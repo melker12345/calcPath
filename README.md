@@ -1,10 +1,14 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CalcPath
+
+Calculus learning SaaS with free practice, structured learning paths, streaks,
+and community forums.
 
 ## Getting Started
 
-First, run the development server:
+First, install dependencies and run the development server:
 
 ```bash
+npm install
 npm run dev
 # or
 yarn dev
@@ -14,9 +18,26 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Features
+
+- 120+ calculus practice problems across 6 topics
+- Learning paths (free and paid)
+- Streak tracking and progress analytics
+- Community forum (Pro plan)
+- Basic analytics capture via `/api/track`
+
+## Testing
+
+```bash
+npm run test
+```
+
+## Notes
+
+- Authentication and billing are mocked with local storage for the MVP.
+- Replace the mock billing in `src/app/pricing/page.tsx` with Stripe when ready.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
