@@ -6,12 +6,11 @@ import { useAuth } from "@/components/auth-provider";
 import { trackEvent } from "@/lib/analytics";
 
 export default function PricingPage() {
-  const { user, upgradeToPro, downgradeToFree } = useAuth();
-  const isPro = user?.plan === "pro";
+  const { user, isPro, setMembership } = useAuth();
 
   useEffect(() => {
-    trackEvent("view_pricing", { plan: user?.plan ?? "anonymous" });
-  }, [user]);
+    trackEvent("view_pricing", { plan: user ? (isPro ? "pro" : "free") : "anonymous" });
+  }, [user, isPro]);
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12">
@@ -37,7 +36,7 @@ export default function PricingPage() {
                 type="button"
                 className="btn-secondary w-full"
                 onClick={() => {
-                  downgradeToFree();
+                  setMembership({ plan: "free", proUntil: null });
                   trackEvent("downgrade_plan");
                 }}
               >
@@ -66,7 +65,9 @@ export default function PricingPage() {
                 type="button"
                 className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-zinc-900"
                 onClick={() => {
-                  upgradeToPro();
+                  // Mock upgrade: grant 30 days of Pro in the profile.
+                  const proUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+                  setMembership({ plan: "pro", proUntil });
                   trackEvent("upgrade_plan");
                 }}
               >

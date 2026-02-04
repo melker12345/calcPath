@@ -6,7 +6,7 @@ import { useProgress } from "@/components/progress-provider";
 import { SectionCard } from "@/components/section-card";
 
 export default function AccountPage() {
-  const { user, signOut } = useAuth();
+  const { user, isPro, signOut } = useAuth();
   const { resetProgress } = useProgress();
 
   if (!user) {
@@ -29,18 +29,26 @@ export default function AccountPage() {
       <h1 className="mb-6 text-3xl font-semibold">Account</h1>
       <div className="grid gap-6 md:grid-cols-2">
         <SectionCard title="Profile">
-          <p className="text-sm text-zinc-500">Email</p>
-          <p className="font-medium">{user.email}</p>
+          <p className="text-sm text-zinc-500">User ID</p>
+          <p className="font-mono text-sm text-zinc-700 dark:text-zinc-200">
+            {user.id}
+          </p>
+          <p className="mt-4 text-sm text-zinc-500">Email</p>
+          <p className="font-medium">{user.email ?? "—"}</p>
+          <p className="mt-4 text-sm text-zinc-500">Phone</p>
+          <p className="font-medium">{user.phone ?? "—"}</p>
           <p className="mt-4 text-sm text-zinc-500">Plan</p>
-          <p className="font-medium">{user.plan.toUpperCase()}</p>
+          <p className="font-medium">{isPro ? "PRO" : "FREE"}</p>
+          <p className="mt-4 text-sm text-zinc-500">Pro valid until</p>
+          <p className="font-medium">{user.proUntil ?? "—"}</p>
           <p className="mt-4 text-sm text-zinc-500">Member since</p>
           <p className="font-medium">
-            {new Date(user.createdAt).toLocaleDateString()}
+            {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "—"}
           </p>
         </SectionCard>
         <SectionCard title="Data & security">
           <p className="text-sm text-zinc-500">
-            Your progress is stored locally in this demo.
+            Your session is managed by Supabase. Progress sync is being added next.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <button className="btn-secondary" onClick={resetProgress}>

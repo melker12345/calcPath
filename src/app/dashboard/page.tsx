@@ -19,7 +19,7 @@ const totalProblemsByTopic = topics.reduce<Record<string, number>>(
 );
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, isPro } = useAuth();
   const { progress } = useProgress();
   const [totalSolved, setTotalSolved] = useState(0);
   const totalProblems = problems.length;
@@ -27,9 +27,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     trackEvent("view_dashboard", {
-      plan: user?.plan ?? "anonymous",
+      plan: user ? (isPro ? "pro" : "free") : "anonymous",
     });
-  }, [user]);
+  }, [user, isPro]);
 
   useEffect(() => {
     // Calculate progress on client only to avoid hydration mismatch

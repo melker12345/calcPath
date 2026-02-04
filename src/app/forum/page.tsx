@@ -8,18 +8,17 @@ import { addForumPost, addForumReply, getForumPosts } from "@/lib/forum";
 import { trackEvent } from "@/lib/analytics";
 
 export default function ForumPage() {
-  const { user } = useAuth();
+  const { user, isPro } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [replyBody, setReplyBody] = useState<Record<string, string>>({});
 
   const posts = useMemo(() => getForumPosts(), [refreshKey]);
-  const isPro = user?.plan === "pro";
 
   useEffect(() => {
-    trackEvent("view_forum", { plan: user?.plan ?? "anonymous" });
-  }, [user]);
+    trackEvent("view_forum", { plan: user ? (isPro ? "pro" : "free") : "anonymous" });
+  }, [user, isPro]);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-12">
@@ -80,7 +79,7 @@ export default function ForumPage() {
                         if (!message || !user) return;
                         addForumReply(post.id, {
                           id: crypto.randomUUID(),
-                          author: user.email,
+                          author: user.email ?? user.phone ?? user.id.slice(0, 8),
                           body: message,
                           createdAt: new Date().toISOString(),
                         });
@@ -130,7 +129,7 @@ export default function ForumPage() {
                 if (!trimmedTitle || !trimmedBody) return;
                 addForumPost({
                   id: crypto.randomUUID(),
-                  author: user.email,
+                  author: user.email ?? user.phone ?? user.id.slice(0, 8),
                   title: trimmedTitle,
                   body: trimmedBody,
                   createdAt: new Date().toISOString(),

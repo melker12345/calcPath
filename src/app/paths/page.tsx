@@ -19,13 +19,12 @@ const totalProblemsByTopic = topics.reduce<Record<string, number>>(
 );
 
 export default function LearningPathsPage() {
-  const { user } = useAuth();
+  const { user, isPro } = useAuth();
   const { progress } = useProgress();
-  const isPro = user?.plan === "pro";
 
   useEffect(() => {
-    trackEvent("view_learning_paths", { plan: user?.plan ?? "anonymous" });
-  }, [user]);
+    trackEvent("view_learning_paths", { plan: user ? (isPro ? "pro" : "free") : "anonymous" });
+  }, [user, isPro]);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-12">
