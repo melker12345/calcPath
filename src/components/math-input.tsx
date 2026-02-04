@@ -13,117 +13,77 @@ export function MathInput({
   onSubmit,
   placeholder = "Your answer",
 }: MathInputProps) {
-  const numbers = ["7", "8", "9", "4", "5", "6", "1", "2", "3", "0"];
-  const symbols = [
-    { label: "×", value: "*" },
-    { label: "÷", value: "/" },
-    { label: "+", value: "+" },
-    { label: "−", value: "-" },
-    { label: "=", value: "=" },
-    { label: "^", value: "^" },
-    { label: "√", value: "sqrt" },
-    { label: "π", value: "pi" },
-    { label: "(", value: "(" },
-    { label: ")", value: ")" },
-    { label: ".", value: "." },
-    { label: "x", value: "x" },
-    { label: "e", value: "e" },
-    { label: "ln", value: "ln" },
-    { label: "sin", value: "sin" },
-    { label: "cos", value: "cos" },
-    { label: "tan", value: "tan" },
-    { label: "C", value: "C" },
-  ];
-
   const handleButtonClick = (val: string) => {
-    if (val === "C") {
-      onChange("");
-    } else {
-      onChange(value + val);
-    }
+    onChange(value + val);
   };
 
   const handleBackspace = () => {
     onChange(value.slice(0, -1));
   };
 
+  const handleClear = () => {
+    onChange("");
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Answer Display */}
-      <div className="rounded-lg border-2 border-emerald-500 bg-emerald-50 px-4 py-3 dark:border-emerald-700 dark:bg-emerald-950/30">
-        <div className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+      <div className="rounded-lg border-2 border-emerald-500 bg-emerald-50 px-4 py-2.5 dark:border-emerald-700 dark:bg-emerald-950/30">
+        <div className="text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
           {placeholder}
         </div>
-        <div className="mt-1 text-2xl font-semibold text-emerald-900 dark:text-emerald-100">
+        <div className="mt-0.5 text-xl font-semibold text-emerald-900 dark:text-emerald-100">
           {value || "—"}
         </div>
       </div>
 
       {/* Keypad */}
-      <div className="space-y-2">
-        {/* Numbers and Basic Operations */}
-        <div className="grid grid-cols-5 gap-2">
-          {/* Numbers (3 columns) */}
-          <div className="col-span-3 grid grid-cols-3 gap-2">
-            {numbers.map((num) => (
-              <button
-                key={num}
-                type="button"
-                onClick={() => handleButtonClick(num)}
-                className="rounded-lg bg-white py-4 text-xl font-semibold text-zinc-900 shadow-sm transition hover:bg-zinc-50 active:scale-95 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
-              >
-                {num}
-              </button>
-            ))}
-          </div>
+      <div className="grid grid-cols-4 gap-2">
+        {/* Row 1: 7, 8, 9, ÷ */}
+        <button onClick={() => handleButtonClick("7")} className="keypad-btn">7</button>
+        <button onClick={() => handleButtonClick("8")} className="keypad-btn">8</button>
+        <button onClick={() => handleButtonClick("9")} className="keypad-btn">9</button>
+        <button onClick={() => handleButtonClick("/")} className="keypad-btn-op">÷</button>
 
-          {/* Basic Math Symbols (2 columns) */}
-          <div className="col-span-2 grid grid-cols-2 gap-2">
-            {symbols.slice(0, 6).map((sym) => (
-              <button
-                key={sym.label}
-                type="button"
-                onClick={() => handleButtonClick(sym.value)}
-                className="rounded-lg bg-blue-500 py-4 text-lg font-semibold text-white shadow-sm transition hover:bg-blue-600 active:scale-95"
-              >
-                {sym.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Row 2: 4, 5, 6, × */}
+        <button onClick={() => handleButtonClick("4")} className="keypad-btn">4</button>
+        <button onClick={() => handleButtonClick("5")} className="keypad-btn">5</button>
+        <button onClick={() => handleButtonClick("6")} className="keypad-btn">6</button>
+        <button onClick={() => handleButtonClick("*")} className="keypad-btn-op">×</button>
 
-        {/* Extended Symbols */}
-        <div className="grid grid-cols-6 gap-2">
-          {symbols.slice(6).map((sym) => (
-            <button
-              key={sym.label}
-              type="button"
-              onClick={() => handleButtonClick(sym.value)}
-              className="rounded-lg bg-purple-500 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-600 active:scale-95"
-            >
-              {sym.label}
-            </button>
-          ))}
-        </div>
+        {/* Row 3: 1, 2, 3, − */}
+        <button onClick={() => handleButtonClick("1")} className="keypad-btn">1</button>
+        <button onClick={() => handleButtonClick("2")} className="keypad-btn">2</button>
+        <button onClick={() => handleButtonClick("3")} className="keypad-btn">3</button>
+        <button onClick={() => handleButtonClick("-")} className="keypad-btn-op">−</button>
 
-        {/* Control Buttons */}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={handleBackspace}
-            className="rounded-lg bg-red-500 py-4 text-base font-semibold text-white shadow-sm transition hover:bg-red-600 active:scale-95"
-          >
-            ⌫ Delete
-          </button>
-          <button
-            type="button"
-            onClick={onSubmit}
-            className="rounded-lg bg-emerald-600 py-4 text-base font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-95"
-          >
-            Check Answer ✓
-          </button>
-        </div>
+        {/* Row 4: 0, ., C, + */}
+        <button onClick={() => handleButtonClick("0")} className="keypad-btn">0</button>
+        <button onClick={() => handleButtonClick(".")} className="keypad-btn">.</button>
+        <button onClick={handleClear} className="keypad-btn">C</button>
+        <button onClick={() => handleButtonClick("+")} className="keypad-btn-op">+</button>
+
+        {/* Row 5: (, ), ^, √ */}
+        <button onClick={() => handleButtonClick("(")} className="keypad-btn-sec">(</button>
+        <button onClick={() => handleButtonClick(")")} className="keypad-btn-sec">)</button>
+        <button onClick={() => handleButtonClick("^")} className="keypad-btn-sec">x^n</button>
+        <button onClick={() => handleButtonClick("sqrt")} className="keypad-btn-sec">√</button>
+
+        {/* Row 6: x, π, e, ⌫ */}
+        <button onClick={() => handleButtonClick("x")} className="keypad-btn-sec">x</button>
+        <button onClick={() => handleButtonClick("pi")} className="keypad-btn-sec">π</button>
+        <button onClick={() => handleButtonClick("e")} className="keypad-btn-sec">e</button>
+        <button onClick={handleBackspace} className="keypad-btn-del">⌫</button>
       </div>
+
+      {/* Check Button */}
+      <button
+        type="button"
+        onClick={onSubmit}
+        className="w-full rounded-lg bg-emerald-600 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.98]"
+      >
+        Check Answer ✓
+      </button>
     </div>
   );
 }
