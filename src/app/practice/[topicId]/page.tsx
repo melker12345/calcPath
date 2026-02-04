@@ -81,15 +81,14 @@ export default function PracticeTopicPage() {
       </div>
 
       <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="text-sm text-zinc-500">
-          Problem {index + 1} of {topicProblems.length}
+        <div className="py-2 text-center">
+          <div className="text-sm text-zinc-500">
+            Problem {index + 1} of {topicProblems.length}
+          </div>
+          <h2 className="mt-4 text-2xl font-semibold leading-snug">
+            <MathText text={current.prompt} />
+          </h2>
         </div>
-        <h2 className="mt-3 text-xl font-semibold">
-          <MathText text={current.prompt} />
-        </h2>
-        <p className="mt-2 text-sm text-zinc-500">
-          <MathText text={current.hint} />
-        </p>
 
         {current.type === "mcq" ? (
           <div className="mt-4 flex flex-col gap-3">

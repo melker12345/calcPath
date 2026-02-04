@@ -7,7 +7,6 @@ export type Problem = {
   type: ProblemType;
   answer: string;
   choices?: string[];
-  hint: string;
   explanation: string;
   difficulty: "easy" | "medium" | "hard";
 };
@@ -92,7 +91,6 @@ const limitsProblems = range(20).map((index) => {
     prompt,
     type: "numeric",
     answer,
-    hint: "Factor or use a small-angle identity.",
     explanation:
       index % 2 === 0
         ? "Factor the numerator as $(x-a)(x+a)$, then cancel."
@@ -127,7 +125,6 @@ const derivativeProblems = range(20).map((index) => {
     prompt,
     type: "numeric",
     answer,
-    hint: "Apply the power rule, chain rule, or log rule.",
     explanation:
       index % 4 === 0
         ? "Use the power rule and multiply by the coefficient."
@@ -158,7 +155,6 @@ const applicationProblems = range(20).map((index) => {
     prompt,
     type: "numeric",
     answer,
-    hint: "Integrate velocity or use symmetry for max area.",
     explanation:
       index % 2 === 0
         ? "Distance is the integral of velocity: $\\int_0^t v(t) dt$."
@@ -188,7 +184,6 @@ const integralProblems = range(20).map((index) => {
     prompt,
     type: "numeric",
     answer,
-    hint: "Reverse the derivative rules.",
     explanation:
       index % 3 === 0
         ? "Use the power rule for integrals."
@@ -217,7 +212,6 @@ const seriesProblems = range(20).map((index) => {
       index % 2 === 0
         ? ["converges", "diverges"]
         : undefined,
-    hint: "Geometric series converges when $|r| < 1$.",
     explanation:
       index % 2 === 0
         ? "Common ratio is $1/${ratio}$, which is $< 1$."
@@ -240,7 +234,6 @@ const differentialEquationProblems = range(20).map((index) => {
     prompt,
     type: "numeric",
     answer,
-    hint: "Separate variables or integrate directly.",
     explanation:
       index % 2 === 0
         ? "Separate variables: $\\frac{dy}{y} = ${k} dx$, integrate."
