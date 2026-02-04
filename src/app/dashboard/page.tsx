@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { SectionCard } from "@/components/section-card";
 import { useAuth } from "@/components/auth-provider";
 import { useProgress } from "@/components/progress-provider";
@@ -21,15 +21,22 @@ const totalProblemsByTopic = topics.reduce<Record<string, number>>(
 export default function DashboardPage() {
   const { user } = useAuth();
   const { progress } = useProgress();
-  const totalSolved = progress.completedProblemIds.length;
+  const [totalSolved, setTotalSolved] = useState(0);
   const totalProblems = problems.length;
-  const completion = Math.round((totalSolved / totalProblems) * 100);
+  const [completion, setCompletion] = useState(0);
 
   useEffect(() => {
     trackEvent("view_dashboard", {
       plan: user?.plan ?? "anonymous",
     });
   }, [user]);
+
+  useEffect(() => {
+    // Calculate progress on client only to avoid hydration mismatch
+    const solved = progress.completedProblemIds.length;
+    setTotalSolved(solved);
+    setCompletion(Math.round((solved / totalProblems) * 100));
+  }, [progress.completedProblemIds.length, totalProblems]);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-12">

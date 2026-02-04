@@ -21,11 +21,20 @@ export default function PracticeTopicPage() {
   const [index, setIndex] = useState(0);
   const [answer, setAnswer] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [solvedCount, setSolvedCount] = useState(0);
 
   useEffect(() => {
     if (!topicId) return;
     trackEvent("view_practice_topic", { topicId });
   }, [topicId]);
+
+  useEffect(() => {
+    // Calculate solved count on client only to avoid hydration mismatch
+    const count = progress.completedProblemIds.filter((id) =>
+      topicProblems.some((problem) => problem.id === id),
+    ).length;
+    setSolvedCount(count);
+  }, [progress.completedProblemIds, topicProblems]);
 
   if (!topic) {
     return (
@@ -39,9 +48,6 @@ export default function PracticeTopicPage() {
   }
 
   const current = topicProblems[index];
-  const solvedCount = progress.completedProblemIds.filter((id) =>
-    topicProblems.some((problem) => problem.id === id),
-  ).length;
 
   const submitAnswer = (value: string) => {
     if (!current) return;

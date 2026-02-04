@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { readStorage, writeStorage } from "@/lib/storage";
 import {
   Attempt,
@@ -26,9 +26,13 @@ export const ProgressProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const [progress, setProgress] = useState<ProgressState>(() =>
-    readStorage<ProgressState>(PROGRESS_KEY, createEmptyProgress()),
-  );
+  const [progress, setProgress] = useState<ProgressState>(createEmptyProgress());
+
+  // Load from localStorage after mount (client-only) to avoid hydration mismatch
+  useEffect(() => {
+    const stored = readStorage<ProgressState>(PROGRESS_KEY, createEmptyProgress());
+    setProgress(stored);
+  }, []);
 
   const addAttempt = (attempt: Attempt) => {
     setProgress((prev) => {

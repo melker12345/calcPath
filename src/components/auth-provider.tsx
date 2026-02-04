@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { readStorage, writeStorage } from "@/lib/storage";
 
 export type PlanTier = "free" | "pro";
@@ -24,9 +24,13 @@ const AUTH_KEY = "calc_auth_v1";
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<UserProfile | null>(() =>
-    readStorage<UserProfile | null>(AUTH_KEY, null),
-  );
+  const [user, setUser] = useState<UserProfile | null>(null);
+
+  // Load from localStorage after mount (client-only) to avoid hydration mismatch
+  useEffect(() => {
+    const stored = readStorage<UserProfile | null>(AUTH_KEY, null);
+    setUser(stored);
+  }, []);
 
   const persist = (nextUser: UserProfile | null) => {
     setUser(nextUser);
