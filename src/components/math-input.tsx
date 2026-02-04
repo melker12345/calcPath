@@ -1,0 +1,159 @@
+"use client";
+
+import { useState } from "react";
+
+interface MathInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  placeholder?: string;
+}
+
+export function MathInput({
+  value,
+  onChange,
+  onSubmit,
+  placeholder = "Tap to enter answer",
+}: MathInputProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const numbers = ["7", "8", "9", "4", "5", "6", "1", "2", "3", "0"];
+  const symbols = [
+    { label: "×", value: "*" },
+    { label: "÷", value: "/" },
+    { label: "+", value: "+" },
+    { label: "−", value: "-" },
+    { label: "=", value: "=" },
+    { label: "^", value: "^" },
+    { label: "√", value: "sqrt" },
+    { label: "π", value: "pi" },
+    { label: "(", value: "(" },
+    { label: ")", value: ")" },
+    { label: ".", value: "." },
+    { label: "x", value: "x" },
+    { label: "e", value: "e" },
+    { label: "ln", value: "ln" },
+    { label: "sin", value: "sin" },
+    { label: "cos", value: "cos" },
+    { label: "tan", value: "tan" },
+    { label: "C", value: "C" },
+  ];
+
+  const handleButtonClick = (val: string) => {
+    if (val === "C") {
+      onChange("");
+    } else {
+      onChange(value + val);
+    }
+  };
+
+  const handleBackspace = () => {
+    onChange(value.slice(0, -1));
+  };
+
+  const handleDone = () => {
+    setIsOpen(false);
+    onSubmit();
+  };
+
+  return (
+    <>
+      {/* Input Display */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        className="min-w-[280px] flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-3 text-left text-lg dark:border-zinc-700 dark:bg-zinc-800"
+      >
+        {value || (
+          <span className="text-zinc-400 dark:text-zinc-500">{placeholder}</span>
+        )}
+      </button>
+
+      {/* Modal Overlay */}
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center">
+          <div className="w-full max-w-lg rounded-t-3xl bg-white p-6 shadow-2xl dark:bg-zinc-900 sm:rounded-3xl">
+            {/* Display Area */}
+            <div className="mb-4 min-h-[60px] rounded-xl border-2 border-blue-200 bg-blue-50/50 p-4 text-right text-2xl font-medium dark:border-blue-900/50 dark:bg-blue-950/20">
+              {value || (
+                <span className="text-zinc-400 dark:text-zinc-500">
+                  Enter answer
+                </span>
+              )}
+            </div>
+
+            {/* Keypad Grid */}
+            <div className="mb-4 grid grid-cols-5 gap-2">
+              {/* Numbers (left side, 3 columns) */}
+              <div className="col-span-3 grid grid-cols-3 gap-2">
+                {numbers.map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => handleButtonClick(num)}
+                    className="rounded-xl bg-zinc-100 py-4 text-xl font-semibold text-zinc-900 transition hover:bg-zinc-200 active:scale-95 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
+                  >
+                    {num}
+                  </button>
+                ))}
+              </div>
+
+              {/* Math Symbols (right side, 2 columns) */}
+              <div className="col-span-2 grid grid-cols-2 gap-2">
+                {symbols.slice(0, 6).map((sym) => (
+                  <button
+                    key={sym.label}
+                    type="button"
+                    onClick={() => handleButtonClick(sym.value)}
+                    className="rounded-xl bg-blue-100 py-4 text-lg font-semibold text-blue-900 transition hover:bg-blue-200 active:scale-95 dark:bg-blue-900/30 dark:text-blue-100 dark:hover:bg-blue-900/50"
+                  >
+                    {sym.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Extended Symbols */}
+            <div className="mb-4 grid grid-cols-6 gap-2">
+              {symbols.slice(6).map((sym) => (
+                <button
+                  key={sym.label}
+                  type="button"
+                  onClick={() => handleButtonClick(sym.value)}
+                  className="rounded-lg bg-purple-100 px-2 py-3 text-sm font-semibold text-purple-900 transition hover:bg-purple-200 active:scale-95 dark:bg-purple-900/30 dark:text-purple-100 dark:hover:bg-purple-900/50"
+                >
+                  {sym.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Control Buttons */}
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={handleBackspace}
+                className="rounded-xl bg-red-100 py-4 text-lg font-semibold text-red-900 transition hover:bg-red-200 active:scale-95 dark:bg-red-900/30 dark:text-red-100 dark:hover:bg-red-900/50"
+              >
+                ⌫ Back
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="rounded-xl bg-zinc-200 py-4 text-lg font-semibold text-zinc-900 transition hover:bg-zinc-300 active:scale-95 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDone}
+                className="rounded-xl bg-gradient-to-r from-emerald-600 to-blue-600 py-4 text-lg font-semibold text-white shadow-lg transition hover:shadow-xl active:scale-95"
+              >
+                Done ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

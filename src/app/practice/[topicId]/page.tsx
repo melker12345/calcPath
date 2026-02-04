@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
+import { MathInput } from "@/components/math-input";
 import { useProgress } from "@/components/progress-provider";
 import { problems, topics } from "@/lib/content";
 import { trackEvent } from "@/lib/analytics";
@@ -98,23 +99,14 @@ export default function PracticeTopicPage() {
             ))}
           </div>
         ) : (
-          <form
-            className="mt-4 flex flex-wrap items-center gap-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              submitAnswer(answer);
-            }}
-          >
-            <input
+          <div className="mt-4">
+            <MathInput
               value={answer}
-              onChange={(event) => setAnswer(event.target.value)}
-              placeholder="Type your answer"
-              className="min-w-[240px] flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+              onChange={setAnswer}
+              onSubmit={() => submitAnswer(answer)}
+              placeholder="Tap to enter answer"
             />
-            <button type="submit" className="btn-primary">
-              Check
-            </button>
-          </form>
+          </div>
         )}
 
         {feedback && (
