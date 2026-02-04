@@ -16,9 +16,14 @@ export default function AccountPage() {
           <p className="text-sm text-zinc-500">
             Create a free account to save progress and unlock streak tracking.
           </p>
-          <Link className="btn-primary mt-4 inline-flex" href="/">
-            Go to home
-          </Link>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link className="btn-primary inline-flex" href="/auth">
+              Sign in / register
+            </Link>
+            <Link className="btn-secondary inline-flex" href="/">
+              Back to home
+            </Link>
+          </div>
         </SectionCard>
       </div>
     );
