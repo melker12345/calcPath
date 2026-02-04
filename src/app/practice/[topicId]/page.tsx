@@ -86,13 +86,13 @@ export default function PracticeTopicPage() {
         </p>
 
         {current.type === "mcq" ? (
-          <div className="mt-4 flex flex-col gap-2">
+          <div className="mt-4 flex flex-col gap-3">
             {current.choices?.map((choice) => (
               <button
                 key={choice}
                 type="button"
                 onClick={() => submitAnswer(choice)}
-                className="rounded-lg border border-zinc-300 px-4 py-2 text-left text-sm hover:border-zinc-400"
+                className="rounded-lg bg-white px-6 py-4 text-left text-lg font-medium shadow-sm transition hover:bg-emerald-50 hover:shadow-md active:scale-95 dark:bg-zinc-800 dark:hover:bg-emerald-950"
               >
                 {choice}
               </button>
@@ -104,15 +104,14 @@ export default function PracticeTopicPage() {
               value={answer}
               onChange={setAnswer}
               onSubmit={() => submitAnswer(answer)}
-              placeholder="Tap to enter answer"
             />
           </div>
         )}
 
         {feedback && (
-          <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-950">
-            <p>{feedback}</p>
-            <p className="mt-2 text-xs text-zinc-500">
+          <div className="mt-4 rounded-lg bg-blue-50 p-4 shadow-sm dark:bg-blue-950/30">
+            <p className="font-semibold text-blue-900 dark:text-blue-100">{feedback}</p>
+            <p className="mt-2 text-base text-blue-800 dark:text-blue-200">
               <MathText text={current.explanation} />
             </p>
           </div>
