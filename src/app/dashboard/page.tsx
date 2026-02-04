@@ -92,7 +92,7 @@ export default function DashboardPage() {
               return (
                 <div
                   key={topic.id}
-                  className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3 text-sm dark:border-zinc-800"
+                  className="flex items-center justify-between rounded-lg border border-zinc-200/50 bg-white/30 px-4 py-3 text-sm backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-900/30"
                 >
                   <div>
                     <div className="font-medium">{topic.title}</div>
