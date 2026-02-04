@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { SectionCard } from "@/components/section-card";
+import { ProgressBar } from "@/components/progress-bar";
 import { useProgress } from "@/components/progress-provider";
 import { getTopicProgress } from "@/lib/progress";
 import { problems, topics } from "@/lib/content";
@@ -45,9 +46,13 @@ export default function PracticePage() {
             >
               <div className="flex items-center justify-between text-sm text-zinc-500">
                 <span>
-                  {stats.solved}/{totals} solved · {stats.accuracyRate}% accuracy
+                  {stats.solved}/{totals} attempted · {stats.correct} correct ·{" "}
+                  {stats.accuracyRate}% accuracy
                 </span>
                 <span>{topic.estimatedMinutes} min</span>
+              </div>
+              <div className="mt-3">
+                <ProgressBar value={stats.completionRate} label="Completion" />
               </div>
               <div className="mt-4 flex gap-2">
                 <Link className="btn-primary" href={`/practice/${topic.id}`}>

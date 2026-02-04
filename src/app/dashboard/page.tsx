@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SectionCard } from "@/components/section-card";
+import { ProgressBar } from "@/components/progress-bar";
 import { useAuth } from "@/components/auth-provider";
 import { useProgress } from "@/components/progress-provider";
 import { getTopicProgress } from "@/lib/progress";
@@ -24,6 +25,8 @@ export default function DashboardPage() {
   const [totalSolved, setTotalSolved] = useState(0);
   const totalProblems = problems.length;
   const [completion, setCompletion] = useState(0);
+  const [attemptedTotal, setAttemptedTotal] = useState(0);
+  const [accuracy, setAccuracy] = useState(0);
 
   useEffect(() => {
     trackEvent("view_dashboard", {
@@ -34,9 +37,31 @@ export default function DashboardPage() {
   useEffect(() => {
     // Calculate progress on client only to avoid hydration mismatch
     const solved = progress.completedProblemIds.length;
+    const attempted = progress.attemptedProblemIds?.length ?? progress.attempts.length;
     setTotalSolved(solved);
+    setAttemptedTotal(attempted);
     setCompletion(Math.round((solved / totalProblems) * 100));
-  }, [progress.completedProblemIds.length, totalProblems]);
+    setAccuracy(attempted === 0 ? 0 : Math.round((solved / attempted) * 100));
+  }, [
+    progress.completedProblemIds.length,
+    progress.attempts.length,
+    progress.attemptedProblemIds?.length,
+    totalProblems,
+  ]);
+
+  const recentDays = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const a of progress.attempts) {
+      const day = a.createdAt.slice(0, 10);
+      counts.set(day, (counts.get(day) ?? 0) + 1);
+    }
+    const days: Array<{ day: string; count: number }> = [];
+    for (let i = 13; i >= 0; i -= 1) {
+      const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+      days.push({ day: d, count: counts.get(d) ?? 0 });
+    }
+    return days;
+  }, [progress.attempts]);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-12">
@@ -45,8 +70,8 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-semibold">Dashboard</h1>
           <p className="text-sm text-zinc-500">
             {user
-              ? `Welcome back, ${user.email}`
-              : "Sign in to save your progress across devices."}
+              ? `Welcome back, ${user.email ?? "student"}`
+              : "Sign in to sync progress across devices."}
           </p>
         </div>
         <div className="flex gap-2">
@@ -60,10 +85,18 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <SectionCard title="Overall Progress">
-          <div className="text-3xl font-semibold">{completion}%</div>
-          <p className="text-sm text-zinc-500">
-            {totalSolved} of {totalProblems} problems solved
+        <SectionCard title="Overall progress" description="Solved across all topics.">
+          <div className="flex items-end justify-between">
+            <div className="text-3xl font-semibold">{completion}%</div>
+            <div className="text-sm text-zinc-500">
+              {totalSolved}/{totalProblems}
+            </div>
+          </div>
+          <div className="mt-4">
+            <ProgressBar value={completion} label="Completion" />
+          </div>
+          <p className="mt-3 text-sm text-zinc-500">
+            Attempted {attemptedTotal} problems total.
           </p>
         </SectionCard>
         <SectionCard title="Current Streak">
@@ -71,19 +104,42 @@ export default function DashboardPage() {
           <p className="text-sm text-zinc-500">
             Longest streak: {progress.streak.longest} days
           </p>
-        </SectionCard>
-        <SectionCard title="Accuracy">
-          <div className="text-3xl font-semibold">
-            {progress.attempts.length === 0
-              ? 0
-              : Math.round(
-                  (progress.attempts.filter((a) => a.correct).length /
-                    progress.attempts.length) *
-                    100,
-                )}
-            %
+          <div className="mt-4 flex items-center gap-1">
+            {recentDays.map((d) => {
+              const intensity =
+                d.count === 0
+                  ? "bg-zinc-100 dark:bg-zinc-800"
+                  : d.count < 3
+                    ? "bg-emerald-200 dark:bg-emerald-900/40"
+                    : d.count < 6
+                      ? "bg-emerald-400 dark:bg-emerald-700/60"
+                      : "bg-emerald-600 dark:bg-emerald-500/80";
+              return (
+                <div
+                  key={d.day}
+                  title={`${d.day}: ${d.count} attempts`}
+                  className={`h-4 w-4 rounded ${intensity}`}
+                />
+              );
+            })}
           </div>
-          <p className="text-sm text-zinc-500">Across all attempts</p>
+          <p className="mt-2 text-xs text-zinc-500">Last 14 days activity</p>
+        </SectionCard>
+        <SectionCard title="Accuracy" description="Correct vs attempted problems.">
+          <div className="flex items-end justify-between">
+            <div className="text-3xl font-semibold">{accuracy}%</div>
+            <div className="text-sm text-zinc-500">
+              {totalSolved}/{attemptedTotal || 0}
+            </div>
+          </div>
+          <div className="mt-4">
+            <ProgressBar value={accuracy} label="Accuracy" />
+          </div>
+          {!isPro && (
+            <p className="mt-3 text-sm text-zinc-500">
+              Pro unlocks deeper analytics and learning paths.
+            </p>
+          )}
         </SectionCard>
       </div>
 
@@ -101,11 +157,14 @@ export default function DashboardPage() {
                   key={topic.id}
                   className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3 text-sm dark:border-zinc-800"
                 >
-                  <div>
+                  <div className="min-w-0 flex-1 pr-4">
                     <div className="font-medium">{topic.title}</div>
-                    <div className="text-xs text-zinc-500">
-                      {stats.solved}/{totals} solved · {stats.accuracyRate}%
-                      accuracy
+                    <div className="mt-2">
+                      <ProgressBar value={stats.completionRate} />
+                    </div>
+                    <div className="mt-2 text-xs text-zinc-500">
+                      {stats.solved}/{totals} attempted · {stats.correct} correct ·{" "}
+                      {stats.accuracyRate}% accuracy
                     </div>
                   </div>
                   <Link

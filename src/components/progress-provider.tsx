@@ -7,6 +7,7 @@ import {
   Attempt,
   ProgressState,
   createEmptyProgress,
+  normalizeProgressState,
   recordAttempt,
 } from "@/lib/progress";
 import { useAuth } from "@/components/auth-provider";
@@ -35,8 +36,11 @@ export const ProgressProvider = ({
     let cancelled = false;
 
     const loadAnonymous = () => {
-      const stored = readStorage<ProgressState>(PROGRESS_KEY, createEmptyProgress());
-      if (!cancelled) setProgress(stored);
+      const stored = readStorage<ProgressState | Partial<ProgressState>>(
+        PROGRESS_KEY,
+        createEmptyProgress(),
+      );
+      if (!cancelled) setProgress(normalizeProgressState(stored as Partial<ProgressState>));
     };
 
     const loadAuthed = async (userId: string) => {
@@ -55,18 +59,22 @@ export const ProgressProvider = ({
       }
 
       if (data?.state) {
-        if (!cancelled) setProgress(data.state as ProgressState);
+        if (!cancelled) setProgress(normalizeProgressState(data.state as Partial<ProgressState>));
         return;
       }
 
-      const local = readStorage<ProgressState>(PROGRESS_KEY, createEmptyProgress());
-      if (!cancelled) setProgress(local);
+      const local = readStorage<ProgressState | Partial<ProgressState>>(
+        PROGRESS_KEY,
+        createEmptyProgress(),
+      );
+      const normalizedLocal = normalizeProgressState(local as Partial<ProgressState>);
+      if (!cancelled) setProgress(normalizedLocal);
 
       // Best-effort initial upload so progress follows the account.
       await supabase.from("user_progress").upsert(
         {
           user_id: userId,
-          state: local,
+          state: normalizedLocal,
         },
         { onConflict: "user_id" },
       );

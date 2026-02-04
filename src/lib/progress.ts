@@ -13,6 +13,7 @@ export type StreakStats = {
 
 export type ProgressState = {
   attempts: Attempt[];
+  attemptedProblemIds: string[];
   completedProblemIds: string[];
   topicStats: Record<string, { solved: number; correct: number }>;
   streak: StreakStats;
@@ -20,10 +21,29 @@ export type ProgressState = {
 
 export const createEmptyProgress = (): ProgressState => ({
   attempts: [],
+  attemptedProblemIds: [],
   completedProblemIds: [],
   topicStats: {},
   streak: { current: 0, longest: 0 },
 });
+
+export const normalizeProgressState = (
+  input: Partial<ProgressState> | null | undefined,
+): ProgressState => {
+  const empty = createEmptyProgress();
+  if (!input) return empty;
+  return {
+    attempts: Array.isArray(input.attempts) ? input.attempts : empty.attempts,
+    attemptedProblemIds: Array.isArray(input.attemptedProblemIds)
+      ? input.attemptedProblemIds
+      : empty.attemptedProblemIds,
+    completedProblemIds: Array.isArray(input.completedProblemIds)
+      ? input.completedProblemIds
+      : empty.completedProblemIds,
+    topicStats: input.topicStats ?? empty.topicStats,
+    streak: input.streak ?? empty.streak,
+  };
+};
 
 const dayKey = (date: Date) => date.toISOString().slice(0, 10);
 
@@ -75,16 +95,30 @@ export const recordAttempt = (
   state: ProgressState,
   attempt: Attempt,
 ): ProgressState => {
+  const prevAttempted = state.attemptedProblemIds.includes(attempt.problemId);
+  const prevCompleted = state.completedProblemIds.includes(attempt.problemId);
+
   const attempts = [attempt, ...state.attempts].slice(0, 5000);
   const topicStats = { ...state.topicStats };
   const stat = topicStats[attempt.topicId] ?? { solved: 0, correct: 0 };
-  if (!state.completedProblemIds.includes(attempt.problemId)) {
+
+  // solved = unique attempted problems (per topic)
+  if (!prevAttempted) {
     stat.solved += 1;
   }
-  if (attempt.correct) {
+
+  // correct = unique correctly solved problems (per topic)
+  if (attempt.correct && !prevCompleted) {
     stat.correct += 1;
   }
   topicStats[attempt.topicId] = stat;
+
+  const attemptedProblemIds = prevAttempted
+    ? state.attemptedProblemIds
+    : Array.from(new Set([attempt.problemId, ...state.attemptedProblemIds])).slice(
+        0,
+        5000,
+      );
 
   const completedProblemIds = attempt.correct
     ? Array.from(
@@ -96,6 +130,7 @@ export const recordAttempt = (
 
   return {
     attempts,
+    attemptedProblemIds,
     completedProblemIds,
     topicStats,
     streak,
