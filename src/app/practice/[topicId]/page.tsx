@@ -110,8 +110,8 @@ export default function PracticeTopicPage() {
 
         {feedback && (
           <div className="mt-4 rounded-lg bg-blue-50 p-4 shadow-sm dark:bg-blue-950/30">
-            <p className="font-semibold text-blue-900 dark:text-blue-100">{feedback}</p>
-            <p className="mt-2 text-base text-blue-800 dark:text-blue-200">
+            <p className="text-lg font-semibold text-blue-900 dark:text-blue-100">{feedback}</p>
+            <p className="mt-2 text-xl leading-relaxed text-blue-800 dark:text-blue-200">
               <MathText text={current.explanation} />
             </p>
           </div>
