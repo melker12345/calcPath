@@ -144,12 +144,20 @@ export default function ModulePage() {
             Test your understanding with {moduleProblems.length} problems on {topic.title.toLowerCase()}.
           </p>
         </div>
-        <Link
-          className="inline-block rounded-full bg-white px-8 py-4 text-lg font-semibold text-blue-600 shadow-lg transition hover:scale-105"
-          href={`/practice/${topic.id}`}
-        >
-          Start practice session →
-        </Link>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Link
+            className="inline-block rounded-full bg-white px-8 py-4 text-lg font-semibold text-blue-600 shadow-lg transition hover:scale-105"
+            href={`/practice/${topic.id}`}
+          >
+            Start practice →
+          </Link>
+          <Link
+            className="inline-block rounded-full border border-white/40 bg-white/10 px-8 py-4 text-lg font-semibold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/15 hover:scale-105"
+            href={`/test/${topic.id}`}
+          >
+            Take 20-question test →
+          </Link>
+        </div>
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           {moduleProblems.slice(0, 3).map((problem, index) => (
             <div

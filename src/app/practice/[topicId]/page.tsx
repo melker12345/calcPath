@@ -8,6 +8,7 @@ import { MathInput } from "@/components/math-input";
 import { useProgress } from "@/components/progress-provider";
 import { problems, topics } from "@/lib/content";
 import { trackEvent } from "@/lib/analytics";
+import { isAnswerCorrect } from "@/lib/answer-check";
 
 export default function PracticeTopicPage() {
   const params = useParams<{ topicId: string }>();
@@ -51,9 +52,7 @@ export default function PracticeTopicPage() {
 
   const submitAnswer = (value: string) => {
     if (!current) return;
-    const normalized = value.trim().toLowerCase().replace(/\s/g, "");
-    const expected = current.answer.toLowerCase().replace(/\s/g, "");
-    const isCorrect = normalized === expected;
+    const isCorrect = isAnswerCorrect(value, current.answer);
 
     addAttempt({
       problemId: current.id,
@@ -66,6 +65,15 @@ export default function PracticeTopicPage() {
       correct: isCorrect,
     });
     setFeedback(isCorrect ? "Correct! Keep going." : "Not quite, try again.");
+
+    // Auto-advance on correct (feels better than re-checking)
+    if (isCorrect) {
+      window.setTimeout(() => {
+        setFeedback(null);
+        setAnswer("");
+        setIndex((prev) => Math.min(topicProblems.length - 1, prev + 1));
+      }, 650);
+    }
   };
 
   return (
@@ -75,8 +83,13 @@ export default function PracticeTopicPage() {
           <h1 className="text-3xl font-semibold">{topic.title}</h1>
           <p className="text-sm text-zinc-500">{topic.description}</p>
         </div>
-        <div className="text-sm text-zinc-500">
-          {solvedCount}/{topicProblems.length} solved
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="text-sm text-zinc-500">
+            {solvedCount}/{topicProblems.length} solved
+          </div>
+          <Link className="btn-secondary" href={`/test/${topic.id}`}>
+            Take test
+          </Link>
         </div>
       </div>
 
