@@ -87,6 +87,104 @@ export default function Home() {
             </a>
           </div>
         </section>
+
+        {/* Testimonials Section */}
+        <section className="mt-24">
+          <div className="mb-12 text-center">
+            <h2 className="mb-4 text-3xl font-bold text-zinc-900 dark:text-white">
+              Loved by students
+            </h2>
+            <p className="text-lg text-zinc-600 dark:text-zinc-300">
+              See what learners are saying about CalcPath
+            </p>
+          </div>
+          
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="rounded-3xl border border-blue-100 bg-white p-8 shadow-lg dark:border-blue-900/30 dark:bg-zinc-900">
+              <div className="mb-4 flex gap-1">
+                {[...Array(5)].map((_, i) => (
+                  <span key={i} className="text-xl text-yellow-400">★</span>
+                ))}
+              </div>
+              <p className="mb-6 text-base text-zinc-700 dark:text-zinc-200">
+                "CalcPath helped me go from struggling with derivatives to acing my AP Calc exam. The instant feedback and clear explanations made all the difference!"
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 font-bold text-white">
+                  S
+                </div>
+                <div>
+                  <p className="font-semibold text-zinc-900 dark:text-white">Sarah M.</p>
+                  <p className="text-sm text-zinc-500">High School Senior</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-purple-100 bg-white p-8 shadow-lg dark:border-purple-900/30 dark:bg-zinc-900">
+              <div className="mb-4 flex gap-1">
+                {[...Array(5)].map((_, i) => (
+                  <span key={i} className="text-xl text-yellow-400">★</span>
+                ))}
+              </div>
+              <p className="mb-6 text-base text-zinc-700 dark:text-zinc-200">
+                "The learning paths are brilliant. Instead of random problems, I follow a structured plan that builds on each concept. My confidence has skyrocketed."
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-blue-500 font-bold text-white">
+                  M
+                </div>
+                <div>
+                  <p className="font-semibold text-zinc-900 dark:text-white">Marcus T.</p>
+                  <p className="text-sm text-zinc-500">College Freshman</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-emerald-100 bg-white p-8 shadow-lg dark:border-emerald-900/30 dark:bg-zinc-900">
+              <div className="mb-4 flex gap-1">
+                {[...Array(5)].map((_, i) => (
+                  <span key={i} className="text-xl text-yellow-400">★</span>
+                ))}
+              </div>
+              <p className="mb-6 text-base text-zinc-700 dark:text-zinc-200">
+                "Finally, a platform that teaches calculus the right way—step by step with real explanations. The worked examples are gold."
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-blue-500 font-bold text-white">
+                  E
+                </div>
+                <div>
+                  <p className="font-semibold text-zinc-900 dark:text-white">Emily R.</p>
+                  <p className="text-sm text-zinc-500">Engineering Student</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Final CTA Section */}
+        <section className="mt-24 rounded-3xl bg-gradient-to-r from-blue-600 to-purple-600 p-12 text-center shadow-2xl">
+          <h2 className="mb-4 text-4xl font-bold text-white">
+            Ready to master calculus?
+          </h2>
+          <p className="mb-8 text-xl text-blue-50">
+            Join thousands of students improving their calculus skills every day.
+          </p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <a
+              className="rounded-full bg-white px-8 py-4 text-lg font-semibold text-blue-600 shadow-lg transition hover:scale-105"
+              href="/practice"
+            >
+              Start free now
+            </a>
+            <a
+              className="rounded-full border-2 border-white bg-transparent px-8 py-4 text-lg font-semibold text-white transition hover:bg-white/10"
+              href="/pricing"
+            >
+              View pricing
+            </a>
+          </div>
+        </section>
       </div>
     </div>
   );
