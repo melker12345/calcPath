@@ -69,90 +69,99 @@ export function MathInput({
         )}
       </button>
 
-      {/* Modal Overlay */}
+      {/* Bottom Sheet Keypad */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center">
-          <div className="w-full max-w-lg rounded-t-3xl bg-white p-6 shadow-2xl dark:bg-zinc-900 sm:rounded-3xl">
-            {/* Display Area */}
-            <div className="mb-4 min-h-[60px] rounded-xl border-2 border-blue-200 bg-blue-50/50 p-4 text-right text-2xl font-medium dark:border-blue-900/50 dark:bg-blue-950/20">
-              {value || (
-                <span className="text-zinc-400 dark:text-zinc-500">
-                  Enter answer
-                </span>
-              )}
-            </div>
-
-            {/* Keypad Grid */}
-            <div className="mb-4 grid grid-cols-5 gap-2">
-              {/* Numbers (left side, 3 columns) */}
-              <div className="col-span-3 grid grid-cols-3 gap-2">
-                {numbers.map((num) => (
-                  <button
-                    key={num}
-                    type="button"
-                    onClick={() => handleButtonClick(num)}
-                    className="rounded-xl bg-zinc-100 py-4 text-xl font-semibold text-zinc-900 transition hover:bg-zinc-200 active:scale-95 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
-                  >
-                    {num}
-                  </button>
-                ))}
+        <>
+          {/* Light Overlay */}
+          <div 
+            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm"
+            onClick={() => setIsOpen(false)}
+          />
+          
+          {/* Bottom Sheet */}
+          <div className="fixed bottom-0 left-0 right-0 z-50 mx-auto w-full max-w-2xl animate-slide-up">
+            <div className="rounded-t-3xl border-t-4 border-blue-500 bg-white p-4 shadow-2xl dark:bg-zinc-900 sm:p-6">
+              {/* Display Area */}
+              <div className="mb-3 min-h-[50px] rounded-xl border-2 border-blue-200 bg-blue-50/50 px-4 py-3 text-right text-xl font-medium dark:border-blue-900/50 dark:bg-blue-950/20 sm:text-2xl">
+                {value || (
+                  <span className="text-zinc-400 dark:text-zinc-500">
+                    Enter answer
+                  </span>
+                )}
               </div>
 
-              {/* Math Symbols (right side, 2 columns) */}
-              <div className="col-span-2 grid grid-cols-2 gap-2">
-                {symbols.slice(0, 6).map((sym) => (
+              {/* Keypad Grid */}
+              <div className="mb-3 grid grid-cols-5 gap-1.5 sm:gap-2">
+                {/* Numbers (left side, 3 columns) */}
+                <div className="col-span-3 grid grid-cols-3 gap-1.5 sm:gap-2">
+                  {numbers.map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => handleButtonClick(num)}
+                      className="rounded-lg bg-zinc-100 py-3 text-lg font-semibold text-zinc-900 transition hover:bg-zinc-200 active:scale-95 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 sm:rounded-xl sm:py-4 sm:text-xl"
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Math Symbols (right side, 2 columns) */}
+                <div className="col-span-2 grid grid-cols-2 gap-1.5 sm:gap-2">
+                  {symbols.slice(0, 6).map((sym) => (
+                    <button
+                      key={sym.label}
+                      type="button"
+                      onClick={() => handleButtonClick(sym.value)}
+                      className="rounded-lg bg-blue-100 py-3 text-base font-semibold text-blue-900 transition hover:bg-blue-200 active:scale-95 dark:bg-blue-900/30 dark:text-blue-100 dark:hover:bg-blue-900/50 sm:rounded-xl sm:py-4 sm:text-lg"
+                    >
+                      {sym.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Extended Symbols */}
+              <div className="mb-3 grid grid-cols-6 gap-1.5 sm:gap-2">
+                {symbols.slice(6).map((sym) => (
                   <button
                     key={sym.label}
                     type="button"
                     onClick={() => handleButtonClick(sym.value)}
-                    className="rounded-xl bg-blue-100 py-4 text-lg font-semibold text-blue-900 transition hover:bg-blue-200 active:scale-95 dark:bg-blue-900/30 dark:text-blue-100 dark:hover:bg-blue-900/50"
+                    className="rounded-lg bg-purple-100 px-1 py-2.5 text-xs font-semibold text-purple-900 transition hover:bg-purple-200 active:scale-95 dark:bg-purple-900/30 dark:text-purple-100 dark:hover:bg-purple-900/50 sm:px-2 sm:py-3 sm:text-sm"
                   >
                     {sym.label}
                   </button>
                 ))}
               </div>
-            </div>
 
-            {/* Extended Symbols */}
-            <div className="mb-4 grid grid-cols-6 gap-2">
-              {symbols.slice(6).map((sym) => (
+              {/* Control Buttons */}
+              <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                 <button
-                  key={sym.label}
                   type="button"
-                  onClick={() => handleButtonClick(sym.value)}
-                  className="rounded-lg bg-purple-100 px-2 py-3 text-sm font-semibold text-purple-900 transition hover:bg-purple-200 active:scale-95 dark:bg-purple-900/30 dark:text-purple-100 dark:hover:bg-purple-900/50"
+                  onClick={handleBackspace}
+                  className="rounded-lg bg-red-100 py-3 text-base font-semibold text-red-900 transition hover:bg-red-200 active:scale-95 dark:bg-red-900/30 dark:text-red-100 dark:hover:bg-red-900/50 sm:rounded-xl sm:py-4 sm:text-lg"
                 >
-                  {sym.label}
+                  ⌫ Back
                 </button>
-              ))}
-            </div>
-
-            {/* Control Buttons */}
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={handleBackspace}
-                className="rounded-xl bg-red-100 py-4 text-lg font-semibold text-red-900 transition hover:bg-red-200 active:scale-95 dark:bg-red-900/30 dark:text-red-100 dark:hover:bg-red-900/50"
-              >
-                ⌫ Back
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="rounded-xl bg-zinc-200 py-4 text-lg font-semibold text-zinc-900 transition hover:bg-zinc-300 active:scale-95 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDone}
-                className="rounded-xl bg-gradient-to-r from-emerald-600 to-blue-600 py-4 text-lg font-semibold text-white shadow-lg transition hover:shadow-xl active:scale-95"
-              >
-                Done ✓
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="rounded-lg bg-zinc-200 py-3 text-base font-semibold text-zinc-900 transition hover:bg-zinc-300 active:scale-95 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600 sm:rounded-xl sm:py-4 sm:text-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDone}
+                  className="rounded-lg bg-gradient-to-r from-emerald-600 to-blue-600 py-3 text-base font-semibold text-white shadow-lg transition hover:shadow-xl active:scale-95 sm:rounded-xl sm:py-4 sm:text-lg"
+                >
+                  Done ✓
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </>
   );

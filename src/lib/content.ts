@@ -83,8 +83,8 @@ const limitsProblems = range(20).map((index) => {
   const id = `limits-${index + 1}`;
   const prompt =
     index % 2 === 0
-      ? `Compute: lim_{x→${a}} (x^2 - ${a ** 2})/(x-${a})`
-      : `Evaluate: lim_{x→0} (sin(${a}x))/(x)`;
+      ? `Compute: $\\lim_{x\\to ${a}} \\frac{x^2 - ${a ** 2}}{x-${a}}$`
+      : `Evaluate: $\\lim_{x\\to 0} \\frac{\\sin(${a}x)}{x}$`;
   const answer = index % 2 === 0 ? `${2 * a}` : `${a}`;
   return makeProblem({
     id,
@@ -95,8 +95,8 @@ const limitsProblems = range(20).map((index) => {
     hint: "Factor or use a small-angle identity.",
     explanation:
       index % 2 === 0
-        ? "Factor the numerator as (x-a)(x+a), then cancel."
-        : "Use lim_{x→0} sin(kx)/x = k.",
+        ? "Factor the numerator as $(x-a)(x+a)$, then cancel."
+        : "Use $\\lim_{x\\to 0} \\frac{\\sin(kx)}{x} = k$.",
     difficulty: index < 8 ? "easy" : index < 15 ? "medium" : "hard",
   });
 });
@@ -107,12 +107,12 @@ const derivativeProblems = range(20).map((index) => {
   const id = `derivatives-${index + 1}`;
   const prompt =
     index % 4 === 0
-      ? `Find d/dx of ${coefficient}x^${power}`
+      ? `Find $\\frac{d}{dx}$ of $${coefficient}x^${power}$`
       : index % 4 === 1
-        ? `Find d/dx of e^{${index + 1}x}`
+        ? `Find $\\frac{d}{dx}$ of $e^{${index + 1}x}$`
         : index % 4 === 2
-          ? `Find d/dx of ln(x^${power})`
-          : `Find d/dx of sin(${index + 1}x)`;
+          ? `Find $\\frac{d}{dx}$ of $\\ln(x^${power})$`
+          : `Find $\\frac{d}{dx}$ of $\\sin(${index + 1}x)$`;
   const answer =
     index % 4 === 0
       ? `${coefficient * power}x^${power - 1}`
@@ -132,10 +132,10 @@ const derivativeProblems = range(20).map((index) => {
       index % 4 === 0
         ? "Use the power rule and multiply by the coefficient."
         : index % 4 === 1
-          ? "Derivative of e^{kx} is k e^{kx}."
+          ? "Derivative of $e^{kx}$ is $ke^{kx}$."
           : index % 4 === 2
-            ? "ln(x^n) = n ln x, then differentiate."
-            : "Derivative of sin(kx) is k cos(kx).",
+            ? "$\\ln(x^n) = n\\ln x$, then differentiate."
+            : "Derivative of $\\sin(kx)$ is $k\\cos(kx)$.",
     difficulty: index < 8 ? "easy" : index < 15 ? "medium" : "hard",
   });
 });
@@ -146,8 +146,8 @@ const applicationProblems = range(20).map((index) => {
   const time = 1 + (index % 5);
   const prompt =
     index % 2 === 0
-      ? `A particle moves with v(t) = ${speed}t. Find the distance traveled from t=0 to t=${time}.`
-      : `A rectangle has perimeter 20. Express area as a function of width w and find w that maximizes area.`;
+      ? `A particle moves with $v(t) = ${speed}t$. Find the distance traveled from $t=0$ to $t=${time}$.`
+      : `A rectangle has perimeter 20. Express area as a function of width $w$ and find $w$ that maximizes area.`;
   const answer =
     index % 2 === 0
       ? `${0.5 * speed * time ** 2}`
@@ -161,7 +161,7 @@ const applicationProblems = range(20).map((index) => {
     hint: "Integrate velocity or use symmetry for max area.",
     explanation:
       index % 2 === 0
-        ? "Distance is the integral of velocity: ∫0^t v(t) dt."
+        ? "Distance is the integral of velocity: $\\int_0^t v(t) dt$."
         : "A square maximizes area for fixed perimeter.",
     difficulty: index < 8 ? "easy" : index < 15 ? "medium" : "hard",
   });
@@ -204,8 +204,8 @@ const seriesProblems = range(20).map((index) => {
   const ratio = (index % 5) + 2;
   const prompt =
     index % 2 === 0
-      ? `Determine if the geometric series Σ (1/${ratio})^n converges.`
-      : `Find the sum of Σ (1/${ratio})^n for n=0..∞`;
+      ? `Determine if the geometric series $\\sum \\left(\\frac{1}{${ratio}}\\right)^n$ converges.`
+      : `Find the sum of $\\sum_{n=0}^{\\infty} \\left(\\frac{1}{${ratio}}\\right)^n$`;
   const answer = index % 2 === 0 ? "converges" : `${ratio / (ratio - 1)}`;
   return makeProblem({
     id,
@@ -217,11 +217,11 @@ const seriesProblems = range(20).map((index) => {
       index % 2 === 0
         ? ["converges", "diverges"]
         : undefined,
-    hint: "Geometric series converges when |r| < 1.",
+    hint: "Geometric series converges when $|r| < 1$.",
     explanation:
       index % 2 === 0
-        ? "Common ratio is 1/ratio, which is < 1."
-        : "Sum is 1/(1-r).",
+        ? "Common ratio is $1/${ratio}$, which is $< 1$."
+        : "Sum is $\\frac{1}{1-r}$.",
     difficulty: index < 8 ? "easy" : index < 15 ? "medium" : "hard",
   });
 });
@@ -231,8 +231,8 @@ const differentialEquationProblems = range(20).map((index) => {
   const k = index + 1;
   const prompt =
     index % 2 === 0
-      ? `Solve dy/dx = ${k}y`
-      : `Solve dy/dx = ${k}x`;
+      ? `Solve $\\frac{dy}{dx} = ${k}y$`
+      : `Solve $\\frac{dy}{dx} = ${k}x$`;
   const answer = index % 2 === 0 ? `y=Ce^${k}x` : `y=${k}/2 x^2 + C`;
   return makeProblem({
     id,
@@ -243,8 +243,8 @@ const differentialEquationProblems = range(20).map((index) => {
     hint: "Separate variables or integrate directly.",
     explanation:
       index % 2 === 0
-        ? "Separate variables: dy/y = k dx, integrate."
-        : "Integrate kx with respect to x.",
+        ? "Separate variables: $\\frac{dy}{y} = ${k} dx$, integrate."
+        : "Integrate $${k}x$ with respect to $x$.",
     difficulty: index < 8 ? "easy" : index < 15 ? "medium" : "hard",
   });
 });
