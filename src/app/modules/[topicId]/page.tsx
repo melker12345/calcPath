@@ -33,138 +33,138 @@ export default function ModulePage() {
         <Link className="text-base font-medium text-emerald-600" href="/modules">
           ← Back to modules
         </Link>
-        <h1 className="text-4xl font-semibold">{module.title}</h1>
-        <p className="text-base text-zinc-500">{topic.description}</p>
+        <h1 className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-4xl font-bold text-transparent dark:from-blue-400 dark:to-purple-400">
+          {module.title}
+        </h1>
+        <p className="text-lg text-zinc-600 dark:text-zinc-400">{topic.description}</p>
       </div>
 
-      <section className="space-y-4 rounded-3xl border border-blue-100 bg-gradient-to-br from-white to-blue-50/30 p-8 shadow-lg dark:border-blue-900/30 dark:from-zinc-900 dark:to-blue-950/20">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 text-xl text-white shadow-md">
-            📚
-          </div>
-          <h2 className="text-2xl font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-purple-400">Explanation</h2>
-        </div>
-        <div>
-          {module.intro.map((paragraph) => (
+      {/* Main Textbook Content Card */}
+      <article className="rounded-3xl border border-zinc-200 bg-white p-10 shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
+        {/* Introduction */}
+        <div className="mb-12 space-y-4">
+          {module.intro.map((paragraph, idx) => (
             <p
               key={paragraph}
-              className="text-base text-zinc-600 dark:text-zinc-300"
+              className={`text-lg leading-relaxed text-zinc-700 dark:text-zinc-200 ${
+                idx === 0 ? "text-xl font-medium" : ""
+              }`}
             >
               <MathText text={paragraph} />
             </p>
           ))}
         </div>
-        <div className="mt-6 space-y-4">
-          {module.sections.map((section) => (
-            <div
-              key={section.title}
-              className="space-y-3 rounded-2xl border border-purple-100 bg-gradient-to-br from-white via-purple-50/20 to-blue-50/20 p-6 shadow-md transition hover:shadow-lg dark:border-purple-900/30 dark:from-zinc-900 dark:via-purple-950/10 dark:to-blue-950/10"
-            >
-              <h3 className="text-xl font-semibold text-purple-900 dark:text-purple-100">{section.title}</h3>
-              {section.body.every((text) => text.trim().startsWith("-")) ? (
-                <ul className="list-disc space-y-2 pl-5 text-base text-zinc-600 dark:text-zinc-300">
-                  {section.body.map((text) => (
-                    <li key={text}>
-                      <MathText text={text.replace(/^-\s*/, "")} />
+
+        {/* Core Content Sections */}
+        <div className="space-y-10">
+          {module.sections.map((section, idx) => (
+            <div key={section.title}>
+              {idx > 0 && <hr className="mb-10 border-t-2 border-zinc-200 dark:border-zinc-700" />}
+              <div>
+                <h2 className="mb-4 text-2xl font-bold text-zinc-900 dark:text-white">
+                  {section.title}
+                </h2>
+                {section.body.every((text) => text.trim().startsWith("-")) ? (
+                  <ul className="ml-6 space-y-3 text-lg leading-relaxed text-zinc-700 dark:text-zinc-200">
+                    {section.body.map((text) => (
+                      <li key={text} className="list-disc">
+                        <MathText text={text.replace(/^-\s*/, "")} />
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="space-y-4">
+                    {section.body.map((text) => (
+                      <p
+                        key={text}
+                        className="text-lg leading-relaxed text-zinc-700 dark:text-zinc-200"
+                      >
+                        <MathText text={text} />
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Worked Examples */}
+        <hr className="my-12 border-t-2 border-zinc-200 dark:border-zinc-700" />
+        <div>
+          <h2 className="mb-6 text-2xl font-bold text-zinc-900 dark:text-white">
+            Worked Examples
+          </h2>
+          <div className="space-y-8">
+            {module.examples.map((example, idx) => (
+              <div key={example.title} className="rounded-xl bg-blue-50/50 p-6 dark:bg-blue-950/20">
+                <h3 className="mb-3 text-xl font-semibold text-blue-900 dark:text-blue-100">
+                  Example {idx + 1}: {example.title}
+                </h3>
+                <ol className="space-y-3 pl-6 text-lg text-zinc-700 dark:text-zinc-200">
+                  {example.steps.map((step) => (
+                    <li key={step} className="list-decimal">
+                      <MathText text={step} />
                     </li>
                   ))}
-                </ul>
-              ) : (
-                <div>
-                  {section.body.map((text) => (
-                    <p
-                      key={text}
-                      className="text-base text-zinc-600 dark:text-zinc-300"
-                    >
-                      <MathText text={text} />
-                    </p>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="mt-8 space-y-4 rounded-3xl border border-emerald-100 bg-gradient-to-br from-white to-emerald-50/30 p-8 shadow-lg dark:border-emerald-900/30 dark:from-zinc-900 dark:to-emerald-950/20">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-blue-500 text-xl text-white shadow-md">
-            ✏️
+                </ol>
+              </div>
+            ))}
           </div>
-          <h2 className="text-2xl font-semibold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent dark:from-emerald-400 dark:to-blue-400">Worked examples</h2>
         </div>
-        <div className="space-y-4">
-          {module.examples.map((example) => (
-            <div
-              key={example.title}
-              className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-white to-emerald-50/50 p-5 text-base shadow-sm transition hover:shadow-md dark:border-emerald-900/30 dark:from-zinc-900 dark:to-emerald-950/20"
-            >
-              <h3 className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">{example.title}</h3>
-              <ol className="mt-3 list-decimal space-y-2 pl-4 text-zinc-600 dark:text-zinc-300">
-                {example.steps.map((step) => (
-                  <li key={step}>
-                    <MathText text={step} />
-                  </li>
-                ))}
-              </ol>
-            </div>
-          ))}
-        </div>
-      </section>
 
-      <section className="mt-8 space-y-4 rounded-3xl border border-red-100 bg-gradient-to-br from-white to-red-50/30 p-8 shadow-lg dark:border-red-900/30 dark:from-zinc-900 dark:to-red-950/20">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-orange-500 text-xl text-white shadow-md">
-            ⚠️
+        {/* Common Mistakes */}
+        <hr className="my-12 border-t-2 border-zinc-200 dark:border-zinc-700" />
+        <div>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100 text-lg dark:bg-red-900/30">
+              ⚠️
+            </div>
+            <h2 className="text-2xl font-bold text-red-900 dark:text-red-100">
+              Common Mistakes to Avoid
+            </h2>
           </div>
-          <h2 className="text-2xl font-semibold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent dark:from-red-400 dark:to-orange-400">Common mistakes</h2>
+          <ul className="ml-6 space-y-3 text-lg leading-relaxed text-zinc-700 dark:text-zinc-200">
+            {module.commonMistakes.map((mistake) => (
+              <li key={mistake} className="list-disc">
+                <MathText text={mistake} />
+              </li>
+            ))}
+          </ul>
         </div>
-        <ul className="list-disc space-y-2 pl-5 text-base text-zinc-600 dark:text-zinc-300">
-          {module.commonMistakes.map((mistake) => (
-            <li key={mistake}>
-              <MathText text={mistake} />
-            </li>
-          ))}
-        </ul>
-      </section>
+      </article>
 
-      <section className="mt-8 space-y-4 rounded-3xl border border-blue-100 bg-gradient-to-br from-white to-blue-50/30 p-8 shadow-lg dark:border-blue-900/30 dark:from-zinc-900 dark:to-blue-950/20">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 text-xl text-white shadow-md">
-              🎯
-            </div>
-            <div>
-              <h2 className="text-2xl font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-indigo-400">Practice questions</h2>
-              <p className="text-base text-zinc-500">
-                Start with these {moduleProblems.length} problems to reinforce the
-                lesson.
-              </p>
-            </div>
-          </div>
-          <Link
-            className="rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 font-semibold text-white shadow-lg transition hover:shadow-xl hover:scale-105"
-            href={`/practice/${topic.id}`}
-          >
-            Open practice →
-          </Link>
+      {/* Practice CTA Section */}
+      <section className="mt-8 rounded-3xl bg-gradient-to-r from-blue-600 to-purple-600 p-10 text-center shadow-2xl">
+        <div className="mb-6">
+          <h2 className="mb-3 text-3xl font-bold text-white">
+            Ready to practice?
+          </h2>
+          <p className="text-xl text-blue-50">
+            Test your understanding with {moduleProblems.length} problems on {topic.title.toLowerCase()}.
+          </p>
         </div>
-        <div className="space-y-3">
-          {moduleProblems.slice(0, 6).map((problem, index) => (
+        <Link
+          className="inline-block rounded-full bg-white px-8 py-4 text-lg font-semibold text-blue-600 shadow-lg transition hover:scale-105"
+          href={`/practice/${topic.id}`}
+        >
+          Start practice session →
+        </Link>
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          {moduleProblems.slice(0, 3).map((problem, index) => (
             <div
               key={problem.id}
-              className="rounded-xl border border-blue-200 bg-gradient-to-r from-white to-blue-50/50 px-5 py-4 text-base shadow-sm transition hover:shadow-md dark:border-blue-900/30 dark:from-zinc-900 dark:to-blue-950/20"
+              className="rounded-xl border border-white/30 bg-white/10 p-4 text-left backdrop-blur"
             >
-              <p className="text-xs text-zinc-500">Question {index + 1}</p>
-              <p className="font-medium">
+              <p className="mb-2 text-xs font-semibold text-blue-100">
+                Sample Question {index + 1}
+              </p>
+              <p className="text-sm text-white">
                 <MathText text={problem.prompt} />
               </p>
             </div>
           ))}
         </div>
-        <p className="text-sm text-zinc-500">
-          Full practice is available in the practice section.
-        </p>
       </section>
     </div>
   );
