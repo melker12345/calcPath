@@ -58,6 +58,14 @@ export const modules: ModuleContent[] = [
           "If the highest powers cancel, you may get a horizontal asymptote. If they don't, the function may grow without bound.",
         ],
       },
+      {
+        title: "L'Hôpital's Rule",
+        body: [
+          "When you get $0/0$ or $\\infty/\\infty$, you can use L'Hôpital's Rule: $\\lim_{x\\to a} \\frac{f(x)}{g(x)} = \\lim_{x\\to a} \\frac{f'(x)}{g'(x)}$.",
+          "Differentiate the numerator and denominator separately, then evaluate the limit again.",
+          "You may need to apply L'Hôpital's Rule multiple times if the result is still indeterminate.",
+        ],
+      },
     ],
     examples: [
       {
@@ -82,6 +90,14 @@ export const modules: ModuleContent[] = [
           "Compute $\\lim_{x\\to \\infty} (2x^2+3x+1)/(x^2-4)$.",
           "Divide by $x^2$: $\\frac{2+3/x+1/x^2}{1-4/x^2}$.",
           "As $x\\to \\infty$, the limit is $2$.",
+        ],
+      },
+      {
+        title: "L'Hôpital's Rule",
+        steps: [
+          "Compute $\\lim_{x\\to 0} \\frac{e^x - 1}{x}$.",
+          "Direct substitution gives $0/0$.",
+          "Apply L'Hôpital: $\\lim_{x\\to 0} \\frac{e^x}{1} = 1$.",
         ],
       },
     ],
@@ -132,6 +148,14 @@ export const modules: ModuleContent[] = [
           "Linearization gives a fast approximation: $f(a+\\Delta x) \\approx f(a)+f'(a)\\Delta x$.",
         ],
       },
+      {
+        title: "Implicit differentiation",
+        body: [
+          "When $y$ is defined implicitly by an equation (like $x^2+y^2=1$), differentiate both sides with respect to $x$.",
+          "Remember to use the chain rule on $y$ terms: $\\frac{d}{dx}y^n = ny^{n-1}\\frac{dy}{dx}$.",
+          "Solve for $\\frac{dy}{dx}$ after differentiating.",
+        ],
+      },
     ],
     examples: [
       {
@@ -156,6 +180,14 @@ export const modules: ModuleContent[] = [
           "Differentiate $f(x)=\\frac{x^2+1}{x}$.",
           "Use $(u/v)' = (u'v-uv')/v^2$ with $u=x^2+1$, $v=x$.",
           "Result: $\\frac{2x\\cdot x-(x^2+1)\\cdot 1}{x^2} = \\frac{x^2-1}{x^2}$.",
+        ],
+      },
+      {
+        title: "Implicit differentiation",
+        steps: [
+          "Find $\\frac{dy}{dx}$ for $x^2+y^2=25$.",
+          "Differentiate both sides: $2x + 2y\\frac{dy}{dx} = 0$.",
+          "Solve: $\\frac{dy}{dx} = -\\frac{x}{y}$.",
         ],
       },
     ],
@@ -297,6 +329,15 @@ export const modules: ModuleContent[] = [
           "Evaluate from 0 to 2: $8 - 0 = 8$.",
         ],
       },
+      {
+        title: "Integration by parts",
+        steps: [
+          "Compute $\\int x e^x dx$.",
+          "Use $\\int u\\,dv = uv - \\int v\\,du$ with $u=x$, $dv=e^x dx$.",
+          "Then $du=dx$ and $v=e^x$.",
+          "Result: $xe^x - \\int e^x dx = xe^x - e^x + C = e^x(x-1) + C$.",
+        ],
+      },
     ],
     commonMistakes: [
       "Forgetting $+C$ on indefinite integrals.",
@@ -386,7 +427,7 @@ export const modules: ModuleContent[] = [
     intro: [
       "Sequences are ordered lists of numbers; series are sums of sequences.",
       "The big question: does the sum converge to a finite value or diverge?",
-      "Series are essential for approximations and understanding infinite processes.",
+      "Series unlock infinite processes, approximations like $e^x \\approx 1+x+x^2/2+...$, and power series that act like polynomials.",
     ],
     sections: [
       {
@@ -394,6 +435,7 @@ export const modules: ModuleContent[] = [
         body: [
           "A sequence $a_n$ converges if $\\lim_{n\\to\\infty} a_n$ exists and is finite.",
           "If $a_n$ does not settle to a finite value, the sequence diverges.",
+          "Example: $a_n = 1/n$ converges to $0$, but $a_n = n$ diverges to infinity.",
         ],
       },
       {
@@ -401,21 +443,61 @@ export const modules: ModuleContent[] = [
         body: [
           "A geometric series has the form $\\sum_{n=0}^{\\infty} ar^n$.",
           "It converges when $|r|<1$ and sums to $\\frac{a}{1-r}$.",
+          "This is the foundation for many convergence tests and real-world models like compound interest.",
         ],
       },
       {
-        title: "Common tests",
+        title: "Divergence test",
         body: [
-          "Divergence test: if $\\lim_{n\\to\\infty} a_n \\neq 0$, the series diverges.",
-          "Comparison test: compare to a known convergent or divergent series.",
-          "Ratio test: if $\\lim |a_{n+1}/a_n| < 1$, the series converges.",
+          "If $\\lim_{n\\to\\infty} a_n \\neq 0$, the series diverges.",
+          "This is a necessary condition but not sufficient. If the limit is $0$, the series might converge or diverge.",
+        ],
+      },
+      {
+        title: "Comparison and limit comparison tests",
+        body: [
+          "If $0 \\leq a_n \\leq b_n$ and $\\sum b_n$ converges, then $\\sum a_n$ converges.",
+          "If $0 \\leq b_n \\leq a_n$ and $\\sum b_n$ diverges, then $\\sum a_n$ diverges.",
+          "Limit comparison: if $\\lim_{n\\to\\infty} a_n/b_n$ is positive and finite, both series behave the same way.",
+        ],
+      },
+      {
+        title: "Ratio and root tests",
+        body: [
+          "Ratio test: compute $L = \\lim_{n\\to\\infty} |a_{n+1}/a_n|$. If $L<1$, converges; if $L>1$, diverges; if $L=1$, inconclusive.",
+          "Root test: compute $L = \\lim_{n\\to\\infty} \\sqrt[n]{|a_n|}$. Same rules as ratio test.",
+          "These are powerful for series with factorials or exponentials.",
+        ],
+      },
+      {
+        title: "Alternating series test",
+        body: [
+          "For series $\\sum (-1)^n a_n$ where $a_n > 0$, if $a_n$ decreases and $\\lim a_n = 0$, the series converges.",
+          "Example: $\\sum (-1)^n / n$ converges (alternating harmonic series).",
+        ],
+      },
+      {
+        title: "p-series",
+        body: [
+          "A p-series has the form $\\sum 1/n^p$.",
+          "It converges when $p>1$ and diverges when $p\\leq 1$.",
+          "Example: $\\sum 1/n^2$ converges, but $\\sum 1/n$ (harmonic series) diverges.",
         ],
       },
       {
         title: "Power series",
         body: [
           "Power series look like $\\sum c_n (x-a)^n$ and converge within a radius $R$.",
-          "Inside the radius of convergence, power series behave like polynomials.",
+          "Use the ratio test to find $R$: $1/R = \\lim |c_{n+1}/c_n|$.",
+          "Inside the radius of convergence, power series behave like polynomials and can be differentiated/integrated term-by-term.",
+        ],
+      },
+      {
+        title: "Taylor and Maclaurin series",
+        body: [
+          "A Taylor series represents a function as $f(x) = \\sum_{n=0}^{\\infty} \\frac{f^{(n)}(a)}{n!}(x-a)^n$.",
+          "A Maclaurin series is a Taylor series centered at $a=0$.",
+          "Common series: $e^x = \\sum x^n/n!$, $\\sin x = \\sum (-1)^n x^{2n+1}/(2n+1)!$, $\\cos x = \\sum (-1)^n x^{2n}/(2n)!$.",
         ],
       },
     ],
@@ -432,15 +514,32 @@ export const modules: ModuleContent[] = [
         title: "Ratio test",
         steps: [
           "Test $\\sum \\frac{n!}{3^n}$.",
-          "Compute $\\left|\\frac{a_{n+1}}{a_n}\\right| = \\frac{n+1}{3}$.",
-          "Limit diverges to $\\infty$, so the series diverges.",
+          "Compute $\\left|\\frac{a_{n+1}}{a_n}\\right| = \\frac{(n+1)!}{3^{n+1}} \\cdot \\frac{3^n}{n!} = \\frac{n+1}{3}$.",
+          "Limit is $\\infty > 1$, so the series diverges.",
+        ],
+      },
+      {
+        title: "Alternating series",
+        steps: [
+          "Test $\\sum (-1)^n / n$.",
+          "$a_n = 1/n$ is decreasing and $\\lim a_n = 0$.",
+          "By the alternating series test, the series converges.",
+        ],
+      },
+      {
+        title: "Taylor series",
+        steps: [
+          "Find the Maclaurin series for $e^x$.",
+          "Compute derivatives: $f^{(n)}(0) = 1$ for all $n$.",
+          "Series is $e^x = \\sum_{n=0}^{\\infty} x^n/n!$.",
         ],
       },
     ],
     commonMistakes: [
       "Forgetting that a necessary condition for convergence is $a_n\\to 0$.",
-      "Applying the ratio test to series where a simpler comparison would work.",
-      "Ignoring endpoint checks for power series.",
+      "Applying the ratio test when it gives $L=1$ (inconclusive).",
+      "Ignoring endpoint checks for power series intervals.",
+      "Confusing absolute convergence with conditional convergence.",
     ],
   },
   {
@@ -449,7 +548,7 @@ export const modules: ModuleContent[] = [
     intro: [
       "Differential equations connect a function to its derivatives.",
       "They model growth, decay, motion, and systems that evolve over time.",
-      "The simplest class you will master first is separable equations.",
+      "The simplest class you will master first is separable equations, then move to linear first-order equations.",
     ],
     sections: [
       {
@@ -457,13 +556,31 @@ export const modules: ModuleContent[] = [
         body: [
           "If $\\frac{dy}{dx} = g(x)h(y)$, you can separate variables: $\\frac{1}{h(y)}dy = g(x)dx$.",
           "Integrate both sides to solve for $y$.",
+          "Don't forget to add the constant of integration and apply initial conditions.",
         ],
       },
       {
         title: "Exponential growth and decay",
         body: [
           "Model: $\\frac{dy}{dx} = ky$ has solution $y=Ce^{kx}$.",
-          "If $k>0$, growth; if $k<0$, decay.",
+          "If $k>0$, exponential growth; if $k<0$, exponential decay.",
+          "Applications: population growth, radioactive decay, compound interest.",
+        ],
+      },
+      {
+        title: "Linear first-order equations",
+        body: [
+          "Form: $\\frac{dy}{dx} + P(x)y = Q(x)$.",
+          "Multiply by integrating factor $\\mu(x) = e^{\\int P(x)dx}$ to make the left side a derivative.",
+          "Then integrate: $y = \\frac{1}{\\mu(x)} \\int \\mu(x)Q(x)dx$.",
+        ],
+      },
+      {
+        title: "Second-order linear equations",
+        body: [
+          "Form: $ay'' + by' + cy = 0$ (homogeneous).",
+          "Characteristic equation: $ar^2 + br + c = 0$.",
+          "Solutions depend on roots: real distinct, repeated, or complex.",
         ],
       },
       {
@@ -471,6 +588,7 @@ export const modules: ModuleContent[] = [
         body: [
           "An initial value like $y(0)=y_0$ determines the constant $C$.",
           "Plug in the initial condition to solve for $C$.",
+          "For second-order equations, you need two initial conditions (e.g., $y(0)$ and $y'(0)$).",
         ],
       },
     ],
@@ -491,11 +609,29 @@ export const modules: ModuleContent[] = [
           "Plug in: $5=C$, so $y=5e^{2x}$.",
         ],
       },
+      {
+        title: "Linear first-order",
+        steps: [
+          "Solve $\\frac{dy}{dx} + 2y = 4$.",
+          "Integrating factor: $\\mu = e^{\\int 2dx} = e^{2x}$.",
+          "Multiply: $e^{2x}y' + 2e^{2x}y = 4e^{2x}$, then $(e^{2x}y)' = 4e^{2x}$.",
+          "Integrate: $e^{2x}y = 2e^{2x} + C$, so $y = 2 + Ce^{-2x}$.",
+        ],
+      },
+      {
+        title: "Second-order with real roots",
+        steps: [
+          "Solve $y'' - 5y' + 6y = 0$.",
+          "Characteristic equation: $r^2 - 5r + 6 = 0$, roots $r=2,3$.",
+          "General solution: $y = C_1e^{2x} + C_2e^{3x}$.",
+        ],
+      },
     ],
     commonMistakes: [
       "Forgetting the constant of integration.",
       "Not separating variables completely before integrating.",
       "Solving for $C$ incorrectly when an initial value is given.",
+      "Forgetting to multiply the entire equation by the integrating factor.",
     ],
   },
 ];
