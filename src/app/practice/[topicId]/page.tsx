@@ -74,7 +74,7 @@ export default function PracticeTopicPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200/50 bg-white/80 p-6 shadow-sm backdrop-blur-xl dark:border-zinc-800/50 dark:bg-zinc-900/80">
+      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <div className="text-sm text-zinc-500">
           Problem {index + 1} of {topicProblems.length}
         </div>
@@ -110,7 +110,7 @@ export default function PracticeTopicPage() {
         )}
 
         {feedback && (
-          <div className="mt-4 rounded-lg border border-zinc-200/50 bg-zinc-50/50 p-3 text-sm backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50">
+          <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-950">
             <p>{feedback}</p>
             <p className="mt-2 text-xs text-zinc-500">
               <MathText text={current.explanation} />
