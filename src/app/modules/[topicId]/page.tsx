@@ -37,8 +37,13 @@ export default function ModulePage() {
         <p className="text-base text-zinc-500">{topic.description}</p>
       </div>
 
-      <section className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-2xl font-semibold">Explanation</h2>
+      <section className="space-y-4 rounded-3xl border border-blue-100 bg-gradient-to-br from-white to-blue-50/30 p-8 shadow-lg dark:border-blue-900/30 dark:from-zinc-900 dark:to-blue-950/20">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 text-xl text-white shadow-md">
+            📚
+          </div>
+          <h2 className="text-2xl font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-purple-400">Explanation</h2>
+        </div>
         <div>
           {module.intro.map((paragraph) => (
             <p
@@ -53,9 +58,9 @@ export default function ModulePage() {
           {module.sections.map((section) => (
             <div
               key={section.title}
-              className="space-y-3 rounded-xl border border-zinc-200 bg-gradient-to-br from-white to-zinc-50 p-5 shadow-sm dark:border-zinc-800 dark:from-zinc-950 dark:to-zinc-900"
+              className="space-y-3 rounded-2xl border border-purple-100 bg-gradient-to-br from-white via-purple-50/20 to-blue-50/20 p-6 shadow-md transition hover:shadow-lg dark:border-purple-900/30 dark:from-zinc-900 dark:via-purple-950/10 dark:to-blue-950/10"
             >
-              <h3 className="text-xl font-semibold">{section.title}</h3>
+              <h3 className="text-xl font-semibold text-purple-900 dark:text-purple-100">{section.title}</h3>
               {section.body.every((text) => text.trim().startsWith("-")) ? (
                 <ul className="list-disc space-y-2 pl-5 text-base text-zinc-600 dark:text-zinc-300">
                   {section.body.map((text) => (
@@ -81,15 +86,20 @@ export default function ModulePage() {
         </div>
       </section>
 
-      <section className="mt-8 space-y-4 rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-2xl font-semibold">Worked examples</h2>
+      <section className="mt-8 space-y-4 rounded-3xl border border-emerald-100 bg-gradient-to-br from-white to-emerald-50/30 p-8 shadow-lg dark:border-emerald-900/30 dark:from-zinc-900 dark:to-emerald-950/20">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-blue-500 text-xl text-white shadow-md">
+            ✏️
+          </div>
+          <h2 className="text-2xl font-semibold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent dark:from-emerald-400 dark:to-blue-400">Worked examples</h2>
+        </div>
         <div className="space-y-4">
           {module.examples.map((example) => (
             <div
               key={example.title}
-              className="rounded-xl border border-zinc-200 p-5 text-base dark:border-zinc-800"
+              className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-white to-emerald-50/50 p-5 text-base shadow-sm transition hover:shadow-md dark:border-emerald-900/30 dark:from-zinc-900 dark:to-emerald-950/20"
             >
-              <h3 className="text-lg font-semibold">{example.title}</h3>
+              <h3 className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">{example.title}</h3>
               <ol className="mt-3 list-decimal space-y-2 pl-4 text-zinc-600 dark:text-zinc-300">
                 {example.steps.map((step) => (
                   <li key={step}>
@@ -102,8 +112,13 @@ export default function ModulePage() {
         </div>
       </section>
 
-      <section className="mt-8 space-y-4 rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-2xl font-semibold">Common mistakes</h2>
+      <section className="mt-8 space-y-4 rounded-3xl border border-red-100 bg-gradient-to-br from-white to-red-50/30 p-8 shadow-lg dark:border-red-900/30 dark:from-zinc-900 dark:to-red-950/20">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-orange-500 text-xl text-white shadow-md">
+            ⚠️
+          </div>
+          <h2 className="text-2xl font-semibold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent dark:from-red-400 dark:to-orange-400">Common mistakes</h2>
+        </div>
         <ul className="list-disc space-y-2 pl-5 text-base text-zinc-600 dark:text-zinc-300">
           {module.commonMistakes.map((mistake) => (
             <li key={mistake}>
@@ -113,24 +128,32 @@ export default function ModulePage() {
         </ul>
       </section>
 
-      <section className="mt-8 space-y-4 rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="mt-8 space-y-4 rounded-3xl border border-blue-100 bg-gradient-to-br from-white to-blue-50/30 p-8 shadow-lg dark:border-blue-900/30 dark:from-zinc-900 dark:to-blue-950/20">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-semibold">Practice questions</h2>
-            <p className="text-base text-zinc-500">
-              Start with these {moduleProblems.length} problems to reinforce the
-              lesson.
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 text-xl text-white shadow-md">
+              🎯
+            </div>
+            <div>
+              <h2 className="text-2xl font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-indigo-400">Practice questions</h2>
+              <p className="text-base text-zinc-500">
+                Start with these {moduleProblems.length} problems to reinforce the
+                lesson.
+              </p>
+            </div>
           </div>
-          <Link className="btn-primary" href={`/practice/${topic.id}`}>
-            Open practice
+          <Link
+            className="rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 font-semibold text-white shadow-lg transition hover:shadow-xl hover:scale-105"
+            href={`/practice/${topic.id}`}
+          >
+            Open practice →
           </Link>
         </div>
         <div className="space-y-3">
           {moduleProblems.slice(0, 6).map((problem, index) => (
             <div
               key={problem.id}
-              className="rounded-lg border border-zinc-200 px-4 py-3 text-base dark:border-zinc-800"
+              className="rounded-xl border border-blue-200 bg-gradient-to-r from-white to-blue-50/50 px-5 py-4 text-base shadow-sm transition hover:shadow-md dark:border-blue-900/30 dark:from-zinc-900 dark:to-blue-950/20"
             >
               <p className="text-xs text-zinc-500">Question {index + 1}</p>
               <p className="font-medium">

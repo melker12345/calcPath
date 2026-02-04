@@ -19,10 +19,10 @@ export const SiteHeader = () => {
   const [email, setEmail] = useState("");
 
   return (
-    <header className="border-b border-zinc-200 bg-white/70 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/70">
+    <header className="sticky top-0 z-50 border-b border-blue-100 bg-white/80 backdrop-blur-xl dark:border-blue-900/30 dark:bg-zinc-950/80">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
-        <Link href="/" className="text-lg font-semibold tracking-tight">
-          CalcPath
+        <Link href="/" className="flex items-center gap-2 text-xl font-bold">
+          <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-purple-400">CalcPath</span>
         </Link>
         <nav className="flex flex-wrap items-center gap-4 text-sm text-zinc-600 dark:text-zinc-300">
           {navLinks.map((link) => (
@@ -50,7 +50,7 @@ export const SiteHeader = () => {
               <button
                 type="button"
                 onClick={signOut}
-                className="rounded-full bg-zinc-900 px-3 py-1 text-sm text-white"
+                className="rounded-full bg-gradient-to-r from-red-500 to-red-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:shadow-lg"
               >
                 Sign out
               </button>
@@ -72,7 +72,7 @@ export const SiteHeader = () => {
               />
               <button
                 type="submit"
-                className="rounded-full bg-zinc-900 px-3 py-1 text-sm text-white"
+                className="rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:shadow-lg"
               >
                 Start free
               </button>
