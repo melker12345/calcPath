@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
 import { MathInput } from "@/components/math-input";
 import { problems, topics } from "@/lib/content";
-import { isAnswerCorrect } from "@/lib/answer-check";
+import { isAnswerCorrectAsync } from "@/lib/answer-check";
 import { useProgress } from "@/components/progress-provider";
 import { trackEvent } from "@/lib/analytics";
 
@@ -176,10 +176,10 @@ export default function TopicTestPage() {
     );
   }
 
-  const submit = (overrideAnswer?: string) => {
+  const submit = async (overrideAnswer?: string) => {
     if (!current) return;
     const answer = (overrideAnswer ?? currentAnswer).trim();
-    const correct = isAnswerCorrect(answer, current.answer);
+    const correct = await isAnswerCorrectAsync(answer, current.answer);
     const nextResult: Result = {
       problemId: current.id,
       prompt: current.prompt,

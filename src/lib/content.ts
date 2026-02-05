@@ -113,12 +113,12 @@ const derivativeProblems = range(20).map((index) => {
           : `Find $\\frac{d}{dx}\\left(\\sin(${index + 1}x)\\right)$`;
   const answer =
     index % 4 === 0
-      ? `${coefficient * power}x^${power - 1}`
+      ? `${coefficient * power}*x^${power - 1}`
       : index % 4 === 1
-        ? `${index + 1}e^${index + 1}x`
+        ? `${index + 1}*e^(${index + 1}*x)`
         : index % 4 === 2
           ? `${power}/x`
-          : `${index + 1}cos(${index + 1}x)`;
+          : `${index + 1}*cos(${index + 1}*x)`;
   return makeProblem({
     id,
     topicId: "derivatives",
@@ -174,10 +174,10 @@ const integralProblems = range(20).map((index) => {
         : `Compute $\\int \\cos(${power}x) dx$`;
   const answer =
     index % 3 === 0
-      ? `x^${power + 1}/${power + 1} + C`
+      ? `x^${power + 1}/(${power + 1}) + C`
       : index % 3 === 1
-        ? `e^${power}x + C`
-        : `sin(${power}x)/${power} + C`;
+        ? `e^(${power}*x) + C`
+        : `sin(${power}*x)/${power} + C`;
   return makeProblem({
     id,
     topicId: "integrals",

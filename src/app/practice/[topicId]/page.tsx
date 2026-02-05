@@ -8,7 +8,7 @@ import { MathInput } from "@/components/math-input";
 import { useProgress } from "@/components/progress-provider";
 import { problems, topics } from "@/lib/content";
 import { trackEvent } from "@/lib/analytics";
-import { isAnswerCorrect } from "@/lib/answer-check";
+import { isAnswerCorrectAsync } from "@/lib/answer-check";
 
 export default function PracticeTopicPage() {
   const params = useParams<{ topicId: string }>();
@@ -50,9 +50,9 @@ export default function PracticeTopicPage() {
 
   const current = topicProblems[index];
 
-  const submitAnswer = (value: string) => {
+  const submitAnswer = async (value: string) => {
     if (!current) return;
-    const isCorrect = isAnswerCorrect(value, current.answer);
+    const isCorrect = await isAnswerCorrectAsync(value, current.answer);
 
     addAttempt({
       problemId: current.id,
