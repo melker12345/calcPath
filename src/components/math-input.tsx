@@ -1,7 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { addStyles } from "react-mathquill";
+
+let stylesInjected = false;
 
 interface MathInputProps {
   value: string;
@@ -30,6 +33,12 @@ export function MathInput({
   placeholder = "Your answer",
 }: MathInputProps) {
   const mqRef = useRef<MQField | null>(null);
+
+  useEffect(() => {
+    if (stylesInjected) return;
+    addStyles();
+    stylesInjected = true;
+  }, []);
 
   const keys = useMemo(
     () => ({

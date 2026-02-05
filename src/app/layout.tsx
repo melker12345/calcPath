@@ -5,7 +5,6 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 import "katex/dist/katex.min.css";
-import "react-mathquill/lib/mathquill.css";
 
 const inter = Inter({
   variable: "--font-inter",

@@ -257,7 +257,11 @@ export default function TopicTestPage() {
               onChange={setCurrentAnswer}
               onSubmit={submit}
             />
-            <button type="button" className="btn-primary w-full" onClick={submit}>
+            <button
+              type="button"
+              className="btn-primary w-full"
+              onClick={() => submit()}
+            >
               Submit answer
             </button>
           </div>
