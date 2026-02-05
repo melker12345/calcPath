@@ -160,7 +160,7 @@ export default function DashboardPage() {
                   <div className="min-w-0 flex-1 pr-4">
                     <div className="font-medium">{topic.title}</div>
                     <div className="mt-2">
-                      <ProgressBar value={stats.completionRate} />
+                      <ProgressBar value={stats.masteryRate} />
                     </div>
                     <div className="mt-2 text-xs text-zinc-500">
                       {stats.solved}/{totals} attempted · {stats.correct} correct ·{" "}

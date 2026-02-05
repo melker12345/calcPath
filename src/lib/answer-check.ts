@@ -30,6 +30,7 @@ const latexToPlain = (latex: string) => {
 
   // Replace \cdot with *
   s = s.replace(/\\cdot/g, "*");
+  s = s.replace(/\\div/g, "/");
 
   // Replace trig/log constants
   s = s

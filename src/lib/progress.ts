@@ -27,13 +27,58 @@ export const createEmptyProgress = (): ProgressState => ({
   streak: { current: 0, longest: 0 },
 });
 
+const rebuildDerivedFields = (attempts: Attempt[]) => {
+  const attempted = new Set<string>();
+  const completed = new Set<string>();
+  const attemptedByTopic = new Map<string, Set<string>>();
+  const completedByTopic = new Map<string, Set<string>>();
+
+  for (const a of attempts) {
+    attempted.add(a.problemId);
+    if (!attemptedByTopic.has(a.topicId)) attemptedByTopic.set(a.topicId, new Set());
+    attemptedByTopic.get(a.topicId)!.add(a.problemId);
+
+    if (a.correct) {
+      completed.add(a.problemId);
+      if (!completedByTopic.has(a.topicId)) completedByTopic.set(a.topicId, new Set());
+      completedByTopic.get(a.topicId)!.add(a.problemId);
+    }
+  }
+
+  const topicStats: Record<string, { solved: number; correct: number }> = {};
+  for (const [topicId, set] of attemptedByTopic.entries()) {
+    topicStats[topicId] = {
+      solved: set.size,
+      correct: completedByTopic.get(topicId)?.size ?? 0,
+    };
+  }
+
+  return {
+    attemptedProblemIds: Array.from(attempted).slice(0, 5000),
+    completedProblemIds: Array.from(completed).slice(0, 5000),
+    topicStats,
+    streak: calculateStreak(attempts),
+  };
+};
+
 export const normalizeProgressState = (
   input: Partial<ProgressState> | null | undefined,
 ): ProgressState => {
   const empty = createEmptyProgress();
   if (!input) return empty;
+  const attempts = Array.isArray(input.attempts) ? input.attempts : empty.attempts;
+  if (attempts.length > 0) {
+    const derived = rebuildDerivedFields(attempts);
+    return {
+      attempts,
+      attemptedProblemIds: derived.attemptedProblemIds,
+      completedProblemIds: derived.completedProblemIds,
+      topicStats: derived.topicStats,
+      streak: derived.streak,
+    };
+  }
   return {
-    attempts: Array.isArray(input.attempts) ? input.attempts : empty.attempts,
+    attempts,
     attemptedProblemIds: Array.isArray(input.attemptedProblemIds)
       ? input.attemptedProblemIds
       : empty.attemptedProblemIds,
@@ -145,8 +190,10 @@ export const getTopicProgress = (
   const stat = state.topicStats[topicId];
   const solved = stat?.solved ?? 0;
   const correct = stat?.correct ?? 0;
-  const completionRate =
+  const attemptedRate =
     totalProblems === 0 ? 0 : Math.min(100, (solved / totalProblems) * 100);
+  const masteryRate =
+    totalProblems === 0 ? 0 : Math.min(100, (correct / totalProblems) * 100);
   const accuracyRate = solved === 0 ? 0 : Math.round((correct / solved) * 100);
-  return { solved, correct, completionRate, accuracyRate };
+  return { solved, correct, attemptedRate, masteryRate, accuracyRate };
 };

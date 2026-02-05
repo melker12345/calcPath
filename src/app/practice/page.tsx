@@ -52,7 +52,7 @@ export default function PracticePage() {
                 <span>{topic.estimatedMinutes} min</span>
               </div>
               <div className="mt-3">
-                <ProgressBar value={stats.completionRate} label="Completion" />
+                <ProgressBar value={stats.masteryRate} label="Mastery (correct)" />
               </div>
               <div className="mt-4 flex gap-2">
                 <Link className="btn-primary" href={`/practice/${topic.id}`}>

@@ -49,7 +49,7 @@ export function MathInput({
         { label: "7", type: "write" as const, latex: "7" },
         { label: "8", type: "write" as const, latex: "8" },
         { label: "9", type: "write" as const, latex: "9" },
-        { label: "÷", type: "write" as const, latex: "\\div " },
+        { label: "÷", type: "write" as const, latex: "/" },
         { label: "4", type: "write" as const, latex: "4" },
         { label: "5", type: "write" as const, latex: "5" },
         { label: "6", type: "write" as const, latex: "6" },
@@ -137,11 +137,11 @@ export function MathInput({
   return (
     <div className="space-y-3">
       {/* Desmos-style equation field */}
-      <div className="rounded-2xl border-2 border-emerald-500 bg-white px-4 py-3 shadow-sm dark:border-emerald-700 dark:bg-zinc-950">
-        <div className="text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+      <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="text-xs font-medium uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
           {placeholder}
         </div>
-        <div className="mt-2 rounded-xl bg-emerald-50 px-3 py-2 dark:bg-emerald-950/30">
+        <div className="mt-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900">
           <EditableMathField
             latex={value}
             onChange={(field: MQField) => {
@@ -151,7 +151,7 @@ export function MathInput({
             mathquillDidMount={(field: MQField) => {
               mqRef.current = field;
             }}
-            className="min-h-[44px] text-xl text-emerald-950 dark:text-emerald-100"
+            className="min-h-[44px] text-xl text-zinc-900 dark:text-white"
           />
         </div>
       </div>
