@@ -24,15 +24,23 @@ export default function TopicTestPage() {
   const topic = topics.find((t) => t.id === topicId);
   const { addAttempt } = useProgress();
 
-  const testProblems = useMemo(() => {
-    // MVP: take first 20 in this topic as the test.
-    return problems.filter((p) => p.topicId === topicId).slice(0, 20);
-  }, [topicId]);
+  const allTopicProblems = useMemo(
+    () => problems.filter((p) => p.topicId === topicId),
+    [topicId],
+  );
 
   const [idx, setIdx] = useState(0);
   const [currentAnswer, setCurrentAnswer] = useState("");
   const [results, setResults] = useState<Result[]>([]);
   const [startedAt] = useState(() => new Date().toISOString());
+  const [mode, setMode] = useState<"full" | "mistakes">("full");
+  const [testProblemIds, setTestProblemIds] = useState<string[]>([]);
+
+  const testProblems = useMemo(() => {
+    if (testProblemIds.length === 0) return [];
+    const map = new Map(allTopicProblems.map((p) => [p.id, p]));
+    return testProblemIds.map((id) => map.get(id)).filter(Boolean) as typeof allTopicProblems;
+  }, [allTopicProblems, testProblemIds]);
 
   const current = testProblems[idx];
   const done = results.length === testProblems.length && testProblems.length > 0;
@@ -49,7 +57,7 @@ export default function TopicTestPage() {
     );
   }
 
-  if (testProblems.length === 0) {
+  if (allTopicProblems.length === 0) {
     return (
       <div className="mx-auto w-full max-w-3xl px-6 py-12">
         <p className="text-sm text-zinc-500">No test questions available.</p>
@@ -60,7 +68,22 @@ export default function TopicTestPage() {
     );
   }
 
+  // Initialize test ids once per topic.
+  if (testProblemIds.length === 0) {
+    const ids = allTopicProblems.map((p) => p.id);
+    // Shuffle deterministically-ish per load using startedAt.
+    let seed = 0;
+    for (let i = 0; i < startedAt.length; i += 1) seed = (seed * 31 + startedAt.charCodeAt(i)) >>> 0;
+    const rand = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 2 ** 32;
+    };
+    const shuffled = [...ids].sort(() => rand() - 0.5);
+    setTestProblemIds(shuffled.slice(0, Math.min(20, shuffled.length)));
+  }
+
   if (done) {
+    const wrongIds = results.filter((r) => !r.correct).map((r) => r.problemId);
     return (
       <div className="mx-auto w-full max-w-4xl px-6 py-12">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -91,11 +114,33 @@ export default function TopicTestPage() {
                 setIdx(0);
                 setResults([]);
                 setCurrentAnswer("");
+                setMode("full");
+                // new shuffle for retake
+                setTestProblemIds([]);
               }}
             >
               Retake test
             </button>
           </div>
+
+          {wrongIds.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                className="btn-secondary"
+                type="button"
+                onClick={() => {
+                  trackEvent("test_review_mistakes", { topicId, startedAt });
+                  setIdx(0);
+                  setResults([]);
+                  setCurrentAnswer("");
+                  setMode("mistakes");
+                  setTestProblemIds(wrongIds);
+                }}
+              >
+                Review mistakes ({wrongIds.length})
+              </button>
+            </div>
+          )}
 
           <div className="mt-6 space-y-3">
             {results.map((r, i) => (
@@ -131,14 +176,15 @@ export default function TopicTestPage() {
     );
   }
 
-  const submit = () => {
+  const submit = (overrideAnswer?: string) => {
     if (!current) return;
-    const correct = isAnswerCorrect(currentAnswer, current.answer);
+    const answer = (overrideAnswer ?? currentAnswer).trim();
+    const correct = isAnswerCorrect(answer, current.answer);
     const nextResult: Result = {
       problemId: current.id,
       prompt: current.prompt,
       expected: current.answer,
-      answer: currentAnswer,
+      answer,
       correct,
     };
 
@@ -163,7 +209,9 @@ export default function TopicTestPage() {
         <div>
           <h1 className="text-3xl font-semibold">{topic.title} test</h1>
           <p className="text-sm text-zinc-500">
-            One attempt per question. Your score is shown at the end.
+            {mode === "mistakes"
+              ? "Mistake review: re-answer the ones you missed."
+              : "One attempt per question. Your score is shown at the end."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-500">
@@ -193,9 +241,8 @@ export default function TopicTestPage() {
                 key={choice}
                 type="button"
                 onClick={() => {
-                  setCurrentAnswer(choice);
-                  // For MCQ, submit immediately.
-                  setTimeout(() => submit(), 0);
+                  // For MCQ, submit immediately with the clicked choice.
+                  submit(choice);
                 }}
                 className="rounded-lg bg-white px-6 py-4 text-left text-lg font-medium shadow-sm transition hover:bg-emerald-50 hover:shadow-md active:scale-95 dark:bg-zinc-800 dark:hover:bg-emerald-950"
               >
