@@ -84,7 +84,7 @@ export function MathInput({
       tools: [
         { label: "frac", type: "cmd" as const, cmd: "\\frac" },
         { label: "√", type: "cmd" as const, cmd: "\\sqrt" },
-        { label: "x^n", type: "write" as const, latex: "^" },
+        { label: "^", type: "write" as const, latex: "^" },
         { label: "ln", type: "func" as const, latex: "\\ln\\left(\\right)" },
       ],
     }),
@@ -144,6 +144,9 @@ export function MathInput({
         <div className="mt-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900">
           <EditableMathField
             latex={value}
+            config={{
+              spaceBehavesLikeTab: true,
+            }}
             onChange={(field: MQField) => {
               mqRef.current = field;
               onChange(field.latex());

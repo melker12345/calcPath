@@ -105,12 +105,12 @@ const derivativeProblems = range(20).map((index) => {
   const id = `derivatives-${index + 1}`;
   const prompt =
     index % 4 === 0
-      ? `Find $\\frac{d}{dx}$ of $${coefficient}x^${power}$`
+      ? `Find $\\frac{d}{dx}\\left(${coefficient}x^{${power}}\\right)$`
       : index % 4 === 1
-        ? `Find $\\frac{d}{dx}$ of $e^{${index + 1}x}$`
+        ? `Find $\\frac{d}{dx}\\left(e^{${index + 1}x}\\right)$`
         : index % 4 === 2
-          ? `Find $\\frac{d}{dx}$ of $\\ln(x^${power})$`
-          : `Find $\\frac{d}{dx}$ of $\\sin(${index + 1}x)$`;
+          ? `Find $\\frac{d}{dx}\\left(\\ln\\left(x^{${power}}\\right)\\right)$`
+          : `Find $\\frac{d}{dx}\\left(\\sin(${index + 1}x)\\right)$`;
   const answer =
     index % 4 === 0
       ? `${coefficient * power}x^${power - 1}`
@@ -237,7 +237,7 @@ const differentialEquationProblems = range(20).map((index) => {
     explanation:
       index % 2 === 0
         ? "Separate variables: $\\frac{dy}{y} = ${k} dx$, integrate."
-        : "Integrate $${k}x$ with respect to $x$.",
+        : `Integrate $${k}x$ with respect to $x$.`,
     difficulty: index < 8 ? "easy" : index < 15 ? "medium" : "hard",
   });
 });
