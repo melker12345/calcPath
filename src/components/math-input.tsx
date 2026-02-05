@@ -1,5 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import { useMemo, useRef } from "react";
+
 interface MathInputProps {
   value: string;
   onChange: (value: string) => void;
@@ -7,73 +10,222 @@ interface MathInputProps {
   placeholder?: string;
 }
 
+type MQField = {
+  latex: (next?: string) => string;
+  write: (latex: string) => void;
+  cmd: (latexCmd: string) => void;
+  keystroke: (keys: string) => void;
+  focus: () => void;
+};
+
+const EditableMathField = dynamic(
+  () => import("react-mathquill").then((m) => m.EditableMathField),
+  { ssr: false },
+);
+
 export function MathInput({
   value,
   onChange,
   onSubmit,
   placeholder = "Your answer",
 }: MathInputProps) {
-  const handleButtonClick = (val: string) => {
-    onChange(value + val);
+  const mqRef = useRef<MQField | null>(null);
+
+  const keys = useMemo(
+    () => ({
+      numbers: ["7", "8", "9", "4", "5", "6", "1", "2", "3", "0"],
+      ops: [
+        { label: "÷", latex: "\\div " },
+        { label: "×", latex: "\\cdot " },
+        { label: "−", latex: "-" },
+        { label: "+", latex: "+" },
+      ],
+      funcs: [
+        { label: "sin", latex: "\\sin\\left(\\right)" },
+        { label: "cos", latex: "\\cos\\left(\\right)" },
+        { label: "tan", latex: "\\tan\\left(\\right)" },
+        { label: "ln", latex: "\\ln\\left(\\right)" },
+      ],
+      misc: [
+        { label: "x", latex: "x" },
+        { label: "e", latex: "e" },
+        { label: "π", latex: "\\pi" },
+        { label: "(", latex: "\\left(" },
+        { label: ")", latex: "\\right)" },
+        { label: "^", latex: "^" },
+        { label: "√", latex: "\\sqrt{}" },
+        { label: "frac", latex: "\\frac{}{}" },
+        { label: "C", latex: "C" },
+      ],
+    }),
+    [],
+  );
+
+  const write = (latex: string) => {
+    if (mqRef.current) {
+      mqRef.current.write(latex);
+      onChange(mqRef.current.latex());
+      mqRef.current.focus();
+      return;
+    }
+    onChange(value + latex);
   };
 
-  const handleBackspace = () => {
-    onChange(value.slice(0, -1));
+  const cmd = (latexCmd: string) => {
+    if (!mqRef.current) return;
+    mqRef.current.cmd(latexCmd);
+    onChange(mqRef.current.latex());
+    mqRef.current.focus();
   };
 
-  const handleClear = () => {
+  const backspace = () => {
+    if (!mqRef.current) {
+      onChange(value.slice(0, -1));
+      return;
+    }
+    mqRef.current.keystroke("Backspace");
+    onChange(mqRef.current.latex());
+    mqRef.current.focus();
+  };
+
+  const clear = () => {
+    if (mqRef.current) {
+      mqRef.current.latex("");
+      onChange("");
+      mqRef.current.focus();
+      return;
+    }
     onChange("");
   };
 
   return (
     <div className="space-y-3">
-      {/* Answer Display */}
-      <div className="rounded-lg border-2 border-emerald-500 bg-emerald-50 px-4 py-2.5 dark:border-emerald-700 dark:bg-emerald-950/30">
+      {/* Desmos-style equation field */}
+      <div className="rounded-2xl border-2 border-emerald-500 bg-white px-4 py-3 shadow-sm dark:border-emerald-700 dark:bg-zinc-950">
         <div className="text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
           {placeholder}
         </div>
-        <div className="mt-0.5 text-xl font-semibold text-emerald-900 dark:text-emerald-100">
-          {value || "—"}
+        <div className="mt-2 rounded-xl bg-emerald-50 px-3 py-2 dark:bg-emerald-950/30">
+          <EditableMathField
+            latex={value}
+            onChange={(field: MQField) => {
+              mqRef.current = field;
+              onChange(field.latex());
+            }}
+            mathquillDidMount={(field: MQField) => {
+              mqRef.current = field;
+            }}
+            className="min-h-[44px] text-xl text-emerald-950 dark:text-emerald-100"
+          />
         </div>
       </div>
 
       {/* Keypad */}
-      <div className="grid grid-cols-4 gap-2">
-        {/* Row 1: 7, 8, 9, ÷ */}
-        <button onClick={() => handleButtonClick("7")} className="keypad-btn">7</button>
-        <button onClick={() => handleButtonClick("8")} className="keypad-btn">8</button>
-        <button onClick={() => handleButtonClick("9")} className="keypad-btn">9</button>
-        <button onClick={() => handleButtonClick("/")} className="keypad-btn-op">÷</button>
+      <div className="space-y-2">
+        <div className="grid grid-cols-4 gap-2">
+          {keys.funcs.map((k) => (
+            <button
+              key={k.label}
+              type="button"
+              onClick={() => {
+                // write function and place cursor inside parentheses
+                write(k.latex);
+                mqRef.current?.keystroke("Left");
+              }}
+              className="keypad-btn-sec"
+            >
+              {k.label}
+            </button>
+          ))}
+        </div>
 
-        {/* Row 2: 4, 5, 6, × */}
-        <button onClick={() => handleButtonClick("4")} className="keypad-btn">4</button>
-        <button onClick={() => handleButtonClick("5")} className="keypad-btn">5</button>
-        <button onClick={() => handleButtonClick("6")} className="keypad-btn">6</button>
-        <button onClick={() => handleButtonClick("*")} className="keypad-btn-op">×</button>
+        <div className="grid grid-cols-4 gap-2">
+          <button type="button" onClick={() => write("7")} className="keypad-btn">
+            7
+          </button>
+          <button type="button" onClick={() => write("8")} className="keypad-btn">
+            8
+          </button>
+          <button type="button" onClick={() => write("9")} className="keypad-btn">
+            9
+          </button>
+          <button
+            type="button"
+            onClick={() => write("\\div ")}
+            className="keypad-btn-op"
+          >
+            ÷
+          </button>
 
-        {/* Row 3: 1, 2, 3, − */}
-        <button onClick={() => handleButtonClick("1")} className="keypad-btn">1</button>
-        <button onClick={() => handleButtonClick("2")} className="keypad-btn">2</button>
-        <button onClick={() => handleButtonClick("3")} className="keypad-btn">3</button>
-        <button onClick={() => handleButtonClick("-")} className="keypad-btn-op">−</button>
+          <button type="button" onClick={() => write("4")} className="keypad-btn">
+            4
+          </button>
+          <button type="button" onClick={() => write("5")} className="keypad-btn">
+            5
+          </button>
+          <button type="button" onClick={() => write("6")} className="keypad-btn">
+            6
+          </button>
+          <button
+            type="button"
+            onClick={() => write("\\cdot ")}
+            className="keypad-btn-op"
+          >
+            ×
+          </button>
 
-        {/* Row 4: 0, ., C, + */}
-        <button onClick={() => handleButtonClick("0")} className="keypad-btn">0</button>
-        <button onClick={() => handleButtonClick(".")} className="keypad-btn">.</button>
-        <button onClick={handleClear} className="keypad-btn">C</button>
-        <button onClick={() => handleButtonClick("+")} className="keypad-btn-op">+</button>
+          <button type="button" onClick={() => write("1")} className="keypad-btn">
+            1
+          </button>
+          <button type="button" onClick={() => write("2")} className="keypad-btn">
+            2
+          </button>
+          <button type="button" onClick={() => write("3")} className="keypad-btn">
+            3
+          </button>
+          <button type="button" onClick={() => write("-")} className="keypad-btn-op">
+            −
+          </button>
 
-        {/* Row 5: (, ), ^, √ */}
-        <button onClick={() => handleButtonClick("(")} className="keypad-btn-sec">(</button>
-        <button onClick={() => handleButtonClick(")")} className="keypad-btn-sec">)</button>
-        <button onClick={() => handleButtonClick("^")} className="keypad-btn-sec">x^n</button>
-        <button onClick={() => handleButtonClick("sqrt")} className="keypad-btn-sec">√</button>
+          <button type="button" onClick={() => write("0")} className="keypad-btn">
+            0
+          </button>
+          <button type="button" onClick={() => write(".")} className="keypad-btn">
+            .
+          </button>
+          <button type="button" onClick={clear} className="keypad-btn">
+            C
+          </button>
+          <button type="button" onClick={() => write("+")} className="keypad-btn-op">
+            +
+          </button>
+        </div>
 
-        {/* Row 6: x, π, e, ⌫ */}
-        <button onClick={() => handleButtonClick("x")} className="keypad-btn-sec">x</button>
-        <button onClick={() => handleButtonClick("pi")} className="keypad-btn-sec">π</button>
-        <button onClick={() => handleButtonClick("e")} className="keypad-btn-sec">e</button>
-        <button onClick={handleBackspace} className="keypad-btn-del">⌫</button>
+        <div className="grid grid-cols-5 gap-2">
+          {keys.misc.map((k) => (
+            <button
+              key={k.label}
+              type="button"
+              onClick={() => {
+                if (k.label === "frac") {
+                  cmd("\\frac");
+                  return;
+                }
+                if (k.label === "√") {
+                  cmd("\\sqrt");
+                  return;
+                }
+                write(k.latex);
+              }}
+              className="keypad-btn-sec"
+            >
+              {k.label}
+            </button>
+          ))}
+          <button type="button" onClick={backspace} className="keypad-btn-del">
+            ⌫
+          </button>
+        </div>
       </div>
 
       {/* Check Button */}
