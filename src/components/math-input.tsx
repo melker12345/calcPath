@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { addStyles } from "react-mathquill";
 
 let stylesInjected = false;
@@ -33,6 +33,9 @@ export function MathInput({
   placeholder = "Your answer",
 }: MathInputProps) {
   const mqRef = useRef<MQField | null>(null);
+  const [panel, setPanel] = useState<"basic" | "trig" | "vars" | "tools">(
+    "basic",
+  );
 
   useEffect(() => {
     if (stylesInjected) return;
@@ -42,29 +45,47 @@ export function MathInput({
 
   const keys = useMemo(
     () => ({
-      numbers: ["7", "8", "9", "4", "5", "6", "1", "2", "3", "0"],
-      ops: [
-        { label: "÷", latex: "\\div " },
-        { label: "×", latex: "\\cdot " },
-        { label: "−", latex: "-" },
-        { label: "+", latex: "+" },
+      basic: [
+        { label: "7", type: "write" as const, latex: "7" },
+        { label: "8", type: "write" as const, latex: "8" },
+        { label: "9", type: "write" as const, latex: "9" },
+        { label: "÷", type: "write" as const, latex: "\\div " },
+        { label: "4", type: "write" as const, latex: "4" },
+        { label: "5", type: "write" as const, latex: "5" },
+        { label: "6", type: "write" as const, latex: "6" },
+        { label: "×", type: "write" as const, latex: "\\cdot " },
+        { label: "1", type: "write" as const, latex: "1" },
+        { label: "2", type: "write" as const, latex: "2" },
+        { label: "3", type: "write" as const, latex: "3" },
+        { label: "−", type: "write" as const, latex: "-" },
+        { label: "0", type: "write" as const, latex: "0" },
+        { label: ".", type: "write" as const, latex: "." },
+        { label: "(", type: "write" as const, latex: "\\left(" },
+        { label: ")", type: "write" as const, latex: "\\right)" },
+        { label: "+", type: "write" as const, latex: "+" },
+        { label: "=", type: "write" as const, latex: "=" },
       ],
-      funcs: [
-        { label: "sin", latex: "\\sin\\left(\\right)" },
-        { label: "cos", latex: "\\cos\\left(\\right)" },
-        { label: "tan", latex: "\\tan\\left(\\right)" },
-        { label: "ln", latex: "\\ln\\left(\\right)" },
+      trig: [
+        { label: "sin", type: "func" as const, latex: "\\sin\\left(\\right)" },
+        { label: "cos", type: "func" as const, latex: "\\cos\\left(\\right)" },
+        { label: "tan", type: "func" as const, latex: "\\tan\\left(\\right)" },
+        { label: "sec", type: "func" as const, latex: "\\sec\\left(\\right)" },
+        { label: "csc", type: "func" as const, latex: "\\csc\\left(\\right)" },
+        { label: "cot", type: "func" as const, latex: "\\cot\\left(\\right)" },
       ],
-      misc: [
-        { label: "x", latex: "x" },
-        { label: "e", latex: "e" },
-        { label: "π", latex: "\\pi" },
-        { label: "(", latex: "\\left(" },
-        { label: ")", latex: "\\right)" },
-        { label: "^", latex: "^" },
-        { label: "√", latex: "\\sqrt{}" },
-        { label: "frac", latex: "\\frac{}{}" },
-        { label: "C", latex: "C" },
+      vars: [
+        { label: "x", type: "write" as const, latex: "x" },
+        { label: "y", type: "write" as const, latex: "y" },
+        { label: "t", type: "write" as const, latex: "t" },
+        { label: "e", type: "write" as const, latex: "e" },
+        { label: "π", type: "write" as const, latex: "\\pi" },
+        { label: "C", type: "write" as const, latex: "C" },
+      ],
+      tools: [
+        { label: "frac", type: "cmd" as const, cmd: "\\frac" },
+        { label: "√", type: "cmd" as const, cmd: "\\sqrt" },
+        { label: "x^n", type: "write" as const, latex: "^" },
+        { label: "ln", type: "func" as const, latex: "\\ln\\left(\\right)" },
       ],
     }),
     [],
@@ -107,6 +128,12 @@ export function MathInput({
     onChange("");
   };
 
+  const insertFunction = (latex: string) => {
+    write(latex);
+    // Move cursor inside the parentheses we just inserted.
+    mqRef.current?.keystroke("Left");
+  };
+
   return (
     <div className="space-y-3">
       {/* Desmos-style equation field */}
@@ -129,122 +156,116 @@ export function MathInput({
         </div>
       </div>
 
-      {/* Keypad */}
-      <div className="space-y-2">
-        <div className="grid grid-cols-4 gap-2">
-          {keys.funcs.map((k) => (
+      {/* Keypad (tabbed) */}
+      <div className="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ["basic", "123"],
+              ["trig", "Trig"],
+              ["vars", "Vars"],
+              ["tools", "Tools"],
+            ] as const
+          ).map(([key, label]) => (
             <button
-              key={k.label}
+              key={key}
               type="button"
-              onClick={() => {
-                // write function and place cursor inside parentheses
-                write(k.latex);
-                mqRef.current?.keystroke("Left");
-              }}
-              className="keypad-btn-sec"
+              onClick={() => setPanel(key)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                panel === key
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                  : "border border-zinc-200 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-900"
+              }`}
             >
-              {k.label}
+              {label}
             </button>
           ))}
         </div>
 
-        <div className="grid grid-cols-4 gap-2">
-          <button type="button" onClick={() => write("7")} className="keypad-btn">
-            7
-          </button>
-          <button type="button" onClick={() => write("8")} className="keypad-btn">
-            8
-          </button>
-          <button type="button" onClick={() => write("9")} className="keypad-btn">
-            9
-          </button>
-          <button
-            type="button"
-            onClick={() => write("\\div ")}
-            className="keypad-btn-op"
-          >
-            ÷
-          </button>
+        <div className="mt-3">
+          {panel === "basic" && (
+            <div className="grid grid-cols-4 gap-2">
+              {keys.basic.map((k) => (
+                <button
+                  key={k.label}
+                  type="button"
+                  onClick={() => write(k.latex)}
+                  className="keypad-btn"
+                >
+                  {k.label}
+                </button>
+              ))}
+            </div>
+          )}
 
-          <button type="button" onClick={() => write("4")} className="keypad-btn">
-            4
-          </button>
-          <button type="button" onClick={() => write("5")} className="keypad-btn">
-            5
-          </button>
-          <button type="button" onClick={() => write("6")} className="keypad-btn">
-            6
-          </button>
-          <button
-            type="button"
-            onClick={() => write("\\cdot ")}
-            className="keypad-btn-op"
-          >
-            ×
-          </button>
+          {panel === "trig" && (
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {keys.trig.map((k) => (
+                <button
+                  key={k.label}
+                  type="button"
+                  onClick={() => insertFunction(k.latex)}
+                  className="keypad-btn"
+                >
+                  {k.label}
+                </button>
+              ))}
+            </div>
+          )}
 
-          <button type="button" onClick={() => write("1")} className="keypad-btn">
-            1
-          </button>
-          <button type="button" onClick={() => write("2")} className="keypad-btn">
-            2
-          </button>
-          <button type="button" onClick={() => write("3")} className="keypad-btn">
-            3
-          </button>
-          <button type="button" onClick={() => write("-")} className="keypad-btn-op">
-            −
-          </button>
+          {panel === "vars" && (
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {keys.vars.map((k) => (
+                <button
+                  key={k.label}
+                  type="button"
+                  onClick={() => write(k.latex)}
+                  className="keypad-btn"
+                >
+                  {k.label}
+                </button>
+              ))}
+            </div>
+          )}
 
-          <button type="button" onClick={() => write("0")} className="keypad-btn">
-            0
-          </button>
-          <button type="button" onClick={() => write(".")} className="keypad-btn">
-            .
-          </button>
-          <button type="button" onClick={clear} className="keypad-btn">
-            C
-          </button>
-          <button type="button" onClick={() => write("+")} className="keypad-btn-op">
-            +
-          </button>
+          {panel === "tools" && (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {keys.tools.map((k) => (
+                <button
+                  key={k.label}
+                  type="button"
+                  onClick={() => {
+                    if (k.type === "cmd") cmd(k.cmd);
+                    else if (k.type === "func") insertFunction(k.latex);
+                    else write(k.latex);
+                  }}
+                  className="keypad-btn"
+                >
+                  {k.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        <div className="grid grid-cols-5 gap-2">
-          {keys.misc.map((k) => (
-            <button
-              key={k.label}
-              type="button"
-              onClick={() => {
-                if (k.label === "frac") {
-                  cmd("\\frac");
-                  return;
-                }
-                if (k.label === "√") {
-                  cmd("\\sqrt");
-                  return;
-                }
-                write(k.latex);
-              }}
-              className="keypad-btn-sec"
-            >
-              {k.label}
-            </button>
-          ))}
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <button type="button" onClick={clear} className="keypad-btn-del">
+            Clear
+          </button>
           <button type="button" onClick={backspace} className="keypad-btn-del">
-            ⌫
+            ⌫ Delete
+          </button>
+          <button
+            type="button"
+            onClick={onSubmit}
+            className="rounded-xl bg-emerald-600 px-3 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-95 sm:col-span-1"
+          >
+            Check
           </button>
         </div>
       </div>
 
-      {/* Check Button */}
-      <button
-        type="button"
-        onClick={onSubmit}
-        className="w-full rounded-lg bg-emerald-600 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.98]"
-      >
-        Check Answer ✓
-      </button>
+      {/* Spacer (keeps layout stable) */}
     </div>
   );
 }
