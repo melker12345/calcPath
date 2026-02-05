@@ -60,10 +60,13 @@ export function MathInput({
         { label: "−", type: "write" as const, latex: "-" },
         { label: "0", type: "write" as const, latex: "0" },
         { label: ".", type: "write" as const, latex: "." },
+        { label: "+", type: "write" as const, latex: "+" },
         { label: "(", type: "write" as const, latex: "\\left(" },
         { label: ")", type: "write" as const, latex: "\\right)" },
-        { label: "+", type: "write" as const, latex: "+" },
-        { label: "=", type: "write" as const, latex: "=" },
+        { label: "x", type: "write" as const, latex: "x" },
+        { label: "^", type: "write" as const, latex: "^" },
+        { label: "π", type: "write" as const, latex: "\\pi" },
+        { label: "e", type: "write" as const, latex: "e" },
       ],
       trig: [
         { label: "sin", type: "func" as const, latex: "\\sin\\left(\\right)" },
@@ -187,17 +190,49 @@ export function MathInput({
 
         <div className="mt-3">
           {panel === "basic" && (
-            <div className="grid grid-cols-4 gap-2">
-              {keys.basic.map((k) => (
+            <div className="space-y-2">
+              <div className="grid grid-cols-4 gap-2">
+                {keys.basic.map((k) => (
+                  <button
+                    key={k.label}
+                    type="button"
+                    onClick={() => write(k.latex)}
+                    className="keypad-btn"
+                  >
+                    {k.label}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-4 gap-2">
                 <button
-                  key={k.label}
                   type="button"
-                  onClick={() => write(k.latex)}
+                  onClick={() => cmd("\\frac")}
                   className="keypad-btn"
                 >
-                  {k.label}
+                  frac
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => cmd("\\sqrt")}
+                  className="keypad-btn"
+                >
+                  √
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertFunction("\\ln\\left(\\right)")}
+                  className="keypad-btn"
+                >
+                  ln
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertFunction("\\sin\\left(\\right)")}
+                  className="keypad-btn"
+                >
+                  sin
+                </button>
+              </div>
             </div>
           )}
 
