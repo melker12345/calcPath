@@ -144,7 +144,7 @@ export function MathInput({
         <div className="text-xs font-medium uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
           {placeholder}
         </div>
-        <div className="mt-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="mt-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 focus-within:ring-2 focus-within:ring-emerald-300 dark:border-zinc-800 dark:bg-zinc-900 dark:focus-within:ring-emerald-900/50">
           <EditableMathField
             latex={value}
             config={{
