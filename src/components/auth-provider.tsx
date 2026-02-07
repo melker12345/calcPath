@@ -48,8 +48,14 @@ function toUserProfile(user: User, dbProfile: DbProfileRow | null): UserProfile 
   };
 }
 
+// Users with permanent full access (bypass plan checks)
+const ADMIN_IDS = new Set([
+  "8e3871de-9cb4-4292-be10-cf45f84e96b4", // memleoberg@gmail.com
+]);
+
 function isProActive(profile: UserProfile | null): boolean {
   if (!profile) return false;
+  if (ADMIN_IDS.has(profile.id)) return true;
   if (profile.plan !== "pro") return false;
   if (!profile.proUntil) return true;
   return new Date(profile.proUntil).getTime() > Date.now();

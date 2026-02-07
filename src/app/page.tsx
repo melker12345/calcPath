@@ -1,191 +1,156 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
-    <div className="relative min-h-screen">
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50/50 to-white dark:from-blue-950/20 dark:via-purple-950/20 dark:to-black" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(96,165,250,0.15),transparent_50%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.15),transparent_50%)]" />
-      <div className="relative mx-auto w-full max-w-5xl px-6 py-20">
-        <section className="flex flex-col items-center text-center">
-          <div className="mb-8 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 px-4 py-2 shadow-sm dark:from-blue-900/30 dark:to-purple-900/30">
-            <div className="h-2 w-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500" />
-            <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-              CalcPath
-            </p>
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <section className="relative mx-auto max-w-6xl px-6 py-20 md:py-28">
+        <div className="flex flex-col items-center text-center">
+          {/* Fun badge */}
+          <div className="mb-8 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 shadow-lg">
+            <span className="text-2xl">🎯</span>
+            <span className="text-sm font-semibold text-orange-800">120+ practice problems!</span>
           </div>
           
-          <h1 className="mb-6 max-w-4xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-5xl font-bold tracking-tight text-transparent sm:text-6xl dark:from-blue-400 dark:to-purple-400">
-            Learn calculus with guided practice, streaks, and structured paths.
+          <h1 className="mb-6 max-w-3xl text-5xl font-extrabold leading-tight text-orange-950 md:text-6xl">
+            Calculus doesn't have to be 
+            <span className="relative">
+              <span className="relative z-10 text-transparent bg-gradient-to-r from-orange-500 to-rose-500 bg-clip-text"> scary!</span>
+              <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 200 12" preserveAspectRatio="none">
+                <path d="M0,8 Q50,0 100,8 T200,8" fill="none" stroke="url(#grad)" strokeWidth="4" strokeLinecap="round"/>
+                <defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#f97316"/><stop offset="100%" stopColor="#f43f5e"/></linearGradient></defs>
+              </svg>
+            </span>
           </h1>
           
-          <p className="mb-10 max-w-2xl text-xl leading-relaxed text-zinc-600 dark:text-zinc-300">
-            Start free with 120+ calculus problems. Upgrade for learning paths,
-            streak tracking, and community discussions.
+          <p className="mb-10 max-w-xl text-xl text-orange-800">
+            Learn step by step with instant feedback, fun streaks, and a supportive community. You've got this! 💪
           </p>
-          <div className="mb-12 flex flex-wrap justify-center gap-4">
-            <a
-              className="rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-4 text-lg font-semibold text-white shadow-lg transition hover:shadow-xl hover:scale-105"
+          
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <Link 
               href="/practice"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-8 py-4 text-lg font-bold text-white shadow-xl shadow-orange-200 transition hover:scale-105 hover:shadow-2xl"
             >
-              Start practicing →
-            </a>
-            <a
-              className="rounded-full border-2 border-blue-200 bg-white px-8 py-4 text-lg font-semibold text-blue-900 transition hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:bg-zinc-900 dark:text-blue-100 dark:hover:bg-blue-950"
+              <span>Start learning</span>
+              <span className="text-2xl">🚀</span>
+            </Link>
+            <Link 
               href="/modules"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-8 py-4 text-lg font-bold text-orange-800 shadow-lg transition hover:shadow-xl"
             >
-              Read modules
-            </a>
+              <span>See modules</span>
+              <span className="text-2xl">📚</span>
+            </Link>
           </div>
-          
-          <div className="mb-16 grid gap-6 sm:grid-cols-3">
-            <div className="group rounded-2xl border border-blue-200 bg-gradient-to-br from-white to-blue-50 p-6 shadow-lg transition hover:shadow-xl dark:border-blue-800 dark:from-zinc-900 dark:to-blue-950/30">
-              <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Problems</p>
-              <p className="text-4xl font-bold text-blue-900 dark:text-blue-100">120+</p>
-            </div>
-            <div className="group rounded-2xl border border-purple-200 bg-gradient-to-br from-white to-purple-50 p-6 shadow-lg transition hover:shadow-xl dark:border-purple-800 dark:from-zinc-900 dark:to-purple-950/30">
-              <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Topics</p>
-              <p className="text-4xl font-bold text-purple-900 dark:text-purple-100">6</p>
-            </div>
-            <div className="group rounded-2xl border border-emerald-200 bg-gradient-to-br from-white to-emerald-50 p-6 shadow-lg transition hover:shadow-xl dark:border-emerald-800 dark:from-zinc-900 dark:to-emerald-950/30">
-              <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Learning paths</p>
-              <p className="text-4xl font-bold text-emerald-900 dark:text-emerald-100">3</p>
-            </div>
-          </div>
-          
-          <div className="mx-auto max-w-2xl space-y-6 rounded-3xl border border-gradient-to-br from-blue-200 to-purple-200 bg-white p-10 shadow-2xl dark:border-none dark:bg-gradient-to-br dark:from-blue-950/50 dark:to-purple-950/50">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-purple-500 text-2xl text-white shadow-lg">
-              ∫
-            </div>
-            <h2 className="text-2xl font-bold">What you get</h2>
-          </div>
-          <ul className="space-y-4 text-base">
-            <li className="flex items-start gap-3">
-              <span className="mt-1 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-purple-100 text-sm font-bold text-blue-700 dark:from-blue-900 dark:to-purple-900 dark:text-blue-300">✓</span>
-              <span className="text-zinc-700 dark:text-zinc-200">Guided calculus practice with instant feedback</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-purple-100 text-sm font-bold text-blue-700 dark:from-blue-900 dark:to-purple-900 dark:text-blue-300">✓</span>
-              <span className="text-zinc-700 dark:text-zinc-200">Topic-level mastery and accuracy insights</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-purple-100 text-sm font-bold text-blue-700 dark:from-blue-900 dark:to-purple-900 dark:text-blue-300">✓</span>
-              <span className="text-zinc-700 dark:text-zinc-200">Learning paths built for AP Calc AB and beyond</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-purple-100 text-sm font-bold text-blue-700 dark:from-blue-900 dark:to-purple-900 dark:text-blue-300">✓</span>
-              <span className="text-zinc-700 dark:text-zinc-200">Streaks, reminders, and weekly goals</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-purple-100 text-sm font-bold text-blue-700 dark:from-blue-900 dark:to-purple-900 dark:text-blue-300">✓</span>
-              <span className="text-zinc-700 dark:text-zinc-200">Community forum for questions and clarifications</span>
-            </li>
-          </ul>
-            <a
-              className="block w-full rounded-full bg-gradient-to-r from-blue-600 to-purple-600 py-4 text-center text-lg font-bold text-white shadow-lg transition hover:shadow-xl hover:scale-105"
-              href="/dashboard"
-            >
-              Go to dashboard →
-            </a>
-          </div>
-        </section>
+        </div>
 
-        {/* Testimonials Section */}
-        <section className="mt-24">
-          <div className="mb-12 text-center">
-            <h2 className="mb-4 text-3xl font-bold text-zinc-900 dark:text-white">
-              Loved by students
+        {/* Fun floating elements */}
+        <div className="absolute left-10 top-32 hidden text-6xl opacity-20 md:block">∑</div>
+        <div className="absolute right-10 top-40 hidden text-5xl opacity-20 md:block">∫</div>
+        <div className="absolute bottom-20 left-20 hidden text-4xl opacity-20 md:block">∂</div>
+      </section>
+
+      {/* Stats Cards */}
+      <section className="mx-auto max-w-6xl px-6 pb-20">
+        <div className="grid gap-6 sm:grid-cols-3">
+          {[
+            { emoji: "📝", value: "120+", label: "Fun problems", color: "from-orange-100 to-amber-100 border-orange-200" },
+            { emoji: "🎓", value: "6", label: "Topics to master", color: "from-rose-100 to-pink-100 border-rose-200" },
+            { emoji: "🛤️", value: "3", label: "Learning paths", color: "from-violet-100 to-purple-100 border-violet-200" },
+          ].map((stat, i) => (
+            <div key={i} className={`rounded-3xl border-2 ${stat.color} bg-gradient-to-br p-8 text-center shadow-lg transition hover:scale-105`}>
+              <span className="mb-2 block text-4xl">{stat.emoji}</span>
+              <p className="text-4xl font-extrabold text-orange-900">{stat.value}</p>
+              <p className="text-sm font-medium text-orange-700">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="bg-white py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mb-16 text-center">
+            <span className="mb-4 inline-block text-4xl">✨</span>
+            <h2 className="mb-4 text-4xl font-extrabold text-orange-950">
+              Why you'll love it
             </h2>
-            <p className="text-lg text-zinc-600 dark:text-zinc-300">
-              See what learners are saying about CalcPath
+            <p className="text-xl text-orange-700">
+              Everything you need to succeed, nothing you don't.
             </p>
           </div>
-          
-          <div className="grid gap-6 md:grid-cols-3">
-            <div className="rounded-3xl border border-blue-100 bg-white p-8 shadow-lg dark:border-blue-900/30 dark:bg-zinc-900">
-              <div className="mb-4 flex gap-1">
-                {[...Array(5)].map((_, i) => (
-                  <span key={i} className="text-xl text-yellow-400">★</span>
-                ))}
-              </div>
-              <p className="mb-6 text-base text-zinc-700 dark:text-zinc-200">
-                "CalcPath helped me go from struggling with derivatives to acing my AP Calc exam. The instant feedback and clear explanations made all the difference!"
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 font-bold text-white">
-                  S
-                </div>
-                <div>
-                  <p className="font-semibold text-zinc-900 dark:text-white">Sarah M.</p>
-                  <p className="text-sm text-zinc-500">High School Senior</p>
-                </div>
-              </div>
-            </div>
 
-            <div className="rounded-3xl border border-purple-100 bg-white p-8 shadow-lg dark:border-purple-900/30 dark:bg-zinc-900">
-              <div className="mb-4 flex gap-1">
-                {[...Array(5)].map((_, i) => (
-                  <span key={i} className="text-xl text-yellow-400">★</span>
-                ))}
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { emoji: "⚡", title: "Instant feedback", desc: "Know if you're right in seconds!", bg: "bg-amber-50" },
+              { emoji: "🎯", title: "Step-by-step help", desc: "We break down every solution.", bg: "bg-rose-50" },
+              { emoji: "📈", title: "Track your progress", desc: "Watch your skills grow!", bg: "bg-violet-50" },
+              { emoji: "🔥", title: "Build streaks", desc: "Stay motivated day after day.", bg: "bg-orange-50" },
+              { emoji: "👥", title: "Friendly community", desc: "Get help when you're stuck.", bg: "bg-pink-50" },
+              { emoji: "🏆", title: "Earn mastery", desc: "Level up topic by topic.", bg: "bg-emerald-50" },
+            ].map((feature, i) => (
+              <div key={i} className={`rounded-3xl ${feature.bg} p-8 transition hover:scale-105 hover:shadow-lg`}>
+                <span className="mb-4 block text-4xl">{feature.emoji}</span>
+                <h3 className="mb-2 text-xl font-bold text-orange-900">{feature.title}</h3>
+                <p className="text-orange-700">{feature.desc}</p>
               </div>
-              <p className="mb-6 text-base text-zinc-700 dark:text-zinc-200">
-                "The learning paths are brilliant. Instead of random problems, I follow a structured plan that builds on each concept. My confidence has skyrocketed."
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-blue-500 font-bold text-white">
-                  M
-                </div>
-                <div>
-                  <p className="font-semibold text-zinc-900 dark:text-white">Marcus T.</p>
-                  <p className="text-sm text-zinc-500">College Freshman</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-emerald-100 bg-white p-8 shadow-lg dark:border-emerald-900/30 dark:bg-zinc-900">
-              <div className="mb-4 flex gap-1">
-                {[...Array(5)].map((_, i) => (
-                  <span key={i} className="text-xl text-yellow-400">★</span>
-                ))}
-              </div>
-              <p className="mb-6 text-base text-zinc-700 dark:text-zinc-200">
-                "Finally, a platform that teaches calculus the right way—step by step with real explanations. The worked examples are gold."
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-blue-500 font-bold text-white">
-                  E
-                </div>
-                <div>
-                  <p className="font-semibold text-zinc-900 dark:text-white">Emily R.</p>
-                  <p className="text-sm text-zinc-500">Engineering Student</p>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Final CTA Section */}
-        <section className="mt-24 rounded-3xl bg-gradient-to-r from-blue-600 to-purple-600 p-12 text-center shadow-2xl">
-          <h2 className="mb-4 text-4xl font-bold text-white">
-            Ready to master calculus?
+      {/* Testimonials */}
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <div className="mb-16 text-center">
+          <span className="mb-4 inline-block text-4xl">💬</span>
+          <h2 className="text-4xl font-extrabold text-orange-950">
+            Happy learners
           </h2>
-          <p className="mb-8 text-xl text-blue-50">
-            Join thousands of students improving their calculus skills every day.
+        </div>
+
+        <div className="grid gap-8 md:grid-cols-3">
+          {[
+            { quote: "CalcPath made calculus actually fun! I went from dreading homework to looking forward to it.", name: "Sarah M.", role: "High School Senior", emoji: "🎉" },
+            { quote: "The streaks keep me motivated every day. I've learned more in a month than a whole semester!", name: "Marcus T.", role: "College Freshman", emoji: "🔥" },
+            { quote: "Finally I understand WHY calculus works, not just how. Game changer!", name: "Emily R.", role: "Engineering Student", emoji: "💡" },
+          ].map((t, i) => (
+            <div key={i} className="rounded-3xl border-2 border-orange-100 bg-white p-8 shadow-lg">
+              <span className="mb-4 block text-4xl">{t.emoji}</span>
+              <p className="mb-6 text-lg text-orange-800">"{t.quote}"</p>
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-400 to-rose-400 font-bold text-white">
+                  {t.name[0]}
+                </div>
+                <div>
+                  <p className="font-bold text-orange-900">{t.name}</p>
+                  <p className="text-sm text-orange-600">{t.role}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="mx-auto max-w-6xl px-6 pb-20">
+        <div className="rounded-[2.5rem] bg-gradient-to-r from-orange-500 to-rose-500 p-12 text-center shadow-2xl md:p-16">
+          <span className="mb-6 inline-block text-6xl">🎓</span>
+          <h2 className="mb-4 text-4xl font-extrabold text-white md:text-5xl">
+            Ready to become a calculus pro?
+          </h2>
+          <p className="mb-8 text-xl text-orange-100">
+            Join thousands of students crushing it every day!
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <a
-              className="rounded-full bg-white px-8 py-4 text-lg font-semibold text-blue-600 shadow-lg transition hover:scale-105"
-              href="/practice"
-            >
-              Start free now
-            </a>
-            <a
-              className="rounded-full border-2 border-white bg-transparent px-8 py-4 text-lg font-semibold text-white transition hover:bg-white/10"
-              href="/pricing"
-            >
-              View pricing
-            </a>
-          </div>
-        </section>
-      </div>
+          <Link 
+            href="/practice"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-10 py-4 text-lg font-bold text-orange-600 shadow-xl transition hover:scale-105"
+          >
+            <span>Let's go!</span>
+            <span className="text-2xl">→</span>
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }

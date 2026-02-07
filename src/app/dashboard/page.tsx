@@ -2,31 +2,23 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { SectionCard } from "@/components/section-card";
-import { ProgressBar } from "@/components/progress-bar";
 import { useAuth } from "@/components/auth-provider";
 import { useProgress } from "@/components/progress-provider";
-import { getTopicProgress } from "@/lib/progress";
+import { getPracticeProgress, getTopicTestStats } from "@/lib/progress";
 import { problems, topics } from "@/lib/content";
+import { PaywallGate } from "@/components/paywall-gate";
 import { trackEvent } from "@/lib/analytics";
-
-const totalProblemsByTopic = topics.reduce<Record<string, number>>(
-  (acc, topic) => {
-    acc[topic.id] = problems.filter((problem) => problem.topicId === topic.id)
-      .length;
-    return acc;
-  },
-  {},
-);
 
 export default function DashboardPage() {
   const { user, isPro } = useAuth();
   const { progress } = useProgress();
-  const [totalSolved, setTotalSolved] = useState(0);
-  const totalProblems = problems.length;
-  const [completion, setCompletion] = useState(0);
-  const [attemptedTotal, setAttemptedTotal] = useState(0);
-  const [accuracy, setAccuracy] = useState(0);
+  
+  // Calculate overall stats on client to avoid hydration mismatch
+  const [stats, setStats] = useState({
+    totalMastered: 0,
+    totalProblems: problems.length,
+    accuracy: 0,
+  });
 
   useEffect(() => {
     trackEvent("view_dashboard", {
@@ -34,20 +26,20 @@ export default function DashboardPage() {
     });
   }, [user, isPro]);
 
+  // Calculate overall practice progress (excluding test questions)
   useEffect(() => {
-    // Calculate progress on client only to avoid hydration mismatch
-    const solved = progress.completedProblemIds.length;
-    const attempted = progress.attemptedProblemIds?.length ?? progress.attempts.length;
-    setTotalSolved(solved);
-    setAttemptedTotal(attempted);
-    setCompletion(Math.round((solved / totalProblems) * 100));
-    setAccuracy(attempted === 0 ? 0 : Math.round((solved / attempted) * 100));
-  }, [
-    progress.completedProblemIds.length,
-    progress.attempts.length,
-    progress.attemptedProblemIds?.length,
-    totalProblems,
-  ]);
+    let totalMastered = 0;
+    let totalAttempted = 0;
+    
+    for (const topic of topics) {
+      const practiceStats = getPracticeProgress(progress, topic.id, problems);
+      totalMastered += practiceStats.correct;
+      totalAttempted += practiceStats.attempted;
+    }
+    
+    const accuracy = totalAttempted === 0 ? 0 : Math.round((totalMastered / totalAttempted) * 100);
+    setStats({ totalMastered, totalProblems: problems.length, accuracy });
+  }, [progress]);
 
   const recentDays = useMemo(() => {
     const counts = new Map<string, number>();
@@ -63,12 +55,16 @@ export default function DashboardPage() {
     return days;
   }, [progress.attempts]);
 
+  const completionPercent = Math.round((stats.totalMastered / stats.totalProblems) * 100);
+
   return (
+    <PaywallGate feature="Dashboard">
     <div className="mx-auto w-full max-w-6xl px-6 py-12">
+      {/* Header */}
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold">Dashboard</h1>
-          <p className="text-sm text-zinc-500">
+          <h1 className="text-3xl font-bold text-zinc-900">Dashboard</h1>
+          <p className="text-sm text-zinc-600">
             {user
               ? `Welcome back, ${user.email ?? "student"}`
               : "Sign in to sync progress across devices."}
@@ -76,128 +72,233 @@ export default function DashboardPage() {
         </div>
         <div className="flex gap-2">
           <Link className="btn-secondary" href="/practice">
-            Start practice
+            Practice
           </Link>
-          <Link className="btn-primary" href="/paths">
-            View learning paths
+          <Link className="btn-primary" href="/flashcards">
+            Flash Cards
           </Link>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <SectionCard title="Overall progress" description="Solved across all topics.">
-          <div className="flex items-end justify-between">
-            <div className="text-3xl font-semibold">{completion}%</div>
-            <div className="text-sm text-zinc-500">
-              {totalSolved}/{totalProblems}
-            </div>
+      {/* Stats Overview - 3 columns */}
+      <div className="mb-8 grid gap-4 sm:grid-cols-3">
+        <div className="rounded-2xl border-2 border-orange-100 bg-gradient-to-br from-orange-50 to-amber-50 p-5">
+          <div className="text-xs font-semibold uppercase tracking-wide text-orange-600">
+            Problems Mastered
           </div>
-          <div className="mt-4">
-            <ProgressBar value={completion} label="Completion" />
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-4xl font-bold text-zinc-900">{stats.totalMastered}</span>
+            <span className="text-lg text-zinc-500">/ {stats.totalProblems}</span>
           </div>
-          <p className="mt-3 text-sm text-zinc-500">
-            Attempted {attemptedTotal} problems total.
-          </p>
-        </SectionCard>
-        <SectionCard title="Current Streak">
-          <div className="text-3xl font-semibold">{progress.streak.current}</div>
-          <p className="text-sm text-zinc-500">
-            Longest streak: {progress.streak.longest} days
-          </p>
-          <div className="mt-4 flex items-center gap-1">
+          <div className="mt-3 h-2 rounded-full bg-orange-100">
+            <div 
+              className="h-2 rounded-full bg-gradient-to-r from-orange-400 to-amber-400 transition-all"
+              style={{ width: `${completionPercent}%` }}
+            />
+          </div>
+          <div className="mt-2 text-sm text-zinc-500">{completionPercent}% complete</div>
+        </div>
+        
+        <div className="rounded-2xl border-2 border-emerald-100 bg-gradient-to-br from-emerald-50 to-teal-50 p-5">
+          <div className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
+            Current Streak
+          </div>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-4xl font-bold text-zinc-900">{progress.streak.current}</span>
+            <span className="text-lg text-zinc-500">days</span>
+          </div>
+          <div className="mt-3 flex items-center gap-1">
             {recentDays.map((d) => {
               const intensity =
                 d.count === 0
-                  ? "bg-zinc-100 dark:bg-zinc-800"
+                  ? "bg-emerald-100"
                   : d.count < 3
-                    ? "bg-emerald-200 dark:bg-emerald-900/40"
+                    ? "bg-emerald-200"
                     : d.count < 6
-                      ? "bg-emerald-400 dark:bg-emerald-700/60"
-                      : "bg-emerald-600 dark:bg-emerald-500/80";
+                      ? "bg-emerald-400"
+                      : "bg-emerald-600";
               return (
                 <div
                   key={d.day}
                   title={`${d.day}: ${d.count} attempts`}
-                  className={`h-4 w-4 rounded ${intensity}`}
+                  className={`h-3 flex-1 rounded-sm ${intensity}`}
                 />
               );
             })}
           </div>
-          <p className="mt-2 text-xs text-zinc-500">Last 14 days activity</p>
-        </SectionCard>
-        <SectionCard title="Accuracy" description="Correct vs attempted problems.">
-          <div className="flex items-end justify-between">
-            <div className="text-3xl font-semibold">{accuracy}%</div>
-            <div className="text-sm text-zinc-500">
-              {totalSolved}/{attemptedTotal || 0}
-            </div>
+          <div className="mt-2 text-sm text-zinc-500">Best: {progress.streak.longest} days</div>
+        </div>
+        
+        <div className="rounded-2xl border-2 border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50 p-5">
+          <div className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
+            Accuracy
           </div>
-          <div className="mt-4">
-            <ProgressBar value={accuracy} label="Accuracy" />
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-4xl font-bold text-zinc-900">{stats.accuracy}%</span>
           </div>
-          {!isPro && (
-            <p className="mt-3 text-sm text-zinc-500">
-              Pro unlocks deeper analytics and learning paths.
-            </p>
-          )}
-        </SectionCard>
+          <div className="mt-3 h-2 rounded-full bg-indigo-100">
+            <div 
+              className={`h-2 rounded-full transition-all ${
+                stats.accuracy >= 80 ? "bg-emerald-500" : 
+                stats.accuracy >= 60 ? "bg-amber-400" : 
+                "bg-gradient-to-r from-indigo-400 to-purple-400"
+              }`}
+              style={{ width: `${stats.accuracy}%` }}
+            />
+          </div>
+          <div className="mt-2 text-sm text-zinc-500">First-try success rate</div>
+        </div>
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <SectionCard
-          title="Topic mastery"
-          description="Track your completion and accuracy by topic."
-        >
-          <div className="space-y-3">
-            {topics.map((topic) => {
-              const totals = totalProblemsByTopic[topic.id];
-              const stats = getTopicProgress(progress, topic.id, totals);
-              return (
-                <div
-                  key={topic.id}
-                  className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3 text-sm dark:border-zinc-800"
+      {/* Topic Progress - Full width cards */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold text-zinc-900">Topic Progress</h2>
+        
+        {topics.map((topic) => {
+          const practiceStats = getPracticeProgress(progress, topic.id, problems);
+          const testStats = getTopicTestStats(progress, topic.id);
+          
+          return (
+            <div
+              key={topic.id}
+              className="rounded-2xl border-2 border-zinc-100 bg-white p-5 shadow-sm transition hover:shadow-md"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-lg font-semibold text-zinc-900">{topic.title}</h3>
+                  <p className="mt-0.5 text-sm text-zinc-500">{topic.description}</p>
+                </div>
+                <Link
+                  href={`/modules/${topic.id}`}
+                  className="text-sm font-medium text-zinc-400 hover:text-zinc-600"
                 >
-                  <div className="min-w-0 flex-1 pr-4">
-                    <div className="font-medium">{topic.title}</div>
-                    <div className="mt-2">
-                      <ProgressBar value={stats.masteryRate} />
+                  View module →
+                </Link>
+              </div>
+              
+              {/* Progress bars side by side */}
+              <div className="mt-5 grid gap-6 md:grid-cols-2">
+                {/* Practice Progress */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-100">
+                        <span className="text-sm">📝</span>
+                      </div>
+                      <span className="font-medium text-zinc-900">Practice</span>
                     </div>
-                    <div className="mt-2 text-xs text-zinc-500">
-                      {stats.solved}/{totals} attempted · {stats.correct} correct ·{" "}
-                      {stats.accuracyRate}% accuracy
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-zinc-900">
+                        {practiceStats.correct}/{practiceStats.total}
+                      </span>
+                      {practiceStats.isComplete && (
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                          Complete
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <Link
-                    className="text-xs font-semibold text-zinc-700 hover:text-emerald-600 dark:text-zinc-300 dark:hover:text-emerald-300"
-                    href={`/practice/${topic.id}`}
-                  >
-                    Continue →
-                  </Link>
+                  
+                  <div className="h-2.5 rounded-full bg-orange-100">
+                    <div 
+                      className={`h-2.5 rounded-full transition-all ${
+                        practiceStats.isComplete 
+                          ? "bg-emerald-500" 
+                          : "bg-gradient-to-r from-orange-400 to-amber-400"
+                      }`}
+                      style={{ width: `${practiceStats.masteryRate}%` }}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-zinc-500">
+                      {practiceStats.accuracyRate}% accuracy
+                    </span>
+                    <Link
+                      href={`/practice/${topic.id}`}
+                      className="font-semibold text-orange-600 hover:text-orange-800"
+                    >
+                      Practice →
+                    </Link>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-        </SectionCard>
-
-        <SectionCard
-          title="Next best actions"
-          description="Stay consistent and hit your goals faster."
-        >
-          <ul className="space-y-3 text-sm text-zinc-600 dark:text-zinc-300">
-            <li>Finish a 10-problem burst today.</li>
-            <li>Maintain your streak with a 5-minute review.</li>
-            <li>Unlock the Applications path to practice optimization.</li>
-          </ul>
-          <div className="mt-4 flex gap-2">
-            <Link className="btn-secondary" href="/streaks">
-              View streaks
-            </Link>
-            <Link className="btn-primary" href="/pricing">
-              Upgrade for paths
-            </Link>
-          </div>
-        </SectionCard>
+                
+                {/* Test Progress */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-100">
+                        <span className="text-sm">🎯</span>
+                      </div>
+                      <span className="font-medium text-zinc-900">Test</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {testStats.bestScore !== null ? (
+                        <>
+                          <span className="text-sm font-semibold text-zinc-900">
+                            {testStats.bestScore}/{testStats.bestTotal}
+                          </span>
+                          {testStats.isPerfect && (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                              🏆 Perfect
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-sm text-zinc-400">Not taken</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="h-2.5 rounded-full bg-indigo-100">
+                    {testStats.bestPercentage !== null && (
+                      <div 
+                        className={`h-2.5 rounded-full transition-all ${
+                          testStats.isPerfect 
+                            ? "bg-amber-400" 
+                            : (testStats.bestPercentage ?? 0) >= 70
+                              ? "bg-emerald-500"
+                              : "bg-gradient-to-r from-indigo-400 to-purple-400"
+                        }`}
+                        style={{ width: `${testStats.bestPercentage}%` }}
+                      />
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-zinc-500">
+                      {testStats.attemptCount > 0 
+                        ? `${testStats.attemptCount} attempt${testStats.attemptCount !== 1 ? "s" : ""}`
+                        : "20 questions"
+                      }
+                    </span>
+                    <Link
+                      href={`/test/${topic.id}`}
+                      className="font-semibold text-indigo-600 hover:text-indigo-800"
+                    >
+                      {testStats.attemptCount > 0 ? "Retake →" : "Take Test →"}
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
+      
+      {/* Pro upsell if not pro */}
+      {!isPro && (
+        <div className="mt-8 rounded-2xl border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-6 text-center">
+          <h3 className="text-lg font-bold text-zinc-900">Upgrade to Pro</h3>
+          <p className="mt-1 text-sm text-zinc-600">
+            Unlock learning paths, detailed analytics, and community features.
+          </p>
+          <Link href="/pricing" className="btn-primary mt-4 inline-flex">
+            View pricing →
+          </Link>
+        </div>
+      )}
     </div>
+    </PaywallGate>
   );
 }

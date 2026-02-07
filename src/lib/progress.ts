@@ -3,6 +3,7 @@ export type Attempt = {
   topicId: string;
   correct: boolean;
   createdAt: string;
+  isTest?: boolean; // Track if this was a test attempt
 };
 
 export type StreakStats = {
@@ -11,11 +12,21 @@ export type StreakStats = {
   lastCompletionDate?: string;
 };
 
+export type TestResult = {
+  topicId: string;
+  score: number;
+  total: number;
+  percentage: number;
+  timeSeconds: number;
+  completedAt: string;
+};
+
 export type ProgressState = {
   attempts: Attempt[];
   attemptedProblemIds: string[];
   completedProblemIds: string[];
   topicStats: Record<string, { solved: number; correct: number }>;
+  testResults: TestResult[];
   streak: StreakStats;
 };
 
@@ -24,8 +35,36 @@ export const createEmptyProgress = (): ProgressState => ({
   attemptedProblemIds: [],
   completedProblemIds: [],
   topicStats: {},
+  testResults: [],
   streak: { current: 0, longest: 0 },
 });
+
+export const recordTestResult = (
+  state: ProgressState,
+  result: TestResult,
+): ProgressState => {
+  const testResults = [result, ...state.testResults].slice(0, 100);
+  return { ...state, testResults };
+};
+
+export const getTopicTestStats = (state: ProgressState, topicId: string) => {
+  const topicTests = state.testResults.filter((t) => t.topicId === topicId);
+  if (topicTests.length === 0) {
+    return { bestScore: null, bestPercentage: null, attemptCount: 0, lastAttempt: null };
+  }
+  
+  const best = topicTests.reduce((a, b) => (a.percentage > b.percentage ? a : b));
+  const lastAttempt = topicTests[0];
+  
+  return {
+    bestScore: best.score,
+    bestTotal: best.total,
+    bestPercentage: best.percentage,
+    attemptCount: topicTests.length,
+    lastAttempt: lastAttempt.completedAt,
+    isPerfect: best.percentage === 100,
+  };
+};
 
 const rebuildDerivedFields = (attempts: Attempt[]) => {
   const attempted = new Set<string>();
@@ -67,6 +106,7 @@ export const normalizeProgressState = (
   const empty = createEmptyProgress();
   if (!input) return empty;
   const attempts = Array.isArray(input.attempts) ? input.attempts : empty.attempts;
+  const testResults = Array.isArray(input.testResults) ? input.testResults : empty.testResults;
   if (attempts.length > 0) {
     const derived = rebuildDerivedFields(attempts);
     return {
@@ -74,6 +114,7 @@ export const normalizeProgressState = (
       attemptedProblemIds: derived.attemptedProblemIds,
       completedProblemIds: derived.completedProblemIds,
       topicStats: derived.topicStats,
+      testResults,
       streak: derived.streak,
     };
   }
@@ -86,6 +127,7 @@ export const normalizeProgressState = (
       ? input.completedProblemIds
       : empty.completedProblemIds,
     topicStats: input.topicStats ?? empty.topicStats,
+    testResults,
     streak: input.streak ?? empty.streak,
   };
 };
@@ -178,6 +220,7 @@ export const recordAttempt = (
     attemptedProblemIds,
     completedProblemIds,
     topicStats,
+    testResults: state.testResults,
     streak,
   };
 };
@@ -196,4 +239,46 @@ export const getTopicProgress = (
     totalProblems === 0 ? 0 : Math.min(100, (correct / totalProblems) * 100);
   const accuracyRate = solved === 0 ? 0 : Math.round((correct / solved) * 100);
   return { solved, correct, attemptedRate, masteryRate, accuracyRate };
+};
+
+/**
+ * Get practice-only progress for a topic (excludes test questions)
+ * This filters attempts to only count practice problem IDs (not test-* IDs)
+ */
+export const getPracticeProgress = (
+  state: ProgressState,
+  topicId: string,
+  practiceProblems: Array<{ id: string; topicId: string }>,
+) => {
+  const topicPracticeIds = new Set(
+    practiceProblems.filter((p) => p.topicId === topicId).map((p) => p.id)
+  );
+  const totalProblems = topicPracticeIds.size;
+
+  // Count unique attempted and completed practice problems
+  const attemptedPractice = state.attemptedProblemIds.filter((id) =>
+    topicPracticeIds.has(id)
+  );
+  const completedPractice = state.completedProblemIds.filter((id) =>
+    topicPracticeIds.has(id)
+  );
+
+  const attempted = attemptedPractice.length;
+  const correct = completedPractice.length;
+
+  const attemptedRate =
+    totalProblems === 0 ? 0 : Math.min(100, (attempted / totalProblems) * 100);
+  const masteryRate =
+    totalProblems === 0 ? 0 : Math.min(100, (correct / totalProblems) * 100);
+  const accuracyRate = attempted === 0 ? 0 : Math.round((correct / attempted) * 100);
+
+  return {
+    attempted,
+    correct,
+    total: totalProblems,
+    attemptedRate,
+    masteryRate,
+    accuracyRate,
+    isComplete: correct >= totalProblems,
+  };
 };

@@ -24,8 +24,8 @@ export default function ForumPage() {
     <div className="mx-auto w-full max-w-6xl px-6 py-12">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold">Community forum</h1>
-          <p className="text-sm text-zinc-500">
+          <h1 className="text-3xl font-bold text-zinc-900">Community forum</h1>
+          <p className="text-sm text-zinc-600">
             Ask questions, share insights, and learn together.
           </p>
         </div>
@@ -43,26 +43,26 @@ export default function ForumPage() {
               title="No posts yet"
               description="Be the first to start a discussion."
             >
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-zinc-600">
                 Paid members can start threads and reply.
               </p>
             </SectionCard>
           ) : (
             posts.map((post) => (
               <SectionCard key={post.id} title={post.title}>
-                <p className="text-sm text-zinc-600 dark:text-zinc-300">
+                <p className="text-sm text-zinc-700">
                   {post.body}
                 </p>
                 <p className="mt-2 text-xs text-zinc-500">
                   {post.author} · {new Date(post.createdAt).toLocaleString()}
                 </p>
-                <div className="mt-4 space-y-3 border-t border-zinc-200 pt-4 text-sm dark:border-zinc-800">
+                <div className="mt-4 space-y-3 border-t-2 border-orange-100 pt-4 text-sm">
                   {post.replies.length === 0 ? (
                     <p className="text-xs text-zinc-500">No replies yet.</p>
                   ) : (
                     post.replies.map((reply) => (
                       <div key={reply.id}>
-                        <p>{reply.body}</p>
+                        <p className="text-zinc-700">{reply.body}</p>
                         <p className="text-xs text-zinc-500">
                           {reply.author} ·{" "}
                           {new Date(reply.createdAt).toLocaleString()}
@@ -88,7 +88,7 @@ export default function ForumPage() {
                       }}
                     >
                       <textarea
-                        className="rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+                        className="rounded-2xl border-2 border-orange-100 px-3 py-2 text-sm text-zinc-900 focus:border-orange-300 focus:outline-none"
                         rows={2}
                         placeholder="Write a reply..."
                         value={replyBody[post.id] ?? ""}
@@ -141,13 +141,13 @@ export default function ForumPage() {
               }}
             >
               <input
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+                className="w-full rounded-2xl border-2 border-orange-100 px-3 py-2 text-sm text-zinc-900 focus:border-orange-300 focus:outline-none"
                 placeholder="Thread title"
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
               />
               <textarea
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+                className="w-full rounded-2xl border-2 border-orange-100 px-3 py-2 text-sm text-zinc-900 focus:border-orange-300 focus:outline-none"
                 rows={4}
                 placeholder="Share your question or insight..."
                 value={body}
@@ -158,7 +158,7 @@ export default function ForumPage() {
               </button>
             </form>
           ) : (
-            <div className="space-y-3 text-sm text-zinc-500">
+            <div className="space-y-3 text-sm text-zinc-600">
               <p>Upgrade to the Pro plan to post and reply.</p>
               <Link className="btn-primary w-full text-center" href="/pricing">
                 Unlock forum access

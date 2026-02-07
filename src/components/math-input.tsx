@@ -11,6 +11,14 @@ interface MathInputProps {
   onChange: (value: string) => void;
   onSubmit: () => void;
   placeholder?: string;
+  /** Variables and symbols detected in the current question for suggestions */
+  questionContext?: {
+    hasVariable?: string[];
+    hasTrig?: boolean;
+    hasExp?: boolean;
+    hasLn?: boolean;
+    hasPi?: boolean;
+  };
 }
 
 type MQField = {
@@ -31,6 +39,7 @@ export function MathInput({
   onChange,
   onSubmit,
   placeholder = "Your answer",
+  questionContext,
 }: MathInputProps) {
   const mqRef = useRef<MQField | null>(null);
   const [panel, setPanel] = useState<"basic" | "trig" | "vars" | "tools">(
@@ -43,56 +52,63 @@ export function MathInput({
     stylesInjected = true;
   }, []);
 
-  const keys = useMemo(
-    () => ({
-      basic: [
-        { label: "7", type: "write" as const, latex: "7" },
-        { label: "8", type: "write" as const, latex: "8" },
-        { label: "9", type: "write" as const, latex: "9" },
-        { label: "÷", type: "write" as const, latex: "/" },
-        { label: "4", type: "write" as const, latex: "4" },
-        { label: "5", type: "write" as const, latex: "5" },
-        { label: "6", type: "write" as const, latex: "6" },
-        { label: "×", type: "write" as const, latex: "\\cdot " },
-        { label: "1", type: "write" as const, latex: "1" },
-        { label: "2", type: "write" as const, latex: "2" },
-        { label: "3", type: "write" as const, latex: "3" },
-        { label: "−", type: "write" as const, latex: "-" },
-        { label: "0", type: "write" as const, latex: "0" },
-        { label: ".", type: "write" as const, latex: "." },
-        { label: "+", type: "write" as const, latex: "+" },
-        { label: "(", type: "write" as const, latex: "\\left(" },
-        { label: ")", type: "write" as const, latex: "\\right)" },
-        { label: "x", type: "write" as const, latex: "x" },
-        { label: "^", type: "write" as const, latex: "^" },
-        { label: "π", type: "write" as const, latex: "\\pi" },
-        { label: "e", type: "write" as const, latex: "e" },
-      ],
-      trig: [
-        { label: "sin", type: "func" as const, latex: "\\sin\\left(\\right)" },
-        { label: "cos", type: "func" as const, latex: "\\cos\\left(\\right)" },
-        { label: "tan", type: "func" as const, latex: "\\tan\\left(\\right)" },
-        { label: "sec", type: "func" as const, latex: "\\sec\\left(\\right)" },
-        { label: "csc", type: "func" as const, latex: "\\csc\\left(\\right)" },
-        { label: "cot", type: "func" as const, latex: "\\cot\\left(\\right)" },
-      ],
-      vars: [
-        { label: "x", type: "write" as const, latex: "x" },
-        { label: "y", type: "write" as const, latex: "y" },
-        { label: "t", type: "write" as const, latex: "t" },
-        { label: "e", type: "write" as const, latex: "e" },
-        { label: "π", type: "write" as const, latex: "\\pi" },
-        { label: "C", type: "write" as const, latex: "C" },
-      ],
-      tools: [
-        { label: "frac", type: "cmd" as const, cmd: "\\frac" },
-        { label: "√", type: "cmd" as const, cmd: "\\sqrt" },
-        { label: "^", type: "write" as const, latex: "^" },
-        { label: "ln", type: "func" as const, latex: "\\ln\\left(\\right)" },
-      ],
-    }),
-    [],
-  );
+  // Build suggested keys based on question context
+  const suggestedKeys = useMemo(() => {
+    const suggestions: Array<{
+      label: string;
+      action: () => void;
+    }> = [];
+
+    if (questionContext?.hasVariable) {
+      questionContext.hasVariable.forEach((v) => {
+        if (!suggestions.find((s) => s.label === v)) {
+          suggestions.push({
+            label: v,
+            action: () => write(v === "π" ? "\\pi" : v),
+          });
+        }
+      });
+    }
+
+    if (questionContext?.hasPi && !suggestions.find((s) => s.label === "π")) {
+      suggestions.push({ label: "π", action: () => write("\\pi") });
+    }
+
+    if (questionContext?.hasExp && !suggestions.find((s) => s.label === "e")) {
+      suggestions.push({ label: "e", action: () => write("e") });
+    }
+
+    if (questionContext?.hasLn) {
+      suggestions.push({
+        label: "ln",
+        action: () => insertFunction("\\ln\\left(\\right)"),
+      });
+    }
+
+    if (questionContext?.hasTrig) {
+      suggestions.push({
+        label: "sin",
+        action: () => insertFunction("\\sin\\left(\\right)"),
+      });
+      suggestions.push({
+        label: "cos",
+        action: () => insertFunction("\\cos\\left(\\right)"),
+      });
+    }
+
+    // Always suggest common tools
+    if (!suggestions.find((s) => s.label === "frac")) {
+      suggestions.push({ label: "frac", action: () => cmd("\\frac") });
+    }
+    if (!suggestions.find((s) => s.label === "xⁿ")) {
+      suggestions.push({ label: "xⁿ", action: () => cmd("^") });
+    }
+    if (!suggestions.find((s) => s.label === "√")) {
+      suggestions.push({ label: "√", action: () => cmd("\\sqrt") });
+    }
+
+    return suggestions.slice(0, 8); // Max 8 suggestions
+  }, [questionContext]);
 
   const write = (latex: string) => {
     if (mqRef.current) {
@@ -139,12 +155,12 @@ export function MathInput({
 
   return (
     <div className="space-y-3">
-      {/* Desmos-style equation field */}
-      <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="text-xs font-medium uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+      {/* Equation input field */}
+      <div className="rounded-2xl border-2 border-orange-100 bg-white px-4 py-3 shadow-sm">
+        <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">
           {placeholder}
         </div>
-        <div className="mt-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 focus-within:ring-2 focus-within:ring-emerald-300 dark:border-zinc-800 dark:bg-zinc-900 dark:focus-within:ring-emerald-900/50">
+        <div className="mt-2 rounded-xl border-2 border-orange-100 bg-white px-3 py-2 focus-within:border-orange-300 focus-within:ring-2 focus-within:ring-orange-200">
           <EditableMathField
             latex={value}
             config={{
@@ -157,14 +173,15 @@ export function MathInput({
             mathquillDidMount={(field: MQField) => {
               mqRef.current = field;
             }}
-            className="min-h-[44px] text-xl text-zinc-900 dark:text-white"
+            className="min-h-[44px] text-xl text-zinc-900"
           />
         </div>
       </div>
 
-      {/* Keypad (tabbed) */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="flex flex-wrap gap-2">
+      {/* Calculator Keypad */}
+      <div className="rounded-2xl border-2 border-orange-100 bg-white p-4 shadow-sm">
+        {/* Category tabs */}
+        <div className="flex flex-wrap gap-2 border-b border-orange-100 pb-3">
           {(
             [
               ["basic", "123"],
@@ -177,10 +194,10 @@ export function MathInput({
               key={key}
               type="button"
               onClick={() => setPanel(key)}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
                 panel === key
-                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-                  : "border border-zinc-200 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                  ? "bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-sm"
+                  : "text-zinc-600 hover:bg-orange-50 hover:text-orange-700"
               }`}
             >
               {label}
@@ -188,122 +205,126 @@ export function MathInput({
           ))}
         </div>
 
+        {/* Suggested section */}
+        {suggestedKeys.length > 0 && (
+          <div className="mt-3 border-b border-orange-100 pb-3">
+            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">
+              Suggested
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {suggestedKeys.map((k) => (
+                <button
+                  key={k.label}
+                  type="button"
+                  onClick={k.action}
+                  className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-sm font-semibold text-orange-700 transition hover:bg-orange-100 active:scale-95"
+                >
+                  {k.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Panel content */}
         <div className="mt-3">
           {panel === "basic" && (
-            <div className="space-y-2">
-              <div className="grid grid-cols-4 gap-2">
-                {keys.basic.map((k) => (
-                  <button
-                    key={k.label}
-                    type="button"
-                    onClick={() => write(k.latex)}
-                    className="keypad-btn"
-                  >
-                    {k.label}
-                  </button>
-                ))}
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                <button
-                  type="button"
-                  onClick={() => cmd("\\frac")}
-                  className="keypad-btn"
-                >
-                  frac
-                </button>
-                <button
-                  type="button"
-                  onClick={() => cmd("\\sqrt")}
-                  className="keypad-btn"
-                >
-                  √
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertFunction("\\ln\\left(\\right)")}
-                  className="keypad-btn"
-                >
-                  ln
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertFunction("\\sin\\left(\\right)")}
-                  className="keypad-btn"
-                >
-                  sin
-                </button>
-              </div>
+            <div className="grid grid-cols-4 gap-2">
+              {/* Row 1: 7 8 9 ÷ */}
+              <button type="button" onClick={() => write("7")} className="keypad-btn">7</button>
+              <button type="button" onClick={() => write("8")} className="keypad-btn">8</button>
+              <button type="button" onClick={() => write("9")} className="keypad-btn">9</button>
+              <button type="button" onClick={() => write("/")} className="keypad-btn">÷</button>
+              
+              {/* Row 2: 4 5 6 × */}
+              <button type="button" onClick={() => write("4")} className="keypad-btn">4</button>
+              <button type="button" onClick={() => write("5")} className="keypad-btn">5</button>
+              <button type="button" onClick={() => write("6")} className="keypad-btn">6</button>
+              <button type="button" onClick={() => write("\\cdot ")} className="keypad-btn">×</button>
+              
+              {/* Row 3: 1 2 3 − */}
+              <button type="button" onClick={() => write("1")} className="keypad-btn">1</button>
+              <button type="button" onClick={() => write("2")} className="keypad-btn">2</button>
+              <button type="button" onClick={() => write("3")} className="keypad-btn">3</button>
+              <button type="button" onClick={() => write("-")} className="keypad-btn">−</button>
+              
+              {/* Row 4: 0 . ( ) */}
+              <button type="button" onClick={() => write("0")} className="keypad-btn">0</button>
+              <button type="button" onClick={() => write(".")} className="keypad-btn">.</button>
+              <button type="button" onClick={() => write("\\left(")} className="keypad-btn">(</button>
+              <button type="button" onClick={() => write("\\right)")} className="keypad-btn">)</button>
+              
+              {/* Row 5: + = xⁿ frac */}
+              <button type="button" onClick={() => write("+")} className="keypad-btn">+</button>
+              <button type="button" onClick={() => write("=")} className="keypad-btn">=</button>
+              <button type="button" onClick={() => cmd("^")} className="keypad-btn">xⁿ</button>
+              <button type="button" onClick={() => cmd("\\frac")} className="keypad-btn">frac</button>
             </div>
           )}
 
           {panel === "trig" && (
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-              {keys.trig.map((k) => (
-                <button
-                  key={k.label}
-                  type="button"
-                  onClick={() => insertFunction(k.latex)}
-                  className="keypad-btn"
-                >
-                  {k.label}
-                </button>
-              ))}
+            <div className="grid grid-cols-3 gap-2">
+              <button type="button" onClick={() => insertFunction("\\sin\\left(\\right)")} className="keypad-btn">sin</button>
+              <button type="button" onClick={() => insertFunction("\\cos\\left(\\right)")} className="keypad-btn">cos</button>
+              <button type="button" onClick={() => insertFunction("\\tan\\left(\\right)")} className="keypad-btn">tan</button>
+              <button type="button" onClick={() => insertFunction("\\sec\\left(\\right)")} className="keypad-btn">sec</button>
+              <button type="button" onClick={() => insertFunction("\\csc\\left(\\right)")} className="keypad-btn">csc</button>
+              <button type="button" onClick={() => insertFunction("\\cot\\left(\\right)")} className="keypad-btn">cot</button>
+              <button type="button" onClick={() => insertFunction("\\arcsin\\left(\\right)")} className="keypad-btn">arcsin</button>
+              <button type="button" onClick={() => insertFunction("\\arccos\\left(\\right)")} className="keypad-btn">arccos</button>
+              <button type="button" onClick={() => insertFunction("\\arctan\\left(\\right)")} className="keypad-btn">arctan</button>
             </div>
           )}
 
           {panel === "vars" && (
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-              {keys.vars.map((k) => (
-                <button
-                  key={k.label}
-                  type="button"
-                  onClick={() => write(k.latex)}
-                  className="keypad-btn"
-                >
-                  {k.label}
-                </button>
-              ))}
+            <div className="grid grid-cols-4 gap-2">
+              <button type="button" onClick={() => write("x")} className="keypad-btn">x</button>
+              <button type="button" onClick={() => write("y")} className="keypad-btn">y</button>
+              <button type="button" onClick={() => write("t")} className="keypad-btn">t</button>
+              <button type="button" onClick={() => write("n")} className="keypad-btn">n</button>
+              <button type="button" onClick={() => write("a")} className="keypad-btn">a</button>
+              <button type="button" onClick={() => write("b")} className="keypad-btn">b</button>
+              <button type="button" onClick={() => write("c")} className="keypad-btn">c</button>
+              <button type="button" onClick={() => write("k")} className="keypad-btn">k</button>
+              <button type="button" onClick={() => write("e")} className="keypad-btn">e</button>
+              <button type="button" onClick={() => write("\\pi")} className="keypad-btn">π</button>
+              <button type="button" onClick={() => write("C")} className="keypad-btn">C</button>
+              <button type="button" onClick={() => write("\\infty")} className="keypad-btn">∞</button>
             </div>
           )}
 
           {panel === "tools" && (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {keys.tools.map((k) => (
-                <button
-                  key={k.label}
-                  type="button"
-                  onClick={() => {
-                    if (k.type === "cmd") cmd(k.cmd);
-                    else if (k.type === "func") insertFunction(k.latex);
-                    else write(k.latex);
-                  }}
-                  className="keypad-btn"
-                >
-                  {k.label}
-                </button>
-              ))}
+            <div className="grid grid-cols-3 gap-2">
+              <button type="button" onClick={() => cmd("\\frac")} className="keypad-btn">frac</button>
+              <button type="button" onClick={() => cmd("\\sqrt")} className="keypad-btn">√</button>
+              <button type="button" onClick={() => cmd("^")} className="keypad-btn">xⁿ</button>
+              <button type="button" onClick={() => cmd("_")} className="keypad-btn">x₍ₙ₎</button>
+              <button type="button" onClick={() => insertFunction("\\ln\\left(\\right)")} className="keypad-btn">ln</button>
+              <button type="button" onClick={() => insertFunction("\\log\\left(\\right)")} className="keypad-btn">log</button>
+              <button type="button" onClick={() => write("\\left|\\right|")} className="keypad-btn">|x|</button>
+              <button type="button" onClick={() => write("\\leq")} className="keypad-btn">≤</button>
+              <button type="button" onClick={() => write("\\geq")} className="keypad-btn">≥</button>
             </div>
           )}
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {/* Action buttons */}
+        <div className="mt-4 grid grid-cols-3 gap-2 border-t border-orange-100 pt-3">
           <button type="button" onClick={clear} className="keypad-btn-del">
             Clear
           </button>
           <button type="button" onClick={backspace} className="keypad-btn-del">
-            ⌫ Delete
+            ⌫
           </button>
           <button
             type="button"
             onClick={onSubmit}
-            className="rounded-xl bg-emerald-600 px-3 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-95 sm:col-span-1"
+            className="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-3 py-3 text-base font-bold text-white shadow-md transition hover:shadow-lg active:scale-95"
           >
-            Check
+            Check ✓
           </button>
         </div>
       </div>
-
-      {/* Spacer (keeps layout stable) */}
     </div>
   );
 }

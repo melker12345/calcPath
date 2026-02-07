@@ -11,20 +11,19 @@ export function ProgressBar({
   return (
     <div className="space-y-1">
       {label ? (
-        <div className="flex items-center justify-between text-xs text-zinc-500">
+        <div className="flex items-center justify-between text-xs text-zinc-600">
           <span>{label}</span>
-          <span className="font-medium text-zinc-700 dark:text-zinc-200">
+          <span className="font-medium text-zinc-800">
             {Math.round(clamped)}%
           </span>
         </div>
       ) : null}
-      <div className="h-2 w-full rounded-full bg-zinc-100 dark:bg-zinc-800">
+      <div className="h-2 w-full rounded-full bg-orange-100">
         <div
-          className="h-2 rounded-full bg-gradient-to-r from-emerald-500 to-blue-500"
+          className="h-2 rounded-full bg-gradient-to-r from-orange-400 to-rose-400"
           style={{ width: `${clamped}%` }}
         />
       </div>
     </div>
   );
 }
-

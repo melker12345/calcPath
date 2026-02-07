@@ -3,20 +3,11 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { SectionCard } from "@/components/section-card";
-import { ProgressBar } from "@/components/progress-bar";
+import { PaywallGate } from "@/components/paywall-gate";
 import { useProgress } from "@/components/progress-provider";
-import { getTopicProgress } from "@/lib/progress";
+import { getPracticeProgress } from "@/lib/progress";
 import { problems, topics } from "@/lib/content";
 import { trackEvent } from "@/lib/analytics";
-
-const totalProblemsByTopic = topics.reduce<Record<string, number>>(
-  (acc, topic) => {
-    acc[topic.id] = problems.filter((problem) => problem.topicId === topic.id)
-      .length;
-    return acc;
-  },
-  {},
-);
 
 export default function PracticePage() {
   const { progress } = useProgress();
@@ -26,9 +17,10 @@ export default function PracticePage() {
   }, []);
 
   return (
+    <PaywallGate feature="Practice">
     <div className="mx-auto w-full max-w-6xl px-6 py-12">
       <div className="mb-8">
-        <h1 className="text-3xl font-semibold">Practice by topic</h1>
+        <h1 className="text-3xl font-semibold text-zinc-900">Practice by topic</h1>
         <p className="text-sm text-zinc-500">
           Choose a calculus topic and start solving problems.
         </p>
@@ -36,27 +28,42 @@ export default function PracticePage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         {topics.map((topic) => {
-          const totals = totalProblemsByTopic[topic.id];
-          const stats = getTopicProgress(progress, topic.id, totals);
+          const stats = getPracticeProgress(progress, topic.id, problems);
           return (
             <SectionCard
               key={topic.id}
               title={topic.title}
               description={topic.description}
             >
-              <div className="flex items-center justify-between text-sm text-zinc-500">
-                <span>
-                  {stats.solved}/{totals} attempted · {stats.correct} correct ·{" "}
-                  {stats.accuracyRate}% accuracy
-                </span>
-                <span>{topic.estimatedMinutes} min</span>
+              <div className="mt-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl font-bold text-zinc-900">
+                    {stats.correct}/{stats.total}
+                  </span>
+                  <span className="text-sm text-zinc-500">mastered</span>
+                </div>
+                <span className="text-sm text-zinc-500">{topic.estimatedMinutes} min</span>
               </div>
-              <div className="mt-3">
-                <ProgressBar value={stats.masteryRate} label="Mastery (correct)" />
+              
+              <div className="mt-3 h-2 rounded-full bg-orange-100">
+                <div 
+                  className={`h-2 rounded-full transition-all ${
+                    stats.isComplete ? "bg-emerald-500" : "bg-gradient-to-r from-orange-400 to-amber-400"
+                  }`}
+                  style={{ width: `${stats.masteryRate}%` }}
+                />
               </div>
+              
+              <div className="mt-2 text-sm text-zinc-500">
+                {stats.accuracyRate}% accuracy
+                {stats.isComplete && (
+                  <span className="ml-2 font-semibold text-emerald-600">✓ Complete</span>
+                )}
+              </div>
+              
               <div className="mt-4 flex gap-2">
                 <Link className="btn-primary" href={`/practice/${topic.id}`}>
-                  Start session
+                  {stats.correct > 0 ? "Continue" : "Start"} practice
                 </Link>
                 <Link className="btn-secondary" href={`/modules/${topic.id}`}>
                   Read module
@@ -67,5 +74,6 @@ export default function PracticePage() {
         })}
       </div>
     </div>
+    </PaywallGate>
   );
 }

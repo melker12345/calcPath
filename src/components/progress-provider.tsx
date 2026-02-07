@@ -6,15 +6,18 @@ import { supabase } from "@/lib/supabase/client";
 import {
   Attempt,
   ProgressState,
+  TestResult,
   createEmptyProgress,
   normalizeProgressState,
   recordAttempt,
+  recordTestResult,
 } from "@/lib/progress";
 import { useAuth } from "@/components/auth-provider";
 
 type ProgressContextValue = {
   progress: ProgressState;
   addAttempt: (attempt: Attempt) => void;
+  addTestResult: (result: TestResult) => void;
   resetProgress: () => void;
 };
 
@@ -113,6 +116,25 @@ export const ProgressProvider = ({
     });
   };
 
+  const addTestResult = (result: TestResult) => {
+    setProgress((prev) => {
+      const next = recordTestResult(prev, result);
+      writeStorage(PROGRESS_KEY, next);
+      if (user?.id) {
+        supabase
+          .from("user_progress")
+          .upsert({ user_id: user.id, state: next }, { onConflict: "user_id" })
+          .then(({ error }) => {
+            if (error) {
+              // eslint-disable-next-line no-console
+              console.warn("Failed to save test result:", error.message);
+            }
+          });
+      }
+      return next;
+    });
+  };
+
   const resetProgress = () => {
     const next = createEmptyProgress();
     setProgress(next);
@@ -134,6 +156,7 @@ export const ProgressProvider = ({
     () => ({
       progress,
       addAttempt,
+      addTestResult,
       resetProgress,
     }),
     [progress],
