@@ -142,3 +142,11 @@ We could have
 📋 Question Review Hard (9 incorrect/7)
 Where each can get expanded.
 
+
+
+
+
+Today 11 - Feb:
+
+Noticed we need to fix mobile.
+And manage subscriptions 
