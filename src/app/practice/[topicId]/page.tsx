@@ -66,8 +66,11 @@ export default function PracticeTopicPage() {
   const [answer, setAnswer] = useState("");
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [solvedCount, setSolvedCount] = useState(0);
+  const [shuffled, setShuffled] = useState(false);
+  const [displayProblems, setDisplayProblems] = useState(topicProblems);
+  const [resumeReady, setResumeReady] = useState(false);
 
-  const current = topicProblems[index];
+  const current = displayProblems[index];
 
   // Get question context for MathInput suggestions
   const questionContext = useMemo(() => {
@@ -82,12 +85,36 @@ export default function PracticeTopicPage() {
 
   useEffect(() => {
     // Calculate mastered count on client only to avoid hydration mismatch
-    // Only count practice problems (not test questions)
     const count = progress.completedProblemIds.filter((id) =>
       topicProblems.some((problem) => problem.id === id)
     ).length;
     setSolvedCount(count);
   }, [progress.completedProblemIds, topicProblems]);
+
+  // Resume from the first unsolved problem on initial load
+  useEffect(() => {
+    if (resumeReady) return;
+    const completedSet = new Set(progress.completedProblemIds);
+    const firstUnsolved = topicProblems.findIndex((p) => !completedSet.has(p.id));
+    if (firstUnsolved > 0) {
+      setIndex(firstUnsolved);
+    }
+    setResumeReady(true);
+  }, [progress.completedProblemIds, topicProblems, resumeReady]);
+
+  // Keep displayProblems in sync with topicProblems when not shuffled
+  useEffect(() => {
+    if (!shuffled) setDisplayProblems(topicProblems);
+  }, [topicProblems, shuffled]);
+
+  const shuffleAndRestart = () => {
+    const shuffledProblems = [...topicProblems].sort(() => Math.random() - 0.5);
+    setDisplayProblems(shuffledProblems);
+    setShuffled(true);
+    setIndex(0);
+    setFeedback(null);
+    setAnswer("");
+  };
 
   // Reset feedback when changing questions
   useEffect(() => {
@@ -170,7 +197,7 @@ export default function PracticeTopicPage() {
   const goToNext = () => {
     setFeedback(null);
     setAnswer("");
-    setIndex((prev) => Math.min(topicProblems.length - 1, prev + 1));
+    setIndex((prev) => Math.min(displayProblems.length - 1, prev + 1));
   };
 
   const goToPrev = () => {
@@ -195,7 +222,7 @@ export default function PracticeTopicPage() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="text-sm text-zinc-600">
-            {solvedCount}/{topicProblems.length} mastered
+            {solvedCount}/{displayProblems.length} mastered
           </div>
           <Link className="btn-secondary" href={`/test/${topic.id}`}>
             Take test
@@ -206,7 +233,7 @@ export default function PracticeTopicPage() {
       <div className="rounded-3xl border-2 border-orange-100 bg-white p-6 shadow-lg">
         <div className="py-2 text-center">
           <div className="text-sm text-zinc-600">
-            Problem {index + 1} of {topicProblems.length}
+            Problem {index + 1} of {displayProblems.length}
           </div>
           <h2 className="mt-4 text-2xl font-semibold leading-snug text-zinc-900">
             <MathText text={current.prompt} />
@@ -404,6 +431,26 @@ export default function PracticeTopicPage() {
           </div>
         )}
 
+        {/* All mastered banner */}
+        {solvedCount >= displayProblems.length && (
+          <div className="mt-6 rounded-2xl border-2 border-emerald-200 bg-emerald-50 p-5 text-center">
+            <div className="text-2xl">🎉</div>
+            <p className="mt-2 text-lg font-bold text-emerald-800">
+              All {displayProblems.length} problems mastered!
+            </p>
+            <p className="mt-1 text-sm text-emerald-700">
+              Want to practice again? Shuffle the questions for a fresh run.
+            </p>
+            <button
+              type="button"
+              onClick={shuffleAndRestart}
+              className="mt-4 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:shadow-lg active:scale-95"
+            >
+              Shuffle &amp; restart
+            </button>
+          </div>
+        )}
+
         <div className="mt-6 flex flex-wrap gap-2">
           <button
             type="button"
@@ -417,10 +464,33 @@ export default function PracticeTopicPage() {
             type="button"
             className="btn-secondary"
             onClick={goToNext}
-            disabled={index === topicProblems.length - 1}
+            disabled={index === displayProblems.length - 1}
           >
             Next →
           </button>
+          {solvedCount > 0 && solvedCount < displayProblems.length && (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                const completedSet = new Set(progress.completedProblemIds);
+                const nextUnsolved = displayProblems.findIndex(
+                  (p, i) => i > index && !completedSet.has(p.id)
+                );
+                if (nextUnsolved >= 0) {
+                  setIndex(nextUnsolved);
+                } else {
+                  // Wrap around to the first unsolved
+                  const first = displayProblems.findIndex((p) => !completedSet.has(p.id));
+                  if (first >= 0) setIndex(first);
+                }
+                setFeedback(null);
+                setAnswer("");
+              }}
+            >
+              Next unsolved →
+            </button>
+          )}
           <Link className="btn-secondary" href="/practice">
             Back to topics
           </Link>

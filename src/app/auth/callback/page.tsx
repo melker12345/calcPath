@@ -1,25 +1,17 @@
-"use client";
-
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
+import { Suspense } from "react";
+import { CallbackClient } from "./callback-client";
 
 export default function AuthCallbackPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    // Supabase handles session from URL automatically in the client.
-    supabase.auth.getSession().finally(() => {
-      router.replace("/dashboard");
-    });
-  }, [router]);
-
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-12">
-      <h1 className="text-2xl font-bold text-zinc-900">Signing you in…</h1>
-      <p className="mt-2 text-zinc-600">
-        Redirecting to your dashboard.
-      </p>
-    </div>
+    <Suspense
+      fallback={
+        <div className="mx-auto w-full max-w-2xl px-6 py-12">
+          <h1 className="text-2xl font-bold text-zinc-900">Signing you in…</h1>
+          <p className="mt-2 text-zinc-600">Redirecting to your dashboard.</p>
+        </div>
+      }
+    >
+      <CallbackClient />
+    </Suspense>
   );
 }

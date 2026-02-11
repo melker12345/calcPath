@@ -1,8 +1,17 @@
 import { Topic } from "@/lib/content";
 
+export type WorkedExample = {
+  title: string;
+  steps: string[];
+};
+
 export type ModuleSection = {
   title: string;
   body: string[];
+  /** Optional "Explain Like I'm 5" — simpler, intuition-based explanation */
+  eli5?: string[];
+  /** Inline worked examples for this section (1-2 detailed examples) */
+  examples?: WorkedExample[];
 };
 
 export type ModuleContent = {
@@ -61,6 +70,32 @@ export const modules: ModuleContent[] = [
           "Combine fractions: if the expression has two fractions being subtracted, find a common denominator to combine them into a single fraction.",
           "Use trig identities: rewrite expressions using $\\sin^2 x + \\cos^2 x = 1$, double-angle formulas, or the identity $1-\\cos x = 2\\sin^2(x/2)$ to simplify.",
         ],
+        examples: [
+          {
+            title: "Factoring a removable discontinuity",
+            steps: [
+              "Compute $\\lim_{x\\to 3} \\frac{x^2-9}{x-3}$.",
+              "First, try direct substitution: plugging in $x=3$ gives $\\frac{9-9}{3-3} = \\frac{0}{0}$. This is indeterminate, so we need to simplify.",
+              "Recognize that the numerator is a difference of squares: $x^2 - 9 = (x-3)(x+3)$.",
+              "Rewrite: $\\frac{(x-3)(x+3)}{x-3}$. Since we're taking the limit as $x \\to 3$ (not evaluating at $x=3$), $x \\neq 3$, so we can cancel the $(x-3)$ terms.",
+              "After canceling: $\\lim_{x\\to 3} (x+3)$.",
+              "Now direct substitution works: $3 + 3 = 6$.",
+              "The limit is $6$. The original function has a hole at $x=3$, but the limit 'sees through' the hole to the value the function approaches.",
+            ],
+          },
+          {
+            title: "Rationalizing a radical expression",
+            steps: [
+              "Compute $\\lim_{x\\to 0} \\frac{\\sqrt{1+x} - 1}{x}$.",
+              "Direct substitution: $\\frac{\\sqrt{1}-1}{0} = \\frac{0}{0}$. Indeterminate.",
+              "The trouble is the square root in the numerator. To eliminate it, multiply by the conjugate: $\\frac{\\sqrt{1+x}-1}{x} \\cdot \\frac{\\sqrt{1+x}+1}{\\sqrt{1+x}+1}$.",
+              "The numerator becomes $(\\sqrt{1+x})^2 - 1^2 = (1+x) - 1 = x$ (difference of squares pattern).",
+              "So the expression simplifies to $\\frac{x}{x(\\sqrt{1+x}+1)} = \\frac{1}{\\sqrt{1+x}+1}$.",
+              "Now substitute $x=0$: $\\frac{1}{\\sqrt{1}+1} = \\frac{1}{2}$.",
+              "The limit is $\\frac{1}{2}$. The conjugate trick is your go-to whenever you see $\\sqrt{\\text{something}} - \\text{number}$ in a limit.",
+            ],
+          },
+        ],
       },
       {
         title: "Key trigonometric limits",
@@ -72,6 +107,19 @@ export const modules: ModuleContent[] = [
           "Generalization: $\\lim_{x\\to 0} \\frac{\\sin(kx)}{x} = k$ for any constant $k$. Factor out the $k$ or substitute $u=kx$.",
           "Another useful limit: $\\lim_{x\\to 0} \\frac{e^x - 1}{x} = 1$. This shows up in many exponential limit problems.",
         ],
+        examples: [
+          {
+            title: "Using the generalized sin(kx)/x limit",
+            steps: [
+              "Compute $\\lim_{x\\to 0} \\frac{\\sin(5x)}{3x}$.",
+              "This doesn't match $\\frac{\\sin x}{x}$ exactly, but we can manipulate it to use the standard limit.",
+              "Rewrite: $\\frac{\\sin(5x)}{3x} = \\frac{5}{3} \\cdot \\frac{\\sin(5x)}{5x}$. We multiplied and divided by $5$ to create the form $\\frac{\\sin(\\text{stuff})}{\\text{stuff}}$.",
+              "Now as $x \\to 0$, the expression $5x \\to 0$ as well, so $\\frac{\\sin(5x)}{5x} \\to 1$ by the standard trig limit.",
+              "Therefore: $\\frac{5}{3} \\cdot 1 = \\frac{5}{3}$.",
+              "Key takeaway: whenever you see $\\frac{\\sin(kx)}{mx}$, the answer is $\\frac{k}{m}$. Just match the argument of $\\sin$ with the denominator.",
+            ],
+          },
+        ],
       },
       {
         title: "The Squeeze Theorem",
@@ -80,6 +128,25 @@ export const modules: ModuleContent[] = [
           "The function $f$ is 'squeezed' between two functions that both approach the same value, so $f$ has no choice but to approach that value too.",
           "Classic example: $\\lim_{x\\to 0} x^2 \\sin(1/x)$. We know $-x^2 \\leq x^2\\sin(1/x) \\leq x^2$, and both $-x^2$ and $x^2$ approach $0$, so the limit is $0$.",
           "The Squeeze Theorem is how we rigorously prove $\\lim_{x\\to 0} \\frac{\\sin x}{x} = 1$ using geometry of the unit circle.",
+        ],
+        eli5: [
+          "Imagine you're walking between two friends on a sidewalk. Both friends are heading toward the same coffee shop. Since you're stuck between them, you have to end up at the same coffee shop too — you have no choice.",
+          "That's the Squeeze Theorem. If a wiggly, hard-to-track function is trapped between two simpler functions, and those simpler functions both go to the same place, the wiggly one must go there too.",
+          "It's especially handy when a function oscillates wildly (like $\\sin(1/x)$ near zero) but is being multiplied by something that shrinks to zero (like $x^2$). The shrinking part forces everything to zero.",
+        ],
+        examples: [
+          {
+            title: "Squeeze Theorem with an oscillating function",
+            steps: [
+              "Compute $\\lim_{x\\to 0} x^2 \\cos(1/x)$.",
+              "The problem: $\\cos(1/x)$ oscillates wildly between $-1$ and $1$ as $x \\to 0$. We can't evaluate $\\cos(1/0)$. So direct substitution is hopeless.",
+              "But we know $-1 \\leq \\cos(1/x) \\leq 1$ for all $x \\neq 0$.",
+              "Multiply the entire inequality by $x^2$ (which is positive, so the inequality direction stays the same): $-x^2 \\leq x^2\\cos(1/x) \\leq x^2$.",
+              "Now evaluate the outer limits: $\\lim_{x\\to 0} (-x^2) = 0$ and $\\lim_{x\\to 0} x^2 = 0$.",
+              "Both sides squeeze to $0$, so by the Squeeze Theorem: $\\lim_{x\\to 0} x^2\\cos(1/x) = 0$.",
+              "The insight: even though $\\cos(1/x)$ is chaotic, $x^2$ is shrinking to zero so fast that it forces the entire product to zero. The $x^2$ 'tames' the oscillation.",
+            ],
+          },
         ],
       },
       {
@@ -91,6 +158,11 @@ export const modules: ModuleContent[] = [
           "Jump discontinuity: the left and right limits exist but are different. Example: $f(x) = \\lfloor x \\rfloor$ (floor function) at every integer.",
           "Infinite discontinuity: the function blows up to $\\pm\\infty$. Example: $f(x) = 1/x$ at $x=0$.",
           "A function continuous on a closed interval $[a,b]$ is guaranteed to hit every $y$-value between $f(a)$ and $f(b)$ (Intermediate Value Theorem). This is used to prove equations have solutions.",
+        ],
+        eli5: [
+          "A continuous function is one you can draw without lifting your pen off the paper. No gaps, no jumps, no sudden teleporting.",
+          "A hole (removable discontinuity) is like a missing stepping stone in a path — the path clearly continues, but one stone is gone. A jump is like a staircase — you suddenly leap to a different height. An infinite discontinuity is like a cliff — the ground drops away forever.",
+          "The Intermediate Value Theorem is common sense: if it's 30°F in the morning and 70°F in the afternoon, at some point during the day it must have been exactly 50°F. Temperature doesn't teleport — it's continuous.",
         ],
       },
       {
@@ -119,6 +191,20 @@ export const modules: ModuleContent[] = [
           "Technique: divide every term by the highest power of $x$ in the denominator. As $x\\to \\infty$, terms like $1/x$, $1/x^2$, etc. all go to $0$.",
           "For expressions with radicals, factor out the dominant term. Example: $\\lim_{x\\to \\infty} \\frac{\\sqrt{4x^2+1}}{x} = \\lim_{x\\to \\infty} \\frac{x\\sqrt{4+1/x^2}}{x} = 2$.",
         ],
+        examples: [
+          {
+            title: "Rational function limit at infinity",
+            steps: [
+              "Compute $\\lim_{x\\to \\infty} \\frac{2x^2 + 3x + 1}{x^2 - 4}$.",
+              "Both numerator and denominator grow without bound, so we get $\\infty / \\infty$. We need to compare how fast each grows.",
+              "Technique: divide every term by the highest power of $x$ in the denominator, which is $x^2$.",
+              "$\\frac{2x^2 + 3x + 1}{x^2 - 4} = \\frac{2 + 3/x + 1/x^2}{1 - 4/x^2}$.",
+              "As $x \\to \\infty$: $3/x \\to 0$, $1/x^2 \\to 0$, and $4/x^2 \\to 0$.",
+              "So the expression approaches $\\frac{2 + 0 + 0}{1 - 0} = 2$.",
+              "The horizontal asymptote is $y = 2$. Quick rule: when the degrees are equal, the limit is just the ratio of the leading coefficients ($2/1 = 2$).",
+            ],
+          },
+        ],
       },
       {
         title: "L'Hôpital's Rule",
@@ -129,77 +215,41 @@ export const modules: ModuleContent[] = [
           "For other indeterminate forms like $0 \\cdot \\infty$, $\\infty - \\infty$, $1^\\infty$, $0^0$, or $\\infty^0$, rewrite the expression into a $0/0$ or $\\infty/\\infty$ form first.",
           "Example: for $\\lim_{x\\to 0^+} x\\ln x$ ($0 \\cdot (-\\infty)$ form), rewrite as $\\lim_{x\\to 0^+} \\frac{\\ln x}{1/x}$ ($-\\infty / \\infty$ form) and apply L'Hôpital.",
         ],
-      },
-    ],
-    examples: [
-      {
-        title: "Factoring out a removable discontinuity",
-        steps: [
-          "Compute $\\lim_{x\\to 3} \\frac{x^2-9}{x-3}$.",
-          "Direct substitution gives $0/0$, so factor: $\\frac{(x-3)(x+3)}{x-3}$.",
-          "Cancel the $(x-3)$ terms: the expression simplifies to $x+3$.",
-          "Substitute $x=3$: the limit is $3+3=6$.",
+        eli5: [
+          "When you plug in the number and get $0/0$, it's like asking 'what's nothing divided by nothing?' — the answer is genuinely unclear. It could be anything.",
+          "L'Hôpital's Rule says: instead of looking at the original functions, look at how fast each one is approaching zero. The one that's racing to zero faster 'wins.' Taking derivatives measures exactly that speed.",
+          "Think of two cars both approaching a finish line (zero). The question 'what's the ratio?' depends on their speeds. L'Hôpital says: compare the speedometers (derivatives) instead of the positions.",
         ],
-      },
-      {
-        title: "Rationalizing a radical",
-        steps: [
-          "Compute $\\lim_{x\\to 0} \\frac{\\sqrt{1+x}-1}{x}$.",
-          "Direct substitution gives $0/0$.",
-          "Multiply numerator and denominator by the conjugate $\\sqrt{1+x}+1$.",
-          "Numerator becomes $(1+x)-1 = x$, so the expression simplifies to $\\frac{x}{x(\\sqrt{1+x}+1)} = \\frac{1}{\\sqrt{1+x}+1}$.",
-          "Substitute $x=0$: the limit is $\\frac{1}{1+1} = \\frac{1}{2}$.",
-        ],
-      },
-      {
-        title: "Using the key trig limit",
-        steps: [
-          "Compute $\\lim_{x\\to 0} \\frac{\\sin(5x)}{3x}$.",
-          "Rewrite: $\\frac{\\sin(5x)}{3x} = \\frac{5}{3} \\cdot \\frac{\\sin(5x)}{5x}$.",
-          "As $x\\to 0$, we have $5x\\to 0$, so $\\frac{\\sin(5x)}{5x} \\to 1$.",
-          "The limit is $\\frac{5}{3} \\cdot 1 = \\frac{5}{3}$.",
-        ],
-      },
-      {
-        title: "Squeeze Theorem",
-        steps: [
-          "Compute $\\lim_{x\\to 0} x^2 \\cos(1/x)$.",
-          "We know $-1 \\leq \\cos(1/x) \\leq 1$ for all $x \\neq 0$.",
-          "Multiply through by $x^2$: $-x^2 \\leq x^2\\cos(1/x) \\leq x^2$.",
-          "Both $-x^2$ and $x^2$ approach $0$ as $x\\to 0$.",
-          "By the Squeeze Theorem, $\\lim_{x\\to 0} x^2\\cos(1/x) = 0$.",
-        ],
-      },
-      {
-        title: "Limits at infinity for a rational function",
-        steps: [
-          "Compute $\\lim_{x\\to \\infty} \\frac{2x^2+3x+1}{x^2-4}$.",
-          "Divide every term by $x^2$: $\\frac{2+3/x+1/x^2}{1-4/x^2}$.",
-          "As $x\\to \\infty$: $3/x \\to 0$, $1/x^2 \\to 0$, and $4/x^2 \\to 0$.",
-          "The limit is $\\frac{2+0+0}{1-0} = 2$. The horizontal asymptote is $y=2$.",
-        ],
-      },
-      {
-        title: "L'Hôpital's Rule",
-        steps: [
-          "Compute $\\lim_{x\\to 0} \\frac{e^x - 1}{x}$.",
-          "Direct substitution gives $\\frac{0}{0}$, an indeterminate form.",
-          "Apply L'Hôpital: differentiate top and bottom separately.",
-          "Numerator derivative: $e^x$. Denominator derivative: $1$.",
-          "New limit: $\\lim_{x\\to 0} \\frac{e^x}{1} = e^0 = 1$.",
-        ],
-      },
-      {
-        title: "Piecewise continuity check",
-        steps: [
-          "Is $f(x) = \\begin{cases} x^2+1 & x < 2 \\\\ 5 & x = 2 \\\\ 3x-1 & x > 2 \\end{cases}$ continuous at $x=2$?",
-          "Left-hand limit: $\\lim_{x\\to 2^-} (x^2+1) = 4+1 = 5$.",
-          "Right-hand limit: $\\lim_{x\\to 2^+} (3x-1) = 6-1 = 5$.",
-          "Both sides agree, so $\\lim_{x\\to 2} f(x) = 5$. Also $f(2)=5$.",
-          "All three conditions met: $f$ is continuous at $x=2$.",
+        examples: [
+          {
+            title: "Applying L'Hôpital's Rule to 0/0",
+            steps: [
+              "Compute $\\lim_{x\\to 0} \\frac{e^x - 1}{\\sin x}$.",
+              "Direct substitution: $\\frac{e^0 - 1}{\\sin 0} = \\frac{0}{0}$. Indeterminate.",
+              "Since both numerator $f(x) = e^x - 1$ and denominator $g(x) = \\sin x$ approach $0$, L'Hôpital's Rule applies.",
+              "Differentiate the numerator: $f'(x) = e^x$.",
+              "Differentiate the denominator: $g'(x) = \\cos x$.",
+              "So $\\lim_{x\\to 0} \\frac{e^x - 1}{\\sin x} = \\lim_{x\\to 0} \\frac{e^x}{\\cos x}$.",
+              "Now direct substitution works: $\\frac{e^0}{\\cos 0} = \\frac{1}{1} = 1$.",
+              "The limit is $1$. This confirms what we'd expect: near $0$, both $e^x - 1$ and $\\sin x$ behave approximately like $x$, so their ratio approaches $1$.",
+            ],
+          },
+          {
+            title: "Converting a 0 · ∞ form for L'Hôpital",
+            steps: [
+              "Compute $\\lim_{x\\to 0^+} x \\ln x$.",
+              "As $x \\to 0^+$: $x \\to 0$ and $\\ln x \\to -\\infty$. So this is a $0 \\cdot (-\\infty)$ form — not directly eligible for L'Hôpital.",
+              "Rewrite as a fraction: $x \\ln x = \\frac{\\ln x}{1/x}$. Now as $x \\to 0^+$, the numerator $\\ln x \\to -\\infty$ and the denominator $1/x \\to \\infty$. This is $-\\infty / \\infty$ — L'Hôpital applies.",
+              "Differentiate numerator: $\\frac{d}{dx} \\ln x = \\frac{1}{x}$.",
+              "Differentiate denominator: $\\frac{d}{dx} (1/x) = -\\frac{1}{x^2}$.",
+              "So $\\lim_{x\\to 0^+} \\frac{\\ln x}{1/x} = \\lim_{x\\to 0^+} \\frac{1/x}{-1/x^2} = \\lim_{x\\to 0^+} \\frac{1/x \\cdot x^2}{-1} = \\lim_{x\\to 0^+} (-x) = 0$.",
+              "The limit is $0$. Even though $\\ln x$ goes to $-\\infty$, $x$ goes to $0$ fast enough to win the tug-of-war.",
+            ],
+          },
         ],
       },
     ],
+    examples: [],
     commonMistakes: [
       "Plugging in the value too early before simplifying an indeterminate form. Always check for $0/0$ or $\\infty/\\infty$ first.",
       "Concluding the limit does not exist just because $f(a)$ is undefined. The function not being defined at $a$ says nothing about the limit.",
@@ -236,6 +286,20 @@ export const modules: ModuleContent[] = [
           "Sum/difference rule: $\\frac{d}{dx}[f(x) \\pm g(x)] = f'(x) \\pm g'(x)$. Differentiate term by term.",
           "Constant rule: $\\frac{d}{dx}[c] = 0$. The derivative of any constant is zero.",
         ],
+        examples: [
+          {
+            title: "Using the power rule on a polynomial",
+            steps: [
+              "Find $\\frac{d}{dx}(3x^4 - 5x^2 + 7x - 2)$.",
+              "Apply the rules term by term: sum rule lets us differentiate each term separately, constant multiple rule pulls out the coefficients.",
+              "First term: $\\frac{d}{dx}(3x^4) = 3 \\cdot 4x^3 = 12x^3$ (power rule: bring down the $4$, reduce exponent by $1$).",
+              "Second term: $\\frac{d}{dx}(-5x^2) = -5 \\cdot 2x = -10x$.",
+              "Third term: $\\frac{d}{dx}(7x) = 7 \\cdot 1 = 7$ (since $x = x^1$, power rule gives $1 \\cdot x^0 = 1$).",
+              "Fourth term: $\\frac{d}{dx}(-2) = 0$ (constant rule).",
+              "Combine: $\\frac{d}{dx}(3x^4 - 5x^2 + 7x - 2) = 12x^3 - 10x + 7$.",
+            ],
+          },
+        ],
       },
       {
         title: "Derivatives of common functions",
@@ -254,6 +318,19 @@ export const modules: ModuleContent[] = [
           "Think of it as: \"derivative of the first times the second, plus the first times the derivative of the second.\"",
           "Example: $\\frac{d}{dx}[x^2 \\sin x] = 2x \\sin x + x^2 \\cos x$.",
           "Tip: always check if you can simplify the expression first. Sometimes you don't need the product rule at all.",
+        ],
+        examples: [
+          {
+            title: "Product rule with exponential and polynomial",
+            steps: [
+              "Find $\\frac{d}{dx}[x^3 e^x]$.",
+              "Identify the two functions: $f(x) = x^3$ and $g(x) = e^x$.",
+              "Find each derivative: $f'(x) = 3x^2$ and $g'(x) = e^x$.",
+              "Apply the product rule: $(fg)' = f'g + fg' = 3x^2 \\cdot e^x + x^3 \\cdot e^x$.",
+              "Factor out common terms: $e^x(3x^2 + x^3) = x^2 e^x(3 + x)$.",
+              "Final answer: $\\frac{d}{dx}[x^3 e^x] = x^2 e^x(x + 3)$.",
+            ],
+          },
         ],
       },
       {
@@ -274,6 +351,36 @@ export const modules: ModuleContent[] = [
           "Nested chains: for $e^{\\sin(x^2)}$, apply the chain rule twice: $e^{\\sin(x^2)} \\cdot \\cos(x^2) \\cdot 2x$.",
           "The chain rule is arguably the most important rule. It appears everywhere: in implicit differentiation, related rates, and integration by substitution.",
         ],
+        examples: [
+          {
+            title: "Chain rule with a nested composition",
+            steps: [
+              "Find $\\frac{d}{dx} \\ln(\\cos x)$.",
+              "Identify the outer and inner functions. Outer: $\\ln(u)$ where $u = \\cos x$. Inner: $\\cos x$.",
+              "Derivative of the outer function: $\\frac{d}{du} \\ln u = \\frac{1}{u}$, evaluated at $u = \\cos x$ gives $\\frac{1}{\\cos x}$.",
+              "Derivative of the inner function: $\\frac{d}{dx} \\cos x = -\\sin x$.",
+              "Multiply them (chain rule): $\\frac{1}{\\cos x} \\cdot (-\\sin x) = -\\frac{\\sin x}{\\cos x} = -\\tan x$.",
+              "Final answer: $\\frac{d}{dx} \\ln(\\cos x) = -\\tan x$.",
+            ],
+          },
+          {
+            title: "Double chain rule",
+            steps: [
+              "Find $\\frac{d}{dx} e^{\\sin(x^2)}$.",
+              "There are three nested layers: $e^{(\\cdot)}$, then $\\sin(\\cdot)$, then $x^2$. We peel them off one at a time.",
+              "Outermost layer: $\\frac{d}{du} e^u = e^u$, evaluated at $u = \\sin(x^2)$ gives $e^{\\sin(x^2)}$.",
+              "Middle layer: $\\frac{d}{dv} \\sin v = \\cos v$, evaluated at $v = x^2$ gives $\\cos(x^2)$.",
+              "Innermost layer: $\\frac{d}{dx} x^2 = 2x$.",
+              "Multiply all three together: $e^{\\sin(x^2)} \\cdot \\cos(x^2) \\cdot 2x$.",
+              "Final answer: $\\frac{d}{dx} e^{\\sin(x^2)} = 2x \\cos(x^2)\\, e^{\\sin(x^2)}$.",
+            ],
+          },
+        ],
+        eli5: [
+          "Imagine a machine with two gears connected together. The big gear turns the small gear. If you want to know how fast the final output changes, you need to know two things: how fast the big gear turns the small gear, and how fast the small gear turns on its own.",
+          "That's the chain rule. If you have a function inside another function (like $\\sin$ of $x^3$), the rate of change of the whole thing is: how fast the outer part changes × how fast the inner part changes.",
+          "A real-world example: temperature affects ice cream sales, and ice cream sales affect your revenue. If temperature goes up by 1°, sales go up by 50 cones, and each cone gives you \\$3, then your revenue goes up by $50 \\times 3 = 150$ dollars per degree. You multiplied the two rates together — that's the chain rule.",
+        ],
       },
       {
         title: "Inverse trigonometric derivatives",
@@ -291,6 +398,26 @@ export const modules: ModuleContent[] = [
           "Every time you differentiate a $y$ term, attach a $\\frac{dy}{dx}$ factor (this is the chain rule in action: $y$ is a function of $x$).",
           "Example: differentiate $x^2 + y^2 = 25$ to get $2x + 2y\\frac{dy}{dx} = 0$, then solve $\\frac{dy}{dx} = -\\frac{x}{y}$.",
           "Implicit differentiation is essential for curves that can't be written as $y = f(x)$, such as circles, ellipses, and other relations.",
+        ],
+        examples: [
+          {
+            title: "Implicit differentiation of a circle",
+            steps: [
+              "Find $\\frac{dy}{dx}$ for $x^2 + y^2 = 25$.",
+              "Differentiate both sides with respect to $x$. Remember: $y$ is a function of $x$, so we must use the chain rule on $y$ terms.",
+              "Left side: $\\frac{d}{dx}(x^2) + \\frac{d}{dx}(y^2) = 2x + 2y \\frac{dy}{dx}$.",
+              "The $2y \\frac{dy}{dx}$ came from the chain rule: $\\frac{d}{dx}(y^2) = 2y \\cdot \\frac{dy}{dx}$.",
+              "Right side: $\\frac{d}{dx}(25) = 0$.",
+              "So: $2x + 2y \\frac{dy}{dx} = 0$.",
+              "Solve for $\\frac{dy}{dx}$: $2y\\frac{dy}{dx} = -2x$, therefore $\\frac{dy}{dx} = -\\frac{x}{y}$.",
+              "At the point $(3, 4)$ on the circle: $\\frac{dy}{dx} = -\\frac{3}{4}$. This makes geometric sense — the tangent line at $(3,4)$ on a circle centered at the origin should slope downward to the right.",
+            ],
+          },
+        ],
+        eli5: [
+          "Usually, you have a nice equation like $y = x^2 + 3$ where $y$ is alone on one side. But sometimes $x$ and $y$ are tangled together, like in $x^2 + y^2 = 25$ (a circle). You can't easily solve for $y$.",
+          "Implicit differentiation says: just differentiate everything with respect to $x$ anyway. Whenever you hit a $y$, remember that $y$ secretly depends on $x$, so slap on a $\\frac{dy}{dx}$ (that's just the chain rule). Then solve for $\\frac{dy}{dx}$.",
+          "It's like a detective figuring out how fast a hidden variable changes by looking at the equation it's trapped in.",
         ],
       },
       {
@@ -334,62 +461,7 @@ export const modules: ModuleContent[] = [
         ],
       },
     ],
-    examples: [
-      {
-        title: "Power rule with various exponents",
-        steps: [
-          "Differentiate $f(x) = 3x^4 - 2x^{-1} + \\sqrt{x}$.",
-          "Rewrite: $3x^4 - 2x^{-1} + x^{1/2}$.",
-          "Apply power rule term by term: $12x^3 + 2x^{-2} + \\frac{1}{2}x^{-1/2}$.",
-          "Simplify: $12x^3 + \\frac{2}{x^2} + \\frac{1}{2\\sqrt{x}}$.",
-        ],
-      },
-      {
-        title: "Chain rule with nested functions",
-        steps: [
-          "Differentiate $f(x) = e^{\\sin(2x)}$.",
-          "Outer function: $e^u$ with $u = \\sin(2x)$. Derivative of outer: $e^u$.",
-          "Inner function: $\\sin(v)$ with $v = 2x$. Derivative: $\\cos(2x) \\cdot 2$.",
-          "Combine: $f'(x) = e^{\\sin(2x)} \\cdot \\cos(2x) \\cdot 2 = 2\\cos(2x)\\,e^{\\sin(2x)}$.",
-        ],
-      },
-      {
-        title: "Product rule",
-        steps: [
-          "Differentiate $f(x) = x^3 \\ln x$.",
-          "Let $u = x^3$ and $v = \\ln x$. Then $u' = 3x^2$ and $v' = 1/x$.",
-          "Product rule: $f'(x) = 3x^2 \\ln x + x^3 \\cdot \\frac{1}{x}$.",
-          "Simplify: $f'(x) = 3x^2 \\ln x + x^2 = x^2(3\\ln x + 1)$.",
-        ],
-      },
-      {
-        title: "Implicit differentiation on a circle",
-        steps: [
-          "Find $\\frac{dy}{dx}$ for $x^2 + y^2 = 25$.",
-          "Differentiate both sides with respect to $x$: $2x + 2y\\frac{dy}{dx} = 0$.",
-          "Solve for $\\frac{dy}{dx}$: $\\frac{dy}{dx} = -\\frac{x}{y}$.",
-          "At the point $(3, 4)$: slope is $-\\frac{3}{4}$. The tangent line is $y - 4 = -\\frac{3}{4}(x-3)$.",
-        ],
-      },
-      {
-        title: "Logarithmic differentiation",
-        steps: [
-          "Differentiate $y = x^x$ for $x > 0$.",
-          "Take $\\ln$ of both sides: $\\ln y = x \\ln x$.",
-          "Differentiate implicitly: $\\frac{1}{y}\\frac{dy}{dx} = \\ln x + x \\cdot \\frac{1}{x} = \\ln x + 1$.",
-          "Multiply both sides by $y = x^x$: $\\frac{dy}{dx} = x^x(\\ln x + 1)$.",
-        ],
-      },
-      {
-        title: "Linearization for quick estimates",
-        steps: [
-          "Approximate $\\sin(0.1)$ using linearization at $a = 0$.",
-          "$f(x) = \\sin x$, $f(0) = 0$, $f'(x) = \\cos x$, $f'(0) = 1$.",
-          "Linear approximation: $\\sin(0.1) \\approx 0 + 1 \\cdot (0.1) = 0.1$.",
-          "Actual value: $\\sin(0.1) = 0.09983...$. The approximation is excellent for small $x$.",
-        ],
-      },
-    ],
+    examples: [],
     commonMistakes: [
       "Forgetting the inner derivative in the chain rule. This is the single most common error. Always ask: is there a function inside another function?",
       "Applying the power rule to $e^x$. The derivative of $e^x$ is $e^x$, not $xe^{x-1}$. The power rule is for $x^n$, not $n^x$.",
@@ -417,6 +489,19 @@ export const modules: ModuleContent[] = [
           "As $n \\to \\infty$ (strips get infinitely thin), the Riemann sum converges to the definite integral: $\\int_a^b f(x)\\,dx = \\lim_{n\\to\\infty} \\sum_{i=1}^{n} f(x_i)\\Delta x$.",
           "This is why integrals represent accumulation: you are adding up infinitely many infinitesimally small contributions.",
         ],
+        examples: [
+          {
+            title: "Setting up a Riemann sum",
+            steps: [
+              "Estimate $\\int_0^2 x^2\\,dx$ using a right Riemann sum with $n = 4$ rectangles.",
+              "Width of each rectangle: $\\Delta x = \\frac{2-0}{4} = 0.5$.",
+              "Right endpoints: $x_1 = 0.5,\\; x_2 = 1.0,\\; x_3 = 1.5,\\; x_4 = 2.0$.",
+              "Heights: $f(0.5) = 0.25,\\; f(1) = 1,\\; f(1.5) = 2.25,\\; f(2) = 4$.",
+              "Sum: $0.25(0.5) + 1(0.5) + 2.25(0.5) + 4(0.5) = 0.125 + 0.5 + 1.125 + 2 = 3.75$.",
+              "The exact answer (using the FTC) is $\\frac{x^3}{3}\\Big|_0^2 = \\frac{8}{3} \\approx 2.667$. Our overestimate of $3.75$ comes from the right endpoints overshooting on an increasing function. With more rectangles, the estimate converges to $\\frac{8}{3}$.",
+            ],
+          },
+        ],
       },
       {
         title: "The Fundamental Theorem of Calculus (FTC)",
@@ -425,6 +510,25 @@ export const modules: ModuleContent[] = [
           "FTC Part 2: $\\int_a^b f(x)\\,dx = F(b) - F(a)$ where $F$ is any antiderivative of $f$ (meaning $F'=f$).",
           "Part 2 is the computational powerhouse: instead of computing limits of Riemann sums, just find an antiderivative and evaluate at the bounds.",
           "The connection to derivatives: if position is $s(t)$ and velocity is $v(t) = s'(t)$, then total displacement is $\\int_a^b v(t)\\,dt = s(b) - s(a)$. Integration recovers position from velocity.",
+        ],
+        eli5: [
+          "Imagine you're on a road trip. Your speedometer tells you how fast you're going at each moment (that's the derivative — the rate). The odometer tells you the total distance you've covered (that's the integral — the accumulation).",
+          "The FTC says: if you know the speedometer reading at every moment, you can figure out the total distance by 'adding up' all those tiny speeds. And the shortcut is: just check the odometer at the start and end, and subtract.",
+          "That's why it's called the Fundamental Theorem — it connects the two main ideas in all of calculus (rates and totals) and gives you a shortcut so you never have to actually add up infinitely many tiny rectangles.",
+        ],
+        examples: [
+          {
+            title: "Evaluating a definite integral with the FTC",
+            steps: [
+              "Compute $\\int_1^3 (2x + 1)\\,dx$.",
+              "Step 1 — find an antiderivative: $\\int (2x+1)\\,dx = x^2 + x + C$. (We don't need the $C$ for definite integrals.)",
+              "Step 2 — evaluate at the bounds using FTC Part 2: $F(x) = x^2 + x$.",
+              "$F(3) = 9 + 3 = 12$.",
+              "$F(1) = 1 + 1 = 2$.",
+              "$\\int_1^3 (2x+1)\\,dx = F(3) - F(1) = 12 - 2 = 10$.",
+              "This is the net area under the line $y = 2x+1$ from $x=1$ to $x=3$. Since $2x+1 > 0$ on this interval, the net area equals the total area.",
+            ],
+          },
         ],
       },
       {
@@ -464,6 +568,25 @@ export const modules: ModuleContent[] = [
           "For definite integrals, either convert the bounds to $u$-values, or back-substitute and use the original bounds.",
           "Tip: look for an \"inner function\" whose derivative (or a constant multiple of it) appears as a factor in the integrand.",
         ],
+        eli5: [
+          "Substitution is like changing languages to make a sentence easier to read. The math looks complicated in $x$-language, so you switch to $u$-language where it's simpler.",
+          "The trick is spotting the 'inside function.' Look at your integral and ask: is there a function stuffed inside another function? If yes, call the inside part $u$. If the derivative of that inside part is also floating around in the integral, you're golden — everything converts cleanly to $u$.",
+          "When you're done integrating in $u$-land, just swap back to $x$. It's like translating your answer back to the original language.",
+        ],
+        examples: [
+          {
+            title: "u-substitution with a definite integral",
+            steps: [
+              "Compute $\\int_0^1 2x(x^2 + 1)^3\\,dx$.",
+              "Spot the pattern: the inner function is $x^2 + 1$ and its derivative $2x$ appears as a factor. Perfect for substitution.",
+              "Let $u = x^2 + 1$, so $du = 2x\\,dx$. The $2x\\,dx$ in the integral is exactly $du$.",
+              "Convert the bounds: when $x=0$, $u = 0+1 = 1$. When $x=1$, $u = 1+1 = 2$.",
+              "The integral becomes $\\int_1^2 u^3\\,du$.",
+              "Integrate: $\\frac{u^4}{4}\\Big|_1^2 = \\frac{16}{4} - \\frac{1}{4} = 4 - 0.25 = \\frac{15}{4}$.",
+              "Final answer: $\\frac{15}{4}$. No need to back-substitute since we converted the bounds.",
+            ],
+          },
+        ],
       },
       {
         title: "Integration by parts (reverse product rule)",
@@ -474,6 +597,27 @@ export const modules: ModuleContent[] = [
           "Result: $x e^x - \\int e^x\\,dx = x e^x - e^x + C = e^x(x-1) + C$.",
           "Sometimes you need to apply by-parts twice (e.g., $\\int x^2 e^x\\,dx$) or use the tabular method for repeated applications.",
           "A special case: $\\int e^x \\sin x\\,dx$ requires by-parts twice, then solving for the integral algebraically.",
+        ],
+        eli5: [
+          "Imagine you're trying to find the area of a weird shape made by two things multiplied together. You can't handle both at once, so you break the job into pieces.",
+          "The idea: pick one part to differentiate (make simpler) and the other to integrate. You do one step of the problem, and in exchange, the remaining integral becomes easier. It's like trading a hard problem for an easier one.",
+          "The LIATE trick tells you which part to pick as $u$: Logs first, then Inverse trig, Algebra ($x$, $x^2$), Trig, and Exponentials last. Pick $u$ from higher in the list because those get simpler when you differentiate them.",
+        ],
+        examples: [
+          {
+            title: "Integration by parts: x·sin(x)",
+            steps: [
+              "Compute $\\int x \\sin x\\,dx$.",
+              "We have a product of algebraic ($x$) and trig ($\\sin x$). By LIATE, pick $u = x$ (algebraic is above trig).",
+              "Set $u = x$ and $dv = \\sin x\\,dx$.",
+              "Differentiate $u$: $du = dx$. Integrate $dv$: $v = -\\cos x$.",
+              "Apply the formula $\\int u\\,dv = uv - \\int v\\,du$:",
+              "$\\int x \\sin x\\,dx = x(-\\cos x) - \\int (-\\cos x)\\,dx = -x\\cos x + \\int \\cos x\\,dx$.",
+              "The remaining integral is easy: $\\int \\cos x\\,dx = \\sin x + C$.",
+              "Final answer: $\\int x \\sin x\\,dx = -x\\cos x + \\sin x + C$.",
+              "Check: differentiate $-x\\cos x + \\sin x$ using the product rule on the first term: $-\\cos x + x\\sin x + \\cos x = x\\sin x$. Correct!",
+            ],
+          },
         ],
       },
       {
@@ -505,6 +649,20 @@ export const modules: ModuleContent[] = [
           "Repeated factors: $\\frac{1}{(x-1)^2}$ requires terms $\\frac{A}{x-1} + \\frac{B}{(x-1)^2}$.",
           "Irreducible quadratics: for $(x^2+1)$ in the denominator, the numerator is $Ax+B$, not just $A$.",
           "If $\\deg P \\geq \\deg Q$, perform polynomial long division first, then decompose the remainder.",
+        ],
+        examples: [
+          {
+            title: "Partial fraction decomposition",
+            steps: [
+              "Compute $\\int \\frac{5x + 1}{(x+1)(x-2)}\\,dx$.",
+              "Decompose: $\\frac{5x+1}{(x+1)(x-2)} = \\frac{A}{x+1} + \\frac{B}{x-2}$.",
+              "Multiply both sides by $(x+1)(x-2)$: $5x + 1 = A(x-2) + B(x+1)$.",
+              "Smart substitution — let $x = 2$: $10 + 1 = A(0) + B(3)$, so $B = \\frac{11}{3}$.",
+              "Let $x = -1$: $-5 + 1 = A(-3) + B(0)$, so $A = \\frac{4}{3}$.",
+              "The integral becomes $\\int \\frac{4/3}{x+1}\\,dx + \\int \\frac{11/3}{x-2}\\,dx$.",
+              "$= \\frac{4}{3}\\ln|x+1| + \\frac{11}{3}\\ln|x-2| + C$.",
+            ],
+          },
         ],
       },
       {
@@ -540,67 +698,7 @@ export const modules: ModuleContent[] = [
         ],
       },
     ],
-    examples: [
-      {
-        title: "Power rule for integrals",
-        steps: [
-          "Compute $\\int x^3\\,dx$.",
-          "Apply the power rule: increase exponent by $1$ and divide: $\\frac{x^4}{4}$.",
-          "Add the constant: $\\frac{x^4}{4} + C$.",
-        ],
-      },
-      {
-        title: "Substitution",
-        steps: [
-          "Compute $\\int 2x\\cos(x^2)\\,dx$.",
-          "Let $u = x^2$, then $du = 2x\\,dx$.",
-          "Integral becomes $\\int \\cos u\\,du = \\sin u + C = \\sin(x^2) + C$.",
-        ],
-      },
-      {
-        title: "Integration by parts",
-        steps: [
-          "Compute $\\int x e^x\\,dx$.",
-          "Let $u = x$ (algebraic, simplifies on differentiation), $dv = e^x\\,dx$.",
-          "Then $du = dx$, $v = e^x$.",
-          "Apply formula: $xe^x - \\int e^x\\,dx = xe^x - e^x + C = e^x(x-1) + C$.",
-        ],
-      },
-      {
-        title: "Trig integral with half-angle identity",
-        steps: [
-          "Compute $\\int \\sin^2 x\\,dx$.",
-          "Use the identity: $\\sin^2 x = \\frac{1-\\cos(2x)}{2}$.",
-          "Integrate: $\\int \\frac{1-\\cos(2x)}{2}\\,dx = \\frac{x}{2} - \\frac{\\sin(2x)}{4} + C$.",
-        ],
-      },
-      {
-        title: "Partial fractions",
-        steps: [
-          "Compute $\\int \\frac{1}{x^2-1}\\,dx$.",
-          "Factor: $x^2-1 = (x-1)(x+1)$. Decompose: $\\frac{1}{(x-1)(x+1)} = \\frac{A}{x-1} + \\frac{B}{x+1}$.",
-          "Solve: $A = 1/2$, $B = -1/2$.",
-          "Integrate: $\\frac{1}{2}\\ln|x-1| - \\frac{1}{2}\\ln|x+1| + C = \\frac{1}{2}\\ln\\left|\\frac{x-1}{x+1}\\right| + C$.",
-        ],
-      },
-      {
-        title: "Improper integral",
-        steps: [
-          "Compute $\\int_1^{\\infty} \\frac{1}{x^2}\\,dx$.",
-          "Replace $\\infty$ with $b$: $\\lim_{b\\to\\infty} \\int_1^b x^{-2}\\,dx$.",
-          "Antiderivative: $-1/x$. Evaluate: $\\lim_{b\\to\\infty} (-1/b + 1) = 0 + 1 = 1$.",
-          "The integral converges to $1$.",
-        ],
-      },
-      {
-        title: "Definite integral with FTC",
-        steps: [
-          "Compute $\\int_0^2 3x^2\\,dx$.",
-          "Antiderivative: $x^3$.",
-          "Evaluate: $F(2) - F(0) = 8 - 0 = 8$.",
-        ],
-      },
-    ],
+    examples: [],
     commonMistakes: [
       "Forgetting $+C$ on indefinite integrals. Every indefinite integral has a constant of integration.",
       "Trying to use the power rule for $\\int \\frac{1}{x}\\,dx$. The power rule gives $\\frac{x^0}{0}$ which is undefined. The answer is $\\ln|x| + C$.",
@@ -630,6 +728,22 @@ export const modules: ModuleContent[] = [
           "If $f'$ does not change sign (e.g., $f(x) = x^3$ at $x=0$), the critical point is neither a max nor a min.",
           "To apply: find all critical points, then build a sign chart for $f'(x)$ using test values in each interval.",
         ],
+        examples: [
+          {
+            title: "Finding and classifying critical points",
+            steps: [
+              "Find and classify the critical points of $f(x) = x^3 - 3x + 1$.",
+              "Step 1 — find $f'(x)$: $f'(x) = 3x^2 - 3 = 3(x^2 - 1) = 3(x-1)(x+1)$.",
+              "Step 2 — set $f'(x) = 0$: $x = -1$ and $x = 1$ are the critical points.",
+              "Step 3 — build a sign chart. Test values in each interval:",
+              "On $(-\\infty, -1)$, try $x = -2$: $f'(-2) = 3(4-1) = 9 > 0$. Increasing.",
+              "On $(-1, 1)$, try $x = 0$: $f'(0) = 3(0-1) = -3 < 0$. Decreasing.",
+              "On $(1, \\infty)$, try $x = 2$: $f'(2) = 3(4-1) = 9 > 0$. Increasing.",
+              "At $x = -1$: $f'$ changes from $+$ to $-$, so this is a local maximum. $f(-1) = -1+3+1 = 3$.",
+              "At $x = 1$: $f'$ changes from $-$ to $+$, so this is a local minimum. $f(1) = 1-3+1 = -1$.",
+            ],
+          },
+        ],
       },
       {
         title: "The second derivative test",
@@ -649,6 +763,11 @@ export const modules: ModuleContent[] = [
           "To find inflection points: set $f''(x) = 0$ (or find where $f''$ is undefined), then verify $f''$ changes sign across that point.",
           "Example: $f(x) = x^3$ has $f''(x) = 6x$. This equals $0$ at $x=0$, and changes from negative to positive. So $(0, 0)$ is an inflection point.",
           "Note: $f''(c) = 0$ alone is not enough. $f(x) = x^4$ has $f''(0) = 0$ but no inflection point (concavity doesn't change).",
+        ],
+        eli5: [
+          "Concave up means the curve smiles (like a bowl that holds water). Concave down means the curve frowns (like an upside-down bowl that spills water).",
+          "An inflection point is where the curve switches from smiling to frowning or vice versa. It's the moment the mood changes.",
+          "The second derivative tells you which mood the curve is in. Positive = happy (smiling/concave up). Negative = sad (frowning/concave down). Zero = the transition point where it might be switching moods.",
         ],
       },
       {
@@ -686,6 +805,23 @@ export const modules: ModuleContent[] = [
           "Step 6: Answer the original question. Make sure you're solving for what was asked.",
           "Common setups: maximize area given a perimeter constraint, minimize material given a volume constraint, maximize revenue.",
         ],
+        examples: [
+          {
+            title: "Optimization: minimizing material for a box",
+            steps: [
+              "Design an open-top box with volume $32\\text{ cm}^3$ using the least material. The base is square.",
+              "Step 1 — define variables: let $x$ = side length of the square base, $h$ = height.",
+              "Step 2 — objective function: surface area (what we minimize). Open top means: $S = x^2 + 4xh$ (base + 4 sides, no top).",
+              "Step 3 — constraint: volume $= x^2 h = 32$, so $h = \\frac{32}{x^2}$.",
+              "Step 4 — substitute to get one variable: $S(x) = x^2 + 4x \\cdot \\frac{32}{x^2} = x^2 + \\frac{128}{x}$.",
+              "Step 5 — differentiate: $S'(x) = 2x - \\frac{128}{x^2}$.",
+              "Set $S'(x) = 0$: $2x = \\frac{128}{x^2}$, so $2x^3 = 128$, giving $x^3 = 64$, thus $x = 4$.",
+              "Then $h = \\frac{32}{16} = 2$.",
+              "Step 6 — verify minimum: $S''(x) = 2 + \\frac{256}{x^3}$. At $x=4$: $S''(4) = 2 + 4 = 6 > 0$. Confirmed minimum.",
+              "Minimum surface area: $S(4) = 16 + 32 = 48\\text{ cm}^2$.",
+            ],
+          },
+        ],
       },
       {
         title: "Related rates",
@@ -698,6 +834,26 @@ export const modules: ModuleContent[] = [
           "Step 5: Solve for the unknown rate.",
           "Critical: never plug in specific values before differentiating. The equation must remain general during differentiation because the variables are changing.",
           "Common setups: expanding balloon (sphere volume), sliding ladder (Pythagorean theorem), filling cone (similar triangles + cone volume), spreading oil slick (circle area).",
+        ],
+        eli5: [
+          "Imagine you're blowing up a balloon. You know how fast you're blowing air in (liters per second). You want to know how fast the radius is growing. Those two rates are related through the formula for the volume of a sphere.",
+          "The trick is: write down the equation that connects the things that are changing (like volume and radius). Then take the derivative of the whole equation with respect to time. This creates a new equation that connects the rates of change instead of the quantities themselves.",
+          "The #1 rule: don't plug in numbers too early. The whole point is that the variables are changing, so you need to differentiate first while everything is still a variable. Only after differentiating do you plug in the specific moment you care about.",
+        ],
+        examples: [
+          {
+            title: "Related rates: a sliding ladder",
+            steps: [
+              "A 10-ft ladder leans against a wall. The base slides away at 1 ft/s. How fast is the top sliding down when the base is 6 ft from the wall?",
+              "Step 1 — draw and label: $x$ = distance from base to wall, $y$ = height of top on wall. Both change with time $t$.",
+              "Step 2 — equation relating variables: by the Pythagorean theorem, $x^2 + y^2 = 100$ (the ladder is always 10 ft).",
+              "Step 3 — differentiate with respect to $t$: $2x\\frac{dx}{dt} + 2y\\frac{dy}{dt} = 0$.",
+              "Note: we did NOT plug in numbers yet. This is critical — both $x$ and $y$ are changing.",
+              "Step 4 — plug in the known values at the instant in question: $x = 6$, $\\frac{dx}{dt} = 1$. Find $y$: $y = \\sqrt{100 - 36} = 8$.",
+              "Step 5 — solve: $2(6)(1) + 2(8)\\frac{dy}{dt} = 0$, so $12 + 16\\frac{dy}{dt} = 0$, giving $\\frac{dy}{dt} = -\\frac{3}{4}$.",
+              "The top slides down at $\\frac{3}{4}$ ft/s. The negative sign confirms the top is moving downward.",
+            ],
+          },
         ],
       },
       {
@@ -727,6 +883,10 @@ export const modules: ModuleContent[] = [
           "Geometric interpretation: there's a point where the tangent line is parallel to the secant line connecting $(a, f(a))$ and $(b, f(b))$.",
           "Applications: proving that a function must have a certain derivative value, establishing speed limits (if you drove 120 miles in 2 hours, you must have been going 60 mph at some instant).",
         ],
+        eli5: [
+          "You drive 120 miles in 2 hours. Your average speed was 60 mph. The Mean Value Theorem says: at some point during your drive, your speedometer must have read exactly 60 mph. Maybe you were going 40 sometimes and 80 other times, but you definitely hit 60 at least once.",
+          "This makes intuitive sense — to average 60, you can't always be above or always be below. You must cross through 60 at some point. The MVT guarantees this mathematically for any smooth function.",
+        ],
       },
       {
         title: "Newton's method",
@@ -739,67 +899,7 @@ export const modules: ModuleContent[] = [
         ],
       },
     ],
-    examples: [
-      {
-        title: "First derivative test: classify critical points",
-        steps: [
-          "Find and classify the critical points of $f(x) = x^3 - 3x + 1$.",
-          "$f'(x) = 3x^2 - 3 = 3(x-1)(x+1)$. Critical points at $x = -1$ and $x = 1$.",
-          "Sign chart: $f'(x) > 0$ on $(-\\infty, -1)$, $f'(x) < 0$ on $(-1, 1)$, $f'(x) > 0$ on $(1, \\infty)$.",
-          "$x=-1$: $f'$ changes $+$ to $-$, so local maximum. $f(-1) = 3$.",
-          "$x=1$: $f'$ changes $-$ to $+$, so local minimum. $f(1) = -1$.",
-        ],
-      },
-      {
-        title: "Absolute extrema on a closed interval",
-        steps: [
-          "Find the absolute max and min of $f(x) = x^3 - 6x^2 + 9x + 2$ on $[0, 4]$.",
-          "$f'(x) = 3x^2 - 12x + 9 = 3(x-1)(x-3)$. Critical points: $x=1, x=3$ (both in $(0,4)$).",
-          "Evaluate: $f(0) = 2$, $f(1) = 6$, $f(3) = 2$, $f(4) = 6$.",
-          "Absolute maximum is $6$ (at $x=1$ and $x=4$). Absolute minimum is $2$ (at $x=0$ and $x=3$).",
-        ],
-      },
-      {
-        title: "Optimization: minimizing material",
-        steps: [
-          "Design an open-top box with volume $32$ cm$^3$ using the least material. The base is a square.",
-          "Let the base side be $x$ and height be $h$. Constraint: $x^2 h = 32$, so $h = 32/x^2$.",
-          "Surface area (no top): $S = x^2 + 4xh = x^2 + 128/x$.",
-          "$S'(x) = 2x - 128/x^2$. Set to zero: $2x^3 = 128$, so $x = 4$ and $h = 2$.",
-          "$S''(4) = 2 + 256/64 = 6 > 0$, confirming a minimum. Minimum material: $S = 48$ cm$^2$.",
-        ],
-      },
-      {
-        title: "Related rates: sliding ladder",
-        steps: [
-          "A 10-ft ladder leans against a wall. The base slides away at 1 ft/s. How fast does the top slide down when the base is 6 ft from the wall?",
-          "Equation: $x^2 + y^2 = 100$ (Pythagorean theorem).",
-          "Differentiate: $2x\\frac{dx}{dt} + 2y\\frac{dy}{dt} = 0$.",
-          "When $x=6$: $y = \\sqrt{100-36} = 8$. Given $dx/dt = 1$.",
-          "Solve: $2(6)(1) + 2(8)\\frac{dy}{dt} = 0$, so $\\frac{dy}{dt} = -\\frac{3}{4}$ ft/s. The top slides down at $3/4$ ft/s.",
-        ],
-      },
-      {
-        title: "Motion analysis",
-        steps: [
-          "A particle has position $s(t) = t^3 - 6t^2 + 9t$ for $t \\geq 0$.",
-          "Velocity: $v(t) = 3t^2 - 12t + 9 = 3(t-1)(t-3)$. Zero at $t=1$ and $t=3$.",
-          "Sign analysis: $v > 0$ on $(0,1)$, $v < 0$ on $(1,3)$, $v > 0$ on $(3,\\infty)$.",
-          "Particle moves right, then left, then right. Direction changes at $t=1$ and $t=3$.",
-          "Acceleration: $a(t) = 6t - 12 = 0$ at $t=2$. Particle slows down on $(0,1)$ since $v>0$ and $a<0$.",
-        ],
-      },
-      {
-        title: "Newton's method",
-        steps: [
-          "Approximate $\\sqrt{5}$ using Newton's method on $f(x) = x^2 - 5$.",
-          "$f'(x) = 2x$. Iteration: $x_{n+1} = x_n - \\frac{x_n^2 - 5}{2x_n}$.",
-          "Start with $x_0 = 2$: $x_1 = 2 - \\frac{-1}{4} = 2.25$.",
-          "$x_2 = 2.25 - \\frac{0.0625}{4.5} = 2.23611...$",
-          "After just 2 iterations, we're accurate to 4 decimal places ($\\sqrt{5} \\approx 2.23607$).",
-        ],
-      },
-    ],
+    examples: [],
     commonMistakes: [
       "Forgetting to check endpoints in absolute extrema problems. The extreme values can occur at the boundary of the interval, not just at critical points.",
       "In optimization problems, not verifying that the critical point is actually a max or min. Use the second derivative test or check the value at boundaries.",
@@ -835,6 +935,11 @@ export const modules: ModuleContent[] = [
           "Key distinction: a sequence $\\{a_n\\}$ converging to $0$ is necessary for the series to converge, but not sufficient. $a_n = 1/n \\to 0$, yet $\\sum 1/n$ diverges.",
           "The harmonic series $\\sum 1/n$ diverges. This is one of the most important facts in the theory of series. It shows that terms going to zero isn't enough.",
         ],
+        eli5: [
+          "Imagine stacking blocks. Each block is thinner than the last. The question is: does the tower reach a finite height, or does it grow forever?",
+          "If each block is half as thick as the previous one (like $1, 1/2, 1/4, 1/8, \\ldots$), the tower settles at height 2. That's a convergent series. But if each block is $1, 1/2, 1/3, 1/4, \\ldots$ (harmonic series), the blocks get thinner but not fast enough — the tower grows forever, just very slowly.",
+          "So 'the pieces get smaller' isn't enough. They have to get smaller fast enough. The convergence tests are all about measuring whether 'fast enough' is satisfied.",
+        ],
       },
       {
         title: "Geometric series",
@@ -843,6 +948,18 @@ export const modules: ModuleContent[] = [
           "It converges if and only if $|r| < 1$, and the sum is $\\frac{a}{1-r}$.",
           "Example: $\\sum_{n=0}^{\\infty} \\frac{3}{2^n} = \\frac{3}{1-1/2} = 6$.",
           "This is the only common series where we can easily compute the exact sum. Many convergence tests compare other series to geometric ones.",
+        ],
+        examples: [
+          {
+            title: "Summing a geometric series",
+            steps: [
+              "Compute $\\sum_{n=0}^{\\infty} \\frac{(-1)^n}{4^n}$.",
+              "Rewrite: this is $\\sum_{n=0}^{\\infty} \\left(-\\frac{1}{4}\\right)^n$. So $a = 1$ and $r = -1/4$.",
+              "Check: $|r| = 1/4 < 1$, so it converges.",
+              "Apply the formula: $\\frac{a}{1-r} = \\frac{1}{1-(-1/4)} = \\frac{1}{5/4} = \\frac{4}{5}$.",
+              "The sum is $\\frac{4}{5}$. Note: even though terms alternate sign, the geometric series formula handles this perfectly.",
+            ],
+          },
         ],
       },
       {
@@ -897,6 +1014,19 @@ export const modules: ModuleContent[] = [
           "The ratio test excels for series with factorials (like $n!/3^n$) or products. The root test is ideal for terms raised to the $n$th power (like $(2/3)^n$).",
           "Warning: both tests are inconclusive when $L=1$. This happens for all p-series, so you can't use ratio/root tests on $\\sum 1/n^p$.",
         ],
+        examples: [
+          {
+            title: "Ratio test on a factorial series",
+            steps: [
+              "Does $\\sum_{n=1}^{\\infty} \\frac{n!}{3^n}$ converge or diverge?",
+              "Use the ratio test. Compute $\\frac{a_{n+1}}{a_n} = \\frac{(n+1)!}{3^{n+1}} \\cdot \\frac{3^n}{n!}$.",
+              "Simplify: $(n+1)!/n! = n+1$ and $3^n/3^{n+1} = 1/3$.",
+              "So $\\frac{a_{n+1}}{a_n} = \\frac{n+1}{3}$.",
+              "Take the limit: $L = \\lim_{n\\to\\infty} \\frac{n+1}{3} = \\infty$.",
+              "Since $L > 1$ (in fact $L = \\infty$), the series diverges. The factorial grows so much faster than $3^n$ that the terms blow up.",
+            ],
+          },
+        ],
       },
       {
         title: "Alternating Series Test",
@@ -915,6 +1045,10 @@ export const modules: ModuleContent[] = [
           "Example: $\\sum (-1)^n/n^2$ converges absolutely because $\\sum 1/n^2$ converges.",
           "Example: $\\sum (-1)^n/n$ converges conditionally. It converges by the alternating series test, but $\\sum 1/n$ diverges.",
           "Why it matters: absolutely convergent series can be rearranged freely without changing the sum. Conditionally convergent series cannot (Riemann rearrangement theorem).",
+        ],
+        eli5: [
+          "Think of absolute convergence like having money in the bank. Even if some terms are positive and some are negative, if the total amount of money moving around (ignoring direction) is finite, you're safe. The sum is solid and reliable.",
+          "Conditional convergence is like balancing on a tightrope. The positive and negative terms cancel each other out just right to give a finite sum, but it's fragile. If you rearrange the order you add them, you can get a completely different answer (or no answer at all). It only works because of the specific order.",
         ],
       },
       {
@@ -938,6 +1072,35 @@ export const modules: ModuleContent[] = [
           "$\\cos x = \\sum_{n=0}^{\\infty} \\frac{(-1)^n x^{2n}}{(2n)!} = 1 - \\frac{x^2}{2!} + \\frac{x^4}{4!} - \\cdots$ for all $x$.",
           "$\\ln(1+x) = \\sum_{n=1}^{\\infty} \\frac{(-1)^{n+1} x^n}{n} = x - \\frac{x^2}{2} + \\frac{x^3}{3} - \\cdots$ for $-1 < x \\leq 1$.",
           "$\\frac{1}{1-x} = \\sum_{n=0}^{\\infty} x^n$ for $|x| < 1$.",
+        ],
+        eli5: [
+          "A Taylor series is like building a copy of a function out of simple polynomial building blocks ($1, x, x^2, x^3, \\ldots$).",
+          "Imagine you want to recreate a complicated curve. First, you match the value at one point (constant term). Then you match the slope (linear term). Then the curvature ($x^2$ term). Each new term makes your copy more accurate, like adding more detail to a sketch.",
+          "With enough terms, your polynomial copy becomes indistinguishable from the original function. That's how your calculator computes $\\sin(0.5)$ — it's not drawing a circle, it's evaluating a polynomial like $0.5 - 0.5^3/6 + 0.5^5/120 - \\cdots$ that happens to equal $\\sin(0.5)$ to many decimal places.",
+        ],
+        examples: [
+          {
+            title: "Computing a Taylor series from scratch",
+            steps: [
+              "Find the Maclaurin series for $f(x) = e^x$ (centered at $a = 0$).",
+              "We need $f^{(n)}(0)$ for each $n$. Since $\\frac{d}{dx}e^x = e^x$, every derivative of $e^x$ is $e^x$.",
+              "So $f(0) = 1$, $f'(0) = 1$, $f''(0) = 1$, $f'''(0) = 1$, and so on. Every derivative at $0$ equals $1$.",
+              "Plug into the Taylor formula: $e^x = \\sum_{n=0}^{\\infty} \\frac{f^{(n)}(0)}{n!} x^n = \\sum_{n=0}^{\\infty} \\frac{x^n}{n!}$.",
+              "Written out: $e^x = 1 + x + \\frac{x^2}{2} + \\frac{x^3}{6} + \\frac{x^4}{24} + \\cdots$",
+              "This converges for all $x$. For example, $e^1 \\approx 1 + 1 + 0.5 + 0.167 + 0.042 + 0.008 + \\cdots \\approx 2.718$.",
+            ],
+          },
+          {
+            title: "Deriving a series by substitution",
+            steps: [
+              "Find the Maclaurin series for $e^{-x^2}$.",
+              "Instead of computing derivatives (which get very messy), use the known series for $e^x$ and substitute $-x^2$ for $x$.",
+              "We know: $e^x = \\sum_{n=0}^{\\infty} \\frac{x^n}{n!}$.",
+              "Replace $x$ with $-x^2$: $e^{-x^2} = \\sum_{n=0}^{\\infty} \\frac{(-x^2)^n}{n!} = \\sum_{n=0}^{\\infty} \\frac{(-1)^n x^{2n}}{n!}$.",
+              "Written out: $e^{-x^2} = 1 - x^2 + \\frac{x^4}{2} - \\frac{x^6}{6} + \\cdots$",
+              "This is the Gaussian function used in probability and statistics. Its integral $\\int_0^\\infty e^{-x^2}dx = \\frac{\\sqrt{\\pi}}{2}$ has no closed form — but we can integrate the series term by term!",
+            ],
+          },
         ],
       },
       {
@@ -972,60 +1135,7 @@ export const modules: ModuleContent[] = [
         ],
       },
     ],
-    examples: [
-      {
-        title: "Geometric series",
-        steps: [
-          "Find the sum of $\\sum_{n=0}^{\\infty} \\frac{3}{2^n}$.",
-          "This is geometric with $a = 3$ and $r = 1/2$.",
-          "Since $|r| = 1/2 < 1$, it converges. Sum $= \\frac{3}{1 - 1/2} = 6$.",
-        ],
-      },
-      {
-        title: "Telescoping series",
-        steps: [
-          "Find the sum of $\\sum_{n=1}^{\\infty} \\frac{1}{n(n+1)}$.",
-          "Partial fractions: $\\frac{1}{n(n+1)} = \\frac{1}{n} - \\frac{1}{n+1}$.",
-          "Partial sum: $S_N = (1 - 1/2) + (1/2 - 1/3) + \\cdots + (1/N - 1/(N+1)) = 1 - \\frac{1}{N+1}$.",
-          "As $N \\to \\infty$: sum $= 1$.",
-        ],
-      },
-      {
-        title: "Ratio test with factorials",
-        steps: [
-          "Test $\\sum_{n=1}^{\\infty} \\frac{n!}{3^n}$.",
-          "$\\left|\\frac{a_{n+1}}{a_n}\\right| = \\frac{(n+1)!}{3^{n+1}} \\cdot \\frac{3^n}{n!} = \\frac{n+1}{3}$.",
-          "$\\lim_{n\\to\\infty} \\frac{n+1}{3} = \\infty > 1$. The series diverges.",
-        ],
-      },
-      {
-        title: "Limit comparison",
-        steps: [
-          "Test $\\sum_{n=1}^{\\infty} \\frac{2n+1}{n^3+n}$.",
-          "For large $n$: $\\frac{2n+1}{n^3+n} \\approx \\frac{2n}{n^3} = \\frac{2}{n^2}$.",
-          "Limit comparison with $b_n = 1/n^2$: $\\lim \\frac{a_n}{b_n} = \\lim \\frac{(2n+1)n^2}{n^3+n} = \\lim \\frac{2n^3+n^2}{n^3+n} = 2$.",
-          "Since $0 < 2 < \\infty$ and $\\sum 1/n^2$ converges, so does the original series.",
-        ],
-      },
-      {
-        title: "Deriving a Taylor series",
-        steps: [
-          "Find the Maclaurin series for $f(x) = e^{-x^2}$.",
-          "Start with the known series: $e^u = \\sum_{n=0}^{\\infty} \\frac{u^n}{n!}$.",
-          "Substitute $u = -x^2$: $e^{-x^2} = \\sum_{n=0}^{\\infty} \\frac{(-x^2)^n}{n!} = \\sum_{n=0}^{\\infty} \\frac{(-1)^n x^{2n}}{n!}$.",
-          "This converges for all $x$ (same as $e^u$).",
-        ],
-      },
-      {
-        title: "Error bound with alternating series",
-        steps: [
-          "Approximate $\\cos(0.1)$ using the first 3 nonzero terms of its Maclaurin series. Bound the error.",
-          "$\\cos(0.1) \\approx 1 - \\frac{(0.1)^2}{2!} + \\frac{(0.1)^4}{4!} = 1 - 0.005 + 0.0000041\\overline{6} \\approx 0.995004$.",
-          "This is an alternating series. The error is at most the next term: $\\frac{(0.1)^6}{6!} = \\frac{10^{-6}}{720} \\approx 1.4 \\times 10^{-9}$.",
-          "So our approximation is accurate to about 9 decimal places with just 3 terms!",
-        ],
-      },
-    ],
+    examples: [],
     commonMistakes: [
       "Using the divergence test to 'prove' convergence. If $a_n \\to 0$, the test tells you nothing. It can only prove divergence.",
       "Applying the ratio or root test to a p-series. These tests always give $L = 1$ (inconclusive) for $\\sum 1/n^p$.",
@@ -1063,6 +1173,11 @@ export const modules: ModuleContent[] = [
           "Direction fields build intuition: you can spot equilibrium solutions (horizontal segments), identify whether solutions grow or decay, and see the qualitative behavior before doing any algebra.",
           "Example: for $y' = -y$, the slopes are negative when $y > 0$ and positive when $y < 0$. Solutions decay toward $y = 0$, which matches $y = Ce^{-x}$.",
         ],
+        eli5: [
+          "Imagine a field of grass with wind blowing in different directions at different spots. At each point, you draw a tiny arrow showing which way the wind blows there.",
+          "A direction field is exactly that for a differential equation. At every point $(x,y)$, the equation tells you the slope (direction) a solution would travel through that point. Draw that slope as a tiny line segment.",
+          "Now if you drop a leaf (a solution) anywhere in the field, it will follow the arrows. The path it traces is the solution curve. You can see the overall behavior — where things flow, where they settle — without ever solving the equation algebraically.",
+        ],
       },
       {
         title: "Separable equations",
@@ -1072,6 +1187,19 @@ export const modules: ModuleContent[] = [
           "Don't forget the constant of integration! Usually written as $+C$ on one side.",
           "Example: $\\frac{dy}{dx} = xy$. Separate: $\\frac{1}{y}\\,dy = x\\,dx$. Integrate: $\\ln|y| = \\frac{x^2}{2} + C$. Solve: $y = Ae^{x^2/2}$ where $A = \\pm e^C$.",
           "Watch for lost solutions: when dividing by $h(y)$, any value where $h(y) = 0$ might be a constant solution (equilibrium) that you lose in the algebra.",
+        ],
+        examples: [
+          {
+            title: "Solving a separable equation with an IVP",
+            steps: [
+              "Solve $\\frac{dy}{dx} = \\frac{x}{y}$ with $y(0) = 2$.",
+              "Step 1 — separate: move all $y$ terms to the left, $x$ terms to the right. Multiply both sides by $y$: $y\\,dy = x\\,dx$.",
+              "Step 2 — integrate both sides: $\\int y\\,dy = \\int x\\,dx$, giving $\\frac{y^2}{2} = \\frac{x^2}{2} + C$.",
+              "Step 3 — apply the initial condition $y(0) = 2$: $\\frac{4}{2} = 0 + C$, so $C = 2$.",
+              "Step 4 — solve for $y$: $y^2 = x^2 + 4$, so $y = \\sqrt{x^2 + 4}$ (positive root since $y(0) = 2 > 0$).",
+              "This is a family of hyperbolas. The initial condition picked out the specific upper branch passing through $(0, 2)$.",
+            ],
+          },
         ],
       },
       {
@@ -1102,6 +1230,21 @@ export const modules: ModuleContent[] = [
           "Solve for $y$: $y = \\frac{1}{\\mu(x)}\\left[\\int \\mu(x) Q(x)\\,dx + C\\right]$.",
           "Why it works: multiplying by $\\mu$ turns the left side into a perfect derivative, which can be integrated directly.",
         ],
+        examples: [
+          {
+            title: "Solving with an integrating factor",
+            steps: [
+              "Solve $\\frac{dy}{dx} + 2y = 4e^{-x}$.",
+              "Step 1 — identify: $P(x) = 2$ and $Q(x) = 4e^{-x}$. Already in standard form.",
+              "Step 2 — compute the integrating factor: $\\mu(x) = e^{\\int 2\\,dx} = e^{2x}$.",
+              "Step 3 — multiply the entire equation by $\\mu$: $e^{2x}\\frac{dy}{dx} + 2e^{2x}y = 4e^{-x} \\cdot e^{2x}$.",
+              "The left side is now $\\frac{d}{dx}[e^{2x} y]$ (that's the whole point of the integrating factor). The right side simplifies to $4e^{x}$.",
+              "Step 4 — integrate both sides: $e^{2x} y = \\int 4e^{x}\\,dx = 4e^{x} + C$.",
+              "Step 5 — solve for $y$: $y = \\frac{4e^{x} + C}{e^{2x}} = 4e^{-x} + Ce^{-2x}$.",
+              "The term $Ce^{-2x}$ is the transient part (dies off), while $4e^{-x}$ is the 'steady-state' particular solution.",
+            ],
+          },
+        ],
       },
       {
         title: "Logistic growth",
@@ -1111,6 +1254,11 @@ export const modules: ModuleContent[] = [
           "Solution: $P(t) = \\frac{K}{1 + Ae^{-rt}}$ where $A = \\frac{K - P_0}{P_0}$.",
           "The graph is an S-shaped (sigmoidal) curve. The population grows fastest at $P = K/2$ (the inflection point).",
           "Applications: population biology, spread of diseases, adoption of technology, logistic regression in machine learning.",
+        ],
+        eli5: [
+          "Imagine rabbits on an island. At first there are few rabbits and lots of food, so the population explodes (exponential growth). But as the island fills up, food gets scarce, rabbits compete, and growth slows down. Eventually, the population levels off at the maximum the island can support (the carrying capacity).",
+          "The logistic equation captures this perfectly. The $(1 - P/K)$ part acts like a brake. When $P$ is tiny, the brake is barely on and growth is fast. When $P$ is close to $K$, the brake is almost fully on and growth nearly stops.",
+          "This S-shaped curve shows up everywhere: the spread of a new app, a virus through a population, a rumor through a school. Fast start, rapid middle, gradual leveling off.",
         ],
       },
       {
@@ -1130,6 +1278,32 @@ export const modules: ModuleContent[] = [
           "Case 1 - Two distinct real roots $r_1, r_2$: general solution is $y = C_1 e^{r_1 x} + C_2 e^{r_2 x}$.",
           "Case 2 - Repeated root $r$: general solution is $y = (C_1 + C_2 x)e^{rx}$. The extra $x$ factor accounts for the repeated root.",
           "Case 3 - Complex roots $r = \\alpha \\pm \\beta i$: general solution is $y = e^{\\alpha x}(C_1 \\cos(\\beta x) + C_2 \\sin(\\beta x))$. This produces oscillatory behavior (springs, circuits).",
+        ],
+        examples: [
+          {
+            title: "Complex roots: oscillation",
+            steps: [
+              "Solve $y'' + 4y = 0$.",
+              "Guess $y = e^{rx}$ and substitute: $r^2 e^{rx} + 4e^{rx} = 0$, so $r^2 + 4 = 0$.",
+              "Solve: $r^2 = -4$, giving $r = \\pm 2i$. These are complex roots with $\\alpha = 0$ and $\\beta = 2$.",
+              "Apply the complex root formula: $y = e^{0 \\cdot x}(C_1 \\cos(2x) + C_2 \\sin(2x))$.",
+              "Simplify: $y = C_1 \\cos(2x) + C_2 \\sin(2x)$.",
+              "This is pure oscillation with no decay (because $\\alpha = 0$). The angular frequency is $\\omega = 2$, giving a period of $T = \\frac{2\\pi}{2} = \\pi$.",
+              "Physical meaning: this models an ideal spring with no friction — it bounces forever.",
+            ],
+          },
+          {
+            title: "Distinct real roots with initial conditions",
+            steps: [
+              "Solve $y'' - 5y' + 6y = 0$ with $y(0) = 1$ and $y'(0) = 0$.",
+              "Characteristic equation: $r^2 - 5r + 6 = (r-2)(r-3) = 0$. Roots: $r = 2$ and $r = 3$.",
+              "General solution: $y = C_1 e^{2x} + C_2 e^{3x}$.",
+              "Apply $y(0) = 1$: $C_1 + C_2 = 1$.",
+              "For $y'(0) = 0$: first find $y' = 2C_1 e^{2x} + 3C_2 e^{3x}$, then $y'(0) = 2C_1 + 3C_2 = 0$.",
+              "Solve the system: from $2C_1 + 3C_2 = 0$ we get $C_1 = -\\frac{3}{2}C_2$. Substituting into $C_1 + C_2 = 1$: $-\\frac{3}{2}C_2 + C_2 = 1$, so $C_2 = -2$ and $C_1 = 3$.",
+              "Final answer: $y = 3e^{2x} - 2e^{3x}$.",
+            ],
+          },
         ],
       },
       {
@@ -1153,6 +1327,11 @@ export const modules: ModuleContent[] = [
           "Critically damped ($c^2 = 4mk$): fastest return to equilibrium without oscillating.",
           "Underdamped ($c^2 < 4mk$): oscillation with decaying amplitude.",
         ],
+        eli5: [
+          "Think of a kid on a swing. If nobody pushes and there's no friction, the swing goes back and forth forever at the same height — that's undamped oscillation.",
+          "Now add friction (air resistance, rusty chains). The swing still goes back and forth, but each swing is a little smaller until it stops — that's underdamped (oscillation with decay).",
+          "If you put the swing in thick honey, it wouldn't even swing — it would just slowly drift back to the bottom. That's overdamped. Critically damped is the sweet spot: the fastest return to rest without any overshooting. Engineers design car suspensions and door closers to be critically damped.",
+        ],
       },
       {
         title: "Initial value problems (IVPs)",
@@ -1165,71 +1344,7 @@ export const modules: ModuleContent[] = [
         ],
       },
     ],
-    examples: [
-      {
-        title: "Separable equation",
-        steps: [
-          "Solve $\\frac{dy}{dx} = \\frac{x}{y}$ with $y(0) = 2$.",
-          "Separate: $y\\,dy = x\\,dx$. Integrate: $\\frac{y^2}{2} = \\frac{x^2}{2} + C$.",
-          "Apply $y(0) = 2$: $\\frac{4}{2} = 0 + C$, so $C = 2$.",
-          "Solution: $y^2 = x^2 + 4$, or $y = \\sqrt{x^2+4}$ (taking the positive root since $y(0)=2 > 0$).",
-        ],
-      },
-      {
-        title: "Exponential decay",
-        steps: [
-          "A substance decays at a rate proportional to its amount. If 100g decays to 80g in 3 hours, find $y(t)$.",
-          "DE: $y' = ky$, solution: $y = 100e^{kt}$.",
-          "Use $y(3) = 80$: $80 = 100e^{3k}$, so $e^{3k} = 0.8$, thus $k = \\frac{\\ln(0.8)}{3} \\approx -0.0744$.",
-          "Final answer: $y(t) = 100e^{-(0.0744)t}$. Half-life $\\approx \\frac{\\ln 2}{0.0744} \\approx 9.3$ hours.",
-        ],
-      },
-      {
-        title: "Linear first-order with integrating factor",
-        steps: [
-          "Solve $\\frac{dy}{dx} + 2y = 4e^{-x}$.",
-          "Integrating factor: $\\mu = e^{\\int 2\\,dx} = e^{2x}$.",
-          "Multiply: $(e^{2x}y)' = 4e^{-x} \\cdot e^{2x} = 4e^{x}$.",
-          "Integrate: $e^{2x}y = 4e^{x} + C$.",
-          "Solve: $y = 4e^{-x} + Ce^{-2x}$.",
-        ],
-      },
-      {
-        title: "Second-order with distinct real roots",
-        steps: [
-          "Solve $y'' - 5y' + 6y = 0$.",
-          "Characteristic equation: $r^2 - 5r + 6 = (r-2)(r-3) = 0$. Roots: $r = 2, 3$.",
-          "General solution: $y = C_1 e^{2x} + C_2 e^{3x}$.",
-        ],
-      },
-      {
-        title: "Second-order with complex roots (oscillation)",
-        steps: [
-          "Solve $y'' + 4y = 0$.",
-          "Characteristic equation: $r^2 + 4 = 0$, so $r = \\pm 2i$.",
-          "Here $\\alpha = 0$ and $\\beta = 2$.",
-          "General solution: $y = C_1 \\cos(2x) + C_2 \\sin(2x)$. This is pure oscillation.",
-        ],
-      },
-      {
-        title: "Non-homogeneous: undetermined coefficients",
-        steps: [
-          "Solve $y'' - 3y' + 2y = 4e^{5x}$.",
-          "Homogeneous solution: $r^2-3r+2 = (r-1)(r-2) = 0$, so $y_h = C_1 e^x + C_2 e^{2x}$.",
-          "Guess $y_p = Ae^{5x}$. Then $y_p'' - 3y_p' + 2y_p = 25Ae^{5x} - 15Ae^{5x} + 2Ae^{5x} = 12Ae^{5x} = 4e^{5x}$.",
-          "So $A = 1/3$. General solution: $y = C_1 e^x + C_2 e^{2x} + \\frac{1}{3}e^{5x}$.",
-        ],
-      },
-      {
-        title: "Logistic growth",
-        steps: [
-          "A population satisfies $\\frac{dP}{dt} = 0.5P(1 - P/1000)$ with $P(0) = 100$.",
-          "Here $r = 0.5$ and $K = 1000$. $A = \\frac{K-P_0}{P_0} = \\frac{900}{100} = 9$.",
-          "Solution: $P(t) = \\frac{1000}{1 + 9e^{-0.5t}}$.",
-          "As $t \\to \\infty$, $P \\to 1000$. Fastest growth at $P = 500$ (the inflection point).",
-        ],
-      },
-    ],
+    examples: [],
     commonMistakes: [
       "Forgetting the constant of integration after separating and integrating. Every integration step produces a $+C$.",
       "Not separating variables completely before integrating. All $y$-terms must be on one side, all $x$-terms on the other.",

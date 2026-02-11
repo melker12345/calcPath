@@ -5,105 +5,276 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 
+type AuthMode = "signin" | "signup" | "forgot";
+
 export function AuthClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/dashboard";
 
-  const { user, sendEmailOtp, verifyOtp } = useAuth();
+  const { user, signUp, signInWithPassword, sendEmailOtp, sendPasswordReset } = useAuth();
+  const [mode, setMode] = useState<AuthMode>("signin");
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (user) router.replace(next);
   }, [user, router, next]);
 
+  const clearMessages = () => {
+    setStatus(null);
+    setError(null);
+  };
+
+  const switchMode = (newMode: AuthMode) => {
+    setMode(newMode);
+    clearMessages();
+    setPassword("");
+    setConfirmPassword("");
+  };
+
+  const handleSignIn = async () => {
+    clearMessages();
+    setLoading(true);
+    try {
+      const result = await signInWithPassword(email, password);
+      if (result.error) {
+        setError(result.error);
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUp = async () => {
+    clearMessages();
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await signUp(email, password);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setStatus("Account created! Check your email to confirm, then sign in.");
+        setMode("signin");
+        setPassword("");
+        setConfirmPassword("");
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    clearMessages();
+    setLoading(true);
+    try {
+      const result = await sendPasswordReset(email);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setStatus("Password reset link sent! Check your email.");
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMagicLink = async () => {
+    clearMessages();
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return;
+    setLoading(true);
+    try {
+      await sendEmailOtp(trimmed);
+      setStatus("Magic link sent! Check your email to sign in.");
+    } catch {
+      setError("Could not send email. Double-check the address.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (mode === "signin") handleSignIn();
+    else if (mode === "signup") handleSignUp();
+    else handleForgotPassword();
+  };
+
+  const title = mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Reset password";
+  const subtitle =
+    mode === "signin"
+      ? "Welcome back! Sign in to continue your practice."
+      : mode === "signup"
+        ? "Create an account to track your progress."
+        : "Enter your email and we'll send a reset link.";
+
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-14">
       <div className="mx-auto max-w-xl text-center">
-        <h1 className="text-4xl font-extrabold text-zinc-900">
-          Sign in with email
-        </h1>
-        <p className="mt-3 text-zinc-600">
-          We'll send you a secure sign-in link. Once you sign in, you'll stay
-          signed in on this device.
-        </p>
+        <h1 className="text-4xl font-extrabold text-zinc-900">{title}</h1>
+        <p className="mt-3 text-zinc-600">{subtitle}</p>
       </div>
 
       <div className="mx-auto mt-10 max-w-xl rounded-3xl border-2 border-orange-100 bg-white p-6 shadow-lg sm:p-8">
-        <div className="mt-6 space-y-4">
-          <div className="space-y-3">
+        {/* Tab switcher */}
+        {mode !== "forgot" && (
+          <div className="flex rounded-2xl bg-orange-50 p-1">
+            <button
+              type="button"
+              onClick={() => switchMode("signin")}
+              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
+                mode === "signin"
+                  ? "bg-white text-orange-600 shadow-sm"
+                  : "text-zinc-500 hover:text-zinc-700"
+              }`}
+            >
+              Sign in
+            </button>
+            <button
+              type="button"
+              onClick={() => switchMode("signup")}
+              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
+                mode === "signup"
+                  ? "bg-white text-orange-600 shadow-sm"
+                  : "text-zinc-500 hover:text-zinc-700"
+              }`}
+            >
+              Create account
+            </button>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          {/* Email */}
+          <div className="space-y-1.5">
             <label className="block text-sm font-medium text-zinc-700">
               Email address
             </label>
             <input
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
+              required
               className="w-full rounded-2xl border-2 border-orange-100 bg-white px-4 py-3 text-base text-zinc-900 shadow-sm outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200"
             />
-            <button
-              type="button"
-              onClick={async () => {
-                setStatus(null);
-                setError(null);
-                const trimmed = email.trim().toLowerCase();
-                if (!trimmed) return;
-                try {
-                  await sendEmailOtp(trimmed);
-                  setPendingEmail(trimmed);
-                  setStatus(
-                    "Check your email for a sign-in link. If your project is configured for codes, enter it below.",
-                  );
-                } catch {
-                  setError("Could not send email. Double-check the address.");
-                }
-              }}
-              className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-5 py-4 text-base font-semibold text-white shadow-lg transition hover:shadow-xl active:scale-[0.99]"
-            >
-              Send sign-in link
-            </button>
           </div>
 
-          {pendingEmail && (
-            <div className="rounded-2xl border-2 border-orange-100 bg-orange-50 p-4">
-              <p className="text-sm font-medium text-zinc-700">
-                Enter verification code (optional)
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <input
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="123456"
-                  className="min-w-[180px] flex-1 rounded-xl border-2 border-orange-100 bg-white px-4 py-3 text-base text-zinc-900 shadow-sm outline-none focus:border-orange-300"
-                />
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setStatus(null);
-                    setError(null);
-                    try {
-                      await verifyOtp({
-                        email: pendingEmail,
-                        token: code,
-                      });
-                      setStatus("Signed in! Redirecting…");
-                      router.replace(next);
-                    } catch {
-                      setError("Invalid code. Try again.");
-                    }
-                  }}
-                  className="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-5 py-3 text-base font-semibold text-white shadow-sm transition hover:shadow-md active:scale-[0.99]"
-                >
-                  Verify
-                </button>
-              </div>
+          {/* Password (not shown for forgot mode) */}
+          {mode !== "forgot" && (
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-zinc-700">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={mode === "signup" ? "At least 6 characters" : "Your password"}
+                required
+                minLength={6}
+                className="w-full rounded-2xl border-2 border-orange-100 bg-white px-4 py-3 text-base text-zinc-900 shadow-sm outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200"
+              />
             </div>
           )}
 
+          {/* Confirm password (sign-up only) */}
+          {mode === "signup" && (
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-zinc-700">
+                Confirm password
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Repeat your password"
+                required
+                minLength={6}
+                className="w-full rounded-2xl border-2 border-orange-100 bg-white px-4 py-3 text-base text-zinc-900 shadow-sm outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200"
+              />
+            </div>
+          )}
+
+          {/* Submit button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-5 py-4 text-base font-semibold text-white shadow-lg transition hover:shadow-xl active:scale-[0.99] disabled:opacity-60"
+          >
+            {loading
+              ? "Loading…"
+              : mode === "signin"
+                ? "Sign in"
+                : mode === "signup"
+                  ? "Create account"
+                  : "Send reset link"}
+          </button>
+
+          {/* Forgot password link (sign-in only) */}
+          {mode === "signin" && (
+            <button
+              type="button"
+              onClick={() => switchMode("forgot")}
+              className="block w-full text-center text-sm text-zinc-500 hover:text-orange-600 transition"
+            >
+              Forgot your password?
+            </button>
+          )}
+
+          {/* Magic link alternative (sign-in only) */}
+          {mode === "signin" && (
+            <div className="relative py-2">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-orange-100" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="bg-white px-3 text-zinc-400">or</span>
+              </div>
+            </div>
+          )}
+          {mode === "signin" && (
+            <button
+              type="button"
+              onClick={handleMagicLink}
+              disabled={loading}
+              className="w-full rounded-2xl border-2 border-orange-200 bg-white px-5 py-3.5 text-sm font-semibold text-orange-600 transition hover:bg-orange-50 active:scale-[0.99] disabled:opacity-60"
+            >
+              Sign in with magic link instead
+            </button>
+          )}
+
+          {/* Back to sign-in (forgot mode) */}
+          {mode === "forgot" && (
+            <button
+              type="button"
+              onClick={() => switchMode("signin")}
+              className="block w-full text-center text-sm text-zinc-500 hover:text-orange-600 transition"
+            >
+              Back to sign in
+            </button>
+          )}
+
+          {/* Status / error messages */}
           {status && (
             <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-900">
               {status}
@@ -126,7 +297,7 @@ export function AuthClient() {
             </Link>
             .
           </p>
-        </div>
+        </form>
       </div>
     </div>
   );

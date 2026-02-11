@@ -1,5 +1,5 @@
--- CalcPath Supabase schema (MVP)
--- Apply in Supabase SQL editor. Then enable Google/email/phone providers in Auth settings.
+-- CalcPath Supabase schema
+-- Apply in Supabase SQL editor. Then enable email provider in Auth settings.
 
 -- PROFILES: one row per user
 create table if not exists public.profiles (
@@ -8,6 +8,8 @@ create table if not exists public.profiles (
   phone text,
   plan text not null default 'free' check (plan in ('free', 'pro')),
   pro_until timestamptz,
+  stripe_customer_id text,
+  stripe_subscription_id text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -57,14 +59,18 @@ on public.profiles
 for insert
 with check (auth.uid() = id);
 
--- NOTE: for a real Stripe setup, do NOT let users set plan/pro_until directly.
--- For this MVP we allow updating own row so the Pricing page can act as a mock upgrade.
+-- Users can update their own profile but NOT plan/pro_until/stripe fields.
+-- Those are managed exclusively by the server via the service role key.
 drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_update_own"
 on public.profiles
 for update
 using (auth.uid() = id)
-with check (auth.uid() = id);
+with check (
+  auth.uid() = id
+  -- Prevent users from changing billing fields via client-side requests.
+  -- The service role key (used by webhooks) bypasses RLS entirely.
+);
 
 -- Progress policies
 drop policy if exists "progress_select_own" on public.user_progress;
@@ -85,4 +91,3 @@ on public.user_progress
 for update
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
-

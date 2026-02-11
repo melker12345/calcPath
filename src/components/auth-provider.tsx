@@ -18,11 +18,11 @@ export type UserProfile = {
 type AuthContextValue = {
   user: UserProfile | null;
   isPro: boolean;
-  signInWithGoogle: () => Promise<void>;
+  signUp: (email: string, password: string) => Promise<{ error?: string }>;
+  signInWithPassword: (email: string, password: string) => Promise<{ error?: string }>;
   sendEmailOtp: (email: string) => Promise<void>;
-  sendPhoneOtp: (phone: string) => Promise<void>;
-  verifyOtp: (params: { email?: string; phone?: string; token: string }) => Promise<void>;
-  setMembership: (params: { plan: PlanTier; proUntil: string | null }) => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<{ error?: string }>;
+  refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -119,13 +119,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
-  const signInWithGoogle = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
+  const signUp = async (email: string, password: string): Promise<{ error?: string }> => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed || !password) return { error: "Email and password are required." };
+    if (password.length < 6) return { error: "Password must be at least 6 characters." };
+    const { error } = await supabase.auth.signUp({
+      email: trimmed,
+      password,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
+    if (error) return { error: error.message };
+    return {};
+  };
+
+  const signInWithPassword = async (email: string, password: string): Promise<{ error?: string }> => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed || !password) return { error: "Email and password are required." };
+    const { error } = await supabase.auth.signInWithPassword({
+      email: trimmed,
+      password,
+    });
+    if (error) return { error: error.message };
+    return {};
   };
 
   const sendEmailOtp = async (email: string) => {
@@ -139,35 +156,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
   };
 
-  const sendPhoneOtp = async (phone: string) => {
-    const trimmed = phone.trim();
-    if (!trimmed) return;
-    await supabase.auth.signInWithOtp({
-      phone: trimmed,
-      options: {
-        channel: "sms",
-      },
+  const sendPasswordReset = async (email: string): Promise<{ error?: string }> => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return { error: "Email is required." };
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/account`,
     });
-  };
-
-  const verifyOtp = async (params: { email?: string; phone?: string; token: string }) => {
-    const token = params.token.trim();
-    if (!token) return;
-    if (params.email) {
-      await supabase.auth.verifyOtp({
-        email: params.email.trim().toLowerCase(),
-        token,
-        type: "email",
-      });
-      return;
-    }
-    if (params.phone) {
-      await supabase.auth.verifyOtp({
-        phone: params.phone.trim(),
-        token,
-        type: "sms",
-      });
-    }
+    if (error) return { error: error.message };
+    return {};
   };
 
   const signOut = async () => {
@@ -175,31 +171,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(null);
   };
 
-  const setMembership = async (params: { plan: PlanTier; proUntil: string | null }) => {
-    if (!user) return;
-    const { error } = await supabase
+  /**
+   * Re-fetch the profile from Supabase. Useful after checkout to pick up
+   * plan changes made by the webhook.
+   */
+  const refreshProfile = async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const authUser = sessionData.session?.user ?? null;
+    if (!authUser) return;
+
+    const { data } = await supabase
       .from("profiles")
-      .update({ plan: params.plan, pro_until: params.proUntil })
-      .eq("id", user.id);
-    if (error) {
-      // eslint-disable-next-line no-console
-      console.warn("Failed to update membership:", error.message);
-      return;
+      .select("id,email,phone,plan,pro_until,created_at")
+      .eq("id", authUser.id)
+      .maybeSingle();
+
+    if (data) {
+      setUser(toUserProfile(authUser, data as DbProfileRow));
     }
-    setUser((prev) =>
-      prev ? { ...prev, plan: params.plan, proUntil: params.proUntil } : prev,
-    );
   };
 
   const value = useMemo(
     () => ({
       user,
       isPro,
-      signInWithGoogle,
+      signUp,
+      signInWithPassword,
       sendEmailOtp,
-      sendPhoneOtp,
-      verifyOtp,
-      setMembership,
+      sendPasswordReset,
+      refreshProfile,
       signOut,
     }),
     [user, isPro],

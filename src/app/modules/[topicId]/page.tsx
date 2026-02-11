@@ -1,16 +1,142 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
 import { modules } from "@/lib/modules";
 import { problems, topics } from "@/lib/content";
+
+/* ── slug helper ── */
+function toSlug(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+/* ── Scrollspy sidebar ── */
+function SectionNav({
+  items,
+  activeId,
+}: {
+  items: { id: string; label: string }[];
+  activeId: string;
+}) {
+  return (
+    <nav className="sticky top-24 self-start hidden xl:block" aria-label="Table of contents">
+      <div className="relative flex flex-col items-center">
+        {/* Vertical line */}
+        <div
+          className="absolute left-1/2 -translate-x-1/2 w-0.5 bg-orange-200/60"
+          style={{
+            top: 0,
+            height: `${(items.length - 1) * 40}px`,
+          }}
+        />
+        {items.map((item) => {
+          const isActive = item.id === activeId;
+          return (
+            <a
+              key={item.id}
+              href={`#${item.id}`}
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              className="group relative flex items-center"
+              style={{ height: 40 }}
+              title={item.label}
+            >
+              {/* Node */}
+              <div
+                className={`relative z-10 h-3 w-3 rounded-full border-2 transition-all duration-200 ${
+                  isActive
+                    ? "border-orange-500 bg-orange-500 scale-125 shadow-md shadow-orange-200"
+                    : "border-orange-300 bg-white group-hover:border-orange-400 group-hover:bg-orange-100"
+                }`}
+              />
+              {/* Tooltip — to the right of the node */}
+              <div
+                className={`pointer-events-none absolute left-full ml-4 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium shadow-lg transition-all duration-200 ${
+                  isActive
+                    ? "bg-orange-500 text-white opacity-100 translate-x-0"
+                    : "bg-zinc-800 text-white opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0"
+                }`}
+              >
+                {item.label}
+                {/* Arrow pointing left */}
+                <div
+                  className={`absolute top-1/2 -translate-y-1/2 right-full h-0 w-0 border-y-4 border-y-transparent border-r-4 ${
+                    isActive ? "border-r-orange-500" : "border-r-zinc-800"
+                  }`}
+                />
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
 
 export default function ModulePage() {
   const params = useParams<{ topicId: string }>();
   const topicId = params?.topicId ?? "";
   const module = modules.find((item) => item.topicId === topicId);
   const topic = topics.find((item) => item.id === topicId);
+
+  /* Build nav items from module content */
+  const navItems = useMemo(() => {
+    if (!module) return [];
+    const items: { id: string; label: string }[] = [
+      { id: "intro", label: "Introduction" },
+    ];
+    module.sections.forEach((s) => {
+      items.push({ id: toSlug(s.title), label: s.title });
+    });
+    items.push({ id: "mistakes", label: "Common Mistakes" });
+    items.push({ id: "practice-preview", label: "Practice Problems" });
+    return items;
+  }, [module]);
+
+  /* Track which section is in view */
+  const [activeId, setActiveId] = useState("intro");
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  const setupObserver = useCallback(() => {
+    if (observerRef.current) observerRef.current.disconnect();
+
+    const headings = navItems
+      .map((item) => document.getElementById(item.id))
+      .filter(Boolean) as HTMLElement[];
+
+    if (headings.length === 0) return;
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        // Find the topmost visible section
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible.length > 0) {
+          setActiveId(visible[0].target.id);
+        }
+      },
+      { rootMargin: "-80px 0px -60% 0px", threshold: 0 },
+    );
+
+    headings.forEach((el) => observerRef.current!.observe(el));
+  }, [navItems]);
+
+  useEffect(() => {
+    // Small delay to let DOM render
+    const timeout = setTimeout(setupObserver, 200);
+    return () => {
+      clearTimeout(timeout);
+      observerRef.current?.disconnect();
+    };
+  }, [setupObserver]);
 
   if (!module || !topic) {
     return (
@@ -28,7 +154,9 @@ export default function ModulePage() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-12">
+    <div className="mx-auto flex w-full max-w-7xl justify-center gap-6 px-6 py-12">
+      {/* Main content */}
+      <div className="w-full max-w-4xl">
       <div className="mb-8 space-y-3">
         <Link className="text-base font-medium text-orange-600 hover:text-orange-800" href="/modules">
           ← Back to modules
@@ -42,7 +170,7 @@ export default function ModulePage() {
       {/* Main Textbook Content Card */}
       <article className="rounded-3xl border-2 border-orange-100 bg-white p-10 shadow-xl">
         {/* Introduction */}
-        <div className="mb-12 space-y-4">
+        <div id="intro" className="mb-12 space-y-4">
           {module.intro.map((paragraph, idx) => (
             <p
               key={paragraph}
@@ -61,7 +189,7 @@ export default function ModulePage() {
             <div key={section.title}>
               {idx > 0 && <hr className="mb-10 border-t-2 border-orange-100" />}
               <div>
-                <h2 className="mb-4 text-2xl font-bold text-zinc-900">
+                <h2 id={toSlug(section.title)} className="mb-4 scroll-mt-24 text-2xl font-bold text-zinc-900">
                   {section.title}
                 </h2>
                 {section.body.every((text) => text.trim().startsWith("-")) ? (
@@ -84,33 +212,57 @@ export default function ModulePage() {
                     ))}
                   </div>
                 )}
+
+                {/* ELI5 expandable */}
+                {section.eli5 && section.eli5.length > 0 && (
+                  <details className="group mt-6 rounded-2xl border-2 border-sky-100 bg-gradient-to-br from-sky-50 to-blue-50">
+                    <summary className="flex cursor-pointer select-none items-center gap-3 px-5 py-3.5 text-sm font-semibold text-sky-700 transition-colors hover:text-sky-900 [&::-webkit-details-marker]:hidden">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-100 text-base transition-transform group-open:rotate-12">
+                        💡
+                      </span>
+                      <span>Explain it simply</span>
+                      <svg className="ml-auto h-4 w-4 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                    </summary>
+                    <div className="space-y-3 px-5 pb-5 pt-1">
+                      {section.eli5.map((text) => (
+                        <p
+                          key={text}
+                          className="text-base leading-relaxed text-sky-900"
+                        >
+                          <MathText text={text} />
+                        </p>
+                      ))}
+                    </div>
+                  </details>
+                )}
+
+                {/* Inline worked examples */}
+                {section.examples && section.examples.length > 0 && (
+                  <div className="mt-6 space-y-4">
+                    {section.examples.map((example, exIdx) => (
+                      <div key={example.title} className="rounded-xl border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-5">
+                        <div className="mb-3 flex items-center gap-3">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-200 text-sm font-bold text-amber-800">
+                            {exIdx + 1}
+                          </span>
+                          <h4 className="text-lg font-semibold text-amber-900">
+                            {example.title}
+                          </h4>
+                        </div>
+                        <ol className="space-y-2.5 pl-4 text-base leading-relaxed text-zinc-700">
+                          {example.steps.map((step) => (
+                            <li key={step} className="list-decimal marker:text-amber-400 marker:font-semibold">
+                              <MathText text={step} />
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))}
-        </div>
-
-        {/* Worked Examples */}
-        <hr className="my-12 border-t-2 border-orange-100" />
-        <div>
-          <h2 className="mb-6 text-2xl font-bold text-zinc-900">
-            Worked Examples
-          </h2>
-          <div className="space-y-8">
-            {module.examples.map((example, idx) => (
-              <div key={example.title} className="rounded-xl bg-amber-50 p-6">
-                <h3 className="mb-3 text-xl font-semibold text-zinc-900">
-                  Example {idx + 1}: {example.title}
-                </h3>
-                <ol className="space-y-3 pl-6 text-lg text-zinc-700">
-                  {example.steps.map((step) => (
-                    <li key={step} className="list-decimal">
-                      <MathText text={step} />
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* Common Mistakes */}
@@ -120,7 +272,7 @@ export default function ModulePage() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100 text-lg">
               ⚠️
             </div>
-            <h2 className="text-2xl font-bold text-red-800">
+            <h2 id="mistakes" className="scroll-mt-24 text-2xl font-bold text-red-800">
               Common Mistakes to Avoid
             </h2>
           </div>
@@ -138,7 +290,7 @@ export default function ModulePage() {
       <section className="mt-8 rounded-3xl border-2 border-orange-100 bg-white p-8 shadow-lg">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-bold text-zinc-900">
+            <h2 id="practice-preview" className="scroll-mt-24 text-2xl font-bold text-zinc-900">
               Worked Practice Problems (5 examples)
             </h2>
             <p className="mt-1 text-sm text-zinc-600">
@@ -247,6 +399,12 @@ export default function ModulePage() {
           </Link>
         </div>
       </section>
+      </div>
+
+      {/* Scrollspy sidebar */}
+      <div className="hidden xl:block w-8 shrink-0">
+        <SectionNav items={navItems} activeId={activeId} />
+      </div>
     </div>
   );
 }

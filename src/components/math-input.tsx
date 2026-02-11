@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addStyles } from "react-mathquill";
 
 let stylesInjected = false;
 
@@ -48,8 +47,10 @@ export function MathInput({
 
   useEffect(() => {
     if (stylesInjected) return;
-    addStyles();
-    stylesInjected = true;
+    import("react-mathquill").then((mod) => {
+      mod.addStyles();
+      stylesInjected = true;
+    });
   }, []);
 
   // Build suggested keys based on question context
