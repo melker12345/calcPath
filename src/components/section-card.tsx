@@ -11,7 +11,7 @@ export const SectionCard = ({
   description?: string;
   children?: ReactNode;
 }) => (
-  <div className="rounded-3xl border-2 border-orange-100 bg-white p-6 shadow-lg">
+  <div className="rounded-2xl border-2 border-orange-100 bg-white p-4 shadow-lg sm:rounded-3xl sm:p-6">
     <div className="mb-4">
       <h3 className="text-lg font-bold text-zinc-900">{title}</h3>
       {description && (

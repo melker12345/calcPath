@@ -140,7 +140,7 @@ export default function ModulePage() {
 
   if (!module || !topic) {
     return (
-      <div className="mx-auto w-full max-w-3xl px-6 py-12">
+      <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
         <p className="text-sm text-zinc-600">Module not found.</p>
         <Link className="btn-secondary mt-4 inline-flex" href="/modules">
           Back to modules
@@ -154,28 +154,28 @@ export default function ModulePage() {
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl justify-center gap-6 px-6 py-12">
+    <div className="mx-auto flex w-full max-w-7xl justify-center gap-4 px-4 py-8 sm:gap-6 sm:px-6 sm:py-12">
       {/* Main content */}
       <div className="w-full max-w-4xl">
-      <div className="mb-8 space-y-3">
-        <Link className="text-base font-medium text-orange-600 hover:text-orange-800" href="/modules">
+      <div className="mb-6 space-y-3 sm:mb-8">
+        <Link className="text-sm font-medium text-orange-600 hover:text-orange-800 sm:text-base" href="/modules">
           ← Back to modules
         </Link>
-        <h1 className="text-4xl font-extrabold text-zinc-900">
+        <h1 className="text-2xl font-extrabold text-zinc-900 sm:text-3xl md:text-4xl">
           {module.title}
         </h1>
         <p className="text-lg text-zinc-600">{topic.description}</p>
       </div>
 
       {/* Main Textbook Content Card */}
-      <article className="rounded-3xl border-2 border-orange-100 bg-white p-10 shadow-xl">
+      <article className="rounded-2xl border-2 border-orange-100 bg-white p-5 shadow-xl sm:rounded-3xl sm:p-10">
         {/* Introduction */}
-        <div id="intro" className="mb-12 space-y-4">
+        <div id="intro" className="mb-8 space-y-4 sm:mb-12">
           {module.intro.map((paragraph, idx) => (
             <p
               key={paragraph}
-              className={`text-lg leading-relaxed text-zinc-700 ${
-                idx === 0 ? "text-xl font-medium" : ""
+              className={`text-base leading-relaxed text-zinc-700 sm:text-lg ${
+                idx === 0 ? "text-lg font-medium sm:text-xl" : ""
               }`}
             >
               <MathText text={paragraph} />
@@ -189,7 +189,7 @@ export default function ModulePage() {
             <div key={section.title}>
               {idx > 0 && <hr className="mb-10 border-t-2 border-orange-100" />}
               <div>
-                <h2 id={toSlug(section.title)} className="mb-4 scroll-mt-24 text-2xl font-bold text-zinc-900">
+                <h2 id={toSlug(section.title)} className="mb-4 scroll-mt-24 text-xl font-bold text-zinc-900 sm:text-2xl">
                   {section.title}
                 </h2>
                 {section.body.every((text) => text.trim().startsWith("-")) ? (
@@ -287,10 +287,10 @@ export default function ModulePage() {
       </article>
 
       {/* Free preview questions with detailed solutions */}
-      <section className="mt-8 rounded-3xl border-2 border-orange-100 bg-white p-8 shadow-lg">
+      <section className="mt-6 rounded-2xl border-2 border-orange-100 bg-white p-5 shadow-lg sm:mt-8 sm:rounded-3xl sm:p-8">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 id="practice-preview" className="scroll-mt-24 text-2xl font-bold text-zinc-900">
+            <h2 id="practice-preview" className="scroll-mt-24 text-xl font-bold text-zinc-900 sm:text-2xl">
               Worked Practice Problems (5 examples)
             </h2>
             <p className="mt-1 text-sm text-zinc-600">
@@ -309,22 +309,22 @@ export default function ModulePage() {
               className="rounded-2xl border-2 border-orange-100 bg-gradient-to-br from-orange-50 to-amber-50 p-6"
             >
               {/* Question header */}
-              <div className="mb-4 flex items-start gap-4">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
                 <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-rose-400 text-lg font-bold text-white shadow">
                   {index + 1}
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold uppercase tracking-wide text-orange-600">
                     Problem {index + 1}
                   </p>
-                  <p className="mt-1 text-xl font-semibold text-zinc-900">
+                  <p className="mt-1 text-lg font-semibold text-zinc-900 sm:text-xl">
                     <MathText text={problem.prompt} />
                   </p>
                 </div>
               </div>
 
               {/* Step-by-step solution */}
-              <div className="ml-14 border-l-4 border-emerald-200 bg-white/70 rounded-r-xl p-5">
+              <div className="border-l-4 border-emerald-200 bg-white/70 rounded-r-xl pl-4 pr-4 pt-4 pb-4 sm:ml-14 sm:p-5">
                 <div className="mb-3 flex items-center gap-2">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-sm">
                     ✓
@@ -375,24 +375,24 @@ export default function ModulePage() {
       </section>
 
       {/* Practice CTA Section */}
-      <section className="mt-8 rounded-3xl bg-gradient-to-r from-orange-500 to-rose-500 p-10 text-center shadow-2xl">
-        <div className="mb-6">
-          <h2 className="mb-3 text-3xl font-bold text-white">
+      <section className="mt-6 rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 p-6 text-center shadow-2xl sm:mt-8 sm:rounded-3xl sm:p-10">
+        <div className="mb-4 sm:mb-6">
+          <h2 className="mb-2 text-2xl font-bold text-white sm:mb-3 sm:text-3xl">
             Ready to practice?
           </h2>
-          <p className="text-xl text-orange-100">
+          <p className="text-base text-orange-100 sm:text-xl">
             Test your understanding with {moduleProblems.length} problems on {topic.title.toLowerCase()}.
           </p>
         </div>
-        <div className="flex flex-wrap items-center justify-center gap-3">
+        <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap">
           <Link
-            className="inline-block rounded-full bg-white px-8 py-4 text-lg font-semibold text-orange-600 shadow-lg transition hover:scale-105"
+            className="w-full rounded-full bg-white px-6 py-3 text-base font-semibold text-orange-600 shadow-lg transition hover:scale-105 sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
             href={`/practice/${topic.id}`}
           >
             Start practice →
           </Link>
           <Link
-            className="inline-block rounded-full border-2 border-white/40 bg-white/10 px-8 py-4 text-lg font-semibold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/15 hover:scale-105"
+            className="w-full rounded-full border-2 border-white/40 bg-white/10 px-6 py-3 text-base font-semibold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/15 hover:scale-105 sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
             href={`/test/${topic.id}`}
           >
             Take 20-question test →

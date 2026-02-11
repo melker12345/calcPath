@@ -58,7 +58,7 @@ function AccountContent() {
 
   if (!user) {
     return (
-      <div className="mx-auto w-full max-w-3xl px-6 py-12">
+      <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
         <SectionCard title="Sign in required">
           <p className="text-sm text-zinc-600">
             Create a free account to save progress and unlock streak tracking.
@@ -77,7 +77,7 @@ function AccountContent() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-12">
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
       {checkoutStatus === "success" && (
         <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-emerald-800">
           <p className="font-semibold">Payment successful!</p>
@@ -88,8 +88,8 @@ function AccountContent() {
           </p>
         </div>
       )}
-      <h1 className="mb-6 text-3xl font-bold text-zinc-900">Account</h1>
-      <div className="grid gap-6 md:grid-cols-2">
+      <h1 className="mb-4 text-2xl font-bold text-zinc-900 sm:mb-6 sm:text-3xl">Account</h1>
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
         {/* Profile info */}
         <SectionCard title="Profile">
           <p className="text-sm text-zinc-500">Email</p>

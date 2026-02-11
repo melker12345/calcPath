@@ -157,7 +157,7 @@ export function MathInput({
   return (
     <div className="space-y-3">
       {/* Equation input field */}
-      <div className="rounded-2xl border-2 border-orange-100 bg-white px-4 py-3 shadow-sm">
+      <div className="rounded-xl border-2 border-orange-100 bg-white px-3 py-2 shadow-sm sm:rounded-2xl sm:px-4 sm:py-3">
         <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">
           {placeholder}
         </div>
@@ -180,9 +180,9 @@ export function MathInput({
       </div>
 
       {/* Calculator Keypad */}
-      <div className="rounded-2xl border-2 border-orange-100 bg-white p-4 shadow-sm">
+      <div className="rounded-xl border-2 border-orange-100 bg-white p-3 shadow-sm sm:rounded-2xl sm:p-4">
         {/* Category tabs */}
-        <div className="flex flex-wrap gap-2 border-b border-orange-100 pb-3">
+        <div className="flex flex-wrap gap-1.5 border-b border-orange-100 pb-2 sm:gap-2 sm:pb-3">
           {(
             [
               ["basic", "123"],
@@ -230,7 +230,7 @@ export function MathInput({
         {/* Panel content */}
         <div className="mt-3">
           {panel === "basic" && (
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid min-h-0 min-w-0 grid-cols-4 gap-1.5 sm:gap-2">
               {/* Row 1: 7 8 9 ÷ */}
               <button type="button" onClick={() => write("7")} className="keypad-btn">7</button>
               <button type="button" onClick={() => write("8")} className="keypad-btn">8</button>
@@ -310,7 +310,7 @@ export function MathInput({
         </div>
 
         {/* Action buttons */}
-        <div className="mt-4 grid grid-cols-3 gap-2 border-t border-orange-100 pt-3">
+        <div className="mt-3 grid grid-cols-3 gap-1.5 border-t border-orange-100 pt-3 sm:mt-4 sm:gap-2">
           <button type="button" onClick={clear} className="keypad-btn-del">
             Clear
           </button>

@@ -12,9 +12,9 @@ export default function FlashCardsPage() {
 
   return (
     <PaywallGate feature="Flash Cards">
-      <div className="mx-auto w-full max-w-3xl px-6 py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-zinc-900">Flash Cards</h1>
+      <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl font-bold text-zinc-900 sm:text-3xl">Flash Cards</h1>
           <p className="mt-1 text-sm text-zinc-500">
             Quick review of key rules, formulas, and identities. Tap a card to
             reveal the answer, then mark it as mastered.

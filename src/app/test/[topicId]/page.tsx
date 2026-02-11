@@ -98,7 +98,7 @@ export default function TopicTestPage() {
 
   if (!topic) {
     return (
-      <div className="mx-auto w-full max-w-3xl px-6 py-12">
+      <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
         <p className="text-sm text-zinc-600">Topic not found.</p>
         <Link className="btn-secondary mt-4 inline-flex" href="/modules">
           Back to modules
@@ -109,7 +109,7 @@ export default function TopicTestPage() {
 
   if (allTestQuestions.length === 0) {
     return (
-      <div className="mx-auto w-full max-w-3xl px-6 py-12">
+      <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
         <p className="text-sm text-zinc-600">No test questions available for this topic.</p>
         <Link className="btn-secondary mt-4 inline-flex" href={`/modules/${topic.id}`}>
           Back to module
@@ -124,13 +124,13 @@ export default function TopicTestPage() {
   if (phase === "confirm") {
     return (
       <PaywallGate feature="Tests">
-      <div className="mx-auto w-full max-w-2xl px-6 py-12">
-        <div className="rounded-3xl border-2 border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50 p-8 shadow-xl">
+      <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
+        <div className="rounded-2xl border-2 border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50 p-5 shadow-xl sm:rounded-3xl sm:p-8">
           <div className="text-center">
             <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-4xl text-white shadow-lg">
               📝
             </div>
-            <h1 className="text-3xl font-bold text-zinc-900">{topic.title} Test</h1>
+            <h1 className="text-2xl font-bold text-zinc-900 sm:text-3xl">{topic.title} Test</h1>
             <p className="mt-2 text-lg text-zinc-600">
               Test your knowledge with {Math.min(20, allTestQuestions.length)} questions
             </p>
@@ -195,9 +195,9 @@ export default function TopicTestPage() {
     const hardCorrect = hardQuestions.filter(r => r.correct).length;
 
     return (
-      <div className="mx-auto w-full max-w-4xl px-6 py-12">
+      <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
         {/* Hero result card */}
-        <div className={`rounded-3xl p-8 text-center shadow-xl ${
+        <div className={`rounded-2xl p-5 text-center shadow-xl sm:rounded-3xl sm:p-8 ${
           perfectScore 
             ? "bg-gradient-to-br from-amber-400 via-yellow-400 to-orange-400" 
             : passed 
@@ -207,7 +207,7 @@ export default function TopicTestPage() {
           <div className="mb-4 text-6xl">
             {perfectScore ? "🏆" : passed ? "🎉" : "💪"}
           </div>
-          <h1 className="text-4xl font-bold text-white">
+          <h1 className="text-2xl font-bold text-white sm:text-4xl">
             {perfectScore ? "Perfect Score!" : passed ? "Great Job!" : "Keep Practicing!"}
           </h1>
           <p className="mt-2 text-xl text-white/90">
@@ -215,9 +215,9 @@ export default function TopicTestPage() {
           </p>
 
           {/* Score display */}
-          <div className="mt-8 inline-flex items-baseline gap-2 rounded-2xl bg-white/20 px-8 py-4 backdrop-blur-sm">
-            <span className="text-6xl font-bold text-white">{score}</span>
-            <span className="text-3xl text-white/80">/ {testQuestions.length}</span>
+          <div className="mt-6 inline-flex items-baseline gap-2 rounded-xl bg-white/20 px-5 py-3 backdrop-blur-sm sm:mt-8 sm:rounded-2xl sm:px-8 sm:py-4">
+            <span className="text-4xl font-bold text-white sm:text-6xl">{score}</span>
+            <span className="text-2xl text-white/80 sm:text-3xl">/ {testQuestions.length}</span>
           </div>
 
           <div className="mt-4 text-2xl font-semibold text-white">
@@ -230,8 +230,8 @@ export default function TopicTestPage() {
         </div>
 
         {/* Score breakdown */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border-2 border-emerald-100 bg-white p-5 text-center shadow-md">
+        <div className="mt-4 grid gap-3 sm:mt-6 sm:grid-cols-3 sm:gap-4">
+          <div className="rounded-xl border-2 border-emerald-100 bg-white p-4 text-center shadow-md sm:rounded-2xl sm:p-5">
             <div className="text-sm font-medium text-emerald-600">Easy</div>
             <div className="mt-1 text-3xl font-bold text-zinc-900">
               {easyCorrect}/{easyQuestions.length}
@@ -243,7 +243,7 @@ export default function TopicTestPage() {
               />
             </div>
           </div>
-          <div className="rounded-2xl border-2 border-amber-100 bg-white p-5 text-center shadow-md">
+          <div className="rounded-xl border-2 border-amber-100 bg-white p-4 text-center shadow-md sm:rounded-2xl sm:p-5">
             <div className="text-sm font-medium text-amber-600">Medium</div>
             <div className="mt-1 text-3xl font-bold text-zinc-900">
               {mediumCorrect}/{mediumQuestions.length}
@@ -255,7 +255,7 @@ export default function TopicTestPage() {
               />
             </div>
           </div>
-          <div className="rounded-2xl border-2 border-rose-100 bg-white p-5 text-center shadow-md">
+          <div className="rounded-xl border-2 border-rose-100 bg-white p-4 text-center shadow-md sm:rounded-2xl sm:p-5">
             <div className="text-sm font-medium text-rose-600">Hard</div>
             <div className="mt-1 text-3xl font-bold text-zinc-900">
               {hardCorrect}/{hardQuestions.length}
@@ -486,18 +486,18 @@ export default function TopicTestPage() {
   const progress = ((currentIndex) / testQuestions.length) * 100;
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-8">
+    <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
       {/* Header with timer and progress */}
-      <div className="mb-6 rounded-2xl border-2 border-indigo-100 bg-gradient-to-r from-indigo-50 to-purple-50 p-4">
+      <div className="mb-4 rounded-xl border-2 border-indigo-100 bg-gradient-to-r from-indigo-50 to-purple-50 p-3 sm:mb-6 sm:rounded-2xl sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl font-bold text-zinc-900">{topic.title} Test</h1>
+            <h1 className="text-lg font-bold text-zinc-900 sm:text-xl">{topic.title} Test</h1>
             <p className="text-sm text-zinc-600">
               Question {currentIndex + 1} of {testQuestions.length}
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <div className="rounded-xl bg-white px-4 py-2 font-mono text-xl font-bold text-indigo-600 shadow-sm">
+            <div className="rounded-xl bg-white px-3 py-2 font-mono text-lg font-bold text-indigo-600 shadow-sm sm:px-4 sm:text-xl">
               ⏱️ {formatTime(elapsedSeconds)}
             </div>
           </div>
@@ -513,7 +513,7 @@ export default function TopicTestPage() {
       </div>
 
       {/* Question card */}
-      <div className="rounded-3xl border-2 border-indigo-100 bg-white p-6 shadow-lg">
+      <div className="rounded-2xl border-2 border-indigo-100 bg-white p-4 shadow-lg sm:rounded-3xl sm:p-6">
         <div className="mb-6 flex items-center justify-between">
           <span className={`rounded-full px-3 py-1 text-sm font-semibold ${
             current.difficulty === "easy" ? "bg-emerald-100 text-emerald-700" :
@@ -528,7 +528,7 @@ export default function TopicTestPage() {
         </div>
 
         <div className="py-4 text-center">
-          <h2 className="text-2xl font-semibold leading-relaxed text-zinc-900">
+          <h2 className="text-lg font-semibold leading-relaxed text-zinc-900 sm:text-2xl">
             <MathText text={current.prompt} />
           </h2>
         </div>
@@ -540,7 +540,7 @@ export default function TopicTestPage() {
                 key={choice}
                 type="button"
                 onClick={() => submit(choice)}
-                className="rounded-2xl border-2 border-indigo-100 bg-white px-6 py-4 text-left text-lg font-medium text-zinc-900 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-md active:scale-[0.98]"
+                className="rounded-xl border-2 border-indigo-100 bg-white px-4 py-3 text-left text-base font-medium text-zinc-900 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-md active:scale-[0.98] sm:rounded-2xl sm:px-6 sm:py-4 sm:text-lg"
               >
                 <span className="mr-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
                   {String.fromCharCode(65 + idx)}

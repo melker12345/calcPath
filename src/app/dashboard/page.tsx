@@ -59,30 +59,30 @@ export default function DashboardPage() {
 
   return (
     <PaywallGate feature="Dashboard">
-    <div className="mx-auto w-full max-w-6xl px-6 py-12">
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
       {/* Header */}
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-zinc-900">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-zinc-900 sm:text-3xl">Dashboard</h1>
           <p className="text-sm text-zinc-600">
             {user
               ? `Welcome back, ${user.email ?? "student"}`
               : "Sign in to sync progress across devices."}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link className="btn-secondary" href="/practice">
+        <div className="flex flex-wrap gap-2">
+          <Link className="btn-secondary flex-1 justify-center sm:flex-initial" href="/practice">
             Practice
           </Link>
-          <Link className="btn-primary" href="/flashcards">
+          <Link className="btn-primary flex-1 justify-center sm:flex-initial" href="/flashcards">
             Flash Cards
           </Link>
         </div>
       </div>
 
       {/* Stats Overview - 3 columns */}
-      <div className="mb-8 grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border-2 border-orange-100 bg-gradient-to-br from-orange-50 to-amber-50 p-5">
+      <div className="mb-6 grid gap-4 sm:mb-8 sm:grid-cols-3">
+        <div className="rounded-xl border-2 border-orange-100 bg-gradient-to-br from-orange-50 to-amber-50 p-4 sm:rounded-2xl sm:p-5">
           <div className="text-xs font-semibold uppercase tracking-wide text-orange-600">
             Problems Mastered
           </div>
@@ -99,7 +99,7 @@ export default function DashboardPage() {
           <div className="mt-2 text-sm text-zinc-500">{completionPercent}% complete</div>
         </div>
         
-        <div className="rounded-2xl border-2 border-emerald-100 bg-gradient-to-br from-emerald-50 to-teal-50 p-5">
+        <div className="rounded-xl border-2 border-emerald-100 bg-gradient-to-br from-emerald-50 to-teal-50 p-4 sm:rounded-2xl sm:p-5">
           <div className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
             Current Streak
           </div>
@@ -129,7 +129,7 @@ export default function DashboardPage() {
           <div className="mt-2 text-sm text-zinc-500">Best: {progress.streak.longest} days</div>
         </div>
         
-        <div className="rounded-2xl border-2 border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50 p-5">
+        <div className="rounded-xl border-2 border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50 p-4 sm:rounded-2xl sm:p-5">
           <div className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
             Accuracy
           </div>
@@ -152,7 +152,7 @@ export default function DashboardPage() {
 
       {/* Topic Progress - Full width cards */}
       <div className="space-y-4">
-        <h2 className="text-xl font-bold text-zinc-900">Topic Progress</h2>
+        <h2 className="text-lg font-bold text-zinc-900 sm:text-xl">Topic Progress</h2>
         
         {topics.map((topic) => {
           const practiceStats = getPracticeProgress(progress, topic.id, problems);
@@ -161,7 +161,7 @@ export default function DashboardPage() {
           return (
             <div
               key={topic.id}
-              className="rounded-2xl border-2 border-zinc-100 bg-white p-5 shadow-sm transition hover:shadow-md"
+              className="rounded-xl border-2 border-zinc-100 bg-white p-4 shadow-sm transition hover:shadow-md sm:rounded-2xl sm:p-5"
             >
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
@@ -288,7 +288,7 @@ export default function DashboardPage() {
       
       {/* Pro upsell if not pro */}
       {!isPro && (
-        <div className="mt-8 rounded-2xl border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-6 text-center">
+        <div className="mt-6 rounded-xl border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-4 text-center sm:mt-8 sm:rounded-2xl sm:p-6">
           <h3 className="text-lg font-bold text-zinc-900">Upgrade to Pro</h3>
           <p className="mt-1 text-sm text-zinc-600">
             Unlock learning paths, detailed analytics, and community features.

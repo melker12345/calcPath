@@ -77,9 +77,9 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-12">
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-zinc-900">Pricing</h1>
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+      <div className="mb-6 text-center sm:mb-8">
+        <h1 className="text-2xl font-bold text-zinc-900 sm:text-3xl">Pricing</h1>
         <p className="text-sm text-zinc-600">
           Read all modules for free. Upgrade for practice, tests, and full analytics.
         </p>
@@ -91,9 +91,9 @@ export default function PricingPage() {
         </div>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
         {/* Free plan */}
-        <div className="rounded-3xl border-2 border-orange-100 bg-white p-8 shadow-lg">
+        <div className="rounded-2xl border-2 border-orange-100 bg-white p-5 shadow-lg sm:rounded-3xl sm:p-8">
           <h2 className="text-xl font-bold text-zinc-900">Free</h2>
           <p className="mt-2 text-4xl font-bold text-zinc-900">
             $0<span className="text-lg font-medium text-zinc-500">/forever</span>
@@ -129,7 +129,7 @@ export default function PricingPage() {
         </div>
 
         {/* Pro plan */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-orange-500 to-rose-500 p-8 text-white shadow-xl">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500 to-rose-500 p-5 text-white shadow-xl sm:rounded-3xl sm:p-8">
           <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
           <div className="absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-white/5" />
 

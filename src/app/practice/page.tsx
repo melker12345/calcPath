@@ -18,15 +18,15 @@ export default function PracticePage() {
 
   return (
     <PaywallGate feature="Practice">
-    <div className="mx-auto w-full max-w-6xl px-6 py-12">
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-zinc-900">Practice by topic</h1>
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl font-semibold text-zinc-900 sm:text-3xl">Practice by topic</h1>
         <p className="text-sm text-zinc-500">
           Choose a calculus topic and start solving problems.
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
         {topics.map((topic) => {
           const stats = getPracticeProgress(progress, topic.id, problems);
           return (
@@ -61,7 +61,7 @@ export default function PracticePage() {
                 )}
               </div>
               
-              <div className="mt-4 flex gap-2">
+              <div className="mt-4 flex flex-wrap gap-2">
                 <Link className="btn-primary" href={`/practice/${topic.id}`}>
                   {stats.correct > 0 ? "Continue" : "Start"} practice
                 </Link>

@@ -52,7 +52,7 @@ export function AchievementEmblems() {
   };
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
+    <div className="pointer-events-none fixed inset-0 z-0 hidden overflow-hidden md:block" aria-hidden="true">
       {perfectTopics.map((topic, i) => {
         const pos = positions[i % positions.length];
         const emoji = topicEmoji[topic.id] || "⭐";

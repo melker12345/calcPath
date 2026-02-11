@@ -22,12 +22,12 @@ export function PaywallGate({ children, feature }: PaywallGateProps) {
   // Not signed in
   if (!user) {
     return (
-      <div className="mx-auto w-full max-w-lg px-6 py-20 text-center">
-        <div className="rounded-3xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-10 shadow-xl">
+      <div className="mx-auto w-full max-w-lg px-4 py-12 text-center sm:px-6 sm:py-20">
+        <div className="rounded-2xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-5 shadow-xl sm:rounded-3xl sm:p-10">
           <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-orange-100 text-4xl">
             🔒
           </div>
-          <h2 className="text-2xl font-bold text-zinc-900">Sign in to access {feature}</h2>
+          <h2 className="text-xl font-bold text-zinc-900 sm:text-2xl">Sign in to access {feature}</h2>
           <p className="mt-3 text-zinc-600">
             Create a free account to get started, then upgrade to Pro for full access to practice, tests, and your dashboard.
           </p>
@@ -52,12 +52,12 @@ export function PaywallGate({ children, feature }: PaywallGateProps) {
 
   // Signed in but not Pro
   return (
-    <div className="mx-auto w-full max-w-lg px-6 py-20 text-center">
-      <div className="rounded-3xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-10 shadow-xl">
+    <div className="mx-auto w-full max-w-lg px-4 py-12 text-center sm:px-6 sm:py-20">
+      <div className="rounded-2xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-5 shadow-xl sm:rounded-3xl sm:p-10">
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-rose-400 text-4xl text-white shadow-lg">
           ⭐
         </div>
-        <h2 className="text-2xl font-bold text-zinc-900">Upgrade to access {feature}</h2>
+        <h2 className="text-xl font-bold text-zinc-900 sm:text-2xl">Upgrade to access {feature}</h2>
         <p className="mt-3 text-zinc-600">
           {feature} is available to Pro members. Upgrade to unlock unlimited practice, tests, your personal dashboard, flash cards, and learning paths.
         </p>

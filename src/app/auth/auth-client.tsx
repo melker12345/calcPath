@@ -128,13 +128,13 @@ export function AuthClient() {
         : "Enter your email and we'll send a reset link.";
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-14">
+    <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
       <div className="mx-auto max-w-xl text-center">
-        <h1 className="text-4xl font-extrabold text-zinc-900">{title}</h1>
+        <h1 className="text-2xl font-extrabold text-zinc-900 sm:text-4xl">{title}</h1>
         <p className="mt-3 text-zinc-600">{subtitle}</p>
       </div>
 
-      <div className="mx-auto mt-10 max-w-xl rounded-3xl border-2 border-orange-100 bg-white p-6 shadow-lg sm:p-8">
+      <div className="mx-auto mt-6 max-w-xl rounded-2xl border-2 border-orange-100 bg-white p-4 shadow-lg sm:mt-10 sm:rounded-3xl sm:p-8">
         {/* Tab switcher */}
         {mode !== "forgot" && (
           <div className="flex rounded-2xl bg-orange-50 p-1">

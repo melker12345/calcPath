@@ -124,7 +124,7 @@ export default function PracticeTopicPage() {
 
   if (!topic) {
     return (
-      <div className="mx-auto w-full max-w-3xl px-6 py-12">
+      <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
         <p className="text-sm text-zinc-600">Topic not found.</p>
         <Link className="btn-secondary mt-4 inline-flex" href="/practice">
           Back to practice
@@ -214,10 +214,10 @@ export default function PracticeTopicPage() {
 
   return (
     <PaywallGate feature="Practice">
-    <div className="mx-auto w-full max-w-4xl px-6 py-12">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
+      <div className="mb-4 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-zinc-900">{topic.title}</h1>
+          <h1 className="text-2xl font-bold text-zinc-900 sm:text-3xl">{topic.title}</h1>
           <p className="text-sm text-zinc-600">{topic.description}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -230,12 +230,12 @@ export default function PracticeTopicPage() {
         </div>
       </div>
 
-      <div className="rounded-3xl border-2 border-orange-100 bg-white p-6 shadow-lg">
+      <div className="rounded-2xl border-2 border-orange-100 bg-white p-4 shadow-lg sm:rounded-3xl sm:p-6">
         <div className="py-2 text-center">
           <div className="text-sm text-zinc-600">
             Problem {index + 1} of {displayProblems.length}
           </div>
-          <h2 className="mt-4 text-2xl font-semibold leading-snug text-zinc-900">
+          <h2 className="mt-4 text-lg font-semibold leading-snug text-zinc-900 sm:text-2xl">
             <MathText text={current.prompt} />
           </h2>
         </div>
@@ -248,7 +248,7 @@ export default function PracticeTopicPage() {
                 type="button"
                 onClick={() => submitAnswer(choice)}
                 disabled={feedback?.type === "correct"}
-                className="rounded-2xl border-2 border-orange-100 bg-white px-6 py-4 text-left text-lg font-medium text-zinc-900 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:shadow-md active:scale-95 disabled:opacity-50"
+                className="rounded-xl border-2 border-orange-100 bg-white px-4 py-3 text-left text-base font-medium text-zinc-900 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:shadow-md active:scale-95 disabled:opacity-50 sm:rounded-2xl sm:px-6 sm:py-4 sm:text-lg"
               >
                 {choice}
               </button>
@@ -267,7 +267,7 @@ export default function PracticeTopicPage() {
 
         {/* Correct answer feedback */}
         {feedback?.type === "correct" && (
-          <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm sm:rounded-2xl sm:p-5">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-200 text-xl">
                 ✓
@@ -324,7 +324,7 @@ export default function PracticeTopicPage() {
 
         {/* Incorrect answer feedback */}
         {feedback?.type === "incorrect" && (
-          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:rounded-2xl sm:p-5">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-200 text-xl">
                 ✗
@@ -451,7 +451,7 @@ export default function PracticeTopicPage() {
           </div>
         )}
 
-        <div className="mt-6 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-2 sm:mt-6">
           <button
             type="button"
             className="btn-secondary"

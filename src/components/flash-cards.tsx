@@ -95,9 +95,9 @@ export function FlashCardDeck() {
       </div>
 
       {cards.length === 0 ? (
-        <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50 p-8 text-center">
+        <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-5 text-center sm:rounded-2xl sm:p-8">
           <div className="text-4xl">🎉</div>
-          <p className="mt-2 text-lg font-bold text-emerald-800">All cards mastered!</p>
+          <p className="mt-2 text-base font-bold text-emerald-800 sm:text-lg">All cards mastered!</p>
           <button type="button" onClick={resetKnown} className="mt-4 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
             Review again
           </button>
@@ -111,23 +111,23 @@ export function FlashCardDeck() {
             className="w-full cursor-pointer perspective-1000"
           >
             <div
-              className={`relative min-h-[200px] rounded-2xl border-2 p-6 shadow-sm transition-all duration-300 ${
+              className={`relative min-h-[180px] rounded-xl border-2 p-4 shadow-sm transition-all duration-300 sm:min-h-[200px] sm:rounded-2xl sm:p-6 ${
                 flipped
                   ? "border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50"
                   : "border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50"
               }`}
             >
-              <div className="absolute left-4 top-4 flex items-center gap-2">
+              <div className="absolute left-3 top-3 flex items-center gap-2 sm:left-4 sm:top-4">
                 <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${categoryColor(current.category)}`}>
                   {current.category}
                 </span>
               </div>
-              <div className="absolute right-4 top-4 text-xs text-zinc-400">
+              <div className="absolute right-3 top-3 text-xs text-zinc-400 sm:right-4 sm:top-4">
                 {flipped ? "Answer" : "Tap to reveal"}
               </div>
 
-              <div className="flex min-h-[160px] items-center justify-center pt-4">
-                <div className="text-center text-xl leading-relaxed">
+              <div className="flex min-h-[140px] items-center justify-center pt-4 sm:min-h-[160px]">
+                <div className="text-center text-lg leading-relaxed sm:text-xl">
                   <MathText text={flipped ? current.back : current.front} />
                 </div>
               </div>
@@ -135,7 +135,7 @@ export function FlashCardDeck() {
           </button>
 
           {/* Actions */}
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <button
               type="button"
               onClick={nextCard}
