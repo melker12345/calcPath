@@ -12,9 +12,33 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "CalcPath | Calculus learning SaaS",
+  title: "CalcPath | Master calculus, one problem at a time",
   description:
-    "Practice calculus for free and unlock learning paths, streaks, and community with CalcPath.",
+    "Step-by-step modules, 240+ practice problems, tests, and flashcards. Free modules — Pro for $8/mo.",
+  metadataBase: new URL("https://calc-path.com"),
+  openGraph: {
+    title: "CalcPath | Master calculus, one problem at a time",
+    description:
+      "Step-by-step modules, 240+ practice problems, tests, and flashcards. Free modules — Pro for $8/mo.",
+    url: "https://calc-path.com",
+    siteName: "CalcPath",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "CalcPath — Master calculus, one problem at a time",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CalcPath | Master calculus, one problem at a time",
+    description:
+      "Step-by-step modules, 240+ practice problems, tests, and flashcards. Free modules — Pro for $8/mo.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({
