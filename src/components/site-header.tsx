@@ -17,10 +17,12 @@ function MobileDrawer({
   open,
   onClose,
   user,
+  onSignOut,
 }: {
   open: boolean;
   onClose: () => void;
   user: boolean;
+  onSignOut: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
 
@@ -94,6 +96,25 @@ function MobileDrawer({
               >
                 Account
               </Link>
+              <button
+                type="button"
+                onClick={() => { onSignOut(); onClose(); }}
+                className="rounded-xl bg-orange-50 px-4 py-3.5 text-left text-base font-semibold text-red-600 transition active:bg-red-50"
+              >
+                Sign out
+              </button>
+            </>
+          )}
+          {!user && (
+            <>
+              <div className="my-2 border-t border-orange-100" />
+              <Link
+                href="/auth"
+                className="block rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-3.5 text-center text-base font-semibold text-white transition active:opacity-90"
+                onClick={onClose}
+              >
+                Sign in / Register
+              </Link>
             </>
           )}
         </nav>
@@ -132,13 +153,49 @@ export const SiteHeader = () => {
             ))}
           </nav>
 
-          {/* Right side: auth + hamburger (mobile) */}
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          {/* Mobile quick links: Modules + Sign in / Account */}
+          <div className="flex items-center gap-2 md:hidden">
+            <Link
+              href="/modules"
+              className="text-sm font-semibold text-orange-700 transition active:text-orange-900"
+            >
+              Modules
+            </Link>
+            {user ? (
+              <Link
+                href="/account"
+                className="rounded-xl border-2 border-orange-100 bg-white px-3 py-1.5 text-sm font-semibold text-orange-700 transition active:bg-orange-50"
+              >
+                Account
+              </Link>
+            ) : (
+              <Link
+                href="/auth"
+                className="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-3 py-1.5 text-sm font-semibold text-white shadow-sm"
+              >
+                Sign in
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((o) => !o)}
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100/80 text-orange-700 transition active:bg-orange-200"
+              aria-label="Toggle menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Desktop right side */}
+          <div className="hidden shrink-0 items-center gap-3 md:flex">
             {user ? (
               <>
                 <Link
                   href="/account"
-                  className="hidden items-center gap-2 rounded-2xl border-2 border-orange-100 bg-white px-4 py-2 text-sm font-semibold text-orange-900 shadow-sm transition hover:border-orange-200 hover:shadow-md md:flex"
+                  className="flex items-center gap-2 rounded-2xl border-2 border-orange-100 bg-white px-4 py-2 text-sm font-semibold text-orange-900 shadow-sm transition hover:border-orange-200 hover:shadow-md"
                 >
                   <span className="max-w-[140px] truncate">
                     {user.email ?? user.phone ?? user.id.slice(0, 8)}
@@ -151,13 +208,10 @@ export const SiteHeader = () => {
                     {isPro ? "PRO" : "FREE"}
                   </span>
                 </Link>
-                <Link className="rounded-2xl border-2 border-orange-100 bg-white px-3 py-2 text-sm font-semibold text-orange-700 md:hidden" href="/account">
-                  Account
-                </Link>
                 <button
                   type="button"
                   onClick={signOut}
-                  className="rounded-xl border-2 border-orange-100 bg-white px-3 py-2 text-sm font-semibold text-orange-700 transition hover:border-orange-200 hover:bg-orange-50 md:rounded-2xl md:px-4"
+                  className="rounded-2xl border-2 border-orange-100 bg-white px-4 py-2 text-sm font-semibold text-orange-700 transition hover:border-orange-200 hover:bg-orange-50"
                 >
                   Sign out
                 </button>
@@ -178,24 +232,6 @@ export const SiteHeader = () => {
                 </Link>
               </>
             )}
-            {/* Mobile hamburger - rightmost for thumb reach */}
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen((o) => !o)}
-              className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-100/80 text-orange-700 transition active:bg-orange-200 md:hidden"
-              aria-label="Toggle menu"
-              aria-expanded={mobileMenuOpen}
-            >
-              {mobileMenuOpen ? (
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
           </div>
         </div>
       </header>
@@ -205,6 +241,7 @@ export const SiteHeader = () => {
         open={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
         user={!!user}
+        onSignOut={signOut}
       />
     </>
   );
