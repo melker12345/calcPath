@@ -50,7 +50,7 @@ function toUserProfile(user: User, dbProfile: DbProfileRow | null): UserProfile 
 
 // Users with permanent full access (bypass plan checks)
 const ADMIN_IDS = new Set([
-  "8e3871de-9cb4-4292-be10-cf45f84e96b4", // memleoberg@gmail.com
+  "f156c714-ded6-45e7-8643-4a78424f4a51", // melkeroberg03@gmail.com
 ]);
 
 function isProActive(profile: UserProfile | null): boolean {

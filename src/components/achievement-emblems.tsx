@@ -8,7 +8,7 @@ import { topics } from "@/lib/content";
 
 // Admin users see all emblems for preview purposes
 const EMBLEM_PREVIEW_IDS = new Set([
-  "8e3871de-9cb4-4292-be10-cf45f84e96b4",
+  "f156c714-ded6-45e7-8643-4a78424f4a51",
 ]);
 
 /**

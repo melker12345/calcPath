@@ -7,6 +7,10 @@ import { useAuth } from "@/components/auth-provider";
 import { useProgress } from "@/components/progress-provider";
 import { SectionCard } from "@/components/section-card";
 
+const ADMIN_IDS = new Set([
+  "f156c714-ded6-45e7-8643-4a78424f4a51",
+]);
+
 type Invoice = {
   id: string;
   number: string | null;
@@ -467,6 +471,108 @@ function AccountContent() {
           </SectionCard>
         </div>
       )}
+      {/* Admin panel — only visible to admin users */}
+      {user && ADMIN_IDS.has(user.id) && (
+        <div className="mt-6">
+          <AdminGrantTrial adminId={user.id} />
+        </div>
+      )}
     </div>
+  );
+}
+
+/* ── Admin: Grant Trial Panel ── */
+function AdminGrantTrial({ adminId }: { adminId: string }) {
+  const [email, setEmail] = useState("");
+  const [days, setDays] = useState(14);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{ success?: boolean; error?: string; email?: string; proUntil?: string; trialDays?: number } | null>(null);
+  const [history, setHistory] = useState<Array<{ email: string; days: number; until: string }>>([]);
+
+  const handleGrant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/admin/grant-trial", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminId, email: email.trim(), days }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setResult({ error: data.error ?? "Failed." });
+      } else {
+        setResult({ success: true, email: data.email, proUntil: data.proUntil, trialDays: data.trialDays });
+        setHistory((prev) => [{ email: data.email, days: data.trialDays, until: data.proUntil }, ...prev]);
+        setEmail("");
+      }
+    } catch {
+      setResult({ error: "Something went wrong." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <SectionCard title="Admin — Grant Trial">
+      <form onSubmit={handleGrant} className="space-y-3">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="student@example.com"
+            required
+            className="min-w-0 flex-1 rounded-xl border-2 border-orange-100 px-3 py-2 text-sm"
+          />
+          <div className="flex gap-2">
+            <select
+              value={days}
+              onChange={(e) => setDays(Number(e.target.value))}
+              className="rounded-xl border-2 border-orange-100 px-3 py-2 text-sm"
+            >
+              <option value={7}>7 days</option>
+              <option value={14}>14 days</option>
+              <option value={30}>30 days</option>
+              <option value={60}>60 days</option>
+              <option value={90}>90 days</option>
+            </select>
+            <button
+              type="submit"
+              disabled={loading}
+              className="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:shadow-md disabled:opacity-60"
+            >
+              {loading ? "..." : "Grant"}
+            </button>
+          </div>
+        </div>
+      </form>
+
+      {result?.error && (
+        <div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {result.error}
+        </div>
+      )}
+
+      {result?.success && (
+        <div className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          Granted Pro to <span className="font-semibold">{result.email}</span> for {result.trialDays} days (until {new Date(result.proUntil!).toLocaleDateString()})
+        </div>
+      )}
+
+      {history.length > 0 && (
+        <div className="mt-4 space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Recent grants</p>
+          {history.map((h, i) => (
+            <div key={`${h.email}-${i}`} className="flex items-center justify-between rounded-lg bg-orange-50/50 px-3 py-1.5 text-sm">
+              <span className="font-medium text-zinc-800">{h.email}</span>
+              <span className="text-xs text-zinc-500">{h.days}d — until {new Date(h.until).toLocaleDateString()}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </SectionCard>
   );
 }
