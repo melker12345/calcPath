@@ -166,6 +166,16 @@ export function MathInput({
             latex={value}
             config={{
               spaceBehavesLikeTab: true,
+              substituteTextarea: () => {
+                const ta = document.createElement("textarea");
+                ta.setAttribute("autocapitalize", "off");
+                ta.setAttribute("autocomplete", "off");
+                ta.setAttribute("autocorrect", "off");
+                ta.setAttribute("spellcheck", "false");
+                // Prevent mobile virtual keyboard — our custom keypad handles input
+                ta.setAttribute("inputmode", "none");
+                return ta;
+              },
             }}
             onChange={(field: MQField) => {
               mqRef.current = field;

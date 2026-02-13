@@ -9,7 +9,7 @@ export default function Home() {
           {/* Fun badge */}
           <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 shadow-lg sm:mb-8 sm:px-5 sm:py-2.5">
             <span className="text-xl sm:text-2xl">🎯</span>
-            <span className="text-xs font-semibold text-orange-800 sm:text-sm">120+ practice problems!</span>
+            <span className="text-xs font-semibold text-orange-800 sm:text-sm">240+ practice problems!</span>
           </div>
           
           <h1 className="mb-5 max-w-3xl text-3xl font-extrabold leading-tight text-orange-950 sm:text-4xl sm:mb-6 md:text-5xl lg:text-6xl">
@@ -29,10 +29,10 @@ export default function Home() {
           
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:gap-4">
             <Link 
-              href="/practice"
+              href="/try"
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-6 py-3.5 text-base font-bold text-white shadow-xl shadow-orange-200 transition hover:scale-105 hover:shadow-2xl sm:px-8 sm:py-4 sm:text-lg"
             >
-              <span>Start learning</span>
+              <span>Try 5 free problems</span>
               <span className="text-2xl">🚀</span>
             </Link>
             <Link 
@@ -55,7 +55,7 @@ export default function Home() {
       <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 sm:pb-20">
         <div className="grid gap-4 sm:grid-cols-3 sm:gap-6">
           {[
-            { emoji: "📝", value: "120+", label: "Fun problems", color: "from-orange-100 to-amber-100 border-orange-200" },
+            { emoji: "📝", value: "240+", label: "Practice problems", color: "from-orange-100 to-amber-100 border-orange-200" },
             { emoji: "🎓", value: "6", label: "Topics to master", color: "from-rose-100 to-pink-100 border-rose-200" },
             { emoji: "🛤️", value: "3", label: "Learning paths", color: "from-violet-100 to-purple-100 border-violet-200" },
           ].map((stat, i) => (
@@ -143,10 +143,10 @@ export default function Home() {
             Join thousands of students crushing it every day!
           </p>
           <Link 
-            href="/practice"
+            href="/try"
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-8 py-3.5 text-base font-bold text-orange-600 shadow-xl transition hover:scale-105 sm:px-10 sm:py-4 sm:text-lg"
           >
-            <span>Let's go!</span>
+            <span>Try it free</span>
             <span className="text-2xl">→</span>
           </Link>
         </div>

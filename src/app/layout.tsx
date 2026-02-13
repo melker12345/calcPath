@@ -12,14 +12,31 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "CalcPath | Master calculus, one problem at a time",
+  title: {
+    default: "CalcPath — Learn Calculus Step by Step",
+    template: "%s | CalcPath",
+  },
   description:
-    "Step-by-step modules, 240+ practice problems, tests, and flashcards. Free modules — Pro for $8/mo.",
+    "Free step-by-step calculus modules, 240+ practice problems with instant feedback, tests, and flashcards. Master limits, derivatives, integrals & more.",
+  keywords: [
+    "calculus",
+    "learn calculus",
+    "calculus practice",
+    "calculus problems",
+    "limits",
+    "derivatives",
+    "integrals",
+    "calculus help",
+    "step by step calculus",
+    "calculus tutor",
+    "math practice",
+  ],
   metadataBase: new URL("https://calc-path.com"),
+  alternates: { canonical: "/" },
   openGraph: {
-    title: "CalcPath | Master calculus, one problem at a time",
+    title: "CalcPath — Learn Calculus Step by Step",
     description:
-      "Step-by-step modules, 240+ practice problems, tests, and flashcards. Free modules — Pro for $8/mo.",
+      "Free step-by-step modules, 240+ practice problems, tests, and flashcards. Master calculus at your own pace.",
     url: "https://calc-path.com",
     siteName: "CalcPath",
     images: [
@@ -27,17 +44,29 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "CalcPath — Master calculus, one problem at a time",
+        alt: "CalcPath — Learn calculus step by step",
       },
     ],
     type: "website",
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "CalcPath | Master calculus, one problem at a time",
+    title: "CalcPath — Learn Calculus Step by Step",
     description:
-      "Step-by-step modules, 240+ practice problems, tests, and flashcards. Free modules — Pro for $8/mo.",
+      "Free modules, 240+ practice problems with instant feedback, tests & flashcards.",
     images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 };
 
@@ -48,6 +77,63 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                {
+                  "@type": "WebSite",
+                  name: "CalcPath",
+                  url: "https://calc-path.com",
+                  description:
+                    "Free step-by-step calculus modules, 240+ practice problems with instant feedback, tests, and flashcards.",
+                  potentialAction: {
+                    "@type": "SearchAction",
+                    target: "https://calc-path.com/modules?q={search_term_string}",
+                    "query-input": "required name=search_term_string",
+                  },
+                },
+                {
+                  "@type": "Organization",
+                  name: "CalcPath",
+                  url: "https://calc-path.com",
+                  logo: "https://calc-path.com/og-image.png",
+                  sameAs: ["https://x.com/CalcPath"],
+                },
+                {
+                  "@type": "Course",
+                  name: "Calculus — Limits, Derivatives, Integrals & More",
+                  description:
+                    "Complete calculus course with 6 topic modules, 240+ practice problems, step-by-step solutions, tests, and flashcards.",
+                  provider: {
+                    "@type": "Organization",
+                    name: "CalcPath",
+                    url: "https://calc-path.com",
+                  },
+                  offers: [
+                    {
+                      "@type": "Offer",
+                      category: "Free",
+                      price: "0",
+                      priceCurrency: "USD",
+                    },
+                    {
+                      "@type": "Offer",
+                      category: "Pro",
+                      price: "8",
+                      priceCurrency: "USD",
+                      billingDuration: "P1M",
+                    },
+                  ],
+                },
+              ],
+            }),
+          }}
+        />
+      </head>
       <body
         className={`${inter.variable} antialiased`}
       >

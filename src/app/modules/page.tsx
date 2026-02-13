@@ -14,8 +14,8 @@ export default function ModulesPage() {
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl font-semibold sm:text-3xl">Calculus modules</h1>
-        <p className="text-sm text-zinc-500">
-          Read the lesson, follow the examples, then practice.
+        <p className="mt-1 text-sm text-zinc-500 sm:text-base">
+          Read the lesson, follow the worked examples, then practice. All modules are <span className="font-semibold text-emerald-700">100% free</span>.
         </p>
       </div>
 
