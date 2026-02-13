@@ -489,12 +489,15 @@ export default function ModulePage() {
         {prevTopic ? (
           <Link
             href={`/modules/${prevTopic.id}`}
-            className="group flex items-center gap-3 rounded-2xl border-2 border-orange-100 bg-white p-4 transition hover:border-orange-200 hover:shadow-md sm:rounded-3xl sm:p-5"
+            className="group relative overflow-hidden rounded-2xl border-2 border-orange-100 bg-gradient-to-br from-orange-50/60 to-rose-50/60 p-5 transition hover:border-orange-200 hover:shadow-lg sm:rounded-3xl sm:p-6"
           >
-            <span className="text-xl text-orange-400 transition group-hover:-translate-x-1">←</span>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-orange-500">Previous</p>
-              <p className="text-base font-bold text-zinc-900 sm:text-lg">{prevTopic.title}</p>
+            <div className="absolute -left-4 top-1/2 -translate-y-1/2 text-[80px] font-black leading-none text-orange-100 transition-transform group-hover:-translate-x-1">
+              ‹
+            </div>
+            <div className="relative">
+              <p className="text-xs font-bold uppercase tracking-widest text-orange-400">Previous module</p>
+              <p className="mt-1 text-lg font-extrabold text-orange-900 sm:text-xl">{prevTopic.title}</p>
+              <p className="mt-1 text-sm text-orange-600">{prevTopic.description}</p>
             </div>
           </Link>
         ) : (
@@ -503,13 +506,16 @@ export default function ModulePage() {
         {nextTopic ? (
           <Link
             href={`/modules/${nextTopic.id}`}
-            className="group flex items-center justify-end gap-3 rounded-2xl border-2 border-orange-100 bg-white p-4 text-right transition hover:border-orange-200 hover:shadow-md sm:rounded-3xl sm:p-5"
+            className="group relative overflow-hidden rounded-2xl border-2 border-orange-100 bg-gradient-to-bl from-orange-50/60 to-rose-50/60 p-5 text-right transition hover:border-orange-200 hover:shadow-lg sm:rounded-3xl sm:p-6"
           >
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-orange-500">Next</p>
-              <p className="text-base font-bold text-zinc-900 sm:text-lg">{nextTopic.title}</p>
+            <div className="absolute -right-4 top-1/2 -translate-y-1/2 text-[80px] font-black leading-none text-orange-100 transition-transform group-hover:translate-x-1">
+              ›
             </div>
-            <span className="text-xl text-orange-400 transition group-hover:translate-x-1">→</span>
+            <div className="relative">
+              <p className="text-xs font-bold uppercase tracking-widest text-orange-400">Next module</p>
+              <p className="mt-1 text-lg font-extrabold text-orange-900 sm:text-xl">{nextTopic.title}</p>
+              <p className="mt-1 text-sm text-orange-600">{nextTopic.description}</p>
+            </div>
           </Link>
         ) : (
           <div />

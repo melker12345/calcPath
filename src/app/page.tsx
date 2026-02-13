@@ -1,5 +1,24 @@
 import Link from "next/link";
 
+const homeFaqs = [
+  { q: "Is CalcPath really free?", a: "Yes. All 6 module lessons with full explanations, worked examples, and \"Explain it simply\" breakdowns are completely free — no credit card needed." },
+  { q: "What calculus topics do you cover?", a: "Limits & Continuity, Derivatives, Applications of Derivatives, Integrals, Series & Sequences, and Differential Equations — 240+ practice problems total." },
+  { q: "Do I get step-by-step solutions?", a: "Every single problem comes with a complete step-by-step walkthrough that shows the approach, each calculation, and the final answer." },
+  { q: "What does Pro include?", a: "Pro ($8/mo) unlocks all 240+ practice problems, 20-question tests per topic, a progress dashboard, flashcards, and learning paths. Cancel anytime." },
+  { q: "Can I try before signing up?", a: "Absolutely. Try 5 interactive problems right now at calc-path.com/try — no account required. You get instant feedback and full solutions." },
+  { q: "Who is CalcPath for?", a: "High school and college students taking Calculus I or II, AP Calculus, or anyone who wants to build a solid foundation in calculus at their own pace." },
+];
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: homeFaqs.map((faq) => ({
+    "@type": "Question",
+    name: faq.q,
+    acceptedAnswer: { "@type": "Answer", text: faq.a },
+  })),
+};
+
 const topics = [
   {
     id: "limits",
@@ -47,6 +66,11 @@ const topics = [
 
 export default function Home() {
   return (
+    <>
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+    />
     <div className="min-h-screen">
       {/* ── Hero ── */}
       <section className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 md:py-28">
@@ -317,6 +341,28 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── FAQ ── */}
+      <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20">
+        <h2 className="mb-8 text-center text-2xl font-extrabold text-orange-950 sm:mb-12 sm:text-4xl">
+          Frequently asked questions
+        </h2>
+        <div className="space-y-3">
+          {homeFaqs.map((faq, i) => (
+            <details key={i} className="group rounded-xl border-2 border-orange-100 bg-white">
+              <summary className="flex cursor-pointer select-none items-center justify-between px-5 py-4 text-base font-semibold text-zinc-900 [&::-webkit-details-marker]:hidden">
+                {faq.q}
+                <svg className="ml-3 h-4 w-4 flex-shrink-0 text-orange-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+              <div className="px-5 pb-4 text-base leading-relaxed text-zinc-600">
+                {faq.a}
+              </div>
+            </details>
+          ))}
+        </div>
+      </section>
+
       {/* ── Final CTA ── */}
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-20">
         <div className="rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 p-8 text-center shadow-2xl sm:rounded-3xl sm:p-12 md:rounded-[2.5rem] md:p-16">
@@ -343,5 +389,6 @@ export default function Home() {
         </div>
       </section>
     </div>
+    </>
   );
 }
