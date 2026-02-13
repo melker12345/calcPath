@@ -4,7 +4,6 @@ import { Providers } from "@/components/providers";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
-import "katex/dist/katex.min.css";
 
 const inter = Inter({
   variable: "--font-inter",
