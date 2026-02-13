@@ -156,20 +156,20 @@ export default function Home() {
               <Link
                 key={topic.id}
                 href={`/modules/${topic.id}`}
-                className="group rounded-2xl border-2 border-orange-100 bg-white p-5 shadow-md transition hover:border-orange-200 hover:shadow-lg sm:rounded-3xl sm:p-6"
+                className="group rounded-2xl border-2 border-orange-100 bg-gradient-to-br from-orange-50/60 to-rose-50/60 p-5 transition hover:border-orange-200 hover:shadow-lg sm:rounded-3xl sm:p-6"
               >
                 <div className="mb-3 flex items-center justify-between">
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-50 to-rose-50 text-sm font-bold text-orange-700">
+                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white text-sm font-bold text-orange-600 shadow-sm">
                     {topic.icon}
                   </span>
-                  <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-600">
+                  <span className="rounded-full bg-white/80 px-2.5 py-1 text-xs font-semibold text-orange-600">
                     {topic.problems} problems
                   </span>
                 </div>
                 <h3 className="mb-1 text-lg font-bold text-orange-900 group-hover:text-orange-700 sm:text-xl">
                   {topic.title}
                 </h3>
-                <p className="text-sm text-orange-700">{topic.desc}</p>
+                <p className="text-sm text-orange-700/80">{topic.desc}</p>
               </Link>
             ))}
           </div>
@@ -269,37 +269,43 @@ export default function Home() {
               {
                 title: "Instant right/wrong feedback",
                 desc: "Submit an answer and know immediately if you're correct. No waiting, no answer keys to flip to.",
-                bg: "bg-amber-50",
+                bg: "from-amber-50 to-orange-50/50",
+                border: "border-amber-100",
               },
               {
                 title: "Step-by-step solutions",
                 desc: "Every problem has a full walkthrough. See exactly how to get from the question to the answer.",
-                bg: "bg-rose-50",
+                bg: "from-rose-50 to-pink-50/50",
+                border: "border-rose-100",
               },
               {
                 title: "Hints before the answer",
                 desc: "Stuck? Get a hint that nudges you in the right direction before revealing the full solution.",
-                bg: "bg-violet-50",
+                bg: "from-violet-50 to-purple-50/50",
+                border: "border-violet-100",
               },
               {
                 title: "Math input keypad",
                 desc: "Type fractions, exponents, trig functions, and more with our built-in math keyboard. No LaTeX needed.",
-                bg: "bg-orange-50",
+                bg: "from-orange-50 to-amber-50/50",
+                border: "border-orange-100",
               },
               {
                 title: "Progress tracking",
                 desc: "See which problems you've mastered and which need more work. Pick up right where you left off.",
-                bg: "bg-pink-50",
+                bg: "from-pink-50 to-rose-50/50",
+                border: "border-pink-100",
               },
               {
                 title: "Flashcard review",
                 desc: "Review key formulas and concepts with flashcards. Great for exam prep and quick refreshers.",
-                bg: "bg-emerald-50",
+                bg: "from-emerald-50 to-teal-50/50",
+                border: "border-emerald-100",
               },
             ].map((feature, i) => (
               <div
                 key={i}
-                className={`rounded-2xl ${feature.bg} p-5 sm:rounded-3xl sm:p-8`}
+                className={`rounded-2xl border-2 ${feature.border} bg-gradient-to-br ${feature.bg} p-5 sm:rounded-3xl sm:p-8`}
               >
                 <h3 className="mb-2 text-lg font-bold text-orange-900 sm:text-xl">
                   {feature.title}
@@ -312,7 +318,7 @@ export default function Home() {
       </section>
 
       {/* ── Final CTA ── */}
-      <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 sm:pb-20">
+      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-20">
         <div className="rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 p-8 text-center shadow-2xl sm:rounded-3xl sm:p-12 md:rounded-[2.5rem] md:p-16">
           <h2 className="mb-3 text-2xl font-extrabold text-white sm:mb-4 sm:text-4xl md:text-5xl">
             Start with 5 free problems
