@@ -53,7 +53,7 @@ export function PaywallGate({ children, feature }: PaywallGateProps) {
               Sign up free
             </Link>
             <Link
-              href="/modules"
+              href="/calculus/modules"
               className="rounded-2xl border-2 border-orange-200 bg-white px-8 py-3 font-semibold text-orange-700 transition hover:bg-orange-50"
             >
               Browse free modules
@@ -102,7 +102,7 @@ export function PaywallGate({ children, feature }: PaywallGateProps) {
             Upgrade to Pro
           </Link>
           <Link
-            href="/modules"
+            href="/calculus/modules"
             className="rounded-2xl border-2 border-orange-200 bg-white px-8 py-3 font-semibold text-orange-700 transition hover:bg-orange-50"
           >
             Browse free modules

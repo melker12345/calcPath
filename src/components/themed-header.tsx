@@ -1,0 +1,299 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { useAuth } from "@/components/auth-provider";
+import type { SubjectTheme } from "@/lib/themes";
+
+function ThemedMobileDrawer({
+  open,
+  onClose,
+  user,
+  onSignOut,
+  theme,
+  navLinks,
+}: {
+  open: boolean;
+  onClose: () => void;
+  user: boolean;
+  onSignOut: () => void;
+  theme: SubjectTheme;
+  navLinks: { href: string; label: string }[];
+}) {
+  const [mounted, setMounted] = useState(false);
+  const c = theme.colors;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const scrollY = window.scrollY;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+      window.scrollTo(0, scrollY);
+    };
+  }, [open]);
+
+  if (!open || !mounted) return null;
+
+  return createPortal(
+    <div className="md:hidden">
+      <button
+        type="button"
+        aria-label="Close menu"
+        onClick={onClose}
+        className="fixed inset-0 z-[9998] bg-black/30 backdrop-blur-sm"
+      />
+      <div
+        className="fixed right-0 top-0 z-[9999] flex h-dvh w-[min(300px,85vw)] flex-col shadow-2xl animate-slide-in-right"
+        style={{ background: c.bg, borderLeft: `1px solid ${c.border}` }}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation menu"
+      >
+        <div className="flex shrink-0 items-center justify-between px-4 py-4" style={{ borderBottom: `1px solid ${c.border}` }}>
+          <span className="text-lg font-bold" style={{ color: c.text }}>Menu</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-xl transition active:opacity-70"
+            style={{ background: c.card, color: c.text }}
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <nav className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-3 py-4">
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="block rounded-xl px-4 py-3.5 text-base font-semibold transition active:opacity-70"
+              style={{ background: c.accentBg, color: c.text }}
+              onClick={onClose}
+            >
+              {link.label}
+            </Link>
+          ))}
+          {user && (
+            <>
+              <div className="my-2" style={{ borderTop: `1px solid ${c.border}` }} />
+              <Link
+                href="/account"
+                className="block rounded-xl px-4 py-3.5 text-base font-semibold transition active:opacity-70"
+                style={{ background: c.accentBg, color: c.text }}
+                onClick={onClose}
+              >
+                Account
+              </Link>
+              <button
+                type="button"
+                onClick={() => { onSignOut(); onClose(); }}
+                className="rounded-xl px-4 py-3.5 text-left text-base font-semibold text-red-500 transition active:opacity-70"
+                style={{ background: c.accentBg }}
+              >
+                Sign out
+              </button>
+            </>
+          )}
+          {!user && (
+            <>
+              <div className="my-2" style={{ borderTop: `1px solid ${c.border}` }} />
+              <Link
+                href="/auth"
+                className="block rounded-xl px-4 py-3.5 text-center text-base font-semibold transition active:opacity-90"
+                style={{ background: c.accent, color: c.navAccentText }}
+                onClick={onClose}
+              >
+                Sign in / Register
+              </Link>
+            </>
+          )}
+        </nav>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+export function ThemedHeader({
+  theme,
+  subjectSlug,
+}: {
+  theme: SubjectTheme;
+  subjectSlug: string;
+}) {
+  const { user, isPro, signOut } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const c = theme.colors;
+  const prefix = `/${subjectSlug}`;
+
+  const navLinks = [
+    { href: `${prefix}/modules`, label: "Modules" },
+    { href: `${prefix}/practice`, label: "Practice" },
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/flashcards", label: "Flash Cards" },
+    { href: "/pricing", label: "Pricing" },
+  ];
+
+  return (
+    <>
+      <header
+        className="sticky top-0 z-50 backdrop-blur-xl pt-[env(safe-area-inset-top)]"
+        style={{ background: c.navBg, borderBottom: `1px solid ${c.navBorder}` }}
+      >
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4">
+          {/* Logo */}
+          <div className="flex shrink-0 items-center gap-3">
+            <Link href="/" className="flex items-center gap-2" aria-label="CalcPath home">
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-xl text-lg font-bold shadow-sm sm:h-10 sm:w-10 sm:rounded-2xl sm:text-xl"
+                style={{ background: c.logoBg, color: c.logoText }}
+              >
+                CP
+              </div>
+            </Link>
+            <div className="hidden h-6 w-px sm:block" style={{ background: c.border }} />
+            <Link
+              href={prefix}
+              className="hidden items-center gap-2 sm:flex"
+              aria-label={`${theme.name} home`}
+            >
+              <span
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-base font-bold"
+                style={{ background: c.accentBg, color: c.accent, border: `1px solid ${c.border}` }}
+              >
+                {theme.icon}
+              </span>
+              <span className="text-base font-bold" style={{ color: c.text }}>
+                {theme.name}
+              </span>
+            </Link>
+          </div>
+
+          {/* Desktop nav */}
+          <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="transition"
+                style={{ color: c.navText }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = c.navTextHover)}
+                onMouseLeave={(e) => (e.currentTarget.style.color = c.navText)}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+
+          {/* Mobile controls */}
+          <div className="flex items-center gap-2 md:hidden">
+            <Link
+              href={`${prefix}/modules`}
+              className="text-sm font-semibold transition"
+              style={{ color: c.navText }}
+            >
+              Modules
+            </Link>
+            {user ? (
+              <Link
+                href="/account"
+                className="rounded-xl px-3 py-1.5 text-sm font-semibold transition"
+                style={{ border: `1.5px solid ${c.border}`, color: c.navText }}
+              >
+                Account
+              </Link>
+            ) : (
+              <Link
+                href="/auth"
+                className="rounded-xl px-3 py-1.5 text-sm font-semibold shadow-sm"
+                style={{ background: c.accent, color: c.navAccentText }}
+              >
+                Sign in
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((o) => !o)}
+              className="flex h-10 w-10 items-center justify-center rounded-xl transition active:opacity-70"
+              style={{ background: c.accentBg, color: c.navText }}
+              aria-label="Toggle menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Desktop right */}
+          <div className="hidden shrink-0 items-center gap-3 md:flex">
+            {user ? (
+              <>
+                <Link
+                  href="/account"
+                  className="flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold shadow-sm transition hover:shadow-md"
+                  style={{ border: `1.5px solid ${c.border}`, color: c.text }}
+                >
+                  <span className="max-w-[140px] truncate">
+                    {user.email ?? user.phone ?? user.id.slice(0, 8)}
+                  </span>
+                  <span
+                    className="rounded-full px-2 py-0.5 text-xs font-bold"
+                    style={{
+                      background: isPro ? c.accent : c.accentBg,
+                      color: isPro ? c.navAccentText : c.accent,
+                    }}
+                  >
+                    {isPro ? "PRO" : "FREE"}
+                  </span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="rounded-2xl px-4 py-2 text-sm font-semibold transition hover:opacity-80"
+                  style={{ border: `1.5px solid ${c.border}`, color: c.navText }}
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/auth"
+                  className="text-sm font-medium transition"
+                  style={{ color: c.navText }}
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/auth"
+                  className="rounded-2xl px-4 py-2.5 text-sm font-semibold shadow-sm transition hover:brightness-110"
+                  style={{ background: c.accent, color: c.navAccentText }}
+                >
+                  Get started
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <ThemedMobileDrawer
+        open={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        user={!!user}
+        onSignOut={signOut}
+        theme={theme}
+        navLinks={navLinks}
+      />
+    </>
+  );
+}

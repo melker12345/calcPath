@@ -14,7 +14,7 @@ export const SiteFooter = () => (
       <p className="text-sm text-orange-600">© 2026 CalcPath. Made with 💖</p>
       <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
         <Link href="/pricing" className="text-sm text-orange-600 hover:text-orange-900">Pricing</Link>
-        <Link href="/modules" className="text-sm text-orange-600 hover:text-orange-900">Modules</Link>
+        <Link href="/calculus/modules" className="text-sm text-orange-600 hover:text-orange-900">Modules</Link>
       </div>
     </div>
   </footer>

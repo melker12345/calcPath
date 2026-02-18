@@ -8,7 +8,7 @@ import { AchievementEmblems } from "@/components/achievement-emblems";
 function EmblemsWrapper() {
   const pathname = usePathname();
   // Hide on test pages to avoid distraction
-  if (pathname?.startsWith("/test/")) return null;
+  if (pathname?.startsWith("/calculus/test/")) return null;
   return <AchievementEmblems />;
 }
 

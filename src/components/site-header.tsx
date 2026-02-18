@@ -7,8 +7,8 @@ import { useAuth } from "@/components/auth-provider";
 
 const navLinks = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/practice", label: "Practice" },
-  { href: "/modules", label: "Modules" },
+  { href: "/calculus/practice", label: "Practice" },
+  { href: "/calculus/modules", label: "Modules" },
   { href: "/flashcards", label: "Flash Cards" },
   { href: "/pricing", label: "Pricing" },
 ];
@@ -156,7 +156,7 @@ export const SiteHeader = () => {
           {/* Mobile quick links: Modules + Sign in / Account */}
           <div className="flex items-center gap-2 md:hidden">
             <Link
-              href="/modules"
+              href="/calculus/modules"
               className="text-sm font-semibold text-orange-700 transition active:text-orange-900"
             >
               Modules
