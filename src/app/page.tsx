@@ -1,12 +1,51 @@
 import Link from "next/link";
 
+const curriculum = [
+  {
+    id: "limits",
+    number: "I",
+    title: "Limits & Continuity",
+    desc: "What does it mean for a function to approach a value? Build intuition for limits through direct substitution, factoring, the squeeze theorem, and L'Hôpital's rule. Understand continuity and what happens when it breaks.",
+  },
+  {
+    id: "derivatives",
+    number: "II",
+    title: "Derivatives",
+    desc: "The derivative measures instantaneous rate of change. Learn the power rule, product and quotient rules, chain rule, and implicit differentiation. Understand what a derivative means geometrically and physically.",
+  },
+  {
+    id: "applications",
+    number: "III",
+    title: "Applications of Derivatives",
+    desc: "Put derivatives to work. Solve optimization problems, related rates, and curve sketching. Analyze motion and understand how derivatives describe the world around us.",
+  },
+  {
+    id: "integrals",
+    number: "IV",
+    title: "Integrals",
+    desc: "Integration is the reverse of differentiation — and much more. Compute definite and indefinite integrals using substitution, integration by parts, and the Fundamental Theorem of Calculus.",
+  },
+  {
+    id: "series",
+    number: "V",
+    title: "Series & Sequences",
+    desc: "When does an infinite sum have a finite value? Study convergence tests, geometric and telescoping series, power series, and the Taylor and Maclaurin expansions that underpin modern mathematics.",
+  },
+  {
+    id: "differential-equations",
+    number: "VI",
+    title: "Differential Equations",
+    desc: "Equations involving derivatives model growth, decay, and change. Learn to solve separable and first-order linear equations, and see how differential equations describe real phenomena.",
+  },
+];
+
 const homeFaqs = [
-  { q: "Is CalcPath really free?", a: "Yes. All 6 module lessons with full explanations, worked examples, and \"Explain it simply\" breakdowns are completely free — no credit card needed." },
-  { q: "What calculus topics do you cover?", a: "Limits & Continuity, Derivatives, Applications of Derivatives, Integrals, Series & Sequences, and Differential Equations — 240+ practice problems total." },
-  { q: "Do I get step-by-step solutions?", a: "Every single problem comes with a complete step-by-step walkthrough that shows the approach, each calculation, and the final answer." },
-  { q: "What does Pro include?", a: "Pro ($8/mo) unlocks all 240+ practice problems, 20-question tests per topic, a progress dashboard, flashcards, and learning paths. Cancel anytime." },
-  { q: "Can I try before signing up?", a: "Absolutely. Try 5 interactive problems right now at calc-path.com/try — no account required. You get instant feedback and full solutions." },
-  { q: "Who is CalcPath for?", a: "High school and college students taking Calculus I or II, AP Calculus, or anyone who wants to build a solid foundation in calculus at their own pace." },
+  { q: "What background do I need?", a: "Algebra and basic trigonometry. If you're comfortable with functions, factoring, and solving equations, you're ready to start." },
+  { q: "Is this free?", a: "All modules — lessons, explanations, and worked examples — are free with no account required. Practice problems and tests require a Pro subscription." },
+  { q: "How is this different from a textbook?", a: "You get the same rigor, but with instant feedback. Every practice problem checks your answer immediately and walks through the solution step by step." },
+  { q: "What topics are covered?", a: "Limits, derivatives, applications of derivatives, integrals, series & sequences, and differential equations. This covers a standard Calculus I–II curriculum." },
+  { q: "Can I try the practice problems first?", a: "Yes. You can solve 5 interactive problems right now — no account needed. Visit the practice sampler to try it." },
+  { q: "Who made this?", a: "CalcPath is an independent project built to make calculus more accessible. Every explanation is written to build understanding, not just get you through an exam." },
 ];
 
 const faqJsonLd = {
@@ -19,51 +58,6 @@ const faqJsonLd = {
   })),
 };
 
-const topics = [
-  {
-    id: "limits",
-    title: "Limits & Continuity",
-    desc: "Direct substitution, L'Hôpital's rule, squeeze theorem, and continuity.",
-    problems: 40,
-    icon: "lim",
-  },
-  {
-    id: "derivatives",
-    title: "Derivatives",
-    desc: "Power rule, chain rule, product & quotient rules, implicit differentiation.",
-    problems: 40,
-    icon: "dy/dx",
-  },
-  {
-    id: "applications",
-    title: "Applications of Derivatives",
-    desc: "Optimization, related rates, curve sketching, and motion problems.",
-    problems: 40,
-    icon: "f′(x)",
-  },
-  {
-    id: "integrals",
-    title: "Integrals",
-    desc: "Definite & indefinite integrals, u-substitution, integration by parts.",
-    problems: 40,
-    icon: "∫",
-  },
-  {
-    id: "series",
-    title: "Series & Sequences",
-    desc: "Convergence tests, geometric series, Taylor & Maclaurin series.",
-    problems: 40,
-    icon: "∑",
-  },
-  {
-    id: "differential-equations",
-    title: "Differential Equations",
-    desc: "Separable equations, first-order linear, exponential growth & decay.",
-    problems: 40,
-    icon: "dy/dt",
-  },
-];
-
 export default function Home() {
   return (
     <>
@@ -72,269 +66,185 @@ export default function Home() {
       dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
     />
     <div className="min-h-screen">
+
       {/* ── Hero ── */}
-      <section className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 md:py-28">
-        <div className="flex flex-col items-center text-center">
-          <h1 className="mb-5 max-w-3xl text-3xl font-extrabold leading-tight text-orange-950 sm:mb-6 sm:text-4xl md:text-5xl lg:text-6xl">
-            Learn calculus{" "}
-            <span className="relative">
-              <span className="relative z-10 bg-gradient-to-r from-orange-500 to-rose-500 bg-clip-text text-transparent">
-                step&nbsp;by&nbsp;step
-              </span>
-              <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 200 12" preserveAspectRatio="none">
-                <path d="M0,8 Q50,0 100,8 T200,8" fill="none" stroke="url(#grad)" strokeWidth="4" strokeLinecap="round" />
-                <defs>
-                  <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#f97316" />
-                    <stop offset="100%" stopColor="#f43f5e" />
-                  </linearGradient>
-                </defs>
-              </svg>
+      <section className="relative mx-auto max-w-4xl px-4 pb-16 pt-20 sm:px-6 sm:pb-24 sm:pt-28 md:pt-36">
+        <div className="text-center">
+          <p className="mb-5 text-sm font-medium uppercase tracking-[0.2em] text-orange-600/80 sm:mb-6 sm:text-base">
+            A structured approach to calculus
+          </p>
+          <h1 className="mx-auto max-w-3xl text-4xl font-extrabold leading-[1.1] tracking-tight text-zinc-900 sm:text-5xl md:text-6xl lg:text-7xl">
+            Understand calculus,{" "}
+            <span className="bg-gradient-to-r from-orange-600 to-rose-500 bg-clip-text text-transparent">
+              don't just memorize it
             </span>
           </h1>
-
-          <p className="mb-8 max-w-xl text-base text-orange-800 sm:mb-10 sm:text-xl">
-            Free modules with worked examples. 240+ practice problems with
-            instant feedback and full solutions. From limits to differential
-            equations.
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-600 sm:mt-8 sm:text-xl">
+            Six topic modules with clear explanations, worked examples, and
+            240+ practice problems — each with step-by-step solutions.
+            Built for students who want to actually learn the material.
           </p>
-
-          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:gap-4">
-            <Link
-              href="/try"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-6 py-3.5 text-base font-bold text-white shadow-xl shadow-orange-200 transition hover:scale-105 hover:shadow-2xl sm:px-8 sm:py-4 sm:text-lg"
-            >
-              Try 5 free problems
-            </Link>
+          <div className="mt-8 flex flex-col items-center gap-3 sm:mt-10 sm:flex-row sm:justify-center sm:gap-4">
             <Link
               href="/modules"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3.5 text-base font-bold text-orange-800 shadow-lg transition hover:shadow-xl sm:px-8 sm:py-4 sm:text-lg"
+              className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-7 py-3.5 text-base font-semibold text-white transition hover:bg-zinc-800 sm:px-8 sm:py-4 sm:text-lg"
             >
-              Browse free modules
+              Start reading
+            </Link>
+            <Link
+              href="/try"
+              className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-white px-7 py-3.5 text-base font-semibold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 sm:px-8 sm:py-4 sm:text-lg"
+            >
+              Try a practice problem
             </Link>
           </div>
         </div>
-
-        {/* Decorative math symbols */}
-        <div className="absolute left-10 top-32 hidden text-6xl opacity-20 md:block">∑</div>
-        <div className="absolute right-10 top-40 hidden text-5xl opacity-20 md:block">∫</div>
-        <div className="absolute bottom-20 left-20 hidden text-4xl opacity-20 md:block">∂</div>
       </section>
 
-      {/* ── How it works ── */}
-      <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 sm:pb-20">
-        <h2 className="mb-8 text-center text-2xl font-extrabold text-orange-950 sm:mb-12 sm:text-4xl">
-          How CalcPath works
-        </h2>
+      {/* ── Sample problem ── */}
+      <section className="border-y border-zinc-100 bg-white py-16 sm:py-24">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6">
+          <p className="mb-8 text-center text-sm font-medium uppercase tracking-[0.2em] text-zinc-400">
+            What learning looks like
+          </p>
 
-        <div className="grid gap-4 sm:grid-cols-3 sm:gap-6">
-          {[
-            {
-              step: "1",
-              title: "Read the module",
-              desc: "Each topic has a free lesson with intuition-first explanations and worked examples.",
-              color: "from-orange-100 to-amber-100 border-orange-200",
-            },
-            {
-              step: "2",
-              title: "Practice problems",
-              desc: "Solve 40 problems per topic. Get instant feedback, hints, and full step-by-step solutions.",
-              color: "from-rose-100 to-pink-100 border-rose-200",
-            },
-            {
-              step: "3",
-              title: "Test yourself",
-              desc: "Take a 20-question test per topic to confirm mastery. Track your progress over time.",
-              color: "from-violet-100 to-purple-100 border-violet-200",
-            },
-          ].map((item) => (
-            <div
-              key={item.step}
-              className={`rounded-2xl border-2 ${item.color} bg-gradient-to-br p-5 shadow-lg sm:rounded-3xl sm:p-8`}
-            >
-              <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-rose-500 text-lg font-bold text-white shadow-sm sm:h-12 sm:w-12 sm:text-xl">
-                {item.step}
-              </span>
-              <h3 className="mb-2 text-lg font-bold text-orange-900 sm:text-xl">{item.title}</h3>
-              <p className="text-sm text-orange-700 sm:text-base">{item.desc}</p>
+          <div className="overflow-hidden rounded-2xl border border-zinc-200 shadow-sm">
+            {/* Problem */}
+            <div className="border-b border-zinc-100 bg-zinc-50/50 px-6 py-5 sm:px-8 sm:py-6">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                Limits — Problem 4
+              </p>
+              <p className="text-lg font-semibold text-zinc-900 sm:text-xl">
+                Compute: lim(x→4) of (x² − 16) / (x − 4)
+              </p>
             </div>
+
+            {/* Solution */}
+            <div className="px-6 py-5 sm:px-8 sm:py-6">
+              <p className="mb-4 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+                Step-by-step solution
+              </p>
+              <ol className="space-y-3 text-base text-zinc-700">
+                <li className="flex gap-3">
+                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-700">
+                    1
+                  </span>
+                  <span>Direct substitution gives 0/0 — an indeterminate form. We need to simplify.</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-700">
+                    2
+                  </span>
+                  <span>Factor the numerator: x² − 16 = (x − 4)(x + 4)</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-700">
+                    3
+                  </span>
+                  <span>Cancel the common factor (x − 4), leaving lim(x→4) of (x + 4)</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-700">
+                    4
+                  </span>
+                  <span>Substitute x = 4: 4 + 4 = <strong className="text-zinc-900">8</strong></span>
+                </li>
+              </ol>
+              <div className="mt-5 rounded-lg bg-emerald-50 px-4 py-3">
+                <p className="text-sm font-semibold text-emerald-800">
+                  Answer: <span className="text-base">8</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-6 text-center text-sm text-zinc-500">
+            Every problem includes a full walkthrough like this.{" "}
+            <Link href="/modules/limits" className="font-medium text-orange-600 hover:text-orange-700">
+              Read the Limits module →
+            </Link>
+          </p>
+        </div>
+      </section>
+
+      {/* ── Curriculum ── */}
+      <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6 sm:py-24">
+        <div className="mb-12 text-center sm:mb-16">
+          <h2 className="text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">
+            Curriculum
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-base text-zinc-500 sm:text-lg">
+            Six modules covering a standard Calculus I–II sequence.
+            Each includes a lesson, worked examples, and practice problems.
+          </p>
+        </div>
+
+        <div className="space-y-0">
+          {curriculum.map((topic, i) => (
+            <Link
+              key={topic.id}
+              href={`/modules/${topic.id}`}
+              className={`group flex gap-5 py-7 transition hover:bg-orange-50/40 sm:gap-8 sm:py-8 ${
+                i < curriculum.length - 1 ? "border-b border-zinc-100" : ""
+              }`}
+            >
+              <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-zinc-100 font-serif text-lg font-bold text-zinc-400 transition group-hover:bg-orange-100 group-hover:text-orange-600 sm:h-14 sm:w-14 sm:text-xl">
+                {topic.number}
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg font-bold text-zinc-900 group-hover:text-orange-800 sm:text-xl">
+                  {topic.title}
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-zinc-500 sm:text-base">
+                  {topic.desc}
+                </p>
+              </div>
+              <span className="hidden flex-shrink-0 self-center text-zinc-300 transition group-hover:translate-x-1 group-hover:text-orange-400 sm:block">
+                →
+              </span>
+            </Link>
           ))}
         </div>
       </section>
 
-      {/* ── Topics covered ── */}
-      <section className="bg-white py-12 sm:py-20">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="mb-10 text-center sm:mb-14">
-            <h2 className="mb-3 text-2xl font-extrabold text-orange-950 sm:mb-4 sm:text-4xl">
-              6 calculus topics, 240+ problems
+      {/* ── Approach ── */}
+      <section className="border-y border-zinc-100 bg-white py-16 sm:py-24">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6">
+          <div className="mb-12 text-center sm:mb-16">
+            <h2 className="text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">
+              How we teach
             </h2>
-            <p className="mx-auto max-w-2xl text-base text-orange-700 sm:text-lg">
-              Every topic includes a free module with lesson content and worked
-              examples. Practice problems and tests are available with Pro.
+            <p className="mx-auto mt-3 max-w-xl text-base text-zinc-500 sm:text-lg">
+              Not shortcuts. Not tricks. Understanding.
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-            {topics.map((topic) => (
-              <Link
-                key={topic.id}
-                href={`/modules/${topic.id}`}
-                className="group rounded-2xl border-2 border-orange-100 bg-gradient-to-br from-orange-50/60 to-rose-50/60 p-5 transition hover:border-orange-200 hover:shadow-lg sm:rounded-3xl sm:p-6"
-              >
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white text-sm font-bold text-orange-600 shadow-sm">
-                    {topic.icon}
-                  </span>
-                  <span className="rounded-full bg-white/80 px-2.5 py-1 text-xs font-semibold text-orange-600">
-                    {topic.problems} problems
-                  </span>
-                </div>
-                <h3 className="mb-1 text-lg font-bold text-orange-900 group-hover:text-orange-700 sm:text-xl">
-                  {topic.title}
-                </h3>
-                <p className="text-sm text-orange-700/80">{topic.desc}</p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Free vs Pro ── */}
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-20">
-        <h2 className="mb-8 text-center text-2xl font-extrabold text-orange-950 sm:mb-12 sm:text-4xl">
-          Free to start, Pro when you're ready
-        </h2>
-
-        <div className="grid gap-6 sm:grid-cols-2">
-          {/* Free */}
-          <div className="rounded-2xl border-2 border-orange-100 bg-white p-6 shadow-lg sm:rounded-3xl sm:p-8">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-1.5 text-sm font-bold text-emerald-700">
-              Free forever
-            </div>
-            <p className="mb-1 text-4xl font-extrabold text-orange-900">$0</p>
-            <p className="mb-6 text-sm text-orange-600">No credit card needed</p>
-            <ul className="space-y-3 text-sm text-zinc-700">
-              <li className="flex items-start gap-2">
-                <span className="mt-0.5 text-emerald-500">✓</span>
-                All 6 module lessons with full explanations
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-0.5 text-emerald-500">✓</span>
-                Worked examples in every module
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-0.5 text-emerald-500">✓</span>
-                5 preview practice problems per topic
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-0.5 text-emerald-500">✓</span>
-                "Explain it simply" breakdowns
-              </li>
-            </ul>
-            <Link
-              href="/modules"
-              className="mt-6 block rounded-2xl border-2 border-orange-200 bg-white px-6 py-3 text-center font-bold text-orange-700 transition hover:bg-orange-50"
-            >
-              Start learning free
-            </Link>
-          </div>
-
-          {/* Pro */}
-          <div className="relative rounded-2xl border-2 border-orange-300 bg-gradient-to-br from-orange-50 to-rose-50 p-6 shadow-lg sm:rounded-3xl sm:p-8">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-1.5 text-sm font-bold text-white shadow-sm">
-              Pro
-            </div>
-            <p className="mb-1 text-4xl font-extrabold text-orange-900">
-              $8<span className="text-lg font-semibold text-orange-600">/mo</span>
-            </p>
-            <p className="mb-6 text-sm text-orange-600">Cancel anytime</p>
-            <ul className="space-y-3 text-sm text-zinc-700">
-              <li className="flex items-start gap-2">
-                <span className="mt-0.5 text-emerald-500">✓</span>
-                Everything in Free
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-0.5 text-emerald-500">✓</span>
-                <strong>240+ practice problems</strong> with step-by-step solutions
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-0.5 text-emerald-500">✓</span>
-                20-question tests per topic
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-0.5 text-emerald-500">✓</span>
-                Progress dashboard & analytics
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-0.5 text-emerald-500">✓</span>
-                Flashcards & learning paths
-              </li>
-            </ul>
-            <Link
-              href="/pricing"
-              className="mt-6 block rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-6 py-3 text-center font-bold text-white shadow-md transition hover:shadow-lg"
-            >
-              Upgrade to Pro
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ── What you get (concrete features) ── */}
-      <section className="bg-white py-12 sm:py-20">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <h2 className="mb-10 text-center text-2xl font-extrabold text-orange-950 sm:mb-14 sm:text-4xl">
-            Built for how you actually learn calculus
-          </h2>
-
-          <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+          <div className="grid gap-x-12 gap-y-10 sm:grid-cols-2">
             {[
               {
-                title: "Instant right/wrong feedback",
-                desc: "Submit an answer and know immediately if you're correct. No waiting, no answer keys to flip to.",
-                bg: "from-amber-50 to-orange-50/50",
-                border: "border-amber-100",
+                title: "Intuition before formulas",
+                desc: "Each module starts by building understanding of why a concept works before showing the formal machinery. You learn the idea, then the technique.",
               },
               {
-                title: "Step-by-step solutions",
-                desc: "Every problem has a full walkthrough. See exactly how to get from the question to the answer.",
-                bg: "from-rose-50 to-pink-50/50",
-                border: "border-rose-100",
+                title: "Worked examples throughout",
+                desc: "Every section includes detailed examples solved step by step. You see the thinking process, not just the answer.",
               },
               {
-                title: "Hints before the answer",
-                desc: "Stuck? Get a hint that nudges you in the right direction before revealing the full solution.",
-                bg: "from-violet-50 to-purple-50/50",
-                border: "border-violet-100",
+                title: "Immediate feedback",
+                desc: "Practice problems tell you if you're right or wrong instantly. When you're wrong, you get hints first — then the full solution when you need it.",
               },
               {
-                title: "Math input keypad",
-                desc: "Type fractions, exponents, trig functions, and more with our built-in math keyboard. No LaTeX needed.",
-                bg: "from-orange-50 to-amber-50/50",
-                border: "border-orange-100",
+                title: "Difficulty that progresses",
+                desc: "Problems go from straightforward to challenging within each topic. Easy problems build confidence; hard problems build depth.",
               },
-              {
-                title: "Progress tracking",
-                desc: "See which problems you've mastered and which need more work. Pick up right where you left off.",
-                bg: "from-pink-50 to-rose-50/50",
-                border: "border-pink-100",
-              },
-              {
-                title: "Flashcard review",
-                desc: "Review key formulas and concepts with flashcards. Great for exam prep and quick refreshers.",
-                bg: "from-emerald-50 to-teal-50/50",
-                border: "border-emerald-100",
-              },
-            ].map((feature, i) => (
-              <div
-                key={i}
-                className={`rounded-2xl border-2 ${feature.border} bg-gradient-to-br ${feature.bg} p-5 sm:rounded-3xl sm:p-8`}
-              >
-                <h3 className="mb-2 text-lg font-bold text-orange-900 sm:text-xl">
-                  {feature.title}
+            ].map((item, i) => (
+              <div key={i}>
+                <h3 className="mb-2 text-base font-bold text-zinc-900 sm:text-lg">
+                  {item.title}
                 </h3>
-                <p className="text-sm text-orange-700 sm:text-base">{feature.desc}</p>
+                <p className="text-sm leading-relaxed text-zinc-500 sm:text-base">
+                  {item.desc}
+                </p>
               </div>
             ))}
           </div>
@@ -342,52 +252,54 @@ export default function Home() {
       </section>
 
       {/* ── FAQ ── */}
-      <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20">
-        <h2 className="mb-8 text-center text-2xl font-extrabold text-orange-950 sm:mb-12 sm:text-4xl">
-          Frequently asked questions
+      <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-24">
+        <h2 className="mb-10 text-center text-3xl font-extrabold tracking-tight text-zinc-900 sm:mb-12 sm:text-4xl">
+          Questions
         </h2>
-        <div className="space-y-3">
+        <div className="divide-y divide-zinc-100">
           {homeFaqs.map((faq, i) => (
-            <details key={i} className="group rounded-xl border-2 border-orange-100 bg-white">
-              <summary className="flex cursor-pointer select-none items-center justify-between px-5 py-4 text-base font-semibold text-zinc-900 [&::-webkit-details-marker]:hidden">
+            <details key={i} className="group py-5">
+              <summary className="flex cursor-pointer select-none items-center justify-between text-base font-semibold text-zinc-900 [&::-webkit-details-marker]:hidden sm:text-lg">
                 {faq.q}
-                <svg className="ml-3 h-4 w-4 flex-shrink-0 text-orange-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                <svg className="ml-4 h-4 w-4 flex-shrink-0 text-zinc-400 transition-transform group-open:rotate-45" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
               </summary>
-              <div className="px-5 pb-4 text-base leading-relaxed text-zinc-600">
+              <p className="mt-3 text-base leading-relaxed text-zinc-500">
                 {faq.a}
-              </div>
+              </p>
             </details>
           ))}
         </div>
       </section>
 
-      {/* ── Final CTA ── */}
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-20">
-        <div className="rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 p-8 text-center shadow-2xl sm:rounded-3xl sm:p-12 md:rounded-[2.5rem] md:p-16">
-          <h2 className="mb-3 text-2xl font-extrabold text-white sm:mb-4 sm:text-4xl md:text-5xl">
-            Start with 5 free problems
+      {/* ── Closing ── */}
+      <section className="border-t border-zinc-100 bg-zinc-50 py-16 sm:py-24">
+        <div className="mx-auto max-w-2xl px-4 text-center sm:px-6">
+          <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 sm:text-3xl">
+            Start with the first module
           </h2>
-          <p className="mb-6 text-base text-orange-100 sm:mb-8 sm:text-xl">
-            No sign-up required. Instant feedback. Step-by-step solutions.
+          <p className="mx-auto mt-3 max-w-lg text-base text-zinc-500 sm:text-lg">
+            Begin with Limits & Continuity. Read at your own pace, then
+            practice when you're ready.
           </p>
-          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4">
+          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4">
             <Link
-              href="/try"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-8 py-3.5 text-base font-bold text-orange-600 shadow-xl transition hover:scale-105 sm:px-10 sm:py-4 sm:text-lg"
+              href="/modules/limits"
+              className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-7 py-3.5 text-base font-semibold text-white transition hover:bg-zinc-800 sm:px-8 sm:py-4 sm:text-lg"
             >
-              Try it free
+              Read Limits & Continuity
             </Link>
             <Link
-              href="/auth"
-              className="inline-flex items-center justify-center rounded-2xl border-2 border-white/30 px-8 py-3.5 text-base font-bold text-white transition hover:bg-white/10 sm:px-10 sm:py-4 sm:text-lg"
+              href="/try"
+              className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-white px-7 py-3.5 text-base font-semibold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 sm:px-8 sm:py-4 sm:text-lg"
             >
-              Sign up
+              Try a practice problem
             </Link>
           </div>
         </div>
       </section>
+
     </div>
     </>
   );
