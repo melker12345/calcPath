@@ -6,6 +6,15 @@ import { createPortal } from "react-dom";
 import { useAuth } from "@/components/auth-provider";
 import type { SubjectTheme } from "@/lib/themes";
 
+function ProfileIcon({ size = 20, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M20 21a8 8 0 1 0-16 0" />
+    </svg>
+  );
+}
+
 function ThemedMobileDrawer({
   open,
   onClose,
@@ -150,32 +159,12 @@ export function ThemedHeader({
       >
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4">
           {/* Logo */}
-          <div className="flex shrink-0 items-center gap-3">
-            <Link href="/" className="flex items-center gap-2" aria-label="CalcPath home">
-              <div
-                className="flex h-9 w-9 items-center justify-center rounded-xl text-lg font-bold shadow-sm sm:h-10 sm:w-10 sm:rounded-2xl sm:text-xl"
-                style={{ background: c.logoBg, color: c.logoText }}
-              >
-                CP
-              </div>
-            </Link>
-            <div className="hidden h-6 w-px sm:block" style={{ background: c.border }} />
-            <Link
-              href={prefix}
-              className="hidden items-center gap-2 sm:flex"
-              aria-label={`${theme.name} home`}
-            >
-              <span
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-base font-bold"
-                style={{ background: c.accentBg, color: c.accent, border: `1px solid ${c.border}` }}
-              >
-                {theme.icon}
-              </span>
-              <span className="text-base font-bold" style={{ color: c.text }}>
-                {theme.name}
-              </span>
-            </Link>
-          </div>
+          <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="CalcPath home">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-rose-400 text-lg font-bold text-white shadow-lg shadow-orange-200 sm:h-10 sm:w-10 sm:rounded-2xl sm:text-xl">
+              ∫
+            </div>
+            <span className="hidden text-lg font-bold text-orange-900 sm:inline sm:text-xl">CalcPath</span>
+          </Link>
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
@@ -205,10 +194,11 @@ export function ThemedHeader({
             {user ? (
               <Link
                 href="/account"
-                className="rounded-xl px-3 py-1.5 text-sm font-semibold transition"
-                style={{ border: `1.5px solid ${c.border}`, color: c.navText }}
+                className="flex h-9 w-9 items-center justify-center rounded-full transition active:opacity-70"
+                style={{ background: c.accentBg, border: `1.5px solid ${c.border}` }}
+                aria-label="Account"
               >
-                Account
+                <ProfileIcon size={18} color={c.navText} />
               </Link>
             ) : (
               <Link
@@ -239,14 +229,13 @@ export function ThemedHeader({
               <>
                 <Link
                   href="/account"
-                  className="flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold shadow-sm transition hover:shadow-md"
-                  style={{ border: `1.5px solid ${c.border}`, color: c.text }}
+                  className="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold transition hover:opacity-80"
+                  style={{ border: `1.5px solid ${c.border}` }}
+                  aria-label="Account"
                 >
-                  <span className="max-w-[140px] truncate">
-                    {user.email ?? user.phone ?? user.id.slice(0, 8)}
-                  </span>
+                  <ProfileIcon size={18} color={c.navText} />
                   <span
-                    className="rounded-full px-2 py-0.5 text-xs font-bold"
+                    className="rounded-full px-2 py-0.5 text-[10px] font-bold"
                     style={{
                       background: isPro ? c.accent : c.accentBg,
                       color: isPro ? c.navAccentText : c.accent,
@@ -258,7 +247,7 @@ export function ThemedHeader({
                 <button
                   type="button"
                   onClick={signOut}
-                  className="rounded-2xl px-4 py-2 text-sm font-semibold transition hover:opacity-80"
+                  className="rounded-full px-4 py-2 text-sm font-semibold transition hover:opacity-80"
                   style={{ border: `1.5px solid ${c.border}`, color: c.navText }}
                 >
                   Sign out
@@ -275,7 +264,7 @@ export function ThemedHeader({
                 </Link>
                 <Link
                   href="/auth"
-                  className="rounded-2xl px-4 py-2.5 text-sm font-semibold shadow-sm transition hover:brightness-110"
+                  className="rounded-full px-4 py-2.5 text-sm font-semibold shadow-sm transition hover:brightness-110"
                   style={{ background: c.accent, color: c.navAccentText }}
                 >
                   Get started

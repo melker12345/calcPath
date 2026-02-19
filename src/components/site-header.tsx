@@ -5,6 +5,15 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/components/auth-provider";
 
+function ProfileIcon({ size = 20, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M20 21a8 8 0 1 0-16 0" />
+    </svg>
+  );
+}
+
 const navLinks = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/calculus/practice", label: "Practice" },
@@ -164,9 +173,10 @@ export const SiteHeader = () => {
             {user ? (
               <Link
                 href="/account"
-                className="rounded-xl border-2 border-orange-100 bg-white px-3 py-1.5 text-sm font-semibold text-orange-700 transition active:bg-orange-50"
+                className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-orange-100 bg-white transition active:bg-orange-50"
+                aria-label="Account"
               >
-                Account
+                <ProfileIcon size={18} color="#9a3412" />
               </Link>
             ) : (
               <Link
@@ -195,12 +205,11 @@ export const SiteHeader = () => {
               <>
                 <Link
                   href="/account"
-                  className="flex items-center gap-2 rounded-2xl border-2 border-orange-100 bg-white px-4 py-2 text-sm font-semibold text-orange-900 shadow-sm transition hover:border-orange-200 hover:shadow-md"
+                  className="flex items-center gap-2 rounded-full border-2 border-orange-100 bg-white px-3 py-1.5 text-sm font-semibold text-orange-900 shadow-sm transition hover:border-orange-200 hover:shadow-md"
+                  aria-label="Account"
                 >
-                  <span className="max-w-[140px] truncate">
-                    {user.email ?? user.phone ?? user.id.slice(0, 8)}
-                  </span>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                  <ProfileIcon size={18} color="#9a3412" />
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                     isPro 
                       ? "bg-gradient-to-r from-orange-400 to-rose-400 text-white" 
                       : "bg-orange-100 text-orange-700"
@@ -211,7 +220,7 @@ export const SiteHeader = () => {
                 <button
                   type="button"
                   onClick={signOut}
-                  className="rounded-2xl border-2 border-orange-100 bg-white px-4 py-2 text-sm font-semibold text-orange-700 transition hover:border-orange-200 hover:bg-orange-50"
+                  className="rounded-full border-2 border-orange-100 bg-white px-4 py-2 text-sm font-semibold text-orange-700 transition hover:border-orange-200 hover:bg-orange-50"
                 >
                   Sign out
                 </button>
@@ -226,7 +235,7 @@ export const SiteHeader = () => {
                 </Link>
                 <Link 
                   href="/auth" 
-                  className="rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:shadow-xl"
+                  className="rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:shadow-xl"
                 >
                   Get started
                 </Link>
