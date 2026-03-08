@@ -9,7 +9,6 @@ import { topics } from "@/lib/content";
 import { getTestQuestionsForTopic, TestQuestion } from "@/lib/test-questions";
 import { isAnswerCorrectAsync } from "@/lib/answer-check";
 import { useProgress } from "@/components/progress-provider";
-import { PaywallGate } from "@/components/paywall-gate";
 import { trackEvent } from "@/lib/analytics";
 
 type Result = {
@@ -119,11 +118,10 @@ export default function TopicTestPage() {
   }
 
   // ============================================================================
-  // CONFIRMATION SCREEN (with paywall gate)
+  // CONFIRMATION SCREEN
   // ============================================================================
   if (phase === "confirm") {
     return (
-      <PaywallGate feature="Tests">
       <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
         <div className="rounded-2xl border-2 border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50 p-5 shadow-xl sm:rounded-3xl sm:p-8">
           <div className="text-center">
@@ -175,7 +173,6 @@ export default function TopicTestPage() {
           </div>
         </div>
       </div>
-      </PaywallGate>
     );
   }
 
@@ -556,6 +553,7 @@ export default function TopicTestPage() {
               onChange={setCurrentAnswer}
               onSubmit={() => submit()}
               placeholder="Enter your answer"
+              answerHint={current.answer}
             />
           </div>
         )}

@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 let stylesInjected = false;
 
@@ -9,8 +9,9 @@ interface MathInputProps {
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
+  onHint?: () => void;
+  hintDisabled?: boolean;
   placeholder?: string;
-  /** Variables and symbols detected in the current question for suggestions */
   questionContext?: {
     hasVariable?: string[];
     hasTrig?: boolean;
@@ -18,6 +19,7 @@ interface MathInputProps {
     hasLn?: boolean;
     hasPi?: boolean;
   };
+  answerHint?: string;
 }
 
 type MQField = {
@@ -33,17 +35,65 @@ const EditableMathField = dynamic(
   { ssr: false },
 );
 
+type SuggestionKey = { label: string; action: () => void };
+
+function deriveKeys(
+  answer: string | undefined,
+  questionCtx: MathInputProps["questionContext"],
+  write: (l: string) => void,
+  cmd: (l: string) => void,
+  insertFn: (l: string) => void,
+): SuggestionKey[] {
+  const keys: SuggestionKey[] = [];
+  const added = new Set<string>();
+  const add = (label: string, action: () => void) => {
+    if (added.has(label)) return;
+    added.add(label);
+    keys.push({ label, action });
+  };
+
+  const src = (answer ?? "") + " " + (questionCtx?.hasVariable?.join(" ") ?? "");
+
+  if (/\bx\b/.test(src)) add("x", () => write("x"));
+  if (/\by\b/.test(src)) add("y", () => write("y"));
+  if (/\bt\b/.test(src)) add("t", () => write("t"));
+  if (/\bn\b/.test(src)) add("n", () => write("n"));
+  if (/\ba\b/.test(src)) add("a", () => write("a"));
+  if (/\bC\b/.test(src)) add("C", () => write("C"));
+
+  if (/sin/i.test(src)) add("sin", () => insertFn("\\sin\\left(\\right)"));
+  if (/cos/i.test(src)) add("cos", () => insertFn("\\cos\\left(\\right)"));
+  if (/tan/i.test(src)) add("tan", () => insertFn("\\tan\\left(\\right)"));
+  if (/sec/i.test(src)) add("sec", () => insertFn("\\sec\\left(\\right)"));
+  if (/csc/i.test(src)) add("csc", () => insertFn("\\csc\\left(\\right)"));
+  if (/cot/i.test(src)) add("cot", () => insertFn("\\cot\\left(\\right)"));
+  if (/arcsin/i.test(src)) add("arcsin", () => insertFn("\\arcsin\\left(\\right)"));
+  if (/arccos/i.test(src)) add("arccos", () => insertFn("\\arccos\\left(\\right)"));
+  if (/arctan/i.test(src)) add("arctan", () => insertFn("\\arctan\\left(\\right)"));
+
+  if (/\be\b|e\^/.test(src)) add("e", () => write("e"));
+  if (/\bln\b/i.test(src)) add("ln", () => insertFn("\\ln\\left(\\right)"));
+  if (/\blog\b/i.test(src)) add("log", () => insertFn("\\log\\left(\\right)"));
+  if (/pi|π/i.test(src) || questionCtx?.hasPi) add("π", () => write("\\pi"));
+  if (/inf/i.test(src)) add("∞", () => write("\\infty"));
+  if (/sqrt/i.test(src)) add("√", () => cmd("\\sqrt"));
+  if (/\//.test(answer ?? "")) add("a/b", () => cmd("\\frac"));
+  if (/\^/.test(answer ?? "")) add("xⁿ", () => cmd("^"));
+
+  return keys;
+}
+
 export function MathInput({
   value,
   onChange,
   onSubmit,
+  onHint,
+  hintDisabled,
   placeholder = "Your answer",
   questionContext,
+  answerHint,
 }: MathInputProps) {
   const mqRef = useRef<MQField | null>(null);
-  const [panel, setPanel] = useState<"basic" | "trig" | "vars" | "tools">(
-    "basic",
-  );
 
   useEffect(() => {
     if (stylesInjected) return;
@@ -52,64 +102,6 @@ export function MathInput({
       stylesInjected = true;
     });
   }, []);
-
-  // Build suggested keys based on question context
-  const suggestedKeys = useMemo(() => {
-    const suggestions: Array<{
-      label: string;
-      action: () => void;
-    }> = [];
-
-    if (questionContext?.hasVariable) {
-      questionContext.hasVariable.forEach((v) => {
-        if (!suggestions.find((s) => s.label === v)) {
-          suggestions.push({
-            label: v,
-            action: () => write(v === "π" ? "\\pi" : v),
-          });
-        }
-      });
-    }
-
-    if (questionContext?.hasPi && !suggestions.find((s) => s.label === "π")) {
-      suggestions.push({ label: "π", action: () => write("\\pi") });
-    }
-
-    if (questionContext?.hasExp && !suggestions.find((s) => s.label === "e")) {
-      suggestions.push({ label: "e", action: () => write("e") });
-    }
-
-    if (questionContext?.hasLn) {
-      suggestions.push({
-        label: "ln",
-        action: () => insertFunction("\\ln\\left(\\right)"),
-      });
-    }
-
-    if (questionContext?.hasTrig) {
-      suggestions.push({
-        label: "sin",
-        action: () => insertFunction("\\sin\\left(\\right)"),
-      });
-      suggestions.push({
-        label: "cos",
-        action: () => insertFunction("\\cos\\left(\\right)"),
-      });
-    }
-
-    // Always suggest common tools
-    if (!suggestions.find((s) => s.label === "frac")) {
-      suggestions.push({ label: "frac", action: () => cmd("\\frac") });
-    }
-    if (!suggestions.find((s) => s.label === "xⁿ")) {
-      suggestions.push({ label: "xⁿ", action: () => cmd("^") });
-    }
-    if (!suggestions.find((s) => s.label === "√")) {
-      suggestions.push({ label: "√", action: () => cmd("\\sqrt") });
-    }
-
-    return suggestions.slice(0, 8); // Max 8 suggestions
-  }, [questionContext]);
 
   const write = (latex: string) => {
     if (mqRef.current) {
@@ -150,18 +142,36 @@ export function MathInput({
 
   const insertFunction = (latex: string) => {
     write(latex);
-    // Move cursor inside the parentheses we just inserted.
     mqRef.current?.keystroke("Left");
   };
 
+  const suggestions = useMemo(
+    () => deriveKeys(answerHint, questionContext, write, cmd, insertFunction),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [answerHint, questionContext],
+  );
+
   return (
-    <div className="space-y-3">
-      {/* Equation input field */}
-      <div className="rounded-xl border-2 border-orange-100 bg-white px-3 py-2 shadow-sm sm:rounded-2xl sm:px-4 sm:py-3">
-        <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-          {placeholder}
-        </div>
-        <div className="mt-2 rounded-xl border-2 border-orange-100 bg-white px-3 py-2 focus-within:border-orange-300 focus-within:ring-2 focus-within:ring-orange-200">
+    <div className="flex min-h-[50dvh] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 sm:min-h-0">
+      {/* ── Header: label + hint ── */}
+      <div className="flex items-center justify-between bg-white px-4 pt-3 sm:px-5 sm:pt-4">
+        <p className="text-xs font-semibold text-zinc-400 sm:text-sm">{placeholder}</p>
+        {onHint && (
+          <button
+            type="button"
+            onClick={onHint}
+            disabled={hintDisabled}
+            className="flex items-center gap-1 rounded-full border border-zinc-200 px-2.5 py-0.5 text-xs font-medium text-zinc-500 transition hover:bg-zinc-50 active:scale-95 disabled:opacity-30 sm:px-3 sm:py-1 sm:text-sm"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:h-3.5 sm:w-3.5"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Hint
+          </button>
+        )}
+      </div>
+
+      {/* ── Math field ── */}
+      <div className="flex py-5 items-center justify-center bg-white px-4 pb-3 sm:px-5 sm:pb-4 ">
+        <div className="flex min-h-[80px] w-full items-center justify-center rounded-xl border border-zinc-200 bg-[#f8fafc] px-4 sm:min-h-[100px]">
           <EditableMathField
             latex={value}
             config={{
@@ -172,7 +182,6 @@ export function MathInput({
                 ta.setAttribute("autocomplete", "off");
                 ta.setAttribute("autocorrect", "off");
                 ta.setAttribute("spellcheck", "false");
-                // Prevent mobile virtual keyboard — our custom keypad handles input
                 ta.setAttribute("inputmode", "none");
                 return ta;
               },
@@ -184,156 +193,67 @@ export function MathInput({
             mathquillDidMount={(field: MQField) => {
               mqRef.current = field;
             }}
-            className="min-h-[44px] text-xl text-zinc-900"
+            className="w-full text-center text-lg text-zinc-900 sm:text-xl"
           />
         </div>
       </div>
 
-      {/* Calculator Keypad */}
-      <div className="rounded-xl border-2 border-orange-100 bg-white p-3 shadow-sm sm:rounded-2xl sm:p-4">
-        {/* Category tabs */}
-        <div className="flex flex-wrap gap-1.5 border-b border-orange-100 pb-2 sm:gap-2 sm:pb-3">
-          {(
-            [
-              ["basic", "123"],
-              ["trig", "Trig"],
-              ["vars", "Vars"],
-              ["tools", "Tools"],
-            ] as const
-          ).map(([key, label]) => (
+      {/* ── Suggestions strip ── */}
+      {suggestions.length > 0 && (
+        <div className="flex gap-1.5 overflow-x-auto border-t border-zinc-200 bg-zinc-50 px-3 py-1.5 sm:gap-2 sm:px-4 sm:py-2 ">
+          {suggestions.map((k) => (
             <button
-              key={key}
+              key={k.label}
               type="button"
-              onClick={() => setPanel(key)}
-              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-                panel === key
-                  ? "bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-sm"
-                  : "text-zinc-600 hover:bg-orange-50 hover:text-orange-700"
-              }`}
+              onClick={k.action}
+              className="shrink-0 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-xs font-bold text-violet-600 transition active:scale-95 sm:px-3 sm:py-1 sm:text-sm"
             >
-              {label}
+              {k.label}
             </button>
           ))}
         </div>
+      )}
 
-        {/* Suggested section */}
-        {suggestedKeys.length > 0 && (
-          <div className="mt-3 border-b border-orange-100 pb-3">
-            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">
-              Suggested
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {suggestedKeys.map((k) => (
-                <button
-                  key={k.label}
-                  type="button"
-                  onClick={k.action}
-                  className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-sm font-semibold text-orange-700 transition hover:bg-orange-100 active:scale-95"
-                >
-                  {k.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+      {/* ── Tools row: ( )  xⁿ  √  ⌫  AC ── */}
+      <div className="grid grid-cols-5 gap-[3px] border-t border-zinc-200 bg-zinc-100 px-2 pt-2 sm:gap-1.5 sm:px-3 sm:pt-2.5 ">
+        <button type="button" onClick={() => { write("\\left(\\right)"); mqRef.current?.keystroke("Left"); }} className="kp-op text-[13px] sm:text-sm text-violet-600">( )</button>
+        <button type="button" onClick={() => cmd("^")} className="kp-op text-[13px] sm:text-sm">x<sup className="text-[9px]">n</sup></button>
+        <button type="button" onClick={() => cmd("\\sqrt")} className="kp-op text-[13px] sm:text-sm">√</button>
+        <button type="button" onClick={backspace} className="kp-op text-[13px] sm:text-sm">⌫</button>
+        <button type="button" onClick={clear} className="kp-op-ac">AC</button>
+      </div>
 
-        {/* Panel content */}
-        <div className="mt-3">
-          {panel === "basic" && (
-            <div className="grid min-h-0 min-w-0 grid-cols-4 gap-1.5 sm:gap-2">
-              {/* Row 1: 7 8 9 ÷ */}
-              <button type="button" onClick={() => write("7")} className="keypad-btn">7</button>
-              <button type="button" onClick={() => write("8")} className="keypad-btn">8</button>
-              <button type="button" onClick={() => write("9")} className="keypad-btn">9</button>
-              <button type="button" onClick={() => write("/")} className="keypad-btn">÷</button>
-              
-              {/* Row 2: 4 5 6 × */}
-              <button type="button" onClick={() => write("4")} className="keypad-btn">4</button>
-              <button type="button" onClick={() => write("5")} className="keypad-btn">5</button>
-              <button type="button" onClick={() => write("6")} className="keypad-btn">6</button>
-              <button type="button" onClick={() => write("\\cdot ")} className="keypad-btn">×</button>
-              
-              {/* Row 3: 1 2 3 − */}
-              <button type="button" onClick={() => write("1")} className="keypad-btn">1</button>
-              <button type="button" onClick={() => write("2")} className="keypad-btn">2</button>
-              <button type="button" onClick={() => write("3")} className="keypad-btn">3</button>
-              <button type="button" onClick={() => write("-")} className="keypad-btn">−</button>
-              
-              {/* Row 4: 0 . ( ) */}
-              <button type="button" onClick={() => write("0")} className="keypad-btn">0</button>
-              <button type="button" onClick={() => write(".")} className="keypad-btn">.</button>
-              <button type="button" onClick={() => write("\\left(")} className="keypad-btn">(</button>
-              <button type="button" onClick={() => write("\\right)")} className="keypad-btn">)</button>
-              
-              {/* Row 5: + = xⁿ frac */}
-              <button type="button" onClick={() => write("+")} className="keypad-btn">+</button>
-              <button type="button" onClick={() => write("=")} className="keypad-btn">=</button>
-              <button type="button" onClick={() => cmd("^")} className="keypad-btn">xⁿ</button>
-              <button type="button" onClick={() => cmd("\\frac")} className="keypad-btn">frac</button>
-            </div>
-          )}
+      {/* ── Numpad (3 cols) + operator column (1 col) ── */}
+      <div className="flex flex-1 flex-col gap-[3px] bg-zinc-100 px-2 pb-2 pt-[3px] sm:flex-none sm:gap-1.5 sm:px-3 sm:pb-3 sm:pt-1.5">
+        <div className="grid flex-1 grid-cols-[2fr_2fr_2fr_1fr] grid-rows-5 gap-[3px] sm:flex-none sm:gap-1.5">
+          <button type="button" onClick={() => write("7")} className="kp-num">7</button>
+          <button type="button" onClick={() => write("8")} className="kp-num">8</button>
+          <button type="button" onClick={() => write("9")} className="kp-num">9</button>
+          <button type="button" onClick={() => write("+")} className="kp-op-solid">+</button>
 
-          {panel === "trig" && (
-            <div className="grid grid-cols-3 gap-2">
-              <button type="button" onClick={() => insertFunction("\\sin\\left(\\right)")} className="keypad-btn">sin</button>
-              <button type="button" onClick={() => insertFunction("\\cos\\left(\\right)")} className="keypad-btn">cos</button>
-              <button type="button" onClick={() => insertFunction("\\tan\\left(\\right)")} className="keypad-btn">tan</button>
-              <button type="button" onClick={() => insertFunction("\\sec\\left(\\right)")} className="keypad-btn">sec</button>
-              <button type="button" onClick={() => insertFunction("\\csc\\left(\\right)")} className="keypad-btn">csc</button>
-              <button type="button" onClick={() => insertFunction("\\cot\\left(\\right)")} className="keypad-btn">cot</button>
-              <button type="button" onClick={() => insertFunction("\\arcsin\\left(\\right)")} className="keypad-btn">arcsin</button>
-              <button type="button" onClick={() => insertFunction("\\arccos\\left(\\right)")} className="keypad-btn">arccos</button>
-              <button type="button" onClick={() => insertFunction("\\arctan\\left(\\right)")} className="keypad-btn">arctan</button>
-            </div>
-          )}
+          <button type="button" onClick={() => write("4")} className="kp-num">4</button>
+          <button type="button" onClick={() => write("5")} className="kp-num">5</button>
+          <button type="button" onClick={() => write("6")} className="kp-num">6</button>
+          <button type="button" onClick={() => write("-")} className="kp-op-solid">−</button>
 
-          {panel === "vars" && (
-            <div className="grid grid-cols-4 gap-2">
-              <button type="button" onClick={() => write("x")} className="keypad-btn">x</button>
-              <button type="button" onClick={() => write("y")} className="keypad-btn">y</button>
-              <button type="button" onClick={() => write("t")} className="keypad-btn">t</button>
-              <button type="button" onClick={() => write("n")} className="keypad-btn">n</button>
-              <button type="button" onClick={() => write("a")} className="keypad-btn">a</button>
-              <button type="button" onClick={() => write("b")} className="keypad-btn">b</button>
-              <button type="button" onClick={() => write("c")} className="keypad-btn">c</button>
-              <button type="button" onClick={() => write("k")} className="keypad-btn">k</button>
-              <button type="button" onClick={() => write("e")} className="keypad-btn">e</button>
-              <button type="button" onClick={() => write("\\pi")} className="keypad-btn">π</button>
-              <button type="button" onClick={() => write("C")} className="keypad-btn">C</button>
-              <button type="button" onClick={() => write("\\infty")} className="keypad-btn">∞</button>
-            </div>
-          )}
+          <button type="button" onClick={() => write("1")} className="kp-num">1</button>
+          <button type="button" onClick={() => write("2")} className="kp-num">2</button>
+          <button type="button" onClick={() => write("3")} className="kp-num">3</button>
+          <button type="button" onClick={() => write("\\cdot ")} className="kp-op-solid">×</button>
 
-          {panel === "tools" && (
-            <div className="grid grid-cols-3 gap-2">
-              <button type="button" onClick={() => cmd("\\frac")} className="keypad-btn">frac</button>
-              <button type="button" onClick={() => cmd("\\sqrt")} className="keypad-btn">√</button>
-              <button type="button" onClick={() => cmd("^")} className="keypad-btn">xⁿ</button>
-              <button type="button" onClick={() => cmd("_")} className="keypad-btn">x₍ₙ₎</button>
-              <button type="button" onClick={() => insertFunction("\\ln\\left(\\right)")} className="keypad-btn">ln</button>
-              <button type="button" onClick={() => insertFunction("\\log\\left(\\right)")} className="keypad-btn">log</button>
-              <button type="button" onClick={() => write("\\left|\\right|")} className="keypad-btn">|x|</button>
-              <button type="button" onClick={() => write("\\leq")} className="keypad-btn">≤</button>
-              <button type="button" onClick={() => write("\\geq")} className="keypad-btn">≥</button>
-            </div>
-          )}
-        </div>
-
-        {/* Action buttons */}
-        <div className="mt-3 grid grid-cols-3 gap-1.5 border-t border-orange-100 pt-3 sm:mt-4 sm:gap-2">
-          <button type="button" onClick={clear} className="keypad-btn-del">
-            Clear
+          <button type="button" onClick={() => write("0")} className="kp-num col-span-2">0</button>
+          <button type="button" onClick={() => write(".")} className="kp-num">.</button>
+          <button type="button" onClick={() => cmd("\\frac")} className="kp-op-solid">
+            <span className="flex flex-col items-center text-[11px] leading-[1.1] sm:text-xs">
+              <span>a</span><span className="my-[-1px] h-px w-3 bg-current" /><span>b</span>
+            </span>
           </button>
-          <button type="button" onClick={backspace} className="keypad-btn-del">
-            ⌫
+
+          <button type="button" onClick={onSubmit} className="kp-submit col-span-3">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5"><path d="M20 6L9 17l-5-5"/></svg>
+            Check
           </button>
-          <button
-            type="button"
-            onClick={onSubmit}
-            className="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-3 py-3 text-base font-bold text-white shadow-md transition hover:shadow-lg active:scale-95"
-          >
-            Check ✓
-          </button>
+          <button type="button" onClick={() => write("\\div ")} className="kp-op-solid">÷</button>
         </div>
       </div>
     </div>

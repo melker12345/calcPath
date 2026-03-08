@@ -28,4 +28,13 @@ If users want to suggest topic, rewrite a section.
 
 
 ### Linking external reasourses.
+We should for each topic link to external reasourses like youtube videos or other well structured explenations of that topic.
+
+
+### Topics home page (/calculus /statistiks etc.)
+
+Should all have a rotating problem that is displayed.
+We should show a problem and its solution in detail
+By rotating I mean it should not be one static problem, say we allocate 5 questions that on page reload alternates.
+
 

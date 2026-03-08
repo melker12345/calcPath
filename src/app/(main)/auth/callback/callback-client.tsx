@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 export function CallbackClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/dashboard";
+  const next = searchParams.get("next") || "/calculus/dashboard";
 
   const [isRecovery, setIsRecovery] = useState(false);
   const recoveryRef = useRef(false);

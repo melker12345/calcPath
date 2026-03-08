@@ -160,7 +160,7 @@ export default function HomePage() {
       <section className="px-6 pb-20 sm:px-12 sm:pb-28">
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-base text-zinc-600" style={{ fontFamily: body }}>
-            All lessons and explanations are free. Practice problems and tests require a Pro subscription.
+            Everything on CalcPath is completely free — lessons, practice problems, tests, and more. Create an account to track your progress.
           </p>
           <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4">
             <Link
@@ -170,10 +170,10 @@ export default function HomePage() {
               Start with Calculus
             </Link>
             <Link
-              href="/pricing"
+              href="/try"
               className="rounded-xl border-2 border-orange-200 px-6 py-3 text-sm font-semibold text-orange-700 transition hover:border-orange-300 hover:bg-orange-50"
             >
-              View pricing
+              Try a problem
             </Link>
           </div>
         </div>

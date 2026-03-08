@@ -138,7 +138,7 @@ export function ThemedHeader({
   theme: SubjectTheme;
   subjectSlug: string;
 }) {
-  const { user, isPro, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const c = theme.colors;
   const prefix = `/${subjectSlug}`;
@@ -146,9 +146,8 @@ export function ThemedHeader({
   const navLinks = [
     { href: `${prefix}/modules`, label: "Modules" },
     { href: `${prefix}/practice`, label: "Practice" },
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/flashcards", label: "Flash Cards" },
-    { href: "/pricing", label: "Pricing" },
+    { href: `${prefix}/dashboard`, label: "Dashboard" },
+    { href: `${prefix}/flashcards`, label: "Flash Cards" },
   ];
 
   return (
@@ -234,15 +233,6 @@ export function ThemedHeader({
                   aria-label="Account"
                 >
                   <ProfileIcon size={18} color={c.navText} />
-                  <span
-                    className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                    style={{
-                      background: isPro ? c.accent : c.accentBg,
-                      color: isPro ? c.navAccentText : c.accent,
-                    }}
-                  >
-                    {isPro ? "PRO" : "FREE"}
-                  </span>
                 </Link>
                 <button
                   type="button"

@@ -24,7 +24,6 @@ export type LearningPath = {
   title: string;
   description: string;
   level: "intro" | "intermediate" | "advanced";
-  paidOnly: boolean;
   steps: Array<{ topicId: string; targetProblems: number }>;
 };
 
@@ -1104,7 +1103,6 @@ export const learningPaths: LearningPath[] = [
     title: "Calculus Foundations",
     description: "Build core skills with limits, derivatives, and integrals.",
     level: "intro",
-    paidOnly: false,
     steps: [
       { topicId: "limits", targetProblems: 20 },
       { topicId: "derivatives", targetProblems: 25 },
@@ -1116,7 +1114,6 @@ export const learningPaths: LearningPath[] = [
     title: "Real-World Calculus",
     description: "Master applications like optimization and modeling.",
     level: "intermediate",
-    paidOnly: true,
     steps: [
       { topicId: "applications", targetProblems: 25 },
       { topicId: "differential-equations", targetProblems: 20 },
@@ -1127,7 +1124,6 @@ export const learningPaths: LearningPath[] = [
     title: "Advanced Topics",
     description: "Dive into series and advanced techniques.",
     level: "advanced",
-    paidOnly: true,
     steps: [
       { topicId: "series", targetProblems: 25 },
       { topicId: "integrals", targetProblems: 20 },

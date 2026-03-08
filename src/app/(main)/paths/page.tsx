@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { SectionCard } from "@/components/section-card";
 import { useAuth } from "@/components/auth-provider";
-import { PaywallGate } from "@/components/paywall-gate";
 import { useProgress } from "@/components/progress-provider";
 import { getPracticeProgress } from "@/lib/progress";
 import { learningPaths, problems, topics } from "@/lib/content";
@@ -12,15 +11,14 @@ import { trackEvent } from "@/lib/analytics";
 
 
 export default function LearningPathsPage() {
-  const { user, isPro } = useAuth();
+  const { user } = useAuth();
   const { progress } = useProgress();
 
   useEffect(() => {
-    trackEvent("view_learning_paths", { plan: user ? (isPro ? "pro" : "free") : "anonymous" });
-  }, [user, isPro]);
+    trackEvent("view_learning_paths", { plan: user ? "user" : "anonymous" });
+  }, [user]);
 
   return (
-    <PaywallGate feature="Learning Paths">
     <div className="mx-auto w-full max-w-6xl px-6 py-12">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -29,16 +27,10 @@ export default function LearningPathsPage() {
             Structured plans to guide your calculus practice.
           </p>
         </div>
-        {!isPro && (
-          <Link className="btn-primary" href="/pricing">
-            Upgrade to unlock paths
-          </Link>
-        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         {learningPaths.map((path) => {
-          const locked = path.paidOnly && !isPro;
           return (
             <SectionCard
               key={path.id}
@@ -47,7 +39,7 @@ export default function LearningPathsPage() {
             >
               <div className="flex items-center justify-between text-xs text-zinc-500">
                 <span>{path.level.toUpperCase()}</span>
-                {locked ? <span>Locked</span> : <span>Available</span>}
+                <span>Available</span>
               </div>
               <div className="mt-4 space-y-3">
                 {path.steps.map((step) => {
@@ -80,21 +72,14 @@ export default function LearningPathsPage() {
                 })}
               </div>
               <div className="mt-4 flex gap-2">
-                {locked ? (
-                  <Link className="btn-primary" href="/pricing">
-                    Unlock path
-                  </Link>
-                ) : (
-                  <Link className="btn-secondary" href="/calculus/practice">
-                    Start path
-                  </Link>
-                )}
+                <Link className="btn-secondary" href="/calculus/practice">
+                  Start path
+                </Link>
               </div>
             </SectionCard>
           );
         })}
       </div>
     </div>
-    </PaywallGate>
   );
 }

@@ -173,7 +173,7 @@ export default function TryPage() {
           </div>
 
           <p className="mt-6 text-xs text-orange-600">
-            Free tier includes all modules + 5 preview problems per topic. Pro unlocks everything for $8/mo.
+            Everything is free — all modules, practice problems, and tests. Create a free account to track your progress.
           </p>
         </div>
       </div>
@@ -258,6 +258,7 @@ export default function TryPage() {
               onChange={setAnswer}
               onSubmit={() => submitAnswer(answer)}
               questionContext={questionContext}
+              answerHint={current.answer}
             />
           </div>
         )}
@@ -418,9 +419,9 @@ export default function TryPage() {
 
       {/* Subtle upsell below the card */}
       <p className="mt-6 text-center text-xs text-orange-600">
-        CalcPath has <span className="font-semibold">240+ problems</span> across 6 topics with step-by-step solutions.{" "}
-        <Link href="/pricing" className="underline hover:text-orange-800">
-          See plans →
+        CalcPath has <span className="font-semibold">240+ problems</span> across 6 topics with step-by-step solutions — all free.{" "}
+        <Link href="/calculus/practice" className="underline hover:text-orange-800">
+          Start practicing →
         </Link>
       </p>
     </div>

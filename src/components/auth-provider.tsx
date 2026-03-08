@@ -4,20 +4,15 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from "
 import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 
-export type PlanTier = "free" | "pro";
-
 export type UserProfile = {
   id: string;
   email: string | null;
   phone: string | null;
-  plan: PlanTier;
-  proUntil: string | null;
   createdAt: string | null;
 };
 
 type AuthContextValue = {
   user: UserProfile | null;
-  isPro: boolean;
   signUp: (email: string, password: string) => Promise<{ error?: string }>;
   signInWithPassword: (email: string, password: string) => Promise<{ error?: string }>;
   sendEmailOtp: (email: string) => Promise<void>;
@@ -32,8 +27,6 @@ type DbProfileRow = {
   id: string;
   email: string | null;
   phone: string | null;
-  plan: PlanTier | null;
-  pro_until: string | null;
   created_at: string | null;
 };
 
@@ -42,28 +35,12 @@ function toUserProfile(user: User, dbProfile: DbProfileRow | null): UserProfile 
     id: user.id,
     email: user.email ?? dbProfile?.email ?? null,
     phone: user.phone ?? dbProfile?.phone ?? null,
-    plan: dbProfile?.plan ?? "free",
-    proUntil: dbProfile?.pro_until ?? null,
     createdAt: dbProfile?.created_at ?? null,
   };
 }
 
-// Users with permanent full access (bypass plan checks)
-const ADMIN_IDS = new Set([
-  "f156c714-ded6-45e7-8643-4a78424f4a51", // melkeroberg03@gmail.com
-]);
-
-function isProActive(profile: UserProfile | null): boolean {
-  if (!profile) return false;
-  if (ADMIN_IDS.has(profile.id)) return true;
-  if (profile.plan !== "pro") return false;
-  if (!profile.proUntil) return true;
-  return new Date(profile.proUntil).getTime() > Date.now();
-}
-
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const isPro = useMemo(() => isProActive(user), [user]);
 
   useEffect(() => {
     let isMounted = true;
@@ -77,7 +54,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("id,email,phone,plan,pro_until,created_at")
+        .select("id,email,phone,created_at")
         .eq("id", authUser.id)
         .maybeSingle();
 
@@ -86,14 +63,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.warn("Failed to load profile:", error.message);
       }
 
-      // Best-effort upsert so new users get a row.
       await supabase.from("profiles").upsert(
         {
           id: authUser.id,
           email: authUser.email ?? data?.email ?? null,
           phone: authUser.phone ?? data?.phone ?? null,
-          plan: data?.plan ?? "free",
-          pro_until: data?.pro_until ?? null,
         },
         { onConflict: "id" },
       );
@@ -171,10 +145,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(null);
   };
 
-  /**
-   * Re-fetch the profile from Supabase. Useful after checkout to pick up
-   * plan changes made by the webhook.
-   */
   const refreshProfile = async () => {
     const { data: sessionData } = await supabase.auth.getSession();
     const authUser = sessionData.session?.user ?? null;
@@ -182,7 +152,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const { data } = await supabase
       .from("profiles")
-      .select("id,email,phone,plan,pro_until,created_at")
+      .select("id,email,phone,created_at")
       .eq("id", authUser.id)
       .maybeSingle();
 
@@ -194,7 +164,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const value = useMemo(
     () => ({
       user,
-      isPro,
       signUp,
       signInWithPassword,
       sendEmailOtp,
@@ -202,7 +171,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       refreshProfile,
       signOut,
     }),
-    [user, isPro],
+    [user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

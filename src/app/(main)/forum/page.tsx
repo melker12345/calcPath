@@ -8,7 +8,7 @@ import { addForumPost, addForumReply, getForumPosts } from "@/lib/forum";
 import { trackEvent } from "@/lib/analytics";
 
 export default function ForumPage() {
-  const { user, isPro } = useAuth();
+  const { user } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -17,8 +17,8 @@ export default function ForumPage() {
   const posts = useMemo(() => getForumPosts(), [refreshKey]);
 
   useEffect(() => {
-    trackEvent("view_forum", { plan: user ? (isPro ? "pro" : "free") : "anonymous" });
-  }, [user, isPro]);
+    trackEvent("view_forum", { plan: user ? "user" : "anonymous" });
+  }, [user]);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-12">
@@ -29,11 +29,6 @@ export default function ForumPage() {
             Ask questions, share insights, and learn together.
           </p>
         </div>
-        {!isPro && (
-          <Link className="btn-primary" href="/pricing">
-            Upgrade to participate
-          </Link>
-        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -44,7 +39,7 @@ export default function ForumPage() {
               description="Be the first to start a discussion."
             >
               <p className="text-sm text-zinc-600">
-                Paid members can start threads and reply.
+                Sign in to start threads and reply.
               </p>
             </SectionCard>
           ) : (
@@ -70,7 +65,7 @@ export default function ForumPage() {
                       </div>
                     ))
                   )}
-                  {isPro ? (
+                  {user && (
                     <form
                       className="flex flex-col gap-2"
                       onSubmit={(event) => {
@@ -103,10 +98,6 @@ export default function ForumPage() {
                         Reply
                       </button>
                     </form>
-                  ) : (
-                    <p className="text-xs text-zinc-500">
-                      Upgrade to reply.
-                    </p>
                   )}
                 </div>
               </SectionCard>
@@ -116,9 +107,9 @@ export default function ForumPage() {
 
         <SectionCard
           title="Start a thread"
-          description="Paid members can open new discussions."
+          description="Sign in to open new discussions."
         >
-          {isPro ? (
+          {user ? (
             <form
               className="space-y-3"
               onSubmit={(event) => {
@@ -159,9 +150,9 @@ export default function ForumPage() {
             </form>
           ) : (
             <div className="space-y-3 text-sm text-zinc-600">
-              <p>Upgrade to the Pro plan to post and reply.</p>
-              <Link className="btn-primary w-full text-center" href="/pricing">
-                Unlock forum access
+              <p>Sign in to post and reply.</p>
+              <Link className="btn-primary w-full text-center" href="/auth">
+                Sign in / Register
               </Link>
             </div>
           )}

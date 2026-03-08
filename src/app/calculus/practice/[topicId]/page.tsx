@@ -9,8 +9,6 @@ import { useProgress } from "@/components/progress-provider";
 import { problems, topics } from "@/lib/content";
 import { trackEvent } from "@/lib/analytics";
 import { isAnswerCorrectAsync } from "@/lib/answer-check";
-import { PaywallGate } from "@/components/paywall-gate";
-
 /** Detect variables and functions in a question prompt for suggested keys */
 function detectQuestionContext(prompt: string) {
   const context: {
@@ -212,84 +210,101 @@ export default function PracticeTopicPage() {
     return match?.[1] || "Think about the rules that apply to this type of problem.";
   };
 
+  const progressPct = Math.round((solvedCount / displayProblems.length) * 100);
+
   return (
-    <PaywallGate feature="Practice">
-    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
-      <div className="mb-4 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+    <div className="mx-auto w-full max-w-3xl px-0 sm:px-6 sm:py-10">
+      {/* Desktop topic header */}
+      <div className="mb-5 hidden sm:flex sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 sm:text-3xl">{topic.title}</h1>
-          <p className="text-sm text-zinc-600">{topic.description}</p>
+          <h1 className="text-2xl font-bold text-zinc-900">{topic.title}</h1>
+          <p className="mt-0.5 text-sm text-zinc-500">{topic.description}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="text-sm text-zinc-600">
-            {solvedCount}/{displayProblems.length} mastered
-          </div>
-          <Link className="btn-secondary" href={`/calculus/test/${topic.id}`}>
-            Take test
-          </Link>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-zinc-500">{solvedCount}/{displayProblems.length}</span>
+          <Link className="btn-secondary" href={`/calculus/test/${topic.id}`}>Take test</Link>
         </div>
       </div>
 
-      <div className="rounded-2xl border-2 border-orange-100 bg-white p-4 shadow-lg sm:rounded-3xl sm:p-6">
-        <div className="py-2 text-center">
-          <div className="text-sm text-zinc-600">
-            Problem {index + 1} of {displayProblems.length}
+      {/* Main card — full-bleed on mobile, rounded card on desktop */}
+      <div className="flex min-h-[calc(100dvh-57px)] flex-col bg-white px-4 pb-3 pt-2 sm:min-h-0 sm:rounded-2xl sm:border sm:border-slate-200 sm:px-8 sm:pb-6 sm:pt-5 sm:shadow-lg">
+
+        {/* Progress bar + counter */}
+        <div className="flex items-center gap-3">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-blue-400 to-indigo-500 transition-all duration-500"
+              style={{ width: `${progressPct}%` }}
+            />
           </div>
-          <h2 className="mt-4 text-lg font-semibold leading-snug text-zinc-900 sm:text-2xl">
+          <span className="shrink-0 text-xs font-semibold tabular-nums text-slate-400">
+            {index + 1} / {displayProblems.length}
+          </span>
+        </div>
+
+        {/* Question */}
+        <div className="flex flex-1 items-center justify-center py-6 sm:py-10">
+          <h2 className="text-center text-lg font-semibold leading-relaxed text-zinc-900 sm:text-2xl">
             <MathText text={current.prompt} />
           </h2>
         </div>
 
+        {/* Answer area */}
         {current.type === "mcq" ? (
-          <div className="mt-4 flex flex-col gap-3">
+          <div className="flex flex-col gap-2 sm:gap-3">
             {current.choices?.map((choice) => (
               <button
                 key={choice}
                 type="button"
                 onClick={() => submitAnswer(choice)}
                 disabled={feedback?.type === "correct"}
-                className="rounded-xl border-2 border-orange-100 bg-white px-4 py-3 text-left text-base font-medium text-zinc-900 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:shadow-md active:scale-95 disabled:opacity-50 sm:rounded-2xl sm:px-6 sm:py-4 sm:text-lg"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-base font-medium text-zinc-900 transition hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg"
               >
                 {choice}
               </button>
             ))}
           </div>
         ) : (
-          <div className="mt-4">
-            <MathInput
-              value={answer}
-              onChange={setAnswer}
-              onSubmit={() => submitAnswer(answer)}
-              questionContext={questionContext}
-            />
-          </div>
+          <MathInput
+            value={answer}
+            onChange={setAnswer}
+            onSubmit={() => submitAnswer(answer)}
+            onHint={useHint}
+            hintDisabled={
+              feedback?.type === "correct" ||
+              (feedback?.type === "incorrect" && feedback.hintUsed)
+            }
+            questionContext={questionContext}
+            answerHint={current.answer}
+          />
         )}
 
         {/* Correct answer feedback */}
         {feedback?.type === "correct" && (
-          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm sm:rounded-2xl sm:p-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-200 text-xl">
+          <div className="animate-correct-pop mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 sm:mt-5 sm:rounded-2xl sm:p-5">
+            <div className="flex items-center gap-2.5">
+              <div className="animate-check-bounce flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base">
                 ✓
               </div>
-              <p className="text-xl font-bold text-emerald-800">
-                Correct! Great job.
-              </p>
+              <p className="text-base font-bold text-emerald-800 sm:text-xl">Correct!</p>
             </div>
-            
-            {/* Step-by-step explanation */}
-            <div className="mt-4 space-y-2">
+
+            <div className="mt-3 space-y-1.5 sm:mt-4 sm:space-y-2">
               {(() => {
                 const parts = current.explanation.split(/Step \d+:\s*/);
-                const steps = parts.filter(Boolean).map((step) => 
+                const steps = parts.filter(Boolean).map((step) =>
                   step.replace(/\s*Final answer:.*$/, "").trim()
                 );
                 return steps.map((step, stepIdx) => (
-                  <div key={stepIdx} className="flex gap-3">
-                    <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-emerald-200 text-xs font-bold text-emerald-800">
+                  <div
+                    key={stepIdx}
+                    className="animate-step-in flex gap-2 sm:gap-3"
+                    style={{ animationDelay: `${0.25 + stepIdx * 0.1}s` }}
+                  >
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 sm:h-6 sm:w-6 sm:text-xs">
                       {stepIdx + 1}
                     </span>
-                    <p className="flex-1 text-base leading-relaxed text-zinc-700">
+                    <p className="flex-1 text-sm leading-relaxed text-zinc-700 sm:text-base">
                       <MathText text={step} />
                     </p>
                   </div>
@@ -297,11 +312,10 @@ export default function PracticeTopicPage() {
               })()}
             </div>
 
-            {/* Final answer */}
-            <div className="mt-4 rounded-xl border border-emerald-300 bg-emerald-100 px-4 py-3">
-              <p className="text-base font-semibold text-emerald-900">
-                Final Answer:{" "}
-                <span className="text-lg">
+            <div className="mt-3 rounded-lg bg-emerald-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3">
+              <p className="text-sm font-semibold text-emerald-900 sm:text-base">
+                Answer:{" "}
+                <span className="text-base sm:text-lg">
                   <MathText
                     text={
                       current.explanation.match(/Final answer:\s*(.+?)\.?$/)?.[1] ||
@@ -315,7 +329,7 @@ export default function PracticeTopicPage() {
             <button
               type="button"
               onClick={goToNext}
-              className="mt-4 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-3 text-lg font-bold text-white shadow-md transition hover:shadow-lg active:scale-95"
+              className="mt-3 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-[0.98] sm:mt-4 sm:py-3 sm:text-base"
             >
               Next Question →
             </button>
@@ -324,16 +338,14 @@ export default function PracticeTopicPage() {
 
         {/* Incorrect answer feedback */}
         {feedback?.type === "incorrect" && (
-          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:rounded-2xl sm:p-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-200 text-xl">
+          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 sm:mt-5 sm:rounded-2xl sm:p-5">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-400 text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base">
                 ✗
               </div>
               <div>
-                <p className="text-lg font-bold text-amber-800">
-                  Not quite right
-                </p>
-                <p className="text-sm text-amber-700">
+                <p className="text-base font-bold text-amber-800 sm:text-lg">Not quite</p>
+                <p className="text-xs text-amber-700 sm:text-sm">
                   {feedback.attempts === 1 && "Give it another try!"}
                   {feedback.attempts === 2 && !feedback.hintUsed && "Need a hint?"}
                   {feedback.attempts >= 3 && "Here's the solution:"}
@@ -342,33 +354,29 @@ export default function PracticeTopicPage() {
               </div>
             </div>
 
-            {/* Hint display */}
             {feedback.hintUsed && !feedback.showSolution && (
-              <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-blue-800">
-                  <span>💡</span> Hint
-                </div>
-                <p className="mt-2 text-base text-blue-900">
+              <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 sm:mt-4 sm:p-4">
+                <p className="text-xs font-semibold text-blue-700 sm:text-sm">Hint</p>
+                <p className="mt-1 text-sm text-blue-900 sm:text-base">
                   <MathText text={getHint()} />
                 </p>
               </div>
             )}
 
-            {/* Full solution (after 3 attempts or show solution clicked) */}
             {feedback.showSolution && (
               <>
-                <div className="mt-4 space-y-2">
+                <div className="mt-3 space-y-1.5 sm:mt-4 sm:space-y-2">
                   {(() => {
                     const parts = current.explanation.split(/Step \d+:\s*/);
-                    const steps = parts.filter(Boolean).map((step) => 
+                    const steps = parts.filter(Boolean).map((step) =>
                       step.replace(/\s*Final answer:.*$/, "").trim()
                     );
                     return steps.map((step, stepIdx) => (
-                      <div key={stepIdx} className="flex gap-3">
-                        <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-amber-200 text-xs font-bold text-amber-800">
+                      <div key={stepIdx} className="flex gap-2 sm:gap-3">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 sm:h-6 sm:w-6 sm:text-xs">
                           {stepIdx + 1}
                         </span>
-                        <p className="flex-1 text-base leading-relaxed text-zinc-700">
+                        <p className="flex-1 text-sm leading-relaxed text-zinc-700 sm:text-base">
                           <MathText text={step} />
                         </p>
                       </div>
@@ -376,10 +384,10 @@ export default function PracticeTopicPage() {
                   })()}
                 </div>
 
-                <div className="mt-4 rounded-xl border border-amber-300 bg-amber-100 px-4 py-3">
-                  <p className="text-base font-semibold text-amber-900">
-                    Correct Answer:{" "}
-                    <span className="text-lg">
+                <div className="mt-3 rounded-lg bg-amber-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3">
+                  <p className="text-sm font-semibold text-amber-900 sm:text-base">
+                    Answer:{" "}
+                    <span className="text-base sm:text-lg">
                       <MathText
                         text={
                           current.explanation.match(/Final answer:\s*(.+?)\.?$/)?.[1] ||
@@ -393,110 +401,111 @@ export default function PracticeTopicPage() {
                 <button
                   type="button"
                   onClick={goToNext}
-                  className="mt-4 w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3 text-lg font-bold text-white shadow-md transition hover:shadow-lg active:scale-95"
+                  className="mt-3 w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-[0.98] sm:mt-4 sm:py-3 sm:text-base"
                 >
                   Next Question →
                 </button>
               </>
             )}
 
-            {/* Action buttons when solution not shown */}
             {!feedback.showSolution && (
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-1.5 sm:mt-4 sm:gap-2">
                 {!feedback.hintUsed && (
                   <button
                     type="button"
                     onClick={useHint}
-                    className="flex items-center gap-2 rounded-xl border-2 border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 active:scale-95"
+                    className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2"
                   >
-                    💡 Get Hint
+                    Hint
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={showFullSolution}
-                  className="rounded-xl border-2 border-amber-200 bg-white px-4 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-50 active:scale-95"
+                  className="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-sm font-semibold text-amber-700 transition hover:bg-amber-50 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2"
                 >
-                  Show Solution
+                  Solution
                 </button>
                 <button
                   type="button"
                   onClick={goToNext}
-                  className="rounded-xl border-2 border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-50 active:scale-95"
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2"
                 >
-                  Skip →
+                  Skip
                 </button>
               </div>
             )}
           </div>
         )}
 
-        {/* All mastered banner */}
+        {/* All mastered */}
         {solvedCount >= displayProblems.length && (
-          <div className="mt-6 rounded-2xl border-2 border-emerald-200 bg-emerald-50 p-5 text-center">
-            <div className="text-2xl">🎉</div>
-            <p className="mt-2 text-lg font-bold text-emerald-800">
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center sm:mt-6 sm:rounded-2xl sm:p-5">
+            <p className="text-lg font-bold text-emerald-800">
               All {displayProblems.length} problems mastered!
             </p>
-            <p className="mt-1 text-sm text-emerald-700">
-              Want to practice again? Shuffle the questions for a fresh run.
+            <p className="mt-1 text-sm text-emerald-600">
+              Shuffle for a fresh run.
             </p>
             <button
               type="button"
               onClick={shuffleAndRestart}
-              className="mt-4 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:shadow-lg active:scale-95"
+              className="mt-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition active:scale-95"
             >
               Shuffle &amp; restart
             </button>
           </div>
         )}
 
-        <div className="mt-4 flex flex-wrap gap-2 sm:mt-6">
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={goToPrev}
-            disabled={index === 0}
-          >
-            ← Previous
-          </button>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={goToNext}
-            disabled={index === displayProblems.length - 1}
-          >
-            Next →
-          </button>
-          {solvedCount > 0 && solvedCount < displayProblems.length && (
+        {/* Navigation toolbar */}
+        <div className="mt-2 flex items-center justify-between sm:mt-4">
+          <div className="flex items-center gap-1">
             <button
               type="button"
-              className="btn-secondary"
-              onClick={() => {
-                const completedSet = new Set(progress.completedProblemIds);
-                const nextUnsolved = displayProblems.findIndex(
-                  (p, i) => i > index && !completedSet.has(p.id)
-                );
-                if (nextUnsolved >= 0) {
-                  setIndex(nextUnsolved);
-                } else {
-                  // Wrap around to the first unsolved
-                  const first = displayProblems.findIndex((p) => !completedSet.has(p.id));
-                  if (first >= 0) setIndex(first);
-                }
-                setFeedback(null);
-                setAnswer("");
-              }}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-100 disabled:opacity-25 sm:h-9 sm:w-9"
+              onClick={goToPrev}
+              disabled={index === 0}
+              aria-label="Previous"
             >
-              Next unsolved →
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
             </button>
-          )}
-          <Link className="btn-secondary" href="/calculus/practice">
-            Back to topics
+            <button
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-100 disabled:opacity-25 sm:h-9 sm:w-9"
+              onClick={goToNext}
+              disabled={index === displayProblems.length - 1}
+              aria-label="Next"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+            {solvedCount > 0 && solvedCount < displayProblems.length && (
+              <button
+                type="button"
+                className="ml-1 rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm"
+                onClick={() => {
+                  const completedSet = new Set(progress.completedProblemIds);
+                  const nextUnsolved = displayProblems.findIndex(
+                    (p, i) => i > index && !completedSet.has(p.id)
+                  );
+                  if (nextUnsolved >= 0) {
+                    setIndex(nextUnsolved);
+                  } else {
+                    const first = displayProblems.findIndex((p) => !completedSet.has(p.id));
+                    if (first >= 0) setIndex(first);
+                  }
+                  setFeedback(null);
+                  setAnswer("");
+                }}
+              >
+                Skip to unsolved
+              </button>
+            )}
+          </div>
+          <Link className="rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm" href="/calculus/practice">
+            All topics
           </Link>
         </div>
       </div>
     </div>
-    </PaywallGate>
   );
 }

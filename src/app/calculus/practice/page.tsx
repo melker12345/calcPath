@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { SectionCard } from "@/components/section-card";
-import { PaywallGate } from "@/components/paywall-gate";
 import { useProgress } from "@/components/progress-provider";
 import { getPracticeProgress } from "@/lib/progress";
 import { problems, topics } from "@/lib/content";
@@ -17,7 +16,6 @@ export default function PracticePage() {
   }, []);
 
   return (
-    <PaywallGate feature="Practice">
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl font-semibold text-zinc-900 sm:text-3xl">Practice by topic</h1>
@@ -74,6 +72,5 @@ export default function PracticePage() {
         })}
       </div>
     </div>
-    </PaywallGate>
   );
 }

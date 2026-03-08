@@ -6,11 +6,10 @@ import { useAuth } from "@/components/auth-provider";
 import { useProgress } from "@/components/progress-provider";
 import { getPracticeProgress, getTopicTestStats } from "@/lib/progress";
 import { problems, topics } from "@/lib/content";
-import { PaywallGate } from "@/components/paywall-gate";
 import { trackEvent } from "@/lib/analytics";
 
 export default function DashboardPage() {
-  const { user, isPro } = useAuth();
+  const { user } = useAuth();
   const { progress } = useProgress();
   
   // Calculate overall stats on client to avoid hydration mismatch
@@ -22,9 +21,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     trackEvent("view_dashboard", {
-      plan: user ? (isPro ? "pro" : "free") : "anonymous",
+      plan: user ? "user" : "anonymous",
     });
-  }, [user, isPro]);
+  }, [user]);
 
   // Calculate overall practice progress (excluding test questions)
   useEffect(() => {
@@ -58,7 +57,6 @@ export default function DashboardPage() {
   const completionPercent = Math.round((stats.totalMastered / stats.totalProblems) * 100);
 
   return (
-    <PaywallGate feature="Dashboard">
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -74,7 +72,7 @@ export default function DashboardPage() {
           <Link className="btn-secondary flex-1 justify-center sm:flex-initial" href="/calculus/practice">
             Practice
           </Link>
-          <Link className="btn-primary flex-1 justify-center sm:flex-initial" href="/flashcards">
+          <Link className="btn-primary flex-1 justify-center sm:flex-initial" href="/calculus/flashcards">
             Flash Cards
           </Link>
         </div>
@@ -285,20 +283,6 @@ export default function DashboardPage() {
           );
         })}
       </div>
-      
-      {/* Pro upsell if not pro */}
-      {!isPro && (
-        <div className="mt-6 rounded-xl border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-4 text-center sm:mt-8 sm:rounded-2xl sm:p-6">
-          <h3 className="text-lg font-bold text-zinc-900">Upgrade to Pro</h3>
-          <p className="mt-1 text-sm text-zinc-600">
-            Unlock learning paths, detailed analytics, and community features.
-          </p>
-          <Link href="/pricing" className="btn-primary mt-4 inline-flex">
-            View pricing →
-          </Link>
-        </div>
-      )}
     </div>
-    </PaywallGate>
   );
 }

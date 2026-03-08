@@ -10,7 +10,7 @@ type AuthMode = "signin" | "signup" | "forgot";
 export function AuthClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/dashboard";
+  const next = searchParams.get("next") || "/calculus/dashboard";
 
   const { user, signUp, signInWithPassword, sendEmailOtp, sendPasswordReset } = useAuth();
   const [mode, setMode] = useState<AuthMode>("signin");

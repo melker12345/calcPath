@@ -15,11 +15,10 @@ function ProfileIcon({ size = 20, color = "currentColor" }: { size?: number; col
 }
 
 const navLinks = [
-  { href: "/dashboard", label: "Dashboard" },
+  { href: "/calculus/dashboard", label: "Dashboard" },
   { href: "/calculus/practice", label: "Practice" },
   { href: "/calculus/modules", label: "Modules" },
-  { href: "/flashcards", label: "Flash Cards" },
-  { href: "/pricing", label: "Pricing" },
+  { href: "/calculus/flashcards", label: "Flash Cards" },
 ];
 
 function MobileDrawer({
@@ -134,7 +133,7 @@ function MobileDrawer({
 }
 
 export const SiteHeader = () => {
-  const { user, isPro, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -209,13 +208,6 @@ export const SiteHeader = () => {
                   aria-label="Account"
                 >
                   <ProfileIcon size={18} color="#9a3412" />
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                    isPro 
-                      ? "bg-gradient-to-r from-orange-400 to-rose-400 text-white" 
-                      : "bg-orange-100 text-orange-700"
-                  }`}>
-                    {isPro ? "PRO" : "FREE"}
-                  </span>
                 </Link>
                 <button
                   type="button"
