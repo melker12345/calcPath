@@ -15,9 +15,9 @@ function ProfileIcon({ size = 20, color = "currentColor" }: { size?: number; col
 }
 
 const navLinks = [
-  { href: "/calculus/dashboard", label: "Dashboard" },
-  { href: "/calculus/practice", label: "Practice" },
   { href: "/calculus/modules", label: "Modules" },
+  { href: "/calculus/practice", label: "Practice" },
+  { href: "/calculus/dashboard", label: "Dashboard" },
   // { href: "/calculus/flashcards", label: "Flash Cards" },  // TODO: re-enable when ready
 ];
 
