@@ -170,8 +170,8 @@ export function MathInput({
       </div>
 
       {/* ── Math field ── */}
-      <div className="flex py-5 items-center justify-center bg-white px-4 pb-3 sm:px-5 sm:pb-4 ">
-        <div className="flex min-h-[80px] w-full items-center justify-center rounded-xl border border-zinc-200 bg-[#f8fafc] px-4 sm:min-h-[100px]">
+      <div className="flex py-5 items-center justify-center bg-white px-4 pb-3 sm:px-5 sm:pb-4 md:px-8 md:py-8 md:pb-6">
+        <div className="flex min-h-[80px] w-full items-center justify-center rounded-xl border border-zinc-200 bg-[#f8fafc] px-4 sm:min-h-[100px] md:min-h-[120px] md:px-8 md:rounded-2xl">
           <EditableMathField
             latex={value}
             config={{
@@ -193,20 +193,20 @@ export function MathInput({
             mathquillDidMount={(field: MQField) => {
               mqRef.current = field;
             }}
-            className="w-full text-center text-lg text-zinc-900 sm:text-xl"
+            className="w-full text-center text-lg text-zinc-900 sm:text-xl md:text-2xl"
           />
         </div>
       </div>
 
       {/* ── Suggestions strip ── */}
       {suggestions.length > 0 && (
-        <div className="flex gap-1.5 overflow-x-auto border-t border-zinc-200 bg-zinc-50 px-3 py-1.5 sm:gap-2 sm:px-4 sm:py-2 ">
+        <div className="flex gap-1.5 overflow-x-auto border-t border-zinc-200 bg-zinc-50 px-3 py-1.5 sm:gap-2 sm:px-4 sm:py-2 md:justify-center md:gap-3 md:px-6 md:py-3">
           {suggestions.map((k) => (
             <button
               key={k.label}
               type="button"
               onClick={k.action}
-              className="shrink-0 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-xs font-bold text-violet-600 transition active:scale-95 sm:px-3 sm:py-1 sm:text-sm"
+              className="shrink-0 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-xs font-bold text-violet-600 transition active:scale-95 hover:bg-violet-100 sm:px-3 sm:py-1 sm:text-sm md:px-4 md:py-1.5"
             >
               {k.label}
             </button>
@@ -215,7 +215,7 @@ export function MathInput({
       )}
 
       {/* ── Tools row: ( )  xⁿ  √  ⌫  AC ── */}
-      <div className="grid grid-cols-5 gap-[3px] border-t border-zinc-200 bg-zinc-100 px-2 pt-2 sm:gap-1.5 sm:px-3 sm:pt-2.5 ">
+      <div className="grid grid-cols-5 gap-[3px] border-t border-zinc-200 bg-zinc-100 px-2 pt-2 sm:gap-1.5 sm:px-3 sm:pt-2.5 md:gap-2.5 md:px-6 md:pt-3 md:[&_button]:min-h-12">
         <button type="button" onClick={() => { write("\\left(\\right)"); mqRef.current?.keystroke("Left"); }} className="kp-op text-[13px] sm:text-sm text-violet-600">( )</button>
         <button type="button" onClick={() => cmd("^")} className="kp-op text-[13px] sm:text-sm">x<sup className="text-[9px]">n</sup></button>
         <button type="button" onClick={() => cmd("\\sqrt")} className="kp-op text-[13px] sm:text-sm">√</button>
@@ -224,8 +224,8 @@ export function MathInput({
       </div>
 
       {/* ── Numpad (3 cols) + operator column (1 col) ── */}
-      <div className="flex flex-1 flex-col gap-[3px] bg-zinc-100 px-2 pb-2 pt-[3px] sm:flex-none sm:gap-1.5 sm:px-3 sm:pb-3 sm:pt-1.5">
-        <div className="grid flex-1 grid-cols-[2fr_2fr_2fr_1fr] grid-rows-5 gap-[3px] sm:flex-none sm:gap-1.5">
+      <div className="flex flex-1 flex-col gap-[3px] bg-zinc-100 px-2 pb-2 pt-[3px] sm:flex-none sm:gap-1.5 sm:px-3 sm:pb-3 sm:pt-1.5 md:gap-2.5 md:px-6 md:pb-5 md:pt-2">
+        <div className="grid flex-1 grid-cols-[2fr_2fr_2fr_1fr] grid-rows-5 gap-[3px] sm:flex-none sm:gap-1.5 md:gap-2.5 md:[&_button]:min-h-12">
           <button type="button" onClick={() => write("7")} className="kp-num">7</button>
           <button type="button" onClick={() => write("8")} className="kp-num">8</button>
           <button type="button" onClick={() => write("9")} className="kp-num">9</button>
