@@ -147,7 +147,7 @@ export function ThemedHeader({
     { href: `${prefix}/modules`, label: "Modules" },
     { href: `${prefix}/practice`, label: "Practice" },
     { href: `${prefix}/dashboard`, label: "Dashboard" },
-    { href: `${prefix}/flashcards`, label: "Flash Cards" },
+    // { href: `${prefix}/flashcards`, label: "Flash Cards" },  // TODO: re-enable when ready
   ];
 
   return (

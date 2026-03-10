@@ -46,9 +46,9 @@ export function ThemedFooter({
               <Link href={`${prefix}/practice`} className="text-sm transition hover:opacity-70" style={{ color: c.textMuted }}>
                 Practice
               </Link>
-              <Link href={`${prefix}/flashcards`} className="text-sm transition hover:opacity-70" style={{ color: c.textMuted }}>
+              {/* <Link href={`${prefix}/flashcards`} className="text-sm transition hover:opacity-70" style={{ color: c.textMuted }}>
                 Flash Cards
-              </Link>
+              </Link> */}
             </nav>
           </div>
 

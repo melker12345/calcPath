@@ -28,7 +28,7 @@ export const SiteFooter = () => (
           <nav className="flex flex-col gap-2">
             <Link href="/calculus/modules" className="text-sm text-orange-600 hover:text-orange-900">Modules</Link>
             <Link href="/calculus/practice" className="text-sm text-orange-600 hover:text-orange-900">Practice</Link>
-            <Link href="/calculus/flashcards" className="text-sm text-orange-600 hover:text-orange-900">Flash Cards</Link>
+            {/* <Link href="/calculus/flashcards" className="text-sm text-orange-600 hover:text-orange-900">Flash Cards</Link> */}
           </nav>
         </div>
 

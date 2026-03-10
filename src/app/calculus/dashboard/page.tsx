@@ -72,9 +72,9 @@ export default function DashboardPage() {
           <Link className="btn-secondary flex-1 justify-center sm:flex-initial" href="/calculus/practice">
             Practice
           </Link>
-          <Link className="btn-primary flex-1 justify-center sm:flex-initial" href="/calculus/flashcards">
+          {/* <Link className="btn-primary flex-1 justify-center sm:flex-initial" href="/calculus/flashcards">
             Flash Cards
-          </Link>
+          </Link> */}
         </div>
       </div>
 

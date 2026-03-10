@@ -166,22 +166,16 @@ export default function PracticeTopicPage() {
   };
 
   const useHint = () => {
-    if (feedback?.type !== "incorrect") return;
-    
-    // Track hint usage as an incorrect attempt
-    addAttempt({
-      problemId: current.id,
-      topicId: current.topicId,
-      correct: false,
-      createdAt: new Date().toISOString(),
-    });
+    if (feedback?.type === "correct") return;
+    if (feedback?.type === "incorrect" && feedback.hintUsed) return;
 
     trackEvent("hint_used", { topicId: current.topicId });
 
-    setFeedback({
-      ...feedback,
-      hintUsed: true,
-    });
+    if (feedback?.type === "incorrect") {
+      setFeedback({ ...feedback, hintUsed: true });
+    } else {
+      setFeedback({ type: "incorrect", attempts: 0, hintUsed: true, showSolution: false });
+    }
   };
 
   const showFullSolution = () => {
@@ -272,7 +266,8 @@ export default function PracticeTopicPage() {
             onHint={useHint}
             hintDisabled={
               feedback?.type === "correct" ||
-              (feedback?.type === "incorrect" && feedback.hintUsed)
+              (feedback?.type === "incorrect" && feedback.hintUsed) ||
+              (feedback?.type === "incorrect" && feedback.showSolution)
             }
             questionContext={questionContext}
             answerHint={current.answer}
@@ -336,23 +331,26 @@ export default function PracticeTopicPage() {
           </div>
         )}
 
-        {/* Incorrect answer feedback */}
+        {/* Incorrect answer / hint feedback */}
         {feedback?.type === "incorrect" && (
-          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 sm:mt-5 sm:rounded-2xl sm:p-5">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-400 text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base">
-                ✗
+          <div className={`mt-3 rounded-xl border p-3 sm:mt-5 sm:rounded-2xl sm:p-5 ${feedback.attempts === 0 && feedback.hintUsed ? "border-blue-200 bg-blue-50" : "border-amber-200 bg-amber-50"}`}>
+            {feedback.attempts > 0 && (
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-400 text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base">
+                  ✗
+                </div>
+                <div>
+                  <p className="text-base font-bold text-amber-800 sm:text-lg">Not quite</p>
+                  <p className="text-xs text-amber-700 sm:text-sm">
+                    {feedback.attempts === 1 && !feedback.hintUsed && "Give it another try!"}
+                    {feedback.attempts === 1 && feedback.hintUsed && "Use the hint and try again!"}
+                    {feedback.attempts === 2 && !feedback.hintUsed && "Need a hint?"}
+                    {feedback.attempts >= 3 && "Here's the solution:"}
+                    {feedback.attempts === 2 && feedback.hintUsed && !feedback.showSolution && "Use the hint and try again!"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-base font-bold text-amber-800 sm:text-lg">Not quite</p>
-                <p className="text-xs text-amber-700 sm:text-sm">
-                  {feedback.attempts === 1 && "Give it another try!"}
-                  {feedback.attempts === 2 && !feedback.hintUsed && "Need a hint?"}
-                  {feedback.attempts >= 3 && "Here's the solution:"}
-                  {feedback.hintUsed && !feedback.showSolution && "Use the hint and try again!"}
-                </p>
-              </div>
-            </div>
+            )}
 
             {feedback.hintUsed && !feedback.showSolution && (
               <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 sm:mt-4 sm:p-4">
