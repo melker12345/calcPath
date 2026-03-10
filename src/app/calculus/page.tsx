@@ -51,11 +51,11 @@ export default function CalculusHome() {
                   Start reading
                 </Link>
                 <Link
-                  href="/try"
+                  href="/calculus/practice"
                   className="rounded-lg px-7 py-3.5 text-base font-semibold transition hover:bg-red-50"
                   style={{ fontFamily: body, border: `2px solid ${C.red}`, color: C.red }}
                 >
-                  Try 5 free problems
+                  Start practicing
                 </Link>
               </div>
             </div>
@@ -218,11 +218,11 @@ export default function CalculusHome() {
               Read Chapter I
             </Link>
             <Link
-              href="/try"
+              href="/calculus/practice"
               className="rounded-lg px-7 py-3.5 text-base font-semibold transition hover:bg-red-50"
               style={{ fontFamily: body, border: `2px solid ${C.red}`, color: C.red }}
             >
-              Try a problem first
+              Practice problems
             </Link>
           </div>
         </div>

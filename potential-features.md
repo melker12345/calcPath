@@ -38,3 +38,15 @@ We should show a problem and its solution in detail
 By rotating I mean it should not be one static problem, say we allocate 5 questions that on page reload alternates.
 
 
+
+### Storing of progress
+We currently store user progression in db and for users with out account their progress is stored in localstorage.
+
+Would it not be possible to have the progress hashed into a easily sharable string like "A1B2a1" this allows for all data to be in localstorage.
+If user want to switch device/browser they enter their code and the progression is retreaved from it. 
+This idea stems from two things one being that hashing information into codes and sharing it is fun.
+The other reason is that progression tracktion is not vital nor really needed, thus just cluttering the db.
+
+Okay so how long does the code have to be to store the users progression?
+For this we need to consider how much data we need to hash, how many users we expect.
+

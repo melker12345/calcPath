@@ -459,45 +459,22 @@ export default function ModulePage() {
       )}
 
       {/* Practice CTA Section */}
-      <section className="mt-6 rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 p-6 text-center shadow-2xl sm:mt-8 sm:rounded-3xl sm:p-10">
-        <div className="mb-4 sm:mb-6">
-          <h2 className="mb-2 text-2xl font-bold text-white sm:mb-3 sm:text-3xl">
-            Ready to practice {topic.title.toLowerCase()}?
-          </h2>
-          <p className="text-base text-orange-100 sm:text-xl">
-            Put what you learned into action with {moduleProblems.length} interactive problems.
-          </p>
-        </div>
-        <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap">
-          <Link
-            className="w-full rounded-full bg-white px-6 py-3 text-base font-semibold text-orange-600 shadow-lg transition hover:scale-105 sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
-            href="/try"
-          >
-            Try 5 free problems
-          </Link>
-          <Link
-            className="w-full rounded-full border-2 border-white/40 bg-white/10 px-6 py-3 text-base font-semibold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/15 hover:scale-105 sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
-            href={`/calculus/practice/${topic.id}`}
-          >
-            Full practice ({moduleProblems.length} problems)
-          </Link>
-        </div>
-      </section>
+      
 
       {/* Prev / Next topic navigation */}
       <nav className="mt-6 grid gap-4 sm:mt-8 sm:grid-cols-2" aria-label="Previous and next topics">
         {prevTopic ? (
           <Link
             href={`/calculus/modules/${prevTopic.id}`}
-            className="group relative overflow-hidden rounded-2xl border-2 border-orange-100 bg-gradient-to-br from-orange-50/60 to-rose-50/60 p-5 transition hover:border-orange-200 hover:shadow-lg sm:rounded-3xl sm:p-6"
+            className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border-2 border-orange-100/80 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-200 hover:border-orange-200 hover:shadow-[0_8px_24px_-4px_rgba(249,115,22,0.12)] sm:rounded-3xl sm:p-6"
           >
-            <div className="absolute -left-4 top-1/2 -translate-y-1/2 text-[80px] font-black leading-none text-orange-100 transition-transform group-hover:-translate-x-1">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-orange-100/80 text-2xl font-bold text-orange-500 transition-colors group-hover:bg-orange-200/80 group-hover:text-orange-600">
               ‹
             </div>
-            <div className="relative">
-              <p className="text-xs font-bold uppercase tracking-widest text-orange-400">Previous module</p>
-              <p className="mt-1 text-lg font-extrabold text-orange-900 sm:text-xl">{prevTopic.title}</p>
-              <p className="mt-1 text-sm text-orange-600">{prevTopic.description}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-orange-500">Previous</p>
+              <p className="mt-0.5 truncate text-base font-bold text-zinc-900 group-hover:text-orange-700 sm:text-lg">{prevTopic.title}</p>
+              <p className="mt-0.5 line-clamp-2 text-sm text-zinc-500">{prevTopic.description}</p>
             </div>
           </Link>
         ) : (
@@ -506,15 +483,15 @@ export default function ModulePage() {
         {nextTopic ? (
           <Link
             href={`/calculus/modules/${nextTopic.id}`}
-            className="group relative overflow-hidden rounded-2xl border-2 border-orange-100 bg-gradient-to-bl from-orange-50/60 to-rose-50/60 p-5 text-right transition hover:border-orange-200 hover:shadow-lg sm:rounded-3xl sm:p-6"
+            className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border-2 border-orange-100/80 bg-white p-5 text-right shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-200 hover:border-orange-200 hover:shadow-[0_8px_24px_-4px_rgba(249,115,22,0.12)] sm:rounded-3xl sm:p-6"
           >
-            <div className="absolute -right-4 top-1/2 -translate-y-1/2 text-[80px] font-black leading-none text-orange-100 transition-transform group-hover:translate-x-1">
+            <div className="order-3 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-orange-100/80 text-2xl font-bold text-orange-500 transition-colors group-hover:bg-orange-200/80 group-hover:text-orange-600">
               ›
             </div>
-            <div className="relative">
-              <p className="text-xs font-bold uppercase tracking-widest text-orange-400">Next module</p>
-              <p className="mt-1 text-lg font-extrabold text-orange-900 sm:text-xl">{nextTopic.title}</p>
-              <p className="mt-1 text-sm text-orange-600">{nextTopic.description}</p>
+            <div className="order-1 min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-orange-500">Next</p>
+              <p className="mt-0.5 truncate text-base font-bold text-zinc-900 group-hover:text-orange-700 sm:text-lg">{nextTopic.title}</p>
+              <p className="mt-0.5 line-clamp-2 text-sm text-zinc-500">{nextTopic.description}</p>
             </div>
           </Link>
         ) : (

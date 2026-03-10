@@ -32,6 +32,34 @@ const subjects = [
     bgPattern: "none",
     bgSize: "auto",
   },
+  {
+    slug: "linear-algebra",
+    title: "Linear Algebra",
+    icon: "->",
+    description:
+      "Linear algebra is a fundamental branch of mathematics focusing on the study of vectors, vector spaces, and linear transformations, typically represented by matrices",
+    modules: 4,
+    problems: 120,
+    available: false,
+    accentColor: "#3372A2", // #3372A2
+    bgColor: "#1a3a2a", // #B4D9FF
+    bgPattern: "none",
+    bgSize: "auto",
+  },
+  {
+    slug: "discrete-math",
+    title: "Discrete Mathematics",
+    icon: "Σ",
+    description:
+      "Discrete mathematics is the study of mathematical structures that are countable, distinct, and separable, rather than continuous",
+    modules: 4,
+    problems: 120,
+    available: false,
+    accentColor: "#AC21FC", // #3372A2
+    bgColor: "#1a3a2a", // #B4D9FF
+    bgPattern: "none",
+    bgSize: "auto",
+  },
 ];
 
 export default function HomePage() {
@@ -67,7 +95,7 @@ export default function HomePage() {
             {subjects.map((subject) => {
               const classes = `group relative overflow-hidden rounded-2xl border-2 p-6 transition-all sm:p-8 ${
                 subject.available
-                  ? "cursor-pointer hover:-translate-y-1 hover:shadow-xl"
+                  ? "cursor-pointer hover:shadow-xl"
                   : "opacity-75"
               }`;
               const borderStyle = { borderColor: subject.available ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.04)" };
@@ -170,10 +198,10 @@ export default function HomePage() {
               Start with Calculus
             </Link>
             <Link
-              href="/try"
+              href="/calculus/practice"
               className="rounded-xl border-2 border-orange-200 px-6 py-3 text-sm font-semibold text-orange-700 transition hover:border-orange-300 hover:bg-orange-50"
             >
-              Try a problem
+              Start practicing
             </Link>
           </div>
         </div>

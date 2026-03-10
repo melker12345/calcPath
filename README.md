@@ -1,63 +1,26 @@
 # CalcPath
 
-A free calculus learning platform with in-depth modules, practice problems, structured learning paths, streaks,
-and community forums.
+A free calculus learning platform. Step-by-step modules, practice problems with instant feedback, and tools to track your progress.
 
-## Getting Started
+## Goal
 
-First, install dependencies and run the development server:
-
-```bash
-npm install
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
+Make calculus accessible. Learn at your own pace with clear explanations and practice problems. No paywalls — everything is free. Create an account to save progress across devices, or use the site without signing up.
 
 ## Features
 
-### Content
-- **6 comprehensive calculus modules** with LaTeX-rendered explanations:
-  - Limits & Continuity (with L'Hôpital's Rule)
-  - Derivatives (with implicit differentiation)
-  - Integrals (with substitution, integration by parts, partial fractions)
-  - Applications of Derivatives
-  - Series & Sequences (with alternating series, p-series, Taylor series)
-  - Differential Equations (separable, linear, second-order)
-- **120+ practice problems** with instant feedback
-- Worked examples and common mistakes for each topic
-
-### Learning Tools
-- Progress tracking with topic-level mastery
-- Streak tracking and goals
-- Learning paths
-- Community forum
-- Flash cards for rules and formulas
-- Analytics capture via `/api/track`
-
-### Business Model
-- **Everything is free** — no paywalls, no tiers
-- Auth (Supabase) is optional, used only for progress tracking
-- Voluntary donations via Stripe one-time payments
-
-## Testing
-
-```bash
-npm run test
-```
+- **6 calculus modules** — Limits, derivatives, applications, integrals, series, differential equations
+- **240+ practice problems** — Instant feedback and step-by-step solutions
+- **Topic tests** — Check your understanding per topic
+- **Flash cards** — Rules and formulas to memorize
+- **Learning paths** — Structured plans to guide your practice
+- **Progress & streaks** — Track what you've done and build consistency (requires free account)
+- **Community forum** — Ask questions and discuss topics
+- **Donations** — Optional one-time support via Stripe
 
 ## Tech Stack
 
-- **Frontend**: Next.js 16 + React 19 + Tailwind CSS
-- **Math rendering**: KaTeX
-- **Auth**: Supabase (for progress tracking)
-- **Donations**: Stripe (one-time payments)
-- **Testing**: Vitest
+- Next.js 16, React 19, Tailwind CSS
+- Supabase (auth, database)
+- KaTeX for math rendering
+- Stripe for donations
 
-## Roadmap
-
-- [ ] Spaced repetition algorithm
-- [ ] Adaptive difficulty
-- [ ] More topics (Statistics, Linear Algebra, Discrete Math)
-- [ ] Diagnostic test with learning path suggestions
-- [ ] Email reminders

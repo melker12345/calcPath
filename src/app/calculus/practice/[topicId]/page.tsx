@@ -227,7 +227,7 @@ export default function PracticeTopicPage() {
       </div>
 
       {/* Main card — full-bleed on mobile, rounded card on desktop */}
-      <div className="flex min-h-[calc(100dvh-57px)] flex-col bg-white px-4 pb-3 pt-2 sm:min-h-0 sm:rounded-2xl sm:border sm:border-slate-200 sm:px-8 sm:pb-6 sm:pt-5 sm:shadow-lg">
+      <div className="flex min-h-[calc(100dvh-150px)] flex-col bg-white px-4 pb-3 pt-2 sm:min-h-0 sm:rounded-2xl sm:border sm:border-slate-200 sm:px-8 sm:py-8 sm:shadow-lg">
 
         {/* Progress bar + counter */}
         <div className="flex items-center gap-3">
@@ -243,7 +243,7 @@ export default function PracticeTopicPage() {
         </div>
 
         {/* Question */}
-        <div className="flex flex-1 items-center justify-center py-6 sm:py-10">
+        <div className="flex flex-1 items-center justify-center sm:py-15 py-[40px]">
           <h2 className="text-center text-lg font-semibold leading-relaxed text-zinc-900 sm:text-2xl">
             <MathText text={current.prompt} />
           </h2>

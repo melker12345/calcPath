@@ -42,7 +42,7 @@ export const homeFaqs = [
   { q: "Is this free?", a: "Yes — everything is completely free. Modules, practice problems, tests, flash cards, and learning paths are all available at no cost. You can create a free account to track your progress." },
   { q: "How is this different from a textbook?", a: "You get the same rigor, but with instant feedback. Every practice problem checks your answer immediately and walks through the solution step by step." },
   { q: "What topics are covered?", a: "Limits, derivatives, applications of derivatives, integrals, series & sequences, and differential equations. This covers a standard Calculus I–II curriculum." },
-  { q: "Can I try the practice problems first?", a: "Yes. You can solve 5 interactive problems right now — no account needed. Visit the practice sampler to try it." },
+  { q: "Can I try the practice problems first?", a: "Yes. All practice problems are free. Visit the practice page to start — no account needed." },
   { q: "Who made this?", a: "CalcPath is an independent project built to make calculus more accessible. Every explanation is written to build understanding, not just get you through an exam." },
 ];
 
