@@ -145,7 +145,7 @@ export default function CalculusHome() {
               <Link
                 key={topic.id}
                 href={`/calculus/modules/${topic.id}`}
-                className="group rounded-xl p-6 transition-all hover:-translate-y-1 hover:shadow-md"
+                className="group rounded-xl p-6 transition-all hover:shadow-md"
                 style={{ background: C.white, border: `1.5px solid ${C.gridDim}`, boxShadow: "3px 3px 0 rgba(147,197,253,0.12)" }}
               >
                 <span className="text-base font-bold" style={{ color: C.red }}>{topic.number}</span>
