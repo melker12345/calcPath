@@ -70,6 +70,20 @@ export const topics: Topic[] = [
     order: 6,
     estimatedMinutes: 90,
   },
+  {
+    id: "applications-of-integration",
+    title: "Applications of Integration",
+    description: "Areas, volumes, arc length, and parametric curves.",
+    order: 7,
+    estimatedMinutes: 110,
+  },
+  {
+    id: "multivariable",
+    title: "Multivariable & Vector Calculus",
+    description: "Partial derivatives, multiple integrals, and vector fields.",
+    order: 8,
+    estimatedMinutes: 150,
+  },
 ];
 
 const p = (problem: Problem) => problem;
