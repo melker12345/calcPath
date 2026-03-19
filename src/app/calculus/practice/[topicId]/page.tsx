@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
 import { MathInput } from "@/components/math-input";
 import { useProgress } from "@/components/progress-provider";
-import { problems, topics } from "@/lib/content";
+import { problems, topics, getModuleSectionUrl, getModuleSectionTitle } from "@/lib/content";
 import { trackEvent } from "@/lib/analytics";
 import { isAnswerCorrectAsync } from "@/lib/answer-check";
 /** Detect variables and functions in a question prompt for suggested keys */
@@ -63,6 +63,7 @@ export default function PracticeTopicPage() {
   const [index, setIndex] = useState(0);
   const [answer, setAnswer] = useState("");
   const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const [overlayDismissed, setOverlayDismissed] = useState(false);
   const [solvedCount, setSolvedCount] = useState(0);
   const [shuffled, setShuffled] = useState(false);
   const [displayProblems, setDisplayProblems] = useState(topicProblems);
@@ -118,6 +119,7 @@ export default function PracticeTopicPage() {
   useEffect(() => {
     setFeedback(null);
     setAnswer("");
+    setOverlayDismissed(false);
   }, [index]);
 
   if (!topic) {
@@ -150,6 +152,7 @@ export default function PracticeTopicPage() {
       correct: isCorrect,
     });
 
+    setOverlayDismissed(false);
     if (isCorrect) {
       setFeedback({ type: "correct" });
     } else {
@@ -170,6 +173,7 @@ export default function PracticeTopicPage() {
     if (feedback?.type === "incorrect" && feedback.hintUsed) return;
 
     trackEvent("hint_used", { topicId: current.topicId });
+    setOverlayDismissed(false);
 
     if (feedback?.type === "incorrect") {
       setFeedback({ ...feedback, hintUsed: true });
@@ -207,7 +211,7 @@ export default function PracticeTopicPage() {
   const progressPct = Math.round((solvedCount / displayProblems.length) * 100);
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-0 sm:px-6 sm:py-10">
+    <div className="mx-auto w-full max-w-3xl px-0 pb-0 sm:px-6 sm:py-10">
       {/* Desktop topic header */}
       <div className="mb-5 hidden sm:flex sm:items-center sm:justify-between">
         <div>
@@ -221,7 +225,7 @@ export default function PracticeTopicPage() {
       </div>
 
       {/* Main card — full-bleed on mobile, rounded card on desktop */}
-      <div className="flex min-h-[calc(100dvh-150px)] flex-col bg-white px-4 pb-3 pt-2 sm:min-h-0 sm:rounded-2xl sm:border sm:border-slate-200 sm:px-8 sm:py-8 sm:shadow-lg">
+      <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-end bg-white px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:border sm:border-slate-200 sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
 
         {/* Progress bar + counter */}
         <div className="flex items-center gap-3">
@@ -236,205 +240,239 @@ export default function PracticeTopicPage() {
           </span>
         </div>
 
-        {/* Question */}
-        <div className="flex flex-1 items-center justify-center sm:py-15 py-[40px]">
+        {/* Question — fills available space, pushes input to bottom */}
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 py-5">
           <h2 className="text-center text-lg font-semibold leading-relaxed text-zinc-900 sm:text-2xl">
             <MathText text={current.prompt} />
           </h2>
+          {(() => {
+            const moduleUrl = getModuleSectionUrl(current.topicId, current.section);
+            const sectionTitle = getModuleSectionTitle(current.topicId, current.section);
+            if (!moduleUrl) return null;
+            return (
+              <Link
+                href={moduleUrl}
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700 sm:text-sm"
+                title={sectionTitle ? `Read: ${sectionTitle}` : "Review this topic"}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 sm:h-4 sm:w-4">
+                  <path d="M10.75 16.82A7.462 7.462 0 0115 15.5c.71 0 1.396.098 2.046.282A.75.75 0 0018 15.06v-11a.75.75 0 00-.546-.721A9.006 9.006 0 0015 3a8.963 8.963 0 00-4.25 1.065V16.82zM9.25 4.065A8.963 8.963 0 005 3c-.85 0-1.673.118-2.454.34A.75.75 0 002 4.06v11a.75.75 0 00.954.721A7.506 7.506 0 015 15.5c1.579 0 3.042.487 4.25 1.32V4.065z" />
+                </svg>
+                {sectionTitle ? sectionTitle : "Review this topic"}
+              </Link>
+            );
+          })()}
         </div>
 
         {/* Answer area */}
-        {current.type === "mcq" ? (
-          <div className="flex flex-col gap-2 sm:gap-3">
-            {current.choices?.map((choice) => (
-              <button
-                key={choice}
-                type="button"
-                onClick={() => submitAnswer(choice)}
-                disabled={feedback?.type === "correct"}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-base font-medium text-zinc-900 transition hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg"
+        {(() => {
+          const renderSolutionSteps = (color: "emerald" | "amber") => {
+            const parts = current.explanation.split(/Step \d+:\s*/);
+            const steps = parts.filter(Boolean).map((step) =>
+              step.replace(/\s*Final answer:.*$/, "").trim()
+            );
+            return steps.map((step, stepIdx) => (
+              <div
+                key={stepIdx}
+                className={`flex gap-2 sm:gap-3 ${color === "emerald" ? "animate-step-in" : ""}`}
+                style={color === "emerald" ? { animationDelay: `${0.25 + stepIdx * 0.1}s` } : undefined}
               >
-                {choice}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <MathInput
-            value={answer}
-            onChange={setAnswer}
-            onSubmit={() => submitAnswer(answer)}
-            onHint={useHint}
-            hintDisabled={
-              feedback?.type === "correct" ||
-              (feedback?.type === "incorrect" && feedback.hintUsed) ||
-              (feedback?.type === "incorrect" && feedback.showSolution)
-            }
-            questionContext={questionContext}
-            answerHint={current.answer}
-          />
-        )}
-
-        {/* Correct answer feedback */}
-        {feedback?.type === "correct" && (
-          <div className="animate-correct-pop mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 sm:mt-5 sm:rounded-2xl sm:p-5">
-            <div className="flex items-center gap-2.5">
-              <div className="animate-check-bounce flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base">
-                ✓
-              </div>
-              <p className="text-base font-bold text-emerald-800 sm:text-xl">Correct!</p>
-            </div>
-
-            <div className="mt-3 space-y-1.5 sm:mt-4 sm:space-y-2">
-              {(() => {
-                const parts = current.explanation.split(/Step \d+:\s*/);
-                const steps = parts.filter(Boolean).map((step) =>
-                  step.replace(/\s*Final answer:.*$/, "").trim()
-                );
-                return steps.map((step, stepIdx) => (
-                  <div
-                    key={stepIdx}
-                    className="animate-step-in flex gap-2 sm:gap-3"
-                    style={{ animationDelay: `${0.25 + stepIdx * 0.1}s` }}
-                  >
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 sm:h-6 sm:w-6 sm:text-xs">
-                      {stepIdx + 1}
-                    </span>
-                    <p className="flex-1 text-sm leading-relaxed text-zinc-700 sm:text-base">
-                      <MathText text={step} />
-                    </p>
-                  </div>
-                ));
-              })()}
-            </div>
-
-            <div className="mt-3 rounded-lg bg-emerald-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3">
-              <p className="text-sm font-semibold text-emerald-900 sm:text-base">
-                Answer:{" "}
-                <span className="text-base sm:text-lg">
-                  <MathText
-                    text={
-                      current.explanation.match(/Final answer:\s*(.+?)\.?$/)?.[1] ||
-                      `$${current.answer}$`
-                    }
-                  />
+                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold sm:h-6 sm:w-6 sm:text-xs ${color === "emerald" ? "bg-emerald-200 text-emerald-800" : "bg-amber-200 text-amber-800"}`}>
+                  {stepIdx + 1}
                 </span>
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={goToNext}
-              className="mt-3 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-[0.98] sm:mt-4 sm:py-3 sm:text-base"
-            >
-              Next Question →
-            </button>
-          </div>
-        )}
-
-        {/* Incorrect answer / hint feedback */}
-        {feedback?.type === "incorrect" && (
-          <div className={`mt-3 rounded-xl border p-3 sm:mt-5 sm:rounded-2xl sm:p-5 ${feedback.attempts === 0 && feedback.hintUsed ? "border-blue-200 bg-blue-50" : "border-amber-200 bg-amber-50"}`}>
-            {feedback.attempts > 0 && (
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-400 text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base">
-                  ✗
-                </div>
-                <div>
-                  <p className="text-base font-bold text-amber-800 sm:text-lg">Not quite</p>
-                  <p className="text-xs text-amber-700 sm:text-sm">
-                    {feedback.attempts === 1 && !feedback.hintUsed && "Give it another try!"}
-                    {feedback.attempts === 1 && feedback.hintUsed && "Use the hint and try again!"}
-                    {feedback.attempts === 2 && !feedback.hintUsed && "Need a hint?"}
-                    {feedback.attempts >= 3 && "Here's the solution:"}
-                    {feedback.attempts === 2 && feedback.hintUsed && !feedback.showSolution && "Use the hint and try again!"}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {feedback.hintUsed && !feedback.showSolution && (
-              <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 sm:mt-4 sm:p-4">
-                <p className="text-xs font-semibold text-blue-700 sm:text-sm">Hint</p>
-                <p className="mt-1 text-sm text-blue-900 sm:text-base">
-                  <MathText text={getHint()} />
+                <p className="flex-1 text-sm leading-relaxed text-zinc-700 sm:text-base">
+                  <MathText text={step} />
                 </p>
               </div>
-            )}
+            ));
+          };
 
-            {feedback.showSolution && (
-              <>
-                <div className="mt-3 space-y-1.5 sm:mt-4 sm:space-y-2">
-                  {(() => {
-                    const parts = current.explanation.split(/Step \d+:\s*/);
-                    const steps = parts.filter(Boolean).map((step) =>
-                      step.replace(/\s*Final answer:.*$/, "").trim()
-                    );
-                    return steps.map((step, stepIdx) => (
-                      <div key={stepIdx} className="flex gap-2 sm:gap-3">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 sm:h-6 sm:w-6 sm:text-xs">
-                          {stepIdx + 1}
-                        </span>
-                        <p className="flex-1 text-sm leading-relaxed text-zinc-700 sm:text-base">
-                          <MathText text={step} />
-                        </p>
-                      </div>
-                    ));
-                  })()}
+          const isDismissable = feedback?.type === "incorrect" && !feedback.showSolution;
+
+          const correctOverlay = feedback?.type === "correct" ? (
+            <div className="animate-correct-pop flex h-full flex-col border-t border-emerald-200 bg-emerald-50 p-3 pt-4 sm:p-5">
+              <div className="flex items-center gap-2.5">
+                <div className="animate-check-bounce flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base">
+                  ✓
                 </div>
+                <p className="text-base font-bold text-emerald-800 sm:text-xl">Correct!</p>
+              </div>
 
-                <div className="mt-3 rounded-lg bg-amber-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3">
-                  <p className="text-sm font-semibold text-amber-900 sm:text-base">
-                    Answer:{" "}
-                    <span className="text-base sm:text-lg">
-                      <MathText
-                        text={
-                          current.explanation.match(/Final answer:\s*(.+?)\.?$/)?.[1] ||
-                          `$${current.answer}$`
-                        }
-                      />
-                    </span>
+              <div className="mt-3 flex-1 space-y-1.5 overflow-y-auto sm:mt-4 sm:space-y-2">
+                {renderSolutionSteps("emerald")}
+              </div>
+
+              <div className="mt-3 rounded-lg bg-emerald-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3">
+                <p className="text-sm font-semibold text-emerald-900 sm:text-base">
+                  Answer:{" "}
+                  <span className="text-base sm:text-lg">
+                    <MathText
+                      text={
+                        current.explanation.match(/Final answer:\s*(.+?)\.?$/)?.[1] ||
+                        `$${current.answer}$`
+                      }
+                    />
+                  </span>
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={goToNext}
+                className="mt-3 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-[0.98] sm:mt-4 sm:py-3 sm:text-base"
+              >
+                Next Question →
+              </button>
+            </div>
+          ) : null;
+
+          const incorrectOverlay = (feedback?.type === "incorrect" && !overlayDismissed) ? (
+            <div className={`flex h-full flex-col border-t p-3 pt-4 sm:p-5 ${
+              feedback.showSolution || feedback.attempts > 0
+                ? "border-amber-200 bg-amber-50"
+                : "border-blue-200 bg-blue-50"
+            }`}>
+              {feedback.attempts > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-white sm:h-10 sm:w-10 sm:text-base">
+                    ✗
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-amber-800 sm:text-lg">Not quite</p>
+                    <p className="text-[11px] text-amber-700 sm:text-sm">
+                      {feedback.showSolution && "Here's the solution:"}
+                      {!feedback.showSolution && feedback.attempts === 1 && !feedback.hintUsed && "Give it another try!"}
+                      {!feedback.showSolution && feedback.attempts === 1 && feedback.hintUsed && "Use the hint and try again!"}
+                      {!feedback.showSolution && feedback.attempts === 2 && !feedback.hintUsed && "Need a hint?"}
+                      {!feedback.showSolution && feedback.attempts >= 3 && ""}
+                      {!feedback.showSolution && feedback.attempts === 2 && feedback.hintUsed && "Use the hint and try again!"}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {feedback.hintUsed && !feedback.showSolution && (
+                <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-2 sm:mt-4 sm:p-4">
+                  <p className="text-[11px] font-semibold text-blue-700 sm:text-sm">Hint</p>
+                  <p className="mt-0.5 text-xs text-blue-900 sm:mt-1 sm:text-base">
+                    <MathText text={getHint()} />
                   </p>
                 </div>
+              )}
 
-                <button
-                  type="button"
-                  onClick={goToNext}
-                  className="mt-3 w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-[0.98] sm:mt-4 sm:py-3 sm:text-base"
-                >
-                  Next Question →
-                </button>
-              </>
-            )}
+              {feedback.showSolution && (
+                <>
+                  <div className="mt-3 flex-1 space-y-1.5 overflow-y-auto sm:mt-4 sm:space-y-2">
+                    {renderSolutionSteps("amber")}
+                  </div>
 
-            {!feedback.showSolution && (
-              <div className="mt-3 flex flex-wrap gap-1.5 sm:mt-4 sm:gap-2">
-                {!feedback.hintUsed && (
+                  <div className="mt-3 rounded-lg bg-amber-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3">
+                    <p className="text-sm font-semibold text-amber-900 sm:text-base">
+                      Answer:{" "}
+                      <span className="text-base sm:text-lg">
+                        <MathText
+                          text={
+                            current.explanation.match(/Final answer:\s*(.+?)\.?$/)?.[1] ||
+                            `$${current.answer}$`
+                          }
+                        />
+                      </span>
+                    </p>
+                  </div>
+                </>
+              )}
+
+              <div className="mt-2 flex flex-wrap gap-1.5 sm:mt-4 sm:gap-2">
+                {!feedback.showSolution && !feedback.hintUsed && (
                   <button
                     type="button"
                     onClick={useHint}
-                    className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2"
+                    className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm"
                   >
                     Hint
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={showFullSolution}
-                  className="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-sm font-semibold text-amber-700 transition hover:bg-amber-50 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2"
-                >
-                  Solution
-                </button>
-                <button
-                  type="button"
-                  onClick={goToNext}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2"
-                >
-                  Skip
-                </button>
+                {!feedback.showSolution && (
+                  <button
+                    type="button"
+                    onClick={showFullSolution}
+                    className="rounded-lg border border-amber-200 bg-white px-2.5 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm"
+                  >
+                    Solution
+                  </button>
+                )}
+                {feedback.showSolution ? (
+                  <button
+                    type="button"
+                    onClick={goToNext}
+                    className="mt-1 w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-[0.98] sm:mt-2 sm:py-3 sm:text-base"
+                  >
+                    Next Question →
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={goToNext}
+                    className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-50 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm"
+                  >
+                    Skip
+                  </button>
+                )}
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          ) : null;
+
+          const overlay = correctOverlay || incorrectOverlay || undefined;
+
+          return current.type === "mcq" ? (
+            <div className="flex flex-col gap-2 sm:gap-3">
+              {(!overlay || overlayDismissed) && current.choices?.map((choice) => (
+                <button
+                  key={choice}
+                  type="button"
+                  onClick={() => {
+                    setAnswer(choice);
+                    submitAnswer(choice);
+                  }}
+                  disabled={feedback?.type === "correct"}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-base font-medium text-zinc-900 transition hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg"
+                >
+                  <MathText text={choice} />
+                </button>
+              ))}
+              {overlay && !overlayDismissed && (
+                <div className="relative overflow-hidden rounded-xl border border-slate-200">
+                  {isDismissable && (
+                    <button
+                      type="button"
+                      onClick={() => setOverlayDismissed(true)}
+                      className="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-sm text-zinc-400 shadow-sm backdrop-blur transition hover:bg-white hover:text-zinc-600"
+                    >
+                      ×
+                    </button>
+                  )}
+                  {overlay}
+                </div>
+              )}
+            </div>
+          ) : (
+            <MathInput
+              value={answer}
+              onChange={setAnswer}
+              onSubmit={() => submitAnswer(answer)}
+              onHint={useHint}
+              hintDisabled={
+                feedback?.type === "correct" ||
+                (feedback?.type === "incorrect" && feedback.hintUsed) ||
+                (feedback?.type === "incorrect" && feedback.showSolution)
+              }
+              questionContext={questionContext}
+              answerHint={current.answer}
+              feedbackOverlay={overlay}
+              onDismissOverlay={isDismissable ? () => setOverlayDismissed(true) : undefined}
+            />
+          );
+        })()}
 
         {/* All mastered */}
         {solvedCount >= displayProblems.length && (
@@ -456,7 +494,7 @@ export default function PracticeTopicPage() {
         )}
 
         {/* Navigation toolbar */}
-        <div className="mt-2 flex items-center justify-between sm:mt-4">
+        <div className="mt-1 flex items-center justify-between py-1 sm:mt-3 sm:py-0">
           <div className="flex items-center gap-1">
             <button
               type="button"

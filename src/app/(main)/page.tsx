@@ -1,7 +1,7 @@
 import Link from "next/link";
 
-const serif = "var(--font-newsreader), Georgia, serif";
-const body = "var(--font-lora), Georgia, serif";
+const heading = "var(--font-inter), system-ui, -apple-system, sans-serif";
+const body = "var(--font-inter), system-ui, -apple-system, sans-serif";
 
 const subjects = [
   {
@@ -9,9 +9,9 @@ const subjects = [
     title: "Calculus",
     icon: "∫",
     description:
-      "Limits, derivatives, integrals, series, and differential equations. 6 modules with 240+ practice problems — each solved step by step.",
-    modules: 6,
-    problems: "240+",
+      "Limits, derivatives, integrals, series, differential equations, and more. 8 modules with 360+ practice problems — each solved step by step.",
+    modules: 8,
+    problems: "360+",
     available: true,
     accentColor: "#dc2626",
     bgColor: "#f8fafc",
@@ -73,7 +73,7 @@ export default function HomePage() {
           </p>
           <h1
             className="text-[2.5rem] font-bold leading-[1.08] tracking-tight text-zinc-900 sm:text-[3.5rem] md:text-[4.5rem]"
-            style={{ fontFamily: serif }}
+            style={{ fontFamily: heading }}
           >
             Learn math by<br />
             <span className="text-orange-600">understanding it</span>
@@ -87,7 +87,7 @@ export default function HomePage() {
       {/* Subject cards */}
       <section className="px-6 pb-24 sm:px-12 sm:pb-32">
         <div className="mx-auto max-w-4xl">
-          <h2 className="mb-8 text-center text-xl font-bold text-zinc-900 sm:text-2xl" style={{ fontFamily: serif }}>
+          <h2 className="mb-8 text-center text-xl font-bold text-zinc-900 sm:text-2xl" style={{ fontFamily: heading }}>
             Subjects
           </h2>
 
@@ -126,7 +126,7 @@ export default function HomePage() {
                         {subject.icon}
                       </span>
                       <div>
-                        <h3 className="text-xl font-bold text-zinc-900 sm:text-2xl" style={{ fontFamily: serif }}>
+                        <h3 className="text-xl font-bold text-zinc-900 sm:text-2xl" style={{ fontFamily: heading }}>
                           {subject.title}
                         </h3>
                         {!subject.available && (

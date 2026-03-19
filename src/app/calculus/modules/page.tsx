@@ -30,10 +30,10 @@ export default function ModulesPage() {
               {topic.estimatedMinutes} min lesson · Practice included
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Link className="btn-primary" href={`/calculus/modules/${topic.id}`}>
+              <Link className="btn-calc-primary" href={`/calculus/modules/${topic.id}`}>
                 Open module
               </Link>
-              <Link className="btn-secondary" href={`/calculus/practice/${topic.id}`}>
+              <Link className="btn-calc-secondary" href={`/calculus/practice/${topic.id}`}>
                 Practice only
               </Link>
             </div>

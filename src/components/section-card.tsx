@@ -11,11 +11,17 @@ export const SectionCard = ({
   description?: string;
   children?: ReactNode;
 }) => (
-  <div className="rounded-2xl border-2 border-orange-100 bg-white p-4 shadow-lg sm:rounded-3xl sm:p-6">
+  <div
+    className="group rounded-xl bg-white p-5 transition-shadow hover:shadow-md sm:rounded-2xl sm:p-6"
+    style={{
+      border: "1.5px solid #dbeafe",
+      boxShadow: "3px 3px 0 rgba(147,197,253,0.12)",
+    }}
+  >
     <div className="mb-4">
-      <h3 className="text-lg font-bold text-zinc-900">{title}</h3>
+      <h3 className="text-lg font-bold text-[#1e293b]">{title}</h3>
       {description && (
-        <p className="mt-1 text-sm text-zinc-600">{description}</p>
+        <p className="mt-1 text-sm leading-relaxed text-[#64748b]">{description}</p>
       )}
     </div>
     {children}

@@ -109,6 +109,7 @@ Once both votes and multiple explanation variants exist:
 
 ---
 
+## General ideas (not thought out.)
 
 ### Linking external reasourses.
 We should for each topic link to external reasourses like youtube videos or other well structured explenations of that topic.
@@ -120,63 +121,44 @@ Should all have a rotating problem that is displayed.
 We should show a problem and its solution in detail
 By rotating I mean it should not be one static problem, say we allocate 5 questions that on page reload alternates.
 
+### Font size 
+
+It would be great if we had like a button "assesible" that reloaded the page with new css.
+This would emphezise on makinging text ledgible, styled like Wikipedia no animations fancy colors etc. 
+This could also serve as a function for allowing the user to set what font size they want - one setting dictates the size of the smallest latax to be no less then X, the other latax and normal text has to adjust to this minimum.
+So this might entail us setting up different "schemas" for text size. meaning if smallest latext is of size X normal text is F(X) etc. to make the text legability more adjustible for the users. 
 
 
----
+### 
 
+# Website Tasks & Improvements
 
-# The Comprehensive Calculus Roadmap (Essential +) – Revised
+okay now we need to update some "meta" text on the site to reflect the correct amount of questions and chapters like in the text  
+"6 topic modules. 240+ practice problems — each with step-by-step solutions. Free to read. No account required." etc.
 
-## 1. Foundations & Limits
-* **1.1 Functional Representations:** Understanding how to model data (linear, power, periodic, **exponential growth/decay**, and basic inverse functions) **(Expanded)**
-* **1.2 The Limit Concept:** Defining how a function behaves as it approaches a specific point.
-* **1.3 Continuity:** The formal rules for "unbroken" curves and the Intermediate Value Theorem.
-* **1.4 Limits at Infinity:** Determining horizontal asymptotes and long-term behavior.
+Also we have some smaller css fixes:
+- Font on the home page needs to not be the font for /calculus
+- The following SectionCard needs to be restyled a touch to match the calculus pattern better.
+- We also need to fix some small things on mobile
+- The buttons on /calculus need to get centered when stacked next to each other as it occupies too much screen width
+- The footer on mobile needs to be better, one thing could be to right-align the links on the right-hand side so that the UX on mobile becomes better.
+- And as for the MathInput on mobile there are a couple of things that we could improve:
 
-## 2. The Derivative (Differential Calculus)
-* **2.1 Derivatives and Rates of Change:** The transition from average slope to instantaneous velocity.
-* **2.2 Differentiation Rules:** Power, Product, and Quotient rules.
-* **2.3 Derivatives of Transcendental Functions:** Essential rules for $e^x$, $\ln(x)$, trigonometry, and **inverse trigonometric functions** **(Added)**
-* **2.4 The Chain Rule:** The most critical tool for differentiating composite functions.
-* **2.5 Implicit Differentiation:** Finding the slope of shapes that aren't simple functions (like circles or ellipses).
-* **2.6 Linear Approximations and Differentials:** Using derivatives for quick estimates and error analysis **(Added)**
-* **2.7 Inverse Functions, Logarithms, and Hyperbolic Functions (Intro):** Managing exponential growth/decay and basic hyperbolic rules **(Expanded)**
+1. The user should not have to scroll to press next question, this can be fixed by changing the "correct answer" into a model that replaces the math input area but does not cover the question.  
+   so that the user can view the question and all actions on same screen for reflecting - this should be a general rule for any place that the user inputs stuff, i.e. that the question is visible when the user inputs.  
+   also the user should not have to scroll when the user presses "hint", when "not quite" appears nor when the "correct answer" appears, for the aforementioned scenarios the user should be able to see the question without having to scroll, this is important
 
-## 3. Applications of the Derivative
-* **3.1 Related Rates:** How the change in one variable affects another (e.g., water level rising as volume increases).
-* **3.2 Maximum and Minimum Values:** Finding the "peaks and valleys" of a function.
-* **3.3 The Mean Value Theorem:** The theoretical backbone of calculus.
-* **3.4 L’Hôpital’s Rule:** A powerful shortcut for solving "indeterminate" limits (like $0/0$).
-* **3.5 Optimization Problems:** Applying derivatives to find the most efficient path, lowest cost, or maximum area.
-* **3.6 Newton’s Method:** Using calculus to find roots numerically, with basic error considerations **(Expanded)**
-* **3.7 Rates of Change in Sciences and Modeling (Intro):** Brief examples from physics, biology, and economics **(Added)**
+2. The number buttons on the math input need to be more square.
 
-## 4. The Integral (Integral Calculus)
-* **4.1 The Definite Integral:** Calculating total accumulation (area) using Riemann Sums.
-* **4.2 The Fundamental Theorem of Calculus:** The formal link between the derivative and the integral.
-* **4.3 The Substitution Rule ($u$-sub):** The primary technique for simplifying integrals.
-* **4.4 Integration by Parts:** The essential method for integrating products of functions.
-* **4.5 Advanced Integration Techniques:** Partial fractions for rational functions and trigonometric substitution (essentials only) **(Added)**
-* **4.6 Improper Integrals:** Dealing with areas that extend to infinity—critical for probability and statistics.
+3. there is too large of a gap between the bottom of the math input area and the footer.
 
-## 5. Applications of Integration
-* **5.1 Areas Between Curves:** Finding the space enclosed by two or more functions.
-* **5.2 Volumes of Solids:** Using the Disk, Washer, and Shell methods to calculate 3D volume.
-* **5.3 Arc Length:** Calculating the actual distance along a curved path.
-* **5.4 Parametric Equations (Intro):** Derivatives, integrals, and arc length for parametric curves **(Added)**
-* **5.5 Differential Equations (Intro + Modeling):** Modeling growth/decay ($y' = ky$), separable equations, **direction fields, Euler's method (numerical intro), and basic population models** **(Expanded)**
+**More of niceties than things to focus on**
 
-## 6. Sequences and Series
-* **6.1 Infinite Sequences & Series:** Determining if an infinite list of numbers sums to a finite value.
-* **6.2 Convergence Tests:** The Ratio, Root, Integral, and **Comparison/Alternating Series tests** **(Expanded)**
-* **6.3 Power Series:** Representing functions as "infinite polynomials."
-* **6.4 Taylor and Maclaurin Series:** Approximating complex curves (like $\sin x$) for computers, physics, and error bounds **(Expanded)**
+1. It would be nice if there was a button to switch to "draw" where the user can write some math with their fingers on mobile/tablets.
 
-## 7. Multivariable & Vector Calculus
-* **7.1 Vectors & Geometry of Space:** Dot products, cross products, and 3D coordinate systems.
-* **7.2 Vector Functions:** Describing motion, velocity, and acceleration in 3D space; **parametric surfaces intro** **(Expanded)**
-* **7.3 Partial Derivatives:** Finding the slope of a surface in the $x$ or $y$ direction; **limits/continuity in multiple variables** **(Added)**
-* **7.4 The Gradient Vector & Optimization:** Direction of steepest ascent; **constrained optimization with Lagrange multipliers (essentials)** **(Expanded)**
-* **7.5 Multiple Integrals:** Calculating volume, mass, and center of gravity for 3D objects; **polar, cylindrical coordinates for simplification** **(Added)**
-* **7.6 Vector Fields & Line Integrals:** Calculating the "Work" done by a force over a specific path.
-* **7.7 Green’s, Stokes’, and Divergence Theorems:** The "Grand Unified Theory" of calculus; **curl and divergence interpretations with physical examples (fluid flow, etc.)** **(Expanded)**
+2. Allowing the user to set the absolute minimum font and have the rest of the fonts across the whole site adjust. so we have some preset font-sizes for all fonts and when the user adjusts it in their profile page all fonts get adjusted this includes starting page, topics page and all of the other pages.  
+   I'm thinking we define the absolute smallest size some latex character can be and adjust the rest based on it.  
+   To build on this we could allow the user to load a more "simple" theme that applies more of a wikipedia styling to all pages where we remove completely the focus on "how good" things look and simply focus on making everything easily readable and interactable, no fancy colors, animations, rounded borders, fancy stuff.
+
+3. Allow users to print the text content/explanations to paper well formatted - this includes questions.  
+   A button on each module at the top "print" that allows the user to print the contents of the explanations as well as the questions if they want

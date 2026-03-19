@@ -33,7 +33,7 @@ export const SiteFooter = () => (
         </div>
 
         {/* Progress column */}
-        <div>
+        <div className="text-right md:text-left">
           <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-orange-400">
             Progress
           </h4>
@@ -45,7 +45,7 @@ export const SiteFooter = () => (
         </div>
 
         {/* Account column */}
-        <div>
+        <div className="text-right md:text-left">
           <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-orange-400">
             Account
           </h4>

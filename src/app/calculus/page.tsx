@@ -38,21 +38,21 @@ export default function CalculusHome() {
               </h1>
 
               <p className="mt-6 max-w-md text-base leading-relaxed sm:text-lg" style={{ fontFamily: body, color: C.muted }}>
-                6 topic modules. 240+ practice problems — each with step-by-step solutions.
+                8 topic modules. 360+ practice problems — each with step-by-step solutions.
                 Free to read. No account required.
               </p>
 
-              <div className="mt-10 flex flex-wrap gap-3">
+              <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:items-start">
                 <Link
                   href="/calculus/modules"
-                  className="rounded-lg px-7 py-3.5 text-base font-semibold transition hover:brightness-110"
+                  className="w-full rounded-lg px-7 py-3.5 text-center text-base font-semibold transition hover:brightness-110 sm:w-auto"
                   style={{ fontFamily: body, background: C.navy, color: C.white }}
                 >
                   Start reading
                 </Link>
                 <Link
                   href="/calculus/practice"
-                  className="rounded-lg px-7 py-3.5 text-base font-semibold transition hover:bg-red-50"
+                  className="w-full rounded-lg px-7 py-3.5 text-center text-base font-semibold transition hover:bg-red-50 sm:w-auto"
                   style={{ fontFamily: body, border: `2px solid ${C.red}`, color: C.red }}
                 >
                   Start practicing
@@ -118,10 +118,13 @@ export default function CalculusHome() {
                 ))}
               </div>
 
-              <div className="mt-8 inline-flex items-center gap-3 rounded-lg px-5 py-3" style={{ border: `2px solid ${C.red}`, background: C.redBg }}>
-                <span className="text-base font-bold" style={{ color: C.red }}>Answer =</span>
-                <span className="text-xl font-bold" style={{ fontFamily: serif, color: C.navy }}>{sampleProblem.answer}</span>
+              <div className="w-full flex justify-center align-center">
+                <div className="mt-8 inline-flex items-center gap-3 rounded-lg px-10 py-3" style={{ border: `2px solid ${C.red}`, background: C.redBg }}>
+                  <span className="text-base font-bold" style={{ color: C.red }}>Answer =</span>
+                  <span className="text-xl font-bold" style={{ fontFamily: serif, color: C.navy }}>{sampleProblem.answer}</span>
+                </div>
               </div>
+              
             </div>
           </div>
 
@@ -137,7 +140,7 @@ export default function CalculusHome() {
         <div className="mx-auto max-w-4xl">
           <h2 className="mb-2 text-2xl font-bold sm:text-3xl" style={{ fontFamily: serif, color: C.navy }}>Curriculum</h2>
           <p className="mb-10 text-base" style={{ fontFamily: body, color: C.muted }}>
-            Six modules covering Calculus I–II. Each module is free to read with worked examples.
+            Eight modules covering Calculus I–III. Each module is free to read with worked examples.
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -212,14 +215,14 @@ export default function CalculusHome() {
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4">
             <Link
               href="/calculus/modules/limits"
-              className="rounded-lg px-7 py-3.5 text-base font-semibold transition hover:brightness-110"
+              className="w-full max-w-xs rounded-lg px-7 py-3.5 text-center text-base font-semibold transition hover:brightness-110 sm:w-auto"
               style={{ fontFamily: body, background: C.navy, color: C.white }}
             >
               Read Chapter I
             </Link>
             <Link
               href="/calculus/practice"
-              className="rounded-lg px-7 py-3.5 text-base font-semibold transition hover:bg-red-50"
+              className="w-full max-w-xs rounded-lg px-7 py-3.5 text-center text-base font-semibold transition hover:bg-red-50 sm:w-auto"
               style={{ fontFamily: body, border: `2px solid ${C.red}`, color: C.red }}
             >
               Practice problems

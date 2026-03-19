@@ -20,6 +20,8 @@ interface MathInputProps {
     hasPi?: boolean;
   };
   answerHint?: string;
+  feedbackOverlay?: React.ReactNode;
+  onDismissOverlay?: () => void;
 }
 
 type MQField = {
@@ -92,6 +94,8 @@ export function MathInput({
   placeholder = "Your answer",
   questionContext,
   answerHint,
+  feedbackOverlay,
+  onDismissOverlay,
 }: MathInputProps) {
   const mqRef = useRef<MQField | null>(null);
 
@@ -152,11 +156,11 @@ export function MathInput({
   );
 
   return (
-    <div className="flex min-h-[50dvh] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 sm:min-h-0">
+    <div className="flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 sm:min-h-0">
       {/* ── Header: label + hint ── */}
       <div className="flex items-center justify-between bg-white px-4 pt-3 sm:px-5 sm:pt-4">
         <p className="text-xs font-semibold text-zinc-400 sm:text-sm">{placeholder}</p>
-        {onHint && (
+        {onHint && !feedbackOverlay && (
           <button
             type="button"
             onClick={onHint}
@@ -170,8 +174,8 @@ export function MathInput({
       </div>
 
       {/* ── Math field ── */}
-      <div className="flex py-5 items-center justify-center bg-white px-4 pb-3 sm:px-5 sm:pb-4 md:px-8 md:py-8 md:pb-6">
-        <div className="flex min-h-[80px] w-full items-center justify-center rounded-xl border border-zinc-200 bg-[#f8fafc] px-4 sm:min-h-[100px] md:min-h-[120px] md:px-8 md:rounded-2xl">
+      <div className="flex items-center justify-center bg-white px-4 py-3 sm:px-5 sm:py-4 md:px-8 md:py-6">
+        <div className="flex min-h-[56px] w-full items-center justify-center rounded-xl border border-zinc-200 bg-[#f8fafc] px-4 sm:min-h-[80px] md:min-h-[100px] md:px-8 md:rounded-2xl">
           <EditableMathField
             latex={value}
             config={{
@@ -198,62 +202,83 @@ export function MathInput({
         </div>
       </div>
 
-      {/* ── Suggestions strip ── */}
-      {suggestions.length > 0 && (
-        <div className="flex gap-1.5 overflow-x-auto border-t border-zinc-200 bg-zinc-50 px-3 py-1.5 sm:gap-2 sm:px-4 sm:py-2 md:justify-center md:gap-3 md:px-6 md:py-3">
-          {suggestions.map((k) => (
-            <button
-              key={k.label}
-              type="button"
-              onClick={k.action}
-              className="shrink-0 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-xs font-bold text-violet-600 transition active:scale-95 hover:bg-violet-100 sm:px-3 sm:py-1 sm:text-sm md:px-4 md:py-1.5"
-            >
-              {k.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* ── Keypad area — overlay replaces it when feedback is active ── */}
+      <div className="relative">
+        {feedbackOverlay && (
+          <div className="absolute inset-0 z-10 overflow-y-auto rounded-b-2xl">
+            {onDismissOverlay && (
+              <button
+                type="button"
+                onClick={onDismissOverlay}
+                className="absolute right-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-zinc-500 shadow-sm backdrop-blur transition hover:bg-white hover:text-zinc-800 sm:right-3 sm:top-3 sm:h-8 sm:w-8"
+                aria-label="Close"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+              </button>
+            )}
+            {feedbackOverlay}
+          </div>
+        )}
 
-      {/* ── Tools row: ( )  xⁿ  √  ⌫  AC ── */}
-      <div className="grid grid-cols-5 gap-[3px] border-t border-zinc-200 bg-zinc-100 px-2 pt-2 sm:gap-1.5 sm:px-3 sm:pt-2.5 md:gap-2.5 md:px-6 md:pt-3 md:[&_button]:min-h-12">
-        <button type="button" onClick={() => { write("\\left(\\right)"); mqRef.current?.keystroke("Left"); }} className="kp-op text-[13px] sm:text-sm text-violet-600">( )</button>
-        <button type="button" onClick={() => cmd("^")} className="kp-op text-[13px] sm:text-sm">x<sup className="text-[9px]">n</sup></button>
-        <button type="button" onClick={() => cmd("\\sqrt")} className="kp-op text-[13px] sm:text-sm">√</button>
-        <button type="button" onClick={backspace} className="kp-op text-[13px] sm:text-sm">⌫</button>
-        <button type="button" onClick={clear} className="kp-op-ac">AC</button>
-      </div>
+        <div className={feedbackOverlay ? "invisible" : ""}>
+          {/* ── Suggestions strip ── */}
+          {suggestions.length > 0 && (
+            <div className="flex gap-1.5 overflow-x-auto border-t border-zinc-200 bg-zinc-50 px-3 py-1.5 sm:gap-2 sm:px-4 sm:py-2 md:justify-center md:gap-3 md:px-6 md:py-3">
+              {suggestions.map((k) => (
+                <button
+                  key={k.label}
+                  type="button"
+                  onClick={k.action}
+                  className="shrink-0 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-xs font-bold text-violet-600 transition active:scale-95 hover:bg-violet-100 sm:px-3 sm:py-1 sm:text-sm md:px-4 md:py-1.5"
+                >
+                  {k.label}
+                </button>
+              ))}
+            </div>
+          )}
 
-      {/* ── Numpad (3 cols) + operator column (1 col) ── */}
-      <div className="flex flex-1 flex-col gap-[3px] bg-zinc-100 px-2 pb-2 pt-[3px] sm:flex-none sm:gap-1.5 sm:px-3 sm:pb-3 sm:pt-1.5 md:gap-2.5 md:px-6 md:pb-5 md:pt-2">
-        <div className="grid flex-1 grid-cols-[2fr_2fr_2fr_1fr] grid-rows-5 gap-[3px] sm:flex-none sm:gap-1.5 md:gap-2.5 md:[&_button]:min-h-12">
-          <button type="button" onClick={() => write("7")} className="kp-num">7</button>
-          <button type="button" onClick={() => write("8")} className="kp-num">8</button>
-          <button type="button" onClick={() => write("9")} className="kp-num">9</button>
-          <button type="button" onClick={() => write("+")} className="kp-op-solid">+</button>
+          {/* ── Tools row: ( )  xⁿ  √  ⌫  AC ── */}
+          <div className="grid grid-cols-5 gap-[3px] border-t border-zinc-200 bg-zinc-100 px-2 py-1.5 sm:gap-1.5 sm:px-3 sm:py-2 md:gap-2.5 md:px-6 md:py-2.5">
+            <button type="button" onClick={() => { write("\\left(\\right)"); mqRef.current?.keystroke("Left"); }} className="kp-op text-[13px] sm:text-sm text-violet-600">( )</button>
+            <button type="button" onClick={() => cmd("^")} className="kp-op text-[13px] sm:text-sm">x<sup className="text-[9px]">n</sup></button>
+            <button type="button" onClick={() => cmd("\\sqrt")} className="kp-op text-[13px] sm:text-sm">√</button>
+            <button type="button" onClick={backspace} className="kp-op text-[13px] sm:text-sm">⌫</button>
+            <button type="button" onClick={clear} className="kp-op-ac">AC</button>
+          </div>
 
-          <button type="button" onClick={() => write("4")} className="kp-num">4</button>
-          <button type="button" onClick={() => write("5")} className="kp-num">5</button>
-          <button type="button" onClick={() => write("6")} className="kp-num">6</button>
-          <button type="button" onClick={() => write("-")} className="kp-op-solid">−</button>
+          {/* ── Numpad (3 cols) + operator column (1 col) ── */}
+          <div className="flex flex-col gap-[3px] bg-zinc-100 px-2 pb-2 pt-[3px] sm:gap-1.5 sm:px-3 sm:pb-3 sm:pt-1.5 md:gap-2.5 md:px-6 md:pb-4 md:pt-2">
+            <div className="grid grid-cols-[2fr_2fr_2fr_1fr] grid-rows-5 gap-[3px] sm:gap-1.5 md:gap-2.5">
+              <button type="button" onClick={() => write("7")} className="kp-num">7</button>
+              <button type="button" onClick={() => write("8")} className="kp-num">8</button>
+              <button type="button" onClick={() => write("9")} className="kp-num">9</button>
+              <button type="button" onClick={() => write("+")} className="kp-op-solid">+</button>
 
-          <button type="button" onClick={() => write("1")} className="kp-num">1</button>
-          <button type="button" onClick={() => write("2")} className="kp-num">2</button>
-          <button type="button" onClick={() => write("3")} className="kp-num">3</button>
-          <button type="button" onClick={() => write("\\cdot ")} className="kp-op-solid">×</button>
+              <button type="button" onClick={() => write("4")} className="kp-num">4</button>
+              <button type="button" onClick={() => write("5")} className="kp-num">5</button>
+              <button type="button" onClick={() => write("6")} className="kp-num">6</button>
+              <button type="button" onClick={() => write("-")} className="kp-op-solid">−</button>
 
-          <button type="button" onClick={() => write("0")} className="kp-num col-span-2">0</button>
-          <button type="button" onClick={() => write(".")} className="kp-num">.</button>
-          <button type="button" onClick={() => cmd("\\frac")} className="kp-op-solid">
-            <span className="flex flex-col items-center text-[11px] leading-[1.1] sm:text-xs">
-              <span>a</span><span className="my-[-1px] h-px w-3 bg-current" /><span>b</span>
-            </span>
-          </button>
+              <button type="button" onClick={() => write("1")} className="kp-num">1</button>
+              <button type="button" onClick={() => write("2")} className="kp-num">2</button>
+              <button type="button" onClick={() => write("3")} className="kp-num">3</button>
+              <button type="button" onClick={() => write("\\cdot ")} className="kp-op-solid">×</button>
 
-          <button type="button" onClick={onSubmit} className="kp-submit col-span-3">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5"><path d="M20 6L9 17l-5-5"/></svg>
-            Check
-          </button>
-          <button type="button" onClick={() => write("\\div ")} className="kp-op-solid">÷</button>
+              <button type="button" onClick={() => write("0")} className="kp-num col-span-2">0</button>
+              <button type="button" onClick={() => write(".")} className="kp-num">.</button>
+              <button type="button" onClick={() => cmd("\\frac")} className="kp-op-solid">
+                <span className="flex flex-col items-center text-[11px] leading-[1.1] sm:text-xs">
+                  <span>a</span><span className="my-[-1px] h-px w-3 bg-current" /><span>b</span>
+                </span>
+              </button>
+
+              <button type="button" onClick={onSubmit} className="kp-submit col-span-3">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5"><path d="M20 6L9 17l-5-5"/></svg>
+                Check
+              </button>
+              <button type="button" onClick={() => write("\\div ")} className="kp-op-solid">÷</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

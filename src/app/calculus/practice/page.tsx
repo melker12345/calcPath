@@ -43,10 +43,10 @@ export default function PracticePage() {
                 <span className="text-sm text-zinc-500">{topic.estimatedMinutes} min</span>
               </div>
               
-              <div className="mt-3 h-2 rounded-full bg-orange-100">
+              <div className="mt-3 h-2 rounded-full bg-slate-100">
                 <div 
                   className={`h-2 rounded-full transition-all ${
-                    stats.isComplete ? "bg-emerald-500" : "bg-gradient-to-r from-orange-400 to-amber-400"
+                    stats.isComplete ? "bg-emerald-500" : "bg-gradient-to-r from-blue-400 to-indigo-500"
                   }`}
                   style={{ width: `${stats.masteryRate}%` }}
                 />
@@ -60,10 +60,10 @@ export default function PracticePage() {
               </div>
               
               <div className="mt-4 flex flex-wrap gap-2">
-                <Link className="btn-primary" href={`/calculus/practice/${topic.id}`}>
+                <Link className="btn-calc-primary" href={`/calculus/practice/${topic.id}`}>
                   {stats.correct > 0 ? "Continue" : "Start"} practice
                 </Link>
-                <Link className="btn-secondary" href={`/calculus/modules/${topic.id}`}>
+                <Link className="btn-calc-secondary" href={`/calculus/modules/${topic.id}`}>
                   Read module
                 </Link>
               </div>

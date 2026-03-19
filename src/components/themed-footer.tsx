@@ -53,7 +53,7 @@ export function ThemedFooter({
           </div>
 
           {/* Progress column */}
-          <div>
+          <div className="text-right md:text-left">
             <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider" style={{ color: c.textDim }}>
               Progress
             </h4>
@@ -71,7 +71,7 @@ export function ThemedFooter({
           </div>
 
           {/* Account column */}
-          <div>
+          <div className="text-right md:text-left">
             <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider" style={{ color: c.textDim }}>
               Account
             </h4>

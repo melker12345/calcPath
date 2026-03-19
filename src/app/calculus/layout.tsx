@@ -8,11 +8,11 @@ export const metadata: Metadata = {
     template: "%s | CalcPath",
   },
   description:
-    "Free step-by-step calculus modules, 240+ practice problems with instant feedback, tests, and flashcards. Master limits, derivatives, integrals & more.",
+    "Free step-by-step calculus modules, 360+ practice problems with instant feedback, tests, and flashcards. Master limits, derivatives, integrals & more.",
   openGraph: {
     title: "CalcPath — Learn Calculus Step by Step",
     description:
-      "Free step-by-step modules, 240+ practice problems, tests, and flashcards. Master calculus at your own pace.",
+      "Free step-by-step modules, 360+ practice problems, tests, and flashcards. Master calculus at your own pace.",
     url: "https://calc-path.com/calculus",
   },
 };

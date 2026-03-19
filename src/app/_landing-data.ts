@@ -35,6 +35,18 @@ export const curriculum = [
     title: "Differential Equations",
     desc: "Equations involving derivatives model growth, decay, and change. Solve separable and first-order linear equations with real applications.",
   },
+  {
+    id: "applications-of-integration",
+    number: "VII",
+    title: "Applications of Integration",
+    desc: "Use integrals to compute areas between curves, volumes of revolution, arc lengths, and work done by a force.",
+  },
+  {
+    id: "multivariable",
+    number: "VIII",
+    title: "Multivariable & Vector Calculus",
+    desc: "Extend calculus to multiple dimensions with partial derivatives, double and triple integrals, and vector fields.",
+  },
 ];
 
 export const homeFaqs = [
