@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
 import { MathInput } from "@/components/math-input";
+import { VoteFeedback } from "@/components/vote-feedback";
 import { topics } from "@/lib/content";
 import { getTestQuestionsForTopic, TestQuestion } from "@/lib/test-questions";
 import { isAnswerCorrectAsync } from "@/lib/answer-check";
@@ -408,6 +409,9 @@ export default function TopicTestPage() {
                                 Final Answer:{" "}
                                 {isLatexAnswer ? <MathText text={`$${r.expected}$`} /> : r.expected}
                               </span>
+                            </div>
+                            <div className="mt-3 flex justify-end">
+                              <VoteFeedback targetType="problem" targetId={r.questionId} />
                             </div>
                           </div>
                         </details>

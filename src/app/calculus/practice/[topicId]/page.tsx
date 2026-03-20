@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
 import { MathInput } from "@/components/math-input";
+import { VoteFeedback } from "@/components/vote-feedback";
 import { useProgress } from "@/components/progress-provider";
 import { problems, topics } from "@/lib/content";
 import { trackEvent } from "@/lib/analytics";
@@ -321,10 +322,14 @@ export default function PracticeTopicPage() {
               </p>
             </div>
 
+            <div className="mt-2 flex justify-end sm:mt-3">
+              <VoteFeedback targetType="problem" targetId={current.id} />
+            </div>
+
             <button
               type="button"
               onClick={goToNext}
-              className="mt-3 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-[0.98] sm:mt-4 sm:py-3 sm:text-base"
+              className="mt-2 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-[0.98] sm:mt-3 sm:py-3 sm:text-base"
             >
               Next Question →
             </button>
@@ -396,10 +401,14 @@ export default function PracticeTopicPage() {
                   </p>
                 </div>
 
+                <div className="mt-2 flex justify-end sm:mt-3">
+                  <VoteFeedback targetType="problem" targetId={current.id} />
+                </div>
+
                 <button
                   type="button"
                   onClick={goToNext}
-                  className="mt-3 w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-[0.98] sm:mt-4 sm:py-3 sm:text-base"
+                  className="mt-2 w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-[0.98] sm:mt-3 sm:py-3 sm:text-base"
                 >
                   Next Question →
                 </button>

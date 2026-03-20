@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
+import { VoteFeedback } from "@/components/vote-feedback";
 import { modules } from "@/lib/modules";
 import { problems, topics } from "@/lib/content";
 
@@ -320,6 +321,10 @@ export default function ModulePage() {
                     ))}
                   </div>
                 )}
+
+                <div className="mt-6 flex justify-end">
+                  <VoteFeedback targetType="section" targetId={`${topicId}:${toSlug(section.title)}`} />
+                </div>
               </div>
             </div>
           ))}
