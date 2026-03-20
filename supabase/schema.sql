@@ -91,3 +91,26 @@ on public.user_progress
 for update
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
+
+-- FEEDBACK: general feedback messages and +1/-1 votes on explanations
+create table if not exists public.feedback (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete set null,
+  kind text not null check (kind in ('bug', 'feature', 'general', 'vote')),
+  target_type text,
+  target_id text,
+  vote smallint check (vote in (-1, 1)),
+  message text,
+  page_url text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.feedback enable row level security;
+
+-- Anyone (including anonymous) can insert feedback via the API route,
+-- which uses the admin client. No client-side select needed.
+drop policy if exists "feedback_insert_authenticated" on public.feedback;
+create policy "feedback_insert_authenticated"
+on public.feedback
+for insert
+with check (true);

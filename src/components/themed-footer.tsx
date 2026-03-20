@@ -82,6 +82,9 @@ export function ThemedFooter({
               <Link href="/account" className="text-sm transition hover:opacity-70" style={{ color: c.textMuted }}>
                 Settings
               </Link>
+              <Link href="/feedback" className="text-sm transition hover:opacity-70" style={{ color: c.textMuted }}>
+                Feedback
+              </Link>
             </nav>
           </div>
         </div>

@@ -52,6 +52,7 @@ export const SiteFooter = () => (
           <nav className="flex flex-col gap-2">
             <Link href="/auth" className="text-sm text-orange-600 hover:text-orange-900">Sign In</Link>
             <Link href="/account" className="text-sm text-orange-600 hover:text-orange-900">Settings</Link>
+            <Link href="/feedback" className="text-sm text-orange-600 hover:text-orange-900">Feedback</Link>
           </nav>
         </div>
       </div>
