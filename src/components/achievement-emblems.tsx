@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { useProgress } from "@/components/progress-provider";
 import { getTopicTestStats } from "@/lib/progress";
-import { topics } from "@/lib/content";
+import { topics } from "@/lib/calculus-content";
 
 // Admin users see all emblems for preview purposes
 const EMBLEM_PREVIEW_IDS = new Set([

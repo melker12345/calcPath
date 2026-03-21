@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { SectionCard } from "@/components/section-card";
 import { useProgress } from "@/components/progress-provider";
 import { getPracticeProgress } from "@/lib/progress";
-import { problems, topics } from "@/lib/content";
+import { problems, topics } from "@/lib/calculus-content";
 import { trackEvent } from "@/lib/analytics";
 
 export default function PracticePage() {
@@ -33,30 +33,29 @@ export default function PracticePage() {
               title={topic.title}
               description={topic.description}
             >
-              <div className="mt-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl font-bold text-zinc-900">
-                    {stats.correct}/{stats.total}
+              <div className="mt-4 space-y-1.5">
+                <div className="flex justify-between text-xs text-zinc-500">
+                  <span>
+                    <span className="font-semibold text-zinc-900">{stats.correct}</span>
+                    /{stats.total} mastered
                   </span>
-                  <span className="text-sm text-zinc-500">mastered</span>
+                  <span>
+                    {stats.accuracyRate}% accuracy · {topic.estimatedMinutes} min
+                    {stats.isComplete && (
+                      <span className="ml-1.5 font-semibold text-emerald-600">✓ Done</span>
+                    )}
+                  </span>
                 </div>
-                <span className="text-sm text-zinc-500">{topic.estimatedMinutes} min</span>
-              </div>
-              
-              <div className="mt-3 h-2 rounded-full bg-slate-100">
-                <div 
-                  className={`h-2 rounded-full transition-all ${
-                    stats.isComplete ? "bg-emerald-500" : "bg-gradient-to-r from-blue-400 to-indigo-500"
-                  }`}
-                  style={{ width: `${stats.masteryRate}%` }}
-                />
-              </div>
-              
-              <div className="mt-2 text-sm text-zinc-500">
-                {stats.accuracyRate}% accuracy
-                {stats.isComplete && (
-                  <span className="ml-2 font-semibold text-emerald-600">✓ Complete</span>
-                )}
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className={`h-1.5 rounded-full transition-all duration-500 ${
+                      stats.isComplete
+                        ? "bg-emerald-500"
+                        : "bg-gradient-to-r from-blue-400 to-indigo-500"
+                    }`}
+                    style={{ width: `${stats.masteryRate}%` }}
+                  />
+                </div>
               </div>
               
               <div className="mt-4 flex flex-wrap gap-2">

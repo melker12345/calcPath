@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { useProgress } from "@/components/progress-provider";
 import { getPracticeProgress, getTopicTestStats } from "@/lib/progress";
-import { problems, topics } from "@/lib/content";
+import { problems, topics } from "@/lib/calculus-content";
 import { trackEvent } from "@/lib/analytics";
 
 export default function DashboardPage() {

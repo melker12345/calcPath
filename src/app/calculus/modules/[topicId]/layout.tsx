@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { modules } from "@/lib/modules";
-import { topics } from "@/lib/content";
+import { topics } from "@/lib/calculus-content";
 
 type Props = {
   params: Promise<{ topicId: string }>;

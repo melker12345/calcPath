@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { SectionCard } from "@/components/section-card";
 import { useProgress } from "@/components/progress-provider";
-import { problems } from "@/lib/content";
+import { problems } from "@/lib/calculus-content";
 
 export default function StreaksPage() {
   const { progress } = useProgress();

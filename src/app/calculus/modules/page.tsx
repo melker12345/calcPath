@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { topics } from "@/lib/content";
+import { topics } from "@/lib/calculus-content";
 import { modules } from "@/lib/modules";
 import { SectionCard } from "@/components/section-card";
 

@@ -159,7 +159,7 @@ export function ThemedHeader({
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4">
           {/* Logo */}
           <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="CalcPath home">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-rose-400 text-lg font-bold text-white shadow-lg shadow-orange-200 sm:h-10 sm:w-10 sm:rounded-2xl sm:text-xl">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-rose-400 text-lg font-bold text-white sm:h-10 sm:w-10 sm:rounded-2xl sm:text-xl">
               ∫
             </div>
             <span className="hidden text-lg font-bold text-orange-900 sm:inline sm:text-xl">CalcPath</span>

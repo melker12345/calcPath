@@ -7,7 +7,7 @@ import { MathText } from "@/components/math-text";
 import { MathInput } from "@/components/math-input";
 import { VoteFeedback } from "@/components/vote-feedback";
 import { useProgress } from "@/components/progress-provider";
-import { problems, topics, getModuleSectionUrl, getModuleSectionTitle } from "@/lib/content";
+import { problems, topics, getModuleSectionUrl, getModuleSectionTitle } from "@/lib/calculus-content";
 import { trackEvent } from "@/lib/analytics";
 import { isAnswerCorrectAsync } from "@/lib/answer-check";
 /** Detect variables and functions in a question prompt for suggested keys */

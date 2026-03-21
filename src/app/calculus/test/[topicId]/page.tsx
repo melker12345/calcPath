@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
 import { MathInput } from "@/components/math-input";
 import { VoteFeedback } from "@/components/vote-feedback";
-import { topics } from "@/lib/content";
+import { topics } from "@/lib/calculus-content";
 import { getTestQuestionsForTopic, TestQuestion } from "@/lib/test-questions";
 import { isAnswerCorrectAsync } from "@/lib/answer-check";
 import { useProgress } from "@/components/progress-provider";
