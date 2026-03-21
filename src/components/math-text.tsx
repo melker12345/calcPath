@@ -41,15 +41,12 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
 
   if (block) {
     return (
-      <div className="space-y-2 text-zinc-700">
+      <div className="space-y-2">
         {parts.map((part, index) =>
           part.type === "math" ? (
             <BlockMath key={`${part.value}-${index}`}>{part.value}</BlockMath>
           ) : (
-            <p
-              key={`${part.value}-${index}`}
-              className="text-zinc-700"
-            >
+            <p key={`${part.value}-${index}`}>
               {part.value}
             </p>
           ),
@@ -59,7 +56,7 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
   }
 
   return (
-    <span className="text-zinc-700">
+    <span>
       {parts.map((part, index) =>
         part.type === "math" ? (
           <InlineMath key={`${part.value}-${index}`}>{part.value}</InlineMath>
