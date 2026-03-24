@@ -558,6 +558,7 @@ export default function TopicTestPage() {
               onSubmit={() => submit()}
               placeholder="Enter your answer"
               answerHint={current.answer}
+              questionPrompt={current.prompt}
             />
           </div>
         )}

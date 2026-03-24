@@ -274,6 +274,7 @@ export default function StatisticsPracticeTopic() {
             answerHint={current.answer}
             feedbackOverlay={overlay}
             onDismissOverlay={isDismissable ? () => setOverlayDismissed(true) : undefined}
+            questionPrompt={current.prompt}
           />
         )}
 

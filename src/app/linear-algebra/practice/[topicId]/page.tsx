@@ -274,6 +274,7 @@ export default function LinalgPracticeTopic() {
               answerHint={current.answer}
               feedbackOverlay={overlay}
               onDismissOverlay={isDismissable ? () => setOverlayDismissed(true) : undefined}
+              questionPrompt={current.prompt}
             />
           )}
 
