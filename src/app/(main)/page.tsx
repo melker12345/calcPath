@@ -1,17 +1,21 @@
 import Link from "next/link";
+import { problems as calculusProblems } from "@/lib/calculus-content";
+import { problems as statisticsProblems } from "@/lib/statistics-content";
+import { problems as linalgProblems } from "@/lib/linalg-content";
 
 const heading = "var(--font-inter), system-ui, -apple-system, sans-serif";
 const body = "var(--font-inter), system-ui, -apple-system, sans-serif";
 
 const subjects = [
+  // Problem counts are derived from the actual content files — same source as the dashboard.
   {
     slug: "calculus",
     title: "Calculus",
     icon: "∫",
     description:
-      "Limits, derivatives, integrals, series, differential equations, and more. 8 modules with 360+ practice problems — each solved step by step.",
+      `Limits, derivatives, integrals, series, differential equations, and more. 8 modules with ${calculusProblems.length}+ practice problems — each solved step by step.`,
     modules: 8,
-    problems: "360+",
+    problems: calculusProblems.length,
     available: true,
     accentColor: "#dc2626",
     bgColor: "#f8fafc",
@@ -29,9 +33,9 @@ const subjects = [
     title: "Statistics",
     icon: "σ",
     description:
-      "Descriptive statistics, probability, distributions, hypothesis testing, regression, and more. 10 modules with practice problems — each solved step by step.",
+      `Descriptive statistics, probability, distributions, hypothesis testing, regression, and more. 10 modules with ${statisticsProblems.length}+ practice problems — each solved step by step.`,
     modules: 10,
-    problems: "50+",
+    problems: statisticsProblems.length,
     available: true,
     accentColor: "#fde68a",
     bgColor: "#1a3a2a",
@@ -49,9 +53,9 @@ const subjects = [
     title: "Linear Algebra",
     icon: "λ",
     description:
-      "Vectors, matrices, systems of equations, vector spaces, eigenvalues, and more. 8 modules with practice problems — each solved step by step.",
+      `Vectors, matrices, systems of equations, vector spaces, eigenvalues, and more. 8 modules with ${linalgProblems.length}+ practice problems — each solved step by step.`,
     modules: 8,
-    problems: "40+",
+    problems: linalgProblems.length,
     available: true,
     accentColor: "#3372A2",
     bgColor: "#0f172a",
