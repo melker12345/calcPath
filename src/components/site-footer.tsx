@@ -6,9 +6,9 @@ export const SiteFooter = () => (
   <footer className="border-t border-orange-100 bg-white pb-[env(safe-area-inset-bottom)]">
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
       {/* Footer grid */}
-      <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-8 sm:grid-cols-2 md:grid-cols-4">
         {/* Brand column */}
-        <div className="sm:col-span-2 md:col-span-1">
+        <div className="col-span-2 md:col-span-1">
           <Link href="/" className="inline-flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-rose-400 text-sm font-bold text-white">
               ∫
@@ -16,36 +16,24 @@ export const SiteFooter = () => (
             <span className="text-lg font-bold text-orange-900">CalcPath</span>
           </Link>
           <p className="mt-3 text-sm leading-relaxed text-orange-600/70">
-            Free step-by-step calculus lessons, practice problems, and tests.
+            Free step-by-step math lessons, practice problems, and tests.
           </p>
         </div>
 
-        {/* Learn column */}
+        {/* Subjects column */}
         <div>
           <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-orange-400">
-            Learn
+            Subjects
           </h4>
           <nav className="flex flex-col gap-2">
-            <Link href="/calculus/modules" className="text-sm text-orange-600 hover:text-orange-900">Modules</Link>
-            <Link href="/calculus/practice" className="text-sm text-orange-600 hover:text-orange-900">Practice</Link>
-            {/* <Link href="/calculus/flashcards" className="text-sm text-orange-600 hover:text-orange-900">Flash Cards</Link> */}
-          </nav>
-        </div>
-
-        {/* Progress column */}
-        <div className="text-right md:text-left">
-          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-orange-400">
-            Progress
-          </h4>
-          <nav className="flex flex-col gap-2">
-            <Link href="/calculus/dashboard" className="text-sm text-orange-600 hover:text-orange-900">Dashboard</Link>
-            <Link href="/paths" className="text-sm text-orange-600 hover:text-orange-900">Learning Paths</Link>
-            <Link href="/streaks" className="text-sm text-orange-600 hover:text-orange-900">Streaks</Link>
+            <Link href="/calculus" className="text-sm text-orange-600 hover:text-orange-900">Calculus</Link>
+            <Link href="/statistics" className="text-sm text-orange-600 hover:text-orange-900">Statistics</Link>
+            <Link href="/linear-algebra" className="text-sm text-orange-600 hover:text-orange-900">Linear Algebra</Link>
           </nav>
         </div>
 
         {/* Account column */}
-        <div className="text-right md:text-left">
+        <div>
           <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-orange-400">
             Account
           </h4>

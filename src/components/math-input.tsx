@@ -1,7 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Scratchpad } from "@/components/scratchpad";
 
 let stylesInjected = false;
 
@@ -63,6 +64,7 @@ interface MathInputProps {
   answerHint?: string;
   feedbackOverlay?: React.ReactNode;
   onDismissOverlay?: () => void;
+  questionPrompt?: string;
 }
 
 type MQField = {
@@ -138,9 +140,18 @@ export function MathInput({
   answerHint,
   feedbackOverlay,
   onDismissOverlay,
+  questionPrompt,
 }: MathInputProps) {
   const th = SUBJECT_THEME[subject];
   const mqRef = useRef<MQField | null>(null);
+  const [scratchpadOpen, setScratchpadOpen] = useState(false);
+  const scratchpadData = useRef<string | null>(null);
+  const prevPrompt = useRef(questionPrompt);
+
+  if (questionPrompt !== prevPrompt.current) {
+    prevPrompt.current = questionPrompt;
+    scratchpadData.current = null;
+  }
 
   useEffect(() => {
     if (stylesInjected) return;
@@ -200,22 +211,44 @@ export function MathInput({
 
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl border sm:min-h-0" data-subject={subject} style={{ background: th.containerBg, borderColor: th.containerBorder }}>
-      {/* ── Header: label + hint ── */}
+      {/* ── Header: label + draw + hint ── */}
       <div className="flex items-center justify-between px-4 pt-3 sm:px-5 sm:pt-4" style={{ background: th.headerBg }}>
         <p className="text-xs font-semibold sm:text-sm" style={{ color: th.labelColor }}>{placeholder}</p>
-        {onHint && !feedbackOverlay && (
-          <button
-            type="button"
-            onClick={onHint}
-            disabled={hintDisabled}
-            className="flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition active:scale-95 disabled:opacity-30 sm:px-3 sm:py-1 sm:text-sm"
-            style={{ borderColor: th.dividerColor, color: th.labelColor }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:h-3.5 sm:w-3.5"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            Hint
-          </button>
-        )}
+        <div className="flex items-center gap-1.5">
+          {!feedbackOverlay && (
+            <button
+              type="button"
+              onClick={() => setScratchpadOpen(true)}
+              className="flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition active:scale-95 sm:px-3 sm:py-1 sm:text-sm"
+              style={{ borderColor: th.dividerColor, color: th.labelColor }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:h-3.5 sm:w-3.5">
+                <path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Z" />
+              </svg>
+              Draw
+            </button>
+          )}
+          {onHint && !feedbackOverlay && (
+            <button
+              type="button"
+              onClick={onHint}
+              disabled={hintDisabled}
+              className="flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition active:scale-95 disabled:opacity-30 sm:px-3 sm:py-1 sm:text-sm"
+              style={{ borderColor: th.dividerColor, color: th.labelColor }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:h-3.5 sm:w-3.5"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Hint
+            </button>
+          )}
+        </div>
       </div>
+      <Scratchpad
+        open={scratchpadOpen}
+        onClose={() => setScratchpadOpen(false)}
+        questionPrompt={questionPrompt}
+        savedImage={scratchpadData.current}
+        onSave={(dataUrl) => { scratchpadData.current = dataUrl; }}
+      />
 
       {/* ── Math field ── */}
       <div className="flex items-center justify-center px-4 py-3 sm:px-5 sm:py-4 md:px-8 md:py-6" style={{ background: th.fieldAreaBg }}>
