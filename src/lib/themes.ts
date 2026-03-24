@@ -25,6 +25,7 @@ export type SubjectTheme = {
     navAccentText: string;
     logoBg: string;
     logoText: string;
+    drawerBg: string;
   };
   fonts: { heading: string; body: string };
   backgroundCSS: CSSProperties;
@@ -58,6 +59,7 @@ export const graphPaperTheme: SubjectTheme = {
     navAccentText: "#ffffff",
     logoBg: "#1e293b",
     logoText: "#ffffff",
+    drawerBg: "#ffffff",
   },
   fonts: { heading: serif, body },
   backgroundCSS: {
@@ -95,6 +97,7 @@ export const chalkboardTheme: SubjectTheme = {
     navAccentText: "#122a1f",
     logoBg: "#fde68a",
     logoText: "#122a1f",
+    drawerBg: "#2a5040",
   },
   fonts: { heading: serif, body },
   backgroundCSS: {
@@ -131,6 +134,7 @@ export const neonTheme: SubjectTheme = {
     navAccentText: "#0b1120",
     logoBg: "#22d3ee",
     logoText: "#0b1120",
+    drawerBg: "#141c2e",
   },
   fonts: { heading: serif, body },
   backgroundCSS: {
@@ -163,6 +167,7 @@ export const blueprintTheme: SubjectTheme = {
     navAccentText: "#ffffff",
     logoBg: "#3372A2",
     logoText: "#ffffff",
+    drawerBg: "#1e2f50",
   },
   fonts: { heading: serif, body },
   backgroundCSS: {
