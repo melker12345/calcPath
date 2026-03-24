@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { MathText } from "@/components/math-text";
 import { FlashCard, flashCards, getFlashCardsForTopic } from "@/lib/flashcards";
-import { topics } from "@/lib/content";
+import { topics } from "@/lib/calculus-content";
 
 export function FlashCardDeck() {
   const [selectedTopic, setSelectedTopic] = useState<string>("all");

@@ -16,7 +16,10 @@ const splitMath = (text: string) => {
 
   for (let i = 0; i < text.length; i += 1) {
     const char = text[i];
-    if (char === "$") {
+    if (char === "$" && i > 0 && text[i - 1] === "\\") {
+      // \$ → literal dollar sign: strip the trailing backslash, add $
+      current = current.slice(0, -1) + "$";
+    } else if (char === "$") {
       if (inMath) {
         parts.push({ type: "math", value: current });
       } else if (current) {
@@ -41,15 +44,12 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
 
   if (block) {
     return (
-      <div className="space-y-2 text-zinc-700">
+      <div className="space-y-2">
         {parts.map((part, index) =>
           part.type === "math" ? (
             <BlockMath key={`${part.value}-${index}`}>{part.value}</BlockMath>
           ) : (
-            <p
-              key={`${part.value}-${index}`}
-              className="text-zinc-700"
-            >
+            <p key={`${part.value}-${index}`}>
               {part.value}
             </p>
           ),
@@ -59,7 +59,7 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
   }
 
   return (
-    <span className="text-zinc-700">
+    <span>
       {parts.map((part, index) =>
         part.type === "math" ? (
           <InlineMath key={`${part.value}-${index}`}>{part.value}</InlineMath>

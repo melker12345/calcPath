@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { topics } from "@/lib/content";
+import { topics } from "@/lib/calculus-content";
 import { modules } from "@/lib/modules";
 
 export default function sitemap(): MetadataRoute.Sitemap {

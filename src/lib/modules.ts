@@ -1,4 +1,4 @@
-import { Topic } from "@/lib/content";
+import type { Topic } from "@/lib/shared-types";
 
 export type WorkedExample = {
   title: string;

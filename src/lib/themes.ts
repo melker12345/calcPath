@@ -25,6 +25,7 @@ export type SubjectTheme = {
     navAccentText: string;
     logoBg: string;
     logoText: string;
+    drawerBg: string;
   };
   fonts: { heading: string; body: string };
   backgroundCSS: CSSProperties;
@@ -58,6 +59,7 @@ export const graphPaperTheme: SubjectTheme = {
     navAccentText: "#ffffff",
     logoBg: "#1e293b",
     logoText: "#ffffff",
+    drawerBg: "#ffffff",
   },
   fonts: { heading: serif, body },
   backgroundCSS: {
@@ -95,6 +97,7 @@ export const chalkboardTheme: SubjectTheme = {
     navAccentText: "#122a1f",
     logoBg: "#fde68a",
     logoText: "#122a1f",
+    drawerBg: "#2a5040",
   },
   fonts: { heading: serif, body },
   backgroundCSS: {
@@ -131,6 +134,7 @@ export const neonTheme: SubjectTheme = {
     navAccentText: "#0b1120",
     logoBg: "#22d3ee",
     logoText: "#0b1120",
+    drawerBg: "#141c2e",
   },
   fonts: { heading: serif, body },
   backgroundCSS: {
@@ -138,9 +142,47 @@ export const neonTheme: SubjectTheme = {
   },
 };
 
+export const blueprintTheme: SubjectTheme = {
+  id: "blueprint",
+  name: "Linear Algebra",
+  slug: "linear-algebra",
+  icon: "λ",
+  colors: {
+    bg: "#0f172a",
+    card: "rgba(255,255,255,0.04)",
+    cardHover: "rgba(255,255,255,0.07)",
+    border: "rgba(51,114,162,0.25)",
+    borderBright: "rgba(51,114,162,0.45)",
+    accent: "#3372A2",
+    accentLight: "rgba(51,114,162,0.18)",
+    accentBg: "rgba(51,114,162,0.08)",
+    text: "#e2e8f0",
+    textMuted: "rgba(226,232,240,0.6)",
+    textDim: "rgba(226,232,240,0.35)",
+    navBg: "rgba(15,23,42,0.92)",
+    navBorder: "rgba(51,114,162,0.2)",
+    navText: "#e2e8f0",
+    navTextHover: "#5b9fd4",
+    navAccent: "#3372A2",
+    navAccentText: "#ffffff",
+    logoBg: "#3372A2",
+    logoText: "#ffffff",
+    drawerBg: "#1e2f50",
+  },
+  fonts: { heading: serif, body },
+  backgroundCSS: {
+    background: `
+      radial-gradient(ellipse at 20% 30%, rgba(51,114,162,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 70%, rgba(51,114,162,0.06) 0%, transparent 40%),
+      #0f172a
+    `,
+  },
+};
+
 export const themes = {
   "graph-paper": graphPaperTheme,
   chalkboard: chalkboardTheme,
+  blueprint: blueprintTheme,
   neon: neonTheme,
 } as const;
 
@@ -150,6 +192,8 @@ export function getThemeForSubject(slug: string): SubjectTheme {
       return graphPaperTheme;
     case "statistics":
       return chalkboardTheme;
+    case "linear-algebra":
+      return blueprintTheme;
     default:
       return graphPaperTheme;
   }

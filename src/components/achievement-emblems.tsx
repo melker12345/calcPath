@@ -1,88 +1,256 @@
 "use client";
 
 import { useMemo } from "react";
-import { useAuth } from "@/components/auth-provider";
 import { useProgress } from "@/components/progress-provider";
-import { getTopicTestStats } from "@/lib/progress";
-import { topics } from "@/lib/content";
+import { getPracticeProgress, getTopicTestStats } from "@/lib/progress";
+import { topics as calculusTopics, problems as calculusProblems } from "@/lib/calculus-content";
+import { topics as statisticsTopics, problems as statisticsProblems } from "@/lib/statistics-content";
+import { topics as linalgTopics, problems as linalgProblems } from "@/lib/linalg-content";
+import { SectionCard } from "@/components/section-card";
+import type { Problem, Topic } from "@/lib/shared-types";
 
-// Admin users see all emblems for preview purposes
-const EMBLEM_PREVIEW_IDS = new Set([
-  "f156c714-ded6-45e7-8643-4a78424f4a51",
-]);
+type Achievement = {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+  subject: string;
+  check: (ctx: AchievementContext) => boolean;
+};
 
-/**
- * Floating achievement emblems for topics with perfect (100%) test scores.
- * Purely visual — subtle, non-interactive, non-distracting.
- * They float gently in fixed positions on the page.
- */
-export function AchievementEmblems() {
-  const { user } = useAuth();
-  const { progress } = useProgress();
+type AchievementContext = {
+  progress: ReturnType<typeof useProgress>["progress"];
+  calcTopics: Topic[];
+  calcProblems: Problem[];
+  statsTopics: Topic[];
+  statsProblems: Problem[];
+  linalgTopics: Topic[];
+  linalgProblems: Problem[];
+};
 
-  const isPreview = user ? EMBLEM_PREVIEW_IDS.has(user.id) : false;
+function topicMastered(
+  ctx: AchievementContext,
+  topicId: string,
+  problems: Problem[],
+): boolean {
+  const stats = getPracticeProgress(ctx.progress, topicId, problems);
+  return stats.isComplete;
+}
 
-  const perfectTopics = useMemo(() => {
-    if (isPreview) return topics; // Show all emblems for preview
-    return topics.filter((t) => {
-      const stats = getTopicTestStats(progress, t.id);
-      return stats.isPerfect;
-    });
-  }, [progress, isPreview]);
+function buildAchievements(): Achievement[] {
+  const achievements: Achievement[] = [];
 
-  if (perfectTopics.length === 0) return null;
-
-  // Fixed positions spread around the viewport edges so they don't overlap content
-  const positions = [
-    { top: "15%", right: "3%" },
-    { top: "35%", left: "2%" },
-    { bottom: "25%", right: "4%" },
-    { bottom: "10%", left: "3%" },
-    { top: "60%", right: "2%" },
-    { top: "70%", left: "4%" },
+  const subjects: {
+    slug: string;
+    name: string;
+    icon: string;
+    topics: Topic[];
+    problemsKey: "calcProblems" | "statsProblems" | "linalgProblems";
+    hasTests: boolean;
+  }[] = [
+    { slug: "calculus", name: "Calculus", icon: "∫", topics: calculusTopics, problemsKey: "calcProblems", hasTests: true },
+    { slug: "statistics", name: "Statistics", icon: "σ", topics: statisticsTopics, problemsKey: "statsProblems", hasTests: false },
+    { slug: "linear-algebra", name: "Linear Algebra", icon: "λ", topics: linalgTopics, problemsKey: "linalgProblems", hasTests: false },
   ];
 
-  const topicEmoji: Record<string, string> = {
-    limits: "∞",
-    derivatives: "𝑓′",
-    applications: "📐",
-    integrals: "∫",
-    series: "Σ",
-    "differential-equations": "𝑑𝑦",
-  };
+  for (const s of subjects) {
+    for (const topic of s.topics) {
+      achievements.push({
+        id: `${s.slug}-master-${topic.id}`,
+        icon: s.icon,
+        title: topic.title,
+        description: `Master all practice problems in ${topic.title}`,
+        subject: s.name,
+        check: (ctx) => topicMastered(ctx, topic.id, ctx[s.problemsKey]),
+      });
+    }
+
+    if (s.hasTests) {
+      for (const topic of s.topics) {
+        achievements.push({
+          id: `${s.slug}-perfect-${topic.id}`,
+          icon: "🏆",
+          title: `${topic.title} — Perfect Test`,
+          description: `Score 100% on the ${topic.title} test`,
+          subject: s.name,
+          check: (ctx) => {
+            const stats = getTopicTestStats(ctx.progress, topic.id);
+            return !!stats.isPerfect;
+          },
+        });
+      }
+    }
+
+    achievements.push({
+      id: `${s.slug}-complete-all`,
+      icon: "⭐",
+      title: `${s.name} — All Mastered`,
+      description: `Master every practice problem in ${s.name}`,
+      subject: s.name,
+      check: (ctx) =>
+        s.topics.every((t) => topicMastered(ctx, t.id, ctx[s.problemsKey])),
+    });
+  }
+
+  achievements.push({
+    id: "streak-7",
+    icon: "🔥",
+    title: "Week Warrior",
+    description: "Achieve a 7-day practice streak",
+    subject: "General",
+    check: (ctx) => ctx.progress.streak.longest >= 7,
+  });
+
+  achievements.push({
+    id: "streak-30",
+    icon: "🔥",
+    title: "Monthly Master",
+    description: "Achieve a 30-day practice streak",
+    subject: "General",
+    check: (ctx) => ctx.progress.streak.longest >= 30,
+  });
+
+  achievements.push({
+    id: "first-problem",
+    icon: "🎯",
+    title: "First Steps",
+    description: "Solve your first practice problem",
+    subject: "General",
+    check: (ctx) => ctx.progress.completedProblemIds.length >= 1,
+  });
+
+  achievements.push({
+    id: "fifty-problems",
+    icon: "💪",
+    title: "Half Century",
+    description: "Solve 50 practice problems",
+    subject: "General",
+    check: (ctx) => ctx.progress.completedProblemIds.length >= 50,
+  });
+
+  achievements.push({
+    id: "hundred-problems",
+    icon: "💯",
+    title: "Centurion",
+    description: "Solve 100 practice problems",
+    subject: "General",
+    check: (ctx) => ctx.progress.completedProblemIds.length >= 100,
+  });
+
+  return achievements;
+}
+
+const ALL_ACHIEVEMENTS = buildAchievements();
+
+const SUBJECT_ORDER = ["General", "Calculus", "Statistics", "Linear Algebra"];
+
+export function AchievementsSection() {
+  const { progress } = useProgress();
+
+  const ctx: AchievementContext = useMemo(
+    () => ({
+      progress,
+      calcTopics: calculusTopics,
+      calcProblems: calculusProblems,
+      statsTopics: statisticsTopics,
+      statsProblems: statisticsProblems,
+      linalgTopics: linalgTopics,
+      linalgProblems: linalgProblems,
+    }),
+    [progress],
+  );
+
+  const results = useMemo(
+    () =>
+      ALL_ACHIEVEMENTS.map((a) => ({
+        ...a,
+        completed: a.check(ctx),
+      })),
+    [ctx],
+  );
+
+  const completedCount = results.filter((r) => r.completed).length;
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, typeof results>();
+    for (const r of results) {
+      const list = map.get(r.subject) ?? [];
+      list.push(r);
+      map.set(r.subject, list);
+    }
+    return SUBJECT_ORDER
+      .filter((s) => map.has(s))
+      .map((s) => ({ subject: s, items: map.get(s)! }));
+  }, [results]);
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-0 hidden overflow-hidden md:block" aria-hidden="true">
-      {perfectTopics.map((topic, i) => {
-        const pos = positions[i % positions.length];
-        const emoji = topicEmoji[topic.id] || "⭐";
-        const delay = i * 2;
-        const duration = 12 + (i % 3) * 4;
-
-        return (
+    <SectionCard title="Achievements">
+      <div className="mb-4 flex items-center gap-2">
+        <span className="text-sm font-semibold text-zinc-900">
+          {completedCount}/{results.length}
+        </span>
+        <div className="h-1.5 flex-1 rounded-full bg-zinc-100">
           <div
-            key={topic.id}
-            className="absolute select-none"
+            className="h-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 transition-all"
             style={{
-              ...pos,
-              animation: `float-emblem ${duration}s ease-in-out ${delay}s infinite`,
+              width: `${results.length > 0 ? (completedCount / results.length) * 100 : 0}%`,
             }}
-          >
-            <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-amber-300/30 bg-amber-100/20 text-2xl font-bold text-amber-500/40 md:h-20 md:w-20 md:text-3xl">
-              {emoji}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-5">
+        {grouped.map(({ subject, items }) => (
+          <div key={subject}>
+            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              {subject}
+            </h4>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {items.map((a) => (
+                <div
+                  key={a.id}
+                  className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 transition ${
+                    a.completed
+                      ? "border-amber-200 bg-amber-50"
+                      : "border-zinc-100 bg-zinc-50/50 opacity-50"
+                  }`}
+                >
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-lg font-bold ${
+                      a.completed
+                        ? "bg-amber-100 text-amber-600"
+                        : "bg-zinc-100 text-zinc-400 grayscale"
+                    }`}
+                  >
+                    {a.icon}
+                  </span>
+                  <div className="min-w-0">
+                    <p
+                      className={`text-sm font-semibold leading-tight ${
+                        a.completed ? "text-zinc-900" : "text-zinc-400"
+                      }`}
+                    >
+                      {a.title}
+                    </p>
+                    <p
+                      className={`text-xs leading-snug ${
+                        a.completed ? "text-zinc-500" : "text-zinc-400"
+                      }`}
+                    >
+                      {a.description}
+                    </p>
+                  </div>
+                  {a.completed && (
+                    <span className="ml-auto shrink-0 text-sm text-amber-500">
+                      ✓
+                    </span>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
-        );
-      })}
-
-      <style>{`
-        @keyframes float-emblem {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          25% { transform: translateY(-12px) rotate(3deg); }
-          50% { transform: translateY(-6px) rotate(-2deg); }
-          75% { transform: translateY(-15px) rotate(1deg); }
-        }
-      `}</style>
-    </div>
+        ))}
+      </div>
+    </SectionCard>
   );
 }

@@ -6,7 +6,7 @@ import { SectionCard } from "@/components/section-card";
 import { useAuth } from "@/components/auth-provider";
 import { useProgress } from "@/components/progress-provider";
 import { getPracticeProgress } from "@/lib/progress";
-import { learningPaths, problems, topics } from "@/lib/content";
+import { learningPaths, problems, topics } from "@/lib/calculus-content";
 import { trackEvent } from "@/lib/analytics";
 
 

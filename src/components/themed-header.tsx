@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/components/auth-provider";
+import { SearchTriggerThemed } from "@/components/search-command";
+import { useSimpleTheme } from "@/components/simple-theme-provider";
 import type { SubjectTheme } from "@/lib/themes";
 
 function ProfileIcon({ size = 20, color = "currentColor" }: { size?: number; color?: string }) {
@@ -31,11 +33,26 @@ function ThemedMobileDrawer({
   navLinks: { href: string; label: string }[];
 }) {
   const [mounted, setMounted] = useState(false);
+  const { isSimple } = useSimpleTheme();
   const c = theme.colors;
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const s = isSimple ? {
+    bg: "#fff",
+    border: "#a2a9b1",
+    text: "#202122",
+    linkBg: "#f0f0f0",
+    accent: "#3366cc",
+    accentText: "#fff",
+  } : {
+    bg: c.drawerBg,
+    border: c.borderBright,
+    text: c.text,
+    linkBg: c.accentBg,
+    accent: c.accent,
+    accentText: c.navAccentText,
+  };
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -59,18 +76,18 @@ function ThemedMobileDrawer({
       />
       <div
         className="fixed right-0 top-0 z-[9999] flex h-dvh w-[min(300px,85vw)] flex-col shadow-2xl animate-slide-in-right"
-        style={{ background: c.bg, borderLeft: `1px solid ${c.border}` }}
+        style={{ background: s.bg, borderLeft: `1px solid ${s.border}` }}
         role="dialog"
         aria-modal="true"
         aria-label="Navigation menu"
       >
-        <div className="flex shrink-0 items-center justify-between px-4 py-4" style={{ borderBottom: `1px solid ${c.border}` }}>
-          <span className="text-lg font-bold" style={{ color: c.text }}>Menu</span>
+        <div className="flex shrink-0 items-center justify-between px-4 py-4" style={{ borderBottom: `1px solid ${s.border}` }}>
+          <span className="text-lg font-bold" style={{ color: s.text }}>{theme.name}</span>
           <button
             type="button"
             onClick={onClose}
             className="flex h-10 w-10 items-center justify-center rounded-xl transition active:opacity-70"
-            style={{ background: c.card, color: c.text }}
+            style={{ background: isSimple ? "#f0f0f0" : c.card, color: s.text }}
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -84,19 +101,19 @@ function ThemedMobileDrawer({
               key={link.href}
               href={link.href}
               className="block rounded-xl px-4 py-3.5 text-base font-semibold transition active:opacity-70"
-              style={{ background: c.accentBg, color: c.text }}
+              style={{ background: s.linkBg, color: s.text }}
               onClick={onClose}
             >
               {link.label}
             </Link>
           ))}
+          <div className="my-2" style={{ borderTop: `1px solid ${s.border}` }} />
           {user && (
             <>
-              <div className="my-2" style={{ borderTop: `1px solid ${c.border}` }} />
               <Link
                 href="/account"
                 className="block rounded-xl px-4 py-3.5 text-base font-semibold transition active:opacity-70"
-                style={{ background: c.accentBg, color: c.text }}
+                style={{ background: s.linkBg, color: s.text }}
                 onClick={onClose}
               >
                 Account
@@ -105,24 +122,21 @@ function ThemedMobileDrawer({
                 type="button"
                 onClick={() => { onSignOut(); onClose(); }}
                 className="rounded-xl px-4 py-3.5 text-left text-base font-semibold text-red-500 transition active:opacity-70"
-                style={{ background: c.accentBg }}
+                style={{ background: s.linkBg }}
               >
                 Sign out
               </button>
             </>
           )}
           {!user && (
-            <>
-              <div className="my-2" style={{ borderTop: `1px solid ${c.border}` }} />
-              <Link
-                href="/auth"
-                className="block rounded-xl px-4 py-3.5 text-center text-base font-semibold transition active:opacity-90"
-                style={{ background: c.accent, color: c.navAccentText }}
-                onClick={onClose}
-              >
-                Sign in / Register
-              </Link>
-            </>
+            <Link
+              href="/auth"
+              className="block rounded-xl px-4 py-3.5 text-center text-base font-semibold transition active:opacity-90"
+              style={{ background: s.accent, color: s.accentText }}
+              onClick={onClose}
+            >
+              Sign in / Register
+            </Link>
           )}
         </nav>
       </div>
@@ -139,6 +153,7 @@ export function ThemedHeader({
   subjectSlug: string;
 }) {
   const { user, signOut } = useAuth();
+  const { isSimple } = useSimpleTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const c = theme.colors;
   const prefix = `/${subjectSlug}`;
@@ -147,7 +162,6 @@ export function ThemedHeader({
     { href: `${prefix}/modules`, label: "Modules" },
     { href: `${prefix}/practice`, label: "Practice" },
     { href: `${prefix}/dashboard`, label: "Dashboard" },
-    // { href: `${prefix}/flashcards`, label: "Flash Cards" },  // TODO: re-enable when ready
   ];
 
   return (
@@ -159,13 +173,18 @@ export function ThemedHeader({
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4">
           {/* Logo */}
           <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="CalcPath home">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-rose-400 text-lg font-bold text-white shadow-lg shadow-orange-200 sm:h-10 sm:w-10 sm:rounded-2xl sm:text-xl">
-              ∫
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-lg font-bold sm:h-10 sm:w-10 sm:rounded-2xl sm:text-xl"
+              style={{ background: isSimple ? "#eaecf0" : c.logoBg, color: isSimple ? "#202122" : c.logoText }}
+            >
+              {theme.icon}
             </div>
-            <span className="hidden text-lg font-bold text-orange-900 sm:inline sm:text-xl">CalcPath</span>
+            <span className="hidden text-lg font-bold sm:inline sm:text-xl" style={{ color: c.text }}>
+              CalcPath
+            </span>
           </Link>
 
-          {/* Desktop nav */}
+          {/* Desktop nav — Modules, Practice, Dashboard, Search */}
           <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
             {navLinks.map((link) => (
               <Link
@@ -179,17 +198,11 @@ export function ThemedHeader({
                 {link.label}
               </Link>
             ))}
+            <SearchTriggerThemed borderColor={c.border} textColor={c.navText} />
           </nav>
 
           {/* Mobile controls */}
           <div className="flex items-center gap-2 md:hidden">
-            <Link
-              href={`${prefix}/modules`}
-              className="text-sm font-semibold transition"
-              style={{ color: c.navText }}
-            >
-              Modules
-            </Link>
             {user ? (
               <Link
                 href="/account"
@@ -222,7 +235,7 @@ export function ThemedHeader({
             </button>
           </div>
 
-          {/* Desktop right */}
+          {/* Desktop right — Profile + Sign out */}
           <div className="hidden shrink-0 items-center gap-3 md:flex">
             {user ? (
               <>

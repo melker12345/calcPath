@@ -1,4 +1,4 @@
-import type { Problem } from "../content";
+import type { Problem } from "../shared-types";
 
 const p = (problem: Problem) => problem;
 
