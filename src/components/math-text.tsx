@@ -16,7 +16,10 @@ const splitMath = (text: string) => {
 
   for (let i = 0; i < text.length; i += 1) {
     const char = text[i];
-    if (char === "$") {
+    if (char === "$" && i > 0 && text[i - 1] === "\\") {
+      // \$ → literal dollar sign: strip the trailing backslash, add $
+      current = current.slice(0, -1) + "$";
+    } else if (char === "$") {
       if (inMath) {
         parts.push({ type: "math", value: current });
       } else if (current) {
