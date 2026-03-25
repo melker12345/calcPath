@@ -1,7 +1,33 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { problems as calculusProblems } from "@/lib/calculus-content";
 import { problems as statisticsProblems } from "@/lib/statistics-content";
 import { problems as linalgProblems } from "@/lib/linalg-content";
+
+export const metadata: Metadata = {
+  title: "CalcPath — Learn University Mathematics for Free",
+  description:
+    "Free university-level math courses with step-by-step lessons and practice problems. Learn calculus, statistics, and linear algebra at your own pace — no account required.",
+  keywords: [
+    "learn university mathematics",
+    "university math",
+    "free math courses",
+    "learn calculus online",
+    "learn statistics online",
+    "learn linear algebra online",
+    "university math practice",
+    "calculus course free",
+    "statistics course free",
+    "linear algebra course free",
+  ],
+  alternates: { canonical: "https://calc-path.com" },
+  openGraph: {
+    title: "CalcPath — Learn University Mathematics for Free",
+    description:
+      "Free step-by-step courses in calculus, statistics, and linear algebra. Practice problems with instant feedback, worked solutions, and no account required.",
+    url: "https://calc-path.com",
+  },
+};
 
 const heading = "var(--font-inter), system-ui, -apple-system, sans-serif";
 const body = "var(--font-inter), system-ui, -apple-system, sans-serif";

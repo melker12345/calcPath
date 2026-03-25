@@ -1,4 +1,34 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Learn Statistics — Free University Course | CalcPath",
+  description:
+    "Learn statistics step by step. Free university-level course covering descriptive statistics, probability, distributions, hypothesis testing, ANOVA, regression, and non-parametric tests. Practice problems with full worked solutions.",
+  alternates: { canonical: "https://calc-path.com/statistics" },
+};
+
+const courseJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Course",
+  name: "Statistics",
+  description:
+    "Free university statistics course covering descriptive statistics, probability, distributions, hypothesis testing, ANOVA, regression, and non-parametric tests. Includes practice problems with step-by-step solutions.",
+  provider: {
+    "@type": "Organization",
+    name: "CalcPath",
+    url: "https://calc-path.com",
+  },
+  url: "https://calc-path.com/statistics",
+  educationalLevel: "University",
+  inLanguage: "en",
+  isAccessibleForFree: true,
+  hasCourseInstance: [
+    { "@type": "CourseInstance", name: "Descriptive Statistics", url: "https://calc-path.com/statistics/modules/descriptive" },
+    { "@type": "CourseInstance", name: "Hypothesis Testing", url: "https://calc-path.com/statistics/modules/hypothesis-testing" },
+    { "@type": "CourseInstance", name: "Linear Regression", url: "https://calc-path.com/statistics/modules/regression" },
+  ],
+};
 
 const serif = "var(--font-newsreader), Georgia, serif";
 const body = "var(--font-lora), Georgia, serif";
@@ -28,6 +58,10 @@ const curriculum = [
 export default function StatisticsHome() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(courseJsonLd) }}
+      />
       {/* Hero */}
       <section className="relative px-6 pb-20 pt-16 sm:px-12 sm:pb-28 sm:pt-24">
         <div className="mx-auto max-w-4xl">

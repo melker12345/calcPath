@@ -4,17 +4,31 @@ import { chalkboardTheme } from "@/lib/themes";
 
 export const metadata: Metadata = {
   title: {
-    default: "Statistics — Free Step-by-Step Lessons | CalcPath",
+    default: "Learn Statistics — Free University Course | CalcPath",
     template: "%s | CalcPath",
   },
   description:
-    "Free step-by-step statistics modules, practice problems with instant feedback. Master descriptive stats, probability, distributions, inference & regression.",
+    "Learn statistics for free. Step-by-step modules covering descriptive statistics, probability, distributions, hypothesis testing, regression, and more. Practice problems with worked solutions.",
+  keywords: [
+    "learn statistics",
+    "statistics course",
+    "university statistics",
+    "free statistics course",
+    "statistics practice problems",
+    "probability and statistics",
+    "hypothesis testing",
+    "regression analysis",
+    "step by step statistics",
+    "statistics help",
+    "introductory statistics",
+  ],
   openGraph: {
-    title: "CalcPath — Learn Statistics Step by Step",
+    title: "Learn Statistics for Free — Step-by-Step | CalcPath",
     description:
-      "Free step-by-step modules, practice problems, and worked examples. Master statistics at your own pace.",
+      "Free university statistics course. Probability, distributions, hypothesis testing, regression, and more — with practice problems and full worked solutions.",
     url: "https://calc-path.com/statistics",
   },
+  alternates: { canonical: "https://calc-path.com/statistics" },
 };
 
 export default function StatisticsLayout({

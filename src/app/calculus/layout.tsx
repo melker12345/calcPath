@@ -4,17 +4,31 @@ import { graphPaperTheme } from "@/lib/themes";
 
 export const metadata: Metadata = {
   title: {
-    default: "Calculus — Free Step-by-Step Lessons | CalcPath",
+    default: "Learn Calculus — Free University Course | CalcPath",
     template: "%s | CalcPath",
   },
   description:
-    "Free step-by-step calculus modules, 360+ practice problems with instant feedback, tests, and flashcards. Master limits, derivatives, integrals & more.",
+    "Learn calculus for free. Step-by-step modules covering limits, derivatives, integrals, sequences, series, and multivariable calculus. 360+ practice problems with worked solutions.",
+  keywords: [
+    "learn calculus",
+    "calculus course",
+    "university calculus",
+    "calculus I",
+    "calculus II",
+    "calculus III",
+    "free calculus course",
+    "calculus practice problems",
+    "limits derivatives integrals",
+    "step by step calculus",
+    "calculus help",
+  ],
   openGraph: {
-    title: "CalcPath — Learn Calculus Step by Step",
+    title: "Learn Calculus for Free — Step-by-Step | CalcPath",
     description:
-      "Free step-by-step modules, 360+ practice problems, tests, and flashcards. Master calculus at your own pace.",
+      "Free university calculus course. Limits, derivatives, integrals, and more — with 360+ practice problems and full worked solutions.",
     url: "https://calc-path.com/calculus",
   },
+  alternates: { canonical: "https://calc-path.com/calculus" },
 };
 
 export default function CalculusLayout({
