@@ -14,14 +14,14 @@ const newsreader = Newsreader({
   variable: "--font-newsreader",
   subsets: ["latin"],
   style: ["normal", "italic"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "700"],
 });
 
 const lora = Lora({
   variable: "--font-lora",
   subsets: ["latin"],
   style: ["normal", "italic"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "600"],
 });
 
 export const metadata: Metadata = {

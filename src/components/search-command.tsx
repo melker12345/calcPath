@@ -11,12 +11,6 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { topics as calculusTopics } from "@/lib/calculus-content";
-import { topics as statisticsTopics } from "@/lib/statistics-content";
-import { topics as linalgTopics } from "@/lib/linalg-content";
-import { modules as calculusModules } from "@/lib/modules";
-import { modules as statisticsModules } from "@/lib/statistics-modules";
-import { modules as linalgModules } from "@/lib/linalg-modules";
 
 type SearchEntry = {
   label: string;
@@ -26,19 +20,35 @@ type SearchEntry = {
   kind: "topic" | "section" | "page";
 };
 
-function buildIndex(): SearchEntry[] {
+async function loadIndex(): Promise<SearchEntry[]> {
+  const [
+    { topics: calculusTopics },
+    { topics: statisticsTopics },
+    { topics: linalgTopics },
+    { modules: calculusModules },
+    { modules: statisticsModules },
+    { modules: linalgModules },
+  ] = await Promise.all([
+    import("@/lib/calculus-content"),
+    import("@/lib/statistics-content"),
+    import("@/lib/linalg-content"),
+    import("@/lib/modules"),
+    import("@/lib/statistics-modules"),
+    import("@/lib/linalg-modules"),
+  ]);
+
   const entries: SearchEntry[] = [];
 
   const subjects = [
-    { slug: "calculus", icon: "∫", name: "Calculus", topics: calculusTopics, modules: calculusModules },
-    { slug: "statistics", icon: "σ", name: "Statistics", topics: statisticsTopics, modules: statisticsModules },
-    { slug: "linear-algebra", icon: "λ", name: "Linear Algebra", topics: linalgTopics, modules: linalgModules },
+    { slug: "calculus", icon: "\u222b", name: "Calculus", topics: calculusTopics, modules: calculusModules },
+    { slug: "statistics", icon: "\u03c3", name: "Statistics", topics: statisticsTopics, modules: statisticsModules },
+    { slug: "linear-algebra", icon: "\u03bb", name: "Linear Algebra", topics: linalgTopics, modules: linalgModules },
   ];
 
   for (const s of subjects) {
     entries.push({ label: s.name, description: `${s.topics.length} topics`, href: `/${s.slug}`, subjectIcon: s.icon, kind: "page" });
-    entries.push({ label: `${s.name} — Practice`, description: "Practice problems", href: `/${s.slug}/practice`, subjectIcon: s.icon, kind: "page" });
-    entries.push({ label: `${s.name} — Dashboard`, description: "Your progress", href: `/${s.slug}/dashboard`, subjectIcon: s.icon, kind: "page" });
+    entries.push({ label: `${s.name} \u2014 Practice`, description: "Practice problems", href: `/${s.slug}/practice`, subjectIcon: s.icon, kind: "page" });
+    entries.push({ label: `${s.name} \u2014 Dashboard`, description: "Your progress", href: `/${s.slug}/dashboard`, subjectIcon: s.icon, kind: "page" });
 
     for (const topic of s.topics) {
       entries.push({ label: topic.title, description: `${s.name} module`, href: `/${s.slug}/modules/${topic.id}`, subjectIcon: s.icon, kind: "topic" });
@@ -49,7 +59,7 @@ function buildIndex(): SearchEntry[] {
           const slug = section.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
           entries.push({
             label: section.title,
-            description: `${topic.title} — ${s.name}`,
+            description: `${topic.title} \u2014 ${s.name}`,
             href: `/${s.slug}/modules/${topic.id}#${slug}`,
             subjectIcon: s.icon,
             kind: "section",
@@ -86,11 +96,11 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [index, setIndex] = useState<SearchEntry[]>([]);
+  const indexLoaded = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-
-  const index = useMemo(() => buildIndex(), []);
 
   useEffect(() => setMounted(true), []);
 
@@ -112,7 +122,13 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     setActiveIndex(0);
   }, []);
 
-  const open = useCallback(() => setIsOpen(true), []);
+  const open = useCallback(() => {
+    setIsOpen(true);
+    if (!indexLoaded.current) {
+      indexLoaded.current = true;
+      loadIndex().then(setIndex);
+    }
+  }, []);
 
   const navigate = useCallback(
     (href: string) => {

@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
+  experimental: {
+    optimizePackageImports: ["lucide-react", "katex"],
+  },
   async redirects() {
     return [
       { source: "/modules", destination: "/calculus/modules", permanent: true },
