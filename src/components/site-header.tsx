@@ -25,29 +25,32 @@ const subjects = [
   { slug: "linear-algebra", label: "Linear Algebra", icon: "λ", topics: linalgTopics },
 ] as const;
 
-function SubjectDropdown({ subject }: { subject: (typeof subjects)[number] }) {
-  const [open, setOpen] = useState(false);
-  const timeout = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const ref = useRef<HTMLDivElement>(null);
-
-  const enter = () => { clearTimeout(timeout.current); setOpen(true); };
-  const leave = () => { timeout.current = setTimeout(() => setOpen(false), 150); };
-
-  useEffect(() => () => clearTimeout(timeout.current), []);
-
+function SubjectDropdown({
+  subject,
+  isOpen,
+  onEnter,
+  onLeave,
+  onClose,
+}: {
+  subject: (typeof subjects)[number];
+  isOpen: boolean;
+  onEnter: () => void;
+  onLeave: () => void;
+  onClose: () => void;
+}) {
   return (
-    <div ref={ref} className="relative" onMouseEnter={enter} onMouseLeave={leave}>
+    <div className="relative" onMouseEnter={onEnter} onMouseLeave={onLeave}>
       <Link
         href={`/${subject.slug}`}
         className="flex items-center gap-1 px-1 py-1 text-sm font-medium text-zinc-700 transition hover:text-zinc-900"
       >
         {subject.label}
-        <svg className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <svg className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </Link>
 
-      {open && (
+      {isOpen && (
         <div className="absolute left-0 top-full z-50 pt-1.5">
           <div className="w-64 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg">
             <div className="max-h-72 overflow-y-auto py-1">
@@ -56,7 +59,7 @@ function SubjectDropdown({ subject }: { subject: (typeof subjects)[number] }) {
                   key={t.id}
                   href={`/${subject.slug}/modules/${t.id}`}
                   className="block px-3.5 py-2 text-sm text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-900"
-                  onClick={() => setOpen(false)}
+                  onClick={onClose}
                 >
                   {t.title}
                 </Link>
@@ -66,7 +69,7 @@ function SubjectDropdown({ subject }: { subject: (typeof subjects)[number] }) {
               <Link
                 href={`/${subject.slug}/dashboard`}
                 className="flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 hover:text-zinc-900"
-                onClick={() => setOpen(false)}
+                onClick={onClose}
               >
                 Dashboard
                 <span className="text-zinc-400">→</span>
@@ -218,6 +221,19 @@ function MobileDrawer({
 export const SiteHeader = () => {
   const { user, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeSlug, setActiveSlug] = useState<string | null>(null);
+  const closeTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const handleEnter = (slug: string) => {
+    clearTimeout(closeTimeout.current);
+    setActiveSlug(slug);
+  };
+
+  const handleLeave = () => {
+    closeTimeout.current = setTimeout(() => setActiveSlug(null), 150);
+  };
+
+  useEffect(() => () => clearTimeout(closeTimeout.current), []);
 
   return (
     <>
@@ -234,7 +250,14 @@ export const SiteHeader = () => {
           {/* Desktop nav — subject dropdowns + search */}
           <nav className="hidden items-center gap-5 text-sm font-medium md:flex">
             {subjects.map((s) => (
-              <SubjectDropdown key={s.slug} subject={s} />
+              <SubjectDropdown
+                key={s.slug}
+                subject={s}
+                isOpen={activeSlug === s.slug}
+                onEnter={() => handleEnter(s.slug)}
+                onLeave={handleLeave}
+                onClose={() => setActiveSlug(null)}
+              />
             ))}
             <SearchTrigger />
           </nav>
