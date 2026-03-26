@@ -161,7 +161,7 @@ export default function LinalgModulePage() {
                         <div key={example.title} className="print-keep-together rounded-xl p-5" style={{ border: `2px solid rgba(51,114,162,0.2)`, background: "rgba(51,114,162,0.06)" }}>
                           <div className="mb-3 flex items-center gap-3">
                             <span className="flex h-7 w-7 items-center justify-center rounded-lg text-sm font-bold" style={{ background: "rgba(51,114,162,0.2)", color: accentLight }}>{exIdx + 1}</span>
-                            <h4 className="text-lg font-semibold" style={{ color: accentLight }}>{example.title}</h4>
+                            <h4 className="text-lg font-semibold" style={{ color: accentLight }}><MathText text={example.title} /></h4>
                           </div>
                           <ol className="space-y-2.5 pl-4 text-base leading-relaxed" style={{ color: text }}>
                             {example.steps.map((step) => (

@@ -398,7 +398,7 @@ export default function ModulePage() {
                             {exIdx + 1}
                           </span>
                           <h4 className="text-lg font-semibold text-amber-900">
-                            {example.title}
+                            <MathText text={example.title} />
                           </h4>
                         </div>
                         <ol className="space-y-2.5 pl-4 text-base leading-relaxed text-zinc-700">
