@@ -44,7 +44,15 @@ const latexToPlain = (latex: string) => {
     .replace(/\\sin/g, "sin")
     .replace(/\\cos/g, "cos")
     .replace(/\\tan/g, "tan")
+    .replace(/\\sec/g, "sec")
+    .replace(/\\csc/g, "csc")
+    .replace(/\\cot/g, "cot")
+    .replace(/\\arcsin/g, "arcsin")
+    .replace(/\\arccos/g, "arccos")
+    .replace(/\\arctan/g, "arctan")
     .replace(/\\ln/g, "ln")
+    .replace(/\\log/g, "log")
+    .replace(/\\exp/g, "exp")
     .replace(/\\pi/g, "pi");
 
   // sqrt
@@ -96,6 +104,12 @@ export const normalizeAnswer = (input: string) => {
 
   // Normalize exponent parentheses: x^(2x) -> x^2x
   out = out.replace(/\^\(([^)]+)\)/g, "^$1");
+
+  // Normalize trig/func^n(arg) -> func(arg)^n  e.g. sec^2(x) -> sec(x)^2
+  out = out.replace(
+    /(sin|cos|tan|sec|csc|cot|arcsin|arccos|arctan|ln|log|exp)\^([\w.]+)\(([^)]*)\)/g,
+    "$1($3)^$2",
+  );
 
   // Common unicode arrow variants don't matter once we strip whitespace.
   out = stripTrailingConstant(out);
