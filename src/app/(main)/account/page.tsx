@@ -1,13 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { useProgress } from "@/components/progress-provider";
 import { useSimpleTheme } from "@/components/simple-theme-provider";
 import { AchievementsSection } from "@/components/achievement-emblems";
 import { SectionCard } from "@/components/section-card";
 import { supabase } from "@/lib/supabase/client";
+import {
+  getProblemMeta,
+  getPromptPreview,
+  getTopicMeta,
+  inferSubjectFromPath,
+  inferTopicIdFromPath,
+} from "@/lib/feedback-metadata";
 
 export default function AccountPage() {
   return (
@@ -132,8 +139,49 @@ type FeedbackRow = {
   target_id: string | null;
   page_url: string | null;
   user_id: string | null;
+  user_email?: string | null;
   created_at: string;
 };
+
+type FeedbackTargetSummary = {
+  subjectLabel: string | null;
+  topicTitle: string | null;
+  questionNumber: number | null;
+  internalId: string | null;
+  promptPreview: string | null;
+  routePath: string | null;
+};
+
+function summarizeFeedbackTarget(fb: FeedbackRow): FeedbackTargetSummary {
+  const routePath = fb.page_url?.replace(/^https?:\/\/[^/]+/, "") ?? null;
+  const pathSubject = inferSubjectFromPath(routePath);
+
+  if (fb.target_type === "problem") {
+    const meta = getProblemMeta(fb.target_id);
+    return {
+      subjectLabel: meta?.subjectLabel ?? null,
+      topicTitle: meta?.topicTitle ?? null,
+      questionNumber: meta?.questionNumber ?? null,
+      internalId: meta?.id ?? fb.target_id ?? null,
+      promptPreview: getPromptPreview(meta?.prompt ?? null),
+      routePath,
+    };
+  }
+
+  const sectionTopicId = fb.target_type === "section"
+    ? fb.target_id?.split(":")[0] ?? null
+    : inferTopicIdFromPath(routePath);
+  const topicMeta = getTopicMeta(sectionTopicId, pathSubject);
+
+  return {
+    subjectLabel: topicMeta?.subjectLabel ?? null,
+    topicTitle: topicMeta?.title ?? null,
+    questionNumber: null,
+    internalId: fb.target_id ?? null,
+    promptPreview: null,
+    routePath,
+  };
+}
 
 function AdminFeedbackPanel() {
   const [feedback, setFeedback] = useState<FeedbackRow[] | null>(null);
@@ -179,6 +227,11 @@ function AdminFeedbackPanel() {
   useEffect(() => {
     loadFeedback();
   }, [loadFeedback]);
+
+  const feedbackWithSummary = useMemo(
+    () => feedback?.map((fb) => ({ fb, summary: summarizeFeedbackTarget(fb) })) ?? [],
+    [feedback],
+  );
 
   if (feedback === null && !loading && !error) return null;
   if (feedback === null && !loading) return null;
@@ -227,13 +280,13 @@ function AdminFeedbackPanel() {
         )}
 
         {feedback && feedback.length > 0 && (
-          <div className="space-y-2">
-            {feedback.map((fb) => (
+          <div className="space-y-3">
+            {feedbackWithSummary.map(({ fb, summary }) => (
               <div
                 key={fb.id}
-                className="rounded-xl border border-zinc-100 bg-zinc-50/50 px-4 py-3"
+                className="rounded-2xl border border-zinc-100 bg-zinc-50/60 px-4 py-4"
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-start gap-2">
                   <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase ${kindColors[fb.kind] ?? "bg-zinc-100 text-zinc-600"}`}>
                     {fb.kind}
                   </span>
@@ -242,10 +295,36 @@ function AdminFeedbackPanel() {
                       {fb.vote === 1 ? "+1" : "-1"}
                     </span>
                   )}
-                  <span className="ml-auto text-[11px] text-zinc-400">
+                  <span className="ml-auto shrink-0 text-[11px] text-zinc-400">
                     {new Date(fb.created_at).toLocaleString()}
                   </span>
                 </div>
+
+                {(summary.subjectLabel || summary.topicTitle || summary.questionNumber !== null) && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                    {summary.subjectLabel && (
+                      <span className="rounded-full bg-white px-2.5 py-1 font-medium text-zinc-700 ring-1 ring-zinc-200">
+                        {summary.subjectLabel}
+                      </span>
+                    )}
+                    {summary.topicTitle && (
+                      <span className="rounded-full bg-white px-2.5 py-1 font-medium text-zinc-700 ring-1 ring-zinc-200">
+                        {summary.topicTitle}
+                      </span>
+                    )}
+                    {summary.questionNumber !== null && (
+                      <span className="rounded-full bg-orange-50 px-2.5 py-1 font-semibold text-orange-700 ring-1 ring-orange-200">
+                        Q{summary.questionNumber}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {summary.promptPreview && (
+                  <p className="mt-3 rounded-xl bg-white px-3 py-2 text-sm leading-relaxed text-zinc-700 ring-1 ring-zinc-100">
+                    {summary.promptPreview}
+                  </p>
+                )}
 
                 {fb.message && (
                   <p className="mt-2 text-sm leading-relaxed text-zinc-700">
@@ -253,15 +332,24 @@ function AdminFeedbackPanel() {
                   </p>
                 )}
 
-                {fb.target_id && (
-                  <p className="mt-1 text-[11px] text-zinc-400">
-                    Target: {fb.target_type}/{fb.target_id}
-                  </p>
-                )}
-
-                <div className="mt-1 flex flex-wrap gap-3 text-[11px] text-zinc-400">
-                  {fb.user_id && <span>User: {fb.user_id.slice(0, 8)}...</span>}
-                  {fb.page_url && <span>{fb.page_url.replace(/^https?:\/\/[^/]+/, "")}</span>}
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-zinc-400">
+                  {summary.internalId && (
+                    <span>
+                      Internal ID: <span className="font-mono">{summary.internalId}</span>
+                    </span>
+                  )}
+                  {fb.target_type && (
+                    <span>Target type: {fb.target_type}</span>
+                  )}
+                  <span>
+                    User:{" "}
+                    {fb.user_email
+                      ? fb.user_email
+                      : fb.user_id
+                        ? `${fb.user_id.slice(0, 8)}...`
+                        : "Anonymous"}
+                  </span>
+                  {summary.routePath && <span>{summary.routePath}</span>}
                 </div>
               </div>
             ))}

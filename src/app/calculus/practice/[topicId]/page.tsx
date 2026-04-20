@@ -10,42 +10,7 @@ import { useProgress } from "@/components/progress-provider";
 import { problems, topics, getModuleSectionUrl, getModuleSectionTitle } from "@/lib/calculus-content";
 import { trackEvent } from "@/lib/analytics";
 import { isAnswerCorrectAsync } from "@/lib/answer-check";
-/** Detect variables and functions in a question prompt for suggested keys */
-function detectQuestionContext(prompt: string) {
-  const context: {
-    hasVariable: string[];
-    hasTrig: boolean;
-    hasExp: boolean;
-    hasLn: boolean;
-    hasPi: boolean;
-  } = {
-    hasVariable: [],
-    hasTrig: false,
-    hasExp: false,
-    hasLn: false,
-    hasPi: false,
-  };
-
-  // Check for common variables
-  if (/\bx\b/.test(prompt)) context.hasVariable.push("x");
-  if (/\by\b/.test(prompt)) context.hasVariable.push("y");
-  if (/\bt\b/.test(prompt)) context.hasVariable.push("t");
-  if (/\bn\b/.test(prompt)) context.hasVariable.push("n");
-
-  // Check for trig functions
-  if (/\\?(sin|cos|tan|sec|csc|cot)/i.test(prompt)) context.hasTrig = true;
-
-  // Check for exponential
-  if (/e\^|\\exp/i.test(prompt)) context.hasExp = true;
-
-  // Check for natural log
-  if (/\\ln|\\log/i.test(prompt)) context.hasLn = true;
-
-  // Check for pi
-  if (/\\pi|π/i.test(prompt)) context.hasPi = true;
-
-  return context;
-}
+import { detectQuestionContext } from "@/lib/math-input-helpers";
 
 type FeedbackState = 
   | null 
@@ -71,6 +36,8 @@ export default function PracticeTopicPage() {
   const [resumeReady, setResumeReady] = useState(false);
 
   const current = displayProblems[index];
+  const canonicalQuestionNumber =
+    current ? topicProblems.findIndex((problem) => problem.id === current.id) + 1 : 0;
 
   // Get question context for MathInput suggestions
   const questionContext = useMemo(() => {
@@ -504,7 +471,7 @@ export default function PracticeTopicPage() {
         )}
 
         {/* Navigation toolbar */}
-        <div className="mt-1 flex items-center justify-between py-1 sm:mt-3 sm:py-0">
+        <div className="mt-1 grid grid-cols-[1fr_auto_1fr] items-center py-1 sm:mt-3 sm:py-0">
           <div className="flex items-center gap-1">
             <button
               type="button"
@@ -547,7 +514,10 @@ export default function PracticeTopicPage() {
               </button>
             )}
           </div>
-          <Link className="rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm" href="/calculus/practice">
+          <div className="justify-self-center rounded-full px-2 py-0.5 text-[11px] font-medium text-zinc-400 ring-1 ring-zinc-200/80">
+            Q{canonicalQuestionNumber}
+          </div>
+          <Link className="justify-self-end rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm" href="/calculus/practice">
             All topics
           </Link>
         </div>

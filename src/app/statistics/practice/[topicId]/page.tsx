@@ -9,19 +9,7 @@ import { VoteFeedback } from "@/components/vote-feedback";
 import { useProgress } from "@/components/progress-provider";
 import { problems, topics, getModuleSectionUrl, getModuleSectionTitle } from "@/lib/statistics-content";
 import { isAnswerCorrectAsync } from "@/lib/answer-check";
-
-function detectQuestionContext(prompt: string) {
-  const ctx = { hasVariable: [] as string[], hasTrig: false, hasExp: false, hasLn: false, hasPi: false };
-  if (/\bx\b/.test(prompt)) ctx.hasVariable.push("x");
-  if (/\by\b/.test(prompt)) ctx.hasVariable.push("y");
-  if (/\bt\b/.test(prompt)) ctx.hasVariable.push("t");
-  if (/\bn\b/.test(prompt)) ctx.hasVariable.push("n");
-  if (/\\?(sin|cos|tan|sec|csc|cot)/i.test(prompt)) ctx.hasTrig = true;
-  if (/e\^|\\exp/i.test(prompt)) ctx.hasExp = true;
-  if (/\\ln|\\log/i.test(prompt)) ctx.hasLn = true;
-  if (/\\pi|π/i.test(prompt)) ctx.hasPi = true;
-  return ctx;
-}
+import { detectQuestionContext } from "@/lib/math-input-helpers";
 
 type FeedbackState =
   | null
@@ -45,6 +33,8 @@ export default function StatisticsPracticeTopic() {
   const [resumeReady, setResumeReady] = useState(false);
 
   const current = displayProblems[index];
+  const canonicalQuestionNumber =
+    current ? topicProblems.findIndex((problem) => problem.id === current.id) + 1 : 0;
   const questionContext = useMemo(() => current ? detectQuestionContext(current.prompt) : undefined, [current]);
 
   useEffect(() => {
@@ -290,7 +280,7 @@ export default function StatisticsPracticeTopic() {
         )}
 
         {/* Navigation */}
-        <div className="mt-1 flex items-center justify-between py-1 sm:mt-3 sm:py-0">
+        <div className="mt-1 grid grid-cols-[1fr_auto_1fr] items-center py-1 sm:mt-3 sm:py-0">
           <div className="flex items-center gap-1">
             <button type="button" onClick={goToPrev} disabled={index === 0}
               className="flex h-8 w-8 items-center justify-center rounded-lg transition disabled:opacity-25 sm:h-9 sm:w-9"
@@ -316,7 +306,13 @@ export default function StatisticsPracticeTopic() {
                 }}>Skip to unsolved</button>
             )}
           </div>
-          <Link className="rounded-lg px-2.5 py-1 text-xs font-medium transition sm:text-sm" style={{ color: "rgba(232,228,217,0.5)" }} href="/statistics/practice">
+          <div
+            className="justify-self-center rounded-full px-2 py-0.5 text-[11px] font-medium ring-1"
+            style={{ color: "rgba(232,228,217,0.58)", borderColor: "rgba(253,230,138,0.16)" }}
+          >
+            Q{canonicalQuestionNumber}
+          </div>
+          <Link className="justify-self-end rounded-lg px-2.5 py-1 text-xs font-medium transition sm:text-sm" style={{ color: "rgba(232,228,217,0.5)" }} href="/statistics/practice">
             All topics
           </Link>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { useAuth } from "@/components/auth-provider";
 
 const voted = new Set<string>();
 
@@ -13,11 +14,13 @@ export function VoteFeedback({
   targetId: string;
   userId?: string;
 }) {
+  const { user } = useAuth();
   const key = `${targetType}:${targetId}`;
   const [selection, setSelection] = useState<1 | -1 | null>(
     voted.has(`${key}:1`) ? 1 : voted.has(`${key}:-1`) ? -1 : null,
   );
   const sending = useRef(false);
+  const resolvedUserId = userId ?? user?.id ?? null;
 
   const castVote = useCallback(
     async (vote: 1 | -1) => {
@@ -38,7 +41,7 @@ export function VoteFeedback({
             target_type: targetType,
             target_id: targetId,
             vote,
-            user_id: userId ?? null,
+            user_id: resolvedUserId,
             page_url: typeof window !== "undefined" ? window.location.href : null,
           }),
         });
@@ -48,7 +51,7 @@ export function VoteFeedback({
         sending.current = false;
       }
     },
-    [key, selection, targetType, targetId, userId],
+    [key, resolvedUserId, selection, targetType, targetId],
   );
 
   return (

@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Scratchpad } from "@/components/scratchpad";
+import { deriveSuggestionLabels, type QuestionContext } from "@/lib/math-input-helpers";
 
 let stylesInjected = false;
 
@@ -54,13 +55,7 @@ interface MathInputProps {
   hintDisabled?: boolean;
   placeholder?: string;
   subject?: Subject;
-  questionContext?: {
-    hasVariable?: string[];
-    hasTrig?: boolean;
-    hasExp?: boolean;
-    hasLn?: boolean;
-    hasPi?: boolean;
-  };
+  questionContext?: QuestionContext;
   answerHint?: string;
   feedbackOverlay?: React.ReactNode;
   onDismissOverlay?: () => void;
@@ -84,48 +79,82 @@ type SuggestionKey = { label: string; action: () => void };
 
 function deriveKeys(
   answer: string | undefined,
-  questionCtx: MathInputProps["questionContext"],
+  questionCtx: QuestionContext | undefined,
   write: (l: string) => void,
   cmd: (l: string) => void,
   insertFn: (l: string) => void,
 ): SuggestionKey[] {
-  const keys: SuggestionKey[] = [];
-  const added = new Set<string>();
-  const add = (label: string, action: () => void) => {
-    if (added.has(label)) return;
-    added.add(label);
-    keys.push({ label, action });
-  };
-
-  const src = (answer ?? "") + " " + (questionCtx?.hasVariable?.join(" ") ?? "");
-
-  if (/\bx\b/.test(src)) add("x", () => write("x"));
-  if (/\by\b/.test(src)) add("y", () => write("y"));
-  if (/\bt\b/.test(src)) add("t", () => write("t"));
-  if (/\bn\b/.test(src)) add("n", () => write("n"));
-  if (/\ba\b/.test(src)) add("a", () => write("a"));
-  if (/\bC\b/.test(src)) add("C", () => write("C"));
-
-  if (/sin/i.test(src)) add("sin", () => insertFn("\\sin\\left(\\right)"));
-  if (/cos/i.test(src)) add("cos", () => insertFn("\\cos\\left(\\right)"));
-  if (/tan/i.test(src)) add("tan", () => insertFn("\\tan\\left(\\right)"));
-  if (/sec/i.test(src)) add("sec", () => insertFn("\\sec\\left(\\right)"));
-  if (/csc/i.test(src)) add("csc", () => insertFn("\\csc\\left(\\right)"));
-  if (/cot/i.test(src)) add("cot", () => insertFn("\\cot\\left(\\right)"));
-  if (/arcsin/i.test(src)) add("arcsin", () => insertFn("\\arcsin\\left(\\right)"));
-  if (/arccos/i.test(src)) add("arccos", () => insertFn("\\arccos\\left(\\right)"));
-  if (/arctan/i.test(src)) add("arctan", () => insertFn("\\arctan\\left(\\right)"));
-
-  if (/\be\b|e\^/.test(src)) add("e", () => write("e"));
-  if (/\bln\b/i.test(src)) add("ln", () => insertFn("\\ln\\left(\\right)"));
-  if (/\blog\b/i.test(src)) add("log", () => insertFn("\\log\\left(\\right)"));
-  if (/pi|π/i.test(src) || questionCtx?.hasPi) add("π", () => write("\\pi"));
-  if (/inf/i.test(src)) add("∞", () => write("\\infty"));
-  if (/sqrt/i.test(src)) add("√", () => cmd("\\sqrt"));
-  if (/\//.test(answer ?? "")) add("a/b", () => cmd("\\frac"));
-  if (/\^/.test(answer ?? "")) add("xⁿ", () => cmd("^"));
-
-  return keys;
+  return deriveSuggestionLabels(answer, questionCtx).map((label) => {
+    switch (label) {
+      case "x":
+      case "y":
+      case "t":
+      case "n":
+      case "a":
+      case "z":
+      case "p":
+      case "C":
+      case "A":
+      case "B":
+      case "P":
+      case "N":
+      case "T":
+      case "e":
+      case "=":
+      case ",":
+      case "[":
+      case "]":
+      case "<":
+      case ">":
+        return { label, action: () => write(label) };
+      case "λ":
+        return { label, action: () => write("\\lambda") };
+      case "sin":
+        return { label, action: () => insertFn("\\sin\\left(\\right)") };
+      case "cos":
+        return { label, action: () => insertFn("\\cos\\left(\\right)") };
+      case "tan":
+        return { label, action: () => insertFn("\\tan\\left(\\right)") };
+      case "sinh":
+        return { label, action: () => insertFn("\\sinh\\left(\\right)") };
+      case "cosh":
+        return { label, action: () => insertFn("\\cosh\\left(\\right)") };
+      case "tanh":
+        return { label, action: () => insertFn("\\tanh\\left(\\right)") };
+      case "sec":
+        return { label, action: () => insertFn("\\sec\\left(\\right)") };
+      case "csc":
+        return { label, action: () => insertFn("\\csc\\left(\\right)") };
+      case "cot":
+        return { label, action: () => insertFn("\\cot\\left(\\right)") };
+      case "arcsin":
+        return { label, action: () => insertFn("\\arcsin\\left(\\right)") };
+      case "arccos":
+        return { label, action: () => insertFn("\\arccos\\left(\\right)") };
+      case "arctan":
+        return { label, action: () => insertFn("\\arctan\\left(\\right)") };
+      case "ln":
+        return { label, action: () => insertFn("\\ln\\left(\\right)") };
+      case "log":
+        return { label, action: () => insertFn("\\log\\left(\\right)") };
+      case "π":
+        return { label, action: () => write("\\pi") };
+      case "∞":
+        return { label, action: () => write("\\infty") };
+      case "√":
+        return { label, action: () => cmd("\\sqrt") };
+      case "| |":
+        return { label, action: () => insertFn("\\left|\\right|") };
+      case "_":
+        return { label, action: () => cmd("_") };
+      case "a/b":
+        return { label, action: () => cmd("\\frac") };
+      case "xⁿ":
+        return { label, action: () => cmd("^") };
+      default:
+        return { label, action: () => write(label) };
+    }
+  });
 }
 
 export function MathInput({

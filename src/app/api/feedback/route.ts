@@ -172,5 +172,28 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Failed to fetch feedback" }, { status: 500 });
   }
 
-  return NextResponse.json({ feedback: data });
+  const userIds = [...new Set((data ?? []).map((row) => row.user_id).filter(Boolean))] as string[];
+  let emailByUserId = new Map<string, string | null>();
+
+  if (userIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id,email")
+      .in("id", userIds);
+
+    if (profilesError) {
+      console.error("Feedback profile fetch error:", profilesError.message);
+    } else {
+      emailByUserId = new Map(
+        (profiles ?? []).map((profile) => [profile.id as string, (profile.email as string | null) ?? null]),
+      );
+    }
+  }
+
+  const feedback = (data ?? []).map((row) => ({
+    ...row,
+    user_email: row.user_id ? emailByUserId.get(row.user_id) ?? null : null,
+  }));
+
+  return NextResponse.json({ feedback });
 }

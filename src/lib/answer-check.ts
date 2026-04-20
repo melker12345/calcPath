@@ -1,7 +1,8 @@
 const stripTrailingConstant = (input: string) => {
-  // Allow optional "+C" / "C" (indefinite integrals).
-  // Examples: "x^2/2+C", "x^2/2 + c", "x^2/2"
-  return input.replace(/\+?c$/i, "");
+  // Allow optional trailing "+C" for indefinite integrals, and a bare "C".
+  // Do not strip multiplicative forms like "Ce^(2x)" or "e^(2x)C".
+  if (/^c$/i.test(input)) return "";
+  return input.replace(/\+c$/i, "");
 };
 
 const hasUnsupportedConstant = (expr: string) => {
@@ -13,6 +14,9 @@ const hasUnsupportedConstant = (expr: string) => {
 
 const removeLatexSizing = (s: string) =>
   s.replace(/\\left/g, "").replace(/\\right/g, "");
+
+const stripOptionalLabelPrefix = (input: string) =>
+  input.replace(/^(?:[a-z]+(?:_[a-z0-9]+)?|[a-z])=/i, "");
 
 const parseGroup = (s: string, start: number) => {
   // expects s[start] === '{'
@@ -32,6 +36,28 @@ const parseGroup = (s: string, start: number) => {
   return null;
 };
 
+const EVALUATION_TOKENS = [
+  "arcsin",
+  "arccos",
+  "arctan",
+  "sinh",
+  "cosh",
+  "tanh",
+  "sqrt",
+  "sin",
+  "cos",
+  "tan",
+  "sec",
+  "csc",
+  "cot",
+  "log",
+  "exp",
+  "abs",
+  "pi",
+  "inf",
+  "lambda",
+] as const;
+
 const latexToPlain = (latex: string) => {
   let s = removeLatexSizing(latex);
 
@@ -42,8 +68,11 @@ const latexToPlain = (latex: string) => {
   // Replace trig/log constants
   s = s
     .replace(/\\sin/g, "sin")
+    .replace(/\\sinh/g, "sinh")
     .replace(/\\cos/g, "cos")
+    .replace(/\\cosh/g, "cosh")
     .replace(/\\tan/g, "tan")
+    .replace(/\\tanh/g, "tanh")
     .replace(/\\sec/g, "sec")
     .replace(/\\csc/g, "csc")
     .replace(/\\cot/g, "cot")
@@ -53,7 +82,8 @@ const latexToPlain = (latex: string) => {
     .replace(/\\ln/g, "ln")
     .replace(/\\log/g, "log")
     .replace(/\\exp/g, "exp")
-    .replace(/\\pi/g, "pi");
+    .replace(/\\pi/g, "pi")
+    .replace(/\\lambda/g, "lambda");
 
   // sqrt
   while (s.includes("\\sqrt{")) {
@@ -91,6 +121,117 @@ const insertImplicitMultiplication = (s: string) => {
   return out;
 };
 
+const replaceAbsoluteValue = (input: string) => {
+  let out = input;
+  while (/\|[^|]+\|/.test(out)) {
+    out = out.replace(/\|([^|]+)\|/g, "abs($1)");
+  }
+  return out;
+};
+
+const tokenizeForEvaluation = (input: string) => {
+  const tokens: string[] = [];
+  let i = 0;
+
+  while (i < input.length) {
+    const char = input[i];
+
+    if (/\d/.test(char)) {
+      let j = i + 1;
+      while (j < input.length && /[\d.]/.test(input[j])) j += 1;
+      tokens.push(input.slice(i, j));
+      i = j;
+      continue;
+    }
+
+    const word = EVALUATION_TOKENS.find((token) => input.startsWith(token, i));
+    if (word) {
+      tokens.push(word);
+      i += word.length;
+      continue;
+    }
+
+    if (/[a-z]/.test(char)) {
+      tokens.push(char);
+      i += 1;
+      continue;
+    }
+
+    tokens.push(char);
+    i += 1;
+  }
+
+  return tokens;
+};
+
+const isValueToken = (token: string) =>
+  /^[\d.]+$/.test(token) ||
+  /^[a-z]$/.test(token) ||
+  token === ")" ||
+  token === "pi" ||
+  token === "inf";
+
+const isFunctionToken = (token: string) =>
+  [
+    "arcsin",
+    "arccos",
+    "arctan",
+    "sinh",
+    "cosh",
+    "tanh",
+    "sqrt",
+    "sin",
+    "cos",
+    "tan",
+    "sec",
+    "csc",
+    "cot",
+    "log",
+    "exp",
+    "abs",
+  ].includes(token);
+
+const startsValueLike = (token: string) =>
+  /^[\d.]+$/.test(token) ||
+  /^[a-z]$/.test(token) ||
+  token === "(" ||
+  token === "pi" ||
+  token === "inf" ||
+  isFunctionToken(token);
+
+const prepareExpressionForEvaluation = (input: string) => {
+  let out = input.trim();
+  if (out.includes("\\")) out = latexToPlain(out);
+  out = out.toLowerCase();
+  out = out.replace(/\s+/g, "");
+  out = out
+    .replace(/−/g, "-")
+    .replace(/×/g, "*")
+    .replace(/÷/g, "/")
+    .replace(/⟨/g, "<")
+    .replace(/⟩/g, ">")
+    .replace(/λ/g, "lambda")
+    .replace(/[{}]/g, "");
+  out = out.replace(/_/g, "");
+  out = stripOptionalLabelPrefix(out);
+  out = replaceAbsoluteValue(out);
+  out = out.replace(/\bln(?=\()/g, "log");
+
+  const tokens = tokenizeForEvaluation(out);
+  const result: string[] = [];
+
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    const prev = result[result.length - 1];
+    if (prev && isValueToken(prev) && startsValueLike(token)) {
+      result.push("*");
+    }
+    result.push(token);
+  }
+
+  return result.join("");
+};
+
 export const normalizeAnswer = (input: string) => {
   let out = input.trim();
   if (out.includes("\\")) out = latexToPlain(out);
@@ -100,6 +241,9 @@ export const normalizeAnswer = (input: string) => {
     .replace(/−/g, "-")
     .replace(/×/g, "*")
     .replace(/÷/g, "/")
+    .replace(/⟨/g, "<")
+    .replace(/⟩/g, ">")
+    .replace(/λ/g, "lambda")
     .replace(/[{}]/g, "");
 
   // Normalize exponent parentheses: x^(2x) -> x^2x
@@ -112,6 +256,8 @@ export const normalizeAnswer = (input: string) => {
   );
 
   // Common unicode arrow variants don't matter once we strip whitespace.
+  out = out.replace(/_/g, "");
+  out = stripOptionalLabelPrefix(out);
   out = stripTrailingConstant(out);
   out = insertImplicitMultiplication(out);
   return out;
@@ -150,16 +296,25 @@ const expressionsEquivalent = async (
   allowConstantOffset: boolean,
 ) => {
   const m = await getMath();
+  const aPrepared = prepareExpressionForEvaluation(aExpr);
+  const bPrepared = prepareExpressionForEvaluation(bExpr);
 
   // Sample points (avoid 0 to reduce log/div issues)
-  const xs = [-1.7, -1.2, -0.7, -0.3, 0.2, 0.6, 1.1, 1.8];
-  const pairs: Array<{ x: number; a: number; b: number }> = [];
+  const scopes = [
+    { x: -1.7, y: 0.8, z: -0.4, t: 1.2, n: 2, p: 1.5, a: 2.3, b: -1.1, c: 0.7, lambda: 1.9 },
+    { x: -0.8, y: -1.3, z: 0.6, t: -0.7, n: 3, p: 2.1, a: -0.9, b: 1.4, c: 2.2, lambda: -1.2 },
+    { x: 0.2, y: 1.1, z: 0.9, t: 0.5, n: 4, p: -0.8, a: 1.6, b: 0.4, c: -1.7, lambda: 0.6 },
+    { x: 0.9, y: -0.5, z: -1.4, t: 1.7, n: 5, p: 0.3, a: -2.5, b: 2.8, c: 1.1, lambda: 2.4 },
+    { x: 1.6, y: 0.3, z: 1.5, t: -1.1, n: 6, p: -2.2, a: 0.8, b: -0.6, c: 3.1, lambda: -0.9 },
+    { x: 2.1, y: -0.9, z: 0.2, t: 0.4, n: 7, p: 1.9, a: 1.2, b: 1.7, c: -2.6, lambda: 1.3 },
+  ];
+  const pairs: Array<{ a: number; b: number }> = [];
 
-  for (const x of xs) {
-    const a = tryEval(m, aExpr, { x });
-    const b = tryEval(m, bExpr, { x });
+  for (const scope of scopes) {
+    const a = tryEval(m, aPrepared, scope);
+    const b = tryEval(m, bPrepared, scope);
     if (a === null || b === null) continue;
-    pairs.push({ x, a, b });
+    pairs.push({ a, b });
     if (pairs.length >= 5) break;
   }
 
@@ -205,8 +360,6 @@ export const isAnswerCorrectAsync = async (userInput: string, expected: string) 
   const aNoC = stripTrailingConstant(a);
   const bNoC = stripTrailingConstant(b);
   if (aNoC === bNoC) return true;
-
-  if (hasUnsupportedConstant(aNoC) || hasUnsupportedConstant(bNoC)) return false;
 
   const allowConstantOffset = /\+?c$/i.test(b);
   return expressionsEquivalent(aNoC, bNoC, allowConstantOffset);
