@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/components/auth-provider";
 import { SearchTriggerThemed } from "@/components/search-command";
-import { useSimpleTheme } from "@/components/simple-theme-provider";
 import type { SubjectTheme } from "@/lib/themes";
 
 function ProfileIcon({ size = 20, color = "currentColor" }: { size?: number; color?: string }) {
@@ -33,17 +32,8 @@ function ThemedMobileDrawer({
   navLinks: { href: string; label: string }[];
 }) {
   const [mounted, setMounted] = useState(false);
-  const { isSimple } = useSimpleTheme();
   const c = theme.colors;
-
-  const s = isSimple ? {
-    bg: "#fff",
-    border: "#a2a9b1",
-    text: "#202122",
-    linkBg: "#f0f0f0",
-    accent: "#3366cc",
-    accentText: "#fff",
-  } : {
+  const s = {
     bg: c.drawerBg,
     border: c.borderBright,
     text: c.text,
@@ -87,7 +77,7 @@ function ThemedMobileDrawer({
             type="button"
             onClick={onClose}
             className="flex h-10 w-10 items-center justify-center rounded-xl transition active:opacity-70"
-            style={{ background: isSimple ? "#f0f0f0" : c.card, color: s.text }}
+            style={{ background: c.card, color: s.text }}
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -153,7 +143,6 @@ export function ThemedHeader({
   subjectSlug: string;
 }) {
   const { user, signOut } = useAuth();
-  const { isSimple } = useSimpleTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const c = theme.colors;
   const prefix = `/${subjectSlug}`;
@@ -175,7 +164,7 @@ export function ThemedHeader({
           <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="CalcPath home">
             <div
               className="flex h-9 w-9 items-center justify-center rounded-xl text-lg font-bold sm:h-10 sm:w-10 sm:rounded-2xl sm:text-xl"
-              style={{ background: isSimple ? "#eaecf0" : c.logoBg, color: isSimple ? "#202122" : c.logoText }}
+              style={{ background: c.logoBg, color: c.logoText }}
             >
               {theme.icon}
             </div>

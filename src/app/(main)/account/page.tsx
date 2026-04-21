@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { useProgress } from "@/components/progress-provider";
-import { useSimpleTheme } from "@/components/simple-theme-provider";
 import { AchievementsSection } from "@/components/achievement-emblems";
 import { SectionCard } from "@/components/section-card";
 import { supabase } from "@/lib/supabase/client";
@@ -21,38 +20,6 @@ export default function AccountPage() {
     <Suspense>
       <AccountContent />
     </Suspense>
-  );
-}
-
-function PreferencesCard() {
-  const { isSimple, toggle } = useSimpleTheme();
-
-  return (
-    <SectionCard title="Preferences">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-zinc-900">Simple theme</p>
-          <p className="mt-0.5 text-xs text-zinc-500">
-            Use a minimal Wikipedia-style layout with no colors or gradients.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={toggle}
-          role="switch"
-          aria-checked={isSimple}
-          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-            isSimple ? "bg-orange-500" : "bg-zinc-300"
-          }`}
-        >
-          <span
-            className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm ring-0 transition-transform ${
-              isSimple ? "translate-x-5" : "translate-x-0"
-            }`}
-          />
-        </button>
-      </div>
-    </SectionCard>
   );
 }
 
@@ -76,10 +43,6 @@ function AccountContent() {
             </Link>
           </div>
         </SectionCard>
-
-        <div className="mt-4 sm:mt-6">
-          <PreferencesCard />
-        </div>
 
         <div className="mt-4 sm:mt-6">
           <AchievementsSection />
@@ -115,10 +78,6 @@ function AccountContent() {
             </button>
           </div>
         </SectionCard>
-      </div>
-
-      <div className="mt-4 sm:mt-6">
-        <PreferencesCard />
       </div>
 
       <div className="mt-4 sm:mt-6">
