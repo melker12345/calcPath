@@ -322,7 +322,7 @@ export const modules: ModuleContent[] = [
           {
             title: "Solving a 3×3 system",
             steps: [
-              "System: $x+y+z=6$,\\; $2x-y+z=3$,\\; $x+2y-z=4$.",
+              "System: $x+y+z=6,\\; 2x-y+z=3,\\; x+2y-z=4$.",
               "Augmented matrix: $\\left(\\begin{array}{ccc|c}1&1&1&6\\\\2&-1&1&3\\\\1&2&-1&4\\end{array}\\right)$.",
               "$R_2\\leftarrow R_2-2R_1$, $R_3\\leftarrow R_3-R_1$: $\\left(\\begin{array}{ccc|c}1&1&1&6\\\\0&-3&-1&-9\\\\0&1&-2&-2\\end{array}\\right)$.",
               "$R_3\\leftarrow R_3+\\tfrac{1}{3}R_2$: $\\left(\\begin{array}{ccc|c}1&1&1&6\\\\0&-3&-1&-9\\\\0&0&-\\tfrac{7}{3}&-5\\end{array}\\right)$.",

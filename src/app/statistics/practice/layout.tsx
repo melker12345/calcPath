@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ProgressBoundary } from "@/components/scoped-providers";
 
 export const metadata: Metadata = {
   title: "Practice Statistics Problems | CalcPath",
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function PracticeLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return <ProgressBoundary>{children}</ProgressBoundary>;
 }

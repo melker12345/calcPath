@@ -4,11 +4,9 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/components/auth-provider";
+import { AuthBoundary } from "@/components/scoped-providers";
 import { SearchTrigger } from "@/components/search-command";
-
-import { topics as calculusTopics } from "@/lib/calculus-content";
-import { topics as statisticsTopics } from "@/lib/statistics-content";
-import { topics as linalgTopics } from "@/lib/linalg-content";
+import { calculusTopics, linalgTopics, statisticsTopics } from "@/lib/subject-topics";
 
 function ProfileIcon({ size = 20, color = "currentColor" }: { size?: number; color?: string }) {
   return (
@@ -24,6 +22,8 @@ const subjects = [
   { slug: "statistics", label: "Statistics", icon: "σ", topics: statisticsTopics },
   { slug: "linear-algebra", label: "Linear Algebra", icon: "λ", topics: linalgTopics },
 ] as const;
+
+const staticNavLinks = [{ href: "/feedback", label: "Feedback" }] as const;
 
 function SubjectDropdown({
   subject,
@@ -42,6 +42,7 @@ function SubjectDropdown({
     <div className="relative" onMouseEnter={onEnter} onMouseLeave={onLeave}>
       <Link
         href={`/${subject.slug}`}
+        prefetch={false}
         className="flex items-center gap-1 px-1 py-1 text-sm font-medium text-zinc-700 transition hover:text-zinc-900"
       >
         {subject.label}
@@ -183,6 +184,17 @@ function MobileDrawer({
             );
           })}
 
+          {staticNavLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="block rounded-xl bg-zinc-50 px-4 py-3.5 text-base font-semibold text-zinc-900 transition active:bg-zinc-100"
+              onClick={onClose}
+            >
+              {link.label}
+            </Link>
+          ))}
+
           <div className="my-2 border-t border-zinc-100" />
           {user && (
             <>
@@ -219,7 +231,6 @@ function MobileDrawer({
 }
 
 export const SiteHeader = () => {
-  const { user, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const closeTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -259,85 +270,116 @@ export const SiteHeader = () => {
                 onClose={() => setActiveSlug(null)}
               />
             ))}
+            {staticNavLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="px-1 py-1 text-sm font-medium text-zinc-700 transition hover:text-zinc-900"
+              >
+                {link.label}
+              </Link>
+            ))}
             <SearchTrigger />
           </nav>
 
-          {/* Mobile controls */}
-          <div className="flex items-center gap-2 md:hidden">
-            {user ? (
-              <Link
-                href="/account"
-                className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-zinc-200 bg-white transition active:bg-zinc-50"
-                aria-label="Account"
-              >
-                <ProfileIcon size={18} color="#3f3f46" />
-              </Link>
-            ) : (
-              <Link
-                href="/auth"
-                className="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-3 py-1.5 text-sm font-semibold text-white shadow-sm"
-              >
-                Sign in
-              </Link>
-            )}
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen((o) => !o)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700 transition active:bg-zinc-200"
-              aria-label="Toggle menu"
-              aria-expanded={mobileMenuOpen}
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Desktop right — profile + sign out */}
-          <div className="hidden shrink-0 items-center gap-3 md:flex">
-            {user ? (
-              <>
-                <Link
-                  href="/account"
-                  className="flex items-center gap-2 rounded-full border-2 border-zinc-200 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-900 shadow-sm transition hover:border-zinc-300 hover:shadow-md"
-                  aria-label="Account"
-                >
-                  <ProfileIcon size={18} color="#3f3f46" />
-                </Link>
-                <button
-                  type="button"
-                  onClick={signOut}
-                  className="rounded-full border-2 border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
-                >
-                  Sign out
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/auth"
-                  className="text-sm font-medium text-zinc-700 hover:text-zinc-900"
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href="/auth"
-                  className="rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:shadow-xl"
-                >
-                  Get started
-                </Link>
-              </>
-            )}
-          </div>
+          <AuthBoundary>
+            <SiteHeaderAuthControls
+              mobileMenuOpen={mobileMenuOpen}
+              onToggleMobileMenu={() => setMobileMenuOpen((open) => !open)}
+              onCloseMobileMenu={() => setMobileMenuOpen(false)}
+            />
+          </AuthBoundary>
         </div>
       </header>
+    </>
+  );
+};
+
+function SiteHeaderAuthControls({
+  mobileMenuOpen,
+  onToggleMobileMenu,
+  onCloseMobileMenu,
+}: {
+  mobileMenuOpen: boolean;
+  onToggleMobileMenu: () => void;
+  onCloseMobileMenu: () => void;
+}) {
+  const { user, signOut } = useAuth();
+
+  return (
+    <>
+      <div className="flex items-center gap-2 md:hidden">
+        {user ? (
+          <Link
+            href="/account"
+            className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-zinc-200 bg-white transition active:bg-zinc-50"
+            aria-label="Account"
+          >
+            <ProfileIcon size={18} color="#3f3f46" />
+          </Link>
+        ) : (
+          <Link
+            href="/auth"
+            className="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-3 py-1.5 text-sm font-semibold text-white shadow-sm"
+          >
+            Sign in
+          </Link>
+        )}
+        <button
+          type="button"
+          onClick={onToggleMobileMenu}
+          className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700 transition active:bg-zinc-200"
+          aria-label="Toggle menu"
+          aria-expanded={mobileMenuOpen}
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="hidden shrink-0 items-center gap-3 md:flex">
+        {user ? (
+          <>
+            <Link
+              href="/account"
+              className="flex items-center gap-2 rounded-full border-2 border-zinc-200 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-900 shadow-sm transition hover:border-zinc-300 hover:shadow-md"
+              aria-label="Account"
+            >
+              <ProfileIcon size={18} color="#3f3f46" />
+            </Link>
+            <button
+              type="button"
+              onClick={signOut}
+              className="rounded-full border-2 border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
+            >
+              Sign out
+            </button>
+          </>
+        ) : (
+          <>
+            <Link
+              href="/auth"
+              className="text-sm font-medium text-zinc-700 hover:text-zinc-900"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/auth"
+              className="rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:shadow-xl"
+            >
+              Get started
+            </Link>
+          </>
+        )}
+      </div>
 
       <MobileDrawer
         open={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
+        onClose={onCloseMobileMenu}
         user={!!user}
         onSignOut={signOut}
       />
     </>
   );
-};
+}

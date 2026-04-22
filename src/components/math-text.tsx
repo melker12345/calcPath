@@ -47,7 +47,7 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
       <div className="space-y-2">
         {parts.map((part, index) =>
           part.type === "math" ? (
-            <BlockMath key={`${part.value}-${index}`}>{part.value}</BlockMath>
+            <BlockMath key={`${part.value}-${index}`} math={part.value} />
           ) : (
             <p key={`${part.value}-${index}`}>
               {part.value}
@@ -62,7 +62,7 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
     <span>
       {parts.map((part, index) =>
         part.type === "math" ? (
-          <InlineMath key={`${part.value}-${index}`}>{part.value}</InlineMath>
+          <InlineMath key={`${part.value}-${index}`} math={part.value} />
         ) : (
           <span key={`${part.value}-${index}`}>{part.value}</span>
         ),

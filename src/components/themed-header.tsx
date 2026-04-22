@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/components/auth-provider";
+import { AuthBoundary } from "@/components/scoped-providers";
 import { SearchTriggerThemed } from "@/components/search-command";
 import type { SubjectTheme } from "@/lib/themes";
 
@@ -142,7 +143,6 @@ export function ThemedHeader({
   theme: SubjectTheme;
   subjectSlug: string;
 }) {
-  const { user, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const c = theme.colors;
   const prefix = `/${subjectSlug}`;
@@ -179,6 +179,7 @@ export function ThemedHeader({
               <Link
                 key={link.href}
                 href={link.href}
+                prefetch={false}
                 className="transition"
                 style={{ color: c.navText }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = c.navTextHover)}
@@ -190,86 +191,115 @@ export function ThemedHeader({
             <SearchTriggerThemed borderColor={c.border} textColor={c.navText} />
           </nav>
 
-          {/* Mobile controls */}
-          <div className="flex items-center gap-2 md:hidden">
-            {user ? (
-              <Link
-                href="/account"
-                className="flex h-9 w-9 items-center justify-center rounded-full transition active:opacity-70"
-                style={{ background: c.accentBg, border: `1.5px solid ${c.border}` }}
-                aria-label="Account"
-              >
-                <ProfileIcon size={18} color={c.navText} />
-              </Link>
-            ) : (
-              <Link
-                href="/auth"
-                className="rounded-xl px-3 py-1.5 text-sm font-semibold shadow-sm"
-                style={{ background: c.accent, color: c.navAccentText }}
-              >
-                Sign in
-              </Link>
-            )}
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen((o) => !o)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl transition active:opacity-70"
-              style={{ background: c.accentBg, color: c.navText }}
-              aria-label="Toggle menu"
-              aria-expanded={mobileMenuOpen}
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Desktop right — Profile + Sign out */}
-          <div className="hidden shrink-0 items-center gap-3 md:flex">
-            {user ? (
-              <>
-                <Link
-                  href="/account"
-                  className="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold transition hover:opacity-80"
-                  style={{ border: `1.5px solid ${c.border}` }}
-                  aria-label="Account"
-                >
-                  <ProfileIcon size={18} color={c.navText} />
-                </Link>
-                <button
-                  type="button"
-                  onClick={signOut}
-                  className="rounded-full px-4 py-2 text-sm font-semibold transition hover:opacity-80"
-                  style={{ border: `1.5px solid ${c.border}`, color: c.navText }}
-                >
-                  Sign out
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/auth"
-                  className="text-sm font-medium transition"
-                  style={{ color: c.navText }}
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href="/auth"
-                  className="rounded-full px-4 py-2.5 text-sm font-semibold shadow-sm transition hover:brightness-110"
-                  style={{ background: c.accent, color: c.navAccentText }}
-                >
-                  Get started
-                </Link>
-              </>
-            )}
-          </div>
+          <AuthBoundary>
+            <ThemedHeaderAuthControls
+              mobileMenuOpen={mobileMenuOpen}
+              onToggleMobileMenu={() => setMobileMenuOpen((open) => !open)}
+              onCloseMobileMenu={() => setMobileMenuOpen(false)}
+              theme={theme}
+              navLinks={navLinks}
+            />
+          </AuthBoundary>
         </div>
       </header>
+    </>
+  );
+}
+
+function ThemedHeaderAuthControls({
+  mobileMenuOpen,
+  onToggleMobileMenu,
+  onCloseMobileMenu,
+  theme,
+  navLinks,
+}: {
+  mobileMenuOpen: boolean;
+  onToggleMobileMenu: () => void;
+  onCloseMobileMenu: () => void;
+  theme: SubjectTheme;
+  navLinks: { href: string; label: string }[];
+}) {
+  const { user, signOut } = useAuth();
+  const c = theme.colors;
+
+  return (
+    <>
+      <div className="flex items-center gap-2 md:hidden">
+        {user ? (
+          <Link
+            href="/account"
+            className="flex h-9 w-9 items-center justify-center rounded-full transition active:opacity-70"
+            style={{ background: c.accentBg, border: `1.5px solid ${c.border}` }}
+            aria-label="Account"
+          >
+            <ProfileIcon size={18} color={c.navText} />
+          </Link>
+        ) : (
+          <Link
+            href="/auth"
+            className="rounded-xl px-3 py-1.5 text-sm font-semibold shadow-sm"
+            style={{ background: c.accent, color: c.navAccentText }}
+          >
+            Sign in
+          </Link>
+        )}
+        <button
+          type="button"
+          onClick={onToggleMobileMenu}
+          className="flex h-10 w-10 items-center justify-center rounded-xl transition active:opacity-70"
+          style={{ background: c.accentBg, color: c.navText }}
+          aria-label="Toggle menu"
+          aria-expanded={mobileMenuOpen}
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="hidden shrink-0 items-center gap-3 md:flex">
+        {user ? (
+          <>
+            <Link
+              href="/account"
+              className="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold transition hover:opacity-80"
+              style={{ border: `1.5px solid ${c.border}` }}
+              aria-label="Account"
+            >
+              <ProfileIcon size={18} color={c.navText} />
+            </Link>
+            <button
+              type="button"
+              onClick={signOut}
+              className="rounded-full px-4 py-2 text-sm font-semibold transition hover:opacity-80"
+              style={{ border: `1.5px solid ${c.border}`, color: c.navText }}
+            >
+              Sign out
+            </button>
+          </>
+        ) : (
+          <>
+            <Link
+              href="/auth"
+              className="text-sm font-medium transition"
+              style={{ color: c.navText }}
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/auth"
+              className="rounded-full px-4 py-2.5 text-sm font-semibold shadow-sm transition hover:brightness-110"
+              style={{ background: c.accent, color: c.navAccentText }}
+            >
+              Get started
+            </Link>
+          </>
+        )}
+      </div>
 
       <ThemedMobileDrawer
         open={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
+        onClose={onCloseMobileMenu}
         user={!!user}
         onSignOut={signOut}
         theme={theme}

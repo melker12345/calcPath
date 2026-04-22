@@ -7,12 +7,72 @@ import { MathText } from "@/components/math-text";
 import { VoteFeedback } from "@/components/vote-feedback";
 import { modules } from "@/lib/linalg-modules";
 import { problems, topics } from "@/lib/linalg-content";
+import { BlockMath, InlineMath } from "react-katex";
 
 function toSlug(text: string) {
   return text
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
+}
+
+function splitMath(text: string) {
+  const parts: Array<{ type: "text" | "math"; value: string }> = [];
+  let current = "";
+  let inMath = false;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+
+    if (char === "$" && i > 0 && text[i - 1] === "\\") {
+      current = current.slice(0, -1) + "$";
+    } else if (char === "$") {
+      if (inMath) {
+        parts.push({ type: "math", value: current });
+      } else if (current) {
+        parts.push({ type: "text", value: current });
+      }
+
+      current = "";
+      inMath = !inMath;
+    } else {
+      current += char;
+    }
+  }
+
+  if (current) {
+    parts.push({ type: inMath ? "math" : "text", value: current });
+  }
+
+  return parts;
+}
+
+function isBlockMath(value: string) {
+  return /\\begin\{(?:array|matrix|bmatrix|pmatrix|Bmatrix|vmatrix|Vmatrix)\}/.test(value);
+}
+
+function RichMathText({ value }: { value: string }) {
+  const parts = splitMath(value);
+
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (part.type === "text") {
+          return <span key={`${part.value}-${index}`}>{part.value}</span>;
+        }
+
+        if (isBlockMath(part.value)) {
+          return (
+            <div key={`${part.value}-${index}`} className="my-3 overflow-x-auto">
+              <BlockMath math={part.value} />
+            </div>
+          );
+        }
+
+        return <InlineMath key={`${part.value}-${index}`} math={part.value} />;
+      })}
+    </>
+  );
 }
 
 const accent = "#3372A2";
@@ -165,7 +225,9 @@ export default function LinalgModulePage() {
                           </div>
                           <ol className="space-y-2.5 pl-4 text-base leading-relaxed" style={{ color: text }}>
                             {example.steps.map((step) => (
-                              <li key={step} className="list-decimal"><MathText text={step} /></li>
+                              <li key={step} className="list-decimal">
+                                <RichMathText value={step} />
+                              </li>
                             ))}
                           </ol>
                         </div>

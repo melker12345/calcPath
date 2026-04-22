@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { AuthBoundary } from "@/components/scoped-providers";
 import { ThemedLayout } from "@/components/themed-layout";
+import { subjectBodyFont, subjectHeadingFont } from "@/lib/subject-fonts";
 import { chalkboardTheme } from "@/lib/themes";
 
 export const metadata: Metadata = {
@@ -37,8 +39,12 @@ export default function StatisticsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ThemedLayout theme={chalkboardTheme} subjectSlug="statistics">
-      {children}
-    </ThemedLayout>
+    <div className={`${subjectHeadingFont.variable} ${subjectBodyFont.variable}`}>
+      <AuthBoundary>
+        <ThemedLayout theme={chalkboardTheme} subjectSlug="statistics">
+          {children}
+        </ThemedLayout>
+      </AuthBoundary>
+    </div>
   );
 }

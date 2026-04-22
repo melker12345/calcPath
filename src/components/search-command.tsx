@@ -22,16 +22,12 @@ type SearchEntry = {
 
 async function loadIndex(): Promise<SearchEntry[]> {
   const [
-    { topics: calculusTopics },
-    { topics: statisticsTopics },
-    { topics: linalgTopics },
+    { calculusTopics, statisticsTopics, linalgTopics },
     { modules: calculusModules },
     { modules: statisticsModules },
     { modules: linalgModules },
   ] = await Promise.all([
-    import("@/lib/calculus-content"),
-    import("@/lib/statistics-content"),
-    import("@/lib/linalg-content"),
+    import("@/lib/subject-topics"),
     import("@/lib/modules"),
     import("@/lib/statistics-modules"),
     import("@/lib/linalg-modules"),

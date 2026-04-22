@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { AuthBoundary } from "@/components/scoped-providers";
 import { ThemedLayout } from "@/components/themed-layout";
+import { subjectBodyFont, subjectHeadingFont } from "@/lib/subject-fonts";
 import { blueprintTheme } from "@/lib/themes";
 
 export const metadata: Metadata = {
@@ -37,8 +39,12 @@ export default function LinearAlgebraLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ThemedLayout theme={blueprintTheme} subjectSlug="linear-algebra">
-      {children}
-    </ThemedLayout>
+    <div className={`${subjectHeadingFont.variable} ${subjectBodyFont.variable}`}>
+      <AuthBoundary>
+        <ThemedLayout theme={blueprintTheme} subjectSlug="linear-algebra">
+          {children}
+        </ThemedLayout>
+      </AuthBoundary>
+    </div>
   );
 }

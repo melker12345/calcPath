@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
+import { BlockMath, InlineMath } from "react-katex";
 import { MathInput } from "@/components/math-input";
 import { VoteFeedback } from "@/components/vote-feedback";
 import { useProgress } from "@/components/progress-provider";
@@ -15,6 +16,65 @@ type FeedbackState =
   | null
   | { type: "correct" }
   | { type: "incorrect"; attempts: number; hintUsed: boolean; showSolution: boolean };
+
+function splitMath(text: string) {
+  const parts: Array<{ type: "text" | "math"; value: string }> = [];
+  let current = "";
+  let inMath = false;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+
+    if (char === "$" && i > 0 && text[i - 1] === "\\") {
+      current = current.slice(0, -1) + "$";
+    } else if (char === "$") {
+      if (inMath) {
+        parts.push({ type: "math", value: current });
+      } else if (current) {
+        parts.push({ type: "text", value: current });
+      }
+
+      current = "";
+      inMath = !inMath;
+    } else {
+      current += char;
+    }
+  }
+
+  if (current) {
+    parts.push({ type: inMath ? "math" : "text", value: current });
+  }
+
+  return parts;
+}
+
+function isBlockMath(value: string) {
+  return /\\begin\{(?:array|matrix|bmatrix|pmatrix|Bmatrix|vmatrix|Vmatrix)\}/.test(value);
+}
+
+function RichMathText({ value }: { value: string }) {
+  const parts = splitMath(value);
+
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (part.type === "text") {
+          return <span key={`${part.value}-${index}`}>{part.value}</span>;
+        }
+
+        if (isBlockMath(part.value)) {
+          return (
+            <div key={`${part.value}-${index}`} className="my-3 overflow-x-auto">
+              <BlockMath math={part.value} />
+            </div>
+          );
+        }
+
+        return <InlineMath key={`${part.value}-${index}`} math={part.value} />;
+      })}
+    </>
+  );
+}
 
 export default function LinalgPracticeTopic() {
   const params = useParams<{ topicId: string }>();
@@ -108,7 +168,7 @@ export default function LinalgPracticeTopic() {
       .map((step, i) => (
         <div key={i} className={`flex gap-2 sm:gap-3 ${color === "emerald" ? "animate-step-in" : ""}`} style={color === "emerald" ? { animationDelay: `${0.25 + i * 0.1}s` } : undefined}>
           <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold sm:h-6 sm:w-6 sm:text-xs ${color === "emerald" ? "bg-emerald-200 text-emerald-800" : "bg-amber-200 text-amber-800"}`}>{i + 1}</span>
-          <p className="flex-1 text-sm leading-relaxed text-zinc-700 sm:text-base"><MathText text={step} /></p>
+          <div className="flex-1 text-sm leading-relaxed text-zinc-700 sm:text-base"><RichMathText value={step} /></div>
         </div>
       ));
 
@@ -152,7 +212,7 @@ export default function LinalgPracticeTopic() {
       {feedback.hintUsed && !feedback.showSolution && (
         <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-2 sm:mt-4 sm:p-4">
           <p className="text-[11px] font-semibold text-blue-700 sm:text-sm">Hint</p>
-          <p className="mt-0.5 text-xs text-blue-900 sm:mt-1 sm:text-base"><MathText text={getHint()} /></p>
+          <div className="mt-0.5 text-xs text-blue-900 sm:mt-1 sm:text-base"><RichMathText value={getHint()} /></div>
         </div>
       )}
       {feedback.showSolution && (
@@ -207,9 +267,14 @@ export default function LinalgPracticeTopic() {
 
           {/* Question */}
           <div className="flex flex-1 flex-col items-center justify-center gap-2 py-5">
-            <h2 className="text-center text-lg font-semibold leading-relaxed sm:text-2xl" style={{ color: "#e2e8f0" }}>
-              <MathText text={current.prompt} />
-            </h2>
+            <div
+              role="heading"
+              aria-level={2}
+              className="text-center text-lg font-semibold leading-relaxed sm:text-2xl"
+              style={{ color: "#e2e8f0" }}
+            >
+              <RichMathText value={current.prompt} />
+            </div>
             {(() => {
               const moduleUrl = getModuleSectionUrl(current.topicId, current.section);
               const sectionTitle = getModuleSectionTitle(current.topicId, current.section);
