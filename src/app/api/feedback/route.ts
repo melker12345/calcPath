@@ -66,6 +66,17 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+    // Notes attached to votes are optional; if provided they must be reasonable.
+    const note = body.message;
+    if (note !== undefined && note !== null && typeof note !== "string") {
+      return NextResponse.json({ error: "message must be a string" }, { status: 400 });
+    }
+    if (typeof note === "string" && note.length > 1000) {
+      return NextResponse.json(
+        { error: "Note is too long (max 1000 characters)" },
+        { status: 400 },
+      );
+    }
   } else {
     const message = (body.message as string)?.trim();
     if (!message || message.length < 3) {
@@ -94,6 +105,8 @@ export async function POST(request: Request) {
     row.vote = body.vote;
     row.target_type = (body.target_type as string).slice(0, 50);
     row.target_id = (body.target_id as string).slice(0, 200);
+    const note = (body.message as string | undefined)?.trim();
+    if (note) row.message = note.slice(0, 1000);
   } else {
     row.message = (body.message as string).trim().slice(0, 5000);
   }

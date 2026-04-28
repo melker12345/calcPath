@@ -8,13 +8,11 @@ Make calculus accessible. Learn at your own pace with clear explanations and pra
 
 ## Features
 
-- **6 calculus modules** — Limits, derivatives, applications, integrals, series, differential equations
+- **Three subjects** — Calculus, Statistics, and Linear Algebra, with modules covering each curriculum
 - **240+ practice problems** — Instant feedback and step-by-step solutions
-- **Topic tests** — Check your understanding per topic
-- **Flash cards** — Rules and formulas to memorize
+- **Topic tests** — Check your understanding per topic (Calculus)
 - **Learning paths** — Structured plans to guide your practice
 - **Progress & streaks** — Track what you've done and build consistency (requires free account)
-- **Community forum** — Ask questions and discuss topics
 - **Donations** — Optional one-time support via Stripe
 
 ## Tech Stack

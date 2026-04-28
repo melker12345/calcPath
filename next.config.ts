@@ -13,7 +13,6 @@ const nextConfig: NextConfig = {
       { source: "/practice/:topicId", destination: "/calculus/practice/:topicId", permanent: true },
       { source: "/test/:topicId", destination: "/calculus/test/:topicId", permanent: true },
       { source: "/dashboard", destination: "/calculus/dashboard", permanent: true },
-      { source: "/flashcards", destination: "/calculus/flashcards", permanent: true },
     ];
   },
 };

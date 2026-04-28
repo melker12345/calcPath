@@ -51,7 +51,7 @@ export const curriculum = [
 
 export const homeFaqs = [
   { q: "What background do I need?", a: "Algebra and basic trigonometry. If you're comfortable with functions, factoring, and solving equations, you're ready to start." },
-  { q: "Is this free?", a: "Yes — everything is completely free. Modules, practice problems, tests, flash cards, and learning paths are all available at no cost. You can create a free account to track your progress." },
+  { q: "Is this free?", a: "Yes — everything is completely free. Modules, practice problems, topic tests, and learning paths are all available at no cost. You can create a free account to track your progress." },
   { q: "How is this different from a textbook?", a: "You get the same rigor, but with instant feedback. Every practice problem checks your answer immediately and walks through the solution step by step." },
   { q: "What topics are covered?", a: "Limits, derivatives, applications of derivatives, integrals, series & sequences, and differential equations. This covers a standard Calculus I–II curriculum." },
   { q: "Can I try the practice problems first?", a: "Yes. All practice problems are free. Visit the practice page to start — no account needed." },

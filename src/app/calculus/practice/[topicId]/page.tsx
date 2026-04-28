@@ -58,9 +58,23 @@ export default function PracticeTopicPage() {
     setSolvedCount(count);
   }, [progress.completedProblemIds, topicProblems]);
 
-  // Resume from the first unsolved problem on initial load
+  // Resume from the first unsolved problem on initial load,
+  // unless an admin deep-link explicitly requested a specific problem via ?focus.
   useEffect(() => {
     if (resumeReady) return;
+
+    if (typeof window !== "undefined") {
+      const focusId = new URLSearchParams(window.location.search).get("focus");
+      if (focusId) {
+        const focusIdx = topicProblems.findIndex((p) => p.id === focusId);
+        if (focusIdx >= 0) {
+          setIndex(focusIdx);
+          setResumeReady(true);
+          return;
+        }
+      }
+    }
+
     const completedSet = new Set(progress.completedProblemIds);
     const firstUnsolved = topicProblems.findIndex((p) => !completedSet.has(p.id));
     if (firstUnsolved > 0) {

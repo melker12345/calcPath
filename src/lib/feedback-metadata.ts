@@ -122,3 +122,49 @@ export function getPromptPreview(prompt: string | null | undefined) {
   if (compact.length <= 120) return compact;
   return `${compact.slice(0, 117)}...`;
 }
+
+/**
+ * Build a deep link an admin can click to land on the exact place a piece of
+ * feedback was submitted from. Returns `null` when we can't resolve a target
+ * (e.g. anonymous "general" feedback with no target_id), which is fine — the
+ * admin panel falls back to the raw page_url in that case.
+ */
+export function buildTargetDeepLink(args: {
+  targetType: string | null | undefined;
+  targetId: string | null | undefined;
+  pagePath: string | null | undefined;
+}): string | null {
+  const { targetType, targetId, pagePath } = args;
+  if (!targetId) return null;
+
+  if (targetType === "problem") {
+    const meta = problemMetaById.get(targetId);
+    if (!meta) return null;
+    return `/${meta.subjectSlug}/practice/${meta.topicId}?focus=${encodeURIComponent(meta.id)}`;
+  }
+
+  if (targetType === "section") {
+    let subject: SubjectSlug;
+    let rest: string[];
+
+    if (targetId.startsWith("stats:")) {
+      subject = "statistics";
+      rest = targetId.slice("stats:".length).split(":");
+    } else if (targetId.startsWith("linalg:")) {
+      subject = "linear-algebra";
+      rest = targetId.slice("linalg:".length).split(":");
+    } else {
+      // Calculus uses an unprefixed `topicId:section-slug`.
+      subject = inferSubjectFromPath(pagePath) ?? "calculus";
+      rest = targetId.split(":");
+    }
+
+    if (rest.length < 2) return null;
+    const [topicId, ...anchorParts] = rest;
+    if (!topicId || anchorParts.length === 0) return null;
+
+    return `/${subject}/modules/${topicId}#${anchorParts.join(":")}`;
+  }
+
+  return null;
+}

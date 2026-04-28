@@ -188,9 +188,14 @@ function MobileDrawer({
             <Link
               key={link.href}
               href={link.href}
-              className="block rounded-xl bg-zinc-50 px-4 py-3.5 text-base font-semibold text-zinc-900 transition active:bg-zinc-100"
+              className="flex items-center gap-3 rounded-xl bg-zinc-50 px-4 py-3.5 text-base font-semibold text-zinc-900 transition active:bg-zinc-100"
               onClick={onClose}
             >
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-100 text-sm text-orange-600">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                </svg>
+              </span>
               {link.label}
             </Link>
           ))}

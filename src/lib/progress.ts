@@ -279,6 +279,8 @@ export const getPracticeProgress = (
     attemptedRate,
     masteryRate,
     accuracyRate,
-    isComplete: correct >= totalProblems,
+    // Require at least one problem in the topic so that an empty topic
+    // (e.g. scaffolded but not yet populated) never reports as mastered.
+    isComplete: totalProblems > 0 && correct >= totalProblems,
   };
 };

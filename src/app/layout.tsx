@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     template: "%s | CalcPath",
   },
   description:
-    "Free step-by-step math courses with practice problems, instant feedback, tests, and flashcards. Calculus, statistics & more.",
+    "Free step-by-step math courses with practice problems, instant feedback, and topic tests. Calculus, statistics & linear algebra.",
   keywords: [
     "learn university mathematics",
     "university math",
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "CalcPath — Learn Math Step by Step",
     description:
-      "Free step-by-step courses, practice problems, tests, and flashcards. Master math at your own pace.",
+      "Free step-by-step courses with practice problems and topic tests. Master math at your own pace.",
     url: "https://calc-path.com",
     siteName: "CalcPath",
     images: [
@@ -61,7 +61,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "CalcPath — Learn Math Step by Step",
     description:
-      "Free courses, practice problems with instant feedback, tests & flashcards.",
+      "Free courses with practice problems, instant feedback, and topic tests.",
     images: ["/og-image.png"],
   },
   robots: {
@@ -96,7 +96,7 @@ export default function RootLayout({
                   name: "CalcPath",
                   url: "https://calc-path.com",
                   description:
-                    "Free step-by-step math courses with practice problems, instant feedback, tests, and flashcards.",
+                    "Free step-by-step math courses with practice problems, instant feedback, and topic tests.",
                   potentialAction: {
                     "@type": "SearchAction",
                     target: "https://calc-path.com/calculus/modules?q={search_term_string}",

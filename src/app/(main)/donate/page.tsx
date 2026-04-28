@@ -15,25 +15,46 @@ export default function DonatePage() {
   const [selected, setSelected] = useState<number | null>(500);
   const [custom, setCustom] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const amount = selected ?? (custom ? Math.round(parseFloat(custom) * 100) : 0);
-  const valid = amount >= 100;
+  const valid = Number.isFinite(amount) && amount >= 100;
+
+  const clearError = () => {
+    if (error) setError(null);
+  };
 
   const handleDonate = async () => {
     if (!valid || loading) return;
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount, email: user?.email ?? undefined }),
       });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
+
+      let data: { url?: string; error?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        // Response wasn't JSON — fall through to a status-based error below.
       }
+
+      if (!res.ok) {
+        setError(data.error ?? "Couldn't start checkout. Please try again.");
+        return;
+      }
+
+      if (!data.url) {
+        setError("Checkout session created but no redirect URL was returned.");
+        return;
+      }
+
+      window.location.href = data.url;
     } catch {
-      // silently fail
+      setError("Network error. Please check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -68,6 +89,7 @@ export default function DonatePage() {
                 onClick={() => {
                   setSelected(cents);
                   setCustom("");
+                  clearError();
                 }}
                 className={`group relative rounded-2xl border-2 p-4 text-left transition ${
                   active
@@ -118,6 +140,7 @@ export default function DonatePage() {
                 const v = e.target.value.replace(/[^0-9.]/g, "");
                 setCustom(v);
                 setSelected(null);
+                clearError();
               }}
               onFocus={() => setSelected(null)}
               className="min-w-0 flex-1 bg-transparent py-4 pl-1.5 pr-3 text-lg font-semibold text-zinc-900 outline-none placeholder:font-normal placeholder:text-zinc-300"
@@ -144,6 +167,14 @@ export default function DonatePage() {
               ? `Donate $${(amount / 100).toFixed(amount % 100 === 0 ? 0 : 2)}`
               : "Choose an amount"}
         </button>
+        {error && (
+          <p
+            role="alert"
+            className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-700"
+          >
+            {error}
+          </p>
+        )}
         <p className="mt-3 text-center text-sm text-zinc-400">
           Secure payment via Stripe. One-time, no recurring charges.
         </p>
@@ -159,7 +190,7 @@ export default function DonatePage() {
           </li>
           <li className="flex items-start gap-3">
             <span className="mt-0.5 text-orange-400">→</span>
-            New topics — Statistics, Linear Algebra, and Discrete Math are on the way
+            New subjects and topics — Discrete Math and beyond
           </li>
           <li className="flex items-start gap-3">
             <span className="mt-0.5 text-orange-400">→</span>

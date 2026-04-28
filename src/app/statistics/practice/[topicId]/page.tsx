@@ -46,6 +46,19 @@ export default function StatisticsPracticeTopic() {
 
   useEffect(() => {
     if (resumeReady) return;
+
+    if (typeof window !== "undefined") {
+      const focusId = new URLSearchParams(window.location.search).get("focus");
+      if (focusId) {
+        const focusIdx = topicProblems.findIndex((p) => p.id === focusId);
+        if (focusIdx >= 0) {
+          setIndex(focusIdx);
+          setResumeReady(true);
+          return;
+        }
+      }
+    }
+
     const completedSet = new Set(progress.completedProblemIds);
     const firstUnsolved = topicProblems.findIndex((p) => !completedSet.has(p.id));
     if (firstUnsolved > 0) setIndex(firstUnsolved);
