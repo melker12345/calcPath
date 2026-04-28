@@ -170,12 +170,18 @@ function targetGroupOf(targetType: string | null): TargetGroup {
   return "other";
 }
 
+type Priority = "all" | "priority" | "low";
+
 function AdminFeedbackPanel() {
+  const { user } = useAuth();
+  const adminEmail = user?.email?.toLowerCase() ?? null;
   const [feedback, setFeedback] = useState<FeedbackRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<string>("all");
   const [targetGroup, setTargetGroup] = useState<TargetGroup>("all");
+  // Default: hide the admin's own feedback so triage focuses on real users.
+  const [priority, setPriority] = useState<Priority>("priority");
 
   const loadFeedback = useCallback(async () => {
     setLoading(true);
@@ -221,6 +227,12 @@ function AdminFeedbackPanel() {
     [feedback],
   );
 
+  const isLowPriority = useCallback(
+    (fb: FeedbackRow) =>
+      adminEmail !== null && (fb.user_email ?? "").toLowerCase() === adminEmail,
+    [adminEmail],
+  );
+
   const counts = useMemo(() => {
     const acc: Record<TargetGroup, number> = { all: 0, questions: 0, explanations: 0, other: 0 };
     for (const { fb } of feedbackWithSummary) {
@@ -230,12 +242,24 @@ function AdminFeedbackPanel() {
     return acc;
   }, [feedbackWithSummary]);
 
+  const priorityCounts = useMemo(() => {
+    const acc: Record<Priority, number> = { all: 0, priority: 0, low: 0 };
+    for (const { fb } of feedbackWithSummary) {
+      acc.all += 1;
+      if (isLowPriority(fb)) acc.low += 1;
+      else acc.priority += 1;
+    }
+    return acc;
+  }, [feedbackWithSummary, isLowPriority]);
+
   const visible = useMemo(() => {
-    if (targetGroup === "all") return feedbackWithSummary;
-    return feedbackWithSummary.filter(
-      ({ fb }) => targetGroupOf(fb.target_type) === targetGroup,
-    );
-  }, [feedbackWithSummary, targetGroup]);
+    return feedbackWithSummary.filter(({ fb }) => {
+      if (targetGroup !== "all" && targetGroupOf(fb.target_type) !== targetGroup) return false;
+      if (priority === "priority" && isLowPriority(fb)) return false;
+      if (priority === "low" && !isLowPriority(fb)) return false;
+      return true;
+    });
+  }, [feedbackWithSummary, targetGroup, priority, isLowPriority]);
 
   if (feedback === null && !loading && !error) return null;
   if (feedback === null && !loading) return null;
@@ -252,6 +276,12 @@ function AdminFeedbackPanel() {
     { id: "questions", label: "Questions" },
     { id: "explanations", label: "Explanations" },
     { id: "other", label: "Other" },
+  ];
+
+  const priorityTabs: { id: Priority; label: string }[] = [
+    { id: "all", label: "All" },
+    { id: "priority", label: "Priority" },
+    { id: "low", label: "Low priority" },
   ];
 
   return (
@@ -282,7 +312,7 @@ function AdminFeedbackPanel() {
           </button>
         </div>
 
-        <div className="mb-4 flex flex-wrap items-center gap-1.5 border-t border-zinc-100 pt-2">
+        <div className="mb-2 flex flex-wrap items-center gap-1.5 border-t border-zinc-100 pt-2">
           <span className="mr-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
             About
           </span>
@@ -309,6 +339,40 @@ function AdminFeedbackPanel() {
           })}
         </div>
 
+        <div className="mb-4 flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+            Priority
+          </span>
+          {priorityTabs.map((tab) => {
+            const count = priorityCounts[tab.id];
+            const active = priority === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setPriority(tab.id)}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                  active
+                    ? "bg-zinc-900 text-white"
+                    : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100"
+                }`}
+                title={
+                  tab.id === "low"
+                    ? "Feedback you submitted yourself"
+                    : tab.id === "priority"
+                      ? "Feedback from everyone except you"
+                      : "Show every row"
+                }
+              >
+                {tab.label}
+                <span className={`ml-1.5 text-[10px] ${active ? "text-zinc-300" : "text-zinc-400"}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         {error && (
           <p className="mb-3 text-sm text-red-600">{error}</p>
         )}
@@ -323,10 +387,14 @@ function AdminFeedbackPanel() {
 
         {visible.length > 0 && (
           <div className="space-y-3">
-            {visible.map(({ fb, summary }) => (
+            {visible.map(({ fb, summary }) => {
+              const lowPriority = isLowPriority(fb);
+              return (
               <div
                 key={fb.id}
-                className="rounded-2xl border border-zinc-100 bg-zinc-50/60 px-4 py-4"
+                className={`rounded-2xl border border-zinc-100 px-4 py-4 transition ${
+                  lowPriority ? "bg-zinc-50/30 opacity-70" : "bg-zinc-50/60"
+                }`}
               >
                 <div className="flex items-start gap-2">
                   <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase ${kindColors[fb.kind] ?? "bg-zinc-100 text-zinc-600"}`}>
@@ -346,13 +414,32 @@ function AdminFeedbackPanel() {
                           : fb.target_type}
                     </span>
                   )}
-                  {(summary.deepLink || summary.routePath) && (
+                  {fb.message && (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-amber-200"
+                      title="This row has a written note"
+                    >
+                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3">
+                        <path d="M3.5 4A1.5 1.5 0 0 1 5 2.5h10A1.5 1.5 0 0 1 16.5 4v8A1.5 1.5 0 0 1 15 13.5H8.41l-3.7 3.7A.5.5 0 0 1 4 16.85V13.5H3.5A1.5 1.5 0 0 1 2 12V4a1.5 1.5 0 0 1 1.5-1.5Z" />
+                      </svg>
+                      Note
+                    </span>
+                  )}
+                  {lowPriority && (
+                    <span
+                      className="rounded-md bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-600"
+                      title="Submitted by you"
+                    >
+                      Low priority
+                    </span>
+                  )}
+                  {summary.deepLink && (
                     <Link
-                      href={summary.deepLink ?? summary.routePath ?? "#"}
+                      href={summary.deepLink}
                       target="_blank"
                       rel="noreferrer"
                       className="ml-auto inline-flex items-center gap-1 rounded-md bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-orange-700 ring-1 ring-orange-200 transition hover:bg-orange-100"
-                      title={summary.deepLink ?? summary.routePath ?? undefined}
+                      title={summary.deepLink}
                     >
                       Open
                       <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3">
@@ -362,7 +449,7 @@ function AdminFeedbackPanel() {
                     </Link>
                   )}
                   <span
-                    className={`shrink-0 text-[11px] text-zinc-400 ${(summary.deepLink || summary.routePath) ? "" : "ml-auto"}`}
+                    className={`shrink-0 text-[11px] text-zinc-400 ${summary.deepLink ? "" : "ml-auto"}`}
                   >
                     {new Date(fb.created_at).toLocaleString()}
                   </span>
@@ -395,9 +482,20 @@ function AdminFeedbackPanel() {
                 )}
 
                 {fb.message && (
-                  <p className="mt-2 text-sm leading-relaxed text-zinc-700">
-                    {fb.message}
-                  </p>
+                  <blockquote
+                    className={`mt-3 rounded-r-xl border-l-4 px-3.5 py-2.5 text-sm leading-relaxed ${
+                      fb.kind === "vote" && fb.vote === -1
+                        ? "border-rose-300 bg-rose-50/70 text-rose-900"
+                        : fb.kind === "vote" && fb.vote === 1
+                          ? "border-emerald-300 bg-emerald-50/70 text-emerald-900"
+                          : "border-amber-300 bg-amber-50/70 text-amber-900"
+                    }`}
+                  >
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide opacity-70">
+                      {fb.kind === "vote" ? "Note from user" : "Message"}
+                    </p>
+                    <p className="whitespace-pre-wrap break-words">{fb.message}</p>
+                  </blockquote>
                 )}
 
                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-zinc-400">
@@ -420,7 +518,8 @@ function AdminFeedbackPanel() {
                   {summary.routePath && <span>{summary.routePath}</span>}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </SectionCard>
