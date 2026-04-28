@@ -4,10 +4,22 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const VALID_KINDS = ["bug", "feature", "general", "vote"] as const;
 type Kind = (typeof VALID_KINDS)[number];
+const VALID_STATUSES = ["open", "fixed", "trash"] as const;
+type FeedbackStatus = (typeof VALID_STATUSES)[number];
 
 const rateLimit = new Map<string, number>();
 const RATE_WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 30;
+
+function isMissingStatusColumnError(error: { message?: string } | null | undefined) {
+  const message = error?.message?.toLowerCase() ?? "";
+  return (
+    message.includes("column feedback.status does not exist") ||
+    message.includes("could not find the 'status' column of 'feedback' in the schema cache") ||
+    (message.includes("feedback") && message.includes("status") && message.includes("schema cache")) ||
+    (message.includes("feedback") && message.includes("status") && message.includes("does not exist"))
+  );
+}
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
@@ -25,6 +37,13 @@ function isRateLimited(ip: string): boolean {
   if (count >= MAX_PER_WINDOW) return true;
   rateLimit.set(key, count + 1);
   return false;
+}
+
+function getAdminEmails() {
+  return (process.env.ADMIN_EMAIL ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
 }
 
 export async function POST(request: Request) {
@@ -104,6 +123,7 @@ export async function POST(request: Request) {
 
   const row: Record<string, unknown> = {
     kind,
+    status: "open",
     user_id: userId,
     page_url: (body.page_url as string)?.slice(0, 500) || null,
   };
@@ -162,11 +182,33 @@ export async function POST(request: Request) {
     row.message = (body.message as string).trim().slice(0, 5000);
   }
 
-  const { data: inserted, error } = await supabase
-    .from("feedback")
-    .insert(row)
-    .select("id, vote")
-    .single();
+  let inserted: { id?: string | null; vote?: number | null } | null = null;
+  let error: { message?: string; details?: string | null; hint?: string | null } | null = null;
+
+  {
+    const result = await supabase
+      .from("feedback")
+      .insert(row)
+      .select("id, vote")
+      .single();
+
+    inserted = result.data;
+    error = result.error;
+  }
+
+  if (isMissingStatusColumnError(error)) {
+    const legacyRow = Object.fromEntries(
+      Object.entries(row).filter(([key]) => key !== "status"),
+    );
+    const retry = await supabase
+      .from("feedback")
+      .insert(legacyRow)
+      .select("id, vote")
+      .single();
+
+    inserted = retry.data;
+    error = retry.error;
+  }
 
   if (error) {
     console.error("Feedback insert error:", error.message, error.details, error.hint);
@@ -206,11 +248,6 @@ export async function PATCH(request: Request) {
     );
   }
 
-  const userId = await getAuthUserId(request);
-  if (!userId) {
-    return NextResponse.json({ error: "Sign in required to leave a note." }, { status: 401 });
-  }
-
   let body: Record<string, unknown>;
   try {
     body = await request.json();
@@ -221,6 +258,54 @@ export async function PATCH(request: Request) {
   const id = body.id;
   if (typeof id !== "string" || id.length === 0) {
     return NextResponse.json({ error: "id is required" }, { status: 400 });
+  }
+
+  const status = body.status;
+  if (status !== undefined) {
+    if (typeof status !== "string" || !VALID_STATUSES.includes(status as FeedbackStatus)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
+
+    const adminEmails = getAdminEmails();
+    if (adminEmails.length === 0) {
+      return NextResponse.json({ error: "No admin configured" }, { status: 403 });
+    }
+
+    const authUser = await getAuthUser(request);
+    const email = authUser?.email?.toLowerCase() ?? null;
+    if (!email || !adminEmails.includes(email)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("feedback")
+      .update({ status })
+      .eq("id", id)
+      .select("id, status")
+      .maybeSingle();
+
+    if (isMissingStatusColumnError(error)) {
+      return NextResponse.json(
+        { error: "Feedback status migration has not been applied yet. Run the Supabase schema update." },
+        { status: 409 },
+      );
+    }
+
+    if (error) {
+      console.error("Feedback status update error:", error.message);
+      return NextResponse.json({ error: "Failed to update feedback status" }, { status: 500 });
+    }
+    if (!data) {
+      return NextResponse.json({ error: "Feedback not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ ok: true, id: data.id, status: data.status });
+  }
+
+  const userId = await getAuthUserId(request);
+  if (!userId) {
+    return NextResponse.json({ error: "Sign in required to leave a note." }, { status: 401 });
   }
 
   const message = (body.message as string | undefined)?.trim();
@@ -287,10 +372,7 @@ async function getAuthUserId(request: Request): Promise<string | null> {
 }
 
 export async function GET(request: Request) {
-  const adminEmails = (process.env.ADMIN_EMAIL ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
+  const adminEmails = getAdminEmails();
 
   if (adminEmails.length === 0) {
     return NextResponse.json({ error: "No admin configured" }, { status: 403 });
@@ -303,7 +385,12 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const kind = url.searchParams.get("kind");
+  const status = url.searchParams.get("status");
   const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 200);
+
+  if (status && !VALID_STATUSES.includes(status as FeedbackStatus)) {
+    return NextResponse.json({ error: "Invalid status filter" }, { status: 400 });
+  }
 
   const supabase = createAdminClient();
 
@@ -317,7 +404,31 @@ export async function GET(request: Request) {
     query = query.eq("kind", kind);
   }
 
-  const { data, error } = await query;
+  if (status) {
+    query = query.eq("status", status);
+  }
+
+  let { data, error } = await query;
+
+  if (isMissingStatusColumnError(error)) {
+    let fallbackQuery = supabase
+      .from("feedback")
+      .select("id, user_id, kind, target_type, target_id, vote, message, page_url, created_at")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (kind) {
+      fallbackQuery = fallbackQuery.eq("kind", kind);
+    }
+
+    const fallback = await fallbackQuery;
+    data = fallback.data?.map((row) => ({ ...row, status: "open" })) ?? null;
+    error = fallback.error;
+
+    if (status && status !== "open") {
+      data = [];
+    }
+  }
 
   if (error) {
     console.error("Feedback fetch error:", error.message);

@@ -93,6 +93,7 @@ function AccountContent() {
 type FeedbackRow = {
   id: string;
   kind: string;
+  status: "open" | "fixed" | "trash";
   message: string | null;
   vote: number | null;
   target_type: string | null;
@@ -171,6 +172,7 @@ function targetGroupOf(targetType: string | null): TargetGroup {
 }
 
 type Priority = "all" | "priority" | "low";
+type FeedbackStatusTab = "open" | "fixed" | "trash";
 
 function AdminFeedbackPanel() {
   const { user } = useAuth();
@@ -179,9 +181,11 @@ function AdminFeedbackPanel() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<FeedbackStatusTab>("open");
   const [targetGroup, setTargetGroup] = useState<TargetGroup>("all");
   // Default: hide the admin's own feedback so triage focuses on real users.
   const [priority, setPriority] = useState<Priority>("priority");
+  const [pendingStatusId, setPendingStatusId] = useState<string | null>(null);
 
   const loadFeedback = useCallback(async () => {
     setLoading(true);
@@ -197,6 +201,7 @@ function AdminFeedbackPanel() {
 
       const params = new URLSearchParams({ limit: "100" });
       if (filter !== "all") params.set("kind", filter);
+      params.set("status", statusFilter);
 
       const res = await fetch(`/api/feedback?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -216,11 +221,55 @@ function AdminFeedbackPanel() {
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [filter, statusFilter]);
 
   useEffect(() => {
     loadFeedback();
   }, [loadFeedback]);
+
+  const updateFeedbackStatus = useCallback(
+    async (id: string, status: FeedbackStatusTab) => {
+      setPendingStatusId(id);
+      setError(null);
+
+      const previous = feedback;
+      setFeedback((current) =>
+        current?.map((row) => (row.id === id ? { ...row, status } : row)) ?? null,
+      );
+
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) throw new Error("Missing auth session");
+
+        const res = await fetch("/api/feedback", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ id, status }),
+        });
+
+        if (!res.ok) {
+          const payload = await res.json().catch(() => null);
+          throw new Error(
+            typeof payload?.error === "string"
+              ? payload.error
+              : "Failed to update feedback status",
+          );
+        }
+      } catch (err) {
+        setFeedback(previous);
+        setError(
+          err instanceof Error ? err.message : "Failed to update feedback status",
+        );
+      } finally {
+        setPendingStatusId(null);
+      }
+    },
+    [feedback],
+  );
 
   const feedbackWithSummary = useMemo(
     () => feedback?.map((fb) => ({ fb, summary: summarizeFeedbackTarget(fb) })) ?? [],
@@ -252,14 +301,25 @@ function AdminFeedbackPanel() {
     return acc;
   }, [feedbackWithSummary, isLowPriority]);
 
+  const statusCounts = useMemo(() => {
+    const acc: Record<FeedbackStatusTab, number> = { open: 0, fixed: 0, trash: 0 };
+    for (const { fb } of feedbackWithSummary) {
+      if (fb.status === "open" || fb.status === "fixed" || fb.status === "trash") {
+        acc[fb.status] += 1;
+      }
+    }
+    return acc;
+  }, [feedbackWithSummary]);
+
   const visible = useMemo(() => {
     return feedbackWithSummary.filter(({ fb }) => {
+      if (fb.status !== statusFilter) return false;
       if (targetGroup !== "all" && targetGroupOf(fb.target_type) !== targetGroup) return false;
       if (priority === "priority" && isLowPriority(fb)) return false;
       if (priority === "low" && !isLowPriority(fb)) return false;
       return true;
     });
-  }, [feedbackWithSummary, targetGroup, priority, isLowPriority]);
+  }, [feedbackWithSummary, statusFilter, targetGroup, priority, isLowPriority]);
 
   if (feedback === null && !loading && !error) return null;
   if (feedback === null && !loading) return null;
@@ -284,9 +344,36 @@ function AdminFeedbackPanel() {
     { id: "low", label: "Low priority" },
   ];
 
+  const statusTabs: { id: FeedbackStatusTab; label: string; active: string; idle: string }[] = [
+    { id: "open", label: "Open", active: "bg-orange-100 text-orange-800", idle: "bg-zinc-50 text-zinc-500 hover:bg-zinc-100" },
+    { id: "fixed", label: "Fixed", active: "bg-emerald-100 text-emerald-800", idle: "bg-zinc-50 text-zinc-500 hover:bg-zinc-100" },
+    { id: "trash", label: "Trash", active: "bg-zinc-800 text-white", idle: "bg-zinc-50 text-zinc-500 hover:bg-zinc-100" },
+  ];
+
   return (
     <div className="mt-8">
       <SectionCard title="Feedback (Admin)">
+        <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-zinc-100 pb-3">
+          {statusTabs.map((tab) => {
+            const active = statusFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setStatusFilter(tab.id)}
+                className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
+                  active ? tab.active : tab.idle
+                }`}
+              >
+                {tab.label}
+                <span className={`ml-1.5 text-[10px] ${active ? "opacity-80" : "text-zinc-400"}`}>
+                  {statusCounts[tab.id]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         <div className="mb-2 flex flex-wrap items-center gap-2">
           {["all", "bug", "feature", "general", "vote"].map((k) => (
             <button
@@ -389,6 +476,12 @@ function AdminFeedbackPanel() {
           <div className="space-y-3">
             {visible.map(({ fb, summary }) => {
               const lowPriority = isLowPriority(fb);
+              const statusPill =
+                fb.status === "fixed"
+                  ? "bg-emerald-100 text-emerald-700"
+                  : fb.status === "trash"
+                    ? "bg-zinc-200 text-zinc-700"
+                    : "bg-orange-100 text-orange-700";
               return (
               <div
                 key={fb.id}
@@ -399,6 +492,9 @@ function AdminFeedbackPanel() {
                 <div className="flex items-start gap-2">
                   <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase ${kindColors[fb.kind] ?? "bg-zinc-100 text-zinc-600"}`}>
                     {fb.kind}
+                  </span>
+                  <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase ${statusPill}`}>
+                    {fb.status}
                   </span>
                   {fb.vote !== null && (
                     <span className={`text-sm font-bold ${fb.vote === 1 ? "text-emerald-600" : "text-rose-500"}`}>
@@ -516,6 +612,39 @@ function AdminFeedbackPanel() {
                         : "Anonymous"}
                   </span>
                   {summary.routePath && <span>{summary.routePath}</span>}
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {fb.status !== "open" && (
+                    <button
+                      type="button"
+                      onClick={() => updateFeedbackStatus(fb.id, "open")}
+                      disabled={pendingStatusId === fb.id}
+                      className="rounded-lg bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-700 ring-1 ring-orange-200 transition hover:bg-orange-100 disabled:opacity-50"
+                    >
+                      Reopen
+                    </button>
+                  )}
+                  {fb.status !== "fixed" && (
+                    <button
+                      type="button"
+                      onClick={() => updateFeedbackStatus(fb.id, "fixed")}
+                      disabled={pendingStatusId === fb.id}
+                      className="rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 transition hover:bg-emerald-100 disabled:opacity-50"
+                    >
+                      Mark fixed
+                    </button>
+                  )}
+                  {fb.status !== "trash" && (
+                    <button
+                      type="button"
+                      onClick={() => updateFeedbackStatus(fb.id, "trash")}
+                      disabled={pendingStatusId === fb.id}
+                      className="rounded-lg bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-700 ring-1 ring-zinc-200 transition hover:bg-zinc-200 disabled:opacity-50"
+                    >
+                      Move to trash
+                    </button>
+                  )}
                 </div>
               </div>
               );

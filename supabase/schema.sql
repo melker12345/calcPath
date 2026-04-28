@@ -97,6 +97,7 @@ create table if not exists public.feedback (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete set null,
   kind text not null check (kind in ('bug', 'feature', 'general', 'vote')),
+  status text not null default 'open' check (status in ('open', 'fixed', 'trash')),
   target_type text,
   target_id text,
   vote smallint check (vote in (-1, 1)),
@@ -104,6 +105,20 @@ create table if not exists public.feedback (
   page_url text,
   created_at timestamptz not null default now()
 );
+
+alter table public.feedback
+add column if not exists status text not null default 'open';
+
+update public.feedback
+set status = 'open'
+where status is null;
+
+alter table public.feedback
+drop constraint if exists feedback_status_check;
+
+alter table public.feedback
+add constraint feedback_status_check
+check (status in ('open', 'fixed', 'trash'));
 
 alter table public.feedback enable row level security;
 
