@@ -120,7 +120,7 @@ export default function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="px-6 pb-16 pt-16 sm:px-12 sm:pb-24 sm:pt-24">
+      <section className="px-6 pb-8 pt-16 sm:px-12 sm:pb-24 sm:pt-24">
         <div className="mx-auto max-w-4xl text-center">
           <p className="mb-4 text-sm font-semibold uppercase tracking-[0.35em] text-orange-600" style={{ fontFamily: body }}>
             CalcPath
@@ -135,6 +135,28 @@ export default function HomePage() {
           <p className="mx-auto mt-6 max-w-lg text-base leading-relaxed text-zinc-600 sm:text-lg" style={{ fontFamily: body }}>
             Free step-by-step courses with practice problems, instant feedback, and detailed solutions. Pick a subject and start learning.
           </p>
+          {/* Top CTA */}
+          <div className="px-6 pb-6 pt-4 sm:px-12">
+            <div className="mx-auto max-w-3xl rounded-2xl  bg-orange-50/60 px-5 py-4 text-center">
+              <p className="text-sm text-zinc-600 sm:text-base" style={{ fontFamily: body }}>
+                Help shape CalcPath with quick feedback, or support the project with a small donation.
+              </p>
+              <div className="mt-3 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4">
+                <Link
+                  href="/feedback"
+                  className="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:shadow-xl"
+                >
+                  Leave feedback
+                </Link>
+                <Link
+                  href="/donate"
+                  className="rounded-xl border border-orange-200 bg-white px-6 py-3 text-sm font-semibold text-orange-700 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-300 hover:bg-orange-50"
+                >
+                  Donate
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
