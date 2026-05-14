@@ -44,10 +44,15 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
 
   if (block) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-2 min-w-0">
         {parts.map((part, index) =>
           part.type === "math" ? (
-            <BlockMath key={`${part.value}-${index}`} math={part.value} />
+            <div
+              key={`${part.value}-${index}`}
+              className="max-w-full overflow-x-auto overflow-y-hidden py-1"
+            >
+              <BlockMath math={part.value} />
+            </div>
           ) : (
             <p key={`${part.value}-${index}`}>
               {part.value}
@@ -59,10 +64,15 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
   }
 
   return (
-    <span>
+    <span className="min-w-0">
       {parts.map((part, index) =>
         part.type === "math" ? (
-          <InlineMath key={`${part.value}-${index}`} math={part.value} />
+          <span
+            key={`${part.value}-${index}`}
+            className="inline-block max-w-full overflow-x-auto overflow-y-hidden align-middle"
+          >
+            <InlineMath math={part.value} />
+          </span>
         ) : (
           <span key={`${part.value}-${index}`}>{part.value}</span>
         ),
