@@ -16,7 +16,7 @@ const removeLatexSizing = (s: string) =>
   s.replace(/\\left/g, "").replace(/\\right/g, "");
 
 const stripOptionalLabelPrefix = (input: string) =>
-  input.replace(/^(?:[a-z]+(?:_[a-z0-9]+)?|[a-z])=/i, "");
+  input.replace(/^(?:[a-z]+(?:_[a-z0-9]+)?|[a-z](?:\([a-z]\))?)=/i, "");
 
 const parseGroup = (s: string, start: number) => {
   // expects s[start] === '{'
