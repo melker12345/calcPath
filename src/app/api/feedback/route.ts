@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const VALID_KINDS = ["bug", "feature", "general", "vote"] as const;
 type Kind = (typeof VALID_KINDS)[number];
+const VALID_STATUSES = ["open", "fixed", "trash"] as const;
+type FeedbackStatus = (typeof VALID_STATUSES)[number];
 
 const rateLimit = new Map<string, number>();
 const RATE_WINDOW_MS = 60_000;
@@ -206,16 +208,59 @@ export async function PATCH(request: Request) {
     );
   }
 
-  const userId = await getAuthUserId(request);
-  if (!userId) {
-    return NextResponse.json({ error: "Sign in required to leave a note." }, { status: 401 });
-  }
-
   let body: Record<string, unknown>;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (body.status !== undefined) {
+    const adminEmails = getAdminEmails();
+    if (adminEmails.length === 0) {
+      return NextResponse.json({ error: "No admin configured" }, { status: 403 });
+    }
+
+    const authUser = await getAuthUser(request);
+    if (!authUser?.email || !adminEmails.includes(authUser.email.toLowerCase())) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    const status = body.status as FeedbackStatus;
+    if (!VALID_STATUSES.includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
+
+    const ids = Array.isArray(body.ids)
+      ? body.ids.filter((id): id is string => typeof id === "string" && id.length > 0)
+      : typeof body.id === "string" && body.id.length > 0
+        ? [body.id]
+        : [];
+
+    if (ids.length === 0) {
+      return NextResponse.json({ error: "id or ids are required" }, { status: 400 });
+    }
+    if (ids.length > 500) {
+      return NextResponse.json({ error: "Too many feedback rows in one update" }, { status: 400 });
+    }
+
+    const supabase = createAdminClient();
+    const { error } = await supabase
+      .from("feedback")
+      .update({ status })
+      .in("id", ids);
+
+    if (error) {
+      console.error("Feedback status update error:", error.message);
+      return NextResponse.json({ error: "Failed to update feedback status" }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true, status, ids });
+  }
+
+  const userId = await getAuthUserId(request);
+  if (!userId) {
+    return NextResponse.json({ error: "Sign in required to leave a note." }, { status: 401 });
   }
 
   const id = body.id;
@@ -286,12 +331,15 @@ async function getAuthUserId(request: Request): Promise<string | null> {
   return (await getAuthUser(request))?.id ?? null;
 }
 
-export async function GET(request: Request) {
-  const adminEmails = (process.env.ADMIN_EMAIL ?? "")
+function getAdminEmails() {
+  return (process.env.ADMIN_EMAIL ?? "")
     .split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
+}
 
+export async function GET(request: Request) {
+  const adminEmails = getAdminEmails();
   if (adminEmails.length === 0) {
     return NextResponse.json({ error: "No admin configured" }, { status: 403 });
   }
@@ -303,7 +351,7 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const kind = url.searchParams.get("kind");
-  const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 200);
+  const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 1000);
 
   const supabase = createAdminClient();
 

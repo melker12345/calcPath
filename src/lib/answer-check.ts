@@ -16,7 +16,9 @@ const removeLatexSizing = (s: string) =>
   s.replace(/\\left/g, "").replace(/\\right/g, "");
 
 const stripOptionalLabelPrefix = (input: string) =>
-  input.replace(/^(?:[a-z]+(?:_[a-z0-9]+)?|[a-z])=/i, "");
+  input
+    .replace(/^[a-z]\([a-z]\)=/i, "")
+    .replace(/^[a-z]+(?:_[a-z0-9]+)?=/i, "");
 
 const parseGroup = (s: string, start: number) => {
   // expects s[start] === '{'
@@ -245,9 +247,6 @@ export const normalizeAnswer = (input: string) => {
     .replace(/⟩/g, ">")
     .replace(/λ/g, "lambda")
     .replace(/[{}]/g, "");
-
-  // Normalize exponent parentheses: x^(2x) -> x^2x
-  out = out.replace(/\^\(([^)]+)\)/g, "^$1");
 
   // Normalize trig/func^n(arg) -> func(arg)^n  e.g. sec^2(x) -> sec(x)^2
   out = out.replace(

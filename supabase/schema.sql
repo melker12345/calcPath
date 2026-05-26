@@ -92,18 +92,31 @@ for update
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
--- FEEDBACK: general feedback messages and +1/-1 votes on explanations
+-- FEEDBACK: general feedback messages and +1/-1/0 votes on explanations
 create table if not exists public.feedback (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete set null,
   kind text not null check (kind in ('bug', 'feature', 'general', 'vote')),
   target_type text,
   target_id text,
-  vote smallint check (vote in (-1, 1)),
+  vote smallint check (vote in (-1, 0, 1)),
   message text,
+  status text not null default 'open' check (status in ('open', 'fixed', 'trash')),
   page_url text,
   created_at timestamptz not null default now()
 );
+
+alter table public.feedback drop constraint if exists feedback_vote_check;
+alter table public.feedback
+add constraint feedback_vote_check check (vote in (-1, 0, 1));
+
+alter table public.feedback add column if not exists status text not null default 'open';
+alter table public.feedback alter column status set default 'open';
+update public.feedback set status = 'open' where status is null;
+alter table public.feedback alter column status set not null;
+alter table public.feedback drop constraint if exists feedback_status_check;
+alter table public.feedback
+add constraint feedback_status_check check (status in ('open', 'fixed', 'trash'));
 
 alter table public.feedback enable row level security;
 
