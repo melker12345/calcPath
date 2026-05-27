@@ -1,3 +1,5 @@
+import type { DiagnosticResult } from "@/lib/diagnostics";
+
 export type Attempt = {
   problemId: string;
   topicId: string;
@@ -27,6 +29,7 @@ export type ProgressState = {
   completedProblemIds: string[];
   topicStats: Record<string, { solved: number; correct: number }>;
   testResults: TestResult[];
+  diagnostics: DiagnosticResult[];
   streak: StreakStats;
 };
 
@@ -36,6 +39,7 @@ export const createEmptyProgress = (): ProgressState => ({
   completedProblemIds: [],
   topicStats: {},
   testResults: [],
+  diagnostics: [],
   streak: { current: 0, longest: 0 },
 });
 
@@ -45,6 +49,14 @@ export const recordTestResult = (
 ): ProgressState => {
   const testResults = [result, ...state.testResults].slice(0, 100);
   return { ...state, testResults };
+};
+
+export const recordDiagnosticResult = (
+  state: ProgressState,
+  result: DiagnosticResult,
+): ProgressState => {
+  const diagnostics = [result, ...state.diagnostics].slice(0, 25);
+  return { ...state, diagnostics };
 };
 
 export const getTopicTestStats = (state: ProgressState, topicId: string) => {
@@ -107,6 +119,7 @@ export const normalizeProgressState = (
   if (!input) return empty;
   const attempts = Array.isArray(input.attempts) ? input.attempts : empty.attempts;
   const testResults = Array.isArray(input.testResults) ? input.testResults : empty.testResults;
+  const diagnostics = Array.isArray(input.diagnostics) ? input.diagnostics : empty.diagnostics;
   if (attempts.length > 0) {
     const derived = rebuildDerivedFields(attempts);
     return {
@@ -115,6 +128,7 @@ export const normalizeProgressState = (
       completedProblemIds: derived.completedProblemIds,
       topicStats: derived.topicStats,
       testResults,
+      diagnostics,
       streak: derived.streak,
     };
   }
@@ -128,6 +142,7 @@ export const normalizeProgressState = (
       : empty.completedProblemIds,
     topicStats: input.topicStats ?? empty.topicStats,
     testResults,
+    diagnostics,
     streak: input.streak ?? empty.streak,
   };
 };
@@ -221,6 +236,7 @@ export const recordAttempt = (
     completedProblemIds,
     topicStats,
     testResults: state.testResults,
+    diagnostics: state.diagnostics,
     streak,
   };
 };

@@ -10,14 +10,17 @@ import {
   createEmptyProgress,
   normalizeProgressState,
   recordAttempt,
+  recordDiagnosticResult,
   recordTestResult,
 } from "@/lib/progress";
 import { useAuth } from "@/components/auth-provider";
+import type { DiagnosticResult } from "@/lib/diagnostics";
 
 type ProgressContextValue = {
   progress: ProgressState;
   addAttempt: (attempt: Attempt) => void;
   addTestResult: (result: TestResult) => void;
+  addDiagnosticResult: (result: DiagnosticResult) => void;
   resetProgress: () => void;
 };
 
@@ -135,6 +138,25 @@ export const ProgressProvider = ({
     });
   };
 
+  const addDiagnosticResult = (result: DiagnosticResult) => {
+    setProgress((prev) => {
+      const next = recordDiagnosticResult(prev, result);
+      writeStorage(PROGRESS_KEY, next);
+      if (user?.id) {
+        supabase
+          .from("user_progress")
+          .upsert({ user_id: user.id, state: next }, { onConflict: "user_id" })
+          .then(({ error }) => {
+            if (error) {
+              // eslint-disable-next-line no-console
+              console.warn("Failed to save diagnostic result:", error.message);
+            }
+          });
+      }
+      return next;
+    });
+  };
+
   const resetProgress = () => {
     const next = createEmptyProgress();
     setProgress(next);
@@ -157,6 +179,7 @@ export const ProgressProvider = ({
       progress,
       addAttempt,
       addTestResult,
+      addDiagnosticResult,
       resetProgress,
     }),
     [progress],

@@ -6,6 +6,7 @@ import { useAuth } from "@/components/auth-provider";
 import { useProgress } from "@/components/progress-provider";
 import { getPracticeProgress, getTopicTestStats } from "@/lib/progress";
 import { trackEvent } from "@/lib/analytics";
+import { getRecommendedDiagnosticAction, summarizeDiagnosticSkills } from "@/lib/diagnostics";
 import type { SubjectTheme } from "@/lib/themes";
 import type { Problem, Topic } from "@/lib/shared-types";
 
@@ -75,6 +76,16 @@ export function SubjectDashboard({
   const completionPercent = Math.round(
     (stats.totalMastered / stats.totalProblems) * 100
   );
+
+  const diagnosticSummaries = useMemo(
+    () => summarizeDiagnosticSkills(progress.diagnostics),
+    [progress.diagnostics],
+  );
+  const diagnosticAction = getRecommendedDiagnosticAction(diagnosticSummaries);
+  const testedDiagnostics = diagnosticSummaries.filter((summary) => summary.status !== "not-tested");
+  const needsReviewCount = diagnosticSummaries.filter((summary) =>
+    summary.status === "weak" || summary.status === "needs-review"
+  ).length;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
@@ -233,6 +244,37 @@ export function SubjectDashboard({
           </div>
         </div>
       </div>
+
+      {subjectSlug === "calculus" && (
+        <div
+          className="mb-6 rounded-xl p-4 sm:mb-8 sm:rounded-2xl sm:p-5"
+          style={{ border: `1.5px solid ${c.border}`, background: c.card }}
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold" style={{ color: c.text }}>
+                Readiness Map
+              </h3>
+              <p className="mt-1 max-w-2xl text-xs leading-relaxed" style={{ color: c.textMuted }}>
+                Check prerequisite skills and get a suggested starting point before going deeper.
+              </p>
+            </div>
+            <Link
+              href="/diagnostic"
+              className="inline-flex rounded-lg px-4 py-2 text-sm font-semibold transition hover:brightness-110"
+              style={{ background: c.accent, color: c.navAccentText }}
+            >
+              {testedDiagnostics.length === 0 ? "Take diagnostic" : "Retake diagnostic"}
+            </Link>
+          </div>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            <DiagnosticMiniStat label="Skills tested" value={`${testedDiagnostics.length}/${diagnosticSummaries.length}`} />
+            <DiagnosticMiniStat label="Needs review" value={String(needsReviewCount)} />
+            <DiagnosticMiniStat label="Next step" value={diagnosticAction.label} />
+          </div>
+        </div>
+      )}
 
       {/* Weekly Goal */}
       <div className="mb-6 grid gap-4 sm:mb-8 sm:grid-cols-2">
@@ -482,6 +524,17 @@ export function SubjectDashboard({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function DiagnosticMiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-black/5 bg-white/70 px-3 py-2">
+      <p className="truncate text-sm font-bold text-zinc-900">{value}</p>
+      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+        {label}
+      </p>
     </div>
   );
 }
