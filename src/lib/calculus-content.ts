@@ -237,6 +237,37 @@ export function getModuleSectionUrl(
   return `/calculus/modules/${topicId}#${anchor}`;
 }
 
+/**
+ * Returns the next section slug (for question filtering) within the same topic,
+ * or null if this is the last section in the topic.
+ */
+export function getNextSection(topicId: string, currentSection: string): string | null {
+  const mod = modules.find((m) => m.topicId === topicId);
+  if (!mod || !mod.sections) return null;
+
+  const anchorMap = sectionToAnchor[topicId] || {};
+  // Build ordered list of question sections based on module order
+  const orderedSections: string[] = [];
+
+  for (const moduleSection of mod.sections) {
+    const moduleAnchor = toSlug(moduleSection.title);
+    // Find which question section maps to this anchor
+    const questionSection = Object.keys(anchorMap).find(
+      (key) => anchorMap[key] === moduleAnchor
+    );
+    if (questionSection) {
+      orderedSections.push(questionSection);
+    }
+  }
+
+  const currentIndex = orderedSections.indexOf(currentSection);
+  if (currentIndex === -1 || currentIndex === orderedSections.length - 1) {
+    return null;
+  }
+
+  return orderedSections[currentIndex + 1];
+}
+
 export const learningPaths: LearningPath[] = [
   {
     id: "calc-foundations",

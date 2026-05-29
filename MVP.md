@@ -25,17 +25,16 @@ The site exists to help a user:
 
 If a feature does not clearly improve one of those steps, it should not be in the MVP.
 
-## Strict Performance Requirement
-- No page should be larger than `14 KB`.
-- This is a hard requirement, not a guideline.
-- Rendering time, hydration cost, and bundle size must be treated as first-class constraints.
+## Performance Philosophy
+- Keep pages reasonably lightweight. A soft target around **14 KB** for the main content is a good guideline (not a hard limit).
+- Rendering time, hydration cost, and bundle size should still be treated as important constraints.
 - Prefer server-rendered, static, and minimal pages wherever possible.
-- Avoid unnecessary client-side state, heavy libraries, visual effects, and abstractions.
+- Avoid unnecessary client-side state, heavy libraries, visual effects, and abstractions that don't clearly improve the learning experience.
 
 ## Required Features
 
 ### 1. Subjects And Topics
-- The user must be able to access the available subjects.
+- The user must be able to access the all available subjects.
 - Each subject must expose its topics clearly.
 - Navigation between subjects, topics, lesson material, and practice must be fast and simple.
 
@@ -76,7 +75,7 @@ If a feature does not clearly improve one of those steps, it should not be in th
 - Reading, practicing, submitting, feedback, and scratchpad access must all remain usable on small screens.
 
 ## What Should Be Removed From The MVP
-- decorative or heavily themed UI
+- decorative or heavily themed UI (this is old themes)
 - unnecessary animations
 - visual polish that increases bundle size or render cost
 - duplicated components and abstractions with little product value

@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
 import { MathInput } from "@/components/math-input";
 import { VoteFeedback } from "@/components/vote-feedback";
 import { useProgress } from "@/components/progress-provider";
-import { problems, topics, getModuleSectionUrl, getModuleSectionTitle } from "@/lib/calculus-content";
+import { problems, topics, getModuleSectionUrl, getModuleSectionTitle, getNextSection } from "@/lib/calculus-content";
 import { trackEvent } from "@/lib/analytics";
 import { isAnswerCorrectAsync } from "@/lib/answer-check";
 import { detectQuestionContext } from "@/lib/math-input-helpers";
@@ -17,15 +17,26 @@ type FeedbackState =
   | { type: "correct" }
   | { type: "incorrect"; attempts: number; hintUsed: boolean; showSolution: boolean };
 
+type QuestionStatus = 'not-attempted' | 'wrong' | 'hint-used' | 'solved';
+
 export default function PracticeTopicPage() {
   const params = useParams<{ topicId: string }>();
   const topicId = params?.topicId ?? "";
   const { progress, addAttempt } = useProgress();
   const topic = topics.find((item) => item.id === topicId);
-  const topicProblems = useMemo(
-    () => problems.filter((problem) => problem.topicId === topicId),
-    [topicId],
-  );
+  const searchParams = useSearchParams();
+  const sectionFilter = searchParams.get("section");
+
+  const topicProblems = useMemo(() => {
+    let filtered = problems.filter((problem) => problem.topicId === topicId);
+    if (sectionFilter) {
+      filtered = filtered.filter((p) => p.section === sectionFilter);
+    }
+    return filtered;
+  }, [topicId, sectionFilter]);
+
+  // Note: We no longer show a separate upper X/Y for sections.
+  // Progress is shown via the dots + the small counter next to them.
   const [index, setIndex] = useState(0);
   const [answer, setAnswer] = useState("");
   const [feedback, setFeedback] = useState<FeedbackState>(null);
@@ -35,6 +46,20 @@ export default function PracticeTopicPage() {
   const [displayProblems, setDisplayProblems] = useState(topicProblems);
   const [resumeReady, setResumeReady] = useState(false);
 
+  // Per-question status for the current practice session (visual circles)
+  const [questionStatuses, setQuestionStatuses] = useState<QuestionStatus[]>([]);
+
+  // Initialize / sync statuses from global progress when the question set changes
+  useEffect(() => {
+    const initialStatuses = displayProblems.map((problem) => {
+      if (progress.completedProblemIds.includes(problem.id)) {
+        return 'solved' as QuestionStatus;
+      }
+      return 'not-attempted' as QuestionStatus;
+    });
+    setQuestionStatuses(initialStatuses);
+  }, [displayProblems, progress.completedProblemIds]);
+
   const current = displayProblems[index];
   const canonicalQuestionNumber =
     current ? topicProblems.findIndex((problem) => problem.id === current.id) + 1 : 0;
@@ -43,6 +68,16 @@ export default function PracticeTopicPage() {
   const questionContext = useMemo(() => {
     if (!current) return undefined;
     return detectQuestionContext(current.prompt);
+  }, [current]);
+
+  // Clean prompt: remove trailing "?" if the prompt ends with a math equation (contains $)
+  const cleanedPrompt = useMemo(() => {
+    if (!current) return "";
+    let p = current.prompt.trim();
+    if (p.endsWith("?") && p.includes("$")) {
+      p = p.slice(0, -1).trim();
+    }
+    return p;
   }, [current]);
 
   useEffect(() => {
@@ -115,6 +150,21 @@ export default function PracticeTopicPage() {
     );
   }
 
+  if (sectionFilter && topicProblems.length === 0) {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+        <h1 className="text-2xl font-semibold">No questions for this section yet</h1>
+        <p className="mt-2 text-zinc-600">We're still adding practice questions for this specific part of the chapter.</p>
+        <Link 
+          href={`/calculus/practice/${topicId}`} 
+          className="mt-4 inline-flex text-[var(--accent)] hover:underline"
+        >
+          Practice the full {topic.title} chapter instead →
+        </Link>
+      </div>
+    );
+  }
+
   const submitAnswer = async (value: string) => {
     if (!current) return;
     const isCorrect = await isAnswerCorrectAsync(value, current.answer);
@@ -135,6 +185,19 @@ export default function PracticeTopicPage() {
     });
 
     setOverlayDismissed(false);
+
+    // Update local status for this question in the current session
+    setQuestionStatuses(prev => {
+      const next = [...prev];
+      if (isCorrect) {
+        next[index] = 'solved';
+      } else {
+        // If they already used a hint, keep it as hint-used, otherwise mark as wrong
+        next[index] = hintWasUsed ? 'hint-used' : 'wrong';
+      }
+      return next;
+    });
+
     if (isCorrect) {
       setFeedback({ type: "correct" });
     } else {
@@ -156,6 +219,15 @@ export default function PracticeTopicPage() {
 
     trackEvent("hint_used", { topicId: current.topicId });
     setOverlayDismissed(false);
+
+    // Mark current question as hint-used (unless already solved)
+    setQuestionStatuses(prev => {
+      const next = [...prev];
+      if (next[index] !== 'solved') {
+        next[index] = 'hint-used';
+      }
+      return next;
+    });
 
     if (feedback?.type === "incorrect") {
       setFeedback({ ...feedback, hintUsed: true });
@@ -190,42 +262,115 @@ export default function PracticeTopicPage() {
     return match?.[1] || "Think about the rules that apply to this type of problem.";
   };
 
-  const progressPct = Math.round((solvedCount / displayProblems.length) * 100);
-
   return (
     <div className="mx-auto w-full max-w-3xl px-0 pb-0 sm:px-6 sm:py-10">
       {/* Desktop topic header */}
       <div className="mb-5 hidden sm:flex sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-[var(--text-primary)]">{topic.title}</h1>
-          <p className="mt-0.5 text-sm text-zinc-500 dark:text-[var(--text-muted)]">{topic.description}</p>
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-[var(--text-primary)]">
+            {topic.title}
+            {sectionFilter && (
+              <span className="ml-2 text-xl font-normal text-zinc-500 dark:text-[var(--text-muted)]">
+                — {getModuleSectionTitle(topicId, sectionFilter) || sectionFilter}
+              </span>
+            )}
+          </h1>
+          {sectionFilter && (() => {
+            const backUrl = getModuleSectionUrl(topicId, sectionFilter);
+            return backUrl ? (
+              <Link 
+                href={backUrl} 
+                className="mt-1 inline-flex items-center gap-1 text-sm text-[var(--accent)] hover:underline"
+              >
+                ← Continue reading this section
+              </Link>
+            ) : null;
+          })()}
+          {!sectionFilter && (
+            <p className="mt-0.5 text-sm text-zinc-500 dark:text-[var(--text-muted)]">
+              {topic.description}
+            </p>
+          )}
         </div>
+
+        {/* Right side actions - simplified in section mode */}
         <div className="flex items-center gap-3">
-          <span className="text-sm text-zinc-500">{solvedCount}/{displayProblems.length}</span>
-          <Link className="btn-secondary" href={`/calculus/test/${topic.id}`}>Take test</Link>
+          {!sectionFilter && (
+            <>
+              <span className="text-sm text-zinc-500">{solvedCount}/{displayProblems.length}</span>
+              <Link className="btn-secondary" href={`/calculus/test/${topic.id}`}>Take test</Link>
+            </>
+          )}
         </div>
       </div>
 
       {/* Main card — full-bleed on mobile, rounded card on desktop */}
       <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-end bg-white px-4 pb-1 pt-2 dark:bg-[var(--surface)] sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
 
-        {/* Progress bar + counter */}
-        <div className="flex items-center gap-3">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-[var(--surface-2)]">
-            <div
-              className="h-full rounded-full bg-slate-900 dark:bg-white transition-all duration-500"
-              style={{ width: `${progressPct}%` }}
-            />
+        {/* Question status circles + simple X/Y for the current section */}
+        <div className="flex w-full justify-center">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              {questionStatuses.map((status, i) => {
+                let colorClass = 'bg-zinc-300 dark:bg-zinc-600'; // not-attempted (gray)
+
+                if (status === 'solved') {
+                  colorClass = 'bg-emerald-500';
+                } else if (status === 'hint-used') {
+                  colorClass = 'bg-amber-500';
+                } else if (status === 'wrong') {
+                  colorClass = 'bg-red-500';
+                }
+
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      setFeedback(null);
+                      setAnswer("");
+                      setIndex(i);
+                    }}
+                    className={`h-2.5 w-2.5 rounded-full transition-all ${colorClass} ${i === index ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-[var(--surface)] ring-zinc-400' : ''}`}
+                    aria-label={`Go to question ${i + 1}`}
+                    title={
+                      status === 'solved' ? 'Solved' :
+                      status === 'hint-used' ? 'Used hint' :
+                      status === 'wrong' ? 'Incorrect' : 'Not attempted'
+                    }
+                  />
+                );
+              })}
+            </div>
+
+            {/* Simple X/Y next to the dots — only for section practice */}
+            {sectionFilter && (
+              <span className="text-xs font-semibold tabular-nums text-slate-500 dark:text-[var(--text-muted)]">
+                {questionStatuses.filter(s => s === 'solved').length} / {displayProblems.length}
+              </span>
+            )}
           </div>
-          <span className="shrink-0 text-xs font-semibold tabular-nums text-slate-400 dark:text-[var(--text-muted)]">
-            {index + 1} / {displayProblems.length}
-          </span>
         </div>
+
+        {/* Mobile-friendly back to reading link when in section mode */}
+        {sectionFilter && (() => {
+          const backUrl = getModuleSectionUrl(topicId, sectionFilter);
+          return backUrl ? (
+            <div className="mt-2 sm:hidden">
+              <Link 
+                href={backUrl} 
+                className="inline-flex items-center gap-1 text-sm text-[var(--accent)] hover:underline"
+              >
+                ← Continue reading this section
+              </Link>
+            </div>
+          ) : null;
+        })()}
 
         {/* Question — fills available space, pushes input to bottom */}
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-5">
           <h2 className="text-center text-lg font-semibold leading-relaxed text-zinc-900 dark:text-[var(--text-primary)] sm:text-2xl">
-            <MathText text={current.prompt} />
+            <MathText text={cleanedPrompt} />
           </h2>
           {(() => {
             const moduleUrl = getModuleSectionUrl(current.topicId, current.section);
@@ -302,13 +447,15 @@ export default function PracticeTopicPage() {
                 <VoteFeedback targetType="problem" targetId={current.id} />
               </div>
 
-              <button
-                type="button"
-                onClick={goToNext}
-                className="mt-2 w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.98] sm:mt-3 sm:py-3 sm:text-base dark:bg-emerald-500 dark:hover:bg-emerald-600"
-              >
-                Next Question →
-              </button>
+              {index < displayProblems.length - 1 && (
+                <button
+                  type="button"
+                  onClick={goToNext}
+                  className="mt-2 w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.98] sm:mt-3 sm:py-3 sm:text-base dark:bg-emerald-500 dark:hover:bg-emerald-600"
+                >
+                  Next Question →
+                </button>
+              )}
             </div>
           ) : null;
 
@@ -392,13 +539,15 @@ export default function PracticeTopicPage() {
                   </button>
                 )}
                 {feedback.showSolution ? (
-                  <button
-                    type="button"
-                    onClick={goToNext}
-                    className="mt-1 w-full rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-amber-700 active:scale-[0.98] sm:mt-2 sm:py-3 sm:text-base dark:bg-amber-500 dark:hover:bg-amber-600"
-                  >
-                    Next Question →
-                  </button>
+                  index < displayProblems.length - 1 ? (
+                    <button
+                      type="button"
+                      onClick={goToNext}
+                      className="mt-1 w-full rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-amber-700 active:scale-[0.98] sm:mt-2 sm:py-3 sm:text-base dark:bg-amber-500 dark:hover:bg-amber-600"
+                    >
+                      Next Question →
+                    </button>
+                  ) : null
                 ) : (
                   <button
                     type="button"
@@ -465,22 +614,76 @@ export default function PracticeTopicPage() {
           );
         })()}
 
-        {/* All mastered */}
+        {/* All mastered - different UI depending on whether we're in section mode */}
         {solvedCount >= displayProblems.length && (
-          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center sm:mt-6 sm:rounded-2xl sm:p-5">
-            <p className="text-lg font-bold text-emerald-800">
-              All {displayProblems.length} problems mastered!
-            </p>
-            <p className="mt-1 text-sm text-emerald-600">
-              Shuffle for a fresh run.
-            </p>
-            <button
-              type="button"
-              onClick={shuffleAndRestart}
-              className="mt-3 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 active:scale-95"
-            >
-              Shuffle &amp; restart
-            </button>
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-center sm:mt-6 sm:rounded-2xl sm:p-6 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+            <p className="text-xl font-bold text-emerald-800 dark:text-emerald-300">Great job!</p>
+            
+            {sectionFilter ? (
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-center">
+                {/* Return to reading the section */}
+                {(() => {
+                  const backUrl = getModuleSectionUrl(topicId, sectionFilter);
+                  return backUrl ? (
+                    <Link
+                      href={backUrl}
+                      className="rounded-xl border border-emerald-300 bg-white px-5 py-2.5 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 dark:border-emerald-800 dark:bg-[var(--surface)] dark:text-emerald-400 dark:hover:bg-emerald-900/30"
+                    >
+                      Return to reading
+                    </Link>
+                  ) : null;
+                })()}
+
+                {/* Practice next (section if possible, otherwise next chapter) */}
+                {(() => {
+                  if (sectionFilter) {
+                    const nextSectionSlug = getNextSection(topicId, sectionFilter);
+                    if (nextSectionSlug) {
+                      const nextSectionTitle = getModuleSectionTitle(topicId, nextSectionSlug) || nextSectionSlug;
+                      return (
+                        <Link
+                          href={`/calculus/practice/${topicId}?section=${nextSectionSlug}`}
+                          className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
+                        >
+                          Practice next: {nextSectionTitle}
+                        </Link>
+                      );
+                    }
+                  }
+
+                  // Fallback: next chapter
+                  const currentIndex = topics.findIndex(t => t.id === topicId);
+                  const nextTopic = currentIndex !== -1 && currentIndex < topics.length - 1 
+                    ? topics[currentIndex + 1] 
+                    : null;
+                  return nextTopic ? (
+                    <Link
+                      href={`/calculus/modules/${nextTopic.id}`}
+                      className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
+                    >
+                      Practice next topic: {nextTopic.title}
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/calculus"
+                      className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                    >
+                      Back to Calculus
+                    </Link>
+                  );
+                })()}
+              </div>
+            ) : (
+              // Full chapter mode - keep simple for now
+              <div className="mt-4">
+                <Link
+                  href={`/calculus/modules/${topicId}`}
+                  className="inline-flex rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                >
+                  Return to {topic.title}
+                </Link>
+              </div>
+            )}
           </div>
         )}
 

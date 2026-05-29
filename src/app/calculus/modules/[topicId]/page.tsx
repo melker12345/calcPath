@@ -314,6 +314,46 @@ export default function ModulePage() {
                 <div className="mt-6 flex justify-end" data-no-print>
                   <VoteFeedback targetType="section" targetId={`${topicId}:${toSlug(section.title)}`} />
                 </div>
+
+                {/* Practice this section button - only for sections that have dedicated questions */}
+                {(() => {
+                  // Sections in Limits that have at least 5 practice questions
+                  const sectionsWithPractice = new Set([
+                    "funcrep", "intuition", "onesided", "directsub", "indeterminate",
+                    "trig", "squeeze", "continuity", "piecewise", "infinite", "atinfinity", "lhopital"
+                  ]);
+
+                  // Map section titles to their slug used in questions
+                  const titleToSlug: Record<string, string> = {
+                    "Functional representations: the language before the calculus": "funcrep",
+                    "Building intuition: what does 'approaching' mean?": "intuition",
+                    "One-sided limits": "onesided",
+                    "Evaluating limits: direct substitution": "directsub",
+                    "Indeterminate forms and algebraic tricks": "indeterminate",
+                    "Key trigonometric limits": "trig",
+                    "The Squeeze Theorem": "squeeze",
+                    "Continuity": "continuity",
+                    "Evaluating limits of piecewise functions": "piecewise",
+                    "Infinite limits and vertical asymptotes": "infinite",
+                    "Limits at infinity and horizontal asymptotes": "atinfinity",
+                    "L'Hôpital's Rule": "lhopital",
+                  };
+
+                  const slug = titleToSlug[section.title];
+                  if (topicId === "limits" && slug && sectionsWithPractice.has(slug)) {
+                    return (
+                      <div className="mt-3 flex justify-end" data-no-print>
+                        <Link
+                          href={`/calculus/practice/limits?section=${slug}`}
+                          className="inline-flex items-center gap-2 rounded-lg border border-[var(--accent)] px-3 py-1.5 text-xs font-medium text-[var(--accent)] transition hover:bg-[var(--accent)] hover:text-white sm:text-sm"
+                        >
+                          Practice this section →
+                        </Link>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             </div>
           ))}
