@@ -124,10 +124,10 @@ export default function TopicTestPage() {
   if (phase === "confirm") {
     return (
       <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
-        <div className="rounded-2xl border-2 border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50 p-5 shadow-xl sm:rounded-3xl sm:p-8">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:rounded-3xl sm:p-8">
           <div className="text-center">
-            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-4xl text-white shadow-lg">
-              📝
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 text-3xl font-bold text-slate-700 ring-1 ring-slate-200">
+              Test
             </div>
             <h1 className="text-2xl font-bold text-zinc-900 sm:text-3xl">{topic.title} Test</h1>
             <p className="mt-2 text-lg text-zinc-600">
@@ -135,23 +135,23 @@ export default function TopicTestPage() {
             </p>
           </div>
 
-          <div className="mt-8 space-y-4 rounded-2xl bg-white/70 p-6">
+          <div className="mt-8 space-y-4 rounded-2xl bg-slate-50 p-6 ring-1 ring-slate-200">
             <h2 className="font-bold text-zinc-900">Test Rules:</h2>
             <ul className="space-y-3 text-zinc-700">
               <li className="flex items-start gap-3">
-                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">1</span>
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-slate-600 ring-1 ring-slate-200">1</span>
                 <span><strong>One attempt per question</strong> — no going back</span>
               </li>
               <li className="flex items-start gap-3">
-                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">2</span>
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-slate-600 ring-1 ring-slate-200">2</span>
                 <span><strong>No hints available</strong> — test your true understanding</span>
               </li>
               <li className="flex items-start gap-3">
-                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">3</span>
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-slate-600 ring-1 ring-slate-200">3</span>
                 <span><strong>Timer is running</strong> — complete at your own pace</span>
               </li>
               <li className="flex items-start gap-3">
-                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">4</span>
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-slate-600 ring-1 ring-slate-200">4</span>
                 <span><strong>Score at the end</strong> — see your results and review mistakes</span>
               </li>
             </ul>
@@ -161,13 +161,13 @@ export default function TopicTestPage() {
             <button
               type="button"
               onClick={startTest}
-              className="rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500 px-8 py-4 text-lg font-bold text-white shadow-lg transition hover:shadow-xl active:scale-95"
+              className="rounded-2xl bg-slate-900 px-8 py-4 text-lg font-bold text-white shadow-sm transition hover:bg-slate-800 active:scale-95"
             >
               Start Test →
             </button>
             <Link
               href={`/calculus/practice/${topic.id}`}
-              className="rounded-2xl border-2 border-indigo-200 bg-white px-8 py-4 text-center text-lg font-semibold text-indigo-700 transition hover:bg-indigo-50"
+              className="rounded-2xl border border-slate-200 bg-white px-8 py-4 text-center text-lg font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               Practice Instead
             </Link>
@@ -195,35 +195,35 @@ export default function TopicTestPage() {
     return (
       <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
         {/* Hero result card */}
-        <div className={`rounded-2xl p-5 text-center shadow-xl sm:rounded-3xl sm:p-8 ${
-          perfectScore 
-            ? "bg-gradient-to-br from-amber-400 via-yellow-400 to-orange-400" 
-            : passed 
-              ? "bg-gradient-to-br from-emerald-500 to-teal-500" 
-              : "bg-gradient-to-br from-rose-500 to-pink-500"
+        <div className={`rounded-2xl border p-5 text-center shadow-sm sm:rounded-3xl sm:p-8 ${
+          perfectScore
+            ? "border-amber-200 bg-amber-50"
+            : passed
+              ? "border-emerald-200 bg-emerald-50"
+              : "border-rose-200 bg-rose-50"
         }`}>
-          <div className="mb-4 text-6xl">
-            {perfectScore ? "🏆" : passed ? "🎉" : "💪"}
+          <div className="mb-4 text-sm font-bold uppercase tracking-[0.2em] text-zinc-500">
+            Score
           </div>
-          <h1 className="text-2xl font-bold text-white sm:text-4xl">
+          <h1 className="text-2xl font-bold text-zinc-900 sm:text-4xl">
             {perfectScore ? "Perfect Score!" : passed ? "Great Job!" : "Keep Practicing!"}
           </h1>
-          <p className="mt-2 text-xl text-white/90">
+          <p className="mt-2 text-xl text-zinc-600">
             {topic.title} Test Complete
           </p>
 
           {/* Score display */}
-          <div className="mt-6 inline-flex items-baseline gap-2 rounded-xl bg-white/20 px-5 py-3 backdrop-blur-sm sm:mt-8 sm:rounded-2xl sm:px-8 sm:py-4">
-            <span className="text-4xl font-bold text-white sm:text-6xl">{score}</span>
-            <span className="text-2xl text-white/80 sm:text-3xl">/ {testQuestions.length}</span>
+          <div className="mt-6 inline-flex items-baseline gap-2 rounded-xl bg-white px-5 py-3 ring-1 ring-black/5 sm:mt-8 sm:rounded-2xl sm:px-8 sm:py-4">
+            <span className="text-4xl font-bold text-zinc-900 sm:text-6xl">{score}</span>
+            <span className="text-2xl text-zinc-500 sm:text-3xl">/ {testQuestions.length}</span>
           </div>
 
-          <div className="mt-4 text-2xl font-semibold text-white">
+          <div className="mt-4 text-2xl font-semibold text-zinc-900">
             {percentage}% Correct
           </div>
 
-          <div className="mt-4 text-lg text-white/80">
-            ⏱️ Time: {formatTime(elapsedSeconds)}
+          <div className="mt-4 text-lg text-zinc-500">
+            Time: {formatTime(elapsedSeconds)}
           </div>
         </div>
 
@@ -275,13 +275,13 @@ export default function TopicTestPage() {
               setPhase("confirm");
               trackEvent("test_retake", { topicId });
             }}
-            className="rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 font-bold text-white shadow-md transition hover:shadow-lg active:scale-95"
+            className="rounded-2xl bg-slate-900 px-6 py-3 font-bold text-white shadow-sm transition hover:bg-slate-800 active:scale-95"
           >
             Retake Test
           </button>
           <Link
             href={`/calculus/practice/${topic.id}`}
-            className="rounded-2xl border-2 border-indigo-200 bg-white px-6 py-3 font-semibold text-indigo-700 transition hover:bg-indigo-50"
+            className="rounded-2xl border border-slate-200 bg-white px-6 py-3 font-semibold text-slate-700 transition hover:bg-slate-50"
           >
             Practice More
           </Link>
@@ -489,7 +489,7 @@ export default function TopicTestPage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
       {/* Header with timer and progress */}
-      <div className="mb-4 rounded-xl border-2 border-indigo-100 bg-gradient-to-r from-indigo-50 to-purple-50 p-3 sm:mb-6 sm:rounded-2xl sm:p-4">
+      <div className="mb-4 rounded-xl border border-slate-200 bg-white p-3 sm:mb-6 sm:rounded-2xl sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-lg font-bold text-zinc-900 sm:text-xl">{topic.title} Test</h1>
@@ -507,7 +507,7 @@ export default function TopicTestPage() {
         {/* Progress bar */}
         <div className="mt-4 h-3 rounded-full bg-indigo-100">
           <div 
-            className="h-3 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-300"
+            className="h-3 rounded-full bg-slate-900 transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>

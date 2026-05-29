@@ -1,16 +1,17 @@
 "use client";
 
 import { SubjectDashboard } from "@/components/subject-dashboard";
-import { blueprintTheme } from "@/lib/themes";
-import { problems, topics } from "@/lib/linalg-content";
+import { subjects } from "@/lib/subjects";
 
 export default function LinearAlgebraDashboardPage() {
+  const subject = subjects["linear-algebra"];
+
   return (
     <SubjectDashboard
-      subjectSlug="linear-algebra"
-      theme={blueprintTheme}
-      topics={topics}
-      problems={problems}
+      subjectSlug={subject.slug}
+      topics={subject.topics}
+      problems={subject.problems}
+      hasTests={subject.hasTests}
     />
   );
 }

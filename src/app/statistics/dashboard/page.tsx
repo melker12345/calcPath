@@ -1,16 +1,17 @@
 "use client";
 
 import { SubjectDashboard } from "@/components/subject-dashboard";
-import { chalkboardTheme } from "@/lib/themes";
-import { problems, topics } from "@/lib/statistics-content";
+import { subjects } from "@/lib/subjects";
 
 export default function StatisticsDashboardPage() {
+  const subject = subjects.statistics;
+
   return (
     <SubjectDashboard
-      subjectSlug="statistics"
-      theme={chalkboardTheme}
-      topics={topics}
-      problems={problems}
+      subjectSlug={subject.slug}
+      topics={subject.topics}
+      problems={subject.problems}
+      hasTests={subject.hasTests}
     />
   );
 }

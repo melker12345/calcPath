@@ -100,6 +100,12 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => setMounted(true), []);
 
+  const ensureIndexLoaded = useCallback(() => {
+    if (indexLoaded.current) return;
+    indexLoaded.current = true;
+    loadIndex().then(setIndex);
+  }, []);
+
   const results = useMemo(() => {
     if (!query.trim()) return index.slice(0, 8);
     return index
@@ -120,11 +126,8 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
 
   const open = useCallback(() => {
     setIsOpen(true);
-    if (!indexLoaded.current) {
-      indexLoaded.current = true;
-      loadIndex().then(setIndex);
-    }
-  }, []);
+    ensureIndexLoaded();
+  }, [ensureIndexLoaded]);
 
   const navigate = useCallback(
     (href: string) => {
@@ -138,7 +141,11 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        setIsOpen((p) => !p);
+        setIsOpen((p) => {
+          const next = !p;
+          if (next) ensureIndexLoaded();
+          return next;
+        });
       }
       if (e.key === "Escape" && isOpen) {
         e.preventDefault();
@@ -147,7 +154,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [isOpen, close]);
+  }, [isOpen, close, ensureIndexLoaded]);
 
   useEffect(() => {
     if (isOpen && inputRef.current) inputRef.current.focus();
@@ -188,7 +195,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
           <div className="fixed inset-0 z-[10000]">
             <button type="button" aria-label="Close search" onClick={close} className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
             <div className="relative mx-auto mt-[15vh] w-[min(560px,90vw)]">
-              <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xl">
+              <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xl dark:border-[var(--border)] dark:bg-[var(--surface)]">
                 <div className="flex items-center gap-3 border-b border-zinc-100 px-4 py-3">
                   <svg className="h-5 w-5 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
@@ -257,20 +264,3 @@ export function SearchTrigger() {
   );
 }
 
-export function SearchTriggerThemed({ borderColor, textColor }: { borderColor: string; textColor: string }) {
-  const { open } = useSearch();
-  return (
-    <button
-      type="button"
-      onClick={open}
-      className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition hover:opacity-80"
-      style={{ border: `1px solid ${borderColor}`, color: textColor }}
-    >
-      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-      </svg>
-      <span className="hidden sm:inline">Search...</span>
-
-    </button>
-  );
-}

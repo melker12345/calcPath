@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import { AuthBoundary } from "@/components/scoped-providers";
-import { ThemedLayout } from "@/components/themed-layout";
+import { CourseLayout } from "@/components/course-layout";
 import { subjectBodyFont, subjectHeadingFont } from "@/lib/subject-fonts";
-import { graphPaperTheme } from "@/lib/themes";
 
 export const metadata: Metadata = {
   title: {
@@ -40,11 +38,7 @@ export default function CalculusLayout({
 }) {
   return (
     <div className={`${subjectHeadingFont.variable} ${subjectBodyFont.variable}`}>
-      <AuthBoundary>
-        <ThemedLayout theme={graphPaperTheme} subjectSlug="calculus">
-          {children}
-        </ThemedLayout>
-      </AuthBoundary>
+      <CourseLayout>{children}</CourseLayout>
     </div>
   );
 }

@@ -197,8 +197,8 @@ export default function PracticeTopicPage() {
       {/* Desktop topic header */}
       <div className="mb-5 hidden sm:flex sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900">{topic.title}</h1>
-          <p className="mt-0.5 text-sm text-zinc-500">{topic.description}</p>
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-[var(--text-primary)]">{topic.title}</h1>
+          <p className="mt-0.5 text-sm text-zinc-500 dark:text-[var(--text-muted)]">{topic.description}</p>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-zinc-500">{solvedCount}/{displayProblems.length}</span>
@@ -207,24 +207,24 @@ export default function PracticeTopicPage() {
       </div>
 
       {/* Main card — full-bleed on mobile, rounded card on desktop */}
-      <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-end bg-white px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:border sm:border-slate-200 sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
+      <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-end bg-white px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
 
         {/* Progress bar + counter */}
         <div className="flex items-center gap-3">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-[var(--surface-2)]">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-blue-400 to-indigo-500 transition-all duration-500"
+              className="h-full rounded-full bg-slate-900 dark:bg-white transition-all duration-500"
               style={{ width: `${progressPct}%` }}
             />
           </div>
-          <span className="shrink-0 text-xs font-semibold tabular-nums text-slate-400">
+          <span className="shrink-0 text-xs font-semibold tabular-nums text-slate-400 dark:text-[var(--text-muted)]">
             {index + 1} / {displayProblems.length}
           </span>
         </div>
 
         {/* Question — fills available space, pushes input to bottom */}
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-5">
-          <h2 className="text-center text-lg font-semibold leading-relaxed text-zinc-900 sm:text-2xl">
+          <h2 className="text-center text-lg font-semibold leading-relaxed text-zinc-900 dark:text-[var(--text-primary)] sm:text-2xl">
             <MathText text={current.prompt} />
           </h2>
           {(() => {
@@ -259,10 +259,10 @@ export default function PracticeTopicPage() {
                 className={`flex gap-2 sm:gap-3 ${color === "emerald" ? "animate-step-in" : ""}`}
                 style={color === "emerald" ? { animationDelay: `${0.25 + stepIdx * 0.1}s` } : undefined}
               >
-                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold sm:h-6 sm:w-6 sm:text-xs ${color === "emerald" ? "bg-emerald-200 text-emerald-800" : "bg-amber-200 text-amber-800"}`}>
+                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold sm:h-6 sm:w-6 sm:text-xs ${color === "emerald" ? "bg-emerald-200 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-400" : "bg-amber-200 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400"}`}>
                   {stepIdx + 1}
                 </span>
-                <p className="flex-1 text-sm leading-relaxed text-zinc-700 sm:text-base">
+                <p className="flex-1 text-sm leading-relaxed text-zinc-700 sm:text-base dark:text-[var(--text-secondary)]">
                   <MathText text={step} />
                 </p>
               </div>
@@ -272,7 +272,7 @@ export default function PracticeTopicPage() {
           const isDismissable = feedback?.type === "incorrect" && !feedback.showSolution;
 
           const correctOverlay = feedback?.type === "correct" ? (
-            <div className="animate-correct-pop flex h-full flex-col border-t border-emerald-200 bg-emerald-50 p-3 pt-4 sm:p-5">
+            <div className="animate-correct-pop flex h-full flex-col border-t border-emerald-200 bg-emerald-50 p-3 pt-4 sm:p-5 dark:border-emerald-800 dark:bg-[#0a2e1f]">
               <div className="flex items-center gap-2.5">
                 <div className="animate-check-bounce flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base">
                   ✓
@@ -305,7 +305,7 @@ export default function PracticeTopicPage() {
               <button
                 type="button"
                 onClick={goToNext}
-                className="mt-2 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-[0.98] sm:mt-3 sm:py-3 sm:text-base"
+                className="mt-2 w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.98] sm:mt-3 sm:py-3 sm:text-base"
               >
                 Next Question →
               </button>
@@ -315,8 +315,8 @@ export default function PracticeTopicPage() {
           const incorrectOverlay = (feedback?.type === "incorrect" && !overlayDismissed) ? (
             <div className={`flex h-full flex-col border-t p-3 pt-4 sm:p-5 ${
               feedback.showSolution || feedback.attempts > 0
-                ? "border-amber-200 bg-amber-50"
-                : "border-blue-200 bg-blue-50"
+                ? "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-[#2a1f0a]"
+                : "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-[#0a1f2a]"
             }`}>
               {feedback.attempts > 0 && (
                 <div className="flex items-center gap-2">
@@ -386,7 +386,7 @@ export default function PracticeTopicPage() {
                   <button
                     type="button"
                     onClick={showFullSolution}
-                    className="rounded-lg border border-amber-200 bg-white px-2.5 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm"
+                    className="rounded-lg border border-amber-200 bg-white px-2.5 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm dark:border-amber-800 dark:bg-[var(--surface)] dark:text-amber-400 dark:hover:bg-[var(--surface-2)]"
                   >
                     Solution
                   </button>
@@ -395,7 +395,7 @@ export default function PracticeTopicPage() {
                   <button
                     type="button"
                     onClick={goToNext}
-                    className="mt-1 w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-[0.98] sm:mt-2 sm:py-3 sm:text-base"
+                    className="mt-1 w-full rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-amber-700 active:scale-[0.98] sm:mt-2 sm:py-3 sm:text-base"
                   >
                     Next Question →
                   </button>
@@ -403,7 +403,7 @@ export default function PracticeTopicPage() {
                   <button
                     type="button"
                     onClick={goToNext}
-                    className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-50 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm"
+                    className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-50 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm dark:border-[var(--border)] dark:bg-[var(--surface)] dark:text-[var(--text-muted)] dark:hover:bg-[var(--surface-2)]"
                   >
                     Skip
                   </button>
@@ -425,18 +425,18 @@ export default function PracticeTopicPage() {
                     submitAnswer(choice);
                   }}
                   disabled={feedback?.type === "correct"}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-base font-medium text-zinc-900 transition hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-base font-medium text-zinc-900 transition hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg dark:border-[var(--border)] dark:bg-[var(--surface)] dark:text-[var(--text-primary)] dark:hover:border-[var(--accent)] dark:hover:bg-[var(--surface-2)]"
                 >
                   <MathText text={choice} />
                 </button>
               ))}
               {overlay && !overlayDismissed && (
-                <div className="relative overflow-hidden rounded-xl border border-slate-200">
+                <div className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-[var(--border)]">
                   {isDismissable && (
                     <button
                       type="button"
                       onClick={() => setOverlayDismissed(true)}
-                      className="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-sm text-zinc-400 shadow-sm backdrop-blur transition hover:bg-white hover:text-zinc-600"
+                      className="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-sm text-zinc-400 shadow-sm backdrop-blur transition hover:bg-white hover:text-zinc-600 dark:bg-[var(--surface-2)]/80 dark:text-[var(--text-muted)] dark:hover:bg-[var(--surface-2)] dark:hover:text-[var(--text-secondary)]"
                     >
                       ×
                     </button>
@@ -477,7 +477,7 @@ export default function PracticeTopicPage() {
             <button
               type="button"
               onClick={shuffleAndRestart}
-              className="mt-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition active:scale-95"
+              className="mt-3 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 active:scale-95"
             >
               Shuffle &amp; restart
             </button>

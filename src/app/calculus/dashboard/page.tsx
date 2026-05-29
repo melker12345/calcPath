@@ -1,17 +1,17 @@
 "use client";
 
 import { SubjectDashboard } from "@/components/subject-dashboard";
-import { graphPaperTheme } from "@/lib/themes";
-import { problems, topics } from "@/lib/calculus-content";
+import { subjects } from "@/lib/subjects";
 
 export default function CalculusDashboardPage() {
+  const subject = subjects.calculus;
+
   return (
     <SubjectDashboard
-      subjectSlug="calculus"
-      theme={graphPaperTheme}
-      topics={topics}
-      problems={problems}
-      hasTests
+      subjectSlug={subject.slug}
+      topics={subject.topics}
+      problems={subject.problems}
+      hasTests={subject.hasTests}
     />
   );
 }

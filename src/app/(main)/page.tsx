@@ -1,8 +1,55 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { problems as calculusProblems } from "@/lib/calculus-content";
-import { problems as statisticsProblems } from "@/lib/statistics-content";
-import { problems as linalgProblems } from "@/lib/linalg-content";
+
+// Accent comes from CSS variables for proper light/dark theming (GitHub-inspired blues)
+
+
+const subjects = [
+  {
+    slug: "calculus" as const,
+    label: "Calculus",
+    icon: "∫",
+    count: 8,
+    topics: ["Limits & Continuity", "Derivatives", "Integrals", "Series & Sequences", "Differential Equations"],
+  },
+  {
+    slug: "linear-algebra" as const,
+    label: "Linear Algebra",
+    icon: "λ",
+    count: 9,
+    topics: ["Vectors & Operations", "Matrices", "Determinants", "Eigenvalues", "Vector Spaces"],
+  },
+  {
+    slug: "statistics" as const,
+    label: "Statistics",
+    icon: "σ",
+    count: 11,
+    topics: ["Probability", "Distributions", "Inference", "Regression", "Hypothesis Testing"],
+  },
+];
+
+const standards = [
+  {
+    num: "01",
+    title: "Precision first",
+    text: "Definitions are exact. Derivations show every meaningful step. Nothing is left as \"obvious\".",
+  },
+  {
+    num: "02",
+    title: "Examples before abstraction",
+    text: "You meet every concept through concrete, carefully chosen problems before the general machinery appears.",
+  },
+  {
+    num: "03",
+    title: "Feedback that actually teaches",
+    text: "Incorrect answers are met with precise hints that address the exact misunderstanding — not generic encouragement.",
+  },
+  {
+    num: "04",
+    title: "Designed for the long term",
+    text: "The goal is lasting understanding, not just passing the next exam. The structure reflects that.",
+  },
+];
 
 export const metadata: Metadata = {
   title: "CalcPath — Learn University Mathematics for Free",
@@ -29,248 +76,210 @@ export const metadata: Metadata = {
   },
 };
 
-const heading = "var(--font-inter), system-ui, -apple-system, sans-serif";
-const body = "var(--font-inter), system-ui, -apple-system, sans-serif";
-
-const subjects = [
-  // Problem counts are derived from the actual content files — same source as the dashboard.
-  {
-    slug: "calculus",
-    title: "Calculus",
-    icon: "∫",
-    description:
-      `Limits, derivatives, integrals, series, differential equations, and more. 8 modules with ${calculusProblems.length}+ practice problems — each solved step by step.`,
-    modules: 8,
-    problems: calculusProblems.length,
-    available: true,
-    accentColor: "#dc2626",
-    bgColor: "#f8fafc",
-    bgOpacity: 0.4,
-    bgPattern: `linear-gradient(#93c5fd33 1px, transparent 1px), linear-gradient(90deg, #93c5fd33 1px, transparent 1px)`,
-    bgSize: "20px 20px",
-    textColor: "#18181b",
-    mutedColor: "#52525b",
-    borderColor: "rgba(0,0,0,0.08)",
-    statColor: "#18181b",
-    darkCard: false,
-  },
-  {
-    slug: "statistics",
-    title: "Statistics",
-    icon: "σ",
-    description:
-      `Descriptive statistics, probability, distributions, hypothesis testing, regression, and more. 10 modules with ${statisticsProblems.length}+ practice problems — each solved step by step.`,
-    modules: 10,
-    problems: statisticsProblems.length,
-    available: true,
-    accentColor: "#fde68a",
-    bgColor: "#1a3a2a",
-    bgOpacity: 0.92,
-    bgPattern: `radial-gradient(circle at 80% 20%, rgba(253,230,138,0.06) 0%, transparent 60%)`,
-    bgSize: "auto",
-    textColor: "#e8e4d9",
-    mutedColor: "rgba(232,228,217,0.6)",
-    borderColor: "rgba(253,230,138,0.22)",
-    statColor: "#fde68a",
-    darkCard: true,
-  },
-  {
-    slug: "linear-algebra",
-    title: "Linear Algebra",
-    icon: "λ",
-    description:
-      `Vectors, matrices, systems of equations, vector spaces, eigenvalues, and more. 8 modules with ${linalgProblems.length}+ practice problems — each solved step by step.`,
-    modules: 8,
-    problems: linalgProblems.length,
-    available: true,
-    accentColor: "#3372A2",
-    bgColor: "#0f172a",
-    bgOpacity: 0.92,
-    bgPattern: `radial-gradient(circle at 80% 20%, rgba(51,114,162,0.12) 0%, transparent 60%)`,
-    bgSize: "auto",
-    textColor: "#e2e8f0",
-    mutedColor: "rgba(226,232,240,0.6)",
-    borderColor: "rgba(51,114,162,0.35)",
-    statColor: "#5b9bd5",
-    darkCard: true,
-  },
-  {
-    slug: "discrete-math",
-    title: "Discrete Mathematics",
-    icon: "Σ",
-    description:
-      "Discrete mathematics is the study of mathematical structures that are countable, distinct, and separable, rather than continuous",
-    modules: 4,
-    problems: 120,
-    available: false,
-    accentColor: "#AC21FC",
-    bgColor: "#1a3a2a",
-    bgOpacity: 0.4,
-    bgPattern: "none",
-    bgSize: "auto",
-    textColor: "#18181b",
-    mutedColor: "#52525b",
-    borderColor: "rgba(0,0,0,0.04)",
-    statColor: "#18181b",
-    darkCard: false,
-  },
-];
-
 export default function HomePage() {
   return (
-    <>
-      {/* Hero */}
-      <section className="px-6 pb-16 pt-16 sm:px-12 sm:pb-24 sm:pt-24">
-        <div className="mx-auto max-w-4xl text-center">
-          <p className="mb-4 text-sm font-semibold uppercase tracking-[0.35em] text-orange-600" style={{ fontFamily: body }}>
-            CalcPath
-          </p>
-          <h1
-            className="text-[2.5rem] font-bold leading-[1.08] tracking-tight text-zinc-900 sm:text-[3.5rem] md:text-[4.5rem]"
-            style={{ fontFamily: heading }}
+    <main>
+      {/* Hero — clean, editorial */}
+      <section className="mx-auto max-w-6xl px-6 pt-16 pb-14">
+        <div className="max-w-[46rem]">
+          <div 
+            className="inline-block rounded-full px-3 py-1 text-[11px] font-semibold tracking-[1.5px] theme-text"
+            style={{ color: 'var(--accent)' }}
           >
-            Learn math by<br />
-            <span className="text-orange-600">understanding it</span>
-          </h1>
-          <p className="mx-auto mt-6 max-w-lg text-base leading-relaxed text-zinc-600 sm:text-lg" style={{ fontFamily: body }}>
-            Free step-by-step courses with practice problems, instant feedback, and detailed solutions. Pick a subject and start learning.
-          </p>
-        </div>
-      </section>
-
-      {/* Subject cards */}
-      <section className="px-6 pb-24 sm:px-12 sm:pb-32">
-        <div className="mx-auto max-w-4xl">
-          <h2 className="mb-8 text-center text-xl font-bold text-zinc-900 sm:text-2xl" style={{ fontFamily: heading }}>
-            Subjects
-          </h2>
-
-          <div className="grid gap-6 sm:grid-cols-2">
-            {subjects.map((subject) => {
-              const classes = `group relative overflow-hidden rounded-2xl border-2 p-6 transition-all sm:p-8 ${
-                subject.available
-                  ? "cursor-pointer hover:shadow-xl"
-                  : "opacity-75"
-              }`;
-
-              const inner = (
-                <>
-                  {/* Themed background */}
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      backgroundColor: subject.bgColor,
-                      backgroundImage: subject.bgPattern,
-                      backgroundSize: subject.bgSize,
-                      opacity: subject.bgOpacity,
-                    }}
-                    aria-hidden="true"
-                  />
-
-                  <div className="relative z-10">
-                    {/* Icon + title */}
-                    <div className="mb-4 flex items-center gap-3">
-                      <span
-                        className="flex h-12 w-12 items-center justify-center rounded-xl text-2xl font-bold"
-                        style={{
-                          background: subject.available ? subject.accentColor : "#94a3b8",
-                          color: subject.darkCard ? (subject.slug === "statistics" ? "#122a1f" : "#fff") : "#fff",
-                        }}
-                      >
-                        {subject.icon}
-                      </span>
-                      <div>
-                        <h3
-                          className="text-xl font-bold sm:text-2xl"
-                          style={{ fontFamily: heading, color: subject.textColor }}
-                        >
-                          {subject.title}
-                        </h3>
-                        {!subject.available && (
-                          <span className="inline-block rounded-full bg-zinc-200 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-600">
-                            Coming soon
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <p className="text-sm leading-relaxed" style={{ fontFamily: body, color: subject.mutedColor }}>
-                      {subject.description}
-                    </p>
-
-                    {subject.available && subject.modules && (
-                      <div className="mt-5 flex items-center gap-6">
-                        <div>
-                          <span className="text-2xl font-bold" style={{ color: subject.statColor }}>{subject.modules}</span>
-                          <span className="ml-1 text-xs" style={{ color: subject.mutedColor }}>modules</span>
-                        </div>
-                        <div className="h-6 w-px" style={{ background: subject.darkCard ? "rgba(255,255,255,0.12)" : "#e4e4e7" }} />
-                        <div>
-                          <span className="text-2xl font-bold" style={{ color: subject.statColor }}>{subject.problems}</span>
-                          <span className="ml-1 text-xs" style={{ color: subject.mutedColor }}>problems</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {subject.available && (
-                      <div className="mt-6">
-                        <span
-                          className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition group-hover:brightness-110"
-                          style={{
-                            background: subject.accentColor,
-                            color: subject.slug === "statistics" ? "#122a1f" : "#fff",
-                          }}
-                        >
-                          Start learning
-                          <span className="transition-transform group-hover:translate-x-1">→</span>
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </>
-              );
-
-              return subject.available ? (
-                <Link
-                  key={subject.slug}
-                  href={`/${subject.slug}`}
-                  className={classes}
-                  style={{ borderColor: subject.borderColor }}
-                >
-                  {inner}
-                </Link>
-              ) : (
-                <div key={subject.slug} className={classes} style={{ borderColor: subject.borderColor }}>
-                  {inner}
-                </div>
-              );
-            })}
+            FREE UNIVERSITY MATHEMATICS
           </div>
-        </div>
-      </section>
 
-      {/* Bottom CTA */}
-      <section className="px-6 pb-20 sm:px-12 sm:pb-28">
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="text-base text-zinc-600" style={{ fontFamily: body }}>
-            Everything on CalcPath is completely free — lessons, practice problems, tests, and more. Create an account to track your progress.
+          <h1 className="mt-5 text-[68px] font-semibold tracking-[-3.8px] leading-[0.96] theme-text">
+            University mathematics,<br />written properly.
+          </h1>
+
+          <p className="mt-6 max-w-lg text-[17px] leading-relaxed theme-text-secondary">
+            Three complete, self-contained courses. Every explanation is written to be read, 
+            not skimmed. Every problem exists to build real understanding.
           </p>
-          <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4">
+
+          <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
               href="/calculus"
-              className="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:shadow-xl"
+              className="inline-flex items-center justify-center rounded-xl px-8 py-3 text-[15px] font-semibold text-white transition active:scale-[0.985]"
+              style={{ backgroundColor: 'var(--accent)' }}
             >
-              Start with Calculus
+              Begin with Calculus
             </Link>
             <Link
-              href="/calculus/practice"
-              className="rounded-xl border-2 border-orange-200 px-6 py-3 text-sm font-semibold text-orange-700 transition hover:border-orange-300 hover:bg-orange-50"
+              href="/diagnostic"
+              className="inline-flex items-center justify-center rounded-xl border theme-border theme-surface px-6 py-3 text-[15px] font-semibold theme-text transition hover:theme-surface-2"
             >
-              Start practicing
+              Find your starting point
             </Link>
           </div>
         </div>
       </section>
-    </>
+
+      {/* The Curriculum */}
+      <section className="border-y theme-border theme-surface py-16">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mb-9">
+            <div className="text-[11px] font-semibold tracking-[1.5px]" style={{ color: 'var(--accent)' }}>
+              THE CURRICULUM
+            </div>
+            <div className="mt-2 text-4xl font-semibold tracking-[-1.3px] text-black theme-text">
+              Three complete courses
+            </div>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-3">
+            {subjects.map((subject) => (
+              <Link
+                key={subject.slug}
+                href={`/${subject.slug}`}
+                className="group flex flex-col rounded-3xl border theme-border theme-surface p-8 transition-all hover:border-zinc-300 active:bg-zinc-50 dark:hover:border-[#484f58]"
+              >
+                <div className="flex items-center gap-4">
+                  <div 
+                    className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl text-4xl font-light text-white transition dark:text-[#0d1117]"
+                    style={{ backgroundColor: 'var(--accent)' }}
+                  >
+                    {subject.icon}
+                  </div>
+                  <div>
+                    <div className="text-[26px] font-semibold tracking-[-0.6px] text-black theme-text">{subject.label}</div>
+                    <div className="text-sm theme-text-muted">{subject.count} modules</div>
+                  </div>
+                </div>
+
+                <div className="mt-8 space-y-[13px] border-t border-zinc-100 pt-7 text-[14.5px] dark:border-[#30363d]">
+                  {subject.topics.map((topic, idx) => (
+                    <div key={idx} className="flex items-center gap-3 theme-text-secondary group-hover:theme-text">
+                      <span className="font-mono text-[10px] text-zinc-400 tabular-nums dark:text-[#484f58]">{String(idx + 1).padStart(2, "0")}</span>
+                      <span>{topic}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div 
+                  className="mt-auto flex items-center gap-1.5 pt-9 text-sm font-medium transition"
+                  style={{ color: 'var(--accent)' }}
+                >
+                  Open course <span className="transition group-hover:translate-x-0.5">→</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* The Standard */}
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <div className="max-w-2xl">
+          <div className="text-[11px] font-semibold tracking-[1.5px]" style={{ color: 'var(--accent)' }}>
+            THE STANDARD
+          </div>
+          <h2 className="mt-2 text-4xl font-semibold tracking-[-1.2px] text-black theme-text">
+            Built like documentation.<br />Not like a textbook.
+          </h2>
+          <p className="mt-4 text-lg theme-text-secondary">
+            Most math resources are either too terse or too hand-holdy. These notes aim for the difficult middle: 
+            rigorous enough for real understanding, clear enough to read without a lecturer.
+          </p>
+        </div>
+
+        <div className="mt-12 grid gap-x-9 gap-y-11 md:grid-cols-2">
+          {standards.map((item, index) => (
+            <div key={index} className="flex gap-5">
+              <div 
+                className="mt-0.5 w-8 font-mono text-sm font-semibold tabular-nums"
+                style={{ color: 'var(--accent)' }}
+              >
+                {item.num}
+              </div>
+              <div>
+                <div className="text-[17px] font-semibold tracking-tight text-black theme-text">{item.title}</div>
+                <p className="mt-2.5 text-[15px] leading-relaxed theme-text-secondary">{item.text}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Inside the notes */}
+      <section className="border-y theme-border theme-surface py-16">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mb-7 flex items-center gap-3">
+            <div 
+              className="rounded px-2.5 py-px text-[10px] font-bold tracking-[1.5px] text-white"
+              style={{ backgroundColor: 'var(--accent)' }}
+            >
+              CALCULUS • LIMITS
+            </div>
+            <div className="text-xs uppercase tracking-widest theme-text-muted">From the notes</div>
+          </div>
+
+          <div className="max-w-3xl">
+            <h3 className="text-3xl font-semibold tracking-[-0.7px] text-black theme-text">When substitution fails</h3>
+            <p className="mt-3 text-[16px] leading-relaxed theme-text-secondary">
+              Direct substitution is the fastest way to evaluate a limit — until it produces the indeterminate form 0/0. 
+              In those cases we usually need algebraic manipulation before we can proceed.
+            </p>
+
+            <div className="mt-8 rounded-2xl border theme-border theme-surface p-8">
+              <div className="font-mono text-sm theme-text-muted">Example</div>
+              <div className="mt-1.5 font-mono text-[17px] tracking-tight text-black theme-text">
+                lim<sub className="text-sm">x→2</sub> (x² − 4) / (x − 2)
+              </div>
+
+              <div className="mt-6 space-y-2 text-[14.5px] theme-text-secondary">
+                <div>1. Substituting x = 2 gives 0/0 — indeterminate.</div>
+                <div>2. Factor numerator: x² − 4 = (x − 2)(x + 2)</div>
+                <div>3. Cancel the common factor (valid for x ≠ 2)</div>
+                <div>4. The expression simplifies to x + 2</div>
+                <div className="pt-1.5" style={{ color: 'var(--accent)' }}>Result: lim = 4</div>
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <Link 
+                href="/calculus/modules/limits" 
+                className="inline-flex items-center text-[14px] font-medium transition hover:underline"
+                style={{ color: 'var(--accent)' }}
+              >
+                Continue reading the Limits module →
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Start anywhere */}
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <div className="text-[11px] font-semibold tracking-[1.5px]" style={{ color: 'var(--accent)' }}>
+          START ANYWHERE
+        </div>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {[
+            { href: "/calculus", label: "Calculus", sub: "Start from the beginning" },
+            { href: "/diagnostic", label: "Take the diagnostic", sub: "See where you actually are" },
+            { href: "/linear-algebra", label: "Linear Algebra", sub: "Jump straight in" },
+          ].map((item, i) => (
+            <Link
+              key={i}
+              href={item.href}
+              className="group flex items-center justify-between rounded-2xl border theme-border theme-surface px-7 py-5 text-sm transition hover:border-zinc-300 dark:hover:border-[#484f58]"
+            >
+              <div>
+                <div className="font-semibold text-black theme-text">{item.label}</div>
+                <div className="theme-text-muted">{item.sub}</div>
+              </div>
+              <span className="text-xl theme-text-muted transition">→</span>
+            </Link>
+          ))}
+        </div>
+
+        <div className="mt-9 text-center text-sm theme-text-muted">
+          All material is free. No account required to read or practice.
+        </div>
+      </section>
+    </main>
   );
 }

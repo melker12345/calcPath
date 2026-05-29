@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
@@ -27,52 +27,26 @@ export default function StatisticsPracticeTopic() {
   const [answer, setAnswer] = useState("");
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [overlayDismissed, setOverlayDismissed] = useState(false);
-  const [solvedCount, setSolvedCount] = useState(0);
-  const [shuffled, setShuffled] = useState(false);
-  const [displayProblems, setDisplayProblems] = useState(topicProblems);
-  const [resumeReady, setResumeReady] = useState(false);
+  const [shuffledProblems, setShuffledProblems] = useState<typeof topicProblems | null>(null);
 
+  const displayProblems = shuffledProblems ?? topicProblems;
   const current = displayProblems[index];
   const canonicalQuestionNumber =
     current ? topicProblems.findIndex((problem) => problem.id === current.id) + 1 : 0;
   const questionContext = useMemo(() => current ? detectQuestionContext(current.prompt) : undefined, [current]);
-
-  useEffect(() => {
-    const count = progress.completedProblemIds.filter((id) =>
-      topicProblems.some((p) => p.id === id)
-    ).length;
-    setSolvedCount(count);
-  }, [progress.completedProblemIds, topicProblems]);
-
-  useEffect(() => {
-    if (resumeReady) return;
-
-    if (typeof window !== "undefined") {
-      const focusId = new URLSearchParams(window.location.search).get("focus");
-      if (focusId) {
-        const focusIdx = topicProblems.findIndex((p) => p.id === focusId);
-        if (focusIdx >= 0) {
-          setIndex(focusIdx);
-          setResumeReady(true);
-          return;
-        }
-      }
-    }
-
-    const completedSet = new Set(progress.completedProblemIds);
-    const firstUnsolved = topicProblems.findIndex((p) => !completedSet.has(p.id));
-    if (firstUnsolved > 0) setIndex(firstUnsolved);
-    setResumeReady(true);
-  }, [progress.completedProblemIds, topicProblems, resumeReady]);
-
-  useEffect(() => { if (!shuffled) setDisplayProblems(topicProblems); }, [topicProblems, shuffled]);
-  useEffect(() => { setFeedback(null); setAnswer(""); setOverlayDismissed(false); }, [index]);
+  const solvedCount = useMemo(
+    () =>
+      progress.completedProblemIds.filter((id) =>
+        topicProblems.some((problem) => problem.id === id),
+      ).length,
+    [progress.completedProblemIds, topicProblems],
+  );
 
   if (!topic) {
     return (
       <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
-        <p className="text-sm" style={{ color: "rgba(232,228,217,0.55)" }}>Topic not found.</p>
-        <Link className="btn-stats-secondary mt-4 inline-flex" href="/statistics/practice">Back to practice</Link>
+        <p className="text-sm text-stone-600">Topic not found.</p>
+        <Link className="btn-secondary mt-4 inline-flex" href="/statistics/practice">Back to practice</Link>
       </div>
     );
   }
@@ -101,11 +75,11 @@ export default function StatisticsPracticeTopic() {
     else setFeedback({ type: "incorrect", attempts: 0, hintUsed: true, showSolution: false });
   };
 
-  const goToNext = () => { setFeedback(null); setAnswer(""); setIndex((i) => Math.min(displayProblems.length - 1, i + 1)); };
-  const goToPrev = () => { setFeedback(null); setAnswer(""); setIndex((i) => Math.max(0, i - 1)); };
+  const goToNext = () => { setFeedback(null); setAnswer(""); setOverlayDismissed(false); setIndex((i) => Math.min(displayProblems.length - 1, i + 1)); };
+  const goToPrev = () => { setFeedback(null); setAnswer(""); setOverlayDismissed(false); setIndex((i) => Math.max(0, i - 1)); };
   const shuffleAndRestart = () => {
-    setDisplayProblems([...topicProblems].sort(() => Math.random() - 0.5));
-    setShuffled(true); setIndex(0); setFeedback(null); setAnswer("");
+    setShuffledProblems([...topicProblems].sort(() => Math.random() - 0.5));
+    setIndex(0); setFeedback(null); setAnswer(""); setOverlayDismissed(false);
   };
 
   const getHint = () => {
@@ -139,7 +113,7 @@ export default function StatisticsPracticeTopic() {
         <p className="text-sm font-semibold text-emerald-900 sm:text-base">Answer: <span className="text-base sm:text-lg"><MathText text={finalAnswer} /></span></p>
       </div>
       <div className="mt-2 flex justify-end sm:mt-3"><VoteFeedback targetType="problem" targetId={current.id} /></div>
-      <button type="button" onClick={goToNext} className="mt-2 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-[0.98] sm:mt-3 sm:py-3 sm:text-base">
+      <button type="button" onClick={goToNext} className="mt-2 w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.98] sm:mt-3 sm:py-3 sm:text-base">
         Next Question →
       </button>
     </div>
@@ -185,7 +159,7 @@ export default function StatisticsPracticeTopic() {
           <button type="button" onClick={() => setFeedback({ ...feedback, showSolution: true })} className="rounded-lg border border-amber-300 bg-white px-2.5 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm">Solution</button>
         )}
         {feedback.showSolution ? (
-          <button type="button" onClick={goToNext} className="mt-1 w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-[0.98] sm:mt-2 sm:py-3 sm:text-base">Next Question →</button>
+          <button type="button" onClick={goToNext} className="mt-1 w-full rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-amber-700 active:scale-[0.98] sm:mt-2 sm:py-3 sm:text-base">Next Question →</button>
         ) : (
           <button type="button" onClick={goToNext} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-50 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm">Skip</button>
         )}
@@ -200,27 +174,26 @@ export default function StatisticsPracticeTopic() {
       {/* Desktop header */}
       <div className="mb-5 hidden sm:flex sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "#e8e4d9" }}>{topic.title}</h1>
-          <p className="mt-0.5 text-sm" style={{ color: "rgba(232,228,217,0.55)" }}>{topic.description}</p>
+          <h1 className="text-2xl font-bold text-zinc-900">{topic.title}</h1>
+          <p className="mt-0.5 text-sm text-zinc-500">{topic.description}</p>
         </div>
-        <span className="text-sm" style={{ color: "rgba(232,228,217,0.5)" }}>{solvedCount}/{displayProblems.length} mastered</span>
+        <span className="text-sm text-zinc-500">{solvedCount}/{displayProblems.length} mastered</span>
       </div>
 
       {/* Main card */}
-      <style>{`@media(min-width:640px){.st-card{background:rgba(255,255,255,0.03)!important;border-color:rgba(253,230,138,0.2)!important;}}`}</style>
-      <div className="st-card flex min-h-[calc(100dvh-56px)] flex-col justify-end px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:border sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
+      <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-end bg-white px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
 
         {/* Progress bar */}
         <div className="flex items-center gap-3">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full" style={{ background: "rgba(253,230,138,0.12)" }}>
-            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progressPct}%`, background: "linear-gradient(90deg,#d97706,#fde68a)" }} />
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-slate-900 transition-all duration-500" style={{ width: `${progressPct}%` }} />
           </div>
-          <span className="shrink-0 text-xs font-semibold tabular-nums" style={{ color: "rgba(232,228,217,0.45)" }}>{index + 1} / {displayProblems.length}</span>
+          <span className="shrink-0 text-xs font-semibold tabular-nums text-slate-400">{index + 1} / {displayProblems.length}</span>
         </div>
 
         {/* Question */}
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-5">
-          <h2 className="text-center text-lg font-semibold leading-relaxed sm:text-2xl" style={{ color: "#e8e4d9" }}>
+          <h2 className="text-center text-lg font-semibold leading-relaxed text-zinc-900 sm:text-2xl">
             <MathText text={current.prompt} />
           </h2>
           {(() => {
@@ -230,8 +203,7 @@ export default function StatisticsPracticeTopic() {
             return (
               <Link
                 href={moduleUrl}
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors hover:bg-amber-900/30"
-                style={{ color: "#d97706" }}
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
                 title={sectionTitle ? `Read: ${sectionTitle}` : "Review this topic"}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 sm:h-4 sm:w-4">
@@ -249,8 +221,7 @@ export default function StatisticsPracticeTopic() {
             {(!overlay || overlayDismissed) && current.choices?.map((choice) => (
               <button key={choice} type="button" onClick={() => { setAnswer(choice); submitAnswer(choice); }}
                 disabled={feedback?.type === "correct"}
-                className="rounded-xl border px-4 py-3 text-left text-base font-medium transition active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg"
-                style={{ borderColor: "rgba(253,230,138,0.22)", color: "#e8e4d9" }}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-base font-medium text-zinc-900 transition hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg"
               >
                 <MathText text={choice} />
               </button>
@@ -285,8 +256,8 @@ export default function StatisticsPracticeTopic() {
         {solvedCount >= displayProblems.length && (
           <div className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-900/20 p-4 text-center sm:mt-6 sm:rounded-2xl sm:p-5">
             <p className="text-lg font-bold text-emerald-300">All {displayProblems.length} problems mastered!</p>
-            <p className="mt-1 text-sm" style={{ color: "rgba(232,228,217,0.55)" }}>Shuffle for a fresh run.</p>
-            <button type="button" onClick={shuffleAndRestart} className="mt-3 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition active:scale-95" style={{ background: "#d97706" }}>
+            <p className="mt-1 text-sm text-emerald-600">Shuffle for a fresh run.</p>
+            <button type="button" onClick={shuffleAndRestart} className="mt-3 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 active:scale-95">
               Shuffle &amp; restart
             </button>
           </div>
@@ -296,21 +267,18 @@ export default function StatisticsPracticeTopic() {
         <div className="mt-1 grid grid-cols-[1fr_auto_1fr] items-center py-1 sm:mt-3 sm:py-0">
           <div className="flex items-center gap-1">
             <button type="button" onClick={goToPrev} disabled={index === 0}
-              className="flex h-8 w-8 items-center justify-center rounded-lg transition disabled:opacity-25 sm:h-9 sm:w-9"
-              style={{ color: "rgba(232,228,217,0.5)" }}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-100 disabled:opacity-25 sm:h-9 sm:w-9"
               aria-label="Previous">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
             </button>
             <button type="button" onClick={goToNext} disabled={index === displayProblems.length - 1}
-              className="flex h-8 w-8 items-center justify-center rounded-lg transition disabled:opacity-25 sm:h-9 sm:w-9"
-              style={{ color: "rgba(232,228,217,0.5)" }}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-100 disabled:opacity-25 sm:h-9 sm:w-9"
               aria-label="Next">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
             </button>
             {solvedCount > 0 && solvedCount < displayProblems.length && (
               <button type="button"
-                className="ml-1 rounded-lg px-2.5 py-1 text-xs font-medium transition sm:text-sm"
-                style={{ color: "rgba(232,228,217,0.5)" }}
+                className="ml-1 rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm"
                 onClick={() => {
                   const done = new Set(progress.completedProblemIds);
                   const next = displayProblems.findIndex((p, i) => i > index && !done.has(p.id));
@@ -319,13 +287,10 @@ export default function StatisticsPracticeTopic() {
                 }}>Skip to unsolved</button>
             )}
           </div>
-          <div
-            className="justify-self-center rounded-full px-2 py-0.5 text-[11px] font-medium ring-1"
-            style={{ color: "rgba(232,228,217,0.58)", borderColor: "rgba(253,230,138,0.16)" }}
-          >
+          <div className="justify-self-center rounded-full px-2 py-0.5 text-[11px] font-medium text-zinc-400 ring-1 ring-zinc-200/80">
             Q{canonicalQuestionNumber}
           </div>
-          <Link className="justify-self-end rounded-lg px-2.5 py-1 text-xs font-medium transition sm:text-sm" style={{ color: "rgba(232,228,217,0.5)" }} href="/statistics/practice">
+          <Link className="justify-self-end rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm" href="/statistics/practice">
             All topics
           </Link>
         </div>

@@ -134,17 +134,17 @@ export function AuthClient() {
         <p className="mt-3 text-zinc-600">{subtitle}</p>
       </div>
 
-      <div className="mx-auto mt-6 max-w-xl rounded-2xl border-2 border-orange-100 bg-white p-4 shadow-lg sm:mt-10 sm:rounded-3xl sm:p-8">
+      <div className="mx-auto mt-6 max-w-xl rounded-2xl border-2 border-orange-100 bg-white p-4 shadow-lg sm:mt-10 sm:rounded-3xl sm:p-8 dark:border-orange-900/50 dark:bg-[var(--surface)]">
         {/* Tab switcher */}
         {mode !== "forgot" && (
-          <div className="flex rounded-2xl bg-orange-50 p-1">
+          <div className="flex rounded-2xl bg-orange-50 p-1 dark:bg-orange-950/30">
             <button
               type="button"
               onClick={() => switchMode("signin")}
               className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
                 mode === "signin"
-                  ? "bg-white text-orange-600 shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-700"
+                  ? "bg-white text-orange-600 shadow-sm dark:bg-[var(--surface)] dark:text-orange-400"
+                  : "text-zinc-500 hover:text-zinc-700 dark:text-[var(--text-muted)] dark:hover:text-[var(--text-secondary)]"
               }`}
             >
               Sign in
@@ -166,7 +166,7 @@ export function AuthClient() {
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {/* Email */}
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-zinc-700">
+            <label className="block text-sm font-medium text-zinc-700 dark:text-[var(--text-secondary)]">
               Email address
             </label>
             <input
@@ -175,14 +175,14 @@ export function AuthClient() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               required
-              className="w-full rounded-2xl border-2 border-orange-100 bg-white px-4 py-3 text-base text-zinc-900 shadow-sm outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200"
+              className="w-full rounded-2xl border-2 border-orange-100 bg-white px-4 py-3 text-base text-zinc-900 shadow-sm outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200 dark:border-orange-900/50 dark:bg-[var(--surface-2)] dark:text-[var(--text-primary)] dark:focus:border-orange-700"
             />
           </div>
 
           {/* Password (not shown for forgot mode) */}
           {mode !== "forgot" && (
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-zinc-700">
+              <label className="block text-sm font-medium text-zinc-700 dark:text-[var(--text-secondary)]">
                 Password
               </label>
               <input
@@ -192,7 +192,7 @@ export function AuthClient() {
                 placeholder={mode === "signup" ? "At least 6 characters" : "Your password"}
                 required
                 minLength={6}
-                className="w-full rounded-2xl border-2 border-orange-100 bg-white px-4 py-3 text-base text-zinc-900 shadow-sm outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200"
+                className="w-full rounded-2xl border-2 border-orange-100 bg-white px-4 py-3 text-base text-zinc-900 shadow-sm outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200 dark:border-orange-900/50 dark:bg-[var(--surface-2)] dark:text-[var(--text-primary)] dark:focus:border-orange-700"
               />
             </div>
           )}
@@ -200,7 +200,7 @@ export function AuthClient() {
           {/* Confirm password (sign-up only) */}
           {mode === "signup" && (
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-zinc-700">
+              <label className="block text-sm font-medium text-zinc-700 dark:text-[var(--text-secondary)]">
                 Confirm password
               </label>
               <input
@@ -210,7 +210,7 @@ export function AuthClient() {
                 placeholder="Repeat your password"
                 required
                 minLength={6}
-                className="w-full rounded-2xl border-2 border-orange-100 bg-white px-4 py-3 text-base text-zinc-900 shadow-sm outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200"
+                className="w-full rounded-2xl border-2 border-orange-100 bg-white px-4 py-3 text-base text-zinc-900 shadow-sm outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200 dark:border-orange-900/50 dark:bg-[var(--surface-2)] dark:text-[var(--text-primary)] dark:focus:border-orange-700"
               />
             </div>
           )}
@@ -219,7 +219,7 @@ export function AuthClient() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-5 py-4 text-base font-semibold text-white shadow-lg transition hover:shadow-xl active:scale-[0.99] disabled:opacity-60"
+            className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-5 py-4 text-base font-semibold text-white shadow-lg transition hover:shadow-xl active:scale-[0.99] disabled:opacity-60 dark:from-orange-600 dark:to-rose-600"
           >
             {loading
               ? "Loading…"
@@ -235,7 +235,7 @@ export function AuthClient() {
             <button
               type="button"
               onClick={() => switchMode("forgot")}
-              className="block w-full text-center text-sm text-zinc-500 hover:text-orange-600 transition"
+              className="block w-full text-center text-sm text-zinc-500 hover:text-orange-600 transition dark:text-[var(--text-muted)] dark:hover:text-orange-400"
             >
               Forgot your password?
             </button>
@@ -245,10 +245,10 @@ export function AuthClient() {
           {mode === "signin" && (
             <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-orange-100" />
+                <div className="w-full border-t border-orange-100 dark:border-orange-900/50" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="bg-white px-3 text-zinc-400">or</span>
+                <span className="bg-white px-3 text-zinc-400 dark:bg-[var(--surface)] dark:text-[var(--text-muted)]">or</span>
               </div>
             </div>
           )}
@@ -257,7 +257,7 @@ export function AuthClient() {
               type="button"
               onClick={handleMagicLink}
               disabled={loading}
-              className="w-full rounded-2xl border-2 border-orange-200 bg-white px-5 py-3.5 text-sm font-semibold text-orange-600 transition hover:bg-orange-50 active:scale-[0.99] disabled:opacity-60"
+              className="w-full rounded-2xl border-2 border-orange-200 bg-white px-5 py-3.5 text-sm font-semibold text-orange-600 transition hover:bg-orange-50 active:scale-[0.99] disabled:opacity-60 dark:border-orange-900/50 dark:bg-[var(--surface)] dark:text-orange-400 dark:hover:bg-orange-950/30"
             >
               Sign in with magic link instead
             </button>
@@ -268,7 +268,7 @@ export function AuthClient() {
             <button
               type="button"
               onClick={() => switchMode("signin")}
-              className="block w-full text-center text-sm text-zinc-500 hover:text-orange-600 transition"
+              className="block w-full text-center text-sm text-zinc-500 hover:text-orange-600 transition dark:text-[var(--text-muted)] dark:hover:text-orange-400"
             >
               Back to sign in
             </button>
@@ -276,23 +276,23 @@ export function AuthClient() {
 
           {/* Status / error messages */}
           {status && (
-            <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-900">
+            <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-400">
               {status}
             </div>
           )}
           {error && (
-            <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-900">
+            <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-900 dark:bg-red-950/30 dark:text-red-400">
               {error}
             </div>
           )}
 
-          <p className="pt-2 text-center text-sm text-zinc-500">
+          <p className="pt-2 text-center text-sm text-zinc-500 dark:text-[var(--text-muted)]">
             By continuing you agree to our{" "}
-            <Link className="text-zinc-900 underline" href="#">
+            <Link className="text-zinc-900 underline dark:text-[var(--text-primary)]" href="#">
               Terms
             </Link>{" "}
             and{" "}
-            <Link className="text-zinc-900 underline" href="#">
+            <Link className="text-zinc-900 underline dark:text-[var(--text-primary)]" href="#">
               Privacy Policy
             </Link>
             .

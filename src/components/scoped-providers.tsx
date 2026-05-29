@@ -8,7 +8,11 @@ export function AuthBoundary({ children }: { children: React.ReactNode }) {
 }
 
 export function ProgressBoundary({ children }: { children: React.ReactNode }) {
-  return <ProgressProvider>{children}</ProgressProvider>;
+  return (
+    <AuthProvider>
+      <ProgressProvider>{children}</ProgressProvider>
+    </AuthProvider>
+  );
 }
 
 export function AppStateProviders({ children }: { children: React.ReactNode }) {

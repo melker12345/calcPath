@@ -27,6 +27,8 @@ export type ProgressState = {
   attempts: Attempt[];
   attemptedProblemIds: string[];
   completedProblemIds: string[];
+  completedModuleIds: string[];
+  moduleCompletions: Record<string, string>;
   topicStats: Record<string, { solved: number; correct: number }>;
   testResults: TestResult[];
   diagnostics: DiagnosticResult[];
@@ -37,6 +39,8 @@ export const createEmptyProgress = (): ProgressState => ({
   attempts: [],
   attemptedProblemIds: [],
   completedProblemIds: [],
+  completedModuleIds: [],
+  moduleCompletions: {},
   topicStats: {},
   testResults: [],
   diagnostics: [],
@@ -57,6 +61,25 @@ export const recordDiagnosticResult = (
 ): ProgressState => {
   const diagnostics = [result, ...state.diagnostics].slice(0, 25);
   return { ...state, diagnostics };
+};
+
+export const recordModuleCompletion = (
+  state: ProgressState,
+  moduleId: string,
+  completedAt = new Date().toISOString(),
+): ProgressState => {
+  const completedModuleIds = Array.from(
+    new Set([moduleId, ...state.completedModuleIds]),
+  ).slice(0, 1000);
+
+  return {
+    ...state,
+    completedModuleIds,
+    moduleCompletions: {
+      ...state.moduleCompletions,
+      [moduleId]: completedAt,
+    },
+  };
 };
 
 export const getTopicTestStats = (state: ProgressState, topicId: string) => {
@@ -126,6 +149,10 @@ export const normalizeProgressState = (
       attempts,
       attemptedProblemIds: derived.attemptedProblemIds,
       completedProblemIds: derived.completedProblemIds,
+      completedModuleIds: Array.isArray(input.completedModuleIds)
+        ? input.completedModuleIds
+        : empty.completedModuleIds,
+      moduleCompletions: input.moduleCompletions ?? empty.moduleCompletions,
       topicStats: derived.topicStats,
       testResults,
       diagnostics,
@@ -140,6 +167,10 @@ export const normalizeProgressState = (
     completedProblemIds: Array.isArray(input.completedProblemIds)
       ? input.completedProblemIds
       : empty.completedProblemIds,
+    completedModuleIds: Array.isArray(input.completedModuleIds)
+      ? input.completedModuleIds
+      : empty.completedModuleIds,
+    moduleCompletions: input.moduleCompletions ?? empty.moduleCompletions,
     topicStats: input.topicStats ?? empty.topicStats,
     testResults,
     diagnostics,
@@ -234,6 +265,8 @@ export const recordAttempt = (
     attempts,
     attemptedProblemIds,
     completedProblemIds,
+    completedModuleIds: state.completedModuleIds,
+    moduleCompletions: state.moduleCompletions,
     topicStats,
     testResults: state.testResults,
     diagnostics: state.diagnostics,

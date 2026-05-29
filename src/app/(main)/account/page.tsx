@@ -5,7 +5,6 @@ import { Suspense } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { useProgress } from "@/components/progress-provider";
 import { AdminFeedbackShortcut } from "@/components/admin-feedback-shortcut";
-import { AchievementsSection } from "@/components/achievement-emblems";
 import { SectionCard } from "@/components/section-card";
 
 export default function AccountPage() {
@@ -22,10 +21,10 @@ function AccountContent() {
 
   if (!user) {
     return (
-      <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+      <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
         <SectionCard title="Sign in required">
           <p className="text-sm text-zinc-600">
-            Create a free account to save progress and unlock streak tracking.
+            Create a free account to save progress and sync reading completion across devices.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Link className="btn-primary inline-flex" href="/auth">
@@ -36,17 +35,18 @@ function AccountContent() {
             </Link>
           </div>
         </SectionCard>
-
-        <div className="mt-4 sm:mt-6">
-          <AchievementsSection />
-        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
-      <h1 className="mb-4 text-2xl font-bold text-zinc-900 sm:mb-6 sm:text-3xl">Account</h1>
+    <div className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
+      <div className="mb-6 border-b border-stone-300 pb-5">
+        <h1 className="text-3xl font-semibold tracking-tight text-stone-950">Account</h1>
+        <p className="mt-2 text-base leading-7 text-stone-700">
+          Manage sign-in, progress storage, and administrative shortcuts.
+        </p>
+      </div>
 
       <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
         <SectionCard title="Profile">
@@ -75,10 +75,6 @@ function AccountContent() {
 
       <div className="mt-4 sm:mt-6">
         <AdminFeedbackShortcut />
-      </div>
-
-      <div className="mt-4 sm:mt-6">
-        <AchievementsSection />
       </div>
     </div>
   );

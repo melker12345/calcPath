@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useAuth } from "@/components/auth-provider";
+import { useOptionalAuth } from "@/components/auth-provider";
 import { supabase } from "@/lib/supabase/client";
 
 const NOTE_MAX = 1000;
@@ -28,9 +28,11 @@ export function VoteFeedback({
   targetId: string;
   userId?: string;
 }) {
-  const { user } = useAuth();
-  const isAuthed = !!user;
-  const resolvedUserId = userId ?? user?.id ?? null;
+  const auth = useOptionalAuth();
+  const user = auth?.user ?? null;
+  const [sessionUserId, setSessionUserId] = useState<string | null>(null);
+  const isAuthed = !!(user ?? sessionUserId);
+  const resolvedUserId = userId ?? user?.id ?? sessionUserId;
 
   const [vote, setVote] = useState<VoteValue>(null);
   const [feedbackId, setFeedbackId] = useState<string | null>(null);
@@ -45,6 +47,17 @@ export function VoteFeedback({
   const inFlightVote = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const reportTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    if (userId || user) return;
+    let cancelled = false;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!cancelled) setSessionUserId(data.session?.user.id ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, user]);
 
   const handleClick = useCallback(
     async (clicked: 1 | -1) => {
@@ -270,8 +283,8 @@ export function VoteFeedback({
       </div>
 
       {showNoteForm && (
-        <div className="w-full max-w-xs rounded-lg border border-zinc-200 bg-white p-2.5 shadow-sm">
-          <label className="mb-1 block text-[11px] font-medium text-zinc-500">
+        <div className="w-full max-w-xs rounded-lg border border-zinc-200 bg-white p-2.5 shadow-sm dark:border-[var(--border)] dark:bg-[var(--surface)]">
+          <label className="mb-1 block text-[11px] font-medium text-zinc-500 dark:text-[var(--text-muted)]">
             {vote === -1 ? "What's wrong?" : "What worked well?"}{" "}
             <span className="font-normal text-zinc-400">(optional)</span>
           </label>
@@ -286,7 +299,7 @@ export function VoteFeedback({
             }
             rows={2}
             maxLength={NOTE_MAX}
-            className="w-full resize-none rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-xs text-zinc-800 outline-none focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
+            className="feedback-textarea w-full resize-none rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-xs text-zinc-800 outline-none focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
           />
           <div className="mt-1.5 flex items-center justify-end">
             <button
@@ -302,11 +315,11 @@ export function VoteFeedback({
       )}
 
       {reportOpen && (
-        <div className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-3 text-left shadow-sm">
+        <div className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-3 text-left shadow-sm dark:border-[var(--border)] dark:bg-[var(--surface)]">
           {reportStatus === "sent" ? (
             <div>
-              <p className="text-sm font-semibold text-zinc-900">Thanks, report sent.</p>
-              <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+              <p className="text-sm font-semibold text-zinc-900 dark:text-[var(--text-primary)]">Thanks, report sent.</p>
+              <p className="mt-1 text-xs leading-relaxed text-zinc-500 dark:text-[var(--text-muted)]">
                 We saved the target and page context so it can be reviewed.
               </p>
               <button
@@ -322,13 +335,13 @@ export function VoteFeedback({
             </div>
           ) : (
             <>
-              <label className="mb-1.5 block text-[11px] font-semibold text-zinc-500">
+              <label className="mb-1.5 block text-[11px] font-semibold text-zinc-500 dark:text-[var(--text-muted)]">
                 What is the issue?
               </label>
               <select
                 value={reportReason}
                 onChange={(e) => setReportReason(e.target.value as ReportReason)}
-                className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-xs text-zinc-800 outline-none focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
+                className="feedback-select w-full rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-xs text-zinc-800 outline-none focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
               >
                 {REPORT_REASONS.map((reason) => (
                   <option key={reason} value={reason}>
@@ -337,7 +350,7 @@ export function VoteFeedback({
                 ))}
               </select>
 
-              <label className="mb-1 mt-2 block text-[11px] font-medium text-zinc-500">
+              <label className="mb-1 mt-2 block text-[11px] font-medium text-zinc-500 dark:text-[var(--text-muted)]">
                 Details <span className="font-normal text-zinc-400">(optional)</span>
               </label>
               <textarea
@@ -347,7 +360,7 @@ export function VoteFeedback({
                 rows={3}
                 maxLength={REPORT_MAX}
                 placeholder="e.g. I typed 2x+1 but it was marked wrong..."
-                className="w-full resize-none rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-xs text-zinc-800 outline-none focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
+                className="feedback-textarea w-full resize-none rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-xs text-zinc-800 outline-none focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
               />
 
               {reportStatus === "error" && (

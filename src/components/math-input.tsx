@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTheme } from "next-themes";
 import { Scratchpad } from "@/components/scratchpad";
 import { deriveSuggestionLabels, type QuestionContext } from "@/lib/math-input-helpers";
 
@@ -19,31 +20,31 @@ const SUBJECT_THEME: Record<Subject, {
   keypadBg: string; numBg: string; numText: string; numShadow: string;
 }> = {
   calculus: {
-    pillBg: "#ede9fe", pillBorder: "#c4b5fd", pillText: "#7c3aed",
-    opBg: "#ede9fe", opText: "#18181b", parenColor: "#7c3aed",
-    opSolidBg: "#6366f1",
-    containerBg: "#f4f4f5", containerBorder: "#e4e4e7",
+    pillBg: "#f1f5f9", pillBorder: "#cbd5e1", pillText: "#334155",
+    opBg: "#f1f5f9", opText: "#0f172a", parenColor: "#334155",
+    opSolidBg: "#334155",
+    containerBg: "#f8fafc", containerBorder: "#e2e8f0",
     headerBg: "#ffffff", labelColor: "#a1a1aa", dividerColor: "#e4e4e7",
     fieldAreaBg: "#ffffff", fieldInnerBg: "#f8fafc", fieldBorder: "#e4e4e7",
     keypadBg: "#f4f4f5", numBg: "#ffffff", numText: "#18181b", numShadow: "0 1px 3px rgba(0,0,0,0.08)",
   },
   linalg: {
-    pillBg: "rgba(51,114,162,0.14)", pillBorder: "rgba(51,114,162,0.35)", pillText: "#5b9bd5",
-    opBg: "rgba(51,114,162,0.22)", opText: "#e2e8f0", parenColor: "#5b9bd5",
-    opSolidBg: "#3372A2",
-    containerBg: "#0d1b2a", containerBorder: "rgba(51,114,162,0.32)",
-    headerBg: "#0d1b2a", labelColor: "rgba(226,232,240,0.45)", dividerColor: "rgba(51,114,162,0.22)",
-    fieldAreaBg: "#0d1b2a", fieldInnerBg: "rgba(255,255,255,0.06)", fieldBorder: "rgba(51,114,162,0.28)",
-    keypadBg: "#0a1520", numBg: "rgba(255,255,255,0.07)", numText: "#e2e8f0", numShadow: "none",
+    pillBg: "#f1f5f9", pillBorder: "#cbd5e1", pillText: "#334155",
+    opBg: "#f1f5f9", opText: "#0f172a", parenColor: "#334155",
+    opSolidBg: "#334155",
+    containerBg: "#f8fafc", containerBorder: "#e2e8f0",
+    headerBg: "#ffffff", labelColor: "#a1a1aa", dividerColor: "#e4e4e7",
+    fieldAreaBg: "#ffffff", fieldInnerBg: "#f8fafc", fieldBorder: "#e4e4e7",
+    keypadBg: "#f4f4f5", numBg: "#ffffff", numText: "#18181b", numShadow: "0 1px 3px rgba(0,0,0,0.08)",
   },
   stats: {
-    pillBg: "rgba(253,230,138,0.16)", pillBorder: "rgba(253,230,138,0.4)", pillText: "#d97706",
-    opBg: "rgba(253,230,138,0.18)", opText: "#e8e4d9", parenColor: "#d97706",
-    opSolidBg: "#d97706",
-    containerBg: "#161e14", containerBorder: "rgba(253,230,138,0.22)",
-    headerBg: "#161e14", labelColor: "rgba(232,228,217,0.45)", dividerColor: "rgba(253,230,138,0.15)",
-    fieldAreaBg: "#161e14", fieldInnerBg: "rgba(255,255,255,0.06)", fieldBorder: "rgba(253,230,138,0.2)",
-    keypadBg: "#111810", numBg: "rgba(255,255,255,0.07)", numText: "#e8e4d9", numShadow: "none",
+    pillBg: "#f1f5f9", pillBorder: "#cbd5e1", pillText: "#334155",
+    opBg: "#f1f5f9", opText: "#0f172a", parenColor: "#334155",
+    opSolidBg: "#334155",
+    containerBg: "#f8fafc", containerBorder: "#e2e8f0",
+    headerBg: "#ffffff", labelColor: "#a1a1aa", dividerColor: "#e4e4e7",
+    fieldAreaBg: "#ffffff", fieldInnerBg: "#f8fafc", fieldBorder: "#e4e4e7",
+    keypadBg: "#f4f4f5", numBg: "#ffffff", numText: "#18181b", numShadow: "0 1px 3px rgba(0,0,0,0.08)",
   },
 };
 
@@ -171,7 +172,43 @@ export function MathInput({
   onDismissOverlay,
   questionPrompt,
 }: MathInputProps) {
-  const th = SUBJECT_THEME[subject];
+  const { theme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const lightTh = SUBJECT_THEME[subject];
+
+  // Dark theme colors (GitHub-inspired + our accent system)
+  const darkTh = {
+    pillBg: "var(--surface-2)",
+    pillBorder: "var(--border)",
+    pillText: "var(--text-secondary)",
+    opBg: "var(--surface-2)",
+    opText: "var(--text-secondary)",
+    parenColor: "var(--text-muted)",
+    opSolidBg: "var(--accent)",
+    containerBg: "var(--surface)",
+    containerBorder: "var(--border)",
+    headerBg: "var(--surface)",
+    labelColor: "var(--text-muted)",
+    dividerColor: "var(--border)",
+    fieldAreaBg: "var(--surface)",
+    fieldInnerBg: "var(--bg)",
+    fieldBorder: "var(--border)",
+    keypadBg: "var(--surface)",
+    numBg: "var(--surface-2)",
+    numText: "var(--text-primary)",
+    numShadow: "none",
+  };
+
+  // Only trust the theme after mount to prevent hydration mismatch.
+  // On server / first client render we always use light values so the HTML matches.
+  const isDark = mounted && (resolvedTheme ?? theme) === "dark";
+  const th = isDark ? darkTh : lightTh;
+
   const mqRef = useRef<MQField | null>(null);
   const [scratchpadOpen, setScratchpadOpen] = useState(false);
   const scratchpadData = useRef<string | null>(null);
@@ -317,7 +354,7 @@ export function MathInput({
               <button
                 type="button"
                 onClick={onDismissOverlay}
-                className="absolute right-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-zinc-500 shadow-sm backdrop-blur transition hover:bg-white hover:text-zinc-800 sm:right-3 sm:top-3 sm:h-8 sm:w-8"
+                className="absolute right-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-zinc-500 shadow-sm backdrop-blur transition hover:bg-white hover:text-zinc-800 dark:bg-[var(--surface-2)]/80 dark:text-[var(--text-muted)] dark:hover:bg-[var(--surface-2)] dark:hover:text-[var(--text-secondary)] sm:right-3 sm:top-3 sm:h-8 sm:w-8"
                 aria-label="Close"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>

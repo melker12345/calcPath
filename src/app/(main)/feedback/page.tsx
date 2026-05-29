@@ -5,9 +5,9 @@ import { useAuth } from "@/components/auth-provider";
 import { trackEvent } from "@/lib/analytics";
 
 const FEEDBACK_KINDS = [
-  { id: "bug", label: "Bug", icon: "🐛" },
-  { id: "feature", label: "Feature idea", icon: "💡" },
-  { id: "general", label: "General", icon: "💬" },
+  { id: "bug", label: "Bug" },
+  { id: "feature", label: "Feature idea" },
+  { id: "general", label: "General" },
 ] as const;
 
 type FeedbackKind = (typeof FEEDBACK_KINDS)[number]["id"];
@@ -48,19 +48,16 @@ export default function FeedbackPage() {
 
   if (status === "sent") {
     return (
-      <div className="mx-auto w-full max-w-xl px-4 py-16 sm:px-6 sm:py-24">
-        <div className="rounded-2xl border-2 border-emerald-200 bg-white p-8 text-center shadow-sm sm:p-10">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-2xl">
-            ✓
-          </div>
-          <h1 className="text-2xl font-bold text-zinc-900">Thanks for your feedback!</h1>
-          <p className="mt-2 text-sm leading-relaxed text-zinc-500">
+      <div className="mx-auto w-full max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
+        <div className="border border-stone-300 bg-[#fffef8] p-8 text-center sm:p-10 dark:border-[var(--border)] dark:bg-[var(--surface)]">
+          <h1 className="text-2xl font-semibold text-stone-950 dark:text-[var(--text-primary)]">Thanks for your feedback.</h1>
+          <p className="mt-2 text-sm leading-relaxed text-stone-600 dark:text-[var(--text-secondary)]">
             We read every submission. Your input helps make CalcPath better for everyone.
           </p>
           <button
             type="button"
             onClick={() => setStatus("idle")}
-            className="mt-6 rounded-xl border-2 border-orange-200 bg-white px-5 py-2.5 text-sm font-semibold text-orange-700 transition hover:bg-orange-50 active:scale-95"
+            className="mt-6 border border-stone-400 bg-white px-5 py-2.5 text-sm font-medium text-stone-900 transition hover:bg-stone-100 active:scale-95 dark:border-[var(--border)] dark:bg-[var(--surface)] dark:text-[var(--text-primary)] dark:hover:bg-[var(--surface-2)]"
           >
             Send more feedback
           </button>
@@ -70,19 +67,19 @@ export default function FeedbackPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-xl px-4 py-12 sm:px-6 sm:py-20">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-zinc-900">Feedback</h1>
-        <p className="mt-2 text-base leading-relaxed text-zinc-500">
+    <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
+      <div className="mb-8 border-b border-stone-300 pb-5 dark:border-[var(--border)]">
+        <h1 className="text-3xl font-semibold tracking-tight text-stone-950 dark:text-[var(--text-primary)]">Feedback</h1>
+        <p className="mt-2 text-base leading-7 text-stone-700 dark:text-[var(--text-secondary)]">
           Any feedback is highly appreciated. If you have an idea, found a bug, or
           just want to share your thoughts — please let us know.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="rounded-2xl border-2 border-orange-100 bg-white p-6 shadow-sm sm:p-8">
+      <form onSubmit={handleSubmit} className="border border-stone-300 bg-[#fffef8] p-6 sm:p-8 dark:border-[var(--border)] dark:bg-[var(--surface)]">
         {/* Kind selector */}
         <fieldset>
-          <legend className="mb-3 text-sm font-semibold text-zinc-700">
+          <legend className="mb-3 text-sm font-semibold text-stone-800 dark:text-[var(--text-primary)]">
             What kind of feedback is this?
           </legend>
           <div className="flex flex-wrap gap-2">
@@ -91,13 +88,12 @@ export default function FeedbackPage() {
                 key={k.id}
                 type="button"
                 onClick={() => setKind(k.id)}
-                className={`flex items-center gap-2 rounded-xl border-2 px-4 py-2.5 text-sm font-medium transition active:scale-95 ${
+                className={`border px-4 py-2.5 text-sm font-medium transition active:scale-95 ${
                   kind === k.id
-                    ? "border-orange-400 bg-orange-50 text-orange-800"
-                    : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50"
+                    ? "border-stone-700 bg-stone-100 text-stone-950 dark:border-[var(--border)] dark:bg-[var(--surface-2)] dark:text-[var(--text-primary)]"
+                    : "border-stone-300 bg-white text-stone-700 hover:bg-stone-100 dark:border-[var(--border)] dark:bg-[var(--surface)] dark:text-[var(--text-secondary)] dark:hover:bg-[var(--surface-2)]"
                 }`}
               >
-                <span>{k.icon}</span>
                 {k.label}
               </button>
             ))}
@@ -106,7 +102,7 @@ export default function FeedbackPage() {
 
         {/* Message */}
         <div className="mt-6">
-          <label htmlFor="feedback-message" className="mb-2 block text-sm font-semibold text-zinc-700">
+          <label htmlFor="feedback-message" className="mb-2 block text-sm font-semibold text-stone-800 dark:text-[var(--text-primary)]">
             Your message
           </label>
           <textarea
@@ -124,16 +120,16 @@ export default function FeedbackPage() {
                   ? "What would you like to see added or changed?"
                   : "Share your thoughts..."
             }
-            className="w-full resize-y rounded-xl border-2 border-orange-100 px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-orange-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
+            className="w-full resize-y border border-stone-300 bg-white px-4 py-3 text-sm text-stone-950 placeholder:text-stone-400 focus:border-stone-600 focus:outline-none dark:border-[var(--border)] dark:bg-[var(--surface-2)] dark:text-[var(--text-primary)] dark:placeholder:text-[var(--text-muted)] dark:focus:border-[var(--accent)]"
           />
-          <p className="mt-1 text-right text-xs text-zinc-400">
+          <p className="mt-1 text-right text-xs text-zinc-400 dark:text-[var(--text-muted)]">
             {message.length}/5000
           </p>
         </div>
 
         {/* Error message */}
         {status === "error" && (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mt-4 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
             Something went wrong. Please try again.
           </div>
         )}
@@ -142,7 +138,7 @@ export default function FeedbackPage() {
         <button
           type="submit"
           disabled={status === "sending" || message.trim().length < 3}
-          className="mt-6 w-full rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 py-3 text-sm font-bold text-white shadow-sm transition hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="mt-6 w-full border border-stone-900 bg-stone-900 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-[var(--border)] dark:bg-white dark:text-black dark:hover:bg-zinc-200"
         >
           {status === "sending" ? "Sending..." : "Send Feedback"}
         </button>

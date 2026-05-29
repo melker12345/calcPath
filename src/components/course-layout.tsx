@@ -1,11 +1,7 @@
-import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader } from "@/components/site-header";
 
-export default function MainLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function CourseLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col theme-bg theme-text">
       <SiteHeader />

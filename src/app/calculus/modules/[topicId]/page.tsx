@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
+import { ModuleDoneButton } from "@/components/module-done-button";
+import { ModuleSectionNav } from "@/components/module-section-nav";
 import { VoteFeedback } from "@/components/vote-feedback";
 import { modules } from "@/lib/modules";
 import { problems, topics } from "@/lib/calculus-content";
@@ -50,90 +52,25 @@ function toSlug(text: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-/* ── Scrollspy sidebar ── */
-function SectionNav({
-  items,
-  activeId,
-}: {
-  items: { id: string; label: string }[];
-  activeId: string;
-}) {
-  return (
-    <nav className="sticky top-24 self-start hidden xl:block" aria-label="Table of contents">
-      <div className="relative flex flex-col items-center">
-        {/* Vertical line */}
-        <div
-          className="absolute left-1/2 -translate-x-1/2 w-0.5 bg-orange-200/60"
-          style={{
-            top: 0,
-            height: `${(items.length - 1) * 40}px`,
-          }}
-        />
-        {items.map((item) => {
-          const isActive = item.id === activeId;
-          return (
-            <a
-              key={item.id}
-              href={`#${item.id}`}
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-              className="group relative flex items-center"
-              style={{ height: 40 }}
-              title={item.label}
-            >
-              {/* Node */}
-              <div
-                className={`relative z-10 h-3 w-3 rounded-full border-2 transition-all duration-200 ${
-                  isActive
-                    ? "border-orange-500 bg-orange-500 scale-125 shadow-md shadow-orange-200"
-                    : "border-orange-300 bg-white group-hover:border-orange-400 group-hover:bg-orange-100"
-                }`}
-              />
-              {/* Tooltip — to the right of the node */}
-              <div
-                className={`pointer-events-none absolute left-full ml-4 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium shadow-lg transition-all duration-200 ${
-                  isActive
-                    ? "bg-orange-500 text-white opacity-100 translate-x-0"
-                    : "bg-zinc-800 text-white opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0"
-                }`}
-              >
-                {item.label}
-                {/* Arrow pointing left */}
-                <div
-                  className={`absolute top-1/2 -translate-y-1/2 right-full h-0 w-0 border-y-4 border-y-transparent border-r-4 ${
-                    isActive ? "border-r-orange-500" : "border-r-zinc-800"
-                  }`}
-                />
-              </div>
-            </a>
-          );
-        })}
-      </div>
-    </nav>
-  );
-}
-
 export default function ModulePage() {
   const params = useParams<{ topicId: string }>();
   const topicId = params?.topicId ?? "";
-  const module = modules.find((item) => item.topicId === topicId);
+  const lessonModule = modules.find((item) => item.topicId === topicId);
   const topic = topics.find((item) => item.id === topicId);
 
   /* Build nav items from module content */
   const navItems = useMemo(() => {
-    if (!module) return [];
+    if (!lessonModule) return [];
     const items: { id: string; label: string }[] = [
       { id: "intro", label: "Introduction" },
     ];
-    module.sections.forEach((s) => {
+    lessonModule.sections.forEach((s) => {
       items.push({ id: toSlug(s.title), label: s.title });
     });
     items.push({ id: "mistakes", label: "Common Mistakes" });
     items.push({ id: "practice-preview", label: "Practice Problems" });
     return items;
-  }, [module]);
+  }, [lessonModule]);
 
   /* Print */
   const [printMode, setPrintMode] = useState<"text" | "questions" | null>(null);
@@ -151,45 +88,7 @@ export default function ModulePage() {
     return () => cancelAnimationFrame(frame);
   }, [printMode]);
 
-  /* Track which section is in view */
-  const [activeId, setActiveId] = useState("intro");
-  const observerRef = useRef<IntersectionObserver | null>(null);
-
-  const setupObserver = useCallback(() => {
-    if (observerRef.current) observerRef.current.disconnect();
-
-    const headings = navItems
-      .map((item) => document.getElementById(item.id))
-      .filter(Boolean) as HTMLElement[];
-
-    if (headings.length === 0) return;
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        // Find the topmost visible section
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible.length > 0) {
-          setActiveId(visible[0].target.id);
-        }
-      },
-      { rootMargin: "-80px 0px -60% 0px", threshold: 0 },
-    );
-
-    headings.forEach((el) => observerRef.current!.observe(el));
-  }, [navItems]);
-
-  useEffect(() => {
-    // Small delay to let DOM render
-    const timeout = setTimeout(setupObserver, 200);
-    return () => {
-      clearTimeout(timeout);
-      observerRef.current?.disconnect();
-    };
-  }, [setupObserver]);
-
-  if (!module || !topic) {
+  if (!lessonModule || !topic) {
     return (
       <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
         <p className="text-sm text-zinc-600">Module not found.</p>
@@ -231,22 +130,22 @@ export default function ModulePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
     )}
-    <div className="mx-auto flex w-full max-w-7xl justify-center gap-4 px-4 py-8 sm:gap-6 sm:px-6 sm:py-12">
+    <div className="mx-auto w-full max-w-[760px] px-4 py-8 sm:px-6 sm:py-10">
       {/* Main content */}
-      <div className="w-full max-w-4xl">
-      <div className="mb-6 space-y-3 sm:mb-8">
-        <Link className="text-sm font-medium text-orange-600 hover:text-orange-800 sm:text-base" href="/calculus/modules" data-no-print>
-          ← Back to modules
+      <div className="min-w-0">
+      <div className="mb-6 border-b border-stone-300 pb-5 sm:mb-8">
+        <Link className="text-sm text-blue-800 hover:underline" href="/calculus/modules" data-no-print>
+          Back to Calculus contents
         </Link>
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-extrabold text-zinc-900 sm:text-3xl md:text-4xl">
-            {module.title}
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+            {lessonModule.title}
           </h1>
           <div className="relative" data-no-print>
             <button
               type="button"
               onClick={() => { setShowPrintModal((v) => !v); setPrintStep("choose"); }}
-              className="rounded-xl p-2 text-zinc-400 transition hover:bg-orange-50 hover:text-orange-600"
+              className="print-button mt-3 rounded border border-stone-300 bg-[#fffef8] p-2 text-stone-500 transition hover:bg-stone-100 hover:text-stone-800"
               title="Print module"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -257,7 +156,7 @@ export default function ModulePage() {
             {showPrintModal && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => { setShowPrintModal(false); setPrintStep("choose"); }} />
-                <div className="absolute right-0 top-full z-50 mt-2 w-60 rounded-xl border-2 border-orange-100 bg-white p-3 shadow-xl">
+                <div className="print-modal absolute right-0 top-full z-50 mt-2 w-60 rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
                   {printStep === "choose" ? (
                     <>
                       <p className="mb-2 text-xs font-semibold text-zinc-500">Print this module</p>
@@ -268,17 +167,17 @@ export default function ModulePage() {
                           setPrintStep("choose");
                           setPrintMode("text");
                         }}
-                        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-zinc-700 transition hover:bg-orange-50"
+                        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-zinc-700 transition hover:bg-slate-50"
                       >
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-xs">📄</span>
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs">Text</span>
                         Text only
                       </button>
                       <button
                         type="button"
                         onClick={() => setPrintStep("count")}
-                        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-zinc-700 transition hover:bg-orange-50"
+                        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-zinc-700 transition hover:bg-slate-50"
                       >
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-xs">📝</span>
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs">Q</span>
                         Text + Questions
                       </button>
                     </>
@@ -287,7 +186,7 @@ export default function ModulePage() {
                       <button
                         type="button"
                         onClick={() => setPrintStep("choose")}
-                        className="mb-2 text-xs font-medium text-orange-600 hover:text-orange-800"
+                        className="mb-2 text-xs font-medium text-slate-500 hover:text-slate-900"
                       >
                         ← Back
                       </button>
@@ -304,7 +203,7 @@ export default function ModulePage() {
                             setPrintQuestionCount(n);
                             setPrintMode("questions");
                           }}
-                          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-zinc-700 transition hover:bg-orange-50"
+                          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-zinc-700 transition hover:bg-slate-50"
                         >
                           {n === moduleProblems.length ? `All (${n})` : n}
                         </button>
@@ -316,14 +215,13 @@ export default function ModulePage() {
             )}
           </div>
         </div>
-        <p className="text-lg text-zinc-600">{topic.description}</p>
+        <p className="mt-3 max-w-3xl text-base leading-7 text-stone-700">{topic.description}</p>
       </div>
 
-      {/* Main Textbook Content Card */}
-      <article className="rounded-2xl border-2 border-orange-100 bg-white p-5 shadow-xl sm:rounded-3xl sm:p-10">
+      <article className="bg-transparent">
         {/* Introduction */}
         <div id="intro" className="mb-8 space-y-4 sm:mb-12">
-          {module.intro.map((paragraph, idx) => (
+          {lessonModule.intro.map((paragraph, idx) => (
             <p
               key={paragraph}
               className={`text-base leading-relaxed text-zinc-700 sm:text-lg ${
@@ -337,15 +235,15 @@ export default function ModulePage() {
 
         {/* Core Content Sections */}
         <div className="space-y-10">
-          {module.sections.map((section, idx) => (
+          {lessonModule.sections.map((section, idx) => (
             <div key={section.title}>
-              {idx > 0 && <hr className="mb-10 border-t-2 border-orange-100" />}
+              {idx > 0 && <hr className="mb-10 border-t border-stone-300" />}
               <div>
-                <h2 id={toSlug(section.title)} className="mb-4 scroll-mt-24 text-xl font-bold text-zinc-900 sm:text-2xl">
+                <h2 id={toSlug(section.title)} className="mb-4 scroll-mt-24 text-2xl font-semibold text-stone-950">
                   {section.title}
                 </h2>
                 {section.body.every((text) => text.trim().startsWith("-")) ? (
-                  <ul className="ml-6 space-y-3 text-lg leading-relaxed text-zinc-700">
+                  <ul className="ml-6 space-y-3 text-base leading-7 text-stone-700">
                     {section.body.map((text) => (
                       <li key={text} className="list-disc">
                         <MathText text={text.replace(/^-\s*/, "")} />
@@ -357,7 +255,7 @@ export default function ModulePage() {
                     {section.body.map((text) => (
                       <p
                         key={text}
-                        className="text-lg leading-relaxed text-zinc-700"
+                        className="text-base leading-7 text-stone-700"
                       >
                         <MathText text={text} />
                       </p>
@@ -367,10 +265,10 @@ export default function ModulePage() {
 
                 {/* ELI5 expandable */}
                 {section.eli5 && section.eli5.length > 0 && (
-                  <details className="print-keep-together group mt-6 rounded-2xl border-2 border-sky-100 bg-gradient-to-br from-sky-50 to-blue-50">
-                    <summary className="flex cursor-pointer select-none items-center gap-3 px-5 py-3.5 text-sm font-semibold text-sky-700 transition-colors hover:text-sky-900 [&::-webkit-details-marker]:hidden">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-100 text-base transition-transform group-open:rotate-12">
-                        💡
+                  <details className="print-keep-together group mt-6 border border-blue-200 bg-blue-50 module-callout">
+                    <summary className="flex cursor-pointer select-none items-center gap-3 px-4 py-3 text-sm font-semibold text-blue-950 hover:bg-blue-100 dark:hover:bg-transparent [&::-webkit-details-marker]:hidden">
+                      <span className="note-label text-xs font-semibold uppercase tracking-wide text-blue-700">
+                        Note
                       </span>
                       <span>Explain it simply</span>
                       <svg className="ml-auto h-4 w-4 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
@@ -379,7 +277,7 @@ export default function ModulePage() {
                       {section.eli5.map((text) => (
                         <p
                           key={text}
-                          className="text-base leading-relaxed text-sky-900"
+                          className="text-base leading-relaxed text-slate-700 example-body"
                         >
                           <MathText text={text} />
                         </p>
@@ -392,18 +290,18 @@ export default function ModulePage() {
                 {section.examples && section.examples.length > 0 && (
                   <div className="mt-6 space-y-4">
                     {section.examples.map((example, exIdx) => (
-                      <div key={example.title} className="print-keep-together rounded-xl border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-5">
+                      <div key={example.title} className="print-keep-together border border-stone-300 bg-[#fffef8] p-5 example-card">
                         <div className="mb-3 flex items-center gap-3">
-                          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-200 text-sm font-bold text-amber-800">
+                          <span className="example-badge flex h-7 w-7 items-center justify-center rounded-lg bg-white text-sm font-bold text-slate-600 ring-1 ring-slate-200">
                             {exIdx + 1}
                           </span>
-                          <h4 className="text-lg font-semibold text-amber-900">
+                          <h4 className="text-lg font-semibold text-slate-900">
                             <MathText text={example.title} />
                           </h4>
                         </div>
-                        <ol className="space-y-2.5 pl-4 text-base leading-relaxed text-zinc-700">
+                        <ol className="example-body space-y-2.5 pl-4 text-base leading-relaxed text-zinc-700">
                           {example.steps.map((step) => (
-                            <li key={step} className="list-decimal marker:text-amber-400 marker:font-semibold">
+                            <li key={step} className="list-decimal marker:text-slate-400 marker:font-semibold">
                               <MathText text={step} />
                             </li>
                           ))}
@@ -422,18 +320,18 @@ export default function ModulePage() {
         </div>
 
         {/* Common Mistakes */}
-        <hr className="my-12 border-t-2 border-orange-100" />
+        <hr className="my-12 border-t border-slate-200" />
         <div className="print-keep-together">
           <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100 text-lg">
-              ⚠️
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-500">
+              Note
             </div>
-            <h2 id="mistakes" className="scroll-mt-24 text-2xl font-bold text-red-800">
+            <h2 id="mistakes" className="scroll-mt-24 text-2xl font-bold text-zinc-900">
               Common Mistakes to Avoid
             </h2>
           </div>
           <ul className="ml-6 space-y-3 text-lg leading-relaxed text-zinc-700">
-            {module.commonMistakes.map((mistake) => (
+            {lessonModule.commonMistakes.map((mistake) => (
               <li key={mistake} className="list-disc">
                 <MathText text={mistake} />
               </li>
@@ -442,8 +340,12 @@ export default function ModulePage() {
         </div>
       </article>
 
+      <div className="mt-10">
+        <ModuleDoneButton moduleId={`calculus:${topic.id}`} />
+      </div>
+
       {/* Free preview questions with detailed solutions */}
-      <section className="mt-6 rounded-2xl border-2 border-orange-100 bg-white p-5 shadow-lg sm:mt-8 sm:rounded-3xl sm:p-8" data-no-print>
+      <section className="mt-10 border-t border-stone-300 pt-8" data-no-print>
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 id="practice-preview" className="scroll-mt-24 text-xl font-bold text-zinc-900 sm:text-2xl">
@@ -462,15 +364,15 @@ export default function ModulePage() {
           {moduleProblems.slice(0, 5).map((problem, index) => (
             <div
               key={problem.id}
-              className="rounded-2xl border-2 border-orange-100 bg-gradient-to-br from-orange-50 to-amber-50 p-6"
+              className="border border-stone-300 bg-[#fffef8] p-5 practice-card"
             >
               {/* Question header */}
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-rose-400 text-lg font-bold text-white shadow">
+                <div className="problem-badge flex h-9 w-9 flex-shrink-0 items-center justify-center border border-stone-300 bg-white text-base font-semibold text-stone-600">
                   {index + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-orange-600">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Problem {index + 1}
                   </p>
                   <p className="mt-1 text-lg font-semibold text-zinc-900 sm:text-xl">
@@ -480,12 +382,12 @@ export default function ModulePage() {
               </div>
 
               {/* Step-by-step solution */}
-              <div className="border-l-4 border-emerald-200 bg-white/70 rounded-r-xl pl-4 pr-4 pt-4 pb-4 sm:ml-14 sm:p-5">
+              <div className="solution-box border border-stone-300 bg-white px-4 py-4 sm:ml-14 sm:p-5">
                 <div className="mb-3 flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-sm">
-                    ✓
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-sm">
+                    1
                   </div>
-                  <h4 className="font-bold text-emerald-800">
+                  <h4 className="font-bold text-slate-900">
                     Step-by-Step Solution
                   </h4>
                 </div>
@@ -499,10 +401,10 @@ export default function ModulePage() {
                     });
                     return steps.map((step, stepIdx) => (
                       <div key={stepIdx} className="flex gap-3">
-                        <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
+                        <span className="step-number flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
                           {stepIdx + 1}
                         </span>
-                        <p className="flex-1 text-base leading-relaxed text-zinc-700">
+                        <p className="solution-body flex-1 text-base leading-relaxed text-zinc-700">
                           <MathText text={step} />
                         </p>
                       </div>
@@ -511,8 +413,8 @@ export default function ModulePage() {
                 </div>
 
                 {/* Final answer highlight */}
-                <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3">
-                  <p className="text-base font-semibold text-emerald-800">
+                <div className="final-answer mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-base font-semibold text-slate-900">
                     Final Answer:{" "}
                     <span className="text-lg">
                       <MathText
@@ -558,20 +460,20 @@ export default function ModulePage() {
 
       {/* FAQ Section */}
       {faqs.length > 0 && (
-        <section className="mt-6 rounded-2xl border-2 border-orange-100 bg-white p-5 shadow-lg sm:mt-8 sm:rounded-3xl sm:p-8" data-no-print>
-          <h2 className="mb-6 text-xl font-bold text-zinc-900 sm:text-2xl">
+        <section className="mt-10 border-t border-stone-300 pt-8" data-no-print>
+          <h2 className="mb-6 text-xl font-bold text-zinc-900 sm:text-2xl faq-heading">
             Frequently asked questions about {topic.title.toLowerCase()}
           </h2>
           <div className="space-y-4">
             {faqs.map((faq, i) => (
-              <details key={i} className="group rounded-xl border-2 border-orange-100 bg-orange-50/50">
-                <summary className="flex cursor-pointer select-none items-center justify-between px-5 py-4 text-base font-semibold text-zinc-900 [&::-webkit-details-marker]:hidden">
+              <details key={i} className="group border border-stone-300 bg-[#fffef8] faq-item">
+                <summary className="flex cursor-pointer select-none items-center justify-between px-4 py-3 text-base font-semibold text-stone-950 [&::-webkit-details-marker]:hidden">
                   {faq.q}
-                  <svg className="ml-3 h-4 w-4 flex-shrink-0 text-orange-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <svg className="ml-3 h-4 w-4 flex-shrink-0 text-slate-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                   </svg>
                 </summary>
-                <div className="px-5 pb-4 text-base leading-relaxed text-zinc-700">
+                <div className="faq-answer px-5 pb-4 text-base leading-relaxed text-zinc-700">
                   {faq.a}
                 </div>
               </details>
@@ -584,19 +486,19 @@ export default function ModulePage() {
       
 
       {/* Prev / Next topic navigation */}
-      <nav className="mt-6 grid gap-4 sm:mt-8 sm:grid-cols-2" aria-label="Previous and next topics" data-no-print>
+      <nav className="mt-10 grid gap-4 border-t border-stone-300 pt-8 sm:grid-cols-2" aria-label="Previous and next topics" data-no-print>
         {prevTopic ? (
           <Link
             href={`/calculus/modules/${prevTopic.id}`}
-            className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border-2 border-orange-100/80 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-200 hover:border-orange-200 hover:shadow-[0_8px_24px_-4px_rgba(249,115,22,0.12)] sm:rounded-3xl sm:p-6"
+            className="group relative flex items-center gap-4 overflow-hidden border border-stone-300 bg-[#fffef8] p-5 transition hover:bg-stone-100 sm:p-6 nav-card"
           >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-orange-100/80 text-2xl font-bold text-orange-500 transition-colors group-hover:bg-orange-200/80 group-hover:text-orange-600">
+            <div className="nav-arrow flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-2xl font-bold text-slate-500 transition-colors group-hover:bg-slate-200 group-hover:text-slate-700">
               ‹
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-orange-500">Previous</p>
-              <p className="mt-0.5 truncate text-base font-bold text-zinc-900 group-hover:text-orange-700 sm:text-lg">{prevTopic.title}</p>
-              <p className="mt-0.5 line-clamp-2 text-sm text-zinc-500">{prevTopic.description}</p>
+              <p className="nav-label text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Previous</p>
+              <p className="nav-title mt-0.5 truncate text-base font-bold text-zinc-900 group-hover:text-slate-700 sm:text-lg">{prevTopic.title}</p>
+              <p className="nav-desc mt-0.5 line-clamp-2 text-sm text-zinc-500">{prevTopic.description}</p>
             </div>
           </Link>
         ) : (
@@ -605,15 +507,15 @@ export default function ModulePage() {
         {nextTopic ? (
           <Link
             href={`/calculus/modules/${nextTopic.id}`}
-            className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border-2 border-orange-100/80 bg-white p-5 text-right shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-200 hover:border-orange-200 hover:shadow-[0_8px_24px_-4px_rgba(249,115,22,0.12)] sm:rounded-3xl sm:p-6"
+            className="group relative flex items-center gap-4 overflow-hidden border border-stone-300 bg-[#fffef8] p-5 text-right transition hover:bg-stone-100 sm:p-6 nav-card"
           >
-            <div className="order-3 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-orange-100/80 text-2xl font-bold text-orange-500 transition-colors group-hover:bg-orange-200/80 group-hover:text-orange-600">
+            <div className="nav-arrow order-3 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-2xl font-bold text-slate-500 transition-colors group-hover:bg-slate-200 group-hover:text-slate-700">
               ›
             </div>
             <div className="order-1 min-w-0 flex-1">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-orange-500">Next</p>
-              <p className="mt-0.5 truncate text-base font-bold text-zinc-900 group-hover:text-orange-700 sm:text-lg">{nextTopic.title}</p>
-              <p className="mt-0.5 line-clamp-2 text-sm text-zinc-500">{nextTopic.description}</p>
+              <p className="nav-label text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Next</p>
+              <p className="nav-title mt-0.5 truncate text-base font-bold text-zinc-900 group-hover:text-slate-700 sm:text-lg">{nextTopic.title}</p>
+              <p className="nav-desc mt-0.5 line-clamp-2 text-sm text-zinc-500">{nextTopic.description}</p>
             </div>
           </Link>
         ) : (
@@ -622,9 +524,9 @@ export default function ModulePage() {
       </nav>
       </div>
 
-      {/* Scrollspy sidebar */}
-      <div className="hidden xl:block w-8 shrink-0" data-no-print>
-        <SectionNav items={navItems} activeId={activeId} />
+      {/* Static table of contents */}
+      <div data-no-print>
+        <ModuleSectionNav items={navItems} />
       </div>
     </div>
     </>

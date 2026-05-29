@@ -7,11 +7,13 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { useTheme } from "next-themes";
 import { MathText } from "@/components/math-text";
 
 type Tool = "pen" | "eraser";
 
 const COLORS = ["#1e293b", "#dc2626", "#2563eb", "#16a34a", "#9333ea"];
+const DARK_DEFAULT_PEN = "#e2e8f0"; // whiteish for dark mode
 const SIZES = [2, 4, 8];
 
 export function Scratchpad({
@@ -28,10 +30,14 @@ export function Scratchpad({
   onSave?: (dataUrl: string | null) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { theme, resolvedTheme } = useTheme();
+  const isDark = (resolvedTheme ?? theme) === "dark";
+
   const [tool, setTool] = useState<Tool>("pen");
-  const [color, setColor] = useState(COLORS[0]);
+  const [color, setColor] = useState(() => COLORS[0]); // start with light default for SSR/hydration safety
   const [size, setSize] = useState(SIZES[1]);
   const [mounted, setMounted] = useState(false);
+
   const drawing = useRef(false);
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
   const paths = useRef<ImageData[]>([]);
@@ -54,6 +60,11 @@ export function Scratchpad({
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
     ctx.scale(dpr, dpr);
+
+    // Always give the canvas a clean light paper background (best for drawing)
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+
     ctx.putImageData(existing, 0, 0);
   }, []);
 
@@ -70,13 +81,22 @@ export function Scratchpad({
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+
+      // Always paint a fresh white paper background *before* restoring the old drawing.
+      // This is the key fix for cached drawings from a different theme session
+      // having the wrong background color baked into the PNG.
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, rect.width, rect.height);
+
+      if (!savedImage) return;
+
       const img = new Image();
       img.onload = () => {
-        const dpr = window.devicePixelRatio || 1;
-        const rect = canvas.getBoundingClientRect();
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
-        ctx.scale(dpr, dpr);
         ctx.drawImage(img, 0, 0, rect.width, rect.height);
       };
       img.src = savedImage;
@@ -91,6 +111,18 @@ export function Scratchpad({
       hasRestored.current = false;
     }
   }, [open]);
+
+  // When scratchpad opens, set an appropriate default pen color.
+  // We wait for mount to avoid hydration mismatches.
+  useEffect(() => {
+    if (!open || !mounted) return;
+
+    if (isDark) {
+      setColor(DARK_DEFAULT_PEN);
+    } else {
+      setColor(COLORS[0]);
+    }
+  }, [open, isDark, mounted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!open) return;
@@ -191,7 +223,8 @@ export function Scratchpad({
     const canvas = canvasRef.current;
     if (!ctx || !canvas) return;
     saveSnapshot();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
   };
 
   const handleClose = () => {
@@ -213,21 +246,21 @@ export function Scratchpad({
   if (!mounted || !open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[10001] flex flex-col bg-white/30 backdrop-blur-md">
+    <div className="fixed inset-0 z-[10001] flex flex-col bg-black/40 backdrop-blur-md">
       {/* Toolbar */}
-      <div className="shrink-0 border-b border-zinc-200 bg-zinc-50 px-3 py-2 sm:px-4 sm:py-2.5">
+      <div className="shrink-0 border-b border-zinc-200 bg-zinc-50 dark:bg-[var(--surface)] dark:border-[var(--border)] px-3 py-2 sm:px-4 sm:py-2.5">
         {/* Top row: close button always visible */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             {/* Pen / Eraser toggle */}
-            <div className="flex rounded-lg border border-zinc-200 bg-white p-0.5">
+            <div className="flex rounded-lg border border-zinc-200 bg-white dark:bg-[var(--surface-2)] dark:border-[var(--border)] p-0.5">
               <button
                 type="button"
                 onClick={() => setTool("pen")}
                 className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition sm:px-3 sm:text-sm ${
                   tool === "pen"
-                    ? "bg-zinc-900 text-white"
-                    : "text-zinc-600 hover:bg-zinc-100"
+                    ? "bg-zinc-900 text-white dark:bg-[var(--accent)] dark:text-[var(--bg)]"
+                    : "text-zinc-600 hover:bg-zinc-100 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--surface)]"
                 }`}
               >
                 <svg className="inline h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -248,18 +281,18 @@ export function Scratchpad({
             </div>
 
             {/* Undo / Clear */}
-            <div className="hidden h-5 w-px bg-zinc-200 sm:block" />
+            <div className="hidden h-5 w-px bg-zinc-200 dark:bg-[var(--border)] sm:block" />
             <button
               type="button"
               onClick={undo}
-              className="rounded-md px-2 py-1.5 text-xs font-medium text-zinc-600 transition hover:bg-zinc-100 sm:px-2.5 sm:text-sm"
+              className="rounded-md px-2 py-1.5 text-xs font-medium text-zinc-600 transition hover:bg-zinc-100 sm:px-2.5 sm:text-sm dark:text-[var(--text-secondary)] dark:hover:bg-[var(--surface)]"
             >
               Undo
             </button>
             <button
               type="button"
               onClick={clearAll}
-              className="rounded-md px-2 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 sm:px-2.5 sm:text-sm"
+              className="rounded-md px-2 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 sm:px-2.5 sm:text-sm dark:text-red-400 dark:hover:bg-red-950/30"
             >
               Clear
             </button>
@@ -269,7 +302,7 @@ export function Scratchpad({
           <button
             type="button"
             onClick={handleClose}
-            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-zinc-800 sm:px-4 sm:py-2 sm:text-sm"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-zinc-800 sm:px-4 sm:py-2 sm:text-sm dark:bg-[var(--accent)] dark:text-[var(--bg)] dark:hover:bg-[color-mix(in_srgb,var(--accent)_85%,white)]"
           >
             Done
           </button>
@@ -280,13 +313,15 @@ export function Scratchpad({
           {/* Colors (only when pen selected) */}
           {tool === "pen" && (
             <div className="flex items-center gap-1.5">
-              {COLORS.map((c) => (
+              {((mounted && isDark) ? [DARK_DEFAULT_PEN, "#f87171", "#60a5fa", "#4ade80", "#c084fc"] : COLORS).map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setColor(c)}
                   className={`h-6 w-6 rounded-full border-2 transition sm:h-7 sm:w-7 ${
-                    color === c ? "border-zinc-900 scale-110" : "border-zinc-200 hover:border-zinc-400"
+                    color === c 
+                      ? "border-zinc-900 dark:border-white scale-110" 
+                      : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500"
                   }`}
                   style={{ backgroundColor: c }}
                   aria-label={`Color ${c}`}
@@ -295,7 +330,7 @@ export function Scratchpad({
             </div>
           )}
 
-          <div className="h-5 w-px bg-zinc-200" />
+          <div className="h-5 w-px bg-zinc-200 dark:bg-[var(--border)]" />
 
           {/* Stroke size */}
           <div className="flex items-center gap-1">
@@ -305,12 +340,12 @@ export function Scratchpad({
                 type="button"
                 onClick={() => setSize(s)}
                 className={`flex h-7 w-7 items-center justify-center rounded-md transition sm:h-8 sm:w-8 ${
-                  size === s ? "bg-zinc-200" : "hover:bg-zinc-100"
+                  size === s ? "bg-zinc-200 dark:bg-[var(--surface-2)]" : "hover:bg-zinc-100 dark:hover:bg-[var(--surface)]"
                 }`}
                 aria-label={`Size ${s}`}
               >
                 <div
-                  className="rounded-full bg-zinc-700"
+                  className="rounded-full bg-zinc-700 dark:bg-[var(--text-primary)]"
                   style={{ width: s + 2, height: s + 2 }}
                 />
               </button>
@@ -321,8 +356,8 @@ export function Scratchpad({
 
       {/* Question prompt */}
       {questionPrompt && (
-        <div className="shrink-0 border-b border-zinc-200 bg-zinc-50 px-4 py-2.5 sm:px-6 sm:py-3">
-          <p className="text-center text-sm font-medium text-zinc-800 sm:text-base">
+        <div className="shrink-0 border-b border-zinc-200 bg-zinc-50 px-4 py-2.5 sm:px-6 sm:py-3 dark:bg-[var(--surface-2)] dark:border-[var(--border)]">
+          <p className="text-center text-sm font-medium text-zinc-800 sm:text-base dark:text-[var(--text-primary)]">
             <MathText text={questionPrompt} />
           </p>
         </div>
@@ -331,7 +366,7 @@ export function Scratchpad({
       {/* Canvas */}
       <canvas
         ref={canvasRef}
-        className="flex-1 cursor-crosshair touch-none"
+        className="flex-1 cursor-crosshair touch-none bg-white"
         onMouseDown={startDraw}
         onMouseMove={draw}
         onMouseUp={endDraw}

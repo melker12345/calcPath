@@ -5,13 +5,6 @@ const stripTrailingConstant = (input: string) => {
   return input.replace(/\+c$/i, "");
 };
 
-const hasUnsupportedConstant = (expr: string) => {
-  // If the expression contains "c" anywhere other than trailing +c, skip numeric equivalence.
-  const s = expr.toLowerCase().replace(/\s+/g, "");
-  if (!s.includes("c")) return false;
-  return !/\+?c$/.test(s);
-};
-
 const removeLatexSizing = (s: string) =>
   s.replace(/\\left/g, "").replace(/\\right/g, "");
 
@@ -278,7 +271,11 @@ const nearlyEqual = (a: number, b: number, eps = 1e-6) => {
   return diff / scale <= eps;
 };
 
-const tryEval = (m: any, expr: string, scope: Record<string, number>) => {
+const tryEval = (
+  m: typeof import("mathjs"),
+  expr: string,
+  scope: Record<string, number>,
+) => {
   try {
     const v = m.evaluate(expr, scope);
     const num = typeof v === "number" ? v : Number(v);

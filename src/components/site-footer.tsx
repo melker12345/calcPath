@@ -1,58 +1,59 @@
-"use client";
-
 import Link from "next/link";
 
 export const SiteFooter = () => (
-  <footer className="border-t border-orange-100 bg-white pb-[env(safe-area-inset-bottom)]">
-    <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-      {/* Footer grid */}
-      <div className="grid grid-cols-2 gap-8 sm:grid-cols-2 md:grid-cols-4">
-        {/* Brand column */}
+  <footer className="border-t theme-border theme-surface pb-[env(safe-area-inset-bottom)]">
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+      <div className="grid grid-cols-2 gap-8 sm:grid-cols-2 md:grid-cols-5">
         <div className="col-span-2 md:col-span-1">
           <Link href="/" className="inline-flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-rose-400 text-sm font-bold text-white">
-              ∫
-            </div>
-            <span className="text-lg font-bold text-orange-900">CalcPath</span>
+            <span className="font-serif text-xl font-semibold theme-text">CalcPath</span>
           </Link>
-          <p className="mt-3 text-sm leading-relaxed text-orange-600/70">
-            Free step-by-step math lessons, practice problems, and tests.
+          <p className="mt-3 text-sm leading-relaxed text-stone-600 dark:text-[var(--text-muted)] dark:text-[#8b949e]">
+            Free university mathematics notes, examples, and practice.
           </p>
         </div>
 
-        {/* Subjects column */}
         <div>
-          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-orange-400">
-            Subjects
+          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider theme-text-muted">
+            Contents
           </h4>
           <nav className="flex flex-col gap-2">
-            <Link href="/calculus" className="text-sm text-orange-600 hover:text-orange-900">Calculus</Link>
-            <Link href="/statistics" className="text-sm text-orange-600 hover:text-orange-900">Statistics</Link>
-            <Link href="/linear-algebra" className="text-sm text-orange-600 hover:text-orange-900">Linear Algebra</Link>
+            <Link href="/calculus" className="text-sm theme-text-secondary hover:theme-text">Calculus</Link>
+            <Link href="/statistics" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Statistics</Link>
+            <Link href="/linear-algebra" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Linear Algebra</Link>
           </nav>
         </div>
 
-        {/* Account column */}
         <div>
-          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-orange-400">
+          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider theme-text-muted">
+            Work
+          </h4>
+          <nav className="flex flex-col gap-2">
+            <Link href="/diagnostic" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Diagnostic</Link>
+            <Link href="/calculus/practice" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Practice</Link>
+            <Link href="/paths" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Paths</Link>
+          </nav>
+        </div>
+
+        <div>
+          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider theme-text-muted">
             Account
           </h4>
           <nav className="flex flex-col gap-2">
-            <Link href="/auth" className="text-sm text-orange-600 hover:text-orange-900">Sign In</Link>
-            <Link href="/account" className="text-sm text-orange-600 hover:text-orange-900">Settings</Link>
-            <Link href="/feedback" className="text-sm text-orange-600 hover:text-orange-900">Feedback</Link>
+            <Link href="/auth" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Sign In</Link>
+            <Link href="/account" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Settings</Link>
+            <Link href="/feedback" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Feedback</Link>
           </nav>
         </div>
       </div>
 
-      {/* Bottom bar */}
-      <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-orange-100 pt-6 sm:flex-row">
-        <p className="text-sm text-orange-400">© 2026 CalcPath</p>
+      <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-stone-300 pt-6 sm:flex-row">
+        <p className="text-sm text-stone-500">© 2026 CalcPath</p>
         <Link
           href="/donate"
-          className="text-sm font-medium text-orange-500 transition hover:text-orange-700"
+          className="text-sm font-medium text-stone-600 dark:text-[var(--text-muted)] transition hover:text-stone-950"
         >
-          Support CalcPath ♥
+          Support CalcPath
         </Link>
       </div>
     </div>
