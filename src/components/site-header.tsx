@@ -17,9 +17,13 @@ function ProfileIcon({ size = 20, color = "currentColor" }: { size?: number; col
   );
 }
 
-const staticNavLinks = [
-  { href: "/", label: "Contents" },
-  { href: "/calculus", label: "Courses" },
+const subjectLinks = [
+  { href: "/calculus", label: "Calculus" },
+  { href: "/linear-algebra", label: "Linear Algebra" },
+  { href: "/statistics", label: "Statistics" },
+] as const;
+
+const utilityLinks = [
   { href: "/diagnostic", label: "Diagnostic" },
   { href: "/feedback", label: "Feedback" },
 ] as const;
@@ -80,7 +84,7 @@ function MobileDrawer({
         </div>
 
         <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto bg-white px-3 py-4">
-          {staticNavLinks.map((link) => (
+          {subjectLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -96,7 +100,26 @@ function MobileDrawer({
             </Link>
           ))}
 
-          <div className="my-2 border-t border-zinc-100" />
+          {/* separator between subject links and utility links */}
+          <div className="my-2 border-t theme-border" />
+
+          {utilityLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="flex items-center gap-3 rounded-xl bg-zinc-50 px-4 py-3.5 text-base font-semibold text-zinc-900 transition active:bg-zinc-100"
+              onClick={onClose}
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-stone-100 text-sm text-stone-600">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                </svg>
+              </span>
+              {link.label}
+            </Link>
+          ))}
+
+          <div className="my-2 border-t theme-border" />
           {user && (
             <>
               <Link
@@ -142,8 +165,8 @@ export const SiteHeader = () => {
             <span className="font-serif text-xl font-semibold theme-text">CalcPath</span>
           </Link>
 
-          <nav className="hidden items-center gap-4 text-sm md:flex">
-            {staticNavLinks.map((link) => (
+          <nav className="hidden items-center gap-3 text-sm md:flex">
+            {subjectLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -152,6 +175,20 @@ export const SiteHeader = () => {
                 {link.label}
               </Link>
             ))}
+
+            {/* subtle separator between subject group and utility links */}
+            <span className="mx-1 h-3 w-px bg-[var(--border)]" aria-hidden="true" />
+
+            {utilityLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="theme-text-secondary transition hover:theme-text"
+              >
+                {link.label}
+              </Link>
+            ))}
+
             <SearchTrigger />
           </nav>
 
