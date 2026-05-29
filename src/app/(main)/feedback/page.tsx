@@ -49,7 +49,7 @@ export default function FeedbackPage() {
   if (status === "sent") {
     return (
       <div className="mx-auto w-full max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
-        <div className="border border-stone-300 bg-[#fffef8] p-8 text-center sm:p-10 dark:border-[var(--border)] dark:bg-[var(--surface)]">
+        <div className="theme-card theme-card-light border p-8 text-center sm:p-10">
           <h1 className="text-2xl font-semibold text-stone-950 dark:text-[var(--text-primary)]">Thanks for your feedback.</h1>
           <p className="mt-2 text-sm leading-relaxed text-stone-600 dark:text-[var(--text-secondary)]">
             We read every submission. Your input helps make CalcPath better for everyone.
@@ -68,7 +68,7 @@ export default function FeedbackPage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
-      <div className="mb-8 border-b border-stone-300 pb-5 dark:border-[var(--border)]">
+      <div className="mb-8 border-b theme-border pb-5">
         <h1 className="text-3xl font-semibold tracking-tight text-stone-950 dark:text-[var(--text-primary)]">Feedback</h1>
         <p className="mt-2 text-base leading-7 text-stone-700 dark:text-[var(--text-secondary)]">
           Any feedback is highly appreciated. If you have an idea, found a bug, or
@@ -76,10 +76,10 @@ export default function FeedbackPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="border border-stone-300 bg-[#fffef8] p-6 sm:p-8 dark:border-[var(--border)] dark:bg-[var(--surface)]">
+      <form onSubmit={handleSubmit} className="theme-card theme-card-light border p-6 sm:p-8">
         {/* Kind selector */}
         <fieldset>
-          <legend className="mb-3 text-sm font-semibold text-stone-800 dark:text-[var(--text-primary)]">
+          <legend className="mb-3 text-sm font-semibold theme-text">
             What kind of feedback is this?
           </legend>
           <div className="flex flex-wrap gap-2">
@@ -102,7 +102,7 @@ export default function FeedbackPage() {
 
         {/* Message */}
         <div className="mt-6">
-          <label htmlFor="feedback-message" className="mb-2 block text-sm font-semibold text-stone-800 dark:text-[var(--text-primary)]">
+          <label htmlFor="feedback-message" className="mb-2 block text-sm font-semibold theme-text">
             Your message
           </label>
           <textarea
@@ -129,7 +129,7 @@ export default function FeedbackPage() {
 
         {/* Error message */}
         {status === "error" && (
-          <div className="mt-4 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
             Something went wrong. Please try again.
           </div>
         )}

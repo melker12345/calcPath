@@ -174,14 +174,14 @@ export default function StatisticsPracticeTopic() {
       {/* Desktop header */}
       <div className="mb-5 hidden sm:flex sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900">{topic.title}</h1>
+          <h1 className="text-2xl font-bold theme-text">{topic.title}</h1>
           <p className="mt-0.5 text-sm text-zinc-500">{topic.description}</p>
         </div>
         <span className="text-sm text-zinc-500">{solvedCount}/{displayProblems.length} mastered</span>
       </div>
 
       {/* Main card */}
-      <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-end bg-white px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
+      <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-end bg-white px-4 pb-1 pt-2 dark:bg-[var(--surface)] sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
 
         {/* Progress bar */}
         <div className="flex items-center gap-3">
@@ -193,7 +193,7 @@ export default function StatisticsPracticeTopic() {
 
         {/* Question */}
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-5">
-          <h2 className="text-center text-lg font-semibold leading-relaxed text-zinc-900 sm:text-2xl">
+          <h2 className="text-center text-lg font-semibold leading-relaxed theme-text sm:text-2xl">
             <MathText text={current.prompt} />
           </h2>
           {(() => {
@@ -221,7 +221,7 @@ export default function StatisticsPracticeTopic() {
             {(!overlay || overlayDismissed) && current.choices?.map((choice) => (
               <button key={choice} type="button" onClick={() => { setAnswer(choice); submitAnswer(choice); }}
                 disabled={feedback?.type === "correct"}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-base font-medium text-zinc-900 transition hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-base font-medium theme-text transition hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg"
               >
                 <MathText text={choice} />
               </button>

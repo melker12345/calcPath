@@ -111,7 +111,7 @@ export function SubjectDashboard({
 
       {/* Stats Overview */}
       <div className="mb-6 grid gap-4 sm:mb-8 sm:grid-cols-3">
-        <div className="bg-zinc-100 dark:bg-[var(--surface)] theme-border p-4 sm:p-5">
+        <div className="theme-card-light theme-border p-4 sm:p-5">
           <div className="text-xs font-semibold uppercase tracking-wide theme-text">
             Problems Mastered
           </div>
@@ -123,13 +123,10 @@ export function SubjectDashboard({
               / {stats.totalProblems}
             </span>
           </div>
-          <div
-            className="mt-3 h-2 rounded-full"
-            className="bg-[var(--accent)]/20"
-          >
+          <div className="mt-3 h-2 rounded-full bg-[var(--accent)]/20">
             <div
-              className="h-2 rounded-full transition-all"
-              className="bg-[var(--accent)]" style={{ width: `${completionPercent}%` }}
+              className="h-2 rounded-full bg-[var(--accent)] transition-all"
+              style={{ width: `${completionPercent}%` }}
             />
           </div>
           <div className="mt-2 text-sm theme-text-muted">
@@ -137,7 +134,7 @@ export function SubjectDashboard({
           </div>
         </div>
 
-        <div className="bg-zinc-100 dark:bg-[var(--surface)] theme-border p-4 sm:p-5">
+        <div className="theme-card-light theme-border p-4 sm:p-5">
           <div
             className="text-xs font-semibold uppercase tracking-wide theme-text">
             Current Streak
@@ -164,8 +161,7 @@ export function SubjectDashboard({
                 <div
                   key={d.day}
                   title={`${d.day}: ${d.count} attempts`}
-                  className="h-3 flex-1 rounded-sm"
-                  className="bg-[var(--accent)]" style={{ opacity }}
+                  className="h-3 flex-1 rounded-sm bg-[var(--accent)]" style={{ opacity }}
                 />
               );
             })}
@@ -175,11 +171,8 @@ export function SubjectDashboard({
           </div>
         </div>
 
-        <div className="bg-zinc-100 dark:bg-[var(--surface)] theme-border p-4 sm:p-5">
-          <div
-            className="text-xs font-semibold uppercase tracking-wide"
-            className="theme-text"
-          >
+        <div className="theme-card-light theme-border p-4 sm:p-5">
+          <div className="text-xs font-semibold uppercase tracking-wide theme-text">
             Accuracy
           </div>
           <div className="mt-2 flex items-baseline gap-2">
@@ -187,10 +180,7 @@ export function SubjectDashboard({
               {stats.accuracy}%
             </span>
           </div>
-          <div
-            className="mt-3 h-2 rounded-full"
-            className="bg-[var(--accent)]/20"
-          >
+          <div className="mt-3 h-2 rounded-full bg-[var(--accent)]/20">
             <div
               className="h-2 rounded-full transition-all"
               style={{
@@ -211,7 +201,7 @@ export function SubjectDashboard({
       </div>
 
       {subjectSlug === "calculus" && (
-        <div className="mb-6 bg-zinc-100 dark:bg-[var(--surface)] theme-border p-4 sm:mb-8 sm:p-5">
+        <div className="mb-6 theme-card-light theme-border p-4 sm:mb-8 sm:p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h3 className="text-sm font-semibold theme-text">
@@ -239,7 +229,7 @@ export function SubjectDashboard({
 
       {/* Weekly Goal */}
       <div className="mb-6 grid gap-4 sm:mb-8 sm:grid-cols-2">
-        <div className="bg-zinc-100 dark:bg-[var(--surface)] theme-border p-4 sm:p-5">
+        <div className="theme-card-light theme-border p-4 sm:p-5">
           <h3 className="text-sm font-semibold theme-text">
             Weekly Goal
           </h3>
@@ -247,13 +237,10 @@ export function SubjectDashboard({
             Finish 30 problems this week to keep your streak growing.
           </p>
           <div className="mt-3 flex items-center gap-3">
-            <div
-              className="h-2 w-full rounded-full"
-              className="bg-[var(--accent)]/20"
-            >
+            <div className="h-2 w-full rounded-full bg-[var(--accent)]/20">
               <div
-                className="h-2 rounded-full transition-all"
-                className="bg-[var(--accent)]" style={{ width: `${Math.min(100, (progress.completedProblemIds.length / 30) * 100)}%` }}
+                className="h-2 rounded-full bg-[var(--accent)] transition-all"
+                style={{ width: `${Math.min(100, (progress.completedProblemIds.length / 30) * 100)}%` }}
               />
             </div>
             <span className="shrink-0 text-sm font-semibold theme-text-muted">
@@ -267,7 +254,7 @@ export function SubjectDashboard({
             Keep practicing
           </Link>
         </div>
-        <div className="bg-zinc-100 dark:bg-[var(--surface)] theme-border p-4 sm:p-5">
+        <div className="theme-card-light theme-border p-4 sm:p-5">
           <h3 className="text-sm font-semibold theme-text">
             Focus Recommendation
           </h3>
@@ -279,7 +266,7 @@ export function SubjectDashboard({
             where your accuracy is lowest.
           </p>
           <Link
-            className="mt-3 inline-flex border px-4 py-2 text-sm font-medium transition hover:bg-stone-100 dark:hover:bg-[var(--surface-2)] theme-border theme-text"
+            className="mt-3 inline-flex rounded-xl border px-4 py-2 text-sm font-medium transition theme-border theme-text hover:bg-[var(--surface-2)]"
             href={`/${subjectSlug}/practice`}
           >
             Start practicing
@@ -306,7 +293,7 @@ export function SubjectDashboard({
           return (
             <div
               key={topic.id}
-              className="bg-zinc-100 dark:bg-[var(--surface)] theme-border p-4 transition sm:p-5"
+              className="theme-card-light theme-border p-4 transition sm:p-5"
             >
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
@@ -337,10 +324,7 @@ export function SubjectDashboard({
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span
-                        className="text-sm font-semibold"
-                        className="theme-text"
-                      >
+                      <span className="text-sm font-semibold theme-text">
                         {practiceStats.correct}/{practiceStats.total}
                       </span>
                       {practiceStats.isComplete && (
@@ -388,10 +372,7 @@ export function SubjectDashboard({
                       <div className="flex items-center gap-3">
                         {testStats.bestScore !== null ? (
                           <>
-                            <span
-                              className="text-sm font-semibold"
-                              className="theme-text"
-                            >
+                            <span className="text-sm font-semibold theme-text">
                               {testStats.bestScore}/{testStats.bestTotal}
                             </span>
                             {testStats.isPerfect && (
@@ -401,20 +382,14 @@ export function SubjectDashboard({
                             )}
                           </>
                         ) : (
-                          <span
-                            className="text-sm"
-                            className="text-[var(--text-muted)]"
-                          >
+                          <span className="text-sm text-[var(--text-muted)]">
                             Not taken
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <div
-                      className="h-2.5 rounded-full"
-                      className="bg-[var(--accent)]/20"
-                    >
+                    <div className="h-2.5 rounded-full bg-[var(--accent)]/20">
                       {testStats.bestPercentage !== null && (
                         <div
                           className="h-2.5 rounded-full transition-all"
@@ -438,8 +413,7 @@ export function SubjectDashboard({
                       </span>
                       <Link
                         href={`/${subjectSlug}/test/${topic.id}`}
-                        className="font-semibold transition hover:opacity-80"
-                        className="theme-text"
+                        className="font-semibold theme-text transition hover:opacity-80"
                       >
                         {testStats.attemptCount > 0
                           ? "Retake →"
@@ -459,7 +433,7 @@ export function SubjectDashboard({
 
 function DiagnosticMiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-black/5 bg-zinc-100 px-3 py-2 dark:border-white/10 dark:bg-[var(--surface)]">
+    <div className="theme-card-light rounded-xl border border-black/5 px-3 py-2">
       <p className="truncate text-sm font-bold text-zinc-900 dark:text-[var(--text-primary)]">{value}</p>
       <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-[var(--text-muted)]">
         {label}

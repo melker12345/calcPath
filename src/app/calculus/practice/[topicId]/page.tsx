@@ -207,7 +207,7 @@ export default function PracticeTopicPage() {
       </div>
 
       {/* Main card — full-bleed on mobile, rounded card on desktop */}
-      <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-end bg-white px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
+      <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-end bg-white px-4 pb-1 pt-2 dark:bg-[var(--surface)] sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
 
         {/* Progress bar + counter */}
         <div className="flex items-center gap-3">
@@ -272,7 +272,7 @@ export default function PracticeTopicPage() {
           const isDismissable = feedback?.type === "incorrect" && !feedback.showSolution;
 
           const correctOverlay = feedback?.type === "correct" ? (
-            <div className="animate-correct-pop flex h-full flex-col border-t border-emerald-200 bg-emerald-50 p-3 pt-4 sm:p-5 dark:border-emerald-800 dark:bg-[#0a2e1f]">
+            <div className="animate-correct-pop flex h-full flex-col border-t border-emerald-200 bg-emerald-50 p-3 pt-4 sm:p-5 dark:border-emerald-900/50 dark:bg-emerald-950/20">
               <div className="flex items-center gap-2.5">
                 <div className="animate-check-bounce flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base">
                   ✓
@@ -284,8 +284,8 @@ export default function PracticeTopicPage() {
                 {renderSolutionSteps("emerald")}
               </div>
 
-              <div className="mt-3 rounded-lg bg-emerald-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3">
-                <p className="text-sm font-semibold text-emerald-900 sm:text-base">
+              <div className="mt-3 rounded-lg bg-emerald-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3 dark:bg-emerald-900/30">
+                <p className="text-sm font-semibold text-emerald-900 sm:text-base dark:text-emerald-300">
                   Answer:{" "}
                   <span className="text-base sm:text-lg">
                     <MathText
@@ -305,7 +305,7 @@ export default function PracticeTopicPage() {
               <button
                 type="button"
                 onClick={goToNext}
-                className="mt-2 w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.98] sm:mt-3 sm:py-3 sm:text-base"
+                className="mt-2 w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.98] sm:mt-3 sm:py-3 sm:text-base dark:bg-emerald-500 dark:hover:bg-emerald-600"
               >
                 Next Question →
               </button>
@@ -315,12 +315,12 @@ export default function PracticeTopicPage() {
           const incorrectOverlay = (feedback?.type === "incorrect" && !overlayDismissed) ? (
             <div className={`flex h-full flex-col border-t p-3 pt-4 sm:p-5 ${
               feedback.showSolution || feedback.attempts > 0
-                ? "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-[#2a1f0a]"
-                : "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-[#0a1f2a]"
+                ? "border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20"
+                : "border-blue-200 bg-blue-50 dark:border-blue-900/50 dark:bg-blue-950/20"
             }`}>
               {feedback.attempts > 0 && (
                 <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-white sm:h-10 sm:w-10 sm:text-base">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-white sm:h-10 sm:w-10 sm:text-base dark:bg-amber-500">
                     ✗
                   </div>
                   <div>
@@ -338,9 +338,9 @@ export default function PracticeTopicPage() {
               )}
 
               {feedback.hintUsed && !feedback.showSolution && (
-                <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-2 sm:mt-4 sm:p-4">
-                  <p className="text-[11px] font-semibold text-blue-700 sm:text-sm">Hint</p>
-                  <p className="mt-0.5 text-xs text-blue-900 sm:mt-1 sm:text-base">
+                <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-2 sm:mt-4 sm:p-4 dark:border-blue-900/50 dark:bg-blue-950/20">
+                  <p className="text-[11px] font-semibold text-blue-700 sm:text-sm dark:text-blue-300">Hint</p>
+                  <p className="mt-0.5 text-xs text-blue-900 sm:mt-1 sm:text-base dark:text-blue-200">
                     <MathText text={getHint()} />
                   </p>
                 </div>
@@ -352,8 +352,8 @@ export default function PracticeTopicPage() {
                     {renderSolutionSteps("amber")}
                   </div>
 
-                  <div className="mt-3 rounded-lg bg-amber-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3">
-                    <p className="text-sm font-semibold text-amber-900 sm:text-base">
+                  <div className="mt-3 rounded-lg bg-amber-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3 dark:bg-amber-900/30">
+                    <p className="text-sm font-semibold text-amber-900 sm:text-base dark:text-amber-300">
                       Answer:{" "}
                       <span className="text-base sm:text-lg">
                         <MathText
@@ -395,7 +395,7 @@ export default function PracticeTopicPage() {
                   <button
                     type="button"
                     onClick={goToNext}
-                    className="mt-1 w-full rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-amber-700 active:scale-[0.98] sm:mt-2 sm:py-3 sm:text-base"
+                    className="mt-1 w-full rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-amber-700 active:scale-[0.98] sm:mt-2 sm:py-3 sm:text-base dark:bg-amber-500 dark:hover:bg-amber-600"
                   >
                     Next Question →
                   </button>
@@ -425,7 +425,7 @@ export default function PracticeTopicPage() {
                     submitAnswer(choice);
                   }}
                   disabled={feedback?.type === "correct"}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-base font-medium text-zinc-900 transition hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg dark:border-[var(--border)] dark:bg-[var(--surface)] dark:text-[var(--text-primary)] dark:hover:border-[var(--accent)] dark:hover:bg-[var(--surface-2)]"
+                  className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-left text-base font-medium theme-text transition hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg dark:bg-[var(--surface)] dark:text-[var(--text-primary)] dark:hover:border-[var(--accent)] dark:hover:bg-[var(--surface-2)]"
                 >
                   <MathText text={choice} />
                 </button>

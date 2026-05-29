@@ -101,14 +101,14 @@ export default function LinalgModulePage() {
   return (
     <div className="mx-auto w-full max-w-[760px] px-4 py-8 sm:px-6 sm:py-10">
       <div className="min-w-0">
-        <div className="mb-6 border-b border-stone-300 pb-5 sm:mb-8">
+        <div className="mb-6 border-b border-[var(--border)] pb-5 sm:mb-8">
           <Link className="text-sm text-blue-800 hover:underline" href="/linear-algebra/modules" data-no-print>
             Back to Linear Algebra contents
           </Link>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight theme-text sm:text-4xl">
             {lessonModule.title}
           </h1>
-          <p className="mt-3 max-w-3xl text-base leading-7 text-stone-700">
+          <p className="mt-3 max-w-3xl text-base leading-7 theme-text-secondary">
             {topic.description}
           </p>
         </div>
@@ -118,7 +118,7 @@ export default function LinalgModulePage() {
             {lessonModule.intro.map((paragraph, idx) => (
               <p
                 key={paragraph}
-                className={`text-base leading-7 text-stone-700 ${
+                className={`text-base leading-7 theme-text-secondary ${
                   idx === 0 ? "font-medium text-stone-900 sm:text-lg" : ""
                 }`}
               >
@@ -130,13 +130,13 @@ export default function LinalgModulePage() {
           <div className="space-y-10">
             {lessonModule.sections.map((section, idx) => (
               <section key={section.title}>
-                {idx > 0 && <hr className="mb-10 border-t border-stone-300" />}
-                <h2 id={toSlug(section.title)} className="mb-4 scroll-mt-24 text-2xl font-semibold text-stone-950">
+                {idx > 0 && <hr className="mb-10 border-t border-[var(--border)]" />}
+                <h2 id={toSlug(section.title)} className="mb-4 scroll-mt-24 text-2xl font-semibold theme-text">
                   {section.title}
                 </h2>
                 <div className="space-y-4">
                   {section.body.map((text) => (
-                    <p key={text} className="text-base leading-7 text-stone-700">
+                    <p key={text} className="text-base leading-7 theme-text-secondary">
                       <MathText text={text} />
                     </p>
                   ))}
@@ -151,7 +151,7 @@ export default function LinalgModulePage() {
                     </summary>
                     <div className="space-y-3 px-5 pb-5 pt-1">
                       {section.eli5.map((text) => (
-                        <p key={text} className="text-base leading-7 text-stone-700 example-body">
+                        <p key={text} className="text-base leading-7 theme-text-secondary example-body">
                           <MathText text={text} />
                         </p>
                       ))}
@@ -162,16 +162,16 @@ export default function LinalgModulePage() {
                 {section.examples && section.examples.length > 0 && (
                   <div className="mt-6 space-y-4">
                     {section.examples.map((example, exIdx) => (
-                      <div key={example.title} className="print-keep-together border border-stone-300 bg-[#fffef8] p-5 example-card">
+                      <div key={example.title} className="print-keep-together border border-[var(--border)] theme-card-light theme-border p-5 example-card">
                         <div className="mb-3 flex items-center gap-3">
-                          <span className="example-badge flex h-7 w-7 items-center justify-center border border-stone-300 bg-white text-sm font-semibold text-stone-600">
+                          <span className="example-badge flex h-7 w-7 items-center justify-center border border-[var(--border)] bg-white text-sm font-semibold text-stone-600">
                             {exIdx + 1}
                           </span>
-                          <h4 className="text-lg font-semibold text-stone-950">
+                          <h4 className="text-lg font-semibold theme-text">
                             <MathText text={example.title} />
                           </h4>
                         </div>
-                        <ol className="space-y-2.5 pl-4 text-base leading-7 text-stone-700">
+                        <ol className="space-y-2.5 pl-4 text-base leading-7 theme-text-secondary">
                           {example.steps.map((step) => (
                             <li key={step} className="list-decimal">
                               <RichMathText value={step} />
@@ -190,12 +190,12 @@ export default function LinalgModulePage() {
             ))}
           </div>
 
-          <hr className="my-12 border-t border-stone-300" />
+          <hr className="my-12 border-t border-[var(--border)]" />
           <section className="print-keep-together">
-            <h2 id="mistakes" className="mb-4 scroll-mt-24 text-2xl font-semibold text-stone-950">
+            <h2 id="mistakes" className="mb-4 scroll-mt-24 text-2xl font-semibold theme-text">
               Common Mistakes to Avoid
             </h2>
-            <ul className="ml-6 space-y-3 text-base leading-7 text-stone-700">
+            <ul className="ml-6 space-y-3 text-base leading-7 theme-text-secondary">
               {lessonModule.commonMistakes.map((mistake) => (
                 <li key={mistake} className="list-disc">
                   <MathText text={mistake} />
@@ -209,17 +209,17 @@ export default function LinalgModulePage() {
           <ModuleDoneButton moduleId={`linear-algebra:${topic.id}`} />
         </div>
 
-        <nav className="mt-10 grid gap-4 border-t border-stone-300 pt-8 sm:grid-cols-2" data-no-print>
+        <nav className="mt-10 grid gap-4 border-t border-[var(--border)] pt-8 sm:grid-cols-2" data-no-print>
           {prevTopic ? (
-            <Link href={`/linear-algebra/modules/${prevTopic.id}`} className="border border-stone-300 bg-[#fffef8] p-5 transition hover:bg-stone-100 nav-card">
+            <Link href={`/linear-algebra/modules/${prevTopic.id}`} className="border border-[var(--border)] theme-card-light theme-border p-5 transition hover:bg-stone-100 nav-card">
               <p className="nav-label text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500">Previous</p>
-              <p className="nav-title mt-0.5 text-base font-semibold text-stone-950">{prevTopic.title}</p>
+              <p className="nav-title mt-0.5 text-base font-semibold theme-text">{prevTopic.title}</p>
             </Link>
           ) : <div />}
           {nextTopic ? (
-            <Link href={`/linear-algebra/modules/${nextTopic.id}`} className="border border-stone-300 bg-[#fffef8] p-5 text-right transition hover:bg-stone-100">
+            <Link href={`/linear-algebra/modules/${nextTopic.id}`} className="border border-[var(--border)] theme-card-light theme-border p-5 text-right transition hover:bg-stone-100">
               <p className="nav-label text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500">Next</p>
-              <p className="nav-title mt-0.5 text-base font-semibold text-stone-950">{nextTopic.title}</p>
+              <p className="nav-title mt-0.5 text-base font-semibold theme-text">{nextTopic.title}</p>
             </Link>
           ) : <div />}
         </nav>

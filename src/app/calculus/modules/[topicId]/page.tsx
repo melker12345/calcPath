@@ -133,19 +133,19 @@ export default function ModulePage() {
     <div className="mx-auto w-full max-w-[760px] px-4 py-8 sm:px-6 sm:py-10">
       {/* Main content */}
       <div className="min-w-0">
-      <div className="mb-6 border-b border-stone-300 pb-5 sm:mb-8">
+      <div className="mb-6 border-b border-[var(--border)] dark:border-[var(--border)] pb-5 sm:mb-8">
         <Link className="text-sm text-blue-800 hover:underline" href="/calculus/modules" data-no-print>
           Back to Calculus contents
         </Link>
         <div className="flex items-center gap-3">
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight theme-text sm:text-4xl">
             {lessonModule.title}
           </h1>
           <div className="relative" data-no-print>
             <button
               type="button"
               onClick={() => { setShowPrintModal((v) => !v); setPrintStep("choose"); }}
-              className="print-button mt-3 rounded border border-stone-300 bg-[#fffef8] p-2 text-stone-500 transition hover:bg-stone-100 hover:text-stone-800"
+              className="print-button mt-3 rounded border border-[var(--border)] dark:border-[var(--border)] bg-white dark:bg-[var(--surface)] p-2 text-stone-500 transition hover:bg-stone-100 hover:text-stone-800"
               title="Print module"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -215,7 +215,7 @@ export default function ModulePage() {
             )}
           </div>
         </div>
-        <p className="mt-3 max-w-3xl text-base leading-7 text-stone-700">{topic.description}</p>
+        <p className="mt-3 max-w-3xl text-base leading-7 theme-text-secondary">{topic.description}</p>
       </div>
 
       <article className="bg-transparent">
@@ -237,13 +237,13 @@ export default function ModulePage() {
         <div className="space-y-10">
           {lessonModule.sections.map((section, idx) => (
             <div key={section.title}>
-              {idx > 0 && <hr className="mb-10 border-t border-stone-300" />}
+              {idx > 0 && <hr className="mb-10 border-t border-[var(--border)] dark:border-[var(--border)]" />}
               <div>
-                <h2 id={toSlug(section.title)} className="mb-4 scroll-mt-24 text-2xl font-semibold text-stone-950">
+                <h2 id={toSlug(section.title)} className="mb-4 scroll-mt-24 text-2xl font-semibold theme-text">
                   {section.title}
                 </h2>
                 {section.body.every((text) => text.trim().startsWith("-")) ? (
-                  <ul className="ml-6 space-y-3 text-base leading-7 text-stone-700">
+                  <ul className="ml-6 space-y-3 text-base leading-7 theme-text-secondary">
                     {section.body.map((text) => (
                       <li key={text} className="list-disc">
                         <MathText text={text.replace(/^-\s*/, "")} />
@@ -255,7 +255,7 @@ export default function ModulePage() {
                     {section.body.map((text) => (
                       <p
                         key={text}
-                        className="text-base leading-7 text-stone-700"
+                        className="text-base leading-7 theme-text-secondary"
                       >
                         <MathText text={text} />
                       </p>
@@ -290,7 +290,7 @@ export default function ModulePage() {
                 {section.examples && section.examples.length > 0 && (
                   <div className="mt-6 space-y-4">
                     {section.examples.map((example, exIdx) => (
-                      <div key={example.title} className="print-keep-together border border-stone-300 bg-[#fffef8] p-5 example-card">
+                      <div key={example.title} className="print-keep-together theme-card-light theme-border p-5 example-card">
                         <div className="mb-3 flex items-center gap-3">
                           <span className="example-badge flex h-7 w-7 items-center justify-center rounded-lg bg-white text-sm font-bold text-slate-600 ring-1 ring-slate-200">
                             {exIdx + 1}
@@ -326,7 +326,7 @@ export default function ModulePage() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-500">
               Note
             </div>
-            <h2 id="mistakes" className="scroll-mt-24 text-2xl font-bold text-zinc-900">
+            <h2 id="mistakes" className="scroll-mt-24 text-2xl font-bold theme-text">
               Common Mistakes to Avoid
             </h2>
           </div>
@@ -345,10 +345,10 @@ export default function ModulePage() {
       </div>
 
       {/* Free preview questions with detailed solutions */}
-      <section className="mt-10 border-t border-stone-300 pt-8" data-no-print>
+      <section className="mt-10 border-t border-[var(--border)] dark:border-[var(--border)] pt-8" data-no-print>
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 id="practice-preview" className="scroll-mt-24 text-xl font-bold text-zinc-900 sm:text-2xl">
+            <h2 id="practice-preview" className="scroll-mt-24 text-xl font-bold theme-text sm:text-2xl">
               Worked Practice Problems (5 examples)
             </h2>
             <p className="mt-1 text-sm text-zinc-600">
@@ -364,25 +364,25 @@ export default function ModulePage() {
           {moduleProblems.slice(0, 5).map((problem, index) => (
             <div
               key={problem.id}
-              className="border border-stone-300 bg-[#fffef8] p-5 practice-card"
+              className="theme-card-light theme-border p-5 practice-card"
             >
               {/* Question header */}
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
-                <div className="problem-badge flex h-9 w-9 flex-shrink-0 items-center justify-center border border-stone-300 bg-white text-base font-semibold text-stone-600">
+                <div className="problem-badge flex h-9 w-9 flex-shrink-0 items-center justify-center border border-[var(--border)] dark:border-[var(--border)] bg-white text-base font-semibold text-stone-600">
                   {index + 1}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Problem {index + 1}
                   </p>
-                  <p className="mt-1 text-lg font-semibold text-zinc-900 sm:text-xl">
+                  <p className="mt-1 text-lg font-semibold theme-text sm:text-xl">
                     <MathText text={problem.prompt} />
                   </p>
                 </div>
               </div>
 
               {/* Step-by-step solution */}
-              <div className="solution-box border border-stone-300 bg-white px-4 py-4 sm:ml-14 sm:p-5">
+              <div className="solution-box border border-[var(--border)] dark:border-[var(--border)] bg-white px-4 py-4 sm:ml-14 sm:p-5">
                 <div className="mb-3 flex items-center gap-2">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-sm">
                     1
@@ -460,14 +460,14 @@ export default function ModulePage() {
 
       {/* FAQ Section */}
       {faqs.length > 0 && (
-        <section className="mt-10 border-t border-stone-300 pt-8" data-no-print>
-          <h2 className="mb-6 text-xl font-bold text-zinc-900 sm:text-2xl faq-heading">
+        <section className="mt-10 border-t border-[var(--border)] dark:border-[var(--border)] pt-8" data-no-print>
+          <h2 className="mb-6 text-xl font-bold theme-text sm:text-2xl faq-heading">
             Frequently asked questions about {topic.title.toLowerCase()}
           </h2>
           <div className="space-y-4">
             {faqs.map((faq, i) => (
-              <details key={i} className="group border border-stone-300 bg-[#fffef8] faq-item">
-                <summary className="flex cursor-pointer select-none items-center justify-between px-4 py-3 text-base font-semibold text-stone-950 [&::-webkit-details-marker]:hidden">
+              <details key={i} className="group border border-[var(--border)] dark:border-[var(--border)] bg-white dark:bg-[var(--surface)] faq-item">
+                <summary className="flex cursor-pointer select-none items-center justify-between px-4 py-3 text-base font-semibold theme-text [&::-webkit-details-marker]:hidden">
                   {faq.q}
                   <svg className="ml-3 h-4 w-4 flex-shrink-0 text-slate-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -486,18 +486,18 @@ export default function ModulePage() {
       
 
       {/* Prev / Next topic navigation */}
-      <nav className="mt-10 grid gap-4 border-t border-stone-300 pt-8 sm:grid-cols-2" aria-label="Previous and next topics" data-no-print>
+      <nav className="mt-10 grid gap-4 border-t border-[var(--border)] dark:border-[var(--border)] pt-8 sm:grid-cols-2" aria-label="Previous and next topics" data-no-print>
         {prevTopic ? (
           <Link
             href={`/calculus/modules/${prevTopic.id}`}
-            className="group relative flex items-center gap-4 overflow-hidden border border-stone-300 bg-[#fffef8] p-5 transition hover:bg-stone-100 sm:p-6 nav-card"
+            className="group relative flex items-center gap-4 overflow-hidden border border-[var(--border)] dark:border-[var(--border)] bg-white dark:bg-[var(--surface)] p-5 transition hover:bg-stone-100 sm:p-6 nav-card"
           >
             <div className="nav-arrow flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-2xl font-bold text-slate-500 transition-colors group-hover:bg-slate-200 group-hover:text-slate-700">
               ‹
             </div>
             <div className="min-w-0 flex-1">
               <p className="nav-label text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Previous</p>
-              <p className="nav-title mt-0.5 truncate text-base font-bold text-zinc-900 group-hover:text-slate-700 sm:text-lg">{prevTopic.title}</p>
+              <p className="nav-title mt-0.5 truncate text-base font-bold theme-text group-hover:text-slate-700 sm:text-lg">{prevTopic.title}</p>
               <p className="nav-desc mt-0.5 line-clamp-2 text-sm text-zinc-500">{prevTopic.description}</p>
             </div>
           </Link>
@@ -507,14 +507,14 @@ export default function ModulePage() {
         {nextTopic ? (
           <Link
             href={`/calculus/modules/${nextTopic.id}`}
-            className="group relative flex items-center gap-4 overflow-hidden border border-stone-300 bg-[#fffef8] p-5 text-right transition hover:bg-stone-100 sm:p-6 nav-card"
+            className="group relative flex items-center gap-4 overflow-hidden border border-[var(--border)] dark:border-[var(--border)] bg-white dark:bg-[var(--surface)] p-5 text-right transition hover:bg-stone-100 sm:p-6 nav-card"
           >
             <div className="nav-arrow order-3 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-2xl font-bold text-slate-500 transition-colors group-hover:bg-slate-200 group-hover:text-slate-700">
               ›
             </div>
             <div className="order-1 min-w-0 flex-1">
               <p className="nav-label text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Next</p>
-              <p className="nav-title mt-0.5 truncate text-base font-bold text-zinc-900 group-hover:text-slate-700 sm:text-lg">{nextTopic.title}</p>
+              <p className="nav-title mt-0.5 truncate text-base font-bold theme-text group-hover:text-slate-700 sm:text-lg">{nextTopic.title}</p>
               <p className="nav-desc mt-0.5 line-clamp-2 text-sm text-zinc-500">{nextTopic.description}</p>
             </div>
           </Link>

@@ -20,18 +20,18 @@ export function CourseContentsPage({
 }) {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
-      <div className="border-b border-stone-300 pb-6 dark:border-[var(--border)] dark:bg-[var(--bg)]">
-        <p className="text-sm text-stone-600 dark:text-[var(--text-muted)]">
+      <div className="border-b theme-border pb-6">
+        <p className="text-sm theme-text-muted">
           <Link href="/" className="text-blue-700 hover:underline dark:text-[var(--accent)]">
             Contents
           </Link>
           {" / "}
           {title}
         </p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-stone-950 dark:text-[var(--text-primary)] sm:text-4xl">
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight theme-text sm:text-4xl">
           {title}
         </h1>
-        <p className="mt-3 max-w-3xl text-base leading-7 text-stone-700 dark:text-[var(--text-secondary)]">
+        <p className="mt-3 max-w-3xl text-base leading-7 theme-text-secondary">
           {description}
         </p>
         <div className="mt-4 flex flex-wrap gap-3 text-sm">
@@ -48,20 +48,20 @@ export function CourseContentsPage({
       </div>
 
       <section className="py-8">
-        <h2 className="text-xl font-semibold text-stone-950 dark:text-[var(--text-primary)]">Course Contents</h2>
-        <ol className="mt-5 divide-y divide-stone-300 border-y border-stone-300 dark:divide-[var(--border)] dark:border-[var(--border)]">
+        <h2 className="text-xl font-semibold theme-text">Course Contents</h2>
+        <ol className="mt-5 divide-y theme-border border-y">
           {topics.map((topic, index) => (
             <li key={topic.id} className="grid gap-2 py-4 sm:grid-cols-[5rem_1fr_auto] sm:items-start">
-              <span className="text-sm font-medium tabular-nums text-stone-500 dark:text-[var(--text-muted)]">
+              <span className="text-sm font-medium tabular-nums theme-text-muted">
                 Chapter {index + 1}
               </span>
               <div>
-                <h3 className="font-semibold text-stone-950 dark:text-[var(--text-primary)]">
+                <h3 className="font-semibold theme-text">
                   <Link href={`/${subjectSlug}/modules/${topic.id}`} className="text-blue-800 hover:underline dark:text-[var(--accent)]">
                     {topic.title}
                   </Link>
                 </h3>
-                <p className="mt-1 text-sm leading-6 text-stone-600 dark:text-[var(--text-secondary)]">
+                <p className="mt-1 text-sm leading-6 theme-text-secondary">
                   {topic.description}
                 </p>
               </div>
