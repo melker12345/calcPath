@@ -100,8 +100,8 @@ export default function TopicTestPage() {
     return (
       <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
         <p className="text-sm text-zinc-600">Topic not found.</p>
-        <Link className="btn-secondary mt-4 inline-flex" href="/calculus/modules">
-          Back to modules
+        <Link className="btn-secondary mt-4 inline-flex" href="/calculus">
+          Back to Calculus
         </Link>
       </div>
     );
@@ -166,7 +166,7 @@ export default function TopicTestPage() {
               Start Test →
             </button>
             <Link
-              href={`/calculus/practice/${topic.id}`}
+              href={`/calculus/modules/${topic.id}`}
               className="rounded-2xl border border-slate-200 bg-white px-8 py-4 text-center text-lg font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               Practice Instead
@@ -280,7 +280,7 @@ export default function TopicTestPage() {
             Retake Test
           </button>
           <Link
-            href={`/calculus/practice/${topic.id}`}
+            href={`/calculus/modules/${topic.id}`}
             className="rounded-2xl border border-slate-200 bg-white px-6 py-3 font-semibold text-slate-700 transition hover:bg-slate-50"
           >
             Practice More

@@ -45,6 +45,8 @@ export default function StatisticsHome() {
         description={subject.shortDescription}
         subjectSlug={subject.slug}
         topics={subject.topics}
+        modules={subject.modules}
+        problems={subject.problems}
       />
     </>
   );

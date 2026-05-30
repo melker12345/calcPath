@@ -3,8 +3,7 @@
 export {
   topics,
   problems,
-  learningPaths,
   getModuleSectionTitle,
   getModuleSectionUrl,
 } from "./calculus-content";
-export type { ProblemType, Problem, Topic, LearningPath } from "./shared-types";
+export type { ProblemType, Problem, Topic } from "./shared-types";

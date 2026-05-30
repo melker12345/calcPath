@@ -7,6 +7,13 @@ export type WorkedExample = {
 
 export type ModuleSection = {
   title: string;
+  /**
+   * Stable slug used for progress tracking and deep links.
+   * MUST match the `section` field on the corresponding questions exactly
+   * (e.g. "squeeze", "lhopital", "chain", "gauss", "confidence-intervals").
+   * When present, the dashboard and practice pages can show accurate per-section progress.
+   */
+  section?: string;
   body: string[];
   /** Optional "Explain Like I'm 5" — simpler, intuition-based explanation */
   eli5?: string[];
@@ -38,6 +45,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "Functional representations: the language before the calculus",
+        section: "funcrep",
         body: [
           "Before studying limits, you need fluency with the functions that calculus operates on. Every model in science begins with choosing the right function family.",
           "Linear functions $f(x) = mx + b$ model constant rates of change. Their graphs are straight lines, and their simplicity is what derivatives approximate locally — the tangent line is a linear approximation.",
@@ -55,6 +63,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Building intuition: what does 'approaching' mean?",
+        section: "intuition",
         body: [
           "Imagine plugging in values of $x$ that get closer and closer to $a$. For $f(x) = (x^2-1)/(x-1)$, try $x=0.9, 0.99, 0.999, 1.001, 1.01, 1.1$. You'll see the outputs cluster around $2$, even though $f(1)$ is undefined.",
           "That clustering is the limit. Formally, $\\lim_{x\\to 1} \\frac{x^2-1}{x-1} = 2$ because the outputs can be made as close to $2$ as we like by choosing $x$ close enough to $1$.",
@@ -81,6 +90,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "One-sided limits",
+        section: "onesided",
         body: [
           "The left-hand limit $\\lim_{x\\to a^-} f(x)$ only uses $x$-values less than $a$ (approaching from the left). The right-hand limit $\\lim_{x\\to a^+} f(x)$ only uses values greater than $a$.",
           "The two-sided limit $\\lim_{x\\to a} f(x)$ exists if and only if both one-sided limits exist and are equal. This is the bridge between one-sided behavior and a 'full' limit.",
@@ -105,6 +115,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Evaluating limits: direct substitution",
+        section: "directsub",
         body: [
           "Always try direct substitution first. If $f$ is continuous at $a$, then $\\lim_{x\\to a} f(x) = f(a)$. You're done. This is the simplest and fastest method.",
           "Polynomials, rational functions (away from zeros of the denominator), $e^x$, $\\ln x$ (for $x>0$), $\\sin x$, $\\cos x$, and $\\tan x$ (away from asymptotes) are all continuous on their domains. Compositions, sums, and products of continuous functions are also continuous.",
@@ -129,6 +140,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Indeterminate forms and algebraic tricks",
+        section: "indeterminate",
         body: [
           "The expression $0/0$ is called indeterminate because the limit could be anything: $0$, $5$, $\\infty$, or it might not exist. You must simplify.",
           "Factor and cancel: if the numerator and denominator share a common factor like $(x-a)$, cancel it and try substitution again.",
@@ -165,6 +177,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Key trigonometric limits",
+        section: "trig",
         body: [
           "These special limits appear constantly and should be memorized:",
           "$\\lim_{x\\to 0} \\frac{\\sin x}{x} = 1$. This is the most important trig limit in calculus. It's proven using the Squeeze Theorem.",
@@ -189,6 +202,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "The Squeeze Theorem",
+        section: "squeeze",
         body: [
           "If $g(x) \\leq f(x) \\leq h(x)$ near $a$, and $\\lim_{x\\to a} g(x) = \\lim_{x\\to a} h(x) = L$, then $\\lim_{x\\to a} f(x) = L$.",
           "The function $f$ is 'squeezed' between two functions that both approach the same value, so $f$ has no choice but to approach that value too.",
@@ -217,6 +231,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Continuity",
+        section: "continuity",
         body: [
           "A function is continuous at $x=a$ when three conditions all hold: (1) $f(a)$ is defined, (2) $\\lim_{x\\to a} f(x)$ exists, and (3) $\\lim_{x\\to a} f(x) = f(a)$.",
           "If any condition fails, we have a discontinuity. Types of discontinuity:",
@@ -233,6 +248,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Evaluating limits of piecewise functions",
+        section: "piecewise",
         body: [
           "For a piecewise function, you must check the left-hand and right-hand limits separately at each boundary point. Each side of the boundary uses a different formula.",
           "Use the piece that applies for $x < a$ to compute $\\lim_{x\\to a^-}$, and the piece that applies for $x > a$ to compute $\\lim_{x\\to a^+}$.",
@@ -259,6 +275,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Infinite limits and vertical asymptotes",
+        section: "infinite",
         body: [
           "An infinite limit like $\\lim_{x\\to a} f(x) = \\infty$ means the outputs grow without bound as $x$ approaches $a$. The limit technically does not exist as a real number, but we write $\\infty$ to describe the behavior.",
           "Vertical asymptotes occur where the denominator approaches $0$ but the numerator does not. The graph shoots upward or downward near these points.",
@@ -286,6 +303,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Limits at infinity and horizontal asymptotes",
+        section: "atinfinity",
         body: [
           "Limits as $x\\to \\infty$ describe long-run behavior. A horizontal asymptote $y=L$ means $\\lim_{x\\to \\infty} f(x) = L$ or $\\lim_{x\\to -\\infty} f(x) = L$.",
           "For rational functions $\\frac{p(x)}{q(x)}$, compare the degrees: if $\\deg(p) < \\deg(q)$, the limit is $0$. If $\\deg(p) = \\deg(q)$, the limit is the ratio of leading coefficients. If $\\deg(p) > \\deg(q)$, the limit is $\\pm\\infty$ (no horizontal asymptote).",
@@ -309,6 +327,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "L'Hôpital's Rule",
+        section: "lhopital",
         body: [
           "When direct substitution gives $0/0$ or $\\infty/\\infty$, L'Hôpital's Rule says: $\\lim_{x\\to a} \\frac{f(x)}{g(x)} = \\lim_{x\\to a} \\frac{f'(x)}{g'(x)}$, provided the right-hand limit exists.",
           "Important: differentiate the numerator and denominator separately — not as a single fraction. This is not the quotient rule.",
@@ -386,6 +405,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "The definition and what it means",
+        section: "definition",
         body: [
           "The derivative $f'(x) = \\lim_{h\\to 0} \\frac{f(x+h)-f(x)}{h}$ is the limit of the difference quotient. The difference quotient $\\frac{f(x+h)-f(x)}{h}$ is the slope of a secant line through two nearby points on the graph of $f$.",
           "As $h\\to 0$, the secant line becomes the tangent line, and its slope becomes the derivative. This is the geometric heart of the derivative: zoom in far enough on any smooth curve and it looks like a straight line. The derivative measures the slope of that local line.",
@@ -413,6 +433,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Core differentiation rules",
+        section: "rules",
         body: [
           "Power rule: $\\frac{d}{dx} x^n = nx^{n-1}$ for any real number $n$. This works for negative and fractional exponents too: $\\frac{d}{dx} x^{-2} = -2x^{-3}$ and $\\frac{d}{dx} \\sqrt{x} = \\frac{1}{2\\sqrt{x}}$.",
           "Constant multiple rule: $\\frac{d}{dx}[cf(x)] = c f'(x)$. Constants pass through the derivative.",
@@ -436,6 +457,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Derivatives of common functions",
+        section: "common",
         body: [
           "Exponentials: $\\frac{d}{dx} e^x = e^x$ — the defining property of $e$. No other function equals its own derivative. More generally, $\\frac{d}{dx} a^x = a^x \\ln a$ (the $\\ln a$ factor accounts for the base).",
           "Logarithms: $\\frac{d}{dx} \\ln x = \\frac{1}{x}$ for $x > 0$. This is why $\\ln x$ appears everywhere in integration — it's the antiderivative of $1/x$. More generally, $\\frac{d}{dx} \\log_a x = \\frac{1}{x \\ln a}$.",
@@ -450,6 +472,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Product rule",
+        section: "product",
         body: [
           "When two functions are multiplied: $(fg)' = f'g + fg'$.",
           "Think of it as: \"derivative of the first times the second, plus the first times the derivative of the second.\"",
@@ -472,6 +495,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Quotient rule",
+        section: "quotient",
         body: [
           "For a ratio of functions: $\\left(\\frac{f}{g}\\right)' = \\frac{f'g - fg'}{g^2}$. The order matters — it's $f'g$ first, then subtract $fg'$.",
           "Memory aid: \"low d-high minus high d-low, over the square of what's below.\" Here 'high' is the numerator $f$, 'low' is the denominator $g$, and 'd-' means 'derivative of.'",
@@ -493,6 +517,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Chain rule",
+        section: "chain",
         body: [
           "The chain rule handles compositions: if $y = f(g(x))$, then $\\frac{dy}{dx} = f'(g(x)) \\cdot g'(x)$.",
           "In words: derivative of the outer function (evaluated at the inner function) times the derivative of the inner function.",
@@ -533,6 +558,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Inverse trigonometric derivatives",
+        section: "invtrig",
         body: [
           "$\\frac{d}{dx} \\arcsin x = \\frac{1}{\\sqrt{1-x^2}}$, valid for $|x| < 1$. The domain restriction comes from the original function: $\\arcsin$ only takes inputs between $-1$ and $1$.",
           "$\\frac{d}{dx} \\arccos x = -\\frac{1}{\\sqrt{1-x^2}}$. Notice this is exactly the negative of $\\arcsin$'s derivative. This makes sense because $\\arcsin x + \\arccos x = \\pi/2$ (they always add to a right angle), so their derivatives must be negatives of each other.",
@@ -560,6 +586,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Implicit differentiation",
+        section: "implicit",
         body: [
           "When $y$ is defined implicitly by an equation like $x^2 + y^2 = 25$, differentiate both sides with respect to $x$.",
           "Every time you differentiate a $y$ term, attach a $\\frac{dy}{dx}$ factor (this is the chain rule in action: $y$ is a function of $x$).",
@@ -589,6 +616,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Logarithmic differentiation",
+        section: "logdiff",
         body: [
           "For complicated products, quotients, or expressions where the variable appears in both the base and exponent (like $x^x$), take the natural log of both sides first, then differentiate implicitly.",
           "Why it works: $\\ln$ converts products into sums ($\\ln(fg) = \\ln f + \\ln g$), quotients into differences ($\\ln(f/g) = \\ln f - \\ln g$), and powers into products ($\\ln(f^g) = g \\ln f$). These are all easier to differentiate.",
@@ -615,6 +643,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Higher-order derivatives",
+        section: "higherorder",
         body: [
           "The second derivative $f''(x)$ is the derivative of $f'(x)$. It measures how the rate of change itself is changing — the 'rate of the rate.'",
           "Notation: $f''(x)$, $\\frac{d^2y}{dx^2}$, or $y''$. For higher orders: $f'''(x)$, $f^{(4)}(x)$, etc. The notation $\\frac{d^2y}{dx^2}$ reminds you that you're applying $\\frac{d}{dx}$ twice.",
@@ -642,6 +671,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Tangent lines and linearization",
+        section: "tangent",
         body: [
           "The tangent line to $f$ at $x = a$ is: $y = f(a) + f'(a)(x - a)$. This is the best linear approximation near $a$.",
           "Linearization: $f(x) \\approx f(a) + f'(a)(x-a)$ for $x$ close to $a$. This is incredibly useful for quick estimates.",
@@ -652,6 +682,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Interpreting the derivative graphically",
+        section: "graphical",
         body: [
           "$f'(x) > 0$ on an interval means $f$ is increasing (going uphill) there. $f'(x) < 0$ means $f$ is decreasing (going downhill). The magnitude $|f'(x)|$ tells you how steep the slope is.",
           "Where $f'(x) = 0$, the tangent line is horizontal. These are critical points — candidates for local maxima, local minima, or inflection points.",
@@ -666,6 +697,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Hyperbolic functions and their derivatives",
+        section: "hyperbolic",
         body: [
           "The hyperbolic functions are built from exponentials: $\\sinh x = \\frac{e^x - e^{-x}}{2}$ and $\\cosh x = \\frac{e^x + e^{-x}}{2}$.",
           "They satisfy $\\cosh^2 x - \\sinh^2 x = 1$ (compare with $\\cos^2 x + \\sin^2 x = 1$ for trig).",
@@ -710,6 +742,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "The big idea: Riemann sums",
+        section: "riemann",
         body: [
           "Divide the interval $[a,b]$ into $n$ thin strips of width $\\Delta x = (b-a)/n$. In each strip, build a rectangle with height $f(x_i)$.",
           "The total area of all rectangles is approximately $\\sum_{i=1}^{n} f(x_i)\\Delta x$. This is a Riemann sum.",
@@ -732,6 +765,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "The Fundamental Theorem of Calculus (FTC)",
+        section: "ftc",
         body: [
           "FTC Part 1: if $F(x) = \\int_a^x f(t)\\,dt$, then $F'(x) = f(x)$. Differentiation and integration are inverse operations.",
           "FTC Part 2: $\\int_a^b f(x)\\,dx = F(b) - F(a)$ where $F$ is any antiderivative of $f$ (meaning $F'=f$).",
@@ -760,6 +794,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Net area vs. total area",
+        section: "netarea",
         body: [
           "The definite integral $\\int_a^b f(x)\\,dx$ computes net (signed) area: regions where $f(x) > 0$ (above the $x$-axis) contribute positively, and regions where $f(x) < 0$ (below the $x$-axis) contribute negatively. Positive and negative areas can cancel.",
           "If you want total area (always positive, no cancellation), integrate the absolute value: $\\int_a^b |f(x)|\\,dx$.",
@@ -773,6 +808,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Antiderivatives and the constant of integration",
+        section: "antideriv",
         body: [
           "An antiderivative of $f(x)$ is any function $F(x)$ such that $F'(x) = f(x)$. The indefinite integral $\\int f(x)\\,dx$ represents the entire family of antiderivatives.",
           "Since the derivative of a constant is $0$, any two antiderivatives of the same function differ by a constant: if $F'(x) = f(x)$ and $G'(x) = f(x)$, then $F(x) - G(x) = C$ for some constant. That's why every indefinite integral includes $+C$.",
@@ -785,6 +821,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Common integrals (your core toolbox)",
+        section: "toolbox",
         body: [
           "These are the integral formulas you must know by heart. Every other technique (substitution, by-parts, etc.) ultimately reduces an integral to one of these:",
           "Power rule: $\\int x^n\\,dx = \\frac{x^{n+1}}{n+1} + C$ for $n \\neq -1$. Works for any real $n$ — including negative and fractional exponents like $\\int x^{-3}\\,dx$ or $\\int \\sqrt{x}\\,dx = \\int x^{1/2}\\,dx$.",
@@ -801,6 +838,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Substitution (reverse chain rule)",
+        section: "usub",
         body: [
           "If the integrand looks like $f(g(x)) \\cdot g'(x)$, substitute $u = g(x)$ so $du = g'(x)\\,dx$.",
           "The integral becomes $\\int f(u)\\,du$, which is usually simpler.",
@@ -830,6 +868,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Integration by parts (reverse product rule)",
+        section: "parts",
         body: [
           "Formula: $\\int u\\,dv = uv - \\int v\\,du$. This comes from the product rule run backwards.",
           "Choose $u$ and $dv$ using the LIATE heuristic: Logarithms, Inverse trig, Algebraic ($x^n$), Trig, Exponentials. Pick $u$ from higher in this list.",
@@ -862,6 +901,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Trigonometric integrals",
+        section: "trigint",
         body: [
           "Integrals of the form $\\int \\sin^m x \\cos^n x\\,dx$ come up constantly and have a systematic strategy based on whether $m$ and $n$ are odd or even.",
           "Case 1 — one power is odd: peel off one factor of the odd-powered function, convert the remaining even power using $\\sin^2 x + \\cos^2 x = 1$, and substitute with $u$ = the other function. Example: $\\int \\cos^3 x\\,dx$. Peel: $\\int \\cos^2 x \\cdot \\cos x\\,dx = \\int(1-\\sin^2 x)\\cos x\\,dx$. Let $u = \\sin x$: $\\int(1-u^2)\\,du = u - u^3/3 + C = \\sin x - \\frac{\\sin^3 x}{3} + C$.",
@@ -888,6 +928,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Trigonometric substitution",
+        section: "trigsub",
         body: [
           "When the integrand involves $\\sqrt{a^2 - x^2}$, $\\sqrt{a^2 + x^2}$, or $\\sqrt{x^2 - a^2}$, no algebraic trick will eliminate the square root. Trig substitution works by exploiting Pythagorean identities to remove the radical.",
           "$\\sqrt{a^2 - x^2}$: let $x = a\\sin\\theta$, $dx = a\\cos\\theta\\,d\\theta$. Then $\\sqrt{a^2-x^2} = a\\cos\\theta$. (Think: $1 - \\sin^2\\theta = \\cos^2\\theta$.)",
@@ -915,6 +956,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Partial fractions",
+        section: "partial",
         body: [
           "To integrate a rational function $\\frac{P(x)}{Q(x)}$ where $\\deg P < \\deg Q$, decompose it into simpler fractions.",
           "Factor the denominator, then write: $\\frac{1}{(x-1)(x+2)} = \\frac{A}{x-1} + \\frac{B}{x+2}$.",
@@ -940,6 +982,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Improper integrals",
+        section: "improper",
         body: [
           "An improper integral has an infinite limit of integration or an integrand that blows up within the interval. In either case, you can't just plug in bounds — you need a limit.",
           "Type 1 — infinite bound: replace $\\infty$ with a variable and take a limit. $\\int_1^{\\infty} \\frac{1}{x^2}\\,dx = \\lim_{b\\to\\infty} \\int_1^b \\frac{1}{x^2}\\,dx = \\lim_{b\\to\\infty} [-1/x]_1^b = \\lim_{b\\to\\infty}(-1/b+1) = 1$. Converges.",
@@ -967,6 +1010,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Which technique should I use? (Decision tree)",
+        section: "technique",
         body: [
           "When facing an unfamiliar integral, work through this decision tree in order:",
           "1. Simplify first: can algebra, trig identities, or long division reduce it? Expanding a product or splitting a fraction may reveal a standard form. Never skip this step.",
@@ -985,6 +1029,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Area between curves and volumes (preview)",
+        section: "areaprev",
         body: [
           "Integration extends naturally from 'area under one curve' to 'area between two curves' and 'volume of a solid.' The strategy is always the same: slice, approximate each slice, and integrate.",
           "Area between curves: the area between $y = f(x)$ (top) and $y = g(x)$ (bottom) from $x = a$ to $x = b$ is $\\int_a^b [f(x) - g(x)]\\,dx$. First determine which function is on top in each sub-interval. If the curves cross, split the integral at the crossing points.",
@@ -1019,6 +1064,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "Critical points and the first derivative test",
+        section: "critical",
         body: [
           "A critical point of $f$ occurs at $x=c$ where $f'(c) = 0$ or $f'(c)$ is undefined (and $f(c)$ exists).",
           "The first derivative test: examine the sign of $f'(x)$ on either side of the critical point.",
@@ -1046,6 +1092,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "The second derivative test",
+        section: "secondderiv",
         body: [
           "An alternative to the first derivative test that avoids building a sign chart. At a critical point where $f'(c) = 0$:",
           "If $f''(c) > 0$: the curve is concave up (bowl-shaped) at $c$, so $f(c)$ is a local minimum. The function is curving upward — any nearby point is higher.",
@@ -1073,6 +1120,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Concavity and inflection points",
+        section: "concavity",
         body: [
           "Concavity describes how the curve bends. $f''(x) > 0$ means concave up (opening upward), $f''(x) < 0$ means concave down (opening downward).",
           "An inflection point is where the concavity changes: $f''$ switches sign. At an inflection point, the curve transitions from bending one way to bending the other.",
@@ -1088,6 +1136,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Absolute extrema on closed intervals (Extreme Value Theorem)",
+        section: "extrema",
         body: [
           "The Extreme Value Theorem (EVT): if $f$ is continuous on a closed interval $[a,b]$, then $f$ attains an absolute maximum and an absolute minimum somewhere on $[a,b]$. Both 'continuous' and 'closed interval' are required — remove either condition and the theorem can fail.",
           "The closed interval method to find them:",
@@ -1116,6 +1165,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Curve sketching (putting it all together)",
+        section: "curvesketch",
         body: [
           "A complete curve sketch synthesizes everything you've learned about derivatives into a picture. Follow this checklist systematically:",
           "1. Domain and intercepts: where is $f$ defined? Set $f(x)=0$ for $x$-intercepts, evaluate $f(0)$ for the $y$-intercept.",
@@ -1147,6 +1197,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Optimization problems",
+        section: "optimization",
         body: [
           "The general strategy for optimization word problems:",
           "Step 1: Draw a diagram and define variables. Label everything.",
@@ -1177,6 +1228,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Related rates",
+        section: "relatedrates",
         body: [
           "Related rates problems involve multiple quantities changing over time, connected by a geometric or physical equation.",
           "Step 1: Draw a picture and identify all variables. Label which quantities are changing.",
@@ -1210,6 +1262,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Motion along a line",
+        section: "motion",
         body: [
           "Given a position function $s(t)$: velocity is $v(t) = s'(t)$ and acceleration is $a(t) = v'(t) = s''(t)$. This is the most natural physical application of derivatives.",
           "The particle is moving right (positive direction) when $v(t) > 0$ and moving left when $v(t) < 0$. The particle is at rest (momentarily stopped) when $v(t) = 0$.",
@@ -1238,6 +1291,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Linearization and differentials",
+        section: "linearization",
         body: [
           "The linearization of $f$ at $a$ is $L(x) = f(a) + f'(a)(x-a)$. This is the equation of the tangent line at $x = a$, repurposed as an approximation tool.",
           "For values of $x$ near $a$, $f(x) \\approx L(x)$. The closer $x$ is to $a$, the better the approximation. This is the foundation of how engineers and scientists do quick estimates without a calculator.",
@@ -1265,6 +1319,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "The Mean Value Theorem",
+        section: "mvt",
         body: [
           "If $f$ is continuous on $[a,b]$ and differentiable on $(a,b)$, then there exists at least one $c$ in $(a,b)$ such that $f'(c) = \\frac{f(b)-f(a)}{b-a}$.",
           "In words: somewhere between $a$ and $b$, the instantaneous rate of change equals the average rate of change.",
@@ -1278,6 +1333,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Newton's method",
+        section: "newton",
         body: [
           "Newton's method finds approximate roots of $f(x) = 0$ using tangent lines.",
           "Start with an initial guess $x_0$. The iteration formula is: $x_{n+1} = x_n - \\frac{f(x_n)}{f'(x_n)}$.",
@@ -1303,6 +1359,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Rates of change in the sciences",
+        section: "ratesci",
         body: [
           "The derivative is the universal language for rates. Here are key applications across disciplines.",
           "Physics — velocity and acceleration: if $s(t)$ is position, then $v(t) = s'(t)$ is velocity and $a(t) = v'(t) = s''(t)$ is acceleration. Force equals mass times acceleration: $F = ma = ms''(t)$.",
@@ -1336,6 +1393,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "Sequences and their limits",
+        section: "sequences",
         body: [
           "A sequence $\\{a_n\\}$ is an ordered list: $a_1, a_2, a_3, \\ldots$ The sequence converges if $\\lim_{n\\to\\infty} a_n = L$ for some finite $L$. If no such $L$ exists, the sequence diverges.",
           "Common sequences: $a_n = 1/n \\to 0$, $a_n = (1+1/n)^n \\to e$ (the definition of $e$), $a_n = (-1)^n$ diverges (oscillates between $-1$ and $1$, never settling), $a_n = n^2$ diverges to $\\infty$.",
@@ -1350,6 +1408,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Series: partial sums and convergence",
+        section: "partialsums",
         body: [
           "A series $\\sum_{n=1}^{\\infty} a_n$ is the limit of its partial sums: $S_N = \\sum_{n=1}^{N} a_n$. If $\\lim_{N\\to\\infty} S_N$ exists and is finite, the series converges.",
           "Key distinction: a sequence $\\{a_n\\}$ converging to $0$ is necessary for the series to converge, but not sufficient. $a_n = 1/n \\to 0$, yet $\\sum 1/n$ diverges.",
@@ -1363,6 +1422,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Geometric series",
+        section: "geometric",
         body: [
           "A geometric series has the form $\\sum_{n=0}^{\\infty} ar^n$ where $a$ is the first term and $r$ is the common ratio.",
           "It converges if and only if $|r| < 1$, and the sum is $\\frac{a}{1-r}$.",
@@ -1384,6 +1444,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Telescoping series",
+        section: "telescoping",
         body: [
           "A telescoping series is one where consecutive terms in the partial sum cancel, leaving only a few surviving terms — like a collapsing telescope.",
           "The classic example: $\\sum_{n=1}^{\\infty} \\frac{1}{n(n+1)}$. Use partial fractions: $\\frac{1}{n(n+1)} = \\frac{1}{n} - \\frac{1}{n+1}$.",
@@ -1408,6 +1469,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "The Divergence Test (nth-term test)",
+        section: "divergence",
         body: [
           "If $\\lim_{n\\to\\infty} a_n \\neq 0$, then $\\sum a_n$ diverges. Full stop. If the terms don't approach zero, they can't possibly add up to a finite sum — the partial sums keep jumping by non-negligible amounts.",
           "This should always be your first check for any series. It's quick and catches obvious divergence. Example: $\\sum \\frac{n}{n+1}$ diverges because $a_n = \\frac{n}{n+1} \\to 1 \\neq 0$.",
@@ -1421,6 +1483,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "p-series and the harmonic series",
+        section: "pseries",
         body: [
           "A p-series has the form $\\sum_{n=1}^{\\infty} \\frac{1}{n^p}$ where $p$ is a positive constant. These are the most important benchmark series in all of convergence testing.",
           "The rule: converges if $p > 1$, diverges if $p \\leq 1$. The critical boundary is $p = 1$.",
@@ -1434,6 +1497,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "The Integral Test",
+        section: "integraltest",
         body: [
           "If $f(x)$ is positive, continuous, and decreasing for $x \\geq N$, and $a_n = f(n)$, then $\\sum_{n=N}^{\\infty} a_n$ and $\\int_N^{\\infty} f(x)\\,dx$ either both converge or both diverge. The series and the integral live or die together.",
           "Why it works: the sum $\\sum a_n$ is a left Riemann sum for $\\int f(x)\\,dx$ (or a right Riemann sum, depending on the direction). Since $f$ is decreasing, these Riemann sums sandwich the integral. If one is finite, the other must be too.",
@@ -1447,6 +1511,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Comparison and Limit Comparison Tests",
+        section: "comparison",
         body: [
           "Direct comparison: if $0 \\leq a_n \\leq b_n$ for all sufficiently large $n$ and $\\sum b_n$ converges, then $\\sum a_n$ converges (a smaller series is forced to converge if a larger one does). Conversely, if $\\sum a_n$ diverges, then $\\sum b_n$ diverges.",
           "Direct comparison requires an inequality that holds term by term. This can be tricky to establish. The limit comparison test removes that difficulty.",
@@ -1461,6 +1526,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Ratio and Root Tests",
+        section: "ratioroot",
         body: [
           "Ratio test: compute $L = \\lim_{n\\to\\infty} \\left|\\frac{a_{n+1}}{a_n}\\right|$. If $L < 1$: converges absolutely. $L > 1$: diverges. $L = 1$: inconclusive.",
           "Root test: compute $L = \\lim_{n\\to\\infty} \\sqrt[n]{|a_n|}$. Same criteria as the ratio test.",
@@ -1483,6 +1549,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Alternating Series Test",
+        section: "alternating",
         body: [
           "An alternating series has terms that switch sign: $\\sum (-1)^n a_n$ or $\\sum (-1)^{n+1} a_n$ where $a_n > 0$. The positive and negative terms partially cancel each other.",
           "The Alternating Series Test (Leibniz's test): the series converges if two conditions hold: (1) $\\{a_n\\}$ is eventually decreasing ($a_{n+1} \\leq a_n$ for large enough $n$), and (2) $\\lim_{n\\to\\infty} a_n = 0$.",
@@ -1497,6 +1564,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Absolute vs. conditional convergence",
+        section: "absconv",
         body: [
           "A series $\\sum a_n$ converges absolutely if $\\sum |a_n|$ converges. It converges conditionally if $\\sum a_n$ converges but $\\sum |a_n|$ diverges.",
           "Absolute convergence implies convergence. So if the absolute value series converges, you're done.",
@@ -1511,6 +1579,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Power series",
+        section: "power",
         body: [
           "A power series centered at $a$ is $\\sum_{n=0}^{\\infty} c_n(x-a)^n = c_0 + c_1(x-a) + c_2(x-a)^2 + \\cdots$. It's an 'infinite polynomial' with infinitely many terms.",
           "The radius of convergence $R$ determines where it converges: $|x-a| < R$ (converges absolutely), $|x-a| > R$ (diverges). At $|x-a| = R$ (the endpoints), you must check separately — the series may converge at one, both, or neither endpoint.",
@@ -1526,6 +1595,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Taylor and Maclaurin series",
+        section: "taylor",
         body: [
           "The Taylor series of $f(x)$ centered at $a$ is: $f(x) = \\sum_{n=0}^{\\infty} \\frac{f^{(n)}(a)}{n!}(x-a)^n$.",
           "A Maclaurin series is a Taylor series centered at $a=0$.",
@@ -1568,6 +1638,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Taylor remainder and error bounds",
+        section: "remainder",
         body: [
           "The $n$th degree Taylor polynomial $T_n(x)$ approximates $f(x)$ near $x = a$. The error (remainder) is $R_n(x) = f(x) - T_n(x)$ — the difference between the true function and the polynomial approximation.",
           "Taylor's inequality (Lagrange error bound): $|R_n(x)| \\leq \\frac{M}{(n+1)!}|x-a|^{n+1}$, where $M$ is an upper bound for $|f^{(n+1)}(t)|$ on the interval between $a$ and $x$. The $(n+1)!$ in the denominator grows extremely fast, which is why Taylor polynomials get accurate quickly.",
@@ -1582,6 +1653,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Building new series from known ones",
+        section: "building",
         body: [
           "Instead of computing Taylor coefficients from scratch (which requires evaluating $n$ derivatives), you can derive new series from known ones using three operations: substitution, differentiation, and integration.",
           "Substitution: replace $x$ in a known series with an expression. $e^{-x^2}$? Start with $e^u = \\sum u^n/n!$ and substitute $u = -x^2$: $e^{-x^2} = \\sum \\frac{(-1)^n x^{2n}}{n!}$. No derivatives needed.",
@@ -1596,6 +1668,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Choosing the right convergence test (strategy)",
+        section: "strategy",
         body: [
           "1. Divergence test first: if $a_n \\not\\to 0$, done (diverges).",
           "2. Is it geometric? Check if $a_n = ar^n$.",
@@ -1630,6 +1703,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "What is a differential equation?",
+        section: "intro",
         body: [
           "A differential equation (DE) is any equation that relates a function $y(x)$ to one or more of its derivatives. The unknown is the function itself — you're solving for $y$, not a number.",
           "The order of a DE is the highest derivative that appears. First-order: $y' = 2xy$ (involves $y'$ but not $y''$). Second-order: $y'' + 4y = 0$ (involves $y''$). Higher-order DEs exist but are less common in a first course.",
@@ -1644,6 +1718,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Direction fields (slope fields)",
+        section: "slopefields",
         body: [
           "A direction field visualizes a first-order DE $y' = f(x,y)$ by drawing short line segments with slope $f(x,y)$ at many points $(x,y)$.",
           "The solution curves must be tangent to these segments at every point. So by drawing segments, you can see the shape of solutions without solving the equation.",
@@ -1658,6 +1733,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Separable equations",
+        section: "separable",
         body: [
           "A first-order DE is separable if it can be written as $\\frac{dy}{dx} = g(x) \\cdot h(y)$, where one factor depends only on $x$ and the other only on $y$.",
           "To solve: separate the variables: $\\frac{1}{h(y)}\\,dy = g(x)\\,dx$. Then integrate both sides.",
@@ -1681,6 +1757,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Exponential growth and decay",
+        section: "expgrowth",
         body: [
           "The DE $\\frac{dy}{dt} = ky$ says: the rate of change of $y$ is proportional to $y$ itself. It's separable: $\\frac{dy}{y} = k\\,dt$, integrating gives $\\ln|y| = kt + C$, so $y(t) = y_0 e^{kt}$ where $y_0 = y(0)$.",
           "If $k > 0$: exponential growth. The larger $y$ gets, the faster it grows. Applications: population growth (early phase), compound interest, viral spread, chain reactions.",
@@ -1694,6 +1771,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Newton's Law of Cooling",
+        section: "cooling",
         body: [
           "Newton's Law of Cooling states that an object's temperature changes at a rate proportional to the difference between its temperature and the surrounding (ambient) temperature: $\\frac{dT}{dt} = -k(T - T_{\\text{env}})$, where $k > 0$.",
           "This is separable. Let $u = T - T_{\\text{env}}$, then $du/dt = -ku$, giving $u = u_0 e^{-kt}$. Substituting back: $T(t) = T_{\\text{env}} + (T_0 - T_{\\text{env}})e^{-kt}$.",
@@ -1719,6 +1797,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Linear first-order equations",
+        section: "linear",
         body: [
           "Standard form: $\\frac{dy}{dx} + P(x)y = Q(x)$. The key: this is always solvable using an integrating factor.",
           "Integrating factor: $\\mu(x) = e^{\\int P(x)\\,dx}$.",
@@ -1745,6 +1824,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Logistic growth",
+        section: "logistic",
         body: [
           "The logistic equation models growth with a carrying capacity $K$: $\\frac{dP}{dt} = rP\\left(1 - \\frac{P}{K}\\right)$.",
           "When $P$ is small compared to $K$, growth is approximately exponential ($\\approx rP$). As $P$ approaches $K$, growth slows and stops.",
@@ -1760,6 +1840,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Bernoulli equations",
+        section: "bernoulli",
         body: [
           "A Bernoulli equation has the form $\\frac{dy}{dx} + P(x)y = Q(x)y^n$ where $n \\neq 0, 1$. When $n = 0$ or $n = 1$, the equation is already linear. For other values of $n$, the $y^n$ term makes it nonlinear.",
           "The clever trick: substitute $v = y^{1-n}$. Then $\\frac{dv}{dx} = (1-n)y^{-n}\\frac{dy}{dx}$. Divide the original Bernoulli equation by $y^n$, and the substitution transforms it into a linear first-order equation in $v$: $\\frac{dv}{dx} + (1-n)P(x)v = (1-n)Q(x)$.",
@@ -1773,6 +1854,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Second-order linear homogeneous equations",
+        section: "secondorder",
         body: [
           "Standard form: $ay'' + by' + cy = 0$ with constant coefficients.",
           "Guess $y = e^{rx}$, substitute, and get the characteristic equation: $ar^2 + br + c = 0$.",
@@ -1809,6 +1891,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Non-homogeneous equations and particular solutions",
+        section: "nonhomog",
         body: [
           "Form: $ay'' + by' + cy = g(x)$ where $g(x) \\neq 0$. The right-hand side $g(x)$ represents an external 'forcing' — a driving input that pushes the system.",
           "The general solution has two parts: $y = y_h + y_p$. Here $y_h$ is the general solution to the homogeneous equation ($g = 0$) — it captures the system's natural behavior. $y_p$ is any particular solution that accounts for the forcing. The combination gives every possible solution.",
@@ -1824,6 +1907,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Applications: springs and oscillations",
+        section: "springs",
         body: [
           "A mass-spring system obeys $my'' + cy' + ky = F(t)$ where $m$ is mass, $c$ is damping, $k$ is spring constant, and $F(t)$ is external force.",
           "Undamped free oscillation ($c=0$, $F=0$): $y'' + \\omega^2 y = 0$ with $\\omega = \\sqrt{k/m}$. Solution: $y = A\\cos(\\omega t) + B\\sin(\\omega t)$. Pure sinusoidal motion.",
@@ -1840,6 +1924,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Initial value problems (IVPs)",
+        section: "ivp",
         body: [
           "An IVP provides the DE plus enough initial conditions to pin down a unique solution from the infinite family of general solutions.",
           "First-order DE: one initial condition, typically $y(x_0) = y_0$. This determines the one arbitrary constant $C$ in the general solution.",
@@ -1891,6 +1976,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "Areas between curves",
+        section: "areacurves",
         body: [
           "The area between $y = f(x)$ (top) and $y = g(x)$ (bottom) from $x = a$ to $x = b$ is $A = \\int_a^b [f(x) - g(x)]\\,dx$.",
           "The integrand is always (top minus bottom) or (right minus left). If the curves cross, split the integral at the crossing points and take care with which function is on top in each sub-interval.",
@@ -1914,6 +2000,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Volumes of solids of revolution: disk and washer methods",
+        section: "diskwasher",
         body: [
           "When you rotate a region around an axis, it sweeps out a solid. To find its volume, slice perpendicular to the axis of rotation.",
           "Disk method (no hole): rotating $y = f(x)$ around the $x$-axis from $a$ to $b$: $V = \\int_a^b \\pi [f(x)]^2\\,dx$. Each cross-section is a disk with radius $f(x)$.",
@@ -1938,6 +2025,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Volumes by cylindrical shells",
+        section: "shells",
         body: [
           "The shell method computes volumes of revolution by wrapping thin cylindrical shells around the axis of rotation, rather than slicing perpendicular to it.",
           "For rotation around the $y$-axis: $V = \\int_a^b 2\\pi x \\cdot f(x)\\,dx$. Each shell is a thin hollow cylinder with radius $x$ (distance from the axis), height $f(x)$, and thickness $dx$. Unrolling a shell gives a rectangle with area $2\\pi x \\cdot f(x)$.",
@@ -1965,6 +2053,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Arc length",
+        section: "arclength",
         body: [
           "The length of a curve $y = f(x)$ from $x = a$ to $x = b$ is $L = \\int_a^b \\sqrt{1 + [f'(x)]^2}\\,dx$.",
           "Derivation: on a tiny interval $[x, x+dx]$, the curve covers a horizontal distance $dx$ and a vertical distance $dy = f'(x)\\,dx$. By Pythagoras, the actual distance along the curve is $\\sqrt{(dx)^2 + (dy)^2} = \\sqrt{1 + [f'(x)]^2}\\,dx$.",
@@ -1987,6 +2076,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Parametric equations: curves in motion",
+        section: "parametric",
         body: [
           "A parametric curve is defined by $x = x(t)$ and $y = y(t)$ as a parameter $t$ varies. The point $(x(t), y(t))$ traces out a path in the plane.",
           "Example: $x = \\cos t$, $y = \\sin t$ for $t \\in [0, 2\\pi]$ traces the unit circle.",
@@ -2012,6 +2102,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Surface area of revolution",
+        section: "surfacearea",
         body: [
           "When rotating $y = f(x)$ around the $x$-axis, each tiny piece of the curve sweeps out a band (frustum) on the surface. The surface area of that band is the circumference $2\\pi f(x)$ times the arc length element $ds = \\sqrt{1 + [f'(x)]^2}\\,dx$.",
           "Full formula: $S = \\int_a^b 2\\pi f(x) \\sqrt{1 + [f'(x)]^2}\\,dx$. This is the integral of $2\\pi r \\cdot ds$ where $r = f(x)$ is the radius (distance from the axis) and $ds$ is the length element along the curve.",
@@ -2037,6 +2128,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Work and physical applications",
+        section: "work",
         body: [
           "In physics, work = force × distance. When the force varies over the displacement, you slice the motion into tiny steps where the force is approximately constant and integrate: $W = \\int_a^b F(x)\\,dx$.",
           "Spring problems (Hooke's Law): the force to stretch a spring $x$ units beyond its natural length is $F(x) = kx$. The work to stretch from $x = a$ to $x = b$ is $W = \\int_a^b kx\\,dx = \\frac{k}{2}(b^2 - a^2)$. Note: $x$ measures displacement from natural length, not the total length of the spring.",
@@ -2083,6 +2175,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "Vectors and the geometry of space",
+        section: "vectors",
         body: [
           "A vector $\\mathbf{v} = \\langle a, b, c \\rangle$ in $\\mathbb{R}^3$ has magnitude $|\\mathbf{v}| = \\sqrt{a^2 + b^2 + c^2}$ and direction.",
           "Dot product: $\\mathbf{u} \\cdot \\mathbf{v} = u_1 v_1 + u_2 v_2 + u_3 v_3 = |\\mathbf{u}||\\mathbf{v}|\\cos\\theta$. It measures how aligned two vectors are. Zero dot product means perpendicular.",
@@ -2105,6 +2198,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Vector functions and space curves",
+        section: "vectorfunc",
         body: [
           "A vector function $\\mathbf{r}(t) = \\langle x(t), y(t), z(t) \\rangle$ traces a curve in 3D space as the parameter $t$ varies. Think of $t$ as time: at each moment, the point $(x(t), y(t), z(t))$ is the particle's position.",
           "The derivative $\\mathbf{r}'(t) = \\langle x'(t), y'(t), z'(t) \\rangle$ is the velocity vector — it points in the direction of motion and its magnitude is the speed.",
@@ -2120,6 +2214,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Partial derivatives",
+        section: "partials",
         body: [
           "For $f(x, y)$, the partial derivative $f_x = \\frac{\\partial f}{\\partial x}$ differentiates with respect to $x$ while treating $y$ as a constant.",
           "Geometrically: $f_x(a, b)$ is the slope of the surface $z = f(x, y)$ in the $x$-direction at the point $(a, b)$.",
@@ -2141,6 +2236,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "The gradient vector and directional derivatives",
+        section: "gradient",
         body: [
           "The gradient of $f(x,y)$ is the vector $\\nabla f = \\langle f_x, f_y \\rangle$. It encodes all the directional information about how $f$ changes. Its direction points toward the steepest uphill, and its magnitude $|\\nabla f|$ is the rate of steepest ascent.",
           "The directional derivative of $f$ in the direction of unit vector $\\mathbf{u}$ is $D_{\\mathbf{u}} f = \\nabla f \\cdot \\mathbf{u} = |\\nabla f|\\cos\\theta$, where $\\theta$ is the angle between $\\nabla f$ and $\\mathbf{u}$. This tells you the rate of change of $f$ in any direction.",
@@ -2155,6 +2251,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Optimization and Lagrange multipliers",
+        section: "optimization",
         body: [
           "To find extrema of $f(x,y)$: set $f_x = 0$ and $f_y = 0$ simultaneously. Solutions are critical points.",
           "Second derivative test: compute $D = f_{xx} f_{yy} - (f_{xy})^2$ at a critical point. If $D > 0$ and $f_{xx} > 0$: local min. If $D > 0$ and $f_{xx} < 0$: local max. If $D < 0$: saddle point. If $D = 0$: inconclusive.",
@@ -2179,6 +2276,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Multiple integrals",
+        section: "multiint",
         body: [
           "A double integral $\\iint_R f(x,y)\\,dA$ computes the volume under $z = f(x,y)$ over a region $R$ in the $xy$-plane.",
           "Iterated integrals: $\\iint_R f\\,dA = \\int_a^b \\int_{g_1(x)}^{g_2(x)} f(x,y)\\,dy\\,dx$. Evaluate the inner integral first (treating the outer variable as a constant).",
@@ -2205,6 +2303,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Vector fields",
+        section: "vectorfields",
         body: [
           "A vector field assigns a vector to every point in space: $\\mathbf{F}(x,y) = \\langle P(x,y), Q(x,y) \\rangle$ in 2D, or $\\mathbf{F}(x,y,z) = \\langle P, Q, R \\rangle$ in 3D. Visually, draw a small arrow at each point showing the direction and magnitude.",
           "Physical examples: gravitational fields (arrows point toward massive objects), electric fields (arrows show the force on a positive charge), fluid velocity fields (arrows show speed and direction of flow at each point), wind maps, and magnetic fields.",
@@ -2220,6 +2319,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Line integrals",
+        section: "lineint",
         body: [
           "A line integral computes a quantity accumulated along a curve $C$ in space. There are two main types, and they answer different questions.",
           "Scalar line integral: $\\int_C f\\,ds = \\int_a^b f(\\mathbf{r}(t)) |\\mathbf{r}'(t)|\\,dt$. Here $ds = |\\mathbf{r}'(t)|\\,dt$ is the arc length element. This computes the 'weighted length' of the curve — for example, the mass of a wire with density $f$ at each point, or the total cost of a path where $f$ is the cost per unit length.",
@@ -2247,6 +2347,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Curl and divergence",
+        section: "curldiv",
         body: [
           "Divergence measures how much a vector field 'spreads out' from a point: $\\text{div}\\,\\mathbf{F} = \\nabla \\cdot \\mathbf{F} = \\frac{\\partial P}{\\partial x} + \\frac{\\partial Q}{\\partial y} + \\frac{\\partial R}{\\partial z}$.",
           "Positive divergence: source (field flows outward). Negative: sink (field flows inward). Zero: incompressible flow.",
@@ -2257,6 +2358,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Green's, Stokes', and the Divergence Theorem",
+        section: "theorems",
         body: [
           "These three theorems are the pinnacle of vector calculus. Each relates an integral over a boundary to an integral over the region it encloses.",
           "Green's Theorem (2D): $\\oint_C P\\,dx + Q\\,dy = \\iint_D \\left(\\frac{\\partial Q}{\\partial x} - \\frac{\\partial P}{\\partial y}\\right) dA$. A line integral around a closed curve equals a double integral over the enclosed region.",

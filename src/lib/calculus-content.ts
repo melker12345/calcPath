@@ -7,9 +7,9 @@ import { differentialEquationProblems } from "./calculus-questions/differential-
 import { appIntProblems } from "./calculus-questions/applications-of-integration";
 import { multivariableProblems } from "./calculus-questions/multivariable";
 import { modules } from "./modules";
-import type { Problem, Topic, LearningPath } from "./shared-types";
+import type { Problem, Topic } from "./shared-types";
 
-export type { ProblemType, Problem, Topic, LearningPath } from "./shared-types";
+export type { ProblemType, Problem, Topic } from "./shared-types";
 
 export const topics: Topic[] = [
   {
@@ -268,36 +268,3 @@ export function getNextSection(topicId: string, currentSection: string): string 
   return orderedSections[currentIndex + 1];
 }
 
-export const learningPaths: LearningPath[] = [
-  {
-    id: "calc-foundations",
-    title: "Calculus Foundations",
-    description: "Build core skills with limits, derivatives, and integrals.",
-    level: "intro",
-    steps: [
-      { topicId: "limits", targetProblems: 20 },
-      { topicId: "derivatives", targetProblems: 25 },
-      { topicId: "integrals", targetProblems: 25 },
-    ],
-  },
-  {
-    id: "calc-applications",
-    title: "Real-World Calculus",
-    description: "Master applications like optimization and modeling.",
-    level: "intermediate",
-    steps: [
-      { topicId: "applications", targetProblems: 25 },
-      { topicId: "differential-equations", targetProblems: 20 },
-    ],
-  },
-  {
-    id: "calc-advanced",
-    title: "Advanced Topics",
-    description: "Dive into series and advanced techniques.",
-    level: "advanced",
-    steps: [
-      { topicId: "series", targetProblems: 25 },
-      { topicId: "integrals", targetProblems: 20 },
-    ],
-  },
-];

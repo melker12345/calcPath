@@ -58,7 +58,7 @@ describe("admin feedback filtering", () => {
         vote: -1,
         target_type: "problem",
         target_id: "problem-1",
-        page_url: "/calculus/practice/derivatives",
+        page_url: "/calculus/modules/derivatives",
       }), { questionNumber: 1 }),
       withSummary(row({
         id: "admin-question-open",
@@ -66,7 +66,7 @@ describe("admin feedback filtering", () => {
         target_type: "problem",
         target_id: "problem-2",
         user_email: adminEmail,
-        page_url: "/calculus/practice/derivatives",
+        page_url: "/calculus/modules/derivatives",
       }), { questionNumber: 2 }),
       withSummary(row({
         id: "user-feature-open",
