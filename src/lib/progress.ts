@@ -63,25 +63,6 @@ export const recordDiagnosticResult = (
   return { ...state, diagnostics };
 };
 
-export const recordModuleCompletion = (
-  state: ProgressState,
-  moduleId: string,
-  completedAt = new Date().toISOString(),
-): ProgressState => {
-  const completedModuleIds = Array.from(
-    new Set([moduleId, ...state.completedModuleIds]),
-  ).slice(0, 1000);
-
-  return {
-    ...state,
-    completedModuleIds,
-    moduleCompletions: {
-      ...state.moduleCompletions,
-      [moduleId]: completedAt,
-    },
-  };
-};
-
 export const getTopicTestStats = (state: ProgressState, topicId: string) => {
   const topicTests = state.testResults.filter((t) => t.topicId === topicId);
   if (topicTests.length === 0) {
@@ -331,5 +312,43 @@ export const getPracticeProgress = (
     // Require at least one problem in the topic so that an empty topic
     // (e.g. scaffolded but not yet populated) never reports as mastered.
     isComplete: totalProblems > 0 && correct >= totalProblems,
+  };
+};
+
+/**
+ * Get practice progress for a specific section within a topic.
+ * This allows showing per-section (e.g. "The Squeeze Theorem") question counts and user progress.
+ */
+export const getSectionPracticeProgress = (
+  state: ProgressState,
+  topicId: string,
+  section: string,
+  practiceProblems: Array<{ id: string; topicId: string; section?: string }>,
+) => {
+  const sectionProblems = practiceProblems.filter(
+    (p) => p.topicId === topicId && p.section === section
+  );
+
+  const sectionIds = new Set(sectionProblems.map((p) => p.id));
+  const total = sectionIds.size;
+
+  const attemptedInSection = state.attemptedProblemIds.filter((id) => sectionIds.has(id));
+  const completedInSection = state.completedProblemIds.filter((id) => sectionIds.has(id));
+
+  const attempted = attemptedInSection.length;
+  const correct = completedInSection.length;
+
+  const attemptedRate = total === 0 ? 0 : Math.min(100, (attempted / total) * 100);
+  const masteryRate = total === 0 ? 0 : Math.min(100, (correct / total) * 100);
+  const accuracyRate = attempted === 0 ? 0 : Math.round((correct / attempted) * 100);
+
+  return {
+    attempted,
+    correct,
+    total,
+    attemptedRate,
+    masteryRate,
+    accuracyRate,
+    isComplete: total > 0 && correct >= total,
   };
 };

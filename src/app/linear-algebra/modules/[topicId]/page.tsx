@@ -5,7 +5,6 @@ import { useMemo } from "react";
 import { useParams } from "next/navigation";
 import { BlockMath, InlineMath } from "react-katex";
 import { MathText } from "@/components/math-text";
-import { ModuleDoneButton } from "@/components/module-done-button";
 import { ModuleSectionNav } from "@/components/module-section-nav";
 import { VoteFeedback } from "@/components/vote-feedback";
 import { modules } from "@/lib/linalg-modules";
@@ -99,6 +98,8 @@ export default function LinalgModulePage() {
   const nextTopic = topicIndex < topics.length - 1 ? topics[topicIndex + 1] : null;
 
   return (
+    <>
+    <ModuleSectionNav items={navItems} />
     <div className="mx-auto w-full max-w-[760px] px-4 py-8 sm:px-6 sm:py-10">
       <div className="min-w-0">
         <div className="mb-6 border-b border-[var(--border)] pb-5 sm:mb-8">
@@ -205,10 +206,6 @@ export default function LinalgModulePage() {
           </section>
         </article>
 
-        <div className="mt-10">
-          <ModuleDoneButton moduleId={`linear-algebra:${topic.id}`} />
-        </div>
-
         <nav className="mt-10 grid gap-4 border-t border-[var(--border)] pt-8 sm:grid-cols-2" data-no-print>
           {prevTopic ? (
             <Link href={`/linear-algebra/modules/${prevTopic.id}`} className="border border-[var(--border)] theme-card-light theme-border p-5 transition hover:bg-stone-100 nav-card">
@@ -225,9 +222,7 @@ export default function LinalgModulePage() {
         </nav>
       </div>
 
-      <div data-no-print>
-        <ModuleSectionNav items={navItems} />
-      </div>
     </div>
+    </>
   );
 }

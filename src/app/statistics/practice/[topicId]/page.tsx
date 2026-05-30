@@ -46,7 +46,7 @@ export default function StatisticsPracticeTopic() {
     return (
       <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
         <p className="text-sm text-stone-600">Topic not found.</p>
-        <Link className="btn-secondary mt-4 inline-flex" href="/statistics/practice">Back to practice</Link>
+        <Link className="btn-secondary mt-4 inline-flex" href="/statistics">Back to Statistics</Link>
       </div>
     );
   }
@@ -290,8 +290,8 @@ export default function StatisticsPracticeTopic() {
           <div className="justify-self-center rounded-full px-2 py-0.5 text-[11px] font-medium text-zinc-400 ring-1 ring-zinc-200/80">
             Q{canonicalQuestionNumber}
           </div>
-          <Link className="justify-self-end rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm" href="/statistics/practice">
-            All topics
+          <Link className="justify-self-end rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm" href="/statistics">
+            All chapters
           </Link>
         </div>
       </div>

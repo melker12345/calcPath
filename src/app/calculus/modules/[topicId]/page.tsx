@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
-import { ModuleDoneButton } from "@/components/module-done-button";
 import { ModuleSectionNav } from "@/components/module-section-nav";
 import { VoteFeedback } from "@/components/vote-feedback";
 import { modules } from "@/lib/modules";
@@ -130,6 +129,7 @@ export default function ModulePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
     )}
+    <ModuleSectionNav items={navItems} />
     <div className="mx-auto w-full max-w-[760px] px-4 py-8 sm:px-6 sm:py-10">
       {/* Main content */}
       <div className="min-w-0">
@@ -380,10 +380,6 @@ export default function ModulePage() {
         </div>
       </article>
 
-      <div className="mt-10">
-        <ModuleDoneButton moduleId={`calculus:${topic.id}`} />
-      </div>
-
       {/* Free preview questions with detailed solutions */}
       <section className="mt-10 border-t border-[var(--border)] dark:border-[var(--border)] pt-8" data-no-print>
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -564,10 +560,6 @@ export default function ModulePage() {
       </nav>
       </div>
 
-      {/* Static table of contents */}
-      <div data-no-print>
-        <ModuleSectionNav items={navItems} />
-      </div>
     </div>
     </>
   );

@@ -43,8 +43,7 @@ async function loadIndex(): Promise<SearchEntry[]> {
 
   for (const s of subjects) {
     entries.push({ label: s.name, description: `${s.topics.length} topics`, href: `/${s.slug}`, subjectIcon: s.icon, kind: "page" });
-    entries.push({ label: `${s.name} \u2014 Practice`, description: "Practice problems", href: `/${s.slug}/practice`, subjectIcon: s.icon, kind: "page" });
-    entries.push({ label: `${s.name} \u2014 Dashboard`, description: "Your progress", href: `/${s.slug}/dashboard`, subjectIcon: s.icon, kind: "page" });
+    entries.push({ label: `${s.name} Progress`, description: "Your progress", href: `/dashboard`, subjectIcon: s.icon, kind: "page" });
 
     for (const topic of s.topics) {
       entries.push({ label: topic.title, description: `${s.name} module`, href: `/${s.slug}/modules/${topic.id}`, subjectIcon: s.icon, kind: "topic" });

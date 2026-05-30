@@ -106,7 +106,7 @@ export default function LinalgPracticeTopic() {
     return (
       <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
         <p className="text-sm text-stone-600">Topic not found.</p>
-        <Link className="btn-secondary mt-4 inline-flex" href="/linear-algebra/practice">Back to practice</Link>
+        <Link className="btn-secondary mt-4 inline-flex" href="/linear-algebra">Back to Linear Algebra</Link>
       </div>
     );
   }
@@ -367,8 +367,8 @@ export default function LinalgPracticeTopic() {
             >
               Q{canonicalQuestionNumber}
             </div>
-            <Link className="justify-self-end rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm" href="/linear-algebra/practice">
-              All topics
+            <Link className="justify-self-end rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm" href="/linear-algebra">
+              All chapters
             </Link>
           </div>
         </div>

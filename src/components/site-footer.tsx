@@ -30,7 +30,6 @@ export const SiteFooter = () => (
           </h4>
           <nav className="flex flex-col gap-2">
             <Link href="/diagnostic" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Diagnostic</Link>
-            <Link href="/calculus/practice" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Practice</Link>
             <Link href="/paths" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Paths</Link>
           </nav>
         </div>

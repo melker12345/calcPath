@@ -143,8 +143,8 @@ export default function PracticeTopicPage() {
     return (
       <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
         <p className="text-sm text-zinc-600">Topic not found.</p>
-        <Link className="btn-secondary mt-4 inline-flex" href="/calculus/practice">
-          Back to practice
+        <Link className="btn-secondary mt-4 inline-flex" href="/calculus">
+          Back to Calculus
         </Link>
       </div>
     );
@@ -156,7 +156,7 @@ export default function PracticeTopicPage() {
         <h1 className="text-2xl font-semibold">No questions for this section yet</h1>
         <p className="mt-2 text-zinc-600">We're still adding practice questions for this specific part of the chapter.</p>
         <Link 
-          href={`/calculus/practice/${topicId}`} 
+          href={`/calculus/modules/${topicId}`} 
           className="mt-4 inline-flex text-[var(--accent)] hover:underline"
         >
           Practice the full {topic.title} chapter instead →
@@ -734,8 +734,8 @@ export default function PracticeTopicPage() {
           <div className="justify-self-center rounded-full px-2 py-0.5 text-[11px] font-medium text-zinc-400 ring-1 ring-zinc-200/80">
             Q{canonicalQuestionNumber}
           </div>
-          <Link className="justify-self-end rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm" href="/calculus/practice">
-            All topics
+          <Link className="justify-self-end rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm" href="/calculus">
+            All chapters
           </Link>
         </div>
       </div>
