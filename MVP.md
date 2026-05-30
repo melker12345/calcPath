@@ -74,14 +74,6 @@ If a feature does not clearly improve one of those steps, it should not be in th
 - The essential learning flow must work on desktop and mobile.
 - Reading, practicing, submitting, feedback, and scratchpad access must all remain usable on small screens.
 
-## What Should Be Removed From The MVP
-- decorative or heavily themed UI (this is old themes)
-- unnecessary animations
-- visual polish that increases bundle size or render cost
-- duplicated components and abstractions with little product value
-- features that do not directly support reading, practicing, feedback, search, or progress
-- anything that makes a page heavier without improving the core learning loop
-
 ## Product Principles
 - minimal UI
 - fast first load
@@ -110,4 +102,14 @@ The MVP is successful if a user can:
 5. use the scratchpad if needed
 6. submit an answer and get feedback
 7. leave and come back without losing local progress
+8. sign in and out including resetting password
+9. track practice
+10. donate
+11. Print this module
+12. search for topic
+13. Admin can obtain feedback.
+
+
+
+
 
