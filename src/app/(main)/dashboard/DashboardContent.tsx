@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { AppStateProviders } from "@/components/scoped-providers";
 import { useProgress } from "@/components/progress-provider";
 import { subjectList } from "@/lib/subjects";
-import { getPracticeProgress } from "@/lib/progress";
+import { getPracticeProgress, getSectionPracticeProgress } from "@/lib/progress";
 
 export default function DashboardContent() {
   return (
@@ -83,6 +83,16 @@ function DashboardInner() {
     };
   }, [progress]); // Only recompute when the actual progress state changes
 
+  // Expandable chapters state (keyed by "subjectSlug-ch-N")
+  const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({});
+
+  const toggleChapter = (key: string) => {
+    setExpandedChapters(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
   const currentStreak = progress.streak?.current ?? 0;
   const bestStreak = progress.streak?.longest ?? 0;
 
@@ -157,16 +167,6 @@ function DashboardInner() {
         </div>
       </div>
 
-      {/* Global summary */}
-      <div className="mb-8 rounded-2xl border theme-border theme-surface p-5">
-        <div className="flex items-center justify-between text-sm">
-          <span className="theme-text-muted">Overall progress</span>
-          <span className="font-mono text-lg font-medium tabular-nums theme-text">
-            {totalSolved} / {totalProblems}
-          </span>
-        </div>
-      </div>
-
       <div className="space-y-10">
         {subjectsWithProgress.map((subject) => {
           const percent = subject.total > 0 ? Math.round((subject.solved / subject.total) * 100) : 0;
@@ -179,10 +179,10 @@ function DashboardInner() {
                   <h2 className="text-2xl font-semibold theme-text">{subject.label}</h2>
                 </div>
                 <Link
-                  href={`/${subject.slug}/practice`}
+                  href={`/${subject.slug}`}
                   className="text-sm font-medium text-[var(--accent)] hover:underline"
                 >
-                  Browse all practice →
+                  Browse chapters →
                 </Link>
               </div>
 
@@ -190,40 +190,107 @@ function DashboardInner() {
                 {subject.solved} of {subject.total} problems solved ({percent}%)
               </div>
 
-              {/* Suggested topics to practice */}
-              {subject.suggestedTopics.length > 0 && (
-                <div className="mt-4">
-                  <div className="mb-2 text-xs font-medium uppercase tracking-[1px] theme-text-muted">
-                    Continue these topics
-                  </div>
-                  <div className="space-y-2">
-                    {subject.suggestedTopics.map((topic) => (
-                      <Link
-                        key={topic.id}
-                        href={`/${subject.slug}/practice`}
-                        className="flex items-center justify-between rounded-xl border theme-border theme-surface px-4 py-3 text-sm transition hover:border-[var(--accent)]/40"
-                      >
-                        <span className="font-medium theme-text">{topic.title}</span>
-                        <span className="tabular-nums text-xs theme-text-muted">
-                          {topic.correct} / {topic.total} ({topic.percent}%)
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
+              {/* Chapters (expandable cards) */}
+              <div className="mt-4">
+                <div className="mb-3 text-xs font-medium uppercase tracking-[1px] theme-text-muted">
+                  Chapters
                 </div>
-              )}
 
-              {/* Fully solved topics */}
-              {subject.topicsWithProgress.some((t) => t.correct === t.total && t.total > 0) && (
-                <div className="mt-3 text-xs theme-text-muted">
-                  {subject.topicsWithProgress.filter((t) => t.correct === t.total).length} topics fully mastered
+                <div className="space-y-3">
+                  {(subject.modules ?? []).map((mod, index) => {
+                    const topic = subject.topicsWithProgress.find(t => t.id === mod.topicId);
+                    if (!topic) return null;
+
+                    const isComplete = topic.total > 0 && topic.correct === topic.total;
+                    const questionsLeft = Math.max(0, topic.total - topic.correct);
+                    const chapterNum = index + 1;
+                    const accuracy = topic.total > 0 ? Math.round((topic.correct / topic.total) * 100) : 0;
+                    const chapterKey = `${subject.slug}-ch-${chapterNum}`;
+                    const isExpanded = !!expandedChapters[chapterKey];
+
+                    return (
+                      <div key={mod.topicId} className="rounded-xl border theme-border theme-surface overflow-hidden">
+                        {/* Chapter card header - always shows overall chapter progress */}
+                        <button
+                          onClick={() => toggleChapter(chapterKey)}
+                          className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[var(--surface-2)] transition"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded bg-[var(--surface-2)] theme-text-muted shrink-0">
+                              Ch. {chapterNum}
+                            </span>
+                            <span className="font-semibold theme-text truncate">
+                              {topic.title}
+                            </span>
+                            <span className="text-xs theme-text-muted hidden sm:inline">
+                              — {topic.correct}/{topic.total} solved
+                              {questionsLeft > 0 && ` (${questionsLeft} left)`}
+                              — {accuracy}% accuracy
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-sm tabular-nums shrink-0">
+                            <span className={`text-lg leading-none transition-transform ${isExpanded ? "rotate-180" : ""}`}>
+                              ▾
+                            </span>
+                          </div>
+                        </button>
+
+                        {/* Expanded: breakdown of topics/sections inside the chapter */}
+                        {isExpanded && (
+                          <div className="border-t theme-border px-4 py-4 bg-[var(--surface)]/40 text-sm">
+                            {/* Individual sections with question counts + user progress */}
+                            {mod.sections && mod.sections.length > 0 && (
+                              <div>
+                                <div className="text-xs font-semibold uppercase tracking-widest theme-text-muted mb-2">
+                                  Topics in this chapter
+                                </div>
+                                <div className="space-y-1">
+                                  {mod.sections.map((section, sIndex) => {
+                                    // Use the explicit stable section slug from module data.
+                                    // This must match the `section` field on the corresponding questions.
+                                    const sectionSlug = section.section;
+
+                                    const secStats = sectionSlug
+                                      ? getSectionPracticeProgress(
+                                          progress,
+                                          topic.id,
+                                          sectionSlug,
+                                          subject.problems
+                                        )
+                                      : { total: 0, correct: 0, attempted: 0, attemptedRate: 0, masteryRate: 0, accuracyRate: 0, isComplete: false };
+
+                                    const hasData = secStats.total > 0;
+                                    const solved = hasData ? secStats.correct : 0;
+                                    const total = hasData ? secStats.total : 0;
+
+                                    return (
+                                      <div key={sIndex} className="flex justify-between items-center pl-1 text-sm">
+                                        <span className="theme-text-secondary">{section.title}</span>
+                                        <span className="tabular-nums text-xs theme-text-muted">
+                                          {hasData ? `${solved} / ${total}` : "—"}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                <div className="mt-2 text-xs theme-text-muted pl-1">
+                                  Section progress requires explicit <code>section</code> tags on both module sections and questions.
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
+              </div>
 
-              {subject.suggestedTopics.length === 0 && subject.solved === 0 && (
+              {subject.solved === 0 && (
                 <div className="mt-4 text-sm theme-text-muted">
                   You haven’t practiced this subject yet.{" "}
-                  <Link href={`/${subject.slug}/practice`} className="text-[var(--accent)] hover:underline">
+                  <Link href={`/${subject.slug}`} className="text-[var(--accent)] hover:underline">
                     Start practicing
                   </Link>
                 </div>

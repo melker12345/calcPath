@@ -7,6 +7,11 @@ export type WorkedExample = {
 
 export type ModuleSection = {
   title: string;
+  /**
+   * Stable slug used for progress tracking and deep links.
+   * MUST match the `section` field on the corresponding questions exactly.
+   */
+  section?: string;
   body: string[];
   eli5?: string[];
   examples?: WorkedExample[];
@@ -33,6 +38,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "Measures of central tendency",
+        section: "median",
         body: [
           "The mean (arithmetic average) is $\\bar{x} = \\frac{1}{n}\\sum_{i=1}^{n} x_i$. It uses every data point, which makes it sensitive to extreme values (outliers). One unusually large value can pull the mean far from the typical observation.",
           "The median is the middle value when data is sorted in order. For an even number of observations, it is the average of the two middle values. The median is resistant to outliers: adding one extreme value does not change it much. This makes it the preferred measure of center for skewed data such as income, house prices, or reaction times.",
@@ -59,6 +65,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Measures of spread",
+        section: "variance",
         body: [
           "The range $= \\max - \\min$ is the simplest measure of spread. It only uses two data points and is badly distorted by a single outlier. If the maximum salary in a sample is a CEO at \\$5,000,000, the range tells you almost nothing about the typical spread.",
           "Variance measures the average squared deviation from the mean. Population variance: $\\sigma^2 = \\frac{1}{N}\\sum_{i=1}^N (x_i-\\mu)^2$. Sample variance uses $n-1$ in the denominator: $s^2 = \\frac{1}{n-1}\\sum_{i=1}^n(x_i-\\bar{x})^2$. The $n-1$ correction (Bessel's correction) makes $s^2$ an unbiased estimator of $\\sigma^2$.",
@@ -85,6 +92,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Data visualization",
+        section: "visualization",
         body: [
           "Histograms group continuous data into bins (intervals) and plot the frequency or density of each bin. They reveal the shape of a distribution: symmetric, right-skewed, left-skewed, bimodal, or uniform. The shape guides which summary statistics are appropriate.",
           "Box plots (box-and-whisker plots) display five numbers: minimum, $Q_1$, median, $Q_3$, maximum, and mark outliers as individual points. They make it easy to compare distributions across multiple groups, and they immediately reveal skewness and outliers.",
@@ -98,6 +106,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Percentiles and the five-number summary",
+        section: "percentiles",
         body: [
           "The $p$-th percentile is the value below which approximately $p\\%$ of observations fall. The median is the $50$th percentile; $Q_1$ is the $25$th, $Q_3$ is the $75$th.",
           "The five-number summary $\\{\\min, Q_1, \\text{median}, Q_3, \\max\\}$ concisely describes the center and spread of a distribution and is the foundation of the box plot.",
@@ -110,6 +119,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Choosing the right summary",
+        section: "mean",
         body: [
           "Symmetric distributions with no outliers: use mean and standard deviation. They use all the data and have convenient mathematical properties.",
           "Skewed distributions or data with outliers: use median and IQR. These are resistant to the extreme values that distort the mean and standard deviation.",
@@ -141,6 +151,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "Basic probability rules",
+        section: "basic",
         body: [
           "The sample space $S$ is the set of all possible outcomes. An event $A$ is any subset of $S$. The probability of $A$ must satisfy $0 \\leq P(A) \\leq 1$, $P(S) = 1$, and for mutually exclusive events $P(A_1 \\cup A_2 \\cup \\cdots) = P(A_1)+P(A_2)+\\cdots$.",
           "For equally likely outcomes: $P(A) = |A|/|S|$ — the number of outcomes in $A$ divided by the total number of outcomes. This classical definition only applies when all outcomes are equally probable.",
@@ -165,6 +176,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Conditional probability and independence",
+        section: "conditional",
         body: [
           "The conditional probability of $A$ given $B$ is $P(A|B) = P(A \\cap B)/P(B)$. It re-scales probability to the reduced sample space where $B$ is known to have occurred.",
           "Events $A$ and $B$ are independent if $P(A|B) = P(A)$ — knowing $B$ gives no information about $A$. Equivalently, $P(A \\cap B) = P(A)\\cdot P(B)$.",
@@ -179,6 +191,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Bayes' theorem",
+        section: "bayes",
         body: [
           "Bayes' theorem reverses conditional probabilities: $P(B|A) = \\frac{P(A|B)\\cdot P(B)}{P(A)}$. The denominator $P(A)$ is computed via the law of total probability.",
           "In Bayesian terminology: $P(B)$ is the prior (your belief before seeing data), $P(A|B)$ is the likelihood (how probable the data is if $B$ is true), and $P(B|A)$ is the posterior (updated belief after seeing data).",
@@ -202,6 +215,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Counting principles",
+        section: "counting",
         body: [
           "The multiplication principle: if a procedure consists of $k$ steps, step $i$ has $n_i$ choices, and the choices are independent, then the total number of outcomes is $n_1\\times n_2\\times\\cdots\\times n_k$.",
           "Permutations count ordered arrangements of $k$ objects chosen from $n$: $P(n,k) = n!/(n-k)!$. The order of selection matters — $ABC$ is different from $BAC$.",
@@ -215,6 +229,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Law of total probability",
+        section: "total",
         body: [
           "If events $B_1,B_2,\\ldots,B_n$ partition $S$ (mutually exclusive and exhaustive), then for any event $A$: $P(A) = \\sum_{i=1}^n P(A|B_i)P(B_i)$.",
           "This is the denominator in Bayes' theorem. Computing $P(A)$ by conditioning on an exhaustive set of cases makes many calculations tractable.",
@@ -245,6 +260,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "Random variables and expected value",
+        section: "expected-value",
         body: [
           "A random variable $X$ is a function from the sample space to the real numbers. Discrete random variables take a countable set of values (integers, fractions). Continuous random variables take any value in an interval.",
           "The probability mass function (PMF) of a discrete $X$ gives $P(X=x_i)$ for each possible value. The PMF must satisfy $P(X=x_i)\\geq 0$ and $\\sum_i P(X=x_i) = 1$.",
@@ -270,6 +286,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "The binomial distribution",
+        section: "binomial",
         body: [
           "The binomial distribution models the number of successes $X$ in exactly $n$ independent trials, each with the same success probability $p$. It arises in coin flips, quality control, clinical trials, and polling.",
           "Requirements (BINS): Binary outcomes only, Independent trials, Number of trials $n$ is fixed in advance, Same probability $p$ for each trial.",
@@ -294,6 +311,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "The Poisson distribution",
+        section: "poisson",
         body: [
           "The Poisson distribution models the count of independent events in a fixed interval of time, area, or volume, when events occur at a constant average rate $\\lambda > 0$.",
           "PMF: $P(X=k) = e^{-\\lambda}\\lambda^k/k!$, for $k=0,1,2,\\ldots$. The Poisson distribution has no upper bound — in principle any count is possible.",
@@ -317,6 +335,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "The geometric and negative binomial distributions",
+        section: "discrete-distributions",
         body: [
           "The geometric distribution models the number of trials until the first success. $P(X=k) = (1-p)^{k-1}p$. Mean $= 1/p$. The geometric distribution is memoryless: $P(X>m+n|X>m) = P(X>n)$.",
           "The negative binomial distribution generalises: it counts the number of trials needed to achieve exactly $r$ successes. Mean $= r/p$, variance $= r(1-p)/p^2$.",
@@ -328,6 +347,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Choosing the right distribution",
+        section: "discrete-distributions",
         body: [
           "Binomial: fixed $n$ trials, each independent with probability $p$, counting the number of successes.",
           "Poisson: counting rare, independent events in a fixed window; no upper bound on the count; mean and variance are equal.",
@@ -360,6 +380,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "Sampling distributions and standard error",
+        section: "sampling-distribution",
         body: [
           "A sampling distribution is the probability distribution of a statistic (such as $\\bar{X}$) computed from all possible random samples of size $n$ from a population. It describes how the statistic varies from sample to sample.",
           "The standard error of the mean is $SE_{\\bar{X}} = \\sigma/\\sqrt{n}$, or estimated as $s/\\sqrt{n}$ when $\\sigma$ is unknown. It quantifies the precision of $\\bar{X}$ as an estimator of $\\mu$ — larger $n$ gives smaller $SE$ and therefore more precise estimates.",
@@ -373,6 +394,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Point estimation and MLE",
+        section: "mle",
         body: [
           "A point estimate is a single numerical value used as a best guess for a population parameter. Common examples: $\\bar{x}$ estimates $\\mu$; $s^2$ estimates $\\sigma^2$; $\\hat{p} = x/n$ estimates $p$.",
           "Maximum Likelihood Estimation (MLE) finds the parameter value $\\hat{\\theta}$ that maximises the likelihood function $L(\\theta) = \\prod_{i=1}^n f(x_i;\\theta)$ — the probability of observing the actual data, viewed as a function of $\\theta$.",
@@ -385,6 +407,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Confidence intervals",
+        section: "confidence-intervals",
         body: [
           "A $100(1-\\alpha)\\%$ confidence interval provides a range of plausible values for an unknown parameter: $\\bar{x} \\pm z_{\\alpha/2}\\cdot SE$ for a known $\\sigma$, or $\\bar{x} \\pm t_{\\alpha/2,n-1}\\cdot(s/\\sqrt{n})$ when $\\sigma$ is estimated.",
           "Correct interpretation: if we were to repeat the sampling procedure many times, approximately $100(1-\\alpha)\\%$ of the resulting intervals would contain the true parameter. The interval either contains $\\mu$ or it does not — after construction, there is no probability to speak of.",
@@ -410,6 +433,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Type I and Type II errors",
+        section: "errors",
         body: [
           "A Type I error (false positive, size $\\alpha$) occurs when $H_0$ is true but we reject it. We control this by choosing $\\alpha$ before testing.",
           "A Type II error (false negative, probability $\\beta$) occurs when $H_0$ is false but we fail to reject it. Power $= 1-\\beta$ is the probability of correctly detecting a real effect.",
@@ -422,6 +446,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Practical vs. statistical significance",
+        section: "p-value",
         body: [
           "Statistical significance ($p \\leq \\alpha$) means the data is unlikely under $H_0$. Practical significance means the effect is large enough to matter in the real world. These are independent: large samples make tiny effects statistically significant; small samples may miss large effects.",
           "Effect size measures the magnitude of an effect independently of sample size. Cohen's $d = (\\bar{x}-\\mu_0)/s$ for means; $r$ or $r^2$ for correlations; odds ratio for proportions. Always report effect size alongside $p$-values.",
@@ -452,6 +477,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "Correlation",
+        section: "correlation",
         body: [
           "The Pearson correlation coefficient $r$ measures the strength and direction of the linear association between two quantitative variables: $r = \\frac{\\sum(x_i-\\bar{x})(y_i-\\bar{y})}{\\sqrt{\\sum(x_i-\\bar{x})^2\\sum(y_i-\\bar{y})^2}}$. It is dimensionless, always in $[-1,1]$.",
           "$r = +1$: perfect positive linear relationship; $r = -1$: perfect negative linear relationship; $r = 0$: no linear relationship (a nonlinear one may still exist). Guidelines: $|r| \\geq 0.8$ is typically considered strong; $0.5 \\leq |r| < 0.8$ moderate; $|r| < 0.5$ weak.",
@@ -465,6 +491,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Simple linear regression",
+        section: "linear",
         body: [
           "Simple linear regression fits a line $\\hat{y} = b_0 + b_1 x$ to data by minimising the sum of squared residuals $\\text{SSE} = \\sum(y_i-\\hat{y}_i)^2$ — the ordinary least-squares (OLS) criterion.",
           "OLS estimators: slope $b_1 = r\\cdot(s_y/s_x) = \\sum(x_i-\\bar{x})(y_i-\\bar{y})/\\sum(x_i-\\bar{x})^2$; intercept $b_0 = \\bar{y} - b_1\\bar{x}$. The line always passes through $(\\bar{x}, \\bar{y})$.",
@@ -490,6 +517,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Residuals and model assessment",
+        section: "residuals",
         body: [
           "The residual $e_i = y_i - \\hat{y}_i$ is the difference between observed and fitted value. By construction, $\\sum e_i = 0$ and $\\sum x_i e_i = 0$.",
           "$R^2 = 1 - \\text{SSE}/\\text{SST}$ is the proportion of total variance in $y$ explained by the model. For simple linear regression, $R^2 = r^2$. Adjusted $R^2$ penalises for the number of predictors and is used in multiple regression.",
@@ -503,6 +531,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Conditions for regression (LINE)",
+        section: "conditions",
         body: [
           "Linearity: the mean of $y$ is a linear function of $x$. Check with a scatter plot before fitting.",
           "Independence: observations are independent. Violated by time-series data with autocorrelated errors.",
@@ -516,6 +545,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Extrapolation and limitations",
+        section: "linear",
         body: [
           "Extrapolation is predicting $y$ for $x$ values outside the range of the training data. The linear relationship may break down, making extrapolated predictions unreliable.",
           "Correlation and regression describe association, not causation. Only randomised controlled experiments allow causal claims.",
@@ -546,6 +576,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "PDFs and CDFs",
+        section: "pdf",
         body: [
           "A probability density function (PDF) $f(x)$ satisfies $f(x) \\geq 0$ and $\\int_{-\\infty}^{\\infty} f(x)\\,dx = 1$. Probabilities are areas under the curve: $P(a \\leq X \\leq b) = \\int_a^b f(x)\\,dx$. The PDF height is not a probability — it is a density (probability per unit length).",
           "For a continuous distribution, $P(X = c) = \\int_c^c f(x)\\,dx = 0$ for any single point $c$. This is why $P(X \\leq b) = P(X < b)$ for continuous distributions: adding or removing a single endpoint changes nothing.",
@@ -560,6 +591,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "The normal distribution",
+        section: "normal",
         body: [
           "The normal (Gaussian) distribution $N(\\mu, \\sigma^2)$ has PDF $f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}}\\exp\\!\\left(-\\frac{(x-\\mu)^2}{2\\sigma^2}\\right)$. It is symmetric about $\\mu$; the inflection points are at $\\mu \\pm \\sigma$.",
           "The empirical (68-95-99.7) rule: $P(\\mu-\\sigma \\leq X \\leq \\mu+\\sigma) \\approx 0.6827$; $P(\\mu-2\\sigma \\leq X \\leq \\mu+2\\sigma) \\approx 0.9545$; $P(\\mu-3\\sigma \\leq X \\leq \\mu+3\\sigma) \\approx 0.9973$.",
@@ -584,6 +616,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "The exponential and uniform distributions",
+        section: "exponential",
         body: [
           "The exponential distribution $\\text{Exp}(\\lambda)$: $f(x) = \\lambda e^{-\\lambda x}$ for $x \\geq 0$. Mean $= 1/\\lambda$, variance $= 1/\\lambda^2$. It models the waiting time between events in a Poisson process at rate $\\lambda$.",
           "Memoryless property: $P(X > s+t \\mid X > s) = P(X > t)$. The past waiting time provides no information about the future wait. This is the continuous analogue of the geometric distribution's memorylessness.",
@@ -609,6 +642,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Normal approximation to the binomial",
+        section: "approximation",
         body: [
           "When $n$ is large and $p$ is not extreme, $X\\sim\\text{Binomial}(n,p)$ can be approximated by $N(np,\\, np(1-p))$.",
           "Validity condition: $np \\geq 10$ and $n(1-p) \\geq 10$. When $p$ is close to $0$ or $1$, use the Poisson approximation instead.",
@@ -639,6 +673,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "Population vs. sample",
+        section: "pop-vs-sample",
         body: [
           "A population is the complete set of individuals or observations of interest. A parameter (e.g., $\\mu$, $\\sigma^2$, $p$) is a fixed numerical characteristic of the population — unknown and usually unknowable without a census.",
           "A sample is a subset of the population. A statistic (e.g., $\\bar{x}$, $s^2$, $\\hat{p}$) is computed from sample data. Statistics are observable but vary from sample to sample — they are random variables.",
@@ -652,6 +687,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "The Law of Large Numbers",
+        section: "lln",
         body: [
           "Weak Law of Large Numbers: for i.i.d. random variables $X_1, X_2, \\ldots$ with mean $\\mu$, the sample mean $\\bar{X}_n = \\frac{1}{n}\\sum_{i=1}^n X_i$ converges in probability to $\\mu$: for any $\\varepsilon > 0$, $P(|\\bar{X}_n - \\mu| > \\varepsilon) \\to 0$ as $n \\to \\infty$.",
           "The Strong Law of Large Numbers guarantees almost sure convergence: $P(\\bar{X}_n \\to \\mu) = 1$. Almost every sequence of i.i.d. observations has a time-average that converges to the true mean.",
@@ -664,6 +700,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "The Central Limit Theorem",
+        section: "clt",
         body: [
           "Central Limit Theorem (CLT): if $X_1, \\ldots, X_n$ are i.i.d. with mean $\\mu$ and finite variance $\\sigma^2$, then the standardised mean $(\\bar{X}-\\mu)/(\\sigma/\\sqrt{n}) \\to N(0,1)$ in distribution as $n\\to\\infty$. Equivalently, $\\bar{X} \\approx N(\\mu, \\sigma^2/n)$ for large $n$.",
           "This is remarkable because the result holds regardless of the population's shape — whether it is skewed, bimodal, or uniform. The averaging process irons out all non-normality.",
@@ -688,6 +725,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Sampling distribution of the proportion",
+        section: "sampling-distribution",
         body: [
           "The sample proportion $\\hat{p} = X/n$ (where $X$ counts successes in $n$ Bernoulli trials) estimates the population proportion $p$.",
           "Mean: $E(\\hat{p}) = p$ (unbiased). Standard error: $SE(\\hat{p}) = \\sqrt{p(1-p)/n}$.",
@@ -719,6 +757,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "The logic of hypothesis testing",
+        section: "basic",
         body: [
         "The null hypothesis $H_0$ is the default claim (no effect, no difference, status quo). The alternative $H_a$ is the claim the investigator wants to support. We begin by assuming $H_0$ is true and ask: how surprising is the observed data under this assumption?",
         "The test statistic measures how many standard errors the sample result is from the value specified by $H_0$. For a mean: $z = (\\bar{x}-\\mu_0)/(\\sigma/\\sqrt{n})$ (if $\\sigma$ known) or $t = (\\bar{x}-\\mu_0)/(s/\\sqrt{n})$ (if $\\sigma$ estimated).",
@@ -744,6 +783,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Type I and Type II errors",
+        section: "errors",
         body: [
           "Type I error ($\\alpha$): rejecting $H_0$ when it is true (false positive). By choosing $\\alpha$ you directly control the probability of this error. Common choices are $\\alpha = 0.05$, $0.01$, or $0.10$ depending on the consequences of false rejection.",
           "Type II error ($\\beta$): failing to reject $H_0$ when it is false (false negative). $\\beta$ is not directly controlled by $\\alpha$ — it depends on $n$, the true effect size, and $\\sigma$.",
@@ -757,6 +797,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "The t-test family",
+        section: "t-test",
         body: [
           "One-sample $t$-test: $H_0: \\mu = \\mu_0$, test statistic $t = (\\bar{x}-\\mu_0)/(s/\\sqrt{n}) \\sim t_{n-1}$ under $H_0$. Used when $\\sigma$ is unknown — which is essentially always.",
           "Two-sample (independent) $t$-test: compares $\\mu_1$ and $\\mu_2$. Test statistic $t = (\\bar{x}_1-\\bar{x}_2)/\\sqrt{s_1^2/n_1+s_2^2/n_2}$ (Welch's version, does not assume equal variances). Degrees of freedom estimated by the Welch-Satterthwaite formula.",
@@ -780,6 +821,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Chi-square test for a proportion and goodness-of-fit",
+        section: "chi-square",
         body: [
           "The chi-square goodness-of-fit test checks whether observed category counts match a hypothesised distribution. $\\chi^2 = \\sum (O_i - E_i)^2/E_i$ with $k-1$ degrees of freedom ($k$ = number of categories).",
           "The one-sample proportion $z$-test: $H_0: p = p_0$, test statistic $z = (\\hat{p}-p_0)/\\sqrt{p_0(1-p_0)/n}$. Valid when $np_0 \\geq 10$ and $n(1-p_0) \\geq 10$.",
@@ -791,6 +833,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Multiple testing and p-hacking",
+        section: "p-value",
         body: [
           "If you run $m$ independent tests each at level $\\alpha$, the probability of at least one false positive is $1 - (1-\\alpha)^m$. For $m=20$ and $\\alpha=0.05$, this is $1 - 0.95^{20} \\approx 0.64$ — a $64\\%$ chance of at least one spurious significant result.",
           "The Bonferroni correction: to keep the family-wise error rate at $\\alpha$, use $\\alpha/m$ for each individual test. It is conservative (too strict when tests are positively correlated).",
@@ -822,6 +865,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "One-way ANOVA",
+        section: "f-test",
         body: [
           "One-way ANOVA tests $H_0: \\mu_1 = \\mu_2 = \\cdots = \\mu_k$ (all $k$ group means are equal) against $H_a$: at least one pair of means differs. It replaces the multiple $t$-test approach, which would inflate the Type I error rate.",
           "Partitioning variability: $SS_{\\text{total}} = SS_{\\text{between}} + SS_{\\text{within}}$. $SS_{\\text{between}} = \\sum_j n_j(\\bar{x}_j - \\bar{x})^2$ measures how much group means vary around the grand mean. $SS_{\\text{within}} = \\sum_j \\sum_i (x_{ij}-\\bar{x}_j)^2$ measures variability within each group.",
@@ -847,6 +891,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Assumptions of ANOVA",
+        section: "assumptions",
         body: [
           "Independence: all observations are independent within and across groups. Violated by repeated measures on the same subjects (use repeated-measures ANOVA instead).",
           "Normality: each group's population is approximately normally distributed. ANOVA is robust to moderate violations when group sizes are equal and $n_j \\geq 5$. Check with Q-Q plots of residuals.",
@@ -859,6 +904,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Post-hoc tests and multiple comparisons",
+        section: "post-hoc",
         body: [
           "A significant $F$-test tells you at least one mean differs — not which pairs. Post-hoc tests identify specific differences while controlling the family-wise error rate (FWER).",
           "Tukey's HSD (Honest Significant Difference): tests all $\\binom{k}{2}$ pairwise comparisons and controls the FWER at $\\alpha$ exactly. It is the most commonly used post-hoc method for balanced designs.",
@@ -872,6 +918,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Two-way ANOVA",
+        section: "two-way",
         body: [
           "Two-way ANOVA has two categorical factors $A$ (with $a$ levels) and $B$ (with $b$ levels). It tests three hypotheses: the main effect of $A$, the main effect of $B$, and the $A\\times B$ interaction.",
           "An interaction $A\\times B$ means the effect of $A$ on the response depends on the level of $B$ (and vice versa). When an interaction is significant, interpret main effects cautiously — they may be misleading averages of varying effects.",
@@ -904,6 +951,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "Chi-square goodness-of-fit test",
+        section: "chi-square",
         body: [
           "The goodness-of-fit test checks whether observed category frequencies match a hypothesised distribution. For $k$ categories with observed counts $O_i$ and expected counts $E_i = n\\cdot p_i$ (where $p_i$ are the hypothesised probabilities), the test statistic is $\\chi^2 = \\sum_{i=1}^k \\frac{(O_i-E_i)^2}{E_i}$.",
           "Under $H_0$, $\\chi^2 \\sim \\chi^2_{k-1}$ (degrees of freedom $= k-1$; subtract one more for each parameter estimated from the data, e.g., if $\\mu$ and $\\sigma$ are estimated for a normal fit).",
@@ -929,6 +977,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Chi-square test for independence",
+        section: "chi-square",
         body: [
           "A two-way contingency table displays the joint frequencies of two categorical variables. The test of independence asks $H_0$: the two variables are independent (knowing one gives no information about the other).",
           "Under independence, the expected count in cell $(i,j)$ is $E_{ij} = (\\text{row}_i \\text{ total}) \\times (\\text{col}_j \\text{ total})/n$. The test statistic is $\\chi^2 = \\sum_{i,j} (O_{ij}-E_{ij})^2/E_{ij}$ with $(r-1)(c-1)$ degrees of freedom.",
@@ -954,6 +1003,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Rank-based tests: Mann-Whitney and Wilcoxon",
+        section: "rank-tests",
         body: [
           "The Mann-Whitney U test (Wilcoxon rank-sum test) is the non-parametric alternative to the two-sample $t$-test. It tests whether one group tends to produce larger values than the other — formally, whether $P(X_1 > X_2) = 0.5$.",
           "Procedure: combine both groups, rank all observations, sum the ranks for each group. The test statistic $U = R_1 - n_1(n_1+1)/2$ where $R_1$ is the rank sum for group $1$.",
@@ -967,6 +1017,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Kruskal-Wallis and Spearman correlation",
+        section: "spearman",
         body: [
           "The Kruskal-Wallis test is the non-parametric equivalent of one-way ANOVA. It tests whether $k$ independent groups have the same distribution (equivalently, the same median). It ranks all $N$ observations and compares rank sums across groups.",
           "Test statistic: $H = \\frac{12}{N(N+1)}\\sum_{j=1}^k \\frac{R_j^2}{n_j} - 3(N+1)$, where $R_j$ is the rank sum for group $j$. Under $H_0$, $H \\approx \\chi^2_{k-1}$.",
@@ -979,6 +1030,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "When to use non-parametric tests",
+        section: "nonparametric",
         body: [
           "Use non-parametric tests when: the data is ordinal (e.g., satisfaction ratings on a $1$–$5$ scale); the sample size is small and normality cannot be assumed; there are severe outliers that resist transformation; or the outcome is inherently rank-based.",
           "With large samples and continuous data, parametric tests are usually robust by the CLT. Non-parametric tests are most valuable for small $n$ with non-normal data.",

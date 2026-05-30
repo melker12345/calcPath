@@ -7,6 +7,11 @@ export type WorkedExample = {
 
 export type ModuleSection = {
   title: string;
+  /**
+   * Stable slug used for progress tracking and deep links.
+   * MUST match the `section` field on the corresponding questions exactly.
+   */
+  section?: string;
   body: string[];
   eli5?: string[];
   examples?: WorkedExample[];
@@ -33,6 +38,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "What is a vector?",
+        section: "vectors",
         body: [
           "A vector in $\\mathbb{R}^n$ is an ordered $n$-tuple of real numbers: $\\mathbf{v} = \\langle v_1, v_2, \\ldots, v_n \\rangle$. In $\\mathbb{R}^2$, a vector is an arrow in the plane; in $\\mathbb{R}^3$, an arrow in space. In $\\mathbb{R}^n$ for $n > 3$, there is no geometric picture, but the algebra is identical.",
           "What defines a vector is its displacement, not its starting point. Two arrows with the same length and direction, drawn anywhere on the page, are the same vector. This is why vectors model velocities, forces, and displacements — all of these are directional quantities independent of position.",
@@ -47,6 +53,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Vector addition and scalar multiplication",
+        section: "operations",
         body: [
           "Addition is component-wise: $\\mathbf{u} + \\mathbf{v} = \\langle u_1+v_1, u_2+v_2, \\ldots, u_n+v_n \\rangle$. Geometrically, place the tail of $\\mathbf{v}$ at the head of $\\mathbf{u}$; the sum is the arrow from the tail of $\\mathbf{u}$ to the head of $\\mathbf{v}$. This is called the parallelogram law.",
           "Scalar multiplication scales every component: $c\\mathbf{v} = \\langle cv_1, cv_2, \\ldots, cv_n \\rangle$. If $c > 0$, direction is preserved and magnitude is multiplied by $c$. If $c < 0$, direction reverses. If $c = 0$, the result is $\\mathbf{0}$.",
@@ -74,6 +81,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "The dot product",
+        section: "dot",
         body: [
           "The dot product (inner product) of $\\mathbf{u}, \\mathbf{v} \\in \\mathbb{R}^n$ is $\\mathbf{u} \\cdot \\mathbf{v} = u_1v_1 + u_2v_2 + \\cdots + u_nv_n$. It takes two vectors and returns a single scalar — not a vector.",
           "The geometric interpretation is fundamental: $\\mathbf{u}\\cdot\\mathbf{v} = \\|\\mathbf{u}\\|\\,\\|\\mathbf{v}\\|\\cos\\theta$, where $\\theta \\in [0,\\pi]$ is the angle between the vectors. This ties algebraic computation directly to geometry.",
@@ -101,6 +109,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Projections",
+        section: "projection",
         body: [
           "The projection of $\\mathbf{u}$ onto $\\mathbf{v}$ is the component of $\\mathbf{u}$ that lies exactly in the direction of $\\mathbf{v}$ — the 'shadow' of $\\mathbf{u}$ on the line through the origin in the direction of $\\mathbf{v}$.",
           "Vector projection: $\\text{proj}_{\\mathbf{v}}\\mathbf{u} = \\dfrac{\\mathbf{u}\\cdot\\mathbf{v}}{\\mathbf{v}\\cdot\\mathbf{v}}\\,\\mathbf{v} = \\dfrac{\\mathbf{u}\\cdot\\mathbf{v}}{\\|\\mathbf{v}\\|^2}\\,\\mathbf{v}$. The result is a vector parallel to $\\mathbf{v}$.",
@@ -126,6 +135,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "The cross product (R³ only)",
+        section: "geometric",
         body: [
           "The cross product $\\mathbf{u}\\times\\mathbf{v}$ is defined only in $\\mathbb{R}^3$ and produces a vector, not a scalar. The result is perpendicular to both $\\mathbf{u}$ and $\\mathbf{v}$.",
           "Determinant formula: $\\mathbf{u}\\times\\mathbf{v} = \\det\\begin{pmatrix}\\mathbf{e}_1&\\mathbf{e}_2&\\mathbf{e}_3\\\\u_1&u_2&u_3\\\\v_1&v_2&v_3\\end{pmatrix} = \\langle u_2v_3-u_3v_2,\\;u_3v_1-u_1v_3,\\;u_1v_2-u_2v_1\\rangle$.",
@@ -172,6 +182,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "Matrix notation and basic operations",
+        section: "operations",
         body: [
           "An $m \\times n$ matrix has $m$ rows and $n$ columns. The entry in row $i$, column $j$ is $A_{ij}$. A square matrix has $m = n$.",
           "Matrix addition: $(A+B)_{ij} = A_{ij}+B_{ij}$. Both matrices must have the same dimensions; you cannot add a $3\\times 2$ to a $2\\times 3$.",
@@ -198,6 +209,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Matrix multiplication",
+        section: "multiplication",
         body: [
           "If $A$ is $m\\times n$ and $B$ is $n\\times p$, the product $AB$ is $m\\times p$. The inner dimensions must match: columns of $A$ must equal rows of $B$.",
           "Each entry is a dot product: $(AB)_{ij} = \\sum_{k=1}^{n} A_{ik}\\,B_{kj}$ — row $i$ of $A$ dotted with column $j$ of $B$.",
@@ -225,6 +237,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Determinants",
+        section: "determinants",
         body: [
           "The determinant is a scalar assigned to every square matrix that captures whether it is invertible, how it scales area/volume, and whether it preserves orientation.",
           "For $2\\times 2$: $\\det\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix} = ad - bc$. The main-diagonal product minus the anti-diagonal product.",
@@ -238,6 +251,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Matrix inverse",
+        section: "inverse",
         body: [
           "The inverse $A^{-1}$ of a square matrix $A$ satisfies $AA^{-1} = A^{-1}A = I$. It exists if and only if $\\det(A) \\neq 0$. A matrix without an inverse is called singular.",
           "For $2\\times 2$: $A^{-1} = \\frac{1}{ad-bc}\\begin{pmatrix}d&-b\\\\-c&a\\end{pmatrix}$. Swap the main-diagonal entries, negate the off-diagonal entries, and divide by the determinant.",
@@ -263,6 +277,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Special matrices",
+        section: "properties",
         body: [
           "Symmetric matrices: $A = A^T$. By the Spectral Theorem (Chapter 8), all eigenvalues are real and there exists an orthonormal eigenvector basis. These arise in covariance matrices, Hessians, and physics.",
           "Orthogonal matrices: $Q^TQ = I$. Columns are orthonormal. $\\det(Q) = \\pm 1$. They represent rotations ($\\det=+1$) and reflections ($\\det=-1$). The inverse is simply the transpose: $Q^{-1}=Q^T$.",
@@ -295,6 +310,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "Setting up augmented matrices",
+        section: "gauss",
         body: [
           "A linear system $a_{11}x_1 + \\cdots + a_{1n}x_n = b_1, \\ldots, a_{m1}x_1 + \\cdots + a_{mn}x_n = b_m$ is written as the matrix equation $A\\mathbf{x} = \\mathbf{b}$, where $A$ is the $m\\times n$ coefficient matrix, $\\mathbf{x}$ is the unknown vector, and $\\mathbf{b}$ is the right-hand side.",
           "The augmented matrix $[A\\;|\\;\\mathbf{b}]$ packs all information into one array. Each row represents one equation. The vertical bar separates coefficients from constants.",
@@ -308,6 +324,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Gaussian elimination",
+        section: "gauss",
         body: [
           "Forward elimination reduces the augmented matrix to row echelon form (REF): a staircase pattern where each row's leading nonzero entry (pivot) is to the right of the pivot above, with zeros below each pivot.",
           "The procedure: work column by column from left to right. Use row operations to create zeros below the current pivot. Skip a column with no eligible pivot — this creates a free variable.",
@@ -333,6 +350,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Solution types",
+        section: "consistency",
         body: [
           "A linear system has exactly one of three outcomes: no solution (inconsistent), exactly one solution, or infinitely many solutions. There is no 'two solutions' in linear algebra.",
           "Inconsistency is flagged by a row $[0\\;0\\;\\cdots\\;0\\;|\\;b]$ with $b\\neq 0$ — the equation $0=b$ is impossible.",
@@ -346,6 +364,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Rank and the rank-nullity theorem",
+        section: "rank",
         body: [
           "The rank of a matrix $A$ is the number of pivot columns in its row echelon form — equivalently, the dimension of the column space $\\text{Col}(A)$.",
           "Consistency condition: $A\\mathbf{x}=\\mathbf{b}$ is consistent iff $\\text{rank}([A\\;|\\;\\mathbf{b}]) = \\text{rank}(A)$. Adding $\\mathbf{b}$ as a column must not create a new pivot — $\\mathbf{b}$ must already lie in $\\text{Col}(A)$.",
@@ -359,6 +378,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Homogeneous systems",
+        section: "homogeneous",
         body: [
           "A homogeneous system $A\\mathbf{x}=\\mathbf{0}$ is always consistent — the trivial solution $\\mathbf{x}=\\mathbf{0}$ always works.",
           "Nontrivial solutions exist iff $\\text{rank}(A)<n$ — there are more unknowns than pivots, creating free variables.",
@@ -390,6 +410,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "Subspaces",
+        section: "subspaces",
         body: [
           "A subspace of $\\mathbb{R}^n$ is a subset $V$ satisfying three conditions: (1) $\\mathbf{0} \\in V$, (2) if $\\mathbf{u},\\mathbf{v}\\in V$ then $\\mathbf{u}+\\mathbf{v}\\in V$ (closed under addition), and (3) if $\\mathbf{v}\\in V$ and $c\\in\\mathbb{R}$ then $c\\mathbf{v}\\in V$ (closed under scalar multiplication). The three conditions collapse into one: $V$ is a subspace iff every linear combination $c\\mathbf{u}+d\\mathbf{v}$ of vectors in $V$ stays in $V$.",
           "Examples of subspaces: $\\{\\mathbf{0}\\}$, any line through the origin, any plane through the origin, $\\mathbb{R}^n$ itself, the null space of any matrix $A$, and the column space of any matrix $A$.",
@@ -402,6 +423,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Span",
+        section: "span",
         body: [
           "The span of vectors $\\{\\mathbf{v}_1,\\ldots,\\mathbf{v}_k\\}$ is every possible linear combination: $\\text{span}\\{\\mathbf{v}_1,\\ldots,\\mathbf{v}_k\\} = \\{c_1\\mathbf{v}_1+\\cdots+c_k\\mathbf{v}_k : c_i\\in\\mathbb{R}\\}$. It is always a subspace — it contains $\\mathbf{0}$ (set all $c_i=0$) and is closed under addition and scaling.",
           "Geometrically in $\\mathbb{R}^3$: one nonzero vector spans a line through the origin; two independent vectors span a plane; three independent vectors span all of $\\mathbb{R}^3$.",
@@ -425,6 +447,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Linear independence",
+        section: "independence",
         body: [
           "Vectors $\\{\\mathbf{v}_1,\\ldots,\\mathbf{v}_k\\}$ are linearly independent if $c_1\\mathbf{v}_1+\\cdots+c_k\\mathbf{v}_k=\\mathbf{0}$ forces all $c_i=0$. If a non-trivial combination equals $\\mathbf{0}$, the vectors are linearly dependent.",
           "Dependence means redundancy: at least one vector is expressible as a combination of the others and adds no new direction. Removing it does not shrink the span.",
@@ -448,6 +471,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Basis and dimension",
+        section: "basis",
         body: [
           "A basis for a subspace $V$ is a set of vectors that is both linearly independent and spans $V$. It is simultaneously a minimal spanning set and a maximal independent set.",
           "Every vector in $V$ has a unique representation as a linear combination of basis vectors. This uniqueness makes a basis a coordinate system: given basis $\\{\\mathbf{b}_1,\\ldots,\\mathbf{b}_n\\}$, each vector has unique coordinates $(c_1,\\ldots,c_n)$.",
@@ -460,6 +484,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Column space and null space",
+        section: "linear-transformations",
         body: [
           "The column space $\\text{Col}(A) = \\{A\\mathbf{x}: \\mathbf{x}\\in\\mathbb{R}^n\\}$ is the span of the columns of $A$ — all possible outputs. Its dimension is $\\text{rank}(A)$.",
           "The null space $\\text{Null}(A) = \\{\\mathbf{x}: A\\mathbf{x}=\\mathbf{0}\\}$ is the set of all inputs that map to zero. It is always a subspace of $\\mathbb{R}^n$, and its dimension is the nullity.",
@@ -491,6 +516,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "Linear transformations and their matrices",
+        section: "linear-transformations",
         body: [
           "A function $T:\\mathbb{R}^n\\to\\mathbb{R}^m$ is linear if $T(\\mathbf{u}+\\mathbf{v})=T(\\mathbf{u})+T(\\mathbf{v})$ and $T(c\\mathbf{v})=cT(\\mathbf{v})$ for all vectors and scalars. Together these imply $T(c\\mathbf{u}+d\\mathbf{v}) = cT(\\mathbf{u})+dT(\\mathbf{v})$ — linear maps preserve linear combinations.",
           "Every linear transformation has a unique representing matrix: $A = [T(\\mathbf{e}_1)\\;|\\;T(\\mathbf{e}_2)\\;|\\;\\cdots\\;|\\;T(\\mathbf{e}_n)]$, where the columns are the images of the standard basis vectors. Once you know what $T$ does to the basis, you know everything.",
@@ -515,6 +541,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Kernel and image",
+        section: "linear-transformations",
         body: [
           "The kernel of $T$ is $\\ker(T) = \\{\\mathbf{x}: T(\\mathbf{x})=\\mathbf{0}\\}$ — the set of inputs that $T$ collapses to zero. For $T_A$, this is exactly $\\text{Null}(A)$.",
           "$T$ is injective (one-to-one) iff $\\ker(T)=\\{\\mathbf{0}\\}$ — only zero maps to zero. Equivalently, different inputs always produce different outputs.",
@@ -527,6 +554,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Eigenvalues and eigenvectors",
+        section: "eigenvectors",
         body: [
           "A nonzero vector $\\mathbf{v}$ is an eigenvector of $A$ with eigenvalue $\\lambda$ if $A\\mathbf{v}=\\lambda\\mathbf{v}$. The matrix merely scales $\\mathbf{v}$ — it does not change its direction (or it reverses it when $\\lambda<0$).",
           "To find eigenvalues: rewrite as $(A-\\lambda I)\\mathbf{v}=\\mathbf{0}$. For a nonzero solution to exist, the matrix $A-\\lambda I$ must be singular: $\\det(A-\\lambda I)=0$. This is the characteristic equation.",
@@ -552,6 +580,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Diagonalization",
+        section: "diagonalization",
         body: [
           "A matrix $A$ is diagonalizable if $A=PDP^{-1}$, where the columns of $P$ are $n$ linearly independent eigenvectors and $D=\\text{diag}(\\lambda_1,\\ldots,\\lambda_n)$ contains the corresponding eigenvalues.",
           "Criterion: $A$ is diagonalizable iff it has $n$ linearly independent eigenvectors. A sufficient condition: $n$ distinct eigenvalues. Repeated eigenvalues may or may not permit diagonalization.",
@@ -565,6 +594,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Geometric transformations and their eigenvalues",
+        section: "geometric",
         body: [
           "Rotation by $\\theta$ (counterclockwise): $R_\\theta=\\begin{pmatrix}\\cos\\theta&-\\sin\\theta\\\\\\sin\\theta&\\cos\\theta\\end{pmatrix}$. $\\det(R_\\theta)=1$ (area preserved, orientation maintained). Eigenvalues $e^{\\pm i\\theta}$ are complex for $\\theta\\neq 0,\\pi$ — no real eigenvectors, consistent with the fact that rotations spin everything.",
           "Reflection across the $x$-axis: $\\begin{pmatrix}1&0\\\\0&-1\\end{pmatrix}$. Eigenvalues $\\lambda_1=1$ (vectors on $x$-axis are fixed) and $\\lambda_2=-1$ (vectors on $y$-axis are flipped). $\\det=-1$: orientation reversed.",
@@ -596,6 +626,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "Cofactor expansion",
+        section: "cofactor",
         body: [
           "For $2\\times 2$: $\\det\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix} = ad-bc$. Main diagonal minus anti-diagonal.",
           "For $n\\times n$, expand along any row or column. Along row $i$: $\\det(A) = \\sum_{j=1}^{n}(-1)^{i+j}\\,a_{ij}\\,M_{ij}$, where the $(i,j)$ minor $M_{ij}$ is the determinant of the $(n-1)\\times(n-1)$ submatrix obtained by deleting row $i$ and column $j$. The factor $(-1)^{i+j}$ is the cofactor sign.",
@@ -619,6 +650,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Properties of determinants",
+        section: "properties",
         body: [
           "Row operations have predictable effects: swapping two rows multiplies $\\det$ by $-1$; scaling a row by $c$ multiplies $\\det$ by $c$; adding a scalar multiple of one row to another leaves $\\det$ unchanged. These three rules make row reduction a fast alternative to cofactor expansion.",
           "Product rule: $\\det(AB)=\\det(A)\\det(B)$. Composition scales volumes multiplicatively. Consequences: $\\det(A^{-1})=1/\\det(A)$ and $\\det(A^k)=\\det(A)^k$.",
@@ -632,6 +664,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Cramer's Rule",
+        section: "cramer",
         body: [
           "For an invertible system $A\\mathbf{x}=\\mathbf{b}$, Cramer's Rule gives each variable explicitly: $x_i = \\det(A_i)/\\det(A)$, where $A_i$ is the matrix $A$ with its $i$-th column replaced by $\\mathbf{b}$.",
           "Cramer's Rule is elegant but computationally expensive — computing $n+1$ determinants of $n\\times n$ matrices is $O(n!)$ for each determinant via cofactor expansion, far slower than $O(n^3)$ Gaussian elimination.",
@@ -654,6 +687,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Geometric interpretation",
+        section: "geometric",
         body: [
           "For a $2\\times 2$ matrix $A$, $|\\det(A)|$ equals the area of the parallelogram spanned by the columns (or rows) of $A$. For $3\\times 3$, it equals the volume of the parallelepiped.",
           "If $\\det(A)>0$, the transformation preserves orientation (counterclockwise goes to counterclockwise). If $\\det(A)<0$, orientation is reversed (a reflection is involved).",
@@ -685,6 +719,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "Inner product, length, and orthogonality",
+        section: "dot",
         body: [
           "In $\\mathbb{R}^n$, the inner product (dot product) is $\\mathbf{u}\\cdot\\mathbf{v} = \\mathbf{u}^T\\mathbf{v} = \\sum_i u_iv_i$. The length is $\\|\\mathbf{v}\\|=\\sqrt{\\mathbf{v}\\cdot\\mathbf{v}}$.",
           "Two vectors are orthogonal if $\\mathbf{u}\\cdot\\mathbf{v}=0$. A unit vector has $\\|\\mathbf{v}\\|=1$. An orthonormal set is orthogonal and every vector has unit length.",
@@ -698,6 +733,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Orthogonal sets and projections",
+        section: "orthogonal-sets",
         body: [
           "An orthogonal set of nonzero vectors is automatically linearly independent — each vector points in a direction not reachable by combining the others.",
           "The orthogonal projection of $\\mathbf{y}$ onto a subspace $W$ is the unique closest point in $W$ to $\\mathbf{y}$. The error $\\mathbf{y}-\\hat{\\mathbf{y}}$ is perpendicular to $W$: $\\mathbf{y}-\\hat{\\mathbf{y}}\\in W^\\perp$.",
@@ -720,6 +756,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "The Gram-Schmidt process",
+        section: "gram-schmidt",
         body: [
           "Gram-Schmidt converts any linearly independent set $\\{\\mathbf{x}_1,\\ldots,\\mathbf{x}_p\\}$ into an orthonormal basis $\\{\\mathbf{u}_1,\\ldots,\\mathbf{u}_p\\}$ for the same subspace.",
           "Procedure: for each new vector $\\mathbf{x}_k$, subtract its projections onto all previously constructed $\\mathbf{v}_j$, then normalise. Formally: $\\mathbf{v}_k = \\mathbf{x}_k - \\sum_{j=1}^{k-1}\\frac{\\mathbf{x}_k\\cdot\\mathbf{v}_j}{\\mathbf{v}_j\\cdot\\mathbf{v}_j}\\mathbf{v}_j$, then $\\mathbf{u}_k = \\mathbf{v}_k/\\|\\mathbf{v}_k\\|$.",
@@ -745,6 +782,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Least-squares problems",
+        section: "least-squares",
         body: [
           "When $A\\mathbf{x}=\\mathbf{b}$ is inconsistent (no exact solution), the least-squares solution $\\hat{\\mathbf{x}}$ minimises the residual $\\|A\\mathbf{x}-\\mathbf{b}\\|^2$. It is not an exact solution — it is the best approximation.",
           "Geometric insight: the closest point in $\\text{Col}(A)$ to $\\mathbf{b}$ is $A\\hat{\\mathbf{x}}=\\hat{\\mathbf{b}}=\\text{proj}_{\\text{Col}(A)}\\mathbf{b}$. The residual $\\mathbf{b}-\\hat{\\mathbf{b}}$ must be orthogonal to $\\text{Col}(A)$, giving $A^T(\\mathbf{b}-A\\hat{\\mathbf{x}})=\\mathbf{0}$.",
@@ -777,6 +815,7 @@ export const modules: ModuleContent[] = [
     sections: [
       {
         title: "The Spectral Theorem",
+        section: "spectral",
         body: [
           "Spectral Theorem: every real symmetric matrix $A$ ($A=A^T$) is orthogonally diagonalisable. That is, $A=Q\\Lambda Q^T$ where $Q$ is orthogonal ($Q^{-1}=Q^T$) and $\\Lambda=\\text{diag}(\\lambda_1,\\ldots,\\lambda_n)$. The columns of $Q$ are orthonormal eigenvectors of $A$.",
           "Three crucial consequences: (1) all eigenvalues of a real symmetric matrix are real; (2) eigenvectors corresponding to distinct eigenvalues are automatically orthogonal; (3) even with repeated eigenvalues, a full orthonormal eigenvector basis always exists.",
@@ -801,6 +840,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Quadratic forms",
+        section: "quadratic-forms",
         body: [
           "A quadratic form is $Q(\\mathbf{x})=\\mathbf{x}^TA\\mathbf{x}$ where $A$ is $n\\times n$ symmetric. In two variables: $Q(x_1,x_2)=ax_1^2+2bx_1x_2+cx_2^2$ corresponding to $A=\\begin{pmatrix}a&b\\\\b&c\\end{pmatrix}$.",
           "Classification by eigenvalues: (1) positive definite: all $\\lambda_k>0$, so $Q(\\mathbf{x})>0$ for all $\\mathbf{x}\\neq\\mathbf{0}$; (2) positive semidefinite: all $\\lambda_k\\geq 0$; (3) negative definite: all $\\lambda_k<0$; (4) negative semidefinite: all $\\lambda_k\\leq 0$; (5) indefinite: mixed signs.",
@@ -814,6 +854,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Singular Value Decomposition",
+        section: "svd",
         body: [
           "Every $m\\times n$ matrix $A$ (any shape, any rank) has an SVD: $A=U\\Sigma V^T$, where $U$ is $m\\times m$ orthogonal, $V$ is $n\\times n$ orthogonal, and $\\Sigma$ is $m\\times n$ with nonneg diagonal entries $\\sigma_1\\geq\\sigma_2\\geq\\cdots\\geq\\sigma_r>0$ (the singular values), where $r=\\text{rank}(A)$.",
           "Computing the SVD: the singular values are $\\sigma_i=\\sqrt{\\lambda_i(A^TA)}$; the columns of $V$ are orthonormal eigenvectors of $A^TA$; the columns of $U$ are orthonormal eigenvectors of $AA^T$.",
@@ -827,6 +868,7 @@ export const modules: ModuleContent[] = [
       },
       {
         title: "Principal Component Analysis",
+        section: "positive-definite",
         body: [
           "PCA finds the directions of maximum variance in a dataset. Given a centered data matrix $X$ ($m$ observations, $n$ features, mean subtracted), the sample covariance matrix is $C=\\frac{1}{m-1}X^TX$, which is symmetric and positive semidefinite.",
           "The eigenvectors of $C$ (the principal components) are the directions of maximum variance. Eigenvalue $\\lambda_k$ equals the variance explained by the $k$-th component. Projecting the data onto the top $k$ eigenvectors gives the best $k$-dimensional linear approximation.",

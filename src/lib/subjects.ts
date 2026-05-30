@@ -10,6 +10,11 @@ export type SubjectSlug = "calculus" | "statistics" | "linear-algebra";
 
 type SubjectModule = {
   topicId: string;
+  sections: Array<{
+    title: string;
+    /** Stable slug that must exactly match the `section` field on questions for this topic (e.g. "squeeze", "chain", "gauss"). */
+    section?: string;
+  }>;
 };
 
 export type SubjectConfig = {
