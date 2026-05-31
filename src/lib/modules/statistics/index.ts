@@ -15,7 +15,7 @@ export type { ModuleContent, ModuleSection, WorkedExample } from "../types";
 // Extracted topics
 export { descriptiveModule } from "./descriptive";
 export { probabilityModule } from "./probability";
-export { discreteDistributionsModule } from "./discrete-distributions";
+export { discrete_distributionsModule as discreteDistributionsModule } from "./discrete-distributions";
 export { estimationModule } from "./estimation";
 export { regressionModule } from "./regression";
 
