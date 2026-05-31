@@ -7,7 +7,7 @@ import {
   seriesModule, 
   differentialEquationsModule,
   applicationsOfIntegrationModule,
-  // multivariableModule temporarily commented out (extraction had syntax artifact at the end)
+  multivariableModule,
 } from "./modules/calculus";
 
 
@@ -52,5 +52,5 @@ export const modules: ModuleContent[] = [
   seriesModule,  // extracted
   differentialEquationsModule,  // extracted
   applicationsOfIntegrationModule,  // extracted
-  // multivariableModule temporarily disabled
+  multivariableModule,  // extracted
 ];
