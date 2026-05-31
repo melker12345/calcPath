@@ -12,17 +12,14 @@ import type { ModuleContent } from "../types";
 // Re-export types for convenience within the calculus folder
 export type { ModuleContent, ModuleSection, WorkedExample } from "../types";
 
-// Successfully extracted & wired topics
+// Successfully extracted modules (real content, wired in main modules.ts)
 export { limitsModule } from "./limits";
 export { derivativesModule } from "./derivatives";
 export { integralsModule } from "./integrals";
 
-// Placeholders for remaining topics (to be extracted next)
-export { applicationsModule } from "./applications";
-export { seriesModule } from "./series";
-export { differentialEquationsModule } from "./differential-equations";
-export { applicationsOfIntegrationModule } from "./applications-of-integration";
-export { multivariableModule } from "./multivariable";
+// Note: Other topics still live in the original modules.ts for now.
+// They will be extracted one by one in future commits on this branch.
+
 
 // When migration is complete this will become:
 // export const calculusModules: ModuleContent[] = [
