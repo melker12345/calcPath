@@ -1,32 +1,3 @@
-import type { Topic } from "@/lib/shared-types";
-import { limitsModule } from "./modules/calculus";
-import { derivativesModule } from "./modules/calculus";
-import { integralsModule } from "./modules/calculus";
-
-
-
-import type { ModuleContent, ModuleSection, WorkedExample } from "./types";
-
-// Re-export types for backward compatibility
-export type { ModuleContent, ModuleSection, WorkedExample };
-
-/**
- * === REFACTOR IN PROGRESS (content-scalability branch) ===
- *
- * This file currently contains all Calculus module content.
- * We are migrating to a split structure under ./modules/calculus/
- *
- * See ./modules/README.md for the full plan.
- *
- * For now we keep the content here while we extract topic-by-topic.
- */
-
-// Prepared import (will be used as we migrate content out of this file)
-import { calculusModules as _calculusModules } from "./modules/calculus";
-
-export const modules: ModuleContent[] = [
-  limitsModule,  // extracted to modules/calculus/limits.ts
-  derivativesModule,  // extracted to modules/calculus/derivatives.ts
   integralsModule,  // extracted
   {
     topicId: "applications",

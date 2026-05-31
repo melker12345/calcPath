@@ -12,10 +12,12 @@ import type { ModuleContent } from "../types";
 // Re-export types for convenience within the calculus folder
 export type { ModuleContent, ModuleSection, WorkedExample } from "../types";
 
-// Placeholders (content will be filled during migration)
+// Successfully extracted & wired topics
 export { limitsModule } from "./limits";
 export { derivativesModule } from "./derivatives";
 export { integralsModule } from "./integrals";
+
+// Placeholders for remaining topics (to be extracted next)
 export { applicationsModule } from "./applications";
 export { seriesModule } from "./series";
 export { differentialEquationsModule } from "./differential-equations";
