@@ -18,6 +18,9 @@ export { matricesModule } from "./matrices";
 export { systemsModule } from "./systems";
 export { spacesModule } from "./spaces";
 export { eigenvaluesModule } from "./eigenvalues";
+export { determinantsModule } from "./determinants";
+export { orthogonalityModule } from "./orthogonality";
+export { symmetricMatricesModule } from "./symmetric-matrices";
 // export { systemsModule } from "./systems";             // TODO
 // export { spacesModule } from "./spaces";               // TODO
 // export { eigenvaluesModule } from "./eigenvalues";     // TODO
