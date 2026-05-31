@@ -11,7 +11,6 @@ import {
   orthogonalityModule,
   symmetricMatricesModule
 } from "./modules/linear-algebra";
-import { vectorsModule, matricesModule, systemsModule, spacesModule, eigenvaluesModule } from "./modules/linear-algebra";
 
 export type { ModuleContent, ModuleSection, WorkedExample };
 
