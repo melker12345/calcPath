@@ -16,6 +16,7 @@ export type { ModuleContent, ModuleSection, WorkedExample } from "../types";
 export { limitsModule } from "./limits";
 export { derivativesModule } from "./derivatives";
 export { integralsModule } from "./integrals";
+export { applicationsModule } from "./applications";
 
 // Note: Other topics still live in the original modules.ts for now.
 // They will be extracted one by one in future commits on this branch.

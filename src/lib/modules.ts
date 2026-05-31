@@ -1,5 +1,5 @@
 import type { Topic } from "@/lib/shared-types";
-import { limitsModule, derivativesModule, integralsModule } from "./modules/calculus";
+import { limitsModule, derivativesModule, integralsModule, applicationsModule } from "./modules/calculus";
 
 
 export type WorkedExample = {
