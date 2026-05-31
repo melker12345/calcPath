@@ -44,7 +44,7 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
 
   if (block) {
     return (
-      <div className="space-y-2">
+      <div className="my-3 space-y-2">
         {parts.map((part, index) =>
           part.type === "math" ? (
             <BlockMath key={`${part.value}-${index}`} math={part.value} />
@@ -60,13 +60,34 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
 
   return (
     <span>
-      {parts.map((part, index) =>
-        part.type === "math" ? (
-          <InlineMath key={`${part.value}-${index}`} math={part.value} />
-        ) : (
-          <span key={`${part.value}-${index}`}>{part.value}</span>
-        ),
-      )}
+      {parts.map((part, index) => {
+        const isMath = part.type === "math";
+        const prevPart = index > 0 ? parts[index - 1] : null;
+        const isAfterMath = prevPart?.type === "math";
+
+        if (isMath) {
+          return (
+            <span key={`${part.value}-${index}`} style={{ marginRight: "0.12em" }}>
+              <InlineMath math={part.value} />
+            </span>
+          );
+        }
+
+        // When text comes right after math and starts with sentence punctuation,
+        // ensure a small visual space so we don't get "1.This" or "too.Classic"
+        const needsSpaceAfterMath =
+          isAfterMath &&
+          /^[.!?;:]/.test(part.value.trimStart());
+
+        return (
+          <span
+            key={`${part.value}-${index}`}
+            style={needsSpaceAfterMath ? { marginLeft: "0.2em" } : undefined}
+          >
+            {part.value}
+          </span>
+        );
+      })}
     </span>
   );
 };
