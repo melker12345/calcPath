@@ -14,6 +14,7 @@ type SubjectModulePageProps = {
   subjectLabel: string;
   modules: ModuleContent[];
   topics: Topic[];
+  faqs?: Record<string, { q: string; a: string }[]>;
 };
 
 function toSlug(text: string) {
@@ -28,6 +29,7 @@ export function SubjectModulePage({
   subjectLabel,
   modules,
   topics,
+  faqs,
 }: SubjectModulePageProps) {
   const params = useParams<{ topicId: string }>();
   const topicId = params?.topicId ?? "";
@@ -156,6 +158,25 @@ export function SubjectModulePage({
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {/* FAQ Section (SEO) */}
+          {faqs && faqs[topicId] && faqs[topicId].length > 0 && (
+            <div className="mt-12">
+              <h2 className="mb-4 text-2xl font-semibold theme-text">Frequently Asked Questions</h2>
+              <div className="space-y-4">
+                {faqs[topicId].map((faq: { q: string; a: string }, index: number) => (
+                  <details key={index} className="group rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+                    <summary className="cursor-pointer font-medium theme-text marker:text-[var(--text-muted)]">
+                      {faq.q}
+                    </summary>
+                    <div className="mt-3 text-sm leading-relaxed theme-text-secondary">
+                      <MathText text={faq.a} />
+                    </div>
+                  </details>
+                ))}
+              </div>
             </div>
           )}
 
