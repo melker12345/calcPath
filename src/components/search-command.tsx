@@ -11,6 +11,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { subjectList } from "@/lib/subjects";
 
 type SearchEntry = {
   label: string;
@@ -35,11 +36,36 @@ async function loadIndex(): Promise<SearchEntry[]> {
 
   const entries: SearchEntry[] = [];
 
-  const subjects = [
-    { slug: "calculus", icon: "\u222b", name: "Calculus", topics: calculusTopics, modules: calculusModules },
-    { slug: "statistics", icon: "\u03c3", name: "Statistics", topics: statisticsTopics, modules: statisticsModules },
-    { slug: "linear-algebra", icon: "\u03bb", name: "Linear Algebra", topics: linalgTopics, modules: linalgModules },
-  ];
+  // Derive subject metadata from the central registry to avoid hardcoding
+  const subjects = subjectList.map((subject) => {
+    const iconMap: Record<string, string> = {
+      calculus: "∫",
+      statistics: "σ",
+      "linear-algebra": "λ",
+    };
+
+    let topics: any[] = [];
+    let modules: any[] = [];
+
+    if (subject.slug === "calculus") {
+      topics = calculusTopics;
+      modules = calculusModules;
+    } else if (subject.slug === "statistics") {
+      topics = statisticsTopics;
+      modules = statisticsModules;
+    } else if (subject.slug === "linear-algebra") {
+      topics = linalgTopics;
+      modules = linalgModules;
+    }
+
+    return {
+      slug: subject.slug,
+      icon: iconMap[subject.slug] || "•",
+      name: subject.label,
+      topics,
+      modules,
+    };
+  });
 
   for (const s of subjects) {
     entries.push({ label: s.name, description: `${s.topics.length} topics`, href: `/${s.slug}`, subjectIcon: s.icon, kind: "page" });

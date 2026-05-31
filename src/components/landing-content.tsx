@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { subjectList } from "@/lib/subjects";
 
 /**
  * Landing page parallax experience.
@@ -161,59 +162,46 @@ export function LandingContent() {
                   <h2 className="text-sm font-semibold tracking-widest uppercase theme-text-muted mb-5">Subjects</h2>
 
                   <div className="grid gap-4 md:grid-cols-3">
-                    <Link
-                      href="/calculus"
-                      className="group block rounded-2xl border theme-border theme-surface p-6 transition hover:border-[var(--accent)]/30 hover:bg-[var(--surface-2)]"
-                    >
-                      <div className="flex justify-center">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl text-4xl font-light tracking-[-1px] text-[var(--text-primary)] transition group-hover:text-[var(--accent)] bg-[var(--surface-2)]">∫</div>
-                      </div>
-                      <div className="mt-5">
-                        <div className="flex items-baseline gap-2.5">
-                          <span className="font-semibold text-[21px] tracking-[-0.2px] theme-text group-hover:underline">Calculus</span>
-                          <span className="text-xs text-[var(--text-muted)] tabular-nums">8 chapters</span>
-                        </div>
-                        <p className="mt-2.5 text-[14.5px] leading-snug theme-text-secondary">
-                          Limits and continuity, differentiation, integration, sequences and series, differential equations, and multivariable calculus.
-                        </p>
-                      </div>
-                    </Link>
+                    {subjectList.map((subject) => {
+                      const icon = subject.icon || "•";
+                      const descriptions: Record<string, string> = {
+                        calculus: "Limits and continuity, differentiation, integration, sequences and series, differential equations, and multivariable calculus.",
+                        "linear-algebra": "Vectors, matrices, systems of equations, vector spaces, linear transformations, eigenvalues, and orthogonality.",
+                        statistics: "Descriptive statistics, probability, discrete and continuous distributions, inference, hypothesis testing, and regression.",
+                      };
+                      const chapterCounts: Record<string, string> = {
+                        calculus: "8 chapters",
+                        "linear-algebra": "9 chapters",
+                        statistics: "11 chapters",
+                      };
 
-                    <Link
-                      href="/linear-algebra"
-                      className="group block rounded-2xl border theme-border theme-surface p-6 transition hover:border-[var(--accent)]/30 hover:bg-[var(--surface-2)]"
-                    >
-                      <div className="flex justify-center">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl text-4xl font-light tracking-[-1px] text-[var(--text-primary)] transition group-hover:text-[var(--accent)] bg-[var(--surface-2)]">λ</div>
-                      </div>
-                      <div className="mt-5">
-                        <div className="flex items-baseline gap-2.5">
-                          <span className="font-semibold text-[21px] tracking-[-0.2px] theme-text group-hover:underline">Linear Algebra</span>
-                          <span className="text-xs text-[var(--text-muted)] tabular-nums">9 chapters</span>
-                        </div>
-                        <p className="mt-2.5 text-[14.5px] leading-snug theme-text-secondary">
-                          Vectors, matrices, systems of equations, vector spaces, linear transformations, eigenvalues, and orthogonality.
-                        </p>
-                      </div>
-                    </Link>
-
-                    <Link
-                      href="/statistics"
-                      className="group block rounded-2xl border theme-border theme-surface p-6 transition hover:border-[var(--accent)]/30 hover:bg-[var(--surface-2)]"
-                    >
-                      <div className="flex justify-center">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl text-4xl font-light tracking-[-1px] text-[var(--text-primary)] transition group-hover:text-[var(--accent)] bg-[var(--surface-2)]">σ</div>
-                      </div>
-                      <div className="mt-5">
-                        <div className="flex items-baseline gap-2.5">
-                          <span className="font-semibold text-[21px] tracking-[-0.2px] theme-text group-hover:underline">Statistics</span>
-                          <span className="text-xs text-[var(--text-muted)] tabular-nums">11 chapters</span>
-                        </div>
-                        <p className="mt-2.5 text-[14.5px] leading-snug theme-text-secondary">
-                          Descriptive statistics, probability, discrete and continuous distributions, inference, hypothesis testing, and regression.
-                        </p>
-                      </div>
-                    </Link>
+                      return (
+                        <Link
+                          key={subject.slug}
+                          href={`/${subject.slug}`}
+                          className="group block rounded-2xl border theme-border theme-surface p-6 transition hover:border-[var(--accent)]/30 hover:bg-[var(--surface-2)]"
+                        >
+                          <div className="flex justify-center">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl text-4xl font-light tracking-[-1px] text-[var(--text-primary)] transition group-hover:text-[var(--accent)] bg-[var(--surface-2)]">
+                              {icon}
+                            </div>
+                          </div>
+                          <div className="mt-5">
+                            <div className="flex items-baseline gap-2.5">
+                              <span className="font-semibold text-[21px] tracking-[-0.2px] theme-text group-hover:underline">
+                                {subject.label}
+                              </span>
+                              <span className="text-xs text-[var(--text-muted)] tabular-nums">
+                                {chapterCounts[subject.slug] || ""}
+                              </span>
+                            </div>
+                            <p className="mt-2.5 text-[14.5px] leading-snug theme-text-secondary">
+                              {descriptions[subject.slug] || subject.shortDescription}
+                            </p>
+                          </div>
+                        </Link>
+                      );
+                    })}
                   </div>
                 </div>
               )}

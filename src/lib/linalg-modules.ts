@@ -1,30 +1,7 @@
 import type { Topic } from "./shared-types";
+import type { ModuleContent, ModuleSection, WorkedExample } from "./modules/types";
 
-export type WorkedExample = {
-  title: string;
-  steps: string[];
-};
-
-export type ModuleSection = {
-  title: string;
-  /**
-   * Stable slug used for progress tracking and deep links.
-   * MUST match the `section` field on the corresponding questions exactly.
-   */
-  section?: string;
-  body: string[];
-  eli5?: string[];
-  examples?: WorkedExample[];
-};
-
-export type ModuleContent = {
-  topicId: Topic["id"];
-  title: string;
-  intro: string[];
-  sections: ModuleSection[];
-  examples: { title: string; steps: string[] }[];
-  commonMistakes: string[];
-};
+export type { ModuleContent, ModuleSection, WorkedExample };
 
 export const modules: ModuleContent[] = [
   {
