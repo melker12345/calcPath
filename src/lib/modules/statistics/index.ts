@@ -19,12 +19,11 @@ export { discrete_distributionsModule as discreteDistributionsModule } from "./d
 export { estimationModule } from "./estimation";
 export { regressionModule } from "./regression";
 
-// TODO: extract remaining 5 topics
-// export { continuousDistributionsModule } from "./continuous-distributions";
-// export { samplingModule } from "./sampling";
-// export { hypothesisTestingModule } from "./hypothesis-testing";
-// export { anovaModule } from "./anova";
-// export { nonparametricModule } from "./nonparametric";
+export { continuous_distributionsModule as continuousDistributionsModule } from "./continuous-distributions";
+export { samplingModule } from "./sampling";
+export { hypothesis_testingModule as hypothesisTestingModule } from "./hypothesis-testing";
+export { anovaModule } from "./anova";
+export { nonparametricModule } from "./nonparametric";
 
 // When complete:
 // export const statisticsModules: ModuleContent[] = [
