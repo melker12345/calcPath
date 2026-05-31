@@ -103,9 +103,13 @@ export function CourseContentsPage({
                       <span className="text-sm font-medium tabular-nums theme-text-muted shrink-0">
                         Chapter {index + 1}
                       </span>
-                      <span className="font-semibold theme-text text-lg leading-tight">
+                      <Link
+                        href={`/${subjectSlug}/modules/${topic.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-semibold theme-text text-lg leading-tight hover:underline hover:text-[var(--accent)]"
+                      >
                         {topic.title}
-                      </span>
+                      </Link>
                     </div>
                     <p className="mt-1 text-sm leading-6 theme-text-secondary line-clamp-2">
                       {topic.description}
