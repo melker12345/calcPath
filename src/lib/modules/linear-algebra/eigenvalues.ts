@@ -1,0 +1,112 @@
+import type { ModuleContent } from "../types";
+
+export const eigenvaluesModule: ModuleContent = {
+    topicId: "eigenvalues",
+    title: "Eigenvalues and Eigenvectors",
+    intro: [
+      "Eigenvalues and eigenvectors reveal the intrinsic skeleton of a linear transformation. Most vectors get both rotated and stretched when a matrix acts on them. But a few special vectors — the eigenvectors — only get stretched: their direction is preserved (or reversed), and the stretch factor is the eigenvalue.",
+      "Finding eigenvalues reduces to solving the characteristic equation $\\det(A-\\lambda I)=0$, a polynomial in $\\lambda$. Each root is an eigenvalue; for each eigenvalue, the eigenvectors are the nonzero solutions to $(A-\\lambda I)\\mathbf{v}=\\mathbf{0}$.",
+      "Diagonalization — writing $A=PDP^{-1}$ — is the payoff: once you have eigenvectors and eigenvalues, complex operations like $A^{100}$ become trivial. This chapter also covers the full theory of linear transformations, which underpins every subsequent result.",
+    ],
+    sections: [
+      {
+        title: "Linear transformations and their matrices",
+        section: "linear-transformations",
+        body: [
+          "A function $T:\\mathbb{R}^n\\to\\mathbb{R}^m$ is linear if $T(\\mathbf{u}+\\mathbf{v})=T(\\mathbf{u})+T(\\mathbf{v})$ and $T(c\\mathbf{v})=cT(\\mathbf{v})$ for all vectors and scalars. Together these imply $T(c\\mathbf{u}+d\\mathbf{v}) = cT(\\mathbf{u})+dT(\\mathbf{v})$ — linear maps preserve linear combinations.",
+          "Every linear transformation has a unique representing matrix: $A = [T(\\mathbf{e}_1)\\;|\\;T(\\mathbf{e}_2)\\;|\\;\\cdots\\;|\\;T(\\mathbf{e}_n)]$, where the columns are the images of the standard basis vectors. Once you know what $T$ does to the basis, you know everything.",
+          "Geometric examples: rotations, reflections, projections, shears, and scalings are all linear. Non-linear examples: translations, squaring a vector, adding a constant.",
+          "Composition of transformations corresponds to matrix multiplication: $(T_A\\circ T_B)(\\mathbf{x}) = A(B\\mathbf{x}) = (AB)\\mathbf{x}$. This is the geometric motivation for the matrix multiplication rule.",
+        ],
+        eli5: [
+          "A linear transformation reshapes space without bending, tearing, or moving the origin. Lines stay lines. Parallel lines stay parallel. The whole space gets rotated, stretched, or squished in a uniform way. Every such rule is exactly captured by a matrix.",
+        ],
+        examples: [
+          {
+            title: "Matrix of a 90° rotation",
+            steps: [
+              "Find the matrix for $90°$ counterclockwise rotation in $\\mathbb{R}^2$.",
+              "$T(\\mathbf{e}_1)=T(\\langle 1,0\\rangle) = \\langle 0,1\\rangle$ (the $x$-axis vector rotates to the $y$-axis).",
+              "$T(\\mathbf{e}_2)=T(\\langle 0,1\\rangle) = \\langle -1,0\\rangle$.",
+              "Matrix: $R_{90} = \\begin{pmatrix}0&-1\\\\1&0\\end{pmatrix}$.",
+              "Apply to $\\langle 3,2\\rangle$: $\\begin{pmatrix}0&-1\\\\1&0\\end{pmatrix}\\begin{pmatrix}3\\\\2\\end{pmatrix} = \\begin{pmatrix}-2\\\\3\\end{pmatrix}$. Rotated $90°$ ✓.",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Kernel and image",
+        section: "linear-transformations",
+        body: [
+          "The kernel of $T$ is $\\ker(T) = \\{\\mathbf{x}: T(\\mathbf{x})=\\mathbf{0}\\}$ — the set of inputs that $T$ collapses to zero. For $T_A$, this is exactly $\\text{Null}(A)$.",
+          "$T$ is injective (one-to-one) iff $\\ker(T)=\\{\\mathbf{0}\\}$ — only zero maps to zero. Equivalently, different inputs always produce different outputs.",
+          "The image of $T$ is $\\text{Im}(T) = \\{T(\\mathbf{x}): \\mathbf{x}\\in\\mathbb{R}^n\\} = \\text{Col}(A)$. $T$ is surjective (onto) iff $\\text{Im}(T)=\\mathbb{R}^m$ iff $\\text{rank}(A)=m$.",
+          "The rank-nullity theorem for transformations: $\\dim(\\ker(T))+\\dim(\\text{Im}(T))=n$. Independent of any choice of basis or matrix representation.",
+        ],
+        eli5: [
+          "The kernel is the transformation's blind spot — inputs it can't distinguish from zero. The image is its range — all possible outputs. An injective map has a trivial kernel (no blind spots). A surjective map has an image that fills the entire output space.",
+        ],
+      },
+      {
+        title: "Eigenvalues and eigenvectors",
+        section: "eigenvectors",
+        body: [
+          "A nonzero vector $\\mathbf{v}$ is an eigenvector of $A$ with eigenvalue $\\lambda$ if $A\\mathbf{v}=\\lambda\\mathbf{v}$. The matrix merely scales $\\mathbf{v}$ — it does not change its direction (or it reverses it when $\\lambda<0$).",
+          "To find eigenvalues: rewrite as $(A-\\lambda I)\\mathbf{v}=\\mathbf{0}$. For a nonzero solution to exist, the matrix $A-\\lambda I$ must be singular: $\\det(A-\\lambda I)=0$. This is the characteristic equation.",
+          "The characteristic polynomial of an $n\\times n$ matrix has degree $n$ and exactly $n$ roots in $\\mathbb{C}$ (counting multiplicity). Real matrices may have complex eigenvalues in conjugate pairs.",
+          "For each eigenvalue $\\lambda_k$, the eigenspace is $E_{\\lambda_k}=\\text{Null}(A-\\lambda_k I)$. Any nonzero vector in this eigenspace is an eigenvector. The eigenspace always has dimension at least $1$.",
+          "Trace and determinant shortcuts: $\\sum_i \\lambda_i = \\text{tr}(A)$ and $\\prod_i \\lambda_i = \\det(A)$. For a $2\\times 2$ matrix, these two conditions fully determine the eigenvalues once you find the characteristic polynomial.",
+        ],
+        eli5: [
+          "Imagine pushing on a rubber sheet with a matrix. Most arrows move and spin. Eigenvectors are special arrows that only stretch or shrink — they never change direction. The eigenvalue is the stretch factor. If $\\lambda=3$, the arrow triples in length. If $\\lambda=-1$, it flips around.",
+        ],
+        examples: [
+          {
+            title: "Eigenvalues and eigenvectors of a 2×2 matrix",
+            steps: [
+              "Find eigenvalues and eigenvectors of $A=\\begin{pmatrix}3&1\\\\0&2\\end{pmatrix}$.",
+              "Characteristic equation: $\\det(A-\\lambda I)=(3-\\lambda)(2-\\lambda)=0$. Eigenvalues: $\\lambda_1=3$, $\\lambda_2=2$.",
+              "For $\\lambda_1=3$: $(A-3I)\\mathbf{v}=\\mathbf{0}\\Rightarrow\\begin{pmatrix}0&1\\\\0&-1\\end{pmatrix}\\mathbf{v}=\\mathbf{0}$. Solution: $\\mathbf{v}_1=\\langle 1,0\\rangle$.",
+              "For $\\lambda_2=2$: $(A-2I)\\mathbf{v}=\\mathbf{0}\\Rightarrow\\begin{pmatrix}1&1\\\\0&0\\end{pmatrix}\\mathbf{v}=\\mathbf{0}$. Solution: $\\mathbf{v}_2=\\langle 1,-1\\rangle$.",
+              "Check: $\\text{tr}(A)=5=3+2$ ✓. $\\det(A)=6=3\\times 2$ ✓.",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Diagonalization",
+        section: "diagonalization",
+        body: [
+          "A matrix $A$ is diagonalizable if $A=PDP^{-1}$, where the columns of $P$ are $n$ linearly independent eigenvectors and $D=\\text{diag}(\\lambda_1,\\ldots,\\lambda_n)$ contains the corresponding eigenvalues.",
+          "Criterion: $A$ is diagonalizable iff it has $n$ linearly independent eigenvectors. A sufficient condition: $n$ distinct eigenvalues. Repeated eigenvalues may or may not permit diagonalization.",
+          "Computing powers: $A^k = PD^kP^{-1}$, and $D^k=\\text{diag}(\\lambda_1^k,\\ldots,\\lambda_n^k)$ is trivial. This turns computing $A^{100}$ into three matrix multiplications.",
+          "Geometric interpretation: $D=P^{-1}AP$ means that in the coordinate system of eigenvectors, the transformation $A$ acts as pure diagonal scaling. Diagonalisation finds the 'natural' coordinate system for $A$.",
+          "Non-diagonalisable matrices (defective matrices) require Jordan normal form — beyond this course but worth knowing exists.",
+        ],
+        eli5: [
+          "Diagonalisation asks: is there a tilted coordinate system in which your transformation just stretches each axis independently? If you tilt your axes to align with the eigenvectors, the transformation becomes trivial. The tilt is $P$; the independent scalings are $D$.",
+        ],
+      },
+      {
+        title: "Geometric transformations and their eigenvalues",
+        section: "geometric",
+        body: [
+          "Rotation by $\\theta$ (counterclockwise): $R_\\theta=\\begin{pmatrix}\\cos\\theta&-\\sin\\theta\\\\\\sin\\theta&\\cos\\theta\\end{pmatrix}$. $\\det(R_\\theta)=1$ (area preserved, orientation maintained). Eigenvalues $e^{\\pm i\\theta}$ are complex for $\\theta\\neq 0,\\pi$ — no real eigenvectors, consistent with the fact that rotations spin everything.",
+          "Reflection across the $x$-axis: $\\begin{pmatrix}1&0\\\\0&-1\\end{pmatrix}$. Eigenvalues $\\lambda_1=1$ (vectors on $x$-axis are fixed) and $\\lambda_2=-1$ (vectors on $y$-axis are flipped). $\\det=-1$: orientation reversed.",
+          "Projection onto a line: eigenvalues $1$ (vectors on the line are fixed by projection) and $0$ (vectors orthogonal to the line collapse to zero). Idempotent: $P^2=P$.",
+          "Shear $\\begin{pmatrix}1&k\\\\0&1\\end{pmatrix}$: repeated eigenvalue $\\lambda=1$ with only one independent eigenvector. Not diagonalisable — it is a canonical example of a defective matrix.",
+        ],
+        eli5: [
+          "Each transformation type has its own eigenvalue signature. Rotations have complex eigenvalues (no real fixed directions). Reflections have eigenvalues $\\pm 1$ (one axis is fixed, the other flips). Projections have eigenvalues $0$ and $1$ (one subspace is kept, the complementary subspace is erased).",
+        ],
+      },
+    ],
+    examples: [],
+    commonMistakes: [
+      "Including the zero vector as an eigenvector. Eigenvectors must be nonzero by definition.",
+      "Writing $\\det(A-\\lambda)=0$ instead of $\\det(A-\\lambda I)=0$. You cannot subtract a scalar from a matrix.",
+      "Assuming every matrix is diagonalisable. A matrix with $n$ distinct eigenvalues is, but repeated eigenvalues can prevent it.",
+      "Confusing eigenvalues (scalars $\\lambda$) and eigenvectors (nonzero vectors $\\mathbf{v}$). They are distinct objects that go together.",
+      "Forgetting to check the trace/determinant as a sanity check after computing eigenvalues.",
+    ],
+  };
