@@ -15,8 +15,8 @@ export type { ModuleContent, ModuleSection, WorkedExample };
  * For now we keep the content here while we extract topic-by-topic.
  */
 
-// Future import path (once split is done):
-// import { calculusModules } from "./modules/calculus";
+// Prepared import (will be used as we migrate content out of this file)
+import { calculusModules as _calculusModules } from "./modules/calculus";
 
 export const modules: ModuleContent[] = [
   {

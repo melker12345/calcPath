@@ -12,9 +12,21 @@ import type { ModuleContent } from "../types";
 // Re-export types for convenience within the calculus folder
 export type { ModuleContent, ModuleSection, WorkedExample } from "../types";
 
-// When splitting is complete, this will look like:
-// import { limitsModule } from "./limits";
-// ...
-// export const calculusModules: ModuleContent[] = [ limitsModule, ... ];
+// Placeholders (content will be filled during migration)
+export { limitsModule } from "./limits";
+export { derivativesModule } from "./derivatives";
+export { integralsModule } from "./integrals";
+export { applicationsModule } from "./applications";
+export { seriesModule } from "./series";
+export { differentialEquationsModule } from "./differential-equations";
+export { applicationsOfIntegrationModule } from "./applications-of-integration";
+export { multivariableModule } from "./multivariable";
 
-export const calculusModules: ModuleContent[] = []; // Populated during migration from monolithic file
+// When migration is complete this will become:
+// export const calculusModules: ModuleContent[] = [
+//   limitsModule,
+//   derivativesModule,
+//   ...
+// ];
+
+export const calculusModules: ModuleContent[] = []; // TODO: populate with real modules during split
