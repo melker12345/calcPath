@@ -14,7 +14,8 @@ export type { ModuleContent, ModuleSection, WorkedExample } from "../types";
 
 // Extracted topics
 export { vectorsModule } from "./vectors";
-// export { matricesModule } from "./matrices";           // TODO
+export { matricesModule } from "./matrices";
+export { systemsModule } from "./systems";
 // export { systemsModule } from "./systems";             // TODO
 // export { spacesModule } from "./spaces";               // TODO
 // export { eigenvaluesModule } from "./eigenvalues";     // TODO
