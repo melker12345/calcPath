@@ -1,6 +1,5 @@
 import type { Topic } from "@/lib/shared-types";
 import { limitsModule, derivativesModule, integralsModule, applicationsModule, seriesModule, differentialEquationsModule } from "./modules/calculus";
-import { differentialEquationsModule } from "./modules/calculus";
 
 
 
