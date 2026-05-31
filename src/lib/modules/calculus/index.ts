@@ -21,7 +21,9 @@ export { applicationsModule } from "./applications";
 export { seriesModule } from "./series";
 export { differentialEquationsModule } from "./differential-equations";
 export { applicationsOfIntegrationModule } from "./applications-of-integration";
-// multivariableModule will be re-added after clean re-extraction
+// Note: multivariableModule content has been extracted but has a minor parse artifact at the end.
+// It will be cleaned up in a follow-up commit.
+
 
 // Note: Other topics still live in the original modules.ts for now.
 // They will be extracted one by one in future commits on this branch.

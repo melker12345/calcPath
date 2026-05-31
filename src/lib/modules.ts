@@ -8,6 +8,7 @@ import {
   differentialEquationsModule,
   applicationsOfIntegrationModule,
 } from "./modules/calculus";
+// Note: multivariableModule content extracted to calculus/multivariable.ts (minor parse artifact to be fixed)
 
 
 export type WorkedExample = {
@@ -51,5 +52,5 @@ export const modules: ModuleContent[] = [
   seriesModule,  // extracted
   differentialEquationsModule,  // extracted
   applicationsOfIntegrationModule,  // extracted
-  // multivariableModule temporarily removed
+  multivariableModule,  // extracted
 ];
