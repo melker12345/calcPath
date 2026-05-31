@@ -20,13 +20,7 @@ export { spacesModule } from "./spaces";
 export { eigenvaluesModule } from "./eigenvalues";
 export { determinantsModule } from "./determinants";
 export { orthogonalityModule } from "./orthogonality";
-export { symmetricMatricesModule } from "./symmetric-matrices";
-// export { systemsModule } from "./systems";             // TODO
-// export { spacesModule } from "./spaces";               // TODO
-// export { eigenvaluesModule } from "./eigenvalues";     // TODO
-// export { determinantsModule } from "./determinants";   // TODO
-// export { orthogonalityModule } from "./orthogonality"; // TODO
-// export { symmetricMatricesModule } from "./symmetric-matrices"; // TODO
+export { symmetric_matricesModule as symmetricMatricesModule } from "./symmetric-matrices";
 
 // When complete, this will become something like:
 // export const linearAlgebraModules: ModuleContent[] = [
