@@ -12,8 +12,8 @@ import type { ModuleContent } from "../types";
 // Re-export types for convenience within the calculus folder
 export type { ModuleContent, ModuleSection, WorkedExample } from "../types";
 
-// Successfully extracted modules (real content, wired in main modules.ts)
-// All 8 calculus topics now extracted
+// 7/8 calculus topics successfully extracted and wired
+// (multivariable will be re-extracted in next session)
 export { limitsModule } from "./limits";
 export { derivativesModule } from "./derivatives";
 export { integralsModule } from "./integrals";
