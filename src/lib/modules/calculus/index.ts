@@ -13,17 +13,13 @@ import type { ModuleContent } from "../types";
 export type { ModuleContent, ModuleSection, WorkedExample } from "../types";
 
 // Successfully extracted modules (real content, wired in main modules.ts)
-// Extracted topics (6 out of 8)
+// Extracted topics (6 out of 8) - main modules.ts is currently the full original for stability
 export { limitsModule } from "./limits";
 export { derivativesModule } from "./derivatives";
 export { integralsModule } from "./integrals";
 export { applicationsModule } from "./applications";
 export { seriesModule } from "./series";
 export { differentialEquationsModule } from "./differential-equations";
-
-// TODO: extract the last two
-// export { applicationsOfIntegrationModule } from "./applications-of-integration";
-// export { multivariableModule } from "./multivariable";
 
 // Note: Other topics still live in the original modules.ts for now.
 // They will be extracted one by one in future commits on this branch.
