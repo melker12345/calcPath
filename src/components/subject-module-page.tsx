@@ -89,7 +89,9 @@ export function SubjectModulePage({
             <h2 className="mb-4 text-2xl font-semibold theme-text">Introduction</h2>
             <div className="prose prose-stone dark:prose-invert max-w-none">
               {lessonModule.intro.map((paragraph, index) => (
-                <MathText key={index} text={paragraph} />
+                <p key={index} className="mb-3 last:mb-0">
+                  <MathText text={paragraph} />
+                </p>
               ))}
             </div>
           </div>
