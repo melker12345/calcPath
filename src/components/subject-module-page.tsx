@@ -114,7 +114,11 @@ export function SubjectModulePage({
                       </div>
                     );
                   }
-                  return <MathText key={index} text={paragraph} />;
+                  return (
+                    <p key={index} className="mb-3 last:mb-0">
+                      <MathText text={paragraph} />
+                    </p>
+                  );
                 })}
               </div>
 
@@ -125,7 +129,9 @@ export function SubjectModulePage({
                   </div>
                   <div className="space-y-3 text-sm leading-relaxed theme-text-secondary">
                     {section.eli5.map((paragraph: string, index: number) => (
-                      <MathText key={index} text={paragraph} />
+                      <p key={index} className="mb-2 last:mb-0">
+                        <MathText text={paragraph} />
+                      </p>
                     ))}
                   </div>
                 </div>
