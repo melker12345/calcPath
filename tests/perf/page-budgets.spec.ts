@@ -1,6 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import { routeBudgets, type RouteBudget } from "./routes";
 
+/**
+ * Performance budget regression tests (CI guardrails).
+ *
+ * These tests enforce hard upper limits and will fail on regression.
+ */
+
 type BrowserMetrics = {
   documentTransferBytes: number;
   scriptTransferBytes: number;

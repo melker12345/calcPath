@@ -257,6 +257,31 @@ export function LandingContent() {
                   <div className="mt-9 border-t theme-border pt-6 text-sm theme-text-muted">
                     All material is freely available. No login required to read or practice.
                   </div>
+
+                  {/* Bottom-of-experience navigation to subjects so users don't have to wheel back up */}
+                  <div className="mt-8 pt-6 border-t theme-border">
+                    <p className="text-[11px] uppercase tracking-[0.5px] theme-text-muted mb-2.5">Ready to dive in?</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href="/calculus"
+                        className="rounded-lg border theme-border px-3.5 py-1.5 text-sm font-medium transition hover:bg-[var(--surface-2)] hover:border-[var(--accent)]/40"
+                      >
+                        Calculus
+                      </Link>
+                      <Link
+                        href="/linear-algebra"
+                        className="rounded-lg border theme-border px-3.5 py-1.5 text-sm font-medium transition hover:bg-[var(--surface-2)] hover:border-[var(--accent)]/40"
+                      >
+                        Linear Algebra
+                      </Link>
+                      <Link
+                        href="/statistics"
+                        className="rounded-lg border theme-border px-3.5 py-1.5 text-sm font-medium transition hover:bg-[var(--surface-2)] hover:border-[var(--accent)]/40"
+                      >
+                        Statistics
+                      </Link>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
