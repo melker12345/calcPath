@@ -21,6 +21,7 @@ export { applicationsModule } from "./applications";
 export { seriesModule } from "./series";
 export { differentialEquationsModule } from "./differential-equations";
 export { applicationsOfIntegrationModule } from "./applications-of-integration";
+export { multivariableModule } from "./multivariable";
 // Note: multivariableModule content has been extracted but has a minor parse artifact at the end.
 // It will be cleaned up in a follow-up commit.
 
