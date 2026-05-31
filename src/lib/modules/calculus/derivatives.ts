@@ -1,7 +1,344 @@
 import type { ModuleContent } from "../types";
 
 /**
- * derivatives (placeholder during migration)
- * Content will be moved here from the original monolithic modules.ts
+ * Derivatives
+ * Extracted from the original monolithic modules.ts
  */
-export const derivativesModule: ModuleContent = {} as ModuleContent; // TODO: move content
+
+export const derivativesModule: ModuleContent = {
+    topicId: "derivatives",
+    title: "Derivatives",
+    intro: [
+      "The derivative of a function measures its instantaneous rate of change at any point. Geometrically, $f'(a)$ is the slope of the tangent line to $y = f(x)$ at $x = a$.",
+      "Derivatives power every optimization problem, every physics equation involving rates, and every approximation method in applied math. If you understand derivatives deeply, the rest of calculus becomes much easier.",
+      "The formal definition is $f'(a) = \\lim_{h\\to 0} \\frac{f(a+h)-f(a)}{h}$. This limit captures the idea of zooming in on a curve until it looks like a straight line, then measuring that line's slope.",
+    ],
+    sections: [
+      {
+        title: "The definition and what it means",
+        section: "definition",
+        body: [
+          "The derivative $f'(x) = \\lim_{h\\to 0} \\frac{f(x+h)-f(x)}{h}$ is the limit of the difference quotient. The difference quotient $\\frac{f(x+h)-f(x)}{h}$ is the slope of a secant line through two nearby points on the graph of $f$.",
+          "As $h\\to 0$, the secant line becomes the tangent line, and its slope becomes the derivative. This is the geometric heart of the derivative: zoom in far enough on any smooth curve and it looks like a straight line. The derivative measures the slope of that local line.",
+          "If this limit exists at $x=a$, we say $f$ is differentiable at $a$. Differentiability implies continuity — if $f$ is differentiable at $a$, then $f$ is also continuous at $a$. The converse is false: $|x|$ is continuous at $0$ but not differentiable (it has a sharp corner where two lines meet at different slopes).",
+          "Places where differentiability fails: sharp corners (like $|x|$), cusps (like $x^{2/3}$), vertical tangent lines (like $\\sqrt[3]{x}$ at $0$), and discontinuities. At all of these points, the limit of the difference quotient either doesn't exist or is infinite.",
+        ],
+        eli5: [
+          "Imagine zooming in on a curve with a magnifying glass. The more you zoom, the more the curve looks like a straight line. The slope of that 'zoomed-in line' is the derivative.",
+          "A sharp corner (like the tip of a V) can never be zoomed into a single straight line — from the left it looks like one slope, from the right a different slope. That's why corners don't have derivatives.",
+        ],
+        examples: [
+          {
+            title: "Computing a derivative from the definition",
+            steps: [
+              "Find $f'(x)$ for $f(x) = x^2 + 3x$ using the limit definition.",
+              "$f'(x) = \\lim_{h\\to 0} \\frac{f(x+h) - f(x)}{h}$.",
+              "Expand $f(x+h) = (x+h)^2 + 3(x+h) = x^2 + 2xh + h^2 + 3x + 3h$.",
+              "Subtract $f(x)$: $f(x+h) - f(x) = 2xh + h^2 + 3h$.",
+              "Divide by $h$: $\\frac{2xh + h^2 + 3h}{h} = 2x + h + 3$.",
+              "Take the limit: $\\lim_{h\\to 0} (2x + h + 3) = 2x + 3$.",
+              "So $f'(x) = 2x + 3$. This matches the power rule ($2x$) plus the derivative of $3x$ ($3$).",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Core differentiation rules",
+        section: "rules",
+        body: [
+          "Power rule: $\\frac{d}{dx} x^n = nx^{n-1}$ for any real number $n$. This works for negative and fractional exponents too: $\\frac{d}{dx} x^{-2} = -2x^{-3}$ and $\\frac{d}{dx} \\sqrt{x} = \\frac{1}{2\\sqrt{x}}$.",
+          "Constant multiple rule: $\\frac{d}{dx}[cf(x)] = c f'(x)$. Constants pass through the derivative.",
+          "Sum/difference rule: $\\frac{d}{dx}[f(x) \\pm g(x)] = f'(x) \\pm g'(x)$. Differentiate term by term.",
+          "Constant rule: $\\frac{d}{dx}[c] = 0$. The derivative of any constant is zero.",
+        ],
+        examples: [
+          {
+            title: "Using the power rule on a polynomial",
+            steps: [
+              "Find $\\frac{d}{dx}(3x^4 - 5x^2 + 7x - 2)$.",
+              "Apply the rules term by term: sum rule lets us differentiate each term separately, constant multiple rule pulls out the coefficients.",
+              "First term: $\\frac{d}{dx}(3x^4) = 3 \\cdot 4x^3 = 12x^3$ (power rule: bring down the $4$, reduce exponent by $1$).",
+              "Second term: $\\frac{d}{dx}(-5x^2) = -5 \\cdot 2x = -10x$.",
+              "Third term: $\\frac{d}{dx}(7x) = 7 \\cdot 1 = 7$ (since $x = x^1$, power rule gives $1 \\cdot x^0 = 1$).",
+              "Fourth term: $\\frac{d}{dx}(-2) = 0$ (constant rule).",
+              "Combine: $\\frac{d}{dx}(3x^4 - 5x^2 + 7x - 2) = 12x^3 - 10x + 7$.",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Derivatives of common functions",
+        section: "common",
+        body: [
+          "Exponentials: $\\frac{d}{dx} e^x = e^x$ — the defining property of $e$. No other function equals its own derivative. More generally, $\\frac{d}{dx} a^x = a^x \\ln a$ (the $\\ln a$ factor accounts for the base).",
+          "Logarithms: $\\frac{d}{dx} \\ln x = \\frac{1}{x}$ for $x > 0$. This is why $\\ln x$ appears everywhere in integration — it's the antiderivative of $1/x$. More generally, $\\frac{d}{dx} \\log_a x = \\frac{1}{x \\ln a}$.",
+          "Trigonometric: $\\frac{d}{dx} \\sin x = \\cos x$, $\\frac{d}{dx} \\cos x = -\\sin x$ (note the negative sign!), $\\frac{d}{dx} \\tan x = \\sec^2 x$.",
+          "More trig: $\\frac{d}{dx} \\sec x = \\sec x \\tan x$, $\\frac{d}{dx} \\csc x = -\\csc x \\cot x$, $\\frac{d}{dx} \\cot x = -\\csc^2 x$. Notice the pattern: the 'co-' functions ($\\cos$, $\\csc$, $\\cot$) always pick up a negative sign.",
+          "These formulas are non-negotiable — they must be committed to memory. Every more complex derivative ultimately reduces to combinations of these through the product, quotient, and chain rules.",
+        ],
+        eli5: [
+          "Think of these as the 'vocabulary words' of calculus. Just like you can't write sentences without knowing words, you can't compute derivatives without knowing these basic building blocks. The rules (product, quotient, chain) are the grammar; these formulas are the words.",
+          "The pattern to notice: trig derivatives cycle — $\\sin \\to \\cos \\to -\\sin \\to -\\cos \\to \\sin \\to \\ldots$. And the 'co-' functions always introduce an extra negative sign.",
+        ],
+      },
+      {
+        title: "Product rule",
+        section: "product",
+        body: [
+          "When two functions are multiplied: $(fg)' = f'g + fg'$.",
+          "Think of it as: \"derivative of the first times the second, plus the first times the derivative of the second.\"",
+          "Example: $\\frac{d}{dx}[x^2 \\sin x] = 2x \\sin x + x^2 \\cos x$.",
+          "Tip: always check if you can simplify the expression first. Sometimes you don't need the product rule at all.",
+        ],
+        examples: [
+          {
+            title: "Product rule with exponential and polynomial",
+            steps: [
+              "Find $\\frac{d}{dx}[x^3 e^x]$.",
+              "Identify the two functions: $f(x) = x^3$ and $g(x) = e^x$.",
+              "Find each derivative: $f'(x) = 3x^2$ and $g'(x) = e^x$.",
+              "Apply the product rule: $(fg)' = f'g + fg' = 3x^2 \\cdot e^x + x^3 \\cdot e^x$.",
+              "Factor out common terms: $e^x(3x^2 + x^3) = x^2 e^x(3 + x)$.",
+              "Final answer: $\\frac{d}{dx}[x^3 e^x] = x^2 e^x(x + 3)$.",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Quotient rule",
+        section: "quotient",
+        body: [
+          "For a ratio of functions: $\\left(\\frac{f}{g}\\right)' = \\frac{f'g - fg'}{g^2}$. The order matters — it's $f'g$ first, then subtract $fg'$.",
+          "Memory aid: \"low d-high minus high d-low, over the square of what's below.\" Here 'high' is the numerator $f$, 'low' is the denominator $g$, and 'd-' means 'derivative of.'",
+          "Alternative: you can often rewrite $f/g$ as $f \\cdot g^{-1}$ and use the product rule with the chain rule instead. For simple denominators, sometimes pure algebra avoids the quotient rule entirely.",
+          "When to definitely use the quotient rule: when the denominator is a non-trivial function (like $\\cos x$, $e^x + 1$, etc.) and rewriting would be messier than just applying the formula.",
+        ],
+        examples: [
+          {
+            title: "Quotient rule with trigonometric functions",
+            steps: [
+              "Find $\\frac{d}{dx}\\frac{x^2}{\\cos x}$.",
+              "Identify: $f = x^2$, $g = \\cos x$, $f' = 2x$, $g' = -\\sin x$.",
+              "Apply the formula: $\\frac{f'g - fg'}{g^2} = \\frac{2x \\cos x - x^2(-\\sin x)}{\\cos^2 x}$.",
+              "Simplify: $\\frac{2x\\cos x + x^2\\sin x}{\\cos^2 x}$.",
+              "Factor: $\\frac{x(2\\cos x + x\\sin x)}{\\cos^2 x}$.",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Chain rule",
+        section: "chain",
+        body: [
+          "The chain rule handles compositions: if $y = f(g(x))$, then $\\frac{dy}{dx} = f'(g(x)) \\cdot g'(x)$.",
+          "In words: derivative of the outer function (evaluated at the inner function) times the derivative of the inner function.",
+          "Example: $\\frac{d}{dx} \\sin(x^3) = \\cos(x^3) \\cdot 3x^2$. The outer function is $\\sin$, the inner function is $x^3$.",
+          "Nested chains: for $e^{\\sin(x^2)}$, apply the chain rule twice: $e^{\\sin(x^2)} \\cdot \\cos(x^2) \\cdot 2x$.",
+          "The chain rule is arguably the most important rule. It appears everywhere: in implicit differentiation, related rates, and integration by substitution.",
+        ],
+        examples: [
+          {
+            title: "Chain rule with a nested composition",
+            steps: [
+              "Find $\\frac{d}{dx} \\ln(\\cos x)$.",
+              "Identify the outer and inner functions. Outer: $\\ln(u)$ where $u = \\cos x$. Inner: $\\cos x$.",
+              "Derivative of the outer function: $\\frac{d}{du} \\ln u = \\frac{1}{u}$, evaluated at $u = \\cos x$ gives $\\frac{1}{\\cos x}$.",
+              "Derivative of the inner function: $\\frac{d}{dx} \\cos x = -\\sin x$.",
+              "Multiply them (chain rule): $\\frac{1}{\\cos x} \\cdot (-\\sin x) = -\\frac{\\sin x}{\\cos x} = -\\tan x$.",
+              "Final answer: $\\frac{d}{dx} \\ln(\\cos x) = -\\tan x$.",
+            ],
+          },
+          {
+            title: "Double chain rule",
+            steps: [
+              "Find $\\frac{d}{dx} e^{\\sin(x^2)}$.",
+              "There are three nested layers: $e^{(\\cdot)}$, then $\\sin(\\cdot)$, then $x^2$. We peel them off one at a time.",
+              "Outermost layer: $\\frac{d}{du} e^u = e^u$, evaluated at $u = \\sin(x^2)$ gives $e^{\\sin(x^2)}$.",
+              "Middle layer: $\\frac{d}{dv} \\sin v = \\cos v$, evaluated at $v = x^2$ gives $\\cos(x^2)$.",
+              "Innermost layer: $\\frac{d}{dx} x^2 = 2x$.",
+              "Multiply all three together: $e^{\\sin(x^2)} \\cdot \\cos(x^2) \\cdot 2x$.",
+              "Final answer: $\\frac{d}{dx} e^{\\sin(x^2)} = 2x \\cos(x^2)\\, e^{\\sin(x^2)}$.",
+            ],
+          },
+        ],
+        eli5: [
+          "Imagine a machine with two gears connected together. The big gear turns the small gear. If you want to know how fast the final output changes, you need to know two things: how fast the big gear turns the small gear, and how fast the small gear turns on its own.",
+          "That's the chain rule. If you have a function inside another function (like $\\sin$ of $x^3$), the rate of change of the whole thing is: how fast the outer part changes × how fast the inner part changes.",
+          "A real-world example: temperature affects ice cream sales, and ice cream sales affect your revenue. If temperature goes up by 1°, sales go up by 50 cones, and each cone gives you \\$3, then your revenue goes up by $50 \\times 3 = 150$ dollars per degree. You multiplied the two rates together — that's the chain rule.",
+        ],
+      },
+      {
+        title: "Inverse trigonometric derivatives",
+        section: "invtrig",
+        body: [
+          "$\\frac{d}{dx} \\arcsin x = \\frac{1}{\\sqrt{1-x^2}}$, valid for $|x| < 1$. The domain restriction comes from the original function: $\\arcsin$ only takes inputs between $-1$ and $1$.",
+          "$\\frac{d}{dx} \\arccos x = -\\frac{1}{\\sqrt{1-x^2}}$. Notice this is exactly the negative of $\\arcsin$'s derivative. This makes sense because $\\arcsin x + \\arccos x = \\pi/2$ (they always add to a right angle), so their derivatives must be negatives of each other.",
+          "$\\frac{d}{dx} \\arctan x = \\frac{1}{1+x^2}$. This is the most commonly used inverse trig derivative. It appears constantly in integration (the antiderivative of $\\frac{1}{1+x^2}$ is $\\arctan x + C$).",
+          "With the chain rule: $\\frac{d}{dx} \\arctan(g(x)) = \\frac{g'(x)}{1+[g(x)]^2}$. For example, $\\frac{d}{dx} \\arctan(3x) = \\frac{3}{1+9x^2}$.",
+          "Where these come from: use implicit differentiation. If $y = \\arcsin x$, then $\\sin y = x$. Differentiate: $\\cos y \\cdot y' = 1$, so $y' = 1/\\cos y = 1/\\sqrt{1-\\sin^2 y} = 1/\\sqrt{1-x^2}$.",
+        ],
+        eli5: [
+          "Inverse trig functions answer questions like: 'What angle has a sine of $0.5$?' The derivative tells you how sensitive that angle is to small changes in the input value.",
+          "The square-root expressions ($\\sqrt{1-x^2}$, $1+x^2$) come from the Pythagorean theorem. When you 'unwrap' the inverse function using a right triangle, the missing side gives you the derivative.",
+        ],
+        examples: [
+          {
+            title: "Inverse trig derivative with the chain rule",
+            steps: [
+              "Find $\\frac{d}{dx} \\arcsin(x^2)$.",
+              "Use the chain rule: outer function is $\\arcsin(u)$ with $u = x^2$.",
+              "Derivative of outer: $\\frac{1}{\\sqrt{1-u^2}}$ evaluated at $u = x^2$ gives $\\frac{1}{\\sqrt{1-x^4}}$.",
+              "Derivative of inner: $\\frac{d}{dx}(x^2) = 2x$.",
+              "Multiply: $\\frac{d}{dx} \\arcsin(x^2) = \\frac{2x}{\\sqrt{1-x^4}}$.",
+              "Domain: requires $|x^2| < 1$, i.e., $|x| < 1$.",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Implicit differentiation",
+        section: "implicit",
+        body: [
+          "When $y$ is defined implicitly by an equation like $x^2 + y^2 = 25$, differentiate both sides with respect to $x$.",
+          "Every time you differentiate a $y$ term, attach a $\\frac{dy}{dx}$ factor (this is the chain rule in action: $y$ is a function of $x$).",
+          "Example: differentiate $x^2 + y^2 = 25$ to get $2x + 2y\\frac{dy}{dx} = 0$, then solve $\\frac{dy}{dx} = -\\frac{x}{y}$.",
+          "Implicit differentiation is essential for curves that can't be written as $y = f(x)$, such as circles, ellipses, and other relations.",
+        ],
+        examples: [
+          {
+            title: "Implicit differentiation of a circle",
+            steps: [
+              "Find $\\frac{dy}{dx}$ for $x^2 + y^2 = 25$.",
+              "Differentiate both sides with respect to $x$. Remember: $y$ is a function of $x$, so we must use the chain rule on $y$ terms.",
+              "Left side: $\\frac{d}{dx}(x^2) + \\frac{d}{dx}(y^2) = 2x + 2y \\frac{dy}{dx}$.",
+              "The $2y \\frac{dy}{dx}$ came from the chain rule: $\\frac{d}{dx}(y^2) = 2y \\cdot \\frac{dy}{dx}$.",
+              "Right side: $\\frac{d}{dx}(25) = 0$.",
+              "So: $2x + 2y \\frac{dy}{dx} = 0$.",
+              "Solve for $\\frac{dy}{dx}$: $2y\\frac{dy}{dx} = -2x$, therefore $\\frac{dy}{dx} = -\\frac{x}{y}$.",
+              "At the point $(3, 4)$ on the circle: $\\frac{dy}{dx} = -\\frac{3}{4}$. This makes geometric sense — the tangent line at $(3,4)$ on a circle centered at the origin should slope downward to the right.",
+            ],
+          },
+        ],
+        eli5: [
+          "Usually, you have a nice equation like $y = x^2 + 3$ where $y$ is alone on one side. But sometimes $x$ and $y$ are tangled together, like in $x^2 + y^2 = 25$ (a circle). You can't easily solve for $y$.",
+          "Implicit differentiation says: just differentiate everything with respect to $x$ anyway. Whenever you hit a $y$, remember that $y$ secretly depends on $x$, so slap on a $\\frac{dy}{dx}$ (that's just the chain rule). Then solve for $\\frac{dy}{dx}$.",
+          "It's like a detective figuring out how fast a hidden variable changes by looking at the equation it's trapped in.",
+        ],
+      },
+      {
+        title: "Logarithmic differentiation",
+        section: "logdiff",
+        body: [
+          "For complicated products, quotients, or expressions where the variable appears in both the base and exponent (like $x^x$), take the natural log of both sides first, then differentiate implicitly.",
+          "Why it works: $\\ln$ converts products into sums ($\\ln(fg) = \\ln f + \\ln g$), quotients into differences ($\\ln(f/g) = \\ln f - \\ln g$), and powers into products ($\\ln(f^g) = g \\ln f$). These are all easier to differentiate.",
+          "The procedure: let $y = f(x)$, take $\\ln$ of both sides, simplify using log properties, differentiate implicitly ($\\frac{1}{y} \\frac{dy}{dx} = \\ldots$), then solve for $\\frac{dy}{dx}$ by multiplying both sides by $y$.",
+          "This is the only way to differentiate variable-base, variable-exponent expressions like $x^{\\sin x}$ or $(\\ln x)^x$. Neither the power rule nor the exponential rule applies when both the base and exponent depend on $x$.",
+        ],
+        eli5: [
+          "Some expressions are like nested puzzles — the variable is both the base and the exponent, so no single rule works. Logarithmic differentiation is like taking the puzzle apart first. The logarithm untangles the messy structure into simple pieces that you know how to differentiate, and then you put the answer back together.",
+        ],
+        examples: [
+          {
+            title: "Logarithmic differentiation of $x^x$",
+            steps: [
+              "Find $\\frac{d}{dx} x^x$ for $x > 0$.",
+              "Let $y = x^x$. Take $\\ln$ of both sides: $\\ln y = x \\ln x$.",
+              "Differentiate both sides with respect to $x$. Left side: $\\frac{1}{y}\\frac{dy}{dx}$ (chain rule on $\\ln y$).",
+              "Right side: product rule on $x \\ln x$: $1 \\cdot \\ln x + x \\cdot \\frac{1}{x} = \\ln x + 1$.",
+              "So $\\frac{1}{y}\\frac{dy}{dx} = \\ln x + 1$.",
+              "Multiply both sides by $y = x^x$: $\\frac{dy}{dx} = x^x(\\ln x + 1)$.",
+              "Note: $x^x$ is only defined for $x > 0$, and the derivative is zero when $\\ln x = -1$, i.e., $x = 1/e$.",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Higher-order derivatives",
+        section: "higherorder",
+        body: [
+          "The second derivative $f''(x)$ is the derivative of $f'(x)$. It measures how the rate of change itself is changing — the 'rate of the rate.'",
+          "Notation: $f''(x)$, $\\frac{d^2y}{dx^2}$, or $y''$. For higher orders: $f'''(x)$, $f^{(4)}(x)$, etc. The notation $\\frac{d^2y}{dx^2}$ reminds you that you're applying $\\frac{d}{dx}$ twice.",
+          "Physical meaning: if $s(t)$ is position, then $s'(t)$ is velocity (how fast position changes) and $s''(t)$ is acceleration (how fast velocity changes). A car accelerating has positive $s''$; a car braking has negative $s''$.",
+          "The second derivative tells you about concavity: $f''(x) > 0$ means concave up (the curve bends upward, like a bowl), $f''(x) < 0$ means concave down (bends downward, like a hill). This is central to the second derivative test for classifying extrema.",
+          "Higher-order derivatives appear in Taylor series: the $n$th coefficient uses $f^{(n)}(a)$, letting you approximate any smooth function with a polynomial. Some functions (like $e^x$ and $\\sin x$) have patterns in their higher derivatives that make the Taylor series elegant.",
+        ],
+        eli5: [
+          "The first derivative tells you speed — how fast the function is changing. The second derivative tells you acceleration — is the change itself speeding up or slowing down?",
+          "When you drive a car: position → velocity (first derivative, how fast you're going) → acceleration (second derivative, are you pressing the gas or the brake?). The third derivative is sometimes called 'jerk' — how suddenly you slam the gas pedal.",
+        ],
+        examples: [
+          {
+            title: "Computing higher-order derivatives",
+            steps: [
+              "Find $f''(x)$ for $f(x) = x^4 - 3x^2 + 5x$.",
+              "First derivative: $f'(x) = 4x^3 - 6x + 5$.",
+              "Second derivative: $f''(x) = 12x^2 - 6$.",
+              "Third derivative: $f'''(x) = 24x$.",
+              "Fourth derivative: $f^{(4)}(x) = 24$.",
+              "Fifth and beyond: $f^{(n)}(x) = 0$ for $n \\geq 5$. Any polynomial of degree $n$ has all derivatives beyond the $n$th equal to zero.",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Tangent lines and linearization",
+        section: "tangent",
+        body: [
+          "The tangent line to $f$ at $x = a$ is: $y = f(a) + f'(a)(x - a)$. This is the best linear approximation near $a$.",
+          "Linearization: $f(x) \\approx f(a) + f'(a)(x-a)$ for $x$ close to $a$. This is incredibly useful for quick estimates.",
+          "Example: approximate $\\sqrt{4.1}$. Use $f(x) = \\sqrt{x}$ at $a = 4$: $f'(x) = \\frac{1}{2\\sqrt{x}}$, $f'(4) = \\frac{1}{4}$.",
+          "Linearization gives $\\sqrt{4.1} \\approx 2 + \\frac{1}{4}(0.1) = 2.025$. The actual value is $2.02485...$, very close!",
+          "Differentials: $dy = f'(x)\\,dx$ gives the approximate change in $y$ for a small change $dx$ in $x$.",
+        ],
+      },
+      {
+        title: "Interpreting the derivative graphically",
+        section: "graphical",
+        body: [
+          "$f'(x) > 0$ on an interval means $f$ is increasing (going uphill) there. $f'(x) < 0$ means $f$ is decreasing (going downhill). The magnitude $|f'(x)|$ tells you how steep the slope is.",
+          "Where $f'(x) = 0$, the tangent line is horizontal. These are critical points — candidates for local maxima, local minima, or inflection points.",
+          "The sign of $f'$ changing from $+$ to $-$ at a critical point signals a local maximum (function goes up then down). From $-$ to $+$ signals a local minimum (down then up). If $f'$ doesn't change sign, the critical point is neither (e.g., $f(x)=x^3$ at $x=0$ — the function flattens momentarily but keeps going in the same direction).",
+          "Reading $f'$'s graph to understand $f$: where $f'$ is above the $x$-axis, $f$ is climbing. Where $f'$ is below, $f$ is falling. The $x$-intercepts of $f'$ correspond to the peaks and valleys (or flat inflection points) of $f$. The higher $|f'|$ is, the steeper $f$ is at that point.",
+          "You can also go the other way: given the graph of $f$, sketch $f'$ by estimating the slope at various points. Steep uphill = large positive $f'$; flat = $f'$ near zero; steep downhill = large negative $f'$.",
+        ],
+        eli5: [
+          "The derivative's graph is like a 'steepness report' for the original function. Wherever the report says positive, the original function is climbing uphill. Wherever it says negative, it's going downhill. Wherever the report crosses zero, the original function has a flat moment — a hilltop, a valley, or a brief rest.",
+          "If you've ever seen a trail elevation profile (height vs. distance), the derivative is the steepness at each point along the trail. Positive = uphill, negative = downhill, zero = flat.",
+        ],
+      },
+      {
+        title: "Hyperbolic functions and their derivatives",
+        section: "hyperbolic",
+        body: [
+          "The hyperbolic functions are built from exponentials: $\\sinh x = \\frac{e^x - e^{-x}}{2}$ and $\\cosh x = \\frac{e^x + e^{-x}}{2}$.",
+          "They satisfy $\\cosh^2 x - \\sinh^2 x = 1$ (compare with $\\cos^2 x + \\sin^2 x = 1$ for trig).",
+          "Derivatives mirror trig but without the sign changes: $\\frac{d}{dx} \\sinh x = \\cosh x$ and $\\frac{d}{dx} \\cosh x = \\sinh x$.",
+          "Also: $\\frac{d}{dx} \\tanh x = \\text{sech}^2 x$ where $\\tanh x = \\sinh x / \\cosh x$.",
+          "Inverse hyperbolics have logarithmic forms: $\\sinh^{-1} x = \\ln(x + \\sqrt{x^2+1})$, and their derivatives produce the expressions $\\frac{1}{\\sqrt{x^2+1}}$ and $\\frac{1}{\\sqrt{x^2-1}}$ that appear in integration.",
+          "Applications: catenary curves (hanging chains/cables obey $y = a\\cosh(x/a)$), special relativity (rapidity), and certain differential equations.",
+        ],
+        examples: [
+          {
+            title: "Differentiating a hyperbolic composition",
+            steps: [
+              "Find $\\frac{d}{dx} \\cosh(3x^2)$.",
+              "This is a composition: outer function is $\\cosh(u)$ with $u = 3x^2$.",
+              "Derivative of the outer: $\\frac{d}{du} \\cosh u = \\sinh u$, evaluated at $u = 3x^2$ gives $\\sinh(3x^2)$.",
+              "Derivative of the inner: $\\frac{d}{dx}(3x^2) = 6x$.",
+              "By the chain rule: $\\frac{d}{dx} \\cosh(3x^2) = 6x\\sinh(3x^2)$.",
+            ],
+          },
+        ],
+      },
+    ],
+    examples: [],
+    commonMistakes: [
+      "Forgetting the inner derivative in the chain rule. This is the single most common error. Always ask: is there a function inside another function?",
+      "Applying the power rule to $e^x$. The derivative of $e^x$ is $e^x$, not $xe^{x-1}$. The power rule is for $x^n$, not $n^x$.",
+      "In implicit differentiation, forgetting to multiply by $\\frac{dy}{dx}$ whenever you differentiate a $y$ term.",
+      "Using the quotient rule when simple algebra would work. For instance, $\\frac{x^3}{x} = x^2$ is easier to differentiate directly.",
+      "Confusing the derivative of $\\ln(f(x))$ with $\\frac{1}{f(x)}$. The correct answer is $\\frac{f'(x)}{f(x)}$ by the chain rule.",
+      "Getting signs wrong on trig derivatives: $\\cos x$ differentiates to $-\\sin x$ (not $+\\sin x$).",
+      "Assuming differentiability implies smoothness everywhere. A function can be continuous but not differentiable at corners, cusps, or vertical tangents.",
+    ],
+  };
