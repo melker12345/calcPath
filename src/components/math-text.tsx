@@ -36,6 +36,17 @@ const splitMath = (text: string) => {
     parts.push({ type: inMath ? "math" : "text", value: current });
   }
 
+  // Fix common grammatical spacing issues that appear after math expressions
+  // e.g. "number.The" → "number. The", "too.Classic" → "too. Classic"
+  for (const part of parts) {
+    if (part.type === "text") {
+      part.value = part.value.replace(/\.([A-Z])/g, ". $1");
+      // Also handle ! and ? followed by capital letter
+      part.value = part.value.replace(/!([A-Z])/g, "! $1");
+      part.value = part.value.replace(/\?([A-Z])/g, "? $1");
+    }
+  }
+
   return parts;
 };
 
