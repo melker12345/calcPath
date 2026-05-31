@@ -14,10 +14,17 @@ export type { ModuleContent, ModuleSection, WorkedExample } from "../types";
 
 // Extracted topics
 export { descriptiveModule } from "./descriptive";
+export { probabilityModule } from "./probability";
+export { discreteDistributionsModule } from "./discrete-distributions";
+export { estimationModule } from "./estimation";
+export { regressionModule } from "./regression";
 
-// TODO: extract remaining 9 topics
-// export { probabilityModule } from "./probability";
-// ... etc
+// TODO: extract remaining 5 topics
+// export { continuousDistributionsModule } from "./continuous-distributions";
+// export { samplingModule } from "./sampling";
+// export { hypothesisTestingModule } from "./hypothesis-testing";
+// export { anovaModule } from "./anova";
+// export { nonparametricModule } from "./nonparametric";
 
 // When complete:
 // export const statisticsModules: ModuleContent[] = [
