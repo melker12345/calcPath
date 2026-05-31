@@ -13,7 +13,7 @@ import type { ModuleContent } from "../types";
 export type { ModuleContent, ModuleSection, WorkedExample } from "../types";
 
 // 7/8 calculus topics successfully extracted and wired
-// (multivariable will be re-extracted in next session)
+// (multivariable will be re-extracted cleanly in a future pass)
 export { limitsModule } from "./limits";
 export { derivativesModule } from "./derivatives";
 export { integralsModule } from "./integrals";
