@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
 import { ModuleSectionNav } from "@/components/module-section-nav";
 import { VoteFeedback } from "@/components/vote-feedback";
+import { BlockMath } from "react-katex";
 import type { Topic } from "@/lib/shared-types";
 import type { ModuleContent } from "@/lib/modules/types";
 
@@ -103,9 +104,18 @@ export function SubjectModulePage({
               <h2 className="mb-4 text-2xl font-semibold theme-text">{section.title}</h2>
 
               <div className="prose prose-stone dark:prose-invert max-w-none">
-                {section.body.map((paragraph: string, index: number) => (
-                  <MathText key={index} text={paragraph} />
-                ))}
+                {section.body.map((paragraph: string, index: number) => {
+                  // Render standalone math as BlockMath for better readability
+                  const trimmed = paragraph.trim();
+                  if (trimmed.startsWith('$') && trimmed.endsWith('$') && trimmed.length > 2) {
+                    return (
+                      <div key={index} className="my-4">
+                        <BlockMath math={trimmed.slice(1, -1)} />
+                      </div>
+                    );
+                  }
+                  return <MathText key={index} text={paragraph} />;
+                })}
               </div>
 
               {section.eli5 && section.eli5.length > 0 && (
@@ -143,6 +153,16 @@ export function SubjectModulePage({
                   ))}
                 </div>
               )}
+
+              {/* Per-section practice link */}
+              <div className="mt-4">
+                <Link
+                  href={`/${subjectSlug}/practice/${topicId}?section=${section.section || toSlug(section.title)}`}
+                  className="inline-flex items-center gap-1 text-sm font-medium text-blue-700 hover:underline"
+                >
+                  Practice questions for this section →
+                </Link>
+              </div>
             </div>
           ))}
 
