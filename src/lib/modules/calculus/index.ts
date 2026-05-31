@@ -18,6 +18,7 @@ export { derivativesModule } from "./derivatives";
 export { integralsModule } from "./integrals";
 export { applicationsModule } from "./applications";
 export { seriesModule } from "./series";
+export { differentialEquationsModule } from "./differential-equations";
 
 // Note: Other topics still live in the original modules.ts for now.
 // They will be extracted one by one in future commits on this branch.
