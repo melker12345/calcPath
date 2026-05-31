@@ -86,7 +86,14 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
         }
 
         // Text coming immediately after math
-        const textValue = part.value;
+        let textValue = part.value;
+
+        // Final safeguard: if this text starts with punctuation that belongs to the previous math sentence
+        // (e.g. the "." from "$a$."), make sure it has a space after it before any capital letter.
+        if (isAfterMath) {
+          textValue = textValue.replace(/^([.!?;:]+)([A-Z])/g, "$1 $2");
+        }
+
         const startsWithNewSentence = isAfterMath && /^[A-Z]/.test(textValue.trimStart());
 
         return (
