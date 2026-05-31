@@ -1,12 +1,12 @@
-// @ts-nocheck
 import type { ModuleContent } from "../types";
 
 /**
  * Multivariable & Vector Calculus
- * Final clean extraction for the content scalability refactor.
+ * Properly extracted with balanced brace counting.
  */
 
-export const multivariableModule: ModuleContent = {
+export const multivariableModule: ModuleContent = 
+  {
     topicId: "multivariable",
     title: "Multivariable & Vector Calculus",
     intro: [
@@ -17,7 +17,6 @@ export const multivariableModule: ModuleContent = {
     sections: [
       {
         title: "Vectors and the geometry of space",
-        section: "vectors",
         body: [
           "A vector $\\mathbf{v} = \\langle a, b, c \\rangle$ in $\\mathbb{R}^3$ has magnitude $|\\mathbf{v}| = \\sqrt{a^2 + b^2 + c^2}$ and direction.",
           "Dot product: $\\mathbf{u} \\cdot \\mathbf{v} = u_1 v_1 + u_2 v_2 + u_3 v_3 = |\\mathbf{u}||\\mathbf{v}|\\cos\\theta$. It measures how aligned two vectors are. Zero dot product means perpendicular.",
@@ -40,7 +39,6 @@ export const multivariableModule: ModuleContent = {
       },
       {
         title: "Vector functions and space curves",
-        section: "vectorfunc",
         body: [
           "A vector function $\\mathbf{r}(t) = \\langle x(t), y(t), z(t) \\rangle$ traces a curve in 3D space as the parameter $t$ varies. Think of $t$ as time: at each moment, the point $(x(t), y(t), z(t))$ is the particle's position.",
           "The derivative $\\mathbf{r}'(t) = \\langle x'(t), y'(t), z'(t) \\rangle$ is the velocity vector — it points in the direction of motion and its magnitude is the speed.",
@@ -56,7 +54,6 @@ export const multivariableModule: ModuleContent = {
       },
       {
         title: "Partial derivatives",
-        section: "partials",
         body: [
           "For $f(x, y)$, the partial derivative $f_x = \\frac{\\partial f}{\\partial x}$ differentiates with respect to $x$ while treating $y$ as a constant.",
           "Geometrically: $f_x(a, b)$ is the slope of the surface $z = f(x, y)$ in the $x$-direction at the point $(a, b)$.",
@@ -78,7 +75,6 @@ export const multivariableModule: ModuleContent = {
       },
       {
         title: "The gradient vector and directional derivatives",
-        section: "gradient",
         body: [
           "The gradient of $f(x,y)$ is the vector $\\nabla f = \\langle f_x, f_y \\rangle$. It encodes all the directional information about how $f$ changes. Its direction points toward the steepest uphill, and its magnitude $|\\nabla f|$ is the rate of steepest ascent.",
           "The directional derivative of $f$ in the direction of unit vector $\\mathbf{u}$ is $D_{\\mathbf{u}} f = \\nabla f \\cdot \\mathbf{u} = |\\nabla f|\\cos\\theta$, where $\\theta$ is the angle between $\\nabla f$ and $\\mathbf{u}$. This tells you the rate of change of $f$ in any direction.",
@@ -93,7 +89,6 @@ export const multivariableModule: ModuleContent = {
       },
       {
         title: "Optimization and Lagrange multipliers",
-        section: "optimization",
         body: [
           "To find extrema of $f(x,y)$: set $f_x = 0$ and $f_y = 0$ simultaneously. Solutions are critical points.",
           "Second derivative test: compute $D = f_{xx} f_{yy} - (f_{xy})^2$ at a critical point. If $D > 0$ and $f_{xx} > 0$: local min. If $D > 0$ and $f_{xx} < 0$: local max. If $D < 0$: saddle point. If $D = 0$: inconclusive.",
@@ -118,7 +113,6 @@ export const multivariableModule: ModuleContent = {
       },
       {
         title: "Multiple integrals",
-        section: "multiint",
         body: [
           "A double integral $\\iint_R f(x,y)\\,dA$ computes the volume under $z = f(x,y)$ over a region $R$ in the $xy$-plane.",
           "Iterated integrals: $\\iint_R f\\,dA = \\int_a^b \\int_{g_1(x)}^{g_2(x)} f(x,y)\\,dy\\,dx$. Evaluate the inner integral first (treating the outer variable as a constant).",
@@ -145,7 +139,6 @@ export const multivariableModule: ModuleContent = {
       },
       {
         title: "Vector fields",
-        section: "vectorfields",
         body: [
           "A vector field assigns a vector to every point in space: $\\mathbf{F}(x,y) = \\langle P(x,y), Q(x,y) \\rangle$ in 2D, or $\\mathbf{F}(x,y,z) = \\langle P, Q, R \\rangle$ in 3D. Visually, draw a small arrow at each point showing the direction and magnitude.",
           "Physical examples: gravitational fields (arrows point toward massive objects), electric fields (arrows show the force on a positive charge), fluid velocity fields (arrows show speed and direction of flow at each point), wind maps, and magnetic fields.",
@@ -161,7 +154,6 @@ export const multivariableModule: ModuleContent = {
       },
       {
         title: "Line integrals",
-        section: "lineint",
         body: [
           "A line integral computes a quantity accumulated along a curve $C$ in space. There are two main types, and they answer different questions.",
           "Scalar line integral: $\\int_C f\\,ds = \\int_a^b f(\\mathbf{r}(t)) |\\mathbf{r}'(t)|\\,dt$. Here $ds = |\\mathbf{r}'(t)|\\,dt$ is the arc length element. This computes the 'weighted length' of the curve — for example, the mass of a wire with density $f$ at each point, or the total cost of a path where $f$ is the cost per unit length.",
@@ -189,7 +181,6 @@ export const multivariableModule: ModuleContent = {
       },
       {
         title: "Curl and divergence",
-        section: "curldiv",
         body: [
           "Divergence measures how much a vector field 'spreads out' from a point: $\\text{div}\\,\\mathbf{F} = \\nabla \\cdot \\mathbf{F} = \\frac{\\partial P}{\\partial x} + \\frac{\\partial Q}{\\partial y} + \\frac{\\partial R}{\\partial z}$.",
           "Positive divergence: source (field flows outward). Negative: sink (field flows inward). Zero: incompressible flow.",
@@ -200,7 +191,6 @@ export const multivariableModule: ModuleContent = {
       },
       {
         title: "Green's, Stokes', and the Divergence Theorem",
-        section: "theorems",
         body: [
           "These three theorems are the pinnacle of vector calculus. Each relates an integral over a boundary to an integral over the region it encloses.",
           "Green's Theorem (2D): $\\oint_C P\\,dx + Q\\,dy = \\iint_D \\left(\\frac{\\partial Q}{\\partial x} - \\frac{\\partial P}{\\partial y}\\right) dA$. A line integral around a closed curve equals a double integral over the enclosed region.",
@@ -228,5 +218,4 @@ export const multivariableModule: ModuleContent = {
       "In Stokes' Theorem, using the wrong orientation. The boundary curve and surface normal must be consistently oriented (right-hand rule).",
       "Forgetting the $\\rho^2 \\sin\\phi$ factor in spherical coordinates. This is the 3D analog of the $r$ factor in polar.",
     ],
-  },
-};
+  };
