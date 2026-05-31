@@ -77,25 +77,24 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
         const isAfterMath = prevPart?.type === "math";
 
         if (isMath) {
+          // Consistent small breathing room after every inline math expression
           return (
-            <span key={`${part.value}-${index}`} style={{ marginRight: "0.12em" }}>
+            <span key={`${part.value}-${index}`} style={{ marginRight: "0.15em" }}>
               <InlineMath math={part.value} />
             </span>
           );
         }
 
-        // When text comes right after math and starts with sentence punctuation,
-        // ensure a small visual space so we don't get "1.This" or "too.Classic"
-        const needsSpaceAfterMath =
-          isAfterMath &&
-          /^[.!?;:]/.test(part.value.trimStart());
+        // Text coming immediately after math
+        const textValue = part.value;
+        const startsWithNewSentence = isAfterMath && /^[A-Z]/.test(textValue.trimStart());
 
         return (
           <span
             key={`${part.value}-${index}`}
-            style={needsSpaceAfterMath ? { marginLeft: "0.2em" } : undefined}
+            style={startsWithNewSentence ? { marginLeft: "0.25em" } : undefined}
           >
-            {part.value}
+            {textValue}
           </span>
         );
       })}
