@@ -17,15 +17,15 @@ export default function ExperimentalLayout({
   return (
     <div className={`${subjectHeadingFont.variable} ${subjectBodyFont.variable}`}>
       <CourseLayout>
-        {/* Experimental banner — tasteful, integrated below SiteHeader so the /x/ area feels like a real subject with an explicit data-driven label.
-            Uses amber for clear "experimental" identity without clashing with theme tokens or dark mode. */}
-        <div className="w-full border-b border-amber-200 bg-amber-50/95 px-4 py-2 text-amber-900 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-200 dark:backdrop-blur-sm">
-          <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 text-xs sm:text-sm">
+        {/* Experimental banner — subtle, professional, integrated below SiteHeader.
+            Signals isolation without looking like a warning. Uses only theme tokens / design system for full dark mode + consistency with rest of app. */}
+        <div className="w-full border-b theme-border bg-[var(--surface-2)] px-4 py-2">
+          <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 text-xs sm:text-sm theme-text-muted">
             <div className="flex items-center gap-2">
-              <span className="rounded bg-amber-200 px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-widest text-amber-900 dark:bg-amber-900 dark:text-amber-100">EXPERIMENTAL</span>
+              <span className="rounded border theme-border px-1.5 py-0.5 font-mono text-[10px] font-semibold tracking-[1px] theme-text">EXPERIMENTAL</span>
               <span className="font-medium">/x/ — Fully dynamic content + generic UI (sourced only from content/ JSON + MDX)</span>
             </div>
-            <Link href="/" className="shrink-0 underline hover:no-underline">Exit experimental →</Link>
+            <Link href="/" className="shrink-0 text-[var(--text-muted)] hover:text-[var(--text-secondary)] underline hover:no-underline transition-colors">Exit experimental →</Link>
           </div>
         </div>
 
