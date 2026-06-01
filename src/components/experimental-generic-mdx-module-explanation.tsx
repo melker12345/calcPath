@@ -143,10 +143,8 @@ function parseMdxToStructured(
     const line = rawLine.trim();
 
     if (!line) {
-      // blank line: may end a block in some cases
-      if (collectingEli5 && currentEli5.length > 0) {
-        // keep collecting across blanks sometimes; for now allow
-      }
+      // blank line: ELI5 collection intentionally spans blanks to catch following lists (LA style).
+      // Regular non-list paras after ELI5 will trigger reset below.
       if (collectingWorked && currentWorked) {
         // continue
       }
@@ -290,7 +288,11 @@ function parseMdxToStructured(
 
     // Regular paragraph / content line
     if (collectingEli5) {
-      currentEli5.push(line);
+      // Non-list paragraph after an ELI5 marker signals end of the ELI5 callout block.
+      // (Common pattern: **ELI5**: foo. \n\n Next technical paragraph continues the section body.)
+      // Push this line to body and reset so we don't swallow the rest of the section.
+      collectingEli5 = false;
+      currentSection.body.push(line);
       continue;
     }
     if (collectingWorked && currentWorked) {
