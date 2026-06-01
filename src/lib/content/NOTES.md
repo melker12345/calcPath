@@ -256,55 +256,32 @@ Both agents produced clean, small-commit histories and updated this file with de
 
 ---
 
-## LaTeX + Practice Robustness Fixes (focused on /x/ practice flow) — 2026-06-01
+## Latest /x/ Polish Agents — 2026-06-01
 
-**Agent**: Focused subagent for LaTeX/practice robustness in experimental /x/ (this task).
+### LaTeX + Practice Robustness Fixes (focused on /x/ practice flow)
 
-**Mission (narrow scope, strictly followed)**:
-- Fix broken LaTeX rendering in practice questions and explanations (mangling e.g. "pp-th percentile", glued words w/o spaces around math).
-- Ensure *every* prompt, choice, step, and explanation text goes through MathText (robust splitting + InlineMath/BlockMath) in GenericPracticeExperience and PracticeFeedback.
-- Make the /x/[subject]/practice/[topicId] experience robust: better error handling + graceful fallback when question has bad data or unparseable katex LaTeX; no generic "Something went wrong" for recoverable cases.
-- Improve RichPrompt (eliminate) + explanation paths to *always* use the project's MathText component.
-- Do not touch module viewer, subject browse, or non-practice files (except minimal for practice flow + this NOTES.md as explicitly required).
-- Test mentally vs descriptive statistics questions (lots of $p$, $Q_1$, 25th/90th percentile, $Q_3-Q_1$, \lfloor, \text{IQR}, etc.).
-- Small commits; update this NOTES.md with specifics.
+**Agent**: Focused subagent for LaTeX/practice robustness in experimental /x/.
 
-**Files touched** (only practice flow for /x/):
-- `src/components/math-text.tsx` (core, necessary)
-- `src/components/generic-practice-experience.tsx` (the one used by /x/ practice)
-- `src/components/practice/PracticeFeedback.tsx`
-- `src/app/x/[subject]/practice/[topicId]/page.tsx` (1-line doc update only)
-- `src/lib/content/NOTES.md`
+**Mission (narrow scope)**:
+- Fix broken LaTeX rendering in practice (mangling like "pp-th percentile", glued text around math).
+- Ensure every prompt/choice/step/explanation goes through robust MathText.
+- Add guards so bad LaTeX or malformed questions don't crash the whole practice session.
 
-**Specific changes (via 2 small commits)**:
+**Key changes**:
+- `math-text.tsx`: Robust regex splitter for $ / $$, ordinal-aware spacing (handles "25th", "50th" after math correctly), `SafeInlineMath`/`SafeBlockMath` fallbacks with amber raw display on katex error.
+- `generic-practice-experience.tsx`: Removed `RichPrompt`, always use `<MathText>`, early guard for bad question data with friendly skip button.
+- `PracticeFeedback.tsx`: Reinforced that all explanation paths go through MathText.
 
-1. math-text.tsx:
-   - Replaced char-loop splitter with regex-based robust version supporting paired $...$ (inline) + $$...$$ (blockmath); correctly unescapes \$ in text parts.
-   - Anti-glue spacing logic (in post-math text handling): insert space after math *unless* the following text starts with punctuation or ordinal suffix (st|nd|rd|th\b). This fixes "glued words without spaces around math" while *preserving* correct rendering for "50th percentile", "$p$th", "$25$th", "$Q_1$ (25th...)" patterns.
-   - Added local `MathRenderBoundary` (class component) + `SafeInlineMath` / `SafeBlockMath` helpers. Any katex parse error for a fragment now renders a highlighted raw-math fallback (amber, with title) instead of throwing → prevents full tree error.
-   - Updated all render paths (incl. block=true mode) to use the safes; inline render now uses <> fragment to allow mixed inline+block.
-   - Result: LaTeX in practice now renders cleanly; bad LaTeX is contained.
+**Result**: Descriptive stats practice now renders cleanly; one bad question no longer kills the session.
 
-2. generic-practice-experience.tsx + PracticeFeedback + page:
-   - Eliminated the local `RichPrompt` (always was delegating to MathText; now prompt uses `<MathText text={...}>` directly; choices already did). Updated jsdoc to document "always MathText".
-   - Switched local getHint/finalAnswer impls to the shared `getDefaultHint`/`extractFinalAnswer` (imported from practice barrel) for dedup + guaranteed MathText downstream.
-   - Added robust guard right after `current = ...`: if !current or prompt not string or no explanation → show friendly "invalid data" message + "Skip to next" button (uses goToNext). This + safe MathText means bad question data/LaTeX never hits the /x/ error.tsx "Something went wrong".
-   - Made questionContext derivation safe.
-   - In PracticeFeedback: added/updated comments explicitly stating that steps (renderInternalSteps), hints, and finalAnswer *all* go exclusively through <MathText text=... />. (They already did; now called out for the requirement.)
-   - Tiny docstring update in the dynamic practice page noting the new guarantees in the delegated component.
-   - Unused direct katex imports cleaned.
+### Subject Browse + Module Viewer UX Polish (Expandable Chapters + Inlined Practice Links)
 
-**Outcome**:
-- All practice question text (prompts, MCQ choices, feedback steps/hints/answers, expls) for /x/ now *always* flows through the (now robust) MathText.
-- Descriptive stats Qs (e.g. "find $Q_1$ (25th percentile)", choices with "$Q_3-Q_1$", expls with $\lfloor 0.9 \times 20 \rfloor$, \text{IQR}, etc.) render with correct spacing, no mangle/glue.
-- A question with unparseable LaTeX (e.g. stray "$Q_1" or bad command) shows inline fallback raw source; rest of session (nav, other Qs, input) continues — fully recoverable, no generic error.
-- Small, isolated commits only. No scope creep.
+**Agent**: Focused subagent for browse + module viewer UX.
 
-**Verification notes (mental test)**:
-- Load /x/statistics/practice/descriptive → cycle Qs with percentiles/Qs → all math spaced and rendered (via new logic + safes).
-- Hypothetical bad prompt with "the $p$th percentile of $Q_1$" or malformed → graceful.
-- MCQ choices with embedded math (e.g. "$Q_1-1.5\cdot\text{IQR}$") use MathText → good.
-- Feedback solution steps: each via MathText.
-- If one Q bad, "Skip" still works; no crash to error boundary.
+**Key changes**:
+- `/x/[subject]/page.tsx`: Replaced flat list with expandable `<details>`/`<summary>` rows (exact match to `CourseContentsPage` pattern, including section drill-down).
+- `GenericModuleViewer` + route: Added prominent per-section "Practice questions for this section →" and post-content "Practice questions for this topic →" links.
 
-See git log for the two commits. Ready for /x/ practice testing.
+**Result**: `/x/statistics` (etc.) now has proper expandable chapters. Module pages have clear inline practice CTAs.
+
+**Combined Outcome**: These two agents close the remaining major gaps the user reported (LaTeX in practice, practice crashes, expandable chapters, missing inline practice links). All changes were scoped, used small commits, and updated this file. Ready for final testing on the feature branch.

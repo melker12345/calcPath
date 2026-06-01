@@ -341,6 +341,16 @@ export function GenericModuleViewer({
                     ))}
                   </div>
                 )}
+
+                {/* Prominent per-section practice link (inline after content, matching real SubjectModulePage exactly in spirit + classes) */}
+                <div className="mt-4">
+                  <Link
+                    href={`/x/${subjectSlug}/practice/${topicId}?section=${sectionId || slugify(section.title)}`}
+                    className="inline-flex items-center gap-1 text-sm font-medium text-blue-700 hover:underline"
+                  >
+                    Practice questions for this section →
+                  </Link>
+                </div>
               </div>
             );
           })}
@@ -359,6 +369,16 @@ export function GenericModuleViewer({
               </ul>
             </div>
           )}
+
+          {/* Prominent "Practice questions for this topic" link after main content (visible always, matching spirit of real bottom "Practice this topic" + per-section ones) */}
+          <div className="mt-8">
+            <Link
+              href={`/x/${subjectSlug}/practice/${topicId}`}
+              className="inline-flex items-center gap-1 text-sm font-medium text-blue-700 hover:underline"
+            >
+              Practice questions for this topic →
+            </Link>
+          </div>
 
           {/* Bottom navigation: prev/next topic + Practice using exact btn-secondary / btn-primary from real pages */}
           <div className="mt-12 flex flex-col gap-3 border-t border-[var(--border)] pt-6 sm:flex-row sm:justify-between">
