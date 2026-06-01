@@ -288,7 +288,7 @@ export function GenericModuleViewer({
             <div id="intro" className="scroll-mt-20">
               <h2 className="mb-4 text-2xl font-semibold theme-text">Introduction</h2>
               <div className="prose prose-stone dark:prose-invert max-w-none">
-                <MdxContent mdxSource={parsed.intro.join("\n\n")} className="text-[15px] leading-relaxed" />
+                <MdxContent mdxSource={parsed.intro.join("\n\n")} />
               </div>
             </div>
           )}
@@ -301,7 +301,7 @@ export function GenericModuleViewer({
                 <h2 className="mb-4 text-2xl font-semibold theme-text">{section.title}</h2>
 
                 <div className="prose prose-stone dark:prose-invert max-w-none">
-                  <MdxContent mdxSource={section.body.join("\n\n")} className="text-[15px] leading-relaxed" />
+                  <MdxContent mdxSource={section.body.join("\n\n")} />
                 </div>
 
                 {section.eli5 && section.eli5.length > 0 && (
