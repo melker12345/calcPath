@@ -335,6 +335,32 @@ New counts (from `content/statistics/topics/*/questions.json`):
 - [x] logistic-regression: now 12/12 (added the 5 missing: separation-1, odds-2, or-2, threshold-1, events-1; appended to existing 7).
 - [x] sampling: 39/39 (no cross files for this topic).
 
+**Remaining Statistics topics ported in subsequent small, frequent commits (following identical systematic process: full read of legacy .ts, extract+convert all objects preserving IDs+text exactly, include cross-file questions for topicId parity, search_replace on target questions.json, update this NOTES, git commit)**:
+- [x] estimation: 40/40 (+2 cross "inf-*" from inference.ts)
+- [x] hypothesis-testing: 40/40 (+3 cross from inference.ts)
+- [x] anova: 39/39
+- [x] regression: 38/38
+- [x] multiple-regression: 18/18
+- [x] nonparametric: 39/39
+- [x] stochastic-processes: 26/26
+
+**Result for Statistics**: All 14 topics now at exact legacy parity (total 461 questions in content/statistics/.../questions.json). /x/statistics practice now has complete question sets per topic.
+
+**Subject/Topic index.json updates**: None needed or performed. Per schema (TopicSchema/SubjectIndexSchema), no `estimatedQuestions` or similar field exists (counts are derived by loader from questions.json length at runtime). No metadata changes to content/statistics/index.json or per-topic index.json (would require schema/code updates, out of scope per instructions).
+
+**Linear Algebra & Calculus**: Already at full parity (336 and 435) as audited; no ports or changes.
+
+**Commits**: 1 initial audit + 1 per major port (discrete, continuous, logistic, sampling + grouped notes for rest) + final = ~10 small commits total, all only touching allowed files.
+
+**Verification approach used**: 
+- Legacy counts via grep "id:" + topicId: "xxx" on src/lib/*-questions/ (cross files accounted).
+- New counts via grep "id": on content/.../questions.json (and spot read_file for structure/IDs).
+- IDs stable and preserved 1:1 (e.g. "desc-*" etc unchanged for progress compat).
+- JSON valid, matches exact existing examples (no topicId, order id/section/type/difficulty/prompt/answer/choices?/explanation, LaTeX preserved).
+
+Task complete. /x/ practice experience now feels complete for stats (and was already for LA/calc).
+
+
 ### Linear Algebra (9 topics, legacy total 336)
 - All topics at exact parity 336/336 in `content/linear-algebra/topics/*/questions.json` (previously completed in LA Completion Agent work). No action needed.
 
