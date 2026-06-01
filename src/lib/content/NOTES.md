@@ -253,3 +253,32 @@ All changes via many small commits (see git log on branch). Full flow demonstrab
 **Combined Outcome (both agents)**: The /x/ area is now dramatically closer to feeling like a native part of the application — both in broad visual language and in the depth of the explanation viewing experience. All changes were styling/structure only (no behavior or data changes). 
 
 Both agents produced clean, small-commit histories and updated this file with detailed notes. Ready for testing on the feature branch.
+
+---
+
+## Subject Browse + Module Viewer UX Polish (Expandable Chapters + Inlined Practice Links) — 2026-06-01
+
+**Agent**: Focused Grok Build subagent (subject browse + GenericModuleViewer UX polish).
+
+**Mission (narrow scope, strictly adhered to)**:
+- Make topic list at /x/[subject] (e.g. /x/statistics) have expandable chapter/rows exactly like real CourseContentsPage: click to expand showing more details, question counts, module sections (if avail) etc. Use same <ol> + toggle pattern.
+- In GenericModuleViewer (module/explanation pages): add prominent inlined "Practice questions for this section →" (per-section) and "Practice questions for this topic →" (after main content), matching spirit of real SubjectModulePage.
+- Changes *strictly limited* to: src/app/x/[subject]/page.tsx , src/components/generic-module-viewer.tsx , src/app/x/[subject]/modules/[topicId]/page.tsx , and this NOTES.md.
+- Feel native + consistent with recent /x/ visual + structural parity polish work.
+- Small commits throughout + this NOTES update.
+- **Never touched**: practice code/paths/components, LaTeX, generic-practice/*, content loader, schema, course-contents-page.tsx, experimental-generic-*.tsx, any main app subject pages, or created any new files.
+
+**Implementation notes**:
+- Browse page (/x/[subject]/page.tsx): Server component. Added lightweight server-side extractSections() + questionCounts + modulesByTopic precompute (parsing H2s from mdxModule sources for the "module info" in expands). Replaced flat grid cards with <ol class="... divide-y ..."> + <li> + <details class="group">/<summary> ... </summary> + conditional expanded sections <ul> (with #anchors). Copied exact markup, classes (theme-*, hover:bg-[var(--surface-2)], btn accents, chevrons, chapter nums, line-clamp, mono section nums), Link stopPropagation, svg chevron (now using group-open:rotate-90 + group-hover), from CourseContentsPage. All links /x/ prefixed. Kept experimental chrome + "loaded purely from content/" stats + bottom note. Uses native <details> for zero-JS expand (avoids client/server split or new files).
+- GenericModuleViewer: Added the per-section practice link (after examples block, inside sections.map, using sectionId + ?section= query) with exact inline classes from real ("inline-flex items-center gap-1 text-sm font-medium text-blue-700 hover:underline"). Also added post-content "Practice questions for this topic →" link before bottom nav (always visible). Bottom "Practice this topic" (conditional) left as-is.
+- Modules route page: Tiny docstring update only.
+- All via small, logical git commits (see log).
+
+**Files touched (strict scope)**: only the three listed + NOTES.md.
+
+**Result**: 
+- /x/[subject] topic lists now have the exact same expandable chapter UX (details, questions, sections drilldown) as real subject homes (e.g. /statistics). Feels completely native.
+- Module/explanation pages (/x/.../modules/[topic]) now have the prominent inlined practice links per-section + after content, just like real.
+- Zero scope creep. Ready for /x/ users (try /x/statistics , expand a topic, click into module, see practice links after sections).
+
+All changes via frequent small commits + this NOTES update. Consistent with "polish" ethos of prior /x/ agents.
