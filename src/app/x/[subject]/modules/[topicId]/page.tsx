@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getFileSystemContentBundle } from "@/lib/content/loader";
 import { GenericModuleViewer } from "@/components/generic-module-viewer";
@@ -26,9 +27,11 @@ export default async function DynamicModulePage({ params }: Props) {
 
   if (!mdxModule || !topic) {
     return (
-      <div className="px-4 py-12">
-        <p className="text-sm">No MDX explanation data for topic “{topicId}” in this subject yet (or topic unknown).</p>
-        <a href={`/x/${subjectSlug}`} className="mt-4 inline-block text-sm underline">Back to browse</a>
+      <div className="px-4 py-12 sm:px-6">
+        <div className="mx-auto max-w-2xl theme-text-secondary">
+          <p className="text-sm">No MDX explanation data for topic “{topicId}” in this subject yet (or topic unknown in bundle).</p>
+          <Link href={`/x/${subjectSlug}`} className="mt-4 inline-block text-sm text-[var(--accent)] hover:underline">← Back to {subjectSlug.replace(/-/g, " ")} topics</Link>
+        </div>
       </div>
     );
   }
@@ -39,6 +42,7 @@ export default async function DynamicModulePage({ params }: Props) {
       title={mdxModule.title || topic.title}
       mdxSource={mdxModule.mdxSource}
       subjectSlug={subjectSlug}
+      subjectLabel={bundle.config.label}
     />
   );
 }
