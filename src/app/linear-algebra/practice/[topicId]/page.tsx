@@ -8,7 +8,9 @@ import { BlockMath, InlineMath } from "react-katex";
 import { MathInput } from "@/components/math-input";
 import { VoteFeedback } from "@/components/vote-feedback";
 import { useProgress } from "@/components/progress-provider";
-import { problems, topics, getModuleSectionUrl, getModuleSectionTitle } from "@/lib/linalg-content";
+import { getModuleSectionUrl, getModuleSectionTitle } from "@/lib/linalg-content";
+import * as linalgLegacy from "@/lib/linalg-content";
+import { useLinalgContent } from "@/components/scoped-providers";
 import { isAnswerCorrectAsync } from "@/lib/answer-check";
 import { detectQuestionContext } from "@/lib/math-input-helpers";
 import { ProgressDots } from "@/components/practice/ProgressDots";
@@ -81,6 +83,14 @@ export default function LinalgPracticeTopic() {
   const focusId = searchParams.get("focus");
 
   const { progress, addAttempt } = useProgress();
+
+  // Dual system on-ramp (small safe change): prefer FileSystemContentBundle (from layout when
+  // USE_FS_CONTENT_LA=true) for topics/problems on the real LA practice page; fallback to legacy.
+  // getModule* fns stay on legacy import (compatible, use same section mappings).
+  const fsData = useLinalgContent();
+  const topics = fsData?.topics ?? linalgLegacy.topics;
+  const problems = fsData?.problems ?? linalgLegacy.problems;
+
   const topic = topics.find((t) => t.id === topicId);
   const topicProblems = useMemo(() => problems.filter((p) => p.topicId === topicId), [topicId]);
 
