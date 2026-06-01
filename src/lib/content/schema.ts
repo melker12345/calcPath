@@ -21,9 +21,14 @@
  *
  * Future work (do not over-engineer in v1):
  * - Per-problem answer validation config (tolerance, equivalence mode, etc.)
- * - Structured explanations (vs rich string)
+ * - Structured explanations (vs rich string) — now using raw MDX sources for rich content
  * - Test questions as first-class (currently separate for calculus only)
- * - MDX / richer body content
+ * - MDX / richer body content (initial FS + raw source support added)
+ *
+ * MDX support (2026-06-01):
+ * - Structured data (subjects/topics/questions/metadata) live in JSON per content/ARCHITECTURE.md
+ * - Rich explanations live in .mdx files
+ * - New FileSystemContentBundle + MdxModule + QuestionFile schemas for loader
  */
 
 import { z } from "zod";
@@ -252,3 +257,102 @@ export const ContentManifestSchema = z.object({
 });
 
 export type ContentManifest = z.infer<typeof ContentManifestSchema>;
+
+// ============================================
+// New: Filesystem-based Content (JSON + MDX per ARCHITECTURE.md)
+// ============================================
+
+/**
+ * Schema for the subject-level index.json (content/{slug}/index.json).
+ * Contains subject metadata + the list of topics (for navigation/overview).
+ * This is the entry point for a data-driven subject.
+ *
+ * Note: This largely overlaps SubjectConfig + topics, but is the canonical
+ * source when loading from the content/ directory (vs legacy TS).
+ */
+export const SubjectIndexSchema = z.object({
+  slug: SubjectSlugSchema,
+  label: z.string().min(1),
+  shortDescription: z.string().min(1),
+  modulesDescription: z.string().min(1),
+  icon: z.string().min(1),
+  order: z.number().int().positive(),
+  hasTests: z.boolean().default(false),
+  topics: z.array(TopicSchema),
+});
+
+export type SubjectIndex = z.infer<typeof SubjectIndexSchema>;
+
+/**
+ * Schema for per-topic index.json (content/{slug}/topics/{topicId}/index.json).
+ * Provides topic metadata. (May duplicate info from subject index for self-contained topics.)
+ */
+export const TopicIndexSchema = TopicSchema;
+export type TopicIndex = z.infer<typeof TopicIndexSchema>;
+
+/**
+ * Base problem fields for questions stored in JSON files.
+ * `topicId` is optional here because it can be derived from the containing topic folder;
+ * the loader will inject it to produce a full Problem.
+ */
+const problemFieldsForFile = {
+  ...problemFields,
+  topicId: z.string().min(1).optional(),
+};
+
+/**
+ * Schema for a single question entry inside questions.json.
+ * Uses relaxed topicId for file loading.
+ */
+export const QuestionFileSchema = z
+  .object(problemFieldsForFile)
+  .refine(mcqRefine.refine, { message: mcqRefine.message, path: mcqRefine.path });
+
+export type QuestionFile = z.infer<typeof QuestionFileSchema>;
+
+/**
+ * Schema for questions.json (array of questions for one topic).
+ */
+export const QuestionsFileSchema = z.array(QuestionFileSchema);
+export type QuestionsFile = z.infer<typeof QuestionsFileSchema>;
+
+/**
+ * Schema for the rich explanation content loaded from module.mdx.
+ * We store the *raw* MDX source (including frontmatter) so that:
+ * - Loader stays simple (just file read + basic frontmatter extract)
+ * - Rendering / MDX compilation happens downstream (e.g. in generic module page)
+ * - No need to force structured body/sections in JSON for explanations.
+ *
+ * Critical invariants still apply:
+ * - Any `section` slugs used in the topic's questions.json MUST correspond
+ *   to sections/headings present in this MDX (for deep links + per-section progress).
+ * - This replaces the legacy structured ModuleContent for new content.
+ */
+export const MdxModuleSchema = z.object({
+  topicId: z.string().min(1),
+  /** Title preferably from MDX frontmatter or topic metadata */
+  title: z.string().min(1),
+  /** Full raw file contents of module.mdx */
+  mdxSource: z.string().min(1),
+});
+
+export type MdxModule = z.infer<typeof MdxModuleSchema>;
+
+/**
+ * The complete bundle loaded purely from the content/ filesystem structure
+ * (JSON metadata + questions + MDX explanations).
+ *
+ * This is the target shape for the data-driven loader.
+ * It is intentionally distinct from legacy SubjectBundle (which uses
+ * structured ModuleContent arrays) to allow parallel evolution during migration.
+ *
+ * For the thin vertical slice we populate this from content/linear-algebra/.
+ */
+export const FileSystemContentBundleSchema = z.object({
+  config: SubjectConfigSchema,
+  topics: z.array(TopicSchema),
+  problems: z.array(ProblemSchema),
+  mdxModules: z.array(MdxModuleSchema),
+});
+
+export type FileSystemContentBundle = z.infer<typeof FileSystemContentBundleSchema>;
