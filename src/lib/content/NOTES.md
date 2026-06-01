@@ -81,7 +81,8 @@
 
 ## Statistics Content Port (Statistics Completion Agent work, 2026-06-01)
 - [x] Created full folder structure `content/statistics/` + subject `index.json` + `topics/*/index.json` skeletons for all 14 topics (matching legacy topics from statistics-content.ts). Committed as first small change.
-- Full port of remaining topics to include `questions.json` (from src/lib/statistics-questions/*.ts) and rich `module.mdx` (converted from src/lib/modules/statistics/*.ts preserving intro, sections with ELI5/LaTeX/examples, commonMistakes).
+- [x] Fully ported first topic: `descriptive` (40 questions in questions.json + rich module.mdx preserving all ELI5, worked examples, LaTeX, common mistakes, sections aligned to question slugs). Small clean commit.
+- Full port of remaining 13 topics (questions + rich mdx) ongoing, following same quality as LA vectors + ported stats examples.
 - References: Linear Algebra vectors/ (for FS format, frontmatter MDX), and will treat bayesian-inference + logistic-regression as the rich quality bar for stats.
 - Will update loader only if needed to support "statistics" slug in FS bundle getter.
 - Do not touch any legacy .ts content files, practice routes, or pages.
