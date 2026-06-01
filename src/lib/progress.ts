@@ -326,6 +326,12 @@ export const getPracticeProgress = (
 /**
  * Get practice progress for a specific section within a topic.
  * This allows showing per-section (e.g. "The Squeeze Theorem") question counts and user progress.
+ *
+ * Compatible with data-driven content:
+ * - `practiceProblems` can come from content/ questions.json (via loader bundles) or legacy.
+ * - Relies on exact `section` slug match between passed problems and module metadata (invariant
+ *   documented in schema.ts and content/ARCHITECTURE.md; used by dashboard + deep links).
+ * - Stable problem `id`s ensure progress recorded in generic /x/ practice flows is visible here.
  */
 export const getSectionPracticeProgress = (
   state: ProgressState,
