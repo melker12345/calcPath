@@ -251,6 +251,7 @@ export async function loadLinearAlgebraFromContent(): Promise<FileSystemContentB
 
 /**
  * Convenience for the new FS path (thin slice).
+ * Now supports all three subjects (la, stats, calculus) since content/ ports complete.
  */
 export async function getFileSystemContentBundle(slug: string): Promise<FileSystemContentBundle> {
   if (slug === "linear-algebra") {
@@ -259,7 +260,10 @@ export async function getFileSystemContentBundle(slug: string): Promise<FileSyst
   if (slug === "statistics") {
     return loadStatisticsFromContent();
   }
-  throw new Error(`FS content loader currently supports only "linear-algebra" and "statistics" (got: ${slug}). Other subjects still use legacy adapters.`);
+  if (slug === "calculus") {
+    return loadCalculusFromContent();
+  }
+  throw new Error(`FS content loader supports "linear-algebra", "statistics", and "calculus" (got: ${slug}).`);
 }
 
 /**
@@ -303,6 +307,67 @@ export async function loadStatisticsFromContent(): Promise<FileSystemContentBund
     if (existingTopicIds.includes(topicMeta.id)) {
       try {
         const { topic: _t, questions, mdxModule } = await loadTopicContent("statistics", topicMeta.id);
+        allProblems.push(...questions);
+        if (mdxModule) {
+          mdxModules.push(mdxModule);
+        }
+      } catch (err) {
+        console.warn(`[content-loader] Partial load for topic ${topicMeta.id}:`, (err as Error).message);
+      }
+    }
+  }
+
+  const rawBundle = {
+    config,
+    topics: loadedTopics,
+    problems: allProblems,
+    mdxModules,
+  };
+
+  return FileSystemContentBundleSchema.parse(rawBundle);
+}
+
+/**
+ * Loads Calculus purely from the content/ filesystem (data-driven).
+ * All 9 topics ported with full questions.json + rich module.mdx.
+ * Mirrors the structure of LA/Stats loaders for consistency.
+ */
+export async function loadCalculusFromContent(): Promise<FileSystemContentBundle> {
+  const subjectIndex = await readJsonFile<SubjectIndex>("calculus/index.json", SubjectIndexSchema);
+
+  const config: SubjectConfig = {
+    slug: subjectIndex.slug,
+    label: subjectIndex.label,
+    shortDescription: subjectIndex.shortDescription,
+    modulesDescription: subjectIndex.modulesDescription,
+    icon: subjectIndex.icon,
+    order: subjectIndex.order,
+    hasTests: subjectIndex.hasTests,
+  };
+
+  const topicsFromIndex = subjectIndex.topics;
+
+  const loadedTopics: import("./schema").Topic[] = [];
+  const allProblems: import("./schema").Problem[] = [];
+  const mdxModules: import("./schema").MdxModule[] = [];
+
+  let existingTopicIds: string[] = [];
+  try {
+    const fs = await import("fs/promises");
+    const path = await import("path");
+    const topicsDir = path.join(process.cwd(), CONTENT_DIR, "calculus/topics");
+    const entries = await fs.readdir(topicsDir, { withFileTypes: true });
+    existingTopicIds = entries.filter((e) => e.isDirectory()).map((e) => e.name);
+  } catch {
+    existingTopicIds = [];
+  }
+
+  for (const topicMeta of topicsFromIndex) {
+    loadedTopics.push(topicMeta);
+
+    if (existingTopicIds.includes(topicMeta.id)) {
+      try {
+        const { topic: _t, questions, mdxModule } = await loadTopicContent("calculus", topicMeta.id);
         allProblems.push(...questions);
         if (mdxModule) {
           mdxModules.push(mdxModule);
