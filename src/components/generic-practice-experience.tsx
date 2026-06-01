@@ -84,7 +84,7 @@ class QuestionErrorBoundary extends React.Component<
       return (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-800 dark:bg-amber-950/40">
           <div className="mx-auto mb-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300" aria-hidden="true">
-            ⚠️
+            !
           </div>
           <p className="text-base font-semibold theme-text">This question had a rendering issue — skipped.</p>
           <p className="mt-1 text-sm theme-text-secondary">
