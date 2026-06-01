@@ -211,3 +211,54 @@ All changes via many small commits (see git log on branch). Full flow demonstrab
 - Visiting /x/.../modules/ will use polished GenericModuleViewer (ELI5 now native-looking).
 - Experimental ready for drop-in (structure 1:1 match + better content rendering).
 - No linter/runtime breaks expected (imports clean, unused removed, existing styles reused).
+
+---
+
+## /x/ Module Viewer Polish — 2026-06-01 (this subagent)
+
+**Mission**: Make ONLY the explanation viewing in experimental `/x/[subject]/modules/[topicId]` (via generic-module-viewer + its x route page) visually/structurally match real `subject-module-page.tsx` (SubjectModulePage) as closely as possible. Full read access but **zero edits** to real subject pages, legacy components (e.g. no edits to experimental-generic-mdx-module-explanation.tsx, mdx-content.tsx, module-section-nav, subject-breadcrumbs, vote-feedback, etc.), practice files, non-module app/x/ files, lib/ (except this NOTES), or content/.
+
+**Files edited (strict scope)**:
+- `src/components/generic-module-viewer.tsx`
+- `src/app/x/[subject]/modules/[topicId]/page.tsx`
+- `src/lib/content/NOTES.md` (explicitly required update)
+
+**All via small frequent git commits** (see `git log --oneline -20` on branch; ~12 targeted commits).
+
+### What was implemented (priority order, all requirements met)
+1. **SubjectBreadcrumbs (w/ current topic) + "Back to {label} contents" link**: Added to header chrome using the component + exact classes (`text-sm text-blue-800 hover:underline`, `data-no-print`). Back now points to `/x/${slug}` (appropriate for experimental; real uses main /${slug}/modules). Uses bundle.config.label + topic title passed from server page.
+2. **ModuleSectionNav**: Imported + rendered at top of viewer (fixed left TOC). navItems derived from lightweight parser (always "Introduction" + section headings + "Common Mistakes" if present) — matches real derivation using toSlug.
+3. **ELI5, Worked Example cards, Common Mistakes identical**:
+   - ELI5: `mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-5` + header `text-xs font-semibold uppercase tracking-widest text-[var(--text-muted)]` + `space-y-3 text-sm leading-relaxed theme-text-secondary` (exact). Per-section.
+   - Worked Examples: label `mb-3 text-sm font-semibold uppercase...`, cards `mb-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5` + title + `<ol class="list-decimal space-y-2 pl-5 text-sm">` + `theme-text-secondary` (exact).
+   - Common Mistakes: `<div id="mistakes" class="scroll-mt-20 mt-12">` + h2 `mb-4 text-2xl...`, `<ul class="space-y-3 text-sm">` + `<li class="flex gap-3 theme-text-secondary">` + dot `<span class="mt-1.5 block h-1.5 w-1.5 ... bg-[var(--text-muted)]" />` + content (exact, no box).
+4. **VoteFeedback at bottom**: Added `<div class="mt-8 flex justify-center"><VoteFeedback targetType="module" targetId={topicId} /></div>` exact.
+5. **Bottom nav improved with btn-* exact**: `mt-12 flex flex-col gap-3 border-t border-[var(--border)] pt-6 sm:flex-row sm:justify-between` + prev: `btn-secondary inline-flex w-full justify-center sm:w-auto` (← title), next or last: `btn-primary ...` (title → or "Practice this topic →" linking to `/x/.../practice/${id}`).
+6. **Consistent max-w, spacing, prose, scroll-mt, headings**:
+   - Outer: `mx-auto w-full max-w-[760px] px-4 py-8 sm:px-6 sm:py-10` + `min-w-0` wrapper (exact).
+   - Header: `mb-6 border-b border-[var(--border)] pb-5 sm:mb-8` + h1 `mt-3 text-3xl font-semibold tracking-tight theme-text sm:text-4xl` + desc `mt-3 text-base leading-7 theme-text-secondary`.
+   - Intro: `id="intro" class="scroll-mt-20"` + h2 `mb-4 text-2xl font-semibold theme-text` + `prose prose-stone dark:prose-invert max-w-none`.
+   - Sections: `id=... class="scroll-mt-20 mt-12"` + same h2 + prose.
+   - Headings from parser: h2 now `mb-4 text-2xl font-semibold theme-text scroll-mt-20` (h3 smaller).
+   - All via lightweight parser + MdxContent (bodies) + MathText (specials).
+
+**Parser**: Enhanced the *existing* lightweight line-based parser inside generic-module-viewer (no new files, no imports from legacy experimental parser). Now produces `{intro, sections[{title,id,body,eli5,examples}], commonMistakes}` purely from mdxSource (handles #/##/### , **ELI5**, **Worked Example**, Common Mistakes, lists, {#slugs}, frontmatter). Still 100% compatible with FileSystemContentBundle + MdxContent. (Old flat blocks logic removed in process.)
+
+**x route page**: Now computes subjectLabel (from bundle.config), prev/nextTopic (from bundle.topics ordering), description; passes down. 404 case untouched.
+
+**Still works purely from MDX + lightweight parser + MdxContent**: Yes — no structured JSON modules used.
+
+### Remaining limitations (per task)
+- Parser is still hand-rolled (covers observed MDX patterns in content/*/topics/*/module.mdx for LA/stats/calc; may need tweaks for future authoring variations like tables, more h3, HTML comments for sections).
+- No per-section "Practice questions for this section →" links (intentionally omitted: would require /x/ practice to support `?section=` query + would touch non-module practice files).
+- Intro nav item always present (even if parsed.intro empty); clicking #intro may be no-op in edge cases.
+- No FAQ (real has optional from legacy faqs prop; not in FS bundle/MDX yet).
+- Debug "source" banner removed for clean native feel (was in prior viewer).
+- Experimental /x/ still has its own layout/banner (not touched).
+- Full next-mdx-remote + custom <ELI5> etc. components still future (per architecture docs).
+- Only module viewing polished; x subject index + practice list pages untouched (per "non-module files" rule).
+- No visual regression tests added.
+
+All requirements completed within constraints. The `/x/.../modules` experience now feels native to the real subject module pages. Update written with absolute paths + snippets in mind.
+
+(End of this task's notes entry.)
