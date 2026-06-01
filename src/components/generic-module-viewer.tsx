@@ -118,7 +118,7 @@ export function GenericModuleViewer({
       return (
         <div key={idx} className="my-4 rounded-xl border border-blue-200 bg-blue-50/60 p-4 text-sm dark:border-blue-900/50 dark:bg-blue-950/20">
           <div className="mb-1 font-semibold text-blue-800 dark:text-blue-300">ELI5</div>
-          <div className="prose prose-sm prose-stone dark:prose-invert max-w-none text-blue-900 dark:text-blue-100">
+          <div className="prose prose-sm prose-stone dark:prose-invert max-w-none text-blue-900 dark:text-blue-100 theme-text-secondary">
             {block.content.split(/\n\n+/).map((p, i) => (
               <p key={i} className="mb-2 last:mb-0">{renderInline(p.trim())}</p>
             ))}
@@ -141,7 +141,7 @@ export function GenericModuleViewer({
   return (
     <div className="mx-auto w-full max-w-[760px] px-4 py-8 sm:px-6 sm:py-10">
       <div className="mb-6">
-        <Link href={backHref || `/x/${subjectSlug}`} className="text-sm text-blue-700 hover:underline">
+        <Link href={backHref || `/x/${subjectSlug}`} className="text-sm text-blue-700 hover:underline dark:text-[var(--accent)]">
           ← Back to {subjectSlug.replace("-", " ")} topics
         </Link>
       </div>
@@ -153,7 +153,7 @@ export function GenericModuleViewer({
         {blocks.map(renderBlock)}
       </div>
 
-      <div className="mt-10 border-t pt-6 text-xs text-zinc-500">
+      <div className="mt-10 border-t pt-6 text-xs theme-text-muted">
         This is basic MDX support in the experimental area. Full compiled MDX (with components, better parsing) is a follow-up.
       </div>
     </div>
