@@ -329,6 +329,9 @@ New counts (from `content/statistics/topics/*/questions.json`):
 
 **Gaps**: 10 topics at 0 (significant), logistic missing 5/12. Total missing ~362 (will port all for parity).
 
+**Progress (ports done)**:
+- [x] discrete-distributions: 42/42 (included 39 from dedicated + 3 cross from distributions.ts; IDs preserved e.g. disc-*, dist-*) . JSON formatted per schema.
+
 ### Linear Algebra (9 topics, legacy total 336)
 - All topics at exact parity 336/336 in `content/linear-algebra/topics/*/questions.json` (previously completed in LA Completion Agent work). No action needed.
 
