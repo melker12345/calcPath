@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
@@ -25,6 +25,12 @@ import type { Problem, Topic } from "@/lib/shared-types";
  * Reuses ALL the shared practice primitives (usePracticeSession, ProgressDots, PracticeFeedback).
  *
  * This is the integration point proving "generic components + new content data = working practice".
+ *
+ * Resilience (Migration Phase): 
+ * - Loader already does tolerant per-question recovery on schema errors ("better to load broken than none").
+ * - Existing data guard + always-<MathText> (with its per-fragment MathRenderBoundary).
+ * - NEW: local QuestionErrorBoundary (below) for any remaining runtime render errors (e.g. edge-case LaTeX, handler bugs, partial data) on a *single* question.
+ *   One bad question never destroys the session; clear "rendering issue" UI + skip affordance keeps progress usable.
  *
  * Differences / simplifications vs legacy per-subject pages (for experimental slice):
  * - Uses the improved PracticeFeedback for *both* correct + incorrect states (less duplication).
@@ -290,7 +296,7 @@ export function GenericPracticeExperience({
             onChange={setAnswer}
             onSubmit={() => submitAnswer(answer)}
             onHint={useHint}
-            subject="generic" /* experimental - uses broad heuristics */
+            subject="generic" /* data-driven /x/ path — uses neutral theme + heuristics */
             hintDisabled={feedback?.type === "correct" || (feedback?.type === "incorrect" && (feedback.hintUsed || feedback.showSolution))}
             questionContext={questionContext}
             answerHint={current.answer}
