@@ -87,13 +87,13 @@ export function GenericPracticeExperience({
   );
 
   if (!topic) {
-    return <div className="p-8 text-sm text-stone-600">Topic not found in data.</div>;
+    return <div className="p-8 text-sm theme-text-muted">Topic not found in data.</div>;
   }
   if (!current) {
     return (
-      <div className="mx-auto max-w-3xl p-8">
-        <p>No practice questions available for this topic in the loaded content data yet.</p>
-        <Link href={`/x/${subjectSlug}`} className="mt-4 inline-block underline">Back to {subjectLabel}</Link>
+      <div className="mx-auto max-w-3xl px-4 py-12">
+        <p className="theme-text-secondary">No practice questions available for this topic in the loaded content data yet.</p>
+        <Link href={`/x/${subjectSlug}`} className="mt-4 inline-block text-sm text-[var(--accent)] hover:underline">← Back to {subjectLabel}</Link>
       </div>
     );
   }
@@ -178,9 +178,9 @@ export function GenericPracticeExperience({
       <div className="mb-5 hidden sm:flex sm:items-center sm:justify-between px-1">
         <div>
           <h1 className="text-2xl font-bold theme-text">{topic.title}</h1>
-          <p className="mt-0.5 text-sm text-zinc-500 dark:text-[var(--text-muted)]">{topic.description}</p>
+          <p className="mt-0.5 text-sm theme-text-muted">{topic.description}</p>
         </div>
-        <span className="text-sm text-zinc-500">{solvedCount}/{displayProblems.length} mastered</span>
+        <span className="text-sm theme-text-muted tabular-nums">{solvedCount}/{displayProblems.length} mastered</span>
       </div>
 
       {/* Main practice card (matches legacy visual language) */}
@@ -208,7 +208,7 @@ export function GenericPracticeExperience({
           {/* Optional link back to explanation (generic, points to our /x/ module route) */}
           <Link
             href={`/x/${subjectSlug}/modules/${current.topicId}`}
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400"
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-[var(--accent)] transition-colors hover:bg-[var(--surface-2)]"
           >
             Review the explanation for this topic →
           </Link>
@@ -227,14 +227,14 @@ export function GenericPracticeExperience({
                     submitAnswer(choice);
                   }}
                   disabled={feedback?.type === "correct"}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-base font-medium theme-text transition hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg dark:bg-[var(--surface)]"
+                  className="rounded-xl border theme-border theme-surface px-4 py-3 text-left text-base font-medium theme-text transition hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg"
                 >
                   <MathText text={choice} />
                 </button>
               ))}
 
             {feedbackOverlay && !overlayDismissed && (
-              <div className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-zinc-700">
+              <div className="relative overflow-hidden rounded-xl border theme-border">
                 {isDismissable && (
                   <button
                     type="button"
@@ -266,13 +266,13 @@ export function GenericPracticeExperience({
 
         {/* All mastered */}
         {solvedCount >= displayProblems.length && (
-          <div className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-900/20 p-4 text-center sm:mt-6 sm:rounded-2xl sm:p-5">
-            <p className="text-lg font-bold text-emerald-300">All {displayProblems.length} problems mastered!</p>
-            <p className="mt-1 text-sm text-emerald-600">Shuffle for a fresh run.</p>
+          <div className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-50 p-4 text-center dark:bg-emerald-950/30 sm:mt-6 sm:rounded-2xl sm:p-5">
+            <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">All {displayProblems.length} problems mastered!</p>
+            <p className="mt-1 text-sm text-emerald-600 dark:text-emerald-400">Shuffle for a fresh run.</p>
             <button
               type="button"
               onClick={shuffleAndRestart}
-              className="mt-3 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 active:scale-95"
+              className="mt-3 rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--accent-text)] shadow-sm transition hover:brightness-95 active:scale-95"
             >
               Shuffle &amp; restart
             </button>
@@ -286,7 +286,7 @@ export function GenericPracticeExperience({
               type="button"
               onClick={goToPrev}
               disabled={index === 0}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-100 disabled:opacity-25 sm:h-9 sm:w-9"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] disabled:opacity-25 sm:h-9 sm:w-9"
               aria-label="Previous"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -297,7 +297,7 @@ export function GenericPracticeExperience({
               type="button"
               onClick={goToNext}
               disabled={index === displayProblems.length - 1}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-100 disabled:opacity-25 sm:h-9 sm:w-9"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] disabled:opacity-25 sm:h-9 sm:w-9"
               aria-label="Next"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -307,7 +307,7 @@ export function GenericPracticeExperience({
             {solvedCount > 0 && solvedCount < displayProblems.length && (
               <button
                 type="button"
-                className="ml-1 rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm"
+                className="ml-1 rounded-lg px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] sm:text-sm"
                 onClick={() => {
                   const done = new Set(progress.completedProblemIds);
                   const next = displayProblems.findIndex((p, i) => i > index && !done.has(p.id));
@@ -319,12 +319,12 @@ export function GenericPracticeExperience({
             )}
           </div>
 
-          <div className="justify-self-center rounded-full px-2 py-0.5 text-[11px] font-medium text-zinc-400 ring-1 ring-zinc-200/80">
+          <div className="justify-self-center rounded-full px-2 py-0.5 text-[11px] font-medium theme-text-muted ring-1 ring-[var(--border)]/60">
             Q{topicProblems.findIndex((p) => p.id === current.id) + 1}
           </div>
 
           <Link
-            className="justify-self-end rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm"
+            className="justify-self-end rounded-lg px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] sm:text-sm"
             href={`/x/${subjectSlug}`}
           >
             All {subjectLabel} topics
