@@ -103,6 +103,28 @@ export function GenericModuleViewer({
       .replace(/(^-|-$)/g, "");
   }
 
+  // Derive section nav from parsed blocks (headings become nav items; special case for Common Mistakes)
+  const navItems = useMemo(() => {
+    const items: { id: string; label: string }[] = [{ id: "intro", label: "Introduction" }];
+    let hasMistakes = false;
+    for (const b of blocks) {
+      if (b.type === "heading" && b.id && b.content) {
+        const label = b.content;
+        const lower = label.toLowerCase();
+        if (lower.includes("common mistake")) {
+          hasMistakes = true;
+          // will add at end
+        } else {
+          items.push({ id: b.id, label });
+        }
+      }
+    }
+    if (hasMistakes) {
+      items.push({ id: "mistakes", label: "Common Mistakes" });
+    }
+    return items;
+  }, [blocks]);
+
   // Basic inline formatting + math for paragraph content
   function renderInline(text: string) {
     // Replace **bold** with <strong> (simple, non-nested)
