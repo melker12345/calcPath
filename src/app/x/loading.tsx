@@ -1,5 +1,3 @@
-import { Skeleton } from "@/components/ui/skeleton"; // if exists? use inline instead
-
 // Simple loading state for /x/ dynamic routes (appears during server data fetch for bundles)
 export default function ExperimentalLoading() {
   return (
