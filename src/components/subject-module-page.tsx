@@ -9,6 +9,7 @@ import { VoteFeedback } from "@/components/vote-feedback";
 import { BlockMath } from "react-katex";
 import type { Topic } from "@/lib/shared-types";
 import type { ModuleContent } from "@/lib/modules/types";
+import { SubjectBreadcrumbs } from "@/components/subject-breadcrumbs";
 
 type SubjectModulePageProps = {
   subjectSlug: string;
@@ -71,6 +72,11 @@ export function SubjectModulePage({
       <div className="mx-auto w-full max-w-[760px] px-4 py-8 sm:px-6 sm:py-10">
         <div className="min-w-0">
           <div className="mb-6 border-b border-[var(--border)] pb-5 sm:mb-8">
+            <SubjectBreadcrumbs
+              subjectSlug={subjectSlug}
+              subjectLabel={subjectLabel}
+              currentTopicTitle={topic.title}
+            />
             <Link
               className="text-sm text-blue-800 hover:underline"
               href={`/${subjectSlug}/modules`}
