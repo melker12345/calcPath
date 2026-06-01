@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { ProgressBoundary } from "@/components/scoped-providers";
 
 export const metadata: Metadata = {
   title: "Practice Calculus Problems | CalcPath",
@@ -14,5 +13,9 @@ export const metadata: Metadata = {
 };
 
 export default function PracticeLayout({ children }: { children: React.ReactNode }) {
-  return <ProgressBoundary>{children}</ProgressBoundary>;
+  // No provider here to avoid pulling the legacy progress/shim graph into the client bundle
+  // for the practice routes (the source of the recurring "topics is not defined" module evaluation error).
+  // Providers are provided locally inside PracticeTopicClient (the only place that needs useProgress on this route).
+  return <>{children}</>;
 }
+

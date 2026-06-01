@@ -4,7 +4,8 @@ import { subjectList } from "@/lib/subjects";
 // Note: Full per-subject module indexing is still somewhat manual.
 // For now we generate subject homepages + basic routes for all subjects,
 // plus deep module pages for Calculus (the most complete subject).
-import { topics as calculusTopics } from "@/lib/calculus-content";
+import { topics as shimTopics } from "@/lib/calculus-content";
+const calculusTopics = shimTopics ?? [];
 import { modules as calculusModules } from "@/lib/modules";
 
 export default function sitemap(): MetadataRoute.Sitemap {

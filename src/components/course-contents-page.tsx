@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { SubjectBreadcrumbs } from "@/components/subject-breadcrumbs";
-import { useProgress } from "@/components/progress-provider";
-import { getPracticeProgress } from "@/lib/progress";
 
 type CourseTopic = {
   id: string;
@@ -60,12 +58,6 @@ export function CourseContentsPage({
     return map;
   }, [modules]);
 
-  // Progress-aware: uses the existing getPracticeProgress helper (which works identically
-  // whether `problems` came from legacy subjects or FileSystemContentBundle via the home pages).
-  // Only the caller (production subject homes) decides the data source; this component stays
-  // agnostic and supports mixed/transition state.
-  const { progress } = useProgress();
-
   const toggleTopic = (topicId: string) => {
     setOpenTopicId(openTopicId === topicId ? null : topicId);
   };
@@ -96,12 +88,6 @@ export function CourseContentsPage({
             const moduleData = modulesByTopic[topic.id];
             const sections = moduleData?.sections || [];
 
-            // Per-topic mastery from shared progress store + the problems list passed by caller.
-            // When home pages source problems from getFileSystemContentBundle (new system),
-            // this automatically reflects new data; legacy lists work too (ID parity).
-            // Non-intrusive: only render indicator for topics the user has started (attempted > 0).
-            const stats = getPracticeProgress(progress, topic.id, problems);
-
             return (
               <li key={topic.id} className="border-b theme-border last:border-b-0 py-[10px]">
                 <button
@@ -131,19 +117,18 @@ export function CourseContentsPage({
                       {questionCount} questions
                     </span>
 
-                    {/* Non-intrusive mastery indicator (production subject homes).
-                        Uses getPracticeProgress + FileSystemContentBundle data when homes opt-in.
-                        Shows only for started topics to stay clean/minimal during transition.
-                        Supports mixed legacy/new problem lists. */}
-                    {stats.attempted > 0 && (
-                      <span
-                        className="text-xs tabular-nums theme-text-muted whitespace-nowrap hidden sm:block"
-                        title={`${stats.correct} of ${stats.total} problems mastered`}
-                      >
-                        {stats.correct}/{stats.total} ({stats.masteryRate}%)
-                        {stats.isComplete && <span className="ml-0.5 text-emerald-600">✓</span>}
-                      </span>
-                    )}
+                    {/* Mastery indicators temporarily disabled on real homes.
+                        The progress system (pulled by MasteryIndicator) still hits
+                        "topics is not defined" in the current client bundle due to
+                        the subjects + shim changes. 
+                        
+                        The important part (new FileSystemContentBundle data for
+                        topics/problems) is already working. Re-enable once the
+                        central progress/shim graph is stable. */}
+                    {/* <DynamicMasteryIndicator
+                      topicId={topic.id}
+                      problems={problems}
+                    /> */}
 
                     {/* Practice chapter button */}
                     <Link
@@ -205,3 +190,7 @@ export function CourseContentsPage({
     </main>
   );
 }
+
+
+
+

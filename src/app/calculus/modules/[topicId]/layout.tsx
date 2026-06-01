@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { modules } from "@/lib/modules";
-import { topics } from "@/lib/calculus-content";
+import { topics as shimTopics } from "@/lib/calculus-content";
+const topics = shimTopics ?? [];
 
 type Props = {
   params: Promise<{ topicId: string }>;

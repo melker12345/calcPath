@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { modules as legacyModules } from "@/lib/statistics-modules";
-import { topics as legacyTopics } from "@/lib/statistics-content";
+// topics sourced via new content/ (getFileSystemContentBundle) inside try below
+// (removes dependency on inert "@/lib/statistics-content" shim for metadata guard)
 
 type Props = {
   params: Promise<{ topicId: string }>;
@@ -9,7 +10,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { topicId } = await params;
   let mod = legacyModules.find((m) => m.topicId === topicId);
-  let topic = legacyTopics.find((t) => t.id === topicId);
+  let topic: any = null;
 
   // Evolutionary: source topic metadata from new content/ system when available.
   // (Uses loader directly; adapter not needed for titles/descriptions.)

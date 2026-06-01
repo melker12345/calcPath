@@ -3,11 +3,19 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { useAuth } from "@/components/auth-provider";
-import { AuthBoundary } from "@/components/scoped-providers";
+import { AuthProvider, useAuth } from "@/components/auth-provider";
 import { SearchTrigger } from "@/components/search-command";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { subjectList } from "@/lib/subjects";
+
+// Slim navigation list only (slug + label).
+// Avoids pulling the full subjects + shim baggage (with its current module evaluation issues)
+// into the client header on every real route. The full legacy SubjectConfig is still
+// available for pages that need it (dashboard, etc.).
+const navSubjects = [
+  { slug: "calculus", label: "Calculus" },
+  { slug: "statistics", label: "Statistics" },
+  { slug: "linear-algebra", label: "Linear Algebra" },
+] as const;
 
 function ProfileIcon({ size = 20, color = "currentColor" }: { size?: number; color?: string }) {
   return (
@@ -79,7 +87,7 @@ function MobileDrawer({
         </div>
 
         <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto bg-white px-3 py-4">
-          {subjectList.map((subject) => (
+          {navSubjects.map((subject) => (
             <Link
               key={subject.slug}
               href={`/${subject.slug}`}
@@ -161,7 +169,7 @@ export const SiteHeader = () => {
           </Link>
 
           <nav className="hidden items-center gap-3 text-sm md:flex">
-            {subjectList.map((subject) => (
+            {navSubjects.map((subject) => (
               <Link
                 key={subject.slug}
                 href={`/${subject.slug}`}
@@ -187,13 +195,13 @@ export const SiteHeader = () => {
             <SearchTrigger />
           </nav>
 
-          <AuthBoundary>
+          <AuthProvider>
             <SiteHeaderAuthControls
               mobileMenuOpen={mobileMenuOpen}
               onToggleMobileMenu={() => setMobileMenuOpen((open) => !open)}
               onCloseMobileMenu={() => setMobileMenuOpen(false)}
             />
-          </AuthBoundary>
+          </AuthProvider>
         </div>
       </header>
     </>

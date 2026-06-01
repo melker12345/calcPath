@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
-import { modules } from "@/lib/linalg-modules";
-import { topics } from "@/lib/linalg-content";
+import type { ModuleContent } from "@/lib/modules/types";
+import * as linalgModules from "@/lib/modules/linear-algebra";
+
+const legacyModules: ModuleContent[] = (Object.values(linalgModules) as any[]).filter(
+  (v): v is ModuleContent => !!v && typeof v === "object" && typeof v.topicId === "string"
+);
 
 type Props = {
   params: Promise<{ topicId: string }>;
@@ -8,8 +12,17 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { topicId } = await params;
-  const mod = modules.find((m) => m.topicId === topicId);
-  const topic = topics.find((t) => t.id === topicId);
+  const mod = legacyModules.find((m) => m.topicId === topicId);
+
+  // Topics from new content system (loadSubjectIndex) for correct `id`s (bypasses inert shim).
+  let topic: any = null;
+  try {
+    const { loadSubjectIndex } = await import("@/lib/content/loader");
+    const idx = await loadSubjectIndex("linear-algebra");
+    topic = idx.topics?.find((t: any) => t.id === topicId) ?? null;
+  } catch {
+    // fallback (guard will fail gracefully)
+  }
 
   if (!mod || !topic) {
     return { title: "Module Not Found | CalcPath" };

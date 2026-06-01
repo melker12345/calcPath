@@ -15,6 +15,8 @@
  * Per MIGRATION-PLAN.md: this is the main path. New code must use the FileSystemContentBundle variants.
  */
 
+import "server-only";
+
 import {
   SubjectBundleSchema,
   type SubjectBundle,

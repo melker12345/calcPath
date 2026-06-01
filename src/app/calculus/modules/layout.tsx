@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { ProgressBoundary } from "@/components/scoped-providers";
 
 export const metadata: Metadata = {
   title: "Calculus Modules — Free Lessons & Examples | CalcPath",
@@ -14,5 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default function ModulesLayout({ children }: { children: React.ReactNode }) {
-  return <ProgressBoundary>{children}</ProgressBoundary>;
+  return <>{children}</>;
 }

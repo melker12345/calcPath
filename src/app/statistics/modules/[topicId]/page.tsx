@@ -1,65 +1,41 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { modules as legacyModules } from "@/lib/statistics-modules";
-import { topics as legacyTopics } from "@/lib/statistics-content";
 import { SubjectModulePage } from "@/components/subject-module-page";
 import type { ModuleContent } from "@/lib/modules/types";
 import type { Topic } from "@/lib/shared-types";
+import * as statsModules from "@/lib/modules/statistics";
 
 /**
- * PHASE 1 EVOLUTIONARY INTEGRATION — STATISTICS MODULE PAGE (minimal + reversible)
+ * PHASE 1 EVOLUTIONARY INTEGRATION — STATISTICS MODULE PAGE
  *
- * Same pattern that succeeded for Calculus real route:
- * - Dynamic import of the adapter helper (no static dep on server-only loader in client bundle).
- * - Guarded try: on success, use new content/ + MDX via adapter → exact legacy shapes.
- * - Silent catch: fall back to (currently inert) shims — zero behavior change on error.
- * - SubjectModulePage + chrome untouched. Progress IDs stable by construction.
- * - Reversible: delete the 15-line useEffect block + 2 state lines + 2 final* lines → pure legacy again.
+ * Server Component that sources topics from the new content/statistics/
+ * system (via loadSubjectIndex) for correct `id`s, while keeping
+ * explanations from stable legacy modules (split sources, not inert shims).
  *
- * This brings the actual production /statistics/modules/[topicId] pages live on the new data model.
- * See adapters.ts header for the full documented transition pattern.
+ * SubjectModulePage and all its UI/chrome remain 100% untouched.
  */
 
-export default function StatisticsModulePage() {
-  const [dynamicModules, setDynamicModules] = useState<ModuleContent[] | null>(null);
-  const [dynamicTopics, setDynamicTopics] = useState<Topic[] | null>(null);
+export default async function StatisticsModulePage() {
+  // Stable modules for explanations (from @/lib/modules/statistics split files).
+  const legacyModules: ModuleContent[] = (Object.values(statsModules) as any[]).filter(
+    (v): v is ModuleContent => !!v && typeof v === "object" && typeof v.topicId === "string"
+  );
 
-  useEffect(() => {
-    // === MINIMAL, REVERSIBLE NEW-DATA-SOURCE INTEGRATION (Phase 1, Statistics) ===
-    // One small block. Uses the existing adapter helper. No other files touched.
-    // On success: full statistics content now flows from content/statistics/.../module.mdx + index.json
-    //   through getLegacyModulesAndTopicsForSubject → identical shape → untouched SubjectModulePage.
-    // On any hiccup: zero user impact (falls back to legacy shim, currently empty arrays).
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const { getLegacyModulesAndTopicsForSubject } = await import("@/lib/content/adapters");
-        const data = await getLegacyModulesAndTopicsForSubject("statistics");
-        if (!cancelled && data) {
-          setDynamicModules(data.modules);
-          setDynamicTopics(data.topics);
-        }
-      } catch {
-        // Silent legacy fallback is the entire point of the evolutionary pattern.
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const finalModules = dynamicModules ?? legacyModules;
-  const finalTopics = dynamicTopics ?? legacyTopics;
+  // Topics from new content system via loadSubjectIndex (preferred per migration;
+  // fixes empty topics from inert "@/lib/statistics-content" shim).
+  let topics: Topic[] = [];
+  try {
+    const { loadSubjectIndex } = await import("@/lib/content/loader");
+    const idx = await loadSubjectIndex("statistics");
+    topics = idx.topics ?? [];
+  } catch {
+    // Reversible: falls back to empty (would have been broken anyway with shims).
+  }
 
   return (
     <SubjectModulePage
       subjectSlug="statistics"
       subjectLabel="Statistics"
-      modules={finalModules}
-      topics={finalTopics}
+      modules={legacyModules}
+      topics={topics}
     />
   );
 }

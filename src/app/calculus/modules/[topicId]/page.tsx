@@ -1,8 +1,5 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import { modules as legacyModules } from "@/lib/modules";
-import { topics as legacyTopics } from "@/lib/calculus-content";
+import { loadSubjectIndex } from "@/lib/content/loader";
 import { SubjectModulePage } from "@/components/subject-module-page";
 import type { ModuleContent } from "@/lib/modules/types";
 import type { Topic } from "@/lib/shared-types";
@@ -56,45 +53,17 @@ const topicFaqs: Record<string, { q: string; a: string }[]> = {
   ],
 };
 
-export default function CalculusModulePage() {
-  const [dynamicModules, setDynamicModules] = useState<ModuleContent[] | null>(null);
-  const [dynamicTopics, setDynamicTopics] = useState<Topic[] | null>(null);
-
-  useEffect(() => {
-    // === MINIMAL, REVERSIBLE NEW-DATA-SOURCE INTEGRATION (Phase 1) ===
-    // One small block. Uses the polished adapter helper. No other files touched.
-    // On success: full calculus content now flows from content/calculus/.../module.mdx + index.json
-    //   through the adapter → identical shape → untouched SubjectModulePage.
-    // On any hiccup: zero user impact, legacy shims provide the data.
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const { getLegacyModulesAndTopicsForSubject } = await import("@/lib/content/adapters");
-        const data = await getLegacyModulesAndTopicsForSubject("calculus");
-        if (!cancelled && data) {
-          setDynamicModules(data.modules);
-          setDynamicTopics(data.topics);
-        }
-      } catch {
-        // Silent legacy fallback is the entire point of the evolutionary pattern.
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const finalModules = dynamicModules ?? legacyModules;
-  const finalTopics = dynamicTopics ?? legacyTopics;
-
+export default async function CalculusModulePage() {
+  const { topics: legacyTopics } = await loadSubjectIndex("calculus");
+  // Use the real legacy modules (which contain the full explanations).
+  // This guarantees the text content renders on the real production pages
+  // while the new content/ + adapter path is still being stabilized.
   return (
     <SubjectModulePage
       subjectSlug="calculus"
       subjectLabel="Calculus"
-      modules={finalModules}
-      topics={finalTopics}
+      modules={legacyModules}
+      topics={legacyTopics}
       faqs={topicFaqs}
     />
   );

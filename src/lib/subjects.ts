@@ -2,18 +2,15 @@ import { modules as calculusModules } from "@/lib/modules";
 import { modules as linalgModules } from "@/lib/linalg-modules";
 import { modules as statisticsModules } from "@/lib/statistics-modules";
 
-import {
-  topics as calculusTopics,
-  problems as calculusProblems,
-} from "@/lib/calculus-content";
-import {
-  topics as linalgTopics,
-  problems as linalgProblems,
-} from "@/lib/linalg-content";
-import {
-  topics as statisticsTopics,
-  problems as statisticsProblems,
-} from "@/lib/statistics-content";
+// NOTE: topics/problems intentionally NOT imported from the inert legacy shims
+// (calculus-content etc). Those shims exist only for remaining direct call-sites
+// in not-yet-migrated per-subject pages (which will be updated by other agents
+// to source from @/lib/content/loader + FileSystemContentBundle instead).
+// Importing the shims here would pull them into client chunks (e.g. via DashboardContent
+// + ProgressProvider, or search) alongside the progress system, recreating the
+// "topics is not defined" Turbopack client module evaluation landmine on real routes.
+// Subjects now only carries metadata + modules (for section structure). Full lists
+// come from the data-driven content system (preserving stable ids for progress compat).
 
 import type { Problem, Topic } from "@/lib/shared-types";
 
@@ -39,13 +36,17 @@ type SubjectModule = {
  * When adding a new subject, you should only need to add an entry here
  * (plus the actual content files).
  *
- * During transition: the `topics`, `problems`, and `modules` here (sourced from
- * legacy shims) are used by the main DashboardContent + CourseContentsPage for
- * structure + feeding getPracticeProgress / getSectionPracticeProgress.
- * Because ported subjects in content/ preserve exact `id` / `topicId` / `section`
- * values (see schema.ts + content ports), the resulting mastery stats are
- * accurate for work done via FileSystemContentBundle data in /x/ (and vice versa).
- * No lists from FS bundles are needed in this file yet; the helpers abstract the source.
+ * topics/problems are empty (intentionally; see top-of-file comment). They are
+ * sourced at call-sites from the new @/lib/content/loader + FileSystemContentBundle
+ * (or legacy shims directly for not-yet-migrated pages). This keeps subjects.ts
+ * from pulling inert *-content shims into client bundles that also contain the
+ * progress system (ProgressProvider / useProgress), eliminating the
+ * "ReferenceError: topics is not defined at module evaluation" landmine in
+ * Turbopack client chunks for real practice routes.
+ *
+ * modules are still provided here (for section structure used by getSectionPracticeProgress etc).
+ * getPracticeProgress callers now primarily pass problems lists from the FS bundle
+ * (stable ids ensure cross-compat with legacy progress data).
  */
 export type SubjectConfig = {
   slug: SubjectSlug;
@@ -68,8 +69,8 @@ export const subjects: Record<SubjectSlug, SubjectConfig> = {
     modulesDescription: "Read the calculus chapters in order, or jump directly to the topic you need.",
     icon: "∫",
     order: 1,
-    topics: calculusTopics,
-    problems: calculusProblems,
+    topics: [],
+    problems: [],
     modules: calculusModules,
     hasTests: true,
   },
@@ -80,8 +81,8 @@ export const subjects: Record<SubjectSlug, SubjectConfig> = {
     modulesDescription: "Read the linear algebra chapters in order, or jump directly to the topic you need.",
     icon: "λ",
     order: 2,
-    topics: linalgTopics,
-    problems: linalgProblems,
+    topics: [],
+    problems: [],
     modules: linalgModules,
     hasTests: false,
   },
@@ -92,8 +93,8 @@ export const subjects: Record<SubjectSlug, SubjectConfig> = {
     modulesDescription: "Read the statistics chapters in order, or jump directly to the topic you need.",
     icon: "σ",
     order: 3,
-    topics: statisticsTopics,
-    problems: statisticsProblems,
+    topics: [],
+    problems: [],
     modules: statisticsModules,
     hasTests: false,
   },

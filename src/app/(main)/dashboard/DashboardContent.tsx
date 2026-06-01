@@ -6,16 +6,23 @@ import { AppStateProviders } from "@/components/scoped-providers";
 import { useProgress } from "@/components/progress-provider";
 import { subjectList } from "@/lib/subjects";
 import { getPracticeProgress, getSectionPracticeProgress } from "@/lib/progress";
+import type { Topic, Problem } from "@/lib/shared-types";
 
-export default function DashboardContent() {
+type RealData = {
+  calculus?: { topics: Topic[]; problems: Problem[] };
+  statistics?: { topics: Topic[]; problems: Problem[] };
+  "linear-algebra"?: { topics: Topic[]; problems: Problem[] };
+};
+
+export default function DashboardContent({ realData }: { realData?: RealData }) {
   return (
     <AppStateProviders>
-      <DashboardInner />
+      <DashboardInner realData={realData} />
     </AppStateProviders>
   );
 }
 
-function DashboardInner() {
+function DashboardInner({ realData }: { realData?: RealData }) {
   const { progress } = useProgress();
 
   // Memoize all the expensive progress aggregation so it only recomputes
@@ -63,7 +70,7 @@ function DashboardInner() {
     let tAttempted = 0;
     let tCorrect = 0;
 
-    subjectList.forEach((subject) => {
+    effectiveSubjects.forEach((subject) => {
       subject.topics.forEach((topic) => {
         const stats = getPracticeProgress(progress, topic.id, subject.problems);
         tAttempted += stats.attempted;
