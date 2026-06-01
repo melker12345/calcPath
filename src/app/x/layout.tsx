@@ -13,7 +13,7 @@ export default function ExperimentalLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className="min-h-screen theme-bg">
       {/* Experimental banner - isolated UI chrome */}
       <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
         <div className="mx-auto flex max-w-6xl items-center justify-between text-xs sm:text-sm">
@@ -25,7 +25,7 @@ export default function ExperimentalLayout({
         </div>
       </div>
       <div className="mx-auto max-w-6xl">{children}</div>
-      <footer className="mt-12 border-t border-[var(--border)] py-6 text-center text-xs text-zinc-500">
+      <footer className="mt-12 border-t border-[var(--border)] py-6 text-center text-xs theme-text-muted">
         This area is isolated. It demonstrates browse → explanation (MDX data) → practice flow using <code>getFileSystemContentBundle</code> + generic components. No legacy per-subject code.
       </footer>
     </div>
