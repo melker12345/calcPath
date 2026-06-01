@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { subjectBodyFont, subjectHeadingFont } from "@/lib/subject-fonts";
 
 export const metadata: Metadata = {
   title: "Experimental Dynamic Area | CalcPath",
@@ -24,7 +25,9 @@ export default function ExperimentalLayout({
           <Link href="/" className="underline hover:no-underline">Exit to main app →</Link>
         </div>
       </div>
-      <div className="mx-auto max-w-6xl">{children}</div>
+      <div className={`mx-auto max-w-6xl ${subjectHeadingFont.variable} ${subjectBodyFont.variable}`}>
+        {children}
+      </div>
       <footer className="mt-12 border-t border-[var(--border)] py-6 text-center text-xs text-zinc-500">
         This area is isolated. It demonstrates browse → explanation (MDX data) → practice flow using <code>getFileSystemContentBundle</code> + generic components. No legacy per-subject code.
       </footer>
