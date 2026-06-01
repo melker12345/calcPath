@@ -9,12 +9,14 @@ export default function ExperimentalHome() {
     {
       slug: "linear-algebra",
       label: "Linear Algebra",
+      icon: "λ",
       desc: "9 topics, ~336 questions. Full port to content/linear-algebra/ (index + per-topic JSON + MDX).",
       topicsCount: 9,
     },
     {
       slug: "statistics",
       label: "Statistics",
+      icon: "σ",
       desc: "14 topics. Fully ported to content/statistics/ by content agents. Ready for generic flows.",
       topicsCount: 14,
     },
@@ -22,56 +24,59 @@ export default function ExperimentalHome() {
   ];
 
   return (
-    <div className="px-4 py-8 sm:px-6 sm:py-12">
+    <div className="px-4 py-8 sm:px-6 sm:py-10">
       <div className="mb-8">
-        <h1 className="text-3xl font-semibold tracking-tight">Experimental Dynamic Area</h1>
-        <p className="mt-2 max-w-2xl text-zinc-600 dark:text-zinc-400">
+        <h1 className="text-3xl font-semibold tracking-tight theme-text">Experimental Dynamic Area</h1>
+        <p className="mt-2 max-w-2xl text-[15px] theme-text-secondary">
           This proves the full user flow using <strong>only</strong> the new content data (JSON + MDX from <code>content/</code> via <code>getFileSystemContentBundle</code>).
           No legacy <code>*-content.ts</code> or per-subject app folders used here.
         </p>
       </div>
 
-      <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm dark:border-blue-900/60 dark:bg-blue-950/30">
-        <strong>Current status:</strong> Browse + basic explanation (MDX raw) + working practice (generic). See NOTES.md in content lib for decisions + limitations.
+      <div className="mb-6 rounded-xl border theme-border bg-[var(--surface-2)] p-4 text-sm theme-text-secondary">
+        <strong className="theme-text">Current status:</strong> Full browse + explanation (lightweight MDX renderer) + working generic practice. See <code>NOTES.md</code> (content lib) for architecture decisions + open items.
       </div>
 
-      <h2 className="mb-4 text-xl font-semibold">Available Subjects (data-driven)</h2>
+      <h2 className="mb-4 text-xl font-semibold theme-text">Available Subjects (data-driven)</h2>
 
       <div className="grid gap-4 md:grid-cols-2">
         {subjects.map((s) => (
-          <div key={s.slug} className="rounded-2xl border border-[var(--border)] bg-white p-6 shadow-sm dark:bg-[var(--surface)]">
+          <div key={s.slug} className="rounded-2xl border theme-border theme-surface p-6 shadow-sm">
             <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-xl font-semibold">{s.label}</h3>
-                <p className="mt-1 text-sm text-zinc-500">{s.desc}</p>
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 text-3xl leading-none opacity-80" aria-hidden>{s.icon}</span>
+                <div>
+                  <h3 className="text-xl font-semibold theme-text">{s.label}</h3>
+                  <p className="mt-1 text-sm theme-text-secondary">{s.desc}</p>
+                </div>
               </div>
-              <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+              <span className="shrink-0 rounded-full border theme-border bg-[var(--surface-2)] px-2.5 py-0.5 text-xs font-medium theme-text-muted">
                 {s.topicsCount} topics
               </span>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-3">
+            <div className="mt-5 flex flex-wrap gap-3">
               <Link
                 href={`/x/${s.slug}`}
-                className="inline-flex items-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black active:scale-[0.985] dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+                className="btn-primary inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition active:scale-[0.985]"
               >
                 Browse topics →
               </Link>
               <Link
-                href={`/x/${s.slug}/practice`}  // note: we may add list page later; for now topic pages are direct
-                className="inline-flex items-center rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+                href={`/x/${s.slug}/practice`}
+                className="btn-secondary inline-flex items-center rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-[var(--surface-2)]"
               >
-                Practice overview (soon)
+                Practice topics
               </Link>
             </div>
-            <p className="mt-3 text-[11px] text-zinc-500">Uses only FileSystemContentBundle for this subject.</p>
+            <p className="mt-3 text-[11px] theme-text-muted">Pure FileSystemContentBundle • no legacy imports</p>
           </div>
         ))}
       </div>
 
-      <div className="mt-8 text-xs text-zinc-500">
-        Routes live at <code>/x/[subject]</code>, <code>/x/[subject]/modules/[topicId]</code>, <code>/x/[subject]/practice/[topicId]</code>.
-        All data fetched at request time from the content loader (async server components).
+      <div className="mt-8 text-xs theme-text-muted">
+        Routes: <code>/x/[subject]</code> • <code>/x/[subject]/modules/[topicId]</code> • <code>/x/[subject]/practice/[topicId]</code>.
+        Server-rendered from content loader on each request.
       </div>
     </div>
   );
