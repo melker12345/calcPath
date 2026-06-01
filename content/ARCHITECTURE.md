@@ -47,17 +47,27 @@ content/
   - Strong structure where we need it
   - Pleasant writing experience where it matters most (explanations)
 
-## Migration Philosophy
+## Official Declaration (2026-06)
 
-1. Start with a **thin vertical slice** on **Linear Algebra** (smallest + cleanest subject).
-2. Build schema + loader first.
-3. Prove that a generic practice experience can consume data from this structure.
-4. Only later expand to other subjects and full generic routes.
+The `content/` + `FileSystemContentBundle` + generic components architecture is now the **primary development direction** for the entire application (see `src/lib/content/NOTES.md` for the formal declaration and `MIGRATION-PLAN.md` for the phased roadmap).
 
-## Next Steps After This Decision
+Legacy per-subject TypeScript content is archived in `backup-content/legacy/`. All new content, features, and pages target the data-driven model.
 
-- Define Zod schemas that match this folder structure.
-- Build a content loader that can read `content/linear-algebra/...`
-- Create a minimal demo of a generic practice page using the new data format.
+## Migration Philosophy (Historical Context)
 
-This document serves as the source of truth for all future work on the dynamic architecture.
+The initial rollout followed a deliberate sequence that has now been completed:
+1. Thin vertical slice on Linear Algebra to validate the approach.
+2. Schema + loader foundation.
+3. Full ports of all three subjects (LA, Statistics, Calculus) with question parity.
+4. Generic UI + `/x/` dynamic routes proving the complete flows.
+5. Formal declaration as primary path.
+
+Future work follows the phases in [MIGRATION-PLAN.md](../MIGRATION-PLAN.md): decoupling, promotion of generic paths, and retirement of legacy.
+
+## Current Status & Next Steps
+
+- **Done**: Full `content/` structure for all subjects, stable Zod schemas + `src/lib/content/loader.ts`, generic components, working `/x/` experience.
+- **Active**: Decouple core systems (progress, answer checking, main routes) from legacy shapes so the new architecture powers the primary app.
+- **Ongoing**: Improve generic components to full parity (or better) with legacy pages; expand MDX richness.
+
+This document + `content/NOTES.md` + root `MIGRATION-PLAN.md` are the sources of truth. New work aligns here.
