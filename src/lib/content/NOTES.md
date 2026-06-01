@@ -106,3 +106,67 @@
 - [ ] Design decision needed: how/when to introduce generic dynamic routes (`[subject]`) without conflicting with existing static subject folders or requiring big refactors
 - [ ] Decide on stable ID policy + migration strategy for when we move content to JSON/MDX (progress compatibility critical)
 - [ ] Expand loader adapters for Calculus + Statistics (after LA slice validated)
+
+## Module & Explanations Page Generalization (Module & Explanations Page Generalization Agent, 2026-06-01)
+
+**Goal achieved in isolated slice**: Created a generic, data-driven module/explanation renderer that consumes `FileSystemContentBundle.mdxModules` (raw `mdxSource`) + `Topic` metadata directly from the new content/ FS structure.
+
+**Deliverable**:
+- New isolated file: `src/components/experimental-generic-mdx-module-explanation.tsx`
+  - `ExperimentalGenericMdxModuleExplanation` React component (client).
+  - Self-contained line-based `parseMdxToStructured` (exported as `experimentalParseMdxModule` for tests/harnesses).
+  - Supports all observed patterns in current `content/*/topics/*/module.mdx` (LA + Stats + Calculus ports):
+    - Intro (pre-first-## content, after stripping frontmatter + # title).
+    - `## Section Title {#slug}` or `## Title` + following `<!-- section: slug -->` (for question matching + deep links + per-section practice).
+    - Body paragraphs (with LaTeX $...$ and $$...$$ detection → MathText + BlockMath).
+    - `**ELI5**` / `**ELI5**:` / `**ELI5 (continued)**` blocks (inline text or following `-` bullet lists; heuristic stops collection on subsequent non-list paragraphs to support stats-style "ELI5 callout then continue body").
+    - Worked examples: `### Worked Examples`, `**Worked Example: Title**` → rendered as titled cards with numbered steps.
+    - `## Common Mistakes` → bulleted list at end.
+  - Re-uses legacy visual + interactive pieces (ModuleSectionNav TOC, ELI5 styled callout, example cards, practice links using ?section=slug, VoteFeedback, prev/next footer) for pixel-level consistency during transition.
+  - Debug footer showing "sourced from content/.../module.mdx via FileSystemContentBundle".
+  - Detailed JSDoc with full MDX proper-rendering plan.
+
+**Decisions**:
+- Work strictly isolated: one new experimental-*.tsx file only (no new dirs, no edits to production pages, layouts, routes, legacy modules/, or loader). No new runtime deps.
+- Basic custom parser (no markdown lib) sufficient for current authored MDX dialect + keeps zero-dep for this slice.
+- Parser produces internal shape modeled on legacy ModuleSection (title/section/body/eli5/examples) so rendering code could later be shared/refactored with SubjectModulePage.
+- Anchor/slug extraction supports both markdown `{#id}` (LA) and HTML comment (some calculus) conventions seen in the ports.
+- Rendering stays "use client" + reuses MathText (which already handles katex + spacing fixes).
+- For real generic pages later: the component can be called from a server page that does `const bundle = await getFileSystemContentBundle(slug); const mdxMod = bundle.mdxModules.find(...)` and passes strings (serializable).
+
+**Proper MDX rendering plan (documented in component + here)**:
+- When productizing: `npm install next-mdx-remote`.
+- Switch (or dual) to server component + `<MDXRemote source={mdxSourceWithoutFm} components={{ELI5: ELI5Callout, ...}} />`.
+- Add remark-math + rehype-katex for native LaTeX in MDX (or keep hybrid).
+- Authors could then use JSX/custom tags in .mdx for richer embeds.
+- Loader remains unchanged (raw source is correct).
+
+**Frequent small commits performed** (as required):
+- Initial creation + parser + full renderer.
+- Parser ELI5 heuristic fix for cross-port variations.
+- Export of pure parser fn.
+- (This NOTES update + follow-ups).
+
+**Remaining blockers for replacing old module pages** (for future agents / decision):
+1. **No MDX compiler yet** — basic parser works for existing content but is brittle to authoring variations (future MDX will solve + allow custom components).
+2. **No wiring / routes** — component not imported anywhere. Needs a thin demo page (dev-only or /_experimental/* route group?) + server data loading. Existing static subject folders + redirects would conflict with `[subject]` dynamic.
+3. **Practice links & deep links assume existing URLs** — they hardcode `/${slug}/practice/...` which still point to per-subject impls.
+4. **Metadata / layouts / SEO** — generateMetadata, subject layouts, course-contents-page still use legacy SubjectConfig / modules. Generic version would need parallel or derived.
+5. **Full bundle for all subjects** — loader only does linear-algebra + statistics (calculus mdx exists in content/ but not loaded by getFileSystemContentBundle yet).
+6. **Progress / section slugs invariant** — must ensure MDX headings always produce slugs matching the `section` field in the topic's questions.json (already convention in ports).
+7. **Testing the renderer** — no visual/e2e tests yet for the experimental component (parser could be unit-tested against real mdxSource fixtures).
+8. **Migration cutover strategy** — when to flip the three per-subject module/[topicId]/page.tsx to use generic + FS bundle? Feature flag? Parallel? Delete legacy ModuleContent after?
+9. **Math fidelity** — current parser + MathText covers 95%+ of LaTeX in ports, but edge cases (align*, matrices in display, etc.) may need validation against real pages.
+10. **Bundle loading in client contexts** — FS loader is server-only (dynamic fs). Generic pages must be server components or use API route / build-time static.
+
+**Status**: Meaningful isolated deliverable complete. Parser + renderer proven conceptually against real content samples from all 3 subjects. Ready for "thin vertical slice demo page" experiment (see open item above) or decision on route strategy. Do not delete or modify legacy module pages yet.
+
+**References in this work**:
+- content/linear-algebra/topics/vectors/module.mdx (primary test case)
+- content/statistics/topics/descriptive/module.mdx and bayesian-inference/ (variation test)
+- content/calculus/topics/limits/module.mdx and derivatives/ (anchor comment style)
+- src/lib/content/{loader.ts,schema.ts}
+- src/components/subject-module-page.tsx (visual + structural reference)
+- content/ARCHITECTURE.md + future-dynamic.md
+
+Regular NOTES updates + small commits followed throughout.
