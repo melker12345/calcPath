@@ -158,3 +158,48 @@
 - Once stable, plan gradual migration or A/B of main routes.
 
 All changes via many small commits (see git log on branch). Full flow demonstrable by visiting /x/linear-algebra (pick vectors or systems) → explanation or practice.
+
+## Dark Mode Consistency (Dark Mode Consistency Agent, 2026-06-01)
+
+**Scope**: Exclusively /x/ experimental routes + reusable generic components used by them (GenericPracticeExperience [both], GenericModuleViewer, ExperimentalGenericMdxModuleExplanation, MdxContent, SubjectBreadcrumbs, PracticeFeedback, ProgressDots, module-section-nav, vote-feedback, etc.). Never touched production subject pages (/calculus/, /linear-algebra/, /statistics/ etc.).
+
+**Fixes applied** (via frequent small commits in worktree):
+- x/layout: Fixed broken --background var (now .theme-bg for correct --bg in dark); footer to theme-text-muted.
+- x/home, [subject] browse, practice index, [topic] pages + error states: Added theme-text / theme-text-secondary / theme-text-muted; dark variants for links (blue-700 -> accent), hovers (zinc-50 etc -> surface-2), cards, disabled states, emerald/amber accents, info boxes.
+- GenericModuleViewer: Back links to accent in dark; ELI5 polish; source/footer to muted; headings already used theme-text.
+- ExperimentalGenericMdxModuleExplanation + ModuleSectionNav: Back/practice links dark accent; error text muted; fixed non-existent .theme-surface-2 -> explicit bg-[var(--surface-2)] + dark.
+- MdxContent: Already solid (links had dark:accent, code used vars, prose theme-text).
+- SubjectBreadcrumbs: Already good (theme-muted + dark accent links).
+- GenericPracticeExperience (used by /x/): 
+  - Main card, MCQ choice buttons: full dark borders/hovers using vars, surface-2.
+  - Feedback overlays + close button: dark bg/borders/texts.
+  - All-mastered box: dark bg/border/texts + inverted primary button.
+  - Bottom nav (prev/next/skip/Q indicator/All topics): dark muted + surface hovers.
+  - Error states, solved count, progress labels: muted.
+- Advanced generic-practice/GenericPracticeExperience: Aligned with above (mcq, overlays, nav, mastered, headers, selects, muted).
+- PracticeFeedback (feedback states/overlay): Improved skip/solution buttons for dark (surface bg, border var, muted text); step text dark secondary.
+- ProgressDots: Already had dark ring-offset + zinc.
+- VoteFeedback (in practice): Muted texts for "Helpful?", thanks notes.
+- MathInput: Already had robust JS-driven darkTh using CSS vars + some dark: in close btn.
+- module-section-nav: Fixed surface + accent links.
+
+**Patterns used for native feel**:
+- Prefer .theme-bg / .theme-surface / .theme-text / .theme-text-secondary / .theme-text-muted / .theme-card / .theme-border.
+- For accents/hovers in cards/inputs/feedback: bg-[var(--surface-2)], border-[var(--border)], text-[var(--text-muted)], dark:hover:bg-[var(--surface-2)], accent via dark:text-[var(--accent)].
+- Legacy raw colors (zinc-*, blue-*, emerald-*, slate-*) only where intentionally colored (status, buttons) + paired dark: counterparts or forcing in globals.css helps.
+- Overlays/feedback: consistent surface + callout dark variants (emerald/amber/blue with /dark:950/40).
+- No new CSS; reused existing theme system + globals forcing safety net.
+
+**Remaining dark mode gaps in experimental area** (not critical but for future polish):
+- Some colored status dots (emerald/amber/red in ProgressDots) and vibrant buttons (emerald-600 etc) use bright colors that work but could have subtle dark adjustments for even better contrast (current forcing + vars cover most).
+- ELI5 / callout boxes in GenericModuleViewer still use blue-* with partial dark (could adopt .module-callout or theme-surface-2 + accent border like prod).
+- MathInput keypad/pills use hardcoded lightTh + JS switch (solid for exp, but subject="generic" path).
+- ModuleSectionNav is fixed-left, may need z-index or mobile consideration (but dark now ok).
+- Some prose-invert + stone in MDX renderers may have minor edge cases in complex content.
+- If/when wiring ExperimentalGenericMdx... or MdxContent deeper into /x/, verify hrefs (currently mix /x/ vs prod) don't affect styles.
+- Amber experimental banner and dashed notes use some raw that look ok but could be more var-driven.
+- No automated dark mode visual tests yet for /x/.
+
+All experimental /x/ now feels solid and consistent with main app's dark (GitHub-inspired via --vars + theme-*). Tested via manual (theme toggle) in mind.
+
+(Changes: ~20 small commits total for this agent task.)
