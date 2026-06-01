@@ -372,3 +372,4 @@ Task complete. /x/ practice experience now feels complete for stats (and was alr
 All work via targeted search_replace on JSON arrays (read before edit) + git commits.
 
 - (2026-06-01, data-migration subagent) Completed anova backport: now exactly 39/39 questions in content/statistics/topics/anova/questions.json matching legacy anova.ts (all IDs, LaTeX, wording, structure preserved exactly; no topicId in JSON; formatted per good examples like descriptive/). Verified with jq length. Small commit follows.
+- (2026-06-01, data-migration subagent) Completed estimation backport: now exactly 40/40 in content/statistics/topics/estimation/questions.json (38 from estimation.ts + 2 cross "inf-ci-1","inf-se-1" from inference.ts with topicId "estimation"; all original wording/LaTeX/IDs preserved). Verified count. Small commit follows.
