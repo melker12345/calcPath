@@ -8,7 +8,7 @@ import { deriveSuggestionLabels, type QuestionContext } from "@/lib/math-input-h
 
 let stylesInjected = false;
 
-type Subject = "calculus" | "linalg" | "stats";
+type Subject = "calculus" | "linalg" | "stats" | "generic";
 
 const SUBJECT_THEME: Record<Subject, {
   pillBg: string; pillBorder: string; pillText: string;
@@ -45,6 +45,18 @@ const SUBJECT_THEME: Record<Subject, {
     headerBg: "#ffffff", labelColor: "#a1a1aa", dividerColor: "#e4e4e7",
     fieldAreaBg: "#ffffff", fieldInnerBg: "#f8fafc", fieldBorder: "#e4e4e7",
     keypadBg: "#f4f4f5", numBg: "#ffffff", numText: "#18181b", numShadow: "0 1px 3px rgba(0,0,0,0.08)",
+  },
+  generic: {
+    // Neutral fallback for the new data-driven /x/ area and future subjects.
+    // Uses CSS vars so it is always design-token aligned, dark-mode friendly,
+    // and resolves to correct light values on initial SSR (no theme flash on fast nav).
+    pillBg: "var(--surface-2)", pillBorder: "var(--border)", pillText: "var(--text-secondary)",
+    opBg: "var(--surface-2)", opText: "var(--text-secondary)", parenColor: "var(--text-muted)",
+    opSolidBg: "var(--accent)",
+    containerBg: "var(--surface)", containerBorder: "var(--border)",
+    headerBg: "var(--surface)", labelColor: "var(--text-muted)", dividerColor: "var(--border)",
+    fieldAreaBg: "var(--surface)", fieldInnerBg: "var(--bg)", fieldBorder: "var(--border)",
+    keypadBg: "var(--surface)", numBg: "var(--surface-2)", numText: "var(--text-primary)", numShadow: "none",
   },
 };
 
