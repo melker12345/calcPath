@@ -93,7 +93,7 @@ export function GenericPracticeExperience({
     return (
       <div className="mx-auto max-w-3xl p-8">
         <p className="theme-text-secondary">No practice questions available for this topic in the loaded content data yet.</p>
-        <Link href={`/x/${subjectSlug}`} className="mt-4 inline-block underline text-blue-700 dark:text-[var(--accent)]">Back to {subjectLabel}</Link>
+        <Link href={`/x/${subjectSlug}`} className="mt-4 inline-block underline text-[var(--accent)]">Back to {subjectLabel}</Link>
       </div>
     );
   }
@@ -208,7 +208,7 @@ export function GenericPracticeExperience({
           {/* Optional link back to explanation (generic, points to our /x/ module route) */}
           <Link
             href={`/x/${subjectSlug}/modules/${current.topicId}`}
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:text-[var(--accent)]"
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-[var(--accent)] transition-colors hover:bg-[var(--surface-2)]"
           >
             Review the explanation for this topic →
           </Link>
@@ -227,7 +227,7 @@ export function GenericPracticeExperience({
                     submitAnswer(choice);
                   }}
                   disabled={feedback?.type === "correct"}
-                  className="rounded-xl border theme-border bg-[var(--surface)] px-4 py-3 text-left text-base font-medium theme-text transition hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg"
+                  className="rounded-xl border theme-border bg-[var(--surface)] px-4 py-3 text-left text-base font-medium theme-text transition hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg"
                 >
                   <MathText text={choice} />
                 </button>
@@ -266,13 +266,13 @@ export function GenericPracticeExperience({
 
         {/* All mastered */}
         {solvedCount >= displayProblems.length && (
-          <div className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-900/20 p-4 text-center sm:mt-6 sm:rounded-2xl sm:p-5">
-            <p className="text-lg font-bold text-emerald-300">All {displayProblems.length} problems mastered!</p>
-            <p className="mt-1 text-sm text-emerald-600">Shuffle for a fresh run.</p>
+          <div className="mt-4 rounded-xl border theme-border bg-[var(--surface-2)] p-4 text-center sm:mt-6 sm:rounded-2xl sm:p-5">
+            <p className="text-lg font-bold theme-text">All {displayProblems.length} problems mastered!</p>
+            <p className="mt-1 text-sm theme-text-secondary">Shuffle for a fresh run.</p>
             <button
               type="button"
               onClick={shuffleAndRestart}
-              className="mt-3 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 active:scale-95"
+              className="btn-primary mt-3 active:scale-95"
             >
               Shuffle &amp; restart
             </button>
