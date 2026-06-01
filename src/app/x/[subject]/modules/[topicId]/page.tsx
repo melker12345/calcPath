@@ -26,10 +26,10 @@ export default async function DynamicModulePage({ params }: Props) {
 
   if (!mdxModule || !topic) {
     return (
-      <div className="px-4 py-12">
-        <p className="text-sm">No MDX explanation data for topic “{topicId}” in this subject yet (or topic unknown).</p>
-        <a href={`/x/${subjectSlug}`} className="mt-4 inline-block text-sm underline">Back to browse</a>
-      </div>
+      <main className="mx-auto w-full max-w-[760px] px-4 py-12">
+        <p className="text-sm theme-text-secondary">No MDX explanation data for topic “{topicId}” in this subject yet (or topic unknown).</p>
+        <a href={`/x/${subjectSlug}`} className="mt-4 inline-block text-sm underline text-blue-700 dark:text-[var(--accent)]">Back to browse</a>
+      </main>
     );
   }
 

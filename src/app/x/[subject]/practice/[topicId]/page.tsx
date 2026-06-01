@@ -28,21 +28,21 @@ export default async function DynamicPracticePage({ params }: Props) {
 
   if (!topic) {
     return (
-      <div className="mx-auto max-w-3xl p-8">
-        Topic “{topicId}” not found in the data for {subjectSlug}.
-        <a href={`/x/${subjectSlug}`} className="mt-4 block underline">Browse topics</a>
-      </div>
+      <main className="mx-auto max-w-3xl p-8">
+        <p className="theme-text-secondary">Topic “{topicId}” not found in the data for {subjectSlug}.</p>
+        <a href={`/x/${subjectSlug}`} className="mt-4 block underline text-blue-700 dark:text-[var(--accent)]">Browse topics</a>
+      </main>
     );
   }
 
   if (topicProblems.length === 0) {
     return (
-      <div className="mx-auto max-w-3xl p-8">
-        <h1 className="text-xl font-semibold">{topic.title}</h1>
-        <p className="mt-2">This topic has no practice questions in the current content/ data yet.</p>
-        <a href={`/x/${subjectSlug}/modules/${topicId}`} className="mt-3 inline-block text-blue-700 underline">View the explanation instead →</a>
-        <a href={`/x/${subjectSlug}`} className="mt-2 block underline">Back to all topics</a>
-      </div>
+      <main className="mx-auto max-w-3xl p-8">
+        <h1 className="text-xl font-semibold theme-text">{topic.title}</h1>
+        <p className="mt-2 theme-text-secondary">This topic has no practice questions in the current content/ data yet.</p>
+        <a href={`/x/${subjectSlug}/modules/${topicId}`} className="mt-3 inline-block text-blue-700 underline dark:text-[var(--accent)]">View the explanation instead →</a>
+        <a href={`/x/${subjectSlug}`} className="mt-2 block underline text-blue-700 dark:text-[var(--accent)]">Back to all topics</a>
+      </main>
     );
   }
 
