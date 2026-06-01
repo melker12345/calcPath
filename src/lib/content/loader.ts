@@ -291,9 +291,13 @@ export function deriveModuleSectionSummaries(bundle: SubjectBundle) {
 // ============================================
 
 /**
- * Loads all known subject bundles (validated).
+ * Loads all known subject bundles (validated) — LEGACY path using TS adapters.
  * In the thin slice we focus on Linear Algebra to prove the data-driven path.
  * Other subjects remain on legacy paths until migrated.
+ *
+ * For the new JSON+MDX architecture use:
+ *   - loadLinearAlgebraFromContent() or getFileSystemContentBundle("linear-algebra")
+ *   - These return FileSystemContentBundle (with mdxModules)
  */
 export async function loadAllContent(): Promise<Record<string, SubjectBundle>> {
   // For now synchronous under the hood; async for future FS or remote loads.
@@ -305,8 +309,10 @@ export async function loadAllContent(): Promise<Record<string, SubjectBundle>> {
 }
 
 /**
- * Convenience: fetch a single validated bundle by slug.
+ * Convenience: fetch a single validated bundle by slug. (Legacy shape)
  * Throws if unknown (in current impl).
+ *
+ * New code for dynamic architecture should prefer the FS variants for subjects that have content/ data.
  */
 export async function getSubjectBundle(slug: string): Promise<SubjectBundle> {
   const all = await loadAllContent();
