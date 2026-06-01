@@ -1,5 +1,5 @@
 // Simple loading state for /x/ dynamic routes (appears during server data fetch for bundles)
-export default function ExperimentalLoading() {
+export default function DynamicLoading() {
   return (
     <div className="px-4 py-8 sm:px-6 sm:py-10">
       <div className="mb-6 h-4 w-48 rounded bg-[var(--surface-2)]" />
