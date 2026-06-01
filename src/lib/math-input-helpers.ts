@@ -52,7 +52,14 @@ export function deriveSuggestionLabels(
     labels.push(label);
   };
 
-  const src = `${answerSrc} ${questionCtx?.hasVariable?.join(" ") ?? ""}`;
+  // Build richer src including ctx flags (hasTrig etc). This improves suggestion
+  // labels for generic/dynamic content (where detectQuestionContext is used on prompts)
+  // and outside legacy per-subject pages. Previously only vars + pi respected ctx.
+  let ctxExtra = "";
+  if (questionCtx?.hasTrig) ctxExtra += " sin cos tan sinh cosh tanh sec csc cot arcsin arccos arctan ";
+  if (questionCtx?.hasExp) ctxExtra += " e exp ";
+  if (questionCtx?.hasLn) ctxExtra += " ln log ";
+  const src = `${answerSrc} ${questionCtx?.hasVariable?.join(" ") ?? ""} ${ctxExtra}`;
   const hasLowerSymbol = (symbol: string) =>
     new RegExp(`(^|[^a-z])${symbol}($|[^a-z])`).test(src);
   const hasUpperSymbol = (symbol: string) =>
