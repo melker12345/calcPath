@@ -85,7 +85,7 @@ export const eigenvalueProblems: Problem[] = [
     prompt: "Find the characteristic polynomial of $A=\\begin{pmatrix}5&2\\\\4&3\\end{pmatrix}$. The constant term (value at $\\lambda=0$) equals $\\det(A)$. What is it?",
     answer: "7",
     explanation: "Step 1: $\\det(A)=5\\cdot3-2\\cdot4=15-8=7$. This is also the constant term of the characteristic polynomial $\\lambda^2-8\\lambda+7$. Final answer: $7$." }),
-  p({ id: "eig-eigenvectors-5", topicId: "eigenvalues", section: "eigenvectors", type: "mcq", difficulty: "medium",
+  p({ id: "eig-eigenvectors-5", topicId: "eigenvalues", section: "eigenvectors", type: "numeric", difficulty: "medium",
     prompt: "For $A=\\begin{pmatrix}5&2\\\\4&3\\end{pmatrix}$ with eigenvalue $\\lambda=7$, find the eigenvector direction. $(A-7I)\\mathbf{v}=\\mathbf{0}$: first component?",
     answer: "1",
     explanation: "Step 1: $A-7I=\\begin{pmatrix}-2&2\\\\4&-4\\end{pmatrix}$. Step 2: Row reduce: $-2x+2y=0\\Rightarrow x=y$. Step 3: Eigenvector: $\\langle 1,1\\rangle$. First component: $1$. Final answer: $1$." }),

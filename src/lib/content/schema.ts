@@ -36,6 +36,60 @@ export const ProblemTypeSchema = z.enum(["numeric", "mcq"]);
 
 export const DifficultySchema = z.enum(["easy", "medium", "hard"]);
 
+// Shared shape for practice problems and test questions (avoids Zod v4 restrictions on .extend/.omit for refined schemas)
+const problemFields = {
+  /**
+   * Stable, unique identifier across all time.
+   * NEVER change this after content is live for real users.
+   * Used in completedProblemIds, streaks, attempts, etc.
+   * Recommended format: kebab-case with topic prefix, e.g. "vectors-operations-1"
+   */
+  id: z.string().min(1),
+
+  /**
+   * Which topic this belongs to (e.g. "vectors", "limits", "multiple-regression")
+   */
+  topicId: z.string().min(1),
+
+  /**
+   * Stable section slug within the topic.
+   * Must match `ModuleSection.section` (or be omitted only for unsectioned) for deep linking and per-section progress.
+   */
+  section: z.string().min(1),
+
+  prompt: z.string().min(1),
+
+  type: ProblemTypeSchema,
+
+  /**
+   * The canonical correct answer (string for flexibility).
+   * For MCQ this should match one of the choices exactly (case sensitive match used in UI).
+   */
+  answer: z.string().min(1),
+
+  choices: z.array(z.string().min(1)).optional(),
+
+  /**
+   * Full step-by-step explanation. This is what gets shown in feedback.
+   * Current convention: "Step 1: ...\nStep 2: ... Final answer: ..."
+   * Parsed by PracticeFeedback and per-page getHint logic.
+   */
+  explanation: z.string().min(1),
+
+  difficulty: DifficultySchema,
+};
+
+const mcqRefine = {
+  refine: (p: any) => {
+    if (p.type === "mcq") {
+      return Array.isArray(p.choices) && p.choices.length > 0 && p.choices.includes(p.answer);
+    }
+    return true;
+  },
+  message: "MCQ problems must have choices and answer must be one of them",
+  path: ["answer"] as const,
+};
+
 /**
  * A single practice question.
  * This is the most critical type for progress tracking.
@@ -47,59 +101,8 @@ export const DifficultySchema = z.enum(["easy", "medium", "hard"]);
  * - Answer validation is currently global (see answer-check.ts); per-question rules are a future extension.
  */
 export const ProblemSchema = z
-  .object({
-    /**
-     * Stable, unique identifier across all time.
-     * NEVER change this after content is live for real users.
-     * Used in completedProblemIds, streaks, attempts, etc.
-     * Recommended format: kebab-case with topic prefix, e.g. "vectors-operations-1"
-     */
-    id: z.string().min(1),
-
-    /**
-     * Which topic this belongs to (e.g. "vectors", "limits", "multiple-regression")
-     */
-    topicId: z.string().min(1),
-
-    /**
-     * Stable section slug within the topic.
-     * Must match `ModuleSection.section` (or be omitted only for unsectioned) for deep linking and per-section progress.
-     */
-    section: z.string().min(1),
-
-    prompt: z.string().min(1),
-
-    type: ProblemTypeSchema,
-
-    /**
-     * The canonical correct answer (string for flexibility).
-     * For MCQ this should match one of the choices exactly (case sensitive match used in UI).
-     */
-    answer: z.string().min(1),
-
-    choices: z.array(z.string().min(1)).optional(),
-
-    /**
-     * Full step-by-step explanation. This is what gets shown in feedback.
-     * Current convention: "Step 1: ...\nStep 2: ... Final answer: ..."
-     * Parsed by PracticeFeedback and per-page getHint logic.
-     */
-    explanation: z.string().min(1),
-
-    difficulty: DifficultySchema,
-  })
-  .refine(
-    (p) => {
-      if (p.type === "mcq") {
-        return Array.isArray(p.choices) && p.choices.length > 0 && p.choices.includes(p.answer);
-      }
-      return true;
-    },
-    {
-      message: "MCQ problems must have choices and answer must be one of them",
-      path: ["answer"],
-    }
-  );
+  .object(problemFields)
+  .refine(mcqRefine.refine, { message: mcqRefine.message, path: mcqRefine.path });
 
 export type Problem = z.infer<typeof ProblemSchema>;
 
@@ -108,10 +111,13 @@ export type Problem = z.infer<typeof ProblemSchema>;
  * Similar shape to Problem but never mixed into practice progress.
  * Ids conventionally prefixed "test-".
  */
-export const TestQuestionSchema = ProblemSchema.omit({ section: true }).extend({
-  /** Tests do not use per-section filtering. */
-  section: z.string().min(1).optional(),
-});
+export const TestQuestionSchema = z
+  .object({
+    ...problemFields,
+    /** Tests do not use per-section filtering (optional in test pool). */
+    section: z.string().min(1).optional(),
+  })
+  .refine(mcqRefine.refine, { message: mcqRefine.message, path: mcqRefine.path });
 export type TestQuestion = z.infer<typeof TestQuestionSchema>;
 
 // ============================================

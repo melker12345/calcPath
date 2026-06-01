@@ -52,7 +52,7 @@ export const symmetricMatrixProblems: Problem[] = [
     answer: "An orthogonal matrix of eigenvectors.",
     choices: ["An arbitrary invertible matrix.", "An orthogonal matrix of eigenvectors.", "A lower triangular matrix.", "A diagonal matrix."],
     explanation: "Step 1: The Spectral Theorem: $A=Q\\Lambda Q^T$ where $Q$ is orthogonal (columns are orthonormal eigenvectors) and $\\Lambda$ is diagonal. Final answer: An orthogonal matrix of eigenvectors." }),
-  p({ id: "sym-quadratic-forms-3", topicId: "symmetric-matrices", section: "quadratic-forms", type: "mcq", difficulty: "easy",
+  p({ id: "sym-quadratic-forms-3", topicId: "symmetric-matrices", section: "quadratic-forms", type: "numeric", difficulty: "easy",
     prompt: "The matrix of a quadratic form $Q(x,y)=5x^2+4xy+2y^2$ is symmetric. What is the $(1,2)$ entry of the associated matrix $A$?",
     answer: "2",
     explanation: "Step 1: For $Q=a x^2 + 2bxy + cy^2$, $A=\\begin{pmatrix}a&b\\\\b&c\\end{pmatrix}$. Step 2: Coefficient of $xy$ is $4=2b$, so $b=2$. $(1,2)$ entry $=2$. Final answer: $2$." }),
