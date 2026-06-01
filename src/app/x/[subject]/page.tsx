@@ -20,11 +20,38 @@ export default async function DynamicSubjectPage({ params }: Props) {
   try {
     bundle = await getFileSystemContentBundle(subjectSlug);
   } catch (err) {
-    // Unsupported subject in current FS loader (e.g. calculus partial)
+    // Unsupported subject in current FS loader (e.g. calculus was the last one added)
     return (
       <main className="mx-auto w-full max-w-5xl px-4 py-12">
-        <p className="text-sm text-amber-700 dark:text-amber-400">Subject “{subjectSlug}” not yet available in the experimental data-driven loader (or partial content).</p>
-        <Link href="/x" className="mt-4 inline-block text-sm text-blue-700 underline hover:no-underline dark:text-[var(--accent)]">← Back to experimental subjects</Link>
+        <div className="rounded-2xl border theme-border bg-[var(--surface-2)] p-8">
+          <div className="flex items-start gap-4">
+            <div className="text-3xl">⚠️</div>
+            <div>
+              <h2 className="text-xl font-semibold theme-text">Subject not available yet</h2>
+              <p className="mt-2 theme-text-secondary">
+                “{subjectSlug}” is not fully wired up in the experimental data-driven loader yet.
+              </p>
+              <p className="mt-1 text-sm theme-text-muted">
+                We’re adding subjects one by one. Linear Algebra and Statistics are currently the most complete.
+              </p>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link
+                  href="/x"
+                  className="inline-flex items-center rounded-lg border theme-border px-4 py-2 text-sm font-medium theme-text hover:bg-[var(--surface)] transition"
+                >
+                  ← Back to experimental subjects
+                </Link>
+                <Link
+                  href="/"
+                  className="inline-flex items-center text-sm theme-text-muted hover:text-[var(--accent)] underline"
+                >
+                  Go to main site
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
     );
   }
@@ -38,7 +65,7 @@ export default async function DynamicSubjectPage({ params }: Props) {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="mb-6">
-        <Link href="/x" className="text-sm text-blue-700 hover:underline dark:text-[var(--accent)]">← All experimental subjects</Link>
+        <Link href="/x" className="text-sm text-[var(--accent)] hover:underline transition-colors">← All experimental subjects</Link>
       </div>
 
       <div className="mb-8 border-b theme-border pb-6">
@@ -49,7 +76,7 @@ export default async function DynamicSubjectPage({ params }: Props) {
             <p className="theme-text-secondary">{config.shortDescription}</p>
           </div>
         </div>
-        <p className="mt-3 text-sm text-emerald-700 dark:text-emerald-400">
+        <p className="mt-3 text-sm theme-text-secondary">
           ✓ Loaded purely from <code>content/{subjectSlug}/</code> ( {topics.length} topics, {totalProblems} practice questions, {mdxModules.length} rich MDX modules )
         </p>
       </div>
@@ -78,7 +105,7 @@ export default async function DynamicSubjectPage({ params }: Props) {
               <div className="flex shrink-0 flex-wrap gap-2 pt-2 sm:pt-0">
                 <Link
                   href={`/x/${subjectSlug}/modules/${topic.id}`}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${hasMdx ? "bg-blue-600 text-white hover:bg-blue-700" : "cursor-not-allowed bg-[var(--surface-2)] text-[var(--text-muted)]"}`}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${hasMdx ? "btn-primary" : "cursor-not-allowed bg-[var(--surface-2)] text-[var(--text-muted)]"}`}
                   aria-disabled={!hasMdx}
                 >
                   View explanation{hasMdx ? "" : " (soon)"}
@@ -86,7 +113,7 @@ export default async function DynamicSubjectPage({ params }: Props) {
 
                 <Link
                   href={`/x/${subjectSlug}/practice/${topic.id}`}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${hasPractice ? "border border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400" : "cursor-not-allowed bg-[var(--surface-2)] text-[var(--text-muted)]"}`}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${hasPractice ? "border border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--accent-text)]" : "cursor-not-allowed bg-[var(--surface-2)] text-[var(--text-muted)]"}`}
                   aria-disabled={!hasPractice}
                 >
                   Practice {hasPractice ? `(${topicProblems.length})` : "(no data)"}
