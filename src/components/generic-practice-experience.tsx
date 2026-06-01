@@ -136,10 +136,12 @@ export function GenericPracticeExperience({
     return <div className="p-8 text-sm theme-text-secondary">Topic not found in data.</div>;
   }
   if (!current || typeof current.prompt !== "string" || !current.explanation) {
-    // Graceful fallback for bad/malformed question data (recoverable; do not let it hit global error.tsx)
+    // Graceful per-question fallback for bad/malformed data (post-loader tolerant recovery).
+    // Uses clear "rendering issue" language per resilience spec. Skip keeps session usable (progress context preserved in hook).
+    // Note: full runtime render errors (e.g. in MathText edges or handlers) handled by QuestionErrorBoundary below.
     return (
       <div className="mx-auto max-w-3xl p-8">
-        <p className="theme-text-secondary">This question has invalid data (missing prompt or explanation). It will be skipped in future runs.</p>
+        <p className="theme-text-secondary">This question had a rendering issue — skipped.</p>
         <button
           type="button"
           onClick={goToNext}
