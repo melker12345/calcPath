@@ -516,6 +516,84 @@ Full Statistics in content/statistics/topics/*/questions.json: TOTAL 461 (exact 
 
 This closes the last UX robustness gap for the experimental /x/ practice flow.
 
+## Progress Tracking Adaptation for Data-Driven Content
+
+**Agent / Explorer**: Progress & State Adaptation Explorer (this subagent task, 2026-06-01)
+
+**Mission**: Analyze current progress tracking, contrast real-app vs generic-practice usage, identify cleanest path for full compatibility (ideally driven by) the new `content/` + `FileSystemContentBundle` model. Deliver short analysis + recs here; flag blockers; perform 1-2 low-risk tactical improvements via tiny safe edits + commits only.
+
+### Short Analysis of Current Progress System
+
+**Core files read** (absolute paths):
+- `/home/melker/Desktop/work/saas/src/lib/progress.ts` — types (`Attempt`, `ProgressState`), `recordAttempt`, `rebuildDerivedFields`, `getPracticeProgress`, `getSectionPracticeProgress`, `getTopicProgress`, `normalizeProgressState`, streak calc. All ID + topicId string based.
+- `/home/melker/Desktop/work/saas/src/components/progress-provider.tsx` — React context + `useProgress`, localStorage (`calc_progress_v1`), Supabase `user_progress` sync (conditional on `useAuth`), `addAttempt` etc.
+- Usage sites: real/legacy (`/app/*/practice/*/[topicId]/page.tsx`, `DashboardContent.tsx`, `subject-practice-page.tsx`, calculus test, diagnostic, account reset); generic (`/components/generic-practice-experience.tsx`, `/components/generic-practice/GenericPracticeExperience.tsx`, `/app/x/.../practice/layout.tsx` + pages).
+- Supporting: `usePracticeSession.ts` (consumes `completedProblemIds` + `problems` list for statuses/resume), `subjects.ts` (legacy feeder), `loader.ts` (new FS bundles), schema docs.
+
+**How progress tracking works today**:
+- Recording: `addAttempt({problemId, topicId, correct, createdAt, isTest?})` → `recordAttempt` updates attempts list + derived `completedProblemIds`/`attemptedProblemIds`/`topicStats` (unique per topicId).
+- Consumption for UI: pass a `Problem[]` (or subset) to `getPracticeProgress(state, topicId, practiceProblems)` or `getSection...`; it intersects the persisted ID sets against the provided list's IDs to compute rates/totals/isComplete (with `total > 0` guard).
+- Persistence: always local + best-effort remote for authed users. IDs are the sole key; no subject slugs or other structures stored.
+- Streak/diagnostics/tests are orthogonal but share the store.
+- Critical invariant (from schema + ports): `problem.id`s are globally stable forever (e.g. "vectors-operations-1"); `topicId`s stable; `section` slugs exact-match for per-section features.
+
+**Real app (legacy + dual) vs generic practice usage**:
+- **Legacy paths** (e.g. `/app/linear-algebra/practice/...`, `/statistics/...`, `/calculus/...` + dashboard): source full `problems` from `subjects.ts` (which does static imports of `linalg-content.ts` etc + modules for sections). Some dual on-ramp for LA via `useLinalgContent()` + `getOptionalLAContentBundle()`. Calls `getPracticeProgress(..., subject.problems)`. Custom per-subject chrome (RichMath etc) but progress calls identical.
+- **Generic / experimental /x/ path** (the "new" one): `/app/x/[subject]/practice/[topicId]/page.tsx` does `bundle = await getFileSystemContentBundle(slug)` (pure FS read + Zod of `content/{slug}/.../questions.json` + index, *zero* legacy content imports in page or Generic component). Passes `bundle.problems` + `topic` (from bundle) to `<GenericPracticeExperience>`. Inside: `useProgress()`, `usePracticeSession({problems: topicProblems, completedProblemIds})`, `addAttempt({problemId: current.id, topicId: current.topicId, ...})` using *exactly* the stable IDs from the JSON. Works today for LA + stats (full parity ports).
+- Result: progress recorded on /x/ generic is immediately visible on legacy dashboard (and vice-versa) because shared ID space + global store. No duplication or migration of data.
+
+**Minimal changes needed for generic practice to record using stable IDs from content/ without legacy dep**:
+- **Zero changes required in the progress layer itself** (`progress.ts`, provider). It was already designed as a pure ID-driven accumulator (see `rebuildDerivedFields` using only attempts' embedded fields; the `*get*` fns are pure functions over caller-supplied data lists).
+- The generic practice components + /x/ routes already achieve this (see above). `Problem` shape from schema matches (id/topicId/section required or optional as appropriate).
+- What *would* be "adaptation" work (outside pure progress layer, per strict scope): wiring the *aggregate consumers* (dashboard etc.) to optionally accept `FileSystemContentBundle` (or derive equivalent problem lists + section summaries from it). A thin adapter in subjects or a new `getSubjectProblemsForProgress(slug)` could bridge.
+
+### Tactical Improvements Implemented (1-2 low-risk quick wins)
+Only doc-only edits + small commits (read before every replace; unique strings; no behavior, no new files, no broad refactors). Followed "small safe edits" rule strictly.
+
+1. `/home/melker/Desktop/work/saas/src/lib/progress.ts` (commit eb19433): Enhanced JSDoc on `getPracticeProgress` (added 9 lines) explicitly documenting data-driven compat, FileSystemContentBundle usage, stable ID preservation from content ports, empty-topic guard benefits for /x/, and "no legacy dep".
+2. Same file (commit a8164d1): Enhanced JSDoc on `getSectionPracticeProgress` (added 6 lines) re: FS bundles + the section-slug invariant critical for dashboard adaptation.
+
+These are pure knowledge transfer / future-proofing with zero risk. (Git log on branch shows the two clean commits.)
+
+### Hard Blockers Flagged (for full "driven by" new model)
+These are *not* in the progress core (which is in good shape); they are integration points:
+- **Auth coupling**: `ProgressProvider` does `const { user } = useAuth();` (line 38) and branches load/save (anonymous local vs Supabase upsert on `user.id`). Remote sync inside `addAttempt` etc. Requires `AuthProvider` ancestor (enforced by `ProgressBoundary` / X layouts / `AppStateProviders`). Blocker for hypothetical auth-free or server-only progress contexts; also means experimental paths must replicate the double-provider wrap (as `/x/.../practice/layout.tsx` correctly does).
+- **Legacy data monopoly for aggregates**: Dashboard (`DashboardContent.tsx:7,34-68,254`) + `subject-practice-page.tsx:44` + chapter expandables exclusively use `subjectList` from `src/lib/subjects.ts:1-6` (hard imports of 3x *-content.ts + *-modules.ts). No path yet to feed `getFileSystemContentBundle(...).problems` or per-subject bundles into `getPracticeProgress`/`getSection...` for global views. Per-topic mastery in /x/ browse pages is also absent.
+- **Section metadata / per-section progress**: `getSectionPracticeProgress` + dashboard section breakdown require caller to supply `modules[].sections[].section` (stable slugs) + matching on problems. Legacy has this in `src/lib/*-modules.ts`. New FS: `mdxModules` are raw MDX (headings have `{#slug}` per ports); `deriveModuleSectionSummaries` exists in `loader.ts:458` but only for old `SubjectBundle` shape (not FS). No parser yet to extract section list from MDX for progress. (Schema calls this out as critical invariant.)
+- **No unified content source for progress consumers**: Dual system only for LA practice/modules (and incomplete — `getOptionalLAContentBundle` is imported in 5+ places but *undefined* in `loader.ts` — runtime error risk on flag). Full subjects still legacy-only.
+- **Test separation convention**: `getPracticeProgress` relies on practice problem lists *not* containing "test-*" IDs (tests go through separate `addTestResult` + `getTopicTestStats`). New content/ has no test questions ported yet.
+- **Global store, no scoping**: Single `ProgressState` for all subjects/topics. Strength for cross-path compat, but means no per-"dynamic experiment" isolation or easy partial resets.
+- **Persistence shape stability**: Full state blob in Supabase `user_progress.state` + localStorage. Any future `ProgressState` shape change requires migration story (affects all users).
+- **Indirect**: Answer-check + MathInput context still have some heuristics; not progress but affect "mastery" UX.
+
+None of these block the *current* generic practice from recording/using progress (it does today). They block "progress UI fully driven by new model everywhere".
+
+### Recommended Next Actions for Progress Layer
+1. **(High value, low risk)** Add optional `bundle?: FileSystemContentBundle` or `getProblemsForSubject` adapter in a new thin helper (e.g. in `loader.ts` or a `progress-adapters.ts` next to it). Update `DashboardContent` and `SubjectPracticePage` callers behind the existing dual/flag pattern to optionally source from FS for supported subjects. This would let dashboard show real /x/ progress stats using new data.
+2. **Wire section summaries for FS**: Extend loader with `deriveSectionSummariesFromMdx(mdxSource)` (or store explicit sections in topic index.json per schema guidance) + use in dashboard when FS data active. Unblocks per-section progress for dynamic path.
+3. **Surface progress in /x/**: In `/x/[subject]/page.tsx` (browse), for each topic compute + display `getPracticeProgress(progress, t.id, bundle.problems)` mastery % / "X mastered" (reuses existing fn + stable data). Makes the dynamic path feel stateful like real app.
+4. **Decouple auth slightly?** (if needed): Consider a `ProgressProvider` prop `disableRemoteSync?: boolean` (default false) for pure experimental/embedded use cases. Or rename internal hooks. Evaluate risk vs benefit (current layout pattern works).
+5. **Tests + invariants**: Add vitest coverage in `progress.test.ts` exercising `getPractice*` + `getSection*` with mock arrays shaped exactly like content/ JSON output (stable ids, some missing sections). Assert empty-topic behavior.
+6. **Fix the latent bug**: Define/implement the missing `getOptionalLAContentBundle` (or remove dual references) — not progress-specific but affects LA paths that use progress.
+7. **Longer**: Once dashboard etc. can consume bundles, consider deprecating the legacy `subjects` statics for new subjects (or make subjects.ts itself a thin loader facade). Keep ID stability contract in schema as #1 rule.
+8. Monitor: After any content port, verify a practice attempt on /x/ appears in dashboard (manual or scripted test).
+
+All per the "analysis + plan + 1-2 tactical + flag blockers" directive. Changes were minimal, commits small/frequent/clean, only touched allowed (progress + this NOTES). The progress layer is in excellent shape for the data-driven future — the work is integration at the consumers.
+
+**Absolute file references for key artifacts** (as required):
+- Progress core: `/home/melker/Desktop/work/saas/src/lib/progress.ts:278 (getPracticeProgress), 322 (getSection...), 208 (recordAttempt), 119 (normalize), 38 (createEmpty)`
+- Provider: `/home/melker/Desktop/work/saas/src/components/progress-provider.tsx:55 (useAuth), 102 (addAttempt), 195 (useProgress export)`
+- Generic (new path, no legacy dep): `/home/melker/Desktop/work/saas/src/components/generic-practice-experience.tsx:55,154 (use+add), 81 (usePracticeSession)`
+- /x/ loader caller: `/home/melker/Desktop/work/saas/src/app/x/[subject]/practice/[topicId]/page.tsx:26,96`
+- Legacy feeder: `/home/melker/Desktop/work/saas/src/lib/subjects.ts:52 (problems), /app/(main)/dashboard/DashboardContent.tsx:35`
+- Schema emphasis: `/home/melker/Desktop/work/saas/src/lib/content/schema.ts:49 (stable id for completedProblemIds), 163 (section for per-section progress)`
+- Loader FS: `/home/melker/Desktop/work/saas/src/lib/content/loader.ts:296 (getFileSystemContentBundle), 458 (derive...)`
+- Commits from this task: eb19433, a8164d1 (on feat/fully-dynamic... branch)
+
+This section + prior NOTES close the loop on progress adaptation. Ready for next agents.
+
+(End of Progress & State Adaptation Explorer deliverable.)
+
 ---
 
 ## Migration to Data-Driven Architecture - Backup Phase (2026-06-01)
