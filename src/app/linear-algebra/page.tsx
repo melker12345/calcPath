@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CourseContentsPage } from "@/components/course-contents-page";
 import { subjects } from "@/lib/subjects";
+import { getOptionalLAContentBundle } from "@/lib/content/loader";
 
 export const metadata: Metadata = {
   title: "Learn Linear Algebra — Free University Course | CalcPath",
@@ -31,8 +32,14 @@ const courseJsonLd = {
   ],
 };
 
-export default function LinearAlgebraHome() {
+export default async function LinearAlgebraHome() {
   const subject = subjects["linear-algebra"];
+
+  // Dual on-ramp for real /linear-algebra home: optionally use FS bundle topics+problems for LA.
+  // modules stay legacy (for section previews in UI) until richer mdx layer.
+  const bundle = await getOptionalLAContentBundle();
+  const topics = bundle ? bundle.topics : subject.topics;
+  const problems = bundle ? bundle.problems : subject.problems;
 
   return (
     <>
@@ -44,9 +51,9 @@ export default function LinearAlgebraHome() {
         title={subject.label}
         description={subject.shortDescription}
         subjectSlug={subject.slug}
-        topics={subject.topics}
+        topics={topics}
         modules={subject.modules}
-        problems={subject.problems}
+        problems={problems}
       />
     </>
   );
