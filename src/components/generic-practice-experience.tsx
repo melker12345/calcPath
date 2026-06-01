@@ -36,7 +36,9 @@ import type { Problem, Topic } from "@/lib/shared-types";
  * - Uses the improved PracticeFeedback for *both* correct + incorrect states (less duplication).
  * - All prompt / choice / step / explanation text *always* goes through the project's <MathText>
  *   (robust $ / $$ splitter + Safe* fallbacks for bad katex). No local RichPrompt/RichMath.
- * - Subject context for MathInput defaults to generic heuristics (can be enhanced).
+ * - Subject context for MathInput uses "generic" (now fully hardened: neutral dark-friendly theme,
+ *   reliable MQ style injection, improved deriveSuggestionLabels via prompt ctx; full keypad/scratchpad/submit
+ *   experience works end-to-end for statistics + linear-algebra topics in /x/ practice).
  * - No per-subject getModuleSectionUrl deep links yet (future: derive from MDX headings or keep legacy maps).
  * - Progress + answer checking use the global shared systems (stable ids preserved from content).
  *
