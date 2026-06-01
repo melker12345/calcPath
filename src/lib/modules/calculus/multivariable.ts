@@ -204,6 +204,30 @@ export const multivariableModule: ModuleContent =
           "Stokes' Theorem is the same idea but for a surface in 3D — like measuring the total wind circulation around the edge of a sail by adding up the curl of the wind over the sail's surface.",
           "The Divergence Theorem says: the total amount of stuff flowing out through the walls of a room equals the total amount of stuff being produced inside the room. Sources inside push flux out through the boundary.",
           "All three theorems say the same thing at different levels: boundary integral = interior derivative integral. This is the grand unification of calculus.",
+          "Proof sketch for Green's Theorem (simplified): Divide the region into thin vertical strips. On each strip the contribution from the left and right sides cancels in a telescoping way, leaving only the top and bottom boundary pieces. The interior double integral of the curl-like term appears from the fundamental theorem applied in one variable at a time.",
+        ],
+        examples: [
+          {
+            title: "Using Green's Theorem to compute area",
+            steps: [
+              "The area of a region $D$ can be written as $A = \\frac12 \\oint_C -y\\,dx + x\\,dy$.",
+              "This follows directly from Green's Theorem with $P = -y/2$, $Q = x/2$: $\\frac{\\partial Q}{\\partial x} - \\frac{\\partial P}{\\partial y} = 1$.",
+              "For the unit circle parametrized by $x=\\cos t$, $y=\\sin t$, $0 \\le t \\le 2\\pi$, the line integral evaluates to $\\pi$.",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Deep dive: Conservative fields and path independence",
+        section: "conservative",
+        body: [
+          "A vector field $\\mathbf{F}$ is conservative if there exists a scalar potential $f$ such that $\\mathbf{F} = \\nabla f$. In this case, the line integral between two points depends only on the endpoints, not the path taken.",
+          "Test for conservative fields (simply connected domain): $\\nabla \\times \\mathbf{F} = \\mathbf{0}$ everywhere (or in 2D: $P_y = Q_x$).",
+          "If the domain is not simply connected (has holes), a field can have zero curl yet still not be conservative (classic example: $\\mathbf{F} = \\langle -y/r^2, x/r^2 \\rangle$ around the origin).",
+          "Physical meaning: gravity and electrostatic fields (away from charges) are conservative. The work to move an object between two points is path-independent and equals the difference in potential energy.",
+        ],
+        eli5: [
+          "A conservative field is like hiking in the mountains where your net energy gain depends only on your starting and ending elevation, not on the route you chose. Non-conservative fields (with curl) are like walking in a wind that swirls — the total work you do can depend on whether you went clockwise or counterclockwise around a vortex.",
         ],
       },
     ],

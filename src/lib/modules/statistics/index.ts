@@ -18,12 +18,16 @@ export { probabilityModule } from "./probability";
 export { discrete_distributionsModule as discreteDistributionsModule } from "./discrete-distributions";
 export { estimationModule } from "./estimation";
 export { regressionModule } from "./regression";
+export { multipleRegressionModule } from "./multiple-regression";
+export { logisticRegressionModule } from "./logistic-regression";
 
 export { continuous_distributionsModule as continuousDistributionsModule } from "./continuous-distributions";
 export { samplingModule } from "./sampling";
 export { hypothesis_testingModule as hypothesisTestingModule } from "./hypothesis-testing";
 export { anovaModule } from "./anova";
 export { nonparametricModule } from "./nonparametric";
+export { stochasticProcessesModule } from "./stochastic-processes";
+export { bayesianInferenceModule } from "./bayesian-inference";
 
 // When complete:
 // export const statisticsModules: ModuleContent[] = [

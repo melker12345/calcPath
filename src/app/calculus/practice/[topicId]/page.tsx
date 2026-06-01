@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
@@ -14,7 +14,6 @@ import { detectQuestionContext } from "@/lib/math-input-helpers";
 import { ProgressDots } from "@/components/practice/ProgressDots";
 import { PracticeFeedback } from "@/components/practice/PracticeFeedback";
 import { usePracticeSession } from "@/components/practice/usePracticeSession";
-import type { FeedbackState, QuestionStatus } from "@/components/practice/types";
 
 
 
@@ -44,24 +43,24 @@ export default function PracticeTopicPage() {
     current: hookCurrent,
     questionStatuses,
     hasManuallyNavigated,
-    solvedCount: hookSolvedCount,
-    goToNext: hookGoToNext,
-    goToPrev: hookGoToPrev,
-    shuffleAndRestart: hookShuffleAndRestart,
-    setHasManuallyNavigated: hookSetHasManuallyNavigated,
+    solvedCount,
+    goToNext,
+    goToPrev,
+    shuffleAndRestart,
+    // Transient per-question UI (feedback, answer, overlay) now lives in the hook.
+    // All navigation automatically clears it → no more stale "Correct!" on next question.
+    answer,
+    setAnswer,
+    feedback,
+    setFeedback,
+    overlayDismissed,
+    setOverlayDismissed,
   } = usePracticeSession({
     problems: topicProblems,
     completedProblemIds: progress.completedProblemIds,
     sectionFilter,
     focusId,
   });
-
-  const [answer, setAnswer] = useState("");
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
-  const [overlayDismissed, setOverlayDismissed] = useState(false);
-  const [solvedCount, setSolvedCount] = useState(0);
-  const [shuffled, setShuffled] = useState(false);
-  const [resumeReady, setResumeReady] = useState(false);
 
   const current = displayProblems[index];
   const canonicalQuestionNumber =
@@ -88,43 +87,9 @@ export default function PracticeTopicPage() {
     trackEvent("view_practice_topic", { topicId });
   }, [topicId]);
 
-  useEffect(() => {
-    // Calculate mastered count on client only to avoid hydration mismatch
-    const count = progress.completedProblemIds.filter((id) =>
-      topicProblems.some((problem) => problem.id === id)
-    ).length;
-    setSolvedCount(count);
-  }, [progress.completedProblemIds, topicProblems]);
-
-  // Resume logic is now handled inside usePracticeSession (via focusId + completedProblemIds)
-
-  // displayProblems syncing is now handled inside usePracticeSession
-
-
-  const shuffleAndRestart = hookShuffleAndRestart;
-
-  // Wrapped navigation that always clears transient per-question UI state
-  const goToNext = () => {
-    setFeedback(null);
-    setAnswer("");
-    setOverlayDismissed(false);
-    hookGoToNext();
-  };
-
-  const goToPrev = () => {
-    setFeedback(null);
-    setAnswer("");
-    setOverlayDismissed(false);
-    hookGoToPrev();
-  };
+  // Note: solvedCount now comes directly from the shared hook (no local state/effect needed).
 
   // Reset feedback when changing questions (safety net)
-  useEffect(() => {
-    setFeedback(null);
-    setAnswer("");
-    setOverlayDismissed(false);
-  }, [index]);
-
   if (!topic) {
     return (
       <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
@@ -276,10 +241,7 @@ export default function PracticeTopicPage() {
               statuses={questionStatuses}
               currentIndex={index}
               onSelect={(i) => {
-                hookSetHasManuallyNavigated(true);
-                setFeedback(null);
-                setAnswer("");
-                setOverlayDismissed(false);
+                // setIndex from hook now clears transients + sets manual nav
                 setIndex(i);
               }}
             />
@@ -340,7 +302,7 @@ export default function PracticeTopicPage() {
             <PracticeFeedback
               feedback={feedback}
               current={current}
-              onNext={hookGoToNext}
+              onNext={goToNext}
               onUseHint={useHint}
               onShowSolution={showFullSolution}
               getHint={getHint}
@@ -357,7 +319,7 @@ export default function PracticeTopicPage() {
             <PracticeFeedback
               feedback={feedback}
               current={current}
-              onNext={hookGoToNext}
+              onNext={goToNext}
               onUseHint={useHint}
               onShowSolution={showFullSolution}
               getHint={getHint}
@@ -502,7 +464,7 @@ export default function PracticeTopicPage() {
             <button
               type="button"
               className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-100 disabled:opacity-25 sm:h-9 sm:w-9"
-              onClick={hookGoToPrev}
+              onClick={goToPrev}
               disabled={index === 0}
               aria-label="Previous"
             >
@@ -511,7 +473,7 @@ export default function PracticeTopicPage() {
             <button
               type="button"
               className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-100 disabled:opacity-25 sm:h-9 sm:w-9"
-              onClick={hookGoToNext}
+              onClick={goToNext}
               disabled={index === displayProblems.length - 1}
               aria-label="Next"
             >
@@ -532,8 +494,7 @@ export default function PracticeTopicPage() {
                     const first = displayProblems.findIndex((p) => !completedSet.has(p.id));
                     if (first >= 0) setIndex(first);
                   }
-                  setFeedback(null);
-                  setAnswer("");
+                  // setIndex (hook) already cleared transient state
                 }}
               >
                 Skip to unsolved

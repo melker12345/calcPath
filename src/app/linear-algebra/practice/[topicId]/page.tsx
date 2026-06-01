@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
@@ -14,7 +14,6 @@ import { detectQuestionContext } from "@/lib/math-input-helpers";
 import { ProgressDots } from "@/components/practice/ProgressDots";
 import { PracticeFeedback } from "@/components/practice/PracticeFeedback";
 import { usePracticeSession } from "@/components/practice/usePracticeSession";
-import type { FeedbackState, QuestionStatus } from "@/components/practice/types";
 
 function splitMath(text: string) {
   const parts: Array<{ type: "text" | "math"; value: string }> = [];
@@ -92,25 +91,27 @@ export default function LinalgPracticeTopic() {
     current: hookCurrent,
     questionStatuses,
     hasManuallyNavigated,
-    solvedCount: hookSolvedCount,
-    goToNext: hookGoToNext,
-    goToPrev: hookGoToPrev,
-    shuffleAndRestart: hookShuffleAndRestart,
-    setHasManuallyNavigated: hookSetHasManuallyNavigated,
+    solvedCount,
+    goToNext,
+    goToPrev,
+    shuffleAndRestart,
+    // Transient UI state centralized in the hook — navigation always clears it
+    answer,
+    setAnswer,
+    feedback,
+    setFeedback,
+    overlayDismissed,
+    setOverlayDismissed,
   } = usePracticeSession({
     problems: topicProblems,
     completedProblemIds: progress.completedProblemIds,
     focusId,
   });
 
-  const [answer, setAnswer] = useState("");
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
-  const [overlayDismissed, setOverlayDismissed] = useState(false);
   const current = hookCurrent || displayProblems[index];
   const canonicalQuestionNumber =
     current ? topicProblems.findIndex((problem) => problem.id === current.id) + 1 : 0;
   const questionContext = useMemo(() => current ? detectQuestionContext(current.prompt) : undefined, [current]);
-  // solvedCount is now provided by usePracticeSession as hookSolvedCount
 
   if (!topic) {
     return (
@@ -145,21 +146,6 @@ export default function LinalgPracticeTopic() {
     if (feedback?.type === "incorrect") setFeedback({ ...feedback, hintUsed: true });
     else setFeedback({ type: "incorrect", attempts: 0, hintUsed: true, showSolution: false });
   };
-
-  const goToNext = () => {
-    setFeedback(null);
-    setAnswer("");
-    setOverlayDismissed(false);
-    hookGoToNext();
-  };
-
-  const goToPrev = () => {
-    setFeedback(null);
-    setAnswer("");
-    setOverlayDismissed(false);
-    hookGoToPrev();
-  };
-  const shuffleAndRestart = hookShuffleAndRestart;
 
   const getHint = () => {
     const m = current.explanation.match(/Step 1:\s*([^.]+\.)/);
@@ -257,7 +243,7 @@ export default function LinalgPracticeTopic() {
           <h1 className="text-2xl font-bold theme-text dark:text-[var(--text-primary)] dark:text-[var(--text-primary)]">{topic.title}</h1>
           <p className="mt-0.5 text-sm text-zinc-500 dark:text-[var(--text-muted)]">{topic.description}</p>
         </div>
-        <span className="text-sm text-zinc-500">{hookSolvedCount}/{displayProblems.length} mastered</span>
+        <span className="text-sm text-zinc-500">{solvedCount}/{displayProblems.length} mastered</span>
       </div>
 
       {/* Main card */}
@@ -270,10 +256,7 @@ export default function LinalgPracticeTopic() {
                 statuses={questionStatuses}
                 currentIndex={index}
                 onSelect={(i) => {
-                  hookSetHasManuallyNavigated(true);
-                  setFeedback(null);
-                  setAnswer("");
-                  setOverlayDismissed(false);
+                  // setIndex from hook handles clearTransient + hasManuallyNavigated
                   setIndex(i);
                 }}
               />
@@ -353,7 +336,7 @@ export default function LinalgPracticeTopic() {
           )}
 
           {/* All mastered */}
-          {hookSolvedCount >= displayProblems.length && (
+          {solvedCount >= displayProblems.length && (
             <div className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-900/20 p-4 text-center sm:mt-6 sm:rounded-2xl sm:p-5">
               <p className="text-lg font-bold text-emerald-300">All {displayProblems.length} problems mastered!</p>
               <p className="mt-1 text-sm text-emerald-600">Shuffle for a fresh run.</p>
@@ -384,15 +367,14 @@ export default function LinalgPracticeTopic() {
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
               </button>
-              {hookSolvedCount > 0 && hookSolvedCount < displayProblems.length && (
+              {solvedCount > 0 && solvedCount < displayProblems.length && (
                 <button type="button"
                   className="ml-1 rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm"
                   onClick={() => {
-                    hookSetHasManuallyNavigated(true);
+                    // setIndex from hook clears transients + sets manual nav flag
                     const done = new Set(progress.completedProblemIds);
                     const next = displayProblems.findIndex((p, i) => i > index && !done.has(p.id));
                     setIndex(next >= 0 ? next : (displayProblems.findIndex((p) => !done.has(p.id)) || 0));
-                    setFeedback(null); setAnswer("");
                   }}>Skip to unsolved</button>
               )}
             </div>

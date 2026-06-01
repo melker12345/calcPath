@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
@@ -13,7 +13,6 @@ import { detectQuestionContext } from "@/lib/math-input-helpers";
 import { ProgressDots } from "@/components/practice/ProgressDots";
 import { PracticeFeedback } from "@/components/practice/PracticeFeedback";
 import { usePracticeSession } from "@/components/practice/usePracticeSession";
-import type { FeedbackState, QuestionStatus } from "@/components/practice/types";
 
 export default function StatisticsPracticeTopic() {
   const params = useParams<{ topicId: string }>();
@@ -32,31 +31,27 @@ export default function StatisticsPracticeTopic() {
     current: hookCurrent,
     questionStatuses,
     hasManuallyNavigated,
-    solvedCount: hookSolvedCount,
-    goToNext: hookGoToNext,
-    goToPrev: hookGoToPrev,
-    shuffleAndRestart: hookShuffleAndRestart,
-    setHasManuallyNavigated: hookSetHasManuallyNavigated,
+    solvedCount,
+    goToNext,
+    goToPrev,
+    shuffleAndRestart,
+    // Transient UI now comes from the hook (cleared automatically on any navigation)
+    answer,
+    setAnswer,
+    feedback,
+    setFeedback,
+    overlayDismissed,
+    setOverlayDismissed,
   } = usePracticeSession({
     problems: topicProblems,
     completedProblemIds: progress.completedProblemIds,
     focusId,
   });
 
-  const [answer, setAnswer] = useState("");
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
-  const [overlayDismissed, setOverlayDismissed] = useState(false);
   const current = displayProblems[index];
   const canonicalQuestionNumber =
     current ? topicProblems.findIndex((problem) => problem.id === current.id) + 1 : 0;
   const questionContext = useMemo(() => current ? detectQuestionContext(current.prompt) : undefined, [current]);
-  const solvedCount = useMemo(
-    () =>
-      progress.completedProblemIds.filter((id) =>
-        topicProblems.some((problem) => problem.id === id),
-      ).length,
-    [progress.completedProblemIds, topicProblems],
-  );
 
   if (!topic) {
     return (
@@ -91,42 +86,10 @@ export default function StatisticsPracticeTopic() {
     else setFeedback({ type: "incorrect", attempts: 0, hintUsed: true, showSolution: false });
   };
 
-  const goToNext = () => {
-    setFeedback(null);
-    setAnswer("");
-    setOverlayDismissed(false);
-    hookGoToNext();
-  };
-
-  const goToPrev = () => {
-    setFeedback(null);
-    setAnswer("");
-    setOverlayDismissed(false);
-    hookGoToPrev();
-  };
-  const shuffleAndRestart = () => {
-    setFeedback(null);
-    setAnswer("");
-    setOverlayDismissed(false);
-    hookShuffleAndRestart();
-  };
-
   const getHint = () => {
     const m = current.explanation.match(/Step 1:\s*([^.]+\.)/);
     return m?.[1] || "Think about the rules that apply to this type of problem.";
   };
-
-  const progressPct = Math.round((solvedCount / displayProblems.length) * 100);
-
-  const renderSteps = (color: "emerald" | "amber") =>
-    current.explanation.split(/Step \d+:\s*/).filter(Boolean)
-      .map((s) => s.replace(/\s*Final answer:.*$/, "").trim())
-      .map((step, i) => (
-        <div key={i} className={`flex gap-2 sm:gap-3 ${color === "emerald" ? "animate-step-in" : ""}`} style={color === "emerald" ? { animationDelay: `${0.25 + i * 0.1}s` } : undefined}>
-          <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold sm:h-6 sm:w-6 sm:text-xs ${color === "emerald" ? "bg-emerald-200 text-emerald-800" : "bg-amber-200 text-amber-800"}`}>{i + 1}</span>
-          <p className="flex-1 text-sm leading-relaxed text-zinc-700 sm:text-base"><MathText text={step} /></p>
-        </div>
-      ));
 
   const finalAnswer = current.explanation.match(/Final answer:\s*(.+?)\.?$/)?.[1] || `$${current.answer}$`;
   const isDismissable = feedback?.type === "incorrect" && !feedback.showSolution;
@@ -135,7 +98,7 @@ export default function StatisticsPracticeTopic() {
     <PracticeFeedback
       feedback={feedback}
       current={current}
-      onNext={hookGoToNext}
+      onNext={goToNext}
       onUseHint={useHint}
       onShowSolution={() => setFeedback((prev) => 
         prev && prev.type === "incorrect" ? { ...prev, showSolution: true } : prev
@@ -151,7 +114,7 @@ export default function StatisticsPracticeTopic() {
     <PracticeFeedback
       feedback={feedback}
       current={current}
-      onNext={hookGoToNext}
+      onNext={goToNext}
       onUseHint={useHint}
       onShowSolution={() => setFeedback((prev) => 
         prev && prev.type === "incorrect" ? { ...prev, showSolution: true } : prev
@@ -186,10 +149,7 @@ export default function StatisticsPracticeTopic() {
               statuses={questionStatuses}
               currentIndex={index}
               onSelect={(i) => {
-                hookSetHasManuallyNavigated(true);
-                setFeedback(null);
-                setAnswer("");
-                setOverlayDismissed(false);
+                // setIndex (from hook) now handles clearing transient UI + marking manual nav
                 setIndex(i);
               }}
             />
@@ -290,8 +250,8 @@ export default function StatisticsPracticeTopic() {
                 onClick={() => {
                   const done = new Set(progress.completedProblemIds);
                   const next = displayProblems.findIndex((p, i) => i > index && !done.has(p.id));
+                  // setIndex from hook clears transient UI (feedback/answer/overlay) automatically
                   setIndex(next >= 0 ? next : (displayProblems.findIndex((p) => !done.has(p.id)) || 0));
-                  setFeedback(null); setAnswer("");
                 }}>Skip to unsolved</button>
             )}
           </div>

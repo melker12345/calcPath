@@ -7,11 +7,15 @@ import {
   discreteDistributionsModule,
   estimationModule,
   regressionModule,
+  multipleRegressionModule,
+  logisticRegressionModule,
   continuousDistributionsModule,
   samplingModule,
   hypothesisTestingModule,
   anovaModule,
-  nonparametricModule
+  nonparametricModule,
+  stochasticProcessesModule,
+  bayesianInferenceModule
 } from "./modules/statistics";
 
 export type { ModuleContent, ModuleSection, WorkedExample };
@@ -22,9 +26,13 @@ export const modules: ModuleContent[] = [
   discreteDistributionsModule,
   estimationModule,
   regressionModule,
+  multipleRegressionModule,
+  logisticRegressionModule,
   continuousDistributionsModule,
   samplingModule,
   hypothesisTestingModule,
   anovaModule,
   nonparametricModule,
+  stochasticProcessesModule,
+  bayesianInferenceModule,
 ];

@@ -1,0 +1,95 @@
+import type { ModuleContent } from "../types";
+
+export const logisticRegressionModule: ModuleContent = {
+  topicId: "logistic-regression",
+  title: "Logistic Regression",
+  intro: [
+    "Logistic regression is the go-to method for modeling binary outcomes (yes/no, success/failure, disease/no disease). Instead of predicting the value of $y$ directly, it predicts the *probability* that $y=1$.",
+    "The key idea is the logistic (sigmoid) function, which transforms any real number into a probability between 0 and 1. This gives us a principled way to do classification while still allowing familiar regression-style interpretation via log-odds (logits).",
+    "It is the foundation of many modern machine learning classifiers and is widely used in medicine, marketing, credit scoring, and the social sciences.",
+  ],
+  sections: [
+    {
+      title: "Why linear regression fails for binary data",
+      section: "why-logistic",
+      body: [
+        "If $y$ is 0 or 1, fitting a linear model $\\hat{y} = b_0 + b_1 x$ can produce predictions outside $[0,1]$. A predicted probability of 1.3 or -0.2 is nonsensical.",
+        "The variance of a binary outcome is $p(1-p)$, which is not constant — it is largest when $p=0.5$ and smallest near 0 or 1. This violates the constant variance assumption of ordinary linear regression.",
+        "The relationship between a predictor and a probability is typically S-shaped (sigmoid), not linear.",
+      ],
+      eli5: [
+        "Trying to use ordinary linear regression on yes/no data is like using a ruler to measure temperature in a system that only has two states: ice or steam. The ruler will give you numbers outside the possible range and the errors won't behave nicely.",
+      ],
+    },
+    {
+      title: "The logistic model",
+      section: "model",
+      body: [
+        "We model the *log-odds* (logit) as a linear function: $\\log\\left(\\frac{p}{1-p}\\right) = b_0 + b_1 x_1 + \\dots + b_k x_k$.",
+        "Solving for the probability gives the logistic (sigmoid) function: $p = \\frac{1}{1 + e^{-(b_0 + b_1 x_1 + \\dots + b_k x_k)}}$.",
+        "The coefficient $b_j$ now has a very useful interpretation: it is the change in the *log-odds* of the outcome for a one-unit increase in $x_j$, holding other variables constant. Exponentiating gives the odds ratio: $e^{b_j}$ is the multiplicative change in the odds.",
+        "For example, if $b_1 = 0.693$ for a binary predictor, then $e^{0.693} \approx 2$, meaning the odds of the outcome are doubled when that predictor is present (holding others fixed).",
+      ],
+      eli5: [
+        "Instead of predicting the probability directly, logistic regression predicts the 'log-odds' on a straight line. The S-curve (sigmoid) then converts those log-odds back into a clean probability between 0 and 1. The coefficients tell you how much each variable multiplies the odds of the event happening.",
+      ],
+      examples: [
+        {
+          title: "Interpreting an odds ratio",
+          steps: [
+            "Model for heart attack risk: $\\text{logit}(p) = -4.2 + 0.8 \\cdot \\text{smoker} + 0.05 \\cdot \\text{age}$.",
+            "For the 'smoker' variable: $e^{0.8} \approx 2.23$.",
+            "Interpretation: Smokers have 2.23 times the odds of a heart attack compared with non-smokers of the same age (in this model).",
+          ],
+        },
+      ],
+    },
+    {
+      title: "Estimation and inference",
+      section: "estimation",
+      body: [
+        "Parameters are estimated by maximum likelihood (not least squares). The likelihood is the product of the predicted probabilities for the observed outcomes.",
+        "There is no closed-form solution — we use iterative numerical methods (Newton-Raphson or iteratively reweighted least squares).",
+        "Wald tests (similar to t-tests) and likelihood ratio tests are used for inference on individual coefficients and groups of coefficients.",
+        "Model fit is assessed with deviance, pseudo-$R^2$ measures (McFadden, Cox-Snell, Nagelkerke), and classification tables (sensitivity, specificity, ROC curves).",
+      ],
+      eli5: [
+        "Instead of minimizing squared errors, logistic regression chooses the coefficients that make the observed data as probable as possible under the model. It's like tuning a recipe until the outcomes you actually saw become the most likely ones the model would have predicted.",
+      ],
+    },
+    {
+      title: "Assumptions and diagnostics",
+      section: "assumptions",
+      body: [
+        "Linearity in the logit: the log-odds must be a linear function of the predictors (check with LOWESS smoothed plots of logit vs continuous predictors).",
+        "Independence of observations (same as linear regression).",
+        "No perfect separation (complete or quasi-complete) — when a predictor perfectly predicts the outcome, the maximum likelihood estimates become infinite.",
+        "Large sample sizes are generally needed for reliable inference (rule of thumb: at least 10 events per predictor variable).",
+      ],
+      eli5: [
+        "The key new assumption is that the relationship is linear on the log-odds scale, not on the probability scale. A variable can have a very nonlinear-looking effect on probability but still be perfectly linear in log-odds.",
+      ],
+    },
+    {
+      title: "Extensions and related models",
+      section: "extensions",
+      body: [
+        "Multinomial logistic regression handles more than two outcome categories.",
+        "Ordinal logistic regression is appropriate when the outcome has a natural ordering (e.g., low/medium/high satisfaction).",
+        "Regularized logistic regression (lasso, ridge) is very common in high-dimensional settings (genomics, text classification).",
+        "Logistic regression is a special case of generalized linear models (GLMs) with a binomial distribution and logit link function.",
+      ],
+      eli5: [
+        "Once you understand binary logistic regression, the extensions are natural: predicting among several categories (multinomial), respecting order in the categories (ordinal), or adding shrinkage when you have thousands of predictors.",
+      ],
+    },
+  ],
+  examples: [],
+  commonMistakes: [
+    "Interpreting the coefficients as changes in probability instead of changes in log-odds or odds ratios.",
+    "Reporting only accuracy on imbalanced data (a model that always predicts the majority class can have high accuracy but be useless).",
+    "Ignoring the linearity-in-the-logit assumption for continuous predictors.",
+    "Using logistic regression when the outcome is not truly binary or when events are not independent (e.g., clustered data).",
+    "Over-interpreting odds ratios as risk ratios when the outcome is common (odds ratios exaggerate effects when baseline risk is high).",
+  ],
+};
