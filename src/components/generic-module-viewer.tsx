@@ -15,25 +15,31 @@ import { VoteFeedback } from "@/components/vote-feedback";
  * - Prove we can surface the raw mdxSource from FileSystemContentBundle.
  * - Handle common patterns in our content/ *.mdx files (headings with {#slug}, paragraphs, **ELI5**, LaTeX).
  * - Integrates <MdxContent> for paragraphs (richer lists/em/links/code + display math + consistent theming).
- * - ELI5 boxes + typography now match real subject module pages (var(--), "Explain Like I'm 5", scroll-mt anchors).
+ * - Now matches real SubjectModulePage structure: SubjectBreadcrumbs + back link, ModuleSectionNav,
+ *   ELI5/Examples/Mistakes with identical classes, VoteFeedback, prev/next + Practice btns using btn-* .
+ * - Consistent max-w-[760px], scroll-mt-20, prose, heading styles.
  *
- * Limitations (documented in NOTES.md):
- * - Not a full MDX compiler (no custom components, limited markdown).
- * - No remark/rehype pipeline yet.
- * - For production generic pages we will later add next-mdx-remote or equivalent.
- * - No full structured sections/ELI5-per-section like ExperimentalGenericMdxModuleExplanation.
+ * Still uses only lightweight line parser + MdxContent (no full MDX remote, no touching legacy files).
  */
 export function GenericModuleViewer({
   topicId,
   title,
   mdxSource,
   subjectSlug,
+  subjectLabel = "Course",
+  prevTopic = null,
+  nextTopic = null,
+  description,
   backHref,
 }: {
   topicId: string;
   title: string;
   mdxSource: string;
   subjectSlug: string;
+  subjectLabel?: string;
+  prevTopic?: { id: string; title: string } | null;
+  nextTopic?: { id: string; title: string } | null;
+  description?: string;
   backHref?: string;
 }) {
   // Strip frontmatter
