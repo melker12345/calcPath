@@ -85,6 +85,42 @@ export function GenericPracticeExperience({
 
   const current = hookCurrent || displayProblems[index];
 
+  if (displayProblems.length === 0) {
+    // Extra guard: show clean intentional "no questions yet" instead of falling to bad-data fallback,
+    // broken nav (length-1=-1), "All 0 mastered", or hitting PracticeErrorBoundary.
+    // Matches polished /x/ card look and feel exactly.
+    return (
+      <div className="mx-auto w-full max-w-3xl px-0 pb-0 sm:px-6 sm:py-10">
+        <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-center bg-[var(--surface)] px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
+          <div className="mx-auto max-w-md text-center">
+            <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface-2)] text-2xl" aria-hidden="true">
+              📝
+            </div>
+            <h2 className="text-xl font-semibold theme-text">No practice questions yet</h2>
+            <p className="mt-2 text-sm theme-text-secondary">
+              This topic’s questions have not been added to the experimental /x/ content yet.
+              This is an intentional “not yet” state while we port topics.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <Link
+                href={`/x/${subjectSlug}/modules/${topic.id}`}
+                className="inline-flex items-center justify-center rounded-lg bg-[var(--accent)] px-5 py-2 text-sm font-medium text-white transition hover:opacity-90 active:scale-[0.985]"
+              >
+                View the explanation →
+              </Link>
+              <Link
+                href={`/x/${subjectSlug}`}
+                className="inline-flex items-center justify-center rounded-lg border theme-border px-5 py-2 text-sm font-medium theme-text-muted transition hover:bg-[var(--surface-2)] hover:text-[var(--accent)]"
+              >
+                ← Back to {subjectLabel}
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const questionContext = useMemo(
     () => (current && typeof current.prompt === "string" ? detectQuestionContext(current.prompt) : undefined),
     [current]
@@ -201,7 +237,7 @@ export function GenericPracticeExperience({
         {/* Question prompt */}
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-5 text-center">
           <div role="heading" aria-level={2} className="text-lg font-semibold leading-relaxed sm:text-2xl">
-            {/* Always delegate to project's MathText (now with robust splitter + katex error fallback) */}
+            {/* Always delegate to project's MathText (robust splitter + katex error fallback) */}
             <MathText text={current.prompt} />
           </div>
 
