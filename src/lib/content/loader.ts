@@ -188,8 +188,8 @@ async function loadTopicContent(subjectSlug: string, topicId: string): Promise<{
  * This proves the JSON+MDX loader path without touching legacy.
  */
 export async function loadLinearAlgebraFromContent(): Promise<FileSystemContentBundle> {
-  // 1. Load subject index (config + topic list)
-  const subjectIndex = await readJsonFile<SubjectIndex>("linear-algebra/index.json", SubjectIndexSchema);
+  // 1. Load subject index (config + topic list) via the generic helper (data-driven nav friendly)
+  const subjectIndex = await loadSubjectIndex("linear-algebra");
 
   const config: SubjectConfig = {
     slug: subjectIndex.slug,
@@ -250,6 +250,16 @@ export async function loadLinearAlgebraFromContent(): Promise<FileSystemContentB
 }
 
 /**
+ * Load just the SubjectIndex (subject metadata + topics list) from content/{slug}/index.json.
+ * This is lightweight and ideal for driving subject-level navigation, breadcrumbs,
+ * topic lists, subject chrome, etc. from the new data-driven content (no need for full bundle with problems/mdx).
+ * Works for any subject that has an index.json (currently all three in content/).
+ */
+export async function loadSubjectIndex(slug: string): Promise<SubjectIndex> {
+  return readJsonFile<SubjectIndex>(`${slug}/index.json`, SubjectIndexSchema);
+}
+
+/**
  * Convenience for the new FS path (thin slice).
  */
 export async function getFileSystemContentBundle(slug: string): Promise<FileSystemContentBundle> {
@@ -268,7 +278,8 @@ export async function getFileSystemContentBundle(slug: string): Promise<FileSyst
  * index.json + questions.json + module.mdx where present.
  */
 export async function loadStatisticsFromContent(): Promise<FileSystemContentBundle> {
-  const subjectIndex = await readJsonFile<SubjectIndex>("statistics/index.json", SubjectIndexSchema);
+  // Use generic index loader (supports driving nav/chrome from subject index data)
+  const subjectIndex = await loadSubjectIndex("statistics");
 
   const config: SubjectConfig = {
     slug: subjectIndex.slug,
