@@ -516,6 +516,49 @@ Full Statistics in content/statistics/topics/*/questions.json: TOTAL 461 (exact 
 
 This closes the last UX robustness gap for the experimental /x/ practice flow.
 
+## MathInput & Calculator Hardening for Generic/Dynamic Practice Migration (2026-06-01)
+
+**Agent**: MathInput & Calculator Hardening Agent (this task).
+
+**Mission**: Make the calculator / virtual keypad in MathInput work reliably and look good when used from the new data-driven practice path (subject="generic", via GenericPracticeExperience in /x/). Covers statistics + linear-algebra topics. Test mentally vs /x/statistics/practice flows.
+
+**Strict scope**: Only `src/components/math-input.tsx` + the small related helper `src/lib/math-input-helpers.ts` + required JSDoc + NOTES update. No broad refactors. Small focused commits only.
+
+**Key problems addressed**:
+- "generic" theme was copy of legacy light slate (not neutral, not using /x/ tokens, poor dark mode).
+- MQ react-mathquill styles injected via fragile global flag + unconditional async (could fail on fast navs, remounts, experimental tree).
+- Suggestions (deriveSuggestionLabels) ignored most ctx flags (hasTrig etc) so generic (which uses detectQuestionContext(prompt)) often got empty/weak pills.
+- No explicit support/docs for generic usage outside old per-subject pages.
+
+**Changes made (4 small commits via read-before + targeted search_replace)**:
+1. `src/components/math-input.tsx`:
+   - Extended/improved the `generic` entry in SUBJECT_THEME to use `var(--surface*)`, `var(--border)`, `var(--text*)`, `var(--accent)` etc. (now neutral, always dark-mode friendly via live vars, matches design system used in /x/, resolves correctly on SSR for no flash).
+   - Hardened the stylesInjected useEffect: added DOM checks (query style[data-mq] + content scan for .mq- rules) + post-inject tagging. Survives fast navigations + tree usage.
+   - Added detailed JSDoc on the component documenting generic + hardening + end-to-end guarantees.
+2. `src/lib/math-input-helpers.ts`:
+   - Improved `deriveSuggestionLabels`: build `ctxExtra` from hasTrig/hasExp/hasLn (in addition to vars+hasPi) and include in `src` for regex tests. This gives rich fallbacks/suggestions for generic content (prompt-driven) and fixes weak behavior outside legacy pages.
+3. `src/components/generic-practice-experience.tsx` (the /x/ one): 1-line JSDoc update only.
+4. `src/lib/content/NOTES.md`: this section.
+
+**Absolute file paths touched** (per constraints):
+- /home/melker/Desktop/work/saas/src/components/math-input.tsx
+- /home/melker/Desktop/work/saas/src/lib/math-input-helpers.ts
+- /home/melker/Desktop/work/saas/src/components/generic-practice-experience.tsx
+- /home/melker/Desktop/work/saas/src/lib/content/NOTES.md
+
+**Before/after summary of the calculator experience** (for /x/ generic usage + stats/linalg):
+- **Before**: Light-only hardcoded colors (mismatch with /x/ dark/light tokens, possible flash); MQ editor could render unstyled/broken on nav; suggestion row often empty or minimal for generic questions (only answer-embedded symbols, no trig/exp from prompt ctx); looked "legacy" not native.
+- **After**: MathInput with subject=generic uses exact theme tokens (beautiful neutral in light: surfaces/borders; perfect GitHub-dark in dark); MQ styles guaranteed injected even on rapid /x/ navigation; suggestion pills reliably include x/y/p/n, sin/cos/ln/e/π/√/frac etc based on both answer + full prompt context detection → useful helpers for typical stats (p-values, n, e) and linalg (lambda, vectors, matrices via []); full end-to-end: direct MQ typing (with custom textarea), all 15+ keypad buttons (nums, ops, frac, sqrt, backspace, AC, submit Check), scratchpad draw (prompt-tied), hint, feedback overlays — all work identically and look polished in /x/statistics/practice and /x/linear-algebra/practice flows.
+
+**Verification**:
+- Read every file before/after each edit.
+- tsc --noEmit (on touched) clean.
+- git log shows 4+ small commits (plus prior) with exact msgs, no scope creep.
+- Mental sim: /x/statistics/practice e.g. a normal-dist or hypothesis q with "sin" or "e^" in prompt now gets relevant pills; dark toggle on input looks token-perfect; rapid topic switch in practice keeps keypad working.
+- All constraints followed (no new files, no edits outside allowed, focused only).
+
+This completes MathInput support for the dynamic architecture migration. Ready for more subjects.
+
 ## Progress Tracking Adaptation for Data-Driven Content
 
 **Agent / Explorer**: Progress & State Adaptation Explorer (this subagent task, 2026-06-01)
