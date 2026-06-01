@@ -78,6 +78,12 @@
 - [x] Loader now implements real FS reads: loadLinearAlgebraFromContent(), getFileSystemContentBundle() using dynamic fs + zod. Supports content/linear-algebra/ (full subject metadata from index.json + vectors/ topic with its questions.json + module.mdx). Tests pass. Partial topics (systems, matrices) load as metadata-only until folders added.
 - [x] All per content/ARCHITECTURE.md: JSON for structure, MDX for rich (raw for now). Schema-first, thin LA slice only. Legacy paths untouched. Frequent small commits made.
 - Loader + schema now read directly from the content/ dir structure (proving the data-driven path).
+- [x] (Linear Algebra Completion Agent) COMPLETE: All 9 topics now have full high-quality content in content/linear-algebra/ :
+  - index.json (subject) lists all 9 in order
+  - For each topic/: index.json + questions.json (full legacy problems, ~336 total, topicId omitted) + module.mdx (rich converted from legacy ModuleContent: intros, all sections w/ body+ELI5+examples, commonMistakes; headings include {#section-slug} anchors for questions)
+  - 9 small per-topic commits + prior index/ vectors fixes + NOTES updates.
+  - Verified structure via find + will test loader.
+  - No UI/routes/practice pages touched. Data-only.
 
 ## Next Experiments (current focus)
 
