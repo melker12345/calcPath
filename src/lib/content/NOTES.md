@@ -211,3 +211,75 @@ All changes via many small commits (see git log on branch). Full flow demonstrab
 - Visiting /x/.../modules/ will use polished GenericModuleViewer (ELI5 now native-looking).
 - Experimental ready for drop-in (structure 1:1 match + better content rendering).
 - No linter/runtime breaks expected (imports clean, unused removed, existing styles reused).
+
+## Frontend Visual Polish for Experimental /x/ Area (2026-06-01)
+
+**Agent**: Specialized Frontend Polish Agent (this subagent task).
+
+**Scope (strictly followed)**: 
+- All files under `src/app/x/` (layout.tsx, page.tsx, [subject]/page.tsx, practice/*, modules/*, error.tsx, loading.tsx)
+- The two main generic components directly consumed by /x/ practice & modules flows:
+  - `src/components/generic-practice-experience.tsx`
+  - `src/components/generic-module-viewer.tsx`
+- Plus update to this NOTES.md only.
+- ZERO changes to real subject pages, other components, lib/ (except notes), content/, globals.css, or anything outside /x/ + those 2 generics.
+
+**Goal**: Eliminate ALL remaining visual inconsistencies so the entire /x/ flow (landing → subject browse → modules/explanation → practice) feels like a native, first-class part of the app rather than an experimental afterthought. Match spacing, typography, hover states, dark mode, component patterns (btn-*, theme-*, var(--accent), var(--surface-2) etc.) from CourseContentsPage, subject module/practice pages, and design system in globals.css. Make experimental banner tasteful/professional (not a loud warning strip). Replace every hardcoded blue-*/emerald-*/zinc-*/slate-*/amber-* etc. in scope.
+
+**Key Polish Changes (via 9 small, frequent, targeted commits)**:
+
+- **Experimental banner (`layout.tsx`)**: Completely rewrote from amber warning-strip (border-amber-*, bg-amber-50/95, shadow, bright text) to subtle integrated bar using `theme-border`, `bg-[var(--surface-2)]`, `theme-text-muted`. EXPERIMENTAL badge now uses border + muted text (no loud bg). Link hover uses theme-text-secondary + transition. Updated comment. Now feels like a quiet header label, not alert.
+
+- **Landing page (`/x/page.tsx`)**: 
+  - Status box: amber border/bg → `rounded-xl border theme-border bg-[var(--surface-2)]`
+  - Primary "Browse topics" CTA: custom zinc-900/black + dark white hack → `btn-primary` (official, handles dark invert via @apply + CSS)
+  - Secondary: already decent, promoted to `btn-secondary` for exact match.
+  - All other text/cards already used theme-*; now 100% clean of hardcodes.
+
+- **Subject browse (`/x/[subject]/page.tsx`)**: 
+  - Back link: `text-blue-700 ... dark:text-[var(--accent)]` → `text-[var(--accent)] hover:underline transition-colors`
+  - "✓ Loaded purely..." success line: emerald-700/400 → `theme-text-secondary` (neutral, still clear with ✓)
+  - (Note: topic cards + action buttons had been partially updated in prior work to use `btn-primary` + `border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--accent-text)]`; completed consistency.)
+  - Error fallback card already used full theme-surface / theme-* + btn-* (kept).
+
+- **Practice index (`/x/[subject]/practice/page.tsx`)**:
+  - Back link: blue → `text-[var(--accent)]`
+  - Per-topic count: `text-emerald-600 dark:text-emerald-400` → `text-[var(--accent)]` (accent now signals "actionable" uniformly)
+
+- **Per-topic practice page + error states (`/x/[subject]/practice/[topicId]/page.tsx`)**:
+  - All 3 fallback <a> links: blue-700 variants → `text-[var(--accent)]` (kept <a> tags for minimal diff; behavior identical).
+
+- **Module page error fallback (`/x/[subject]/modules/[topicId]/page.tsx`)**:
+  - Back link: blue → `text-[var(--accent)]`
+
+- **GenericModuleViewer (consumed by modules route)**:
+  - Back link: blue-700 → `text-[var(--accent)] ... transition-colors`
+  - Source attribution: emerald → `theme-text-muted`
+  - Footer disclaimer: zinc-500 → `theme-text-muted`
+  - (Already had good ELI5 + prose matching from prior polish; now fully color-clean.)
+
+- **GenericPracticeExperience (the heart of /x/ practice flow)**:
+  - Fallback "Back to..." link: blue → `text-[var(--accent)]`
+  - "Review the explanation for this topic →" (shown above input): full blue-600/50/700 + dark override → `text-[var(--accent)] hover:bg-[var(--surface-2)]` (works in both modes, no light-only blues)
+  - MCQ choice buttons (the hover affordance): `hover:border-blue-300 hover:bg-blue-50` → `hover:border-[var(--accent)] hover:bg-[var(--surface-2)]` (now theme-native; still gives clear interactive feedback)
+  - "All problems mastered!" success card: emerald border/bg/texts + slate button → `theme-border bg-[var(--surface-2)]` + `theme-text`/`theme-text-secondary` + `btn-primary` (official primary action button, no more slate-900/800)
+  - No other colors touched; reuses ProgressDots/PracticeFeedback/MathInput which are shared (and already mostly themed).
+
+**Overall Visual/Consistency Results**:
+- Every button, card, link, list item, empty/error state, status indicator, hover, and text hierarchy now uses the official system: `.theme-text*`, `.theme-surface`, `.theme-border`, `var(--accent)`, `var(--surface-2)`, `btn-primary` / `btn-secondary`.
+- Spacing/typography/containers: already matched real (max-w-5xl py-8 etc for browse; practice inner max-w-3xl card matches legacy practice UIs); no changes needed beyond colors.
+- Dark mode: fully automatic via vars (no more manual dark: emerald-400 etc that could mismatch).
+- Experimental banner now tasteful isolation signal (still present so users know it's the dynamic proof area).
+- The full flow feels seamless: same fonts (from subject fonts in layout), same header/footer via CourseLayout, same interactive patterns.
+- No behavior, routing, data, or logic changes whatsoever.
+
+**Commit Hygiene**: 9 small frequent commits (banner; landing; subject browse; practice index; practice [topic]; modules [topic]; generic-module-viewer; generic-practice-experience; + this NOTES update). Each used read_file + precise search_replace on unique strings. Git log shows clean incremental history.
+
+**Gaps left (intentionally out of scope or future)**:
+- Legacy real-subject pages (e.g. statistics/practice, linear-algebra) still contain some blue-/emerald-/slate- hovers in their local MCQ impls etc. (per task: only /x/ + its direct generics).
+- The generic-practice/ subdir (newer GenericPracticeExperience) not consumed by /x/ routes (the flat generic-practice-experience.tsx is the one wired).
+- Some real pages use mixed styles; global cleanup separate effort.
+- Banner could be further refined (e.g. icon) but current is professional and minimal.
+- No new CSS or design system changes.
+
+This completes making /x/ feel native end-to-end.
