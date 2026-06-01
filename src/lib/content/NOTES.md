@@ -158,3 +158,23 @@
 - Once stable, plan gradual migration or A/B of main routes.
 
 All changes via many small commits (see git log on branch). Full flow demonstrable by visiting /x/linear-algebra (pick vectors or systems) → explanation or practice.
+
+### Subject-Specific Theming (Subject-Specific Theming Agent work)
+- Made `/x/[subject]` (and subpages like /modules/, /practice/) feel like they belong to the real subject by:
+  - Importing and applying `subjectHeadingFont` + `subjectBodyFont` (Newsreader/Lora CSS vars) in the experimental `/x/layout.tsx`. This activates the same subject serif font stack used by the real `/linear-algebra/layout.tsx`, `/calculus/layout.tsx`, and `/statistics/layout.tsx` (and makes `font-serif` resolve to subject typography).
+  - Added `font-serif` class (matching real app's SiteHeader/SiteFooter logo treatment) to all subject/topic titles, topic list items, practice prompts, and module headings in the `/x/` pages + `GenericModuleViewer` / `GenericPracticeExperience`.
+- Added/reused subject icon (from `bundle.config.icon` e.g. "λ" for linear-algebra) in more places: now shown alongside title in practice experience header and module viewer (mirrors the icon+label header in real subject browse via `CourseContentsPage`).
+- Switched `MathInput` calls inside generic practice from hardcoded `subject="generic"` to a slug→key mapping ("linear-algebra"→"linalg" etc.). This enables any future subject-specific visual treatments in the input keypad (see SUBJECT_THEME). Added defensive fallback `?? SUBJECT_THEME.calculus` in math-input.tsx itself.
+- All changes used *only edits to existing files* (no new files created, per agent guidelines). 6 small commits on the worktree.
+- **Limitations** (as noted in task):
+  - No per-subject color accents or other visuals beyond icon + typography: the `SUBJECT_THEME` entries in `math-input.tsx` are currently identical for calculus/linalg/stats; no subject-specific `--accent` or CSS vars exist in `globals.css` or the new `SubjectConfig` schema (only `icon` + shared data).
+  - Experimental area deliberately uses minimal custom chrome (banner + no `<CourseLayout>`/`<SiteHeader>`), so full "belongs to subject" (e.g. subject-colored header, breadcrumbs with real subject nav, footer) not present. These would require either duplicating real chrome (bad) or waiting for dynamic routes to share more layout/providers (see future-dynamic.md).
+  - Fonts applied at `/x/` level (affects the generic `/x` landing too) because we avoided creating `/x/[subject]/layout.tsx` (new file). With proper dynamic route layouts in future, could scope more precisely or load subject-specific fonts if they diverge.
+  - Generic components stay intentionally subject-agnostic for reusability; deeper personalization (e.g. subject-aware prose styles) would need data extensions + more invasive changes.
+  - Some UI (topic cards, buttons, practice cards) remain visually generic — only typography + icon + input mapping applied for this slice.
+- Goal achieved: Visiting `/x/linear-algebra` now has serif typography on titles and λ icon in key views, evoking the real Linear Algebra area (at least in basic theming). Same for statistics (σ) and calculus (∫) where supported.
+
+**Next suggested (theming)**:
+- If subject fonts ever diverge per-subject, move imports into per-[subject] dynamic layout.
+- Extend SubjectConfig + loader with optional `accentColor` / theme hints; consume in generic components + math-input for subtle accents.
+- Consider a shared `<SubjectThemed>` wrapper component for future generic pages.
