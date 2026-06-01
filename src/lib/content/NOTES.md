@@ -158,3 +158,48 @@
 - Once stable, plan gradual migration or A/B of main routes.
 
 All changes via many small commits (see git log on branch). Full flow demonstrable by visiting /x/linear-algebra (pick vectors or systems) → explanation or practice.
+
+---
+
+## Experimental Area Polish & Solidification (2026-06-01)
+
+**Agent**: Experimental Area Polish & Solidification Agent
+
+**Goal**: Raise the quality bar of the entire `/x/` area so it feels like a solid, native part of the app rather than a rough prototype. Focus on consistency, polish details, loading/error, nav flow — no new features.
+
+### What was polished (via small commits)
+- **Design system consistency**: Replaced all raw Tailwind colors (zinc-*, blue-600/700/200, emerald-*, amber-*, slate-*, stone-*, bg-white etc.) across `/x/` pages + `Generic*` components with semantic `theme-*` classes, `var(--accent)`, `var(--surface)`, `var(--border)`, `var(--text-muted)`, `var(--surface-2)` etc. Dark mode now fully aligned. Adopted `.btn-primary` / `.btn-secondary` where appropriate.
+- **Experimental banner**: Completely reworked — now subtle surface-2 bar with muted text + small accent-bordered "EXPERIMENTAL" pill. Far less visually intrusive while still unmistakably marking the isolated area. Updated exit link + footer copy.
+- **Loading states**: Added `src/app/x/loading.tsx` with skeleton cards that appears during async `getFileSystemContentBundle` fetches on all dynamic routes.
+- **Error handling**: Added `src/app/x/error.tsx` (themed recovery UI with reset + links) + improved all per-page catch/error UIs (consistent padding, Links not <a>, theme colors, helpful copy). No longer falls straight to root error.
+- **Navigation smoothness** (browse → explanation → practice): 
+  - Consistent ← back links using accent + hover everywhere.
+  - Added "Practice this topic" + "All topics" affordances in GenericModuleViewer header/footer.
+  - "Review the explanation" in practice now styled cleanly.
+  - Practice index page exists and polished.
+  - Buttons now match main app patterns (accent primary for explanations, outline-accent for practice).
+- **Small UI details for "real app" feel**:
+  - Subject icons (λ, σ) displayed in landing cards + headers.
+  - Better metadata: estimatedMinutes shown on topics, accurate counts, "rich explanation" labels.
+  - Consistent spacing/typography (py-10 etc, text-[15px], theme-text).
+  - Disabled states, hover states, active scales using design tokens.
+  - ELI5 callouts in lightweight viewer now use app callout pattern (surface-2 + muted label) instead of loud blue.
+  - All error/empty states have clear recovery links.
+  - Removed dead code (unused vars) during edits.
+- 8 small focused commits. All /x/ routes + the two generic components used by them updated. (The more advanced unused generic-practice/ impl and experimental-generic-mdx... left untouched.)
+
+### What still feels rough / future polish needed
+- MDX rendering remains hand-rolled & incomplete (no real lists, tables, blockquotes, images, custom MDX components, full parsing of all syntax seen in content/). Still "raw-ish" for complex modules — full next-mdx-remote is the big missing piece (as noted in prior sections).
+- No dedicated per-subject chrome or layout under /x/ (still inherits single experimental banner/footer).
+- Practice "All mastered" success state + some MathInput chrome use a few remaining hard-coded tones (emerald success is intentional).
+- Performance: still re-reads FS on every request (no caching layer in loader for /x/).
+- No deep section linking from generic practice back into MDX (links go to topic top).
+- The two generic practice impls (flat generic-practice-experience.tsx used by /x/ vs subdir version) remain; consolidation later.
+- No visual subject switcher or "you are in experimental" persistent hint inside deep pages beyond banner.
+- Still no tests, no analytics events, no a11y audit specific to this area.
+- Calculus support in loader is present but content/ quality for full generic may vary.
+- The advanced ExperimentalGenericMdxModuleExplanation (unused by /x/ routes) has legacy-style links pointing outside /x/ — keep isolated.
+
+The `/x/` area now passes a much higher "this is a real, intentional part of the product" bar while remaining clearly experimental and isolated. Ready for further iteration or A/B.
+
+All via small commits on the architecture branch.
