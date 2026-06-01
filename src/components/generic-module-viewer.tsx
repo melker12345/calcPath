@@ -235,8 +235,8 @@ export function GenericModuleViewer({
     };
   }, [mdxSource]);
 
-  // navItems now from structured parse (exact match to real SubjectModulePage nav derivation)
-  const navItems = useMemo(() => {
+  // navItems derived directly from parsed (no extra useMemo needed; matches real SubjectModulePage derivation logic exactly)
+  const navItems = (() => {
     const items = [{ id: "intro", label: "Introduction" }];
     parsed.sections.forEach((sec) => {
       items.push({ id: sec.id || slugify(sec.title), label: sec.title });
@@ -245,7 +245,7 @@ export function GenericModuleViewer({
       items.push({ id: "mistakes", label: "Common Mistakes" });
     }
     return items;
-  }, [parsed]);
+  })();
 
   // Inline math/bold helper (for ELI5 + mistakes, which use MathText like real page)
   function renderInline(text: string) {
