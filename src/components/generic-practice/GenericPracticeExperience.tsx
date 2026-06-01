@@ -144,7 +144,7 @@ export function GenericPracticeExperience({
     return (
       <div className="mx-auto w-full max-w-3xl px-4 py-8 text-sm text-red-600 dark:text-red-400">
         Topic “{currentTopicId}” not found in the provided FileSystemContentBundle for “{subjectSlug}”.
-        <div className="mt-2 text-xs text-zinc-500">
+        <div className="mt-2 text-xs theme-text-muted">
           Available: {bundle.topics.map((t) => t.id).join(", ")}
         </div>
       </div>
@@ -155,7 +155,7 @@ export function GenericPracticeExperience({
     return (
       <div className="mx-auto w-full max-w-3xl px-4 py-12 text-center">
         <p className="text-lg font-semibold">No questions for this topic in the current bundle.</p>
-        <p className="mt-2 text-sm text-zinc-500">
+        <p className="mt-2 text-sm theme-text-muted">
           Bundle contains {bundle.problems.length} total problems across {bundle.topics.length} topics.
           (Some topics may be metadata-only until their questions.json + module.mdx are present.)
         </p>
@@ -269,11 +269,11 @@ export function GenericPracticeExperience({
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-3 text-sm text-zinc-500">
+        <div className="flex shrink-0 items-center gap-3 text-sm theme-text-muted">
           <span className="tabular-nums">
             {solvedCount}/{displayProblems.length} mastered
           </span>
-          <span className="hidden text-xs uppercase tracking-widest text-zinc-400 sm:inline">
+          <span className="hidden text-xs uppercase tracking-widest theme-text-muted sm:inline">
             {subjectSlug}
           </span>
         </div>
@@ -309,7 +309,7 @@ export function GenericPracticeExperience({
             return (
               <Link
                 href={moduleUrl}
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-blue-600 transition hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400"
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-blue-600 transition hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-950/30"
                 title={section ? `Review “${section}” in the module` : "Review the full module"}
               >
                 📖 Review this section
@@ -331,19 +331,19 @@ export function GenericPracticeExperience({
                     submitAnswer(choice);
                   }}
                   disabled={feedback?.type === "correct"}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-base font-medium theme-text transition hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg dark:text-[var(--text-primary)]"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-base font-medium theme-text transition hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg dark:border-[var(--border)] dark:bg-[var(--surface)] dark:hover:border-[var(--accent)] dark:hover:bg-[var(--surface-2)] dark:text-[var(--text-primary)]"
                 >
                   <MathText text={choice} />
                 </button>
               ))}
 
             {overlay && !overlayDismissed && (
-              <div className="relative overflow-hidden rounded-xl border border-slate-200">
+              <div className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-[var(--border)]">
                 {isDismissable && (
                   <button
                     type="button"
                     onClick={() => setOverlayDismissed(true)}
-                    className="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-sm text-zinc-400 shadow-sm backdrop-blur transition hover:bg-white hover:text-zinc-600"
+                    className="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-sm text-zinc-400 shadow-sm backdrop-blur transition hover:bg-white hover:text-zinc-600 dark:bg-[var(--surface-2)]/80 dark:text-[var(--text-muted)] dark:hover:bg-[var(--surface-2)] dark:hover:text-[var(--text-secondary)]"
                   >
                     ×
                   </button>
@@ -373,7 +373,7 @@ export function GenericPracticeExperience({
 
         {/* All mastered state (with shuffle) */}
         {solvedCount >= displayProblems.length && (
-          <div className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-900/20 p-4 text-center sm:mt-6 sm:rounded-2xl sm:p-5">
+          <div className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-900/20 p-4 text-center sm:mt-6 sm:rounded-2xl sm:p-5 dark:border-emerald-800/50 dark:bg-emerald-950/30">
             <p className="text-lg font-bold text-emerald-300 dark:text-emerald-200">
               All {displayProblems.length} problems mastered!
             </p>
@@ -383,7 +383,7 @@ export function GenericPracticeExperience({
             <button
               type="button"
               onClick={shuffleAndRestart}
-              className="mt-3 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 active:scale-95"
+              className="mt-3 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 active:scale-95 dark:bg-white dark:text-[var(--bg)] dark:hover:bg-zinc-200"
             >
               Shuffle &amp; restart
             </button>
@@ -397,7 +397,7 @@ export function GenericPracticeExperience({
               type="button"
               onClick={goToPrev}
               disabled={index === 0}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-100 disabled:opacity-25 sm:h-9 sm:w-9"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-100 disabled:opacity-25 sm:h-9 sm:w-9 dark:text-[var(--text-muted)] dark:hover:bg-[var(--surface-2)]"
               aria-label="Previous question"
             >
               ←
@@ -406,7 +406,7 @@ export function GenericPracticeExperience({
               type="button"
               onClick={goToNext}
               disabled={index === displayProblems.length - 1}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-100 disabled:opacity-25 sm:h-9 sm:w-9"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-100 disabled:opacity-25 sm:h-9 sm:w-9 dark:text-[var(--text-muted)] dark:hover:bg-[var(--surface-2)]"
               aria-label="Next question"
             >
               →
@@ -414,7 +414,7 @@ export function GenericPracticeExperience({
             {solvedCount > 0 && solvedCount < displayProblems.length && (
               <button
                 type="button"
-                className="ml-1 rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm"
+                className="ml-1 rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm dark:text-[var(--text-muted)] dark:hover:bg-[var(--surface-2)]"
                 onClick={() => {
                   const done = new Set(progress.completedProblemIds);
                   const nextUnsolved = displayProblems.findIndex((p, i) => i > index && !done.has(p.id));
@@ -426,12 +426,12 @@ export function GenericPracticeExperience({
             )}
           </div>
 
-          <div className="justify-self-center rounded-full px-2 py-0.5 text-[11px] font-medium text-zinc-400 ring-1 ring-zinc-200/80 dark:ring-zinc-700">
+          <div className="justify-self-center rounded-full px-2 py-0.5 text-[11px] font-medium text-zinc-400 ring-1 ring-zinc-200/80 dark:ring-zinc-700 dark:text-[var(--text-muted)]">
             Q{canonicalQuestionNumber}
           </div>
 
           <Link
-            className="justify-self-end rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm dark:hover:bg-zinc-800"
+            className="justify-self-end rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-400 transition hover:bg-zinc-100 sm:text-sm dark:text-[var(--text-muted)] dark:hover:bg-[var(--surface-2)]"
             href={`/${subjectSlug}`}
           >
             All chapters

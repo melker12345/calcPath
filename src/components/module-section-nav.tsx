@@ -4,7 +4,7 @@ export function ModuleSectionNav({
   items: { id: string; label: string }[];
 }) {
   return (
-    <nav className="fixed left-0 top-20 hidden max-h-[calc(100vh-6rem)] w-64 overflow-y-auto border-r theme-border theme-surface-2 px-5 py-2 xl:block" aria-label="Table of contents">
+    <nav className="fixed left-0 top-20 hidden max-h-[calc(100vh-6rem)] w-64 overflow-y-auto border-r theme-border bg-[var(--surface-2)] px-5 py-2 xl:block dark:bg-[var(--surface-2)]" aria-label="Table of contents">
       <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.18em] theme-text-muted">
         Contents
       </p>
@@ -14,7 +14,7 @@ export function ModuleSectionNav({
             <span className="w-5 shrink-0 tabular-nums theme-text-muted">
               {index + 1}.
             </span>
-            <a href={`#${item.id}`} className="text-blue-800 hover:underline">
+            <a href={`#${item.id}`} className="text-blue-800 hover:underline dark:text-[var(--accent)]">
               {item.label}
             </a>
           </li>

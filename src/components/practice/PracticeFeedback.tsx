@@ -79,7 +79,7 @@ export function PracticeFeedback({
         >
           {stepIdx + 1}
         </span>
-        <div className="flex-1 text-sm leading-relaxed text-zinc-700 sm:text-base dark:text-zinc-300">
+        <div className="flex-1 text-sm leading-relaxed text-zinc-700 sm:text-base dark:text-[var(--text-secondary)]">
           <MathText text={step} />
         </div>
       </div>
@@ -180,7 +180,7 @@ export function PracticeFeedback({
             <button
               type="button"
               onClick={onShowSolution}
-              className="rounded-lg border border-amber-200 bg-white px-2.5 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/50"
+              className="rounded-lg border border-amber-200 bg-white px-2.5 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm dark:border-amber-800 dark:bg-[var(--surface)] dark:text-amber-300 dark:hover:bg-amber-900/50"
             >
               Solution
             </button>
@@ -197,7 +197,7 @@ export function PracticeFeedback({
             <button
               type="button"
               onClick={onNext}
-              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-50 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm"
+              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-50 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm dark:border-[var(--border)] dark:bg-[var(--surface)] dark:text-[var(--text-muted)] dark:hover:bg-[var(--surface-2)]"
             >
               Skip
             </button>

@@ -354,7 +354,7 @@ export function ExperimentalGenericMdxModuleExplanation({
   if (!hasContent) {
     return (
       <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
-        <p className="text-sm text-stone-600">Unable to parse module content from MDX source.</p>
+        <p className="text-sm theme-text-muted">Unable to parse module content from MDX source.</p>
         <details className="mt-4 text-xs">
           <summary className="cursor-pointer">Raw MDX source (debug)</summary>
           <pre className="mt-2 overflow-auto rounded bg-[var(--surface-2)] p-3 text-[10px]">{mdxSource.slice(0, 2000)}...</pre>
@@ -374,7 +374,7 @@ export function ExperimentalGenericMdxModuleExplanation({
         <div className="min-w-0">
           <div className="mb-6 border-b border-[var(--border)] pb-5 sm:mb-8">
             <Link
-              className="text-sm text-blue-800 hover:underline"
+              className="text-sm text-blue-800 hover:underline dark:text-[var(--accent)]"
               href={`/${subjectSlug}/modules`}
               data-no-print
             >
@@ -469,7 +469,7 @@ export function ExperimentalGenericMdxModuleExplanation({
                 <div className="mt-4">
                   <Link
                     href={`/${subjectSlug}/practice/${topic.id}?section=${section.section || sectionId}`}
-                    className="inline-flex items-center gap-1 text-sm font-medium text-blue-700 hover:underline"
+                    className="inline-flex items-center gap-1 text-sm font-medium text-blue-700 hover:underline dark:text-[var(--accent)]"
                   >
                     Practice questions for this section →
                   </Link>
