@@ -316,71 +316,75 @@ export function GenericPracticeExperience({
           </div>
         </div>
 
-        {/* Question prompt */}
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 py-5 text-center">
-          <div role="heading" aria-level={2} className="text-lg font-semibold leading-relaxed sm:text-2xl">
-            {/* Always delegate to project's MathText (robust splitter + katex error fallback) */}
-            <MathText text={current.prompt} />
+        {/* Per-question error boundary: keeps header/progress/nav always visible.
+            Only the question+input subtree is isolated. Key ensures clean state per q. */}
+        <QuestionErrorBoundary key={current.id} onSkip={goToNext} questionId={current.id}>
+          {/* Question prompt */}
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 py-5 text-center">
+            <div role="heading" aria-level={2} className="text-lg font-semibold leading-relaxed sm:text-2xl">
+              {/* Always delegate to project's MathText (robust splitter + katex error fallback) */}
+              <MathText text={current.prompt} />
+            </div>
+
+            {/* Optional link back to explanation (generic, points to our /x/ module route) */}
+            <Link
+              href={`/x/${subjectSlug}/modules/${current.topicId}`}
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-[var(--accent)] transition-colors hover:bg-[var(--surface-2)]"
+            >
+              Review the explanation for this topic →
+            </Link>
           </div>
 
-          {/* Optional link back to explanation (generic, points to our /x/ module route) */}
-          <Link
-            href={`/x/${subjectSlug}/modules/${current.topicId}`}
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-[var(--accent)] transition-colors hover:bg-[var(--surface-2)]"
-          >
-            Review the explanation for this topic →
-          </Link>
-        </div>
-
-        {/* Answer input area */}
-        {current.type === "mcq" ? (
-          <div className="flex flex-col gap-2 sm:gap-3">
-            {(!feedbackOverlay || overlayDismissed) &&
-              current.choices?.map((choice) => (
-                <button
-                  key={choice}
-                  type="button"
-                  onClick={() => {
-                    setAnswer(choice);
-                    submitAnswer(choice);
-                  }}
-                  disabled={feedback?.type === "correct"}
-                  className="rounded-xl border theme-border bg-[var(--surface)] px-4 py-3 text-left text-base font-medium theme-text transition hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg"
-                >
-                  <MathText text={choice} />
-                </button>
-              ))}
-
-            {feedbackOverlay && !overlayDismissed && (
-              <div className="relative overflow-hidden rounded-xl border theme-border">
-                {isDismissable && (
+          {/* Answer input area */}
+          {current.type === "mcq" ? (
+            <div className="flex flex-col gap-2 sm:gap-3">
+              {(!feedbackOverlay || overlayDismissed) &&
+                current.choices?.map((choice) => (
                   <button
+                    key={choice}
                     type="button"
-                    onClick={() => setOverlayDismissed(true)}
-                    className="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--surface)]/80 text-sm theme-text-muted shadow-sm backdrop-blur transition hover:bg-[var(--surface)] hover:text-[var(--text-secondary)]"
+                    onClick={() => {
+                      setAnswer(choice);
+                      submitAnswer(choice);
+                    }}
+                    disabled={feedback?.type === "correct"}
+                    className="rounded-xl border theme-border bg-[var(--surface)] px-4 py-3 text-left text-base font-medium theme-text transition hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg"
                   >
-                    ×
+                    <MathText text={choice} />
                   </button>
-                )}
-                {feedbackOverlay}
-              </div>
-            )}
-          </div>
-        ) : (
-          <MathInput
-            value={answer}
-            onChange={setAnswer}
-            onSubmit={() => submitAnswer(answer)}
-            onHint={useHint}
-            subject="generic" /* data-driven /x/ path — uses neutral theme + heuristics */
-            hintDisabled={feedback?.type === "correct" || (feedback?.type === "incorrect" && (feedback.hintUsed || feedback.showSolution))}
-            questionContext={questionContext}
-            answerHint={current.answer}
-            feedbackOverlay={feedbackOverlay && !overlayDismissed ? feedbackOverlay : undefined}
-            onDismissOverlay={isDismissable ? () => setOverlayDismissed(true) : undefined}
-            questionPrompt={current.prompt}
-          />
-        )}
+                ))}
+
+              {feedbackOverlay && !overlayDismissed && (
+                <div className="relative overflow-hidden rounded-xl border theme-border">
+                  {isDismissable && (
+                    <button
+                      type="button"
+                      onClick={() => setOverlayDismissed(true)}
+                      className="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--surface)]/80 text-sm theme-text-muted shadow-sm backdrop-blur transition hover:bg-[var(--surface)] hover:text-[var(--text-secondary)]"
+                    >
+                      ×
+                    </button>
+                  )}
+                  {feedbackOverlay}
+                </div>
+              )}
+            </div>
+          ) : (
+            <MathInput
+              value={answer}
+              onChange={setAnswer}
+              onSubmit={() => submitAnswer(answer)}
+              onHint={useHint}
+              subject="generic" /* data-driven /x/ path — uses neutral theme + heuristics */
+              hintDisabled={feedback?.type === "correct" || (feedback?.type === "incorrect" && (feedback.hintUsed || feedback.showSolution))}
+              questionContext={questionContext}
+              answerHint={current.answer}
+              feedbackOverlay={feedbackOverlay && !overlayDismissed ? feedbackOverlay : undefined}
+              onDismissOverlay={isDismissable ? () => setOverlayDismissed(true) : undefined}
+              questionPrompt={current.prompt}
+            />
+          )}
+        </QuestionErrorBoundary>
 
         {/* All mastered */}
         {solvedCount >= displayProblems.length && (
