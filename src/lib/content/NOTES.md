@@ -370,3 +370,5 @@ Task complete. /x/ practice experience now feels complete for stats (and was alr
 **Plan**: Port missing questions one topic at a time for Statistics (small commits per topic + NOTES updates). Preserve all original `id`s exactly for progress compatibility. Follow exact JSON schema/shape from existing `questions.json` (no `topicId`, compact objects, choices arrays for MCQ, identical prompt/answer/explanation/LaTeX text). After all Stats, verify no other updates needed to `index.json`s (no `estimatedQuestions` field in TopicSchema, counts derived at load; no changes made). End with final NOTES summary + commit.
 
 All work via targeted search_replace on JSON arrays (read before edit) + git commits.
+
+- (2026-06-01, data-migration subagent) Completed anova backport: now exactly 39/39 questions in content/statistics/topics/anova/questions.json matching legacy anova.ts (all IDs, LaTeX, wording, structure preserved exactly; no topicId in JSON; formatted per good examples like descriptive/). Verified with jq length. Small commit follows.
