@@ -11,9 +11,10 @@ interface Props {
 /**
  * Generic dynamic practice page under experimental /x/.
  * Server component loads *only* from FileSystemContentBundle (new data).
- * Then delegates entirely to <GenericPracticeExperience> (which now ensures *all* prompt/choice/step/expl
- * text uses robust MathText, + has guards + graceful fallbacks so bad LaTeX/data in a question
- * does not produce generic "Something went wrong").
+ * - If topic missing → friendly not-found.
+ * - If 0 questions (not yet ported) → extremely clear intentional "no questions yet" UI (never generic error).
+ * Then (for good topics) delegates to <GenericPracticeExperience> (robust MathText everywhere + 0-displayProblems guard + per-q fallbacks)
+ * so bad data never produces generic "Something went wrong".
  *
  * This + the module viewer + browse page complete the "browse → explanation → practice" loop using purely new content.
  */
