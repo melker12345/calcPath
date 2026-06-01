@@ -232,10 +232,36 @@ export function MathInput({
   }
 
   useEffect(() => {
+    if (typeof document === "undefined") return;
     if (stylesInjected) return;
+
+    // Robust detection for already-injected MQ styles (handles fast client navs,
+    // remounts in /x/ experimental tree, HMR, or multi-bundle scenarios).
+    const hasMQStyles =
+      !!document.querySelector('style[data-mq]') ||
+      Array.from(document.getElementsByTagName("style")).some((s) => {
+        try {
+          return /mq-editable-field|\\.mq-/.test(s.textContent || "");
+        } catch {
+          return false;
+        }
+      });
+    if (hasMQStyles) {
+      stylesInjected = true;
+      return;
+    }
+
     import("react-mathquill").then((mod) => {
       mod.addStyles();
       stylesInjected = true;
+      // Tag the (likely last) injected stylesheet for future fast-path detection
+      const allStyles = document.getElementsByTagName("style");
+      if (allStyles.length > 0) {
+        const last = allStyles[allStyles.length - 1];
+        if (!last.dataset.mq && /mq-|mathquill/i.test(last.textContent || "")) {
+          last.dataset.mq = "injected";
+        }
+      }
     });
   }, []);
 
