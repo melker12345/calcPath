@@ -44,7 +44,7 @@ To move toward the vision, we need several coordinated changes:
 
 ### 1. Content as Data (Not Code)
 - Define a clear, versioned schema for subjects, chapters, topics, sections, explanations, and questions.
-- Move content out of `.ts` files into JSON, YAML, or MDX.
+- Move content out of `.ts` files into **JSON** (for structured data) + **MDX** (for rich explanations). YAML was rejected in favor of JSON.
 - Use a content loader (at build time or runtime) that validates and serves this data.
 
 ### 2. Generic, Data-Driven Pages
@@ -77,8 +77,8 @@ To move toward the vision, we need several coordinated changes:
 ### Phase 2: Define a Content Schema + Loader (Primary Focus)
 - Create formal TypeScript + Zod schemas for the entire content model (`Subject`, `Topic`, `Problem`, `ModuleContent`, `ModuleSection`, etc.).
 - Explicitly model question types, answer validation rules, rich explanation formats, and stable identifiers.
-- Decide on a content format (JSON + Markdown/MDX with frontmatter is the current leading candidate).
-- Build a `loadContent()` system (build-time preferred) that reads from a `content/` directory.
+- Content format decision: **JSON for structured data + MDX for rich explanations** (see `content/ARCHITECTURE.md` for the full decision and folder structure).
+- Build a `loadContent()` system (build-time preferred) that reads from a `content/` directory following the decided structure.
 - Strong validation at build time + good error messages.
 
 **Critical**: This phase must include a serious design effort around **stable IDs for progress tracking** and **how answer checking will be configured**.
