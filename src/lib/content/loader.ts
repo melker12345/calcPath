@@ -66,6 +66,200 @@ export function getLinearAlgebraBundle(): SubjectBundle {
 }
 
 // ============================================
+// NEW: Data-driven loader from content/ directory (JSON + MDX)
+// Per content/ARCHITECTURE.md and schema updates.
+// Thin vertical slice: Linear Algebra, metadata + topics with folders (e.g. vectors)
+// ============================================
+
+const CONTENT_DIR = "content";
+
+/**
+ * Simple frontmatter parser for MDX (no extra deps).
+ * Supports basic key: value (single line) under --- delimiters.
+ * Returns { title?, ...other }
+ */
+function parseMdxFrontmatter(mdxSource: string): Record<string, string> {
+  const frontmatterMatch = mdxSource.match(/^---\s*\r?\n([\s\S]*?)\r?\n---\s*\r?\n/);
+  if (!frontmatterMatch) return {};
+  const yamlBlock = frontmatterMatch[1];
+  const data: Record<string, string> = {};
+  yamlBlock.split(/\r?\n/).forEach((line) => {
+    const colonIdx = line.indexOf(":");
+    if (colonIdx > 0) {
+      const key = line.slice(0, colonIdx).trim();
+      let value = line.slice(colonIdx + 1).trim();
+      // strip simple quotes
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      if (key) data[key] = value;
+    }
+  });
+  return data;
+}
+
+/**
+ * Internal: read a JSON file + validate with provided schema.
+ * Uses dynamic import so 'fs' never enters client bundles.
+ */
+async function readJsonFile<T>(relativePath: string, schema: import("zod").ZodType<T>): Promise<T> {
+  const fs = await import("fs/promises");
+  const path = await import("path");
+  const fullPath = path.join(process.cwd(), CONTENT_DIR, relativePath);
+  const raw = await fs.readFile(fullPath, "utf-8");
+  const parsed = JSON.parse(raw);
+  return schema.parse(parsed);
+}
+
+/**
+ * Internal: read an MDX (or any text) file as raw string.
+ */
+async function readMdxFile(relativePath: string): Promise<string> {
+  const fs = await import("fs/promises");
+  const path = await import("path");
+  const fullPath = path.join(process.cwd(), CONTENT_DIR, relativePath);
+  return fs.readFile(fullPath, "utf-8");
+}
+
+/**
+ * Load a single topic's data from its folder under content/{subject}/topics/{topicId}/
+ * - topic index.json (optional fallback)
+ * - questions.json (injects topicId if missing)
+ * - module.mdx (required for now in thin slice)
+ *
+ * Graceful for missing files in early skeleton: questions default [], mdx optional? but for vectors present.
+ */
+async function loadTopicContent(subjectSlug: string, topicId: string): Promise<{
+  topic: import("./schema").Topic;
+  questions: import("./schema").Problem[];
+  mdxModule?: import("./schema").MdxModule;
+}> {
+  const topicDir = `${subjectSlug}/topics/${topicId}`;
+
+  // Topic metadata: prefer topic/index.json, fallback not present yet in skeleton for all
+  let topic: import("./schema").Topic;
+  try {
+    topic = await readJsonFile(`${topicDir}/index.json`, TopicIndexSchema);
+  } catch {
+    // For skeleton, some topics only listed at subject level; we'll handle upstream
+    throw new Error(`Missing required topic index for ${topicId} at ${topicDir}/index.json`);
+  }
+
+  // Questions (may be empty in skeleton)
+  let questionsFile: import("./schema").QuestionsFile = [];
+  try {
+    questionsFile = await readJsonFile(`${topicDir}/questions.json`, QuestionsFileSchema);
+  } catch {
+    // ok for partial content
+    questionsFile = [];
+  }
+
+  // Inject topicId for any that omit it (per our schema design)
+  const questions = questionsFile.map((q) => ({
+    ...q,
+    topicId: q.topicId ?? topicId,
+  })) as import("./schema").Problem[];
+
+  // MDX rich content
+  let mdxModule: import("./schema").MdxModule | undefined;
+  try {
+    const mdxSource = await readMdxFile(`${topicDir}/module.mdx`);
+    const fm = parseMdxFrontmatter(mdxSource);
+    const title = fm.title || topic.title;
+    mdxModule = MdxModuleSchema.parse({
+      topicId,
+      title,
+      mdxSource,
+    });
+  } catch {
+    // For thin slice, only vectors has it; others may not yet
+    mdxModule = undefined;
+  }
+
+  return { topic, questions, mdxModule };
+}
+
+/**
+ * Loads Linear Algebra purely from the content/ filesystem (data-driven).
+ * Currently supports full metadata from index.json + full data for topics that have
+ * a topics/{id}/ folder (vectors today; systems/matrices listed in index but folders pending).
+ *
+ * Returns FileSystemContentBundle (validated). Problems aggregated across loaded topics.
+ * This proves the JSON+MDX loader path without touching legacy.
+ */
+export async function loadLinearAlgebraFromContent(): Promise<FileSystemContentBundle> {
+  // 1. Load subject index (config + topic list)
+  const subjectIndex = await readJsonFile<SubjectIndex>("linear-algebra/index.json", SubjectIndexSchema);
+
+  const config: SubjectConfig = {
+    slug: subjectIndex.slug,
+    label: subjectIndex.label,
+    shortDescription: subjectIndex.shortDescription,
+    modulesDescription: subjectIndex.modulesDescription,
+    icon: subjectIndex.icon,
+    order: subjectIndex.order,
+    hasTests: subjectIndex.hasTests,
+  };
+
+  // 2. Start with topics from index (metadata only for now)
+  const topicsFromIndex = subjectIndex.topics;
+
+  // 3. Load detailed data only for topics that have folders on disk (thin slice: vectors)
+  const loadedTopics: import("./schema").Topic[] = [];
+  const allProblems: import("./schema").Problem[] = [];
+  const mdxModules: import("./schema").MdxModule[] = [];
+
+  // Use readdir to discover what topic folders actually exist (robust for partial skeleton)
+  let existingTopicIds: string[] = [];
+  try {
+    const fs = await import("fs/promises");
+    const path = await import("path");
+    const topicsDir = path.join(process.cwd(), CONTENT_DIR, "linear-algebra/topics");
+    const entries = await fs.readdir(topicsDir, { withFileTypes: true });
+    existingTopicIds = entries.filter((e) => e.isDirectory()).map((e) => e.name);
+  } catch {
+    existingTopicIds = [];
+  }
+
+  for (const topicMeta of topicsFromIndex) {
+    loadedTopics.push(topicMeta); // always include metadata
+
+    if (existingTopicIds.includes(topicMeta.id)) {
+      try {
+        const { topic: _t, questions, mdxModule } = await loadTopicContent("linear-algebra", topicMeta.id);
+        // topic from index already has the meta; questions + mdx if present
+        allProblems.push(...questions);
+        if (mdxModule) {
+          mdxModules.push(mdxModule);
+        }
+      } catch (err) {
+        // Log but don't fail whole load for thin slice
+        console.warn(`[content-loader] Partial load for topic ${topicMeta.id}:`, (err as Error).message);
+      }
+    }
+  }
+
+  const rawBundle = {
+    config,
+    topics: loadedTopics,
+    problems: allProblems,
+    mdxModules,
+  };
+
+  return FileSystemContentBundleSchema.parse(rawBundle);
+}
+
+/**
+ * Convenience for the new FS path (thin slice).
+ */
+export async function getFileSystemContentBundle(slug: string): Promise<FileSystemContentBundle> {
+  if (slug !== "linear-algebra") {
+    throw new Error(`FS content loader only supports "linear-algebra" in thin vertical slice (got: ${slug}). Other subjects still use legacy adapters.`);
+  }
+  return loadLinearAlgebraFromContent();
+}
+
+// ============================================
 // Adapter / Validation helpers (for migration & other subjects)
 // ============================================
 
