@@ -66,7 +66,7 @@ export default async function DynamicSubjectPage({ params }: Props) {
           return (
             <div key={topic.id} className="flex flex-col gap-2 rounded-xl border border-[var(--border)] bg-white p-4 dark:bg-[var(--surface)] sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <div className="font-medium">
+                <div className="font-medium font-serif">
                   {idx + 1}. {topic.title}
                 </div>
                 <div className="text-sm text-zinc-600 dark:text-zinc-400">{topic.description}</div>

@@ -35,7 +35,7 @@ export default async function DynamicPracticeIndex({ params }: Props) {
               href={`/x/${subjectSlug}/practice/${topic.id}`}
               className="block rounded-xl border border-[var(--border)] bg-white p-4 hover:bg-zinc-50 dark:bg-[var(--surface)] dark:hover:bg-zinc-900"
             >
-              <div className="font-medium">{topic.title}</div>
+              <div className="font-medium font-serif">{topic.title}</div>
               <div className="text-sm text-zinc-500">{topic.description}</div>
               <div className="mt-1 text-xs text-emerald-600">{count} questions available →</div>
             </Link>
