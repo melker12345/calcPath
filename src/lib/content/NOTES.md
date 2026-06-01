@@ -79,6 +79,15 @@
 - [x] All per content/ARCHITECTURE.md: JSON for structure, MDX for rich (raw for now). Schema-first, thin LA slice only. Legacy paths untouched. Frequent small commits made.
 - Loader + schema now read directly from the content/ dir structure (proving the data-driven path).
 
+## Statistics Content Port (Statistics Completion Agent work, 2026-06-01)
+- [x] Created full folder structure `content/statistics/` + subject `index.json` + `topics/*/index.json` skeletons for all 14 topics (matching legacy topics from statistics-content.ts). Committed as first small change.
+- Full port of remaining topics to include `questions.json` (from src/lib/statistics-questions/*.ts) and rich `module.mdx` (converted from src/lib/modules/statistics/*.ts preserving intro, sections with ELI5/LaTeX/examples, commonMistakes).
+- References: Linear Algebra vectors/ (for FS format, frontmatter MDX), and will treat bayesian-inference + logistic-regression as the rich quality bar for stats.
+- Will update loader only if needed to support "statistics" slug in FS bundle getter.
+- Do not touch any legacy .ts content files, practice routes, or pages.
+- Frequent small commits + regular NOTES updates.
+- Validation via schema + existing test harness.
+
 ## Next Experiments (current focus)
 
 - [ ] Prototype a generic (data-only) practice page / component that consumes Problem[] + Topic from a loaded bundle (avoiding large changes to the 3 existing subject practice pages)
