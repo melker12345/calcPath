@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
 import { MathInput } from "@/components/math-input";
 import { VoteFeedback } from "@/components/vote-feedback";
@@ -10,26 +10,42 @@ import { useProgress } from "@/components/progress-provider";
 import { problems, topics, getModuleSectionUrl, getModuleSectionTitle } from "@/lib/statistics-content";
 import { isAnswerCorrectAsync } from "@/lib/answer-check";
 import { detectQuestionContext } from "@/lib/math-input-helpers";
-
-type FeedbackState =
-  | null
-  | { type: "correct" }
-  | { type: "incorrect"; attempts: number; hintUsed: boolean; showSolution: boolean };
+import { ProgressDots } from "@/components/practice/ProgressDots";
+import { PracticeFeedback } from "@/components/practice/PracticeFeedback";
+import { usePracticeSession } from "@/components/practice/usePracticeSession";
+import type { FeedbackState, QuestionStatus } from "@/components/practice/types";
 
 export default function StatisticsPracticeTopic() {
   const params = useParams<{ topicId: string }>();
   const topicId = params?.topicId ?? "";
+  const searchParams = useSearchParams();
+  const focusId = searchParams.get("focus");
+
   const { progress, addAttempt } = useProgress();
   const topic = topics.find((t) => t.id === topicId);
   const topicProblems = useMemo(() => problems.filter((p) => p.topicId === topicId), [topicId]);
 
-  const [index, setIndex] = useState(0);
+  const {
+    displayProblems,
+    index,
+    setIndex,
+    current: hookCurrent,
+    questionStatuses,
+    hasManuallyNavigated,
+    solvedCount: hookSolvedCount,
+    goToNext: hookGoToNext,
+    goToPrev: hookGoToPrev,
+    shuffleAndRestart: hookShuffleAndRestart,
+    setHasManuallyNavigated: hookSetHasManuallyNavigated,
+  } = usePracticeSession({
+    problems: topicProblems,
+    completedProblemIds: progress.completedProblemIds,
+    focusId,
+  });
+
   const [answer, setAnswer] = useState("");
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [overlayDismissed, setOverlayDismissed] = useState(false);
-  const [shuffledProblems, setShuffledProblems] = useState<typeof topicProblems | null>(null);
-
-  const displayProblems = shuffledProblems ?? topicProblems;
   const current = displayProblems[index];
   const canonicalQuestionNumber =
     current ? topicProblems.findIndex((problem) => problem.id === current.id) + 1 : 0;
@@ -75,11 +91,24 @@ export default function StatisticsPracticeTopic() {
     else setFeedback({ type: "incorrect", attempts: 0, hintUsed: true, showSolution: false });
   };
 
-  const goToNext = () => { setFeedback(null); setAnswer(""); setOverlayDismissed(false); setIndex((i) => Math.min(displayProblems.length - 1, i + 1)); };
-  const goToPrev = () => { setFeedback(null); setAnswer(""); setOverlayDismissed(false); setIndex((i) => Math.max(0, i - 1)); };
+  const goToNext = () => {
+    setFeedback(null);
+    setAnswer("");
+    setOverlayDismissed(false);
+    hookGoToNext();
+  };
+
+  const goToPrev = () => {
+    setFeedback(null);
+    setAnswer("");
+    setOverlayDismissed(false);
+    hookGoToPrev();
+  };
   const shuffleAndRestart = () => {
-    setShuffledProblems([...topicProblems].sort(() => Math.random() - 0.5));
-    setIndex(0); setFeedback(null); setAnswer(""); setOverlayDismissed(false);
+    setFeedback(null);
+    setAnswer("");
+    setOverlayDismissed(false);
+    hookShuffleAndRestart();
   };
 
   const getHint = () => {
@@ -103,68 +132,35 @@ export default function StatisticsPracticeTopic() {
   const isDismissable = feedback?.type === "incorrect" && !feedback.showSolution;
 
   const correctOverlay = feedback?.type === "correct" ? (
-    <div className="animate-correct-pop flex h-full flex-col border-t border-emerald-200 bg-emerald-50 p-3 pt-4 sm:p-5">
-      <div className="flex items-center gap-2.5">
-        <div className="animate-check-bounce flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base">✓</div>
-        <p className="text-base font-bold text-emerald-800 sm:text-xl">Correct!</p>
-      </div>
-      <div className="mt-3 flex-1 space-y-1.5 overflow-y-auto sm:mt-4 sm:space-y-2">{renderSteps("emerald")}</div>
-      <div className="mt-3 rounded-lg bg-emerald-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3">
-        <p className="text-sm font-semibold text-emerald-900 sm:text-base">Answer: <span className="text-base sm:text-lg"><MathText text={finalAnswer} /></span></p>
-      </div>
-      <div className="mt-2 flex justify-end sm:mt-3"><VoteFeedback targetType="problem" targetId={current.id} /></div>
-      <button type="button" onClick={goToNext} className="mt-2 w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.98] sm:mt-3 sm:py-3 sm:text-base">
-        Next Question →
-      </button>
-    </div>
+    <PracticeFeedback
+      feedback={feedback}
+      current={current}
+      onNext={hookGoToNext}
+      onUseHint={useHint}
+      onShowSolution={() => setFeedback((prev) => 
+        prev && prev.type === "incorrect" ? { ...prev, showSolution: true } : prev
+      )}
+      getHint={getHint}
+      overlayDismissed={overlayDismissed}
+      setOverlayDismissed={setOverlayDismissed}
+      finalAnswer={finalAnswer}
+    />
   ) : null;
 
   const incorrectOverlay = (feedback?.type === "incorrect" && !overlayDismissed) ? (
-    <div className={`flex h-full flex-col border-t p-3 pt-4 sm:p-5 ${feedback.showSolution || feedback.attempts > 0 ? "border-amber-200 bg-amber-50" : "border-amber-100 bg-amber-50/50"}`}>
-      {feedback.attempts > 0 && (
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-white sm:h-10 sm:w-10 sm:text-base">✗</div>
-          <div>
-            <p className="text-sm font-bold text-amber-800 sm:text-lg">Not quite</p>
-            <p className="text-[11px] text-amber-700 sm:text-sm">
-              {feedback.showSolution && "Here's the solution:"}
-              {!feedback.showSolution && feedback.attempts === 1 && !feedback.hintUsed && "Give it another try!"}
-              {!feedback.showSolution && feedback.attempts === 1 && feedback.hintUsed && "Use the hint and try again!"}
-              {!feedback.showSolution && feedback.attempts === 2 && !feedback.hintUsed && "Need a hint?"}
-              {!feedback.showSolution && feedback.attempts === 2 && feedback.hintUsed && "Use the hint and try again!"}
-            </p>
-          </div>
-        </div>
+    <PracticeFeedback
+      feedback={feedback}
+      current={current}
+      onNext={hookGoToNext}
+      onUseHint={useHint}
+      onShowSolution={() => setFeedback((prev) => 
+        prev && prev.type === "incorrect" ? { ...prev, showSolution: true } : prev
       )}
-      {feedback.hintUsed && !feedback.showSolution && (
-        <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 sm:mt-4 sm:p-4">
-          <p className="text-[11px] font-semibold text-amber-700 sm:text-sm">Hint</p>
-          <p className="mt-0.5 text-xs text-amber-900 sm:mt-1 sm:text-base"><MathText text={getHint()} /></p>
-        </div>
-      )}
-      {feedback.showSolution && (
-        <>
-          <div className="mt-3 flex-1 space-y-1.5 overflow-y-auto sm:mt-4 sm:space-y-2">{renderSteps("amber")}</div>
-          <div className="mt-3 rounded-lg bg-amber-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3">
-            <p className="text-sm font-semibold text-amber-900 sm:text-base">Answer: <span className="text-base sm:text-lg"><MathText text={finalAnswer} /></span></p>
-          </div>
-          <div className="mt-2 flex justify-end sm:mt-3"><VoteFeedback targetType="problem" targetId={current.id} /></div>
-        </>
-      )}
-      <div className="mt-2 flex flex-wrap gap-1.5 sm:mt-4 sm:gap-2">
-        {!feedback.showSolution && !feedback.hintUsed && (
-          <button type="button" onClick={useHint} className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm">Hint</button>
-        )}
-        {!feedback.showSolution && (
-          <button type="button" onClick={() => setFeedback({ ...feedback, showSolution: true })} className="rounded-lg border border-amber-300 bg-white px-2.5 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm">Solution</button>
-        )}
-        {feedback.showSolution ? (
-          <button type="button" onClick={goToNext} className="mt-1 w-full rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-amber-700 active:scale-[0.98] sm:mt-2 sm:py-3 sm:text-base">Next Question →</button>
-        ) : (
-          <button type="button" onClick={goToNext} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-50 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm">Skip</button>
-        )}
-      </div>
-    </div>
+      getHint={getHint}
+      overlayDismissed={overlayDismissed}
+      setOverlayDismissed={setOverlayDismissed}
+      finalAnswer={finalAnswer}
+    />
   ) : null;
 
   const overlay = correctOverlay || incorrectOverlay || undefined;
@@ -183,12 +179,24 @@ export default function StatisticsPracticeTopic() {
       {/* Main card */}
       <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-end bg-white px-4 pb-1 pt-2 dark:bg-[var(--surface)] sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
 
-        {/* Progress bar */}
-        <div className="flex items-center gap-3">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-            <div className="h-full rounded-full bg-slate-900 transition-all duration-500" style={{ width: `${progressPct}%` }} />
+        {/* Question status dots */}
+        <div className="flex w-full justify-center">
+          <div className="flex items-center gap-2">
+            <ProgressDots
+              statuses={questionStatuses}
+              currentIndex={index}
+              onSelect={(i) => {
+                hookSetHasManuallyNavigated(true);
+                setFeedback(null);
+                setAnswer("");
+                setOverlayDismissed(false);
+                setIndex(i);
+              }}
+            />
+            <span className="shrink-0 text-xs font-semibold tabular-nums text-slate-400">
+              {index + 1} / {displayProblems.length}
+            </span>
           </div>
-          <span className="shrink-0 text-xs font-semibold tabular-nums text-slate-400">{index + 1} / {displayProblems.length}</span>
         </div>
 
         {/* Question */}
