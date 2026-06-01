@@ -95,20 +95,33 @@ export const ModuleSectionSchema = z.object({
 
   /**
    * Stable slug. Must exactly match the `section` on associated Problems.
+   * This is critical for deep linking and per-section progress tracking.
    */
   section: z.string().optional(),
 
+  /** Main explanatory content (array of paragraphs / steps) */
   body: z.array(z.string()),
+
+  /** Simpler, intuition-first explanations (ELI5) */
   eli5: z.array(z.string()).optional(),
+
+  /** Inline worked examples for this specific section */
   examples: z.array(WorkedExampleSchema).optional(),
 });
 
 export const ModuleContentSchema = z.object({
   topicId: z.string(),
   title: z.string(),
+
+  /** High-level introduction to the entire topic (shown at the top of the module page) */
   intro: z.array(z.string()),
+
   sections: z.array(ModuleSectionSchema),
+
+  /** Top-level worked examples for the whole topic (less common than per-section examples) */
   examples: z.array(WorkedExampleSchema),
+
+  /** Common mistakes / misconceptions for this topic */
   commonMistakes: z.array(z.string()),
 });
 
