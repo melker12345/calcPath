@@ -22,30 +22,30 @@ export default function ExperimentalHome() {
   ];
 
   return (
-    <div className="px-4 py-8 sm:px-6 sm:py-12">
+    <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="mb-8">
-        <h1 className="text-3xl font-semibold tracking-tight">Experimental Dynamic Area</h1>
-        <p className="mt-2 max-w-2xl text-zinc-600 dark:text-zinc-400">
+        <h1 className="text-3xl font-semibold tracking-tight theme-text">Experimental Dynamic Area</h1>
+        <p className="mt-2 max-w-2xl theme-text-secondary">
           This proves the full user flow using <strong>only</strong> the new content data (JSON + MDX from <code>content/</code> via <code>getFileSystemContentBundle</code>).
           No legacy <code>*-content.ts</code> or per-subject app folders used here.
         </p>
       </div>
 
-      <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm dark:border-blue-900/60 dark:bg-blue-950/30">
-        <strong>Current status:</strong> Browse + basic explanation (MDX raw) + working practice (generic). See NOTES.md in content lib for decisions + limitations.
+      <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-900/60 dark:bg-amber-950/30">
+        <strong className="theme-text">Current status:</strong> Browse + explanation (MDX) + working practice (generic components). See NOTES.md for decisions + limitations.
       </div>
 
-      <h2 className="mb-4 text-xl font-semibold">Available Subjects (data-driven)</h2>
+      <h2 className="mb-4 text-xl font-semibold theme-text">Available Subjects (data-driven)</h2>
 
       <div className="grid gap-4 md:grid-cols-2">
         {subjects.map((s) => (
-          <div key={s.slug} className="rounded-2xl border border-[var(--border)] bg-white p-6 shadow-sm dark:bg-[var(--surface)]">
+          <div key={s.slug} className="rounded-2xl border theme-border theme-surface p-6 shadow-sm">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-xl font-semibold">{s.label}</h3>
-                <p className="mt-1 text-sm text-zinc-500">{s.desc}</p>
+                <h3 className="text-xl font-semibold theme-text">{s.label}</h3>
+                <p className="mt-1 text-sm theme-text-secondary">{s.desc}</p>
               </div>
-              <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+              <span className="rounded-full bg-[var(--surface-2)] px-3 py-1 text-xs font-medium theme-text-muted">
                 {s.topicsCount} topics
               </span>
             </div>
@@ -58,21 +58,21 @@ export default function ExperimentalHome() {
                 Browse topics →
               </Link>
               <Link
-                href={`/x/${s.slug}/practice`}  // note: we may add list page later; for now topic pages are direct
-                className="inline-flex items-center rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+                href={`/x/${s.slug}/practice`}
+                className="inline-flex items-center rounded-lg border theme-border px-4 py-2 text-sm font-medium hover:bg-[var(--surface-2)]"
               >
                 Practice overview (soon)
               </Link>
             </div>
-            <p className="mt-3 text-[11px] text-zinc-500">Uses only FileSystemContentBundle for this subject.</p>
+            <p className="mt-3 text-[11px] theme-text-muted">Uses only FileSystemContentBundle for this subject.</p>
           </div>
         ))}
       </div>
 
-      <div className="mt-8 text-xs text-zinc-500">
+      <div className="mt-8 text-xs theme-text-muted">
         Routes live at <code>/x/[subject]</code>, <code>/x/[subject]/modules/[topicId]</code>, <code>/x/[subject]/practice/[topicId]</code>.
         All data fetched at request time from the content loader (async server components).
       </div>
-    </div>
+    </main>
   );
 }
