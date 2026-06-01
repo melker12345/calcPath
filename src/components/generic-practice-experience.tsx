@@ -4,14 +4,17 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
-import { BlockMath, InlineMath } from "react-katex";
 import { MathInput } from "@/components/math-input";
 import { useProgress } from "@/components/progress-provider";
 import { isAnswerCorrectAsync } from "@/lib/answer-check";
 import { detectQuestionContext } from "@/lib/math-input-helpers";
-import { ProgressDots } from "@/components/practice/ProgressDots";
-import { PracticeFeedback } from "@/components/practice/PracticeFeedback";
-import { usePracticeSession } from "@/components/practice/usePracticeSession";
+import {
+  ProgressDots,
+  PracticeFeedback,
+  usePracticeSession,
+  getDefaultHint,
+  extractFinalAnswer,
+} from "@/components/practice";
 import type { Problem, Topic } from "@/lib/shared-types";
 
 /**
@@ -25,7 +28,8 @@ import type { Problem, Topic } from "@/lib/shared-types";
  *
  * Differences / simplifications vs legacy per-subject pages (for experimental slice):
  * - Uses the improved PracticeFeedback for *both* correct + incorrect states (less duplication).
- * - Minimal custom RichMath (delegates heavily to MathText + katex where needed).
+ * - All prompt / choice / step / explanation text *always* goes through the project's <MathText>
+ *   (robust $ / $$ splitter + Safe* fallbacks for bad katex). No local RichPrompt/RichMath.
  * - Subject context for MathInput defaults to generic heuristics (can be enhanced).
  * - No per-subject getModuleSectionUrl deep links yet (future: derive from MDX headings or keep legacy maps).
  * - Progress + answer checking use the global shared systems (stable ids preserved from content).
@@ -82,18 +86,26 @@ export function GenericPracticeExperience({
   const current = hookCurrent || displayProblems[index];
 
   const questionContext = useMemo(
-    () => (current ? detectQuestionContext(current.prompt) : undefined),
+    () => (current && typeof current.prompt === "string" ? detectQuestionContext(current.prompt) : undefined),
     [current]
   );
 
   if (!topic) {
     return <div className="p-8 text-sm theme-text-secondary">Topic not found in data.</div>;
   }
-  if (!current) {
+  if (!current || typeof current.prompt !== "string" || !current.explanation) {
+    // Graceful fallback for bad/malformed question data (recoverable; do not let it hit global error.tsx)
     return (
       <div className="mx-auto max-w-3xl p-8">
-        <p className="theme-text-secondary">No practice questions available for this topic in the loaded content data yet.</p>
-        <Link href={`/x/${subjectSlug}`} className="mt-4 inline-block underline text-[var(--accent)]">Back to {subjectLabel}</Link>
+        <p className="theme-text-secondary">This question has invalid data (missing prompt or explanation). It will be skipped in future runs.</p>
+        <button
+          type="button"
+          onClick={goToNext}
+          className="mt-4 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm text-white"
+        >
+          Skip to next question →
+        </button>
+        <Link href={`/x/${subjectSlug}`} className="mt-3 block underline text-[var(--accent)]">Back to {subjectLabel}</Link>
       </div>
     );
   }
@@ -135,12 +147,8 @@ export function GenericPracticeExperience({
     }
   };
 
-  const getHint = () => {
-    const m = current.explanation.match(/Step 1:\s*([^.]+\.)/);
-    return m?.[1] || "Think about the rules that apply to this type of problem.";
-  };
-
-  const finalAnswer = current.explanation.match(/Final answer:\s*(.+?)\.?$/)?.[1] || `$${current.answer}$`;
+  const getHint = () => getDefaultHint(current?.explanation || "");
+  const finalAnswer = extractFinalAnswer(current?.explanation || "", current?.answer || "");
 
   const isDismissable = feedback?.type === "incorrect" && !feedback.showSolution;
 
@@ -162,15 +170,6 @@ export function GenericPracticeExperience({
       finalAnswer={finalAnswer}
     />
   );
-
-  // Very small local rich text for prompts (MathText covers most; katex for complex)
-  function RichPrompt({ value }: { value: string }) {
-    // Fallback splitter only for block math in prompts if needed
-    if (value.includes("\\begin{") || value.includes("$$")) {
-      return <MathText text={value} />;
-    }
-    return <MathText text={value} />;
-  }
 
   return (
     <div className="mx-auto w-full max-w-3xl px-0 pb-0 sm:px-6 sm:py-10">
@@ -202,7 +201,8 @@ export function GenericPracticeExperience({
         {/* Question prompt */}
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-5 text-center">
           <div role="heading" aria-level={2} className="text-lg font-semibold leading-relaxed sm:text-2xl">
-            <RichPrompt value={current.prompt} />
+            {/* Always delegate to project's MathText (now with robust splitter + katex error fallback) */}
+            <MathText text={current.prompt} />
           </div>
 
           {/* Optional link back to explanation (generic, points to our /x/ module route) */}

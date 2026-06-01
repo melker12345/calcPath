@@ -9,7 +9,9 @@ interface Props {
 /**
  * Generic dynamic practice page under experimental /x/.
  * Server component loads *only* from FileSystemContentBundle (new data).
- * Then delegates entirely to <GenericPracticeExperience> which proves the reusable UI.
+ * Then delegates entirely to <GenericPracticeExperience> (which now ensures *all* prompt/choice/step/expl
+ * text uses robust MathText, + has guards + graceful fallbacks so bad LaTeX/data in a question
+ * does not produce generic "Something went wrong").
  *
  * This + the module viewer + browse page complete the "browse → explanation → practice" loop using purely new content.
  */

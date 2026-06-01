@@ -9,6 +9,10 @@ import type { FeedbackState } from "./types";
  * ("Step 1: ... Step 2: ... Final answer: ...").
  * Used by PracticeFeedback internally and by GenericPracticeExperience (and future generic pages)
  * to avoid duplicating hint/solution/final-answer extraction logic across subjects.
+ *
+ * IMPORTANT: every step/hint/finalAnswer/explanation fragment rendered here goes through
+ * <MathText> (see renderInternalSteps + call sites) so that /x/ practice gets the robust
+ * LaTeX splitter + katex error fallbacks.
  */
 export function extractSteps(explanation: string): string[] {
   const parts = explanation.split(/Step \d+:\s*/).filter(Boolean);
@@ -80,6 +84,7 @@ export function PracticeFeedback({
           {stepIdx + 1}
         </span>
         <div className="flex-1 text-sm leading-relaxed text-zinc-700 sm:text-base dark:text-[var(--text-secondary)]">
+          {/* All explanation step text routes through MathText for correct LaTeX (incl. $Q_1$, percentiles etc) + error resilience */}
           <MathText text={step} />
         </div>
       </div>
@@ -98,7 +103,7 @@ export function PracticeFeedback({
         </div>
         <div className="mt-3 rounded-lg bg-emerald-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3 dark:bg-emerald-900/50">
           <p className="text-sm font-semibold text-emerald-900 sm:text-base dark:text-emerald-200">
-            Answer: <span className="text-base sm:text-lg"><MathText text={finalAnswer} /></span>
+            Answer: <span className="text-base sm:text-lg">{/* final via MathText */}<MathText text={finalAnswer} /></span>
           </p>
         </div>
         <div className="mt-2 flex justify-end sm:mt-3">
@@ -145,6 +150,7 @@ export function PracticeFeedback({
           <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-2 sm:mt-4 sm:p-4 dark:border-blue-800 dark:bg-blue-950/40">
             <p className="text-[11px] font-semibold text-blue-700 sm:text-sm dark:text-blue-300">Hint</p>
             <div className="mt-0.5 text-xs text-blue-900 sm:mt-1 sm:text-base dark:text-blue-200">
+              {/* Hint text (from expl) always via MathText */}
               <MathText text={getHint()} />
             </div>
           </div>
@@ -157,7 +163,7 @@ export function PracticeFeedback({
             </div>
             <div className="mt-3 rounded-lg bg-amber-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3 dark:bg-amber-900/50">
               <p className="text-sm font-semibold text-amber-900 sm:text-base dark:text-amber-200">
-                Answer: <span className="text-base sm:text-lg"><MathText text={finalAnswer} /></span>
+                Answer: <span className="text-base sm:text-lg">{/* final via MathText */}<MathText text={finalAnswer} /></span>
               </p>
             </div>
             <div className="mt-2 flex justify-end sm:mt-3">
