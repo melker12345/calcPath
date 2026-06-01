@@ -758,3 +758,118 @@ This agent completes the promotion. The dynamic /x/ area is now ready to be the 
 ---
 
 *X-Area Promotion & De-Experimental Agent task complete. 2026-06-01. All per spec.*
+
+## Practice Resilience Improvements - Migration Phase (2026-06-01)
+
+**Agent**: Practice Resilience Agent (this task).
+
+**Mission**: Make the practice experience in the new architecture much more tolerant of imperfect questions (as requested: "better to load broken questions than none at all").
+
+**Focus**:
+- GenericPracticeExperience: Better per-question error boundaries / recovery so one bad LaTeX / malformed question doesn't destroy the whole session.
+- Improve skipping of bad questions with clear UI ("This question had a rendering issue - skipped" or auto-advance with warning).
+- Strengthen the existing PracticeErrorBoundary and add per-question recovery where possible.
+- Ensure that even with partial progress context, the session remains usable.
+- Work closely with the tolerant loader changes already made (per-question schema recovery in loadTopicContent).
+
+**Strict scope** (per assignment): Only `src/components/generic-practice-experience.tsx`, the PracticeErrorBoundary in the x area (`src/app/x/[subject]/practice/PracticeErrorBoundary.tsx`), and related feedback components (`src/components/practice/PracticeFeedback.tsx`). No other files. Many small commits. Update this NOTES.md. Todo progress tracked implicitly via these notes (internal todo_write used for 8-step breakdown).
+
+**Key problems addressed** (building on prior 0-q robustness):
+- Tolerant loader (see below) already skips schema-bad questions at load (per-item safeParse), but runtime render errors (e.g. exotic LaTeX that evades MathText's MathRenderBoundary, errors in choice handlers, MathInput for edge data, feedback step rendering) could still bubble to the page-level boundary or crash session.
+- The pre-existing data guard in Generic was limited (only !prompt/!expl check; returned *outside* the polished card chrome, losing progress dots/nav feel).
+- No per-question isolation for the "current" question render subtree → one bad q in a topic with 90% good ones made the session feel broken.
+- PracticeErrorBoundary docs were not updated to reflect layered defenses.
+
+**Tolerant loader (already present, worked closely with)**:
+In `src/lib/content/loader.ts` (loadTopicContent):
+```ts
+// Resilient loading: prefer the whole file validating, but if it fails we still try to
+// load the good individual questions. This way one bad MCQ/LaTeX item does not nuke
+// the entire topic for practice (user preference: "better to load broken questions than none").
+...
+const result = QuestionFileSchema.safeParse(item);
+if (result.success) { valid.push... } else { invalid... log }
+```
+This + schema + JSON ports = fewer bad items reach Generic at all.
+
+**Changes made (7 small commits, read-before-edit + search_replace only; 1 file per commit except final NOTES)**:
+
+1. `src/components/generic-practice-experience.tsx`:
+   - Added `import React` (prep for local class boundary) + extended JSDoc with "Resilience (Migration Phase)" bullets referencing loader + new boundary plan.
+   - Commit: be276d6
+
+2. `src/components/generic-practice-experience.tsx`:
+   - Improved the existing bad/malformed data guard: exact phrasing `"This question had a rendering issue — skipped."`, stronger comment referencing loader tolerance + partial progress + future boundary.
+   - Commit: c837d8c
+
+3. `src/components/generic-practice-experience.tsx`:
+   - Added full local `QuestionErrorBoundary` class (module scope, modeled on PracticeErrorBoundary + MathRenderBoundary; ~50 LOC self-contained; no new files).
+   - Key features: getDerivedStateFromError, didCatch (warn only), handleSkip (reset + call onSkip), handleReset. Renders amber warning card with spec message, details, Skip + Try buttons. Matches /x/ theme tokens.
+   - Snippet of error UI:
+     ```tsx
+     <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center ...">
+       <div className="... rounded-full ...">!</div>
+       <p className="...">This question had a rendering issue — skipped.</p>
+       <p className="...">A malformed LaTeX fragment or edge-case data prevented display. The rest of your session (including progress) is unaffected.</p>
+       ... error.message ... <buttons for skip / try>
+     </div>
+     ```
+   - Commit: faf7f5a
+
+4. `src/components/generic-practice-experience.tsx`:
+   - Wired the boundary into the render: placed immediately after progress dots, wrapping ONLY the question prompt div + answer input area (mcq choices + MathText + MathInput + the feedbackOverlay usage). 
+   - `<QuestionErrorBoundary key={current.id} onSkip={goToNext} questionId={current.id}> ... </QuestionErrorBoundary>`
+   - Comment: "Per-question error boundary: keeps header/progress/nav always visible."
+   - Result: chrome (dots, title, solvedCount, bottom nav with "Skip to unsolved", links) always usable; only bad q area replaced by warning; skip advances cleanly (new key remounts); progress context (useProgress completed ids, shuffle state from hook) untouched.
+   - (Also tiny follow-up de-emoji: 35ebf42 for policy.)
+   - Commit: f7919fe (+ cleanup)
+
+5. `src/app/x/[subject]/practice/PracticeErrorBoundary.tsx`:
+   - Strengthened: replaced/expanded JSDoc to explicitly document layering ("Most per-question ... now caught *inside* Generic... This remains the outer last-resort").
+   - Updated rendered error para to acknowledge per-q skipping + "tolerant loader".
+   - Keeps the friendly card + links + Try again.
+   - Commit: 05418b4
+
+6. `src/components/practice/PracticeFeedback.tsx` (related feedback component):
+   - Tiny doc-only update in the utilities comment block: added "Resilience note (Migration Phase)" explaining that its usages (in Generic) are now protected by the surrounding QuestionErrorBoundary + MathText.
+   - No logic change.
+   - Commit: 29f3b4d
+
+**Absolute file paths touched** (only allowed):
+- src/components/generic-practice-experience.tsx
+- src/app/x/[subject]/practice/PracticeErrorBoundary.tsx
+- src/components/practice/PracticeFeedback.tsx
+- src/lib/content/NOTES.md (this update)
+
+**Commits** (exact, all small + focused; see `git log --oneline`):
+- be276d6 resilience: import React + update JSDoc...
+- c837d8c resilience: improve existing bad-question guard...
+- faf7f5a resilience: add QuestionErrorBoundary class (local)...
+- f7919fe resilience: wire QuestionErrorBoundary around prompt + answer input...
+- 05418b4 resilience: strengthen PracticeErrorBoundary docs + messaging...
+- 29f3b4d resilience: minor doc update in related feedback component...
+- 35ebf42 resilience: remove emoji from QuestionErrorBoundary fallback UI...
+
+**Result**:
+- A practice session on a topic with a couple edge-case questions (bad LaTeX in prompt/choices/expl, or other render-time malformation that passes loader) now feels solid:
+  - Most cases: loader skips at ingest (no entry in displayProblems).
+  - Runtime cases: inner per-q boundary catches, shows the exact warning UI *inside* the native card (amber, accessible, actionable), user clicks Skip (or Try), advances via goToNext, session chrome + partial progress never lost, no hit to outer boundary.
+  - The data guard path also updated for the rare pre-render bad case.
+  - Outer PracticeErrorBoundary only for true session disasters (now better documented).
+- Even with focusId, completedProblemIds from progress, shuffle, etc. the flow stays usable.
+- Matches "better to load broken questions than none at all" + "This question had a rendering issue - skipped".
+- All /x/ practice pages benefit immediately (since they consume the Generic).
+
+**Verification performed**:
+- Re-read every scoped file (full or targeted sections) immediately before *each* search_replace.
+- Used only exact unique string matches for all edits (no replace_all unless safe).
+- Ran `git status`, `git diff`, `git log --oneline -10` after every commit; confirmed only scoped files + small deltas (no json, no loader, no page.tsx, no other practice/ files, no new files).
+- Post-edit: `npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "(generic-practice-experience|PracticeErrorBoundary|PracticeFeedback)"` (clean for our files).
+- Manual mental sim of error paths + key={id} remount + goToNext interaction.
+- Confirmed no emojis remain in code (cleanup commit).
+- Internal todo list (8 items) advanced step-by-step via tool; final status reflected in this NOTES section.
+- No scope violations whatsoever. All per assignment + "Small commits only."
+
+This delivers a practice session that feels solid even on topics that still have a couple of edge-case questions. The layered defenses (loader tolerant recovery + MathText per-fragment + Generic data guard + new QuestionErrorBoundary + strengthened outer boundary) make imperfect content non-fatal.
+
+Closes the per-question resilience gap for the migration phase.
