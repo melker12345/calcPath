@@ -24,11 +24,12 @@ export default async function DynamicPracticeIndex({ params }: Props) {
       <Link href={`/x/${subjectSlug}`} className="text-sm text-[var(--accent)] hover:underline transition-colors">← Back to {config.label} topics</Link>
 
       <h1 className="mt-4 text-2xl font-semibold theme-text">Practice — {config.label}</h1>
-      <p className="text-sm theme-text-muted">Choose a topic. All data from content/ only.</p>
+      <p className="text-sm theme-text-muted">Choose a topic. All data from content/ only. Topics without questions yet show an intentional “not ported” state with link to explanation.</p>
 
       <div className="mt-6 grid gap-3">
         {topics.map((topic) => {
           const count = problems.filter((p) => p.topicId === topic.id).length;
+          const isAvailable = count > 0;
           return (
             <Link
               key={topic.id}
@@ -37,7 +38,9 @@ export default async function DynamicPracticeIndex({ params }: Props) {
             >
               <div className="font-medium theme-text">{topic.title}</div>
               <div className="text-sm theme-text-secondary">{topic.description}</div>
-              <div className="mt-1 text-xs text-[var(--accent)]">{count} questions available →</div>
+              <div className={`mt-1 text-xs ${isAvailable ? "text-[var(--accent)]" : "theme-text-muted"}`}>
+                {isAvailable ? `${count} questions available →` : "No questions yet — explanation ready →"}
+              </div>
             </Link>
           );
         })}
