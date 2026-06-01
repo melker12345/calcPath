@@ -10,9 +10,9 @@ import type { FeedbackState } from "./types";
  * Used by PracticeFeedback internally and by GenericPracticeExperience (and future generic pages)
  * to avoid duplicating hint/solution/final-answer extraction logic across subjects.
  *
- * IMPORTANT: every step/hint/finalAnswer/explanation fragment rendered here goes through
- * <MathText> (see renderInternalSteps + call sites) so that /x/ practice gets the robust
- * LaTeX splitter + katex error fallbacks.
+ * Resilience note (Migration Phase): When rendered inside GenericPracticeExperience's QuestionErrorBoundary,
+ * even an edge-case failure in step parsing or a MathText fragment here is isolated per-question (clear skip UI).
+ * All text still flows through MathText's own per-fragment boundaries.
  */
 export function extractSteps(explanation: string): string[] {
   const parts = explanation.split(/Step \d+:\s*/).filter(Boolean);
