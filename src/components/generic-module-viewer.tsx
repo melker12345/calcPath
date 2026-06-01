@@ -145,19 +145,19 @@ export function GenericModuleViewer({
   return (
     <div className="mx-auto w-full max-w-[760px] px-4 py-8 sm:px-6 sm:py-10">
       <div className="mb-6">
-        <Link href={backHref || `/x/${subjectSlug}`} className="text-sm text-blue-700 hover:underline">
+        <Link href={backHref || `/x/${subjectSlug}`} className="text-sm text-[var(--accent)] hover:underline transition-colors">
           ← Back to {subjectSlug.replace("-", " ")} topics
         </Link>
       </div>
 
       <h1 className="text-3xl font-semibold tracking-tight theme-text sm:text-4xl">{title}</h1>
-      <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">Source: content/{subjectSlug}/topics/{topicId}/module.mdx (raw, rendered lightly)</p>
+      <p className="mt-1 text-xs theme-text-muted">Source: content/{subjectSlug}/topics/{topicId}/module.mdx (raw, rendered lightly)</p>
 
       <div className="mt-6">
         {blocks.map(renderBlock)}
       </div>
 
-      <div className="mt-10 border-t pt-6 text-xs text-zinc-500">
+      <div className="mt-10 border-t pt-6 text-xs theme-text-muted">
         This is basic MDX support in the experimental area. Full compiled MDX (with components, better parsing) is a follow-up.
       </div>
     </div>
