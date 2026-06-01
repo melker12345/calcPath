@@ -85,7 +85,7 @@
 - [x] Fully ported second topic: `probability` (~40 questions + rich mdx with Bayes, counting, conditional, total prob, ELI5 etc.). Committed.
 - Full port of remaining 12 topics ongoing.
 - References: Linear Algebra vectors/ (for FS format, frontmatter MDX), and will treat bayesian-inference + logistic-regression as the rich quality bar for stats.
-- Will update loader only if needed to support "statistics" slug in FS bundle getter.
+- [x] Updated loader (genuinely necessary): added loadStatisticsFromContent() + support in getFileSystemContentBundle("statistics"). Refactored for reuse. Committed.
 - Do not touch any legacy .ts content files, practice routes, or pages.
 - Frequent small commits + regular NOTES updates.
 - Validation via schema + existing test harness.
