@@ -223,7 +223,7 @@ export function VoteFeedback({
   return (
     <div className="flex flex-col items-end gap-1.5">
       <div className="flex items-center gap-2">
-        <span className="text-xs text-zinc-400">Helpful?</span>
+        <span className="text-xs theme-text-muted">Helpful?</span>
         <button
           type="button"
           onClick={() => void handleClick(1)}
@@ -258,7 +258,7 @@ export function VoteFeedback({
         </button>
 
         {showAnonThanks && (
-          <span className="ml-1 text-[10px] text-zinc-400">
+          <span className="ml-1 text-[10px] theme-text-muted">
             Thanks!{" "}
             <Link href="/auth" className="text-orange-600 underline hover:text-orange-700">
               Sign in to leave a note
@@ -267,7 +267,7 @@ export function VoteFeedback({
         )}
 
         {showAuthedThanks && (
-          <span className="ml-1 text-[10px] text-zinc-400">Thanks!</span>
+          <span className="ml-1 text-[10px] theme-text-muted">Thanks!</span>
         )}
 
         <button
