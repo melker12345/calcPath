@@ -158,3 +158,40 @@
 - Once stable, plan gradual migration or A/B of main routes.
 
 All changes via many small commits (see git log on branch). Full flow demonstrable by visiting /x/linear-algebra (pick vectors or systems) → explanation or practice.
+
+## Visual Consistency Pass — Experimental Area Styling Agent (2026-06-01)
+
+**Agent**: Experimental Area Styling Agent (this subagent task).
+
+**Goal**: Make the entire `/x/` area (layout + all pages + generic components it uses) visually consistent with the real application (CourseLayout, subject fonts, theme-* tokens, prose, spacing, dark mode, card styles, etc.). Feel like a "real subject" with clear experimental label. No routing changes.
+
+### Changes Made
+- **src/app/x/layout.tsx**: 
+  - Now imports + wraps with `CourseLayout` (provides SiteHeader + themed main + SiteFooter) and the two subject font variables (`subjectHeadingFont` + `subjectBodyFont`) exactly like real subject layouts (`calculus/layout.tsx` etc.).
+  - Integrated the amber experimental banner *inside* the CourseLayout flow (right after header, before page content). Made tasteful: subtle shadow, better max-w-5xl alignment, responsive, dark mode backdrop, "Exit experimental →" label. Removed duplicate footer (now uses real SiteFooter).
+- **All /x/ route pages** (`src/app/x/page.tsx`, `src/app/x/[subject]/page.tsx`, practice pages, module wrappers):
+  - Switched to `<main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10">` (matches `CourseContentsPage` and module containers).
+  - Replaced nearly all `text-zinc-*`, `bg-white`, `text-slate-*`, `border-zinc-*` etc. with `theme-text`, `theme-text-secondary`, `theme-text-muted`, `theme-surface`, `theme-border`, `bg-[var(--surface-2)]`, `var(--text-muted)` etc.
+  - Consistent link colors (blue-700 + dark forcing to accent).
+  - Error/empty states now use themed containers + text.
+- **Generic components used by /x/**:
+  - `src/components/generic-module-viewer.tsx`: Upgraded ELI5 block to exact visual pattern from `SubjectModulePage` (rounded-2xl, theme-border, bg-[var(--surface-2)], uppercase muted label "Explain Like I'm 5", theme-text-secondary body). Updated back links, footers, borders to theme tokens. Still lightweight parser.
+  - `src/components/generic-practice-experience.tsx`: Extensive cleanup of the tall practice card + chrome (nav buttons, MCQ choices, progress, mastered state, "review explanation" link, skip buttons, Q indicator, footer links). Now uses `theme-*` + CSS vars for backgrounds, text, borders, hovers. Removed dark: conditionals where vars suffice. Matches visual language of real practice flows.
+  - Minor: cleaned a stone-600 in the (currently unused) `experimental-generic-mdx-module-explanation.tsx` for future parity.
+- **Dark mode & theming**: All updates leverage the existing globals.css forcing layers + semantic tokens so experimental area now respects theme toggle, accent, surfaces, etc. without breakage.
+- **Banner**: Remains distinctly amber (for "experimental data-driven" signal) but no longer breaks layout, spacing, or header/footer; sits cleanly below SiteHeader like a subject-specific notice.
+- **Fonts**: Now active on all /x/ content (headings/body serif where used in real pages or via --font-serif-* in theme).
+
+### Remaining Visual Gaps (documented for follow-up)
+- Some interactive elements (e.g. MathInput internals, shared PracticeFeedback success/amber banners, ProgressDots) still contain raw zinc/slate in shared components — these were left untouched (affect main app too; global css forcing mitigates most).
+- The "primary action" buttons in /x/home still use explicit zinc-900/white invert (intentional "strong CTA" style, matches other non-accent buttons in app).
+- No SubjectBreadcrumbs used in /x/ pages (would require a /x-aware version or basePath prop); plain links used instead. Module viewer lacks the full ModuleSectionNav + prev/next + VoteFeedback that the richer (unused) experimental mdx renderer has.
+- GenericModuleViewer still uses basic parser (vs. the structured one in experimental-*.tsx); once MDX remote is added, full visual parity (including custom callouts) will be easier.
+- Practice pages under /x/ use max-w-3xl in some states vs. 5xl elsewhere (minor).
+- No "experimental" watermark or badge inside deep pages (banner at top is the only label — sufficient and non-intrusive).
+- If/when generic components are promoted out of experimental, a small refactor to accept `basePath="/x"` for links (in the richer mdx renderer) would be needed.
+- Typography: subject fonts load + vars set, but explicit `font-serif-display` / `font-serif-body` classes not yet applied to headings in generic renderers (real legacy modules also mostly rely on "font-semibold" + the var for font stack).
+
+All work done via small, frequent, isolated commits on the worktree (see `git log --oneline`).
+
+The /x/ area now feels like a first-class (if labeled) part of the app.
