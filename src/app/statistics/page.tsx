@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CourseContentsPage } from "@/components/course-contents-page";
 import { subjects } from "@/lib/subjects";
+import type { Topic, Problem } from "@/lib/shared-types";
 
 export const metadata: Metadata = {
   title: "Learn Statistics — Free University Course | CalcPath",
@@ -31,8 +32,26 @@ const courseJsonLd = {
   ],
 };
 
-export default function StatisticsHome() {
+export default async function StatisticsHome() {
   const subject = subjects.statistics;
+
+  // Evolutionary integration (home): source topics + problems for statistics home
+  // from the new content/ system (via getFileSystemContentBundle, no adapter needed).
+  // Modules (slim section list) kept from legacy subject for now (matches dual pattern
+  // used in calculus routes). Adapter used only for full ModuleContent pages.
+  // Change is tiny + try/catch; fully reversible; identical (or better) output.
+  let topics: Topic[] = subject.topics;
+  let problems: Problem[] = subject.problems;
+  try {
+    const { getFileSystemContentBundle } = await import("@/lib/content/loader");
+    const bundle = await getFileSystemContentBundle("statistics");
+    if (bundle.topics.length > 0) {
+      topics = bundle.topics;
+      problems = bundle.problems;
+    }
+  } catch {
+    // fallback to shims (subjects + statistics-content reexport)
+  }
 
   return (
     <>
@@ -44,9 +63,9 @@ export default function StatisticsHome() {
         title={subject.label}
         description={subject.shortDescription}
         subjectSlug={subject.slug}
-        topics={subject.topics}
+        topics={topics}
         modules={subject.modules}
-        problems={subject.problems}
+        problems={problems}
       />
     </>
   );
