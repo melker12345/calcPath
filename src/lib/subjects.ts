@@ -1,4 +1,20 @@
 import { modules as calculusModules } from "@/lib/modules";
+import { modules as linalgModules } from "@/lib/linalg-modules";
+import { modules as statisticsModules } from "@/lib/statistics-modules";
+
+import {
+  topics as calculusTopics,
+  problems as calculusProblems,
+} from "@/lib/calculus-content";
+import {
+  topics as linalgTopics,
+  problems as linalgProblems,
+} from "@/lib/linalg-content";
+import {
+  topics as statisticsTopics,
+  problems as statisticsProblems,
+} from "@/lib/statistics-content";
+
 import type { Problem, Topic } from "@/lib/shared-types";
 
 /**
