@@ -1,8 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { MathText } from "@/components/math-text";
 import { MdxContent } from "@/components/mdx-content";
+import { ModuleSectionNav } from "@/components/module-section-nav";
+import { SubjectBreadcrumbs } from "@/components/subject-breadcrumbs";
+import { VoteFeedback } from "@/components/vote-feedback";
 
 /**
  * Very lightweight MDX-ish renderer for the experimental /x/ area.
