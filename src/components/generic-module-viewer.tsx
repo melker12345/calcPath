@@ -22,14 +22,12 @@ export function GenericModuleViewer({
   title,
   mdxSource,
   subjectSlug,
-  subjectLabel,
   backHref,
 }: {
   topicId: string;
   title: string;
   mdxSource: string;
   subjectSlug: string;
-  subjectLabel?: string;
   backHref?: string;
 }) {
   // Strip frontmatter
@@ -118,9 +116,11 @@ export function GenericModuleViewer({
 
     if (block.type === "eli5") {
       return (
-        <div key={idx} className="my-4 rounded-2xl border theme-border bg-[var(--surface-2)] p-4 text-sm">
-          <div className="mb-1 font-semibold uppercase tracking-widest text-[var(--text-muted)] text-xs">Explain Like I’m 5</div>
-          <div className="prose prose-sm prose-stone dark:prose-invert max-w-none theme-text-secondary">
+        <div key={idx} className="mt-6 rounded-2xl border theme-border bg-[var(--surface-2)] p-5">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-widest text-[var(--text-muted)]">
+            Explain Like I'm 5
+          </div>
+          <div className="space-y-3 text-sm leading-relaxed theme-text-secondary">
             {block.content.split(/\n\n+/).map((p, i) => (
               <p key={i} className="mb-2 last:mb-0">{renderInline(p.trim())}</p>
             ))}
@@ -143,32 +143,20 @@ export function GenericModuleViewer({
   return (
     <div className="mx-auto w-full max-w-[760px] px-4 py-8 sm:px-6 sm:py-10">
       <div className="mb-6">
-        <Link href={backHref || `/x/${subjectSlug}`} className="text-sm text-[var(--accent)] hover:underline">
-          ← Back to {subjectLabel || subjectSlug.replace(/-/g, " ")} topics
+        <Link href={backHref || `/x/${subjectSlug}`} className="text-sm text-blue-700 hover:underline dark:text-[var(--accent)]">
+          ← Back to {subjectSlug.replace("-", " ")} topics
         </Link>
       </div>
 
       <h1 className="text-3xl font-semibold tracking-tight theme-text sm:text-4xl">{title}</h1>
-      <p className="mt-1 text-xs theme-text-muted">Source: content/{subjectSlug}/topics/{topicId}/module.mdx (lightweight renderer)</p>
+      <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">Source: content/{subjectSlug}/topics/{topicId}/module.mdx (raw, rendered lightly)</p>
 
       <div className="mt-6">
         {blocks.map(renderBlock)}
       </div>
 
-      <div className="mt-10 flex flex-wrap gap-3 border-t theme-border pt-6 text-sm">
-        <Link
-          href={`/x/${subjectSlug}/practice/${topicId}`}
-          className="inline-flex items-center rounded-lg border border-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--accent)] transition hover:bg-[var(--accent)] hover:text-[var(--accent-text)]"
-        >
-          Practice this topic →
-        </Link>
-        <Link href={`/x/${subjectSlug}`} className="inline-flex items-center px-3 py-2 text-sm theme-text-muted hover:text-[var(--accent)]">
-          All topics
-        </Link>
-      </div>
-
-      <div className="mt-6 text-xs theme-text-muted opacity-70">
-        Experimental lightweight MDX renderer in /x/. Full next-mdx-remote + custom components planned for production generic pages.
+      <div className="mt-10 border-t theme-border pt-6 text-xs theme-text-muted">
+        This is basic MDX support in the experimental area. Full compiled MDX (with components, better parsing) is a follow-up.
       </div>
     </div>
   );

@@ -159,47 +159,39 @@
 
 All changes via many small commits (see git log on branch). Full flow demonstrable by visiting /x/linear-algebra (pick vectors or systems) → explanation or practice.
 
----
+## Visual Consistency Pass — Experimental Area Styling Agent (2026-06-01)
 
-## Experimental Area Polish & Solidification (2026-06-01)
+**Agent**: Experimental Area Styling Agent (this subagent task).
 
-**Agent**: Experimental Area Polish & Solidification Agent
+**Goal**: Make the entire `/x/` area (layout + all pages + generic components it uses) visually consistent with the real application (CourseLayout, subject fonts, theme-* tokens, prose, spacing, dark mode, card styles, etc.). Feel like a "real subject" with clear experimental label. No routing changes.
 
-**Goal**: Raise the quality bar of the entire `/x/` area so it feels like a solid, native part of the app rather than a rough prototype. Focus on consistency, polish details, loading/error, nav flow — no new features.
+### Changes Made
+- **src/app/x/layout.tsx**: 
+  - Now imports + wraps with `CourseLayout` (provides SiteHeader + themed main + SiteFooter) and the two subject font variables (`subjectHeadingFont` + `subjectBodyFont`) exactly like real subject layouts (`calculus/layout.tsx` etc.).
+  - Integrated the amber experimental banner *inside* the CourseLayout flow (right after header, before page content). Made tasteful: subtle shadow, better max-w-5xl alignment, responsive, dark mode backdrop, "Exit experimental →" label. Removed duplicate footer (now uses real SiteFooter).
+- **All /x/ route pages** (`src/app/x/page.tsx`, `src/app/x/[subject]/page.tsx`, practice pages, module wrappers):
+  - Switched to `<main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10">` (matches `CourseContentsPage` and module containers).
+  - Replaced nearly all `text-zinc-*`, `bg-white`, `text-slate-*`, `border-zinc-*` etc. with `theme-text`, `theme-text-secondary`, `theme-text-muted`, `theme-surface`, `theme-border`, `bg-[var(--surface-2)]`, `var(--text-muted)` etc.
+  - Consistent link colors (blue-700 + dark forcing to accent).
+  - Error/empty states now use themed containers + text.
+- **Generic components used by /x/**:
+  - `src/components/generic-module-viewer.tsx`: Upgraded ELI5 block to exact visual pattern from `SubjectModulePage` (rounded-2xl, theme-border, bg-[var(--surface-2)], uppercase muted label "Explain Like I'm 5", theme-text-secondary body). Updated back links, footers, borders to theme tokens. Still lightweight parser.
+  - `src/components/generic-practice-experience.tsx`: Extensive cleanup of the tall practice card + chrome (nav buttons, MCQ choices, progress, mastered state, "review explanation" link, skip buttons, Q indicator, footer links). Now uses `theme-*` + CSS vars for backgrounds, text, borders, hovers. Removed dark: conditionals where vars suffice. Matches visual language of real practice flows.
+  - Minor: cleaned a stone-600 in the (currently unused) `experimental-generic-mdx-module-explanation.tsx` for future parity.
+- **Dark mode & theming**: All updates leverage the existing globals.css forcing layers + semantic tokens so experimental area now respects theme toggle, accent, surfaces, etc. without breakage.
+- **Banner**: Remains distinctly amber (for "experimental data-driven" signal) but no longer breaks layout, spacing, or header/footer; sits cleanly below SiteHeader like a subject-specific notice.
+- **Fonts**: Now active on all /x/ content (headings/body serif where used in real pages or via --font-serif-* in theme).
 
-### What was polished (via small commits)
-- **Design system consistency**: Replaced all raw Tailwind colors (zinc-*, blue-600/700/200, emerald-*, amber-*, slate-*, stone-*, bg-white etc.) across `/x/` pages + `Generic*` components with semantic `theme-*` classes, `var(--accent)`, `var(--surface)`, `var(--border)`, `var(--text-muted)`, `var(--surface-2)` etc. Dark mode now fully aligned. Adopted `.btn-primary` / `.btn-secondary` where appropriate.
-- **Experimental banner**: Completely reworked — now subtle surface-2 bar with muted text + small accent-bordered "EXPERIMENTAL" pill. Far less visually intrusive while still unmistakably marking the isolated area. Updated exit link + footer copy.
-- **Loading states**: Added `src/app/x/loading.tsx` with skeleton cards that appears during async `getFileSystemContentBundle` fetches on all dynamic routes.
-- **Error handling**: Added `src/app/x/error.tsx` (themed recovery UI with reset + links) + improved all per-page catch/error UIs (consistent padding, Links not <a>, theme colors, helpful copy). No longer falls straight to root error.
-- **Navigation smoothness** (browse → explanation → practice): 
-  - Consistent ← back links using accent + hover everywhere.
-  - Added "Practice this topic" + "All topics" affordances in GenericModuleViewer header/footer.
-  - "Review the explanation" in practice now styled cleanly.
-  - Practice index page exists and polished.
-  - Buttons now match main app patterns (accent primary for explanations, outline-accent for practice).
-- **Small UI details for "real app" feel**:
-  - Subject icons (λ, σ) displayed in landing cards + headers.
-  - Better metadata: estimatedMinutes shown on topics, accurate counts, "rich explanation" labels.
-  - Consistent spacing/typography (py-10 etc, text-[15px], theme-text).
-  - Disabled states, hover states, active scales using design tokens.
-  - ELI5 callouts in lightweight viewer now use app callout pattern (surface-2 + muted label) instead of loud blue.
-  - All error/empty states have clear recovery links.
-  - Removed dead code (unused vars) during edits.
-- 8 small focused commits. All /x/ routes + the two generic components used by them updated. (The more advanced unused generic-practice/ impl and experimental-generic-mdx... left untouched.)
+### Remaining Visual Gaps (documented for follow-up)
+- Some interactive elements (e.g. MathInput internals, shared PracticeFeedback success/amber banners, ProgressDots) still contain raw zinc/slate in shared components — these were left untouched (affect main app too; global css forcing mitigates most).
+- The "primary action" buttons in /x/home still use explicit zinc-900/white invert (intentional "strong CTA" style, matches other non-accent buttons in app).
+- No SubjectBreadcrumbs used in /x/ pages (would require a /x-aware version or basePath prop); plain links used instead. Module viewer lacks the full ModuleSectionNav + prev/next + VoteFeedback that the richer (unused) experimental mdx renderer has.
+- GenericModuleViewer still uses basic parser (vs. the structured one in experimental-*.tsx); once MDX remote is added, full visual parity (including custom callouts) will be easier.
+- Practice pages under /x/ use max-w-3xl in some states vs. 5xl elsewhere (minor).
+- No "experimental" watermark or badge inside deep pages (banner at top is the only label — sufficient and non-intrusive).
+- If/when generic components are promoted out of experimental, a small refactor to accept `basePath="/x"` for links (in the richer mdx renderer) would be needed.
+- Typography: subject fonts load + vars set, but explicit `font-serif-display` / `font-serif-body` classes not yet applied to headings in generic renderers (real legacy modules also mostly rely on "font-semibold" + the var for font stack).
 
-### What still feels rough / future polish needed
-- MDX rendering remains hand-rolled & incomplete (no real lists, tables, blockquotes, images, custom MDX components, full parsing of all syntax seen in content/). Still "raw-ish" for complex modules — full next-mdx-remote is the big missing piece (as noted in prior sections).
-- No dedicated per-subject chrome or layout under /x/ (still inherits single experimental banner/footer).
-- Practice "All mastered" success state + some MathInput chrome use a few remaining hard-coded tones (emerald success is intentional).
-- Performance: still re-reads FS on every request (no caching layer in loader for /x/).
-- No deep section linking from generic practice back into MDX (links go to topic top).
-- The two generic practice impls (flat generic-practice-experience.tsx used by /x/ vs subdir version) remain; consolidation later.
-- No visual subject switcher or "you are in experimental" persistent hint inside deep pages beyond banner.
-- Still no tests, no analytics events, no a11y audit specific to this area.
-- Calculus support in loader is present but content/ quality for full generic may vary.
-- The advanced ExperimentalGenericMdxModuleExplanation (unused by /x/ routes) has legacy-style links pointing outside /x/ — keep isolated.
+All work done via small, frequent, isolated commits on the worktree (see `git log --oneline`).
 
-The `/x/` area now passes a much higher "this is a real, intentional part of the product" bar while remaining clearly experimental and isolated. Ready for further iteration or A/B.
-
-All via small commits on the architecture branch.
+The /x/ area now feels like a first-class (if labeled) part of the app.

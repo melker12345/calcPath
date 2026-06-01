@@ -87,13 +87,13 @@ export function GenericPracticeExperience({
   );
 
   if (!topic) {
-    return <div className="p-8 text-sm theme-text-muted">Topic not found in data.</div>;
+    return <div className="p-8 text-sm theme-text-secondary">Topic not found in data.</div>;
   }
   if (!current) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-12">
+      <div className="mx-auto max-w-3xl p-8">
         <p className="theme-text-secondary">No practice questions available for this topic in the loaded content data yet.</p>
-        <Link href={`/x/${subjectSlug}`} className="mt-4 inline-block text-sm text-[var(--accent)] hover:underline">← Back to {subjectLabel}</Link>
+        <Link href={`/x/${subjectSlug}`} className="mt-4 inline-block underline text-blue-700 dark:text-[var(--accent)]">Back to {subjectLabel}</Link>
       </div>
     );
   }
@@ -180,11 +180,11 @@ export function GenericPracticeExperience({
           <h1 className="text-2xl font-bold theme-text">{topic.title}</h1>
           <p className="mt-0.5 text-sm theme-text-muted">{topic.description}</p>
         </div>
-        <span className="text-sm theme-text-muted tabular-nums">{solvedCount}/{displayProblems.length} mastered</span>
+        <span className="text-sm theme-text-muted">{solvedCount}/{displayProblems.length} mastered</span>
       </div>
 
       {/* Main practice card (matches legacy visual language) */}
-      <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-end bg-white px-4 pb-1 pt-2 dark:bg-[var(--surface)] sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
+      <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-end bg-[var(--surface)] px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
         {/* Progress dots */}
         <div className="flex w-full justify-center">
           <div className="flex items-center gap-2">
@@ -193,7 +193,7 @@ export function GenericPracticeExperience({
               currentIndex={index}
               onSelect={(i) => setIndex(i)}
             />
-            <span className="shrink-0 text-xs font-semibold tabular-nums text-slate-400">
+            <span className="shrink-0 text-xs font-semibold tabular-nums theme-text-muted">
               {index + 1} / {displayProblems.length}
             </span>
           </div>
@@ -208,7 +208,7 @@ export function GenericPracticeExperience({
           {/* Optional link back to explanation (generic, points to our /x/ module route) */}
           <Link
             href={`/x/${subjectSlug}/modules/${current.topicId}`}
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-[var(--accent)] transition-colors hover:bg-[var(--surface-2)]"
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:text-[var(--accent)]"
           >
             Review the explanation for this topic →
           </Link>
@@ -227,7 +227,7 @@ export function GenericPracticeExperience({
                     submitAnswer(choice);
                   }}
                   disabled={feedback?.type === "correct"}
-                  className="rounded-xl border theme-border theme-surface px-4 py-3 text-left text-base font-medium theme-text transition hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg"
+                  className="rounded-xl border theme-border bg-[var(--surface)] px-4 py-3 text-left text-base font-medium theme-text transition hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg"
                 >
                   <MathText text={choice} />
                 </button>
@@ -239,7 +239,7 @@ export function GenericPracticeExperience({
                   <button
                     type="button"
                     onClick={() => setOverlayDismissed(true)}
-                    className="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-sm text-zinc-400 shadow-sm backdrop-blur transition hover:bg-white hover:text-zinc-600"
+                    className="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--surface)]/80 text-sm theme-text-muted shadow-sm backdrop-blur transition hover:bg-[var(--surface)] hover:text-[var(--text-secondary)]"
                   >
                     ×
                   </button>
@@ -266,13 +266,13 @@ export function GenericPracticeExperience({
 
         {/* All mastered */}
         {solvedCount >= displayProblems.length && (
-          <div className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-50 p-4 text-center dark:bg-emerald-950/30 sm:mt-6 sm:rounded-2xl sm:p-5">
-            <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">All {displayProblems.length} problems mastered!</p>
-            <p className="mt-1 text-sm text-emerald-600 dark:text-emerald-400">Shuffle for a fresh run.</p>
+          <div className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-900/20 p-4 text-center sm:mt-6 sm:rounded-2xl sm:p-5">
+            <p className="text-lg font-bold text-emerald-300">All {displayProblems.length} problems mastered!</p>
+            <p className="mt-1 text-sm text-emerald-600">Shuffle for a fresh run.</p>
             <button
               type="button"
               onClick={shuffleAndRestart}
-              className="mt-3 rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--accent-text)] shadow-sm transition hover:brightness-95 active:scale-95"
+              className="mt-3 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 active:scale-95"
             >
               Shuffle &amp; restart
             </button>
@@ -319,7 +319,7 @@ export function GenericPracticeExperience({
             )}
           </div>
 
-          <div className="justify-self-center rounded-full px-2 py-0.5 text-[11px] font-medium theme-text-muted ring-1 ring-[var(--border)]/60">
+          <div className="justify-self-center rounded-full px-2 py-0.5 text-[11px] font-medium text-[var(--text-muted)] ring-1 ring-[var(--border)]/80">
             Q{topicProblems.findIndex((p) => p.id === current.id) + 1}
           </div>
 

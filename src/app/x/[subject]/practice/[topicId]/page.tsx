@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getFileSystemContentBundle } from "@/lib/content/loader";
 import { GenericPracticeExperience } from "@/components/generic-practice-experience";
@@ -29,23 +28,21 @@ export default async function DynamicPracticePage({ params }: Props) {
 
   if (!topic) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+      <main className="mx-auto max-w-3xl p-8">
         <p className="theme-text-secondary">Topic “{topicId}” not found in the data for {subjectSlug}.</p>
-        <Link href={`/x/${subjectSlug}`} className="mt-4 block text-sm text-[var(--accent)] hover:underline">← Browse topics</Link>
-      </div>
+        <a href={`/x/${subjectSlug}`} className="mt-4 block underline text-blue-700 dark:text-[var(--accent)]">Browse topics</a>
+      </main>
     );
   }
 
   if (topicProblems.length === 0) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+      <main className="mx-auto max-w-3xl p-8">
         <h1 className="text-xl font-semibold theme-text">{topic.title}</h1>
-        <p className="mt-2 theme-text-secondary">This topic has no practice questions in the current <code>content/</code> data yet.</p>
-        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-          <Link href={`/x/${subjectSlug}/modules/${topicId}`} className="text-[var(--accent)] hover:underline">View the explanation instead →</Link>
-          <Link href={`/x/${subjectSlug}`} className="theme-text-muted hover:text-[var(--accent)]">← Back to all topics</Link>
-        </div>
-      </div>
+        <p className="mt-2 theme-text-secondary">This topic has no practice questions in the current content/ data yet.</p>
+        <a href={`/x/${subjectSlug}/modules/${topicId}`} className="mt-3 inline-block text-blue-700 underline dark:text-[var(--accent)]">View the explanation instead →</a>
+        <a href={`/x/${subjectSlug}`} className="mt-2 block underline text-blue-700 dark:text-[var(--accent)]">Back to all topics</a>
+      </main>
     );
   }
 
@@ -55,7 +52,6 @@ export default async function DynamicPracticePage({ params }: Props) {
       problems={bundle.problems} // pass full; component filters safely
       subjectSlug={subjectSlug}
       subjectLabel={bundle.config.label}
-      subjectIcon={bundle.config.icon}
     />
   );
 }

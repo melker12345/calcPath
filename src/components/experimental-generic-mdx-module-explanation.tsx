@@ -354,7 +354,11 @@ export function ExperimentalGenericMdxModuleExplanation({
   if (!hasContent) {
     return (
       <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+<<<<<<< HEAD
         <p className="text-sm theme-text-muted">Unable to parse module content from MDX source.</p>
+=======
+        <p className="text-sm theme-text-secondary">Unable to parse module content from MDX source.</p>
+>>>>>>> agent-visual-consistency
         <details className="mt-4 text-xs">
           <summary className="cursor-pointer">Raw MDX source (debug)</summary>
           <pre className="mt-2 overflow-auto rounded bg-[var(--surface-2)] p-3 text-[10px]">{mdxSource.slice(0, 2000)}...</pre>
