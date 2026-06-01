@@ -1,17 +1,20 @@
 /**
  * Content Loader
  *
- * Provides validated SubjectBundle data.
+ * Provides validated content data.
  *
- * Current implementation (bridge for thin vertical slice):
- * - Uses adapter functions that pull from the existing *-content.ts / *-modules.ts
- *   and run them through the central Zod schema for validation.
- * - This proves the schema is sufficient and catches drift early.
+ * Current implementation:
+ * - Legacy bridge: adapters from *-content.ts / *-modules.ts for SubjectBundle (kept for compat).
+ * - NEW (this slice): pure data-driven loader reading JSON + MDX from `content/` dir per ARCHITECTURE.md
  *
- * Future (per future-dynamic.md):
- * - Read pure data (JSON + MD/MDX) from a `content/` directory at build time.
- * - Generate or import bundles with zero TS logic per subject.
- * - Strong build-time validation + error messages.
+ * Schema-first: all output validated with Zod from src/lib/content/schema.ts
+ *
+ * Thin vertical slice: focus on Linear Algebra from content/linear-algebra/ (metadata + topics that have folders).
+ * Do NOT touch the three practice page impls or legacy content TS files.
+ *
+ * Future (per future-dynamic.md + ARCHITECTURE.md):
+ * - Zero per-subject TS logic.
+ * - Full generic pages consume FileSystemContentBundle.
  */
 
 import {
@@ -19,6 +22,14 @@ import {
   type SubjectBundle,
   type SubjectConfig,
   ModuleSectionSummarySchema,
+  // New FS content schemas (JSON + MDX)
+  SubjectIndexSchema,
+  type SubjectIndex,
+  TopicIndexSchema,
+  QuestionsFileSchema,
+  MdxModuleSchema,
+  FileSystemContentBundleSchema,
+  type FileSystemContentBundle,
 } from "./schema";
 
 // ============================================
