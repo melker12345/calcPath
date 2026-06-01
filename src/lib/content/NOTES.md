@@ -106,3 +106,39 @@
 - [ ] Design decision needed: how/when to introduce generic dynamic routes (`[subject]`) without conflicting with existing static subject folders or requiring big refactors
 - [ ] Decide on stable ID policy + migration strategy for when we move content to JSON/MDX (progress compatibility critical)
 - [ ] Expand loader adapters for Calculus + Statistics (after LA slice validated)
+
+## Subject Layout & Navigation Generalization Agent (2026-06-01)
+
+**Goal achieved in this slice**: Made high-level subject "chrome" (layouts, nav, subject/topic lists, breadcrumbs) more data-driven from new content, via reusable generic components/patterns. Focus strictly on chrome/navigation layer (not practice deep logic, not full module rendering, not route restructuring).
+
+**Decisions**:
+- Created `SubjectBreadcrumbs` as first reusable generic chrome component. API designed to be driven by:
+  - `SubjectIndex` (lightweight, from `loadSubjectIndex(slug)` reading content/{slug}/index.json -- perfect for nav/topic lists/breadcrumbs)
+  - `FileSystemContentBundle` (via .config + helpers)
+  - Legacy `SubjectConfig` (compat)
+- Helpers `getSubjectHomeBreadcrumbs`, `getBreadcrumbsFromBundle` establish patterns for consuming the new data shapes in generic nav.
+- Kept changes *isolated*: only edited loader (for enabling), two existing chrome components (CourseContentsPage for topic lists, SubjectModulePage), added 1 new component file. No changes to subject app/ folders, no new public routes, no breakage to existing 3 subject experiences.
+- Used private/experimental-friendly approach: the new component + `loadSubjectIndex` is the "experimental area" ready for future thin vertical slice demos or generic pages (e.g. in `_experimental/` private folders which Next ignores for routing).
+- Did *not* yet generalize full subject lists (header/footer etc still use central `subjects.ts`/`subjectList` -- that's a solid abstraction; future can derive or merge from index data via manifest).
+- Topic lists: CourseContentsPage already acts as generic renderer (accepts topics + slug); now its own breadcrumb layer is fully generic. The subject index's `topics` array is the canonical data source for such lists going forward.
+- Breadcrumbs: unified the previously ad-hoc inline implementations. Supports simple "Contents / Subject" or "Contents / Subject / Topic".
+- Small commits only. Type-safe via existing schemas. No new docs files created (edited NOTES only as required).
+- Calculus support: `loadSubjectIndex("calculus")` works immediately (index.json present); full bundle load still needs adapter (future).
+
+**Progress**:
+- [x] Reviewed all 3 subjects' layouts (near-identical wrappers around CourseLayout), pages (dupe metadata/JSON-LD), chrome components, nav (header/footer use subjectList; ad-hoc crumbs in contents+module pages), hardcoded paths/links.
+- [x] Reviewed new content: SubjectIndex (ideal for nav), FileSystemContentBundle, loader (now has loadSubjectIndex).
+- [x] Added `loadSubjectIndex` + refactored existing loaders (DRY + nav enabler). Commit 1.
+- [x] Implemented generic SubjectBreadcrumbs + helpers. Adopted in 2 chrome components for topic/module nav. Commit 2.
+- [x] Updated this NOTES with decisions/progress.
+- Total: 2 small commits, focused on nav layer only.
+- Ready for: using `await loadSubjectIndex(slug)` in future server components for fully data-driven subject chrome; thin vertical demo page; eventual generic [subject] routes.
+
+**Files touched (absolute paths)**:
+- /home/melker/.grok/worktrees/work-saas/subagent-019e83b0-206f-7cb2-8395-f4a61529fdbb/src/lib/content/loader.ts
+- /home/melker/.grok/worktrees/work-saas/subagent-019e83b0-206f-7cb2-8395-f4a61529fdbb/src/components/subject-breadcrumbs.tsx (new, required for reusable)
+- /home/melker/.grok/worktrees/work-saas/subagent-019e83b0-206f-7cb2-8395-f4a61529fdbb/src/components/course-contents-page.tsx
+- /home/melker/.grok/worktrees/work-saas/subagent-019e83b0-206f-7cb2-8395-f4a61529fdbb/src/components/subject-module-page.tsx
+- This file (NOTES.md)
+
+Next for nav generalization could include: generic SubjectTopicList (extract from CourseContentsPage), SubjectList component for header/footer (data-backed), experimental demo page in private folder using bundle/index for full subject preview.
