@@ -37,7 +37,7 @@ export default function DynamicHome() {
       </div>
 
       <div className="mb-6 rounded-xl border theme-border bg-[var(--surface-2)] p-4 text-sm">
-        <strong className="theme-text">Active development:</strong> The new dynamic content system lives here. Legacy content is in backup. We are building the future of navigation, practice, and explanations in this evolving UI.
+        <strong className="theme-text">Active development:</strong> The new dynamic content system lives here. Legacy content backed up. <strong>Progress tracking is already fully compatible</strong> — practice attempts here (using stable IDs from content/ JSON) appear in the main dashboard and vice-versa. We are now migrating the remaining layers (practice UI polish, dashboard consumers, section progress from MDX).
       </div>
 
       <h2 className="mb-4 text-xl font-semibold theme-text">Subjects</h2>

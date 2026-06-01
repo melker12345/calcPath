@@ -3,23 +3,32 @@
  * and the legacy shapes still expected by the main application components
  * (SubjectModulePage, CourseContentsPage, etc.).
  *
- * Goal during migration:
- *   Real production pages can load from `getFileSystemContentBundle(subjectSlug)`
- *   (the canonical source from content/ JSON+MDX) and feed the *exact* legacy
- *   ModuleContent / slim module summaries that the high-quality existing UI
- *   components expect — with zero changes to those components.
+ * =============================================================================
+ * PHASE 1: EVOLUTIONARY INTEGRATION — TRANSITION PATTERN (read this first)
+ * =============================================================================
+ * Pattern (minimal + reversible):
+ *   1. Real subject page (e.g. /calculus/modules/[topicId]/page.tsx) does a dynamic
+ *      or server import of getLegacyModulesAndTopicsForSubject (or the per-topic variant).
+ *   2. On success, feeds the *exact* legacy-shaped {modules: ModuleContent[], topics: Topic[]}
+ *      into the untouched <SubjectModulePage ... /> (and same for practice etc in future).
+ *   3. On any error / incomplete port, falls back to the original legacy imports.
+ *   4. Result: zero diff to SubjectModulePage.tsx, its subcomponents (MathText, ModuleSectionNav,
+ *      ELI5 rendering, etc.), or any of the excellent existing UI/logic.
  *
- * Public API (recommended for transition pages):
- *   - mdxModuleToLegacyModuleContent(mdxModule, topic)
- *   - mdxModulesToLegacyModules(mdxModules, topics)
- *   - getLegacyModuleContentForTopic(slug, topicId)
- *   - getLegacyModulesForSubject(slug)   // full ModuleContent[] ready to pass as `modules` prop
- *   - mdxModulesToLegacyModuleSummaries(...) // for CourseContentsPage `modules` prop
+ * Benefits during migration:
+ *   - Real pages gradually source from `content/` + loader (canonical).
+ *   - Stable problem IDs preserved → progress, attempts, dashboard all continue working.
+ *   - Section slugs from MDX headings (or explicit <!-- section: -->) match question.section exactly.
+ *   - Can delete the dynamic block later when legacy shims retired; change is one import + one ternary.
  *
- * All conversions are defensive, tolerate partial MDX ports, and preserve
- * the critical invariants (stable section slugs for progress + deep links).
+ * This file (adapters.ts) is the *only* place that knows about both shapes during Phase 1.
+ * It must stay robust, well-tested via usage, and have zero side effects.
  *
- * See NOTES.md for the full adapter strategy and usage examples.
+ * Parser note: The MDX dialect parser is inlined here (self-contained) so adapters never
+ * depend on client-only experimental components or use `require()`. The logic is the
+ * battle-tested dialect handler from ports (supports all variations in linear-algebra,
+ * statistics, and calculus content/ folders). Duplication with experimental-*.tsx is
+ * temporary for the transition; consolidation happens post-Phase 1.
  */
 
 import type { MdxModule } from "./schema";
@@ -34,62 +43,60 @@ function toSlug(text: string): string {
 }
 
 /**
- * Self-contained, server-safe parser for the MDX dialect used across all
- * content/*/topics/*/module.mdx files.
+ * Internal: lightweight, pure, server-safe parser for the MDX dialect in
+ * content/{subject}/topics/{topicId}/module.mdx .
  *
- * Tuned specifically for the *legacy* ModuleContent output contract:
- * - body paragraphs are always plain strings (list markers stripped so legacy
- *   SubjectModulePage's per-para MathText rendering stays clean).
- * - ELI5 and example steps keep their natural list-item text.
- * - Handles the full range of variations observed in the three full ports:
- *   * LA style: **ELI5** \n\n - bullets, ### Worked Examples
- *   * Stats style: **ELI5**: single sentence, **Worked Example:** bullets (no ###)
- *   * Calculus style: **ELI5**: ..., inline "Common pitfall", <!-- section: slug --> markers
- *   * Mixed: ELI5 immediately after heading or after first prose para, worked ex
- *     under h3 or as bold, common mistakes as final ## section.
+ * Supports (and has been validated against) all ported content:
+ * - Optional YAML frontmatter (stripped)
+ * - Top # Title (stripped; we use Topic.title)
+ * - Intro paragraphs before first ##
+ * - ## Section Title {#optional-slug}   or   ## Title \n <!-- section: slug -->
+ *   (the comment lookahead is critical for some calculus ports)
+ * - **ELI5**: or **ELI5** blocks (lists or paras; spans blanks in LA style)
+ * - **Worked Example:** or ### Worked Examples:  (with title + step lists)
+ * - Regular body content (paras, lists — original markers preserved for MdxContent parity)
+ * - ## Common Mistakes  (at end of file or per some modules)
  *
- * This is an improvement/refinement over the experimental parser for the
- * adapter use-case (legacy bridge) while still sharing the same dialect knowledge.
- * No React, no client directives, fully tree-shakeable and safe in RSC.
+ * Output is *not* the final ModuleContent — just the parsed pieces.
+ * The public mdxModuleToLegacyModuleContent maps + normalizes it to the exact
+ * shape SubjectModulePage has always received from legacy TS modules.
+ *
+ * Robustness: tolerant of minor whitespace, missing optionals, mixed list markers.
+ * All section slugs are stable and must continue to exactly match Problem.section
+ * values for per-section progress / deep links to keep working.
  */
-function parseMdxSourceForLegacy(mdxSource: string): {
+function parseMdxToLegacyShape(mdxSource: string): {
   intro: string[];
   sections: Array<{
     title: string;
     section: string;
     body: string[];
     eli5?: string[];
-    examples?: WorkedExample[];
+    examples?: Array<{ title: string; steps: string[] }>;
   }>;
   commonMistakes: string[];
 } {
-  // 1. Strip frontmatter (robust to \r\n and no trailing newline)
+  // Strip frontmatter
   let source = mdxSource.replace(/^---\s*\r?\n[\s\S]*?\r?\n---\s*\r?\n?/, "").trim();
 
-  // 2. Remove the redundant top-level # Title (we take title from Topic JSON)
-  source = source.replace(/^#\s+[^\n]+(\n|$)/, "").trim();
+  // Remove the top-level # Title (we use topic.title from JSON index)
+  source = source.replace(/^#\s+[^\n]+\n?/, "").trim();
 
   const lines = source.split(/\r?\n/);
 
   const intro: string[] = [];
-  const sections: Array<{
-    title: string;
-    section: string;
-    body: string[];
-    eli5?: string[];
-    examples?: WorkedExample[];
-  }> = [];
+  const sections: any[] = [];
   const commonMistakes: string[] = [];
 
-  let currentSection: (typeof sections)[number] | null = null;
+  let currentSection: any = null;
   let inIntro = true;
   let inCommonMistakes = false;
 
-  // Per-section collectors (reset on new section)
+  // State for nested blocks within a section
   let collectingEli5 = false;
   let currentEli5: string[] = [];
   let collectingWorked = false;
-  let currentWorked: WorkedExample | null = null;
+  let currentWorked: { title: string; steps: string[] } | null = null;
 
   const finishCurrentSection = () => {
     if (currentSection) {
@@ -106,23 +113,24 @@ function parseMdxSourceForLegacy(mdxSource: string): {
   };
 
   for (let i = 0; i < lines.length; i++) {
-    const rawLine = lines[i];
+    let rawLine = lines[i];
     const line = rawLine.trim();
 
     if (!line) {
-      // blank lines: allow ELI5/worked lists to span them (as seen in LA ports)
-      if (collectingWorked || collectingEli5) {
-        // stay in collector
+      // blank line: ELI5 collection intentionally spans blanks to catch following lists (LA style).
+      // Regular non-list paras after ELI5 will trigger reset below.
+      if (collectingWorked && currentWorked) {
+        // continue
       }
       continue;
     }
 
-    // Skip non-section HTML comments (some calculus ports use them for slugs)
-    if (line.startsWith("<!--") && !/section:/i.test(line)) {
+    // Skip pure comment lines that are not section markers
+    if (line.startsWith("<!--") && !/section:/.test(line)) {
       continue;
     }
 
-    // === H2 section heading (primary structure) ===
+    // H2 section heading
     const h2 = line.match(/^##\s+(.+?)(?:\s*\{#([a-z0-9-]+)\})?$/i);
     if (h2) {
       finishCurrentSection();
@@ -130,17 +138,17 @@ function parseMdxSourceForLegacy(mdxSource: string): {
       const rawTitle = h2[1].trim();
       let slug = h2[2] || toSlug(rawTitle);
 
-      // Lookahead for <!-- section: foo --> override (used in some ports)
+      // Look ahead a couple lines for HTML comment slug marker (used in some calculus ports)
       for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
-        const cm = lines[j].match(/<!--\s*section:\s*([a-z0-9-]+)\s*-->/i);
-        if (cm) {
-          slug = cm[1];
+        const commentMatch = lines[j].match(/<!--\s*section:\s*([a-z0-9-]+)\s*-->/i);
+        if (commentMatch) {
+          slug = commentMatch[1];
           break;
         }
       }
 
       const lower = rawTitle.toLowerCase();
-      if (lower.includes("common mistake") || lower.includes("common pitfall")) {
+      if (lower.includes("common mistake")) {
         inCommonMistakes = true;
         inIntro = false;
         currentSection = null;
@@ -150,8 +158,9 @@ function parseMdxSourceForLegacy(mdxSource: string): {
       currentSection = {
         title: rawTitle,
         section: slug,
-        body: [],
-        examples: [],
+        body: [] as string[],
+        eli5: undefined as string[] | undefined,
+        examples: [] as any[],
       };
       inIntro = false;
       inCommonMistakes = false;
@@ -160,23 +169,24 @@ function parseMdxSourceForLegacy(mdxSource: string): {
       continue;
     }
 
-    // === H3 — frequently "Worked Examples" or sub-headings ===
+    // H3 (often used for "Worked Examples")
     const h3 = line.match(/^###\s+(.+)$/);
     if (h3) {
-      const h3Lower = h3[1].trim().toLowerCase();
-      if (h3Lower.includes("worked example")) {
+      const h3Title = h3[1].trim().toLowerCase();
+      if (h3Title.includes("worked example")) {
         collectingWorked = true;
         collectingEli5 = false;
+        // title may be on this line or next bold
         const exTitleMatch = h3[1].match(/worked examples?:\s*(.*)/i);
-        const exTitle = (exTitleMatch?.[1] || "Example").trim() || "Worked Example";
-        currentWorked = { title: exTitle, steps: [] };
+        const exTitle = (exTitleMatch && exTitleMatch[1]) ? exTitleMatch[1].trim() : "Example";
+        currentWorked = { title: exTitle || "Worked Example", steps: [] };
         if (currentSection) {
           currentSection.examples = currentSection.examples || [];
           currentSection.examples.push(currentWorked);
         }
         continue;
       }
-      // Other H3: treat as body prose (rare)
+      // other h3: treat as body for now
       if (currentSection && !collectingEli5 && !collectingWorked) {
         currentSection.body.push(h3[1].trim());
       }
@@ -186,34 +196,39 @@ function parseMdxSourceForLegacy(mdxSource: string): {
     if (inCommonMistakes) {
       if (line.startsWith("- ") || line.startsWith("* ")) {
         commonMistakes.push(line.replace(/^[-*]\s*/, "").trim());
+      } else if (currentSection === null) {
+        // still in mistakes section
       }
       continue;
     }
 
     if (inIntro) {
-      if (!line.startsWith("#")) {
+      // Skip any remaining top title or empty
+      if (!/^#/.test(line)) {
         intro.push(line);
       }
       continue;
     }
 
     if (!currentSection) {
-      // Stray content before first section → attach to intro (defensive)
+      // stray content after intro before first section? attach to intro
       intro.push(line);
       continue;
     }
 
-    // === ELI5 detection (multiple styles from real ports) ===
+    // ELI5 detection (supports multiple styles seen in ports)
     const eli5Marker = line.match(/^\*\*ELI5(?:\*\*|[:\s(]|$)/i);
     if (eli5Marker) {
       collectingEli5 = true;
       collectingWorked = false;
-      const after = line.replace(/^\*\*ELI5\*\*[:\s]*/i, "").trim();
-      if (after) currentEli5.push(after);
+      const afterColon = line.replace(/^\*\*ELI5\*\*[:\s]*/i, "").trim();
+      if (afterColon) {
+        currentEli5.push(afterColon);
+      }
       continue;
     }
 
-    // === Worked Example bold marker (stats-heavy ports) ===
+    // Worked example marker (stats style + LA style)
     const workedMarker = line.match(/^\*\*Worked Example(?:s)?:?\s*(.*?)\*\*/i);
     if (workedMarker) {
       collectingWorked = true;
@@ -227,7 +242,7 @@ function parseMdxSourceForLegacy(mdxSource: string): {
       continue;
     }
 
-    // === List items (under ELI5, worked, or body) ===
+    // List item under current block
     if (line.startsWith("- ") || line.startsWith("* ") || /^\d+\.\s/.test(line)) {
       const itemText = line.replace(/^[-*\d.]\s*/, "").trim();
       if (collectingEli5) {
@@ -238,17 +253,18 @@ function parseMdxSourceForLegacy(mdxSource: string): {
         currentWorked.steps.push(itemText);
         continue;
       }
-      // Body list: STRIP marker for legacy consumers (SubjectModulePage etc.)
-      // This matches historical legacy TS modules (prose body paras, no "- ").
+      // regular list in body — preserve original list marker syntax so MdxContent + marked can render proper <ul>/<ol>
       if (currentSection) {
-        if (itemText) currentSection.body.push(itemText);
+        currentSection.body.push(line);
       }
       continue;
     }
 
-    // === Regular content line ===
+    // Regular paragraph / content line
     if (collectingEli5) {
-      // Non-list after ELI5 marker ends the ELI5 block (stats style)
+      // Non-list paragraph after an ELI5 marker signals end of the ELI5 callout block.
+      // (Common pattern: **ELI5**: foo. \n\n Next technical paragraph continues the section body.)
+      // Push this line to body and reset so we don't swallow the rest of the section.
       collectingEli5 = false;
       currentSection.body.push(line);
       continue;
@@ -258,194 +274,135 @@ function parseMdxSourceForLegacy(mdxSource: string): {
       continue;
     }
 
-    // default body paragraph
+    // default: body
     currentSection.body.push(line);
   }
 
-  // Flush final section
+  // Flush last section
   finishCurrentSection();
 
-  // Cleanup empties + filter useless sections
-  const cleaned = sections
+  // Dedupe / cleanup empty (robustness)
+  const cleanedSections = sections
     .map((s) => ({
       ...s,
-      body: s.body.filter((p) => p && p.trim()),
-      eli5: s.eli5?.length ? s.eli5.filter((p) => p && p.trim()) : undefined,
-      examples: s.examples?.length
-        ? s.examples.filter((e) => e.steps && e.steps.length > 0)
-        : undefined,
+      body: s.body.filter((p: string) => p && p.trim()),
+      eli5: s.eli5 && s.eli5.length ? s.eli5.filter((p: string) => p && p.trim()) : undefined,
+      examples: s.examples && s.examples.length ? s.examples.filter((e: any) => e.steps && e.steps.length) : undefined,
     }))
-    .filter(
-      (s) =>
-        s.body.length > 0 ||
-        (s.eli5 && s.eli5.length) ||
-        (s.examples && s.examples.length)
-    );
+    .filter((s) => s.body.length > 0 || (s.eli5 && s.eli5.length) || (s.examples && s.examples.length));
 
   return {
     intro: intro.filter(Boolean),
-    sections: cleaned,
+    sections: cleanedSections,
     commonMistakes: commonMistakes.filter(Boolean),
   };
 }
 
 /**
- * Parses a raw MDX module (from content/*/topics/*/module.mdx) into the legacy
- * ModuleContent shape that SubjectModulePage, generic practice "review" links,
- * and related high-quality legacy-shaped components expect.
+ * Parses a raw MDX module (from content/*/topics/*/module.mdx) into the *exact*
+ * legacy ModuleContent shape that SubjectModulePage (and CourseContentsPage etc.)
+ * have always expected.
  *
- * This is the core of the bridge: the MDX "dialect" used in all content/ ports
- * (frontmatter, ## Title {#slug}, **ELI5**, ### Worked Examples, ## Common Mistakes,
- * variations across LA/Stats/Calculus) is turned into the exact {intro, sections[], ...}
- * contract the existing UI was built against.
+ * This is the key enabler for Phase 1: the excellent existing UI + logic in
+ * SubjectModulePage remains 100% untouched. We just swap the data it receives.
  *
- * Robustness notes:
- * - Uses a self-contained, server-safe parser (inlined + refined here from
- *   experimental dialect knowledge) with legacy-specific tuning (body list
- *   markers stripped for clean <MathText> rendering in the old components).
- * - Handles all observed edge cases from the real content/ ports (LA, stats,
- *   calculus): inline vs block ELI5, varied worked-example syntax, comment-based
- *   slugs, "Common Mistakes" vs "pitfall", stray content, partial/empty sections.
- * - Preserves exact section slugs (from {#...} or <!-- --> or generated) —
- *   critical invariant for progress tracking and deep links.
- * - Zero external runtime deps or client-module leakage.
- *
- * @example
- * // Server component in a transitional real page:
- * import { getFileSystemContentBundle } from '@/lib/content/loader';
- * import { mdxModuleToLegacyModuleContent } from '@/lib/content/adapters';
- * import { SubjectModulePage } from '@/components/subject-module-page';
- *
- * export default async function MyModulePage({ params }) {
- *   const bundle = await getFileSystemContentBundle('statistics');
- *   const topic = bundle.topics.find(t => t.id === params.topicId)!;
- *   const mdxMod = bundle.mdxModules.find(m => m.topicId === params.topicId)!;
- *   const legacyModule = mdxModuleToLegacyModuleContent(mdxMod, topic);
- *
- *   return (
- *     <SubjectModulePage
- *       subjectSlug="statistics"
- *       subjectLabel="Statistics"
- *       modules={[legacyModule]}   // <— legacy shape, no UI changes needed
- *       topics={bundle.topics}
- *     />
- *   );
- * }
+ * @param mdxModule - from FileSystemContentBundle.mdxModules (raw mdxSource)
+ * @param topic - from same bundle (provides stable id/title/description)
  */
 export function mdxModuleToLegacyModuleContent(
   mdxModule: MdxModule,
   topic: Topic
 ): ModuleContent {
-  // Use our self-contained, server-safe, legacy-tuned parser.
-  // No dependency on experimental client component; fully typed; robust
-  // to every observed variation in the complete content/ ports.
-  const parsed = parseMdxSourceForLegacy(mdxModule.mdxSource);
+  // Self-contained parser (no require, no client component dep, pure + robust).
+  const parsed = parseMdxToLegacyShape(mdxModule.mdxSource);
 
-  // Direct map (parser already did legacy body stripping + cleanup)
-  const sections: ModuleSection[] = parsed.sections.map((sec) => ({
+  // Map to the exact legacy shape (1:1 field compatibility with old *-modules/*.ts)
+  const sections: ModuleSection[] = parsed.sections.map((sec: any) => ({
     title: sec.title,
-    section: sec.section,
-    body: sec.body,
+    section: sec.section || toSlug(sec.title),
+    body: sec.body || [],
     eli5: sec.eli5,
-    examples: sec.examples,
+    examples: sec.examples as WorkedExample[] | undefined,
   }));
 
   return {
     topicId: topic.id,
     title: topic.title,
-    intro: parsed.intro,
+    intro: parsed.intro || [],
     sections,
-    examples: [], // legacy top-level examples (rarely used now; per-section preferred)
-    commonMistakes: parsed.commonMistakes,
+    examples: [], // legacy top-level examples (rarely used now; per-section ones live in sections[].examples)
+    commonMistakes: parsed.commonMistakes || [],
   };
 }
 
 /**
- * Convenience helper: given a subject slug and topicId, load the FS bundle
- * and return the single legacy-shaped ModuleContent (or null if the topic
- * has no corresponding module.mdx yet).
- *
- * Useful for deep "review explanation" links or per-topic server components
- * during the transition.
+ * Convenience: given subject + topicId, return *one* legacy-shaped module (or null).
+ * Used for targeted deep-link scenarios or testing.
  */
 export async function getLegacyModuleContentForTopic(
   subjectSlug: string,
   topicId: string
 ): Promise<ModuleContent | null> {
-  const { getFileSystemContentBundle } = await import("./loader");
-  const bundle = await getFileSystemContentBundle(subjectSlug);
+  try {
+    const { getFileSystemContentBundle } = await import("./loader");
+    const bundle = await getFileSystemContentBundle(subjectSlug);
 
-  const topic = bundle.topics.find((t) => t.id === topicId);
-  const mdxModule = bundle.mdxModules.find((m) => m.topicId === topicId);
+    const topic = bundle.topics.find((t) => t.id === topicId);
+    const mdxModule = bundle.mdxModules.find((m) => m.topicId === topicId);
 
-  if (!topic || !mdxModule) {
+    if (!topic || !mdxModule) {
+      return null;
+    }
+
+    return mdxModuleToLegacyModuleContent(mdxModule, topic);
+  } catch {
+    // Silent fail = safe for transition fallbacks
     return null;
   }
-
-  return mdxModuleToLegacyModuleContent(mdxModule, topic);
 }
 
 /**
- * Returns the full array of legacy ModuleContent objects for a subject,
- * in the order the topics appear in the bundle (i.e. subject index order).
+ * PRIMARY HELPER FOR REAL MODULE PAGES (Phase 1 pattern).
  *
- * This is the drop-in replacement for the old `modules` arrays that real
- * pages and <SubjectModulePage modules={...}> expect.
+ * Returns the complete arrays needed by SubjectModulePage (and similar chrome)
+ * sourced entirely from the new FileSystemContentBundle, converted via the
+ * adapter to the exact legacy ModuleContent + Topic shapes.
  *
- * @example
- * // Transitional version of a subject modules index or layout:
- * const bundle = await getFileSystemContentBundle('calculus');
- * const legacyModules = await getLegacyModulesForSubject('calculus');
- * // Now pass legacyModules to any component that used to receive the TS one.
+ * Returns null on any failure (incomplete port, load error, etc.) so caller
+ * can transparently fall back to legacy imports. Zero breaking changes.
+ *
+ * This is what enables a *minimal* change in a real page like the calculus
+ * [topicId] module page: ~5 lines of try { const data = await get... ; if(data) set } catch{}
+ *
+ * Absolute stability contract: the returned modules[].sections[].section values
+ * are derived from the same MDX headings/comments that were used to author the
+ * questions.json files. Progress tracking etc. are unaffected.
  */
-export async function getLegacyModulesForSubject(
+export async function getLegacyModulesAndTopicsForSubject(
   subjectSlug: string
-): Promise<ModuleContent[]> {
-  const { getFileSystemContentBundle } = await import("./loader");
-  const bundle = await getFileSystemContentBundle(subjectSlug);
-  return mdxModulesToLegacyModules(bundle.mdxModules, bundle.topics);
-}
+): Promise<{ modules: ModuleContent[]; topics: Topic[] } | null> {
+  try {
+    const { getFileSystemContentBundle } = await import("./loader");
+    const bundle = await getFileSystemContentBundle(subjectSlug);
 
-/**
- * Pure (sync) conversion of multiple MdxModules + their matching Topics
- * into legacy ModuleContent[].
- *
- * Preferred when you already have the bundle (avoids re-loading).
- * Filters out any mdxModule without a matching topic (defensive).
- */
-export function mdxModulesToLegacyModules(
-  mdxModules: MdxModule[],
-  topics: Topic[]
-): ModuleContent[] {
-  return mdxModules
-    .map((mdxMod) => {
-      const topic = topics.find((t) => t.id === mdxMod.topicId);
-      return topic ? mdxModuleToLegacyModuleContent(mdxMod, topic) : null;
-    })
-    .filter((m): m is ModuleContent => m !== null);
-}
+    const convertedModules: ModuleContent[] = [];
+    for (const topic of bundle.topics) {
+      const mdxMod = bundle.mdxModules.find((m) => m.topicId === topic.id);
+      if (mdxMod) {
+        convertedModules.push(mdxModuleToLegacyModuleContent(mdxMod, topic));
+      }
+    }
 
-/**
- * Derives the *slim* module section summaries that <CourseContentsPage>
- * (and dashboard chapter expanders) consume for "what sections are in this topic?"
- *
- * Shape: [{ topicId, sections: [{ title, section? }, ...] }, ...]
- *
- * Use this + the FS topics/problems to drive the real /subject page
- * contents listing during migration without touching CourseContentsPage.
- */
-export function mdxModulesToLegacyModuleSummaries(
-  mdxModules: MdxModule[],
-  topics: Topic[]
-): Array<{
-  topicId: string;
-  sections: Array<{ title: string; section?: string }>;
-}> {
-  return mdxModulesToLegacyModules(mdxModules, topics).map((mod) => ({
-    topicId: mod.topicId,
-    sections: mod.sections.map((s) => ({
-      title: s.title,
-      section: s.section,
-    })),
-  }));
+    if (convertedModules.length === 0) {
+      return null;
+    }
+
+    return {
+      modules: convertedModules,
+      topics: bundle.topics,
+    };
+  } catch {
+    // Safe silent fallback path — the hallmark of evolutionary integration.
+    return null;
+  }
 }

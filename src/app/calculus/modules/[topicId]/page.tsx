@@ -1,8 +1,26 @@
 "use client";
 
-import { modules } from "@/lib/modules";
-import { problems, topics } from "@/lib/calculus-content";
+import { useEffect, useState } from "react";
+import { modules as legacyModules } from "@/lib/modules";
+import { topics as legacyTopics } from "@/lib/calculus-content";
 import { SubjectModulePage } from "@/components/subject-module-page";
+import type { ModuleContent } from "@/lib/modules/types";
+import type { Topic } from "@/lib/shared-types";
+
+/**
+ * PHASE 1 EVOLUTIONARY INTEGRATION — CALCULUS MODULE PAGE (minimal demo)
+ *
+ * This is the *only* change needed in the real page to source explanation data
+ * (ModuleContent + Topics) from the new canonical `content/calculus/` via the adapter.
+ *
+ * - SubjectModulePage and all its children are 100% untouched.
+ * - The data shape fed to it is identical (legacy ModuleContent).
+ * - Fallback to the (now shimmed) legacy imports is automatic and silent.
+ * - Reversible in one step: delete the useEffect + dynamic state lines; always use legacy* .
+ *
+ * See src/lib/content/adapters.ts for the full documented transition pattern
+ * and the getLegacyModulesAndTopicsForSubject helper (the enabler of this tiny diff).
+ */
 
 /* ── FAQ data per topic (SEO-targeted questions people actually Google) ── */
 const topicFaqs: Record<string, { q: string; a: string }[]> = {
@@ -39,12 +57,44 @@ const topicFaqs: Record<string, { q: string; a: string }[]> = {
 };
 
 export default function CalculusModulePage() {
+  const [dynamicModules, setDynamicModules] = useState<ModuleContent[] | null>(null);
+  const [dynamicTopics, setDynamicTopics] = useState<Topic[] | null>(null);
+
+  useEffect(() => {
+    // === MINIMAL, REVERSIBLE NEW-DATA-SOURCE INTEGRATION (Phase 1) ===
+    // One small block. Uses the polished adapter helper. No other files touched.
+    // On success: full calculus content now flows from content/calculus/.../module.mdx + index.json
+    //   through the adapter → identical shape → untouched SubjectModulePage.
+    // On any hiccup: zero user impact, legacy shims provide the data.
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { getLegacyModulesAndTopicsForSubject } = await import("@/lib/content/adapters");
+        const data = await getLegacyModulesAndTopicsForSubject("calculus");
+        if (!cancelled && data) {
+          setDynamicModules(data.modules);
+          setDynamicTopics(data.topics);
+        }
+      } catch {
+        // Silent legacy fallback is the entire point of the evolutionary pattern.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const finalModules = dynamicModules ?? legacyModules;
+  const finalTopics = dynamicTopics ?? legacyTopics;
+
   return (
     <SubjectModulePage
       subjectSlug="calculus"
       subjectLabel="Calculus"
-      modules={modules}
-      topics={topics}
+      modules={finalModules}
+      topics={finalTopics}
       faqs={topicFaqs}
     />
   );

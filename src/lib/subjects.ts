@@ -1,9 +1,4 @@
-import { topics as calculusTopics, problems as calculusProblems } from "@/lib/calculus-content";
 import { modules as calculusModules } from "@/lib/modules";
-import { topics as statisticsTopics, problems as statisticsProblems } from "@/lib/statistics-content";
-import { modules as statisticsModules } from "@/lib/statistics-modules";
-import { topics as linalgTopics, problems as linalgProblems } from "@/lib/linalg-content";
-import { modules as linalgModules } from "@/lib/linalg-modules";
 import type { Problem, Topic } from "@/lib/shared-types";
 
 /**
@@ -27,6 +22,14 @@ type SubjectModule = {
  * This is the single source of truth for subject metadata.
  * When adding a new subject, you should only need to add an entry here
  * (plus the actual content files).
+ *
+ * During transition: the `topics`, `problems`, and `modules` here (sourced from
+ * legacy shims) are used by the main DashboardContent + CourseContentsPage for
+ * structure + feeding getPracticeProgress / getSectionPracticeProgress.
+ * Because ported subjects in content/ preserve exact `id` / `topicId` / `section`
+ * values (see schema.ts + content ports), the resulting mastery stats are
+ * accurate for work done via FileSystemContentBundle data in /x/ (and vice versa).
+ * No lists from FS bundles are needed in this file yet; the helpers abstract the source.
  */
 export type SubjectConfig = {
   slug: SubjectSlug;

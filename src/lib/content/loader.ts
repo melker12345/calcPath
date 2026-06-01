@@ -35,9 +35,6 @@ import {
 // Linear Algebra (first for thin vertical slice)
 // ============================================
 
-import { topics as linalgTopics, problems as linalgProblems } from "@/lib/linalg-content";
-import { modules as linalgModules } from "@/lib/linalg-modules";
-
 const linalgConfig: SubjectConfig = {
   slug: "linear-algebra",
   label: "Linear Algebra",

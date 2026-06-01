@@ -104,6 +104,7 @@ function DashboardInner() {
         </h1>
         <p className="mt-2 text-[15px] theme-text-muted">
           Your progress and suggested practice across all subjects.
+          Mastery stats are unified: practice in the main views or the new /x/ dynamic content area (powered by FileSystemContentBundle) both update the same counts via stable problem IDs.
         </p>
       </div>
 
