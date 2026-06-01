@@ -99,10 +99,62 @@
 - Frequent small commits + regular NOTES updates.
 - Validation via schema + existing test harness.
 
-## Next Experiments (current focus)
+## Dynamic Route + Generic UI Integration (x/ experimental) — 2026-06-01
 
-- [ ] Prototype a generic (data-only) practice page / component that consumes Problem[] + Topic from a loaded bundle (avoiding large changes to the 3 existing subject practice pages)
-- [ ] Introduce thin vertical slice demo (e.g. dev-only page or parallel structure) to prove end-to-end from `getSubjectBundle("linear-algebra")` → generic UI
-- [ ] Design decision needed: how/when to introduce generic dynamic routes (`[subject]`) without conflicting with existing static subject folders or requiring big refactors
-- [ ] Decide on stable ID policy + migration strategy for when we move content to JSON/MDX (progress compatibility critical)
-- [ ] Expand loader adapters for Calculus + Statistics (after LA slice validated)
+**Agent**: Dynamic Route + Generic UI Integration Agent (this subagent task).
+
+**Goal achieved in this slice**: Made `/x/` actually usable. Proved the complete user flow **browse subject → view explanation (MDX) → practice** works 100% dynamically using *only* the new `FileSystemContentBundle` data (no legacy TS content imports, no changes to existing `/linear-algebra/` etc. routes).
+
+### Routes added (isolated under /x/)
+- `/x` — experimental landing + subject picker
+- `/x/[subject]` — dynamic browse: loads bundle, renders topic list with per-topic "View explanation" + "Practice N" links (data-driven)
+- `/x/[subject]/modules/[topicId]` — explanation viewer
+- `/x/[subject]/practice/[topicId]` — full working practice session
+
+### New generic components (in src/components/)
+- `GenericModuleViewer.tsx` — lightweight MDX source renderer (frontmatter strip, headings w/ {#slugs}, ELI5 blocks, inline **bold**, delegates LaTeX to existing `<MathText>`). No new runtime deps.
+- `GenericPracticeExperience.tsx` — the key integration. Accepts `problems: Problem[]`, `topic: Topic` from bundle. Fully reuses:
+  - `usePracticeSession` (state, shuffle, dots navigation, transient clear)
+  - `ProgressDots`
+  - `PracticeFeedback` (now used for *both* correct/incorrect — leverages improvements from prior agents)
+  - `MathInput`, `useProgress`, `isAnswerCorrectAsync`, etc.
+  - MCQ buttons + numeric input paths
+  - Progress, attempts, hints, solutions, shuffle-all-mastered all work
+- Both components + pages are pure consumers of the schema/loader output.
+
+### Key Integration Decisions
+- **Isolation strategy**: All new work lives under `src/app/x/` (dynamic segments) + new generic components. Zero modifications to existing static subject folders, practice pages, or layouts. No route conflicts possible. Easy to delete/iterate.
+- **Data loading**: Async server components call `getFileSystemContentBundle(slug)` (which supports "linear-algebra" + "statistics" fully; calculus metadata exists in content/ but loader adapter pending). Props passed down to client generic UI.
+- **MDX**: Raw `mdxSource` surfaced; basic client-side rendering (good enough for proof + rich math). Full compiled MDX (next-mdx-remote + components for custom callouts etc.) is explicit future work.
+- **Practice vs legacy pages**: Avoided touching the 3 big per-subject impls (as recommended in future-dynamic.md Phase 1). Generic is the "new path".
+- **Progress/IDs**: Uses exact same stable `problem.id`s from the JSON content (ported by prior agents). Compatible with existing `useProgress` + local storage.
+- **MathInput subject prop**: Hard-coded "generic" for exp (still works via broad heuristics + questionContext detection). Future: pass real subject slug for better context.
+- **No deep-links in practice yet**: The "Review explanation" link goes to our `/x/.../modules/` (good). Legacy `getModuleSectionUrl` not used (would require parsing MDX headings for section slugs — possible later enhancement).
+- **Supported subjects**: linear-algebra (full 9 topics) + statistics (14). Easy to extend when loader gains calculus.
+
+### Current Limitations (as of this integration)
+- Generic components live in root components/ (necessary for reuse); not "physically" under /x/ but clearly named `generic-*` and only imported from /x/ pages.
+- MDX rendering is hand-rolled and incomplete (no lists, tables, code blocks, images, or MDX components). Content with complex markdown will look raw-ish.
+- No /x/[subject]/practice (list page) yet — direct /practice/[topicId] only (browse page links work).
+- No dedicated layout.tsx per [subject] (inherits experimental banner).
+- No sitemap/SEO/metadata generation for /x/ (by design — experimental + robots: noindex on layout).
+- No error boundaries specific to x/; falls to root.
+- Answer checking + progress still global (good for now).
+- Performance: each /x/ page load re-reads JSON+MDX from disk (fs in server component). Fine for demo; cache or build-time static in future.
+- No tests added for the new pages/components (existing content tests cover the data).
+- Only 2 subjects fully supported in loader.
+
+### Progress on original "Next Experiments"
+- [x] Prototype a generic (data-only) practice page/component — **DONE** via GenericPracticeExperience + /x/ routes.
+- [x] Thin vertical slice demo using parallel structure — **DONE** (the entire /x/ area *is* the demo; no dev-only flag needed).
+- [x] Design decision for generic dynamic routes — **RESOLVED**: use `/x/` prefix for isolation (avoids conflicts + big refactors). Recommended for continued parallel work.
+- [ ] Stable ID policy — unchanged (we preserved them perfectly).
+- [ ] Expand loader for Calculus — still pending (content/ folders exist).
+
+**Next suggested**: 
+- Wire a calculus loader adapter + test full flow on a calculus topic.
+- Add proper MDX compilation (add dep + <MDXRemote> in viewer).
+- Optionally backfill a generic subject list component usable outside x/.
+- Once stable, plan gradual migration or A/B of main routes.
+
+All changes via many small commits (see git log on branch). Full flow demonstrable by visiting /x/linear-algebra (pick vectors or systems) → explanation or practice.
