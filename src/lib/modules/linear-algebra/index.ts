@@ -21,6 +21,7 @@ export { eigenvaluesModule } from "./eigenvalues";
 export { determinantsModule } from "./determinants";
 export { orthogonalityModule } from "./orthogonality";
 export { symmetric_matricesModule as symmetricMatricesModule } from "./symmetric-matrices";
+export { transformationsModule } from "./transformations";
 
 // When complete, this will become something like:
 // export const linearAlgebraModules: ModuleContent[] = [

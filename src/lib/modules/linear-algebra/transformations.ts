@@ -1,0 +1,125 @@
+import type { ModuleContent } from "../types";
+
+/**
+ * Linear Transformations
+ *
+ * New dedicated topic for JSON Chapter 6.
+ * This fills the largest remaining gap in the Linear Algebra coverage.
+ */
+export const transformationsModule: ModuleContent = {
+  topicId: "transformations",
+  title: "Linear Transformations",
+  intro: [
+    "Linear transformations are the central objects of linear algebra. While vectors and matrices are the raw materials, it is the *functions* that map one vector space into another while preserving addition and scaling that give the subject its power and elegance.",
+    "Every linear transformation between finite-dimensional spaces can be represented by a matrix once bases are chosen. This representation lets us compute with abstract maps using the familiar tools of matrix algebra. The same map can look very different depending on the bases we pick.",
+    "The kernel and image of a transformation capture its most important structural information: what gets sent to zero, and what can be reached. The rank-nullity theorem relates these two subspaces in a fundamental way that appears throughout mathematics and data science.",
+  ],
+  sections: [
+    {
+      title: "What is a linear transformation?",
+      section: "definition",
+      body: [
+        "A function $T: V \\to W$ between vector spaces is a linear transformation if it preserves the two vector space operations: $T(\\mathbf{u} + \\mathbf{v}) = T(\\mathbf{u}) + T(\\mathbf{v})$ and $T(c\\mathbf{v}) = c T(\\mathbf{v})$ for all vectors and scalars.",
+        "These two properties together imply that linear transformations preserve all linear combinations: $T(c_1\\mathbf{v}_1 + \\cdots + c_k\\mathbf{v}_k) = c_1 T(\\mathbf{v}_1) + \\cdots + c_k T(\\mathbf{v}_k)$. This is the defining feature — linear maps send lines through the origin to lines through the origin (or to the zero vector).",
+        "The zero vector must always be sent to the zero vector: $T(\\mathbf{0}) = \\mathbf{0}$. Any map that fails this test cannot be linear.",
+        "Common examples: rotation, reflection, projection, differentiation (on polynomials), integration, and matrix multiplication $T(\\mathbf{x}) = A\\mathbf{x}$. Non-examples: translation, $T(x) = x^2$, or any map that moves the origin.",
+      ],
+      eli5: [
+        "A linear transformation is like a perfectly fair machine: if you feed it a mixture of inputs, it gives you the same mixture of outputs. It never distorts the 'straight-line' relationships between vectors. Scaling an input by 3 always scales the output by 3, and adding two inputs always adds their outputs.",
+      ],
+      examples: [
+        {
+          title: "Checking linearity",
+          steps: [
+            "Is $T(x, y) = (x + y, x - y)$ a linear transformation from $\\mathbb{R}^2$ to $\\mathbb{R}^2$?",
+            "Check addition: $T((x_1,y_1) + (x_2,y_2)) = T(x_1+x_2, y_1+y_2) = (x_1+x_2+y_1+y_2, x_1+x_2 - (y_1+y_2))$.",
+            "And $T(x_1,y_1) + T(x_2,y_2) = (x_1+y_1, x_1-y_1) + (x_2+y_2, x_2-y_2) = (x_1+x_2+y_1+y_2, x_1+x_2-y_1-y_2)$. Same result.",
+            "Check scaling: obvious. Therefore $T$ is linear (it is actually a rotation by 45° composed with scaling).",
+          ],
+        },
+      ],
+    },
+    {
+      title: "Kernel and image",
+      section: "kernel-image",
+      body: [
+        "The kernel (or null space) of $T: V \\to W$ is $\\ker(T) = \\{\\mathbf{v} \\in V : T(\\mathbf{v}) = \\mathbf{0}\\ \\}$. It is always a subspace of $V$.",
+        "The image (or range) of $T$ is $\\text{im}(T) = \\{T(\\mathbf{v}) : \\mathbf{v} \\in V\\ \\}$. It is always a subspace of $W$.",
+        "The rank-nullity theorem (also called the dimension theorem) states that for a linear map $T: V \\to W$ between finite-dimensional spaces: $\\dim(V) = \\dim(\\ker(T)) + \\dim(\\text{im}(T))$.",
+        "This is one of the most important results in linear algebra. It tells us that the 'loss of information' (dimension of the kernel) plus the 'new information produced' (dimension of the image) always equals the dimension of the domain.",
+        "$T$ is injective (one-to-one) if and only if $\\ker(T) = \\{\\mathbf{0}\\}$. $T$ is surjective (onto) if and only if $\\text{im}(T) = W$.",
+      ],
+      eli5: [
+        "Think of a linear transformation as a machine that processes vectors. The kernel is everything that gets completely destroyed (turned into nothing). The image is everything that can possibly come out the other end. The rank-nullity theorem says that what you put in equals what gets destroyed plus what comes out.",
+      ],
+      examples: [
+        {
+          title: "Kernel and image of a projection",
+          steps: [
+            "Let $T: \\mathbb{R}^3 \\to \\mathbb{R}^3$ be the projection onto the $xy$-plane: $T(x,y,z) = (x,y,0)$.",
+            "Kernel: $T(x,y,z) = \\mathbf{0}$ iff $x=0$, $y=0$, and $z$ anything. So $\\ker(T) = $ the $z$-axis. Dimension 1.",
+            "Image: everything of the form $(x,y,0)$ — the entire $xy$-plane. Dimension 2.",
+            "Check: $3 = 1 + 2$. Rank-nullity holds.",
+            "$T$ is neither injective nor surjective, as expected.",
+          ],
+        },
+      ],
+    },
+    {
+      title: "The matrix of a linear transformation",
+      section: "matrix-representation",
+      body: [
+        "Once we choose bases for the domain and codomain, every linear transformation $T: V \\to W$ can be represented by a matrix. If $\\mathcal{B} = \\{\\mathbf{b}_1, \\dots, \\mathbf{b}_n\\}$ is a basis for $V$ and $\\mathcal{C}$ is a basis for $W$, the matrix $A$ of $T$ with respect to these bases has columns that are the coordinate vectors of $T(\\mathbf{b}_j)$ expressed in the $\\mathcal{C}$ basis.",
+        "Applying the transformation then becomes matrix multiplication in coordinates: $[T(\\mathbf{v})]_{\\mathcal{C}} = A [\\mathbf{v}]_{\\mathcal{B}}$.",
+        "Different choices of bases produce different matrices for the same transformation. This is why 'the' matrix of a linear map is not unique until bases are specified.",
+        "The standard matrix (when using the standard bases) is the most common representation. For $T(\\mathbf{x}) = A\\mathbf{x}$, the matrix is simply $A$ itself.",
+      ],
+      examples: [
+        {
+          title: "Finding the matrix of a transformation",
+          steps: [
+            "Let $T: \\mathbb{R}^2 \\to \\mathbb{R}^2$ be $T(x,y) = (x+y, x-y)$. Find the standard matrix of $T$.",
+            "Apply $T$ to the standard basis vectors: $T(1,0) = (1,1)$, $T(0,1) = (1,-1)$.",
+            "The matrix has these images as columns: $A = \\begin{pmatrix} 1 & 1 \\\\ 1 & -1 \\end{pmatrix}$.",
+            "Verify: $A \\begin{pmatrix} x \\\\ y \\end{pmatrix} = \\begin{pmatrix} x+y \\\\ x-y \\end{pmatrix}$ — correct.",
+          ],
+        },
+      ],
+    },
+    {
+      title: "Change of basis",
+      section: "change-of-basis",
+      body: [
+        "If we have two different bases for the same space, we need a way to convert coordinates from one basis to the other. The change-of-basis matrix $P$ from basis $\\mathcal{B}$ to the standard basis has the vectors of $\\mathcal{B}$ as its columns.",
+        "To get coordinates in the new basis: $[\\mathbf{v}]_{\\mathcal{B}} = P^{-1} \\mathbf{v}$ (when $P$ changes from $\\mathcal{B}$ to standard).",
+        "If a linear transformation has matrix $A$ in the standard basis, its matrix in a new basis $\\mathcal{B}$ is given by the similarity transformation $P^{-1} A P$. Similar matrices represent the same linear transformation in different coordinate systems.",
+        "This is why eigenvalues are intrinsic to the transformation and do not depend on the basis — they are preserved under similarity.",
+      ],
+      eli5: [
+        "Changing basis is like switching from Cartesian coordinates to a different coordinate grid. The same physical arrow has different numerical descriptions depending on which grid you use. The change-of-basis matrix is the translation table between the two descriptions.",
+      ],
+    },
+    {
+      title: "Composition and invertibility",
+      section: "composition",
+      body: [
+        "The composition of two linear transformations is again linear. If $T: V \\to W$ and $S: W \\to U$, then the matrix of $S \\circ T$ is the product of the individual matrices (in the appropriate order and bases).",
+        "A linear transformation $T: V \\to V$ is invertible if and only if it is both injective and surjective (by the rank-nullity theorem, these are equivalent in finite dimensions). Equivalently, $\\ker(T) = \\{\\mathbf{0}\\}$ or $\\text{im}(T) = V$.",
+        "The inverse of an invertible linear transformation is also linear. The matrix of the inverse is the matrix inverse of the matrix of the original map.",
+        "Invertible linear transformations are precisely the isomorphisms between vector spaces — they preserve all linear-algebraic structure.",
+      ],
+    },
+  ],
+  examples: [],
+  commonMistakes: [
+    "Claiming a map is linear just because it 'looks linear' — always verify the two defining properties.",
+    "Forgetting that the kernel is always a subspace of the domain and the image is always a subspace of the codomain.",
+    "Believing that rank-nullity only applies to square matrices — it applies to any linear map between finite-dimensional spaces.",
+    "Treating the matrix representation as the transformation itself rather than a coordinate-dependent description.",
+    "Forgetting that $T(\\mathbf{0}) = \\mathbf{0}$ must hold for any linear map.",
+    "Confusing the kernel with the set of vectors that map to a particular nonzero vector.",
+    "Assuming every linear transformation has an inverse (most do not).",
+    "Mixing up the order when composing transformations with matrices.",
+    "Thinking that the matrix of a transformation is unique without specifying bases.",
+  ],
+};

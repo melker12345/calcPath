@@ -69,6 +69,13 @@ export const topics: Topic[] = [
     order: 8,
     estimatedMinutes: 90,
   },
+  {
+    id: "transformations",
+    title: "Linear Transformations",
+    description: "Kernel, image, matrix representations, and change of basis.",
+    order: 9,
+    estimatedMinutes: 90,
+  },
 ];
 
 export const problems: Problem[] = [
@@ -143,6 +150,13 @@ const sectionToAnchor: Record<string, Record<string, string>> = {
     "quadratic-forms": "quadratic-forms",
     svd: "singular-value-decomposition",
     pca: "principal-component-analysis",
+  },
+  transformations: {
+    definition: "what-is-a-linear-transformation",
+    "kernel-image": "kernel-and-image",
+    "matrix-representation": "the-matrix-of-a-linear-transformation",
+    "change-of-basis": "change-of-basis",
+    composition: "composition-and-invertibility",
   },
 };
 
