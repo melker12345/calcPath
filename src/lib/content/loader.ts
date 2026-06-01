@@ -3,18 +3,16 @@
  *
  * Provides validated content data.
  *
- * Current implementation:
- * - Legacy bridge: adapters from *-content.ts / *-modules.ts for SubjectBundle (kept for compat).
- * - NEW (this slice): pure data-driven loader reading JSON + MDX from `content/` dir per ARCHITECTURE.md
+ * Primary implementation (data-driven architecture):
+ * - Legacy bridge: adapters from *-content.ts / *-modules.ts for SubjectBundle (kept only for compat during transition).
+ * - Primary data-driven loader: reads JSON + MDX from `content/` dir per content/ARCHITECTURE.md and the official 2026-06 declaration.
  *
- * Schema-first: all output validated with Zod from src/lib/content/schema.ts
+ * Schema-first: all output validated with Zod from src/lib/content/schema.ts.
  *
- * Thin vertical slice: focus on Linear Algebra from content/linear-algebra/ (metadata + topics that have folders).
- * Do NOT touch the three practice page impls or legacy content TS files.
+ * Supports all three subjects (linear-algebra, statistics, calculus) from their full content/ structures.
+ * Legacy TS content files are archived in backup-content/legacy/ and no longer the focus.
  *
- * Future (per future-dynamic.md + ARCHITECTURE.md):
- * - Zero per-subject TS logic.
- * - Full generic pages consume FileSystemContentBundle.
+ * Per MIGRATION-PLAN.md: this is the main path. New code must use the FileSystemContentBundle variants.
  */
 
 import {
@@ -27,6 +25,7 @@ import {
   type SubjectIndex,
   TopicIndexSchema,
   QuestionsFileSchema,
+  QuestionFileSchema,
   MdxModuleSchema,
   FileSystemContentBundleSchema,
   type FileSystemContentBundle,
@@ -52,8 +51,8 @@ const linalgConfig: SubjectConfig = {
 };
 
 /**
- * Returns the fully validated Linear Algebra content bundle.
- * This is the entry point for any generic LA-aware code in the thin slice.
+ * Returns the fully validated Linear Algebra content bundle (legacy adapter path).
+ * Prefer getFileSystemContentBundle("linear-algebra") for new code.
  */
 export function getLinearAlgebraBundle(): SubjectBundle {
   const raw = {
@@ -66,9 +65,9 @@ export function getLinearAlgebraBundle(): SubjectBundle {
 }
 
 // ============================================
-// NEW: Data-driven loader from content/ directory (JSON + MDX)
-// Per content/ARCHITECTURE.md and schema updates.
-// Thin vertical slice: Linear Algebra, metadata + topics with folders (e.g. vectors)
+// Primary: Data-driven loader from content/ directory (JSON + MDX)
+// Per content/ARCHITECTURE.md (official primary architecture).
+// Supports full structures for all subjects.
 // ============================================
 
 const CONTENT_DIR = "content";
@@ -125,9 +124,9 @@ async function readMdxFile(relativePath: string): Promise<string> {
  * Load a single topic's data from its folder under content/{subject}/topics/{topicId}/
  * - topic index.json (optional fallback)
  * - questions.json (injects topicId if missing)
- * - module.mdx (required for now in thin slice)
+ * - module.mdx (the rich explanation source)
  *
- * Graceful for missing files in early skeleton: questions default [], mdx optional? but for vectors present.
+ * Resilient loading for partial ports or future subjects.
  */
 async function loadTopicContent(subjectSlug: string, topicId: string): Promise<{
   topic: import("./schema").Topic;
@@ -146,12 +145,41 @@ async function loadTopicContent(subjectSlug: string, topicId: string): Promise<{
   }
 
   // Questions (may be empty in skeleton)
+  // Resilient loading: prefer the whole file validating, but if it fails we still try to
+  // load the good individual questions. This way one bad MCQ/LaTeX item does not nuke
+  // the entire topic for practice (user preference: "better to load broken questions than none").
   let questionsFile: import("./schema").QuestionsFile = [];
   try {
     questionsFile = await readJsonFile(`${topicDir}/questions.json`, QuestionsFileSchema);
-  } catch {
-    // ok for partial content
-    questionsFile = [];
+  } catch (err) {
+    // Whole file failed validation (common during content porting). Be tolerant.
+    console.warn(`[content-loader] Whole questions.json failed validation for ${subjectSlug}/${topicId}. Attempting per-question recovery...`);
+    try {
+      const fs = await import("fs/promises");
+      const path = await import("path");
+      const fullPath = path.join(process.cwd(), CONTENT_DIR, `${subjectSlug}/topics/${topicId}/questions.json`);
+      const raw = JSON.parse(await fs.readFile(fullPath, "utf-8"));
+
+      if (Array.isArray(raw)) {
+        const valid: any[] = [];
+        const invalid: any[] = [];
+        for (const item of raw) {
+          const result = QuestionFileSchema.safeParse(item);
+          if (result.success) {
+            valid.push(result.data);
+          } else {
+            invalid.push({ id: item?.id, issues: result.error.issues.map((i: any) => i.message) });
+          }
+        }
+        questionsFile = valid;
+        if (invalid.length > 0) {
+          console.warn(`[content-loader] Skipped ${invalid.length} invalid question(s) in ${subjectSlug}/${topicId}:`, invalid);
+        }
+      }
+    } catch (recoverErr) {
+      console.error(`[content-loader] Could not recover any questions for ${subjectSlug}/${topicId}:`, (recoverErr as Error).message);
+      questionsFile = [];
+    }
   }
 
   // Inject topicId for any that omit it (per our schema design)
@@ -172,7 +200,7 @@ async function loadTopicContent(subjectSlug: string, topicId: string): Promise<{
       mdxSource,
     });
   } catch {
-    // For thin slice, only vectors has it; others may not yet
+    // Some topics may ship without module.mdx initially (or for subjects still ramping); caller handles absence.
     mdxModule = undefined;
   }
 
@@ -181,11 +209,9 @@ async function loadTopicContent(subjectSlug: string, topicId: string): Promise<{
 
 /**
  * Loads Linear Algebra purely from the content/ filesystem (data-driven).
- * Currently supports full metadata from index.json + full data for topics that have
- * a topics/{id}/ folder (vectors today; systems/matrices listed in index but folders pending).
+ * Full support: subject index + all topics with their questions.json + module.mdx.
  *
- * Returns FileSystemContentBundle (validated). Problems aggregated across loaded topics.
- * This proves the JSON+MDX loader path without touching legacy.
+ * Returns FileSystemContentBundle (validated). This is the canonical loader for the primary architecture.
  */
 export async function loadLinearAlgebraFromContent(): Promise<FileSystemContentBundle> {
   // 1. Load subject index (config + topic list) via the generic helper (data-driven nav friendly)
@@ -204,7 +230,7 @@ export async function loadLinearAlgebraFromContent(): Promise<FileSystemContentB
   // 2. Start with topics from index (metadata only for now)
   const topicsFromIndex = subjectIndex.topics;
 
-  // 3. Load detailed data only for topics that have folders on disk (thin slice: vectors)
+  // 3. Load detailed data for topics that have folders on disk (all do for LA; the discovery is robust for any subject)
   const loadedTopics: import("./schema").Topic[] = [];
   const allProblems: import("./schema").Problem[] = [];
   const mdxModules: import("./schema").MdxModule[] = [];
@@ -233,7 +259,7 @@ export async function loadLinearAlgebraFromContent(): Promise<FileSystemContentB
           mdxModules.push(mdxModule);
         }
       } catch (err) {
-        // Log but don't fail whole load for thin slice
+        // Log but don't fail whole load (resilient for any subject during rollout)
         console.warn(`[content-loader] Partial load for topic ${topicMeta.id}:`, (err as Error).message);
       }
     }
@@ -260,8 +286,8 @@ export async function loadSubjectIndex(slug: string): Promise<SubjectIndex> {
 }
 
 /**
- * Convenience for the new FS path (thin slice).
- * Now supports all three subjects (la, stats, calculus) since content/ ports complete.
+ * Primary entry point for the data-driven architecture.
+ * Supports all three subjects (la, stats, calculus) — full content/ ports complete.
  */
 export async function getFileSystemContentBundle(slug: string): Promise<FileSystemContentBundle> {
   if (slug === "linear-algebra") {
@@ -346,6 +372,68 @@ export async function loadCalculusFromContent(): Promise<FileSystemContentBundle
   return loadSubjectFromContent("calculus");
 }
 
+/**
+ * Generic loader for any subject that has a full content/{slug}/ structure
+ * (index.json + topics/<topicId>/index.json + questions.json + module.mdx).
+ * Used by statistics (via dedicated wrapper for history) and calculus.
+ * This is the "add subject = just write the data files" path.
+ */
+export async function loadSubjectFromContent(slug: string): Promise<FileSystemContentBundle> {
+  const subjectIndex = await loadSubjectIndex(slug);
+
+  const config: SubjectConfig = {
+    slug: subjectIndex.slug,
+    label: subjectIndex.label,
+    shortDescription: subjectIndex.shortDescription,
+    modulesDescription: subjectIndex.modulesDescription,
+    icon: subjectIndex.icon,
+    order: subjectIndex.order,
+    hasTests: subjectIndex.hasTests,
+  };
+
+  const topicsFromIndex = subjectIndex.topics;
+
+  const loadedTopics: import("./schema").Topic[] = [];
+  const allProblems: import("./schema").Problem[] = [];
+  const mdxModules: import("./schema").MdxModule[] = [];
+
+  let existingTopicIds: string[] = [];
+  try {
+    const fs = await import("fs/promises");
+    const path = await import("path");
+    const topicsDir = path.join(process.cwd(), CONTENT_DIR, `${slug}/topics`);
+    const entries = await fs.readdir(topicsDir, { withFileTypes: true });
+    existingTopicIds = entries.filter((e) => e.isDirectory()).map((e) => e.name);
+  } catch {
+    existingTopicIds = [];
+  }
+
+  for (const topicMeta of topicsFromIndex) {
+    loadedTopics.push(topicMeta);
+
+    if (existingTopicIds.includes(topicMeta.id)) {
+      try {
+        const { topic: _t, questions, mdxModule } = await loadTopicContent(slug, topicMeta.id);
+        allProblems.push(...questions);
+        if (mdxModule) {
+          mdxModules.push(mdxModule);
+        }
+      } catch (err) {
+        console.warn(`[content-loader] Partial load for topic ${topicMeta.id}:`, (err as Error).message);
+      }
+    }
+  }
+
+  const rawBundle = {
+    config,
+    topics: loadedTopics,
+    problems: allProblems,
+    mdxModules,
+  };
+
+  return FileSystemContentBundleSchema.parse(rawBundle);
+}
+
 // ============================================
 // Adapter / Validation helpers (for migration & other subjects)
 // ============================================
@@ -374,32 +462,31 @@ export function deriveModuleSectionSummaries(bundle: SubjectBundle) {
 }
 
 // ============================================
-// General loader (currently LA only for focused slice; expand later)
+// Legacy general loader (for transition compat only)
 // ============================================
 
 /**
- * Loads all known subject bundles (validated) — LEGACY path using TS adapters.
- * In the thin slice we focus on Linear Algebra to prove the data-driven path.
- * Other subjects remain on legacy paths until migrated.
+ * Loads known subject bundles using legacy TS adapters — kept only for any remaining
+ * code not yet migrated to the primary data-driven path.
  *
- * For the new JSON+MDX architecture use:
- *   - loadLinearAlgebraFromContent() or getFileSystemContentBundle("linear-algebra")
- *   - These return FileSystemContentBundle (with mdxModules)
+ * For the official architecture (per 2026-06 declaration) use:
+ *   - getFileSystemContentBundle(slug)  → returns FileSystemContentBundle from content/
  */
 export async function loadAllContent(): Promise<Record<string, SubjectBundle>> {
   // For now synchronous under the hood; async for future FS or remote loads.
   const bundles: Record<string, SubjectBundle> = {
     "linear-algebra": getLinearAlgebraBundle(),
-    // TODO: add calculus + statistics adapters after LA slice is proven
+    // NOTE: calculus + statistics are fully available via the FS path (getFileSystemContentBundle);
+    // legacy adapters here are intentionally minimal during migration.
   };
   return bundles;
 }
 
 /**
- * Convenience: fetch a single validated bundle by slug. (Legacy shape)
+ * Convenience: fetch a single validated bundle by slug (legacy SubjectBundle shape).
  * Throws if unknown (in current impl).
  *
- * New code for dynamic architecture should prefer the FS variants for subjects that have content/ data.
+ * New / primary code must use getFileSystemContentBundle(slug) for subjects that have content/ data.
  */
 export async function getSubjectBundle(slug: string): Promise<SubjectBundle> {
   const all = await loadAllContent();
