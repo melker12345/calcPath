@@ -4,6 +4,27 @@ import { MathText } from "@/components/math-text";
 import { VoteFeedback } from "@/components/vote-feedback";
 import type { FeedbackState } from "./types";
 
+/**
+ * Shared pure utilities for parsing the conventional explanation format
+ * ("Step 1: ... Step 2: ... Final answer: ...").
+ * Used by PracticeFeedback internally and by GenericPracticeExperience (and future generic pages)
+ * to avoid duplicating hint/solution/final-answer extraction logic across subjects.
+ */
+export function extractSteps(explanation: string): string[] {
+  const parts = explanation.split(/Step \d+:\s*/).filter(Boolean);
+  return parts.map((step) => step.replace(/\s*Final answer:.*$/, "").trim());
+}
+
+export function extractFinalAnswer(explanation: string, fallbackAnswer = ""): string {
+  const match = explanation.match(/Final answer:\s*(.+?)\.?\s*$/);
+  return match?.[1]?.trim() || (fallbackAnswer ? `$${fallbackAnswer}$` : "");
+}
+
+export function getDefaultHint(explanation: string): string {
+  const m = explanation.match(/Step 1:\s*([^.]+\.)/);
+  return m?.[1] || "Think about the rules that apply to this type of problem.";
+}
+
 interface PracticeFeedbackProps {
   feedback: FeedbackState;
   current: {
@@ -42,10 +63,7 @@ export function PracticeFeedback({
 
   // Internal step renderer (replaces the need for subjects to pass renderSteps)
   const renderInternalSteps = (color: "emerald" | "amber") => {
-    const parts = current.explanation.split(/Step \d+:\s*/).filter(Boolean);
-    const steps = parts.map((step) =>
-      step.replace(/\s*Final answer:.*$/, "").trim()
-    );
+    const steps = extractSteps(current.explanation);
 
     return steps.map((step, stepIdx) => (
       <div
