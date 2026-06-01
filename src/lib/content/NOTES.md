@@ -152,3 +152,50 @@ See also: future-dynamic.md Phase 5, content/ARCHITECTURE.md .
 - [ ] Design decision needed: how/when to introduce generic dynamic routes (`[subject]`) without conflicting with existing static subject folders or requiring big refactors
 - [ ] Decide on stable ID policy + migration strategy for when we move content to JSON/MDX (progress compatibility critical)
 - [ ] Expand loader adapters for Calculus + Statistics (after LA slice validated)
+
+## MDX Rendering Agent Work (2026-06-01)
+
+**Investigation summary (before implementation):**
+- No MDX rendering existed anywhere: `mdxSource` (raw string incl. frontmatter) was only loaded/validated/stored in `MdxModule` + `FileSystemContentBundle` (see schema.ts:331, loader.ts:163). `grep` for MDXRemote / serialize / compile returned only schema/loader comments.
+- Existing explanation rendering lives only in legacy path:
+  - `src/components/subject-module-page.tsx` (used by all 3 subject `/modules/[topicId]` pages): consumes structured `ModuleContent` (intro[], sections[].{body,eli5,examples}, commonMistakes). Renders with `<MathText>` (for mixed text+$math$) + manual `BlockMath` detection for standalone `$...$` paras + `.prose` wrappers. Duplicated `splitMath` logic also appears in `linear-algebra/practice/[topicId]/page.tsx` (RichMathText) and `math-text.tsx`.
+  - No generic/experimental components consumed `FileSystemContentBundle` or `mdxSource` yet (only tests + loader + docs reference it; `course-contents-page.tsx` etc. are metadata-only).
+- MDX content shape (samples from `content/*/topics/*/module.mdx`): frontmatter + markdown (#/##/###, paras, **bold**, -/1. lists, **ELI5**/**Worked Examples**/**Common Mistakes** as bold paras or subheads), inline `$...$` LaTeX (no `$$`/block in current ports), custom `{#slug}` in some LA headings or `<!-- section: slug -->` comments (for question.section matching + anchors). Inconsistent heading vs comment style across ports.
+- Deps: only katex + react-katex + custom MathText (no remark/rehype/marked/next-mdx-remote/@mdx-js before this).
+
+**Decisions made:**
+- Added single small runtime dep `marked` (lightweight, no sub-deps, token-based) rather than full `next-mdx-remote` + remark-math + rehype-katex (would bypass MathText, add plugin complexity, larger bundle). This lets us:
+  - Strip frontmatter + lex once.
+  - Recursively map tokens → React elements (h*, p, ul/ol/li, strong/em, code, a).
+  - Delegate *every* leaf text run (incl. inside strong/lists) to existing `<MathText text={...}>` → guarantees identical math rendering, spacing fixes, and future updates in one place.
+- Created isolated `src/components/mdx-content.tsx` (no changes to legacy pages, no pollution of subject-module-page or loader). Exports:
+  - `MdxContent({ mdxSource, className? })` — drop-in for any generic explanation view.
+  - `extractMdxSections(mdxSource)` — pure util returning `{id, title, level}[]` (respects explicit `{#id}`, falls back to slugify; useful for nav/progress like legacy `toSlug` + sections).
+- Frontmatter stripped inside renderer (dupe of loader's parser is tiny; keeps renderer self-contained).
+- HTML comments (section markers) + space tokens skipped (visual only).
+- Styling: minimal classes matching legacy prose + theme vars; no auto ELI5 boxes (see limitations).
+- Future evolution path documented in component JSDoc: swap impl to full MDX compiler + provide `components` prop for `<ELI5>`, `<ExampleCard>`, custom math blocks etc. without API change.
+- Kept all changes minimal + frequent small commits (dep; new renderer file; fixes; NOTES; no unrelated).
+
+**Current status / working rendering:**
+- `MdxContent` + extract successfully render and parse *all* current mdxSource (LA full, stats full).
+- Verified via: node lexer inspection + real FS reads + vitest execution importing the component (extract path exercised against `load*FromContent()` bundles containing the mdxSource). Headings with `{#vectors}` etc. produce clean ids + titles; math $...$ flows to MathText; lists/emphasis preserved.
+- Typecheck + lint clean. (Pre-existing test expectations in schema-validation.test.ts are stale but unrelated.)
+
+**Limitations (documented for future work):**
+- Only basic CommonMark subset (no tables, footnotes, task lists, raw JSX/MDX components yet — current MDX ports don't use any). Adding full MDX support later requires `next-mdx-remote` etc.
+- No automatic special UI for `**ELI5**`, `### Worked Examples`, `## Common Mistakes` (rendered as normal bold/heading + content). Legacy had dedicated rounded boxes + "Example s" headers. Consumers of `MdxContent` can post-process tokens or wrap, or we can enhance renderer with heuristic detection in v2.
+- Top-level `# Title` in MDX often duplicates the `<h1>` already rendered by page shell (from Topic.title). Generic pages should either hide first h1 (CSS or slice tokens) or omit from authored MDX.
+- No block math support beyond what MathText does on single-$ (no `$$` or `\[ \]` detection/auto BlockMath yet; none authored today).
+- Renderer is client-only ("use client") because MathText is; fine for now (bundles come from server loader anyway). If server-only RSC MDX wanted, would need different compile path.
+- No error boundary / graceful bad MDX handling yet.
+- Section extraction + renderer do not yet parse/emit the `<!-- section: xxx -->` into data structures (still rely on questions.json matching heading slugs manually).
+- Performance: lex + recursive React on every render (for long modules ~few KB). Fine; can memoize later.
+- No support for images, custom directives, or MDX imports (per future-dynamic.md vision).
+
+**Next steps enabled by this:**
+- Generic module explanation page can now do: `const bundle = await getFileSystemContentBundle(slug); const mdx = bundle.mdxModules.find(...)?.mdxSource; <MdxContent mdxSource={mdx} />` + `const nav = extractMdxSections(mdx).filter(s=>s.level===2)`
+- Can replace/parallel subject-module-page for stats+LA without touching legacy content TS.
+- Update NOTES + ARCHITECTURE when first consumer page lands.
+
+All per task: investigated, set up generic reusable using existing MathText, works for mdxSource, isolated, small commits, NOTES updated.
