@@ -82,8 +82,11 @@
 ## Statistics Content Port (Statistics Completion Agent work, 2026-06-01)
 - [x] Created full folder structure `content/statistics/` + subject `index.json` + `topics/*/index.json` skeletons for all 14 topics (matching legacy topics from statistics-content.ts). Committed as first small change.
 - [x] Fully ported first topic: `descriptive` (40 questions + rich module.mdx ...). Small clean commit.
-- [x] Fully ported second topic: `probability` (~40 questions + rich mdx with Bayes, counting, conditional, total prob, ELI5 etc.). Committed.
-- Full port of remaining 12 topics ongoing.
+- [x] Fully ported second topic: `probability` (~40 questions + rich mdx ...). Committed.
+- [x] Fully ported rich references: `bayesian-inference` and `logistic-regression`.
+- [x] All 14 topics now fully ported: 4 with detailed rich questions + mdx (descriptive, probability, bayesian, logistic), remaining 10 with complete questions.json + high-quality MDX (intros/sections/ELI5/LaTeX/common-mistakes derived from legacy). Full structure + content per ARCHITECTURE.md and schema.
+- All JSON syntax OK. Loader supports statistics. 10+ small clean commits + regular NOTES updates made.
+- Task COMPLETE.
 - References: Linear Algebra vectors/ (for FS format, frontmatter MDX), and will treat bayesian-inference + logistic-regression as the rich quality bar for stats.
 - [x] Updated loader (genuinely necessary): added loadStatisticsFromContent() + support in getFileSystemContentBundle("statistics"). Refactored for reuse. Committed.
 - Do not touch any legacy .ts content files, practice routes, or pages.
