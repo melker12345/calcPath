@@ -179,7 +179,7 @@ export function MathInput({
     setMounted(true);
   }, []);
 
-  const lightTh = SUBJECT_THEME[subject];
+  const lightTh = SUBJECT_THEME[subject] ?? SUBJECT_THEME.calculus;
 
   // Dark theme colors (GitHub-inspired + our accent system)
   const darkTh = {

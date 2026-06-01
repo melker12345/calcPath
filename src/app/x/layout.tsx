@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CourseLayout } from "@/components/course-layout";
+import { subjectBodyFont, subjectHeadingFont } from "@/lib/subject-fonts";
 
 export const metadata: Metadata = {
   title: "Experimental Dynamic Area | CalcPath",
@@ -13,21 +15,23 @@ export default function ExperimentalLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen theme-bg">
-      {/* Experimental banner - subtle, design-system aligned, less intrusive but clearly marked */}
-      <div className="border-b theme-border bg-[var(--surface-2)] px-4 py-1.5 text-xs">
-        <div className="mx-auto flex max-w-6xl items-center justify-between text-[var(--text-muted)]">
-          <div className="flex items-center gap-2">
-            <span className="rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 font-mono text-[10px] font-semibold tracking-[0.5px] text-[var(--accent)]">EXPERIMENTAL</span>
-            <span>/x/ — Dynamic content preview (JSON + MDX from <code className="font-mono text-[10px]">content/</code> only)</span>
+    <div className={`${subjectHeadingFont.variable} ${subjectBodyFont.variable}`}>
+      <CourseLayout>
+        {/* Experimental banner — tasteful, integrated below SiteHeader so the /x/ area feels like a real subject with an explicit data-driven label.
+            Uses amber for clear "experimental" identity without clashing with theme tokens or dark mode. */}
+        <div className="w-full border-b border-amber-200 bg-amber-50/95 px-4 py-2 text-amber-900 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-200 dark:backdrop-blur-sm">
+          <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 text-xs sm:text-sm">
+            <div className="flex items-center gap-2">
+              <span className="rounded bg-amber-200 px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-widest text-amber-900 dark:bg-amber-900 dark:text-amber-100">EXPERIMENTAL</span>
+              <span className="font-medium">/x/ — Fully dynamic content + generic UI (sourced only from content/ JSON + MDX)</span>
+            </div>
+            <Link href="/" className="shrink-0 underline hover:no-underline">Exit experimental →</Link>
           </div>
-          <Link href="/" className="text-[var(--accent)] hover:underline">Exit experimental →</Link>
         </div>
-      </div>
-      <div className="mx-auto max-w-6xl">{children}</div>
-      <footer className="mt-12 border-t theme-border py-6 text-center text-xs theme-text-muted">
-        Isolated experimental area. Proves full browse → explanation (light MDX) → practice flow using only <code>getFileSystemContentBundle</code> + shared generic components. No legacy subject code.
-      </footer>
+
+        {/* Page content flows here (CourseContentsPage-style containers, module viewers etc. live in children) */}
+        {children}
+      </CourseLayout>
     </div>
   );
 }
