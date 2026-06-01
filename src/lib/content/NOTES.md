@@ -333,6 +333,7 @@ New counts (from `content/statistics/topics/*/questions.json`):
 - [x] discrete-distributions: 42/42 (included 39 from dedicated + 3 cross from distributions.ts; IDs preserved e.g. disc-*, dist-*) . JSON formatted per schema.
 - [x] continuous-distributions: 41/41 (39 + 2 cross from distributions.ts for normal/zscore).
 - [x] logistic-regression: now 12/12 (added the 5 missing: separation-1, odds-2, or-2, threshold-1, events-1; appended to existing 7).
+- [x] sampling: 39/39 (no cross files for this topic).
 
 ### Linear Algebra (9 topics, legacy total 336)
 - All topics at exact parity 336/336 in `content/linear-algebra/topics/*/questions.json` (previously completed in LA Completion Agent work). No action needed.
