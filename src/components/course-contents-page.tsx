@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { SubjectBreadcrumbs } from "@/components/subject-breadcrumbs";
 
 type CourseTopic = {
   id: string;
@@ -63,13 +64,7 @@ export function CourseContentsPage({
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="border-b theme-border pb-6">
-        <p className="text-sm theme-text-muted">
-          <Link href="/" className="text-blue-700 hover:underline dark:text-[var(--accent)]">
-            Contents
-          </Link>
-          {" / "}
-          {title}
-        </p>
+        <SubjectBreadcrumbs subjectSlug={subjectSlug} subjectLabel={title} />
         <h1 className="mt-3 text-3xl font-semibold tracking-tight theme-text sm:text-4xl">
           {title}
         </h1>

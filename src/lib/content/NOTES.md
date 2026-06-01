@@ -107,66 +107,38 @@
 - [ ] Decide on stable ID policy + migration strategy for when we move content to JSON/MDX (progress compatibility critical)
 - [ ] Expand loader adapters for Calculus + Statistics (after LA slice validated)
 
-## Module & Explanations Page Generalization (Module & Explanations Page Generalization Agent, 2026-06-01)
+## Subject Layout & Navigation Generalization Agent (2026-06-01)
 
-**Goal achieved in isolated slice**: Created a generic, data-driven module/explanation renderer that consumes `FileSystemContentBundle.mdxModules` (raw `mdxSource`) + `Topic` metadata directly from the new content/ FS structure.
-
-**Deliverable**:
-- New isolated file: `src/components/experimental-generic-mdx-module-explanation.tsx`
-  - `ExperimentalGenericMdxModuleExplanation` React component (client).
-  - Self-contained line-based `parseMdxToStructured` (exported as `experimentalParseMdxModule` for tests/harnesses).
-  - Supports all observed patterns in current `content/*/topics/*/module.mdx` (LA + Stats + Calculus ports):
-    - Intro (pre-first-## content, after stripping frontmatter + # title).
-    - `## Section Title {#slug}` or `## Title` + following `<!-- section: slug -->` (for question matching + deep links + per-section practice).
-    - Body paragraphs (with LaTeX $...$ and $$...$$ detection → MathText + BlockMath).
-    - `**ELI5**` / `**ELI5**:` / `**ELI5 (continued)**` blocks (inline text or following `-` bullet lists; heuristic stops collection on subsequent non-list paragraphs to support stats-style "ELI5 callout then continue body").
-    - Worked examples: `### Worked Examples`, `**Worked Example: Title**` → rendered as titled cards with numbered steps.
-    - `## Common Mistakes` → bulleted list at end.
-  - Re-uses legacy visual + interactive pieces (ModuleSectionNav TOC, ELI5 styled callout, example cards, practice links using ?section=slug, VoteFeedback, prev/next footer) for pixel-level consistency during transition.
-  - Debug footer showing "sourced from content/.../module.mdx via FileSystemContentBundle".
-  - Detailed JSDoc with full MDX proper-rendering plan.
+**Goal achieved in this slice**: Made high-level subject "chrome" (layouts, nav, subject/topic lists, breadcrumbs) more data-driven from new content, via reusable generic components/patterns. Focus strictly on chrome/navigation layer (not practice deep logic, not full module rendering, not route restructuring).
 
 **Decisions**:
-- Work strictly isolated: one new experimental-*.tsx file only (no new dirs, no edits to production pages, layouts, routes, legacy modules/, or loader). No new runtime deps.
-- Basic custom parser (no markdown lib) sufficient for current authored MDX dialect + keeps zero-dep for this slice.
-- Parser produces internal shape modeled on legacy ModuleSection (title/section/body/eli5/examples) so rendering code could later be shared/refactored with SubjectModulePage.
-- Anchor/slug extraction supports both markdown `{#id}` (LA) and HTML comment (some calculus) conventions seen in the ports.
-- Rendering stays "use client" + reuses MathText (which already handles katex + spacing fixes).
-- For real generic pages later: the component can be called from a server page that does `const bundle = await getFileSystemContentBundle(slug); const mdxMod = bundle.mdxModules.find(...)` and passes strings (serializable).
+- Created `SubjectBreadcrumbs` as first reusable generic chrome component. API designed to be driven by:
+  - `SubjectIndex` (lightweight, from `loadSubjectIndex(slug)` reading content/{slug}/index.json -- perfect for nav/topic lists/breadcrumbs)
+  - `FileSystemContentBundle` (via .config + helpers)
+  - Legacy `SubjectConfig` (compat)
+- Helpers `getSubjectHomeBreadcrumbs`, `getBreadcrumbsFromBundle` establish patterns for consuming the new data shapes in generic nav.
+- Kept changes *isolated*: only edited loader (for enabling), two existing chrome components (CourseContentsPage for topic lists, SubjectModulePage), added 1 new component file. No changes to subject app/ folders, no new public routes, no breakage to existing 3 subject experiences.
+- Used private/experimental-friendly approach: the new component + `loadSubjectIndex` is the "experimental area" ready for future thin vertical slice demos or generic pages (e.g. in `_experimental/` private folders which Next ignores for routing).
+- Did *not* yet generalize full subject lists (header/footer etc still use central `subjects.ts`/`subjectList` -- that's a solid abstraction; future can derive or merge from index data via manifest).
+- Topic lists: CourseContentsPage already acts as generic renderer (accepts topics + slug); now its own breadcrumb layer is fully generic. The subject index's `topics` array is the canonical data source for such lists going forward.
+- Breadcrumbs: unified the previously ad-hoc inline implementations. Supports simple "Contents / Subject" or "Contents / Subject / Topic".
+- Small commits only. Type-safe via existing schemas. No new docs files created (edited NOTES only as required).
+- Calculus support: `loadSubjectIndex("calculus")` works immediately (index.json present); full bundle load still needs adapter (future).
 
-**Proper MDX rendering plan (documented in component + here)**:
-- When productizing: `npm install next-mdx-remote`.
-- Switch (or dual) to server component + `<MDXRemote source={mdxSourceWithoutFm} components={{ELI5: ELI5Callout, ...}} />`.
-- Add remark-math + rehype-katex for native LaTeX in MDX (or keep hybrid).
-- Authors could then use JSX/custom tags in .mdx for richer embeds.
-- Loader remains unchanged (raw source is correct).
+**Progress**:
+- [x] Reviewed all 3 subjects' layouts (near-identical wrappers around CourseLayout), pages (dupe metadata/JSON-LD), chrome components, nav (header/footer use subjectList; ad-hoc crumbs in contents+module pages), hardcoded paths/links.
+- [x] Reviewed new content: SubjectIndex (ideal for nav), FileSystemContentBundle, loader (now has loadSubjectIndex).
+- [x] Added `loadSubjectIndex` + refactored existing loaders (DRY + nav enabler). Commit 1.
+- [x] Implemented generic SubjectBreadcrumbs + helpers. Adopted in 2 chrome components for topic/module nav. Commit 2.
+- [x] Updated this NOTES with decisions/progress.
+- Total: 2 small commits, focused on nav layer only.
+- Ready for: using `await loadSubjectIndex(slug)` in future server components for fully data-driven subject chrome; thin vertical demo page; eventual generic [subject] routes.
 
-**Frequent small commits performed** (as required):
-- Initial creation + parser + full renderer.
-- Parser ELI5 heuristic fix for cross-port variations.
-- Export of pure parser fn.
-- (This NOTES update + follow-ups).
+**Files touched (absolute paths)**:
+- /home/melker/.grok/worktrees/work-saas/subagent-019e83b0-206f-7cb2-8395-f4a61529fdbb/src/lib/content/loader.ts
+- /home/melker/.grok/worktrees/work-saas/subagent-019e83b0-206f-7cb2-8395-f4a61529fdbb/src/components/subject-breadcrumbs.tsx (new, required for reusable)
+- /home/melker/.grok/worktrees/work-saas/subagent-019e83b0-206f-7cb2-8395-f4a61529fdbb/src/components/course-contents-page.tsx
+- /home/melker/.grok/worktrees/work-saas/subagent-019e83b0-206f-7cb2-8395-f4a61529fdbb/src/components/subject-module-page.tsx
+- This file (NOTES.md)
 
-**Remaining blockers for replacing old module pages** (for future agents / decision):
-1. **No MDX compiler yet** — basic parser works for existing content but is brittle to authoring variations (future MDX will solve + allow custom components).
-2. **No wiring / routes** — component not imported anywhere. Needs a thin demo page (dev-only or /_experimental/* route group?) + server data loading. Existing static subject folders + redirects would conflict with `[subject]` dynamic.
-3. **Practice links & deep links assume existing URLs** — they hardcode `/${slug}/practice/...` which still point to per-subject impls.
-4. **Metadata / layouts / SEO** — generateMetadata, subject layouts, course-contents-page still use legacy SubjectConfig / modules. Generic version would need parallel or derived.
-5. **Full bundle for all subjects** — loader only does linear-algebra + statistics (calculus mdx exists in content/ but not loaded by getFileSystemContentBundle yet).
-6. **Progress / section slugs invariant** — must ensure MDX headings always produce slugs matching the `section` field in the topic's questions.json (already convention in ports).
-7. **Testing the renderer** — no visual/e2e tests yet for the experimental component (parser could be unit-tested against real mdxSource fixtures).
-8. **Migration cutover strategy** — when to flip the three per-subject module/[topicId]/page.tsx to use generic + FS bundle? Feature flag? Parallel? Delete legacy ModuleContent after?
-9. **Math fidelity** — current parser + MathText covers 95%+ of LaTeX in ports, but edge cases (align*, matrices in display, etc.) may need validation against real pages.
-10. **Bundle loading in client contexts** — FS loader is server-only (dynamic fs). Generic pages must be server components or use API route / build-time static.
-
-**Status**: Meaningful isolated deliverable complete. Parser + renderer proven conceptually against real content samples from all 3 subjects. Ready for "thin vertical slice demo page" experiment (see open item above) or decision on route strategy. Do not delete or modify legacy module pages yet.
-
-**References in this work**:
-- content/linear-algebra/topics/vectors/module.mdx (primary test case)
-- content/statistics/topics/descriptive/module.mdx and bayesian-inference/ (variation test)
-- content/calculus/topics/limits/module.mdx and derivatives/ (anchor comment style)
-- src/lib/content/{loader.ts,schema.ts}
-- src/components/subject-module-page.tsx (visual + structural reference)
-- content/ARCHITECTURE.md + future-dynamic.md
-
-Regular NOTES updates + small commits followed throughout.
+Next for nav generalization could include: generic SubjectTopicList (extract from CourseContentsPage), SubjectList component for header/footer (data-backed), experimental demo page in private folder using bundle/index for full subject preview.
