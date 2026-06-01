@@ -9,10 +9,10 @@ interface Props {
 }
 
 /**
- * Generic dynamic practice page under experimental /x/.
+ * Generic dynamic practice page under the /x/ dynamic content system.
  * Server component loads *only* from FileSystemContentBundle (new data).
  * - If topic missing → friendly not-found.
- * - If 0 questions (not yet ported) → extremely clear intentional "no questions yet" UI (never generic error).
+ * - If 0 questions → extremely clear intentional "no questions yet" UI (never generic error).
  * Then (for good topics) delegates to <GenericPracticeExperience> (robust MathText everywhere + 0-displayProblems guard + per-q fallbacks)
  * so bad data never produces generic "Something went wrong".
  *
@@ -57,7 +57,7 @@ export default async function DynamicPracticePage({ params }: Props) {
             No practice questions are available for this topic yet.
           </p>
           <p className="mt-2 text-sm theme-text-muted">
-            This is an intentional “not yet” state in the experimental /x/ area while topics are ported from the legacy content. The full explanation is ready and complete.
+            This is an intentional “not yet” state in the dynamic content area while we complete the port of all topics. The full explanation is ready and complete.
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3 text-sm">

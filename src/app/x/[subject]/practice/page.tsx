@@ -6,7 +6,7 @@ interface Props {
   params: Promise<{ subject: string }>;
 }
 
-/** Generic practice topic picker under /x/ (for the "practice overview" links) */
+/** Practice topic picker for the dynamic /x/ content system (for the overview links from subject browser). */
 export default async function DynamicPracticeIndex({ params }: Props) {
   const { subject: subjectSlug } = await params;
 
@@ -24,7 +24,7 @@ export default async function DynamicPracticeIndex({ params }: Props) {
       <Link href={`/x/${subjectSlug}`} className="text-sm text-[var(--accent)] hover:underline transition-colors">← Back to {config.label} topics</Link>
 
       <h1 className="mt-4 text-2xl font-semibold theme-text">Practice — {config.label}</h1>
-      <p className="text-sm theme-text-muted">Choose a topic. All data from content/ only. Topics without questions yet show an intentional “not ported” state with link to explanation.</p>
+      <p className="text-sm theme-text-muted">Choose a topic. All data from content/ only. Topics without questions yet show an intentional “not yet” state (explanation is ready and linked).</p>
 
       <div className="mt-6 grid gap-3">
         {topics.map((topic) => {
