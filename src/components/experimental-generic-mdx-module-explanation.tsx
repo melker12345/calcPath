@@ -324,6 +324,9 @@ function parseMdxToStructured(
   };
 }
 
+// Export parser for isolated testing / future thin-slice harnesses (no React needed)
+export { parseMdxToStructured as experimentalParseMdxModule };
+
 export function ExperimentalGenericMdxModuleExplanation({
   mdxSource,
   topic,
