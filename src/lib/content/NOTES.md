@@ -710,3 +710,51 @@ All commits used only `git mv` + descriptive messages. Zero content diffs inside
 ---
 
 *Legacy Backup Agent task complete. 2026-06-01. All per spec.*
+
+## Promoting the Dynamic Area (X-Area Promotion & De-Experimental Agent) — 2026-06-01
+
+**Agent**: X-Area Promotion & De-Experimental Agent (this subagent task).
+
+**Mission**: Reduce the "experimental" feel of the /x/ dynamic area so it can start being treated as the real evolving UI for the new content system.
+
+**Specific work completed** (per exact request):
+- In `src/app/x/layout.tsx`: Made the banner *much more subtle* (removed bg-[var(--surface-2)] block, reduced padding/text sizes, smaller "IN DEVELOPMENT" pill using theme tokens). Changed copy to: "New Dynamic Content System — this is where new content is developed and will become the main experience." (directly following suggested phrasing). Removed loud warning tone. Renamed `ExperimentalLayout` → `DynamicLayout`. Updated metadata description to affirm "the forward-looking, primary development path — it will become the main experience."
+- Cleaned up comments and metadata across /x/ pages: eliminated "experimental", "Experimental*" prefixes from function/component names (e.g. `DynamicHome`, `DynamicError`, `DynamicLoading`, `DynamicSubjectPage` etc.), JSDocs, console logs, and all user strings. Back-links and labels now say "Back to subjects", "Back to dynamic content", "/x/ dynamic" etc.
+- Ensured the subject list on /x/ feels like the *main content browser*: rewrote landing to "Subjects" heading + supportive intro para ("Browse the full content library..."); refreshed card descriptions to emphasize complete/live interactive experiences (no "port" or agent language); polished practice links and footers. The /[subject] topic list (via TopicRow + expandable native pattern) already mirrors main app UX; its copy was also de-experimentalized.
+- Improved overall polish & consistency (focus on tone/language; small styling only in banner for subtlety): language now positions /x/ as the active evolving implementation rather than side experiment. Landing copy fully updated: "This is where new content for CalcPath is being developed. ... This dynamic area will eventually become the main experience across the app." Status box reframed positively around "Active development".
+- Stayed strictly scoped to x/ directory + top-level layout (the latter reviewed for any stray refs; none found/needed, no changes made to it). Used only existing theme-/btn- classes. No new files.
+
+**Result**: /x/ no longer carries an "experimental" or "warning" tone anywhere. It reads as the legitimate, forward-looking home of the dynamic content system. The subject/topic browsers feel primary. Small, frequent commits (5 total for this agent) with read-before-edit discipline.
+
+**Absolute paths edited (in scope)**:
+- /home/melker/Desktop/work/saas/src/app/x/layout.tsx
+- /home/melker/Desktop/work/saas/src/app/x/page.tsx
+- /home/melker/Desktop/work/saas/src/app/x/[subject]/page.tsx
+- /home/melker/Desktop/work/saas/src/app/x/error.tsx
+- /home/melker/Desktop/work/saas/src/app/x/loading.tsx
+- /home/melker/Desktop/work/saas/src/app/x/[subject]/modules/[topicId]/page.tsx
+- /home/melker/Desktop/work/saas/src/app/x/[subject]/practice/layout.tsx
+- /home/melker/Desktop/work/saas/src/app/x/[subject]/practice/page.tsx
+- /home/melker/Desktop/work/saas/src/app/x/[subject]/practice/[topicId]/page.tsx
+- /home/melker/Desktop/work/saas/src/lib/content/NOTES.md (this section only; reviewed TopicRow.tsx but no tone edits needed)
+
+**Commits** (small, incremental, descriptive):
+- x: promote layout - subtle banner...
+- x: promote landing - clean ... subject list...
+- x: de-experimentalize [subject]/page.tsx ...
+- x: rename error/loading ...
+- x: clean remaining /x/ pages ...
+
+**Verification performed**:
+- Re-read every file in x/ immediately before each search_replace.
+- Used only exact unique string matches for edits.
+- Ran `git status`, `git log --oneline -10`, confirmed only x/ + NOTES touched for this task.
+- Post-edit full reads + terminal `grep -i experimental` limited to src/app/x (confirmed zero remaining loud instances in source).
+- Banner now subtle and affirmative; all copy positions as "the" place for new content.
+- No scope violations, no docs outside NOTES, no emojis in code.
+
+This agent completes the promotion. The dynamic /x/ area is now ready to be the real evolving UI.
+
+---
+
+*X-Area Promotion & De-Experimental Agent task complete. 2026-06-01. All per spec.*
