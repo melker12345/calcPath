@@ -52,11 +52,26 @@ interface GenericPracticeExperienceProps {
  *  - Review links back to modules (using stable section anchors from content)
  *  - Subject-aware MathInput theming via bundle.config.slug
  *
- * This provides the clear migration/adapter path: existing per-subject pages can
- * gradually replace their duplicated logic with <GenericPracticeExperience bundle={...} topicId={...} />
- * (or wrap it) without immediate big refactors. Main pages untouched per instructions.
+ * ## Migration / Adapter Path (for the three existing subject practice pages)
+ * The component is the target. Existing pages (which still import from *-content.ts + have
+ * duplicated submit/getHint/overlay/renderSteps/RichMathText) can adopt GRADUALLY:
  *
- * Usage (e.g. in an experimental route or dev playground):
+ * 1. Experimental / behind flag: in a dev-only page or feature-flagged branch, import the bundle
+ *    + render <GenericPracticeExperience bundle={fsBundle} topicId={...} /> instead of local logic.
+ * 2. Add thin adapter helpers (e.g. legacyProblemsToBundleShape) in this generic-practice/ dir only.
+ * 3. Once battle-tested per subject, the old page can be a 5-line wrapper and eventually deleted.
+ *
+ * Blockers for full switchover (documented also in src/lib/content/NOTES.md):
+ * - MathInput still requires a "subject" key (we map it).
+ * - Module deep-link helpers (getModuleSectionUrl) are per-legacy-content; we provide sensible default.
+ * - Analytics/trackEvent calls and some subject polish (e.g. cleanedPrompt in calc) are page-specific today.
+ * - Full dynamic routes ([subject]/practice/[topicId]) not yet (per open questions).
+ * - Progress ID stability guaranteed (same ids in JSON as legacy).
+ *
+ * No changes were made to app/*/practice/[topicId]/page.tsx files.
+ *
+ * Usage example (experimental or playground):
+ *   import { getFileSystemContentBundle } from "@/lib/content/loader";
  *   const bundle = await getFileSystemContentBundle("linear-algebra");
  *   <GenericPracticeExperience bundle={bundle} topicId="vectors" allowTopicSwitch />
  */
