@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { CourseContentsPage } from "@/components/course-contents-page";
 import { subjects } from "@/lib/subjects";
-import { getOptionalLAContentBundle } from "@/lib/content/loader";
 
 export const metadata: Metadata = {
   title: "Learn Linear Algebra — Free University Course | CalcPath",
@@ -35,11 +34,22 @@ const courseJsonLd = {
 export default async function LinearAlgebraHome() {
   const subject = subjects["linear-algebra"];
 
-  // Dual on-ramp for real /linear-algebra home: optionally use FS bundle topics+problems for LA.
-  // modules stay legacy (for section previews in UI) until richer mdx layer.
-  const bundle = await getOptionalLAContentBundle();
-  const topics = bundle ? bundle.topics : subject.topics;
-  const problems = bundle ? bundle.problems : subject.problems;
+  // === TRANSITION: source topics + problems from new FileSystemContentBundle (content/ FS data)
+  // for this ported subject (standardized pattern across all three homes). Uses direct loader.
+  // Modules remain from legacy subjects (for expandable section previews) → mixed state supported.
+  // getPracticeProgress (called inside CourseContentsPage) works seamlessly with either source
+  // thanks to stable IDs from the content ports. Safe fallback keeps page working if loader changes.
+  // This is the production home (/linear-algebra/) — minimal, reversible, no changes to CourseContentsPage contract.
+  let topics = subject.topics;
+  let problems = subject.problems;
+  try {
+    const { getFileSystemContentBundle } = await import("@/lib/content/loader");
+    const bundle = await getFileSystemContentBundle(subject.slug);
+    if (bundle?.topics?.length) topics = bundle.topics;
+    if (bundle?.problems?.length) problems = bundle.problems;
+  } catch {
+    // Silent legacy fallback (mixed/transition safety)
+  }
 
   return (
     <>
