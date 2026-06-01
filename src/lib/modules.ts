@@ -7,7 +7,8 @@ import {
   seriesModule,
   differentialEquationsModule,
   applicationsOfIntegrationModule,
-  multivariableModule
+  multivariableModule,
+  parametricPolarModule
 } from "./modules/calculus";
 
 
@@ -52,5 +53,6 @@ export const modules: ModuleContent[] = [
   seriesModule,
   differentialEquationsModule,
   applicationsOfIntegrationModule,
+  parametricPolarModule,
   multivariableModule,
 ];

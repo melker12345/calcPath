@@ -4,9 +4,9 @@ export const applicationsOfIntegrationModule: ModuleContent = {
     topicId: "applications-of-integration",
     title: "Applications of Integration",
     intro: [
-      "Integration computes accumulated quantities. So far you've seen it as 'area under a curve,' but the real power of the integral is that it can measure anything that accumulates: length along a curve, volume of a solid, work done by a force, or probability of an event.",
+      "Integration computes accumulated quantities. So far you've seen it as 'area under a curve,' but the real power of the integral is that it can measure anything that accumulates: length along a curve, volume of a solid, work done by a force, hydrostatic pressure, center of mass, or the average value of a varying quantity.",
       "The strategy is always the same: slice the quantity into infinitely many small pieces, write a formula for each piece, then integrate (sum them up). The only thing that changes from problem to problem is what you're slicing and how.",
-      "This module covers the major geometric and physical applications: areas between curves, volumes of solids of revolution, arc length, and an introduction to parametric curves.",
+      "This module covers the major geometric and physical applications: areas between curves, volumes of solids of revolution, arc length, parametric curves, work, hydrostatic force, center of mass, and average value.",
     ],
     sections: [
       {
@@ -168,7 +168,6 @@ export const applicationsOfIntegrationModule: ModuleContent = {
           "In physics, work = force × distance. When the force varies over the displacement, you slice the motion into tiny steps where the force is approximately constant and integrate: $W = \\int_a^b F(x)\\,dx$.",
           "Spring problems (Hooke's Law): the force to stretch a spring $x$ units beyond its natural length is $F(x) = kx$. The work to stretch from $x = a$ to $x = b$ is $W = \\int_a^b kx\\,dx = \\frac{k}{2}(b^2 - a^2)$. Note: $x$ measures displacement from natural length, not the total length of the spring.",
           "Pumping problems: to pump liquid out of a tank, slice the liquid into thin horizontal layers. Each layer at height $y$ has volume $A(y)\\,dy$ (where $A(y)$ is the cross-sectional area), weighs $\\rho g \\cdot A(y)\\,dy$, and must be lifted a distance $d(y)$ to the top. Total work: $W = \\int_0^h \\rho g \\cdot A(y) \\cdot d(y)\\,dy$. The tricky part is expressing $A(y)$ and $d(y)$ correctly for the tank's shape.",
-          "Hydrostatic force: the pressure at depth $d$ below the surface of a fluid is $P = \\rho g d$. The total force on a submerged vertical plate is $F = \\int_a^b \\rho g \\cdot d(y) \\cdot w(y)\\,dy$, where $w(y)$ is the width of the plate at depth $d(y)$.",
           "The unifying idea: in every application, you identify the small piece, write its contribution ($dW$, $dF$, etc.), and integrate. The calculus is the same; only the physical setup changes.",
         ],
         eli5: [
@@ -188,6 +187,85 @@ export const applicationsOfIntegrationModule: ModuleContent = {
           },
         ],
       },
+      {
+        title: "Average value of a function",
+        section: "averagevalue",
+        body: [
+          "If a quantity varies over an interval, its average value is the constant height of the rectangle that has the same area as the region under the curve. For a continuous function $f$ on $[a, b]$, the average value is $\\frac{1}{b-a} \\int_a^b f(x)\\,dx$.",
+          "This is a direct consequence of the Fundamental Theorem of Calculus. The Mean Value Theorem for Integrals guarantees that there exists some $c$ in $[a,b]$ where $f(c)$ actually equals this average value.",
+          "Common applications: average temperature over a day, average velocity over a trip, average current in a circuit, or the average concentration of a drug in the bloodstream.",
+          "Note the difference from a simple arithmetic mean of two endpoints. The integral properly weights every moment in the interval according to the function's behavior.",
+        ],
+        eli5: [
+          "Imagine the temperature outside over a 24-hour period. It goes up and down. If you wanted to know the single number that represents the 'typical' temperature for the day (the one that would give the same total 'heat' if it stayed constant), you would use the average value given by the integral. It's not just (high + low)/2 — it cares about how long it stayed hot or cold.",
+        ],
+        examples: [
+          {
+            title: "Average temperature",
+            steps: [
+              "The temperature in a city is modeled by $T(t) = 20 + 10\\sin(\\frac{\\pi}{12}t)$ degrees Celsius, where $t$ is hours after midnight. Find the average temperature from 6am to 6pm ($t=6$ to $t=18$).",
+              "Average value = $\\frac{1}{18-6} \\int_6^{18} (20 + 10\\sin(\\frac{\\pi}{12}t))\\,dt = \\frac{1}{12} \\left[ 20t - \\frac{120}{\\pi} \\cos(\\frac{\\pi}{12}t) \\right]_6^{18}$.",
+              "At $t=18$: $20\\cdot18 - \\frac{120}{\\pi}\\cos(\\frac{3\\pi}{2}) = 360 - 0 = 360$.",
+              "At $t=6$: $20\\cdot6 - \\frac{120}{\\pi}\\cos(\\frac{\\pi}{2}) = 120 - 0 = 120$.",
+              "Difference: $240$. Divide by 12: average = $20$°C.",
+              "Interestingly, the average is exactly the constant term because the sine wave is symmetric over that interval.",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Hydrostatic force",
+        section: "hydrostatic",
+        body: [
+          "When a vertical plate is submerged in a fluid, the pressure increases with depth. The total force on the plate is found by integrating pressure times width over depth: $F = \\int_a^b \\rho g \\cdot d(y) \\cdot w(y)\\,dy$, where $\\rho$ is fluid density, $g$ is gravity, $d(y)$ is depth at height $y$, and $w(y)$ is the width of the plate at that height.",
+          "Pressure at depth $d$ is $P = \\rho g d$ (Pascal's law). Force on a thin horizontal strip is pressure times area of the strip.",
+          "This is why dams are much thicker at the bottom than the top — the force grows quadratically with depth.",
+          "Common setups: rectangular gates, triangular dams, circular windows on submarines or aquariums. The key is expressing the width $w(y)$ and depth $d(y)$ correctly in terms of the integration variable.",
+        ],
+        eli5: [
+          "Water pushes harder the deeper you go. At the surface there's almost no pressure. At the bottom of a deep pool it can crush things. To find the total push on a submerged gate or dam, you can't just use one pressure value — you have to slice the gate into thin horizontal strips, calculate the force on each strip (which depends on how deep it is), and add them all up. That's the integral.",
+        ],
+        examples: [
+          {
+            title: "Force on a rectangular dam gate",
+            steps: [
+              "A rectangular gate 3 meters wide and 2 meters tall is submerged vertically in water so that its top is 4 meters below the surface. Find the total hydrostatic force on the gate. (Use $\\rho g = 9800$ N/m³ for water.)",
+              "Set $y=0$ at the top of the gate, $y$ positive downward. Then depth at position $y$ is $d(y) = 4 + y$, and width $w(y) = 3$ (constant).",
+              "The gate goes from $y=0$ to $y=2$.",
+              "$F = \\int_0^2 9800 \\cdot (4 + y) \\cdot 3\\,dy = 29400 \\int_0^2 (4 + y)\\,dy = 29400 \\left[ 4y + \\frac{y^2}{2} \\right]_0^2$.",
+              "Evaluate: $4(2) + \\frac{4}{2} = 8 + 2 = 10$.",
+              "$F = 29400 \\cdot 10 = 294{,}000$ N.",
+              "Note: if we had (incorrectly) used the pressure at the top for the whole gate, we would have gotten a much smaller answer.",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Center of mass and moments",
+        section: "centerofmass",
+        body: [
+          "For a thin rod or wire lying along the x-axis from $a$ to $b$ with linear density $\\rho(x)$, the total mass is $m = \\int_a^b \\rho(x)\\,dx$.",
+          "The first moment about the origin is $M_0 = \\int_a^b x \\rho(x)\\,dx$. The center of mass (balance point) is then $\\bar{x} = \\frac{M_0}{m} = \\frac{\\int_a^b x \\rho(x)\\,dx}{\\int_a^b \\rho(x)\\,dx}$.",
+          "This is the point where the object would balance if placed on a fulcrum. It is the 'weighted average' position, weighted by mass.",
+          "If density is constant, the center of mass is simply the midpoint. Variable density pulls the center of mass toward the heavier parts.",
+          "The same idea extends to 2D and 3D objects (double and triple integrals), which is covered in multivariable calculus.",
+        ],
+        eli5: [
+          "Imagine a seesaw with different weights at different positions. The balance point isn't the middle if one side is heavier. The center of mass is the single point where all the mass can be imagined to be concentrated so that the total turning effect (moment) is the same. For a non-uniform rod, you find it by integrating position × density and dividing by total mass.",
+        ],
+        examples: [
+          {
+            title: "Center of mass of a non-uniform rod",
+            steps: [
+              "A rod extends from $x=0$ to $x=4$ meters. Its density is $\\rho(x) = 3x$ kg/m. Find the center of mass.",
+              "Mass: $m = \\int_0^4 3x\\,dx = \\frac{3}{2}x^2 \\Big|_0^4 = 24$ kg.",
+              "Moment: $M_0 = \\int_0^4 x \\cdot 3x\\,dx = 3 \\int_0^4 x^2\\,dx = x^3 \\Big|_0^4 = 64$.",
+              "Center of mass: $\\bar{x} = \\frac{64}{24} = \\frac{8}{3} \\approx 2.667$ meters from the left end.",
+              "Because density increases with $x$, the center of mass is pulled to the right of the midpoint (2 m).",
+            ],
+          },
+        ],
+      },
     ],
     examples: [],
     commonMistakes: [
@@ -197,5 +275,9 @@ export const applicationsOfIntegrationModule: ModuleContent = {
       "In arc length, forgetting to take the derivative. The formula involves $f'(x)$, not $f(x)$.",
       "Not adjusting radii when rotating around a line other than an axis. If rotating around $y = 3$, the radius is $|f(x) - 3|$, not $f(x)$.",
       "Confusing the parameter $t$ with $x$ in parametric problems. $\\frac{dy}{dx} \\neq \\frac{dy}{dt}$; you need $\\frac{dy/dt}{dx/dt}$.",
+      "Using pressure at the top of a plate for the entire hydrostatic force calculation. Pressure changes with depth — you must integrate.",
+      "Forgetting the factor of $\\frac{1}{b-a}$ when computing average value (just doing the integral alone gives total accumulation, not the average).",
+      "In center of mass, forgetting to divide the moment by the total mass. $\\int x\\rho(x)\\,dx$ is the moment, not the center of mass.",
+      "Mixing up the single-variable center of mass formulas with the 2D versions that use double integrals.",
     ],
   };

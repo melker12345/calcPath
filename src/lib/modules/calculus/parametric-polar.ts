@@ -1,0 +1,232 @@
+import type { ModuleContent } from "../types";
+
+/**
+ * Parametric Equations and Polar Coordinates
+ *
+ * New dedicated module to provide proper depth for what the reference
+ * data treats as a full chapter (JSON Chapter 7).
+ * This significantly expands on the very light "parametric" section
+ * that previously lived inside applications-of-integration.
+ */
+export const parametricPolarModule: ModuleContent = {
+  topicId: "parametric-polar",
+  title: "Parametric Equations and Polar Coordinates",
+  intro: [
+    "Most curves you meet in calculus are written as $y = f(x)$ or $x = g(y)$. But many important paths in physics, engineering, and geometry are much more natural to describe with a *parameter* that is neither $x$ nor $y$.",
+    "Parametric equations let you express both $x$ and $y$ as functions of a third variable (usually $t$). This is the language of motion: $t$ is time, $(x(t), y(t))$ is position. It also unlocks beautiful curves that would be impossible or ugly to write in rectangular form.",
+    "Polar coordinates take a different approach: instead of measuring horizontal and vertical distance from the origin, you measure distance from the origin ($r$) and the angle from the positive $x$-axis ($\\theta$). Many problems involving circles, spirals, and rotational symmetry become dramatically simpler in polar form.",
+    "Together, these two ideas form a powerful toolkit for describing and analyzing curves that don't play nicely with the standard $y = f(x)$ mindset.",
+  ],
+  sections: [
+    {
+      title: "Parametric equations: curves with a parameter",
+      section: "parametric-basics",
+      body: [
+        "A parametric curve is defined by a pair of functions $x = x(t)$ and $y = y(t)$ where the parameter $t$ varies over some interval. As $t$ changes, the point $(x(t), y(t))$ traces out a path in the plane.",
+        "The classic example is the unit circle: $x = \\cos t$, $y = \\sin t$, $t \\in [0, 2\\pi]$. Here $t$ represents the angle from the positive $x$-axis. Eliminating the parameter gives the familiar $x^2 + y^2 = 1$, but the parametric form tells you *how* the curve is traversed (counterclockwise starting from $(1,0)$ at $t=0$).",
+        "Parametric form is often the most natural description in physics. A projectile's position might be $x = (v_0 \\cos \\alpha) t$, $y = (v_0 \\sin \\alpha) t - \\frac{1}{2}gt^2$. The parameter $t$ is literally time.",
+        "You can also have curves that are not functions at all. The curve $x = t^3 - 3t$, $y = t^2$ crosses itself and fails the vertical line test, yet it is perfectly well-defined parametrically.",
+        "To eliminate the parameter and get a relation between $x$ and $y$, solve one equation for $t$ and substitute into the other (when possible). This is often messy or impossible, which is exactly why parametric form is useful.",
+      ],
+      eli5: [
+        "Imagine you're drawing a curve by following a set of instructions that say 'at time t, be at this x and this y.' The instructions are two separate functions of t. As time marches forward, your pencil traces the path. Sometimes the same point on the page gets visited at two different times — that's perfectly allowed in parametric land.",
+      ],
+      examples: [
+        {
+          title: "Eliminating the parameter",
+          steps: [
+            "Given $x = 2\\cos t$ and $y = 3\\sin t$, $0 \\le t \\le 2\\pi$, eliminate $t$ to find the Cartesian equation.",
+            "Solve for the trig functions: $\\cos t = x/2$, $\\sin t = y/3$.",
+            "Use the identity $\\cos^2 t + \\sin^2 t = 1$: $(x/2)^2 + (y/3)^2 = 1$.",
+            "This is the equation of an ellipse centered at the origin with semi-major axis 3 (along y) and semi-minor axis 2 (along x).",
+            "The parametric equations also tell us the curve is traced counterclockwise starting from (2,0) when t=0.",
+          ],
+        },
+      ],
+    },
+    {
+      title: "Derivatives and tangent lines for parametric curves",
+      section: "parametric-derivatives",
+      body: [
+        "The slope of the tangent line to a parametric curve is given by $\\frac{dy}{dx} = \\frac{dy/dt}{dx/dt} = \\frac{y'(t)}{x'(t)}$, provided $x'(t) \\neq 0$.",
+        "This is just the chain rule in disguise. If $y$ is a function of $t$ and $t$ is a function of $x$ (implicitly), then $\\frac{dy}{dx} = \\frac{dy}{dt} \\cdot \\frac{dt}{dx} = \\frac{y'(t)}{x'(t)}$.",
+        "The second derivative is more subtle: $\\frac{d^2 y}{dx^2} = \\frac{d}{dt} \\left( \\frac{dy}{dx} \\right) \\bigg/ \\frac{dx}{dt} = \\frac{d}{dt} \\left( \\frac{y'(t)}{x'(t)} \\right) \\cdot \\frac{1}{x'(t)}$.",
+        "Horizontal tangents occur where $y'(t) = 0$ and $x'(t) \\neq 0$. Vertical tangents occur where $x'(t) = 0$ and $y'(t) \\neq 0$. If both are zero at the same $t$, you must investigate further (it may be a cusp or corner).",
+        "The direction of motion matters. As $t$ increases, you travel along the curve in a specific direction. Reversing the direction of $t$ reverses the orientation of the curve.",
+      ],
+      eli5: [
+        "Think of the curve as the path of a car. The parameter t is the stopwatch. The velocity vector is (x'(t), y'(t)). The slope of the road at that instant is rise over run = (vertical speed) / (horizontal speed) = y'(t)/x'(t). If the car is moving purely vertically at that moment (x'(t)=0), the road is vertical — a vertical tangent.",
+      ],
+      examples: [
+        {
+          title: "Tangent line to a parametric curve",
+          steps: [
+            "Find the equation of the tangent line to the curve $x = t^2$, $y = t^3$ at the point corresponding to $t=1$.",
+            "Compute derivatives: $x'(t) = 2t$, $y'(t) = 3t^2$.",
+            "Slope: $\\frac{dy}{dx} = \\frac{3t^2}{2t} = \\frac{3t}{2}$ (for $t \\neq 0$).",
+            "At $t=1$: slope = $\\frac{3}{2}$.",
+            "Point: $x=1^2=1$, $y=1^3=1$, so the point is $(1,1)$.",
+            "Tangent line: $y - 1 = \\frac{3}{2}(x - 1)$, or $y = \\frac{3}{2}x - \\frac{1}{2}$.",
+          ],
+        },
+      ],
+    },
+    {
+      title: "Arc length of parametric curves",
+      section: "parametric-arclength",
+      body: [
+        "The arc length of a parametric curve $x=x(t)$, $y=y(t)$ from $t=a$ to $t=b$ is $L = \\int_a^b \\sqrt{ [x'(t)]^2 + [y'(t)]^2 }\\,dt$.",
+        "This is the natural generalization of the rectangular arc length formula. The speed of the particle at time $t$ is $\\sqrt{ [x'(t)]^2 + [y'(t)]^2 }$, so the distance traveled is the integral of speed over time.",
+        "Important: the formula uses the *speed*, which is always positive. If the particle reverses direction, the arc length still accumulates positively. You do not get cancellation.",
+        "If the curve is traversed more than once (the parameter interval covers the same path multiple times), the integral will count the length multiple times. Trim the interval if you want the length of the image only.",
+        "Many parametric arc length integrals have no elementary antiderivative. The cycloid is a famous example where the integral can be done but produces a somewhat ugly expression.",
+      ],
+      examples: [
+        {
+          title: "Arc length of a parametric curve",
+          steps: [
+            "Find the length of the curve $x = t^3$, $y = 3t^2/2$ from $t=0$ to $t=1$.",
+            "Derivatives: $x' = 3t^2$, $y' = 3t$.",
+            "$L = \\int_0^1 \\sqrt{(3t^2)^2 + (3t)^2}\\,dt = \\int_0^1 \\sqrt{9t^4 + 9t^2}\\,dt = \\int_0^1 3t \\sqrt{t^2 + 1}\\,dt$.",
+            "Substitute $u = t^2 + 1$, $du = 2t\\,dt$, so $\\frac{3}{2} du = 3t\\,dt$.",
+            "When $t=0$, $u=1$; when $t=1$, $u=2$.",
+            "$L = \\frac{3}{2} \\int_1^2 \\sqrt{u}\\,du = \\frac{3}{2} \\cdot \\frac{2}{3} [u^{3/2}]_1^2 = [u^{3/2}]_1^2 = 2^{3/2} - 1 = 2\\sqrt{2} - 1$.",
+          ],
+        },
+      ],
+    },
+    {
+      title: "Areas and other integrals with parametric curves",
+      section: "parametric-area",
+      body: [
+        "The area under a parametric curve (above the x-axis) from $t=a$ to $t=b$ is $A = \\int_a^b y(t) \\cdot x'(t)\\,dt$, assuming the curve is traversed left to right ($x'$ positive).",
+        "If the curve is traversed right to left, the integral will be negative; take the absolute value or swap limits.",
+        "For a closed curve traversed counterclockwise, the area enclosed is $A = \\frac{1}{2} \\int_a^b (x y' - y x')\\,dt$ (Green's theorem in disguise).",
+        "This is extremely useful for curves like the astroid or hypocycloids where expressing y as a function of x is ugly or multi-valued.",
+        "You can also compute volumes, surface areas, centroids, etc., by replacing the usual $dx$ or $dy$ with the appropriate parametric differential.",
+      ],
+      examples: [
+        {
+          title: "Area under a parametric curve",
+          steps: [
+            "Find the area under one arch of the cycloid $x = a(t - \\sin t)$, $y = a(1 - \\cos t)$, $0 \\le t \\le 2\\pi$.",
+            "Here $x' = a(1 - \\cos t)$, which is $\u2265 0$ on $[0, 2\\pi]$.",
+            "$A = \\int_0^{2\\pi} y(t) \\cdot x'(t)\\,dt = \\int_0^{2\\pi} a(1-\\cos t) \\cdot a(1 - \\cos t)\\,dt = a^2 \\int_0^{2\\pi} (1 - \\cos t)^2\\,dt$.",
+            "Expand: $(1 - 2\\cos t + \\cos^2 t)$. Use $\\cos^2 t = \\frac{1 + \\cos 2t}{2}$.",
+            "Integral becomes $a^2 \\int_0^{2\\pi} \\left( \\frac{3}{2} - 2\\cos t + \\frac{1}{2}\\cos 2t \\right) dt = a^2 \\left[ \\frac{3}{2}t - 2\\sin t + \\frac{1}{4}\\sin 2t \\right]_0^{2\\pi} = a^2 \\cdot 3\\pi$.",
+            "The area under one arch is $3\\pi a^2$.",
+          ],
+        },
+      ],
+    },
+    {
+      title: "Introduction to polar coordinates",
+      section: "polar-intro",
+      body: [
+        "In polar coordinates, a point is identified by $(r, \\theta)$ where $r \\ge 0$ is the distance from the origin and $\\theta$ is the angle from the positive $x$-axis (usually in radians, measured counterclockwise).",
+        "Conversion formulas: $x = r \\cos \\theta$, $y = r \\sin \\theta$, and $r = \\sqrt{x^2 + y^2}$, $\\theta = \\tan^{-1}(y/x)$ (with quadrant adjustment).",
+        "A single point has infinitely many polar representations: $(r, \\theta) = (r, \\theta + 2k\\pi)$ for any integer $k$. Also, $(r, \\theta) = (-r, \\theta + \\pi)$. Negative $r$ means you go in the opposite direction of $\\theta$.",
+        "Polar coordinates shine when a curve has rotational symmetry or is defined by a simple relationship between distance from origin and angle (e.g., $r = 2\\cos \\theta$ is a circle).",
+        "The origin is $r=0$; $\\theta$ can be anything. This is a singularity of the coordinate system — many different angles describe the same point.",
+      ],
+      eli5: [
+        "Instead of saying 'go 3 right and 4 up,' you say 'go 5 units at an angle of about 53 degrees from the x-axis.' Both describe the same point, but one is much more natural when you're dealing with things that spin or radiate outward from a center (radar, flowers, ripples in a pond).",
+      ],
+    },
+    {
+      title: "Area in polar coordinates",
+      section: "polar-area",
+      body: [
+        "The area swept out by a polar curve $r = f(\\theta)$ from $\\theta = \\alpha$ to $\\theta = \\beta$ is $A = \\frac{1}{2} \\int_\\alpha^\\beta [f(\\theta)]^2\\,d\\theta$.",
+        "Derivation: a tiny angle $d\\theta$ creates a thin sector. The area of a sector of a circle is $\\frac{1}{2} r^2 \\Delta \\theta$. Replacing $r$ with $f(\\theta)$ and $d\\theta$ for $\\Delta \\theta$ and integrating gives the formula.",
+        "The $\\frac{1}{2} r^2$ is crucial. Forgetting the square or the 1/2 is a very common error.",
+        "If the curve passes through the origin or has loops (like a rose curve), you may need to be careful with the limits so you don't double-count or miss petals.",
+        "Symmetry can dramatically simplify the integral. A rose curve with 3 petals only needs integration over an interval that covers one petal, then multiply by 3.",
+      ],
+      eli5: [
+        "Imagine the origin is a lighthouse and the curve is the edge of a lawn. As the beam of light sweeps from angle alpha to beta, it paints a region. The area of that painted region is what the integral computes. The r squared comes from the fact that area grows with the square of distance from the center.",
+      ],
+      examples: [
+        {
+          title: "Area inside a cardioid",
+          steps: [
+            "Find the area inside the cardioid $r = 2(1 + \\cos \\theta)$.",
+            "The cardioid is traced once as $\\theta$ goes from 0 to $2\\pi$.",
+            "$A = \\frac{1}{2} \\int_0^{2\\pi} [2(1 + \\cos \\theta)]^2 d\\theta = \\frac{1}{2} \\int_0^{2\\pi} 4(1 + 2\\cos \\theta + \\cos^2 \\theta) d\\theta = 2 \\int_0^{2\\pi} (1 + 2\\cos \\theta + \\frac{1+\\cos 2\\theta}{2}) d\\theta$.",
+            "Simplify integrand: $1 + 2\\cos \\theta + \\frac{1}{2} + \\frac{1}{2}\\cos 2\\theta = \\frac{3}{2} + 2\\cos \\theta + \\frac{1}{2}\\cos 2\\theta$.",
+            "Integral: $2 \\left[ \\frac{3}{2}\\theta + 2\\sin \\theta + \\frac{1}{4}\\sin 2\\theta \\right]_0^{2\\pi} = 2 \\cdot \\frac{3}{2} \\cdot 2\\pi = 6\\pi$.",
+            "Area inside the cardioid is $6\\pi$.",
+          ],
+        },
+      ],
+    },
+    {
+      title: "Area between polar curves",
+      section: "polar-areabetween",
+      body: [
+        "The area between two polar curves $r = f(\\theta)$ (outer) and $r = g(\\theta)$ (inner) from $\\alpha$ to $\\beta$ is $A = \\frac{1}{2} \\int_\\alpha^\\beta \\left( [f(\\theta)]^2 - [g(\\theta)]^2 \\right) d\\theta$.",
+        "You must correctly identify which curve is outside in each interval. Plot or use test points.",
+        "When curves intersect, solve $f(\\theta) = g(\\theta)$ for the limits of integration. Remember that $r$ can be zero or negative in polar, so intersections at the origin are common and sometimes tricky.",
+        "Rose curves, limaçons, and cardioids frequently produce beautiful region problems that are far easier in polar than in Cartesian coordinates.",
+      ],
+      examples: [
+        {
+          title: "Area between two polar curves",
+          steps: [
+            "Find the area between the circle $r = 2$ and the cardioid $r = 2(1 + \\cos \\theta)$ in the region where the cardioid is inside the circle.",
+            "They intersect when $2 = 2(1 + \\cos \\theta) \\Rightarrow \\cos \\theta = 0 \Rightarrow \\theta = \\pm \\pi/2$.",
+            "On $[-\\pi/2, \\pi/2]$ the cardioid is to the right (larger r for most angles). Actually for this pair the cardioid bulges to the right and lies partly inside and partly outside the circle.",
+            "Better test: at $\\theta=0$, cardioid r=4, circle r=2, so cardioid is outside near $\\theta=0$.",
+            "The area we want is the region inside the cardioid but outside the circle between the intersection angles: $A = \\frac{1}{2} \\int_{-\\pi/2}^{\\pi/2} [(2+2\\cos \\theta)^2 - 2^2] d\\theta$.",
+            "This evaluates to $2 + \\pi$ after simplification (standard result for this pair).",
+          ],
+        },
+      ],
+    },
+    {
+      title: "Arc length in polar coordinates",
+      section: "polar-arclength",
+      body: [
+        "The arc length of a polar curve $r = f(\\theta)$ from $\\theta = \\alpha$ to $\\theta = \\beta$ is $L = \\int_\\alpha^\\beta \\sqrt{ r^2 + \\left( \\frac{dr}{d\\theta} \\right)^2 }\\,d\\theta$.",
+        "Derivation: convert to parametric form with parameter $\\theta$: $x = r\\cos \\theta$, $y = r\\sin \\theta$. Then compute $dx$ and $dy$, square, add, take square root. After simplification using $r^2 = x^2 + y^2$ you arrive at the formula.",
+        "The term under the square root has a nice geometric meaning: $r^2 + (dr/d\\theta)^2$ is like (radial component)^2 + (transverse component)^2 of the velocity when moving along the curve.",
+        "Again, many polar arc length integrals do not have elementary antiderivatives. The cardioid and some limaçons are classic examples.",
+      ],
+    },
+    {
+      title: "Calculus with polar curves",
+      section: "polar-calculus",
+      body: [
+        "To find the slope of a tangent line to $r = f(\\theta)$, convert to parametric form with parameter $\\theta$ and use $\\frac{dy}{dx} = \\frac{dy/d\\theta}{dx/d\\theta}$.",
+        "Explicitly: $x = r \\cos \\theta$, $y = r \\sin \\theta$, so $dx/d\\theta = dr/d\\theta \\cos \\theta - r \\sin \\theta$, $dy/d\\theta = dr/d\\theta \\sin \\theta + r \\cos \\theta$.",
+        "Horizontal tangents when $dy/d\\theta = 0$ (and $dx/d\\theta \neq 0$). Vertical when $dx/d\\theta = 0$.",
+        "At the origin ($r=0$), the tangent direction is often given by the angle where the curve passes through the pole.",
+        "These formulas let you do full calculus (tangents, concavity, arc length, area) without ever leaving polar coordinates when that is more convenient.",
+      ],
+    },
+    {
+      title: "Conic sections in polar form",
+      section: "polar-conics",
+      body: [
+        "All conic sections (ellipses, parabolas, hyperbolas) can be written in the unified polar form $r = \\frac{ed}{1 - e \\cos \\theta}$ (or sin, depending on orientation), where $e$ is the eccentricity and $d$ is the directrix distance.",
+        "Eccentricity $e$: if $e < 1$ the conic is an ellipse; $e=1$ parabola; $e>1$ hyperbola.",
+        "This polar representation is extremely useful in orbital mechanics (Kepler's laws, Newton's law of gravitation). The sun sits at one focus, and the polar equation describes the planet's orbit directly.",
+        "You can derive the polar form of a conic from the definition (set of points where distance to focus / distance to directrix = e) using the law of cosines in the appropriate triangle.",
+        "While you may not need to derive it often, recognizing the form lets you instantly identify the type of conic and its key parameters from a polar equation.",
+      ],
+      eli5: [
+        "The ancients discovered that slicing a cone at different angles gives circles, ellipses, parabolas, and hyperbolas. It turns out they all obey one elegant rule involving a focus point and a directrix line. In polar coordinates centered at the focus, that rule becomes a beautifully simple equation with a single parameter e that tells you which conic you're looking at.",
+      ],
+    },
+  ],
+  examples: [],
+  commonMistakes: [
+    "Forgetting the square on r in the polar area formula: it is (1/2)\u222b r^{2} d\theta, not (1/2)\u222b r d\theta.",
+    "Using the wrong curve as 'outer' when computing area between polar curves. Always check a test angle.",
+    "Confusing dx/dt with the speed when computing parametric arc length. You need the magnitude of the velocity vector.",
+    "Forgetting that negative r in polar means going in the opposite direction. This can cause you to plot points in the wrong quadrant.",
+    "Treating the parameter interval as the geometric length. A curve can be traversed slowly or quickly; arc length cares about the actual distance traveled, not the range of t.",
+    "When converting polar area problems to Cartesian, making the integral much harder than necessary. Stay in polar when the region has circular symmetry.",
+    "At points where both x'(t)=0 and y'(t)=0 in parametric form, blindly concluding there is no tangent. There may be a cusp (like t^{2/3}) that still has a well-defined direction.",
+  ],
+};

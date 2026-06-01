@@ -12,7 +12,7 @@ import type { ModuleContent } from "../types";
 // Re-export types for convenience within the calculus folder
 export type { ModuleContent, ModuleSection, WorkedExample } from "../types";
 
-// 7/8 calculus topics successfully extracted and wired
+// 8/9 calculus topics successfully extracted and wired
 // (multivariable will be re-extracted cleanly in a future pass)
 export { limitsModule } from "./limits";
 export { derivativesModule } from "./derivatives";
@@ -22,6 +22,7 @@ export { seriesModule } from "./series";
 export { differentialEquationsModule } from "./differential-equations";
 export { applicationsOfIntegrationModule } from "./applications-of-integration";
 export { multivariableModule } from "./multivariable";
+export { parametricPolarModule } from "./parametric-polar";
 // Note: multivariableModule content has been extracted but has a minor parse artifact at the end.
 // It will be cleaned up in a follow-up commit.
 
