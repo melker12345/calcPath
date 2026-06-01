@@ -31,7 +31,7 @@ export default function ExperimentalHome() {
         </p>
       </div>
 
-      <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-900/60 dark:bg-amber-950/30">
+      <div className="mb-6 rounded-xl border theme-border bg-[var(--surface-2)] p-4 text-sm">
         <strong className="theme-text">Current status:</strong> Browse + explanation (MDX) + working practice (generic components). See NOTES.md for decisions + limitations.
       </div>
 
@@ -53,13 +53,13 @@ export default function ExperimentalHome() {
             <div className="mt-4 flex flex-wrap gap-3">
               <Link
                 href={`/x/${s.slug}`}
-                className="inline-flex items-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black active:scale-[0.985] dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+                className="btn-primary inline-flex items-center px-4 py-2 text-sm"
               >
                 Browse topics →
               </Link>
               <Link
                 href={`/x/${s.slug}/practice`}
-                className="inline-flex items-center rounded-lg border theme-border px-4 py-2 text-sm font-medium hover:bg-[var(--surface-2)]"
+                className="btn-secondary inline-flex items-center px-4 py-2 text-sm"
               >
                 Practice overview (soon)
               </Link>
