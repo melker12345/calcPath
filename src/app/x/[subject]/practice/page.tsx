@@ -23,7 +23,7 @@ export default async function DynamicPracticeIndex({ params }: Props) {
     <div className="px-4 py-8 sm:px-6 sm:py-12">
       <Link href={`/x/${subjectSlug}`} className="text-sm text-blue-700 hover:underline">← Back to {config.label} topics</Link>
 
-      <h1 className="mt-4 text-2xl font-semibold">Practice — {config.label}</h1>
+      <h1 className="mt-4 text-2xl font-semibold font-serif">Practice — {config.label}</h1>
       <p className="text-sm text-zinc-500">Choose a topic. All data from content/ only.</p>
 
       <div className="mt-6 grid gap-3">

@@ -45,7 +45,7 @@ export default async function DynamicSubjectPage({ params }: Props) {
         <div className="flex items-center gap-3">
           <span className="text-4xl">{config.icon}</span>
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">{config.label}</h1>
+            <h1 className="text-3xl font-semibold tracking-tight font-serif">{config.label}</h1>
             <p className="text-zinc-600 dark:text-zinc-400">{config.shortDescription}</p>
           </div>
         </div>

@@ -23,12 +23,14 @@ export function GenericModuleViewer({
   mdxSource,
   subjectSlug,
   backHref,
+  subjectIcon,
 }: {
   topicId: string;
   title: string;
   mdxSource: string;
   subjectSlug: string;
   backHref?: string;
+  subjectIcon?: string;
 }) {
   // Strip frontmatter
   const withoutFrontmatter = mdxSource.replace(/^---\s*[\s\S]*?---\s*/, "");
@@ -103,10 +105,10 @@ export function GenericModuleViewer({
       const Tag = block.level === 1 ? "h1" : block.level === 2 ? "h2" : "h3";
       const className =
         block.level === 1
-          ? "mt-8 mb-3 text-2xl font-semibold tracking-tight theme-text scroll-mt-24"
+          ? "mt-8 mb-3 text-2xl font-semibold tracking-tight theme-text font-serif scroll-mt-24"
           : block.level === 2
-          ? "mt-6 mb-2 text-xl font-semibold theme-text scroll-mt-20"
-          : "mt-4 mb-1.5 text-lg font-semibold theme-text scroll-mt-16";
+          ? "mt-6 mb-2 text-xl font-semibold theme-text font-serif scroll-mt-20"
+          : "mt-4 mb-1.5 text-lg font-semibold theme-text font-serif scroll-mt-16";
       return (
         <Tag id={block.id} key={idx} className={className}>
           {renderInline(block.content)}
@@ -146,7 +148,10 @@ export function GenericModuleViewer({
         </Link>
       </div>
 
-      <h1 className="text-3xl font-semibold tracking-tight theme-text sm:text-4xl">{title}</h1>
+      <div className="flex items-center gap-3">
+        {subjectIcon && <span className="text-3xl" aria-hidden>{subjectIcon}</span>}
+        <h1 className="text-3xl font-semibold tracking-tight theme-text font-serif sm:text-4xl">{title}</h1>
+      </div>
       <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">Source: content/{subjectSlug}/topics/{topicId}/module.mdx (raw, rendered lightly)</p>
 
       <div className="mt-6">

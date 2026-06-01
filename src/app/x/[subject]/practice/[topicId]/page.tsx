@@ -52,6 +52,7 @@ export default async function DynamicPracticePage({ params }: Props) {
       problems={bundle.problems} // pass full; component filters safely
       subjectSlug={subjectSlug}
       subjectLabel={bundle.config.label}
+      subjectIcon={bundle.config.icon}
     />
   );
 }

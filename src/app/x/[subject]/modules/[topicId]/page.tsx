@@ -39,6 +39,7 @@ export default async function DynamicModulePage({ params }: Props) {
       title={mdxModule.title || topic.title}
       mdxSource={mdxModule.mdxSource}
       subjectSlug={subjectSlug}
+      subjectIcon={bundle.config.icon}
     />
   );
 }

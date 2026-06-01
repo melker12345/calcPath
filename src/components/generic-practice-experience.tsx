@@ -37,11 +37,13 @@ export function GenericPracticeExperience({
   problems: allTopicProblems,
   subjectSlug,
   subjectLabel,
+  subjectIcon,
 }: {
   topic: Topic;
   problems: Problem[];
   subjectSlug: string;
   subjectLabel: string;
+  subjectIcon?: string;
 }) {
   const params = useParams<{ topicId: string }>();
   const topicId = params?.topicId ?? topic.id;
@@ -85,6 +87,10 @@ export function GenericPracticeExperience({
     () => (current ? detectQuestionContext(current.prompt) : undefined),
     [current]
   );
+
+  // Map /x/ slug to MathInput's expected subject key for any subject-specific theming (accents etc).
+  // Falls back safely; currently all SUBJECT_THEME entries are visually identical.
+  const mathInputSubject = (subjectSlug === "linear-algebra" ? "linalg" : subjectSlug === "statistics" ? "stats" : subjectSlug === "calculus" ? "calculus" : "calculus") as "calculus" | "linalg" | "stats";
 
   if (!topic) {
     return <div className="p-8 text-sm text-stone-600">Topic not found in data.</div>;
@@ -176,9 +182,12 @@ export function GenericPracticeExperience({
     <div className="mx-auto w-full max-w-3xl px-0 pb-0 sm:px-6 sm:py-10">
       {/* Header */}
       <div className="mb-5 hidden sm:flex sm:items-center sm:justify-between px-1">
-        <div>
-          <h1 className="text-2xl font-bold theme-text">{topic.title}</h1>
-          <p className="mt-0.5 text-sm text-zinc-500 dark:text-[var(--text-muted)]">{topic.description}</p>
+        <div className="flex items-center gap-3">
+          {subjectIcon && <span className="text-3xl" aria-hidden>{subjectIcon}</span>}
+          <div>
+            <h1 className="text-2xl font-bold theme-text font-serif">{topic.title}</h1>
+            <p className="mt-0.5 text-sm text-zinc-500 dark:text-[var(--text-muted)]">{topic.description}</p>
+          </div>
         </div>
         <span className="text-sm text-zinc-500">{solvedCount}/{displayProblems.length} mastered</span>
       </div>
@@ -201,7 +210,7 @@ export function GenericPracticeExperience({
 
         {/* Question prompt */}
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-5 text-center">
-          <div role="heading" aria-level={2} className="text-lg font-semibold leading-relaxed sm:text-2xl">
+          <div role="heading" aria-level={2} className="text-lg font-semibold leading-relaxed sm:text-2xl font-serif">
             <RichPrompt value={current.prompt} />
           </div>
 
@@ -254,7 +263,7 @@ export function GenericPracticeExperience({
             onChange={setAnswer}
             onSubmit={() => submitAnswer(answer)}
             onHint={useHint}
-            subject="generic" /* experimental - uses broad heuristics */
+            subject={mathInputSubject}
             hintDisabled={feedback?.type === "correct" || (feedback?.type === "incorrect" && (feedback.hintUsed || feedback.showSolution))}
             questionContext={questionContext}
             answerHint={current.answer}
