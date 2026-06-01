@@ -99,36 +99,74 @@
 - Frequent small commits + regular NOTES updates.
 - Validation via schema + existing test harness.
 
-## Next Experiments (current focus) — Practice Page Generalization Agent (2026-06-01)
+## Next Experiments (current focus)
 
-### Progress (Practice Generalization)
-- [x] Extended FS loader (`getFileSystemContentBundle` + `loadCalculusFromContent()`) to support **all three subjects** (la, stats, calculus) now that full content/ ports exist. Small isolated commit. (Previously only la+stats.)
-- [x] Enhanced shared practice primitives: extracted `extractSteps` / `extractFinalAnswer` / `getDefaultHint` from PracticeFeedback into public exports. Used by generic; eliminates future duplication. Commit.
-- [x] Created `src/components/generic-practice/GenericPracticeExperience.tsx` (production-quality, ~200 LOC focused impl) + index.
-  - **Primary input**: `FileSystemContentBundle` (cleanly) + `topicId`.
-  - Full support: numeric + mcq (all types), hints/solutions (via shared parsers), progress/resume/shuffle/dots/skip, topic switching (built-in selector + onTopicSwitch prop for adapters), module review links (default uses #section from MDX anchors), MathInput subject mapping.
-  - Built 100% on `usePracticeSession` + `ProgressDots` + `PracticeFeedback` (no local duplication of overlays/steps).
-  - Self-contained submit/useHint logic + error states.
-  - Supports both controlled topicId (for page wrappers) and internal switching (for demos).
-- [x] Clear documented migration/adapter path **inside the component JSDoc** + this NOTES: existing pages can adopt gradually via experimental flag / wrapper without any edits to the 3 main `app/*/practice/[topicId]/page.tsx`.
-- Frequent small clean commits made throughout (loader, primitives, component, docs).
-- Type-checked cleanly (`tsc --noEmit`); loader tests would pass (env constrained).
-- Does not modify any of the three subject practice pages, legacy *-content.ts, or module pages.
+- [ ] Prototype a generic (data-only) practice page / component that consumes Problem[] + Topic from a loaded bundle (avoiding large changes to the 3 existing subject practice pages)
+- [ ] Introduce thin vertical slice demo (e.g. dev-only page or parallel structure) to prove end-to-end from `getSubjectBundle("linear-algebra")` → generic UI
+- [ ] Design decision needed: how/when to introduce generic dynamic routes (`[subject]`) without conflicting with existing static subject folders or requiring big refactors
+- [ ] Decide on stable ID policy + migration strategy for when we move content to JSON/MDX (progress compatibility critical)
+- [ ] Expand loader adapters for Calculus + Statistics (after LA slice validated)
 
-### Blockers / Remaining for Full Generic Production + Switchover
-- **No thin vertical slice demo page yet** (intentionally avoided creating new app/ routes or temp files per "never create unless absolutely necessary" + "do not modify main pages"). Can be added later behind /dev or feature flag in a follow-up.
-- **Loader still has duplicated load*FromContent bodies** (la/stats/calc ~identical); a future small refactor to private `loadSubjectFromContent(slug)` would be ideal for maintainability (not blocking).
-- **MathInput subject theming** still limited to 3 hardcoded keys (we provide best-effort map; future: make MathInput accept more generic config or slug).
-- **Analytics / tracking**: Generic does not yet fire the subject-specific `trackEvent` calls present in some pages (calc especially). Can be added as optional `onEvent` callback prop.
-- **Dynamic routes**: Still open design question (see below). Generic component is route-agnostic, ready for when `[subject]/practice/[topicId]` arrives.
-- **Stable IDs**: Already compatible (JSON problems use same ids as legacy).
-- **Per-section filter** (used by calc): Not yet exposed as prop on Generic (easy future addition via usePracticeSession sectionFilter).
-- **Rich MDX in practice?** Currently questions still carry legacy "explanation" strings (even in new content/); module.mdx is separate (for reading view). Future could compile hints/solutions from MDX per-question, but convention works today.
-- Adding a new subject: now only needs content/ folder + one-line in getFileSystem... (once we expose a single `loadFromContent(slug)`).
+## Module & Explanations Page Generalization (Module & Explanations Page Generalization Agent, 2026-06-01)
 
-### Updated Open Items
-- [x] Prototype generic data-only practice component consuming FileSystemContentBundle (done; higher quality than initial request).
-- [ ] Thin vertical slice demo (postpone to avoid new files; use storybook/dev or import in existing test pages if needed).
-- [ ] Design for generic dynamic routes (`[subject]`) — still needed; component is ready.
-- [ ] Decide/automate stable ID + migration (progress OK for now).
-- [ ] Expand/refactor loader for unified subject loading + full calculus legacy adapter removal (future).
+**Goal achieved in isolated slice**: Created a generic, data-driven module/explanation renderer that consumes `FileSystemContentBundle.mdxModules` (raw `mdxSource`) + `Topic` metadata directly from the new content/ FS structure.
+
+**Deliverable**:
+- New isolated file: `src/components/experimental-generic-mdx-module-explanation.tsx`
+  - `ExperimentalGenericMdxModuleExplanation` React component (client).
+  - Self-contained line-based `parseMdxToStructured` (exported as `experimentalParseMdxModule` for tests/harnesses).
+  - Supports all observed patterns in current `content/*/topics/*/module.mdx` (LA + Stats + Calculus ports):
+    - Intro (pre-first-## content, after stripping frontmatter + # title).
+    - `## Section Title {#slug}` or `## Title` + following `<!-- section: slug -->` (for question matching + deep links + per-section practice).
+    - Body paragraphs (with LaTeX $...$ and $$...$$ detection → MathText + BlockMath).
+    - `**ELI5**` / `**ELI5**:` / `**ELI5 (continued)**` blocks (inline text or following `-` bullet lists; heuristic stops collection on subsequent non-list paragraphs to support stats-style "ELI5 callout then continue body").
+    - Worked examples: `### Worked Examples`, `**Worked Example: Title**` → rendered as titled cards with numbered steps.
+    - `## Common Mistakes` → bulleted list at end.
+  - Re-uses legacy visual + interactive pieces (ModuleSectionNav TOC, ELI5 styled callout, example cards, practice links using ?section=slug, VoteFeedback, prev/next footer) for pixel-level consistency during transition.
+  - Debug footer showing "sourced from content/.../module.mdx via FileSystemContentBundle".
+  - Detailed JSDoc with full MDX proper-rendering plan.
+
+**Decisions**:
+- Work strictly isolated: one new experimental-*.tsx file only (no new dirs, no edits to production pages, layouts, routes, legacy modules/, or loader). No new runtime deps.
+- Basic custom parser (no markdown lib) sufficient for current authored MDX dialect + keeps zero-dep for this slice.
+- Parser produces internal shape modeled on legacy ModuleSection (title/section/body/eli5/examples) so rendering code could later be shared/refactored with SubjectModulePage.
+- Anchor/slug extraction supports both markdown `{#id}` (LA) and HTML comment (some calculus) conventions seen in the ports.
+- Rendering stays "use client" + reuses MathText (which already handles katex + spacing fixes).
+- For real generic pages later: the component can be called from a server page that does `const bundle = await getFileSystemContentBundle(slug); const mdxMod = bundle.mdxModules.find(...)` and passes strings (serializable).
+
+**Proper MDX rendering plan (documented in component + here)**:
+- When productizing: `npm install next-mdx-remote`.
+- Switch (or dual) to server component + `<MDXRemote source={mdxSourceWithoutFm} components={{ELI5: ELI5Callout, ...}} />`.
+- Add remark-math + rehype-katex for native LaTeX in MDX (or keep hybrid).
+- Authors could then use JSX/custom tags in .mdx for richer embeds.
+- Loader remains unchanged (raw source is correct).
+
+**Frequent small commits performed** (as required):
+- Initial creation + parser + full renderer.
+- Parser ELI5 heuristic fix for cross-port variations.
+- Export of pure parser fn.
+- (This NOTES update + follow-ups).
+
+**Remaining blockers for replacing old module pages** (for future agents / decision):
+1. **No MDX compiler yet** — basic parser works for existing content but is brittle to authoring variations (future MDX will solve + allow custom components).
+2. **No wiring / routes** — component not imported anywhere. Needs a thin demo page (dev-only or /_experimental/* route group?) + server data loading. Existing static subject folders + redirects would conflict with `[subject]` dynamic.
+3. **Practice links & deep links assume existing URLs** — they hardcode `/${slug}/practice/...` which still point to per-subject impls.
+4. **Metadata / layouts / SEO** — generateMetadata, subject layouts, course-contents-page still use legacy SubjectConfig / modules. Generic version would need parallel or derived.
+5. **Full bundle for all subjects** — loader only does linear-algebra + statistics (calculus mdx exists in content/ but not loaded by getFileSystemContentBundle yet).
+6. **Progress / section slugs invariant** — must ensure MDX headings always produce slugs matching the `section` field in the topic's questions.json (already convention in ports).
+7. **Testing the renderer** — no visual/e2e tests yet for the experimental component (parser could be unit-tested against real mdxSource fixtures).
+8. **Migration cutover strategy** — when to flip the three per-subject module/[topicId]/page.tsx to use generic + FS bundle? Feature flag? Parallel? Delete legacy ModuleContent after?
+9. **Math fidelity** — current parser + MathText covers 95%+ of LaTeX in ports, but edge cases (align*, matrices in display, etc.) may need validation against real pages.
+10. **Bundle loading in client contexts** — FS loader is server-only (dynamic fs). Generic pages must be server components or use API route / build-time static.
+
+**Status**: Meaningful isolated deliverable complete. Parser + renderer proven conceptually against real content samples from all 3 subjects. Ready for "thin vertical slice demo page" experiment (see open item above) or decision on route strategy. Do not delete or modify legacy module pages yet.
+
+**References in this work**:
+- content/linear-algebra/topics/vectors/module.mdx (primary test case)
+- content/statistics/topics/descriptive/module.mdx and bayesian-inference/ (variation test)
+- content/calculus/topics/limits/module.mdx and derivatives/ (anchor comment style)
+- src/lib/content/{loader.ts,schema.ts}
+- src/components/subject-module-page.tsx (visual + structural reference)
+- content/ARCHITECTURE.md + future-dynamic.md
+
+Regular NOTES updates + small commits followed throughout.
