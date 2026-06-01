@@ -9,7 +9,7 @@ interface Props {
 /**
  * Dynamic module/explanation page in experimental area.
  * Completely data-driven: mdxSource comes from the loaded FileSystemContentBundle.
- * Uses GenericModuleViewer for basic rendering.
+ * Uses GenericModuleViewer (now with inlined per-section + topic-level practice links for UX parity).
  */
 export default async function DynamicModulePage({ params }: Props) {
   const { subject: subjectSlug, topicId } = await params;
