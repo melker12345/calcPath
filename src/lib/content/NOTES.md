@@ -378,3 +378,14 @@ All work via targeted search_replace on JSON arrays (read before edit) + git com
 - (2026-06-01, data-migration subagent) Completed nonparametric backport: now exactly 39/39 in content/statistics/topics/nonparametric/questions.json (all from nonparametric.ts; IDs/LaTeX/wording preserved exactly). Verified with jq. Small commit follows.
 - (2026-06-01, data-migration subagent) Completed regression backport: now exactly 38/38 in content/statistics/topics/regression/questions.json (all from regression.ts; IDs/LaTeX/wording preserved exactly). Verified with jq. Small commit follows.
 - (2026-06-01, data-migration subagent) Completed stochastic-processes backport: now exactly 26/26 in content/statistics/topics/stochastic-processes/questions.json (all from stochastic-processes.ts; IDs/LaTeX/wording preserved exactly). Verified with jq. Small commit follows.
+
+**FINAL VERIFICATION (data-migration subagent, 2026-06-01)**: All 7 incomplete topics now at exact legacy parity:
+- anova: 39/39
+- estimation: 40/40 (incl. 2 cross from inference.ts)
+- hypothesis-testing: 40/40 (incl. 3 cross from inference.ts)
+- multiple-regression: 18/18
+- nonparametric: 39/39
+- regression: 38/38
+- stochastic-processes: 26/26
+
+Full Statistics in content/statistics/topics/*/questions.json: TOTAL 461 (exact goal). All other topics untouched. Only edited allowed files (the 7 questions.json + NOTES.md appends). 7 small targeted commits made. Task complete. All original IDs, LaTeX ($...$), wording, explanations, choices preserved exactly from src/lib/statistics-questions/*.ts . No code/styling/other subjects touched.
