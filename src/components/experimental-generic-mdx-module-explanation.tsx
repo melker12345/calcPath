@@ -12,13 +12,13 @@
  * Current implementation:
  * - Basic line-based parser for the MDX dialect used in content/*/topics/*/module.mdx
  *   (supports variations seen in linear-algebra, statistics, calculus ports).
- * - Renders using existing MathText + BlockMath (no new deps).
- * - Supports: intro, ## sections (with {#slug} or <!-- section: slug --> anchors),
+ * - Integrates new MdxContent renderer for intro + section bodies (fuller markdown: lists, emphasis, links, codespans, + native display math + consistent typography/spacing).
+ * - Supports: intro, ## sections (with {#slug} or <!-- section: slug --> anchors + scroll-mt for nav),
  *   **ELI5** / **ELI5**: blocks (inline or following), Worked Examples (### or **Worked Example:**),
  *   ## Common Mistakes lists.
  * - Reuses visual patterns + components from the legacy SubjectModulePage for consistency
  *   (ELI5 callout box, example cards, practice links, nav, VoteFeedback, prev/next).
- * - Derives TOC nav items.
+ * - Derives TOC nav items. Proper section anchors for ModuleSectionNav.
  *
  * NOT YET:
  * - Full MDX compilation (see PLAN below).
@@ -64,7 +64,7 @@ import { useMemo } from "react";
 import { MathText } from "@/components/math-text";
 import { ModuleSectionNav } from "@/components/module-section-nav";
 import { VoteFeedback } from "@/components/vote-feedback";
-import { BlockMath } from "react-katex";
+import { MdxContent } from "@/components/mdx-content";
 import type { Topic } from "@/lib/content/schema"; // Use new schema types (Topic shape is stable)
 
 type ExperimentalGenericMdxModuleExplanationProps = {
@@ -279,9 +279,9 @@ function parseMdxToStructured(
         currentWorked.steps.push(itemText);
         continue;
       }
-      // regular list in body
+      // regular list in body — preserve original list marker syntax so MdxContent + marked can render proper <ul>/<ol>
       if (currentSection) {
-        currentSection.body.push(itemText);
+        currentSection.body.push(line);
       }
       continue;
     }
@@ -354,11 +354,7 @@ export function ExperimentalGenericMdxModuleExplanation({
   if (!hasContent) {
     return (
       <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
-<<<<<<< HEAD
-        <p className="text-sm theme-text-muted">Unable to parse module content from MDX source.</p>
-=======
-        <p className="text-sm theme-text-secondary">Unable to parse module content from MDX source.</p>
->>>>>>> agent-visual-consistency
+        <p className="text-sm text-stone-600">Unable to parse module content from MDX source.</p>
         <details className="mt-4 text-xs">
           <summary className="cursor-pointer">Raw MDX source (debug)</summary>
           <pre className="mt-2 overflow-auto rounded bg-[var(--surface-2)] p-3 text-[10px]">{mdxSource.slice(0, 2000)}...</pre>
@@ -378,7 +374,7 @@ export function ExperimentalGenericMdxModuleExplanation({
         <div className="min-w-0">
           <div className="mb-6 border-b border-[var(--border)] pb-5 sm:mb-8">
             <Link
-              className="text-sm text-blue-800 hover:underline dark:text-[var(--accent)]"
+              className="text-sm text-blue-700 hover:underline"
               href={`/${subjectSlug}/modules`}
               data-no-print
             >
@@ -395,11 +391,7 @@ export function ExperimentalGenericMdxModuleExplanation({
             <div id="intro" className="scroll-mt-20">
               <h2 className="mb-4 text-2xl font-semibold theme-text">Introduction</h2>
               <div className="prose prose-stone dark:prose-invert max-w-none">
-                {parsed.intro.map((paragraph, index) => (
-                  <p key={index} className="mb-3 last:mb-0">
-                    <MathText text={paragraph} />
-                  </p>
-                ))}
+                <MdxContent mdxSource={parsed.intro.join("\n\n")} />
               </div>
             </div>
           )}
@@ -412,23 +404,8 @@ export function ExperimentalGenericMdxModuleExplanation({
                 <h2 className="mb-4 text-2xl font-semibold theme-text">{section.title}</h2>
 
                 <div className="prose prose-stone dark:prose-invert max-w-none">
-                  {section.body.map((paragraph: string, index: number) => {
-                    const trimmed = paragraph.trim();
-                    // Standalone display math ($$ or single $ line that is purely math)
-                    if ((trimmed.startsWith("$$") && trimmed.endsWith("$$")) || (trimmed.startsWith("$") && trimmed.endsWith("$") && trimmed.length > 2 && !trimmed.slice(1, -1).includes("$"))) {
-                      const math = trimmed.replace(/^\$\$?|\$\$?$/g, "");
-                      return (
-                        <div key={index} className="my-4">
-                          <BlockMath math={math} />
-                        </div>
-                      );
-                    }
-                    return (
-                      <p key={index} className="mb-3 last:mb-0">
-                        <MathText text={paragraph} />
-                      </p>
-                    );
-                  })}
+                  {/* Delegate body (paras + preserved lists + display math) to new MdxContent renderer for consistency + richer markdown support */}
+                  <MdxContent mdxSource={section.body.join("\n\n")} />
                 </div>
 
                 {section.eli5 && section.eli5.length > 0 && (
@@ -473,7 +450,7 @@ export function ExperimentalGenericMdxModuleExplanation({
                 <div className="mt-4">
                   <Link
                     href={`/${subjectSlug}/practice/${topic.id}?section=${section.section || sectionId}`}
-                    className="inline-flex items-center gap-1 text-sm font-medium text-blue-700 hover:underline dark:text-[var(--accent)]"
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:underline transition-colors"
                   >
                     Practice questions for this section →
                   </Link>

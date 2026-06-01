@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { MathText } from "@/components/math-text";
+import { MdxContent } from "@/components/mdx-content";
 
 /**
  * Very lightweight MDX-ish renderer for the experimental /x/ area.
@@ -9,13 +10,14 @@ import { MathText } from "@/components/math-text";
  * Goals for this slice:
  * - Prove we can surface the raw mdxSource from FileSystemContentBundle.
  * - Handle common patterns in our content/ *.mdx files (headings with {#slug}, paragraphs, **ELI5**, LaTeX).
- * - Use existing <MathText> so $...$ and display math render without new deps.
+ * - Integrates <MdxContent> for paragraphs (richer lists/em/links/code + display math + consistent theming).
+ * - ELI5 boxes + typography now match real subject module pages (var(--), "Explain Like I'm 5", scroll-mt anchors).
  *
  * Limitations (documented in NOTES.md):
  * - Not a full MDX compiler (no custom components, limited markdown).
  * - No remark/rehype pipeline yet.
  * - For production generic pages we will later add next-mdx-remote or equivalent.
- * - Sections/anchors partially supported via id extraction.
+ * - No full structured sections/ELI5-per-section like ExperimentalGenericMdxModuleExplanation.
  */
 export function GenericModuleViewer({
   topicId,
@@ -115,10 +117,11 @@ export function GenericModuleViewer({
     }
 
     if (block.type === "eli5") {
+      // Match ELI5 box styling from real subject module pages + ExperimentalGeneric
       return (
-        <div key={idx} className="mt-6 rounded-2xl border theme-border bg-[var(--surface-2)] p-5">
+        <div key={idx} className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-5">
           <div className="mb-2 text-xs font-semibold uppercase tracking-widest text-[var(--text-muted)]">
-            Explain Like I'm 5
+            Explain Like I&apos;m 5
           </div>
           <div className="space-y-3 text-sm leading-relaxed theme-text-secondary">
             {block.content.split(/\n\n+/).map((p, i) => (
@@ -129,21 +132,20 @@ export function GenericModuleViewer({
       );
     }
 
-    // paragraph (default)
-    const paras = block.content.split(/\n\n+/).filter(Boolean);
+    // paragraph (default) — delegate to MdxContent for full markdown (lists, emphasis, code, links) + consistent math/typography
     return (
-      <div key={idx} className="prose prose-stone dark:prose-invert max-w-none text-[15px] leading-relaxed">
-        {paras.map((p, pi) => (
-          <p key={pi} className="mb-3 last:mb-0">{renderInline(p.trim())}</p>
-        ))}
-      </div>
+      <MdxContent
+        key={idx}
+        mdxSource={block.content}
+        className="prose prose-stone dark:prose-invert max-w-none text-[15px] leading-relaxed"
+      />
     );
   };
 
   return (
     <div className="mx-auto w-full max-w-[760px] px-4 py-8 sm:px-6 sm:py-10">
       <div className="mb-6">
-        <Link href={backHref || `/x/${subjectSlug}`} className="text-sm text-blue-700 hover:underline dark:text-[var(--accent)]">
+        <Link href={backHref || `/x/${subjectSlug}`} className="text-sm text-blue-700 hover:underline">
           ← Back to {subjectSlug.replace("-", " ")} topics
         </Link>
       </div>
@@ -155,7 +157,7 @@ export function GenericModuleViewer({
         {blocks.map(renderBlock)}
       </div>
 
-      <div className="mt-10 border-t theme-border pt-6 text-xs theme-text-muted">
+      <div className="mt-10 border-t pt-6 text-xs text-zinc-500">
         This is basic MDX support in the experimental area. Full compiled MDX (with components, better parsing) is a follow-up.
       </div>
     </div>

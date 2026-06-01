@@ -3,6 +3,7 @@
 import React from "react";
 import { marked, type Tokens } from "marked";
 import { MathText } from "@/components/math-text";
+import { BlockMath } from "react-katex";
 
 type AnyToken = Tokens.Generic & { tokens?: AnyToken[] };
 
@@ -24,6 +25,15 @@ function slugify(text: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
+}
+
+function isPureDisplayMath(text: string): boolean {
+  const t = text.trim();
+  // Matches standalone display math lines using $...$ or $$...$$ (no internal $ for simplicity)
+  return (
+    (t.startsWith("$$") && t.endsWith("$$") && t.length > 4) ||
+    (t.startsWith("$") && t.endsWith("$") && t.length > 2 && !t.slice(1, -1).includes("$"))
+  );
 }
 
 /**
@@ -110,8 +120,8 @@ function renderBlocks(tokens: AnyToken[]): React.ReactNode {
 
       const className =
         depth === 1
-          ? "text-3xl font-semibold tracking-tight mt-6 mb-4 theme-text first:mt-0"
-          : "text-2xl font-semibold tracking-tight mt-8 mb-3 theme-text";
+          ? "text-3xl font-semibold tracking-tight mt-6 mb-4 theme-text first:mt-0 scroll-mt-24"
+          : "text-2xl font-semibold tracking-tight mt-8 mb-3 theme-text scroll-mt-20";
 
       return React.createElement(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -122,6 +132,16 @@ function renderBlocks(tokens: AnyToken[]): React.ReactNode {
     }
     if (token.type === "paragraph") {
       const p = token as Tokens.Paragraph;
+      // Support display math as standalone paragraphs (common in our module.mdx)
+      const paraText = (p as any).text || "";
+      if (isPureDisplayMath(paraText)) {
+        const math = paraText.trim().replace(/^[$]{1,2}|[$]{1,2}$/g, "").trim();
+        return (
+          <div key={key} className="my-4">
+            <BlockMath math={math} />
+          </div>
+        );
+      }
       return (
         <p key={key} className="mb-3 last:mb-0 leading-relaxed theme-text-secondary">
           {renderInline(p.tokens)}
@@ -169,9 +189,9 @@ function renderBlocks(tokens: AnyToken[]): React.ReactNode {
  * (as provided by FileSystemContentBundle.mdxModules[*].mdxSource).
  *
  * - Strips YAML frontmatter automatically.
- * - Uses project's MathText (and thus react-katex) for all LaTeX $...$ and $$...$$.
- * - Supports headings (with {#custom-id} anchors), paragraphs, lists, strong/em/code/links.
- * - Applies consistent prose styling + theme tokens.
+ * - Uses project's MathText (and thus react-katex) for inline LaTeX; native BlockMath for standalone display $$...$$ / $...$ paragraphs (module.mdx convention).
+ * - Supports headings (with {#custom-id} anchors + scroll-mt for native section nav), paragraphs, lists, strong/em/code/links.
+ * - Applies consistent prose styling + theme tokens. Dark mode via .theme-* and var(--).
  * - Ignores HTML comment markers (used for section metadata in some content).
  *
  * Isolated: does not depend on legacy ModuleContent shapes.

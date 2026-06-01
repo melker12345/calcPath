@@ -159,39 +159,55 @@
 
 All changes via many small commits (see git log on branch). Full flow demonstrable by visiting /x/linear-algebra (pick vectors or systems) → explanation or practice.
 
-## Visual Consistency Pass — Experimental Area Styling Agent (2026-06-01)
+## Generic Module Viewer Polish (ExperimentalGenericMdxModuleExplanation + MdxContent + GenericModuleViewer) — 2026-06-01
 
-**Agent**: Experimental Area Styling Agent (this subagent task).
+**Agent**: Generic Module Viewer Polish Agent (this subagent task).
 
-**Goal**: Make the entire `/x/` area (layout + all pages + generic components it uses) visually consistent with the real application (CourseLayout, subject fonts, theme-* tokens, prose, spacing, dark mode, card styles, etc.). Feel like a "real subject" with clear experimental label. No routing changes.
+**Scope (strictly followed)**: Only edits to experimental/generic components in `src/components/`:
+- `mdx-content.tsx` (new renderer integration + fixes)
+- `experimental-generic-mdx-module-explanation.tsx`
+- `generic-module-viewer.tsx`
+(Plus this NOTES update as explicitly requested; no touches to real subject pages, legacy impls, practice UIs beyond generics, content/, app/x/ pages, or lib/ except notes.)
 
-### Changes Made
-- **src/app/x/layout.tsx**: 
-  - Now imports + wraps with `CourseLayout` (provides SiteHeader + themed main + SiteFooter) and the two subject font variables (`subjectHeadingFont` + `subjectBodyFont`) exactly like real subject layouts (`calculus/layout.tsx` etc.).
-  - Integrated the amber experimental banner *inside* the CourseLayout flow (right after header, before page content). Made tasteful: subtle shadow, better max-w-5xl alignment, responsive, dark mode backdrop, "Exit experimental →" label. Removed duplicate footer (now uses real SiteFooter).
-- **All /x/ route pages** (`src/app/x/page.tsx`, `src/app/x/[subject]/page.tsx`, practice pages, module wrappers):
-  - Switched to `<main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10">` (matches `CourseContentsPage` and module containers).
-  - Replaced nearly all `text-zinc-*`, `bg-white`, `text-slate-*`, `border-zinc-*` etc. with `theme-text`, `theme-text-secondary`, `theme-text-muted`, `theme-surface`, `theme-border`, `bg-[var(--surface-2)]`, `var(--text-muted)` etc.
-  - Consistent link colors (blue-700 + dark forcing to accent).
-  - Error/empty states now use themed containers + text.
-- **Generic components used by /x/**:
-  - `src/components/generic-module-viewer.tsx`: Upgraded ELI5 block to exact visual pattern from `SubjectModulePage` (rounded-2xl, theme-border, bg-[var(--surface-2)], uppercase muted label "Explain Like I'm 5", theme-text-secondary body). Updated back links, footers, borders to theme tokens. Still lightweight parser.
-  - `src/components/generic-practice-experience.tsx`: Extensive cleanup of the tall practice card + chrome (nav buttons, MCQ choices, progress, mastered state, "review explanation" link, skip buttons, Q indicator, footer links). Now uses `theme-*` + CSS vars for backgrounds, text, borders, hovers. Removed dark: conditionals where vars suffice. Matches visual language of real practice flows.
-  - Minor: cleaned a stone-600 in the (currently unused) `experimental-generic-mdx-module-explanation.tsx` for future parity.
-- **Dark mode & theming**: All updates leverage the existing globals.css forcing layers + semantic tokens so experimental area now respects theme toggle, accent, surfaces, etc. without breakage.
-- **Banner**: Remains distinctly amber (for "experimental data-driven" signal) but no longer breaks layout, spacing, or header/footer; sits cleanly below SiteHeader like a subject-specific notice.
-- **Fonts**: Now active on all /x/ content (headings/body serif where used in real pages or via --font-serif-* in theme).
+**Goal**: Make the generic module/explanation viewing experience match the visual structure, spacing, typography, ELI5 boxes, worked example cards, common mistakes sections, etc. of real `SubjectModulePage` / subject module pages. Good integration with MdxContent. Proper anchors. Dark mode. Native-looking nav/"Review..." elements. Small incremental commits.
 
-### Remaining Visual Gaps (documented for follow-up)
-- Some interactive elements (e.g. MathInput internals, shared PracticeFeedback success/amber banners, ProgressDots) still contain raw zinc/slate in shared components — these were left untouched (affect main app too; global css forcing mitigates most).
-- The "primary action" buttons in /x/home still use explicit zinc-900/white invert (intentional "strong CTA" style, matches other non-accent buttons in app).
-- No SubjectBreadcrumbs used in /x/ pages (would require a /x-aware version or basePath prop); plain links used instead. Module viewer lacks the full ModuleSectionNav + prev/next + VoteFeedback that the richer (unused) experimental mdx renderer has.
-- GenericModuleViewer still uses basic parser (vs. the structured one in experimental-*.tsx); once MDX remote is added, full visual parity (including custom callouts) will be easier.
-- Practice pages under /x/ use max-w-3xl in some states vs. 5xl elsewhere (minor).
-- No "experimental" watermark or badge inside deep pages (banner at top is the only label — sufficient and non-intrusive).
-- If/when generic components are promoted out of experimental, a small refactor to accept `basePath="/x"` for links (in the richer mdx renderer) would be needed.
-- Typography: subject fonts load + vars set, but explicit `font-serif-display` / `font-serif-body` classes not yet applied to headings in generic renderers (real legacy modules also mostly rely on "font-semibold" + the var for font stack).
+### Polish Details & Changes Made
+- **MdxContent integration (core of task)**:
+  - Added `BlockMath` + `isPureDisplayMath` helper + detection in paragraph rendering: standalone `$...$` or `$$...$$` paras now render as centered display math blocks (was broken via MathText splitter only; matches legacy/experimental manual logic).
+  - Headings now include `scroll-mt-24`/`scroll-mt-20` for proper section anchor navigation (fixes jump under fixed header/TOC).
+  - Updated docs + dark mode notes.
+- **GenericModuleViewer polish** (the one wired to `/x/[subject]/modules/[topicId]`):
+  - ELI5 box fully restyled to match real: `rounded-2xl border-[var(--border)] bg-[var(--surface-2)] p-5`, label "Explain Like I'm 5" (uppercase tracking-widest muted), content `space-y-3 text-sm leading-relaxed theme-text-secondary`. Removed all hardcoded blue-*.
+  - Paragraph blocks now delegate to `<MdxContent mdxSource={...} className="prose ...">` — instantly gains: proper list rendering (ul/ol), <em>, <code>, <a> links, more robust inline. (Previously only **bold** regex + manual p splits.)
+  - Updated jsdoc with new capabilities + limitations.
+  - Typography/spacing/anchors already had scroll-mt; now consistent.
+- **ExperimentalGenericMdxModuleExplanation polish** (the rich structured one):
+  - Body + intro rendering now use `<MdxContent>` inside the existing `.prose` wrappers (after small parser tweak).
+  - Parser tweak: for regular body lists, push original `line` (incl. `- ` / `* ` / `1. `) instead of stripped `itemText`. This preserves markdown so MdxContent/marked renders real `<ul class="list-disc ...">` etc. (improvement over legacy stripping behavior; ELI5+examples keep stripped as before to match SubjectModulePage).
+  - Removed now-unused `BlockMath` import (delegated fully).
+  - Minor nav polish: back link + per-section "Practice questions..." links use consistent `text-blue-700`, `gap-1.5`, `transition-colors` (still underline style to exactly match real subject pages).
+  - Updated extensive jsdoc to document MdxContent integration, anchors, dark mode via theme vars.
+- **Visual/Consistency**:
+  - All ELI5, examples, common-mistakes, headings, spacing (`mt-12` sections, `mb-4` h2s, etc.), prose, var(--border/surface-2/text-muted), scroll-mt now aligned between generic/experimental and real.
+  - Dark mode: relies on existing `.dark` forcings in globals.css + theme-* + var() (no new hardcoded colors introduced).
+  - "Review in practice" / nav elements: kept exact match to real (plain links + `btn-*` footers which have full @apply rounded-xl etc. in css). Enhanced hover/transition slightly for polish without diverging.
+- **Anchors/Navigation**: `extractMdxSections` + heading ids in MdxContent + manual in viewers + `scroll-mt-*` + ModuleSectionNav all work for # jumping.
+- **No behavior change** for callers; fully backward compatible. Still no custom MDX components (future per docs).
 
-All work done via small, frequent, isolated commits on the worktree (see `git log --oneline`).
+### Gaps / Remaining Polish Opportunities (documented for next)
+- ExperimentalGeneric still has some manual MathText in ELI5/examples/commonMistakes (could delegate those contents to MdxContent snippets too for even more consistency, but small win).
+- GenericModuleViewer ELI5 still uses local renderInline (limited); full MdxContent inside ELI5 box possible but would nest prose.
+- Neither viewer yet consumes `extractMdxSections` (they have custom parsers for dialect specials like ELI5).
+- Per-section practice links + bottom nav in Experimental point to *main app* URLs (intentional for future promotion); Generic points to /x/ (correct for current usage).
+- No visual tests/screenshots; would need Playwright update.
+- "Review the explanation..." links live in generic-practice components (not touched per isolation rule).
+- Full MDX (next-mdx-remote + <ELI5> etc custom) still future; this makes the hand-rolled path *much* closer to production feel.
+- If wiring ExperimentalGeneric into /x/ route (instead of light GenericViewer), would need caller updates (outside scope).
 
-The /x/ area now feels like a first-class (if labeled) part of the app.
+**Commits style**: Many small, targeted search_replace (read before each edit; unique strings; isolated to 3 components + notes). All changes make the generic viewers "look and feel like the real subject module pages".
+
+**Verification notes**: 
+- MdxContent now handles math+lists+anchors standalone.
+- Visiting /x/.../modules/ will use polished GenericModuleViewer (ELI5 now native-looking).
+- Experimental ready for drop-in (structure 1:1 match + better content rendering).
+- No linter/runtime breaks expected (imports clean, unused removed, existing styles reused).
