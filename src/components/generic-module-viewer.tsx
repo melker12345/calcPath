@@ -45,10 +45,13 @@ export function GenericModuleViewer({
   // Strip frontmatter
   const withoutFrontmatter = mdxSource.replace(/^---\s*[\s\S]*?---\s*/, "");
 
+  // Remove leading top-level # Title (we render h1 from prop; matches real + advanced parser)
+  const withoutTitle = withoutFrontmatter.replace(/^#\s+[^\n]+\n?/, "").trim();
+
   // Split into blocks by headings (## or #) while keeping the heading
   const blocks: Array<{ type: "heading" | "paragraph" | "eli5" | "list"; content: string; level?: number; id?: string }> = [];
 
-  const lines = withoutFrontmatter.trim().split(/\r?\n/);
+  const lines = withoutTitle.split(/\r?\n/);
   let currentBlock: string[] = [];
   let currentType: "paragraph" | "heading" | "eli5" = "paragraph";
   let currentLevel = 0;
@@ -134,12 +137,13 @@ export function GenericModuleViewer({
 
   const renderBlock = (block: (typeof blocks)[number], idx: number) => {
     if (block.type === "heading") {
+      // Match real SubjectModulePage h2 styles + scroll-mt for anchors (h1 suppressed)
       const Tag = block.level === 1 ? "h1" : block.level === 2 ? "h2" : "h3";
       const className =
         block.level === 1
           ? "mt-8 mb-3 text-2xl font-semibold tracking-tight theme-text scroll-mt-24"
           : block.level === 2
-          ? "mt-6 mb-2 text-xl font-semibold theme-text scroll-mt-20"
+          ? "mb-4 text-2xl font-semibold theme-text scroll-mt-20"
           : "mt-4 mb-1.5 text-lg font-semibold theme-text scroll-mt-16";
       return (
         <Tag id={block.id} key={idx} className={className}>
@@ -174,24 +178,76 @@ export function GenericModuleViewer({
     );
   };
 
+  // Back href for x area (experimental subject "contents")
+  const effectiveBackHref = backHref || `/x/${subjectSlug}`;
+
   return (
-    <div className="mx-auto w-full max-w-[760px] px-4 py-8 sm:px-6 sm:py-10">
-      <div className="mb-6">
-        <Link href={backHref || `/x/${subjectSlug}`} className="text-sm text-blue-700 hover:underline">
-          ← Back to {subjectSlug.replace("-", " ")} topics
-        </Link>
-      </div>
+    <>
+      <ModuleSectionNav items={navItems} />
+      <div className="mx-auto w-full max-w-[760px] px-4 py-8 sm:px-6 sm:py-10">
+        <div className="min-w-0">
+          {/* Header chrome matching SubjectModulePage exactly */}
+          <div className="mb-6 border-b border-[var(--border)] pb-5 sm:mb-8">
+            <SubjectBreadcrumbs
+              subjectSlug={subjectSlug}
+              subjectLabel={subjectLabel}
+              currentTopicTitle={title}
+            />
+            <Link
+              className="text-sm text-blue-800 hover:underline"
+              href={effectiveBackHref}
+              data-no-print
+            >
+              Back to {subjectLabel} contents
+            </Link>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight theme-text sm:text-4xl">
+              {title}
+            </h1>
+            {description && (
+              <p className="mt-3 text-base leading-7 theme-text-secondary">{description}</p>
+            )}
+          </div>
 
-      <h1 className="text-3xl font-semibold tracking-tight theme-text sm:text-4xl">{title}</h1>
-      <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">Source: content/{subjectSlug}/topics/{topicId}/module.mdx (raw, rendered lightly)</p>
+          {/* Content from lightweight parser + MdxContent (intro flows from first blocks) */}
+          <div className="mt-6">
+            {blocks.map(renderBlock)}
+          </div>
 
-      <div className="mt-6">
-        {blocks.map(renderBlock)}
-      </div>
+          {/* Bottom navigation: prev/next topic + Practice using exact btn-secondary / btn-primary from real pages */}
+          <div className="mt-12 flex flex-col gap-3 border-t border-[var(--border)] pt-6 sm:flex-row sm:justify-between">
+            {prevTopic ? (
+              <Link
+                href={`/x/${subjectSlug}/modules/${prevTopic.id}`}
+                className="btn-secondary inline-flex w-full justify-center sm:w-auto"
+              >
+                ← {prevTopic.title}
+              </Link>
+            ) : (
+              <div />
+            )}
 
-      <div className="mt-10 border-t pt-6 text-xs text-zinc-500">
-        This is basic MDX support in the experimental area. Full compiled MDX (with components, better parsing) is a follow-up.
+            {nextTopic ? (
+              <Link
+                href={`/x/${subjectSlug}/modules/${nextTopic.id}`}
+                className="btn-primary inline-flex w-full justify-center sm:w-auto"
+              >
+                {nextTopic.title} →
+              </Link>
+            ) : (
+              <Link
+                href={`/x/${subjectSlug}/practice/${topicId}`}
+                className="btn-primary inline-flex w-full justify-center sm:w-auto"
+              >
+                Practice this topic →
+              </Link>
+            )}
+          </div>
+
+          <div className="mt-8 flex justify-center">
+            <VoteFeedback targetType="module" targetId={topicId} />
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
