@@ -70,7 +70,7 @@ function renderInline(tokens: AnyToken[] | undefined): React.ReactNode {
           target="_blank"
           rel="noopener noreferrer"
         >
-          {renderInline(token.tokens || [{ type: "text", text: token.text } as AnyToken])}
+          {renderInline(token.tokens || [{ type: "text", text: token.text } as unknown as AnyToken])}
         </a>
       );
     }
@@ -98,7 +98,7 @@ function renderBlocks(tokens: AnyToken[]): React.ReactNode {
       const { title: cleanTitle, id: explicitId } = cleanSlug(h.text);
       const id = explicitId || slugify(cleanTitle);
       const depth = Math.min(Math.max(h.depth, 1), 6);
-      const Tag = `h${depth}` as keyof JSX.IntrinsicElements;
+      const Tag = `h${depth}` as unknown as keyof React.JSX.IntrinsicElements;
 
       // Clean slug suffix out of inline tokens for display (prevents "{#id}" from appearing)
       const cleanedInline = (h.tokens || []).map((t: AnyToken) => {
@@ -114,7 +114,8 @@ function renderBlocks(tokens: AnyToken[]): React.ReactNode {
           : "text-2xl font-semibold tracking-tight mt-8 mb-3 theme-text";
 
       return React.createElement(
-        Tag,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        Tag as any,
         { key, id, className },
         renderInline(cleanedInline)
       );
@@ -136,7 +137,7 @@ function renderBlocks(tokens: AnyToken[]): React.ReactNode {
           key={key}
           className={`${listClass} my-3 space-y-1 pl-5 text-sm theme-text-secondary`}
         >
-          {list.items.map((item, i) => {
+          {list.items.map((item: Tokens.ListItem & { tokens?: AnyToken[] }, i: number) => {
             // list_item may wrap inlines under tokens[0].tokens (tight list) or direct
             const inner =
               item.tokens?.[0]?.tokens || item.tokens || [];
