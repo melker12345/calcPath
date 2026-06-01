@@ -33,12 +33,21 @@ export default async function DynamicModulePage({ params }: Props) {
     );
   }
 
+  const subjectLabel = bundle.config.label;
+  const topicIndex = bundle.topics.findIndex((t) => t.id === topicId);
+  const prevTopic = topicIndex > 0 ? { id: bundle.topics[topicIndex - 1].id, title: bundle.topics[topicIndex - 1].title } : null;
+  const nextTopic = topicIndex < bundle.topics.length - 1 ? { id: bundle.topics[topicIndex + 1].id, title: bundle.topics[topicIndex + 1].title } : null;
+
   return (
     <GenericModuleViewer
       topicId={topicId}
       title={mdxModule.title || topic.title}
       mdxSource={mdxModule.mdxSource}
       subjectSlug={subjectSlug}
+      subjectLabel={subjectLabel}
+      prevTopic={prevTopic}
+      nextTopic={nextTopic}
+      description={topic.description}
     />
   );
 }
