@@ -7,13 +7,15 @@ import Link from "next/link";
  * PracticeErrorBoundary
  *
  * Class-based React error boundary (required for catching render errors in children).
- * Used exclusively by /x/[subject]/practice/[topicId] to ensure that even if a question
- * has bad data/LaTeX that slips past <MathText> safeguards + GenericPracticeExperience guards,
- * the user sees a friendly, actionable fallback (with links to explanation + subject) instead
- * of the generic /x/ or root "Something went wrong" error page.
+ * Used exclusively by /x/[subject]/practice/[topicId] (wraps the GenericPracticeExperience).
  *
- * Improved from prior functional+inner wrapper: now self-contained standard class component
- * (more reliable state+error capture, no cross-component prop callbacks during catch).
+ * Strengthened for Migration Phase:
+ * - Most per-question render issues (bad LaTeX, malformed data) are now caught *inside* GenericPracticeExperience
+ *   by its local QuestionErrorBoundary → clear skip UI, session never breaks, progress intact.
+ * - This remains the outer last-resort (e.g. hook init crash, total topic data failure, uncaught in feedback).
+ * - Never lets generic error.tsx surface for practice; always friendly + actionable.
+ *
+ * (History: replaced fragile functional wrapper in prior UX robustness work.)
  */
 interface PracticeErrorBoundaryProps {
   children: React.ReactNode;
@@ -55,7 +57,7 @@ export class PracticeErrorBoundary extends React.Component<
           <div className="rounded-2xl border theme-border bg-[var(--surface-2)] p-6">
             <h2 className="text-lg font-semibold theme-text mb-2">Practice session error</h2>
             <p className="theme-text-secondary mb-4">
-              Something went wrong while rendering this question (often a complex LaTeX expression or malformed content).
+              A session-level render error occurred (most per-question issues are now isolated and auto-skipped by the inner GenericPracticeExperience boundary + tolerant loader).
             </p>
             {this.state.error && (
               <p className="text-xs theme-text-muted mb-4 font-mono break-all">
