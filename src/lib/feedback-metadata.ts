@@ -2,8 +2,7 @@ import { problems as calculusProblems, topics as calculusTopics } from "@/lib/ca
 import { problems as statisticsProblems, topics as statisticsTopics } from "@/lib/statistics-content";
 import { problems as linalgProblems, topics as linalgTopics } from "@/lib/linalg-content";
 import type { Problem, Topic } from "@/lib/shared-types";
-
-export type SubjectSlug = "calculus" | "statistics" | "linear-algebra";
+import type { SubjectSlug } from "@/lib/subjects";
 
 type ProblemMeta = {
   id: string;

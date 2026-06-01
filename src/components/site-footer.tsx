@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { subjectList } from "@/lib/subjects";
 
 export const SiteFooter = () => (
   <footer className="border-t theme-border theme-surface pb-[env(safe-area-inset-bottom)]">
@@ -18,9 +19,15 @@ export const SiteFooter = () => (
             Contents
           </h4>
           <nav className="flex flex-col gap-2">
-            <Link href="/calculus" className="text-sm theme-text-secondary hover:theme-text">Calculus</Link>
-            <Link href="/statistics" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Statistics</Link>
-            <Link href="/linear-algebra" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Linear Algebra</Link>
+            {subjectList.map((subject) => (
+              <Link
+                key={subject.slug}
+                href={`/${subject.slug}`}
+                className="text-sm theme-text-secondary hover:theme-text"
+              >
+                {subject.label}
+              </Link>
+            ))}
           </nav>
         </div>
 

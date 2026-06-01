@@ -36,6 +36,17 @@ const splitMath = (text: string) => {
     parts.push({ type: inMath ? "math" : "text", value: current });
   }
 
+  // Fix common grammatical spacing issues that appear after math expressions
+  // e.g. "number.The" → "number. The", "too.Classic" → "too. Classic"
+  for (const part of parts) {
+    if (part.type === "text") {
+      part.value = part.value.replace(/\.([A-Z])/g, ". $1");
+      // Also handle ! and ? followed by capital letter
+      part.value = part.value.replace(/!([A-Z])/g, "! $1");
+      part.value = part.value.replace(/\?([A-Z])/g, "? $1");
+    }
+  }
+
   return parts;
 };
 
@@ -44,7 +55,7 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
 
   if (block) {
     return (
-      <div className="space-y-2">
+      <div className="my-3 space-y-2">
         {parts.map((part, index) =>
           part.type === "math" ? (
             <BlockMath key={`${part.value}-${index}`} math={part.value} />
@@ -60,13 +71,40 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
 
   return (
     <span>
-      {parts.map((part, index) =>
-        part.type === "math" ? (
-          <InlineMath key={`${part.value}-${index}`} math={part.value} />
-        ) : (
-          <span key={`${part.value}-${index}`}>{part.value}</span>
-        ),
-      )}
+      {parts.map((part, index) => {
+        const isMath = part.type === "math";
+        const prevPart = index > 0 ? parts[index - 1] : null;
+        const isAfterMath = prevPart?.type === "math";
+
+        if (isMath) {
+          // Consistent small breathing room after every inline math expression
+          return (
+            <span key={`${part.value}-${index}`} style={{ marginRight: "0.15em" }}>
+              <InlineMath math={part.value} />
+            </span>
+          );
+        }
+
+        // Text coming immediately after math
+        let textValue = part.value;
+
+        // Final safeguard: if this text starts with punctuation that belongs to the previous math sentence
+        // (e.g. the "." from "$a$."), make sure it has a space after it before any capital letter.
+        if (isAfterMath) {
+          textValue = textValue.replace(/^([.!?;:]+)([A-Z])/g, "$1 $2");
+        }
+
+        const startsWithNewSentence = isAfterMath && /^[A-Z]/.test(textValue.trimStart());
+
+        return (
+          <span
+            key={`${part.value}-${index}`}
+            style={startsWithNewSentence ? { marginLeft: "0.25em" } : undefined}
+          >
+            {textValue}
+          </span>
+        );
+      })}
     </span>
   );
 };

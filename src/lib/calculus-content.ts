@@ -6,6 +6,7 @@ import { seriesProblems } from "./calculus-questions/series";
 import { differentialEquationProblems } from "./calculus-questions/differential-equations";
 import { appIntProblems } from "./calculus-questions/applications-of-integration";
 import { multivariableProblems } from "./calculus-questions/multivariable";
+import { parametricPolarProblems } from "./calculus-questions/parametric-polar";
 import { modules } from "./modules";
 import type { Problem, Topic } from "./shared-types";
 
@@ -57,15 +58,22 @@ export const topics: Topic[] = [
   {
     id: "applications-of-integration",
     title: "Applications of Integration",
-    description: "Areas, volumes, arc length, and parametric curves.",
+    description: "Areas, volumes, arc length, work, hydrostatic force, center of mass, average value, and parametric curves.",
     order: 7,
-    estimatedMinutes: 110,
+    estimatedMinutes: 130,
+  },
+  {
+    id: "parametric-polar",
+    title: "Parametric Equations and Polar Coordinates",
+    description: "Curves defined by parameters and the power of polar coordinates for circular and radial regions.",
+    order: 8,
+    estimatedMinutes: 100,
   },
   {
     id: "multivariable",
     title: "Multivariable & Vector Calculus",
     description: "Partial derivatives, multiple integrals, and vector fields.",
-    order: 8,
+    order: 9,
     estimatedMinutes: 150,
   },
 ];
@@ -79,6 +87,7 @@ export const problems: Problem[] = [
   ...differentialEquationProblems,
   ...appIntProblems,
   ...multivariableProblems,
+  ...parametricPolarProblems,
 ];
 
 function toSlug(text: string) {
@@ -191,6 +200,21 @@ const sectionToAnchor: Record<string, Record<string, string>> = {
     parametric: "parametric-equations-curves-in-motion",
     surfacearea: "surface-area-of-revolution",
     work: "work-and-physical-applications",
+    averagevalue: "average-value-of-a-function",
+    hydrostatic: "hydrostatic-force",
+    centerofmass: "center-of-mass-and-moments",
+  },
+  "parametric-polar": {
+    "parametric-basics": "parametric-equations-curves-with-a-parameter",
+    "parametric-derivatives": "derivatives-and-tangent-lines-for-parametric-curves",
+    "parametric-arclength": "arc-length-of-parametric-curves",
+    "parametric-area": "areas-and-other-integrals-with-parametric-curves",
+    "polar-intro": "introduction-to-polar-coordinates",
+    "polar-area": "area-in-polar-coordinates",
+    "polar-areabetween": "area-between-polar-curves",
+    "polar-arclength": "arc-length-in-polar-coordinates",
+    "polar-calculus": "calculus-with-polar-curves",
+    "polar-conics": "conic-sections-in-polar-form",
   },
   multivariable: {
     vectors: "vectors-and-the-geometry-of-space",

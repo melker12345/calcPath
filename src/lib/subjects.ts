@@ -6,7 +6,12 @@ import { topics as linalgTopics, problems as linalgProblems } from "@/lib/linalg
 import { modules as linalgModules } from "@/lib/linalg-modules";
 import type { Problem, Topic } from "@/lib/shared-types";
 
-export type SubjectSlug = "calculus" | "statistics" | "linear-algebra";
+/**
+ * Subject identifier.
+ * Kept as `string` intentionally so we can add new subjects (e.g. Real Analysis, Discrete Math)
+ * without having to update this type or touch dozens of files.
+ */
+export type SubjectSlug = string;
 
 type SubjectModule = {
   topicId: string;
@@ -17,16 +22,23 @@ type SubjectModule = {
   }>;
 };
 
+/**
+ * Central configuration for a subject.
+ * This is the single source of truth for subject metadata.
+ * When adding a new subject, you should only need to add an entry here
+ * (plus the actual content files).
+ */
 export type SubjectConfig = {
   slug: SubjectSlug;
   label: string;
   shortDescription: string;
   modulesDescription: string;
   icon: string;
+  order: number; // Used for consistent ordering across the app
   topics: Topic[];
   problems: Problem[];
   modules: SubjectModule[];
-  hasTests?: boolean;
+  hasTests: boolean;
 };
 
 export const subjects: Record<SubjectSlug, SubjectConfig> = {
@@ -36,20 +48,11 @@ export const subjects: Record<SubjectSlug, SubjectConfig> = {
     shortDescription: "A free calculus course covering limits, derivatives, applications, integrals, series, and differential equations.",
     modulesDescription: "Read the calculus chapters in order, or jump directly to the topic you need.",
     icon: "∫",
+    order: 1,
     topics: calculusTopics,
     problems: calculusProblems,
     modules: calculusModules,
     hasTests: true,
-  },
-  statistics: {
-    slug: "statistics",
-    label: "Statistics",
-    shortDescription: "A free statistics course from descriptive summaries through probability, inference, regression, and non-parametric methods.",
-    modulesDescription: "Read the statistics chapters in order, or jump directly to the topic you need.",
-    icon: "σ",
-    topics: statisticsTopics,
-    problems: statisticsProblems,
-    modules: statisticsModules,
   },
   "linear-algebra": {
     slug: "linear-algebra",
@@ -57,16 +60,38 @@ export const subjects: Record<SubjectSlug, SubjectConfig> = {
     shortDescription: "A free linear algebra course covering systems, vectors, matrices, determinants, vector spaces, orthogonality, eigenvalues, and symmetric matrices.",
     modulesDescription: "Read the linear algebra chapters in order, or jump directly to the topic you need.",
     icon: "λ",
+    order: 2,
     topics: linalgTopics,
     problems: linalgProblems,
     modules: linalgModules,
+    hasTests: false,
+  },
+  statistics: {
+    slug: "statistics",
+    label: "Statistics",
+    shortDescription: "A free statistics course from descriptive summaries through probability, inference, regression, and non-parametric methods.",
+    modulesDescription: "Read the statistics chapters in order, or jump directly to the topic you need.",
+    icon: "σ",
+    order: 3,
+    topics: statisticsTopics,
+    problems: statisticsProblems,
+    modules: statisticsModules,
+    hasTests: false,
   },
 };
 
-export const subjectList = [subjects.calculus, subjects.statistics, subjects["linear-algebra"]] as const;
+/** Subjects sorted by `order` — use this instead of hardcoding arrays elsewhere. */
+export const subjectList: SubjectConfig[] = Object.values(subjects).sort(
+  (a, b) => a.order - b.order
+);
 
-export function getSubject(slug: SubjectSlug) {
+export function getSubject(slug: SubjectSlug): SubjectConfig | undefined {
   return subjects[slug];
+}
+
+/** Returns all subjects in display order */
+export function getOrderedSubjects(): SubjectConfig[] {
+  return [...subjectList];
 }
 
 export function getAvailableTopics(subject: SubjectConfig) {

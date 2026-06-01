@@ -1,0 +1,152 @@
+import type { ModuleContent } from "../types";
+
+/**
+ * Vectors
+ * Extracted from the original monolithic linalg-modules.ts
+ * as part of the content scalability refactor.
+ */
+
+export const vectorsModule: ModuleContent = {
+    topicId: "vectors",
+    title: "Vectors & Operations",
+    intro: [
+      "Vectors are the atomic units of linear algebra. Everything else — matrices, transformations, eigenvalues, the SVD — is ultimately built on top of vectors. Before any of those ideas make sense, you must be fluent with what a vector is, how vectors combine, and what the dot product measures.",
+      "Geometrically, a vector in $\\mathbb{R}^2$ or $\\mathbb{R}^3$ is an arrow: it has a length (magnitude) and a direction. Algebraically, it is an ordered list of real numbers. The power of linear algebra is that the same algebraic rules work in any number of dimensions, even when there is no geometric picture to draw.",
+      "This chapter covers vector arithmetic, the dot product, projections, and the cross product. These tools recur in every subsequent topic.",
+    ],
+    sections: [
+      {
+        title: "What is a vector?",
+        section: "vectors",
+        body: [
+          "A vector in $\\mathbb{R}^n$ is an ordered $n$-tuple of real numbers: $\\mathbf{v} = \\langle v_1, v_2, \\ldots, v_n \\rangle$. In $\\mathbb{R}^2$, a vector is an arrow in the plane; in $\\mathbb{R}^3$, an arrow in space. In $\\mathbb{R}^n$ for $n > 3$, there is no geometric picture, but the algebra is identical.",
+          "What defines a vector is its displacement, not its starting point. Two arrows with the same length and direction, drawn anywhere on the page, are the same vector. This is why vectors model velocities, forces, and displacements — all of these are directional quantities independent of position.",
+          "Two vectors are equal if and only if every corresponding component is equal: $\\langle u_1, u_2 \\rangle = \\langle v_1, v_2 \\rangle$ iff $u_1 = v_1$ and $u_2 = v_2$. A vector in $\\mathbb{R}^2$ and a vector in $\\mathbb{R}^3$ can never be equal — they live in different spaces.",
+          "The zero vector $\\mathbf{0} = \\langle 0, 0, \\ldots, 0 \\rangle$ has zero magnitude and no defined direction. It is the additive identity: $\\mathbf{v} + \\mathbf{0} = \\mathbf{v}$ for any $\\mathbf{v}$.",
+          "The magnitude (length, norm) is $\\|\\mathbf{v}\\| = \\sqrt{v_1^2 + v_2^2 + \\cdots + v_n^2}$, a direct generalisation of the Pythagorean theorem. For $\\mathbf{v} = \\langle 3, 4 \\rangle$: $\\|\\mathbf{v}\\| = \\sqrt{9+16} = 5$. Magnitude is always nonneg.",
+        ],
+        eli5: [
+          "A vector is GPS walking directions: 'go $3$ blocks east and $4$ blocks north.' It doesn't say where you start — only the steps to take. The magnitude ($5$ blocks, by Pythagoras) is the total distance walked.",
+          "A point marks a location on a map. A vector marks a movement. Two arrows pointing the same way and the same length are the same vector, no matter where they are drawn.",
+        ],
+      },
+      {
+        title: "Vector addition and scalar multiplication",
+        section: "operations",
+        body: [
+          "Addition is component-wise: $\\mathbf{u} + \\mathbf{v} = \\langle u_1+v_1, u_2+v_2, \\ldots, u_n+v_n \\rangle$. Geometrically, place the tail of $\\mathbf{v}$ at the head of $\\mathbf{u}$; the sum is the arrow from the tail of $\\mathbf{u}$ to the head of $\\mathbf{v}$. This is called the parallelogram law.",
+          "Scalar multiplication scales every component: $c\\mathbf{v} = \\langle cv_1, cv_2, \\ldots, cv_n \\rangle$. If $c > 0$, direction is preserved and magnitude is multiplied by $c$. If $c < 0$, direction reverses. If $c = 0$, the result is $\\mathbf{0}$.",
+          "The magnitude satisfies $\\|c\\mathbf{v}\\| = |c|\\,\\|\\mathbf{v}\\|$ — scaling a vector scales its length by the absolute value of the scalar.",
+          "A unit vector has magnitude exactly $1$. To normalise any nonzero vector: $\\hat{\\mathbf{v}} = \\mathbf{v}/\\|\\mathbf{v}\\|$. The result $\\hat{\\mathbf{v}}$ points in the same direction as $\\mathbf{v}$ but has length $1$.",
+          "The standard unit vectors in $\\mathbb{R}^3$ are $\\mathbf{e}_1 = \\langle 1,0,0 \\rangle$, $\\mathbf{e}_2 = \\langle 0,1,0 \\rangle$, $\\mathbf{e}_3 = \\langle 0,0,1 \\rangle$ (also written $\\mathbf{i}, \\mathbf{j}, \\mathbf{k}$). Every vector in $\\mathbb{R}^3$ is a linear combination of these: $\\langle a,b,c \\rangle = a\\mathbf{e}_1 + b\\mathbf{e}_2 + c\\mathbf{e}_3$.",
+          "These two operations — addition and scalar multiplication — satisfy eight axioms (commutativity, associativity, distributivity, and so on) that define what it means to be a vector space. Any collection of objects obeying these axioms, whether arrows, polynomials, or signals, is a vector space and the same theory applies.",
+        ],
+        eli5: [
+          "Adding vectors is like following two sets of directions back-to-back. 'Go $3$ east, $4$ north' then 'go $1$ east, $2$ south' gives total displacement '$4$ east, $2$ north.'",
+          "Scalar multiplication is adjusting your speed. Multiply by $2$ and you cover twice the ground in the same direction. Multiply by $-1$ and you turn around and retrace your steps.",
+        ],
+        examples: [
+          {
+            title: "Vector arithmetic and normalisation",
+            steps: [
+              "Let $\\mathbf{u} = \\langle 1, -2, 3 \\rangle$ and $\\mathbf{v} = \\langle 4, 1, -1 \\rangle$.",
+              "Sum: $\\mathbf{u}+\\mathbf{v} = \\langle 5, -1, 2 \\rangle$.",
+              "Scalar multiple: $3\\mathbf{u} = \\langle 3, -6, 9 \\rangle$.",
+              "Magnitude of $\\mathbf{v}$: $\\|\\mathbf{v}\\| = \\sqrt{16+1+1} = \\sqrt{18} = 3\\sqrt{2}$.",
+              "Unit vector: $\\hat{\\mathbf{v}} = \\tfrac{1}{3\\sqrt{2}}\\langle 4,1,-1\\rangle$. Verify: $\\|\\hat{\\mathbf{v}}\\| = \\frac{1}{3\\sqrt{2}}\\cdot 3\\sqrt{2} = 1$ ✓.",
+            ],
+          },
+        ],
+      },
+      {
+        title: "The dot product",
+        section: "dot",
+        body: [
+          "The dot product (inner product) of $\\mathbf{u}, \\mathbf{v} \\in \\mathbb{R}^n$ is $\\mathbf{u} \\cdot \\mathbf{v} = u_1v_1 + u_2v_2 + \\cdots + u_nv_n$. It takes two vectors and returns a single scalar — not a vector.",
+          "The geometric interpretation is fundamental: $\\mathbf{u}\\cdot\\mathbf{v} = \\|\\mathbf{u}\\|\\,\\|\\mathbf{v}\\|\\cos\\theta$, where $\\theta \\in [0,\\pi]$ is the angle between the vectors. This ties algebraic computation directly to geometry.",
+          "Three key cases from the geometric formula: $\\mathbf{u}\\cdot\\mathbf{v} > 0$ means the angle is acute (vectors point broadly the same way); $\\mathbf{u}\\cdot\\mathbf{v} < 0$ means obtuse (they point away from each other); $\\mathbf{u}\\cdot\\mathbf{v} = 0$ means $\\theta = 90°$ — the vectors are orthogonal (perpendicular).",
+          "Self-dot product gives magnitude squared: $\\mathbf{v}\\cdot\\mathbf{v} = \\|\\mathbf{v}\\|^2$. So $\\|\\mathbf{v}\\| = \\sqrt{\\mathbf{v}\\cdot\\mathbf{v}}$.",
+          "The Cauchy-Schwarz inequality states $|\\mathbf{u}\\cdot\\mathbf{v}| \\leq \\|\\mathbf{u}\\|\\,\\|\\mathbf{v}\\|$, with equality iff the vectors are parallel. Rearranging gives the formula for $\\cos\\theta$; since $|\\cos\\theta| \\leq 1$, the inequality is automatically satisfied.",
+          "Algebraic properties: $\\mathbf{u}\\cdot\\mathbf{v} = \\mathbf{v}\\cdot\\mathbf{u}$ (commutative), $\\mathbf{u}\\cdot(\\mathbf{v}+\\mathbf{w}) = \\mathbf{u}\\cdot\\mathbf{v}+\\mathbf{u}\\cdot\\mathbf{w}$ (distributive), $(c\\mathbf{u})\\cdot\\mathbf{v} = c(\\mathbf{u}\\cdot\\mathbf{v})$ (scalar associativity). These hold in any dimension.",
+        ],
+        eli5: [
+          "The dot product answers: how much do these two arrows agree in direction? If both point the same way, the answer is as large as possible. If they are perpendicular, they have zero agreement. If they point opposite ways, the answer is maximally negative.",
+          "Think of shining a torch beam: the dot product is like the shadow of one vector onto the other. Perpendicular vectors cast no shadow on each other. Parallel vectors have maximum shadow.",
+        ],
+        examples: [
+          {
+            title: "Angle between two vectors",
+            steps: [
+              "Find the angle between $\\mathbf{u} = \\langle 1,2,3\\rangle$ and $\\mathbf{v} = \\langle 4,-1,2\\rangle$.",
+              "$\\mathbf{u}\\cdot\\mathbf{v} = 4-2+6 = 8$.",
+              "$\\|\\mathbf{u}\\| = \\sqrt{14}$, $\\|\\mathbf{v}\\| = \\sqrt{21}$.",
+              "$\\cos\\theta = 8/(\\sqrt{14}\\cdot\\sqrt{21}) = 8/\\sqrt{294} \\approx 0.466$.",
+              "$\\theta = \\arccos(0.466) \\approx 62.2°$ — an acute angle.",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Projections",
+        section: "projection",
+        body: [
+          "The projection of $\\mathbf{u}$ onto $\\mathbf{v}$ is the component of $\\mathbf{u}$ that lies exactly in the direction of $\\mathbf{v}$ — the 'shadow' of $\\mathbf{u}$ on the line through the origin in the direction of $\\mathbf{v}$.",
+          "Vector projection: $\\text{proj}_{\\mathbf{v}}\\mathbf{u} = \\dfrac{\\mathbf{u}\\cdot\\mathbf{v}}{\\mathbf{v}\\cdot\\mathbf{v}}\\,\\mathbf{v} = \\dfrac{\\mathbf{u}\\cdot\\mathbf{v}}{\\|\\mathbf{v}\\|^2}\\,\\mathbf{v}$. The result is a vector parallel to $\\mathbf{v}$.",
+          "Scalar projection (signed length of the shadow): $\\text{comp}_{\\mathbf{v}}\\mathbf{u} = \\mathbf{u}\\cdot\\hat{\\mathbf{v}} = \\dfrac{\\mathbf{u}\\cdot\\mathbf{v}}{\\|\\mathbf{v}\\|}$. Positive if they lean the same way, negative if opposite.",
+          "Orthogonal decomposition: every vector splits as $\\mathbf{u} = \\underbrace{\\text{proj}_{\\mathbf{v}}\\mathbf{u}}_{\\parallel\\mathbf{v}} + \\underbrace{(\\mathbf{u}-\\text{proj}_{\\mathbf{v}}\\mathbf{u})}_{\\perp\\mathbf{v}}$. The error $\\mathbf{u} - \\text{proj}_{\\mathbf{v}}\\mathbf{u}$ is perpendicular to $\\mathbf{v}$, as you can verify by dotting with $\\mathbf{v}$.",
+          "Projections are the building block of the Gram-Schmidt process (Chapter 7), least-squares regression, and Fourier series. The single idea of 'drop a perpendicular' reappears throughout mathematics, statistics, and signal processing.",
+        ],
+        eli5: [
+          "Shine a vertical flashlight on a tilted rod. The shadow on the floor is the projection — it captures how much of the rod's length goes in the horizontal direction. If the rod stands straight up, the shadow is a dot (zero projection). If the rod lies flat, the shadow equals the rod.",
+        ],
+        examples: [
+          {
+            title: "Computing a vector projection",
+            steps: [
+              "Project $\\mathbf{u} = \\langle 2,3\\rangle$ onto $\\mathbf{v} = \\langle 4,1\\rangle$.",
+              "$\\mathbf{u}\\cdot\\mathbf{v} = 8+3 = 11$, $\\mathbf{v}\\cdot\\mathbf{v} = 17$.",
+              "$\\text{proj}_{\\mathbf{v}}\\mathbf{u} = \\tfrac{11}{17}\\langle 4,1\\rangle = \\langle \\tfrac{44}{17},\\tfrac{11}{17}\\rangle$.",
+              "Perpendicular component: $\\mathbf{u}-\\text{proj} = \\langle 2-\\tfrac{44}{17},\\,3-\\tfrac{11}{17}\\rangle = \\langle -\\tfrac{10}{17},\\,\\tfrac{40}{17}\\rangle$.",
+              "Check: $\\langle -\\tfrac{10}{17},\\tfrac{40}{17}\\rangle\\cdot\\langle 4,1\\rangle = -\\tfrac{40}{17}+\\tfrac{40}{17} = 0$ ✓",
+            ],
+          },
+        ],
+      },
+      {
+        title: "The cross product (R³ only)",
+        section: "geometric",
+        body: [
+          "The cross product $\\mathbf{u}\\times\\mathbf{v}$ is defined only in $\\mathbb{R}^3$ and produces a vector, not a scalar. The result is perpendicular to both $\\mathbf{u}$ and $\\mathbf{v}$.",
+          "Determinant formula: $\\mathbf{u}\\times\\mathbf{v} = \\det\\begin{pmatrix}\\mathbf{e}_1&\\mathbf{e}_2&\\mathbf{e}_3\\\\u_1&u_2&u_3\\\\v_1&v_2&v_3\\end{pmatrix} = \\langle u_2v_3-u_3v_2,\\;u_3v_1-u_1v_3,\\;u_1v_2-u_2v_1\\rangle$.",
+          "Magnitude: $\\|\\mathbf{u}\\times\\mathbf{v}\\| = \\|\\mathbf{u}\\|\\,\\|\\mathbf{v}\\|\\sin\\theta$. This equals the area of the parallelogram spanned by $\\mathbf{u}$ and $\\mathbf{v}$. If the vectors are parallel ($\\sin\\theta = 0$), the cross product is $\\mathbf{0}$.",
+          "Anti-commutativity: $\\mathbf{u}\\times\\mathbf{v} = -(\\mathbf{v}\\times\\mathbf{u})$. Reversing the order flips the sign. This is why the cross product is not commutative.",
+          "Direction follows the right-hand rule: curl the fingers of your right hand from $\\mathbf{u}$ toward $\\mathbf{v}$; your thumb points in the direction of $\\mathbf{u}\\times\\mathbf{v}$.",
+          "Applications: computing the normal vector to a plane, finding the area of a triangle ($\\frac{1}{2}\\|\\mathbf{u}\\times\\mathbf{v}\\|$), computing torque in physics ($\\boldsymbol{\\tau} = \\mathbf{r}\\times\\mathbf{F}$).",
+        ],
+        eli5: [
+          "The cross product finds the direction perpendicular to two given arrows — like finding 'up' given two arrows lying on a table. Its length tells you the area the two arrows enclose as a parallelogram. If the arrows are parallel they enclose no area, so the cross product is zero.",
+        ],
+        examples: [
+          {
+            title: "Cross product and area of a triangle",
+            steps: [
+              "Find $\\mathbf{u}\\times\\mathbf{v}$ for $\\mathbf{u} = \\langle 1,2,3\\rangle$, $\\mathbf{v} = \\langle 4,5,6\\rangle$.",
+              "$\\mathbf{u}\\times\\mathbf{v} = \\langle (2)(6)-(3)(5),\\,(3)(4)-(1)(6),\\,(1)(5)-(2)(4)\\rangle = \\langle -3,6,-3\\rangle$.",
+              "Area of parallelogram: $\\|\\langle -3,6,-3\\rangle\\| = \\sqrt{9+36+9} = \\sqrt{54} = 3\\sqrt{6}$.",
+              "Area of triangle with these two sides: $\\frac{1}{2}\\cdot 3\\sqrt{6} = \\frac{3\\sqrt{6}}{2}$.",
+              "Verify perpendicularity: $\\langle -3,6,-3\\rangle\\cdot\\langle 1,2,3\\rangle = -3+12-9 = 0$ ✓.",
+            ],
+          },
+        ],
+      },
+    ],
+    examples: [],
+    commonMistakes: [
+      "Confusing the dot product (scalar result) with the cross product (vector result). $\\mathbf{u}\\cdot\\mathbf{v}$ measures alignment; $\\mathbf{u}\\times\\mathbf{v}$ produces a perpendicular vector.",
+      "Using $\\|c\\mathbf{v}\\| = c\\|\\mathbf{v}\\|$ when $c < 0$. Correct formula: $\\|c\\mathbf{v}\\| = |c|\\,\\|\\mathbf{v}\\|$. Magnitude is always nonneg.",
+      "Normalising the zero vector. Always check $\\|\\mathbf{v}\\| \\neq 0$ before dividing.",
+      "Thinking $\\mathbf{u}\\cdot\\mathbf{v}=0$ implies one vector is zero. Orthogonality and zero-ness are completely different conditions.",
+      "Applying the cross product in dimensions other than $3$. It is only defined in $\\mathbb{R}^3$.",
+      "Forgetting that vectors must share the same dimension before addition or the dot product can be computed.",
+    ],
+  };

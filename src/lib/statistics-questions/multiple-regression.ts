@@ -1,0 +1,168 @@
+import type { Problem } from "../shared-types";
+
+const p = (problem: Problem) => problem;
+
+export const multipleRegressionProblems: Problem[] = [
+  // Easy
+  p({ id: "mreg-model-1", topicId: "multiple-regression", section: "model", type: "mcq", difficulty: "easy",
+    prompt: "In the model $\\hat{y} = b_0 + b_1 x_1 + b_2 x_2$, the coefficient $b_1$ represents:",
+    answer: "The expected change in $y$ when $x_1$ increases by 1, holding $x_2$ constant.",
+    choices: [
+      "The expected change in $y$ when $x_1$ increases by 1, holding $x_2$ constant.",
+      "The total effect of $x_1$ on $y$ ignoring $x_2$.",
+      "The correlation between $x_1$ and $y$.",
+      "The change in $y$ when both $x_1$ and $x_2$ increase by 1.",
+    ],
+    explanation: "Step 1: By definition, partial regression coefficients hold the other variables in the model fixed. Final answer: The expected change in $y$ when $x_1$ increases by 1, holding $x_2$ constant." }),
+
+  p({ id: "mreg-r2-1", topicId: "multiple-regression", section: "fit", type: "mcq", difficulty: "easy",
+    prompt: "When you add a new predictor to a multiple regression model, what always happens to the unadjusted $R^2$?",
+    answer: "It stays the same or increases.",
+    choices: ["It stays the same or increases.", "It always decreases.", "It can increase or decrease.", "It resets to zero."],
+    explanation: "Step 1: Adding a variable can only reduce SSE or leave it unchanged, so $R^2 = 1 - SSE/SST$ never decreases. Final answer: It stays the same or increases." }),
+
+  p({ id: "mreg-vif-1", topicId: "multiple-regression", section: "multicollinearity", type: "mcq", difficulty: "easy",
+    prompt: "A VIF of 12 for a predictor indicates:",
+    answer: "High multicollinearity with other predictors.",
+    choices: ["No multicollinearity.", "Moderate multicollinearity.", "High multicollinearity with other predictors.", "The variable should be kept at all costs."],
+    explanation: "Step 1: VIF > 5 or 10 is a common rule of thumb for problematic multicollinearity. 12 is clearly high. Final answer: High multicollinearity with other predictors." }),
+
+  p({ id: "mreg-coeff-1", topicId: "multiple-regression", section: "model", type: "mcq", difficulty: "easy",
+    prompt: "In multiple regression, each slope coefficient is called a:",
+    answer: "Partial regression coefficient.",
+    choices: ["Simple slope.", "Partial regression coefficient.", "Total effect.", "Marginal effect ignoring other variables."],
+    explanation: "Step 1: The term 'partial' emphasizes that other variables are held constant in the interpretation. Final answer: Partial regression coefficient." }),
+
+  // Medium
+  p({ id: "mreg-adjr2-1", topicId: "multiple-regression", section: "fit", type: "mcq", difficulty: "medium",
+    prompt: "Adjusted $R^2$ is useful because it:",
+    answer: "Penalizes the addition of predictors that do not improve the model enough.",
+    choices: [
+      "Always increases when a new variable is added.",
+      "Penalizes the addition of predictors that do not improve the model enough.",
+      "Is always higher than unadjusted $R^2$.",
+      "Measures causality.",
+    ],
+    explanation: "Step 1: The penalty term involving $k$ (number of predictors) means adjusted $R^2$ can decrease when a weak predictor is added. Final answer: Penalizes the addition of predictors that do not improve the model enough." }),
+
+  p({ id: "mreg-f-1", topicId: "multiple-regression", section: "fit", type: "mcq", difficulty: "medium",
+    prompt: "The overall F-test in multiple regression tests whether:",
+    answer: "At least one of the slope coefficients is nonzero.",
+    choices: [
+      "All slope coefficients are exactly zero.",
+      "At least one of the slope coefficients is nonzero.",
+      "The intercept is zero.",
+      "The model is perfect ($R^2=1$).",
+    ],
+    explanation: "Step 1: $H_0: \\beta_1 = \\beta_2 = \\dots = \\beta_k = 0$ vs the alternative that at least one $\\beta_j \\ne 0$. Final answer: At least one of the slope coefficients is nonzero." }),
+
+  p({ id: "mreg-vif-2", topicId: "multiple-regression", section: "multicollinearity", type: "numeric", difficulty: "medium",
+    prompt: "A predictor has $R^2_j = 0.85$ when regressed on the other predictors. What is its VIF?",
+    answer: "6.67",
+    explanation: "Step 1: VIF = 1 / (1 - R^2_j) = 1 / (1 - 0.85) = 1 / 0.15 ≈ 6.67. Final answer: 6.67." }),
+
+  p({ id: "mreg-interpret-1", topicId: "multiple-regression", section: "model", type: "mcq", difficulty: "medium",
+    prompt: "In a model predicting house price with square footage and number of bedrooms, the coefficient on square footage is $150. This means:",
+    answer: "For two houses with the same number of bedrooms, each additional square foot is associated with $150 higher predicted price.",
+    choices: [
+      "Each additional square foot increases price by $150 regardless of bedrooms.",
+      "For two houses with the same number of bedrooms, each additional square foot is associated with $150 higher predicted price.",
+      "The average price per square foot is $150.",
+      "Adding one bedroom increases price by $150 after controlling for size.",
+    ],
+    explanation: "Step 1: The coefficient is the partial effect holding the other variable (bedrooms) fixed. Final answer: For two houses with the same number of bedrooms, each additional square foot is associated with $150 higher predicted price." }),
+
+  // Harder / calculation
+  p({ id: "mreg-matrix-1", topicId: "multiple-regression", section: "model", type: "mcq", difficulty: "hard",
+    prompt: "The OLS estimator in matrix form is $\\hat{\\boldsymbol{\\beta}} = $",
+    answer: "$(X^T X)^{-1} X^T \\mathbf{y}$",
+    choices: [
+      "$(X^T X)^{-1} X^T \\mathbf{y}$",
+      "$X^T (X X^T)^{-1} \\mathbf{y}$",
+      "$X^{-1} \\mathbf{y}$",
+      "$(X^T X) X^T \\mathbf{y}$",
+    ],
+    explanation: "Step 1: Derivation from minimizing the sum of squared residuals in matrix form yields the normal equations and the closed-form solution $(X^T X)^{-1} X^T \\mathbf{y}$. Final answer: $(X^T X)^{-1} X^T \\mathbf{y}$." }),
+
+  p({ id: "mreg-adjr2-2", topicId: "multiple-regression", section: "fit", type: "numeric", difficulty: "medium",
+    prompt: "A model with $n=50$, $k=4$ predictors has $R^2 = 0.72$. What is the approximate adjusted $R^2$?",
+    answer: "0.69",
+    explanation: "Step 1: Adjusted $R^2 = 1 - (1 - R^2) \\cdot (n-1)/(n-k-1) = 1 - 0.28 \\cdot 49/45 ≈ 1 - 0.28 \\cdot 1.089 ≈ 0.695. Final answer: 0.69." }),
+
+  p({ id: "mreg-selection-1", topicId: "multiple-regression", section: "selection", type: "mcq", difficulty: "medium",
+    prompt: "Compared with AIC, BIC tends to:",
+    answer: "Select simpler models (penalizes extra variables more heavily).",
+    choices: [
+      "Select more complex models.",
+      "Select simpler models (penalizes extra variables more heavily).",
+      "Always choose the model with highest $R^2$.",
+      "Ignore sample size.",
+    ],
+    explanation: "Step 1: BIC has a $\\log(n)$ penalty instead of 2, so for $n > 7$ it penalizes additional predictors more than AIC. Final answer: Select simpler models (penalizes extra variables more heavily)." }),
+
+  p({ id: "mreg-diagnostics-1", topicId: "multiple-regression", section: "diagnostics", type: "mcq", difficulty: "medium",
+    prompt: "A partial regression plot (added-variable plot) is used to:",
+    answer: "Visualize the relationship between $y$ and one predictor after removing the linear effects of the other predictors.",
+    choices: [
+      "Plot the raw scatter between $y$ and $x_j$.",
+      "Visualize the relationship between $y$ and one predictor after removing the linear effects of the other predictors.",
+      "Check the overall F-statistic.",
+      "Detect perfect multicollinearity.",
+    ],
+    explanation: "Step 1: It shows the unique contribution of one variable after the others have been partialled out. Final answer: Visualize the relationship between $y$ and one predictor after removing the linear effects of the other predictors." }),
+
+  p({ id: "mreg-leverage-1", topicId: "multiple-regression", section: "diagnostics", type: "mcq", difficulty: "hard",
+    prompt: "Cook's distance measures:",
+    answer: "The influence of an observation on the fitted regression coefficients (how much the model would change if that point were removed).",
+    choices: [
+      "Only the size of the residual.",
+      "Only how unusual the predictor values are.",
+      "The influence of an observation on the fitted regression coefficients (how much the model would change if that point were removed).",
+      "The correlation between two predictors.",
+    ],
+    explanation: "Step 1: Cook's distance combines leverage and residual magnitude to quantify overall influence on $\\hat{\\boldsymbol{\\beta}}$. Final answer: The influence of an observation on the fitted regression coefficients (how much the model would change if that point were removed)." }),
+
+  // Additional solid questions
+  p({ id: "mreg-interpret-2", topicId: "multiple-regression", section: "model", type: "numeric", difficulty: "medium",
+    prompt: "In a salary model, the coefficient on 'years of experience' is 2500 when 'education' is also in the model. What does this mean for someone with 10 years experience vs 11 years, same education?",
+    answer: "2500",
+    explanation: "Step 1: Holding education fixed, one extra year of experience is associated with an expected $2500 increase in salary. Final answer: 2500." }),
+
+  p({ id: "mreg-vif-3", topicId: "multiple-regression", section: "multicollinearity", type: "numeric", difficulty: "medium",
+    prompt: "Two predictors have correlation 0.95. Roughly what VIF would you expect for each (assuming only these two predictors)?",
+    answer: "10.3",
+    explanation: "Step 1: For two predictors, VIF ≈ 1 / (1 - r^2) ≈ 1 / (1 - 0.9025) ≈ 10.3. Final answer: 10.3." }),
+
+  p({ id: "mreg-f-2", topicId: "multiple-regression", section: "fit", type: "mcq", difficulty: "hard",
+    prompt: "If the overall F-test is significant but none of the individual t-tests are, the most likely explanation is:",
+    answer: "The predictors are correlated with each other (multicollinearity).",
+    choices: [
+      "The model is useless.",
+      "The predictors are correlated with each other (multicollinearity).",
+      "There is no relationship at all.",
+      "Sample size is too small for t-tests.",
+    ],
+    explanation: "Step 1: Joint significance without individual significance is a classic symptom of multicollinearity — the variables together explain variance, but no single one stands out after controlling for the others. Final answer: The predictors are correlated with each other (multicollinearity)." }),
+
+  p({ id: "mreg-selection-2", topicId: "multiple-regression", section: "selection", type: "mcq", difficulty: "medium",
+    prompt: "A major danger of using stepwise regression and then reporting p-values is:",
+    answer: "The p-values are biased (too small) because the model was selected using the same data.",
+    choices: [
+      "The model will always be the best possible.",
+      "The p-values are biased (too small) because the model was selected using the same data.",
+      "Adjusted $R^2$ will be exactly correct.",
+      "It automatically solves multicollinearity.",
+    ],
+    explanation: "Step 1: Variable selection capitalizes on chance in the sample; the reported p-values do not account for the search process. Final answer: The p-values are biased (too small) because the model was selected using the same data." }),
+
+  p({ id: "mreg-assumption-1", topicId: "multiple-regression", section: "diagnostics", type: "mcq", difficulty: "easy",
+    prompt: "Which assumption is most directly threatened when predictors are highly correlated?",
+    answer: "Stable estimation of individual coefficients (multicollinearity affects precision).",
+    choices: [
+      "Linearity of the mean function.",
+      "Independence of observations.",
+      "Stable estimation of individual coefficients (multicollinearity affects precision).",
+      "Normality of residuals.",
+    ],
+    explanation: "Step 1: Multicollinearity primarily inflates variances of the coefficient estimates without violating the other LINE assumptions directly. Final answer: Stable estimation of individual coefficients (multicollinearity affects precision)." }),
+];

@@ -1,0 +1,102 @@
+import type { ModuleContent } from "../types";
+
+export const systemsModule: ModuleContent = {
+    topicId: "systems",
+    title: "Systems of Linear Equations",
+    intro: [
+      "A system of linear equations is a set of constraints that must hold simultaneously. The question is always: do values of the unknowns exist that satisfy every equation at once, and if so, how many?",
+      "Gaussian elimination — systematically row-reducing the augmented matrix — gives a complete algorithmic answer to this question for any system, regardless of size. It is one of the most important algorithms in all of computational mathematics.",
+      "The theory connects directly to rank, the null space, and the fundamental theorem of linear maps. Every statement about when a system has zero, one, or infinitely many solutions follows from these ideas.",
+    ],
+    sections: [
+      {
+        title: "Setting up augmented matrices",
+        section: "gauss",
+        body: [
+          "A linear system $a_{11}x_1 + \\cdots + a_{1n}x_n = b_1, \\ldots, a_{m1}x_1 + \\cdots + a_{mn}x_n = b_m$ is written as the matrix equation $A\\mathbf{x} = \\mathbf{b}$, where $A$ is the $m\\times n$ coefficient matrix, $\\mathbf{x}$ is the unknown vector, and $\\mathbf{b}$ is the right-hand side.",
+          "The augmented matrix $[A\\;|\\;\\mathbf{b}]$ packs all information into one array. Each row represents one equation. The vertical bar separates coefficients from constants.",
+          "Three elementary row operations preserve the solution set: (R1) swap two rows, (R2) multiply a row by a nonzero scalar, (R3) add a scalar multiple of one row to another. These correspond exactly to legal algebraic manipulations of equations.",
+          "Why row operations work: they produce equivalent systems — systems with identical solution sets. You are not changing the solutions; you are changing the representation until the solution is obvious.",
+        ],
+        eli5: [
+          "Each equation is a constraint on a map: 'I'm somewhere on this line' and 'I'm somewhere on that line.' The solution is where the lines cross.",
+          "Gaussian elimination redraws the map so the crossing point is obvious. Instead of two diagonal lines, you draw one horizontal and one vertical line. The answer is immediately readable.",
+        ],
+      },
+      {
+        title: "Gaussian elimination",
+        section: "gauss",
+        body: [
+          "Forward elimination reduces the augmented matrix to row echelon form (REF): a staircase pattern where each row's leading nonzero entry (pivot) is to the right of the pivot above, with zeros below each pivot.",
+          "The procedure: work column by column from left to right. Use row operations to create zeros below the current pivot. Skip a column with no eligible pivot — this creates a free variable.",
+          "Back substitution: starting from the last nonzero row, solve for the pivot variable, then substitute upward through the other equations.",
+          "Reduced row echelon form (RREF) goes further: each pivot is scaled to $1$, and zeros are created both above and below each pivot. The solution can be read directly without back substitution.",
+          "A useful check: the number of pivots in RREF equals the rank of $A$. The number of non-pivot columns equals the number of free variables.",
+        ],
+        eli5: [
+          "Gaussian elimination is like solving a crossword one row at a time. You use each equation to eliminate one unknown, until you have one equation with one unknown. Solve it, substitute back, solve the next, and so on.",
+        ],
+        examples: [
+          {
+            title: "Solving a 3×3 system",
+            steps: [
+              "System: $x+y+z=6,\\; 2x-y+z=3,\\; x+2y-z=4$.",
+              "Augmented matrix: $\\left(\\begin{array}{ccc|c}1&1&1&6\\\\2&-1&1&3\\\\1&2&-1&4\\end{array}\\right)$.",
+              "$R_2\\leftarrow R_2-2R_1$, $R_3\\leftarrow R_3-R_1$: $\\left(\\begin{array}{ccc|c}1&1&1&6\\\\0&-3&-1&-9\\\\0&1&-2&-2\\end{array}\\right)$.",
+              "$R_3\\leftarrow R_3+\\tfrac{1}{3}R_2$: $\\left(\\begin{array}{ccc|c}1&1&1&6\\\\0&-3&-1&-9\\\\0&0&-\\tfrac{7}{3}&-5\\end{array}\\right)$.",
+              "Back-substitute: $z = 15/7$, then solve for $y$, then $x$.",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Solution types",
+        section: "consistency",
+        body: [
+          "A linear system has exactly one of three outcomes: no solution (inconsistent), exactly one solution, or infinitely many solutions. There is no 'two solutions' in linear algebra.",
+          "Inconsistency is flagged by a row $[0\\;0\\;\\cdots\\;0\\;|\\;b]$ with $b\\neq 0$ — the equation $0=b$ is impossible.",
+          "A unique solution exists when every variable is a pivot variable — the coefficient matrix has full column rank ($\\text{rank}(A)=n$). RREF produces $[I\\;|\\;\\mathbf{x}^*]$.",
+          "Infinitely many solutions arise when there are free variables — columns with no pivot. Each free variable can take any real value. You parameterise the solution set: express pivot variables in terms of free variables.",
+          "The complete solution to $A\\mathbf{x}=\\mathbf{b}$ is $\\mathbf{x} = \\mathbf{x}_p + \\mathbf{x}_h$, where $\\mathbf{x}_p$ is any particular solution and $\\mathbf{x}_h$ is any solution to the homogeneous system $A\\mathbf{x}=\\mathbf{0}$.",
+        ],
+        eli5: [
+          "Two lines either cross at one point (unique solution), are parallel and never meet (no solution), or are the same line (infinitely many solutions). In higher dimensions, replace 'lines' with 'hyperplanes' — the three possibilities are the same.",
+        ],
+      },
+      {
+        title: "Rank and the rank-nullity theorem",
+        section: "rank",
+        body: [
+          "The rank of a matrix $A$ is the number of pivot columns in its row echelon form — equivalently, the dimension of the column space $\\text{Col}(A)$.",
+          "Consistency condition: $A\\mathbf{x}=\\mathbf{b}$ is consistent iff $\\text{rank}([A\\;|\\;\\mathbf{b}]) = \\text{rank}(A)$. Adding $\\mathbf{b}$ as a column must not create a new pivot — $\\mathbf{b}$ must already lie in $\\text{Col}(A)$.",
+          "Uniqueness condition: the solution is unique iff $\\text{rank}(A)=n$ (no free variables).",
+          "The rank-nullity theorem: $\\text{rank}(A) + \\text{nullity}(A) = n$. Pivot columns contribute to rank; free columns contribute to nullity. Together they account for all $n$ columns.",
+          "For an $m\\times n$ matrix: $\\text{rank}(A) \\leq \\min(m,n)$. You cannot have more independent directions than the smaller dimension.",
+        ],
+        eli5: [
+          "Rank counts how many truly independent equations you have. Ten equations might contain only $3$ independent constraints if the rest are just combinations of those $3$. Rank-nullity says: independent constraints plus free variables always adds up to the total number of unknowns.",
+        ],
+      },
+      {
+        title: "Homogeneous systems",
+        section: "homogeneous",
+        body: [
+          "A homogeneous system $A\\mathbf{x}=\\mathbf{0}$ is always consistent — the trivial solution $\\mathbf{x}=\\mathbf{0}$ always works.",
+          "Nontrivial solutions exist iff $\\text{rank}(A)<n$ — there are more unknowns than pivots, creating free variables.",
+          "The set of all solutions to $A\\mathbf{x}=\\mathbf{0}$ is the null space $\\text{Null}(A)$, which is always a subspace of $\\mathbb{R}^n$. Its dimension (the nullity) equals the number of free variables.",
+          "A square matrix $A$ is invertible iff $A\\mathbf{x}=\\mathbf{0}$ has only the trivial solution iff $\\text{nullity}(A)=0$ iff $\\det(A)\\neq 0$. These conditions are all equivalent.",
+        ],
+        eli5: [
+          "A homogeneous system asks: what inputs does the matrix send to zero? Zero is always one answer. But if the matrix collapses space — if it's not full rank — then entire lines or planes of inputs get sent to zero. Those make up the null space.",
+        ],
+      },
+    ],
+    examples: [],
+    commonMistakes: [
+      "Multiplying a row by zero during elimination. This destroys information and is invalid.",
+      "Seeing free variables and claiming 'no solution.' Free variables mean infinitely many solutions. Inconsistency requires a row $[0\\;\\cdots\\;0\\;|\\;b]$ with $b\\neq 0$.",
+      "Confusing $\\text{rank}(A)$ with $\\text{rank}([A|\\mathbf{b}])$. The system is consistent iff these are equal.",
+      "Back-substituting in the wrong order. Always start from the bottom row and work upward.",
+      "Forgetting to express the general solution as particular solution plus null-space solution.",
+    ],
+  };

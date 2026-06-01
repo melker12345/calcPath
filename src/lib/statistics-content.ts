@@ -10,6 +10,10 @@ import { regressionProblems } from "./statistics-questions/regression";
 import { nonparametricProblems } from "./statistics-questions/nonparametric";
 import { distributionProblems } from "./statistics-questions/distributions";
 import { inferenceProblems } from "./statistics-questions/inference";
+import { stochasticProcessesProblems } from "./statistics-questions/stochastic-processes";
+import { bayesianInferenceProblems } from "./statistics-questions/bayesian-inference";
+import { multipleRegressionProblems } from "./statistics-questions/multiple-regression";
+import { logisticRegressionProblems } from "./statistics-questions/logistic-regression";
 import { modules } from "./statistics-modules";
 import type { Problem, Topic } from "./shared-types";
 
@@ -80,11 +84,39 @@ export const topics: Topic[] = [
     estimatedMinutes: 75,
   },
   {
+    id: "multiple-regression",
+    title: "Multiple Linear Regression",
+    description: "Multiple predictors, partial effects, multicollinearity, model selection, and diagnostics.",
+    order: 10,
+    estimatedMinutes: 90,
+  },
+  {
+    id: "logistic-regression",
+    title: "Logistic Regression",
+    description: "Modeling binary outcomes, odds ratios, maximum likelihood estimation, and classification.",
+    order: 11,
+    estimatedMinutes: 75,
+  },
+  {
     id: "nonparametric",
     title: "Non-Parametric Statistics",
     description: "Chi-square tests, Mann-Whitney U, and Wilcoxon signed-rank tests.",
-    order: 10,
+    order: 12,
     estimatedMinutes: 60,
+  },
+  {
+    id: "stochastic-processes",
+    title: "Stochastic Processes",
+    description: "Markov chains, Poisson processes, Brownian motion, and basic time series.",
+    order: 13,
+    estimatedMinutes: 100,
+  },
+  {
+    id: "bayesian-inference",
+    title: "Bayesian Inference",
+    description: "Prior distributions, posterior updating, credible intervals, and Bayesian model comparison.",
+    order: 14,
+    estimatedMinutes: 75,
   },
 ];
 
@@ -98,9 +130,13 @@ export const problems: Problem[] = [
   ...hypothesisTestingProblems,
   ...anovaProblems,
   ...regressionProblems,
+  ...multipleRegressionProblems,
+  ...logisticRegressionProblems,
   ...nonparametricProblems,
   ...distributionProblems,
   ...inferenceProblems,
+  ...stochasticProcessesProblems,
+  ...bayesianInferenceProblems,
 ];
 
 function toSlug(text: string) {
@@ -169,10 +205,39 @@ const sectionToAnchor: Record<string, Record<string, string>> = {
     residuals: "residuals-and-model-assessment",
     inference: "conditions-for-regression",
   },
+  "multiple-regression": {
+    model: "the-multiple-regression-model",
+    fit: "goodness-of-fit-and-inference",
+    multicollinearity: "multicollinearity",
+    selection: "model-selection-and-regularization",
+    diagnostics: "assumptions-and-diagnostics",
+  },
+  "logistic-regression": {
+    "why-logistic": "why-linear-regression-fails-for-binary-data",
+    model: "the-logistic-model",
+    estimation: "estimation-and-inference",
+    assumptions: "assumptions-and-diagnostics",
+    extensions: "extensions-and-related-models",
+  },
   nonparametric: {
     "chi-square": "chi-square-goodness-of-fit-test",
     "rank-tests": "mann-whitney-u-and-wilcoxon-tests",
     independence: "chi-square-test-for-independence",
+  },
+  "stochastic-processes": {
+    intro: "what-is-a-stochastic-process",
+    markov: "markov-chains",
+    poisson: "poisson-processes",
+    brownian: "brownian-motion-and-diffusion",
+    timeseries: "time-series-basics",
+    advanced: "connections-and-advanced-directions",
+  },
+  "bayesian-inference": {
+    bayes: "bayes-theorem-revisited",
+    prior: "prior-likelihood-posterior",
+    estimation: "bayesian-estimation-and-credible-intervals",
+    testing: "bayesian-hypothesis-testing-and-model-comparison",
+    computation: "computational-methods",
   },
 };
 
