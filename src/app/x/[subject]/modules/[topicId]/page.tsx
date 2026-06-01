@@ -28,7 +28,7 @@ export default async function DynamicModulePage({ params }: Props) {
     return (
       <main className="mx-auto w-full max-w-[760px] px-4 py-12">
         <p className="text-sm theme-text-secondary">No MDX explanation data for topic “{topicId}” in this subject yet (or topic unknown).</p>
-        <a href={`/x/${subjectSlug}`} className="mt-4 inline-block text-sm underline text-blue-700 dark:text-[var(--accent)]">Back to browse</a>
+        <a href={`/x/${subjectSlug}`} className="mt-4 inline-block text-sm underline text-[var(--accent)]">Back to browse</a>
       </main>
     );
   }
