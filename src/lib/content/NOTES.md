@@ -285,3 +285,56 @@ Both agents produced clean, small-commit histories and updated this file with de
 **Result**: `/x/statistics` (etc.) now has proper expandable chapters. Module pages have clear inline practice CTAs.
 
 **Combined Outcome**: These two agents close the remaining major gaps the user reported (LaTeX in practice, practice crashes, expandable chapters, missing inline practice links). All changes were scoped, used small commits, and updated this file. Ready for final testing on the feature branch.
+
+## Question Parity Migration - 2026
+
+**Agent**: Content Migration Subagent (this task).
+
+**Goal**: Achieve question count parity for the experimental `/x/` practice pages between legacy `src/lib/*-questions/*.ts` and new `content/*/topics/*/questions.json` (and update subject `index.json` metadata if needed). Only edits to `content/**/ *.json` (questions and index) + this NOTES.md. No code changes. Small, frequent git commits. Start with Statistics (user complaint), then verify LA + Calculus.
+
+**Audit findings (2026-06-01, before any ports in this task)**:
+
+### Statistics (14 topics, legacy total 461 questions)
+Legacy counts (from `src/lib/statistics-questions/*.ts` + cross files `distributions.ts`/`inference.ts` via `topicId`):
+- descriptive: 39
+- probability: 39
+- discrete-distributions: 42
+- continuous-distributions: 41
+- sampling: 39
+- estimation: 40
+- hypothesis-testing: 40
+- anova: 39
+- regression: 38
+- multiple-regression: 18
+- logistic-regression: 12
+- nonparametric: 39
+- stochastic-processes: 26
+- bayesian-inference: 9
+
+New counts (from `content/statistics/topics/*/questions.json`):
+- descriptive: 39 (parity)
+- probability: 39 (parity)
+- discrete-distributions: 0
+- continuous-distributions: 0
+- sampling: 0
+- estimation: 0
+- hypothesis-testing: 0
+- anova: 0
+- regression: 0
+- multiple-regression: 0
+- logistic-regression: 7
+- nonparametric: 0
+- stochastic-processes: 0
+- bayesian-inference: 9 (parity)
+
+**Gaps**: 10 topics at 0 (significant), logistic missing 5/12. Total missing ~362 (will port all for parity).
+
+### Linear Algebra (9 topics, legacy total 336)
+- All topics at exact parity 336/336 in `content/linear-algebra/topics/*/questions.json` (previously completed in LA Completion Agent work). No action needed.
+
+### Calculus (9 topics, legacy total 435)
+- All topics at exact parity 435/435 in `content/calculus/topics/*/questions.json` (limits:75, applications:42, diff-eq:44, integrals:50, multivariable:44, series:46, parametric-polar:36, derivatives:46, apps-integration:52). No action needed.
+
+**Plan**: Port missing questions one topic at a time for Statistics (small commits per topic + NOTES updates). Preserve all original `id`s exactly for progress compatibility. Follow exact JSON schema/shape from existing `questions.json` (no `topicId`, compact objects, choices arrays for MCQ, identical prompt/answer/explanation/LaTeX text). After all Stats, verify no other updates needed to `index.json`s (no `estimatedQuestions` field in TopicSchema, counts derived at load; no changes made). End with final NOTES summary + commit.
+
+All work via targeted search_replace on JSON arrays (read before edit) + git commits.
