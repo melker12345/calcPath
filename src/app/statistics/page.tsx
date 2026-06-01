@@ -31,8 +31,25 @@ const courseJsonLd = {
   ],
 };
 
-export default function StatisticsHome() {
+export default async function StatisticsHome() {
   const subject = subjects.statistics;
+
+  // === TRANSITION: source topics + problems from new FileSystemContentBundle (content/ FS data)
+  // for this ported subject. Uses direct loader (now supports statistics fully).
+  // Modules remain from legacy subjects (for expandable section previews) → mixed state supported.
+  // getPracticeProgress (called inside CourseContentsPage) works seamlessly with either source
+  // thanks to stable IDs from the content ports. Safe fallback keeps page working if loader changes.
+  // This is the production home (/statistics/) — minimal, reversible, no changes to CourseContentsPage contract.
+  let topics = subject.topics;
+  let problems = subject.problems;
+  try {
+    const { getFileSystemContentBundle } = await import("@/lib/content/loader");
+    const bundle = await getFileSystemContentBundle(subject.slug);
+    if (bundle?.topics?.length) topics = bundle.topics;
+    if (bundle?.problems?.length) problems = bundle.problems;
+  } catch {
+    // Silent legacy fallback (mixed/transition safety)
+  }
 
   return (
     <>
@@ -44,9 +61,9 @@ export default function StatisticsHome() {
         title={subject.label}
         description={subject.shortDescription}
         subjectSlug={subject.slug}
-        topics={subject.topics}
+        topics={topics}
         modules={subject.modules}
-        problems={subject.problems}
+        problems={problems}
       />
     </>
   );

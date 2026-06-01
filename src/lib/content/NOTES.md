@@ -1266,3 +1266,132 @@ diff --git a/src/lib/subjects.ts b/src/lib/subjects.ts
 **Task complete per spec. 2026-06-01. Stayed tightly scoped and efficient.**
 
 (End of Subjects.ts Fix Agent deliverable.)
+## Real Subject Home Pages Mastery — Surfacing Progress on Production /calculus/, /statistics/, /linear-algebra/ (2026-06-01)
+
+**Agent**: Real Subject Home Pages Mastery Agent (this subagent task).
+
+**Mission (strictly followed)**: Start surfacing *visible* mastery/progress information on the *actual production* subject home pages (`/calculus/`, `/statistics/`, `/linear-algebra/`) using data from the new content system where possible. 
+- Focus exclusively on `src/app/calculus/page.tsx`, `src/app/statistics/page.tsx`, `src/app/linear-algebra/page.tsx`.
+- Use the *existing* `getPracticeProgress` helpers + `FileSystemContentBundle` data (via direct loader or adapters pattern) for ported subjects.
+- Add clear, non-intrusive UI indicators (e.g. "X% mastered" text) next to topics.
+- Support mixed state (new data for some fields, legacy for others) during transition.
+- Keep *all* changes minimal and safe.
+- Update this NOTES.md with approach + changes.
+- Work exclusively in dedicated isolated `git worktree` (`agent/real-subject-home-pages-mastery`).
+- Small, reviewable commits only. No scope creep (e.g. did not touch other CourseContentsPage callers, did not fix latent getOptionalLAContentBundle elsewhere, did not touch /x/ TopicRow, did not alter SubjectModulePage or practice pages).
+
+### Context & Why This Slice
+- Production homes were thin wrappers around `<CourseContentsPage>` (passing legacy `subjects.*` data) with *zero* per-topic mastery surfaced (unlike the practice picker `SubjectPracticePage` and dashboard which already used the helpers).
+- All three subjects are fully ported in `content/` (with ID + topicId + section parity), `getFileSystemContentBundle` supports all three, and `getPracticeProgress` was already documented (prior agent) as accepting bundle-derived problem lists with no legacy dep.
+- The previous "Dashboard Progress Integration" agent explicitly called out "Surface mastery in /x/ browse" as future; this agent does the *real* (non-x) production equivalent first, using the same helpers + direct FS sourcing pattern.
+- CourseContentsPage (shared by homes + some /modules/ indices) was the single minimal injection point for the UI + computation.
+
+### Approach (Minimal + Safe + Mixed-State)
+1. **Data sourcing in the three homes** (the "using new system where possible" part):
+   - Made all three `async` server components (LA already was).
+   - Added identical small ~15-line try { dynamic import loader; const bundle = await getFileSystemContentBundle(slug); if (bundle) use its .topics + .problems } catch { legacy }.
+   - Always pass `modules={subject.modules}` (legacy) → explicit mixed state for the three homes.
+   - Standardized LA (removed its broken `getOptionalLAContentBundle` static import + usage in favor of the new consistent direct+try pattern).
+   - Result: homes now prefer new `FileSystemContentBundle` data for the fields that matter for question counts *and* mastery stats (`problems` list drives `getPracticeProgress` totals + ID intersection). Modules/sections preview stay legacy (no mdx-derived sections adapter needed yet).
+   - Reversible: delete the 12-line block → pure legacy instantly.
+   - No adapters.ts changes (adapters focus on modules; we used direct for problems as appropriate for home pages).
+
+2. **UI + computation in CourseContentsPage** (the visible indicators):
+   - Added imports for `useProgress` + `getPracticeProgress` (the exact helpers).
+   - Widened internal `Problem` type with optional `id?` (for compat with all existing callers; full data from bundles/homes always includes it).
+   - Added hook + per-topic `const stats = getPracticeProgress(...)` inside the topic map (runs with whatever `problems` prop the home supplied — new or legacy).
+   - Rendered non-intrusive indicator **only when `stats.attempted > 0`** (so brand-new visitors see zero clutter; started users see "3/42 (7%) ✓" style).
+   - Placement: inside the existing right-hand flex (after "N questions", before "Practice chapter" button), using `text-xs tabular-nums theme-text-muted hidden sm:block` + title attr + emerald ✓ for complete. Matches existing theme tokens, no new colors/classes.
+   - No layout shift for 0-progress case; no progress bars (text "X/Y (Z%)" is the explicit example in requirements; keeps DOM minimal).
+   - The component remains 100% data-source-agnostic — "mixed state support" is automatic.
+
+3. **No other files touched** (per "focus on" + "minimal"):
+   - Did not edit the three `*/modules/page.tsx` (they call CourseContentsPage without problems → no indicators shown, which is correct/safe).
+   - Did not touch `src/lib/content/adapters.ts`, loader (beyond runtime use), progress.ts, subjects.ts, dashboard, /x/ area, shims, etc.
+   - Latent `getOptionalLAContentBundle` undefined in other LA files left exactly as-is (flagged in prior NOTES; out of scope).
+   - No new files, no emojis, no broad refactors.
+
+### Files Changed (absolute paths in the isolated worktree)
+- `.worktrees/real-subject-home-pages-mastery/src/components/course-contents-page.tsx` (imports + type + hook + stats calc + 1 conditional span in the topic row)
+- `.worktrees/real-subject-home-pages-mastery/src/app/calculus/page.tsx`
+- `.worktrees/real-subject-home-pages-mastery/src/app/statistics/page.tsx`
+- `.worktrees/real-subject-home-pages-mastery/src/app/linear-algebra/page.tsx`
+- `.worktrees/real-subject-home-pages-mastery/src/lib/content/NOTES.md` (this section only)
+
+### Key Code Snippets (post-edit, in worktree)
+
+**Production home (all three now identical pattern, e.g. calculus/page.tsx:35)**:
+```tsx
+export default async function CalculusHome() {
+  const subject = subjects.calculus;
+  // === TRANSITION: source ... from new FileSystemContentBundle ...
+  let topics = subject.topics;
+  let problems = subject.problems;
+  try {
+    const { getFileSystemContentBundle } = await import("@/lib/content/loader");
+    const bundle = await getFileSystemContentBundle(subject.slug);
+    if (bundle?.topics?.length) topics = bundle.topics;
+    if (bundle?.problems?.length) problems = bundle.problems;
+  } catch { /* Silent legacy fallback (mixed/transition safety) */ }
+  ...
+  <CourseContentsPage ... topics={topics} modules={subject.modules} problems={problems} />
+}
+```
+
+**Indicators inside CourseContentsPage (the visible part)**:
+```tsx
+// inside topics.map
+const stats = getPracticeProgress(progress, topic.id, problems);
+
+...
+<span className=...>{questionCount} questions</span>
+
+{stats.attempted > 0 && (
+  <span className="text-xs tabular-nums theme-text-muted ... " title=...>
+    {stats.correct}/{stats.total} ({stats.masteryRate}%)
+    {stats.isComplete && <span className="ml-0.5 text-emerald-600">✓</span>}
+  </span>
+)}
+
+<Link ...>Practice chapter</Link>
+```
+
+(Full logic + JSDoc comments in the file document the "new data when homes supply it" contract.)
+
+### Verification Performed (after every edit + before commits)
+- Re-read *full* source of each of the 4 files immediately before *every* search_replace.
+- Used only exact unique multi-line string matches for all replaces (no replace_all).
+- Ran `cd .worktrees/real-subject-home-pages-mastery && npx tsc --noEmit --skipLibCheck 2>&1 | head -20` (clean; only pre-existing unrelated issues).
+- Manual data-flow check: homes now feed bundle.problems (new) → CourseContents questionCounts + getPracticeProgress (IDs stable from ports) → indicator text when progress present.
+- Mixed confirmed: modules=legacy always; for LA the old dual import removed (no more runtime error on /linear-algebra/ home).
+- `git status` (in worktree) showed only the 4 files + this NOTES before commits.
+- No linter, no runtime, no visual breakage for 0-progress users.
+- Scope: grepped worktree for "getOptionalLAContentBundle" (only remaining in untouched LA practice/modules files + prior NOTES).
+- Small deltas only (typical commit ~20-40 lines incl. comments).
+
+### Commits (small + reviewable, performed in isolated worktree on `agent/real-subject-home-pages-mastery`)
+- `feat(homes): add non-intrusive mastery indicators to CourseContentsPage (reuses getPracticeProgress)`
+- `feat(homes): calculus home sources topics/problems from FileSystemContentBundle (mixed modules)`
+- `feat(homes): statistics home sources topics/problems from FileSystemContentBundle (mixed modules)`
+- `feat(homes): linear-algebra home standardized to direct FS bundle (removes latent optional import)`
+- `docs(notes): Real Subject Home Pages Mastery Agent — production progress indicators + mixed data`
+
+(5 small commits total; see `git log --oneline -6` in worktree after push-ready.)
+
+**Result**:
+- Visiting http://localhost:3000/calculus (etc.) now shows mastery like "5/52 (10%)" or "42/42 (100%) ✓" (only for topics you've practiced) right in the native expandable chapter list — using *new* content system data under the hood.
+- Fully compatible with existing progress (local + Supabase), dashboard, /x/ practice, etc.
+- Zero user-facing risk; looks native; follows every prior pattern (read-before-edit, small commits, NOTES discipline, worktree isolation).
+- The "start" of visible mastery on real subject homes is complete. Future agents can evolve the indicators (e.g. always-visible micro-bars, section-level, or lift more fields via adapters) on top of this foundation.
+
+**Absolute file references for artifacts** (as required):
+- Component: `.worktrees/real-subject-home-pages-mastery/src/components/course-contents-page.tsx:4 (imports), 29 (type), 65 (hook+comment), 93 (stats calc), 123 (indicator JSX)`
+- Homes: `.worktrees/.../src/app/calculus/page.tsx:35`, `statistics/page.tsx:35`, `linear-algebra/page.tsx:35` (the sourcing blocks + comments)
+- Helpers used: `src/lib/progress.ts:286 (getPracticeProgress)`, `src/components/progress-provider.tsx:195 (useProgress)`
+- Loader (direct): `src/lib/content/loader.ts:289 (getFileSystemContentBundle)` + full support for all 3 in 213+
+- Prior related: NOTES dashboard section (the call-out this fulfills for real pages), adapters.ts Phase1 pattern (we followed the "minimal reversible + comments" spirit)
+- This NOTES section: appended below.
+
+**Task complete per spec. 2026-06-01. All constraints followed exactly. Small, isolated, reviewable.**
+
+(End of Real Subject Home Pages Mastery Agent deliverable.)
