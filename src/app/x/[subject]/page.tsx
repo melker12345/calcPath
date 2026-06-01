@@ -125,7 +125,7 @@ export default async function DynamicSubjectPage({ params }: Props) {
       </div>
 
       <h2 className="mb-3 text-lg font-semibold theme-text">Topics — pick explanation or practice</h2>
-      <p className="mb-4 text-sm theme-text-muted">Expandable list (click rows) matches the real CourseContentsPage &lt;ol&gt; + toggle pattern exactly. Data + sections from FileSystemContentBundle. Full dynamic flow demo.</p>
+      <p className="mb-4 text-sm theme-text-muted">Expandable rows (click chapter header or chevron) use the real CourseContentsPage &lt;ol&gt; + toggle pattern. Shows question counts + module sections (parsed from MDX) on expand. Purely from FileSystemContentBundle.</p>
 
       <ol className="mt-5 divide-y theme-border border-y">
         {topics.map((topic, index) => {
@@ -217,7 +217,7 @@ export default async function DynamicSubjectPage({ params }: Props) {
       </ol>
 
       <div className="mt-8 rounded border border-dashed theme-border p-4 text-xs theme-text-muted bg-[var(--surface-2)]/50">
-        This page and its links demonstrate the “browse subject → view explanation → practice” flow entirely from new content data. No static subject folders or legacy imports used.
+        This page (now with native-feeling expandable topic list) and its links demonstrate the “browse subject → view explanation → practice” flow entirely from new content data. No static subject folders or legacy imports used. (See NOTES.md for /x/ polish history.)
       </div>
     </main>
   );
