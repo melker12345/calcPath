@@ -44,6 +44,78 @@ import type { Problem, Topic } from "@/lib/shared-types";
  *
  * Limitations noted in NOTES.md.
  */
+
+/**
+ * Local per-question error boundary (defined here to avoid new files / scope creep).
+ * Catches runtime render errors for *one* question's subtree (prompt MathText edges beyond its own,
+ * choice rendering, MathInput internals, PracticeFeedback expl rendering, event-time sync bugs etc).
+ * Shows clear "rendering issue" UI per spec; onSkip advances via parent's goToNext (preserves
+ * session progress context, dots, nav). Keyed by question id so skip remounts clean.
+ * Complements the page-level PracticeErrorBoundary (last-resort) and MathText's fragment boundaries.
+ */
+class QuestionErrorBoundary extends React.Component<
+  { children: React.ReactNode; onSkip: () => void; questionId: string },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode; onSkip: () => void; questionId: string }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.warn(`[QuestionErrorBoundary] Render error for question ${this.props.questionId}:`, error, errorInfo);
+  }
+
+  private handleSkip = () => {
+    this.setState({ hasError: false, error: null });
+    this.props.onSkip();
+  };
+
+  private handleReset = () => {
+    this.setState({ hasError: false, error: null });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-800 dark:bg-amber-950/40">
+          <div className="mx-auto mb-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300" aria-hidden="true">
+            ⚠️
+          </div>
+          <p className="text-base font-semibold theme-text">This question had a rendering issue — skipped.</p>
+          <p className="mt-1 text-sm theme-text-secondary">
+            A malformed LaTeX fragment or edge-case data prevented display. The rest of your session (including progress) is unaffected.
+          </p>
+          {this.state.error && (
+            <p className="mt-2 text-[10px] theme-text-muted font-mono break-all opacity-70">{this.state.error.message}</p>
+          )}
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
+            <button
+              type="button"
+              onClick={this.handleSkip}
+              className="inline-flex items-center justify-center rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 active:scale-[0.985]"
+            >
+              Skip to next question →
+            </button>
+            <button
+              type="button"
+              onClick={this.handleReset}
+              className="inline-flex items-center justify-center rounded-lg border theme-border px-4 py-2 text-sm font-medium theme-text-muted transition hover:bg-[var(--surface-2)]"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export function GenericPracticeExperience({
   topic,
   problems: allTopicProblems,
