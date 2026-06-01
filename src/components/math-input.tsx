@@ -170,6 +170,19 @@ function deriveKeys(
   });
 }
 
+/**
+ * MathInput — virtual keypad + react-mathquill LaTeX editor for free-response numeric answers.
+ *
+ * - subject="generic" (used by GenericPracticeExperience in the /x/ data-driven path) now has
+ *   a hardened neutral var-based theme (light/dark friendly, matches app design tokens).
+ * - Style injection for MQ is robust (DOM-checked + tagging) to survive fast navigations and
+ *   experimental tree usage.
+ * - Suggestions derive improved via better questionContext fallbacks (benefits generic stats/linalg topics).
+ * - Full flow (direct typing in MQ field, all keypad buttons, scratchpad, submit, hint, feedback overlay)
+ *   works end-to-end for /x/[subject]/practice with subject=generic.
+ *
+ * Used by legacy per-subject pages (calculus/stats/linalg) and the new generic practice.
+ */
 export function MathInput({
   value,
   onChange,
