@@ -4,13 +4,13 @@
  * This is the source of truth for what "content" looks like in the new system.
  * All future loaders, editors, and generic pages will be built against these types.
  *
- * Design goals (per revised future-dynamic.md):
+ * Design goals (per future-dynamic.md and the 2026-06 primary architecture declaration):
  * - Versioned (we will evolve this)
  * - Strongly validated (Zod) at load time with good errors
  * - Captures current real-world usage from the 3 existing subjects (inventory in NOTES.md + analysis)
  * - Explicit about stable identifiers (critical for user progress, streaks, completedProblemIds)
  * - Schema-first: loader + generic UI derive from this, not the other way around
- * - Thin vertical slice first (start with Linear Algebra)
+ * - Now the canonical schema for the primary data-driven system (all subjects)
  *
  * Key invariants from code analysis:
  * - Problem.section <-> ModuleSection.section exact match required for dashboard sections + deep links.
@@ -342,11 +342,10 @@ export type MdxModule = z.infer<typeof MdxModuleSchema>;
  * The complete bundle loaded purely from the content/ filesystem structure
  * (JSON metadata + questions + MDX explanations).
  *
- * This is the target shape for the data-driven loader.
- * It is intentionally distinct from legacy SubjectBundle (which uses
- * structured ModuleContent arrays) to allow parallel evolution during migration.
+ * This is the target shape for the primary data-driven loader (official architecture).
+ * Distinct from legacy SubjectBundle during the transition period (see MIGRATION-PLAN.md).
  *
- * For the thin vertical slice we populate this from content/linear-algebra/.
+ * Populated from the full content/{subject}/ structures for all subjects.
  */
 export const FileSystemContentBundleSchema = z.object({
   config: SubjectConfigSchema,
