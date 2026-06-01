@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { modules } from "@/lib/statistics-modules";
-import { topics } from "@/lib/statistics-content";
+import { modules as legacyModules } from "@/lib/statistics-modules";
+import { topics as legacyTopics } from "@/lib/statistics-content";
 
 type Props = {
   params: Promise<{ topicId: string }>;
@@ -8,8 +8,26 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { topicId } = await params;
-  const mod = modules.find((m) => m.topicId === topicId);
-  const topic = topics.find((t) => t.id === topicId);
+  let mod = legacyModules.find((m) => m.topicId === topicId);
+  let topic = legacyTopics.find((t) => t.id === topicId);
+
+  // Evolutionary: source topic metadata from new content/ system when available.
+  // (Uses loader directly; adapter not needed for titles/descriptions.)
+  // Also ensures the existence guard passes for new topics (legacyModules is now inert stub).
+  // Reversible: remove the try block.
+  try {
+    const { getFileSystemContentBundle } = await import("@/lib/content/loader");
+    const bundle = await getFileSystemContentBundle("statistics");
+    const fromNew = bundle.topics.find((t) => t.id === topicId);
+    if (fromNew) {
+      topic = fromNew;
+      if (!mod) {
+        mod = { topicId } as any; // existence proxy only; page supplies real ModuleContent via adapter
+      }
+    }
+  } catch {
+    // fallback to legacy* shims
+  }
 
   if (!mod || !topic) {
     return { title: "Module Not Found | CalcPath" };
