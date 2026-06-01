@@ -1,5 +1,36 @@
 # Dynamic Content Architecture - Working Notes
 
+> **2026-06 Status**: The data-driven system (`content/` + `FileSystemContentBundle` + generic components) is now the **primary development direction** for CalcPath.  
+> The old per-subject TypeScript content files have been moved to `backup-content/legacy/`.  
+> All new work (practice, progress, navigation, etc.) should be done against the new model.  
+> See [MIGRATION-PLAN.md](/MIGRATION-PLAN.md) at the root for the overall strategy.
+
+## 2026-06 Migration: New Data-Driven Architecture is Now the Main Development Path
+
+**Decision**: Following the successful full port of all three subjects (Linear Algebra, Statistics, Calculus) into `content/` with complete JSON metadata, questions, and rich MDX explanations; the implementation of `FileSystemContentBundle` + generic components; and end-to-end validation of the user flows at `/x/`, we hereby declare the data-driven architecture (`content/` directory + `FileSystemContentBundle` loader + generic UI components) as the **primary and exclusive development path** for the entire application.
+
+No new features, content work, or UI changes will be built against the legacy TypeScript content model. All future development aligns to the new model.
+
+**Current Status**:
+- **Content**: 100% ported and question-parity verified for linear-algebra (9 topics, 336 qs), statistics (14 topics, 461 qs), calculus (9 topics, 435 qs) under `content/`.
+- **Loader & Schema**: `src/lib/content/loader.ts` and `schema.ts` are production-grade, schema-validated, and the canonical source.
+- **UI**: Generic components (`GenericModuleViewer`, `GenericPracticeExperience`, `MdxContent`, etc.) + `/x/` dynamic routes are the active development surface. They consume *only* `FileSystemContentBundle`.
+- **Legacy**: Old subject routes and per-subject implementations continue to function for continuity during transition but receive no further investment.
+
+**Legacy Files Location**: The original per-subject TypeScript content files have been moved to `backup-content/legacy/`. (See `backup-content/README.md` and `backup-content/legacy/`.) They are archived for reference only and are not imported or executed in the new architecture paths. All authoring and updates now happen exclusively via the `content/` folder structure per `content/ARCHITECTURE.md`.
+
+**Phased Migration Plan**: The detailed roadmap (declaration, decoupling, promotion, legacy retirement) lives in the root [MIGRATION-PLAN.md](/MIGRATION-PLAN.md). This NOTES section records the formal declaration milestone. See also the history in this file for prior thin-slice work that validated the approach.
+
+### Migration Status Summary
+
+| Category          | Status          | Details |
+|-------------------|-----------------|---------|
+| **Backed up**     | Complete        | Legacy TS files (`*-content.ts`, `*-questions/`, `*-modules.ts`, `modules/`) archived to `backup-content/legacy/`. |
+| **Promoted**      | Complete (data + core loader) | All subjects in `content/`, full `FileSystemContentBundle` support in loader, generic components live in `src/components/`, `/x/` pages fully functional as primary dev area. |
+| **Still coupled** | In active decoupling (Phase 1) | Main app routes (`/linear-algebra/*` etc.), progress tracking (`useProgress`), answer checking, some legacy `SubjectBundle` adapters, and per-subject page impls still reference old shapes. Goal: make generic path the default without breakage. |
+
+This declaration is effective immediately. All agents and contributors: target new work at the `content/` + generic model.
+
 ## Current Content Shape Inventory (as of start of this branch)
 
 ### Core Data Types (from src/lib/)
