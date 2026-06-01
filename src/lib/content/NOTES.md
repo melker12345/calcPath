@@ -59,15 +59,26 @@
 4. **Deep Linking**
    - `getModuleSectionUrl(topicId, section)` relies on `sectionToAnchor` maps + module data
 
-## Open Questions for Schema v1
+## Open Questions for Schema v1 (updated 2026-06-01)
 
-- How do we represent answer validation rules per question? (inline? separate validator registry?)
-- Should `explanation` stay as a single rich string, or be structured (steps + finalAnswer)?
-- Do we need a `Chapter` level between Subject and Topic?
-- How will we handle "hasTests", subject-specific icons, etc.?
+- How do we represent answer validation rules per question? (inline? separate validator registry?) — still future; global checker remains.
+- Should `explanation` stay as a single rich string, or be structured (steps + finalAnswer)? — kept string + convention for now.
+- Do we need a `Chapter` level between Subject and Topic? — not yet; topics are flat per subject.
+- How will we handle "hasTests", subject-specific icons, etc.? — modeled in SubjectConfig; tests separate for now.
+- Zod v4 constraints on refined schemas (no direct .extend/.omit) — worked around with shared field shape.
 
-## Next Experiments
+## Progress & Milestones (thin vertical slice phase)
 
-- [ ] Try loading one existing topic (e.g. "determinants") purely from data
-- [ ] Prototype a generic practice page that works from `Problem[]`
-- [ ] Decide on stable ID policy for migrated content
+- [x] Deep inventory of shapes across LA/Calculus/Stats + usages (progress, dashboard, practice hooks, answer-check, search, etc.)
+- [x] Schema hardened in src/lib/content/schema.ts: stricter rules, MCQ refine validation, TestQuestion, ModuleSectionSummary, rich JSDoc with invariants. Committed.
+- [x] Working content loader (src/lib/content/loader.ts): adapter for existing TS data, focused on Linear Algebra first. Exports getLinearAlgebraBundle(), loadAllContent(), getSubjectBundle(), validate, derive helpers. Successfully loads 9 topics, 336 problems, 9 modules with full validation.
+- [x] Data quality fixes: 3 LA MCQ problems corrected (type and exact-match answer) that schema validation caught. Committed.
+- Loader + schema together prove schema is now strong enough for real content.
+
+## Next Experiments (current focus)
+
+- [ ] Prototype a generic (data-only) practice page / component that consumes Problem[] + Topic from a loaded bundle (avoiding large changes to the 3 existing subject practice pages)
+- [ ] Introduce thin vertical slice demo (e.g. dev-only page or parallel structure) to prove end-to-end from `getSubjectBundle("linear-algebra")` → generic UI
+- [ ] Design decision needed: how/when to introduce generic dynamic routes (`[subject]`) without conflicting with existing static subject folders or requiring big refactors
+- [ ] Decide on stable ID policy + migration strategy for when we move content to JSON/MDX (progress compatibility critical)
+- [ ] Expand loader adapters for Calculus + Statistics (after LA slice validated)
