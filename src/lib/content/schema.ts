@@ -87,7 +87,7 @@ const mcqRefine = {
     return true;
   },
   message: "MCQ problems must have choices and answer must be one of them",
-  path: ["answer"] as const,
+  path: ["answer"],
 };
 
 /**
