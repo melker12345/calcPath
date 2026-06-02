@@ -10,7 +10,7 @@
  * implementation driven by the new content/ JSON+MDX data.
  *
  * Current implementation:
- * - Basic line-based parser for the MDX dialect used in content/*/topics/*/module.mdx
+ * - Basic line-based parser for the MDX dialect used in content/[star]/topics/[star]/module.mdx
  *   (supports variations seen in linear-algebra, statistics, calculus ports).
  * - Integrates new MdxContent renderer for intro + section bodies (fuller markdown: lists, emphasis, links, codespans, + native display math + consistent typography/spacing).
  * - Supports: intro, ## sections (with {#slug} or <!-- section: slug --> anchors + scroll-mt for nav),

@@ -11,7 +11,6 @@ import type { Topic, Problem } from "@/lib/shared-types";
 const PracticeClient = dynamic(
   () => import("./PracticeClient"),
   {
-    ssr: false,
     loading: () => (
       <div className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6">
         <div className="text-sm text-stone-500">Loading practice session…</div>
@@ -25,7 +24,7 @@ export default async function StatisticsPracticeTopicPage({
   searchParams,
 }: {
   params: Promise<{ topicId: string }>;
-  searchParams?: Promise<{ focus?: string }>;
+  searchParams: Promise<{ focus?: string }>;
 }) {
   const { topicId } = await params;
   const sp = await (searchParams ?? Promise.resolve({}));

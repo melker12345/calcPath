@@ -299,7 +299,7 @@ function parseMdxToLegacyShape(mdxSource: string): {
 }
 
 /**
- * Parses a raw MDX module (from content/*/topics/*/module.mdx) into the *exact*
+ * Parses a raw MDX module (from content/[star]/topics/[star]/module.mdx) into the *exact*
  * legacy ModuleContent shape that SubjectModulePage (and CourseContentsPage etc.)
  * have always expected.
  *

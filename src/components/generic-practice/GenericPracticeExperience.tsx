@@ -68,7 +68,7 @@ interface GenericPracticeExperienceProps {
  * - Full dynamic routes ([subject]/practice/[topicId]) not yet (per open questions).
  * - Progress ID stability guaranteed (same ids in JSON as legacy).
  *
- * No changes were made to app/*/practice/[topicId]/page.tsx files.
+ * No changes were made to app/[star]/practice/[topicId]/page.tsx files.
  *
  * Usage example (experimental or playground):
  *   import { getFileSystemContentBundle } from "@/lib/content/loader";

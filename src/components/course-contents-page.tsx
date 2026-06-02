@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useProgress } from "@/components/progress-provider";
+import { getPracticeProgress } from "@/lib/progress";
 import { SubjectBreadcrumbs } from "@/components/subject-breadcrumbs";
 
 type CourseTopic = {
@@ -13,6 +15,8 @@ type CourseTopic = {
 
 type ModuleSection = {
   title: string;
+  /** Stable slug (preferred for # anchors when present; from new content/ derive or legacy) */
+  section?: string;
 };
 
 type Module = {
@@ -21,7 +25,7 @@ type Module = {
 };
 
 type Problem = {
-  id?: string;
+  id: string;
   topicId: string;
 };
 
@@ -41,6 +45,8 @@ export function CourseContentsPage({
   problems?: Problem[];
 }) {
   const [openTopicId, setOpenTopicId] = useState<string | null>(null);
+
+  const { progress } = useProgress();
 
   const questionCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -117,18 +123,24 @@ export function CourseContentsPage({
                       {questionCount} questions
                     </span>
 
-                    {/* Mastery indicators temporarily disabled on real homes.
-                        The progress system (pulled by MasteryIndicator) still hits
-                        "topics is not defined" in the current client bundle due to
-                        the subjects + shim changes. 
-                        
-                        The important part (new FileSystemContentBundle data for
-                        topics/problems) is already working. Re-enable once the
-                        central progress/shim graph is stable. */}
-                    {/* <DynamicMasteryIndicator
-                      topicId={topic.id}
-                      problems={problems}
-                    /> */}
+                    {/* Mastery indicator (re-enabled): shows only for started topics.
+                        Uses problems passed from caller (which for real homes now comes
+                        from FileSystemContentBundle via guarded loader in the page).
+                        getPracticeProgress is source-agnostic (stable IDs). */}
+                    {(() => {
+                      const stats = getPracticeProgress(progress, topic.id, problems);
+                      return stats.attempted > 0 ? (
+                        <span
+                          className="text-xs tabular-nums theme-text-muted hidden sm:block"
+                          title={`${stats.correct} of ${stats.total} correct`}
+                        >
+                          {stats.correct}/{stats.total} ({stats.masteryRate}%)
+                          {stats.isComplete && (
+                            <span className="ml-0.5 text-emerald-600">✓</span>
+                          )}
+                        </span>
+                      ) : null;
+                    })()}
 
                     {/* Practice chapter button */}
                     <Link
@@ -158,12 +170,14 @@ export function CourseContentsPage({
                     <div className="pl-4 border-l-2 border-zinc-200 dark:border-zinc-700">
                       <ul className="space-y-1 text-sm">
                         {sections.map((section, sIdx) => {
-                          const slug = section.title
+                          // Prefer explicit stable .section (from new content/ MDX or legacy) for anchors
+                          // (matches question.section and progress). Fall back to title slugify.
+                          const slug = (section as any).section || section.title
                             .toLowerCase()
                             .replace(/[^a-z0-9]+/g, "-")
                             .replace(/(^-|-$)/g, "");
                           const chapterNum = index + 1;
-                          const sectionNum = sIdx; // 0-based as per your example (1.0, 1.1, ...)
+                          const sectionNum = sIdx;
                           return (
                             <li key={sIdx}>
                               <Link

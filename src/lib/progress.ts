@@ -277,7 +277,7 @@ export const getTopicProgress = (
  *
  * Fully compatible with (and driven by) the new data-driven content model:
  * - Pass `practiceProblems` directly from FileSystemContentBundle.problems (loaded via
- *   getFileSystemContentBundle() from content/*/topics/*/questions.json) or legacy sources.
+ *   getFileSystemContentBundle() from content/[star]/topics/[star]/questions.json) or legacy sources.
  * - Uses ONLY the stable `id` + `topicId` values (preserved 1:1 during content ports).
  * - The empty-topic guard (totalProblems > 0) ensures scaffolded/not-yet-ported topics
  *   in the dynamic /x/ path never falsely report as "mastered".

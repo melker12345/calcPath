@@ -11,10 +11,16 @@ import type { Topic } from "@/lib/shared-types";
 import type { ModuleContent } from "@/lib/modules/types";
 import { SubjectBreadcrumbs } from "@/components/subject-breadcrumbs";
 
+/**
+ * Dual-support for legacy ModuleContent[] (from src/lib/modules/ tree) and the
+ * shape produced by adapters (getLegacyModulesAndTopicsForSubject from content/ MDX).
+ * UI and behavior 100% unchanged — this is the "granular component" bridge.
+ * Over time callers will pass adapter output exclusively; then we can narrow the type.
+ */
 type SubjectModulePageProps = {
   subjectSlug: string;
   subjectLabel: string;
-  modules: ModuleContent[];
+  modules: ModuleContent[] | any[]; // accepts legacy or adapter-converted (new content-driven)
   topics: Topic[];
   faqs?: Record<string, { q: string; a: string }[]>;
 };
@@ -94,7 +100,7 @@ export function SubjectModulePage({
           <div id="intro" className="scroll-mt-20">
             <h2 className="mb-4 text-2xl font-semibold theme-text">Introduction</h2>
             <div className="prose prose-stone dark:prose-invert max-w-none">
-              {lessonModule.intro.map((paragraph, index) => (
+              {lessonModule.intro.map((paragraph: any, index: any) => (
                 <p key={index} className="mb-3 last:mb-0">
                   <MathText text={paragraph} />
                 </p>
@@ -103,7 +109,7 @@ export function SubjectModulePage({
           </div>
 
           {/* Sections */}
-          {lessonModule.sections.map((section) => (
+          {lessonModule.sections.map((section: any) => (
             <div
               key={section.section || section.title}
               id={toSlug(section.title)}
@@ -150,14 +156,14 @@ export function SubjectModulePage({
                   <div className="mb-3 text-sm font-semibold uppercase tracking-widest text-[var(--text-muted)]">
                     Example{section.examples.length > 1 ? "s" : ""}
                   </div>
-                  {section.examples.map((example, idx) => (
+                  {section.examples.map((example: any, idx: any) => (
                     <div
                       key={idx}
                       className="mb-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5"
                     >
                       <div className="mb-3 font-semibold theme-text">{example.title}</div>
                       <ol className="list-decimal space-y-2 pl-5 text-sm">
-                        {example.steps.map((step, stepIdx) => (
+                        {example.steps.map((step: any, stepIdx: any) => (
                           <li key={stepIdx} className="theme-text-secondary">
                             <MathText text={step} />
                           </li>
@@ -185,7 +191,7 @@ export function SubjectModulePage({
             <div id="mistakes" className="scroll-mt-20 mt-12">
               <h2 className="mb-4 text-2xl font-semibold theme-text">Common Mistakes</h2>
               <ul className="space-y-3 text-sm">
-                {lessonModule.commonMistakes.map((mistake, index) => (
+                {lessonModule.commonMistakes.map((mistake: any, index: any) => (
                   <li key={index} className="flex gap-3 theme-text-secondary">
                     <span className="mt-1.5 block h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--text-muted)]" />
                     <MathText text={mistake} />
