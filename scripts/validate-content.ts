@@ -21,10 +21,12 @@ import {
   SubjectIndexSchema,
   TopicIndexSchema,
   QuestionFileSchema,
+  DiagnosticFileSchema,
 } from "../src/lib/content/schema";
 import type {
   SubjectIndex,
   QuestionFile,
+  DiagnosticFile,
 } from "../src/lib/content/schema";
 import { extractMdxSectionSlugs } from "../src/lib/content/mdx";
 
@@ -86,6 +88,35 @@ async function main() {
     for (const dir of actualTopicDirs) {
       if (!declaredIds.has(dir)) {
         warnings.push(`${slug}: topics/${dir}/ exists but not listed in index.json topics[]`);
+      }
+    }
+
+    // optional diagnostic.json
+    const diagnosticPath = path.join(subjDir, "diagnostic.json");
+    if (await fs.access(diagnosticPath).then(() => true).catch(() => false)) {
+      try {
+        const raw = JSON.parse(await fs.readFile(diagnosticPath, "utf8"));
+        const diagnostic: DiagnosticFile = DiagnosticFileSchema.parse(raw);
+
+        if (diagnostic.targetSubject !== slug) {
+          errors.push(`${slug}/diagnostic.json: targetSubject "${diagnostic.targetSubject}" must match subject slug "${slug}"`);
+        }
+
+        const prerequisiteIds = new Set(diagnostic.prerequisites.map((p) => p.id));
+        const diagnosticQuestionIds = new Set<string>();
+
+        for (const question of diagnostic.questions) {
+          if (!prerequisiteIds.has(question.prerequisiteId)) {
+            errors.push(`${slug}/diagnostic.json: question "${question.id}" references unknown prerequisite "${question.prerequisiteId}"`);
+          }
+          if (diagnosticQuestionIds.has(question.id)) {
+            errors.push(`${slug}/diagnostic.json: duplicate question id "${question.id}"`);
+          }
+          diagnosticQuestionIds.add(question.id);
+        }
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        errors.push(`${slug}/diagnostic.json: ${msg}`);
       }
     }
 
