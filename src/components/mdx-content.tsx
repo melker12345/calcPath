@@ -178,8 +178,7 @@ function renderBlocks(tokens: AnyToken[], mathSegments: string[]): React.ReactNo
           : "text-2xl font-semibold tracking-tight mt-8 mb-3 theme-text scroll-mt-20";
 
       return React.createElement(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        Tag as any,
+        Tag as keyof React.JSX.IntrinsicElements,
         { key, id, className },
         renderInline(cleanedInline, mathSegments)
       );
@@ -187,7 +186,7 @@ function renderBlocks(tokens: AnyToken[], mathSegments: string[]): React.ReactNo
     if (token.type === "paragraph") {
       const p = token as Tokens.Paragraph;
       // Support display math as standalone paragraphs (common in our module.mdx)
-      const paraText = restoreMathInText((p as any).text || "", mathSegments);
+      const paraText = restoreMathInText((p as Tokens.Paragraph & { text?: string }).text || "", mathSegments);
       if (isPureDisplayMath(paraText)) {
         const math = paraText.trim().replace(/^[$]{1,2}|[$]{1,2}$/g, "").trim();
         return (
@@ -272,7 +271,7 @@ function renderBlocks(tokens: AnyToken[], mathSegments: string[]): React.ReactNo
       );
     }
     if (token.type === "code") {
-      const c = token as any;
+      const c = token as Tokens.Code;
       if (c.lang === "mermaid") {
         return <MermaidDiagram key={key} chart={c.text} />;
       }

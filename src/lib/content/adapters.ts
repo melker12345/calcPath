@@ -35,7 +35,15 @@ import type { MdxModule } from "./schema";
 import type { ModuleContent, ModuleSection, WorkedExample } from "@/lib/modules";
 import type { Topic } from "@/lib/shared-types";
 
-import { toSlug, stripFrontmatterAndH1, extractMdxSections } from "./mdx";
+import { toSlug, stripFrontmatterAndH1 } from "./mdx";
+
+type ParsedSection = {
+  title: string;
+  section: string;
+  body: string[];
+  eli5?: string[];
+  examples?: WorkedExample[];
+};
 
 /**
  * Strip raw HTML comment lines (e.g. <!-- section: xxx --> markers or any others).
@@ -90,10 +98,10 @@ function parseMdxToLegacyShape(mdxSource: string): {
   const lines = source.split(/\r?\n/);
 
   const intro: string[] = [];
-  const sections: any[] = [];
+  const sections: ParsedSection[] = [];
   const commonMistakes: string[] = [];
 
-  let currentSection: any = null;
+  let currentSection: ParsedSection | null = null;
   let inIntro = true;
   let inCommonMistakes = false;
 
@@ -118,7 +126,7 @@ function parseMdxToLegacyShape(mdxSource: string): {
   };
 
   for (let i = 0; i < lines.length; i++) {
-    let rawLine = lines[i];
+    const rawLine = lines[i];
     const line = rawLine.trim();
 
     if (!line) {
@@ -169,7 +177,7 @@ function parseMdxToLegacyShape(mdxSource: string): {
         section: slug,
         body: [] as string[],
         eli5: undefined as string[] | undefined,
-        examples: [] as any[],
+        examples: [] as WorkedExample[],
       };
       inIntro = false;
       inCommonMistakes = false;
@@ -345,7 +353,7 @@ function parseMdxToLegacyShape(mdxSource: string): {
       ...s,
       body: stripComments(s.body),
       eli5: s.eli5 && s.eli5.length ? stripComments(s.eli5) : undefined,
-      examples: s.examples && s.examples.length ? s.examples.filter((e: any) => e.steps && e.steps.length) : undefined,
+      examples: s.examples && s.examples.length ? s.examples.filter((e) => e.steps && e.steps.length) : undefined,
     }))
     .filter((s) => s.body.length > 0 || (s.eli5 && s.eli5.length) || (s.examples && s.examples.length));
 
@@ -375,7 +383,7 @@ export function mdxModuleToLegacyModuleContent(
   const parsed = parseMdxToLegacyShape(mdxModule.mdxSource);
 
   // Map to the exact legacy shape (1:1 field compatibility with old *-modules/*.ts)
-  const sections: ModuleSection[] = parsed.sections.map((sec: any) => ({
+  const sections: ModuleSection[] = parsed.sections.map((sec) => ({
     title: sec.title,
     section: sec.section || toSlug(sec.title),
     body: sec.body || [],

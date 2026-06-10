@@ -44,13 +44,6 @@ export class PracticeErrorBoundary extends React.Component<
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("Practice render error caught by boundary:", error, errorInfo);
 
-    // Surface migration/porting context for content-related crashes (e.g. legacy data shape issues
-    // leaking into the generic practice path, or a not-yet-ported component inside the tree).
-    if (process.env.NODE_ENV === "development") {
-      import("@/lib/migration-diagnostics")
-        .then((m) => m.onContentRelatedError(error))
-        .catch(() => {});
-    }
   }
 
   private reset = () => {

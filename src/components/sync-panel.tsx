@@ -21,8 +21,8 @@ export function SyncPanel() {
       setCode(newCode);
       setSuccess("Progress saved. Your code is linked to this snapshot for the next 1 week.");
       setMode("generate");
-    } catch (e: any) {
-      setError(e.message || "Failed to generate code");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to generate code");
     } finally {
       setLoading(false);
     }
@@ -38,8 +38,8 @@ export function SyncPanel() {
       applySyncedProgress(imported);
       setSuccess("Progress imported successfully!");
       setCode("");
-    } catch (e: any) {
-      setError(e.message || "Failed to import code. Check it and try again.");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to import code. Check it and try again.");
     } finally {
       setLoading(false);
     }

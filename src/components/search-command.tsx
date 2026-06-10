@@ -11,6 +11,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { useClientMounted } from "@/hooks/use-client-mounted";
 
 // Type is now also exported from the server action for the new content path.
 import type { SearchEntry } from "@/lib/actions/get-search-index";
@@ -46,14 +47,12 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useClientMounted();
   const [index, setIndex] = useState<SearchEntry[]>([]);
   const indexLoaded = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-
-  useEffect(() => setMounted(true), []);
 
   const ensureIndexLoaded = useCallback(() => {
     if (indexLoaded.current) return;
@@ -70,8 +69,6 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
       .slice(0, 12)
       .map((r) => r.e);
   }, [query, index]);
-
-  useEffect(() => setActiveIndex(0), [query]);
 
   const close = useCallback(() => {
     setIsOpen(false);
@@ -159,7 +156,10 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
                     ref={inputRef}
                     type="text"
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setActiveIndex(0);
+                    }}
                     onKeyDown={handleKeyDown}
                     placeholder="Search topics, sections, pages..."
                     className="flex-1 bg-transparent text-sm theme-text placeholder:text-[var(--text-muted)] outline-none border-none p-0 focus:ring-0"

@@ -7,6 +7,7 @@ export const subjectHeadingFont = Newsreader({
   variable: "--font-newsreader",
   subsets: ["latin"],
   weight: ["400", "700"],
+  display: "swap",
 });
 
 // Body serif is only rendered at a single weight (400); drop unused variants
@@ -15,4 +16,5 @@ export const subjectBodyFont = Lora({
   variable: "--font-lora",
   subsets: ["latin"],
   weight: ["400"],
+  display: "swap",
 });

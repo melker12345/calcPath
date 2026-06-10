@@ -72,7 +72,7 @@ export async function getSearchIndex(): Promise<SearchEntry[]> {
         for (const sec of secs) {
           // Prefer the stable .section slug (from MDX {#} or <!-- section: -->) for accurate deep links.
           // Falls back to title slugify (matches old behavior).
-          const sectionSlug = (sec as any).section || slugify(sec.title);
+          const sectionSlug = sec.section || slugify(sec.title);
           entries.push({
             label: sec.title,
             description: `${topic.title} — ${name}`,

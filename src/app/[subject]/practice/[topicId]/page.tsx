@@ -21,9 +21,9 @@ export default async function DynamicPracticePage({ params, searchParams }: Prop
   }
 
   const topic = bundle.topics.find((t) => t.id === topicId);
-  let topicProblems = bundle.problems.filter((p: any) => p.topicId === topicId);
+  let topicProblems = bundle.problems.filter((p) => p.topicId === topicId);
   if (sectionFilter) {
-    topicProblems = topicProblems.filter((p: any) => p.section === sectionFilter);
+    topicProblems = topicProblems.filter((p) => p.section === sectionFilter);
   }
 
   if (!topic) {

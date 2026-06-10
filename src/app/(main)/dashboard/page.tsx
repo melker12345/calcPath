@@ -1,4 +1,5 @@
 import { getDashboardDataForSubject, getAvailableSubjectConfigs } from "@/lib/content/loader";
+import type { Problem, Topic } from "@/lib/shared-types";
 import { DashboardShell } from "./DashboardShell";
 
 type SlimModule = { topicId: string; sections: Array<{ title: string; section?: string }> };
@@ -21,15 +22,15 @@ export default async function UnifiedDashboard() {
   const loads = await Promise.all(
     subjectList.map(async (s) => {
       const data = await getDashboardDataForSubject(s.slug).catch(() => ({
-        topics: [] as any[],
-        problems: [] as any[],
+        topics: [] as Topic[],
+        problems: [] as Problem[],
         modules: [] as SlimModule[],
       }));
       return { slug: s.slug, ...data };
     })
   );
 
-  const realData: Record<string, { topics: any[]; problems: any[]; modules: SlimModule[] }> = {};
+  const realData: Record<string, { topics: Topic[]; problems: Problem[]; modules: SlimModule[] }> = {};
   for (const { slug, topics, problems, modules } of loads) {
     realData[slug] = { topics: topics || [], problems: problems || [], modules };
   }

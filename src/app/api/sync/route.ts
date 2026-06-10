@@ -59,7 +59,9 @@ function isRateLimited(ip: string): boolean {
   return false;
 }
 
-async function cleanupOld(supabase: any) {
+type AdminClient = ReturnType<typeof createAdminClient>;
+
+async function cleanupOld(supabase: AdminClient) {
   const cutoff = new Date(Date.now() - TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
   await supabase
     .from('sync_snapshots')
@@ -73,14 +75,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
   }
 
-  let body: any;
+  let body: unknown;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const state = body.state;
+  const state =
+    typeof body === "object" && body !== null && "state" in body
+      ? (body as { state: unknown }).state
+      : undefined;
   if (!state || typeof state !== 'object') {
     return NextResponse.json({ error: "state (progress snapshot) is required" }, { status: 400 });
   }

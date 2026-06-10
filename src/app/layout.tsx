@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { subjectBodyFont, subjectHeadingFont } from "@/lib/subject-fonts";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Providers } from "@/components/providers";
@@ -83,7 +84,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${inter.variable} ${subjectHeadingFont.variable} ${subjectBodyFont.variable}`}
+    >
       <head>
         <script
           type="application/ld+json"
@@ -115,9 +120,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body
-        className={`${inter.variable} antialiased`}
-      >
+      <body className="antialiased">
         <Providers>{children}</Providers>
         <Analytics />
         <SpeedInsights />

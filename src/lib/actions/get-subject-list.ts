@@ -13,6 +13,7 @@ export async function getSubjectList() {
     slug: s.slug,
     label: s.label,
     icon: s.icon,
+    category: s.category,
     shortDescription: s.shortDescription,
     order: s.order,
   }));

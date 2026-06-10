@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import type { Topic } from "@/lib/shared-types";
 import type { TestQuestion } from "@/lib/test-questions";
 import { getTestQuestionsForTopic } from "@/lib/test-questions";
-import { getSubject } from "@/lib/subjects";
+import { loadSubjectIndex } from "@/lib/content/loader";
 
 type Props = {
   params: Promise<{ subject: string; topicId: string }>;
@@ -24,11 +24,13 @@ const TestClient = dynamic(
 export default async function SubjectTestPage({ params }: Props) {
   const { subject: slug, topicId } = await params;
 
-  // hasTests (from subjects.ts for core subjects, or content/*/index.json for discovered)
-  // is the single source of truth that gates the /test/[topicId] route.
-  // Removed the previous calculus-only hack (?? (slug === "calculus")).
-  const subjCfg = getSubject(slug);
-  const hasTests = !!subjCfg?.hasTests;
+  let hasTests = false;
+  try {
+    const idx = await loadSubjectIndex(slug);
+    hasTests = idx.hasTests ?? false;
+  } catch {
+    notFound();
+  }
   if (!hasTests) {
     notFound();
   }

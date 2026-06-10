@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getSubject } from "@/lib/subjects";
+import { loadSubjectIndex } from "@/lib/content/loader";
 
 type Props = {
   params: Promise<{ subject: string; topicId: string }>;
@@ -7,17 +7,19 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { subject: slug, topicId } = await params;
-  const s = getSubject(slug);
-  let label = s?.label || slug;
+  let title = slug;
+  let subjectLabel = slug;
   try {
-    const { loadSubjectIndex } = await import("@/lib/content/loader");
     const idx = await loadSubjectIndex(slug);
-    const t = idx.topics?.find((x: any) => x.id === topicId);
-    if (t) label = `${idx.label} — ${t.title}`;
-  } catch {}
+    subjectLabel = idx.label;
+    const topic = idx.topics.find((t) => t.id === topicId);
+    title = topic ? `${idx.label} — ${topic.title}` : idx.label;
+  } catch {
+    // minimal fallback
+  }
   return {
-    title: `${label} | CalcPath`,
-    description: `Step-by-step explanation and practice for ${topicId} in ${s?.label || slug}.`,
+    title: `${title} | CalcPath`,
+    description: `Step-by-step explanation and practice for ${topicId} in ${subjectLabel}.`,
     alternates: { canonical: `https://calc-path.com/${slug}/modules/${topicId}` },
   };
 }

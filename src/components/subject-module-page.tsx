@@ -6,9 +6,8 @@ import { useParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
 import { ModuleSectionNav } from "@/components/module-section-nav";
 import { VoteFeedback } from "@/components/vote-feedback";
-import { BlockMath } from "react-katex";
-import type { Topic } from "@/lib/shared-types";
-import type { ModuleContent } from "@/lib/modules";
+import type { Problem, Topic } from "@/lib/shared-types";
+import type { ModuleContent, ModuleSection, WorkedExample } from "@/lib/modules";
 import { SubjectBreadcrumbs } from "@/components/subject-breadcrumbs";
 import { MdxContent } from "@/components/mdx-content";
 
@@ -21,10 +20,10 @@ import { MdxContent } from "@/components/mdx-content";
 type SubjectModulePageProps = {
   subjectSlug: string;
   subjectLabel: string;
-  modules: ModuleContent[] | any[]; // accepts legacy or adapter-converted (new content-driven)
+  modules: ModuleContent[];
   topics: Topic[];
   /** Optional problems for the topic (from content bundle) to power the print "Text + Questions" worksheet feature. */
-  problems?: Array<{ id: string; topicId: string; prompt: string; type?: string; choices?: string[] }>;
+  problems?: Array<Pick<Problem, "id" | "topicId" | "prompt" | "type" | "choices">>;
   faqs?: Record<string, { q: string; a: string }[]>;
 };
 
@@ -43,13 +42,6 @@ export function SubjectModulePage({
   problems,
   faqs,
 }: SubjectModulePageProps) {
-  // Dev-only: if someone is still feeding this the old shape (or the adapter output),
-  // record it so we can see exactly which routes/components are the last users of legacy module data.
-  if (typeof process !== "undefined" && process.env.NODE_ENV === "development" && modules && modules.length > 0) {
-    import("@/lib/migration-diagnostics")
-      .then((m) => m.trackLegacyUsageInComponent("SubjectModulePage", "ModuleContent[] (legacy shape or adapter)"))
-      .catch(() => {});
-  }
   const params = useParams<{ topicId: string }>();
   const topicId = params?.topicId ?? "";
 
@@ -60,7 +52,7 @@ export function SubjectModulePage({
     if (!lessonModule) return [];
     return [
       { id: "intro", label: "Introduction" },
-      ...lessonModule.sections.map((section: any) => ({
+      ...lessonModule.sections.map((section: ModuleSection) => ({
         // Prefer stable .section (from <!-- section: xxx --> or explicit {#slug} in MDX) so that
         // practice "Review the explanation..." links using getSectionHref + question.section land on the right spot.
         id: section.section || toSlug(section.title),
@@ -77,7 +69,7 @@ export function SubjectModulePage({
   const [printStep, setPrintStep] = useState<"choose" | "count">("choose");
 
   const moduleProblems = useMemo(
-    () => (problems || []).filter((p: any) => p.topicId === topicId),
+    () => (problems || []).filter((p) => p.topicId === topicId),
     [problems, topicId]
   );
 
@@ -226,7 +218,7 @@ export function SubjectModulePage({
           <div id="intro" className="scroll-mt-20 print-keep-together">
             <h2 className="mb-4 text-2xl font-semibold theme-text">Introduction</h2>
             <div className="prose prose-stone dark:prose-invert max-w-none">
-              {lessonModule.intro.map((paragraph: any, index: any) => (
+              {lessonModule.intro.map((paragraph, index) => (
                 <p key={index} className="mb-3 last:mb-0">
                   <MathText text={paragraph} />
                 </p>
@@ -235,7 +227,7 @@ export function SubjectModulePage({
           </div>
 
           {/* Sections */}
-          {lessonModule.sections.map((section: any) => (
+          {lessonModule.sections.map((section: ModuleSection) => (
             <div
               key={section.section || section.title}
               id={section.section || toSlug(section.title)}
@@ -248,7 +240,7 @@ export function SubjectModulePage({
               {section.eli5 && section.eli5.length > 0 && (
                 <div className="print-keep-together mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-5">
                   <div className="mb-2 text-xs font-semibold uppercase tracking-widest text-[var(--text-muted)]">
-                    Explain Like I'm 5
+                    Explain Like I&apos;m 5
                   </div>
                   <div className="space-y-3 text-sm leading-relaxed theme-text-secondary">
                     {section.eli5.map((paragraph: string, index: number) => (
@@ -265,7 +257,7 @@ export function SubjectModulePage({
                   <div className="mb-3 text-sm font-semibold uppercase tracking-widest text-[var(--text-muted)]">
                     Example{section.examples.length > 1 ? "s" : ""}
                   </div>
-                  {section.examples.map((example: any, idx: any) => {
+                  {section.examples.map((example: WorkedExample, idx: number) => {
                     const steps: string[] = example.steps || [];
                     // Detect rich content (e.g. markdown tables inside Worked Example prose) vs classic short step lists.
                     // Tables in examples (like truth tables in propositional-logic) were previously dumped raw into <ol><li>
@@ -281,7 +273,7 @@ export function SubjectModulePage({
                           <MdxContent mdxSource={steps.join("\n\n")} className="max-w-none" />
                         ) : (
                           <ol className="list-decimal space-y-2 pl-5 text-sm">
-                            {steps.map((step: any, stepIdx: any) => (
+                            {steps.map((step: string, stepIdx: number) => (
                               <li key={stepIdx} className="theme-text-secondary">
                                 <MathText text={step} />
                               </li>
@@ -313,7 +305,7 @@ export function SubjectModulePage({
                 Common Mistakes
               </div>
               <ul className="space-y-3 text-sm leading-relaxed">
-                {lessonModule.commonMistakes.map((mistake: any, index: any) => (
+                {lessonModule.commonMistakes.map((mistake, index) => (
                   <li key={index} className="flex gap-3 theme-text-secondary">
                     <span className="mt-1.5 block h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500 dark:bg-amber-400" />
                     {/* Wrap MathText content in a single block so its internal fragments/spans (from splitMath + bold) flow as continuous text with natural spacing.
@@ -353,7 +345,7 @@ export function SubjectModulePage({
             <section className="hidden print-only mt-8 border-t border-[var(--border)] pt-6">
               <h2 className="mb-6 text-xl font-bold theme-text">Practice Questions — {topic.title}</h2>
               <ol className="list-decimal space-y-8 pl-6 text-sm">
-                {moduleProblems.slice(0, printQuestionCount).map((problem: any) => (
+                {moduleProblems.slice(0, printQuestionCount).map((problem) => (
                   <li key={problem.id} className="print-keep-together">
                     <div className="mb-2">
                       <MathText text={problem.prompt} />

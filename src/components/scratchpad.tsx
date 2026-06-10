@@ -9,6 +9,7 @@ import {
 import { createPortal } from "react-dom";
 import { useTheme } from "next-themes";
 import { MathText } from "@/components/math-text";
+import { useClientMounted } from "@/hooks/use-client-mounted";
 
 type Tool = "pen" | "eraser";
 
@@ -34,16 +35,17 @@ export function Scratchpad({
   const isDark = (resolvedTheme ?? theme) === "dark";
 
   const [tool, setTool] = useState<Tool>("pen");
-  const [color, setColor] = useState(() => COLORS[0]); // start with light default for SSR/hydration safety
+  const [colorOverride, setColorOverride] = useState<string | null>(null);
   const [size, setSize] = useState(SIZES[1]);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useClientMounted();
 
   const drawing = useRef(false);
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
   const paths = useRef<ImageData[]>([]);
   const hasRestored = useRef(false);
 
-  useEffect(() => setMounted(true), []);
+  const defaultPenColor = mounted && isDark ? DARK_DEFAULT_PEN : COLORS[0];
+  const color = colorOverride ?? defaultPenColor;
 
   const getCtx = useCallback(() => canvasRef.current?.getContext("2d") ?? null, []);
 
@@ -111,18 +113,6 @@ export function Scratchpad({
       hasRestored.current = false;
     }
   }, [open]);
-
-  // When scratchpad opens, set an appropriate default pen color.
-  // We wait for mount to avoid hydration mismatches.
-  useEffect(() => {
-    if (!open || !mounted) return;
-
-    if (isDark) {
-      setColor(DARK_DEFAULT_PEN);
-    } else {
-      setColor(COLORS[0]);
-    }
-  }, [open, isDark, mounted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!open) return;
@@ -240,6 +230,7 @@ export function Scratchpad({
       }
     }
     paths.current = [];
+    setColorOverride(null);
     onClose();
   };
 
@@ -317,7 +308,7 @@ export function Scratchpad({
                 <button
                   key={c}
                   type="button"
-                  onClick={() => setColor(c)}
+                  onClick={() => setColorOverride(c)}
                   className={`h-6 w-6 rounded-full border-2 transition sm:h-7 sm:w-7 ${
                     color === c 
                       ? "border-zinc-900 dark:border-white scale-110" 

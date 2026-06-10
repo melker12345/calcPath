@@ -174,6 +174,11 @@ export function GenericPracticeExperience({
     current?.section || displayProblems[0]?.section
   );
 
+  const questionContext = useMemo(
+    () => (current && typeof current.prompt === "string" ? detectQuestionContext(current.prompt) : undefined),
+    [current]
+  );
+
   if (displayProblems.length === 0) {
     // Extra guard: show clean intentional "no questions yet" instead of falling to bad-data fallback,
     // broken nav (length-1=-1), "All 0 mastered", or hitting PracticeErrorBoundary.
@@ -209,11 +214,6 @@ export function GenericPracticeExperience({
       </div>
     );
   }
-
-  const questionContext = useMemo(
-    () => (current && typeof current.prompt === "string" ? detectQuestionContext(current.prompt) : undefined),
-    [current]
-  );
 
   if (!topic) {
     return <div className="p-8 text-sm theme-text-secondary">Topic not found in data.</div>;
@@ -411,7 +411,7 @@ export function GenericPracticeExperience({
         {solvedCount >= displayProblems.length && (
           <div className="mt-4 rounded-xl border theme-border bg-[var(--surface-2)] p-4 text-center sm:mt-6 sm:rounded-2xl sm:p-5">
             <p className="text-lg font-bold theme-text">Congrats! All {displayProblems.length} mastered.</p>
-            <p className="mt-1 text-sm theme-text-secondary">You've completed the practice for this section.</p>
+            <p className="mt-1 text-sm theme-text-secondary">You&apos;ve completed the practice for this section.</p>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:gap-3 sm:justify-center">
               <Link
                 href={backToExplanationHref}

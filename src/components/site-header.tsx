@@ -5,8 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { SearchTrigger } from "@/components/search-command";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { getSubjectList } from "@/lib/actions/get-subject-list";
-import { subjectList as fallbackSubjectList } from "@/lib/subjects";
+import { useClientMounted } from "@/hooks/use-client-mounted";
+import { getSubjectIconClass } from "@/lib/subject-icon-styles";
+import type { NavSubject } from "@/lib/subjects";
 
 function ProfileIcon({ size = 20, color = "currentColor" }: { size?: number; color?: string }) {
   return (
@@ -23,7 +24,11 @@ const utilityLinks = [
   { href: "/feedback", label: "Feedback" },
 ] as const;
 
-function SubjectsDropdown({ subjects }: { subjects: Array<{ slug: string; label: string; icon?: string }> }) {
+function SubjectsDropdown({
+  subjects,
+}: {
+  subjects: Array<{ slug: string; label: string; icon?: string; category?: string }>;
+}) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -91,8 +96,8 @@ function SubjectsDropdown({ subjects }: { subjects: Array<{ slug: string; label:
                 className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm theme-text transition hover:bg-[var(--surface-2)] hover:theme-text"
                 role="menuitem"
               >
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-stone-100 text-[10px] text-stone-600 dark:bg-zinc-800 dark:text-zinc-400">
-                  {subject.icon || "📚"}
+                <span className={getSubjectIconClass(subject.category, "xs")}>
+                  {subject.icon || "•"}
                 </span>
                 <span className="truncate">{subject.label}</span>
               </Link>
@@ -120,12 +125,10 @@ function MobileDrawer({
 }: {
   open: boolean;
   onClose: () => void;
-  subjects?: Array<{ slug: string; label: string; icon?: string }>;
+  subjects?: Array<{ slug: string; label: string; icon?: string; category?: string }>;
 }) {
   // Auth removed: always show Account link in drawer (no conditional sign in/out).
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => { setMounted(true); }, []);
+  const mounted = useClientMounted();
 
   useEffect(() => {
     if (!open) return;
@@ -176,8 +179,8 @@ function MobileDrawer({
               className="flex items-center gap-3 rounded-xl bg-zinc-50 px-4 py-3.5 text-base font-semibold text-zinc-900 transition active:bg-zinc-100"
               onClick={onClose}
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-stone-100 text-sm text-stone-600">
-                {subject.icon || "📚"}
+              <span className={getSubjectIconClass(subject.category, "sm")}>
+                {subject.icon || "•"}
               </span>
               {subject.label}
             </Link>
@@ -217,32 +220,9 @@ function MobileDrawer({
   );
 }
 
-export const SiteHeader = () => {
+export const SiteHeader = ({ subjects }: { subjects: NavSubject[] }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [subjects, setSubjects] = useState<Array<{ slug: string; label: string; icon?: string }>>(() =>
-    fallbackSubjectList
-      .filter((s) => (s.order ?? 0) < 50)
-      .map((s) => ({ slug: s.slug, label: s.label, icon: s.icon }))
-  );
-
-  useEffect(() => {
-    // Load dynamically discovered subjects (supports pure content/ drops with no entry in subjects.ts).
-    // This makes the navbar dropdown automatically include newly dropped subjects without any code changes.
-    getSubjectList()
-      .then((discovered) => {
-        // Merge: start with fallback, add any additional discovered ones not already present.
-        const existingSlugs = new Set(fallbackSubjectList.map((s) => s.slug));
-        const additional = discovered.filter((d) => !existingSlugs.has(d.slug));
-        setSubjects((prev) => {
-          // If we had fallback, keep the structure, append new.
-          const base = prev.length > 0 ? prev : fallbackSubjectList.filter((s) => (s.order ?? 0) < 50).map((s) => ({ slug: s.slug, label: s.label, icon: s.icon }));
-          return [...base, ...additional];
-        });
-      })
-      .catch(() => {
-        // On error, keep the fallback.
-      });
-  }, []);
+  const navSubjects = subjects.filter((s) => (s.order ?? 0) < 50);
 
   return (
     <>
@@ -253,7 +233,7 @@ export const SiteHeader = () => {
           </Link>
 
           <nav className="hidden items-center gap-3 text-sm md:flex">
-            <SubjectsDropdown subjects={subjects} />
+            <SubjectsDropdown subjects={navSubjects} />
 
             {/* subtle separator between subject group and utility links */}
             <span className="mx-1 h-3 w-px bg-[var(--border)]" aria-hidden="true" />
@@ -275,7 +255,7 @@ export const SiteHeader = () => {
             mobileMenuOpen={mobileMenuOpen}
             onToggleMobileMenu={() => setMobileMenuOpen((open) => !open)}
             onCloseMobileMenu={() => setMobileMenuOpen(false)}
-            subjects={subjects}
+            subjects={navSubjects}
           />
         </div>
       </header>
@@ -292,7 +272,7 @@ function SiteHeaderAuthControls({
   mobileMenuOpen: boolean;
   onToggleMobileMenu: () => void;
   onCloseMobileMenu: () => void;
-  subjects?: Array<{ slug: string; label: string; icon?: string }>;
+  subjects?: Array<{ slug: string; label: string; icon?: string; category?: string }>;
 }) {
   // Auth removed: always show Profile/Account + Sync devices (anon accessible). No sign in/out CTAs.
   return (

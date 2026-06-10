@@ -40,8 +40,8 @@ function AccountContent() {
       URL.revokeObjectURL(url);
       setJsonMessage("Progress exported as JSON.");
       setTimeout(() => setJsonMessage(""), 2500);
-    } catch (e: any) {
-      setJsonMessage("Export failed: " + (e?.message || "unknown error"));
+    } catch (e: unknown) {
+      setJsonMessage("Export failed: " + (e instanceof Error ? e.message : "unknown error"));
     }
   };
 
@@ -56,8 +56,8 @@ function AccountContent() {
         applySyncedProgress(parsed);
         setJsonMessage("Progress imported from JSON successfully!");
         setTimeout(() => setJsonMessage(""), 3000);
-      } catch (err: any) {
-        setJsonMessage("Import failed: " + (err?.message || "Invalid JSON file"));
+      } catch (err: unknown) {
+        setJsonMessage("Import failed: " + (err instanceof Error ? err.message : "Invalid JSON file"));
       }
     };
     reader.onerror = () => {

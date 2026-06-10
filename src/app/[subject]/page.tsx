@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CourseContentsPage } from "@/components/course-contents-page";
-import { getSubject } from "@/lib/subjects";
-import { getFileSystemContentBundle, deriveModuleStructureFromBundle, loadSubjectIndex } from "@/lib/content/loader";
+import {
+  getFileSystemContentBundle,
+  deriveModuleStructureFromBundle,
+  loadSubjectIndex,
+  requireSubjectConfig,
+} from "@/lib/content/loader";
+import type { ListedSubjectConfig } from "@/lib/content/loader";
+import type { Problem, Topic } from "@/lib/shared-types";
 
 type Props = {
   params: Promise<{ subject: string }>;
 };
 
+type ModuleStructure = ListedSubjectConfig["modules"];
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { subject: slug } = await params;
-  const subject = getSubject(slug);
-  if (subject) {
-    return {
-      title: `Learn ${subject.label} — Free University Course | CalcPath`,
-      description: subject.shortDescription,
-    };
-  }
-  // Support auto-discovered subjects (no entry in subjects.ts): check via loader (index.json exists).
   try {
     const idx = await loadSubjectIndex(slug);
     return {
@@ -31,54 +31,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function SubjectHome({ params }: Props) {
   const { subject: slug } = await params;
-  let subject = getSubject(slug);
-  if (!subject) {
-    // Support pure discovered subjects via loader success (index.json present) even with no subjects.ts entry.
-    try {
-      const idx = await loadSubjectIndex(slug);
-      // Build a minimal config shape for the chrome (topics etc overridden from bundle below).
-      subject = {
-        slug: idx.slug,
-        label: idx.label,
-        shortDescription: idx.shortDescription,
-        modulesDescription: idx.modulesDescription,
-        icon: idx.icon,
-        order: idx.order,
-        hasTests: idx.hasTests,
-        topics: [],
-        problems: [],
-        modules: [],
-      } as any;
-    } catch {
-      notFound();
-    }
+
+  let subject: ListedSubjectConfig;
+  try {
+    subject = await requireSubjectConfig(slug);
+  } catch {
+    notFound();
   }
 
-  // Load from new content/ bundle (like the original subjects do)
-  let topics = (subject as any).topics || [];
-  let problems = (subject as any).problems || [];
-  let modules = (subject as any).modules || [];
+  let topics: Topic[] = subject.topics;
+  let problems: Problem[] = subject.problems;
+  let modules: ModuleStructure = subject.modules;
   try {
     const bundle = await getFileSystemContentBundle(slug);
     if (bundle?.topics?.length) topics = bundle.topics;
     if (bundle?.problems?.length) problems = bundle.problems;
     const derived = await deriveModuleStructureFromBundle(slug);
-    if (derived.length) modules = derived as any;
+    if (derived.length) modules = derived;
   } catch {
-    // fallback to the (empty for new) from subjects.ts or index
+    // graceful: keep empty lists from index-only config
   }
 
-  if (!subject) notFound();
-
-  const label = (subject as any).label;
-  const shortDesc = (subject as any).shortDescription;
-
-  // Data-driven Course JSON-LD (structured data) for all subjects.
-  // Pulled from the loaded subjectIndex (which now carries optional courseDescription etc from index.json).
-  // For the original 3: rich values come from their index.json (e.g. calculus has the detailed one).
-  // For new subjects: basic good default using label + shortDescription.
-  // No more slug === "calculus" (or other) special cases.
-  let courseJsonLd: any = null;
+  let courseJsonLd: Record<string, unknown> | null = null;
   try {
     const idx = await loadSubjectIndex(slug);
     const cdesc = idx.courseDescription || idx.shortDescription || `A free course on ${idx.label}.`;
@@ -94,7 +68,7 @@ export default async function SubjectHome({ params }: Props) {
       isAccessibleForFree: true,
     };
   } catch {
-    // If no index.json at all, omit ld+json (graceful; rare once content-driven)
+    // omit ld+json when index is unavailable
   }
 
   return (
@@ -103,9 +77,9 @@ export default async function SubjectHome({ params }: Props) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(courseJsonLd) }} />
       )}
       <CourseContentsPage
-        title={label}
-        description={shortDesc}
-        subjectSlug={(subject as any).slug}
+        title={subject.label}
+        description={subject.shortDescription}
+        subjectSlug={subject.slug}
         topics={topics}
         modules={modules}
         problems={problems}

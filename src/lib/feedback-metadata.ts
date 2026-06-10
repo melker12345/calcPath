@@ -5,10 +5,8 @@ import { getPracticePath, getSectionHref, getSubjectPath, LEGACY_SUBJECTS } from
 // pulling server-only loader into client bundles. For now return nulls (degraded but
 // builds; was already empty from inert shims). Full restore via props from admin page
 // is future small follow-up.
-const allProblemMeta: any[] = [];
-const problemMetaById = new Map<string, any>();
-const allTopicMeta: any[] = [];
-const topicMetaBySubjectAndId = new Map<string, any>();
+const problemMetaById = new Map<string, ProblemMeta>();
+const topicMetaBySubjectAndId = new Map<string, TopicMeta>();
 
 type ProblemMeta = {
   id: string;

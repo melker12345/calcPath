@@ -4,23 +4,320 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AppStateProviders } from "@/components/scoped-providers";
 import { useProgress } from "@/components/progress-provider";
-import { subjectList as fallbackSubjectList } from "@/lib/subjects";
-import { getPracticeProgress, getSectionPracticeProgress } from "@/lib/progress";
+import type { NavSubject } from "@/lib/subjects";
+import {
+  getPracticeProgress,
+  getSectionPracticeProgress,
+  type ProgressState,
+} from "@/lib/progress";
 import type { Topic, Problem } from "@/lib/shared-types";
 
 type SlimModule = { topicId: string; sections: Array<{ title: string; section?: string }> };
 
-// Generalized for auto-discovered subjects (from getAvailableSubjectConfigs in server).
-// Keys are slugs; supports any subject dropped in content/ without subjects.ts entry.
-type RealData = Record<string, { topics: Topic[]; problems: Problem[]; modules?: SlimModule[] }>;
+export type DashboardRealData = Record<
+  string,
+  { topics: Topic[]; problems: Problem[]; modules?: SlimModule[] }
+>;
+
+type TopicWithProgress = Topic & { correct: number; total: number; percent: number };
+
+type SubjectWithProgress = NavSubject & {
+  topics: Topic[];
+  problems: Problem[];
+  modules: SlimModule[];
+  solved: number;
+  total: number;
+  topicsWithProgress: TopicWithProgress[];
+  suggestedTopics: TopicWithProgress[];
+};
+
+function sectionSlugFromTitle(title: string) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function SectionTopicRow({
+  subjectSlug,
+  topicId,
+  title,
+  sectionSlug,
+  correct,
+  total,
+  percent,
+}: {
+  subjectSlug: string;
+  topicId: string;
+  title: string;
+  sectionSlug: string;
+  correct: number;
+  total: number;
+  percent: number;
+}) {
+  const hasProgress = total > 0;
+
+  return (
+    <Link
+      href={`/${subjectSlug}/practice/${topicId}?section=${sectionSlug}`}
+      className="group flex flex-col gap-2 rounded-lg border theme-border bg-[var(--surface)] p-3 transition hover:border-[var(--accent)]/35 hover:bg-[var(--surface-2)]"
+    >
+      <span className="text-sm font-medium leading-snug theme-text group-hover:text-[var(--accent)]">
+        {title}
+      </span>
+      {hasProgress ? (
+        <>
+          <div className="h-1.5 overflow-hidden rounded-full bg-[var(--accent)]/15">
+            <div
+              className="h-full rounded-full bg-[var(--accent)] transition-all"
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+          <span className="text-xs tabular-nums theme-text-muted">
+            {correct} / {total} solved
+          </span>
+        </>
+      ) : (
+        <span className="text-xs theme-text-muted">No practice tagged yet</span>
+      )}
+    </Link>
+  );
+}
+
+function ChapterRow({
+  subject,
+  mod,
+  topic,
+  chapterNum,
+  isExpanded,
+  onToggle,
+  progress,
+}: {
+  subject: SubjectWithProgress;
+  mod: SlimModule;
+  topic: TopicWithProgress;
+  chapterNum: number;
+  isExpanded: boolean;
+  onToggle: () => void;
+  progress: ProgressState;
+}) {
+  const isComplete = topic.total > 0 && topic.correct === topic.total;
+  const sectionCount = mod.sections?.length ?? 0;
+
+  return (
+    <div
+      className={`overflow-hidden rounded-xl border theme-border theme-surface ${isExpanded ? "md:col-span-2" : ""}`}
+    >
+      <div className="flex items-stretch">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={isExpanded}
+          className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3.5 text-left transition hover:bg-[var(--surface-2)] sm:gap-4 sm:py-4"
+        >
+          <span className="shrink-0 rounded-md bg-[var(--surface-2)] px-2 py-1 text-xs font-semibold tabular-nums theme-text-muted">
+            Ch. {chapterNum}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold theme-text sm:text-base">{topic.title}</p>
+            <p className="mt-0.5 text-xs theme-text-muted">
+              {sectionCount} {sectionCount === 1 ? "topic" : "topics"}
+              <span className="mx-1.5 opacity-40">·</span>
+              <span className="tabular-nums">
+                {topic.correct}/{topic.total} solved
+              </span>
+            </p>
+          </div>
+          <div className="hidden w-24 shrink-0 sm:block">
+            <div className="h-1.5 overflow-hidden rounded-full bg-[var(--accent)]/15">
+              <div
+                className="h-full rounded-full bg-[var(--accent)]"
+                style={{ width: `${topic.percent}%` }}
+              />
+            </div>
+          </div>
+          {isComplete ? (
+            <span className="shrink-0 text-sm text-[var(--accent)]" aria-label="Complete">
+              ✓
+            </span>
+          ) : null}
+          <span
+            className={`shrink-0 text-lg leading-none theme-text-muted transition-transform ${isExpanded ? "rotate-180" : ""}`}
+            aria-hidden
+          >
+            ▾
+          </span>
+        </button>
+      </div>
+
+      {isExpanded && (
+        <div className="border-t theme-border bg-[var(--surface)]/60 px-4 py-4">
+          {mod.sections && mod.sections.length > 0 ? (
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              {mod.sections.map((section) => {
+                const slug = section.section || sectionSlugFromTitle(section.title);
+                const secStats = getSectionPracticeProgress(
+                  progress,
+                  topic.id,
+                  slug,
+                  subject.problems
+                );
+
+                const total = secStats.total;
+                const correct = secStats.correct;
+                const percent = total > 0 ? Math.round((correct / total) * 100) : 0;
+
+                return (
+                  <SectionTopicRow
+                    key={slug}
+                    subjectSlug={subject.slug}
+                    topicId={topic.id}
+                    title={section.title}
+                    sectionSlug={slug}
+                    correct={correct}
+                    total={total}
+                    percent={percent}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm theme-text-muted">No topics listed for this chapter yet.</p>
+          )}
+
+          <div className="mt-4 flex flex-wrap gap-3 text-sm">
+            <Link
+              href={`/${subject.slug}/modules/${topic.id}`}
+              className="font-medium text-[var(--accent)] hover:underline"
+            >
+              Read chapter →
+            </Link>
+            <Link
+              href={`/${subject.slug}/practice/${topic.id}`}
+              className="theme-text-secondary hover:theme-text hover:underline"
+            >
+              Practice all topics
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SubjectRow({
+  subject,
+  isExpanded,
+  onToggle,
+  expandedChapters,
+  onToggleChapter,
+  progress,
+}: {
+  subject: SubjectWithProgress;
+  isExpanded: boolean;
+  onToggle: () => void;
+  expandedChapters: Record<string, boolean>;
+  onToggleChapter: (key: string) => void;
+  progress: ProgressState;
+}) {
+  const percent = subject.total > 0 ? Math.round((subject.solved / subject.total) * 100) : 0;
+  const chapters = subject.modules
+    .map((mod, index) => {
+      const topic = subject.topicsWithProgress.find((t) => t.id === mod.topicId);
+      if (!topic) return null;
+      return { mod, topic, chapterNum: index + 1 };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
+
+  const chapterCount = chapters.length;
+
+  return (
+    <section className="overflow-hidden rounded-xl border theme-border theme-surface">
+      <div className="flex items-stretch">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={isExpanded}
+          className="flex min-w-0 flex-1 items-center gap-3 px-4 py-4 text-left transition hover:bg-[var(--surface-2)] sm:gap-4"
+        >
+          <span className="shrink-0 text-xl leading-none" aria-hidden>
+            {subject.icon}
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-base font-semibold theme-text sm:text-lg">
+              {subject.label}
+            </h2>
+            <p className="mt-0.5 text-xs theme-text-muted sm:text-sm">
+              {chapterCount} {chapterCount === 1 ? "chapter" : "chapters"}
+              <span className="mx-1.5 opacity-40">·</span>
+              <span className="tabular-nums">
+                {subject.solved}/{subject.total} solved ({percent}%)
+              </span>
+            </p>
+          </div>
+          <div className="hidden w-28 shrink-0 sm:block">
+            <div className="h-2 overflow-hidden rounded-full bg-[var(--accent)]/15">
+              <div
+                className="h-full rounded-full bg-[var(--accent)]"
+                style={{ width: `${percent}%` }}
+              />
+            </div>
+          </div>
+          <span
+            className={`shrink-0 text-lg leading-none theme-text-muted transition-transform ${isExpanded ? "rotate-180" : ""}`}
+            aria-hidden
+          >
+            ▾
+          </span>
+        </button>
+        <Link
+          href={`/${subject.slug}`}
+          className="flex shrink-0 items-center border-l theme-border px-4 text-sm font-medium text-[var(--accent)] transition hover:bg-[var(--surface-2)]"
+        >
+          Open
+        </Link>
+      </div>
+
+      {isExpanded && (
+        <div className="border-t theme-border bg-[var(--surface)]/40 px-3 py-3 sm:px-4 sm:py-4">
+          {chapters.length > 0 ? (
+            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+              {chapters.map(({ mod, topic, chapterNum }) => {
+                const chapterKey = `${subject.slug}-${topic.id}`;
+                return (
+                  <ChapterRow
+                    key={topic.id}
+                    subject={subject}
+                    mod={mod}
+                    topic={topic}
+                    chapterNum={chapterNum}
+                    isExpanded={!!expandedChapters[chapterKey]}
+                    onToggle={() => onToggleChapter(chapterKey)}
+                    progress={progress}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm theme-text-muted">
+              No chapters yet.{" "}
+              <Link href={`/${subject.slug}`} className="text-[var(--accent)] hover:underline">
+                Browse subject
+              </Link>
+            </p>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
 
 export default function DashboardContent({
   realData,
   subjectConfigs,
 }: {
-  realData?: RealData;
-  /** Optional: list from auto-discovery so client iteration includes new subjects not in sync subjectList. */
-  subjectConfigs?: Array<{ slug: string; label: string; icon: string; shortDescription?: string; order?: number }>;
+  realData?: DashboardRealData;
+  subjectConfigs?: NavSubject[];
 }) {
   return (
     <AppStateProviders>
@@ -33,34 +330,23 @@ function DashboardInner({
   realData,
   subjectConfigs,
 }: {
-  realData?: RealData;
-  subjectConfigs?: Array<{ slug: string; label: string; icon: string; shortDescription?: string; order?: number }>;
+  realData?: DashboardRealData;
+  subjectConfigs?: NavSubject[];
 }) {
   const { progress } = useProgress();
+  const [expandedSubjects, setExpandedSubjects] = useState<Record<string, boolean>>({});
+  const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({});
 
-  // Resolve topics/problems/modules(structure) from new FileSystemContentBundle (realData) when present.
-  // This makes the dashboard fully consume the data-driven architecture for counts,
-  // mastery, aggregates, suggested topics, chapter expandables + per-section progress.
-  // Stable IDs + section slugs (from MDX) guarantee cross-compat with the data-driven /[subject] routes (powered by generics + FileSystemContentBundle).
-  const getEffectiveTopics = (slug: string, fallback: Topic[]) => {
-    const r = realData?.[slug];
-    return r?.topics?.length ? r.topics : fallback;
-  };
-  const getEffectiveProblems = (slug: string, fallback: Problem[]) => {
-    const r = realData?.[slug];
-    return r?.problems?.length ? r.problems : fallback;
-  };
-  const getEffectiveModules = (slug: string, fallback: any[]) => {
-    const r = realData?.[slug];
-    return r?.modules?.length ? r.modules : fallback;
+  const toggleSubject = (slug: string) => {
+    setExpandedSubjects((prev) => ({ ...prev, [slug]: !prev[slug] }));
   };
 
-  // Use passed subjectConfigs (from auto-discovery on server) or fallback to sync subjectList.
-  // This ensures newly dropped subjects (no subjects.ts entry) appear in dashboard aggregates.
-  const activeSubjects = subjectConfigs && subjectConfigs.length > 0 ? subjectConfigs : fallbackSubjectList;
+  const toggleChapter = (key: string) => {
+    setExpandedChapters((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
-  // Memoize all the expensive progress aggregation so it only recomputes
-  // when the actual progress data changes (not on every parent re-render).
+  const activeSubjects = subjectConfigs ?? [];
+
   const {
     subjectsWithProgress,
     totalSolved,
@@ -68,13 +354,14 @@ function DashboardInner({
     overallAccuracy,
     masteryPercent,
   } = useMemo(() => {
-    const computedSubjects = activeSubjects.map((subject: any) => {
-      const effTopics = getEffectiveTopics(subject.slug, subject.topics || []);
-      const effProblems = getEffectiveProblems(subject.slug, subject.problems || []);
-      const effModules = getEffectiveModules(subject.slug, subject.modules || []);
+    const computedSubjects: SubjectWithProgress[] = activeSubjects.map((subject) => {
+      const bundle = realData?.[subject.slug];
+      const effTopics = bundle?.topics?.length ? bundle.topics : [];
+      const effProblems = bundle?.problems?.length ? bundle.problems : [];
+      const effModules = bundle?.modules?.length ? bundle.modules : [];
 
       let solved = 0;
-      let total = effProblems.length;
+      const total = effProblems.length;
 
       const topicsWithProgress = effTopics.map((topic) => {
         const stats = getPracticeProgress(progress, topic.id, effProblems);
@@ -94,8 +381,6 @@ function DashboardInner({
 
       return {
         ...subject,
-        // Override with real (new arch) data for full consumption in client.
-        // topics/problems drive counts + getPractice*/getSection* ; modules drive chapter UI + sec slugs.
         topics: effTopics,
         problems: effProblems,
         modules: effModules,
@@ -109,12 +394,11 @@ function DashboardInner({
     const tSolved = computedSubjects.reduce((sum, s) => sum + s.solved, 0);
     const tProblems = computedSubjects.reduce((sum, s) => sum + s.total, 0);
 
-    // Single pass for accuracy (now using the effective per-subject lists from realData or fallback)
     let tAttempted = 0;
     let tCorrect = 0;
 
-    computedSubjects.forEach((subject: any) => {
-      subject.topics.forEach((topic: any) => {
+    computedSubjects.forEach((subject) => {
+      subject.topics.forEach((topic) => {
         const stats = getPracticeProgress(progress, topic.id, subject.problems);
         tAttempted += stats.attempted;
         tCorrect += stats.correct;
@@ -131,47 +415,28 @@ function DashboardInner({
       overallAccuracy: acc,
       masteryPercent: mPercent,
     };
-  }, [progress, realData]); // Recompute if realData (bundle data) changes too (e.g. future refresh)
-
-  // Expandable chapters state (keyed by "subjectSlug-ch-N")
-  const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({});
-
-  const toggleChapter = (key: string) => {
-    setExpandedChapters(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
+  }, [progress, realData, activeSubjects]);
 
   const currentStreak = progress.streak?.current ?? 0;
   const bestStreak = progress.streak?.longest ?? 0;
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-12">
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold tracking-tight theme-text">
-          Dashboard
-        </h1>
-        <p className="mt-2 text-[15px] theme-text-muted">
-          Your progress and suggested practice across all subjects.
-          Mastery stats are unified: practice in the main views or the data-driven routes (powered by FileSystemContentBundle + the generic components) both update the same counts via stable problem IDs.
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mb-6">
+        <h1 className="text-3xl font-semibold tracking-tight theme-text">Dashboard</h1>
+        <p className="mt-2 text-sm theme-text-muted">
+          Expand a subject for chapters, then a chapter for topics and practice links.
         </p>
       </div>
 
-      {/* Stats Overview - restored from old dashboard */}
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
-        {/* Problems Mastered */}
         <div className="theme-card-light theme-border p-4 sm:p-5">
           <div className="text-xs font-semibold uppercase tracking-wide theme-text">
             Problems Mastered
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-4xl font-bold theme-text">
-              {totalSolved}
-            </span>
-            <span className="text-lg theme-text-muted">
-              / {totalProblems}
-            </span>
+            <span className="text-4xl font-bold theme-text">{totalSolved}</span>
+            <span className="text-lg theme-text-muted">/ {totalProblems}</span>
           </div>
           <div className="mt-3 h-2 rounded-full bg-[var(--accent)]/20">
             <div
@@ -179,179 +444,46 @@ function DashboardInner({
               style={{ width: `${masteryPercent}%` }}
             />
           </div>
-          <div className="mt-2 text-sm theme-text-muted">
-            {masteryPercent}% complete
-          </div>
+          <div className="mt-2 text-sm theme-text-muted">{masteryPercent}% complete</div>
         </div>
 
-        {/* Current Streak */}
         <div className="theme-card-light theme-border p-4 sm:p-5">
           <div className="text-xs font-semibold uppercase tracking-wide theme-text">
             Current Streak
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-4xl font-bold theme-text">
-              {currentStreak}
-            </span>
-            <span className="text-lg theme-text-muted">
-              days
-            </span>
+            <span className="text-4xl font-bold theme-text">{currentStreak}</span>
+            <span className="text-lg theme-text-muted">days</span>
           </div>
-          <div className="mt-3 text-sm theme-text-muted">
-            Best: {bestStreak} days
-          </div>
+          <div className="mt-3 text-sm theme-text-muted">Best: {bestStreak} days</div>
         </div>
 
-        {/* Accuracy */}
         <div className="theme-card-light theme-border p-4 sm:p-5">
-          <div className="text-xs font-semibold uppercase tracking-wide theme-text">
-            Accuracy
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-4xl font-bold theme-text">
-              {overallAccuracy}%
-            </span>
-          </div>
-          <div className="mt-3 text-sm theme-text-muted">
-            First-try success rate
-          </div>
+          <div className="text-xs font-semibold uppercase tracking-wide theme-text">Accuracy</div>
+          <div className="mt-2 text-4xl font-bold theme-text">{overallAccuracy}%</div>
+          <div className="mt-3 text-sm theme-text-muted">First-try success rate</div>
         </div>
       </div>
 
-      <div className="space-y-10">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {subjectsWithProgress.map((subject) => {
-          const percent = subject.total > 0 ? Math.round((subject.solved / subject.total) * 100) : 0;
-
+          const isSubjectExpanded = !!expandedSubjects[subject.slug];
           return (
-            <div key={subject.slug}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{subject.icon}</span>
-                  <h2 className="text-2xl font-semibold theme-text">{subject.label}</h2>
-                </div>
-                <Link
-                  href={`/${subject.slug}`}
-                  className="text-sm font-medium text-[var(--accent)] hover:underline"
-                >
-                  Browse chapters →
-                </Link>
-              </div>
-
-              <div className="mt-1 text-sm theme-text-muted">
-                {subject.solved} of {subject.total} problems solved ({percent}%)
-              </div>
-
-              {/* Chapters (expandable cards) */}
-              <div className="mt-4">
-                <div className="mb-3 text-xs font-medium uppercase tracking-[1px] theme-text-muted">
-                  Chapters
-                </div>
-
-                <div className="space-y-3">
-                  {(subject.modules ?? []).map((mod: any, index: number) => {
-                    const topic = subject.topicsWithProgress.find((t: any) => t.id === mod.topicId);
-                    if (!topic) return null;
-
-                    const isComplete = topic.total > 0 && topic.correct === topic.total;
-                    const questionsLeft = Math.max(0, topic.total - topic.correct);
-                    const chapterNum = index + 1;
-                    const accuracy = topic.total > 0 ? Math.round((topic.correct / topic.total) * 100) : 0;
-                    const chapterKey = `${subject.slug}-ch-${chapterNum}`;
-                    const isExpanded = !!expandedChapters[chapterKey];
-
-                    return (
-                      <div key={mod.topicId} className="rounded-xl border theme-border theme-surface overflow-hidden">
-                        {/* Chapter card header - always shows overall chapter progress */}
-                        <button
-                          onClick={() => toggleChapter(chapterKey)}
-                          className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[var(--surface-2)] transition"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span className="text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded bg-[var(--surface-2)] theme-text-muted shrink-0">
-                              Ch. {chapterNum}
-                            </span>
-                            <span className="font-semibold theme-text truncate">
-                              {topic.title}
-                            </span>
-                            <span className="text-xs theme-text-muted hidden sm:inline">
-                              — {topic.correct}/{topic.total} solved
-                              {questionsLeft > 0 && ` (${questionsLeft} left)`}
-                              — {accuracy}% accuracy
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2 text-sm tabular-nums shrink-0">
-                            <span className={`text-lg leading-none transition-transform ${isExpanded ? "rotate-180" : ""}`}>
-                              ▾
-                            </span>
-                          </div>
-                        </button>
-
-                        {/* Expanded: breakdown of topics/sections inside the chapter */}
-                        {isExpanded && (
-                          <div className="border-t theme-border px-4 py-4 bg-[var(--surface)]/40 text-sm">
-                            {/* Individual sections with question counts + user progress */}
-                            {mod.sections && mod.sections.length > 0 && (
-                              <div>
-                                <div className="text-xs font-semibold uppercase tracking-widest theme-text-muted mb-2">
-                                  Topics in this chapter
-                                </div>
-                                <div className="space-y-1">
-                                  {mod.sections.map((section: any, sIndex: number) => {
-                                    // Use the explicit stable section slug from module data.
-                                    // This must match the `section` field on the corresponding questions.
-                                    const sectionSlug = section.section;
-
-                                    const secStats = sectionSlug
-                                      ? getSectionPracticeProgress(
-                                          progress,
-                                          topic.id,
-                                          sectionSlug,
-                                          subject.problems
-                                        )
-                                      : { total: 0, correct: 0, attempted: 0, attemptedRate: 0, masteryRate: 0, accuracyRate: 0, isComplete: false };
-
-                                    const hasData = secStats.total > 0;
-                                    const solved = hasData ? secStats.correct : 0;
-                                    const total = hasData ? secStats.total : 0;
-
-                                    return (
-                                      <div key={sIndex} className="flex justify-between items-center pl-1 text-sm">
-                                        <span className="theme-text-secondary">{section.title}</span>
-                                        <span className="tabular-nums text-xs theme-text-muted">
-                                          {hasData ? `${solved} / ${total}` : "—"}
-                                        </span>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                                <div className="mt-2 text-xs theme-text-muted pl-1">
-                                  Section progress requires explicit <code>section</code> tags on both module sections and questions.
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {subject.solved === 0 && (
-                <div className="mt-4 text-sm theme-text-muted">
-                  You haven’t practiced this subject yet.{" "}
-                  <Link href={`/${subject.slug}`} className="text-[var(--accent)] hover:underline">
-                    Start practicing
-                  </Link>
-                </div>
-              )}
+            <div key={subject.slug} className={isSubjectExpanded ? "md:col-span-2" : ""}>
+              <SubjectRow
+                subject={subject}
+                isExpanded={isSubjectExpanded}
+                onToggle={() => toggleSubject(subject.slug)}
+                expandedChapters={expandedChapters}
+                onToggleChapter={toggleChapter}
+                progress={progress}
+              />
             </div>
           );
         })}
       </div>
 
-      <div className="mt-12 border-t theme-border pt-6 text-center text-xs theme-text-muted">
+      <div className="mt-10 border-t theme-border pt-6 text-center text-xs theme-text-muted">
         Progress is saved locally and can be synced across devices via /sync.
       </div>
     </div>

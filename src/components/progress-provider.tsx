@@ -116,14 +116,16 @@ export const useProgress = () => {
     // (no provider = no persistence for that tree). Practice/dashboard etc always provide.
     // This enables granular components like CourseContentsPage to be dropped into
     // server-driven home pages without forcing provider wrappers on every caller.
+    const noopProgress = createEmptyProgress();
+    const noop = () => {};
     return {
-      progress: { completedProblemIds: [], attemptedProblemIds: [], topicStats: {}, attempts: [], streak: { current: 0, longest: 0 } },
-      addAttempt: () => {},
-      setStreak: () => {},
-      reset: () => {},
-      isLoaded: false,
-      applySyncedProgress: () => {},
-    } as any; // shape matches the context value for read paths
+      progress: noopProgress,
+      addAttempt: noop,
+      addTestResult: noop,
+      addDiagnosticResult: noop,
+      resetProgress: noop,
+      applySyncedProgress: noop,
+    } satisfies ProgressContextValue;
   }
   return context;
 };

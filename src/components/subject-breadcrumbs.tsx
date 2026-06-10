@@ -100,9 +100,10 @@ export function SubjectBreadcrumbs({
  * Helper: build standard subject home breadcrumb items from index data.
  * Useful for CourseContentsPage and subject home chrome.
  */
-export function getSubjectHomeBreadcrumbs(indexOrConfig: SubjectIndex | SubjectConfig): BreadcrumbItem[] {
-  const slug = (indexOrConfig as any).slug;
-  const label = (indexOrConfig as any).label;
+type SubjectBreadcrumbSource = Pick<SubjectIndex, "slug" | "label"> | Pick<SubjectConfig, "slug" | "label">;
+
+export function getSubjectHomeBreadcrumbs(indexOrConfig: SubjectBreadcrumbSource): BreadcrumbItem[] {
+  const { slug, label } = indexOrConfig;
   return [
     { label: "Contents", href: "/" },
     { label, href: `/${slug}` },
@@ -117,7 +118,7 @@ export function getBreadcrumbsFromBundle(
   bundle: { config: { slug: string; label: string } },
   currentTopicTitle?: string
 ): BreadcrumbItem[] {
-  const base = getSubjectHomeBreadcrumbs(bundle.config as any);
+  const base = getSubjectHomeBreadcrumbs(bundle.config);
   if (currentTopicTitle) {
     return [...base, { label: currentTopicTitle }];
   }

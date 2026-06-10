@@ -1,17 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { subjectList as fallbackSubjectList } from "@/lib/subjects";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+
+import { getSubjectIconResponsiveClass } from "@/lib/subject-icon-styles";
+import { LandingScrim } from "@/components/landing-scrim";
 
 /**
  * Landing page parallax experience.
  *
- * - 4 discrete sections, each in a fixed 500px tall container
+ * - 5 discrete sections, each in a fixed 500px tall container
  * - Only one section visible at a time, vertically centered below the header
- * - Wheel input drives forward/backward transitions
- * - Current section exits upward, next enters from below (spring animation)
+ * - Wheel / arrow-key input drives forward/backward transitions
+ * - Current section exits upward, next enters from below (CSS transition)
  * - Normal page scroll is locked for the duration of the experience
  *
  * Background layers live in the parent page component.
@@ -19,60 +20,150 @@ import { subjectList as fallbackSubjectList } from "@/lib/subjects";
 
 // Visual constants
 const SECTION_HEIGHT = 500;
-const SECTION_COUNT = 4;
+
+const SECTIONS = [
+  { label: "Intro" },
+  { label: "Subjects" },
+  { label: "Practice" },
+  { label: "Included" },
+  { label: "Project" },
+] as const;
+
+const SECTION_COUNT = SECTIONS.length;
+
+const FEATURED_SLUGS = [
+  "calculus",
+  "linear-algebra",
+  "statistics",
+  "precalculus",
+  "algebra",
+  "geometry",
+];
+
+const POPULAR_SLUGS = ["calculus", "linear-algebra", "statistics", "precalculus"];
+
+/** Matches .landing-section-panel transition duration (ms). */
+const SECTION_TRANSITION_MS = 480;
 
 // Approximate header height (sticky) + breathing room.
-// Used to size the parallax stage so sections are centered in the remaining viewport.
 const HEADER_OFFSET = "4rem";
+
+type LandingSubject = {
+  slug: string;
+  label: string;
+  icon?: string;
+  shortDescription?: string;
+  category?: string;
+  topicCount?: number;
+};
+
+function pickFeaturedSubjects(list: LandingSubject[]): LandingSubject[] {
+  const picked: LandingSubject[] = [];
+  const seen = new Set<string>();
+
+  for (const slug of FEATURED_SLUGS) {
+    const match = list.find((s) => s.slug === slug);
+    if (match) {
+      picked.push(match);
+      seen.add(match.slug);
+    }
+  }
+
+  for (const subject of list) {
+    if (picked.length >= 6) break;
+    if (!seen.has(subject.slug)) {
+      picked.push(subject);
+      seen.add(subject.slug);
+    }
+  }
+
+  return picked.slice(0, 6);
+}
+
+const MOBILE_LANDING_MQ = "(max-width: 639px)";
+
+function subscribeMobileLanding(onStoreChange: () => void) {
+  const mq = window.matchMedia(MOBILE_LANDING_MQ);
+  mq.addEventListener("change", onStoreChange);
+  return () => mq.removeEventListener("change", onStoreChange);
+}
+
+function getMobileLandingSnapshot() {
+  return window.matchMedia(MOBILE_LANDING_MQ).matches;
+}
+
+function pickPopularSubjects(list: LandingSubject[]): LandingSubject[] {
+  const picked: LandingSubject[] = [];
+  for (const slug of POPULAR_SLUGS) {
+    const match = list.find((s) => s.slug === slug);
+    if (match) picked.push(match);
+  }
+  if (picked.length === 0) return list.slice(0, 4);
+  return picked;
+}
 
 export function LandingContent({
   subjects: propSubjects,
+  subjectCount,
+  topicCount,
 }: {
-  /** Optional list from server auto-discovery (supports subjects with no entry in subjects.ts). Falls back to sync list. */
-  subjects?: Array<{ slug: string; label: string; icon?: string; shortDescription?: string }>;
+  subjects?: LandingSubject[];
+  subjectCount?: number;
+  topicCount?: number;
 } = {}) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [hasMounted, setHasMounted] = useState(false);
+  /** Mobile: subjects panel fills the stage. Desktop: vertically centered 500px slot. */
+  const subjectsFullBleed = useSyncExternalStore(subscribeMobileLanding, getMobileLandingSnapshot, () => false);
   const currentIndexRef = useRef(0);
   const isLockedRef = useRef(false);
   const wheelAccumRef = useRef(0);
 
-  const subjectList = propSubjects && propSubjects.length > 0 ? propSubjects : fallbackSubjectList;
+  const subjectList = propSubjects ?? [];
+  const featuredSubjects = useMemo(() => pickFeaturedSubjects(subjectList), [subjectList]);
+  const popularSubjects = useMemo(() => pickPopularSubjects(subjectList), [subjectList]);
 
-  function getCategoryIconClass(cat?: string) {
-    // Prominent but clean category color on the icon container as the main subtle visual cue.
-    // No borders, lines, or dots on the card itself. Icon color + ring indicates category.
-    switch (cat) {
-      case "foundations":
-        return "bg-emerald-100 text-emerald-700 ring-2 ring-emerald-300/70 dark:bg-emerald-900/70 dark:text-emerald-300 dark:ring-emerald-400/50";
-      case "calculus":
-        return "bg-blue-100 text-blue-700 ring-2 ring-blue-300/70 dark:bg-blue-900/70 dark:text-blue-300 dark:ring-blue-400/50";
-      case "linear":
-        return "bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300/70 dark:bg-indigo-900/70 dark:text-indigo-300 dark:ring-indigo-400/50";
-      case "stats":
-        return "bg-teal-100 text-teal-700 ring-2 ring-teal-300/70 dark:bg-teal-900/70 dark:text-teal-300 dark:ring-teal-400/50";
-      case "discrete":
-        return "bg-violet-100 text-violet-700 ring-2 ring-violet-300/70 dark:bg-violet-900/70 dark:text-violet-300 dark:ring-violet-400/50";
-      case "algebra":
-        return "bg-purple-100 text-purple-700 ring-2 ring-purple-300/70 dark:bg-purple-900/70 dark:text-purple-300 dark:ring-purple-400/50";
-      case "logic":
-        return "bg-amber-100 text-amber-700 ring-2 ring-amber-300/70 dark:bg-amber-900/70 dark:text-amber-300 dark:ring-amber-400/50";
-      case "analysis":
-        return "bg-rose-100 text-rose-700 ring-2 ring-rose-300/70 dark:bg-rose-900/70 dark:text-rose-300 dark:ring-rose-400/50";
-      default:
-        return "bg-[var(--surface-2)] text-[var(--text-primary)] ring-2 ring-zinc-300/50 dark:ring-zinc-400/30";
-    }
-  }
+  const totalSubjects = subjectCount ?? subjectList.length;
+  const totalTopics =
+    topicCount ??
+    subjectList.reduce((sum, s) => sum + (s.topicCount ?? 0), 0);
+
+  const goToSection = useCallback((index: number) => {
+    if (isLockedRef.current) return;
+    const next = Math.max(0, Math.min(SECTION_COUNT - 1, index));
+    if (next === currentIndexRef.current) return;
+
+    isLockedRef.current = true;
+    currentIndexRef.current = next;
+    setCurrentIndex(next);
+
+    window.setTimeout(() => {
+      isLockedRef.current = false;
+    }, SECTION_TRANSITION_MS);
+  }, []);
+
+  const stepSection = useCallback((dir: 1 | -1) => {
+    goToSection(currentIndexRef.current + dir);
+  }, [goToSection]);
 
   // Wheel hijack: drives the one-section-at-a-time experience.
-  // Normal scrolling is disabled while this component is mounted.
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
+      const scrollable = (e.target as HTMLElement | null)?.closest(
+        "[data-landing-scroll]"
+      ) as HTMLElement | null;
+      if (scrollable) {
+        const canScrollDown =
+          scrollable.scrollTop + scrollable.clientHeight < scrollable.scrollHeight - 1;
+        const canScrollUp = scrollable.scrollTop > 0;
+        if ((e.deltaY > 0 && canScrollDown) || (e.deltaY < 0 && canScrollUp)) {
+          return;
+        }
+      }
+
       e.preventDefault();
 
       if (isLockedRef.current) return;
 
-      // Accumulate to require a deliberate scroll gesture before advancing
       wheelAccumRef.current += e.deltaY;
 
       const threshold = 110;
@@ -80,176 +171,212 @@ export function LandingContent({
 
       const dir = wheelAccumRef.current > 0 ? 1 : -1;
       wheelAccumRef.current = 0;
+      stepSection(dir);
+    };
 
-      const next = Math.max(0, Math.min(SECTION_COUNT - 1, currentIndexRef.current + dir));
-      if (next === currentIndexRef.current) return;
-
-      // Lock briefly for snappy non-overlapping transitions
-      isLockedRef.current = true;
-      currentIndexRef.current = next;
-      setCurrentIndex(next);
-
-      // Release lock after the spring animation roughly completes
-      window.setTimeout(() => {
-        isLockedRef.current = false;
-      }, 480);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isLockedRef.current) return;
+      if (e.key === "ArrowDown" || e.key === "PageDown") {
+        e.preventDefault();
+        stepSection(1);
+      } else if (e.key === "ArrowUp" || e.key === "PageUp") {
+        e.preventDefault();
+        stepSection(-1);
+      }
     };
 
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
 
     window.addEventListener("wheel", handleWheel, { passive: false });
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       window.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("keydown", handleKeyDown);
       document.documentElement.style.overflow = "";
       document.body.style.overflow = "";
     };
-  }, []);
-
-  // Helper to compute target y/opacity for a given section index
-  const getSectionTargets = (idx: number) => {
-    if (idx === currentIndex) {
-      return { y: 0, opacity: 1 };
-    }
-    // Sections before current live above (have exited upward on forward nav)
-    if (idx < currentIndex) {
-      return { y: -110, opacity: 0 };
-    }
-    // Sections after live below
-    return { y: 110, opacity: 0 };
-  };
+  }, [stepSection]);
 
   const stageHeight = `calc(100dvh - ${HEADER_OFFSET})`;
 
-  // Prevent flash of stacked sections on first paint / hydration.
-  // We force opacity:0 on inactive sections until after mount + Framer has applied styles.
-  useLayoutEffect(() => {
-    setHasMounted(true);
-  }, []);
+  const getSectionYOffset = (idx: number) => {
+    if (idx === currentIndex) return 0;
+    return idx < currentIndex ? -110 : 110;
+  };
+
+  const showScrollHint = currentIndex === 0;
 
   return (
     <div
       className="relative overflow-hidden"
       style={{ height: stageHeight }}
     >
-      {/* Subtle legibility gradient (stronger at very top) */}
-      <div
-        aria-hidden
-        className="absolute inset-x-0 top-0 h-[55%] bg-gradient-to-b from-[var(--bg)]/75 via-[var(--bg)]/35 to-transparent pointer-events-none z-10"
-      />
+      <LandingScrim />
 
-      {/* The four 500px centered sections — only one visible at a time */}
-      {[0, 1, 2, 3].map((idx) => {
-        const targets = getSectionTargets(idx);
+      {[0, 1, 2, 3, 4].map((idx) => {
         const isActive = idx === currentIndex;
-
-        // First-paint safety: inactive sections must be invisible until the component has mounted.
-        const firstPaintOpacity = hasMounted ? targets.opacity : (isActive ? 1 : 0);
+        const isSubjectsPanel = idx === 1;
+        const subjectsUsesFullStage = isSubjectsPanel && subjectsFullBleed;
+        const yOffset = getSectionYOffset(idx);
 
         return (
-          <motion.div
+          <div
             key={idx}
-            initial={false}
-            animate={{ y: targets.y, opacity: targets.opacity }}
-            transition={{
-              type: "spring",
-              stiffness: 135,
-              damping: 26,
-              mass: 0.75,
-            }}
-            className="absolute left-1/2 -translate-x-1/2 w-full max-w-4xl px-6"
+            className="landing-section-panel absolute left-1/2 w-full max-w-4xl px-4 sm:px-6"
             style={{
-              height: SECTION_HEIGHT,
-              top: "50%",
-              marginTop: -SECTION_HEIGHT / 2,
+              height: subjectsUsesFullStage ? "100%" : SECTION_HEIGHT,
+              top: subjectsUsesFullStage ? 0 : "50%",
+              marginTop: subjectsUsesFullStage ? 0 : -SECTION_HEIGHT / 2,
               pointerEvents: isActive ? "auto" : "none",
-              opacity: hasMounted ? undefined : firstPaintOpacity,
               zIndex: isActive ? 10 : 1,
+              opacity: isActive ? 1 : 0,
+              transform: `translateX(-50%) translateY(${yOffset}px)`,
             }}
           >
-            {/* Inner content wrapper — vertically centered within the 500px box for text sections */}
-            <div className={`h-full ${idx === 1 ? "pt-3" : "flex flex-col justify-center"}`}>
-              {/* SECTION 0: Hero / intro (exactly as requested) */}
+            <div
+              className={
+                isSubjectsPanel
+                  ? subjectsUsesFullStage
+                    ? "flex h-full min-h-0 flex-col pb-14 pt-2"
+                    : "flex h-full min-h-0 flex-col"
+                  : "flex h-full flex-col justify-center"
+              }
+            >
+              {/* SECTION 0: Hero */}
               {idx === 0 && (
                 <div className="max-w-3xl">
-                  <h1 className="text-4xl font-semibold tracking-tight theme-text">CalcPath</h1>
-                  <p className="mt-4 text-xl text-balance theme-text-secondary">
-                    Free reference notes for university mathematics.
+                  <h1 className="font-serif text-4xl font-semibold tracking-tight theme-text sm:text-5xl">
+                    CalcPath
+                  </h1>
+                  <p className="mt-4 text-xl text-balance theme-text">
+                    University math you can read, practice, and track — no account required.
                   </p>
-                  <div className="mt-9 space-y-5 text-[15px] leading-relaxed theme-text-secondary">
-                    <p>
-                      This site contains complete, self-contained notes for three core subjects in the undergraduate mathematics curriculum.
-                      Each subject is covered from the foundations up, with full derivations and carefully chosen examples.
+                  <p className="mt-3 text-[15px] leading-relaxed theme-text-secondary">
+                    Built for undergraduates and self-learners who want clear notes, worked examples,
+                    and instant feedback — from foundations through advanced topics.
+                  </p>
+
+                  {(totalSubjects > 0 || totalTopics > 0) && (
+                    <p className="mt-4 text-sm font-medium tabular-nums theme-text-muted">
+                      {totalSubjects} {totalSubjects === 1 ? "subject" : "subjects"}
+                      {totalTopics > 0 && (
+                        <>
+                          <span className="mx-2 opacity-40">·</span>
+                          {totalTopics} topics
+                        </>
+                      )}
                     </p>
-                    <p>
-                      The notes are written to be read directly. They are not a replacement for lectures or textbooks, but a clear, independent reference that you can work through at your own pace.
-                    </p>
+                  )}
+
+                  <div className="mt-8 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => goToSection(1)}
+                      className="inline-flex items-center justify-center rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--accent-text)] shadow-sm transition hover:opacity-90 active:scale-[0.98]"
+                    >
+                      Browse subjects
+                    </button>
+                    <Link
+                      href="/subjects"
+                      className="inline-flex items-center justify-center rounded-xl border theme-border px-5 py-2.5 text-sm font-medium theme-text-secondary transition hover:border-[var(--accent)]/35 hover:bg-[var(--surface-2)] hover:theme-text"
+                    >
+                      View all subjects
+                    </Link>
                   </div>
                 </div>
               )}
 
-              {/* SECTION 1: Subjects */}
+              {/* SECTION 1: Subjects — full stage height + scroll on small screens */}
               {idx === 1 && (
-                <div>
-                  <h2 className="text-sm font-semibold tracking-widest uppercase theme-text-muted mb-5">Subjects</h2>
+                <>
+                  <div className="shrink-0">
+                    <h2 className="mb-1 text-sm font-semibold uppercase tracking-widest theme-text-muted">
+                      Subjects
+                    </h2>
+                    <p className="text-xs theme-text-secondary sm:text-sm">
+                      Start with a core course or explore the full catalog.
+                    </p>
+                  </div>
 
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:gap-5">
-                    {/* Featured: first 6 by order only (core subjects showcase). Bottom "ready" list below uses full. */}
-                    {subjectList.slice(0, 6).map((subject: any) => {
-                      const icon = subject.icon || "•";
-                      const count = subject.topicCount ? `${subject.topicCount} topics` : "";
-                      return (
-                        <Link
-                          key={subject.slug}
-                          href={`/${subject.slug}`}
-                          className="group block rounded-2xl border theme-border theme-surface p-5 transition-all hover:shadow-xl"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-2xl font-light tracking-[-1px] ${getCategoryIconClass(subject.category)}`}>
+                  <div
+                    data-landing-scroll
+                    className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:thin] sm:mt-4"
+                  >
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 lg:gap-4">
+                      {featuredSubjects.map((subject) => {
+                        const icon = subject.icon || "•";
+                        const count = subject.topicCount ? `${subject.topicCount} topics` : "";
+                        return (
+                          <Link
+                            key={subject.slug}
+                            href={`/${subject.slug}`}
+                            className="group flex items-center gap-3 rounded-xl border theme-border bg-[var(--surface)]/80 p-3.5 backdrop-blur-[1px] transition-colors active:bg-[var(--surface)] sm:items-start sm:rounded-2xl sm:p-4 lg:p-5 hover:border-[var(--accent)]/40 hover:bg-[var(--surface)]"
+                          >
+                            <div
+                              className={`${getSubjectIconResponsiveClass(subject.category)} shrink-0 group-hover:border-[var(--accent)]/30`}
+                            >
                               {icon}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-baseline gap-1.5">
-                                <span className="font-semibold text-base tracking-[-0.2px] theme-text group-hover:underline">
+                              <div className="flex items-start justify-between gap-2 sm:items-baseline sm:gap-1.5">
+                                <span className="text-sm font-semibold leading-snug theme-text group-hover:text-[var(--accent)] sm:text-base sm:tracking-[-0.2px]">
                                   {subject.label}
                                 </span>
-                                <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
-                                  {count}
-                                </span>
+                                {count ? (
+                                  <span className="shrink-0 text-[10px] tabular-nums text-[var(--text-muted)]">
+                                    {count}
+                                  </span>
+                                ) : null}
                               </div>
-                              <p className="mt-1.5 text-xs leading-snug theme-text-secondary line-clamp-3">
+                              <p className="mt-1 line-clamp-2 text-xs leading-snug theme-text-secondary sm:mt-1.5 sm:line-clamp-3">
                                 {subject.shortDescription}
                               </p>
                             </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
+                          </Link>
+                        );
+                      })}
+                    </div>
+
+                    <Link
+                      href="/subjects"
+                      className="mt-3 inline-flex text-xs font-medium text-[var(--accent)] transition hover:opacity-80 sm:mt-4 sm:text-sm"
+                    >
+                      View all subjects →
+                    </Link>
                   </div>
-                </div>
+                </>
               )}
 
               {/* SECTION 2: Practice */}
               {idx === 2 && (
                 <div className="max-w-3xl">
-                  <h2 className="text-sm font-semibold tracking-widest uppercase theme-text-muted mb-4">Practice</h2>
-                  <div className="text-[15px] leading-relaxed theme-text-secondary space-y-4">
+                  <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest theme-text-muted">
+                    Practice
+                  </h2>
+                  <div className="space-y-4 text-[15px] leading-relaxed theme-text-secondary">
                     <p>Practice is built directly into the notes at two scales.</p>
                     <p>
-                      <span className="font-medium theme-text">Section practice</span> appears alongside the reading. Small, focused sets of questions let you check your understanding of individual concepts as you go.
+                      <span className="font-medium theme-text">Section practice</span> appears alongside
+                      the reading. Small, focused sets of questions let you check your understanding of
+                      individual concepts as you go.
                     </p>
                     <p>
-                      <span className="font-medium theme-text">Chapter practice</span> offers a complete set of questions for an entire topic. These are useful for review or as a self-test before moving on.
+                      <span className="font-medium theme-text">Chapter practice</span> offers a complete
+                      set of questions for an entire topic. These are useful for review or as a self-test
+                      before moving on.
                     </p>
                   </div>
                 </div>
               )}
 
-              {/* SECTION 3: What is included + This project + closing line */}
+              {/* SECTION 3: What is included */}
               {idx === 3 && (
                 <div className="max-w-3xl">
-                  <h2 className="text-sm font-semibold tracking-widest uppercase theme-text-muted mb-4">What is included</h2>
+                  <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest theme-text-muted">
+                    What is included
+                  </h2>
                   <ul className="grid gap-x-8 gap-y-2 text-[15px] theme-text-secondary md:grid-cols-2">
                     <li>• Full step-by-step derivations for every major result</li>
                     <li>• Worked examples with detailed reasoning</li>
@@ -258,62 +385,88 @@ export function LandingContent({
                     <li>• Chapter-level practice sets</li>
                     <li>• Local progress tracking (sync across devices with a short code — no account needed)</li>
                   </ul>
+                </div>
+              )}
 
-                  <div className="mt-10">
-                    <h2 className="text-sm font-semibold tracking-widest uppercase theme-text-muted mb-4">This project</h2>
-                    <p className="text-[15px] leading-relaxed theme-text-secondary">
-                      This is an independent hobby project. The goal is to collect clear, high-quality mathematics reference material in one place. The notes and exercises will continue to grow over time.
+              {/* SECTION 4: This project + popular paths */}
+              {idx === 4 && (
+                <div className="max-w-3xl">
+                  <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest theme-text-muted">
+                    This project
+                  </h2>
+                  <p className="text-[15px] leading-relaxed theme-text-secondary">
+                    This is an independent hobby project. The goal is to collect clear, high-quality
+                    mathematics reference material in one place. The notes and exercises will continue to
+                    grow over time.
+                  </p>
+
+                  <div className="mt-10 border-t theme-border pt-8">
+                    <p className="mb-2.5 text-[11px] uppercase tracking-[0.5px] theme-text-muted">
+                      Popular paths
                     </p>
-                  </div>
-
-                  <div className="mt-9 border-t theme-border pt-6 text-sm theme-text-muted">
-                    All material is freely available. No login required to read or practice.
-                  </div>
-
-                  {/* Bottom-of-experience navigation to subjects so users don't have to wheel back up */}
-                  <div className="mt-8 pt-6 border-t theme-border">
-                    <p className="text-[11px] uppercase tracking-[0.5px] theme-text-muted mb-2.5">Ready to dive in?</p>
                     <div className="flex flex-wrap gap-2">
-                      {(subjectList as any[]).map((s) => (
+                      {popularSubjects.map((s) => (
                         <Link
                           key={s.slug}
                           href={`/${s.slug}`}
-                          className="rounded-lg border theme-border px-3.5 py-1.5 text-sm font-medium transition hover:bg-[var(--surface-2)] hover:border-[var(--accent)]/40"
+                          className="rounded-lg border theme-border px-3.5 py-1.5 text-sm font-medium transition hover:border-[var(--accent)]/40 hover:bg-[var(--surface-2)]"
                         >
                           {s.label}
                         </Link>
                       ))}
                     </div>
+                    <Link
+                      href="/subjects"
+                      className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[var(--accent)] transition hover:opacity-80"
+                    >
+                      All subjects →
+                    </Link>
                   </div>
                 </div>
               )}
             </div>
-          </motion.div>
+          </div>
         );
       })}
 
-      {/* Progress dots — allow direct jumping between sections */}
-      <div className="absolute bottom-7 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
-        {Array.from({ length: SECTION_COUNT }).map((_, i) => (
-          <button
-            key={i}
-            onClick={() => {
-              if (isLockedRef.current) return;
-              currentIndexRef.current = i;
-              setCurrentIndex(i);
-              isLockedRef.current = true;
-              setTimeout(() => (isLockedRef.current = false), 420);
-            }}
-            className={`h-px rounded-full transition-all duration-200 ${
-              i === currentIndex
-                ? "w-6 bg-[var(--text-primary)]"
-                : "w-1.5 bg-[var(--text-muted)]/35 hover:bg-[var(--text-muted)]/60"
-            }`}
-            aria-label={`Go to section ${i + 1}`}
-          />
-        ))}
+      {/* Bottom chrome: one compact control (dots + optional first-screen scroll hint) */}
+      <div
+        className="absolute bottom-7 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-1.5"
+        aria-label={`Section ${currentIndex + 1} of ${SECTION_COUNT}: ${SECTIONS[currentIndex].label}`}
+      >
+        {showScrollHint && (
+          <svg
+            aria-hidden
+            className="landing-scroll-hint h-3 w-3 text-[var(--text-muted)]/50"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.71a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+              clipRule="evenodd"
+            />
+          </svg>
+        )}
+        <div className="flex items-center gap-2" role="tablist" aria-label="Landing sections">
+          {SECTIONS.map((section, i) => (
+            <button
+              key={section.label}
+              type="button"
+              role="tab"
+              aria-selected={i === currentIndex}
+              aria-label={`${section.label}, section ${i + 1} of ${SECTION_COUNT}`}
+              title={section.label}
+              onClick={() => goToSection(i)}
+              className={`rounded-full transition-all duration-200 ${
+                i === currentIndex
+                  ? "h-1 w-5 bg-[var(--text-primary)]"
+                  : "h-1 w-1 bg-[var(--text-muted)]/30 hover:bg-[var(--text-muted)]/55"
+              }`}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
 }
-

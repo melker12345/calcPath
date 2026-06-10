@@ -41,6 +41,37 @@ import {
 } from "./schema";
 
 import { extractMdxSections } from "./mdx";
+import type { Problem, Topic } from "@/lib/shared-types";
+
+/** Subject list entry: index.json metadata + empty content slots filled at call sites. */
+export type ListedSubjectConfig = SubjectConfig & {
+  topics: Topic[];
+  problems: Problem[];
+  modules: Array<{ topicId: string; sections: Array<{ title: string; section?: string }> }>;
+};
+
+export function subjectConfigFromIndex(idx: SubjectIndex): ListedSubjectConfig {
+  return {
+    slug: idx.slug,
+    label: idx.label,
+    shortDescription: idx.shortDescription,
+    modulesDescription: idx.modulesDescription,
+    icon: idx.icon,
+    order: idx.order,
+    hasTests: idx.hasTests ?? false,
+    category: idx.category,
+    topicCount: idx.topics.length,
+    topics: [],
+    problems: [],
+    modules: [],
+  };
+}
+
+/** Loads subject metadata from content/{slug}/index.json. Throws if missing/invalid. */
+export async function requireSubjectConfig(slug: string): Promise<ListedSubjectConfig> {
+  const idx = await loadSubjectIndex(slug);
+  return subjectConfigFromIndex(idx);
+}
 
 // ============================================
 // Linear Algebra (first for thin vertical slice)
@@ -171,24 +202,29 @@ async function loadTopicContent(
     let questionsFile: import("./schema").QuestionsFile = [];
     try {
       questionsFile = await readJsonFile(`${topicDir}/questions.json`, QuestionsFileSchema);
-    } catch (err) {
+    } catch {
       // Whole file failed validation (common during content porting). Be tolerant.
       console.warn(`[content-loader] Whole questions.json failed validation for ${subjectSlug}/${topicId}. Attempting per-question recovery...`);
       try {
         const fs = await import("fs/promises");
         const path = await import("path");
         const fullPath = path.join(process.cwd(), CONTENT_DIR, `${subjectSlug}/topics/${topicId}/questions.json`);
-        const raw = JSON.parse(await fs.readFile(fullPath, "utf-8"));
+        const raw: unknown = JSON.parse(await fs.readFile(fullPath, "utf-8"));
 
         if (Array.isArray(raw)) {
-          const valid: any[] = [];
-          const invalid: any[] = [];
+          const valid: import("./schema").QuestionFile[] = [];
+          const invalid: Array<{ id?: string; issues: string[] }> = [];
           for (const item of raw) {
             const result = QuestionFileSchema.safeParse(item);
             if (result.success) {
               valid.push(result.data);
             } else {
-              invalid.push({ id: item?.id, issues: result.error.issues.map((i: any) => i.message) });
+              invalid.push({
+                id: typeof item === "object" && item !== null && "id" in item
+                  ? String((item as { id?: unknown }).id)
+                  : undefined,
+                issues: result.error.issues.map((i) => i.message),
+              });
             }
           }
           questionsFile = valid;
@@ -244,68 +280,33 @@ export async function loadSubjectIndex(slug: string): Promise<SubjectIndex> {
  * Lightweight auto subject discovery to enable true "just drop content/" for new subjects.
  * Scans the content/ directory (server-only via fs) for subdirectories containing index.json.
  * For each, loads the SubjectIndex for label/desc/icon/order/hasTests.
- * Merges with (optional) metadata entry from subjects.ts record for overrides/fallbacks
- * (e.g. different icon or order without touching the content index.json).
- * New subjects with only content/{new-slug}/index.json + topics/... require *zero* code
- * or entry in subjects.ts to appear in lists, sitemap, search, dashboard, navs, etc.
- * Subjects only in the record (no content dir) still appear via fallback.
- * Returns shapes compatible with the SubjectConfig (retained for compat) used by subjectList consumers
- * (topics/problems/modules are empty arrays; real data comes from bundles at call sites).
+ * Scans content/ for subdirectories with a valid index.json.
+ * Returns listed configs (topics/problems/modules empty; bundles loaded at call sites).
  */
-export async function getAvailableSubjectConfigs(): Promise<SubjectConfig[]> {
-  const metaMod = await import("@/lib/subjects");
-  const metaRecord = (metaMod as any).subjects as Record<string, any>;
-
+export async function getAvailableSubjectConfigs(): Promise<ListedSubjectConfig[]> {
   const fs = await import("fs/promises");
   const path = await import("path");
   const contentRoot = path.join(process.cwd(), CONTENT_DIR);
 
-  const allSlugs = new Set<string>(Object.keys(metaRecord));
+  const results: ListedSubjectConfig[] = [];
+  let dirents;
   try {
-    const dirents = await fs.readdir(contentRoot, { withFileTypes: true });
-    for (const d of dirents) {
-      if (d.isDirectory()) allSlugs.add(d.name);
-    }
+    dirents = await fs.readdir(contentRoot, { withFileTypes: true });
   } catch {
-    // content dir absent or unreadable; proceed with record only
+    return [];
   }
 
-  const results: any[] = [];
-  for (const slug of allSlugs) {
-    const meta = metaRecord[slug];
-    let fromIndex: any = null;
+  for (const d of dirents) {
+    if (!d.isDirectory()) continue;
     try {
-      // Verify index.json exists before loading (lightweight discovery)
-      const idxPath = path.join(contentRoot, slug, "index.json");
-      await fs.access(idxPath);
-      fromIndex = await loadSubjectIndex(slug);
+      const idx = await loadSubjectIndex(d.name);
+      results.push(subjectConfigFromIndex(idx));
     } catch {
-      // No content/ entry for this slug; include only if it had a metadata record entry
-      if (!meta) continue;
+      // skip dirs without a valid index.json
     }
-
-    const cfg = fromIndex || {};
-    const topicsArr = cfg.topics || [];
-    const item = {
-      slug,
-      label: cfg.label || meta?.label || slug,
-      shortDescription: cfg.shortDescription || meta?.shortDescription || `Learn ${slug}.`,
-      modulesDescription: cfg.modulesDescription || meta?.modulesDescription || `Modules for ${slug}.`,
-      icon: cfg.icon || meta?.icon || "📘",
-      order: typeof cfg.order === "number" ? cfg.order : (meta?.order ?? 999),
-      hasTests: typeof cfg.hasTests === "boolean" ? cfg.hasTests : (meta?.hasTests ?? false),
-      category: cfg.category || meta?.category,
-      // Lightweight count for the dedicated /subjects overview page (full topics loaded on demand per subject).
-      topicCount: Array.isArray(topicsArr) ? topicsArr.length : 0,
-      // SubjectConfig shape compat (consumers like dashboard expect these fields; name retained for compat)
-      topics: [],
-      problems: [],
-      modules: [],
-    };
-    results.push(item);
   }
 
-  results.sort((a: any, b: any) => a.order - b.order);
+  results.sort((a, b) => a.order - b.order);
   return results;
 }
 

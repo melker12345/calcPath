@@ -1,30 +1,6 @@
 import Link from "next/link";
 import { getAvailableSubjectConfigs } from "@/lib/content/loader";
-
-function getCategoryIconClass(cat?: string) {
-  // Prominent but clean category color on the icon container (with ring) as the main subtle visual cue for category.
-  // No borders, lines, dots, or extra elements on the card body itself. Consistent with home page.
-  switch (cat) {
-    case "foundations":
-      return "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300/70 dark:bg-emerald-900/70 dark:text-emerald-300 dark:ring-emerald-400/50";
-    case "calculus":
-      return "bg-blue-100 text-blue-700 ring-1 ring-blue-300/70 dark:bg-blue-900/70 dark:text-blue-300 dark:ring-blue-400/50";
-    case "linear":
-      return "bg-indigo-100 text-indigo-700 ring-1 ring-indigo-300/70 dark:bg-indigo-900/70 dark:text-indigo-300 dark:ring-indigo-400/50";
-    case "stats":
-      return "bg-teal-100 text-teal-700 ring-1 ring-teal-300/70 dark:bg-teal-900/70 dark:text-teal-300 dark:ring-teal-400/50";
-    case "discrete":
-      return "bg-violet-100 text-violet-700 ring-1 ring-violet-300/70 dark:bg-violet-900/70 dark:text-violet-300 dark:ring-violet-400/50";
-    case "algebra":
-      return "bg-purple-100 text-purple-700 ring-1 ring-purple-300/70 dark:bg-purple-900/70 dark:text-purple-300 dark:ring-purple-400/50";
-    case "logic":
-      return "bg-amber-100 text-amber-700 ring-1 ring-amber-300/70 dark:bg-amber-900/70 dark:text-amber-300 dark:ring-amber-400/50";
-    case "analysis":
-      return "bg-rose-100 text-rose-700 ring-1 ring-rose-300/70 dark:bg-rose-900/70 dark:text-rose-300 dark:ring-rose-400/50";
-    default:
-      return "bg-zinc-100 text-zinc-700 ring-1 ring-zinc-300/50 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-400/30";
-  }
-}
+import { getSubjectIconClass } from "@/lib/subject-icon-styles";
 
 export default async function SubjectsPage() {
   const subjectList = await getAvailableSubjectConfigs();
@@ -46,7 +22,7 @@ export default async function SubjectsPage() {
           >
             <Link href={`/${subject.slug}`} className="block">
               <div className="mb-1.5 flex items-center gap-2">
-                <div className={`flex h-7 w-7 items-center justify-center rounded-md text-base ${getCategoryIconClass(subject.category)}`}>
+                <div className={`${getSubjectIconClass(subject.category, "sm")} group-hover:border-[var(--accent)]/25`}>
                   {subject.icon || "📘"}
                 </div>
                 <h2 className="text-base font-semibold">{subject.label}</h2>

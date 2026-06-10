@@ -31,8 +31,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Deep indexing for all subjects using new content/ + derive (no shim or modules/ import).
   // Auto-discovery means adding content/{slug}/ + index.json is enough (metadata fallback from index or thin subjects.ts).
-  let deepModulePages: MetadataRoute.Sitemap = [];
-  let deepPracticePages: MetadataRoute.Sitemap = [];
+  const deepModulePages: MetadataRoute.Sitemap = [];
+  const deepPracticePages: MetadataRoute.Sitemap = [];
   for (const subject of subjectList) {
     const slug = subject.slug;
     try {

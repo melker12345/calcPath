@@ -84,8 +84,14 @@ const problemFields = {
   difficulty: DifficultySchema,
 };
 
+type McqRefineInput = {
+  type: string;
+  choices?: string[];
+  answer: string;
+};
+
 const mcqRefine = {
-  refine: (p: any) => {
+  refine: (p: McqRefineInput) => {
     if (p.type === "mcq") {
       return Array.isArray(p.choices) && p.choices.length > 0 && p.choices.includes(p.answer);
     }
@@ -282,6 +288,7 @@ export const SubjectIndexSchema = z.object({
   icon: z.string().min(1),
   order: z.number().int().positive(),
   hasTests: z.boolean().default(false),
+  category: z.string().optional(),
   topics: z.array(TopicSchema),
 
   // Rich metadata (optional) — makes SEO/OG/JSON-LD data-driven from content/{slug}/index.json
