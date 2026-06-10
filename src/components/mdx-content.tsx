@@ -7,6 +7,35 @@ import { BlockMath } from "react-katex";
 
 type AnyToken = Tokens.Generic & { tokens?: AnyToken[] };
 
+/** Private-use placeholders so marked does not split LaTeX (e.g. `\,`, `\(`) into escape tokens. */
+const MATH_PLACEHOLDER_PREFIX = "\uE000MDXMATH";
+const MATH_PLACEHOLDER_SUFFIX = "\uE001";
+
+const MATH_SPAN_REGEX = /(?<!\\)(\$\$([\s\S]*?)(?<!\\)\$\$|\$([\s\S]*?)(?<!\\)\$)/g;
+const MATH_PLACEHOLDER_REGEX = new RegExp(
+  `${MATH_PLACEHOLDER_PREFIX}(\\d+)${MATH_PLACEHOLDER_SUFFIX}`,
+  "g"
+);
+
+/**
+ * Replace $...$ / $$...$$ spans with opaque placeholders before marked lexing.
+ * marked treats sequences like `\,` as Markdown escapes, which breaks math delimiters
+ * and leaves raw LaTeX visible in section bodies.
+ */
+function protectMathDelimiters(source: string): { protectedSource: string; mathSegments: string[] } {
+  const mathSegments: string[] = [];
+  const protectedSource = source.replace(MATH_SPAN_REGEX, (match) => {
+    const index = mathSegments.length;
+    mathSegments.push(match);
+    return `${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}`;
+  });
+  return { protectedSource, mathSegments };
+}
+
+function restoreMathInText(text: string, mathSegments: string[]): string {
+  return text.replace(MATH_PLACEHOLDER_REGEX, (_, index) => mathSegments[Number(index)] ?? "");
+}
+
 function stripFrontmatter(source: string): string {
   // Remove leading YAML frontmatter block (--- ... ---)
   return source.replace(/^---\s*[\r\n]+[\s\S]*?^---\s*[\r\n]+/m, "");
@@ -51,7 +80,10 @@ function isPureDisplayMath(text: string): boolean {
  * Leaf text nodes (that may contain $...$ LaTeX) are delegated to the project's
  * existing MathText component for consistent math rendering + spacing fixes.
  */
-function renderInline(tokens: AnyToken[] | undefined): React.ReactNode {
+function renderInline(
+  tokens: AnyToken[] | undefined,
+  mathSegments: string[]
+): React.ReactNode {
   if (!tokens || tokens.length === 0) return null;
   return tokens.map((token, index) => {
     const key = `${token.type || "inline"}-${index}`;
@@ -59,21 +91,26 @@ function renderInline(tokens: AnyToken[] | undefined): React.ReactNode {
       if (token.tokens && token.tokens.length > 0) {
         // In some contexts (e.g. list items), 'text' acts as a container for nested inline tokens.
         return (
-          <React.Fragment key={key}>{renderInline(token.tokens)}</React.Fragment>
+          <React.Fragment key={key}>{renderInline(token.tokens, mathSegments)}</React.Fragment>
         );
       }
       // Leaf text content — use MathText so $math$ becomes InlineMath, with project spacing rules.
-      return <MathText key={key} text={token.text || ""} />;
+      return (
+        <MathText key={key} text={restoreMathInText(token.text || "", mathSegments)} />
+      );
+    }
+    if (token.type === "escape") {
+      return <React.Fragment key={key}>{token.text}</React.Fragment>;
     }
     if (token.type === "strong") {
       return (
         <strong key={key} className="font-semibold">
-          {renderInline(token.tokens)}
+          {renderInline(token.tokens, mathSegments)}
         </strong>
       );
     }
     if (token.type === "em") {
-      return <em key={key}>{renderInline(token.tokens)}</em>;
+      return <em key={key}>{renderInline(token.tokens, mathSegments)}</em>;
     }
     if (token.type === "codespan") {
       return (
@@ -94,7 +131,10 @@ function renderInline(tokens: AnyToken[] | undefined): React.ReactNode {
           target="_blank"
           rel="noopener noreferrer"
         >
-          {renderInline(token.tokens || [{ type: "text", text: token.text } as unknown as AnyToken])}
+          {renderInline(
+            token.tokens || [{ type: "text", text: token.text } as unknown as AnyToken],
+            mathSegments
+          )}
         </a>
       );
     }
@@ -102,7 +142,7 @@ function renderInline(tokens: AnyToken[] | undefined): React.ReactNode {
     if (token.text) {
       return (
         <React.Fragment key={key}>
-          <MathText text={token.text} />
+          <MathText text={restoreMathInText(token.text, mathSegments)} />
         </React.Fragment>
       );
     }
@@ -110,7 +150,7 @@ function renderInline(tokens: AnyToken[] | undefined): React.ReactNode {
   });
 }
 
-function renderBlocks(tokens: AnyToken[]): React.ReactNode {
+function renderBlocks(tokens: AnyToken[], mathSegments: string[]): React.ReactNode {
   return tokens.map((token, index) => {
     const key = `block-${token.type}-${index}`;
     if (token.type === "space" || token.type === "html") {
@@ -141,13 +181,13 @@ function renderBlocks(tokens: AnyToken[]): React.ReactNode {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         Tag as any,
         { key, id, className },
-        renderInline(cleanedInline)
+        renderInline(cleanedInline, mathSegments)
       );
     }
     if (token.type === "paragraph") {
       const p = token as Tokens.Paragraph;
       // Support display math as standalone paragraphs (common in our module.mdx)
-      const paraText = (p as any).text || "";
+      const paraText = restoreMathInText((p as any).text || "", mathSegments);
       if (isPureDisplayMath(paraText)) {
         const math = paraText.trim().replace(/^[$]{1,2}|[$]{1,2}$/g, "").trim();
         return (
@@ -158,7 +198,7 @@ function renderBlocks(tokens: AnyToken[]): React.ReactNode {
       }
       return (
         <p key={key} className="mb-3 last:mb-0 leading-relaxed theme-text-secondary">
-          {renderInline(p.tokens)}
+          {renderInline(p.tokens, mathSegments)}
         </p>
       );
     }
@@ -177,7 +217,7 @@ function renderBlocks(tokens: AnyToken[]): React.ReactNode {
               item.tokens?.[0]?.tokens || item.tokens || [];
             return (
               <li key={i} className="pl-1">
-                {renderInline(inner)}
+                {renderInline(inner, mathSegments)}
               </li>
             );
           })}
@@ -204,7 +244,7 @@ function renderBlocks(tokens: AnyToken[]): React.ReactNode {
                     className="border theme-border bg-[var(--surface-2)] px-3 py-2 text-left font-semibold"
                     style={{ textAlign: align as React.CSSProperties["textAlign"] }}
                   >
-                    {renderInline(cell.tokens)}
+                    {renderInline(cell.tokens, mathSegments)}
                   </th>
                 );
               })}
@@ -221,7 +261,7 @@ function renderBlocks(tokens: AnyToken[]): React.ReactNode {
                       className="border theme-border px-3 py-2 align-top"
                       style={{ textAlign: align as React.CSSProperties["textAlign"] }}
                     >
-                      {renderInline(cell.tokens)}
+                      {renderInline(cell.tokens, mathSegments)}
                     </td>
                   );
                 })}
@@ -246,7 +286,7 @@ function renderBlocks(tokens: AnyToken[]): React.ReactNode {
     if ((token as AnyToken).text) {
       return (
         <p key={key} className="mb-3">
-          <MathText text={(token as AnyToken).text} />
+          <MathText text={restoreMathInText((token as AnyToken).text, mathSegments)} />
         </p>
       );
     }
@@ -302,10 +342,11 @@ export function MdxContent({
   }
   const withoutFrontmatter = stripFrontmatter(mdxSource);
   const withoutComments = stripComments(withoutFrontmatter).trim();
-  const tokens = marked.lexer(withoutComments) as AnyToken[];
+  const { protectedSource, mathSegments } = protectMathDelimiters(withoutComments);
+  const tokens = marked.lexer(protectedSource) as AnyToken[];
   return (
     <div className={`max-w-none ${className}`}>
-      {renderBlocks(tokens)}
+      {renderBlocks(tokens, mathSegments)}
     </div>
   );
 }
@@ -330,12 +371,15 @@ export function extractMdxSections(mdxSource: string): Array<{
   if (!mdxSource) return [];
   const withoutFrontmatter = stripFrontmatter(mdxSource);
   const withoutComments = stripComments(withoutFrontmatter).trim();
-  const tokens = marked.lexer(withoutComments) as AnyToken[];
+  const { protectedSource, mathSegments } = protectMathDelimiters(withoutComments);
+  const tokens = marked.lexer(protectedSource) as AnyToken[];
   const sections: Array<{ id: string; title: string; level: number }> = [];
   for (const t of tokens) {
     if (t.type === "heading") {
       const h = t as Tokens.Heading;
-      const { title: cleanTitle, id: explicit } = cleanSlug(h.text);
+      const { title: cleanTitle, id: explicit } = cleanSlug(
+        restoreMathInText(h.text, mathSegments)
+      );
       const id = explicit || slugify(cleanTitle);
       sections.push({ id, title: cleanTitle, level: h.depth });
     }
