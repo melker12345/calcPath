@@ -1,23 +1,23 @@
 import type { MetadataRoute } from "next";
-import { subjectList } from "@/lib/subjects";
+import {
+  getAvailableSubjectConfigs,
+  getFileSystemContentBundle,
+  deriveModuleStructureFromBundle,
+} from "@/lib/content/loader";
 
-// Note: Full per-subject module indexing is still somewhat manual.
-// For now we generate subject homepages + basic routes for all subjects,
-// plus deep module pages for Calculus (the most complete subject).
-import { topics as shimTopics } from "@/lib/calculus-content";
-const calculusTopics = shimTopics ?? [];
-import { modules as calculusModules } from "@/lib/modules";
-
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = "https://calc-path.com";
 
   const staticPages: MetadataRoute.Sitemap = [
     { url: base, lastModified: new Date(), changeFrequency: "weekly", priority: 1.0 },
-    { url: `${base}/auth`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
     { url: `${base}/dashboard`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.7 },
   ];
 
   const allPages: MetadataRoute.Sitemap = [];
+
+  // Use auto-discovered subjects (scans content/ for index.json) + merge from subjects.ts metadata if present.
+  // New subjects require zero entry in subjects.ts to be included in sitemap (and deep links).
+  const subjectList = await getAvailableSubjectConfigs();
 
   // Generate entries for every subject (home + progress)
   for (const subject of subjectList) {
@@ -29,20 +29,37 @@ export default function sitemap(): MetadataRoute.Sitemap {
     });
   }
 
-  // Deep indexing for Calculus (best coverage today)
-  const calculusModulePages: MetadataRoute.Sitemap = calculusModules.map((mod) => ({
-    url: `${base}/calculus/modules/${mod.topicId}`,
-    lastModified: new Date(),
-    changeFrequency: "monthly" as const,
-    priority: 0.85,
-  }));
+  // Deep indexing for all subjects using new content/ + derive (no shim or modules/ import).
+  // Auto-discovery means adding content/{slug}/ + index.json is enough (metadata fallback from index or thin subjects.ts).
+  let deepModulePages: MetadataRoute.Sitemap = [];
+  let deepPracticePages: MetadataRoute.Sitemap = [];
+  for (const subject of subjectList) {
+    const slug = subject.slug;
+    try {
+      const [bundle, modStructure] = await Promise.all([
+        getFileSystemContentBundle(slug),
+        deriveModuleStructureFromBundle(slug),
+      ]);
+      deepModulePages.push(
+        ...modStructure.map((mod) => ({
+          url: `${base}/${slug}/modules/${mod.topicId}`,
+          lastModified: new Date(),
+          changeFrequency: "monthly" as const,
+          priority: 0.85,
+        }))
+      );
+      deepPracticePages.push(
+        ...bundle.topics.map((topic) => ({
+          url: `${base}/${slug}/practice/${topic.id}`,
+          lastModified: new Date(),
+          changeFrequency: "monthly" as const,
+          priority: 0.6,
+        }))
+      );
+    } catch {
+      // graceful; sitemap still has the subject homes
+    }
+  }
 
-  const calculusPracticePages: MetadataRoute.Sitemap = calculusTopics.map((topic) => ({
-    url: `${base}/calculus/modules/${topic.id}`,
-    lastModified: new Date(),
-    changeFrequency: "monthly" as const,
-    priority: 0.6,
-  }));
-
-  return [...staticPages, ...allPages, ...calculusModulePages, ...calculusPracticePages];
+  return [...staticPages, ...allPages, ...deepModulePages, ...deepPracticePages];
 }

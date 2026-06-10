@@ -50,7 +50,6 @@ export function usePracticeSession({
   const [index, setIndexState] = useState(0);
   const [shuffledProblems, setShuffledProblems] = useState<Problem[] | null>(null);
   const [hasManuallyNavigated, setHasManuallyNavigated] = useState(false);
-  const [questionStatuses, setQuestionStatuses] = useState<QuestionStatus[]>([]);
 
   // Transient per-question UI state — owned by the hook so that *all* navigation
   // paths (Next, Prev, Shuffle, dots click, "Skip", feedback overlay buttons)
@@ -87,12 +86,16 @@ export function usePracticeSession({
     }
   };
 
-  // Apply section filter if provided
-  const filteredProblems = sectionFilter
-    ? allProblems.filter((p) => p.section === sectionFilter)
-    : allProblems;
+  // Apply section filter if provided (memoized for stable object ref to avoid effect re-runs / update loops)
+  const filteredProblems = useMemo(
+    () => (sectionFilter ? allProblems.filter((p) => p.section === sectionFilter) : allProblems),
+    [allProblems, sectionFilter]
+  );
 
-  const displayProblems = shuffledProblems ?? filteredProblems;
+  const displayProblems = useMemo(
+    () => shuffledProblems ?? filteredProblems,
+    [shuffledProblems, filteredProblems]
+  );
 
   const current = displayProblems[index];
 
@@ -105,15 +108,15 @@ export function usePracticeSession({
     ).length;
   }, [completedProblemIds, allProblems, sectionFilter]);
 
-  // Sync statuses from global progress
-  useEffect(() => {
-    const statuses = displayProblems.map((problem) => {
+  // Derive statuses from global progress (useMemo instead of useEffect+setState to prevent "setState inside useEffect" + max update depth loops
+  // when displayProblems or completed refs change identity on renders).
+  const questionStatuses = useMemo<QuestionStatus[]>(() => {
+    return displayProblems.map((problem) => {
       if (completedProblemIds.includes(problem.id)) {
         return "solved" as QuestionStatus;
       }
       return "not-attempted" as QuestionStatus;
     });
-    setQuestionStatuses(statuses);
   }, [displayProblems, completedProblemIds]);
 
   // Helper to wipe per-question transient UI (answer, feedback overlay, etc.)

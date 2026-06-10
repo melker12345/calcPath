@@ -1,7 +1,13 @@
 import Link from "next/link";
-import { subjectList } from "@/lib/subjects";
 
-export const SiteFooter = () => (
+/**
+ * Site footer is async to support auto subject discovery from content/ (scan index.json).
+ * New subjects appear here automatically with no entry in subjects.ts (uses index metadata + fallback).
+ */
+export const SiteFooter = async () => {
+  const { getAvailableSubjectConfigs } = await import("@/lib/content/loader");
+  const subjectList = await getAvailableSubjectConfigs();
+  return (
   <footer className="border-t theme-border theme-surface pb-[env(safe-area-inset-bottom)]">
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="grid grid-cols-2 gap-8 sm:grid-cols-2 md:grid-cols-5">
@@ -46,7 +52,7 @@ export const SiteFooter = () => (
             Account
           </h4>
           <nav className="flex flex-col gap-2">
-            <Link href="/auth" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Sign In</Link>
+            <Link href="/account" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Profile</Link>
             <Link href="/account" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Settings</Link>
             <Link href="/feedback" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Feedback</Link>
           </nav>
@@ -64,4 +70,5 @@ export const SiteFooter = () => (
       </div>
     </div>
   </footer>
-);
+  );
+};

@@ -49,9 +49,9 @@ content/
 
 ## Official Declaration (2026-06)
 
-The `content/` + `FileSystemContentBundle` + generic components architecture is now the **primary development direction** for the entire application (see `src/lib/content/NOTES.md` for the formal declaration and `MIGRATION-PLAN.md` for the phased roadmap).
+The `content/` + `FileSystemContentBundle` + generic components architecture is now the **primary development direction** for the entire application (see `src/lib/content/NOTES.md` for the formal declaration and git history for the phased roadmap details).
 
-Legacy per-subject TypeScript content is archived in `backup-content/legacy/`. All new content, features, and pages target the data-driven model.
+Legacy per-subject TypeScript content was archived in `backup-content/legacy/` and has been **fully deleted** (2026-06-03) after migration complete (sign-off + two.md + verification waves). All history preserved in git. All new content, features, and pages target the data-driven model.
 
 ## Migration Philosophy (Historical Context)
 
@@ -62,12 +62,20 @@ The initial rollout followed a deliberate sequence that has now been completed:
 4. Generic UI + `/x/` dynamic routes proving the complete flows.
 5. Formal declaration as primary path.
 
-Future work follows the phases in [MIGRATION-PLAN.md](../MIGRATION-PLAN.md): decoupling, promotion of generic paths, and retirement of legacy.
+Phases (decoupling, promotion of generic paths, retirement of legacy + final backup deletion) are complete (see git history for MIGRATION-PLAN.md / two.md details and src/lib/content/NOTES.md).
 
 ## Current Status & Next Steps
 
 - **Done**: Full `content/` structure for all subjects, stable Zod schemas + `src/lib/content/loader.ts`, generic components, working `/x/` experience.
-- **Active**: Decouple core systems (progress, answer checking, main routes) from legacy shapes so the new architecture powers the primary app.
-- **Ongoing**: Improve generic components to full parity (or better) with legacy pages; expand MDX richness.
+- **Done**: Full ports + decouple + generic promotion + retirement of legacy + /x/.
+- **Final**: Lightweight auto subject discovery (`loader.getAvailableSubjectConfigs()`) enables true "just drop content/{new-subject}/" with zero subjects.ts / code changes. (See NOTES.md + git history for prior plan docs.)
 
-This document + `content/NOTES.md` + root `MIGRATION-PLAN.md` are the sources of truth. New work aligns here.
+This document + `content/NOTES.md` (historical) are the sources of truth. Detailed prior plan docs (MIGRATION-PLAN.md, one.md, two.md, etc.) are preserved in git history. New work aligns here. Migration complete.
+
+## Authoring Rules & Validation
+- Run `npm run content:validate` (uses tsx) before committing content changes. It enforces Zod schemas, folder<->index parity, **and the critical invariant**: every `question.section` must exactly equal a section slug derived from the topic's `module.mdx` (from `## Title` + optional `{#slug}` or immediate following `<!-- section: slug -->` comment).
+- Sections power per-section mastery, deep links (?section=), dashboard, and progress. Mismatches silently break UX for that topic.
+- Use `<!-- section: the-exact-string-from-questions -->` right after the relevant `##` when the natural heading slug would not match the qs you need (or use `{#slug}` in the heading itself).
+- `per-topic/index.json` is optional (subject-level list wins for metadata); folder must still exist if questions/mdx are present.
+- All three core markers (`**ELI5**`, `**Worked Example:**`, `## Common Mistakes` / `## Pitfalls`) are recommended for best authoring consistency and full ELI5/worked/pitfalls UI cards.
+- However, the rich content parser (in adapters.ts + mdx utils) is resilient: it auto-detects example blocks (via h3 containing "example", "Step 1:", etc.), ELI5 variants, and common-mistakes headings (pitfalls/errors) even if the exact bold markers are absent or worded differently. Thus "recommended" markers improve UX polish but missing ones no longer silently degrade the cards. Run validate to see authoring warnings.

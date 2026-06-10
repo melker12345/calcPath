@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/auth/callback", "/account"],
+        disallow: ["/api/", "/account"],
       },
     ],
     sitemap: "https://calc-path.com/sitemap.xml",

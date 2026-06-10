@@ -1,0 +1,77 @@
+---
+title: Error detection and correction
+---
+
+# Error detection and correction
+
+In any real communication or storage system, noise, interference, or hardware faults can flip bits. Error detection tells the receiver "something is wrong"; error correction goes further and recovers the original message. The theory of error-correcting codes quantifies how much redundancy is needed to achieve a target reliability.
+
+Claude Shannon's noisy-channel coding theorem guarantees that reliable communication is possible below channel capacity, but practical codes must approach that limit with reasonable complexity.
+
+## Errors in Communication
+
+<!-- section: errors-in-communication -->
+
+A binary symmetric channel (BSC) with crossover probability $p$ flips each transmitted bit independently with probability $p$. The Hamming distance between two vectors $\mathbf{x}$ and $\mathbf{y}$ is the number of positions they differ:
+
+$d(\mathbf{x}, \mathbf{y}) = |\{ i : x_i \neq y_i \}| = w(\mathbf{x} - \mathbf{y})$
+
+where $w$ is the Hamming weight (number of 1s).
+
+A code $\mathcal{C}$ is a subset of $\{0,1\}^n$. Its minimum distance $d = \min_{\mathbf{c} \neq \mathbf{c}'} d(\mathbf{c},\mathbf{c}')$ determines its error capability: it can detect up to $d-1$ errors and correct up to $t = \lfloor (d-1)/2 \rfloor$ errors.
+
+**ELI5**
+
+- Think of sending a message over a phone line that sometimes crackles. Each crackle flips a bit. Distance measures how different two possible messages look after noise.
+- If codewords are far apart in Hamming distance, noise has to flip many bits before one valid codeword becomes another.
+
+**Worked Example:**
+
+The repetition code of length 3: codewords 000 and 111. Minimum distance $d=3$. It corrects $t=1$ error. If 001 arrives we decode to 000 (one flip); 011 decodes to 111 (two flips would be miscorrected, but $t=1$).
+
+## Error Detection
+
+<!-- section: error-detection -->
+
+Simple detection uses parity bits. An even-parity bit makes the total number of 1s even in the codeword. A single flip changes parity and is detected; two flips preserve parity and go undetected.
+
+Cyclic redundancy checks (CRC) use polynomial division over GF(2) and catch burst errors of length up to the degree with high probability. They are ubiquitous in Ethernet, ZIP files, and hard drives.
+
+A code detects $e$ errors if no error pattern of weight $\le e$ takes a codeword to another codeword.
+
+**ELI5**
+
+- Even parity is like adding a "check digit" so the sum mod 2 is zero. Any odd number of flips breaks the sum and screams "error!"
+- CRC is a fancier checksum using modular arithmetic in the polynomial ring; it is excellent at catching the kinds of errors that actually occur on wires and disks.
+
+**Worked Example:**
+
+Send data 1011 with even parity: total 1s = 3 (odd), so append 1 → 10111. Received 10101 has four 1s (even) — wait, original appended made even (10111 has 4 ones? 1+0+1+1+1=4 even). Received 10011 (flipped position 3 and 4? ) parity check: count 1s=3 odd → error detected.
+
+## Error Correction
+
+<!-- section: error-correction -->
+
+Correction requires spheres of radius $t$ around codewords to be disjoint. For perfect codes they also cover the whole space.
+
+Linear codes are subspaces: encoding is $\mathbf{m} \mapsto \mathbf{m}G$ for generator matrix $G$; syndrome decoding uses parity-check matrix $H$ with $\mathbf{c}H^T = 0$ for codewords.
+
+The syndrome $\mathbf{s} = \mathbf{r}H^T$ depends only on the error: $\mathbf{s} = \mathbf{e}H^T$.
+
+**ELI5**
+
+- Correction is "nearest-neighbor" decoding in Hamming space: pick the codeword that differs in fewest positions from what you received.
+- Linear structure lets you use linear algebra over GF(2) instead of searching all codewords.
+
+**Worked Example:**
+
+Repetition code (3,1) again. Generator $G = [1~1~1]^T$, $H = \begin{bmatrix}1 & 1 & 0 \\ 1 & 0 & 1\end{bmatrix}$. Received 101 gives syndrome (1,0) which matches column 1 of $H$, so flip first bit → 001? Standard majority: three bits, decode by majority vote. 101 → majority 1, decode 111.
+
+## Common Mistakes
+
+- **Thinking detection is the same as correction**: A parity bit detects odd errors but gives no location information for correction.
+- **Ignoring the rate penalty**: Adding redundancy for reliability reduces the information rate; the Hamming bound shows you cannot correct too many errors without making rate tiny.
+- **Assuming all error patterns are equally likely**: Real channels have bursts and correlations; codes good on BSC may fail on bursty media without interleaving.
+- **Forgetting that two errors can look like a single error in the wrong direction**: In a code with $d=3$, a weight-2 error can move you to distance 1 from a wrong codeword.
+- **Confusing minimum distance with average distance**: Only the smallest distance between any pair governs guaranteed capability.
+- **Believing longer codes are always better**: While longer codes can approach capacity, decoding complexity and latency also grow; practical systems balance block length carefully.

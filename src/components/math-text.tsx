@@ -162,6 +162,9 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
         // Text coming immediately after math
         let textValue = part.value;
 
+        // Normalize newlines (from MDX source wraps or parse) to space to avoid bad breaks in paragraphs.
+        textValue = textValue.replace(/\n+/g, ' ');
+
         if (isAfterMath) {
           // Robust anti-glue + percentile/ordinal fix for stats questions:
           // - Auto space after math unless text starts with punct or ordinal suffix (st|nd|rd|th).
@@ -178,12 +181,27 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
 
         const startsWithNewSentence = isAfterMath && /^[A-Z]/.test(textValue.trimStart());
 
+        // Basic **bold** support for explanation bodies (e.g. "**Common pitfall**:" in MDX).
+        // Splits on ** and renders <strong> for even segments. Simple, no nested.
+        const boldParts = textValue.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+        const renderedText = boldParts.map((seg, sIdx) => {
+          if (/^\*\*(.+)\*\*$/.test(seg)) {
+            const inner = seg.replace(/^\*\*(.+)\*\*$/, '$1');
+            return (
+              <strong key={sIdx} className="font-semibold">
+                {inner}
+              </strong>
+            );
+          }
+          return <React.Fragment key={sIdx}>{seg}</React.Fragment>;
+        });
+
         return (
           <span
             key={`${part.value}-${index}`}
             style={startsWithNewSentence ? { marginLeft: "0.25em" } : undefined}
           >
-            {textValue}
+            {renderedText}
           </span>
         );
       })}

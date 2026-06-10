@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { SubjectIndex } from "@/lib/content/schema";
-import type { SubjectConfig } from "@/lib/subjects"; // for compat during transition
+import type { SubjectConfig } from "@/lib/subjects"; // type for legacy shape compat (bundles provide slim config)
 
 export type BreadcrumbItem = {
   label: string;
@@ -39,7 +39,7 @@ export function SubjectBreadcrumbs({
   items?: BreadcrumbItem[];
   /** Preferred: drive directly from new content SubjectIndex (topics list etc available too) */
   subjectIndex?: SubjectIndex;
-  /** Legacy compat during migration */
+  /** Legacy SubjectConfig shape (for compat) */
   subjectConfig?: SubjectConfig;
   /** Fallback manual slug/label (when not passing full index/config) */
   subjectSlug?: string;

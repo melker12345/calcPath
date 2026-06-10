@@ -1,0 +1,71 @@
+---
+title: Channel coding with feedback
+---
+
+# Channel coding with feedback
+
+When the receiver can send information back to the transmitter, the system becomes a two-way communication link. Feedback does not increase the capacity of a memoryless point-to-point channel (Shannon 1956), yet it dramatically simplifies coding, reduces delay, and improves the error exponent. Practical systems rely heavily on feedback in the form of acknowledgments and retransmissions.
+
+In network settings and for channels with memory, feedback can strictly increase capacity.
+
+## Feedback Does Not Increase Capacity (Point-to-Point)
+
+<!-- section: capacity-feedback -->
+
+For a discrete memoryless channel (DMC) with capacity C, even with perfect instantaneous feedback of every received symbol, the maximum reliable rate remains C. The converse follows from the same mutual-information bounds used without feedback; feedback cannot create new information about the message that was not already in the channel outputs.
+
+What feedback does provide is the ability to adapt the next transmission based on what has already been received, enabling variable-length and rateless strategies.
+
+**ELI5**
+
+- The 'pipe' from sender to receiver still has the same average 'width' C bits per use; feedback is like a return pipe that tells the sender how much arrived, but does not widen the forward pipe.
+- You cannot magically send more than C bits per forward use on average, no matter how clever the back-talk.
+
+**Worked Example:**
+
+Binary symmetric channel with crossover 0.1 has C ≈ 0.53 bits. With feedback you can still not exceed 0.53 bits per channel use in the limit of many uses; any scheme claiming higher rate will have error probability bounded away from zero.
+
+## Automatic Repeat Request (ARQ)
+
+<!-- section: arq -->
+
+The simplest use of feedback is ARQ: the receiver sends ACK if the packet passes error detection (CRC), NACK otherwise. On NACK the transmitter retransmits (possibly with incremental redundancy).
+
+Pure ARQ is a repetition code with random number of repetitions; throughput is R(1 - P_err) where R is the rate of the packet. It achieves arbitrarily low error probability but throughput vanishes as target error → 0 unless combined with forward error correction.
+
+**ELI5**
+
+- 'Did you get it?' 'No, send again.' Simple, reliable, but wasteful if the channel is bad — you may retransmit the whole packet many times.
+- A CRC is the cheap 'error detected' flag that triggers the repeat.
+
+**Worked Example:**
+
+A 1000-bit packet protected by 32-bit CRC sent at rate 0.9 over a channel with packet error prob 0.01. Expected number of transmissions ≈ 1.01, throughput ≈ 0.9 / 1.01 ≈ 0.89 bits per channel use (ignoring ACK overhead).
+
+## Variable-Length Coding with Feedback
+
+<!-- section: variable-length -->
+
+With feedback one can achieve the capacity with far simpler codes using variable-length transmission. The transmitter keeps sending parity bits until the receiver's posterior on the message is sufficiently peaked (posterior matching, or simple erasure decoding on BEC).
+
+For the binary erasure channel, the capacity-achieving scheme with feedback is trivial: keep sending each bit until the receiver says it got it (ACK). The expected number of transmissions per bit is 1/(1-p) and rate exactly equals capacity.
+
+For general DMCs, more sophisticated posterior-matching schemes exist that also achieve capacity with variable length and zero error probability (in the limit).
+
+**ELI5**
+
+- Instead of deciding in advance how many times to repeat, keep sending 'more hints' until the receiver says 'I understand the message now.'
+- The average number of hints needed is exactly what the capacity predicts; you never waste bits on packets that were already clear.
+
+**Worked Example:**
+
+On a BEC with erasure probability p=0.4, capacity 0.6. Sending uncoded bits with per-bit ACK-until-received: each info bit takes on average 1/0.6 ≈ 1.67 transmissions. Rate = 1 / 1.67 = 0.6, exactly capacity, with zero decoding error (the receiver never stops until it has the bit).
+
+## Common Mistakes
+
+- **Claiming feedback increases point-to-point DMC capacity**: It does not; the mutual information upper bound is unchanged.
+- **Confusing ARQ throughput with capacity**: Pure ARQ throughput goes to zero with target reliability for fixed packet size; only variable-length or FEC+ARQ (HARQ) can approach capacity.
+- **Ignoring feedback channel errors or delay**: Real feedback is itself noisy and delayed; protocols must be robust to lost ACKs (timers) and the analysis changes.
+- **Thinking variable-length codes are always impractical**: Modern systems already use HARQ with incremental redundancy, which is a practical approximation to variable-length coding.
+- **Forgetting that feedback helps error exponents and delay dramatically**: Even when capacity is unchanged, the number of channel uses needed to reach a given small error probability can be much smaller with feedback.
+- **Assuming feedback always helps in networks**: While it often does (e.g., multiple-access with feedback), there are cases where it does not or where the benefit is only in the second-order terms.

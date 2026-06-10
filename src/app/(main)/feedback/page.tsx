@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@/components/auth-provider";
 import { trackEvent } from "@/lib/analytics";
 
 const FEEDBACK_KINDS = [
@@ -13,7 +12,7 @@ const FEEDBACK_KINDS = [
 type FeedbackKind = (typeof FEEDBACK_KINDS)[number]["id"];
 
 export default function FeedbackPage() {
-  const { user } = useAuth();
+  // useAuth removed (auth stripped); user_id optional, always null now (fine for feedback)
   const [kind, setKind] = useState<FeedbackKind>("general");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -31,7 +30,7 @@ export default function FeedbackPage() {
         body: JSON.stringify({
           kind,
           message: trimmed,
-          user_id: user?.id ?? null,
+          user_id: null,
           page_url: window.location.href,
         }),
       });

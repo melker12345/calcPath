@@ -4,26 +4,60 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AppStateProviders } from "@/components/scoped-providers";
 import { useProgress } from "@/components/progress-provider";
-import { subjectList } from "@/lib/subjects";
+import { subjectList as fallbackSubjectList } from "@/lib/subjects";
 import { getPracticeProgress, getSectionPracticeProgress } from "@/lib/progress";
 import type { Topic, Problem } from "@/lib/shared-types";
 
-type RealData = {
-  calculus?: { topics: Topic[]; problems: Problem[] };
-  statistics?: { topics: Topic[]; problems: Problem[] };
-  "linear-algebra"?: { topics: Topic[]; problems: Problem[] };
-};
+type SlimModule = { topicId: string; sections: Array<{ title: string; section?: string }> };
 
-export default function DashboardContent({ realData }: { realData?: RealData }) {
+// Generalized for auto-discovered subjects (from getAvailableSubjectConfigs in server).
+// Keys are slugs; supports any subject dropped in content/ without subjects.ts entry.
+type RealData = Record<string, { topics: Topic[]; problems: Problem[]; modules?: SlimModule[] }>;
+
+export default function DashboardContent({
+  realData,
+  subjectConfigs,
+}: {
+  realData?: RealData;
+  /** Optional: list from auto-discovery so client iteration includes new subjects not in sync subjectList. */
+  subjectConfigs?: Array<{ slug: string; label: string; icon: string; shortDescription?: string; order?: number }>;
+}) {
   return (
     <AppStateProviders>
-      <DashboardInner realData={realData} />
+      <DashboardInner realData={realData} subjectConfigs={subjectConfigs} />
     </AppStateProviders>
   );
 }
 
-function DashboardInner({ realData }: { realData?: RealData }) {
+function DashboardInner({
+  realData,
+  subjectConfigs,
+}: {
+  realData?: RealData;
+  subjectConfigs?: Array<{ slug: string; label: string; icon: string; shortDescription?: string; order?: number }>;
+}) {
   const { progress } = useProgress();
+
+  // Resolve topics/problems/modules(structure) from new FileSystemContentBundle (realData) when present.
+  // This makes the dashboard fully consume the data-driven architecture for counts,
+  // mastery, aggregates, suggested topics, chapter expandables + per-section progress.
+  // Stable IDs + section slugs (from MDX) guarantee cross-compat with the data-driven /[subject] routes (powered by generics + FileSystemContentBundle).
+  const getEffectiveTopics = (slug: string, fallback: Topic[]) => {
+    const r = realData?.[slug];
+    return r?.topics?.length ? r.topics : fallback;
+  };
+  const getEffectiveProblems = (slug: string, fallback: Problem[]) => {
+    const r = realData?.[slug];
+    return r?.problems?.length ? r.problems : fallback;
+  };
+  const getEffectiveModules = (slug: string, fallback: any[]) => {
+    const r = realData?.[slug];
+    return r?.modules?.length ? r.modules : fallback;
+  };
+
+  // Use passed subjectConfigs (from auto-discovery on server) or fallback to sync subjectList.
+  // This ensures newly dropped subjects (no subjects.ts entry) appear in dashboard aggregates.
+  const activeSubjects = subjectConfigs && subjectConfigs.length > 0 ? subjectConfigs : fallbackSubjectList;
 
   // Memoize all the expensive progress aggregation so it only recomputes
   // when the actual progress data changes (not on every parent re-render).
@@ -34,12 +68,16 @@ function DashboardInner({ realData }: { realData?: RealData }) {
     overallAccuracy,
     masteryPercent,
   } = useMemo(() => {
-    const computedSubjects = subjectList.map((subject) => {
-      let solved = 0;
-      let total = subject.problems.length;
+    const computedSubjects = activeSubjects.map((subject: any) => {
+      const effTopics = getEffectiveTopics(subject.slug, subject.topics || []);
+      const effProblems = getEffectiveProblems(subject.slug, subject.problems || []);
+      const effModules = getEffectiveModules(subject.slug, subject.modules || []);
 
-      const topicsWithProgress = subject.topics.map((topic) => {
-        const stats = getPracticeProgress(progress, topic.id, subject.problems);
+      let solved = 0;
+      let total = effProblems.length;
+
+      const topicsWithProgress = effTopics.map((topic) => {
+        const stats = getPracticeProgress(progress, topic.id, effProblems);
         solved += stats.correct;
         return {
           ...topic,
@@ -56,6 +94,11 @@ function DashboardInner({ realData }: { realData?: RealData }) {
 
       return {
         ...subject,
+        // Override with real (new arch) data for full consumption in client.
+        // topics/problems drive counts + getPractice*/getSection* ; modules drive chapter UI + sec slugs.
+        topics: effTopics,
+        problems: effProblems,
+        modules: effModules,
         solved,
         total,
         topicsWithProgress,
@@ -66,12 +109,12 @@ function DashboardInner({ realData }: { realData?: RealData }) {
     const tSolved = computedSubjects.reduce((sum, s) => sum + s.solved, 0);
     const tProblems = computedSubjects.reduce((sum, s) => sum + s.total, 0);
 
-    // Single pass for accuracy (was duplicated before)
+    // Single pass for accuracy (now using the effective per-subject lists from realData or fallback)
     let tAttempted = 0;
     let tCorrect = 0;
 
-    effectiveSubjects.forEach((subject) => {
-      subject.topics.forEach((topic) => {
+    computedSubjects.forEach((subject: any) => {
+      subject.topics.forEach((topic: any) => {
         const stats = getPracticeProgress(progress, topic.id, subject.problems);
         tAttempted += stats.attempted;
         tCorrect += stats.correct;
@@ -88,7 +131,7 @@ function DashboardInner({ realData }: { realData?: RealData }) {
       overallAccuracy: acc,
       masteryPercent: mPercent,
     };
-  }, [progress]); // Only recompute when the actual progress state changes
+  }, [progress, realData]); // Recompute if realData (bundle data) changes too (e.g. future refresh)
 
   // Expandable chapters state (keyed by "subjectSlug-ch-N")
   const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({});
@@ -111,7 +154,7 @@ function DashboardInner({ realData }: { realData?: RealData }) {
         </h1>
         <p className="mt-2 text-[15px] theme-text-muted">
           Your progress and suggested practice across all subjects.
-          Mastery stats are unified: practice in the main views or the new /x/ dynamic content area (powered by FileSystemContentBundle) both update the same counts via stable problem IDs.
+          Mastery stats are unified: practice in the main views or the data-driven routes (powered by FileSystemContentBundle + the generic components) both update the same counts via stable problem IDs.
         </p>
       </div>
 
@@ -205,8 +248,8 @@ function DashboardInner({ realData }: { realData?: RealData }) {
                 </div>
 
                 <div className="space-y-3">
-                  {(subject.modules ?? []).map((mod, index) => {
-                    const topic = subject.topicsWithProgress.find(t => t.id === mod.topicId);
+                  {(subject.modules ?? []).map((mod: any, index: number) => {
+                    const topic = subject.topicsWithProgress.find((t: any) => t.id === mod.topicId);
                     if (!topic) return null;
 
                     const isComplete = topic.total > 0 && topic.correct === topic.total;
@@ -254,7 +297,7 @@ function DashboardInner({ realData }: { realData?: RealData }) {
                                   Topics in this chapter
                                 </div>
                                 <div className="space-y-1">
-                                  {mod.sections.map((section, sIndex) => {
+                                  {mod.sections.map((section: any, sIndex: number) => {
                                     // Use the explicit stable section slug from module data.
                                     // This must match the `section` field on the corresponding questions.
                                     const sectionSlug = section.section;
@@ -309,7 +352,7 @@ function DashboardInner({ realData }: { realData?: RealData }) {
       </div>
 
       <div className="mt-12 border-t theme-border pt-6 text-center text-xs theme-text-muted">
-        Progress is saved locally and synced when you are signed in.
+        Progress is saved locally and can be synced across devices via /sync.
       </div>
     </div>
   );

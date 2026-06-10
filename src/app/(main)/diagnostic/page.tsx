@@ -13,6 +13,7 @@ import {
   type DiagnosticQuestionResult,
 } from "@/lib/diagnostics";
 import { detectQuestionContext } from "@/lib/math-input-helpers";
+import { getModulesPath } from "@/lib/subject-urls";
 
 type Stage = "intro" | "questions" | "results";
 type FeedbackState = null | { correct: boolean };
@@ -121,7 +122,7 @@ export default function DiagnosticPage() {
               Start diagnostic
             </button>
             <Link
-              href="/calculus/modules/limits"
+              href={getModulesPath("calculus", "limits")}
               className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-zinc-600 transition hover:bg-slate-50 dark:border-[var(--border)] dark:bg-[var(--surface)] dark:text-[var(--text-secondary)] dark:hover:bg-[var(--surface-2)]"
             >
               Skip to Limits

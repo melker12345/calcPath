@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { subjectList } from "@/lib/subjects";
+import { subjectList as fallbackSubjectList } from "@/lib/subjects";
 
 /**
  * Landing page parallax experience.
@@ -25,12 +25,44 @@ const SECTION_COUNT = 4;
 // Used to size the parallax stage so sections are centered in the remaining viewport.
 const HEADER_OFFSET = "4rem";
 
-export function LandingContent() {
+export function LandingContent({
+  subjects: propSubjects,
+}: {
+  /** Optional list from server auto-discovery (supports subjects with no entry in subjects.ts). Falls back to sync list. */
+  subjects?: Array<{ slug: string; label: string; icon?: string; shortDescription?: string }>;
+} = {}) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [hasMounted, setHasMounted] = useState(false);
   const currentIndexRef = useRef(0);
   const isLockedRef = useRef(false);
   const wheelAccumRef = useRef(0);
+
+  const subjectList = propSubjects && propSubjects.length > 0 ? propSubjects : fallbackSubjectList;
+
+  function getCategoryIconClass(cat?: string) {
+    // Prominent but clean category color on the icon container as the main subtle visual cue.
+    // No borders, lines, or dots on the card itself. Icon color + ring indicates category.
+    switch (cat) {
+      case "foundations":
+        return "bg-emerald-100 text-emerald-700 ring-2 ring-emerald-300/70 dark:bg-emerald-900/70 dark:text-emerald-300 dark:ring-emerald-400/50";
+      case "calculus":
+        return "bg-blue-100 text-blue-700 ring-2 ring-blue-300/70 dark:bg-blue-900/70 dark:text-blue-300 dark:ring-blue-400/50";
+      case "linear":
+        return "bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300/70 dark:bg-indigo-900/70 dark:text-indigo-300 dark:ring-indigo-400/50";
+      case "stats":
+        return "bg-teal-100 text-teal-700 ring-2 ring-teal-300/70 dark:bg-teal-900/70 dark:text-teal-300 dark:ring-teal-400/50";
+      case "discrete":
+        return "bg-violet-100 text-violet-700 ring-2 ring-violet-300/70 dark:bg-violet-900/70 dark:text-violet-300 dark:ring-violet-400/50";
+      case "algebra":
+        return "bg-purple-100 text-purple-700 ring-2 ring-purple-300/70 dark:bg-purple-900/70 dark:text-purple-300 dark:ring-purple-400/50";
+      case "logic":
+        return "bg-amber-100 text-amber-700 ring-2 ring-amber-300/70 dark:bg-amber-900/70 dark:text-amber-300 dark:ring-amber-400/50";
+      case "analysis":
+        return "bg-rose-100 text-rose-700 ring-2 ring-rose-300/70 dark:bg-rose-900/70 dark:text-rose-300 dark:ring-rose-400/50";
+      default:
+        return "bg-[var(--surface-2)] text-[var(--text-primary)] ring-2 ring-zinc-300/50 dark:ring-zinc-400/30";
+    }
+  }
 
   // Wheel hijack: drives the one-section-at-a-time experience.
   // Normal scrolling is disabled while this component is mounted.
@@ -133,6 +165,7 @@ export function LandingContent() {
               marginTop: -SECTION_HEIGHT / 2,
               pointerEvents: isActive ? "auto" : "none",
               opacity: hasMounted ? undefined : firstPaintOpacity,
+              zIndex: isActive ? 10 : 1,
             }}
           >
             {/* Inner content wrapper — vertically centered within the 500px box for text sections */}
@@ -161,43 +194,34 @@ export function LandingContent() {
                 <div>
                   <h2 className="text-sm font-semibold tracking-widest uppercase theme-text-muted mb-5">Subjects</h2>
 
-                  <div className="grid gap-4 md:grid-cols-3">
-                    {subjectList.map((subject) => {
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:gap-5">
+                    {/* Featured: first 6 by order only (core subjects showcase). Bottom "ready" list below uses full. */}
+                    {subjectList.slice(0, 6).map((subject: any) => {
                       const icon = subject.icon || "•";
-                      const descriptions: Record<string, string> = {
-                        calculus: "Limits and continuity, differentiation, integration, sequences and series, differential equations, and multivariable calculus.",
-                        "linear-algebra": "Vectors, matrices, systems of equations, vector spaces, linear transformations, eigenvalues, and orthogonality.",
-                        statistics: "Descriptive statistics, probability, discrete and continuous distributions, inference, hypothesis testing, and regression.",
-                      };
-                      const chapterCounts: Record<string, string> = {
-                        calculus: "8 chapters",
-                        "linear-algebra": "9 chapters",
-                        statistics: "11 chapters",
-                      };
-
+                      const count = subject.topicCount ? `${subject.topicCount} topics` : "";
                       return (
                         <Link
                           key={subject.slug}
                           href={`/${subject.slug}`}
-                          className="group block rounded-2xl border theme-border theme-surface p-6 transition hover:border-[var(--accent)]/30 hover:bg-[var(--surface-2)]"
+                          className="group block rounded-2xl border theme-border theme-surface p-5 transition-all hover:shadow-xl"
                         >
-                          <div className="flex justify-center">
-                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl text-4xl font-light tracking-[-1px] text-[var(--text-primary)] transition group-hover:text-[var(--accent)] bg-[var(--surface-2)]">
+                          <div className="flex items-start gap-3">
+                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-2xl font-light tracking-[-1px] ${getCategoryIconClass(subject.category)}`}>
                               {icon}
                             </div>
-                          </div>
-                          <div className="mt-5">
-                            <div className="flex items-baseline gap-2.5">
-                              <span className="font-semibold text-[21px] tracking-[-0.2px] theme-text group-hover:underline">
-                                {subject.label}
-                              </span>
-                              <span className="text-xs text-[var(--text-muted)] tabular-nums">
-                                {chapterCounts[subject.slug] || ""}
-                              </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-baseline gap-1.5">
+                                <span className="font-semibold text-base tracking-[-0.2px] theme-text group-hover:underline">
+                                  {subject.label}
+                                </span>
+                                <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
+                                  {count}
+                                </span>
+                              </div>
+                              <p className="mt-1.5 text-xs leading-snug theme-text-secondary line-clamp-3">
+                                {subject.shortDescription}
+                              </p>
                             </div>
-                            <p className="mt-2.5 text-[14.5px] leading-snug theme-text-secondary">
-                              {descriptions[subject.slug] || subject.shortDescription}
-                            </p>
                           </div>
                         </Link>
                       );
@@ -232,7 +256,7 @@ export function LandingContent() {
                     <li>• Practice problems with solutions for every chapter</li>
                     <li>• Section-specific practice while reading</li>
                     <li>• Chapter-level practice sets</li>
-                    <li>• Local progress tracking (optional account for sync)</li>
+                    <li>• Local progress tracking (sync across devices with a short code — no account needed)</li>
                   </ul>
 
                   <div className="mt-10">
@@ -250,24 +274,15 @@ export function LandingContent() {
                   <div className="mt-8 pt-6 border-t theme-border">
                     <p className="text-[11px] uppercase tracking-[0.5px] theme-text-muted mb-2.5">Ready to dive in?</p>
                     <div className="flex flex-wrap gap-2">
-                      <Link
-                        href="/calculus"
-                        className="rounded-lg border theme-border px-3.5 py-1.5 text-sm font-medium transition hover:bg-[var(--surface-2)] hover:border-[var(--accent)]/40"
-                      >
-                        Calculus
-                      </Link>
-                      <Link
-                        href="/linear-algebra"
-                        className="rounded-lg border theme-border px-3.5 py-1.5 text-sm font-medium transition hover:bg-[var(--surface-2)] hover:border-[var(--accent)]/40"
-                      >
-                        Linear Algebra
-                      </Link>
-                      <Link
-                        href="/statistics"
-                        className="rounded-lg border theme-border px-3.5 py-1.5 text-sm font-medium transition hover:bg-[var(--surface-2)] hover:border-[var(--accent)]/40"
-                      >
-                        Statistics
-                      </Link>
+                      {(subjectList as any[]).map((s) => (
+                        <Link
+                          key={s.slug}
+                          href={`/${s.slug}`}
+                          className="rounded-lg border theme-border px-3.5 py-1.5 text-sm font-medium transition hover:bg-[var(--surface-2)] hover:border-[var(--accent)]/40"
+                        >
+                          {s.label}
+                        </Link>
+                      ))}
                     </div>
                   </div>
                 </div>

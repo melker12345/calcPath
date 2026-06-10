@@ -280,7 +280,7 @@ export const getTopicProgress = (
  *   getFileSystemContentBundle() from content/[star]/topics/[star]/questions.json) or legacy sources.
  * - Uses ONLY the stable `id` + `topicId` values (preserved 1:1 during content ports).
  * - The empty-topic guard (totalProblems > 0) ensures scaffolded/not-yet-ported topics
- *   in the dynamic /x/ path never falsely report as "mastered".
+ *   for the data-driven routes (generics now primary for main /[subject] practice) never falsely report as "mastered".
  * - No dependency on legacy *-content.ts structures.
  */
 export const getPracticeProgress = (
@@ -331,7 +331,7 @@ export const getPracticeProgress = (
  * - `practiceProblems` can come from content/ questions.json (via loader bundles) or legacy.
  * - Relies on exact `section` slug match between passed problems and module metadata (invariant
  *   documented in schema.ts and content/ARCHITECTURE.md; used by dashboard + deep links).
- * - Stable problem `id`s ensure progress recorded in generic /x/ practice flows is visible here.
+ * - Stable problem `id`s ensure progress recorded in the primary generic practice flows (for main data-driven routes) is visible here.
  */
 export const getSectionPracticeProgress = (
   state: ProgressState,

@@ -44,6 +44,18 @@ export function CourseContentsPage({
   modules?: Module[];
   problems?: Problem[];
 }) {
+  // Dev signal: this is one of the main surfaces that can receive either legacy subject.modules
+  // or realData-derived modules from the new architecture. Helps us know when real homes/dashboard
+  // are still depending on the old tree for section lists.
+  if (typeof process !== "undefined" && process.env.NODE_ENV === "development") {
+    const hasModules = (modules?.length ?? 0) > 0;
+    const hasProblems = (problems?.length ?? 0) > 0;
+    if (hasModules || hasProblems) {
+      import("@/lib/migration-diagnostics")
+        .then((m) => m.trackLegacyUsageInComponent("CourseContentsPage", hasModules ? "modules structure" : "problems list"))
+        .catch(() => {});
+    }
+  }
   const [openTopicId, setOpenTopicId] = useState<string | null>(null);
 
   const { progress } = useProgress();

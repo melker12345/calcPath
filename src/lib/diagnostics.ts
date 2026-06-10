@@ -5,6 +5,7 @@ import {
   type DiagnosticSkill,
   type DiagnosticStatus,
 } from "@/lib/diagnostic-content";
+import { getModulesPath } from "@/lib/subject-urls";
 
 export type DiagnosticQuestionResult = {
   questionId: string;
@@ -93,7 +94,7 @@ export function getRecommendedDiagnosticAction(summaries: DiagnosticSkillSummary
 
   return {
     label: "Start Limits",
-    href: "/calculus/modules/limits",
+    href: getModulesPath("calculus", "limits"),
     description: "Your first diagnostic results look ready for the Limits module.",
   };
 }

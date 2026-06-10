@@ -1,0 +1,102 @@
+---
+title: Secure multiparty computation
+---
+
+# Secure multiparty computation
+
+Secure multiparty computation (MPC, or SMPC) lets a set of parties, each holding a private input, compute a joint function of all inputs while revealing only the output (and whatever is implied by it). No party learns anything else about the other parties' inputs.
+
+MPC is the broadest primitive in cryptography that generalizes secret sharing, zero-knowledge, and private set intersection. It can realize any 'mental poker' or 'millionaires' problem in a provably secure way.
+
+## The Secure MPC Problem
+
+<!-- section: mpc-problem -->
+
+n parties P1 … Pn hold private inputs x1 … xn. They wish to compute y = f(x1,…,xn) such that:
+
+- Correctness: all honest parties obtain the correct y.
+- Privacy: nothing is revealed about the xi's beyond what y itself reveals.
+
+Security is defined via the simulation paradigm: for any adversary controlling a subset of parties, there exists a simulator that, given only the inputs of the corrupted parties and the output y, can produce a view indistinguishable from the real protocol execution.
+
+The function f can be any efficiently computable function (arithmetic circuit, Boolean circuit, RAM program, etc.).
+
+**ELI5**
+
+- Several hospitals want to compute the average salary of their doctors or the statistics of a rare disease across all their patient records, without any hospital seeing another hospital's raw data.
+- The protocol lets them obtain only the final statistic; the individual records stay private.
+
+**Worked Example:**
+
+Two millionaires want to know who is richer without revealing their wealth. f(x,y) = 1 if x > y else 0. An MPC protocol lets them learn only the bit; neither learns the other's number (or even a range that would be implied by a naïve comparison).
+
+## Yao's Garbled Circuits for Two Parties
+
+<!-- section: yao-garbled -->
+
+Yao's protocol (1986) solves the two-party case (semi-honest model) using garbled circuits.
+
+One party ('garbler') takes a Boolean circuit for f, replaces every wire with two random keys (one for 0, one for 1), and for each gate creates a 'garbled table' of four ciphertexts that encrypt the correct output key under the two input keys, in random order.
+
+The other party ('evaluator') obtains the keys corresponding to its own input bits via oblivious transfer (OT), then evaluates the circuit gate by gate by decrypting exactly one entry per gate using the keys it holds, finally obtaining the output keys and (with mapping) the output bits.
+
+The garbler sends the garbled tables plus the keys for its own input; the evaluator learns nothing about the garbler's input except through the output.
+
+**ELI5**
+
+- The garbler creates an encrypted 'maze' that computes the function. Each wire is a pair of secret keys; each gate is a lookup table that, given the right two input keys, lets you decrypt exactly the right output key.
+- The evaluator walks the maze using keys for his inputs (obtained without the garbler learning which ones) and at the end holds only the output keys, which map to the answer.
+
+**Worked Example:**
+
+For an AND gate with input wires A,B output wire C. Garbler picks random 128-bit strings K_A^0, K_A^1, K_B^0, K_B^1, K_C^0, K_C^1. The four ciphertexts are Enc_{K_A^0,K_B^0}(K_C^0), Enc_{K_A^0,K_B^1}(K_C^0), Enc_{K_A^1,K_B^0}(K_C^0), Enc_{K_A^1,K_B^1}(K_C^1) in random permuted order. Evaluator who holds, say, K_A^0 and K_B^1 can decrypt only the second ciphertext and obtains K_C^0, learning that the gate output bit is 0, without learning the other key or the other input bit.
+
+## Information-Theoretic MPC with Secret Sharing (BGW)
+
+<!-- section: bgw-ss -->
+
+For n parties with honest majority (t < n/2 corruptions) the BGW protocol (Ben-Or, Goldwasser, Wigderson 1988) achieves information-theoretic security using Shamir secret sharing.
+
+Each input is shared using a (t+1, n) Shamir scheme. Addition of shared values is local (just add shares). Multiplication of two shared values requires an interactive degree-reduction step (each party locally multiplies its shares, re-shares the product, then the parties jointly compute a linear combination that reduces the degree back to t).
+
+With these two primitives any arithmetic circuit can be evaluated securely. For dishonest majority (t ≥ n/2) information-theoretic security is impossible for general functions without honest majority; computational assumptions or additional setup (e.g., OT) are required.
+
+**ELI5**
+
+- Everyone splits their private number into 'shares' that look random individually and gives one share to each other person.
+- Adding two shared numbers is easy: everyone just adds the shares they hold.
+- Multiplying is harder; it produces higher-degree shares that must be 'cleaned up' by an interactive protocol that uses fresh randomness so that the final shares still hide the product.
+
+**Worked Example:**
+
+To compute the sum of three private salaries s1+s2+s3 with t=1 (any one party may be corrupt). Each si is shared with a degree-1 polynomial (2-out-of-3). Each party adds the three shares it holds (one from each polynomial). The resulting shares are a valid sharing of the sum; any two parties can reconstruct the sum, but any single party sees only a random field element independent of the sum.
+
+## Security Models and Feasibility
+
+<!-- section: security-models -->
+
+- Semi-honest (honest-but-curious): parties follow the protocol but try to learn extra information from the messages they receive. Easier to achieve; many protocols are first designed in this model and then compiled to malicious security.
+- Malicious (Byzantine): corrupted parties can deviate arbitrarily (send wrong messages, abort, etc.). Requires zero-knowledge proofs, commitments, or verifiable secret sharing to force correct behavior.
+- Honest majority vs. dishonest majority: with t < n/2 information-theoretic security is possible for any function (BGW). With t ≥ n/2 computational assumptions are necessary for most functions (Yao + OT for 2 parties; GMW for many parties).
+- With preprocessing (Beaver triples, OT extension, etc.) online phases can be extremely fast (information-theoretic or symmetric-crypto only).
+
+Universally composable (UC) security gives security even when the MPC protocol is used as a subroutine inside larger protocols.
+
+**ELI5**
+
+- Semi-honest is like 'the other people follow the rules but are nosy and will try to infer your salary from the messages they legitimately receive.'
+- Malicious is 'the other people may lie, send garbage, or collude to try to learn or corrupt the result.'
+- With an honest majority you can use pure information-theoretic tricks (secret sharing + interaction). Without it you need cryptography (one-way functions, oblivious transfer) to create 'virtual honest majority' or to detect cheating.
+
+**Worked Example:**
+
+In the GMW compiler, a semi-honest protocol is compiled to malicious security by having every party prove (via zero-knowledge) that each message it sends is the correct next message according to the protocol transcript so far and its private input. This forces correct behavior without revealing the input.
+
+## Common Mistakes
+
+- **Thinking MPC always requires a trusted third party**: The whole point is to remove the trusted party; the protocol itself emulates the ideal functionality.
+- **Assuming that 'the output reveals nothing'**: By definition the output y is revealed; privacy only protects the inputs beyond what is implied by y (e.g., if f is the sum, the sum itself is learned but not the individual addends).
+- **Believing information-theoretic security is always possible**: It requires an honest majority (or a private channel + honest majority). Dishonest majority needs computational assumptions.
+- **Confusing 2-party Yao with multi-party secret-sharing MPC**: Yao is usually computational (via OT) and for two parties; BGW-style is information-theoretic for honest majority and uses Shamir sharing + interaction for multiplication.
+- **Forgetting the cost of malicious security**: Semi-honest protocols can be very cheap (linear in circuit size); malicious security often adds heavy zero-knowledge or cut-and-choose overhead, although recent protocols (e.g., SPDZ, authenticated triples) have made malicious security practical.
+- **Assuming MPC is only for 'millionaires' or toy functions**: Modern MPC frameworks (MP-SPDZ, SCALE-MAMBA, EMP-toolkit, etc.) routinely evaluate AES, neural-network inference, and complex database queries among dozens of parties.

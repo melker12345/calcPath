@@ -1,28 +1,22 @@
 "use client";
 
-import { AuthProvider } from "@/components/auth-provider";
 import { ProgressProvider } from "@/components/progress-provider";
 import { createContext, useContext } from "react";
 import type { Topic, Problem } from "@/lib/shared-types";
 
 export function AuthBoundary({ children }: { children: React.ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>;
+  // No-op: auth removed; passthrough for compatibility with existing layout wrappers.
+  return <>{children}</>;
 }
 
 export function ProgressBoundary({ children }: { children: React.ReactNode }) {
-  return (
-    <AuthProvider>
-      <ProgressProvider>{children}</ProgressProvider>
-    </AuthProvider>
-  );
+  // AuthProvider wrapper removed (auth stripped); ProgressProvider kept.
+  return <ProgressProvider>{children}</ProgressProvider>;
 }
 
 export function AppStateProviders({ children }: { children: React.ReactNode }) {
-  return (
-    <AuthProvider>
-      <ProgressProvider>{children}</ProgressProvider>
-    </AuthProvider>
-  );
+  // AuthProvider wrapper removed (auth stripped); ProgressProvider kept.
+  return <ProgressProvider>{children}</ProgressProvider>;
 }
 
 // ============================================

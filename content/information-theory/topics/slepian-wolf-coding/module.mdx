@@ -1,0 +1,82 @@
+---
+title: Slepian–Wolf coding
+---
+
+# Slepian–Wolf coding
+
+Slepian–Wolf coding is the problem of lossless compression of two (or more) correlated discrete memoryless sources when the encoders cannot communicate with each other but the decoder receives all compressed streams and can exploit the correlation.
+
+Surprisingly, the total rate needed is still the joint entropy H(X,Y); the encoders can operate separately at rates as low as the conditional entropies. This is the first and most famous result in network information theory for source coding.
+
+## Distributed Source Coding Problem
+
+<!-- section: distributed-sc-problem -->
+
+Two sources X and Y are drawn i.i.d. from a joint pmf p(x,y). Encoder 1 sees only the X^n sequence and compresses it to a message at rate R1 bits per symbol. Encoder 2 compresses Y^n to rate R2 independently. The joint decoder, upon receiving both messages, must reconstruct both sequences with vanishing error probability.
+
+No communication is allowed between the two encoders; they do not even know each other's realizations.
+
+**ELI5**
+
+- Two sensors in different rooms measure correlated temperatures or images. Each sensor must send a compressed description over its own link to a central server, but the sensors cannot talk to each other. The server, seeing both compressed descriptions, should recover both measurements perfectly.
+- The correlation is 'free side information' that only the decoder sees.
+
+**Worked Example:**
+
+X and Y are the two bits of a (3,1) repetition codeword sent over independent BSCs; they are highly correlated. Each encoder can compress its own bit string at rate close to the conditional entropy H(X|Y) without knowing the other, yet the joint decoder recovers both perfectly.
+
+## The Slepian-Wolf Rate Region
+
+<!-- section: sw-rate-region -->
+
+The achievable rate region is all (R1, R2) such that
+
+R1 ≥ H(X | Y)
+
+R2 ≥ H(Y | X)
+
+R1 + R2 ≥ H(X, Y)
+
+The region is a pentagon (for two sources). The corner point (H(X|Y), H(Y)) corresponds to encoder 2 sending at full entropy (no compression exploiting correlation) while encoder 1 sends only the 'innovation' given Y.
+
+The surprising fact is that the sum rate equals the joint entropy even though encoders are separate — the same as if they could pool their observations before compressing.
+
+**ELI5**
+
+- You need at least H(X|Y) bits from the first sensor because even if the decoder already knew Y perfectly, it would still need that much to resolve the uncertainty in X.
+- The total bits from both sensors cannot be less than H(X,Y) because together they must resolve the pair (X,Y).
+- The magic is that these lower bounds are simultaneously achievable without the encoders talking.
+
+**Worked Example:**
+
+For binary symmetric correlation (X uniform, Y = X ⊕ Z, Z ~ Bern(p)), H(X,Y) = 1 + h(p), H(X|Y) = h(p). The region allows (R1,R2) = (h(p), 1) or (1, h(p)) or any point on the sum-rate line R1+R2 = 1+h(p) with each above h(p).
+
+## Binning and Achievability (Channel Coding Dual)
+
+<!-- section: binning-achievability -->
+
+The achievability uses random binning, which is the dual of random channel coding.
+
+Encoder 1 generates a random partition of the typical X^n sequences into 2^{n R1} bins and sends only the bin index. Encoder 2 does likewise for Y^n.
+
+The decoder, knowing both bin indices, looks for the unique jointly typical pair (x^n, y^n) that lies in the announced bins. Because the number of bins is large enough, with high probability there is only one such pair inside the intersection of the two bins.
+
+This is exactly analogous to the decoder in a multiple-access channel or to syndrome decoding; the 'bins' play the role of cosets.
+
+**ELI5**
+
+- Each encoder throws its possible sequences into a huge number of buckets (bins) at random and tells the decoder only which bucket its sequence landed in.
+- The decoder knows the statistical relationship between X and Y, so among all sequences in bucket A for X and bucket B for Y there is (with high prob) only one pair that 'makes sense' together (jointly typical). That must be the one that was observed.
+
+**Worked Example:**
+
+For the binary symmetric case, encoder 1 can use a good channel code for the 'virtual' BSC(p) whose 'syndrome' (bin index) is sent at rate h(p). The decoder, treating Y^n as side information (the 'received word' for the virtual channel), uses the syndrome to correct the 'errors' and recover X^n. This is precisely syndrome-based Slepian-Wolf coding and is dual to channel coding.
+
+## Common Mistakes
+
+- **Thinking separate encoders must incur a rate penalty compared with joint encoding**: The sum rate is exactly H(X,Y) — the same as joint encoding. Only the individual rates have extra constraints.
+- **Confusing Slepian-Wolf with Wyner-Ziv**: Slepian-Wolf is lossless; Wyner-Ziv allows lossy reconstruction of one source when the other is available as side information only at the decoder.
+- **Assuming the encoders need to know the correlation parameter p**: In theory the binning is designed for a known p; in practice one uses universal or compound codes or estimates p.
+- **Believing practical Slepian-Wolf is just 'send syndromes of two separate codes'**: While that works for certain correlation models (virtual channel is BSC), general p(x,y) requires more sophisticated binning or graph-based codes (LDPC for SW).
+- **Forgetting that the decoder must be able to handle the union of many possible pairs**: The error analysis uses the union bound over the 'wrong' pairs that happen to land in the same bins and are jointly typical.
+- **Thinking the result requires the sources to be i.i.d. binary**: The theorem holds for any discrete memoryless joint distribution; extensions exist for continuous, Markov, etc. sources.

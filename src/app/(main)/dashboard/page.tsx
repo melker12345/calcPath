@@ -1,26 +1,40 @@
-import { getFileSystemContentBundle } from "@/lib/content/loader";
-import dynamic from "next/dynamic";
+import { getDashboardDataForSubject, getAvailableSubjectConfigs } from "@/lib/content/loader";
+import { DashboardShell } from "./DashboardShell";
 
-const DashboardContent = dynamic(() => import("./DashboardContent"), { ssr: false });
+type SlimModule = { topicId: string; sections: Array<{ title: string; section?: string }> };
 
 export default async function UnifiedDashboard() {
-  // Load real topics/problems from the new data-driven system so the dashboard
-  // shows accurate mastery stats based on the migrated content (stable IDs ensure
-  // progress carries over). The client component receives the lists and still
-  // uses live useProgress + getPracticeProgress for the UI.
-  const [calc, stats, la] = await Promise.all([
-    getFileSystemContentBundle("calculus").catch(() => ({ topics: [], problems: [] as any[] })),
-    getFileSystemContentBundle("statistics").catch(() => ({ topics: [], problems: [] as any[] })),
-    getFileSystemContentBundle("linear-algebra").catch(() => ({ topics: [], problems: [] as any[] })),
-  ]);
+  // Load *lightweight* real topics/problems + module (section) structure from the new data-driven system for ALL subjects.
+  // Uses auto-discovery: new subjects with only content/{slug}/ (index.json + topics) appear automatically,
+  // even with zero entry in subjects.ts (metadata comes from index.json or graceful fallback).
+  //
+  // Perf fix for "14 subjects dashboard": was doing Promise.all( getFileSystemContentBundle (full: ALL problems + ALL mdx) + derive (which *re-did* full bundle + re-parse MDX headings) for every subject ).
+  // Large subjects (algebra 48t/~400q, real-analysis 42t/353q, statistics 14t/461q, geometry, ...) caused excessive fs reads + CPU.
+  //
+  // Now: getDashboardDataForSubject uses:
+  //  - load with mdx skipped (problems+topics only; problems list still required in full for stable-ID fidelity in getPracticeProgress/getSection...)
+  //  - derive (now light mdx-only + cached)
+  // + top-level lifetime caches in loader for bundles + structures.
+  // Full fidelity kept: same problem IDs, same section slugs, full counts+chapters even for untouched subjects (UI shows correct 0/N and all expandables).
+  // Progress, per-section, aggregates unaffected (DashboardContent + progress.ts unchanged).
+  const subjectList = await getAvailableSubjectConfigs();
+  const loads = await Promise.all(
+    subjectList.map(async (s) => {
+      const data = await getDashboardDataForSubject(s.slug).catch(() => ({
+        topics: [] as any[],
+        problems: [] as any[],
+        modules: [] as SlimModule[],
+      }));
+      return { slug: s.slug, ...data };
+    })
+  );
+
+  const realData: Record<string, { topics: any[]; problems: any[]; modules: SlimModule[] }> = {};
+  for (const { slug, topics, problems, modules } of loads) {
+    realData[slug] = { topics: topics || [], problems: problems || [], modules };
+  }
 
   return (
-    <DashboardContent
-      realData={{
-        calculus: { topics: calc.topics, problems: calc.problems },
-        statistics: { topics: stats.topics, problems: stats.problems },
-        "linear-algebra": { topics: la.topics, problems: la.problems },
-      }}
-    />
+    <DashboardShell realData={realData} subjectConfigs={subjectList} />
   );
 }

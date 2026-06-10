@@ -4,7 +4,7 @@
  * This is the source of truth for what "content" looks like in the new system.
  * All future loaders, editors, and generic pages will be built against these types.
  *
- * Design goals (per future-dynamic.md and the 2026-06 primary architecture declaration):
+ * Design goals (per the 2026-06 primary architecture declaration; see git history for future-dynamic.md):
  * - Versioned (we will evolve this)
  * - Strongly validated (Zod) at load time with good errors
  * - Captures current real-world usage from the 3 existing subjects (inventory in NOTES.md + analysis)
@@ -206,6 +206,10 @@ export const SubjectConfigSchema = z.object({
   icon: z.string().min(1), // emoji or short symbol
   order: z.number().int().positive(),
   hasTests: z.boolean().default(false),
+  /** Optional topic count for /subjects overview, populated from the index topics array by loader */
+  topicCount: z.number().int().nonnegative().optional(),
+  /** Category for color-coding cards (foundations | calculus | linear | stats | discrete | algebra | logic | analysis) */
+  category: z.string().optional(),
 });
 
 export type SubjectConfig = z.infer<typeof SubjectConfigSchema>;
@@ -279,7 +283,15 @@ export const SubjectIndexSchema = z.object({
   order: z.number().int().positive(),
   hasTests: z.boolean().default(false),
   topics: z.array(TopicSchema),
-});
+
+  // Rich metadata (optional) — makes SEO/OG/JSON-LD data-driven from content/{slug}/index.json
+  // New subjects can include these keys for rich metadata without any code changes in layout/page.
+  // Falls back gracefully to basic defaults derived from label/shortDescription.
+  keywords: z.array(z.string().min(1)).optional(),
+  ogTitle: z.string().optional(),
+  ogDescription: z.string().optional(),
+  courseDescription: z.string().optional(),
+}).passthrough();
 
 export type SubjectIndex = z.infer<typeof SubjectIndexSchema>;
 
@@ -343,7 +355,7 @@ export type MdxModule = z.infer<typeof MdxModuleSchema>;
  * (JSON metadata + questions + MDX explanations).
  *
  * This is the target shape for the primary data-driven loader (official architecture).
- * Distinct from legacy SubjectBundle during the transition period (see MIGRATION-PLAN.md).
+ * Distinct from legacy SubjectBundle during the transition period (see git history + NOTES.md).
  *
  * Populated from the full content/{subject}/ structures for all subjects.
  */

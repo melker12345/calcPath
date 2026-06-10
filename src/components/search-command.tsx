@@ -11,86 +11,16 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { subjectList } from "@/lib/subjects";
 
-type SearchEntry = {
-  label: string;
-  description: string;
-  href: string;
-  subjectIcon: string;
-  kind: "topic" | "section" | "page";
-};
+// Type is now also exported from the server action for the new content path.
+import type { SearchEntry } from "@/lib/actions/get-search-index";
 
 async function loadIndex(): Promise<SearchEntry[]> {
-  const [
-    { calculusTopics, statisticsTopics, linalgTopics },
-    { modules: calculusModules },
-    { modules: statisticsModules },
-    { modules: linalgModules },
-  ] = await Promise.all([
-    import("@/lib/subject-topics"),
-    import("@/lib/modules"),
-    import("@/lib/statistics-modules"),
-    import("@/lib/linalg-modules"),
-  ]);
-
-  const entries: SearchEntry[] = [];
-
-  // Derive subject metadata from the central registry to avoid hardcoding
-  const subjects = subjectList.map((subject) => {
-    const iconMap: Record<string, string> = {
-      calculus: "∫",
-      statistics: "σ",
-      "linear-algebra": "λ",
-    };
-
-    let topics: any[] = [];
-    let modules: any[] = [];
-
-    if (subject.slug === "calculus") {
-      topics = calculusTopics;
-      modules = calculusModules;
-    } else if (subject.slug === "statistics") {
-      topics = statisticsTopics;
-      modules = statisticsModules;
-    } else if (subject.slug === "linear-algebra") {
-      topics = linalgTopics;
-      modules = linalgModules;
-    }
-
-    return {
-      slug: subject.slug,
-      icon: iconMap[subject.slug] || "•",
-      name: subject.label,
-      topics,
-      modules,
-    };
-  });
-
-  for (const s of subjects) {
-    entries.push({ label: s.name, description: `${s.topics.length} topics`, href: `/${s.slug}`, subjectIcon: s.icon, kind: "page" });
-    entries.push({ label: `${s.name} Progress`, description: "Your progress", href: `/dashboard`, subjectIcon: s.icon, kind: "page" });
-
-    for (const topic of s.topics) {
-      entries.push({ label: topic.title, description: `${s.name} module`, href: `/${s.slug}/modules/${topic.id}`, subjectIcon: s.icon, kind: "topic" });
-
-      const mod = s.modules.find((m) => m.topicId === topic.id);
-      if (mod) {
-        for (const section of mod.sections) {
-          const slug = section.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-          entries.push({
-            label: section.title,
-            description: `${topic.title} \u2014 ${s.name}`,
-            href: `/${s.slug}/modules/${topic.id}#${slug}`,
-            subjectIcon: s.icon,
-            kind: "section",
-          });
-        }
-      }
-    }
-  }
-
-  return entries;
+  // Use the new data-driven architecture exclusively (FileSystemContentBundle + deriveModuleStructureFromBundle via Server Action).
+  // Search results (topics + per-section deep links) now come 100% from real content/ data.
+  // No more legacy fallback — the old modules/ tree and static shims like subject-topics are fully retired for this path.
+  const { getSearchIndex } = await import("@/lib/actions/get-search-index");
+  return await getSearchIndex();
 }
 
 function matchScore(entry: SearchEntry, query: string): number {

@@ -52,13 +52,15 @@ export function deriveSuggestionLabels(
     labels.push(label);
   };
 
-  // Build richer src including ctx flags (hasTrig etc). This improves suggestion
-  // labels for generic/dynamic content (where detectQuestionContext is used on prompts)
-  // and outside legacy per-subject pages. Previously only vars + pi respected ctx.
+  // Build richer src including ctx flags for constants (e, ln, pi).
+  // IMPORTANT: do NOT inject full trig family from hasTrig (that used to cause "way too many options"
+  // for any question whose prompt mentioned sin/cos etc., even when final answer was a plain number).
+  // Trig buttons only surface if the answer string itself contains them (rare for final numeric answers).
+  // hasExp/hasLn/hasPi still help suggest 'e'/'ln'/'π' when prompt signals the form but answer string may vary.
   let ctxExtra = "";
-  if (questionCtx?.hasTrig) ctxExtra += " sin cos tan sinh cosh tanh sec csc cot arcsin arccos arctan ";
   if (questionCtx?.hasExp) ctxExtra += " e exp ";
   if (questionCtx?.hasLn) ctxExtra += " ln log ";
+  if (questionCtx?.hasPi) ctxExtra += " pi π ";
   const src = `${answerSrc} ${questionCtx?.hasVariable?.join(" ") ?? ""} ${ctxExtra}`;
   const hasLowerSymbol = (symbol: string) =>
     new RegExp(`(^|[^a-z])${symbol}($|[^a-z])`).test(src);
@@ -97,8 +99,8 @@ export function deriveSuggestionLabels(
   if (/\bln\b/i.test(src)) add("ln");
   if (/\blog\b/i.test(src)) add("log");
   if (/pi|π/i.test(src) || questionCtx?.hasPi) add("π");
-  if (/inf/i.test(src)) add("∞");
-  if (/sqrt/i.test(src)) add("√");
+  if (/inf|∞/i.test(src)) add("∞");
+  if (/sqrt|√/i.test(src)) add("√");
   if (/=/.test(answer ?? "")) add("=");
   if (/,/.test(answer ?? "")) add(",");
   if (/\|/.test(answer ?? "")) add("| |");

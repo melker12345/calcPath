@@ -1,0 +1,88 @@
+---
+title: Polar code
+---
+
+# Polar code
+
+Polar codes, invented by Erdal Arıkan in 2009, are the first family of codes that provably achieve the symmetric capacity of any binary-input discrete memoryless channel with encoding and decoding complexity O(n log n). They do so by an explicit, deterministic construction based on the beautiful phenomenon of channel polarization.
+
+In 5G New Radio, polar codes were selected for the control channel (PDCCH) and for the broadcast channel, marking the first widespread commercial deployment of a capacity-achieving code family.
+
+## Channel Polarization
+
+<!-- section: channel-polarization -->
+
+Arikan's insight starts with a simple 2×2 kernel: two copies of a channel W are combined into a worse channel W⁻ and a better channel W⁺. Recursively applying this transformation to n = 2^m independent copies of W creates n synthetic bit-channels whose capacities polarize: a fraction I(W) of them become almost noiseless (capacity → 1) while the rest become almost useless (capacity → 0).
+
+As m → ∞ the polarization is sharp; the fraction of good channels approaches exactly the symmetric capacity I(W).
+
+**ELI5**
+
+- Imagine taking many identical noisy phone lines and cleverly wiring them together in stages. Some of the resulting 'virtual lines' become crystal clear while others become pure noise.
+- The fraction that become clear equals the fraction of information the original noisy line could have carried reliably.
+
+**Worked Example:**
+
+For the binary erasure channel with erasure probability 0.5, I(W)=0.5. After one step of polarization the good synthetic channel W⁺ has erasure prob 0.25 (better) and W⁻ has 0.75 (worse). After many recursions roughly half the final bit-channels have erasure probability near 0.
+
+## Construction and Encoding
+
+<!-- section: construction-encoding -->
+
+The polar transform is the matrix G_n = F^{\otimes m} where F = [[1,0],[1,1]] (Kronecker power). To encode, place the k information bits in the k most reliable synthetic channels (the information set A); the remaining n-k positions (the frozen set) are set to 0 (or known values).
+
+Encoding is simply $\mathbf{x} = \mathbf{u} G_n$ where u_A are the info bits and u_{A^c}=0. Because G_n is the fast Hadamard transform (essentially), encoding costs only n log n XORs.
+
+**ELI5**
+
+- You get a big 'mixing' matrix built by repeatedly applying a tiny 2-bit mixer. The mixing sorts the bits into 'good' and 'bad' positions according to how much the channel likes them.
+- Frozen bits are the positions you deliberately set to known values so the decoder has side information to help it guess the real data bits.
+
+**Worked Example:**
+
+For n=8, m=3, a rate-1/2 code might freeze positions {1,2,3,5} (the worst synthetic channels) and put info bits in {4,6,7,8}. The generator rows corresponding to the info set are selected; the code is linear.
+
+## Successive Cancellation Decoding
+
+<!-- section: sc-decoding -->
+
+Successive cancellation (SC) decodes bit by bit in a fixed order, using previously decided bits as side information for later decisions. At each information bit it computes the likelihood ratio (or LLR) of that synthetic channel given the channel output and prior decisions, then decides 0 or 1 (or uses CRC-aided list decoding).
+
+The recursion follows the same butterfly structure as the encoder, allowing an efficient implementation with O(n log n) complexity using a scheduling graph.
+
+SC list decoding (SCL) keeps L best paths and is used in practice with a small CRC to select the correct path; it dramatically improves finite-length performance.
+
+**ELI5**
+
+- The decoder walks through the bits in a special order, 'freezing' its guesses for the known frozen bits and using them as crutches to decide the unknown data bits one by one.
+- Because of the polarization, when it reaches a good bit position the decision is almost obvious given everything seen so far.
+
+**Worked Example:**
+
+Decoding bit u_4 (an information bit). The LLR for the corresponding synthetic channel is computed by combining the LLRs of the two underlying channels, taking into account any already-decided bits that affect the combination (via the polarization recursions). If |LLR| is large the decision is reliable.
+
+## Performance in Standards
+
+<!-- section: performance-standards -->
+
+For short to moderate block lengths (hundreds to a few thousand bits) that are typical of control signaling, polar codes with CRC-aided SCL decoding outperform both LDPC and turbo codes in the 5G operating region. They have deterministic construction, no need for large interleavers, and admit efficient hardware implementations (especially with list size 8 or 32).
+
+The main practical limitation is that plain SC is suboptimal for short n; list decoding + CRC is essential. Rate matching (puncturing, shortening, repetition) is used to support arbitrary code lengths and rates.
+
+**ELI5**
+
+- For the small packets used to tell a phone 'here is your schedule', polar codes give better reliability than the older turbo or LDPC designs that were tuned for big data blocks.
+- 5G chose them precisely because control messages are short and must be decoded extremely reliably with low latency.
+
+**Worked Example:**
+
+In 5G, downlink control information (DCI) uses polar codes with n up to 512 or 1024 bits, list size 8, and an 24-bit CRC; this achieves the required BLER < 10^{-3} or 10^{-5} at the cell edge with modest Eb/N0.
+
+## Common Mistakes
+
+- **Believing polar codes are 'capacity-achieving for any finite n'**: The proof is asymptotic; for finite n a gap remains and list decoding is needed to close it.
+- **Confusing the polar transform with the FFT**: While the matrix is Kronecker like the FFT, the decoding algorithm and frozen-bit selection are specific to the channel polarization phenomenon.
+- **Thinking frozen bits carry no information**: They are known to both encoder and decoder and provide the 'anchor' values that let SC work.
+- **Assuming SC decoding is maximum-likelihood**: Plain SC is a greedy approximation; SCL with list size >1 is much closer to ML.
+- **Overlooking rate matching complexity**: Supporting many code lengths in 5G required careful puncturing/shortening designs that interact with the information set.
+- **Expecting polar codes to dominate at all lengths and rates**: At very long blocks and high rates LDPC often have implementation advantages (fully parallelizable without list).

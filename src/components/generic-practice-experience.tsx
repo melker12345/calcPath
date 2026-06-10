@@ -8,6 +8,7 @@ import { MathInput } from "@/components/math-input";
 import { useProgress } from "@/components/progress-provider";
 import { isAnswerCorrectAsync } from "@/lib/answer-check";
 import { detectQuestionContext } from "@/lib/math-input-helpers";
+import { getSectionHref } from "@/lib/subject-urls";
 import {
   ProgressDots,
   PracticeFeedback,
@@ -20,26 +21,25 @@ import type { Problem, Topic } from "@/lib/shared-types";
 /**
  * GenericPracticeExperience
  *
- * Fully data-driven practice UI for the experimental /x/ area.
+ * Fully data-driven practice UI for the main dynamic routes (primary implementation for /[subject] pages via generics + FileSystemContentBundle).
  * Consumes Problem[] + Topic directly from FileSystemContentBundle (via server props).
  * Reuses ALL the shared practice primitives (usePracticeSession, ProgressDots, PracticeFeedback).
  *
  * This is the integration point proving "generic components + new content data = working practice".
  *
- * Resilience (Migration Phase): 
+ * Resilience:
  * - Loader already does tolerant per-question recovery on schema errors ("better to load broken than none").
  * - Existing data guard + always-<MathText> (with its per-fragment MathRenderBoundary).
- * - NEW: local QuestionErrorBoundary (below) for any remaining runtime render errors (e.g. edge-case LaTeX, handler bugs, partial data) on a *single* question.
+ * - Local QuestionErrorBoundary (below) for any runtime render errors (e.g. edge-case LaTeX, handler bugs, partial data) on a *single* question.
  *   One bad question never destroys the session; clear "rendering issue" UI + skip affordance keeps progress usable.
  *
- * Differences / simplifications vs legacy per-subject pages (for experimental slice):
+ * Current design notes / simplifications (vs older per-subject page implementations):
  * - Uses the improved PracticeFeedback for *both* correct + incorrect states (less duplication).
  * - All prompt / choice / step / explanation text *always* goes through the project's <MathText>
  *   (robust $ / $$ splitter + Safe* fallbacks for bad katex). No local RichPrompt/RichMath.
- * - Subject context for MathInput uses "generic" (now fully hardened: neutral dark-friendly theme,
+ * - Subject context for MathInput uses "generic" (neutral dark-friendly theme,
  *   reliable MQ style injection, improved deriveSuggestionLabels via prompt ctx; full keypad/scratchpad/submit
- *   experience works end-to-end for statistics + linear-algebra topics in /x/ practice).
- * - No per-subject getModuleSectionUrl deep links yet (future: derive from MDX headings or keep legacy maps).
+ *   experience works end-to-end for statistics + linear-algebra topics in the primary dynamic routes' practice).
  * - Progress + answer checking use the global shared systems (stable ids preserved from content).
  *
  * Limitations noted in NOTES.md.
@@ -121,11 +121,13 @@ export function GenericPracticeExperience({
   problems: allTopicProblems,
   subjectSlug,
   subjectLabel,
+  nextTopic,
 }: {
   topic: Topic;
   problems: Problem[];
   subjectSlug: string;
   subjectLabel: string;
+  nextTopic?: { id: string; title: string };
 }) {
   const params = useParams<{ topicId: string }>();
   const topicId = params?.topicId ?? topic.id;
@@ -150,7 +152,7 @@ export function GenericPracticeExperience({
     solvedCount,
     goToNext,
     goToPrev,
-    shuffleAndRestart,
+
     answer,
     setAnswer,
     feedback,
@@ -164,11 +166,18 @@ export function GenericPracticeExperience({
   });
 
   const current = hookCurrent || displayProblems[index];
+  // For "back to explanation" after mastering (or in empty states), prefer a section anchor if we have one
+  // (e.g. when practicing a filtered ?section= or when all questions share a section). Falls back to topic root.
+  const backToExplanationHref = getSectionHref(
+    subjectSlug,
+    topic.id,
+    current?.section || displayProblems[0]?.section
+  );
 
   if (displayProblems.length === 0) {
     // Extra guard: show clean intentional "no questions yet" instead of falling to bad-data fallback,
     // broken nav (length-1=-1), "All 0 mastered", or hitting PracticeErrorBoundary.
-    // Matches polished /x/ card look and feel exactly.
+    // Matches the polished card look and feel of the main data-driven routes exactly.
     return (
       <div className="mx-auto w-full max-w-3xl px-0 pb-0 sm:px-6 sm:py-10">
         <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-center bg-[var(--surface)] px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
@@ -178,18 +187,18 @@ export function GenericPracticeExperience({
             </div>
             <h2 className="text-xl font-semibold theme-text">No practice questions yet</h2>
             <p className="mt-2 text-sm theme-text-secondary">
-              This topic’s questions have not been added to the experimental /x/ content yet.
-              This is an intentional “not yet” state while we port topics.
+              This topic’s questions have not been added yet.
+              This is an intentional “not yet” state while we expand practice for this topic.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Link
-                href={`/x/${subjectSlug}/modules/${topic.id}`}
+                href={backToExplanationHref}
                 className="inline-flex items-center justify-center rounded-lg bg-[var(--accent)] px-5 py-2 text-sm font-medium text-white transition hover:opacity-90 active:scale-[0.985]"
               >
                 View the explanation →
               </Link>
               <Link
-                href={`/x/${subjectSlug}`}
+                href={`/${subjectSlug}`}
                 className="inline-flex items-center justify-center rounded-lg border theme-border px-5 py-2 text-sm font-medium theme-text-muted transition hover:bg-[var(--surface-2)] hover:text-[var(--accent)]"
               >
                 ← Back to {subjectLabel}
@@ -223,7 +232,7 @@ export function GenericPracticeExperience({
         >
           Skip to next question →
         </button>
-        <Link href={`/x/${subjectSlug}`} className="mt-3 block underline text-[var(--accent)]">Back to {subjectLabel}</Link>
+        <Link href={`/${subjectSlug}`} className="mt-3 block underline text-[var(--accent)]">Back to {subjectLabel}</Link>
       </div>
     );
   }
@@ -270,8 +279,11 @@ export function GenericPracticeExperience({
 
   const isDismissable = feedback?.type === "incorrect" && !feedback.showSolution;
 
-  // Use the *shared improved* PracticeFeedback for the entire overlay (correct + incorrect)
-  const feedbackOverlay = (
+  // Use the *shared improved* PracticeFeedback for the entire overlay (correct + incorrect).
+  // Only create the element when there is actual feedback to display. This prevents the
+  // keypad from being unconditionally hidden (via the `feedbackOverlay ? "invisible" : ""`
+  // logic inside MathInput) on the very first question before any answer is submitted.
+  const feedbackOverlay = feedback ? (
     <PracticeFeedback
       feedback={feedback}
       current={{ id: current.id, explanation: current.explanation, answer: current.answer }}
@@ -286,8 +298,9 @@ export function GenericPracticeExperience({
       overlayDismissed={overlayDismissed}
       setOverlayDismissed={setOverlayDismissed}
       finalAnswer={finalAnswer}
+      isLastQuestion={index === displayProblems.length - 1}
     />
-  );
+  ) : null;
 
   return (
     <div className="mx-auto w-full max-w-3xl px-0 pb-0 sm:px-6 sm:py-10">
@@ -300,9 +313,9 @@ export function GenericPracticeExperience({
         <span className="text-sm theme-text-muted">{solvedCount}/{displayProblems.length} mastered</span>
       </div>
 
-      {/* Main practice card (matches legacy visual language) */}
+      {/* Main practice card (uses the established visual language) */}
       <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-end bg-[var(--surface)] px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
-        {/* Progress dots */}
+        {/* Progress dots + "1 / N" counter (counter positioned on right of dots; uses theme-text-muted) */}
         <div className="flex w-full justify-center">
           <div className="flex items-center gap-2">
             <ProgressDots
@@ -319,20 +332,28 @@ export function GenericPracticeExperience({
         {/* Per-question error boundary: keeps header/progress/nav always visible.
             Only the question+input subtree is isolated. Key ensures clean state per q. */}
         <QuestionErrorBoundary key={current.id} onSkip={goToNext} questionId={current.id}>
-          {/* Question prompt */}
-          <div className="flex flex-1 flex-col items-center justify-center gap-2 py-5 text-center">
+          {/* Question prompt area: centered + py-6 (increased vs 5 for more vertical breathing room/legibility around prompt) */}
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 py-6 text-center">
             <div role="heading" aria-level={2} className="text-lg font-semibold leading-relaxed sm:text-2xl">
               {/* Always delegate to project's MathText (robust splitter + katex error fallback) */}
               <MathText text={current.prompt} />
             </div>
 
-            {/* Optional link back to explanation (generic, points to our /x/ module route) */}
+            {/* Optional link back to explanation (generic, points to main data-driven module route + specific #section for the question) */}
             <Link
-              href={`/x/${subjectSlug}/modules/${current.topicId}`}
+              href={getSectionHref(subjectSlug, current.topicId, current.section)}
               className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-[var(--accent)] transition-colors hover:bg-[var(--surface-2)]"
             >
               Review the explanation for this topic →
             </Link>
+            {subjectSlug === "calculus" && (
+              <Link
+                href={`/${subjectSlug}/test/${current.topicId}`}
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-50 dark:text-amber-400"
+              >
+                Take topic test →
+              </Link>
+            )}
           </div>
 
           {/* Answer input area */}
@@ -375,7 +396,7 @@ export function GenericPracticeExperience({
               onChange={setAnswer}
               onSubmit={() => submitAnswer(answer)}
               onHint={useHint}
-              subject="generic" /* data-driven /x/ path — uses neutral theme + heuristics */
+              subject="generic" /* for primary data-driven routes — uses neutral theme + heuristics */
               hintDisabled={feedback?.type === "correct" || (feedback?.type === "incorrect" && (feedback.hintUsed || feedback.showSolution))}
               questionContext={questionContext}
               answerHint={current.answer}
@@ -389,15 +410,31 @@ export function GenericPracticeExperience({
         {/* All mastered */}
         {solvedCount >= displayProblems.length && (
           <div className="mt-4 rounded-xl border theme-border bg-[var(--surface-2)] p-4 text-center sm:mt-6 sm:rounded-2xl sm:p-5">
-            <p className="text-lg font-bold theme-text">All {displayProblems.length} problems mastered!</p>
-            <p className="mt-1 text-sm theme-text-secondary">Shuffle for a fresh run.</p>
-            <button
-              type="button"
-              onClick={shuffleAndRestart}
-              className="btn-primary mt-3 active:scale-95"
-            >
-              Shuffle &amp; restart
-            </button>
+            <p className="text-lg font-bold theme-text">Congrats! All {displayProblems.length} mastered.</p>
+            <p className="mt-1 text-sm theme-text-secondary">You've completed the practice for this section.</p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:gap-3 sm:justify-center">
+              <Link
+                href={backToExplanationHref}
+                className="btn-primary inline-flex items-center justify-center"
+              >
+                Back to explanation →
+              </Link>
+              {nextTopic && (
+                <Link
+                  href={`/${subjectSlug}/practice/${nextTopic.id}`}
+                  className="btn-secondary inline-flex items-center justify-center"
+                >
+                  Go to next topic’s practice →
+                </Link>
+              )}
+              <button
+                type="button"
+                onClick={() => setIndex(0)}
+                className="btn-secondary"
+              >
+                Restart
+              </button>
+            </div>
           </div>
         )}
 
@@ -447,7 +484,7 @@ export function GenericPracticeExperience({
 
           <Link
             className="justify-self-end rounded-lg px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] sm:text-sm"
-            href={`/x/${subjectSlug}`}
+            href={`/${subjectSlug}`}
           >
             All {subjectLabel} topics
           </Link>

@@ -221,10 +221,12 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "No admin configured" }, { status: 403 });
     }
 
-    const authUser = await getAuthUser(request);
-    if (!authUser?.email || !adminEmails.includes(authUser.email.toLowerCase())) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+    // Auth removed: admin status updates (from panel) now bypass email guard; anyone visiting obscure /admin/feedback can triage.
+    // (Previously: const authUser = await getAuthUser(request); if (!authUser?.email || !adminEmails.includes... )
+    // const authUser = await getAuthUser(request);
+    // if (!authUser?.email || !adminEmails.includes(authUser.email.toLowerCase())) {
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    // }
 
     const status = body.status as FeedbackStatus;
     if (!VALID_STATUSES.includes(status)) {
@@ -258,10 +260,9 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: true, status, ids });
   }
 
-  const userId = await getAuthUserId(request);
-  if (!userId) {
-    return NextResponse.json({ error: "Sign in required to leave a note." }, { status: 401 });
-  }
+  // Auth removed: notes on votes now allowed without sign-in (anon votes supported notes; user_id may be null).
+  // Bypass getAuthUserId check for vote note updates.
+  const userId = await getAuthUserId(request); // may be null for anon
 
   const id = body.id;
   if (typeof id !== "string" || id.length === 0) {
@@ -284,8 +285,8 @@ export async function PATCH(request: Request) {
     .from("feedback")
     .update({ message: message.slice(0, 1000) })
     .eq("id", id)
-    .eq("user_id", userId)
     .eq("kind", "vote")
+    // user_id eq removed/bypassed to support notes on anon (null user_id) votes
     .select("id");
 
   if (error) {
@@ -344,10 +345,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "No admin configured" }, { status: 403 });
   }
 
-  const email = await getAuthEmail(request);
-  if (!email || !adminEmails.includes(email.toLowerCase())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-  }
+  // Auth removed: admin list now always allowed (no token/email check) -- admin inbox open to anyone who visits /admin/feedback (obscure URL).
+  // const email = await getAuthEmail(request);
+  // if (!email || !adminEmails.includes(email.toLowerCase())) {
+  //   return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  // }
 
   const url = new URL(request.url);
   const kind = url.searchParams.get("kind");

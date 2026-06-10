@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { marked, type Tokens } from "marked";
 import { MathText } from "@/components/math-text";
 import { BlockMath } from "react-katex";
@@ -10,6 +10,16 @@ type AnyToken = Tokens.Generic & { tokens?: AnyToken[] };
 function stripFrontmatter(source: string): string {
   // Remove leading YAML frontmatter block (--- ... ---)
   return source.replace(/^---\s*[\r\n]+[\s\S]*?^---\s*[\r\n]+/m, "");
+}
+
+/**
+ * Remove all HTML comments from source (e.g. <!-- section: slug --> markers from module.mdx).
+ * Makes comment stripping robust even when MdxContent receives raw mdxSource (or bodies
+ * that somehow included them). Comments are metadata only; never rendered content.
+ * Complements the token-level skip for "html" in renderBlocks.
+ */
+function stripComments(source: string): string {
+  return source.replace(/<!--[\s\S]*?-->/g, "");
 }
 
 function cleanSlug(text: string): { title: string; id?: string } {
@@ -56,7 +66,11 @@ function renderInline(tokens: AnyToken[] | undefined): React.ReactNode {
       return <MathText key={key} text={token.text || ""} />;
     }
     if (token.type === "strong") {
-      return <strong key={key}>{renderInline(token.tokens)}</strong>;
+      return (
+        <strong key={key} className="font-semibold">
+          {renderInline(token.tokens)}
+        </strong>
+      );
     }
     if (token.type === "em") {
       return <em key={key}>{renderInline(token.tokens)}</em>;
@@ -100,7 +114,7 @@ function renderBlocks(tokens: AnyToken[]): React.ReactNode {
   return tokens.map((token, index) => {
     const key = `block-${token.type}-${index}`;
     if (token.type === "space" || token.type === "html") {
-      // Skip whitespace and raw HTML (e.g. <!-- section: slug --> markers used in some MDX)
+      // Skip whitespace and raw HTML comments (<!-- section: slug --> etc. are stripped earlier too).
       return null;
     }
     if (token.type === "heading") {
@@ -170,6 +184,64 @@ function renderBlocks(tokens: AnyToken[]): React.ReactNode {
         </ListTag>
       );
     }
+    if (token.type === "table") {
+      const tbl = token as AnyToken & {
+        header: Array<{ tokens?: AnyToken[]; align?: string | null }>;
+        rows: Array<Array<{ tokens?: AnyToken[]; align?: string | null }>>;
+      };
+      return (
+        <table
+          key={key}
+          className="my-4 w-full border-collapse overflow-hidden rounded border theme-border text-sm theme-text-secondary"
+        >
+          <thead>
+            <tr>
+              {tbl.header.map((cell, i) => {
+                const align = cell.align || "left";
+                return (
+                  <th
+                    key={i}
+                    className="border theme-border bg-[var(--surface-2)] px-3 py-2 text-left font-semibold"
+                    style={{ textAlign: align as React.CSSProperties["textAlign"] }}
+                  >
+                    {renderInline(cell.tokens)}
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {tbl.rows.map((row, ri) => (
+              <tr key={ri}>
+                {row.map((cell, ci) => {
+                  const align = cell.align || "left";
+                  return (
+                    <td
+                      key={ci}
+                      className="border theme-border px-3 py-2 align-top"
+                      style={{ textAlign: align as React.CSSProperties["textAlign"] }}
+                    >
+                      {renderInline(cell.tokens)}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      );
+    }
+    if (token.type === "code") {
+      const c = token as any;
+      if (c.lang === "mermaid") {
+        return <MermaidDiagram key={key} chart={c.text} />;
+      }
+      return (
+        <pre key={key} className="my-4 overflow-x-auto rounded bg-[var(--surface-2)] p-3 text-xs font-mono theme-text-secondary">
+          <code>{c.text}</code>
+        </pre>
+      );
+    }
     // Fallback block with raw text (rare)
     if ((token as AnyToken).text) {
       return (
@@ -182,6 +254,24 @@ function renderBlocks(tokens: AnyToken[]): React.ReactNode {
   });
 }
 
+function MermaidDiagram({ chart }: { chart: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let mounted = true;
+    import("mermaid").then(({ default: mermaid }) => {
+      if (!mounted || !ref.current) return;
+      mermaid.initialize({ startOnLoad: false, theme: "neutral", securityLevel: "loose" });
+      mermaid.render(`mermaid-${Date.now()}`, chart).then(({ svg }) => {
+        if (ref.current) ref.current.innerHTML = svg;
+      }).catch(() => {
+        if (ref.current) ref.current.textContent = chart;
+      });
+    });
+    return () => { mounted = false; };
+  }, [chart]);
+  return <div ref={ref} className="my-4 overflow-x-auto rounded border theme-border p-2 bg-white dark:bg-zinc-950" />;
+}
+
 /**
  * MdxContent
  *
@@ -190,9 +280,11 @@ function renderBlocks(tokens: AnyToken[]): React.ReactNode {
  *
  * - Strips YAML frontmatter automatically.
  * - Uses project's MathText (and thus react-katex) for inline LaTeX; native BlockMath for standalone display $$...$$ / $...$ paragraphs (module.mdx convention).
- * - Supports headings (with {#custom-id} anchors + scroll-mt for native section nav), paragraphs, lists, strong/em/code/links.
+ * - Supports headings (with {#custom-id} anchors + scroll-mt for native section nav), paragraphs, lists, tables, strong/em/code/links.
  * - Applies consistent prose styling + theme tokens. Dark mode via .theme-* and var(--).
- * - Ignores HTML comment markers (used for section metadata in some content).
+ * - Proactively strips HTML comments (<!-- section: ... --> etc.) via stripComments helper
+ *   before lexing (in addition to skipping token.type==="html" and "space" in renderBlocks).
+ *   Ensures raw markers never leak into rendered output even for raw mdxSource inputs.
  *
  * Isolated: does not depend on legacy ModuleContent shapes.
  * Future: can be upgraded to full next-mdx-remote + custom MDX components
@@ -209,7 +301,8 @@ export function MdxContent({
     return null;
   }
   const withoutFrontmatter = stripFrontmatter(mdxSource);
-  const tokens = marked.lexer(withoutFrontmatter) as AnyToken[];
+  const withoutComments = stripComments(withoutFrontmatter).trim();
+  const tokens = marked.lexer(withoutComments) as AnyToken[];
   return (
     <div className={`max-w-none ${className}`}>
       {renderBlocks(tokens)}
@@ -225,6 +318,7 @@ export function MdxContent({
  *
  * Respects explicit {#slug} in headings when present (as authored in many module.mdx files).
  * Falls back to slugified title.
+ * (Comment markers are stripped before lexing but do not affect heading extraction anyway.)
  *
  * Returns only headings (level 1-6); consumers can filter e.g. level===2 for sections.
  */
@@ -235,7 +329,8 @@ export function extractMdxSections(mdxSource: string): Array<{
 }> {
   if (!mdxSource) return [];
   const withoutFrontmatter = stripFrontmatter(mdxSource);
-  const tokens = marked.lexer(withoutFrontmatter) as AnyToken[];
+  const withoutComments = stripComments(withoutFrontmatter).trim();
+  const tokens = marked.lexer(withoutComments) as AnyToken[];
   const sections: Array<{ id: string; title: string; level: number }> = [];
   for (const t of tokens) {
     if (t.type === "heading") {

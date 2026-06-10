@@ -1,3 +1,5 @@
+import { getModulesPath } from "@/lib/subject-urls";
+
 export type DiagnosticSkillGroup = "foundations" | "calculus";
 export type DiagnosticStatus = "strong" | "ready" | "needs-review" | "weak" | "not-tested";
 
@@ -28,42 +30,42 @@ export const diagnosticSkills: DiagnosticSkill[] = [
     label: "Function notation",
     group: "foundations",
     description: "Evaluate and interpret expressions like f(2), f(x + 1), and function outputs.",
-    reviewHref: "/calculus/modules/limits",
+    reviewHref: getModulesPath("calculus", "limits"),
   },
   {
     id: "algebra-manipulation",
     label: "Algebra manipulation",
     group: "foundations",
     description: "Simplify expressions, factor common patterns, and cancel valid factors.",
-    reviewHref: "/calculus/modules/limits",
+    reviewHref: getModulesPath("calculus", "limits"),
   },
   {
     id: "graph-reading",
     label: "Graph reading",
     group: "foundations",
     description: "Read values, trends, holes, and approaching behavior from graphs or tables.",
-    reviewHref: "/calculus/modules/limits",
+    reviewHref: getModulesPath("calculus", "limits"),
   },
   {
     id: "exponents-logs",
     label: "Exponents and logs",
     group: "foundations",
     description: "Use exponent and logarithm rules that appear throughout calculus.",
-    reviewHref: "/calculus/modules/differential-equations",
+    reviewHref: getModulesPath("calculus", "differential-equations"),
   },
   {
     id: "limits-intuition",
     label: "Limits intuition",
     group: "calculus",
     description: "Understand what a function approaches, even when the function value is missing.",
-    reviewHref: "/calculus/modules/limits",
+    reviewHref: getModulesPath("calculus", "limits"),
   },
   {
     id: "continuity",
     label: "Continuity",
     group: "calculus",
     description: "Decide when a function is continuous and identify removable breaks.",
-    reviewHref: "/calculus/modules/limits",
+    reviewHref: getModulesPath("calculus", "limits"),
   },
 ];
 

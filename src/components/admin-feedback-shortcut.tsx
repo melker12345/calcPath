@@ -2,9 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/components/auth-provider";
 import { SectionCard } from "@/components/section-card";
-import { supabase } from "@/lib/supabase/client";
 import type { FeedbackRow } from "@/lib/admin-feedback";
 
 type ShortcutState =
@@ -13,29 +11,16 @@ type ShortcutState =
   | { status: "visible"; rows: FeedbackRow[] };
 
 export function AdminFeedbackShortcut() {
-  const { user } = useAuth();
+  // Auth removed: always attempt to load admin shortcut (no user check; api allows without token now).
   const [state, setState] = useState<ShortcutState>({ status: "checking" });
 
   useEffect(() => {
     let cancelled = false;
 
     async function checkAccess() {
-      if (!user) {
-        setState({ status: "hidden" });
-        return;
-      }
-
       try {
-        const { data } = await supabase.auth.getSession();
-        const token = data.session?.access_token;
-        if (!token) {
-          setState({ status: "hidden" });
-          return;
-        }
-
-        const res = await fetch("/api/feedback?limit=1000", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        // Fetch without token (bypassed in api).
+        const res = await fetch("/api/feedback?limit=1000");
 
         if (!res.ok) {
           if (!cancelled) setState({ status: "hidden" });
@@ -55,7 +40,7 @@ export function AdminFeedbackShortcut() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, []);
 
   const counts = useMemo(() => {
     if (state.status !== "visible") return { open: 0, total: 0 };

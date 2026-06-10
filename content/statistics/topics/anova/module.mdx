@@ -4,6 +4,93 @@ title: Analysis of Variance
 
 # Analysis of Variance
 
-One-way ANOVA, the F-test, multiple comparisons, and two-way ANOVA.
+ANOVA extends the two-sample $t$-test to compare three or more group means simultaneously. Running multiple $t$-tests would inflate the Type I error rate; ANOVA controls it with a single $F$-test.
 
-(Full port of rich content: sections with ELI5, worked examples, LaTeX, common mistakes.)
+The key insight is partitioning total variability: ANOVA asks whether the variability between groups is large relative to the variability within groups. If yes, at least one mean differs.
+
+One-way ANOVA handles one categorical factor; two-way ANOVA handles two factors and can detect interactions between them.
+
+## One-Way ANOVA
+
+<!-- section: f-test -->
+
+One-way ANOVA tests $H_0: \mu_1 = \mu_2 = \cdots = \mu_k$ (all $k$ group means are equal) against $H_a$: at least one pair of means differs. It replaces the multiple $t$-test approach, which would inflate the Type I error rate.
+
+Partitioning variability: $SS_{\text{total}} = SS_{\text{between}} + SS_{\text{within}}$. $SS_{\text{between}} = \sum_j n_j(\bar{x}_j - \bar{x})^2$ measures how much group means vary around the grand mean. $SS_{\text{within}} = \sum_j \sum_i (x_{ij}-\bar{x}_j)^2$ measures variability within each group.
+
+The $F$-statistic: $F = MS_{\text{between}}/MS_{\text{within}}$ where $MS = SS/df$. $df_{\text{between}} = k-1$, $df_{\text{within}} = N-k$ (total observations $N$, groups $k$). Under $H_0$, $F \sim F_{k-1,\,N-k}$.
+
+Interpretation: a large $F$ means the between-group variation is large relative to within-group noise — the group means differ more than chance would predict. Reject $H_0$ if $F > F_{\alpha, k-1, N-k}$ (critical value from $F$-table).
+
+The ANOVA table summarises the decomposition: Source, SS, df, MS, $F$, $p$-value. Each row represents one source of variability.
+
+**ELI5**
+
+- ANOVA asks: is the spread between the group averages bigger than the typical spread within each group? If you have three fertiliser treatments and the plants' heights are very different across groups but quite consistent within each group, $F$ will be large and you'll conclude the fertiliser type matters.
+
+**Worked Example: One-way ANOVA computation**
+- Three groups ($k=3$, $n_j=4$ each, $N=12$). Group means: $\bar{x}_1=5$, $\bar{x}_2=8$, $\bar{x}_3=6$. Grand mean $\bar{x}=19/3\approx 6.33$.
+- $SS_{\text{between}} = 4[(5-6.33)^2+(8-6.33)^2+(6-6.33)^2] = 4[1.77+2.79+0.11] = 4(4.67) = 18.67$. $df_{\text{between}}=2$.
+- Suppose $SS_{\text{within}}=27$. $df_{\text{within}}=9$.
+- $MS_{\text{between}}=18.67/2=9.33$. $MS_{\text{within}}=27/9=3$.
+- $F=9.33/3=3.11$. Compare to $F_{0.05,\,2,\,9}=4.26$. Since $3.11<4.26$, fail to reject $H_0$.
+
+## Assumptions of ANOVA
+
+<!-- section: assumptions -->
+
+Independence: all observations are independent within and across groups. Violated by repeated measures on the same subjects (use repeated-measures ANOVA instead).
+
+Normality: each group's population is approximately normally distributed. ANOVA is robust to moderate violations when group sizes are equal and $n_j \geq 5$. Check with Q-Q plots of residuals.
+
+Homoscedasticity (equal variances): all groups share the same variance $\sigma^2$. Check with Levene's test or by comparing the largest to smallest sample standard deviation (ratio $\leq 2$ is a common rule of thumb). Welch's one-way ANOVA does not require equal variances.
+
+If assumptions are seriously violated, consider transforming the data (e.g., log-transform for right-skewed data) or using the Kruskal-Wallis test (the non-parametric alternative to one-way ANOVA).
+
+**ELI5**
+
+- ANOVA needs the data to be independent (no repeated measures), roughly bell-shaped in each group (normality), and spread about the same in each group (equal variances). It is fairly forgiving of mild violations when group sizes are balanced and roughly similar.
+
+## Post-Hoc Tests and Multiple Comparisons
+
+<!-- section: post-hoc -->
+
+A significant $F$-test tells you at least one mean differs — not which pairs. Post-hoc tests identify specific differences while controlling the family-wise error rate (FWER).
+
+Tukey's HSD (Honest Significant Difference): tests all $\binom{k}{2}$ pairwise comparisons and controls the FWER at $\alpha$ exactly. It is the most commonly used post-hoc method for balanced designs.
+
+Bonferroni correction: for $m$ comparisons, use $\alpha/m$ for each test. Simple and widely applicable, but more conservative (lower power) than Tukey's when $m$ is large.
+
+Scheffé's method: allows any contrast (not just pairwise) while controlling FWER. Most conservative but most flexible.
+
+Planned contrasts: if specific comparisons are hypothesised in advance (before seeing data), they can be tested at level $\alpha$ without correction. Only pre-specified comparisons qualify.
+
+**ELI5**
+
+- A significant $F$-test is like knowing 'someone in this class got a very different grade than the others' — but you don't know who. Post-hoc tests then check each pair of groups to find which ones are actually different, while making sure the overall chance of a false alarm stays at $5\%$.
+
+## Two-Way ANOVA
+
+<!-- section: two-way -->
+
+Two-way ANOVA has two categorical factors $A$ (with $a$ levels) and $B$ (with $b$ levels). It tests three hypotheses: the main effect of $A$, the main effect of $B$, and the $A\times B$ interaction.
+
+An interaction $A\times B$ means the effect of $A$ on the response depends on the level of $B$ (and vice versa). When an interaction is significant, interpret main effects cautiously — they may be misleading averages of varying effects.
+
+The total SS is partitioned: $SS_{\text{total}} = SS_A + SS_B + SS_{AB} + SS_{\text{error}}$. Each has an associated $F$-ratio and $p$-value.
+
+Two-way ANOVA with replication (more than one observation per cell) is needed to estimate $SS_{\text{error}}$ and test the interaction. Without replication, you must assume no interaction exists.
+
+Balanced designs (equal cell sizes) simplify computation and interpretation; unbalanced designs require more care with the order of entering terms (Type I vs. Type III sums of squares).
+
+**ELI5**
+
+- Two-way ANOVA asks three questions at once: Does factor $A$ matter? Does factor $B$ matter? Does the combination of $A$ and $B$ matter in a way that's more than just their individual effects? Interactions are the surprising case: factor $A$ helps women but hurts men, for example. Main effects alone would miss that.
+
+## Common Mistakes
+
+- Running multiple pairwise $t$-tests instead of ANOVA. With $k=5$ groups and $10$ tests at $\alpha=0.05$, FWER $\approx 40\%$.
+- Stopping at a significant $F$ without running post-hoc tests. You need post-hoc comparisons to identify which groups differ.
+- Ignoring a significant interaction and interpreting only main effects. If $A\times B$ is significant, main effects can be misleading.
+- Violating the homoscedasticity assumption without correction. Use Welch's ANOVA or the Kruskal-Wallis test when variances differ substantially.
+- Claiming a non-significant interaction proves the factors are independent. Non-significance only means insufficient evidence for an interaction.

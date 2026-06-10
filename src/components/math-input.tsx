@@ -47,7 +47,7 @@ const SUBJECT_THEME: Record<Subject, {
     keypadBg: "#f4f4f5", numBg: "#ffffff", numText: "#18181b", numShadow: "0 1px 3px rgba(0,0,0,0.08)",
   },
   generic: {
-    // Neutral fallback for the new data-driven /x/ area and future subjects.
+    // Neutral fallback for the data-driven dynamic routes (primary for main /[subject] + future subjects).
     // Uses CSS vars so it is always design-token aligned, dark-mode friendly,
     // and resolves to correct light values on initial SSR (no theme flash on fast nav).
     pillBg: "var(--surface-2)", pillBorder: "var(--border)", pillText: "var(--text-secondary)",
@@ -173,13 +173,13 @@ function deriveKeys(
 /**
  * MathInput — virtual keypad + react-mathquill LaTeX editor for free-response numeric answers.
  *
- * - subject="generic" (used by GenericPracticeExperience in the /x/ data-driven path) now has
+ * - subject="generic" (used by GenericPracticeExperience in the primary data-driven routes) now has
  *   a hardened neutral var-based theme (light/dark friendly, matches app design tokens).
  * - Style injection for MQ is robust (DOM-checked + tagging) to survive fast navigations and
- *   experimental tree usage.
+ *   remounts/HMR (or multi-bundle scenarios).
  * - Suggestions derive improved via better questionContext fallbacks (benefits generic stats/linalg topics).
  * - Full flow (direct typing in MQ field, all keypad buttons, scratchpad, submit, hint, feedback overlay)
- *   works end-to-end for /x/[subject]/practice with subject=generic.
+ *   works end-to-end for the primary /[subject]/practice routes with subject=generic.
  *
  * Used by legacy per-subject pages (calculus/stats/linalg) and the new generic practice.
  */
@@ -249,7 +249,7 @@ export function MathInput({
     if (stylesInjected) return;
 
     // Robust detection for already-injected MQ styles (handles fast client navs,
-    // remounts in /x/ experimental tree, HMR, or multi-bundle scenarios).
+    // remounts in data-driven routes, HMR, or multi-bundle scenarios).
     const hasMQStyles =
       !!document.querySelector('style[data-mq]') ||
       Array.from(document.getElementsByTagName("style")).some((s) => {

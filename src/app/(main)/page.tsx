@@ -1,14 +1,27 @@
 import type { Metadata } from "next";
+import { getAvailableSubjectConfigs } from "@/lib/content/loader";
 import { LandingContent } from "@/components/landing-content";
 
 export const metadata: Metadata = {
   title: "CalcPath",
   description:
-    "Free reference notes for university mathematics: Calculus, Linear Algebra, and Statistics. Complete derivations, worked examples, and practice problems with solutions.",
+    "Free reference notes for university mathematics (calculus, linear algebra, statistics, and more). Complete derivations, worked examples, and practice problems with solutions. Just drop content/ for new subjects.",
   alternates: { canonical: "https://calc-path.com" },
 };
 
-export default function Home() {
+export default async function Home() {
+  // Load via auto-discovery so landing shows newly dropped subjects (from their index.json) with no subjects.ts entry.
+  const subjectConfigs = await getAvailableSubjectConfigs();
+  // Pass slim data (client component receives serializable props).
+  const slimSubjects = subjectConfigs.map((s) => ({
+    slug: s.slug,
+    label: s.label,
+    icon: s.icon,
+    shortDescription: s.shortDescription,
+    category: s.category,
+    topicCount: s.topicCount,
+  }));
+
   return (
     <div className="relative min-h-screen">
       {/* Background geometric pattern (light + dark variants) */}
@@ -50,8 +63,28 @@ export default function Home() {
         }}
       />
 
+      {/* Solid paper sheet between the geometric background pattern and the content.
+          Looks like a physical sheet of paper (solid background + subtle lift shadow for depth).
+          Centered the same way as the text sections.
+          Sized wide and tall enough to contain the full section content (including the tall last one)
+          so nothing bleeds outside the paper area. The geometric pattern shows around the paper edges. */}
+      <div
+        aria-hidden
+        className="absolute pointer-events-none"
+        style={{
+          left: '50%',
+          top: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '1000px',
+          height: '650px',
+          zIndex: 0,
+          backgroundColor: 'var(--bg)',
+          boxShadow: '0 10px 30px -8px rgba(0, 0, 0, 0.12), 0 4px 12px -4px rgba(0, 0, 0, 0.08)',
+        }}
+      />
+
       {/* One-section-at-a-time parallax stage (wheel-driven, 4 centered 500px sections) */}
-      <LandingContent />
+      <LandingContent subjects={slimSubjects} />
     </div>
   );
 }

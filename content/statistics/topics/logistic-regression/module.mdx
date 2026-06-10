@@ -12,33 +12,91 @@ It is the foundation of many modern machine learning classifiers and is widely u
 
 ## Why Linear Regression Fails for Binary Data
 
-If $y$ is 0 or 1, fitting a linear model $\hat{y} = b_0 + b_1 x$ can produce predictions outside [0,1]. A predicted probability of 1.3 or -0.2 is nonsensical.
+<!-- section: why-logistic -->
+
+If $y$ is 0 or 1, fitting a linear model $\hat{y} = b_0 + b_1 x$ can produce predictions outside $[0,1]$. A predicted probability of 1.3 or -0.2 is nonsensical.
 
 The variance of a binary outcome is $p(1-p)$, which is not constant — it is largest when $p=0.5$ and smallest near 0 or 1. This violates the constant variance assumption of ordinary linear regression.
 
 The relationship between a predictor and a probability is typically S-shaped (sigmoid), not linear.
 
-**ELI5**: Trying to use linear regression for yes/no is like using a ruler to measure probabilities — it goes off the scale. The sigmoid squashes everything nicely into 0–1.
+**ELI5**
+
+- Trying to use ordinary linear regression on yes/no data is like using a ruler to measure temperature in a system that only has two states: ice or steam. The ruler will give you numbers outside the possible range and the errors won't behave nicely.
 
 ## The Logistic Model
 
-The model is: $\log\left(\frac{p}{1-p}\right) = b_0 + b_1 x_1 + \dots + b_k x_k$
+<!-- section: model -->
 
-or $p = \frac{1}{1 + e^{-(b_0 + \mathbf{b}\cdot\mathbf{x})}}$
+We model the *log-odds* (logit) as a linear function: $\log\left(\frac{p}{1-p}\right) = b_0 + b_1 x_1 + \dots + b_k x_k$.
 
-$e^{b_j}$ = odds ratio for a one unit increase in $x_j$ (multiplicative change in odds, holding others constant).
+Solving for the probability gives the logistic (sigmoid) function: $p = \frac{1}{1 + e^{-(b_0 + b_1 x_1 + \dots + b_k x_k)}}$.
 
-**Common interpretation**: coefficients on the logit scale; exponentiate for odds ratios.
+The coefficient $b_j$ now has a very useful interpretation: it is the change in the *log-odds* of the outcome for a one-unit increase in $x_j$, holding other variables constant. Exponentiating gives the odds ratio: $e^{b_j}$ is the multiplicative change in the odds.
+
+For example, if $b_1 = 0.693$ for a binary predictor, then $e^{0.693} \approx 2$, meaning the odds of the outcome are doubled when that predictor is present (holding others fixed).
+
+**ELI5**
+
+- Instead of predicting the probability directly, logistic regression predicts the 'log-odds' on a straight line. The S-curve (sigmoid) then converts those log-odds back into a clean probability between 0 and 1. The coefficients tell you how much each variable multiplies the odds of the event happening.
+
+**Worked Example: Interpreting an odds ratio**
+- Model for heart attack risk: $\text{logit}(p) = -4.2 + 0.8 \cdot \text{smoker} + 0.05 \cdot \text{age}$.
+- For the 'smoker' variable: $e^{0.8} \approx 2.23$.
+- Interpretation: Smokers have 2.23 times the odds of a heart attack compared with non-smokers of the same age (in this model).
 
 ## Estimation and Inference
 
-Logistic regression uses maximum likelihood estimation (not least squares).
+<!-- section: estimation -->
 
-Model assessment: deviance, AIC, ROC curves, confusion matrices at chosen thresholds.
+Parameters are estimated by maximum likelihood (not least squares). The likelihood is the product of the predicted probabilities for the observed outcomes.
 
-**ELI5 for odds**: Odds of 3:1 means for every 3 successes expect 1 failure; probability = 3/4 = 0.75.
+There is no closed-form solution — we use iterative numerical methods (Newton-Raphson or iteratively reweighted least squares).
+
+Wald tests (similar to t-tests) and likelihood ratio tests are used for inference on individual coefficients and groups of coefficients.
+
+Model fit is assessed with deviance, pseudo-$R^2$ measures (McFadden, Cox-Snell, Nagelkerke), and classification tables (sensitivity, specificity, ROC curves).
+
+**ELI5**
+
+- Instead of minimizing squared errors, logistic regression chooses the coefficients that make the observed data as probable as possible under the model. It's like tuning a recipe until the outcomes you actually saw become the most likely ones the model would have predicted.
+
+## Assumptions and Diagnostics
+
+<!-- section: assumptions -->
+
+Linearity in the logit: the log-odds must be a linear function of the predictors (check with LOWESS smoothed plots of logit vs continuous predictors).
+
+Independence of observations (same as linear regression).
+
+No perfect separation (complete or quasi-complete) — when a predictor perfectly predicts the outcome, the maximum likelihood estimates become infinite.
+
+Large sample sizes are generally needed for reliable inference (rule of thumb: at least 10 events per predictor variable).
+
+**ELI5**
+
+- The key new assumption is that the relationship is linear on the log-odds scale, not on the probability scale. A variable can have a very nonlinear-looking effect on probability but still be perfectly linear in log-odds.
+
+## Extensions and Related Models
+
+<!-- section: extensions -->
+
+Multinomial logistic regression handles more than two outcome categories.
+
+Ordinal logistic regression is appropriate when the outcome has a natural ordering (e.g., low/medium/high satisfaction).
+
+Regularized logistic regression (lasso, ridge) is very common in high-dimensional settings (genomics, text classification).
+
+Logistic regression is a special case of generalized linear models (GLMs) with a binomial distribution and logit link function.
+
+**ELI5**
+
+- Once you understand binary logistic regression, the extensions are natural: predicting among several categories (multinomial), respecting order in the categories (ordinal), or adding shrinkage when you have thousands of predictors.
 
 ## Common Mistakes
-- Interpreting coefficients as probability changes (they are log-odds / odds ratios).
-- Forgetting that predictions are probabilities, not hard 0/1 classifications (choose threshold based on costs).
-- Ignoring separation (perfect prediction) which makes MLE infinite.
+
+- Interpreting the coefficients as changes in probability instead of changes in log-odds or odds ratios.
+- Reporting only accuracy on imbalanced data (a model that always predicts the majority class can have high accuracy but be useless).
+- Ignoring the linearity-in-the-logit assumption for continuous predictors.
+- Using logistic regression when the outcome is not truly binary or when events are not independent (e.g., clustered data).
+- Over-interpreting odds ratios as risk ratios when the outcome is common (odds ratios exaggerate effects when baseline risk is high).

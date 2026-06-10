@@ -1,0 +1,83 @@
+---
+title: Huffman coding
+---
+
+# Huffman coding
+
+Huffman coding, invented by David Huffman in 1952 while a student, is a classic algorithm that produces an optimal prefix-free variable-length code for a known discrete probability distribution. It is still widely used, often in combination with other techniques, because of its simplicity and provable optimality for the prefix-free constraint.
+
+It assigns shorter codewords to more probable symbols, exactly as intuition (and information theory) demands.
+
+## The Huffman Algorithm
+
+<!-- section: algorithm -->
+
+The algorithm builds a binary tree bottom-up:
+
+1. Create a leaf node for each symbol, labeled with its probability.
+2. While more than one node remains: extract the two nodes with smallest probabilities, create a new internal node with probability = sum, and make the two nodes its children.
+3. The final remaining node is the root. Codewords are the paths from root to leaves (0 for left, 1 for right, or vice versa).
+
+The resulting code is prefix-free because it corresponds to a full binary tree (all internal nodes have two children, leaves hold symbols).
+
+**ELI5**
+
+- Always glue together the two currently rarest "groups" into a combined super-symbol.
+- At the end the tree tells you the code: frequent symbols end up near the root with short paths.
+
+**Worked Example:**
+
+Symbols A:0.5, B:0.25, C:0.125, D:0.125.
+
+- Merge C+D → node E:0.25
+- Now A:0.5, B:0.25, E:0.25
+- Merge B+E → node F:0.5
+- Now A:0.5, F:0.5 → root.
+
+Codes (example assignment): A=0 (len 1), B=10 (len 2), C=110 (len 3), D=111 (len 3).
+
+## Optimality
+
+<!-- section: optimality -->
+
+Huffman codes are optimal among all prefix-free codes: no other prefix code has smaller expected codeword length for the given probabilities.
+
+Moreover, the average length L satisfies H ≤ L < H + 1, so it is at most 1 bit worse than the entropy lower bound.
+
+**ELI5**
+
+- Among all ways of writing a "comma-free" (instantaneously readable) variable-length code, Huffman gives the shortest average message.
+- You are guaranteed to be within one bit per symbol of the theoretical minimum.
+
+**Worked Example:**
+
+In the example above, average length L = 0.5*1 + 0.25*2 + 0.125*3 + 0.125*3 = 1.75 bits.
+
+The entropy of the distribution is also 1.75 bits, so the code is perfectly efficient (within the <H+1 bound, here equal).
+
+## Practical Considerations and Limitations
+
+<!-- section: practical -->
+
+- **Canonical Huffman**: the actual bit patterns can be chosen in a standardized way so that the code table can be transmitted compactly.
+- **Length-limited Huffman**: for hardware or cache reasons one sometimes caps maximum code length (sacrificing a tiny amount of optimality).
+- **Single-symbol vs. blocked**: basic Huffman on individual symbols ignores memory; one can run it on pairs/triples or combine with other models.
+- **Adaptive / dynamic Huffman**: variants exist that update the tree on the fly as symbols are seen (used in some old archivers).
+
+**ELI5**
+
+- Real implementations often transmit a compact description of the tree or code lengths first, then the coded data.
+- For text with strong local correlations, pure symbol Huffman is only a starting point; modern compressors layer dictionary or context modeling on top.
+
+**Worked Example:**
+
+In JPEG, after the DCT and quantization, the 63 AC coefficients are run-length + category encoded, and the category codes are Huffman-coded with a table chosen for typical image statistics. The DC coefficients use a separate Huffman table. This is why JPEG has "Huffman tables" in its header.
+
+## Common Mistakes
+
+- **Assuming Huffman always achieves exactly the entropy**: It achieves L < H+1; equality to H occurs only for dyadic probabilities (powers of 1/2).
+- **Using Huffman on data whose probabilities are unknown or changing**: You must estimate the distribution first (two-pass) or use adaptive versions; otherwise performance suffers.
+- **Forgetting the prefix property when concatenating codes**: Because it is prefix-free you can just concatenate codewords and decode unambiguously from left to right.
+- **Thinking the longest codeword is short**: In the worst case (one very probable symbol) the rarest symbol can receive a codeword of length |alphabet|-1.
+- **Confusing Huffman optimality with arithmetic coding**: Arithmetic coding can get closer to H for finite data (fractional bits per symbol) and handles memory more naturally when combined with good models.
+- **Believing you must always build the tree from scratch**: Many systems use precomputed "canonical" tables tuned to typical data (e.g., the fixed Huffman tables in DEFLATE).

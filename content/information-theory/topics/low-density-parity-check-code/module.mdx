@@ -1,0 +1,71 @@
+---
+title: Low-density parity-check code
+---
+
+# Low-density parity-check code
+
+Low-density parity-check (LDPC) codes are linear codes defined by a sparse parity-check matrix $H$ in which most entries are zero. Their rediscovery in the 1990s by MacKay and others revealed that simple iterative message-passing decoding on the associated Tanner graph can achieve performance extremely close to the Shannon limit for long block lengths.
+
+LDPC codes are now used in virtually every modern wireless and storage standard that demands high reliability at high rates (Wi-Fi 802.11, DVB-S2, 5G NR, hard-disk controllers).
+
+## Definition and Sparsity
+
+<!-- section: definition-sparsity -->
+
+An $(n, k)$ LDPC code is a linear subspace whose $m = n-k$ parity-check equations are represented by an $m \times n$ matrix $H$ with only a small constant number of 1s per row and per column (low density). The code is the nullspace: $\mathbf{c} H^T = \mathbf{0}$ over GF(2).
+
+Gallager's original construction used regular degree distributions; modern irregular LDPC codes optimize the variable and check node degrees for better thresholds.
+
+**ELI5**
+
+- Imagine a huge crossword puzzle where each "clue" (parity check) involves only a few letters (bits). Because the clues are local and sparsely connected, you can solve most of the puzzle by iteratively satisfying local constraints.
+- Low density means each bit participates in only a few checks, keeping the graph tree-like locally and making decoding tractable.
+
+**Worked Example:**
+
+A tiny regular (3,6) LDPC: n=12, each column of H has weight 3, each row weight 6, rate 1/2. The matrix is 6x12 with exactly 18 ones total. Any codeword satisfies the 6 parity equations.
+
+## Tanner Graphs and Message Passing
+
+<!-- section: tanner-graphs -->
+
+The Tanner graph is a bipartite graph with variable nodes (one per code bit) on one side and check nodes (one per row of H) on the other; an edge exists where $H_{j,i}=1$.
+
+Belief-propagation (sum-product) decoding passes log-likelihood ratios (LLRs) along edges. Each variable node collects messages from its neighboring checks, updates its belief, and sends new messages back. After a few iterations the beliefs converge to the most likely codeword or a near-codeword.
+
+For cycle-free graphs the algorithm is exact maximum-likelihood; short cycles degrade performance slightly but are managed by good constructions (progressive edge growth, protographs).
+
+**ELI5**
+
+- Variable nodes are the "bits" that gossip with the "checks" they belong to. Each check tells every bit "given what my other bits say, you should probably be 0 (or 1)".
+- After a few rounds of polite conversation the bits settle on values that satisfy almost all checks.
+
+**Worked Example:**
+
+Variable node v1 connected to checks c2 and c4. It receives LLR messages L2 and L4 from them. Its extrinsic message to c2 is L_channel + L4 (its own channel observation plus the other check's opinion). The check node c2 computes the "tanh rule" or min-sum approximation for the outgoing messages.
+
+## Performance and Decoding
+
+<!-- section: performance-decoding -->
+
+Under density evolution, the decoding threshold of a well-designed LDPC ensemble can be within 0.1 dB of the Shannon limit for the binary-input AWGN channel at rates 1/2 and higher. Finite-length performance is governed by the girth (shortest cycle) and the minimum distance (which grows linearly with n for good ensembles).
+
+Decoding is parallelizable and has linear complexity in block length per iteration; usually 10-50 iterations suffice. Hardware implementations use layered scheduling and min-sum approximations to reduce multipliers.
+
+**ELI5**
+
+- For long enough blocks, LDPC can get you almost as close to the theoretical best error rate as any code possibly could.
+- The decoder is "dumb but fast": thousands of tiny local processors just exchange simple numbers until the whole block agrees.
+
+**Worked Example:**
+
+A rate-1/2 LDPC code of length 64800 (DVB-S2) at Eb/N0 = 1.0 dB achieves BER below 10^{-5} after 50 iterations, while the Shannon limit for rate 1/2 on BI-AWGN is approximately 0.18 dB — within 0.8 dB and improvable with better degree distributions.
+
+## Common Mistakes
+
+- **Confusing LDPC with Turbo codes**: Both are iteratively decoded capacity-approaching codes, but LDPC use sparse graphs and message passing while Turbo codes concatenate two convolutional codes with an interleaver.
+- **Assuming all sparse matrices give good codes**: Random sparse H can have short cycles or poor degree distributions; structured constructions (quasi-cyclic, protograph) are used in standards.
+- **Expecting small-block excellent performance**: LDPC shine at large n; for short packets polar or algebraic codes are often preferred.
+- **Forgetting that the all-zero codeword is assumed w.l.o.g. for linear codes when simulating**: Because of linearity, error probability is independent of the transmitted codeword.
+- **Overlooking the error floor**: At very high SNR, performance is limited by low-weight codewords or trapping sets rather than the waterfall region.
+- **Thinking decoding always finds a codeword**: The algorithm may output a non-codeword or declare failure; post-processing or outer CRC is common.

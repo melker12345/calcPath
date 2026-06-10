@@ -7,8 +7,11 @@ import type { FeedbackState } from "./types";
 /**
  * Shared pure utilities for parsing the conventional explanation format
  * ("Step 1: ... Step 2: ... Final answer: ...").
- * Used by PracticeFeedback internally and by GenericPracticeExperience (and future generic pages)
- * to avoid duplicating hint/solution/final-answer extraction logic across subjects.
+ * Used by PracticeFeedback internally and by GenericPracticeExperience, the calc PracticeTopicClient,
+ * stats/la PracticeClients (and future generic pages) to avoid duplicating hint/solution/final-answer extraction logic across subjects.
+ *
+ * Clients must pass a getHint={() => ...} that extracts Step 1 (e.g. local fn or getDefaultHint(expl)).
+ * (Fixes prior calc regression where hardcoded generic msg was passed.)
  *
  * Resilience note (Migration Phase): When rendered inside GenericPracticeExperience's QuestionErrorBoundary,
  * even an edge-case failure in step parsing or a MathText fragment here is isolated per-question (clear skip UI).
@@ -43,6 +46,8 @@ interface PracticeFeedbackProps {
   overlayDismissed: boolean;
   setOverlayDismissed: (dismissed: boolean) => void;
   finalAnswer: string;
+  /** When true on a correct feedback for the final question, shows "Congrats!" and "Finish" instead of "Correct!"/"Next Question" */
+  isLastQuestion?: boolean;
 }
 
 /**
@@ -59,6 +64,7 @@ export function PracticeFeedback({
   overlayDismissed,
   setOverlayDismissed,
   finalAnswer,
+  isLastQuestion = false,
 }: PracticeFeedbackProps) {
   if (!feedback) return null;
 
@@ -96,7 +102,7 @@ export function PracticeFeedback({
       <div className="animate-correct-pop flex h-full flex-col border-t border-emerald-200 bg-emerald-50 p-3 pt-4 sm:p-5 dark:border-emerald-800 dark:bg-emerald-950/40">
         <div className="flex items-center gap-2.5">
           <div className="animate-check-bounce flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base">✓</div>
-          <p className="text-base font-bold text-emerald-800 sm:text-xl dark:text-emerald-300">Correct!</p>
+          <p className="text-base font-bold text-emerald-800 sm:text-xl dark:text-emerald-300">{isLastQuestion ? "Congrats!" : "Correct!"}</p>
         </div>
         <div className="mt-3 flex-1 space-y-1.5 overflow-y-auto sm:mt-4 sm:space-y-2">
           {renderInternalSteps("emerald")}
@@ -114,7 +120,7 @@ export function PracticeFeedback({
           onClick={onNext}
           className="mt-2 w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.98] sm:mt-3 sm:py-3 sm:text-base"
         >
-          Next Question →
+          {isLastQuestion ? "Finish" : "Next Question →"}
         </button>
       </div>
     );

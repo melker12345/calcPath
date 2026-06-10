@@ -1,0 +1,96 @@
+---
+title: Rate distortion with side information
+---
+
+# Rate distortion with side information
+
+When correlated side information is available, the fundamental rate-distortion tradeoff changes. Depending on whether the side information Y is available at the encoder, the decoder, both, or neither, we obtain different rate-distortion functions and regions.
+
+The four canonical cases are: no side information (ordinary R(D)), side info at decoder only (Wyner-Ziv), side info at encoder only, and side info at both (conditional rate-distortion R_{X|Y}(D)).
+
+These settings model many practical scenarios: distributed sensor networks, video coding with previous frames, communication with channel state information, etc.
+
+## Rate-Distortion with Side Information at Decoder (Wyner-Ziv)
+
+<!-- section: rd-si-decoder -->
+
+This is the Wyner-Ziv problem: lossy compression of X with distortion D when Y is available only at the decoder. The minimal rate is R_{WZ}(D) = min I(X; U | Y) over auxiliaries U generated from X alone and reconstructions that may depend on Y.
+
+For the quadratic-Gaussian source, R_{WZ}(D) = R_{X|Y}(D) — there is no rate loss from the side information being absent at the encoder. For other sources (e.g., binary Hamming) there is generally a strict gap R_{WZ}(D) > R_{X|Y}(D).
+
+**ELI5**
+
+- Your friend has a noisy version Y of your photo X. You must send a lossy description that lets him reconstruct a good version using his Y, but you don't know his exact Y when you compress.
+- For Gaussian noise the math works out so that you pay exactly the same rate as if you had known Y; for other distortions you may pay a penalty.
+
+**Worked Example:**
+
+Gaussian X ~ N(0,1), Y = X + Z, Z ~ N(0,0.5), target MSE D=0.1. The conditional variance is 1/(1+1/0.5)=1/3. The rate when Y known at encoder is ½ log((1/3)/0.1) ≈ 0.737 bits. For this source the WZ rate is the same; the optimal auxiliary is a Gaussian test channel whose noise variance is chosen so the MMSE given Y meets D.
+
+## Side Information at Encoder Only
+
+<!-- section: rd-si-encoder -->
+
+When Y is known only at the encoder (the 'helper' knows the side information), the problem is sometimes called source coding with side information at the encoder or the 'dual' of Wyner-Ziv.
+
+The rate needed can be as low as R(D) - I(X;Y) in some cases, but the exact function involves a different auxiliary and is generally not the same as the other settings. The encoder can use Y to choose the quantization or binning, but the decoder has no Y.
+
+This setting appears when the transmitter has channel state or correlated observations that the receiver does not.
+
+**ELI5**
+
+- You know both the clean photo X and a noisy version Y; the receiver has nothing. You can use your knowledge of Y to send a smarter description of X (perhaps describing only the 'difference' in a clever way), but the receiver still has to reconstruct without ever seeing Y.
+- The benefit is usually smaller than when the decoder has the side info, because the decoder cannot 'subtract' Y itself.
+
+**Worked Example:**
+
+If Y = X exactly (perfect side info at encoder), the encoder can simply send nothing and the 'reconstruction' at the decoder can be a constant; but if the decoder does not know Y, the distortion may be large unless the constant is the right one. More interesting: when Y is a noisy observation, the encoder can allocate bits only to the innovation X - E[X|Y].
+
+## Side Information at Both Encoder and Decoder (Conditional RD)
+
+<!-- section: conditional-rd -->
+
+When both encoder and decoder know Y, the problem reduces to ordinary rate-distortion on the conditional distribution of X given Y. The rate-distortion function is
+
+R_{X|Y}(D) = min I(X; \hat X | Y)
+
+where the min is over p(\hat x | x, y) such that E[d(X, \hat X)] ≤ D (the expectation is also conditional on Y in the natural way).
+
+This is the smallest possible rate among all side-information configurations; extra side info at the encoder cannot hurt.
+
+**ELI5**
+
+- Both you and your friend have the noisy version Y. You only need to describe the 'new information' in X that is not already predictable from Y. Your friend uses his copy of Y to combine with your description.
+- This is the most favorable case and gives the absolute lowest rate for a given fidelity.
+
+**Worked Example:**
+
+Same Gaussian numbers as above: R_{X|Y}(D) = ½ log( var(X|Y) / D' ) where D' is the target after the conditional variance. With var(X|Y)=1/3 and D=0.1 the rate is ½ log((1/3)/0.1) ≈ 0.737 bits — the lowest of the four cases.
+
+## The General Rate-Distortion Region with Side Info
+
+<!-- section: general-rd-si -->
+
+When there are multiple sources or more complex side-information patterns (e.g., side info at some encoders but not others, or common and private side info), one obtains rate-distortion regions with several auxiliaries and Markov constraints.
+
+The Heegard-Berger problem (side info at decoder may be different for different receivers) and the multiple-description problem with side info are further generalizations. Many of these regions remain open or only partially solved.
+
+In all cases the inner bounds are obtained by test-channel + binning (quantize then Slepian-Wolf the indices, possibly with different binning rates for different receivers).
+
+**ELI5**
+
+- Real networks have asymmetric side information: some nodes have extra sensor data, others don't; some receivers have previous packets, others joined late.
+- The optimal strategy is usually 'quantize to a good auxiliary description, then bin the description at rates that match what each receiver already knows.'
+
+**Worked Example:**
+
+In the Heegard-Berger setting with two receivers having different quality side information Y1 (good) and Y2 (bad), the encoder sends a common description plus a refinement; the good receiver uses the common + refinement + Y1, the bad receiver uses only the common + Y2. The achievable region involves two auxiliaries with nested Markov chains.
+
+## Common Mistakes
+
+- **Assuming that side information at the encoder is always as useful as side information at the decoder**: For lossy coding the decoder having the side info is usually more powerful (it can 'subtract' at reconstruction time); encoder-only side info helps mainly by allowing smarter quantization or power allocation.
+- **Forgetting that in the Gaussian case Wyner-Ziv has no rate loss**: Many students remember only the binary case where there is a gap and incorrectly generalize.
+- **Confusing conditional rate-distortion R_{X|Y}(D) with ordinary R(D)**: R_{X|Y}(D) ≤ R(D) always; the gap can be large when Y is highly informative about X.
+- **Thinking the Wyner-Ziv achievability is 'just send the quantization index at rate R(D)'**: The binning step is essential; without it the rate would be the higher ordinary rate-distortion of the auxiliary, not the conditional mutual information.
+- **Ignoring that the reconstruction function may depend on the side information**: \hat x = f(u, y) is crucial; many practical 'Wyner-Ziv' codecs forget to exploit Y fully at reconstruction and pay a performance penalty.
+- **Believing all rate-distortion problems with side information have single-letter characterizations**: Several important multi-terminal settings (e.g., the general Heegard-Berger problem with arbitrary side-info quality) still lack complete single-letter solutions.

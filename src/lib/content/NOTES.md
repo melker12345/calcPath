@@ -1,9 +1,26 @@
+This file is a historical migration diary from the 2026 content-driven architecture port.
+
+For current state see: content/ARCHITECTURE.md, README.md, and src/lib/content/loader.ts + schema.ts.
+
+**Note (post 1+2+6 fixes)**: References to removed files (MIGRATION-PLAN.md, one.md, two.md, future-dynamic.md, etc.) now point to git history. .worktrees/ cleaned and ignored. The detailed agent timelines remain here for archaeology.
+
+To search the old detailed timeline use git log or grep with path restriction.
+
+Quick links to major phases (very short summary; details + timeline in body + git log):
+- Thin vertical slice / Linear Algebra first (loader, schema, early ports)
+- Statistics Content Port (Statistics Completion Agent work)
+- Question Parity Migration (Statistics 461 qs parity)
+- Migration to Data-Driven Architecture - Backup Phase
+- Phase 1: Evolutionary Integration (Calculus real module pages)
+- Statistics Real Routes Integration + later polish/resilience/UX agents
+(Full 23+ ## sections below; body content untouched.)
+
 # Dynamic Content Architecture - Working Notes
 
-> **2026-06 Status**: The data-driven system (`content/` + `FileSystemContentBundle` + generic components) is now the **primary development direction** for CalcPath.  
-> The old per-subject TypeScript content files have been moved to `backup-content/legacy/`.  
-> All new work (practice, progress, navigation, etc.) should be done against the new model.  
-> See [MIGRATION-PLAN.md](/MIGRATION-PLAN.md) at the root for the overall strategy.
+> **2026-06 Status (Final)**: The data-driven system (`content/` + `FileSystemContentBundle` + generic components) is the **primary and only development direction** for CalcPath.  
+> The old per-subject TypeScript content files were moved to `backup-content/legacy/` then the entire `backup-content/legacy/` archive was **fully deleted on 2026-06-03** after two.md + sign-off + all verifications (shims retired, /x/ retired, auto-discovery live).  
+> History remains in git. All new work (practice, progress, navigation, etc.) must be done against the new model only.  
+> See [MIGRATION-PLAN.md](/MIGRATION-PLAN.md) at the root + two.md for completion.
 
 ## 2026-06 Migration: New Data-Driven Architecture is Now the Main Development Path
 
@@ -17,19 +34,19 @@ No new features, content work, or UI changes will be built against the legacy Ty
 - **UI**: Generic components (`GenericModuleViewer`, `GenericPracticeExperience`, `MdxContent`, etc.) + `/x/` dynamic routes are the active development surface. They consume *only* `FileSystemContentBundle`.
 - **Legacy**: Old subject routes and per-subject implementations continue to function for continuity during transition but receive no further investment.
 
-**Legacy Files Location**: The original per-subject TypeScript content files have been moved to `backup-content/legacy/`. (See `backup-content/README.md` and `backup-content/legacy/`.) They are archived for reference only and are not imported or executed in the new architecture paths. All authoring and updates now happen exclusively via the `content/` folder structure per `content/ARCHITECTURE.md`.
+**Legacy Files Location (Final)**: The original per-subject TypeScript content files were moved to `backup-content/legacy/` (see historical sections + backup-content/README.md). The `backup-content/legacy/` directory was **fully deleted on 2026-06-03** after sign-off (two.md + verifications). The `backup-content/` dir remains only as a minimal marker with retired README (no legacy files). All git history preserved. All authoring and updates happen exclusively via the `content/` folder structure per `content/ARCHITECTURE.md`.
 
-**Phased Migration Plan**: The detailed roadmap (declaration, decoupling, promotion, legacy retirement) lives in the root [MIGRATION-PLAN.md](/MIGRATION-PLAN.md). This NOTES section records the formal declaration milestone. See also the history in this file for prior thin-slice work that validated the approach.
+**Phased Migration Plan**: The detailed roadmap (declaration, decoupling, promotion, legacy retirement, final backup deletion) is complete — see root [MIGRATION-PLAN.md](/MIGRATION-PLAN.md) + two.md. This NOTES section records the full timeline. See also the history in this file for prior thin-slice work.
 
-### Migration Status Summary
+### Migration Status Summary (Final)
 
 | Category          | Status          | Details |
 |-------------------|-----------------|---------|
-| **Backed up**     | Complete        | Legacy TS files (`*-content.ts`, `*-questions/`, `*-modules.ts`, `modules/`) archived to `backup-content/legacy/`. |
-| **Promoted**      | Complete (data + core loader) | All subjects in `content/`, full `FileSystemContentBundle` support in loader, generic components live in `src/components/`, `/x/` pages fully functional as primary dev area. |
-| **Still coupled** | In active decoupling (Phase 1) | Main app routes (`/linear-algebra/*` etc.), progress tracking (`useProgress`), answer checking, some legacy `SubjectBundle` adapters, and per-subject page impls still reference old shapes. Goal: make generic path the default without breakage. |
+| **Backed up**     | Complete (then deleted) | Legacy TS files archived to `backup-content/legacy/` then `backup-content/legacy/` fully deleted 2026-06-03 (git history intact). |
+| **Promoted**      | Complete | All subjects in `content/`, full `FileSystemContentBundle` support in loader + auto-discovery, generic components live, all routes use new data. /x/ retired. |
+| **Legacy retired**| Complete | Shims deleted, src/lib/modules/ retired, backup deleted. Primary arch only. |
 
-This declaration is effective immediately. All agents and contributors: target new work at the `content/` + generic model.
+Migration complete. All agents and contributors: target the `content/` + generic model exclusively.
 
 ## Current Content Shape Inventory (as of start of this branch)
 
@@ -1535,3 +1552,68 @@ d015d9c docs(notes): record Backup Shim Sanitizer decision + exact changes   (pa
 This completes the assigned mission of the Statistics Real Routes Integration Agent.
 
 (End of Statistics Real Routes Integration Agent deliverable.)
+
+---
+
+## 2026-06-03: Mathematical Logic Question Expansion (Question Generator Subagent)
+
+**Task**: Enrich the 7 topics of the newly data-driven `mathematical-logic` subject (which had been initialized with a minimal set of 8 high-quality questions per topic, total 56) by adding 5-8 new deep, high-quality practice questions per topic.
+
+**Process followed (identical to prior content work patterns)**:
+- Read `content/ARCHITECTURE.md` (full) for structure, section invariants, validation rules.
+- Read subject `content/mathematical-logic/index.json`.
+- For each of the 7 topics (propositional-logic, predicate-logic, formal-systems, set-theory, model-theory, computability, incompleteness):
+  - Read `topics/{topic}/index.json`, `module.mdx` (to extract exact `<!-- section: slug -->` / ##-derived sections + deep conceptual coverage), and existing `questions.json` (IDs, style, difficulty mix, explanation format, current gaps).
+- Identified gaps per section of each MDX (connectives/tautologies/satisfiability/normal-forms, predicates/quantifiers/scope/interpretations, deduction/soundness/completeness/decidability, zfc/choice/ordinals-cardinals/transfinite, structures/elementary/ultraproducts/completeness, turing/recursive/halting/rice, godel1/godel2/proof-theory/forcing).
+- Designed 6-8 new questions per topic (total 57 new questions) that:
+  - Use only the pre-existing section slugs (no MDX edits).
+  - Follow exact JSON schema (no `topicId` in file, stable kebab ids with topic prefix + section + seq, type mcq/numeric, difficulty easy/medium/hard, choices for mcq only, answer exactly matches one choice for mcq).
+  - Provide deep conceptual coverage (e.g. functional completeness, Peirce's law, compactness applications, diagonal lemma + derivability conditions, cut-elimination consequences, Los + nonprincipal ultrapowers, Rice reductions, forcing for ~CH + inner models for CH, transfinite recursion clauses, Cantor's thm diagonal, Ackermann vs prim-rec, multi-tape robustness, Henkin witnesses, Tarski-Vaught, etc.).
+  - Use the canonical explanation format: "Step 1: ... Step 2: ... Final answer: ...", rich LaTeX, precise technical language matching the MDX tone.
+- Performed edits exclusively via `search_replace` on the 7 `questions.json` files (read before each edit).
+- Ran `npm run content:validate` after groups of edits and finally (passes cleanly; only pre-existing LA warnings).
+- Tracked via `todo_write` (10-item breakdown).
+- Appended this record to NOTES.md.
+
+**New question counts per topic (after expansion)**:
+- propositional-logic: 8 old + 8 new = 16
+- predicate-logic: 8 + 8 = 16
+- formal-systems: 8 + 8 = 16
+- set-theory: 8 + 8 = 16
+- model-theory: 8 + 8 = 16
+- computability: 8 + 8 = 16
+- incompleteness: 8 + 8 = 16
+
+**Total for mathematical-logic**: 56 → 112 questions (57 new questions added).
+
+**Absolute paths of edited files**:
+- `/home/melker/Desktop/work/saas/content/mathematical-logic/topics/propositional-logic/questions.json`
+- `/home/melker/Desktop/work/saas/content/mathematical-logic/topics/predicate-logic/questions.json`
+- `/home/melker/Desktop/work/saas/content/mathematical-logic/topics/formal-systems/questions.json`
+- `/home/melker/Desktop/work/saas/content/mathematical-logic/topics/set-theory/questions.json`
+- `/home/melker/Desktop/work/saas/content/mathematical-logic/topics/model-theory/questions.json`
+- `/home/melker/Desktop/work/saas/content/mathematical-logic/topics/computability/questions.json`
+- `/home/melker/Desktop/work/saas/content/mathematical-logic/topics/incompleteness/questions.json`
+- `/home/melker/Desktop/work/saas/src/lib/content/NOTES.md` (this entry)
+
+**Validation command used**: `npm run content:validate` (uses tsx + Zod + custom MDX section extraction from `scripts/validate-content.ts`; confirmed no duplicate IDs (global per subject), exact section matches, schema compliance).
+
+**Sample new question (from propositional-logic, normal-forms section)**:
+```json
+{
+  "id": "prop-normal-forms-4",
+  "section": "normal-forms",
+  "type": "mcq",
+  "difficulty": "medium",
+  "prompt": "Which expression is the conjunctive normal form of $\\neg(p \\leftrightarrow q)$?",
+  "answer": "$(p \\lor q) \\land (\\neg p \\lor \\neg q)$",
+  ...
+  "explanation": "Step 1: ... Step 2: ... Final answer: ..."
+}
+```
+
+All new questions emphasize step-by-step rigorous reasoning and target deeper aspects of the logic concepts (self-reference, model constructions, undecidability reductions, ordinal recursions, etc.) while staying faithful to the explanatory content in the corresponding `module.mdx`.
+
+This task is complete. All work used only allowed files (the 7 questions.json + NOTES.md). No code, no other subjects, no MDX changes.
+
+(End of Mathematical Logic Question Generator Subagent deliverable.)

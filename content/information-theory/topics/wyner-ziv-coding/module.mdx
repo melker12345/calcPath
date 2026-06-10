@@ -1,0 +1,78 @@
+---
+title: Wyner–Ziv coding
+---
+
+# Wyner–Ziv coding
+
+Wyner–Ziv coding is the lossy counterpart of Slepian–Wolf: compress a source X to a reproduction \hat X with average distortion ≤ D, when correlated side information Y is available only at the decoder, not at the encoder. The minimal rate is the Wyner-Ziv rate-distortion function R_{WZ}(D).
+
+Surprisingly, for many important cases (including the quadratic-Gaussian case) R_{WZ}(D) equals the rate that would be needed if the encoder also had Y, i.e., there is no rate loss from the side information being decoder-only.
+
+## Wyner-Ziv Problem Setup
+
+<!-- section: wz-setup -->
+
+Encoder sees only X^n, produces a message at rate R. Decoder sees the message and the side-information sequence Y^n ~ p(y|x) jointly with X, and produces \hat X^n with (1/n) sum d(X_i, \hat X_i) ≤ D.
+
+No communication from decoder to encoder; the encoder cannot adapt to the particular realization of Y.
+
+Classic application: video coding where the previous frame (or a frame at another camera) is available as side information only at the decoder.
+
+**ELI5**
+
+- You have a photo X that you want to send in compressed form. Your friend already has a similar but noisy photo Y. You must send a description that works without knowing exactly which noisy version your friend has; your friend uses his Y to help reconstruct a good version of your photo.
+- The description has to 'cover' all possible Y's that might be at the decoder.
+
+**Worked Example:**
+
+X ~ N(0,1), Y = X + Z with Z ~ N(0, N_z) independent, quadratic distortion. Even though the encoder does not know Y, the minimal rate to achieve distortion D is the same as if it did know Y (for the Gaussian case).
+
+## Rate-Distortion with Decoder-Only Side Information
+
+<!-- section: wz-rd -->
+
+The Wyner-Ziv rate-distortion function is
+
+R_{WZ}(D) = \min I(X; U | Y)
+
+where the min is over auxiliary U and reconstruction functions \hat x(u,y) such that E[d(X, \hat x(U,Y))] ≤ D and the Markov chain U — X — Y holds (U is generated from X alone).
+
+When side information is also at the encoder the minimal rate is the conditional rate-distortion R_{X|Y}(D) = min I(X; \hat X | Y) under the distortion constraint. In general R_{WZ}(D) ≥ R_{X|Y}(D); equality holds for the quadratic Gaussian source.
+
+**ELI5**
+
+- The auxiliary U is like a 'description' that the encoder prepares; the decoder, with Y, extracts the best \hat X from U and Y.
+- The mutual information is conditioned on Y because Y is free side information at the decoder; the encoder still has to 'pay' for the uncertainty that remains after Y.
+
+**Worked Example:**
+
+For binary source with Hamming distortion and binary side information, there is generally a rate loss: R_{WZ}(D) > R_{X|Y}(D). The optimal auxiliary is a 'test channel' that adds extra 'virtual' noise before binning.
+
+## Binning + Quantization Achievability
+
+<!-- section: wz-binning -->
+
+The optimal scheme quantizes X to an auxiliary codeword U (as in ordinary rate-distortion), then bins the U codewords exactly as in Slepian-Wolf (the bin index is the message sent). The decoder, given the bin index and its Y, finds the unique U in the bin that is jointly typical with Y, then produces the reconstruction \hat x(U, Y).
+
+The binning rate is essentially I(U; X) - I(U; Y) = I(U; X | Y), which is exactly the expression for R_{WZ}.
+
+This unifies quantization (to create U) with distributed lossless compression of the quantization index (binning).
+
+**ELI5**
+
+- First pretend you are doing ordinary lossy compression to an intermediate 'U' description (ignoring that the decoder has Y).
+- Then compress the U index in a Slepian-Wolf fashion as if U were a source correlated with the decoder's Y. The decoder uses Y to disambiguate which U was sent inside the bin.
+- The net rate is the 'extra' information in U beyond what Y already provides.
+
+**Worked Example:**
+
+In the quadratic Gaussian case the optimal U is X + W where W ~ N(0, variance chosen for the target D). The 'quantization' to U is like adding the right amount of noise; then the binning rate needed turns out to equal the conditional rate-distortion, so no loss.
+
+## Common Mistakes
+
+- **Assuming there is always a rate penalty for decoder-only side information**: For quadratic Gaussian (and some other cases) R_{WZ}(D) = R_{X|Y}(D); the side information at the encoder would not help the rate.
+- **Confusing Wyner-Ziv with ordinary rate-distortion**: In ordinary R(D) there is no side information at all; here the decoder has free Y that must be accounted for in the test channel and reconstruction function.
+- **Thinking the encoder can simply quantize as if Y were known**: The encoder must use a codebook and binning that works for the worst-case (or average) Y; it cannot adapt the quantization to the actual Y.
+- **Forgetting that the reconstruction function at the decoder depends on Y**: \hat x = f(u, y), not just a function of u alone. This is crucial for achieving the bound.
+- **Believing practical Wyner-Ziv video codecs have no loss**: Real implementations have losses from finite dimension, correlation estimation, and the fact that practical video is neither Gaussian nor memoryless; the information-theoretic result is still the benchmark.
+- **Mixing up the auxiliary U with the final reconstruction \hat X**: U is an auxiliary 'description' variable; the actual output is a (usually deterministic) function of U and the side information Y.

@@ -1,8 +1,14 @@
-import { problems as calculusProblems, topics as calculusTopics } from "@/lib/calculus-content";
-import { problems as statisticsProblems, topics as statisticsTopics } from "@/lib/statistics-content";
-import { problems as linalgProblems, topics as linalgTopics } from "@/lib/linalg-content";
-import type { Problem, Topic } from "@/lib/shared-types";
 import type { SubjectSlug } from "@/lib/subjects";
+import { getPracticePath, getSectionHref, getSubjectPath, LEGACY_SUBJECTS } from "@/lib/subject-urls";
+
+// Stubs: admin feedback meta now requires explicit server-side data passing to avoid
+// pulling server-only loader into client bundles. For now return nulls (degraded but
+// builds; was already empty from inert shims). Full restore via props from admin page
+// is future small follow-up.
+const allProblemMeta: any[] = [];
+const problemMetaById = new Map<string, any>();
+const allTopicMeta: any[] = [];
+const topicMetaBySubjectAndId = new Map<string, any>();
 
 type ProblemMeta = {
   id: string;
@@ -21,70 +27,6 @@ type TopicMeta = {
   subjectLabel: string;
 };
 
-const SUBJECT_LABELS: Record<SubjectSlug, string> = {
-  calculus: "Calculus",
-  statistics: "Statistics",
-  "linear-algebra": "Linear Algebra",
-};
-
-function buildProblemMeta(
-  subjectSlug: SubjectSlug,
-  topics: Topic[],
-  problems: Problem[],
-): ProblemMeta[] {
-  const topicById = new Map(topics.map((topic) => [topic.id, topic]));
-  const perTopicCounts = new Map<string, number>();
-
-  return problems.map((problem) => {
-    const topic = topicById.get(problem.topicId);
-    const count = (perTopicCounts.get(problem.topicId) ?? 0) + 1;
-    perTopicCounts.set(problem.topicId, count);
-
-    return {
-      id: problem.id,
-      prompt: problem.prompt,
-      topicId: problem.topicId,
-      topicTitle: topic?.title ?? problem.topicId,
-      subjectSlug,
-      subjectLabel: SUBJECT_LABELS[subjectSlug],
-      questionNumber: count,
-    };
-  });
-}
-
-const allProblemMeta = [
-  ...buildProblemMeta("calculus", calculusTopics, calculusProblems),
-  ...buildProblemMeta("statistics", statisticsTopics, statisticsProblems),
-  ...buildProblemMeta("linear-algebra", linalgTopics, linalgProblems),
-];
-
-const problemMetaById = new Map(allProblemMeta.map((problem) => [problem.id, problem]));
-
-const allTopicMeta: TopicMeta[] = [
-  ...calculusTopics.map((topic) => ({
-    id: topic.id,
-    title: topic.title,
-    subjectSlug: "calculus" as const,
-    subjectLabel: SUBJECT_LABELS.calculus,
-  })),
-  ...statisticsTopics.map((topic) => ({
-    id: topic.id,
-    title: topic.title,
-    subjectSlug: "statistics" as const,
-    subjectLabel: SUBJECT_LABELS.statistics,
-  })),
-  ...linalgTopics.map((topic) => ({
-    id: topic.id,
-    title: topic.title,
-    subjectSlug: "linear-algebra" as const,
-    subjectLabel: SUBJECT_LABELS["linear-algebra"],
-  })),
-];
-
-const topicMetaBySubjectAndId = new Map(
-  allTopicMeta.map((topic) => [`${topic.subjectSlug}:${topic.id}`, topic]),
-);
-
 export function getProblemMeta(problemId: string | null | undefined) {
   if (!problemId) return null;
   return problemMetaById.get(problemId) ?? null;
@@ -93,9 +35,9 @@ export function getProblemMeta(problemId: string | null | undefined) {
 export function inferSubjectFromPath(path: string | null | undefined): SubjectSlug | null {
   if (!path) return null;
   const normalized = path.replace(/^https?:\/\/[^/]+/, "");
-  if (normalized.startsWith("/calculus")) return "calculus";
-  if (normalized.startsWith("/statistics")) return "statistics";
-  if (normalized.startsWith("/linear-algebra")) return "linear-algebra";
+  for (const slug of LEGACY_SUBJECTS) {
+    if (normalized.startsWith(getSubjectPath(slug))) return slug;
+  }
   return null;
 }
 
@@ -139,7 +81,7 @@ export function buildTargetDeepLink(args: {
   if (targetType === "problem") {
     const meta = problemMetaById.get(targetId);
     if (!meta) return null;
-    return `/${meta.subjectSlug}/practice/${meta.topicId}?focus=${encodeURIComponent(meta.id)}`;
+    return `${getPracticePath(meta.subjectSlug, meta.topicId)}?focus=${encodeURIComponent(meta.id)}`;
   }
 
   if (targetType === "section") {
@@ -162,7 +104,7 @@ export function buildTargetDeepLink(args: {
     const [topicId, ...anchorParts] = rest;
     if (!topicId || anchorParts.length === 0) return null;
 
-    return `/${subject}/modules/${topicId}#${anchorParts.join(":")}`;
+    return getSectionHref(subject, topicId, anchorParts.join(":"));
   }
 
   return null;

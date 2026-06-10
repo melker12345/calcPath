@@ -1,21 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AuthProvider, useAuth } from "@/components/auth-provider";
 import { SearchTrigger } from "@/components/search-command";
 import { ThemeToggle } from "@/components/theme-toggle";
-
-// Slim navigation list only (slug + label).
-// Avoids pulling the full subjects + shim baggage (with its current module evaluation issues)
-// into the client header on every real route. The full legacy SubjectConfig is still
-// available for pages that need it (dashboard, etc.).
-const navSubjects = [
-  { slug: "calculus", label: "Calculus" },
-  { slug: "statistics", label: "Statistics" },
-  { slug: "linear-algebra", label: "Linear Algebra" },
-] as const;
+import { getSubjectList } from "@/lib/actions/get-subject-list";
+import { subjectList as fallbackSubjectList } from "@/lib/subjects";
 
 function ProfileIcon({ size = 20, color = "currentColor" }: { size?: number; color?: string }) {
   return (
@@ -27,21 +18,111 @@ function ProfileIcon({ size = 20, color = "currentColor" }: { size?: number; col
 }
 
 const utilityLinks = [
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/diagnostic", label: "Diagnostic" },
   { href: "/feedback", label: "Feedback" },
 ] as const;
 
+function SubjectsDropdown({ subjects }: { subjects: Array<{ slug: string; label: string; icon?: string }> }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
+
+  const closeAndNavigate = () => setOpen(false);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm theme-text-secondary transition hover:theme-text hover:bg-[var(--surface-2)]"
+        aria-haspopup="true"
+        aria-expanded={open}
+      >
+        Subjects
+        <svg
+          className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`}
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            fillRule="evenodd"
+            d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          className="absolute left-0 top-full z-50 mt-1 w-80 overflow-hidden rounded-xl border theme-border theme-surface shadow-xl"
+          role="menu"
+        >
+          <div className="grid grid-cols-2 gap-0.5 p-1">
+            {subjects.map((subject) => (
+              <Link
+                key={subject.slug}
+                href={`/${subject.slug}`}
+                onClick={closeAndNavigate}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm theme-text transition hover:bg-[var(--surface-2)] hover:theme-text"
+                role="menuitem"
+              >
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-stone-100 text-[10px] text-stone-600 dark:bg-zinc-800 dark:text-zinc-400">
+                  {subject.icon || "📚"}
+                </span>
+                <span className="truncate">{subject.label}</span>
+              </Link>
+            ))}
+          </div>
+          <div className="border-t theme-border" />
+          <Link
+            href="/subjects"
+            onClick={closeAndNavigate}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-[var(--accent)] transition hover:bg-[var(--surface-2)]"
+            role="menuitem"
+          >
+            All subjects →
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MobileDrawer({
   open,
   onClose,
-  user,
-  onSignOut,
+  subjects = [],
 }: {
   open: boolean;
   onClose: () => void;
-  user: boolean;
-  onSignOut: () => void;
+  subjects?: Array<{ slug: string; label: string; icon?: string }>;
 }) {
+  // Auth removed: always show Account link in drawer (no conditional sign in/out).
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
@@ -87,7 +168,8 @@ function MobileDrawer({
         </div>
 
         <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto bg-white px-3 py-4">
-          {navSubjects.map((subject) => (
+          <div className="px-4 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[1px] theme-text-muted">Subjects</div>
+          {subjects.map((subject) => (
             <Link
               key={subject.slug}
               href={`/${subject.slug}`}
@@ -95,9 +177,7 @@ function MobileDrawer({
               onClick={onClose}
             >
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-stone-100 text-sm text-stone-600">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-                </svg>
+                {subject.icon || "📚"}
               </span>
               {subject.label}
             </Link>
@@ -123,33 +203,13 @@ function MobileDrawer({
           ))}
 
           <div className="my-2 border-t theme-border" />
-          {user && (
-            <>
-              <Link
-                href="/account"
-                className="block rounded-xl bg-zinc-50 px-4 py-3.5 text-base font-semibold text-zinc-900 transition active:bg-zinc-100"
-                onClick={onClose}
-              >
-                Account
-              </Link>
-              <button
-                type="button"
-                onClick={() => { onSignOut(); onClose(); }}
-                className="rounded-xl bg-zinc-50 px-4 py-3.5 text-left text-base font-semibold text-red-600 transition active:bg-red-50"
-              >
-                Sign out
-              </button>
-            </>
-          )}
-          {!user && (
-            <Link
-              href="/auth"
-              className="block rounded-xl bg-slate-900 px-4 py-3.5 text-center text-base font-semibold text-white transition active:opacity-90"
-              onClick={onClose}
-            >
-              Sign in / Register
-            </Link>
-          )}
+          <Link
+            href="/account"
+            className="block rounded-xl bg-zinc-50 px-4 py-3.5 text-base font-semibold text-zinc-900 transition active:bg-zinc-100"
+            onClick={onClose}
+          >
+            Account
+          </Link>
         </nav>
       </div>
     </div>,
@@ -159,6 +219,30 @@ function MobileDrawer({
 
 export const SiteHeader = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [subjects, setSubjects] = useState<Array<{ slug: string; label: string; icon?: string }>>(() =>
+    fallbackSubjectList
+      .filter((s) => (s.order ?? 0) < 50)
+      .map((s) => ({ slug: s.slug, label: s.label, icon: s.icon }))
+  );
+
+  useEffect(() => {
+    // Load dynamically discovered subjects (supports pure content/ drops with no entry in subjects.ts).
+    // This makes the navbar dropdown automatically include newly dropped subjects without any code changes.
+    getSubjectList()
+      .then((discovered) => {
+        // Merge: start with fallback, add any additional discovered ones not already present.
+        const existingSlugs = new Set(fallbackSubjectList.map((s) => s.slug));
+        const additional = discovered.filter((d) => !existingSlugs.has(d.slug));
+        setSubjects((prev) => {
+          // If we had fallback, keep the structure, append new.
+          const base = prev.length > 0 ? prev : fallbackSubjectList.filter((s) => (s.order ?? 0) < 50).map((s) => ({ slug: s.slug, label: s.label, icon: s.icon }));
+          return [...base, ...additional];
+        });
+      })
+      .catch(() => {
+        // On error, keep the fallback.
+      });
+  }, []);
 
   return (
     <>
@@ -169,15 +253,7 @@ export const SiteHeader = () => {
           </Link>
 
           <nav className="hidden items-center gap-3 text-sm md:flex">
-            {navSubjects.map((subject) => (
-              <Link
-                key={subject.slug}
-                href={`/${subject.slug}`}
-                className="theme-text-secondary transition hover:theme-text"
-              >
-                {subject.label}
-              </Link>
-            ))}
+            <SubjectsDropdown subjects={subjects} />
 
             {/* subtle separator between subject group and utility links */}
             <span className="mx-1 h-3 w-px bg-[var(--border)]" aria-hidden="true" />
@@ -195,13 +271,12 @@ export const SiteHeader = () => {
             <SearchTrigger />
           </nav>
 
-          <AuthProvider>
-            <SiteHeaderAuthControls
-              mobileMenuOpen={mobileMenuOpen}
-              onToggleMobileMenu={() => setMobileMenuOpen((open) => !open)}
-              onCloseMobileMenu={() => setMobileMenuOpen(false)}
-            />
-          </AuthProvider>
+          <SiteHeaderAuthControls
+            mobileMenuOpen={mobileMenuOpen}
+            onToggleMobileMenu={() => setMobileMenuOpen((open) => !open)}
+            onCloseMobileMenu={() => setMobileMenuOpen(false)}
+            subjects={subjects}
+          />
         </div>
       </header>
     </>
@@ -212,33 +287,25 @@ function SiteHeaderAuthControls({
   mobileMenuOpen,
   onToggleMobileMenu,
   onCloseMobileMenu,
+  subjects = [],
 }: {
   mobileMenuOpen: boolean;
   onToggleMobileMenu: () => void;
   onCloseMobileMenu: () => void;
+  subjects?: Array<{ slug: string; label: string; icon?: string }>;
 }) {
-  const { user, signOut } = useAuth();
-
+  // Auth removed: always show Profile/Account + Sync devices (anon accessible). No sign in/out CTAs.
   return (
     <>
       <div className="flex items-center gap-1.5 md:hidden">
         <ThemeToggle />
-        {user ? (
-          <Link
-            href="/account"
-            className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-zinc-200 bg-white transition active:bg-zinc-50 dark:border-white/15 dark:bg-[#18181b]"
-            aria-label="Account"
-          >
-            <ProfileIcon size={18} color="#3f3f46" />
-          </Link>
-        ) : (
-          <Link
-            href="/auth"
-            className="rounded border border-stone-300 bg-[#fffef8] px-3 py-1.5 text-sm text-stone-800 dark:border-white/15 dark:bg-[#18181b] dark:text-[#ededed]"
-          >
-            Sign in
-          </Link>
-        )}
+        <Link
+          href="/account"
+          className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-zinc-200 bg-white transition active:bg-zinc-50 dark:border-white/15 dark:bg-[#18181b]"
+          aria-label="Account"
+        >
+          <ProfileIcon size={18} color="#3f3f46" />
+        </Link>
         <button
           type="button"
           onClick={onToggleMobileMenu}
@@ -254,46 +321,20 @@ function SiteHeaderAuthControls({
 
       <div className="hidden shrink-0 items-center gap-2 md:flex">
         <ThemeToggle />
-        {user ? (
-          <>
-            <Link
-              href="/account"
-              className="flex items-center gap-2 rounded-full border-2 theme-border theme-surface px-3 py-1.5 text-sm font-semibold theme-text shadow-sm transition hover:shadow-md"
-              aria-label="Account"
-            >
-              <ProfileIcon size={18} color="currentColor" />
-            </Link>
-            <button
-              type="button"
-              onClick={signOut}
-              className="rounded-full border-2 theme-border theme-surface px-4 py-2 text-sm font-semibold theme-text-secondary transition hover:theme-text"
-            >
-              Sign out
-            </button>
-          </>
-        ) : (
-          <>
-            <Link
-              href="/auth"
-              className="text-sm theme-text-secondary hover:theme-text"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/auth"
-              className="rounded border theme-border theme-surface px-4 py-2 text-sm theme-text transition"
-            >
-              Get started
-            </Link>
-          </>
-        )}
+        <Link
+          href="/account"
+          className="flex items-center gap-2 rounded-full border-2 theme-border theme-surface px-3 py-1.5 text-sm font-semibold theme-text shadow-sm transition hover:shadow-md"
+          aria-label="Account"
+        >
+          <ProfileIcon size={18} color="currentColor" />
+        </Link>
+        <Link href="/sync" className="text-sm theme-text-secondary hover:theme-text">Sync devices</Link>
       </div>
 
       <MobileDrawer
         open={mobileMenuOpen}
         onClose={onCloseMobileMenu}
-        user={!!user}
-        onSignOut={signOut}
+        subjects={subjects}
       />
     </>
   );

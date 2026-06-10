@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@/components/auth-provider";
 
 const PRESETS = [
   { cents: 300, label: "$3", note: "A coffee" },
@@ -11,7 +10,7 @@ const PRESETS = [
 ] as const;
 
 export default function DonatePage() {
-  const { user } = useAuth();
+  // useAuth removed (auth stripped); email optional for stripe, now null (anon ok)
   const [selected, setSelected] = useState<number | null>(500);
   const [custom, setCustom] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,7 +31,7 @@ export default function DonatePage() {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, email: user?.email ?? undefined }),
+        body: JSON.stringify({ amount, email: undefined }),
       });
 
       let data: { url?: string; error?: string } = {};

@@ -1,0 +1,102 @@
+---
+title: Differential privacy
+---
+
+# Differential privacy
+
+Differential privacy (DP) is a rigorous, quantifiable definition of privacy for data analysis and machine learning. A randomized algorithm M is ε-differentially private if, for any two neighboring datasets D and D' (differing in at most one record) and any measurable set S of possible outputs,
+
+Pr[M(D) ∈ S] ≤ e^ε Pr[M(D') ∈ S].
+
+The parameter ε (the privacy budget) controls the strength of the guarantee: smaller ε gives stronger privacy. The definition makes no assumptions about the adversary's background knowledge or computational power.
+
+DP has become the gold standard for private data release at companies (Apple, Google, Microsoft, Uber) and in the U.S. Census Bureau's 2020 release.
+
+## The Definition of Differential Privacy
+
+<!-- section: dp-definition -->
+
+Two datasets are neighboring if they differ by the addition, removal, or change of a single individual's record. The definition is closed under post-processing: if M is DP then any (possibly randomized) function of M's output is also DP with the same ε.
+
+(ε,δ)-DP relaxes pure DP to allow a small probability δ of 'catastrophic' failure (the bound may be violated with prob ≤ δ). This is necessary for many mechanisms (Gaussian noise) and for composition over many queries.
+
+Group privacy: if M is ε-DP then changing k records changes probabilities by at most e^{kε} (or (kε,δ') in the approximate case).
+
+**ELI5**
+
+- Whatever the output distribution looks like when your data is in the dataset, it cannot look too different (multiplicatively e^ε) from the distribution when your data is removed or changed.
+- The guarantee holds even if the adversary knows everything else about the world and sees the exact output; your participation still cannot be reliably detected.
+
+**Worked Example:**
+
+A database of medical records. Neighboring databases differ by one patient. A DP release of 'how many patients have disease X' must have output distributions that are multiplicatively close whether that patient is included or not. Adding or removing one patient can change the true count by at most 1; the mechanism must mask that difference.
+
+## The Laplace and Gaussian Mechanisms
+
+<!-- section: mechanisms -->
+
+For a numeric query f with L1 sensitivity Δ (max |f(D)-f(D')| over neighbors D,D'), the Laplace mechanism outputs f(D) + Lap(Δ/ε) (noise from the Laplace distribution with scale Δ/ε). This is ε-DP.
+
+For (ε,δ)-DP the Gaussian mechanism adds N(0, σ²) with σ ≥ Δ √(2 ln(1.25/δ)) / ε (or similar calibrated constants). Gaussian noise is often preferred in practice because of its tail behavior and compatibility with composition.
+
+For non-numeric outputs (histograms, synthetic data, ML models) one uses the exponential mechanism (sample from a distribution weighted by a utility score) or more sophisticated constructions (private SGD, PATE, etc.).
+
+**ELI5**
+
+- Compute the statistic you care about on the real data. Because one person can affect the statistic by at most Δ, add random noise whose 'width' is proportional to Δ/ε. The noise hides whether any single person was present.
+- Laplace noise is 'double-exponential' and gives pure ε-DP; Gaussian is bell-shaped and gives the slightly weaker (ε,δ) guarantee but is easier to analyze with many queries.
+
+**Worked Example:**
+
+Counting query, sensitivity Δ=1. For ε=0.5 add Laplace noise with scale 2. The probability of outputting a particular integer k is proportional to exp(-|true_count - k|/2). Changing the true count by 1 multiplies every probability by at most e^{0.5}, satisfying the definition.
+
+## Composition, Post-Processing, and Advanced Properties
+
+<!-- section: composition-properties -->
+
+Basic composition: k mechanisms each ε-DP together are kε-DP (and (kε, kδ) for approximate).
+
+Advanced composition: for (ε,δ)-DP mechanisms, k-fold adaptive composition is roughly (ε' , kδ + δ')-DP with ε' ≈ √(2k ln(1/δ')) ε + kε(e^ε-1) (or tighter modern bounds). This is the source of the 'privacy budget' accounting used in practice.
+
+Post-processing immunity: any function (even randomized) of a DP output remains DP with the same parameters. This lets you post-process noisy answers arbitrarily (take medians, train models on synthetic data, etc.) without spending more privacy.
+
+Other properties: parallel composition (queries on disjoint subsets cost only the max ε), privacy amplification by sampling, and privacy odometers / filters for fully adaptive composition.
+
+**ELI5**
+
+- Every time you release a DP statistic you 'spend' some of your privacy budget ε. After many releases the total spent budget is tracked by composition theorems; you stop when the budget is exhausted.
+- Once something is DP, you can compute anything you like from it later (graphs, ML models, press releases) and the privacy guarantee still holds; you do not pay extra.
+
+**Worked Example:**
+
+A data analyst wants to release 100 counting queries, each with sensitivity 1, at total (ε=1, δ=10^{-6}). Using advanced composition one can set the per-query ε_i small enough (roughly 1/√(2*100 * ln(1/δ'))) so that the composed guarantee meets the target. The exact calibration is done by a privacy accountant.
+
+## Applications and Limitations
+
+<!-- section: applications-limitations -->
+
+DP is used for:
+- Releasing aggregate statistics, contingency tables, synthetic data.
+- Training ML models (DP-SGD adds noise to gradients; the privacy cost depends on the noise multiplier, batch size, and number of epochs).
+- Apple's 'differential privacy' deployment for emoji and Safari usage (local DP, each device adds noise before sending).
+- The 2020 U.S. Census (Disclosure Avoidance System based on the TopDown algorithm, a form of DP).
+
+Limitations: the utility/privacy tradeoff can be severe for small datasets or many queries; choosing ε is a policy question (typical deployed values 0.1–10); composition can exhaust the budget quickly; DP does not protect against all inference (it protects participation, not the fact that someone is in a certain group if group membership is already known).
+
+**ELI5**
+
+- DP gives a dial you can turn: more noise → stronger privacy but less accurate answers. For big datasets and few queries the dial can be set so that the noise is tiny relative to the signal.
+- In machine learning, DP-SGD makes models slightly less accurate but gives a mathematical guarantee that the model weights do not memorize any single training example too strongly.
+
+**Worked Example:**
+
+Training a neural net with DP-SGD: clip per-example gradients to norm C, add Gaussian noise scaled to C σ, average, and take a step. The privacy accountant (Rényi DP or moments accountant) tracks the cumulative (ε,δ) after T steps. For a dataset of size N, sampling rate q = batch/N, noise multiplier σ, one obtains concrete (ε,δ) numbers that can be compared across papers and deployments.
+
+## Common Mistakes
+
+- **Confusing differential privacy with k-anonymity or other syntactic notions**: k-anonymity can be broken by background knowledge or homogeneity attacks; DP gives a worst-case multiplicative guarantee independent of the adversary's knowledge.
+- **Thinking that 'adding noise' is automatically DP**: The noise distribution and its scale must be calibrated exactly to the sensitivity and the desired ε (or (ε,δ)); arbitrary noise may give no guarantee.
+- **Forgetting that post-processing does not cost privacy but composition does**: You can analyze the released DP object as much as you want for free; each new release that depends on the original data costs more budget.
+- **Using a fixed ε across all datasets and applications**: ε is a policy choice that should depend on the sensitivity of the data, the number of expected queries, and the risk tolerance;  ε=1 is not 'always safe.'
+- **Believing local DP (each user perturbs before sending) is the same as central DP**: Local DP requires much more noise (roughly √n worse) because each report must be private by itself; central DP (a trusted curator adds noise to the aggregate) is far more accurate.
+- **Ignoring that DP protects participation, not the value of an attribute**: If everyone in a group has the same sensitive attribute, learning that the group statistic is high may still reveal the attribute for a member even if participation is hidden.

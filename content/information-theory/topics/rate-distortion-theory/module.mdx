@@ -1,0 +1,107 @@
+---
+title: Rate–distortion theory
+---
+
+# Rate–distortion theory
+
+Rate-distortion theory answers the question: what is the lowest rate (bits per symbol) at which a source can be compressed if we are willing to tolerate a certain average distortion D in the reconstruction? The answer is the rate-distortion function R(D). It is the lossy counterpart of the source coding theorem (which is the special case D=0 for lossless).
+
+Lossy compression is essential for images, video, speech, and any situation where perfect fidelity is either impossible or not worth the bits.
+
+## The Rate-Distortion Trade-off
+
+<!-- section: rate-distortion-tradeoff -->
+
+A source produces symbols X ~ p(x). A reproduction alphabet and a distortion measure d(x, \hat{x}) are given (e.g., squared error, Hamming distance). An encoder maps a block of n symbols to an index at rate R bits per symbol; the decoder produces \hat{X}^n with average per-symbol distortion ≤ D.
+
+R(D) is the infimum of rates R such that there exist codes with average distortion ≤ D for large n.
+
+**ELI5**
+
+- If you allow the reconstructed picture to look a little blurry (D>0), you can describe it with far fewer bits than the lossless case.
+- The more distortion you tolerate, the lower the rate you need; R(D) traces this fundamental curve.
+
+**Worked Example:**
+
+1. A grayscale image pixel quantized to 8 bits. If we allow mean-squared error $D$ corresponding to 'barely visible' artifacts, a good compressor might use only 1-2 bits per pixel instead of 8, achieving $4$-$8\times$ compression.
+
+## Definition of the Rate-Distortion Function
+
+<!-- section: definition-rd -->
+
+The rate-distortion function is defined as the minimum mutual information over all conditional distributions (test channels) p(\hat{x}|x) that satisfy the distortion constraint:
+
+$R(D) = \min_{p(\hat{x}|x) : \mathbb{E}[d(X,\hat{X})] \le D} I(X;\hat{X})$
+
+where the minimum is over all p(\hat{x}|x) inducing E[d] ≤ D. The joint is p(x) p(\hat{x}|x).
+
+By the rate-distortion theorem (Shannon), R(D) is the fundamental limit: no scheme can do better asymptotically, and there exist schemes that approach it.
+
+**ELI5**
+
+- R(D) measures the smallest amount of information the reproduction \hat{X} must 'share' with the source X while keeping average distortion under D.
+- The optimizing p(\hat{x}|x) tells you the best statistical relationship between original and reproduction.
+
+**Worked Example:**
+
+1. For a Bernoulli(1/2) source with Hamming distortion, $R(D) = 1 - h_2(D)$ for $D \leq 1/2$ (where $h_2$ is binary entropy).
+2. At $D=0$, $R=1$ bit; at $D=0.5$, $R=0$.
+
+## Computation and Properties
+
+<!-- section: computation-properties -->
+
+R(D) is convex, decreasing, R(0) = H(X) (lossless), and R(D_max)=0 where D_max is the minimum distortion achievable with rate 0 (e.g., the best constant reproduction).
+
+The Blahut-Arimoto algorithm (and other methods) can numerically compute R(D) by alternating optimization of the test channel and the output distribution.
+
+Important properties: R(D) ≤ H(X) - h(D) or other lower bounds from entropy power etc.; the slope of R(D) is related to the Lagrange multiplier for the distortion constraint.
+
+**ELI5**
+
+- R(D) always starts at the entropy when D=0 and gracefully falls to zero when you allow enough distortion that you can just guess the reproduction without looking at the source.
+- Convexity means the 'bang for the bit' gets worse as you demand lower distortion.
+
+**Worked Example:**
+
+1. Typical table for a unit-variance Gaussian source under squared-error distortion:
+2. | D | R(D) (bits) |
+3. | 1.0 | 0 |
+4. | 0.5 | 0.5 |
+5. | 0.25 | 1.0 |
+6. | 0.1 | ≈1.66 |
+7. | 0.01 | ≈3.32 |
+8. $R(D) = \frac12 \log(1/D)$ for $D \leq 1$.
+
+## Examples: Gaussian and Binary Sources
+
+<!-- section: examples-gaussian-binary -->
+
+For X ~ N(0, σ²) and d(x,\hat{x})=(x-\hat{x})², the rate-distortion function is 
+
+$R(D) = \frac12 \log_2 \left( \frac{\sigma^2}{D} \right)$ for 0 ≤ D ≤ σ², and 0 otherwise.
+
+The optimal test channel is additive Gaussian noise with variance D; the reconstruction is a scaled version of the observation.
+
+For binary sources the expressions involve binary entropy as above.
+
+These closed forms are rare; most sources require numerical optimization.
+
+**ELI5**
+
+- For a Gaussian, the best you can do is pretend the reconstruction is the original plus independent Gaussian 'noise' of variance D; the mutual information then gives exactly the formula.
+- The formula shows that each halving of allowed distortion costs an extra 0.5 bits per sample.
+
+**Worked Example:**
+
+1. A zero-mean Gaussian with variance 4 ($\sigma^2=4$). To achieve MSE $D=0.5$, $R(0.5) = 0.5 \log_2(4/0.5) = 0.5 \log_2(8) = 0.5 \cdot 3 = 1.5$ bits per sample.
+2. This is achievable by a Gaussian test channel with noise variance 0.5; the MMSE estimator at the decoder is $(4/(4+0.5)) Y$ or similar scaling.
+
+## Common Mistakes
+
+- **Confusing R(D) with the distortion-rate function D(R)**: They are inverses; R(D) gives min rate for given D, D(R) gives min distortion for given rate.
+- **Thinking R(D) is achieved by simple scalar quantization**: Optimal R(D) generally requires vector quantization (block coding); scalar quantizers have a gap (1.53 dB for high-rate Gaussian).
+- **Using R(0) = H(X) for lossy sources**: When D>0 the rate can be strictly less than the entropy; entropy is only the lossless limit.
+- **Forgetting that the distortion measure must be specified**: Changing from MSE to absolute error or perceptual distortion completely changes R(D).
+- **Assuming the optimal reproduction alphabet is the same as the source**: For some problems the best \hat{X} alphabet is smaller or even continuous even if X is discrete.
+- **Ignoring the asymptotic nature**: R(D) is a limit as block length n→∞; for small blocks there is a penalty and practical codecs use heuristics + entropy coding of quantized coefficients.

@@ -32,14 +32,18 @@
  */
 
 import type { MdxModule } from "./schema";
-import type { ModuleContent, ModuleSection, WorkedExample } from "@/lib/modules/types";
+import type { ModuleContent, ModuleSection, WorkedExample } from "@/lib/modules";
 import type { Topic } from "@/lib/shared-types";
 
-function toSlug(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
+import { toSlug, stripFrontmatterAndH1, extractMdxSections } from "./mdx";
+
+/**
+ * Strip raw HTML comment lines (e.g. <!-- section: xxx --> markers or any others).
+ * Used defensively in cleaned output so that no raw comments ever remain in .body,
+ * .intro, commonMistakes, eli5, etc. (markers are metadata only).
+ */
+function stripComments(texts: string[]): string[] {
+  return texts.filter((t) => t && t.trim() && !t.trim().startsWith("<!--"));
 }
 
 /**
@@ -54,8 +58,13 @@ function toSlug(text: string): string {
  *   (the comment lookahead is critical for some calculus ports)
  * - **ELI5**: or **ELI5** blocks (lists or paras; spans blanks in LA style)
  * - **Worked Example:** or ### Worked Examples:  (with title + step lists)
+ * - Resilient auto-detect: also populates eli5/examples from variants like "### Example", "Step 1:", "ELI5" etc. even without exact bold markers (for thin/varied new-subject MDX; recommended markers still encouraged for authoring).
  * - Regular body content (paras, lists — original markers preserved for MdxContent parity)
- * - ## Common Mistakes  (at end of file or per some modules)
+ * - ## Common Mistakes (at end of file or per some modules)
+ *
+ * Section comment markers (<!-- section: xxx -->) are inspected via lookahead
+ * (for stable slugs) but ALWAYS skipped thereafter and never appear in .body,
+ * intro, etc. (use stripComments helper on final arrays as guard).
  *
  * Output is *not* the final ModuleContent — just the parsed pieces.
  * The public mdxModuleToLegacyModuleContent maps + normalizes it to the exact
@@ -76,12 +85,8 @@ function parseMdxToLegacyShape(mdxSource: string): {
   }>;
   commonMistakes: string[];
 } {
-  // Strip frontmatter
-  let source = mdxSource.replace(/^---\s*\r?\n[\s\S]*?\r?\n---\s*\r?\n?/, "").trim();
-
-  // Remove the top-level # Title (we use topic.title from JSON index)
-  source = source.replace(/^#\s+[^\n]+\n?/, "").trim();
-
+  // Use shared strip (frontmatter + top # Title). We use topic.title from JSON index.
+  const source = stripFrontmatterAndH1(mdxSource);
   const lines = source.split(/\r?\n/);
 
   const intro: string[] = [];
@@ -125,8 +130,10 @@ function parseMdxToLegacyShape(mdxSource: string): {
       continue;
     }
 
-    // Skip pure comment lines that are not section markers
-    if (line.startsWith("<!--") && !/section:/.test(line)) {
+    // ALWAYS skip pure comment lines, including section markers (<!-- section: xxx -->).
+    // Markers are used *only* in the H2 lookahead (immediately after detecting heading)
+    // to capture stable slugs for ?section= / progress; they must never reach body arrays.
+    if (line.startsWith("<!--")) {
       continue;
     }
 
@@ -136,13 +143,15 @@ function parseMdxToLegacyShape(mdxSource: string): {
       finishCurrentSection();
 
       const rawTitle = h2[1].trim();
-      let slug = h2[2] || toSlug(rawTitle);
+      const provided = h2[2];
+      let slug = provided || toSlug(rawTitle);
 
-      // Look ahead a couple lines for HTML comment slug marker (used in some calculus ports)
-      for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
-        const commentMatch = lines[j].match(/<!--\s*section:\s*([a-z0-9-]+)\s*-->/i);
-        if (commentMatch) {
-          slug = commentMatch[1];
+      // Use shared lookahead for <!-- section: ... --> (exact same logic as extractMdxSections / validate).
+      // This guarantees the section slug here matches what derive + questions expect.
+      for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+        const cm = lines[j].match(/<!--\s*section:\s*([a-z0-9-]+)\s*-->/i);
+        if (cm) {
+          slug = cm[1];
           break;
         }
       }
@@ -170,14 +179,15 @@ function parseMdxToLegacyShape(mdxSource: string): {
     }
 
     // H3 (often used for "Worked Examples")
+    // Resilient: also catch plain "### Example", "### Worked Example", etc. for auto populating .examples[] even if ** marker absent.
     const h3 = line.match(/^###\s+(.+)$/);
     if (h3) {
       const h3Title = h3[1].trim().toLowerCase();
-      if (h3Title.includes("worked example")) {
+      if (h3Title.includes("worked") || h3Title.includes("example")) {
         collectingWorked = true;
         collectingEli5 = false;
         // title may be on this line or next bold
-        const exTitleMatch = h3[1].match(/worked examples?:\s*(.*)/i);
+        const exTitleMatch = h3[1].match(/(?:worked\s+)?examples?:\s*(.*)/i);
         const exTitle = (exTitleMatch && exTitleMatch[1]) ? exTitleMatch[1].trim() : "Example";
         currentWorked = { title: exTitle || "Worked Example", steps: [] };
         if (currentSection) {
@@ -196,8 +206,12 @@ function parseMdxToLegacyShape(mdxSource: string): {
     if (inCommonMistakes) {
       if (line.startsWith("- ") || line.startsWith("* ")) {
         commonMistakes.push(line.replace(/^[-*]\s*/, "").trim());
-      } else if (currentSection === null) {
-        // still in mistakes section
+      } else if (line.trim() && currentSection === null) {
+        // continuation line for the last common mistake (supports multi-line grouping in MDX source)
+        if (commonMistakes.length > 0) {
+          const lastIdx = commonMistakes.length - 1;
+          commonMistakes[lastIdx] += " " + line.trim();
+        }
       }
       continue;
     }
@@ -228,6 +242,19 @@ function parseMdxToLegacyShape(mdxSource: string): {
       continue;
     }
 
+    // Resilient ELI5 auto-detect: catch variants without exact **ELI5 bold (for thin/varied MDX in new subjects).
+    // Prevents missing ELI5 cards in UI even if authoring used slightly different heading.
+    const eli5Loose = line.match(/^(?:###\s*)?(ELI5|In plain English|Simple explanation|Explain like I'm 5|ELI5 explanation)\s*[:\-]?\s*(.*)$/i);
+    if (eli5Loose && !collectingEli5) {
+      collectingEli5 = true;
+      collectingWorked = false;
+      const after = (eli5Loose[2] || "").trim();
+      if (after) {
+        currentEli5.push(after);
+      }
+      continue;
+    }
+
     // Worked example marker (stats style + LA style)
     const workedMarker = line.match(/^\*\*Worked Example(?:s)?:?\s*(.*?)\*\*/i);
     if (workedMarker) {
@@ -240,6 +267,27 @@ function parseMdxToLegacyShape(mdxSource: string): {
         currentSection.examples.push(currentWorked);
       }
       continue;
+    }
+
+    // Resilient auto-detect for worked / example blocks even without exact "**Worked Example:**" bold marker.
+    // E.g. after "### Example", lines starting "Step 1:", "Example:", or example-ish content.
+    // This ensures .examples[] is populated (for nice UI cards) on varied/thin MDX from high-volume subjects,
+    // so "recommended" markers don't silently degrade UX. Conservative to avoid swallowing regular body lists.
+    if (!collectingWorked && !collectingEli5 && currentSection) {
+      const lowLine = line.toLowerCase();
+      if (/\bstep\s*1\s*[:.]/.test(lowLine) || /^example\s*[:.]/.test(lowLine) || /\bexample\s*\d*\s*[:.]/.test(lowLine)) {
+        collectingWorked = true;
+        collectingEli5 = false;
+        const titleFromLine = line.replace(/^\*\*|\*\*|Step\s*1\s*[:.]\s*|Example\s*[:.]\s*/gi, "").trim();
+        currentWorked = { title: titleFromLine.substring(0, 80) || "Example", steps: [] };
+        currentSection.examples = currentSection.examples || [];
+        currentSection.examples.push(currentWorked);
+        // Include the starter text as first step content if non-trivial
+        if (titleFromLine || !/^\d/.test(line)) {
+          currentWorked.steps.push(line.replace(/^Step\s*1\s*[:.]\s*|^Example\s*[:.]\s*/i, "").trim() || line);
+        }
+        continue;
+      }
     }
 
     // List item under current block
@@ -266,7 +314,17 @@ function parseMdxToLegacyShape(mdxSource: string): {
       // (Common pattern: **ELI5**: foo. \n\n Next technical paragraph continues the section body.)
       // Push this line to body and reset so we don't swallow the rest of the section.
       collectingEli5 = false;
-      currentSection.body.push(line);
+      // Resilience: if this interrupting para looks like start of example, auto-start worked collection instead of body.
+      if (/\bstep\s*1\s*[:.]/.test(line.toLowerCase()) || /^example/i.test(line) || /example\s*\d/i.test(line)) {
+        collectingWorked = true;
+        currentWorked = { title: "Example", steps: [line] };
+        if (currentSection) {
+          currentSection.examples = currentSection.examples || [];
+          currentSection.examples.push(currentWorked);
+        }
+      } else {
+        currentSection.body.push(line);
+      }
       continue;
     }
     if (collectingWorked && currentWorked) {
@@ -281,20 +339,20 @@ function parseMdxToLegacyShape(mdxSource: string): {
   // Flush last section
   finishCurrentSection();
 
-  // Dedupe / cleanup empty (robustness)
+  // Dedupe / cleanup empty (robustness). Use stripComments to guarantee no raw <!-- section: --> or other comments remain in any output arrays.
   const cleanedSections = sections
     .map((s) => ({
       ...s,
-      body: s.body.filter((p: string) => p && p.trim()),
-      eli5: s.eli5 && s.eli5.length ? s.eli5.filter((p: string) => p && p.trim()) : undefined,
+      body: stripComments(s.body),
+      eli5: s.eli5 && s.eli5.length ? stripComments(s.eli5) : undefined,
       examples: s.examples && s.examples.length ? s.examples.filter((e: any) => e.steps && e.steps.length) : undefined,
     }))
     .filter((s) => s.body.length > 0 || (s.eli5 && s.eli5.length) || (s.examples && s.examples.length));
 
   return {
-    intro: intro.filter(Boolean),
+    intro: stripComments(intro),
     sections: cleanedSections,
-    commonMistakes: commonMistakes.filter(Boolean),
+    commonMistakes: stripComments(commonMistakes),
   };
 }
 

@@ -1,9 +1,6 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useOptionalAuth } from "@/components/auth-provider";
-import { supabase } from "@/lib/supabase/client";
 
 const NOTE_MAX = 1000;
 const REPORT_MAX = 1000;
@@ -28,17 +25,16 @@ export function VoteFeedback({
   targetId: string;
   userId?: string;
 }) {
-  const auth = useOptionalAuth();
-  const user = auth?.user ?? null;
-  const [sessionUserId, setSessionUserId] = useState<string | null>(null);
-  const isAuthed = !!(user ?? sessionUserId);
-  const resolvedUserId = userId ?? user?.id ?? sessionUserId;
+  // Auth removed (all users anon): notes on votes now always available after voting (no sign-in gate).
+  // isAuthed=false forces anon vote path (no server-side cancel, separate rows), but notes supported.
+  const isAuthed = false;
+  const resolvedUserId = userId ?? null;
 
   const [vote, setVote] = useState<VoteValue>(null);
   const [feedbackId, setFeedbackId] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [noteSent, setNoteSent] = useState(false);
-  const [voted, setVoted] = useState(false); // anon: lock after first click
+  const [voted, setVoted] = useState(false); // lock after first click (all treated anon)
   const [sendingNote, setSendingNote] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState<ReportReason>("Explanation is unclear");
@@ -47,17 +43,6 @@ export function VoteFeedback({
   const inFlightVote = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const reportTextareaRef = useRef<HTMLTextAreaElement | null>(null);
-
-  useEffect(() => {
-    if (userId || user) return;
-    let cancelled = false;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!cancelled) setSessionUserId(data.session?.user.id ?? null);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [userId, user]);
 
   const handleClick = useCallback(
     async (clicked: 1 | -1) => {
@@ -75,17 +60,11 @@ export function VoteFeedback({
 
       inFlightVote.current = true;
       try {
-        let token: string | null = null;
-        if (isAuthed) {
-          const { data } = await supabase.auth.getSession();
-          token = data.session?.access_token ?? null;
-        }
-
+        // Auth removed: no token ever (pure anon); api accepts anon votes + notes.
         const res = await fetch("/api/feedback", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
             kind: "vote",
@@ -119,15 +98,11 @@ export function VoteFeedback({
 
     setSendingNote(true);
     try {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) return;
-
+      // Auth removed: notes allowed on anon votes too; send PATCH without token (api relaxed to accept for vote notes, user_id may be null).
       const res = await fetch("/api/feedback", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           id: feedbackId,
@@ -156,17 +131,11 @@ export function VoteFeedback({
 
     setReportStatus("sending");
     try {
-      let token: string | null = null;
-      if (isAuthed) {
-        const { data } = await supabase.auth.getSession();
-        token = data.session?.access_token ?? null;
-      }
-
+      // Auth removed: reports are anon too (no token); api accepts without auth.
       const res = await fetch("/api/feedback", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           kind: "bug",
@@ -202,12 +171,12 @@ export function VoteFeedback({
   }, [sendNote]);
 
   // Auto-focus the note textarea when it first appears so the user can
-  // immediately type without an extra click.
+  // immediately type without an extra click. (auth removed: always allow for voted)
   useEffect(() => {
-    if (isAuthed && (vote === 1 || vote === -1) && !noteSent) {
+    if ((vote === 1 || vote === -1) && !noteSent) {
       requestAnimationFrame(() => textareaRef.current?.focus());
     }
-  }, [isAuthed, vote, noteSent]);
+  }, [vote, noteSent]);
 
   useEffect(() => {
     if (reportOpen && reportStatus !== "sent") {
@@ -216,9 +185,9 @@ export function VoteFeedback({
   }, [reportOpen, reportStatus]);
 
   const showNoteForm =
-    isAuthed && (vote === 1 || vote === -1) && !noteSent && feedbackId !== null;
-  const showAnonThanks = !isAuthed && voted;
-  const showAuthedThanks = isAuthed && noteSent;
+    (vote === 1 || vote === -1) && !noteSent && feedbackId !== null;
+  // showAnonThanks removed (no more /auth "Sign in to leave a note" link)
+  const showThanks = voted || noteSent;
 
   return (
     <div className="flex flex-col items-end gap-1.5">
@@ -257,16 +226,7 @@ export function VoteFeedback({
           </svg>
         </button>
 
-        {showAnonThanks && (
-          <span className="ml-1 text-[10px] theme-text-muted">
-            Thanks!{" "}
-            <Link href="/auth" className="text-orange-600 underline hover:text-orange-700">
-              Sign in to leave a note
-            </Link>
-          </span>
-        )}
-
-        {showAuthedThanks && (
+        {showThanks && (
           <span className="ml-1 text-[10px] theme-text-muted">Thanks!</span>
         )}
 
