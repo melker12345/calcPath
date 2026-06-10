@@ -374,3 +374,62 @@ export const FileSystemContentBundleSchema = z.object({
 });
 
 export type FileSystemContentBundle = z.infer<typeof FileSystemContentBundleSchema>;
+
+// ============================================
+// Diagnostic Content (content/{slug}/diagnostic.json)
+// ============================================
+
+export const DiagnosticPrerequisiteReviewLinkSchema = z.object({
+  label: z.string().min(1),
+  href: z.string().min(1),
+});
+
+export type DiagnosticPrerequisiteReviewLink = z.infer<typeof DiagnosticPrerequisiteReviewLinkSchema>;
+
+/**
+ * A prerequisite skill area assessed by the subject diagnostic.
+ * Used for stratified sampling and readiness summaries.
+ */
+export const DiagnosticPrerequisiteSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  description: z.string().min(1),
+  reviewLinks: z.array(DiagnosticPrerequisiteReviewLinkSchema).optional(),
+});
+
+export type DiagnosticPrerequisite = z.infer<typeof DiagnosticPrerequisiteSchema>;
+
+const diagnosticQuestionFields = {
+  id: z.string().min(1),
+  prerequisiteId: z.string().min(1),
+  prompt: z.string().min(1),
+  type: ProblemTypeSchema,
+  answer: z.string().min(1),
+  choices: z.array(z.string().min(1)).optional(),
+  explanation: z.string().min(1),
+  difficulty: DifficultySchema,
+};
+
+/**
+ * A single diagnostic question entry inside diagnostic.json.
+ * Same shape as practice questions but keyed by prerequisiteId (not topicId/section).
+ */
+export const DiagnosticQuestionFileSchema = z
+  .object(diagnosticQuestionFields)
+  .refine(mcqRefine.refine, { message: mcqRefine.message, path: mcqRefine.path });
+
+export type DiagnosticQuestionFile = z.infer<typeof DiagnosticQuestionFileSchema>;
+
+/**
+ * Schema for content/{slug}/diagnostic.json — prerequisite readiness check for a target subject.
+ */
+export const DiagnosticFileSchema = z.object({
+  /** The subject slug this diagnostic prepares the learner for. */
+  targetSubject: z.string().min(1),
+  /** Number of questions to sample per session (stratified by prerequisite). */
+  sampleSize: z.number().int().positive().default(50),
+  prerequisites: z.array(DiagnosticPrerequisiteSchema).min(1),
+  questions: z.array(DiagnosticQuestionFileSchema).min(1),
+});
+
+export type DiagnosticFile = z.infer<typeof DiagnosticFileSchema>;
