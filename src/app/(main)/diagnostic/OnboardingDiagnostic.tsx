@@ -12,6 +12,7 @@ import {
   summarizeDiagnosticSkills,
   type DiagnosticQuestionResult,
 } from "@/lib/diagnostics";
+import { formatAnswerForDisplay } from "@/components/practice/PracticeFeedback";
 import { detectQuestionContext } from "@/lib/math-input-helpers";
 import { getModulesPath } from "@/lib/subject-urls";
 import { DiagnosticStatusPill } from "./DiagnosticStatusPill";
@@ -200,7 +201,7 @@ export default function OnboardingDiagnostic() {
   if (!question) return null;
 
   const progressPct = Math.round(((index + (feedback ? 1 : 0)) / diagnosticQuestions.length) * 100);
-  const answerText = question.answer.includes("$") ? question.answer : `$${question.answer}$`;
+  const answerText = formatAnswerForDisplay(question.answer);
   const overlay = feedback ? (
     <div className={`flex flex-col border-t p-4 sm:p-5 ${
       feedback.correct

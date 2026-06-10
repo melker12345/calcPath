@@ -427,7 +427,7 @@ export const DiagnosticFileSchema = z.object({
   /** The subject slug this diagnostic prepares the learner for. */
   targetSubject: z.string().min(1),
   /** Number of questions to sample per session (stratified by prerequisite). */
-  sampleSize: z.number().int().positive().default(50),
+  sampleSize: z.number().int().positive().default(24),
   prerequisites: z.array(DiagnosticPrerequisiteSchema).min(1),
   questions: z.array(DiagnosticQuestionFileSchema).min(1),
 });

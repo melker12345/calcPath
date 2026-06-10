@@ -12,6 +12,7 @@ import {
   summarizeDiagnosticPrerequisites,
   type DiagnosticQuestionResult,
 } from "@/lib/diagnostics";
+import { formatAnswerForDisplay } from "@/components/practice/PracticeFeedback";
 import { detectQuestionContext } from "@/lib/math-input-helpers";
 import { getModulesPath } from "@/lib/subject-urls";
 import { DiagnosticStatusPill } from "./DiagnosticStatusPill";
@@ -249,7 +250,7 @@ export function DiagnosticSession({
 
   const prerequisite = prerequisiteById.get(question.prerequisiteId);
   const progressPct = Math.round(((index + (feedback ? 1 : 0)) / questions.length) * 100);
-  const answerText = question.answer.includes("$") ? question.answer : `$${question.answer}$`;
+  const answerText = formatAnswerForDisplay(question.answer);
   const overlay = feedback ? (
     <div className={`flex flex-col border-t p-4 sm:p-5 ${
       feedback.correct

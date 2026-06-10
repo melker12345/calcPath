@@ -22,9 +22,26 @@ export function extractSteps(explanation: string): string[] {
   return parts.map((step) => step.replace(/\s*Final answer:.*$/, "").trim());
 }
 
+/**
+ * Format a canonical answer for MathText. Plain English MCQ labels must not be
+ * wrapped in $...$ — KaTeX math mode strips spaces and garbles prose.
+ */
+export function formatAnswerForDisplay(answer: string): string {
+  if (!answer) return "";
+  if (answer.includes("$")) return answer;
+
+  const isProse =
+    /[A-Za-z]\s+[A-Za-z]/.test(answer) ||
+    (/^[A-Za-z][A-Za-z\s.,'();:-]+$/.test(answer) && !/^[0-9+\-*/=^x().\\]+$/.test(answer));
+
+  return isProse ? answer : `$${answer}$`;
+}
+
 export function extractFinalAnswer(explanation: string, fallbackAnswer = ""): string {
   const match = explanation.match(/Final answer:\s*(.+?)\.?\s*$/);
-  return match?.[1]?.trim() || (fallbackAnswer ? `$${fallbackAnswer}$` : "");
+  const extracted = match?.[1]?.trim();
+  if (extracted) return formatAnswerForDisplay(extracted);
+  return fallbackAnswer ? formatAnswerForDisplay(fallbackAnswer) : "";
 }
 
 export function getDefaultHint(explanation: string): string {
