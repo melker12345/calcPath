@@ -36,12 +36,12 @@ export async function loadDiagnosticFile(slug: string): Promise<DiagnosticFile> 
  * Scan content/ for subjects that ship a diagnostic.json.
  * Returns slug + human label from each subject's index.json.
  */
-export async function listSubjectsWithDiagnostics(): Promise<Array<{ slug: string; label: string }>> {
+export async function listSubjectsWithDiagnostics(): Promise<Array<{ slug: string; label: string; order: number }>> {
   const fs = await import("fs/promises");
   const path = await import("path");
   const contentRoot = path.join(process.cwd(), CONTENT_DIR);
 
-  const results: Array<{ slug: string; label: string }> = [];
+  const results: Array<{ slug: string; label: string; order: number }> = [];
 
   let dirents;
   try {
@@ -62,13 +62,13 @@ export async function listSubjectsWithDiagnostics(): Promise<Array<{ slug: strin
 
     try {
       const idx = await loadSubjectIndex(d.name);
-      results.push({ slug: d.name, label: idx.label });
+      results.push({ slug: d.name, label: idx.label, order: idx.order });
     } catch {
-      results.push({ slug: d.name, label: d.name });
+      results.push({ slug: d.name, label: d.name, order: 999 });
     }
   }
 
-  results.sort((a, b) => a.label.localeCompare(b.label));
+  results.sort((a, b) => a.order - b.order);
   return results;
 }
 

@@ -43,20 +43,7 @@ export default async function DiagnosticPickerPage() {
           )}
         </div>
 
-        <div className="mt-8 space-y-3">
-          <p className="text-sm font-semibold text-zinc-900 dark:text-[var(--text-primary)]">
-            Legacy onboarding
-          </p>
-          <Link
-            href="/diagnostic/onboarding"
-            className="block rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-blue-200 hover:bg-blue-50 dark:border-[var(--border)] dark:bg-[var(--surface)] dark:hover:border-[var(--accent)] dark:hover:bg-[var(--surface-2)]"
-          >
-            <h2 className="font-bold text-zinc-900 dark:text-[var(--text-primary)]">Calculus foundations</h2>
-            <p className="mt-1 text-xs text-zinc-500 dark:text-[var(--text-muted)]">
-              Original readiness check for Limits and early calculus
-            </p>
-          </Link>
-        </div>
+
       </div>
     </div>
   );
