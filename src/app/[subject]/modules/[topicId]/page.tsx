@@ -1,13 +1,20 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { SubjectModulePage } from "@/components/subject-module-page";
 import type { ModuleContent } from "@/lib/modules";
 import type { Problem, Topic } from "@/lib/shared-types";
 import { getFileSystemContentBundle, requireSubjectConfig } from "@/lib/content/loader";
+import { getLegacyTopicRedirect } from "@/lib/content/legacy-topic-redirects";
+import { getSectionHref } from "@/lib/subject-urls";
 
 type Props = { params: Promise<{ subject: string; topicId: string }> };
 
 export default async function SubjectModulePageRoute({ params }: Props) {
   const { subject: slug, topicId } = await params;
+
+  const legacy = await getLegacyTopicRedirect(slug, topicId);
+  if (legacy) {
+    redirect(getSectionHref(slug, legacy.chapterId, legacy.section));
+  }
   let subjectLabel: string;
   try {
     const subject = await requireSubjectConfig(slug);

@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getFileSystemContentBundle } from "@/lib/content/loader";
+import { getLegacyTopicRedirect } from "@/lib/content/legacy-topic-redirects";
+import { getPracticePath } from "@/lib/subject-urls";
 import { GenericPracticeExperience } from "@/components/generic-practice-experience";
 import { PracticeErrorBoundary } from "@/components/practice/PracticeErrorBoundary";
 
@@ -12,6 +14,12 @@ interface Props {
 export default async function DynamicPracticePage({ params, searchParams }: Props) {
   const { subject: subjectSlug, topicId } = await params;
   const { section: sectionFilter } = await searchParams;
+
+  const legacy = await getLegacyTopicRedirect(subjectSlug, topicId);
+  if (legacy) {
+    const target = getPracticePath(subjectSlug, legacy.chapterId);
+    redirect(`${target}?section=${encodeURIComponent(legacy.section)}`);
+  }
 
   let bundle;
   try {
