@@ -67,6 +67,31 @@ export function summarizeDiagnosticPrerequisites(
   });
 }
 
+export function getLatestDiagnosticBySubject(
+  diagnostics: DiagnosticResult[],
+): Map<string, DiagnosticResult> {
+  const latest = new Map<string, DiagnosticResult>();
+  for (const result of diagnostics) {
+    if (result.mode !== "prerequisite" || !result.targetSubject) continue;
+    const prev = latest.get(result.targetSubject);
+    if (!prev || result.completedAt > prev.completedAt) {
+      latest.set(result.targetSubject, result);
+    }
+  }
+  return latest;
+}
+
+export function getDiagnosticHistoryForSubject(
+  diagnostics: DiagnosticResult[],
+  targetSubject: string,
+  limit = 5,
+): DiagnosticResult[] {
+  return diagnostics
+    .filter((r) => r.mode === "prerequisite" && r.targetSubject === targetSubject)
+    .sort((a, b) => b.completedAt.localeCompare(a.completedAt))
+    .slice(0, limit);
+}
+
 export function getRecommendedPrerequisiteAction(
   summaries: DiagnosticPrerequisiteSummary[],
   prerequisites: DiagnosticPrerequisite[],

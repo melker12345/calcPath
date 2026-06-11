@@ -1,4 +1,5 @@
 import { getDashboardDataForSubject, getAvailableSubjectConfigs } from "@/lib/content/loader";
+import { listSubjectsWithDiagnostics } from "@/lib/content/diagnostic-loader";
 import type { Problem, Topic } from "@/lib/shared-types";
 import { DashboardShell } from "./DashboardShell";
 
@@ -18,7 +19,10 @@ export default async function UnifiedDashboard() {
   // + top-level lifetime caches in loader for bundles + structures.
   // Full fidelity kept: same problem IDs, same section slugs, full counts+chapters even for untouched subjects (UI shows correct 0/N and all expandables).
   // Progress, per-section, aggregates unaffected (DashboardContent + progress.ts unchanged).
-  const subjectList = await getAvailableSubjectConfigs();
+  const [subjectList, diagnosticSubjects] = await Promise.all([
+    getAvailableSubjectConfigs(),
+    listSubjectsWithDiagnostics(),
+  ]);
   const loads = await Promise.all(
     subjectList.map(async (s) => {
       const data = await getDashboardDataForSubject(s.slug).catch(() => ({
@@ -36,6 +40,10 @@ export default async function UnifiedDashboard() {
   }
 
   return (
-    <DashboardShell realData={realData} subjectConfigs={subjectList} />
+    <DashboardShell
+      realData={realData}
+      subjectConfigs={subjectList}
+      diagnosticSubjects={diagnosticSubjects}
+    />
   );
 }

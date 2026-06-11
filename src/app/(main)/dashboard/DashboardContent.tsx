@@ -11,6 +11,14 @@ import {
   type ProgressState,
 } from "@/lib/progress";
 import type { Topic, Problem } from "@/lib/shared-types";
+import {
+  getDiagnosticHistoryForSubject,
+  getLatestDiagnosticBySubject,
+  getRecommendedPrerequisiteAction,
+  type DiagnosticResult,
+} from "@/lib/diagnostics";
+import { DiagnosticStatusPill } from "@/app/(main)/diagnostic/DiagnosticStatusPill";
+import type { DiagnosticSubjectMeta } from "./DashboardShell";
 
 type SlimModule = { topicId: string; sections: Array<{ title: string; section?: string }> };
 
@@ -205,6 +213,175 @@ function ChapterRow({
   );
 }
 
+function formatDiagnosticDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function DiagnosticSubjectCard({
+  slug,
+  label,
+  icon,
+  latest,
+  history,
+}: {
+  slug: string;
+  label: string;
+  icon?: string;
+  latest?: DiagnosticResult;
+  history: DiagnosticResult[];
+}) {
+  const summaries = latest?.prerequisiteSummaries ?? [];
+  const action =
+    summaries.length > 0
+      ? getRecommendedPrerequisiteAction(summaries, summaries.map((s) => s.prerequisite), slug)
+      : null;
+  const score = latest?.score;
+  const total = latest?.total;
+  const scorePct =
+    score != null && total != null && total > 0 ? Math.round((score / total) * 100) : null;
+
+  const trend =
+    history.length > 1
+      ? [...history]
+          .reverse()
+          .map((attempt) =>
+            attempt.score != null && attempt.total != null
+              ? `${attempt.score}/${attempt.total}`
+              : null,
+          )
+          .filter((value): value is string => value !== null)
+      : [];
+
+  return (
+    <div className="flex h-full flex-col rounded-xl border theme-border theme-surface p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            {icon ? (
+              <span className="text-lg leading-none" aria-hidden>
+                {icon}
+              </span>
+            ) : null}
+            <h3 className="truncate text-base font-semibold theme-text">{label}</h3>
+          </div>
+          {latest ? (
+            <p className="mt-1 text-xs theme-text-muted">
+              Last taken {formatDiagnosticDate(latest.completedAt)}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs theme-text-muted">Not taken yet</p>
+          )}
+        </div>
+        {scorePct != null ? (
+          <div className="shrink-0 text-right">
+            <div className="text-2xl font-bold tabular-nums theme-text">{scorePct}%</div>
+            <div className="text-xs tabular-nums theme-text-muted">
+              {score}/{total} correct
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {summaries.length > 0 ? (
+        <div className="mt-4 grid gap-2">
+          {summaries.map((summary) => (
+            <div
+              key={summary.prerequisite.id}
+              className="flex items-center justify-between gap-2 rounded-lg border theme-border bg-[var(--surface)] px-3 py-2"
+            >
+              <span className="min-w-0 truncate text-sm theme-text">{summary.prerequisite.label}</span>
+              <div className="flex shrink-0 items-center gap-2">
+                {summary.total > 0 ? (
+                  <span className="text-xs tabular-nums theme-text-muted">
+                    {summary.correct}/{summary.total}
+                  </span>
+                ) : null}
+                <DiagnosticStatusPill status={summary.status} />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-4 text-sm leading-relaxed theme-text-muted">
+          A short readiness check samples prerequisite skills before you dive into {label}.
+        </p>
+      )}
+
+      {trend.length > 1 ? (
+        <p className="mt-3 text-xs theme-text-muted">
+          <span className="font-medium theme-text-secondary">Recent scores:</span>{" "}
+          <span className="tabular-nums">{trend.join(" → ")}</span>
+        </p>
+      ) : null}
+
+      <div className="mt-4 flex flex-wrap gap-2 text-sm">
+        <Link
+          href={`/diagnostic/${slug}`}
+          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 font-medium text-white transition hover:opacity-90"
+        >
+          {latest ? "Retake diagnostic" : "Take diagnostic"}
+        </Link>
+        {action && latest ? (
+          <Link
+            href={action.href}
+            className="rounded-lg border theme-border px-3 py-1.5 font-medium theme-text-secondary transition hover:bg-[var(--surface-2)]"
+          >
+            {action.label}
+          </Link>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function DiagnosticProgressSection({
+  diagnosticSubjects,
+  diagnostics,
+  subjectConfigs,
+}: {
+  diagnosticSubjects: DiagnosticSubjectMeta[];
+  diagnostics: DiagnosticResult[];
+  subjectConfigs: NavSubject[];
+}) {
+  if (diagnosticSubjects.length === 0) return null;
+
+  const latestBySubject = getLatestDiagnosticBySubject(diagnostics);
+  const iconBySlug = new Map(subjectConfigs.map((subject) => [subject.slug, subject.icon]));
+
+  return (
+    <section className="mb-8">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold theme-text">Prerequisite diagnostics</h2>
+          <p className="mt-1 text-sm theme-text-muted">
+            Readiness checks for subjects with prerequisite pools. Retakes update your latest map.
+          </p>
+        </div>
+        <Link href="/diagnostic" className="text-sm font-medium text-[var(--accent)] hover:underline">
+          All diagnostics →
+        </Link>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {diagnosticSubjects.map((subject) => (
+          <DiagnosticSubjectCard
+            key={subject.slug}
+            slug={subject.slug}
+            label={subject.label}
+            icon={iconBySlug.get(subject.slug)}
+            latest={latestBySubject.get(subject.slug)}
+            history={getDiagnosticHistoryForSubject(diagnostics, subject.slug)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function SubjectRow({
   subject,
   isExpanded,
@@ -315,13 +492,19 @@ function SubjectRow({
 export default function DashboardContent({
   realData,
   subjectConfigs,
+  diagnosticSubjects,
 }: {
   realData?: DashboardRealData;
   subjectConfigs?: NavSubject[];
+  diagnosticSubjects?: DiagnosticSubjectMeta[];
 }) {
   return (
     <AppStateProviders>
-      <DashboardInner realData={realData} subjectConfigs={subjectConfigs} />
+      <DashboardInner
+        realData={realData}
+        subjectConfigs={subjectConfigs}
+        diagnosticSubjects={diagnosticSubjects}
+      />
     </AppStateProviders>
   );
 }
@@ -329,9 +512,11 @@ export default function DashboardContent({
 function DashboardInner({
   realData,
   subjectConfigs,
+  diagnosticSubjects = [],
 }: {
   realData?: DashboardRealData;
   subjectConfigs?: NavSubject[];
+  diagnosticSubjects?: DiagnosticSubjectMeta[];
 }) {
   const { progress } = useProgress();
   const [expandedSubjects, setExpandedSubjects] = useState<Record<string, boolean>>({});
@@ -428,6 +613,12 @@ function DashboardInner({
           Expand a subject for chapters, then a chapter for topics and practice links.
         </p>
       </div>
+
+      <DiagnosticProgressSection
+        diagnosticSubjects={diagnosticSubjects}
+        diagnostics={progress.diagnostics}
+        subjectConfigs={activeSubjects}
+      />
 
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
         <div className="theme-card-light theme-border p-4 sm:p-5">
