@@ -44,7 +44,7 @@ export default async function SubjectsPage() {
 
             <div className="flex flex-wrap gap-1">
               <Link
-                href={`/${subject.slug}/modules`}
+                href={`/${subject.slug}`}
                 className="inline-flex items-center justify-center rounded-md px-2 py-0.5 text-[10px] font-medium text-zinc-600 transition hover:text-zinc-900 active:scale-[0.985] dark:text-zinc-400 dark:hover:text-white"
               >
                 Chapters

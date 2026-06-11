@@ -10,6 +10,7 @@ import type { Problem, Topic } from "@/lib/shared-types";
 import type { ModuleContent, ModuleSection, WorkedExample } from "@/lib/modules";
 import { SubjectBreadcrumbs } from "@/components/subject-breadcrumbs";
 import { MdxContent } from "@/components/mdx-content";
+import { getSubjectPath } from "@/lib/subject-urls";
 
 /**
  * Dual-support for legacy ModuleContent[] (from src/lib/modules/ tree) and the
@@ -87,8 +88,8 @@ export function SubjectModulePage({
     return (
       <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
         <p className="text-sm text-stone-600">Module not found.</p>
-        <Link className="btn-secondary mt-4 inline-flex" href={`/${subjectSlug}/modules`}>
-          Back to {subjectLabel} modules
+        <Link className="btn-secondary mt-4 inline-flex" href={getSubjectPath(subjectSlug)}>
+          Back to {subjectLabel} contents
         </Link>
       </div>
     );
@@ -111,7 +112,7 @@ export function SubjectModulePage({
             />
             <Link
               className="text-sm text-blue-800 hover:underline"
-              href={`/${subjectSlug}/modules`}
+              href={getSubjectPath(subjectSlug)}
               data-no-print
             >
               Back to {subjectLabel} contents

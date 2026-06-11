@@ -8,7 +8,7 @@ export function getSubjectPath(slug: string): string {
 }
 
 export function getModulesPath(slug: string, topicId?: string): string {
-  return topicId ? `/${slug}/modules/${topicId}` : `/${slug}/modules`;
+  return topicId ? `/${slug}/modules/${topicId}` : getSubjectPath(slug);
 }
 
 export function getPracticePath(slug: string, topicId?: string): string {

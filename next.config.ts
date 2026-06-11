@@ -19,10 +19,8 @@ const nextConfig: NextConfig = {
       { source: "/practice/:topicId", destination: "/calculus/practice/:topicId", permanent: true },
       { source: "/test/:topicId", destination: "/calculus/test/:topicId", permanent: true },
 
-      // Removed redundant modules index pages — redirect to subject home (new canonical chapter list)
-      { source: "/calculus/modules", destination: "/calculus", permanent: true },
-      { source: "/linear-algebra/modules", destination: "/linear-algebra", permanent: true },
-      { source: "/statistics/modules", destination: "/statistics", permanent: true },
+      // Redundant modules index — canonical chapter list lives at /[subject]
+      { source: "/:subject/modules", destination: "/:subject", permanent: true },
 
       // { source: "/dashboard", destination: "/calculus/dashboard", permanent: true }, // disabled - now points to unified dashboard
     ];
