@@ -12,7 +12,7 @@ import {
   summarizeDiagnosticPrerequisites,
   type DiagnosticQuestionResult,
 } from "@/lib/diagnostics";
-import { formatAnswerForDisplay } from "@/components/practice/PracticeFeedback";
+import { formatAnswerForDisplay, ProgressDots, type QuestionStatus } from "@/components/practice";
 import { detectQuestionContext } from "@/lib/math-input-helpers";
 import { getModulesPath } from "@/lib/subject-urls";
 import { DiagnosticStatusPill } from "./DiagnosticStatusPill";
@@ -78,6 +78,23 @@ export function DiagnosticSession({
     () => (question ? detectQuestionContext(question.prompt) : undefined),
     [question],
   );
+
+  const questionStatuses = useMemo<QuestionStatus[]>(
+    () =>
+      questions.map((_, i) => {
+        const result = currentResults[i];
+        if (!result) return "not-attempted";
+        return result.correct ? "solved" : "wrong";
+      }),
+    [questions, currentResults],
+  );
+
+  const selectQuestion = (i: number) => {
+    if (i >= currentResults.length) return;
+    setIndex(i);
+    setAnswer("");
+    setFeedback({ correct: currentResults[i].correct });
+  };
 
   const start = () => {
     setIndex(0);
@@ -249,7 +266,6 @@ export function DiagnosticSession({
   if (!question) return null;
 
   const prerequisite = prerequisiteById.get(question.prerequisiteId);
-  const progressPct = Math.round(((index + (feedback ? 1 : 0)) / questions.length) * 100);
   const answerText = formatAnswerForDisplay(question.answer);
   const overlay = feedback ? (
     <div className={`flex flex-col border-t p-4 sm:p-5 ${
@@ -304,16 +320,17 @@ export function DiagnosticSession({
   return (
     <div className="mx-auto w-full max-w-3xl px-0 pb-0 sm:px-6 sm:py-10">
       <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-end bg-white px-4 pb-1 pt-2 dark:bg-[var(--bg)] sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg dark:sm:shadow-none">
-        <div className="flex items-center gap-3">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-[var(--surface-2)]">
-            <div
-              className="h-full rounded-full bg-slate-900 dark:bg-white transition-all duration-500"
-              style={{ width: `${progressPct}%` }}
+        <div className="flex w-full justify-center">
+          <div className="flex items-center gap-2">
+            <ProgressDots
+              statuses={questionStatuses}
+              currentIndex={index}
+              onSelect={selectQuestion}
             />
+            <span className="shrink-0 text-xs font-semibold tabular-nums text-slate-400 dark:text-[var(--text-muted)]">
+              {index + 1} / {questions.length}
+            </span>
           </div>
-          <span className="shrink-0 text-xs font-semibold tabular-nums text-slate-400 dark:text-[var(--text-muted)]">
-            {index + 1} / {questions.length}
-          </span>
         </div>
 
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-5">
