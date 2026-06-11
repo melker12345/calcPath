@@ -279,6 +279,39 @@ const nearlyEqual = (a: number, b: number, eps = 1e-6) => {
   return diff / scale <= eps;
 };
 
+/** Decimal places in a normalized numeric literal, e.g. "5.477" -> 3. */
+const decimalPlaces = (expr: string): number | null => {
+  const match = expr.match(/^-?(\d+)\.(\d+)$/);
+  return match ? match[2].length : null;
+};
+
+/**
+ * Tolerance for comparing two scalar values when at least one side is a
+ * rounded decimal. Allows 5.477 and 5.48 against sqrt(30) etc.
+ */
+const scalarComparisonTolerance = (aPrepared: string, bPrepared: string): number => {
+  const aPlaces = decimalPlaces(aPrepared);
+  const bPlaces = decimalPlaces(bPrepared);
+  if (aPlaces !== null || bPlaces !== null) {
+    // Half-unit tolerance at the least-precise decimal literal (standard rounding).
+    const places = Math.min(aPlaces ?? 12, bPlaces ?? 12);
+    return 0.5 * 10 ** -places;
+  }
+  return 1e-4;
+};
+
+const scalarNumericEquivalent = async (aExpr: string, bExpr: string): Promise<boolean> => {
+  const m = await getMath();
+  const aPrepared = prepareExpressionForEvaluation(aExpr);
+  const bPrepared = prepareExpressionForEvaluation(bExpr);
+  const aVal = tryEval(m, aPrepared, {});
+  const bVal = tryEval(m, bPrepared, {});
+  if (aVal === null || bVal === null) return false;
+  const tol = scalarComparisonTolerance(aPrepared, bPrepared);
+  // Absolute tolerance only — relative scaling would accept answers far too loose.
+  return Math.abs(aVal - bVal) <= tol;
+};
+
 const tryEval = (m: any, expr: string, scope: Record<string, number>) => {
   try {
     const v = m.evaluate(expr, scope);
@@ -360,6 +393,8 @@ export const isAnswerCorrectAsync = async (userInput: string, expected: string) 
   const aNoC = stripTrailingConstant(a);
   const bNoC = stripTrailingConstant(b);
   if (aNoC === bNoC) return true;
+
+  if (await scalarNumericEquivalent(aNoC, bNoC)) return true;
 
   const allowConstantOffset = /\+?c$/i.test(b);
   return expressionsEquivalent(aNoC, bNoC, allowConstantOffset);
