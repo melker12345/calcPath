@@ -106,6 +106,21 @@ function deriveKeys(
       case "a":
       case "z":
       case "p":
+      case "s":
+      case "r":
+      case "u":
+      case "v":
+      case "w":
+      case "k":
+      case "m":
+      case "h":
+      case "d":
+      case "f":
+      case "g":
+      case "l":
+      case "q":
+      case "c":
+      case "b":
       case "C":
       case "A":
       case "B":
