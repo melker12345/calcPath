@@ -1,0 +1,390 @@
+---
+title: Network Information Theory
+---
+
+# Network Information Theory
+
+Multiple-access and broadcast channels, network coding, common randomness, and the Blahut–Arimoto algorithm.
+
+A multiple-access channel (MAC) has several independent transmitters sending to a single receiver over a shared medium. The receiver observes a superposition (or other combination) of the transmitted signals plus noise. The fundamental question is the set of rate pairs (R1, R2, …) at which the senders can reliably communicate their independent messages.
+
+The MAC is the simplest non-trivial network in information theory and introduces the concept of a capacity region rather than a single capacity number.
+
+## The Multiple-Access Channel Model
+
+<!-- section: mac-model -->
+
+Two (or more) encoders observe independent messages W1, W2 and produce channel inputs X1^n, X2^n according to their codebooks. The channel is a conditional p(y | x1, x2, …). The single decoder, upon receiving Y^n, must recover both messages with high probability.
+
+Classic example: the Gaussian MAC Y = X1 + X2 + Z, Z ~ N(0,N), with power constraints E[Xi²] ≤ Pi.
+
+**ELI5**
+
+- Two people shouting messages at the same time to one listener over a noisy room. The listener hears the sum of voices plus background noise and must disentangle who said what.
+- The 'channel' is the acoustics that mix the voices; the listener's job is joint decoding.
+
+**Worked Example:**
+
+In the binary adder MAC, Xi ∈ {0,1}, Y = X1 + X2 (mod 2 or integer sum). Even the mod-2 version has an interesting region; the integer-sum version is a classic example where joint decoding helps.
+
+## Capacity Region for the Two-User MAC
+
+<!-- section: capacity-region -->
+
+The capacity region of the two-user MAC is the convex closure of all rate pairs (R1,R2) satisfying
+
+R1 ≤ I(X1; Y | X2)
+
+R2 ≤ I(X2; Y | X1)
+
+R1 + R2 ≤ I(X1,X2; Y)
+
+for some product distribution p(x1)p(x2) (independent codebooks). Time-sharing convexifies the region.
+
+For the Gaussian MAC the region is a pentagon whose corner points are achieved by treating one user as noise or by successive interference cancellation (SIC) ordering.
+
+**ELI5**
+
+- Each user has a 'private' rate limited by what the other user's signal looks like (as side information at the decoder).
+- Together they cannot exceed the mutual information when both inputs are considered as a single super-input.
+- The sum-rate bound is the total 'pipe' capacity when the two users cooperate in choosing their signals.
+
+**Worked Example:**
+
+Gaussian MAC, P1=P2=P, noise N=1. The sum capacity is ½ log(1 + 2P/N) when both transmit at full power. Individual bounds R1 ≤ ½ log(1 + P/(P+N)) when the other is treated as noise. The region is the pentagon connecting (0, ½ log(1+2P)), the two SIC points, and (½ log(1+P/N),0) etc.
+
+## Coding Strategies: Joint Decoding and SIC
+
+<!-- section: coding-strategies -->
+
+With independent codebooks, the decoder can use joint typicality decoding: look for the unique pair (codeword1, codeword2) jointly typical with Y^n.
+
+Successive interference cancellation (SIC): decode the stronger user first treating the other as noise, subtract its contribution, then decode the weaker user on the clean channel.
+
+SIC achieves the corner points of the capacity region; rate-splitting or time-sharing fills the rest. For more than two users, more sophisticated strategies (compute-forward, etc.) are studied.
+
+**ELI5**
+
+- Joint decoding: the listener considers all possible pairs of messages and picks the pair whose combined voices best match what was heard.
+- SIC: 'First understand the loud person, write it down, subtract that voice from the recording, then understand the quiet person on the cleaned-up tape.'
+
+**Worked Example:**
+
+In the Gaussian MAC with P1 >> P2, decode user 1 first (its SINR is high), subtract \hat X1 from Y, then decode user 2 on essentially noise-only channel. This achieves R1 ≈ ½ log(1+P1/N), R2 ≈ ½ log(1+P2/N) which is the sum-rate corner when the strong user is decoded first.
+
+## Common Mistakes
+
+- **Thinking the MAC capacity region is always a rectangle**: Only when the users do not interfere (orthogonal channels) is it a rectangle; otherwise there is a sum-rate tradeoff.
+- **Using the same code as for a single-user channel without accounting for interference**: Treating the other user purely as noise is suboptimal except at the corner points.
+- **Confusing the MAC with the broadcast channel**: In MAC multiple senders → one receiver; in broadcast one sender → multiple receivers with possibly different channels.
+- **Assuming independent codebooks are always optimal**: For some MACs (deterministic) correlation can help, but for the standard memoryless MAC independent inputs suffice for the capacity region.
+- **Forgetting that the capacity region is for asymptotically long blocks**: For finite n there is a penalty and practical systems use HARQ, power control, and scheduling on top of the information-theoretic region.
+- **Believing SIC always requires the stronger user to be decoded first in every realization**: In information theory we consider average power and typical sets; practical SIC adapts ordering or uses joint decoding for robustness.
+
+A broadcast channel (BC) has a single transmitter sending one or more messages to several receivers. Each receiver observes its own (possibly different) noisy version of the transmitted signal. The goal is to characterize the set of rates at which the transmitter can send private messages to each receiver (and possibly a common message to all).
+
+The broadcast channel is the dual of the multiple-access channel and introduces superposition and binning ideas central to network information theory.
+
+## Broadcast Channel Model
+
+<!-- section: bc-model -->
+
+One encoder maps messages (W0 common, W1 private to receiver 1, W2 to receiver 2, …) into a single channel input X^n. Receiver i observes Y_i^n ~ p(y_i | x) (the marginal channels may differ) and must recover its intended messages.
+
+The capacity region is the set of achievable rate tuples (R0, R1, R2, …).
+
+The most important special case is the degraded broadcast channel in which the receivers can be ordered so that one is a stochastically degraded version of the other.
+
+**ELI5**
+
+- One radio tower broadcasting a signal; some listeners have good antennas (strong channel), others have poor reception (weak channel). The tower must send content that the good listeners can decode extra private parts while the weak listeners at least get the basic common program.
+- The physics of the channels to different listeners are different and usually nested (degraded).
+
+**Worked Example:**
+
+A Gaussian broadcast channel: Y1 = X + Z1, Y2 = X + Z2 with Var(Z1) < Var(Z2) (receiver 1 has better SNR). The transmitter has power constraint P. Receiver 1 can support higher rates than receiver 2.
+
+## Degraded Broadcast Channel and Capacity Region
+
+<!-- section: degraded-bc -->
+
+For the degraded BC the capacity region (with common and two private messages) is known and achieved by superposition. The bounds involve auxiliary random variables U (the 'cloud center' for the weaker user) satisfying the Markov chain U — X — (Y1, Y2) with appropriate degradation.
+
+The private rates satisfy expressions such as R2 ≤ I(U; Y2), R1 ≤ I(X; Y1 | U), R0 + R2 ≤ I(U; Y2), etc., maximized over p(u,x).
+
+**ELI5**
+
+- The weaker receiver can only 'see' the coarse cloud centers U; the stronger receiver can resolve the fine 'satellite' points X inside each cloud.
+- This gives the weaker user its message 'for free' from the cloud index while the strong user gets both its private message and the weak user's as side information.
+
+**Worked Example:**
+
+In the Gaussian BC, the optimal auxiliary U is a scaled version of X with power αP allocated to the 'common/weak' layer; the remainder (1-α)P is for the private strong layer. The resulting region is the union over α ∈ [0,1] of the rate pairs satisfying the mutual information expressions with the effective SNRs.
+
+## Superposition Coding
+
+<!-- section: superposition-coding -->
+
+The transmitter generates two codebooks: a coarse codebook for the weak user's message (cloud centers) and, for each cloud center, a fine codebook of satellites for the strong user's message. The transmitted X is the satellite point.
+
+The weak receiver decodes only the cloud center (treating satellites as noise). The strong receiver first decodes the cloud center (using its better channel), subtracts it, then decodes its own satellite.
+
+This is dual to SIC on the MAC and achieves every point in the capacity region of the degraded BC.
+
+**ELI5**
+
+- Imagine sending a 'base layer' that the poor receiver can just barely understand, plus 'enhancement layers' that only the good receiver can peel off on top of the base.
+- The enhancement is hidden inside the 'noise' that the weak receiver already has to tolerate.
+
+**Worked Example:**
+
+With power split αP for base (weak), (1-α)P for enhancement. Weak receiver sees effective SNR αP / ((1-α)P + N2); strong sees full power after cancelling base. Rates follow from the Gaussian capacity formula on the effective channels.
+
+## Common Mistakes
+
+- **Assuming the broadcast capacity region is always the intersection of the individual point-to-point capacities**: That would be too pessimistic; superposition lets the strong user get extra rate 'on top' without hurting the weak user as much as orthogonal allocation would.
+- **Confusing superposition with time-sharing**: Time-sharing is a simple inner bound; superposition strictly enlarges the region for non-degraded or even some degraded channels.
+- **Thinking the same codebook is sent to everyone**: The encoding uses auxiliary variables; the actual X carries a combination of messages in a structured way.
+- **Forgetting the common message**: Many treatments focus on private messages only; adding a common message R0 changes the bounds and is important for video multicast etc.
+- **Believing all broadcast channels have known capacity regions**: Only degraded (and a few other classes such as more capable, less noisy) BCs have single-letter capacity regions; the general BC capacity is still open.
+- **Ignoring that practical broadcast systems use layered video + unequal error protection rather than pure information-theoretic superposition**: The principle is the same, but implementation uses scalable codecs and different modulation/coding per layer.
+
+In traditional packet networks, intermediate routers only store and forward packets. Network coding allows (or requires) routers to compute linear combinations (or other functions) of the packets they receive and forward the combinations. For multicast traffic this can achieve higher throughput than routing alone; the classic gain is demonstrated by the butterfly network.
+
+Network coding sits at the intersection of information theory, graph theory, and algebra; random linear network coding makes it practical in large networks.
+
+## Store-and-Forward vs Network Coding
+
+<!-- section: store-forward-vs-nc -->
+
+Under pure routing, each edge carries a copy of some source packet (or a duplicate). The max-flow min-cut theorem gives the maximum rate from one source to one sink, but for multiple sinks the routing rate may be strictly less than the cut value.
+
+With network coding, an edge can carry a function (typically linear combination over a finite field) of several packets. This 'mixing' lets information flow more efficiently to multiple destinations that need different subsets of the data.
+
+**ELI5**
+
+- Routing is like delivering whole letters or whole boxes; each truck on a road carries one intact box.
+- Network coding is like allowing the post office to open the boxes, mix the contents (say take the XOR of two letters), and send the mixture onward. The recipients, having side information, can still recover everything.
+
+**Worked Example:**
+
+In a network where two sources S1 S2 want to reach two sinks T1 T2, and the only paths cross on a bottleneck edge of capacity 1, routing can deliver at most rate 1 total (one source or the other, or half each), while coding on the bottleneck can deliver rate 1 to each sink (see butterfly).
+
+## The Butterfly Network Example
+
+<!-- section: butterfly -->
+
+The canonical butterfly: sources S1 and S2 each produce one packet (say bits a and b). Two edge-disjoint paths from S1 to T1 and from S2 to T2, plus a cross path through a central node C that has only unit capacity to both T1 and T2.
+
+With routing, C can forward either a or b but not both in one use; at least one sink gets only rate 1/2 or one message is lost.
+
+With network coding, C forwards a+b (over GF(2)). T1 receives a (direct) and a+b, recovers b = a + (a+b). T2 symmetrically recovers a. Both sinks get both packets at rate 1 each; the bottleneck carried 'one packet worth' of information that served both.
+
+**ELI5**
+
+- The middle link sends a 'mixture' a+b. The guy who already has a can subtract to get b; the guy who has b can subtract to get a.
+- One transmission on the scarce middle link satisfies the missing piece for two different people.
+
+**Worked Example:**
+
+Packets a from S1, b from S2. C computes and sends a XOR b. T1 has direct a, receives a⊕b → computes b. T2 has direct b, receives a⊕b → computes a. Total throughput 2 packets across a min-cut of 2 (but routing would need 3 edge uses or drop rate).
+
+## Linear Network Coding and Throughput
+
+<!-- section: linear-nc -->
+
+For multicast (one source, many sinks wanting the same data), linear network coding over a sufficiently large field achieves the max-flow min-cut rate to every sink simultaneously — something routing cannot always do.
+
+Each edge carries a linear combination of the source packets; the coefficients can be chosen centrally (algebraic NC) or randomly (random linear NC, with high probability invertible at the sinks when field is large).
+
+Decoding at a sink reduces to solving a linear system whose matrix is the product of the local coding matrices along the paths; the sink needs the matrix to be full rank.
+
+**ELI5**
+
+- Each packet on the wire is a 'recipe' — a vector of coefficients telling how much of each original source packet is mixed in.
+- At the destination you collect enough independent recipes; linear algebra (Gaussian elimination) recovers the original ingredients.
+
+**Worked Example:**
+
+Source has k packets (a vector in F_q^k). Each internal node chooses random coefficients and outputs the corresponding linear combo. After receiving k independent combinations (the global encoding vectors form an invertible matrix), the sink inverts the matrix and obtains the original k packets. For q large enough or with high probability for random choice, success probability →1.
+
+## Common Mistakes
+
+- **Thinking network coding always doubles throughput**: The gain is topology-dependent; in some networks (trees) coding gives no gain over routing; the butterfly is the smallest example with gain 2.
+- **Confusing network coding with source or channel coding**: Network coding operates on packets at intermediate nodes; it is orthogonal and can be composed with end-to-end source/channel coding.
+- **Assuming the field size can be arbitrarily small**: For linear NC to achieve capacity, the field must be large enough relative to the number of sinks or edges; GF(2) sometimes works but not always.
+- **Forgetting header overhead for coefficients**: In random linear NC the coding vector (coefficients) must be sent with the packet or known by other means; this overhead vanishes asymptotically but matters for small generations.
+- **Believing coding is only for multicast**: While the big theorem is for multicast, network coding ideas (including index coding, functional compression, compute-forward) apply to many other traffic patterns and have practical uses in wireless (COPE, MORE) and distributed storage.
+- **Ignoring that practical deployments use generation-based or sliding-window NC rather than the block model of the theorems**: Real systems chunk data into generations to keep matrices small and decoding delay low.
+
+Common randomness refers to the problem of generating or extracting identical random bits that are shared among two or more parties, often when the parties observe correlated but noisy versions of some source or communicate over noisy channels. The extracted bits should be nearly uniform and independent of any eavesdropper's view (when privacy is required).
+
+This area sits at the intersection of information theory, cryptography, and communication complexity. It underlies secret-key agreement, privacy amplification, randomness extraction, and certain physical-layer security schemes.
+
+## The Common Randomness Generation Problem
+
+<!-- section: cr-problem -->
+
+Two parties, Alice and Bob, observe correlated random variables X and Y (e.g., repeated independent draws from a joint distribution p(x,y), or the inputs and outputs of a noisy channel). They may also have access to a public (authenticated but eavesdropped) communication channel.
+
+Their goal is to output identical strings K_A and K_B that are (almost) uniformly random and (almost) independent of any side information Z that an eavesdropper may possess.
+
+When communication is free and unlimited, the maximum rate of common randomness that can be generated is the mutual information I(X;Y) (or more precisely the supremum of I(U;V) over auxiliaries with the right Markov chains). With rate-limited communication the problem becomes a rate region.
+
+**ELI5**
+
+- Alice and Bob each see a noisy version of the same underlying 'coin flips' or 'fading coefficients.' By talking over a public line they can reconcile their views and distill a shorter string of bits that both hold exactly and that an eavesdropper who saw the conversation and maybe one of the noisy observations still cannot predict.
+- The distilled bits can be used as a shared secret key or as a source of shared randomness for coordination.
+
+**Worked Example:**
+
+X and Y are the inputs and outputs of a binary symmetric channel with crossover p. Alice sends her X over the public channel (or a compressed/syndrome version). Bob uses his Y and the communication to recover X (or a function of X). The common string can be X itself (if communication is free) or a shorter extracted version.
+
+## Secret Key Agreement from Common Randomness
+
+<!-- section: key-agreement -->
+
+When an eavesdropper Eve observes Z correlated with (X,Y), the goal is often secret key agreement: produce K that is uniform, identical at Alice and Bob, and I(K; communication, Z) ≈ 0 (Eve learns essentially nothing about K).
+
+The secret-key rate is bounded by the mutual information quantities I(X;Y) - I(X;Z) or more refined expressions involving auxiliary variables (Csiszár–Körner). For the wiretap channel (no public discussion) the secrecy capacity is max I(U;Y) - I(U;Z) over U–X–(Y,Z).
+
+Achievability uses reconciliation (error correction to make Alice's and Bob's strings identical) followed by privacy amplification (hashing to remove Eve's information).
+
+**ELI5**
+
+- Alice and Bob start with some 'raw' shared uncertainty (I(X;Y)) that Eve also partially sees (I(X;Z)). They first correct the differences in their views (reconciliation), then hash the corrected string down to a shorter key whose bits are unpredictable to Eve (privacy amplification).
+- The net rate of secure key they can distill is limited by how much 'advantage' they have over Eve: the mutual information gap.
+
+**Worked Example:**
+
+Binary source with Alice observing X, Bob Y = X ⊕ Z1, Eve Z = X ⊕ Z2, independent Bernoullis. After reconciliation (sending syndromes) they hold a common string W whose entropy is close to H(X|Y). Privacy amplification with a universal hash extracts a key of length roughly H(W) - H(W|Z, communication) bits that is nearly uniform and secret from Eve.
+
+## Randomness Extraction and Privacy Amplification
+
+<!-- section: extraction-amplification -->
+
+A randomness extractor is a function Ext(X, S) (S a short random seed) such that when X has sufficient min-entropy, Ext(X,S) is close to uniform even conditioned on S.
+
+Strong extractors (output independent of the seed) are used for privacy amplification: after reconciliation Alice and Bob apply the same extractor (or a randomness condenser followed by hashing) to their common string using a short public random seed; the output is uniform and independent of Eve's entire view (including the seed).
+
+Leftover-hash lemma: if W has min-entropy k and we apply a universal hash to an m-bit output with m ≤ k - 2 log(1/ε), the output is ε-close to uniform even given the seed and Eve's side information.
+
+**ELI5**
+
+- After Alice and Bob have made their strings identical (but Eve still has some partial information), they both run the same public hash function on the string. If the string had enough uncertainty left, the hash output looks like fresh random bits to everyone, including Eve.
+- The seed for the hash can be sent in the clear; strong extractors guarantee that the output is uniform even given the seed.
+
+**Worked Example:**
+
+W is a 256-bit string with min-entropy at least 200 bits from Eve's perspective. Alice and Bob pick a public random 128-bit seed S for a universal hash family (e.g., polynomial evaluation over GF(2^128)) and output the 128-bit hash value. By the leftover-hash lemma the output is within 2^{-20} or better of uniform and independent of (S, Eve's view).
+
+## Applications: Key Distribution, Correlation, and Communication
+
+<!-- section: applications-cr -->
+
+Common-randomness primitives are used for:
+- Information-theoretic secret-key agreement over noisy channels or quantum channels (quantum key distribution can be viewed as a form of common-randomness distillation).
+- Coordinated actions without communication: two parties that share common randomness can choose the same random codebook, the same time slot, the same hash function, etc.
+- Wireless physical-layer security, localization, and authentication (shared randomness from channel reciprocity).
+- Distributed simulation and coordination complexity: the amount of common randomness needed to simulate a joint distribution with limited communication.
+- Explicit constructions of extractors, condensers, and Ramsey graphs from common-randomness ideas.
+
+In the asymptotic regime the rates are characterized by mutual information quantities; for finite block length one uses smooth min-entropy, one-shot bounds, and second-order analysis.
+
+**ELI5**
+
+- Two wireless devices that see the same fading channel can turn the reciprocity into shared secret bits (after reconciliation and privacy amplification) that they use to encrypt their traffic — without ever sending the key over the air.
+- Once they have shared randomness they can 'flip a shared coin' to decide who transmits first, which frequency to hop to, or which code to use, all without further messages.
+
+**Worked Example:**
+
+In a wireless pairing protocol Alice and Bob measure the channel coefficient h (reciprocal) plus independent noise during a probe phase. After quantization and reconciliation they hold a common bit string W. Privacy amplification yields a 128-bit AES key whose security is information-theoretic (given the eavesdropper's noisy observations of h).
+
+## Common Mistakes
+
+- **Equating common randomness with secret-key agreement**: Common randomness can be generated even when there is no secrecy requirement (just identical uniform bits); secrecy adds the privacy-amplification step and changes the achievable rates.
+- **Forgetting reconciliation**: Correlated observations X and Y are almost never identical; an error-correction / reconciliation phase (often using Slepian-Wolf or LDPC codes on the virtual correlation channel) is required before extraction.
+- **Thinking that sending the raw observations over the public channel always works**: It does give common randomness at rate H(X|Y), but it may leak everything to an eavesdropper; privacy amplification is still needed if secrecy is required.
+- **Confusing min-entropy with Shannon entropy in one-shot extraction**: Extractors are analyzed with min-entropy (worst-case); Shannon entropy gives only asymptotic typical-set statements.
+- **Assuming that common randomness always requires interaction**: In some models (e.g., channel reciprocity with no active adversary) the correlation itself may be sufficient with one-way or even zero communication after the initial observations.
+- **Overlooking that common randomness is a resource that can be consumed**: Once Alice and Bob use up their shared bits for a key or for coordination, they may need to distill more from a fresh batch of correlated observations.
+
+The Blahut–Arimoto (BA) algorithm is a practical iterative method for numerically computing the rate-distortion function R(D) for a given source and distortion measure, and a closely related algorithm computes the channel capacity C of a DMC. It was developed independently by Blahut and Arimoto in the early 1970s and remains the standard tool when no closed form is available.
+
+Because R(D) and C are defined by convex optimizations, alternating optimization between the variables yields a convergent procedure whose fixed point satisfies the necessary KKT conditions for optimality.
+
+## The Blahut-Arimoto Algorithm for R(D)
+
+<!-- section: ba-for-rd -->
+
+To compute R(D) we alternate between two steps (for a fixed Lagrange multiplier s < 0, or directly for a target D):
+
+Given current output distribution p(\hat x), the optimal test channel is
+
+p(\hat x | x) \propto p(\hat x) \exp(s \, d(x,\hat x))
+
+(normalized over \hat x for each x).
+
+Then, given the test channel, the output marginal is updated to the one induced by the source and the test channel: p(\hat x) = \sum_x p(x) p(\hat x | x).
+
+Iterating these two steps monotonically decreases the Lagrangian and converges to the minimizing test channel for that s; D and R are then read off.
+
+**ELI5**
+
+- Start with a guess at what the reproductions 'look like' on average (p(\hat x)).
+- Update the 'best way to map originals to reproductions' given that guess, then update the guess to match what the mapping actually produces. Repeat.
+- The math is just re-normalizing exponentials of the (negative) distortion; it is a soft version of 'assign to the closest reproduction'.
+
+**Worked Example:**
+
+For a binary source p=0.1 and Hamming distortion, running BA for s chosen to target D≈0.05 quickly converges to a BSC crossover probability close to 0.05 and yields R≈0.183 bits, matching the closed form.
+
+## The Algorithm for Channel Capacity
+
+<!-- section: ba-for-capacity -->
+
+For capacity, the Arimoto-Blahut iteration is:
+
+Given current input distribution p(x), the 'reverse' channel that maximizes I is
+
+p(x | y) \propto p(x) \exp( I(x;y) terms via the forward channel ), more precisely the update uses the mutual information expression.
+
+Standard form: given p(x), compute the output p(y), then the 'capacity-achieving' backward, then update p(x) proportional to exp( D( p(y|x) || p(y) ) ) or equivalent.
+
+The fixed point satisfies p(x) > 0 only for inputs that achieve the max mutual information with the induced output.
+
+**ELI5**
+
+- Guess a distribution on what you send.
+- Compute what comes out and how much information each possible input 'explains' the output.
+- Reweight your guess toward the inputs that carried more information. Repeat until the distribution stabilizes on the best inputs.
+
+**Worked Example:**
+
+For a Z-channel or binary asymmetric channel, BA quickly finds the capacity-achieving input bias p(x=1) that is not 0.5; the algorithm automatically discovers the optimal input distribution that equalizes the mutual informations of the supported inputs.
+
+## Convergence and Practical Use
+
+<!-- section: convergence-use -->
+
+Under mild conditions the iterations converge to the global optimum because of convexity. In practice one stops when the change in R (or C) or in the distributions falls below a tolerance. The algorithm can be implemented with careful normalization to avoid under/overflow (use log domain).
+
+Modern variants use accelerated methods, stochastic approximations for very large alphabets, or combine with neural nets for continuous/high-dimensional sources. The same alternating-minimization idea underlies the EM algorithm and many other procedures in information theory and machine learning (e.g., expectation propagation).
+
+**ELI5**
+
+- Because the math problem is 'bowl-shaped' (convex), no matter where you start the iteration rolls downhill to the same bottom.
+- In code you just keep updating two arrays (the conditional and the marginal) until they stop changing much; the final mutual information is your answer.
+
+**Worked Example:**
+
+Computing R(D) for a 256-ary source (e.g. image pixel histogram) with 256 reproduction levels and a chosen distortion matrix is feasible: a few hundred iterations of 256×256 matrix normalizations suffice on a laptop; the resulting R(D) curve is used to allocate bits in a practical coder.
+
+## Common Mistakes
+
+- **Running the algorithm for a fixed D instead of using the s-parameter**: Direct fixed-D versions exist but the Lagrangian form is numerically more stable and naturally traces the whole curve.
+- **Forgetting to normalize the test-channel updates**: The proportionality must become a true conditional pmf for each x; missing normalization ruins the I calculation.
+- **Assuming convergence from any initialization to the global optimum without checking**: While convexity guarantees it for the exact BA, floating-point or approximate versions can need multiple random starts for large problems.
+- **Confusing the BA algorithm with actual code construction**: BA gives the information-theoretic limit R(D) or C; it does not directly produce the encoder/decoder codebooks (though it can guide quantizer design).
+- **Using it on continuous alphabets without discretization**: The algorithm is for finite alphabets; continuous problems require discretization, kernel methods, or parametric assumptions.
+- **Ignoring that s = dR/dD at the solution**: After convergence you can read the slope from the final s to verify consistency with the computed (R,D) point.

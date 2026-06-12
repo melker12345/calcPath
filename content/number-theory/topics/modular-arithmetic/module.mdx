@@ -4,6 +4,8 @@ title: Modular Arithmetic
 
 # Modular Arithmetic
 
+Congruences, the Chinese remainder theorem, and quadratic residues with Jacobi and Legendre symbols.
+
 Modular arithmetic is arithmetic on the "clock": after reaching the modulus you wrap around. Formally, we work in the ring of residue classes $\mathbb{Z}/n\mathbb{Z}$. It lets us ignore multiples of the modulus and focus only on remainders, which simplifies calculations involving divisibility, cyclic patterns, and large exponents.
 
 This is the language of modern cryptography (Diffie-Hellman, RSA, elliptic curves), checksums, hashing, and computer science (hash tables, cyclic buffers). Many Diophantine problems and congruences become tractable only after translating them into modular equations.
@@ -124,3 +126,667 @@ Neither 2 nor 3 is ≡0. In the ring they multiply to the zero element.
 - **Number of solutions to ax≡b mod m**: Exactly d=gcd(a,m) solutions when d|b, not always 1 or always 0.
 - **Negative remainders**: We conventionally use 0 ≤ r < m. -1 ≡ m-1 mod m is the standard positive representative.
 - **Confusing ≡ with =**: a ≡ b mod m does not mean a=b; it means they differ by multiple of m. Never drop the "mod m" when it matters.
+
+The Chinese Remainder Theorem (CRT) tells us when and how we can combine several modular conditions into a single congruence modulo the product of the moduli. It is named after ancient Chinese mathematicians who used it to solve calendar and astronomical problems.
+
+In modern terms, if the moduli m1, m2, ..., mk are pairwise coprime, then the system
+x ≡ a_i mod m_i   (for i=1 to k)
+has a unique solution modulo M = m1 m2 ... mk.
+
+CRT is indispensable in cryptography (RSA, secret sharing), computing with large numbers (break into small-modulus pieces), and in the structure theory of rings (Z/MZ ≅ product of Z/miZ when coprime).
+
+The constructive proof gives an explicit formula for the solution using the inverses of the partial products.
+
+## Statement and Pairwise Coprime Condition
+
+<!-- section: crt-statement -->
+
+**Chinese Remainder Theorem**: Let m1, ..., mk be positive integers that are pairwise coprime (gcd(mi, mj)=1 for i≠j). Let a1,...,ak be any integers. Then the system of congruences
+\[
+x \equiv a_i \pmod{m_i} \quad (i=1,\dots,k)
+\]
+has a solution, and the solution is unique modulo M = m1 m2 ⋯ mk.
+
+If the mi are not pairwise coprime, solutions may still exist but are not guaranteed for arbitrary ai, and when they exist the modulus is the lcm of the mi rather than the product.
+
+**ELI5**
+
+- Imagine several clocks of different sizes (the mi) that are "coprime in size". There is exactly one time that satisfies all the hand positions ai simultaneously, and it repeats every full product of the clock sizes.
+- Pairwise coprime means no two clocks share a common "tick factor", so their cycles combine fully without overlap or gaps in the combined period.
+
+**Worked Example:**
+
+**Solve the classic system**
+
+x ≡ 2 mod 3
+
+x ≡ 3 mod 5
+
+x ≡ 2 mod 7
+
+Here m=3,5,7 pairwise coprime, M=105.
+
+We will find the unique x mod 105 in the worked solution below.
+
+## Constructive Proof and Explicit Solution
+
+<!-- section: constructive-crt -->
+
+Let M_i = M / m_i (the product of all moduli except m_i).
+
+Since gcd(M_i , m_i)=1 (by pairwise coprimeness), M_i has an inverse y_i mod m_i: M_i y_i ≡ 1 mod m_i.
+
+Then the solution is
+\[
+x = \sum_{i=1}^k a_i M_i y_i \pmod{M}
+\]
+
+Each term a_i M_i y_i ≡ a_i *1 ≡ a_i mod m_i, and 0 mod the other mj (because M_i divisible by mj).
+
+Summing gives the correct ai mod each mi, and uniqueness follows from the ring isomorphism or by difference of two solutions being 0 mod each mi hence mod M.
+
+**ELI5**
+
+- For each condition, build a number that is 0 mod every other modulus but "1" mod its own (using the inverse). Scale it by the desired ai and add them all up. The total satisfies all conditions at once.
+- The big modulus M is the "least common multiple period" guaranteed by coprimeness.
+
+**Worked Example:**
+
+**Solving the system x≡2 mod3, x≡3 mod5, x≡2 mod7**
+
+M=105
+
+M1=105/3=35, inverse of 35 mod3: 35≡2≡-1, (-1)*(-1)=1 mod3 so y1= -1 ≡2 mod3
+
+M2=105/5=21, 21 mod5=1, inverse y2=1
+
+M3=105/7=15, 15 mod7=1, y3=1
+
+x = 2*35*2 + 3*21*1 + 2*15*1 = 140 + 63 + 30 = 233
+
+233 mod 105: 105*2=210, 233-210=23.
+
+Check: 23 mod3=23-21=2 ok; 23 mod5=3 ok; 23 mod7=2 (21+2) ok.
+
+## When Moduli Are Not Coprime
+
+<!-- section: non-coprime-case -->
+
+If gcd(mi,mj)>1 for some pair, a solution exists if and only if for every such pair, a_i ≡ a_j mod gcd(mi,mj).
+
+When solutions exist, they are unique modulo lcm(m1,...,mk), which is smaller than the product.
+
+The general case can be handled by iteratively solving two at a time, or using the explicit formula with care on the lcm.
+
+**ELI5**
+
+- If two conditions conflict on the overlapping part (the gcd), no solution. E.g. x≡1 mod 4 and x≡2 mod 6: gcd=2, but 1≢2 mod2, impossible.
+- If consistent on overlaps, the combined period is the lcm, not the full product.
+
+**Worked Example:**
+
+**Consistent non-coprime system**
+
+x ≡ 3 mod 4
+
+x ≡ 7 mod 6
+
+gcd(4,6)=2, 3≡7≡1 mod2, consistent.
+
+Solve: x=4k+3. Plug: 4k+3 ≡7 mod6 ⇒ 4k ≡4 mod6.
+
+Divide by 2 carefully: 2k ≡2 mod3 ⇒ k≡1 mod3 (divide by gcd2 but modulus becomes 3).
+
+k=3m+1, x=4(3m+1)+3=12m+7.
+
+So x≡7 mod12. lcm(4,6)=12.
+
+Check: 7 mod4=3, 7 mod6=1 but wait 7-6=1? Wait 7 mod6=1 but target was 7≡1 mod6 yes (7=6+1).
+
+7≡1 mod6 yes.
+
+## Applications
+
+<!-- section: crt-applications -->
+
+- RSA decryption: compute mod p and mod q separately then combine via CRT (much faster for large exponents).
+- Secret sharing and threshold schemes.
+- Fast multiplication of huge integers by splitting via CRT into smaller pieces.
+- Solving systems of linear Diophantine equations.
+- In computing, representing numbers in mixed-radix systems.
+
+The ring isomorphism $\mathbb{Z}/M\mathbb{Z} \cong \prod \mathbb{Z}/m_i \mathbb{Z}$ when the mi pairwise coprime is the algebraic heart of CRT.
+
+**ELI5**
+
+- Big hard problems mod a composite can be broken into easy problems mod the prime power factors, solved independently, then glued back together uniquely.
+- This "divide and conquer" via coprime pieces is why RSA can use huge moduli safely yet compute efficiently.
+
+**Worked Example:**
+
+**RSA-style small CRT**
+
+Suppose ciphertext c mod (p q) with p=5 q=13, M=65. Suppose we have c mod5 and c mod13 from partial decryptions, combine to recover c mod65.
+
+The explicit sum formula does exactly the gluing.
+
+## Common Mistakes
+
+- **Forgetting the pairwise coprime hypothesis**: The simple product modulus and guaranteed unique solution require gcd(mi,mj)=1 for all pairs. Counterexamples exist otherwise.
+- **Using the formula without inverses existing**: If not coprime, M_i may not be invertible mod m_i; the construction fails.
+- **Claiming no solution when consistent on gcds**: Even if not pairwise coprime, check the compatibility a_i ≡ a_j mod gcd(mi,mj) before declaring impossibility.
+- **Solution unique mod product always**: When not coprime the period is lcm ≤ product; multiple solutions mod product may exist or none.
+- **Sign errors in explicit formula**: The y_i are inverses of M_i mod m_i; easy to pick the wrong sign or representative when computing by hand.
+
+The congruence relation a ≡ b mod m is the central equivalence relation of number theory. It turns the integers into a ring of residue classes and allows us to do arithmetic while "ignoring" multiples of m. Understanding its algebraic properties (it is a congruence in the algebraic sense: compatible with + and *) is what makes modular arithmetic powerful.
+
+This topic formalizes what we used intuitively in the previous modular arithmetic topic: the quotient ring construction, the ideal (m), and how congruences interact with divisibility and gcd.
+
+It sets the stage for rings Z/nZ, Euler's theorem generalizations, and the isomorphism theorems via CRT.
+
+## Definition and Equivalence Relation Properties
+
+<!-- section: definition-equivalence -->
+
+The relation a ≡ b (mod m) means m | (a-b).
+
+It is an equivalence relation:
+
+- Reflexive: a ≡ a mod m (m divides 0).
+- Symmetric: if a≡b then b≡a ( - (a-b) ).
+- Transitive: if a≡b and b≡c then a-c = (a-b)+(b-c) divisible by m.
+
+The equivalence classes are [r] = { ..., r-2m, r-m, r, r+m, r+2m, ... } for r =0,1,...,m-1 the standard representatives.
+
+**ELI5**
+
+- "Same mod m" means they are identical after you throw away complete cycles of m. Like two times on different days that show the same clock position.
+- The three properties (reflexive/symmetric/transitive) are exactly what is needed for "being the same" to be consistent and partition the integers into clean buckets.
+
+**Worked Example:**
+
+**Classes mod 4**
+
+[0] = multiples of 4: ...,-8,-4,0,4,8,...
+
+[1] = 1+4Z : ...,-7,-3,1,5,9,...
+
+[2], [3] similarly.
+
+Note -1 ≡ 3 mod4, useful for signs.
+
+## Congruence is a Ring Congruence
+
+<!-- section: ring-congruence -->
+
+The relation is compatible with addition and multiplication:
+
+If a1 ≡ b1 mod m and a2 ≡ b2 mod m, then
+
+a1 + a2 ≡ b1 + b2 mod m
+
+a1 - a2 ≡ b1 - b2 mod m
+
+a1 * a2 ≡ b1 * b2 mod m
+
+(This follows immediately from the definition: differences are multiples of m, and (a1-b1) + (a2-b2) etc., and the cross term for multiplication.)
+
+Consequently the set of classes with induced + and * forms the quotient ring Z/mZ (also written Z_m).
+
+**ELI5**
+
+- You can add or multiply two "clock readings" and the result doesn't depend on which representative you chose for each. The arithmetic is well-defined on the classes themselves.
+- This is why  (10 mod12) + (5 mod12) = 3 mod12 no matter if you think of 10 as 22 or -2.
+
+**Worked Example:**
+
+**Well-defined multiplication mod 5**
+
+Take 7≡2, 8≡3 mod5. 7*8=56≡1 mod5.
+
+2*3=6≡1 mod5. Same result. If I had used 7=2+5, (2+5)*3 =6+15≡1+0=1 same.
+
+## Connection to Ideals and Divisibility
+
+<!-- section: ideals-divisibility -->
+
+The set mZ = {multiples of m} is the principal ideal generated by m. Congruence a ≡ b mod m means a - b ∈ mZ.
+
+The gcd appears naturally: the common solutions to x≡a mod m, x≡b mod n etc.
+
+Also, if d = gcd(k,m) then the congruence k x ≡ c mod m has solutions iff d|c, and then exactly d solutions, as seen earlier.
+
+Z/mZ is a field iff m prime (i.e. the ideal (m) is maximal).
+
+**ELI5**
+
+- The "ignore multiples of m" bucket is literally the ideal mZ, the multiples.
+- Divisibility questions translate into membership in ideals or kernels of maps.
+
+**Worked Example:**
+
+**Solve 6x ≡ 9 mod 15**
+
+d=gcd(6,15)=3, 3 divides 9, ok.
+
+Divide eq by 3: 2x ≡3 mod5.
+
+Inverse of 2 mod5 is 3 (2*3=6≡1).
+
+x≡9≡4 mod5.
+
+Solutions mod15: x=5k +4 for k=0,1,2 (the d=3 lifts).
+
+Check: x=4: 6*4=24≡9 mod15? 24-15=9 yes.
+
+x=9: 6*9=54, 54/15=3.6, 15*3=45,54-45=9 yes.
+
+x=14: 6*14=84, 15*5=75,84-75=9 yes.
+
+## Induced Maps and Homomorphisms
+
+<!-- section: homomorphisms -->
+
+The natural projection π: Z → Z/mZ , a |→ [a] is a ring homomorphism with kernel mZ.
+
+By the first isomorphism theorem Z / mZ ≅ image.
+
+More generally, congruences let us define maps on residue classes consistently.
+
+This is the beginning of quotient constructions used throughout algebra.
+
+**ELI5**
+
+- The map that sends every integer to its "remainder bucket" respects addition and multiplication. It "forgets" the exact value but keeps the modular information.
+- Kernels capture exactly what is being set to zero (the multiples of m).
+
+**Worked Example:**
+
+**The projection mod 3**
+
+π(5)=[2], π(7)=[1], π(5+7)=π(12)=[0], and [2]+[1]=[0] mod3 yes.
+
+Kernel = multiples of 3.
+
+## Common Mistakes
+
+- **Thinking congruence only for positive remainders**: Classes include negatives; -1 is always a valid representative equivalent to m-1.
+- **Dropping the modulus when manipulating**: a≡b mod m and c≡d mod m does NOT imply a/c ≡ b/d unless inverses exist.
+- **Confusing the ideal (m) with the number m**: The congruence is membership of difference in the ideal mZ.
+- **Assuming all rings Z/nZ behave like fields**: Only when n prime; otherwise zero divisors exist and not every equation has unique solution.
+- **Forgetting that transitivity requires the same m**: a≡b mod m, b≡c mod n with m≠n does not imply a≡c mod anything in particular without lcm.
+
+The Jacobi symbol (a/n) generalizes the Legendre symbol to odd composite n: if n= product p_i^{e_i} odd, (a/n) = product (a/p_i)^{e_i} (Legendre).
+
+It is completely multiplicative in a, and (a/n)=0 if gcd(a,n)>1.
+
+Unlike Legendre, (a/n)=1 does not imply a is quadratic residue mod n (it can be 1 even if non-residue mod some p| n, as long as the product of signs is +1).
+
+It is still useful because it can be computed using a reciprocity law similar to Legendre, in time comparable to gcd, without factoring n.
+
+Used in the Solovay-Strassen primality test (a probabilistic test using the Jacobi symbol).
+
+## Definition
+
+<!-- section: jacobi-def -->
+
+For odd positive integer n>1 and integer a, the **Jacobi symbol** (a/n) is defined by factoring n into odd primes (with multiplicity) and multiplying the Legendre symbols:
+
+If n = ∏ p_i ^{e_i}, then (a/n) = ∏ (a / p_i )^{e_i} where ( / p_i) are Legendre.
+
+If gcd(a,n)>1 then (a/n)=0.
+
+For n=1, (a/1)=1 by convention.
+
+**ELI5**
+
+- It is the "product of the yes/no answers" for the prime power factors of n.
+- It can say +1 even when there is no square root mod n, because the "no" from one prime can be canceled by "yes" from another.
+
+**Worked Example:**
+
+**(2/15)**
+
+15=3*5.
+
+(2/3)=-1 (3=3 mod8), (2/5)= (2/5), 5=5 mod8=5≡-3, -1? 5 mod8=5, the rule (2/p)=1 if p≡1 or7 mod8, -1 if 3 or5 mod8.
+
+So (2/5)=-1.
+
+(2/15)= (-1)*(-1)=1.
+
+But is 2 square mod15? x^2≡2 mod3 and mod5. Mod3 2≡-1, squares mod3 0,1 not 2. No solution mod3, hence no mod15. So (2/15)=1 but not residue. Classic example why Jacobi=1 does not imply residue.
+
+## Properties and Reciprocity
+
+<!-- section: jacobi-properties -->
+
+The Jacobi symbol satisfies:
+
+(a/n) = (b/n) if a≡b mod n.
+
+Completely multiplicative in a: (ab/n)=(a/n)(b/n).
+
+(a/n)=(a mod n /n).
+
+For the "quadratic reciprocity" for Jacobi: if m,n odd positive coprime, then (m/n)(n/m) = (-1)^{(m-1)/2 (n-1)/2}.
+
+Same as for primes.
+
+Also the rules for ( -1 /n ) = (-1)^{(n-1)/2}, (2/n)= (-1)^{(n^2-1)/8}.
+
+These allow computing (a/n) by a Euclidean-like algorithm (repeatedly flip using reciprocity, reduce mod, factor out 2 and -1 using the rules), without ever factoring n.
+
+The running time is O(log^2 n) like gcd.
+
+**ELI5**
+
+- The reciprocity law works for the composite Jacobi just as for Legendre, letting you swap the arguments with a sign.
+- Combined with the special rules for 2 and -1, you can reduce the size like Euclid algorithm for gcd, computing the symbol fast.
+
+**Worked Example:**
+
+**Compute (5/21) using reciprocity**
+
+21=3*7.
+
+But to compute without factoring? The algorithm doesn't need the factors.
+
+But for illustration: (5/21)=(5/3)(5/7) by def (since multiplicative).
+
+But using the law directly on composite: m=5 n=21 coprime odd.
+
+(5/21)(21/5) = (-1)^{2 * 10}=1.
+
+(21/5)=(1/5)=1.
+
+So (5/21)=1.
+
+Check: (5/3)=(2/3)=-1, (5/7)=(5/7), 7 mod5=2, (2/7)=1 (7=7 mod8), so (-1)*1=-1. Wait product -1? Contradiction? Wait the def (5/21)=(5/3)(5/7).
+
+(5/3)=(2/3)=-1 (3=3 mod8).
+
+(5/7): reciprocity for 5,7 both 1 mod4? Exponent 2*3=6 even, (5/7)=(7/5)=(2/5).
+
+(2/5):5=5 mod8, -1.
+
+So (5/7)=-1.
+
+Product (-1)*(-1)=1.
+
+Yes (5/21)=1. Matches.
+
+(And earlier miscalc on (5/7).)
+
+## Use in Primality Tests
+
+<!-- section: jacobi-primality -->
+
+The Solovay-Strassen test: for random a, compute the Jacobi (a/n) and a^{(n-1)/2} mod n. If n prime they are equal by Euler criterion (the power equals Legendre=Jacobi).
+
+If for some a they differ, n composite.
+
+If they agree for many a, declare probable prime.
+
+It detects Carmichael numbers (for which the power is 1, but Jacobi may differ for some a).
+
+**ELI5**
+
+- For prime, the power must equal the Jacobi symbol.
+- If for a witness a the power mod n does not equal the easily computed Jacobi, then n cannot be prime.
+
+**Worked Example:**
+
+**For a Carmichael like 561, there exist a where a^{560} ≡1 mod561 but (a/561) ≠1, detecting compositeness.**
+
+Yes.
+
+## Common Mistakes
+
+- **(a/n)=1 implies quadratic residue mod n**: False for composite n; it is necessary but not sufficient.
+- **Jacobi requires factoring n**: No, the reciprocity algorithm computes it without factoring n (that's its point).
+- **Jacobi defined for even n**: No, n must be odd positive.
+- **Confusing with Legendre**: Legendre is the special case when n prime; Jacobi can be 1 for non-residues.
+
+The Legendre symbol (a/p) is a compact notation that is 1 if a is quadratic residue mod p (p odd prime not dividing a), -1 if non-residue, and 0 if p divides a.
+
+It is a character mod p, completely multiplicative in a, and satisfies the law of quadratic reciprocity that allows computing it in logarithmic time without finding square roots (like a Jacobi symbol but for prime).
+
+It is the main tool for deciding quadratic residuosity and appears in many formulas (class numbers, L-functions, etc).
+
+## Definition
+
+<!-- section: legendre-def -->
+
+For odd prime p and integer a, the **Legendre symbol** (a/p) is:
+
+- 0 if p | a
+
+- 1 if p ∤ a and a is quadratic residue mod p
+
+- -1 if p ∤ a and a is quadratic non-residue mod p.
+
+It can be computed via Euler's criterion (a/p) = a^{(p-1)/2} mod p (taking the representative -1 or 1).
+
+**ELI5**
+
+- A compact +1 / -1 / 0 "yes/no/ divisible" answer to "is a a square mod p?"
+- Like a "sign" that tells the residuosity.
+
+**Worked Example:**
+
+**(3/7)**
+
+From earlier, 3 non residue mod7, so (3/7)=-1.
+
+By Euler 3^3=27≡-1 mod7 yes.
+
+## Properties
+
+<!-- section: legendre-properties -->
+
+(a/p) = (b/p) if a≡b mod p.
+
+Completely multiplicative in the top: (a b /p) = (a/p)(b/p).
+
+(a/p) = (a mod p / p).
+
+If p | a then 0.
+
+Also ( -1 /p ) = (-1)^{(p-1)/2} = 1 iff p=1 mod4.
+
+(2/p) = (-1)^{(p^2-1)/8} =1 iff p=1 or 7 mod8.
+
+**ELI5**
+
+- It only depends on a mod p.
+
+- Multiplicativity lets you factor the top argument into primes and compute for each.
+
+**Worked Example:**
+
+**(6/7) = (2/7)(3/7)**
+
+(2/7): 7=7 mod8, (2/p)=-1 for p=±3 mod8, 7= -1 mod8, yes -1.
+
+(3/7)=-1.
+
+Product (+1). Is 6 residue? From list 1,2,4 no 6, wait product (-1)*(-1)=+1? Wait earlier list squares 1,2,4, 6 not, contradiction? Wait (2/7): 7≡7 mod8, the rule is (2/p)=1 if p≡±1 mod8, -1 if ±3 mod8. 7≡ -1=7 mod8? 7 mod8=7, ±1 is 1 or 7 mod8 yes 1. So (2/7)=1.
+
+(3/7)=-1, product -1. And 6 not in {1,2,4}, yes non residue.
+
+## Quadratic Reciprocity Preview
+
+<!-- section: legendre-reciprocity-preview -->
+
+The law of quadratic reciprocity (next topic) says for distinct odd primes p,q:
+
+(p/q)(q/p) = (-1)^{(p-1)/2 * (q-1)/2}.
+
+This lets you flip the symbol and reduce the size, like Euclid algorithm for computing the symbol in log time.
+
+**ELI5**
+
+- The symbols (p/q) and (q/p) are almost the same, except a sign flip when both p and q are 3 mod4.
+- This reciprocity is what makes the symbol computable efficiently.
+
+**Worked Example:**
+
+**Compute (5/13)**
+
+By reciprocity (5/13)(13/5) = (-1)^{2*6}=1, so (5/13)=(13/5).
+
+13 mod5=3, (3/5).
+
+Then (3/5)(5/3)= (-1)^{1*2}= -1, so (3/5)= - (5/3)= -(2/3).
+
+(2/3): 3=3 mod8, (2/p)=-1 for 3 mod8.
+
+So (2/3)=-1, thus (3/5)= - (-1)=1.
+
+Thus (5/13)=1.
+
+Check: squares mod13: 1,4,9,3(16-13),12(25-13*1=12? 5^2=25-26=-1=12, 6^2=36-2*13=36-26=10, etc. Is 5 a square? 6^2=36≡10, 7^2=49-3*13=49-39=10? Wait known or 8^2=64-4*13=64-52=12, 4^2=16-13=3, 3^2=9, 2^2=4,1. No 5. Wait according to calculation 1 but list no? Wait error in calculation.
+
+Wait (5/13): 13 mod5=3, (13/5)=(3/5).
+
+Reciprocity for 5,13 both 1 mod4? 5=1,13=1 mod4, (p-1)/2 even for both, product even, (-1)^even=1, (5/13)=(13/5)=(3/5).
+
+Now (3/5)(5/3)= (-1)^{1*2}= -1, (3/5)= - (5/3)= -(2/3) since 5 mod3=2.
+
+(2/3): 3≡3 mod8, (2/p)=-1 yes.
+
+(3/5)= - (-1)=1.
+
+So (5/13)=1.
+
+But is 5 square mod13? Let's list x=0 to6:
+
+0:0
+
+1:1
+
+2:4
+
+3:9
+
+4:16≡3
+
+5:25≡12 (26-1=25, 25-26=-1≡12)
+
+6:36≡10 (2*13=26,36-26=10)
+
+No 5. 7= -6 mod13, (-6)^2=36≡10 same.
+
+No 5. But calculation says 1. Wait (5/13) should be? Perhaps I have the list, is there x^2=5 mod13?
+
+Solve x^2 -5 =13k. Try x=6 36-5=31=2*13+5 no. x=8 64-5=59=4*13+7 no. Perhaps not. The calculation must have error in sign.
+
+(5/13)=(13/5) since both 1 mod4, exponent (4/2)*(12/2)=2*6=12 even, +1.
+
+(13/5)=(3/5).
+
+Now for (3/5) and (5/3): p=3 q=5, (3-1)/2=1, (5-1)/2=2, 1*2=2 even? (-1)^2=1 ? Wait the formula is (-1) ^ {(p-1)/2 * (q-1)/2}.
+
+For 3,5: 1*2=2 even, +1.
+
+So (3/5)=(5/3).
+
+(5/3)=(2/3).
+
+(2/3): 3 mod8=3, which is -1 for (2/p).
+
+So (3/5)=(2/3)=-1.
+
+Thus (5/13)=(3/5)=-1.
+
+Yes, I had the exponent for 3,5: 1*2=2 even, so + not - . I miscalculated 1*2 as odd. Even. So (3/5)=(5/3)=(2/3)=-1.
+
+Hence (5/13)=-1. Matches the list (5 not square mod13). Good.
+
+The sign is important.
+
+## Common Mistakes
+
+- **(a/p) defined only for p odd prime**: For p=2 use other (Kronecker or direct).
+- **Forgetting 0 case**: (0/p)=0.
+- **Thinking the symbol gives the square root**: It only decides existence, not computes the root (which is harder, Tonelli-Shanks).
+- **Sign errors in reciprocity**: The exponent (p-1)/2 *(q-1)/2 is the number of 3 mod4 primes in the pair; flip sign only if both 3 mod4.
+
+A number a is a quadratic residue modulo m if there exists x such that x^2 ≡ a mod m (and usually gcd(a,m)=1 for the nonzero case).
+
+The theory of quadratic residues is central to number theory, with applications to cryptography (quadratic residuosity assumption in some protocols), primality tests, and the law of quadratic reciprocity which gives an efficient way to decide residuosity without finding the square root.
+
+This topic introduces the basic definitions, Euler's criterion, and the Legendre symbol (next topic).
+
+## Definition and Examples
+
+<!-- section: quadratic-residue-def -->
+
+Let m >1, a integer with gcd(a,m)=1. a is a **quadratic residue** mod m if the congruence x^2 ≡ a mod m has a solution x. Otherwise a is a quadratic non-residue mod m.
+
+We usually consider a mod m in 1 to m-1 coprime.
+
+For m prime the number of nonzero quadratic residues is (p-1)/2, and same number of non-residues (the map x |→ x^2 is 2-to-1 onto the residues from the (p-1)/2 nonzero squares, wait (p-1)/2 distinct nonzero squares).
+
+**ELI5**
+
+- Is there an integer x whose square "lands on" a when you look only at remainders mod m?
+- Half the possible nonzero remainders are "perfect squares" mod p, the other half are not.
+
+**Worked Example:**
+
+**Quadratic residues mod 7**
+
+Possible squares: 1^2=1, 2^2=4, 3^2=2, 4^2=2, 5^2=4, 6^2=1 mod7.
+
+Nonzero residues: 1,2,3,4,5,6.
+
+Squares: 1,2,4. So residues 1,2,4; non 3,5,6.
+
+## Euler's Criterion
+
+<!-- section: euler-criterion -->
+
+For odd prime p not dividing a, a is quadratic residue mod p iff a^{(p-1)/2} ≡ 1 mod p.
+
+(If non-residue ≡ -1 mod p.)
+
+This follows from Fermat a^{p-1}≡1, so (a^{(p-1)/2} -1)(a^{(p-1)/2}+1)≡0, and the polynomial has at most two roots, the residues satisfy the +1=0? The criterion comes from the fact that the Legendre symbol is a character and the index or from the group being cyclic: generator g, a = g^k , square iff k even, and a^{(p-1)/2} = g^{k (p-1)/2} = (g^{(p-1)/2})^k = (-1)^k since g^{(p-1)/2}≡-1 (order p-1).
+
+**ELI5**
+
+- Raise a to the "half" power (p-1)/2 mod p; if you get 1 it is a square, if -1 it is not. This is a quick test without searching for x.
+- It works because in the cyclic group the squares are exactly the even powers, and raising to (p-1)/2 sends even to 1 and odd to -1.
+
+**Worked Example:**
+
+**Is 3 quadratic residue mod 7?**
+
+Compute 3^{3} =27 ≡6≡ -1 mod7. By Euler, non-residue. From list above, yes 3 not in {1,2,4}.
+
+## Number of Solutions and -1 as Residue
+
+<!-- section: number-solutions-minus-one -->
+
+For p odd prime, the equation x^2 ≡ a mod p has 1 + (a/p) solutions, where (a/p) the Legendre (1 if residue, -1 non, 0 if p|a).
+
+In particular, -1 is quadratic residue mod p iff p≡1 mod4 (since (-1)^{(p-1)/2} =1 iff (p-1)/2 even iff p=1 mod4).
+
+**ELI5**
+
+- Either 0 (if a=0 mod p), 1 (impossible for nonzero), or exactly 2 solutions if residue (x and -x distinct mod p for p>2).
+- -1 being square mod p means p=1 mod4, like 5=1+4, 1^2=1≡-4? Wait 2^2=4≡-1 mod5 yes.
+
+**Worked Example:**
+
+**-1 mod 5: yes, 2^2=4≡-1 mod5. 5=1 mod4.**
+
+**-1 mod 7:  x^2 ≡-1=6 mod7. From earlier squares 1,2,4 no 6. 7=3 mod4.**
+
+## Common Mistakes
+
+- **Including a divisible by p as residue**: Usually we say nonzero quadratic residue, excluding 0 which trivially is 0^2.
+- **For composite moduli the count is more complicated**: Not necessarily half; use Jacobi or CRT to combine.
+- **Euler criterion requires p odd prime not dividing a**: For p=2 separate case; for a multiple of p, 0.
+- **Confusing residue with the square root existing in integers**: Residue is existence mod m, not that a is a perfect square in Z.

@@ -1,0 +1,622 @@
+---
+title: Source Coding & Compression
+---
+
+# Source Coding & Compression
+
+The AEP, Shannon's source coding theorem, and practical lossless compression algorithms.
+
+The asymptotic equipartition property (AEP) is the information-theoretic analogue of the law of large numbers. It says that for long sequences drawn from a stationary ergodic source, "almost all" sequences look the same: each has probability roughly 2^{-n h} (where h is the entropy rate) and they all lie in a "typical set" whose size is only 2^{n h}, a vanishing fraction of the total possible sequences.
+
+The AEP is the key bridge between the abstract entropy rate and concrete statements about compression and typical behavior.
+
+## Definition and Statement of the AEP
+
+<!-- section: definition -->
+
+For a discrete stationary ergodic process with entropy rate h, for every ε>0 there exists N such that for n>N the following hold for the typical set A_ε^{(n)} :
+
+1. For sequences x^n in A_ε^{(n)}, | - (1/n) log p(x^n) - h | < ε   (the empirical rate is close to h).
+2. Pr( X^n ∈ A_ε^{(n)} ) > 1 - ε.
+3. |A_ε^{(n)}| ≤ 2^{n(h+ε)}.
+
+**ELI5**
+
+- Most long strings you will ever see from the source have roughly the same "surprise per symbol" equal to the entropy rate.
+- There are only about 2^{n h} such "ordinary-looking" strings; the weird ones are overwhelmingly unlikely.
+
+**Worked Example:**
+
+Fair coin (h=1). Every specific sequence of length n has p = 2^{-n}. All sequences are typical for any ε>0 when n is large (in fact for all n). The typical set is the entire {0,1}^n and has size 2^n = 2^{n h}.
+
+## The Typical Set
+
+<!-- section: typical-set -->
+
+The typical set is the set of sequences whose sample average information content is close to h. Although exponentially smaller than the whole space, it carries almost all the probability mass.
+
+This is why random-looking data (high entropy) is hard to compress: you need nearly n h bits to specify which typical sequence occurred.
+
+**ELI5**
+
+- Imagine all possible novels of length 100 000 words. The "sensible English-like" ones form a tiny fraction of all word strings, yet any real novel you read will almost surely be one of them.
+- To name which sensible novel it is you need only about (entropy rate) × length bits, not the naïve log(|alphabet|^length).
+
+**Worked Example:**
+
+Source over alphabet of size 4, uniform i.i.d. (h=2). For n=20 the total space has 4^{20} ≈ 1.1×10^{12} strings. Typical set size ≈ 2^{40} ≈ 1 trillion — still huge but only 2^{40} / 4^{20} = 2^{40} / 2^{40} =1 ? Wait 4^{20}=(2^2)^{20}=2^{40}, again the whole space is typical.
+
+For a biased or Markov source the fraction becomes tiny.
+
+## Applications to Compression and Coding
+
+<!-- section: applications -->
+
+The AEP directly proves the source coding theorem (achievability part): to compress n symbols you only need to index the typical set with ≈ n h bits. On the (vanishing probability) atypical event you can output a fixed "error" flag.
+
+It also underlies the definition of typicality in channel coding proofs.
+
+**ELI5**
+
+- A practical compressor doesn't have to handle every crazy string; it only has to handle the ones that actually occur with high probability, and there aren't that many of them.
+- The "just drop" description length for a long file is essentially n times the entropy rate.
+
+**Worked Example:**
+
+A video encoder knows the entropy rate of natural video (after motion compensation) is say 0.8 bits per pixel. For a 1920×1080 frame (≈2 Mpixels) it only needs to encode a description of length roughly 1.6 Mbits for a typical frame; everything else is handled by the model of "typicality."
+
+## Common Mistakes
+
+- **Thinking every sequence has probability exactly 2^{-n h}**: Only typical ones do; atypical ones can have wildly different probabilities (often much smaller).
+- **Confusing the size of the typical set with the support size**: The support can be the full |X|^n; the typical set is much smaller when there is structure or bias.
+- **Forgetting that AEP requires ergodicity/stationarity**: Without it the limit may not exist or the probability of the "typical" set may not go to 1.
+- **Applying AEP to finite n as if it were exact**: It is an asymptotic statement; for small n the concentration may be poor and you need union bounds or other tools.
+- **Believing the atypical set can be ignored in practice for short blocks**: For short sequences atypical events may still have non-negligible probability; good codes add margin or use other techniques.
+- **Mixing AEP up with the central limit theorem**: AEP is a weak law for the information density; CLT would give fluctuations of order sqrt(n) around n h.
+
+Shannon's source coding theorem (also called the noiseless coding theorem) is one of the two pillars of information theory. It states that the entropy rate h of a source is both an achievable and a lower bound (in the limit) for the rate of any lossless compression scheme that works with vanishing error probability.
+
+In other words, you can compress down to h bits per symbol but no further, asymptotically.
+
+## Statement of the Theorem
+
+<!-- section: statement -->
+
+For a discrete stationary ergodic source with entropy rate h:
+
+- **Achievability**: For any R > h there exists a sequence of block codes with rate R that achieve error probability → 0 as block length n → ∞.
+- **Converse**: For any R < h, every sequence of codes with rate R has error probability bounded away from zero (in fact → 1).
+
+For i.i.d. sources the rate is simply the ordinary entropy H(X).
+
+**ELI5**
+
+- Entropy is the "irreducible size" of the data. Good compression gets close to it; nothing can sustainably beat it.
+- For a long file the best average bits per symbol you can hope for is the entropy rate.
+
+**Worked Example:**
+
+A source of independent fair bits has H=1. You cannot compress a long string of fair coin flips at all (on average); any lossless scheme must output essentially as many bits as it receives for typical inputs.
+
+## Achievability (Existence of Good Codes)
+
+<!-- section: achievability -->
+
+The proof is non-constructive in its simplest form and uses the AEP: enumerate the typical set (size roughly 2^{n h}) and assign each member a unique index of length ⌈n(R)⌉ bits where R > h. On atypical inputs declare error.
+
+Because the typical set has probability →1, the overall error probability →0.
+
+**ELI5**
+
+- You don't need to worry about the "crazy" strings that almost never occur. Just make a big table of all the ordinary strings and number them.
+- The numbering only needs n h + o(n) bits.
+
+**Worked Example:**
+
+Source with H=2.3 bits/symbol. For blocks of n=1000, typical set size ≈ 2^{2300}. An index of 2305 bits (R=2.305 > H) is enough to identify which typical block occurred. Decode by table lookup. Error only on the rare atypical blocks.
+
+## The Converse (You Cannot Beat Entropy)
+
+<!-- section: converse -->
+
+If a code compresses to rate R < h, then even with the best possible mapping, there are not enough distinct codewords to cover all the typical sequences (of which there are ~2^{n h}).
+
+By a pigeonhole or information argument (often using Fano's inequality), some typical source sequences must map to the same codeword or be lost, forcing the decoder to err with positive probability that does not vanish.
+
+**ELI5**
+
+- If you try to use too few bits, you are forced to "merge" two ordinary-looking long strings into the same codeword. The decoder cannot know which one was sent.
+- Because those ordinary strings occur with high probability, your error rate stays high.
+
+**Worked Example:**
+
+Suppose someone claims a compressor for the fair-coin source that outputs only 0.9 n bits for length-n blocks. There are only 2^{0.9 n} possible outputs but 2^n typical (all) inputs. By pigeonhole many inputs share an output; decoder cannot distinguish them. Error is inevitable on a large fraction of inputs.
+
+## Common Mistakes
+
+- **Thinking the theorem applies directly to a single fixed-length message without blocks**: The result is asymptotic in block length; practical codes get close for moderate sizes via Huffman/arithmetic but the exact bound is for large n.
+- **Confusing the source coding theorem with the channel coding theorem**: Source coding is about compression (removing redundancy); channel coding is about adding redundancy for noise protection.
+- **Believing you can always compress below H for finite data**: For atypical short data you sometimes can, but on average and in the limit you cannot.
+- **Forgetting the "vanishing error" qualifier**: The theorem allows a tiny probability of failure that goes to zero; it does not promise zero error for every possible input.
+- **Applying the i.i.d. H when the source has memory**: You must use the entropy *rate*, not the marginal entropy.
+- **Assuming the code must be fixed-length for every block**: The theorem can be stated for variable-length or fixed-length; the rate is the average or the fixed length divided by n.
+
+Data compression is the practical art of representing information using fewer bits than the naive encoding, by exploiting statistical regularities and redundancies. Information theory supplies both the fundamental limits (entropy) and the design principles for good compressors.
+
+Compression is ubiquitous: from zip files and PNG images to the video codecs that make streaming possible.
+
+## Lossless versus Lossy Compression
+
+<!-- section: lossless-vs-lossy -->
+
+Lossless compression (gzip, PNG, FLAC, ZIP) guarantees exact recovery of the original bit string. It is required for text, executables, and scientific data where every bit matters.
+
+Lossy compression (JPEG, MP3, H.264, WebP) deliberately discards information that is judged perceptually unimportant, achieving much higher compression ratios at the cost of irreversible distortion.
+
+**ELI5**
+
+- Lossless is like vacuum-packing your luggage so it takes less space but everything is still there when you unpack.
+- Lossy is like taking only the important souvenirs and leaving the rest behind; you save a lot of room but can't get the discarded items back.
+
+**Worked Example:**
+
+A 1 MB raw text file might gzip to 250 kB (lossless, 4:1). The same text as a low-quality JPEG screenshot might be 30 kB but the exact original characters are gone forever.
+
+## Redundancy and Modeling
+
+<!-- section: redundancy -->
+
+All compression works by removing redundancy — the part of the data that can be predicted from a good model of the source.
+
+If the true entropy rate is h bits per symbol, then in the limit a compressor cannot do better than h bits per symbol on typical data, no matter how clever the algorithm.
+
+**ELI5**
+
+- Redundancy is "what you already know." In "aaaaaaa" the next 'a' is highly predictable; you don't need to send it explicitly.
+- A compressor builds (or assumes) a probability model and then sends only the "surprises" using short codewords for likely events.
+
+**Worked Example:**
+
+The string "abababab..." (alternating) has very low entropy rate. A simple model "repeat the previous symbol with high prob" lets a compressor describe long runs with just a few bits for the count and the starting symbol.
+
+## Practical Techniques and Universal Coding
+
+<!-- section: practical -->
+
+- **Huffman / Shannon-Fano**: optimal prefix codes for known symbol probabilities (good for small alphabets).
+- **Arithmetic coding**: encodes the whole message as a single fractional number; can get arbitrarily close to entropy even with fractional bits.
+- **Dictionary / Lempel-Ziv (LZ77, LZW, DEFLATE)**: universal methods that discover repeated substrings on the fly; used in gzip, zip, PNG.
+- **Context modeling + arithmetic**: PPM, PAQ, modern compressors that adapt high-order conditional probabilities.
+
+**ELI5**
+
+- Huffman is like giving the most common words in a language the shortest names.
+- LZ methods are like "instead of repeating 'the cat sat on the mat' I can say 'see phrase #7' after the first time it appears."
+
+**Worked Example:**
+
+In DEFLATE (used by gzip), literals and distances to previous matches are Huffman-coded, and the Huffman tables themselves can be transmitted or dynamically adapted. On English text this often achieves 2–4 bits per character, close to estimated entropy rates.
+
+## Common Mistakes
+
+- **Expecting a compressor to shrink already-compressed or random data**: Truly random (high-entropy) data or data that has already been compressed cannot be compressed further on average; attempts usually make it slightly larger.
+- **Confusing file size reduction with information loss in lossless mode**: Lossless never loses information by definition; any size reduction comes purely from redundancy removal.
+- **Using the wrong tool for the data type**: Text compressors on images or vice-versa leave huge amounts of redundancy on the table; specialized models (2-D for images, LPC for audio) are essential.
+- **Ignoring header and dictionary overhead**: For very small files the fixed cost of describing the model can exceed the savings; compression shines on larger data.
+- **Believing "best compression" is always slowest**: There is a speed-vs-ratio trade-off; sometimes a fast compressor at 3:1 beats a slow one at 3.1:1 for a given application.
+- **Forgetting that lossy compression has a rate-distortion curve**: You must choose the operating point; more distortion buys lower rate, but perceptual quality is not the same as mean-squared error.
+
+Huffman coding, invented by David Huffman in 1952 while a student, is a classic algorithm that produces an optimal prefix-free variable-length code for a known discrete probability distribution. It is still widely used, often in combination with other techniques, because of its simplicity and provable optimality for the prefix-free constraint.
+
+It assigns shorter codewords to more probable symbols, exactly as intuition (and information theory) demands.
+
+## The Huffman Algorithm
+
+<!-- section: algorithm -->
+
+The algorithm builds a binary tree bottom-up:
+
+1. Create a leaf node for each symbol, labeled with its probability.
+2. While more than one node remains: extract the two nodes with smallest probabilities, create a new internal node with probability = sum, and make the two nodes its children.
+3. The final remaining node is the root. Codewords are the paths from root to leaves (0 for left, 1 for right, or vice versa).
+
+The resulting code is prefix-free because it corresponds to a full binary tree (all internal nodes have two children, leaves hold symbols).
+
+**ELI5**
+
+- Always glue together the two currently rarest "groups" into a combined super-symbol.
+- At the end the tree tells you the code: frequent symbols end up near the root with short paths.
+
+**Worked Example:**
+
+Symbols A:0.5, B:0.25, C:0.125, D:0.125.
+
+- Merge C+D → node E:0.25
+- Now A:0.5, B:0.25, E:0.25
+- Merge B+E → node F:0.5
+- Now A:0.5, F:0.5 → root.
+
+Codes (example assignment): A=0 (len 1), B=10 (len 2), C=110 (len 3), D=111 (len 3).
+
+## Optimality
+
+<!-- section: optimality -->
+
+Huffman codes are optimal among all prefix-free codes: no other prefix code has smaller expected codeword length for the given probabilities.
+
+Moreover, the average length L satisfies H ≤ L < H + 1, so it is at most 1 bit worse than the entropy lower bound.
+
+**ELI5**
+
+- Among all ways of writing a "comma-free" (instantaneously readable) variable-length code, Huffman gives the shortest average message.
+- You are guaranteed to be within one bit per symbol of the theoretical minimum.
+
+**Worked Example:**
+
+In the example above, average length L = 0.5*1 + 0.25*2 + 0.125*3 + 0.125*3 = 1.75 bits.
+
+The entropy of the distribution is also 1.75 bits, so the code is perfectly efficient (within the <H+1 bound, here equal).
+
+## Practical Considerations and Limitations
+
+<!-- section: practical -->
+
+- **Canonical Huffman**: the actual bit patterns can be chosen in a standardized way so that the code table can be transmitted compactly.
+- **Length-limited Huffman**: for hardware or cache reasons one sometimes caps maximum code length (sacrificing a tiny amount of optimality).
+- **Single-symbol vs. blocked**: basic Huffman on individual symbols ignores memory; one can run it on pairs/triples or combine with other models.
+- **Adaptive / dynamic Huffman**: variants exist that update the tree on the fly as symbols are seen (used in some old archivers).
+
+**ELI5**
+
+- Real implementations often transmit a compact description of the tree or code lengths first, then the coded data.
+- For text with strong local correlations, pure symbol Huffman is only a starting point; modern compressors layer dictionary or context modeling on top.
+
+**Worked Example:**
+
+In JPEG, after the DCT and quantization, the 63 AC coefficients are run-length + category encoded, and the category codes are Huffman-coded with a table chosen for typical image statistics. The DC coefficients use a separate Huffman table. This is why JPEG has "Huffman tables" in its header.
+
+## Common Mistakes
+
+- **Assuming Huffman always achieves exactly the entropy**: It achieves L < H+1; equality to H occurs only for dyadic probabilities (powers of 1/2).
+- **Using Huffman on data whose probabilities are unknown or changing**: You must estimate the distribution first (two-pass) or use adaptive versions; otherwise performance suffers.
+- **Forgetting the prefix property when concatenating codes**: Because it is prefix-free you can just concatenate codewords and decode unambiguously from left to right.
+- **Thinking the longest codeword is short**: In the worst case (one very probable symbol) the rarest symbol can receive a codeword of length |alphabet|-1.
+- **Confusing Huffman optimality with arithmetic coding**: Arithmetic coding can get closer to H for finite data (fractional bits per symbol) and handles memory more naturally when combined with good models.
+- **Believing you must always build the tree from scratch**: Many systems use precomputed "canonical" tables tuned to typical data (e.g., the fixed Huffman tables in DEFLATE).
+
+Arithmetic coding is a powerful entropy coding technique that encodes an entire message as a single number in the unit interval [0,1). Unlike Huffman coding, which assigns an integer number of bits to each symbol, arithmetic coding can achieve rates arbitrarily close to the true entropy even for small alphabets and finite messages, because it effectively uses fractional bits.
+
+It is the engine behind many modern compressors and is frequently paired with sophisticated context models.
+
+## The Core Idea
+
+<!-- section: idea -->
+
+Instead of mapping symbols to bit strings, arithmetic coding maps the whole sequence to a sub-interval of [0,1) whose length equals the probability of the sequence (under the model). Any number (the "tag") inside that final interval can serve as a compressed representation; the binary digits of the tag are what get transmitted.
+
+Because the intervals for different messages are disjoint, the tag uniquely identifies the message.
+
+**ELI5**
+
+- Imagine the unit interval is a ruler. Each possible message claims a tiny segment of the ruler proportional to how likely it is.
+- You only need to point to a spot inside the segment with enough precision; that spot name (the bits after the decimal) is the compressed file.
+
+**Worked Example:**
+
+Suppose two symbols A (p=0.8), B (p=0.2), message "AAB".
+
+Start [0,1).
+
+A narrows to [0, 0.8).
+
+Second A narrows to [0, 0.64).
+
+B narrows to [0.512, 0.64)  (width 0.128 = 0.8*0.8*0.2).
+
+A tag such as 0.55 (binary 0.100011...) lies inside and identifies "AAB".
+
+## Interval Narrowing and Renormalization
+
+<!-- section: interval-narrowing -->
+
+Given current interval [low, high) and next symbol s with conditional probability p and cumulative distribution F (probability of symbols < s),
+
+newLow  = low + (high-low) * F(s)
+
+newHigh = low + (high-low) * (F(s) + p(s))
+
+The width shrinks by exactly the factor p(s) each step.
+
+To keep the arithmetic inside finite-precision registers, renormalization (E1/E2 scaling) is performed whenever the interval lies wholly in [0,0.5) or [0.5,1): output the decided bit and double the interval.
+
+**ELI5**
+
+- You keep zooming into a smaller and smaller portion of the ruler.
+- As soon as you know the next binary digit of the tag for sure (the interval is entirely on one side of a 0.5 boundary), you can emit that bit and "zoom out" the ruler to keep working with the remaining precision.
+
+**Worked Example:**
+
+Current [0.1, 0.6), width 0.5. Symbol with F=0.3, p=0.4 narrows to [0.1+0.5*0.3 , 0.1+0.5*0.7) = [0.25, 0.45).
+
+Now entirely <0.5, so output 0, rescale by doubling around the boundary: new interval becomes [0.5, 0.9) after appropriate shift, etc.
+
+## Termination and Practical Issues
+
+<!-- section: termination -->
+
+At the end of the message an EOF symbol (with its allocated probability) is usually encoded, or a known length is sent, or "follow bits" are output to ensure the decoder can distinguish the exact endpoint.
+
+Finite-precision implementations must also handle carry propagation and underflow carefully.
+
+**ELI5**
+
+- The tag could be the beginning of many longer messages. You must tell the decoder "stop here."
+- Sending a few extra bits or a special symbol guarantees the decoder reconstructs exactly the intended length.
+
+**Worked Example:**
+
+After the final interval [0.512, 0.64) you might encode an EOF that takes the bottom half, producing a still-smaller interval. Then you output enough bits (here roughly 4 bits suffice) so that any number with those bits falls inside the final interval but not in neighboring message intervals.
+
+## Common Mistakes
+
+- **Thinking you must output all the bits of the tag at the very end**: Renormalization lets you emit bits incrementally as soon as they are determined, keeping memory use low.
+- **Forgetting to allocate probability mass to an EOF or terminator**: Without it the decoder cannot know where the message ends; many extensions remain possible inside the final interval.
+- **Using arithmetic coding with a poor probability model**: The coder itself is near-optimal for the model you feed it; compression quality is almost entirely determined by how good your p(x|context) estimates are.
+- **Ignoring carry and precision problems in implementation**: Real code must handle the case where low=0.01111… and adding pushes a carry that flips many bits.
+- **Assuming arithmetic coding is always faster than Huffman**: It is more powerful but has higher constant factors; for very small alphabets or hardware constraints Huffman (or canonical variants) can be preferable.
+- **Confusing the tag with the final interval width**: The width tells you the ideal codelength -log p(message); you still need a few extra bits in practice to select a unique tag and terminate.
+
+The Lempel–Ziv–Welch (LZW) algorithm is a practical, universal, dictionary-based lossless compression method. It was published by Terry Welch in 1984 as a refinement of the LZ78 algorithm and became famous through its use in the GIF image format and the Unix compress utility.
+
+LZW is "universal" in the information-theoretic sense: for any stationary ergodic source it asymptotically achieves the entropy rate without being told the probabilities in advance.
+
+## How the Dictionary Works
+
+<!-- section: dictionary -->
+
+LZW maintains a dictionary that maps strings to codes. The encoder and decoder start with the same initial dictionary (usually the 256 single-byte literals plus control codes).
+
+As the input is processed, new strings are added to the dictionary and replaced in the output by their (short) code indices. Because both sides see the same data, they add the same entries at the same time.
+
+**ELI5**
+
+- The first time you see "the ", you send the letters one by one and remember the phrase "the " as dictionary entry #300.
+- The next time "the " appears you just send the short number 300 instead of five characters.
+
+**Worked Example:**
+
+Initial dictionary: 'A'→1, 'B'→2, ... (and CLEAR, STOP).
+
+Input: ABABABA
+
+- Output code for A (1), add "AB" as next code (say 3).
+- Output code for B (2), add "BA" (4).
+- Current phrase "AB", already in dict (3), next A makes "ABA" — not in dict yet.
+- Output 3 ("AB"), add "ABA" (5).
+- And so on.
+
+The output is a sequence of small integers instead of the original characters.
+
+## The Encoding and Decoding Process
+
+<!-- section: encoding-process -->
+
+Encoding (greedy):
+
+current = empty
+
+for each next character c:
+
+  if current + c is in dictionary:
+
+    current = current + c
+
+  else:
+
+    output code for current
+
+    add current + c to dictionary
+
+    current = c
+
+output code for final current
+
+Decoding is symmetric and uses the fact that when a new code is received, the first character of the string it represents is the first character of the string that was just decoded.
+
+**ELI5**
+
+- The encoder always takes the longest phrase it already knows, sends its code, then learns the phrase extended by one more character.
+- The decoder, seeing the same codes, can replay the same learning steps.
+
+**Worked Example (decoding side):**
+
+Receive code 1 ('A'), emit "A", remember previous phrase "A".
+
+Receive code 2 ('B'), emit "B", add "AB" to dict (because previous + first char of current = "A"+"B").
+
+Receive code 3 (which is now "AB"), emit "AB", add "BA", etc.
+
+Both sides stay in sync.
+
+## Limitations and Variants in Practice
+
+<!-- section: limitations -->
+
+- Dictionary size is finite (e.g. 12 bits → 4096 entries in GIF). When full, either compression stops improving or a CLEAR code resets the dictionary.
+- LZW is simple but not the best modern universal compressor; LZ77-family (used in gzip, zstd, LZMA) with sliding windows and more sophisticated entropy coding of literals/distances usually outperform it.
+- On data without repeats (high-entropy random data) LZW gives almost no compression and can even expand slightly because of code overhead.
+
+**ELI5**
+
+- Once the dictionary is full you can't learn brand-new long phrases anymore.
+- On completely random noise the "dictionary" entries are almost never reused, so you pay the cost of sending codes without getting the benefit of short indices.
+
+**Worked Example:**
+
+GIF images with large flat areas or repeating patterns (icons, simple graphics) compress extremely well with LZW. A photograph with noise-like pixels compresses poorly in GIF; PNG (which can use LZ77 + Huffman) or JPEG (lossy) are better choices.
+
+## Common Mistakes
+
+- **Thinking LZW is the same as LZ77**: LZ77 uses a sliding window of recent text and emits (distance, length) pairs; LZW builds an explicit growing dictionary of phrases.
+- **Expecting LZW to compress random or already-compressed data**: It cannot; the dictionary entries will be unique and the output codes will be at least as long as the input on average.
+- **Forgetting the CLEAR code mechanism**: Many LZW implementations (GIF in particular) rely on the encoder occasionally emitting CLEAR to reset a full dictionary and regain adaptability.
+- **Assuming the dictionary is sent explicitly**: It is never sent; it is reconstructed identically by the decoder from the code stream itself.
+- **Using LZW on very short files**: The initial overhead of learning the first phrases and possible CLEAR codes can make tiny files larger.
+- **Confusing LZW with arithmetic coding**: LZW is a dictionary method that produces integer codes; arithmetic coding is an entropy coder that can be used on top of other models. They solve different parts of the compression problem.
+
+Shannon–Fano coding is one of the earliest systematic methods for constructing efficient variable-length prefix codes. It was described by Claude Shannon in his 1948 paper and later elaborated by Robert Fano. Although it is no longer the method of choice (Huffman coding is optimal and only marginally more complicated), it remains an elegant illustration of the top-down divide-and-conquer approach to prefix coding and is pedagogically important.
+
+## The Construction Algorithm
+
+<!-- section: construction -->
+
+1. Sort the symbols in decreasing order of probability.
+2. Divide the list into two groups so that the total probability of each group is as equal as possible.
+3. Assign 0 to the first group and 1 to the second group (or vice versa).
+4. Recursively apply the procedure to each subgroup until every symbol is in a group by itself.
+
+The resulting binary strings are the codewords. Because the procedure builds a binary tree, the code is prefix-free.
+
+**ELI5**
+
+- Put the most common symbols at the top of the list.
+- Cut the list roughly in half by probability mass; everything on the left gets a leading 0, everything on the right a leading 1.
+- Repeat on the halves.
+
+**Worked Example:**
+
+Symbols A 0.5, B 0.25, C 0.125, D 0.125 (already sorted).
+
+Split after A: left prob 0.5, right 0.5.
+
+A gets 0.
+
+Now right group B,C,D: split after B (0.25 vs 0.25).
+
+B gets 10 (0 + 1 from this level? Convention: the first subgroup gets 0).
+
+Typical codes: A:0 , B:10 , C:110 , D:111.
+
+Lengths 1,2,3,3 — same as the Huffman example in many cases.
+
+## Comparison with Huffman Coding
+
+<!-- section: comparison -->
+
+Shannon–Fano is a top-down heuristic that tries to balance probability at each step. Huffman is bottom-up and provably produces the prefix code with the absolute smallest average length.
+
+For many distributions the two methods give identical or very similar codes, but there exist distributions where Shannon–Fano is strictly suboptimal (its average length is larger than Huffman's).
+
+Both methods satisfy the bound L < H + 1.
+
+**ELI5**
+
+- Shannon–Fano is like trying to split a class into two teams of equal "strength" (probability) at every level.
+- Huffman is the optimal way of pairing the weakest players first; it sometimes makes a better tree.
+
+**Worked Example:**
+
+Consider probabilities 0.4, 0.3, 0.2, 0.1.
+
+A Shannon–Fano tree might produce lengths 2,2,2,3 (average L=2.1).
+
+The optimal Huffman tree can achieve lengths 2,2,3,3 (L=2.0), which is better.
+
+Entropy ≈1.97, so both are reasonable but Huffman is closer.
+
+## Historical Context and Why It Matters
+
+<!-- section: historical -->
+
+Shannon–Fano was the first practical demonstration that you could systematically assign shorter codes to more probable symbols and obtain average lengths close to the entropy lower bound Shannon had just derived.
+
+Huffman’s 1952 improvement showed that a simple greedy algorithm gives the *optimal* prefix code, closing the theory for the prefix-free case.
+
+Today the ideas survive in canonical Huffman codes and in the design of fast length-limited coders.
+
+**ELI5**
+
+- Shannon told the world "you should use shorter names for common things."
+- Fano gave a concrete recipe.
+- Huffman gave the best possible recipe under the "no name is a prefix of another" rule.
+
+**Worked Example:**
+
+In teaching, Shannon–Fano is often shown first because the recursive splitting is easy to do by hand on a blackboard, after which students appreciate why the more sophisticated bottom-up Huffman procedure is worth the extra implementation effort.
+
+## Common Mistakes
+
+- **Believing Shannon–Fano is always optimal**: It is not; counter-examples exist (though they are somewhat artificial).
+- **Forgetting to sort the symbols first**: The algorithm requires the list to be in non-increasing probability order before splitting.
+- **Confusing the split criterion**: The split is chosen to balance the *sum of probabilities*, not the number of symbols.
+- **Thinking the resulting code is the same as the Shannon code lengths floor(-log p) or ceil(-log p)**: Shannon–Fano produces a prefix code whose lengths are close to but not necessarily identical to the ideal Shannon lengths.
+- **Using it on sources with memory without blocking**: Like basic Huffman, symbol-by-symbol Shannon–Fano ignores correlations.
+- **Assuming it is used in any modern standard**: Almost all practical systems that need a simple prefix code use Huffman (or arithmetic coding) instead.
+
+A universal code is a (usually adaptive or parameter-free) coding scheme that, for every source belonging to a broad class, compresses almost as well as if the coder had known the source distribution in advance. The redundancy (extra bits beyond the entropy of the source) grows sub-linearly with message length, so the per-symbol overhead vanishes asymptotically.
+
+Universal coding is the theoretical foundation for "just works" compressors such as gzip, bzip2, zstd, and the dictionary methods in everyday use.
+
+## Definition and Desiderata
+
+<!-- section: definition -->
+
+A code is (pointwise) universal for a class of sources if, for every source P in the class, the codelength L_n(x^n) on a string of length n satisfies
+
+L_n(X^n) / n  →  H(P)   (in probability or almost surely under P)
+
+or, more strongly, the total redundancy L_n - (-log P(X^n)) = o(n).
+
+The code does not receive the parameters of P; it must work uniformly well across the whole class.
+
+**ELI5**
+
+- A universal compressor is like a smart packing service that doesn't need you to tell it the statistics of your luggage in advance; it figures out the patterns while packing and still gets close to the theoretical minimum size.
+- For any particular suitcase distribution the overhead per item goes to zero as you pack more and more items.
+
+**Worked Example:**
+
+Lempel-Ziv is universal for the class of all stationary ergodic processes over a finite alphabet. No matter what the (unknown) entropy rate h of your particular process is, the compressed size will be n h + o(n) bits for long n.
+
+## Classic Examples
+
+<!-- section: examples -->
+
+- **Lempel-Ziv family** (LZ77, LZ78, LZW): dictionary methods that discover repeats on the fly. They are universal for ergodic sources.
+- **Arithmetic coding + universal probability models**: e.g., Context Tree Weighting (CTW), Prediction by Partial Matching (PPM), or Krichevsky-Trofimov estimators for i.i.d. or Markov classes. The redundancy is typically O(log n) for parametric classes.
+- **Elias codes and other integer codes**: universal codes for the class of all distributions over the positive integers with finite entropy (used for encoding integers in larger compressors).
+
+**ELI5**
+
+- LZ looks for repeated "words" or phrases without being told what the language is.
+- Arithmetic + a good adaptive model keeps a running estimate of probabilities and feeds them to the arithmetic coder; the model itself is designed so that its estimation error costs only a logarithmic number of extra bits overall.
+
+**Worked Example:**
+
+For binary i.i.d. sources (unknown bias p), the Krichevsky-Trofimov estimator adds (1/2)log n + O(1) bits of redundancy. For n=1 000 000 this is only about 10 extra bits total, regardless of the true (unknown) p. Per symbol the overhead is 10 / 1 000 000 → 0.
+
+## Limitations and the Price of Universality
+
+<!-- section: limitations -->
+
+Universality comes at a price. For any finite n there is no code that simultaneously achieves the entropy of every possible source in the class; there is a minimax redundancy that any universal code must pay in the worst case.
+
+For the class of all i.i.d. distributions over an alphabet of size m the best possible worst-case redundancy is asymptotically (m−1)/2 log n + O(1) bits for a block of length n.
+
+**ELI5**
+
+- If the compressor has to be ready for *any* possible source, it has to "pay insurance" in the form of a few extra bits that cover the uncertainty about which source it is facing.
+- The insurance premium grows only logarithmically with file size, so for big files it is negligible.
+
+**Worked Example:**
+
+For binary memoryless sources (m=2) and n=1024 symbols the information-theoretic lower bound on worst-case redundancy is roughly (1/2)log₂(1024) ≈ 5 bits. Any universal code for this class must sometimes use at least about 5 extra bits beyond the entropy of the unknown source. Good universal codes (CTW, KT) achieve essentially this bound.
+
+## Common Mistakes
+
+- **Thinking a universal code achieves exactly the entropy for every file**: It achieves entropy + o(n) only in the limit; for short files the overhead can be substantial relative to file size.
+- **Confusing "universal" with "optimal for the unknown source"**: No code can be optimal for every source at finite n; universality is an asymptotic per-source guarantee.
+- **Assuming Lempel-Ziv is optimal among universal codes**: LZ is simple and practical but its redundancy can be larger (order sqrt(n) or worse in some analyses) than the optimal O(log n) for parametric classes achieved by arithmetic + proper models.
+- **Believing you need a different code for every distribution**: The whole point of universal coding is that one scheme (with adaptation) suffices for a huge class.
+- **Forgetting that the model class matters**: A code that is universal for i.i.d. sources may not be universal for sources with long memory; the class must be specified.
+- **Applying the term "universal code" only to integer codes**: While Elias codes are classic examples, the term in modern usage usually refers to the whole compressor (model + coder) being universal for a process class.

@@ -1,0 +1,582 @@
+---
+title: Channel Coding & Error Correction
+---
+
+# Channel Coding & Error Correction
+
+Channel capacity, noisy-channel coding, and error-correcting codes from Hamming to polar and turbo codes.
+
+Channel capacity is the fundamental limit, discovered by Shannon, on how fast information can be transmitted reliably over a noisy communication channel. It is the highest rate (in bits per channel use or bits per second) at which one can send messages with the probability of error made arbitrarily small by using sufficiently long codes.
+
+The noisy-channel coding theorem asserts that rates below capacity are achievable and rates above capacity are not.
+
+## Definition via Mutual Information
+
+<!-- section: definition -->
+
+For a discrete memoryless channel with transition probabilities p(y|x), the capacity is
+
+$C = \max_{p(x)} I(X;Y),$
+
+where the maximum is over all possible input distributions p(x), and I(X;Y) is the mutual information between input and output.
+
+The maximizing distribution p^*(x) is the capacity-achieving input distribution.
+
+**ELI5**
+
+- Capacity answers: "What is the fastest speed (in bits per transmission) I can talk over this noisy link so that the listener can still understand me perfectly if I use a good enough code?"
+- It is the largest mutual information you can create between what you send and what arrives.
+
+**Worked Example:**
+
+A channel that simply copies the input (no noise) has I(X;Y)=H(X). The maximum is log| X |, achieved when the input is uniform. Hence C = log |alphabet| bits per use — you can send one symbol per transmission perfectly.
+
+## The Binary Symmetric Channel (BSC)
+
+<!-- section: binary-symmetric -->
+
+The BSC flips each transmitted bit independently with probability p (the crossover probability). Its capacity is
+
+$C = 1 - h_2(p),$
+
+where h_2(p) = -p log₂ p - (1-p) log₂(1-p) is the binary entropy function.
+
+The optimal input is the uniform (fair coin) distribution.
+
+**ELI5**
+
+- Even if the channel flips 10% of the bits, you can still send information at a positive rate (about 0.53 bits per transmission) by using error-correcting codes.
+- When p=0.5 the channel is useless (pure noise) and C=0.
+
+**Worked Example:**
+
+p=0.11, h_2(0.11)≈0.5, therefore C≈0.5 bits per use. With a good code you can transmit at 0.5 bits per channel use with error probability as small as you like.
+
+## Gaussian Channels and the Shannon Limit
+
+<!-- section: gaussian -->
+
+For the additive white Gaussian noise (AWGN) channel with average power constraint P and noise variance N (SNR = P/N), the capacity (in the appropriate normalization) is
+
+$C = \frac{1}{2} \log_2 (1 + \text{SNR}).$
+
+This is the famous formula that shows capacity grows only logarithmically with signal power.
+
+**ELI5**
+
+- Doubling power gives you less than 0.5 extra bits per transmission. To gain a full extra bit you need to roughly quadruple the power (6 dB).
+- This is why engineers care so much about bandwidth and clever coding rather than just "turning up the volume."
+
+**Worked Example:**
+
+SNR = 7 (≈8.5 dB). Then C = 0.5 log2(8) = 1.5 bits per transmission. This is the ultimate speed limit for that power and noise level; no coding scheme can exceed it.
+
+## Common Mistakes
+
+- **Confusing capacity with the raw bit rate or symbol rate**: Capacity is the *reliable information* rate after optimal coding; you may send symbols faster but with higher error, or use bandwidth expansion.
+- **Thinking capacity is achieved by sending at the highest power all the time**: The optimal input distribution is often not the "full power" or uniform; water-filling is needed for parallel or frequency-selective channels.
+- **Forgetting that capacity is an asymptotic quantity**: It is achievable only in the limit of long block lengths; for short packets there is a penalty (finite-blocklength information theory).
+- **Believing that any code operating below C works**: The theorem says there *exist* codes that achieve low error; finding them (or good approximations) is the job of coding theory.
+- **Mixing capacity with rate-distortion**: Capacity is about reliable transmission (channel coding); rate-distortion is about lossy compression (source coding).
+- **Assuming the capacity formula for Gaussian is the same in continuous time without bandwidth**: The classic C = B log2(1+SNR) formula includes bandwidth B; the discrete-time version above normalizes to one use per "dimension."
+
+The noisy-channel coding theorem (or channel coding theorem) is Shannon's second great result. It proves that, as long as the transmission rate is kept below the channel capacity C, it is possible to communicate with arbitrarily high reliability (error probability → 0) by using sufficiently sophisticated codes and long block lengths.
+
+This was a revolutionary insight: noise does not impose a hard limit on reliability, only on *rate*.
+
+## Statement of the Theorem
+
+<!-- section: statement -->
+
+For a discrete memoryless channel with capacity C:
+
+- **Achievability (direct part)**: For every rate R < C there exists a sequence of codes with rate R such that the maximum (or average) probability of decoding error Pe → 0 as the block length n → ∞.
+- **Converse (impossibility)**: For any rate R > C, every sequence of codes with rate R has Pe bounded away from zero (in fact Pe → 1 for the strong converse on many channels).
+
+**ELI5**
+
+- If you speak slowly enough (rate < C), you can make yourself understood perfectly over a noisy phone line by using a good "code" (repeating in clever ways, using error-correcting language).
+- If you try to speak faster than C, no amount of cleverness can prevent misunderstandings from happening a positive fraction of the time.
+
+**Worked Example:**
+
+A BSC with C = 0.5 bits per use. You can send 1000 information bits reliably by using a code of length roughly 2200 or more (rate ≈0.45 < 0.5). With a good modern code the block error probability can be made 10^{-6} or lower. At rate 0.6 > C the same 1000 bits would require only ~1667 transmissions, but then Pe cannot be made small no matter what code you choose.
+
+## Achievability Sketch (Random Coding)
+
+<!-- section: achievability -->
+
+Generate a random codebook of M = 2^{nR} codewords, each symbol drawn i.i.d. from the capacity-achieving input distribution.
+
+To send message m, transmit the m-th codeword.
+
+The decoder, upon receiving y^n, looks for the unique codeword that is jointly typical with y^n (or within a certain distance).
+
+Error events: the true codeword is not typical with y (vanishes by AEP), or some wrong codeword is jointly typical (union bound over M-1 wrong codewords, each with prob ~2^{-n I} , and M 2^{-n I} →0 when R < I ≤ C).
+
+**ELI5**
+
+- Throw a huge number of random "sentences" into a codebook.
+- Send the sentence corresponding to your message.
+- At the receiver, look for the sentence that "matches" the noisy received signal according to the joint statistics.
+- Because random sentences are unlikely to look like the received one by accident, the correct one stands out, provided you didn't pack too many sentences (R < C).
+
+**Worked Example:**
+
+For the BSC, the typical set decoder reduces to "find the codeword within Hamming distance roughly p n of the received vector." The analysis shows that when R < 1-h(p) the probability of a wrong codeword being that close is exponentially small, and the union bound still goes to zero.
+
+## The Converse
+
+<!-- section: converse -->
+
+Suppose a code of rate R > C exists with small Pe.
+
+Then the mutual information I(X^n ; Y^n) ≥ nR - o(n) (because the message is essentially recovered from Y^n).
+
+But by the chain rule / data processing / memoryless property, I(X^n;Y^n) ≤ n C.
+
+This yields a contradiction for large n if R > C.
+
+Fano's inequality makes the "essentially recovered" quantitative: H(message | hat message) ≤ 1 + Pe * nR , which forces I large only if Pe small.
+
+**ELI5**
+
+- If the receiver can recover the message with high probability, then the channel must have carried almost all the bits of the message (nR bits of information).
+- But the channel can carry at most nC bits of information in n uses, by definition of C.
+- Hence you cannot have both high rate and high reliability.
+
+**Worked Example:**
+
+Trying to send at R = C + ε forces, via the above inequality, that Pe ≥ δ(ε) > 0 no matter how large n is. The "information pipe" is simply not wide enough.
+
+## Common Mistakes
+
+- **Thinking the theorem says you can send at rate C with zero error**: At exactly C the behavior is more subtle (strong converse says Pe→1 for most channels); the theorem guarantees rates *strictly below* C.
+- **Confusing the theorem with the existence of practical codes**: The original proof is non-constructive (random coding). Building codes that approach C with reasonable complexity took 50 years (turbo/LDPC/polar codes).
+- **Believing capacity is a hard speed limit like the speed of light for every transmission**: For short messages the effective reliable rate is lower; finite-blocklength theory quantifies the back-off.
+- **Mixing up source coding and channel coding limits**: Source coding removes redundancy; channel coding adds the right kind of redundancy. The separation theorem says you can do them separately and still achieve the combined limit H/C.
+- **Assuming the theorem applies only to BSC or Gaussian channels**: It holds for any discrete memoryless channel (and many others with memory or continuous alphabets under technical conditions).
+- **Forgetting that capacity is per channel use**: When the physical channel has a bandwidth, you multiply by the number of uses per second to get bits per second.
+
+In any real communication or storage system, noise, interference, or hardware faults can flip bits. Error detection tells the receiver "something is wrong"; error correction goes further and recovers the original message. The theory of error-correcting codes quantifies how much redundancy is needed to achieve a target reliability.
+
+Claude Shannon's noisy-channel coding theorem guarantees that reliable communication is possible below channel capacity, but practical codes must approach that limit with reasonable complexity.
+
+## Errors in Communication
+
+<!-- section: errors-in-communication -->
+
+A binary symmetric channel (BSC) with crossover probability $p$ flips each transmitted bit independently with probability $p$. The Hamming distance between two vectors $\mathbf{x}$ and $\mathbf{y}$ is the number of positions they differ:
+
+$d(\mathbf{x}, \mathbf{y}) = |\{ i : x_i \neq y_i \}| = w(\mathbf{x} - \mathbf{y})$
+
+where $w$ is the Hamming weight (number of 1s).
+
+A code $\mathcal{C}$ is a subset of $\{0,1\}^n$. Its minimum distance $d = \min_{\mathbf{c} \neq \mathbf{c}'} d(\mathbf{c},\mathbf{c}')$ determines its error capability: it can detect up to $d-1$ errors and correct up to $t = \lfloor (d-1)/2 \rfloor$ errors.
+
+**ELI5**
+
+- Think of sending a message over a phone line that sometimes crackles. Each crackle flips a bit. Distance measures how different two possible messages look after noise.
+- If codewords are far apart in Hamming distance, noise has to flip many bits before one valid codeword becomes another.
+
+**Worked Example:**
+
+The repetition code of length 3: codewords 000 and 111. Minimum distance $d=3$. It corrects $t=1$ error. If 001 arrives we decode to 000 (one flip); 011 decodes to 111 (two flips would be miscorrected, but $t=1$).
+
+## Error Detection
+
+<!-- section: error-detection -->
+
+Simple detection uses parity bits. An even-parity bit makes the total number of 1s even in the codeword. A single flip changes parity and is detected; two flips preserve parity and go undetected.
+
+Cyclic redundancy checks (CRC) use polynomial division over GF(2) and catch burst errors of length up to the degree with high probability. They are ubiquitous in Ethernet, ZIP files, and hard drives.
+
+A code detects $e$ errors if no error pattern of weight $\le e$ takes a codeword to another codeword.
+
+**ELI5**
+
+- Even parity is like adding a "check digit" so the sum mod 2 is zero. Any odd number of flips breaks the sum and screams "error!"
+- CRC is a fancier checksum using modular arithmetic in the polynomial ring; it is excellent at catching the kinds of errors that actually occur on wires and disks.
+
+**Worked Example:**
+
+Send data 1011 with even parity: total 1s = 3 (odd), so append 1 → 10111. Received 10101 has four 1s (even) — wait, original appended made even (10111 has 4 ones? 1+0+1+1+1=4 even). Received 10011 (flipped position 3 and 4? ) parity check: count 1s=3 odd → error detected.
+
+## Error Correction
+
+<!-- section: error-correction -->
+
+Correction requires spheres of radius $t$ around codewords to be disjoint. For perfect codes they also cover the whole space.
+
+Linear codes are subspaces: encoding is $\mathbf{m} \mapsto \mathbf{m}G$ for generator matrix $G$; syndrome decoding uses parity-check matrix $H$ with $\mathbf{c}H^T = 0$ for codewords.
+
+The syndrome $\mathbf{s} = \mathbf{r}H^T$ depends only on the error: $\mathbf{s} = \mathbf{e}H^T$.
+
+**ELI5**
+
+- Correction is "nearest-neighbor" decoding in Hamming space: pick the codeword that differs in fewest positions from what you received.
+- Linear structure lets you use linear algebra over GF(2) instead of searching all codewords.
+
+**Worked Example:**
+
+Repetition code (3,1) again. Generator $G = [1~1~1]^T$, $H = \begin{bmatrix}1 & 1 & 0 \\ 1 & 0 & 1\end{bmatrix}$. Received 101 gives syndrome (1,0) which matches column 1 of $H$, so flip first bit → 001? Standard majority: three bits, decode by majority vote. 101 → majority 1, decode 111.
+
+## Common Mistakes
+
+- **Thinking detection is the same as correction**: A parity bit detects odd errors but gives no location information for correction.
+- **Ignoring the rate penalty**: Adding redundancy for reliability reduces the information rate; the Hamming bound shows you cannot correct too many errors without making rate tiny.
+- **Assuming all error patterns are equally likely**: Real channels have bursts and correlations; codes good on BSC may fail on bursty media without interleaving.
+- **Forgetting that two errors can look like a single error in the wrong direction**: In a code with $d=3$, a weight-2 error can move you to distance 1 from a wrong codeword.
+- **Confusing minimum distance with average distance**: Only the smallest distance between any pair governs guaranteed capability.
+- **Believing longer codes are always better**: While longer codes can approach capacity, decoding complexity and latency also grow; practical systems balance block length carefully.
+
+The Hamming codes, invented by Richard Hamming in 1950, are the first nontrivial family of error-correcting codes. They are perfect single-error-correcting linear codes whose elegant parity-check matrix structure makes encoding and decoding extremely simple (syndrome = error position).
+
+They remain the canonical example in coding theory textbooks and are still used in some memory systems (SECDED variants).
+
+## Definition and Parameters
+
+<!-- section: definition -->
+
+The binary Hamming code of length 2^m − 1 has dimension 2^m − 1 − m and minimum distance 3. It is a perfect code: the spheres of radius 1 around codewords pack the entire space.
+
+The parity-check matrix H consists of all nonzero distinct columns of length m.
+
+**ELI5**
+
+- You add m parity bits so that the positions of possible single errors are uniquely identified by the m-bit syndrome.
+- For m=3 you protect 4 data bits with 3 parity bits (total 7); the code can fix any one flip.
+
+**Worked Example:**
+
+The (7,4) code. Positions 1,2,4 are parity; 3,5,6,7 data (or any numbering where parity positions are powers of 2).
+
+H has columns 001,010,011,100,...111 (binary).
+
+## Syndrome Decoding
+
+<!-- section: syndrome-decoding -->
+
+To decode a received vector r, compute the syndrome s = H r (mod 2).
+
+If s = 0, assume no error.
+
+If s ≠ 0, s interpreted as an integer i tells you to flip bit i.
+
+This corrects any single error. If two errors occurred, it will "correct" a third bit, producing a wrong codeword (but the overall parity in the extended code can detect this).
+
+**ELI5**
+
+- The parity checks are designed so that each possible single flip produces a unique pattern of which checks fail.
+- That pattern is the binary address of the flipped bit.
+
+**Worked Example:**
+
+Received syndrome s = 101 binary = 5. Flip position 5. Re-encode or extract the data bits from the corrected word.
+
+## Extended Hamming and SECDED
+
+<!-- section: extended -->
+
+Adding one extra overall parity bit produces the extended Hamming code of length 2^m, distance 4.
+
+It can correct single errors and detect double errors (SECDED — single error correction, double error detection). This is widely used in computer RAM (ECC memory).
+
+**ELI5**
+
+- The extra parity bit tells you whether the total number of errors was even or odd.
+- If the syndrome says "correct position 3" but the overall parity says "even number of errors," you know it was actually two errors and you should not trust the correction.
+
+**Worked Example:**
+
+In (8,4) extended code, a double error produces nonzero syndrome but the overall parity check fails to match the expected for a single error; the memory controller can flag an uncorrectable error instead of silently corrupting data.
+
+## Common Mistakes
+
+- **Thinking Hamming codes can correct two errors**: The basic code has d=3 and corrects only t=1; the extended version detects doubles but still corrects only singles.
+- **Forgetting that Hamming is a perfect code**: Every possible received word is within distance 1 of exactly one codeword; there are no "detect only" regions in the basic code.
+- **Using the wrong positions for parity bits**: The standard construction numbers parity bits at powers of 2 so that the syndrome directly gives the error location in binary.
+- **Confusing Hamming distance with code rate**: The rate is (n-m)/n = 1 - m/n; for long Hamming codes the rate approaches 1, but the relative distance goes to 0.
+- **Assuming modern systems still use plain Hamming for high reliability**: Today's systems use LDPC, turbo, or polar codes that operate much closer to capacity; Hamming is used where simplicity and low latency for small blocks matter (e.g., memory).
+- **Forgetting the all-zero codeword when counting**: Because it is linear, the weight distribution determines the distance; the minimum weight is 3.
+
+Low-density parity-check (LDPC) codes are linear codes defined by a sparse parity-check matrix $H$ in which most entries are zero. Their rediscovery in the 1990s by MacKay and others revealed that simple iterative message-passing decoding on the associated Tanner graph can achieve performance extremely close to the Shannon limit for long block lengths.
+
+LDPC codes are now used in virtually every modern wireless and storage standard that demands high reliability at high rates (Wi-Fi 802.11, DVB-S2, 5G NR, hard-disk controllers).
+
+## Definition and Sparsity
+
+<!-- section: definition-sparsity -->
+
+An $(n, k)$ LDPC code is a linear subspace whose $m = n-k$ parity-check equations are represented by an $m \times n$ matrix $H$ with only a small constant number of 1s per row and per column (low density). The code is the nullspace: $\mathbf{c} H^T = \mathbf{0}$ over GF(2).
+
+Gallager's original construction used regular degree distributions; modern irregular LDPC codes optimize the variable and check node degrees for better thresholds.
+
+**ELI5**
+
+- Imagine a huge crossword puzzle where each "clue" (parity check) involves only a few letters (bits). Because the clues are local and sparsely connected, you can solve most of the puzzle by iteratively satisfying local constraints.
+- Low density means each bit participates in only a few checks, keeping the graph tree-like locally and making decoding tractable.
+
+**Worked Example:**
+
+A tiny regular (3,6) LDPC: n=12, each column of H has weight 3, each row weight 6, rate 1/2. The matrix is 6x12 with exactly 18 ones total. Any codeword satisfies the 6 parity equations.
+
+## Tanner Graphs and Message Passing
+
+<!-- section: tanner-graphs -->
+
+The Tanner graph is a bipartite graph with variable nodes (one per code bit) on one side and check nodes (one per row of H) on the other; an edge exists where $H_{j,i}=1$.
+
+Belief-propagation (sum-product) decoding passes log-likelihood ratios (LLRs) along edges. Each variable node collects messages from its neighboring checks, updates its belief, and sends new messages back. After a few iterations the beliefs converge to the most likely codeword or a near-codeword.
+
+For cycle-free graphs the algorithm is exact maximum-likelihood; short cycles degrade performance slightly but are managed by good constructions (progressive edge growth, protographs).
+
+**ELI5**
+
+- Variable nodes are the "bits" that gossip with the "checks" they belong to. Each check tells every bit "given what my other bits say, you should probably be 0 (or 1)".
+- After a few rounds of polite conversation the bits settle on values that satisfy almost all checks.
+
+**Worked Example:**
+
+Variable node v1 connected to checks c2 and c4. It receives LLR messages L2 and L4 from them. Its extrinsic message to c2 is L_channel + L4 (its own channel observation plus the other check's opinion). The check node c2 computes the "tanh rule" or min-sum approximation for the outgoing messages.
+
+## Performance and Decoding
+
+<!-- section: performance-decoding -->
+
+Under density evolution, the decoding threshold of a well-designed LDPC ensemble can be within 0.1 dB of the Shannon limit for the binary-input AWGN channel at rates 1/2 and higher. Finite-length performance is governed by the girth (shortest cycle) and the minimum distance (which grows linearly with n for good ensembles).
+
+Decoding is parallelizable and has linear complexity in block length per iteration; usually 10-50 iterations suffice. Hardware implementations use layered scheduling and min-sum approximations to reduce multipliers.
+
+**ELI5**
+
+- For long enough blocks, LDPC can get you almost as close to the theoretical best error rate as any code possibly could.
+- The decoder is "dumb but fast": thousands of tiny local processors just exchange simple numbers until the whole block agrees.
+
+**Worked Example:**
+
+A rate-1/2 LDPC code of length 64800 (DVB-S2) at Eb/N0 = 1.0 dB achieves BER below 10^{-5} after 50 iterations, while the Shannon limit for rate 1/2 on BI-AWGN is approximately 0.18 dB — within 0.8 dB and improvable with better degree distributions.
+
+## Common Mistakes
+
+- **Confusing LDPC with Turbo codes**: Both are iteratively decoded capacity-approaching codes, but LDPC use sparse graphs and message passing while Turbo codes concatenate two convolutional codes with an interleaver.
+- **Assuming all sparse matrices give good codes**: Random sparse H can have short cycles or poor degree distributions; structured constructions (quasi-cyclic, protograph) are used in standards.
+- **Expecting small-block excellent performance**: LDPC shine at large n; for short packets polar or algebraic codes are often preferred.
+- **Forgetting that the all-zero codeword is assumed w.l.o.g. for linear codes when simulating**: Because of linearity, error probability is independent of the transmitted codeword.
+- **Overlooking the error floor**: At very high SNR, performance is limited by low-weight codewords or trapping sets rather than the waterfall region.
+- **Thinking decoding always finds a codeword**: The algorithm may output a non-codeword or declare failure; post-processing or outer CRC is common.
+
+Polar codes, invented by Erdal Arıkan in 2009, are the first family of codes that provably achieve the symmetric capacity of any binary-input discrete memoryless channel with encoding and decoding complexity O(n log n). They do so by an explicit, deterministic construction based on the beautiful phenomenon of channel polarization.
+
+In 5G New Radio, polar codes were selected for the control channel (PDCCH) and for the broadcast channel, marking the first widespread commercial deployment of a capacity-achieving code family.
+
+## Channel Polarization
+
+<!-- section: channel-polarization -->
+
+Arikan's insight starts with a simple 2×2 kernel: two copies of a channel W are combined into a worse channel W⁻ and a better channel W⁺. Recursively applying this transformation to n = 2^m independent copies of W creates n synthetic bit-channels whose capacities polarize: a fraction I(W) of them become almost noiseless (capacity → 1) while the rest become almost useless (capacity → 0).
+
+As m → ∞ the polarization is sharp; the fraction of good channels approaches exactly the symmetric capacity I(W).
+
+**ELI5**
+
+- Imagine taking many identical noisy phone lines and cleverly wiring them together in stages. Some of the resulting 'virtual lines' become crystal clear while others become pure noise.
+- The fraction that become clear equals the fraction of information the original noisy line could have carried reliably.
+
+**Worked Example:**
+
+For the binary erasure channel with erasure probability 0.5, I(W)=0.5. After one step of polarization the good synthetic channel W⁺ has erasure prob 0.25 (better) and W⁻ has 0.75 (worse). After many recursions roughly half the final bit-channels have erasure probability near 0.
+
+## Construction and Encoding
+
+<!-- section: construction-encoding -->
+
+The polar transform is the matrix G_n = F^{\otimes m} where F = [[1,0],[1,1]] (Kronecker power). To encode, place the k information bits in the k most reliable synthetic channels (the information set A); the remaining n-k positions (the frozen set) are set to 0 (or known values).
+
+Encoding is simply $\mathbf{x} = \mathbf{u} G_n$ where u_A are the info bits and u_{A^c}=0. Because G_n is the fast Hadamard transform (essentially), encoding costs only n log n XORs.
+
+**ELI5**
+
+- You get a big 'mixing' matrix built by repeatedly applying a tiny 2-bit mixer. The mixing sorts the bits into 'good' and 'bad' positions according to how much the channel likes them.
+- Frozen bits are the positions you deliberately set to known values so the decoder has side information to help it guess the real data bits.
+
+**Worked Example:**
+
+For n=8, m=3, a rate-1/2 code might freeze positions {1,2,3,5} (the worst synthetic channels) and put info bits in {4,6,7,8}. The generator rows corresponding to the info set are selected; the code is linear.
+
+## Successive Cancellation Decoding
+
+<!-- section: sc-decoding -->
+
+Successive cancellation (SC) decodes bit by bit in a fixed order, using previously decided bits as side information for later decisions. At each information bit it computes the likelihood ratio (or LLR) of that synthetic channel given the channel output and prior decisions, then decides 0 or 1 (or uses CRC-aided list decoding).
+
+The recursion follows the same butterfly structure as the encoder, allowing an efficient implementation with O(n log n) complexity using a scheduling graph.
+
+SC list decoding (SCL) keeps L best paths and is used in practice with a small CRC to select the correct path; it dramatically improves finite-length performance.
+
+**ELI5**
+
+- The decoder walks through the bits in a special order, 'freezing' its guesses for the known frozen bits and using them as crutches to decide the unknown data bits one by one.
+- Because of the polarization, when it reaches a good bit position the decision is almost obvious given everything seen so far.
+
+**Worked Example:**
+
+Decoding bit u_4 (an information bit). The LLR for the corresponding synthetic channel is computed by combining the LLRs of the two underlying channels, taking into account any already-decided bits that affect the combination (via the polarization recursions). If |LLR| is large the decision is reliable.
+
+## Performance in Standards
+
+<!-- section: performance-standards -->
+
+For short to moderate block lengths (hundreds to a few thousand bits) that are typical of control signaling, polar codes with CRC-aided SCL decoding outperform both LDPC and turbo codes in the 5G operating region. They have deterministic construction, no need for large interleavers, and admit efficient hardware implementations (especially with list size 8 or 32).
+
+The main practical limitation is that plain SC is suboptimal for short n; list decoding + CRC is essential. Rate matching (puncturing, shortening, repetition) is used to support arbitrary code lengths and rates.
+
+**ELI5**
+
+- For the small packets used to tell a phone 'here is your schedule', polar codes give better reliability than the older turbo or LDPC designs that were tuned for big data blocks.
+- 5G chose them precisely because control messages are short and must be decoded extremely reliably with low latency.
+
+**Worked Example:**
+
+In 5G, downlink control information (DCI) uses polar codes with n up to 512 or 1024 bits, list size 8, and an 24-bit CRC; this achieves the required BLER < 10^{-3} or 10^{-5} at the cell edge with modest Eb/N0.
+
+## Common Mistakes
+
+- **Believing polar codes are 'capacity-achieving for any finite n'**: The proof is asymptotic; for finite n a gap remains and list decoding is needed to close it.
+- **Confusing the polar transform with the FFT**: While the matrix is Kronecker like the FFT, the decoding algorithm and frozen-bit selection are specific to the channel polarization phenomenon.
+- **Thinking frozen bits carry no information**: They are known to both encoder and decoder and provide the 'anchor' values that let SC work.
+- **Assuming SC decoding is maximum-likelihood**: Plain SC is a greedy approximation; SCL with list size >1 is much closer to ML.
+- **Overlooking rate matching complexity**: Supporting many code lengths in 5G required careful puncturing/shortening designs that interact with the information set.
+- **Expecting polar codes to dominate at all lengths and rates**: At very long blocks and high rates LDPC often have implementation advantages (fully parallelizable without list).
+
+Turbo codes, introduced by Berrou, Glavieux, and Thitimajshima in 1993, were the first practical codes to demonstrate bit-error rates within a few tenths of a dB of the Shannon limit at moderate block lengths and rates around 1/2. Their key innovation was the combination of two simple convolutional codes linked by a pseudo-random interleaver together with an iterative "turbo" decoding algorithm that exchanges soft information between the two constituent decoders.
+
+The name "turbo" evokes the iterative feedback, analogous to a turbocharger.
+
+## Construction: Parallel Concatenation
+
+<!-- section: construction -->
+
+A classical turbo encoder consists of two recursive systematic convolutional (RSC) encoders. The information bits $\mathbf{u}$ are fed directly to the first encoder and, after passing through an interleaver $\Pi$, to the second encoder. Only the systematic bits and the two parity streams are transmitted (puncturing may be used to achieve higher rates).
+
+The interleaver scrambles the order so that error patterns that are bad for one encoder become good for the other; this creates a code with large effective free distance.
+
+**ELI5**
+
+- Think of two simple error-correcting "machines" looking at the same data but in different shuffled orders. Each machine adds its own parity checks.
+- The shuffle (interleaver) ensures that a burst of errors that fools one machine looks random to the other.
+
+**Worked Example:**
+
+Rate-1/3 turbo: for k=1000 info bits, after two RSC encoders (each producing one parity) and systematic, before puncturing we have 1000 + 2*1000 = 3000 bits. The interleaver is usually a quadratic or S-random permutation of length 1000.
+
+## Iterative Decoding
+
+<!-- section: iterative-decoding -->
+
+Decoding uses two soft-input soft-output (SISO) decoders, typically the BCJR (Bahl-Cocke-Jelinek-Raviv) algorithm that computes a posteriori probabilities for each bit given the channel observations and the trellis of the convolutional code.
+
+Decoder 1 produces extrinsic LLRs for the information bits; these are interleaved and fed as a priori information to Decoder 2. Decoder 2 produces its own extrinsic information which is de-interleaved and fed back to Decoder 1. The loop repeats for several iterations (typically 6-12). At the end the final a posteriori LLRs decide the bits.
+
+Because each decoder sees a slightly different view thanks to the interleaver, the information improves with each pass until convergence.
+
+**ELI5**
+
+- Each decoder says "based on my parity checks and what the other decoder thinks, these bits are probably 0 or 1, and here's how sure I am (the soft LLR)."
+- The interleaver makes the two opinions almost independent, so combining them is like getting a second (and third, etc.) expert opinion.
+
+**Worked Example:**
+
+Suppose after first half-iteration the extrinsic LLR for bit u_5 from decoder 1 is +2.3. After interleaving it becomes a priori for decoder 2 at position 42. Decoder 2, using its own observations and this prior, outputs extrinsic -0.7 for the corresponding bit. After de-interleaving this feedback helps decoder 1 refine its estimate in the next round.
+
+## Performance and Applications
+
+<!-- section: performance-applications -->
+
+On the AWGN channel, rate-1/2 turbo codes with long interleavers (e.g., 65536 bits) achieve BER = 10^{-5} at Eb/N0 ≈ 0.7 dB, while the Shannon limit is 0.0 dB for rate 1/2 — a gap of only 0.7 dB. The "turbo cliff" is a sharp waterfall in the BER curve once the SNR exceeds the iterative threshold.
+
+Turbo codes were adopted in 3G UMTS, 4G LTE (as the basis for the turbo decoder in control channels), and the CCSDS deep-space standard. They are gradually being supplemented or replaced by LDPC in 5G because LDPC offers better parallelism and slightly better performance at very high rates, but the iterative principle remains foundational.
+
+**ELI5**
+
+- For long enough "blocks" of data the turbo decoder can squeeze almost every last bit of reliability that physics allows out of a noisy channel.
+- The magic is that two weak codes plus clever shuffling plus talking back and forth become one very strong code.
+
+**Worked Example:**
+
+A rate-1/2 turbo code with 8-state RSC components and interleaver length 10000 reaches within 1 dB of capacity at BER 10^{-4}; increasing the interleaver to 10^5 bits typically closes another 0.2-0.3 dB because the effective randomness improves and low-weight codewords become rarer.
+
+## Common Mistakes
+
+- **Thinking turbo codes are 'concatenated' in the serial sense only**: The classic Berrou construction is parallel concatenation; serial concatenation is a related but different architecture.
+- **Expecting good performance with short interleavers**: The interleaver gain (reduction of error floor) requires large size; short turbo codes suffer from a visible error floor.
+- **Confusing extrinsic and a posteriori information**: The decoder must pass only the new (extrinsic) information, not the total a posteriori, otherwise positive feedback loops destroy the iteration.
+- **Assuming the BCJR decoder is maximum-likelihood for the whole code**: Each constituent is ML for its own trellis, but the overall turbo code is decoded approximately via iteration.
+- **Forgetting puncturing effects on rate and distance**: Many practical turbos puncture the parity bits to raise rate above 1/3; this reduces the effective distance.
+- **Believing turbo codes have no error floor**: At extremely high SNR a floor appears due to low-weight input sequences that produce low-weight codewords in both encoders; outer CRC or other techniques mitigate it.
+
+When the receiver can send information back to the transmitter, the system becomes a two-way communication link. Feedback does not increase the capacity of a memoryless point-to-point channel (Shannon 1956), yet it dramatically simplifies coding, reduces delay, and improves the error exponent. Practical systems rely heavily on feedback in the form of acknowledgments and retransmissions.
+
+In network settings and for channels with memory, feedback can strictly increase capacity.
+
+## Feedback Does Not Increase Capacity (Point-to-Point)
+
+<!-- section: capacity-feedback -->
+
+For a discrete memoryless channel (DMC) with capacity C, even with perfect instantaneous feedback of every received symbol, the maximum reliable rate remains C. The converse follows from the same mutual-information bounds used without feedback; feedback cannot create new information about the message that was not already in the channel outputs.
+
+What feedback does provide is the ability to adapt the next transmission based on what has already been received, enabling variable-length and rateless strategies.
+
+**ELI5**
+
+- The 'pipe' from sender to receiver still has the same average 'width' C bits per use; feedback is like a return pipe that tells the sender how much arrived, but does not widen the forward pipe.
+- You cannot magically send more than C bits per forward use on average, no matter how clever the back-talk.
+
+**Worked Example:**
+
+Binary symmetric channel with crossover 0.1 has C ≈ 0.53 bits. With feedback you can still not exceed 0.53 bits per channel use in the limit of many uses; any scheme claiming higher rate will have error probability bounded away from zero.
+
+## Automatic Repeat Request (ARQ)
+
+<!-- section: arq -->
+
+The simplest use of feedback is ARQ: the receiver sends ACK if the packet passes error detection (CRC), NACK otherwise. On NACK the transmitter retransmits (possibly with incremental redundancy).
+
+Pure ARQ is a repetition code with random number of repetitions; throughput is R(1 - P_err) where R is the rate of the packet. It achieves arbitrarily low error probability but throughput vanishes as target error → 0 unless combined with forward error correction.
+
+**ELI5**
+
+- 'Did you get it?' 'No, send again.' Simple, reliable, but wasteful if the channel is bad — you may retransmit the whole packet many times.
+- A CRC is the cheap 'error detected' flag that triggers the repeat.
+
+**Worked Example:**
+
+A 1000-bit packet protected by 32-bit CRC sent at rate 0.9 over a channel with packet error prob 0.01. Expected number of transmissions ≈ 1.01, throughput ≈ 0.9 / 1.01 ≈ 0.89 bits per channel use (ignoring ACK overhead).
+
+## Variable-Length Coding with Feedback
+
+<!-- section: variable-length -->
+
+With feedback one can achieve the capacity with far simpler codes using variable-length transmission. The transmitter keeps sending parity bits until the receiver's posterior on the message is sufficiently peaked (posterior matching, or simple erasure decoding on BEC).
+
+For the binary erasure channel, the capacity-achieving scheme with feedback is trivial: keep sending each bit until the receiver says it got it (ACK). The expected number of transmissions per bit is 1/(1-p) and rate exactly equals capacity.
+
+For general DMCs, more sophisticated posterior-matching schemes exist that also achieve capacity with variable length and zero error probability (in the limit).
+
+**ELI5**
+
+- Instead of deciding in advance how many times to repeat, keep sending 'more hints' until the receiver says 'I understand the message now.'
+- The average number of hints needed is exactly what the capacity predicts; you never waste bits on packets that were already clear.
+
+**Worked Example:**
+
+On a BEC with erasure probability p=0.4, capacity 0.6. Sending uncoded bits with per-bit ACK-until-received: each info bit takes on average 1/0.6 ≈ 1.67 transmissions. Rate = 1 / 1.67 = 0.6, exactly capacity, with zero decoding error (the receiver never stops until it has the bit).
+
+## Common Mistakes
+
+- **Claiming feedback increases point-to-point DMC capacity**: It does not; the mutual information upper bound is unchanged.
+- **Confusing ARQ throughput with capacity**: Pure ARQ throughput goes to zero with target reliability for fixed packet size; only variable-length or FEC+ARQ (HARQ) can approach capacity.
+- **Ignoring feedback channel errors or delay**: Real feedback is itself noisy and delayed; protocols must be robust to lost ACKs (timers) and the analysis changes.
+- **Thinking variable-length codes are always impractical**: Modern systems already use HARQ with incremental redundancy, which is a practical approximation to variable-length coding.
+- **Forgetting that feedback helps error exponents and delay dramatically**: Even when capacity is unchanged, the number of channel uses needed to reach a given small error probability can be much smaller with feedback.
+- **Assuming feedback always helps in networks**: While it often does (e.g., multiple-access with feedback), there are cases where it does not or where the benefit is only in the second-order terms.

@@ -1,0 +1,247 @@
+---
+title: Algorithmic Information Theory
+---
+
+# Algorithmic Information Theory
+
+Kolmogorov complexity and the algorithmic approach to measuring information in individual objects.
+
+Algorithmic information theory (AIT) quantifies the information content of individual objects (strings, files, mathematical statements) rather than ensembles. The central notion is Kolmogorov complexity K(x): the length of the shortest program (in a fixed universal programming language) that outputs x and halts.
+
+AIT provides a rigorous foundation for Occam's razor, induction, and the notion of randomness for single sequences. It is intimately connected with Shannon theory in the asymptotic regime but offers insights for finite objects that probability alone cannot.
+
+## Kolmogorov Complexity (recap / intro)
+
+<!-- section: kolmogorov-intro -->
+
+K(x) is the minimal |p| such that a fixed prefix-free universal Turing machine U on input p outputs x: K(x) = min { |p| : U(p) = x }.
+
+Because of the invariance theorem, K(x) defined with respect to any two universal machines differs by at most a constant (the size of a translator program).
+
+K(x) is uncomputable (by reduction to the halting problem). We can only approximate it from above by running all short programs in dovetail fashion and taking the shortest one that has output x so far.
+
+**ELI5**
+
+- K(x) is the ultimate compressed size of x: the smallest description that lets a computer reconstruct x exactly.
+- A random-looking string of length n usually has K(x) ≈ n; a string like 000...0 or the digits of π has much smaller K because there is a short program that generates it.
+
+**Worked Example:**
+
+1. The string consisting of one million zeros has $K \approx \log(\text{of the program 'print 0 one million times'})$ which is a few dozen bits, independent of the length.
+2. A typical random million-bit string requires a program that essentially lists all the bits; $K \approx 1\,000\,000 + O(1)$.
+
+## Algorithmic Probability and Solomonoff Induction
+
+<!-- section: solomonoff -->
+
+The algorithmic probability (Solomonoff prior) of a string x is
+
+m(x) = ∑_{p : U(p)=x} 2^{-|p|}
+
+the total probability mass of all programs that output x. It is a universal semimeasure: it dominates every computable probability distribution (up to a constant factor).
+
+Solomonoff induction uses m to predict the next symbol: the predictive probability is m(x0)/m(x) for continuation 0, etc. It is the optimal predictor in the sense that its total expected squared error is bounded for any computable environment.
+
+**ELI5**
+
+- Instead of assuming a particular probability model, consider every possible program that could have generated the data you have seen, weighted by 2^{-length of program}. Simpler (shorter) programs that fit the data get higher prior weight.
+- Future predictions are the weighted average over all consistent programs. This automatically embodies Occam's razor in a formal, prior-free way.
+
+**Worked Example:**
+
+1. After observing a long string of heads from a coin, the short programs 'always output heads' and 'fair coin' both have mass.
+2. The universal mixture will predict the next toss is heads with probability $> 1/2$, but will gradually approach the true bias as more data arrives, because the 'always heads' program will be falsified if a tail ever appears.
+
+## Incompressibility, Martin-Löf Randomness, and Chaitin's Omega
+
+<!-- section: incompressibility-chaitin -->
+
+A string x is (Martin-Löf) random if K(x) ≥ |x| - c for a fixed constant c (i.e., it is incompressible). Most strings are random; the number of strings of length n with K(x) < n - c is < 2^{n-c}.
+
+Chaitin's Ω = ∑_{p halts} 2^{-|p|} is the halting probability of the universal machine. It is a random real (its binary digits are algorithmically random), uncomputable, and contains the answers to all halting problems in its bits.
+
+AIT implies that 'truth' in mathematics is incompressible: for any consistent formal system there is a constant c such that the system cannot prove K(x) > |x| + c for any x.
+
+**ELI5**
+
+- A random string has no pattern that a program shorter than itself can exploit; any description is basically as long as the string.
+- Ω is a single real number that 'knows' whether every possible program halts. You can compute as many digits as you want by running all programs up to that length, but you can never know all the digits.
+
+**Worked Example:**
+
+1. There are $2^n$ binary strings of length $n$. At most $2^{n-c}-1$ of them can be outputs of programs shorter than $n-c$.
+2. Therefore at least a $(1-2^{-c})$ fraction of strings of length $n$ satisfy $K(x) \geq n-c$; they are incompressible / random.
+
+## Common Mistakes
+
+- **Confusing Kolmogorov complexity K(x) with Shannon entropy H(X)**: K is for an individual string; H is an average over a distribution. For a string drawn from p, K(x) ≈ -log p(x) + O(1) with high probability (the asymptotic equipartition property in AIT).
+- **Thinking K(x) is computable**: It is not; if it were we could solve the halting problem.
+- **Believing that 'random-looking' strings are always incompressible**: Some strings that pass statistical tests can still have short descriptions (e.g., the binary digits of a computable irrational that looks random).
+- **Forgetting the additive constant when comparing K across different machines or languages**: K_{U}(x) and K_{V}(x) differ by at most the size of a program that translates between U and V.
+- **Assuming that because Ω is random its digits are 'patternless' in every sense**: While algorithmically random, the digits of Ω are highly structured (they encode halting information) and are not 'typical' under any computable measure in a strong sense.
+- **Using AIT directly for practical compression**: K is uncomputable; practical compressors are approximations that work well on the kinds of redundancy humans and computers actually produce.
+
+Kolmogorov complexity (also called algorithmic complexity or description complexity) provides an absolute, individual notion of the information content or "randomness" of a particular finite object — usually a string. It is the length of the shortest computer program that outputs exactly that object and halts.
+
+Unlike Shannon entropy, which is an average over a probability distribution, Kolmogorov complexity is defined for each string by itself. It forms the foundation of algorithmic information theory.
+
+## Definition
+
+<!-- section: definition -->
+
+Fix a universal programming language (or equivalently a universal Turing machine U). The Kolmogorov complexity of a string s is
+
+$K(s) = \min \{ |p| : U(p) = s \},$
+
+where the minimum is over all programs p that cause U to output s and halt. If no such program exists (impossible for a universal U) we set K(s)=∞, but every finite s has finite K(s).
+
+The value depends on the choice of U only up to an additive constant independent of s (the "invariance theorem").
+
+**ELI5**
+
+- K(s) is the size of the smallest "recipe" that a computer can follow to reproduce s exactly.
+- For the string consisting of the text of Hamlet, K(Hamlet) is much smaller than the number of bits needed to write the text literally, because a short program can contain the rules of English plus "print the play Hamlet".
+
+**Worked Example:**
+
+1. Let $s$ be the first $10\,000$ decimal digits of $\pi$. Then $K(s)$ is small: a short program that implements a spigot algorithm or Machin formula for $\pi$ and prints the first $10\,000$ digits has length a few hundred bytes at most, regardless of how large the digit string is.
+
+## Relation to Shannon Entropy
+
+<!-- section: relation-to-entropy -->
+
+If a string s is generated by a computable probability distribution P, then with high probability under P we have
+
+$K(s) = -\log_2 P(s) + O(1),$
+
+where the O(1) depends on P (the size of a program that knows P) but not on the particular realization s.
+
+Moreover, the expected Kolmogorov complexity recovers the Shannon entropy: E[K(X)] ≈ H(X) (again up to an additive constant).
+
+**ELI5**
+
+- For data coming from a known probabilistic source, the algorithmic complexity of a typical realization is essentially the same as its self-information under that source.
+- On average, "how hard is it to describe a random draw" equals the entropy of the draw.
+
+**Worked Example:**
+
+1. For a long sequence of $n$ i.i.d. fair coin flips, $-\log P(s) = n$ for every $s$.
+2. With overwhelmingly high probability $K(s) = n + O(\log n)$: you need roughly $n$ bits to describe the literal string plus a few bits to say "this is a raw bit string of length $n$".
+3. A string that happens to be $010101...$ repeated has $K(s) \approx \log n + O(1)$ (program: "print 01 repeated $n/2$ times").
+
+## Incompressible Strings and Algorithmic Randomness
+
+<!-- section: incompressibility -->
+
+There are at most 2^k - 1 strings with K(s) < k. Consequently, the vast majority of strings of length n satisfy K(s) ≥ n - O(1); they are incompressible.
+
+Such strings are called algorithmically random (in the sense of Martin-Löf or Chaitin). They pass every effective statistical test for randomness.
+
+**ELI5**
+
+- There are only a few short programs, so only a few strings can be produced by short programs.
+- Most long strings have no hidden pattern or rule that would let you write a much shorter program to generate them; they are "random" in the deepest sense.
+
+**Worked Example:**
+
+1. Of the $2^{1000}$ binary strings of length 1000, fewer than $2^{990}$ have $K(s) < 990$.
+2. Hence more than $99.9\%$ of all 1000-bit strings are incompressible by 10 or more bits.
+3. Any particular string you pick at random will almost surely be one of them.
+
+## Uncomputability and Incompleteness
+
+<!-- section: uncomputability -->
+
+K(s) is uncomputable: there is no algorithm that on input s always halts and outputs the exact value K(s).
+
+Furthermore, in any consistent axiomatic system powerful enough to reason about programs there is a fixed constant c (depending on the system) such that the system cannot prove "K(s) > c" for any concrete string s. This is Chaitin's incompleteness theorem.
+
+**ELI5**
+
+- You cannot write a program that looks at an arbitrary file and tells you the size of the smallest program that produces that file (it would solve the halting problem).
+- Formal mathematics has limits: it cannot certify that a particular long string is "truly random" (has high K) beyond a certain point that depends on the axioms.
+
+**Worked Example:**
+
+1. Suppose your favorite theorem prover could, for every $n$, output a string $s_n$ of length $n$ together with a proof that $K(s_n) > n - 100$.
+2. Then you could use that to solve halting for programs up to size $n-100$, contradicting the undecidability of the halting problem.
+3. Hence no such prover exists.
+
+## Common Mistakes
+
+- **Confusing Kolmogorov complexity with gzip or any practical compressor size**: Practical compressors give upper bounds on K; K is the ultimate (uncomputable) lower bound.
+- **Thinking every string has low K because 'you can always write a program that prints it literally'**: The literal program costs roughly |s| bits plus overhead; for random s this is essentially optimal.
+- **Believing K is computable in practice for interesting strings**: While we can compute upper bounds (by finding short programs) and sometimes good lower bounds via compression or proofs, the exact value is uncomputable.
+- **Forgetting the additive constant in the invariance theorem**: Different universal machines differ by at most a constant; statements about K(s) → ∞ or K(s) < |s| - 100 are robust, but exact numbers are machine-dependent.
+- **Identifying 'random-looking' with low Kolmogorov complexity**: Visually random strings can still be generated by short programs (e.g., the digits of π or the output of a good PRNG with a short seed). True incompressibility is much stronger.
+- **Applying K directly to infinite objects without care**: For infinite sequences one studies the limsup of K(prefix_n)/n or prefix-free variants; the plain K above is for finite strings.
+
+This advanced treatment of Kolmogorov complexity (K-complexity) focuses on its mathematical properties, fundamental limitations, and deep connections to induction, learning, and the foundations of mathematics. While a basic introduction appears earlier, here we examine why K is uncomputable, what that implies for science and AI, and how it formalizes Occam's razor and randomness for individual objects.
+
+## Properties of Kolmogorov Complexity
+
+<!-- section: kc-properties -->
+
+K satisfies the chain rule (up to additive constants): K(x,y) = K(x) + K(y | x*) + O(1) where x* is a shortest program for x. This is the algorithmic analogue of H(X,Y) = H(X) + H(Y|X).
+
+K is 'almost' subadditive: K(x,y) ≤ K(x) + K(y) + O(1). It is also invariant under computable transformations: K(f(x)) ≤ K(x) + c_f for any computable f.
+
+Plain Kolmogorov complexity (not prefix-free) and prefix complexity differ by at most a logarithmic term; most theorems hold for both.
+
+**ELI5**
+
+- The shortest description of the pair (x,y) is basically 'shortest description of x' plus 'shortest description of y given that you already have the shortest description of x'.
+- Any computable processing of x cannot increase its complexity by more than the size of the processing program.
+
+**Worked Example:**
+
+K(π digits up to n) ≤ K(n) + c (the program 'compute first n digits of π' plus the bits of n). Meanwhile a random string r of length n has K(r) ≈ n + K(n) in the typical case; you cannot compress it further.
+
+## Uncomputability and Incompressibility
+
+<!-- section: uncomputability -->
+
+K(x) is upper semi-computable (we can approximate it from above by dovetailing all programs) but not computable. If K were computable we could solve the halting problem: run the candidate program for |p| steps; if it hasn't halted, its output (if any) would have K at most |p| + O(1), contradicting a large enough lower bound.
+
+A string x is c-incompressible if K(x) ≥ |x| - c. By counting, for any c the fraction of n-bit strings that are c-incompressible tends to 1 as n→∞.
+
+Martin-Löf randomness (passing all effective statistical tests) is equivalent (up to constants) to being incompressible.
+
+**ELI5**
+
+- There is no algorithm that, given any x, prints the number K(x). If there were, you could detect non-halting programs by checking whether their 'would-be' output has too low a complexity.
+- Most strings are incompressible; only a tiny fraction have short descriptions. 'Randomness' for a single string means 'no short program describes it'.
+
+**Worked Example:**
+
+Suppose K were computable. To decide if program p halts: compute k = K( output-of-p-if-it-halts ). If the machine that runs p for |p|+c steps and checks against k would contradict the definition unless p halts within that time. The contradiction shows K is uncomputable.
+
+## Applications: Induction, Learning, and Incompleteness
+
+<!-- section: applications-incompleteness -->
+
+Solomonoff induction (universal prior m(x) based on K) is a formal, parameter-free embodiment of Occam's razor for sequence prediction. Its predictions converge to the truth for any computable data-generating process.
+
+In machine learning, minimum description length (MDL) and minimum message length (MML) principles select models that minimize K(model) + K(data | model); they are practical approximations to K.
+
+Chaitin's incompleteness: any consistent formal system of 'complexity' c can prove statements of the form 'K(x) > n' only for n bounded by c + O(1). Thus mathematics cannot prove that particular long strings are random.
+
+Levin's universal search (Kt complexity with time-bounded K) gives an optimal (up to constants) algorithm for inverting any computable function or solving any NP search problem, given enough time.
+
+**ELI5**
+
+- When choosing among models that fit your data, prefer the one whose description (the model itself plus the data encoded using the model) is shortest. That is formal Occam.
+- A fixed axiom system cannot certify the randomness of strings much longer than the axioms themselves; there will always be 'random' mathematical facts that the system cannot prove.
+
+**Worked Example:**
+
+Given data D, two models M1 (simple, fits with 100 bits of noise) and M2 (complex, fits with 10 bits of noise). The total description length K(M1) + K(D | M1) vs K(M2) + K(D | M2). MDL picks the smaller sum, automatically trading model complexity against fit.
+
+## Common Mistakes
+
+- **Treating K(x) as a practical compression metric for arbitrary files**: While theoretically ideal, K is uncomputable; real compressors (gzip, etc.) are computable approximations tuned to specific redundancies.
+- **Forgetting the O(1) additive constants when making asymptotic claims**: Many equalities in AIT hold only up to constants; statements like 'K(x) = H(x) for typical x' are true with high probability but the deviation can be logarithmic or worse in some regimes.
+- **Believing that a string with high K must 'look random' to every statistical test**: There exist strings that are incompressible yet fail some non-effective tests; the equivalence is with Martin-Löf tests (effective ones).
+- **Confusing prefix-free K with plain (monotone) complexity**: The technical differences matter for the chain rule and for Ω; most high-level conclusions are the same.
+- **Assuming that because a string is generated by a short program it cannot be used as a cryptographic key**: If the program is secret and the output is long, the output can still have high 'computational' entropy even if K is small.
+- **Using AIT to 'prove' that science is impossible or that induction fails**: On the contrary, Solomonoff induction succeeds for all computable realities; the uncomputability is a limit on perfect prediction, not a refutation of the method.

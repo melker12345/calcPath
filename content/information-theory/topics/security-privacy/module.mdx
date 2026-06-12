@@ -1,0 +1,288 @@
+---
+title: Security & Privacy
+---
+
+# Security & Privacy
+
+Secret sharing, secure multiparty computation, and differential privacy.
+
+Secret sharing is a cryptographic primitive that distributes a secret value s among a set of participants so that only certain authorized subsets of participants (the access structure) can reconstruct s, while any unauthorized subset learns absolutely nothing about s (perfect security) or only negligible information (statistical/computational security).
+
+The canonical example is threshold secret sharing: any k out of n participants can recover the secret, but any k-1 or fewer learn nothing. This is information-theoretically secure and does not rely on computational hardness assumptions.
+
+## Threshold Secret Sharing
+
+<!-- section: threshold-ss -->
+
+In a (k,n)-threshold scheme a dealer splits secret s into n shares s1,...,sn such that:
+
+- Any set of k or more shares determines s uniquely.
+- Any set of k-1 or fewer shares reveals no information about s (the distribution of the shares is independent of s).
+
+The scheme is perfect if the 'no information' condition is information-theoretic (the mutual information I(s; any k-1 shares) = 0).
+
+Each share must be at least as large as the secret itself (in bits) for perfect threshold schemes; this is an information-theoretic lower bound.
+
+**ELI5**
+
+- Imagine a combination to a safe. You want any 3 out of 5 bank managers to be able to open it together, but any 2 should learn nothing that helps them guess the combination.
+- The dealer gives each manager a 'piece' of the combination. Only when 3 pieces are brought together do they fit into the full combination; any 2 pieces look like random garbage unrelated to the real combination.
+
+**Worked Example:**
+
+1. A $(2,3)$ scheme for a 128-bit secret. The dealer picks a random 128-bit $r$, gives share1 = $r$, share2 = $s \oplus r$, share3 = $s$.
+2. Any single share is uniformly random (independent of $s$). Any two shares determine $s$: share1+share2 $\to s$, share1+share3 $\to s$ (share3 = $s$), share2+share3 $\to s$.
+3. But share1 and share2 together give $r$ and $s\oplus r$, hence $s$, as required.
+
+## Shamir's Polynomial Scheme
+
+<!-- section: shamir -->
+
+Shamir's (k,n) scheme works over a finite field F_q with q > n and secret s ∈ F_q.
+
+The dealer chooses a random polynomial p(x) of degree at most k-1 with p(0) = s (the constant term). The n shares are the points (i, p(i)) for i=1 to n (distinct nonzero field elements).
+
+Any k points determine a unique degree-(k-1) polynomial (Lagrange interpolation), hence determine p(0)=s.
+
+Any k-1 points are consistent with exactly q possible degree-(k-1) polynomials (one for each possible value of the missing coefficient that would set p(0) to any field element); thus the secret is completely undetermined.
+
+**ELI5**
+
+- The secret is the y-intercept of a random polynomial of degree k-1. Each share is one point on that hidden curve.
+- k points uniquely determine the whole curve (and therefore where it crosses the y-axis). k-1 points can be extended to a curve that crosses the y-axis at any value you like, so they give no clue.
+
+**Worked Example:**
+
+1. $(k=3, n=5)$, field $F_{17}$, secret $s=7$. Dealer picks random $a_1=3$, $a_2=12$; $p(x) = 7 + 3x + 12 x^2 \mod 17$.
+2. Shares: $p(1)=7+3+12=22 \mod 17=5$.
+3. $p(2)=7+6+48 \mod 17=7+6+14=27 \mod 17=10$.
+4. $p(3)=7+9+108 \mod 17=7+9+6=22 \mod 17=5$ (calc: $12*9=108$, $108/17=6*17=102$, $108-102=6$).
+5. Any 3 of these points interpolated recover the unique quadratic with $p(0)=7$.
+
+## Properties, Extensions, and Impossibility Results
+
+<!-- section: properties-extensions -->
+
+Share size lower bound: in a perfect (k,n) scheme over a secret of entropy H, each share has entropy at least H (otherwise the k-1 shares plus the missing one could not uniquely determine a high-entropy secret while k-1 give zero info).
+
+Linear secret sharing schemes (shares are linear functions of the secret and randomness) are equivalent to monotone span programs and have efficient realizations for many access structures.
+
+General access structures (not just thresholds) can be realized by realizing the minimal authorized sets and using monotone formulas or by the Benaloh-Leichter construction.
+
+Verifiable secret sharing (VSS) adds the ability for participants to check that their shares are consistent with some secret (protects against a cheating dealer). Proactive secret sharing periodically refreshes shares so that an adversary who compromises shares over time still cannot collect k at any epoch.
+
+Multi-secret and ramp schemes trade off reconstruction threshold vs privacy for multiple secrets or partial leakage.
+
+**ELI5**
+
+- You cannot make shares smaller than the secret in the perfect information-theoretic setting; information has to 'flow' to the qualified sets.
+- For general who-can-reconstruct rules (e.g., 'any two managers plus the CEO, or any four managers') there are systematic ways to build the sharing from the simple threshold building blocks or from linear algebra over vector spaces.
+
+**Worked Example:**
+
+1. The lower bound proof: fix an unauthorized set $A$ of size $k-1$. Their shares are independent of $s$ (by privacy).
+2. For a qualified set $B = A \cup \{p\}$, the share of $p$ plus the shares of $A$ must determine $s$.
+3. Since $A$ gives no info, the share of $p$ must carry all the entropy of $s$; hence $| \text{share}_p | \geq H(s)$.
+
+## Common Mistakes
+
+- **Thinking that in Shamir's scheme the polynomial is evaluated at the participant identities only**: The x-coordinates are public identifiers; the y-values (or the pair) are the actual shares that must be kept secret.
+- **Believing that k-1 shares give 'some' partial information about s**: In a perfect scheme they give zero information; the posterior on s is identical to the prior (uniform).
+- **Using a small field for a large secret**: Shamir is usually applied to field elements; for a long secret one either uses a large field or shares the secret bit-by-bit / block-by-block with independent polynomials.
+- **Forgetting that the dealer must be trusted to choose the polynomial correctly**: If the dealer is malicious he can give inconsistent shares. Verifiable secret sharing solves this.
+- **Assuming computational secret sharing (e.g., using one-way functions) is the same as information-theoretic**: Computational schemes can have shorter shares but rely on hardness assumptions and may be broken by future algorithms or quantum computers.
+- **Confusing secret sharing with threshold cryptography or multiparty computation**: Secret sharing is the distribution step; threshold crypto uses shares of a key to perform operations without reconstructing the key in the clear; MPC is the broader interactive protocol setting.
+
+Secure multiparty computation (MPC, or SMPC) lets a set of parties, each holding a private input, compute a joint function of all inputs while revealing only the output (and whatever is implied by it). No party learns anything else about the other parties' inputs.
+
+MPC is the broadest primitive in cryptography that generalizes secret sharing, zero-knowledge, and private set intersection. It can realize any 'mental poker' or 'millionaires' problem in a provably secure way.
+
+## The Secure MPC Problem
+
+<!-- section: mpc-problem -->
+
+n parties P1 … Pn hold private inputs x1 … xn. They wish to compute y = f(x1,…,xn) such that:
+
+- Correctness: all honest parties obtain the correct y.
+- Privacy: nothing is revealed about the xi's beyond what y itself reveals.
+
+Security is defined via the simulation paradigm: for any adversary controlling a subset of parties, there exists a simulator that, given only the inputs of the corrupted parties and the output y, can produce a view indistinguishable from the real protocol execution.
+
+The function f can be any efficiently computable function (arithmetic circuit, Boolean circuit, RAM program, etc.).
+
+**ELI5**
+
+- Several hospitals want to compute the average salary of their doctors or the statistics of a rare disease across all their patient records, without any hospital seeing another hospital's raw data.
+- The protocol lets them obtain only the final statistic; the individual records stay private.
+
+**Worked Example:**
+
+Two millionaires want to know who is richer without revealing their wealth. f(x,y) = 1 if x > y else 0. An MPC protocol lets them learn only the bit; neither learns the other's number (or even a range that would be implied by a naïve comparison).
+
+## Yao's Garbled Circuits for Two Parties
+
+<!-- section: yao-garbled -->
+
+Yao's protocol (1986) solves the two-party case (semi-honest model) using garbled circuits.
+
+One party ('garbler') takes a Boolean circuit for f, replaces every wire with two random keys (one for 0, one for 1), and for each gate creates a 'garbled table' of four ciphertexts that encrypt the correct output key under the two input keys, in random order.
+
+The other party ('evaluator') obtains the keys corresponding to its own input bits via oblivious transfer (OT), then evaluates the circuit gate by gate by decrypting exactly one entry per gate using the keys it holds, finally obtaining the output keys and (with mapping) the output bits.
+
+The garbler sends the garbled tables plus the keys for its own input; the evaluator learns nothing about the garbler's input except through the output.
+
+**ELI5**
+
+- The garbler creates an encrypted 'maze' that computes the function. Each wire is a pair of secret keys; each gate is a lookup table that, given the right two input keys, lets you decrypt exactly the right output key.
+- The evaluator walks the maze using keys for his inputs (obtained without the garbler learning which ones) and at the end holds only the output keys, which map to the answer.
+
+**Worked Example:**
+
+For an AND gate with input wires A,B output wire C. Garbler picks random 128-bit strings K_A^0, K_A^1, K_B^0, K_B^1, K_C^0, K_C^1. The four ciphertexts are Enc_{K_A^0,K_B^0}(K_C^0), Enc_{K_A^0,K_B^1}(K_C^0), Enc_{K_A^1,K_B^0}(K_C^0), Enc_{K_A^1,K_B^1}(K_C^1) in random permuted order. Evaluator who holds, say, K_A^0 and K_B^1 can decrypt only the second ciphertext and obtains K_C^0, learning that the gate output bit is 0, without learning the other key or the other input bit.
+
+## Information-Theoretic MPC with Secret Sharing (BGW)
+
+<!-- section: bgw-ss -->
+
+For n parties with honest majority (t < n/2 corruptions) the BGW protocol (Ben-Or, Goldwasser, Wigderson 1988) achieves information-theoretic security using Shamir secret sharing.
+
+Each input is shared using a (t+1, n) Shamir scheme. Addition of shared values is local (just add shares). Multiplication of two shared values requires an interactive degree-reduction step (each party locally multiplies its shares, re-shares the product, then the parties jointly compute a linear combination that reduces the degree back to t).
+
+With these two primitives any arithmetic circuit can be evaluated securely. For dishonest majority (t ≥ n/2) information-theoretic security is impossible for general functions without honest majority; computational assumptions or additional setup (e.g., OT) are required.
+
+**ELI5**
+
+- Everyone splits their private number into 'shares' that look random individually and gives one share to each other person.
+- Adding two shared numbers is easy: everyone just adds the shares they hold.
+- Multiplying is harder; it produces higher-degree shares that must be 'cleaned up' by an interactive protocol that uses fresh randomness so that the final shares still hide the product.
+
+**Worked Example:**
+
+To compute the sum of three private salaries s1+s2+s3 with t=1 (any one party may be corrupt). Each si is shared with a degree-1 polynomial (2-out-of-3). Each party adds the three shares it holds (one from each polynomial). The resulting shares are a valid sharing of the sum; any two parties can reconstruct the sum, but any single party sees only a random field element independent of the sum.
+
+## Security Models and Feasibility
+
+<!-- section: security-models -->
+
+- Semi-honest (honest-but-curious): parties follow the protocol but try to learn extra information from the messages they receive. Easier to achieve; many protocols are first designed in this model and then compiled to malicious security.
+- Malicious (Byzantine): corrupted parties can deviate arbitrarily (send wrong messages, abort, etc.). Requires zero-knowledge proofs, commitments, or verifiable secret sharing to force correct behavior.
+- Honest majority vs. dishonest majority: with t < n/2 information-theoretic security is possible for any function (BGW). With t ≥ n/2 computational assumptions are necessary for most functions (Yao + OT for 2 parties; GMW for many parties).
+- With preprocessing (Beaver triples, OT extension, etc.) online phases can be extremely fast (information-theoretic or symmetric-crypto only).
+
+Universally composable (UC) security gives security even when the MPC protocol is used as a subroutine inside larger protocols.
+
+**ELI5**
+
+- Semi-honest is like 'the other people follow the rules but are nosy and will try to infer your salary from the messages they legitimately receive.'
+- Malicious is 'the other people may lie, send garbage, or collude to try to learn or corrupt the result.'
+- With an honest majority you can use pure information-theoretic tricks (secret sharing + interaction). Without it you need cryptography (one-way functions, oblivious transfer) to create 'virtual honest majority' or to detect cheating.
+
+**Worked Example:**
+
+In the GMW compiler, a semi-honest protocol is compiled to malicious security by having every party prove (via zero-knowledge) that each message it sends is the correct next message according to the protocol transcript so far and its private input. This forces correct behavior without revealing the input.
+
+## Common Mistakes
+
+- **Thinking MPC always requires a trusted third party**: The whole point is to remove the trusted party; the protocol itself emulates the ideal functionality.
+- **Assuming that 'the output reveals nothing'**: By definition the output y is revealed; privacy only protects the inputs beyond what is implied by y (e.g., if f is the sum, the sum itself is learned but not the individual addends).
+- **Believing information-theoretic security is always possible**: It requires an honest majority (or a private channel + honest majority). Dishonest majority needs computational assumptions.
+- **Confusing 2-party Yao with multi-party secret-sharing MPC**: Yao is usually computational (via OT) and for two parties; BGW-style is information-theoretic for honest majority and uses Shamir sharing + interaction for multiplication.
+- **Forgetting the cost of malicious security**: Semi-honest protocols can be very cheap (linear in circuit size); malicious security often adds heavy zero-knowledge or cut-and-choose overhead, although recent protocols (e.g., SPDZ, authenticated triples) have made malicious security practical.
+- **Assuming MPC is only for 'millionaires' or toy functions**: Modern MPC frameworks (MP-SPDZ, SCALE-MAMBA, EMP-toolkit, etc.) routinely evaluate AES, neural-network inference, and complex database queries among dozens of parties.
+
+Differential privacy (DP) is a rigorous, quantifiable definition of privacy for data analysis and machine learning. A randomized algorithm M is ε-differentially private if, for any two neighboring datasets D and D' (differing in at most one record) and any measurable set S of possible outputs,
+
+Pr[M(D) ∈ S] ≤ e^ε Pr[M(D') ∈ S].
+
+The parameter ε (the privacy budget) controls the strength of the guarantee: smaller ε gives stronger privacy. The definition makes no assumptions about the adversary's background knowledge or computational power.
+
+DP has become the gold standard for private data release at companies (Apple, Google, Microsoft, Uber) and in the U.S. Census Bureau's 2020 release.
+
+## The Definition of Differential Privacy
+
+<!-- section: dp-definition -->
+
+Two datasets are neighboring if they differ by the addition, removal, or change of a single individual's record. The definition is closed under post-processing: if M is DP then any (possibly randomized) function of M's output is also DP with the same ε.
+
+(ε,δ)-DP relaxes pure DP to allow a small probability δ of 'catastrophic' failure (the bound may be violated with prob ≤ δ). This is necessary for many mechanisms (Gaussian noise) and for composition over many queries.
+
+Group privacy: if M is ε-DP then changing k records changes probabilities by at most e^{kε} (or (kε,δ') in the approximate case).
+
+**ELI5**
+
+- Whatever the output distribution looks like when your data is in the dataset, it cannot look too different (multiplicatively e^ε) from the distribution when your data is removed or changed.
+- The guarantee holds even if the adversary knows everything else about the world and sees the exact output; your participation still cannot be reliably detected.
+
+**Worked Example:**
+
+A database of medical records. Neighboring databases differ by one patient. A DP release of 'how many patients have disease X' must have output distributions that are multiplicatively close whether that patient is included or not. Adding or removing one patient can change the true count by at most 1; the mechanism must mask that difference.
+
+## The Laplace and Gaussian Mechanisms
+
+<!-- section: mechanisms -->
+
+For a numeric query f with L1 sensitivity Δ (max |f(D)-f(D')| over neighbors D,D'), the Laplace mechanism outputs f(D) + Lap(Δ/ε) (noise from the Laplace distribution with scale Δ/ε). This is ε-DP.
+
+For (ε,δ)-DP the Gaussian mechanism adds N(0, σ²) with σ ≥ Δ √(2 ln(1.25/δ)) / ε (or similar calibrated constants). Gaussian noise is often preferred in practice because of its tail behavior and compatibility with composition.
+
+For non-numeric outputs (histograms, synthetic data, ML models) one uses the exponential mechanism (sample from a distribution weighted by a utility score) or more sophisticated constructions (private SGD, PATE, etc.).
+
+**ELI5**
+
+- Compute the statistic you care about on the real data. Because one person can affect the statistic by at most Δ, add random noise whose 'width' is proportional to Δ/ε. The noise hides whether any single person was present.
+- Laplace noise is 'double-exponential' and gives pure ε-DP; Gaussian is bell-shaped and gives the slightly weaker (ε,δ) guarantee but is easier to analyze with many queries.
+
+**Worked Example:**
+
+Counting query, sensitivity Δ=1. For ε=0.5 add Laplace noise with scale 2. The probability of outputting a particular integer k is proportional to exp(-|true_count - k|/2). Changing the true count by 1 multiplies every probability by at most e^{0.5}, satisfying the definition.
+
+## Composition, Post-Processing, and Advanced Properties
+
+<!-- section: composition-properties -->
+
+Basic composition: k mechanisms each ε-DP together are kε-DP (and (kε, kδ) for approximate).
+
+Advanced composition: for (ε,δ)-DP mechanisms, k-fold adaptive composition is roughly (ε' , kδ + δ')-DP with ε' ≈ √(2k ln(1/δ')) ε + kε(e^ε-1) (or tighter modern bounds). This is the source of the 'privacy budget' accounting used in practice.
+
+Post-processing immunity: any function (even randomized) of a DP output remains DP with the same parameters. This lets you post-process noisy answers arbitrarily (take medians, train models on synthetic data, etc.) without spending more privacy.
+
+Other properties: parallel composition (queries on disjoint subsets cost only the max ε), privacy amplification by sampling, and privacy odometers / filters for fully adaptive composition.
+
+**ELI5**
+
+- Every time you release a DP statistic you 'spend' some of your privacy budget ε. After many releases the total spent budget is tracked by composition theorems; you stop when the budget is exhausted.
+- Once something is DP, you can compute anything you like from it later (graphs, ML models, press releases) and the privacy guarantee still holds; you do not pay extra.
+
+**Worked Example:**
+
+A data analyst wants to release 100 counting queries, each with sensitivity 1, at total (ε=1, δ=10^{-6}). Using advanced composition one can set the per-query ε_i small enough (roughly 1/√(2*100 * ln(1/δ'))) so that the composed guarantee meets the target. The exact calibration is done by a privacy accountant.
+
+## Applications and Limitations
+
+<!-- section: applications-limitations -->
+
+DP is used for:
+- Releasing aggregate statistics, contingency tables, synthetic data.
+- Training ML models (DP-SGD adds noise to gradients; the privacy cost depends on the noise multiplier, batch size, and number of epochs).
+- Apple's 'differential privacy' deployment for emoji and Safari usage (local DP, each device adds noise before sending).
+- The 2020 U.S. Census (Disclosure Avoidance System based on the TopDown algorithm, a form of DP).
+
+Limitations: the utility/privacy tradeoff can be severe for small datasets or many queries; choosing ε is a policy question (typical deployed values 0.1–10); composition can exhaust the budget quickly; DP does not protect against all inference (it protects participation, not the fact that someone is in a certain group if group membership is already known).
+
+**ELI5**
+
+- DP gives a dial you can turn: more noise → stronger privacy but less accurate answers. For big datasets and few queries the dial can be set so that the noise is tiny relative to the signal.
+- In machine learning, DP-SGD makes models slightly less accurate but gives a mathematical guarantee that the model weights do not memorize any single training example too strongly.
+
+**Worked Example:**
+
+Training a neural net with DP-SGD: clip per-example gradients to norm C, add Gaussian noise scaled to C σ, average, and take a step. The privacy accountant (Rényi DP or moments accountant) tracks the cumulative (ε,δ) after T steps. For a dataset of size N, sampling rate q = batch/N, noise multiplier σ, one obtains concrete (ε,δ) numbers that can be compared across papers and deployments.
+
+## Common Mistakes
+
+- **Confusing differential privacy with k-anonymity or other syntactic notions**: k-anonymity can be broken by background knowledge or homogeneity attacks; DP gives a worst-case multiplicative guarantee independent of the adversary's knowledge.
+- **Thinking that 'adding noise' is automatically DP**: The noise distribution and its scale must be calibrated exactly to the sensitivity and the desired ε (or (ε,δ)); arbitrary noise may give no guarantee.
+- **Forgetting that post-processing does not cost privacy but composition does**: You can analyze the released DP object as much as you want for free; each new release that depends on the original data costs more budget.
+- **Using a fixed ε across all datasets and applications**: ε is a policy choice that should depend on the sensitivity of the data, the number of expected queries, and the risk tolerance;  ε=1 is not 'always safe.'
+- **Believing local DP (each user perturbs before sending) is the same as central DP**: Local DP requires much more noise (roughly √n worse) because each report must be private by itself; central DP (a trusted curator adds noise to the aggregate) is far more accurate.
+- **Ignoring that DP protects participation, not the value of an attribute**: If everyone in a group has the same sensitive attribute, learning that the group statistic is high may still reveal the attribute for a member even if participation is hidden.

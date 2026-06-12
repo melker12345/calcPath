@@ -1,0 +1,317 @@
+---
+title: Advanced Combinatorics
+---
+
+# Advanced Combinatorics
+
+The probabilistic method, Lovász Local Lemma, combinatorial nullstellensatz, and additive combinatorics.
+
+The probabilistic method, pioneered by Erdős, proves the existence of combinatorial objects by showing that a randomly chosen object from a suitable probability space satisfies the desired property with positive probability. It is one of the most powerful non-constructive tools in combinatorics.
+
+## The Basic Idea
+
+<!-- section: basic-idea -->
+
+Suppose we have a probability space whose outcomes are the candidate objects (graphs, colorings, subsets, etc.).
+
+Let A be the "bad" event that the random object fails to have the desired property.
+
+If Pr[A] < 1, then Pr[not A] > 0, hence there exists at least one outcome that is good.
+
+Often one computes or bounds Pr[A] via union bound, expectation, or more sophisticated concentration.
+
+**ELI5**
+
+- Instead of building the object step by step, you throw dice (or flip coins for each possible edge/color/choice) and argue "the chance that something went wrong is less than 100 %, so sometimes nothing goes wrong."
+- The argument may not tell you how to find the lucky outcome.
+
+**Worked Example:**
+
+To show there exists a graph on n vertices with no clique of size k and no independent set of size k (for suitable n), or Ramsey lower bounds: a random 2-coloring has small probability of containing a large mono clique (union bound over all potential k-sets).
+
+## The Deletion / Alteration Method
+
+<!-- section: deletion-method -->
+
+When the crude union bound Pr[union bad_i] ≤ sum Pr[bad_i] is larger than 1, one can still succeed by "cleaning up."
+
+Compute the expected number X of bad substructures.
+
+There exists an outcome with at most E[X] bad things.
+
+For each bad thing, delete or alter a small number of elements that "witness" it.
+
+The expected size (or quality) of the cleaned object is still large enough to be positive, proving existence.
+
+**ELI5**
+
+- "On average there are only 100 bad apples. In the realization with ≤100 bad apples, throw those 100 away; you still have a huge pile of good apples left."
+- Linearity of expectation makes the calculation painless even when events are dependent.
+
+**Worked Example:**
+
+Erdős proof of graphs with large girth and large chromatic number: in G(n,p) the expected number of short cycles is o(n); delete one vertex per such cycle. The remaining graph has high girth. One also shows that the independence number is small with positive probability (or after deletion still o(n)), hence χ ≥ n / α large.
+
+## Preview of the Lovász Local Lemma
+
+<!-- section: lovasz-lemma-preview -->
+
+When bad events are plentiful but each depends on only a few others and has tiny probability, the Local Lemma shows that the probability that *none* occur is still positive — even when the total expected number of bad events is huge.
+
+Symmetric LLL: if each bad event has Pr ≤ p, depends on at most D others, and e p (D+1) ≤ 1, then Pr[no bad events] > 0.
+
+This is the workhorse for many modern probabilistic existence proofs (colorings of hypergraphs, list coloring, etc.).
+
+**ELI5**
+
+- "Each potential disaster is very unlikely, and only 'talks to' a few other potential disasters. Then even if there are millions of them, the chance that at least one happens can still be made <1 by the local lemma calculation."
+- It is a sophisticated form of the union bound that takes limited dependence into account.
+
+**Worked Example:**
+
+Coloring the vertices of a hypergraph randomly with 2 colors so that no edge is monochromatic. Each edge is bad with p = 2^{1-k} for k-uniform. Each edge depends on other edges that share a vertex (D ≈ k Δ). When D is not too large relative to 2^k the LLL guarantees a good 2-coloring (property B of hypergraphs).
+
+## Common Mistakes
+
+- **Thinking the method always gives a constructive / efficient algorithm**: It gives existence; derandomization (conditional expectations, pessimistic estimators, or algorithmic LLL) is a separate hard step.
+- **Using only the union bound when dependence is limited**: The LLL or Lovász Local Lemma or Janson inequalities often rescue the argument.
+- **Forgetting to verify that the probability space is well-defined**: The random experiment must be clearly described.
+- **Confusing 'positive probability' with 'probability close to 1'**: For existence >0 is enough; concentration gives "with high probability" which is stronger and useful for algorithmic sampling.
+- **Applying deletion without checking the cost per deletion**: If deleting one bad thing costs too many good elements the expectation may go negative.
+
+The Lovász Local Lemma (LLL) is a fundamental tool that strengthens the probabilistic method to situations with many bad events that are only locally dependent. It shows that if each bad event is sufficiently unlikely and depends on only a limited number of other bad events, then there is a positive probability that none of them occur.
+
+## The Lemma (Symmetric Version)
+
+<!-- section: the-lemma -->
+
+Let A_1, … , A_m be events in a probability space. Suppose:
+
+- Pr[A_i] ≤ p for each i,
+- each A_i is mutually independent of all the A_j except for at most D of them (its "neighbors" in the dependency graph).
+
+If e p (D + 1) ≤ 1, then
+
+Pr[ A_1^c ∩ … ∩ A_m^c ] > 0.
+
+That is, there is a positive probability that none of the bad events happen.
+
+**ELI5**
+
+- Each potential disaster is rare (p small) and only "knows about" a few other disasters (D small).
+- Then even if there are tons of potential disasters, the chance that they all get avoided is still positive.
+
+**Worked Example:**
+
+2-coloring the vertices of a k-uniform hypergraph with maximum degree D so that no edge is monochromatic.
+
+Bad event per edge: "this edge is mono". p = 2^{1-k}.
+
+Dependency: an edge depends on edges that share a vertex, at most k(D) or so.
+
+When e * 2^{1-k} * (k D) ≲ 1 the LLL guarantees a good coloring exists.
+
+## Proof Sketch
+
+<!-- section: proof-sketch -->
+
+The proof is by showing a stronger statement on conditional probabilities.
+
+One proves (by induction on the number of events or by careful use of the chain rule) that for any event A_i and any set of events not including its neighbors,
+
+Pr[A_i | none of those occurred] ≤ x_i ,
+
+where the x_i are numbers in (0,1) satisfying the general LLL inequalities Pr[A_i] ≤ x_i ∏_{neighbors j} (1 − x_j).
+
+The symmetric case takes x_i = 1/(D+1) for all i and uses the inequality (1 − 1/(D+1))^D ≥ 1/e (approximately) to obtain the numerical condition.
+
+The product ∏ (1 − x_i) then lower-bounds the probability that all are avoided.
+
+**ELI5**
+
+- You bound the chance that one more disaster happens, given that all the disasters it could possibly influence have already been prevented.
+- The limited dependence lets the bound factor nicely; the hypothesis makes that conditional chance <1 in a way that multiplies to something positive overall.
+
+**Worked Example:**
+
+For the calculation with p and D, plugging x = 1/(D+1) yields exactly the condition e p (D+1) ≤ 1 after using the standard inequality for (1-x)^D.
+
+## Applications
+
+<!-- section: applications -->
+
+The LLL is used for:
+
+- Hypergraph 2-colorability (property B) when maximum degree is not too large relative to uniformity.
+- List coloring and choice number bounds χ_l(G) = O(Δ).
+- Non-repetitive colorings, acyclic colorings, frugal colorings.
+- Latin squares, edge colorings, Ramsey numbers for sparse graphs, etc.
+- Many results in positional games, random structures, and theoretical CS.
+
+The algorithmic LLL (Moser-Tardos resampling) turns many of these existence proofs into efficient randomized algorithms: while there is a currently bad event, resample all the random variables that affect it. Under the LLL condition the expected number of resamples is linear.
+
+**ELI5**
+
+- "Keep rerolling the dice that affect the currently broken constraints. Because the bad events are locally rare and locally dependent, you won't have to reroll forever; you'll quickly reach a global good configuration."
+
+**Worked Example:**
+
+For list coloring with lists of size roughly 2eΔ: assign each vertex a random color from its list. While there is a monochromatic edge, resample the colors of its two endpoints. The LLL condition guarantees that the process terminates quickly with a proper list coloring.
+
+## Common Mistakes
+
+- **Using the symmetric LLL when probabilities or degrees vary wildly**: The general (asymmetric) version with per-event x_i often saves the day.
+- **Forgetting the +1 or the e in the bound**: The precise constant matters for borderline cases; sometimes a slightly better analysis (or the lopsided LLL) works when the basic bound is 1.01 >1.
+- **Confusing dependence with correlation**: The LLL requires *mutual independence* from the non-neighbors (in the probability space), not merely uncorrelated.
+- **Thinking the LLL gives probability close to 1**: It only gives >0; for high-probability results one needs concentration or the algorithmic version with many independent trials.
+- **Applying it without defining the probability space and the exact dependency graph**: The lemma is only as good as the modeling of "bad events" and their dependencies.
+
+The Combinatorial Nullstellensatz, introduced by Noga Alon in 1999, is a powerful algebraic tool that guarantees the existence of points in a grid where a multivariate polynomial does not vanish, provided a certain "leading" monomial has nonzero coefficient and the grid is large enough in each coordinate relative to the degrees.
+
+It has become a central instrument in the polynomial method in combinatorics.
+
+## The Theorem
+
+<!-- section: the-theorem -->
+
+Let F be a field, f a polynomial in F[x_1, … , x_n], S_1, … , S_n nonempty subsets of F.
+
+Let d_1, … , d_n be non-negative integers with deg(f) = ∑ d_i.
+
+If the coefficient of the monomial ∏ x_i^{d_i} in f is nonzero, and |S_i| > d_i for each i, then there exist s_i ∈ S_i such that f(s_1, … , s_n) ≠ 0.
+
+**ELI5**
+
+- If the polynomial has a 'highest' term with all the right exponents adding to its total degree, and that term's coefficient is alive, and each variable has more possible values than its exponent in that term, then the polynomial cannot be zero everywhere on the grid.
+- It is a multivariate, combinatorial-flavored version of "a nonzero univariate polynomial of degree d has at most d roots."
+
+**Worked Example:**
+
+Univariate case: f of degree d with leading coefficient ≠0, |S| > d ⇒ f not identically zero on S ⇒ exists s∈S, f(s)≠0. Exactly the usual fact.
+
+## The Polynomial Method Context
+
+<!-- section: polynomial-method -->
+
+To apply CN one constructs a polynomial f whose vanishing at a point (s_1,…,s_n) would correspond to a "bad" combinatorial configuration.
+
+One then verifies that the monomial ∏ x_i^{d_i} (with d_i usually related to the "defect" or degree of freedom per coordinate) has nonzero coefficient (often by direct extraction, symmetry, or combinatorial interpretation of the coefficient).
+
+The theorem then guarantees a good point in the product of the sets S_i (the "lists" or "color sets" or "possible values").
+
+**ELI5**
+
+- The polynomial is an "alarm" that rings (nonzero) precisely when the choice is good.
+- The algebraic condition on one coefficient + size of the sets forces the alarm to ring somewhere.
+
+**Worked Example:**
+
+Cauchy-Davenport in F_p (p prime): to bound |A+B|. Suppose for contradiction |A+B| ≤ |A|+|B|-2. Let C be a set of size |A|+|B|-2 containing A+B. Consider a polynomial that vanishes exactly when x+y is in C. Degree analysis and the nonzero coefficient of the critical monomial x^{|A|-1} y^{|B|-1} (which can be shown to be related to binomial or Vandermonde) contradict CN on the grid A×B. Hence |A+B| must be larger.
+
+## Applications
+
+<!-- section: applications -->
+
+- Additive combinatorics (Cauchy-Davenport, Vosper, etc. over prime fields).
+- Graph coloring and list coloring (via the graph polynomial ∏_{uv edge} (x_u − x_v); coefficient related to orientations or Alon-Tarsi number).
+- Existence of Latin squares, orthogonal mates, and designs.
+- The Erdős–Ginzburg–Ziv theorem and zero-sum problems (via polynomials that detect sums).
+- Chevalley–Warning type results and solution counting mod p.
+- Many other "existence in grids with forbidden positions" problems.
+
+The method often gives the right order of magnitude or exact results where purely combinatorial arguments are harder.
+
+**ELI5**
+
+- "Encode the bad thing as the zero set of a polynomial, then use algebra to show the zero set cannot cover the whole grid you care about."
+
+**Worked Example:**
+
+For list coloring: the graph polynomial f = ∏_{edges uv} (x_u − x_v). If the coefficient of ∏ x_v^{deg(v)} is nonzero (counts even minus odd Eulerian orientations, the Alon-Tarsi number), and each vertex has a list S_v with |S_v| > deg(v), then CN applied to the grid ∏ S_v guarantees a point where f ≠0, i.e. all adjacent differences nonzero — a proper coloring from the lists.
+
+## Common Mistakes
+
+- **Forgetting the exact degree condition deg f = sum d_i**: The monomial must be a "top-degree" term; lower terms do not help for the argument.
+- **Misidentifying which monomial's coefficient must be nonzero**: It has to be the specific ∏ x_i^{d_i} with the d_i matching the |S_i|-1 bounds you want.
+- **Applying over rings that are not fields**: The statement requires a field (for the polynomial ring to behave well with respect to roots).
+- **Thinking the theorem constructs the point**: It is existential; finding the point may still be hard (though sometimes the proof is constructive or the point is obvious once existence is known).
+- **Confusing with the ordinary Hilbert Nullstellensatz**: CN is a quantitative, combinatorial, "non-vanishing" version tailored to finite grids rather than algebraic varieties.
+
+Additive combinatorics studies the additive structure (and sometimes multiplicative) of subsets of abelian groups, primarily the integers, cyclic groups Z/pZ, and finite fields. Its central questions concern the size of sumsets, the presence of arithmetic progressions and other configurations, and the structure of sets with "small doubling."
+
+It sits at the crossroads of combinatorics, number theory, harmonic analysis, and ergodic theory.
+
+## Sumsets and Basic Inequalities
+
+<!-- section: sumsets-basics -->
+
+For subsets A,B of an abelian group the sumset A + B = {a + b | a ∈ A, b ∈ B}.
+
+In Z (or any torsion-free abelian group) one has the elementary inequality |A + B| ≥ |A| + |B| − 1, with equality if and only if A and B are arithmetic progressions with the same common difference.
+
+In a general abelian group the size can be as small as max(|A|, |B|) when one is a coset of a subgroup containing the other.
+
+**ELI5**
+
+- Adding two long arithmetic progressions with the same step just gives another (slightly longer) AP.
+- If the sets are "additively unstructured" (like random), the sumset is almost as large as the product |A| |B| (up to the ambient group size).
+
+**Worked Example:**
+
+A = {1,2,4} ⊂ Z is sum-free in some sense? A+A = {2,3,4,5,6,8}, |A+A|=6 > 2*3−1=5, because it is not an AP.
+
+## Cauchy-Davenport and the Start of the Theory
+
+<!-- section: cauchy-davenport -->
+
+Cauchy-Davenport (1813/1930s): If A, B nonempty subsets of Z/pZ (p prime) then
+
+|A + B| ≥ min(p, |A| + |B| − 1).
+
+It is sharp: arithmetic progressions with the same difference achieve the bound until they wrap around.
+
+Modern proofs use the Combinatorial Nullstellensatz or the pigeonhole / "checksum" method.
+
+**ELI5**
+
+- In a "cyclic clock" with p hours, adding two sets cannot produce too few distinct sums unless the sets are themselves very regularly spaced.
+- When the sumset is the whole group the bound is trivial.
+
+**Worked Example:**
+
+In Z/7Z, A={0,1,3}, |A|=3. B={0,2}, |B|=2.
+
+A+B = {0,1,2,3,5}, size 5 > min(7,3+2−1)=4. The theorem only guarantees 4; the actual set is larger.
+
+## Advanced Structure and Results
+
+<!-- section: advanced-results -->
+
+Freiman's theorem: if |A+A| ≤ K |A| (small doubling) then A is "close" to a generalized arithmetic progression of dimension bounded in terms of K and size O_K(|A|).
+
+Plünnecke-Ruzsa inequalities control the size of higher sumsets |hA| in terms of the doubling constant.
+
+Szemerédi's theorem: positive upper density implies arbitrarily long APs.
+
+Green-Tao: the primes contain arbitrarily long APs.
+
+The sum-product problem (Elekes, Solymosi, Bourgain-Katz-Tao, …): max(|A+A|, |A·A|) ≫ |A|^{1+ε} for subsets of reals or finite fields (with current best exponents).
+
+These results have deep connections to harmonic analysis (Fourier, additive energy), incidence geometry, and ergodic theory.
+
+**ELI5**
+
+- Small doubling means the set is "additively structured" — almost an AP or a low-dimensional grid.
+- Even very sparse sets like the primes can be forced to have structure (long APs) by transference principles that reduce to the dense case (Szemerédi).
+
+**Worked Example:**
+
+The set of squares has small sumset in some senses? No, |A+A| for A the first N squares is large; the theory classifies when it is small.
+
+## Common Mistakes
+
+- **Assuming |A+B| is always ≈ |A| |B|**: In groups with torsion or for structured sets it can be much smaller.
+- **Confusing sumset size with density**: In infinite groups one works with upper density or asymptotic density.
+- **Thinking Cauchy-Davenport holds in every group**: It fails dramatically in Z (no wrap) or in groups with 2-torsion.
+- **Forgetting that structure theorems are qualitative**: Freiman gives existence of a model; effective versions and quantitative bounds are much harder (current research).
+- **Mixing additive combinatorics with extremal graph theory**: While there are connections (e.g. via Cayley graphs or Balog-Wooley), the core questions are about sums inside the group, not edge counts.
