@@ -14,8 +14,18 @@ export type StreakStats = {
   lastCompletionDate?: string;
 };
 
-export type TestResult = {
+export type TestTopicScore = {
   topicId: string;
+  correct: number;
+  total: number;
+};
+
+export type TestResult = {
+  /** Identifies which test was taken (defaults to topicId for single-topic tests). */
+  testId: string;
+  topicId: string;
+  /** Per-topic breakdown within the test, e.g. limits 3/5. */
+  topicScores: TestTopicScore[];
   score: number;
   total: number;
   percentage: number;
@@ -47,11 +57,28 @@ export const createEmptyProgress = (): ProgressState => ({
   streak: { current: 0, longest: 0 },
 });
 
+export const normalizeTestResult = (input: Partial<TestResult> & Pick<TestResult, "topicId" | "score" | "total" | "percentage" | "timeSeconds" | "completedAt">): TestResult => {
+  const topicScores =
+    input.topicScores ??
+    [{ topicId: input.topicId, correct: input.score, total: input.total }];
+  return {
+    testId: input.testId ?? input.topicId,
+    topicId: input.topicId,
+    topicScores,
+    score: input.score,
+    total: input.total,
+    percentage: input.percentage,
+    timeSeconds: input.timeSeconds,
+    completedAt: input.completedAt,
+  };
+};
+
 export const recordTestResult = (
   state: ProgressState,
   result: TestResult,
 ): ProgressState => {
-  const testResults = [result, ...state.testResults].slice(0, 100);
+  const normalized = normalizeTestResult(result);
+  const testResults = [normalized, ...state.testResults].slice(0, 100);
   return { ...state, testResults };
 };
 
@@ -122,7 +149,11 @@ export const normalizeProgressState = (
   const empty = createEmptyProgress();
   if (!input) return empty;
   const attempts = Array.isArray(input.attempts) ? input.attempts : empty.attempts;
-  const testResults = Array.isArray(input.testResults) ? input.testResults : empty.testResults;
+  const testResults = Array.isArray(input.testResults)
+    ? input.testResults.map((result) =>
+        normalizeTestResult(result as TestResult),
+      )
+    : empty.testResults;
   const diagnostics = Array.isArray(input.diagnostics) ? input.diagnostics : empty.diagnostics;
   if (attempts.length > 0) {
     const derived = rebuildDerivedFields(attempts);

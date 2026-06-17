@@ -79,8 +79,8 @@ function AccountContent() {
 
       {/* Hero / Primary: Manual Save - this is the prominent "manual save button" surface */}
       <SectionCard
-        title="Manual Save / Sync to another device"
-        description="Generate a short code to send your progress snapshot to another device, or import one. No sign-in ever needed."
+        title="Cloud backup &amp; restore"
+        description="Back up progress with a 6-digit PIN and password, update it as you go, or restore on another device. No sign-in ever needed."
       >
         <SyncPanel />
       </SectionCard>

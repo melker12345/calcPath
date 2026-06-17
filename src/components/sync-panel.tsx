@@ -1,100 +1,213 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useProgress } from "@/components/progress-provider";
-import { generateSyncCode, importSyncCode } from "@/lib/sync";
+import {
+  createCloudBackup,
+  downloadBackupReceipt,
+  formatBackupReceipt,
+  getSavedBackupPin,
+  restoreCloudBackup,
+  updateCloudBackup,
+} from "@/lib/sync";
+
+type Mode = "create" | "update" | "restore" | null;
 
 export function SyncPanel() {
   const { progress, applySyncedProgress } = useProgress();
-  const [mode, setMode] = useState<"generate" | "import" | null>(null);
-  const [code, setCode] = useState("");
+  const [mode, setMode] = useState<Mode>(null);
+  const [pin, setPin] = useState("");
+  const [password, setPassword] = useState("");
+  const [savedPin, setSavedPin] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [receipt, setReceipt] = useState<{ pin: string; password: string } | null>(null);
 
-  const handleGenerate = async () => {
+  useEffect(() => {
+    setSavedPin(getSavedBackupPin());
+  }, []);
+
+  const handleCreate = async () => {
+    if (password.length < 6) {
+      setError("Choose a password with at least 6 characters.");
+      return;
+    }
     setLoading(true);
     setError("");
     setSuccess("");
+    setReceipt(null);
     try {
-      const { code: newCode } = await generateSyncCode(progress);
-      setCode(newCode);
-      setSuccess("Progress saved. Your code is linked to this snapshot for the next 1 week.");
-      setMode("generate");
+      const result = await createCloudBackup(progress, password);
+      setPin(result.pin);
+      setSavedPin(result.pin);
+      setReceipt(result);
+      setSuccess("Backup created. Save your PIN and password — we cannot recover them.");
+      setMode("create");
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to generate code");
+      setError(e instanceof Error ? e.message : "Failed to create backup");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleImport = async () => {
-    if (!code.trim()) return;
+  const handleUpdate = async () => {
+    const activePin = savedPin ?? pin.replace(/\D/g, "");
+    if (activePin.length !== 6) {
+      setError("Enter your 6-digit PIN.");
+      return;
+    }
+    if (!password) {
+      setError("Enter your backup password.");
+      return;
+    }
     setLoading(true);
     setError("");
     setSuccess("");
     try {
-      const imported = await importSyncCode(code.trim().toUpperCase());
-      applySyncedProgress(imported);
-      setSuccess("Progress imported successfully!");
-      setCode("");
+      await updateCloudBackup(activePin, password, progress);
+      setSuccess("Cloud backup updated with your latest progress.");
+      setMode("update");
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to import code. Check it and try again.");
+      setError(e instanceof Error ? e.message : "Failed to update backup");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRestore = async () => {
+    const normalized = pin.replace(/\D/g, "");
+    if (normalized.length !== 6) return;
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const { state, isTemplate } = await restoreCloudBackup(normalized);
+      applySyncedProgress(state);
+      setSuccess(
+        isTemplate
+          ? "Recovery template loaded. Your local progress was replaced."
+          : "Progress restored. Your local progress was replaced.",
+      );
+      setPin("");
+      setPassword("");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to restore backup");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatPinDisplay = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 6);
+    if (digits.length <= 3) return digits;
+    return `${digits.slice(0, 3)} ${digits.slice(3)}`;
   };
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
-      {/* Generate */}
       <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-        <h2 className="text-xl font-semibold mb-2">Send progress to another device</h2>
+        <h2 className="text-xl font-semibold mb-2">Backup to cloud</h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-          Saves your current progress to the server. We give you a short code linked to that snapshot. The code works for 1 week.
+          Upload your local progress and get a memorable 6-digit PIN plus password. No email or account.
         </p>
+
+        <label className="block text-xs uppercase tracking-widest text-zinc-500 mb-1">
+          Backup password
+        </label>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="At least 6 characters"
+          className="w-full rounded-lg border px-3 py-2 mb-3 dark:bg-zinc-900"
+          autoComplete="new-password"
+        />
+
         <button
-          onClick={handleGenerate}
+          onClick={handleCreate}
           disabled={loading}
           className="btn-primary w-full disabled:opacity-50"
         >
-          {loading ? "Generating..." : "Generate sync code"}
+          {loading && mode === "create" ? "Creating..." : "Create cloud backup"}
         </button>
 
-        {mode === "generate" && code && (
-          <div className="mt-4 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800">
-            <div className="text-xs uppercase tracking-widest text-emerald-700 dark:text-emerald-400 mb-1">Your code</div>
-            <div className="font-mono text-4xl font-bold tracking-[8px] text-emerald-900 dark:text-emerald-200 select-all">{code}</div>
-            <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">{success}</p>
-            <button onClick={() => navigator.clipboard?.writeText(code)} className="mt-3 text-xs underline">Copy code</button>
+        {savedPin && (
+          <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2">
+              Update existing backup (PIN {formatPinDisplay(savedPin)})
+            </p>
+            <button
+              onClick={handleUpdate}
+              disabled={loading}
+              className="btn-secondary w-full disabled:opacity-50"
+            >
+              {loading && mode === "update" ? "Updating..." : "Update cloud backup"}
+            </button>
           </div>
+        )}
+
+        {mode === "create" && receipt && (
+          <div className="mt-4 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800">
+            <div className="text-xs uppercase tracking-widest text-emerald-700 dark:text-emerald-400 mb-1">
+              Your credentials
+            </div>
+            <div className="font-mono text-3xl font-bold tracking-[6px] text-emerald-900 dark:text-emerald-200 select-all">
+              {formatPinDisplay(receipt.pin)}
+            </div>
+            <p className="mt-2 text-sm text-emerald-800 dark:text-emerald-300">
+              Password: <span className="font-mono select-all">{receipt.password}</span>
+            </p>
+            <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">{success}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                onClick={() => navigator.clipboard?.writeText(formatBackupReceipt(receipt.pin, receipt.password))}
+                className="text-xs underline"
+              >
+                Copy to clipboard
+              </button>
+              <button
+                onClick={() => downloadBackupReceipt(receipt.pin, receipt.password)}
+                className="text-xs underline"
+              >
+                Download recovery file
+              </button>
+            </div>
+          </div>
+        )}
+
+        {mode === "update" && success && (
+          <p className="mt-3 text-sm text-emerald-600">{success}</p>
         )}
       </div>
 
-      {/* Import */}
       <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-        <h2 className="text-xl font-semibold mb-2">Receive progress from another device</h2>
+        <h2 className="text-xl font-semibold mb-2">Restore from cloud</h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-          Enter the code from the other device. Your current local progress will be replaced.
+          Enter a 6-digit PIN to download progress. Replaces everything stored locally on this device.
+          Public recovery templates (111111, 222222, …) work here too.
         </p>
         <div className="flex gap-2">
           <input
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase().slice(0,5))}
-            placeholder="ABC12"
+            value={formatPinDisplay(pin)}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder="582 910"
+            inputMode="numeric"
             className="flex-1 rounded-lg border px-3 py-2 font-mono tracking-widest text-lg dark:bg-zinc-900"
-            maxLength={5}
+            maxLength={7}
           />
           <button
-            onClick={handleImport}
-            disabled={loading || code.length < 5}
+            onClick={handleRestore}
+            disabled={loading || pin.replace(/\D/g, "").length < 6}
             className="btn-primary disabled:opacity-50"
           >
-            {loading ? "Importing..." : "Import"}
+            {loading ? "Restoring..." : "Restore"}
           </button>
         </div>
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-        {success && <p className="mt-2 text-sm text-emerald-600">{success}</p>}
+        {success && mode !== "create" && mode !== "update" && (
+          <p className="mt-2 text-sm text-emerald-600">{success}</p>
+        )}
       </div>
     </div>
   );

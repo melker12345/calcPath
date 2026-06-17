@@ -14,6 +14,7 @@ import type { Topic } from "@/lib/shared-types";
 
 type Result = {
   questionId: string;
+  topicId: string;
   prompt: string;
   expected: string;
   userAnswer: string;
@@ -440,6 +441,7 @@ function TestClientInner({ subjectSlug, topicId, topic, allTestQuestions }: Test
     
     const result: Result = {
       questionId: current.id,
+      topicId: current.topicId,
       prompt: current.prompt,
       expected: current.answer,
       userAnswer: answer,
@@ -447,13 +449,16 @@ function TestClientInner({ subjectSlug, topicId, topic, allTestQuestions }: Test
       explanation: current.explanation,
     };
 
-    setResults((prev) => [...prev, result]);
+    const allResults = [...results, result];
+
+    setResults(allResults);
 
     addAttempt({
       problemId: current.id,
       topicId: current.topicId,
       correct,
       createdAt: new Date().toISOString(),
+      isTest: true,
     });
 
     trackEvent("test_answered", { topicId, correct });
@@ -462,12 +467,27 @@ function TestClientInner({ subjectSlug, topicId, topic, allTestQuestions }: Test
       setCurrentIndex((prev) => prev + 1);
       setCurrentAnswer("");
     } else {
-      const finalScore = results.filter(r => r.correct).length + (correct ? 1 : 0);
+      const finalScore = allResults.filter((r) => r.correct).length;
       const finalTotal = testQuestions.length;
       const finalPercentage = Math.round((finalScore / finalTotal) * 100);
-      
+
+      const topicCounts = new Map<string, { correct: number; total: number }>();
+      for (const r of allResults) {
+        const current = topicCounts.get(r.topicId) ?? { correct: 0, total: 0 };
+        current.total += 1;
+        if (r.correct) current.correct += 1;
+        topicCounts.set(r.topicId, current);
+      }
+      const topicScores = Array.from(topicCounts.entries()).map(([id, counts]) => ({
+        topicId: id,
+        correct: counts.correct,
+        total: counts.total,
+      }));
+
       addTestResult({
+        testId: `${subjectSlug}/${topicId}`,
         topicId,
+        topicScores,
         score: finalScore,
         total: finalTotal,
         percentage: finalPercentage,
