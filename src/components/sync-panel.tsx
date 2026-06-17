@@ -65,8 +65,20 @@ export function SyncPanel() {
     setError("");
     setSuccess("");
     try {
-      await updateCloudBackup(activePin, password, progress);
-      setSuccess("Cloud backup updated with your latest progress.");
+      const outcome = await updateCloudBackup(activePin, password, progress);
+      if (outcome.upToDate && outcome.added === 0) {
+        setSuccess(
+          outcome.kept > 0
+            ? `Cloud already had everything (plus ${outcome.kept} question${outcome.kept === 1 ? "" : "s"} not on this device). Nothing to push.`
+            : "Cloud backup is already up to date.",
+        );
+      } else {
+        const parts = [`Pushed ${outcome.added} new question${outcome.added === 1 ? "" : "s"} to the cloud.`];
+        if (outcome.kept > 0) {
+          parts.push(`Kept ${outcome.kept} the cloud already had — nothing was overwritten.`);
+        }
+        setSuccess(parts.join(" "));
+      }
       setMode("update");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to update backup");
@@ -82,13 +94,14 @@ export function SyncPanel() {
     setError("");
     setSuccess("");
     try {
-      const { state, isTemplate } = await restoreCloudBackup(normalized);
+      const { state, isTemplate, added, kept } = await restoreCloudBackup(normalized, progress);
       applySyncedProgress(state);
-      setSuccess(
-        isTemplate
-          ? "Recovery template loaded. Your local progress was replaced."
-          : "Progress restored. Your local progress was replaced.",
-      );
+      const label = isTemplate ? "Recovery template merged." : "Progress restored.";
+      const parts = [label, `Added ${added} question${added === 1 ? "" : "s"} from the cloud.`];
+      if (kept > 0) {
+        parts.push(`Kept ${kept} this device already had — nothing was lost.`);
+      }
+      setSuccess(parts.join(" "));
       setPin("");
       setPassword("");
     } catch (e: unknown) {
@@ -184,8 +197,9 @@ export function SyncPanel() {
       <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
         <h2 className="text-xl font-semibold mb-2">Restore from cloud</h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-          Enter a 6-digit PIN to download progress. Replaces everything stored locally on this device.
-          Public recovery templates (111111, 222222, …) work here too.
+          Enter a 6-digit PIN to download progress. It merges with whatever is on this
+          device — nothing already completed here gets lost. Public recovery templates
+          (111111, 222222, …) work here too.
         </p>
         <div className="flex gap-2">
           <input

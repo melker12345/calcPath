@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  countProgressDiffFromState,
+  blobIsSupersetOf,
+  compareCloudBlobs,
   deserializeCloudToProgress,
+  mergeCloudBlobs,
   serializeProgressToCloud,
   type CloudProgressBlob,
 } from "@/lib/cloud-progress";
@@ -31,8 +33,6 @@ import { normalizeProgressState, type ProgressState } from "@/lib/progress";
 
 const PIN_LENGTH = 6;
 const MIN_PASSWORD_LEN = 6;
-const MIN_PROGRESS_DIFF = 5;
-const MIN_UPDATE_INTERVAL_MS = 60_000;
 const MAX_PIN_RETRIES = 20;
 
 const rateLimit = new Map<string, number>();
@@ -207,9 +207,13 @@ export async function GET(request: Request) {
     .update({ last_accessed: new Date().toISOString() })
     .eq("pin", pin);
 
-  const state = deserializeCloudToProgress(data.blob as CloudProgressBlob);
+  const blob = data.blob as CloudProgressBlob;
+  const state = deserializeCloudToProgress(blob);
   return NextResponse.json({
     state,
+    // Raw blob lets the client merge with local progress instead of blindly
+    // replacing it, so pulling an older backup can never wipe newer local work.
+    blob,
     isTemplate: Boolean(data.is_template),
   });
 }
@@ -274,24 +278,36 @@ export async function PUT(request: Request) {
 
   clearPinFailures(pin);
 
+  // Convergent merge: the cloud blob only ever grows. Even if the client pushes
+  // an empty or stale state (e.g. a fresh browser after restore), nothing that
+  // was already backed up can be lost. This replaces the old destructive
+  // "diff >= N overwrites" guard.
   const storedBlob = backup.blob as CloudProgressBlob;
-  const diff = countProgressDiffFromState(state, storedBlob);
-  const elapsed = Date.now() - new Date(backup.updated_at).getTime();
+  const incomingBlob = serializeProgressToCloud(state);
+  const mergedBlob = mergeCloudBlobs(incomingBlob, storedBlob);
+  const comparison = compareCloudBlobs(incomingBlob, storedBlob);
 
-  if (diff < MIN_PROGRESS_DIFF && elapsed < MIN_UPDATE_INTERVAL_MS) {
-    return NextResponse.json(
-      {
-        error: `Backup is already up to date. Change at least ${MIN_PROGRESS_DIFF} questions or wait before updating again.`,
-      },
-      { status: 429 },
-    );
+  const now = new Date().toISOString();
+
+  // Nothing new to store — skip the write entirely (cheap spam protection).
+  if (blobIsSupersetOf(mergedBlob, storedBlob)) {
+    await supabase
+      .from("progress_backups")
+      .update({ last_accessed: now })
+      .eq("pin", pin);
+    return NextResponse.json({
+      ok: true,
+      upToDate: true,
+      addedToCloud: 0,
+      keptFromCloud: comparison.dbOnlyCorrect,
+      direction: comparison.direction,
+      updatedAt: backup.updated_at,
+    });
   }
 
-  const blob = serializeProgressToCloud(state);
-  const now = new Date().toISOString();
   const { error: updateError } = await supabase
     .from("progress_backups")
-    .update({ blob, updated_at: now, last_accessed: now })
+    .update({ blob: mergedBlob, updated_at: now, last_accessed: now })
     .eq("pin", pin);
 
   if (updateError) {
@@ -299,5 +315,12 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Failed to update backup" }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, updatedAt: now });
+  return NextResponse.json({
+    ok: true,
+    upToDate: false,
+    addedToCloud: comparison.localOnlyCorrect,
+    keptFromCloud: comparison.dbOnlyCorrect,
+    direction: comparison.direction,
+    updatedAt: now,
+  });
 }
