@@ -44,9 +44,43 @@ export function extractFinalAnswer(explanation: string, fallbackAnswer = ""): st
   return fallbackAnswer ? formatAnswerForDisplay(fallbackAnswer) : "";
 }
 
+/**
+ * Pull a useful hint from an explanation without giving away the final answer.
+ * Supports both practice ("Step 1: ...") and diagnostic (short prose + math) formats.
+ */
+export function extractHintFromExplanation(explanation: string): string {
+  const stepMatch = explanation.match(/Step 1:\s*([\s\S]+?)(?=Step \d+:|Final answer:|$)/i);
+  if (stepMatch) {
+    const step = stepMatch[1].replace(/\s*Final answer:.*$/i, "").trim();
+    const withoutTrailingAnswer = step.replace(/\s*\$[^$]+\$\s*\.?\s*$/, "").trim();
+    if (withoutTrailingAnswer.length >= 8) {
+      return withoutTrailingAnswer.endsWith(".") ? withoutTrailingAnswer : `${withoutTrailingAnswer}.`;
+    }
+    return step.endsWith(".") ? step : `${step}.`;
+  }
+
+  const trimmed = explanation.replace(/\s*Final answer:.*$/i, "").trim();
+  const firstSentence = trimmed.match(/^([\s\S]+?\.)(?:\s|$)/)?.[1]?.trim();
+  if (firstSentence) {
+    const withoutAnswer = firstSentence
+      .replace(/:?\s*\$[^$]+\$\s*\.?$/, ".")
+      .replace(/\.{2,}/g, ".")
+      .trim();
+    if (withoutAnswer.length >= 8 && withoutAnswer !== ".") {
+      return withoutAnswer.endsWith(".") ? withoutAnswer : `${withoutAnswer}.`;
+    }
+
+    const colonLead = firstSentence.match(/^([^:$]+):/)?.[1]?.trim();
+    if (colonLead && colonLead.length >= 8) {
+      return colonLead.endsWith(".") ? colonLead : `${colonLead}.`;
+    }
+  }
+
+  return "Think about which rules or definitions apply to this problem.";
+}
+
 export function getDefaultHint(explanation: string): string {
-  const m = explanation.match(/Step 1:\s*([^.]+\.)/);
-  return m?.[1] || "Think about the rules that apply to this type of problem.";
+  return extractHintFromExplanation(explanation);
 }
 
 interface PracticeFeedbackProps {

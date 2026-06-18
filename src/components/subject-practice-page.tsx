@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { SectionCard } from "@/components/section-card";
+import { SubjectBreadcrumbs } from "@/components/subject-breadcrumbs";
 import { useProgress } from "@/components/progress-provider";
 import { getPracticeProgress } from "@/lib/progress";
 import { trackEvent } from "@/lib/analytics";
@@ -29,14 +30,18 @@ export function SubjectPracticePage({
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
-      <div className="mb-6 sm:mb-8">
-        <p className="mb-1 text-xs font-bold uppercase tracking-widest text-zinc-500">
-          {subjectLabel}
+      <div className="mb-6 border-b theme-border pb-6 sm:mb-8">
+        <SubjectBreadcrumbs subjectSlug={subjectSlug} subjectLabel={subjectLabel} />
+        <h1 className="mt-3 text-2xl font-semibold theme-text sm:text-3xl">Practice problems</h1>
+        <p className="mt-2 text-sm theme-text-secondary">
+          Pick a chapter and work through its problem set. Progress is saved automatically.
         </p>
-        <h1 className="text-2xl font-semibold text-zinc-900 sm:text-3xl">Practice by topic</h1>
-        <p className="text-sm text-zinc-500">
-          Choose a {subjectLabel.toLowerCase()} topic and start solving problems.
-        </p>
+        <Link
+          href={`/${subjectSlug}`}
+          className="mt-3 inline-block text-sm font-medium text-[var(--accent)] hover:underline"
+        >
+          ← Back to chapters
+        </Link>
       </div>
 
       <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
@@ -49,24 +54,24 @@ export function SubjectPracticePage({
               description={topic.description}
             >
               <div className="mt-4 space-y-1.5">
-                <div className="flex justify-between gap-3 text-xs text-zinc-500">
+                <div className="flex justify-between gap-3 text-xs theme-text-muted">
                   <span>
-                    <span className="font-semibold text-zinc-900">{stats.correct}</span>
-                    /{stats.total} mastered
+                    <span className="font-semibold theme-text">{stats.correct}</span>
+                    /{stats.total} solved
                   </span>
                   <span className="text-right">
                     {stats.accuracyRate}% accuracy · {topic.estimatedMinutes} min
                     {stats.isComplete && (
-                      <span className="ml-1.5 font-semibold text-emerald-600">✓ Done</span>
+                      <span className="ml-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
+                        ✓ Done
+                      </span>
                     )}
                   </span>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--accent)]/15">
                   <div
                     className={`h-1.5 rounded-full transition-all duration-500 ${
-                      stats.isComplete
-                        ? "bg-emerald-500"
-                        : "bg-slate-900"
+                      stats.isComplete ? "bg-emerald-500" : "bg-[var(--accent)]"
                     }`}
                     style={{ width: `${stats.masteryRate}%` }}
                   />

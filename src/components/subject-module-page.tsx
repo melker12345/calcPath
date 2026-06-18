@@ -269,7 +269,9 @@ export function SubjectModulePage({
                         key={idx}
                         className="print-keep-together mb-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5"
                       >
-                        <div className="mb-3 font-semibold theme-text">{example.title}</div>
+                        <div className="mb-3 font-semibold theme-text">
+                          <MathText text={example.title} />
+                        </div>
                         {hasTable ? (
                           <MdxContent mdxSource={steps.join("\n\n")} className="max-w-none" />
                         ) : (

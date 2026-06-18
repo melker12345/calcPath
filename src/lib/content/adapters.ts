@@ -54,6 +54,19 @@ function stripComments(texts: string[]): string[] {
   return texts.filter((t) => t && t.trim() && !t.trim().startsWith("<!--"));
 }
 
+/** Strip markdown list markers (numbered, bullet) from a single line. */
+function stripListMarker(line: string): string {
+  const numbered = line.match(/^\d+\.\s+(.*)$/);
+  if (numbered) return numbered[1].trim();
+  if (line.startsWith("- ")) return line.slice(2).trim();
+  if (line.startsWith("* ")) return line.slice(2).trim();
+  return line.trim();
+}
+
+function isGenericWorkedExampleTitle(title: string): boolean {
+  return !title || /^(?:worked\s+)?examples?$/i.test(title.trim());
+}
+
 /**
  * Internal: lightweight, pure, server-safe parser for the MDX dialect in
  * content/{subject}/topics/{topicId}/module.mdx .
@@ -278,29 +291,46 @@ function parseMdxToLegacyShape(mdxSource: string): {
     }
 
     // Resilient auto-detect for worked / example blocks even without exact "**Worked Example:**" bold marker.
-    // E.g. after "### Example", lines starting "Step 1:", "Example:", or example-ish content.
-    // This ensures .examples[] is populated (for nice UI cards) on varied/thin MDX from high-volume subjects,
-    // so "recommended" markers don't silently degrade UX. Conservative to avoid swallowing regular body lists.
+    // E.g. after "### Example", lines starting "Step 1:" or "Example 1:" (numbered blocks).
+    // Do NOT match inline prose like "Example: for $f(x)=...$" — those stay in section body for MdxContent.
     if (!collectingWorked && !collectingEli5 && currentSection) {
       const lowLine = line.toLowerCase();
-      if (/\bstep\s*1\s*[:.]/.test(lowLine) || /^example\s*[:.]/.test(lowLine) || /\bexample\s*\d*\s*[:.]/.test(lowLine)) {
+      if (/^step\s*1\s*[:.]/.test(lowLine) || /^example\s+\d+\s*[:.]/.test(lowLine)) {
         collectingWorked = true;
         collectingEli5 = false;
-        const titleFromLine = line.replace(/^\*\*|\*\*|Step\s*1\s*[:.]\s*|Example\s*[:.]\s*/gi, "").trim();
-        currentWorked = { title: titleFromLine.substring(0, 80) || "Example", steps: [] };
+        const titleFromLine = line
+          .replace(/^\*\*|\*\*/g, "")
+          .replace(/^Step\s*1\s*[:.]\s*/i, "")
+          .replace(/^Example\s+\d+\s*[:.]\s*/i, "")
+          .trim();
+        currentWorked = { title: titleFromLine || "Example", steps: [] };
         currentSection.examples = currentSection.examples || [];
         currentSection.examples.push(currentWorked);
         // Include the starter text as first step content if non-trivial
         if (titleFromLine || !/^\d/.test(line)) {
-          currentWorked.steps.push(line.replace(/^Step\s*1\s*[:.]\s*|^Example\s*[:.]\s*/i, "").trim() || line);
+          currentWorked.steps.push(
+            line
+              .replace(/^Step\s*1\s*[:.]\s*/i, "")
+              .replace(/^Example\s+\d+\s*[:.]\s*/i, "")
+              .trim() || line
+          );
         }
+        continue;
+      }
+    }
+
+    // Bold-only line under worked example → example title (common MDX pattern after **Worked Example:**)
+    if (collectingWorked && currentWorked) {
+      const boldOnly = line.match(/^\*\*(.+)\*\*$/);
+      if (boldOnly && isGenericWorkedExampleTitle(currentWorked.title)) {
+        currentWorked.title = boldOnly[1].trim();
         continue;
       }
     }
 
     // List item under current block
     if (line.startsWith("- ") || line.startsWith("* ") || /^\d+\.\s/.test(line)) {
-      const itemText = line.replace(/^[-*\d.]\s*/, "").trim();
+      const itemText = stripListMarker(line);
       if (collectingEli5) {
         currentEli5.push(itemText);
         continue;
@@ -323,7 +353,7 @@ function parseMdxToLegacyShape(mdxSource: string): {
       // Push this line to body and reset so we don't swallow the rest of the section.
       collectingEli5 = false;
       // Resilience: if this interrupting para looks like start of example, auto-start worked collection instead of body.
-      if (/\bstep\s*1\s*[:.]/.test(line.toLowerCase()) || /^example/i.test(line) || /example\s*\d/i.test(line)) {
+      if (/^step\s*1\s*[:.]/.test(line.toLowerCase()) || /^example\s+\d+\s*[:.]/i.test(line)) {
         collectingWorked = true;
         currentWorked = { title: "Example", steps: [line] };
         if (currentSection) {

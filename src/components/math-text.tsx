@@ -3,6 +3,7 @@
 import React, { Component, type ReactNode } from "react";
 import { InlineMath, BlockMath } from "react-katex";
 import "katex/dist/katex.min.css";
+import { normalizeMathText } from "@/lib/math-text-normalize";
 
 type MathTextProps = {
   text: string;
@@ -115,7 +116,7 @@ function SafeBlockMath({ math }: { math: string }) {
 }
 
 export const MathText = ({ text, block = false }: MathTextProps) => {
-  const parts = splitMath(text);
+  const parts = splitMath(normalizeMathText(text));
 
   if (block) {
     return (
