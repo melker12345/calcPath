@@ -39,6 +39,14 @@ Small visual polish on:
 
 ### Validate topic explanations
 - Review each topic's explanation and confirm they are the **highest quality** (clear, correct, well-written).
+- Audited all 4,026 (sampled ~150 in depth). Overall quality high. Fixed:
+  - 94 single-backslash LaTeX commands corrupted into control chars (`\binom`/`\theta`/`\to`/`\bar`).
+  - 4 wrong/contradictory answers: `series-taylor-5`, `limits-piecewise-3`, `precalc-piece-11`, `appint-com-4`.
+- Remaining backlog (need per-item judgment):
+  - Broken scratch-text answer/prompt fields: `numtheory-quadres-4`, `comb-hook-4`, `comb-prob-2`, plus weak combinatorics prompts (`comb-null-6`, `comb-add-6`, `comb-flow-4`, `comb-lp-4`).
+  - `info-network-4`: answer/explanation contradict (5 vs 1) — depends on the intended butterfly diagram.
+  - ~30 "thinking-out-loud / Wait, let me recalculate" explanations to tidy.
+  - Geometry: ~104 stripped `°`/`−` symbols (mostly cosmetic; `geom-hyp-3` dropped a real minus).
 
 ### De-duplicate the sync feature
 - The sync/backup feature currently lives in **both `/sync` and `/account`**.
