@@ -288,12 +288,12 @@ export function DiagnosticSession({
     }`}>
       <div className="flex items-center gap-2.5">
         <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base ${
-          feedback.correct ? "bg-emerald-500" : "bg-amber-400"
+          feedback.correct ? "bg-emerald-500" : "bg-amber-500"
         }`}>
           {feedback.correct ? "✓" : "✗"}
         </div>
         <p className={`text-base font-bold sm:text-xl ${
-          feedback.correct ? "text-emerald-800 dark:text-emerald-400" : "text-amber-800 dark:text-amber-400"
+          feedback.correct ? "text-emerald-800 dark:text-emerald-300" : "text-amber-800 dark:text-amber-300"
         }`}>
           {feedback.correct ? "Correct!" : "Not quite"}
         </p>

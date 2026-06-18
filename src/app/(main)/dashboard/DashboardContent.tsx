@@ -210,7 +210,7 @@ function DashboardInner({
       </section>
 
       <div className="mt-10 border-t theme-border pt-6 text-center text-xs theme-text-muted">
-        Progress is saved locally and can be synced across devices via /sync.
+        Progress is saved locally and can be backed up &amp; synced across devices from your account page.
       </div>
     </div>
   );

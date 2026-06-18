@@ -346,25 +346,27 @@ export function MathInput({
       {/* ── Header: label + draw + hint ── */}
       <div className="flex items-center justify-between px-4 pt-3 sm:px-5 sm:pt-4" style={{ background: th.headerBg }}>
         <p className="text-xs font-semibold sm:text-sm" style={{ color: th.labelColor }}>{placeholder}</p>
-        <div className="flex items-center gap-1.5">
-          {!feedbackOverlay && (
-            <button
-              type="button"
-              onClick={() => setScratchpadOpen(true)}
-              className="flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition active:scale-95 sm:px-3 sm:py-1 sm:text-sm"
-              style={{ borderColor: th.dividerColor, color: th.labelColor }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:h-3.5 sm:w-3.5">
-                <path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Z" />
-              </svg>
-              Draw
-            </button>
-          )}
-          {onHint && !feedbackOverlay && (
+        {/* Keep the action buttons mounted (just hidden) while feedback is shown
+            so the header height never changes between input and feedback states. */}
+        <div className={`flex items-center gap-1.5 ${feedbackOverlay ? "invisible" : ""}`} aria-hidden={feedbackOverlay ? true : undefined}>
+          <button
+            type="button"
+            onClick={() => setScratchpadOpen(true)}
+            tabIndex={feedbackOverlay ? -1 : undefined}
+            className="flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition active:scale-95 sm:px-3 sm:py-1 sm:text-sm"
+            style={{ borderColor: th.dividerColor, color: th.labelColor }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:h-3.5 sm:w-3.5">
+              <path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Z" />
+            </svg>
+            Draw
+          </button>
+          {onHint && (
             <button
               type="button"
               onClick={onHint}
               disabled={hintDisabled}
+              tabIndex={feedbackOverlay ? -1 : undefined}
               className="flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition active:scale-95 disabled:opacity-30 sm:px-3 sm:py-1 sm:text-sm"
               style={{ borderColor: th.dividerColor, color: th.labelColor }}
             >

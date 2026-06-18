@@ -20,7 +20,7 @@ Run `npm run content:validate` after edits — it enforces schemas + the hard re
 - **Rich explanations** — Parsed from MDX with ELI5, worked examples, common pitfalls, section anchors for deep links + progress
 - **Practice** — Numeric/MCQ questions with MathInput (keypad + suggestions), hints, solutions, mastery tracking
 - **Topic tests** (Calculus) — Dedicated per-topic tests via the app's /<subject>/test/ feature
-- **Local progress + sync** — Everything stored locally (no account required). Use the ephemeral /sync page (or Profile page) for cross-device transfer via short codes (no PII, self-destructing snapshots)
+- **Local progress + sync** — Everything stored locally (no account required). Use the account page to back up and restore across devices via a 6-digit PIN + password (no PII, no emails); progress merges convergently so syncing never loses completed work
 - **Donations** — Optional one-time support via Stripe
 
 ## Tech Stack

@@ -189,7 +189,7 @@ export function PracticeFeedback({
       }`}>
         {feedback.attempts > 0 && (
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-white sm:h-10 sm:w-10 sm:text-base">✗</div>
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white sm:h-10 sm:w-10 sm:text-base dark:bg-amber-500">✗</div>
             <div>
               <p className="text-sm font-bold text-amber-800 sm:text-lg dark:text-amber-300">Not quite</p>
               <p className="text-[11px] text-amber-700 sm:text-sm dark:text-amber-400">

@@ -308,7 +308,6 @@ function SiteHeaderAuthControls({
         >
           <ProfileIcon size={18} color="currentColor" />
         </Link>
-        <Link href="/sync" className="text-sm theme-text-secondary hover:theme-text">Sync devices</Link>
       </div>
 
       <MobileDrawer

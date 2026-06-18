@@ -140,10 +140,9 @@ function AccountContent() {
 
         <SectionCard title="Other tools &amp; reset">
           <p className="text-sm text-zinc-600 mb-4">
-            Reset erases all local progress permanently (no undo). Use /sync for the dedicated sync UI.
+            Reset erases all local progress permanently (no undo).
           </p>
           <div className="flex flex-wrap gap-2">
-            <Link href="/sync" className="btn-secondary inline-flex">Dedicated sync page</Link>
             <Link href="/diagnostic" className="btn-secondary inline-flex">Take the diagnostic</Link>
             <button className="btn-secondary" onClick={resetProgress}>
               Reset progress
