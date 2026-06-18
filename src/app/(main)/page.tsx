@@ -28,7 +28,7 @@ export default async function Home() {
       {/* Background geometric pattern (light + dark variants) */}
       <div
         aria-hidden
-        className="absolute inset-0 pointer-events-none dark:hidden"
+        className="landing-bg-layer absolute inset-0 pointer-events-none dark:hidden"
         style={{
           backgroundColor: "#f8fafc",
           opacity: 0.45,
@@ -47,7 +47,7 @@ export default async function Home() {
 
       <div
         aria-hidden
-        className="absolute inset-0 pointer-events-none hidden dark:block"
+        className="landing-bg-layer absolute inset-0 pointer-events-none hidden dark:block"
         style={{
           backgroundColor: "#0f172a",
           opacity: 0.38,

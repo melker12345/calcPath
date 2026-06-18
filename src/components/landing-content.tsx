@@ -112,6 +112,9 @@ export function LandingContent({
   topicCount?: number;
 } = {}) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  /** Enables parallax transitions one frame after mount so the initial shell
+      paint/hydration never animates. */
+  const [ready, setReady] = useState(false);
   /** Mobile: subjects panel fills the stage. Desktop: vertically centered 500px slot. */
   const subjectsFullBleed = useSyncExternalStore(subscribeMobileLanding, getMobileLandingSnapshot, () => false);
   const currentIndexRef = useRef(0);
@@ -199,6 +202,11 @@ export function LandingContent({
     };
   }, [stepSection]);
 
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setReady(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
   const stageHeight = `calc(100dvh - ${HEADER_OFFSET})`;
 
   const getSectionYOffset = (idx: number) => {
@@ -210,7 +218,7 @@ export function LandingContent({
 
   return (
     <div
-      className="relative overflow-hidden"
+      className={`relative overflow-hidden ${ready ? "landing-ready" : ""}`}
       style={{ height: stageHeight }}
     >
       <LandingScrim />
