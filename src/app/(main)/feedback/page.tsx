@@ -56,7 +56,7 @@ export default function FeedbackPage() {
           <button
             type="button"
             onClick={() => setStatus("idle")}
-            className="mt-6 border border-stone-400 bg-white px-5 py-2.5 text-sm font-medium text-stone-900 transition hover:bg-stone-100 active:scale-95 dark:border-[var(--border)] dark:bg-[var(--surface)] dark:text-[var(--text-primary)] dark:hover:bg-[var(--surface-2)]"
+            className="mt-6 rounded-lg border border-stone-400 bg-white px-5 py-2.5 text-sm font-medium text-stone-900 transition hover:bg-stone-100 active:scale-95 dark:border-[var(--border)] dark:bg-[var(--surface)] dark:text-[var(--text-primary)] dark:hover:bg-[var(--surface-2)]"
           >
             Send more feedback
           </button>
@@ -87,7 +87,7 @@ export default function FeedbackPage() {
                 key={k.id}
                 type="button"
                 onClick={() => setKind(k.id)}
-                className={`border px-4 py-2.5 text-sm font-medium transition active:scale-95 ${
+                className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition active:scale-95 ${
                   kind === k.id
                     ? "border-stone-700 bg-stone-100 text-stone-950 dark:border-[var(--border)] dark:bg-[var(--surface-2)] dark:text-[var(--text-primary)]"
                     : "border-stone-300 bg-white text-stone-700 hover:bg-stone-100 dark:border-[var(--border)] dark:bg-[var(--surface)] dark:text-[var(--text-secondary)] dark:hover:bg-[var(--surface-2)]"
@@ -119,7 +119,7 @@ export default function FeedbackPage() {
                   ? "What would you like to see added or changed?"
                   : "Share your thoughts..."
             }
-            className="w-full resize-y border border-stone-300 bg-white px-4 py-3 text-sm text-stone-950 placeholder:text-stone-400 focus:border-stone-600 focus:outline-none dark:border-[var(--border)] dark:bg-[var(--surface-2)] dark:text-[var(--text-primary)] dark:placeholder:text-[var(--text-muted)] dark:focus:border-[var(--accent)]"
+            className="w-full resize-y rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm text-stone-950 placeholder:text-stone-400 focus:border-stone-600 focus:outline-none focus:ring-2 focus:ring-stone-900/10 dark:border-[var(--border)] dark:bg-[var(--surface-2)] dark:text-[var(--text-primary)] dark:placeholder:text-[var(--text-muted)] dark:focus:border-[var(--accent)] dark:focus:ring-[var(--accent)]/20"
           />
           <p className="mt-1 text-right text-xs text-zinc-400 dark:text-[var(--text-muted)]">
             {message.length}/5000
@@ -137,7 +137,7 @@ export default function FeedbackPage() {
         <button
           type="submit"
           disabled={status === "sending" || message.trim().length < 3}
-          className="mt-6 w-full border border-stone-900 bg-stone-900 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-[var(--border)] dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+          className="mt-6 w-full rounded-xl border border-stone-900 bg-stone-900 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-[var(--border)] dark:bg-white dark:text-black dark:hover:bg-zinc-200"
         >
           {status === "sending" ? "Sending..." : "Send Feedback"}
         </button>

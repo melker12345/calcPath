@@ -70,9 +70,9 @@ function AccountContent() {
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
-      <div className="mb-6 border-b border-stone-300 pb-5">
-        <h1 className="text-3xl font-semibold tracking-tight text-stone-950">Your Profile &amp; Progress Save</h1>
-        <p className="mt-2 text-base leading-7 text-stone-700">
+      <div className="mb-6 border-b theme-border pb-5">
+        <h1 className="text-3xl font-semibold tracking-tight theme-text">Your Profile &amp; Progress Save</h1>
+        <p className="mt-2 text-base leading-7 theme-text-secondary">
           No account required. All progress is saved locally on this device. Use the tools below for manual save/export to move to another device.
         </p>
       </div>
@@ -88,25 +88,23 @@ function AccountContent() {
       {/* Quick stats summary using useProgress */}
       <div className="mt-6">
         <SectionCard title="Your Progress Snapshot">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-semibold text-stone-950">{topicsWithProgress}</div>
-              <div className="text-xs uppercase tracking-widest text-stone-500">Topics touched</div>
-            </div>
-            <div>
-              <div className="text-2xl font-semibold text-stone-950">{problemsMastered}</div>
-              <div className="text-xs uppercase tracking-widest text-stone-500">Problems mastered</div>
-            </div>
-            <div>
-              <div className="text-2xl font-semibold text-stone-950">{totalAttempts}</div>
-              <div className="text-xs uppercase tracking-widest text-stone-500">Total attempts</div>
-            </div>
-            <div>
-              <div className="text-2xl font-semibold text-stone-950">{currentStreak}</div>
-              <div className="text-xs uppercase tracking-widest text-stone-500">Current streak (days)</div>
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { value: topicsWithProgress, label: "Topics touched" },
+              { value: problemsMastered, label: "Problems mastered" },
+              { value: totalAttempts, label: "Total attempts" },
+              { value: currentStreak, label: "Current streak (days)" },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="rounded-xl border theme-border bg-[var(--surface-2)] px-3 py-4 text-center"
+              >
+                <div className="text-2xl font-semibold tabular-nums theme-text">{stat.value}</div>
+                <div className="mt-1 text-xs uppercase tracking-widest theme-text-muted">{stat.label}</div>
+              </div>
+            ))}
           </div>
-          <p className="mt-3 text-xs text-stone-500">
+          <p className="mt-3 text-xs theme-text-muted">
             Stats are computed from your local progress. Practice more to increase these numbers.
           </p>
         </SectionCard>
@@ -115,7 +113,7 @@ function AccountContent() {
       {/* Additional data tools: reset, links, and new JSON backup/restore (in addition to code sync) */}
       <div className="mt-6 grid gap-4 sm:gap-6 md:grid-cols-2">
         <SectionCard title="Backup &amp; Restore (JSON)">
-          <p className="text-sm text-zinc-600 mb-4">
+          <p className="text-sm theme-text-secondary mb-4">
             Download a full JSON backup of your current progress for manual safekeeping or moving to another browser/profile.
             Import will replace your local progress with the file&apos;s data.
           </p>
@@ -139,7 +137,7 @@ function AccountContent() {
         </SectionCard>
 
         <SectionCard title="Other tools &amp; reset">
-          <p className="text-sm text-zinc-600 mb-4">
+          <p className="text-sm theme-text-secondary mb-4">
             Reset erases all local progress permanently (no undo).
           </p>
           <div className="flex flex-wrap gap-2">
@@ -155,7 +153,7 @@ function AccountContent() {
         <AdminFeedbackShortcut />
       </div>
 
-      <div className="mt-8 text-xs text-stone-500">
+      <div className="mt-8 text-xs theme-text-muted">
         All data stays on this device by default. The manual save tools above (codes + JSON) let you transfer or backup without any account or sign-in.
       </div>
     </div>

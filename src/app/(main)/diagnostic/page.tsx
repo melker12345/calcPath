@@ -31,9 +31,17 @@ export default async function DiagnosticPickerPage() {
                 <Link
                   key={subject.slug}
                   href={`/diagnostic/${subject.slug}`}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-blue-200 hover:bg-blue-50 dark:border-[var(--border)] dark:bg-[var(--surface)] dark:hover:border-[var(--accent)] dark:hover:bg-[var(--surface-2)]"
+                  className="group rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50 hover:shadow-sm dark:border-[var(--border)] dark:bg-[var(--surface)] dark:hover:border-[var(--accent)] dark:hover:bg-[var(--surface-2)]"
                 >
-                  <h2 className="font-bold text-zinc-900 dark:text-[var(--text-primary)]">{subject.label}</h2>
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 className="font-bold text-zinc-900 dark:text-[var(--text-primary)]">{subject.label}</h2>
+                    <span
+                      aria-hidden
+                      className="text-zinc-400 transition group-hover:translate-x-0.5 group-hover:text-blue-500 dark:text-[var(--text-muted)] dark:group-hover:text-[var(--accent)]"
+                    >
+                      →
+                    </span>
+                  </div>
                   <p className="mt-1 text-xs text-zinc-500 dark:text-[var(--text-muted)]">
                     Prerequisite readiness check
                   </p>
@@ -42,8 +50,6 @@ export default async function DiagnosticPickerPage() {
             </div>
           )}
         </div>
-
-
       </div>
     </div>
   );
