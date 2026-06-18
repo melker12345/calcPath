@@ -45,23 +45,29 @@ function normalizeMathInner(inner: string): string {
   // single backslash was meant. We undo that, but ONLY outside \begin{...}\end{...}
   // environments — inside matrices/arrays/cases the "\\" is a real row separator
   // and must be preserved (collapsing it produces an invalid lone "\").
-  const envs: string[] = [];
-  normalized = normalized.replace(
-    /\\begin\{[\s\S]*?\\end\{[a-zA-Z*]+\}/g,
-    (match) => {
-      envs.push(match);
-      return `\u0000ENV${envs.length - 1}\u0000`;
-    },
-  );
-  // Outside environments, "\\" immediately before a letter is an over-escaped command.
-  normalized = normalized.replace(/\\\\(?=[a-zA-Z])/g, "\\");
-  normalized = normalized.replace(/\u0000ENV(\d+)\u0000/g, (_, i: string) => envs[Number(i)]);
+  // Protect spans whose contents must not be rewritten: matrix/array
+  // environments (their "\\" are real row separators) and literal text spans
+  // like \text{sum} (where bare words must stay words, not become commands).
+  const guarded: string[] = [];
+  const guard = (re: RegExp) => {
+    normalized = normalized.replace(re, (match) => {
+      guarded.push(match);
+      return `\u0000G${guarded.length - 1}\u0000`;
+    });
+  };
+  guard(/\\begin\{[\s\S]*?\\end\{[a-zA-Z*]+\}/g);
+  guard(/\\(?:text|operatorname|mathrm|textbf|textit|textrm)\{[^{}]*\}/g);
 
+  // Outside the guarded spans, "\\" immediately before a letter is an
+  // over-escaped command (e.g. "\\omega" -> "\omega").
+  normalized = normalized.replace(/\\\\(?=[a-zA-Z])/g, "\\");
   for (const [pattern, replacement] of MATH_COMMAND_FIXES) {
     normalized = normalized.replace(pattern, replacement);
   }
   // Bare exponents like e^2 or x^10 are fragile in some KaTeX paths — prefer braces.
   normalized = normalized.replace(/([A-Za-z])\^(\d+)/g, "$1^{$2}");
+
+  normalized = normalized.replace(/\u0000G(\d+)\u0000/g, (_, i: string) => guarded[Number(i)]);
   return normalized;
 }
 
