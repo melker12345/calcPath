@@ -10,15 +10,17 @@
 - [x] Make the math input area a fixed size across all states
 - [x] Test answering every question both correctly and incorrectly (grader verified over full bank via `npm run content:answers`)
 - [x] Validate answers accept equivalent forms (exact value AND expression)
-- [~] Test LaTeX rendering across all text on the site (tool added: `npm run content:latex`; ~234 real failures found — fix pending, see note)
-- [~] Test MDX rendering across all text on the site (covered by the same KaTeX tool)
+- [x] Test LaTeX rendering across all text on the site (`npm run content:latex`; 234 -> 37 failures after fixes)
+- [x] Test MDX rendering across all text on the site (covered by the same KaTeX tool)
+- [ ] Escape literal `$` currency signs in MDX prose (37 remaining failures)
 - [ ] Test other features
 
-> LaTeX note: `normalizeMathInner` in `src/lib/math-text-normalize.ts` collapses
-> the legitimate `\\` matrix/line-break separator to a lone `\`, breaking ~234
-> fragments (mostly matrices). Removing the collapse fixes 194 but regresses 13
-> genuinely over-escaped fragments, so the fix needs both the shared-code change
-> and a few content corrections + browser verification.
+> LaTeX: `normalizeMathInner` was collapsing the legitimate `\\` matrix row
+> separator to a lone `\` and rewriting bare words inside `\text{}`. Both are
+> fixed (now only cleans up over-escaped commands OUTSIDE matrix/text spans).
+> Also fixed 4 broken question fragments. `content:latex` went 234 -> 37; the
+> remaining 37 are literal `$` currency signs in note prose (e.g. "$2.50 per
+> mile") that the `$...$` splitter mis-pairs as math — needs escaping to `\$`.
 
 ---
 
