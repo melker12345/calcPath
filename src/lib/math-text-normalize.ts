@@ -39,8 +39,24 @@ const MATH_COMMAND_FIXES: Array<[RegExp, string]> = [
 ];
 
 function normalizeMathInner(inner: string): string {
-  // Raw MDX doubles backslashes (\\frac); MathText reads parser output without MDX compile.
-  let normalized = inner.replace(/\\\\/g, "\\");
+  let normalized = inner;
+
+  // Some authored math over-escapes commands (e.g. "\\omega", "\\frac") where a
+  // single backslash was meant. We undo that, but ONLY outside \begin{...}\end{...}
+  // environments — inside matrices/arrays/cases the "\\" is a real row separator
+  // and must be preserved (collapsing it produces an invalid lone "\").
+  const envs: string[] = [];
+  normalized = normalized.replace(
+    /\\begin\{[\s\S]*?\\end\{[a-zA-Z*]+\}/g,
+    (match) => {
+      envs.push(match);
+      return `\u0000ENV${envs.length - 1}\u0000`;
+    },
+  );
+  // Outside environments, "\\" immediately before a letter is an over-escaped command.
+  normalized = normalized.replace(/\\\\(?=[a-zA-Z])/g, "\\");
+  normalized = normalized.replace(/\u0000ENV(\d+)\u0000/g, (_, i: string) => envs[Number(i)]);
+
   for (const [pattern, replacement] of MATH_COMMAND_FIXES) {
     normalized = normalized.replace(pattern, replacement);
   }
