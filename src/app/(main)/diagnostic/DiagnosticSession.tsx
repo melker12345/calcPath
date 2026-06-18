@@ -12,7 +12,14 @@ import {
   summarizeDiagnosticPrerequisites,
   type DiagnosticQuestionResult,
 } from "@/lib/diagnostics";
-import { formatAnswerForDisplay, ProgressDots, type QuestionStatus } from "@/components/practice";
+import {
+  extractFinalAnswer,
+  extractSteps,
+  formatAnswerForDisplay,
+  extractHintFromExplanation,
+  ProgressDots,
+  type QuestionStatus,
+} from "@/components/practice";
 import { detectQuestionContext } from "@/lib/math-input-helpers";
 import { getModulesPath } from "@/lib/subject-urls";
 import { DiagnosticStatusPill } from "./DiagnosticStatusPill";
@@ -266,7 +273,13 @@ export function DiagnosticSession({
   if (!question) return null;
 
   const prerequisite = prerequisiteById.get(question.prerequisiteId);
-  const answerText = formatAnswerForDisplay(question.answer);
+  const finalAnswer = extractFinalAnswer(question.explanation, question.answer);
+  const explanationSteps = extractSteps(question.explanation);
+  const hasStructuredSteps = /Step\s+\d+:/i.test(question.explanation);
+  const solutionSteps = hasStructuredSteps
+    ? explanationSteps
+    : [];
+  const hintText = extractHintFromExplanation(question.explanation);
   const overlay = feedback ? (
     <div className={`flex flex-col border-t p-4 sm:p-5 ${
       feedback.correct
@@ -279,19 +292,59 @@ export function DiagnosticSession({
         }`}>
           {feedback.correct ? "✓" : "✗"}
         </div>
-        <div>
-          <p className={`text-base font-bold sm:text-xl ${
-            feedback.correct ? "text-emerald-800 dark:text-emerald-400" : "text-amber-800 dark:text-amber-400"
-          }`}>
-            {feedback.correct ? "Correct!" : "Not quite"}
-          </p>
-          <p className={`text-xs sm:text-sm ${
-            feedback.correct ? "text-emerald-700 dark:text-emerald-400/90" : "text-amber-700 dark:text-amber-400/90"
-          }`}>
-            <MathText text={question.explanation} />
-          </p>
-        </div>
+        <p className={`text-base font-bold sm:text-xl ${
+          feedback.correct ? "text-emerald-800 dark:text-emerald-400" : "text-amber-800 dark:text-amber-400"
+        }`}>
+          {feedback.correct ? "Correct!" : "Not quite"}
+        </p>
       </div>
+
+      {!feedback.correct ? (
+        <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/40">
+          <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">Hint</p>
+          <div className="mt-1 text-sm leading-relaxed text-blue-900 dark:text-blue-200">
+            <MathText text={hintText} />
+          </div>
+        </div>
+      ) : null}
+
+      {(feedback.correct || solutionSteps.length > 0) ? (
+        <div className="mt-3 space-y-2">
+          {!feedback.correct && solutionSteps.length > 0 ? (
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+              Solution
+            </p>
+          ) : null}
+          {(feedback.correct
+            ? (solutionSteps.length > 0 ? solutionSteps : [question.explanation.trim()])
+            : solutionSteps
+          ).map((step, stepIdx) => (
+            <div key={stepIdx} className="flex gap-2 sm:gap-3">
+              <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold sm:h-6 sm:w-6 sm:text-xs ${
+                feedback.correct
+                  ? "bg-emerald-200 text-emerald-800 dark:bg-emerald-800 dark:text-emerald-200"
+                  : "bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200"
+              }`}>
+                {stepIdx + 1}
+              </span>
+              <div className={`flex-1 text-sm leading-relaxed sm:text-base ${
+                feedback.correct
+                  ? "text-emerald-800 dark:text-emerald-300"
+                  : "text-amber-800 dark:text-amber-300"
+              }`}>
+                <MathText text={step} />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : !feedback.correct ? (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/40">
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Solution</p>
+          <div className="mt-1 text-sm leading-relaxed text-amber-900 dark:text-amber-200">
+            <MathText text={question.explanation.trim()} />
+          </div>
+        </div>
+      ) : null}
 
       <div className={`mt-3 rounded-lg px-3 py-2 sm:rounded-xl sm:px-4 sm:py-3 ${
         feedback.correct ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-amber-100 dark:bg-amber-900/30"
@@ -299,7 +352,7 @@ export function DiagnosticSession({
         <p className={`text-sm font-semibold sm:text-base ${
           feedback.correct ? "text-emerald-900 dark:text-emerald-300" : "text-amber-900 dark:text-amber-300"
         }`}>
-          Answer: <MathText text={answerText} />
+          Answer: <MathText text={finalAnswer} />
         </p>
       </div>
 

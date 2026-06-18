@@ -3,6 +3,7 @@ import type {
   DiagnosticPrerequisite,
   DiagnosticQuestionFile,
 } from "@/lib/content/schema";
+import { expandExplanation } from "./expand-diagnostic-explanations";
 import type { SubjectSpec } from "./seed-tier1-diagnostics-types";
 
 export function buildDiagnostic(spec: SubjectSpec): DiagnosticFile {
@@ -13,11 +14,13 @@ export function buildDiagnostic(spec: SubjectSpec): DiagnosticFile {
   const questions: DiagnosticQuestionFile[] = [];
   for (const prereq of spec.prerequisites) {
     prereq.questions.forEach((question, index) => {
-      questions.push({
+      const built = {
         ...question,
         id: `${spec.idPrefix}${prereq.slug}-${index + 1}`,
         prerequisiteId: prereq.id,
-      });
+      };
+      const expanded = expandExplanation(built);
+      questions.push(expanded ? { ...built, explanation: expanded } : built);
     });
   }
 
