@@ -9,7 +9,6 @@ import {
 import { createPortal } from "react-dom";
 import { useTheme } from "next-themes";
 import { MathText } from "@/components/math-text";
-import { useClientMounted } from "@/hooks/use-client-mounted";
 
 type Tool = "pen" | "eraser";
 
@@ -32,19 +31,21 @@ export function Scratchpad({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme, resolvedTheme } = useTheme();
-  const isDark = (resolvedTheme ?? theme) === "dark";
+  const [mounted, setMounted] = useState(false);
+  const isDark = mounted && (resolvedTheme ?? theme) === "dark";
 
   const [tool, setTool] = useState<Tool>("pen");
   const [colorOverride, setColorOverride] = useState<string | null>(null);
   const [size, setSize] = useState(SIZES[1]);
-  const mounted = useClientMounted();
 
   const drawing = useRef(false);
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
   const paths = useRef<ImageData[]>([]);
   const hasRestored = useRef(false);
 
-  const defaultPenColor = mounted && isDark ? DARK_DEFAULT_PEN : COLORS[0];
+  useEffect(() => setMounted(true), []);
+
+  const defaultPenColor = isDark ? DARK_DEFAULT_PEN : COLORS[0];
   const color = colorOverride ?? defaultPenColor;
 
   const getCtx = useCallback(() => canvasRef.current?.getContext("2d") ?? null, []);
@@ -90,8 +91,6 @@ export function Scratchpad({
       ctx.scale(dpr, dpr);
 
       // Always paint a fresh white paper background *before* restoring the old drawing.
-      // This is the key fix for cached drawings from a different theme session
-      // having the wrong background color baked into the PNG.
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, rect.width, rect.height);
 
@@ -263,8 +262,8 @@ export function Scratchpad({
                 onClick={() => setTool("eraser")}
                 className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition sm:px-3 sm:text-sm ${
                   tool === "eraser"
-                    ? "bg-zinc-900 text-white"
-                    : "text-zinc-600 hover:bg-zinc-100"
+                    ? "bg-zinc-900 text-white dark:bg-[var(--accent)] dark:text-[var(--bg)]"
+                    : "text-zinc-600 hover:bg-zinc-100 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--surface)]"
                 }`}
               >
                 Eraser
@@ -304,14 +303,14 @@ export function Scratchpad({
           {/* Colors (only when pen selected) */}
           {tool === "pen" && (
             <div className="flex items-center gap-1.5">
-              {((mounted && isDark) ? [DARK_DEFAULT_PEN, "#f87171", "#60a5fa", "#4ade80", "#c084fc"] : COLORS).map((c) => (
+              {(isDark ? [DARK_DEFAULT_PEN, "#f87171", "#60a5fa", "#4ade80", "#c084fc"] : COLORS).map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setColorOverride(c)}
                   className={`h-6 w-6 rounded-full border-2 transition sm:h-7 sm:w-7 ${
-                    color === c 
-                      ? "border-zinc-900 dark:border-white scale-110" 
+                    color === c
+                      ? "border-zinc-900 dark:border-white scale-110"
                       : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500"
                   }`}
                   style={{ backgroundColor: c }}
@@ -354,7 +353,7 @@ export function Scratchpad({
         </div>
       )}
 
-      {/* Canvas */}
+      {/* Canvas — always white background (drawing surface) */}
       <canvas
         ref={canvasRef}
         className="flex-1 cursor-crosshair touch-none bg-white"

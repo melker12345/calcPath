@@ -1,102 +1,30 @@
-# TODO
+TODO:
 
-- [x] Optimize the home page (shell, bg blur-in, defer parallax)
-- [x] Fix styling touch-up for `/feedback`
-- [x] Fix styling touch-up for `/diagnostic`
-- [x] Fix styling touch-up for `/account`
-- [ ] Validate every topic explanation is highest quality
-- [x] Remove sync feature from `/sync` (keep it only on `/account`)
-- [x] Fix practice feedback UI styling on dark theme ("Not quite / Hint / Solution / Answer")
-- [x] Make the math input area a fixed size across all states
-- [x] Test answering every question both correctly and incorrectly (grader verified over full bank via `npm run content:answers`)
-- [x] Validate answers accept equivalent forms (exact value AND expression)
-- [x] Test LaTeX rendering across all text on the site (`npm run content:latex`; 234 -> 37 failures after fixes)
-- [x] Test MDX rendering across all text on the site (covered by the same KaTeX tool)
-- [ ] Escape literal `$` currency signs in MDX prose (37 remaining failures)
-- [ ] Test other features
+- [ ] Fix the /account page, the design is slighly broken.
+- [ ] Fix the /donate page, styling is from the old version.
+- [ ] 
 
-> LaTeX: `normalizeMathInner` was collapsing the legitimate `\\` matrix row
-> separator to a lone `\` and rewriting bare words inside `\text{}`. Both are
-> fixed (now only cleans up over-escaped commands OUTSIDE matrix/text spans).
-> Also fixed 4 broken question fragments. `content:latex` went 234 -> 37; the
-> remaining 37 are literal `$` currency signs in note prose (e.g. "$2.50 per
-> mile") that the `$...$` splitter mis-pairs as math — needs escaping to `\$`.
 
----
+Bugs:
+- Found some broken latex "Upper and Lower Sums; Partitions
+A partition P of [a,b] is a finite increasing sequence a = x_0 < x_1 < … < x_n = b.
+On each subinterval [x_{i−1}, x_i] let m_i = inf f on that subinterval, M_i = sup f.
+The lower sum L(f,P) = ∑ m_i Δx_i , upper sum U(f,P) = ∑ M_i Δx_i .
+f is Riemann integrable on [a,b] if sup over all partitions of L(f,P) equals inf of U(f,P); that common value is the integral ∫_a^b f."
 
-## Details
+[think it's meant to render subscript like x_0 reffering to the 0th x in the secence but currently the text renders as just x_0]
 
-### Optimize the home page
-- Send a good-quality **shell** first (fast, meaningful initial paint).
-- The **background blur can fade/blur in** after the shell loads, rather than blocking it.
-- **Parallax effects should not run on the initial page shell load** — defer them so they don't add cost to first paint.
+- [ ] /feedback could do with a small touch up on it's style.
 
-### Styling touch-ups (slight, not a rework)
-Small visual polish on:
-- `/feedback`
-- `/diagnostic`
-- `/account`
+- [ ] Do we not have numerical id for each question? or is it divid up into it's topics? like every topic show <div class="justify-self-center rounded-full px-2 py-0.5 text-[11px] font-medium text-[var(--text-muted)] ring-1 ring-[var(--border)]/80">Q1</div> for the first question in the topic, would it not be better to have just 0~4000?
+makes the feed back for spesific questoin easier, then i can just look up question #356 or what ever the question is in focus.
 
-### Validate topic explanations
-- Review each topic's explanation and confirm they are the **highest quality** (clear, correct, well-written).
-- Audited all 4,026 (sampled ~150 in depth). Overall quality high. Fixed:
-  - 94 single-backslash LaTeX commands corrupted into control chars (`\binom`/`\theta`/`\to`/`\bar`).
-  - 4 wrong/contradictory answers: `series-taylor-5`, `limits-piecewise-3`, `precalc-piece-11`, `appint-com-4`.
-- Remaining backlog (need per-item judgment):
-  - Broken scratch-text answer/prompt fields: `numtheory-quadres-4`, `comb-hook-4`, `comb-prob-2`, plus weak combinatorics prompts (`comb-null-6`, `comb-add-6`, `comb-flow-4`, `comb-lp-4`).
-  - `info-network-4`: answer/explanation contradict (5 vs 1) — depends on the intended butterfly diagram.
-  - ~30 "thinking-out-loud / Wait, let me recalculate" explanations to tidy.
-  - Geometry: ~104 stripped `°`/`−` symbols (mostly cosmetic; `geom-hyp-3` dropped a real minus).
 
-### De-duplicate the sync feature
-- The sync/backup feature currently lives in **both `/sync` and `/account`**.
-- Keep it **only on `/account`** — remove it from `/sync` (or remove the `/sync` page).
+- [ ] I think we have to many MCQ questions, why? does it make sence?
+- [ ] the scratch pad is broken on dark theme.
 
-### Practice feedback UI on dark theme
-- The "wrong answer" feedback block currently **looks bad on dark theme**. Example of the content shown:
-  ```
-  ✗
-  Not quite
-  Hint
-  All exponents.
-  Solution
-  1
-  All exponents 11.
-  Answer: Yes
-  ```
-- Touch up the styling so this reads well in dark mode.
 
-### Fixed-size math input
-- The answer/feedback area changes height between states, which is distracting.
-  - While inputting an answer: ~**640px**
-  - After getting a question wrong: ~**638px**
-- Goal: keep the area the **same size regardless of state** — entering an answer, answered wrong, or answered right — so the UI doesn't shift and distract the user.
-- Example of a "wrong" state whose height should match the input state:
-  ```
-  ✗
-  Not quite
-  Hint
-  Divide by.
-  Solution
-  1
-  Divide by 33.
-  Answer: 2/3
-  ```
+Future work not to do now:
+- [ ] Link to external resourses that explain the topic better, [youtube, khan accadamy, others (this is a manuall review step so i know we link to high quality resourses, also we need to validate that we can link to their resourse)]
 
-### Full correctness pass (answering)
-- Test **all aspects** of the app by answering questions **correctly and incorrectly**, and observe whether any issues appear.
-
-### Equivalent answer forms
-- Questions should accept **common equivalent forms** of the same answer.
-  - e.g. "what is 5 - 2" should accept `3`.
-  - For some questions it's more natural to answer with an **expression** rather than the evaluated value — **both should be accepted**.
-- Apply this so that, **for all questions**, both the exact value and a natural equivalent expression are accepted.
-
-### LaTeX testing
-- Test LaTeX rendering for **all text on the page** (questions, hints, solutions, explanations, UI copy).
-
-### MDX testing
-- Same as above but for **MDX** content rendering.
-
-### Other features
-- Test any remaining features for issues.
+- [ ] Implement vissual elements to represent the idea beeing explained.
