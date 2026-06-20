@@ -119,6 +119,20 @@ export function SyncPanel() {
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
+      {/* How it works */}
+      <details className="md:col-span-2 group">
+        <summary className="cursor-pointer list-none flex items-center gap-1.5 text-sm theme-text-muted hover:theme-text transition-colors w-fit">
+          <span className="inline-block transition-transform group-open:rotate-90">▶</span>
+          How does cloud backup work?
+        </summary>
+        <div className="mt-3 rounded-lg border theme-border bg-[var(--surface-2)] px-4 py-3 text-sm theme-text-secondary space-y-2">
+          <p>Your progress is saved on this device only. Cloud backup lets you access it on other devices without an account.</p>
+          <p><span className="font-medium theme-text">PIN</span> — a 6-digit code that identifies your backup. Share it across your devices to restore.</p>
+          <p><span className="font-medium theme-text">Password</span> — encrypts the backup so only you can restore it. We never store it. If you forget it you cannot restore (the PIN alone isn&apos;t enough).</p>
+          <p className="theme-text-muted">No email, no account, no tracking. The backup is anonymous.</p>
+        </div>
+      </details>
+
       {/* Backup card */}
       <div className="rounded-xl border theme-border theme-card p-5 space-y-4">
         <div>
