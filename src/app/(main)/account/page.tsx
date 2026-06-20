@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Suspense, useState } from "react";
 import { useProgress } from "@/components/progress-provider";
 import { AdminFeedbackShortcut } from "@/components/admin-feedback-shortcut";
@@ -136,12 +135,11 @@ function AccountContent() {
           )}
         </SectionCard>
 
-        <SectionCard title="Other tools &amp; reset">
+        <SectionCard title="Reset">
           <p className="text-sm theme-text-secondary mb-4">
             Reset erases all local progress permanently (no undo).
           </p>
           <div className="flex flex-wrap gap-2">
-            <Link href="/diagnostic" className="btn-secondary inline-flex">Take the diagnostic</Link>
             <button className="btn-secondary" onClick={resetProgress}>
               Reset progress
             </button>

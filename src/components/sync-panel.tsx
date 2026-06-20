@@ -119,13 +119,13 @@ export function SyncPanel() {
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-        <h2 className="text-xl font-semibold mb-2">Backup to cloud</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+      <div className="rounded-2xl border theme-border theme-card p-6">
+        <h2 className="text-xl font-semibold mb-2 theme-text">Backup to cloud</h2>
+        <p className="text-sm theme-text-secondary mb-4">
           Upload your local progress and get a memorable 6-digit PIN plus password. No email or account.
         </p>
 
-        <label className="block text-xs uppercase tracking-widest text-zinc-500 mb-1">
+        <label className="block text-xs uppercase tracking-widest theme-text-muted mb-1">
           Backup password
         </label>
         <input
@@ -133,7 +133,7 @@ export function SyncPanel() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="At least 6 characters"
-          className="w-full rounded-lg border px-3 py-2 mb-3 dark:bg-zinc-900"
+          className="w-full rounded-lg border theme-border bg-[var(--surface-2)] theme-text placeholder:text-[var(--text-muted)] px-3 py-2 mb-3"
           autoComplete="new-password"
         />
 
@@ -146,8 +146,8 @@ export function SyncPanel() {
         </button>
 
         {savedPin && (
-          <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2">
+          <div className="mt-4 border-t theme-border pt-4">
+            <p className="text-sm theme-text-secondary mb-2">
               Update existing backup (PIN {formatPinDisplay(savedPin)})
             </p>
             <button
@@ -175,13 +175,13 @@ export function SyncPanel() {
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 onClick={() => navigator.clipboard?.writeText(formatBackupReceipt(receipt.pin, receipt.password))}
-                className="text-xs underline"
+                className="text-xs underline theme-text-muted hover:theme-text"
               >
                 Copy to clipboard
               </button>
               <button
                 onClick={() => downloadBackupReceipt(receipt.pin, receipt.password)}
-                className="text-xs underline"
+                className="text-xs underline theme-text-muted hover:theme-text"
               >
                 Download recovery file
               </button>
@@ -190,13 +190,13 @@ export function SyncPanel() {
         )}
 
         {mode === "update" && success && (
-          <p className="mt-3 text-sm text-emerald-600">{success}</p>
+          <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400">{success}</p>
         )}
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-        <h2 className="text-xl font-semibold mb-2">Restore from cloud</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+      <div className="rounded-2xl border theme-border theme-card p-6">
+        <h2 className="text-xl font-semibold mb-2 theme-text">Restore from cloud</h2>
+        <p className="text-sm theme-text-secondary mb-4">
           Enter a 6-digit PIN to download progress. It merges with whatever is on this
           device — nothing already completed here gets lost. Public recovery templates
           (111111, 222222, …) work here too.
@@ -207,7 +207,7 @@ export function SyncPanel() {
             onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
             placeholder="582 910"
             inputMode="numeric"
-            className="flex-1 rounded-lg border px-3 py-2 font-mono tracking-widest text-lg dark:bg-zinc-900"
+            className="flex-1 rounded-lg border theme-border bg-[var(--surface-2)] theme-text placeholder:text-[var(--text-muted)] px-3 py-2 font-mono tracking-widest text-lg"
             maxLength={7}
           />
           <button
@@ -218,9 +218,9 @@ export function SyncPanel() {
             {loading ? "Restoring..." : "Restore"}
           </button>
         </div>
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
         {success && mode !== "create" && mode !== "update" && (
-          <p className="mt-2 text-sm text-emerald-600">{success}</p>
+          <p className="mt-2 text-sm text-emerald-600 dark:text-emerald-400">{success}</p>
         )}
       </div>
     </div>
