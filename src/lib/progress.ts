@@ -355,6 +355,36 @@ export const getPracticeProgress = (
 };
 
 /**
+ * Chapter completion = how many questions the user has DONE (attempted) for a
+ * topic, counting both practice questions and recap/topic-test questions, over
+ * the total available (practice pool + test pool).
+ *
+ * topicStats[topicId].solved tracks unique attempted problems per topic across
+ * every flow (practice and isTest attempts both call recordAttempt), so it is
+ * the right "questions done" numerator. Pass testTotal = size of the topic's
+ * recap-test pool (0 when the subject has no tests).
+ */
+export const getChapterCompletion = (
+  state: ProgressState,
+  topicId: string,
+  practiceProblems: Array<{ id: string; topicId: string }>,
+  testTotal = 0,
+) => {
+  const practiceTotal = practiceProblems.filter((p) => p.topicId === topicId).length;
+  const total = practiceTotal + testTotal;
+  // Cap against total so questions removed from the pool can't push past 100%.
+  const done = Math.min(state.topicStats[topicId]?.solved ?? 0, total);
+  const pct = total === 0 ? 0 : Math.min(100, Math.round((done / total) * 100));
+  return {
+    done,
+    total,
+    pct,
+    started: done > 0,
+    isComplete: total > 0 && done >= total,
+  };
+};
+
+/**
  * Get practice progress for a specific section within a topic.
  * This allows showing per-section (e.g. "The Squeeze Theorem") question counts and user progress.
  *

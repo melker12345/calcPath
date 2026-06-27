@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useProgress } from "@/components/progress-provider";
-import { getPracticeProgress } from "@/lib/progress";
+import { getChapterCompletion } from "@/lib/progress";
 import { SubjectBreadcrumbs } from "@/components/subject-breadcrumbs";
 
 type CourseTopic = {
@@ -36,6 +36,7 @@ export function CourseContentsPage({
   topics,
   modules = [],
   problems = [],
+  testCounts = {},
 }: {
   title: string;
   description: string;
@@ -43,18 +44,12 @@ export function CourseContentsPage({
   topics: CourseTopic[];
   modules?: Module[];
   problems?: Problem[];
+  /** Recap-test pool size per topicId, for counting test questions toward progress. */
+  testCounts?: Record<string, number>;
 }) {
   const [openTopicId, setOpenTopicId] = useState<string | null>(null);
 
   const { progress } = useProgress();
-
-  const questionCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const problem of problems) {
-      counts[problem.topicId] = (counts[problem.topicId] || 0) + 1;
-    }
-    return counts;
-  }, [problems]);
 
   const modulesByTopic = useMemo(() => {
     const map: Record<string, Module | undefined> = {};
@@ -95,12 +90,15 @@ export function CourseContentsPage({
         <div className="mt-5 divide-y divide-[var(--border)] border-y border-[var(--border)] dark:divide-[var(--surface-2)] dark:border-[var(--surface-2)]">
           {topics.map((topic, index) => {
             const isOpen = openTopicId === topic.id;
-            const questionCount = questionCounts[topic.id] || 0;
             const moduleData = modulesByTopic[topic.id];
             const sections = moduleData?.sections || [];
-            const stats = getPracticeProgress(progress, topic.id, problems);
-            const started = stats.attempted > 0;
-            const pct = started ? stats.masteryRate : 0;
+            // Progress = questions done (practice + recap tests) / total available.
+            const comp = getChapterCompletion(
+              progress,
+              topic.id,
+              problems,
+              testCounts[topic.id] ?? 0,
+            );
 
             return (
               <div key={topic.id}>
@@ -115,26 +113,26 @@ export function CourseContentsPage({
                   <div className="min-w-0 flex-1">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] theme-text-muted">
                       Chapter {index + 1}
-                      {questionCount > 0 && (
-                        <span className="opacity-50"> · {questionCount} questions</span>
+                      {comp.total > 0 && (
+                        <span className="opacity-50"> · {comp.total} questions</span>
                       )}
                     </p>
                     <h3 className="mt-0.5 text-base font-semibold leading-snug theme-text sm:text-lg">
                       {topic.title}
                     </h3>
-                    {questionCount > 0 && (
+                    {comp.total > 0 && (
                       <div className="mt-2 flex items-center gap-2">
                         <div className="h-1.5 w-full max-w-[220px] overflow-hidden rounded-full bg-[var(--surface-2)]">
                           <div
-                            className={`h-full rounded-full ${stats.isComplete ? "bg-emerald-500" : "bg-[var(--accent)]"}`}
-                            style={{ width: `${pct}%` }}
+                            className={`h-full rounded-full ${comp.isComplete ? "bg-emerald-500" : "bg-[var(--accent)]"}`}
+                            style={{ width: `${comp.pct}%` }}
                           />
                         </div>
                         <span className="shrink-0 text-[11px] tabular-nums theme-text-muted">
-                          {stats.isComplete
+                          {comp.isComplete
                             ? "Complete"
-                            : started
-                              ? `${stats.masteryRate}%`
+                            : comp.started
+                              ? `${comp.done}/${comp.total} done`
                               : "Not started"}
                         </span>
                       </div>

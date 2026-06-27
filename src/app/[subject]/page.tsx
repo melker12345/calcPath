@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CourseContentsPage } from "@/components/course-contents-page";
+import { ProgressBoundary } from "@/components/scoped-providers";
 import {
   getFileSystemContentBundle,
   deriveModuleStructureFromBundle,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/content/loader";
 import type { ListedSubjectConfig } from "@/lib/content/loader";
 import type { Problem, Topic } from "@/lib/shared-types";
+import { getTestQuestionsForTopic } from "@/lib/test-questions";
 
 type Props = {
   params: Promise<{ subject: string }>;
@@ -71,19 +73,30 @@ export default async function SubjectHome({ params }: Props) {
     // omit ld+json when index is unavailable
   }
 
+  // Size of each topic's recap-test pool, so chapter progress can count test
+  // questions toward "questions done" (empty for subjects without test pools).
+  const testCounts: Record<string, number> = {};
+  for (const topic of topics) {
+    const n = getTestQuestionsForTopic(topic.id).length;
+    if (n > 0) testCounts[topic.id] = n;
+  }
+
   return (
     <>
       {courseJsonLd && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(courseJsonLd) }} />
       )}
-      <CourseContentsPage
-        title={subject.label}
-        description={subject.shortDescription}
-        subjectSlug={subject.slug}
-        topics={topics}
-        modules={modules}
-        problems={problems}
-      />
+      <ProgressBoundary>
+        <CourseContentsPage
+          title={subject.label}
+          description={subject.shortDescription}
+          subjectSlug={subject.slug}
+          topics={topics}
+          modules={modules}
+          problems={problems}
+          testCounts={testCounts}
+        />
+      </ProgressBoundary>
     </>
   );
 }
