@@ -866,12 +866,12 @@ function MessageBlock({
 }) {
   const toneClass =
     tone === "positive"
-      ? "border-emerald-300 bg-white/80 text-emerald-900"
+      ? "border-emerald-300 bg-white/80 text-emerald-900 dark:border-emerald-500/60 dark:bg-emerald-500/10 dark:text-emerald-100"
       : tone === "negative"
-        ? "border-rose-300 bg-white/80 text-rose-900"
+        ? "border-rose-300 bg-white/80 text-rose-900 dark:border-rose-500/60 dark:bg-rose-500/10 dark:text-rose-100"
         : tone === "neutral"
-          ? "border-zinc-300 bg-white/80 text-zinc-800"
-          : "border-amber-300 bg-amber-50/70 text-amber-900";
+          ? "border-zinc-300 bg-white/80 text-zinc-800 dark:border-[var(--border)] dark:bg-[var(--surface-2)] dark:text-[var(--text-secondary)]"
+          : "border-amber-300 bg-amber-50/70 text-amber-900 dark:border-amber-500/60 dark:bg-amber-500/10 dark:text-amber-100";
 
   return (
     <blockquote className={`mt-3 rounded-r-xl border-l-4 px-3.5 py-2.5 text-sm leading-relaxed ${toneClass}`}>
