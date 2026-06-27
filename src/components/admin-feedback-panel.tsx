@@ -92,10 +92,10 @@ const PRIORITY_TABS: { id: Priority; label: string; title: string }[] = [
   { id: "low", label: "Low priority", title: "Feedback you submitted yourself" },
 ];
 
-const STATUS_TABS: { id: FeedbackStatus; label: string; description: string }[] = [
-  { id: "open", label: "Open", description: "Needs review" },
-  { id: "fixed", label: "Fixed", description: "Already handled" },
-  { id: "trash", label: "Trash", description: "Hidden from triage" },
+const STATUS_COLUMNS: { id: FeedbackStatus; label: string; dot: string }[] = [
+  { id: "open", label: "Open", dot: "bg-amber-400" },
+  { id: "fixed", label: "Fixed", dot: "bg-emerald-400" },
+  { id: "trash", label: "Trash", dot: "bg-zinc-500" },
 ];
 
 function summarizeFeedbackTarget(fb: FeedbackRow): FeedbackTargetSummary {
@@ -195,7 +195,6 @@ export function AdminFeedbackPanel() {
   const [accessDenied, setAccessDenied] = useState(false);
   const [updatingStatusFor, setUpdatingStatusFor] = useState<string | null>(null);
   const [filter, setFilter] = useState<FeedbackKind | "all">("all");
-  const [statusView, setStatusView] = useState<FeedbackStatus>("open");
   const [targetGroup, setTargetGroup] = useState<TargetGroup>("all");
   const [priority, setPriority] = useState<Priority>("priority");
 
@@ -274,17 +273,36 @@ export function AdminFeedbackPanel() {
     [feedbackWithSummary],
   );
 
-  const { statusCounts, targetGroupCounts, priorityCounts, visibleItems } = useMemo(
-    () =>
-      getFeedbackFilterState({
+  const { columns, statusCounts, targetGroupCounts, priorityCounts, totalVisible } = useMemo(() => {
+    const columns = STATUS_COLUMNS.map((col) => ({
+      ...col,
+      ...getFeedbackFilterState({
         items: listItems,
-        statusView,
+        statusView: col.id,
         targetGroup,
         priority,
         adminEmail,
       }),
-    [listItems, statusView, targetGroup, priority, adminEmail],
-  );
+    }));
+
+    const statusCounts = columns[0]?.statusCounts ?? { open: 0, fixed: 0, trash: 0 };
+
+    // Toolbar filter counts apply across all three columns, so sum per status.
+    const targetGroupCounts: Record<TargetGroup, number> = { all: 0, questions: 0, explanations: 0, other: 0 };
+    const priorityCounts: Record<Priority, number> = { all: 0, priority: 0, low: 0 };
+    for (const col of columns) {
+      (Object.keys(targetGroupCounts) as TargetGroup[]).forEach((k) => {
+        targetGroupCounts[k] += col.targetGroupCounts[k];
+      });
+      (Object.keys(priorityCounts) as Priority[]).forEach((k) => {
+        priorityCounts[k] += col.priorityCounts[k];
+      });
+    }
+
+    const totalVisible = columns.reduce((sum, col) => sum + col.visibleItems.length, 0);
+
+    return { columns, statusCounts, targetGroupCounts, priorityCounts, totalVisible };
+  }, [listItems, targetGroup, priority, adminEmail]);
 
   if (accessDenied && !loading) {
     return (
@@ -306,25 +324,23 @@ export function AdminFeedbackPanel() {
   if (feedback === null && !loading) return null;
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
-      <div className="border-b border-zinc-200 bg-zinc-100 px-5 py-5 text-zinc-950 sm:px-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
-              Admin
-            </p>
-            <h2 className="mt-1 text-2xl font-bold tracking-tight dark:text-[var(--text-primary)]">
-              Feedback Inbox
-            </h2>
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-zinc-600">
-              Triage bugs, question reports, explanation votes, and feature requests without the account page noise.
-            </p>
-          </div>
-          <div className="grid grid-cols-3 gap-2 text-right">
-            <InboxStat label="Open" value={statusCounts.open} />
-            <InboxStat label="Fixed" value={statusCounts.fixed} />
-            <InboxStat label="Trash" value={statusCounts.trash} />
-          </div>
+    <section className="overflow-hidden rounded-3xl border theme-border bg-[var(--surface)] shadow-sm">
+      <div className="flex flex-col gap-3 border-b theme-border bg-[var(--surface-2)] px-5 py-5 sm:flex-row sm:items-end sm:justify-between sm:px-6">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] theme-text-muted">
+            Admin
+          </p>
+          <h2 className="mt-1 font-serif text-2xl font-semibold tracking-tight theme-text">
+            Feedback Inbox
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm leading-relaxed theme-text-secondary">
+            Triage bugs, question reports, explanation votes, and feature requests without the account page noise.
+          </p>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-right">
+          <InboxStat label="Open" value={statusCounts.open} />
+          <InboxStat label="Fixed" value={statusCounts.fixed} />
+          <InboxStat label="Trash" value={statusCounts.trash} />
         </div>
       </div>
 
@@ -334,12 +350,6 @@ export function AdminFeedbackPanel() {
           loading={loading}
           onFilterChange={setFilter}
           onRefresh={loadFeedback}
-        />
-
-        <StatusTabs
-          counts={statusCounts}
-          value={statusView}
-          onChange={setStatusView}
         />
 
         <LabeledTabs
@@ -358,24 +368,40 @@ export function AdminFeedbackPanel() {
           onChange={setPriority}
         />
 
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-500">{error}</p>}
         {feedback && feedback.length === 0 && (
-          <p className="text-sm text-zinc-500">No feedback yet.</p>
+          <p className="text-sm theme-text-muted">No feedback yet.</p>
         )}
-        {feedback && feedback.length > 0 && visibleItems.length === 0 && (
-          <p className="text-sm text-zinc-500">Nothing in this view.</p>
+        {feedback && feedback.length > 0 && totalVisible === 0 && (
+          <p className="text-sm theme-text-muted">Nothing matches the current filters.</p>
         )}
 
-        {visibleItems.length > 0 && (
-          <div className="space-y-3">
-            {visibleItems.map((item) => (
-              <FeedbackCard
-                key={item.id}
-                item={item}
-                lowPriority={isLowPriorityItem(item, adminEmail)}
-                statusBusy={updatingStatusFor === item.id}
-                onStatusChange={(status) => updateFeedbackStatus(item, status)}
-              />
+        {feedback && feedback.length > 0 && (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {columns.map((col) => (
+              <div key={col.id} className="flex flex-col rounded-2xl bg-[var(--surface-2)]/50 p-3">
+                <div className="mb-3 flex items-center gap-2 px-1">
+                  <span className={`h-2 w-2 rounded-full ${col.dot}`} />
+                  <h3 className="text-sm font-semibold theme-text">{col.label}</h3>
+                  <span className="ml-auto rounded-full bg-[var(--surface)] px-2 py-0.5 text-xs font-semibold tabular-nums theme-text-muted ring-1 ring-[var(--border)]">
+                    {col.visibleItems.length}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {col.visibleItems.map((item) => (
+                    <FeedbackCard
+                      key={item.id}
+                      item={item}
+                      lowPriority={isLowPriorityItem(item, adminEmail)}
+                      statusBusy={updatingStatusFor === item.id}
+                      onStatusChange={(status) => updateFeedbackStatus(item, status)}
+                    />
+                  ))}
+                  {col.visibleItems.length === 0 && (
+                    <p className="px-1 py-6 text-center text-xs theme-text-muted">Nothing here</p>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
         )}
@@ -386,9 +412,9 @@ export function AdminFeedbackPanel() {
 
 function InboxStat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white px-3 py-2 shadow-sm">
-      <p className="text-lg font-bold leading-none text-zinc-950 dark:text-[var(--text-primary)]">{value}</p>
-      <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+    <div className="rounded-xl border theme-border bg-[var(--surface)] px-3 py-2 text-center">
+      <p className="text-lg font-bold leading-none theme-text">{value}</p>
+      <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide theme-text-muted">
         {label}
       </p>
     </div>
@@ -431,48 +457,6 @@ function FeedbackToolbar({
       >
         {loading ? "Loading..." : "Refresh"}
       </button>
-    </div>
-  );
-}
-
-function StatusTabs({
-  counts,
-  value,
-  onChange,
-}: {
-  counts: Record<FeedbackStatus, number>;
-  value: FeedbackStatus;
-  onChange: (status: FeedbackStatus) => void;
-}) {
-  return (
-    <div className="grid gap-2 sm:grid-cols-3">
-      {STATUS_TABS.map((tab) => {
-        const active = value === tab.id;
-        return (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => onChange(tab.id)}
-            className={`rounded-xl border px-3 py-2 text-left transition ${
-              active
-                ? "border-zinc-300 bg-zinc-200 text-zinc-950"
-                : "border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300 hover:bg-zinc-50"
-            }`}
-          >
-            <span className="flex items-center justify-between gap-2 text-xs font-bold">
-              {tab.label}
-              <span className={`rounded-full px-2 py-0.5 text-[10px] ${
-                active ? "bg-white text-zinc-700" : "bg-zinc-100 text-zinc-400"
-              }`}>
-                {counts[tab.id]}
-              </span>
-            </span>
-            <span className="mt-0.5 block text-[11px] opacity-70">
-              {tab.description}
-            </span>
-          </button>
-        );
-      })}
     </div>
   );
 }
