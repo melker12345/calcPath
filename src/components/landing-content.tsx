@@ -188,15 +188,61 @@ export function LandingContent({
       }
     };
 
+    // Touch hijack: mirror the wheel behaviour for mobile, where no wheel
+    // events fire and body scroll is locked. A single vertical swipe past the
+    // threshold steps one section; swipes inside the subjects list scroll it.
+    let touchStartY = 0;
+    let touchScrollable: HTMLElement | null = null;
+    let touchHandled = false;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      touchStartY = e.touches[0].clientY;
+      touchHandled = false;
+      touchScrollable = (e.target as HTMLElement | null)?.closest(
+        "[data-landing-scroll]"
+      ) as HTMLElement | null;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      // Positive deltaY = finger moving up the screen = advance to next section.
+      const deltaY = touchStartY - e.touches[0].clientY;
+
+      if (touchScrollable) {
+        const canScrollDown =
+          touchScrollable.scrollTop + touchScrollable.clientHeight <
+          touchScrollable.scrollHeight - 1;
+        const canScrollUp = touchScrollable.scrollTop > 0;
+        if ((deltaY > 0 && canScrollDown) || (deltaY < 0 && canScrollUp)) {
+          return; // let the inner list scroll natively
+        }
+      }
+
+      e.preventDefault();
+
+      if (isLockedRef.current || touchHandled) return;
+
+      const threshold = 50;
+      if (Math.abs(deltaY) < threshold) return;
+
+      touchHandled = true;
+      stepSection(deltaY > 0 ? 1 : -1);
+    };
+
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
 
     window.addEventListener("wheel", handleWheel, { passive: false });
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("touchstart", handleTouchStart, { passive: false });
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
 
     return () => {
       window.removeEventListener("wheel", handleWheel);
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove);
       document.documentElement.style.overflow = "";
       document.body.style.overflow = "";
     };
