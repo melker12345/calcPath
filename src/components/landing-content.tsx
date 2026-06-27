@@ -408,6 +408,24 @@ export function LandingContent({
                     grow over time.
                   </p>
 
+                  <p className="mt-6 text-[15px] leading-relaxed theme-text-secondary">
+                    Help shape CalcPath with quick feedback, or support it with a small donation.
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <Link
+                      href="/donate"
+                      className="inline-flex items-center justify-center rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--accent-text)] shadow-sm transition hover:opacity-90 active:scale-[0.98]"
+                    >
+                      Donate
+                    </Link>
+                    <Link
+                      href="/feedback"
+                      className="inline-flex items-center justify-center rounded-xl border theme-border px-5 py-2.5 text-sm font-medium theme-text-secondary transition hover:border-[var(--accent)]/35 hover:bg-[var(--surface-2)] hover:theme-text"
+                    >
+                      Leave feedback
+                    </Link>
+                  </div>
+
                   <div className="mt-10 border-t theme-border pt-8">
                     <p className="mb-2.5 text-[11px] uppercase tracking-[0.5px] theme-text-muted">
                       Popular paths

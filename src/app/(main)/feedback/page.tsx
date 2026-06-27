@@ -12,10 +12,11 @@ const FEEDBACK_KINDS = [
 type FeedbackKind = (typeof FEEDBACK_KINDS)[number]["id"];
 
 export default function FeedbackPage() {
-  // useAuth removed (auth stripped); user_id optional, always null now (fine for feedback)
   const [kind, setKind] = useState<FeedbackKind>("general");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+  const canSubmit = status !== "sending" && message.trim().length >= 3;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,16 +48,18 @@ export default function FeedbackPage() {
 
   if (status === "sent") {
     return (
-      <div className="mx-auto w-full max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
-        <div className="theme-card theme-card-light border p-8 text-center sm:p-10">
-          <h1 className="text-2xl font-semibold text-stone-950 dark:text-[var(--text-primary)]">Thanks for your feedback.</h1>
-          <p className="mt-2 text-sm leading-relaxed text-stone-600 dark:text-[var(--text-secondary)]">
+      <div className="mx-auto w-full max-w-xl px-4 py-16 sm:px-6 sm:py-24">
+        <div className="text-center">
+          <h1 className="font-serif text-3xl font-semibold tracking-tight theme-text">
+            Thanks for your feedback
+          </h1>
+          <p className="mx-auto mt-3 max-w-md text-base leading-relaxed theme-text-secondary">
             We read every submission. Your input helps make CalcPath better for everyone.
           </p>
           <button
             type="button"
             onClick={() => setStatus("idle")}
-            className="mt-6 rounded-lg border border-stone-400 bg-white px-5 py-2.5 text-sm font-medium text-stone-900 transition hover:bg-stone-100 active:scale-95 dark:border-[var(--border)] dark:bg-[var(--surface)] dark:text-[var(--text-primary)] dark:hover:bg-[var(--surface-2)]"
+            className="mt-8 inline-flex items-center justify-center rounded-xl border theme-border px-5 py-2.5 text-sm font-medium theme-text-secondary transition hover:border-[var(--accent)]/35 hover:bg-[var(--surface-2)] hover:theme-text active:scale-[0.98]"
           >
             Send more feedback
           </button>
@@ -66,62 +69,67 @@ export default function FeedbackPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
-      <div className="mb-8 border-b theme-border pb-5">
-        <h1 className="text-3xl font-semibold tracking-tight text-stone-950 dark:text-[var(--text-primary)]">Feedback</h1>
-        <p className="mt-2 text-base leading-7 text-stone-700 dark:text-[var(--text-secondary)]">
-          Any feedback is highly appreciated. If you have an idea, found a bug, or
-          just want to share your thoughts — please let us know.
+    <div className="mx-auto w-full max-w-xl px-4 py-12 sm:px-6 sm:py-20">
+      <div className="text-center">
+        <h1 className="font-serif text-3xl font-semibold tracking-tight theme-text sm:text-4xl">
+          Feedback
+        </h1>
+        <p className="mx-auto mt-4 max-w-md text-base leading-relaxed theme-text-secondary">
+          Found a bug, have an idea, or just want to share a thought? Let us know — every
+          message helps shape CalcPath.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="theme-card theme-card-light border p-6 sm:p-8">
+      <form onSubmit={handleSubmit} className="mt-10">
         {/* Kind selector */}
         <fieldset>
-          <legend className="mb-3 text-sm font-semibold theme-text">
+          <legend className="mb-3 text-sm font-medium theme-text">
             What kind of feedback is this?
           </legend>
-          <div className="flex flex-wrap gap-2">
-            {FEEDBACK_KINDS.map((k) => (
-              <button
-                key={k.id}
-                type="button"
-                onClick={() => setKind(k.id)}
-                className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition active:scale-95 ${
-                  kind === k.id
-                    ? "border-stone-700 bg-stone-100 text-stone-950 dark:border-[var(--border)] dark:bg-[var(--surface-2)] dark:text-[var(--text-primary)]"
-                    : "border-stone-300 bg-white text-stone-700 hover:bg-stone-100 dark:border-[var(--border)] dark:bg-[var(--surface)] dark:text-[var(--text-secondary)] dark:hover:bg-[var(--surface-2)]"
-                }`}
-              >
-                {k.label}
-              </button>
-            ))}
+          <div className="flex flex-wrap gap-2.5">
+            {FEEDBACK_KINDS.map((k) => {
+              const active = kind === k.id;
+              return (
+                <button
+                  key={k.id}
+                  type="button"
+                  onClick={() => setKind(k.id)}
+                  className={`rounded-xl border-2 px-4 py-2.5 text-sm font-medium transition active:scale-95 ${
+                    active
+                      ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
+                      : "theme-border bg-[var(--surface)] theme-text-secondary hover:border-[var(--accent)]/40"
+                  }`}
+                >
+                  {k.label}
+                </button>
+              );
+            })}
           </div>
         </fieldset>
 
         {/* Message */}
-        <div className="mt-6">
-          <label htmlFor="feedback-message" className="mb-2 block text-sm font-semibold theme-text">
+        <div className="mt-7">
+          <label htmlFor="feedback-message" className="mb-2 block text-sm font-medium theme-text">
             Your message
           </label>
           <textarea
             id="feedback-message"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            rows={5}
+            rows={6}
             maxLength={5000}
             required
             minLength={3}
             placeholder={
               kind === "bug"
-                ? "Describe what happened and what you expected..."
+                ? "Describe what happened and what you expected…"
                 : kind === "feature"
                   ? "What would you like to see added or changed?"
-                  : "Share your thoughts..."
+                  : "Share your thoughts…"
             }
-            className="w-full resize-y rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm text-stone-950 placeholder:text-stone-400 focus:border-stone-600 focus:outline-none focus:ring-2 focus:ring-stone-900/10 dark:border-[var(--border)] dark:bg-[var(--surface-2)] dark:text-[var(--text-primary)] dark:placeholder:text-[var(--text-muted)] dark:focus:border-[var(--accent)] dark:focus:ring-[var(--accent)]/20"
+            className="w-full resize-y rounded-xl border-2 theme-border bg-[var(--surface)] px-4 py-3 text-sm theme-text outline-none transition placeholder:text-[var(--text-muted)] focus:border-[var(--accent)]"
           />
-          <p className="mt-1 text-right text-xs text-zinc-400 dark:text-[var(--text-muted)]">
+          <p className="mt-1.5 text-right text-xs theme-text-muted">
             {message.length}/5000
           </p>
         </div>
@@ -136,10 +144,14 @@ export default function FeedbackPage() {
         {/* Submit */}
         <button
           type="submit"
-          disabled={status === "sending" || message.trim().length < 3}
-          className="mt-6 w-full rounded-xl border border-stone-900 bg-stone-900 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-[var(--border)] dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+          disabled={!canSubmit}
+          className={`mt-6 w-full rounded-xl py-3.5 text-sm font-semibold transition active:scale-[0.99] ${
+            canSubmit
+              ? "bg-[var(--accent)] text-[var(--accent-text)] shadow-sm hover:opacity-90"
+              : "cursor-not-allowed border-2 theme-border bg-[var(--surface-2)] theme-text-muted"
+          }`}
         >
-          {status === "sending" ? "Sending..." : "Send Feedback"}
+          {status === "sending" ? "Sending…" : "Send feedback"}
         </button>
       </form>
     </div>
