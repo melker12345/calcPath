@@ -1,10 +1,18 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import dynamic from "next/dynamic";
 import { useProgress } from "@/components/progress-provider";
 import { AdminFeedbackShortcut } from "@/components/admin-feedback-shortcut";
 import { SectionCard } from "@/components/section-card";
-import { SyncPanel } from "@/components/sync-panel";
+
+// Lazy-load the sync panel: it pulls in cloud-progress + the 285KB question
+// registry, which is only needed here. Keeps that weight out of the shared
+// bundle loaded on every route.
+const SyncPanel = dynamic(
+  () => import("@/components/sync-panel").then((m) => m.SyncPanel),
+  { ssr: false },
+);
 
 export default function AccountPage() {
   return (
