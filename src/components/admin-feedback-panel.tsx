@@ -313,7 +313,7 @@ export function AdminFeedbackPanel() {
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
               Admin
             </p>
-            <h2 className="mt-1 text-2xl font-bold tracking-tight">
+            <h2 className="mt-1 text-2xl font-bold tracking-tight dark:text-[var(--text-primary)]">
               Feedback Inbox
             </h2>
             <p className="mt-1 max-w-2xl text-sm leading-relaxed text-zinc-600">
@@ -387,7 +387,7 @@ export function AdminFeedbackPanel() {
 function InboxStat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white px-3 py-2 shadow-sm">
-      <p className="text-lg font-bold leading-none text-zinc-950">{value}</p>
+      <p className="text-lg font-bold leading-none text-zinc-950 dark:text-[var(--text-primary)]">{value}</p>
       <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
         {label}
       </p>
