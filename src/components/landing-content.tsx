@@ -150,7 +150,13 @@ export function LandingContent({
 
   // Wheel hijack: drives the one-section-at-a-time experience.
   useEffect(() => {
+    // Never hijack scroll inside an open overlay (e.g. the mobile menu drawer),
+    // otherwise the page steps sections instead of letting the overlay scroll.
+    const inOverlay = (target: EventTarget | null) =>
+      !!(target as HTMLElement | null)?.closest('[aria-modal="true"]');
+
     const handleWheel = (e: WheelEvent) => {
+      if (inOverlay(e.target)) return;
       const scrollable = (e.target as HTMLElement | null)?.closest(
         "[data-landing-scroll]"
       ) as HTMLElement | null;
@@ -195,8 +201,11 @@ export function LandingContent({
     let touchScrollable: HTMLElement | null = null;
     let touchHandled = false;
 
+    let touchInOverlay = false;
+
     const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length !== 1) return;
+      touchInOverlay = inOverlay(e.target);
       touchStartY = e.touches[0].clientY;
       touchHandled = false;
       touchScrollable = (e.target as HTMLElement | null)?.closest(
@@ -205,7 +214,7 @@ export function LandingContent({
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches.length !== 1) return;
+      if (e.touches.length !== 1 || touchInOverlay) return;
       // Positive deltaY = finger moving up the screen = advance to next section.
       const deltaY = touchStartY - e.touches[0].clientY;
 
