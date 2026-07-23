@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import { AdminNav } from "@/components/admin-nav";
-import { AdminFeedbackPanel } from "@/components/admin-feedback-panel";
+import { AdminMetricsPanel } from "@/components/admin-metrics-panel";
 
 export const metadata: Metadata = {
-  title: "Admin Feedback | CalcPath",
-  description: "Admin feedback triage inbox for CalcPath.",
+  title: "Admin Metrics | CalcPath",
+  description: "Usage metrics for CalcPath.",
 };
 
-export default function AdminFeedbackPage() {
+export default function AdminMetricsPage() {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
       <AdminNav />
-      <AdminFeedbackPanel />
+      <AdminMetricsPanel />
     </div>
   );
 }

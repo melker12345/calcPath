@@ -92,6 +92,30 @@ alter table public.feedback enable row level security;
 
 
 -- ----------------------------------------------------------------------------
+-- analytics_events — privacy-friendly in-house usage tracking (no PII, no IP)
+-- ----------------------------------------------------------------------------
+-- Full table + aggregation RPCs live in supabase/analytics.sql. Run that file
+-- too (it is idempotent) to enable the /admin/metrics dashboard.
+create table if not exists public.analytics_events (
+  id          bigint generated always as identity primary key,
+  event       text        not null,
+  visitor_id  text,
+  session_id  text,
+  path        text,
+  referrer    text,
+  duration_ms integer,
+  meta        jsonb,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists analytics_events_created_idx on public.analytics_events (created_at);
+create index if not exists analytics_events_event_idx   on public.analytics_events (event);
+create index if not exists analytics_events_session_idx on public.analytics_events (session_id);
+
+alter table public.analytics_events enable row level security;
+
+
+-- ----------------------------------------------------------------------------
 -- OPTIONAL: profiles — only needed if/when auth is reintroduced
 -- ----------------------------------------------------------------------------
 -- On this dev branch auth is stripped, so feedback.user_id is always null and

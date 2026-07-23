@@ -4,6 +4,7 @@ import { subjectBodyFont, subjectHeadingFont } from "@/lib/subject-fonts";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Providers } from "@/components/providers";
+import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { allThemesCss } from "@/lib/themes";
 import "./globals.css";
 
@@ -129,6 +130,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <Providers>{children}</Providers>
+        <AnalyticsTracker />
         <Analytics />
         <SpeedInsights />
       </body>
