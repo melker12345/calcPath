@@ -5,18 +5,13 @@ const stripTrailingConstant = (input: string) => {
   return input.replace(/\+c$/i, "");
 };
 
-const hasUnsupportedConstant = (expr: string) => {
-  // If the expression contains "c" anywhere other than trailing +c, skip numeric equivalence.
-  const s = expr.toLowerCase().replace(/\s+/g, "");
-  if (!s.includes("c")) return false;
-  return !/\+?c$/.test(s);
-};
-
 const removeLatexSizing = (s: string) =>
   s.replace(/\\left/g, "").replace(/\\right/g, "");
 
 const stripOptionalLabelPrefix = (input: string) =>
-  input.replace(/^(?:[a-z]+(?:_[a-z0-9]+)?|[a-z](?:\([a-z]\))?)=/i, "");
+  input
+    .replace(/^[a-z]\([a-z]\)=/i, "")
+    .replace(/^[a-z]+(?:_[a-z0-9]+)?=/i, "");
 
 const parseGroup = (s: string, start: number) => {
   // expects s[start] === '{'
@@ -246,9 +241,6 @@ export const normalizeAnswer = (input: string) => {
     .replace(/λ/g, "lambda")
     .replace(/[{}]/g, "");
 
-  // Normalize exponent parentheses: x^(2x) -> x^2x
-  out = out.replace(/\^\(([^)]+)\)/g, "^$1");
-
   // Normalize trig/func^n(arg) -> func(arg)^n  e.g. sec^2(x) -> sec(x)^2
   out = out.replace(
     /(sin|cos|tan|sec|csc|cot|arcsin|arccos|arctan|ln|log|exp)\^([\w.]+)\(([^)]*)\)/g,
@@ -293,7 +285,6 @@ const scalarComparisonTolerance = (aPrepared: string, bPrepared: string): number
   const aPlaces = decimalPlaces(aPrepared);
   const bPlaces = decimalPlaces(bPrepared);
   if (aPlaces !== null || bPlaces !== null) {
-    // Half-unit tolerance at the least-precise decimal literal (standard rounding).
     const places = Math.min(aPlaces ?? 12, bPlaces ?? 12);
     return 0.5 * 10 ** -places;
   }
@@ -308,11 +299,14 @@ const scalarNumericEquivalent = async (aExpr: string, bExpr: string): Promise<bo
   const bVal = tryEval(m, bPrepared, {});
   if (aVal === null || bVal === null) return false;
   const tol = scalarComparisonTolerance(aPrepared, bPrepared);
-  // Absolute tolerance only — relative scaling would accept answers far too loose.
   return Math.abs(aVal - bVal) <= tol;
 };
 
-const tryEval = (m: any, expr: string, scope: Record<string, number>) => {
+const tryEval = (
+  m: typeof import("mathjs"),
+  expr: string,
+  scope: Record<string, number>,
+) => {
   try {
     const v = m.evaluate(expr, scope);
     const num = typeof v === "number" ? v : Number(v);
@@ -334,12 +328,12 @@ const expressionsEquivalent = async (
 
   // Sample points (avoid 0 to reduce log/div issues)
   const scopes = [
-    { x: -1.7, y: 0.8, z: -0.4, t: 1.2, n: 2, p: 1.5, a: 2.3, b: -1.1, c: 0.7, lambda: 1.9 },
-    { x: -0.8, y: -1.3, z: 0.6, t: -0.7, n: 3, p: 2.1, a: -0.9, b: 1.4, c: 2.2, lambda: -1.2 },
-    { x: 0.2, y: 1.1, z: 0.9, t: 0.5, n: 4, p: -0.8, a: 1.6, b: 0.4, c: -1.7, lambda: 0.6 },
-    { x: 0.9, y: -0.5, z: -1.4, t: 1.7, n: 5, p: 0.3, a: -2.5, b: 2.8, c: 1.1, lambda: 2.4 },
-    { x: 1.6, y: 0.3, z: 1.5, t: -1.1, n: 6, p: -2.2, a: 0.8, b: -0.6, c: 3.1, lambda: -0.9 },
-    { x: 2.1, y: -0.9, z: 0.2, t: 0.4, n: 7, p: 1.9, a: 1.2, b: 1.7, c: -2.6, lambda: 1.3 },
+    { x: -1.7, y: 0.8, z: -0.4, t: 1.2, n: 2, p: 1.5, s: 0.6, r: 1.1, a: 2.3, b: -1.1, c: 0.7, lambda: 1.9 },
+    { x: -0.8, y: -1.3, z: 0.6, t: -0.7, n: 3, p: 2.1, s: -1.2, r: 0.4, a: -0.9, b: 1.4, c: 2.2, lambda: -1.2 },
+    { x: 0.2, y: 1.1, z: 0.9, t: 0.5, n: 4, p: -0.8, s: 2.1, r: -0.7, a: 1.6, b: 0.4, c: -1.7, lambda: 0.6 },
+    { x: 0.9, y: -0.5, z: -1.4, t: 1.7, n: 5, p: 0.3, s: -0.5, r: 1.8, a: -2.5, b: 2.8, c: 1.1, lambda: 2.4 },
+    { x: 1.6, y: 0.3, z: 1.5, t: -1.1, n: 6, p: -2.2, s: 1.4, r: -1.3, a: 0.8, b: -0.6, c: 3.1, lambda: -0.9 },
+    { x: 2.1, y: -0.9, z: 0.2, t: 0.4, n: 7, p: 1.9, s: 0.9, r: 2.2, a: 1.2, b: 1.7, c: -2.6, lambda: 1.3 },
   ];
   const pairs: Array<{ a: number; b: number }> = [];
 

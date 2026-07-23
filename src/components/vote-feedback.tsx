@@ -1,13 +1,20 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useAuth } from "@/components/auth-provider";
-import { supabase } from "@/lib/supabase/client";
 
 const NOTE_MAX = 1000;
+const REPORT_MAX = 1000;
+
+const REPORT_REASONS = [
+  "Answer seems wrong",
+  "Explanation is unclear",
+  "Input will not accept my answer",
+  "Typo or formatting issue",
+  "Other",
+] as const;
 
 type VoteValue = 1 | -1 | 0 | null;
+type ReportReason = (typeof REPORT_REASONS)[number];
 
 export function VoteFeedback({
   targetType,
@@ -18,18 +25,24 @@ export function VoteFeedback({
   targetId: string;
   userId?: string;
 }) {
-  const { user } = useAuth();
-  const isAuthed = !!user;
-  const resolvedUserId = userId ?? user?.id ?? null;
+  // Auth removed (all users anon): notes on votes now always available after voting (no sign-in gate).
+  // isAuthed=false forces anon vote path (no server-side cancel, separate rows), but notes supported.
+  const isAuthed = false;
+  const resolvedUserId = userId ?? null;
 
   const [vote, setVote] = useState<VoteValue>(null);
   const [feedbackId, setFeedbackId] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [noteSent, setNoteSent] = useState(false);
-  const [voted, setVoted] = useState(false); // anon: lock after first click
+  const [voted, setVoted] = useState(false); // lock after first click (all treated anon)
   const [sendingNote, setSendingNote] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState<ReportReason>("Explanation is unclear");
+  const [reportMessage, setReportMessage] = useState("");
+  const [reportStatus, setReportStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const inFlightVote = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const reportTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const handleClick = useCallback(
     async (clicked: 1 | -1) => {
@@ -47,17 +60,11 @@ export function VoteFeedback({
 
       inFlightVote.current = true;
       try {
-        let token: string | null = null;
-        if (isAuthed) {
-          const { data } = await supabase.auth.getSession();
-          token = data.session?.access_token ?? null;
-        }
-
+        // Auth removed: no token ever (pure anon); api accepts anon votes + notes.
         const res = await fetch("/api/feedback", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
             kind: "vote",
@@ -91,15 +98,11 @@ export function VoteFeedback({
 
     setSendingNote(true);
     try {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) return;
-
+      // Auth removed: notes allowed on anon votes too; send PATCH without token (api relaxed to accept for vote notes, user_id may be null).
       const res = await fetch("/api/feedback", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           id: feedbackId,
@@ -117,6 +120,42 @@ export function VoteFeedback({
     }
   }, [feedbackId, note, sendingNote]);
 
+  const sendReport = useCallback(async () => {
+    if (reportStatus === "sending") return;
+
+    const trimmed = reportMessage.trim();
+    const structuredMessage = [
+      `[${reportReason}]`,
+      trimmed || "No extra details provided.",
+    ].join(" ");
+
+    setReportStatus("sending");
+    try {
+      // Auth removed: reports are anon too (no token); api accepts without auth.
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          kind: "bug",
+          message: structuredMessage.slice(0, REPORT_MAX),
+          target_type: targetType,
+          target_id: targetId,
+          user_id: resolvedUserId,
+          page_url: typeof window !== "undefined" ? window.location.href : null,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to send report");
+
+      setReportStatus("sent");
+      setReportMessage("");
+    } catch {
+      setReportStatus("error");
+    }
+  }, [isAuthed, reportMessage, reportReason, reportStatus, resolvedUserId, targetId, targetType]);
+
   // Cmd/Ctrl-Enter sends the note from the textarea.
   useEffect(() => {
     const el = textareaRef.current;
@@ -132,22 +171,28 @@ export function VoteFeedback({
   }, [sendNote]);
 
   // Auto-focus the note textarea when it first appears so the user can
-  // immediately type without an extra click.
+  // immediately type without an extra click. (auth removed: always allow for voted)
   useEffect(() => {
-    if (isAuthed && (vote === 1 || vote === -1) && !noteSent) {
+    if ((vote === 1 || vote === -1) && !noteSent) {
       requestAnimationFrame(() => textareaRef.current?.focus());
     }
-  }, [isAuthed, vote, noteSent]);
+  }, [vote, noteSent]);
+
+  useEffect(() => {
+    if (reportOpen && reportStatus !== "sent") {
+      requestAnimationFrame(() => reportTextareaRef.current?.focus());
+    }
+  }, [reportOpen, reportStatus]);
 
   const showNoteForm =
-    isAuthed && (vote === 1 || vote === -1) && !noteSent && feedbackId !== null;
-  const showAnonThanks = !isAuthed && voted;
-  const showAuthedThanks = isAuthed && noteSent;
+    (vote === 1 || vote === -1) && !noteSent && feedbackId !== null;
+  // showAnonThanks removed (no more /auth "Sign in to leave a note" link)
+  const showThanks = voted || noteSent;
 
   return (
     <div className="flex flex-col items-end gap-1.5">
       <div className="flex items-center gap-2">
-        <span className="text-xs text-zinc-400">Helpful?</span>
+        <span className="text-xs theme-text-muted">Helpful?</span>
         <button
           type="button"
           onClick={() => void handleClick(1)}
@@ -181,23 +226,25 @@ export function VoteFeedback({
           </svg>
         </button>
 
-        {showAnonThanks && (
-          <span className="ml-1 text-[10px] text-zinc-400">
-            Thanks!{" "}
-            <Link href="/auth" className="text-orange-600 underline hover:text-orange-700">
-              Sign in to leave a note
-            </Link>
-          </span>
+        {showThanks && (
+          <span className="ml-1 text-[10px] theme-text-muted">Thanks!</span>
         )}
 
-        {showAuthedThanks && (
-          <span className="ml-1 text-[10px] text-zinc-400">Thanks!</span>
-        )}
+        <button
+          type="button"
+          onClick={() => {
+            setReportOpen((open) => !open);
+            setReportStatus("idle");
+          }}
+          className="ml-1 rounded-md px-1.5 py-1 text-[11px] font-medium text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600"
+        >
+          Report issue
+        </button>
       </div>
 
       {showNoteForm && (
-        <div className="w-full max-w-xs rounded-lg border border-zinc-200 bg-white p-2.5 shadow-sm">
-          <label className="mb-1 block text-[11px] font-medium text-zinc-500">
+        <div className="w-full max-w-xs rounded-lg border border-zinc-200 bg-white p-2.5 shadow-sm dark:border-[var(--border)] dark:bg-[var(--surface)]">
+          <label className="mb-1 block text-[11px] font-medium text-zinc-500 dark:text-[var(--text-muted)]">
             {vote === -1 ? "What's wrong?" : "What worked well?"}{" "}
             <span className="font-normal text-zinc-400">(optional)</span>
           </label>
@@ -212,7 +259,7 @@ export function VoteFeedback({
             }
             rows={2}
             maxLength={NOTE_MAX}
-            className="w-full resize-none rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-xs text-zinc-800 outline-none focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
+            className="feedback-textarea w-full resize-none rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-xs text-zinc-800 outline-none focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
           />
           <div className="mt-1.5 flex items-center justify-end">
             <button
@@ -224,6 +271,83 @@ export function VoteFeedback({
               {sendingNote ? "Sending…" : "Send"}
             </button>
           </div>
+        </div>
+      )}
+
+      {reportOpen && (
+        <div className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-3 text-left shadow-sm dark:border-[var(--border)] dark:bg-[var(--surface)]">
+          {reportStatus === "sent" ? (
+            <div>
+              <p className="text-sm font-semibold text-zinc-900 dark:text-[var(--text-primary)]">Thanks, report sent.</p>
+              <p className="mt-1 text-xs leading-relaxed text-zinc-500 dark:text-[var(--text-muted)]">
+                We saved the target and page context so it can be reviewed.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setReportOpen(false);
+                  setReportStatus("idle");
+                }}
+                className="mt-2 rounded-md bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-200"
+              >
+                Close
+              </button>
+            </div>
+          ) : (
+            <>
+              <label className="mb-1.5 block text-[11px] font-semibold text-zinc-500 dark:text-[var(--text-muted)]">
+                What is the issue?
+              </label>
+              <select
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value as ReportReason)}
+                className="feedback-select w-full rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-xs text-zinc-800 outline-none focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
+              >
+                {REPORT_REASONS.map((reason) => (
+                  <option key={reason} value={reason}>
+                    {reason}
+                  </option>
+                ))}
+              </select>
+
+              <label className="mb-1 mt-2 block text-[11px] font-medium text-zinc-500 dark:text-[var(--text-muted)]">
+                Details <span className="font-normal text-zinc-400">(optional)</span>
+              </label>
+              <textarea
+                ref={reportTextareaRef}
+                value={reportMessage}
+                onChange={(e) => setReportMessage(e.target.value.slice(0, REPORT_MAX))}
+                rows={3}
+                maxLength={REPORT_MAX}
+                placeholder="e.g. I typed 2x+1 but it was marked wrong..."
+                className="feedback-textarea w-full resize-none rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-xs text-zinc-800 outline-none focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
+              />
+
+              {reportStatus === "error" && (
+                <p className="mt-1.5 text-[11px] text-rose-600">
+                  Could not send report. Please try again.
+                </p>
+              )}
+
+              <div className="mt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReportOpen(false)}
+                  className="rounded-md px-3 py-1.5 text-xs font-semibold text-zinc-500 transition hover:bg-zinc-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void sendReport()}
+                  disabled={reportStatus === "sending"}
+                  className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-zinc-700 disabled:opacity-50"
+                >
+                  {reportStatus === "sending" ? "Sending..." : "Send report"}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

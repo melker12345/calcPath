@@ -1,0 +1,141 @@
+---
+title: Quantum Information Theory
+---
+
+# Quantum Information Theory
+
+Information-theoretic foundations of quantum communication and computation.
+
+Quantum information theory studies the storage, processing, and transmission of information carried by quantum systems (qubits, photons, etc.). It replaces classical bits and Shannon entropy with qubits and von Neumann entropy, and reveals phenomena with no classical analogue: superposition, entanglement, no-cloning, and quantum teleportation.
+
+While a full treatment requires quantum mechanics, the information-theoretic questions (compression, channel capacity, cryptography) have elegant and often surprising answers that are driving quantum computing and quantum communication research.
+
+## Qubits and Quantum States
+
+<!-- section: qubits-states -->
+
+A classical bit is 0 or 1. A qubit is a unit vector in a 2-dimensional complex Hilbert space: |ψ⟩ = α|0⟩ + β|1⟩ with |α|² + |β|² = 1. Upon measurement in the computational basis the qubit collapses to 0 with probability |α|² or 1 with |β|².
+
+A general quantum state is a density operator ρ (positive semidefinite, trace 1). Pure states have rank 1 (ρ = |ψ⟩⟨ψ|); mixed states are probabilistic mixtures of pure states.
+
+The no-cloning theorem states that there is no unitary operation that can copy an unknown quantum state: you cannot make a perfect copy of an arbitrary qubit.
+
+**ELI5**
+
+- A qubit can be 'both 0 and 1 at the same time' until you look; the amplitudes α, β are like probabilities but with phases that let interference happen.
+- Measurement forces a definite answer and destroys the superposition. You cannot duplicate the qubit without already knowing what it is.
+
+**Worked Example:**
+
+Take the "plus" state $|+\rangle = \tfrac{1}{\sqrt2}|0\rangle + \tfrac{1}{\sqrt2}|1\rangle$, so $\alpha = \beta = \tfrac{1}{\sqrt2}$.
+
+- Step 1 — check it is a valid qubit. Normalization requires $|\alpha|^2 + |\beta|^2 = 1$. Here $|\alpha|^2 = \left(\tfrac{1}{\sqrt2}\right)^2 = \tfrac12$ and likewise $|\beta|^2 = \tfrac12$, so the sum is $\tfrac12 + \tfrac12 = 1$. ✓
+- Step 2 — measure in the computational basis. By the Born rule, $\Pr(0) = |\alpha|^2 = \tfrac12$ and $\Pr(1) = |\beta|^2 = \tfrac12$. Whichever outcome occurs, the state *collapses* to that basis vector ($|0\rangle$ or $|1\rangle$); the superposition is gone.
+- Step 3 — why cloning fails. Suppose a single unitary $U$ copied every state: $U|\psi\rangle|0\rangle = |\psi\rangle|\psi\rangle$. Then $U|0\rangle|0\rangle = |0\rangle|0\rangle$ and $U|1\rangle|0\rangle = |1\rangle|1\rangle$. Feed in $|+\rangle = \tfrac{1}{\sqrt2}(|0\rangle + |1\rangle)$. Linearity forces $U|+\rangle|0\rangle = \tfrac{1}{\sqrt2}(|0\rangle|0\rangle + |1\rangle|1\rangle)$, which is an *entangled* Bell state — **not** the copy $|+\rangle|+\rangle = \tfrac12(|0\rangle|0\rangle + |0\rangle|1\rangle + |1\rangle|0\rangle + |1\rangle|1\rangle)$. The two differ, so no such $U$ can exist.
+
+Sanity check: the argument only needs one superposed input to break, which is exactly why *orthogonal* (known-in-advance) states *can* be copied — cloning is only impossible for *arbitrary unknown* states.
+
+## Von Neumann Entropy and Quantum Information Measures
+
+<!-- section: von-neumann -->
+
+The von Neumann entropy of a density operator ρ is
+
+$$S(\rho) = -\operatorname{Tr}(\rho \log_2 \rho)$$
+
+In practice you never take the logarithm of a matrix directly: diagonalize $\rho$ to get its eigenvalues $\lambda_1, \dots, \lambda_d$ (real, non-negative, summing to 1 because $\rho$ is positive semidefinite with trace 1), and then $S(\rho) = -\sum_i \lambda_i \log_2 \lambda_i$, using the convention $0\log_2 0 = 0$. In other words, **von Neumann entropy is just the Shannon entropy of the eigenvalue distribution**. So it generalizes Shannon entropy: for a state diagonal in some basis with eigenvalues $p_i$ it reduces to the classical $H(p)$. With the $\log_2$ convention the units are bits (or "qubits" of entropy); using the natural log gives nats.
+
+Quantum mutual information, conditional entropy, and relative entropy (quantum KL) are defined analogously using S(·). Quantum conditional entropy S(A|B) can be negative — a signature of entanglement.
+
+The quantum relative entropy D(ρ||σ) = Tr(ρ log ρ - ρ log σ) is the basis for many quantum information bounds and is monotonic under completely positive trace-preserving maps.
+
+**ELI5**
+
+- Think of a spinning coin. If you *know* it's heads, there's no surprise ($S=0$, a pure state). If it's a genuine 50/50 coin, you're maximally in the dark ($S=1$, the maximally mixed qubit). Von Neumann entropy is just "how surprised are you about which face it is" — but computed on the state's *own* natural faces (its eigenvalues), not whatever basis you happen to look in.
+- Negative conditional entropy is the weird part with no coin analogy: two entangled systems can be so tightly linked that the *pair* is perfectly known while each *half* looks random. Knowing $B$ then tells you *more* than everything about $A$ — as if learning your friend's card told you your own card plus a spare secret. Classically that "spare secret" (negative entropy) is impossible.
+
+**Worked Example (a single mixed qubit):**
+
+Take the maximally mixed qubit $\rho = \tfrac{I}{2} = \begin{pmatrix} 1/2 & 0 \\ 0 & 1/2 \end{pmatrix}$.
+
+- Step 1 — find the eigenvalues. This matrix is already diagonal, so $\lambda_1 = \lambda_2 = \tfrac12$.
+- Step 2 — plug into the formula. $S(\rho) = -\left(\tfrac12\log_2\tfrac12 + \tfrac12\log_2\tfrac12\right) = -\left(\tfrac12\cdot(-1) + \tfrac12\cdot(-1)\right) = 1$ bit.
+- Sanity check: a pure state $|0\rangle$ has eigenvalues $1, 0$, giving $S = -(1\log_2 1 + 0) = 0$ — no uncertainty, as expected. The mixed qubit sits at the maximum $S = 1$: one full bit of uncertainty, the most a single qubit can carry.
+
+**Worked Example (a Bell pair, showing negative conditional entropy):**
+
+Take the maximally entangled two-qubit state $|\Phi^+\rangle = \tfrac{1}{\sqrt2}(|00\rangle + |11\rangle)$.
+
+- Step 1 — the joint state is *pure* ($\rho_{AB} = |\Phi^+\rangle\langle\Phi^+|$ has eigenvalues $1, 0, 0, 0$), so $S(AB) = 0$.
+- Step 2 — trace out $B$ to get Alice's marginal. Because the two outcomes $|00\rangle$ and $|11\rangle$ are equally weighted, $\rho_A = \operatorname{Tr}_B(\rho_{AB}) = \tfrac12|0\rangle\langle0| + \tfrac12|1\rangle\langle1| = \tfrac{I}{2}$. By the previous example $S(A) = 1$, and by symmetry $S(B) = 1$.
+- Step 3 — conditional entropy. $S(A|B) = S(AB) - S(B) = 0 - 1 = -1 < 0$.
+
+Sanity check: the *whole* is perfectly known ($S(AB)=0$) yet each *part* is maximally uncertain ($S(A)=1$). That "the whole is more certain than its parts" is impossible classically ($H(A|B)\ge 0$ always) — the negative value is the fingerprint of entanglement.
+
+## Quantum Channels and the Holevo Bound
+
+<!-- section: quantum-channels-holevo -->
+
+A quantum channel is a completely positive trace-preserving (CPTP) map Φ from density operators on one space to another. It can describe noisy evolution, measurement, or transmission.
+
+Suppose Alice encodes a classical symbol $x$ (drawn with probability $p_x$) as a quantum state $\rho_x$ and sends it through the channel; the collection $\{p_x, \rho_x\}$ is called an **ensemble**. The **Holevo quantity** of that ensemble at the output is
+
+$$\chi = S\!\left(\sum_x p_x\, \Phi(\rho_x)\right) - \sum_x p_x\, S\!\left(\Phi(\rho_x)\right),$$
+
+i.e. the entropy of the *average* output minus the average entropy of the *individual* outputs. It is always non-negative (concavity of $S$), and it equals zero exactly when all the outputs $\Phi(\rho_x)$ coincide. The **Holevo bound** says that no measurement Bob performs on a single output can extract more than $\chi$ bits of information about $x$; maximizing $\chi$ over all input ensembles gives the single-use classical capacity.
+
+Unlike classical channels, the capacity of quantum channels can be **super-additive**: two uses together can carry more than twice one use, so the true classical capacity is the *regularized* limit $C = \lim_{n\to\infty}\tfrac1n \max_{\text{ensembles}} \chi(\Phi^{\otimes n})$, which is often hard to compute. (For well-behaved channels like the depolarizing channel below, $\chi$ *is* additive and the single-use value is already the capacity.)
+
+**ELI5**
+
+- Imagine mailing letters written in disappearing ink through a smudgy post office (the channel). The Holevo quantity is a hard ceiling on how many bits of your message survive the smudging — no matter how clever a magnifying glass (measurement) Bob uses at the other end, he cannot read more than $\chi$ bits per letter.
+- The "smudge" costs you: $\chi = $ (uncertainty of the whole mailbag) $-$ (leftover uncertainty inside each smudged letter). If the noise smudges every letter into the *same* grey blob, the two terms cancel and $\chi = 0$ — nothing gets through.
+- The surprise: with quantum letters, sending two *together* can sometimes beat sending them one at a time (super-additivity), so the true capacity needs you to consider many letters at once.
+
+**Worked Example:**
+
+Consider the qubit depolarizing channel $\Phi(\rho) = (1-p)\,\rho + p\,\tfrac{I}{2}$, which leaves the state alone with probability $1-p$ and replaces it with the maximally mixed state with probability $p$. Let us compute its Holevo capacity $C = \max_{\{p_x, \rho_x\}} \chi$. We use the ensemble $\{\tfrac12, |0\rangle;\ \tfrac12, |1\rangle\}$ (this symmetric orthogonal pair is optimal for this channel).
+
+- Step 1 — output of each input. $\Phi(|0\rangle\langle0|) = (1-p)|0\rangle\langle0| + p\tfrac{I}{2}$, a diagonal matrix with eigenvalues $(1-p)+\tfrac{p}{2} = 1-\tfrac{p}{2}$ and $\tfrac{p}{2}$. So each individual output has entropy $S(\Phi(\rho_x)) = h_2\!\left(\tfrac{p}{2}\right)$, the binary entropy $h_2(q) = -q\log_2 q - (1-q)\log_2(1-q)$.
+- Step 2 — average output. $\sum_x p_x \Phi(\rho_x) = \tfrac12\Phi(|0\rangle\langle0|) + \tfrac12\Phi(|1\rangle\langle1|) = \tfrac{I}{2}$, which has $S = 1$.
+- Step 3 — assemble $\chi$. $\chi = S(\text{average}) - \sum_x p_x S(\text{individual}) = 1 - h_2\!\left(\tfrac{p}{2}\right)$.
+- Step 4 — a concrete number. For $p = 0.2$: $\tfrac{p}{2} = 0.1$, and $h_2(0.1) = -0.1\log_2 0.1 - 0.9\log_2 0.9 \approx 0.1(3.322) + 0.9(0.152) \approx 0.469$. Hence $\chi \approx 1 - 0.469 = 0.531$ bits per channel use.
+
+Sanity check: at $p=0$ (noiseless) we get $\chi = 1 - h_2(0) = 1$ bit — a perfect qubit carries one classical bit. At $p=1$ (output is always $I/2$ regardless of input) we get $\chi = 1 - h_2(0.5) = 1 - 1 = 0$ — no information gets through, as it must. For the depolarizing channel this $\chi$ is additive, so no regularization is needed and $C = 1 - h_2(p/2)$ exactly.
+
+## Entanglement, Teleportation, and Quantum Capacity
+
+<!-- section: entanglement-teleportation -->
+
+Entanglement is the resource that enables quantum teleportation: using a shared Bell pair and two classical bits, an unknown qubit can be transferred perfectly from Alice to Bob without sending the qubit itself through the quantum channel.
+
+The quantum capacity Q of a channel is the rate at which qubits (or entanglement) can be transmitted reliably. It is given by a regularized coherent information, and is zero for some channels that still have positive classical capacity (e.g., entanglement-breaking channels).
+
+Quantum error-correcting codes, stabilizer codes, and surface codes protect quantum information from noise, analogous to classical ECC but with the added difficulty of the no-cloning theorem (you cannot simply copy for repetition).
+
+**ELI5**
+
+- Teleportation: Alice and Bob share an entangled pair beforehand. Alice measures her unknown qubit together with her half of the pair, sends two classical bits of the measurement outcome to Bob, and Bob's half of the pair 'becomes' the unknown qubit (up to a Pauli correction he applies from the two bits).
+- No quantum information traveled in the two classical bits; the entanglement 'pre-delivered' the quantum channel.
+
+**Worked Example (teleporting one qubit, step by step):**
+
+Alice holds an unknown qubit $|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$ and shares the Bell pair $|\Phi^+\rangle_{AB} = \tfrac{1}{\sqrt2}(|00\rangle + |11\rangle)$ with Bob (Alice owns $A$, Bob owns $B$).
+
+- Step 1 — write the three-qubit state. Before anything happens the joint state is
+  $$|\psi\rangle \otimes |\Phi^+\rangle = \tfrac{1}{\sqrt2}\big(\alpha|0\rangle + \beta|1\rangle\big)\otimes\big(|00\rangle + |11\rangle\big).$$
+- Step 2 — re-express Alice's two qubits (the unknown qubit and $A$) in the Bell basis $|\Phi^\pm\rangle = \tfrac{1}{\sqrt2}(|00\rangle \pm |11\rangle)$, $|\Psi^\pm\rangle = \tfrac{1}{\sqrt2}(|01\rangle \pm |10\rangle)$. A standard algebraic regrouping gives
+  $$\tfrac12\Big[\,|\Phi^+\rangle(\alpha|0\rangle+\beta|1\rangle) + |\Phi^-\rangle(\alpha|0\rangle-\beta|1\rangle) + |\Psi^+\rangle(\beta|0\rangle+\alpha|1\rangle) + |\Psi^-\rangle(-\beta|0\rangle+\alpha|1\rangle)\Big].$$
+- Step 3 — read off the correspondence. Each Bell outcome leaves Bob's qubit in a *Pauli-twisted* copy of $|\psi\rangle$: $|\Phi^+\rangle \to I|\psi\rangle$, $|\Phi^-\rangle \to Z|\psi\rangle$, $|\Psi^+\rangle \to X|\psi\rangle$, $|\Psi^-\rangle \to XZ|\psi\rangle$. Each of the four outcomes is equally likely with probability $\tfrac14$ (each Bell coefficient has squared magnitude $\left|\tfrac12\right|^2 = \tfrac14$, and $|\alpha|^2+|\beta|^2 = 1$).
+- Step 4 — Bob corrects. Alice sends the 2-bit outcome; Bob applies the inverse Pauli ($I$, $Z$, $X$, or $ZX$ — each Pauli is its own inverse) and recovers exactly $\alpha|0\rangle + \beta|1\rangle$.
+
+Sanity check on resources and no-cloning: the protocol *consumes* one Bell pair and *two* classical bits, and it destroys Alice's original in the measurement — so only one copy of $|\psi\rangle$ ever exists at the end, respecting no-cloning. Note the classical bits alone carry no quantum information (they're just which of four Paulis to undo); without the pre-shared entanglement Bob could do nothing with them.
+
+## Common Mistakes
+
+- **Thinking a qubit is just a probabilistic classical bit**: The phases and interference matter; measurement in the wrong basis yields no information and collapses the state.
+- **Assuming von Neumann entropy is always non-negative like Shannon entropy**: Conditional von Neumann entropy can be negative, quantifying entanglement.
+- **Believing the Holevo quantity is the quantum capacity**: Holevo/χ gives the classical capacity of a quantum channel; the quantum capacity (sending qubits) is given by coherent information and is usually smaller.
+- **Forgetting that entanglement is a resource that can be consumed and distilled**: Teleportation, super-dense coding, and many protocols consume ebits (Bell pairs) and classical communication.
+- **Expecting all quantum channels to have additive capacities**: Many capacities require regularization over many uses; this is one of the hardest open problems in quantum information.
+- **Confusing 'sending classical information over quantum channel' with 'sending quantum information'**: The former can use measurements and classical post-processing; the latter must preserve superpositions and entanglement.

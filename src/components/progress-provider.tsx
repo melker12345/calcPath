@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { readStorage, writeStorage } from "@/lib/storage";
-import { supabase } from "@/lib/supabase/client";
 import {
   Attempt,
   ProgressState,
@@ -10,15 +9,18 @@ import {
   createEmptyProgress,
   normalizeProgressState,
   recordAttempt,
+  recordDiagnosticResult,
   recordTestResult,
 } from "@/lib/progress";
-import { useAuth } from "@/components/auth-provider";
+import type { DiagnosticResult } from "@/lib/diagnostics";
 
 type ProgressContextValue = {
   progress: ProgressState;
   addAttempt: (attempt: Attempt) => void;
   addTestResult: (result: TestResult) => void;
+  addDiagnosticResult: (result: DiagnosticResult) => void;
   resetProgress: () => void;
+  applySyncedProgress: (synced: ProgressState) => void;
 };
 
 const PROGRESS_KEY = "calc_progress_v1";
@@ -32,13 +34,12 @@ export const ProgressProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const { user } = useAuth();
   const [progress, setProgress] = useState<ProgressState>(createEmptyProgress());
 
   useEffect(() => {
     let cancelled = false;
 
-    const loadAnonymous = () => {
+    const load = () => {
       const stored = readStorage<ProgressState | Partial<ProgressState>>(
         PROGRESS_KEY,
         createEmptyProgress(),
@@ -46,72 +47,16 @@ export const ProgressProvider = ({
       if (!cancelled) setProgress(normalizeProgressState(stored as Partial<ProgressState>));
     };
 
-    const loadAuthed = async (userId: string) => {
-      // Prefer Supabase state; if none exists, fall back to local and upload.
-      const { data, error } = await supabase
-        .from("user_progress")
-        .select("state")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (error) {
-        // eslint-disable-next-line no-console
-        console.warn("Failed to load user_progress:", error.message);
-        loadAnonymous();
-        return;
-      }
-
-      if (data?.state) {
-        if (!cancelled) setProgress(normalizeProgressState(data.state as Partial<ProgressState>));
-        return;
-      }
-
-      const local = readStorage<ProgressState | Partial<ProgressState>>(
-        PROGRESS_KEY,
-        createEmptyProgress(),
-      );
-      const normalizedLocal = normalizeProgressState(local as Partial<ProgressState>);
-      if (!cancelled) setProgress(normalizedLocal);
-
-      // Best-effort initial upload so progress follows the account.
-      await supabase.from("user_progress").upsert(
-        {
-          user_id: userId,
-          state: normalizedLocal,
-        },
-        { onConflict: "user_id" },
-      );
-    };
-
-    if (!user?.id) {
-      loadAnonymous();
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    loadAuthed(user.id);
+    load();
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, []);
 
   const addAttempt = (attempt: Attempt) => {
     setProgress((prev) => {
       const next = recordAttempt(prev, attempt);
-      // Always keep a local cache; sync to Supabase if signed in.
       writeStorage(PROGRESS_KEY, next);
-      if (user?.id) {
-        supabase
-          .from("user_progress")
-          .upsert({ user_id: user.id, state: next }, { onConflict: "user_id" })
-          .then(({ error }) => {
-            if (error) {
-              // eslint-disable-next-line no-console
-              console.warn("Failed to save progress:", error.message);
-            }
-          });
-      }
       return next;
     });
   };
@@ -120,17 +65,14 @@ export const ProgressProvider = ({
     setProgress((prev) => {
       const next = recordTestResult(prev, result);
       writeStorage(PROGRESS_KEY, next);
-      if (user?.id) {
-        supabase
-          .from("user_progress")
-          .upsert({ user_id: user.id, state: next }, { onConflict: "user_id" })
-          .then(({ error }) => {
-            if (error) {
-              // eslint-disable-next-line no-console
-              console.warn("Failed to save test result:", error.message);
-            }
-          });
-      }
+      return next;
+    });
+  };
+
+  const addDiagnosticResult = (result: DiagnosticResult) => {
+    setProgress((prev) => {
+      const next = recordDiagnosticResult(prev, result);
+      writeStorage(PROGRESS_KEY, next);
       return next;
     });
   };
@@ -139,17 +81,12 @@ export const ProgressProvider = ({
     const next = createEmptyProgress();
     setProgress(next);
     writeStorage(PROGRESS_KEY, next);
-    if (user?.id) {
-      supabase
-        .from("user_progress")
-        .upsert({ user_id: user.id, state: next }, { onConflict: "user_id" })
-        .then(({ error }) => {
-          if (error) {
-            // eslint-disable-next-line no-console
-            console.warn("Failed to reset progress remotely:", error.message);
-          }
-        });
-    }
+  };
+
+  const applySyncedProgress = (synced: ProgressState) => {
+    const next = normalizeProgressState(synced as Partial<ProgressState>);
+    setProgress(next);
+    writeStorage(PROGRESS_KEY, next);
   };
 
   const value = useMemo(
@@ -157,7 +94,9 @@ export const ProgressProvider = ({
       progress,
       addAttempt,
       addTestResult,
+      addDiagnosticResult,
       resetProgress,
+      applySyncedProgress,
     }),
     [progress],
   );
@@ -172,7 +111,21 @@ export const ProgressProvider = ({
 export const useProgress = () => {
   const context = useContext(ProgressContext);
   if (!context) {
-    throw new Error("useProgress must be used within ProgressProvider");
+    // Safe default for read-only surfaces (e.g. home page mastery indicators in
+    // CourseContentsPage when used outside a ProgressBoundary). Mutations will be no-ops
+    // (no provider = no persistence for that tree). Practice/dashboard etc always provide.
+    // This enables granular components like CourseContentsPage to be dropped into
+    // server-driven home pages without forcing provider wrappers on every caller.
+    const noopProgress = createEmptyProgress();
+    const noop = () => {};
+    return {
+      progress: noopProgress,
+      addAttempt: noop,
+      addTestResult: noop,
+      addDiagnosticResult: noop,
+      resetProgress: noop,
+      applySyncedProgress: noop,
+    } satisfies ProgressContextValue;
   }
   return context;
 };

@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useAuth } from "@/components/auth-provider";
-import { AuthBoundary } from "@/components/scoped-providers";
 import { SearchTrigger } from "@/components/search-command";
-import { calculusTopics, linalgTopics, statisticsTopics } from "@/lib/subject-topics";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { useClientMounted } from "@/hooks/use-client-mounted";
+import { getSubjectIconClass } from "@/lib/subject-icon-styles";
+import type { NavSubject } from "@/lib/subjects";
 
 function ProfileIcon({ size = 20, color = "currentColor" }: { size?: number; color?: string }) {
   return (
@@ -17,66 +18,100 @@ function ProfileIcon({ size = 20, color = "currentColor" }: { size?: number; col
   );
 }
 
-const subjects = [
-  { slug: "calculus", label: "Calculus", icon: "∫", topics: calculusTopics },
-  { slug: "statistics", label: "Statistics", icon: "σ", topics: statisticsTopics },
-  { slug: "linear-algebra", label: "Linear Algebra", icon: "λ", topics: linalgTopics },
+const utilityLinks = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/diagnostic", label: "Diagnostic" },
+  { href: "/feedback", label: "Feedback" },
 ] as const;
 
-const staticNavLinks = [{ href: "/feedback", label: "Feedback" }] as const;
-
-function SubjectDropdown({
-  subject,
-  isOpen,
-  onEnter,
-  onLeave,
-  onClose,
+function SubjectsDropdown({
+  subjects,
 }: {
-  subject: (typeof subjects)[number];
-  isOpen: boolean;
-  onEnter: () => void;
-  onLeave: () => void;
-  onClose: () => void;
+  subjects: Array<{ slug: string; label: string; icon?: string; category?: string }>;
 }) {
-  return (
-    <div className="relative" onMouseEnter={onEnter} onMouseLeave={onLeave}>
-      <Link
-        href={`/${subject.slug}`}
-        prefetch={false}
-        className="flex items-center gap-1 px-1 py-1 text-sm font-medium text-zinc-700 transition hover:text-zinc-900"
-      >
-        {subject.label}
-        <svg className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </Link>
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-      {isOpen && (
-        <div className="absolute left-0 top-full z-50 pt-1.5">
-          <div className="w-64 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg">
-            <div className="max-h-72 overflow-y-auto py-1">
-              {subject.topics.map((t) => (
-                <Link
-                  key={t.id}
-                  href={`/${subject.slug}/modules/${t.id}`}
-                  className="block px-3.5 py-2 text-sm text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-900"
-                  onClick={onClose}
-                >
-                  {t.title}
-                </Link>
-              ))}
-            </div>
-            <div className="border-t border-zinc-100">
+  useEffect(() => {
+    if (!open) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
+
+  const closeAndNavigate = () => setOpen(false);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm theme-text-secondary transition hover:theme-text hover:bg-[var(--surface-2)]"
+        aria-haspopup="true"
+        aria-expanded={open}
+      >
+        Subjects
+        <svg
+          className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`}
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            fillRule="evenodd"
+            d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          className="absolute left-0 top-full z-50 mt-1 w-80 overflow-hidden rounded-xl border theme-border bg-[var(--surface-solid)] shadow-xl"
+          role="menu"
+        >
+          <div className="grid grid-cols-2 gap-0.5 p-1">
+            {subjects.map((subject) => (
               <Link
-                href={`/${subject.slug}/dashboard`}
-                className="flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 hover:text-zinc-900"
-                onClick={onClose}
+                key={subject.slug}
+                href={`/${subject.slug}`}
+                onClick={closeAndNavigate}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm theme-text transition hover:bg-[var(--surface-2)] hover:theme-text"
+                role="menuitem"
               >
-                Dashboard
-                <span className="text-zinc-400">→</span>
+                <span className={getSubjectIconClass(subject.category, "xs")}>
+                  {subject.icon || "•"}
+                </span>
+                <span className="truncate">{subject.label}</span>
               </Link>
-            </div>
+            ))}
           </div>
+          <div className="border-t theme-border" />
+          <Link
+            href="/subjects"
+            onClick={closeAndNavigate}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-[var(--accent)] transition hover:bg-[var(--surface-2)]"
+            role="menuitem"
+          >
+            All subjects →
+          </Link>
         </div>
       )}
     </div>
@@ -86,18 +121,14 @@ function SubjectDropdown({
 function MobileDrawer({
   open,
   onClose,
-  user,
-  onSignOut,
+  subjects = [],
 }: {
   open: boolean;
   onClose: () => void;
-  user: boolean;
-  onSignOut: () => void;
+  subjects?: Array<{ slug: string; label: string; icon?: string; category?: string }>;
 }) {
-  const [mounted, setMounted] = useState(false);
-  const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
-
-  useEffect(() => { setMounted(true); }, []);
+  // Auth removed: always show Account link in drawer (no conditional sign in/out).
+  const mounted = useClientMounted();
 
   useEffect(() => {
     if (!open) return;
@@ -126,8 +157,8 @@ function MobileDrawer({
         aria-modal="true"
         aria-label="Navigation menu"
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-zinc-200 bg-zinc-50 px-4 py-4">
-          <span className="text-lg font-bold text-zinc-900">Menu</span>
+        <div className="flex shrink-0 items-center justify-between border-b border-zinc-200 bg-zinc-50 px-4 py-4 dark:border-white/10 dark:bg-[#121214]">
+          <span className="text-lg font-bold text-zinc-900 dark:text-white">Menu</span>
           <button
             type="button"
             onClick={onClose}
@@ -140,58 +171,32 @@ function MobileDrawer({
         </div>
 
         <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto bg-white px-3 py-4">
-          {subjects.map((s) => {
-            const isExpanded = expandedSubject === s.slug;
-            return (
-              <div key={s.slug}>
-                <button
-                  type="button"
-                  onClick={() => setExpandedSubject(isExpanded ? null : s.slug)}
-                  className="flex w-full items-center justify-between rounded-xl bg-zinc-50 px-4 py-3 text-base font-semibold text-zinc-900 transition active:bg-zinc-100"
-                >
-                  <span className="flex items-center gap-3">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-200 text-sm font-bold text-zinc-600">
-                      {s.icon}
-                    </span>
-                    {s.label}
-                  </span>
-                  <svg className={`h-4 w-4 text-zinc-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {isExpanded && (
-                  <div className="ml-4 mt-1 space-y-0.5 border-l-2 border-zinc-100 pl-3">
-                    {s.topics.map((t) => (
-                      <Link
-                        key={t.id}
-                        href={`/${s.slug}/modules/${t.id}`}
-                        className="block rounded-lg px-3 py-2 text-sm text-zinc-600 transition active:bg-zinc-50"
-                        onClick={onClose}
-                      >
-                        {t.title}
-                      </Link>
-                    ))}
-                    <Link
-                      href={`/${s.slug}/dashboard`}
-                      className="block rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 transition active:bg-zinc-50"
-                      onClick={onClose}
-                    >
-                      Dashboard →
-                    </Link>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          <div className="px-4 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[1px] theme-text-muted">Subjects</div>
+          {subjects.map((subject) => (
+            <Link
+              key={subject.slug}
+              href={`/${subject.slug}`}
+              className="flex items-center gap-3 rounded-xl bg-zinc-50 px-4 py-3.5 text-base font-semibold text-zinc-900 transition active:bg-zinc-100"
+              onClick={onClose}
+            >
+              <span className={getSubjectIconClass(subject.category, "sm")}>
+                {subject.icon || "•"}
+              </span>
+              {subject.label}
+            </Link>
+          ))}
 
-          {staticNavLinks.map((link) => (
+          {/* separator between subject links and utility links */}
+          <div className="my-2 border-t theme-border" />
+
+          {utilityLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               className="flex items-center gap-3 rounded-xl bg-zinc-50 px-4 py-3.5 text-base font-semibold text-zinc-900 transition active:bg-zinc-100"
               onClick={onClose}
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-100 text-sm text-orange-600">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-stone-100 text-sm text-stone-600">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
                 </svg>
@@ -200,34 +205,14 @@ function MobileDrawer({
             </Link>
           ))}
 
-          <div className="my-2 border-t border-zinc-100" />
-          {user && (
-            <>
-              <Link
-                href="/account"
-                className="block rounded-xl bg-zinc-50 px-4 py-3.5 text-base font-semibold text-zinc-900 transition active:bg-zinc-100"
-                onClick={onClose}
-              >
-                Account
-              </Link>
-              <button
-                type="button"
-                onClick={() => { onSignOut(); onClose(); }}
-                className="rounded-xl bg-zinc-50 px-4 py-3.5 text-left text-base font-semibold text-red-600 transition active:bg-red-50"
-              >
-                Sign out
-              </button>
-            </>
-          )}
-          {!user && (
-            <Link
-              href="/auth"
-              className="block rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-3.5 text-center text-base font-semibold text-white transition active:opacity-90"
-              onClick={onClose}
-            >
-              Sign in / Register
-            </Link>
-          )}
+          <div className="my-2 border-t theme-border" />
+          <Link
+            href="/account"
+            className="block rounded-xl bg-zinc-50 px-4 py-3.5 text-base font-semibold text-zinc-900 transition active:bg-zinc-100"
+            onClick={onClose}
+          >
+            Account
+          </Link>
         </nav>
       </div>
     </div>,
@@ -235,65 +220,43 @@ function MobileDrawer({
   );
 }
 
-export const SiteHeader = () => {
+export const SiteHeader = ({ subjects }: { subjects: NavSubject[] }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeSlug, setActiveSlug] = useState<string | null>(null);
-  const closeTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  const handleEnter = (slug: string) => {
-    clearTimeout(closeTimeout.current);
-    setActiveSlug(slug);
-  };
-
-  const handleLeave = () => {
-    closeTimeout.current = setTimeout(() => setActiveSlug(null), 150);
-  };
-
-  useEffect(() => () => clearTimeout(closeTimeout.current), []);
+  const navSubjects = subjects.filter((s) => (s.order ?? 0) < 50);
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4">
-          {/* Logo */}
+      <header className="sticky top-0 z-50 border-b theme-border bg-[var(--surface-solid)] pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="CalcPath home">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-rose-400 text-lg font-bold text-white sm:h-10 sm:w-10 sm:rounded-2xl sm:text-xl">
-              ∫
-            </div>
-            <span className="hidden text-lg font-bold text-zinc-900 sm:inline sm:text-xl">CalcPath</span>
+            <span className="font-serif text-xl font-semibold theme-text">CalcPath</span>
           </Link>
 
-          {/* Desktop nav — subject dropdowns + search */}
-          <nav className="hidden items-center gap-5 text-sm font-medium md:flex">
-            {subjects.map((s) => (
-              <SubjectDropdown
-                key={s.slug}
-                subject={s}
-                isOpen={activeSlug === s.slug}
-                onEnter={() => handleEnter(s.slug)}
-                onLeave={handleLeave}
-                onClose={() => setActiveSlug(null)}
-              />
-            ))}
-            {staticNavLinks.map((link) => (
+          <nav className="hidden items-center gap-3 text-sm md:flex">
+            <SubjectsDropdown subjects={navSubjects} />
+
+            {/* subtle separator between subject group and utility links */}
+            <span className="mx-1 h-3 w-px bg-[var(--border)]" aria-hidden="true" />
+
+            {utilityLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="px-1 py-1 text-sm font-medium text-zinc-700 transition hover:text-zinc-900"
+                className="theme-text-secondary transition hover:theme-text"
               >
                 {link.label}
               </Link>
             ))}
+
             <SearchTrigger />
           </nav>
 
-          <AuthBoundary>
-            <SiteHeaderAuthControls
-              mobileMenuOpen={mobileMenuOpen}
-              onToggleMobileMenu={() => setMobileMenuOpen((open) => !open)}
-              onCloseMobileMenu={() => setMobileMenuOpen(false)}
-            />
-          </AuthBoundary>
+          <SiteHeaderAuthControls
+            mobileMenuOpen={mobileMenuOpen}
+            onToggleMobileMenu={() => setMobileMenuOpen((open) => !open)}
+            onCloseMobileMenu={() => setMobileMenuOpen(false)}
+            subjects={navSubjects}
+          />
         </div>
       </header>
     </>
@@ -304,36 +267,29 @@ function SiteHeaderAuthControls({
   mobileMenuOpen,
   onToggleMobileMenu,
   onCloseMobileMenu,
+  subjects = [],
 }: {
   mobileMenuOpen: boolean;
   onToggleMobileMenu: () => void;
   onCloseMobileMenu: () => void;
+  subjects?: Array<{ slug: string; label: string; icon?: string; category?: string }>;
 }) {
-  const { user, signOut } = useAuth();
-
+  // Auth removed: always show Profile/Account + Sync devices (anon accessible). No sign in/out CTAs.
   return (
     <>
-      <div className="flex items-center gap-2 md:hidden">
-        {user ? (
-          <Link
-            href="/account"
-            className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-zinc-200 bg-white transition active:bg-zinc-50"
-            aria-label="Account"
-          >
-            <ProfileIcon size={18} color="#3f3f46" />
-          </Link>
-        ) : (
-          <Link
-            href="/auth"
-            className="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-3 py-1.5 text-sm font-semibold text-white shadow-sm"
-          >
-            Sign in
-          </Link>
-        )}
+      <div className="flex items-center gap-1.5 md:hidden">
+        <ThemeToggle />
+        <Link
+          href="/account"
+          className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-zinc-200 bg-white transition active:bg-zinc-50 dark:border-white/15 dark:bg-[#18181b]"
+          aria-label="Account"
+        >
+          <ProfileIcon size={18} color="#3f3f46" />
+        </Link>
         <button
           type="button"
           onClick={onToggleMobileMenu}
-          className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700 transition active:bg-zinc-200"
+          className="flex h-10 w-10 items-center justify-center rounded border border-stone-300 bg-[#fffef8] text-stone-700 transition active:bg-stone-100 dark:border-white/15 dark:bg-[#18181b] dark:text-[#ededed]"
           aria-label="Toggle menu"
           aria-expanded={mobileMenuOpen}
         >
@@ -343,47 +299,21 @@ function SiteHeaderAuthControls({
         </button>
       </div>
 
-      <div className="hidden shrink-0 items-center gap-3 md:flex">
-        {user ? (
-          <>
-            <Link
-              href="/account"
-              className="flex items-center gap-2 rounded-full border-2 border-zinc-200 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-900 shadow-sm transition hover:border-zinc-300 hover:shadow-md"
-              aria-label="Account"
-            >
-              <ProfileIcon size={18} color="#3f3f46" />
-            </Link>
-            <button
-              type="button"
-              onClick={signOut}
-              className="rounded-full border-2 border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
-            >
-              Sign out
-            </button>
-          </>
-        ) : (
-          <>
-            <Link
-              href="/auth"
-              className="text-sm font-medium text-zinc-700 hover:text-zinc-900"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/auth"
-              className="rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:shadow-xl"
-            >
-              Get started
-            </Link>
-          </>
-        )}
+      <div className="hidden shrink-0 items-center gap-2 md:flex">
+        <ThemeToggle />
+        <Link
+          href="/account"
+          className="flex items-center gap-2 rounded-full border-2 theme-border theme-surface px-3 py-1.5 text-sm font-semibold theme-text shadow-sm transition hover:shadow-md"
+          aria-label="Account"
+        >
+          <ProfileIcon size={18} color="currentColor" />
+        </Link>
       </div>
 
       <MobileDrawer
         open={mobileMenuOpen}
         onClose={onCloseMobileMenu}
-        user={!!user}
-        onSignOut={signOut}
+        subjects={subjects}
       />
     </>
   );

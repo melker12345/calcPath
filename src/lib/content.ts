@@ -1,10 +1,9 @@
-// Legacy shim — all content has moved to calculus-content.ts.
-// Prefer importing directly from @/lib/calculus-content.
-export {
-  topics,
-  problems,
-  learningPaths,
-  getModuleSectionTitle,
-  getModuleSectionUrl,
-} from "./calculus-content";
-export type { ProblemType, Problem, Topic, LearningPath } from "./shared-types";
+// Legacy shim (deprecated). All content now lives in content/ + loader + adapters.
+// No active imports remain; this exists only to avoid resolution surprises during final cleanup.
+import type { Problem, Topic } from "./shared-types";
+
+export const topics: Topic[] = [];
+export const problems: Problem[] = [];
+export function getModuleSectionTitle() { return null; }
+export function getModuleSectionUrl() { return null; }
+export type { ProblemType, Problem, Topic } from "./shared-types";

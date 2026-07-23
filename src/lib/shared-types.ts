@@ -24,11 +24,3 @@ export type Topic = {
   order: number;
   estimatedMinutes: number;
 };
-
-export type LearningPath = {
-  id: string;
-  title: string;
-  description: string;
-  level: "intro" | "intermediate" | "advanced";
-  steps: Array<{ topicId: string; targetProblems: number }>;
-};

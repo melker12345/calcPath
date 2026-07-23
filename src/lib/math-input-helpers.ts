@@ -18,12 +18,30 @@ export function detectQuestionContext(prompt: string): QuestionContext {
     hasPi: false,
   };
 
-  if (/\bx\b/.test(prompt)) context.hasVariable.push("x");
-  if (/\by\b/.test(prompt)) context.hasVariable.push("y");
-  if (/\bt\b/.test(prompt)) context.hasVariable.push("t");
-  if (/\bn\b/.test(prompt)) context.hasVariable.push("n");
-  if (/\bz\b/.test(prompt)) context.hasVariable.push("z");
-  if (/\bp\b/.test(prompt)) context.hasVariable.push("p");
+  const pushVar = (letter: string) => {
+    if (!context.hasVariable.includes(letter)) context.hasVariable.push(letter);
+  };
+
+  if (/\bx\b/.test(prompt)) pushVar("x");
+  if (/\by\b/.test(prompt)) pushVar("y");
+  if (/\bt\b/.test(prompt)) pushVar("t");
+  if (/\bn\b/.test(prompt)) pushVar("n");
+  if (/\bz\b/.test(prompt)) pushVar("z");
+  if (/\bp\b/i.test(prompt)) pushVar("p");
+  if (/\bs\b/i.test(prompt)) pushVar("s");
+  if (/\br\b/.test(prompt)) pushVar("r");
+  if (/\bu\b/.test(prompt)) pushVar("u");
+  if (/\bv\b/.test(prompt)) pushVar("v");
+  if (/\bw\b/.test(prompt)) pushVar("w");
+  if (/\bk\b/.test(prompt)) pushVar("k");
+  if (/\bm\b/.test(prompt)) pushVar("m");
+  if (/\bh\b/.test(prompt)) pushVar("h");
+  if (/\bd\b/.test(prompt)) pushVar("d");
+  if (/\bf\b/.test(prompt)) pushVar("f");
+  if (/\bg\b/.test(prompt)) pushVar("g");
+  if (/\bl\b/.test(prompt)) pushVar("l");
+  if (/\bq\b/.test(prompt)) pushVar("q");
+  if (/\bc\b/.test(prompt)) pushVar("c");
 
   if (/\\?(sin|cos|tan|sec|csc|cot|sinh|cosh|tanh)/i.test(prompt)) context.hasTrig = true;
   if (/e\^|\\exp/i.test(prompt)) context.hasExp = true;
@@ -52,7 +70,16 @@ export function deriveSuggestionLabels(
     labels.push(label);
   };
 
-  const src = `${answerSrc} ${questionCtx?.hasVariable?.join(" ") ?? ""}`;
+  // Build richer src including ctx flags for constants (e, ln, pi).
+  // IMPORTANT: do NOT inject full trig family from hasTrig (that used to cause "way too many options"
+  // for any question whose prompt mentioned sin/cos etc., even when final answer was a plain number).
+  // Trig buttons only surface if the answer string itself contains them (rare for final numeric answers).
+  // hasExp/hasLn/hasPi still help suggest 'e'/'ln'/'π' when prompt signals the form but answer string may vary.
+  let ctxExtra = "";
+  if (questionCtx?.hasExp) ctxExtra += " e exp ";
+  if (questionCtx?.hasLn) ctxExtra += " ln log ";
+  if (questionCtx?.hasPi) ctxExtra += " pi π ";
+  const src = `${answerSrc} ${questionCtx?.hasVariable?.join(" ") ?? ""} ${ctxExtra}`;
   const hasLowerSymbol = (symbol: string) =>
     new RegExp(`(^|[^a-z])${symbol}($|[^a-z])`).test(src);
   const hasUpperSymbol = (symbol: string) =>
@@ -65,6 +92,28 @@ export function deriveSuggestionLabels(
   if (hasLowerSymbol("a")) add("a");
   if (hasLowerSymbol("z")) add("z");
   if (hasLowerSymbol("p")) add("p");
+  if (hasLowerSymbol("s")) add("s");
+  if (hasLowerSymbol("r")) add("r");
+  if (hasLowerSymbol("u")) add("u");
+  if (hasLowerSymbol("v")) add("v");
+  if (hasLowerSymbol("w")) add("w");
+  if (hasLowerSymbol("k")) add("k");
+  if (hasLowerSymbol("m")) add("m");
+  if (hasLowerSymbol("h")) add("h");
+  if (hasLowerSymbol("d")) add("d");
+  if (hasLowerSymbol("f")) add("f");
+  if (hasLowerSymbol("g")) add("g");
+  if (hasLowerSymbol("l")) add("l");
+  if (hasLowerSymbol("q")) add("q");
+  if (hasLowerSymbol("c")) add("c");
+  if (hasLowerSymbol("b")) add("b");
+
+  // Any single-letter variable token required by the canonical answer (e.g. "4s").
+  for (const token of tokenizeAnswer(answer ?? "")) {
+    if (/^[a-z]$/.test(token) && !KNOWN_WORD_TOKENS.includes(token as (typeof KNOWN_WORD_TOKENS)[number])) {
+      add(token);
+    }
+  }
   if (hasUpperSymbol("C")) add("C");
   if (hasUpperSymbol("A")) add("A");
   if (hasUpperSymbol("B")) add("B");
@@ -90,8 +139,8 @@ export function deriveSuggestionLabels(
   if (/\bln\b/i.test(src)) add("ln");
   if (/\blog\b/i.test(src)) add("log");
   if (/pi|π/i.test(src) || questionCtx?.hasPi) add("π");
-  if (/inf/i.test(src)) add("∞");
-  if (/sqrt/i.test(src)) add("√");
+  if (/inf|∞/i.test(src)) add("∞");
+  if (/sqrt|√/i.test(src)) add("√");
   if (/=/.test(answer ?? "")) add("=");
   if (/,/.test(answer ?? "")) add(",");
   if (/\|/.test(answer ?? "")) add("| |");

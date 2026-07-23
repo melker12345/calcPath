@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@/components/auth-provider";
 
 const PRESETS = [
   { cents: 300, label: "$3", note: "A coffee" },
@@ -11,7 +10,7 @@ const PRESETS = [
 ] as const;
 
 export default function DonatePage() {
-  const { user } = useAuth();
+  // useAuth removed (auth stripped); email optional for stripe, now null (anon ok)
   const [selected, setSelected] = useState<number | null>(500);
   const [custom, setCustom] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,7 +31,7 @@ export default function DonatePage() {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, email: user?.email ?? undefined }),
+        body: JSON.stringify({ amount, email: undefined }),
       });
 
       let data: { url?: string; error?: string } = {};
@@ -65,13 +64,13 @@ export default function DonatePage() {
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-12 sm:px-6 sm:py-20">
       <div className="text-center">
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-400 to-rose-400 text-2xl font-bold text-white shadow-lg shadow-orange-200">
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--accent)] font-serif text-3xl text-[var(--accent-text)] shadow-sm">
           ∫
         </div>
-        <h1 className="text-3xl font-bold text-zinc-900 sm:text-4xl">
+        <h1 className="font-serif text-3xl font-semibold tracking-tight theme-text sm:text-4xl">
           Support CalcPath
         </h1>
-        <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-zinc-600">
+        <p className="mx-auto mt-4 max-w-md text-base leading-relaxed theme-text-secondary">
           CalcPath is and will always be free. Every lesson, practice problem, and test is
           available to everyone — no paywalls, no tiers. If CalcPath has helped you learn,
           a donation helps us keep building.
@@ -93,26 +92,26 @@ export default function DonatePage() {
                 }}
                 className={`group relative rounded-2xl border-2 p-4 text-left transition ${
                   active
-                    ? "border-orange-400 bg-orange-50 shadow-md shadow-orange-100"
-                    : "border-zinc-100 bg-white hover:border-orange-200 hover:shadow-sm"
+                    ? "border-[var(--accent)] bg-[var(--accent)]/10"
+                    : "theme-border bg-[var(--surface)] hover:border-[var(--accent)]/40"
                 }`}
               >
                 <span
                   className={`text-2xl font-bold ${
-                    active ? "text-orange-600" : "text-zinc-900"
+                    active ? "text-[var(--accent)]" : "theme-text"
                   }`}
                 >
                   {label}
                 </span>
                 <span
                   className={`mt-1 block text-sm ${
-                    active ? "text-orange-500" : "text-zinc-400"
+                    active ? "text-[var(--accent)]/80" : "theme-text-muted"
                   }`}
                 >
                   {note}
                 </span>
                 {active && (
-                  <div className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-xs text-white">
+                  <div className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent)] text-xs text-[var(--accent-text)]">
                     ✓
                   </div>
                 )}
@@ -126,11 +125,11 @@ export default function DonatePage() {
           <div
             className={`flex items-center overflow-hidden rounded-2xl border-2 transition ${
               isCustomActive
-                ? "border-orange-400 bg-orange-50 shadow-md shadow-orange-100"
-                : "border-zinc-100 bg-white hover:border-orange-200"
+                ? "border-[var(--accent)] bg-[var(--accent)]/10"
+                : "theme-border bg-[var(--surface)] hover:border-[var(--accent)]/40"
             }`}
           >
-            <span className="shrink-0 px-2 text-lg font-bold text-zinc-400 sm:px-3">$</span>
+            <span className="shrink-0 px-2 text-lg font-bold theme-text-muted sm:px-3">$</span>
             <input
               type="text"
               inputMode="decimal"
@@ -143,10 +142,10 @@ export default function DonatePage() {
                 clearError();
               }}
               onFocus={() => setSelected(null)}
-              className="min-w-0 flex-1 bg-transparent py-4 pl-1.5 pr-3 text-lg font-semibold text-zinc-900 outline-none placeholder:font-normal placeholder:text-zinc-300"
+              className="min-w-0 flex-1 bg-transparent py-4 pl-1.5 pr-3 text-lg font-semibold theme-text outline-none placeholder:font-normal placeholder:text-[var(--text-muted)]"
             />
             {isCustomActive && custom && (
-              <span className="shrink-0 whitespace-nowrap px-4 text-sm text-orange-500 sm:px-5">
+              <span className="shrink-0 whitespace-nowrap px-4 text-sm text-[var(--accent)] sm:px-5">
                 {parseFloat(custom) >= 1 ? "Thank you!" : "Min $1"}
               </span>
             )}
@@ -159,7 +158,7 @@ export default function DonatePage() {
         <button
           onClick={handleDonate}
           disabled={!valid || loading}
-          className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-8 py-4 text-lg font-bold text-white shadow-lg shadow-orange-200 transition hover:shadow-xl disabled:opacity-40"
+          className="w-full rounded-xl bg-[var(--accent)] px-8 py-4 text-lg font-semibold text-[var(--accent-text)] shadow-sm transition hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
         >
           {loading
             ? "Redirecting to Stripe…"
@@ -170,34 +169,34 @@ export default function DonatePage() {
         {error && (
           <p
             role="alert"
-            className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-700"
+            className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400"
           >
             {error}
           </p>
         )}
-        <p className="mt-3 text-center text-sm text-zinc-400">
+        <p className="mt-3 text-center text-sm theme-text-muted">
           Secure payment via Stripe. One-time, no recurring charges.
         </p>
       </div>
 
       {/* What donations support */}
-      <div className="mt-14 rounded-2xl border-2 border-zinc-100 bg-white p-6 sm:p-8">
-        <h2 className="text-lg font-bold text-zinc-900">What your donation supports</h2>
-        <ul className="mt-4 space-y-3 text-base text-zinc-600">
+      <div className="mt-14 theme-card-light theme-border rounded-2xl border p-6 sm:p-8">
+        <h2 className="font-serif text-lg font-semibold theme-text">What your donation supports</h2>
+        <ul className="mt-4 space-y-3 text-base theme-text-secondary">
           <li className="flex items-start gap-3">
-            <span className="mt-0.5 text-orange-400">→</span>
+            <span className="mt-0.5 text-[var(--accent)]">→</span>
             Hosting and infrastructure to keep CalcPath fast and free
           </li>
           <li className="flex items-start gap-3">
-            <span className="mt-0.5 text-orange-400">→</span>
+            <span className="mt-0.5 text-[var(--accent)]">→</span>
             New subjects and topics — Discrete Math and beyond
           </li>
           <li className="flex items-start gap-3">
-            <span className="mt-0.5 text-orange-400">→</span>
+            <span className="mt-0.5 text-[var(--accent)]">→</span>
             More practice problems with step-by-step solutions
           </li>
           <li className="flex items-start gap-3">
-            <span className="mt-0.5 text-orange-400">→</span>
+            <span className="mt-0.5 text-[var(--accent)]">→</span>
             Continued development by a small independent team
           </li>
         </ul>

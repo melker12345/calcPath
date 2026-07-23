@@ -1,0 +1,253 @@
+---
+title: Combinatorics
+---
+
+# Combinatorics
+
+Combinatorics is the art and science of counting. While it may sound elementary, clever counting arguments solve hard problems in probability, computer science (algorithm analysis, complexity), cryptography, and optimization. The fundamental question is "how many ways can this happen?" under various constraints.
+
+We begin with the basic rules (product and sum), move to permutations (ordered selections) and combinations (unordered), introduce binomial coefficients that appear everywhere from Pascal's triangle to probability, then the pigeonhole principle (existence proofs via counting), and finish with inclusion-exclusion for counting unions with overlaps.
+
+Mastering these tools lets you compute the size of huge sets without enumerating them and proves statements that would otherwise require exhaustive casework.
+
+## Basic Counting Principles
+
+<!-- section: counting -->
+
+Two fundamental rules:
+
+- **Product rule** (multiplication principle): If a process consists of $k$ stages made *in sequence*, where stage $i$ can be completed in $n_i$ ways **no matter how the earlier stages turned out**, then the number of ways to complete the whole process is $n_1 \times n_2 \times \cdots \times n_k$. The key condition is that the *count* $n_i$ at each stage does not depend on the previous choices (the specific options may differ, but their number must be fixed).
+- **Sum rule** (addition principle): If the outcomes split into $k$ categories that are **mutually exclusive** (no outcome lies in two categories at once) with $n_i$ options in category $i$, then the total is $n_1 + n_2 + \cdots + n_k$. If the categories can overlap, the plain sum overcounts — you need inclusion-exclusion (last section).
+
+A useful way to decide which rule applies: use the product rule for "AND" (do this *and then* that), and the sum rule for "OR" (do this *or* that, from separate piles).
+
+These extend to more complex situations via trees of decisions or partitioning the set of outcomes.
+
+**ELI5**
+
+- Product: "to make an outfit you choose a shirt (5 options) AND pants (4 options) AND shoes (3) → 5×4×3=60 possible outfits."
+- Sum: "number of desserts = number of cakes + number of pies + number of ice creams" (categories don't overlap).
+
+### Worked Examples
+
+**Worked Example:**
+
+**License plates**
+
+A license plate has 3 letters (A-Z, 26 possibilities) followed by 4 digits (0-9), and repetition *is* allowed.
+
+- Step 1 — identify the stages: there are 7 independent stages (3 letter slots, then 4 digit slots).
+- Step 2 — count each stage: each letter slot has $26$ choices; each digit slot has $10$ choices. Because repetition is allowed, these counts stay fixed regardless of earlier picks, so the product rule applies.
+- Step 3 — multiply: $26 \times 26 \times 26 \times 10 \times 10 \times 10 \times 10 = 26^3 \times 10^4 = 17576 \times 10000 = 175{,}760{,}000$.
+
+Now suppose repetition is **not** allowed for the letters (all three letters distinct). Then the second letter slot has only $25$ choices left and the third has $24$, giving $26 \times 25 \times 24 \times 10^4 = 15{,}600 \times 10{,}000 = 156{,}000{,}000$.
+
+Sanity check: forbidding repeats can only remove plates, and indeed $156{,}000{,}000 < 175{,}760{,}000$. ✓
+
+## Permutations
+
+<!-- section: permutations -->
+
+A **permutation** of $n$ distinct objects is an ordering of them. There are $n! = n \times (n-1) \times \cdots \times 1$ such orderings. Intuitively this is the product rule: the first position has $n$ candidates, the next has $n-1$ (one is already used), then $n-2$, down to $1$. By convention $0! = 1$ (there is exactly one way to arrange nothing — the empty arrangement).
+
+The number of ways to choose and arrange $k$ distinct items from $n$ (with $0 \le k \le n$), where order matters, is the **$k$-permutation** $P(n,k) = \dfrac{n!}{(n-k)!} = n \times (n-1) \times \cdots \times (n-k+1)$. Note the last factor: the product has exactly $k$ terms, counting down from $n$.
+
+When some objects are identical, distinct orderings are fewer, because swapping two identical items does not create a new arrangement. For a multiset whose distinct symbols occur with counts $n_1, n_2, \ldots$ (so $n_1 + n_2 + \cdots = n$), the number of distinct permutations is $\dfrac{n!}{n_1!\, n_2! \cdots}$. Each $n_i!$ divides out the orderings among the identical copies of symbol $i$ that we would otherwise overcount.
+
+**ELI5**
+
+- Permutations answer "in how many different sequences can these people stand in line?" or "how many different ways can these tasks be scheduled?"
+- If two people are twins (indistinguishable), you overcounted by swapping the twins, so divide by 2!.
+
+### Worked Examples
+
+**Ordered selection (order matters)**
+
+A club of 5 people elects a president, a vice-president, and a treasurer, with no one holding two posts. How many outcomes?
+
+- Step 1 — order matters here, because assigning Alice as president vs. as treasurer are different outcomes. So this is a $k$-permutation with $n = 5$, $k = 3$.
+- Step 2 — apply the formula: $P(5,3) = \dfrac{5!}{(5-3)!} = \dfrac{5!}{2!} = \dfrac{120}{2} = 60$.
+- Step 3 — cross-check by the product rule: $5$ choices for president $\times\, 4$ for VP $\times\, 3$ for treasurer $= 60$. ✓
+
+**Arranging letters with repeats**
+
+"MISSISSIPPI" has 11 letters with counts M:1, I:4, S:4, P:2 (and $1 + 4 + 4 + 2 = 11$ ✓, so we have accounted for every letter).
+
+- Step 1 — if all 11 letters were distinct, there would be $11! = 39{,}916{,}800$ arrangements.
+- Step 2 — divide out the indistinguishable swaps: the four I's can be reordered $4!$ ways with no visible change, likewise the four S's ($4!$) and the two P's ($2!$).
+- Step 3 — compute: $\dfrac{11!}{1!\,4!\,4!\,2!} = \dfrac{39{,}916{,}800}{1 \times 24 \times 24 \times 2} = \dfrac{39{,}916{,}800}{1152} = 34{,}650$.
+
+**Circular permutations**
+
+For $n$ distinct people around a round table where rotations are considered the same seating: $(n-1)!$ ways. Reason: the $n!$ linear orderings each get counted $n$ times (once per rotation of the same circular arrangement), so divide by $n$ to get $\dfrac{n!}{n} = (n-1)!$. Equivalently, *fix one person's seat* to kill the rotational symmetry and arrange the remaining $n-1$ people in $(n-1)!$ ways. For example, $6$ people around a table give $(6-1)! = 5! = 120$ distinct seatings.
+
+## Combinations
+
+<!-- section: combinations -->
+
+A **combination** is an unordered selection. The number of ways to choose k items from n distinct items, where order does not matter, is the **binomial coefficient** (or combination) 
+
+$$\binom{n}{k} = \frac{n!}{k!(n-k)!} = \frac{n (n-1) \cdots (n-k+1)}{k!}.$$
+
+This is defined for integers $0 \le k \le n$; outside that range we take $\binom{n}{k} = 0$ (you cannot choose more items than you have, and you cannot choose a negative number). Why the $k!$ in the denominator? First count *ordered* selections, $P(n,k) = \dfrac{n!}{(n-k)!}$, then notice that each unordered group of $k$ items was counted $k!$ times (once per ordering of those same $k$ items), so divide by $k!$.
+
+Key identity: $\binom{n}{k} = \binom{n}{n-k}$ (choosing who is *in* is the same as choosing who is *out*).
+
+Combinations appear when we care only about the group, not roles inside it.
+
+**ELI5**
+
+- Combination: "how many different teams of 5 can I pick from 12 players?" — the team is the same set regardless of who is captain on Tuesday.
+- Contrast with permutations: if the 5 then get assigned distinct jerseys 1-5, multiply by 5! to get P(12,5).
+
+### Worked Examples
+
+**Basic combination**
+
+How many committees of 3 can be chosen from 8 people (no roles, order irrelevant)?
+
+- Step 1 — order does not matter, so use $\binom{8}{3}$.
+- Step 2 — $\binom{8}{3} = \dfrac{8 \times 7 \times 6}{3!} = \dfrac{336}{6} = 56$.
+- Sanity check via the symmetry identity: $\binom{8}{3} = \binom{8}{5}$, and choosing the 3 who serve is the same as choosing the 5 who don't. ✓
+
+**Committee selection with constraints**
+
+From 7 men and 5 women (12 people total), form a committee of 4.
+
+- Total committees, no constraint: $\binom{12}{4} = \dfrac{12 \times 11 \times 10 \times 9}{4!} = \dfrac{11880}{24} = 495$.
+- All-male committees: pick all 4 from the 7 men: $\binom{7}{4} = \dfrac{7 \times 6 \times 5 \times 4}{24} = 35$.
+- Exactly 2 women: this is an "AND" — choose 2 of the 5 women **and** choose the remaining 2 of the 4 members from the 7 men, so multiply (product rule): $\binom{5}{2} \times \binom{7}{2} = 10 \times 21 = 210$.
+
+Sanity check on the last one: $210 < 495$, as it must be, since committees with exactly 2 women are only a slice of all committees. ✓
+
+## Binomial Coefficients and the Binomial Theorem
+
+<!-- section: binomial -->
+
+The **binomial theorem** (valid for any real or complex $x, y$ and any non-negative integer $n$):
+
+$$(x + y)^n = \sum_{k=0}^n \binom{n}{k} x^{n-k} y^k.$$
+
+Why the coefficients are binomial coefficients: expanding $(x+y)^n = \underbrace{(x+y)(x+y)\cdots(x+y)}_{n \text{ factors}}$ means picking either $x$ or $y$ from each factor. The term $x^{n-k}y^k$ arises exactly once for each way to choose which $k$ of the $n$ factors contribute a $y$ — and there are $\binom{n}{k}$ such choices. So each term's coefficient counts the ways to pick the $y$'s (equivalently the $x$'s) in the expansion.
+
+Pascal's identity: $\binom{n}{k} = \binom{n-1}{k} + \binom{n-1}{k-1}$.
+
+This generates Pascal's triangle, where each entry is sum of the two above it.
+
+Other useful identities: $\sum_{k=0}^n \binom{n}{k} = 2^n$ (total subsets), $\binom{n}{k} = \frac{n}{k} \binom{n-1}{k-1}$.
+
+**ELI5**
+
+- Binomial coefficients count paths through a grid (right and down moves), subsets, and the ways terms multiply in (x+y) multiplied n times.
+- Pascal's triangle is a beautiful number pyramid where every number is the sum of the two parents — and it secretly counts everything from coin flips to committee choices.
+
+### Worked Examples
+
+**Coefficient extraction**
+
+Find the coefficient of $x^3 y^2$ in $(x+y)^5$.
+
+- Step 1 — match the general term $\binom{5}{k} x^{5-k} y^k$ to $x^3 y^2$: we need $k = 2$ (the exponent on $y$), which also gives $x^{5-2} = x^3$. ✓
+- Step 2 — the coefficient is $\binom{5}{2} = \dfrac{5 \times 4}{2} = 10$. Equivalently $\binom{5}{3} = 10$ by the symmetry $\binom{n}{k} = \binom{n}{n-k}$ (choose the 3 factors giving $x$, or the 2 giving $y$).
+
+**Verifying an identity numerically**
+
+Set $x = 2$, $y = 1$, $n = 4$; the theorem should reproduce $(2+1)^4 = 3^4 = 81$.
+
+- Term-by-term: $\binom{4}{0}2^4 + \binom{4}{1}2^3 + \binom{4}{2}2^2 + \binom{4}{3}2^1 + \binom{4}{4}2^0$.
+- Substitute the coefficients $1, 4, 6, 4, 1$: $1\cdot 16 + 4\cdot 8 + 6\cdot 4 + 4\cdot 2 + 1\cdot 1 = 16 + 32 + 24 + 8 + 1 = 81$. ✓
+
+**The subset-count identity**
+
+Setting $x = y = 1$ collapses the theorem to $\sum_{k=0}^{n} \binom{n}{k} = (1+1)^n = 2^n$. This says the total number of subsets of an $n$-element set is $2^n$: grouping subsets by their size $k$, there are $\binom{n}{k}$ of each size, and summing over all sizes must recover every subset. For $n = 3$: $\binom{3}{0} + \binom{3}{1} + \binom{3}{2} + \binom{3}{3} = 1 + 3 + 3 + 1 = 8 = 2^3$. ✓
+
+## The Pigeonhole Principle
+
+<!-- section: pigeonhole -->
+
+The **pigeonhole principle** (Dirichlet principle): If $n$ objects are placed into $m$ boxes and $n > m$, then at least one box contains more than one object. Contrapositive intuition: if *every* box had at most one object, the total would be at most $m$, contradicting $n > m$.
+
+Generalized form: if $n$ pigeons go into $m$ holes, then at least one hole contains at least $\left\lceil \dfrac{n}{m} \right\rceil$ pigeons (the ceiling, i.e. round up). Reason: if every hole had at most $\lceil n/m \rceil - 1$ pigeons, the total would fall short of $n$.
+
+Turned around, to *guarantee* at least $k$ pigeons in some one hole you need at least $(k-1)\times m + 1$ pigeons: the worst case spreads $k-1$ into each of the $m$ holes ($(k-1)m$ pigeons, no hole yet at $k$), and one more pigeon then forces some hole up to $k$.
+
+It is an "existence proof" tool: you prove something must exist without constructing it.
+
+**ELI5**
+
+- With only 12 months, you need 13 people to guarantee at least two share a birth month — you don't need to look at names, pure counting forces it.
+- Grabbing socks in the dark: with only 2 colors in the drawer, any 3 socks you pull must include a matching pair — 3 socks into 2 color-boxes leaves no way to keep them all different.
+
+### Worked Examples
+
+**Guarantee at least 3 in one hole**
+
+There are $m = 4$ holes. How many pigeons force some hole to hold at least $k = 3$?
+
+- Step 1 — worst case: put $k - 1 = 2$ pigeons in every hole. That is $2 \times 4 = 8$ pigeons, and no hole has reached 3 yet.
+- Step 2 — one more pigeon (the 9th) must land in some already-full-of-2 hole, pushing it to 3.
+- Answer: $(k-1)m + 1 = 2\times 4 + 1 = 9$ pigeons. (Note this is the *guaranteed* threshold; with 8 or fewer it is possible to avoid any triple.)
+
+**Guarantee a shared birthday (simplified)**
+
+Ignoring leap years there are $365$ possible birthdays (the "holes").
+
+- To guarantee two people share a birthday, treat people as pigeons and days as holes with $m = 365$, $k = 2$: need $(2-1)\times 365 + 1 = 366$ people. Worst case, the first 365 all have distinct days; the 366th must collide.
+- To guarantee at least $3$ people share some one day ($k = 3$): need $(3-1)\times 365 + 1 = 730 + 1 = 731$ people.
+
+Caution: this is *guaranteeing* a collision with certainty — a very different question from the famous "birthday problem," which only asks when a collision becomes more likely than not (that happens at just 23 people).
+
+**Ramsey's small case**
+
+In any group of 6 people, there are always either 3 who are mutual friends or 3 who are mutual strangers ($R(3,3) = 6$). Sketch: fix one person $P$; among the other 5, each is either a friend or a stranger of $P$, so by pigeonhole ($5$ people into $2$ categories) at least $\lceil 5/2 \rceil = 3$ fall in the same category — say 3 friends of $P$. If any two of those 3 are friends of each other, they plus $P$ form 3 mutual friends; if none of them are, those 3 are mutual strangers. Either way we get a monochromatic triangle.
+
+## Inclusion-Exclusion Principle
+
+<!-- section: inclusion -->
+
+The inclusion-exclusion principle gives the exact count for the union of sets when there are overlaps:
+
+For two sets: |A ∪ B| = |A| + |B| - |A ∩ B|
+
+For three: |A ∪ B ∪ C| = |A| + |B| + |C| - |A∩B| - |A∩C| - |B∩C| + |A∩B∩C|
+
+In general, alternate signs: add singles, subtract pairwise intersections, add triple, subtract quadruples, etc.
+
+It is derived by counting how many times each element is overcounted in the naive sum.
+
+**ELI5**
+
+- When you add "people who like cats" + "people who like dogs", the cat-dog lovers were counted twice, so subtract them once to correct.
+- For three clubs, the triple-overlap people were added 3 times then subtracted 3 times → net 0, but they belong in the union once, so add them back at the end.
+
+### Worked Examples
+
+**Survey problem (two sets)**
+
+Among 30 students, 18 read novel A, 12 read novel B, and 5 read both.
+
+- Step 1 — at least one: $|A \cup B| = |A| + |B| - |A \cap B| = 18 + 12 - 5 = 25$. We subtract the 5 "both" readers once because they were counted inside the 18 *and* inside the 12.
+- Step 2 — neither: everyone else, $30 - 25 = 5$.
+- Sanity check by parts: only A $= 18 - 5 = 13$, only B $= 12 - 5 = 7$, both $= 5$, neither $= 5$; total $13 + 7 + 5 + 5 = 30$. ✓
+
+**Three sets**
+
+Given $|A| = 20$, $|B| = 15$, $|C| = 10$; $|A \cap B| = 5$, $|A \cap C| = 4$, $|B \cap C| = 3$; and $|A \cap B \cap C| = 2$.
+
+- Step 1 — add the singles: $20 + 15 + 10 = 45$.
+- Step 2 — subtract the pairwise overlaps (each was counted twice): $45 - (5 + 4 + 3) = 45 - 12 = 33$.
+- Step 3 — add back the triple overlap: elements in all three sets were added 3 times in Step 1 and subtracted 3 times in Step 2, netting to 0, so we must add them once: $33 + 2 = 35$.
+- Result: $|A \cup B \cup C| = 35$.
+
+Sanity check: the union cannot exceed the sum of the parts, and indeed $35 \le 45$; nor can it be smaller than the largest single set, and $35 \ge 20$. ✓
+
+## Common Mistakes
+
+- Using n! for permutations when items are not distinct — always divide by the repeats.
+- Confusing P(n,k) (order matters) with C(n,k) (order irrelevant). Ask: "does the arrangement/assignment matter?"
+- Forgetting that $0! = 1$ (empty product) and $\binom{n}{0} = 1$.
+- Applying pigeonhole without the "+1" for the guarantee (the worst-case +1).
+- In inclusion-exclusion, messing up the sign pattern or forgetting the triple intersections get added back.
+- Computing $\binom{n}{k}$ with $k > n$ or $k < 0$ (taken as $0$ by convention, not a positive count).
+- Assuming all outcomes equally likely when using counting for probability — only true in uniform spaces.
+- For circular arrangements, forgetting to divide by n (or fix one position) and overcounting rotations.

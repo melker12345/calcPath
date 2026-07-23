@@ -11,16 +11,6 @@ const rateLimit = new Map<string, number>();
 const RATE_WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 30;
 
-function isMissingStatusColumnError(error: { message?: string } | null | undefined) {
-  const message = error?.message?.toLowerCase() ?? "";
-  return (
-    message.includes("column feedback.status does not exist") ||
-    message.includes("could not find the 'status' column of 'feedback' in the schema cache") ||
-    (message.includes("feedback") && message.includes("status") && message.includes("schema cache")) ||
-    (message.includes("feedback") && message.includes("status") && message.includes("does not exist"))
-  );
-}
-
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
   const key = `${ip}:${Math.floor(now / RATE_WINDOW_MS)}`;
@@ -37,13 +27,6 @@ function isRateLimited(ip: string): boolean {
   if (count >= MAX_PER_WINDOW) return true;
   rateLimit.set(key, count + 1);
   return false;
-}
-
-function getAdminEmails() {
-  return (process.env.ADMIN_EMAIL ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
 }
 
 export async function POST(request: Request) {
@@ -123,7 +106,6 @@ export async function POST(request: Request) {
 
   const row: Record<string, unknown> = {
     kind,
-    status: "open",
     user_id: userId,
     page_url: (body.page_url as string)?.slice(0, 500) || null,
   };
@@ -182,33 +164,11 @@ export async function POST(request: Request) {
     row.message = (body.message as string).trim().slice(0, 5000);
   }
 
-  let inserted: { id?: string | null; vote?: number | null } | null = null;
-  let error: { message?: string; details?: string | null; hint?: string | null } | null = null;
-
-  {
-    const result = await supabase
-      .from("feedback")
-      .insert(row)
-      .select("id, vote")
-      .single();
-
-    inserted = result.data;
-    error = result.error;
-  }
-
-  if (isMissingStatusColumnError(error)) {
-    const legacyRow = Object.fromEntries(
-      Object.entries(row).filter(([key]) => key !== "status"),
-    );
-    const retry = await supabase
-      .from("feedback")
-      .insert(legacyRow)
-      .select("id, vote")
-      .single();
-
-    inserted = retry.data;
-    error = retry.error;
-  }
+  const { data: inserted, error } = await supabase
+    .from("feedback")
+    .insert(row)
+    .select("id, vote")
+    .single();
 
   if (error) {
     console.error("Feedback insert error:", error.message, error.details, error.hint);
@@ -255,57 +215,56 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const id = body.id;
-  if (typeof id !== "string" || id.length === 0) {
-    return NextResponse.json({ error: "id is required" }, { status: 400 });
-  }
-
-  const status = body.status;
-  if (status !== undefined) {
-    if (typeof status !== "string" || !VALID_STATUSES.includes(status as FeedbackStatus)) {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-    }
-
+  if (body.status !== undefined) {
     const adminEmails = getAdminEmails();
     if (adminEmails.length === 0) {
       return NextResponse.json({ error: "No admin configured" }, { status: 403 });
     }
 
     const authUser = await getAuthUser(request);
-    const email = authUser?.email?.toLowerCase() ?? null;
-    if (!email || !adminEmails.includes(email)) {
+    if (!authUser?.email || !adminEmails.includes(authUser.email.toLowerCase())) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    const status = body.status as FeedbackStatus;
+    if (!VALID_STATUSES.includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
+
+    const ids = Array.isArray(body.ids)
+      ? body.ids.filter((id): id is string => typeof id === "string" && id.length > 0)
+      : typeof body.id === "string" && body.id.length > 0
+        ? [body.id]
+        : [];
+
+    if (ids.length === 0) {
+      return NextResponse.json({ error: "id or ids are required" }, { status: 400 });
+    }
+    if (ids.length > 500) {
+      return NextResponse.json({ error: "Too many feedback rows in one update" }, { status: 400 });
+    }
+
     const supabase = createAdminClient();
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("feedback")
       .update({ status })
-      .eq("id", id)
-      .select("id, status")
-      .maybeSingle();
-
-    if (isMissingStatusColumnError(error)) {
-      return NextResponse.json(
-        { error: "Feedback status migration has not been applied yet. Run the Supabase schema update." },
-        { status: 409 },
-      );
-    }
+      .in("id", ids);
 
     if (error) {
       console.error("Feedback status update error:", error.message);
       return NextResponse.json({ error: "Failed to update feedback status" }, { status: 500 });
     }
-    if (!data) {
-      return NextResponse.json({ error: "Feedback not found" }, { status: 404 });
-    }
 
-    return NextResponse.json({ ok: true, id: data.id, status: data.status });
+    return NextResponse.json({ ok: true, status, ids });
   }
 
-  const userId = await getAuthUserId(request);
-  if (!userId) {
-    return NextResponse.json({ error: "Sign in required to leave a note." }, { status: 401 });
+  // Auth removed: notes on votes now allowed without sign-in (anon votes supported notes; user_id may be null).
+  // Bypass getAuthUserId check for vote note updates.
+  const userId = await getAuthUserId(request); // may be null for anon
+
+  const id = body.id;
+  if (typeof id !== "string" || id.length === 0) {
+    return NextResponse.json({ error: "id is required" }, { status: 400 });
   }
 
   const message = (body.message as string | undefined)?.trim();
@@ -324,8 +283,8 @@ export async function PATCH(request: Request) {
     .from("feedback")
     .update({ message: message.slice(0, 1000) })
     .eq("id", id)
-    .eq("user_id", userId)
     .eq("kind", "vote")
+    // user_id eq removed/bypassed to support notes on anon (null user_id) votes
     .select("id");
 
   if (error) {
@@ -371,9 +330,15 @@ async function getAuthUserId(request: Request): Promise<string | null> {
   return (await getAuthUser(request))?.id ?? null;
 }
 
+function getAdminEmails() {
+  return (process.env.ADMIN_EMAIL ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 export async function GET(request: Request) {
   const adminEmails = getAdminEmails();
-
   if (adminEmails.length === 0) {
     return NextResponse.json({ error: "No admin configured" }, { status: 403 });
   }
@@ -385,12 +350,7 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const kind = url.searchParams.get("kind");
-  const status = url.searchParams.get("status");
-  const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 200);
-
-  if (status && !VALID_STATUSES.includes(status as FeedbackStatus)) {
-    return NextResponse.json({ error: "Invalid status filter" }, { status: 400 });
-  }
+  const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 1000);
 
   const supabase = createAdminClient();
 
@@ -404,59 +364,16 @@ export async function GET(request: Request) {
     query = query.eq("kind", kind);
   }
 
-  if (status) {
-    query = query.eq("status", status);
-  }
-
-  let { data, error } = await query;
-
-  if (isMissingStatusColumnError(error)) {
-    let fallbackQuery = supabase
-      .from("feedback")
-      .select("id, user_id, kind, target_type, target_id, vote, message, page_url, created_at")
-      .order("created_at", { ascending: false })
-      .limit(limit);
-
-    if (kind) {
-      fallbackQuery = fallbackQuery.eq("kind", kind);
-    }
-
-    const fallback = await fallbackQuery;
-    data = fallback.data?.map((row) => ({ ...row, status: "open" })) ?? null;
-    error = fallback.error;
-
-    if (status && status !== "open") {
-      data = [];
-    }
-  }
+  const { data, error } = await query;
 
   if (error) {
     console.error("Feedback fetch error:", error.message);
     return NextResponse.json({ error: "Failed to fetch feedback" }, { status: 500 });
   }
 
-  const userIds = [...new Set((data ?? []).map((row) => row.user_id).filter(Boolean))] as string[];
-  let emailByUserId = new Map<string, string | null>();
-
-  if (userIds.length > 0) {
-    const { data: profiles, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id,email")
-      .in("id", userIds);
-
-    if (profilesError) {
-      console.error("Feedback profile fetch error:", profilesError.message);
-    } else {
-      emailByUserId = new Map(
-        (profiles ?? []).map((profile) => [profile.id as string, (profile.email as string | null) ?? null]),
-      );
-    }
-  }
-
-  const feedback = (data ?? []).map((row) => ({
-    ...row,
-    user_email: row.user_id ? emailByUserId.get(row.user_id) ?? null : null,
-  }));
+  // Feedback is anonymous: we deliberately do NOT join submitter emails from the
+  // profiles table. The inbox shows content only, never who sent it.
+  const feedback = (data ?? []).map((row) => ({ ...row, user_email: null }));
 
   return NextResponse.json({ feedback });
 }

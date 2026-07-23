@@ -1,3 +1,5 @@
+import type { DiagnosticResult } from "@/lib/diagnostics";
+
 export type Attempt = {
   problemId: string;
   topicId: string;
@@ -12,8 +14,18 @@ export type StreakStats = {
   lastCompletionDate?: string;
 };
 
-export type TestResult = {
+export type TestTopicScore = {
   topicId: string;
+  correct: number;
+  total: number;
+};
+
+export type TestResult = {
+  /** Identifies which test was taken (defaults to topicId for single-topic tests). */
+  testId: string;
+  topicId: string;
+  /** Per-topic breakdown within the test, e.g. limits 3/5. */
+  topicScores: TestTopicScore[];
   score: number;
   total: number;
   percentage: number;
@@ -25,8 +37,11 @@ export type ProgressState = {
   attempts: Attempt[];
   attemptedProblemIds: string[];
   completedProblemIds: string[];
+  completedModuleIds: string[];
+  moduleCompletions: Record<string, string>;
   topicStats: Record<string, { solved: number; correct: number }>;
   testResults: TestResult[];
+  diagnostics: DiagnosticResult[];
   streak: StreakStats;
 };
 
@@ -34,17 +49,45 @@ export const createEmptyProgress = (): ProgressState => ({
   attempts: [],
   attemptedProblemIds: [],
   completedProblemIds: [],
+  completedModuleIds: [],
+  moduleCompletions: {},
   topicStats: {},
   testResults: [],
+  diagnostics: [],
   streak: { current: 0, longest: 0 },
 });
+
+export const normalizeTestResult = (input: Partial<TestResult> & Pick<TestResult, "topicId" | "score" | "total" | "percentage" | "timeSeconds" | "completedAt">): TestResult => {
+  const topicScores =
+    input.topicScores ??
+    [{ topicId: input.topicId, correct: input.score, total: input.total }];
+  return {
+    testId: input.testId ?? input.topicId,
+    topicId: input.topicId,
+    topicScores,
+    score: input.score,
+    total: input.total,
+    percentage: input.percentage,
+    timeSeconds: input.timeSeconds,
+    completedAt: input.completedAt,
+  };
+};
 
 export const recordTestResult = (
   state: ProgressState,
   result: TestResult,
 ): ProgressState => {
-  const testResults = [result, ...state.testResults].slice(0, 100);
+  const normalized = normalizeTestResult(result);
+  const testResults = [normalized, ...state.testResults].slice(0, 100);
   return { ...state, testResults };
+};
+
+export const recordDiagnosticResult = (
+  state: ProgressState,
+  result: DiagnosticResult,
+): ProgressState => {
+  const diagnostics = [result, ...state.diagnostics].slice(0, 25);
+  return { ...state, diagnostics };
 };
 
 export const getTopicTestStats = (state: ProgressState, topicId: string) => {
@@ -106,15 +149,25 @@ export const normalizeProgressState = (
   const empty = createEmptyProgress();
   if (!input) return empty;
   const attempts = Array.isArray(input.attempts) ? input.attempts : empty.attempts;
-  const testResults = Array.isArray(input.testResults) ? input.testResults : empty.testResults;
+  const testResults = Array.isArray(input.testResults)
+    ? input.testResults.map((result) =>
+        normalizeTestResult(result as TestResult),
+      )
+    : empty.testResults;
+  const diagnostics = Array.isArray(input.diagnostics) ? input.diagnostics : empty.diagnostics;
   if (attempts.length > 0) {
     const derived = rebuildDerivedFields(attempts);
     return {
       attempts,
       attemptedProblemIds: derived.attemptedProblemIds,
       completedProblemIds: derived.completedProblemIds,
+      completedModuleIds: Array.isArray(input.completedModuleIds)
+        ? input.completedModuleIds
+        : empty.completedModuleIds,
+      moduleCompletions: input.moduleCompletions ?? empty.moduleCompletions,
       topicStats: derived.topicStats,
       testResults,
+      diagnostics,
       streak: derived.streak,
     };
   }
@@ -126,8 +179,13 @@ export const normalizeProgressState = (
     completedProblemIds: Array.isArray(input.completedProblemIds)
       ? input.completedProblemIds
       : empty.completedProblemIds,
+    completedModuleIds: Array.isArray(input.completedModuleIds)
+      ? input.completedModuleIds
+      : empty.completedModuleIds,
+    moduleCompletions: input.moduleCompletions ?? empty.moduleCompletions,
     topicStats: input.topicStats ?? empty.topicStats,
     testResults,
+    diagnostics,
     streak: input.streak ?? empty.streak,
   };
 };
@@ -219,8 +277,11 @@ export const recordAttempt = (
     attempts,
     attemptedProblemIds,
     completedProblemIds,
+    completedModuleIds: state.completedModuleIds,
+    moduleCompletions: state.moduleCompletions,
     topicStats,
     testResults: state.testResults,
+    diagnostics: state.diagnostics,
     streak,
   };
 };
@@ -243,7 +304,15 @@ export const getTopicProgress = (
 
 /**
  * Get practice-only progress for a topic (excludes test questions)
- * This filters attempts to only count practice problem IDs (not test-* IDs)
+ * This filters attempts to only count practice problem IDs (not test-* IDs).
+ *
+ * Fully compatible with (and driven by) the new data-driven content model:
+ * - Pass `practiceProblems` directly from FileSystemContentBundle.problems (loaded via
+ *   getFileSystemContentBundle() from content/[star]/topics/[star]/questions.json) or legacy sources.
+ * - Uses ONLY the stable `id` + `topicId` values (preserved 1:1 during content ports).
+ * - The empty-topic guard (totalProblems > 0) ensures scaffolded/not-yet-ported topics
+ *   for the data-driven routes (generics now primary for main /[subject] practice) never falsely report as "mastered".
+ * - No dependency on legacy *-content.ts structures.
  */
 export const getPracticeProgress = (
   state: ProgressState,
@@ -282,5 +351,79 @@ export const getPracticeProgress = (
     // Require at least one problem in the topic so that an empty topic
     // (e.g. scaffolded but not yet populated) never reports as mastered.
     isComplete: totalProblems > 0 && correct >= totalProblems,
+  };
+};
+
+/**
+ * Chapter completion = how many questions the user has DONE (attempted) for a
+ * topic, counting both practice questions and recap/topic-test questions, over
+ * the total available (practice pool + test pool).
+ *
+ * topicStats[topicId].solved tracks unique attempted problems per topic across
+ * every flow (practice and isTest attempts both call recordAttempt), so it is
+ * the right "questions done" numerator. Pass testTotal = size of the topic's
+ * recap-test pool (0 when the subject has no tests).
+ */
+export const getChapterCompletion = (
+  state: ProgressState,
+  topicId: string,
+  practiceProblems: Array<{ id: string; topicId: string }>,
+  testTotal = 0,
+) => {
+  const practiceTotal = practiceProblems.filter((p) => p.topicId === topicId).length;
+  const total = practiceTotal + testTotal;
+  // Cap against total so questions removed from the pool can't push past 100%.
+  const done = Math.min(state.topicStats[topicId]?.solved ?? 0, total);
+  const pct = total === 0 ? 0 : Math.min(100, Math.round((done / total) * 100));
+  return {
+    done,
+    total,
+    pct,
+    started: done > 0,
+    isComplete: total > 0 && done >= total,
+  };
+};
+
+/**
+ * Get practice progress for a specific section within a topic.
+ * This allows showing per-section (e.g. "The Squeeze Theorem") question counts and user progress.
+ *
+ * Compatible with data-driven content:
+ * - `practiceProblems` can come from content/ questions.json (via loader bundles) or legacy.
+ * - Relies on exact `section` slug match between passed problems and module metadata (invariant
+ *   documented in schema.ts and content/ARCHITECTURE.md; used by dashboard + deep links).
+ * - Stable problem `id`s ensure progress recorded in the primary generic practice flows (for main data-driven routes) is visible here.
+ */
+export const getSectionPracticeProgress = (
+  state: ProgressState,
+  topicId: string,
+  section: string,
+  practiceProblems: Array<{ id: string; topicId: string; section?: string }>,
+) => {
+  const sectionProblems = practiceProblems.filter(
+    (p) => p.topicId === topicId && p.section === section
+  );
+
+  const sectionIds = new Set(sectionProblems.map((p) => p.id));
+  const total = sectionIds.size;
+
+  const attemptedInSection = state.attemptedProblemIds.filter((id) => sectionIds.has(id));
+  const completedInSection = state.completedProblemIds.filter((id) => sectionIds.has(id));
+
+  const attempted = attemptedInSection.length;
+  const correct = completedInSection.length;
+
+  const attemptedRate = total === 0 ? 0 : Math.min(100, (attempted / total) * 100);
+  const masteryRate = total === 0 ? 0 : Math.min(100, (correct / total) * 100);
+  const accuracyRate = attempted === 0 ? 0 : Math.round((correct / attempted) * 100);
+
+  return {
+    attempted,
+    correct,
+    total,
+    attemptedRate,
+    masteryRate,
+    accuracyRate,
+    isComplete: total > 0 && correct >= total,
   };
 };

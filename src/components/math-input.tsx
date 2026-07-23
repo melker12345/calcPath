@@ -2,12 +2,13 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTheme } from "next-themes";
 import { Scratchpad } from "@/components/scratchpad";
 import { deriveSuggestionLabels, type QuestionContext } from "@/lib/math-input-helpers";
 
 let stylesInjected = false;
 
-type Subject = "calculus" | "linalg" | "stats";
+type Subject = "calculus" | "linalg" | "stats" | "generic";
 
 const SUBJECT_THEME: Record<Subject, {
   pillBg: string; pillBorder: string; pillText: string;
@@ -19,31 +20,43 @@ const SUBJECT_THEME: Record<Subject, {
   keypadBg: string; numBg: string; numText: string; numShadow: string;
 }> = {
   calculus: {
-    pillBg: "#ede9fe", pillBorder: "#c4b5fd", pillText: "#7c3aed",
-    opBg: "#ede9fe", opText: "#18181b", parenColor: "#7c3aed",
-    opSolidBg: "#6366f1",
-    containerBg: "#f4f4f5", containerBorder: "#e4e4e7",
+    pillBg: "#f1f5f9", pillBorder: "#cbd5e1", pillText: "#334155",
+    opBg: "#f1f5f9", opText: "#0f172a", parenColor: "#334155",
+    opSolidBg: "#334155",
+    containerBg: "#f8fafc", containerBorder: "#e2e8f0",
     headerBg: "#ffffff", labelColor: "#a1a1aa", dividerColor: "#e4e4e7",
     fieldAreaBg: "#ffffff", fieldInnerBg: "#f8fafc", fieldBorder: "#e4e4e7",
     keypadBg: "#f4f4f5", numBg: "#ffffff", numText: "#18181b", numShadow: "0 1px 3px rgba(0,0,0,0.08)",
   },
   linalg: {
-    pillBg: "rgba(51,114,162,0.14)", pillBorder: "rgba(51,114,162,0.35)", pillText: "#5b9bd5",
-    opBg: "rgba(51,114,162,0.22)", opText: "#e2e8f0", parenColor: "#5b9bd5",
-    opSolidBg: "#3372A2",
-    containerBg: "#0d1b2a", containerBorder: "rgba(51,114,162,0.32)",
-    headerBg: "#0d1b2a", labelColor: "rgba(226,232,240,0.45)", dividerColor: "rgba(51,114,162,0.22)",
-    fieldAreaBg: "#0d1b2a", fieldInnerBg: "rgba(255,255,255,0.06)", fieldBorder: "rgba(51,114,162,0.28)",
-    keypadBg: "#0a1520", numBg: "rgba(255,255,255,0.07)", numText: "#e2e8f0", numShadow: "none",
+    pillBg: "#f1f5f9", pillBorder: "#cbd5e1", pillText: "#334155",
+    opBg: "#f1f5f9", opText: "#0f172a", parenColor: "#334155",
+    opSolidBg: "#334155",
+    containerBg: "#f8fafc", containerBorder: "#e2e8f0",
+    headerBg: "#ffffff", labelColor: "#a1a1aa", dividerColor: "#e4e4e7",
+    fieldAreaBg: "#ffffff", fieldInnerBg: "#f8fafc", fieldBorder: "#e4e4e7",
+    keypadBg: "#f4f4f5", numBg: "#ffffff", numText: "#18181b", numShadow: "0 1px 3px rgba(0,0,0,0.08)",
   },
   stats: {
-    pillBg: "rgba(253,230,138,0.16)", pillBorder: "rgba(253,230,138,0.4)", pillText: "#d97706",
-    opBg: "rgba(253,230,138,0.18)", opText: "#e8e4d9", parenColor: "#d97706",
-    opSolidBg: "#d97706",
-    containerBg: "#161e14", containerBorder: "rgba(253,230,138,0.22)",
-    headerBg: "#161e14", labelColor: "rgba(232,228,217,0.45)", dividerColor: "rgba(253,230,138,0.15)",
-    fieldAreaBg: "#161e14", fieldInnerBg: "rgba(255,255,255,0.06)", fieldBorder: "rgba(253,230,138,0.2)",
-    keypadBg: "#111810", numBg: "rgba(255,255,255,0.07)", numText: "#e8e4d9", numShadow: "none",
+    pillBg: "#f1f5f9", pillBorder: "#cbd5e1", pillText: "#334155",
+    opBg: "#f1f5f9", opText: "#0f172a", parenColor: "#334155",
+    opSolidBg: "#334155",
+    containerBg: "#f8fafc", containerBorder: "#e2e8f0",
+    headerBg: "#ffffff", labelColor: "#a1a1aa", dividerColor: "#e4e4e7",
+    fieldAreaBg: "#ffffff", fieldInnerBg: "#f8fafc", fieldBorder: "#e4e4e7",
+    keypadBg: "#f4f4f5", numBg: "#ffffff", numText: "#18181b", numShadow: "0 1px 3px rgba(0,0,0,0.08)",
+  },
+  generic: {
+    // Neutral fallback for the data-driven dynamic routes (primary for main /[subject] + future subjects).
+    // Uses CSS vars so it is always design-token aligned, dark-mode friendly,
+    // and resolves to correct light values on initial SSR (no theme flash on fast nav).
+    pillBg: "var(--surface-2)", pillBorder: "var(--border)", pillText: "var(--text-secondary)",
+    opBg: "var(--surface-2)", opText: "var(--text-secondary)", parenColor: "var(--text-muted)",
+    opSolidBg: "var(--accent)",
+    containerBg: "var(--surface)", containerBorder: "var(--border)",
+    headerBg: "var(--surface)", labelColor: "var(--text-muted)", dividerColor: "var(--border)",
+    fieldAreaBg: "var(--surface)", fieldInnerBg: "var(--bg)", fieldBorder: "var(--border)",
+    keypadBg: "var(--surface)", numBg: "var(--surface-2)", numText: "var(--text-primary)", numShadow: "none",
   },
 };
 
@@ -93,6 +106,21 @@ function deriveKeys(
       case "a":
       case "z":
       case "p":
+      case "s":
+      case "r":
+      case "u":
+      case "v":
+      case "w":
+      case "k":
+      case "m":
+      case "h":
+      case "d":
+      case "f":
+      case "g":
+      case "l":
+      case "q":
+      case "c":
+      case "b":
       case "C":
       case "A":
       case "B":
@@ -157,6 +185,19 @@ function deriveKeys(
   });
 }
 
+/**
+ * MathInput — virtual keypad + react-mathquill LaTeX editor for free-response numeric answers.
+ *
+ * - subject="generic" (used by GenericPracticeExperience in the primary data-driven routes) now has
+ *   a hardened neutral var-based theme (light/dark friendly, matches app design tokens).
+ * - Style injection for MQ is robust (DOM-checked + tagging) to survive fast navigations and
+ *   remounts/HMR (or multi-bundle scenarios).
+ * - Suggestions derive improved via better questionContext fallbacks (benefits generic stats/linalg topics).
+ * - Full flow (direct typing in MQ field, all keypad buttons, scratchpad, submit, hint, feedback overlay)
+ *   works end-to-end for the primary /[subject]/practice routes with subject=generic.
+ *
+ * Used by legacy per-subject pages (calculus/stats/linalg) and the new generic practice.
+ */
 export function MathInput({
   value,
   onChange,
@@ -171,7 +212,43 @@ export function MathInput({
   onDismissOverlay,
   questionPrompt,
 }: MathInputProps) {
-  const th = SUBJECT_THEME[subject];
+  const { theme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const lightTh = SUBJECT_THEME[subject] ?? SUBJECT_THEME.calculus;
+
+  // Dark theme colors (GitHub-inspired + our accent system)
+  const darkTh = {
+    pillBg: "var(--surface-2)",
+    pillBorder: "var(--border)",
+    pillText: "var(--text-secondary)",
+    opBg: "var(--surface-2)",
+    opText: "var(--text-secondary)",
+    parenColor: "var(--text-muted)",
+    opSolidBg: "var(--accent)",
+    containerBg: "var(--surface)",
+    containerBorder: "var(--border)",
+    headerBg: "var(--surface)",
+    labelColor: "var(--text-muted)",
+    dividerColor: "var(--border)",
+    fieldAreaBg: "var(--surface)",
+    fieldInnerBg: "var(--bg)",
+    fieldBorder: "var(--border)",
+    keypadBg: "var(--surface)",
+    numBg: "var(--surface-2)",
+    numText: "var(--text-primary)",
+    numShadow: "none",
+  };
+
+  // Only trust the theme after mount to prevent hydration mismatch.
+  // On server / first client render we always use light values so the HTML matches.
+  const isDark = mounted && (resolvedTheme ?? theme) === "dark";
+  const th = isDark ? darkTh : lightTh;
+
   const mqRef = useRef<MQField | null>(null);
   const [scratchpadOpen, setScratchpadOpen] = useState(false);
   const scratchpadData = useRef<string | null>(null);
@@ -183,10 +260,36 @@ export function MathInput({
   }
 
   useEffect(() => {
+    if (typeof document === "undefined") return;
     if (stylesInjected) return;
+
+    // Robust detection for already-injected MQ styles (handles fast client navs,
+    // remounts in data-driven routes, HMR, or multi-bundle scenarios).
+    const hasMQStyles =
+      !!document.querySelector('style[data-mq]') ||
+      Array.from(document.getElementsByTagName("style")).some((s) => {
+        try {
+          return /mq-editable-field|\\.mq-/.test(s.textContent || "");
+        } catch {
+          return false;
+        }
+      });
+    if (hasMQStyles) {
+      stylesInjected = true;
+      return;
+    }
+
     import("react-mathquill").then((mod) => {
       mod.addStyles();
       stylesInjected = true;
+      // Tag the (likely last) injected stylesheet for future fast-path detection
+      const allStyles = document.getElementsByTagName("style");
+      if (allStyles.length > 0) {
+        const last = allStyles[allStyles.length - 1];
+        if (!last.dataset.mq && /mq-|mathquill/i.test(last.textContent || "")) {
+          last.dataset.mq = "injected";
+        }
+      }
     });
   }, []);
 
@@ -243,25 +346,27 @@ export function MathInput({
       {/* ── Header: label + draw + hint ── */}
       <div className="flex items-center justify-between px-4 pt-3 sm:px-5 sm:pt-4" style={{ background: th.headerBg }}>
         <p className="text-xs font-semibold sm:text-sm" style={{ color: th.labelColor }}>{placeholder}</p>
-        <div className="flex items-center gap-1.5">
-          {!feedbackOverlay && (
-            <button
-              type="button"
-              onClick={() => setScratchpadOpen(true)}
-              className="flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition active:scale-95 sm:px-3 sm:py-1 sm:text-sm"
-              style={{ borderColor: th.dividerColor, color: th.labelColor }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:h-3.5 sm:w-3.5">
-                <path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Z" />
-              </svg>
-              Draw
-            </button>
-          )}
-          {onHint && !feedbackOverlay && (
+        {/* Keep the action buttons mounted (just hidden) while feedback is shown
+            so the header height never changes between input and feedback states. */}
+        <div className={`flex items-center gap-1.5 ${feedbackOverlay ? "invisible" : ""}`} aria-hidden={feedbackOverlay ? true : undefined}>
+          <button
+            type="button"
+            onClick={() => setScratchpadOpen(true)}
+            tabIndex={feedbackOverlay ? -1 : undefined}
+            className="flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition active:scale-95 sm:px-3 sm:py-1 sm:text-sm"
+            style={{ borderColor: th.dividerColor, color: th.labelColor }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:h-3.5 sm:w-3.5">
+              <path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Z" />
+            </svg>
+            Draw
+          </button>
+          {onHint && (
             <button
               type="button"
               onClick={onHint}
               disabled={hintDisabled}
+              tabIndex={feedbackOverlay ? -1 : undefined}
               className="flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition active:scale-95 disabled:opacity-30 sm:px-3 sm:py-1 sm:text-sm"
               style={{ borderColor: th.dividerColor, color: th.labelColor }}
             >
@@ -317,7 +422,7 @@ export function MathInput({
               <button
                 type="button"
                 onClick={onDismissOverlay}
-                className="absolute right-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-zinc-500 shadow-sm backdrop-blur transition hover:bg-white hover:text-zinc-800 sm:right-3 sm:top-3 sm:h-8 sm:w-8"
+                className="absolute right-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-zinc-500 shadow-sm backdrop-blur transition hover:bg-white hover:text-zinc-800 dark:bg-[var(--surface-2)]/80 dark:text-[var(--text-muted)] dark:hover:bg-[var(--surface-2)] dark:hover:text-[var(--text-secondary)] sm:right-3 sm:top-3 sm:h-8 sm:w-8"
                 aria-label="Close"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>

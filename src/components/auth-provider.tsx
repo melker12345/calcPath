@@ -21,6 +21,20 @@ type AuthContextValue = {
   signOut: () => Promise<void>;
 };
 
+// Safe fallback returned by useAuth/useOptionalAuth when called outside an
+// AuthProvider. Many surfaces (public/anon pages) mount components that call
+// useAuth without a provider above them; those must degrade to "no user", not
+// throw. The real value below is used wherever AuthBoundary wraps the tree.
+const noAuthValue: AuthContextValue = {
+  user: null,
+  signUp: async () => ({}),
+  signInWithPassword: async () => ({}),
+  sendEmailOtp: async () => {},
+  sendPasswordReset: async () => ({}),
+  refreshProfile: async () => {},
+  signOut: async () => {},
+};
+
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 type DbProfileRow = {
@@ -59,7 +73,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .maybeSingle();
 
       if (error) {
-        // eslint-disable-next-line no-console
         console.warn("Failed to load profile:", error.message);
       }
 
@@ -177,10 +190,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
+// Non-throwing on purpose: outside an AuthProvider these return the no-op value
+// so anonymous surfaces keep working. Wrap admin/account trees in AuthBoundary
+// to get the real session-backed value.
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
-  return context;
+  return useContext(AuthContext) ?? noAuthValue;
+};
+
+export const useOptionalAuth = () => {
+  return useContext(AuthContext) ?? noAuthValue;
 };
