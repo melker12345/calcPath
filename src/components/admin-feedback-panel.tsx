@@ -109,6 +109,18 @@ function summarizeFeedbackTarget(fb: FeedbackRow): FeedbackTargetSummary {
     pagePath: routePath,
   });
 
+  if (fb.target_type === "site-version") {
+    return {
+      subjectLabel: null,
+      topicTitle: "Do you prefer the new version?",
+      questionNumber: null,
+      internalId: fb.target_id ?? null,
+      promptPreview: null,
+      routePath,
+      deepLink,
+    };
+  }
+
   if (fb.target_type === "problem") {
     const meta = getProblemMeta(fb.target_id);
     return {
@@ -151,6 +163,7 @@ function summarizeFeedbackTarget(fb: FeedbackRow): FeedbackTargetSummary {
 function targetTypeLabel(targetType: string | null) {
   if (targetType === "problem") return "Question";
   if (targetType === "section") return "Explanation";
+  if (targetType === "site-version") return "New version";
   return targetType;
 }
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getAvailableSubjectConfigs } from "@/lib/content/loader";
 import { LandingContent } from "@/components/landing-content";
+import { SiteUpdateModal } from "@/components/site-update-modal";
 
 export const metadata: Metadata = {
   title: "CalcPath",
@@ -71,6 +72,10 @@ export default async function Home() {
         subjectCount={subjectConfigs.length}
         topicCount={topicCount}
       />
+
+      {/* One-time "do you prefer the new version?" prompt — records a vote the
+          admin inbox tallies as +Yes / -No (target_type "site-version"). */}
+      <SiteUpdateModal />
     </div>
   );
 }
