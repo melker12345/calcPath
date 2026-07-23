@@ -54,12 +54,46 @@ type TrackPayload = {
   meta?: Record<string, unknown> | null;
 };
 
+// Whether to record this client's activity. Signed-in users are excluded from
+// metrics — and since the app has no public signup, the only accounts are
+// admins, so an auth session == admin. `null` means "not resolved yet"; we then
+// fall back to a synchronous localStorage probe so the very first pageview is
+// gated correctly before the async auth check completes.
+let trackingEnabled: boolean | null = null;
+
+function hasSupabaseSession(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("sb-") && key.endsWith("-auth-token")) {
+        const value = localStorage.getItem(key);
+        if (value && value.includes("access_token")) return true;
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return false;
+}
+
+/** Called by the auth watcher: disable tracking while a session is active. */
+export function setTrackingEnabled(enabled: boolean) {
+  trackingEnabled = enabled;
+}
+
+function isTrackingEnabled(): boolean {
+  if (trackingEnabled === null) trackingEnabled = !hasSupabaseSession();
+  return trackingEnabled;
+}
+
 /**
  * Low-level send to /api/track. Uses sendBeacon when `useBeacon` is set so the
  * request survives page unload (used for time-on-page). Always best-effort.
  */
 export function postTrack(payload: TrackPayload, useBeacon = false) {
   if (typeof window === "undefined") return;
+  if (!isTrackingEnabled()) return;
   const body = JSON.stringify({
     ...payload,
     visitor_id: getVisitorId(),

@@ -2,7 +2,8 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { postTrack } from "@/lib/analytics";
+import { postTrack, setTrackingEnabled } from "@/lib/analytics";
+import { supabase } from "@/lib/supabase/client";
 
 // Ignore absurd durations (tab left open for days) so they don't skew averages.
 const MAX_PAGE_MS = 1000 * 60 * 60 * 6;
@@ -16,6 +17,18 @@ export function AnalyticsTracker() {
   const pathname = usePathname();
   const startRef = useRef(0);
   const flushedRef = useRef(false);
+
+  // Exclude signed-in users (admins) from metrics. Keep the flag in sync with
+  // the auth session so it flips immediately on sign-in / sign-out.
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setTrackingEnabled(!data.session);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setTrackingEnabled(!session);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     startRef.current = Date.now();
