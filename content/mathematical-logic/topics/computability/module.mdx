@@ -25,7 +25,7 @@ A **Turing machine** consists of:
 - A head that reads/writes one cell and moves left or right.
 - A transition table: given current state and symbol read, what to write, which direction to move, and next state.
 
-A function $f:\mathbb{N}\to\mathbb{N}$ is **computable** (Turing-computable, recursive) if there is a TM that, started with input $n$ (in unary or binary), eventually halts with $f(n)$ on the tape.
+A function $f:\mathbb{N}\to\mathbb{N}$ is **computable** (Turing-computable, recursive) if there is a TM that, started with input $n$ (encoded on the tape, e.g. in unary or binary), eventually halts with $f(n)$ written on the tape. If $f$ is a **partial** function, the TM is required to halt with $f(n)$ exactly on those inputs $n$ where $f(n)$ is defined, and to run forever (or reject) where $f(n)$ is undefined. A function is **total computable** when it is computable and defined on all of $\mathbb{N}$, i.e. the machine halts on every input.
 
 **ELI5**
 
@@ -34,16 +34,40 @@ A function $f:\mathbb{N}\to\mathbb{N}$ is **computable** (Turing-computable, rec
 
 **Worked Example:**
 
-A TM that computes the successor function on unary numbers (tally marks): scan right until you find the first blank, write a 1, halt. This works for any input length.
+Let us fully specify a TM that computes the **successor function** on unary numbers, where the natural number $n$ is written as a block of $n$ ones (so $3$ is `111`) followed by blanks. Goal: turn the block of $n$ ones into a block of $n+1$ ones.
+
+Tape alphabet: $\{1, \sqcup\}$ ($\sqcup$ is blank). States: $q_{\text{start}}$ and the halting state $q_{\text{halt}}$. Transition table (reading `state, symbol` $\to$ `write, move, next state`):
+
+- $q_{\text{start}}, 1 \to 1, R, q_{\text{start}}$  (skip past a $1$, stay scanning)
+- $q_{\text{start}}, \sqcup \to 1, S, q_{\text{halt}}$  (found the end; write a $1$ and stop; $S$ = stay)
+
+Trace on input $n = 2$ (tape `11` with head at the leftmost cell):
+
+1. State $q_{\text{start}}$, read $1$: write $1$, move right. Tape `11`, head on cell 2.
+2. State $q_{\text{start}}$, read $1$: write $1$, move right. Tape `11`, head on cell 3 (blank).
+3. State $q_{\text{start}}$, read $\sqcup$: write $1$, halt. Tape `111`.
+
+Sanity check: the input `11` represented $2$ and the output `111` represents $3 = 2+1$. The machine scanned the whole block once, so it halts after $n+1$ steps for input $n$ — in particular it halts on **every** input, so the successor function is total computable. The same two-line table works for any $n$: there is no separate case per input length.
 
 ## Recursive Functions and Church-Turing Thesis
 
 <!-- section: recursive -->
 
-The class of **recursive functions** is the smallest class containing:
+Instead of describing a *machine*, the recursive-function approach builds computable functions *algebraically*: start from a few trivially-computable functions and only allow rules that manifestly preserve computability. Any function you can reach this way is computable, and (Church-Turing thesis below) every computable function can be reached.
 
-- Zero function, successor, projection functions (base).
-- Closed under composition, primitive recursion, and the $\mu$-operator (unbounded search / minimization).
+The class of **recursive functions** is the smallest class of functions on $\mathbb{N}$ containing the three **base functions**:
+
+- the **zero function** $Z(x) = 0$,
+- the **successor** $S(x) = x+1$,
+- the **projections** $P^n_i(x_1,\dots,x_n) = x_i$ (pick out the $i$-th of $n$ arguments),
+
+and closed under three construction rules:
+
+- **Composition:** plug functions into another function, $h(\vec{x}) = f(g_1(\vec{x}),\dots,g_k(\vec{x}))$.
+- **Primitive recursion:** define $f$ by a base case and a step that may reuse the previous value, $f(\vec{x},0)=g(\vec{x})$ and $f(\vec{x},y+1)=h(\vec{x},y,f(\vec{x},y))$. The recursion depth $y$ is fixed by an argument, so this is a "bounded loop" and always terminates.
+- The **$\mu$-operator** (unbounded search / minimization): $\mu y[\,g(\vec{x},y)=0\,]$ returns the *least* $y$ making $g$ output $0$. This is the only rule that can fail to halt (if no such $y$ exists), which is exactly why it is needed to reach *partial* functions and total functions like Ackermann that outrun primitive recursion.
+
+Functions built using only the base functions, composition, and primitive recursion are the **primitive recursive** functions — a strict subclass, since every primitive recursive function is total but the full recursive class also contains partial functions and fast-growing total ones.
 
 **Church-Turing thesis** (not a theorem): a function is effectively calculable by an algorithm if and only if it is recursive / Turing-computable. All reasonable models of computation (lambda calculus, register machines, etc.) define the same class.
 
@@ -54,9 +78,18 @@ The class of **recursive functions** is the smallest class containing:
 
 **Worked Example:**
 
-Addition is primitive recursive: $\text{add}(x,0) = x$, $\text{add}(x,S(y)) = S(\text{add}(x,y))$.
+Addition is primitive recursive. Fit it to the schema $f(x,0)=g(x)$, $f(x,y+1)=h(x,y,f(x,y))$:
 
-Multiplication similarly from addition. Exponentiation from multiplication. The Ackermann function is a famous example that grows faster than any primitive recursive function and requires the full $\mu$-operator (general recursion).
+- Base case: $\text{add}(x,0) = x$, so $g(x) = P^1_1(x) = x$ (the identity, a projection).
+- Step: $\text{add}(x,y+1) = S(\text{add}(x,y))$, so $h(x,y,z) = S(z) = S(P^3_3(x,y,z))$ — take the previous value and add one.
+
+Both $g$ and $h$ are built from base functions and composition, so $\text{add}$ is primitive recursive. Let us unfold $\text{add}(2,3)$ to check the recursion actually computes the sum:
+
+$$\text{add}(2,3) = S(\text{add}(2,2)) = S(S(\text{add}(2,1))) = S(S(S(\text{add}(2,0)))) = S(S(S(2))) = 5.$$
+
+Sanity check: $2+3 = 5$ ✓, and the recursion bottomed out at the base case $\text{add}(2,0)=2$ after exactly $3$ unfoldings (one per unit of the second argument), so it always terminates.
+
+Multiplication is then primitive recursive by the same pattern using $\text{add}$ as its step function: $\text{mult}(x,0)=0$, $\text{mult}(x,y+1)=\text{add}(x,\text{mult}(x,y))$. Exponentiation follows from multiplication in the same way. The **Ackermann function** is the classic example that is total and computable but **not** primitive recursive: it grows faster than every primitive recursive function, so it cannot be captured by bounded (primitive) recursion alone and requires general recursion (double recursion / the $\mu$-operator).
 
 ## The Halting Problem and Undecidability
 
@@ -66,7 +99,20 @@ The **halting problem**: given (description of) a Turing machine $M$ and input $
 
 **Theorem** (Turing 1936): the halting problem is undecidable.
 
-Proof by contradiction: assume a TM $H$ decides it. Build a diagonal machine $D$ that on input $M$ runs $H(M,M)$; if $H$ says $M$ halts on itself then $D$ loops, else halts. Then ask what $D$ does on input $D$: contradiction either way.
+Here "undecidable" means: no Turing machine can, for *every* pair $(M,w)$, halt with the correct yes/no answer. (It is still *semi-decidable* — you can just simulate $M$ on $w$ and answer "yes" if it stops — but that procedure never gives a definite "no".)
+
+Proof by contradiction (diagonalization). Suppose a **total** decider $H$ exists: $H(M,w)$ always halts, outputting "halts" if $M$ halts on $w$ and "loops" otherwise. Build a machine $D$ that takes a single machine description $M$ and does the following:
+
+1. run $H(M,M)$ (ask whether $M$ halts when given its own code as input);
+2. if $H$ answers "halts", then $D$ deliberately enters an infinite loop;
+3. if $H$ answers "loops", then $D$ halts immediately.
+
+Now feed $D$ its own description and ask: does $D$ halt on input $D$?
+
+- If $D$ **halts** on $D$, then step 1 computed $H(D,D)=$ "halts", so by step 2 $D$ loops — contradiction.
+- If $D$ **loops** on $D$, then $H(D,D)=$ "loops", so by step 3 $D$ halts — contradiction.
+
+Either way we reach a contradiction, so the assumed decider $H$ cannot exist. The one assumption we made was that $H$ is total and correct, so *that* is what fails.
 
 Many other problems reduce to halting and are therefore undecidable: "does this program ever print 0?", "does this program halt on empty input?", validity in FOL, etc.
 
@@ -77,15 +123,34 @@ Many other problems reduce to halting and are therefore undecidable: "does this 
 
 **Worked Example:**
 
-The set of (codes of) Turing machines that halt on the empty tape is undecidable (special case of halting). If it were decidable we could solve the full halting problem by modifying the machine to ignore its input and run the original on empty.
+Claim: the **empty-tape halting problem** — "given the code of a TM $M$, does $M$ halt when started on a blank tape?" — is undecidable. We prove it by **reduction** from the general halting problem: we show that a decider for the empty-tape version could be turned into a decider for the general version, which we just proved impossible.
+
+Given an arbitrary pair $(M, w)$, effectively construct a new machine $M'$ (with $w$ hard-coded into its transition table) that ignores whatever is on its tape and does this:
+
+1. erase the tape and write the fixed string $w$ on it;
+2. run $M$ from that configuration.
+
+Two facts to verify:
+
+- **$M'$ on the empty tape does exactly what $M$ does on $w$.** Its first action recreates the input $w$, then it behaves as $M$. So $M'$ halts on the empty tape $\iff$ $M$ halts on $w$.
+- **The map $(M,w) \mapsto M'$ is itself computable** — it just splices a fixed "write $w$" preamble in front of $M$.
+
+Now suppose, for contradiction, a decider $E$ for empty-tape halting existed. Then to decide whether arbitrary $M$ halts on arbitrary $w$, build $M'$ and return $E(M')$. By the first bullet this answer is correct, so we would have decided the general halting problem — contradicting Turing's theorem. Hence no such $E$ exists.
+
+Sanity check on the reduction direction: we reduced the *known-undecidable* problem (general halting) *to* the target problem (empty-tape halting), which is the correct direction to conclude the target is undecidable. Reducing the other way would prove nothing.
 
 ## Rice's Theorem and Decidable vs. Undecidable Properties
 
 <!-- section: rice -->
 
-**Rice's theorem**: Any non-trivial property of the language recognized (or function computed) by Turing machines is undecidable.
+**Rice's theorem**: Any non-trivial **semantic** property of the language recognized (or partial function computed) by Turing machines is undecidable.
 
-"Non-trivial" means: there exists at least one TM with the property and at least one without.
+Two conditions must both hold for the theorem to apply:
+
+- **Semantic** (a property of *behavior*): whether a machine has the property depends only on the language it recognizes / function it computes, not on how its code is written. Formally, if $M_1$ and $M_2$ compute the same function, they must both have the property or both lack it. Equivalently, the set of machine codes with the property is an **index set**.
+- **Non-trivial:** there is at least one TM with the property *and* at least one without. The two properties the theorem does **not** cover are the two trivial ones — "true of every machine" and "true of no machine" — which are decidable (always answer yes, or always answer no).
+
+Syntactic properties (about the finite code itself) fall outside the theorem's scope and may well be decidable — Rice says nothing about them.
 
 Examples of undecidable properties: "does the TM accept the empty string?", "does it accept any string?", "is the language finite?", "is the function computed total?", "does it ever output 42?".
 
@@ -98,7 +163,17 @@ Properties that *are* decidable are usually syntactic (about the code of the mac
 
 **Worked Example:**
 
-"Does the TM accept at least one string?" is non-trivial (some accept everything, some accept nothing) hence undecidable by Rice.
+Take the property $P$ = "the TM accepts at least one string" (equivalently, its language is non-empty). Check the hypotheses of Rice's theorem, then confirm with a direct reduction.
+
+- **Semantic?** Yes: whether $L(M)\neq\varnothing$ depends only on the language $L(M)$, not on how $M$ is coded. So $P$ is an index set.
+- **Non-trivial?** Yes: a machine that accepts every string has $P$; a machine that rejects every string does not. So some machines are in, some are out.
+
+Both hypotheses hold, so Rice's theorem immediately gives: $P$ is undecidable. To *see why* concretely, reduce the (empty-tape) halting problem to $P$. Given a machine $M$, build $M'$ that on **any** input $x$ ignores $x$, simulates $M$ on the empty tape, and accepts $x$ only if that simulation halts:
+
+- If $M$ halts on the empty tape, then $M'$ accepts every $x$, so $L(M') = \Sigma^* \neq \varnothing$: $M'$ has property $P$.
+- If $M$ loops on the empty tape, then $M'$ never accepts anything, so $L(M') = \varnothing$: $M'$ lacks property $P$.
+
+The construction $M \mapsto M'$ is effective, so a decider for $P$ would decide empty-tape halting — impossible. Sanity check: the reduction bundles the *undecidable* halting behavior into the *non-emptiness* of $L(M')$, exactly matching the two truth-values of $P$, so a $P$-oracle would leak the halting answer.
 
 ## Common Mistakes
 

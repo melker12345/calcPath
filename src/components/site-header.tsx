@@ -84,7 +84,7 @@ function SubjectsDropdown({
 
       {open && (
         <div
-          className="absolute left-0 top-full z-50 mt-1 w-80 overflow-hidden rounded-xl border theme-border theme-surface shadow-xl"
+          className="absolute left-0 top-full z-50 mt-1 w-80 overflow-hidden rounded-xl border theme-border bg-[var(--surface-solid)] shadow-xl"
           role="menu"
         >
           <div className="grid grid-cols-2 gap-0.5 p-1">
@@ -226,7 +226,7 @@ export const SiteHeader = ({ subjects }: { subjects: NavSubject[] }) => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b theme-border theme-surface pt-[env(safe-area-inset-top)]">
+      <header className="sticky top-0 z-50 border-b theme-border bg-[var(--surface-solid)] pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="CalcPath home">
             <span className="font-serif text-xl font-semibold theme-text">CalcPath</span>

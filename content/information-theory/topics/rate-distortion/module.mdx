@@ -25,7 +25,13 @@ R(D) is the infimum of rates R such that there exist codes with average distorti
 
 **Worked Example:**
 
-1. A grayscale image pixel quantized to 8 bits. If we allow mean-squared error $D$ corresponding to 'barely visible' artifacts, a good compressor might use only 1-2 bits per pixel instead of 8, achieving $4$-$8\times$ compression.
+Take a unit-variance Gaussian source ($\sigma^2 = 1$) under squared-error distortion, whose rate-distortion function is $R(D) = \tfrac12 \log_2(1/D)$ for $0 < D \le 1$ (derived later in this module).
+
+1. Lossless-ish, tiny error $D = 0.01$: $R = \tfrac12 \log_2(100) = \tfrac12 (6.64) \approx 3.32$ bits/symbol.
+2. Loosen the budget to $D = 0.25$: $R = \tfrac12 \log_2(4) = \tfrac12 (2) = 1$ bit/symbol.
+3. Loosen further to $D = 1 = \sigma^2$: $R = \tfrac12 \log_2(1) = 0$ bits/symbol.
+
+So going from "barely any error" to "25% of the variance as error" cut the rate from $3.32$ to $1$ bit — a $3.3\times$ saving for a modest fidelity loss. Sanity check: $R$ falls monotonically as $D$ grows and hits $0$ exactly when $D$ reaches the source variance (at that point you can just output the mean, $\hat X = 0$, and pay distortion $\sigma^2$ for free), matching the shape $R(D)$ must have.
 
 ## Definition of the Rate-Distortion Function
 
@@ -46,8 +52,13 @@ By the rate-distortion theorem (Shannon), R(D) is the fundamental limit: no sche
 
 **Worked Example:**
 
-1. For a Bernoulli(1/2) source with Hamming distortion, $R(D) = 1 - h_2(D)$ for $D \leq 1/2$ (where $h_2$ is binary entropy).
-2. At $D=0$, $R=1$ bit; at $D=0.5$, $R=0$.
+Consider a Bernoulli(1/2) source ($X \in \{0,1\}$, each with probability $1/2$) with Hamming distortion $d(x,\hat x) = \mathbf{1}[x \ne \hat x]$, so $\mathbb{E}[d] = \Pr[X \ne \hat X]$, the bit-error rate.
+
+1. We must minimize $I(X;\hat X)$ over test channels $p(\hat x | x)$ with $\Pr[X \ne \hat X] \le D$. The clever move: describe the *backward* channel as $X = \hat X \oplus Z$ with $Z \sim \text{Bernoulli}(D)$ independent of $\hat X$, i.e. the reproduction plus a random flip that occurs with probability at most $D$.
+2. Then $I(X;\hat X) = H(X) - H(X|\hat X) = 1 - H(Z) = 1 - h_2(D)$, using $H(X)=1$ (fair bit) and $H(X|\hat X) = H(Z) = h_2(D)$ (the flip is all that remains uncertain once $\hat X$ is known).
+3. One shows this is optimal (no test channel does better at the same $D$), giving $R(D) = 1 - h_2(D)$ for $0 \le D \le 1/2$ (where $h_2(t) = -t\log_2 t - (1-t)\log_2(1-t)$).
+
+Sanity check: at $D = 0$, $h_2(0) = 0$ so $R = 1$ bit (you must send the whole bit). At $D = 1/2$, $h_2(1/2) = 1$ so $R = 0$ (a coin flip for $\hat X$ already achieves 50% agreement, no bits needed). Both endpoints match the general facts $R(0) = H(X)$ and $R(D_{\max}) = 0$.
 
 ## Computation and Properties
 
@@ -57,7 +68,7 @@ R(D) is convex, decreasing, R(0) = H(X) (lossless), and R(D_max)=0 where D_max i
 
 The Blahut-Arimoto algorithm (and other methods) can numerically compute R(D) by alternating optimization of the test channel and the output distribution.
 
-Important properties: R(D) ≤ H(X) - h(D) or other lower bounds from entropy power etc.; the slope of R(D) is related to the Lagrange multiplier for the distortion constraint.
+Important properties: for difference distortion measures the Shannon *lower* bound gives $R(D) \ge h(X) - h(D)$, where $h(D)$ is the differential entropy of the noise variable that just meets the distortion budget (this is a lower bound, not an upper bound). The slope of the curve, $dR/dD$, equals the (negative) Lagrange multiplier for the distortion constraint, which is why the parametric $s$-formulation below traces the curve.
 
 **ELI5**
 
@@ -66,14 +77,23 @@ Important properties: R(D) ≤ H(X) - h(D) or other lower bounds from entropy po
 
 **Worked Example:**
 
-1. Typical table for a unit-variance Gaussian source under squared-error distortion:
-2. | D | R(D) (bits) |
-3. | 1.0 | 0 |
-4. | 0.5 | 0.5 |
-5. | 0.25 | 1.0 |
-6. | 0.1 | ≈1.66 |
-7. | 0.01 | ≈3.32 |
-8. $R(D) = \frac12 \log(1/D)$ for $D \leq 1$.
+Build the table for a unit-variance Gaussian source ($\sigma^2 = 1$) under squared-error distortion, using $R(D) = \tfrac12 \log_2(1/D)$ for $0 < D \le 1$:
+
+1. $D = 1.0$: $R = \tfrac12 \log_2(1) = 0$.
+2. $D = 0.5$: $R = \tfrac12 \log_2(2) = \tfrac12(1) = 0.5$.
+3. $D = 0.25$: $R = \tfrac12 \log_2(4) = \tfrac12(2) = 1.0$.
+4. $D = 0.1$: $R = \tfrac12 \log_2(10) = \tfrac12(3.32) \approx 1.66$.
+5. $D = 0.01$: $R = \tfrac12 \log_2(100) = \tfrac12(6.64) \approx 3.32$.
+
+| $D$ | $R(D)$ (bits) |
+| --- | --- |
+| $1.0$ | $0$ |
+| $0.5$ | $0.5$ |
+| $0.25$ | $1.0$ |
+| $0.1$ | $\approx 1.66$ |
+| $0.01$ | $\approx 3.32$ |
+
+Sanity checks: the curve is decreasing and convex (each halving of $D$ adds exactly $0.5$ bit, since $\tfrac12\log_2(1/(D/2)) - \tfrac12\log_2(1/D) = \tfrac12\log_2 2 = 0.5$), it hits $R=0$ at $D = \sigma^2 = 1$, and $R \to \infty$ as $D \to 0$ (a continuous source has $h(X)$ finite but $H(X) = \infty$, so lossless coding needs unbounded rate).
 
 ## Examples: Gaussian and Binary Sources
 
@@ -96,8 +116,12 @@ These closed forms are rare; most sources require numerical optimization.
 
 **Worked Example:**
 
-1. A zero-mean Gaussian with variance 4 ($\sigma^2=4$). To achieve MSE $D=0.5$, $R(0.5) = 0.5 \log_2(4/0.5) = 0.5 \log_2(8) = 0.5 \cdot 3 = 1.5$ bits per sample.
-2. This is achievable by a Gaussian test channel with noise variance 0.5; the MMSE estimator at the decoder is $(4/(4+0.5)) Y$ or similar scaling.
+Take a zero-mean Gaussian source with variance $\sigma^2 = 4$ and target MSE $D = 0.5$ (note $D \le \sigma^2$, so the formula applies).
+
+1. Rate: $R(0.5) = \tfrac12 \log_2(\sigma^2/D) = \tfrac12 \log_2(4/0.5) = \tfrac12 \log_2(8) = \tfrac12 (3) = 1.5$ bits per sample.
+2. Optimal test channel: model the *backward* channel $X = \hat X + Z$ with $Z \sim N(0, D) = N(0, 0.5)$ independent of $\hat X$. For this to reproduce $\text{var}(X) = 4$ we need $\text{var}(\hat X) = \sigma^2 - D = 3.5$.
+3. Check the mutual information: $I(X;\hat X) = h(X) - h(X|\hat X) = \tfrac12\log_2(2\pi e \cdot 4) - \tfrac12\log_2(2\pi e \cdot 0.5) = \tfrac12\log_2(4/0.5) = \tfrac12\log_2 8 = 1.5$ bits. ✓ (matches step 1).
+4. Decoder reconstruction: given the observation $Y$ with $X = Y + N$, $N \sim N(0,D)$, the MMSE estimator scales toward zero by the ratio $\hat X = \frac{\sigma^2 - D}{\sigma^2}\,Y = \frac{3.5}{4}\,Y = 0.875\,Y$. The shrinkage reflects that part of $Y$ is quantization noise, not signal.
 
 ## Common Mistakes
 
@@ -205,7 +229,14 @@ The quantization error e = x - Q(x) is usually modeled as additive noise, approx
 
 **Worked Example:**
 
-An 8-bit uniform quantizer for audio with peak-to-peak range 2 V (from -1 V to +1 V) has Δ = 2/256 ≈ 0.0078 V. A sample x=0.123 V is quantized to the level closest to it, say 0.121 V or whatever the grid gives; error |e| ≤ Δ/2.
+An 8-bit uniform quantizer for audio with peak-to-peak range 2 V (from $-1$ V to $+1$ V) has $2^8 = 256$ levels and step size $\Delta = 2/256 = 0.0078125$ V.
+
+1. Place reproduction levels at cell midpoints $\hat x_k = -1 + (k + \tfrac12)\Delta$ for $k = 0, 1, \dots, 255$.
+2. Quantize $x = 0.123$ V: the index is $k = \lfloor (x - (-1))/\Delta \rfloor = \lfloor 1.123 / 0.0078125 \rfloor = \lfloor 143.74 \rfloor = 143$.
+3. Reconstruction: $\hat x = -1 + (143 + 0.5)(0.0078125) = -1 + 143.5 \cdot 0.0078125 = -1 + 1.12109 = 0.12109$ V.
+4. Error: $e = x - \hat x = 0.123 - 0.12109 = 0.00191$ V, which satisfies $|e| \le \Delta/2 = 0.00391$ V. ✓
+
+Sanity check: the error magnitude is below half a step, as it must be for nearest-level (midpoint) quantization.
 
 ## Optimal Quantizer Design (Lloyd-Max)
 
@@ -228,17 +259,21 @@ For non-MSE distortion measures the conditions generalize (e.g., median for abso
 
 **Worked Example:**
 
-For a standard normal source and 2-bit (4-level) Lloyd-Max quantizer, the optimal levels are approximately ±0.4528, ±1.510, with boundaries at 0 and ±0.9816 (symmetric). The resulting MSE is about 0.117, better than a uniform quantizer's 0.125 or so.
+For a standard normal source $N(0,1)$ and a 2-bit (4-level) Lloyd-Max quantizer, the optimal solution is symmetric: reproduction levels $\pm 0.4528, \pm 1.510$ with decision boundaries at $0$ and $\pm 0.9816$.
+
+1. Check the boundary condition (midpoint rule): the boundary between the two positive levels should be $(0.4528 + 1.510)/2 = 0.9814 \approx 0.9816$. ✓
+2. Check the centroid condition: the inner level should be $\mathbb{E}[X \mid 0 \le X \le 0.9816] = \frac{\varphi(0) - \varphi(0.9816)}{\Phi(0.9816) - \Phi(0)} \approx 0.4528$ (using $\mathbb{E}[X\mid a\le X\le b] = \frac{\varphi(a)-\varphi(b)}{\Phi(b)-\Phi(a)}$ for the normal), and the outer level $\mathbb{E}[X \mid X \ge 0.9816] \approx 1.510$. ✓ The two conditions are mutually consistent — this is a fixed point of the Lloyd iteration.
+3. Resulting distortion $\text{MSE} \approx 0.1175$, versus $\approx 0.1188$ for the best *uniform* 4-level quantizer of the same source — the non-uniform spacing (finer near the dense center, coarser in the tails) buys the improvement.
 
 ## Performance and High-Rate Approximations
 
 <!-- section: performance-highrate -->
 
-For high rate (small Δ), the signal-to-quantization-noise ratio (SQNR) for a uniform quantizer on a signal with variance σ² and peak factor is approximately
+For high rate (small $\Delta$), the granular quantization-noise power of a uniform quantizer is $\sigma_q^2 \approx \Delta^2/12$ (variance of a uniform distribution on $[-\Delta/2, \Delta/2]$). For a $b$-bit quantizer spanning full-scale amplitude $A$ (so $\Delta = 2A/2^b$), the signal-to-quantization-noise ratio is
 
-SQNR ≈ 6.02 b + 10 log_{10}(σ² / (Δ²/12)) dB,
+$$\text{SQNR} = 10 \log_{10}\!\frac{\sigma^2}{\sigma_q^2} \approx 6.02\,b + 10\log_{10}\!\frac{12\,\sigma^2}{(2A)^2}\ \text{dB},$$
 
-where b is bits. Each extra bit buys roughly 6 dB improvement.
+where $\sigma^2$ is the signal power. The $b$ appears exactly once (inside $\Delta$); the second term depends only on the signal's loading factor $A/\sigma$, not on $b$. Because each added bit halves $\Delta$, it multiplies $\sigma_q^2$ by $1/4$, i.e. adds $10\log_{10}4 \approx 6.02$ dB. For a full-scale sinusoid ($\sigma^2 = A^2/2$) the constant term is $10\log_{10}(12/8) = 10\log_{10}(1.5) \approx 1.76$ dB, giving the classic $\text{SQNR} \approx 6.02\,b + 1.76$ dB.
 
 Companding (compressor + uniform quantizer + expander) approximates the optimal non-uniform quantizer for a given density; μ-law and A-law are classic examples in telephony.
 
@@ -283,7 +318,12 @@ The famous result is that the ultimate gain of VQ over entropy-coded scalar quan
 
 **Worked Example:**
 
-Two correlated zero-mean unit-variance Gaussians with correlation ρ=0.9. Scalar 1-bit quantizers on each give MSE ≈ 0.36 per component (total 0.72). A 2-dimensional VQ with 4 codewords (rate 1 bit per sample) can place points at (±a,±a) with appropriate a and achieve noticeably lower joint MSE by aligning with the principal axis of the data cloud.
+Two correlated zero-mean unit-variance Gaussians $(X_1, X_2)$ with correlation $\rho = 0.9$. Compare two schemes at the same rate of 1 bit per sample (2 bits for the pair).
+
+1. Independent scalar 1-bit quantizers. Each coordinate gets one bit. The optimal 1-bit Lloyd-Max quantizer of a unit Gaussian reports $\pm\sqrt{2/\pi} \approx \pm 0.7979$ (the conditional mean of each half-line) with MSE $1 - 2/\pi \approx 0.3634$ per component. Per-sample MSE $\approx 0.3634$. This ignores $\rho$: its four codepoints sit at $(\pm 0.798, \pm 0.798)$, including the off-diagonal points $(+,-)$ and $(-,+)$ that the highly correlated data almost never visits — two of the four codewords are wasted.
+2. Rotate first, then allocate bits (the vector view). Diagonalize: $U = (X_1 + X_2)/\sqrt2$ and $V = (X_1 - X_2)/\sqrt2$ are independent with variances $1 + \rho = 1.9$ and $1 - \rho = 0.1$. The rate-distortion-optimal allocation of the 2-bit budget across these axes is reverse water-filling ($D_i = \min(\theta, \lambda_i)$). Solving $\sum_i \tfrac12\log_2(\lambda_i / D_i) = 2$ gives water level $\theta \approx 0.1187$: axis $U$ is quantized to $D_U \approx 0.1187$ and axis $V$ (already tiny) is left at $D_V = 0.1$. Total distortion $\approx 0.1187 + 0.1 = 0.2187$, per-sample MSE $\approx 0.109$.
+
+Result: $0.109$ vs $0.363$, a $3.3\times$ reduction in MSE at the same rate. The win comes entirely from exploiting the correlation — spend bits on the fat $U$-axis where the cloud actually lives and almost none on the thin $V$-axis. The general lesson is exact: for jointly Gaussian sources the optimal strategy is "rotate to independent axes (KLT), then reverse-water-fill bits across the eigenvalues," which scalar quantization of the original coordinates cannot do.
 
 ## Design: The LBG / Generalized Lloyd Algorithm
 
@@ -354,7 +394,13 @@ For the quadratic-Gaussian source, R_{WZ}(D) = R_{X|Y}(D) — there is no rate l
 
 **Worked Example:**
 
-Gaussian X ~ N(0,1), Y = X + Z, Z ~ N(0,0.5), target MSE D=0.1. The conditional variance is 1/(1+1/0.5)=1/3. The rate when Y known at encoder is ½ log((1/3)/0.1) ≈ 0.737 bits. For this source the WZ rate is the same; the optimal auxiliary is a Gaussian test channel whose noise variance is chosen so the MMSE given Y meets D.
+Gaussian $X \sim N(0,1)$, $Y = X + Z$ with $Z \sim N(0, 0.5)$ independent, target MSE $D = 0.1$.
+
+1. Conditional variance: $\text{var}(X|Y) = \sigma_X^2 - \frac{\sigma_{XY}^2}{\sigma_Y^2}$. Here $\sigma_{XY} = \text{cov}(X, X+Z) = \text{var}(X) = 1$ and $\sigma_Y^2 = \text{var}(X) + \text{var}(Z) = 1 + 0.5 = 1.5$, so $\text{var}(X|Y) = 1 - \frac{1^2}{1.5} = 1 - \tfrac{2}{3} = \tfrac13$.
+2. Rate when $Y$ is known at the encoder (conditional RD): $\tfrac12 \log_2\!\big(\text{var}(X|Y)/D\big) = \tfrac12 \log_2\!\big((1/3)/0.1\big) = \tfrac12 \log_2(3.333) \approx \tfrac12 (1.737) \approx 0.868$ bits.
+3. For this quadratic-Gaussian source the Wyner-Ziv rate (side info at decoder only) equals the same $\approx 0.868$ bits — the celebrated no-rate-loss result. The optimal auxiliary is a Gaussian test channel whose noise variance is chosen so the MMSE of $X$ given $(U, Y)$ meets $D$.
+
+Sanity check: $D = 0.1 < \text{var}(X|Y) = 1/3$, so the formula is in range and the rate is positive, as it must be.
 
 ## Side Information at Encoder Only
 
@@ -394,7 +440,7 @@ This is the smallest possible rate among all side-information configurations; ex
 
 **Worked Example:**
 
-Same Gaussian numbers as above: R_{X|Y}(D) = ½ log( var(X|Y) / D' ) where D' is the target after the conditional variance. With var(X|Y)=1/3 and D=0.1 the rate is ½ log((1/3)/0.1) ≈ 0.737 bits — the lowest of the four cases.
+Same Gaussian numbers as above ($X \sim N(0,1)$, $Y = X + Z$, $Z \sim N(0,0.5)$, target $D = 0.1$): with both encoder and decoder knowing $Y$, the problem reduces to ordinary rate-distortion on the innovation $X - \mathbb{E}[X|Y]$, whose variance is $\text{var}(X|Y) = 1/3$. So $R_{X|Y}(D) = \tfrac12 \log_2\!\big(\text{var}(X|Y)/D\big) = \tfrac12 \log_2\!\big((1/3)/0.1\big) \approx 0.868$ bits. For the Gaussian source this equals the Wyner-Ziv rate above, and it is the lowest achievable rate among the four side-information configurations (ordinary $R(D)$, encoder-only, decoder-only, both).
 
 ## The General Rate-Distortion Region with Side Info
 

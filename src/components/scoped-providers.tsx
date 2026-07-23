@@ -1,22 +1,25 @@
 "use client";
 
+import { AuthProvider } from "@/components/auth-provider";
 import { ProgressProvider } from "@/components/progress-provider";
 import { createContext, useContext } from "react";
 import type { Topic, Problem } from "@/lib/shared-types";
 
 export function AuthBoundary({ children }: { children: React.ReactNode }) {
-  // No-op: auth removed; passthrough for compatibility with existing layout wrappers.
-  return <>{children}</>;
+  return <AuthProvider>{children}</AuthProvider>;
 }
 
 export function ProgressBoundary({ children }: { children: React.ReactNode }) {
-  // AuthProvider wrapper removed (auth stripped); ProgressProvider kept.
+  // No AuthProvider here: progress surfaces are anonymous and don't need a session.
   return <ProgressProvider>{children}</ProgressProvider>;
 }
 
 export function AppStateProviders({ children }: { children: React.ReactNode }) {
-  // AuthProvider wrapper removed (auth stripped); ProgressProvider kept.
-  return <ProgressProvider>{children}</ProgressProvider>;
+  return (
+    <AuthProvider>
+      <ProgressProvider>{children}</ProgressProvider>
+    </AuthProvider>
+  );
 }
 
 // ============================================

@@ -25,7 +25,13 @@ Classic example: the Gaussian MAC Y = X1 + X2 + Z, Z ~ N(0,N), with power constr
 
 **Worked Example:**
 
-In the binary adder MAC, Xi ∈ {0,1}, Y = X1 + X2 (mod 2 or integer sum). Even the mod-2 version has an interesting region; the integer-sum version is a classic example where joint decoding helps.
+Consider the *binary adder MAC* with integer sum: $X_1, X_2 \in \{0,1\}$ and $Y = X_1 + X_2$ (noiseless, so $Y \in \{0,1,2\}$).
+
+- **Step 1 — Enumerate the outputs.** The map is deterministic: $(0,0)\to 0$, $(0,1)\to 1$, $(1,0)\to 1$, $(1,1)\to 2$.
+- **Step 2 — Which inputs does $Y$ reveal?** If $Y=0$ the decoder knows $(X_1,X_2)=(0,0)$; if $Y=2$ it knows $(1,1)$. Only $Y=1$ is ambiguous — it could be $(0,1)$ or $(1,0)$.
+- **Step 3 — Why joint decoding matters.** Neither user's bit is individually recoverable from $Y$ alone when $Y=1$, yet the *pair* is confusable only along one axis. Take $X_1, X_2$ i.i.d. uniform. Then $Y$ takes values $0,1,2$ with probabilities $\tfrac14, \tfrac12, \tfrac14$, so $H(Y) = -\tfrac14\log_2\tfrac14 - \tfrac12\log_2\tfrac12 - \tfrac14\log_2\tfrac14 = \tfrac12 + \tfrac12 + \tfrac12 = 1.5$ bits.
+- **Step 4 — Sum-rate.** Because the channel is deterministic, $I(X_1,X_2;Y) = H(Y) - H(Y\mid X_1,X_2) = 1.5 - 0 = 1.5$ bits per use. So the two users *together* can push $1.5$ bits/use through this channel — strictly more than the $1$ bit a single binary input could carry, and strictly less than the $2$ bits they would get on clean separate links.
+- **Sanity check:** $1 \le 1.5 \le 2$, matching the intuition that sharing the channel costs something (you cannot get the full $2$ bits) but joint use still beats giving the whole channel to one user.
 
 ## Capacity Region for the Two-User MAC
 
@@ -51,7 +57,14 @@ For the Gaussian MAC the region is a pentagon whose corner points are achieved b
 
 **Worked Example:**
 
-Gaussian MAC, P1=P2=P, noise N=1. The sum capacity is ½ log(1 + 2P/N) when both transmit at full power. Individual bounds R1 ≤ ½ log(1 + P/(P+N)) when the other is treated as noise. The region is the pentagon connecting (0, ½ log(1+2P)), the two SIC points, and (½ log(1+P/N),0) etc.
+Gaussian MAC with equal powers $P_1 = P_2 = P = 1$ and noise variance $N = 1$. All logs are base 2, giving rates in bits per channel use.
+
+- **Step 1 — Individual bounds (other user known).** With $X_2$ available at the decoder as side information it can be subtracted, so $R_1 \le I(X_1;Y\mid X_2) = \tfrac12\log(1 + P/N) = \tfrac12\log 2 = 0.5$. By symmetry $R_2 \le 0.5$ as well.
+- **Step 2 — Sum bound.** $R_1 + R_2 \le I(X_1,X_2;Y) = \tfrac12\log(1 + (P_1+P_2)/N) = \tfrac12\log(1 + 2) = \tfrac12\log 3 \approx 0.792$.
+- **Step 3 — The pentagon corners.** The two individual caps at $0.5$ and the sum cap at $0.792$ carve a pentagon; its dominant face runs between the two corner points. Consider the SIC corner where user 1 is decoded *first* while user 2 is treated as noise. Decoding user 1 against noise power $P + N$ gives $R_1 = \tfrac12\log\!\big(1 + \tfrac{P}{P+N}\big) = \tfrac12\log 1.5 \approx 0.292$ bits.
+- **Step 3b — Second user after cancellation.** Subtract user 1; user 2 then sees noise power $N$ only, giving $R_2 = \tfrac12\log(1+P/N) = \tfrac12\log 2 = 0.5$ bits.
+- **Step 4 — Verify the corner lies on the sum face.** $R_1 + R_2 = 0.292 + 0.5 = 0.792 = \tfrac12\log 3$. ✓ The corner sits exactly on the sum-rate boundary, and the symmetric corner $(0.5,\,0.292)$ is reached by reversing the decoding order.
+- **Sanity check:** each user's rate stays below its individual cap ($0.292 < 0.5$ and $0.5 = 0.5$), and the two corners are connected by a line of slope $-1$ (constant sum $0.792$) that time-sharing traces out.
 
 ## Coding Strategies: Joint Decoding and SIC
 
@@ -70,7 +83,13 @@ SIC achieves the corner points of the capacity region; rate-splitting or time-sh
 
 **Worked Example:**
 
-In the Gaussian MAC with P1 >> P2, decode user 1 first (its SINR is high), subtract \hat X1 from Y, then decode user 2 on essentially noise-only channel. This achieves R1 ≈ ½ log(1+P1/N), R2 ≈ ½ log(1+P2/N) which is the sum-rate corner when the strong user is decoded first.
+Gaussian MAC with a strong and a weak user, $P_1 = 10$, $P_2 = 1$, noise $N = 1$; decode the strong user 1 first. Logs are base 2.
+
+- **Step 1 — Decode user 1 treating user 2 as noise.** User 1's signal competes against $X_2$ plus thermal noise, an effective noise power of $P_2 + N = 2$. So $R_1 = \tfrac12\log\!\big(1 + \tfrac{P_1}{P_2+N}\big) = \tfrac12\log\!\big(1 + \tfrac{10}{2}\big) = \tfrac12\log 6 \approx 1.292$.
+- **Step 2 — Cancel and decode user 2.** Once $X_1^n$ is correctly decoded it is subtracted from $Y^n$, leaving user 2 alone against thermal noise only: $R_2 = \tfrac12\log\!\big(1 + \tfrac{P_2}{N}\big) = \tfrac12\log 2 = 0.5$.
+- **Step 3 — Check against the sum bound.** $R_1 + R_2 = 1.292 + 0.5 = 1.792$, and $I(X_1,X_2;Y) = \tfrac12\log\!\big(1 + \tfrac{P_1+P_2}{N}\big) = \tfrac12\log(1+11) = \tfrac12\log 12 \approx 1.792$. ✓ The two match, confirming SIC lands exactly on the sum-rate corner.
+- **Note on ordering:** decoding user 1 *first* is what forces user 1 to swallow user 2 as noise (hence the $P_2+N$ denominator), while the last-decoded user always enjoys the clean $\tfrac12\log(1+P_i/N)$ channel. This is why the corner reached depends on the order.
+- **Sanity check:** neither individual rate exceeds its genie-aided cap $\tfrac12\log(1+P_i/N)$ — user 1's cap is $\tfrac12\log 11 \approx 1.729$, and $1.292 < 1.729$; user 2 is at its cap $0.5$ because it was decoded last. ✓
 
 ## Common Mistakes
 
@@ -102,15 +121,20 @@ The most important special case is the degraded broadcast channel in which the r
 
 **Worked Example:**
 
-A Gaussian broadcast channel: Y1 = X + Z1, Y2 = X + Z2 with Var(Z1) < Var(Z2) (receiver 1 has better SNR). The transmitter has power constraint P. Receiver 1 can support higher rates than receiver 2.
+A scalar Gaussian broadcast channel: $Y_1 = X + Z_1$ and $Y_2 = X + Z_2$ with noise variances $N_1 = \mathrm{Var}(Z_1) = 1$ and $N_2 = \mathrm{Var}(Z_2) = 4$, so receiver 1 has the better channel. Total power constraint $\mathbb{E}[X^2] \le P = 10$. Logs are base 2.
+
+- **Step 1 — Single-user ceilings.** If the transmitter dedicated *all* power to one receiver, receiver 1 could get up to $\tfrac12\log(1 + P/N_1) = \tfrac12\log 11 \approx 1.730$ bits, and receiver 2 up to $\tfrac12\log(1 + P/N_2) = \tfrac12\log(1 + 2.5) = \tfrac12\log 3.5 \approx 0.904$ bits.
+- **Step 2 — Read off the ordering.** Because $N_1 < N_2$, this channel is *degraded*: $Y_2$ is a noisier version of $Y_1$ (formally $Y_2 = Y_1 + Z'$ with $Z' \sim \mathcal N(0, N_2 - N_1)$ independent of $Y_1$). The strong receiver can always simulate whatever the weak one sees.
+- **Step 3 — Consequence.** Receiver 1 supports strictly higher rates ($1.730 > 0.904$), so any layered scheme should hand the *coarse* layer to the weak receiver 2 and the *fine* enhancement to the strong receiver 1 — exactly the superposition split developed in the next sections.
+- **Sanity check:** halving the noise from $N_2=4$ to $N_1=1$ roughly *doubles* the achievable rate ($0.904 \to 1.730$), consistent with the $\log(1+P/N)$ dependence on SNR. ✓
 
 ## Degraded Broadcast Channel and Capacity Region
 
 <!-- section: degraded-bc -->
 
-For the degraded BC the capacity region (with common and two private messages) is known and achieved by superposition. The bounds involve auxiliary random variables U (the 'cloud center' for the weaker user) satisfying the Markov chain U — X — (Y1, Y2) with appropriate degradation.
+A BC is (stochastically) *degraded* when the receivers can be ordered so that the physical Markov chain $X - Y_1 - Y_2$ holds: receiver 2's output is a further-corrupted version of receiver 1's, so anything $Y_2$ reveals, $Y_1$ reveals at least as well. Under this ordering the capacity region (with a common message and two private messages) is known and achieved by superposition. The construction introduces an auxiliary random variable $U$ (the 'cloud center' carrying the weak user's message) satisfying the Markov chain $U - X - (Y_1, Y_2)$; $U$ is a bookkeeping variable, not transmitted directly, and its alphabet may be taken bounded ($|\mathcal U| \le |\mathcal X| + 2$) without loss.
 
-The private rates satisfy expressions such as R2 ≤ I(U; Y2), R1 ≤ I(X; Y1 | U), R0 + R2 ≤ I(U; Y2), etc., maximized over p(u,x).
+Taking $Y_2$ as the weaker receiver, the private rates satisfy $R_2 \le I(U; Y_2)$ and $R_1 \le I(X; Y_1 \mid U)$, while a common message shares the weak user's budget, $R_0 + R_2 \le I(U; Y_2)$ — all maximized over the joint law $p(u)\,p(x\mid u)$ (equivalently $p(u,x)$).
 
 **ELI5**
 
@@ -119,7 +143,13 @@ The private rates satisfy expressions such as R2 ≤ I(U; Y2), R1 ≤ I(X; Y1 | 
 
 **Worked Example:**
 
-In the Gaussian BC, the optimal auxiliary U is a scaled version of X with power αP allocated to the 'common/weak' layer; the remainder (1-α)P is for the private strong layer. The resulting region is the union over α ∈ [0,1] of the rate pairs satisfying the mutual information expressions with the effective SNRs.
+Continue the Gaussian BC with $N_1 = 1$ (strong receiver 1), $N_2 = 4$ (weak receiver 2), and total power $P = 10$. Split the power into $\alpha P$ for the weak/cloud layer and $(1-\alpha)P$ for the strong/satellite layer, choosing $\alpha = 0.5$. Logs are base 2.
+
+- **Step 1 — Weak user's rate.** Receiver 2 decodes only the cloud, so the satellite power $(1-\alpha)P = 5$ acts as extra noise on top of $N_2 = 4$. Its cloud SNR is $\dfrac{\alpha P}{(1-\alpha)P + N_2} = \dfrac{5}{5 + 4} = \dfrac{5}{9}$, giving $R_2 \le \tfrac12\log\!\big(1 + \tfrac59\big) = \tfrac12\log\tfrac{14}{9} \approx 0.319$ bits.
+- **Step 2 — Strong user's rate.** Receiver 1 first decodes the cloud (it can, since its channel is better than receiver 2's), *subtracts* it, and then reads the satellite over noise $N_1 = 1$ only: $R_1 \le \tfrac12\log\!\big(1 + \tfrac{(1-\alpha)P}{N_1}\big) = \tfrac12\log(1 + 5) = \tfrac12\log 6 \approx 1.292$ bits.
+- **Step 3 — Compare to naive splitting.** Time-sharing / orthogonal splitting would force the two rates to trade along a straight line between the single-user points; superposition instead lets receiver 1 keep a large rate ($1.292$) while receiver 2 still gets $0.319$ — the whole power is "reused" because the strong user cancels the weak layer rather than avoiding it.
+- **Step 4 — Sweep $\alpha$.** As $\alpha \to 1$, all power goes to the cloud: $R_2 \to \tfrac12\log(1 + 10/4) = \tfrac12\log 3.5 \approx 0.904$ (its single-user ceiling) while $R_1 \to 0$. As $\alpha \to 0$: $R_1 \to \tfrac12\log 11 \approx 1.730$, $R_2 \to 0$. The union over $\alpha \in [0,1]$ traces the boundary of the capacity region.
+- **Sanity check:** the endpoints of the sweep reproduce exactly the single-user ceilings computed in the BC model example ($1.730$ and $0.904$). ✓
 
 ## Superposition Coding
 
@@ -138,7 +168,13 @@ This is dual to SIC on the MAC and achieves every point in the capacity region o
 
 **Worked Example:**
 
-With power split αP for base (weak), (1-α)P for enhancement. Weak receiver sees effective SNR αP / ((1-α)P + N2); strong sees full power after cancelling base. Rates follow from the Gaussian capacity formula on the effective channels.
+Same Gaussian BC as above ($N_1 = 1$, $N_2 = 4$, $P = 10$), now viewed from the *encoder's* construction with $\alpha = 0.5$. Write $X = U + V$ where $U$ (the base/cloud) has power $\alpha P = 5$ and $V$ (the enhancement/satellite) has power $(1-\alpha)P = 5$, chosen independently.
+
+- **Step 1 — Build the codebooks.** Draw $2^{nR_2}$ cloud centers $U^n$ i.i.d. $\mathcal N(0, \alpha P)$. Around each cloud center draw $2^{nR_1}$ satellites by adding an independent $V^n \sim \mathcal N(0, (1-\alpha)P)$. The transmitted symbol is $X = U + V$, with total power $\alpha P + (1-\alpha)P = 10 = P$. ✓ (power constraint met with equality).
+- **Step 2 — Weak receiver decodes the base.** Receiver 2 sees $Y_2 = U + V + Z_2$. It treats $V + Z_2$ (variance $5 + 4 = 9$) as noise and decodes $U$, so it can support $R_2 = \tfrac12\log\!\big(1 + \tfrac{5}{9}\big) \approx 0.319$ bits — identical to the previous section.
+- **Step 3 — Strong receiver peels the base, then reads the enhancement.** Receiver 1 sees $Y_1 = U + V + Z_1$ with $Z_1$ of variance $1$. Its channel is cleaner than receiver 2's, so it can decode $U$ *at least* as reliably, subtract $\hat U$, and be left with $V + Z_1$ (variance $5 + 1 = 6$ before cancellation, but the useful signal is $V$ over noise $N_1 = 1$). Its enhancement rate is $R_1 = \tfrac12\log\!\big(1 + \tfrac{5}{1}\big) = \tfrac12\log 6 \approx 1.292$ bits.
+- **Step 4 — Why the strong user can always decode the base.** Degradedness guarantees receiver 1's SNR for the cloud, $\tfrac{\alpha P}{(1-\alpha)P + N_1} = \tfrac{5}{6}$, exceeds receiver 2's cloud SNR $\tfrac{5}{9}$. Since $\tfrac56 > \tfrac59$, whatever rate the weak user can decode, the strong user decodes too. This is the crucial condition that makes cancellation valid.
+- **Sanity check:** the achieved pair $(R_1, R_2) = (1.292,\, 0.319)$ matches the degraded-BC computation exactly, confirming superposition and the region description agree. ✓
 
 ## Common Mistakes
 
@@ -168,7 +204,13 @@ With network coding, an edge can carry a function (typically linear combination 
 
 **Worked Example:**
 
-In a network where two sources S1 S2 want to reach two sinks T1 T2, and the only paths cross on a bottleneck edge of capacity 1, routing can deliver at most rate 1 total (one source or the other, or half each), while coding on the bottleneck can deliver rate 1 to each sink (see butterfly).
+Take the setup where two packets $a$ and $b$ must each reach two sinks $T_1$ and $T_2$, and every route from a source to the "far" sink is forced through a single shared bottleneck edge of capacity $1$ packet per use.
+
+- **Step 1 — What routing can do.** The bottleneck can carry only one packet per use. To route both $a$ and $b$ across it takes *two* uses, so in a single use routing delivers at most $1$ packet of "cross" traffic. One sink ends up missing its far packet, capping the achievable rate.
+- **Step 2 — What coding can do.** Send the single combined packet $a \oplus b$ (bitwise XOR over $\mathrm{GF}(2)$) across the bottleneck. It still occupies exactly $1$ unit of capacity — no more bits than a plain packet.
+- **Step 3 — Recovery at each sink.** $T_1$ already holds $a$ from a direct path; it computes $b = a \oplus (a \oplus b)$. $T_2$ already holds $b$; it computes $a = b \oplus (a \oplus b)$. Both sinks now have both packets.
+- **Step 4 — Count the gain.** Routing delivered $1$ useful packet-worth of cross traffic per bottleneck use; coding delivered $2$ (one to each sink) for the same $1$ unit of capacity — a factor-of-2 throughput gain on the bottleneck.
+- **Sanity check:** $a \oplus (a \oplus b) = (a \oplus a) \oplus b = 0 \oplus b = b$. ✓ The XOR is its own inverse, which is exactly why one coded transmission serves both recipients.
 
 ## The Butterfly Network Example
 
@@ -187,13 +229,19 @@ With network coding, C forwards a+b (over GF(2)). T1 receives a (direct) and a+b
 
 **Worked Example:**
 
-Packets a from S1, b from S2. C computes and sends a XOR b. T1 has direct a, receives a⊕b → computes b. T2 has direct b, receives a⊕b → computes a. Total throughput 2 packets across a min-cut of 2 (but routing would need 3 edge uses or drop rate).
+Packets $a$ from $S_1$, $b$ from $S_2$; the middle node $C$ computes and sends $a \oplus b$ over $\mathrm{GF}(2)$.
+
+- **Step 1 — Direct paths.** $T_1$ receives $a$ over its dedicated direct edge; $T_2$ receives $b$ over its direct edge.
+- **Step 2 — Coded path.** $C$ receives both $a$ and $b$, forms $a \oplus b$, and forwards this single packet down the shared branch that reaches *both* sinks.
+- **Step 3 — Decode.** $T_1$: $a \oplus (a \oplus b) = b$. $T_2$: $b \oplus (a \oplus b) = a$. Each sink now has $\{a,b\}$, i.e. rate $1$ for $a$ and rate $1$ for $b$.
+- **Step 4 — Edge accounting.** Number the unit-capacity edges: $S_1\!\to\!C$, $S_2\!\to\!C$, the coded edge $C\!\to\!(T_1,T_2)$, and the two direct edges $S_1\!\to\!T_1$, $S_2\!\to\!T_2$ — five edge-uses total, each carrying one packet. The min-cut to each sink is $2$, and coding achieves rate $2$ (both packets) at *every* sink simultaneously, which pure routing cannot on this topology.
+- **Sanity check:** count what each sink knows — $T_1$ holds $\{a, a\oplus b\}$, a full-rank pair over $\mathrm{GF}(2)$, so it inverts to $\{a,b\}$; symmetrically for $T_2$. ✓
 
 ## Linear Network Coding and Throughput
 
 <!-- section: linear-nc -->
 
-For multicast (one source, many sinks wanting the same data), linear network coding over a sufficiently large field achieves the max-flow min-cut rate to every sink simultaneously — something routing cannot always do.
+For multicast (one source, many sinks *all wanting the same data*), the achievable rate is exactly the *minimum over sinks* of that sink's individual max-flow from the source. Linear network coding over a sufficiently large field achieves this common min-cut rate to every sink simultaneously — something routing cannot always do. (The clean "min of max-flows" characterization is special to single-source multicast; general multi-source or multi-sink demands need not have a simple cut-based capacity.)
 
 Each edge carries a linear combination of the source packets; the coefficients can be chosen centrally (algebraic NC) or randomly (random linear NC, with high probability invertible at the sinks when field is large).
 
@@ -204,9 +252,23 @@ Decoding at a sink reduces to solving a linear system whose matrix is the produc
 - Each packet on the wire is a 'recipe' — a vector of coefficients telling how much of each original source packet is mixed in.
 - At the destination you collect enough independent recipes; linear algebra (Gaussian elimination) recovers the original ingredients.
 
-**Worked Example:**
+**Worked Example (small, over $\mathrm{GF}(2)$):**
 
-Source has k packets (a vector in F_q^k). Each internal node chooses random coefficients and outputs the corresponding linear combo. After receiving k independent combinations (the global encoding vectors form an invertible matrix), the sink inverts the matrix and obtains the original k packets. For q large enough or with high probability for random choice, success probability →1.
+Source has $k = 2$ packets $a, b$. A sink collects two coded packets whose global encoding vectors are $v_1 = (1,1)$ (payload $a \oplus b$) and $v_2 = (0,1)$ (payload $b$).
+
+- **Step 1 — Form the decoding matrix.** Stack the vectors as rows: $G = \begin{pmatrix} 1 & 1 \\ 0 & 1 \end{pmatrix}$, and the received payloads as $\begin{pmatrix} a\oplus b \\ b \end{pmatrix} = G \begin{pmatrix} a \\ b \end{pmatrix}$.
+- **Step 2 — Check invertibility.** $\det G = (1)(1) - (1)(0) = 1 \ne 0$ over $\mathrm{GF}(2)$, so $G$ is full rank and invertible.
+- **Step 3 — Invert.** Over $\mathrm{GF}(2)$, $G^{-1} = \begin{pmatrix} 1 & 1 \\ 0 & 1 \end{pmatrix}$ (self-inverse here). Then $\begin{pmatrix} a \\ b \end{pmatrix} = G^{-1}\begin{pmatrix} a\oplus b \\ b \end{pmatrix}$, i.e. $b = b$ and $a = (a\oplus b)\oplus b = a$. ✓
+- **Step 4 — Sanity check.** $G G^{-1} = \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix}$ over $\mathrm{GF}(2)$ (recall $1+1 = 0$), confirming the inverse.
+
+**Worked Example (why a large field helps):**
+
+Now a generation of $k = 8$ source packets over $\mathrm{GF}(256)$ with random coefficients. The sink can decode iff the $8$ collected global vectors are linearly independent in $\mathbb{F}_q^k$ with $q = 256$.
+
+- **Step 1 — Count independent choices.** The first vector must be nonzero: probability $\dfrac{q^k - 1}{q^k}$. The $i$-th vector must avoid the span of the previous $i-1$ (a subspace of size $q^{i-1}$): probability $\dfrac{q^k - q^{i-1}}{q^k}$.
+- **Step 2 — Multiply.** $\Pr[\text{full rank}] = \displaystyle\prod_{i=0}^{k-1}\Big(1 - q^{\,i-k}\Big) = \prod_{i=0}^{7}\big(1 - 256^{\,i-8}\big)$.
+- **Step 3 — Evaluate.** The dominant loss term is the last factor $1 - 256^{-1} \approx 0.99609$; the product over all eight factors is $\approx 0.99608$, so failure probability $\approx 0.0039$, well under $1\%$.
+- **Sanity check / scaling:** the failure probability is dominated by $q^{-(q-k+1)} \approx q^{-1} = 1/256$; pushing to $\mathrm{GF}(2^{16})$ would drop it to $\approx 1/65536$. This is the precise sense in which "a large enough field" makes random linear network coding succeed with probability $\to 1$.
 
 ## Common Mistakes
 
@@ -238,7 +300,12 @@ When communication is free and unlimited, the maximum rate of common randomness 
 
 **Worked Example:**
 
-X and Y are the inputs and outputs of a binary symmetric channel with crossover p. Alice sends her X over the public channel (or a compressed/syndrome version). Bob uses his Y and the communication to recover X (or a function of X). The common string can be X itself (if communication is free) or a shorter extracted version.
+Alice holds $X$, uniform on $\{0,1\}$, and Bob holds $Y = X \oplus N$ where $N \sim \mathrm{Bernoulli}(p)$ with $p = 0.1$ — i.e. their observations pass through a BSC with crossover $0.1$. All logs base 2, and $H_2(p) = -p\log p - (1-p)\log(1-p)$.
+
+- **Step 1 — How much correlation is there?** The common-randomness rate with free public discussion is $I(X;Y)$. Since $X$ is uniform, $Y$ is uniform too, so $H(Y) = 1$ bit, and $H(Y\mid X) = H_2(p) = H_2(0.1) \approx 0.469$ bits (given $X$, the only uncertainty in $Y$ is the noise bit).
+- **Step 2 — Mutual information.** $I(X;Y) = H(Y) - H(Y\mid X) = 1 - 0.469 = 0.531$ bits per observation.
+- **Step 3 — Achieving it.** Alice sends Bob just enough about $X$ to let him correct the $\approx 10\%$ of positions where $X$ and $Y$ differ. That reconciliation costs $H(X\mid Y) = H_2(0.1) \approx 0.469$ bits per symbol (a Slepian–Wolf/syndrome description), after which both hold $X$. The *net* common randomness is $H(X) - H(X\mid Y) = 1 - 0.469 = 0.531 = I(X;Y)$.
+- **Sanity check:** as $p \to 0$ the channels agree, $H_2(p)\to 0$, and the rate $\to 1$ bit — they share a whole fair coin per symbol; as $p \to 0.5$ the observations become independent, $H_2(p)\to 1$, and the rate $\to 0$ — nothing to share. ✓
 
 ## Secret Key Agreement from Common Randomness
 
@@ -257,7 +324,13 @@ Achievability uses reconciliation (error correction to make Alice's and Bob's st
 
 **Worked Example:**
 
-Binary source with Alice observing X, Bob Y = X ⊕ Z1, Eve Z = X ⊕ Z2, independent Bernoullis. After reconciliation (sending syndromes) they hold a common string W whose entropy is close to H(X|Y). Privacy amplification with a universal hash extracts a key of length roughly H(W) - H(W|Z, communication) bits that is nearly uniform and secret from Eve.
+Binary source: Alice sees $X$ uniform; Bob sees $Y = X \oplus N_1$ with $N_1 \sim \mathrm{Bernoulli}(0.1)$; Eve sees $Z = X \oplus N_2$ with $N_2 \sim \mathrm{Bernoulli}(0.25)$, all noises independent. Logs base 2, $H_2(0.1) \approx 0.469$, $H_2(0.25) \approx 0.811$.
+
+- **Step 1 — Alice–Bob correlation.** $I(X;Y) = 1 - H_2(0.1) \approx 0.531$ bits, as in the previous example.
+- **Step 2 — Alice–Eve leakage.** $I(X;Z) = 1 - H_2(0.25) = 1 - 0.811 \approx 0.189$ bits — Eve's noisier channel means she learns less about $X$.
+- **Step 3 — Secret-key rate.** The one-way lower bound (advantage of the legitimate pair over Eve) is $I(X;Y) - I(X;Z) \approx 0.531 - 0.189 = 0.342$ secret bits per symbol.
+- **Step 4 — Two-phase protocol.** *Reconciliation:* Alice sends a syndrome of rate $H(X\mid Y) \approx 0.469$ so Bob recovers $X$; they now share $W = X$. *Privacy amplification:* they hash $W$ down, discarding roughly the $I(X;Z) \approx 0.189$ bits Eve could infer plus the reconciliation leakage, keeping $\approx 0.342$ bits per symbol that are $\varepsilon$-close to uniform and independent of $(Z, \text{transcript})$.
+- **Sanity check:** the rate is positive precisely because Bob's channel is *less* noisy than Eve's ($0.1 < 0.25$). If Eve's channel matched Bob's ($p_2 = 0.1$), the gap would be $0$ and no secret key could be distilled by this one-way scheme. ✓
 
 ## Randomness Extraction and Privacy Amplification
 
@@ -267,7 +340,7 @@ A randomness extractor is a function Ext(X, S) (S a short random seed) such that
 
 Strong extractors (output independent of the seed) are used for privacy amplification: after reconciliation Alice and Bob apply the same extractor (or a randomness condenser followed by hashing) to their common string using a short public random seed; the output is uniform and independent of Eve's entire view (including the seed).
 
-Leftover-hash lemma: if W has min-entropy k and we apply a universal hash to an m-bit output with m ≤ k - 2 log(1/ε), the output is ε-close to uniform even given the seed and Eve's side information.
+Leftover-hash lemma: if $W$ has min-entropy $k$ (i.e. $H_\infty(W) = -\log_2 \max_w \Pr[W=w] \ge k$, the *worst-case* uncertainty from Eve's viewpoint, which is what matters here — not the average-case Shannon entropy) and we apply a universal hash to an $m$-bit output with $m \le k - 2\log(1/\varepsilon)$, then the output is $\varepsilon$-close to uniform even given the seed and Eve's side information. Equivalently, the statistical distance obeys $\varepsilon \le 2^{-(k-m)/2}$.
 
 **ELI5**
 
@@ -276,7 +349,13 @@ Leftover-hash lemma: if W has min-entropy k and we apply a universal hash to an 
 
 **Worked Example:**
 
-W is a 256-bit string with min-entropy at least 200 bits from Eve's perspective. Alice and Bob pick a public random 128-bit seed S for a universal hash family (e.g., polynomial evaluation over GF(2^128)) and output the 128-bit hash value. By the leftover-hash lemma the output is within 2^{-20} or better of uniform and independent of (S, Eve's view).
+$W$ is a 256-bit string with min-entropy at least $k = 200$ bits from Eve's perspective (she has partial side information but cannot pin $W$ down better than $2^{-200}$). Alice and Bob apply a universal hash with a public seed to produce an $m$-bit key.
+
+- **Step 1 — Choose the output length.** The leftover-hash lemma requires $m \le k - 2\log_2(1/\varepsilon)$. Target $\varepsilon = 2^{-20}$, so the "entropy tax" is $2\log_2(1/\varepsilon) = 2 \times 20 = 40$ bits.
+- **Step 2 — Solve for $m$.** $m \le 200 - 40 = 160$ bits. Outputting a $128$-bit key ($m = 128$) is comfortably within budget.
+- **Step 3 — Bound the leakage.** With $m = 128$ and $k = 200$, the achieved distance is $\varepsilon \le 2^{-(k-m)/2} = 2^{-(200-128)/2} = 2^{-36}$ — far better than the $2^{-20}$ target, because we left $160 - 128 = 32$ bits of headroom.
+- **Step 4 — Publicity of the seed.** Because a *strong* extractor / universal hash is used, the output stays uniform even when the seed $S$ is revealed, so $S$ can be sent in the clear over the public channel.
+- **Sanity check:** with the maximal $m = 160$ the distance is exactly $2^{-(200-160)/2} = 2^{-20}$, hitting the target with zero margin — confirming $160$ is the largest safe key length and $128$ is conservative. ✓
 
 ## Applications: Key Distribution, Correlation, and Communication
 
@@ -298,7 +377,13 @@ In the asymptotic regime the rates are characterized by mutual information quant
 
 **Worked Example:**
 
-In a wireless pairing protocol Alice and Bob measure the channel coefficient h (reciprocal) plus independent noise during a probe phase. After quantization and reconciliation they hold a common bit string W. Privacy amplification yields a 128-bit AES key whose security is information-theoretic (given the eavesdropper's noisy observations of h).
+A wireless pairing protocol. Alice and Bob each send a probe; by *reciprocity* both measure (nearly) the same channel coefficient $h$, plus independent local noise. Eve, at a different location more than half a wavelength away, sees an essentially decorrelated coefficient.
+
+- **Step 1 — Harvest.** Over one coherence block each device quantizes its noisy $h$ estimate into, say, $3$ bits. Reciprocity makes Alice's and Bob's $3$-bit words agree with high probability; Eve's are near-independent, so her min-entropy about the joint word is close to the full $3$ bits.
+- **Step 2 — Accumulate.** Repeat over $N = 500$ independent coherence blocks. Suppose after reconciliation the shared string $W$ retains a conservative min-entropy of $k \approx 0.4$ bits per block $\times\ 500 = 200$ bits from Eve's viewpoint.
+- **Step 3 — Distill the key.** Apply privacy amplification (leftover-hash lemma) with target $\varepsilon = 2^{-20}$: allowed output $m \le k - 2\log_2(1/\varepsilon) = 200 - 40 = 160$ bits. Output a $128$-bit key — safely under the $160$-bit ceiling, with $2^{-36}$ leakage.
+- **Step 4 — Security claim.** The resulting AES-128 key is *information-theoretically* secured against Eve's noisy channel observations: no computational assumption is used, only her lack of correlation with $h$ and the min-entropy budget.
+- **Sanity check:** the number of usable key bits scales linearly with the number of independent probes ($200$ bits of entropy needed $\Rightarrow \sim 500$ blocks at $0.4$ bit/block), so a longer probing phase buys a longer key — the expected behaviour of an entropy-limited resource. ✓
 
 ## Common Mistakes
 
@@ -337,21 +422,28 @@ Iterating these two steps monotonically decreases the Lagrangian and converges t
 
 **Worked Example:**
 
-For a binary source p=0.1 and Hamming distortion, running BA for s chosen to target D≈0.05 quickly converges to a BSC crossover probability close to 0.05 and yields R≈0.183 bits, matching the closed form.
+Binary source with $\Pr[X=1] = p = 0.1$ and Hamming distortion $d(x,\hat x) = \mathbb 1[x \ne \hat x]$. We target $D = 0.05$ and check BA against the known closed form $R(D) = H_2(p) - H_2(D)$ (valid for $0 \le D \le p \le \tfrac12$). Logs base 2.
+
+- **Step 1 — Closed-form target.** $H_2(0.1) = -0.1\log 0.1 - 0.9\log 0.9 \approx 0.469$ and $H_2(0.05) \approx 0.286$, so $R(0.05) = 0.469 - 0.286 \approx 0.183$ bits.
+- **Step 2 — What BA converges to.** For this source the optimal test channel is a BSC with crossover $D = 0.05$: $p(\hat x \mid x)$ flips the symbol with probability $0.05$. The BA iteration, updating $p(\hat x \mid x) \propto p(\hat x)\exp(s\,d(x,\hat x))$ then re-inducing $p(\hat x)$, drives the effective crossover to $0.05$ for the $s$ that yields $\mathbb E[d] = 0.05$.
+- **Step 3 — Read off the rate.** At the fixed point $R = I(X;\hat X)$ evaluated at that test channel equals $H_2(0.1) - H_2(0.05) \approx 0.183$ bits, matching Step 1.
+- **Step 4 — Check the slope.** The Lagrange multiplier at convergence should equal $s = \dfrac{dR}{dD}$. Numerically $\dfrac{d}{dD}\big[H_2(p) - H_2(D)\big] = -\dfrac{d}{dD}H_2(D) = -\log_2\dfrac{1-D}{D} = -\log_2\dfrac{0.95}{0.05} = -\log_2 19 \approx -4.25$, so BA reports $s \approx -4.25$ at $D = 0.05$ (negative, as required for a rate–distortion tradeoff).
+- **Sanity check:** at $D = p = 0.1$ the formula gives $R = H_2(0.1) - H_2(0.1) = 0$ — you can achieve zero rate by always outputting $\hat x = 0$, incurring distortion exactly $p = 0.1$. ✓
 
 ## The Algorithm for Channel Capacity
 
 <!-- section: ba-for-capacity -->
 
-For capacity, the Arimoto-Blahut iteration is:
+For capacity of a DMC with fixed forward channel $p(y\mid x)$, the Arimoto–Blahut iteration alternates two closed-form steps. Given the current input distribution $p(x)$:
 
-Given current input distribution p(x), the 'reverse' channel that maximizes I is
+- **Compute the induced output** $p(y) = \sum_x p(x)\,p(y\mid x)$.
+- **Update the input** by reweighting each symbol by how "informative" it is, measured by the KL divergence between its output row and the average output:
+$$p'(x) = \frac{p(x)\,\exp\!\big(D\big(p(y\mid x)\,\|\,p(y)\big)\big)}{\sum_{x'} p(x')\,\exp\!\big(D\big(p(y\mid x')\,\|\,p(y)\big)\big)},$$
+where $D(p(y\mid x)\,\|\,p(y)) = \sum_y p(y\mid x)\log\frac{p(y\mid x)}{p(y)}$ is exactly $I(x;Y)$, the mutual information contributed by input symbol $x$.
 
-p(x | y) \propto p(x) \exp( I(x;y) terms via the forward channel ), more precisely the update uses the mutual information expression.
+Symbols whose output row stands out from the average (large divergence) get boosted; symbols that look like the crowd get suppressed. The normalization keeps $p'(x)$ a valid pmf.
 
-Standard form: given p(x), compute the output p(y), then the 'capacity-achieving' backward, then update p(x) proportional to exp( D( p(y|x) || p(y) ) ) or equivalent.
-
-The fixed point satisfies p(x) > 0 only for inputs that achieve the max mutual information with the induced output.
+At the fixed point the KKT conditions hold: every symbol with $p(x) > 0$ has the *same* $I(x;Y) = C$, and every unused symbol has $I(x;Y) \le C$. Inputs with lower $I(x;Y)$ are driven to probability zero.
 
 **ELI5**
 
@@ -361,7 +453,13 @@ The fixed point satisfies p(x) > 0 only for inputs that achieve the max mutual i
 
 **Worked Example:**
 
-For a Z-channel or binary asymmetric channel, BA quickly finds the capacity-achieving input bias p(x=1) that is not 0.5; the algorithm automatically discovers the optimal input distribution that equalizes the mutual informations of the supported inputs.
+The **Z-channel**: input $0$ is always received as $0$; input $1$ is flipped to $0$ with probability $e = 0.5$ and received correctly with probability $1-e = 0.5$. So $p(0\mid 0) = 1$, $p(0\mid 1) = 0.5$, $p(1\mid 1) = 0.5$. Logs base 2. Write $a = \Pr[X=1]$.
+
+- **Step 1 — Induced output.** $\Pr[Y=1] = a(1-e) = 0.5a$ and $\Pr[Y=0] = 1 - 0.5a$. Conditional output entropy: $H(Y\mid X) = (1-a)\cdot 0 + a\cdot H_2(e) = a\,H_2(0.5) = a$ (since only $X=1$ injects noise, and $H_2(0.5)=1$).
+- **Step 2 — Mutual information.** $I(a) = H(Y) - H(Y\mid X) = H_2(0.5a) - a$.
+- **Step 3 — Optimize (what BA converges to).** Setting $I'(a) = 0$ gives the closed form $a^\star = \dfrac{1}{(1-e)\big(1 + 2^{H_2(e)/(1-e)}\big)} = \dfrac{1}{0.5\,(1 + 2^{2})} = \dfrac{1}{0.5\cdot 5} = 0.4$. Note $a^\star = 0.4 \ne 0.5$ — the asymmetry pushes the optimal input off uniform, and BA discovers this automatically.
+- **Step 4 — Capacity.** With $a^\star = 0.4$: $\Pr[Y=1] = 0.2$, so $I = H_2(0.2) - 0.4 = 0.7219 - 0.4 \approx 0.322$ bits.
+- **Step 5 — Verify the KKT fixed point.** At $a^\star$, each supported input must satisfy $I(x;Y) = D(p(y\mid x)\,\|\,p(y)) = C$. For $x=0$: $D = 1\cdot\log\frac{1}{0.8} \approx 0.322$. For $x=1$: $D = 0.5\log\frac{0.5}{0.8} + 0.5\log\frac{0.5}{0.2} \approx 0.322$. Both equal $C \approx 0.322$. ✓ This equality is exactly the fixed-point condition that stops the BA iteration.
 
 ## Convergence and Practical Use
 
@@ -378,7 +476,13 @@ Modern variants use accelerated methods, stochastic approximations for very larg
 
 **Worked Example:**
 
-Computing R(D) for a 256-ary source (e.g. image pixel histogram) with 256 reproduction levels and a chosen distortion matrix is feasible: a few hundred iterations of 256×256 matrix normalizations suffice on a laptop; the resulting R(D) curve is used to allocate bits in a practical coder.
+Estimate the cost of computing $R(D)$ for a $256$-ary source (e.g. an 8-bit image pixel histogram) with $256$ reproduction levels and a chosen $256 \times 256$ distortion matrix.
+
+- **Step 1 — Cost per iteration.** Each BA iteration does two passes over the $256 \times 256$ conditional array: one to update $p(\hat x\mid x) \propto p(\hat x)\exp(s\,d(x,\hat x))$ (with a row-normalization), one to re-induce $p(\hat x) = \sum_x p(x)\,p(\hat x\mid x)$. That is $\Theta(256^2) = \Theta(65{,}536)$ multiply-adds per iteration — microseconds on a laptop.
+- **Step 2 — Iteration count.** BA converges linearly; for small-to-moderate alphabets reaching a change below $10^{-3}$ bits typically takes tens to a few hundred iterations (consistent with the $|X|=|Y|=4$ rule of thumb). Say $\sim 200$ iterations here.
+- **Step 3 — Total work.** $200 \times 65{,}536 \approx 1.3\times 10^{7}$ operations for one point on the curve — a fraction of a second. Sweeping $\sim 50$ values of $s$ to trace the whole $R(D)$ curve is still well under a minute.
+- **Step 4 — Numerical hygiene.** Compute $\exp(s\,d)$ in the log domain and subtract the row max before exponentiating (a log-sum-exp), so that with $s \ll 0$ and large distortions the exponentials do not underflow to $0$.
+- **Sanity check:** verify $s = dR/dD$ at each converged point by finite-differencing neighbouring $(R,D)$ pairs; agreement with the returned $s$ confirms the iteration reached a genuine stationary point rather than stopping early. ✓
 
 ## Common Mistakes
 

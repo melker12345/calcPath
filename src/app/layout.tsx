@@ -4,6 +4,7 @@ import { subjectBodyFont, subjectHeadingFont } from "@/lib/subject-fonts";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Providers } from "@/components/providers";
+import { allThemesCss } from "@/lib/themes";
 import "./globals.css";
 
 const inter = Inter({
@@ -90,6 +91,12 @@ export default function RootLayout({
       className={`${inter.variable} ${subjectHeadingFont.variable} ${subjectBodyFont.variable}`}
     >
       <head>
+        {/* Per-subject metaphor theme palettes (light + dark), generated from
+            src/lib/themes.ts. Scoped via .subject-theme-<id> classes. */}
+        <style
+          id="subject-themes"
+          dangerouslySetInnerHTML={{ __html: allThemesCss() }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

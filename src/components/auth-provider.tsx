@@ -1,6 +1,8 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase/client";
 
 export type UserProfile = {
   id: string;
@@ -19,6 +21,10 @@ type AuthContextValue = {
   signOut: () => Promise<void>;
 };
 
+// Safe fallback returned by useAuth/useOptionalAuth when called outside an
+// AuthProvider. Many surfaces (public/anon pages) mount components that call
+// useAuth without a provider above them; those must degrade to "no user", not
+// throw. The real value below is used wherever AuthBoundary wraps the tree.
 const noAuthValue: AuthContextValue = {
   user: null,
   signUp: async () => ({}),
@@ -29,20 +35,168 @@ const noAuthValue: AuthContextValue = {
   signOut: async () => {},
 };
 
-const AuthContext = createContext<AuthContextValue>(noAuthValue);
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  return <AuthContext.Provider value={noAuthValue}>{children}</AuthContext.Provider>;
+type DbProfileRow = {
+  id: string;
+  email: string | null;
+  phone: string | null;
+  created_at: string | null;
 };
 
+function toUserProfile(user: User, dbProfile: DbProfileRow | null): UserProfile {
+  return {
+    id: user.id,
+    email: user.email ?? dbProfile?.email ?? null,
+    phone: user.phone ?? dbProfile?.phone ?? null,
+    createdAt: dbProfile?.created_at ?? null,
+  };
+}
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const load = async (session: Session | null) => {
+      const authUser = session?.user ?? null;
+      if (!authUser) {
+        if (isMounted) setUser(null);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id,email,phone,created_at")
+        .eq("id", authUser.id)
+        .maybeSingle();
+
+      if (error) {
+        console.warn("Failed to load profile:", error.message);
+      }
+
+      await supabase.from("profiles").upsert(
+        {
+          id: authUser.id,
+          email: authUser.email ?? data?.email ?? null,
+          phone: authUser.phone ?? data?.phone ?? null,
+        },
+        { onConflict: "id" },
+      );
+
+      if (isMounted) setUser(toUserProfile(authUser, (data ?? null) as DbProfileRow | null));
+    };
+
+    supabase.auth.getSession().then(({ data }) => load(data.session ?? null));
+
+    const { data: sub } = supabase.auth.onAuthStateChange(
+      (event: AuthChangeEvent, session: Session | null) => {
+        if (event === "SIGNED_OUT") {
+          setUser(null);
+          return;
+        }
+        load(session);
+      },
+    );
+
+    return () => {
+      isMounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  const signUp = async (email: string, password: string): Promise<{ error?: string }> => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed || !password) return { error: "Email and password are required." };
+    if (password.length < 6) return { error: "Password must be at least 6 characters." };
+    const { error } = await supabase.auth.signUp({
+      email: trimmed,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) return { error: error.message };
+    return {};
+  };
+
+  const signInWithPassword = async (email: string, password: string): Promise<{ error?: string }> => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed || !password) return { error: "Email and password are required." };
+    const { error } = await supabase.auth.signInWithPassword({
+      email: trimmed,
+      password,
+    });
+    if (error) return { error: error.message };
+    return {};
+  };
+
+  const sendEmailOtp = async (email: string) => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return;
+    await supabase.auth.signInWithOtp({
+      email: trimmed,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+  };
+
+  const sendPasswordReset = async (email: string): Promise<{ error?: string }> => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return { error: "Email is required." };
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/account`,
+    });
+    if (error) return { error: error.message };
+    return {};
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
+
+  const refreshProfile = async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const authUser = sessionData.session?.user ?? null;
+    if (!authUser) return;
+
+    const { data } = await supabase
+      .from("profiles")
+      .select("id,email,phone,created_at")
+      .eq("id", authUser.id)
+      .maybeSingle();
+
+    if (data) {
+      setUser(toUserProfile(authUser, data as DbProfileRow));
+    }
+  };
+
+  const value = useMemo(
+    () => ({
+      user,
+      signUp,
+      signInWithPassword,
+      sendEmailOtp,
+      sendPasswordReset,
+      refreshProfile,
+      signOut,
+    }),
+    [user],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+// Non-throwing on purpose: outside an AuthProvider these return the no-op value
+// so anonymous surfaces keep working. Wrap admin/account trees in AuthBoundary
+// to get the real session-backed value.
 export const useAuth = () => {
-  // No throw: returns no-op value for compatibility after auth removal.
-  // useOptionalAuth likewise always returns the empty value (never undefined).
-  const context = useContext(AuthContext);
-  return context ?? noAuthValue;
+  return useContext(AuthContext) ?? noAuthValue;
 };
 
 export const useOptionalAuth = () => {
-  const context = useContext(AuthContext);
-  return context ?? noAuthValue;
+  return useContext(AuthContext) ?? noAuthValue;
 };

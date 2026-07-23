@@ -14,11 +14,15 @@ The AEP is the key bridge between the abstract entropy rate and concrete stateme
 
 <!-- section: definition -->
 
-For a discrete stationary ergodic process with entropy rate h, for every ε>0 there exists N such that for n>N the following hold for the typical set A_ε^{(n)} :
+Here the *entropy rate* $h$ is the long-run average uncertainty per symbol, $h = \lim_{n\to\infty} \tfrac{1}{n}H(X_1,\dots,X_n)$; for an i.i.d. source it reduces to the ordinary per-symbol entropy $H(X)$. The AEP makes this abstract rate concrete.
 
-1. For sequences x^n in A_ε^{(n)}, | - (1/n) log p(x^n) - h | < ε   (the empirical rate is close to h).
-2. Pr( X^n ∈ A_ε^{(n)} ) > 1 - ε.
-3. |A_ε^{(n)}| ≤ 2^{n(h+ε)}.
+For a discrete stationary ergodic process with entropy rate $h$, for every $\varepsilon>0$ there exists $N$ such that for $n>N$ the following hold for the typical set $A_\varepsilon^{(n)}$:
+
+1. For sequences $x^n \in A_\varepsilon^{(n)}$, $\left| -\tfrac{1}{n}\log_2 p(x^n) - h \right| < \varepsilon$ (the empirical rate is close to $h$).
+2. $\Pr\!\left( X^n \in A_\varepsilon^{(n)} \right) > 1 - \varepsilon$.
+3. $|A_\varepsilon^{(n)}| \le 2^{n(h+\varepsilon)}$.
+
+The quantity $-\tfrac{1}{n}\log_2 p(x^n)$ is the *sample information rate* (average surprise per symbol); condition 1 says a typical sequence's surprise per symbol sits within $\varepsilon$ of the source's entropy rate.
 
 **ELI5**
 
@@ -27,7 +31,7 @@ For a discrete stationary ergodic process with entropy rate h, for every ε>0 th
 
 **Worked Example:**
 
-Fair coin (h=1). Every specific sequence of length n has p = 2^{-n}. All sequences are typical for any ε>0 when n is large (in fact for all n). The typical set is the entire {0,1}^n and has size 2^n = 2^{n h}.
+Fair coin ($h=1$). Every specific sequence of length $n$ has $p(x^n) = 2^{-n}$, so the sample information rate is $-\tfrac{1}{n}\log_2 2^{-n} = 1 = h$ for *every* sequence exactly. Condition 1 therefore holds for all sequences and any $\varepsilon>0$ (even at finite $n$), so the typical set is the entire $\{0,1\}^n$, of size $2^n = 2^{nh}$. **Sanity check:** conditions 2 and 3 hold trivially — the probability of the whole space is $1 > 1-\varepsilon$, and $2^n \le 2^{n(1+\varepsilon)}$. This is the degenerate case with no redundancy to exploit; the biased-source example in the next section shows the typical set shrinking below the full space.
 
 ## The Typical Set
 
@@ -44,9 +48,17 @@ This is why random-looking data (high entropy) is hard to compress: you need nea
 
 **Worked Example:**
 
-Source over alphabet of size 4, uniform i.i.d. (h=2). For n=20 the total space has 4^{20} ≈ 1.1×10^{12} strings. Typical set size ≈ 2^{40} ≈ 1 trillion — still huge but only 2^{40} / 4^{20} = 2^{40} / 2^{40} =1 ? Wait 4^{20}=(2^2)^{20}=2^{40}, again the whole space is typical.
+Take a biased i.i.d. binary source with $p(1)=0.9$, $p(0)=0.1$. Its entropy is
 
-For a biased or Markov source the fraction becomes tiny.
+$$h = -0.9\log_2 0.9 - 0.1\log_2 0.1 \approx 0.9\cdot 0.152 + 0.1\cdot 3.322 \approx 0.469 \text{ bits/symbol}.$$
+
+The full space of length-$n$ sequences always has size $2^n$ (every bit is either 0 or 1). But the typical set has size only $\approx 2^{nh}$. For $n=100$:
+
+- Total space: $2^{100} \approx 1.27\times 10^{30}$ sequences.
+- Typical set: $2^{100\cdot 0.469} = 2^{46.9} \approx 1.3\times 10^{14}$ sequences.
+- Fraction: $2^{46.9}/2^{100} = 2^{-53.1} \approx 10^{-16}$.
+
+So the typical sequences (roughly those with about ninety 1s and ten 0s) are an utterly negligible fraction of all binary strings, yet they carry almost all the probability. **Sanity check:** a uniform source has $h=\log_2 2 = 1$, giving typical-set size $2^{n\cdot 1}=2^n$ — the whole space, exactly as expected when there is no bias to exploit.
 
 ## Applications to Compression and Coding
 
@@ -63,7 +75,15 @@ It also underlies the definition of typicality in channel coding proofs.
 
 **Worked Example:**
 
-A video encoder knows the entropy rate of natural video (after motion compensation) is say 0.8 bits per pixel. For a 1920×1080 frame (≈2 Mpixels) it only needs to encode a description of length roughly 1.6 Mbits for a typical frame; everything else is handled by the model of "typicality."
+Suppose an encoder models the residual after motion compensation as a source with entropy rate $h = 0.8$ bits per pixel. A $1920\times 1080$ frame has
+
+$$n = 1920 \times 1080 = 2{,}073{,}600 \text{ pixels}.$$
+
+By the AEP, the typical set for this frame has size $\approx 2^{nh}$, so an index into it (the compressed description of a typical frame) needs
+
+$$nh = 2{,}073{,}600 \times 0.8 = 1{,}658{,}880 \text{ bits} \approx 1.66 \text{ Mbit} \approx 207 \text{ kB}.$$
+
+Compare this to storing the raw frame at, say, 24 bits/pixel: $2{,}073{,}600 \times 24 \approx 49.8$ Mbit $\approx 6.2$ MB. **Sanity check:** the ratio $24/0.8 = 30$, so the compressed size is $1/30$ of raw, matching $6.2\text{ MB}/30 \approx 207$ kB. Atypical frames (scene cuts, noise bursts) fall outside the model and are flagged/handled separately, but they occur with vanishing probability, so they do not affect the average rate.
 
 ## Common Mistakes
 
@@ -96,7 +116,15 @@ For i.i.d. sources the rate is simply the ordinary entropy H(X).
 
 **Worked Example:**
 
-A source of independent fair bits has H=1. You cannot compress a long string of fair coin flips at all (on average); any lossless scheme must output essentially as many bits as it receives for typical inputs.
+Consider a biased i.i.d. source over $\{a,b,c,d\}$ with probabilities $0.5, 0.25, 0.125, 0.125$. Its entropy is
+
+$$H = -0.5\log_2 0.5 - 0.25\log_2 0.25 - 2\cdot 0.125\log_2 0.125 = 0.5\cdot 1 + 0.25\cdot 2 + 0.25\cdot 3 = 1.75 \text{ bits/symbol}.$$
+
+- **Naive encoding:** with 4 symbols you might use $\log_2 4 = 2$ bits each — 2 bits/symbol.
+- **Theorem (achievability):** for any $R>1.75$ there is a code approaching rate $R$ with vanishing error, so a long file of $n$ symbols can be squeezed to about $1.75n$ bits.
+- **Theorem (converse):** no lossless scheme can sustainably beat $1.75$ bits/symbol.
+
+**Sanity check:** the redundancy the naive code wastes is $2 - 1.75 = 0.25$ bits/symbol — exactly what a good entropy coder (e.g. Huffman, computed later in this module) recovers. Contrast this with independent fair bits ($H=1$): there the entropy already equals the naive cost, so a long string of fair coin flips cannot be compressed at all on average.
 
 ## Achievability (Existence of Good Codes)
 
@@ -177,7 +205,9 @@ If the true entropy rate is h bits per symbol, then in the limit a compressor ca
 
 **Worked Example:**
 
-The string "abababab..." (alternating) has very low entropy rate. A simple model "repeat the previous symbol with high prob" lets a compressor describe long runs with just a few bits for the count and the starting symbol.
+Take the deterministic alternating string $ababab\ldots ab$ of length $n=1000$ (500 pairs). Naively at 1 bit/symbol it costs 1000 bits. But conditioned on the previous symbol the next one is fully determined, so its entropy rate is $h=0$. A model that captures "alternate, starting with $a$" needs only: 1 bit for the starting symbol, plus a length count $\lceil\log_2 1000\rceil = 10$ bits, i.e. about **11 bits total** for the whole string — a compression ratio of $1000/11 \approx 91:1$.
+
+**Sanity check:** the description length per symbol is $11/1000 \approx 0.011$ bits, which tends to $0 = h$ as the string lengthens (the fixed 11-bit overhead is amortized away) — consistent with the source coding theorem's limit of $h$ bits/symbol.
 
 ## Practical Techniques and Universal Coding
 
@@ -229,14 +259,15 @@ The resulting code is prefix-free because it corresponds to a full binary tree (
 
 **Worked Example:**
 
-Symbols A:0.5, B:0.25, C:0.125, D:0.125.
+Symbols $A{:}0.5,\ B{:}0.25,\ C{:}0.125,\ D{:}0.125$.
 
-- Merge C+D → node E:0.25
-- Now A:0.5, B:0.25, E:0.25
-- Merge B+E → node F:0.5
-- Now A:0.5, F:0.5 → root.
+- The two smallest are $C$ and $D$. Merge $C+D \to$ node $E{:}0.25$.
+- Now $A{:}0.5,\ B{:}0.25,\ E{:}0.25$. The two smallest are $B$ and $E$ (tie broken arbitrarily). Merge $B+E \to$ node $F{:}0.5$.
+- Now $A{:}0.5,\ F{:}0.5$ → merge to the root ($1.0$).
 
-Codes (example assignment): A=0 (len 1), B=10 (len 2), C=110 (len 3), D=111 (len 3).
+Reading paths from the root (0 = left, 1 = right): $A=0$ (len 1), $B=10$ (len 2), $C=110$ (len 3), $D=111$ (len 3).
+
+**Sanity check (prefix-free):** no codeword is a prefix of another — $0$ is not a prefix of $10,110,111$, and $10$ is not a prefix of $110/111$ ✓. Also the merged probabilities sum correctly: $0.25+0.5+1.0$ internal-node weights, and all leaf probabilities sum to $1$ ✓. (The average length and its comparison to entropy are worked out in the Optimality section.)
 
 ## Optimality
 
@@ -303,29 +334,26 @@ Because the intervals for different messages are disjoint, the tag uniquely iden
 
 **Worked Example:**
 
-Suppose two symbols A (p=0.8), B (p=0.2), message "AAB".
+Suppose two symbols $A$ ($p=0.8$, cumulative $F(A)=0$) and $B$ ($p=0.2$, cumulative $F(B)=0.8$), message "AAB".
 
-Start [0,1).
+- Start $[0,1)$, width $1$.
+- First $A$: $[0 + 1\cdot 0,\ 0 + 1\cdot 0.8) = [0, 0.8)$, width $0.8$.
+- Second $A$: $[0 + 0.8\cdot 0,\ 0 + 0.8\cdot 0.8) = [0, 0.64)$, width $0.64$.
+- $B$: $[0 + 0.64\cdot 0.8,\ 0 + 0.64\cdot(0.8+0.2)) = [0.512, 0.64)$, width $0.128$.
 
-A narrows to [0, 0.8).
-
-Second A narrows to [0, 0.64).
-
-B narrows to [0.512, 0.64)  (width 0.128 = 0.8*0.8*0.2).
-
-A tag such as 0.55 (binary 0.100011...) lies inside and identifies "AAB".
+**Sanity check:** the final width equals the message probability $0.8\cdot 0.8\cdot 0.2 = 0.128$ ✓. Any tag inside $[0.512, 0.64)$ identifies "AAB" — for instance $0.55$, whose binary expansion begins $0.100011\ldots$, since $0.512 \le 0.55 < 0.64$.
 
 ## Interval Narrowing and Renormalization
 
 <!-- section: interval-narrowing -->
 
-Given current interval [low, high) and next symbol s with conditional probability p and cumulative distribution F (probability of symbols < s),
+Given current interval $[\text{low}, \text{high})$ and next symbol $s$ with conditional probability $p(s)$ and cumulative distribution $F(s)$ (the total probability of all symbols ordered before $s$),
 
-newLow  = low + (high-low) * F(s)
+$$\text{low}' = \text{low} + (\text{high}-\text{low})\cdot F(s),$$
 
-newHigh = low + (high-low) * (F(s) + p(s))
+$$\text{high}' = \text{low} + (\text{high}-\text{low})\cdot \big(F(s) + p(s)\big).$$
 
-The width shrinks by exactly the factor p(s) each step.
+The new width is $\text{high}' - \text{low}' = (\text{high}-\text{low})\cdot p(s)$, so it shrinks by exactly the factor $p(s)$ each step. After the whole message the width equals the product of the per-symbol probabilities, i.e. the probability of the message — which is why $-\log_2(\text{width})$ bits suffice to name it.
 
 To keep the arithmetic inside finite-precision registers, renormalization (E1/E2 scaling) is performed whenever the interval lies wholly in [0,0.5) or [0.5,1): output the decided bit and double the interval.
 
@@ -336,9 +364,15 @@ To keep the arithmetic inside finite-precision registers, renormalization (E1/E2
 
 **Worked Example:**
 
-Current [0.1, 0.6), width 0.5. Symbol with F=0.3, p=0.4 narrows to [0.1+0.5*0.3 , 0.1+0.5*0.7) = [0.25, 0.45).
+Current interval $[0.1, 0.6)$, width $0.5$. A symbol with cumulative $F=0.3$ and probability $p=0.4$ narrows it to
 
-Now entirely <0.5, so output 0, rescale by doubling around the boundary: new interval becomes [0.5, 0.9) after appropriate shift, etc.
+$$[\,0.1 + 0.5\cdot 0.3,\ 0.1 + 0.5\cdot(0.3+0.4)\,) = [0.25, 0.45).$$
+
+This interval lies entirely in $[0,0.5)$ (both ends below $0.5$), so the leading bit of the tag is known to be $0$: **output 0**. Renormalize by the E1 rule — map $[l,h)$ to $[2l, 2h)$:
+
+$$[2\cdot 0.25,\ 2\cdot 0.45) = [0.5, 0.9).$$
+
+**Sanity check:** the width doubled from $0.20$ back to $0.40$ (recovering one bit of precision), and the map $x\mapsto 2x$ is exactly "drop the leading bit after the binary point," which is why emitting a $0$ and rescaling is lossless. Had the interval instead landed in $[0.5,1)$, the E2 rule would output a $1$ and map $[l,h)\mapsto[2l-1, 2h-1)$.
 
 ## Termination and Practical Issues
 
@@ -385,17 +419,17 @@ As the input is processed, new strings are added to the dictionary and replaced 
 
 **Worked Example:**
 
-Initial dictionary: 'A'→1, 'B'→2, ... (and CLEAR, STOP).
+Initial dictionary: `A`→1, `B`→2 (plus CLEAR/STOP control codes). Next free code is 3. Input: `ABABABA`. The encoder keeps a growing `current` phrase and outputs a code only when `current + next char` is *not* yet known:
 
-Input: ABABABA
+- `current="A"`, read `B`: `"AB"` not in dict → output code for `"A"` (**1**), add `"AB"`=3, set `current="B"`.
+- `current="B"`, read `A`: `"BA"` not in dict → output code for `"B"` (**2**), add `"BA"`=4, set `current="A"`.
+- `current="A"`, read `B`: `"AB"` *is* in dict → extend: `current="AB"`.
+- `current="AB"`, read `A`: `"ABA"` not in dict → output code for `"AB"` (**3**), add `"ABA"`=5, set `current="A"`.
+- `current="A"`, read `B`: `"AB"` *is* in dict → extend: `current="AB"`.
+- `current="AB"`, read `A`: `"ABA"` *is* in dict → extend: `current="ABA"`.
+- End of input: output code for the leftover `current="ABA"` (**5**).
 
-- Output code for A (1), add "AB" as next code (say 3).
-- Output code for B (2), add "BA" (4).
-- Current phrase "AB", already in dict (3), next A makes "ABA" — not in dict yet.
-- Output 3 ("AB"), add "ABA" (5).
-- And so on.
-
-The output is a sequence of small integers instead of the original characters.
+Output stream: **1, 2, 3, 5** — four small integers in place of seven characters, and the last one (`5="ABA"`) is a phrase LZW *learned during this very string*. **Sanity check:** each dictionary addition is exactly the phrase just output followed by one new character (`AB`, `BA`, `ABA`), which is precisely the information the decoder can reconstruct from the same code stream.
 
 ## The Encoding and Decoding Process
 
@@ -430,13 +464,14 @@ Decoding is symmetric and uses the fact that when a new code is received, the fi
 
 **Worked Example (decoding side):**
 
-Receive code 1 ('A'), emit "A", remember previous phrase "A".
+Decode the stream **1, 2, 3, 5** produced by the encoder above (initial dict `A`=1, `B`=2, next free code 3). Each step emits the received phrase, then adds *previous phrase + first char of current phrase*:
 
-Receive code 2 ('B'), emit "B", add "AB" to dict (because previous + first char of current = "A"+"B").
+- Receive **1** → emit `"A"`. (First code; nothing to add yet.) `prev="A"`.
+- Receive **2** (`"B"`) → emit `"B"`, add `"A"+"B" = "AB"`=3. `prev="B"`.
+- Receive **3** (`"AB"`) → emit `"AB"`, add `"B"+"A" = "BA"`=4. `prev="AB"`.
+- Receive **5** — but code 5 is *not yet in the dictionary!* This is the special LZW case: the phrase must be `prev + prev[0] = "AB"+"A" = "ABA"`. Emit `"ABA"`, add `"AB"+"A" = "ABA"`=5. `prev="ABA"`.
 
-Receive code 3 (which is now "AB"), emit "AB", add "BA", etc.
-
-Both sides stay in sync.
+Emitted output: `A` + `B` + `AB` + `ABA` = `"ABABABA"`. **Sanity check:** this is exactly the original input, and the dictionary the decoder built (`AB`=3, `BA`=4, `ABA`=5) matches the encoder's — the two sides stayed in perfect sync using only the code stream, never an explicitly transmitted dictionary.
 
 ## Limitations and Variants in Practice
 
@@ -485,19 +520,15 @@ The resulting binary strings are the codewords. Because the procedure builds a b
 
 **Worked Example:**
 
-Symbols A 0.5, B 0.25, C 0.125, D 0.125 (already sorted).
+Symbols $A\ 0.5,\ B\ 0.25,\ C\ 0.125,\ D\ 0.125$ (already sorted in decreasing order).
 
-Split after A: left prob 0.5, right 0.5.
+- **Level 1:** split into $\{A\}\,|\,\{B,C,D\}$. This balances the mass perfectly: $0.5$ vs $0.5$. Assign $0$ to the left group, $1$ to the right. So $A = 0$ (done — it is alone).
+- **Level 2** (on $\{B,C,D\}$, which already carry a leading $1$): split into $\{B\}\,|\,\{C,D\}$, giving $0.25$ vs $0.25$. Append $0$ to the left, $1$ to the right. So $B = 10$; $C$ and $D$ carry prefix $11$.
+- **Level 3** (on $\{C,D\}$): split into $\{C\}\,|\,\{D\}$, giving $0.125$ vs $0.125$. Append $0$/$1$. So $C = 110$, $D = 111$.
 
-A gets 0.
+Final codes: $A{:}\,0,\ B{:}\,10,\ C{:}\,110,\ D{:}\,111$ — lengths $1,2,3,3$.
 
-Now right group B,C,D: split after B (0.25 vs 0.25).
-
-B gets 10 (0 + 1 from this level? Convention: the first subgroup gets 0).
-
-Typical codes: A:0 , B:10 , C:110 , D:111.
-
-Lengths 1,2,3,3 — same as the Huffman example in many cases.
+**Sanity check:** every split here was a perfect $50/50$ balance because the probabilities are dyadic (powers of $1/2$). In that case Shannon–Fano and Huffman coincide, and both hit the entropy exactly: $L = 0.5\cdot 1 + 0.25\cdot 2 + 0.125\cdot 3 + 0.125\cdot 3 = 1.75 = H$.
 
 ## Comparison with Huffman Coding
 
@@ -516,13 +547,21 @@ Both methods satisfy the bound L < H + 1.
 
 **Worked Example:**
 
-Consider probabilities 0.4, 0.3, 0.2, 0.1.
+Consider probabilities $0.4, 0.3, 0.2, 0.1$.
 
-A Shannon–Fano tree might produce lengths 2,2,2,3 (average L=2.1).
+**Shannon–Fano.** Sorted, the most balanced first split is $\{0.4\}\,|\,\{0.3,0.2,0.1\}$? That gives $0.4$ vs $0.6$; the alternative $\{0.4,0.3\}\,|\,\{0.2,0.1\}$ gives $0.7$ vs $0.3$. The first is closer to a $50/50$ split, but the second keeps groups more even further down; a common Shannon–Fano run yields lengths $2,2,2,3$ with
 
-The optimal Huffman tree can achieve lengths 2,2,3,3 (L=2.0), which is better.
+$$L_{SF} = 0.4\cdot 2 + 0.3\cdot 2 + 0.2\cdot 2 + 0.1\cdot 3 = 2.1 \text{ bits/symbol.}$$
 
-Entropy ≈1.97, so both are reasonable but Huffman is closer.
+**Huffman.** Merge $0.2+0.1=0.3$; now $\{0.4, 0.3, 0.3\}$. Merge the two $0.3$s into $0.6$; now $\{0.4, 0.6\}$; merge to the root. Reading depths gives lengths $1,2,3,3$:
+
+$$L_H = 0.4\cdot 1 + 0.3\cdot 2 + 0.2\cdot 3 + 0.1\cdot 3 = 1.9 \text{ bits/symbol.}$$
+
+**Sanity check:** the entropy is
+
+$$H = -(0.4\log_2 0.4 + 0.3\log_2 0.3 + 0.2\log_2 0.2 + 0.1\log_2 0.1) \approx 1.846 \text{ bits/symbol.}$$
+
+Both codes satisfy $L < H+1 \approx 2.846$, and both exceed the lower bound $H$, but Huffman ($1.9$) is strictly closer than Shannon–Fano ($2.1$) — a concrete case where the top-down heuristic is beaten by the bottom-up optimum.
 
 ## Historical Context and Why It Matters
 

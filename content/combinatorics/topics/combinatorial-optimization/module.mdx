@@ -22,12 +22,26 @@ Equivalent axiomatizations exist using bases, circuits (minimal dependent sets),
 
 **ELI5**
 
-- Independent sets behave exactly like linearly independent vectors: you can always extend a smaller one using an element from a larger one.
-- The axioms are chosen so that all the good theorems about bases, rank, etc. continue to hold.
+- Think of "independent" as "no redundancy." A team where everyone brings a *different* skill is independent; the moment someone duplicates a skill already on the team, they are redundant (dependent).
+- The augmentation axiom is the magic: if your team is smaller than a rival team, you can always poach *someone* from the rival who adds a genuinely new skill to yours. That "you can always grow toward the bigger set" property is what makes greedy hiring work.
+- The axioms are deliberately chosen so that every nice theorem about bases and rank from linear algebra keeps holding in this abstract world.
 
 **Worked Example:**
 
-Take E = {1,2,3}, I = all subsets of size ≤ 2 except {1,2}. Check axioms: augmentation may fail between {1,3} and {2} or adjust; this may not be a matroid. A valid graphic example below.
+Let us verify that the uniform matroid $U_{2,3}$ really is a matroid. Take ground set $E = \{1,2,3\}$ and declare $I$ to be *all* subsets of size at most $2$:
+$$I = \{\emptyset,\ \{1\},\{2\},\{3\},\ \{1,2\},\{1,3\},\{2,3\}\}.$$
+
+Check each axiom:
+
+- **(1) $\emptyset \in I$.** Yes, $\emptyset$ has size $0 \le 2$. ✓
+- **(2) Hereditary.** Any subset of a set of size $\le 2$ also has size $\le 2$, so it is in $I$. ✓
+- **(3) Augmentation.** Suppose $A, B \in I$ with $|A| < |B|$. Then $|A| \le 1$ and $|B| \le 2$. Since $|B| > |A|$, the set $B$ contains an element $e \notin A$; adding it gives $|A \cup \{e\}| = |A| + 1 \le 2$, so $A \cup \{e\} \in I$. ✓
+
+All three hold, so $U_{2,3}$ is a matroid.
+
+Now contrast this with a *non-example* to see why augmentation is the load-bearing axiom. Keep $E = \{1,2,3\}$ but take the hereditary family
+$$I'' = \{\emptyset,\ \{1\},\{2\},\{3\},\ \{1,2\}\}.$$
+Axioms (1) and (2) still hold (every subset of $\{1,2\}$ is listed). But augmentation fails: take $A = \{3\}$ and $B = \{1,2\}$, both in $I''$ with $|A| = 1 < 2 = |B|$. The elements of $B \setminus A$ are $1$ and $2$, giving candidates $\{3,1\}$ and $\{3,2\}$ — *neither* is in $I''$. So no element of $B$ can extend $A$, and axiom (3) is violated. Thus $I''$ is hereditary but **not** a matroid, and (as the Common Mistakes section notes) greedy can fail on such a family — which is exactly what axiom (3) rules out.
 
 ## Important Examples
 
@@ -48,13 +62,19 @@ Many theorems true for vector spaces or for graphs have matroid generalizations.
 
 **Worked Example:**
 
-Cycle graph C_4 has graphic matroid with 4 elements (edges). A basis (max forest) has 3 edges (a spanning tree of the vertices? C_4 has 4 verts, rank 3). Any 3 edges form a path (forest); all 4 form a circuit.
+Consider the cycle graph $C_4$ on vertices $\{1,2,3,4\}$ with edges $e_1=12$, $e_2=23$, $e_3=34$, $e_4=41$. Its graphic matroid has ground set $E = \{e_1,e_2,e_3,e_4\}$, and a set of edges is independent iff it is acyclic (a forest).
+
+- **Rank of the whole set.** The graph is connected with $v = 4$ vertices and $c = 1$ component, so the rank formula gives $r(E) = v - c = 4 - 1 = 3$. A maximal forest (basis) therefore has $3$ edges.
+- **Which 3-edge sets are bases?** Any $3$ of the $4$ edges omit exactly one edge and form a path on all $4$ vertices — a tree, hence acyclic and independent. All $\binom{4}{3} = 4$ triples are bases.
+- **The unique circuit.** Taking all $4$ edges closes the cycle $1\text{-}2\text{-}3\text{-}4\text{-}1$. This is a minimal dependent set (removing any one edge makes it independent again), so $\{e_1,e_2,e_3,e_4\}$ is the single circuit of this matroid.
+
+**Sanity check:** rank $3$, bases of size $3$, and adding the $4$th edge to any basis creates the circuit — consistent with "a basis is a maximal independent set." ✓
 
 ## Optimization and Min-Max Theorems
 
 <!-- section: optimization -->
 
-The greedy algorithm (sort by weight descending, add if remains independent) finds a maximum-weight basis exactly when the set system is a matroid.
+The greedy algorithm (sort elements by weight descending, then scan through them adding each one iff the current set stays independent) finds a maximum-weight basis exactly when the set system is a matroid. In fact this is a *characterization*: a hereditary set system is a matroid if and only if greedy returns a maximum-weight basis for **every** weight function.
 
 The matroid intersection theorem gives a min-max formula for the largest set independent in *two* different matroids on the same ground set; it is solved in polynomial time.
 
@@ -67,7 +87,17 @@ These results generalize Kruskal's MST algorithm, bipartite matching, and many o
 
 **Worked Example:**
 
-Kruskal's algorithm for MST is exactly the matroid greedy algorithm on the graphic matroid with edge weights.
+Kruskal's algorithm for the maximum-weight spanning tree *is* the matroid greedy algorithm on the graphic matroid. Let us run it explicitly. Take the triangle $K_3$ on vertices $\{a,b,c\}$ with edge weights
+$$w(ab) = 3,\quad w(bc) = 2,\quad w(ca) = 1.$$
+We want a **maximum**-weight basis (spanning tree), so we sort descending and add each edge iff it keeps the set acyclic:
+
+1. **$ab$ (weight $3$).** Current set $\emptyset$; adding $ab$ stays a forest. Take it → $\{ab\}$.
+2. **$bc$ (weight $2$).** $\{ab, bc\}$ is a path $a\text{-}b\text{-}c$, still acyclic. Take it → $\{ab, bc\}$.
+3. **$ca$ (weight $1$).** Adding $ca$ would close the triangle $a\text{-}b\text{-}c\text{-}a$, a cycle — dependent. Skip it.
+
+Result: the tree $\{ab, bc\}$ with total weight $3 + 2 = 5$.
+
+**Sanity check:** $K_3$ has $v=3$ vertices, so every spanning tree has $v-1 = 2$ edges; there are $3$ spanning trees with weights $3{+}2{=}5$, $3{+}1{=}4$, $2{+}1{=}3$, and greedy correctly picked the heaviest, $5$. ✓ (For a *minimum* spanning tree, sort ascending instead — the same argument shows greedy is optimal because forests form a matroid.)
 
 ## Common Mistakes
 
@@ -102,7 +132,15 @@ By Berge's lemma, a matching is maximum if and only if it admits no augmenting p
 
 **Worked Example:**
 
-In a path of three edges a-b-c-d-e, the matching {a-b, c-d} has size 2; there is an augmenting path e-d-c-b-a? Wait edges. Standard P_4 (4 verts) max matching size 2.
+Take the path $P_5$ on vertices $a\text{-}b\text{-}c\text{-}d\text{-}e$ (four edges: $ab$, $bc$, $cd$, $de$). Start from the small matching $M = \{bc\}$, of size $1$. Vertices $b,c$ are matched; $a,d,e$ are free.
+
+Look for an augmenting path — an alternating path (out-of-$M$, in-$M$, out-of-$M$, …) whose two endpoints are both free. Start at the free vertex $a$:
+$$a \xrightarrow{ab \notin M} b \xrightarrow{bc \in M} c \xrightarrow{cd \notin M} d.$$
+The endpoints $a$ and $d$ are both free, and the edges alternate out/in/out, so $a\text{-}b\text{-}c\text{-}d$ is augmenting. **Flip** membership along it: remove $bc$, add $ab$ and $cd$. The new matching is
+$$M' = \{ab,\ cd\},\qquad |M'| = 2,$$
+one larger than before, as promised. Now $a,b,c,d$ are matched and only $e$ is free. Any alternating path from $e$ is $e\text{-}d\text{-}c\text{-}b\text{-}a$, but $a$ is matched, so it does **not** end at a free vertex — no augmenting path exists.
+
+**Sanity check:** by Berge's lemma, no augmenting path means $M'$ is maximum. Indeed $P_5$ has $5$ vertices, so a matching has at most $\lfloor 5/2\rfloor = 2$ edges, and $|M'| = 2$ attains it. ✓
 
 ## Hall's Theorem in Bipartite Graphs
 
@@ -119,7 +157,18 @@ This is a necessary and sufficient condition and a prototype min-max theorem.
 
 **Worked Example:**
 
-Boys A,B,C; girls 1,2,3. A knows 1,2; B knows 1; C knows 1,2,3. For S={A,B} N(S)={1,2} size 2 ≥2. Hall holds; a perfect matching from L exists (B-1, A-2, C-3).
+Let $L = \{A,B,C\}$ and $R = \{1,2,3\}$ with neighborhoods
+$$N(A) = \{1,2\},\quad N(B) = \{1\},\quad N(C) = \{1,2,3\}.$$
+To apply Hall we must check $|N(S)| \ge |S|$ for **every** $S \subseteq L$. The dangerous cases are the small, "cramped" ones — a set is only in danger if its members share few neighbors:
+
+- Singletons: $|N(A)|=2\ge1$, $|N(B)|=1\ge1$, $|N(C)|=3\ge1$. ✓
+- Pairs: $N(\{A,B\})=\{1,2\}$ ($2\ge2$); $N(\{A,C\})=\{1,2,3\}$ ($3\ge2$); $N(\{B,C\})=\{1,2,3\}$ ($3\ge2$). ✓
+- All three: $N(\{A,B,C\}) = \{1,2,3\}$ ($3 \ge 3$). ✓
+
+Every subset satisfies Hall's condition, so a matching saturating $L$ exists. To construct one, match the most constrained vertex first: $B$ can only take $1$, so set $B\text{-}1$; then $A$ takes $2$; then $C$ takes the remaining $3$. This gives the perfect matching
+$$M = \{B\text{-}1,\ A\text{-}2,\ C\text{-}3\}.$$
+
+**Sanity check:** the three chosen right-vertices $1,2,3$ are distinct, and each edge respects the neighborhoods ($1\in N(B)$, $2\in N(A)$, $3\in N(C)$). ✓ Notice the failure mode Hall guards against: if instead $N(A)=N(C)=\{1\}$ too, then $S=\{A,B,C\}$ would have $|N(S)|=1<3$ and no such matching could exist.
 
 ## Algorithms and Min-Max
 
@@ -138,7 +187,18 @@ König's theorem (bipartite): size of max matching = size of min vertex cover.
 
 **Worked Example:**
 
-Kruskal or any max cardinality matching algorithm on a small graph will find the largest set of disjoint edges.
+Let us find a maximum matching in the bipartite graph $L=\{A,B,C\}$, $R=\{1,2,3\}$ with edges
+$$A\text{-}1,\ A\text{-}2,\ B\text{-}1,\ C\text{-}2,\ C\text{-}3,$$
+using the augmenting-path method (the combinatorial heart of the flow reduction).
+
+1. **Start empty.** $M = \emptyset$.
+2. **Grow from $A$:** edge $A\text{-}1$ reaches free $1$. Add it → $M=\{A\text{-}1\}$.
+3. **Grow from $B$:** edge $B\text{-}1$, but $1$ is taken. Try the alternating path $B \to 1 \to A \to 2$ (out $B1$, in $A1$, out $A2$), ending at free $2$. Augment: drop $A\text{-}1$, add $B\text{-}1$ and $A\text{-}2$ → $M=\{B\text{-}1,\ A\text{-}2\}$, size $2$.
+4. **Grow from $C$:** edge $C\text{-}3$ reaches free $3$. Add it → $M=\{B\text{-}1,\ A\text{-}2,\ C\text{-}3\}$, size $3$.
+
+No free left vertex remains, so no augmenting path exists and $M$ is maximum with $|M| = 3$.
+
+**Sanity check via König.** The vertex set $\{1,2,3\}$ (all of $R$) is a vertex cover of size $3$ — every edge has a right endpoint. Since max matching $\le$ min vertex cover always, and here matching $=3=$ this cover, both are optimal: max matching $=$ min vertex cover $=3$, as König's theorem guarantees for bipartite graphs. ✓
 
 ## Common Mistakes
 
@@ -170,7 +230,17 @@ The value |f| of the flow is the net flow out of s.
 
 **Worked Example:**
 
-s connected to a (cap 5) and b (cap 3); a to t (4), b to t (4), a to b (1). A feasible flow can send 4 from a to t, 3 from b to t (total 7); the a-b edge can carry extra if needed but is not required for max.
+Consider a network with vertices $s, a, b, t$ and directed capacities
+$$s\to a:\ 3,\quad s\to b:\ 2,\quad a\to t:\ 2,\quad b\to t:\ 3,\quad a\to b:\ 2.$$
+Let us build **one feasible flow** and verify it obeys both rules. Try
+$$f(s\to a)=3,\ f(a\to t)=2,\ f(a\to b)=1,\ f(s\to b)=2,\ f(b\to t)=3.$$
+
+- **Capacity** ($0 \le f(e) \le c(e)$): $3\le3$, $2\le2$, $1\le2$, $2\le2$, $3\le3$ — all hold. ✓
+- **Conservation** at internal vertices:
+  - At $a$: in $= f(s\to a) = 3$; out $= f(a\to t) + f(a\to b) = 2 + 1 = 3$. Balanced. ✓
+  - At $b$: in $= f(s\to b) + f(a\to b) = 2 + 1 = 3$; out $= f(b\to t) = 3$. Balanced. ✓
+
+The value is the net flow out of $s$: $|f| = f(s\to a) + f(s\to b) = 3 + 2 = 5$. (It matches the inflow to $t$: $f(a\to t)+f(b\to t) = 2+3 = 5$, as conservation forces.) We show in the next section that this flow is in fact *maximum*.
 
 ## The Max-Flow Min-Cut Theorem
 
@@ -187,9 +257,20 @@ An s-t cut is a partition of V into S ∋ s and T = V\S ∋ t; its capacity is t
 
 **Worked Example:**
 
-In the network above, the cut S={s}, capacity 5+3=8.
+Take the same network as in the previous section:
+$$s\to a:\ 3,\quad s\to b:\ 2,\quad a\to t:\ 2,\quad b\to t:\ 3,\quad a\to b:\ 2.$$
+An $s$-$t$ cut $(S, T)$ has $s \in S$, $t \in T$, and capacity $=$ sum of capacities of edges that go **from $S$ to $T$** (backward edges $T\to S$ do *not* count). Enumerate all four cuts:
 
-The cut S={s,a}, capacity of edges leaving: a→t (4) + s→b (3) + (a-b if from S to T but a-b from a in S to b in T yes 1) total 8? Earlier calc showed flow 7; the min cut is 7 (e.g. S={s,a,b} wait proper min cut S={s} has 8 but actual max flow 7 because of the t sides. The cut S={s,a} : edges from S to T: a-t=4 , (if a-b to b in T cap1), s-b if b in T? If S={s,a} b in T, s-b from s in S to b T cap3. 4+1+3=8. The min cut is actually the edges into t: a-t + b-t =4+4=8, but wait the max flow is min of the two 'sides'. In this network the max is 7? Wait let's compute properly: the outflow from s is at most 8, inflow to t at most 8, but with the internal a-b. Actually one can send 4 on a-t, 3 on b-t, total 7. Is 8 possible? No because to send 5 from s-a then a can only push 4 to t and 1 to b, b receives 1+3 from s=4, b-t only 4. So max 4 (from a direct) +4 (from b) =8? Wait with a sending 1 to b: s-a sends 5, a-t 4, a-b1; s-b 3, b receives 1+3=4, b-t4. Total flow 5 (out s-a) +3 (s-b) =8, and in to t 4+4=8. Yes max flow 8. (Earlier miscalc). Min cut e.g. edges into t total 8. Yes.
+| $S$ | edges from $S$ to $T$ | capacity |
+|---|---|---|
+| $\{s\}$ | $s\to a,\ s\to b$ | $3+2 = 5$ |
+| $\{s,a\}$ | $a\to t,\ a\to b,\ s\to b$ | $2+2+2 = 6$ |
+| $\{s,b\}$ | $s\to a,\ b\to t$ | $3+3 = 6$ |
+| $\{s,a,b\}$ | $a\to t,\ b\to t$ | $2+3 = 5$ |
+
+The **minimum** cut capacity is $5$, attained by both $S=\{s\}$ and $S=\{s,a,b\}$.
+
+**Sanity check (max-flow $=$ min-cut).** The flow of value $5$ we built in the previous section meets this bottleneck exactly: $5 = 5$. By the max-flow min-cut theorem this equality certifies that our flow is maximum *and* that these cuts are minimum — no separate optimality proof is needed. Note also that the cut $\{s,a\}$ has capacity $6 > 5$: not every cut is tight, only the minimum one, which is why you must minimize over cuts rather than picking any convenient one.
 
 ## Algorithms and Applications
 
@@ -208,7 +289,17 @@ Applications: bipartite matching, assignment problem, transportation, circulatio
 
 **Worked Example:**
 
-To compute max bipartite matching, create flow network with s to all left (cap 1), left to right according to edges (cap 1), right to t (cap 1). Max flow value = size of max matching.
+Let us turn a bipartite matching problem into a flow computation. Take $L=\{A,B\}$, $R=\{1,2\}$ with edges $A\text{-}1$, $A\text{-}2$, $B\text{-}1$. Build the flow network:
+
+- add a source $s$ with $s\to A$ and $s\to B$, each capacity $1$;
+- direct each original edge left-to-right with capacity $1$: $A\to1$, $A\to2$, $B\to1$;
+- add a sink $t$ with $1\to t$ and $2\to t$, each capacity $1$.
+
+**Why unit capacities model matching:** the cap-$1$ edge $s\to A$ forces at most one unit through $A$, so $A$ is matched to at most one right vertex; the cap-$1$ edge $1\to t$ forces $1$ to receive at most one unit, so it is matched at most once. An integral flow is therefore exactly a matching.
+
+Run augmenting paths: push $1$ unit along $s\to A\to 1\to t$ (flow $1$). Now try $s\to B\to 1\to t$, but $1\to t$ is saturated; instead augment along $s\to B\to 1$, then *backward* along the used $A\to1$ (cancelling it via the residual edge), then $A\to 2\to t$: the path $s\to B\to 1 \dashrightarrow A\to 2\to t$ adds a second unit. Max flow $=2$.
+
+**Sanity check:** the integral flow of value $2$ saturates both $s\to A$ and $s\to B$, corresponding to the matching $\{B\text{-}1,\ A\text{-}2\}$ of size $2$. Since $|L|=2$ this saturates $L$ and is clearly maximum. ✓ The backward (residual) step is precisely the augmenting-path re-routing from the Definitions section, now seen through the flow lens.
 
 ## Common Mistakes
 
@@ -230,7 +321,7 @@ In inequality form: maximize c^T x subject to A x ≤ b, x ≥ 0.
 
 (Equality form obtained by adding slack variables.)
 
-The feasible region is a convex polyhedron. If the optimum is finite it is attained at a vertex (a basic feasible solution with at most m tight constraints in m-dimensional space).
+The feasible region is a convex polyhedron. **Fundamental theorem of LP:** if the feasible region is nonempty and the objective is bounded above on it, then the optimum is attained, and — provided the polyhedron has at least one vertex (which holds here because $x\ge0$ prevents lines) — it is attained at a vertex (a *basic feasible solution*, where enough constraints are tight to pin down the point uniquely). This is why algorithms need only search the finitely many vertices, not the whole region.
 
 **ELI5**
 
@@ -239,11 +330,17 @@ The feasible region is a convex polyhedron. If the optimum is finite it is attai
 
 **Worked Example:**
 
-Max 3x + 4y s.t. x + y ≤ 5, x≥0, y≥0.
+Solve $\max\ 3x + 4y$ subject to $x + y \le 5$, $x \ge 0$, $y \ge 0$.
 
-Vertices: (0,0) value 0; (5,0) value 15; (0,5) value 20.
+The feasible region is the triangle bounded by the three lines $x+y=5$, $x=0$, $y=0$. Its vertices are the pairwise intersections of those boundary lines:
 
-Optimum 20 at (0,5).
+- $x=0,\ y=0 \Rightarrow (0,0)$, objective $3(0)+4(0) = 0$.
+- $y=0,\ x+y=5 \Rightarrow (5,0)$, objective $3(5)+4(0) = 15$.
+- $x=0,\ x+y=5 \Rightarrow (0,5)$, objective $3(0)+4(5) = 20$.
+
+By the fundamental theorem the optimum sits at a vertex, so we just compare the three values: the maximum is $\boxed{20}$ at $(0,5)$.
+
+**Sanity check:** the objective gradient is $(3,4)$, which points "up and to the left"; since $y$ has the larger coefficient we expect to prefer $y$ over $x$, and indeed the all-$y$ corner $(0,5)$ wins. ✓
 
 ## Duality
 
@@ -251,9 +348,9 @@ Optimum 20 at (0,5).
 
 Every primal LP has a dual LP. For the standard max c x s.t. A x ≤ b, x≥0 the dual is min b y s.t. A^T y ≥ c, y ≥0.
 
-Weak duality: any feasible primal x and dual y satisfy c x ≤ b y.
+Weak duality: **any** primal-feasible $x$ and dual-feasible $y$ satisfy $c^T x \le b^T y$. (Quick proof: $c^T x \le (A^Ty)^T x = y^T(Ax) \le y^T b$, using $A^Ty\ge c$ with $x\ge0$ for the first inequality and $Ax\le b$ with $y\ge0$ for the second.) So every dual-feasible point hands you an upper bound on the primal, and vice versa.
 
-Strong duality: if both problems are feasible and bounded, then the optimal values are equal, and optimal solutions exist.
+Strong duality: if **both** problems are feasible and bounded, then their optimal values are equal and optimal solutions exist for both. The hypothesis matters: if one side is infeasible the other may be unbounded (then no finite common value exists), so "both feasible and bounded" is the condition that closes the gap.
 
 **ELI5**
 
@@ -262,11 +359,20 @@ Strong duality: if both problems are feasible and bounded, then the optimal valu
 
 **Worked Example:**
 
-Primal max x1 + x2 s.t. x1 + 2 x2 ≤ 4, x≥0.
+**Primal:** $\max\ x_1 + x_2$ subject to $x_1 + 2x_2 \le 4$, $x_1, x_2 \ge 0$.
 
-Dual min 4 y s.t. y ≥1 (x1 coeff), 2y ≥1 (x2), y≥0.
+There is one constraint ($m=1$), so the dual has one variable $y \ge 0$. Reading off $b = 4$ and the columns of $A = (1\ \ 2)$ against $c = (1, 1)$:
 
-Optimal primal at (4,0) value 4; dual at y=1 value 4. Equal.
+**Dual:** $\min\ 4y$ subject to $y \ge 1$ (from the $x_1$ column), $2y \ge 1$ (from the $x_2$ column), $y \ge 0$.
+
+Solve each side:
+
+- *Primal.* Vertices of the feasible region are $(0,0)$ [value $0$], $(4,0)$ [value $4$], $(0,2)$ [value $2$]. Maximum $= 4$ at $(4,0)$.
+- *Dual.* The binding constraint is $y \ge 1$ (it implies $2y \ge 2 \ge 1$), so the smallest feasible $y$ is $y = 1$, giving objective $4(1) = 4$.
+
+Both optima equal $4$, exactly as strong duality predicts.
+
+**Sanity check (complementary slackness).** At the primal optimum $(4,0)$: the constraint $x_1 + 2x_2 = 4 \le 4$ is *tight*, which is consistent with the dual variable $y = 1 > 0$. And $x_1 = 4 > 0$ pairs with the dual constraint $y \ge 1$ being *tight* ($y = 1$); $x_2 = 0$ is allowed to leave its dual constraint $2y \ge 1$ slack ($2 > 1$). All slackness conditions hold, certifying both solutions optimal. ✓
 
 ## Combinatorial Applications
 
@@ -277,7 +383,7 @@ Optimal primal at (4,0) value 4; dual at y=1 value 4. Equal.
 - Shortest paths, min spanning trees (via LP or duals).
 - Many packing and covering problems admit LP relaxations whose integrality gap is 1 or can be rounded.
 
-When the matrix is TU (network matrices, interval matrices, bipartite incidence, etc.) every vertex of the polyhedron is integer, so LP solves the IP exactly.
+A matrix is **totally unimodular (TU)** if every square submatrix has determinant $0$, $+1$, or $-1$. When the constraint matrix is TU and the right-hand side $b$ is integral (network matrices, interval matrices, bipartite incidence matrices, etc.), every vertex of the polyhedron has integer coordinates — so the LP optimum is automatically an integer solution and LP solves the integer program exactly, with no rounding.
 
 **ELI5**
 
@@ -286,7 +392,20 @@ When the matrix is TU (network matrices, interval matrices, bipartite incidence,
 
 **Worked Example:**
 
-The bipartite matching LP (variables x_e for edges, degree constraints =1 or ≤1, max sum x) has integral vertices (permutation matrices or 0-1 matchings) because the constraint matrix is TU. Hence the LP value equals the integer matching size.
+Consider the $2\times2$ **assignment problem**: assign workers $\{1,2\}$ to jobs $\{1,2\}$ to maximize total value, with values
+$$w_{11}=5,\ w_{12}=3,\ w_{21}=2,\ w_{22}=4.$$
+Introduce $x_{ij}\in[0,1]$ (allowed to be fractional in the LP relaxation) and write
+$$\max\ 5x_{11}+3x_{12}+2x_{21}+4x_{22}$$
+subject to each worker used once ($x_{11}+x_{12}=1$, $x_{21}+x_{22}=1$), each job filled once ($x_{11}+x_{21}=1$, $x_{12}+x_{22}=1$), and $x_{ij}\ge0$.
+
+The constraint matrix is the bipartite incidence matrix, which is TU, so — even though we *permitted* fractional $x$ — every vertex of this polytope is a $0/1$ permutation matrix. There are only two:
+
+- $x_{11}=x_{22}=1$ (worker $1\to$job $1$, worker $2\to$job $2$): value $5+4 = 9$.
+- $x_{12}=x_{21}=1$ (worker $1\to$job $2$, worker $2\to$job $1$): value $3+2 = 5$.
+
+The LP optimum is $\max(9,5) = 9$, attained at the integral point $x_{11}=x_{22}=1$.
+
+**Sanity check:** the relaxation never beat the best integer assignment — TU guarantees the fractional optimum coincides with the combinatorial one, so there was no "integrality gap" to round away. ✓
 
 ## Common Mistakes
 

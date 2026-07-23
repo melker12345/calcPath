@@ -64,13 +64,13 @@ The $\chi^2$ test for independence is equivalent to the $z$-test for comparing t
 
 <!-- section: rank-tests -->
 
-The Mann-Whitney U test (Wilcoxon rank-sum test) is the non-parametric alternative to the two-sample $t$-test. It tests whether one group tends to produce larger values than the other — formally, whether $P(X_1 > X_2) = 0.5$.
+The Mann-Whitney U test (Wilcoxon rank-sum test) is the non-parametric alternative to the two-sample $t$-test for two **independent** groups. The strict null is $H_0$: the two populations have identical distributions. When the two distributions are assumed to differ only by a shift in location, this is equivalent to testing whether one group tends to produce larger values than the other — formally, whether $P(X_1 > X_2) = 0.5$.
 
-Procedure: combine both groups, rank all observations, sum the ranks for each group. The test statistic $U = R_1 - n_1(n_1+1)/2$ where $R_1$ is the rank sum for group $1$.
+Procedure: combine both groups, rank all $n_1+n_2$ observations from smallest ($1$) to largest, sum the ranks for each group. The test statistic is $U_1 = R_1 - n_1(n_1+1)/2$, where $R_1$ is the rank sum for group $1$ and $n_1$ its size. The term $n_1(n_1+1)/2$ is the smallest rank sum group $1$ could possibly have (if it held ranks $1,2,\dots,n_1$), so $U_1$ counts how much group $1$ exceeds that floor. The two statistics satisfy $U_1 + U_2 = n_1 n_2$, and you report the smaller of the two against the critical value.
 
-The Wilcoxon signed-rank test is the paired version. Compute differences $d_i = x_i - y_i$, rank their absolute values, and compare the sum of positive ranks to the sum of negative ranks. It is the non-parametric alternative to the paired $t$-test.
+The Wilcoxon signed-rank test is the paired version, the non-parametric alternative to the paired $t$-test. Compute the differences $d_i = x_i - y_i$, **discard any pair with $d_i = 0$**, rank the remaining absolute values $|d_i|$ from smallest to largest, then reattach the original signs. The test statistic $W$ is the sum of the positive ranks (or, equivalently, the negative ranks). Under $H_0$ (the differences are symmetric about $0$) the positive and negative rank sums should be close; a lopsided split is evidence against $H_0$. Because it uses the ranks of the magnitudes, it uses more information than the sign test (which uses only the direction of each difference).
 
-Rank-based tests are resistant to outliers because they use only the ordering of observations, not their actual values. A single extreme outlier changes only one rank.
+Rank-based tests are resistant to outliers because they use only the ordering of observations, not their actual values. A single extreme outlier changes only one rank: turning a value from $50$ into $5000$ still leaves it the largest observation, so its rank is unchanged.
 
 Efficiency: when the normal distribution holds, the Mann-Whitney U test has about $95.5\%$ efficiency relative to the $t$-test (i.e., it needs about $5\%$ more observations to achieve the same power). For non-normal data, it can be more powerful than the $t$-test.
 
@@ -78,21 +78,51 @@ Efficiency: when the normal distribution holds, the Mann-Whitney U test has abou
 
 - Instead of comparing actual test scores between two teaching methods, rank all students from $1$ (lowest score) to $n$ (highest score). Then ask: do students from Method A tend to have higher ranks? By using ranks instead of raw values, you don't need to assume anything about the distribution of scores.
 
+**Worked Example: Mann-Whitney U by hand**
+- Group A $=\{1,3,5\}$ ($n_1=3$), Group B $=\{2,4,6\}$ ($n_2=3$). $H_0$: the two groups have the same distribution.
+- Pool and rank all $6$ values from smallest to largest. Since the values $1,2,3,4,5,6$ are already in order, each value's rank equals itself: A gets ranks $1,3,5$ and B gets ranks $2,4,6$.
+- Rank sums: $R_1 = 1+3+5 = 9$ (group A), $R_2 = 2+4+6 = 12$ (group B).
+- $U_1 = R_1 - \dfrac{n_1(n_1+1)}{2} = 9 - \dfrac{3(4)}{2} = 9 - 6 = 3$.
+- $U_2 = R_2 - \dfrac{n_2(n_2+1)}{2} = 12 - 6 = 6$ (or directly $U_2 = n_1 n_2 - U_1 = 9 - 3 = 6$).
+- Sanity check: $U_1 + U_2 = 3 + 6 = 9 = n_1 n_2 = 3\times 3$. ✓ Report $U = \min(U_1,U_2) = 3$; with such tiny samples this is far from significant.
+
+**Worked Example: Wilcoxon signed-rank by hand**
+- Before/after scores for $5$ subjects, $d_i = \text{after} - \text{before}$: $d = \{+4,\ -1,\ +3,\ 0,\ +6\}$.
+- Discard the pair with $d_i = 0$; four differences remain: $\{+4,\ -1,\ +3,\ +6\}$.
+- Rank the absolute values $\{4,1,3,6\}$ from smallest to largest: $|{-1}|\to 1$, $|{+3}|\to 2$, $|{+4}|\to 3$, $|{+6}|\to 4$.
+- Reattach signs: positive ranks are $2,3,4$ (from $+3,+4,+6$); the only negative rank is $1$ (from $-1$).
+- $W^+ = 2+3+4 = 9$, $W^- = 1$.
+- Sanity check: $W^+ + W^- = 9 + 1 = 10 = \dfrac{m(m+1)}{2} = \dfrac{4(5)}{2}$ for the $m=4$ retained pairs. ✓ The large imbalance ($9$ vs. $1$) points to a positive shift.
+
 ## Kruskal-Wallis and Spearman Correlation
 
 <!-- section: spearman -->
 
 The Kruskal-Wallis test is the non-parametric equivalent of one-way ANOVA. It tests whether $k$ independent groups have the same distribution (equivalently, the same median). It ranks all $N$ observations and compares rank sums across groups.
 
-Test statistic: $H = \frac{12}{N(N+1)}\sum_{j=1}^k \frac{R_j^2}{n_j} - 3(N+1)$, where $R_j$ is the rank sum for group $j$. Under $H_0$, $H \approx \chi^2_{k-1}$.
+Test statistic: $H = \frac{12}{N(N+1)}\sum_{j=1}^k \frac{R_j^2}{n_j} - 3(N+1)$, where $N$ is the total sample size, $R_j$ is the rank sum for group $j$, and $n_j$ is its size. Ranking is done over all $N$ observations pooled together. Under $H_0$ (all groups share the same distribution), $H \approx \chi^2_{k-1}$; the approximation improves as each $n_j$ grows (a common rule of thumb is $n_j \geq 5$).
 
-If Kruskal-Wallis is significant, use pairwise Mann-Whitney tests with Bonferroni correction for post-hoc comparisons.
+If Kruskal-Wallis is significant, use a rank-based post-hoc procedure such as Dunn's test with Bonferroni correction for the pairwise comparisons — this controls the family-wise error rate the way the omnibus $H$ does not.
 
-Spearman's rank correlation $r_s$: compute ranks of $x$ and $y$ separately, then apply the Pearson correlation formula to the ranks. It measures monotone (not just linear) relationships and is robust to outliers and non-normality.
+Spearman's rank correlation $r_s$: compute ranks of $x$ and $y$ separately, then apply the Pearson correlation formula to the ranks. When there are **no ties**, this simplifies to the shortcut $r_s = 1 - \dfrac{6\sum d_i^2}{n(n^2-1)}$, where $d_i$ is the difference between the two ranks of the $i$-th pair and $n$ is the number of pairs. It measures monotone (not just linear) relationships and is robust to outliers and non-normality. Like Pearson's $r$, it lies in $[-1, 1]$: $r_s = +1$ is a perfect increasing monotone relationship, $r_s = -1$ a perfect decreasing one, and $r_s = 0$ no monotone trend.
 
 **ELI5**
 
 - Kruskal-Wallis is ANOVA with ranks: instead of comparing the actual group means, it compares the average rank positions of each group. Spearman correlation is Pearson correlation with ranks: instead of asking 'do $x$ and $y$ increase together linearly?', it asks 'do the rankings of $x$ and $y$ increase together?'
+
+**Worked Example: Kruskal-Wallis $H$**
+- Three groups, each of size $n_j = 4$, total $N = 12$. Pooled rank sums: $R_1 = 30$, $R_2 = 24$, $R_3 = 24$.
+- Sanity check on the ranks: the total of all ranks must be $\frac{N(N+1)}{2} = \frac{12\cdot 13}{2} = 78$, and indeed $30 + 24 + 24 = 78$. ✓
+- $\sum_j \dfrac{R_j^2}{n_j} = \dfrac{30^2}{4} + \dfrac{24^2}{4} + \dfrac{24^2}{4} = \dfrac{900 + 576 + 576}{4} = \dfrac{2052}{4} = 513$.
+- $H = \dfrac{12}{N(N+1)}\cdot 513 - 3(N+1) = \dfrac{12}{12\cdot 13}\cdot 513 - 3(13) = \dfrac{513}{13} - 39 = 39.46 - 39 = 0.46$.
+- $df = k-1 = 2$, so compare to $\chi^2_{0.05,2} = 5.99$. Since $0.46 < 5.99$, fail to reject $H_0$: no evidence the groups differ.
+
+**Worked Example: Spearman's $r_s$**
+- Five students ranked on a midterm ($x$) and a final ($y$): $x$-ranks $= 1,2,3,4,5$ and $y$-ranks $= 2,4,1,3,5$.
+- Rank differences $d_i = x_i - y_i$: $-1,\ -2,\ +2,\ +1,\ 0$.
+- Squared differences $d_i^2$: $1,\ 4,\ 4,\ 1,\ 0$, so $\sum d_i^2 = 10$.
+- No ties, so use the shortcut with $n = 5$: $r_s = 1 - \dfrac{6\sum d_i^2}{n(n^2-1)} = 1 - \dfrac{6(10)}{5(25-1)} = 1 - \dfrac{60}{120} = 0.5$.
+- Sanity check: $0.5 \in [-1, 1]$ and is positive, matching the fact that the two rankings broadly agree (both start low and end at $5$). ✓
 
 ## When to Use Non-Parametric Tests
 
@@ -109,6 +139,13 @@ Parametric vs. non-parametric summary: $t$-test $\leftrightarrow$ Mann-Whitney U
 **ELI5**
 
 - Non-parametric tests are your fall-back when you can't trust the bell-curve assumption. They're less picky — they work with ranks and counts rather than raw values — but they pay a small price in power when the normal assumption actually holds.
+
+**Worked Example: Choosing the right test**
+- Scenario A: comparing pain relief between a drug and a placebo, $n_1 = 8$ and $n_2 = 8$ patients, outcome rated on a $1$–$5$ ordinal scale. Data are ordinal and $n$ is small, so a $t$-test's normality assumption is untrustworthy. Two independent groups $\Rightarrow$ **Mann-Whitney U**.
+- Scenario B: same patients' symptom scores measured before and after a treatment (paired), scores skewed. Paired design with non-normal differences $\Rightarrow$ **Wilcoxon signed-rank**.
+- Scenario C: comparing recovery time across four hospitals, one hospital has an extreme outlier. Three or more independent groups with an outlier $\Rightarrow$ **Kruskal-Wallis** (then Dunn's test if significant).
+- Scenario D: relating exam rank to hours-studied rank, monotone but curved. Association of two quantitative variables without a linear form $\Rightarrow$ **Spearman's $r_s$**.
+- Reasoning pattern: identify (i) how many groups / whether paired, and (ii) whether parametric assumptions hold; the two answers pick the test.
 
 ## Common Mistakes
 

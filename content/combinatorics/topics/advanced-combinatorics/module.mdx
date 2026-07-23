@@ -14,11 +14,11 @@ The probabilistic method, pioneered by Erdős, proves the existence of combinato
 
 Suppose we have a probability space whose outcomes are the candidate objects (graphs, colorings, subsets, etc.).
 
-Let A be the "bad" event that the random object fails to have the desired property.
+Let $A$ be the "bad" event that the random object fails to have the desired property.
 
-If Pr[A] < 1, then Pr[not A] > 0, hence there exists at least one outcome that is good.
+If $\Pr[A] < 1$, then $\Pr[\overline{A}] > 0$, hence there exists at least one outcome that is good. The logic is simply that an event of probability $0$ never happens, so an event whose complement has probability below $1$ must sometimes happen.
 
-Often one computes or bounds Pr[A] via union bound, expectation, or more sophisticated concentration.
+Often one computes or bounds $\Pr[A]$ via the union bound (when $A$ is a union of many small bad sub-events), via expectation (Markov's inequality), or via more sophisticated concentration inequalities.
 
 **ELI5**
 
@@ -27,21 +27,35 @@ Often one computes or bounds Pr[A] via union bound, expectation, or more sophist
 
 **Worked Example:**
 
-To show there exists a graph on n vertices with no clique of size k and no independent set of size k (for suitable n), or Ramsey lower bounds: a random 2-coloring has small probability of containing a large mono clique (union bound over all potential k-sets).
+*Ramsey lower bound: there is a red/blue edge-coloring of $K_n$ with no monochromatic $K_k$ whenever $\binom{n}{k}\,2^{1-\binom{k}{2}} < 1$.*
+
+Color each of the $\binom{n}{2}$ edges of $K_n$ red or blue independently, each with probability $\tfrac12$.
+
+Step 1 — probability a fixed $k$-set is bad. A fixed set of $k$ vertices spans $\binom{k}{2}$ edges. It is *monochromatic* iff all those edges get the same color: two ways to pick the color out of $2^{\binom{k}{2}}$ equally likely patterns, so
+$$\Pr[\text{fixed } k\text{-set mono}] = \frac{2}{2^{\binom{k}{2}}} = 2^{\,1-\binom{k}{2}}.$$
+
+Step 2 — union bound over all $k$-sets. Let $A$ be the bad event "some $k$-set is monochromatic." There are $\binom{n}{k}$ such sets, so
+$$\Pr[A] \le \binom{n}{k}\,2^{\,1-\binom{k}{2}}.$$
+
+Step 3 — force $\Pr[A] < 1$. If $\binom{n}{k}\,2^{1-\binom{k}{2}} < 1$, then $\Pr[A] < 1$, so $\Pr[\overline A] > 0$ and a good coloring exists.
+
+Step 4 — a concrete instance. Take $k = 3$, so $\binom{k}{2}=3$ and $2^{1-3} = \tfrac14$. For $n = 5$ we get $\binom{5}{3}\cdot\tfrac14 = 10\cdot\tfrac14 = 2.5$, which is $\ge 1$ — the bound is too weak here (indeed $R(3,3)=6$, so $K_5$ *can* be colored without a mono triangle, but this crude count does not prove it). The estimate first drops below $1$ for larger $k$; e.g. it yields the classical bound $R(k,k) > 2^{k/2}$.
+
+Sanity check: probabilities are consistent — for $k=3$ a fixed triangle is mono with probability $2/2^3 = 1/4$, matching the "all three edges agree" count. $\checkmark$
 
 ## The Deletion / Alteration Method
 
 <!-- section: deletion-method -->
 
-When the crude union bound Pr[union bad_i] ≤ sum Pr[bad_i] is larger than 1, one can still succeed by "cleaning up."
+When the crude union bound $\Pr\!\big[\bigcup_i \text{bad}_i\big] \le \sum_i \Pr[\text{bad}_i]$ exceeds $1$, the basic method fails outright — but one can still succeed by "cleaning up."
 
-Compute the expected number X of bad substructures.
+Compute the expected number $X$ of bad substructures. By linearity of expectation this is just $\sum_i \Pr[\text{bad}_i]$, with no independence needed.
 
-There exists an outcome with at most E[X] bad things.
+Because a random variable is $\le$ its mean with positive probability, there exists an outcome with at most $\mathbb{E}[X]$ bad things.
 
-For each bad thing, delete or alter a small number of elements that "witness" it.
+Fix that outcome and, for each bad thing, delete or alter a small number of elements that "witness" it.
 
-The expected size (or quality) of the cleaned object is still large enough to be positive, proving existence.
+The size (or quality) of the cleaned object is still large enough to be positive, proving existence.
 
 **ELI5**
 
@@ -50,15 +64,36 @@ The expected size (or quality) of the cleaned object is still large enough to be
 
 **Worked Example:**
 
-Erdős proof of graphs with large girth and large chromatic number: in G(n,p) the expected number of short cycles is o(n); delete one vertex per such cycle. The remaining graph has high girth. One also shows that the independence number is small with positive probability (or after deletion still o(n)), hence χ ≥ n / α large.
+*A clean deletion computation: an independent set of size $\ge n^2/(4m)$ in any graph with $n$ vertices and $m \ge n/2$ edges.*
+
+Step 1 — random sample. Pick $p \in [0,1]$ (chosen later). Keep each vertex independently with probability $p$; let $S$ be the kept set. Let $X = |S|$ and let $Y$ be the number of edges of the graph with *both* endpoints in $S$.
+
+Step 2 — expectations by linearity.
+$$\mathbb{E}[X] = np, \qquad \mathbb{E}[Y] = m\,p^2,$$
+since each vertex survives with probability $p$ and each edge survives (both endpoints kept) with probability $p^2$.
+
+Step 3 — delete one endpoint per surviving edge. Removing one vertex from each of the $Y$ bad edges kills all of them and leaves an independent set of size $\ge X - Y$. By linearity,
+$$\mathbb{E}[X - Y] = np - mp^2.$$
+So some outcome yields an independent set of size at least $np - mp^2$.
+
+Step 4 — optimize $p$. Maximize $g(p) = np - mp^2$; setting $g'(p) = n - 2mp = 0$ gives $p = \tfrac{n}{2m}$, which lies in $[0,1]$ because $m \ge n/2$. Then
+$$g\!\left(\tfrac{n}{2m}\right) = n\cdot\tfrac{n}{2m} - m\cdot\tfrac{n^2}{4m^2} = \tfrac{n^2}{2m} - \tfrac{n^2}{4m} = \frac{n^2}{4m}.$$
+
+Hence the graph has an independent set of size $\ge n^2/(4m)$, i.e. $\alpha(G) \ge n^2/(4m)$.
+
+Sanity check: for a $d$-regular graph $m = nd/2$, giving $\alpha \ge n/(2d)$ — the right order of magnitude (a proper coloring uses $\le d+1$ colors, and the largest color class has size $\ge n/(d+1)$). $\checkmark$
+
+Erdős's celebrated girth/chromatic-number theorem uses the same recipe: in $G(n,p)$ the expected number of short cycles is $o(n)$; delete one vertex per short cycle to make the girth large, while a separate estimate keeps the independence number $\alpha$ small, forcing $\chi \ge n/\alpha$ to be large.
 
 ## Preview of the Lovász Local Lemma
 
 <!-- section: lovasz-lemma-preview -->
 
-When bad events are plentiful but each depends on only a few others and has tiny probability, the Local Lemma shows that the probability that *none* occur is still positive — even when the total expected number of bad events is huge.
+When bad events are plentiful but each depends on only a few others and has tiny probability, the Local Lemma shows that the probability that *none* occur is still positive — even when the total expected number of bad events is huge (so the union bound is hopeless).
 
-Symmetric LLL: if each bad event has Pr ≤ p, depends on at most D others, and e p (D+1) ≤ 1, then Pr[no bad events] > 0.
+Here "depends on only a few others" means each bad event is *mutually independent* of all but at most $D$ of the rest; those $\le D$ exceptions are its neighbors in the **dependency graph**. This local sparsity is exactly what the union bound ignores.
+
+Symmetric LLL: if each bad event has $\Pr \le p$, depends on at most $D$ others, and $e\,p\,(D+1) \le 1$, then $\Pr[\text{no bad events}] > 0$.
 
 This is the workhorse for many modern probabilistic existence proofs (colorings of hypergraphs, list coloring, etc.).
 
@@ -69,7 +104,19 @@ This is the workhorse for many modern probabilistic existence proofs (colorings 
 
 **Worked Example:**
 
-Coloring the vertices of a hypergraph randomly with 2 colors so that no edge is monochromatic. Each edge is bad with p = 2^{1-k} for k-uniform. Each edge depends on other edges that share a vertex (D ≈ k Δ). When D is not too large relative to 2^k the LLL guarantees a good 2-coloring (property B of hypergraphs).
+*When does a $k$-uniform hypergraph admit a proper 2-coloring (no monochromatic edge)?*
+
+Color each vertex red or blue independently with probability $\tfrac12$.
+
+Step 1 — probability one edge is bad. A single edge has $k$ vertices; it is monochromatic iff all $k$ agree, which happens with probability $2\cdot(\tfrac12)^k = 2^{1-k}$. So $p = 2^{1-k}$.
+
+Step 2 — dependency degree. Two edges' bad events are independent unless the edges share a vertex. If every vertex lies in at most $\Delta$ edges, one edge meets at most $k(\Delta-1) < k\Delta$ others, so $D \le k\Delta$.
+
+Step 3 — apply the symmetric LLL. The condition $e\,p\,(D+1) \le 1$ becomes
+$$e\cdot 2^{1-k}\cdot (k\Delta + 1) \le 1,$$
+which holds once $\Delta \lesssim \dfrac{2^{k-1}}{e\,k}$. Under this bound a proper 2-coloring exists — this is a classical existence proof for **property B**.
+
+Step 4 — a number. For $k=3$ (so $p = 2^{-2} = \tfrac14$) and $D = 2$, we get $e\cdot\tfrac14\cdot 3 \approx 2.04 > 1$: the symmetric bound just fails. For $D = 1$, $e\cdot\tfrac14\cdot 2 \approx 1.36 > 1$ — still fails at $p=\tfrac14$. The takeaway: at $p=\tfrac14$ the crude symmetric LLL is tight and one needs larger $k$ (smaller $p$) or the asymmetric version for interesting cases. $\checkmark$
 
 ## Common Mistakes
 
@@ -85,13 +132,16 @@ The Lovász Local Lemma (LLL) is a fundamental tool that strengthens the probabi
 
 <!-- section: the-lemma -->
 
-Let $A_1, \ldots, A_m$ be events in a probability space. Suppose:\n\n- $\Pr[A_i] \leq p$ for each $i$,\n- each $A_i$ is mutually independent of all the $A_j$ except for at most $D$ of them (its "neighbors" in the dependency graph).
+Let $A_1, \ldots, A_m$ be events in a probability space. Suppose:
 
-If e p (D + 1) ≤ 1, then
+- $\Pr[A_i] \leq p$ for each $i$,
+- each $A_i$ is mutually independent of all the $A_j$ except for at most $D$ of them (its "neighbors" in the dependency graph).
 
-$\Pr[ A_1^c \cap \cdots \cap A_m^c ] > 0$.
+If $e\,p\,(D + 1) \le 1$ (where $e = 2.718\ldots$ is Euler's number), then
 
-That is, there is a positive probability that none of the bad events happen.
+$$\Pr[\, A_1^c \cap \cdots \cap A_m^c \,] > 0.$$
+
+That is, there is a positive probability that none of the bad events happen. Note the events need not be identically distributed or even few in number — $m$ can be enormous; only the *per-event* probability $p$ and the *local* degree $D$ enter the condition.
 
 **ELI5**
 
@@ -100,13 +150,18 @@ That is, there is a positive probability that none of the bad events happen.
 
 **Worked Example:**
 
-2-coloring the vertices of a k-uniform hypergraph with maximum degree D so that no edge is monochromatic.
+*Reading off the largest $D$ the symmetric LLL can tolerate for a given $p$.*
 
-Bad event per edge: "this edge is mono". p = 2^{1-k}.
+Fix the per-event probability $p$. Solving $e\,p\,(D+1)\le 1$ for the dependency degree gives the clean rule
+$$D \le \frac{1}{e\,p} - 1.$$
 
-Dependency: an edge depends on edges that share a vertex, at most k(D) or so.
+Step 1 — take $p = \tfrac18$. Then $\dfrac{1}{e\,p} = \dfrac{8}{e} \approx 2.943$, so $D \le 2.943 - 1 = 1.943$. The largest integer that works is $D = 1$.
 
-When e * 2^{1-k} * (k D) ≲ 1 the LLL guarantees a good coloring exists.
+Step 2 — verify $D = 1$. $e\cdot\tfrac18\cdot(1+1) = \dfrac{2e}{8} = \dfrac{e}{4} \approx 0.680 \le 1$. $\checkmark$
+
+Step 3 — verify $D = 2$ fails. $e\cdot\tfrac18\cdot(2+1) = \dfrac{3e}{8} \approx 1.019 > 1$, so the symmetric condition is (just barely) violated — a good candidate for the asymmetric or lopsided LLL.
+
+Interpretation: with $p = \tfrac18$ (e.g. a $4$-uniform hypergraph, where a mono edge has probability $2^{1-4} = \tfrac18$), the crude symmetric LLL certifies a proper $2$-coloring only when each edge overlaps at most one other edge.
 
 ## Proof Sketch
 
@@ -114,7 +169,15 @@ When e * 2^{1-k} * (k D) ≲ 1 the LLL guarantees a good coloring exists.
 
 The proof is by showing a stronger statement on conditional probabilities.
 
-One proves (by induction on the number of events or by careful use of the chain rule) that for any event $A_i$ and any set of events not including its neighbors,\n\n$\Pr[A_i \mid \text{none of those occurred}] \leq x_i$,\n\nwhere the $x_i$ are numbers in $(0,1)$ satisfying the general LLL inequalities $\Pr[A_i] \leq x_i \prod_{\text{neighbors } j} (1 - x_j)$.\n\nThe symmetric case takes $x_i = 1/(D+1)$ for all $i$ and uses the inequality $(1 - 1/(D+1))^D \geq 1/e$ (approximately) to obtain the numerical condition.\n\nThe product $\prod (1 - x_i)$ then lower-bounds the probability that all are avoided.
+One proves (by induction on the number of events or by careful use of the chain rule) that for any event $A_i$ and any set of events not including its neighbors,
+
+$$\Pr[A_i \mid \text{none of those occurred}] \leq x_i,$$
+
+where the $x_i$ are numbers in $(0,1)$ satisfying the general LLL inequalities $\Pr[A_i] \leq x_i \prod_{\text{neighbors } j} (1 - x_j)$.
+
+The symmetric case takes $x_i = 1/(D+1)$ for all $i$ and uses the inequality $(1 - 1/(D+1))^D \geq 1/e$ to obtain the numerical condition.
+
+The product $\prod_i (1 - x_i)$ then lower-bounds the probability that all are avoided.
 
 **ELI5**
 
@@ -123,7 +186,21 @@ One proves (by induction on the number of events or by careful use of the chain 
 
 **Worked Example:**
 
-For the calculation with p and D, plugging x = 1/(D+1) yields exactly the condition e p (D+1) ≤ 1 after using the standard inequality for (1-x)^D.
+*Deriving the symmetric condition $e\,p\,(D+1)\le 1$ from the general inequality $\Pr[A_i] \le x_i \prod_{\text{neighbors }j}(1-x_j)$.*
+
+Step 1 — a uniform choice of $x_i$. Set every $x_i = x = \dfrac{1}{D+1}$. Each event has at most $D$ neighbors, and every factor $1 - x_j = 1 - x < 1$, so the product over neighbors is *smallest* (hardest to satisfy) when there are exactly $D$ of them:
+$$x_i \prod_{\text{neighbors }j}(1-x_j) \;\ge\; x\,(1-x)^{D}.$$
+Thus it suffices to have $p \le x(1-x)^D$.
+
+Step 2 — plug in $x = \tfrac{1}{D+1}$.
+$$x(1-x)^D = \frac{1}{D+1}\left(1 - \frac{1}{D+1}\right)^{D} = \frac{1}{D+1}\left(\frac{D}{D+1}\right)^{D}.$$
+
+Step 3 — bound the power by $1/e$. The sequence $\left(\dfrac{D}{D+1}\right)^{D} = \left(1 - \dfrac{1}{D+1}\right)^{D}$ decreases to $1/e$ from above, so $\left(\dfrac{D}{D+1}\right)^{D} > \dfrac{1}{e}$ for every finite $D$. Therefore
+$$x(1-x)^D > \frac{1}{e(D+1)}.$$
+
+Step 4 — assemble. If $e\,p\,(D+1) \le 1$, i.e. $p \le \dfrac{1}{e(D+1)}$, then $p < x(1-x)^D$, the general inequality holds, and the LLL applies.
+
+Sanity check ($D=1$): $x = \tfrac12$, $x(1-x)^1 = \tfrac14 = 0.25$, while $\tfrac{1}{e(D+1)} = \tfrac{1}{2e} \approx 0.184$. Indeed $0.25 > 0.184$, so the $1/e$ bound is a genuine (safe) underestimate. $\checkmark$
 
 ## Applications
 
@@ -132,7 +209,7 @@ For the calculation with p and D, plugging x = 1/(D+1) yields exactly the condit
 The LLL is used for:
 
 - Hypergraph 2-colorability (property B) when maximum degree is not too large relative to uniformity.
-- List coloring and choice number bounds χ_l(G) = O(Δ).
+- List coloring and choice-number bounds $\chi_\ell(G) = O(\Delta)$.
 - Non-repetitive colorings, acyclic colorings, frugal colorings.
 - Latin squares, edge colorings, Ramsey numbers for sparse graphs, etc.
 - Many results in positional games, random structures, and theoretical CS.
@@ -145,7 +222,22 @@ The algorithmic LLL (Moser-Tardos resampling) turns many of these existence proo
 
 **Worked Example:**
 
-For list coloring with lists of size roughly 2eΔ: assign each vertex a random color from its list. While there is a monochromatic edge, resample the colors of its two endpoints. The LLL condition guarantees that the process terminates quickly with a proper list coloring.
+*List coloring: lists of size $\ell \ge 2e\Delta$ always suffice, via LLL.* Here $\Delta$ is the maximum degree and each vertex $v$ has its own list $L_v$ of allowed colors with $|L_v| = \ell$.
+
+Step 1 — the random experiment. Color each vertex independently with a uniformly random color from its own list.
+
+Step 2 — bad events and their probability. For each edge $uv$ let $A_{uv}$ be the bad event "$u$ and $v$ receive the same color." Conditioning on $u$'s color, at most one color in $L_v$ collides, so
+$$\Pr[A_{uv}] \le \frac{1}{\ell} =: p.$$
+
+Step 3 — dependency degree. $A_{uv}$ shares a variable only with edges touching $u$ or $v$. Each of $u,v$ has at most $\Delta$ incident edges, so $A_{uv}$ has at most $2\Delta - 2 < 2\Delta$ neighbors: $D \le 2\Delta$.
+
+Step 4 — check the LLL condition.
+$$e\,p\,(D+1) \le e\cdot\frac1\ell\cdot(2\Delta+1) \le \frac{e\,(2\Delta+1)}{\ell}.$$
+This is $\le 1$ as soon as $\ell \ge e(2\Delta+1)$, in particular for $\ell \ge 2e\Delta + e$. Rounding, lists of size $\ell = \lceil 2e\Delta\rceil + 1$ suffice, giving $\chi_\ell(G) = O(\Delta)$.
+
+Step 5 — make it algorithmic (Moser–Tardos). Sample as above; while some edge is monochromatic, resample the colors of its two endpoints. Under the LLL condition the expected number of resamples is $O(m)$ (linear in the number of edges), so a proper list coloring is found in expected polynomial time.
+
+Sanity check: for a single edge ($\Delta = 1$) the formula asks for $\ell \ge e(2\cdot1+1) = 3e \approx 8.15$; of course lists of size $2$ already suffice here, confirming the LLL bound is loose by constants but has the right $O(\Delta)$ shape. $\checkmark$
 
 ## Common Mistakes
 
@@ -167,7 +259,9 @@ Let $F$ be a field, $f$ a polynomial in $F[x_1, \ldots, x_n]$, $S_1, \ldots, S_n
 
 Let $d_1, \ldots, d_n$ be non-negative integers with $\deg(f) = \sum d_i$.
 
-If the coefficient of the monomial $\prod x_i^{d_i}$ in $f$ is nonzero, and $|S_i| > d_i$ for each $i$, then there exist $s_i \in S_i$ such that $f(s_1, \ldots, s_n) \neq 0$.
+If the coefficient of the monomial $\prod_i x_i^{d_i}$ in $f$ is nonzero, and $|S_i| > d_i$ for each $i$, then there exist $s_i \in S_i$ such that $f(s_1, \ldots, s_n) \neq 0$.
+
+Two conditions carry the whole theorem and are easy to get wrong: (i) $\prod_i x_i^{d_i}$ must be a **top-degree** monomial, meaning its exponents sum to the total degree $\deg(f) = \sum_i d_i$; and (ii) the field hypothesis is essential — over a ring with zero divisors the univariate root count that underlies the proof can fail.
 
 **ELI5**
 
@@ -176,17 +270,27 @@ If the coefficient of the monomial $\prod x_i^{d_i}$ in $f$ is nonzero, and $|S_
 
 **Worked Example:**
 
-Univariate case: f of degree d with leading coefficient ≠0, |S| > d ⇒ f not identically zero on S ⇒ exists s∈S, f(s)≠0. Exactly the usual fact.
+*Univariate case — CN recovers the "$\le d$ roots" fact.* Take $n=1$ and $f(x)$ of degree $d$ with leading coefficient $c \ne 0$, so the top monomial is $c\,x^{d}$ with $d_1 = d$. If $|S| > d$, CN says some $s \in S$ has $f(s) \ne 0$. Indeed, a nonzero degree-$d$ polynomial over a field has at most $d$ roots, so it cannot vanish on the $|S| > d$ points of $S$. CN is exactly the multivariate generalization of this.
+
+**Worked Example:**
+
+*A concrete two-variable check.* Let $f(x,y) = x^2 y - x y + 3$ over $\mathbb{Q}$. Its total degree is $3$. The monomial $x^2 y$ is top-degree ($2 + 1 = 3 = \deg f$) with coefficient $1 \ne 0$, giving $d_1 = 2$, $d_2 = 1$.
+
+Step 1 — pick grids beating the exponents: need $|S_1| > d_1 = 2$ and $|S_2| > d_2 = 1$. Take $S_1 = \{0,1,2\}$ ($|S_1| = 3$) and $S_2 = \{0,1\}$ ($|S_2| = 2$).
+
+Step 2 — CN promises a nonvanishing point in $S_1 \times S_2$. Let us find one: $f(2,1) = 4\cdot1 - 2\cdot1 + 3 = 5 \ne 0$. $\checkmark$
+
+Step 3 — why the size conditions matter. If we had shrunk $S_1$ to $\{0,1\}$ (so $|S_1| = 2 \not> 2$), the guarantee would evaporate — and indeed $f$ can be arranged to vanish on too-small grids. The theorem needs *more* values per coordinate than the corresponding exponent so that a univariate slice cannot use up all its roots.
 
 ## The Polynomial Method Context
 
 <!-- section: polynomial-method -->
 
-To apply CN one constructs a polynomial f whose vanishing at a point (s_1,…,s_n) would correspond to a "bad" combinatorial configuration.
+To apply CN one constructs a polynomial $f$ whose vanishing at a point $(s_1,\ldots,s_n)$ would correspond to a "bad" combinatorial configuration.
 
-One then verifies that the monomial $\prod x_i^{d_i}$ (with $d_i$ usually related to the "defect" or degree of freedom per coordinate) has nonzero coefficient (often by direct extraction, symmetry, or combinatorial interpretation of the coefficient).
+One then verifies that the monomial $\prod_i x_i^{d_i}$ (with $d_i$ usually related to the "defect" or degree of freedom per coordinate) has nonzero coefficient — often by direct extraction, symmetry, or a combinatorial interpretation of the coefficient.
 
-The theorem then guarantees a good point in the product of the sets S_i (the "lists" or "color sets" or "possible values").
+The theorem then guarantees a good point in the product of the sets $S_i$ (the "lists" or "color sets" or "possible values").
 
 **ELI5**
 
@@ -195,17 +299,33 @@ The theorem then guarantees a good point in the product of the sets S_i (the "li
 
 **Worked Example:**
 
-Cauchy-Davenport in F_p (p prime): to bound |A+B|. Suppose for contradiction |A+B| ≤ |A|+|B|-2. Let C be a set of size |A|+|B|-2 containing A+B. Consider a polynomial that vanishes exactly when x+y is in C. Degree analysis and the nonzero coefficient of the critical monomial x^{|A|-1} y^{|B|-1} (which can be shown to be related to binomial or Vandermonde) contradict CN on the grid A×B. Hence |A+B| must be larger.
+*Cauchy–Davenport in $\mathbb{F}_p$ ($p$ prime) via CN: $|A+B| \ge \min(p,\,|A|+|B|-1)$.*
+
+We may assume $|A|+|B|-1 \le p$ (otherwise the sumset, living in $\mathbb{F}_p$, hits the floor $\min = p$ trivially once it fills the group). Suppose for contradiction that
+$$|A+B| \le |A|+|B|-2.$$
+
+Step 1 — build the vanishing polynomial. Choose a set $C \subseteq \mathbb{F}_p$ with $A+B \subseteq C$ and $|C| = |A|+|B|-2$ (possible by the contradiction hypothesis). Define
+$$f(x,y) = \prod_{c \in C} (x + y - c).$$
+For every $a \in A$, $b \in B$ we have $a+b \in A+B \subseteq C$, so one factor is zero: $f(a,b) = 0$. Thus $f$ vanishes on the entire grid $A \times B$.
+
+Step 2 — identify the top monomial. $\deg f = |C| = |A|+|B|-2$. Consider the monomial $x^{\,|A|-1}\,y^{\,|B|-1}$; its exponents sum to $(|A|-1)+(|B|-1) = |A|+|B|-2 = \deg f$, so it is top-degree. Its coefficient in $f$ equals its coefficient in the top-degree part $\prod_{c}(x+y) = (x+y)^{|A|+|B|-2}$, namely
+$$\binom{|A|+|B|-2}{\,|A|-1\,} \pmod p.$$
+
+Step 3 — this coefficient is nonzero mod $p$. Since $|A|+|B|-2 < p$, all the numbers involved are $< p$, so the binomial coefficient is a product of factors none divisible by $p$; hence it is nonzero in $\mathbb{F}_p$.
+
+Step 4 — contradiction via CN. Take $d_1 = |A|-1$, $d_2 = |B|-1$, grids $S_1 = A$, $S_2 = B$. Then $|S_1| = |A| > d_1$ and $|S_2| = |B| > d_2$, and the top-monomial coefficient is nonzero. CN forces some $(a,b) \in A \times B$ with $f(a,b) \ne 0$ — contradicting Step 1. Therefore $|A+B| \ge |A|+|B|-1$.
+
+Sanity check: in $\mathbb{Z}/7\mathbb{Z}$ with $A = \{0,1,3\}$, $B = \{0,2\}$, the bound gives $\ge \min(7,\,3+2-1) = 4$; the actual sumset $A+B = \{0,1,2,3,5\}$ has size $5 \ge 4$. $\checkmark$
 
 ## Applications
 
 <!-- section: applications -->
 
-- Additive combinatorics (Cauchy-Davenport, Vosper, etc. over prime fields).
-- Graph coloring and list coloring (via the graph polynomial ∏_{uv edge} (x_u − x_v); coefficient related to orientations or Alon-Tarsi number).
+- Additive combinatorics (Cauchy–Davenport, Vosper, etc. over prime fields).
+- Graph coloring and list coloring (via the graph polynomial $\prod_{uv \in E} (x_u - x_v)$; coefficient related to orientations or the Alon–Tarsi number).
 - Existence of Latin squares, orthogonal mates, and designs.
 - The Erdős–Ginzburg–Ziv theorem and zero-sum problems (via polynomials that detect sums).
-- Chevalley–Warning type results and solution counting mod p.
+- Chevalley–Warning type results and solution counting mod $p$.
 - Many other "existence in grids with forbidden positions" problems.
 
 The method often gives the right order of magnitude or exact results where purely combinatorial arguments are harder.
@@ -216,7 +336,17 @@ The method often gives the right order of magnitude or exact results where purel
 
 **Worked Example:**
 
-For list coloring: the graph polynomial f = ∏_{edges uv} (x_u − x_v). If the coefficient of ∏ x_v^{deg(v)} is nonzero (counts even minus odd Eulerian orientations, the Alon-Tarsi number), and each vertex has a list S_v with |S_v| > deg(v), then CN applied to the grid ∏ S_v guarantees a point where f ≠0, i.e. all adjacent differences nonzero — a proper coloring from the lists.
+*List coloring $C_4$ (the 4-cycle) from lists of size $2$, via CN.* Label the cycle $1\!-\!2\!-\!3\!-\!4\!-\!1$; every vertex has degree $2$. The graph polynomial is
+$$f = (x_1 - x_2)(x_2 - x_3)(x_3 - x_4)(x_4 - x_1),$$
+which is nonzero at a point exactly when adjacent vertices get different colors — a proper coloring.
+
+Step 1 — the target monomial. $C_4$ has $4$ edges, so $\deg f = 4$; a top monomial has exponents summing to $4$. A natural candidate is $x_1^{2} x_3^{2}$ (exponents $d_1 = d_3 = 2$, $d_2 = d_4 = 0$), coming from orienting the cycle so that the two "opposite" vertices $1,3$ each have in-degree $2$.
+
+Step 2 — the coefficient is nonzero. Expanding $f$, the coefficient of $x_1^2 x_3^2$ is $+1$, which is nonzero (over any field). Note that a monomial like $x_1^2 x_2^2$ on an *adjacent* pair has coefficient $0$ — the correct top monomial must sit on a non-adjacent pair. This nonzero coefficient is exactly the Alon–Tarsi non-vanishing condition.
+
+Step 3 — grid sizes and conclusion. CN needs $|S_i| > d_i$: here $|S_1| > 2$, $|S_3| > 2$, while $|S_2|, |S_4| > 0$ (any nonempty list). So if vertices $1,3$ get lists of size $\ge 3$ and vertices $2,4$ get lists of size $\ge 1$, CN guarantees a point of $\prod_v S_v$ where $f \ne 0$ — i.e. all four adjacent differences are nonzero, a proper list coloring.
+
+The general template: for any graph, $f = \prod_{uv \in E}(x_u - x_v)$; pick a top monomial $\prod_v x_v^{d_v}$ (with $\sum_v d_v = |E|$ and each $d_v$ the in-degree of some orientation) whose coefficient — the Alon–Tarsi test — is nonzero; then any lists with $|S_v| > d_v$ admit a proper coloring. $\checkmark$
 
 ## Common Mistakes
 
@@ -234,32 +364,39 @@ It sits at the crossroads of combinatorics, number theory, harmonic analysis, an
 
 <!-- section: sumsets-basics -->
 
-For subsets A,B of an abelian group the sumset A + B = {a + b | a ∈ A, b ∈ B}.
+For subsets $A, B$ of an abelian group the sumset is $A + B = \{\,a + b \mid a \in A,\ b \in B\,\}$. (When $A = B$ we write $2A$ for $A+A$; beware that $2A \ne \{2a : a\in A\}$.)
 
-In Z (or any torsion-free abelian group) one has the elementary inequality |A + B| ≥ |A| + |B| − 1, with equality if and only if A and B are arithmetic progressions with the same common difference.
+In $\mathbb{Z}$ (or any torsion-free abelian group) one has the elementary inequality $|A + B| \ge |A| + |B| - 1$ for finite nonempty $A,B$, with equality if and only if $A$ and $B$ are arithmetic progressions with the same common difference. (Quick reason for the lower bound: if $A = \{a_1 < \cdots < a_m\}$ and $B = \{b_1 < \cdots < b_n\}$, then $a_1+b_1 < a_1+b_2 < \cdots < a_1+b_n < a_2+b_n < \cdots < a_m+b_n$ is a chain of $m+n-1$ distinct sums.)
 
-In a general abelian group the size can be as small as max(|A|, |B|) when one is a coset of a subgroup containing the other.
+The torsion-free hypothesis matters: in a general abelian group the size can be as small as $\max(|A|,|B|)$ — e.g. when $B$ is a subgroup and $A$ is a union of $B$-cosets, adding $B$ changes nothing.
 
 **ELI5**
 
-- Adding two long arithmetic progressions with the same step just gives another (slightly longer) AP.
-- If the sets are "additively unstructured" (like random), the sumset is almost as large as the product |A| |B| (up to the ambient group size).
+- Adding two long arithmetic progressions with the same step just gives another (slightly longer) AP — the most "efficient" way to keep the sumset small.
+- If the sets are "additively unstructured" (like random), the sumset is almost as large as the product $|A|\,|B|$ (up to the ambient group size), because few sums collide.
 
 **Worked Example:**
 
-A = {1,2,4} ⊂ Z is sum-free in some sense? A+A = {2,3,4,5,6,8}, |A+A|=6 > 2*3−1=5, because it is not an AP.
+*Show $A = \{1,2,4\} \subset \mathbb{Z}$ beats the $2|A|-1$ floor because it is not an AP.*
+
+Step 1 — list all pairwise sums (with repetition allowed): $1{+}1{=}2$, $1{+}2{=}3$, $1{+}4{=}5$, $2{+}2{=}4$, $2{+}4{=}6$, $4{+}4{=}8$.
+
+Step 2 — collect distinct values: $A+A = \{2,3,4,5,6,8\}$, so $|A+A| = 6$.
+
+Step 3 — compare to the floor: for $|A| = 3$ the minimum possible is $2|A|-1 = 5$, attained only by an AP. Since $\{1,2,4\}$ is not an AP (gaps $1$ then $2$), we get the strict inequality $6 > 5$. $\checkmark$ For contrast, the AP $\{1,2,3\}$ gives $A+A = \{2,3,4,5,6\}$, exactly $5$.
 
 ## Cauchy-Davenport and the Start of the Theory
 
 <!-- section: cauchy-davenport -->
 
-Cauchy-Davenport (1813/1930s): If A, B nonempty subsets of Z/pZ (p prime) then
+Cauchy–Davenport (Cauchy 1813, Davenport 1935): if $A, B$ are nonempty subsets of $\mathbb{Z}/p\mathbb{Z}$ with $p$ prime, then
+$$|A + B| \ge \min(p,\ |A| + |B| - 1).$$
 
-|A + B| ≥ min(p, |A| + |B| − 1).
+The primality of $p$ is essential — $\mathbb{Z}/p\mathbb{Z}$ has no nontrivial subgroups, which is exactly what blocks the "coset" way of keeping a sumset small (see Common Mistakes). The $\min$ with $p$ appears because the sumset lives inside a group of only $p$ elements, so it can never exceed $p$.
 
-It is sharp: arithmetic progressions with the same difference achieve the bound until they wrap around.
+It is sharp: two arithmetic progressions with the same common difference achieve the bound until they wrap around the group.
 
-Modern proofs use the Combinatorial Nullstellensatz or the pigeonhole / "checksum" method.
+Modern proofs use the Combinatorial Nullstellensatz (as worked above) or the pigeonhole / "checksum" method.
 
 **ELI5**
 
@@ -268,23 +405,31 @@ Modern proofs use the Combinatorial Nullstellensatz or the pigeonhole / "checksu
 
 **Worked Example:**
 
-In Z/7Z, A={0,1,3}, |A|=3. B={0,2}, |B|=2.
+*A case where the bound is met exactly, and one where the set is larger.*
 
-A+B = {0,1,2,3,5}, size 5 > min(7,3+2−1)=4. The theorem only guarantees 4; the actual set is larger.
+Non-tight case. In $\mathbb{Z}/7\mathbb{Z}$ take $A = \{0,1,3\}$ ($|A| = 3$) and $B = \{0,2\}$ ($|B| = 2$).
+
+Step 1 — compute: $A + B = \{0,\,2,\,1,\,3,\,3,\,5\} = \{0,1,2,3,5\}$, so $|A+B| = 5$.
+
+Step 2 — the guarantee: $\min(7,\ 3+2-1) = \min(7,4) = 4$. The theorem promises only $\ge 4$; here the actual set is larger because $A$ is not an AP with the same step as $B$.
+
+Tight case. Take $A = \{0,1,2\}$, $B = \{0,1\}$ (both APs of step $1$). Then $A+B = \{0,1,2,3\}$, size $4 = 3+2-1$ — the bound is attained exactly, confirming sharpness. $\checkmark$
 
 ## Advanced Structure and Results
 
 <!-- section: advanced-results -->
 
-Freiman's theorem: if |A+A| ≤ K |A| (small doubling) then A is "close" to a generalized arithmetic progression of dimension bounded in terms of K and size O_K(|A|).
+The **doubling constant** of a finite set is $K = |A+A|/|A|$; it measures how "additively structured" $A$ is. $K$ is smallest ($\approx 1$, more precisely $K = 2 - 1/|A|$) for an AP and largest ($\approx |A|$) for a random-looking set.
 
-Plünnecke-Ruzsa inequalities control the size of higher sumsets |hA| in terms of the doubling constant.
+Freiman's theorem: if $|A+A| \le K|A|$ (small doubling) then $A$ is "close" to a generalized arithmetic progression (a $d$-dimensional grid $\{x_0 + \sum_i \ell_i v_i : 0 \le \ell_i < L_i\}$) of dimension $d$ bounded in terms of $K$ and total size $O_K(|A|)$.
 
-Szemerédi's theorem: positive upper density implies arbitrarily long APs.
+Plünnecke–Ruzsa inequalities control the size of higher sumsets $|hA| = |\underbrace{A+\cdots+A}_{h}|$ in terms of the doubling constant: small doubling of $A+A$ forces every $hA$ to stay small too, namely $|hA| \le K^{h}\,|A|$.
 
-Green-Tao: the primes contain arbitrarily long APs.
+Szemerédi's theorem: any set of integers with positive upper density contains arbitrarily long APs.
 
-The sum-product problem (Elekes, Solymosi, Bourgain-Katz-Tao, …): max(|A+A|, |A·A|) ≫ |A|^{1+ε} for subsets of reals or finite fields (with current best exponents).
+Green–Tao: the primes contain arbitrarily long APs (despite having density $0$).
+
+The sum–product problem (Elekes, Solymosi, Bourgain–Katz–Tao, …): $\max(|A+A|,\ |A\cdot A|) \gg |A|^{1+\varepsilon}$ for subsets of the reals or finite fields — a set cannot be simultaneously additively and multiplicatively structured.
 
 These results have deep connections to harmonic analysis (Fourier, additive energy), incidence geometry, and ergodic theory.
 
@@ -295,7 +440,16 @@ These results have deep connections to harmonic analysis (Fourier, additive ener
 
 **Worked Example:**
 
-The set of squares has small sumset in some senses? No, |A+A| for A the first N squares is large; the theory classifies when it is small.
+*From doubling to tripling via Plünnecke–Ruzsa.* Suppose $A$ has small doubling $|A+A| \le K|A|$ with $K = 2$. What can we say about $|A+A+A| = |3A|$?
+
+Step 1 — the Plünnecke–Ruzsa bound. If $|A+A| \le K|A|$, then for every $h \ge 1$,
+$$|hA| \le K^{h}\,|A|.$$
+
+Step 2 — plug in $h = 3$, $K = 2$: $\ |3A| \le 2^{3}\,|A| = 8|A|$. So tripling stays linear in $|A|$, blown up only by an absolute constant. (Sharper constants exist; the point is that *bounded* doubling forces *bounded* higher-fold sumsets.)
+
+Step 3 — contrast with the arithmetic-progression extreme. If $A = \{1,2,\ldots,n\}$ is a genuine AP, then $A+A = \{2,\ldots,2n\}$ has size $2n-1$, so $K = (2n-1)/n < 2$, and $3A = \{3,\ldots,3n\}$ has size $3n-2 \approx 3|A|$ — comfortably under the $8|A|$ ceiling. $\checkmark$
+
+Contrast: the first $N$ squares $\{1,4,9,\ldots,N^2\}$ have a *large* sumset (doubling $K$ grows with $N$), so the structure theory does not apply to them — they are additively unstructured.
 
 ## Common Mistakes
 

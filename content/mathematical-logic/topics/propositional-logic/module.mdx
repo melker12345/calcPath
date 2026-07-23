@@ -24,6 +24,8 @@ The five standard connectives are:
 
 Each has a precise truth table. The implication $p \to q$ is material implication; it does not require causation in natural language.
 
+A connective is called **binary** if it takes two inputs (like $\land$, $\lor$, $\to$, $\leftrightarrow$) and **unary** if it takes one (like $\neg$). Since two atoms have $2^2 = 4$ input rows and each row can independently map to T or F, there are exactly $2^4 = 16$ possible binary connectives; only a handful have standard names. A set of connectives is **functionally complete** if every one of those truth functions can be expressed using only that set. For example $\{\neg, \land\}$ is functionally complete (we recover $\lor$ from De Morgan and $\to$ from $\neg p \lor q$), whereas $\{\land, \lor\}$ is not, because with no negation you can never turn an all-true row false.
+
 **ELI5**
 
 - Think of propositions as light switches: on (true) or off (false). Connectives are wiring diagrams: AND requires both switches on, OR needs at least one, NOT flips the switch, IMPLIES is a one-way safety: if the first is on, the second must be too (otherwise the circuit "fails").
@@ -44,15 +46,30 @@ Columns for each subexpression, rows for all combinations:
 
 Only one falsifying case (where the implication is false): when the antecedent $p$ is true but the consequent $q$ is false. All other rows are true. This shows why "false implies anything" is vacuously true.
 
+**Worked Example:**
+
+Show that $\{\neg, \land\}$ can express disjunction $p \lor q$.
+
+Step 1: We want a formula using only $\neg$ and $\land$ whose truth table matches $p \lor q$ (true unless both are false). Step 2: By De Morgan, $\neg(\neg p \land \neg q) \equiv p \lor q$. Step 3: Verify by table — the only row where $p \lor q$ is false is $p = q = \text{F}$:
+
+| $p$ | $q$ | $\neg p \land \neg q$ | $\neg(\neg p \land \neg q)$ | $p \lor q$ |
+|-----|-----|-----------------------|------------------------------|------------|
+| T   | T   | F                     | T                            | T          |
+| T   | F   | F                     | T                            | T          |
+| F   | T   | F                     | T                            | T          |
+| F   | F   | T                     | F                            | F          |
+
+The last two columns agree in every row, so the construction is correct. Since $\lor$ (and, similarly, $\to$ and $\leftrightarrow$) can be rebuilt this way, $\{\neg, \land\}$ is functionally complete.
+
 ## Truth Tables and Tautologies
 
 <!-- section: tautologies -->
 
 A **truth table** enumerates all $2^n$ possible assignments of truth values to $n$ atomic propositions and computes the value of the compound formula under each.
 
-A formula is a **tautology** (or logically valid) if it evaluates to true no matter the assignment of truth values. A **contradiction** is false under every assignment. A **contingent** formula is true under some and false under others.
+A formula is a **tautology** (or logically valid) if it evaluates to true no matter the assignment of truth values. A **contradiction** is false under every assignment. A **contingent** formula is true under some and false under others. These three categories are exhaustive and mutually exclusive: every formula is exactly one of them.
 
-To check: build the full table or use shortcuts (e.g., assume false and derive contradiction for validity proofs).
+To check whether a formula is a tautology you can build the full table, or use the faster **falsification shortcut**: *assume* the formula is false and try to solve for a consistent truth assignment. If that attempt forces a contradiction (some atom would have to be both true and false), no falsifying assignment exists, so the formula is a tautology. If instead you find a consistent assignment, that assignment is an explicit counterexample proving it is *not* a tautology.
 
 **ELI5**
 
@@ -72,6 +89,12 @@ Build the table for the two possible assignments:
 
 The formula evaluates to T in both rows, hence it is a tautology (always true, no matter the truth value of p). This is a foundational law in classical logic.
 
+**Worked Example:**
+
+Show that hypothetical syllogism $(p \to q) \land (q \to r) \to (p \to r)$ is a tautology, using the falsification shortcut instead of writing all $2^3 = 8$ rows.
+
+Step 1: Assume the whole implication is false. An implication is false only when its antecedent is true and its consequent is false, so we need $(p \to q) \land (q \to r)$ true and $(p \to r)$ false. Step 2: For $(p \to r)$ to be false we need $p = \text{T}$ and $r = \text{F}$. Step 3: The antecedent being true means both $p \to q$ and $q \to r$ are true. Since $p = \text{T}$, $p \to q$ true forces $q = \text{T}$. Step 4: But then $q \to r$ is $\text{T} \to \text{F} = \text{F}$, contradicting that $q \to r$ is true. Step 5: The assumption "the formula is false" leads to a contradiction, so no falsifying assignment exists. Hence the formula is a tautology. Sanity check: this is exactly transitivity of implication — "if $p$ forces $q$ and $q$ forces $r$, then $p$ forces $r$" — which is what we expect to hold.
+
 ## Satisfiability and Validity
 
 <!-- section: satisfiability -->
@@ -80,7 +103,7 @@ A formula (or set of formulas) is **satisfiable** if there is some truth assignm
 
 The **satisfiability problem** (SAT) asks whether a given formula in conjunctive normal form is satisfiable. It is NP-complete, yet central to verification, AI planning, and hardware design.
 
-Two formulas are **logically equivalent** if they have identical truth tables (same value under every assignment). We write $p \equiv q$.
+Two formulas are **logically equivalent** if they have identical truth tables (same value under every assignment). We write $p \equiv q$. A useful bridge between these ideas: a formula is a tautology exactly when its negation is unsatisfiable, and it is satisfiable exactly when its negation is not a tautology. This duality is why SAT solvers can also answer validity questions — to test whether $\varphi$ is valid, ask whether $\neg\varphi$ is satisfiable and expect the answer "no".
 
 **ELI5**
 
@@ -92,13 +115,19 @@ Two formulas are **logically equivalent** if they have identical truth tables (s
 
 Is $(p \to q) \land (q \to r) \land p \land \neg r$ satisfiable?
 
-Assume it is true. Then $p$ true, $r$ false. From $p \to q$ we get $q$ true. From $q \to r$ we get $r$ true. Contradiction with $\neg r$. Hence unsatisfiable.
+Step 1: A conjunction is true only if every conjunct is true, so assume all four hold and try to build a consistent assignment. Step 2: The last two conjuncts, $p$ and $\neg r$, force $p = \text{T}$ and $r = \text{F}$. Step 3: With $p = \text{T}$, the conjunct $p \to q$ (which must be true) forces $q = \text{T}$, since $\text{T} \to \text{F}$ would be false. Step 4: With $q = \text{T}$, the conjunct $q \to r$ must be true, but $q \to r = \text{T} \to \text{F} = \text{F}$. Step 5: Contradiction — we needed $q \to r$ true but it came out false. No assignment satisfies all conjuncts, so the formula is **unsatisfiable**. Sanity check: the four conjuncts say "$p$ leads to $q$, $q$ leads to $r$, $p$ holds, but $r$ does not" — chaining the first three forces $r$, clashing with the fourth, exactly as the algebra found.
+
+**Worked Example:**
+
+Is the clause set $\{p \lor q,\; \neg p \lor r,\; \neg q \lor \neg r\}$ satisfiable?
+
+Step 1: Rather than assume unsatisfiability, we hunt for one model by case analysis. Try $p = \text{T}$. Step 2: The second clause $\neg p \lor r$ becomes $\text{F} \lor r$, so it needs $r = \text{T}$. Step 3: The third clause $\neg q \lor \neg r$ becomes $\neg q \lor \text{F}$, so it needs $\neg q = \text{T}$, i.e. $q = \text{F}$. Step 4: Check the first clause $p \lor q = \text{T} \lor \text{F} = \text{T}$ — satisfied. Step 5: The assignment $p = \text{T},\, q = \text{F},\, r = \text{T}$ makes all three clauses true, so the set is **satisfiable**. Finding a single satisfying assignment (a "witness") is enough; we do not need to inspect the other rows.
 
 ## Logical Equivalence and Normal Forms
 
 <!-- section: normal-forms -->
 
-Every propositional formula is logically equivalent to one in **disjunctive normal form** (DNF: OR of ANDs) and one in **conjunctive normal form** (CNF: AND of ORs).
+A **literal** is an atom or its negation ($p$ or $\neg p$). A **clause** is a disjunction of literals, e.g. $\neg p \lor q \lor r$. Every propositional formula is logically equivalent to one in **disjunctive normal form** (DNF: an OR of ANDs of literals) and one in **conjunctive normal form** (CNF: an AND of ORs of literals — that is, an AND of clauses). Existence is guaranteed: from a truth table you can read off a DNF (one AND-term per true row) or a CNF (one clause per false row), so no formula is ever "unconvertible". The forms are not unique, though — many equivalent CNFs exist for the same formula.
 
 Useful equivalences (replace subformulas):
 
@@ -116,9 +145,13 @@ Useful equivalences (replace subformulas):
 
 Convert $p \to (q \land r)$ to CNF.
 
-$p \to (q \land r) \equiv \neg p \lor (q \land r) \equiv (\neg p \lor q) \land (\neg p \lor r)$ (by distribution).
+Step 1: Eliminate the implication using $p \to q \equiv \neg p \lor q$: this gives $\neg p \lor (q \land r)$. Step 2: Push the disjunction inside the conjunction with the distributive law $a \lor (b \land c) \equiv (a \lor b) \land (a \lor c)$, taking $a = \neg p$, $b = q$, $c = r$: this yields $(\neg p \lor q) \land (\neg p \lor r)$. Step 3: Both parts are clauses (disjunctions of literals) joined by AND, so this is CNF with two clauses. Sanity check: the original is false only when $p = \text{T}$ and $q \land r = \text{F}$; the CNF is false exactly when $\neg p \lor q$ or $\neg p \lor r$ is false, i.e. when $p = \text{T}$ and $q = \text{F}$, or $p = \text{T}$ and $r = \text{F}$ — the same set of falsifying rows.
 
-CNF with two clauses.
+**Worked Example:**
+
+Convert $\neg(p \leftrightarrow q)$ to CNF.
+
+Step 1: Expand the biconditional. $p \leftrightarrow q$ is true when $p$ and $q$ share a truth value, so $p \leftrightarrow q \equiv (p \land q) \lor (\neg p \land \neg q)$. Step 2: Negate both sides and apply De Morgan to the outer OR: $\neg\big((p \land q) \lor (\neg p \land \neg q)\big) \equiv \neg(p \land q) \land \neg(\neg p \land \neg q)$. Step 3: Apply De Morgan inside each factor: $\neg(p \land q) \equiv \neg p \lor \neg q$, and $\neg(\neg p \land \neg q) \equiv p \lor q$ (using double negation). Step 4: Combine: $\neg(p \leftrightarrow q) \equiv (\neg p \lor \neg q) \land (p \lor q)$, a CNF of two clauses. Sanity check: $\neg(p \leftrightarrow q)$ is exclusive-or, true exactly when $p$ and $q$ differ; the clause $p \lor q$ rules out both-false and $\neg p \lor \neg q$ rules out both-true, leaving precisely the two "differ" rows.
 
 ## Common Mistakes
 

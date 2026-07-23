@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/components/auth-provider";
+import { supabase } from "@/lib/supabase/client";
 import {
   buildTargetDeepLink,
   getProblemMeta,
@@ -187,8 +189,8 @@ function voteCardClass(item: Extract<FeedbackListItem, { type: "vote-group" }>) 
 }
 
 export function AdminFeedbackPanel() {
-  // Auth removed: always attempt load (no user/session/token checks). Admin inbox now open (obscure /admin/feedback URL).
-  const adminEmail = null;
+  const { user, signOut } = useAuth();
+  const adminEmail = user?.email ?? null;
   const [feedback, setFeedback] = useState<FeedbackRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -204,13 +206,22 @@ export function AdminFeedbackPanel() {
     setAccessDenied(false);
 
     try {
-      // No token: api GET now allows without auth (bypassed guard).
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) {
+        setAccessDenied(true);
+        setFeedback(null);
+        return;
+      }
+
       const params = new URLSearchParams({ limit: "1000" });
       if (filter !== "all") params.set("kind", filter);
 
-      const res = await fetch(`/api/feedback?${params}`);
+      const res = await fetch(`/api/feedback?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-      if (res.status === 403) {
+      if (res.status === 403 || res.status === 401) {
         setAccessDenied(true);
         setFeedback(null);
         return;
@@ -238,11 +249,18 @@ export function AdminFeedbackPanel() {
       setError(null);
 
       try {
-        // No token required (api status update guard bypassed for anon-admin).
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) {
+          setError("Your session expired. Please sign in again.");
+          return;
+        }
+
         const res = await fetch("/api/feedback", {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ ids, status }),
         });
@@ -311,11 +329,20 @@ export function AdminFeedbackPanel() {
           Admin
         </p>
         <h2 className="mt-2 text-2xl font-bold text-zinc-900">
-          Feedback inbox unavailable
+          Not authorized
         </h2>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-zinc-500">
-          Unable to load (check admin config or try refresh).
+          {adminEmail
+            ? `You're signed in as ${adminEmail}, which isn't an admin account.`
+            : "You need to sign in with an admin account to view feedback."}
         </p>
+        <button
+          type="button"
+          onClick={() => signOut()}
+          className="mt-4 rounded-xl border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+        >
+          Sign out
+        </button>
       </section>
     );
   }

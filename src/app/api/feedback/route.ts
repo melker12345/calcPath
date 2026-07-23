@@ -221,12 +221,10 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "No admin configured" }, { status: 403 });
     }
 
-    // Auth removed: admin status updates (from panel) now bypass email guard; anyone visiting obscure /admin/feedback can triage.
-    // (Previously: const authUser = await getAuthUser(request); if (!authUser?.email || !adminEmails.includes... )
-    // const authUser = await getAuthUser(request);
-    // if (!authUser?.email || !adminEmails.includes(authUser.email.toLowerCase())) {
-    //   return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    // }
+    const authUser = await getAuthUser(request);
+    if (!authUser?.email || !adminEmails.includes(authUser.email.toLowerCase())) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
 
     const status = body.status as FeedbackStatus;
     if (!VALID_STATUSES.includes(status)) {
@@ -345,11 +343,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "No admin configured" }, { status: 403 });
   }
 
-  // Auth removed: admin list now always allowed (no token/email check) -- admin inbox open to anyone who visits /admin/feedback (obscure URL).
-  // const email = await getAuthEmail(request);
-  // if (!email || !adminEmails.includes(email.toLowerCase())) {
-  //   return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-  // }
+  const email = await getAuthEmail(request);
+  if (!email || !adminEmails.includes(email.toLowerCase())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
 
   const url = new URL(request.url);
   const kind = url.searchParams.get("kind");
@@ -374,28 +371,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Failed to fetch feedback" }, { status: 500 });
   }
 
-  const userIds = [...new Set((data ?? []).map((row) => row.user_id).filter(Boolean))] as string[];
-  let emailByUserId = new Map<string, string | null>();
-
-  if (userIds.length > 0) {
-    const { data: profiles, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id,email")
-      .in("id", userIds);
-
-    if (profilesError) {
-      console.error("Feedback profile fetch error:", profilesError.message);
-    } else {
-      emailByUserId = new Map(
-        (profiles ?? []).map((profile) => [profile.id as string, (profile.email as string | null) ?? null]),
-      );
-    }
-  }
-
-  const feedback = (data ?? []).map((row) => ({
-    ...row,
-    user_email: row.user_id ? emailByUserId.get(row.user_id) ?? null : null,
-  }));
+  // Feedback is anonymous: we deliberately do NOT join submitter emails from the
+  // profiles table. The inbox shows content only, never who sent it.
+  const feedback = (data ?? []).map((row) => ({ ...row, user_email: null }));
 
   return NextResponse.json({ feedback });
 }

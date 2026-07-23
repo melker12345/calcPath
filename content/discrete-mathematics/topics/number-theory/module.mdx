@@ -18,198 +18,256 @@ A prime is an integer greater than 1 whose only positive divisors are 1 and itse
 
 In this section you will learn the definition, Euclid's proof of infinitude, the fundamental theorem, basic properties of divisibility and gcd, and the computational techniques (trial division, sieves, Euclidean algorithm) that make number theory practical.
 
-A positive integer p > 1 is **prime** if it has no positive divisors other than 1 and itself. Otherwise it is **composite**.
+A positive integer $p > 1$ is **prime** if it has no positive divisors other than $1$ and itself. Otherwise it is **composite**. Note the hypothesis $p > 1$: it is part of the definition, not an afterthought.
 
-1 is neither prime nor composite.
+$1$ is neither prime nor composite. It is excluded on purpose — if $1$ were prime, factorizations would no longer be unique (you could paste in extra copies of $1$), and the theorem below would fail.
 
-There are infinitely many primes (Euclid's proof by contradiction: assume finitely many p1...pk, then p1...pk +1 is a new prime or has a new prime factor).
+There are infinitely many primes. **Euclid's proof by contradiction:** suppose there were only finitely many, $p_1, p_2, \dots, p_k$. Form $N = p_1 p_2 \cdots p_k + 1$. Dividing $N$ by any $p_i$ leaves remainder $1$, so no $p_i$ divides $N$. But every integer $> 1$ has at least one prime divisor, so $N$ has a prime factor not in our list — contradiction. Hence no finite list can contain all primes.
 
-The **Fundamental Theorem of Arithmetic**: every integer n > 1 factors uniquely (up to order) as a product of primes: n = p1^{e1} ... pk^{ek}.
+The **Fundamental Theorem of Arithmetic (FTA):** every integer $n > 1$ factors uniquely (up to the order of the factors) as a product of prime powers:
 
-**Prime factorization** is the key to many divisibility questions.
+$$n = p_1^{e_1} p_2^{e_2} \cdots p_k^{e_k}.$$
+
+**Prime factorization** is the key to many divisibility questions: gcd, lcm, divisor counts, and perfect-square tests all fall out of the exponents $e_i$.
+
+**Trial division for primality.** To test whether $n$ is prime, you only need to try dividing by primes up to $\sqrt{n}$. Why $\sqrt{n}$? If $n = a \cdot b$ with $a \le b$, then $a \le \sqrt{n}$ — a composite number always has a factor at or below its square root, so if none is found, $n$ is prime.
 
 **ELI5**
 
-- Primes are the "atoms" of the integers — you can't break them into smaller integer factors >1.
-- Every number is built by multiplying these atoms (with repeats allowed). The factorization is like the unique "ingredient list" with quantities.
+- Primes are the "atoms" of the integers — you can't break them into smaller integer factors greater than $1$.
+- Every number is built by multiplying these atoms (with repeats allowed). The factorization is like the unique "ingredient list" with quantities: $180$ is "two 2's, two 3's, and one 5," and no other recipe makes $180$.
 
 ### Worked Examples
 
-**Worked Example:**
+**Worked Example: Is 91 prime?**
 
-**Is 91 prime?**
+Step 1: Compute the search bound. $\sqrt{91} \approx 9.54$, so we only need to test prime divisors $\le 9$: that is $2, 3, 5, 7$.
 
-sqrt(91)≈9.5. Check divis by 2,3,5,7. 91=7*13. Not prime.
+Step 2: Test each. $91$ is odd (not divisible by $2$); its digit sum is $9+1 = 10$, not a multiple of $3$; it doesn't end in $0$ or $5$; but $91 = 7 \times 13$.
 
-**Prime factorization of 180**
+Step 3: We found a factor, so $91$ is **not prime**.
 
-180=2*90=2*2*45=2*2*3*15=2*2*3*3*5 = 2² × 3² × 5.
+Sanity check: $7 \times 13 = 91$ ✓, and both $7$ and $13$ are prime, so $91 = 7 \times 13$ is its full factorization.
+
+**Worked Example: Prime factorization of 180**
+
+Step 1: Peel off the smallest prime repeatedly. $180 = 2 \times 90$; $90 = 2 \times 45$; $45$ is odd, so we move on from $2$.
+
+Step 2: $45 = 3 \times 15$; $15 = 3 \times 5$; and $5$ is prime.
+
+Step 3: Collect the factors: $180 = 2 \times 2 \times 3 \times 3 \times 5 = 2^2 \times 3^2 \times 5$.
+
+Sanity check: $2^2 \times 3^2 \times 5 = 4 \times 9 \times 5 = 180$ ✓.
 
 ## Divisors and the Greatest Common Divisor
 
 <!-- section: divisors -->
 
-If d divides n (d | n), then n = d * k for integer k; d is a **divisor** (factor) of n.
+If $d$ divides $n$ (written $d \mid n$), then $n = d \cdot k$ for some integer $k$; $d$ is a **divisor** (factor) of $n$. Read the bar as "divides": $d \mid n$ is a true/false statement, not the fraction $d/n$.
 
-The **greatest common divisor** gcd(a,b) is the largest positive integer that divides both a and b.
+The **greatest common divisor** $\gcd(a, b)$ is the largest positive integer that divides both $a$ and $b$. When $\gcd(a,b) = 1$ we call $a$ and $b$ **coprime** (relatively prime).
 
-The **least common multiple** lcm(a,b) satisfies gcd(a,b) * lcm(a,b) = |a b| (for positive).
+The **least common multiple** $\operatorname{lcm}(a, b)$ is the smallest positive integer that both $a$ and $b$ divide. For positive $a, b$ the two are linked by
 
-If a = p1^{a1}... , b=p1^{b1}... then gcd takes min exponents, lcm takes max.
+$$\gcd(a, b) \cdot \operatorname{lcm}(a, b) = a \cdot b.$$
 
-Number of positive divisors of n = p1^{e1}... is ∏ (ei + 1).
+**Reading gcd and lcm off the factorizations.** If $a = p_1^{a_1} p_2^{a_2} \cdots$ and $b = p_1^{b_1} p_2^{b_2} \cdots$ (using the same list of primes, with a zero exponent when a prime is absent), then the gcd takes the **minimum** exponent of each prime and the lcm takes the **maximum**:
+
+$$\gcd(a,b) = \prod_i p_i^{\min(a_i, b_i)}, \qquad \operatorname{lcm}(a,b) = \prod_i p_i^{\max(a_i, b_i)}.$$
+
+**Counting divisors.** The number of positive divisors of $n = p_1^{e_1} \cdots p_k^{e_k}$ is
+
+$$\prod_{i=1}^{k} (e_i + 1),$$
+
+because each divisor independently chooses an exponent from $0$ up to $e_i$ for prime $p_i$ — that is $e_i + 1$ choices per prime.
 
 **ELI5**
 
-- Divisors of 12: 1,2,3,4,6,12. Common divisors of 12 and 18 are 1,2,3,6; greatest is 6.
-- gcd is the largest "shared building block" pile; lcm is the smallest number that contains both as building blocks.
+- Divisors of $12$ are $1, 2, 3, 4, 6, 12$. The common divisors of $12$ and $18$ are $1, 2, 3, 6$; the greatest is $6$.
+- The gcd is the largest "shared building block" you can make from the primes both numbers own; the lcm is the smallest number roomy enough to contain both as building blocks. Every prime a number owns "min" for the gcd (only the overlap) and "max" for the lcm (whatever either needs).
 
 ### Worked Examples
 
-**Divisor count**
+**Worked Example: Divisor count of 60**
 
-For 60=2²*3*5, number of divisors=(2+1)(1+1)(1+1)=3*2*2=12.
+Step 1: Factor. $60 = 2^2 \times 3 \times 5$, so the exponents are $2, 1, 1$.
 
-List: 1,2,3,4,5,6,10,12,15,20,30,60.
+Step 2: Apply the formula. Number of divisors $= (2+1)(1+1)(1+1) = 3 \times 2 \times 2 = 12$.
 
-**gcd via primes**
+Step 3: List them to confirm: $1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60$ — that is $12$ divisors ✓.
 
-gcd(48,180): 48=2^4*3, 180=2^2*3^2*5 → min 2^2 *3 =12.
+**Worked Example: gcd and lcm via prime factorizations**
+
+Step 1: Factor both. $48 = 2^4 \times 3$ and $180 = 2^2 \times 3^2 \times 5$.
+
+Step 2: gcd = minimum exponent on each shared prime. For $2$: $\min(4, 2) = 2$. For $3$: $\min(1, 2) = 1$. The prime $5$ appears only in $180$, so its min exponent is $0$. Thus $\gcd(48, 180) = 2^2 \times 3 = 12$.
+
+Step 3: lcm = maximum exponent on each prime. For $2$: $\max(4,2)=4$; for $3$: $\max(1,2)=2$; for $5$: $\max(0,1)=1$. Thus $\operatorname{lcm}(48,180) = 2^4 \times 3^2 \times 5 = 16 \times 9 \times 5 = 720$.
+
+Sanity check: $\gcd \cdot \operatorname{lcm} = 12 \times 720 = 8640$ and $48 \times 180 = 8640$ ✓.
 
 ## The Euclidean Algorithm
 
 <!-- section: euclid -->
 
-The **Euclidean algorithm** computes gcd(a,b) efficiently (a > b > 0):
+Factoring big numbers is slow, so we rarely compute gcd from prime factorizations. The **Euclidean algorithm** computes $\gcd(a, b)$ efficiently without any factoring. For $a > b > 0$ it uses the identity
 
-gcd(a,b) = gcd(b, a mod b)
+$$\gcd(a, b) = \gcd(b, \; a \bmod b).$$
 
-Repeat until remainder 0; last nonzero remainder is the gcd.
+Repeat, replacing the pair $(a, b)$ by $(b, \; a \bmod b)$, until the remainder is $0$; the **last nonzero remainder is the gcd**.
 
-It is based on: any common divisor of a and b also divides a - q b, hence divides the remainder.
+**Why it works:** write $a = qb + r$ where $r = a \bmod b$. Any common divisor of $a$ and $b$ also divides $r = a - qb$, and any common divisor of $b$ and $r$ also divides $a = qb + r$. So the pair $(a,b)$ and the pair $(b, r)$ have exactly the same set of common divisors — and therefore the same greatest one.
 
-**Extended Euclidean algorithm** also finds integers x,y (Bézout coefficients) such that gcd(a,b) = a x + b y. These exist for any integers (Bézout's identity).
+The **extended Euclidean algorithm** additionally finds integers $x, y$ (the **Bézout coefficients**) with
 
-Running time is O(log min(a,b)) — very fast even for huge numbers.
+$$\gcd(a, b) = a x + b y.$$
+
+Such $x, y$ exist for every pair of integers (this is **Bézout's identity**), and you recover them by back-substituting the remainders from the ordinary Euclidean steps. This is exactly how you find modular inverses in the next sections.
+
+Running time is $O(\log \min(a, b))$ — very fast even for numbers with hundreds of digits.
 
 **ELI5**
 
-- Instead of listing all divisors of both numbers and finding the biggest shared one, you repeatedly replace the bigger number by the remainder when divided by the smaller — like the "difference game" but faster with mod.
-- The extended version back-substitutes the remainders to express the gcd as a combination (like making change with two denominations).
+- Instead of listing all divisors of both numbers and hunting for the biggest shared one, you repeatedly replace the bigger number by the remainder it leaves against the smaller — like the ancient "keep subtracting the smaller" game, but sped up by using $\bmod$ to subtract many copies at once.
+- The extended version rewinds those remainder steps to express the gcd as a combination $a x + b y$ — like figuring out how many of each of two coin denominations add up to a target amount.
 
 ### Worked Examples
 
-**gcd(1071, 462)**
+**Worked Example: gcd(1071, 462)**
 
-1071 = 2*462 + 147
+Step 1: $1071 = 2 \times 462 + 147$ (remainder $147$).
 
-462 = 3*147 + 21
+Step 2: $462 = 3 \times 147 + 21$ (remainder $21$).
 
-147 = 7*21 + 0
+Step 3: $147 = 7 \times 21 + 0$ (remainder $0$ — stop).
 
-gcd = 21.
+The last nonzero remainder is $21$, so $\gcd(1071, 462) = 21$.
 
-**Extended for gcd(48,18)**
+Sanity check: $21 \mid 1071$ since $1071 = 21 \times 51$, and $21 \mid 462$ since $462 = 21 \times 22$; and $\gcd(51, 22) = 1$, so $21$ is indeed the *greatest* common divisor ✓.
 
-48 = 2*18 + 12
+**Worked Example: Extended Euclidean for gcd(48, 18)**
 
-18 = 1*12 + 6
+Step 1: Run the forward algorithm, keeping every equation.
 
-12 = 2*6 + 0
+$$48 = 2 \times 18 + 12, \qquad 18 = 1 \times 12 + 6, \qquad 12 = 2 \times 6 + 0.$$
 
-gcd=6.
+The last nonzero remainder is $6$, so $\gcd(48, 18) = 6$.
 
-Back-sub: 6 = 18 -1*12
+Step 2: Back-substitute, starting from the equation that produced the gcd. From the second equation, $6 = 18 - 1 \times 12$.
 
-12 = 48-2*18
+Step 3: From the first equation, $12 = 48 - 2 \times 18$. Substitute:
 
-6 = 18 -1*(48-2*18) = 3*18 -1*48
+$$6 = 18 - 1 \times (48 - 2 \times 18) = 18 - 48 + 2 \times 18 = 3 \times 18 - 1 \times 48.$$
 
-Thus 6 = -1*48 + 3*18. (x=-1, y=3)
+So $6 = (-1)\times 48 + 3 \times 18$, giving Bézout coefficients $x = -1$, $y = 3$.
+
+Sanity check: $(-1)(48) + (3)(18) = -48 + 54 = 6$ ✓.
 
 ## Modular Arithmetic and Congruences
 
 <!-- section: modular -->
 
-We say a ≡ b (mod m) if m divides (a - b), i.e., a and b leave the same remainder when divided by m.
+Fix a positive integer $m$, called the **modulus**. We say $a \equiv b \pmod{m}$ (read "$a$ is congruent to $b$ modulo $m$") if $m$ divides $a - b$ — equivalently, $a$ and $b$ leave the same remainder when divided by $m$.
 
-Congruence is an equivalence relation; the classes are residue classes 0,1,...,m-1.
+Congruence modulo $m$ is an equivalence relation, so it partitions the integers into $m$ **residue classes** represented by $0, 1, \dots, m-1$. Working "mod $m$" means working with these classes rather than with individual integers.
 
-Arithmetic works on congruences:
+**Arithmetic respects congruence.** If $a \equiv b \pmod m$ and $c \equiv d \pmod m$, then
 
-- If a≡b (mod m) and c≡d (mod m) then a+c ≡ b+d, a-c ≡ b-d, a*c ≡ b*d (mod m)
+$$a + c \equiv b + d, \qquad a - c \equiv b - d, \qquad a c \equiv b d \pmod{m},$$
 
-- a^k ≡ b^k (mod m) for positive k.
+and consequently $a^k \equiv b^k \pmod{m}$ for every positive integer $k$. This is what lets you reduce numbers *before* adding or multiplying, keeping intermediate values small.
 
-Solving linear congruence ax ≡ b (mod m): solutions exist iff gcd(a,m) divides b. If d=gcd(a,m)|b, there are exactly d solutions mod m.
+**Warning — division is different.** You may *not* freely cancel a common factor: $a c \equiv b c \pmod m$ does **not** imply $a \equiv b \pmod m$ unless $\gcd(c, m) = 1$. (For example $2 \cdot 3 \equiv 2 \cdot 0 \pmod 6$ but $3 \not\equiv 0 \pmod 6$.)
 
-The **multiplicative inverse** of a mod m exists iff gcd(a,m)=1; then ax≡1 (mod m) has unique solution.
+**Linear congruences.** The equation $a x \equiv b \pmod{m}$ has a solution **if and only if** $d = \gcd(a, m)$ divides $b$. When it does, there are exactly $d$ solutions among the residues $0, 1, \dots, m-1$.
+
+**Multiplicative inverse.** The special case $a x \equiv 1 \pmod m$ has a solution — the **inverse** $a^{-1}$ of $a$ modulo $m$ — if and only if $\gcd(a, m) = 1$, and then that inverse is unique modulo $m$. You can compute it with the extended Euclidean algorithm: if $a x + m y = 1$ then $a x \equiv 1 \pmod m$, so $x$ is the inverse.
 
 **ELI5**
 
-- Modular arithmetic is "clock arithmetic": 10 o'clock + 5 hours = 3 o'clock (mod 12). You care only about the remainder.
-- Two numbers are "the same mod m" if they differ by a multiple of m (a whole number of full cycles).
+- Modular arithmetic is "clock arithmetic": $10$ o'clock $+ 5$ hours $= 3$ o'clock (mod $12$). You only care about the remainder, so the clock wraps around.
+- Two numbers are "the same mod $m$" if they differ by a whole number of full laps around the clock (a multiple of $m$).
+- An inverse of $a$ is the number of laps that undoes multiplying by $a$ — and it only exists when $a$ shares no factor with the clock size, so multiplying by $a$ visits every hour instead of getting stuck on a few.
 
 ### Worked Examples
 
-**Compute 7^3 mod 5**
+**Worked Example: Compute $7^3 \bmod 5$**
 
-7≡2 mod5, 2^3=8≡3 mod5. Or direct 343 /5 =68*5=340, rem 3.
+Step 1: Reduce the base first. $7 \equiv 2 \pmod 5$, so $7^3 \equiv 2^3 \pmod 5$.
 
-**Solve 5x ≡ 3 (mod 7)**
+Step 2: $2^3 = 8 \equiv 3 \pmod 5$ (since $8 = 1 \times 5 + 3$).
 
-gcd(5,7)=1 divides 3. Inverse of 5 mod7: find y,5y=1 mod7. Trial: 5*3=15≡1. y=3.
+Sanity check by direct computation: $7^3 = 343 = 68 \times 5 + 3$, remainder $3$ ✓.
 
-x ≡ 3*3 =9 ≡2 mod7.
+**Worked Example: Solve $5x \equiv 3 \pmod 7$**
 
-Check: 5*2=10≡3 mod7 yes.
+Step 1: Check solvability. $\gcd(5, 7) = 1$, and $1 \mid 3$, so a (unique) solution exists.
+
+Step 2: Find the inverse of $5$ modulo $7$. We need $5y \equiv 1 \pmod 7$; testing, $5 \times 3 = 15 = 2\times 7 + 1 \equiv 1$, so $5^{-1} \equiv 3 \pmod 7$.
+
+Step 3: Multiply both sides of $5x \equiv 3$ by $3$: $x \equiv 3 \times 3 = 9 \equiv 2 \pmod 7$.
+
+Sanity check: $5 \times 2 = 10 = 7 + 3 \equiv 3 \pmod 7$ ✓.
 
 ## The Chinese Remainder Theorem
 
 <!-- section: chinese -->
 
-When moduli are pairwise coprime, the Chinese Remainder Theorem (CRT) guarantees a unique solution modulo the product.
+Sometimes we know a number only by its remainders against several moduli, and want to pin down the number itself. When the moduli are **pairwise coprime**, the Chinese Remainder Theorem (CRT) guarantees this is always possible, uniquely, modulo their product.
 
-If m1, m2, ..., mk pairwise coprime (gcd(mi,mj)=1 for i≠j), and we have the system
+**Statement.** Let $m_1, m_2, \dots, m_k$ be **pairwise coprime** (that is, $\gcd(m_i, m_j) = 1$ whenever $i \neq j$). Then the system
 
-x ≡ a1 (mod m1)
+$$x \equiv a_1 \pmod{m_1}, \quad x \equiv a_2 \pmod{m_2}, \quad \dots, \quad x \equiv a_k \pmod{m_k}$$
 
-...
+has a **unique solution modulo** $M = m_1 m_2 \cdots m_k$.
 
-x ≡ ak (mod mk)
+The pairwise-coprime hypothesis is essential: without it the system may have no solution at all, or several incompatible ones. (For instance $x \equiv 0 \pmod 2$ and $x \equiv 1 \pmod 4$ is impossible, since $\gcd(2,4) \neq 1$.)
 
-Then there is a unique solution modulo M = m1 m2 ... mk.
+**Explicit construction.** Let $M_i = M / m_i$ (the product of all the other moduli). Since the moduli are pairwise coprime, $\gcd(M_i, m_i) = 1$, so $M_i$ has an inverse $y_i$ modulo $m_i$. Then
 
-Explicit construction: x = sum ai * (M/mi) * yi  where yi is inverse of (M/mi) mod mi.
+$$x \equiv \sum_{i=1}^{k} a_i \, M_i \, y_i \pmod{M}.$$
 
-CRT lets us break a big modulus problem into smaller coprime pieces, solve, then combine — used heavily in RSA and fast arithmetic.
+The trick works because $M_i \equiv 0 \pmod{m_j}$ for $j \neq i$, so the $i$-th term contributes to exactly the $i$-th congruence and vanishes in the others. In practice, **successive substitution** (solve two congruences into one, then fold in the next) is often quicker by hand.
+
+CRT lets us break a big-modulus problem into smaller coprime pieces, solve each, then recombine — a technique used heavily in RSA decryption and fast modular arithmetic.
 
 **ELI5**
 
-- If you know a number mod 3, mod 5, and mod 7 (coprime), you can reconstruct the unique number mod 105 that satisfies all three simultaneously. Like having the time on three different clock cycles and figuring out the exact second.
-- The coprimeness ensures the "cycles" mesh without common factors, giving full coverage.
+- If you know a number's remainder mod $3$, mod $5$, and mod $7$ (all coprime), you can reconstruct the one number between $0$ and $104$ that matches all three — like reading three gears of different tooth counts and figuring out the single position that lines them all up.
+- Coprimeness is what makes the gears mesh without a shared factor, so the combined cycle has full length $M = 3\times 5 \times 7 = 105$ and no position repeats early.
 
 ### Worked Examples
 
-**Solve x ≡ 2 mod 3, x ≡ 3 mod 5, x ≡ 2 mod 7. Modulus 105.**
+**Worked Example: $x \equiv 2 \pmod 3$, $\;x \equiv 3 \pmod 5$, $\;x \equiv 2 \pmod 7$**
 
-One solution is x=23: 23/3 rem 2, 23/5=4*5+3, 23/7=3*7+2. Yes.
+Step 1: Check the hypothesis. $3, 5, 7$ are pairwise coprime, so a unique solution exists modulo $M = 3 \times 5 \times 7 = 105$.
 
-Using formula or successive substitution yields the class 23 + 105k.
+Step 2: Fold the first two congruences together by successive substitution. From $x \equiv 3 \pmod 5$ write $x = 5t + 3$. Substitute into $x \equiv 2 \pmod 3$: $5t + 3 \equiv 2 \pmod 3$. Since $5 \equiv 2$ and $3 \equiv 0 \pmod 3$, this is $2t \equiv 2 \pmod 3$, so $t \equiv 1 \pmod 3$ (multiplying by $2^{-1} \equiv 2 \pmod 3$). Write $t = 3s + 1$, giving $x = 5(3s+1) + 3 = 15s + 8$, i.e. $x \equiv 8 \pmod{15}$.
 
-**Simple two-modulus as in questions**
+Step 3: Fold in the third congruence. From $x = 15s + 8$, require $15s + 8 \equiv 2 \pmod 7$. Since $15 \equiv 1$ and $8 \equiv 1 \pmod 7$, this is $s + 1 \equiv 2 \pmod 7$, so $s \equiv 1 \pmod 7$. Write $s = 7u + 1$: $x = 15(7u + 1) + 8 = 105u + 23$, i.e. $x \equiv 23 \pmod{105}$.
 
-x≡2 mod3, x≡3 mod5 → x=8 works (8 mod3=2, 8 mod5=3), and 8+15=23 etc.
+Sanity check: $23 = 7\times 3 + 2$ so $23 \equiv 2 \pmod 3$ ✓; $23 = 4 \times 5 + 3$ so $23 \equiv 3 \pmod 5$ ✓; $23 = 3 \times 7 + 2$ so $23 \equiv 2 \pmod 7$ ✓. The full solution set is $\{23 + 105k\}$.
+
+**Worked Example: Two moduli, $x \equiv 2 \pmod 3$, $\;x \equiv 3 \pmod 5$**
+
+Step 1: $3$ and $5$ are coprime, so there is a unique solution mod $M = 15$.
+
+Step 2: Write $x = 5k + 3$ from the second congruence. Then $5k + 3 \equiv 2 \pmod 3 \Rightarrow 2k \equiv 2 \pmod 3 \Rightarrow k \equiv 1 \pmod 3$, so $k = 3m + 1$ and $x = 15m + 8$.
+
+Step 3: The unique solution is $x \equiv 8 \pmod{15}$.
+
+Sanity check: $8 \bmod 3 = 2$ ✓ and $8 \bmod 5 = 3$ ✓. The next few solutions are $8, 23, 38, \dots$ (adding $15$ each time).
 
 ## Common Mistakes
 
-- Thinking 1 is prime (it is not).
-- Forgetting that gcd computations via primes require the prime factorization first (Euclidean is usually faster and doesn't need it).
-- Confusing "divides" notation a|b (a divides b) with the fraction a/b.
-- Assuming every linear congruence ax≡b mod m has a solution (needs d|gcd(a,m) divides b).
-- Forgetting that inverses exist only when gcd(a,m)=1.
-- In CRT, applying when moduli are not coprime (may have no solution or multiple solutions mod lcm).
-- Computing a mod m as negative remainders without normalizing to [0,m-1].
-- Believing unique factorization holds in every number system (false in some rings, but true for integers).
-- Using Euclidean algorithm steps incorrectly (must replace larger by remainder each time).
-- In extended Euclidean, sign errors when back-substituting the coefficients.
+- Thinking $1$ is prime (it is not — and if it were, unique factorization would break).
+- Forgetting that gcd via primes requires factoring first; the Euclidean algorithm is usually faster and needs no factorization.
+- Confusing the "divides" statement $a \mid b$ ("$a$ divides $b$", true/false) with the fraction $a / b$.
+- Assuming every linear congruence $ax \equiv b \pmod m$ has a solution — it needs $\gcd(a, m) \mid b$.
+- Forgetting that a modular inverse of $a$ exists only when $\gcd(a, m) = 1$.
+- Cancelling a common factor in a congruence: $ac \equiv bc \pmod m$ gives $a \equiv b$ only when $\gcd(c, m) = 1$.
+- Applying CRT when the moduli are **not** pairwise coprime (there may be no solution, or several modulo the lcm).
+- Reporting $a \bmod m$ as a negative remainder instead of normalizing to $\{0, 1, \dots, m-1\}$.
+- Believing unique factorization holds in every number system — it holds for the integers, but fails in some other rings.
+- Running the Euclidean algorithm wrong by not replacing the larger number with the remainder at each step.
+- Sign errors when back-substituting the Bézout coefficients in the extended Euclidean algorithm.

@@ -20,9 +20,17 @@ The key distinction from ordinary random variables is the dependence structure a
 
 Common types: discrete-time vs continuous-time, discrete-state vs continuous-state, Markovian (memoryless) vs non-Markovian.
 
+To be precise, "random variable" here means each $X_t$ is a measurable function on a common probability space, so all the $X_t$ live on the same underlying source of randomness. Fixing that randomness (one draw of "how the universe rolls out") gives a single **sample path** — one concrete trajectory $t \mapsto X_t$. The process is the whole *ensemble* of possible paths together with their probabilities.
+
 **ELI5**
 
 - Think of the weather as a stochastic process. Each day's weather is random, but today's weather affects tomorrow's. The whole sequence of daily weather over a year is one realization of the process.
+
+**Worked Example: Reading a process vs. a single variable**
+- Let $X_t$ be the number of customers in a shop at hour $t$, for $t \in \{9, 10, \dots, 17\}$ (a discrete-time, discrete-state process).
+- A single random variable answers "how many customers at 2 pm?" — that is just $X_{14}$, described by one distribution.
+- The *process* answers richer questions that involve several times at once, e.g. "given $X_{14} = 20$, what is the distribution of $X_{15}$?" (a transition) or "what fraction of the day is the shop empty?" (long-run behaviour). These need the *joint* distribution of $(X_9, \dots, X_{17})$, not just one marginal.
+- Sanity check: if the $X_t$ were all independent, knowing $X_{14}$ would tell us nothing about $X_{15}$. The whole point of a process is that the dependence structure across $t$ carries information — that is what we model.
 
 ## Markov Chains
 
@@ -30,7 +38,7 @@ Common types: discrete-time vs continuous-time, discrete-state vs continuous-sta
 
 A Markov chain is a stochastic process with the Markov property: the future depends only on the present state, not on the past. $P(X_{n+1} | X_n, X_{n-1}, \dots) = P(X_{n+1} | X_n)$.
 
-The one-step transition matrix $P$ completely describes the dynamics. The $n$-step transition probabilities are given by matrix powers $P^n$.
+The one-step transition matrix $P$ (with entries $P_{ij} = P(X_{n+1}=j \mid X_n=i)$, each row summing to 1) completely describes the dynamics. The $n$-step transition probabilities are given by matrix powers: $P(X_{n+m}=j \mid X_m=i) = (P^n)_{ij}$. This is the Chapman–Kolmogorov identity, $P^{(m+n)} = P^{(m)} P^{(n)}$, and it is exactly what the Markov property buys us — to look $n$ steps ahead you just multiply $P$ by itself, no history required.
 
 States can be transient, recurrent, or absorbing. In the long run, many chains converge to a unique stationary distribution $\pi$ satisfying $\pi P = \pi$ (and $\sum \pi_i = 1$). For irreducible, aperiodic, positive recurrent chains (ergodic), the stationary distribution is also the long-run proportion of time spent in each state, independent of the starting state.
 
@@ -44,14 +52,18 @@ Applications: page ranking (Google's original algorithm), board games like Monop
 - Over a very long time, the frog will settle into a steady pattern: it spends a fixed fraction of time on each pad, no matter where it started. That long-run fraction is the stationary distribution — you can calculate it from the jump probabilities alone.
 
 **Worked Example: Two-state weather Markov chain**
-- Suppose tomorrow's weather depends only on today: Sunny → Sunny with prob 0.8, Rainy with 0.2. Rainy → Sunny 0.4, Rainy 0.6.
-- Transition matrix $P = [[0.8, 0.2], [0.4, 0.6]]$.
-- If today is sunny, the probability of sunny two days from now is the (1,1) entry of $P^2 = 0.76$.
+- Suppose tomorrow's weather depends only on today: Sunny → Sunny with prob 0.8, Rainy with 0.2. Rainy → Sunny 0.4, Rainy 0.6. Label state 1 = Sunny, state 2 = Rainy.
+- Transition matrix $P = \begin{bmatrix} 0.8 & 0.2 \\ 0.4 & 0.6 \end{bmatrix}$. (Each row sums to 1, as required.)
+- If today is sunny, the probability of sunny two days from now is the (Sunny, Sunny) entry of $P^2$. Compute it as a dot product of row 1 of $P$ with column 1 of $P$: $(P^2)_{11} = 0.8\times 0.8 + 0.2\times 0.4 = 0.64 + 0.08 = 0.72$.
+- So $P(\text{sunny in 2 days}\mid \text{sunny today}) = 0.72$.
+- Sanity check: the full second row of $P^2$ must also sum to 1. The other first-row entry is $(P^2)_{12} = 0.8\times 0.2 + 0.2\times 0.6 = 0.16 + 0.12 = 0.28$, and $0.72 + 0.28 = 1$ ✓.
 
 **Worked Example: Finding the stationary distribution (weather example)**
-- For the same two-state chain, let $\pi = [\pi_S, \pi_R]$. Solve $\pi P = \pi$ and $\pi_S + \pi_R = 1$.
-- This gives the equations: $\pi_S = 0.8\pi_S + 0.4\pi_R$ and $\pi_R = 0.2\pi_S + 0.6\pi_R$.
-- Simplifying: $0.2\pi_S = 0.4\pi_R$ → $\pi_S = 2\pi_R$. Combined with $\pi_S + \pi_R = 1$ we get $\pi_S = 2/3$, $\pi_R = 1/3$.
+- This chain is irreducible (you can get from either state to the other) and aperiodic, so a unique stationary distribution exists and equals the long-run fraction of days in each state. Let $\pi = [\pi_S, \pi_R]$. Solve $\pi P = \pi$ together with $\pi_S + \pi_R = 1$.
+- Writing $\pi P = \pi$ column by column gives: $\pi_S = 0.8\pi_S + 0.4\pi_R$ (column Sunny) and $\pi_R = 0.2\pi_S + 0.6\pi_R$ (column Rainy).
+- Take the first equation: $\pi_S - 0.8\pi_S = 0.4\pi_R$, i.e. $0.2\pi_S = 0.4\pi_R$, so $\pi_S = 2\pi_R$. (The two equations are linearly dependent — one is redundant — which is why we need the normalization $\pi_S + \pi_R = 1$ to pin down a unique answer.)
+- Substituting: $2\pi_R + \pi_R = 1 \Rightarrow \pi_R = 1/3$, hence $\pi_S = 2/3$.
+- Sanity check: verify $\pi P = \pi$ directly. First component: $0.8\cdot\tfrac{2}{3} + 0.4\cdot\tfrac{1}{3} = \tfrac{1.6}{3} + \tfrac{0.4}{3} = \tfrac{2}{3} = \pi_S$ ✓.
 - In the long run, no matter the starting weather, about 67% of days are sunny and 33% rainy.
 
 ## Poisson Processes
@@ -73,14 +85,17 @@ Applications: customer arrivals, radioactive decay, insurance claims, website hi
 
 **Worked Example: Calls to a call center**
 - A call center receives calls at an average rate of 12 per hour. What is the probability of exactly 5 calls in the next 30 minutes?
-- For a Poisson process, number of events in time $t$ is Poisson($\lambda t$). Here $\lambda=12$, $t=0.5$ so mean = 6.
-- P(X=5) = e^{-6} * 6^5 / 5! ≈ 0.1606.
-- So about 16% chance of exactly 5 calls in 30 minutes.
+- For a Poisson process, the number of events in an interval of length $t$ is Poisson with mean $\lambda t$. Keep the time units consistent: with $\lambda = 12$ per hour and $t = 0.5$ hours, the mean is $\lambda t = 12 \times 0.5 = 6$ calls.
+- Plug $k = 5$ into the Poisson pmf: $P(X = 5) = \dfrac{e^{-6}\, 6^{5}}{5!} = \dfrac{e^{-6}\cdot 7776}{120}$.
+- Numerically $e^{-6} \approx 0.002479$, so $P(X=5) \approx \dfrac{0.002479 \times 7776}{120} \approx 0.1606$.
+- So there is about a 16% chance of exactly 5 calls in 30 minutes.
+- Sanity check: the mean is 6, and for a Poisson the most likely counts cluster around the mean, so a value of 5 should carry a moderate probability of order 0.15 — consistent with what we got. (Had we forgotten to convert 30 minutes to $t=0.5$ and used mean 12, the answer would be a tiny $\approx 0.013$, a red flag that the units were wrong.)
 
 **Worked Example: Superposition and thinning (two coffee shops)**
-- Two independent Poisson arrival streams merge at a combined counter: Shop A at $\lambda_A=3$/hr, Shop B at $\lambda_B=5$/hr. The merged process is Poisson($\lambda=8$).
-- If each arriving customer is 'takeout' with probability 0.25 independently (thinning), then takeout arrivals form Poisson($2$) and dine-in Poisson($6$).
-- This is why Poisson processes are so convenient: merging and splitting preserve the Poisson property.
+- Two *independent* Poisson arrival streams merge at a combined counter: Shop A at $\lambda_A=3$/hr, Shop B at $\lambda_B=5$/hr. By superposition the merged process is Poisson with rate $\lambda = \lambda_A + \lambda_B = 3 + 5 = 8$/hr.
+- Now thin the merged stream: label each arriving customer 'takeout' independently with probability $p = 0.25$. The takeout stream is Poisson with rate $p\lambda = 0.25 \times 8 = 2$/hr, and the dine-in stream is Poisson with rate $(1-p)\lambda = 0.75 \times 8 = 6$/hr; crucially, these two thinned streams are *independent* of each other.
+- Sanity check: the two thinned rates must add back to the original, $2 + 6 = 8$ ✓. And the expected number of takeout customers in an 8-hour day is $2 \times 8 = 16$.
+- This is why Poisson processes are so convenient: merging and splitting preserve the Poisson property (independence of increments is what makes both work).
 
 ## Brownian Motion and Diffusion
 
@@ -102,9 +117,11 @@ Applications: stock prices, physical Brownian motion of particles, noise in elec
 - A key surprise: Brownian motion wiggles so much that its 'speed' is infinite in a certain sense (infinite total variation), yet the accumulated squared changes grow exactly like ordinary time t. That quadratic variation is the secret sauce that powers stochastic calculus and option pricing.
 
 **Worked Example: Simulating a stock price path (GBM)**
-- Start with $S_0 = 100$, drift $\mu=0.08$, volatility $\sigma=0.2$, simulate over 1 year ($t=1$).
-- A single realization: pick a normal draw $Z \sim N(0,1)$ for the Brownian increment over the full period, then $S_1 = 100 \exp((0.08 - 0.02) \cdot 1 + 0.2 Z)$.
-- Different $Z$ values give different ending prices; the distribution of $S_1$ is lognormal. The expected return is higher than the drift because of the Itô correction ($-\sigma^2/2$).
+- Start with $S_0 = 100$, drift $\mu=0.08$, volatility $\sigma=0.2$, simulate over 1 year ($t=1$). Here $W_1 \sim N(0,1)$, so we can write $W_1 = Z$ with $Z \sim N(0,1)$.
+- The Itô drift correction is $\mu - \tfrac{\sigma^2}{2} = 0.08 - \tfrac{0.2^2}{2} = 0.08 - 0.02 = 0.06$. A single realization is $S_1 = 100\exp\!\big(0.06\cdot 1 + 0.2\,Z\big)$.
+- Concrete draw: suppose $Z = +1$ (a one-standard-deviation up move). Then $S_1 = 100\exp(0.06 + 0.2) = 100\exp(0.26) \approx 100 \times 1.2969 = 129.69$. A draw of $Z = -1$ instead gives $S_1 = 100\exp(0.06 - 0.2) = 100\exp(-0.14) \approx 86.94$ — note the up and down moves are *not* symmetric around 100, because exp is convex; that is the log-normal shape.
+- Expected ending price: for $S_1 = S_0\exp((\mu-\tfrac{\sigma^2}{2})t + \sigma W_t)$, the $-\tfrac{\sigma^2}{2}$ correction is exactly what makes $E[S_t] = S_0 e^{\mu t}$. Here $E[S_1] = 100\,e^{0.08} \approx 108.33$.
+- Sanity check on why the correction is needed: for $X \sim N(m, v)$, $E[e^{X}] = e^{m + v/2}$. With $m = (\mu-\tfrac{\sigma^2}{2})t$ and $v = \sigma^2 t$, the exponent becomes $(\mu-\tfrac{\sigma^2}{2})t + \tfrac{\sigma^2 t}{2} = \mu t$, so the $\sigma^2/2$ terms cancel and the mean grows cleanly at rate $\mu$ ✓. Without the correction, the mean would be inflated by a factor $e^{\sigma^2 t/2}$.
 
 ## Time Series Basics
 
@@ -126,9 +143,11 @@ Forecasting and diagnostics (residual analysis, Ljung-Box test) are central to p
 - The ACF is like a 'memory scan': it tells you how much today's temperature is correlated with yesterday's, two days ago, etc. If the correlation fades slowly, you probably have an AR process (momentum). If it drops to zero after a fixed lag, it's more like an MA (the shock from a heatwave only affects the next few days).
 
 **Worked Example: AR(1) autocorrelation structure**
-- For the AR(1) process $X_t = \phi X_{t-1} + \epsilon_t$ with $|\phi|<1$ and white noise $\epsilon_t$ of variance $\sigma^2$, the lag-k autocorrelation is $\rho_k = \phi^k$.
-- So ACF at lag 1 is $\phi$, at lag 2 is $\phi^2$, etc. — geometric decay.
-- The variance of the process (long-run) is $\gamma_0 = \sigma^2 / (1 - \phi^2)$. This is larger than the innovation variance when there is positive autocorrelation (persistence amplifies variability).
+- For the AR(1) process $X_t = \phi X_{t-1} + \epsilon_t$ with $|\phi|<1$ and white noise $\epsilon_t$ (mean 0, variance $\sigma^2$, uncorrelated with past $X$), the lag-$k$ autocorrelation is $\rho_k = \phi^k$. The condition $|\phi|<1$ is essential: it is exactly what makes the process stationary (if $|\phi|\ge 1$ the variance below blows up).
+- Derive the variance $\gamma_0 = \mathrm{Var}(X_t)$. By stationarity $\mathrm{Var}(X_t) = \mathrm{Var}(X_{t-1}) = \gamma_0$. Taking the variance of both sides of the AR(1) equation and using that $\epsilon_t$ is independent of $X_{t-1}$: $\gamma_0 = \phi^2 \gamma_0 + \sigma^2$. Solving, $\gamma_0(1-\phi^2) = \sigma^2$, hence $\gamma_0 = \dfrac{\sigma^2}{1-\phi^2}$.
+- So ACF at lag 1 is $\phi$, at lag 2 is $\phi^2$, etc. — geometric decay. When $\phi > 0$, $\gamma_0 > \sigma^2$: positive autocorrelation (persistence) amplifies variability above the raw innovation variance.
+- Numeric instance: with $\phi = 0.6$ and $\sigma^2 = 4$, $\gamma_0 = \dfrac{4}{1 - 0.6^2} = \dfrac{4}{1 - 0.36} = \dfrac{4}{0.64} = 6.25$, and $\rho_1 = 0.6$, $\rho_2 = 0.36$.
+- Sanity check: $\gamma_0 = 6.25 > 4 = \sigma^2$ ✓, as expected for positive $\phi$; and as $\phi \to 0$ the formula returns $\gamma_0 \to \sigma^2$ (pure white noise, no persistence) ✓.
 - To identify from data: plot the sample ACF; if it decays geometrically and PACF cuts off after lag 1, an AR(1) is a good candidate.
 
 ## Connections and Advanced Directions
@@ -147,6 +166,17 @@ Renewal theory studies the long-run behavior of processes that 'restart' at rand
 
 - A call center where the arrival rate itself changes randomly between 'busy' and 'slow' periods is a Markov-modulated Poisson process — the underlying 'mood' of the system is a Markov chain, and the calls arrive as a Poisson process whose rate depends on the current mood.
 - An HMM is like listening to someone speaking a secret language with noisy audio: the hidden states are the intended phonemes (following Markov grammar rules), and what you hear is a garbled emission from each phoneme. The model lets you guess the most likely sequence of intended sounds.
+
+**Worked Example: Long-run replacement rate (renewal theorem)**
+- A machine part is replaced each time it fails; the successive lifetimes are i.i.d. positive random variables — a renewal process. Suppose each lifetime is uniform on $[2, 6]$ years, so the mean inter-renewal time is $\mu = \tfrac{2+6}{2} = 4$ years.
+- The **elementary renewal theorem** says the long-run rate of renewals is the reciprocal of the mean inter-renewal time: $\displaystyle \lim_{t\to\infty} \frac{N(t)}{t} = \frac{1}{\mu}$, where $N(t)$ counts renewals up to time $t$. (This requires $0 < \mu < \infty$; the individual lifetime distribution need not be exponential — that is the payoff of renewal theory over the Poisson process.)
+- Here the long-run replacement rate is $1/\mu = 1/4 = 0.25$ parts per year, i.e. one replacement every 4 years on average, so about $0.25 \times 40 = 10$ replacements over a 40-year horizon.
+- Sanity check: the Poisson process is the special case with exponential lifetimes of mean $1/\lambda$; there $1/\mu = \lambda$, recovering the familiar Poisson rate ✓. The theorem generalizes that fact to *any* i.i.d. lifetime distribution.
+
+**Worked Example: Why a Poisson process is a Lévy process (but a renewal process need not be)**
+- A Lévy process needs increments that are both *independent* and *stationary* (same distribution over equal-length intervals), starting from 0.
+- Poisson process: the count in $(s, s+h]$ is Poisson$(\lambda h)$ regardless of $s$ (stationary) and independent of counts on disjoint intervals (independent) — so it qualifies. Brownian motion qualifies for the same two reasons with Gaussian increments.
+- A general renewal process with, say, uniform$[2,6]$ lifetimes does *not* have independent increments: knowing a renewal just happened at time $s$ changes the distribution of how long until the next one, so counts over adjacent intervals are dependent. This is exactly why only the *exponential*-lifetime renewal process (the Poisson process) is a Lévy process — the memoryless property is what restores independent increments.
 
 ## Common Mistakes
 

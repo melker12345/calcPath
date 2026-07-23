@@ -29,7 +29,12 @@ The maximizing distribution p^*(x) is the capacity-achieving input distribution.
 
 **Worked Example:**
 
-A channel that simply copies the input (no noise) has I(X;Y)=H(X). The maximum is log| X |, achieved when the input is uniform. Hence C = log |alphabet| bits per use — you can send one symbol per transmission perfectly.
+Consider the noiseless channel that simply copies the input, $Y = X$.
+
+- Step 1: since $Y$ determines $X$ exactly, $H(X \mid Y) = 0$, so $I(X;Y) = H(X) - H(X\mid Y) = H(X)$.
+- Step 2: maximize over input distributions. Entropy $H(X)$ over an alphabet $\mathcal X$ is largest when $X$ is uniform, giving $H(X) = \log|\mathcal X|$.
+- Step 3: therefore $C = \max_{p(x)} I(X;Y) = \log|\mathcal X|$ bits per use — you can send one symbol per transmission perfectly.
+- Concrete case: for a binary noiseless channel ($|\mathcal X| = 2$), $C = \log_2 2 = 1$ bit per use. Sanity check: one perfect bit per transmission is exactly what you'd expect from a wire that never lies.
 
 ## The Binary Symmetric Channel (BSC)
 
@@ -50,7 +55,12 @@ The optimal input is the uniform (fair coin) distribution.
 
 **Worked Example:**
 
-p=0.11, h_2(0.11)≈0.5, therefore C≈0.5 bits per use. With a good code you can transmit at 0.5 bits per channel use with error probability as small as you like.
+Take crossover probability $p = 0.11$.
+
+- Step 1 (binary entropy): $h_2(0.11) = -0.11\log_2 0.11 - 0.89\log_2 0.89$. Compute each term: $-0.11\log_2 0.11 = -0.11(-3.18) \approx 0.35$ and $-0.89\log_2 0.89 = -0.89(-0.168) \approx 0.15$.
+- Step 2 (add): $h_2(0.11) \approx 0.35 + 0.15 = 0.50$ bits.
+- Step 3 (capacity): $C = 1 - h_2(0.11) \approx 1 - 0.50 = 0.50$ bits per use.
+- Interpretation and sanity check: even though $11\%$ of bits are flipped, a good code lets you transmit at $0.5$ bits per channel use with error probability as small as you like. As a check on the extremes, $p=0$ gives $h_2(0)=0$ and $C=1$ (perfect channel), while $p=0.5$ gives $h_2(0.5)=1$ and $C=0$ (useless channel) — and $0.11$ sits sensibly between them.
 
 ## Gaussian Channels and the Shannon Limit
 
@@ -69,7 +79,12 @@ This is the famous formula that shows capacity grows only logarithmically with s
 
 **Worked Example:**
 
-SNR = 7 (≈8.5 dB). Then C = 0.5 log2(8) = 1.5 bits per transmission. This is the ultimate speed limit for that power and noise level; no coding scheme can exceed it.
+Take $\text{SNR} = 7$ (which is $10\log_{10}7 \approx 8.5$ dB).
+
+- Step 1: form $1 + \text{SNR} = 8$.
+- Step 2: $\log_2 8 = 3$ (since $2^3 = 8$).
+- Step 3: $C = \tfrac{1}{2}\cdot 3 = 1.5$ bits per transmission. This is the ultimate speed limit for that power and noise level; no coding scheme can exceed it.
+- Sanity check on the logarithmic law: double the power to $\text{SNR} = 14$. Then $C = \tfrac12\log_2 15 \approx \tfrac12(3.907) \approx 1.95$ bits — only $\approx 0.45$ extra bits for twice the power, confirming that gains shrink as power grows. To buy a full extra bit you would need $1 + \text{SNR}$ to quadruple, i.e. roughly $\text{SNR} \approx 4\times 8 - 1 = 31$ ($+6$ dB).
 
 ## Common Mistakes
 
@@ -123,7 +138,12 @@ Error events: the true codeword is not typical with y (vanishes by AEP), or some
 
 **Worked Example:**
 
-For the BSC, the typical set decoder reduces to "find the codeword within Hamming distance roughly p n of the received vector." The analysis shows that when R < 1-h(p) the probability of a wrong codeword being that close is exponentially small, and the union bound still goes to zero.
+Specialize the random-coding argument to a BSC with crossover $p$, where typicality decoding becomes "find the codeword within Hamming distance $\approx pn$ of the received vector $\mathbf y$."
+
+- Step 1 (size of the noise ball): a received word typically lands about $pn$ flips from the sent codeword, and the number of length-$n$ words within that radius is $\approx 2^{n h_2(p)}$ (the volume of a Hamming ball).
+- Step 2 (chance a random wrong codeword lands in that ball): each of the $M-1 = 2^{nR}-1$ other codewords is uniform over $2^n$ words, so the probability one particular wrong codeword falls in the ball is $\approx 2^{n h_2(p)}/2^n = 2^{-n(1-h_2(p))}$.
+- Step 3 (union bound over all wrong codewords): total error probability $\lesssim 2^{nR}\cdot 2^{-n(1-h_2(p))} = 2^{-n(1 - h_2(p) - R)} = 2^{-n(C - R)}$, using $C = 1 - h_2(p)$.
+- Step 4 (conclude): whenever $R < C$ the exponent $C - R$ is positive, so this bound $\to 0$ exponentially in $n$. Sanity check: at $R = C$ the exponent vanishes and the argument no longer guarantees reliability — exactly the boundary the theorem predicts.
 
 ## The Converse
 
@@ -147,7 +167,12 @@ Fano's inequality makes the "essentially recovered" quantitative: H(message | ha
 
 **Worked Example:**
 
-Trying to send at R = C + ε forces, via the above inequality, that Pe ≥ δ(ε) > 0 no matter how large n is. The "information pipe" is simply not wide enough.
+Make the converse bound quantitative for a BSC with $C = 0.5$ bits per use, and suppose we try to communicate at rate $R = 0.6 > C$.
+
+- Step 1 (Fano, per use): Fano's inequality gives $H(W \mid \hat W) \le 1 + P_e\, nR$, where $W$ is the length-$nR$ message. Combined with $I(W;\hat W) = nR - H(W\mid \hat W)$ and the pipe bound $I(W;\hat W) \le I(X^n;Y^n) \le nC$, we get $nR \le nC + 1 + P_e\, nR$.
+- Step 2 (divide by $n$): $R \le C + \tfrac1n + P_e R$, so $P_e \ge 1 - \dfrac{C}{R} - \dfrac{1}{nR}$.
+- Step 3 (plug in $C=0.5$, $R=0.6$): $P_e \ge 1 - \dfrac{0.5}{0.6} - \dfrac{1}{0.6\,n} = 0.1\overline{6} - \dfrac{1.6\overline{6}}{n}$.
+- Step 4 (take $n\to\infty$): the vanishing $1/n$ term drops out and $P_e \ge 1 - C/R \approx 0.167 > 0$, a strictly positive floor no matter how long the code. The "information pipe" ($nC$ bits) is simply not wide enough to carry the $nR$ message bits reliably.
 
 ## Common Mistakes
 
@@ -200,7 +225,12 @@ A code detects $e$ errors if no error pattern of weight $\le e$ takes a codeword
 
 **Worked Example:**
 
-Send data 1011 with even parity: total 1s = 3 (odd), so append 1 → 10111. Received 10101 has four 1s (even) — wait, original appended made even (10111 has 4 ones? 1+0+1+1+1=4 even). Received 10011 (flipped position 3 and 4? ) parity check: count 1s=3 odd → error detected.
+Send the data word $1011$ with an even parity bit.
+
+- Step 1 (choose the parity bit): count the 1s in $1011$: there are $3$, which is odd. To make the total even, the parity bit must be $1$. The transmitted codeword is $10111$ (five bits, with $4$ ones — even, as required).
+- Step 2 (a single flip occurs): suppose the third bit flips in transit, so the receiver sees $10011$. Count its 1s: $1+0+0+1+1 = 3$, which is odd.
+- Step 3 (run the check): the receiver expects an even count but sees odd, so the parity check fails and an error is flagged. Sanity check: a single flip always changes the count of 1s by exactly $\pm 1$, so it always flips the parity — detected, as claimed.
+- Step 4 (the blind spot): if instead bits $3$ and $4$ both flipped, the receiver would see $10001$, which has $2$ ones (even), so the check passes and the double error slips through undetected. This is why a single parity bit detects only an *odd* number of flips.
 
 ## Error Correction
 
@@ -219,7 +249,12 @@ The syndrome $\mathbf{s} = \mathbf{r}H^T$ depends only on the error: $\mathbf{s}
 
 **Worked Example:**
 
-Repetition code (3,1) again. Generator $G = [1~1~1]^T$, $H = \begin{bmatrix}1 & 1 & 0 \\ 1 & 0 & 1\end{bmatrix}$. Received 101 gives syndrome (1,0) which matches column 1 of $H$, so flip first bit → 001? Standard majority: three bits, decode by majority vote. 101 → majority 1, decode 111.
+Repetition code $(3,1)$ again, decoded by syndrome. The generator is $G = [1~1~1]$ (the single message bit $m$ maps to $mmm$), and a parity-check matrix is $H = \begin{bmatrix}1 & 1 & 0 \\ 1 & 0 & 1\end{bmatrix}$, encoding the two constraints $c_1 + c_2 = 0$ and $c_1 + c_3 = 0$ (which force $c_1=c_2=c_3$, i.e. exactly the codewords $000$ and $111$).
+
+- Step 1 (receive): suppose $\mathbf r = 101$ arrives.
+- Step 2 (compute the syndrome $\mathbf s = \mathbf r H^T$ over GF(2)): first component $= r_1 + r_2 = 1 + 0 = 1$; second component $= r_1 + r_3 = 1 + 1 = 0$. So $\mathbf s = (1,0)$.
+- Step 3 (locate the error): $\mathbf s$ equals a column of $H$ — reading columns left to right they are $(1,1)^T$, $(1,0)^T$, $(0,1)^T$, so $(1,0)^T$ is column $2$. The minimum-weight error consistent with this syndrome is $\mathbf e = 010$ (a single flip in position 2). Verify: $\mathbf e H^T = (e_1+e_2,\,e_1+e_3) = (1,0)$ ✓.
+- Step 4 (correct): $\hat{\mathbf c} = \mathbf r - \mathbf e = 101 - 010 = 111$, a valid codeword. Sanity check: this agrees with plain majority vote on $101$ (two 1s, one 0 → decode $111$). Both methods give the same answer because syndrome decoding *is* nearest-neighbor decoding, done with linear algebra.
 
 ## Common Mistakes
 
@@ -249,9 +284,12 @@ The parity-check matrix H consists of all nonzero distinct columns of length m.
 
 **Worked Example:**
 
-The (7,4) code. Positions 1,2,4 are parity; 3,5,6,7 data (or any numbering where parity positions are powers of 2).
+The $(7,4)$ code, with $m = 3$ parity bits and $2^3 - 1 = 7$ total positions.
 
-H has columns 001,010,011,100,...111 (binary).
+- Step 1 (parameters): dimension $= 2^m - 1 - m = 7 - 3 = 4$ data bits; rate $= 4/7 \approx 0.571$; minimum distance $d = 3$, so $t = \lfloor (3-1)/2\rfloor = 1$ correctable error.
+- Step 2 (build $H$): the columns of $H$ are *all* nonzero binary vectors of length $3$, i.e. the numbers $1$ through $7$ in binary. Writing the $i$-th column as the binary form of $i$: $001, 010, 011, 100, 101, 110, 111$. There are exactly $7$ of them, matching the code length.
+- Step 3 (why this works): because every column is distinct and nonzero, a single error in position $i$ produces syndrome equal to column $i$ = the binary address of $i$ — which is what makes decoding a one-step lookup.
+- Sanity check on "perfect": each of the $2^4 = 16$ codewords owns a radius-1 sphere of $1 + 7 = 8$ words; $16 \times 8 = 128 = 2^7$ fills the whole space exactly, with no leftover — the hallmark of a perfect code.
 
 ## Syndrome Decoding
 
@@ -272,7 +310,11 @@ This corrects any single error. If two errors occurred, it will "correct" a thir
 
 **Worked Example:**
 
-Received syndrome s = 101 binary = 5. Flip position 5. Re-encode or extract the data bits from the corrected word.
+Use the $(7,4)$ code with columns of $H$ numbered so column $i$ is the binary form of $i$ (as built above). Send the all-zero codeword $\mathbf c = 0000000$ (valid since $\mathbf 0 H^T = \mathbf 0$), and suppose position $5$ is flipped in transit, so $\mathbf r = 0000100$.
+
+- Step 1 (compute the syndrome): $\mathbf s = H\mathbf r^T$ picks out the columns where $\mathbf r$ has a $1$ and XORs them. Only position $5$ is set, so $\mathbf s = $ column $5 = 101_2$.
+- Step 2 (read the address): interpret $\mathbf s = 101_2 = 5$ as an integer — the error is in position $5$.
+- Step 3 (correct): flip bit $5$ of $\mathbf r$: $0000100 \to 0000000 = \mathbf c$. Sanity check: recomputing the syndrome of the corrected word gives $\mathbf 0$, confirming a valid codeword and that we undid exactly the one error.
 
 ## Extended Hamming and SECDED
 
@@ -319,7 +361,11 @@ Gallager's original construction used regular degree distributions; modern irreg
 
 **Worked Example:**
 
-A tiny regular (3,6) LDPC: n=12, each column of H has weight 3, each row weight 6, rate 1/2. The matrix is 6x12 with exactly 18 ones total. Any codeword satisfies the 6 parity equations.
+A tiny regular $(3,6)$ LDPC: $n=12$, each column of $H$ has weight $3$ (variable degree), each row weight $6$ (check degree).
+
+- Step 1 (dimensions): a $(d_v, d_c) = (3,6)$ regular code has design rate $1 - d_v/d_c = 1 - 3/6 = 1/2$, so $k = 6$ and the number of parity checks is $m = n - k = 6$. Thus $H$ is $6 \times 12$.
+- Step 2 (count the ones two ways, as a consistency check): counting by columns gives $12 \times 3 = 36$ ones; counting by rows gives $6 \times 6 = 36$ ones. The two agree ✓ — this equality $n\,d_v = m\,d_c$ is exactly the constraint that makes a regular degree pair feasible.
+- Step 3 (what it means): every codeword $\mathbf c$ satisfies all $6$ parity equations, i.e. $\mathbf c H^T = \mathbf 0$ over GF(2), and "low density" here means only $36$ of the $72$ matrix entries are nonzero.
 
 ## Tanner Graphs and Message Passing
 
@@ -338,7 +384,11 @@ For cycle-free graphs the algorithm is exact maximum-likelihood; short cycles de
 
 **Worked Example:**
 
-Variable node v1 connected to checks c2 and c4. It receives LLR messages L2 and L4 from them. Its extrinsic message to c2 is L_channel + L4 (its own channel observation plus the other check's opinion). The check node c2 computes the "tanh rule" or min-sum approximation for the outgoing messages.
+Variable node $v_1$ is connected to checks $c_2$ and $c_4$, with channel LLR $L_{\text{ch}} = +2.0$ and incoming check messages $L_2 = +1.5$ (from $c_2$) and $L_4 = -0.8$ (from $c_4$). Recall the LLR sign convention: positive means "probably $0$".
+
+- Step 1 (variable-node rule = add): a variable node combines independent evidence by summing LLRs. Its total belief is $L_{\text{total}} = L_{\text{ch}} + L_2 + L_4 = 2.0 + 1.5 - 0.8 = +2.7$. Since this is positive, $v_1$ currently leans toward bit $= 0$.
+- Step 2 (extrinsic message back to a check — exclude that check's own message): the message $v_1$ sends *to* $c_2$ must omit $L_2$ to avoid feeding $c_2$'s own opinion back to it: $L_{v_1 \to c_2} = L_{\text{ch}} + L_4 = 2.0 - 0.8 = +1.2$. Likewise $L_{v_1 \to c_4} = L_{\text{ch}} + L_2 = 2.0 + 1.5 = +3.5$.
+- Step 3 (check-node rule = tanh): a check node $c$ enforces an even-parity constraint, so its outgoing message uses the "tanh rule" $\tanh\!\big(\tfrac{L_{\text{out}}}{2}\big) = \prod_{j} \tanh\!\big(\tfrac{L_j}{2}\big)$ over the *other* incoming messages $L_j$. Its magnitude is dominated by the *least confident* neighbor (a product of $\tanh$'s shrinks toward $0$), which is why min-sum approximates it by the minimum-magnitude input. Sanity check: the sign of a check's output is the product of the signs of the other inputs — exactly the parity logic "the remaining bits together predict what this bit must be."
 
 ## Performance and Decoding
 
@@ -421,7 +471,11 @@ SC list decoding (SCL) keeps L best paths and is used in practice with a small C
 
 **Worked Example:**
 
-Decoding bit u_4 (an information bit). The LLR for the corresponding synthetic channel is computed by combining the LLRs of the two underlying channels, taking into account any already-decided bits that affect the combination (via the polarization recursions). If |LLR| is large the decision is reliable.
+Take the $n=2$ polar transform ($\mathbf x = (u_1 \oplus u_2,\; u_2)$) over a BEC, and watch SC decode the two bits in order. Let $L_1, L_2$ be the channel LLRs for the two received symbols.
+
+- Step 1 (decode $u_1$ first, via the $W^-$ recursion): $u_1$ influences both outputs, so its LLR combines *both* channel LLRs with the check-node ("box-plus") rule: $L_{u_1} = 2\,\text{artanh}\!\big(\tanh\tfrac{L_1}{2}\tanh\tfrac{L_2}{2}\big)$. This is the *worse* synthetic channel, so $|L_{u_1}|$ is small — if $u_1$ is a frozen bit we simply use its known value and skip the decision.
+- Step 2 (decode $u_2$ next, via the $W^+$ recursion, using $\hat u_1$): now the already-decided $\hat u_1$ is side information. The LLR adds the two channel LLRs, with the sign of $L_1$ flipped when $\hat u_1 = 1$: $L_{u_2} = L_2 + (-1)^{\hat u_1} L_1$. This is the *better* synthetic channel, so $|L_{u_2}|$ is large and the decision is reliable.
+- Step 3 (decide): for an information bit, set $\hat u_i = 0$ if $L_{u_i} > 0$ and $\hat u_i = 1$ otherwise. Sanity check: Step 2 literally *reuses* the guess from Step 1 — this dependence on earlier decisions is exactly what "successive cancellation" names, and it is also why an early error can propagate, motivating list decoding.
 
 ## Performance in Standards
 

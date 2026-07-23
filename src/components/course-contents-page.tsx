@@ -73,9 +73,9 @@ export function CourseContentsPage({
         <p className="mt-3 max-w-3xl text-base leading-7 theme-text-secondary">
           {description}
         </p>
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm theme-text-muted">
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm theme-text-secondary">
           <span className="tabular-nums">{topics.length} chapters</span>
-          <span className="opacity-40">·</span>
+          <span className="theme-text-muted">·</span>
           <span className="tabular-nums">{problems.length} practice questions</span>
           <Link href="/dashboard" className="ml-auto font-medium text-[var(--accent)] hover:underline">
             Dashboard →
@@ -111,10 +111,10 @@ export function CourseContentsPage({
                     {index + 1}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] theme-text-muted">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] theme-text-secondary">
                       Chapter {index + 1}
                       {comp.total > 0 && (
-                        <span className="opacity-50"> · {comp.total} questions</span>
+                        <span className="theme-text-muted"> · {comp.total} questions</span>
                       )}
                     </p>
                     <h3 className="mt-0.5 text-base font-semibold leading-snug theme-text sm:text-lg">
@@ -128,7 +128,7 @@ export function CourseContentsPage({
                             style={{ width: `${comp.pct}%` }}
                           />
                         </div>
-                        <span className="shrink-0 text-[11px] tabular-nums theme-text-muted">
+                        <span className="shrink-0 text-[11px] tabular-nums theme-text-secondary">
                           {comp.isComplete
                             ? "Complete"
                             : comp.started

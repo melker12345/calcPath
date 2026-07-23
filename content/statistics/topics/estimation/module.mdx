@@ -22,11 +22,18 @@ By the Central Limit Theorem, $\bar{X}$ is approximately $N(\mu, \sigma^2/n)$ fo
 
 A statistic is an unbiased estimator of a parameter $\theta$ if $E(\hat{\theta}) = \theta$. The sample mean $\bar{X}$ is unbiased for $\mu$. The sample variance $s^2$ (with $n-1$) is unbiased for $\sigma^2$.
 
-Mean Squared Error: $\text{MSE}(\hat{\theta}) = \text{Var}(\hat{\theta}) + [\text{Bias}(\hat{\theta})]^2$. A good estimator minimises MSE — there is a bias-variance trade-off.
+The bias of an estimator is $\text{Bias}(\hat{\theta}) = E(\hat{\theta}) - \theta$; an unbiased estimator has zero bias. Mean Squared Error combines bias and variance into a single measure of accuracy: $\text{MSE}(\hat{\theta}) = \text{Var}(\hat{\theta}) + [\text{Bias}(\hat{\theta})]^2$. A good estimator minimises MSE — and because shrinking one term can grow the other, there is a bias-variance trade-off: a slightly biased estimator with much smaller variance can beat an unbiased one on MSE.
 
 **ELI5**
 
 - Imagine repeatedly drawing samples of size $n$ and computing the mean each time. You would get a slightly different mean every time, but they would cluster around the true $\mu$. The standard error measures how tightly they cluster. The bigger the sample, the tighter the cluster.
+
+**Worked Example: standard error and the MSE trade-off**
+- A population has $\sigma = 30$. We take a sample of size $n = 36$.
+- Standard error of the mean: $SE_{\bar{X}} = \sigma/\sqrt{n} = 30/\sqrt{36} = 30/6 = 5$.
+- Now quadruple the sample to $n = 144$: $SE_{\bar{X}} = 30/\sqrt{144} = 30/12 = 2.5$. Sanity check: to halve the $SE$ we needed $4\times$ the data, matching the $\sqrt{n}$ law.
+- MSE comparison. Estimator A is unbiased with $\text{Var} = 5$, so $\text{MSE}_A = 5 + 0^2 = 5$. Estimator B has $\text{Bias} = 1$ but $\text{Var} = 2$, so $\text{MSE}_B = 2 + 1^2 = 3$.
+- Since $3 < 5$, the biased estimator B is actually more accurate on average — a concrete instance of the bias-variance trade-off.
 
 ## Point Estimation and MLE
 
@@ -34,13 +41,30 @@ A point estimate is a single numerical value used as a best guess for a populati
 
 Maximum Likelihood Estimation (MLE) finds the parameter value $\hat{\theta}$ that maximises the likelihood function $L(\theta) = \prod_{i=1}^n f(x_i;\theta)$ — the probability of observing the actual data, viewed as a function of $\theta$.
 
-In practice, we maximise $\ell(\theta) = \ln L(\theta)$ (log-likelihood) which is easier to differentiate. Set $d\ell/d\theta = 0$ and solve. For a normal population, MLE gives $\hat{\mu}=\bar{x}$ and $\hat{\sigma}^2 = \frac{1}{n}\sum(x_i-\bar{x})^2$ (note: MLE uses $n$, not $n-1$).
+In practice, we maximise $\ell(\theta) = \ln L(\theta)$ (log-likelihood) instead of $L$. Because $\ln$ is strictly increasing, it has its maximum at the same $\theta$, but it turns the product into a sum that is far easier to differentiate. Set $d\ell/d\theta = 0$ and solve (checking the second derivative is negative to confirm a maximum). For a normal population, MLE gives $\hat{\mu}=\bar{x}$ and $\hat{\sigma}^2 = \frac{1}{n}\sum(x_i-\bar{x})^2$ (note: MLE uses $n$, not $n-1$, so it is slightly biased downward for $\sigma^2$).
 
-MLE has excellent asymptotic properties: it is consistent, asymptotically efficient (achieves the Cramér-Rao lower bound), and asymptotically normal. For large samples it is the go-to estimation method.
+An alternative recipe is the **method of moments**: set the population moments equal to the sample moments and solve. For example, matching $E(X)=\mu$ to $\bar{x}$ gives an estimate for $\mu$; the two methods often agree but need not.
+
+Two properties describe how good an estimator gets as data accumulates. An estimator is **consistent** if it converges (in probability) to the true value as $n\to\infty$ — collect enough data and you home in on the truth. Among *unbiased* estimators, the one with the smallest possible variance (achieving the Cramér-Rao lower bound $\text{Var}(\hat{\theta})\geq 1/I(\theta)$, where $I(\theta)$ is the Fisher information) is the most **efficient**. MLE has excellent asymptotic behaviour on both counts: under mild regularity conditions it is consistent, asymptotically efficient, and asymptotically normal ($\sqrt{n}(\hat{\theta}_{MLE}-\theta)\to N(0,1/I(\theta))$). For large samples it is the go-to estimation method.
 
 **ELI5**
 
 - MLE asks: given the data I observed, which parameter value would have made this data most likely? It's like tuning a radio — you turn the dial until the signal is clearest. The dial setting that gives the clearest signal is your maximum likelihood estimate.
+
+**Worked Example: deriving the MLE for a Bernoulli proportion**
+- Observe $n$ independent coin flips with $k$ heads (each flip is Bernoulli$(p)$). We want $\hat{p}$.
+- Likelihood: each head contributes $p$, each tail contributes $1-p$, so $L(p) = p^{k}(1-p)^{n-k}$.
+- Log-likelihood: $\ell(p) = k\ln p + (n-k)\ln(1-p)$.
+- Differentiate and set to zero: $\dfrac{d\ell}{dp} = \dfrac{k}{p} - \dfrac{n-k}{1-p} = 0$.
+- Solve: $k(1-p) = (n-k)p \Rightarrow k - kp = np - kp \Rightarrow k = np \Rightarrow \hat{p} = k/n$.
+- Sanity check: with $k=3$ heads in $n=5$ flips, $\hat{p} = 3/5 = 0.6$ — exactly the observed frequency, which is the intuitive "best guess" for a coin's bias.
+
+**Worked Example: MLE for a Poisson rate**
+- Data $\{2,3,1,4,2\}$ are counts modelled as Poisson$(\lambda)$, with pmf $f(x;\lambda)=e^{-\lambda}\lambda^{x}/x!$.
+- Log-likelihood: $\ell(\lambda) = \sum_i\big(-\lambda + x_i\ln\lambda - \ln x_i!\big) = -n\lambda + \big(\textstyle\sum_i x_i\big)\ln\lambda - \sum_i\ln x_i!$.
+- Set $\dfrac{d\ell}{d\lambda} = -n + \dfrac{\sum_i x_i}{\lambda} = 0 \Rightarrow \hat{\lambda} = \dfrac{\sum_i x_i}{n} = \bar{x}$.
+- Compute: $\sum_i x_i = 2+3+1+4+2 = 12$, $n=5$, so $\hat{\lambda} = 12/5 = 2.4$.
+- Sanity check: the Poisson mean *is* $\lambda$, so estimating it by the sample mean is exactly what we would hope.
 
 ## Confidence Intervals
 
@@ -62,10 +86,26 @@ For a proportion $p$: $\hat{p} \pm z^*\sqrt{\hat{p}(1-\hat{p})/n}$. Valid when $
 
 **Worked Example: 95% t-interval for a mean**
 - $\bar{x}=52$, $s=8$, $n=16$. Construct a $95\%$ CI.
-- $SE = 8/\sqrt{16} = 2$.
+- Check conditions: $\sigma$ is unknown (we only have $s$) and $n$ is small, so we use the $t$-distribution with $df=n-1=15$.
+- $SE = s/\sqrt{n} = 8/\sqrt{16} = 8/4 = 2$.
 - $t^*_{0.025,15} = 2.131$ (from $t$-table with $df=15$).
 - CI: $52 \pm 2.131(2) = 52 \pm 4.262 = (47.74,\; 56.26)$.
 - Interpretation: we are $95\%$ confident the true population mean falls between $47.74$ and $56.26$.
+
+**Worked Example: 95% CI for a proportion**
+- A poll finds $\hat{p}=0.6$ in a sample of $n=100$. Construct a $95\%$ CI for $p$.
+- Check conditions: $n\hat{p} = 100(0.6) = 60 \geq 10$ and $n(1-\hat{p}) = 100(0.4) = 40 \geq 10$, so the normal approximation is valid.
+- $SE = \sqrt{\hat{p}(1-\hat{p})/n} = \sqrt{0.6(0.4)/100} = \sqrt{0.0024} \approx 0.049$.
+- Margin of error: $E = z^*\cdot SE = 1.96(0.049) \approx 0.096$.
+- CI: $0.6 \pm 0.096 = (0.504,\; 0.696)$.
+- Sanity check: the whole interval lies above $0.5$, so we can be $95\%$ confident of a genuine majority.
+
+**Worked Example: sample size for a target margin of error**
+- We want a $95\%$ CI for a mean with margin of error $E \leq 3$, and we believe $\sigma = 15$.
+- Rearrange $E = z^*\sigma/\sqrt{n}$ to solve for $n$: $n = (z^*\sigma/E)^2$.
+- Substitute: $n = (1.96\times 15/3)^2 = (9.8)^2 = 96.04$.
+- Always round *up* (rounding down would exceed the target margin): $n = 97$.
+- Sanity check: with $n=97$, $SE = 15/\sqrt{97}\approx 1.523$ and $E = 1.96(1.523)\approx 2.99 \leq 3$. ✓
 
 ## Type I and Type II Errors
 
@@ -83,6 +123,13 @@ Sample size planning: choose $n$ to achieve a desired power (typically $80\%$ or
 
 - Type I error: you shout 'fire!' when there is no fire (false alarm). Type II error: there is a fire but you say nothing (miss). To reduce false alarms, raise the bar for shouting fire ($\alpha$ gets smaller) — but then you will miss more real fires. Only collecting more information (larger $n$) reduces both simultaneously.
 
+**Worked Example: reading the two error rates from a decision table**
+- Suppose a test is run at $\alpha = 0.05$ and, for a specific alternative, has power $= 0.80$.
+- $\alpha = 0.05$ is the Type I error rate: if $H_0$ is in fact true, there is a $5\%$ chance we wrongly reject it.
+- $\beta = 1 - \text{power} = 1 - 0.80 = 0.20$ is the Type II error rate: if $H_0$ is in fact false (at that effect size), there is a $20\%$ chance we fail to detect it.
+- Now suppose we tighten to $\alpha = 0.01$ to cut false positives. With everything else fixed the rejection region shrinks, so real effects are harder to detect: $\beta$ rises and power falls below $0.80$.
+- Sanity check: $\alpha$ and $\beta$ move in opposite directions when only the threshold changes; the one lever that lowers *both* is increasing $n$.
+
 ## Practical vs. Statistical Significance
 
 <!-- section: p-value -->
@@ -96,6 +143,12 @@ Confidence intervals are more informative than $p$-values alone: they show both 
 **ELI5**
 
 - With a huge sample, even a change of $0.001$ degrees in temperature becomes 'statistically significant' — but nobody cares about $0.001$ degrees. Statistical significance just means 'the data is very unlikely under $H_0$.' Practical significance asks the more important question: 'Does this actually matter?'
+
+**Worked Example: significant but trivial (Cohen's $d$)**
+- A study of $n = 40{,}000$ finds $\bar{x} = 100.2$ against $H_0: \mu_0 = 100$, with $s = 15$.
+- Test statistic: $SE = s/\sqrt{n} = 15/\sqrt{40000} = 15/200 = 0.075$, so $z = (\bar{x}-\mu_0)/SE = 0.2/0.075 \approx 2.67$, giving $p \approx 0.008 < 0.05$ — statistically significant.
+- Effect size: $d = (\bar{x}-\mu_0)/s = 0.2/15 \approx 0.013$. This is a *tiny* effect (Cohen's benchmarks: $0.2$ small, $0.5$ medium, $0.8$ large).
+- Sanity check: unlike the $z$-statistic, $d$ has no $\sqrt{n}$ in it, so it does not grow with sample size. The effect is negligible whatever $n$ is, even though the large sample pushed $p$ below $0.05$. Report both: "significant, but the effect is negligible."
 
 ## Common Mistakes
 

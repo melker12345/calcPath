@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CourseLayout } from "@/components/course-layout";
 import { subjectBodyFont, subjectHeadingFont } from "@/lib/subject-fonts";
 import { getAvailableSubjectConfigs, loadSubjectIndex } from "@/lib/content/loader";
+import { getThemeForSubject } from "@/lib/themes";
 
 type Props = {
   params: Promise<{ subject: string }>;
@@ -48,9 +49,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function SubjectLayout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: Promise<{ subject: string }>;
 }) {
+  const { subject: slug } = await params;
+  // Metaphor theme restored from master (graph paper / chalkboard / blueprint);
+  // null for subjects without one → default site look.
+  const theme = getThemeForSubject(slug);
+
   const subjectConfigs = await getAvailableSubjectConfigs();
   const navSubjects = subjectConfigs.map((s) => ({
     slug: s.slug,
@@ -62,7 +70,9 @@ export default async function SubjectLayout({
 
   return (
     <div className={`${subjectHeadingFont.variable} ${subjectBodyFont.variable}`}>
-      <CourseLayout navSubjects={navSubjects}>{children}</CourseLayout>
+      <CourseLayout navSubjects={navSubjects} theme={theme}>
+        {children}
+      </CourseLayout>
     </div>
   );
 }
