@@ -1,3 +1,38 @@
+/**
+ * Answer grading.
+ *
+ * A learner types into a MathQuill field, so the raw input is LaTeX; the stored
+ * answer is whatever the author wrote in questions.json. Grading has to accept
+ * every spelling of the right answer without accepting a wrong one, and the
+ * balance between those two is the whole design.
+ *
+ * The contract, in order:
+ *
+ *  1. Canonicalize both sides (`canonicalizeInput`): unwrap LaTeX, fold case and
+ *     whitespace, fold every spelling of a symbol onto one character (\\ge, >=
+ *     and \u2265 are one thing), turn MathQuill's `^{...}` into `^(...)`, and set
+ *     aside a label prefix such as "f'(x)=".
+ *  2. Compare as strings. Most correct answers land here.
+ *  3. Compare as numbers, where an answer given to fewer decimals is accepted
+ *     when it is the correct rounding of the stored one (`scalarsAgree`).
+ *  4. Compare as expressions by sampling both at fixed points
+ *     (`expressionsEquivalent`) — this is what accepts a factored form against
+ *     an expanded one.
+ *  5. Compare as comma-separated lists, ignoring order when no part is labelled.
+ *
+ * Two guards keep leniency from becoming wrong: labels must agree when both
+ * sides carry one ("y = -3" is not "x = -3"), and normalization never deletes a
+ * symbol it does not recognise — deleting made opposites equal.
+ *
+ * Multiple choice does NOT come through here: a selected choice is graded by
+ * identity (`isMcqAnswerCorrect`), because equivalence buys nothing when the
+ * input is one of the offered strings and can only collapse distractors onto
+ * the answer.
+ *
+ * Changes here are covered by `npm run content:answers`, which replays the whole
+ * question corpus: every stored answer respelled the ways learners type it, every
+ * multiple-choice distractor, and every pair of answers within a topic.
+ */
 const stripTrailingConstant = (input: string) => {
   // Allow optional trailing "+C" for indefinite integrals, and a bare "C".
   // Do not strip multiplicative forms like "Ce^(2x)" or "e^(2x)C".
@@ -8,15 +43,42 @@ const stripTrailingConstant = (input: string) => {
 const removeLatexSizing = (s: string) =>
   s.replace(/\\left/g, "").replace(/\\right/g, "");
 
-const stripOptionalLabelPrefix = (input: string) =>
-  input
-    // "f(x)=", "y=", "y_1="
-    .replace(/^[a-z]\([a-z]\)=/i, "")
-    // Derivative notation a learner naturally types on a derivatives question:
-    // "f'(x)=", "y'=", "dy/dx=".
-    .replace(/^[a-z]'\s*(?:\([a-z]\))?=/i, "")
-    .replace(/^d[a-z]\/d[a-z]=/i, "")
-    .replace(/^[a-z]+(?:_[a-z0-9]+)?=/i, "");
+/**
+ * A label prefix on an answer: "y=", "f(x)=", "f'(x)=", "dy/dx=", "T=".
+ *
+ * Labels are dropped before comparing, so a learner may answer "10" where the
+ * stored answer is "T=10". But when BOTH sides carry a label the labels have to
+ * agree, or "y = -3" would be accepted for "x = -3" — a different line.
+ * Spellings of the same thing share a family: y, f(x) and g(x) are all a
+ * function value; y', f'(x) and dy/dx are all its derivative.
+ */
+const LABEL_PATTERNS: Array<{ re: RegExp; family: string }> = [
+  { re: /^d([a-z])\/d[a-z]=/i, family: "derivative" },
+  { re: /^[a-z]'\s*(?:\([a-z]\))?=/i, family: "derivative" },
+  { re: /^([fgh])\([a-z]\)=/i, family: "value" },
+  { re: /^y=/i, family: "value" },
+  { re: /^([a-z])\([a-z]\)=/i, family: "apply" },
+  { re: /^([a-z]+)(?:_[a-z0-9]+)?=/i, family: "name" },
+];
+
+type AnswerLabel = { family: string; raw: string };
+
+const matchLabelPrefix = (input: string): AnswerLabel | null => {
+  for (const { re, family } of LABEL_PATTERNS) {
+    const m = input.match(re);
+    if (!m) continue;
+    // "apply" and "name" are labels whose identity matters: K(s) vs P(s), T vs N.
+    const family_ =
+      family === "apply" || family === "name" ? `${family}:${(m[1] ?? "").toLowerCase()}` : family;
+    return { family: family_, raw: m[0] };
+  }
+  return null;
+};
+
+const stripOptionalLabelPrefix = (input: string) => {
+  const label = matchLabelPrefix(input);
+  return label ? input.slice(label.raw.length) : input;
+};
 
 const parseGroup = (s: string, start: number) => {
   // expects s[start] === '{'
@@ -57,6 +119,87 @@ const EVALUATION_TOKENS = [
   "inf",
   "lambda",
 ] as const;
+
+/**
+ * One canonical spelling per symbol. Every LaTeX, ASCII and Unicode way of
+ * writing a relation collapses onto the same character, so "x \\ge 4",
+ * "x >= 4" and "x \u2265 4" are one answer — and "x \\le 4" stays a different one.
+ *
+ * Longest keys first: "\\leq" must be consumed before "\\le".
+ */
+const LATEX_SYMBOLS: Array<[string, string]> = [
+  ["\\leftrightarrow", "\u21d4"],
+  ["\\Leftrightarrow", "\u21d4"],
+  ["\\rightarrow", "\u2192"],
+  ["\\Rightarrow", "\u21d2"],
+  ["\\implies", "\u21d2"],
+  ["\\iff", "\u21d4"],
+  ["\\varnothing", "\u2205"],
+  ["\\emptyset", "\u2205"],
+  ["\\subseteq", "\u2286"],
+  ["\\supseteq", "\u2287"],
+  ["\\subset", "\u2282"],
+  ["\\supset", "\u2283"],
+  ["\\notin", "\u2209"],
+  ["\\infty", "inf"],
+  ["\\forall", "\u2200"],
+  ["\\exists", "\u2203"],
+  ["\\wedge", "\u2227"],
+  ["\\land", "\u2227"],
+  ["\\vee", "\u2228"],
+  ["\\lor", "\u2228"],
+  ["\\lnot", "\u00ac"],
+  ["\\neg", "\u00ac"],
+  ["\\leq", "\u2264"],
+  ["\\geq", "\u2265"],
+  ["\\neq", "\u2260"],
+  ["\\cup", "\u222a"],
+  ["\\cap", "\u2229"],
+  ["\\mid", "|"],
+  ["\\le", "\u2264"],
+  ["\\ge", "\u2265"],
+  ["\\ne", "\u2260"],
+  ["\\in", "\u2208"],
+  ["\\to", "\u2192"],
+  ["\\pm", "\u00b1"],
+  ["\\mp", "\u2213"],
+];
+
+/** Style and spacing commands: no meaning, and their content must survive. */
+const FORMATTING_COMMANDS =
+  /\\(?:displaystyle|textstyle|scriptstyle|limits|nolimits|quad|qquad|thinspace|boldsymbol|operatorname|mathbb|mathbf|mathrm|mathcal|mathit|mathsf|mathfrak|textbf|textit|text|bf|it|rm)\b/g;
+
+/** The same symbols as typed on a keyboard, folded onto the canonical form. */
+const ASCII_SYMBOLS: Array<[RegExp, string]> = [
+  [/<=>/g, "\u21d4"],
+  [/<=/g, "\u2264"],
+  [/>=/g, "\u2265"],
+  [/!=/g, "\u2260"],
+  [/=>/g, "\u21d2"],
+  [/->/g, "\u2192"],
+  [/\+\/-/g, "\u00b1"],
+  [/-\/\+/g, "\u2213"],
+  [/&&/g, "\u2227"],
+  [/\|\|/g, "\u2228"],
+];
+
+/** Greek letters and roots a learner may paste or type directly. */
+const UNICODE_LETTERS: Array<[RegExp, string]> = [
+  [/\u03b1/g, "alpha"],
+  [/\u03b2/g, "beta"],
+  [/\u03b3/g, "gamma"],
+  [/\u03b4/g, "delta"],
+  [/\u03b5/g, "epsilon"],
+  [/\u03b8/g, "theta"],
+  [/\u03bc/g, "mu"],
+  [/\u03c0/g, "pi"],
+  [/\u03c1/g, "rho"],
+  [/\u03c3/g, "sigma"],
+  [/\u03c4/g, "tau"],
+  [/\u03c6/g, "phi"],
+  [/\u03c9/g, "omega"],
+  [/\u221e/g, "inf"],
+];
 
 const latexToPlain = (latex: string) => {
   let s = removeLatexSizing(latex);
@@ -106,8 +249,22 @@ const latexToPlain = (latex: string) => {
       s.slice(den.end);
   }
 
-  // Remove remaining backslashes from unknown commands
-  s = s.replace(/\\[a-zA-Z]+/g, "");
+  // Relations, logic and set operations become canonical symbols rather than
+  // being deleted. Deleting them collapsed opposites onto each other — "p \\land
+  // \\neg p" and "p \\lor \\neg p" both became "pp" — so a wrong answer could
+  // compare equal to the right one.
+  for (const [command, symbol] of LATEX_SYMBOLS) {
+    s = s.split(command).join(symbol);
+  }
+
+  // Formatting commands carry no meaning; their braced content is kept and the
+  // braces are stripped downstream, so \\mathbb{R} still reduces to R.
+  s = s.replace(FORMATTING_COMMANDS, "");
+
+  // Anything left is a named symbol (\\theta, \\aleph, ...). Keep the name: two
+  // different symbols must not reduce to the same empty string.
+  s = s.replace(/\\([a-zA-Z]+)/g, "$1");
+  s = s.replace(/\\(.)/g, "$1");
   return s;
 };
 
@@ -172,6 +329,14 @@ const canonicalizeInput = (input: string) => {
     .replace(/\u27e9/g, ">")
     .replace(/\u03bb/g, "lambda");
 
+  // Keyboard and Unicode spellings of the symbols LaTeX also produces, folded
+  // onto the same canonical character so "x >= 4" and "x \\ge 4" are one answer.
+  for (const [pattern, symbol] of ASCII_SYMBOLS) out = out.replace(pattern, symbol);
+  for (const [pattern, name] of UNICODE_LETTERS) out = out.replace(pattern, name);
+  // \u221a2 and \u221a(x+1) are sqrt(2) and sqrt(x+1).
+  out = out.replace(/\u221a\(/g, "sqrt(");
+  out = out.replace(/\u221a(\d+(?:\.\d+)?|[a-z])/g, "sqrt($1)");
+
   // x**2 -> x^2 (Python/JS habit), x² -> x^(2) (phone keyboards, pasted text).
   out = out.replace(/\*\*/g, "^");
   const superscriptClass = new RegExp(`[${Object.keys(SUPERSCRIPT_CHARS).join("")}]+`, "g");
@@ -200,6 +365,25 @@ const canonicalizeInput = (input: string) => {
   // A sentence-ending period is punctuation, not arithmetic.
   out = out.replace(/\.$/, "");
   return out;
+};
+
+/** The label family an answer carries, or null when it carries none. */
+const labelFamilyOf = (input: string): string | null => {
+  let out = input.trim();
+  if (out.includes("\\")) out = latexToPlain(out);
+  out = out.toLowerCase().replace(/\s+/g, "").replace(/[{}$]/g, "").replace(/_/g, "");
+  return matchLabelPrefix(out)?.family ?? null;
+};
+
+/**
+ * True when the two answers are labelled in ways that cannot mean the same
+ * thing — "x=" against "y=", or "T=" against "N=". An unlabelled side never
+ * conflicts: omitting the label is normal.
+ */
+const labelsConflict = (a: string, b: string): boolean => {
+  const aLabel = labelFamilyOf(a);
+  const bLabel = labelFamilyOf(b);
+  return aLabel !== null && bLabel !== null && aLabel !== bLabel;
 };
 
 const insertImplicitMultiplication = (s: string) => {
@@ -342,18 +526,36 @@ const decimalPlaces = (expr: string): number | null => {
   return match ? match[2].length : null;
 };
 
+/** Half-up rounding to `places` decimals, nudged past float representation error. */
+const roundTo = (value: number, places: number): number => {
+  const factor = 10 ** places;
+  const nudged = value + Math.sign(value) * 1e-9;
+  return Math.round(nudged * factor) / factor;
+};
+
 /**
- * Tolerance for comparing two scalar values when at least one side is a
- * rounded decimal. Allows 5.477 and 5.48 against sqrt(30) etc.
+ * Compare two scalar values when at least one side is written as a rounded
+ * decimal.
+ *
+ * A learner may answer to fewer decimals than the stored answer carries, so
+ * 0.3 has to be accepted for 0.333. But a raw half-a-unit-in-the-last-place
+ * tolerance also accepted 0.25 for 0.2 — half a unit away in *both*
+ * directions is a whole unit wide, so neighbouring answers overlapped.
+ *
+ * The rule instead is the one a marker would use: rounded to the coarser of
+ * the two precisions, the values must agree. 0.333 and 0.3 both round to 0.3
+ * at one decimal, so 0.3 is accepted; 0.25 rounds to 0.3 and 0.2 does not, so
+ * it is not.
  */
-const scalarComparisonTolerance = (aPrepared: string, bPrepared: string): number => {
+const scalarsAgree = (a: number, b: number, aPrepared: string, bPrepared: string): boolean => {
   const aPlaces = decimalPlaces(aPrepared);
   const bPlaces = decimalPlaces(bPrepared);
-  if (aPlaces !== null || bPlaces !== null) {
-    const places = Math.min(aPlaces ?? 12, bPlaces ?? 12);
-    return 0.5 * 10 ** -places;
+  if (aPlaces === null && bPlaces === null) {
+    return Math.abs(a - b) <= 1e-4;
   }
-  return 1e-4;
+  const places = Math.min(aPlaces ?? 12, bPlaces ?? 12);
+  if (Math.abs(a - b) > 0.5 * 10 ** -places) return false;
+  return roundTo(a, places) === roundTo(b, places);
 };
 
 const scalarNumericEquivalent = async (aExpr: string, bExpr: string): Promise<boolean> => {
@@ -363,8 +565,7 @@ const scalarNumericEquivalent = async (aExpr: string, bExpr: string): Promise<bo
   const aVal = tryEval(m, aPrepared, {});
   const bVal = tryEval(m, bPrepared, {});
   if (aVal === null || bVal === null) return false;
-  const tol = scalarComparisonTolerance(aPrepared, bPrepared);
-  return Math.abs(aVal - bVal) <= tol;
+  return scalarsAgree(aVal, bVal, aPrepared, bPrepared);
 };
 
 const tryEval = (
@@ -431,6 +632,7 @@ const expressionsEquivalent = async (
 };
 
 export const isAnswerCorrect = (userInput: string, expected: string) => {
+  if (labelsConflict(userInput, expected)) return false;
   const a = normalizeAnswer(userInput);
   const b = normalizeAnswer(expected);
   if (a === b) return true;
@@ -476,19 +678,91 @@ export const isMcqAnswerCorrect = (
   return collapse(selected) === target;
 };
 
-// Async version for richer checks (used by practice/test flows)
-export const isAnswerCorrectAsync = async (userInput: string, expected: string) => {
-  const a = normalizeAnswer(userInput);
-  const b = normalizeAnswer(expected);
-  if (a === b) return true;
+/**
+ * Split "1,-1" into its parts, but leave "(-2,2)", "<0,0,1>" and "f(x,y)" alone:
+ * only commas outside every bracket separate list items.
+ */
+const splitTopLevelList = (input: string): string[] | null => {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const char of input) {
+    if ("([{<".includes(char)) depth += 1;
+    else if (")]}>".includes(char)) depth -= 1;
+    if (char === "," && depth === 0) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  parts.push(current);
+  if (depth !== 0 || parts.length < 2) return null;
+  if (parts.some((part) => part.trim() === "")) return null;
+  return parts.map((part) => part.trim());
+};
 
+/** The single-value comparison, without list handling (which builds on it). */
+const valuesEquivalent = async (a: string, b: string): Promise<boolean> => {
+  if (a === b) return true;
   const aNoC = stripTrailingConstant(a);
   const bNoC = stripTrailingConstant(b);
   if (aNoC === bNoC) return true;
-
   if (await scalarNumericEquivalent(aNoC, bNoC)) return true;
-
   const allowConstantOffset = /\+?c$/i.test(b);
   return expressionsEquivalent(aNoC, bNoC, allowConstantOffset);
+};
+
+/**
+ * Compare comma-separated answers such as "1,-1" — the two roots of a problem
+ * with no natural order, which a learner may list either way round.
+ *
+ * Order is ignored only when no part carries an "=": in "x=-1, y=3" the labels
+ * make position meaningful, and swapping them is a different answer.
+ */
+const listsEquivalent = async (aParts: string[], bParts: string[]): Promise<boolean> => {
+  if (aParts.length !== bParts.length) return false;
+
+  // Each item is compared like a whole answer, so "x = 3, x = -3" accepts the
+  // "3,-3" a learner would type — while still refusing a swapped labelled pair.
+  const partsEquivalent = async (a: string, b: string) => {
+    if (labelsConflict(a, b)) return false;
+    return valuesEquivalent(normalizeAnswer(a), normalizeAnswer(b));
+  };
+
+  const ordered = await Promise.all(aParts.map((part, i) => partsEquivalent(part, bParts[i])));
+  if (ordered.every(Boolean)) return true;
+
+  if ([...aParts, ...bParts].some((part) => part.includes("="))) return false;
+
+  const unmatched = [...bParts];
+  for (const part of aParts) {
+    let found = -1;
+    for (let i = 0; i < unmatched.length; i += 1) {
+      if (await partsEquivalent(part, unmatched[i])) {
+        found = i;
+        break;
+      }
+    }
+    if (found === -1) return false;
+    unmatched.splice(found, 1);
+  }
+  return true;
+};
+
+// Async version for richer checks (used by practice/test flows)
+export const isAnswerCorrectAsync = async (userInput: string, expected: string) => {
+  // "y = -3" must not pass for "x = -3": different labels, different answers.
+  if (labelsConflict(userInput, expected)) return false;
+
+  const a = normalizeAnswer(userInput);
+  const b = normalizeAnswer(expected);
+  if (await valuesEquivalent(a, b)) return true;
+
+  const aParts = splitTopLevelList(a);
+  const bParts = splitTopLevelList(b);
+  if (aParts && bParts) return listsEquivalent(aParts, bParts);
+
+  return false;
 };
 

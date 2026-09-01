@@ -32,6 +32,14 @@ Content quality fixes done this session:
   - geom-parab-7: 1/4 → 1
 
 
+Answer-grading fixes (from the "typed answer right but it came out wrong" report):
+- [x] MathQuill `^{...}` exponents were misparsed (e^{3x} became e^3*x) — braces now become parentheses before stripping.
+- [x] `ln` after a letter ("2xln(x)") was unevaluable; MCQ was graded by expression equivalence, so distractors could grade correct (38 across the corpus) — MCQ now compares by identity.
+- [x] Rounding tolerance was half a unit wide in both directions, so 0.25 passed for 0.2. Now: rounded to the coarser precision, the two values must agree.
+- [x] Labels must agree when both sides have one ("y = -3" no longer passes for "x = -3"); comma lists ("1,-1") match in any order unless the parts are labelled.
+- [x] `npm run content:answers` now replays every stored answer respelled the way learners type it, every MCQ distractor, and every answer pair within a topic. It caught all of the above; self-validation alone never could.
+- [x] Last 5 KaTeX failures fixed (an unescaped `$1000s` and a `z^\*`) — content:latex is now at 0 failures.
+
 Future work not to do now:
 - [ ] Link to external resourses that explain the topic better, [youtube, khan accadamy, others (this is a manuall review step so i know we link to high quality resourses, also we need to validate that we can link to their resourse)]
 
