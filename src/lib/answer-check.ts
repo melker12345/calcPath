@@ -10,7 +10,12 @@ const removeLatexSizing = (s: string) =>
 
 const stripOptionalLabelPrefix = (input: string) =>
   input
+    // "f(x)=", "y=", "y_1="
     .replace(/^[a-z]\([a-z]\)=/i, "")
+    // Derivative notation a learner naturally types on a derivatives question:
+    // "f'(x)=", "y'=", "dy/dx=".
+    .replace(/^[a-z]'\s*(?:\([a-z]\))?=/i, "")
+    .replace(/^d[a-z]\/d[a-z]=/i, "")
     .replace(/^[a-z]+(?:_[a-z0-9]+)?=/i, "");
 
 const parseGroup = (s: string, start: number) => {
@@ -106,6 +111,97 @@ const latexToPlain = (latex: string) => {
   return s;
 };
 
+/** Superscript characters a learner can paste or type on a phone keyboard. */
+const SUPERSCRIPT_CHARS: Record<string, string> = {
+  "\u2070": "0",
+  "\u00b9": "1",
+  "\u00b2": "2",
+  "\u00b3": "3",
+  "\u2074": "4",
+  "\u2075": "5",
+  "\u2076": "6",
+  "\u2077": "7",
+  "\u2078": "8",
+  "\u2079": "9",
+  "\u207f": "n",
+  "\u207a": "+",
+  "\u207b": "-",
+};
+
+/**
+ * Rewrite `^{...}` as `^(...)`.
+ *
+ * MathQuill emits braces around any exponent longer than one character, so the
+ * only way to type e^{3x} in the answer widget produced a string whose braces
+ * were later deleted wholesale — turning e^{3x} into e^3*x, a different
+ * function. Converting to parentheses keeps the grouping the learner typed.
+ */
+const braceExponentsToParens = (input: string) => {
+  let out = "";
+  let i = 0;
+  while (i < input.length) {
+    if (input[i] === "^" && input[i + 1] === "{") {
+      const group = parseGroup(input, i + 1);
+      if (group) {
+        out += `^(${braceExponentsToParens(group.content)})`;
+        i = group.end;
+        continue;
+      }
+    }
+    out += input[i];
+    i += 1;
+  }
+  return out;
+};
+
+/**
+ * Everything both the string-equality path and the evaluation path agree on:
+ * unwrap LaTeX, fold case and whitespace, normalize the many ways a keyboard
+ * can spell the same operator, and drop a label prefix like "f'(x)=".
+ */
+const canonicalizeInput = (input: string) => {
+  let out = input.trim();
+  if (out.includes("\\")) out = latexToPlain(out);
+  out = out.toLowerCase();
+  out = out.replace(/\s+/g, "");
+  out = out
+    .replace(/\u2212/g, "-")
+    .replace(/\u00d7/g, "*")
+    .replace(/\u00f7/g, "/")
+    .replace(/\u27e8/g, "<")
+    .replace(/\u27e9/g, ">")
+    .replace(/\u03bb/g, "lambda");
+
+  // x**2 -> x^2 (Python/JS habit), x² -> x^(2) (phone keyboards, pasted text).
+  out = out.replace(/\*\*/g, "^");
+  const superscriptClass = new RegExp(`[${Object.keys(SUPERSCRIPT_CHARS).join("")}]+`, "g");
+  out = out.replace(superscriptClass, (run) =>
+    `^(${[...run].map((c) => SUPERSCRIPT_CHARS[c]).join("")})`
+  );
+
+  out = braceExponentsToParens(out);
+  // A single-token exponent needs no grouping: x^(2) and x^2 are the same string
+  // once the braces MathQuill added are gone. A single letter or a number only —
+  // "^(3x)" is two tokens and must keep its parentheses, or e^(3x) would decay
+  // into e^3*x, which is the bug this whole path exists to prevent.
+  out = out.replace(/\^\(([a-z]|\d+(?:\.\d+)?)\)/g, "^$1");
+  out = out.replace(/[{}]/g, "");
+  // Some stored answers carry their LaTeX math delimiters; they are punctuation.
+  out = out.replace(/\$/g, "");
+
+  // Normalize trig/func^n(arg) -> func(arg)^n  e.g. sec^2(x) -> sec(x)^2
+  out = out.replace(
+    /(sin|cos|tan|sec|csc|cot|arcsin|arccos|arctan|ln|log|exp)\^([\w.]+)\(([^)]*)\)/g,
+    "$1($3)^$2",
+  );
+
+  out = out.replace(/_/g, "");
+  out = stripOptionalLabelPrefix(out);
+  // A sentence-ending period is punctuation, not arithmetic.
+  out = out.replace(/\.$/, "");
+  return out;
+};
+
 const insertImplicitMultiplication = (s: string) => {
   let out = s;
   // 2x, 2pi, 2sin(x) -> 2*x, 2*pi, 2*sin(x)
@@ -195,22 +291,12 @@ const startsValueLike = (token: string) =>
   isFunctionToken(token);
 
 const prepareExpressionForEvaluation = (input: string) => {
-  let out = input.trim();
-  if (out.includes("\\")) out = latexToPlain(out);
-  out = out.toLowerCase();
-  out = out.replace(/\s+/g, "");
-  out = out
-    .replace(/−/g, "-")
-    .replace(/×/g, "*")
-    .replace(/÷/g, "/")
-    .replace(/⟨/g, "<")
-    .replace(/⟩/g, ">")
-    .replace(/λ/g, "lambda")
-    .replace(/[{}]/g, "");
-  out = out.replace(/_/g, "");
-  out = stripOptionalLabelPrefix(out);
+  let out = canonicalizeInput(input);
   out = replaceAbsoluteValue(out);
-  out = out.replace(/\bln(?=\()/g, "log");
+  // mathjs has no `ln`. The word-boundary this rewrite used to carry could not
+  // fire after a letter, so "2xln(x)" left an `ln` mathjs could not evaluate and
+  // the whole equivalence check gave up.
+  out = out.replace(/ln(?=\()/g, "log");
 
   const tokens = tokenizeForEvaluation(out);
   const result: string[] = [];
@@ -228,28 +314,7 @@ const prepareExpressionForEvaluation = (input: string) => {
 };
 
 export const normalizeAnswer = (input: string) => {
-  let out = input.trim();
-  if (out.includes("\\")) out = latexToPlain(out);
-  out = out.toLowerCase();
-  out = out.replace(/\s+/g, "");
-  out = out
-    .replace(/−/g, "-")
-    .replace(/×/g, "*")
-    .replace(/÷/g, "/")
-    .replace(/⟨/g, "<")
-    .replace(/⟩/g, ">")
-    .replace(/λ/g, "lambda")
-    .replace(/[{}]/g, "");
-
-  // Normalize trig/func^n(arg) -> func(arg)^n  e.g. sec^2(x) -> sec(x)^2
-  out = out.replace(
-    /(sin|cos|tan|sec|csc|cot|arcsin|arccos|arctan|ln|log|exp)\^([\w.]+)\(([^)]*)\)/g,
-    "$1($3)^$2",
-  );
-
-  // Common unicode arrow variants don't matter once we strip whitespace.
-  out = out.replace(/_/g, "");
-  out = stripOptionalLabelPrefix(out);
+  let out = canonicalizeInput(input);
   out = stripTrailingConstant(out);
   out = insertImplicitMultiplication(out);
   return out;
@@ -326,7 +391,11 @@ const expressionsEquivalent = async (
   const aPrepared = prepareExpressionForEvaluation(aExpr);
   const bPrepared = prepareExpressionForEvaluation(bExpr);
 
-  // Sample points (avoid 0 to reduce log/div issues)
+  // Sample points (avoid 0 to reduce log/div issues).
+  // The last four sit inside (-0.5, 0.5) so that answers defined only on a small
+  // interval — arcsin/arccos derivatives such as 2/sqrt(1-4x^2) — still produce
+  // the three usable pairs this check requires. Without them a correct answer
+  // could only ever pass by spelling the stored string exactly.
   const scopes = [
     { x: -1.7, y: 0.8, z: -0.4, t: 1.2, n: 2, p: 1.5, s: 0.6, r: 1.1, a: 2.3, b: -1.1, c: 0.7, lambda: 1.9 },
     { x: -0.8, y: -1.3, z: 0.6, t: -0.7, n: 3, p: 2.1, s: -1.2, r: 0.4, a: -0.9, b: 1.4, c: 2.2, lambda: -1.2 },
@@ -334,6 +403,10 @@ const expressionsEquivalent = async (
     { x: 0.9, y: -0.5, z: -1.4, t: 1.7, n: 5, p: 0.3, s: -0.5, r: 1.8, a: -2.5, b: 2.8, c: 1.1, lambda: 2.4 },
     { x: 1.6, y: 0.3, z: 1.5, t: -1.1, n: 6, p: -2.2, s: 1.4, r: -1.3, a: 0.8, b: -0.6, c: 3.1, lambda: -0.9 },
     { x: 2.1, y: -0.9, z: 0.2, t: 0.4, n: 7, p: 1.9, s: 0.9, r: 2.2, a: 1.2, b: 1.7, c: -2.6, lambda: 1.3 },
+    { x: 0.35, y: 0.45, z: -0.25, t: 0.3, n: 2, p: 0.4, s: 0.25, r: 0.35, a: 0.45, b: -0.3, c: 0.2, lambda: 0.4 },
+    { x: -0.3, y: -0.25, z: 0.4, t: -0.35, n: 3, p: -0.45, s: 0.3, r: -0.2, a: -0.4, b: 0.25, c: -0.35, lambda: -0.3 },
+    { x: 0.15, y: 0.3, z: 0.15, t: 0.45, n: 4, p: 0.2, s: -0.35, r: 0.15, a: 0.25, b: 0.35, c: 0.45, lambda: 0.2 },
+    { x: -0.45, y: 0.2, z: -0.4, t: -0.15, n: 5, p: -0.25, s: 0.45, r: -0.45, a: 0.35, b: -0.2, c: 0.3, lambda: -0.45 },
   ];
   const pairs: Array<{ a: number; b: number }> = [];
 
@@ -376,6 +449,31 @@ export const isAnswerCorrect = (userInput: string, expected: string) => {
   }
 
   return false;
+};
+
+/**
+ * Grade a multiple-choice answer.
+ *
+ * A selected choice is one of `choices` verbatim, so equivalence checking buys
+ * nothing here and actively harms: normalization deletes unknown LaTeX commands,
+ * which collapses distractors onto the answer — "p \\land \\neg p" and
+ * "p \\lor \\neg p" both reduce to "pp", and a wrong choice grades correct.
+ * Compare identity instead, exactly as the diagnostic flow does.
+ *
+ * Returns null when the stored answer is not one of the offered choices (bad
+ * content, or a choice list rendered differently); the caller then falls back to
+ * the expression checker rather than marking every attempt wrong.
+ */
+export const isMcqAnswerCorrect = (
+  selected: string,
+  expected: string,
+  choices: string[] | undefined,
+): boolean | null => {
+  const collapse = (value: string) => value.trim().replace(/\s+/g, " ");
+  if (!choices || choices.length === 0) return null;
+  const target = collapse(expected);
+  if (!choices.some((choice) => collapse(choice) === target)) return null;
+  return collapse(selected) === target;
 };
 
 // Async version for richer checks (used by practice/test flows)

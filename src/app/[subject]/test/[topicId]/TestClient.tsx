@@ -8,7 +8,7 @@ import { VoteFeedback } from "@/components/vote-feedback";
 import { ProgressProvider } from "@/components/progress-provider";
 import { useProgress } from "@/components/progress-provider";
 import { TestQuestion } from "@/lib/test-questions";
-import { isAnswerCorrectAsync } from "@/lib/answer-check";
+import { isAnswerCorrectAsync, isMcqAnswerCorrect } from "@/lib/answer-check";
 import { trackEvent } from "@/lib/analytics";
 import type { Topic } from "@/lib/shared-types";
 
@@ -437,7 +437,13 @@ function TestClientInner({ subjectSlug, topicId, topic, allTestQuestions }: Test
   const submit = async (overrideAnswer?: string) => {
     if (!current) return;
     const answer = (overrideAnswer ?? currentAnswer).trim();
-    const correct = await isAnswerCorrectAsync(answer, current.answer);
+    // Multiple choice is graded by identity against the offered choices; only
+    // typed answers go through expression equivalence.
+    const mcqVerdict =
+      current.type === "mcq"
+        ? isMcqAnswerCorrect(answer, current.answer, current.choices)
+        : null;
+    const correct = mcqVerdict ?? (await isAnswerCorrectAsync(answer, current.answer));
     
     const result: Result = {
       questionId: current.id,
