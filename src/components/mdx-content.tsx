@@ -4,6 +4,15 @@ import React, { useRef, useEffect } from "react";
 import { marked, type Tokens } from "marked";
 import { MathText } from "@/components/math-text";
 import { BlockMath } from "react-katex";
+import {
+  MATH_BLOCK_SPECS,
+  bareMathBody,
+  formatBlockNumber,
+  isBareMath,
+  segmentMathBlocks,
+  splitRunInHead,
+  type MathBlockSegment,
+} from "@/lib/content/math-blocks";
 
 type AnyToken = Tokens.Generic & { tokens?: AnyToken[] };
 
@@ -66,14 +75,15 @@ function slugify(text: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
-function isPureDisplayMath(text: string): boolean {
-  const t = text.trim();
-  // Matches standalone display math lines using $...$ or $$...$$ (no internal $ for simplicity)
-  return (
-    (t.startsWith("$$") && t.endsWith("$$") && t.length > 4) ||
-    (t.startsWith("$") && t.endsWith("$") && t.length > 2 && !t.slice(1, -1).includes("$"))
-  );
-}
+/**
+ * Render options threaded through the block renderer so an environment can set
+ * its head into the first paragraph and its end mark onto the last one — the
+ * run-in typography a printed theorem or proof uses.
+ */
+type RenderOptions = {
+  leadIn?: React.ReactNode;
+  tailMark?: string;
+};
 
 /**
  * Recursively render inline/phrasing tokens (text, strong, em, etc.).
@@ -150,13 +160,55 @@ function renderInline(
   });
 }
 
-function renderBlocks(tokens: AnyToken[], mathSegments: string[]): React.ReactNode {
-  return tokens.map((token, index) => {
+function renderBlocks(
+  tokens: AnyToken[],
+  mathSegments: string[],
+  options: RenderOptions = {}
+): React.ReactNode {
+  const nodes = renderBlockNodes(tokens, mathSegments, options);
+  const renderableTokens = tokens.filter((t) => t.type !== "space" && t.type !== "html");
+  const last = renderableTokens[renderableTokens.length - 1];
+  // A run-in head needs a sentence to run into. When an environment opens
+  // straight onto a list or an equation (a solution that is only steps, say),
+  // the head gets a line of its own rather than being dropped.
+  const headHasNoHome = options.leadIn && renderableTokens[0]?.type !== "paragraph";
+  const body = headHasNoHome ? (
+    <>
+      <p className="mb-2">{options.leadIn}</p>
+      {nodes}
+    </>
+  ) : (
+    nodes
+  );
+  // The end mark rides the closing sentence; when a proof ends on a list or a
+  // table there is no sentence to ride, so it gets its own flush-right line.
+  if (options.tailMark && last && last.type !== "paragraph") {
+    return (
+      <>
+        {body}
+        <span className="mb-endmark-standalone">{options.tailMark}</span>
+      </>
+    );
+  }
+  return body;
+}
+
+function renderBlockNodes(
+  tokens: AnyToken[],
+  mathSegments: string[],
+  options: RenderOptions = {}
+): React.ReactNode {
+  const renderable = tokens.filter((t) => t.type !== "space" && t.type !== "html");
+  // The head belongs to the opening sentence — never to a later paragraph, which
+  // would strand "Solution." halfway down a list of steps.
+  const firstParagraph = renderable[0]?.type === "paragraph" ? 0 : -1;
+  const lastRenderable = renderable.length - 1;
+
+  return renderable.map((token, index) => {
     const key = `block-${token.type}-${index}`;
-    if (token.type === "space" || token.type === "html") {
-      // Skip whitespace and raw HTML comments (<!-- section: slug --> etc. are stripped earlier too).
-      return null;
-    }
+    // Run-in head goes into the first paragraph; the end mark closes the last block.
+    const leadIn = index === firstParagraph ? options.leadIn : undefined;
+    const tailMark = index === lastRenderable ? options.tailMark : undefined;
     if (token.type === "heading") {
       const h = token as Tokens.Heading;
       const { title: cleanTitle, id: explicitId } = cleanSlug(h.text);
@@ -185,19 +237,48 @@ function renderBlocks(tokens: AnyToken[], mathSegments: string[]): React.ReactNo
     }
     if (token.type === "paragraph") {
       const p = token as Tokens.Paragraph;
-      // Support display math as standalone paragraphs (common in our module.mdx)
       const paraText = restoreMathInText((p as Tokens.Paragraph & { text?: string }).text || "", mathSegments);
-      if (isPureDisplayMath(paraText)) {
-        const math = paraText.trim().replace(/^[$]{1,2}|[$]{1,2}$/g, "").trim();
+
+      // A paragraph that is nothing but math is a displayed equation, centred and
+      // given room to breathe — never a sentence-shaped line of inline symbols.
+      if (isBareMath(paraText)) {
         return (
-          <div key={key} className="my-4">
-            <BlockMath math={math} />
+          <div key={key} className="mb-display">
+            {leadIn && <p className="mb-display-lead">{leadIn}</p>}
+            <BlockMath math={bareMathBody(paraText)} />
+            {tailMark && <span className="mb-endmark-standalone">{tailMark}</span>}
           </div>
         );
       }
+
+      // "Power rule: $\frac{d}{dx}x^n = nx^{n-1}$" — a named result stated inline.
+      // Books set the name as a run-in head and the result on its own line.
+      const runIn = leadIn ? null : splitRunInHead(paraText);
+      if (runIn && isBareMath(runIn.rest)) {
+        return (
+          <div key={key} className="mb-display">
+            <p className="mb-display-lead">
+              <span className="mb-runin">{runIn.head}.</span>
+            </p>
+            <BlockMath math={bareMathBody(runIn.rest)} />
+          </div>
+        );
+      }
+      if (runIn) {
+        return (
+          <p key={key} className="mb-3 last:mb-0 leading-relaxed theme-text-secondary">
+            <span className="mb-runin">{runIn.head}.</span>{" "}
+            <MathText text={runIn.rest} />
+            {tailMark && <span className="mb-endmark">{tailMark}</span>}
+          </p>
+        );
+      }
+
       return (
         <p key={key} className="mb-3 last:mb-0 leading-relaxed theme-text-secondary">
+          {leadIn}
           {renderInline(p.tokens, mathSegments)}
+          {tailMark && <span className="mb-endmark">{tailMark}</span>}
         </p>
       );
     }
@@ -208,7 +289,7 @@ function renderBlocks(tokens: AnyToken[], mathSegments: string[]): React.ReactNo
       return (
         <ListTag
           key={key}
-          className={`${listClass} my-3 space-y-1 pl-5 text-sm theme-text-secondary`}
+          className={`${listClass} my-3 space-y-1 pl-5 theme-text-secondary`}
         >
           {list.items.map((item: Tokens.ListItem & { tokens?: AnyToken[] }, i: number) => {
             // list_item may wrap inlines under tokens[0].tokens (tight list) or direct
@@ -332,21 +413,95 @@ function MermaidDiagram({ chart }: { chart: string }) {
 export function MdxContent({
   mdxSource,
   className = "",
+  chapter,
+  startNumber = 0,
 }: {
   mdxSource: string;
   className?: string;
+  /** Topic number within the subject; makes environments read "Theorem 3.4". */
+  chapter?: number;
+  /** Numbered environments already used earlier in this topic. */
+  startNumber?: number;
 }) {
   if (!mdxSource?.trim()) {
     return null;
   }
-  const withoutFrontmatter = stripFrontmatter(mdxSource);
-  const withoutComments = stripComments(withoutFrontmatter).trim();
-  const { protectedSource, mathSegments } = protectMathDelimiters(withoutComments);
-  const tokens = marked.lexer(protectedSource) as AnyToken[];
+  const segments = segmentMathBlocks(stripComments(stripFrontmatter(mdxSource)).trim());
+  let counter = startNumber;
+
   return (
     <div className={`max-w-none ${className}`}>
-      {renderBlocks(tokens, mathSegments)}
+      {segments.map((segment, index) => {
+        if (segment.type === "block") {
+          const spec = MATH_BLOCK_SPECS[segment.kind];
+          const number = spec.numbered ? formatBlockNumber(chapter, ++counter) : undefined;
+          return (
+            <MathBlockView
+              key={`env-${segment.kind}-${index}`}
+              segment={segment}
+              number={number}
+            />
+          );
+        }
+        return (
+          <React.Fragment key={`prose-${index}`}>{renderProse(segment.body)}</React.Fragment>
+        );
+      })}
     </div>
+  );
+}
+
+/** Lex + render a run of ordinary MDX prose (no environment fences inside). */
+function renderProse(source: string, options: RenderOptions = {}): React.ReactNode {
+  if (!source.trim()) return null;
+  const { protectedSource, mathSegments } = protectMathDelimiters(source);
+  const tokens = marked.lexer(protectedSource) as AnyToken[];
+  return renderBlocks(tokens, mathSegments, options);
+}
+
+/**
+ * A single math-book environment.
+ *
+ * Typeset the way a printed book does it: a bold run-in head carrying the label,
+ * number and (optional) name, the statement running on from it, and a hairline
+ * rule in the margin so the eye can find the statement while skimming. Proofs
+ * and solutions close with a tombstone instead of a rule.
+ */
+export function MathBlockView({
+  segment,
+  number,
+  className = "",
+}: {
+  segment: MathBlockSegment;
+  number?: string;
+  className?: string;
+}) {
+  const spec = MATH_BLOCK_SPECS[segment.kind];
+  const head = (
+    <span className="mb-env-head">
+      <span className="mb-env-label">
+        {spec.label}
+        {number ? ` ${number}` : ""}
+      </span>
+      {segment.title ? (
+        <span className="mb-env-title">
+          {" ("}
+          <MathText text={segment.title} />
+          {")"}
+        </span>
+      ) : null}
+      <span className="mb-env-stop">.</span>{" "}
+    </span>
+  );
+
+  return (
+    <section
+      id={segment.id}
+      className={`mb-env mb-env-${spec.style} mb-env-${spec.kind} ${className}`}
+      data-environment={spec.kind}
+    >
+      {renderProse(segment.body, { leadIn: head, tailMark: spec.endMark })}
+    </section>
   );
 }
 

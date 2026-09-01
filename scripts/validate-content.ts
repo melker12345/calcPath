@@ -29,6 +29,11 @@ import type {
   DiagnosticFile,
 } from "../src/lib/content/schema";
 import { extractMdxSectionSlugs } from "../src/lib/content/mdx";
+import {
+  MATH_BLOCK_SPECS,
+  isMathBlockClose,
+  type MathBlockSpec,
+} from "../src/lib/content/math-blocks";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CONTENT_DIR = path.join(__dirname, "..", "content");
@@ -203,16 +208,54 @@ async function main() {
         }
       }
 
+      // math-book environments (::: fences, see content/STYLE.md)
+      // A mistyped kind or a missing closer silently degrades to plain prose at
+      // runtime, so both are caught here instead of on the page.
+      const mdxLines = mdx.split(/\r?\n/);
+      let openFence: { kind: string; line: number } | null = null;
+      for (let li = 0; li < mdxLines.length; li++) {
+        const line = mdxLines[li].trim();
+        if (!line.startsWith(":::")) continue;
+        if (isMathBlockClose(line)) {
+          if (!openFence) {
+            errors.push(`${slug}/topics/${tid}/module.mdx:${li + 1}: closing ":::" with no open environment`);
+          }
+          openFence = null;
+          continue;
+        }
+        const opener = line.match(/^:::([a-zA-Z]+)/);
+        if (!opener) {
+          errors.push(`${slug}/topics/${tid}/module.mdx:${li + 1}: malformed environment fence "${line}"`);
+          continue;
+        }
+        const kind = opener[1];
+        if (!(MATH_BLOCK_SPECS as Record<string, MathBlockSpec>)[kind]) {
+          errors.push(
+            `${slug}/topics/${tid}/module.mdx:${li + 1}: unknown environment ":::${kind}" (known: ${Object.keys(MATH_BLOCK_SPECS).join(", ")})`
+          );
+          continue;
+        }
+        if (openFence) {
+          errors.push(
+            `${slug}/topics/${tid}/module.mdx:${li + 1}: ":::${kind}" opened inside ":::${openFence.kind}" (line ${openFence.line}) — environments do not nest`
+          );
+        }
+        openFence = { kind, line: li + 1 };
+      }
+      if (openFence) {
+        errors.push(`${slug}/topics/${tid}/module.mdx: ":::${openFence.kind}" (line ${openFence.line}) is never closed`);
+      }
+
       // optional nice markers (recommended for best UX cards per ARCHITECTURE.md)
       // Parser in adapters.ts is resilient and will still populate examples[]/eli5 from auto-detect (### Example, Step 1:, variants, etc.)
       // so missing markers do not degrade runtime UX. To silence warnings for intentionally thin/minimal topics, add `minimal: true` to frontmatter.
       const intentionallyMinimal = /minimal:\s*true/i.test(mdx) || /<!--\s*intentionally.?minimal/i.test(mdx);
       if (!intentionallyMinimal) {
-        if (!hasMarker(mdx, /\*\*ELI5/i)) {
-          warnings.push(`${slug}/topics/${tid}/module.mdx: no **ELI5** found (some sections may lack rich ELI5 box; parser resilient)`);
+        if (!hasMarker(mdx, /\*\*ELI5/i) && !hasMarker(mdx, /^:::intuition\b/m)) {
+          warnings.push(`${slug}/topics/${tid}/module.mdx: no **ELI5** or :::intuition found (some sections may lack an intuition aside; parser resilient)`);
         }
-        if (!hasMarker(mdx, /\*\*Worked Example/i)) {
-          warnings.push(`${slug}/topics/${tid}/module.mdx: no **Worked Example:** found (parser will auto-detect examples for cards)`);
+        if (!hasMarker(mdx, /\*\*Worked Example/i) && !hasMarker(mdx, /^:::example\b/m)) {
+          warnings.push(`${slug}/topics/${tid}/module.mdx: no **Worked Example:** or :::example found (parser will auto-detect examples)`);
         }
       }
     }
