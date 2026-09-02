@@ -82,6 +82,13 @@ implementations. The environment vocabulary itself lives in
 `src/lib/content/math-blocks.ts` and is rendered by `src/components/mdx-content.tsx`.
 
 ## Authoring Rules & Validation
+- `npm run content:audit` reports book-style coverage per subject (definitions,
+  theorems, proofs, examples, intuition asides) and fails if a module lost prose
+  or if any section slug changed against a git revision (`--base=<rev>`,
+  `--verbose` for a per-module listing). Run it after any bulk content edit.
+- `npx tsx scripts/convert-book-style.ts` is the one-off migration that turned
+  `**ELI5**` / `**Worked Example:**` markers into `:::intuition` / `:::example` +
+  `:::solution`. It is idempotent and safe to run on newly authored content.
 - Run `npm run content:validate` (uses tsx) before committing content changes. It enforces Zod schemas, folder<->index parity, environment fences (`:::kind ... :::` — closed, not nested, known kind), **and the critical invariant**: every `question.section` must exactly equal a section slug derived from the topic's `module.mdx` (from `## Title` + optional `{#slug}` or immediate following `<!-- section: slug -->` comment).
 - Sections power per-section mastery, deep links (?section=), dashboard, and progress. Mismatches silently break UX for that topic.
 - Use `<!-- section: the-exact-string-from-questions -->` right after the relevant `##` when the natural heading slug would not match the qs you need (or use `{#slug}` in the heading itself).

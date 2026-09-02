@@ -124,7 +124,17 @@ npm run content:validate   # schemas, section slugs, environment fences
 npm run content:latex      # every $…$ fragment renders under KaTeX
 ```
 
-## 6. Converting an existing module
+## 6. Where the corpus stands
+
+Every module has been through the structural pass: `**ELI5**` is `:::intuition`,
+and worked examples are `:::example` + `:::solution`. New content should be
+authored that way directly — `npx tsx scripts/convert-book-style.ts` will fix it
+up if you use the old markers out of habit.
+
+`npm run content:audit` shows, per subject, how many definitions, theorems and
+proofs each has, and which modules still have none.
+
+## 7. Converting an existing module
 
 Work section by section:
 
