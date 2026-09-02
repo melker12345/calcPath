@@ -20,15 +20,19 @@ The variance of a binary outcome is $p(1-p)$, which is not constant — it is la
 
 The relationship between a predictor and a probability is typically S-shaped (sigmoid), not linear.
 
-**ELI5**
+:::intuition
+Trying to use ordinary linear regression on yes/no data is like using a ruler to measure temperature in a system that only has two states: ice or steam. The ruler will give you numbers outside the possible range and the errors won't behave nicely.
+:::
 
-- Trying to use ordinary linear regression on yes/no data is like using a ruler to measure temperature in a system that only has two states: ice or steam. The ruler will give you numbers outside the possible range and the errors won't behave nicely.
+:::example[Linear regression predicting an impossible probability]
+Suppose we fit a straight line to predict whether a loan defaults ($y=1$) from income (in \$1000s), and get $\hat{y} = 0.9 - 0.01 x$.
+:::
 
-**Worked Example: Linear regression predicting an impossible probability**
-- Suppose we fit a straight line to predict whether a loan defaults ($y=1$) from income (in \$1000s), and get $\hat{y} = 0.9 - 0.01 x$.
-- For a low earner with $x = 20$: $\hat{y} = 0.9 - 0.01 \cdot 20 = 0.9 - 0.2 = 0.7$. Fine so far — this reads as a 70% chance.
-- For a high earner with $x = 100$: $\hat{y} = 0.9 - 0.01 \cdot 100 = 0.9 - 1.0 = -0.1$. A probability of $-0.1$ is impossible.
-- Sanity check: a valid probability must lie in $[0,1]$, but the line is unbounded, so far enough out in either direction it *must* leave $[0,1]$. This is the structural failure logistic regression fixes by squashing the output through the sigmoid.
+:::solution
+1. For a low earner with $x = 20$: $\hat{y} = 0.9 - 0.01 \cdot 20 = 0.9 - 0.2 = 0.7$. Fine so far — this reads as a 70% chance.
+2. For a high earner with $x = 100$: $\hat{y} = 0.9 - 0.01 \cdot 100 = 0.9 - 1.0 = -0.1$. A probability of $-0.1$ is impossible.
+3. Sanity check: a valid probability must lie in $[0,1]$, but the line is unbounded, so far enough out in either direction it *must* leave $[0,1]$. This is the structural failure logistic regression fixes by squashing the output through the sigmoid.
+:::
 
 ## The Logistic Model
 
@@ -44,26 +48,38 @@ The coefficient $b_j$ now has a very useful interpretation: it is the change in 
 
 For example, if $b_1 = 0.693$ for a binary predictor, then $e^{0.693} \approx 2$, meaning the odds of the outcome are doubled when that predictor is present (holding others fixed).
 
-**ELI5**
+:::intuition
+Instead of predicting the probability directly, logistic regression predicts the 'log-odds' on a straight line. The S-curve (sigmoid) then converts those log-odds back into a clean probability between 0 and 1. The coefficients tell you how much each variable multiplies the odds of the event happening.
+:::
 
-- Instead of predicting the probability directly, logistic regression predicts the 'log-odds' on a straight line. The S-curve (sigmoid) then converts those log-odds back into a clean probability between 0 and 1. The coefficients tell you how much each variable multiplies the odds of the event happening.
+:::example[Odds and probability convert both ways]
+Say the probability a customer buys is $p = 0.8$. The odds are $\frac{p}{1-p} = \frac{0.8}{0.2} = 4$ — a "4 to 1" chance of buying.
+:::
 
-**Worked Example: Odds and probability convert both ways**
-- Say the probability a customer buys is $p = 0.8$. The odds are $\frac{p}{1-p} = \frac{0.8}{0.2} = 4$ — a "4 to 1" chance of buying.
-- Going the other way, suppose we are told the odds of an event are $3$. Solve $\frac{p}{1-p} = 3$: multiply out to get $p = 3(1-p) = 3 - 3p$, so $4p = 3$ and $p = 0.75$.
-- Sanity check: $p = 0.75$ gives odds $\frac{0.75}{0.25} = 3$ ✓, and $p = 0.8$ gives back $p = \frac{4}{1+4} = 0.8$ ✓ (using $p = \frac{\text{odds}}{1+\text{odds}}$).
+:::solution
+1. Going the other way, suppose we are told the odds of an event are $3$. Solve $\frac{p}{1-p} = 3$: multiply out to get $p = 3(1-p) = 3 - 3p$, so $4p = 3$ and $p = 0.75$.
+2. Sanity check: $p = 0.75$ gives odds $\frac{0.75}{0.25} = 3$ ✓, and $p = 0.8$ gives back $p = \frac{4}{1+4} = 0.8$ ✓ (using $p = \frac{\text{odds}}{1+\text{odds}}$).
+:::
 
-**Worked Example: From coefficients to a predicted probability**
-- Model for heart attack risk: $\text{logit}(p) = -4.2 + 0.8 \cdot \text{smoker} + 0.05 \cdot \text{age}$.
-- Take a 50-year-old smoker: plug in $\text{smoker}=1$, $\text{age}=50$. The logit is $-4.2 + 0.8(1) + 0.05(50) = -4.2 + 0.8 + 2.5 = -0.9$.
-- Convert the log-odds back to a probability with the sigmoid: $p = \frac{1}{1 + e^{-(-0.9)}} = \frac{1}{1 + e^{0.9}} = \frac{1}{1 + 2.46} \approx 0.29$.
-- Sanity check: the logit is negative, so we expect $p < 0.5$, and indeed $0.29 < 0.5$ ✓.
+:::example[From coefficients to a predicted probability]
+Model for heart attack risk: $\text{logit}(p) = -4.2 + 0.8 \cdot \text{smoker} + 0.05 \cdot \text{age}$.
+:::
 
-**Worked Example: Interpreting an odds ratio**
-- Using the same heart attack model, focus on the 'smoker' variable, whose coefficient is $b = 0.8$.
-- The odds ratio is $e^{b} = e^{0.8} \approx 2.23$.
-- Interpretation: holding age fixed, smokers have $2.23$ times the odds of a heart attack compared with non-smokers.
-- Sanity check via the two logits: for a 50-year-old non-smoker the logit is $-4.2 + 0 + 2.5 = -1.7$, versus $-0.9$ for the smoker above. The difference is $-0.9 - (-1.7) = 0.8 = b$, and exponentiating that log-odds difference gives $e^{0.8} \approx 2.23$ — the same odds ratio ✓.
+:::solution
+1. Take a 50-year-old smoker: plug in $\text{smoker}=1$, $\text{age}=50$. The logit is $-4.2 + 0.8(1) + 0.05(50) = -4.2 + 0.8 + 2.5 = -0.9$.
+2. Convert the log-odds back to a probability with the sigmoid: $p = \frac{1}{1 + e^{-(-0.9)}} = \frac{1}{1 + e^{0.9}} = \frac{1}{1 + 2.46} \approx 0.29$.
+3. Sanity check: the logit is negative, so we expect $p < 0.5$, and indeed $0.29 < 0.5$ ✓.
+:::
+
+:::example[Interpreting an odds ratio]
+Using the same heart attack model, focus on the 'smoker' variable, whose coefficient is $b = 0.8$.
+:::
+
+:::solution
+1. The odds ratio is $e^{b} = e^{0.8} \approx 2.23$.
+2. Interpretation: holding age fixed, smokers have $2.23$ times the odds of a heart attack compared with non-smokers.
+3. Sanity check via the two logits: for a 50-year-old non-smoker the logit is $-4.2 + 0 + 2.5 = -1.7$, versus $-0.9$ for the smoker above. The difference is $-0.9 - (-1.7) = 0.8 = b$, and exponentiating that log-odds difference gives $e^{0.8} \approx 2.23$ — the same odds ratio ✓.
+:::
 
 ## Estimation and Inference
 
@@ -77,19 +93,25 @@ Wald tests (similar to t-tests) and likelihood ratio tests are used for inferenc
 
 Model fit is assessed with deviance, pseudo-$R^2$ measures (McFadden, Cox-Snell, Nagelkerke), and classification tables (sensitivity, specificity, ROC curves). Once we have predicted probabilities, we turn them into 0/1 predictions by comparing to a **threshold** (0.5 by default). **Sensitivity** is the fraction of true positives caught, and **specificity** is the fraction of true negatives correctly cleared; an **ROC curve** traces sensitivity against $1 - \text{specificity}$ as the threshold sweeps from 1 down to 0.
 
-**ELI5**
+:::intuition
+Instead of minimizing squared errors, logistic regression chooses the coefficients that make the observed data as probable as possible under the model. It's like tuning a recipe until the outcomes you actually saw become the most likely ones the model would have predicted.
+:::
 
-- Instead of minimizing squared errors, logistic regression chooses the coefficients that make the observed data as probable as possible under the model. It's like tuning a recipe until the outcomes you actually saw become the most likely ones the model would have predicted.
+:::example[Computing a likelihood]
+Three independent observations with outcomes $y = (1, 0, 1)$. A candidate model predicts probabilities of "1" of $p = (0.8,\ 0.3,\ 0.6)$.
+:::
 
-**Worked Example: Computing a likelihood**
-- Three independent observations with outcomes $y = (1, 0, 1)$. A candidate model predicts probabilities of "1" of $p = (0.8,\ 0.3,\ 0.6)$.
-- Each point contributes the probability of what actually happened: obs 1 was a 1, contributes $0.8$; obs 2 was a 0, contributes $1 - 0.3 = 0.7$; obs 3 was a 1, contributes $0.6$.
-- Multiply (independence): $L = 0.8 \times 0.7 \times 0.6 = 0.336$.
-- Sanity check that this beats a know-nothing model that predicts $p = 0.5$ for everyone: $L = 0.5 \times 0.5 \times 0.5 = 0.125$. Since $0.336 > 0.125$, the first model explains the data better ✓ — and maximum likelihood is the search for the coefficients that push $L$ as high as it will go.
+:::solution
+1. Each point contributes the probability of what actually happened: obs 1 was a 1, contributes $0.8$; obs 2 was a 0, contributes $1 - 0.3 = 0.7$; obs 3 was a 1, contributes $0.6$.
+2. Multiply (independence): $L = 0.8 \times 0.7 \times 0.6 = 0.336$.
+3. Sanity check that this beats a know-nothing model that predicts $p = 0.5$ for everyone: $L = 0.5 \times 0.5 \times 0.5 = 0.125$. Since $0.336 > 0.125$, the first model explains the data better ✓ — and maximum likelihood is the search for the coefficients that push $L$ as high as it will go.
+:::
 
-**Worked Example: How the threshold trades sensitivity for specificity**
-- Five patients, actual disease status ($1$ = disease) and model-predicted probabilities:
+:::example[How the threshold trades sensitivity for specificity]
+Five patients, actual disease status ($1$ = disease) and model-predicted probabilities:
+:::
 
+:::solution
 | Patient | Actual $y$ | Predicted $p$ |
 |--------:|:----------:|:-------------:|
 | 1 | 1 | 0.90 |
@@ -98,9 +120,10 @@ Model fit is assessed with deviance, pseudo-$R^2$ measures (McFadden, Cox-Snell,
 | 4 | 1 | 0.35 |
 | 5 | 0 | 0.20 |
 
-- At threshold $0.5$ (predict disease if $p \ge 0.5$): flagged = patients 1, 2. Of the three true cases (1, 2, 4), we catch 2, so sensitivity $= 2/3 \approx 0.67$; both true non-cases (3, 5) are correctly cleared, so specificity $= 2/2 = 1$.
-- Lower the threshold to $0.3$: flagged = patients 1, 2, 3, 4. Now all three true cases are caught, sensitivity $= 3/3 = 1$, but patient 3 (a non-case) is now a false positive, so specificity $= 1/2 = 0.5$.
-- Sanity check: dropping the threshold raised sensitivity ($0.67 \to 1$) and lowered specificity ($1 \to 0.5$), exactly the trade-off the ROC curve traces out ✓.
+At threshold $0.5$ (predict disease if $p \ge 0.5$): flagged = patients 1, 2. Of the three true cases (1, 2, 4), we catch 2, so sensitivity $= 2/3 \approx 0.67$; both true non-cases (3, 5) are correctly cleared, so specificity $= 2/2 = 1$.
+Lower the threshold to $0.3$: flagged = patients 1, 2, 3, 4. Now all three true cases are caught, sensitivity $= 3/3 = 1$, but patient 3 (a non-case) is now a false positive, so specificity $= 1/2 = 0.5$.
+Sanity check: dropping the threshold raised sensitivity ($0.67 \to 1$) and lowered specificity ($1 \to 0.5$), exactly the trade-off the ROC curve traces out ✓.
+:::
 
 ## Assumptions and Diagnostics
 
@@ -114,20 +137,28 @@ No perfect separation (complete or quasi-complete) — when a predictor perfectl
 
 Large sample sizes are generally needed for reliable inference (rule of thumb: at least 10 events per predictor variable).
 
-**ELI5**
+:::intuition
+The key new assumption is that the relationship is linear on the log-odds scale, not on the probability scale. A variable can have a very nonlinear-looking effect on probability but still be perfectly linear in log-odds.
+:::
 
-- The key new assumption is that the relationship is linear on the log-odds scale, not on the probability scale. A variable can have a very nonlinear-looking effect on probability but still be perfectly linear in log-odds.
+:::example[Spotting perfect separation]
+Suppose every patient with cholesterol below $200$ is healthy ($y=0$) and every patient at or above $200$ is sick ($y=1$), with no overlap.
+:::
 
-**Worked Example: Spotting perfect separation**
-- Suppose every patient with cholesterol below $200$ is healthy ($y=0$) and every patient at or above $200$ is sick ($y=1$), with no overlap.
-- The likelihood is maximized by making the fitted probability jump from $0$ to $1$ right at $200$, which requires an infinitely steep sigmoid — i.e. the slope coefficient is driven toward $\pm\infty$.
-- Symptom you would actually see: the software warns of non-convergence, or reports a huge coefficient with a gigantic standard error (e.g. $b = 34$ with SE $= 12000$).
-- Fix: this is *complete separation*. Remedies include penalized/Firth logistic regression, dropping or combining the offending predictor, or gathering data that overlaps the boundary. Contrast with *quasi-complete separation*, where the split is perfect only along a tie.
+:::solution
+1. The likelihood is maximized by making the fitted probability jump from $0$ to $1$ right at $200$, which requires an infinitely steep sigmoid — i.e. the slope coefficient is driven toward $\pm\infty$.
+2. Symptom you would actually see: the software warns of non-convergence, or reports a huge coefficient with a gigantic standard error (e.g. $b = 34$ with SE $= 12000$).
+3. Fix: this is *complete separation*. Remedies include penalized/Firth logistic regression, dropping or combining the offending predictor, or gathering data that overlaps the boundary. Contrast with *quasi-complete separation*, where the split is perfect only along a tie.
+:::
 
-**Worked Example: Applying the events-per-variable rule**
-- You want to fit a model with $5$ predictors. The rule of thumb asks for at least $10$ events (occurrences of the *less common* outcome) per predictor, so you need about $10 \times 5 = 50$ events.
-- Your dataset has $600$ patients but only $40$ have the disease. The binding count is the events ($40$), not the total sample, giving $40 / 5 = 8$ events per variable — below $10$.
-- Conclusion: with only $8$ events per predictor the estimates and their standard errors may be unstable; you should reduce the number of predictors (to at most $4$) or collect more cases before trusting the inference.
+:::example[Applying the events-per-variable rule]
+You want to fit a model with $5$ predictors. The rule of thumb asks for at least $10$ events (occurrences of the *less common* outcome) per predictor, so you need about $10 \times 5 = 50$ events.
+:::
+
+:::solution
+1. Your dataset has $600$ patients but only $40$ have the disease. The binding count is the events ($40$), not the total sample, giving $40 / 5 = 8$ events per variable — below $10$.
+2. Conclusion: with only $8$ events per predictor the estimates and their standard errors may be unstable; you should reduce the number of predictors (to at most $4$) or collect more cases before trusting the inference.
+:::
 
 ## Extensions and Related Models
 
@@ -141,15 +172,19 @@ Regularized logistic regression (lasso, ridge) is very common in high-dimensiona
 
 Logistic regression is a special case of generalized linear models (GLMs) with a binomial distribution and logit link function.
 
-**ELI5**
+:::intuition
+Once you understand binary logistic regression, the extensions are natural: predicting among several categories (multinomial), respecting order in the categories (ordinal), or adding shrinkage when you have thousands of predictors.
+:::
 
-- Once you understand binary logistic regression, the extensions are natural: predicting among several categories (multinomial), respecting order in the categories (ordinal), or adding shrinkage when you have thousands of predictors.
+:::example[Multinomial prediction via softmax]
+A model for three fruit classes produces raw scores (logits) $z = (z_{\text{apple}}, z_{\text{banana}}, z_{\text{cherry}}) = (1, 2, 0)$ for one item.
+:::
 
-**Worked Example: Multinomial prediction via softmax**
-- A model for three fruit classes produces raw scores (logits) $z = (z_{\text{apple}}, z_{\text{banana}}, z_{\text{cherry}}) = (1, 2, 0)$ for one item.
-- Softmax exponentiates and normalizes so the class probabilities sum to 1: compute $e^{1} \approx 2.72$, $e^{2} \approx 7.39$, $e^{0} = 1$, with sum $2.72 + 7.39 + 1 = 11.11$.
-- Divide each by the sum: apple $\approx 2.72/11.11 = 0.245$, banana $\approx 7.39/11.11 = 0.665$, cherry $\approx 1/11.11 = 0.090$.
-- Sanity check: the three probabilities add to $0.245 + 0.665 + 0.090 = 1.000$ ✓, and the largest logit (banana) gets the largest probability ✓. Binary logistic regression is exactly this with two classes, where softmax collapses to the ordinary sigmoid.
+:::solution
+1. Softmax exponentiates and normalizes so the class probabilities sum to 1: compute $e^{1} \approx 2.72$, $e^{2} \approx 7.39$, $e^{0} = 1$, with sum $2.72 + 7.39 + 1 = 11.11$.
+2. Divide each by the sum: apple $\approx 2.72/11.11 = 0.245$, banana $\approx 7.39/11.11 = 0.665$, cherry $\approx 1/11.11 = 0.090$.
+3. Sanity check: the three probabilities add to $0.245 + 0.665 + 0.090 = 1.000$ ✓, and the largest logit (banana) gets the largest probability ✓. Binary logistic regression is exactly this with two classes, where softmax collapses to the ordinary sigmoid.
+:::
 
 ## Common Mistakes
 

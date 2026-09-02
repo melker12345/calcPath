@@ -20,18 +20,21 @@ Because of the invariance theorem, K(x) defined with respect to any two universa
 
 K(x) is uncomputable (by reduction to the halting problem). We can only approximate it from above by running all short programs in dovetail fashion and taking the shortest one that has output x so far.
 
-**ELI5**
+:::intuition
+K(x) is the ultimate compressed size of x: the smallest description that lets a computer reconstruct x exactly.
 
-- K(x) is the ultimate compressed size of x: the smallest description that lets a computer reconstruct x exactly.
-- A random-looking string of length n usually has K(x) ≈ n; a string like 000...0 or the digits of π has much smaller K because there is a short program that generates it.
+A random-looking string of length n usually has K(x) ≈ n; a string like 000...0 or the digits of π has much smaller K because there is a short program that generates it.
+:::
 
-**Worked Example:**
-
+:::example
 Compare two length-$1\,000\,000$ strings and estimate $K$ for each.
+:::
 
-1. **All zeros**, $x = 0^{1\,000\,000}$. A program that reproduces $x$ is essentially `print '0' repeated N times`, where $N = 1\,000\,000$. The fixed loop and print instruction cost $O(1)$ bits; the only part that grows is the number $N$, which needs $\lceil \log_2 N \rceil = \lceil \log_2 10^6 \rceil = 20$ bits to write down. So $K(x) \le 20 + O(1)$ — a few dozen bits, and the count barely grows even if we go to a billion zeros ($\log_2 10^9 \approx 30$ bits).
-2. **A typical random string** $r$ of the same length. There is no pattern to exploit, so the best a program can do is carry the bits verbatim: `print` followed by the literal $1\,000\,000$-bit string. That costs $1\,000\,000$ bits for the data plus $O(1)$ for the print instruction, giving $K(r) \approx 1\,000\,000 + O(1)$.
-3. **Sanity check.** The two answers differ by a factor of roughly $50\,000$ even though the strings have the *same length*. That is exactly the point of $K$: it measures pattern content, not length. Shannon entropy, which only sees the length and the symbol distribution, would not distinguish "structured" from "random" for a single fixed string the way $K$ does.
+:::solution
+**All zeros**, $x = 0^{1\,000\,000}$. A program that reproduces $x$ is essentially `print '0' repeated N times`, where $N = 1\,000\,000$. The fixed loop and print instruction cost $O(1)$ bits; the only part that grows is the number $N$, which needs $\lceil \log_2 N \rceil = \lceil \log_2 10^6 \rceil = 20$ bits to write down. So $K(x) \le 20 + O(1)$ — a few dozen bits, and the count barely grows even if we go to a billion zeros ($\log_2 10^9 \approx 30$ bits).
+**A typical random string** $r$ of the same length. There is no pattern to exploit, so the best a program can do is carry the bits verbatim: `print` followed by the literal $1\,000\,000$-bit string. That costs $1\,000\,000$ bits for the data plus $O(1)$ for the print instruction, giving $K(r) \approx 1\,000\,000 + O(1)$.
+**Sanity check.** The two answers differ by a factor of roughly $50\,000$ even though the strings have the *same length*. That is exactly the point of $K$: it measures pattern content, not length. Shannon entropy, which only sees the length and the symbol distribution, would not distinguish "structured" from "random" for a single fixed string the way $K$ does.
+:::
 
 ## Algorithmic Probability and Solomonoff Induction
 
@@ -47,20 +50,23 @@ the total probability mass of all programs that output x. It is a universal semi
 
 Solomonoff induction uses m to predict the next symbol: the predictive probability is m(x0)/m(x) for continuation 0, etc. It is the optimal predictor in the sense that its total expected squared error is bounded for any computable environment.
 
-**ELI5**
+:::intuition
+Instead of assuming a particular probability model, consider every possible program that could have generated the data you have seen, weighted by 2^{-length of program}. Simpler (shorter) programs that fit the data get higher prior weight.
 
-- Instead of assuming a particular probability model, consider every possible program that could have generated the data you have seen, weighted by 2^{-length of program}. Simpler (shorter) programs that fit the data get higher prior weight.
-- Future predictions are the weighted average over all consistent programs. This automatically embodies Occam's razor in a formal, prior-free way.
+Future predictions are the weighted average over all consistent programs. This automatically embodies Occam's razor in a formal, prior-free way.
+:::
 
-**Worked Example:**
-
+:::example
 Predict the next coin toss after seeing $n$ heads in a row, using a tiny two-program toy model of the universal mixture. This is a caricature (the real mixture ranges over *all* programs), but it shows the mechanics.
+:::
 
-1. Suppose only two programs are in play. Program $A$ = "always output H" has some length $\ell_A$, so prior weight $w_A = 2^{-\ell_A}$. Program $B$ = "each toss is an independent fair coin" has length $\ell_B$, so prior weight $w_B = 2^{-\ell_B}$. Say $\ell_A = 4$ and $\ell_B = 6$, so $w_A = 2^{-4} = 1/16$ and $w_B = 2^{-6} = 1/64$.
-2. **Likelihoods of the data** $x = \mathrm{H}^n$. Program $A$ produces $n$ heads with certainty: $P(x \mid A) = 1$. Program $B$ produces any specific length-$n$ string with probability $2^{-n}$: $P(x \mid B) = 2^{-n}$.
-3. **Posterior weights** $\propto$ prior $\times$ likelihood. Unnormalized, $A$ has $w_A \cdot 1 = 1/16$ and $B$ has $w_B \cdot 2^{-n} = 2^{-n}/64$. As $n$ grows, $B$'s share shrinks like $2^{-n}$, so the posterior concentrates on $A$.
-4. **Predict the next toss.** $P(\text{next}=\mathrm{H}) = P(A\mid x)\cdot 1 + P(B\mid x)\cdot \tfrac12$. For $n=3$: unnormalized $A = 1/16 = 0.0625$, $B = 2^{-3}/64 = 1/512 \approx 0.00195$; normalizing, $P(A\mid x) = 0.0625/(0.0625+0.00195) \approx 0.970$. So $P(\text{next}=\mathrm{H}) \approx 0.970\cdot 1 + 0.030\cdot 0.5 \approx 0.985$.
-5. **Sanity check.** The prediction sits strictly between $1/2$ (what $B$ alone says) and $1$ (what $A$ alone says), and it climbs toward $1$ as $n$ increases — Occam's razor emerging automatically, since the shorter, better-fitting program $A$ dominates. Crucially, if a tail ever appears, $P(x \mid A) = 0$ and $A$ is eliminated outright, so the mixture never becomes overconfident in a falsifiable hypothesis.
+:::solution
+Suppose only two programs are in play. Program $A$ = "always output H" has some length $\ell_A$, so prior weight $w_A = 2^{-\ell_A}$. Program $B$ = "each toss is an independent fair coin" has length $\ell_B$, so prior weight $w_B = 2^{-\ell_B}$. Say $\ell_A = 4$ and $\ell_B = 6$, so $w_A = 2^{-4} = 1/16$ and $w_B = 2^{-6} = 1/64$.
+**Likelihoods of the data** $x = \mathrm{H}^n$. Program $A$ produces $n$ heads with certainty: $P(x \mid A) = 1$. Program $B$ produces any specific length-$n$ string with probability $2^{-n}$: $P(x \mid B) = 2^{-n}$.
+**Posterior weights** $\propto$ prior $\times$ likelihood. Unnormalized, $A$ has $w_A \cdot 1 = 1/16$ and $B$ has $w_B \cdot 2^{-n} = 2^{-n}/64$. As $n$ grows, $B$'s share shrinks like $2^{-n}$, so the posterior concentrates on $A$.
+**Predict the next toss.** $P(\text{next}=\mathrm{H}) = P(A\mid x)\cdot 1 + P(B\mid x)\cdot \tfrac12$. For $n=3$: unnormalized $A = 1/16 = 0.0625$, $B = 2^{-3}/64 = 1/512 \approx 0.00195$; normalizing, $P(A\mid x) = 0.0625/(0.0625+0.00195) \approx 0.970$. So $P(\text{next}=\mathrm{H}) \approx 0.970\cdot 1 + 0.030\cdot 0.5 \approx 0.985$.
+**Sanity check.** The prediction sits strictly between $1/2$ (what $B$ alone says) and $1$ (what $A$ alone says), and it climbs toward $1$ as $n$ increases — Occam's razor emerging automatically, since the shorter, better-fitting program $A$ dominates. Crucially, if a tail ever appears, $P(x \mid A) = 0$ and $A$ is eliminated outright, so the mixture never becomes overconfident in a falsifiable hypothesis.
+:::
 
 ## Incompressibility, Martin-Löf Randomness, and Chaitin's Omega
 
@@ -72,19 +78,22 @@ Chaitin's Ω = ∑_{p halts} 2^{-|p|} is the halting probability of the universa
 
 AIT implies that certifying incompressibility has a hard ceiling: for any consistent formal system able to reason about programs there is a constant c (roughly the system's own description length) such that the system cannot prove the true statement "K(x) > c" for any concrete x — even though such x are abundant. This is Chaitin's incompleteness theorem.
 
-**ELI5**
+:::intuition
+A random string has no pattern that a program shorter than itself can exploit; any description is basically as long as the string.
 
-- A random string has no pattern that a program shorter than itself can exploit; any description is basically as long as the string.
-- Ω is a single real number that 'knows' whether every possible program halts. You can *approach* it from below — running programs and adding $2^{-|p|}$ each time one halts gives ever-better under-estimates — but you can never pin down its exact digits, because that would tell you which programs never halt. Knowing the first $n$ bits of Ω would let you settle halting for all programs up to length $n$.
+Ω is a single real number that 'knows' whether every possible program halts. You can *approach* it from below — running programs and adding $2^{-|p|}$ each time one halts gives ever-better under-estimates — but you can never pin down its exact digits, because that would tell you which programs never halt. Knowing the first $n$ bits of Ω would let you settle halting for all programs up to length $n$.
+:::
 
-**Worked Example:**
-
+:::example
 Show that almost every string is incompressible, then plug in numbers.
+:::
 
-1. **Count the descriptions.** Programs shorter than $n-c$ have lengths $0, 1, \ldots, n-c-1$, so there are at most $2^0 + 2^1 + \cdots + 2^{n-c-1} = 2^{n-c}-1$ of them. Each program outputs at most one string, so fewer than $2^{n-c}$ strings can have $K(x) < n-c$.
-2. **Count the strings.** There are exactly $2^n$ binary strings of length $n$. The compressible ones number fewer than $2^{n-c}$, so the incompressible ones ($K(x) \ge n-c$) number more than $2^n - 2^{n-c}$.
-3. **Turn it into a fraction.** The incompressible fraction exceeds $\dfrac{2^n - 2^{n-c}}{2^n} = 1 - 2^{-c}$.
-4. **Sanity check with $c = 10$, $n = 1000$.** The incompressible fraction is at least $1 - 2^{-10} = 1 - 1/1024 \approx 0.99902$, i.e. over $99.9\%$ of all 1000-bit strings cannot be compressed even by 10 bits. Note the bound $1 - 2^{-c}$ does not depend on $n$ at all: no matter how long the strings, only a $2^{-c}$ sliver can be shortened by $c$ bits.
+:::solution
+**Count the descriptions.** Programs shorter than $n-c$ have lengths $0, 1, \ldots, n-c-1$, so there are at most $2^0 + 2^1 + \cdots + 2^{n-c-1} = 2^{n-c}-1$ of them. Each program outputs at most one string, so fewer than $2^{n-c}$ strings can have $K(x) < n-c$.
+**Count the strings.** There are exactly $2^n$ binary strings of length $n$. The compressible ones number fewer than $2^{n-c}$, so the incompressible ones ($K(x) \ge n-c$) number more than $2^n - 2^{n-c}$.
+**Turn it into a fraction.** The incompressible fraction exceeds $\dfrac{2^n - 2^{n-c}}{2^n} = 1 - 2^{-c}$.
+**Sanity check with $c = 10$, $n = 1000$.** The incompressible fraction is at least $1 - 2^{-10} = 1 - 1/1024 \approx 0.99902$, i.e. over $99.9\%$ of all 1000-bit strings cannot be compressed even by 10 bits. Note the bound $1 - 2^{-c}$ does not depend on $n$ at all: no matter how long the strings, only a $2^{-c}$ sliver can be shortened by $c$ bits.
+:::
 
 ## Common Mistakes
 
@@ -111,19 +120,22 @@ where the minimum is over all programs p that cause U to output s and halt. If n
 
 The value depends on the choice of U only up to an additive constant independent of s (the "invariance theorem").
 
-**ELI5**
+:::intuition
+K(s) is the size of the smallest "recipe" that a computer can follow to reproduce s exactly.
 
-- K(s) is the size of the smallest "recipe" that a computer can follow to reproduce s exactly.
-- For the string consisting of the text of Hamlet, K(Hamlet) is much smaller than the number of bits needed to write the text literally, because a short program can contain the rules of English plus "print the play Hamlet".
+For the string consisting of the text of Hamlet, K(Hamlet) is much smaller than the number of bits needed to write the text literally, because a short program can contain the rules of English plus "print the play Hamlet".
+:::
 
-**Worked Example:**
-
+:::example
 Estimate $K(s)$ for $s = $ the first $10\,000$ decimal digits of $\pi$, and see why it stays small.
+:::
 
-1. **Write a generating program.** A spigot algorithm (or a Machin-like arctangent series) computes the digits of $\pi$ from scratch. Encode: the fixed digit-extraction routine (a constant number of bits, call it $c_\pi$) plus the target count $N = 10\,000$.
-2. **Cost of the count.** Writing $N$ takes about $\log_2 10\,000 \approx 13.3$, i.e. $14$ bits.
-3. **Total.** $K(s) \le c_\pi + 14 + O(1)$ — a few hundred bytes at most, dominated by the fixed routine, *not* by the $10\,000$ digits themselves.
-4. **Sanity check by comparison.** Writing the digits literally would take about $10\,000 \times \log_2 10 \approx 33\,219$ bits. The program is smaller by a factor of hundreds, and — crucially — asking for the first *million* digits changes only the count from $14$ to $\approx 20$ bits, while the literal cost balloons to $\approx 3.3$ million bits. So $K(\pi\text{-digits})$ grows like $\log N$, confirming $\pi$ is highly compressible despite its digits passing every simple statistical test for randomness.
+:::solution
+**Write a generating program.** A spigot algorithm (or a Machin-like arctangent series) computes the digits of $\pi$ from scratch. Encode: the fixed digit-extraction routine (a constant number of bits, call it $c_\pi$) plus the target count $N = 10\,000$.
+**Cost of the count.** Writing $N$ takes about $\log_2 10\,000 \approx 13.3$, i.e. $14$ bits.
+**Total.** $K(s) \le c_\pi + 14 + O(1)$ — a few hundred bytes at most, dominated by the fixed routine, *not* by the $10\,000$ digits themselves.
+**Sanity check by comparison.** Writing the digits literally would take about $10\,000 \times \log_2 10 \approx 33\,219$ bits. The program is smaller by a factor of hundreds, and — crucially — asking for the first *million* digits changes only the count from $14$ to $\approx 20$ bits, while the literal cost balloons to $\approx 3.3$ million bits. So $K(\pi\text{-digits})$ grows like $\log N$, confirming $\pi$ is highly compressible despite its digits passing every simple statistical test for randomness.
+:::
 
 ## Relation to Shannon Entropy
 
@@ -137,17 +149,21 @@ where the O(1) depends on P (the size of a program that knows P) but not on the 
 
 Moreover, the expected Kolmogorov complexity recovers the Shannon entropy: E[K(X)] ≈ H(X) (again up to an additive constant).
 
-**ELI5**
+:::intuition
+For data coming from a known probabilistic source, the algorithmic complexity of a typical realization is essentially the same as its self-information under that source.
 
-- For data coming from a known probabilistic source, the algorithmic complexity of a typical realization is essentially the same as its self-information under that source.
-- On average, "how hard is it to describe a random draw" equals the entropy of the draw.
+On average, "how hard is it to describe a random draw" equals the entropy of the draw.
+:::
 
-**Worked Example:**
+:::example
+For a long sequence of $n$ i.i.d. fair coin flips, each specific outcome $s$ has $P(s) = 2^{-n}$, so $-\log_2 P(s) = n$ for every $s$.
+:::
 
-1. For a long sequence of $n$ i.i.d. fair coin flips, each specific outcome $s$ has $P(s) = 2^{-n}$, so $-\log_2 P(s) = n$ for every $s$.
-2. With overwhelmingly high probability $K(s) = n + O(\log n)$: you need roughly $n$ bits to describe the literal string plus a few bits to say "this is a raw bit string of length $n$". This matches $-\log_2 P(s) = n$, as the theorem $K(s) = -\log_2 P(s) + O(1)$ predicts.
-3. The exception proves the rule. A string that happens to be $010101\ldots$ repeated has $K(s) \approx \log_2 n + O(1)$ (program: "print 01 repeated $n/2$ times") — far below $n$. This does *not* contradict step 2, because the theorem only holds "with high probability": the periodic string is one of the exponentially rare atypical outcomes. Its own self-information is still $-\log_2 P(s) = n$; the periodic string simply happens to be much more compressible than its probability suggests, which is exactly why such strings have vanishing probability.
-4. **Sanity check.** Averaging over all $s$, $E[K(X)] \approx \sum_s 2^{-n}\cdot(\text{its }K) \approx n = H(X)$ for the uniform distribution on $n$ bits, recovering the entropy. The rare low-$K$ strings pull the average down only negligibly because they are so few.
+:::solution
+1. With overwhelmingly high probability $K(s) = n + O(\log n)$: you need roughly $n$ bits to describe the literal string plus a few bits to say "this is a raw bit string of length $n$". This matches $-\log_2 P(s) = n$, as the theorem $K(s) = -\log_2 P(s) + O(1)$ predicts.
+2. The exception proves the rule. A string that happens to be $010101\ldots$ repeated has $K(s) \approx \log_2 n + O(1)$ (program: "print 01 repeated $n/2$ times") — far below $n$. This does *not* contradict step 2, because the theorem only holds "with high probability": the periodic string is one of the exponentially rare atypical outcomes. Its own self-information is still $-\log_2 P(s) = n$; the periodic string simply happens to be much more compressible than its probability suggests, which is exactly why such strings have vanishing probability.
+3. **Sanity check.** Averaging over all $s$, $E[K(X)] \approx \sum_s 2^{-n}\cdot(\text{its }K) \approx n = H(X)$ for the uniform distribution on $n$ bits, recovering the entropy. The rare low-$K$ strings pull the average down only negligibly because they are so few.
+:::
 
 ## Incompressible Strings and Algorithmic Randomness
 
@@ -157,16 +173,20 @@ There are at most 2^k - 1 strings with K(s) < k. Consequently, the vast majority
 
 Such strings are called algorithmically random (in the sense of Martin-Löf or Chaitin). They pass every effective statistical test for randomness.
 
-**ELI5**
+:::intuition
+There are only a few short programs, so only a few strings can be produced by short programs.
 
-- There are only a few short programs, so only a few strings can be produced by short programs.
-- Most long strings have no hidden pattern or rule that would let you write a much shorter program to generate them; they are "random" in the deepest sense.
+Most long strings have no hidden pattern or rule that would let you write a much shorter program to generate them; they are "random" in the deepest sense.
+:::
 
-**Worked Example:**
+:::example
+Of the $2^{1000}$ binary strings of length 1000, fewer than $2^{990}$ have $K(s) < 990$.
+:::
 
-1. Of the $2^{1000}$ binary strings of length 1000, fewer than $2^{990}$ have $K(s) < 990$.
-2. Hence more than $99.9\%$ of all 1000-bit strings are incompressible by 10 or more bits.
-3. Any particular string you pick at random will almost surely be one of them.
+:::solution
+1. Hence more than $99.9\%$ of all 1000-bit strings are incompressible by 10 or more bits.
+2. Any particular string you pick at random will almost surely be one of them.
+:::
 
 ## Uncomputability and Incompleteness
 
@@ -176,16 +196,20 @@ K(s) is uncomputable: there is no algorithm that on input s always halts and out
 
 Furthermore, in any consistent axiomatic system powerful enough to reason about programs there is a fixed constant c (depending on the system) such that the system cannot prove "K(s) > c" for any concrete string s. This is Chaitin's incompleteness theorem.
 
-**ELI5**
+:::intuition
+You cannot write a program that looks at an arbitrary file and tells you the size of the smallest program that produces that file (it would solve the halting problem).
 
-- You cannot write a program that looks at an arbitrary file and tells you the size of the smallest program that produces that file (it would solve the halting problem).
-- Formal mathematics has limits: it cannot certify that a particular long string is "truly random" (has high K) beyond a certain point that depends on the axioms.
+Formal mathematics has limits: it cannot certify that a particular long string is "truly random" (has high K) beyond a certain point that depends on the axioms.
+:::
 
-**Worked Example:**
+:::example
+Suppose your favorite theorem prover could, for every $n$, output a string $s_n$ of length $n$ together with a proof that $K(s_n) > n - 100$.
+:::
 
-1. Suppose your favorite theorem prover could, for every $n$, output a string $s_n$ of length $n$ together with a proof that $K(s_n) > n - 100$.
-2. Then you could use that to solve halting for programs up to size $n-100$, contradicting the undecidability of the halting problem.
-3. Hence no such prover exists.
+:::solution
+1. Then you could use that to solve halting for programs up to size $n-100$, contradicting the undecidability of the halting problem.
+2. Hence no such prover exists.
+:::
 
 ## Common Mistakes
 
@@ -208,19 +232,22 @@ K is 'almost' subadditive: K(x,y) ≤ K(x) + K(y) + O(1). It is also invariant u
 
 Plain Kolmogorov complexity (not prefix-free) and prefix complexity differ by at most a logarithmic term; most theorems hold for both.
 
-**ELI5**
+:::intuition
+The shortest description of the pair (x,y) is basically 'shortest description of x' plus 'shortest description of y given that you already have the shortest description of x'.
 
-- The shortest description of the pair (x,y) is basically 'shortest description of x' plus 'shortest description of y given that you already have the shortest description of x'.
-- Any computable processing of x cannot increase its complexity by more than the size of the processing program.
+Any computable processing of x cannot increase its complexity by more than the size of the processing program.
+:::
 
-**Worked Example:**
-
+:::example
 Apply the properties to two contrasting strings and check the chain rule.
+:::
 
-1. **Invariance under computable maps.** Let $s$ = the first $n$ digits of $\pi$. Because a fixed program computes $\pi$'s digits from $n$ alone, $K(s) \le K(n) + c_\pi$, where $c_\pi$ is the size of that program. With $K(n) \le \log_2 n + O(1)$ this gives $K(s) \le \log_2 n + O(1)$ — small, confirming $\pi$'s digits are highly structured.
-2. **Incompressible contrast.** A typical random string $r$ of length $n$ has $K(r) = n + O(1)$; no computable transformation shrinks it, because $K(f(r)) \le K(r)+c_f$ bounds growth but there is nothing to gain when $r$ is already incompressible.
-3. **Chain rule on independent halves.** Take $x$ and $y$ to be two *independent* random strings, each of length $n$, so $K(x) \approx n$ and $K(y) \approx n$. Since $y$ shares no structure with $x$, knowing $x^*$ gives no help: $K(y \mid x^*) \approx K(y) \approx n$. The chain rule then gives $K(x,y) = K(x) + K(y\mid x^*) + O(1) \approx 2n$.
-4. **Sanity check against subadditivity.** Subadditivity says $K(x,y) \le K(x)+K(y)+O(1) \approx 2n$, consistent with step 3. Now contrast the *dependent* case $y = x$: then $K(x,x) = K(x) + K(x \mid x^*) + O(1) \approx n + O(1)$, far below $2n$, because once you have $x^*$, reproducing the second copy is free. The chain rule correctly charges nothing for redundant information — the algorithmic mirror of $H(X,X)=H(X)$.
+:::solution
+**Invariance under computable maps.** Let $s$ = the first $n$ digits of $\pi$. Because a fixed program computes $\pi$'s digits from $n$ alone, $K(s) \le K(n) + c_\pi$, where $c_\pi$ is the size of that program. With $K(n) \le \log_2 n + O(1)$ this gives $K(s) \le \log_2 n + O(1)$ — small, confirming $\pi$'s digits are highly structured.
+**Incompressible contrast.** A typical random string $r$ of length $n$ has $K(r) = n + O(1)$; no computable transformation shrinks it, because $K(f(r)) \le K(r)+c_f$ bounds growth but there is nothing to gain when $r$ is already incompressible.
+**Chain rule on independent halves.** Take $x$ and $y$ to be two *independent* random strings, each of length $n$, so $K(x) \approx n$ and $K(y) \approx n$. Since $y$ shares no structure with $x$, knowing $x^*$ gives no help: $K(y \mid x^*) \approx K(y) \approx n$. The chain rule then gives $K(x,y) = K(x) + K(y\mid x^*) + O(1) \approx 2n$.
+**Sanity check against subadditivity.** Subadditivity says $K(x,y) \le K(x)+K(y)+O(1) \approx 2n$, consistent with step 3. Now contrast the *dependent* case $y = x$: then $K(x,x) = K(x) + K(x \mid x^*) + O(1) \approx n + O(1)$, far below $2n$, because once you have $x^*$, reproducing the second copy is free. The chain rule correctly charges nothing for redundant information — the algorithmic mirror of $H(X,X)=H(X)$.
+:::
 
 ## Uncomputability and Incompressibility
 
@@ -232,20 +259,23 @@ A string x is c-incompressible if K(x) ≥ |x| - c. By counting, for any c the f
 
 Martin-Löf randomness (passing all effective statistical tests) is equivalent (up to constants) to being incompressible.
 
-**ELI5**
+:::intuition
+There is no algorithm that, given any x, prints the number K(x). If there were, you could detect non-halting programs by checking whether their 'would-be' output has too low a complexity.
 
-- There is no algorithm that, given any x, prints the number K(x). If there were, you could detect non-halting programs by checking whether their 'would-be' output has too low a complexity.
-- Most strings are incompressible; only a tiny fraction have short descriptions. 'Randomness' for a single string means 'no short program describes it'.
+Most strings are incompressible; only a tiny fraction have short descriptions. 'Randomness' for a single string means 'no short program describes it'.
+:::
 
-**Worked Example:**
-
+:::example
 Prove $K$ is uncomputable via the "Berry paradox" construction (the cleanest self-contained argument).
+:::
 
-1. **Assume for contradiction** that $K$ is computable — there is an always-halting algorithm $\text{Kcomp}(x)$ returning $K(x)$.
-2. **Build a short paradoxical program** $Q$. Given a target number $m$ (hard-coded into $Q$), $Q$ enumerates strings $x = 0, 1, 00, 01, \ldots$ in order, calls $\text{Kcomp}(x)$ on each, and outputs the *first* string $x_0$ it finds with $K(x_0) \ge m$. Such an $x_0$ always exists because, by the counting argument, most strings have complexity near their length, so complexities are unbounded.
-3. **Measure $Q$'s length.** $Q$ consists of a fixed enumerator plus $\text{Kcomp}$ (a constant $d$ bits) together with the number $m$ (about $\log_2 m$ bits). So $|Q| \le \log_2 m + d$. Since $Q$ outputs $x_0$, we have $K(x_0) \le |Q| \le \log_2 m + d$.
-4. **Derive the contradiction.** By construction $K(x_0) \ge m$. Combining, $m \le K(x_0) \le \log_2 m + d$. But $m > \log_2 m + d$ for all sufficiently large $m$ (the left side grows linearly, the right only logarithmically), so choosing such an $m$ makes $m \le \log_2 m + d$ false.
-5. **Sanity check.** The contradiction came *only* from assuming $\text{Kcomp}$ exists and always halts. Everything else (the enumerator, hard-coding $m$) is plainly implementable. Hence no such $\text{Kcomp}$ exists: $K$ is uncomputable. Note $K$ remains upper semi-computable — dovetailing all programs gives ever-better upper bounds on $K(x)$ — it is only the exact value that is out of reach.
+:::solution
+**Assume for contradiction** that $K$ is computable — there is an always-halting algorithm $\text{Kcomp}(x)$ returning $K(x)$.
+**Build a short paradoxical program** $Q$. Given a target number $m$ (hard-coded into $Q$), $Q$ enumerates strings $x = 0, 1, 00, 01, \ldots$ in order, calls $\text{Kcomp}(x)$ on each, and outputs the *first* string $x_0$ it finds with $K(x_0) \ge m$. Such an $x_0$ always exists because, by the counting argument, most strings have complexity near their length, so complexities are unbounded.
+**Measure $Q$'s length.** $Q$ consists of a fixed enumerator plus $\text{Kcomp}$ (a constant $d$ bits) together with the number $m$ (about $\log_2 m$ bits). So $|Q| \le \log_2 m + d$. Since $Q$ outputs $x_0$, we have $K(x_0) \le |Q| \le \log_2 m + d$.
+**Derive the contradiction.** By construction $K(x_0) \ge m$. Combining, $m \le K(x_0) \le \log_2 m + d$. But $m > \log_2 m + d$ for all sufficiently large $m$ (the left side grows linearly, the right only logarithmically), so choosing such an $m$ makes $m \le \log_2 m + d$ false.
+**Sanity check.** The contradiction came *only* from assuming $\text{Kcomp}$ exists and always halts. Everything else (the enumerator, hard-coding $m$) is plainly implementable. Hence no such $\text{Kcomp}$ exists: $K$ is uncomputable. Note $K$ remains upper semi-computable — dovetailing all programs gives ever-better upper bounds on $K(x)$ — it is only the exact value that is out of reach.
+:::
 
 ## Applications: Induction, Learning, and Incompleteness
 
@@ -259,19 +289,22 @@ Chaitin's incompleteness: any consistent formal system of 'complexity' c can pro
 
 Levin's universal search (Kt complexity with time-bounded K) gives an optimal (up to constants) algorithm for inverting any computable function or solving any NP search problem, given enough time.
 
-**ELI5**
+:::intuition
+When choosing among models that fit your data, prefer the one whose description (the model itself plus the data encoded using the model) is shortest. That is formal Occam.
 
-- When choosing among models that fit your data, prefer the one whose description (the model itself plus the data encoded using the model) is shortest. That is formal Occam.
-- A fixed axiom system cannot certify the randomness of strings much longer than the axioms themselves; there will always be 'random' mathematical facts that the system cannot prove.
+A fixed axiom system cannot certify the randomness of strings much longer than the axioms themselves; there will always be 'random' mathematical facts that the system cannot prove.
+:::
 
-**Worked Example:**
-
+:::example
 Use MDL to choose between a simple and a complex model, with numbers.
+:::
 
-1. **Set up the two candidates.** We have data $D$ and two models. Model $M_1$ is a low-degree fit: cheap to describe, $K(M_1) = 30$ bits, but it leaves larger residuals that cost $K(D \mid M_1) = 100$ bits to encode. Model $M_2$ is a high-degree fit: expensive to describe, $K(M_2) = 200$ bits, but it hugs the data so the residuals cost only $K(D \mid M_2) = 10$ bits.
-2. **Compute total description lengths.** $L_1 = K(M_1) + K(D \mid M_1) = 30 + 100 = 130$ bits. $L_2 = K(M_2) + K(D \mid M_2) = 200 + 10 = 210$ bits.
-3. **Pick the minimum.** $L_1 = 130 < 210 = L_2$, so MDL selects the *simpler* model $M_1$ even though $M_2$ fits the data better.
-4. **Sanity check — the overfitting guard.** $M_2$ reduced residual cost by $100 - 10 = 90$ bits but paid $200 - 30 = 170$ extra bits to describe its added parameters. Since it spent more than it saved, its extra complexity was not "paid for" by the data — the hallmark of overfitting. MDL's single number, total code length, captures exactly this trade-off with no separate regularization knob.
+:::solution
+**Set up the two candidates.** We have data $D$ and two models. Model $M_1$ is a low-degree fit: cheap to describe, $K(M_1) = 30$ bits, but it leaves larger residuals that cost $K(D \mid M_1) = 100$ bits to encode. Model $M_2$ is a high-degree fit: expensive to describe, $K(M_2) = 200$ bits, but it hugs the data so the residuals cost only $K(D \mid M_2) = 10$ bits.
+**Compute total description lengths.** $L_1 = K(M_1) + K(D \mid M_1) = 30 + 100 = 130$ bits. $L_2 = K(M_2) + K(D \mid M_2) = 200 + 10 = 210$ bits.
+**Pick the minimum.** $L_1 = 130 < 210 = L_2$, so MDL selects the *simpler* model $M_1$ even though $M_2$ fits the data better.
+**Sanity check — the overfitting guard.** $M_2$ reduced residual cost by $100 - 10 = 90$ bits but paid $200 - 30 = 170$ extra bits to describe its added parameters. Since it spent more than it saved, its extra complexity was not "paid for" by the data — the hallmark of overfitting. MDL's single number, total code length, captures exactly this trade-off with no separate regularization knob.
+:::
 
 ## Common Mistakes
 
