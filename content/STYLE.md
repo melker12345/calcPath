@@ -126,13 +126,35 @@ npm run content:latex      # every $…$ fragment renders under KaTeX
 
 ## 6. Where the corpus stands
 
-Every module has been through the structural pass: `**ELI5**` is `:::intuition`,
-and worked examples are `:::example` + `:::solution`. New content should be
-authored that way directly — `npx tsx scripts/convert-book-style.ts` will fix it
-up if you use the old markers out of habit.
+All 113 modules are converted. Every subject carries numbered statements, and
+`npm run content:audit` prints the scoreboard:
 
-`npm run content:audit` shows, per subject, how many definitions, theorems and
-proofs each has, and which modules still have none.
+| subject | mods | defs | results | proofs |
+|---|---|---|---|---|
+| statistics | 14 | 107 | 47 | 4 |
+| geometry | 6 | 74 | 89 | 17 |
+| real-analysis | 8 | 67 | 119 | 28 |
+| number-theory | 7 | 60 | 129 | 43 |
+| information-theory | 8 | 59 | 62 | 13 |
+| calculus | 9 | 51 | 71 | 14 |
+| algebra | 8 | 47 | 56 | 9 |
+| discrete-mathematics | 6 | 47 | 47 | 22 |
+| linear-algebra | 9 | 45 | 60 | 8 |
+| abstract-algebra | 8 | 44 | 39 | 13 |
+| precalculus | 9 | 44 | 52 | 10 |
+| set-theory | 6 | 44 | 61 | 9 |
+| combinatorics | 8 | 40 | 70 | 27 |
+| mathematical-logic | 7 | 40 | 28 | 5 |
+
+Roughly 700 definitions, 900 results and 220 proofs. New content should be
+authored this way directly — `npx tsx scripts/convert-book-style.ts` will fix it
+up if you use the old `**ELI5**` / `**Worked Example:**` markers out of habit,
+and `scripts/repair-example-splits.ts` cleans up a split that landed badly.
+
+The proof counts differ by subject on purpose. Number theory and combinatorics
+argue their results in two or three lines, so those arguments are in the text;
+statistics quotes results it does not prove, so it has four. A proof appears
+only where the prose already made the argument — none were invented.
 
 ## 7. Converting an existing module
 

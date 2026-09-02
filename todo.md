@@ -40,6 +40,29 @@ Answer-grading fixes (from the "typed answer right but it came out wrong" report
 - [x] `npm run content:answers` now replays every stored answer respelled the way learners type it, every MCQ distractor, and every answer pair within a topic. It caught all of the above; self-validation alone never could.
 - [x] Last 5 KaTeX failures fixed (an unescaped `$1000s` and a `z^\*`) — content:latex is now at 0 failures.
 
+Book-style conversion (done):
+- [x] All 113 modules converted: ~700 definitions, ~900 theorems/propositions, ~220 proofs, 1455 numbered examples, 1275 intuition asides.
+- [x] Structural pass (scripts/convert-book-style.ts) preserved every word of prose; verified reproducible from the pre-conversion commit with zero drift.
+- [x] Statement lifting done subject by subject, each gated on content:validate + content:latex + content:audit.
+- [x] scripts/repair-example-splits.ts cleaned up the conversion's own leftovers: 47 examples that began at "Step 1", 15 orphan solutions, 38 unbalanced bold markers. All three now measure zero.
+- [x] npm run content:audit is the scoreboard; it fails if a module loses prose or a section slug moves.
+
+Content errors found and fixed during the conversion:
+- [x] Central Limit Theorem stated without finite variance (statistics/continuous-distributions) — false as written.
+- [x] Dirichlet convolution identity backwards in a Common Mistakes bullet (number-theory/arithmetic-functions).
+- [x] Shannon-Fano example claimed 2.1 bits/symbol on a distribution where Fano ties Huffman at 1.9; replaced with a verified counterexample.
+- [x] R(0) = H(X) asserted for all sources (information-theory/rate-distortion) — only true for discrete ones.
+- [x] Garbled sentence in number-theory/divisibility-primes restated as a proposition.
+- [x] Leaked authoring reference to question `bayes-est-2` in a worked example.
+
+Content gaps the agents reported (nothing invented, worth filling):
+- [ ] abstract-algebra: Cayley's theorem, Cauchy's theorem, "a finite integral domain is a field", and the classification of finite fields appear nowhere. Eisenstein's criterion is used by name twice but never stated.
+- [ ] precalculus: radian measure is never defined; the Remainder Theorem is never stated; the "Sum-to-Product and Product-to-Sum" section never gives the product-to-sum identities.
+- [ ] discrete-mathematics/graph-theory: Euler's formula for planar graphs, Kuratowski, the four colour theorem and planarity are absent; Hamiltonian graphs get a definition but no characterisation. The division algorithm is used but never stated.
+- [ ] real-analysis/real-number-system: an example claims a set of integers "has a max (finite set of integers)" when the set is infinite; the cardinality-of-the-continuum example muddles its two inequalities.
+- [ ] algebra/exponents-radicals-logarithms: "the graph is always above the x-axis" is false for a<0, and its own Common Mistakes bullet says so.
+- [ ] 31 duplicate section slugs across 23 modules strand 201 questions (content:validate warns with counts). Fixing means deciding which section each question belongs to.
+
 Future work not to do now:
 - [ ] Link to external resourses that explain the topic better, [youtube, khan accadamy, others (this is a manuall review step so i know we link to high quality resourses, also we need to validate that we can link to their resourse)]
 
