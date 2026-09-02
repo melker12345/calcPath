@@ -29,7 +29,9 @@ const CONTENT = path.join(__dirname, "..", "content");
 
 const ELI5_INLINE = /^\*\*ELI5\*\*\s*:?\s*(.*)$/i;
 const ELI5_LOOSE = /^\*\*ELI5\b.*?\*\*\s*:?\s*(.*)$/i;
-const WORKED = /^\*\*Worked Examples?\s*:?\s*(.*?)\*\*\s*:?\s*$/i;
+// "**Worked Example: Title**", and also "**Worked Example:** lead-in text",
+// where everything after the bold is the example's opening sentence.
+const WORKED = /^\*\*Worked Examples?\s*:?\s*(.*?)\*\*\s*:?\s*(.*)$/i;
 const HEADING = /^#{1,6}\s/;
 const LIST_ITEM = /^(?:[-*]\s+|\d+\.\s+)/;
 const BOLD_ONLY = /^\*\*(.+)\*\*$/;
@@ -38,7 +40,7 @@ const STEP_PREFIX = /^\*{0,2}Step\s*\d+\s*(?:[:.—-]\s*)\*{0,2}/i;
 const isBlank = (line: string) => line.trim() === "";
 const isMarker = (line: string) => {
   const t = line.trim();
-  return ELI5_LOOSE.test(t) || WORKED.test(t) || HEADING.test(t);
+  return ELI5_LOOSE.test(t) || WORKED.test(t) || HEADING.test(t) || t.startsWith(":::");
 };
 const isGenericTitle = (title: string) =>
   !title || /^(?:worked\s+)?examples?$/i.test(title.trim());
@@ -138,9 +140,11 @@ function interleave(paragraphs: string[]): string[] {
  * every module already follows — and the rest become the solution.
  */
 function convertWorked(lines: string[], start: number): { end: number; out: string[] } {
-  let title = (lines[start].trim().match(WORKED)?.[1] ?? "").trim();
+  const marker = lines[start].trim().match(WORKED);
+  let title = (marker?.[1] ?? "").trim();
+  const leadIn = (marker?.[2] ?? "").trim();
   const block = collectBlock(lines, start + 1);
-  let body = block.lines;
+  let body = leadIn ? [leadIn, ...block.lines] : block.lines;
 
   // "**Worked Example:**" on its own, with the name on the next bold line.
   // Only lift it when something follows: a few examples are nothing BUT that
@@ -209,8 +213,26 @@ export function convert(source: string): { text: string; eli5: number; examples:
   let examples = 0;
   let i = 0;
 
+  // Never open an environment inside one that is already open. A marker can
+  // only sit inside a fence if an earlier run wrapped it there, and converting
+  // it in place would nest — which the content validator rightly rejects.
+  let insideFence = false;
+
   while (i < lines.length) {
     const trimmed = lines[i].trim();
+
+    if (trimmed.startsWith(":::")) {
+      insideFence = trimmed === ":::" ? false : true;
+      out.push(lines[i]);
+      i += 1;
+      continue;
+    }
+
+    if (insideFence) {
+      out.push(lines[i]);
+      i += 1;
+      continue;
+    }
 
     if (ELI5_LOOSE.test(trimmed)) {
       const { end, out: block } = convertEli5(lines, i);
@@ -258,7 +280,7 @@ export function proseOf(source: string): string {
     .map((line) =>
       line
         .replace(ELI5_LOOSE, "$1")
-        .replace(WORKED, "$1")
+        .replace(WORKED, "$1 $2")
         .replace(LIST_ITEM, "")
         .replace(STEP_PREFIX, "")
     )
