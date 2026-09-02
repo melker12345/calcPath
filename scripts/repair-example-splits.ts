@@ -71,7 +71,9 @@ function repair(source: string) {
   const counts = { merged: 0, unwrapped: 0, rebolded: 0 };
 
   // --- 1 + 2: rebuild the file around example/solution pairs -----------------
-  for (let pass = 0; pass < 20; pass += 1) {
+  // One repair per pass (the block offsets shift after each edit), so the cap
+  // must exceed the most defects any single file carries.
+  for (let pass = 0; pass < 500; pass += 1) {
     const blocks = readBlocks(lines);
     let changed = false;
 
