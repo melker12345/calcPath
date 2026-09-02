@@ -14,15 +14,41 @@ Key challenges that appear only in the multiple-predictor setting include multic
 
 <!-- section: model -->
 
-The population model is $y = \beta_0 + \beta_1 x_1 + \dots + \beta_k x_k + \varepsilon$, where the errors are assumed independent with $\varepsilon \sim N(0, \sigma^2)$ — same variance $\sigma^2$ for every observation (homoscedasticity), mean zero, and normally distributed. These are the conditions under which the inference below (t-tests, F-tests, confidence intervals) is valid.
+:::definition[The multiple regression model]{#model-def}
+The population model is
 
-In matrix form: $\mathbf{y} = X\boldsymbol{\beta} + \boldsymbol{\varepsilon}$, where $X$ is the $n \times (k+1)$ design matrix (including a column of 1s for the intercept), $\boldsymbol{\beta}$ is the $(k+1) \times 1$ vector of coefficients, and $\mathbf{y}$, $\boldsymbol{\varepsilon}$ are $n \times 1$.
+$$y = \beta_0 + \beta_1 x_1 + \dots + \beta_k x_k + \varepsilon,$$
 
-The ordinary least squares estimator is $\hat{\boldsymbol{\beta}} = (X^T X)^{-1} X^T \mathbf{y}$. This requires $X$ to have full column rank (no predictor is an exact linear combination of the others), because only then is the $(k+1) \times (k+1)$ matrix $X^T X$ invertible. If two predictors are perfectly collinear, $X^T X$ is singular and there is no unique solution.
+where the errors are independent with $\varepsilon \sim N(0, \sigma^2)$ — mean zero, normally distributed, and the same variance $\sigma^2$ for every observation (homoscedasticity).
+:::
 
-Fitted values: $\hat{\mathbf{y}} = X\hat{\boldsymbol{\beta}} = H\mathbf{y}$, where $H = X(X^T X)^{-1}X^T$ is the hat matrix (projection onto the column space of $X$).
+These are the conditions under which the inference below (t-tests, F-tests, confidence intervals) is valid.
 
-Residuals: $\mathbf{e} = \mathbf{y} - \hat{\mathbf{y}} = (I - H)\mathbf{y}$.
+:::notation
+In matrix form the model reads
+
+$$\mathbf{y} = X\boldsymbol{\beta} + \boldsymbol{\varepsilon},$$
+
+where $X$ is the $n \times (k+1)$ design matrix (including a column of 1s for the intercept), $\boldsymbol{\beta}$ is the $(k+1) \times 1$ vector of coefficients, and $\mathbf{y}$, $\boldsymbol{\varepsilon}$ are $n \times 1$.
+:::
+
+:::proposition[The ordinary least squares estimator]{#ols-matrix}
+If $X$ has full column rank, the least-squares coefficients are
+
+$$\hat{\boldsymbol{\beta}} = (X^T X)^{-1} X^T \mathbf{y}.$$
+:::
+
+Full column rank means no predictor is an exact linear combination of the others, because only then is the $(k+1) \times (k+1)$ matrix $X^T X$ invertible. If two predictors are perfectly collinear, $X^T X$ is singular and there is no unique solution.
+
+:::definition[Hat matrix, fitted values and residuals]
+The fitted values are
+
+$$\hat{\mathbf{y}} = X\hat{\boldsymbol{\beta}} = H\mathbf{y}, \qquad H = X(X^T X)^{-1}X^T,$$
+
+where $H$ is the hat matrix, the projection onto the column space of $X$. The residuals are
+
+$$\mathbf{e} = \mathbf{y} - \hat{\mathbf{y}} = (I - H)\mathbf{y}.$$
+:::
 
 :::intuition
 Think of multiple regression as fitting a flat 'sheet' (hyperplane) through points in many dimensions instead of a line through points in 2D. Each predictor gives the sheet another direction to tilt.
@@ -54,11 +80,19 @@ Suppose we fit an intercept plus one predictor ($k = 1$) to three points $(x, y)
 
 <!-- section: fit -->
 
-$R^2 = 1 - \frac{\text{SSE}}{\text{SST}}$ is still the proportion of variance explained, but now it always increases when you add more predictors (even useless ones).
+The quantity $R^2 = 1 - \frac{\text{SSE}}{\text{SST}}$ is still the proportion of variance explained, but now it always increases when you add more predictors, even useless ones. That is what the adjusted version repairs.
 
-Adjusted $R^2 = 1 - \frac{\text{SSE}/(n-k-1)}{\text{SST}/(n-1)}$ penalizes for the number of predictors $k$. It can decrease when a variable is added that does not improve the model enough.
+:::definition[Adjusted R-squared]{#adjusted-r2}
+$$\text{Adjusted } R^2 = 1 - \frac{\text{SSE}/(n-k-1)}{\text{SST}/(n-1)}.$$
+:::
 
-The overall F-test tests $H_0: \beta_1 = \beta_2 = \dots = \beta_k = 0$ (the model as a whole has no explanatory power). $F = \frac{\text{MSR}}{\text{MSE}} \sim F_{k, n-k-1}$.
+The denominators penalise the number of predictors $k$, so adjusted $R^2$ can decrease when a variable is added that does not improve the model enough.
+
+:::definition[The overall F-test]{#f-test}
+The overall F-test tests $H_0: \beta_1 = \beta_2 = \dots = \beta_k = 0$ — the model as a whole has no explanatory power — using
+
+$$F = \frac{\text{MSR}}{\text{MSE}} \sim F_{k,\, n-k-1}.$$
+:::
 
 Individual t-tests on each $b_j$ test whether that predictor is useful *after controlling for the others already in the model*.
 
@@ -94,11 +128,21 @@ Same model: $n = 50$, $k = 4$, $R^2 = 0.72$. We test $H_0: \beta_1 = \dots = \be
 
 <!-- section: multicollinearity -->
 
-Multicollinearity occurs when two or more predictors are highly correlated with each other. It does not bias the coefficients, but it inflates their standard errors, making individual coefficients unstable and hard to interpret.
+:::definition[Multicollinearity]
+Multicollinearity is the condition where two or more predictors are highly correlated with each other.
+:::
 
-Symptoms: large standard errors, coefficients with unexpected signs or magnitudes, sensitivity to small changes in the data or model specification.
+It does not bias the coefficients, but it inflates their standard errors, making individual coefficients unstable and hard to interpret. Symptoms: large standard errors, coefficients with unexpected signs or magnitudes, sensitivity to small changes in the data or model specification.
 
-Variance Inflation Factor (VIF) for predictor $j$: $\text{VIF}_j = \frac{1}{1 - R^2_j}$, where $R^2_j$ is the $R^2$ from regressing $x_j$ on all the other predictors. Rule of thumb: VIF > 5 or 10 indicates problematic multicollinearity.
+:::definition[Variance inflation factor]{#vif}
+For predictor $j$,
+
+$$\text{VIF}_j = \frac{1}{1 - R^2_j},$$
+
+where $R^2_j$ is the $R^2$ from regressing $x_j$ on all the other predictors.
+:::
+
+Rule of thumb: VIF > 5 or 10 indicates problematic multicollinearity.
 
 Remedies: remove one of the correlated variables, combine them (e.g., via PCA), collect more data, or use regularization (ridge regression, lasso).
 
@@ -120,15 +164,27 @@ You have predictors: 'years of education' and 'highest degree level' (which are 
 
 <!-- section: selection -->
 
-All-subsets regression tries every possible combination of predictors (computationally expensive for large $k$).
+All-subsets regression tries every possible combination of predictors, which is computationally expensive for large $k$. The stepwise alternatives walk through the space of models one predictor at a time.
 
-Forward selection: start with no predictors, add the most useful one at each step until no more improve the model (by F-test, AIC, etc.).
+:::recipe[Forward selection]
+1. Start with no predictors.
+2. Add the predictor that most improves the model (by F-test, AIC, etc.).
+3. Repeat until no remaining predictor improves the model.
+:::
 
-Backward elimination: start with all predictors, remove the least useful one iteratively.
+Backward elimination runs the same idea in reverse: start with all predictors and remove the least useful one iteratively. Stepwise regression combines forward and backward steps.
 
-Stepwise regression combines forward and backward steps.
+Information criteria let us compare models directly instead of just watching SSE fall. The idea: a good model fits well (small SSE, first term) *without* using too many parameters (small $k$, penalty term).
 
-Information criteria let us compare models directly instead of just watching SSE fall. The idea: a good model fits well (small SSE, first term) *without* using too many parameters (small $k$, penalty term). AIC = $n \log(\text{SSE}/n) + 2(k+1)$, BIC = $n \log(\text{SSE}/n) + \log(n)(k+1)$ (here $\log$ is the natural logarithm). Lower is better. Because $\log(n) > 2$ once $n > e^2 \approx 7.4$, BIC charges a steeper price per extra parameter than AIC, so BIC tends to pick smaller models.
+:::definition[AIC and BIC]{#aic-bic}
+$$\text{AIC} = n \log(\text{SSE}/n) + 2(k+1),$$
+
+$$\text{BIC} = n \log(\text{SSE}/n) + \log(n)(k+1),$$
+
+where $\log$ is the natural logarithm. Lower is better.
+:::
+
+Because $\log(n) > 2$ once $n > e^2 \approx 7.4$, BIC charges a steeper price per extra parameter than AIC, so BIC tends to pick smaller models.
 
 Regularization methods (ridge, lasso, elastic net) add a penalty on the size of the coefficients. They can shrink coefficients toward zero and perform automatic variable selection (lasso).
 
@@ -152,11 +208,21 @@ Compare two nested models on $n = 50$ observations. Model A uses $k = 2$ predict
 
 <!-- section: diagnostics -->
 
-The LINE assumptions still apply: **L**inearity (the mean of $y$ is a linear function of the *multiple* predictors — the hyperplane), **I**ndependence of the errors, **N**ormality of the errors, and **E**qual variance (homoscedasticity). Note that multicollinearity is *not* on this list: it does not violate LINE, it only inflates the variance of $\hat{\boldsymbol{\beta}}$.
+:::definition[The LINE assumptions]{#line}
+The assumptions of simple regression still apply: **L**inearity (the mean of $y$ is a linear function of the *multiple* predictors — the hyperplane), **I**ndependence of the errors, **N**ormality of the errors, and **E**qual variance (homoscedasticity).
+:::
+
+Note that multicollinearity is *not* on this list: it does not violate LINE, it only inflates the variance of $\hat{\boldsymbol{\beta}}$.
 
 Partial regression plots (added-variable plots) help visualize the relationship between $y$ and one $x_j$ after removing the linear effects of the other predictors.
 
-Leverage is the diagonal entry $h_{ii}$ of the hat matrix $H = X(X^T X)^{-1}X^T$; it measures how far observation $i$'s predictor values sit from the center of the predictor cloud (high leverage = unusual $x$, before even looking at $y$). Cook's distance and DFFITS combine leverage with the residual to identify observations that actually *move* the fitted model.
+:::definition[Leverage]{#leverage}
+The leverage of observation $i$ is the diagonal entry $h_{ii}$ of the hat matrix
+
+$$H = X(X^T X)^{-1}X^T.$$
+:::
+
+Leverage measures how far observation $i$'s predictor values sit from the center of the predictor cloud — high leverage means an unusual $x$, before even looking at $y$. Cook's distance and DFFITS combine leverage with the residual to identify observations that actually *move* the fitted model.
 
 Residual plots against each predictor or against fitted values are still essential. Look for nonlinearity, heteroscedasticity, and outliers.
 

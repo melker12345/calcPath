@@ -14,14 +14,28 @@ While computationally more demanding than classical methods, modern tools (MCMC,
 
 <!-- section: bayes -->
 
-Bayes' theorem tells us how to update the probability of a hypothesis $H$ given data $D$: $P(H|D) = \frac{P(D|H) P(H)}{P(D)}$.
+:::theorem[Bayes' theorem]{#bayes-update}
+For a hypothesis $H$ and data $D$ with $P(D) > 0$,
 
+$$P(H|D) = \frac{P(D|H)\, P(H)}{P(D)}.$$
+:::
+
+:::notation
 - $P(H)$ is the prior probability — what we believed before seeing the data.
 - $P(D|H)$ is the likelihood — how probable the observed data is under hypothesis $H$.
 - $P(H|D)$ is the posterior probability — our updated belief after seeing the data.
 - $P(D)$ is the marginal likelihood (evidence), which acts as a normalizing constant.
+:::
 
-The denominator $P(D)$ is not a separate mystery quantity: when the hypotheses $H_1, \dots, H_k$ are mutually exclusive and exhaustive, the law of total probability gives $P(D) = \sum_i P(D|H_i)\,P(H_i)$. So $P(D)$ is just the sum of the numerator over every hypothesis — exactly what is needed to make the posteriors sum to $1$. This is why we often write posterior $\propto$ likelihood $\times$ prior and only normalize at the end.
+The denominator $P(D)$ is not a separate mystery quantity.
+
+:::proposition[The evidence is a sum over hypotheses]
+When the hypotheses $H_1, \dots, H_k$ are mutually exclusive and exhaustive, the law of total probability gives
+
+$$P(D) = \sum_i P(D|H_i)\,P(H_i).$$
+:::
+
+So $P(D)$ is just the sum of the numerator over every hypothesis — exactly what is needed to make the posteriors sum to $1$. This is why we often write posterior $\propto$ likelihood $\times$ prior and only normalize at the end.
 
 :::intuition
 You have two coins: one fair, one double-headed. You pick one at random and flip it — heads. Bayes' theorem tells you the probability you picked the double-headed coin. Your prior was 50/50. The likelihood of heads is 1 for the double-headed coin and 0.5 for the fair coin. After seeing heads, your posterior belief shifts toward the double-headed coin.
@@ -51,9 +65,25 @@ Setup: a disease has prevalence $P(D) = 0.01$. A test has sensitivity $P(+|D) = 
 
 <!-- section: prior -->
 
-The prior encodes knowledge or beliefs before seeing the data. It can be informative (based on previous studies) or non-informative (trying to let the data speak for itself). A prior is *proper* if it integrates to $1$ (a genuine probability distribution); it is *improper* if it does not (e.g. a "flat" prior $p(\theta) \propto 1$ over an unbounded range). Improper priors are sometimes used to represent ignorance, but they are only safe if the resulting posterior is itself proper — you must check this.
+The prior encodes knowledge or beliefs before seeing the data. It can be informative (based on previous studies) or non-informative (trying to let the data speak for itself).
 
-Conjugate priors are mathematically convenient because the posterior is in the same family as the prior, so updating just changes the parameters instead of requiring an integral. The classic example: a Beta prior with a binomial likelihood gives a Beta posterior. Concretely, with a $\text{Beta}(\alpha, \beta)$ prior and $s$ successes in $n$ trials, the posterior is $\text{Beta}(\alpha + s,\; \beta + n - s)$ — you simply add the observed successes to $\alpha$ and the failures to $\beta$. This makes $\alpha$ and $\beta$ interpretable as "prior pseudo-counts" of successes and failures.
+:::definition[Proper and improper priors]
+A prior is *proper* if it integrates to $1$, making it a genuine probability distribution, and *improper* if it does not — for example a "flat" prior $p(\theta) \propto 1$ over an unbounded range.
+:::
+
+Improper priors are sometimes used to represent ignorance, but they are only safe if the resulting posterior is itself proper — you must check this.
+
+:::definition[Conjugate prior]{#conjugate-prior}
+A prior is conjugate to a likelihood when the resulting posterior lies in the same family as the prior, so that updating only changes the parameters instead of requiring an integral.
+:::
+
+:::proposition[Beta-binomial conjugacy]
+With a $\text{Beta}(\alpha, \beta)$ prior and $s$ successes in $n$ binomial trials, the posterior is
+
+$$\text{Beta}(\alpha + s,\; \beta + n - s).$$
+:::
+
+You simply add the observed successes to $\alpha$ and the failures to $\beta$, which makes $\alpha$ and $\beta$ interpretable as "prior pseudo-counts" of successes and failures.
 
 The choice of prior matters when data is scarce; with lots of data the posterior is dominated by the likelihood. This is because the prior contributes a fixed number of pseudo-counts while the data contributes $n$ real counts — as $n$ grows, the data swamps the prior.
 
@@ -79,9 +109,21 @@ Setup: you suspect a coin is roughly fair, so you use a mildly informative $\tex
 
 Instead of a single point estimate, Bayesian inference gives the entire posterior distribution. Common summaries are the posterior mean, median, or mode (MAP).
 
-A 95% credible interval is an interval that contains 95% of the posterior probability mass. Unlike a frequentist confidence interval, you can say 'there is 95% probability that the true parameter lies in this interval' (given the model and data). The frequentist interval, by contrast, makes a statement about the long-run coverage of the *procedure*, not about the single interval you computed.
+:::definition[Credible interval]{#credible-interval}
+A $95\%$ credible interval is an interval that contains $95\%$ of the posterior probability mass.
+:::
 
-There is more than one way to pick a 95% interval from the same posterior. The *equal-tailed* interval chops off 2.5% of probability from each tail (using the posterior quantiles). The *Highest Posterior Density* (HPD) interval is the shortest interval containing 95% probability; every point inside it has higher posterior density than every point outside. For a symmetric posterior the two coincide, but for a skewed posterior the HPD interval is shorter and shifted toward the mode.
+:::remark
+Given the model and the data, you may say "there is $95\%$ probability that the true parameter lies in this interval". That is exactly what a frequentist confidence interval does *not* license: its $95\%$ describes the long-run coverage of the *procedure*, not the single interval you computed.
+:::
+
+There is more than one way to pick a $95\%$ interval from the same posterior.
+
+:::definition[Equal-tailed and highest posterior density intervals]
+The *equal-tailed* interval chops off $2.5\%$ of probability from each tail, using the posterior quantiles. The *highest posterior density* (HPD) interval is the shortest interval containing $95\%$ probability; every point inside it has higher posterior density than every point outside.
+:::
+
+For a symmetric posterior the two coincide, but for a skewed posterior the HPD interval is shorter and shifted toward the mode.
 
 :::intuition
 A point estimate is like saying "the treasure is at step 40." A credible interval is saying "I'm 95% sure the treasure is between steps 30 and 55" — and unlike the frequentist version, that 95% really is your probability that *this* range holds the treasure. The HPD interval is the smallest such range you can draw around the spots where the treasure is most likely to be buried.
@@ -108,20 +150,32 @@ Setup: you want to estimate a student's true ability $\mu$. Prior belief: $\mu \
 1. work in *precisions* (precision $=$ 1/variance), because Normal–Normal updating is a precision-weighted average. Prior precision $= \dfrac{1}{\sigma_0^2} = \dfrac{1}{225} \approx 0.00444$. Data precision $= \dfrac{n}{\sigma^2} = \dfrac{4}{100} = 0.04$.
 2. posterior precision is the sum: $0.00444 + 0.04 = 0.04444$, so posterior variance $= \dfrac{1}{0.04444} = 22.5$ and posterior SD $= \sqrt{22.5} \approx 4.74$.
 3. posterior mean is the precision-weighted average of prior mean and data mean: $\mu_{\text{post}} = \dfrac{0.00444(100) + 0.04(112)}{0.04444} = \dfrac{0.444 + 4.48}{0.04444} \approx 110.8$.
-4. Sanity check: the posterior mean $110.8$ lies between the prior mean $100$ and the data mean $112$, but much closer to the data because the data precision ($0.04$) is about $9\times$ the prior precision ($0.00444$). This "shrinkage toward the prior" is the same mechanism behind question `bayes-est-2`: had the data been weaker (fewer scores or noisier tests), the estimate would sit closer to $100$ ✓.
+4. Sanity check: the posterior mean $110.8$ lies between the prior mean $100$ and the data mean $112$, but much closer to the data because the data precision ($0.04$) is about $9\times$ the prior precision ($0.00444$). This "shrinkage toward the prior" is the whole mechanism: had the data been weaker (fewer scores or noisier tests), the estimate would sit closer to $100$ ✓.
 :::
 
 ## Bayesian Hypothesis Testing and Model Comparison
 
 <!-- section: testing -->
 
-Bayes factors compare the evidence for two competing models: $BF_{12} = P(\text{data} \mid M_1) / P(\text{data} \mid M_2)$. Here each $P(\text{data} \mid M_i)$ is the *marginal* likelihood — the likelihood integrated over that model's prior, $P(\text{data} \mid M_i) = \int P(\text{data} \mid \theta, M_i)\,P(\theta \mid M_i)\,d\theta$ — not the maximized likelihood. Because it averages rather than maximizes, the marginal likelihood automatically penalizes models that are more flexible than the data warrant (an automatic Occam's razor). A consequence is that Bayes factors require *proper* priors on the parameters being tested; an arbitrary improper prior leaves $BF$ undefined up to a constant.
+:::definition[Bayes factor]{#bayes-factor}
+The Bayes factor comparing two models is the ratio of their marginal likelihoods,
 
-The Bayes factor connects priors to posteriors through the odds form of Bayes' theorem:
+$$BF_{12} = \frac{P(\text{data} \mid M_1)}{P(\text{data} \mid M_2)}, \qquad P(\text{data} \mid M_i) = \int P(\text{data} \mid \theta, M_i)\,P(\theta \mid M_i)\,d\theta.$$
+:::
+
+Note that each $P(\text{data} \mid M_i)$ is the *marginal* likelihood — the likelihood integrated over that model's prior — not the maximized likelihood. Because it averages rather than maximizes, the marginal likelihood automatically penalizes models that are more flexible than the data warrant (an automatic Occam's razor). A consequence is that Bayes factors require *proper* priors on the parameters being tested; an arbitrary improper prior leaves $BF$ undefined up to a constant.
+
+:::proposition[Odds form of Bayes' theorem]
+The Bayes factor connects prior odds to posterior odds:
 
 $$\underbrace{\frac{P(M_1 \mid \text{data})}{P(M_2 \mid \text{data})}}_{\text{posterior odds}} = \underbrace{\frac{P(\text{data} \mid M_1)}{P(\text{data} \mid M_2)}}_{BF_{12}} \times \underbrace{\frac{P(M_1)}{P(M_2)}}_{\text{prior odds}}.$$
+:::
 
-So $BF_{12} > 1$ means the data shift the odds toward $M_1$; a common reading (Jeffreys' scale) is that $BF > 3$ is "substantial," $> 10$ is "strong," and $> 100$ is "decisive" evidence, with the reciprocals favoring $M_2$.
+So $BF_{12} > 1$ means the data shift the odds toward $M_1$.
+
+:::note
+A common reading (Jeffreys' scale) is that $BF > 3$ is "substantial," $> 10$ is "strong," and $> 100$ is "decisive" evidence, with the reciprocals favouring $M_2$.
+:::
 
 Unlike p-values, Bayes factors can provide evidence *for* the null hypothesis as well as against it — a p-value can only fail to reject.
 
@@ -149,9 +203,21 @@ Setup: you test whether a coin is fair. $M_1$: "biased, $p = 0.8$." $M_2$: "fair
 
 <!-- section: computation -->
 
-For all but the simplest models, the posterior cannot be computed in closed form — the obstacle is almost always the normalizing constant $P(D) = \int P(D|\theta)P(\theta)\,d\theta$, a high-dimensional integral with no analytic solution. We use numerical methods instead.
+For all but the simplest models, the posterior cannot be computed in closed form. The obstacle is almost always the normalizing constant
 
-Markov Chain Monte Carlo (MCMC) methods (Metropolis-Hastings, Gibbs sampling, Hamiltonian Monte Carlo) generate samples from the posterior. Their key trick is that they need only the *unnormalized* posterior $P(D|\theta)P(\theta)$ — because they work with *ratios* of the target density at two points, the intractable constant $P(D)$ cancels. Once you have samples, any posterior summary (mean, credible interval, $P(\theta > 0)$) is just a summary of the samples.
+$$P(D) = \int P(D|\theta)P(\theta)\,d\theta,$$
+
+a high-dimensional integral with no analytic solution. We use numerical methods instead.
+
+:::definition[Markov chain Monte Carlo]
+MCMC methods — Metropolis-Hastings, Gibbs sampling, Hamiltonian Monte Carlo — generate samples from the posterior rather than computing it in closed form.
+:::
+
+:::remark
+MCMC needs only the *unnormalized* posterior $P(D|\theta)P(\theta)$: because the algorithms work with *ratios* of the target density at two points, the intractable constant $P(D)$ cancels.
+:::
+
+Once you have samples, any posterior summary — the mean, a credible interval, $P(\theta > 0)$ — is just a summary of the samples.
 
 Modern probabilistic programming languages (Stan, PyMC, Turing.jl) let you specify models in a high-level language and automatically run efficient sampling.
 
