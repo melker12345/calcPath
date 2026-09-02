@@ -14,14 +14,18 @@ The canonical example is threshold secret sharing: any k out of n participants c
 
 <!-- section: threshold-ss -->
 
-In a (k,n)-threshold scheme a dealer splits secret s into n shares s1,...,sn such that:
+:::definition[(k,n)-threshold secret sharing]{#threshold-scheme}
+In a $(k,n)$-threshold scheme a dealer splits a secret $s$ into $n$ shares $s_1,\dots,s_n$ such that
 
-- Any set of k or more shares determines s uniquely.
-- Any set of k-1 or fewer shares reveals no information about s (the distribution of the shares is independent of s).
+- any set of $k$ or more shares determines $s$ uniquely, and
+- any set of $k-1$ or fewer shares reveals no information about $s$: the distribution of those shares is independent of $s$.
 
-The scheme is perfect if the 'no information' condition is information-theoretic (the mutual information I(s; any k-1 shares) = 0).
+The scheme is **perfect** when the second condition is information-theoretic, that is
 
-Each share must be at least as large as the secret itself (in bits) for perfect threshold schemes; this is an information-theoretic lower bound.
+$$I\bigl(s;\ \text{any } k-1 \text{ shares}\bigr) = 0.$$
+:::
+
+Perfection is expensive in one specific way: each share must be at least as large as the secret itself, in bits. That is an information-theoretic lower bound, proved in the properties section below.
 
 :::intuition
 Imagine a combination to a safe. You want any 3 out of 5 bank managers to be able to open it together, but any 2 should learn nothing that helps them guess the combination.
@@ -49,11 +53,18 @@ The idea: hide the secret as the y-intercept of a random curve, and hand each pa
 
 Shamir's (k,n) scheme works over a finite field F_q with q > n and secret s ∈ F_q. We need a *field* so that interpolation (which divides by coordinate differences) is well-defined, and $q>n$ so there are enough distinct nonzero evaluation points $1,\dots,n$ to give every participant one.
 
-The dealer chooses a random polynomial p(x) of degree at most k-1 with p(0) = s (the constant term); the other $k-1$ coefficients are drawn uniformly at random. The n shares are the points (i, p(i)) for i=1 to n (distinct nonzero field elements).
+:::recipe[Shamir's dealing procedure]{#shamir-scheme}
+1. Choose a random polynomial $p(x)$ of degree at most $k-1$ with $p(0) = s$ as its constant term; the other $k-1$ coefficients are drawn uniformly at random.
+2. Hand participant $i$ the point $(i, p(i))$, for $i = 1, \dots, n$ — distinct nonzero field elements.
+:::
 
-Any k points determine a unique degree-(k-1) polynomial (Lagrange interpolation), hence determine p(0)=s.
+:::theorem[Threshold property of Shamir's scheme]{#shamir-threshold}
+Any $k$ shares determine $s$, and any $k-1$ shares leave it completely undetermined.
+:::
 
-Any k-1 points are consistent with exactly q possible degree-(k-1) polynomials (one for each possible value of the missing coefficient that would set p(0) to any field element); thus the secret is completely undetermined.
+:::proof
+Any $k$ points determine a unique degree-$(k-1)$ polynomial, by Lagrange interpolation, and hence determine $p(0)=s$. Any $k-1$ points, on the other hand, are consistent with exactly $q$ degree-$(k-1)$ polynomials — one for each value of the missing coefficient, which sets $p(0)$ to any field element you please — so every candidate secret remains equally possible.
+:::
 
 :::intuition
 The secret is the y-intercept of a random polynomial of degree k-1. Each share is one point on that hidden curve.
@@ -82,7 +93,13 @@ $(k=3, n=5)$, field $F_{17}$, secret $s=7$. Dealer picks random $a_1=3$, $a_2=12
 
 <!-- section: properties-extensions -->
 
-Share size lower bound: in a perfect (k,n) scheme over a secret of entropy H, each share has entropy at least H (otherwise the k-1 shares plus the missing one could not uniquely determine a high-entropy secret while k-1 give zero info).
+:::theorem[Share size lower bound]{#share-size-bound}
+In a perfect $(k,n)$ scheme over a secret of entropy $H(s)$, each share has entropy at least that much:
+
+$$H(\text{share}) \ge H(s).$$
+:::
+
+The reason is that otherwise the $k-1$ shares plus the missing one could not uniquely determine a high-entropy secret while the $k-1$ alone give zero information.
 
 Linear secret sharing schemes (shares are linear functions of the secret and randomness) are equivalent to monotone span programs and have efficient realizations for many access structures.
 
@@ -125,12 +142,17 @@ MPC is the broadest primitive in cryptography that generalizes secret sharing, z
 
 <!-- section: mpc-problem -->
 
-n parties P1 … Pn hold private inputs x1 … xn. They wish to compute y = f(x1,…,xn) such that:
+:::definition[Secure multiparty computation]{#mpc}
+Parties $P_1, \dots, P_n$ hold private inputs $x_1, \dots, x_n$ and wish to compute
 
-- Correctness: all honest parties obtain the correct y.
-- Privacy: nothing is revealed about the xi's beyond what y itself reveals.
+$$y = f(x_1,\dots,x_n)$$
 
-Security is defined via the simulation paradigm: for any adversary controlling a subset of parties, there exists a simulator that, given only the inputs of the corrupted parties and the output y, can produce a view indistinguishable from the real protocol execution.
+such that **correctness** holds — all honest parties obtain the correct $y$ — and **privacy** holds: nothing is revealed about the $x_i$ beyond what $y$ itself reveals.
+:::
+
+:::definition[Simulation-based security]{#simulation-paradigm}
+Security is defined via the simulation paradigm: for any adversary controlling a subset of parties, there exists a simulator that, given only the inputs of the corrupted parties and the output $y$, can produce a view indistinguishable from the real protocol execution.
+:::
 
 The function f can be any efficiently computable function (arithmetic circuit, Boolean circuit, RAM program, etc.).
 
@@ -157,9 +179,12 @@ Yao's "millionaires' problem": two parties want to know who is richer without re
 
 Yao's protocol (1986) solves the two-party case (semi-honest model) using garbled circuits.
 
-One party ('garbler') takes a Boolean circuit for f, replaces every wire with two random keys (one for 0, one for 1), and for each gate creates a 'garbled table' of four ciphertexts that encrypt the correct output key under the two input keys, in random order.
-
-The other party ('evaluator') obtains the keys corresponding to its own input bits via oblivious transfer (OT), then evaluates the circuit gate by gate by decrypting exactly one entry per gate using the keys it holds, finally obtaining the output keys and (with mapping) the output bits.
+:::recipe[Yao's garbled circuit protocol]{#yao-garbled}
+1. The **garbler** takes a Boolean circuit for $f$ and replaces every wire with two random keys, one for $0$ and one for $1$.
+2. For each gate it creates a *garbled table* of four ciphertexts that encrypt the correct output key under the two input keys, in random order.
+3. The **evaluator** obtains the keys corresponding to its own input bits via oblivious transfer (OT).
+4. The evaluator walks the circuit gate by gate, decrypting exactly one entry per gate with the keys it holds, and finally obtains the output keys and, with the mapping, the output bits.
+:::
 
 The garbler sends the garbled tables plus the keys for its own input; the evaluator learns nothing about the garbler's input except through the output.
 
@@ -189,7 +214,9 @@ The evaluator walks the maze using keys for his inputs (obtained without the gar
 
 <!-- section: bgw-ss -->
 
-For n parties with honest majority (t < n/2 corruptions) the BGW protocol (Ben-Or, Goldwasser, Wigderson 1988) achieves information-theoretic security using Shamir secret sharing.
+:::theorem[BGW theorem]{#bgw}
+For $n$ parties with an honest majority, meaning $t < n/2$ corruptions, the BGW protocol (Ben-Or, Goldwasser, Wigderson 1988) achieves information-theoretic security using Shamir secret sharing.
+:::
 
 Each input is shared using a (t+1, n) Shamir scheme. Addition of shared values is local (just add shares). Multiplication of two shared values requires an interactive degree-reduction step (each party locally multiplies its shares, re-shares the product, then the parties jointly compute a linear combination that reduces the degree back to t).
 
@@ -264,9 +291,7 @@ Turn a semi-honest protocol into a maliciously-secure one.
 - **Forgetting the cost of malicious security**: Semi-honest protocols can be very cheap (linear in circuit size); malicious security often adds heavy zero-knowledge or cut-and-choose overhead, although recent protocols (e.g., SPDZ, authenticated triples) have made malicious security practical.
 - **Assuming MPC is only for 'millionaires' or toy functions**: Modern MPC frameworks (MP-SPDZ, SCALE-MAMBA, EMP-toolkit, etc.) routinely evaluate AES, neural-network inference, and complex database queries among dozens of parties.
 
-Differential privacy (DP) is a rigorous, quantifiable definition of privacy for data analysis and machine learning. A randomized algorithm M is ε-differentially private if, for any two neighboring datasets D and D' (differing in at most one record) and any measurable set S of possible outputs,
-
-Pr[M(D) ∈ S] ≤ e^ε Pr[M(D') ∈ S].
+Differential privacy (DP) is a rigorous, quantifiable definition of privacy for data analysis and machine learning. It asks that a randomized algorithm behave almost identically on any two datasets differing in at most one record, so that no output can betray whether a particular individual took part; the formal statement is given in the next section.
 
 The parameter ε (the privacy budget) controls the strength of the guarantee: smaller ε gives stronger privacy. The definition makes no assumptions about the adversary's background knowledge or computational power.
 
@@ -276,11 +301,25 @@ DP has become the gold standard for private data release at companies (Apple, Go
 
 <!-- section: dp-definition -->
 
-Two datasets are neighboring if they differ by the addition, removal, or change of a single individual's record. The definition is closed under post-processing: if M is DP then any (possibly randomized) function of M's output is also DP with the same ε.
+:::definition[Neighboring datasets]{#neighboring-datasets}
+Two datasets are neighboring if they differ by the addition, removal, or change of a single individual's record.
+:::
 
-(ε,δ)-DP relaxes pure DP to allow a small probability δ of 'catastrophic' failure (the bound may be violated with prob ≤ δ). This is necessary for many mechanisms (Gaussian noise) and for composition over many queries.
+:::definition[ε-differential privacy]{#differential-privacy}
+A randomized algorithm $M$ is $\varepsilon$-differentially private if, for any two neighboring datasets $D$ and $D'$ and any measurable set $S$ of possible outputs,
 
-Group privacy: if M is ε-DP then changing k records changes probabilities by at most e^{kε} (or (kε,δ') in the approximate case).
+$$\Pr[M(D) \in S] \le e^{\varepsilon}\, \Pr[M(D') \in S].$$
+:::
+
+The definition is closed under post-processing: if $M$ is DP then any (possibly randomized) function of $M$'s output is also DP with the same $\varepsilon$.
+
+:::definition[Approximate differential privacy]{#approximate-dp}
+$(\varepsilon,\delta)$-DP relaxes pure DP to allow a small probability $\delta$ of 'catastrophic' failure: the bound above may be violated with probability at most $\delta$.
+:::
+
+This relaxation is necessary for many mechanisms — Gaussian noise, in particular — and for composition over many queries.
+
+Group privacy follows from the definition by iterating it: if $M$ is $\varepsilon$-DP then changing $k$ records changes probabilities by at most $e^{k\varepsilon}$, or $(k\varepsilon,\delta')$ in the approximate case.
 
 :::intuition
 Whatever the output distribution looks like when your data is in the dataset, it cannot look too different (multiplicatively e^ε) from the distribution when your data is removed or changed.
@@ -303,9 +342,31 @@ A database of medical records; a DP release of "how many patients have disease X
 
 <!-- section: mechanisms -->
 
-For a numeric query f with L1 sensitivity Δ (max |f(D)-f(D')| over neighbors D,D'), the Laplace mechanism outputs f(D) + Lap(Δ/ε) (noise from the Laplace distribution with scale Δ/ε). This is ε-DP.
+:::definition[Sensitivity]{#sensitivity}
+The $L_1$ sensitivity of a numeric query $f$ is
 
-For (ε,δ)-DP the Gaussian mechanism adds N(0, σ²) with σ ≥ Δ √(2 ln(1.25/δ)) / ε (or similar calibrated constants). Gaussian noise is often preferred in practice because of its tail behavior and compatibility with composition.
+$$\Delta = \max_{D, D' \text{ neighbors}} |f(D)-f(D')|,$$
+
+the most that one record can move the answer.
+:::
+
+:::theorem[Laplace mechanism]{#laplace-mechanism}
+The mechanism that outputs
+
+$$f(D) + \mathrm{Lap}(\Delta/\varepsilon),$$
+
+adding noise from the Laplace distribution with scale $\Delta/\varepsilon$, is $\varepsilon$-DP.
+:::
+
+:::theorem[Gaussian mechanism]{#gaussian-mechanism}
+For $(\varepsilon,\delta)$-DP, adding $N(0, \sigma^2)$ noise with
+
+$$\sigma \ge \frac{\Delta \sqrt{2 \ln(1.25/\delta)}}{\varepsilon}$$
+
+(or similar calibrated constants) suffices.
+:::
+
+Gaussian noise is often preferred in practice because of its tail behavior and compatibility with composition.
 
 For non-numeric outputs (histograms, synthetic data, ML models) one uses the exponential mechanism (sample from a distribution weighted by a utility score) or more sophisticated constructions (private SGD, PATE, etc.).
 
@@ -341,11 +402,25 @@ $\sigma\ge 4\cdot4.85/1\approx19.4$. So adding $N(0,\sigma^2)$ with $\sigma\appr
 
 <!-- section: composition-properties -->
 
-Basic composition: k mechanisms each ε-DP together are kε-DP (and (kε, kδ) for approximate).
+:::theorem[Basic composition]{#basic-composition}
+$k$ mechanisms, each $\varepsilon$-DP, are together $k\varepsilon$-DP — and $(k\varepsilon, k\delta)$-DP in the approximate case.
+:::
 
-Advanced composition: for (ε,δ)-DP mechanisms, k-fold adaptive composition is roughly (ε' , kδ + δ')-DP with ε' ≈ √(2k ln(1/δ')) ε + kε(e^ε-1) (or tighter modern bounds). This is the source of the 'privacy budget' accounting used in practice.
+:::theorem[Advanced composition]{#advanced-composition}
+For $(\varepsilon,\delta)$-DP mechanisms, $k$-fold adaptive composition is roughly $(\varepsilon', k\delta + \delta')$-DP with
 
-Post-processing immunity: any function (even randomized) of a DP output remains DP with the same parameters. This lets you post-process noisy answers arbitrarily (take medians, train models on synthetic data, etc.) without spending more privacy.
+$$\varepsilon' \approx \sqrt{2k \ln(1/\delta')}\;\varepsilon + k\varepsilon(e^{\varepsilon}-1),$$
+
+or tighter under modern bounds.
+:::
+
+Advanced composition is the source of the 'privacy budget' accounting used in practice: the $\sqrt{k}$ in place of $k$ is what makes hundreds of queries affordable.
+
+:::proposition[Post-processing immunity]{#post-processing}
+Any function, even a randomized one, of a DP output remains DP with the same parameters.
+:::
+
+This lets you post-process noisy answers arbitrarily — take medians, train models on synthetic data — without spending more privacy.
 
 Other properties: parallel composition (queries on disjoint subsets cost only the max ε), privacy amplification by sampling, and privacy odometers / filters for fully adaptive composition.
 

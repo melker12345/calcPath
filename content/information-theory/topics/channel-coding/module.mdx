@@ -14,13 +14,15 @@ The noisy-channel coding theorem asserts that rates below capacity are achievabl
 
 <!-- section: definition -->
 
-For a discrete memoryless channel with transition probabilities p(y|x), the capacity is
+:::definition[Channel capacity]{#channel-capacity}
+For a discrete memoryless channel with transition probabilities $p(y|x)$, the capacity is
 
-$C = \max_{p(x)} I(X;Y),$
+$$C = \max_{p(x)} I(X;Y),$$
 
-where the maximum is over all possible input distributions p(x), and I(X;Y) is the mutual information between input and output.
+where the maximum is over all possible input distributions $p(x)$ and $I(X;Y)$ is the mutual information between input and output.
+:::
 
-The maximizing distribution p^*(x) is the capacity-achieving input distribution.
+The maximizing distribution $p^*(x)$ is called the capacity-achieving input distribution. Note what the definition does: it hands the channel to you fixed, and lets you choose only how to drive it.
 
 :::intuition
 Capacity answers: "What is the fastest speed (in bits per transmission) I can talk over this noisy link so that the listener can still understand me perfectly if I use a good enough code?"
@@ -43,13 +45,19 @@ Concrete case: for a binary noiseless channel ($|\mathcal X| = 2$), $C = \log_2 
 
 <!-- section: binary-symmetric -->
 
-The BSC flips each transmitted bit independently with probability p (the crossover probability). Its capacity is
+:::definition[Binary symmetric channel]{#bsc}
+The BSC flips each transmitted bit independently with probability $p$, the crossover probability.
+:::
 
-$C = 1 - h_2(p),$
+:::theorem[Capacity of the BSC]{#bsc-capacity}
+The capacity of the binary symmetric channel with crossover probability $p$ is
 
-where h_2(p) = -p log₂ p - (1-p) log₂(1-p) is the binary entropy function.
+$$C = 1 - h_2(p),$$
 
-The optimal input is the uniform (fair coin) distribution.
+where $h_2(p) = -p \log_2 p - (1-p)\log_2(1-p)$ is the binary entropy function. The optimal input is the uniform (fair coin) distribution.
+:::
+
+The formula reads as a subtraction of what the noise costs you: one bit per use is what a clean binary channel delivers, and $h_2(p)$ is the uncertainty the flip leaves behind.
 
 :::intuition
 Even if the channel flips 10% of the bits, you can still send information at a positive rate (about 0.53 bits per transmission) by using error-correcting codes.
@@ -72,9 +80,11 @@ Interpretation and sanity check: even though $11\%$ of bits are flipped, a good 
 
 <!-- section: gaussian -->
 
-For the additive white Gaussian noise (AWGN) channel with average power constraint P and noise variance N (SNR = P/N), the capacity (in the appropriate normalization) is
+:::theorem[Capacity of the AWGN channel]{#awgn-capacity}
+For the additive white Gaussian noise (AWGN) channel with average power constraint $P$ and noise variance $N$, so that $\text{SNR} = P/N$, the capacity in the appropriate normalization is
 
-$C = \frac{1}{2} \log_2 (1 + \text{SNR}).$
+$$C = \frac{1}{2} \log_2 (1 + \text{SNR}).$$
+:::
 
 This is the famous formula that shows capacity grows only logarithmically with signal power.
 
@@ -112,10 +122,14 @@ This was a revolutionary insight: noise does not impose a hard limit on reliabil
 
 <!-- section: statement -->
 
-For a discrete memoryless channel with capacity C:
+:::theorem[Noisy-channel coding theorem]{#channel-coding-theorem}
+Let a discrete memoryless channel have capacity $C$.
 
-- **Achievability (direct part)**: For every rate R < C there exists a sequence of codes with rate R such that the maximum (or average) probability of decoding error Pe → 0 as the block length n → ∞.
-- **Converse (impossibility)**: For any rate R > C, every sequence of codes with rate R has Pe bounded away from zero (in fact Pe → 1 for the strong converse on many channels).
+- **Achievability (direct part)**: for every rate $R < C$ there exists a sequence of codes with rate $R$ such that the maximum (or average) probability of decoding error $P_e \to 0$ as the block length $n \to \infty$.
+- **Converse (impossibility)**: for any rate $R > C$, every sequence of codes with rate $R$ has $P_e$ bounded away from zero (in fact $P_e \to 1$ for the strong converse on many channels).
+:::
+
+The theorem is an existence result on one side and an impossibility result on the other, and the two meet exactly at $C$. Everything in the rest of this chapter is an attempt to make the first half constructive.
 
 :::intuition
 If you speak slowly enough (rate < C), you can make yourself understood perfectly over a noisy phone line by using a good "code" (repeating in clever ways, using error-correcting language).
@@ -131,13 +145,13 @@ A BSC with C = 0.5 bits per use. You can send 1000 information bits reliably by 
 
 <!-- section: achievability -->
 
-Generate a random codebook of M = 2^{nR} codewords, each symbol drawn i.i.d. from the capacity-achieving input distribution.
+Shannon's proof of achievability is famous for not building a code at all: it builds a *random* one and shows the average code is good, so at least one good code must exist.
 
-To send message m, transmit the m-th codeword.
+:::proof
+Generate a random codebook of $M = 2^{nR}$ codewords, each symbol drawn i.i.d. from the capacity-achieving input distribution. To send message $m$, transmit the $m$-th codeword. The decoder, upon receiving $y^n$, looks for the unique codeword that is jointly typical with $y^n$ (or within a certain distance).
 
-The decoder, upon receiving y^n, looks for the unique codeword that is jointly typical with y^n (or within a certain distance).
-
-Error events: the true codeword is not typical with y (vanishes by AEP), or some wrong codeword is jointly typical (union bound over M-1 wrong codewords, each with prob ~2^{-n I} , and M 2^{-n I} →0 when R < I ≤ C).
+There are two error events. The true codeword may fail to be typical with $y^n$, which vanishes by the AEP; or some wrong codeword may be jointly typical, which a union bound over the $M-1$ wrong codewords controls, each contributing probability about $2^{-nI}$. Since $M 2^{-nI} \to 0$ when $R < I \le C$, the total error probability vanishes.
+:::
 
 :::intuition
 Throw a huge number of random "sentences" into a codebook.
@@ -164,15 +178,17 @@ Step 4 (conclude): whenever $R < C$ the exponent $C - R$ is positive, so this bo
 
 <!-- section: converse -->
 
-Suppose a code of rate R > C exists with small Pe.
+The converse is an accounting argument: the channel is a pipe of a fixed width, and a rate above $C$ asks it to carry more than it holds.
 
-Then the mutual information I(X^n ; Y^n) ≥ nR - o(n) (because the message is essentially recovered from Y^n).
+:::proof
+Suppose a code of rate $R > C$ exists with small $P_e$. Then the mutual information satisfies $I(X^n; Y^n) \ge nR - o(n)$, because the message is essentially recovered from $Y^n$. But by the chain rule, the data processing inequality and the memoryless property,
 
-But by the chain rule / data processing / memoryless property, I(X^n;Y^n) ≤ n C.
+$$I(X^n;Y^n) \le nC,$$
 
-This yields a contradiction for large n if R > C.
+which is a contradiction for large $n$ when $R > C$.
+:::
 
-Fano's inequality makes the "essentially recovered" quantitative: H(message | hat message) ≤ 1 + Pe * nR , which forces I large only if Pe small.
+Fano's inequality is what makes "essentially recovered" quantitative: $H(\text{message} \mid \widehat{\text{message}}) \le 1 + P_e\, nR$, which forces the mutual information to be large only when $P_e$ is small.
 
 :::intuition
 If the receiver can recover the message with high probability, then the channel must have carried almost all the bits of the message (nR bits of information).
@@ -210,13 +226,29 @@ Claude Shannon's noisy-channel coding theorem guarantees that reliable communica
 
 <!-- section: errors-in-communication -->
 
-A binary symmetric channel (BSC) with crossover probability $p$ flips each transmitted bit independently with probability $p$. The Hamming distance between two vectors $\mathbf{x}$ and $\mathbf{y}$ is the number of positions they differ:
+A binary symmetric channel (BSC) with crossover probability $p$ flips each transmitted bit independently with probability $p$. To reason about what that does to a codeword we need a way to measure how far apart two bit strings are.
 
-$d(\mathbf{x}, \mathbf{y}) = |\{ i : x_i \neq y_i \}| = w(\mathbf{x} - \mathbf{y})$
+:::definition[Hamming distance]{#hamming-distance}
+The Hamming distance between two vectors $\mathbf{x}$ and $\mathbf{y}$ is the number of positions in which they differ:
 
-where $w$ is the Hamming weight (number of 1s).
+$$d(\mathbf{x}, \mathbf{y}) = |\{ i : x_i \neq y_i \}| = w(\mathbf{x} - \mathbf{y}),$$
 
-A code $\mathcal{C}$ is a subset of $\{0,1\}^n$. Its minimum distance $d = \min_{\mathbf{c} \neq \mathbf{c}'} d(\mathbf{c},\mathbf{c}')$ determines its error capability: it can detect up to $d-1$ errors and correct up to $t = \lfloor (d-1)/2 \rfloor$ errors.
+where $w$ is the Hamming weight, the number of 1s.
+:::
+
+:::definition[Code and minimum distance]{#minimum-distance}
+A code $\mathcal{C}$ is a subset of $\{0,1\}^n$. Its minimum distance is
+
+$$d = \min_{\mathbf{c} \neq \mathbf{c}'} d(\mathbf{c},\mathbf{c}').$$
+:::
+
+:::proposition[Error capability from minimum distance]{#error-capability}
+A code of minimum distance $d$ can detect up to $d-1$ errors and correct up to
+
+$$t = \left\lfloor \frac{d-1}{2} \right\rfloor$$
+
+errors.
+:::
 
 :::intuition
 Think of sending a message over a phone line that sometimes crackles. Each crackle flips a bit. Distance measures how different two possible messages look after noise.
@@ -236,7 +268,9 @@ Simple detection uses parity bits. An even-parity bit makes the total number of 
 
 Cyclic redundancy checks (CRC) use polynomial division over GF(2) and catch burst errors of length up to the degree with high probability. They are ubiquitous in Ethernet, ZIP files, and hard drives.
 
+:::definition[Detection capability]{#detection-capability}
 A code detects $e$ errors if no error pattern of weight $\le e$ takes a codeword to another codeword.
+:::
 
 :::intuition
 Even parity is like adding a "check digit" so the sum mod 2 is zero. Any odd number of flips breaks the sum and screams "error!"
@@ -261,9 +295,19 @@ Step 4 (the blind spot): if instead bits $3$ and $4$ both flipped, the receiver 
 
 Correction requires spheres of radius $t$ around codewords to be disjoint. For perfect codes they also cover the whole space.
 
-Linear codes are subspaces: encoding is $\mathbf{m} \mapsto \mathbf{m}G$ for generator matrix $G$; syndrome decoding uses parity-check matrix $H$ with $\mathbf{c}H^T = 0$ for codewords.
+:::definition[Linear code, generator and parity-check matrices]{#linear-code}
+A linear code is a subspace of $\{0,1\}^n$. Encoding is the map $\mathbf{m} \mapsto \mathbf{m}G$ for a generator matrix $G$, and the codewords are exactly the vectors annihilated by a parity-check matrix $H$:
 
-The syndrome $\mathbf{s} = \mathbf{r}H^T$ depends only on the error: $\mathbf{s} = \mathbf{e}H^T$.
+$$\mathbf{c}H^T = \mathbf{0}.$$
+:::
+
+:::proposition[The syndrome depends only on the error]{#syndrome}
+If $\mathbf r = \mathbf c + \mathbf e$ is received, the syndrome satisfies
+
+$$\mathbf{s} = \mathbf{r}H^T = \mathbf{e}H^T,$$
+
+so it carries no information about which codeword was sent, only about the error pattern.
+:::
 
 :::intuition
 Correction is "nearest-neighbor" decoding in Hamming space: pick the codeword that differs in fewest positions from what you received.
@@ -299,9 +343,11 @@ They remain the canonical example in coding theory textbooks and are still used 
 
 <!-- section: definition -->
 
-The binary Hamming code of length 2^m − 1 has dimension 2^m − 1 − m and minimum distance 3. It is a perfect code: the spheres of radius 1 around codewords pack the entire space.
+:::definition[Binary Hamming code]{#hamming-code}
+The binary Hamming code of length $2^m - 1$ has dimension $2^m - 1 - m$ and minimum distance $3$. Its parity-check matrix $H$ consists of all nonzero distinct columns of length $m$.
+:::
 
-The parity-check matrix H consists of all nonzero distinct columns of length m.
+It is a perfect code: the spheres of radius $1$ around codewords pack the entire space, with nothing left over.
 
 :::intuition
 You add m parity bits so that the positions of possible single errors are uniquely identified by the m-bit syndrome.
@@ -324,11 +370,11 @@ Sanity check on "perfect": each of the $2^4 = 16$ codewords owns a radius-1 sphe
 
 <!-- section: syndrome-decoding -->
 
-To decode a received vector r, compute the syndrome s = H r (mod 2).
-
-If s = 0, assume no error.
-
-If s ≠ 0, s interpreted as an integer i tells you to flip bit i.
+:::recipe[Syndrome decoding of a Hamming code]{#syndrome-decoding}
+1. Compute the syndrome $\mathbf s = H\mathbf r \pmod 2$ of the received vector $\mathbf r$.
+2. If $\mathbf s = \mathbf 0$, assume no error.
+3. If $\mathbf s \neq \mathbf 0$, read $\mathbf s$ as an integer $i$ in binary and flip bit $i$.
+:::
 
 This corrects any single error. If two errors occurred, it will "correct" a third bit, producing a wrong codeword (but the overall parity in the extended code can detect this).
 
@@ -352,9 +398,11 @@ Step 3 (correct): flip bit $5$ of $\mathbf r$: $0000100 \to 0000000 = \mathbf c$
 
 <!-- section: extended -->
 
-Adding one extra overall parity bit produces the extended Hamming code of length 2^m, distance 4.
+:::definition[Extended Hamming code]{#extended-hamming}
+Adding one extra overall parity bit to a binary Hamming code produces the extended Hamming code, of length $2^m$ and minimum distance $4$.
+:::
 
-It can correct single errors and detect double errors (SECDED — single error correction, double error detection). This is widely used in computer RAM (ECC memory).
+The extra distance buys exactly one more capability: the code can correct single errors and detect double errors (SECDED — single error correction, double error detection). This is widely used in computer RAM (ECC memory).
 
 :::intuition
 The extra parity bit tells you whether the total number of errors was even or odd.
@@ -383,7 +431,11 @@ LDPC codes are now used in virtually every modern wireless and storage standard 
 
 <!-- section: definition-sparsity -->
 
-An $(n, k)$ LDPC code is a linear subspace whose $m = n-k$ parity-check equations are represented by an $m \times n$ matrix $H$ with only a small constant number of 1s per row and per column (low density). The code is the nullspace: $\mathbf{c} H^T = \mathbf{0}$ over GF(2).
+:::definition[LDPC code]{#ldpc-code}
+An $(n, k)$ LDPC code is a linear subspace whose $m = n-k$ parity-check equations are represented by an $m \times n$ matrix $H$ with only a small constant number of 1s per row and per column — the low density. The code is the nullspace,
+
+$$\mathbf{c} H^T = \mathbf{0} \quad \text{over } \mathrm{GF}(2).$$
+:::
 
 Gallager's original construction used regular degree distributions; modern irregular LDPC codes optimize the variable and check node degrees for better thresholds.
 
@@ -407,7 +459,9 @@ Step 3 (what it means): every codeword $\mathbf c$ satisfies all $6$ parity equa
 
 <!-- section: tanner-graphs -->
 
-The Tanner graph is a bipartite graph with variable nodes (one per code bit) on one side and check nodes (one per row of H) on the other; an edge exists where $H_{j,i}=1$.
+:::definition[Tanner graph]{#tanner-graph}
+The Tanner graph of an LDPC code is a bipartite graph with variable nodes (one per code bit) on one side and check nodes (one per row of $H$) on the other; an edge joins variable $i$ to check $j$ exactly when $H_{j,i}=1$.
+:::
 
 Belief-propagation (sum-product) decoding passes log-likelihood ratios (LLRs) along edges. Each variable node collects messages from its neighboring checks, updates its belief, and sends new messages back. After a few iterations the beliefs converge to the most likely codeword or a near-codeword.
 
@@ -464,9 +518,13 @@ In 5G New Radio, polar codes were selected for the control channel (PDCCH) and f
 
 <!-- section: channel-polarization -->
 
-Arikan's insight starts with a simple 2×2 kernel: two copies of a channel W are combined into a worse channel W⁻ and a better channel W⁺. Recursively applying this transformation to n = 2^m independent copies of W creates n synthetic bit-channels whose capacities polarize: a fraction I(W) of them become almost noiseless (capacity → 1) while the rest become almost useless (capacity → 0).
+Arikan's insight starts with a simple $2\times 2$ kernel: two copies of a channel $W$ are combined into a worse channel $W^-$ and a better channel $W^+$. Recursively applying this transformation to $n = 2^m$ independent copies of $W$ creates $n$ synthetic bit-channels.
 
-As m → ∞ the polarization is sharp; the fraction of good channels approaches exactly the symmetric capacity I(W).
+:::theorem[Channel polarization]{#channel-polarization}
+The capacities of the $n = 2^m$ synthetic bit-channels polarize: a fraction $I(W)$ of them become almost noiseless (capacity $\to 1$) while the rest become almost useless (capacity $\to 0$). As $m \to \infty$ the polarization is sharp, and the fraction of good channels approaches exactly the symmetric capacity $I(W)$.
+:::
+
+That last clause is what makes polar codes capacity-achieving: the good channels are not merely plentiful, there are exactly as many of them as the capacity allows.
 
 :::intuition
 Imagine taking many identical noisy phone lines and cleverly wiring them together in stages. Some of the resulting 'virtual lines' become crystal clear while others become pure noise.
@@ -482,9 +540,19 @@ For the binary erasure channel with erasure probability 0.5, I(W)=0.5. After one
 
 <!-- section: construction-encoding -->
 
-The polar transform is the matrix G_n = F^{\otimes m} where F = [[1,0],[1,1]] (Kronecker power). To encode, place the k information bits in the k most reliable synthetic channels (the information set A); the remaining n-k positions (the frozen set) are set to 0 (or known values).
+:::definition[Polar transform]{#polar-transform}
+The polar transform is the Kronecker power
 
-Encoding is simply $\mathbf{x} = \mathbf{u} G_n$ where u_A are the info bits and u_{A^c}=0. Because G_n is the fast Hadamard transform (essentially), encoding costs only n log n XORs.
+$$G_n = F^{\otimes m}, \qquad F = \begin{bmatrix} 1 & 0 \\ 1 & 1\end{bmatrix}.$$
+
+To encode, place the $k$ information bits in the $k$ most reliable synthetic channels (the information set $A$); the remaining $n-k$ positions (the frozen set) are set to $0$, or to other known values. Encoding is then
+
+$$\mathbf{x} = \mathbf{u} G_n,$$
+
+where $u_A$ are the information bits and $u_{A^c}=0$.
+:::
+
+Because $G_n$ is essentially the fast Hadamard transform, encoding costs only $n \log n$ XORs.
 
 :::intuition
 You get a big 'mixing' matrix built by repeatedly applying a tiny 2-bit mixer. The mixing sorts the bits into 'good' and 'bad' positions according to how much the channel likes them.
@@ -557,7 +625,9 @@ The name "turbo" evokes the iterative feedback, analogous to a turbocharger.
 
 <!-- section: construction -->
 
-A classical turbo encoder consists of two recursive systematic convolutional (RSC) encoders. The information bits $\mathbf{u}$ are fed directly to the first encoder and, after passing through an interleaver $\Pi$, to the second encoder. Only the systematic bits and the two parity streams are transmitted (puncturing may be used to achieve higher rates).
+:::definition[Turbo encoder (parallel concatenation)]{#turbo-encoder}
+A classical turbo encoder consists of two recursive systematic convolutional (RSC) encoders. The information bits $\mathbf{u}$ are fed directly to the first encoder and, after passing through an interleaver $\Pi$, to the second encoder. Only the systematic bits and the two parity streams are transmitted; puncturing may be used to achieve higher rates.
+:::
 
 The interleaver scrambles the order so that error patterns that are bad for one encoder become good for the other; this creates a code with large effective free distance.
 
@@ -626,7 +696,13 @@ In network settings and for channels with memory, feedback can strictly increase
 
 <!-- section: capacity-feedback -->
 
-For a discrete memoryless channel (DMC) with capacity C, even with perfect instantaneous feedback of every received symbol, the maximum reliable rate remains C. The converse follows from the same mutual-information bounds used without feedback; feedback cannot create new information about the message that was not already in the channel outputs.
+:::theorem[Feedback does not increase capacity]{#feedback-capacity}
+For a discrete memoryless channel with capacity $C$, even with perfect instantaneous feedback of every received symbol, the maximum reliable rate remains $C$.
+:::
+
+:::proof
+The converse follows from the same mutual-information bounds used without feedback: feedback cannot create new information about the message that was not already in the channel outputs.
+:::
 
 What feedback does provide is the ability to adapt the next transmission based on what has already been received, enabling variable-length and rateless strategies.
 
@@ -644,9 +720,15 @@ Binary symmetric channel with crossover 0.1 has C ≈ 0.53 bits. With feedback y
 
 <!-- section: arq -->
 
-The simplest use of feedback is ARQ: the receiver sends ACK if the packet passes error detection (CRC), NACK otherwise. On NACK the transmitter retransmits (possibly with incremental redundancy).
+:::definition[Automatic repeat request]{#arq}
+The simplest use of feedback is ARQ: the receiver sends an ACK if the packet passes error detection (CRC), and a NACK otherwise. On a NACK the transmitter retransmits, possibly with incremental redundancy.
+:::
 
-Pure ARQ is a repetition code with random number of repetitions; throughput is R(1 - P_err) where R is the rate of the packet. It achieves arbitrarily low error probability but throughput vanishes as target error → 0 unless combined with forward error correction.
+Pure ARQ is a repetition code with a random number of repetitions, and its throughput is
+
+$$R\,(1 - P_{\text{err}}),$$
+
+where $R$ is the rate of the packet. It achieves arbitrarily low error probability but throughput vanishes as target error → 0 unless combined with forward error correction.
 
 :::intuition
 'Did you get it?' 'No, send again.' Simple, reliable, but wasteful if the channel is bad — you may retransmit the whole packet many times.
@@ -664,7 +746,11 @@ A 1000-bit packet protected by 32-bit CRC sent at rate 0.9 over a channel with p
 
 With feedback one can achieve the capacity with far simpler codes using variable-length transmission. The transmitter keeps sending parity bits until the receiver's posterior on the message is sufficiently peaked (posterior matching, or simple erasure decoding on BEC).
 
-For the binary erasure channel, the capacity-achieving scheme with feedback is trivial: keep sending each bit until the receiver says it got it (ACK). The expected number of transmissions per bit is 1/(1-p) and rate exactly equals capacity.
+For the binary erasure channel, the capacity-achieving scheme with feedback is trivial: keep sending each bit until the receiver says it got it (ACK). The expected number of transmissions per bit is
+
+$$\frac{1}{1-p},$$
+
+so the rate is exactly the capacity.
 
 For general DMCs, more sophisticated posterior-matching schemes exist that also achieve capacity with variable length and zero error probability (in the limit).
 

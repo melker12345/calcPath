@@ -14,13 +14,21 @@ The AEP is the key bridge between the abstract entropy rate and concrete stateme
 
 <!-- section: definition -->
 
-Here the *entropy rate* $h$ is the long-run average uncertainty per symbol, $h = \lim_{n\to\infty} \tfrac{1}{n}H(X_1,\dots,X_n)$; for an i.i.d. source it reduces to the ordinary per-symbol entropy $H(X)$. The AEP makes this abstract rate concrete.
+Here the *entropy rate* $h$ is the long-run average uncertainty per symbol,
 
+$$h = \lim_{n\to\infty} \tfrac{1}{n}H(X_1,\dots,X_n);$$
+
+for an i.i.d. source it reduces to the ordinary per-symbol entropy $H(X)$. The AEP makes this abstract rate concrete.
+
+:::theorem[Asymptotic equipartition property]{#aep}
 For a discrete stationary ergodic process with entropy rate $h$, for every $\varepsilon>0$ there exists $N$ such that for $n>N$ the following hold for the typical set $A_\varepsilon^{(n)}$:
 
 1. For sequences $x^n \in A_\varepsilon^{(n)}$, $\left| -\tfrac{1}{n}\log_2 p(x^n) - h \right| < \varepsilon$ (the empirical rate is close to $h$).
 2. $\Pr\!\left( X^n \in A_\varepsilon^{(n)} \right) > 1 - \varepsilon$.
 3. $|A_\varepsilon^{(n)}| \le 2^{n(h+\varepsilon)}$.
+:::
+
+The three clauses do three different jobs: the first says what "typical" means, the second says typicality is overwhelmingly likely, and the third says there are few typical sequences. Compression lives in the gap between the second and the third.
 
 The quantity $-\tfrac{1}{n}\log_2 p(x^n)$ is the *sample information rate* (average surprise per symbol); condition 1 says a typical sequence's surprise per symbol sits within $\varepsilon$ of the source's entropy rate.
 
@@ -38,7 +46,13 @@ Fair coin ($h=1$). Every specific sequence of length $n$ has $p(x^n) = 2^{-n}$, 
 
 <!-- section: typical-set -->
 
-The typical set is the set of sequences whose sample average information content is close to h. Although exponentially smaller than the whole space, it carries almost all the probability mass.
+:::definition[Typical set]{#typical-set}
+The typical set is the set of sequences whose sample average information content is close to $h$:
+
+$$A_\varepsilon^{(n)} = \Bigl\{ x^n : \bigl| -\tfrac{1}{n}\log_2 p(x^n) - h \bigr| < \varepsilon \Bigr\}.$$
+:::
+
+Although exponentially smaller than the whole space, it carries almost all the probability mass.
 
 This is why random-looking data (high entropy) is hard to compress: you need nearly n h bits to specify which typical sequence occurred.
 
@@ -109,12 +123,14 @@ In other words, you can compress down to h bits per symbol but no further, asymp
 
 <!-- section: statement -->
 
-For a discrete stationary ergodic source with entropy rate h:
+:::theorem[Shannon's source coding theorem]{#source-coding-theorem}
+Let a discrete stationary ergodic source have entropy rate $h$.
 
-- **Achievability**: For any R > h there exists a sequence of block codes with rate R that achieve error probability → 0 as block length n → ∞.
-- **Converse**: For any R < h, every sequence of codes with rate R has error probability bounded away from zero (in fact → 1).
+- **Achievability**: for any $R > h$ there exists a sequence of block codes with rate $R$ that achieve error probability $\to 0$ as the block length $n \to \infty$.
+- **Converse**: for any $R < h$, every sequence of codes with rate $R$ has error probability bounded away from zero (in fact $\to 1$).
+:::
 
-For i.i.d. sources the rate is simply the ordinary entropy H(X).
+The two halves pin the answer from opposite sides, and together they say the compressibility of the source is exactly the single number $h$. For i.i.d. sources that rate is simply the ordinary entropy $H(X)$.
 
 :::intuition
 Entropy is the "irreducible size" of the data. Good compression gets close to it; nothing can sustainably beat it.
@@ -140,9 +156,11 @@ $$H = -0.5\log_2 0.5 - 0.25\log_2 0.25 - 2\cdot 0.125\log_2 0.125 = 0.5\cdot 1 +
 
 <!-- section: achievability -->
 
-The proof is non-constructive in its simplest form and uses the AEP: enumerate the typical set (size roughly 2^{n h}) and assign each member a unique index of length ⌈n(R)⌉ bits where R > h. On atypical inputs declare error.
+The achievability half of the source coding theorem is proved by the AEP, and in its simplest form the argument is non-constructive: it shows that a good code exists without exhibiting one you would want to implement.
 
-Because the typical set has probability →1, the overall error probability →0.
+:::proof
+Enumerate the typical set, whose size is roughly $2^{nh}$, and assign each member a unique index of length $\lceil nR \rceil$ bits, where $R > h$. On atypical inputs, declare an error. Because the typical set has probability $\to 1$, the overall error probability $\to 0$.
+:::
 
 :::intuition
 You don't need to worry about the "crazy" strings that almost never occur. Just make a big table of all the ordinary strings and number them.
@@ -158,9 +176,11 @@ Source with H=2.3 bits/symbol. For blocks of n=1000, typical set size ≈ 2^{230
 
 <!-- section: converse -->
 
-If a code compresses to rate R < h, then even with the best possible mapping, there are not enough distinct codewords to cover all the typical sequences (of which there are ~2^{n h}).
+The converse half is a counting argument, and it is the reason entropy is a genuine barrier rather than a target that a cleverer engineer might one day undercut.
 
-By a pigeonhole or information argument (often using Fano's inequality), some typical source sequences must map to the same codeword or be lost, forcing the decoder to err with positive probability that does not vanish.
+:::proof
+If a code compresses to rate $R < h$, then even with the best possible mapping there are not enough distinct codewords to cover all the typical sequences, of which there are about $2^{nh}$. By a pigeonhole or information argument (often using Fano's inequality), some typical source sequences must map to the same codeword or be lost, forcing the decoder to err with a positive probability that does not vanish.
+:::
 
 :::intuition
 If you try to use too few bits, you are forced to "merge" two ordinary-looking long strings into the same codeword. The decoder cannot know which one was sent.
@@ -189,9 +209,13 @@ Compression is ubiquitous: from zip files and PNG images to the video codecs tha
 
 <!-- section: lossless-vs-lossy -->
 
-Lossless compression (gzip, PNG, FLAC, ZIP) guarantees exact recovery of the original bit string. It is required for text, executables, and scientific data where every bit matters.
+:::definition[Lossless and lossy compression]{#lossless-lossy}
+A compression scheme is **lossless** when it guarantees exact recovery of the original bit string, and **lossy** when it deliberately discards information, so that the reconstruction differs from the original.
+:::
 
-Lossy compression (JPEG, MP3, H.264, WebP) deliberately discards information that is judged perceptually unimportant, achieving much higher compression ratios at the cost of irreversible distortion.
+Lossless compression (gzip, PNG, FLAC, ZIP) is required for text, executables, and scientific data where every bit matters.
+
+Lossy compression (JPEG, MP3, H.264, WebP) discards information that is judged perceptually unimportant, achieving much higher compression ratios at the cost of irreversible distortion.
 
 :::intuition
 Lossless is like vacuum-packing your luggage so it takes less space but everything is still there when you unpack.
@@ -207,9 +231,11 @@ A 1 MB raw text file might gzip to 250 kB (lossless, 4:1). The same text as a lo
 
 <!-- section: redundancy -->
 
-All compression works by removing redundancy — the part of the data that can be predicted from a good model of the source.
+:::definition[Redundancy]{#redundancy}
+The redundancy of a source is the part of the data that can be predicted from a good model of the source. All compression works by removing it.
+:::
 
-If the true entropy rate is h bits per symbol, then in the limit a compressor cannot do better than h bits per symbol on typical data, no matter how clever the algorithm.
+If the true entropy rate is $h$ bits per symbol, then in the limit a compressor cannot do better than $h$ bits per symbol on typical data, no matter how clever the algorithm. Redundancy is precisely the gap between the naive description length and that floor.
 
 :::intuition
 Redundancy is "what you already know." In "aaaaaaa" the next 'a' is highly predictable; you don't need to send it explicitly.
@@ -261,11 +287,13 @@ It assigns shorter codewords to more probable symbols, exactly as intuition (and
 
 <!-- section: algorithm -->
 
-The algorithm builds a binary tree bottom-up:
+:::recipe[Huffman's algorithm]{#huffman-algorithm}
+The algorithm builds a binary tree bottom-up.
 
 1. Create a leaf node for each symbol, labeled with its probability.
-2. While more than one node remains: extract the two nodes with smallest probabilities, create a new internal node with probability = sum, and make the two nodes its children.
+2. While more than one node remains: extract the two nodes with smallest probabilities, create a new internal node with probability equal to their sum, and make the two nodes its children.
 3. The final remaining node is the root. Codewords are the paths from root to leaves (0 for left, 1 for right, or vice versa).
+:::
 
 The resulting code is prefix-free because it corresponds to a full binary tree (all internal nodes have two children, leaves hold symbols).
 
@@ -293,9 +321,15 @@ Reading paths from the root (0 = left, 1 = right): $A=0$ (len 1), $B=10$ (len 2)
 
 <!-- section: optimality -->
 
-Huffman codes are optimal among all prefix-free codes: no other prefix code has smaller expected codeword length for the given probabilities.
+:::theorem[Optimality of Huffman codes]{#huffman-optimality}
+Huffman codes are optimal among all prefix-free codes: no other prefix code has smaller expected codeword length for the given probabilities. Moreover the average length $L$ satisfies
 
-Moreover, the average length L satisfies H ≤ L < H + 1, so it is at most 1 bit worse than the entropy lower bound.
+$$H \le L < H + 1,$$
+
+so it is at most one bit per symbol worse than the entropy lower bound.
+:::
+
+The one-bit slack is the price of insisting on a whole number of bits per symbol. It matters for small alphabets, where one wasted bit is a large fraction of the total, and it is exactly what arithmetic coding removes.
 
 :::intuition
 Among all ways of writing a "comma-free" (instantaneously readable) variable-length code, Huffman gives the shortest average message.
@@ -347,7 +381,9 @@ It is the engine behind many modern compressors and is frequently paired with so
 
 <!-- section: idea -->
 
-Instead of mapping symbols to bit strings, arithmetic coding maps the whole sequence to a sub-interval of [0,1) whose length equals the probability of the sequence (under the model). Any number (the "tag") inside that final interval can serve as a compressed representation; the binary digits of the tag are what get transmitted.
+:::definition[Arithmetic code interval and tag]{#arithmetic-tag}
+Instead of mapping symbols to bit strings, arithmetic coding maps the whole sequence to a sub-interval of $[0,1)$ whose length equals the probability of the sequence under the model. Any number inside that final interval — the *tag* — can serve as a compressed representation; the binary digits of the tag are what get transmitted.
+:::
 
 Because the intervals for different messages are disjoint, the tag uniquely identifies the message.
 
@@ -380,7 +416,15 @@ $$\text{low}' = \text{low} + (\text{high}-\text{low})\cdot F(s),$$
 
 $$\text{high}' = \text{low} + (\text{high}-\text{low})\cdot \big(F(s) + p(s)\big).$$
 
-The new width is $\text{high}' - \text{low}' = (\text{high}-\text{low})\cdot p(s)$, so it shrinks by exactly the factor $p(s)$ each step. After the whole message the width equals the product of the per-symbol probabilities, i.e. the probability of the message — which is why $-\log_2(\text{width})$ bits suffice to name it.
+That single update rule is the whole encoder, and it has one consequence worth stating on its own.
+
+:::proposition[The final width is the message probability]{#arithmetic-width}
+After encoding a whole message, the width of the interval equals the probability of that message, so $-\log_2(\text{width})$ bits suffice to name it.
+:::
+
+:::proof
+The new width is $\text{high}' - \text{low}' = (\text{high}-\text{low})\cdot p(s)$, so it shrinks by exactly the factor $p(s)$ at each step. Multiplying those factors across the message leaves the product of the per-symbol probabilities, which is the probability of the message.
+:::
 
 To keep the arithmetic inside finite-precision registers, renormalization (E1/E2 scaling) is performed whenever the interval lies wholly in [0,0.5) or [0.5,1): output the decided bit and double the interval.
 
@@ -469,25 +513,11 @@ Output stream: **1, 2, 3, 5** — four small integers in place of seven characte
 
 <!-- section: encoding-process -->
 
-Encoding (greedy):
-
-current = empty
-
-for each next character c:
-
-  if current + c is in dictionary:
-
-    current = current + c
-
-  else:
-
-    output code for current
-
-    add current + c to dictionary
-
-    current = c
-
-output code for final current
+:::recipe[LZW encoding (greedy)]{#lzw-encoding}
+1. Set `current` to the empty string.
+2. For each next character `c`: if `current + c` is in the dictionary, set `current = current + c`; otherwise output the code for `current`, add `current + c` to the dictionary, and set `current = c`.
+3. At the end of the input, output the code for the final `current`.
+:::
 
 Decoding is symmetric and uses the fact that when a new code is received, the first character of the string it represents is the first character of the string that was just decoded.
 
@@ -543,10 +573,12 @@ Shannon–Fano coding is one of the earliest systematic methods for constructing
 
 <!-- section: construction -->
 
+:::recipe[Shannon–Fano construction]{#shannon-fano-construction}
 1. Sort the symbols in decreasing order of probability.
 2. Divide the list into two groups so that the total probability of each group is as equal as possible.
 3. Assign 0 to the first group and 1 to the second group (or vice versa).
 4. Recursively apply the procedure to each subgroup until every symbol is in a group by itself.
+:::
 
 The resulting binary strings are the codewords. Because the procedure builds a binary tree, the code is prefix-free.
 
@@ -580,7 +612,11 @@ Shannon–Fano is a top-down heuristic that tries to balance probability at each
 
 For many distributions the two methods give identical or very similar codes, but there exist distributions where Shannon–Fano is strictly suboptimal (its average length is larger than Huffman's).
 
-Both methods satisfy the bound L < H + 1.
+Both methods satisfy the bound
+
+$$L < H + 1,$$
+
+so the gap between the heuristic and the optimum is never wider than the gap either of them has to the entropy.
 
 :::intuition
 Shannon–Fano is like trying to split a class into two teams of equal "strength" (probability) at every level.
@@ -647,11 +683,15 @@ Universal coding is the theoretical foundation for "just works" compressors such
 
 <!-- section: definition -->
 
-A code is (pointwise) universal for a class of sources if, for every source P in the class, the codelength L_n(x^n) on a string of length n satisfies
+:::definition[Universal code]{#universal-code}
+A code is (pointwise) universal for a class of sources if, for every source $P$ in the class, the codelength $L_n(x^n)$ on a string of length $n$ satisfies
 
-L_n(X^n) / n  →  H(P)   (in probability or almost surely under P)
+$$\frac{L_n(X^n)}{n} \longrightarrow H(P)$$
 
-or, more strongly, the total redundancy L_n - (-log P(X^n)) = o(n).
+in probability or almost surely under $P$, or, more strongly, the total redundancy obeys
+
+$$L_n - \bigl(-\log P(X^n)\bigr) = o(n).$$
+:::
 
 The code does not receive the parameters of P; it must work uniformly well across the whole class.
 
@@ -687,9 +727,13 @@ For binary i.i.d. sources (unknown bias p), the Krichevsky-Trofimov estimator ad
 
 <!-- section: limitations -->
 
-Universality comes at a price. For any finite n there is no code that simultaneously achieves the entropy of every possible source in the class; there is a minimax redundancy that any universal code must pay in the worst case.
+Universality comes at a price. For any finite $n$ there is no code that simultaneously achieves the entropy of every possible source in the class; there is a minimax redundancy that any universal code must pay in the worst case.
 
-For the class of all i.i.d. distributions over an alphabet of size m the best possible worst-case redundancy is asymptotically (m−1)/2 log n + O(1) bits for a block of length n.
+:::theorem[Minimax redundancy for i.i.d. classes]{#minimax-redundancy}
+For the class of all i.i.d. distributions over an alphabet of size $m$, the best possible worst-case redundancy for a block of length $n$ is asymptotically
+
+$$\frac{m-1}{2}\log n + O(1) \text{ bits}.$$
+:::
 
 :::intuition
 If the compressor has to be ready for *any* possible source, it has to "pay insurance" in the form of a few extra bits that cover the uncertainty about which source it is facing.

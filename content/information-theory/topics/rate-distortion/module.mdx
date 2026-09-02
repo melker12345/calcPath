@@ -16,7 +16,11 @@ Lossy compression is essential for images, video, speech, and any situation wher
 
 A source produces symbols X ~ p(x). A reproduction alphabet and a distortion measure d(x, \hat{x}) are given (e.g., squared error, Hamming distance). An encoder maps a block of n symbols to an index at rate R bits per symbol; the decoder produces \hat{X}^n with average per-symbol distortion ≤ D.
 
-R(D) is the infimum of rates R such that there exist codes with average distortion ≤ D for large n.
+:::definition[Rate-distortion function (operational)]{#rd-operational}
+$R(D)$ is the infimum of rates $R$ such that there exist codes with average distortion $\le D$ for large $n$.
+:::
+
+Everything in this chapter is an attempt to replace that infimum-over-codes, which you cannot compute, with a formula in the source distribution, which you can.
 
 :::intuition
 If you allow the reconstructed picture to look a little blurry (D>0), you can describe it with far fewer bits than the lossless case.
@@ -40,13 +44,19 @@ So going from "barely any error" to "25% of the variance as error" cut the rate 
 
 <!-- section: definition-rd -->
 
-The rate-distortion function is defined as the minimum mutual information over all conditional distributions (test channels) p(\hat{x}|x) that satisfy the distortion constraint:
+:::definition[Rate-distortion function]{#rd-function}
+The rate-distortion function is the minimum mutual information over all conditional distributions (test channels) $p(\hat{x}|x)$ that satisfy the distortion constraint:
 
-$R(D) = \min_{p(\hat{x}|x) : \mathbb{E}[d(X,\hat{X})] \le D} I(X;\hat{X})$
+$$R(D) = \min_{p(\hat{x}|x)\,:\, \mathbb{E}[d(X,\hat{X})] \le D} I(X;\hat{X}),$$
 
-where the minimum is over all p(\hat{x}|x) inducing E[d] ≤ D. The joint is p(x) p(\hat{x}|x).
+where the joint distribution is $p(x)\,p(\hat{x}|x)$.
+:::
 
-By the rate-distortion theorem (Shannon), R(D) is the fundamental limit: no scheme can do better asymptotically, and there exist schemes that approach it.
+:::theorem[Rate-distortion theorem]{#rd-theorem}
+$R(D)$ is the fundamental limit for lossy compression: no scheme can do better asymptotically, and there exist schemes that approach it.
+:::
+
+The theorem is what licenses the swap between the two definitions above — one counts codes, the other optimizes a mutual information, and they give the same number.
 
 :::intuition
 R(D) measures the smallest amount of information the reproduction \hat{X} must 'share' with the source X while keeping average distortion under D.
@@ -74,7 +84,15 @@ R(D) is convex, decreasing, R(0) = H(X) (lossless), and R(D_max)=0 where D_max i
 
 The Blahut-Arimoto algorithm (and other methods) can numerically compute R(D) by alternating optimization of the test channel and the output distribution.
 
-Important properties: for difference distortion measures the Shannon *lower* bound gives $R(D) \ge h(X) - h(D)$, where $h(D)$ is the differential entropy of the noise variable that just meets the distortion budget (this is a lower bound, not an upper bound). The slope of the curve, $dR/dD$, equals the (negative) Lagrange multiplier for the distortion constraint, which is why the parametric $s$-formulation below traces the curve.
+:::theorem[Shannon lower bound]{#shannon-lower-bound}
+For difference distortion measures,
+
+$$R(D) \ge h(X) - h(D),$$
+
+where $h(D)$ is the differential entropy of the noise variable that just meets the distortion budget.
+:::
+
+This is a lower bound, not an upper bound: it tells you how few bits could conceivably suffice, never that a scheme achieving them exists. The slope of the curve, $dR/dD$, equals the (negative) Lagrange multiplier for the distortion constraint, which is why the parametric $s$-formulation below traces the curve.
 
 :::intuition
 R(D) always starts at the entropy when D=0 and gracefully falls to zero when you allow enough distortion that you can just guess the reproduction without looking at the source.
@@ -108,11 +126,15 @@ Sanity checks: the curve is decreasing and convex (each halving of $D$ adds exac
 
 <!-- section: examples-gaussian-binary -->
 
-For X ~ N(0, σ²) and d(x,\hat{x})=(x-\hat{x})², the rate-distortion function is 
+:::theorem[Rate-distortion function of a Gaussian source]{#gaussian-rd}
+For $X \sim N(0, \sigma^2)$ with squared-error distortion $d(x,\hat{x})=(x-\hat{x})^2$,
 
-$R(D) = \frac12 \log_2 \left( \frac{\sigma^2}{D} \right)$ for 0 ≤ D ≤ σ², and 0 otherwise.
+$$R(D) = \frac12 \log_2 \left( \frac{\sigma^2}{D} \right) \quad \text{for } 0 \le D \le \sigma^2,$$
 
-The optimal test channel is additive Gaussian noise with variance D; the reconstruction is a scaled version of the observation.
+and $R(D) = 0$ otherwise.
+:::
+
+The optimal test channel is additive Gaussian noise with variance $D$; the reconstruction is a scaled version of the observation.
 
 For binary sources the expressions involve binary entropy as above.
 
@@ -154,11 +176,13 @@ It is both a lower bound (converse) that no code can beat and, by the rate-disto
 
 Formally,
 
-$R(D) = \inf_{p(\hat{x}|x):\ \mathbb{E}[d(X,\hat{X})]\leq D} I(X;\hat{X})$
+$$R(D) = \inf_{p(\hat{x}|x)\,:\ \mathbb{E}[d(X,\hat{X})]\leq D} I(X;\hat{X}),$$
 
-where the infimum is over all conditional pmfs (or pdfs) p(\hat x | x) such that the expected distortion is at most D. The infimum is achieved by some test channel p^*(\hat x | x) that is usually not the same as the forward channel that would be used in a communication problem.
+where the infimum is over all conditional pmfs (or pdfs) $p(\hat x | x)$ such that the expected distortion is at most $D$. The infimum is achieved by some test channel $p^*(\hat x | x)$ that is usually not the same as the forward channel that would be used in a communication problem.
 
-R(D) is a non-increasing convex function of D, with R(0) = H(X) (or h(X) for continuous) and R(D) = 0 for all D ≥ D_max where D_max is the distortion of the best zero-rate reproduction (e.g. the value that minimizes E[d(X, c)] over constants c).
+:::proposition[Shape of the rate-distortion curve]{#rd-shape}
+$R(D)$ is a non-increasing convex function of $D$, with $R(0) = H(X)$ (or $h(X)$ for a continuous source) and $R(D) = 0$ for all $D \ge D_{\max}$, where $D_{\max}$ is the distortion of the best zero-rate reproduction — the constant $c$ minimizing $\mathbb{E}[d(X,c)]$.
+:::
 
 :::intuition
 R(D) draws the curve 'how many bits do I really need if I'm allowed this much average error?'
@@ -174,11 +198,15 @@ For any source, at D=0 the only allowed test channels have \hat X = X with proba
 
 <!-- section: parametric-s -->
 
-It is often convenient to work with the Lagrangian formulation. For a slope parameter s ≤ 0 define
+It is often convenient to work with the Lagrangian formulation.
 
-$R_s = \min_{p(\hat x|x)} [ I(X;\hat X) + s \mathbb{E} d(X,\hat X) ]$
+:::definition[Lagrangian (s-parameter) formulation]{#s-parameter}
+For a slope parameter $s \le 0$, define
 
-Then the minimizing test channel for each s gives a point (D(s), R(s)) on the R(D) curve, where D(s) = - dR_s / ds (by envelope theorem). Varying s from 0 to -∞ traces the entire convex curve from (D_max, 0) to (0, H(X)).
+$$R_s = \min_{p(\hat x|x)} \bigl[\, I(X;\hat X) + s\, \mathbb{E}\, d(X,\hat X) \,\bigr].$$
+:::
+
+The minimizing test channel for each $s$ gives a point $(D(s), R(s))$ on the $R(D)$ curve, where $D(s) = -\,dR_s/ds$ by the envelope theorem. Varying $s$ from $0$ to $-\infty$ traces the entire convex curve from $(D_{\max}, 0)$ to $(0, H(X))$.
 
 This parametric form is the basis of the Blahut-Arimoto algorithm and of most analytic derivations.
 
@@ -196,13 +224,19 @@ For the Gaussian quadratic case the optimal test channel is always additive Gaus
 
 <!-- section: closed-form-bounds -->
 
-Only a handful of sources have known closed-form R(D):
+Only a handful of sources have known closed-form $R(D)$.
 
-- Bernoulli(p) with Hamming distortion: R(D) = h_2(p) - h_2(D) for D ≤ min(p,1-p) (more generally the binary R(D) formula).
-- Gaussian with quadratic distortion: R(D) = ½ log(σ²/D) for D ≤ σ².
-- Some other exponential-family sources with matching distortion measures.
+:::proposition[Closed-form rate-distortion functions]{#rd-closed-forms}
+For a Bernoulli($p$) source with Hamming distortion,
 
-Useful bounds include the Shannon lower bound R(D) ≥ h(X) - h(D) (for difference distortion measures), and various upper bounds obtained from specific test channels (e.g., the Gaussian test channel for non-Gaussian sources gives an upper bound on R(D)).
+$$R(D) = h_2(p) - h_2(D) \quad \text{for } D \le \min(p, 1-p).$$
+
+For a Gaussian source with quadratic distortion,
+
+$$R(D) = \tfrac12 \log\!\left(\frac{\sigma^2}{D}\right) \quad \text{for } D \le \sigma^2.$$
+:::
+
+Some other exponential-family sources with matching distortion measures also admit closed forms; beyond those, the useful bounds are the Shannon lower bound $R(D) \ge h(X) - h(D)$ for difference distortion measures, and various upper bounds obtained from specific test channels (e.g., the Gaussian test channel for non-Gaussian sources gives an upper bound on R(D)).
 
 :::intuition
 For the 'nicest' sources (Gaussian, binary) we have exact formulas that look like 'entropy minus the entropy of the allowed error'.
@@ -231,7 +265,9 @@ While quantization always introduces error, careful design minimizes the perceiv
 
 <!-- section: scalar-quantization -->
 
-A scalar quantizer Q maps a real number x to the nearest (or otherwise chosen) reproduction level \hat{x}_i from a codebook of size 2^b (for b-bit quantizer). The decision regions (Voronoi cells) partition the real line.
+:::definition[Scalar quantizer]{#scalar-quantizer}
+A scalar quantizer $Q$ maps a real number $x$ to the nearest (or otherwise chosen) reproduction level $\hat{x}_i$ from a codebook of size $2^b$ for a $b$-bit quantizer. The decision regions (Voronoi cells) partition the real line.
+:::
 
 A uniform quantizer spaces levels equally with step size Δ; a non-uniform quantizer places levels more densely where the source density is high or where distortion is more costly.
 
@@ -260,13 +296,26 @@ Sanity check: the error magnitude is below half a step, as it must be for neares
 
 <!-- section: lloyd-max -->
 
-The Lloyd-Max conditions for a minimum-MSE quantizer are:
+:::theorem[Lloyd–Max conditions]{#lloyd-max-conditions}
+A minimum-MSE quantizer satisfies two conditions. Each reproduction level is the centroid (conditional mean) of its decision region,
 
-1. Each reproduction level \hat{x}_i is the centroid (conditional mean) of its decision region: \hat{x}_i = E[X | X ∈ V_i].
+$$\hat{x}_i = \mathbb{E}[X \mid X \in V_i],$$
 
-2. Each decision boundary between \hat{x}_i and \hat{x}_{i+1} lies at the midpoint (for MSE): ( \hat{x}_i + \hat{x}_{i+1} )/2 .
+and each decision boundary between $\hat{x}_i$ and $\hat{x}_{i+1}$ lies at the midpoint
 
-These yield an iterative algorithm: start with some levels, assign points to nearest, update levels to centroids, repeat until convergence. For many common densities (Gaussian, Laplacian) the solution is tabulated or can be computed numerically.
+$$\frac{\hat{x}_i + \hat{x}_{i+1}}{2}.$$
+:::
+
+Each condition is optimal given the other, which is exactly what makes an alternating algorithm natural.
+
+:::recipe[Lloyd iteration]{#lloyd-iteration}
+1. Start with some reproduction levels.
+2. Assign each point to the nearest level.
+3. Update each level to the centroid of the points assigned to it.
+4. Repeat until convergence.
+:::
+
+For many common densities (Gaussian, Laplacian) the solution is tabulated or can be computed numerically.
 
 For non-MSE distortion measures the conditions generalize (e.g., median for absolute error).
 
@@ -290,11 +339,21 @@ Resulting distortion $\text{MSE} \approx 0.1175$, versus $\approx 0.1188$ for th
 
 <!-- section: performance-highrate -->
 
-For high rate (small $\Delta$), the granular quantization-noise power of a uniform quantizer is $\sigma_q^2 \approx \Delta^2/12$ (variance of a uniform distribution on $[-\Delta/2, \Delta/2]$). For a $b$-bit quantizer spanning full-scale amplitude $A$ (so $\Delta = 2A/2^b$), the signal-to-quantization-noise ratio is
+For high rate (small $\Delta$), the granular quantization-noise power of a uniform quantizer is $\sigma_q^2 \approx \Delta^2/12$, the variance of a uniform distribution on $[-\Delta/2, \Delta/2]$.
+
+:::proposition[High-rate SQNR of a uniform quantizer]{#sqnr}
+For a $b$-bit quantizer spanning full-scale amplitude $A$, so that $\Delta = 2A/2^b$, the signal-to-quantization-noise ratio is
 
 $$\text{SQNR} = 10 \log_{10}\!\frac{\sigma^2}{\sigma_q^2} \approx 6.02\,b + 10\log_{10}\!\frac{12\,\sigma^2}{(2A)^2}\ \text{dB},$$
 
-where $\sigma^2$ is the signal power. The $b$ appears exactly once (inside $\Delta$); the second term depends only on the signal's loading factor $A/\sigma$, not on $b$. Because each added bit halves $\Delta$, it multiplies $\sigma_q^2$ by $1/4$, i.e. adds $10\log_{10}4 \approx 6.02$ dB. For a full-scale sinusoid ($\sigma^2 = A^2/2$) the constant term is $10\log_{10}(12/8) = 10\log_{10}(1.5) \approx 1.76$ dB, giving the classic $\text{SQNR} \approx 6.02\,b + 1.76$ dB.
+where $\sigma^2$ is the signal power.
+:::
+
+:::proof
+The parameter $b$ appears exactly once, inside $\Delta$; the second term depends only on the signal's loading factor $A/\sigma$, not on $b$. Because each added bit halves $\Delta$, it multiplies $\sigma_q^2$ by $1/4$, that is, it adds $10\log_{10}4 \approx 6.02$ dB.
+:::
+
+For a full-scale sinusoid ($\sigma^2 = A^2/2$) the constant term is $10\log_{10}(12/8) = 10\log_{10}(1.5) \approx 1.76$ dB, giving the classic $\text{SQNR} \approx 6.02\,b + 1.76$ dB.
 
 Companding (compressor + uniform quantizer + expander) approximates the optimal non-uniform quantizer for a given density; μ-law and A-law are classic examples in telephony.
 
@@ -354,12 +413,14 @@ Result: $0.109$ vs $0.363$, a $3.3\times$ reduction in MSE at the same rate. The
 
 <!-- section: lbg-design -->
 
-The Linde-Buzo-Gray (LBG) algorithm is the vector generalization of Lloyd-Max iteration:
+:::recipe[Linde–Buzo–Gray (generalized Lloyd) algorithm]{#lbg}
+The LBG algorithm is the vector generalization of the Lloyd-Max iteration.
 
-1. Start with an initial codebook (e.g., random or from a training set split).
+1. Start with an initial codebook (e.g. random, or from a training-set split).
 2. Assign each training vector to the nearest codevector (Voronoi partition).
 3. Replace each codevector by the centroid of the vectors assigned to it.
-4. Repeat until the codebook (or distortion) stabilizes.
+4. Repeat until the codebook (or the distortion) stabilizes.
+:::
 
 It is exactly k-means clustering with the Euclidean (or other) distortion. Good initialization (splitting, pairwise nearest neighbor) and multiple restarts help avoid poor local minima. For very large codebooks or dimensions, tree-structured VQ, product VQ, or lattice VQ are used as structured approximations.
 
@@ -410,9 +471,19 @@ These settings model many practical scenarios: distributed sensor networks, vide
 
 <!-- section: rd-si-decoder -->
 
-This is the Wyner-Ziv problem: lossy compression of X with distortion D when Y is available only at the decoder. The minimal rate is R_{WZ}(D) = min I(X; U | Y) over auxiliaries U generated from X alone and reconstructions that may depend on Y.
+This is the Wyner-Ziv problem: lossy compression of $X$ with distortion $D$ when $Y$ is available only at the decoder. The minimal rate is
 
-For the quadratic-Gaussian source, R_{WZ}(D) = R_{X|Y}(D) — there is no rate loss from the side information being absent at the encoder. For other sources (e.g., binary Hamming) there is generally a strict gap R_{WZ}(D) > R_{X|Y}(D).
+$$R_{WZ}(D) = \min\ I(X; U \mid Y),$$
+
+minimized over auxiliaries $U$ generated from $X$ alone and reconstructions that may depend on $Y$.
+
+:::theorem[No rate loss for the quadratic-Gaussian source]{#wz-no-rate-loss}
+For the quadratic-Gaussian source,
+
+$$R_{WZ}(D) = R_{X|Y}(D),$$
+
+so there is no rate loss from the side information being absent at the encoder. For other sources (e.g. binary with Hamming distortion) there is generally a strict gap $R_{WZ}(D) > R_{X|Y}(D)$.
+:::
 
 :::intuition
 Your friend has a noisy version Y of your photo X. You must send a lossy description that lets him reconstruct a good version using his Y, but you don't know his exact Y when you compress.
@@ -456,11 +527,13 @@ If Y = X exactly (perfect side info at encoder), the encoder can simply send not
 
 <!-- section: conditional-rd -->
 
-When both encoder and decoder know Y, the problem reduces to ordinary rate-distortion on the conditional distribution of X given Y. The rate-distortion function is
+When both encoder and decoder know $Y$, the problem reduces to ordinary rate-distortion on the conditional distribution of $X$ given $Y$.
 
-R_{X|Y}(D) = min I(X; \hat X | Y)
+:::definition[Conditional rate-distortion function]{#conditional-rd}
+$$R_{X|Y}(D) = \min\ I(X; \hat X \mid Y),$$
 
-where the min is over p(\hat x | x, y) such that E[d(X, \hat X)] ≤ D (the expectation is also conditional on Y in the natural way).
+where the minimum is over $p(\hat x \mid x, y)$ such that $\mathbb{E}[d(X, \hat X)] \le D$, the expectation being conditional on $Y$ in the natural way.
+:::
 
 This is the smallest possible rate among all side-information configurations; extra side info at the encoder cannot hurt.
 
@@ -531,13 +604,17 @@ X ~ N(0,1), Y = X + Z with Z ~ N(0, N_z) independent, quadratic distortion. Even
 
 <!-- section: wz-rd -->
 
-The Wyner-Ziv rate-distortion function is
+:::definition[Wyner–Ziv rate-distortion function]{#wyner-ziv-rd}
+$$R_{WZ}(D) = \min\ I(X; U \mid Y),$$
 
-R_{WZ}(D) = \min I(X; U | Y)
+where the minimum is over auxiliary variables $U$ and reconstruction functions $\hat x(u,y)$ such that $\mathbb{E}[d(X, \hat x(U,Y))] \le D$ and the Markov chain $U - X - Y$ holds, i.e. $U$ is generated from $X$ alone.
+:::
 
-where the min is over auxiliary U and reconstruction functions \hat x(u,y) such that E[d(X, \hat x(U,Y))] ≤ D and the Markov chain U — X — Y holds (U is generated from X alone).
+When side information is also at the encoder, the minimal rate is instead the conditional rate-distortion $R_{X|Y}(D) = \min I(X; \hat X \mid Y)$ under the distortion constraint. In general
 
-When side information is also at the encoder the minimal rate is the conditional rate-distortion R_{X|Y}(D) = min I(X; \hat X | Y) under the distortion constraint. In general R_{WZ}(D) ≥ R_{X|Y}(D); equality holds for the quadratic Gaussian source.
+$$R_{WZ}(D) \ge R_{X|Y}(D),$$
+
+with equality for the quadratic Gaussian source.
 
 :::intuition
 The auxiliary U is like a 'description' that the encoder prepares; the decoder, with Y, extracts the best \hat X from U and Y.
@@ -553,9 +630,18 @@ For binary source with Hamming distortion and binary side information, there is 
 
 <!-- section: wz-binning -->
 
-The optimal scheme quantizes X to an auxiliary codeword U (as in ordinary rate-distortion), then bins the U codewords exactly as in Slepian-Wolf (the bin index is the message sent). The decoder, given the bin index and its Y, finds the unique U in the bin that is jointly typical with Y, then produces the reconstruction \hat x(U, Y).
+:::recipe[Quantize and bin]{#wz-quantize-bin}
+1. Quantize $X$ to an auxiliary codeword $U$, as in ordinary rate-distortion.
+2. Bin the $U$ codewords exactly as in Slepian-Wolf, and send the bin index as the message.
+3. At the decoder, given the bin index and its $Y$, find the unique $U$ in the bin that is jointly typical with $Y$.
+4. Produce the reconstruction $\hat x(U, Y)$.
+:::
 
-The binning rate is essentially I(U; X) - I(U; Y) = I(U; X | Y), which is exactly the expression for R_{WZ}.
+The binning rate is essentially
+
+$$I(U; X) - I(U; Y) = I(U; X \mid Y),$$
+
+which is exactly the expression for $R_{WZ}$.
 
 This unifies quantization (to create U) with distributed lossless compression of the quantization index (binning).
 
@@ -606,15 +692,13 @@ X and Y are the two bits of a (3,1) repetition codeword sent over independent BS
 
 <!-- section: sw-rate-region -->
 
-The achievable rate region is all (R1, R2) such that
+:::theorem[Slepian–Wolf theorem]{#slepian-wolf}
+The achievable rate region is all pairs $(R_1, R_2)$ satisfying
 
-R1 ≥ H(X | Y)
+$$R_1 \ge H(X \mid Y), \qquad R_2 \ge H(Y \mid X), \qquad R_1 + R_2 \ge H(X, Y).$$
+:::
 
-R2 ≥ H(Y | X)
-
-R1 + R2 ≥ H(X, Y)
-
-The region is a pentagon (for two sources). The corner point (H(X|Y), H(Y)) corresponds to encoder 2 sending at full entropy (no compression exploiting correlation) while encoder 1 sends only the 'innovation' given Y.
+The region is a pentagon (for two sources). The corner point $(H(X|Y), H(Y))$ corresponds to encoder 2 sending at full entropy (no compression exploiting correlation) while encoder 1 sends only the 'innovation' given Y.
 
 The surprising fact is that the sum rate equals the joint entropy even though encoders are separate — the same as if they could pool their observations before compressing.
 
@@ -636,9 +720,9 @@ For binary symmetric correlation (X uniform, Y = X ⊕ Z, Z ~ Bern(p)), H(X,Y) =
 
 The achievability uses random binning, which is the dual of random channel coding.
 
-Encoder 1 generates a random partition of the typical X^n sequences into 2^{n R1} bins and sends only the bin index. Encoder 2 does likewise for Y^n.
-
-The decoder, knowing both bin indices, looks for the unique jointly typical pair (x^n, y^n) that lies in the announced bins. Because the number of bins is large enough, with high probability there is only one such pair inside the intersection of the two bins.
+:::proof
+Encoder 1 generates a random partition of the typical $X^n$ sequences into $2^{nR_1}$ bins and sends only the bin index; encoder 2 does likewise for $Y^n$. The decoder, knowing both bin indices, looks for the unique jointly typical pair $(x^n, y^n)$ lying in the announced bins. Because the number of bins is large enough, with high probability there is only one such pair inside the intersection of the two bins.
+:::
 
 This is exactly analogous to the decoder in a multiple-access channel or to syndrome decoding; the 'bins' play the role of cosets.
 
