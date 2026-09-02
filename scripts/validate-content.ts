@@ -198,6 +198,24 @@ async function main() {
         warnings.push(`${slug}/topics/${tid}/module.mdx: no ## sections`);
       }
 
+      // Two ## sections deriving the same slug is a silent data bug: questions,
+      // deep links (?section=) and per-section progress can only resolve to the
+      // first one, so the other section's questions are stranded.
+      const sectionCounts = new Map<string, number>();
+      for (const slug of extractMdxSectionSlugs(mdx)) {
+        sectionCounts.set(slug, (sectionCounts.get(slug) ?? 0) + 1);
+      }
+      for (const [slug, count] of sectionCounts) {
+        if (count > 1) {
+          const stranded = questions.filter((q) => q.section === slug).length;
+          warnings.push(
+            `${slug}/topics/${tid}/module.mdx: ${count} sections share the slug "${slug}"` +
+              (stranded ? ` — ${stranded} question(s) cannot tell them apart` : "") +
+              ` (give each an explicit {#slug} or <!-- section: --> marker)`
+          );
+        }
+      }
+
       // section matching (the critical one) — now uses the shared canonical implementation
       // so it is guaranteed identical to what deriveModuleStructureFromBundle and adapters produce.
       const msecs = extractMdxSectionSlugs(mdx);
