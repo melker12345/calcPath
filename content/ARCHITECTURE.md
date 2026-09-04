@@ -82,6 +82,11 @@ implementations. The environment vocabulary itself lives in
 `src/lib/content/math-blocks.ts` and is rendered by `src/components/mdx-content.tsx`.
 
 ## Authoring Rules & Validation
+- `npm run content:contrast` audits every subject theme in both light and dark
+  against WCAG AA: secondary prose, labels, link accents, and button labels on
+  their accent. Themes project their palette onto the global tokens, so a colour
+  picked for its character can quietly make body text unreadable — run this after
+  touching `src/lib/themes.ts`.
 - `npm run content:audit` reports book-style coverage per subject (definitions,
   theorems, proofs, examples, intuition asides) and fails if a module lost prose
   or if any section slug changed against a git revision (`--base=<rev>`,
