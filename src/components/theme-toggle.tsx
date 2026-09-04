@@ -16,7 +16,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="flex h-9 w-9 items-center justify-center rounded-lg border text-sm transition theme-border theme-surface theme-text-muted hover:theme-text"
+      className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--nav-control-border,var(--border))] bg-[var(--nav-control-bg,var(--surface))] text-sm theme-text-muted transition hover:bg-[var(--nav-control-hover,var(--surface-2))] hover:theme-text"
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       title={isDark ? "Switch to light mode" : "Switch to GitHub dark mode"}
     >

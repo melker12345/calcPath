@@ -10,8 +10,8 @@ export default async function SubjectsPage() {
       <div className="mb-10">
         <h1 className="text-3xl font-semibold tracking-tight theme-text">All subjects</h1>
         <p className="mt-2 max-w-2xl text-base leading-relaxed theme-text-secondary">
-          Free, self-contained math courses — each in its own world. Read the
-          chapters or jump straight into practice.
+          Free, self-contained math courses. Read the chapters or jump
+          straight into practice.
         </p>
       </div>
 

@@ -209,7 +209,7 @@ export function SearchTrigger() {
     <button
       type="button"
       onClick={open}
-      className="flex items-center gap-2 rounded-lg border theme-border bg-[var(--surface)]/80 px-3 py-1.5 text-sm theme-text-muted transition hover:bg-[var(--surface)]"
+      className="flex items-center gap-2 rounded-lg border border-[var(--nav-control-border,var(--border))] bg-[var(--nav-control-bg,var(--surface))] px-3 py-1.5 text-sm theme-text-muted transition hover:bg-[var(--nav-control-hover,var(--surface-2))] hover:theme-text"
     >
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />

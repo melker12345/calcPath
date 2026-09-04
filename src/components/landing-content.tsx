@@ -371,20 +371,18 @@ export function LandingContent({
                       {featuredSubjects.map((subject) => {
                         const icon = subject.icon || "•";
                         const count = subject.topicCount ? `${subject.topicCount} topics` : "";
-                        // Each row is a mini window into the subject's metaphor
-                        // world (texture + palette via .subject-theme-* class).
+                        // Each row carries the subject's identity accent
+                        // (--subject-accent via .subject-theme-* class).
                         const themeClass = subjectThemeClass(subject.slug);
                         return (
                           <Link
                             key={subject.slug}
                             href={`/${subject.slug}`}
-                            className={`group flex items-center gap-3 rounded-xl border theme-border p-3.5 transition-shadow duration-200 hover:shadow-[0_10px_24px_-12px_color-mix(in_srgb,var(--accent)_50%,rgba(2,6,23,0.35))] sm:items-start sm:rounded-2xl sm:p-4 lg:p-5 ${
-                              themeClass || "bg-[var(--surface)]/80 backdrop-blur-[1px]"
-                            }`}
+                            className={`group flex items-center gap-3 rounded-xl border theme-border bg-[var(--surface)]/80 backdrop-blur-[1px] p-3.5 transition-shadow duration-200 hover:shadow-[0_10px_24px_-12px_color-mix(in_srgb,var(--subject-accent,var(--accent))_50%,rgba(2,6,23,0.35))] sm:items-start sm:rounded-2xl sm:p-4 lg:p-5 ${themeClass}`}
                           >
                             <span
                               aria-hidden
-                              className="shrink-0 font-serif text-xl leading-none text-[var(--accent)] sm:text-2xl"
+                              className="shrink-0 font-serif text-xl leading-none text-[var(--subject-accent,var(--accent))] sm:text-2xl"
                             >
                               {icon}
                             </span>

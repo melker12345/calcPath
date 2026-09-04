@@ -226,7 +226,11 @@ export const SiteHeader = ({ subjects }: { subjects: NavSubject[] }) => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b theme-border bg-[var(--surface-solid)] pt-[env(safe-area-inset-top)]">
+      {/* --nav-bg / --nav-border exist only inside a .subject-theme-* subtree
+          (see themes.ts): there the nav carries the subject's identity tint —
+          the ONE place subjects differ visually. Everywhere else the fallbacks
+          keep the default header. */}
+      <header className="sticky top-0 z-50 border-b border-[var(--nav-border,var(--border))] bg-[var(--nav-bg,var(--surface-solid))] pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="CalcPath home">
             <span className="font-serif text-xl font-semibold theme-text">CalcPath</span>
@@ -281,15 +285,15 @@ function SiteHeaderAuthControls({
         <ThemeToggle />
         <Link
           href="/account"
-          className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-zinc-200 bg-white transition active:bg-zinc-50 dark:border-white/15 dark:bg-[#18181b]"
+          className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[var(--nav-control-border,var(--border))] bg-[var(--nav-control-bg,var(--surface))] theme-text-secondary transition active:bg-[var(--nav-control-hover,var(--surface-2))]"
           aria-label="Account"
         >
-          <ProfileIcon size={18} color="#3f3f46" />
+          <ProfileIcon size={18} color="currentColor" />
         </Link>
         <button
           type="button"
           onClick={onToggleMobileMenu}
-          className="flex h-10 w-10 items-center justify-center rounded border border-stone-300 bg-[#fffef8] text-stone-700 transition active:bg-stone-100 dark:border-white/15 dark:bg-[#18181b] dark:text-[#ededed]"
+          className="flex h-10 w-10 items-center justify-center rounded border border-[var(--nav-control-border,var(--border))] bg-[var(--nav-control-bg,var(--surface))] theme-text-secondary transition active:bg-[var(--nav-control-hover,var(--surface-2))]"
           aria-label="Toggle menu"
           aria-expanded={mobileMenuOpen}
         >
@@ -303,7 +307,7 @@ function SiteHeaderAuthControls({
         <ThemeToggle />
         <Link
           href="/account"
-          className="flex items-center gap-2 rounded-full border-2 theme-border theme-surface px-3 py-1.5 text-sm font-semibold theme-text shadow-sm transition hover:shadow-md"
+          className="flex items-center gap-2 rounded-full border-2 border-[var(--nav-control-border,var(--border))] bg-[var(--nav-control-bg,var(--surface))] px-3 py-1.5 text-sm font-semibold theme-text shadow-sm transition hover:bg-[var(--nav-control-hover,var(--surface-2))] hover:shadow-md"
           aria-label="Account"
         >
           <ProfileIcon size={18} color="currentColor" />

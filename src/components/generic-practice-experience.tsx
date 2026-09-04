@@ -197,7 +197,7 @@ export function GenericPracticeExperience({
     // Matches the polished card look and feel of the main data-driven routes exactly.
     return (
       <div className="mx-auto w-full max-w-3xl px-0 pb-0 sm:px-6 sm:py-10">
-        <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-center bg-[var(--surface)] px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
+        <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-center bg-[var(--surface-solid)] px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:border sm:border-[var(--border)] sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
           <div className="mx-auto max-w-md text-center">
             <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface-2)] text-2xl" aria-hidden="true">
               📝
@@ -345,7 +345,10 @@ export function GenericPracticeExperience({
       </div>
 
       {/* Main practice card (uses the established visual language) */}
-      <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-end bg-[var(--surface)] px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
+      {/* Practice surface is deliberately OPAQUE (--surface-solid): themed pages use a
+          translucent --surface over a textured background, and grid/ruled-line textures
+          running behind question maths made practice unreadable in dark mode. */}
+      <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-end bg-[var(--surface-solid)] px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:border sm:border-[var(--border)] sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
         {/* Progress dots + "1 / N" counter (counter positioned on right of dots; uses theme-text-muted) */}
         <div className="flex w-full justify-center">
           <div className="flex items-center gap-2">

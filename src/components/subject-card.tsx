@@ -2,12 +2,12 @@ import Link from "next/link";
 import { subjectThemeClass } from "@/lib/themes";
 
 /**
- * Themed subject card — a miniature window into the subject's metaphor world
- * (graph paper, chalkboard, blueprint, vellum, terminal, ...). The
+ * Subject card — a neutral card carrying the subject's identity accent. The
  * .subject-theme-<id> class (generated CSS in src/lib/themes.ts, injected by
- * the root layout) paints the theme's background texture and projects its
- * palette onto the token vars — with light AND dark variants, so cards follow
- * the site toggle. Server component, no client JS.
+ * the root layout) defines --subject-accent for this subtree — with light AND
+ * dark variants, so cards follow the site toggle. The card itself uses the
+ * default site surface; only the accent colors differ per subject.
+ * Server component, no client JS.
  *
  * Used by /subjects and the landing page subject grid.
  */
@@ -44,15 +44,13 @@ export function SubjectCard({ subject }: { subject: SubjectCardData }) {
   return (
     <Link
       href={`/${subject.slug}`}
-      className={`group flex flex-col overflow-hidden rounded-2xl border theme-border p-6 shadow-[0_1px_2px_rgba(2,6,23,0.05)] transition-shadow duration-300 ease-out hover:shadow-[0_18px_40px_-18px_color-mix(in_srgb,var(--accent)_50%,rgba(2,6,23,0.35))] ${
-        themeClass || "bg-[var(--surface)]"
-      }`}
+      className={`group flex flex-col overflow-hidden rounded-2xl border theme-border bg-[var(--surface)] p-6 shadow-[0_1px_2px_rgba(2,6,23,0.05)] transition-shadow duration-300 ease-out hover:shadow-[0_18px_40px_-18px_color-mix(in_srgb,var(--subject-accent,var(--accent))_50%,rgba(2,6,23,0.35))] ${themeClass}`}
     >
       {/* Glyph as a typographic mark in the subject's accent */}
       <div className="flex items-start justify-between gap-3">
         <span
           aria-hidden
-          className="font-serif text-[1.9rem] leading-none text-[var(--accent)]"
+          className="font-serif text-[1.9rem] leading-none text-[var(--subject-accent,var(--accent))]"
         >
           {glyph}
         </span>
@@ -74,10 +72,10 @@ export function SubjectCard({ subject }: { subject: SubjectCardData }) {
           texture (notebook / manuscript / proof-sheet themes). */}
       <div
         className="mt-auto flex items-center justify-between gap-3 border-t pt-4"
-        style={{ borderColor: "color-mix(in srgb, var(--accent) 28%, var(--border))" }}
+        style={{ borderColor: "color-mix(in srgb, var(--subject-accent, var(--accent)) 28%, var(--border))" }}
       >
         <span className="text-xs font-medium theme-text-secondary">{chapterLabel}</span>
-        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--accent)]">
+        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--subject-accent,var(--accent))]">
           Start
           <span
             aria-hidden
