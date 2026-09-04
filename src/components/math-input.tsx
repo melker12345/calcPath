@@ -352,7 +352,7 @@ export function MathInput({
   );
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl border sm:min-h-0" data-subject={subject} style={{ background: th.containerBg, borderColor: th.containerBorder }}>
+    <div className="flex flex-col overflow-hidden rounded-2xl sm:min-h-0" data-subject={subject} style={{ background: th.containerBg }}>
       {/* ── Header: label + draw + hint ── */}
       <div className="flex items-center justify-between px-4 pt-3 sm:px-5 sm:pt-4" style={{ background: th.headerBg }}>
         <p className="text-xs font-semibold sm:text-sm" style={{ color: th.labelColor }}>{placeholder}</p>
@@ -471,9 +471,13 @@ export function MathInput({
         )}
 
         <div className={feedbackOverlay ? "invisible" : ""}>
-          {/* ── Suggestions strip: contextual symbols for this question ── */}
+          {/* ── Suggestions strip: contextual symbols for this question.
+                 Dividers are short centered hairlines, not full-width rules. ── */}
           {suggestions.length > 0 && (
-            <div className="flex items-center justify-center gap-1.5 overflow-x-auto border-t px-3 py-1.5 sm:gap-2 sm:px-4" style={{ background: th.keypadBg, borderColor: th.dividerColor }}>
+            <div aria-hidden className="mx-auto h-px w-1/3" style={{ background: th.dividerColor }} />
+          )}
+          {suggestions.length > 0 && (
+            <div className="flex items-center justify-center gap-1.5 overflow-x-auto px-3 py-1.5 sm:gap-2 sm:px-4" style={{ background: th.keypadBg }}>
               {suggestions.map((k) => (
                 <button
                   key={k.label}
@@ -491,7 +495,8 @@ export function MathInput({
           {/* ── Keypad — compact, centered, capped width so it reads as a tool,
                  not a wall. Digits are clickable everywhere; typing + Enter
                  always work too. ── */}
-          <div className="border-t" style={{ background: th.keypadBg, borderColor: th.dividerColor }}>
+          <div style={{ background: th.keypadBg }}>
+            <div aria-hidden className="mx-auto h-px w-1/3" style={{ background: th.dividerColor }} />
             <div className="mx-auto w-full max-w-[430px] px-3 pb-2.5 pt-1.5 sm:px-4 sm:pb-3">
               {/* Tools row: ( )  xⁿ  √  ⌫  AC */}
               <div className="grid grid-cols-5 gap-1 pb-1 sm:gap-1.5 sm:pb-1.5">
