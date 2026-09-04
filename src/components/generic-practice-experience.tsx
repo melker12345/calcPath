@@ -152,6 +152,7 @@ export function GenericPracticeExperience({
     solvedCount,
     goToNext,
     goToPrev,
+    pinIndex,
 
     answer,
     setAnswer,
@@ -257,6 +258,10 @@ export function GenericPracticeExperience({
   }
 
   const submitAnswer = async (val: string) => {
+    // Freeze the session on this question so a correct grade (which updates
+    // progress and would move the auto-index to the next unsolved question)
+    // can't tear down the feedback the user is about to read.
+    pinIndex();
     // Multiple choice is graded by identity against the offered choices; only
     // typed answers go through expression equivalence.
     const mcqVerdict =
@@ -392,19 +397,11 @@ export function GenericPracticeExperience({
             >
               Review the explanation for this topic →
             </Link>
-            {subjectSlug === "calculus" && (
-              <Link
-                href={`/${subjectSlug}/test/${current.topicId}`}
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-50 dark:text-amber-400"
-              >
-                Take topic test →
-              </Link>
-            )}
           </div>
 
           {/* Answer input area */}
           {current.type === "mcq" ? (
-            <div className="flex flex-col gap-2 sm:gap-3">
+            <div className="flex min-h-0 flex-col gap-2 sm:gap-3">
               {(!feedbackOverlay || overlayDismissed) &&
                 current.choices?.map((choice) => (
                   <button
@@ -422,7 +419,7 @@ export function GenericPracticeExperience({
                 ))}
 
               {feedbackOverlay && !overlayDismissed && (
-                <div className="relative overflow-hidden rounded-xl border theme-border">
+                <div className="relative min-h-0 overflow-y-auto rounded-xl">
                   {isDismissable && (
                     <button
                       type="button"
@@ -528,12 +525,22 @@ export function GenericPracticeExperience({
             Q{topicProblems.findIndex((p) => p.id === current.id) + 1}
           </div>
 
-          <Link
-            className="justify-self-end rounded-lg px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] sm:text-sm"
-            href={`/${subjectSlug}`}
-          >
-            All {subjectLabel} topics
-          </Link>
+          <div className="flex items-center justify-self-end">
+            {subjectSlug === "calculus" && (
+              <Link
+                className="rounded-lg px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] sm:text-sm"
+                href={`/${subjectSlug}/test/${current.topicId}`}
+              >
+                Take topic test
+              </Link>
+            )}
+            <Link
+              className="rounded-lg px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] sm:text-sm"
+              href={`/${subjectSlug}`}
+            >
+              All {subjectLabel} topics
+            </Link>
+          </div>
         </div>
       </div>
     </div>

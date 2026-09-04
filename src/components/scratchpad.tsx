@@ -13,7 +13,10 @@ import { MathText } from "@/components/math-text";
 type Tool = "pen" | "eraser";
 
 const COLORS = ["#1e293b", "#dc2626", "#2563eb", "#16a34a", "#9333ea"];
-const DARK_DEFAULT_PEN = "#e2e8f0"; // whiteish for dark mode
+// Dark mode gets dark paper, so pens must be bright (default: near-white).
+const DARK_COLORS = ["#e2e8f0", "#f87171", "#60a5fa", "#4ade80", "#c084fc"];
+const PAPER_LIGHT = "#ffffff";
+const PAPER_DARK = "#10151c";
 const SIZES = [2, 4, 8];
 
 export function Scratchpad({
@@ -45,8 +48,9 @@ export function Scratchpad({
 
   useEffect(() => setMounted(true), []);
 
-  const defaultPenColor = isDark ? DARK_DEFAULT_PEN : COLORS[0];
-  const color = colorOverride ?? defaultPenColor;
+  const palette = isDark ? DARK_COLORS : COLORS;
+  const paper = isDark ? PAPER_DARK : PAPER_LIGHT;
+  const color = colorOverride ?? palette[0];
 
   const getCtx = useCallback(() => canvasRef.current?.getContext("2d") ?? null, []);
 
@@ -64,12 +68,14 @@ export function Scratchpad({
     canvas.height = rect.height * dpr;
     ctx.scale(dpr, dpr);
 
-    // Always give the canvas a clean light paper background (best for drawing)
-    ctx.fillStyle = "#ffffff";
+    // Paper follows the site theme: white in light mode, near-black in dark
+    // (a bright canvas in a dark room is blinding, and the default bright pen
+    // would be invisible on white).
+    ctx.fillStyle = paper;
     ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
 
     ctx.putImageData(existing, 0, 0);
-  }, []);
+  }, [paper]);
 
   // Restore saved drawing when opening
   useEffect(() => {
@@ -90,8 +96,8 @@ export function Scratchpad({
       canvas.height = rect.height * dpr;
       ctx.scale(dpr, dpr);
 
-      // Always paint a fresh white paper background *before* restoring the old drawing.
-      ctx.fillStyle = "#ffffff";
+      // Paint fresh theme-colored paper *before* restoring the old drawing.
+      ctx.fillStyle = paper;
       ctx.fillRect(0, 0, rect.width, rect.height);
 
       if (!savedImage) return;
@@ -160,7 +166,7 @@ export function Scratchpad({
     if (!ctx) return;
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, (tool === "eraser" ? size * 3 : size) / 2, 0, Math.PI * 2);
-    ctx.fillStyle = tool === "eraser" ? "#ffffff" : color;
+    ctx.fillStyle = tool === "eraser" ? paper : color;
     ctx.fill();
   };
 
@@ -176,7 +182,7 @@ export function Scratchpad({
     ctx.beginPath();
     ctx.moveTo(prev.x, prev.y);
     ctx.lineTo(pos.x, pos.y);
-    ctx.strokeStyle = tool === "eraser" ? "#ffffff" : color;
+    ctx.strokeStyle = tool === "eraser" ? paper : color;
     ctx.lineWidth = tool === "eraser" ? size * 3 : size;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -212,7 +218,7 @@ export function Scratchpad({
     const canvas = canvasRef.current;
     if (!ctx || !canvas) return;
     saveSnapshot();
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = paper;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   };
 
@@ -303,7 +309,7 @@ export function Scratchpad({
           {/* Colors (only when pen selected) */}
           {tool === "pen" && (
             <div className="flex items-center gap-1.5">
-              {(isDark ? [DARK_DEFAULT_PEN, "#f87171", "#60a5fa", "#4ade80", "#c084fc"] : COLORS).map((c) => (
+              {palette.map((c) => (
                 <button
                   key={c}
                   type="button"
@@ -353,10 +359,11 @@ export function Scratchpad({
         </div>
       )}
 
-      {/* Canvas — always white background (drawing surface) */}
+      {/* Canvas — paper color follows the theme (white / near-black) */}
       <canvas
         ref={canvasRef}
-        className="flex-1 cursor-crosshair touch-none bg-white"
+        className="flex-1 cursor-crosshair touch-none"
+        style={{ background: paper }}
         onMouseDown={startDraw}
         onMouseMove={draw}
         onMouseUp={endDraw}

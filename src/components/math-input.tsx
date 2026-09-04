@@ -352,7 +352,25 @@ export function MathInput({
   );
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl sm:min-h-0" data-subject={subject} style={{ background: th.containerBg }}>
+    <div className="relative flex flex-col overflow-hidden rounded-2xl sm:min-h-0" data-subject={subject} style={{ background: th.containerBg }}>
+      {/* ── Feedback overlay covers the ENTIRE input area (header + field +
+             keypad) so even long "Correct!" explanations fit without
+             scrolling; overflow-y-auto is the fallback for extreme cases. ── */}
+      {feedbackOverlay && (
+        <div className="absolute inset-0 z-10 overflow-y-auto rounded-2xl">
+          {onDismissOverlay && (
+            <button
+              type="button"
+              onClick={onDismissOverlay}
+              className="absolute right-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-zinc-500 shadow-sm backdrop-blur transition hover:bg-white hover:text-zinc-800 dark:bg-[var(--surface-2)]/80 dark:text-[var(--text-muted)] dark:hover:bg-[var(--surface-2)] dark:hover:text-[var(--text-secondary)] sm:right-3 sm:top-3 sm:h-8 sm:w-8"
+              aria-label="Close"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+            </button>
+          )}
+          {feedbackOverlay}
+        </div>
+      )}
       {/* ── Header: label + draw + hint ── */}
       <div className="flex items-center justify-between px-4 pt-3 sm:px-5 sm:pt-4" style={{ background: th.headerBg }}>
         <p className="text-xs font-semibold sm:text-sm" style={{ color: th.labelColor }}>{placeholder}</p>
@@ -394,10 +412,10 @@ export function MathInput({
         onSave={(dataUrl) => { scratchpadData.current = dataUrl; }}
       />
 
-      {/* ── Math field — compact borderless bar, accent ring on focus ── */}
+      {/* ── Math field — taller, and no wider than the keypad below it ── */}
       <div className="flex items-center justify-center px-4 py-3 sm:px-5" style={{ background: th.fieldAreaBg }}>
         <div
-          className="relative flex min-h-[52px] w-full items-center justify-center rounded-xl px-4 transition-shadow focus-within:ring-2 focus-within:ring-[var(--accent)]/50 sm:min-h-[58px]"
+          className="relative flex min-h-[64px] w-full max-w-[430px] items-center justify-center rounded-xl px-4 transition-shadow focus-within:ring-2 focus-within:ring-[var(--accent)]/50 sm:min-h-[76px]"
           style={{ background: "var(--surface-2)" }}
           // Enter submits. Caught at the wrapper (the event bubbles up from
           // MathQuill's hidden textarea) instead of via config.handlers.enter:
@@ -451,25 +469,9 @@ export function MathInput({
         </div>
       </div>
 
-      {/* ── Symbol strip + keypad — the feedback overlay covers them exactly
-             when active (their height is preserved underneath). ── */}
+      {/* ── Symbol strip + keypad (hidden but height-preserving while the
+             feedback overlay above is active). ── */}
       <div className="relative">
-        {feedbackOverlay && (
-          <div className="absolute inset-0 z-10 overflow-y-auto rounded-b-2xl">
-            {onDismissOverlay && (
-              <button
-                type="button"
-                onClick={onDismissOverlay}
-                className="absolute right-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-zinc-500 shadow-sm backdrop-blur transition hover:bg-white hover:text-zinc-800 dark:bg-[var(--surface-2)]/80 dark:text-[var(--text-muted)] dark:hover:bg-[var(--surface-2)] dark:hover:text-[var(--text-secondary)] sm:right-3 sm:top-3 sm:h-8 sm:w-8"
-                aria-label="Close"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
-              </button>
-            )}
-            {feedbackOverlay}
-          </div>
-        )}
-
         <div className={feedbackOverlay ? "invisible" : ""}>
           {/* ── Suggestions strip: contextual symbols for this question.
                  Dividers are short centered hairlines, not full-width rules. ── */}

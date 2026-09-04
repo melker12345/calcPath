@@ -23,6 +23,7 @@ interface UsePracticeSessionReturn {
   solvedCount: number;
   goToNext: () => void;
   goToPrev: () => void;
+  pinIndex: () => void;
   shuffleAndRestart: () => void;
   setHasManuallyNavigated: (value: boolean) => void;
   // Transient per-question UI state (answer input, feedback overlay, dismissed state).
@@ -155,6 +156,18 @@ export function usePracticeSession({
     });
   };
 
+  /**
+   * Pin the session to the question currently on screen WITHOUT clearing its
+   * transient state. Called when an answer is submitted: until then the index
+   * auto-tracks "first unsolved", so a correct answer would update progress and
+   * instantly yank the session to the next question — wiping the "Correct!"
+   * feedback before the user can read it.
+   */
+  const pinIndex = () => {
+    setManualIndex(index);
+    setHasManuallyNavigated(true);
+  };
+
   const setIndex = (newIndex: number) => {
     clearTransientState();
     setHasManuallyNavigated(true);
@@ -197,6 +210,7 @@ export function usePracticeSession({
     solvedCount,
     goToNext,
     goToPrev,
+    pinIndex,
     shuffleAndRestart,
     setHasManuallyNavigated,
     answer,
