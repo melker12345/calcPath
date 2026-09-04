@@ -372,7 +372,8 @@ export function MathInput({
         </div>
       )}
       {/* ── Header: label + draw + hint ── */}
-      <div className="flex items-center justify-between px-4 pt-3 sm:px-5 sm:pt-4" style={{ background: th.headerBg }}>
+      {/* Aligned to the same centered 430px column as the field and keypad */}
+      <div className="mx-auto flex w-full max-w-[430px] items-center justify-between px-4 pt-3 sm:px-1 sm:pt-4" style={{ background: th.headerBg }}>
         <p className="text-xs font-semibold sm:text-sm" style={{ color: th.labelColor }}>{placeholder}</p>
         {/* Keep the action buttons mounted (just hidden) while feedback is shown
             so the header height never changes between input and feedback states. */}
