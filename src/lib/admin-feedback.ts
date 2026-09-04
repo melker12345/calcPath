@@ -10,6 +10,16 @@ export type FeedbackRow = {
   vote: number | null;
   target_type: string | null;
   target_id: string | null;
+  context?: Record<string, unknown> | null;
+  /** Server-resolved subject/topic/question metadata for the target (from GET /api/feedback). */
+  target_meta?: {
+    subjectSlug: string;
+    subjectLabel: string;
+    topicId: string;
+    topicTitle: string | null;
+    questionNumber: number | null;
+    promptPreview: string | null;
+  } | null;
   page_url: string | null;
   user_id: string | null;
   user_email?: string | null;

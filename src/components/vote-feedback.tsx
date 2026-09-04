@@ -20,10 +20,14 @@ export function VoteFeedback({
   targetType,
   targetId,
   userId,
+  reportContext,
 }: {
   targetType: string;
   targetId: string;
   userId?: string;
+  /** Structured context (user's submitted answers, expected answer, hint use…)
+   *  attached to bug reports so they are reproducible without guesswork. */
+  reportContext?: Record<string, unknown>;
 }) {
   // Auth removed (all users anon): notes on votes now always available after voting (no sign-in gate).
   // isAuthed=false forces anon vote path (no server-side cancel, separate rows), but notes supported.
@@ -144,6 +148,7 @@ export function VoteFeedback({
           target_id: targetId,
           user_id: resolvedUserId,
           page_url: typeof window !== "undefined" ? window.location.href : null,
+          context: reportContext ?? null,
         }),
       });
 
@@ -154,7 +159,7 @@ export function VoteFeedback({
     } catch {
       setReportStatus("error");
     }
-  }, [isAuthed, reportMessage, reportReason, reportStatus, resolvedUserId, targetId, targetType]);
+  }, [isAuthed, reportMessage, reportReason, reportStatus, resolvedUserId, targetId, targetType, reportContext]);
 
   // Cmd/Ctrl-Enter sends the note from the textarea.
   useEffect(() => {

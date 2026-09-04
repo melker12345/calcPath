@@ -12,6 +12,7 @@ import {
   inferSubjectFromPath,
   inferTopicIdFromPath,
 } from "@/lib/feedback-metadata";
+import { getPracticePath } from "@/lib/subject-urls";
 import {
   buildFeedbackListItems,
   getFeedbackFilterState,
@@ -122,15 +123,21 @@ function summarizeFeedbackTarget(fb: FeedbackRow): FeedbackTargetSummary {
   }
 
   if (fb.target_type === "problem") {
+    // Prefer the server-resolved metadata (GET /api/feedback enriches every row);
+    // the local getProblemMeta stub is a legacy fallback.
+    const server = fb.target_meta;
     const meta = getProblemMeta(fb.target_id);
     return {
-      subjectLabel: meta?.subjectLabel ?? null,
-      topicTitle: meta?.topicTitle ?? null,
-      questionNumber: meta?.questionNumber ?? null,
+      subjectLabel: server?.subjectLabel ?? meta?.subjectLabel ?? null,
+      topicTitle: server?.topicTitle ?? meta?.topicTitle ?? null,
+      questionNumber: server?.questionNumber ?? meta?.questionNumber ?? null,
       internalId: meta?.id ?? fb.target_id ?? null,
-      promptPreview: getPromptPreview(meta?.prompt ?? null),
+      promptPreview: server?.promptPreview ?? getPromptPreview(meta?.prompt ?? null),
       routePath,
-      deepLink,
+      deepLink:
+        server && fb.target_id
+          ? `${getPracticePath(server.subjectSlug, server.topicId)}?focus=${encodeURIComponent(fb.target_id)}`
+          : deepLink,
     };
   }
 
@@ -150,8 +157,8 @@ function summarizeFeedbackTarget(fb: FeedbackRow): FeedbackTargetSummary {
   const topicMeta = getTopicMeta(sectionTopicId, sectionSubject);
 
   return {
-    subjectLabel: topicMeta?.subjectLabel ?? null,
-    topicTitle: topicMeta?.title ?? null,
+    subjectLabel: fb.target_meta?.subjectLabel ?? topicMeta?.subjectLabel ?? null,
+    topicTitle: fb.target_meta?.topicTitle ?? topicMeta?.title ?? null,
     questionNumber: null,
     internalId: fb.target_id ?? null,
     promptPreview: null,
@@ -666,6 +673,7 @@ function FeedbackRowCard({
 
       <TargetSummary summary={summary} />
       {fb.message && <MessageBlock message={fb.message} />}
+      {fb.context && <ReportContextBlock context={fb.context} />}
       <CardFooter summary={summary} targetType={fb.target_type} userMeta={`User: ${userLabel(fb)}`} />
       <StatusActions busy={statusBusy} currentStatus={statusOfItem(item)} onChange={onStatusChange} />
     </CardShell>
@@ -875,6 +883,48 @@ function VoteNotes({ rows }: { rows: FeedbackRow[] }) {
           label={`${row.vote === 1 ? "+1 note" : row.vote === -1 ? "-1 note" : "Neutral note"} · ${userLabel(row)} · ${new Date(row.created_at).toLocaleString()}`}
         />
       ))}
+    </div>
+  );
+}
+
+function ReportContextBlock({ context }: { context: Record<string, unknown> }) {
+  const submissions = Array.isArray(context.submissions)
+    ? (context.submissions as { input?: unknown; gradedCorrect?: unknown }[])
+    : [];
+  const expected =
+    typeof context.expectedAnswer === "string" ? context.expectedAnswer : null;
+  const flags = [
+    context.hintUsed ? "Hint used" : null,
+    context.solutionShown ? "Solution was shown" : null,
+  ].filter(Boolean);
+
+  return (
+    <div className="mt-3 rounded-xl bg-white px-3 py-2.5 text-xs leading-relaxed text-zinc-700 ring-1 ring-zinc-100">
+      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+        What the user did
+      </p>
+      {expected && (
+        <p>
+          Expected answer:{" "}
+          <span className="rounded bg-zinc-100 px-1 py-0.5 font-mono">{expected}</span>
+        </p>
+      )}
+      {submissions.length > 0 ? (
+        submissions.map((s, i) => (
+          <p key={i}>
+            Submitted:{" "}
+            <span className="rounded bg-zinc-100 px-1 py-0.5 font-mono">
+              {String(s.input ?? "")}
+            </span>{" "}
+            <span className={s.gradedCorrect ? "font-semibold text-emerald-600" : "font-semibold text-rose-600"}>
+              {s.gradedCorrect ? "graded correct" : "graded wrong"}
+            </span>
+          </p>
+        ))
+      ) : (
+        <p className="text-zinc-400">No answers were submitted before reporting.</p>
+      )}
+      {flags.length > 0 && <p className="mt-1 text-zinc-500">{flags.join(" · ")}</p>}
     </div>
   );
 }

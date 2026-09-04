@@ -99,6 +99,8 @@ interface PracticeFeedbackProps {
   finalAnswer: string;
   /** When true on a correct feedback for the final question, shows "Congrats!" and "Finish" instead of "Correct!"/"Next Question" */
   isLastQuestion?: boolean;
+  /** Attached to bug reports filed from this overlay (user's submissions, expected answer…). */
+  reportContext?: Record<string, unknown>;
 }
 
 /**
@@ -116,6 +118,7 @@ export function PracticeFeedback({
   setOverlayDismissed,
   finalAnswer,
   isLastQuestion = false,
+  reportContext,
 }: PracticeFeedbackProps) {
   if (!feedback) return null;
 
@@ -164,7 +167,7 @@ export function PracticeFeedback({
           </p>
         </div>
         <div className="mt-2 flex justify-end sm:mt-3">
-          <VoteFeedback targetType="problem" targetId={current.id} />
+          <VoteFeedback targetType="problem" targetId={current.id} reportContext={reportContext} />
         </div>
         <button
           type="button"
@@ -224,7 +227,7 @@ export function PracticeFeedback({
               </p>
             </div>
             <div className="mt-2 flex justify-end sm:mt-3">
-              <VoteFeedback targetType="problem" targetId={current.id} />
+              <VoteFeedback targetType="problem" targetId={current.id} reportContext={reportContext} />
             </div>
           </>
         )}

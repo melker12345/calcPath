@@ -44,6 +44,7 @@ create table public.feedback (
   vote        smallint     check (vote in (-1, 0, 1)),
   target_type text,
   target_id   text,
+  context     jsonb,
   status      text         not null default 'open' check (status in ('open', 'fixed', 'trash')),
   created_at  timestamptz  not null default now()
 );

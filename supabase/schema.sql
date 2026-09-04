@@ -59,7 +59,9 @@ alter table public.progress_backups enable row level security;
 -- feedback — bug/feature/general messages and per-target up/down votes
 -- ----------------------------------------------------------------------------
 -- kind = 'vote'  -> uses vote (+1/-1/0) + target_type + target_id, message optional (note)
--- kind = other   -> uses message (the report text)
+-- kind = other   -> uses message (the report text), target_type/target_id when the
+--                   report was filed on a specific question, and context (jsonb)
+--                   with what the user actually did (submitted answers, hint use…)
 -- user_id is nullable: on this branch auth is stripped, so it is effectively
 -- always null. It is kept so the same schema works if auth is reintroduced.
 create table if not exists public.feedback (
@@ -71,9 +73,13 @@ create table if not exists public.feedback (
   vote        smallint     check (vote in (-1, 0, 1)),
   target_type text,
   target_id   text,
+  context     jsonb,
   status      text         not null default 'open' check (status in ('open', 'fixed', 'trash')),
   created_at  timestamptz  not null default now()
 );
+
+-- Existing databases predating the report-context column: add it in place.
+alter table public.feedback add column if not exists context jsonb;
 
 -- Admin inbox lists newest first.
 create index if not exists feedback_created_at_idx

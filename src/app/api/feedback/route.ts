@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveFeedbackTargetMeta } from "@/lib/server/feedback-target-meta";
 
 const VALID_KINDS = ["bug", "feature", "general", "vote"] as const;
 type Kind = (typeof VALID_KINDS)[number];
@@ -162,13 +163,45 @@ export async function POST(request: Request) {
     }
   } else {
     row.message = (body.message as string).trim().slice(0, 5000);
+    // Reports/feature requests may carry a target too (e.g. the practice
+    // question the "Report issue" form was opened on) — keep it so the admin
+    // panel can show exactly which problem the report is about.
+    if (typeof body.target_type === "string" && body.target_type) {
+      row.target_type = body.target_type.slice(0, 50);
+    }
+    if (typeof body.target_id === "string" && body.target_id) {
+      row.target_id = body.target_id.slice(0, 200);
+    }
+    // Structured report context (what the user typed, expected answer, hint
+    // use…) sent by the practice UI so "Answer seems wrong" reports are
+    // reproducible. Must be a plain object and reasonably small.
+    const context = body.context;
+    if (
+      context &&
+      typeof context === "object" &&
+      !Array.isArray(context) &&
+      JSON.stringify(context).length <= 4000
+    ) {
+      row.context = context;
+    }
   }
 
-  const { data: inserted, error } = await supabase
+  let { data: inserted, error } = await supabase
     .from("feedback")
     .insert(row)
     .select("id, vote")
     .single();
+
+  // A live DB that predates the `context` column would reject the whole row —
+  // in that case keep the report and drop only the context.
+  if (error && row.context !== undefined && /context/i.test(error.message ?? "")) {
+    delete row.context;
+    ({ data: inserted, error } = await supabase
+      .from("feedback")
+      .insert(row)
+      .select("id, vote")
+      .single());
+  }
 
   if (error) {
     console.error("Feedback insert error:", error.message, error.details, error.hint);
@@ -373,7 +406,16 @@ export async function GET(request: Request) {
 
   // Feedback is anonymous: we deliberately do NOT join submitter emails from the
   // profiles table. The inbox shows content only, never who sent it.
-  const feedback = (data ?? []).map((row) => ({ ...row, user_email: null }));
+  // Each row is enriched with target_meta (subject/topic/question/prompt) so the
+  // inbox can show exactly which question a report is about — resolved at read
+  // time, so rows submitted before this existed get it too.
+  const feedback = await Promise.all(
+    (data ?? []).map(async (row) => ({
+      ...row,
+      user_email: null,
+      target_meta: await resolveFeedbackTargetMeta(row.target_type, row.target_id),
+    })),
+  );
 
   return NextResponse.json({ feedback });
 }

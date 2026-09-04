@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
@@ -166,6 +166,18 @@ export function GenericPracticeExperience({
   });
 
   const current = hookCurrent || displayProblems[index];
+
+  // Every graded submission for the current question, in order. Attached to bug
+  // reports so "Answer seems wrong" arrives with exactly what the user typed
+  // and how the grader judged it. Reset when the question changes.
+  const [submissionLog, setSubmissionLog] = useState<
+    { input: string; gradedCorrect: boolean; at: string }[]
+  >([]);
+  const [loggedQuestionId, setLoggedQuestionId] = useState(current?.id);
+  if (current?.id !== loggedQuestionId) {
+    setLoggedQuestionId(current?.id);
+    setSubmissionLog([]);
+  }
   // For "back to explanation" after mastering (or in empty states), prefer a section anchor if we have one
   // (e.g. when practicing a filtered ?section= or when all questions share a section). Falls back to topic root.
   const backToExplanationHref = getSectionHref(
@@ -242,6 +254,11 @@ export function GenericPracticeExperience({
     const currentAttempts = feedback?.type === "incorrect" ? feedback.attempts : 0;
     const hintWasUsed = feedback?.type === "incorrect" ? feedback.hintUsed : false;
 
+    setSubmissionLog((log) => [
+      ...log,
+      { input: val, gradedCorrect: isCorrect, at: new Date().toISOString() },
+    ]);
+
     addAttempt({
       problemId: current.id,
       topicId: current.topicId,
@@ -279,6 +296,19 @@ export function GenericPracticeExperience({
 
   const isDismissable = feedback?.type === "incorrect" && !feedback.showSolution;
 
+  // Everything an admin needs to reproduce a report without asking the user:
+  // which question, what the grader expected, every graded submission, and the
+  // hint/solution state at report time. Sent only with "Report issue".
+  const reportContext: Record<string, unknown> = {
+    questionId: current.id,
+    questionType: current.type,
+    section: current.section ?? null,
+    expectedAnswer: current.answer,
+    submissions: submissionLog,
+    hintUsed: feedback?.type === "incorrect" ? feedback.hintUsed : false,
+    solutionShown: feedback?.type === "incorrect" ? feedback.showSolution : false,
+  };
+
   // Use the *shared improved* PracticeFeedback for the entire overlay (correct + incorrect).
   // Only create the element when there is actual feedback to display. This prevents the
   // keypad from being unconditionally hidden (via the `feedbackOverlay ? "invisible" : ""`
@@ -299,6 +329,7 @@ export function GenericPracticeExperience({
       setOverlayDismissed={setOverlayDismissed}
       finalAnswer={finalAnswer}
       isLastQuestion={index === displayProblems.length - 1}
+      reportContext={reportContext}
     />
   ) : null;
 

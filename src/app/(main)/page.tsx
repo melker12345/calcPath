@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getAvailableSubjectConfigs } from "@/lib/content/loader";
 import { LandingContent } from "@/components/landing-content";
 import { SiteUpdateModal } from "@/components/site-update-modal";
+import { DevNotice } from "@/components/dev-notice";
 
 export const metadata: Metadata = {
   title: "CalcPath",
@@ -76,6 +77,9 @@ export default async function Home() {
       {/* One-time "do you prefer the new version?" prompt — records a vote the
           admin inbox tallies as +Yes / -No (target_type "site-version"). */}
       <SiteUpdateModal />
+
+      {/* Dismissible bottom-left "in development" notice pointing critique to /feedback. */}
+      <DevNotice />
     </div>
   );
 }
