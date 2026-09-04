@@ -14,139 +14,233 @@ Key challenges that appear only in the multiple-predictor setting include multic
 
 <!-- section: model -->
 
-The population model is $y = \beta_0 + \beta_1 x_1 + \dots + \beta_k x_k + \varepsilon$, where the errors are assumed independent with $\varepsilon \sim N(0, \sigma^2)$ — same variance $\sigma^2$ for every observation (homoscedasticity), mean zero, and normally distributed. These are the conditions under which the inference below (t-tests, F-tests, confidence intervals) is valid.
+:::definition[The multiple regression model]{#model-def}
+The population model is
 
-In matrix form: $\mathbf{y} = X\boldsymbol{\beta} + \boldsymbol{\varepsilon}$, where $X$ is the $n \times (k+1)$ design matrix (including a column of 1s for the intercept), $\boldsymbol{\beta}$ is the $(k+1) \times 1$ vector of coefficients, and $\mathbf{y}$, $\boldsymbol{\varepsilon}$ are $n \times 1$.
+$$y = \beta_0 + \beta_1 x_1 + \dots + \beta_k x_k + \varepsilon,$$
 
-The ordinary least squares estimator is $\hat{\boldsymbol{\beta}} = (X^T X)^{-1} X^T \mathbf{y}$. This requires $X$ to have full column rank (no predictor is an exact linear combination of the others), because only then is the $(k+1) \times (k+1)$ matrix $X^T X$ invertible. If two predictors are perfectly collinear, $X^T X$ is singular and there is no unique solution.
+where the errors are independent with $\varepsilon \sim N(0, \sigma^2)$ — mean zero, normally distributed, and the same variance $\sigma^2$ for every observation (homoscedasticity).
+:::
 
-Fitted values: $\hat{\mathbf{y}} = X\hat{\boldsymbol{\beta}} = H\mathbf{y}$, where $H = X(X^T X)^{-1}X^T$ is the hat matrix (projection onto the column space of $X$).
+These are the conditions under which the inference below (t-tests, F-tests, confidence intervals) is valid.
 
-Residuals: $\mathbf{e} = \mathbf{y} - \hat{\mathbf{y}} = (I - H)\mathbf{y}$.
+:::notation
+In matrix form the model reads
 
-**ELI5**
+$$\mathbf{y} = X\boldsymbol{\beta} + \boldsymbol{\varepsilon},$$
 
-- Think of multiple regression as fitting a flat 'sheet' (hyperplane) through points in many dimensions instead of a line through points in 2D. Each predictor gives the sheet another direction to tilt.
+where $X$ is the $n \times (k+1)$ design matrix (including a column of 1s for the intercept), $\boldsymbol{\beta}$ is the $(k+1) \times 1$ vector of coefficients, and $\mathbf{y}$, $\boldsymbol{\varepsilon}$ are $n \times 1$.
+:::
 
-**Worked Example: Interpreting a coefficient while holding others constant**
-- Model: $\widehat{\text{salary}} = 30000 + 2000 \cdot \text{years exp} + 1500 \cdot \text{education years} - 5000 \cdot \text{gap in resume}$.
-- The coefficient on 'years of experience' ($2000$) means: for two people with the *same* education and resume gap, one extra year of experience is associated with \$2000 more predicted salary.
-- Sanity check: take person A (5 yrs exp, 4 yrs education, 0 gap) and person B (6 yrs exp, 4 yrs education, 0 gap). Their predicted salaries differ only through the experience term: $\hat{y}_B - \hat{y}_A = 2000 \cdot (6 - 5) = 2000$. The other two predictors are identical, so their contributions cancel — exactly the "holding others constant" idea. ✓
-- This is the *partial* effect — we have statistically controlled for the other variables in the model.
+:::proposition[The ordinary least squares estimator]{#ols-matrix}
+If $X$ has full column rank, the least-squares coefficients are
 
-**Worked Example: Computing $\hat{\boldsymbol{\beta}}$ from the normal equations**
-- Suppose we fit an intercept plus one predictor ($k = 1$) to three points $(x, y) = (1, 2), (2, 2), (3, 4)$. Then $X = \begin{bmatrix} 1 & 1 \\ 1 & 2 \\ 1 & 3 \end{bmatrix}$ and $\mathbf{y} = \begin{bmatrix} 2 \\ 2 \\ 4 \end{bmatrix}$.
-- Step 1 — form $X^T X$: $X^T X = \begin{bmatrix} 3 & 6 \\ 6 & 14 \end{bmatrix}$ (top-left $= 1+1+1 = 3$, off-diagonal $= 1+2+3 = 6$, bottom-right $= 1+4+9 = 14$).
-- Step 2 — form $X^T \mathbf{y}$: $X^T \mathbf{y} = \begin{bmatrix} 2+2+4 \\ 1\cdot2 + 2\cdot2 + 3\cdot4 \end{bmatrix} = \begin{bmatrix} 8 \\ 18 \end{bmatrix}$.
-- Step 3 — invert $X^T X$: determinant $= 3\cdot14 - 6\cdot6 = 42 - 36 = 6$, so $(X^T X)^{-1} = \frac{1}{6}\begin{bmatrix} 14 & -6 \\ -6 & 3 \end{bmatrix}$.
-- Step 4 — solve: $\hat{\boldsymbol{\beta}} = (X^T X)^{-1} X^T \mathbf{y} = \frac{1}{6}\begin{bmatrix} 14\cdot8 - 6\cdot18 \\ -6\cdot8 + 3\cdot18 \end{bmatrix} = \frac{1}{6}\begin{bmatrix} 4 \\ 6 \end{bmatrix} = \begin{bmatrix} 2/3 \\ 1 \end{bmatrix}$.
-- So $\hat{y} = \tfrac{2}{3} + 1\cdot x$. Sanity check: this is exactly the simple-regression line with slope $\bar{xy}$-style formula $b_1 = \frac{\sum (x-\bar x)(y-\bar y)}{\sum (x-\bar x)^2} = \frac{2}{2} = 1$ and intercept $b_0 = \bar y - b_1 \bar x = \tfrac{8}{3} - 1\cdot 2 = \tfrac{2}{3}$. The matrix machinery reproduces the familiar answer. ✓
+$$\hat{\boldsymbol{\beta}} = (X^T X)^{-1} X^T \mathbf{y}.$$
+:::
+
+Full column rank means no predictor is an exact linear combination of the others, because only then is the $(k+1) \times (k+1)$ matrix $X^T X$ invertible. If two predictors are perfectly collinear, $X^T X$ is singular and there is no unique solution.
+
+:::definition[Hat matrix, fitted values and residuals]
+The fitted values are
+
+$$\hat{\mathbf{y}} = X\hat{\boldsymbol{\beta}} = H\mathbf{y}, \qquad H = X(X^T X)^{-1}X^T,$$
+
+where $H$ is the hat matrix, the projection onto the column space of $X$. The residuals are
+
+$$\mathbf{e} = \mathbf{y} - \hat{\mathbf{y}} = (I - H)\mathbf{y}.$$
+:::
+
+:::intuition
+Think of multiple regression as fitting a flat 'sheet' (hyperplane) through points in many dimensions instead of a line through points in 2D. Each predictor gives the sheet another direction to tilt.
+:::
+
+:::example[Interpreting a coefficient while holding others constant]
+Model: $\widehat{\text{salary}} = 30000 + 2000 \cdot \text{years exp} + 1500 \cdot \text{education years} - 5000 \cdot \text{gap in resume}$.
+:::
+
+:::solution
+1. The coefficient on 'years of experience' ($2000$) means: for two people with the *same* education and resume gap, one extra year of experience is associated with \$2000 more predicted salary.
+2. Sanity check: take person A (5 yrs exp, 4 yrs education, 0 gap) and person B (6 yrs exp, 4 yrs education, 0 gap). Their predicted salaries differ only through the experience term: $\hat{y}_B - \hat{y}_A = 2000 \cdot (6 - 5) = 2000$. The other two predictors are identical, so their contributions cancel — exactly the "holding others constant" idea. ✓
+3. This is the *partial* effect — we have statistically controlled for the other variables in the model.
+:::
+
+:::example[Computing $\hat{\boldsymbol{\beta}}$ from the normal equations]
+Suppose we fit an intercept plus one predictor ($k = 1$) to three points $(x, y) = (1, 2), (2, 2), (3, 4)$. Then $X = \begin{bmatrix} 1 & 1 \\ 1 & 2 \\ 1 & 3 \end{bmatrix}$ and $\mathbf{y} = \begin{bmatrix} 2 \\ 2 \\ 4 \end{bmatrix}$.
+:::
+
+:::solution
+1. form $X^T X$: $X^T X = \begin{bmatrix} 3 & 6 \\ 6 & 14 \end{bmatrix}$ (top-left $= 1+1+1 = 3$, off-diagonal $= 1+2+3 = 6$, bottom-right $= 1+4+9 = 14$).
+2. form $X^T \mathbf{y}$: $X^T \mathbf{y} = \begin{bmatrix} 2+2+4 \\ 1\cdot2 + 2\cdot2 + 3\cdot4 \end{bmatrix} = \begin{bmatrix} 8 \\ 18 \end{bmatrix}$.
+3. invert $X^T X$: determinant $= 3\cdot14 - 6\cdot6 = 42 - 36 = 6$, so $(X^T X)^{-1} = \frac{1}{6}\begin{bmatrix} 14 & -6 \\ -6 & 3 \end{bmatrix}$.
+4. solve: $\hat{\boldsymbol{\beta}} = (X^T X)^{-1} X^T \mathbf{y} = \frac{1}{6}\begin{bmatrix} 14\cdot8 - 6\cdot18 \\ -6\cdot8 + 3\cdot18 \end{bmatrix} = \frac{1}{6}\begin{bmatrix} 4 \\ 6 \end{bmatrix} = \begin{bmatrix} 2/3 \\ 1 \end{bmatrix}$.
+5. So $\hat{y} = \tfrac{2}{3} + 1\cdot x$. Sanity check: this is exactly the simple-regression line with slope $\bar{xy}$-style formula $b_1 = \frac{\sum (x-\bar x)(y-\bar y)}{\sum (x-\bar x)^2} = \frac{2}{2} = 1$ and intercept $b_0 = \bar y - b_1 \bar x = \tfrac{8}{3} - 1\cdot 2 = \tfrac{2}{3}$. The matrix machinery reproduces the familiar answer. ✓
+:::
 
 ## Goodness of Fit and Inference
 
 <!-- section: fit -->
 
-$R^2 = 1 - \frac{\text{SSE}}{\text{SST}}$ is still the proportion of variance explained, but now it always increases when you add more predictors (even useless ones).
+The quantity $R^2 = 1 - \frac{\text{SSE}}{\text{SST}}$ is still the proportion of variance explained, but now it always increases when you add more predictors, even useless ones. That is what the adjusted version repairs.
 
-Adjusted $R^2 = 1 - \frac{\text{SSE}/(n-k-1)}{\text{SST}/(n-1)}$ penalizes for the number of predictors $k$. It can decrease when a variable is added that does not improve the model enough.
+:::definition[Adjusted R-squared]{#adjusted-r2}
+$$\text{Adjusted } R^2 = 1 - \frac{\text{SSE}/(n-k-1)}{\text{SST}/(n-1)}.$$
+:::
 
-The overall F-test tests $H_0: \beta_1 = \beta_2 = \dots = \beta_k = 0$ (the model as a whole has no explanatory power). $F = \frac{\text{MSR}}{\text{MSE}} \sim F_{k, n-k-1}$.
+The denominators penalise the number of predictors $k$, so adjusted $R^2$ can decrease when a variable is added that does not improve the model enough.
+
+:::definition[The overall F-test]{#f-test}
+The overall F-test tests $H_0: \beta_1 = \beta_2 = \dots = \beta_k = 0$ — the model as a whole has no explanatory power — using
+
+$$F = \frac{\text{MSR}}{\text{MSE}} \sim F_{k,\, n-k-1}.$$
+:::
 
 Individual t-tests on each $b_j$ test whether that predictor is useful *after controlling for the others already in the model*.
 
 Confidence intervals and prediction intervals are constructed similarly to simple regression but use the full variance-covariance matrix of $\hat{\boldsymbol{\beta}}$.
 
-**ELI5**
+:::intuition
+Adjusted $R^2$ is like a 'fairness adjustment' in a video game. Adding a new predictor is like giving yourself extra tools — $R^2$ will always look better or the same, but adjusted $R^2$ only improves if the new tool was actually helpful.
+:::
 
-- Adjusted $R^2$ is like a 'fairness adjustment' in a video game. Adding a new predictor is like giving yourself extra tools — $R^2$ will always look better or the same, but adjusted $R^2$ only improves if the new tool was actually helpful.
+:::example[Computing adjusted $R^2$]
+A model has $n = 50$ observations, $k = 4$ predictors, and $R^2 = 0.72$.
+:::
 
-**Worked Example: Computing adjusted $R^2$**
-- A model has $n = 50$ observations, $k = 4$ predictors, and $R^2 = 0.72$.
-- Step 1 — use the algebraically equivalent form $\text{Adj } R^2 = 1 - (1 - R^2)\cdot \dfrac{n - 1}{n - k - 1}$.
-- Step 2 — plug in: $1 - (1 - 0.72)\cdot \dfrac{49}{45} = 1 - 0.28 \cdot 1.0889$.
-- Step 3 — compute: $0.28 \cdot 1.0889 = 0.3049$, so $\text{Adj } R^2 = 1 - 0.3049 = 0.695$.
-- Sanity check: adjusted $R^2$ (0.695) is below the raw $R^2$ (0.72), as it must be whenever $k \ge 1$ — the penalty always pulls it down, and the gap widens as $k$ grows relative to $n$. ✓
+:::solution
+1. use the algebraically equivalent form $\text{Adj } R^2 = 1 - (1 - R^2)\cdot \dfrac{n - 1}{n - k - 1}$.
+2. plug in: $1 - (1 - 0.72)\cdot \dfrac{49}{45} = 1 - 0.28 \cdot 1.0889$.
+3. compute: $0.28 \cdot 1.0889 = 0.3049$, so $\text{Adj } R^2 = 1 - 0.3049 = 0.695$.
+4. Sanity check: adjusted $R^2$ (0.695) is below the raw $R^2$ (0.72), as it must be whenever $k \ge 1$ — the penalty always pulls it down, and the gap widens as $k$ grows relative to $n$. ✓
+:::
 
-**Worked Example: The overall F-test**
-- Same model: $n = 50$, $k = 4$, $R^2 = 0.72$. We test $H_0: \beta_1 = \dots = \beta_4 = 0$.
-- Step 1 — write $F$ in terms of $R^2$: $F = \dfrac{R^2 / k}{(1 - R^2)/(n - k - 1)} = \dfrac{\text{MSR}}{\text{MSE}}$.
-- Step 2 — plug in: $F = \dfrac{0.72 / 4}{0.28 / 45} = \dfrac{0.18}{0.006222}$.
-- Step 3 — compute: $F \approx 28.9$ on $(k,\, n-k-1) = (4,\, 45)$ degrees of freedom.
-- Step 4 — compare: the 5% critical value $F_{0.05,\,4,45} \approx 2.58$. Since $28.9 \gg 2.58$, reject $H_0$: at least one predictor has a nonzero coefficient. Note this does *not* tell us which one — that is what the individual t-tests are for.
+:::example[The overall F-test]
+Same model: $n = 50$, $k = 4$, $R^2 = 0.72$. We test $H_0: \beta_1 = \dots = \beta_4 = 0$.
+:::
+
+:::solution
+1. write $F$ in terms of $R^2$: $F = \dfrac{R^2 / k}{(1 - R^2)/(n - k - 1)} = \dfrac{\text{MSR}}{\text{MSE}}$.
+2. plug in: $F = \dfrac{0.72 / 4}{0.28 / 45} = \dfrac{0.18}{0.006222}$.
+3. compute: $F \approx 28.9$ on $(k,\, n-k-1) = (4,\, 45)$ degrees of freedom.
+4. compare: the 5% critical value $F_{0.05,\,4,45} \approx 2.58$. Since $28.9 \gg 2.58$, reject $H_0$: at least one predictor has a nonzero coefficient. Note this does *not* tell us which one — that is what the individual t-tests are for.
+:::
 
 ## Multicollinearity
 
 <!-- section: multicollinearity -->
 
-Multicollinearity occurs when two or more predictors are highly correlated with each other. It does not bias the coefficients, but it inflates their standard errors, making individual coefficients unstable and hard to interpret.
+:::definition[Multicollinearity]
+Multicollinearity is the condition where two or more predictors are highly correlated with each other.
+:::
 
-Symptoms: large standard errors, coefficients with unexpected signs or magnitudes, sensitivity to small changes in the data or model specification.
+It does not bias the coefficients, but it inflates their standard errors, making individual coefficients unstable and hard to interpret. Symptoms: large standard errors, coefficients with unexpected signs or magnitudes, sensitivity to small changes in the data or model specification.
 
-Variance Inflation Factor (VIF) for predictor $j$: $\text{VIF}_j = \frac{1}{1 - R^2_j}$, where $R^2_j$ is the $R^2$ from regressing $x_j$ on all the other predictors. Rule of thumb: VIF > 5 or 10 indicates problematic multicollinearity.
+:::definition[Variance inflation factor]{#vif}
+For predictor $j$,
+
+$$\text{VIF}_j = \frac{1}{1 - R^2_j},$$
+
+where $R^2_j$ is the $R^2$ from regressing $x_j$ on all the other predictors.
+:::
+
+Rule of thumb: VIF > 5 or 10 indicates problematic multicollinearity.
 
 Remedies: remove one of the correlated variables, combine them (e.g., via PCA), collect more data, or use regularization (ridge regression, lasso).
 
-**ELI5**
+:::intuition
+Imagine trying to figure out whether height or weight matters more for basketball performance when every tall player is also heavy. The two variables move together so much that the model can't reliably separate their individual effects — that's multicollinearity.
+:::
 
-- Imagine trying to figure out whether height or weight matters more for basketball performance when every tall player is also heavy. The two variables move together so much that the model can't reliably separate their individual effects — that's multicollinearity.
+:::example[Detecting multicollinearity with VIF]
+You have predictors: 'years of education' and 'highest degree level' (which are very correlated).
+:::
 
-**Worked Example: Detecting multicollinearity with VIF**
-- You have predictors: 'years of education' and 'highest degree level' (which are very correlated).
-- Regress 'years of education' on all other predictors (including degree level) and obtain $R^2 = 0.92$.
-- VIF = 1 / (1 - 0.92) = 12.5 — well above the common threshold of 5 or 10.
-- Conclusion: these two variables are too redundant; consider dropping one or combining them.
+:::solution
+1. Regress 'years of education' on all other predictors (including degree level) and obtain $R^2 = 0.92$.
+2. VIF = 1 / (1 - 0.92) = 12.5 — well above the common threshold of 5 or 10.
+3. Conclusion: these two variables are too redundant; consider dropping one or combining them.
+:::
 
 ## Model Selection and Regularization
 
 <!-- section: selection -->
 
-All-subsets regression tries every possible combination of predictors (computationally expensive for large $k$).
+All-subsets regression tries every possible combination of predictors, which is computationally expensive for large $k$. The stepwise alternatives walk through the space of models one predictor at a time.
 
-Forward selection: start with no predictors, add the most useful one at each step until no more improve the model (by F-test, AIC, etc.).
+:::recipe[Forward selection]
+1. Start with no predictors.
+2. Add the predictor that most improves the model (by F-test, AIC, etc.).
+3. Repeat until no remaining predictor improves the model.
+:::
 
-Backward elimination: start with all predictors, remove the least useful one iteratively.
+Backward elimination runs the same idea in reverse: start with all predictors and remove the least useful one iteratively. Stepwise regression combines forward and backward steps.
 
-Stepwise regression combines forward and backward steps.
+Information criteria let us compare models directly instead of just watching SSE fall. The idea: a good model fits well (small SSE, first term) *without* using too many parameters (small $k$, penalty term).
 
-Information criteria let us compare models directly instead of just watching SSE fall. The idea: a good model fits well (small SSE, first term) *without* using too many parameters (small $k$, penalty term). AIC = $n \log(\text{SSE}/n) + 2(k+1)$, BIC = $n \log(\text{SSE}/n) + \log(n)(k+1)$ (here $\log$ is the natural logarithm). Lower is better. Because $\log(n) > 2$ once $n > e^2 \approx 7.4$, BIC charges a steeper price per extra parameter than AIC, so BIC tends to pick smaller models.
+:::definition[AIC and BIC]{#aic-bic}
+$$\text{AIC} = n \log(\text{SSE}/n) + 2(k+1),$$
+
+$$\text{BIC} = n \log(\text{SSE}/n) + \log(n)(k+1),$$
+
+where $\log$ is the natural logarithm. Lower is better.
+:::
+
+Because $\log(n) > 2$ once $n > e^2 \approx 7.4$, BIC charges a steeper price per extra parameter than AIC, so BIC tends to pick smaller models.
 
 Regularization methods (ridge, lasso, elastic net) add a penalty on the size of the coefficients. They can shrink coefficients toward zero and perform automatic variable selection (lasso).
 
-**ELI5**
+:::intuition
+Model selection is like packing for a trip: you want to bring the most useful items without overloading your suitcase. AIC and BIC are different ways of deciding whether the benefit of adding another 'item' (predictor) is worth the cost of extra complexity.
+:::
 
-- Model selection is like packing for a trip: you want to bring the most useful items without overloading your suitcase. AIC and BIC are different ways of deciding whether the benefit of adding another 'item' (predictor) is worth the cost of extra complexity.
+:::example[AIC and BIC disagreeing]
+Compare two nested models on $n = 50$ observations. Model A uses $k = 2$ predictors with $\text{SSE} = 200$; Model B adds a third predictor ($k = 3$) and drops SSE to $190$.
+:::
 
-**Worked Example: AIC and BIC disagreeing**
-- Compare two nested models on $n = 50$ observations. Model A uses $k = 2$ predictors with $\text{SSE} = 200$; Model B adds a third predictor ($k = 3$) and drops SSE to $190$.
-- Step 1 — the fit term for A: $n\log(\text{SSE}/n) = 50\log(200/50) = 50\log(4) = 50 \cdot 1.3863 = 69.31$.
-- Step 2 — the fit term for B: $50\log(190/50) = 50\log(3.8) = 50 \cdot 1.3350 = 66.75$.
-- Step 3 — AIC: A $= 69.31 + 2(3) = 75.31$; B $= 66.75 + 2(4) = 74.75$. AIC prefers **B** (74.75 < 75.31): the extra predictor earned its keep.
-- Step 4 — BIC uses $\log(50) = 3.912$: A $= 69.31 + 3.912(3) = 81.05$; B $= 66.75 + 3.912(4) = 82.40$. BIC prefers **A** (81.05 < 82.40): the same predictor is *not* worth its steeper BIC price.
-- Takeaway: the criteria genuinely disagree here — a real, common situation. BIC's heavier penalty makes it the more conservative choice for the simpler model. Neither is "wrong"; they optimize different trade-offs.
+:::solution
+1. the fit term for A: $n\log(\text{SSE}/n) = 50\log(200/50) = 50\log(4) = 50 \cdot 1.3863 = 69.31$.
+2. the fit term for B: $50\log(190/50) = 50\log(3.8) = 50 \cdot 1.3350 = 66.75$.
+3. AIC: A $= 69.31 + 2(3) = 75.31$; B $= 66.75 + 2(4) = 74.75$. AIC prefers **B** (74.75 < 75.31): the extra predictor earned its keep.
+4. BIC uses $\log(50) = 3.912$: A $= 69.31 + 3.912(3) = 81.05$; B $= 66.75 + 3.912(4) = 82.40$. BIC prefers **A** (81.05 < 82.40): the same predictor is *not* worth its steeper BIC price.
+5. Takeaway: the criteria genuinely disagree here — a real, common situation. BIC's heavier penalty makes it the more conservative choice for the simpler model. Neither is "wrong"; they optimize different trade-offs.
+:::
 
 ## Assumptions and Diagnostics
 
 <!-- section: diagnostics -->
 
-The LINE assumptions still apply: **L**inearity (the mean of $y$ is a linear function of the *multiple* predictors — the hyperplane), **I**ndependence of the errors, **N**ormality of the errors, and **E**qual variance (homoscedasticity). Note that multicollinearity is *not* on this list: it does not violate LINE, it only inflates the variance of $\hat{\boldsymbol{\beta}}$.
+:::definition[The LINE assumptions]{#line}
+The assumptions of simple regression still apply: **L**inearity (the mean of $y$ is a linear function of the *multiple* predictors — the hyperplane), **I**ndependence of the errors, **N**ormality of the errors, and **E**qual variance (homoscedasticity).
+:::
+
+Note that multicollinearity is *not* on this list: it does not violate LINE, it only inflates the variance of $\hat{\boldsymbol{\beta}}$.
 
 Partial regression plots (added-variable plots) help visualize the relationship between $y$ and one $x_j$ after removing the linear effects of the other predictors.
 
-Leverage is the diagonal entry $h_{ii}$ of the hat matrix $H = X(X^T X)^{-1}X^T$; it measures how far observation $i$'s predictor values sit from the center of the predictor cloud (high leverage = unusual $x$, before even looking at $y$). Cook's distance and DFFITS combine leverage with the residual to identify observations that actually *move* the fitted model.
+:::definition[Leverage]{#leverage}
+The leverage of observation $i$ is the diagonal entry $h_{ii}$ of the hat matrix
+
+$$H = X(X^T X)^{-1}X^T.$$
+:::
+
+Leverage measures how far observation $i$'s predictor values sit from the center of the predictor cloud — high leverage means an unusual $x$, before even looking at $y$. Cook's distance and DFFITS combine leverage with the residual to identify observations that actually *move* the fitted model.
 
 Residual plots against each predictor or against fitted values are still essential. Look for nonlinearity, heteroscedasticity, and outliers.
 
-**ELI5**
+:::intuition
+With many predictors it becomes harder to 'see' problems by eye. Partial regression plots are like holding everything else in the model fixed so you can look at one relationship at a time — the statistical equivalent of a controlled experiment in your data.
+:::
 
-- With many predictors it becomes harder to 'see' problems by eye. Partial regression plots are like holding everything else in the model fixed so you can look at one relationship at a time — the statistical equivalent of a controlled experiment in your data.
+:::example[Flagging a high-leverage point]
+A model has $n = 50$ observations and $k = 4$ predictors (so $k + 1 = 5$ estimated coefficients).
+:::
 
-**Worked Example: Flagging a high-leverage point**
-- A model has $n = 50$ observations and $k = 4$ predictors (so $k + 1 = 5$ estimated coefficients).
-- Step 1 — the leverages always sum to the number of coefficients: $\sum_i h_{ii} = k + 1 = 5$. So the *average* leverage is $\bar h = \dfrac{k+1}{n} = \dfrac{5}{50} = 0.1$.
-- Step 2 — a common rule of thumb flags a point as high-leverage when $h_{ii} > 2\bar h = 2 \cdot \dfrac{k+1}{n} = 0.2$.
-- Step 3 — suppose observation #37 has $h_{37,37} = 0.35$. Since $0.35 > 0.2$, it is a high-leverage point: its predictor values are unusual, and it has outsized *potential* to pull the hyperplane.
-- Step 4 — high leverage alone is not damning. Check its residual too: a high-leverage point that also has a large residual will have a large Cook's distance and is a genuine influential point worth investigating; a high-leverage point that sits right on the fitted surface barely moves anything.
-- Sanity check: $0 \le h_{ii} \le 1$ always, and here $0.35$ is comfortably in range; if you ever compute a leverage outside $[0,1]$, you have an arithmetic error. ✓
+:::solution
+1. the leverages always sum to the number of coefficients: $\sum_i h_{ii} = k + 1 = 5$. So the *average* leverage is $\bar h = \dfrac{k+1}{n} = \dfrac{5}{50} = 0.1$.
+2. a common rule of thumb flags a point as high-leverage when $h_{ii} > 2\bar h = 2 \cdot \dfrac{k+1}{n} = 0.2$.
+3. suppose observation #37 has $h_{37,37} = 0.35$. Since $0.35 > 0.2$, it is a high-leverage point: its predictor values are unusual, and it has outsized *potential* to pull the hyperplane.
+4. high leverage alone is not damning. Check its residual too: a high-leverage point that also has a large residual will have a large Cook's distance and is a genuine influential point worth investigating; a high-leverage point that sits right on the fitted surface barely moves anything.
+5. Sanity check: $0 \le h_{ii} \le 1$ always, and here $0.35$ is comfortably in range; if you ever compute a leverage outside $[0,1]$, you have an arithmetic error. ✓
+:::
 
 ## Common Mistakes
 

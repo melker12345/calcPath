@@ -14,134 +14,171 @@ Classical examples: Hilbert-style axiomatic systems, natural deduction (Gentzen)
 
 Formal systems turn the intuitive idea of "proof" into a purely mechanical, syntax-driven process that a computer (or a meticulous clerk) can verify without ever understanding what the symbols mean. This separation of syntax from semantics is what makes logic foundational for computer science, automated theorem proving, and the study of what can and cannot be proved.
 
-Every formal system has three essential ingredients: a precisely defined language of symbols and formulas, a collection of axioms (or axiom schemas) that are accepted without proof, and inference rules that generate new formulas from old ones. Different styles—Hilbert systems, natural deduction, sequent calculus—package these ingredients differently, yet they are inter-translatable when they are sound and complete for the same semantics.
+:::definition[Formal system]{#formal-system}
+A **formal system** has three ingredients:
+
+- A language (symbols, well-formed formulas).
+- A set of axioms (or axiom schemas), accepted without proof.
+- Rules of inference (e.g., modus ponens: from $\phi$ and $\phi\to\psi$ infer $\psi$).
+:::
+
+Different styles—Hilbert systems, natural deduction, sequent calculus—package these ingredients differently, yet they are inter-translatable when they are sound and complete for the same semantics.
 
 In this section you will learn the common skeleton, see a concrete example of a formal proof, understand the crucial distinction between syntactic provability and semantic truth (soundness and completeness), and why these notions matter for the later incompleteness results.
 
-In a formal system we have:
-
-- A language (symbols, well-formed formulas).
-- A set of axioms (or axiom schemas).
-- Rules of inference (e.g., modus ponens: from $\phi$ and $\phi\to\psi$ infer $\psi$).
-
-A **proof** of $\psi$ from assumptions $\Gamma$ is a finite sequence of formulas ending in $\psi$ where each line is an axiom, an assumption, or follows from earlier lines by a rule.
+:::definition[Proof]{#proof-definition}
+A **proof** of $\psi$ from assumptions $\Gamma$ is a finite sequence of formulas ending in $\psi$ where each line is an axiom, an assumption, or follows from earlier lines by a rule. We write $\Gamma \vdash \psi$ when such a proof exists.
+:::
 
 Natural deduction uses introduction and elimination rules for each connective and quantifier, producing tree-shaped or linear proofs that mirror intuitive reasoning.
 
-**ELI5**
+:::intuition
+Think of it as a board game with strict legal moves. Axioms are starting positions you may place for free. Rules tell you exactly how to add the next piece. If you can legally reach a position that spells your target formula, you have a proof.
 
-- Think of it as a board game with strict legal moves. Axioms are starting positions you may place for free. Rules tell you exactly how to add the next piece. If you can legally reach a position that spells your target formula, you have a proof.
-- No "intuition" or "it feels right" is allowed; every step must cite a rule and prior lines.
+No "intuition" or "it feels right" is allowed; every step must cite a rule and prior lines.
+:::
 
-**Worked Example:**
-
+:::example
 Let us build a full Hilbert-style proof of $p \to p$ (the identity law) using only *modus ponens* and two standard axiom schemas of implicational logic:
+:::
 
-- **A1:** $\phi \to (\psi \to \phi)$
-- **A2:** $(\phi \to (\psi \to \chi)) \to ((\phi \to \psi) \to (\phi \to \chi))$
+:::solution
+**A1:** $\phi \to (\psi \to \phi)$
+**A2:** $(\phi \to (\psi \to \chi)) \to ((\phi \to \psi) \to (\phi \to \chi))$
 
 The trick is to pick the substitutions so that two applications of modus ponens collapse everything down to $p \to p$.
 
-1. $(p \to ((p \to p) \to p)) \to ((p \to (p \to p)) \to (p \to p))$
+$(p \to ((p \to p) \to p)) \to ((p \to (p \to p)) \to (p \to p))$
    — instance of **A2** with $\phi = p$, $\psi = p \to p$, $\chi = p$.
-2. $p \to ((p \to p) \to p)$
+$p \to ((p \to p) \to p)$
    — instance of **A1** with $\phi = p$, $\psi = p \to p$.
-3. $(p \to (p \to p)) \to (p \to p)$
+$(p \to (p \to p)) \to (p \to p)$
    — **MP** on lines 1 and 2: line 2 is exactly the antecedent of line 1, so we detach its consequent.
-4. $p \to (p \to p)$
+$p \to (p \to p)$
    — instance of **A1** with $\phi = p$, $\psi = p$.
-5. $p \to p$
+$p \to p$
    — **MP** on lines 3 and 4: line 4 is the antecedent of line 3, so we detach $p \to p$.
 
 **Sanity check:** every line is either an axiom instance or follows by modus ponens from two earlier lines, and the last line is the target $p \to p$ — so this is a valid five-line proof. Notice we never once appealed to what $p$ *means*; the derivation is pure symbol-pushing.
 
 In natural deduction the same theorem takes a single, far more intuitive step: assume $p$, observe that $p$ is now derived, then *discharge* the assumption via implication-introduction ($\to$I) to conclude $p \to p$. The Hilbert proof is longer precisely because it trades the convenient "assume and discharge" move for raw axioms — a recurring theme when comparing proof styles.
+:::
 
 ## Soundness
 
 <!-- section: soundness -->
 
-**Soundness** (or consistency of the proof system): If $\Gamma \vdash \phi$ (there is a formal proof of $\phi$ from $\Gamma$), then $\Gamma \models \phi$ (every model of $\Gamma$ is a model of $\phi$).
+:::theorem[Soundness]{#soundness}
+If $\Gamma \vdash \phi$ (there is a formal proof of $\phi$ from $\Gamma$), then $\Gamma \models \phi$ (every model of $\Gamma$ is a model of $\phi$):
 
-In plain words: you cannot prove false things from true premises using the rules. The syntactic consequence relation is contained in the semantic one.
+$$\Gamma \vdash \phi \quad\Longrightarrow\quad \Gamma \models \phi.$$
+:::
 
-Soundness is usually proved by **induction on the length (or structure) of proofs**. The two things you must check are: (i) the *base case* — every axiom is valid, i.e. true in every model; and (ii) the *inductive step* — every inference rule *preserves validity*, meaning that whenever its premises hold in a model, its conclusion holds in that same model. If both hold, then every line of a proof from $\Gamma$ is true in every model of $\Gamma$, so in particular the last line $\phi$ is — which is exactly $\Gamma \models \phi$.
+:::proof
+By **induction on the length (or structure) of proofs**. The two things to check are: (i) the *base case* — every axiom is valid, i.e. true in every model; and (ii) the *inductive step* — every inference rule *preserves validity*, meaning that whenever its premises hold in a model, its conclusion holds in that same model. If both hold, then every line of a proof from $\Gamma$ is true in every model of $\Gamma$, so in particular the last line $\phi$ is — which is exactly $\Gamma \models \phi$.
+:::
 
-**ELI5**
+In plain words: you cannot prove false things from true premises using the rules. The syntactic consequence relation $\vdash$ is contained in the semantic one $\models$.
 
-- Soundness is the "safety guarantee": the proof machine never lies. If it outputs "yes, this follows", then in reality (in every possible world consistent with your starting facts) the conclusion really does hold.
-- If a system were unsound you could "prove" $2+2=5$ from true arithmetic axioms — a disaster for reliability.
+:::intuition
+Soundness is the "safety guarantee": the proof machine never lies. If it outputs "yes, this follows", then in reality (in every possible world consistent with your starting facts) the conclusion really does hold.
 
-**Worked Example:**
+If a system were unsound you could "prove" $2+2=5$ from true arithmetic axioms — a disaster for reliability.
+:::
 
+:::example
 Let us carry out the inductive step for one rule — modus ponens — which is the heart of any soundness proof for a Hilbert system.
+:::
 
+:::solution
 **Claim:** modus ponens preserves validity: if $\mathcal{M} \models \phi$ and $\mathcal{M} \models \phi \to \psi$, then $\mathcal{M} \models \psi$.
 
-- **Step 1.** Fix any model $\mathcal{M}$ in which both premises are true.
-- **Step 2.** Recall the truth table for implication: $\phi \to \psi$ is false in exactly one case, namely when $\phi$ is true and $\psi$ is false. Equivalently, $\phi \to \psi$ is true iff ($\phi$ is false) or ($\psi$ is true).
-- **Step 3.** In $\mathcal{M}$ we have $\phi$ true, so the "$\phi$ is false" branch is ruled out. Since $\phi \to \psi$ is nonetheless true (premise 2), the only remaining branch that can make it true is "$\psi$ is true."
-- **Step 4.** Hence $\mathcal{M} \models \psi$, as required.
+ Fix any model $\mathcal{M}$ in which both premises are true.
+**Step 2.** Recall the truth table for implication: $\phi \to \psi$ is false in exactly one case, namely when $\phi$ is true and $\psi$ is false. Equivalently, $\phi \to \psi$ is true iff ($\phi$ is false) or ($\psi$ is true).
+**Step 3.** In $\mathcal{M}$ we have $\phi$ true, so the "$\phi$ is false" branch is ruled out. Since $\phi \to \psi$ is nonetheless true (premise 2), the only remaining branch that can make it true is "$\psi$ is true."
+**Step 4.** Hence $\mathcal{M} \models \psi$, as required.
 
 **Sanity check:** try to break it. To make the conclusion $\psi$ false while both premises hold, we would need $\phi$ true (premise 1) and $\psi$ false — but that is precisely the single row where $\phi \to \psi$ is *false*, contradicting premise 2. No such model exists, so the rule can never lead from truths to a falsehood. That is exactly what "sound" means, line by line.
+:::
 
 ## Completeness and Compactness
 
 <!-- section: completeness -->
 
-**Completeness** (Gödel 1929 for FOL): If $\Gamma \models \phi$ (semantic consequence), then $\Gamma \vdash \phi$ (there exists a formal proof).
+:::theorem[Gödel's completeness theorem]{#completeness}
+For first-order logic, if $\Gamma \models \phi$ (semantic consequence), then $\Gamma \vdash \phi$ (there exists a formal proof):
+
+$$\Gamma \models \phi \quad\Longrightarrow\quad \Gamma \vdash \phi.$$
+:::
 
 Together with soundness we have the perfect match: syntactic provability = semantic entailment.
 
 Why should completeness even be possible? Semantic entailment $\Gamma \models \phi$ quantifies over *all* models — potentially uncountably many, of every size. It is a genuine surprise that this infinite semantic fact can always be witnessed by a single *finite* proof. That is the content of the completeness theorem, and it is what makes formal proof a faithful stand-in for truth-in-all-models.
 
-**Compactness theorem**: If every finite subset of $\Gamma$ is satisfiable (has a model), then the whole (possibly infinite) $\Gamma$ is satisfiable.
+:::theorem[Compactness]{#compactness}
+If every finite subset of $\Gamma$ is satisfiable (has a model), then the whole (possibly infinite) $\Gamma$ is satisfiable.
+:::
 
-Here is the quick reason it follows from soundness + completeness. Suppose $\Gamma$ had *no* model. Then $\Gamma \models \bot$ (it entails a contradiction vacuously), so by completeness $\Gamma \vdash \bot$. But a proof is a *finite* sequence, so it can only cite finitely many members of $\Gamma$; call them $\Gamma_0 \subseteq \Gamma$. Then $\Gamma_0 \vdash \bot$, and by soundness $\Gamma_0$ has no model — contradicting the hypothesis that every finite subset is satisfiable. So $\Gamma$ must have a model after all. The single word doing the work is "finite": proofs cannot reach into infinitely much of the theory at once.
+:::proof
+It follows from soundness and completeness. Suppose $\Gamma$ had *no* model. Then $\Gamma \models \bot$ (it entails a contradiction vacuously), so by completeness $\Gamma \vdash \bot$. But a proof is a *finite* sequence, so it can only cite finitely many members of $\Gamma$; call them $\Gamma_0 \subseteq \Gamma$. Then $\Gamma_0 \vdash \bot$, and by soundness $\Gamma_0$ has no model — contradicting the hypothesis that every finite subset is satisfiable. So $\Gamma$ must have a model after all.
+:::
 
-Compactness is equivalent to completeness in many settings and has powerful consequences (e.g., existence of non-standard models of arithmetic).
+The single word doing the work is "finite": proofs cannot reach into infinitely much of the theory at once. Compactness is equivalent to completeness in many settings and has powerful consequences (e.g., existence of non-standard models of arithmetic).
 
-**ELI5**
+:::intuition
+Completeness: if something is *true in all models* of your premises, then there is a finite formal proof of it that the rule-following machine can find.
 
-- Completeness: if something is *true in all models* of your premises, then there is a finite formal proof of it that the rule-following machine can find.
-- Compactness: if no finite piece of your theory leads to contradiction, the whole infinite theory is still consistent. You never need infinitely many reasons at once to get a contradiction.
+Compactness: if no finite piece of your theory leads to contradiction, the whole infinite theory is still consistent. You never need infinitely many reasons at once to get a contradiction.
+:::
 
-**Worked Example:**
-
+:::example
 Let us use compactness to prove a clean, concrete fact:
+:::
 
+:::solution
 **Claim:** if a first-order theory $T$ has finite models of arbitrarily large size, then $T$ also has an *infinite* model.
 
-- **Step 1 — Write down what "infinite" costs.** For each $n \ge 2$ introduce the sentence
+**Write down what "infinite" costs.** For each $n \ge 2$ introduce the sentence
   $$\lambda_n : \exists x_1 \cdots \exists x_n \bigwedge_{i < j} x_i \neq x_j,$$
   which says "there are at least $n$ distinct elements." Let $T' = T \cup \{\lambda_2, \lambda_3, \lambda_4, \dots\}$. A model of $T'$ satisfies *every* $\lambda_n$, so it has at least $n$ elements for all $n$ — i.e. it is infinite.
-- **Step 2 — Check every finite subset of $T'$ is satisfiable.** Take any finite $\Delta \subseteq T'$. It mentions only finitely many of the $\lambda_n$; let $N$ be the largest index among them. By hypothesis $T$ has a finite model $\mathcal{M}$ with at least $N$ elements. That $\mathcal{M}$ satisfies $T$ and satisfies $\lambda_2, \dots, \lambda_N$ (having $\ge N$ elements), hence satisfies all of $\Delta$.
-- **Step 3 — Apply compactness.** Every finite subset of $T'$ is satisfiable, so by the compactness theorem $T'$ itself has a model $\mathcal{N}$.
-- **Step 4 — Read off the conclusion.** $\mathcal{N} \models T'$, so $\mathcal{N} \models T$ and $\mathcal{N} \models \lambda_n$ for every $n$. Being a model of every $\lambda_n$, $\mathcal{N}$ is infinite.
+**Step 2 — Check every finite subset of $T'$ is satisfiable.** Take any finite $\Delta \subseteq T'$. It mentions only finitely many of the $\lambda_n$; let $N$ be the largest index among them. By hypothesis $T$ has a finite model $\mathcal{M}$ with at least $N$ elements. That $\mathcal{M}$ satisfies $T$ and satisfies $\lambda_2, \dots, \lambda_N$ (having $\ge N$ elements), hence satisfies all of $\Delta$.
+**Step 3 — Apply compactness.** Every finite subset of $T'$ is satisfiable, so by the compactness theorem $T'$ itself has a model $\mathcal{N}$.
+**Step 4 — Read off the conclusion.** $\mathcal{N} \models T'$, so $\mathcal{N} \models T$ and $\mathcal{N} \models \lambda_n$ for every $n$. Being a model of every $\lambda_n$, $\mathcal{N}$ is infinite.
 
 **Sanity check:** we never needed one single finite model that was already infinite — that would be absurd. Each finite subset was satisfied by a *different* finite model, and compactness is exactly the tool that stitches these finite witnesses into one infinite model. This is also why the theory of "all finite groups," say, cannot be axiomatized so as to exclude infinite models: any first-order theory with arbitrarily large finite models is stuck with an infinite one too.
+:::
 
 ## Decidability
 
 <!-- section: decidability -->
 
-A theory (or logic) is **decidable** if there is an algorithm that, given any sentence, is guaranteed to **halt** and correctly answers whether it is a theorem (or valid). The emphasis on "halts on every input" is what separates decidability from mere provability: a proof-search that runs forever on non-theorems is not a decision procedure.
+:::definition[Decidable theory]
+A theory (or logic) is **decidable** if there is an algorithm that, given any sentence, is guaranteed to **halt** and correctly answers whether it is a theorem (or valid).
+:::
+
+The emphasis on "halts on every input" is what separates decidability from mere provability: a proof-search that runs forever on non-theorems is not a decision procedure.
 
 Propositional logic is decidable (truth tables or resolution), because a formula has only finitely many relevant truth assignments to check.
 
-First-order logic is **undecidable** (Church–Turing, 1936): no algorithm halts on every input and correctly decides validity for arbitrary FOL sentences. The escape hatch that props gave us — finitely many rows to check — disappears once quantifiers range over potentially infinite domains.
+:::theorem[Church–Turing: undecidability of first-order logic]
+First-order logic is **undecidable**: no algorithm halts on every input and correctly decides validity for arbitrary FOL sentences.
+:::
+
+The escape hatch that props gave us — finitely many rows to check — disappears once quantifiers range over potentially infinite domains.
 
 Many important fragments and theories are decidable (e.g., Presburger arithmetic, theory of real closed fields).
 
-**ELI5**
+:::intuition
+Decidable = a computer program can in principle answer "is this always true?" for any question you feed it, and it will finish with the right yes/no.
 
-- Decidable = a computer program can in principle answer "is this always true?" for any question you feed it, and it will finish with the right yes/no.
-- FOL as a whole is undecidable: there will always be some formulas for which the program either loops forever or gives wrong answers on some inputs. Yet for any *particular* valid formula a proof exists and can be found by a (different) search procedure.
+FOL as a whole is undecidable: there will always be some formulas for which the program either loops forever or gives wrong answers on some inputs. Yet for any *particular* valid formula a proof exists and can be found by a (different) search procedure.
+:::
 
-**Worked Example:**
-
+:::example
 Let us actually *run* the decision procedure for propositional validity on a small formula and confirm it terminates with the right answer.
+:::
 
+:::solution
 **Question:** is $\phi = (p \to q) \to (\neg q \to \neg p)$ valid (a tautology)?
 
 The algorithm: $\phi$ has $2$ atoms, $p$ and $q$, so build the full truth table — $2^2 = 4$ rows — and check whether $\phi$ is true in every row.
@@ -153,10 +190,11 @@ The algorithm: $\phi$ has $2$ atoms, $p$ and $q$, so build the full truth table 
 | F | T | T | F | T | T | T |
 | F | F | T | T | T | T | T |
 
-- **Step 1.** Row by row: when $p\to q$ is true and $\neg q \to \neg p$ is true, the outer implication is true; when the antecedent $p\to q$ is false (row 2), the outer implication is *automatically* true regardless. So every row yields $\phi = $ T.
-- **Step 2.** The procedure has examined all $4$ rows and found no falsifying assignment, so it halts and outputs "valid."
+ Row by row: when $p\to q$ is true and $\neg q \to \neg p$ is true, the outer implication is true; when the antecedent $p\to q$ is false (row 2), the outer implication is *automatically* true regardless. So every row yields $\phi = $ T.
+**Step 2.** The procedure has examined all $4$ rows and found no falsifying assignment, so it halts and outputs "valid."
 
 **Sanity check:** this formula is the law of contraposition, which we expect to be a tautology — and the table confirms it, with row 2 being the instructive case where a *false* antecedent makes the whole implication vacuously true. The point for decidability: because the number of rows is always the finite quantity $2^{(\text{number of atoms})}$, this brute-force check is guaranteed to terminate on *any* propositional formula. (It can be exponentially slow — propositional SAT is NP-complete, so practical tools like DPLL/CDCL use heuristics — but slow-yet-finite is still decidable.) For full first-order logic there is no analogous finite table to fill in, which is the intuitive root of its undecidability.
+:::
 
 ## Common Mistakes
 

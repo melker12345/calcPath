@@ -36,6 +36,7 @@ import type { ModuleContent, ModuleSection, WorkedExample } from "@/lib/modules"
 import type { Topic } from "@/lib/shared-types";
 
 import { toSlug, stripFrontmatterAndH1 } from "./mdx";
+import { isMathBlockClose, isMathBlockOpen } from "./math-blocks";
 
 type ParsedSection = {
   title: string;
@@ -141,6 +142,34 @@ function parseMdxToLegacyShape(mdxSource: string): {
   for (let i = 0; i < lines.length; i++) {
     const rawLine = lines[i];
     const line = rawLine.trim();
+
+    // Math-book environment (:::theorem[...] ... :::): capture the whole fence as
+    // ONE body entry. Body entries are re-joined with blank lines downstream, so a
+    // line-by-line push would tear the environment into unrelated paragraphs.
+    if (isMathBlockOpen(line)) {
+      let close = -1;
+      for (let j = i + 1; j < lines.length; j++) {
+        if (isMathBlockClose(lines[j].trim())) {
+          close = j;
+          break;
+        }
+      }
+      if (close !== -1) {
+        const fence = lines.slice(i, close + 1).join("\n");
+        // An environment closes any ELI5 / worked-example block it follows.
+        collectingEli5 = false;
+        collectingWorked = false;
+        currentWorked = null;
+        if (currentSection) {
+          currentSection.body.push(fence);
+        } else if (inIntro) {
+          intro.push(fence);
+        }
+        i = close;
+        continue;
+      }
+      // Unterminated fence: fall through and treat the line as ordinary content.
+    }
 
     if (!line) {
       // blank line: ELI5 collection intentionally spans blanks to catch following lists (LA style).

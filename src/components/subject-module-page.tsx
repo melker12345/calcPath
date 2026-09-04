@@ -10,6 +10,7 @@ import type { Problem, Topic } from "@/lib/shared-types";
 import type { ModuleContent, ModuleSection, WorkedExample } from "@/lib/modules";
 import { SubjectBreadcrumbs } from "@/components/subject-breadcrumbs";
 import { MdxContent } from "@/components/mdx-content";
+import { countNumberedBlocks } from "@/lib/content/math-blocks";
 import { getSubjectPath } from "@/lib/subject-urls";
 
 /**
@@ -35,6 +36,72 @@ function toSlug(text: string) {
     .replace(/(^-|-$)/g, "");
 }
 
+/**
+ * A worked example, set the way a textbook sets one:
+ *
+ *   Example 4.7 (Product rule with an exponential). Find d/dx[x^3 e^x].
+ *   Solution. ... steps ... □
+ *
+ * Authored content keeps the existing "**Worked Example: Title**" marker, where
+ * the first bullet is the problem and the rest are the steps; the presentation
+ * is what changes. Steps that spell out "Step 3:" have that prefix dropped — the
+ * list already numbers them, and the doubled numbering is noise.
+ */
+function WorkedExampleBlock({
+  example,
+  number,
+}: {
+  example: WorkedExample;
+  number: string;
+}) {
+  const steps: string[] = example.steps || [];
+  // Rich content (e.g. a truth table inside the example) is rendered as MDX;
+  // a plain step list is set as the solution proper.
+  const hasTable = steps.some((s: string) => /\|-+\|/.test(s) || /^\s*\|/.test(s));
+  const statement = steps.length > 1 ? steps[0] : null;
+  const solutionSteps = (statement ? steps.slice(1) : steps).map((step) =>
+    step.replace(/^\*{0,2}Step\s*\d+\s*[:.]\s*\*{0,2}/i, "").trim()
+  );
+  const hasTitle = Boolean(example.title) && !/^examples?$/i.test(example.title.trim());
+
+  return (
+    <section className="mb-env mb-env-declaration mb-env-example book-prose print-keep-together">
+      <p className="mb-0">
+        <span className="mb-env-head">
+          <span className="mb-env-label">Example {number}</span>
+          {hasTitle && (
+            <span className="mb-env-title">
+              {" ("}
+              <MathText text={example.title} />
+              {")"}
+            </span>
+          )}
+          <span className="mb-env-stop">.</span>{" "}
+        </span>
+        {statement && <MathText text={statement} />}
+      </p>
+
+      {hasTable ? (
+        <MdxContent mdxSource={steps.join("\n\n")} className="max-w-none" />
+      ) : (
+        <>
+          <p className="mt-3 mb-0">
+            <span className="mb-runin">Solution.</span>
+          </p>
+          <ol className="mb-solution-steps">
+            {solutionSteps.map((step: string, stepIdx: number) => (
+              <li key={stepIdx} className="theme-text-secondary">
+                <MathText text={step} />
+              </li>
+            ))}
+          </ol>
+          <span className="mb-endmark-standalone">□</span>
+        </>
+      )}
+    </section>
+  );
+}
+
 export function SubjectModulePage({
   subjectSlug,
   subjectLabel,
@@ -49,19 +116,48 @@ export function SubjectModulePage({
   const lessonModule = modules.find((item) => item.topicId === topicId);
   const topic = topics.find((item) => item.id === topicId);
 
+  // Chapter number = the topic's position in the subject, so a lesson is
+  // "Chapter 4" and its sections are 4.1, 4.2, ... exactly as in a printed book.
+  const chapter = useMemo(() => {
+    const index = topics.findIndex((t) => t.id === topicId);
+    return index >= 0 ? index + 1 : undefined;
+  }, [topics, topicId]);
+
+  /**
+   * Numbered environments (definitions, theorems, examples, ...) share ONE
+   * counter across the whole topic — "Theorem 4.3" then "Example 4.4" — which is
+   * how a reader finds a cross-reference in order. The offsets are derived here
+   * so numbering is a pure function of the content: no counters mutated during
+   * render, identical on the server and the client.
+   */
+  const sectionNumbering = useMemo(() => {
+    if (!lessonModule) return [];
+    // The chapter opener can hold environments too; it numbers first.
+    let used = countNumberedBlocks((lessonModule.intro || []).join("\n\n"));
+    return lessonModule.sections.map((section: ModuleSection) => {
+      const bodySource = (section.body || []).join("\n\n");
+      const bodyBlocks = countNumberedBlocks(bodySource);
+      const bodyStart = used;
+      const exampleStart = bodyStart + bodyBlocks;
+      used = exampleStart + (section.examples?.length || 0);
+      return { bodySource, bodyStart, exampleStart };
+    });
+  }, [lessonModule]);
+
   const navItems = useMemo(() => {
     if (!lessonModule) return [];
     return [
       { id: "intro", label: "Introduction" },
-      ...lessonModule.sections.map((section: ModuleSection) => ({
+      ...lessonModule.sections.map((section: ModuleSection, index: number) => ({
         // Prefer stable .section (from <!-- section: xxx --> or explicit {#slug} in MDX) so that
         // practice "Review the explanation..." links using getSectionHref + question.section land on the right spot.
         id: section.section || toSlug(section.title),
         label: section.title,
+        number: chapter ? `${chapter}.${index + 1}` : `${index + 1}`,
       })),
       { id: "mistakes", label: "Common Mistakes" },
     ];
-  }, [lessonModule]);
+  }, [lessonModule, chapter]);
 
   /* Print worksheet (restored from old calculus implementation, now generic for all subjects via content data) */
   const [printMode, setPrintMode] = useState<"text" | "questions" | null>(null);
@@ -117,8 +213,11 @@ export function SubjectModulePage({
             >
               Back to {subjectLabel} contents
             </Link>
-            <div className="mt-3 flex items-center gap-3">
-              <h1 className="text-3xl font-semibold tracking-tight theme-text sm:text-4xl">
+            {chapter && (
+              <p className="mt-4 book-chapter-label">Chapter {chapter}</p>
+            )}
+            <div className="mt-1 flex items-center gap-3">
+              <h1 className="font-serif text-3xl font-semibold tracking-tight theme-text sm:text-4xl">
                 {topic.title}
               </h1>
               {/* Print button + dropdown (restored generic feature; works for every subject via content/ questions) */}
@@ -212,105 +311,96 @@ export function SubjectModulePage({
                 )}
               </div>
             </div>
-            <p className="mt-3 text-base leading-7 theme-text-secondary">{topic.description}</p>
+            <p className="book-prose mt-3 theme-text-secondary">{topic.description}</p>
           </div>
 
-          {/* Introduction */}
+          {/* Introduction — the chapter opener. Rendered through MdxContent so it
+              gets the same book treatment (displayed equations, run-in heads) as
+              the sections below. */}
           <div id="intro" className="scroll-mt-20 print-keep-together">
-            <h2 className="mb-4 text-2xl font-semibold theme-text">Introduction</h2>
-            <div className="prose prose-stone dark:prose-invert max-w-none">
-              {lessonModule.intro.map((paragraph, index) => (
-                <p key={index} className="mb-3 last:mb-0">
-                  <MathText text={paragraph} />
-                </p>
-              ))}
-            </div>
+            <h2 className="book-section-heading mb-4 text-2xl font-semibold theme-text">
+              <span>Introduction</span>
+            </h2>
+            <MdxContent
+              mdxSource={lessonModule.intro.join("\n\n")}
+              className="book-prose"
+              chapter={chapter}
+            />
           </div>
 
           {/* Sections */}
-          {lessonModule.sections.map((section: ModuleSection) => (
+          {lessonModule.sections.map((section: ModuleSection, sectionIndex: number) => {
+            const numbering = sectionNumbering[sectionIndex];
+            const sectionNumber = chapter
+              ? `${chapter}.${sectionIndex + 1}`
+              : `${sectionIndex + 1}`;
+            return (
             <div
               key={section.section || section.title}
               id={section.section || toSlug(section.title)}
               className="scroll-mt-20 mt-12 print-keep-together"
             >
-              <h2 className="mb-4 text-2xl font-semibold theme-text">{section.title}</h2>
+              <h2 className="book-section-heading mb-4 text-2xl font-semibold theme-text">
+                <span className="book-section-number">{sectionNumber}</span>
+                <span>{section.title}</span>
+              </h2>
 
-              <MdxContent mdxSource={section.body.join('\n\n')} className="max-w-none" />
+              <MdxContent
+                mdxSource={numbering?.bodySource ?? section.body.join("\n\n")}
+                className="book-prose"
+                chapter={chapter}
+                startNumber={numbering?.bodyStart ?? 0}
+              />
 
               {section.eli5 && section.eli5.length > 0 && (
-                <div className="print-keep-together mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-5">
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-widest text-[var(--text-muted)]">
-                    Explain Like I&apos;m 5
-                  </div>
-                  <div className="space-y-3 text-sm leading-relaxed theme-text-secondary">
-                    {section.eli5.map((paragraph: string, index: number) => (
-                      <p key={index} className="mb-2 last:mb-0">
-                        <MathText text={paragraph} />
-                      </p>
-                    ))}
-                  </div>
-                </div>
+                <aside className="mb-env mb-env-aside mb-env-intuition print-keep-together book-prose">
+                  <span className="mb-env-head">
+                    <span className="mb-env-label">Intuition</span>
+                  </span>
+                  {section.eli5.map((paragraph: string, index: number) => (
+                    <p key={index} className="mb-2 last:mb-0">
+                      <MathText text={paragraph} />
+                    </p>
+                  ))}
+                </aside>
               )}
 
-              {section.examples && section.examples.length > 0 && (
-                <div className="mt-6">
-                  <div className="mb-3 text-sm font-semibold uppercase tracking-widest text-[var(--text-muted)]">
-                    Example{section.examples.length > 1 ? "s" : ""}
-                  </div>
-                  {section.examples.map((example: WorkedExample, idx: number) => {
-                    const steps: string[] = example.steps || [];
-                    // Detect rich content (e.g. markdown tables inside Worked Example prose) vs classic short step lists.
-                    // Tables in examples (like truth tables in propositional-logic) were previously dumped raw into <ol><li>
-                    // causing "duplicated chars" and broken lines. Use MdxContent (which supports GFM tables + MathText cells) for those.
-                    const hasTable = steps.some((s: string) => /\|-+\|/.test(s) || /^\s*\|/.test(s));
-                    return (
-                      <div
-                        key={idx}
-                        className="print-keep-together mb-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5"
-                      >
-                        <div className="mb-3 font-semibold theme-text">
-                          <MathText text={example.title} />
-                        </div>
-                        {hasTable ? (
-                          <MdxContent mdxSource={steps.join("\n\n")} className="max-w-none" />
-                        ) : (
-                          <ol className="list-decimal space-y-2 pl-5 text-sm">
-                            {steps.map((step: string, stepIdx: number) => (
-                              <li key={stepIdx} className="theme-text-secondary">
-                                <MathText text={step} />
-                              </li>
-                            ))}
-                          </ol>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              {section.examples && section.examples.length > 0 &&
+                section.examples.map((example: WorkedExample, idx: number) => (
+                  <WorkedExampleBlock
+                    key={idx}
+                    example={example}
+                    number={
+                      chapter
+                        ? `${chapter}.${(numbering?.exampleStart ?? 0) + idx + 1}`
+                        : `${(numbering?.exampleStart ?? 0) + idx + 1}`
+                    }
+                  />
+                ))}
 
-              {/* Per-section practice link */}
-              <div className="mt-4" data-no-print>
+              {/* Per-section practice link — a book's end-of-section exercises. */}
+              <div className="mt-5" data-no-print>
                 <Link
                   href={`/${subjectSlug}/practice/${topicId}?section=${section.section || toSlug(section.title)}`}
-                  className="inline-flex items-center gap-1 text-sm font-medium text-blue-700 hover:underline"
+                  className="inline-flex items-center gap-1 text-sm font-medium text-blue-700 hover:underline dark:text-[var(--accent)]"
                 >
-                  Practice questions for this section →
+                  Exercises for §{sectionNumber} →
                 </Link>
               </div>
             </div>
-          ))}
+            );
+          })}
 
           {/* Common Mistakes */}
           {lessonModule.commonMistakes.length > 0 && (
-            <div id="mistakes" className="print-keep-together scroll-mt-20 mt-12 rounded-2xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-800 dark:bg-amber-950/30">
-              <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-400">
-                Common Mistakes
-              </div>
-              <ul className="space-y-3 text-sm leading-relaxed">
+            <div id="mistakes" className="mb-env mb-env-aside mb-env-pitfall book-prose print-keep-together scroll-mt-20 mt-12">
+              <span className="mb-env-head">
+                <span className="mb-env-label">Common Mistakes</span>
+              </span>
+              <ul className="space-y-3 leading-relaxed">
                 {lessonModule.commonMistakes.map((mistake, index) => (
                   <li key={index} className="flex gap-3 theme-text-secondary">
-                    <span className="mt-1.5 block h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500 dark:bg-amber-400" />
+                    <span className="mt-2.5 block h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500 dark:bg-amber-400" />
                     {/* Wrap MathText content in a single block so its internal fragments/spans (from splitMath + bold) flow as continuous text with natural spacing.
                         Previously, multiple direct flex children + gap-3 created artificial large gaps around inline math and caused awkward wrapping/"stacking" for complex items like quantifier negations.
                         The internal MathText marginRight on math + word spacing now provide appropriate small breathing room. */}

@@ -6,7 +6,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
 import { MathInput } from "@/components/math-input";
 import { useProgress } from "@/components/progress-provider";
-import { isAnswerCorrectAsync } from "@/lib/answer-check";
+import { isAnswerCorrectAsync, isMcqAnswerCorrect } from "@/lib/answer-check";
 import { detectQuestionContext } from "@/lib/math-input-helpers";
 import { getSectionHref } from "@/lib/subject-urls";
 import {
@@ -250,7 +250,14 @@ export function GenericPracticeExperience({
   }
 
   const submitAnswer = async (val: string) => {
-    const isCorrect = await isAnswerCorrectAsync(val, current.answer);
+    // Multiple choice is graded by identity against the offered choices; only
+    // typed answers go through expression equivalence.
+    const mcqVerdict =
+      current.type === "mcq"
+        ? isMcqAnswerCorrect(val, current.answer, current.choices)
+        : null;
+    const isCorrect =
+      mcqVerdict ?? (await isAnswerCorrectAsync(val, current.answer));
     const currentAttempts = feedback?.type === "incorrect" ? feedback.attempts : 0;
     const hintWasUsed = feedback?.type === "incorrect" ? feedback.hintUsed : false;
 

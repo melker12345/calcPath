@@ -14,29 +14,36 @@ The canonical example is threshold secret sharing: any k out of n participants c
 
 <!-- section: threshold-ss -->
 
-In a (k,n)-threshold scheme a dealer splits secret s into n shares s1,...,sn such that:
+:::definition[(k,n)-threshold secret sharing]{#threshold-scheme}
+In a $(k,n)$-threshold scheme a dealer splits a secret $s$ into $n$ shares $s_1,\dots,s_n$ such that
 
-- Any set of k or more shares determines s uniquely.
-- Any set of k-1 or fewer shares reveals no information about s (the distribution of the shares is independent of s).
+- any set of $k$ or more shares determines $s$ uniquely, and
+- any set of $k-1$ or fewer shares reveals no information about $s$: the distribution of those shares is independent of $s$.
 
-The scheme is perfect if the 'no information' condition is information-theoretic (the mutual information I(s; any k-1 shares) = 0).
+The scheme is **perfect** when the second condition is information-theoretic, that is
 
-Each share must be at least as large as the secret itself (in bits) for perfect threshold schemes; this is an information-theoretic lower bound.
+$$I\bigl(s;\ \text{any } k-1 \text{ shares}\bigr) = 0.$$
+:::
 
-**ELI5**
+Perfection is expensive in one specific way: each share must be at least as large as the secret itself, in bits. That is an information-theoretic lower bound, proved in the properties section below.
 
-- Imagine a combination to a safe. You want any 3 out of 5 bank managers to be able to open it together, but any 2 should learn nothing that helps them guess the combination.
-- The dealer gives each manager a 'piece' of the combination. Only when 3 pieces are brought together do they fit into the full combination; any 2 pieces look like random garbage unrelated to the real combination.
+:::intuition
+Imagine a combination to a safe. You want any 3 out of 5 bank managers to be able to open it together, but any 2 should learn nothing that helps them guess the combination.
 
-**Worked Example:**
+The dealer gives each manager a 'piece' of the combination. Only when 3 pieces are brought together do they fit into the full combination; any 2 pieces look like random garbage unrelated to the real combination.
+:::
 
+:::example
 The simplest XOR construction is a $(2,2)$ scheme (both shares needed, one learns nothing); we build it first, then note why extending to a *perfect* $(2,3)$ needs a bit more care.
+:::
 
-1. **Perfect $(2,2)$ scheme.** For a 128-bit secret $s$, the dealer picks a uniform random 128-bit $r$ and sets share1 $=r$, share2 $=s\oplus r$.
-2. **Privacy:** each single share is uniform and independent of $s$ — share1 $=r$ is uniform by construction, and share2 $=s\oplus r$ is uniform because XOR-ing a fixed value with a uniform independent pad yields a uniform result. So one share gives zero information.
-3. **Reconstruction:** share1 $\oplus$ share2 $=r\oplus(s\oplus r)=s$, since $r\oplus r=0$.
-4. **Concrete 3-bit run.** $s=101$, dealer draws $r=011$. Then share1 $=011$, share2 $=101\oplus011=110$. Reconstruct: $011\oplus110=101=s$ ✓. Neither $011$ nor $110$ alone reveals anything: for each candidate secret there is exactly one pad making that share appear, so all secrets stay equally likely. **Sanity check:** recovers $101$, and each share is uniform ✓.
-5. **Extending to $(2,3)$.** A common toy version writes share1 $=r$, share2 $=s\oplus r$, share3 $=s$; this is *not* perfect, because share3 alone equals $s$. A genuinely perfect $(2,3)$ threshold scheme is obtained from Shamir's polynomial scheme (next section) with $k=2$, where every single share is uniform and any two reconstruct.
+:::solution
+**Perfect $(2,2)$ scheme.** For a 128-bit secret $s$, the dealer picks a uniform random 128-bit $r$ and sets share1 $=r$, share2 $=s\oplus r$.
+**Privacy:** each single share is uniform and independent of $s$ — share1 $=r$ is uniform by construction, and share2 $=s\oplus r$ is uniform because XOR-ing a fixed value with a uniform independent pad yields a uniform result. So one share gives zero information.
+**Reconstruction:** share1 $\oplus$ share2 $=r\oplus(s\oplus r)=s$, since $r\oplus r=0$.
+**Concrete 3-bit run.** $s=101$, dealer draws $r=011$. Then share1 $=011$, share2 $=101\oplus011=110$. Reconstruct: $011\oplus110=101=s$ ✓. Neither $011$ nor $110$ alone reveals anything: for each candidate secret there is exactly one pad making that share appear, so all secrets stay equally likely. **Sanity check:** recovers $101$, and each share is uniform ✓.
+**Extending to $(2,3)$.** A common toy version writes share1 $=r$, share2 $=s\oplus r$, share3 $=s$; this is *not* perfect, because share3 alone equals $s$. A genuinely perfect $(2,3)$ threshold scheme is obtained from Shamir's polynomial scheme (next section) with $k=2$, where every single share is uniform and any two reconstruct.
+:::
 
 ## Shamir's Polynomial Scheme
 
@@ -46,36 +53,53 @@ The idea: hide the secret as the y-intercept of a random curve, and hand each pa
 
 Shamir's (k,n) scheme works over a finite field F_q with q > n and secret s ∈ F_q. We need a *field* so that interpolation (which divides by coordinate differences) is well-defined, and $q>n$ so there are enough distinct nonzero evaluation points $1,\dots,n$ to give every participant one.
 
-The dealer chooses a random polynomial p(x) of degree at most k-1 with p(0) = s (the constant term); the other $k-1$ coefficients are drawn uniformly at random. The n shares are the points (i, p(i)) for i=1 to n (distinct nonzero field elements).
+:::recipe[Shamir's dealing procedure]{#shamir-scheme}
+1. Choose a random polynomial $p(x)$ of degree at most $k-1$ with $p(0) = s$ as its constant term; the other $k-1$ coefficients are drawn uniformly at random.
+2. Hand participant $i$ the point $(i, p(i))$, for $i = 1, \dots, n$ — distinct nonzero field elements.
+:::
 
-Any k points determine a unique degree-(k-1) polynomial (Lagrange interpolation), hence determine p(0)=s.
+:::theorem[Threshold property of Shamir's scheme]{#shamir-threshold}
+Any $k$ shares determine $s$, and any $k-1$ shares leave it completely undetermined.
+:::
 
-Any k-1 points are consistent with exactly q possible degree-(k-1) polynomials (one for each possible value of the missing coefficient that would set p(0) to any field element); thus the secret is completely undetermined.
+:::proof
+Any $k$ points determine a unique degree-$(k-1)$ polynomial, by Lagrange interpolation, and hence determine $p(0)=s$. Any $k-1$ points, on the other hand, are consistent with exactly $q$ degree-$(k-1)$ polynomials — one for each value of the missing coefficient, which sets $p(0)$ to any field element you please — so every candidate secret remains equally possible.
+:::
 
-**ELI5**
+:::intuition
+The secret is the y-intercept of a random polynomial of degree k-1. Each share is one point on that hidden curve.
 
-- The secret is the y-intercept of a random polynomial of degree k-1. Each share is one point on that hidden curve.
-- k points uniquely determine the whole curve (and therefore where it crosses the y-axis). k-1 points can be extended to a curve that crosses the y-axis at any value you like, so they give no clue.
+k points uniquely determine the whole curve (and therefore where it crosses the y-axis). k-1 points can be extended to a curve that crosses the y-axis at any value you like, so they give no clue.
+:::
 
-**Worked Example:**
+:::example
+$(k=3, n=5)$, field $F_{17}$, secret $s=7$. Dealer picks random $a_1=3$, $a_2=12$; $p(x) = 7 + 3x + 12 x^2 \mod 17$.
+:::
 
-1. $(k=3, n=5)$, field $F_{17}$, secret $s=7$. Dealer picks random $a_1=3$, $a_2=12$; $p(x) = 7 + 3x + 12 x^2 \mod 17$.
-2. Shares: $p(1)=7+3+12=22 \mod 17=5$.
-3. $p(2)=7+6+48 \mod 17=7+6+14=27 \mod 17=10$.
-4. $p(3)=7+9+108 \mod 17=7+9+6=22 \mod 17=5$ (calc: $12*9=108$, $108/17=6*17=102$, $108-102=6$).
-5. Shares handed out: $(1,5),(2,10),(3,5)$ (and $p(4),p(5)$ for the other two participants).
-6. **Reconstruct from any 3 points.** Take $(1,5),(2,10),(3,5)$ and recover $p(0)$ by Lagrange interpolation at $x=0$. The Lagrange weights at $x=0$ are $\ell_i(0)=\prod_{j\neq i}\frac{0-x_j}{x_i-x_j}$:
-   - $\ell_1(0)=\frac{(0-2)(0-3)}{(1-2)(1-3)}=\frac{6}{2}=3$.
-   - $\ell_2(0)=\frac{(0-1)(0-3)}{(2-1)(2-3)}=\frac{3}{-1}=-3\equiv 14 \pmod{17}$.
-   - $\ell_3(0)=\frac{(0-1)(0-2)}{(3-1)(3-2)}=\frac{2}{2}=1$.
-7. Then $s=p(0)=\sum_i y_i\,\ell_i(0)=5\cdot 3+10\cdot 14+5\cdot 1=15+140+5=160 \bmod 17$. Since $160=9\cdot17+7=153+7$, we get $s=7$. **Sanity check:** recovers the original secret $7$ ✓.
-8. Any $k-1=2$ points, say $(1,5),(2,10)$, are consistent with a quadratic passing through *any* chosen $p(0)=s'$: the third free coefficient can always be solved for, so the two points leak nothing about $s$.
+:::solution
+1. Shares: $p(1)=7+3+12=22 \mod 17=5$.
+2. $p(2)=7+6+48 \mod 17=7+6+14=27 \mod 17=10$.
+3. $p(3)=7+9+108 \mod 17=7+9+6=22 \mod 17=5$ (calc: $12*9=108$, $108/17=6*17=102$, $108-102=6$).
+4. Shares handed out: $(1,5),(2,10),(3,5)$ (and $p(4),p(5)$ for the other two participants).
+5. **Reconstruct from any 3 points.** Take $(1,5),(2,10),(3,5)$ and recover $p(0)$ by Lagrange interpolation at $x=0$. The Lagrange weights at $x=0$ are $\ell_i(0)=\prod_{j\neq i}\frac{0-x_j}{x_i-x_j}$:
+6. $\ell_1(0)=\frac{(0-2)(0-3)}{(1-2)(1-3)}=\frac{6}{2}=3$.
+7. $\ell_2(0)=\frac{(0-1)(0-3)}{(2-1)(2-3)}=\frac{3}{-1}=-3\equiv 14 \pmod{17}$.
+8. $\ell_3(0)=\frac{(0-1)(0-2)}{(3-1)(3-2)}=\frac{2}{2}=1$.
+9. Then $s=p(0)=\sum_i y_i\,\ell_i(0)=5\cdot 3+10\cdot 14+5\cdot 1=15+140+5=160 \bmod 17$. Since $160=9\cdot17+7=153+7$, we get $s=7$. **Sanity check:** recovers the original secret $7$ ✓.
+10. Any $k-1=2$ points, say $(1,5),(2,10)$, are consistent with a quadratic passing through *any* chosen $p(0)=s'$: the third free coefficient can always be solved for, so the two points leak nothing about $s$.
+:::
 
 ## Properties, Extensions, and Impossibility Results
 
 <!-- section: properties-extensions -->
 
-Share size lower bound: in a perfect (k,n) scheme over a secret of entropy H, each share has entropy at least H (otherwise the k-1 shares plus the missing one could not uniquely determine a high-entropy secret while k-1 give zero info).
+:::theorem[Share size lower bound]{#share-size-bound}
+In a perfect $(k,n)$ scheme over a secret of entropy $H(s)$, each share has entropy at least that much:
+
+$$H(\text{share}) \ge H(s).$$
+:::
+
+The reason is that otherwise the $k-1$ shares plus the missing one could not uniquely determine a high-entropy secret while the $k-1$ alone give zero information.
 
 Linear secret sharing schemes (shares are linear functions of the secret and randomness) are equivalent to monotone span programs and have efficient realizations for many access structures.
 
@@ -85,17 +109,21 @@ Verifiable secret sharing (VSS) adds the ability for participants to check that 
 
 Multi-secret and ramp schemes trade off reconstruction threshold vs privacy for multiple secrets or partial leakage.
 
-**ELI5**
+:::intuition
+You cannot make shares smaller than the secret in the perfect information-theoretic setting; information has to 'flow' to the qualified sets.
 
-- You cannot make shares smaller than the secret in the perfect information-theoretic setting; information has to 'flow' to the qualified sets.
-- For general who-can-reconstruct rules (e.g., 'any two managers plus the CEO, or any four managers') there are systematic ways to build the sharing from the simple threshold building blocks or from linear algebra over vector spaces.
+For general who-can-reconstruct rules (e.g., 'any two managers plus the CEO, or any four managers') there are systematic ways to build the sharing from the simple threshold building blocks or from linear algebra over vector spaces.
+:::
 
-**Worked Example:**
+:::example
+The lower bound proof: fix an unauthorized set $A$ of size $k-1$. By perfect privacy their joint shares are independent of $s$, so $H(s \mid \text{shares}_A)=H(s)$.
+:::
 
-1. The lower bound proof: fix an unauthorized set $A$ of size $k-1$. By perfect privacy their joint shares are independent of $s$, so $H(s \mid \text{shares}_A)=H(s)$.
-2. For a qualified set $B=A\cup\{p\}$, the shares of $B$ determine $s$, i.e. $H(s\mid\text{shares}_A,\text{share}_p)=0$.
-3. Subtracting, the one extra share must remove all remaining uncertainty: $I(s;\text{share}_p\mid\text{shares}_A)=H(s)-0=H(s)$. Since conditional mutual information is at most the entropy of either argument, $H(\text{share}_p)\ge H(\text{share}_p\mid\text{shares}_A)\ge I(s;\text{share}_p\mid\text{shares}_A)=H(s)$.
-4. **Sanity check with the XOR $(2,2)$ scheme:** a 128-bit secret has $H(s)=128$ bits, and each share is a uniform 128-bit string with $H(\text{share})=128$ bits — the bound $H(\text{share})\ge H(s)$ holds with equality, so XOR sharing is size-optimal.
+:::solution
+1. For a qualified set $B=A\cup\{p\}$, the shares of $B$ determine $s$, i.e. $H(s\mid\text{shares}_A,\text{share}_p)=0$.
+2. Subtracting, the one extra share must remove all remaining uncertainty: $I(s;\text{share}_p\mid\text{shares}_A)=H(s)-0=H(s)$. Since conditional mutual information is at most the entropy of either argument, $H(\text{share}_p)\ge H(\text{share}_p\mid\text{shares}_A)\ge I(s;\text{share}_p\mid\text{shares}_A)=H(s)$.
+3. **Sanity check with the XOR $(2,2)$ scheme:** a 128-bit secret has $H(s)=128$ bits, and each share is a uniform 128-bit string with $H(\text{share})=128$ bits — the bound $H(\text{share})\ge H(s)$ holds with equality, so XOR sharing is size-optimal.
+:::
 
 ## Common Mistakes
 
@@ -114,28 +142,36 @@ MPC is the broadest primitive in cryptography that generalizes secret sharing, z
 
 <!-- section: mpc-problem -->
 
-n parties P1 … Pn hold private inputs x1 … xn. They wish to compute y = f(x1,…,xn) such that:
+:::definition[Secure multiparty computation]{#mpc}
+Parties $P_1, \dots, P_n$ hold private inputs $x_1, \dots, x_n$ and wish to compute
 
-- Correctness: all honest parties obtain the correct y.
-- Privacy: nothing is revealed about the xi's beyond what y itself reveals.
+$$y = f(x_1,\dots,x_n)$$
 
-Security is defined via the simulation paradigm: for any adversary controlling a subset of parties, there exists a simulator that, given only the inputs of the corrupted parties and the output y, can produce a view indistinguishable from the real protocol execution.
+such that **correctness** holds — all honest parties obtain the correct $y$ — and **privacy** holds: nothing is revealed about the $x_i$ beyond what $y$ itself reveals.
+:::
+
+:::definition[Simulation-based security]{#simulation-paradigm}
+Security is defined via the simulation paradigm: for any adversary controlling a subset of parties, there exists a simulator that, given only the inputs of the corrupted parties and the output $y$, can produce a view indistinguishable from the real protocol execution.
+:::
 
 The function f can be any efficiently computable function (arithmetic circuit, Boolean circuit, RAM program, etc.).
 
-**ELI5**
+:::intuition
+Several hospitals want to compute the average salary of their doctors or the statistics of a rare disease across all their patient records, without any hospital seeing another hospital's raw data.
 
-- Several hospitals want to compute the average salary of their doctors or the statistics of a rare disease across all their patient records, without any hospital seeing another hospital's raw data.
-- The protocol lets them obtain only the final statistic; the individual records stay private.
+The protocol lets them obtain only the final statistic; the individual records stay private.
+:::
 
-**Worked Example:**
-
+:::example
 Yao's "millionaires' problem": two parties want to know who is richer without revealing their wealth. Define $f(x,y)=1$ if $x>y$ else $0$.
+:::
 
-1. **Concrete inputs.** Alice has $x=\$7\text{M}$, Bob has $y=\$5\text{M}$ (each private).
-2. **Ideal functionality.** Imagine a trusted third party who takes $x$ and $y$, computes $f(x,y)$, and announces only the bit. Here $7>5$, so it announces $1$.
-3. **What MPC guarantees.** A real MPC protocol (no trusted party) must reveal exactly what the ideal functionality would: both learn the bit $1$, and *nothing more*. In particular Bob does not learn that Alice has $7$M, nor even a range like "$>5$M" — only "Alice is richer."
-4. **What the output does imply.** Privacy is only "beyond what $y$ reveals." From output $1$, Bob deduces $x>5$; that is unavoidable because it is implied by the function's own answer. **Sanity check:** the simulator for Bob, given Bob's input $y=5$ and the output $1$, can reproduce Bob's entire view — confirming no extra leakage. If instead $x=4$, the output would be $0$ and Alice would learn $y>4$; again only what the answer itself entails.
+:::solution
+**Concrete inputs.** Alice has $x=\$7\text{M}$, Bob has $y=\$5\text{M}$ (each private).
+**Ideal functionality.** Imagine a trusted third party who takes $x$ and $y$, computes $f(x,y)$, and announces only the bit. Here $7>5$, so it announces $1$.
+**What MPC guarantees.** A real MPC protocol (no trusted party) must reveal exactly what the ideal functionality would: both learn the bit $1$, and *nothing more*. In particular Bob does not learn that Alice has $7$M, nor even a range like "$>5$M" — only "Alice is richer."
+**What the output does imply.** Privacy is only "beyond what $y$ reveals." From output $1$, Bob deduces $x>5$; that is unavoidable because it is implied by the function's own answer. **Sanity check:** the simulator for Bob, given Bob's input $y=5$ and the output $1$, can reproduce Bob's entire view — confirming no extra leakage. If instead $x=4$, the output would be $0$ and Alice would learn $y>4$; again only what the answer itself entails.
+:::
 
 ## Yao's Garbled Circuits for Two Parties
 
@@ -143,65 +179,78 @@ Yao's "millionaires' problem": two parties want to know who is richer without re
 
 Yao's protocol (1986) solves the two-party case (semi-honest model) using garbled circuits.
 
-One party ('garbler') takes a Boolean circuit for f, replaces every wire with two random keys (one for 0, one for 1), and for each gate creates a 'garbled table' of four ciphertexts that encrypt the correct output key under the two input keys, in random order.
-
-The other party ('evaluator') obtains the keys corresponding to its own input bits via oblivious transfer (OT), then evaluates the circuit gate by gate by decrypting exactly one entry per gate using the keys it holds, finally obtaining the output keys and (with mapping) the output bits.
+:::recipe[Yao's garbled circuit protocol]{#yao-garbled}
+1. The **garbler** takes a Boolean circuit for $f$ and replaces every wire with two random keys, one for $0$ and one for $1$.
+2. For each gate it creates a *garbled table* of four ciphertexts that encrypt the correct output key under the two input keys, in random order.
+3. The **evaluator** obtains the keys corresponding to its own input bits via oblivious transfer (OT).
+4. The evaluator walks the circuit gate by gate, decrypting exactly one entry per gate with the keys it holds, and finally obtains the output keys and, with the mapping, the output bits.
+:::
 
 The garbler sends the garbled tables plus the keys for its own input; the evaluator learns nothing about the garbler's input except through the output.
 
-**ELI5**
+:::intuition
+The garbler creates an encrypted 'maze' that computes the function. Each wire is a pair of secret keys; each gate is a lookup table that, given the right two input keys, lets you decrypt exactly the right output key.
 
-- The garbler creates an encrypted 'maze' that computes the function. Each wire is a pair of secret keys; each gate is a lookup table that, given the right two input keys, lets you decrypt exactly the right output key.
-- The evaluator walks the maze using keys for his inputs (obtained without the garbler learning which ones) and at the end holds only the output keys, which map to the answer.
+The evaluator walks the maze using keys for his inputs (obtained without the garbler learning which ones) and at the end holds only the output keys, which map to the answer.
+:::
 
-**Worked Example:**
+:::example
+**Setup.** Garble one AND gate with input wires $A,B$ and output wire $C$. The garbler picks six random 128-bit keys: $K_A^0,K_A^1$ for wire $A$; $K_B^0,K_B^1$ for wire $B$; $K_C^0,K_C^1$ for wire $C$. The map key $\to$ bit is secret.
+:::
 
-1. **Setup.** Garble one AND gate with input wires $A,B$ and output wire $C$. The garbler picks six random 128-bit keys: $K_A^0,K_A^1$ for wire $A$; $K_B^0,K_B^1$ for wire $B$; $K_C^0,K_C^1$ for wire $C$. The map key $\to$ bit is secret.
-2. **Truth table of AND:** output is $1$ only when both inputs are $1$, i.e. $0\wedge0=0$, $0\wedge1=0$, $1\wedge0=0$, $1\wedge1=1$.
-3. **Garbled table.** For each input combination, encrypt the *correct* output key under the two input keys. Writing $\mathrm{Enc}_{K,K'}(m)$ for double encryption under both keys:
-   - $\mathrm{Enc}_{K_A^0,K_B^0}(K_C^0)$
-   - $\mathrm{Enc}_{K_A^0,K_B^1}(K_C^0)$
-   - $\mathrm{Enc}_{K_A^1,K_B^0}(K_C^0)$
-   - $\mathrm{Enc}_{K_A^1,K_B^1}(K_C^1)$
-4. The garbler randomly permutes these four rows (so row position leaks no bit) and sends them to the evaluator.
-5. **Evaluation.** Say the evaluator holds $K_A^0$ (its own bit is $0$) and $K_B^1$ (obtained by OT, garbler doesn't know which). It tries to decrypt each row; the double-encryption authenticates so that only the row keyed by *exactly this pair* decrypts successfully — that is the second row, yielding $K_C^0$.
-6. **What is learned.** The evaluator now holds $K_C^0$ but not $K_C^1$, so it cannot tell that $0$ corresponds to output-bit $0$ unless the garbler also reveals the output map — hence intermediate wires stay hidden and only the final output map is disclosed. **Sanity check:** the true gate value is $0\wedge1=0$, matching $K_C^0$ ✓. The evaluator never sees $K_A^1$ or $K_B^0$, so it learns nothing about the garbler's input beyond the gate output.
+:::solution
+1. **Truth table of AND:** output is $1$ only when both inputs are $1$, i.e. $0\wedge0=0$, $0\wedge1=0$, $1\wedge0=0$, $1\wedge1=1$.
+2. **Garbled table.** For each input combination, encrypt the *correct* output key under the two input keys. Writing $\mathrm{Enc}_{K,K'}(m)$ for double encryption under both keys:
+3. $\mathrm{Enc}_{K_A^0,K_B^0}(K_C^0)$
+4. $\mathrm{Enc}_{K_A^0,K_B^1}(K_C^0)$
+5. $\mathrm{Enc}_{K_A^1,K_B^0}(K_C^0)$
+6. $\mathrm{Enc}_{K_A^1,K_B^1}(K_C^1)$
+7. The garbler randomly permutes these four rows (so row position leaks no bit) and sends them to the evaluator.
+8. **Evaluation.** Say the evaluator holds $K_A^0$ (its own bit is $0$) and $K_B^1$ (obtained by OT, garbler doesn't know which). It tries to decrypt each row; the double-encryption authenticates so that only the row keyed by *exactly this pair* decrypts successfully — that is the second row, yielding $K_C^0$.
+9. **What is learned.** The evaluator now holds $K_C^0$ but not $K_C^1$, so it cannot tell that $0$ corresponds to output-bit $0$ unless the garbler also reveals the output map — hence intermediate wires stay hidden and only the final output map is disclosed. **Sanity check:** the true gate value is $0\wedge1=0$, matching $K_C^0$ ✓. The evaluator never sees $K_A^1$ or $K_B^0$, so it learns nothing about the garbler's input beyond the gate output.
+:::
 
 ## Information-Theoretic MPC with Secret Sharing (BGW)
 
 <!-- section: bgw-ss -->
 
-For n parties with honest majority (t < n/2 corruptions) the BGW protocol (Ben-Or, Goldwasser, Wigderson 1988) achieves information-theoretic security using Shamir secret sharing.
+:::theorem[BGW theorem]{#bgw}
+For $n$ parties with an honest majority, meaning $t < n/2$ corruptions, the BGW protocol (Ben-Or, Goldwasser, Wigderson 1988) achieves information-theoretic security using Shamir secret sharing.
+:::
 
 Each input is shared using a (t+1, n) Shamir scheme. Addition of shared values is local (just add shares). Multiplication of two shared values requires an interactive degree-reduction step (each party locally multiplies its shares, re-shares the product, then the parties jointly compute a linear combination that reduces the degree back to t).
 
 With these two primitives any arithmetic circuit can be evaluated securely. For dishonest majority (t ≥ n/2) information-theoretic security is impossible for general functions without honest majority; computational assumptions or additional setup (e.g., OT) are required.
 
-**ELI5**
+:::intuition
+Everyone splits their private number into 'shares' that look random individually and gives one share to each other person.
 
-- Everyone splits their private number into 'shares' that look random individually and gives one share to each other person.
-- Adding two shared numbers is easy: everyone just adds the shares they hold.
-- Multiplying is harder; it produces higher-degree shares that must be 'cleaned up' by an interactive protocol that uses fresh randomness so that the final shares still hide the product.
+Adding two shared numbers is easy: everyone just adds the shares they hold.
 
-**Worked Example:**
+Multiplying is harder; it produces higher-degree shares that must be 'cleaned up' by an interactive protocol that uses fresh randomness so that the final shares still hide the product.
+:::
 
+:::example
 Compute the sum of three private salaries $s_1+s_2+s_3$ with $t=1$ (any one party may be corrupt), so we use degree-1 (2-out-of-3) sharings over $F_{17}$. Parties evaluate at $x=1,2,3$.
+:::
 
-1. **Inputs and polynomials.** Say $s_1=4,\ s_2=9,\ s_3=2$ (secrets, kept private). Each party picks its own random linear polynomial with the secret as constant term:
-   - $P_1(x)=4+5x$ (party 1 chose slope $5$).
-   - $P_2(x)=9+2x$.
-   - $P_3(x)=2+11x$.
-2. **Distribute shares.** Party $j$ receives $P_i(j)$ from each dealer $i$. Compute mod $17$:
-   - Party 1 ($x=1$): $P_1(1)=9,\ P_2(1)=11,\ P_3(1)=13$.
-   - Party 2 ($x=2$): $P_1(2)=14,\ P_2(2)=13,\ P_3(2)=24\equiv7$.
-   - Party 3 ($x=3$): $P_1(3)=19\equiv2,\ P_2(3)=15,\ P_3(3)=35\equiv1$.
-3. **Local addition.** Each party adds the three shares it holds (no communication):
-   - Party 1: $9+11+13=33\equiv16 \pmod{17}$.
-   - Party 2: $14+13+7=34\equiv0 \pmod{17}$.
-   - Party 3: $2+15+1=18\equiv1 \pmod{17}$.
+:::solution
+**Inputs and polynomials.** Say $s_1=4,\ s_2=9,\ s_3=2$ (secrets, kept private). Each party picks its own random linear polynomial with the secret as constant term:
+$P_1(x)=4+5x$ (party 1 chose slope $5$).
+$P_2(x)=9+2x$.
+$P_3(x)=2+11x$.
+**Distribute shares.** Party $j$ receives $P_i(j)$ from each dealer $i$. Compute mod $17$:
+Party 1 ($x=1$): $P_1(1)=9,\ P_2(1)=11,\ P_3(1)=13$.
+Party 2 ($x=2$): $P_1(2)=14,\ P_2(2)=13,\ P_3(2)=24\equiv7$.
+Party 3 ($x=3$): $P_1(3)=19\equiv2,\ P_2(3)=15,\ P_3(3)=35\equiv1$.
+**Local addition.** Each party adds the three shares it holds (no communication):
+Party 1: $9+11+13=33\equiv16 \pmod{17}$.
+Party 2: $14+13+7=34\equiv0 \pmod{17}$.
+Party 3: $2+15+1=18\equiv1 \pmod{17}$.
    These are shares of $Q(x)=P_1(x)+P_2(x)+P_3(x)=15+18x\equiv 15+x \pmod{17}$, whose constant term is $Q(0)=4+9+2=15$, the true sum.
-4. **Reconstruct from any two.** Interpolate the summed shares $(1,16)$ and $(2,0)$ at $x=0$: weights $\ell_1(0)=\frac{0-2}{1-2}=2$, $\ell_2(0)=\frac{0-1}{2-1}=-1\equiv16$. Then $Q(0)=16\cdot2+0\cdot16=32\equiv15 \pmod{17}$. **Sanity check:** $s_1+s_2+s_3=4+9+2=15$ ✓.
-5. **Privacy.** A single party sees three field elements (its own summed share $16$, say) that are independent of the true sum, because one point on a degree-1 polynomial is uniform; only $t+1=2$ shares reveal the sum. Addition needed zero interaction; multiplication would raise the degree to $2t=2$ and require the interactive degree-reduction step.
+**Reconstruct from any two.** Interpolate the summed shares $(1,16)$ and $(2,0)$ at $x=0$: weights $\ell_1(0)=\frac{0-2}{1-2}=2$, $\ell_2(0)=\frac{0-1}{2-1}=-1\equiv16$. Then $Q(0)=16\cdot2+0\cdot16=32\equiv15 \pmod{17}$. **Sanity check:** $s_1+s_2+s_3=4+9+2=15$ ✓.
+**Privacy.** A single party sees three field elements (its own summed share $16$, say) that are independent of the true sum, because one point on a degree-1 polynomial is uniform; only $t+1=2$ shares reveal the sum. Addition needed zero interaction; multiplication would raise the degree to $2t=2$ and require the interactive degree-reduction step.
+:::
 
 ## Security Models and Feasibility
 
@@ -214,20 +263,24 @@ Compute the sum of three private salaries $s_1+s_2+s_3$ with $t=1$ (any one part
 
 Universally composable (UC) security gives security even when the MPC protocol is used as a subroutine inside larger protocols.
 
-**ELI5**
+:::intuition
+Semi-honest is like 'the other people follow the rules but are nosy and will try to infer your salary from the messages they legitimately receive.'
 
-- Semi-honest is like 'the other people follow the rules but are nosy and will try to infer your salary from the messages they legitimately receive.'
-- Malicious is 'the other people may lie, send garbage, or collude to try to learn or corrupt the result.'
-- With an honest majority you can use pure information-theoretic tricks (secret sharing + interaction). Without it you need cryptography (one-way functions, oblivious transfer) to create 'virtual honest majority' or to detect cheating.
+Malicious is 'the other people may lie, send garbage, or collude to try to learn or corrupt the result.'
 
-**Worked Example (GMW compiler):**
+With an honest majority you can use pure information-theoretic tricks (secret sharing + interaction). Without it you need cryptography (one-way functions, oblivious transfer) to create 'virtual honest majority' or to detect cheating.
+:::
 
+:::example[(GMW compiler):]
 Turn a semi-honest protocol into a maliciously-secure one.
+:::
 
-1. **Commit to inputs.** Every party first commits to its private input $x_i$ and to the randomness $r_i$ it will use, so it cannot later change them.
-2. **Each message is a deterministic function.** In a fixed protocol, the next message a party should send is $m=\text{NextMsg}(x_i,r_i,\text{transcript})$ — a public function of the committed values and the messages seen so far.
-3. **Prove correctness with zero-knowledge.** Alongside each message $m$, the party sends a zero-knowledge proof that "$m$ is the correct output of $\text{NextMsg}$ for the values I committed to, given this transcript" — without revealing $x_i$ or $r_i$.
-4. **Effect.** A malicious party can no longer send a crafted wrong message: any deviation fails the proof and is caught, while honest behavior leaks nothing new (the proof is zero-knowledge). **Sanity check:** correctness is now enforced (matching the semi-honest guarantee) and privacy is preserved, so the compiled protocol is secure against Byzantine adversaries — at the cost of the extra ZK proofs, which is exactly the "cost of malicious security" noted in Common Mistakes.
+:::solution
+**Commit to inputs.** Every party first commits to its private input $x_i$ and to the randomness $r_i$ it will use, so it cannot later change them.
+**Each message is a deterministic function.** In a fixed protocol, the next message a party should send is $m=\text{NextMsg}(x_i,r_i,\text{transcript})$ — a public function of the committed values and the messages seen so far.
+**Prove correctness with zero-knowledge.** Alongside each message $m$, the party sends a zero-knowledge proof that "$m$ is the correct output of $\text{NextMsg}$ for the values I committed to, given this transcript" — without revealing $x_i$ or $r_i$.
+**Effect.** A malicious party can no longer send a crafted wrong message: any deviation fails the proof and is caught, while honest behavior leaks nothing new (the proof is zero-knowledge). **Sanity check:** correctness is now enforced (matching the semi-honest guarantee) and privacy is preserved, so the compiled protocol is secure against Byzantine adversaries — at the cost of the extra ZK proofs, which is exactly the "cost of malicious security" noted in Common Mistakes.
+:::
 
 ## Common Mistakes
 
@@ -238,9 +291,7 @@ Turn a semi-honest protocol into a maliciously-secure one.
 - **Forgetting the cost of malicious security**: Semi-honest protocols can be very cheap (linear in circuit size); malicious security often adds heavy zero-knowledge or cut-and-choose overhead, although recent protocols (e.g., SPDZ, authenticated triples) have made malicious security practical.
 - **Assuming MPC is only for 'millionaires' or toy functions**: Modern MPC frameworks (MP-SPDZ, SCALE-MAMBA, EMP-toolkit, etc.) routinely evaluate AES, neural-network inference, and complex database queries among dozens of parties.
 
-Differential privacy (DP) is a rigorous, quantifiable definition of privacy for data analysis and machine learning. A randomized algorithm M is ε-differentially private if, for any two neighboring datasets D and D' (differing in at most one record) and any measurable set S of possible outputs,
-
-Pr[M(D) ∈ S] ≤ e^ε Pr[M(D') ∈ S].
+Differential privacy (DP) is a rigorous, quantifiable definition of privacy for data analysis and machine learning. It asks that a randomized algorithm behave almost identically on any two datasets differing in at most one record, so that no output can betray whether a particular individual took part; the formal statement is given in the next section.
 
 The parameter ε (the privacy budget) controls the strength of the guarantee: smaller ε gives stronger privacy. The definition makes no assumptions about the adversary's background knowledge or computational power.
 
@@ -250,91 +301,154 @@ DP has become the gold standard for private data release at companies (Apple, Go
 
 <!-- section: dp-definition -->
 
-Two datasets are neighboring if they differ by the addition, removal, or change of a single individual's record. The definition is closed under post-processing: if M is DP then any (possibly randomized) function of M's output is also DP with the same ε.
+:::definition[Neighboring datasets]{#neighboring-datasets}
+Two datasets are neighboring if they differ by the addition, removal, or change of a single individual's record.
+:::
 
-(ε,δ)-DP relaxes pure DP to allow a small probability δ of 'catastrophic' failure (the bound may be violated with prob ≤ δ). This is necessary for many mechanisms (Gaussian noise) and for composition over many queries.
+:::definition[ε-differential privacy]{#differential-privacy}
+A randomized algorithm $M$ is $\varepsilon$-differentially private if, for any two neighboring datasets $D$ and $D'$ and any measurable set $S$ of possible outputs,
 
-Group privacy: if M is ε-DP then changing k records changes probabilities by at most e^{kε} (or (kε,δ') in the approximate case).
+$$\Pr[M(D) \in S] \le e^{\varepsilon}\, \Pr[M(D') \in S].$$
+:::
 
-**ELI5**
+The definition is closed under post-processing: if $M$ is DP then any (possibly randomized) function of $M$'s output is also DP with the same $\varepsilon$.
 
-- Whatever the output distribution looks like when your data is in the dataset, it cannot look too different (multiplicatively e^ε) from the distribution when your data is removed or changed.
-- The guarantee holds even if the adversary knows everything else about the world and sees the exact output; your participation still cannot be reliably detected.
+:::definition[Approximate differential privacy]{#approximate-dp}
+$(\varepsilon,\delta)$-DP relaxes pure DP to allow a small probability $\delta$ of 'catastrophic' failure: the bound above may be violated with probability at most $\delta$.
+:::
 
-**Worked Example:**
+This relaxation is necessary for many mechanisms — Gaussian noise, in particular — and for composition over many queries.
 
+Group privacy follows from the definition by iterating it: if $M$ is $\varepsilon$-DP then changing $k$ records changes probabilities by at most $e^{k\varepsilon}$, or $(k\varepsilon,\delta')$ in the approximate case.
+
+:::intuition
+Whatever the output distribution looks like when your data is in the dataset, it cannot look too different (multiplicatively e^ε) from the distribution when your data is removed or changed.
+
+The guarantee holds even if the adversary knows everything else about the world and sees the exact output; your participation still cannot be reliably detected.
+:::
+
+:::example
 A database of medical records; a DP release of "how many patients have disease X."
+:::
 
-1. **Neighboring datasets.** $D$ has $1000$ patients, of whom $200$ have disease X. Remove one patient who has X to get neighbor $D'$: now the true count is $199$. Neighboring means they differ by exactly one record.
-2. **The requirement.** For the release $M$ to be $\varepsilon$-DP, for *every* output set $S$, $\Pr[M(D)\in S]\le e^{\varepsilon}\Pr[M(D')\in S]$ and vice-versa. So no observed output can be much more likely under "patient included" than under "patient removed."
-3. **Numbers with $\varepsilon=\ln 3\approx1.099$.** Then $e^{\varepsilon}=3$. Whatever the chance the mechanism outputs some value, say $205$, it may be at most $3\times$ as likely when the patient is present as when absent. An adversary who sees $205$ therefore cannot update its belief about that patient's participation by more than a factor of $3$.
-4. **Why noise is needed.** The true counts differ by only $1$, but a deterministic release would output $200$ vs $199$ — perfectly distinguishing $D$ from $D'$ (ratio $\infty$). The mechanism must add randomness to smear the outputs together. **Sanity check:** as $\varepsilon\to0$, $e^{\varepsilon}\to1$, forcing the two output distributions to coincide — maximum privacy, and by post-processing, any function of the release inherits the same $\varepsilon$.
+:::solution
+**Neighboring datasets.** $D$ has $1000$ patients, of whom $200$ have disease X. Remove one patient who has X to get neighbor $D'$: now the true count is $199$. Neighboring means they differ by exactly one record.
+**The requirement.** For the release $M$ to be $\varepsilon$-DP, for *every* output set $S$, $\Pr[M(D)\in S]\le e^{\varepsilon}\Pr[M(D')\in S]$ and vice-versa. So no observed output can be much more likely under "patient included" than under "patient removed."
+**Numbers with $\varepsilon=\ln 3\approx1.099$.** Then $e^{\varepsilon}=3$. Whatever the chance the mechanism outputs some value, say $205$, it may be at most $3\times$ as likely when the patient is present as when absent. An adversary who sees $205$ therefore cannot update its belief about that patient's participation by more than a factor of $3$.
+**Why noise is needed.** The true counts differ by only $1$, but a deterministic release would output $200$ vs $199$ — perfectly distinguishing $D$ from $D'$ (ratio $\infty$). The mechanism must add randomness to smear the outputs together. **Sanity check:** as $\varepsilon\to0$, $e^{\varepsilon}\to1$, forcing the two output distributions to coincide — maximum privacy, and by post-processing, any function of the release inherits the same $\varepsilon$.
+:::
 
 ## The Laplace and Gaussian Mechanisms
 
 <!-- section: mechanisms -->
 
-For a numeric query f with L1 sensitivity Δ (max |f(D)-f(D')| over neighbors D,D'), the Laplace mechanism outputs f(D) + Lap(Δ/ε) (noise from the Laplace distribution with scale Δ/ε). This is ε-DP.
+:::definition[Sensitivity]{#sensitivity}
+The $L_1$ sensitivity of a numeric query $f$ is
 
-For (ε,δ)-DP the Gaussian mechanism adds N(0, σ²) with σ ≥ Δ √(2 ln(1.25/δ)) / ε (or similar calibrated constants). Gaussian noise is often preferred in practice because of its tail behavior and compatibility with composition.
+$$\Delta = \max_{D, D' \text{ neighbors}} |f(D)-f(D')|,$$
+
+the most that one record can move the answer.
+:::
+
+:::theorem[Laplace mechanism]{#laplace-mechanism}
+The mechanism that outputs
+
+$$f(D) + \mathrm{Lap}(\Delta/\varepsilon),$$
+
+adding noise from the Laplace distribution with scale $\Delta/\varepsilon$, is $\varepsilon$-DP.
+:::
+
+:::theorem[Gaussian mechanism]{#gaussian-mechanism}
+For $(\varepsilon,\delta)$-DP, adding $N(0, \sigma^2)$ noise with
+
+$$\sigma \ge \frac{\Delta \sqrt{2 \ln(1.25/\delta)}}{\varepsilon}$$
+
+(or similar calibrated constants) suffices.
+:::
+
+Gaussian noise is often preferred in practice because of its tail behavior and compatibility with composition.
 
 For non-numeric outputs (histograms, synthetic data, ML models) one uses the exponential mechanism (sample from a distribution weighted by a utility score) or more sophisticated constructions (private SGD, PATE, etc.).
 
-**ELI5**
+:::intuition
+Compute the statistic you care about on the real data. Because one person can affect the statistic by at most Δ, add random noise whose 'width' is proportional to Δ/ε. The noise hides whether any single person was present.
 
-- Compute the statistic you care about on the real data. Because one person can affect the statistic by at most Δ, add random noise whose 'width' is proportional to Δ/ε. The noise hides whether any single person was present.
-- Laplace noise is 'double-exponential' and gives pure ε-DP; Gaussian is bell-shaped and gives the slightly weaker (ε,δ) guarantee but is easier to analyze with many queries.
+Laplace noise is 'double-exponential' and gives pure ε-DP; Gaussian is bell-shaped and gives the slightly weaker (ε,δ) guarantee but is easier to analyze with many queries.
+:::
 
-**Worked Example (Laplace):**
-
+:::example[(Laplace):]
 Counting query with sensitivity $\Delta=1$ (adding/removing one person changes the count by at most $1$), target $\varepsilon=0.5$.
+:::
 
-1. **Calibrate the noise.** Laplace scale $b=\Delta/\varepsilon=1/0.5=2$. The mechanism releases $M(D)=\text{count}(D)+\text{Lap}(2)$, whose density at output $z$ is $\propto \exp(-|z-\text{count}(D)|/b)=\exp(-|z-\text{count}(D)|/2)$.
-2. **Check the DP ratio.** Take neighbors with counts $c$ and $c'$ where $|c-c'|\le\Delta=1$. For any output $z$ the density ratio is
+:::solution
+**Calibrate the noise.** Laplace scale $b=\Delta/\varepsilon=1/0.5=2$. The mechanism releases $M(D)=\text{count}(D)+\text{Lap}(2)$, whose density at output $z$ is $\propto \exp(-|z-\text{count}(D)|/b)=\exp(-|z-\text{count}(D)|/2)$.
+**Check the DP ratio.** Take neighbors with counts $c$ and $c'$ where $|c-c'|\le\Delta=1$. For any output $z$ the density ratio is
 $$\frac{\exp(-|z-c|/2)}{\exp(-|z-c'|/2)}=\exp\!\Big(\tfrac{|z-c'|-|z-c|}{2}\Big)\le \exp\!\Big(\tfrac{|c-c'|}{2}\Big)\le \exp\!\Big(\tfrac{1}{2}\Big)=e^{0.5}=e^{\varepsilon}.$$
    The middle step uses the reverse triangle inequality $|z-c'|-|z-c|\le|c-c'|$.
-3. **Sanity check.** The bound is exactly $e^{\varepsilon}$ and it holds for *every* $z$, so the mechanism is $\varepsilon$-DP with $\varepsilon=0.5$ ✓. Smaller $\varepsilon$ would force a larger scale $b=1/\varepsilon$, i.e. more noise.
+**Sanity check.** The bound is exactly $e^{\varepsilon}$ and it holds for *every* $z$, so the mechanism is $\varepsilon$-DP with $\varepsilon=0.5$ ✓. Smaller $\varepsilon$ would force a larger scale $b=1/\varepsilon$, i.e. more noise.
+:::
 
-**Worked Example (Gaussian):**
-
+:::example[(Gaussian):]
 Suppose the query is a vector-valued statistic with $L_2$ sensitivity $\Delta=4$, and we want $(\varepsilon=1,\delta=10^{-5})$-DP via the Gaussian mechanism using the rule of thumb $\sigma\ge \Delta\sqrt{2\ln(1.25/\delta)}/\varepsilon$.
+:::
 
-1. $1.25/\delta=1.25/10^{-5}=1.25\times10^{5}$, and $\ln(1.25\times10^{5})\approx11.74$.
-2. $\sqrt{2\cdot11.74}=\sqrt{23.48}\approx4.85$.
-3. $\sigma\ge 4\cdot4.85/1\approx19.4$. So adding $N(0,\sigma^2)$ with $\sigma\approx19.4$ per coordinate suffices. **Sanity check:** halving the budget to $\varepsilon=0.5$ would double $\sigma$ to $\approx38.8$ — tighter privacy costs proportionally more noise.
+:::solution
+$1.25/\delta=1.25/10^{-5}=1.25\times10^{5}$, and $\ln(1.25\times10^{5})\approx11.74$.
+$\sqrt{2\cdot11.74}=\sqrt{23.48}\approx4.85$.
+$\sigma\ge 4\cdot4.85/1\approx19.4$. So adding $N(0,\sigma^2)$ with $\sigma\approx19.4$ per coordinate suffices. **Sanity check:** halving the budget to $\varepsilon=0.5$ would double $\sigma$ to $\approx38.8$ — tighter privacy costs proportionally more noise.
+:::
 
 ## Composition, Post-Processing, and Advanced Properties
 
 <!-- section: composition-properties -->
 
-Basic composition: k mechanisms each ε-DP together are kε-DP (and (kε, kδ) for approximate).
+:::theorem[Basic composition]{#basic-composition}
+$k$ mechanisms, each $\varepsilon$-DP, are together $k\varepsilon$-DP — and $(k\varepsilon, k\delta)$-DP in the approximate case.
+:::
 
-Advanced composition: for (ε,δ)-DP mechanisms, k-fold adaptive composition is roughly (ε' , kδ + δ')-DP with ε' ≈ √(2k ln(1/δ')) ε + kε(e^ε-1) (or tighter modern bounds). This is the source of the 'privacy budget' accounting used in practice.
+:::theorem[Advanced composition]{#advanced-composition}
+For $(\varepsilon,\delta)$-DP mechanisms, $k$-fold adaptive composition is roughly $(\varepsilon', k\delta + \delta')$-DP with
 
-Post-processing immunity: any function (even randomized) of a DP output remains DP with the same parameters. This lets you post-process noisy answers arbitrarily (take medians, train models on synthetic data, etc.) without spending more privacy.
+$$\varepsilon' \approx \sqrt{2k \ln(1/\delta')}\;\varepsilon + k\varepsilon(e^{\varepsilon}-1),$$
+
+or tighter under modern bounds.
+:::
+
+Advanced composition is the source of the 'privacy budget' accounting used in practice: the $\sqrt{k}$ in place of $k$ is what makes hundreds of queries affordable.
+
+:::proposition[Post-processing immunity]{#post-processing}
+Any function, even a randomized one, of a DP output remains DP with the same parameters.
+:::
+
+This lets you post-process noisy answers arbitrarily — take medians, train models on synthetic data — without spending more privacy.
 
 Other properties: parallel composition (queries on disjoint subsets cost only the max ε), privacy amplification by sampling, and privacy odometers / filters for fully adaptive composition.
 
-**ELI5**
+:::intuition
+Every time you release a DP statistic you 'spend' some of your privacy budget ε. After many releases the total spent budget is tracked by composition theorems; you stop when the budget is exhausted.
 
-- Every time you release a DP statistic you 'spend' some of your privacy budget ε. After many releases the total spent budget is tracked by composition theorems; you stop when the budget is exhausted.
-- Once something is DP, you can compute anything you like from it later (graphs, ML models, press releases) and the privacy guarantee still holds; you do not pay extra.
+Once something is DP, you can compute anything you like from it later (graphs, ML models, press releases) and the privacy guarantee still holds; you do not pay extra.
+:::
 
-**Worked Example (basic composition):**
-
+:::example[(basic composition):]
 Release $k=3$ statistics, each made $\varepsilon_0=0.2$-DP.
+:::
 
-1. By basic composition the combined release is $k\varepsilon_0=3\cdot0.2=0.6$-DP.
-2. **Why:** for neighbors $D,D'$ and outputs $(z_1,z_2,z_3)$, the joint density ratio factors, and each factor is bounded by $e^{\varepsilon_0}$, so the product is at most $e^{3\varepsilon_0}=e^{0.6}$. **Sanity check:** $3\cdot0.2=0.6\le$ the analyst's budget if the budget is, say, $1$.
+:::solution
+By basic composition the combined release is $k\varepsilon_0=3\cdot0.2=0.6$-DP.
+**Why:** for neighbors $D,D'$ and outputs $(z_1,z_2,z_3)$, the joint density ratio factors, and each factor is bounded by $e^{\varepsilon_0}$, so the product is at most $e^{3\varepsilon_0}=e^{0.6}$. **Sanity check:** $3\cdot0.2=0.6\le$ the analyst's budget if the budget is, say, $1$.
+:::
 
-**Worked Example (advanced composition):**
-
+:::example[(advanced composition):]
 An analyst wants $k=100$ counting queries (each sensitivity $1$) within total budget $(\varepsilon=1,\delta=10^{-6})$; pick $\delta'=10^{-6}$ for the composition slack.
+:::
 
-1. **Basic composition is too lossy:** it would force each query to be $\varepsilon/k=1/100=0.01$-DP — very noisy per query.
-2. **Advanced composition** gives roughly $\varepsilon\approx\sqrt{2k\ln(1/\delta')}\,\varepsilon_0 + k\varepsilon_0(e^{\varepsilon_0}-1)$. For small $\varepsilon_0$ the first term dominates, so set $\varepsilon_0\approx \dfrac{\varepsilon}{\sqrt{2k\ln(1/\delta')}}$.
-3. **Plug in:** $\ln(1/\delta')=\ln(10^{6})\approx13.8$, so $\sqrt{2\cdot100\cdot13.8}=\sqrt{2760}\approx52.5$. Then $\varepsilon_0\approx 1/52.5\approx0.019$.
-4. **Sanity check:** this per-query $\varepsilon_0\approx0.019$ is nearly $2\times$ larger than the $0.01$ that basic composition allowed, so each query can use about half the noise — the $\sqrt{k}$ savings of advanced composition. The exact calibration is done by a privacy accountant (e.g. Rényi-DP), which is tighter still.
+:::solution
+**Basic composition is too lossy:** it would force each query to be $\varepsilon/k=1/100=0.01$-DP — very noisy per query.
+**Advanced composition** gives roughly $\varepsilon\approx\sqrt{2k\ln(1/\delta')}\,\varepsilon_0 + k\varepsilon_0(e^{\varepsilon_0}-1)$. For small $\varepsilon_0$ the first term dominates, so set $\varepsilon_0\approx \dfrac{\varepsilon}{\sqrt{2k\ln(1/\delta')}}$.
+**Plug in:** $\ln(1/\delta')=\ln(10^{6})\approx13.8$, so $\sqrt{2\cdot100\cdot13.8}=\sqrt{2760}\approx52.5$. Then $\varepsilon_0\approx 1/52.5\approx0.019$.
+**Sanity check:** this per-query $\varepsilon_0\approx0.019$ is nearly $2\times$ larger than the $0.01$ that basic composition allowed, so each query can use about half the noise — the $\sqrt{k}$ savings of advanced composition. The exact calibration is done by a privacy accountant (e.g. Rényi-DP), which is tighter still.
+:::
 
 ## Applications and Limitations
 
@@ -348,19 +462,22 @@ DP is used for:
 
 Limitations: the utility/privacy tradeoff can be severe for small datasets or many queries; choosing ε is a policy question (typical deployed values 0.1–10); composition can exhaust the budget quickly; DP does not protect against all inference (it protects participation, not the fact that someone is in a certain group if group membership is already known).
 
-**ELI5**
+:::intuition
+DP gives a dial you can turn: more noise → stronger privacy but less accurate answers. For big datasets and few queries the dial can be set so that the noise is tiny relative to the signal.
 
-- DP gives a dial you can turn: more noise → stronger privacy but less accurate answers. For big datasets and few queries the dial can be set so that the noise is tiny relative to the signal.
-- In machine learning, DP-SGD makes models slightly less accurate but gives a mathematical guarantee that the model weights do not memorize any single training example too strongly.
+In machine learning, DP-SGD makes models slightly less accurate but gives a mathematical guarantee that the model weights do not memorize any single training example too strongly.
+:::
 
-**Worked Example (DP-SGD):**
-
+:::example[(DP-SGD):]
 Train a neural net privately. Concrete setup: dataset size $N=50{,}000$, batch size $B=500$, noise multiplier $\sigma=1.1$, clipping norm $C=1.0$, and $E=30$ epochs.
+:::
 
-1. **Per-step mechanism.** Compute each example's gradient $g_i$, clip it to $L_2$ norm $C$ via $\bar g_i=g_i/\max(1,\lVert g_i\rVert_2/C)$ (bounding sensitivity to $C$), sum over the batch, add Gaussian noise $N(0,(\sigma C)^2 I)=N(0,1.21\,I)$, then divide by $B$ and take the SGD step.
-2. **Sampling rate.** $q=B/N=500/50{,}000=0.01$. Poisson subsampling amplifies privacy: each step is much more private than $\sigma$ alone would suggest.
-3. **Number of steps.** Steps per epoch $=N/B=50{,}000/500=100$, so total $T=E\cdot(N/B)=30\cdot100=3000$ steps.
-4. **Accounting.** A Rényi-DP / moments accountant composes these $T=3000$ subsampled Gaussian steps and outputs a single $(\varepsilon,\delta)$. For these parameters one typically lands near $\varepsilon\approx2$–$3$ at $\delta=10^{-5}$. **Sanity check:** raising $\sigma$ or lowering $q$ or $T$ all *decrease* $\varepsilon$ (stronger privacy) at the cost of accuracy — the levers behave monotonically, as expected. Because the trained weights are a post-processing of the noisy gradients, the final model inherits the same $(\varepsilon,\delta)$.
+:::solution
+**Per-step mechanism.** Compute each example's gradient $g_i$, clip it to $L_2$ norm $C$ via $\bar g_i=g_i/\max(1,\lVert g_i\rVert_2/C)$ (bounding sensitivity to $C$), sum over the batch, add Gaussian noise $N(0,(\sigma C)^2 I)=N(0,1.21\,I)$, then divide by $B$ and take the SGD step.
+**Sampling rate.** $q=B/N=500/50{,}000=0.01$. Poisson subsampling amplifies privacy: each step is much more private than $\sigma$ alone would suggest.
+**Number of steps.** Steps per epoch $=N/B=50{,}000/500=100$, so total $T=E\cdot(N/B)=30\cdot100=3000$ steps.
+**Accounting.** A Rényi-DP / moments accountant composes these $T=3000$ subsampled Gaussian steps and outputs a single $(\varepsilon,\delta)$. For these parameters one typically lands near $\varepsilon\approx2$–$3$ at $\delta=10^{-5}$. **Sanity check:** raising $\sigma$ or lowering $q$ or $T$ all *decrease* $\varepsilon$ (stronger privacy) at the cost of accuracy — the levers behave monotonically, as expected. Because the trained weights are a post-processing of the noisy gradients, the final model inherits the same $(\varepsilon,\delta)$.
+:::
 
 ## Common Mistakes
 

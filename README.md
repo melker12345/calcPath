@@ -17,7 +17,7 @@ Run `npm run content:validate` after edits — it enforces schemas + the hard re
 ## Features
 
 - **Dynamic subjects** — Add more by dropping content/ folders (JSON + MDX); everything auto-wires (home, modules, practice, etc.)
-- **Rich explanations** — Parsed from MDX with ELI5, worked examples, common pitfalls, section anchors for deep links + progress
+- **Rich explanations** — Textbook layout: numbered chapters and sections, numbered math-book environments (definitions, theorems, proofs, examples, intuition asides) via `:::` fences in MDX, displayed equations, serif book typography. See `content/STYLE.md`.
 - **Practice** — Numeric/MCQ questions with MathInput (keypad + suggestions), hints, solutions, mastery tracking
 - **Topic tests** (Calculus) — Dedicated per-topic tests via the app's /<subject>/test/ feature
 - **Local progress + sync** — Everything stored locally (no account required). Use the account page to back up and restore across devices via a 6-digit PIN + password (no PII, no emails); progress merges convergently so syncing never loses completed work
