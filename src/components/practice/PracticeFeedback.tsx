@@ -153,7 +153,7 @@ export function PracticeFeedback({
 
   if (isCorrect) {
     return (
-      <div className="animate-correct-pop flex h-full flex-col border-t border-emerald-200 bg-emerald-50 p-3 pt-4 sm:p-5 dark:border-emerald-800 dark:bg-emerald-950/40">
+      <div className="animate-correct-pop flex h-full flex-col border-t border-emerald-200 bg-emerald-50 p-3 pt-4 sm:p-5 dark:border-[var(--border)] dark:bg-[var(--surface-2)]">
         <div className="flex items-center gap-2.5">
           <div className="animate-check-bounce flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base">✓</div>
           <p className="text-base font-bold text-emerald-800 sm:text-xl dark:text-emerald-300">{isLastQuestion ? "Congrats!" : "Correct!"}</p>
@@ -161,7 +161,7 @@ export function PracticeFeedback({
         <div className="mt-3 flex-1 space-y-1.5 overflow-y-auto sm:mt-4 sm:space-y-2">
           {renderInternalSteps("emerald")}
         </div>
-        <div className="mt-3 rounded-lg bg-emerald-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3 dark:bg-emerald-900/50">
+        <div className="mt-3 rounded-lg bg-emerald-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3 dark:bg-emerald-400/10">
           <p className="text-sm font-semibold text-emerald-900 sm:text-base dark:text-emerald-200">
             Answer: <span className="text-base sm:text-lg">{/* final via MathText */}<MathText text={finalAnswer} /></span>
           </p>
@@ -187,8 +187,8 @@ export function PracticeFeedback({
     return (
       <div className={`flex h-full flex-col border-t p-3 pt-4 sm:p-5 ${
         showSolution 
-          ? "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40" 
-          : "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/40"
+          ? "border-amber-200 bg-amber-50 dark:border-[var(--border)] dark:bg-[var(--surface-2)]" 
+          : "border-blue-200 bg-blue-50 dark:border-[var(--border)] dark:bg-[var(--surface-2)]"
       }`}>
         {feedback.attempts > 0 && (
           <div className="flex items-center gap-2">
@@ -207,7 +207,7 @@ export function PracticeFeedback({
         )}
 
         {showHint && (
-          <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-2 sm:mt-4 sm:p-4 dark:border-blue-800 dark:bg-blue-950/40">
+          <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-2 sm:mt-4 sm:p-4 dark:border-[var(--border)] dark:bg-[var(--surface-2)]">
             <p className="text-[11px] font-semibold text-blue-700 sm:text-sm dark:text-blue-300">Hint</p>
             <div className="mt-0.5 text-xs text-blue-900 sm:mt-1 sm:text-base dark:text-blue-200">
               {/* Hint text (from expl) always via MathText */}
@@ -221,7 +221,7 @@ export function PracticeFeedback({
             <div className="mt-3 flex-1 space-y-1.5 overflow-y-auto sm:mt-4 sm:space-y-2">
               {renderInternalSteps("amber")}
             </div>
-            <div className="mt-3 rounded-lg bg-amber-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3 dark:bg-amber-900/50">
+            <div className="mt-3 rounded-lg bg-amber-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3 dark:bg-amber-400/10">
               <p className="text-sm font-semibold text-amber-900 sm:text-base dark:text-amber-200">
                 Answer: <span className="text-base sm:text-lg">{/* final via MathText */}<MathText text={finalAnswer} /></span>
               </p>
@@ -237,7 +237,7 @@ export function PracticeFeedback({
             <button
               type="button"
               onClick={onUseHint}
-              className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/50"
+              className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 active:scale-95 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm dark:border-[var(--border)] dark:bg-[var(--surface-2)] dark:text-blue-300 dark:hover:bg-blue-900/50"
             >
               Hint
             </button>

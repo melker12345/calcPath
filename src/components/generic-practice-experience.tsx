@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
@@ -167,6 +167,13 @@ export function GenericPracticeExperience({
 
   const current = hookCurrent || displayProblems[index];
 
+  // Practice is an app-like screen: everything fits the viewport, the page
+  // itself never scrolls (long question prompts scroll inside their own area).
+  useEffect(() => {
+    document.documentElement.classList.add("practice-no-scroll");
+    return () => document.documentElement.classList.remove("practice-no-scroll");
+  }, []);
+
   // Every graded submission for the current question, in order. Attached to bug
   // reports so "Answer seems wrong" arrives with exactly what the user typed
   // and how the grader judged it. Reset when the question changes.
@@ -197,7 +204,7 @@ export function GenericPracticeExperience({
     // Matches the polished card look and feel of the main data-driven routes exactly.
     return (
       <div className="mx-auto w-full max-w-3xl px-0 pb-0 sm:px-6 sm:py-10">
-        <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-center bg-[var(--surface-solid)] px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:border sm:border-[var(--border)] sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
+        <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-center bg-[var(--surface-solid)] px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
           <div className="mx-auto max-w-md text-center">
             <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface-2)] text-2xl" aria-hidden="true">
               📝
@@ -341,21 +348,18 @@ export function GenericPracticeExperience({
   ) : null;
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-0 pb-0 sm:px-6 sm:py-10">
-      {/* Header */}
-      <div className="mb-5 hidden sm:flex sm:items-center sm:justify-between px-1">
-        <div>
-          <h1 className="text-2xl font-bold theme-text">{topic.title}</h1>
-          <p className="mt-0.5 text-sm theme-text-muted">{topic.description}</p>
-        </div>
-        <span className="text-sm theme-text-muted">{solvedCount}/{displayProblems.length} mastered</span>
+    <div className="mx-auto flex h-[calc(100dvh-56px)] w-full max-w-3xl flex-col px-0 sm:px-6 sm:py-4">
+      {/* Compact header row — practice fits the viewport, so it stays slim */}
+      <div className="mb-2 hidden min-w-0 shrink-0 sm:flex sm:items-baseline sm:gap-3 px-1">
+        <h1 className="shrink-0 text-lg font-bold theme-text">{topic.title}</h1>
+        <span className="min-w-0 flex-1 truncate text-sm theme-text-muted">{topic.description}</span>
+        <span className="shrink-0 text-sm theme-text-muted">{solvedCount}/{displayProblems.length} mastered</span>
       </div>
 
-      {/* Main practice card (uses the established visual language) */}
-      {/* Practice surface is deliberately OPAQUE (--surface-solid): themed pages use a
-          translucent --surface over a textured background, and grid/ruled-line textures
-          running behind question maths made practice unreadable in dark mode. */}
-      <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-end bg-[var(--surface-solid)] px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:border sm:border-[var(--border)] sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
+      {/* Main practice card: fills the remaining viewport exactly; the page
+          never scrolls (html.practice-no-scroll). Long prompts scroll inside
+          their own area instead. Opaque surface, borderless — depth via shadow. */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--surface-solid)] px-4 pb-1 pt-2 sm:rounded-2xl sm:px-8 sm:pb-5 sm:pt-5 sm:shadow-lg">
         {/* Progress dots + "1 / N" counter (counter positioned on right of dots; uses theme-text-muted) */}
         <div className="flex w-full justify-center">
           <div className="flex items-center gap-2">
@@ -373,8 +377,9 @@ export function GenericPracticeExperience({
         {/* Per-question error boundary: keeps header/progress/nav always visible.
             Only the question+input subtree is isolated. Key ensures clean state per q. */}
         <QuestionErrorBoundary key={current.id} onSkip={goToNext} questionId={current.id}>
-          {/* Question prompt area: centered + py-6 (increased vs 5 for more vertical breathing room/legibility around prompt) */}
-          <div className="flex flex-1 flex-col items-center justify-center gap-2 py-6 text-center">
+          {/* Question prompt area: centered; scrolls internally if a prompt is
+              very tall so the page itself never scrolls */}
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 overflow-y-auto py-4 text-center">
             <div role="heading" aria-level={2} className="text-lg font-semibold leading-relaxed sm:text-2xl">
               {/* Always delegate to project's MathText (robust splitter + katex error fallback) */}
               <MathText text={current.prompt} />

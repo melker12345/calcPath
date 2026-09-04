@@ -339,6 +339,12 @@ export function MathInput({
     mqRef.current?.keystroke("Left");
   };
 
+  // Keep the field focused as questions change (covers non-remounting callers;
+  // keyed remounts focus via mathquillDidMount).
+  useEffect(() => {
+    mqRef.current?.focus();
+  }, [questionPrompt]);
+
   const suggestions = useMemo(
     () => deriveKeys(answerHint, questionContext, write, cmd, insertFunction),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -388,11 +394,11 @@ export function MathInput({
         onSave={(dataUrl) => { scratchpadData.current = dataUrl; }}
       />
 
-      {/* ── Math field — compact bar; on keyboard devices Check sits inline ── */}
-      <div className="flex items-center justify-center gap-2 px-4 py-3 sm:gap-3 sm:px-5 sm:py-4" style={{ background: th.fieldAreaBg }}>
+      {/* ── Math field — compact borderless bar, accent ring on focus ── */}
+      <div className="flex items-center justify-center px-4 py-3 sm:px-5" style={{ background: th.fieldAreaBg }}>
         <div
-          className="relative flex min-h-[52px] w-full items-center justify-center rounded-xl border px-4 sm:min-h-[60px]"
-          style={{ background: th.fieldInnerBg, borderColor: th.fieldBorder }}
+          className="relative flex min-h-[52px] w-full items-center justify-center rounded-xl px-4 transition-shadow focus-within:ring-2 focus-within:ring-[var(--accent)]/50 sm:min-h-[58px]"
+          style={{ background: "var(--surface-2)" }}
           // Enter submits. Caught at the wrapper (the event bubbles up from
           // MathQuill's hidden textarea) instead of via config.handlers.enter:
           // react-mathquill mutates the passed handlers object when wiring its
@@ -434,32 +440,22 @@ export function MathInput({
             }}
             mathquillDidMount={(field: MQField) => {
               mqRef.current = field;
+              // Each question remounts this component (keyed error boundary),
+              // so focusing here means the field is ready to type into the
+              // moment a question appears — no click required.
+              requestAnimationFrame(() => field.focus());
             }}
             className="w-full text-center text-lg sm:text-xl"
             style={{ color: th.numText }}
           />
         </div>
-        {/* Keyboard devices: Check lives next to the field (the keypad, and its
-            Check button, only exist on touch). Hidden during feedback like the
-            header actions so layout stays put. */}
-        {!feedbackOverlay && (
-          <button
-            type="button"
-            onClick={onSubmit}
-            className="mi-fine-only h-[52px] shrink-0 items-center gap-1.5 rounded-xl bg-[var(--accent)] px-5 text-sm font-bold text-[var(--accent-text)] shadow-sm transition hover:opacity-90 active:scale-[0.98] sm:h-[60px] sm:text-base"
-          >
-            Check
-            <span className="rounded border px-1 text-[10px] font-semibold opacity-70" style={{ borderColor: "currentColor" }}>↵</span>
-          </button>
-        )}
       </div>
 
-      {/* ── Symbol strip + keypad — overlay replaces them when feedback is active.
-             Keyboard devices see only the symbol strip (digits/operators come
-             from the physical keyboard); touch devices get the full keypad. ── */}
+      {/* ── Symbol strip + keypad — the feedback overlay covers them exactly
+             when active (their height is preserved underneath). ── */}
       <div className="relative">
         {feedbackOverlay && (
-          <div className="mi-overlay rounded-b-2xl">
+          <div className="absolute inset-0 z-10 overflow-y-auto rounded-b-2xl">
             {onDismissOverlay && (
               <button
                 type="button"
@@ -474,63 +470,40 @@ export function MathInput({
           </div>
         )}
 
-        <div className={feedbackOverlay ? "mi-under-overlay" : ""}>
-          {/* ── Symbol strip: contextual suggestions, plus the structural
-                 symbols that are awkward to type. Both pointer types see it. ── */}
-          {/* With no contextual suggestions the strip only holds the keyboard
-              symbol chips, so on touch (where those live in the keypad) it
-              would be empty — mi-fine-only hides it there. */}
-          <div className={`${suggestions.length === 0 ? "mi-fine-only" : "flex"} items-center gap-1.5 overflow-x-auto border-t px-3 py-2 sm:gap-2 sm:px-4 md:justify-center md:gap-2.5 md:px-6`} style={{ background: th.keypadBg, borderColor: th.dividerColor }}>
-            {suggestions.map((k) => (
-              <button
-                key={k.label}
-                type="button"
-                onClick={k.action}
-                className="shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-bold transition active:scale-95 sm:px-3 sm:py-1 sm:text-sm"
-                style={{ background: th.pillBg, borderColor: th.pillBorder, color: th.pillText }}
-              >
-                {k.label}
-              </button>
-            ))}
-            {/* Structural symbols for keyboard users (on touch these live in the
-                tools/operator rows below). */}
-            <span className="mi-fine-only shrink-0 items-center gap-1.5 sm:gap-2">
-              {suggestions.length > 0 && (
-                <span aria-hidden className="mx-1 h-4 w-px" style={{ background: th.dividerColor }} />
-              )}
-              {[
-                { label: "a/b", action: () => cmd("\\frac") },
-                { label: "xⁿ", action: () => cmd("^") },
-                { label: "√", action: () => cmd("\\sqrt") },
-                { label: "( )", action: () => { write("\\left(\\right)"); mqRef.current?.keystroke("Left"); } },
-              ].map((k) => (
+        <div className={feedbackOverlay ? "invisible" : ""}>
+          {/* ── Suggestions strip: contextual symbols for this question ── */}
+          {suggestions.length > 0 && (
+            <div className="flex items-center justify-center gap-1.5 overflow-x-auto border-t px-3 py-1.5 sm:gap-2 sm:px-4" style={{ background: th.keypadBg, borderColor: th.dividerColor }}>
+              {suggestions.map((k) => (
                 <button
                   key={k.label}
                   type="button"
                   onClick={k.action}
-                  className="shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-bold transition active:scale-95 sm:px-3 sm:py-1 sm:text-sm"
-                  style={{ background: th.pillBg, borderColor: th.pillBorder, color: th.pillText }}
+                  className="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold transition active:scale-95 sm:px-3 sm:text-sm"
+                  style={{ background: th.pillBg, color: th.pillText }}
                 >
                   {k.label}
                 </button>
               ))}
-            </span>
-          </div>
-
-          {/* ── Touch keypad (coarse pointer only) ── */}
-          <div className="mi-touch-only">
-            {/* Tools row: ( )  xⁿ  √  ⌫  AC */}
-            <div className="grid grid-cols-5 gap-[3px] border-t px-2 py-1.5 sm:gap-1.5 sm:px-3 sm:py-2" style={{ background: th.keypadBg, borderColor: th.dividerColor }}>
-              <button type="button" onClick={() => { write("\\left(\\right)"); mqRef.current?.keystroke("Left"); }} className="kp-op text-[13px] sm:text-sm">( )</button>
-              <button type="button" onClick={() => cmd("^")} className="kp-op text-[13px] sm:text-sm">x<sup className="text-[9px]">n</sup></button>
-              <button type="button" onClick={() => cmd("\\sqrt")} className="kp-op text-[13px] sm:text-sm">√</button>
-              <button type="button" onClick={backspace} className="kp-op text-[13px] sm:text-sm">⌫</button>
-              <button type="button" onClick={clear} className="kp-op-ac">AC</button>
             </div>
+          )}
 
-            {/* Numpad (3 cols) + operator column (1 col) */}
-            <div className="flex flex-col gap-[3px] px-2 pb-2 pt-[3px] sm:gap-1.5 sm:px-3 sm:pb-3 sm:pt-1.5" style={{ background: th.keypadBg }}>
-              <div className="grid grid-cols-[2fr_2fr_2fr_1fr] grid-rows-5 gap-[3px] sm:gap-1.5">
+          {/* ── Keypad — compact, centered, capped width so it reads as a tool,
+                 not a wall. Digits are clickable everywhere; typing + Enter
+                 always work too. ── */}
+          <div className="border-t" style={{ background: th.keypadBg, borderColor: th.dividerColor }}>
+            <div className="mx-auto w-full max-w-[430px] px-3 pb-2.5 pt-1.5 sm:px-4 sm:pb-3">
+              {/* Tools row: ( )  xⁿ  √  ⌫  AC */}
+              <div className="grid grid-cols-5 gap-1 pb-1 sm:gap-1.5 sm:pb-1.5">
+                <button type="button" onClick={() => { write("\\left(\\right)"); mqRef.current?.keystroke("Left"); }} className="kp-op text-[13px] sm:text-sm">( )</button>
+                <button type="button" onClick={() => cmd("^")} className="kp-op text-[13px] sm:text-sm">x<sup className="text-[9px]">n</sup></button>
+                <button type="button" onClick={() => cmd("\\sqrt")} className="kp-op text-[13px] sm:text-sm">√</button>
+                <button type="button" onClick={backspace} className="kp-op text-[13px] sm:text-sm">⌫</button>
+                <button type="button" onClick={clear} className="kp-op-ac">AC</button>
+              </div>
+
+              {/* Numpad (3 cols) + operator column (1 col) */}
+              <div className="grid grid-cols-[2fr_2fr_2fr_1fr] grid-rows-5 gap-1 sm:gap-1.5">
                 <button type="button" onClick={() => write("7")} className="kp-num">7</button>
                 <button type="button" onClick={() => write("8")} className="kp-num">8</button>
                 <button type="button" onClick={() => write("9")} className="kp-num">9</button>
@@ -557,6 +530,7 @@ export function MathInput({
                 <button type="button" onClick={onSubmit} className="kp-submit col-span-3">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5"><path d="M20 6L9 17l-5-5"/></svg>
                   Check
+                  <span className="mi-fine-only ml-1.5 items-center rounded border px-1 text-[10px] font-semibold opacity-70" style={{ borderColor: "currentColor" }}>↵</span>
                 </button>
                 <button type="button" onClick={() => write("\\div ")} className="kp-op-solid">÷</button>
               </div>
