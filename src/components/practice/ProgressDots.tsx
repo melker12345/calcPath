@@ -28,15 +28,23 @@ export function ProgressDots({
 }: ProgressDotsProps) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
-  // Keep the active dot centered in the scroll window.
+  // Keep the active dot centered in the scroll window. Positions come from
+  // getBoundingClientRect deltas — offsetLeft would be relative to the nearest
+  // positioned ancestor (the practice card), not the scroller, and over-scrolls.
   useEffect(() => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
     const active = scroller.children[currentIndex] as HTMLElement | undefined;
     if (!active) return;
+    const activeRect = active.getBoundingClientRect();
+    const scrollerRect = scroller.getBoundingClientRect();
     const target =
-      active.offsetLeft - scroller.clientWidth / 2 + active.offsetWidth / 2;
-    scroller.scrollTo({ left: target, behavior: "smooth" });
+      activeRect.left -
+      scrollerRect.left +
+      scroller.scrollLeft -
+      scroller.clientWidth / 2 +
+      activeRect.width / 2;
+    scroller.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
   }, [currentIndex, statuses.length]);
 
   return (
