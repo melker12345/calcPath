@@ -10,6 +10,25 @@ type MathTextProps = {
   block?: boolean;
 };
 
+/**
+ * Detects "tall" inline math — LaTeX whose rendered height spans more than one
+ * text row (multi-row matrices/vectors, arrays, cases, aligned blocks). KaTeX
+ * inline math does NOT grow the surrounding line box for tall content, so such
+ * expressions bleed into the line below (augmented matrices were overlapping the
+ * following paragraph on mobile). We detect tallness straight from the source and
+ * render those spans as a self-contained inline-block that owns its vertical space
+ * and scrolls horizontally on narrow screens (see `.math-tall` in globals.css).
+ *
+ * Signals: a stacking environment (matrix family, array, cases, aligned, …) or a
+ * literal `\\` row break (present in every multi-row matrix/vector/array).
+ */
+const TALL_INLINE_MATH =
+  /\\begin\{(?:[pbvVB]?matrix\*?|smallmatrix|array|cases|aligned|gathered|split|align\*?)\}|\\\\/;
+
+export function isTallInlineMath(latex: string): boolean {
+  return TALL_INLINE_MATH.test(latex);
+}
+
 const splitMath = (text: string) => {
   // Robust splitter: supports $...$ (inline) and $$...$$ (block). Handles \$ escapes.
   // Post-processes for sentence spacing + anti-glue logic (see below).
@@ -152,6 +171,17 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
         }
 
         if (isInlineMath) {
+          // Tall inline math (multi-row matrices, vectors, cases) needs its own
+          // vertical space so it doesn't overlap the line below. inline-block makes
+          // the line box grow to fit it, and .math-tall adds breathing room + a
+          // horizontal scroll fallback for wide matrices on mobile.
+          if (isTallInlineMath(part.value)) {
+            return (
+              <span key={`${part.value}-${index}`} className="math-tall">
+                <SafeInlineMath math={part.value} />
+              </span>
+            );
+          }
           // Consistent small breathing room after every inline math expression
           return (
             <span key={`${part.value}-${index}`} style={{ marginRight: "0.15em" }}>
@@ -189,7 +219,7 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
           if (/^\*\*(.+)\*\*$/.test(seg)) {
             const inner = seg.replace(/^\*\*(.+)\*\*$/, '$1');
             return (
-              <strong key={sIdx} className="font-semibold">
+              <strong key={sIdx} className="font-semibold theme-text">
                 {inner}
               </strong>
             );

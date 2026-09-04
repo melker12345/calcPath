@@ -104,7 +104,7 @@ function renderInline(
     }
     if (token.type === "strong") {
       return (
-        <strong key={key} className="font-semibold">
+        <strong key={key} className="font-semibold theme-text">
           {renderInline(token.tokens, mathSegments)}
         </strong>
       );
@@ -311,6 +311,35 @@ function MermaidDiagram({ chart }: { chart: string }) {
   return <div ref={ref} className="my-4 overflow-x-auto rounded border theme-border p-2 bg-white dark:bg-zinc-950" />;
 }
 
+const STUDY_BLOCKS = new Set([
+  "definition",
+  "theorem",
+  "property",
+  "proposition",
+  "lemma",
+  "corollary",
+  "example",
+  "application",
+  "proof",
+  "key-facts",
+]);
+
+function StudyBlock({ type, title, source }: { type: string; title?: string; source: string }) {
+  const label = type === "key-facts" ? "Key facts" : type[0].toUpperCase() + type.slice(1);
+  const tone = ["definition", "theorem", "property", "proposition", "lemma", "corollary"].includes(type)
+    ? "border-blue-200 bg-blue-50/70 dark:border-blue-900 dark:bg-blue-950/30"
+    : type === "proof"
+      ? "border-stone-300 bg-stone-50 dark:border-stone-700 dark:bg-stone-900/40"
+      : type === "key-facts"
+        ? "border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/30"
+        : "border-amber-200 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/30";
+  const content = <MdxContent mdxSource={source} className="max-w-none" />;
+  if (type === "proof") {
+    return <details className={`my-5 rounded-xl border p-4 ${tone}`}><summary className="cursor-pointer font-semibold theme-text">{title || label}</summary><div className="mt-3">{content}</div></details>;
+  }
+  return <div className={`my-5 rounded-xl border p-4 ${tone}`}><div className="mb-2 text-xs font-bold uppercase tracking-widest theme-text-secondary">{title || label}</div>{content}</div>;
+}
+
 /**
  * MdxContent
  *
@@ -341,6 +370,25 @@ export function MdxContent({
   }
   const withoutFrontmatter = stripFrontmatter(mdxSource);
   const withoutComments = stripComments(withoutFrontmatter).trim();
+  const blocks: Array<{ before: string; type: string; title?: string; source: string }> = [];
+  const blockPattern = /:::([a-z-]+)(?:\s+(.+?))?\n([\s\S]*?)\n:::/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = blockPattern.exec(withoutComments))) {
+    if (!STUDY_BLOCKS.has(match[1])) continue;
+    blocks.push({ before: withoutComments.slice(lastIndex, match.index), type: match[1], title: match[2]?.trim(), source: match[3].trim() });
+    lastIndex = match.index + match[0].length;
+  }
+  if (blocks.length > 0) {
+    const rendered = blocks.map((block, index) => (
+      <React.Fragment key={`study-${index}`}>
+        {block.before.trim() && <MdxContent mdxSource={block.before} />}
+        <StudyBlock type={block.type} title={block.title} source={block.source} />
+      </React.Fragment>
+    ));
+    const remainder = withoutComments.slice(lastIndex).trim();
+    return <div className={`max-w-none ${className}`}>{rendered}{remainder && <MdxContent mdxSource={remainder} />}</div>;
+  }
   const { protectedSource, mathSegments } = protectMathDelimiters(withoutComments);
   const tokens = marked.lexer(protectedSource) as AnyToken[];
   return (
