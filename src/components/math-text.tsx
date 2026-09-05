@@ -32,7 +32,7 @@ export function isTallInlineMath(latex: string): boolean {
 const splitMath = (text: string) => {
   // Robust splitter: supports $...$ (inline) and $$...$$ (block). Handles \$ escapes.
   // Post-processes for sentence spacing + anti-glue logic (see below).
-  const parts: Array<{ type: "text" | "math" | "blockmath"; value: string; trailing?: string }> = [];
+  const parts: Array<{ type: "text" | "math" | "blockmath"; value: string; trailing?: string; leading?: string }> = [];
 
   // Regex matches opening $ or $$ not preceded by \, captures inner content up to unescaped closer.
   // Uses [\s\S]*? non-greedy across lines.
@@ -89,6 +89,24 @@ const glueTrailingPunctuation = (parts: ReturnType<typeof splitMath>) => {
     cur.trailing = punct;
     nxt.value = nxt.value.slice(punct.length);
   }
+
+  // A lone short connective between two formulas ("{cases}. Compute $\lim…$")
+  // must not be stranded at the end of a line away from the formula it
+  // introduces. Attach it to the following math span's nowrap wrapper. Only
+  // single words, and never before tall math — a .math-tall block manages its
+  // own width/scrolling and a nowrap prefix could push it past the container.
+  for (let i = 1; i < parts.length - 1; i++) {
+    const prev = parts[i - 1];
+    const cur = parts[i];
+    const nxt = parts[i + 1];
+    if (prev.type !== "math" || cur.type !== "text" || nxt.type !== "math") continue;
+    if (isTallInlineMath(nxt.value)) continue;
+    const word = cur.value.match(/^([.,;:!?)\]}]*)\s+([A-Za-z]{1,14})\s+$/);
+    if (!word) continue;
+    nxt.leading = `${word[2]} `;
+    cur.value = `${word[1]} `;
+  }
+
   return parts;
 };
 
@@ -210,6 +228,7 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
           // splitMath) on the same line as the math it follows.
           return (
             <span key={`${part.value}-${index}`} className="whitespace-nowrap" style={{ marginRight: "0.15em" }}>
+              {part.leading}
               <SafeInlineMath math={part.value} />
               {part.trailing}
             </span>
