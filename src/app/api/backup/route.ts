@@ -1,3 +1,4 @@
+import { randomInt } from "crypto";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -35,10 +36,50 @@ const PIN_LENGTH = 6;
 const MIN_PASSWORD_LEN = 6;
 const MAX_PIN_RETRIES = 20;
 
+// Legit states stay well under this (~600KB at the hard caps normalizeProgressState
+// applies); anything bigger is garbage or abuse.
+const MAX_BODY_CHARS = 1_500_000;
+
 const rateLimit = new Map<string, number>();
 const RATE_WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 30;
-const pinAttemptLimit = new Map<string, { count: number; resetAt: number }>();
+
+// Failed-attempt throttling (wrong passwords, PIN guessing). Keyed per
+// PIN + IP so an attacker hammering a PIN can't lock the real owner out from
+// their own IP; an extra per-IP key catches cross-PIN enumeration on GET.
+// In-memory and per-instance by design (accepted deployment limitation).
+const FAILURE_WINDOW_MS = 15 * 60_000;
+const MAX_PASSWORD_FAILURES = 10;
+const MAX_PIN_GUESS_FAILURES = 10;
+const MAX_MISSES_PER_IP = 30;
+const failureLimit = new Map<string, { count: number; resetAt: number }>();
+
+function pruneFailures(now: number) {
+  if (failureLimit.size <= 2000) return;
+  for (const [k, v] of failureLimit) {
+    if (now > v.resetAt) failureLimit.delete(k);
+  }
+}
+
+function tooManyFailures(key: string, limit: number): boolean {
+  const entry = failureLimit.get(key);
+  return Boolean(entry) && Date.now() <= entry!.resetAt && entry!.count >= limit;
+}
+
+function recordFailure(key: string) {
+  const now = Date.now();
+  pruneFailures(now);
+  const entry = failureLimit.get(key);
+  if (!entry || now > entry.resetAt) {
+    failureLimit.set(key, { count: 1, resetAt: now + FAILURE_WINDOW_MS });
+    return;
+  }
+  entry.count += 1;
+}
+
+function clearFailures(key: string) {
+  failureLimit.delete(key);
+}
 
 function getClientIp(request: Request): string {
   return (
@@ -63,24 +104,17 @@ function isRateLimited(ip: string): boolean {
   return false;
 }
 
-function recordPinFailure(pin: string): boolean {
-  const now = Date.now();
-  const entry = pinAttemptLimit.get(pin);
-  if (!entry || now > entry.resetAt) {
-    pinAttemptLimit.set(pin, { count: 1, resetAt: now + 15 * 60_000 });
-    return false;
-  }
-  entry.count += 1;
-  return entry.count >= 10;
-}
-
-function clearPinFailures(pin: string) {
-  pinAttemptLimit.delete(pin);
-}
-
 function generatePin(): string {
-  const n = Math.floor(100000 + Math.random() * 900000);
-  return String(n);
+  // Cryptographically secure — Math.random() is predictable enough to make
+  // 6-digit PINs guessable.
+  return String(randomInt(100000, 1000000));
+}
+
+/** Parse a JSON body with a hard size cap. Returns `undefined` when oversized. */
+async function readJsonBody(request: Request): Promise<unknown> {
+  const text = await request.text();
+  if (text.length > MAX_BODY_CHARS) return undefined;
+  return JSON.parse(text);
 }
 
 function parseState(body: unknown): ProgressState | null {
@@ -120,9 +154,12 @@ export async function POST(request: Request) {
 
   let body: unknown;
   try {
-    body = await request.json();
+    body = await readJsonBody(request);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  if (body === undefined) {
+    return NextResponse.json({ error: "Payload too large" }, { status: 413 });
   }
 
   const password = parsePassword(body);
@@ -175,10 +212,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to store backup" }, { status: 500 });
   }
 
-  return NextResponse.json({ pin, password });
+  // Deliberately do not echo the plaintext password back — the client already
+  // holds it and it has no business travelling in a response body.
+  return NextResponse.json({ pin });
 }
 
-/** GET — restore progress by PIN (read-only, no password required). */
+/**
+ * GET — restore progress by PIN (read-only, no password required: the client
+ * restore flow only asks for the PIN, and progress data is low-sensitivity).
+ * Compensating control: hard per-PIN+IP and per-IP throttles on missed
+ * lookups, so a 6-digit space can't be enumerated from one instance.
+ */
 export async function GET(request: Request) {
   const ip = getClientIp(request);
   if (isRateLimited(ip)) {
@@ -191,6 +235,16 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Valid 6-digit PIN required" }, { status: 400 });
   }
 
+  if (
+    tooManyFailures(`get:${pin}:${ip}`, MAX_PIN_GUESS_FAILURES) ||
+    tooManyFailures(`miss:${ip}`, MAX_MISSES_PER_IP)
+  ) {
+    return NextResponse.json(
+      { error: "Too many failed attempts. Try again later." },
+      { status: 429 },
+    );
+  }
+
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("progress_backups")
@@ -199,8 +253,12 @@ export async function GET(request: Request) {
     .maybeSingle();
 
   if (error || !data) {
+    recordFailure(`get:${pin}:${ip}`);
+    recordFailure(`miss:${ip}`);
     return NextResponse.json({ error: "Backup not found" }, { status: 404 });
   }
+
+  clearFailures(`get:${pin}:${ip}`);
 
   await supabase
     .from("progress_backups")
@@ -227,9 +285,12 @@ export async function PUT(request: Request) {
 
   let body: unknown;
   try {
-    body = await request.json();
+    body = await readJsonBody(request);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  if (body === undefined) {
+    return NextResponse.json({ error: "Payload too large" }, { status: 413 });
   }
 
   if (typeof body !== "object" || body === null) {
@@ -250,77 +311,107 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "state (progress) is required" }, { status: 400 });
   }
 
+  const failureKey = `pw:${pin}:${ip}`;
+  if (tooManyFailures(failureKey, MAX_PASSWORD_FAILURES)) {
+    return NextResponse.json(
+      { error: "Too many failed attempts for this PIN. Try again in 15 minutes." },
+      { status: 429 },
+    );
+  }
+
   const supabase = createAdminClient();
-  const { data: row, error } = await supabase
-    .from("progress_backups")
-    .select("password_hash, blob, is_template, updated_at")
-    .eq("pin", pin)
-    .maybeSingle();
-
-  if (error || !row) {
-    return NextResponse.json({ error: "Backup not found" }, { status: 404 });
-  }
-
-  const backup = row as BackupRow;
-  if (backup.is_template) {
-    return NextResponse.json({ error: "Template backups cannot be modified" }, { status: 403 });
-  }
-
-  if (!verifyPassword(password, backup.password_hash)) {
-    if (recordPinFailure(pin)) {
-      return NextResponse.json(
-        { error: "Too many failed attempts for this PIN. Try again in 15 minutes." },
-        { status: 429 },
-      );
-    }
-    return NextResponse.json({ error: "Incorrect password" }, { status: 401 });
-  }
-
-  clearPinFailures(pin);
-
-  // Convergent merge: the cloud blob only ever grows. Even if the client pushes
-  // an empty or stale state (e.g. a fresh browser after restore), nothing that
-  // was already backed up can be lost. This replaces the old destructive
-  // "diff >= N overwrites" guard.
-  const storedBlob = backup.blob as CloudProgressBlob;
   const incomingBlob = serializeProgressToCloud(state);
-  const mergedBlob = mergeCloudBlobs(incomingBlob, storedBlob);
-  const comparison = compareCloudBlobs(incomingBlob, storedBlob);
+  let passwordChecked = false;
 
-  const now = new Date().toISOString();
-
-  // Nothing new to store — skip the write entirely (cheap spam protection).
-  if (blobIsSupersetOf(mergedBlob, storedBlob)) {
-    await supabase
+  // Read-merge-write with an optimistic-concurrency guard: the UPDATE only
+  // applies while updated_at still matches what we read, so two concurrent
+  // PUTs can't silently drop each other's merge. On conflict, re-read and
+  // re-merge (small bounded retry).
+  const MAX_WRITE_RETRIES = 3;
+  for (let attempt = 0; attempt < MAX_WRITE_RETRIES; attempt++) {
+    const { data: row, error } = await supabase
       .from("progress_backups")
-      .update({ last_accessed: now })
-      .eq("pin", pin);
+      .select("password_hash, blob, is_template, updated_at")
+      .eq("pin", pin)
+      .maybeSingle();
+
+    if (error || !row) {
+      return NextResponse.json({ error: "Backup not found" }, { status: 404 });
+    }
+
+    const backup = row as BackupRow;
+    if (backup.is_template) {
+      return NextResponse.json({ error: "Template backups cannot be modified" }, { status: 403 });
+    }
+
+    if (!passwordChecked) {
+      if (!verifyPassword(password, backup.password_hash)) {
+        recordFailure(failureKey);
+        if (tooManyFailures(failureKey, MAX_PASSWORD_FAILURES)) {
+          return NextResponse.json(
+            { error: "Too many failed attempts for this PIN. Try again in 15 minutes." },
+            { status: 429 },
+          );
+        }
+        return NextResponse.json({ error: "Incorrect password" }, { status: 401 });
+      }
+      clearFailures(failureKey);
+      passwordChecked = true;
+    }
+
+    // Convergent merge: the cloud blob only ever grows. Even if the client
+    // pushes an empty or stale state (e.g. a fresh browser after restore),
+    // nothing that was already backed up can be lost.
+    const storedBlob = backup.blob as CloudProgressBlob;
+    const mergedBlob = mergeCloudBlobs(incomingBlob, storedBlob);
+    const comparison = compareCloudBlobs(incomingBlob, storedBlob);
+
+    const now = new Date().toISOString();
+
+    // Nothing new to store — skip the write entirely (cheap spam protection).
+    if (blobIsSupersetOf(mergedBlob, storedBlob)) {
+      await supabase
+        .from("progress_backups")
+        .update({ last_accessed: now })
+        .eq("pin", pin);
+      return NextResponse.json({
+        ok: true,
+        upToDate: true,
+        addedToCloud: 0,
+        keptFromCloud: comparison.dbOnlyCorrect,
+        direction: comparison.direction,
+        updatedAt: backup.updated_at,
+      });
+    }
+
+    const { data: updatedRows, error: updateError } = await supabase
+      .from("progress_backups")
+      .update({ blob: mergedBlob, updated_at: now, last_accessed: now })
+      .eq("pin", pin)
+      .eq("updated_at", backup.updated_at)
+      .select("pin");
+
+    if (updateError) {
+      console.error("Backup update error:", updateError);
+      return NextResponse.json({ error: "Failed to update backup" }, { status: 500 });
+    }
+
+    // Guard tripped: someone else wrote between our read and write. Loop and
+    // merge against the fresh row.
+    if (!updatedRows || updatedRows.length === 0) continue;
+
     return NextResponse.json({
       ok: true,
-      upToDate: true,
-      addedToCloud: 0,
+      upToDate: false,
+      addedToCloud: comparison.localOnlyCorrect,
       keptFromCloud: comparison.dbOnlyCorrect,
       direction: comparison.direction,
-      updatedAt: backup.updated_at,
+      updatedAt: now,
     });
   }
 
-  const { error: updateError } = await supabase
-    .from("progress_backups")
-    .update({ blob: mergedBlob, updated_at: now, last_accessed: now })
-    .eq("pin", pin);
-
-  if (updateError) {
-    console.error("Backup update error:", updateError);
-    return NextResponse.json({ error: "Failed to update backup" }, { status: 500 });
-  }
-
-  return NextResponse.json({
-    ok: true,
-    upToDate: false,
-    addedToCloud: comparison.localOnlyCorrect,
-    keptFromCloud: comparison.dbOnlyCorrect,
-    direction: comparison.direction,
-    updatedAt: now,
-  });
+  return NextResponse.json(
+    { error: "Backup is being updated by another device. Try again." },
+    { status: 409 },
+  );
 }

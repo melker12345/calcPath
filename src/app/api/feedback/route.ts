@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -11,6 +12,28 @@ type FeedbackStatus = (typeof VALID_STATUSES)[number];
 const rateLimit = new Map<string, number>();
 const RATE_WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 30;
+
+/**
+ * Opaque proof-of-creation token for anonymous vote rows. The POST response
+ * hands it to the client that created the row; PATCH requires it back before
+ * an anonymous caller may edit that row's note. HMAC over the row id with a
+ * server-side secret, so knowing a row id alone is not enough to edit it.
+ */
+function makeEditToken(rowId: string): string | null {
+  const secret =
+    process.env.FEEDBACK_EDIT_TOKEN_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!secret) return null;
+  return createHmac("sha256", secret).update(`feedback-edit:${rowId}`).digest("base64url");
+}
+
+function verifyEditToken(rowId: string, token: unknown): boolean {
+  if (typeof token !== "string" || token.length === 0) return false;
+  const expected = makeEditToken(rowId);
+  if (!expected) return false;
+  const a = Buffer.from(token);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
@@ -98,12 +121,12 @@ export async function POST(request: Request) {
 
   const supabase = createAdminClient();
 
-  // For votes, prefer the user_id verified from the bearer token (so people can't
-  // spoof another user's id and cancel their vote). Falls back to the body id
-  // (which is fine for anonymous users — they have nothing to verify against).
+  // Only ever attribute a row to a user id verified from the bearer token.
+  // A client-supplied body.user_id is ignored: trusting it would let anyone
+  // pre-seed rows attributed to a victim's id (and, for votes, collapse the
+  // victim's next genuine vote into a cancellation). Anonymous rows get null.
   const verifiedUserId = await getAuthUserId(request);
-  const claimedUserId = (body.user_id as string) || null;
-  const userId = verifiedUserId ?? claimedUserId;
+  const userId = verifiedUserId;
 
   const row: Record<string, unknown> = {
     kind,
@@ -152,7 +175,12 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: "Failed to save vote" }, { status: 500 });
         }
 
-        return NextResponse.json({ ok: true, id: existing.id, vote: nextVote });
+        return NextResponse.json({
+          ok: true,
+          id: existing.id,
+          vote: nextVote,
+          edit_token: makeEditToken(existing.id),
+        });
       }
 
       // No existing row: fall through to insert below with vote=clicked.
@@ -204,29 +232,25 @@ export async function POST(request: Request) {
   }
 
   if (error) {
+    // Detail (including schema problems like a missing table) stays in the
+    // server logs only — clients get a generic message.
     console.error("Feedback insert error:", error.message, error.details, error.hint);
-    const isTableMissing = error.message?.includes("relation") && error.message?.includes("does not exist");
-    return NextResponse.json(
-      {
-        error: isTableMissing
-          ? "Feedback table not found. Run the schema migration in Supabase SQL editor."
-          : "Failed to save feedback",
-      },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to save feedback" }, { status: 500 });
   }
 
   return NextResponse.json({
     ok: true,
     id: inserted?.id ?? null,
     vote: inserted?.vote ?? null,
+    // Lets the (possibly anonymous) creator attach a note to this row later.
+    edit_token: kind === "vote" && inserted?.id ? makeEditToken(inserted.id) : null,
   });
 }
 
 /**
- * Attach (or replace) a note on an existing vote row. Auth-gated: the requester
- * must be signed in and own the row. Anonymous votes are immutable here; they
- * have no identity to gate against.
+ * Attach (or replace) a note on an existing vote row. Ownership-gated: the
+ * requester must present the edit_token that POST returned when the row was
+ * created (anonymous flow), or be signed in as the row's user_id.
  */
 export async function PATCH(request: Request) {
   const ip =
@@ -291,10 +315,6 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: true, status, ids });
   }
 
-  // Auth removed: notes on votes now allowed without sign-in (anon votes supported notes; user_id may be null).
-  // Bypass getAuthUserId check for vote note updates.
-  const userId = await getAuthUserId(request); // may be null for anon
-
   const id = body.id;
   if (typeof id !== "string" || id.length === 0) {
     return NextResponse.json({ error: "id is required" }, { status: 400 });
@@ -311,14 +331,30 @@ export async function PATCH(request: Request) {
     );
   }
 
+  // Ownership enforcement. Two ways to prove the row is yours:
+  //  1. edit_token — the HMAC proof handed out by POST to whoever created the
+  //     row (works for anonymous votes, which have no user identity), or
+  //  2. a bearer token whose verified user id matches the row's user_id.
+  // Knowing a row id alone is NOT enough to edit it.
+  const hasValidEditToken = verifyEditToken(id, body.edit_token);
+  const userId = hasValidEditToken ? null : await getAuthUserId(request);
+  if (!hasValidEditToken && !userId) {
+    return NextResponse.json(
+      { error: "You are not allowed to edit this vote." },
+      { status: 403 },
+    );
+  }
+
   const supabase = createAdminClient();
-  const { data, error } = await supabase
+  let update = supabase
     .from("feedback")
     .update({ message: message.slice(0, 1000) })
     .eq("id", id)
-    .eq("kind", "vote")
-    // user_id eq removed/bypassed to support notes on anon (null user_id) votes
-    .select("id");
+    .eq("kind", "vote");
+  if (!hasValidEditToken && userId) {
+    update = update.eq("user_id", userId);
+  }
+  const { data, error } = await update.select("id");
 
   if (error) {
     console.error("Feedback PATCH error:", error.message);
@@ -383,7 +419,10 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const kind = url.searchParams.get("kind");
-  const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 1000);
+  const limitRaw = Number(url.searchParams.get("limit") ?? 50);
+  const limit = Number.isFinite(limitRaw)
+    ? Math.min(Math.max(Math.trunc(limitRaw), 1), 1000)
+    : 50;
 
   const supabase = createAdminClient();
 

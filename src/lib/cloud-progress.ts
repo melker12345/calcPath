@@ -416,11 +416,19 @@ export function blobIsSupersetOf(
   merged: CloudProgressBlob,
   stored: CloudProgressBlob,
 ): boolean {
+  const mergedCompletions = merged.moduleCompletions ?? {};
+  const storedCompletions = stored.moduleCompletions ?? {};
+  const completionKeys = Object.keys(mergedCompletions);
+  const moduleCompletionsEqual =
+    completionKeys.length === Object.keys(storedCompletions).length &&
+    completionKeys.every((key) => storedCompletions[key] === mergedCompletions[key]);
+
   return (
     merged.practiceBits === stored.practiceBits &&
     merged.testResults.length === (stored.testResults?.length ?? 0) &&
     merged.diagnostics.length === (stored.diagnostics?.length ?? 0) &&
-    merged.completedModuleIds.length === (stored.completedModuleIds?.length ?? 0)
+    merged.completedModuleIds.length === (stored.completedModuleIds?.length ?? 0) &&
+    moduleCompletionsEqual
   );
 }
 

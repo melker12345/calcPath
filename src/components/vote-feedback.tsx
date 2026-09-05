@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 const NOTE_MAX = 1000;
 const REPORT_MAX = 1000;
@@ -34,8 +34,13 @@ export function VoteFeedback({
   const isAuthed = false;
   const resolvedUserId = userId ?? null;
 
+  const uid = useId();
+
   const [vote, setVote] = useState<VoteValue>(null);
   const [feedbackId, setFeedbackId] = useState<string | null>(null);
+  // Proof-of-creation token returned by POST; PATCH requires it so only the
+  // client that cast the vote can attach a note to it.
+  const [editToken, setEditToken] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [noteSent, setNoteSent] = useState(false);
   const [voted, setVoted] = useState(false); // lock after first click (all treated anon)
@@ -81,8 +86,13 @@ export function VoteFeedback({
         });
 
         if (res.ok) {
-          const data = (await res.json()) as { id?: string; vote?: VoteValue };
+          const data = (await res.json()) as {
+            id?: string;
+            vote?: VoteValue;
+            edit_token?: string | null;
+          };
           if (typeof data.id === "string") setFeedbackId(data.id);
+          if (typeof data.edit_token === "string") setEditToken(data.edit_token);
           if (data.vote !== undefined) setVote(data.vote);
         }
         setVoted(true);
@@ -102,7 +112,8 @@ export function VoteFeedback({
 
     setSendingNote(true);
     try {
-      // Auth removed: notes allowed on anon votes too; send PATCH without token (api relaxed to accept for vote notes, user_id may be null).
+      // Notes on anon votes need no sign-in, but the API requires the
+      // edit_token it returned when this client created the vote row.
       const res = await fetch("/api/feedback", {
         method: "PATCH",
         headers: {
@@ -110,6 +121,7 @@ export function VoteFeedback({
         },
         body: JSON.stringify({
           id: feedbackId,
+          edit_token: editToken,
           message: trimmed.slice(0, NOTE_MAX),
         }),
       });
@@ -122,7 +134,7 @@ export function VoteFeedback({
     } finally {
       setSendingNote(false);
     }
-  }, [feedbackId, note, sendingNote]);
+  }, [feedbackId, editToken, note, sendingNote]);
 
   const sendReport = useCallback(async () => {
     if (reportStatus === "sending") return;
@@ -159,7 +171,7 @@ export function VoteFeedback({
     } catch {
       setReportStatus("error");
     }
-  }, [isAuthed, reportMessage, reportReason, reportStatus, resolvedUserId, targetId, targetType, reportContext]);
+  }, [reportMessage, reportReason, reportStatus, resolvedUserId, targetId, targetType, reportContext]);
 
   // Cmd/Ctrl-Enter sends the note from the textarea.
   useEffect(() => {
@@ -207,7 +219,7 @@ export function VoteFeedback({
           className={`flex h-7 w-7 items-center justify-center rounded-lg text-sm transition active:scale-90 ${
             vote === 1
               ? "bg-emerald-100 text-emerald-600"
-              : "text-zinc-300 hover:bg-zinc-100 hover:text-zinc-500"
+              : "text-[var(--text-muted)] hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-[var(--surface-2)] dark:hover:text-[var(--text-secondary)]"
           } disabled:cursor-not-allowed disabled:opacity-50`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
@@ -223,7 +235,7 @@ export function VoteFeedback({
           className={`flex h-7 w-7 items-center justify-center rounded-lg text-sm transition active:scale-90 ${
             vote === -1
               ? "bg-rose-100 text-rose-500"
-              : "text-zinc-300 hover:bg-zinc-100 hover:text-zinc-500"
+              : "text-[var(--text-muted)] hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-[var(--surface-2)] dark:hover:text-[var(--text-secondary)]"
           } disabled:cursor-not-allowed disabled:opacity-50`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 rotate-180">
@@ -241,7 +253,7 @@ export function VoteFeedback({
             setReportOpen((open) => !open);
             setReportStatus("idle");
           }}
-          className="ml-1 rounded-md px-1.5 py-1 text-[11px] font-medium text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600"
+          className="ml-1 rounded-md px-1.5 py-1 text-[11px] font-medium text-[var(--text-muted)] transition hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-[var(--surface-2)] dark:hover:text-[var(--text-secondary)]"
         >
           Report issue
         </button>
@@ -249,11 +261,15 @@ export function VoteFeedback({
 
       {showNoteForm && (
         <div className="w-full max-w-xs rounded-lg border border-zinc-200 bg-white p-2.5 shadow-sm dark:border-[var(--border)] dark:bg-[var(--surface)]">
-          <label className="mb-1 block text-[11px] font-medium text-zinc-500 dark:text-[var(--text-muted)]">
+          <label
+            htmlFor={`${uid}-note`}
+            className="mb-1 block text-[11px] font-medium text-zinc-500 dark:text-[var(--text-muted)]"
+          >
             {vote === -1 ? "What's wrong?" : "What worked well?"}{" "}
-            <span className="font-normal text-zinc-400">(optional)</span>
+            <span className="font-normal text-zinc-500 dark:text-[var(--text-muted)]">(optional)</span>
           </label>
           <textarea
+            id={`${uid}-note`}
             ref={textareaRef}
             value={note}
             onChange={(e) => setNote(e.target.value.slice(0, NOTE_MAX))}
@@ -293,17 +309,21 @@ export function VoteFeedback({
                   setReportOpen(false);
                   setReportStatus("idle");
                 }}
-                className="mt-2 rounded-md bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-200"
+                className="mt-2 rounded-md bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-200 dark:bg-[var(--surface-2)] dark:text-[var(--text-secondary)] dark:hover:bg-[var(--border)]"
               >
                 Close
               </button>
             </div>
           ) : (
             <>
-              <label className="mb-1.5 block text-[11px] font-semibold text-zinc-500 dark:text-[var(--text-muted)]">
+              <label
+                htmlFor={`${uid}-report-reason`}
+                className="mb-1.5 block text-[11px] font-semibold text-zinc-500 dark:text-[var(--text-muted)]"
+              >
                 What is the issue?
               </label>
               <select
+                id={`${uid}-report-reason`}
                 value={reportReason}
                 onChange={(e) => setReportReason(e.target.value as ReportReason)}
                 className="feedback-select w-full rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-xs text-zinc-800 outline-none focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
@@ -315,10 +335,14 @@ export function VoteFeedback({
                 ))}
               </select>
 
-              <label className="mb-1 mt-2 block text-[11px] font-medium text-zinc-500 dark:text-[var(--text-muted)]">
-                Details <span className="font-normal text-zinc-400">(optional)</span>
+              <label
+                htmlFor={`${uid}-report-details`}
+                className="mb-1 mt-2 block text-[11px] font-medium text-zinc-500 dark:text-[var(--text-muted)]"
+              >
+                Details <span className="font-normal text-zinc-500 dark:text-[var(--text-muted)]">(optional)</span>
               </label>
               <textarea
+                id={`${uid}-report-details`}
                 ref={reportTextareaRef}
                 value={reportMessage}
                 onChange={(e) => setReportMessage(e.target.value.slice(0, REPORT_MAX))}
@@ -338,7 +362,7 @@ export function VoteFeedback({
                 <button
                   type="button"
                   onClick={() => setReportOpen(false)}
-                  className="rounded-md px-3 py-1.5 text-xs font-semibold text-zinc-500 transition hover:bg-zinc-100"
+                  className="rounded-md px-3 py-1.5 text-xs font-semibold text-zinc-500 transition hover:bg-zinc-100 dark:text-[var(--text-muted)] dark:hover:bg-[var(--surface-2)]"
                 >
                   Cancel
                 </button>

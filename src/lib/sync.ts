@@ -50,9 +50,11 @@ export async function createCloudBackup(
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { error?: string }).error || "Failed to create backup");
   }
-  const data = (await res.json()) as { pin: string; password: string };
+  // The server intentionally no longer echoes the password back; the caller
+  // already holds it, so return it from the argument for the receipt flow.
+  const data = (await res.json()) as { pin: string };
   saveBackupPin(data.pin);
-  return data;
+  return { pin: data.pin, password };
 }
 
 export async function updateCloudBackup(
@@ -144,11 +146,11 @@ export function downloadBackupReceipt(pin: string, password: string) {
 }
 
 /** @deprecated Use createCloudBackup — kept for any stale imports */
-export async function generateSyncCode(state: ProgressState): Promise<{ code: string }> {
+export async function generateSyncCode(): Promise<{ code: string }> {
   throw new Error("Snapshot codes are retired. Use createCloudBackup with a password.");
 }
 
 /** @deprecated Use restoreCloudBackup */
-export async function importSyncCode(_code: string): Promise<ProgressState> {
+export async function importSyncCode(): Promise<ProgressState> {
   throw new Error("Snapshot codes are retired. Use restoreCloudBackup with your PIN.");
 }

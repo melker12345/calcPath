@@ -58,9 +58,11 @@ export const createEmptyProgress = (): ProgressState => ({
 });
 
 export const normalizeTestResult = (input: Partial<TestResult> & Pick<TestResult, "topicId" | "score" | "total" | "percentage" | "timeSeconds" | "completedAt">): TestResult => {
-  const topicScores =
+  // Cap the per-topic breakdown; no real test spans anywhere near 50 topics.
+  const topicScores = (
     input.topicScores ??
-    [{ topicId: input.topicId, correct: input.score, total: input.total }];
+    [{ topicId: input.topicId, correct: input.score, total: input.total }]
+  ).slice(0, 50);
   return {
     testId: input.testId ?? input.topicId,
     topicId: input.topicId,
@@ -143,28 +145,62 @@ const rebuildDerivedFields = (attempts: Attempt[]) => {
   };
 };
 
+/**
+ * Hard size caps applied when normalizing an (untrusted) progress state.
+ * All are generously above what the app itself can produce — recordAttempt
+ * caps attempts/ids at 5000, recordTestResult at 100, recordDiagnosticResult
+ * at 25 — so legitimate data is never truncated; only abusive payloads are.
+ */
+const MAX_ATTEMPTS = 5000;
+const MAX_PROBLEM_IDS = 5000;
+const MAX_MODULE_IDS = 2000;
+const MAX_MODULE_COMPLETIONS = 2000;
+const MAX_TEST_RESULTS = 100;
+const MAX_DIAGNOSTICS = 25;
+
+const normalizeModuleCompletions = (
+  input: unknown,
+): Record<string, string> => {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
+  const out: Record<string, string> = {};
+  let count = 0;
+  for (const [key, value] of Object.entries(input)) {
+    if (typeof value !== "string") continue;
+    out[key.slice(0, 200)] = value.slice(0, 64);
+    count += 1;
+    if (count >= MAX_MODULE_COMPLETIONS) break;
+  }
+  return out;
+};
+
 export const normalizeProgressState = (
   input: Partial<ProgressState> | null | undefined,
 ): ProgressState => {
   const empty = createEmptyProgress();
   if (!input) return empty;
-  const attempts = Array.isArray(input.attempts) ? input.attempts : empty.attempts;
+  const attempts = Array.isArray(input.attempts)
+    ? input.attempts.slice(0, MAX_ATTEMPTS)
+    : empty.attempts;
   const testResults = Array.isArray(input.testResults)
-    ? input.testResults.map((result) =>
-        normalizeTestResult(result as TestResult),
-      )
+    ? input.testResults
+        .slice(0, MAX_TEST_RESULTS)
+        .map((result) => normalizeTestResult(result as TestResult))
     : empty.testResults;
-  const diagnostics = Array.isArray(input.diagnostics) ? input.diagnostics : empty.diagnostics;
+  const diagnostics = Array.isArray(input.diagnostics)
+    ? input.diagnostics.slice(0, MAX_DIAGNOSTICS)
+    : empty.diagnostics;
+  const completedModuleIds = Array.isArray(input.completedModuleIds)
+    ? input.completedModuleIds.slice(0, MAX_MODULE_IDS)
+    : empty.completedModuleIds;
+  const moduleCompletions = normalizeModuleCompletions(input.moduleCompletions);
   if (attempts.length > 0) {
     const derived = rebuildDerivedFields(attempts);
     return {
       attempts,
       attemptedProblemIds: derived.attemptedProblemIds,
       completedProblemIds: derived.completedProblemIds,
-      completedModuleIds: Array.isArray(input.completedModuleIds)
-        ? input.completedModuleIds
-        : empty.completedModuleIds,
-      moduleCompletions: input.moduleCompletions ?? empty.moduleCompletions,
+      completedModuleIds,
+      moduleCompletions,
       topicStats: derived.topicStats,
       testResults,
       diagnostics,
@@ -174,15 +210,13 @@ export const normalizeProgressState = (
   return {
     attempts,
     attemptedProblemIds: Array.isArray(input.attemptedProblemIds)
-      ? input.attemptedProblemIds
+      ? input.attemptedProblemIds.slice(0, MAX_PROBLEM_IDS)
       : empty.attemptedProblemIds,
     completedProblemIds: Array.isArray(input.completedProblemIds)
-      ? input.completedProblemIds
+      ? input.completedProblemIds.slice(0, MAX_PROBLEM_IDS)
       : empty.completedProblemIds,
-    completedModuleIds: Array.isArray(input.completedModuleIds)
-      ? input.completedModuleIds
-      : empty.completedModuleIds,
-    moduleCompletions: input.moduleCompletions ?? empty.moduleCompletions,
+    completedModuleIds,
+    moduleCompletions,
     topicStats: input.topicStats ?? empty.topicStats,
     testResults,
     diagnostics,
