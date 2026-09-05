@@ -42,7 +42,10 @@ export const metadata: Metadata = {
     "linear algebra problems",
   ],
   metadataBase: new URL("https://calc-path.com"),
-  alternates: { canonical: "/" },
+  // NOTE: no `alternates` here — Next.js metadata is shallow-merged, so a root
+  // canonical would be inherited verbatim by every page that doesn't declare
+  // its own `alternates`, making them all claim "/" as canonical. Each page
+  // declares its own self-canonical instead.
   openGraph: {
     title: "CalcPath — Learn Math Step by Step",
     description:
@@ -118,6 +121,10 @@ export default function RootLayout({
                 },
                 {
                   "@type": "Organization",
+                  // Same @id as the landing page's EducationalOrganization node
+                  // (see src/lib/landing/seo.tsx) so crawlers merge them into
+                  // one entity instead of seeing two conflicting organizations.
+                  "@id": "https://calc-path.com/#org",
                   name: "CalcPath",
                   url: "https://calc-path.com",
                   logo: "https://calc-path.com/og-image.png",

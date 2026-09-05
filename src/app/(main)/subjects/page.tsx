@@ -1,5 +1,13 @@
+import type { Metadata } from "next";
 import { getAvailableSubjectConfigs } from "@/lib/content/loader";
 import { SubjectCard } from "@/components/subject-card";
+
+export const metadata: Metadata = {
+  title: "All Subjects",
+  description:
+    "Browse every free CalcPath course — calculus, linear algebra, statistics, and more — with step-by-step chapters and practice problems.",
+  alternates: { canonical: "https://calc-path.com/subjects" },
+};
 
 export default async function SubjectsPage() {
   const subjectList = await getAvailableSubjectConfigs();

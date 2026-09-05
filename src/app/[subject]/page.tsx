@@ -20,14 +20,34 @@ type ModuleStructure = ListedSubjectConfig["modules"];
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { subject: slug } = await params;
+  const canonical = `https://calc-path.com/${slug}`;
   try {
     const idx = await loadSubjectIndex(slug);
     return {
       title: `Learn ${idx.label} — Free University Course | CalcPath`,
       description: idx.shortDescription,
+      alternates: { canonical },
+      // Full openGraph block: metadata shallow-merge means a partial override
+      // would drop the root's images/siteName/type/locale entirely.
+      openGraph: {
+        title: idx.ogTitle || `Learn ${idx.label} — Free | CalcPath`,
+        description: idx.ogDescription || idx.shortDescription,
+        url: canonical,
+        siteName: "CalcPath",
+        images: [
+          {
+            url: "/og-image.png",
+            width: 1200,
+            height: 630,
+            alt: "CalcPath — Learn math step by step",
+          },
+        ],
+        type: "website",
+        locale: "en_US",
+      },
     };
   } catch {
-    return { title: "Not Found" };
+    return { title: "Not Found", robots: { index: false, follow: false } };
   }
 }
 

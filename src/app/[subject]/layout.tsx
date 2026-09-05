@@ -13,33 +13,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   let label = slug;
   let desc = `Learn ${label} for free.`;
   let keywords: string[] | undefined;
-  let ogTitle: string | undefined;
-  let ogDesc: string | undefined;
-  const canonical = `https://calc-path.com/${slug}`;
 
   try {
     const idx = await loadSubjectIndex(slug);
     label = idx.label;
     desc = idx.shortDescription;
     keywords = idx.keywords;
-    ogTitle = idx.ogTitle;
-    ogDesc = idx.ogDescription;
   } catch {
     // subject not found — minimal metadata
   }
 
+  // IMPORTANT: no `alternates`/`openGraph` here. Layout metadata is inherited
+  // verbatim by every child route (practice/[topicId], test/*, …), so a
+  // canonical set here would make all of them claim /{slug} as canonical while
+  // the sitemap advertises the deep URLs — Google then drops the deep pages as
+  // duplicates. Canonical + openGraph live on each page/leaf-layout instead
+  // (see ./page.tsx, ./modules/[topicId]/layout.tsx, ./practice/[topicId]).
   const meta: Metadata = {
     title: {
       default: `Learn ${label} — Free University Course | CalcPath`,
       template: "%s | CalcPath",
     },
     description: desc,
-    alternates: { canonical },
-    openGraph: {
-      title: ogTitle || `Learn ${label} — Free | CalcPath`,
-      description: ogDesc || desc,
-      url: canonical,
-    },
   };
   if (keywords && keywords.length > 0) {
     meta.keywords = keywords;

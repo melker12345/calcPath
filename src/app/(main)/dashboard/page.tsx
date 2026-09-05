@@ -1,6 +1,16 @@
+import type { Metadata } from "next";
 import { getDashboardDataForSubject, getAvailableSubjectConfigs } from "@/lib/content/loader";
 import type { Problem, Topic } from "@/lib/shared-types";
 import { DashboardShell } from "./DashboardShell";
+
+// Noindex: the dashboard renders a personal/empty shell to crawlers (also
+// disallowed in robots.ts and excluded from the sitemap).
+export const metadata: Metadata = {
+  title: "Dashboard",
+  description: "Your personal CalcPath dashboard: progress, streaks, and next steps across subjects.",
+  alternates: { canonical: "https://calc-path.com/dashboard" },
+  robots: { index: false, follow: true },
+};
 
 type SlimModule = { topicId: string; sections: Array<{ title: string; section?: string }> };
 

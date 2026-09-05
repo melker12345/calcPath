@@ -1,5 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { listSubjectsWithDiagnostics } from "@/lib/content/diagnostic-loader";
+
+// On the page (not layout.tsx): layout metadata would be inherited by
+// /diagnostic/[subject] and /diagnostic/onboarding, giving them a wrong canonical.
+export const metadata: Metadata = {
+  title: "Diagnostic Test",
+  description:
+    "Take a short free diagnostic to find your gaps in calculus, linear algebra, or statistics — then get pointed at exactly the topics to review.",
+  alternates: { canonical: "https://calc-path.com/diagnostic" },
+};
 
 export default async function DiagnosticPickerPage() {
   const subjects = await listSubjectsWithDiagnostics();

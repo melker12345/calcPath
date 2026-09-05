@@ -1,6 +1,7 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getFileSystemContentBundle } from "@/lib/content/loader";
+import { getFileSystemContentBundle, loadSubjectIndex } from "@/lib/content/loader";
 import { getLegacyTopicRedirect } from "@/lib/content/legacy-topic-redirects";
 import { getPracticePath } from "@/lib/subject-urls";
 import { GenericPracticeExperience } from "@/components/generic-practice-experience";
@@ -9,6 +10,50 @@ import { PracticeErrorBoundary } from "@/components/practice/PracticeErrorBounda
 interface Props {
   params: Promise<{ subject: string; topicId: string }>;
   searchParams: Promise<{ section?: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { subject: slug, topicId } = await params;
+  // Self-canonical: without this the page would inherit its parents' metadata
+  // and (before the layout fix) a canonical pointing at /{slug}, causing Google
+  // to drop the practice URLs the sitemap advertises as duplicates.
+  const canonical = `https://calc-path.com/${slug}/practice/${topicId}`;
+  let subjectLabel = slug;
+  let topicTitle = topicId;
+  try {
+    const idx = await loadSubjectIndex(slug);
+    subjectLabel = idx.label;
+    const topic = idx.topics.find((t) => t.id === topicId);
+    if (topic) topicTitle = topic.title;
+  } catch {
+    // minimal fallback
+  }
+  const title = `${topicTitle} Practice Problems — ${subjectLabel}`;
+  const description = `Free ${subjectLabel.toLowerCase()} practice problems on ${topicTitle.toLowerCase()}, with instant feedback and full step-by-step solutions.`;
+  return {
+    // Parent [subject] layout's title template appends " | CalcPath".
+    title,
+    description,
+    alternates: { canonical },
+    // Full openGraph block: metadata shallow-merge means a partial override
+    // would drop the root's images/siteName/type/locale entirely.
+    openGraph: {
+      title: `${title} | CalcPath`,
+      description,
+      url: canonical,
+      siteName: "CalcPath",
+      images: [
+        {
+          url: "/og-image.png",
+          width: 1200,
+          height: 630,
+          alt: "CalcPath — Learn math step by step",
+        },
+      ],
+      type: "website",
+      locale: "en_US",
+    },
+  };
 }
 
 export default async function DynamicPracticePage({ params, searchParams }: Props) {

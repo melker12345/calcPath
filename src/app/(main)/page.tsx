@@ -1,19 +1,30 @@
-import type { Metadata } from "next";
 import { getAvailableSubjectConfigs } from "@/lib/content/loader";
+import {
+  JsonLd,
+  buildLandingJsonLd,
+  buildLandingMetadata,
+  getLandingData,
+} from "@/lib/landing/seo";
 import { LandingContent } from "@/components/landing-content";
 import { SiteUpdateModal } from "@/components/site-update-modal";
 import { DevNotice } from "@/components/dev-notice";
 
-export const metadata: Metadata = {
-  title: "CalcPath",
+// Rich landing metadata from the shared helper (path "/" => self-canonical,
+// indexable; the /1../5 design variants get canonical "/" + noindex instead).
+export const metadata = buildLandingMetadata({
+  path: "/",
+  title: "CalcPath — Free University Math: Calculus, Linear Algebra & Statistics",
   description:
-    "Free reference notes for university mathematics (calculus, linear algebra, statistics, and more). Complete derivations, worked examples, and practice problems with solutions. Just drop content/ for new subjects.",
-  alternates: { canonical: "https://calc-path.com" },
-};
+    "Learn university mathematics free with CalcPath: clear derivation-first chapters, worked examples, and practice problems with full step-by-step solutions for calculus, linear algebra, statistics and more. No account required.",
+});
 
 export default async function Home() {
   // Load via auto-discovery so landing shows newly dropped subjects (from their index.json) with no subjects.ts entry.
   const subjectConfigs = await getAvailableSubjectConfigs();
+  // Structured data (EducationalOrganization + Course ItemList + FAQPage),
+  // shared with the /1../5 design variants. The org node reuses the same @id
+  // as the root layout's Organization node so crawlers merge them.
+  const landingData = await getLandingData();
   // Pass slim data (client component receives serializable props).
   const slimSubjects = subjectConfigs.map((s) => ({
     slug: s.slug,
@@ -27,6 +38,8 @@ export default async function Home() {
 
   return (
     <div className="relative min-h-screen">
+      <JsonLd data={buildLandingJsonLd(landingData)} />
+
       {/* Background geometric pattern (light + dark variants) */}
       <div
         aria-hidden

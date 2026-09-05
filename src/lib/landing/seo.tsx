@@ -6,6 +6,8 @@ import { getAvailableSubjectConfigs } from "@/lib/content/loader";
  *
  * Every variant renders identical metadata and schema.org structured data so the
  * only thing that differs between them is the visual design — a clean A/B test.
+ * Variants stay viewable but are noindex'd and canonicalize to "/" so they never
+ * compete with the real homepage in search; only "/" itself is indexable.
  * Keep this the single source of truth; variants must not redefine SEO logic.
  */
 
@@ -78,15 +80,28 @@ export const LANDING_FAQ: Array<{ q: string; a: string }> = [
   },
 ];
 
-/** Consistent metadata for a variant. `path` is the route, e.g. "/2". */
+/**
+ * Consistent metadata for the landing page and its design variants.
+ * `path` is the route: "/" for the real landing page, "/1".."/5" for variants.
+ *
+ * The variants are five near-identical copies of the homepage kept viewable
+ * for A/B design comparison. They must NOT compete with the homepage in
+ * search: every variant canonicalizes to "https://calc-path.com/" and carries
+ * robots noindex,follow. Only the real landing page ("/") self-canonicalizes
+ * and is indexable.
+ */
 export function buildLandingMetadata(opts: {
   path: string;
   title: string;
   description: string;
 }): Metadata {
-  const url = `${SITE_URL}${opts.path}`;
+  const isCanonicalHome = opts.path === "/";
+  // Variants point their canonical (and og:url) at the homepage.
+  const canonicalUrl = `${SITE_URL}/`;
   return {
-    title: opts.title,
+    // Absolute: landing titles carry their own branding, so the root layout's
+    // "%s | CalcPath" template must not append a second "| CalcPath".
+    title: { absolute: opts.title },
     description: opts.description,
     keywords: [
       "free university math courses",
@@ -102,11 +117,11 @@ export function buildLandingMetadata(opts: {
       "self study mathematics",
       "worked examples calculus",
     ],
-    alternates: { canonical: url },
+    alternates: { canonical: canonicalUrl },
     openGraph: {
       title: opts.title,
       description: opts.description,
-      url,
+      url: canonicalUrl,
       siteName: "CalcPath",
       images: [
         { url: "/og-image.png", width: 1200, height: 630, alt: "CalcPath — learn university math free" },
@@ -120,7 +135,9 @@ export function buildLandingMetadata(opts: {
       description: opts.description,
       images: ["/og-image.png"],
     },
-    robots: { index: true, follow: true },
+    robots: isCanonicalHome
+      ? { index: true, follow: true }
+      : { index: false, follow: true },
   };
 }
 

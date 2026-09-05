@@ -17,10 +17,32 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   } catch {
     // minimal fallback
   }
+  const canonical = `https://calc-path.com/${slug}/modules/${topicId}`;
+  const description = `Step-by-step explanation and practice for ${topicId} in ${subjectLabel}.`;
   return {
-    title: `${title} | CalcPath`,
-    description: `Step-by-step explanation and practice for ${topicId} in ${subjectLabel}.`,
-    alternates: { canonical: `https://calc-path.com/${slug}/modules/${topicId}` },
+    // No manual "| CalcPath" suffix — the parent [subject] layout's title
+    // template ("%s | CalcPath") appends it.
+    title,
+    description,
+    alternates: { canonical },
+    // Full openGraph block: metadata shallow-merge means a partial override
+    // would drop the root's images/siteName/type/locale entirely.
+    openGraph: {
+      title: `${title} | CalcPath`,
+      description,
+      url: canonical,
+      siteName: "CalcPath",
+      images: [
+        {
+          url: "/og-image.png",
+          width: 1200,
+          height: 630,
+          alt: "CalcPath — Learn math step by step",
+        },
+      ],
+      type: "website",
+      locale: "en_US",
+    },
   };
 }
 
