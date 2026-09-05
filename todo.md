@@ -28,6 +28,12 @@ Fix-fleet session 2026-09-05 (commits 99d717c..be8cd78 on dev, not yet on master
 - [x] All 31 duplicate section-slug warnings resolved (23 topics); content:validate now zero warnings.
 - [x] ESLint: 61 errors / 37 warnings → 0 / 0.
 
+UI refinement session 2026-09-05 (commits 94f7cc2..8278c45 on dev, verified visually with headless Chromium):
+- [x] Hints no longer strip their formula ("Power rule:." bug); incorrect answers show a compact banner with the attempt still editable; MCQ choices stay visible after grading.
+- [x] What's-New modal gated to visitors with existing progress; landing carousel got visible indicators/scroll cue; dark mode follows the OS preference.
+- [x] Practice surfaces use per-subject accents (calculus red, statistics green); one .btn-primary definition (slate duplicate removed).
+- [x] Dead /paths footer link, "public recovery templates" copy, dashboard empty-state CTA + colored glyphs, word-boundary subject blurbs, serif title unification, mobile practice bottom row.
+
 Still open (bigger, editorial):
 - [ ] MCQ ratio (60%) — decide target mix and convert.
 - [ ] In-memory API rate limiters are per-serverless-instance; durable limiting needs infra (accepted for now).
