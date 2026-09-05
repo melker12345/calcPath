@@ -310,7 +310,7 @@ function DiagnosticPanel({
       <div className="mt-4 flex flex-wrap gap-2 text-sm">
         <Link
           href={`/diagnostic/${slug}`}
-          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 font-medium text-white transition hover:opacity-90"
+          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 font-medium text-[var(--accent-text)] transition hover:opacity-90"
         >
           {latest ? "Retake diagnostic" : "Take diagnostic"}
         </Link>
@@ -348,11 +348,8 @@ function SubjectOverviewInner({
     const effProblems = realData.problems?.length ? realData.problems : [];
     const effModules = realData.modules?.length ? realData.modules : [];
 
-    let solved = 0;
-
     const topicsWithProgress = effTopics.map((topic) => {
       const stats = getPracticeProgress(progress, topic.id, effProblems);
-      solved += stats.correct;
       return {
         ...topic,
         correct: stats.correct,
@@ -360,6 +357,8 @@ function SubjectOverviewInner({
         percent: stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0,
       };
     });
+
+    const solved = topicsWithProgress.reduce((sum, topic) => sum + topic.correct, 0);
 
     return {
       ...subject,

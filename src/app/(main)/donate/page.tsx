@@ -85,6 +85,8 @@ export default function DonatePage() {
             return (
               <button
                 key={cents}
+                type="button"
+                aria-pressed={active}
                 onClick={() => {
                   setSelected(cents);
                   setCustom("");
@@ -122,6 +124,9 @@ export default function DonatePage() {
 
         {/* Custom amount */}
         <div className="mt-4">
+          <label htmlFor="custom-amount" className="sr-only">
+            Custom donation amount in dollars
+          </label>
           <div
             className={`flex items-center overflow-hidden rounded-2xl border-2 transition ${
               isCustomActive
@@ -129,19 +134,26 @@ export default function DonatePage() {
                 : "theme-border bg-[var(--surface)] hover:border-[var(--accent)]/40"
             }`}
           >
-            <span className="shrink-0 px-2 text-lg font-bold theme-text-muted sm:px-3">$</span>
+            <span aria-hidden className="shrink-0 px-2 text-lg font-bold theme-text-muted sm:px-3">
+              $
+            </span>
             <input
+              id="custom-amount"
               type="text"
               inputMode="decimal"
               placeholder="Custom amount"
               value={custom}
               onChange={(e) => {
-                const v = e.target.value.replace(/[^0-9.]/g, "");
+                // Digits only, a single decimal point, at most 2 decimals.
+                const raw = e.target.value.replace(/[^0-9.]/g, "");
+                const [whole, ...decimals] = raw.split(".");
+                const v =
+                  decimals.length > 0 ? `${whole}.${decimals.join("").slice(0, 2)}` : whole;
                 setCustom(v);
-                setSelected(null);
+                // Only clear a chosen preset when the user actually types a value.
+                if (v !== "") setSelected(null);
                 clearError();
               }}
-              onFocus={() => setSelected(null)}
               className="min-w-0 flex-1 bg-transparent py-4 pl-1.5 pr-3 text-lg font-semibold theme-text outline-none placeholder:font-normal placeholder:text-[var(--text-muted)]"
             />
             {isCustomActive && custom && (

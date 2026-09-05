@@ -24,7 +24,8 @@ export default function AccountPage() {
 
 function AccountContent() {
   const { progress, resetProgress, applySyncedProgress } = useProgress();
-  const [jsonMessage, setJsonMessage] = useState("");
+  const [jsonMessage, setJsonMessage] = useState<{ text: string; ok: boolean } | null>(null);
+  const [confirmingReset, setConfirmingReset] = useState(false);
 
   // Derive simple stats (no topic list needed; use what's in progress)
   const topicsWithProgress = Object.keys(progress.topicStats || {}).length;
@@ -45,10 +46,13 @@ function AccountContent() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      setJsonMessage("Progress exported as JSON.");
-      setTimeout(() => setJsonMessage(""), 2500);
+      setJsonMessage({ text: "Progress exported as JSON.", ok: true });
+      setTimeout(() => setJsonMessage(null), 2500);
     } catch (e: unknown) {
-      setJsonMessage("Export failed: " + (e instanceof Error ? e.message : "unknown error"));
+      setJsonMessage({
+        text: "Export failed: " + (e instanceof Error ? e.message : "unknown error"),
+        ok: false,
+      });
     }
   };
 
@@ -61,14 +65,17 @@ function AccountContent() {
         const text = (ev.target?.result as string) || "";
         const parsed = JSON.parse(text);
         applySyncedProgress(parsed);
-        setJsonMessage("Progress imported from JSON successfully!");
-        setTimeout(() => setJsonMessage(""), 3000);
+        setJsonMessage({ text: "Progress imported from JSON successfully!", ok: true });
+        setTimeout(() => setJsonMessage(null), 3000);
       } catch (err: unknown) {
-        setJsonMessage("Import failed: " + (err instanceof Error ? err.message : "Invalid JSON file"));
+        setJsonMessage({
+          text: "Import failed: " + (err instanceof Error ? err.message : "Invalid JSON file"),
+          ok: false,
+        });
       }
     };
     reader.onerror = () => {
-      setJsonMessage("Failed to read the file.");
+      setJsonMessage({ text: "Failed to read the file.", ok: false });
     };
     reader.readAsText(file);
     // allow re-select same file
@@ -139,7 +146,16 @@ function AccountContent() {
             </label>
           </div>
           {jsonMessage && (
-            <p className="mt-2 text-sm text-emerald-600">{jsonMessage}</p>
+            <p
+              role="status"
+              className={`mt-2 text-sm ${
+                jsonMessage.ok
+                  ? "text-emerald-600"
+                  : "text-red-600 dark:text-red-400"
+              }`}
+            >
+              {jsonMessage.text}
+            </p>
           )}
         </SectionCard>
 
@@ -147,11 +163,33 @@ function AccountContent() {
           <p className="text-sm theme-text-secondary mb-4">
             Reset erases all local progress permanently (no undo).
           </p>
-          <div className="flex flex-wrap gap-2">
-            <button className="btn-secondary" onClick={resetProgress}>
-              Reset progress
-            </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {confirmingReset ? (
+              <>
+                <button
+                  className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/50"
+                  onClick={() => {
+                    resetProgress();
+                    setConfirmingReset(false);
+                  }}
+                >
+                  Yes, erase everything
+                </button>
+                <button className="btn-secondary" onClick={() => setConfirmingReset(false)}>
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button className="btn-secondary" onClick={() => setConfirmingReset(true)}>
+                Reset progress
+              </button>
+            )}
           </div>
+          {confirmingReset && (
+            <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">
+              This permanently erases all local progress. There is no undo.
+            </p>
+          )}
         </SectionCard>
       </div>
 

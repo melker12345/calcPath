@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { trackEvent } from "@/lib/analytics";
+import { supabase } from "@/lib/supabase/client";
 
 const FEEDBACK_KINDS = [
   { id: "bug", label: "Bug" },
@@ -15,8 +16,23 @@ export default function FeedbackPage() {
   const [kind, setKind] = useState<FeedbackKind>("general");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const radioRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const canSubmit = status !== "sending" && message.trim().length >= 3;
+
+  const handleRadioKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, idx: number) => {
+    let next: number | null = null;
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      next = (idx + 1) % FEEDBACK_KINDS.length;
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      next = (idx - 1 + FEEDBACK_KINDS.length) % FEEDBACK_KINDS.length;
+    }
+    if (next !== null) {
+      e.preventDefault();
+      setKind(FEEDBACK_KINDS[next].id);
+      radioRefs.current[next]?.focus();
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,13 +41,24 @@ export default function FeedbackPage() {
 
     setStatus("sending");
     try {
+      // Attribute the feedback when signed in; anonymous submissions still work.
+      let accessToken: string | undefined;
+      try {
+        const { data } = await supabase.auth.getSession();
+        accessToken = data.session?.access_token ?? undefined;
+      } catch {
+        // No session available — submit anonymously.
+      }
+
       const res = await fetch("/api/feedback", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({
           kind,
           message: trimmed,
-          user_id: null,
           page_url: window.location.href,
         }),
       });
@@ -49,7 +76,7 @@ export default function FeedbackPage() {
   if (status === "sent") {
     return (
       <div className="mx-auto w-full max-w-xl px-4 py-16 sm:px-6 sm:py-24">
-        <div className="text-center">
+        <div role="status" className="text-center">
           <h1 className="font-serif text-3xl font-semibold tracking-tight theme-text">
             Thanks for your feedback
           </h1>
@@ -86,20 +113,32 @@ export default function FeedbackPage() {
           <legend className="mb-3 text-sm font-medium theme-text">
             What kind of feedback is this?
           </legend>
-          <div className="flex flex-wrap gap-2.5">
-            {FEEDBACK_KINDS.map((k) => {
+          <div
+            role="radiogroup"
+            aria-label="Kind of feedback"
+            className="flex flex-wrap gap-2.5"
+          >
+            {FEEDBACK_KINDS.map((k, idx) => {
               const active = kind === k.id;
               return (
                 <button
                   key={k.id}
                   type="button"
+                  role="radio"
+                  aria-checked={active}
+                  tabIndex={active ? 0 : -1}
+                  ref={(el) => {
+                    radioRefs.current[idx] = el;
+                  }}
                   onClick={() => setKind(k.id)}
-                  className={`rounded-xl border-2 px-4 py-2.5 text-sm font-medium transition active:scale-95 ${
+                  onKeyDown={(e) => handleRadioKeyDown(e, idx)}
+                  className={`inline-flex items-center gap-1.5 rounded-xl border-2 px-4 py-2.5 text-sm font-medium transition active:scale-95 ${
                     active
-                      ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
+                      ? "border-[var(--accent)] bg-[var(--accent)]/10 font-semibold text-[var(--accent)]"
                       : "theme-border bg-[var(--surface)] theme-text-secondary hover:border-[var(--accent)]/40"
                   }`}
                 >
+                  {active && <span aria-hidden>✓</span>}
                   {k.label}
                 </button>
               );
@@ -136,9 +175,12 @@ export default function FeedbackPage() {
 
         {/* Error message */}
         {status === "error" && (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+          <p
+            role="alert"
+            className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400"
+          >
             Something went wrong. Please try again.
-          </div>
+          </p>
         )}
 
         {/* Submit */}

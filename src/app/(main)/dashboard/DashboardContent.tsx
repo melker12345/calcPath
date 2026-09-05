@@ -88,7 +88,6 @@ function DashboardInner({
   subjectConfigs?: NavSubject[];
 }) {
   const { progress } = useProgress();
-  const activeSubjects = subjectConfigs ?? [];
 
   const {
     subjectsWithProgress,
@@ -97,6 +96,7 @@ function DashboardInner({
     overallAccuracy,
     masteryPercent,
   } = useMemo(() => {
+    const activeSubjects = subjectConfigs ?? [];
     const computedSubjects: SubjectWithProgress[] = activeSubjects.map((subject) => {
       const bundle = realData?.[subject.slug];
       const effTopics = bundle?.topics?.length ? bundle.topics : [];
@@ -147,7 +147,7 @@ function DashboardInner({
       overallAccuracy: acc,
       masteryPercent: mPercent,
     };
-  }, [progress, realData, activeSubjects]);
+  }, [progress, realData, subjectConfigs]);
 
   const currentStreak = progress.streak?.current ?? 0;
   const bestStreak = progress.streak?.longest ?? 0;
@@ -164,7 +164,7 @@ function DashboardInner({
       <section className="mb-8">
         <h2 className="mb-4 text-lg font-semibold theme-text">Overall progress</h2>
         <div className="grid gap-4 sm:grid-cols-3">
-          <div className="theme-card-light theme-border p-4 sm:p-5">
+          <div className="theme-card-light theme-border rounded-2xl border p-4 sm:p-5">
             <div className="text-xs font-semibold uppercase tracking-wide theme-text">
               Problems Mastered
             </div>
@@ -181,7 +181,7 @@ function DashboardInner({
             <div className="mt-2 text-sm theme-text-muted">{masteryPercent}% complete</div>
           </div>
 
-          <div className="theme-card-light theme-border p-4 sm:p-5">
+          <div className="theme-card-light theme-border rounded-2xl border p-4 sm:p-5">
             <div className="text-xs font-semibold uppercase tracking-wide theme-text">
               Current Streak
             </div>
@@ -192,7 +192,7 @@ function DashboardInner({
             <div className="mt-3 text-sm theme-text-muted">Best: {bestStreak} days</div>
           </div>
 
-          <div className="theme-card-light theme-border p-4 sm:p-5">
+          <div className="theme-card-light theme-border rounded-2xl border p-4 sm:p-5">
             <div className="text-xs font-semibold uppercase tracking-wide theme-text">Accuracy</div>
             <div className="mt-2 text-4xl font-bold theme-text">{overallAccuracy}%</div>
             <div className="mt-3 text-sm theme-text-muted">First-try success rate</div>
