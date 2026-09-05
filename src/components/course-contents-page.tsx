@@ -102,53 +102,65 @@ export function CourseContentsPage({
 
             return (
               <div key={topic.id}>
-                <button
-                  onClick={() => toggleTopic(topic.id)}
-                  aria-expanded={isOpen}
-                  className="group flex w-full items-center gap-4 py-4 text-left"
-                >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)]/10 text-sm font-bold tabular-nums text-[var(--accent)]">
-                    {index + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] theme-text-secondary">
-                      Chapter {index + 1}
-                      {comp.total > 0 && (
-                        <span className="theme-text-muted"> · {comp.total} questions</span>
-                      )}
-                    </p>
-                    <h3 className="mt-0.5 text-base font-semibold leading-snug theme-text sm:text-lg">
-                      {topic.title}
-                    </h3>
-                    {comp.total > 0 && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <div className="h-1.5 w-full max-w-[220px] overflow-hidden rounded-full bg-[var(--surface-2)]">
-                          <div
-                            className={`h-full rounded-full ${comp.isComplete ? "bg-emerald-500" : "bg-[var(--accent)]"}`}
-                            style={{ width: `${comp.pct}%` }}
-                          />
-                        </div>
-                        <span className="shrink-0 text-[11px] tabular-nums theme-text-secondary">
-                          {comp.isComplete
-                            ? "Complete"
-                            : comp.started
-                              ? `${comp.done}/${comp.total} done`
-                              : "Not started"}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className={`h-4 w-4 shrink-0 text-zinc-400 transition-transform duration-200 group-hover:text-[var(--accent)] dark:text-zinc-500 ${isOpen ? "rotate-90" : ""}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
+                {/* The title navigates to the chapter (primary action); the
+                    chevron is a separate toggle for the section list. One
+                    row-sized button doing both made the title open the
+                    accordion, which is not what a chapter name promises. */}
+                <div className="flex w-full items-center gap-2 py-4">
+                  <Link
+                    href={`/${subjectSlug}/modules/${topic.id}`}
+                    className="group flex min-w-0 flex-1 items-center gap-4"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)]/10 text-sm font-bold tabular-nums text-[var(--accent)]">
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] theme-text-secondary">
+                        Chapter {index + 1}
+                        {comp.total > 0 && (
+                          <span className="theme-text-muted"> · {comp.total} questions</span>
+                        )}
+                      </p>
+                      <h3 className="mt-0.5 text-base font-semibold leading-snug theme-text transition-colors group-hover:text-[var(--accent)] sm:text-lg">
+                        {topic.title}
+                      </h3>
+                      {comp.total > 0 && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <div className="h-1.5 w-full max-w-[220px] overflow-hidden rounded-full bg-[var(--surface-2)]">
+                            <div
+                              className={`h-full rounded-full ${comp.isComplete ? "bg-emerald-500" : "bg-[var(--accent)]"}`}
+                              style={{ width: `${comp.pct}%` }}
+                            />
+                          </div>
+                          <span className="shrink-0 text-[11px] tabular-nums theme-text-secondary">
+                            {comp.isComplete
+                              ? "Complete"
+                              : comp.started
+                                ? `${comp.done}/${comp.total} done`
+                                : "Not started"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                  <button
+                    onClick={() => toggleTopic(topic.id)}
+                    aria-expanded={isOpen}
+                    aria-label={`${isOpen ? "Hide" : "Show"} sections of ${topic.title}`}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-[var(--surface-2)] hover:text-[var(--accent)] dark:text-zinc-500"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className={`h-4 w-4 transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
 
                 {isOpen && (
                   <div className="pb-4 pl-[56px]">
