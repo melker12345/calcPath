@@ -8,6 +8,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useTheme } from "next-themes";
+import { useClientMounted } from "@/hooks/use-client-mounted";
 import { MathText } from "@/components/math-text";
 
 type Tool = "pen" | "eraser";
@@ -18,6 +19,9 @@ const DARK_COLORS = ["#e2e8f0", "#f87171", "#60a5fa", "#4ade80", "#c084fc"];
 const PAPER_LIGHT = "#ffffff";
 const PAPER_DARK = "#10151c";
 const SIZES = [2, 4, 8];
+// Undo snapshots are stored at CSS-pixel resolution (not device pixels) and
+// capped, so a long session can't hold hundreds of MB of full-DPR ImageData.
+const MAX_UNDO_SNAPSHOTS = 20;
 
 export function Scratchpad({
   open,
@@ -33,8 +37,9 @@ export function Scratchpad({
   onSave?: (dataUrl: string | null) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { theme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useClientMounted();
   const isDark = mounted && (resolvedTheme ?? theme) === "dark";
 
   const [tool, setTool] = useState<Tool>("pen");
@@ -43,10 +48,11 @@ export function Scratchpad({
 
   const drawing = useRef(false);
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
-  const paths = useRef<ImageData[]>([]);
+  const paths = useRef<HTMLCanvasElement[]>([]);
   const hasRestored = useRef(false);
-
-  useEffect(() => setMounted(true), []);
+  // Tracks whether the pad actually holds a drawing. The pixel-scan alternative
+  // fails because resizeCanvas paints opaque paper, so alpha is never 0.
+  const hasDrawn = useRef(false);
 
   const palette = isDark ? DARK_COLORS : COLORS;
   const paper = isDark ? PAPER_DARK : PAPER_LIGHT;
@@ -105,17 +111,19 @@ export function Scratchpad({
       const img = new Image();
       img.onload = () => {
         ctx.drawImage(img, 0, 0, rect.width, rect.height);
+        hasDrawn.current = true;
       };
       img.src = savedImage;
     }, 60);
 
     return () => clearTimeout(timer);
-  }, [open, savedImage]);
+  }, [open, savedImage, paper]);
 
   // Reset restoration flag when closed so next open can restore again
   useEffect(() => {
     if (!open) {
       hasRestored.current = false;
+      hasDrawn.current = false;
     }
   }, [open]);
 
@@ -137,6 +145,17 @@ export function Scratchpad({
     };
   }, [open]);
 
+  // Modal focus management: move focus into the dialog on open, restore it on close.
+  useEffect(() => {
+    if (!open || !mounted) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const timer = setTimeout(() => containerRef.current?.focus(), 0);
+    return () => {
+      clearTimeout(timer);
+      previouslyFocused?.focus?.();
+    };
+  }, [open, mounted]);
+
   const getPos = (e: React.MouseEvent | React.TouchEvent): { x: number; y: number } => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
@@ -148,16 +167,25 @@ export function Scratchpad({
   };
 
   const saveSnapshot = () => {
-    const ctx = getCtx();
     const canvas = canvasRef.current;
-    if (!ctx || !canvas) return;
-    paths.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
-    if (paths.current.length > 50) paths.current.shift();
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    // Downsample to CSS pixels: at DPR 2 this is a 4x smaller copy per snapshot,
+    // and drawImage keeps the copy on the GPU instead of a huge ImageData buffer.
+    const snap = document.createElement("canvas");
+    snap.width = Math.max(1, Math.round(canvas.width / dpr));
+    snap.height = Math.max(1, Math.round(canvas.height / dpr));
+    const snapCtx = snap.getContext("2d");
+    if (!snapCtx) return;
+    snapCtx.drawImage(canvas, 0, 0, snap.width, snap.height);
+    paths.current.push(snap);
+    if (paths.current.length > MAX_UNDO_SNAPSHOTS) paths.current.shift();
   };
 
   const startDraw = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     saveSnapshot();
+    if (tool === "pen") hasDrawn.current = true;
     drawing.current = true;
     const pos = getPos(e);
     lastPoint.current = pos;
@@ -209,7 +237,14 @@ export function Scratchpad({
 
     if (paths.current.length > 0) {
       const prev = paths.current.pop()!;
-      ctx.putImageData(prev, 0, 0);
+      const dpr = window.devicePixelRatio || 1;
+      const cssW = canvas.width / dpr;
+      const cssH = canvas.height / dpr;
+      // ctx is scaled by dpr (see resizeCanvas), so painting the CSS-sized
+      // snapshot over the CSS rect covers the whole backing store.
+      ctx.fillStyle = paper;
+      ctx.fillRect(0, 0, cssW, cssH);
+      ctx.drawImage(prev, 0, 0, cssW, cssH);
     }
   };
 
@@ -218,6 +253,7 @@ export function Scratchpad({
     const canvas = canvasRef.current;
     if (!ctx || !canvas) return;
     saveSnapshot();
+    hasDrawn.current = false;
     ctx.fillStyle = paper;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   };
@@ -225,24 +261,59 @@ export function Scratchpad({
   const handleClose = () => {
     const canvas = canvasRef.current;
     if (canvas && onSave) {
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const isEmpty = pixels.data.every((v, i) => i % 4 === 3 ? v === 0 : true);
-        onSave(isEmpty ? null : canvas.toDataURL("image/png"));
-      } else {
-        onSave(null);
-      }
+      onSave(hasDrawn.current ? canvas.toDataURL("image/png") : null);
     }
     paths.current = [];
     setColorOverride(null);
     onClose();
   };
 
+  // Focus trap + Escape-to-close for the full-screen dialog.
+  const handleDialogKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      handleClose();
+      return;
+    }
+    if (e.key !== "Tab") return;
+    const root = containerRef.current;
+    if (!root) return;
+    const focusables = Array.from(
+      root.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    );
+    if (focusables.length === 0) {
+      e.preventDefault();
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey) {
+      if (active === first || active === root) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else if (active === last || active === root) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
   if (!mounted || !open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[10001] flex flex-col bg-black/40 backdrop-blur-md">
+    <div
+      ref={containerRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Scratchpad"
+      tabIndex={-1}
+      onKeyDown={handleDialogKeyDown}
+      className="fixed inset-0 z-[10001] flex flex-col bg-black/40 outline-none backdrop-blur-md"
+    >
       {/* Toolbar */}
       <div className="shrink-0 border-b border-zinc-200 bg-zinc-50 dark:bg-[var(--surface)] dark:border-[var(--border)] px-3 py-2 sm:px-4 sm:py-2.5">
         {/* Top row: close button always visible */}

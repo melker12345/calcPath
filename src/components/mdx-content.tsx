@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
+import { useTheme } from "next-themes";
 import { marked, type Tokens } from "marked";
 import { MathText } from "@/components/math-text";
 import { BlockMath } from "react-katex";
@@ -374,21 +375,31 @@ function renderBlockNodes(
   });
 }
 
+let mermaidRenderId = 0;
+
 function MermaidDiagram({ chart }: { chart: string }) {
   const ref = useRef<HTMLDivElement>(null);
+  const { theme, resolvedTheme } = useTheme();
+  // On the server / first client render this is false (light), matching SSR HTML;
+  // the effect below re-renders the diagram once the real theme resolves.
+  const isDark = (resolvedTheme ?? theme) === "dark";
   useEffect(() => {
     let mounted = true;
     import("mermaid").then(({ default: mermaid }) => {
       if (!mounted || !ref.current) return;
-      mermaid.initialize({ startOnLoad: false, theme: "neutral", securityLevel: "loose" });
-      mermaid.render(`mermaid-${Date.now()}`, chart).then(({ svg }) => {
-        if (ref.current) ref.current.innerHTML = svg;
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: isDark ? "dark" : "neutral",
+        securityLevel: "loose",
+      });
+      mermaid.render(`mermaid-${++mermaidRenderId}`, chart).then(({ svg }) => {
+        if (mounted && ref.current) ref.current.innerHTML = svg;
       }).catch(() => {
-        if (ref.current) ref.current.textContent = chart;
+        if (mounted && ref.current) ref.current.textContent = chart;
       });
     });
     return () => { mounted = false; };
-  }, [chart]);
+  }, [chart, isDark]);
   return <div ref={ref} className="my-4 overflow-x-auto rounded border theme-border p-2 bg-white dark:bg-zinc-950" />;
 }
 

@@ -24,7 +24,7 @@ const SUBJECT_THEME: Record<Subject, {
     opBg: "#f1f5f9", opText: "#0f172a", parenColor: "#334155",
     opSolidBg: "#334155",
     containerBg: "#f8fafc", containerBorder: "#e2e8f0",
-    headerBg: "#ffffff", labelColor: "#a1a1aa", dividerColor: "#e4e4e7",
+    headerBg: "#ffffff", labelColor: "var(--text-muted)", dividerColor: "#e4e4e7",
     fieldAreaBg: "#ffffff", fieldInnerBg: "#f8fafc", fieldBorder: "#e4e4e7",
     keypadBg: "#f4f4f5", numBg: "#ffffff", numText: "#18181b", numShadow: "0 1px 3px rgba(0,0,0,0.08)",
   },
@@ -33,7 +33,7 @@ const SUBJECT_THEME: Record<Subject, {
     opBg: "#f1f5f9", opText: "#0f172a", parenColor: "#334155",
     opSolidBg: "#334155",
     containerBg: "#f8fafc", containerBorder: "#e2e8f0",
-    headerBg: "#ffffff", labelColor: "#a1a1aa", dividerColor: "#e4e4e7",
+    headerBg: "#ffffff", labelColor: "var(--text-muted)", dividerColor: "#e4e4e7",
     fieldAreaBg: "#ffffff", fieldInnerBg: "#f8fafc", fieldBorder: "#e4e4e7",
     keypadBg: "#f4f4f5", numBg: "#ffffff", numText: "#18181b", numShadow: "0 1px 3px rgba(0,0,0,0.08)",
   },
@@ -42,7 +42,7 @@ const SUBJECT_THEME: Record<Subject, {
     opBg: "#f1f5f9", opText: "#0f172a", parenColor: "#334155",
     opSolidBg: "#334155",
     containerBg: "#f8fafc", containerBorder: "#e2e8f0",
-    headerBg: "#ffffff", labelColor: "#a1a1aa", dividerColor: "#e4e4e7",
+    headerBg: "#ffffff", labelColor: "var(--text-muted)", dividerColor: "#e4e4e7",
     fieldAreaBg: "#ffffff", fieldInnerBg: "#f8fafc", fieldBorder: "#e4e4e7",
     keypadBg: "#f4f4f5", numBg: "#ffffff", numText: "#18181b", numShadow: "0 1px 3px rgba(0,0,0,0.08)",
   },
@@ -377,11 +377,14 @@ export function MathInput({
         <p className="text-xs font-semibold sm:text-sm" style={{ color: th.labelColor }}>{placeholder}</p>
         {/* Keep the action buttons mounted (just hidden) while feedback is shown
             so the header height never changes between input and feedback states. */}
-        <div className={`flex items-center gap-1.5 ${feedbackOverlay ? "invisible" : ""}`} aria-hidden={feedbackOverlay ? true : undefined}>
+        <div
+          className={`flex items-center gap-1.5 ${feedbackOverlay ? "invisible" : ""}`}
+          aria-hidden={feedbackOverlay ? true : undefined}
+          inert={feedbackOverlay ? true : undefined}
+        >
           <button
             type="button"
             onClick={() => setScratchpadOpen(true)}
-            tabIndex={feedbackOverlay ? -1 : undefined}
             className="flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition active:scale-95 sm:px-3 sm:py-1 sm:text-sm"
             style={{ borderColor: th.dividerColor, color: th.labelColor }}
           >
@@ -395,7 +398,6 @@ export function MathInput({
               type="button"
               onClick={onHint}
               disabled={hintDisabled}
-              tabIndex={feedbackOverlay ? -1 : undefined}
               className="flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition active:scale-95 disabled:opacity-30 sm:px-3 sm:py-1 sm:text-sm"
               style={{ borderColor: th.dividerColor, color: th.labelColor }}
             >
@@ -413,8 +415,14 @@ export function MathInput({
         onSave={(dataUrl) => { scratchpadData.current = dataUrl; }}
       />
 
-      {/* ── Math field — taller, and no wider than the keypad below it ── */}
-      <div className="flex items-center justify-center px-4 py-3 sm:px-5" style={{ background: th.fieldAreaBg }}>
+      {/* ── Math field — taller, and no wider than the keypad below it ──
+             inert while the (opaque) feedback overlay covers it, so Tab can
+             never land on the invisible MathQuill textarea underneath. */}
+      <div
+        className="flex items-center justify-center px-4 py-3 sm:px-5"
+        style={{ background: th.fieldAreaBg }}
+        inert={feedbackOverlay ? true : undefined}
+      >
         <div
           className="relative flex min-h-[64px] w-full max-w-[430px] items-center justify-center rounded-xl px-4 transition-shadow focus-within:ring-2 focus-within:ring-[var(--accent)]/50 sm:min-h-[76px]"
           style={{ background: "var(--surface-2)" }}
@@ -473,7 +481,7 @@ export function MathInput({
       {/* ── Symbol strip + keypad (hidden but height-preserving while the
              feedback overlay above is active). ── */}
       <div className="relative">
-        <div className={feedbackOverlay ? "invisible" : ""}>
+        <div className={feedbackOverlay ? "invisible" : ""} inert={feedbackOverlay ? true : undefined}>
           {/* ── Suggestions strip: contextual symbols for this question.
                  Dividers are short centered hairlines, not full-width rules. ── */}
           {suggestions.length > 0 && (
@@ -503,11 +511,11 @@ export function MathInput({
             <div className="mx-auto w-full max-w-[430px] px-3 pb-2.5 pt-1.5 sm:px-4 sm:pb-3">
               {/* Tools row: ( )  xⁿ  √  ⌫  AC */}
               <div className="grid grid-cols-5 gap-1 pb-1 sm:gap-1.5 sm:pb-1.5">
-                <button type="button" onClick={() => { write("\\left(\\right)"); mqRef.current?.keystroke("Left"); }} className="kp-op text-[13px] sm:text-sm">( )</button>
-                <button type="button" onClick={() => cmd("^")} className="kp-op text-[13px] sm:text-sm">x<sup className="text-[9px]">n</sup></button>
-                <button type="button" onClick={() => cmd("\\sqrt")} className="kp-op text-[13px] sm:text-sm">√</button>
-                <button type="button" onClick={backspace} className="kp-op text-[13px] sm:text-sm">⌫</button>
-                <button type="button" onClick={clear} className="kp-op-ac">AC</button>
+                <button type="button" aria-label="parentheses" onClick={() => { write("\\left(\\right)"); mqRef.current?.keystroke("Left"); }} className="kp-op text-[13px] sm:text-sm">( )</button>
+                <button type="button" aria-label="exponent" onClick={() => cmd("^")} className="kp-op text-[13px] sm:text-sm"><span aria-hidden>x<sup className="text-[9px]">n</sup></span></button>
+                <button type="button" aria-label="square root" onClick={() => cmd("\\sqrt")} className="kp-op text-[13px] sm:text-sm">√</button>
+                <button type="button" aria-label="backspace" onClick={backspace} className="kp-op text-[13px] sm:text-sm">⌫</button>
+                <button type="button" aria-label="clear all" onClick={clear} className="kp-op-ac">AC</button>
               </div>
 
               {/* Numpad (3 cols) + operator column (1 col) */}
@@ -515,22 +523,22 @@ export function MathInput({
                 <button type="button" onClick={() => write("7")} className="kp-num">7</button>
                 <button type="button" onClick={() => write("8")} className="kp-num">8</button>
                 <button type="button" onClick={() => write("9")} className="kp-num">9</button>
-                <button type="button" onClick={() => write("+")} className="kp-op-solid">+</button>
+                <button type="button" aria-label="plus" onClick={() => write("+")} className="kp-op-solid">+</button>
 
                 <button type="button" onClick={() => write("4")} className="kp-num">4</button>
                 <button type="button" onClick={() => write("5")} className="kp-num">5</button>
                 <button type="button" onClick={() => write("6")} className="kp-num">6</button>
-                <button type="button" onClick={() => write("-")} className="kp-op-solid">−</button>
+                <button type="button" aria-label="minus" onClick={() => write("-")} className="kp-op-solid">−</button>
 
                 <button type="button" onClick={() => write("1")} className="kp-num">1</button>
                 <button type="button" onClick={() => write("2")} className="kp-num">2</button>
                 <button type="button" onClick={() => write("3")} className="kp-num">3</button>
-                <button type="button" onClick={() => write("\\cdot ")} className="kp-op-solid">×</button>
+                <button type="button" aria-label="multiply" onClick={() => write("\\cdot ")} className="kp-op-solid">×</button>
 
                 <button type="button" onClick={() => write("0")} className="kp-num col-span-2">0</button>
-                <button type="button" onClick={() => write(".")} className="kp-num">.</button>
-                <button type="button" onClick={() => cmd("\\frac")} className="kp-op-solid">
-                  <span className="flex flex-col items-center text-[11px] leading-[1.1] sm:text-xs">
+                <button type="button" aria-label="decimal point" onClick={() => write(".")} className="kp-num">.</button>
+                <button type="button" aria-label="fraction" onClick={() => cmd("\\frac")} className="kp-op-solid">
+                  <span aria-hidden className="flex flex-col items-center text-[11px] leading-[1.1] sm:text-xs">
                     <span>a</span><span className="my-[-1px] h-px w-3 bg-current" /><span>b</span>
                   </span>
                 </button>
@@ -538,9 +546,9 @@ export function MathInput({
                 <button type="button" onClick={onSubmit} className="kp-submit col-span-3">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5"><path d="M20 6L9 17l-5-5"/></svg>
                   Check
-                  <span className="mi-fine-only ml-1.5 items-center rounded border px-1 text-[10px] font-semibold opacity-70" style={{ borderColor: "currentColor" }}>↵</span>
+                  <span aria-hidden className="mi-fine-only ml-1.5 items-center rounded border px-1 text-[10px] font-semibold opacity-70" style={{ borderColor: "currentColor" }}>↵</span>
                 </button>
-                <button type="button" onClick={() => write("\\div ")} className="kp-op-solid">÷</button>
+                <button type="button" aria-label="divide" onClick={() => write("\\div ")} className="kp-op-solid">÷</button>
               </div>
             </div>
           </div>

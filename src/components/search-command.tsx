@@ -52,6 +52,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   const indexLoaded = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   const ensureIndexLoaded = useCallback(() => {
@@ -112,6 +113,15 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     if (isOpen && inputRef.current) inputRef.current.focus();
   }, [isOpen]);
 
+  // Restore focus to whatever opened the palette once it closes.
+  useEffect(() => {
+    if (!isOpen) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    return () => {
+      previouslyFocused?.focus?.();
+    };
+  }, [isOpen]);
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -131,6 +141,34 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     else if (e.key === "Enter" && results[activeIndex]) { e.preventDefault(); navigate(results[activeIndex].href); }
   };
 
+  // Keep Tab focus inside the modal palette while it is open.
+  const handleTrapKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Tab") return;
+    const root = dialogRef.current;
+    if (!root) return;
+    const focusables = Array.from(
+      root.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    );
+    if (focusables.length === 0) {
+      e.preventDefault();
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey) {
+      if (active === first || active === root) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else if (active === last || active === root) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
   const kindClasses: Record<string, string> = {
     topic: "bg-blue-100 text-blue-700 dark:bg-[var(--accent)]/15 dark:text-[var(--accent)]",
     section: "bg-zinc-100 text-zinc-600 dark:bg-[var(--surface-2)] dark:text-[var(--text-muted)]",
@@ -144,7 +182,14 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
       {children}
       {mounted && isOpen &&
         createPortal(
-          <div className="fixed inset-0 z-[10000]">
+          <div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Search"
+            onKeyDown={handleTrapKeyDown}
+            className="fixed inset-0 z-[10000]"
+          >
             <button type="button" aria-label="Close search" onClick={close} className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
             <div className="relative mx-auto mt-[15vh] w-[min(560px,90vw)]">
               <div className="overflow-hidden rounded-xl border theme-border theme-surface shadow-2xl">
@@ -162,17 +207,32 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
                     }}
                     onKeyDown={handleKeyDown}
                     placeholder="Search topics, sections, pages..."
+                    aria-label="Search topics, sections, and pages"
+                    role="combobox"
+                    aria-expanded="true"
+                    aria-autocomplete="list"
+                    aria-controls="search-command-listbox"
+                    aria-activedescendant={results.length > 0 ? `search-command-option-${activeIndex}` : undefined}
                     className="flex-1 bg-transparent text-sm theme-text placeholder:text-[var(--text-muted)] outline-none border-none p-0 focus:ring-0"
                   />
                   <kbd className="rounded border theme-border bg-[var(--surface-2)] px-1.5 py-0.5 text-[10px] font-medium theme-text-muted">ESC</kbd>
                 </div>
-                <div ref={listRef} className="max-h-[50vh] overflow-y-auto overscroll-contain py-2">
+                <div
+                  ref={listRef}
+                  id="search-command-listbox"
+                  role="listbox"
+                  aria-label="Search results"
+                  className="max-h-[50vh] overflow-y-auto overscroll-contain py-2"
+                >
                   {results.length === 0 && (
-                    <div className="px-4 py-8 text-center text-sm theme-text-muted">No results found</div>
+                    <div role="presentation" className="px-4 py-8 text-center text-sm theme-text-muted">No results found</div>
                   )}
                   {results.map((entry, i) => (
                     <button
                       key={entry.href}
+                      id={`search-command-option-${i}`}
+                      role="option"
+                      aria-selected={i === activeIndex}
                       type="button"
                       onClick={() => navigate(entry.href)}
                       onMouseEnter={() => setActiveIndex(i)}
