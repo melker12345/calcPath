@@ -74,7 +74,9 @@ function normalizeMathInner(inner: string): string {
 export function normalizeMathText(text: string): string {
   if (!text) return text;
 
+  // "\$" is a literal dollar sign, not a math delimiter — the same rule
+  // splitMath in math-text.tsx applies when it renders this text.
   return text
-    .replace(/\$\$([\s\S]*?)\$\$/g, (_, inner: string) => `$$${normalizeMathInner(inner)}$$`)
-    .replace(/\$([\s\S]*?)\$/g, (_, inner: string) => `$${normalizeMathInner(inner)}$`);
+    .replace(/(?<!\\)\$\$([\s\S]*?)(?<!\\)\$\$/g, (_, inner: string) => `$$${normalizeMathInner(inner)}$$`)
+    .replace(/(?<!\\)\$([\s\S]*?)(?<!\\)\$/g, (_, inner: string) => `$${normalizeMathInner(inner)}$`);
 }

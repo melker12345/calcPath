@@ -34,10 +34,12 @@
  * multiple-choice distractor, and every pair of answers within a topic.
  */
 const stripTrailingConstant = (input: string) => {
-  // Allow optional trailing "+C" for indefinite integrals, and a bare "C".
-  // Do not strip multiplicative forms like "Ce^(2x)" or "e^(2x)C".
-  if (/^c$/i.test(input)) return "";
-  return input.replace(/\+c$/i, "");
+  // Allow optional trailing "+C" for indefinite integrals.
+  // Do not strip multiplicative forms like "Ce^(2x)" or "e^(2x)C", and never
+  // strip an answer down to nothing: an answer that IS "c" (e.g. "b = c" once
+  // its label is gone) must stay "c", or an empty submission would match it.
+  const stripped = input.replace(/\+c$/i, "");
+  return stripped === "" ? input : stripped;
 };
 
 const removeLatexSizing = (s: string) =>
@@ -99,6 +101,7 @@ const parseGroup = (s: string, start: number) => {
 };
 
 const EVALUATION_TOKENS = [
+  "combinations",
   "arcsin",
   "arccos",
   "arctan",
@@ -204,8 +207,9 @@ const UNICODE_LETTERS: Array<[RegExp, string]> = [
 const latexToPlain = (latex: string) => {
   let s = removeLatexSizing(latex);
 
-  // Replace \cdot with *
+  // Replace \cdot / \times with *
   s = s.replace(/\\cdot/g, "*");
+  s = s.replace(/\\times/g, "*");
   s = s.replace(/\\div/g, "/");
 
   // Replace trig/log constants
@@ -228,12 +232,34 @@ const latexToPlain = (latex: string) => {
     .replace(/\\pi/g, "pi")
     .replace(/\\lambda/g, "lambda");
 
+  // \sqrt[n]{x} is the nth root of x, not "sqrt[n]x": rewrite it as a power
+  // before the plain-sqrt loop, which only knows the index-free form.
+  while (/\\sqrt\[[^\]]*\]\{/.test(s)) {
+    const m = s.match(/\\sqrt\[([^\]]*)\]\{/);
+    if (!m || m.index === undefined) break;
+    const g = parseGroup(s, m.index + m[0].length - 1);
+    if (!g) break;
+    s = s.slice(0, m.index) + `(${g.content})^(1/(${m[1]}))` + s.slice(g.end);
+  }
+
   // sqrt
   while (s.includes("\\sqrt{")) {
     const idx = s.indexOf("\\sqrt{");
     const g = parseGroup(s, idx + "\\sqrt".length);
     if (!g) break;
     s = s.slice(0, idx) + `sqrt(${g.content})` + s.slice(g.end);
+  }
+
+  // \binom{n}{k} -> combinations(n,k), which mathjs evaluates. Falling through
+  // to the keep-command-name rule produced "binom*93", a string nothing else
+  // could ever equal.
+  while (s.includes("\\binom{")) {
+    const idx = s.indexOf("\\binom{");
+    const top = parseGroup(s, idx + "\\binom".length);
+    if (!top) break;
+    const bottom = parseGroup(s, top.end);
+    if (!bottom) break;
+    s = s.slice(0, idx) + `combinations(${top.content},${bottom.content})` + s.slice(bottom.end);
   }
 
   // frac
@@ -360,8 +386,10 @@ const canonicalizeInput = (input: string) => {
     "$1($3)^$2",
   );
 
-  out = out.replace(/_/g, "");
+  // Match the label while any subscript is still visible — deleting "_" first
+  // turned "v_0=" into "v0=", which no label pattern recognises.
   out = stripOptionalLabelPrefix(out);
+  out = out.replace(/_/g, "");
   // A sentence-ending period is punctuation, not arithmetic.
   out = out.replace(/\.$/, "");
   return out;
@@ -371,7 +399,9 @@ const canonicalizeInput = (input: string) => {
 const labelFamilyOf = (input: string): string | null => {
   let out = input.trim();
   if (out.includes("\\")) out = latexToPlain(out);
-  out = out.toLowerCase().replace(/\s+/g, "").replace(/[{}$]/g, "").replace(/_/g, "");
+  // Keep "_": the label patterns read subscripts, and canonicalizeInput also
+  // matches the label before deleting them.
+  out = out.toLowerCase().replace(/\s+/g, "").replace(/[{}$]/g, "");
   return matchLabelPrefix(out)?.family ?? null;
 };
 
@@ -446,25 +476,27 @@ const isValueToken = (token: string) =>
   token === "pi" ||
   token === "inf";
 
-const isFunctionToken = (token: string) =>
-  [
-    "arcsin",
-    "arccos",
-    "arctan",
-    "sinh",
-    "cosh",
-    "tanh",
-    "sqrt",
-    "sin",
-    "cos",
-    "tan",
-    "sec",
-    "csc",
-    "cot",
-    "log",
-    "exp",
-    "abs",
-  ].includes(token);
+const FUNCTION_TOKENS = [
+  "combinations",
+  "arcsin",
+  "arccos",
+  "arctan",
+  "sinh",
+  "cosh",
+  "tanh",
+  "sqrt",
+  "sin",
+  "cos",
+  "tan",
+  "sec",
+  "csc",
+  "cot",
+  "log",
+  "exp",
+  "abs",
+] as const;
+
+const isFunctionToken = (token: string) => (FUNCTION_TOKENS as readonly string[]).includes(token);
 
 const startsValueLike = (token: string) =>
   /^[\d.]+$/.test(token) ||
@@ -635,6 +667,8 @@ export const isAnswerCorrect = (userInput: string, expected: string) => {
   if (labelsConflict(userInput, expected)) return false;
   const a = normalizeAnswer(userInput);
   const b = normalizeAnswer(expected);
+  // An empty submission is never a correct answer, whatever it is compared to.
+  if (a === "" || b === "") return false;
   if (a === b) return true;
 
   // If expected includes "+c" but user omitted it, allow it.
@@ -702,13 +736,44 @@ const splitTopLevelList = (input: string): string[] | null => {
   return parts.map((part) => part.trim());
 };
 
+/**
+ * A stored answer may restate the expression before giving its value —
+ * "\\binom{9}{3} = 84" normalizes to "combinations(9,3)=84". When every side
+ * of the "=" evaluates to the same constant, the identity as a whole means that
+ * constant, and a learner may answer with any one side of it. An equation with
+ * free variables ("x^2=4") is no identity and is left alone — and so is a
+ * worked arithmetic chain ("1+2=3", "289-288=1"): only a side that applies a
+ * named function is a restatement rather than shown working, and the sweep
+ * counts on the chain forms NOT collapsing onto their value.
+ */
+const constantIdentityValue = async (input: string): Promise<string | null> => {
+  const sides = input.split("=");
+  if (sides.length < 2 || sides.some((side) => side === "")) return null;
+  if (!sides.some((side) => FUNCTION_TOKENS.some((name) => side.includes(`${name}(`)))) {
+    return null;
+  }
+  const m = await getMath();
+  const values = sides.map((side) => tryEval(m, prepareExpressionForEvaluation(side), {}));
+  const first = values[0];
+  if (first === null) return null;
+  if (values.some((v) => v === null || !nearlyEqual(v, first))) return null;
+  return sides[sides.length - 1];
+};
+
 /** The single-value comparison, without list handling (which builds on it). */
 const valuesEquivalent = async (a: string, b: string): Promise<boolean> => {
+  // An empty submission is never a correct answer, whatever it is compared to.
+  if (a === "" || b === "") return false;
   if (a === b) return true;
   const aNoC = stripTrailingConstant(a);
   const bNoC = stripTrailingConstant(b);
   if (aNoC === bNoC) return true;
   if (await scalarNumericEquivalent(aNoC, bNoC)) return true;
+  const aIdentity = await constantIdentityValue(aNoC);
+  const bIdentity = await constantIdentityValue(bNoC);
+  if (aIdentity !== null || bIdentity !== null) {
+    return valuesEquivalent(aIdentity ?? aNoC, bIdentity ?? bNoC);
+  }
   const allowConstantOffset = /\+?c$/i.test(b);
   return expressionsEquivalent(aNoC, bNoC, allowConstantOffset);
 };
