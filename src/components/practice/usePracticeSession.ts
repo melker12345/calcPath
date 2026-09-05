@@ -50,6 +50,21 @@ const EMPTY_TRANSIENT: TransientState = {
 };
 
 /**
+ * Unbiased Fisher-Yates shuffle (returns a new array).
+ * `sort(() => Math.random() - 0.5)` is biased (and engine-dependent); this is
+ * the same algorithm as shuffleArray in lib/assessment/diagnostic-sampling.ts,
+ * which is module-private there (and takes a seeded rand we don't need here).
+ */
+function shuffleArray<T>(array: T[]): T[] {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+/**
  * Custom hook that encapsulates the core state and logic for a practice session.
  * This is the foundation for making the practice experience reusable across subjects.
  */
@@ -193,8 +208,7 @@ export function usePracticeSession({
     const base = sectionFilter
       ? allProblems.filter((p) => p.section === sectionFilter)
       : allProblems;
-    const shuffled = [...base].sort(() => Math.random() - 0.5);
-    setShuffledProblems(shuffled);
+    setShuffledProblems(shuffleArray(base));
     setManualIndex(0);
     setHasManuallyNavigated(false);
     setTransientByProblem({});

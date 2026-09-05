@@ -9,6 +9,7 @@ import { useProgress } from "@/components/progress-provider";
 import { isAnswerCorrectAsync, isMcqAnswerCorrect } from "@/lib/answer-check";
 import { detectQuestionContext } from "@/lib/math-input-helpers";
 import { getSectionHref } from "@/lib/subject-urls";
+import { getQuestionIndex } from "@/lib/question-registry";
 import {
   ProgressDots,
   PracticeFeedback,
@@ -97,7 +98,7 @@ class QuestionErrorBoundary extends React.Component<
             <button
               type="button"
               onClick={this.handleSkip}
-              className="inline-flex items-center justify-center rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 active:scale-[0.985]"
+              className="inline-flex items-center justify-center rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--accent-text)] transition hover:opacity-90 active:scale-[0.985]"
             >
               Skip to next question →
             </button>
@@ -148,7 +149,6 @@ export function GenericPracticeExperience({
     setIndex,
     current: hookCurrent,
     questionStatuses,
-    hasManuallyNavigated,
     solvedCount,
     goToNext,
     goToPrev,
@@ -218,7 +218,7 @@ export function GenericPracticeExperience({
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Link
                 href={backToExplanationHref}
-                className="inline-flex items-center justify-center rounded-lg bg-[var(--accent)] px-5 py-2 text-sm font-medium text-white transition hover:opacity-90 active:scale-[0.985]"
+                className="inline-flex items-center justify-center rounded-lg bg-[var(--accent)] px-5 py-2 text-sm font-medium text-[var(--accent-text)] transition hover:opacity-90 active:scale-[0.985]"
               >
                 View the explanation →
               </Link>
@@ -235,9 +235,6 @@ export function GenericPracticeExperience({
     );
   }
 
-  if (!topic) {
-    return <div className="p-8 text-sm theme-text-secondary">Topic not found in data.</div>;
-  }
   if (!current || typeof current.prompt !== "string" || !current.explanation) {
     // Graceful per-question fallback for bad/malformed data (post-loader tolerant recovery).
     // Uses clear "rendering issue" language per resilience spec. Skip keeps session usable (progress context preserved in hook).
@@ -248,7 +245,7 @@ export function GenericPracticeExperience({
         <button
           type="button"
           onClick={goToNext}
-          className="mt-4 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm text-white"
+          className="mt-4 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm text-[var(--accent-text)]"
         >
           Skip to next question →
         </button>
@@ -315,11 +312,17 @@ export function GenericPracticeExperience({
 
   const isDismissable = feedback?.type === "incorrect" && !feedback.showSolution;
 
+  // Stable global question number from the registry (same regardless of arrival
+  // route / ?section= filtering). Undefined only for problems not yet registered.
+  const globalIndex = getQuestionIndex(current.id);
+  const globalQuestionNumber = globalIndex !== undefined ? globalIndex + 1 : null;
+
   // Everything an admin needs to reproduce a report without asking the user:
   // which question, what the grader expected, every graded submission, and the
   // hint/solution state at report time. Sent only with "Report issue".
   const reportContext: Record<string, unknown> = {
     questionId: current.id,
+    globalQuestionNumber,
     questionType: current.type,
     section: current.section ?? null,
     expectedAnswer: current.answer,
@@ -402,21 +405,33 @@ export function GenericPracticeExperience({
           {/* Answer input area */}
           {current.type === "mcq" ? (
             <div className="flex min-h-0 flex-col gap-2 sm:gap-3">
-              {(!feedbackOverlay || overlayDismissed) &&
-                current.choices?.map((choice) => (
-                  <button
-                    key={choice}
-                    type="button"
-                    onClick={() => {
-                      setAnswer(choice);
-                      submitAnswer(choice);
-                    }}
-                    disabled={feedback?.type === "correct"}
-                    className="rounded-xl border theme-border bg-[var(--surface)] px-4 py-3 text-left text-base font-medium theme-text transition hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg"
-                  >
-                    <MathText text={choice} />
-                  </button>
-                ))}
+              {(!feedbackOverlay || overlayDismissed) && (
+                <div role="radiogroup" aria-label="Answer choices" className="flex min-h-0 flex-col gap-2 sm:gap-3">
+                  {current.choices?.map((choice) => {
+                    const isSelected = answer === choice;
+                    return (
+                      <button
+                        key={choice}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() => {
+                          setAnswer(choice);
+                          submitAnswer(choice);
+                        }}
+                        disabled={feedback?.type === "correct"}
+                        className={`rounded-xl border px-4 py-3 text-left text-base font-medium theme-text transition hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg ${
+                          isSelected
+                            ? "border-[var(--accent)] bg-[var(--surface-2)] ring-1 ring-[var(--accent)]"
+                            : "theme-border bg-[var(--surface)]"
+                        }`}
+                      >
+                        <MathText text={choice} />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               {feedbackOverlay && !overlayDismissed && (
                 <div className="relative min-h-0 overflow-y-auto rounded-xl">
@@ -437,7 +452,12 @@ export function GenericPracticeExperience({
             <MathInput
               value={answer}
               onChange={setAnswer}
-              onSubmit={() => submitAnswer(answer)}
+              onSubmit={() => {
+                // Ignore empty/whitespace-only submissions — a blank MathQuill
+                // submit must not record an attempt (or trigger grading at all).
+                if (!answer.trim()) return;
+                submitAnswer(answer);
+              }}
               onHint={useHint}
               subject="generic" /* for primary data-driven routes — uses neutral theme + heuristics */
               hintDisabled={feedback?.type === "correct" || (feedback?.type === "incorrect" && (feedback.hintUsed || feedback.showSolution))}
@@ -513,7 +533,14 @@ export function GenericPracticeExperience({
                 onClick={() => {
                   const done = new Set(progress.completedProblemIds);
                   const next = displayProblems.findIndex((p, i) => i > index && !done.has(p.id));
-                  setIndex(next >= 0 ? next : (displayProblems.findIndex((p) => !done.has(p.id)) || 0));
+                  if (next >= 0) {
+                    setIndex(next);
+                    return;
+                  }
+                  // Wrap around to the first unsolved question; if everything is
+                  // solved (findIndex → -1), stay put instead of setIndex(-1).
+                  const wrapped = displayProblems.findIndex((p) => !done.has(p.id));
+                  if (wrapped >= 0) setIndex(wrapped);
                 }}
               >
                 Skip to unsolved
@@ -522,7 +549,12 @@ export function GenericPracticeExperience({
           </div>
 
           <div className="justify-self-center rounded-full px-2 py-0.5 text-[11px] font-medium text-[var(--text-muted)] ring-1 ring-[var(--border)]/80">
-            Q{topicProblems.findIndex((p) => p.id === current.id) + 1}
+            {/* Stable global question number (registry index) — independent of
+                arrival route / section filtering. Falls back to the per-topic
+                ordinal only for problems missing from the registry. */}
+            {globalQuestionNumber !== null
+              ? `#${globalQuestionNumber}`
+              : `Q${topicProblems.findIndex((p) => p.id === current.id) + 1}`}
           </div>
 
           <div className="flex items-center justify-self-end">

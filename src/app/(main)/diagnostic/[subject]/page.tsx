@@ -4,6 +4,10 @@ import { sampleDiagnosticQuestions } from "@/lib/assessment/diagnostic-sampling"
 import { loadDiagnosticFile } from "@/lib/content/diagnostic-loader";
 import { requireSubjectConfig } from "@/lib/content/loader";
 
+// The sample is seeded with Math.random() per request; opt out of the
+// full-route cache so "Retake diagnostic" gets a fresh question set.
+export const dynamic = "force-dynamic";
+
 type PageProps = {
   params: Promise<{ subject: string }>;
 };
@@ -23,8 +27,9 @@ export default async function SubjectDiagnosticPage({ params }: PageProps) {
   }
 
   const config = await requireSubjectConfig(subject);
-  const seed = Math.floor(Math.random() * 2 ** 31);
-  const session = sampleDiagnosticQuestions(diagnostic.questions, diagnostic.sampleSize, seed);
+  // No explicit seed: the sampler falls back to unseeded shuffling, and with
+  // force-dynamic every request draws a fresh set.
+  const session = sampleDiagnosticQuestions(diagnostic.questions, diagnostic.sampleSize);
 
   return (
     <DiagnosticSession

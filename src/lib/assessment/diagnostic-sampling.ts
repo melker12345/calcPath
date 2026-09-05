@@ -83,13 +83,13 @@ function allocateByPrerequisite(
     if (totalCapacity > 0) {
       const quotas = capacities.map((cap) => (remaining * cap) / totalCapacity);
       const floors = quotas.map((q) => Math.floor(q));
-      let assigned = floors.reduce((sum, f) => sum + f, 0);
+      const assigned = floors.reduce((sum, f) => sum + f, 0);
       const remainders = quotas
         .map((q, i) => ({ i, remainder: q - floors[i] }))
         .sort((a, b) => b.remainder - a.remainder);
 
       const extras = [...floors];
-      let leftover = remaining - assigned;
+      const leftover = remaining - assigned;
       for (let k = 0; k < leftover && k < remainders.length; k++) {
         extras[remainders[k].i]++;
       }
@@ -103,13 +103,13 @@ function allocateByPrerequisite(
   } else if (sampleSize < n) {
     const quotas = poolSizes.map((size) => (sampleSize * size) / totalPool);
     const floors = quotas.map((q) => Math.floor(q));
-    let assigned = floors.reduce((sum, f) => sum + f, 0);
+    const assigned = floors.reduce((sum, f) => sum + f, 0);
     const remainders = quotas
       .map((q, i) => ({ i, remainder: q - floors[i] }))
       .sort((a, b) => b.remainder - a.remainder);
 
     const extras = [...floors];
-    let leftover = sampleSize - assigned;
+    const leftover = sampleSize - assigned;
     for (let k = 0; k < leftover && k < remainders.length; k++) {
       extras[remainders[k].i]++;
     }

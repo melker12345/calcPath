@@ -51,7 +51,7 @@ export function ProgressDots({
     <div className={`flex w-full justify-center ${className}`}>
       <div
         ref={scrollerRef}
-        className="flex max-w-[380px] flex-nowrap items-center gap-1.5 overflow-x-auto px-3 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(90deg,transparent,black_14px,black_calc(100%-14px),transparent)] sm:max-w-[520px]"
+        className="flex max-w-[380px] flex-nowrap items-center overflow-x-auto px-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(90deg,transparent,black_14px,black_calc(100%-14px),transparent)] sm:max-w-[520px]"
       >
         {statuses.map((status, i) => {
           let colorClass = "bg-zinc-300 dark:bg-zinc-600"; // not-attempted
@@ -65,28 +65,36 @@ export function ProgressDots({
           }
 
           const isActive = i === currentIndex;
+          const statusLabel =
+            status === "solved"
+              ? "Solved"
+              : status === "hint-used"
+              ? "Used hint"
+              : status === "wrong"
+              ? "Incorrect"
+              : "Not attempted";
 
           return (
+            // The button provides a comfortably sized hit area (~22×22px + row
+            // padding); the inner span keeps the small 10px visual dot.
             <button
               key={i}
               type="button"
               onClick={() => onSelect(i)}
-              className={`h-2.5 w-2.5 shrink-0 rounded-full transition-all ${colorClass} ${
-                isActive
-                  ? "ring-2 ring-offset-2 ring-offset-white dark:ring-offset-[var(--surface)] ring-zinc-400"
-                  : ""
-              }`}
-              aria-label={`Go to question ${i + 1}`}
-              title={
-                status === "solved"
-                  ? "Solved"
-                  : status === "hint-used"
-                  ? "Used hint"
-                  : status === "wrong"
-                  ? "Incorrect"
-                  : "Not attempted"
-              }
-            />
+              className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full"
+              aria-label={`Go to question ${i + 1} (${statusLabel})`}
+              aria-current={isActive ? "true" : undefined}
+              title={statusLabel}
+            >
+              <span
+                aria-hidden="true"
+                className={`h-2.5 w-2.5 rounded-full transition-all ${colorClass} ${
+                  isActive
+                    ? "ring-2 ring-offset-2 ring-offset-white dark:ring-offset-[var(--surface)] ring-zinc-400"
+                    : ""
+                }`}
+              />
+            </button>
           );
         })}
       </div>

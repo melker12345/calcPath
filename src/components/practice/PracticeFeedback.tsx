@@ -115,7 +115,6 @@ export function PracticeFeedback({
   onShowSolution,
   getHint,
   overlayDismissed,
-  setOverlayDismissed,
   finalAnswer,
   isLastQuestion = false,
   reportContext,
@@ -153,7 +152,12 @@ export function PracticeFeedback({
 
   if (isCorrect) {
     return (
-      <div className="animate-correct-pop flex h-full flex-col border-t border-emerald-200 bg-emerald-50 p-3 pt-4 sm:p-5 dark:border-[var(--border)] dark:bg-[var(--surface-2)]">
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="animate-correct-pop flex h-full flex-col border-t border-emerald-200 bg-emerald-50 p-3 pt-4 sm:p-5 dark:border-[var(--border)] dark:bg-[var(--surface-2)]"
+      >
         <div className="flex items-center gap-2.5">
           <div className="animate-check-bounce flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base">✓</div>
           <p className="text-base font-bold text-emerald-800 sm:text-xl dark:text-emerald-300">{isLastQuestion ? "Congrats!" : "Correct!"}</p>
@@ -181,15 +185,19 @@ export function PracticeFeedback({
   }
 
   if (isIncorrect) {
-    const showSolution = feedback.showSolution || feedback.attempts > 0;
     const showHint = feedback.hintUsed && !feedback.showSolution;
 
     return (
-      <div className={`flex h-full flex-col border-t p-3 pt-4 sm:p-5 ${
-        showSolution 
-          ? "border-amber-200 bg-amber-50 dark:border-[var(--border)] dark:bg-[var(--surface-2)]" 
-          : "border-blue-200 bg-blue-50 dark:border-[var(--border)] dark:bg-[var(--surface-2)]"
-      }`}>
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className={`flex h-full flex-col border-t p-3 pt-4 sm:p-5 ${
+          feedback.showSolution
+            ? "border-amber-200 bg-amber-50 dark:border-[var(--border)] dark:bg-[var(--surface-2)]"
+            : "border-blue-200 bg-blue-50 dark:border-[var(--border)] dark:bg-[var(--surface-2)]"
+        }`}
+      >
         {feedback.attempts > 0 && (
           <div className="flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white sm:h-10 sm:w-10 sm:text-base dark:bg-amber-500">✗</div>

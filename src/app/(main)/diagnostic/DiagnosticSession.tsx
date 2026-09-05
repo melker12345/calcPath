@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { MathInput } from "@/components/math-input";
 import { MathText } from "@/components/math-text";
 import { useProgress } from "@/components/progress-provider";
-import { isAnswerCorrectAsync } from "@/lib/answer-check";
+import { isAnswerCorrectAsync, isMcqAnswerCorrect } from "@/lib/answer-check";
 import type { DiagnosticPrerequisite, DiagnosticQuestionFile } from "@/lib/content/schema";
 import {
   getRecommendedPrerequisiteAction,
@@ -15,7 +15,6 @@ import {
 import {
   extractFinalAnswer,
   extractSteps,
-  formatAnswerForDisplay,
   extractHintFromExplanation,
   ProgressDots,
   type QuestionStatus,
@@ -54,7 +53,7 @@ export function DiagnosticSession({
   );
 
   const question = questions[index];
-  const currentResults = results ?? [];
+  const currentResults = useMemo(() => results ?? [], [results]);
 
   const priorResults = useMemo(
     () =>
@@ -97,10 +96,11 @@ export function DiagnosticSession({
   );
 
   const selectQuestion = (i: number) => {
-    if (i >= currentResults.length) return;
+    const result = currentResults[i];
+    if (!result) return;
     setIndex(i);
     setAnswer("");
-    setFeedback({ correct: currentResults[i].correct });
+    setFeedback({ correct: result.correct });
   };
 
   const start = () => {
@@ -115,14 +115,17 @@ export function DiagnosticSession({
     if (!question || checking || feedback) return;
     setChecking(true);
 
-    const correct = question.type === "mcq"
-      ? value === question.answer
-      : await isAnswerCorrectAsync(value, question.answer);
+    // Multiple choice is graded by identity against the offered choices; only
+    // typed answers go through expression equivalence.
+    const mcqVerdict = question.type === "mcq"
+      ? isMcqAnswerCorrect(value, question.answer, question.choices)
+      : null;
+    const correct = mcqVerdict ?? (await isAnswerCorrectAsync(value, question.answer));
 
-    const nextResults = [
-      ...currentResults,
-      { questionId: question.id, prerequisiteId: question.prerequisiteId, correct },
-    ];
+    // Keyed by question index (replace, not append) so revisiting an answered
+    // question can never duplicate its entry or inflate the final total.
+    const nextResults = [...currentResults];
+    nextResults[index] = { questionId: question.id, prerequisiteId: question.prerequisiteId, correct };
 
     setResults(nextResults);
     setFeedback({ correct });
@@ -133,9 +136,14 @@ export function DiagnosticSession({
     if (!results) return;
 
     if (index < questions.length - 1) {
-      setIndex((current) => current + 1);
+      // When stepping into a question that was already answered (after jumping
+      // back via the progress dots), show its stored feedback instead of
+      // reopening it for a second answer.
+      const nextIndex = index + 1;
+      const existing = results[nextIndex];
+      setIndex(nextIndex);
       setAnswer("");
-      setFeedback(null);
+      setFeedback(existing ? { correct: existing.correct } : null);
       return;
     }
 
@@ -283,8 +291,8 @@ export function DiagnosticSession({
   const overlay = feedback ? (
     <div className={`flex flex-col border-t p-4 sm:p-5 ${
       feedback.correct
-        ? "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-[#0a2e1f]"
-        : "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-[#2a1f0a]"
+        ? "border-emerald-200 bg-emerald-50 dark:border-[var(--border)] dark:bg-[var(--surface-2)]"
+        : "border-amber-200 bg-amber-50 dark:border-[var(--border)] dark:bg-[var(--surface-2)]"
     }`}>
       <div className="flex items-center gap-2.5">
         <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base ${
@@ -423,6 +431,11 @@ export function DiagnosticSession({
             onSubmit={() => void submitAnswer(answer)}
             onHint={undefined}
             hintDisabled
+            subject={
+              targetSubject === "calculus" || targetSubject === "linalg" || targetSubject === "stats"
+                ? targetSubject
+                : "generic"
+            }
             questionContext={questionContext}
             answerHint={question.answer}
             feedbackOverlay={overlay}
