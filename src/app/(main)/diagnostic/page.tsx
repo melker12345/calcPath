@@ -20,8 +20,8 @@ export default async function DiagnosticPickerPage() {
         <p className="text-xs font-bold uppercase tracking-[0.24em] text-blue-500 dark:text-[var(--accent)]">
           Diagnostics
         </p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight text-zinc-900 dark:text-[var(--text-primary)] sm:text-4xl">
-          Check your readiness before you dive in.
+        <h1 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-zinc-900 dark:text-[var(--text-primary)] sm:text-4xl">
+          Check your readiness first.
         </h1>
         <p className="mt-4 text-base leading-relaxed text-zinc-600 dark:text-[var(--text-muted)]">
           Short prerequisite checks help you find gaps before starting a subject. They use the same answer tools as practice and do not affect your module progress.

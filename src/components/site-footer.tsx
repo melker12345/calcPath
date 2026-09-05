@@ -43,7 +43,6 @@ export const SiteFooter = async () => {
           </h4>
           <nav className="flex flex-col gap-2">
             <Link href="/diagnostic" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Diagnostic</Link>
-            <Link href="/paths" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Paths</Link>
             <Link href="/about" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">About</Link>
           </nav>
         </div>

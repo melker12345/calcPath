@@ -6,6 +6,7 @@ import { AppStateProviders } from "@/components/scoped-providers";
 import { useProgress } from "@/components/progress-provider";
 import type { NavSubject } from "@/lib/subjects";
 import { getPracticeProgress } from "@/lib/progress";
+import { subjectThemeClass } from "@/lib/themes";
 import type { Topic, Problem } from "@/lib/shared-types";
 
 type SlimModule = { topicId: string; sections: Array<{ title: string; section?: string }> };
@@ -31,7 +32,12 @@ function SubjectRow({ subject }: { subject: SubjectWithProgress }) {
           href={`/dashboard/${subject.slug}`}
           className="flex min-w-0 flex-1 items-center gap-3 px-4 py-4 text-left transition hover:bg-[var(--surface-2)] sm:gap-4"
         >
-          <span className="shrink-0 text-xl leading-none" aria-hidden>
+          {/* Same colored glyph treatment as the /subjects cards: the
+              subject-theme class defines --subject-accent for this element. */}
+          <span
+            className={`shrink-0 font-serif text-xl leading-none text-[var(--subject-accent,var(--accent))] ${subjectThemeClass(subject.slug)}`}
+            aria-hidden
+          >
             {subject.icon}
           </span>
           <div className="min-w-0 flex-1">
@@ -93,6 +99,7 @@ function DashboardInner({
     subjectsWithProgress,
     totalSolved,
     totalProblems,
+    totalAttempted,
     overallAccuracy,
     masteryPercent,
   } = useMemo(() => {
@@ -144,6 +151,7 @@ function DashboardInner({
       subjectsWithProgress: computedSubjects,
       totalSolved: tSolved,
       totalProblems: tProblems,
+      totalAttempted: tAttempted,
       overallAccuracy: acc,
       masteryPercent: mPercent,
     };
@@ -155,11 +163,35 @@ function DashboardInner({
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="mb-6">
-        <h1 className="text-3xl font-semibold tracking-tight theme-text">Dashboard</h1>
+        <h1 className="font-serif text-4xl font-semibold tracking-tight theme-text">Dashboard</h1>
         <p className="mt-2 text-sm theme-text-muted">
           Your overall progress across all subjects. Open a subject for chapter breakdown and diagnostics.
         </p>
       </div>
+
+      {totalAttempted === 0 && (
+        <section className="mb-8 rounded-2xl border theme-border theme-card-light p-4 sm:p-5">
+          <h2 className="text-lg font-semibold theme-text">New here?</h2>
+          <p className="mt-1 text-sm theme-text-muted">
+            Take a quick diagnostic to find your starting point, or jump straight into a course —
+            your progress shows up here as you practice.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2 text-sm">
+            <Link
+              href="/diagnostic"
+              className="rounded-lg bg-[var(--accent)] px-4 py-2 font-medium text-[var(--accent-text)] transition hover:opacity-90"
+            >
+              Take a quick diagnostic →
+            </Link>
+            <Link
+              href="/calculus"
+              className="rounded-lg border theme-border px-4 py-2 font-medium theme-text-secondary transition hover:bg-[var(--surface-2)]"
+            >
+              Start with Calculus →
+            </Link>
+          </div>
+        </section>
+      )}
 
       <section className="mb-8">
         <h2 className="mb-4 text-lg font-semibold theme-text">Overall progress</h2>

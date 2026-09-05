@@ -9,6 +9,27 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://calc-path.com/subjects" },
 };
 
+/**
+ * Card blurb derived from the subject's shortDescription at render time only —
+ * the underlying content descriptions feed SEO metadata and stay untouched.
+ * Strips the repeated "A free X course covering/on/…" lead-in (it reads poorly
+ * repeated across the grid) and truncates on a word boundary so the card never
+ * clips mid-word.
+ */
+// Two lines at the card's width fit ~64 chars; keeping the JS cut below that
+// means the word-boundary ellipsis lands before the CSS line-clamp can cut
+// mid-word.
+const BLURB_MAX = 64;
+
+function cardBlurb(description: string): string {
+  const stripped = description.replace(/^A free .+? course (?:covering |on )?/i, "");
+  const blurb = stripped.charAt(0).toUpperCase() + stripped.slice(1);
+  if (blurb.length <= BLURB_MAX) return blurb;
+  const cut = blurb.slice(0, BLURB_MAX);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).replace(/[,;:.\s—–-]+$/, "")}…`;
+}
+
 export default async function SubjectsPage() {
   const subjectList = await getAvailableSubjectConfigs();
   const sorted = [...subjectList].sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
@@ -31,7 +52,7 @@ export default async function SubjectsPage() {
               slug: subject.slug,
               label: subject.label,
               icon: subject.icon,
-              shortDescription: subject.shortDescription,
+              shortDescription: cardBlurb(subject.shortDescription),
               category: subject.category,
               topicCount: subject.topicCount,
             }}

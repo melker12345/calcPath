@@ -206,13 +206,6 @@ export function SubjectModulePage({
               subjectLabel={subjectLabel}
               currentTopicTitle={topic.title}
             />
-            <Link
-              className="text-sm text-blue-800 hover:underline"
-              href={getSubjectPath(subjectSlug)}
-              data-no-print
-            >
-              Back to {subjectLabel} contents
-            </Link>
             {chapter && (
               <p className="mt-4 book-chapter-label">Chapter {chapter}</p>
             )}

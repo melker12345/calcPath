@@ -85,9 +85,9 @@ function AccountContent() {
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
       <div className="mb-6 border-b theme-border pb-5">
-        <h1 className="text-3xl font-semibold tracking-tight theme-text">Your Profile &amp; Progress Save</h1>
+        <h1 className="font-serif text-4xl font-semibold tracking-tight theme-text">Progress &amp; Backup</h1>
         <p className="mt-2 text-base leading-7 theme-text-secondary">
-          No account required. All progress is saved locally on this device. Use the tools below for manual save/export to move to another device.
+          No account required — progress is saved locally on this device. Use the tools below to back it up or move it to another device.
         </p>
       </div>
 

@@ -159,7 +159,7 @@ export function SyncPanel() {
         <button
           onClick={handleCreate}
           disabled={loading}
-          className="btn-primary w-full rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-40 transition-opacity"
+          className="w-full rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--accent-text)] transition hover:opacity-90 disabled:opacity-40"
         >
           {loading && mode === "create" ? "Creating…" : "Create cloud backup"}
         </button>
@@ -238,7 +238,7 @@ export function SyncPanel() {
           <button
             onClick={handleRestore}
             disabled={loading || pin.replace(/\D/g, "").length < 6}
-            className="btn-primary w-full rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-40 transition-opacity"
+            className="w-full rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--accent-text)] transition hover:opacity-90 disabled:opacity-40"
           >
             {loading ? "Restoring…" : "Restore"}
           </button>
@@ -250,10 +250,6 @@ export function SyncPanel() {
         {success && mode !== "create" && mode !== "update" && (
           <p className="text-sm text-emerald-600 dark:text-emerald-400">{success}</p>
         )}
-
-        <p className="text-xs theme-text-muted">
-          Public recovery templates (111111, 222222, …) work here too.
-        </p>
       </div>
     </div>
   );

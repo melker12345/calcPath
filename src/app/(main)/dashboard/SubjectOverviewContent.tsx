@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { AppStateProviders } from "@/components/scoped-providers";
 import { useProgress } from "@/components/progress-provider";
 import type { NavSubject } from "@/lib/subjects";
+import { subjectThemeClass } from "@/lib/themes";
 import {
   getPracticeProgress,
   getSectionPracticeProgress,
@@ -402,7 +403,11 @@ function SubjectOverviewInner({
 
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 items-start gap-4">
-          <span className="shrink-0 text-3xl leading-none" aria-hidden>
+          {/* Same colored glyph treatment as the /subjects cards. */}
+          <span
+            className={`shrink-0 font-serif text-3xl leading-none text-[var(--subject-accent,var(--accent))] ${subjectThemeClass(subject.slug)}`}
+            aria-hidden
+          >
             {subject.icon}
           </span>
           <div className="min-w-0">
