@@ -14,7 +14,15 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Backup of legacy code — do not lint or type-check
     "backup-content/**",
+    // Agent worktrees hold stale checkouts of the repo
+    ".claude/**",
   ]),
+  {
+    rules: {
+      // Rest destructuring is the idiomatic way to omit keys from an object.
+      "@typescript-eslint/no-unused-vars": ["warn", { ignoreRestSiblings: true }],
+    },
+  },
 ]);
 
 export default eslintConfig;

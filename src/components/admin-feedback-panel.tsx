@@ -24,7 +24,6 @@ import {
   type FeedbackRow,
   type FeedbackStatus,
   type FeedbackTargetSummary,
-  type FeedbackWithSummary,
   type Priority,
   type TargetGroup,
 } from "@/lib/admin-feedback";

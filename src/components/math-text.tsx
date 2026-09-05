@@ -89,7 +89,7 @@ class MathRenderBoundary extends Component<MathBoundaryProps, MathBoundaryState>
     super(props);
     this.state = { hasError: false };
   }
-  static getDerivedStateFromError(_error: Error): MathBoundaryState {
+  static getDerivedStateFromError(): MathBoundaryState {
     return { hasError: true };
   }
   componentDidCatch(error: Error) {

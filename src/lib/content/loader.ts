@@ -423,7 +423,7 @@ export async function loadSubjectFromContent(
 
     if (existingTopicIds.includes(topicMeta.id)) {
       try {
-        const { topic: _t, questions, mdxModule } = await loadTopicContent(slug, topicMeta.id, {
+        const { questions, mdxModule } = await loadTopicContent(slug, topicMeta.id, {
           loadQuestions: true,
           loadMdx: includeMdxModules,
         });

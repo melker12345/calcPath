@@ -121,7 +121,7 @@ export function LandingContent({
   const isLockedRef = useRef(false);
   const wheelAccumRef = useRef(0);
 
-  const subjectList = propSubjects ?? [];
+  const subjectList = useMemo(() => propSubjects ?? [], [propSubjects]);
   const featuredSubjects = useMemo(() => pickFeaturedSubjects(subjectList), [subjectList]);
   const popularSubjects = useMemo(() => pickPopularSubjects(subjectList), [subjectList]);
 
