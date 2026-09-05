@@ -9,15 +9,28 @@ Bugs:
   Fixed across 20 module.mdx files (real-analysis, combinatorics, algebra, geometry, precalculus, number-theory).
   content:latex now checks 10,428 fragments with 0 failures.
 
-- [ ] /feedback could do with a small touch up on it's style.
+- [x] /feedback could do with a small touch up on it's style. Restyled to the theme-token idiom with a real radio group; signed-in feedback is now attributed via the Supabase bearer token.
 
-- [ ] Do we not have numerical id for each question? or is it divid up into it's topics? like every topic show <div class="justify-self-center rounded-full px-2 py-0.5 text-[11px] font-medium text-[var(--text-muted)] ring-1 ring-[var(--border)]/80">Q1</div> for the first question in the topic, would it not be better to have just 0~4000?
-makes the feed back for spesific questoin easier, then i can just look up question #356 or what ever the question is in focus.
+- [x] Do we not have numerical id for each question? Yes now: the practice badge shows the stable global registry number (#N from question-registry getQuestionIndex), independent of topic/section route, and the number is included in bug-report context.
 
-- [ ] I think we have to many MCQ questions, why? does it make sence?
+- [ ] I think we have to many MCQ questions, why? does it make sence? (Measured: 2,410 of 4,026 questions — 60% — are MCQ. Editorial decision still open.)
 
 - [x] the scratch pad is broken on dark theme. Fixed: added full dark: variant coverage to toolbar, buttons, color swatches, stroke controls, and canvas background.
 
+
+Fix-fleet session 2026-09-05 (commits 99d717c..be8cd78 on dev, not yet on master):
+- [x] Grading: empty answers can no longer grade correct; \times, \binom{n}{k}, \sqrt[n]{x} now evaluate; escaped \$ honored in normalizeMathText.
+- [x] API hardening: feedback PATCH ownership (HMAC edit_token or bearer match), backup PINs via crypto.randomInt + throttled GET + optimistic-concurrency merge, track rate-limit/size caps. Stripe routes untouched by request.
+- [x] SEO: canonicals corrected sitewide (root leak + subject-layout leak), landing variants /1../5 noindexed with canonical /, Course/FAQ JSON-LD on the real landing page, sitemap/robots made consistent.
+- [x] A11y/theme: undefined --text token, mermaid dark mode, scratchpad + ⌘K as real dialogs with focus traps, keypad aria-labels, MCQ radio semantics, aria-live grading feedback, contrast fixes (--accent-text).
+- [x] Diagnostic: revisit no longer double-counts results; retakes draw fresh questions (force-dynamic).
+- [x] Donate/account: decimal-amount bug, preset lost on tab-focus, red error messages, two-step reset confirm.
+- [x] All 31 duplicate section-slug warnings resolved (23 topics); content:validate now zero warnings.
+- [x] ESLint: 61 errors / 37 warnings → 0 / 0.
+
+Still open (bigger, editorial):
+- [ ] MCQ ratio (60%) — decide target mix and convert.
+- [ ] In-memory API rate limiters are per-serverless-instance; durable limiting needs infra (accepted for now).
 
 Content quality fixes done this session:
 - [x] Escaped all literal $ currency signs in MDX prose (37 → 0 KaTeX failures)
