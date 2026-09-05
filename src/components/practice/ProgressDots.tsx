@@ -48,10 +48,13 @@ export function ProgressDots({
   }, [currentIndex, statuses.length]);
 
   return (
-    <div className={`flex w-full justify-center ${className}`}>
+    <div className={`flex w-full min-w-0 justify-center ${className}`}>
+      {/* Width is additionally capped relative to the viewport so on narrow
+          screens the row leaves room for the adjacent "1 / N" counter instead
+          of pushing it past the right edge. */}
       <div
         ref={scrollerRef}
-        className="flex max-w-[380px] flex-nowrap items-center overflow-x-auto px-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(90deg,transparent,black_14px,black_calc(100%-14px),transparent)] sm:max-w-[520px]"
+        className="flex min-w-0 max-w-[min(380px,calc(100vw_-_7.5rem))] flex-nowrap items-center overflow-x-auto px-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(90deg,transparent,black_14px,black_calc(100%-14px),transparent)] sm:max-w-[520px]"
       >
         {statuses.map((status, i) => {
           let colorClass = "bg-zinc-300 dark:bg-zinc-600"; // not-attempted

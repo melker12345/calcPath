@@ -399,17 +399,19 @@ export function Scratchpad({
 
           <div className="h-5 w-px bg-zinc-200 dark:bg-[var(--border)]" />
 
-          {/* Stroke size */}
+          {/* Stroke size — generous ≥36px hit areas (the small dot is only the
+              visual); the selected state carries the affordance. */}
           <div className="flex items-center gap-1">
             {SIZES.map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => setSize(s)}
-                className={`flex h-7 w-7 items-center justify-center rounded-md transition sm:h-8 sm:w-8 ${
+                className={`flex h-9 w-9 items-center justify-center rounded-md transition ${
                   size === s ? "bg-zinc-200 dark:bg-[var(--surface-2)]" : "hover:bg-zinc-100 dark:hover:bg-[var(--surface)]"
                 }`}
                 aria-label={`Size ${s}`}
+                aria-pressed={size === s}
               >
                 <div
                   className="rounded-full bg-zinc-700 dark:bg-[var(--text-primary)]"

@@ -10,6 +10,7 @@ import { isAnswerCorrectAsync, isMcqAnswerCorrect } from "@/lib/answer-check";
 import { detectQuestionContext } from "@/lib/math-input-helpers";
 import { getSectionHref } from "@/lib/subject-urls";
 import { getQuestionIndex } from "@/lib/question-registry";
+import { getThemeForSubject } from "@/lib/themes";
 import {
   ProgressDots,
   PracticeFeedback,
@@ -158,8 +159,6 @@ export function GenericPracticeExperience({
     setAnswer,
     feedback,
     setFeedback,
-    overlayDismissed,
-    setOverlayDismissed,
   } = usePracticeSession({
     problems: topicProblems,
     completedProblemIds: progress.completedProblemIds,
@@ -199,12 +198,30 @@ export function GenericPracticeExperience({
     [current]
   );
 
+  // Subject-accent alignment: subject pages render inside a
+  // `.subject-theme-<id>` subtree (see CourseLayout + lib/themes) which defines
+  // --subject-accent / --subject-accent-text. Re-pointing --accent at those for
+  // the whole practice card makes the Check button, keypad operator keys and
+  // links follow the subject's identity color (calculus red, stats green, …).
+  // Unthemed subjects get no override — the global blue accent stays the
+  // fallback. The theme palettes pair each accent with a ≥4.5:1 accent-text.
+  const subjectAccentVars = useMemo(
+    () =>
+      getThemeForSubject(subjectSlug)
+        ? ({
+            "--accent": "var(--subject-accent)",
+            "--accent-text": "var(--subject-accent-text)",
+          } as React.CSSProperties)
+        : undefined,
+    [subjectSlug]
+  );
+
   if (displayProblems.length === 0) {
     // Extra guard: show clean intentional "no questions yet" instead of falling to bad-data fallback,
     // broken nav (length-1=-1), "All 0 mastered", or hitting PracticeErrorBoundary.
     // Matches the polished card look and feel of the main data-driven routes exactly.
     return (
-      <div className="mx-auto w-full max-w-3xl px-0 pb-0 sm:px-6 sm:py-10">
+      <div className="mx-auto w-full max-w-3xl px-0 pb-0 sm:px-6 sm:py-10" style={subjectAccentVars}>
         <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-center bg-[var(--surface-solid)] px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
           <div className="mx-auto max-w-md text-center">
             <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface-2)] text-2xl" aria-hidden="true">
@@ -281,7 +298,6 @@ export function GenericPracticeExperience({
       correct: isCorrect,
       createdAt: new Date().toISOString(),
     });
-    setOverlayDismissed(false);
 
     if (isCorrect) {
       setFeedback({ type: "correct" });
@@ -299,7 +315,6 @@ export function GenericPracticeExperience({
   const useHint = () => {
     if (feedback?.type === "correct") return;
     if (feedback?.type === "incorrect" && feedback.hintUsed) return;
-    setOverlayDismissed(false);
     if (feedback?.type === "incorrect") {
       setFeedback({ ...feedback, hintUsed: true });
     } else {
@@ -307,10 +322,11 @@ export function GenericPracticeExperience({
     }
   };
 
-  const getHint = () => getDefaultHint(current?.explanation || "");
+  // Pass the stored answer so the hint extractor only strips a trailing $math$
+  // fragment when it actually reveals the answer (a formula like the power rule
+  // is kept and rendered via MathText).
+  const getHint = () => getDefaultHint(current?.explanation || "", current?.answer);
   const finalAnswer = extractFinalAnswer(current?.explanation || "", current?.answer || "");
-
-  const isDismissable = feedback?.type === "incorrect" && !feedback.showSolution;
 
   // Stable global question number from the registry (same regardless of arrival
   // route / ?section= filtering). Undefined only for problems not yet registered.
@@ -331,11 +347,16 @@ export function GenericPracticeExperience({
     solutionShown: feedback?.type === "incorrect" ? feedback.showSolution : false,
   };
 
-  // Use the *shared improved* PracticeFeedback for the entire overlay (correct + incorrect).
-  // Only create the element when there is actual feedback to display. This prevents the
-  // keypad from being unconditionally hidden (via the `feedbackOverlay ? "invisible" : ""`
-  // logic inside MathInput) on the very first question before any answer is submitted.
-  const feedbackOverlay = feedback ? (
+  // Shared PracticeFeedback element for all three feedback states.
+  //
+  // Only the FULL states (correct celebration, full solution) are handed to
+  // MathInput as a covering overlay — those genuinely replace the input, and
+  // MathInput's inert/invisible treatment of the field + keypad only applies
+  // while such an overlay actually covers them. A plain incorrect verdict
+  // renders as a compact banner NEXT TO the input instead, keeping the math
+  // field visible and editable (with the user's attempt still in it) for a
+  // retry.
+  const feedbackEl = feedback ? (
     <PracticeFeedback
       feedback={feedback}
       current={{ id: current.id, explanation: current.explanation, answer: current.answer }}
@@ -347,16 +368,21 @@ export function GenericPracticeExperience({
         )
       }
       getHint={getHint}
-      overlayDismissed={overlayDismissed}
-      setOverlayDismissed={setOverlayDismissed}
       finalAnswer={finalAnswer}
       isLastQuestion={index === displayProblems.length - 1}
       reportContext={reportContext}
     />
   ) : null;
+  const isFullFeedback =
+    feedback?.type === "correct" ||
+    (feedback?.type === "incorrect" && feedback.showSolution);
+  // MCQ: a choice has been graded (hint-only feedback doesn't count).
+  const mcqAnswered =
+    feedback?.type === "correct" ||
+    (feedback?.type === "incorrect" && feedback.attempts > 0);
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-56px)] w-full max-w-3xl flex-col px-0 sm:px-6 sm:py-4">
+    <div className="mx-auto flex h-[calc(100dvh-56px)] w-full max-w-3xl flex-col px-0 sm:px-6 sm:py-4" style={subjectAccentVars}>
       {/* Compact header row — practice fits the viewport, so it stays slim */}
       <div className="mb-2 hidden min-w-0 shrink-0 sm:flex sm:items-baseline sm:gap-3 px-1">
         <h1 className="shrink-0 text-lg font-bold theme-text">{topic.title}</h1>
@@ -368,9 +394,10 @@ export function GenericPracticeExperience({
           never scrolls (html.practice-no-scroll). Long prompts scroll inside
           their own area instead. Opaque surface, borderless — depth via shadow. */}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--surface-solid)] px-4 pb-1 pt-2 sm:rounded-2xl sm:px-8 sm:pb-5 sm:pt-5 sm:shadow-lg">
-        {/* Progress dots + "1 / N" counter (counter positioned on right of dots; uses theme-text-muted) */}
-        <div className="flex w-full justify-center">
-          <div className="flex items-center gap-2">
+        {/* Progress dots + "1 / N" counter (counter positioned on right of dots; uses theme-text-muted).
+            min-w-0 lets the dots scroller shrink on narrow viewports so the counter never clips. */}
+        <div className="flex w-full min-w-0 justify-center">
+          <div className="flex min-w-0 max-w-full items-center gap-2">
             <ProgressDots
               statuses={questionStatuses}
               currentIndex={index}
@@ -385,9 +412,12 @@ export function GenericPracticeExperience({
         {/* Per-question error boundary: keeps header/progress/nav always visible.
             Only the question+input subtree is isolated. Key ensures clean state per q. */}
         <QuestionErrorBoundary key={current.id} onSkip={goToNext} questionId={current.id}>
-          {/* Question prompt area: centered; scrolls internally if a prompt is
-              very tall so the page itself never scrolls */}
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 overflow-y-auto py-4 text-center">
+          {/* Question prompt area: content-sized (NOT flex-1) so a short
+              question sits right above the answer area instead of reserving a
+              tall empty band; leftover space collapses into the spacer below
+              the answer area. Still scrolls internally if a prompt is very
+              tall so the page itself never scrolls. */}
+          <div className="flex min-h-0 shrink flex-col items-center gap-2 overflow-y-auto py-4 text-center sm:py-6">
             <div role="heading" aria-level={2} className="text-lg font-semibold leading-relaxed sm:text-2xl">
               {/* Always delegate to project's MathText (robust splitter + katex error fallback) */}
               <MathText text={current.prompt} />
@@ -404,71 +434,92 @@ export function GenericPracticeExperience({
 
           {/* Answer input area */}
           {current.type === "mcq" ? (
-            <div className="flex min-h-0 flex-col gap-2 sm:gap-3">
-              {(!feedbackOverlay || overlayDismissed) && (
-                <div role="radiogroup" aria-label="Answer choices" className="flex min-h-0 flex-col gap-2 sm:gap-3">
-                  {current.choices?.map((choice) => {
-                    const isSelected = answer === choice;
-                    return (
-                      <button
-                        key={choice}
-                        type="button"
-                        role="radio"
-                        aria-checked={isSelected}
-                        onClick={() => {
-                          setAnswer(choice);
-                          submitAnswer(choice);
-                        }}
-                        disabled={feedback?.type === "correct"}
-                        className={`rounded-xl border px-4 py-3 text-left text-base font-medium theme-text transition hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.98] disabled:opacity-50 sm:px-5 sm:py-3.5 sm:text-lg ${
-                          isSelected
-                            ? "border-[var(--accent)] bg-[var(--surface-2)] ring-1 ring-[var(--accent)]"
-                            : "theme-border bg-[var(--surface)]"
-                        }`}
-                      >
-                        <MathText text={choice} />
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {feedbackOverlay && !overlayDismissed && (
-                <div className="relative min-h-0 overflow-y-auto rounded-xl">
-                  {isDismissable && (
+            /* MCQ: the choice list NEVER disappears after answering — the
+               selected choice and the correct one stay visibly (and
+               accessibly) marked, with the feedback card/banner rendered
+               below so users can compare against the distractors. */
+            <div className="flex min-h-0 flex-col gap-2 overflow-y-auto sm:gap-3">
+              <div role="radiogroup" aria-label="Answer choices" className="flex shrink-0 flex-col gap-2 sm:gap-3">
+                {current.choices?.map((choice) => {
+                  const isSelected = answer === choice;
+                  const isCorrectChoice = isMcqAnswerCorrect(choice, current.answer, current.choices);
+                  let stateClass = isSelected
+                    ? "border-[var(--accent)] bg-[var(--surface-2)] ring-1 ring-[var(--accent)]"
+                    : "theme-border bg-[var(--surface)]";
+                  if (mcqAnswered) {
+                    stateClass = isCorrectChoice
+                      ? "border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500 dark:bg-emerald-500/10"
+                      : isSelected
+                      ? "border-red-400 bg-red-50 ring-1 ring-red-400 dark:bg-red-500/10"
+                      : "theme-border bg-[var(--surface)] opacity-60";
+                  }
+                  return (
                     <button
+                      key={choice}
                       type="button"
-                      onClick={() => setOverlayDismissed(true)}
-                      className="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--surface)]/80 text-sm theme-text-muted shadow-sm backdrop-blur transition hover:bg-[var(--surface)] hover:text-[var(--text-secondary)]"
+                      role="radio"
+                      aria-checked={isSelected}
+                      onClick={() => {
+                        setAnswer(choice);
+                        submitAnswer(choice);
+                      }}
+                      disabled={mcqAnswered}
+                      className={`rounded-xl border px-4 py-3 text-left text-base font-medium theme-text transition active:scale-[0.98] disabled:pointer-events-none sm:px-5 sm:py-3.5 sm:text-lg ${
+                        mcqAnswered ? "" : "hover:border-[var(--accent)] hover:bg-[var(--surface-2)]"
+                      } ${stateClass}`}
                     >
-                      ×
+                      <MathText text={choice} />
+                      {mcqAnswered && isCorrectChoice && (
+                        <span className="sr-only"> (correct answer)</span>
+                      )}
+                      {mcqAnswered && isSelected && !isCorrectChoice && (
+                        <span className="sr-only"> (your answer — incorrect)</span>
+                      )}
                     </button>
-                  )}
-                  {feedbackOverlay}
+                  );
+                })}
+              </div>
+
+              {feedbackEl && (
+                <div className={isFullFeedback ? "min-h-0 shrink-0 overflow-y-auto rounded-xl" : "shrink-0"}>
+                  {feedbackEl}
                 </div>
               )}
             </div>
           ) : (
-            <MathInput
-              value={answer}
-              onChange={setAnswer}
-              onSubmit={() => {
-                // Ignore empty/whitespace-only submissions — a blank MathQuill
-                // submit must not record an attempt (or trigger grading at all).
-                if (!answer.trim()) return;
-                submitAnswer(answer);
-              }}
-              onHint={useHint}
-              subject="generic" /* for primary data-driven routes — uses neutral theme + heuristics */
-              hintDisabled={feedback?.type === "correct" || (feedback?.type === "incorrect" && (feedback.hintUsed || feedback.showSolution))}
-              questionContext={questionContext}
-              answerHint={current.answer}
-              feedbackOverlay={feedbackOverlay && !overlayDismissed ? feedbackOverlay : undefined}
-              onDismissOverlay={isDismissable ? () => setOverlayDismissed(true) : undefined}
-              questionPrompt={current.prompt}
-            />
+            /* Typed answers: on a plain incorrect verdict the compact banner
+               sits ABOVE the input, which stays visible and editable with the
+               user's attempt still in it. Only correct / full-solution
+               feedback covers the input as an overlay. */
+            /* overflow-y-auto: when the incorrect banner + inline hint expand,
+               the keypad must stay reachable by scrolling within the card
+               (the page itself never scrolls in practice). */
+            <div className="flex min-h-0 flex-col gap-2 overflow-y-auto">
+              {feedbackEl && !isFullFeedback && <div className="shrink-0">{feedbackEl}</div>}
+              <MathInput
+                value={answer}
+                onChange={setAnswer}
+                onSubmit={() => {
+                  // Ignore empty/whitespace-only submissions — a blank MathQuill
+                  // submit must not record an attempt (or trigger grading at all).
+                  if (!answer.trim()) return;
+                  submitAnswer(answer);
+                }}
+                onHint={useHint}
+                subject="generic" /* for primary data-driven routes — uses neutral theme + heuristics */
+                hintDisabled={feedback?.type === "correct" || (feedback?.type === "incorrect" && (feedback.hintUsed || feedback.showSolution))}
+                questionContext={questionContext}
+                answerHint={current.answer}
+                feedbackOverlay={isFullFeedback ? feedbackEl : undefined}
+                questionPrompt={current.prompt}
+              />
+            </div>
           )}
         </QuestionErrorBoundary>
+
+        {/* Spacer: absorbs leftover height on short questions so the answer
+            area follows the prompt instead of being pushed toward the fold. */}
+        <div aria-hidden="true" className="min-h-0 flex-1" />
 
         {/* All mastered */}
         {solvedCount >= displayProblems.length && (
@@ -508,7 +559,7 @@ export function GenericPracticeExperience({
               type="button"
               onClick={goToPrev}
               disabled={index === 0}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] disabled:opacity-25 sm:h-9 sm:w-9"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-secondary)] transition hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-[var(--text-secondary)] sm:h-9 sm:w-9"
               aria-label="Previous"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -519,7 +570,7 @@ export function GenericPracticeExperience({
               type="button"
               onClick={goToNext}
               disabled={index === displayProblems.length - 1}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] disabled:opacity-25 sm:h-9 sm:w-9"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-secondary)] transition hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-[var(--text-secondary)] sm:h-9 sm:w-9"
               aria-label="Next"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -529,7 +580,7 @@ export function GenericPracticeExperience({
             {solvedCount > 0 && solvedCount < displayProblems.length && (
               <button
                 type="button"
-                className="ml-1 rounded-lg px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] sm:text-sm"
+                className="ml-1 whitespace-nowrap rounded-lg px-2 py-1 text-xs font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] sm:px-2.5 sm:text-sm"
                 onClick={() => {
                   const done = new Set(progress.completedProblemIds);
                   const next = displayProblems.findIndex((p, i) => i > index && !done.has(p.id));
@@ -543,7 +594,9 @@ export function GenericPracticeExperience({
                   if (wrapped >= 0) setIndex(wrapped);
                 }}
               >
-                Skip to unsolved
+                {/* Shorter label on narrow viewports so the bottom row never wraps */}
+                <span className="sm:hidden">Unsolved</span>
+                <span className="hidden sm:inline">Skip to unsolved</span>
               </button>
             )}
           </div>
@@ -557,20 +610,24 @@ export function GenericPracticeExperience({
               : `Q${topicProblems.findIndex((p) => p.id === current.id) + 1}`}
           </div>
 
-          <div className="flex items-center justify-self-end">
+          {/* On narrow viewports the labels shorten (instead of wrapping into
+              multiple lines each) and never wrap internally. */}
+          <div className="flex min-w-0 items-center justify-self-end">
             {subjectSlug === "calculus" && (
               <Link
-                className="rounded-lg px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] sm:text-sm"
+                className="whitespace-nowrap rounded-lg px-2 py-1 text-xs font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] sm:px-2.5 sm:text-sm"
                 href={`/${subjectSlug}/test/${current.topicId}`}
               >
-                Take topic test
+                <span className="sm:hidden">Topic test</span>
+                <span className="hidden sm:inline">Take topic test</span>
               </Link>
             )}
             <Link
-              className="rounded-lg px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] sm:text-sm"
+              className="whitespace-nowrap rounded-lg px-2 py-1 text-xs font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] sm:px-2.5 sm:text-sm"
               href={`/${subjectSlug}`}
             >
-              All {subjectLabel} topics
+              <span className="sm:hidden">All topics</span>
+              <span className="hidden sm:inline">All {subjectLabel} topics</span>
             </Link>
           </div>
         </div>

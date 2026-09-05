@@ -5,10 +5,28 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import { Scratchpad } from "@/components/scratchpad";
 import { deriveSuggestionLabels, type QuestionContext } from "@/lib/math-input-helpers";
+import { getThemeForSubject } from "@/lib/themes";
 
 let stylesInjected = false;
 
 type Subject = "calculus" | "linalg" | "stats" | "generic";
+
+/**
+ * MathInput subject → lib/themes identity slug. Named subjects re-point the
+ * --accent / --accent-text tokens INSIDE the input to the subject's identity
+ * color (calculus red, stats green, linalg blue), so the primary Check button
+ * (.kp-submit), the operator-key tint (.kp-op-solid) and the focus ring follow
+ * the subject accent instead of the global blue. "generic" keeps whatever
+ * accent cascades in (global blue, or a subject override set by the page) —
+ * the safe fallback. Each palette pairs its accent with an accent-text chosen
+ * for ≥4.5:1 contrast (the app's --accent-text convention).
+ */
+const SUBJECT_IDENTITY_SLUG: Record<Subject, string | null> = {
+  calculus: "calculus",
+  linalg: "linear-algebra",
+  stats: "statistics",
+  generic: null,
+};
 
 const SUBJECT_THEME: Record<Subject, {
   pillBg: string; pillBorder: string; pillText: string;
@@ -249,6 +267,19 @@ export function MathInput({
   const isDark = mounted && (resolvedTheme ?? theme) === "dark";
   const th = isDark ? darkTh : lightTh;
 
+  // Per-subject accent (see SUBJECT_IDENTITY_SLUG above). Resolved to concrete
+  // palette values (not var(--subject-accent)) so it also works when the input
+  // is rendered outside a subject-themed subtree (e.g. the diagnostic).
+  const identitySlug = SUBJECT_IDENTITY_SLUG[subject] ?? null;
+  const identityTheme = identitySlug ? getThemeForSubject(identitySlug) : null;
+  const identityPalette = identityTheme ? (isDark ? identityTheme.dark : identityTheme.light) : null;
+  const accentVars = identityPalette
+    ? ({
+        "--accent": identityPalette.accent,
+        "--accent-text": identityPalette.accentText,
+      } as React.CSSProperties)
+    : undefined;
+
   const mqRef = useRef<MQField | null>(null);
   // Stable ref so the MathQuill enter handler (bound once at mount) always
   // calls the latest onSubmit.
@@ -352,10 +383,16 @@ export function MathInput({
   );
 
   return (
-    <div className="relative flex flex-col overflow-hidden rounded-2xl sm:min-h-0" data-subject={subject} style={{ background: th.containerBg }}>
+    <div className="relative flex flex-col overflow-hidden rounded-2xl sm:min-h-0" data-subject={subject} style={{ background: th.containerBg, ...accentVars }}>
       {/* ── Feedback overlay covers the ENTIRE input area (header + field +
              keypad) so even long "Correct!" explanations fit without
-             scrolling; overflow-y-auto is the fallback for extreme cases. ── */}
+             scrolling; overflow-y-auto is the fallback for extreme cases.
+             Contract: callers pass `feedbackOverlay` ONLY for feedback that
+             genuinely replaces the input (correct celebration, full solution).
+             The inert/invisible treatment of the field + keypad below is keyed
+             off this prop, so it only applies while an overlay actually covers
+             them — compact "Not quite" banners render OUTSIDE MathInput and
+             leave the field fully interactive for a retry. ── */}
       {feedbackOverlay && (
         <div className="absolute inset-0 z-10 overflow-y-auto rounded-2xl">
           {onDismissOverlay && (
