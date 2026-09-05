@@ -32,7 +32,7 @@ export function isTallInlineMath(latex: string): boolean {
 const splitMath = (text: string) => {
   // Robust splitter: supports $...$ (inline) and $$...$$ (block). Handles \$ escapes.
   // Post-processes for sentence spacing + anti-glue logic (see below).
-  const parts: Array<{ type: "text" | "math" | "blockmath"; value: string }> = [];
+  const parts: Array<{ type: "text" | "math" | "blockmath"; value: string; trailing?: string }> = [];
 
   // Regex matches opening $ or $$ not preceded by \, captures inner content up to unescaped closer.
   // Uses [\s\S]*? non-greedy across lines.
@@ -70,6 +70,25 @@ const splitMath = (text: string) => {
     }
   }
 
+  return parts;
+};
+
+// Glue trailing punctuation onto the preceding inline math span. KaTeX roots
+// are inline-block, which gives the browser a break opportunity right before
+// a following "." or ")," — stranding lone punctuation on the next line.
+// Moving the cluster into the math span's nowrap wrapper removes that break.
+// Inline rendering only: block mode renders math as display blocks, where the
+// punctuation belongs to the surrounding paragraph.
+const glueTrailingPunctuation = (parts: ReturnType<typeof splitMath>) => {
+  for (let i = 0; i < parts.length - 1; i++) {
+    const cur = parts[i];
+    const nxt = parts[i + 1];
+    if (cur.type !== "math" || nxt.type !== "text") continue;
+    const punct = nxt.value.match(/^[.,;:!?)\]}]+/)?.[0];
+    if (!punct) continue;
+    cur.trailing = punct;
+    nxt.value = nxt.value.slice(punct.length);
+  }
   return parts;
 };
 
@@ -135,7 +154,8 @@ function SafeBlockMath({ math }: { math: string }) {
 }
 
 export const MathText = ({ text, block = false }: MathTextProps) => {
-  const parts = splitMath(normalizeMathText(text));
+  const rawParts = splitMath(normalizeMathText(text));
+  const parts = block ? rawParts : glueTrailingPunctuation(rawParts);
 
   if (block) {
     return (
@@ -177,15 +197,21 @@ export const MathText = ({ text, block = false }: MathTextProps) => {
           // horizontal scroll fallback for wide matrices on mobile.
           if (isTallInlineMath(part.value)) {
             return (
-              <span key={`${part.value}-${index}`} className="math-tall">
-                <SafeInlineMath math={part.value} />
+              <span key={`${part.value}-${index}`} className="whitespace-nowrap">
+                <span className="math-tall">
+                  <SafeInlineMath math={part.value} />
+                </span>
+                {part.trailing}
               </span>
             );
           }
-          // Consistent small breathing room after every inline math expression
+          // Consistent small breathing room after every inline math expression.
+          // whitespace-nowrap keeps any glued trailing punctuation (see
+          // splitMath) on the same line as the math it follows.
           return (
-            <span key={`${part.value}-${index}`} style={{ marginRight: "0.15em" }}>
+            <span key={`${part.value}-${index}`} className="whitespace-nowrap" style={{ marginRight: "0.15em" }}>
               <SafeInlineMath math={part.value} />
+              {part.trailing}
             </span>
           );
         }
