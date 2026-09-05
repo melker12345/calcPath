@@ -4,21 +4,21 @@ import { useTheme } from "next-themes";
 import { useClientMounted } from "@/hooks/use-client-mounted";
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const mounted = useClientMounted();
 
   if (!mounted) {
     return <div className="h-9 w-9" />;
   }
 
-  const isDark = theme === "dark";
+  const isDark = resolvedTheme === "dark";
 
   return (
     <button
       onClick={() => setTheme(isDark ? "light" : "dark")}
       className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--nav-control-border,var(--border))] bg-[var(--nav-control-bg,var(--surface))] text-sm theme-text-muted transition hover:bg-[var(--nav-control-hover,var(--surface-2))] hover:theme-text"
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      title={isDark ? "Switch to light mode" : "Switch to GitHub dark mode"}
+      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
       {isDark ? (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.25}>

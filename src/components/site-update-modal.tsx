@@ -8,10 +8,44 @@ import { useCallback, useEffect, useState } from "react";
  * in the feedback table (target_type "site-version"), so the admin inbox shows
  * a running +Yes / -No tally. Shown at most once per browser: the moment the
  * visitor votes or dismisses, we set a localStorage flag and never show it again.
+ *
+ * Only shown to returning visitors: someone with no pre-existing local progress
+ * never saw the old version, so asking them "do you prefer the new one?" is
+ * meaningless (and blocks their very first impression of the landing page).
  */
 const STORAGE_KEY = "calc_site_update_v2_responded";
+/** Same key the progress system persists under (see progress-provider.tsx). */
+const PROGRESS_KEY = "calc_progress_v1";
 const TARGET_TYPE = "site-version";
 const TARGET_ID = "new-version-2026";
+
+/**
+ * True only when the browser already holds real practice progress (attempts,
+ * completions, test results, ...) written by the progress system. Any parse or
+ * storage error means "no" — a brand-new visitor must never see the prompt.
+ */
+function hasExistingProgress(): boolean {
+  try {
+    const raw = localStorage.getItem(PROGRESS_KEY);
+    if (!raw) return false;
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return false;
+    }
+    const p = parsed as Record<string, unknown>;
+    const nonEmptyArray = (v: unknown) => Array.isArray(v) && v.length > 0;
+    return (
+      nonEmptyArray(p.attempts) ||
+      nonEmptyArray(p.attemptedProblemIds) ||
+      nonEmptyArray(p.completedProblemIds) ||
+      nonEmptyArray(p.completedModuleIds) ||
+      nonEmptyArray(p.testResults) ||
+      nonEmptyArray(p.diagnostics)
+    );
+  } catch {
+    return false;
+  }
+}
 
 export function SiteUpdateModal() {
   const [open, setOpen] = useState(false);
@@ -26,6 +60,8 @@ export function SiteUpdateModal() {
       responded = false;
     }
     if (responded) return;
+    // First-time visitors (no stored progress) never saw the old site — skip.
+    if (!hasExistingProgress()) return;
     const t = setTimeout(() => setOpen(true), 1200);
     return () => clearTimeout(t);
   }, []);

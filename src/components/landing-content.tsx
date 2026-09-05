@@ -9,9 +9,12 @@ import { subjectThemeClass } from "@/lib/themes";
 /**
  * Landing page parallax experience.
  *
- * - 5 discrete sections, each in a fixed 500px tall container
- * - Only one section visible at a time, vertically centered below the header
- * - Wheel / arrow-key input drives forward/backward transitions
+ * - 5 discrete sections, each vertically centered below the header in a slot
+ *   capped at 500px (shorter viewports shrink the slot; overflowing content
+ *   scrolls inside its own [data-landing-scroll] area so it stays reachable)
+ * - Only one section visible at a time
+ * - Wheel / touch / arrow-key input drives forward/backward transitions
+ *   (ArrowDown/PageDown advance, ArrowUp/PageUp go back)
  * - Current section exits upward, next enters from below (CSS transition)
  * - Normal page scroll is locked for the duration of the experience
  *
@@ -269,7 +272,9 @@ export function LandingContent({
     return idx < currentIndex ? -110 : 110;
   };
 
-  const showScrollHint = currentIndex === 0;
+  // Visible on every slide but the last, so visitors always have an obvious
+  // "there's more below" affordance (it doubles as a next-section button).
+  const showScrollHint = currentIndex < SECTION_COUNT - 1;
 
   return (
     <div
@@ -287,29 +292,31 @@ export function LandingContent({
         return (
           <div
             key={idx}
-            className="landing-section-panel absolute left-1/2 w-full max-w-4xl px-4 sm:px-6"
+            className="landing-section-panel absolute left-1/2 top-0 h-full w-full max-w-4xl px-4 sm:px-6"
             style={{
-              height: subjectsUsesFullStage ? "100%" : SECTION_HEIGHT,
-              top: subjectsUsesFullStage ? 0 : "50%",
-              marginTop: subjectsUsesFullStage ? 0 : -SECTION_HEIGHT / 2,
               pointerEvents: isActive ? "auto" : "none",
               zIndex: isActive ? 10 : 1,
               opacity: isActive ? 1 : 0,
               transform: `translateX(-50%) translateY(${yOffset}px)`,
             }}
           >
+            {/* Content slot: capped at SECTION_HEIGHT on tall viewports (the
+                original centered 500px slot), but never taller than the stage,
+                so overflowing content stays reachable via its own scroll area
+                (the wheel/touch handlers defer to [data-landing-scroll]). */}
             <div
               className={
-                isSubjectsPanel
-                  ? subjectsUsesFullStage
-                    ? "flex h-full min-h-0 flex-col pb-14 pt-2"
-                    : "flex h-full min-h-0 flex-col"
-                  : "flex h-full flex-col justify-center"
+                subjectsUsesFullStage
+                  ? "flex h-full min-h-0 flex-col pb-14 pt-2"
+                  : "flex h-full min-h-0 flex-col justify-center pb-16 pt-2"
               }
             >
               {/* SECTION 0: Hero */}
               {idx === 0 && (
-                <div className="max-w-3xl">
+                <div
+                  data-landing-scroll
+                  className="max-h-full w-full max-w-3xl overflow-y-auto overscroll-contain [scrollbar-width:thin]"
+                >
                   <h1 className="font-serif text-4xl font-semibold tracking-tight theme-text sm:text-5xl">
                     CalcPath
                   </h1>
@@ -353,7 +360,14 @@ export function LandingContent({
 
               {/* SECTION 1: Subjects — full stage height + scroll on small screens */}
               {idx === 1 && (
-                <>
+                <div
+                  className="flex h-full min-h-0 w-full flex-col"
+                  style={
+                    subjectsUsesFullStage
+                      ? undefined
+                      : { maxHeight: SECTION_HEIGHT }
+                  }
+                >
                   <div className="shrink-0">
                     <h2 className="mb-1 text-sm font-semibold uppercase tracking-widest theme-text-muted">
                       Subjects
@@ -413,12 +427,15 @@ export function LandingContent({
                       View all subjects →
                     </Link>
                   </div>
-                </>
+                </div>
               )}
 
               {/* SECTION 2: Practice */}
               {idx === 2 && (
-                <div className="max-w-3xl">
+                <div
+                  data-landing-scroll
+                  className="max-h-full w-full max-w-3xl overflow-y-auto overscroll-contain [scrollbar-width:thin]"
+                >
                   <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest theme-text-muted">
                     Practice
                   </h2>
@@ -440,7 +457,10 @@ export function LandingContent({
 
               {/* SECTION 3: What is included */}
               {idx === 3 && (
-                <div className="max-w-3xl">
+                <div
+                  data-landing-scroll
+                  className="max-h-full w-full max-w-3xl overflow-y-auto overscroll-contain [scrollbar-width:thin]"
+                >
                   <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest theme-text-muted">
                     What is included
                   </h2>
@@ -457,7 +477,10 @@ export function LandingContent({
 
               {/* SECTION 4: This project + popular paths */}
               {idx === 4 && (
-                <div className="max-w-3xl">
+                <div
+                  data-landing-scroll
+                  className="max-h-full w-full max-w-3xl overflow-y-auto overscroll-contain [scrollbar-width:thin]"
+                >
                   <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest theme-text-muted">
                     This project
                   </h2>
@@ -514,26 +537,42 @@ export function LandingContent({
         );
       })}
 
-      {/* Bottom chrome: one compact control (dots + optional first-screen scroll hint) */}
+      {/* Bottom chrome: section dots + a scroll cue that doubles as "next section" */}
       <div
-        className="absolute bottom-7 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-1.5"
+        className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-0.5"
         aria-label={`Section ${currentIndex + 1} of ${SECTION_COUNT}: ${SECTIONS[currentIndex].label}`}
       >
         {showScrollHint && (
-          <svg
-            aria-hidden
-            className="landing-scroll-hint h-3 w-3 text-[var(--text-muted)]/50"
-            viewBox="0 0 20 20"
-            fill="currentColor"
+          <button
+            type="button"
+            onClick={() => stepSection(1)}
+            aria-label="Continue to next section"
+            className="flex flex-col items-center gap-0.5 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
           >
-            <path
-              fillRule="evenodd"
-              d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.71a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
-              clipRule="evenodd"
-            />
-          </svg>
+            {currentIndex === 0 && (
+              <span className="text-[10px] font-medium uppercase tracking-[0.2em]">
+                Scroll
+              </span>
+            )}
+            <svg
+              aria-hidden
+              className="landing-scroll-hint h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.71a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
         )}
-        <div className="flex items-center gap-2" role="tablist" aria-label="Landing sections">
+        <div
+          className="flex items-center gap-1"
+          role="tablist"
+          aria-label="Landing sections"
+        >
           {SECTIONS.map((section, i) => (
             <button
               key={section.label}
@@ -543,12 +582,17 @@ export function LandingContent({
               aria-label={`${section.label}, section ${i + 1} of ${SECTION_COUNT}`}
               title={section.label}
               onClick={() => goToSection(i)}
-              className={`rounded-full transition-all duration-200 ${
-                i === currentIndex
-                  ? "h-1 w-5 bg-[var(--text-primary)]"
-                  : "h-1 w-1 bg-[var(--text-muted)]/30 hover:bg-[var(--text-muted)]/55"
-              }`}
-            />
+              className="group flex h-8 min-w-8 items-center justify-center rounded-full px-1"
+            >
+              <span
+                aria-hidden
+                className={`rounded-full transition-all duration-200 ${
+                  i === currentIndex
+                    ? "h-2.5 w-7 bg-[var(--text-primary)]"
+                    : "h-2.5 w-2.5 bg-[var(--text-muted)]/35 group-hover:bg-[var(--text-muted)]/70"
+                }`}
+              />
+            </button>
           ))}
         </div>
       </div>

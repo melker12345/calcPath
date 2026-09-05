@@ -6,8 +6,8 @@ import { ThemeProvider } from "next-themes";
 export const Providers = ({ children }: { children: React.ReactNode }) => (
   <ThemeProvider
     attribute="class"
-    defaultTheme="light"
-    enableSystem={false}
+    defaultTheme="system"
+    enableSystem
     storageKey="calcpath-theme"
   >
     <SearchProvider>{children}</SearchProvider>
