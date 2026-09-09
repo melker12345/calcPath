@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { subjectBodyFont, subjectHeadingFont } from "@/lib/subject-fonts";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { Providers } from "@/components/providers";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { allThemesCss } from "@/lib/themes";
@@ -140,6 +141,12 @@ export default function RootLayout({
         <AnalyticsTracker />
         <Analytics />
         <SpeedInsights />
+        {/* Google Analytics 4. Loads gtag.js and reports page views on every
+            route change. Unset NEXT_PUBLIC_GA_ID locally to keep dev traffic
+            out of the reports. */}
+        {process.env.NEXT_PUBLIC_GA_ID && (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+        )}
       </body>
     </html>
   );
