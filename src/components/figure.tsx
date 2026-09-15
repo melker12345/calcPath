@@ -13,7 +13,11 @@ import { useId } from "react";
 import {
   computeLayout,
   evaluateExpression,
+  fieldSegments,
+  leaderGeometry,
   markTone,
+  polygonCentroid,
+  samplePolar,
   sampleFunction,
   FIGURE_PAD as PAD,
   FIGURE_W as W,
@@ -29,7 +33,8 @@ export function Figure({ spec, alt }: { spec: FigureSpec; alt?: string }) {
 
   // Layout lives in figure-spec so the linter measures exactly what the
   // renderer draws; a second copy here would drift and pass broken figures.
-  const { height: H, plotW, plotH, sx, sy } = computeLayout(spec);
+  const layout = computeLayout(spec);
+  const { height: H, plotW, plotH, sx, sy } = layout;
   const project = ([x, y]: Point) => `${sx(x).toFixed(2)},${sy(y).toFixed(2)}`;
 
   const showAxes = spec.axes !== false;
@@ -164,6 +169,7 @@ export function Figure({ spec, alt }: { spec: FigureSpec; alt?: string }) {
             mark={mark}
             spec={spec}
             uid={uid}
+            layout={layout}
             sx={sx}
             sy={sy}
             project={project}
@@ -205,12 +211,13 @@ type Projector = {
   mark: Mark;
   spec: FigureSpec;
   uid: string;
+  layout: ReturnType<typeof computeLayout>;
   sx: (x: number) => number;
   sy: (y: number) => number;
   project: (p: Point) => string;
 };
 
-function MarkView({ mark, spec, uid, sx, sy, project }: Projector) {
+function MarkView({ mark, spec, uid, layout, sx, sy, project }: Projector) {
   const tone = `fig-${markTone(mark)}`;
   const dash = "dashed" in mark && mark.dashed ? "fig-dashed" : "";
 
@@ -371,24 +378,81 @@ function MarkView({ mark, spec, uid, sx, sy, project }: Projector) {
                 y={Math.min(yTop, yBase)}
                 width={Math.max(sx(right) - sx(left) - 1.5, 1)}
                 height={Math.abs(yBase - yTop)}
-                className="fig-bar"
+                className={`fig-bar ${tone}`}
               />
             );
           })}
         </>
       );
 
-    case "text":
+    case "field": {
+      // Segments come back already in viewBox units: their length is fixed on
+      // screen, so the field shows direction only, never magnitude.
+      const segs = fieldSegments(mark, spec, layout);
       return (
-        <text
-          x={sx(mark.at[0])}
-          y={sy(mark.at[1])}
-          className={`fig-label ${tone}`}
-          textAnchor="middle"
-        >
-          {mark.text}
-        </text>
+        <>
+          {segs.map(([x1, y1, x2, y2], i) => (
+            <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} className={`fig-field ${tone}`} />
+          ))}
+        </>
       );
+    }
+
+    case "polar": {
+      const pts = samplePolar(mark.r, mark.from, mark.to);
+      if (pts.length < 2) return null;
+      const end = pts[pts.length - 1];
+      return (
+        <>
+          <polyline points={pts.map(project).join(" ")} className={`fig-curve ${tone} ${dash}`} />
+          {mark.label && (
+            <text x={sx(end[0]) - 6} y={sy(end[1]) - 10} className={`fig-label ${tone}`} textAnchor="end">
+              {mark.label}
+            </text>
+          )}
+        </>
+      );
+    }
+
+    case "region": {
+      if (mark.points.length < 3) return null;
+      const c = polygonCentroid(mark.points);
+      return (
+        <>
+          <path d={`M ${mark.points.map(project).join(" L ")} Z`} className="fig-area" />
+          {mark.label && (
+            <text x={sx(c[0])} y={sy(c[1])} className="fig-label fig-accent" textAnchor="middle">
+              {mark.label}
+            </text>
+          )}
+        </>
+      );
+    }
+
+    case "text": {
+      const leader = leaderGeometry(mark, layout);
+      return (
+        <>
+          {leader && (
+            <line
+              x1={leader.x1}
+              y1={leader.y1}
+              x2={leader.x2}
+              y2={leader.y2}
+              className="fig-leader"
+            />
+          )}
+          <text
+            x={sx(mark.at[0])}
+            y={sy(mark.at[1])}
+            className={`fig-label ${tone}`}
+            textAnchor="middle"
+          >
+            {mark.text}
+          </text>
+        </>
+      );
+    }
 
     default:
       return null;

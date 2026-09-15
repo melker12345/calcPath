@@ -33,6 +33,7 @@ import { parseFigureSpec, evaluateExpression } from "../src/lib/content/figure-s
 import {
   MATH_BLOCK_SPECS,
   isMathBlockClose,
+  isMathBlockOpen,
   segmentMathBlocks,
   type MathBlockSpec,
 } from "../src/lib/content/math-blocks";
@@ -249,6 +250,19 @@ async function main() {
           continue;
         }
         const kind = opener[1];
+        // Check with the PARSER's own matcher, not a looser one of our own.
+        // The two used to disagree: this loop accepted `:::figure[... $[0,1]$ ...]`
+        // while segmentMathBlocks rejected it, so the environment quietly
+        // degraded to prose and the figure disappeared with nothing reported.
+        if (
+          (MATH_BLOCK_SPECS as Record<string, MathBlockSpec>)[kind] &&
+          !isMathBlockOpen(line)
+        ) {
+          errors.push(
+            `${slug}/topics/${tid}/module.mdx:${li + 1}: ":::${kind}" opener cannot be parsed and would silently render as plain text — check the [caption] and {#id} syntax`
+          );
+          continue;
+        }
         if (!(MATH_BLOCK_SPECS as Record<string, MathBlockSpec>)[kind]) {
           errors.push(
             `${slug}/topics/${tid}/module.mdx:${li + 1}: unknown environment ":::${kind}" (known: ${Object.keys(MATH_BLOCK_SPECS).join(", ")})`
@@ -284,11 +298,13 @@ async function main() {
         }
         // Three probes across the drawn range: all-NaN means the expression
         // never evaluates, which draws nothing at all.
-        const checkExpression = (expr: string, from: number, to: number) => {
-          const probes = [from, (from + to) / 2, to].map((x) => evaluateExpression(expr, x));
+        const checkProbes = (label: string, probes: number[]) => {
           if (probes.every((v) => !Number.isFinite(v))) {
-            errors.push(`${where}: :::figure expression "${expr}" does not evaluate anywhere on [${from}, ${to}] (multiplication must be explicit: 2*x, not 2x)`);
+            errors.push(`${where}: :::figure expression "${label}" never evaluates on the drawn range (multiplication must be explicit: 2*x, not 2x; a slope field uses x and y, a polar radius uses t)`);
           }
+        };
+        const checkExpression = (expr: string, from: number, to: number) => {
+          checkProbes(expr, [from, (from + to) / 2, to].map((x) => evaluateExpression(expr, x)));
         };
         for (const mark of figure.marks) {
           if (mark.kind === "function") {
@@ -296,6 +312,26 @@ async function main() {
           } else if (mark.kind === "area") {
             checkExpression(mark.fn, mark.from, mark.to);
             if (mark.below) checkExpression(mark.below, mark.from, mark.to);
+          } else if (mark.kind === "polar") {
+            // r is a function of the angle t, not of x.
+            checkProbes(
+              `r = ${mark.r}`,
+              [mark.from, (mark.from + mark.to) / 2, mark.to].map((t) => evaluateExpression(mark.r, { t }))
+            );
+          } else if (mark.kind === "field") {
+            // A slope field is a function of both coordinates, so probe the
+            // corners and the centre of the plotted rectangle.
+            const [fx0, fx1] = figure.x;
+            const [fy0, fy1] = figure.y;
+            const pts: Array<[number, number]> = [
+              [fx0, fy0],
+              [fx1, fy1],
+              [(fx0 + fx1) / 2, (fy0 + fy1) / 2],
+            ];
+            checkProbes(
+              mark.slope,
+              pts.map(([x, y]) => evaluateExpression(mark.slope, { x, y }))
+            );
           }
         }
       }

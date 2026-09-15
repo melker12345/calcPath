@@ -118,6 +118,59 @@ export type BarsMark = {
   /** [left edge, right edge, height] per bar, in data coordinates. */
   bars: Array<[number, number, number]>;
   label?: string;
+  /**
+   * Bars carry a tone like every other mark, so two distributions can be drawn
+   * on one axis — observed against expected, binomial against its Poisson
+   * approximation. Every bar fill is translucent, so the overlap of two series
+   * stays readable rather than one hiding the other.
+   */
+  muted?: boolean;
+  tone?: Tone;
+};
+
+/**
+ * A slope field: a short segment at every grid point whose gradient is given by
+ * an expression in `x` and `y`. The segments are drawn at a constant on-screen
+ * length, so a steep slope reads as steep rather than as long.
+ */
+export type FieldMark = {
+  kind: "field";
+  /** Expression in `x` and `y` — the right-hand side of y' = f(x, y). */
+  slope: string;
+  /** Grid spacing in data units. Default: one tenth of the range. */
+  xStep?: number;
+  yStep?: number;
+  label?: string;
+  muted?: boolean;
+  tone?: Tone;
+};
+
+/**
+ * A polar curve r = f(t), sampled over [from, to] and converted to Cartesian
+ * before projecting. The angle is `t`, not `x`, so the expression grammar reads
+ * the same whether a mark is polar or Cartesian.
+ */
+export type PolarMark = {
+  kind: "polar";
+  /** Expression in `t` (the angle, in radians). */
+  r: string;
+  from: number;
+  to: number;
+  label?: string;
+  dashed?: boolean;
+  muted?: boolean;
+  tone?: Tone;
+};
+
+/**
+ * A shaded region bounded by explicit points. `area` can only shade what lies
+ * under a function of x; this draws any closed polygon, which is what a type II
+ * region or a general plane area needs.
+ */
+export type RegionMark = {
+  kind: "region";
+  points: Point[];
+  label?: string;
 };
 
 /** Free-standing text at a data coordinate. */
@@ -125,6 +178,11 @@ export type TextMark = {
   kind: "text";
   at: Point;
   text: string;
+  /**
+   * Draw a thin muted leader from the label to the thing it names, so a label
+   * placed in clear space still says what it belongs to.
+   */
+  leaderTo?: Point;
   muted?: boolean;
   tone?: Tone;
 };
@@ -137,6 +195,9 @@ export type Mark =
   | ArrowMark
   | AreaMark
   | BarsMark
+  | FieldMark
+  | PolarMark
+  | RegionMark
   | TextMark;
 
 export type PlotSpec = {
@@ -215,7 +276,7 @@ const isRange = (v: unknown): v is [number, number] =>
  *   term   := power (('*' | '/') power)*
  *   power  := unary ('^' power)?        -- right associative
  *   unary  := '-'? primary
- *   primary := number | 'x' | 'pi' | 'e' | func '(' expr ')' | '(' expr ')'
+ *   primary := number | variable | 'pi' | 'e' | func '(' expr ')' | '(' expr ')'
  *
  * Multiplication must be explicit: write 2*x, not 2x.
  * ------------------------------------------------------------------ */
@@ -240,12 +301,22 @@ const FUNCTIONS: Record<string, (v: number) => number> = {
   ceil: Math.ceil,
 };
 
+/** The variables an expression may refer to: `x` for a curve, `x`/`y` for a
+ * slope field, `t` for a polar radius. */
+export type Scope = Record<string, number>;
+
 /**
- * Evaluate `expr` at `x`. Returns NaN for anything unparseable or undefined at
- * this x, which the renderer treats as a break in the curve — so an asymptote
- * or a domain edge leaves a gap instead of a spurious vertical line.
+ * Evaluate `expr` in a scope. Passing a bare number is shorthand for `{ x }`,
+ * which is how every Cartesian call site reads.
+ *
+ * Returns NaN for anything unparseable or undefined at this point, which the
+ * renderer treats as a break in the curve — so an asymptote or a domain edge
+ * leaves a gap instead of a spurious vertical line. An unknown variable is NaN
+ * too, so `y` in a `function` mark fails loudly at validation rather than
+ * drawing a silently wrong curve.
  */
-export function evaluateExpression(expr: string, x: number): number {
+export function evaluateExpression(expr: string, at: number | Scope): number {
+  const scope: Scope = typeof at === "number" ? { x: at } : at;
   let i = 0;
   const s = expr.replace(/\s+/g, "");
 
@@ -306,7 +377,8 @@ export function evaluateExpression(expr: string, x: number): number {
     const name = nameMatch[0];
     i += name.length;
 
-    if (name === "x") return x;
+    // hasOwn, not `in`: `{}.toString` would otherwise resolve as a "variable".
+    if (Object.hasOwn(scope, name)) return scope[name];
     if (name === "pi") return Math.PI;
     if (name === "e") return Math.E;
 
@@ -357,6 +429,65 @@ export function sampleFunction(
   }
   if (run.length > 0) runs.push(run);
   return runs.filter((r) => r.length > 1);
+}
+
+/**
+ * Sample a polar curve r = f(t) into Cartesian points. A polar curve has no
+ * poles to break at in the way a Cartesian one does — a negative r is a real
+ * point, reflected through the origin — so this returns a single run and drops
+ * only the samples where the expression is undefined.
+ */
+export function samplePolar(r: string, from: number, to: number, samples = 360): Point[] {
+  const out: Point[] = [];
+  for (let k = 0; k <= samples; k++) {
+    const t = from + ((to - from) * k) / samples;
+    const radius = evaluateExpression(r, { t });
+    if (!Number.isFinite(radius)) continue;
+    out.push([radius * Math.cos(t), radius * Math.sin(t)]);
+  }
+  return out;
+}
+
+/**
+ * The segments of a slope field, in VIEWBOX coordinates.
+ *
+ * View space rather than data space because the whole point of a slope field is
+ * that every tick is the same length on screen: computed in data space, a slope
+ * of 4 would draw a segment four times longer than a slope of 0 and the field
+ * would read as a contour map. Shared with the linter, like every other piece
+ * of layout maths here.
+ */
+export function fieldSegments(
+  mark: FieldMark,
+  spec: PlotSpec,
+  layout: FigureLayout
+): Array<[number, number, number, number]> {
+  const [x0, x1] = spec.x;
+  const [y0, y1] = spec.y;
+  const xStep = mark.xStep && mark.xStep > 0 ? mark.xStep : (x1 - x0) / 10;
+  const yStep = mark.yStep && mark.yStep > 0 ? mark.yStep : (y1 - y0) / 10;
+  // Half the shorter grid spacing, so neighbouring segments never touch.
+  const half = 0.4 * Math.min(xStep * layout.unitX, yStep * layout.unitY);
+
+  const out: Array<[number, number, number, number]> = [];
+  const start = (from: number, step: number) => Math.ceil(from / step - 1e-9) * step;
+  for (let x = start(x0, xStep); x <= x1 + 1e-9; x += xStep) {
+    for (let y = start(y0, yStep); y <= y1 + 1e-9; y += yStep) {
+      const m = evaluateExpression(mark.slope, { x, y });
+      if (!Number.isFinite(m)) continue;
+      // Direction in view space: one data unit right, m data units up (and up
+      // is -y on screen). Normalised, so only the angle survives.
+      const dx = layout.unitX;
+      const dy = -m * layout.unitY;
+      const len = Math.hypot(dx, dy) || 1;
+      const ux = (dx / len) * half;
+      const uy = (dy / len) * half;
+      const cx = layout.sx(x);
+      const cy = layout.sy(y);
+      out.push([cx - ux, cy - uy, cx + ux, cy + uy]);
+    }
+  }
+  return out;
 }
 
 /* ------------------------------------------------------------------ *
@@ -424,4 +555,58 @@ export function estimateTextBox(
   const height = fontSize * 1.15;
   const left = anchor === "middle" ? cx - width / 2 : anchor === "end" ? cx - width : cx;
   return { left, right: left + width, top: cy - height * 0.78, bottom: cy + height * 0.32 };
+}
+
+/**
+ * The leader line for a `text` mark that names something away from itself, in
+ * viewBox coordinates. It starts just outside the label's own box — so the line
+ * never strikes through its own text, and so the figure linter can treat it as
+ * an ordinary drawn segment — and stops just short of the target.
+ *
+ * Returns null when the target lies inside the label, where a leader would be
+ * noise rather than help.
+ */
+export function leaderGeometry(
+  mark: TextMark,
+  layout: FigureLayout
+): { x1: number; y1: number; x2: number; y2: number } | null {
+  if (!mark.leaderTo) return null;
+  const cx = layout.sx(mark.at[0]);
+  const cy = layout.sy(mark.at[1]);
+  const tx = layout.sx(mark.leaderTo[0]);
+  const ty = layout.sy(mark.leaderTo[1]);
+
+  const b = estimateTextBox(mark.text, cx, cy);
+  const pad = 4;
+  const box = { left: b.left - pad, right: b.right + pad, top: b.top - pad, bottom: b.bottom + pad };
+  if (tx >= box.left && tx <= box.right && ty >= box.top && ty <= box.bottom) return null;
+
+  const dx = tx - cx;
+  const dy = ty - cy;
+  // Largest t in [0, 1] at which the ray from the label centre is still inside
+  // the padded box: that is where the leader should begin.
+  const hits = [
+    dx > 0 ? (box.right - cx) / dx : dx < 0 ? (box.left - cx) / dx : Infinity,
+    dy > 0 ? (box.bottom - cy) / dy : dy < 0 ? (box.top - cy) / dy : Infinity,
+  ].filter((t) => Number.isFinite(t) && t > 0);
+  const tEnter = hits.length ? Math.min(...hits) : 0;
+
+  const len = Math.hypot(dx, dy) || 1;
+  const tExit = Math.max(tEnter, 1 - 7 / len); // stop short of what it points at
+  if (tExit <= tEnter) return null;
+  return {
+    x1: cx + dx * tEnter,
+    y1: cy + dy * tEnter,
+    x2: cx + dx * tExit,
+    y2: cy + dy * tExit,
+  };
+}
+
+/** Centroid of a polygon's vertices — where a `region` puts its label. */
+export function polygonCentroid(points: Point[]): Point {
+  const n = points.length || 1;
+  return [
+    points.reduce((s, p) => s + p[0], 0) / n,
+    points.reduce((s, p) => s + p[1], 0) / n,
+  ];
 }

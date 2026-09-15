@@ -102,8 +102,15 @@ export const MATH_BLOCK_SPECS: Record<MathBlockKind, MathBlockSpec> = {
 
 export const MATH_BLOCK_KINDS = Object.keys(MATH_BLOCK_SPECS) as MathBlockKind[];
 
-/** `:::kind[Optional title]{#optional-id}` */
-const OPEN_FENCE = /^:::([a-z]+)(?:\[([^\]]*)\])?(?:\{#([a-zA-Z0-9_-]+)\})?\s*$/;
+/**
+ * `:::kind[Optional title]{#optional-id}`
+ *
+ * The title is matched greedily rather than "up to the first ]", because a
+ * caption routinely contains one: `over $[0, \pi]$`. With a lazy match the
+ * fence silently failed to parse, the block degraded to plain prose, and a
+ * whole figure vanished from the page with nothing reported.
+ */
+const OPEN_FENCE = /^:::([a-z]+)(?:\[(.*)\])?(?:\{#([a-zA-Z0-9_-]+)\})?\s*$/;
 const CLOSE_FENCE = /^:::\s*$/;
 
 export function isMathBlockOpen(line: string): boolean {

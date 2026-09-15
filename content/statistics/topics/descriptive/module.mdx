@@ -4,328 +4,1152 @@ title: Descriptive Statistics
 
 # Descriptive Statistics
 
-Descriptive statistics is the art of summarizing raw data into meaningful numbers and visuals. Before you can make predictions or test theories, you need to know what your data looks like.
+A dataset arrives as a list of numbers, and a list of numbers is not yet
+knowledge. Descriptive statistics is the discipline of compressing that list
+into a few quantities and a picture, in such a way that the compression is
+honest: what survives should be the features of the data that matter, and what
+is discarded should be the part a reader would not have used anyway.
 
-The two big questions are always the same: where is the center of the data, and how spread out is it? Answering these two questions well tells you most of what you need to know.
+Two questions organise the whole subject. *Where is the data?* — a question
+about location, answered by the mean, the median, the mode. *How spread out is
+it?* — a question about scale, answered by the variance, the standard
+deviation, the interquartile range. A third question, *what shape is it?*,
+decides which of the first two answers you are allowed to trust.
 
-We will cover measures of central tendency (mean, median, mode), measures of spread (range, variance, standard deviation), and how to visualize distributions.
+This chapter takes those summaries seriously as mathematical objects rather than
+as recipes. The mean is not merely "add up and divide"; it is the unique number
+that minimises total squared distance to the data, which is exactly why it turns
+up wherever squares are minimised. The median is the corresponding minimiser for
+absolute distance, which is exactly why it ignores outliers. The sample variance
+divides by $n-1$ and not by $n$ for a reason that can be written down and
+proved, and we prove it. By the end you should be able to say, of every formula
+here, what it optimises and what it assumes.
+
+## Populations, Samples and Notation
+
+<!-- section: populations-and-samples -->
+
+Almost every confusion in elementary statistics traces back to one blurred
+distinction: the difference between the thing you want to know about and the
+thing you actually measured.
+
+:::definition[Population, sample, parameter, statistic]{#population-sample}
+A **population** is the entire collection of units under study; a **sample** is
+a subset of it that we actually observe.
+
+A **parameter** is a number computed from the whole population. It is a fixed,
+usually unknown constant — the population mean $\mu$, the population variance
+$\sigma^2$.
+
+A **statistic** is a number computed from the sample. It is *random*: draw a
+different sample and you get a different value. The sample mean $\bar{x}$ and
+sample variance $s^2$ are statistics.
+:::
+
+The parameter is fixed and unknown; the statistic is known and variable. Every
+inferential technique in later chapters is a way of managing that trade. Here we
+only need the distinction to keep two formulas apart, but keeping them apart is
+worth the effort, because the divisor in the variance depends on which of the
+two you are computing.
+
+:::notation[Parameters versus statistics]
+Throughout this chapter and the rest of the subject:
+
+| quantity | population (parameter) | sample (statistic) |
+|---|---|---|
+| size | $N$ | $n$ |
+| mean | $\mu$ | $\bar{x}$ |
+| variance | $\sigma^2$ | $s^2$ |
+| standard deviation | $\sigma$ | $s$ |
+| proportion | $p$ | $\hat{p}$ |
+
+Greek letters for parameters, Roman letters (often with a bar or a hat) for
+statistics. A capital $X_i$ denotes the $i$-th observation regarded as a random
+variable, before it is observed; a lower-case $x_i$ denotes the number it turned
+out to be. The distinction matters in a statement like $E[\bar{X}] = \mu$, which
+is a claim about the random variable $\bar{X}$ and is meaningless for the
+observed number $\bar{x}$.
+:::
+
+We will use one modelling assumption repeatedly, and it deserves a name.
+
+:::definition[Random sample]{#random-sample}
+$X_1, \dots, X_n$ is a **random sample** (equivalently, the $X_i$ are
+**i.i.d.**) from a distribution with mean $\mu$ and variance $\sigma^2$ if the
+$X_i$ are independent of one another and each has that same distribution, so
+that $E[X_i] = \mu$ and $\operatorname{Var}(X_i) = \sigma^2$ for every $i$.
+:::
+
+Notice what this does *not* assume: nothing about normality, nothing about
+symmetry, nothing about the shape of the distribution at all. Only independence
+and a common distribution with a finite variance. Most of the theorems in this
+chapter need exactly that much and no more, and it is worth watching which ones
+need more.
+
+:::definition[Estimator, bias, unbiasedness]{#unbiased}
+An **estimator** of a parameter $\theta$ is a statistic $\hat{\theta}$ used to
+guess it. Its **bias** is
+
+$$\operatorname{Bias}(\hat\theta) = E[\hat{\theta}] - \theta,$$
+
+and $\hat\theta$ is **unbiased** when the bias is zero, i.e.
+$E[\hat{\theta}] = \theta$.
+:::
+
+:::intuition
+Unbiasedness is a statement about the long run, not about your particular
+sample. It says: if you could repeat the sampling forever and average all the
+estimates you got, you would land exactly on the truth. It does *not* say your
+one estimate is close. An estimator can be unbiased and wildly noisy, or
+slightly biased and far more reliable. Unbiasedness is one desirable property
+among several, not a certificate of quality.
+:::
 
 ## Mean
 
-:::definition[Sample mean]{#sample-mean}
-The mean (arithmetic average) of the values $x_1, \dots, x_n$ is
+<!-- section: mean -->
+
+:::definition[Population mean and sample mean]{#sample-mean}
+The **population mean** of $N$ values $x_1,\dots,x_N$ is
+
+$$\mu = \frac{1}{N}\sum_{i=1}^{N} x_i,$$
+
+and the **sample mean** of $n$ observed values is
 
 $$\bar{x} = \frac{1}{n}\sum_{i=1}^{n} x_i.$$
+
+The two formulas are identical; only the set being averaged differs.
 :::
 
-The mean uses every data point, which makes it sensitive to extreme values (outliers). One unusually large value can pull the mean far from the typical observation.
+The mean uses every data point, with equal weight. That is its great strength —
+no observation is thrown away, and the algebra that follows is clean — and its
+one great weakness: a single extreme value gets the same vote as every other, so
+it can drag the mean far from anything typical.
 
 :::intuition
-The mean is like a balance point: put weights at each value and the mean is where the seesaw balances. One very heavy weight (an outlier) yanks the balance point toward it.
+Picture the values as unit weights placed along a rod. The mean is the point
+where the rod balances. Slide one weight far to the right and the balance point
+must move right too, even though every other weight stayed put. That is the
+whole story of the mean's sensitivity to outliers, and it is literally true: the
+identity $\sum (x_i - \bar{x}) = 0$ below *is* the statement that the moments
+about $\bar{x}$ cancel.
 :::
 
-For a symmetric, bell-shaped distribution, mean = median = mode. For right-skewed data the mean is pulled higher than the median.
+The balance property is the first thing to prove, because everything else in the
+section leans on it.
 
-### Weighted Mean
+:::proposition[Deviations from the mean sum to zero]{#deviations-sum-zero}
+For any values $x_1,\dots,x_n$ with mean $\bar{x}$,
 
-:::definition[Weighted mean]
-Given weights $w_i > 0$ attached to the values $x_i$, the weighted mean is
-
-$$\bar{x}_w = \frac{\sum w_i x_i}{\sum w_i}.$$
+$$\sum_{i=1}^{n} (x_i - \bar{x}) = 0.$$
 :::
 
-Weights are used when observations have different importances (e.g. course grades with different weights). The ordinary mean is just the special case where every weight is equal.
+:::proof
+Split the sum and use that $\bar{x}$ does not depend on $i$:
 
-:::example[Mean calculation]
-Data: $\{3, 7, 7, 2, 9\}$.
+$$\sum_{i=1}^n (x_i - \bar x) = \sum_{i=1}^n x_i - n\bar x = n\bar x - n\bar x = 0,$$
+
+where the middle step is just the definition $\sum x_i = n\bar{x}$ rearranged.
+:::
+
+This is why raw deviations are useless as a measure of spread: they always
+cancel, for every dataset, tight or scattered. Any workable measure of spread
+must first destroy the signs, by squaring (variance) or by taking absolute
+values (mean absolute deviation).
+
+### The mean as a minimiser
+
+The following theorem is the real definition of the mean. It explains, in one
+line, why least-squares regression produces means, why the variance is defined
+around $\bar{x}$ rather than around anything else, and why the mean is the
+natural centre whenever the cost of being wrong grows with the *square* of the
+error.
+
+:::theorem[The mean minimises total squared deviation]{#mean-minimises-squares}
+For fixed data $x_1,\dots,x_n$, define $S(c) = \sum_{i=1}^n (x_i - c)^2$. Then
+$S$ is minimised uniquely at $c = \bar{x}$, and
+
+$$S(c) = S(\bar{x}) + n(c-\bar{x})^2.$$
+:::
+
+:::proof
+Insert $\bar{x}$ and expand, writing $x_i - c = (x_i - \bar x) + (\bar x - c)$:
+
+$$S(c) = \sum_{i=1}^n \bigl[(x_i-\bar x) + (\bar x - c)\bigr]^2
+= \sum_{i=1}^n (x_i-\bar x)^2 + 2(\bar x - c)\sum_{i=1}^n (x_i - \bar x) + n(\bar x - c)^2.$$
+
+The middle term vanishes by Proposition *Deviations from the mean sum to zero*
+— this is exactly where that identity earns its keep. What remains is
+
+$$S(c) = S(\bar x) + n(c - \bar x)^2.$$
+
+The second term is non-negative and equals zero only when $c = \bar{x}$, so
+$S(c) > S(\bar{x})$ for every $c \neq \bar{x}$.
+:::
+
+:::remark
+The same computation done with calculus is shorter but says less:
+$S'(c) = -2\sum(x_i - c) = 0$ gives $c = \bar{x}$, and $S''(c) = 2n > 0$
+confirms a minimum. The algebraic version is better because it produces the
+*exact* excess $n(c-\bar{x})^2$ incurred by centring at the wrong place, an
+identity we use again when proving why the sample variance needs $n-1$.
+:::
+
+### Linear transformations
+
+Changing units — Celsius to Fahrenheit, dollars to thousands of dollars — is a
+linear transformation $y_i = a x_i + b$. Summaries must transform predictably or
+they would be useless.
+
+:::proposition[Mean under a linear transformation]{#mean-linear}
+If $y_i = a x_i + b$ for constants $a, b$ and all $i$, then
+$\bar{y} = a\bar{x} + b$.
+:::
+
+:::proof
+Directly from the definition,
+
+$$\bar y = \frac1n \sum_{i=1}^n (a x_i + b) = \frac{a}{n}\sum_{i=1}^n x_i + \frac{1}{n}\cdot nb = a\bar x + b. \qquad$$
+:::
+
+So the mean is *equivariant*: it moves with a shift and scales with a scale.
+This is the property the median also has, and it is what lets us standardise
+data later without worrying about units.
+
+### Weighted and combined means
+
+:::definition[Weighted mean]{#weighted-mean}
+Given weights $w_i > 0$ attached to values $x_i$, the **weighted mean** is
+
+$$\bar{x}_w = \frac{\sum_{i=1}^n w_i x_i}{\sum_{i=1}^n w_i}.$$
+:::
+
+The ordinary mean is the case $w_i = 1$ for every $i$. Weights are the right
+tool when observations carry different amounts of information — a course grade
+where assignments are worth different point totals, a survey where respondents
+represent different numbers of people.
+
+:::proposition[Combined mean of two groups]{#combined-mean}
+If group $A$ has $n_A$ values with mean $\bar{x}_A$ and group $B$ has $n_B$
+values with mean $\bar{x}_B$, then the mean of the pooled data is
+
+$$\bar{x} = \frac{n_A \bar{x}_A + n_B \bar{x}_B}{n_A + n_B}.$$
+:::
+
+:::proof
+The pooled sum is the sum of the two sums, and each group's sum is its size
+times its mean: $\sum_A x_i = n_A \bar{x}_A$ and $\sum_B x_i = n_B\bar{x}_B$.
+Dividing the total $n_A\bar{x}_A + n_B\bar{x}_B$ by the total count $n_A + n_B$
+gives the claim.
+:::
+
+The pooled mean is therefore a weighted mean of the group means, with the group
+*sizes* as weights. Averaging the two means directly is correct only when the
+groups are the same size.
+
+:::pitfall
+Averaging averages is one of the most common errors in applied work, and it does
+not merely lose precision — it can reverse a conclusion. If a small group has a
+high mean and a large group a low one, the naive average of the two means sits
+far above the true pooled mean. The same mechanism, applied to rates rather than
+means, produces Simpson's paradox.
+:::
+
+:::definition[Trimmed mean]{#trimmed-mean}
+A **$100\alpha\%$ trimmed mean** discards the lowest $\alpha$ fraction and the
+highest $\alpha$ fraction of the sorted values and averages what remains.
+:::
+
+Trimming interpolates between the two extremes: $\alpha = 0$ gives the ordinary
+mean, and pushing $\alpha$ toward $1/2$ gives the median. A $10\%$ trimmed mean
+keeps most of the mean's efficiency on clean data while refusing to be dragged
+by a handful of extreme values.
+
+### The sample mean as an estimator
+
+So far $\bar{x}$ has been a descriptive number. Regarded as an estimator of an
+unknown $\mu$, it has two properties that make it the default choice, and both
+have short proofs. Note carefully which hypothesis each one needs.
+
+:::theorem[The sample mean is unbiased]{#mean-unbiased}
+Let $X_1,\dots,X_n$ be a random sample from a distribution with mean $\mu$. Then
+
+$$E[\bar{X}] = \mu.$$
+
+Only $E[X_i] = \mu$ and linearity of expectation are used; independence is
+*not* needed.
+:::
+
+:::proof
+By linearity of expectation, which holds whether or not the $X_i$ are
+independent,
+
+$$E[\bar X] = E\!\left[\frac1n\sum_{i=1}^n X_i\right] = \frac1n\sum_{i=1}^n E[X_i] = \frac1n \cdot n\mu = \mu. \qquad$$
+:::
+
+:::theorem[Variance of the sample mean]{#mean-variance}
+If in addition the $X_i$ are independent, each with variance $\sigma^2 < \infty$,
+then
+
+$$\operatorname{Var}(\bar{X}) = \frac{\sigma^2}{n}, \qquad \text{so} \qquad \operatorname{SD}(\bar{X}) = \frac{\sigma}{\sqrt{n}}.$$
+:::
+
+:::proof
+For a constant $a$, $\operatorname{Var}(aX) = a^2\operatorname{Var}(X)$, and for
+*independent* summands the variance of a sum is the sum of the variances. Hence
+
+$$\operatorname{Var}(\bar X) = \frac{1}{n^2}\operatorname{Var}\!\left(\sum_{i=1}^n X_i\right) = \frac{1}{n^2}\sum_{i=1}^n \operatorname{Var}(X_i) = \frac{n\sigma^2}{n^2} = \frac{\sigma^2}{n}. \qquad$$
+:::
+
+Here independence is doing genuine work: with correlated observations the cross
+terms $2\sum_{i<j}\operatorname{Cov}(X_i,X_j)$ do not vanish, and a positively
+correlated sample has a sample mean far noisier than $\sigma/\sqrt{n}$ suggests.
+This is why cluster sampling needs its own variance formulas, and why treating
+$100$ measurements on $10$ subjects as $100$ independent observations
+understates the uncertainty.
+
+:::intuition
+The $\sqrt{n}$ is the single most consequential fact in applied statistics.
+Precision improves with the *square root* of effort: to halve the noise in an
+estimate you must quadruple the sample. Every cost–benefit argument about sample
+size is an argument about this square root.
+:::
+
+:::example[Mean, weighted mean, and units]
+Five service times, in minutes, are $\{3, 7, 7, 2, 9\}$. Find the mean. Then
+find the mean of the same times recorded in seconds.
 :::
 
 :::solution
-1. Sum: $3+7+7+2+9 = 28$.
-2. Mean: $28/5 = 5.6$.
-3. Sanity check: $5.6$ lies between the min ($2$) and max ($9$), as any mean must. ✓
+1. Sum: $3+7+7+2+9 = 28$, so $\bar{x} = 28/5 = 5.6$ minutes.
+2. Seconds are $y_i = 60 x_i$, a linear transformation with $a = 60$, $b = 0$.
+   By Proposition *Mean under a linear transformation*,
+   $\bar{y} = 60(5.6) = 336$ seconds.
+3. Check: $5.6$ lies between the minimum $2$ and maximum $9$, as any mean must,
+   and $336$ seconds is $5.6$ minutes. ✓
 :::
-
-:::example[Weighted mean]
-Scores $60, 70, 80$ with weights $1, 2, 3$ (say, three assignments worth increasingly many points).
-:::
-
-:::solution
-1. Weighted sum: $1(60) + 2(70) + 3(80) = 60 + 140 + 240 = 440$.
-2. Sum of weights: $1 + 2 + 3 = 6$.
-3. Weighted mean: $440/6 \approx 73.33$.
-4. Sanity check: the plain mean would be $(60+70+80)/3 = 70$. Because the heaviest weight sits on the largest score ($80$), the weighted mean is pulled above $70$. ✓
-:::
-
-### Combined Mean
-
-To merge two groups without the raw data, weight each group mean by its size.
-
-:::proposition[Combined mean of two groups]
-If group A has $n_A$ values with mean $\bar{x}_A$ and group B has $n_B$ values with mean $\bar{x}_B$, the mean of the two groups pooled together is
-
-$$\frac{n_A\bar{x}_A + n_B\bar{x}_B}{n_A + n_B},$$
-
-a weighted mean of the two group means with the group sizes as weights.
-:::
-
-Do **not** just average the two means unless the groups are the same size.
 
 :::example[Combined mean]
-Group A: $n_A = 10$, $\bar{x}_A = 15$. Group B: $n_B = 20$, $\bar{x}_B = 25$.
+Group $A$ has $n_A = 10$ values with mean $15$; group $B$ has $n_B = 20$ values
+with mean $25$. Find the pooled mean.
 :::
 
 :::solution
 1. Total sum $= 10(15) + 20(25) = 150 + 500 = 650$.
-2. Combined mean $= 650/(10+20) = 650/30 \approx 21.67$.
-3. Sanity check: the naive average of the means is $(15+25)/2 = 20$, but group B is twice as large, so the true combined mean is pulled toward B's mean of $25$. Indeed $21.67 > 20$. ✓
+2. Pooled mean $= 650/30 = 65/3 \approx 21.67$.
+3. Check: the naive average of the means is $20$, but $B$ is twice as large, so
+   the truth is pulled toward $B$'s mean of $25$. Indeed $21.67 > 20$. ✓
 :::
 
-### Trimmed Mean
-
-:::definition[Trimmed mean]
-A trimmed mean discards a fixed percentage of the lowest and highest values before averaging. A $10\%$ trimmed mean removes the bottom $10\%$ and top $10\%$ of the sorted values.
-:::
-
-Trimming gives a compromise between the mean (uses all data) and the median (resistant to outliers).
-
-:::example[10% trimmed mean]
-Data: $\{1,2,3,4,5,6,7,8,9,10\}$ ($n = 10$, already sorted).
+:::example[Using the minimising property]
+A dataset of $n = 8$ values has $\bar{x} = 5$ and $\sum (x_i - 5)^2 = 32$.
+Without the raw data, find $\sum (x_i - 7)^2$.
 :::
 
 :::solution
-1. $10\%$ of $10$ is $1$ value from each end: remove the lowest ($1$) and the highest ($10$).
-2. Remaining: $\{2,3,4,5,6,7,8,9\}$, sum $= 44$.
-3. Trimmed mean $= 44/8 = 5.5$.
-4. Sanity check: for this symmetric data the ordinary mean is also $5.5$, so trimming symmetric ends leaves the center unchanged. ✓
+1. By Theorem *The mean minimises total squared deviation*,
+   $S(c) = S(\bar{x}) + n(c - \bar{x})^2$.
+2. With $c = 7$: $S(7) = 32 + 8(7-5)^2 = 32 + 32 = 64$.
+3. Check: $S(7) > S(5)$, as it must be, since $5$ is the unique minimiser. ✓
 :::
 
-## Median
+## Median and Mode
+
+<!-- section: median -->
 
 :::definition[Median]{#median}
-The median is the middle value when the data is sorted in order. For an even number of observations, it is the average of the two middle values.
+Sort the data as $x_{(1)} \le x_{(2)} \le \dots \le x_{(n)}$. The **median** is
+
+$$\text{med} = \begin{cases} x_{((n+1)/2)}, & n \text{ odd},\\[4pt] \tfrac12\bigl(x_{(n/2)} + x_{(n/2+1)}\bigr), & n \text{ even}.\end{cases}$$
 :::
 
-The median is resistant to outliers: adding one extreme value does not change it much. This makes it the preferred measure of center for skewed data such as income, house prices, or reaction times.
+When $n$ is even any number between the two middle values splits the data
+equally, so the median is not unique as a *splitting point*; taking the midpoint
+is a convention chosen to make the median a continuous function of the data.
 
 :::intuition
-The median is what the middle person has when you line up from least to most. It ignores extreme values and just asks "who is in the exact middle?"
+Line everyone up from smallest to largest and ask what the person in the middle
+has. Doubling the richest person's fortune moves the mean but does not move the
+middle person at all. That insensitivity is not a defect to be corrected — it is
+the entire point of the median.
 :::
 
-:::example[Median, odd count]
-Data: $\{3, 7, 7, 2, 9\}$ ($n = 5$, odd).
-:::
+The median has its own minimisation property, exactly parallel to the mean's,
+with squares replaced by absolute values. This one theorem explains every
+robustness claim made about the median.
 
-:::solution
-1. Sorted: $\{2,3,7,7,9\}$. The middle position is the 3rd value.
-2. Median $= 7$.
-:::
-
-:::example[Median, even count]
-Data: $\{2, 4, 6, 8\}$ ($n = 4$, even) — already sorted.
-:::
-
-:::solution
-1. The two middle values are the 2nd and 3rd: $4$ and $6$.
-2. Median $= (4 + 6)/2 = 5$.
-3. Sanity check: with an even count the median need not be a value in the dataset; here $5$ is not, which is fine. ✓
-:::
-
-### Mode
-
-:::definition[Mode]
-The mode is the most frequently occurring value. A dataset can be **unimodal** (one peak), **bimodal** (two), or **multimodal**.
-:::
-
-The mode is the only measure of center applicable to categorical data (e.g. the most common eye colour), since you cannot add or sort categories to form a mean or median.
-
-:::example[Mode]
-Data: $\{1,2,2,3,4,4,4,5\}$.
-:::
-
-:::solution
-1. Frequencies: $1\to1$, $2\to2$, $3\to1$, $4\to3$, $5\to1$.
-2. The highest frequency is $3$, at the value $4$.
-3. Mode $= 4$.
-:::
-
-## Variance
-
-The range = max − min is the simplest measure of spread. It only uses two data points and is badly distorted by a single outlier.
-
-Variance measures the average squared deviation from the mean.
-
-:::definition[Variance and standard deviation]{#variance}
-The population variance of $N$ values with mean $\mu$ is
-
-$$\sigma^2 = \frac{1}{N}\sum_{i=1}^N (x_i-\mu)^2,$$
-
-and the sample variance of $n$ values with mean $\bar{x}$ is
-
-$$s^2 = \frac{1}{n-1}\sum_{i=1}^n(x_i-\bar{x})^2.$$
-
-The sample version divides by $n-1$ rather than $n$ — Bessel's correction — which is what makes $s^2$ an unbiased estimate of $\sigma^2$. The standard deviation $s = \sqrt{s^2}$ restores the original units.
-:::
-
-:::intuition
-Standard deviation tells you how scattered the data is around the mean. Small $\sigma$ means tight cluster around average. Large $\sigma$ means values all over the place. Think of the mean as the centre of a target and $\sigma$ as the average distance from the bullseye.
-:::
-
-:::pitfall
-Confusing population ($\div N$) vs sample ($\div (n-1)$). In virtually all real applications use $n-1$.
-:::
-
-:::example[Sample variance]
-Data: $\{2, 4, 4, 4, 5, 5, 7, 9\}$, $n=8$. First the mean: $(2+4+4+4+5+5+7+9)/8 = 40/8 = 5$, so $\bar{x}=5$.
-:::
-
-:::solution
-1. Deviations $x_i - \bar{x}$: $-3, -1, -1, -1, 0, 0, 2, 4$.
-2. Squared deviations: $9, 1, 1, 1, 0, 0, 4, 16$; sum $= 32$.
-3. Sample variance: $s^2 = 32/(8-1) = 32/7 \approx 4.57$.
-4. Sample SD: $s = \sqrt{4.57} \approx 2.14$.
-5. Sanity check: most values sit within a couple of units of $5$, and $s \approx 2.14$ matches that typical distance. ✓ (If we had treated this as a whole population, we'd divide by $8$ instead: $\sigma^2 = 32/8 = 4$.)
-:::
-
-### Effect of shifting and scaling
-
-Two rules follow directly from the definition and are worth memorizing.
-
-:::proposition[Shifting and scaling]
-Adding a constant $c$ to every value shifts the mean by $c$ and leaves the variance and SD unchanged. Multiplying every value by a constant $c$ scales the variance by $c^2$ and the SD by $|c|$.
+:::theorem[The median minimises total absolute deviation]{#median-minimises-abs}
+For fixed data $x_1,\dots,x_n$, the function $A(c) = \sum_{i=1}^n |x_i - c|$ is
+minimised at any median of the data. If $n$ is odd the minimiser is unique and
+equals $x_{((n+1)/2)}$; if $n$ is even every $c$ in
+$[x_{(n/2)}, x_{(n/2+1)}]$ is a minimiser.
 :::
 
 :::proof
-Adding $c$ to every value shifts the mean by $c$ as well, so every deviation $x_i - \bar{x}$ is unchanged and so is any average of their squares. Multiplying every value by $c$ scales each deviation by $c$, so each squared deviation scales by $c^2$; the SD, being a square root, scales by $|c|$ (absolute value, since SD is never negative).
+$A$ is a sum of convex functions, hence convex and continuous, and it is
+piecewise linear with kinks only at the data values. So it suffices to examine
+how $A$ changes as $c$ moves.
+
+Take $c$ not equal to any data value, and let $L(c)$ be the number of $x_i < c$
+and $R(c)$ the number with $x_i > c$, so $L + R = n$. Increasing $c$ by a small
+$h > 0$ that crosses no data value increases each of the $L$ terms with
+$x_i < c$ by exactly $h$ and decreases each of the $R$ terms by exactly $h$:
+
+$$A(c+h) - A(c) = h\bigl(L(c) - R(c)\bigr).$$
+
+Thus $A$ is strictly decreasing while $L < R$ (more points still to the right)
+and strictly increasing once $L > R$. The minimum is therefore attained where
+the counts on the two sides balance, which is precisely the median.
+
+Concretely, for $n$ odd, $L < R$ for every $c < x_{((n+1)/2)}$ and $L > R$ for
+every $c > x_{((n+1)/2)}$, so the unique minimiser is that middle order
+statistic. For $n$ even, $L = R = n/2$ throughout the interval
+$(x_{(n/2)}, x_{(n/2+1)})$, so $A$ has slope zero there and every point of the
+closed interval is a minimiser.
 :::
 
-:::example[shift and scale]
-Start with $\bar{x} = 10$, $s = 3$.
-Add $5$ to every value: new mean $= 15$, but new $s = 3$ (spread is untouched by a shift).
-Instead, multiply every value by $2$: new $s = |2|\cdot 3 = 6$, and new variance $= 2^2 \cdot 9 = 36$.
-Sanity check: doubling the numbers should double how far apart they are, and indeed $s$ doubled from $3$ to $6$. ✓
+:::remark[Why the two theorems explain everything]
+Squared loss punishes one huge error far more than many small ones, so the
+minimiser must chase an outlier to keep its squared distance down. Absolute loss
+charges an outlier in proportion to its distance, and moving the centre toward
+it costs exactly as much on the other side; the trade is a wash, so the
+minimiser does not move. Robustness is not a property bolted onto the median —
+it is a consequence of the loss function it minimises.
 :::
 
-The interquartile range IQR = $Q_3 - Q_1$ captures the spread of the middle 50% of the data. It is unaffected by extremes and pairs naturally with the median.
-
-:::definition[Coefficient of variation]
-The coefficient of variation is
-
-$$\text{CV} = \frac{s}{\bar{x}},$$
-
-often quoted as a percentage. It is **unitless**, so it lets you compare spread across datasets with different units or wildly different scales. It is only meaningful when $\bar{x} > 0$ (typically for positive ratio-scale data).
+:::definition[Mode]{#mode}
+The **mode** is the most frequently occurring value (for discrete or categorical
+data) or the location of a peak of the density (for continuous data). A
+distribution is **unimodal**, **bimodal**, or **multimodal** according to the
+number of peaks.
 :::
 
-:::example[coefficient of variation]
-Dataset A: heights with $\bar{x} = 170$ cm, $s = 8.5$ cm → $\text{CV} = 8.5/170 = 0.05 = 5\%$.
+The mode is the only one of the three centres that makes sense for purely
+categorical data: you cannot sort eye colours, so there is no median, and you
+certainly cannot average them.
+
+:::pitfall
+A bimodal distribution usually signals two mixed subpopulations — two machines,
+two age groups, two experimental conditions. Reporting a single mean for it
+describes a value that may occur in neither group. Always look at the shape
+before quoting a centre; this is the one case where *no* single number is an
+honest summary.
+:::
+
+:::example[Median, odd and even counts]
+Find the median of $\{3, 7, 7, 2, 9\}$ and of $\{2, 4, 6, 8\}$.
 :::
 
 :::solution
-1. Dataset B: weights with $\bar{x} = 70$ kg, $s = 8.4$ kg → $\text{CV} = 8.4/70 = 0.12 = 12\%$.
-2. Even though the raw SDs ($8.5$ vs $8.4$) are almost equal, weights are relatively more variable ($12\%$ vs $5\%$). The CV reveals this; comparing the raw SDs across different units would not.
+1. Sorted: $2, 3, 7, 7, 9$. With $n=5$ odd the median is the $3$rd value, $7$.
+2. Sorted: $2,4,6,8$. With $n=4$ even the median is $(4+6)/2 = 5$.
+3. Check: with an even count the median need not be an observed value; here $5$
+   is not in the data, which is fine. ✓
 :::
 
-## Percentiles
-
-:::definition[Percentiles and quartiles]{#percentile}
-The $p$-th percentile is the value below which approximately $p\%$ of observations fall. The median is the 50th percentile; $Q_1$ is the 25th, $Q_3$ is the 75th. The quartiles cut the sorted data into four equal-sized quarters.
+:::example[Mean versus median under an outlier]
+Twelve help-desk service times (minutes) are
+$\{2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 42\}$, already sorted. Compute both
+centres, then recompute after deleting the $42$.
 :::
 
-The five-number summary $\{\min, Q_1, \text{median}, Q_3, \max\}$ concisely describes center and spread and is the foundation of the box plot.
+:::solution
+1. Sum $= 140$, so $\bar{x} = 140/12 = 35/3 \approx 11.67$.
+2. With $n = 12$ even, the median is $(x_{(6)} + x_{(7)})/2 = (9+10)/2 = 9.5$.
+3. Deleting the $42$: the sum falls to $98$ over $11$ values, so
+   $\bar{x} \approx 8.91$ — a shift of $2.76$ minutes. The new median is the
+   $6$th of $11$ values, $9$ — a shift of $0.5$.
+4. Check: one observation out of twelve moved the mean by more than five times
+   as much as it moved the median. ✓
+:::
+
+## Variance and Standard Deviation
+
+<!-- section: variance -->
+
+The crudest measure of spread is the **range**, $\max - \min$. It uses two
+observations out of $n$, throws away everything between them, and is determined
+entirely by the two least typical values in the dataset. It is worth quoting and
+never worth relying on.
+
+Since deviations from the mean sum to zero, a useful measure must remove the
+signs. Squaring is the choice that keeps the algebra differentiable and connects
+to the minimisation theorem above.
+
+:::definition[Variance and standard deviation]{#variance}
+For a population of $N$ values with mean $\mu$,
+
+$$\sigma^2 = \frac{1}{N}\sum_{i=1}^{N}(x_i - \mu)^2, \qquad \sigma = \sqrt{\sigma^2}.$$
+
+For a sample of $n$ values with mean $\bar{x}$,
+
+$$s^2 = \frac{1}{n-1}\sum_{i=1}^{n}(x_i-\bar{x})^2, \qquad s = \sqrt{s^2}.$$
+
+The divisor $n-1$ is **Bessel's correction**; the next section proves why it is
+there. The standard deviation restores the original units of the data, which the
+variance — measured in units squared — does not.
+:::
 
 :::intuition
-If you score in the 90th percentile on a test, 90% of test-takers scored below you. Percentile rank is about where you stand relative to others.
+The standard deviation is roughly "the typical distance from the mean". It is
+not exactly the average distance (that would be the mean absolute deviation),
+because squaring weights large deviations more heavily, but it is the right
+order of magnitude and it is the number the empirical rule and every
+normal-theory method are written in terms of.
 :::
 
-IQR = $Q_3 - Q_1$ measures spread of the central half.
+For a random variable the same definition reads
+$\operatorname{Var}(X) = E[(X-\mu)^2]$, and it has a computational form that
+saves a pass through the data and is used constantly in later chapters.
 
-:::recipe[Finding quartiles by median of halves]
+:::theorem[Computational formula for the variance]{#var-identity}
+For a random variable $X$ with finite second moment and $\mu = E[X]$,
+
+$$\operatorname{Var}(X) = E[X^2] - (E[X])^2.$$
+
+In particular $E[X^2] \ge (E[X])^2$, with equality only if $X$ is constant.
+:::
+
+:::proof
+Expand the square inside the expectation and use linearity, remembering that
+$\mu$ is a constant so $E[\mu X] = \mu E[X]$ and $E[\mu^2] = \mu^2$:
+
+$$E[(X-\mu)^2] = E[X^2 - 2\mu X + \mu^2] = E[X^2] - 2\mu E[X] + \mu^2 = E[X^2] - 2\mu^2 + \mu^2 = E[X^2] - \mu^2.$$
+
+Since $\operatorname{Var}(X) = E[(X-\mu)^2] \ge 0$ as the expectation of a
+non-negative quantity, $E[X^2] \ge \mu^2$; equality forces $E[(X-\mu)^2] = 0$,
+which for a non-negative random variable means $X = \mu$ with probability one.
+:::
+
+:::corollary[Computational formula for a sample]{#sum-of-squares-identity}
+For any values $x_1,\dots,x_n$ with mean $\bar{x}$,
+
+$$\sum_{i=1}^n (x_i - \bar{x})^2 = \sum_{i=1}^n x_i^2 - n\bar{x}^2 = \sum_{i=1}^n x_i^2 - \frac{\bigl(\sum_i x_i\bigr)^2}{n}.$$
+:::
+
+:::proof
+Expand: $\sum (x_i - \bar x)^2 = \sum x_i^2 - 2\bar x \sum x_i + n\bar x^2$.
+Substituting $\sum x_i = n\bar{x}$ turns the middle term into $-2n\bar{x}^2$, so
+the last two terms combine to $-n\bar{x}^2$. The final form follows from
+$\bar{x} = (\sum x_i)/n$.
+:::
+
+:::pitfall
+The computational formula is exact in exact arithmetic and treacherous in
+floating point. When the mean is large compared with the spread — timestamps,
+years, sensor readings offset from zero — $\sum x_i^2$ and $n\bar{x}^2$ are two
+huge nearly equal numbers, and subtracting them destroys most of the significant
+digits. It can even return a negative variance. Use it for hand computation and
+for algebra; use the two-pass or Welford formula in code.
+:::
+
+### Linear transformations of the variance
+
+:::proposition[Variance under a linear transformation]{#variance-linear}
+If $y_i = a x_i + b$ for constants $a, b$, then
+
+$$s_y^2 = a^2 s_x^2, \qquad s_y = |a|\, s_x.$$
+
+In particular a shift ($a=1$) leaves the spread unchanged, and the same holds
+for $\sigma^2$ and for $\operatorname{Var}(aX+b) = a^2\operatorname{Var}(X)$.
+:::
+
+:::proof
+By Proposition *Mean under a linear transformation*, $\bar{y} = a\bar{x} + b$.
+Hence each deviation transforms as
+
+$$y_i - \bar y = (a x_i + b) - (a\bar x + b) = a(x_i - \bar x),$$
+
+the $b$ cancelling exactly. Squaring gives $(y_i - \bar y)^2 = a^2 (x_i-\bar x)^2$,
+and summing and dividing by the same $n-1$ gives $s_y^2 = a^2 s_x^2$. Taking
+square roots, and noting a standard deviation is non-negative, gives
+$s_y = |a| s_x$.
+:::
+
+:::remark
+The absolute value is not decoration. Multiplying data by $-3$ reflects and
+stretches it; the spread triples, so $s_y = 3 s_x$, not $-3 s_x$. A negative
+standard deviation would be meaningless.
+:::
+
+### Comparing spreads across scales
+
+:::definition[Coefficient of variation]{#cv}
+For data with $\bar{x} > 0$, the **coefficient of variation** is
+
+$$\mathrm{CV} = \frac{s}{\bar{x}},$$
+
+usually quoted as a percentage. It is dimensionless, since $s$ and $\bar{x}$
+carry the same units.
+:::
+
+Being dimensionless, the CV compares variability across datasets measured in
+different units or on wildly different scales. It requires a meaningful zero and
+a positive mean — it is a ratio-scale tool, and quoting a CV for temperatures in
+Celsius is nonsense, because shifting to Fahrenheit changes it.
+
+:::example[Sample variance two ways]
+For $\{2, 4, 4, 4, 5, 5, 7, 9\}$ ($n = 8$), find $s^2$ and $s$ using the
+definition, then confirm with the computational formula.
+:::
+
+:::solution
+1. Mean: $\sum x_i = 40$, so $\bar{x} = 5$.
+2. Deviations: $-3,-1,-1,-1,0,0,2,4$; squares $9,1,1,1,0,0,4,16$ summing to $32$.
+3. $s^2 = 32/7 \approx 4.571$ and $s = \sqrt{32/7} \approx 2.138$.
+4. Computational check: $\sum x_i^2 = 4+16+16+16+25+25+49+81 = 232$ and
+   $n\bar{x}^2 = 8(25) = 200$, so $\sum(x_i-\bar{x})^2 = 232 - 200 = 32$. ✓
+5. Had this been a whole population we would divide by $8$: $\sigma^2 = 4$.
+:::
+
+:::example[Rescaling a summary]
+A dataset has $\bar{x} = 10$ and $s = 3$. Give the mean and standard deviation
+of $y_i = -2x_i + 7$.
+:::
+
+:::solution
+1. Mean: $\bar{y} = -2(10) + 7 = -13$.
+2. Standard deviation: $s_y = |-2|\cdot 3 = 6$, and $s_y^2 = 36$.
+3. Check: the shift by $7$ affected only the mean; the sign of $a$ affected only
+   the mean. ✓
+:::
+
+:::example[Coefficient of variation]
+Heights have $\bar{x} = 170$ cm with $s = 8.5$ cm; weights have $\bar{x} = 70$
+kg with $s = 8.4$ kg. Which is more variable?
+:::
+
+:::solution
+1. Heights: $\mathrm{CV} = 8.5/170 = 0.05 = 5\%$.
+2. Weights: $\mathrm{CV} = 8.4/70 = 0.12 = 12\%$.
+3. The raw standard deviations are nearly equal, but relative to their own
+   scales weights vary more than twice as much. Comparing $8.5$ cm with $8.4$ kg
+   directly would have been meaningless. ✓
+:::
+
+## Why the Sample Variance Divides by $n-1$
+
+<!-- section: bessel-correction -->
+
+This is the single most-asked question in the chapter, and it has a complete
+answer. The claim is not that $n-1$ is more cautious, or that it "corrects for
+small samples", or that it makes the answer bigger. The claim is exact:
+dividing by $n-1$ makes $s^2$ an unbiased estimator of $\sigma^2$, and dividing
+by $n$ does not.
+
+The source of the problem is that $\sigma^2$ is defined as a spread about the
+*true* mean $\mu$, but we can only measure spread about the *sample* mean
+$\bar{x}$ — and by Theorem *The mean minimises total squared deviation*,
+$\bar{x}$ is the one centre that makes that sum of squares as small as it can
+possibly be. Measuring spread about the minimiser systematically understates it.
+The next lemma computes the shortfall exactly.
+
+:::lemma[Expected sum of squares about the sample mean]{#bessel-lemma}
+Let $X_1,\dots,X_n$ be a random sample from a distribution with mean $\mu$ and
+finite variance $\sigma^2$, and let $\bar{X}$ be the sample mean. Then
+
+$$E\!\left[\sum_{i=1}^n (X_i - \bar{X})^2\right] = (n-1)\sigma^2.$$
+
+Independence is required: the proof uses $\operatorname{Var}(\bar X) = \sigma^2/n$.
+:::
+
+:::proof
+Apply the identity of Theorem *The mean minimises total squared deviation* with
+$c = \mu$, read in the direction $S(\mu) = S(\bar X) + n(\mu - \bar X)^2$, that
+is
+
+$$\sum_{i=1}^n (X_i - \bar X)^2 = \sum_{i=1}^n (X_i - \mu)^2 - n(\bar X - \mu)^2.$$
+
+This is an algebraic identity, true sample by sample. Now take expectations of
+both sides and use linearity.
+
+For the first term, $E[(X_i - \mu)^2] = \operatorname{Var}(X_i) = \sigma^2$ for
+each $i$, so it contributes $n\sigma^2$.
+
+For the second, $E[\bar X] = \mu$ by Theorem *The sample mean is unbiased*, so
+$E[(\bar X - \mu)^2] = \operatorname{Var}(\bar X) = \sigma^2/n$ by Theorem
+*Variance of the sample mean*. That term contributes $n \cdot \sigma^2/n = \sigma^2$.
+
+Therefore
+
+$$E\!\left[\sum_{i=1}^n (X_i-\bar X)^2\right] = n\sigma^2 - \sigma^2 = (n-1)\sigma^2. \qquad$$
+:::
+
+:::theorem[Unbiasedness of the sample variance]{#s2-unbiased}
+Under the same hypotheses — a random sample from a distribution with finite
+variance $\sigma^2$ —
+
+$$E[s^2] = E\!\left[\frac{1}{n-1}\sum_{i=1}^n (X_i-\bar X)^2\right] = \sigma^2.$$
+
+No assumption of normality is needed.
+:::
+
+:::proof
+Pull the constant $1/(n-1)$ out of the expectation and apply Lemma *Expected sum
+of squares about the sample mean*:
+
+$$E[s^2] = \frac{1}{n-1}\,E\!\left[\sum_{i=1}^n (X_i - \bar X)^2\right] = \frac{(n-1)\sigma^2}{n-1} = \sigma^2. \qquad$$
+:::
+
+:::corollary[The n-divisor estimator is biased downward]{#n-divisor-biased}
+Let $\hat\sigma^2 = \frac1n \sum_{i=1}^n (X_i - \bar X)^2$. Then
+
+$$E[\hat\sigma^2] = \frac{n-1}{n}\,\sigma^2, \qquad \operatorname{Bias}(\hat\sigma^2) = -\frac{\sigma^2}{n}.$$
+:::
+
+:::proof
+$\hat\sigma^2 = \frac{n-1}{n}s^2$, so $E[\hat\sigma^2] = \frac{n-1}{n}E[s^2] = \frac{n-1}{n}\sigma^2$
+by Theorem *Unbiasedness of the sample variance*. Subtracting $\sigma^2$ gives
+the bias $-\sigma^2/n$.
+:::
+
+So the $n$-divisor version underestimates the variance by a factor $(n-1)/n$, on
+average, every time. At $n = 2$ it is off by half; at $n = 100$ by $1\%$; as
+$n \to \infty$ the bias vanishes, which is why the distinction stops mattering
+for large samples and matters enormously for small ones.
+
+:::intuition[Degrees of freedom]
+The $n$ deviations $x_i - \bar{x}$ are not $n$ free numbers. They satisfy one
+linear constraint, $\sum (x_i - \bar{x}) = 0$ from Proposition *Deviations from
+the mean sum to zero*: knowing any $n-1$ of them determines the last. So the
+deviation vector carries only $n-1$ independent pieces of information about
+spread, and the honest thing is to average over $n-1$ of them, not $n$.
+
+This is the same bookkeeping that gives $n-1$ degrees of freedom to a
+one-sample $t$-test, $n-2$ to a simple regression (two parameters estimated),
+and $n-p$ in general. Every estimated parameter costs one degree of freedom, and
+the cost is exactly the shrinkage this section quantifies.
+:::
+
+:::pitfall
+Unbiasedness does not pass through a square root. Since $\sqrt{\cdot}$ is
+strictly concave, Jensen's inequality gives
+$E[s] = E[\sqrt{s^2}] < \sqrt{E[s^2]} = \sigma$ whenever $s^2$ is genuinely
+random, so **$s$ underestimates $\sigma$ on average** even though $s^2$ is
+unbiased for $\sigma^2$. Nobody corrects for this in practice — the correction
+factor depends on the distribution — but "we use $n-1$ so the standard deviation
+is unbiased" is a false statement.
+:::
+
+:::example[Bias of the two divisors]
+A population has $\sigma^2 = 40$. Samples of size $n = 5$ are drawn repeatedly
+and $\hat\sigma^2 = \frac15\sum(x_i-\bar{x})^2$ is computed each time. What value
+does $\hat\sigma^2$ average to, and what is its bias?
+:::
+
+:::solution
+1. By Corollary *The n-divisor estimator is biased downward*,
+   $E[\hat\sigma^2] = \frac{n-1}{n}\sigma^2 = \frac45 (40) = 32$.
+2. Bias $= 32 - 40 = -8$, which agrees with $-\sigma^2/n = -40/5 = -8$.
+3. Check: the bias is negative, as it must be, since the sum of squares is taken
+   about the minimising centre $\bar{x}$. ✓
+:::
+
+:::example[Recovering the sum of squares]
+A sample of $n = 16$ has $s = 6$. Find $\sum (x_i - \bar{x})^2$ and the value the
+$n$-divisor formula would have reported for the variance.
+:::
+
+:::solution
+1. $s^2 = 36$ and $\sum (x_i-\bar{x})^2 = (n-1)s^2 = 15(36) = 540$.
+2. The $n$-divisor version gives $540/16 = 33.75$.
+3. Check: $33.75 = \frac{15}{16}(36)$, matching the factor $(n-1)/n$. ✓
+:::
+
+## Percentiles, Quartiles and the IQR
+
+<!-- section: percentiles -->
+
+Location and spread can also be described positionally, by where a value falls
+in the sorted order rather than by how far it is from a centre. Positional
+summaries are the natural partners of the median, and they inherit its
+robustness.
+
+:::definition[Percentile and quantile]{#percentile}
+The **$p$-th percentile** of a dataset is a value below which approximately
+$p\%$ of the observations fall. Equivalently, the **$q$-quantile** with
+$q = p/100$ is a value $x_q$ with at least a fraction $q$ of the data at or
+below it and at least a fraction $1-q$ at or above it.
+
+The **quartiles** are $Q_1$ (the $25$th percentile), $Q_2$ (the median), and
+$Q_3$ (the $75$th percentile). The **five-number summary** is
+$\{\min, Q_1, Q_2, Q_3, \max\}$.
+:::
+
+The word *approximately* is not laziness. For finite data no value in general
+has exactly $25\%$ below it, and different software resolves the ambiguity
+differently — there are nine commonly implemented quantile definitions. They
+agree to within one observation and disagree in the last decimal place; this
+chapter uses the median-of-halves convention throughout.
+
+:::recipe[Quartiles by the median-of-halves rule]{#quartile-recipe}
 1. Sort the data.
-2. Split it at the median into a lower half and an upper half. When $n$ is odd, exclude the overall median from both halves.
-3. $Q_1$ is the median of the lower half; $Q_3$ is the median of the upper half.
+2. Find the median $Q_2$.
+3. Form the lower half: all values strictly below the median's position. If $n$
+   is odd, exclude the median value itself.
+4. Form the upper half the same way.
+5. $Q_1$ is the median of the lower half; $Q_3$ is the median of the upper half.
 :::
 
-:::example[quartiles]
-Sorted data: $\{5,10,15,20,25,30\}$ ($n = 6$, even; the median splits it cleanly in two).
-Lower half $\{5,10,15\}$: its median is $10$, so $Q_1 = 10$.
-Upper half $\{20,25,30\}$: its median is $25$, so $Q_3 = 25$.
-IQR $= Q_3 - Q_1 = 25 - 10 = 15$.
-Sanity check: $Q_1 \le \text{median} \le Q_3$ must hold; here $10 \le 17.5 \le 25$. ✓
+:::definition[Interquartile range]{#iqr}
+The **interquartile range** is $\mathrm{IQR} = Q_3 - Q_1$: the width of the
+interval containing the middle half of the data.
 :::
 
-**Percentile position.** To locate the $p$-th percentile in a sorted list of $n$ values, compute the position index
+The IQR is to the median what the standard deviation is to the mean — a measure
+of scale matched to its centre. It is determined entirely by the middle of the
+data, so moving the largest observation to infinity does not change it at all,
+whereas it sends $s$ to infinity too.
 
-$$L = \frac{p}{100}\,n.$$
+### The box plot
 
-Roughly, about $L$ values fall below the percentile; when $L$ is a whole number the percentile sits between the $L$-th and $(L{+}1)$-th values.
+The five-number summary is exactly what a box plot draws.
 
-:::example[percentile position]
-$n = 20$ sorted values; find the position of the 90th percentile.
+:::figure[A box plot of the twelve service times $\{2,5,6,7,8,9,10,11,12,13,15,42\}$. The box spans $Q_1 = 6.5$ to $Q_3 = 12.5$ with the median at $9.5$; whiskers reach the most extreme values inside the upper fence $Q_3 + 1.5\,\mathrm{IQR} = 21.5$, and the value $42$ is plotted separately as an outlier.]{#boxplot-figure}
+{
+  "type": "plot",
+  "x": [-6, 48],
+  "y": [-1.6, 2.9],
+  "xTicks": 10,
+  "xLabel": "service time (minutes)",
+  "axes": false,
+  "marks": [
+    { "kind": "path", "points": [[6.5, 0.6], [12.5, 0.6], [12.5, 1.6], [6.5, 1.6], [6.5, 0.6]], "tone": "accent" },
+    { "kind": "path", "points": [[9.5, 0.6], [9.5, 1.6]], "tone": "result" },
+    { "kind": "path", "points": [[2, 1.1], [6.5, 1.1]], "tone": "muted" },
+    { "kind": "path", "points": [[12.5, 1.1], [15, 1.1]], "tone": "muted" },
+    { "kind": "path", "points": [[2, 0.85], [2, 1.35]], "tone": "muted" },
+    { "kind": "path", "points": [[15, 0.85], [15, 1.35]], "tone": "muted" },
+    { "kind": "path", "points": [[21.5, 0.2], [21.5, 2.0]], "tone": "alt", "dashed": true },
+    { "kind": "point", "at": [42, 1.1], "tone": "alt" },
+    { "kind": "text", "at": [9.5, 2.35], "text": "median 9.5", "tone": "result" },
+    { "kind": "text", "at": [3.0, -0.35], "text": "Q1 = 6.5" },
+    { "kind": "text", "at": [16.5, -0.35], "text": "Q3 = 12.5" },
+    { "kind": "text", "at": [30.5, 1.75], "text": "upper fence 21.5", "tone": "alt" },
+    { "kind": "text", "at": [41, 0.35], "text": "42", "tone": "alt" },
+    { "kind": "text", "at": [9.5, -1.15], "text": "IQR = 6" }
+  ]
+}
+:::
+
+Read off the figure what the box plot is good at and what it hides. It shows
+centre, spread, skew (the median sits left of centre in the box, and the right
+whisker is longer) and outliers, in a form compact enough to stack a dozen
+groups side by side. What it cannot show is *shape*: a bimodal dataset and a
+uniform one can produce identical box plots, because five numbers do not
+determine a distribution.
+
+### Where the 1.5 comes from
+
+The outlier rule looks like an arbitrary constant. It is not.
+
+:::definition[Tukey's fences]{#tukey-fences}
+A value is a **mild outlier** if it lies outside
+
+$$[\,Q_1 - 1.5\,\mathrm{IQR},\; Q_3 + 1.5\,\mathrm{IQR}\,],$$
+
+and an **extreme outlier** if it lies outside the same interval with $1.5$
+replaced by $3$.
+:::
+
+:::proposition[What the 1.5 fence flags in normal data]{#fence-calibration}
+If the data follow a normal distribution with mean $\mu$ and standard deviation
+$\sigma$, then $Q_1 = \mu - 0.6745\sigma$ and $Q_3 = \mu + 0.6745\sigma$, so
+$\mathrm{IQR} = 1.349\sigma$ and the mild-outlier fences sit at
+
+$$\mu \pm (0.6745 + 1.5 \times 1.349)\sigma = \mu \pm 2.698\sigma.$$
+
+The proportion of a normal population outside those fences is about $0.70\%$.
+:::
+
+:::proof
+For the standard normal, $\Phi^{-1}(0.75) = 0.6745$ to four places, and the
+distribution is symmetric about $0$, so $\Phi^{-1}(0.25) = -0.6745$; quantiles of
+$\mu + \sigma Z$ are $\mu + \sigma$ times the quantiles of $Z$ by Proposition
+*Mean under a linear transformation* applied to quantiles, which are
+order-preserving under an increasing linear map. Hence
+$\mathrm{IQR} = 2(0.6745)\sigma = 1.3490\sigma$ and the upper fence is at
+$0.6745\sigma + 1.5(1.3490)\sigma = 2.6980\sigma$ above the mean. The tail
+probability is $2\bigl(1 - \Phi(2.698)\bigr) = 2(0.003488) = 0.006976$.
+:::
+
+So $1.5$ is calibrated: on clean normal data the rule flags roughly seven points
+in a thousand — rare enough that a flag means something, common enough that the
+rule is not vacuous. The $3\,\mathrm{IQR}$ fence sits at $4.72\sigma$, flagging
+about two points in a million.
+
+:::pitfall
+A flagged point is not an error and must not be deleted on sight. The rule is
+calibrated for a roughly normal, unimodal distribution; on genuinely skewed data
+— incomes, waiting times, insurance claims — it flags a large fraction of
+perfectly valid observations, because the long tail is the distribution rather
+than a contamination of it. Investigate a flagged point; delete it only if you
+find an actual reason.
+:::
+
+:::example[Five-number summary and fences]
+For the twelve service times $\{2,5,6,7,8,9,10,11,12,13,15,42\}$, give the
+five-number summary, the IQR, and the mild-outlier fences.
 :::
 
 :::solution
-1. $L = \frac{90}{100}\times 20 = 18$.
-2. So about $18$ values lie below it, and the 90th percentile falls between the 18th and 19th sorted values.
-3. Sanity check: $90\%$ of $20$ is $18$, matching the count below. ✓
+1. Median: $n = 12$ is even, so $Q_2 = (9+10)/2 = 9.5$.
+2. Lower half $\{2,5,6,7,8,9\}$ has median $(6+7)/2 = 6.5 = Q_1$.
+3. Upper half $\{10,11,12,13,15,42\}$ has median $(12+13)/2 = 12.5 = Q_3$.
+4. Five-number summary: $\{2,\ 6.5,\ 9.5,\ 12.5,\ 42\}$ and
+   $\mathrm{IQR} = 12.5 - 6.5 = 6$.
+5. Fences: $6.5 - 1.5(6) = -2.5$ and $12.5 + 1.5(6) = 21.5$. Only $42$ falls
+   outside, so it is the sole outlier. It is beyond $12.5 + 3(6) = 30.5$ as
+   well, so it is an *extreme* outlier.
+6. Check: $Q_1 \le Q_2 \le Q_3$ holds, and the whisker ends at the largest
+   non-outlier, $15$. ✓
 :::
 
-### z-scores
-
-:::definition[z-score]{#z-score}
-The z-score of a value $x$ rescales it by how many standard deviations it sits from the mean:
-
-$$z = \frac{x - \mu}{\sigma}.$$
-:::
-
-A z-score is unitless, so it lets you compare positions across different distributions (e.g. a score on two differently-scaled exams). A positive $z$ is above the mean, a negative $z$ below, and $z = 0$ is exactly at the mean.
-
-:::example[z-score]
-A value has $z = 2.5$. This means $x$ lies $2.5$ standard deviations **above** the mean.
+:::example[Locating a percentile]
+A sorted list has $n = 20$ values. Where does the $90$th percentile fall?
 :::
 
 :::solution
-1. Concretely, if $\mu = 100$ and $\sigma = 15$, then $x = \mu + z\sigma = 100 + 2.5(15) = 137.5$.
-2. Sanity check: $z = (137.5 - 100)/15 = 37.5/15 = 2.5$. ✓
+1. The position index is $L = \frac{p}{100}n = 0.90(20) = 18$.
+2. $L$ is a whole number, so exactly $18$ values lie below the percentile and
+   it is taken as the midpoint of the $18$th and $19$th sorted values.
+3. Check: $90\%$ of $20$ is $18$, matching the count below. ✓
 :::
+
+:::example[IQR versus standard deviation under contamination]
+In the service-time data, replacing $42$ by $4200$ changes $s$ from about
+$10.2$ to about $1210$. What happens to the IQR?
+:::
+
+:::solution
+1. The quartiles depend only on the ordered positions $6,7$ within each half.
+   Replacing the largest value by a larger one changes no quartile.
+2. So $\mathrm{IQR} = 6$ exactly as before, a change of zero.
+3. Check: this is the robustness claim made concrete — $s$ grew by a factor of
+   more than a hundred, the IQR did not move. ✓
+:::
+
+## Standard Scores, the Empirical Rule and Chebyshev
+
+<!-- section: z-scores -->
+
+A raw value carries units and a scale, so "$137.5$" means nothing until you know
+what is typical. Standardising strips both away.
+
+:::definition[Standard score]{#z-score}
+The **z-score** of a value $x$ from a distribution with mean $\mu$ and standard
+deviation $\sigma > 0$ is
+
+$$z = \frac{x - \mu}{\sigma},$$
+
+the number of standard deviations $x$ sits above the mean. For sample data,
+$z_i = (x_i - \bar{x})/s$.
+:::
+
+:::proposition[Standardised data has mean 0 and variance 1]{#standardised-moments}
+If $z_i = (x_i - \bar{x})/s$ with $s > 0$, then $\bar{z} = 0$ and $s_z^2 = 1$.
+:::
+
+:::proof
+Write $z_i = a x_i + b$ with $a = 1/s$ and $b = -\bar{x}/s$. By Proposition
+*Mean under a linear transformation*,
+
+$$\bar z = \frac{\bar x}{s} - \frac{\bar x}{s} = 0,$$
+
+and by Proposition *Variance under a linear transformation*,
+$s_z^2 = a^2 s^2 = s^2/s^2 = 1$.
+:::
+
+Because standardisation is exactly a linear transformation, everything proved
+about linear transformations applies, and the two propositions together say that
+standardising puts any dataset on a common footing: mean $0$, spread $1$,
+dimensionless. That is what makes two scores on differently-scaled exams
+comparable.
 
 :::intuition
-A z-score is a universal ruler. Instead of saying "you're 12 cm taller than average," it says "you're 1.5 SDs above average" — a measure that means the same thing whether you're comparing heights, test scores, or house prices.
+A z-score is a universal ruler. "Twelve centimetres above average" means nothing
+without knowing how much heights vary; "$1.5$ standard deviations above average"
+means the same thing whether the subject is heights, test scores or house
+prices, and can be compared directly across all three.
 :::
 
-:::definition[Tukey's outlier fences]
-A value is a mild outlier if it falls below the lower fence or above the upper fence,
-
-$$Q_1 - 1.5 \cdot \text{IQR} \quad\text{and}\quad Q_3 + 1.5 \cdot \text{IQR}.$$
+:::pitfall
+A z-score is comparable across distributions but a z-score does **not** by
+itself give a percentile. Converting $z = 1.5$ into "the $93$rd percentile"
+requires the normal distribution; on a skewed distribution that conversion can
+be badly wrong. The z-score is always a position in standard-deviation units,
+and only sometimes a probability statement.
 :::
 
-:::example[outlier fences]
-From the data above, $Q_1 = 10$, $Q_3 = 25$, IQR $= 15$.
+### The empirical rule
+
+:::proposition[The empirical rule (68–95–99.7)]{#empirical-rule}
+If the data are approximately **normal** with mean $\mu$ and standard deviation
+$\sigma$, then approximately
+
+- $68.3\%$ of values lie in $\mu \pm \sigma$,
+- $95.4\%$ lie in $\mu \pm 2\sigma$,
+- $99.7\%$ lie in $\mu \pm 3\sigma$.
+:::
+
+These are not conventions; they are the values of
+$\Phi(k) - \Phi(-k)$ at $k = 1, 2, 3$, computed from the normal density. The
+hypothesis of approximate normality is doing all the work, and the rule fails
+badly without it — for a strongly right-skewed distribution, far more than
+$0.15\%$ of the mass can sit above $\mu + 3\sigma$.
+
+:::figure[The empirical rule on a normal curve with $\mu = 50$ and $\sigma = 10$. The darker central band spans $\mu \pm \sigma = [40,60]$ and holds about $68\%$ of the area; the full shaded band spans $\mu \pm 2\sigma = [30,70]$ and holds about $95\%$.]{#empirical-rule-figure}
+{
+  "type": "plot",
+  "x": [14, 86],
+  "y": [-0.004, 0.052],
+  "xTicks": 10,
+  "yTicks": 0.01,
+  "xLabel": "value",
+  "yLabel": "density",
+  "marks": [
+    { "kind": "area", "fn": "exp(0-((x-50)^2)/200)/(10*sqrt(2*pi))", "from": 30, "to": 70 },
+    { "kind": "area", "fn": "exp(0-((x-50)^2)/200)/(10*sqrt(2*pi))", "from": 40, "to": 60 },
+    { "kind": "function", "fn": "exp(0-((x-50)^2)/200)/(10*sqrt(2*pi))", "tone": "accent" },
+    { "kind": "line", "through": [[40, 0], [40, 0.0242]], "extend": false, "dashed": true, "tone": "result" },
+    { "kind": "line", "through": [[60, 0], [60, 0.0242]], "extend": false, "dashed": true, "tone": "result" },
+    { "kind": "line", "through": [[30, 0], [30, 0.0054]], "extend": false, "dashed": true, "tone": "alt" },
+    { "kind": "line", "through": [[70, 0], [70, 0.0054]], "extend": false, "dashed": true, "tone": "alt" },
+    { "kind": "text", "at": [50, 0.0175], "text": "68%", "tone": "result" },
+    { "kind": "text", "at": [50, 0.0075], "text": "95%", "tone": "alt" },
+    { "kind": "text", "at": [39, 0.0318], "text": "40", "tone": "result" },
+    { "kind": "text", "at": [61, 0.0318], "text": "60", "tone": "result" },
+    { "kind": "text", "at": [28, 0.0135], "text": "30", "tone": "alt" },
+    { "kind": "text", "at": [72, 0.0135], "text": "70", "tone": "alt" }
+  ]
+}
+:::
+
+:::example[Applying the empirical rule]
+Test scores are roughly normal with $\mu = 50$ and $\sigma = 10$. What fraction
+of scores lie in $[40,60]$? Above $70$?
 :::
 
 :::solution
-1. Lower fence: $Q_1 - 1.5\cdot\text{IQR} = 10 - 1.5(15) = 10 - 22.5 = -12.5$.
-2. Upper fence: $Q_3 + 1.5\cdot\text{IQR} = 25 + 1.5(15) = 25 + 22.5 = 47.5$.
-3. Any value below $-12.5$ or above $47.5$ is flagged. All six values fall inside $[-12.5, 47.5]$, so there are no outliers here. ✓
+1. $[40,60] = \mu \pm \sigma$, so about $68\%$.
+2. $70 = \mu + 2\sigma$. About $95\%$ lies inside $\mu \pm 2\sigma$, leaving
+   about $5\%$ split between the two tails; by symmetry about $2.5\%$ lies above
+   $70$.
+3. Check: the exact normal values are $68.27\%$ and $2.28\%$, so the rule's
+   rounding is what causes the small discrepancy. ✓
 :::
 
-## Visualization
+### Chebyshev's inequality
 
-Histograms group continuous data into bins and plot frequency or density. They reveal shape: symmetric, right-skewed, left-skewed, bimodal, uniform.
+When normality is not available, a weaker but universal bound is.
 
-Box plots display the five-number summary and mark outliers. Excellent for comparing groups and spotting skewness/outliers.
+:::theorem[Chebyshev's inequality]{#chebyshev}
+Let $X$ be any random variable with finite mean $\mu$ and finite variance
+$\sigma^2$. For every $k > 0$,
 
-Scatter plots show the joint distribution of two quantitative variables. Use one when you want to see the *relationship* between two quantities, not the distribution of a single one.
+$$P\bigl(|X - \mu| \ge k\sigma\bigr) \le \frac{1}{k^2}, \qquad\text{equivalently}\qquad P\bigl(|X-\mu| < k\sigma\bigr) \ge 1 - \frac{1}{k^2}.$$
 
-:::intuition
-A histogram is like sorting marbles into trays by size — you instantly see the most common sizes and overall spread. A box plot is a quick summary card: lowest, bottom quarter, middle, top quarter, highest. Outliers get their own dots.
+No assumption whatsoever is made about the shape of the distribution.
 :::
 
-### Reading skew
-Skew describes which tail is longer. Because the mean is pulled toward the long tail while the median stays put, the two split apart in a predictable way:
+:::proof
+First, **Markov's inequality**: if $Y \ge 0$ and $a > 0$, then
+$P(Y \ge a) \le E[Y]/a$. To see it, note that the random variable
+$Y - a\,\mathbf{1}\{Y \ge a\}$ is non-negative — when $Y \ge a$ it equals
+$Y - a \ge 0$, and otherwise it equals $Y \ge 0$. Taking expectations,
+$E[Y] - a\,P(Y \ge a) \ge 0$, which rearranges to Markov's inequality.
 
-- **Right- (positively) skewed**: long tail on the right → mean $>$ median (e.g. income).
-- **Left- (negatively) skewed**: long tail on the left → mean $<$ median.
-- **Symmetric**: mean $\approx$ median.
+Now apply it to $Y = (X-\mu)^2$, which is non-negative with
+$E[Y] = \sigma^2$, and $a = k^2\sigma^2 > 0$. Since $|X-\mu| \ge k\sigma$ holds
+exactly when $(X-\mu)^2 \ge k^2\sigma^2$,
+
+$$P\bigl(|X-\mu|\ge k\sigma\bigr) = P\bigl((X-\mu)^2 \ge k^2\sigma^2\bigr) \le \frac{\sigma^2}{k^2\sigma^2} = \frac{1}{k^2}. \qquad$$
+:::
+
+The bound is vacuous for $k \le 1$ (a probability is always at most $1$) and is
+deliberately loose for $k > 1$ — it must hold for *every* distribution with the
+stated variance, including the worst one. That worst case is attainable: the
+variable taking values $\mu \pm k\sigma$ with probability $1/(2k^2)$ each and
+$\mu$ otherwise has variance $\sigma^2$ and achieves equality, so Chebyshev's
+inequality cannot be improved without further assumptions.
+
+:::example[Chebyshev versus the empirical rule]
+A distribution has $\mu = 100$ and $\sigma = 15$, with unknown shape. What can be
+guaranteed about the interval $[70, 130]$? What would the empirical rule claim?
+:::
+
+:::solution
+1. $[70,130] = \mu \pm 2\sigma$, so $k = 2$ and Chebyshev guarantees at least
+   $1 - 1/4 = 75\%$.
+2. If the distribution were known to be normal, the empirical rule would give
+   about $95\%$.
+3. Check: $75\% \le 95\%$, as required — the universal guarantee must be weaker
+   than the one that gets to assume a shape. ✓
+:::
+
+:::example[Solving for k]
+For any distribution, within how many standard deviations of the mean must at
+least $96\%$ of the values lie?
+:::
+
+:::solution
+1. Set $1 - 1/k^2 \ge 0.96$, i.e. $1/k^2 \le 0.04$.
+2. So $k^2 \ge 25$ and $k \ge 5$.
+3. Check: at $k=5$ the bound is $1 - 1/25 = 0.96$ exactly. ✓
+:::
+
+## Shape and Visualization
+
+<!-- section: visualization -->
+
+Numerical summaries answer questions you thought to ask. A picture answers the
+ones you did not, which is why it should always come first.
+
+**Histograms** bin a quantitative variable and plot the count or density in each
+bin. They show shape: symmetric, skewed, unimodal, bimodal, uniform, heavy
+tailed. The one choice they force on you is the bin width, and it matters — too
+wide hides structure, too narrow turns the picture into noise.
+
+**Box plots** draw the five-number summary. They compress a distribution into
+five numbers, which makes them ideal for comparing many groups at once and
+useless for seeing modality.
+
+**Scatter plots** show two quantitative variables jointly, and are the tool for
+*relationship* rather than distribution.
+
+:::definition[Skewness]{#skewness}
+A distribution is **right-** (or positively) **skewed** when its right tail is
+longer, **left-** (negatively) **skewed** when its left tail is longer, and
+**symmetric** when the two tails mirror each other. Numerically, the sample
+skewness is
+
+$$g_1 = \frac{\frac1n\sum_{i=1}^n (x_i - \bar{x})^3}{s_n^3}, \qquad s_n^2 = \frac1n\sum_{i=1}^n (x_i-\bar{x})^2,$$
+
+which is positive for right skew and zero for any symmetric distribution.
+:::
+
+The cube is what makes this work: it preserves sign, so deviations on the long
+side do not cancel those on the short side, and it weights distant points
+heavily, so the tail dominates.
+
+:::proposition[Skew separates the mean from the median]{#skew-ordering}
+For a right-skewed unimodal distribution one typically has
+$\text{mode} < \text{median} < \text{mean}$, and the reverse ordering for left
+skew.
+:::
+
+:::pitfall
+The word *typically* is honest, not hedging. The ordering is a reliable rule of
+thumb, not a theorem: discrete and multimodal counterexamples exist in which a
+right-skewed distribution has mean below median. Use the ordering to form a
+hypothesis about shape, then confirm it with a plot.
+:::
+
+The mechanism behind the ordering is the mean's sensitivity, already proved: by
+Theorem *The mean minimises total squared deviation* the mean chases squared
+distance, so a long tail pulls it; by Theorem *The median minimises total
+absolute deviation* the median only counts observations on each side, so the
+tail's length is irrelevant to it.
 
 :::figure[A right-skewed distribution of $198$ incomes (thousands). The long right tail drags the mean to $\approx 50$ while the median stays at $\approx 41$: the gap between the two lines *is* the skew.]{#right-skew-figure}
 {
@@ -351,69 +1175,168 @@ Skew describes which tail is longer. Because the mean is pulled toward the long 
 }
 :::
 
-:::example[diagnosing skew]
-A dataset has mean $52{,}000$ and median $41{,}000$ (annual incomes).
+### Centre is not the whole story
+
+Two distributions can share a mean exactly and behave completely differently,
+because the mean says nothing at all about scale. Spread is an independent
+dimension of the summary, not a footnote to the centre.
+
+:::figure[Two normal distributions with the identical mean $\mu = 50$ but standard deviations $\sigma = 5$ and $\sigma = 15$. Every measure of centre agrees on these two datasets; only a measure of spread tells them apart.]{#same-mean-figure}
+{
+  "type": "plot",
+  "x": [5, 95],
+  "y": [-0.006, 0.100],
+  "xTicks": 10,
+  "yTicks": 0.02,
+  "xLabel": "value",
+  "yLabel": "density",
+  "marks": [
+    { "kind": "function", "fn": "exp(0-((x-50)^2)/50)/(5*sqrt(2*pi))", "tone": "accent" },
+    { "kind": "function", "fn": "exp(0-((x-50)^2)/450)/(15*sqrt(2*pi))", "tone": "alt", "dashed": true },
+    { "kind": "line", "through": [[50, 0], [50, 0.0845]], "extend": false, "dashed": true, "tone": "muted" },
+    { "kind": "text", "at": [50, 0.0925], "text": "mean 50", "tone": "muted" },
+    { "kind": "text", "at": [66, 0.060], "text": "SD 5" },
+    { "kind": "text", "at": [80, 0.024], "text": "SD 15", "tone": "alt" }
+  ]
+}
+:::
+
+:::remark[Anscombe's quartet and the Datasaurus]
+Anscombe's four datasets share their means, variances, correlation and fitted
+regression line to two decimal places, yet one is linear, one is curved, one is
+a perfect line with a single outlier, and one is a vertical stack with a lone
+influential point. The "Datasaurus dozen" pushes the joke further: a dozen
+datasets with identical summary statistics, one of which is a dinosaur. The
+moral is not that summaries are useless — it is that summaries are answers to
+specific questions, and a plot is what tells you which question to ask.
+:::
+
+:::example[Diagnosing skew from two numbers]
+A dataset of annual incomes has mean $52{,}000$ and median $41{,}000$. What
+shape is it, and which summary should be reported?
 :::
 
 :::solution
-1. Since mean $>$ median, the distribution is right-skewed: a few very high earners stretch the right tail and drag the mean up.
-2. Sanity check: this matches the well-known shape of income data. ✓
+1. The mean exceeds the median by $11{,}000$, so by Proposition *Skew separates
+   the mean from the median* the distribution is right-skewed.
+2. A few very high earners stretch the right tail and drag the mean; the median
+   is the better summary of a typical income, paired with the IQR.
+3. Check: this matches the known shape of income data, and the direction agrees
+   with the histogram above. ✓
 :::
 
-### The empirical rule (68–95–99.7)
-
-:::proposition[The empirical rule]{#empirical-rule}
-For a roughly **normal** (bell-shaped) distribution, the standard deviation partitions the data predictably:
-
-- $\approx 68\%$ of values fall within $\mu \pm \sigma$,
-- $\approx 95\%$ within $\mu \pm 2\sigma$,
-- $\approx 99.7\%$ within $\mu \pm 3\sigma$.
-:::
-
-The hypothesis is doing real work here: the rule assumes approximate normality, and it does not apply to strongly skewed or heavy-tailed data.
-
-:::example[empirical rule]
-Test scores with $\mu = 50$, $\sigma = 10$, roughly normal.
+:::example[Reading a box plot comparison]
+Two groups have the same median but group $A$'s box is twice as wide as group
+$B$'s. What do you conclude?
 :::
 
 :::solution
-1. Within one SD, i.e. $[50 - 10,\ 50 + 10] = [40, 60]$, we expect about $68\%$ of scores.
-2. Within $[30, 70]$ (two SDs), about $95\%$.
-3. Sanity check: the intervals nest and the percentages grow ($68 < 95 < 99.7$), as they must for wider ranges. ✓
-:::
-
-### Chebyshev's inequality
-
-When you *cannot* assume normality, Chebyshev's inequality gives a guaranteed — if loose — bound.
-
-:::theorem[Chebyshev's inequality]{#chebyshev}
-For **any** distribution with finite variance and any $k > 1$, the proportion of values lying within $k$ standard deviations of the mean is at least
-
-$$1 - \frac{1}{k^2}.$$
-:::
-
-:::example[Chebyshev bound]
-A distribution has $\mu = 100$, $\sigma = 15$; find the guaranteed fraction within $k = 2$ SDs.
-$1 - \frac{1}{k^2} = 1 - \frac{1}{2^2} = 1 - \frac{1}{4} = \frac{3}{4} = 0.75$.
-So at least $75\%$ of values lie in $[100 - 30,\ 100 + 30] = [70, 130]$, no matter the shape.
-Sanity check: the empirical rule's $95\%$ within $2\sigma$ is stronger, but it only holds for normal data; Chebyshev's $75\%$ is the weaker promise that holds always, so $75\% \le 95\%$ as expected. ✓
-:::
-
-:::remark
-Always visualise your data before computing summaries. Anscombe's quartet shows four datasets with identical means, variances, and correlations but completely different shapes.
+1. Equal medians mean the two groups have the same typical value.
+2. $A$'s IQR is twice $B$'s, so $A$'s middle half is twice as spread out;
+   $A$ is the more variable group.
+3. Check: this is exactly the situation the two-normals figure draws, where
+   centre alone cannot distinguish the distributions. ✓
 :::
 
 ## Choosing the Right Summary
 
-:::summary
-- Symmetric distributions, no outliers → mean + standard deviation (use all data, nice math properties).
-- Skewed distributions or outliers → median + IQR (resistant to extremes).
-- Categorical/ordinal data → mode (or counts/proportions). Never compute a "mean hair colour".
+<!-- section: choosing-the-right-summary -->
+
+Everything above reduces to one decision, made after looking at a plot.
+
+:::recipe[Choosing a centre and a spread]{#choosing-recipe}
+1. Plot the data first — a histogram for one variable, box plots for several
+   groups.
+2. If the distribution is roughly symmetric and unimodal with no extreme values,
+   report $\bar{x}$ and $s$. They use all the data and feed directly into the
+   inferential machinery of later chapters.
+3. If it is skewed or contains outliers you cannot justify removing, report the
+   median and the IQR, or the five-number summary.
+4. If it is bimodal, report neither as a single figure. Say so, and summarise
+   the groups separately.
+5. For categorical data, report the mode and the proportions; a mean is
+   undefined.
+6. Always report $n$ alongside any summary. A mean of $7.2$ from $n = 4$ and one
+   from $n = 4000$ are not the same claim, because the precision
+   $\sigma/\sqrt{n}$ differs by a factor of more than thirty.
 :::
 
-**Common Mistakes**
-- Reporting the mean for heavily skewed data (income, house prices). Use the median instead.
-- Forgetting to sort before median or quartiles.
-- Interpreting SD as a percentage — it has the same units as the data.
-- Relying on the range as primary spread measure (one outlier ruins it).
-- Using the wrong denominator for variance (sample vs population).
+:::summary
+**Notation.** Parameters $\mu, \sigma^2, \sigma, p$ describe a population and are
+fixed; statistics $\bar{x}, s^2, s, \hat{p}$ are computed from a sample and are
+random.
+
+**Centres.** $\bar{x} = \frac1n\sum x_i$ is the unique minimiser of
+$\sum (x_i-c)^2$, with the exact identity $S(c) = S(\bar{x}) + n(c-\bar{x})^2$;
+any median minimises $\sum |x_i - c|$, uniquely when $n$ is odd. Deviations from
+the mean always satisfy $\sum(x_i - \bar{x}) = 0$. The pooled mean of two groups
+is $\frac{n_A\bar{x}_A + n_B\bar{x}_B}{n_A+n_B}$, never the average of the means
+unless $n_A = n_B$.
+
+**Spread.** $\sigma^2 = \frac1N\sum(x_i-\mu)^2$ for a population;
+$s^2 = \frac{1}{n-1}\sum(x_i-\bar{x})^2$ for a sample. For a random variable,
+$\operatorname{Var}(X) = E[X^2]-(E[X])^2$; for data,
+$\sum(x_i-\bar{x})^2 = \sum x_i^2 - n\bar{x}^2$. Under $y = ax+b$:
+$\bar{y} = a\bar{x}+b$, $s_y^2 = a^2 s_x^2$, $s_y = |a| s_x$.
+
+**Why $n-1$.** For a random sample (independent, identically distributed, finite
+variance — normality *not* required),
+$E\bigl[\sum (X_i - \bar{X})^2\bigr] = (n-1)\sigma^2$, hence $E[s^2] = \sigma^2$
+while the $n$-divisor version has expectation $\frac{n-1}{n}\sigma^2$ and bias
+$-\sigma^2/n$. Unbiasedness does not survive the square root: $E[s] < \sigma$.
+
+**Sampling behaviour of $\bar{X}$.** $E[\bar{X}] = \mu$ needs only a common mean
+and linearity of expectation; $\operatorname{Var}(\bar{X}) = \sigma^2/n$ needs
+independence and finite variance.
+
+**Position.** $\mathrm{IQR} = Q_3 - Q_1$; Tukey's mild fences are
+$Q_1 - 1.5\,\mathrm{IQR}$ and $Q_3 + 1.5\,\mathrm{IQR}$, which on normal data sit
+at $\mu \pm 2.698\sigma$ and flag about $0.7\%$ of values. The z-score
+$z = (x-\mu)/\sigma$ standardises to mean $0$ and variance $1$.
+
+**Coverage.** The empirical rule ($68/95/99.7$ within $1/2/3$ standard
+deviations) requires approximate normality. Chebyshev's inequality,
+$P(|X-\mu| \ge k\sigma) \le 1/k^2$, requires only a finite variance and is
+sharp, hence loose.
+:::
+
+## Common Mistakes
+
+- Reporting the mean for heavily skewed data such as incomes or house prices. A
+  right tail drags the mean above anything typical; report the median and IQR.
+- Averaging two group means without weighting by group size. The pooled mean is
+  $\frac{n_A\bar{x}_A+n_B\bar{x}_B}{n_A+n_B}$, and the unweighted average is
+  right only when the groups are equally large.
+- Using the $n$ divisor for a sample variance. It is biased downward by exactly
+  $\sigma^2/n$, which is negligible at $n = 1000$ and catastrophic at $n = 3$.
+- Claiming that $n-1$ makes the *standard deviation* unbiased. It does not;
+  Jensen's inequality gives $E[s] < \sigma$. Only $s^2$ is unbiased.
+- Forgetting to sort the data before reading off a median, a quartile or a
+  percentile.
+- Quoting the computational formula's result from floating-point code when the
+  mean is large relative to the spread. Catastrophic cancellation can even
+  produce a negative variance.
+- Treating the standard deviation as a percentage. It carries the units of the
+  data; the dimensionless comparison is the coefficient of variation, and that
+  one requires a meaningful zero and a positive mean.
+- Applying the empirical rule to non-normal data. Without approximate normality
+  the $68/95/99.7$ figures have no standing; Chebyshev's bound is what holds
+  universally.
+- Expecting Chebyshev's bound to be tight. It is attained by a specific
+  three-point distribution, so it cannot be improved in general, and on normal
+  data it is far weaker than the truth.
+- Deleting every point flagged by the $1.5\,\mathrm{IQR}$ rule. On skewed data
+  the rule flags a large fraction of legitimate observations; a flag is a prompt
+  to investigate, not a licence to discard.
+- Reading a percentile off a z-score without normality. $z = 2$ is the $97.7$th
+  percentile for a normal distribution and can be anywhere for another shape.
+- Using the range as the primary measure of spread. It is a function of the two
+  least typical observations and grows with $n$ even when the distribution does
+  not change.
+- Reporting a single centre for a bimodal distribution, which describes a value
+  that may occur in neither subpopulation.
+- Quoting a summary without $n$. Precision scales as $\sigma/\sqrt{n}$, so the
+  sample size is part of the claim.
+- Treating repeated measurements on the same subjects as independent. The
+  $\sigma^2/n$ formula needs independence, and positive correlation makes the
+  sample mean far noisier than it promises.

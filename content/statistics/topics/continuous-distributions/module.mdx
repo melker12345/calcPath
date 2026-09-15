@@ -4,269 +4,872 @@ title: Continuous Probability Distributions
 
 # Continuous Probability Distributions
 
-Continuous random variables can take any value in an interval. Their distributions are described by probability density functions (PDFs): probabilities are areas under the curve, never the height at a point.
+A discrete random variable is described by a list. You write down the values it can take, you write down the probability of each, and every question you might ask is answered by adding up some of those numbers. The whole apparatus is arithmetic on a table.
 
-The normal distribution is the cornerstone of statistics. Its bell-curve shape emerges naturally when many small independent effects are added, and it underpins virtually all classical inference methods.
+That description breaks the moment the variable is allowed to take *any* value in an interval. The time until a radioactive atom decays, the error in a voltage measurement, the height of a randomly chosen adult — none of these is confined to a countable list of outcomes. And once the list of outcomes is uncountable, no table can hold it, because there is no way to assign a positive probability to each of uncountably many values and have the total come to one.
 
-The exponential and uniform distributions complete the toolkit for modeling waiting times, lifetimes, and situations where all outcomes are equally likely.
+The resolution is to stop asking what an individual value is worth and start asking what an *interval* is worth. Probability becomes a quantity spread along the line, like mass along a wire, and a probability is recovered by integrating that spread over a region. Sums become integrals; the probability mass function becomes a probability *density* function; and a single point, having zero length, carries zero probability.
 
-## PDFs and CDFs
+This chapter builds that machinery and then stocks it. It defines densities and distribution functions and proves how they determine each other, computes expectation and variance as integrals, and derives from first principles the three distributions that carry most of the load in applied work: the uniform, the normal, and the exponential. Standardisation is proved rather than asserted; memorylessness is proved and tied back to the Poisson process; the chi-squared and $t$ distributions are constructed out of normals; and the chapter closes with the normal approximation to the binomial, the continuity correction that makes it accurate, and a statement of when it is legitimate to use.
+
+## From mass to density
 
 <!-- section: pdf -->
 
+Begin with the obstruction, because it is what forces every definition that follows. Suppose $X$ is a random variable taking values in $[0,1]$, and suppose every value is "equally likely" in whatever sense that phrase can be made to mean. What is $P(X = 0.5)$?
+
+Whatever number it is, call it $p$, and by the assumed symmetry every other value in $[0,1]$ has the same probability $p$. If $p > 0$, pick an integer $n$ with $n > 1/p$ and pick $n$ distinct values in $[0,1]$. These are disjoint events, so their probabilities add, and the total is $np > 1$. That is impossible. Hence $p = 0$.
+
+:::theorem[Point probabilities vanish]{#point-prob-zero}
+Let $X$ be a random variable whose distribution function $F(x) = P(X \le x)$ is continuous at $c$. Then
+
+$$P(X = c) = 0.$$
+:::
+
+:::proof
+The events $\{c - \tfrac1n < X \le c\}$ shrink to $\{X = c\}$ as $n \to \infty$, and they are nested decreasing, so by continuity of probability from above,
+
+$$P(X = c) = \lim_{n\to\infty} P\!\left(c - \tfrac1n < X \le c\right) = \lim_{n\to\infty}\left[F(c) - F\!\left(c - \tfrac1n\right)\right] = F(c) - F(c^-) = 0,$$
+
+the last step because $F$ is continuous at $c$.
+:::
+
+So a continuous random variable assigns probability zero to every single value while assigning probability one to the whole line. There is no contradiction here — zero probability does not mean impossible, only that the outcome is negligible among the alternatives — but it does mean that a table of values and their probabilities carries no information at all. Something else has to do the describing.
+
 :::definition[Probability density function]{#pdf}
-A probability density function $f(x)$ satisfies
+A **probability density function** for a random variable $X$ is a function $f: \mathbb{R} \to \mathbb{R}$ satisfying
 
-$$f(x) \geq 0, \qquad \int_{-\infty}^{\infty} f(x)\,dx = 1,$$
+$$f(x) \ge 0 \quad \text{for all } x, \qquad \int_{-\infty}^{\infty} f(x)\,dx = 1,$$
 
-and probabilities are the areas under it:
+and such that for every $a \le b$,
 
-$$P(a \leq X \leq b) = \int_a^b f(x)\,dx.$$
+$$P(a \le X \le b) = \int_a^b f(x)\,dx.$$
+
+A random variable admitting such an $f$ is called **continuous**.
 :::
 
-The PDF height is not a probability — it is a density (probability per unit length).
+The two conditions are exactly the two axioms of probability in integral form: probabilities are non-negative, and the total is one. Everything else follows from them. Note that the definition is stated for a *closed* interval but that the choice of endpoints is immaterial, since by the theorem *Point probabilities vanish* each endpoint contributes nothing:
 
-For a continuous distribution, $P(X = c) = \int_c^c f(x)\,dx = 0$ for any single point $c$. This is why $P(X \leq b) = P(X < b)$ for continuous distributions: adding or removing a single endpoint changes nothing.
+$$P(a \le X \le b) = P(a < X < b) = P(a \le X < b) = P(a < X \le b).$$
 
-:::definition[Cumulative distribution function]{#cdf}
-The cumulative distribution function of $X$ is
+This is a genuine convenience and a genuine difference from the discrete case, where moving an endpoint in or out of an interval moves a whole atom of probability with it.
 
-$$F(x) = P(X \leq x) = \int_{-\infty}^x f(t)\,dt.$$
+:::pitfall[A density is not a probability]
+Three distinct errors live here, and they are the most common misconceptions in the subject.
+
+**One.** $f(c)$ is not $P(X = c)$. That probability is zero. The value $f(c)$ is a *rate*: probability per unit length near $c$. It answers "how thickly is probability packed here?", not "how likely is this?".
+
+**Two.** A density may exceed $1$. Nothing in the definition bounds $f$ above. The uniform density on $[0, \tfrac12]$ equals $2$ everywhere on that interval, and $2 \times \tfrac12 = 1$, so the total area is still one. If you find yourself objecting that "a probability can't be $2$", you have confused the height with the area. A density on a narrow interval *must* be tall, for the same reason a fixed mass squeezed into a short wire must be dense.
+
+**Three.** Probability is area, so it takes an interval to have any. Asking for $P(X = 3.7)$ when $X$ is continuous is not a hard question; it is a question whose answer is always $0$. What is meant, almost always, is $P(3.65 \le X \le 3.75)$ or some similar band, and the band has to be supplied before the question has content.
 :::
-
-The CDF is non-decreasing from $0$ to $1$, right-continuous, and gives the probability of being at or below $x$.
-
-:::proposition[PDF and CDF determine each other]
-The derivative of the CDF is the PDF, and the antiderivative of the PDF is the CDF:
-
-$$f(x) = F'(x), \qquad F(x) = \int_{-\infty}^x f(t)\,dt.$$
-:::
-
-:::definition[Quantiles and percentiles]
-The $p$-th quantile $x_p$ of a distribution satisfies
-
-$$F(x_p) = p.$$
-:::
-
-For the standard normal, $x_{0.975} = 1.96$ — this is where $97.5\%$ of the distribution lies below.
 
 :::intuition
-A PDF is like a topographic map of probability. The height at any point shows how densely packed the probability is there. But the actual probability of a region is the volume (area) under the curve over that region — not the height at a single point.
+Think of one kilogram of putty smeared along a wire. Ask "how much putty is at the point $x = 3$?" and the answer is none: a point has no length, so it holds no mass. The useful question is how much putty lies between $x = 3$ and $x = 4$, and to answer it you need to know the *linear density* — grams per centimetre — at each place, and integrate it along the stretch.
 
-The CDF is the running total: $F(x)$ tells you the total probability that has accumulated by the point $x$. It starts at $0$ (nothing accumulated yet) and ends at $1$ (all probability accounted for).
+A probability density is that function, with probability in the role of mass. The height tells you how thickly probability is packed; the area over a stretch tells you how much of it there is.
 :::
 
-:::example[Finding a normalising constant, then a probability]
-Suppose $f(x) = c\,x^2$ on $[0, 3]$ and $f(x) = 0$ elsewhere. Find $c$, then compute $P(1 \leq X \leq 2)$.
+The accumulated-probability view has its own function, and it is often the more computable of the two.
+
+:::definition[Cumulative distribution function]{#cdf}
+The **cumulative distribution function** (cdf) of a random variable $X$ is
+
+$$F(x) = P(X \le x).$$
+
+If $X$ has density $f$, then $F(x) = \displaystyle\int_{-\infty}^{x} f(t)\,dt$.
+:::
+
+:::proposition[Properties of a distribution function]{#cdf-properties}
+Any cdf $F$ satisfies:
+
+1. $F$ is non-decreasing;
+2. $\lim_{x \to -\infty} F(x) = 0$ and $\lim_{x \to \infty} F(x) = 1$;
+3. $F$ is right-continuous;
+4. $P(a < X \le b) = F(b) - F(a)$ for $a < b$.
+:::
+
+:::proof
+(1) If $a \le b$ then $\{X \le a\} \subseteq \{X \le b\}$, and probability is monotone under inclusion.
+
+(4) The events $\{X \le a\}$ and $\{a < X \le b\}$ are disjoint with union $\{X \le b\}$, so $F(a) + P(a < X \le b) = F(b)$.
+
+(2) and (3) follow from continuity of probability along the monotone sequences of events $\{X \le -n\}$, $\{X \le n\}$ and $\{X \le x + \tfrac1n\}$ respectively.
+:::
+
+Property (4) is the workhorse. It says that once you know $F$, every interval probability is a subtraction — no integral required at the point of use, because the integrating was done once and for all when $F$ was built. The relationship between the two functions runs in both directions.
+
+:::theorem[Density and distribution determine each other]{#density-cdf}
+Let $X$ have density $f$ and distribution function $F$. Then
+
+$$F(x) = \int_{-\infty}^{x} f(t)\,dt,$$
+
+and at every point $x$ where $f$ is continuous,
+
+$$F'(x) = f(x).$$
+:::
+
+:::proof
+The first identity is the definition of $F$ together with the defining property of $f$, taking $a \to -\infty$.
+
+For the second, fix $x$ at which $f$ is continuous and write $F(x) = \int_{-\infty}^x f(t)\,dt$. For $h > 0$,
+
+$$\frac{F(x+h) - F(x)}{h} = \frac1h \int_x^{x+h} f(t)\,dt.$$
+
+Given $\varepsilon > 0$, continuity of $f$ at $x$ gives a $\delta > 0$ with $|f(t) - f(x)| < \varepsilon$ whenever $|t - x| < \delta$. For $0 < h < \delta$ the integrand lies within $\varepsilon$ of $f(x)$ throughout $[x, x+h]$, so the average above lies within $\varepsilon$ of $f(x)$. The same argument applies for $h < 0$, and hence $F'(x) = f(x)$. This is the Fundamental Theorem of Calculus in the form that makes the density the derivative of the accumulated probability.
+:::
+
+:::remark
+The hypothesis "at every point where $f$ is continuous" is not decoration. The uniform density on $[0,1]$ jumps from $0$ to $1$ at the origin, and $F$ has a corner there: the one-sided derivatives are $0$ and $1$ and disagree. Densities are only determined up to their values at such exceptional points, which is why two densities differing at finitely many places describe the same distribution.
+:::
+
+:::example[A normalising constant and a probability]{#normalising-example}
+Let $f(x) = c\,x^2$ for $0 \le x \le 3$ and $f(x) = 0$ otherwise. Find the constant $c$ that makes $f$ a density, find the distribution function, and compute $P(1 \le X \le 2)$.
 :::
 
 :::solution
-1. impose the total-area condition. A valid PDF must integrate to $1$ over its domain: $\int_0^3 c\,x^2\,dx = 1$.
-2. evaluate the integral: $\int_0^3 c\,x^2\,dx = c\left[\frac{x^3}{3}\right]_0^3 = c\cdot\frac{27}{3} = 9c$.
-3. solve: $9c = 1 \Rightarrow c = \frac{1}{9} \approx 0.111$. Note $f(x) = x^2/9 \geq 0$ on $[0,3]$, so the non-negativity condition also holds — this is a valid PDF.
-4. now find the probability by integrating the density over the interval: $P(1 \leq X \leq 2) = \int_1^2 \frac{x^2}{9}\,dx = \frac{1}{9}\left[\frac{x^3}{3}\right]_1^2 = \frac{1}{9}\cdot\frac{8-1}{3} = \frac{7}{27} \approx 0.259$.
-5. Sanity check: $[1,2]$ is one-third of the domain's width, so a uniform density would assign it $1/3 \approx 0.333$. But $f(x) = x^2/9$ grows toward $x=3$, piling most mass to the right of our interval, so a probability below $1/3$ is exactly what we expect. And integrating over the full domain returns $\int_0^3 x^2/9\,dx = 1$ ✓.
+1. Impose the total-area condition. A density must integrate to $1$, and $f$ vanishes outside $[0,3]$, so
+$$\int_0^3 c\,x^2\,dx = c\left[\frac{x^3}{3}\right]_0^3 = 9c = 1, \qquad c = \frac19.$$
+2. Check non-negativity: $x^2/9 \ge 0$ everywhere, so both conditions of the definition hold and $f(x) = x^2/9$ on $[0,3]$ is a genuine density. Note $f(3) = 1$ — the density reaches the value $1$ and nothing is wrong.
+3. Build the cdf by integrating from the left. For $0 \le x \le 3$,
+$$F(x) = \int_0^x \frac{t^2}{9}\,dt = \frac{x^3}{27},$$
+with $F(x) = 0$ for $x < 0$ and $F(x) = 1$ for $x > 3$. As a check, $F'(x) = 3x^2/27 = x^2/9 = f(x)$, as the theorem *Density and distribution determine each other* requires.
+4. Read off the probability by subtraction:
+$$P(1 \le X \le 2) = F(2) - F(1) = \frac{8}{27} - \frac{1}{27} = \frac{7}{27} \approx 0.2593.$$
+5. Sanity check: $[1,2]$ occupies one third of the domain's width, so a flat density would give it $1/3 \approx 0.333$. The density $x^2/9$ grows towards $x = 3$, piling mass to the right of the interval, so a value below $1/3$ is exactly what is expected. ✓
 :::
 
-## The Normal Distribution
+:::figure[The density $f(x)=x^2/9$ on $[0,3]$. The shaded region over $[1,2]$ has area $7/27 \approx 0.259$, and that area *is* $P(1 \le X \le 2)$. The height $f(2)=0.444$ is not a probability; only the area is.]{#density-area-figure}
+{
+  "type": "plot",
+  "x": [-0.35, 3.5],
+  "y": [-0.16, 1.32],
+  "xTicks": 0.5,
+  "yTicks": 0.25,
+  "xLabel": "x",
+  "yLabel": "density f(x)",
+  "marks": [
+    { "kind": "area", "fn": "x^2/9", "from": 1, "to": 2 },
+    { "kind": "function", "fn": "x^2/9", "from": 0, "to": 3, "tone": "accent" },
+    { "kind": "line", "through": [[3, 0], [3, 1]], "extend": false, "tone": "muted", "dashed": true },
+    { "kind": "point", "at": [2, 0.4444], "tone": "result" },
+    { "kind": "text", "at": [1.52, 0.115], "text": "area = 7/27" },
+    { "kind": "text", "at": [2.42, 0.52], "text": "f(2) = 0.444", "tone": "result" },
+    { "kind": "text", "at": [0.62, 0.86], "text": "f(x) = x²/9" }
+  ]
+}
+:::
+
+## Expectation, variance and quantiles
+
+<!-- section: moments -->
+
+For a discrete variable the expectation is $\sum_k k\,P(X = k)$: each value weighted by its probability. In the continuous case every value has probability zero, so that sum would be identically zero. The weights must instead be the infinitesimal probabilities $f(x)\,dx$, and the sum becomes an integral.
+
+:::definition[Expectation and variance]{#expectation}
+Let $X$ have density $f$. Its **expectation** is
+
+$$E[X] = \int_{-\infty}^{\infty} x\,f(x)\,dx,$$
+
+provided $\int |x| f(x)\,dx < \infty$. Its **variance** is
+
+$$\operatorname{Var}(X) = E\!\left[(X - \mu)^2\right] = \int_{-\infty}^{\infty} (x - \mu)^2 f(x)\,dx, \qquad \mu = E[X],$$
+
+and its standard deviation is $\sigma = \sqrt{\operatorname{Var}(X)}$.
+:::
+
+The absolute-convergence proviso matters. The Cauchy density $f(x) = 1/[\pi(1+x^2)]$ is a perfectly good density — symmetric, bell-shaped, total area one — but $\int |x| f(x)\,dx$ diverges, so the Cauchy distribution has no expectation at all. It is not that its mean is infinite or that it is zero by symmetry; the defining integral simply fails to exist, and results that assume a mean exists do not apply to it. This will matter again when the Central Limit Theorem is invoked.
+
+To compute the expectation of a *function* of $X$ there is no need to find the density of that function first.
+
+:::theorem[Law of the unconscious statistician]{#lotus}
+If $X$ has density $f$ and $g$ is a function with $\int |g(x)| f(x)\,dx < \infty$, then
+
+$$E[g(X)] = \int_{-\infty}^{\infty} g(x)\,f(x)\,dx.$$
+:::
+
+The name is a joke at the expense of anyone who writes this down without noticing it needs proof: the left-hand side is by definition $\int y\,f_{g(X)}(y)\,dy$, an integral against a different density entirely, and the claim is that the change of variables works out. We take it as given here and use it constantly.
+
+:::proposition[Linearity and the scaling of variance]{#linearity}
+For constants $a$ and $b$, and any $X$ with finite mean and variance,
+
+$$E[aX + b] = a\,E[X] + b, \qquad \operatorname{Var}(aX + b) = a^2 \operatorname{Var}(X).$$
+:::
+
+:::proof
+For the mean, apply the law of the unconscious statistician with $g(x) = ax + b$ and split the integral:
+
+$$E[aX+b] = \int (ax + b) f(x)\,dx = a\int x f(x)\,dx + b\int f(x)\,dx = a\mu + b,$$
+
+using $\int f = 1$ for the second term.
+
+For the variance, the mean of $aX + b$ is $a\mu + b$ by the first part, so
+
+$$\operatorname{Var}(aX+b) = \int \big[(ax+b) - (a\mu+b)\big]^2 f(x)\,dx = \int a^2 (x - \mu)^2 f(x)\,dx = a^2 \operatorname{Var}(X).$$
+
+The shift $b$ cancels inside the bracket, which is the formal statement that variance measures spread and spread does not care where the distribution sits.
+:::
+
+Two consequences are worth stating separately. Variance scales by $a^2$, never by $a$, so the standard deviation scales by $|a|$ — doubling every value doubles the standard deviation and quadruples the variance. And adding a constant changes the mean but not the variance at all.
+
+:::proposition[Computational formula for the variance]{#var-formula}
+$$\operatorname{Var}(X) = E[X^2] - (E[X])^2.$$
+:::
+
+:::proof
+Expand the square inside the defining integral and use linearity:
+
+$$E[(X-\mu)^2] = E[X^2 - 2\mu X + \mu^2] = E[X^2] - 2\mu E[X] + \mu^2 = E[X^2] - 2\mu^2 + \mu^2 = E[X^2] - \mu^2. $$
+:::
+
+In practice this is almost always the easier route: $\int x^2 f(x)\,dx$ is a routine integral, whereas $\int (x-\mu)^2 f(x)\,dx$ requires expanding the square anyway. A corollary that gets used without comment: since $\operatorname{Var}(X) \ge 0$ always, $E[X^2] \ge (E[X])^2$ for every random variable with two moments.
+
+The other way of locating a distribution is by cutting it at a prescribed proportion.
+
+:::definition[Quantile]{#quantile}
+For $0 < p < 1$, the **$p$-th quantile** of $X$ is the value $x_p$ with
+
+$$F(x_p) = p, \qquad \text{equivalently} \qquad x_p = F^{-1}(p),$$
+
+whenever $F$ is continuous and strictly increasing on the relevant range. The $0.5$ quantile is the **median**; the $p$-th quantile is also called the $100p$-th **percentile**.
+:::
+
+Quantiles run the calculation backwards. A probability question supplies a value and asks for an area; a quantile question supplies an area and asks for the value that cuts it off. Confidence intervals and critical values in later chapters are quantile questions throughout, which is why the inverse direction deserves its own name and its own table column.
+
+:::example[Mean, variance and median of a cubic-tailed density]{#moments-example}
+For the density $f(x) = x^2/9$ on $[0,3]$ of the previous example, find $E[X]$, $\operatorname{Var}(X)$ and the median.
+:::
+
+:::solution
+1. The mean, by the definition:
+$$E[X] = \int_0^3 x \cdot \frac{x^2}{9}\,dx = \frac19\left[\frac{x^4}{4}\right]_0^3 = \frac{81}{36} = 2.25.$$
+2. The second moment:
+$$E[X^2] = \int_0^3 x^2 \cdot \frac{x^2}{9}\,dx = \frac19\left[\frac{x^5}{5}\right]_0^3 = \frac{243}{45} = 5.4.$$
+3. The variance, by the computational formula:
+$$\operatorname{Var}(X) = 5.4 - 2.25^2 = 5.4 - 5.0625 = 0.3375, \qquad \sigma = \sqrt{0.3375} \approx 0.581.$$
+4. The median solves $F(m) = m^3/27 = 0.5$, so $m = (13.5)^{1/3} \approx 2.381$.
+5. Sanity check: the density is largest near $x = 3$, so the distribution is left-skewed and the median should sit *above* the mean. Indeed $2.381 > 2.25$. ✓ And $\sigma \approx 0.58$ is a plausible spread for a distribution living on an interval of width $3$. ✓
+:::
+
+## The uniform distribution and the inverse-transform method
+
+<!-- section: uniform -->
+
+The simplest continuous distribution is the one with no preferences at all.
+
+:::definition[Uniform distribution]{#uniform}
+$X$ is **uniform** on $[a,b]$, written $X \sim U(a,b)$, if its density is constant on that interval:
+
+$$f(x) = \frac{1}{b-a} \ \ (a \le x \le b), \qquad f(x) = 0 \ \ \text{otherwise}.$$
+:::
+
+The constant $1/(b-a)$ is forced: a constant $c$ on an interval of length $b-a$ integrates to $c(b-a)$, and that must equal $1$. Every sub-interval of a given length inside $[a,b]$ carries the same probability, which is the precise content of "equally likely" for a continuous variable.
+
+:::proposition[Uniform cdf, mean and variance]{#uniform-moments}
+If $X \sim U(a,b)$ then
+
+$$F(x) = \frac{x-a}{b-a} \ \ (a \le x \le b), \qquad E[X] = \frac{a+b}{2}, \qquad \operatorname{Var}(X) = \frac{(b-a)^2}{12}.$$
+:::
+
+:::proof
+For $a \le x \le b$,
+
+$$F(x) = \int_a^x \frac{dt}{b-a} = \frac{x-a}{b-a},$$
+
+which rises linearly from $0$ at $a$ to $1$ at $b$. The mean is
+
+$$E[X] = \int_a^b \frac{x}{b-a}\,dx = \frac{1}{b-a}\cdot\frac{b^2-a^2}{2} = \frac{(b-a)(b+a)}{2(b-a)} = \frac{a+b}{2}.$$
+
+For the variance, first the second moment,
+
+$$E[X^2] = \int_a^b \frac{x^2}{b-a}\,dx = \frac{b^3-a^3}{3(b-a)} = \frac{a^2+ab+b^2}{3},$$
+
+using $b^3 - a^3 = (b-a)(a^2+ab+b^2)$. Then by the computational formula,
+
+$$\operatorname{Var}(X) = \frac{a^2+ab+b^2}{3} - \frac{(a+b)^2}{4} = \frac{4a^2+4ab+4b^2 - 3a^2-6ab-3b^2}{12} = \frac{a^2-2ab+b^2}{12} = \frac{(b-a)^2}{12}.$$
+:::
+
+The mean is the midpoint, as symmetry demands. The variance depends only on the *width* of the interval, not on where it sits — a restatement of the fact that shifting a distribution does not change its spread. The factor $12$ is not memorable but is worth one derivation: it gives a standard deviation of $(b-a)/\sqrt{12} \approx 0.289(b-a)$, a little under a third of the range.
+
+The uniform distribution on $[0,1]$ has a further role: it is the raw material from which every other distribution can be manufactured.
+
+:::theorem[Inverse transform]{#inverse-transform}
+Let $F$ be a continuous, strictly increasing distribution function, and let $U \sim U(0,1)$. Then the random variable
+
+$$X = F^{-1}(U)$$
+
+has distribution function $F$. Conversely, if $X$ has that distribution function, then $F(X) \sim U(0,1)$.
+:::
+
+:::proof
+For any $x$, since $F$ is strictly increasing the events $\{F^{-1}(U) \le x\}$ and $\{U \le F(x)\}$ are the same event. Hence
+
+$$P(X \le x) = P\!\left(F^{-1}(U) \le x\right) = P\big(U \le F(x)\big) = F(x),$$
+
+the last step because $U$ is uniform on $[0,1]$ and $F(x) \in [0,1]$, so $P(U \le u) = u$. That is the first claim.
+
+For the converse, put $Y = F(X)$ and take $u \in (0,1)$. Then
+
+$$P(Y \le u) = P\big(F(X) \le u\big) = P\big(X \le F^{-1}(u)\big) = F\big(F^{-1}(u)\big) = u,$$
+
+which is the distribution function of $U(0,1)$.
+:::
+
+:::intuition
+The cdf is a machine that stretches and squashes the line until the distribution is spread out evenly: wherever probability was dense, $F$ climbs steeply and pulls that region wide; where probability was thin, $F$ is flat and the region is compressed. What comes out the other side is uniform, because being uniform is what "evenly spread" means. Run the machine backwards — feed it uniform noise, apply $F^{-1}$ — and it repacks that even spread into whatever shape $F$ describes.
+
+This is how a computer draws a random exponential waiting time. It has one source of randomness, a uniform number generator, and every other distribution is that source pushed through the right inverse cdf.
+:::
+
+:::example[Simulating an exponential from a uniform]{#inverse-example}
+The exponential distribution with rate $\lambda$ has $F(x) = 1 - e^{-\lambda x}$ for $x \ge 0$. Derive the transformation that turns a $U(0,1)$ draw into an exponential draw, and apply it to $u = 0.25$ with $\lambda = 2$.
+:::
+
+:::solution
+1. Solve $F(x) = u$ for $x$: from $1 - e^{-\lambda x} = u$ we get $e^{-\lambda x} = 1 - u$, hence
+$$x = F^{-1}(u) = -\frac{\ln(1-u)}{\lambda}.$$
+2. By the theorem *Inverse transform*, $X = -\ln(1-U)/\lambda$ is $\text{Exp}(\lambda)$ when $U \sim U(0,1)$.
+3. With $u = 0.25$ and $\lambda = 2$: $x = -\ln(0.75)/2 = 0.2877/2 \approx 0.1438$.
+4. Sanity check: $u = 0.25$ is the first quartile of the uniform, so the output must be the first quartile of the exponential; the exponential median is $\ln 2 / 2 \approx 0.347$, and $0.144$ sits below it as a first quartile should. ✓
+:::
+
+:::remark
+Because $1 - U$ is also $U(0,1)$, the simulation formula is usually written $X = -\ln(U)/\lambda$, which saves one subtraction. The two are different random variables but have the same distribution, and for generating samples that is all that is asked of them.
+:::
+
+## The normal distribution
 
 <!-- section: normal -->
 
 :::definition[Normal distribution]{#normal}
-The normal (Gaussian) distribution $N(\mu, \sigma^2)$ has PDF
+$X$ is **normal** with mean $\mu$ and variance $\sigma^2$, written $X \sim N(\mu, \sigma^2)$, if its density is
 
-$$f(x) = \frac{1}{\sigma\sqrt{2\pi}}\exp\!\left(-\frac{(x-\mu)^2}{2\sigma^2}\right).$$
+$$f(x) = \frac{1}{\sigma\sqrt{2\pi}}\exp\!\left(-\frac{(x-\mu)^2}{2\sigma^2}\right), \qquad x \in \mathbb{R}.$$
+
+The case $\mu = 0$, $\sigma = 1$ is the **standard normal**, whose density is written $\varphi$ and whose distribution function is written $\Phi$:
+
+$$\varphi(z) = \frac{1}{\sqrt{2\pi}}e^{-z^2/2}, \qquad \Phi(z) = \int_{-\infty}^{z} \varphi(t)\,dt.$$
 :::
 
-The curve is symmetric about $\mu$, and its inflection points are at $\mu \pm \sigma$.
+Before anything else, the constant out front has to be justified, since the definition is only legitimate if the thing integrates to one.
 
-:::proposition[The empirical 68-95-99.7 rule]
-For $X \sim N(\mu, \sigma^2)$,
+:::theorem[The normal density is a density]{#gaussian-integral}
+$$\int_{-\infty}^{\infty} e^{-z^2/2}\,dz = \sqrt{2\pi},$$
 
-$$P(\mu-\sigma \leq X \leq \mu+\sigma) \approx 0.6827,$$
-
-$$P(\mu-2\sigma \leq X \leq \mu+2\sigma) \approx 0.9545,$$
-
-$$P(\mu-3\sigma \leq X \leq \mu+3\sigma) \approx 0.9973.$$
+and consequently $\int_{-\infty}^{\infty} f(x)\,dx = 1$ for the normal density with any $\mu$ and $\sigma > 0$.
 :::
 
-:::proposition[Linear transformations of a normal]{#standardisation}
-If $X\sim N(\mu,\sigma^2)$ then for constants $a \neq 0$ and $b$,
+:::proof
+Let $I = \int_{-\infty}^{\infty} e^{-z^2/2}\,dz$. The integrand has no elementary antiderivative, so evaluate $I^2$ instead, as a double integral over the plane:
 
-$$aX + b \sim N(a\mu + b,\ a^2\sigma^2).$$
+$$I^2 = \left(\int_{-\infty}^{\infty} e^{-x^2/2}dx\right)\left(\int_{-\infty}^{\infty} e^{-y^2/2}dy\right) = \iint_{\mathbb{R}^2} e^{-(x^2+y^2)/2}\,dx\,dy.$$
 
-Standardisation is the special case $a = 1/\sigma$, $b = -\mu/\sigma$:
+Change to polar coordinates, $x = r\cos\theta$, $y = r\sin\theta$, with area element $r\,dr\,d\theta$ and $x^2+y^2 = r^2$:
 
-$$Z = \frac{X-\mu}{\sigma} \sim N(0,1).$$
+$$I^2 = \int_0^{2\pi}\!\!\int_0^{\infty} e^{-r^2/2}\, r\,dr\,d\theta = \int_0^{2\pi} \left[-e^{-r^2/2}\right]_0^{\infty} d\theta = \int_0^{2\pi} 1\,d\theta = 2\pi.$$
+
+The extra factor of $r$ from the Jacobian is what makes the radial integral elementary; this is the whole trick. Since $I > 0$ we get $I = \sqrt{2\pi}$.
+
+For general $\mu, \sigma$, substitute $z = (x-\mu)/\sigma$, so $dx = \sigma\,dz$ and
+
+$$\int_{-\infty}^{\infty}\frac{1}{\sigma\sqrt{2\pi}}e^{-(x-\mu)^2/(2\sigma^2)}dx = \frac{1}{\sqrt{2\pi}}\int_{-\infty}^{\infty} e^{-z^2/2}\,dz = 1. $$
 :::
 
-Note that the variance scales by $a^2$, never by $a$. The idea behind standardising is to measure how many standard deviations $x$ sits above or below the mean; once expressed in those units, every normal curve looks identical, so a single table (the standard normal) serves them all. Standard normal probabilities are read from $z$-tables or computed with software. Because tables list left-tail values $\Phi(z) = P(Z \leq z)$, use $P(Z > z) = 1 - \Phi(z)$ for right tails and $\Phi(z_2) - \Phi(z_1)$ for an interval.
+The same substitution is the reason a single table suffices for every normal distribution, and it deserves to be stated as a theorem in its own right rather than used silently.
 
-:::proposition[Sums of independent normals]
-If $X\sim N(\mu_1,\sigma_1^2)$ and $Y\sim N(\mu_2,\sigma_2^2)$ are independent, then
+:::theorem[Standardisation]{#standardisation}
+Let $X \sim N(\mu, \sigma^2)$ with $\sigma > 0$, and set
 
-$$X+Y\sim N(\mu_1+\mu_2,\ \sigma_1^2+\sigma_2^2).$$
+$$Z = \frac{X - \mu}{\sigma}.$$
+
+Then $Z \sim N(0,1)$. In particular $E[Z] = 0$ and $\operatorname{Var}(Z) = 1$, and for any $a < b$,
+
+$$P(a \le X \le b) = \Phi\!\left(\frac{b-\mu}{\sigma}\right) - \Phi\!\left(\frac{a-\mu}{\sigma}\right).$$
 :::
 
-Variances add only because $X$ and $Y$ are independent; the sum stays exactly normal, not merely approximately. By induction, a sum of $n$ independent $N(\mu,\sigma^2)$ variables is $N(n\mu,\ n\sigma^2)$.
+:::proof
+Compute the distribution function of $Z$ directly. For any $z$,
 
-Why normal? By the Central Limit Theorem, the sum (or average) of many independent, identically distributed random variables with *finite variance* is approximately normal, whatever that underlying distribution is. The finite-variance hypothesis is not a technicality: the Cauchy distribution has none, and averaging Cauchy samples never approaches a normal — the average of $n$ of them is distributed exactly like a single one. With it, the theorem explains the normal's ubiquity in nature and statistics.
+$$P(Z \le z) = P\!\left(\frac{X-\mu}{\sigma} \le z\right) = P(X \le \mu + \sigma z) = \int_{-\infty}^{\mu + \sigma z} \frac{1}{\sigma\sqrt{2\pi}}e^{-(x-\mu)^2/(2\sigma^2)}\,dx.$$
+
+Substitute $t = (x-\mu)/\sigma$, so $dx = \sigma\,dt$ and the upper limit $x = \mu + \sigma z$ becomes $t = z$:
+
+$$P(Z \le z) = \int_{-\infty}^{z} \frac{1}{\sqrt{2\pi}}e^{-t^2/2}\,dt = \Phi(z).$$
+
+So $Z$ has exactly the standard normal distribution function, hence exactly the standard normal density.
+
+For the moments, note that $z\varphi(z)$ is an odd function and $\int |z|\varphi(z)\,dz = 2\int_0^\infty z\varphi(z)\,dz = \sqrt{2/\pi} < \infty$, so the mean exists and equals $0$ by symmetry. For the variance, $\operatorname{Var}(Z) = E[Z^2]$ since the mean is zero, and integrating by parts with $u = z$, $dv = z e^{-z^2/2}dz$ (so $v = -e^{-z^2/2}$):
+
+$$E[Z^2] = \frac{1}{\sqrt{2\pi}}\int_{-\infty}^{\infty} z \cdot z e^{-z^2/2}dz = \frac{1}{\sqrt{2\pi}}\left(\Big[-z e^{-z^2/2}\Big]_{-\infty}^{\infty} + \int_{-\infty}^{\infty} e^{-z^2/2}dz\right) = \frac{1}{\sqrt{2\pi}}\left(0 + \sqrt{2\pi}\right) = 1.$$
+
+The boundary term vanishes because $e^{-z^2/2}$ decays faster than $z$ grows. Finally, the interval formula is property (4) of a distribution function applied to $Z$ after dividing the inequality $a \le X \le b$ through by $\sigma > 0$.
+:::
+
+:::corollary[Mean and variance of a general normal]{#normal-moments}
+If $X \sim N(\mu,\sigma^2)$ then $E[X] = \mu$ and $\operatorname{Var}(X) = \sigma^2$.
+:::
+
+:::proof
+Write $X = \mu + \sigma Z$ with $Z \sim N(0,1)$, which is the standardisation read backwards. By the proposition *Linearity and the scaling of variance*, $E[X] = \mu + \sigma \cdot 0 = \mu$ and $\operatorname{Var}(X) = \sigma^2 \cdot 1 = \sigma^2$. The parameters were named correctly.
+:::
+
+So the two parameters really are the mean and the variance, and standardising measures a value in units of standard deviations away from the mean. That number — the **$z$-score** — is the only thing the normal table needs to know, and it is dimensionless: whether $X$ is in kilograms or in dollars, $z$ is a pure number.
+
+:::pitfall[Standardising with the variance instead of the standard deviation]
+The denominator in $Z = (X-\mu)/\sigma$ is $\sigma$, the standard deviation. Writing $N(100, 15^2)$ advertises the variance $225$ and the standard deviation $15$, and dividing by $225$ instead of $15$ is the single most common slip in this computation. Read the notation carefully: $N(\mu, \sigma^2)$ lists the *variance* in the second slot, so $N(100, 225)$ and $N(100, 15^2)$ are the same distribution and both have $\sigma = 15$.
+:::
+
+Normal tables list left-tail values $\Phi(z) = P(Z \le z)$, usually only for $z \ge 0$. Everything else is recovered from two identities.
+
+:::proposition[Symmetry identities for the standard normal]{#symmetry}
+For every $z$,
+
+$$\Phi(-z) = 1 - \Phi(z), \qquad P(Z > z) = 1 - \Phi(z), \qquad P(|Z| \le z) = 2\Phi(z) - 1 \ \ (z \ge 0).$$
+:::
+
+:::proof
+The density $\varphi$ is even, so $\varphi(-t) = \varphi(t)$. Substituting $t \mapsto -t$ in the defining integral,
+
+$$\Phi(-z) = \int_{-\infty}^{-z}\varphi(t)\,dt = \int_{z}^{\infty}\varphi(t)\,dt = 1 - \Phi(z),$$
+
+which is simultaneously the first and the second identity, since $P(Z > z) = 1 - P(Z \le z)$ by the theorem *Point probabilities vanish* removing the endpoint. For the third,
+
+$$P(|Z| \le z) = \Phi(z) - \Phi(-z) = \Phi(z) - \big(1 - \Phi(z)\big) = 2\Phi(z) - 1. $$
+:::
+
+:::recipe[Computing a normal probability from a table]{#normal-recipe}
+To find $P(a \le X \le b)$ for $X \sim N(\mu,\sigma^2)$:
+
+1. Standardise both endpoints: $z_a = (a-\mu)/\sigma$ and $z_b = (b-\mu)/\sigma$. Keep two decimal places, which is what tables are ruled for.
+2. Express the answer as a difference of left tails: $P = \Phi(z_b) - \Phi(z_a)$. A one-sided upper tail is the case $z_b = +\infty$, $\Phi(+\infty)=1$; a one-sided lower tail is $z_a = -\infty$, $\Phi(-\infty)=0$.
+3. Look up each $\Phi$. For a negative argument use $\Phi(-z) = 1 - \Phi(z)$ from the proposition *Symmetry identities for the standard normal*.
+4. Subtract, and sanity-check the result against the empirical rule: anything inside $\pm 1\sigma$ should come to roughly $0.68$, inside $\pm 2\sigma$ roughly $0.95$.
+
+To go the other way — from a probability $p$ to a value — find $z$ with $\Phi(z) = p$ and untransform: $x = \mu + z\sigma$.
+:::
+
+:::proposition[The empirical rule]{#empirical-rule}
+For $X \sim N(\mu,\sigma^2)$,
+
+$$P(\mu - \sigma \le X \le \mu + \sigma) = 0.6827, \qquad P(\mu - 2\sigma \le X \le \mu + 2\sigma) = 0.9545,$$
+
+$$P(\mu - 3\sigma \le X \le \mu + 3\sigma) = 0.9973,$$
+
+each to four decimal places.
+:::
+
+:::proof
+By the theorem *Standardisation* the event $\mu - k\sigma \le X \le \mu + k\sigma$ is the event $|Z| \le k$, whose probability is $2\Phi(k) - 1$ by the proposition *Symmetry identities for the standard normal*. Substituting the tabulated values $\Phi(1) = 0.84134$, $\Phi(2) = 0.97725$, $\Phi(3) = 0.99865$ gives $0.68269$, $0.95450$ and $0.99730$. Note that these numbers are properties of the standard normal alone; $\mu$ and $\sigma$ have disappeared, which is exactly why the rule is quotable without reference to a particular problem.
+:::
+
+:::figure[The standard normal density with the central band $|z| \le 1$ shaded: its area is $2\Phi(1)-1 = 0.6827$. The dashed lines at $\pm 2$ and $\pm 3$ cut off the wider bands, which hold $0.9545$ and $0.9973$ of the probability.]{#empirical-rule-figure}
+{
+  "type": "plot",
+  "x": [-3.9, 3.9],
+  "y": [-0.055, 0.5],
+  "xTicks": 1,
+  "yTicks": 0.1,
+  "xLabel": "z",
+  "yLabel": "density",
+  "marks": [
+    { "kind": "area", "fn": "exp(-x^2/2)/sqrt(2*pi)", "from": -1, "to": 1 },
+    { "kind": "function", "fn": "exp(-x^2/2)/sqrt(2*pi)", "tone": "accent" },
+    { "kind": "line", "through": [[-2, 0], [-2, 0.16]], "extend": false, "tone": "muted", "dashed": true },
+    { "kind": "line", "through": [[2, 0], [2, 0.16]], "extend": false, "tone": "muted", "dashed": true },
+    { "kind": "line", "through": [[-3, 0], [-3, 0.09]], "extend": false, "tone": "muted", "dashed": true },
+    { "kind": "line", "through": [[3, 0], [3, 0.09]], "extend": false, "tone": "muted", "dashed": true },
+    { "kind": "text", "at": [0, 0.155], "text": "68.27%", "tone": "result" },
+    { "kind": "text", "at": [0, 0.285], "text": "95.45% within ±2", "tone": "result" },
+    { "kind": "text", "at": [0, 0.375], "text": "99.73% within ±3", "tone": "result" },
+    { "kind": "text", "at": [-2.75, 0.2], "text": "−2σ" },
+    { "kind": "text", "at": [2.75, 0.2], "text": "+2σ" }
+  ]
+}
+:::
 
 :::intuition
-The bell curve is the shape that emerges whenever many small, independent random factors add together. Heights, measurement errors, test scores — they all pile up near the average and thin out toward the extremes. That's the normal distribution, and it appears everywhere precisely because of this 'sum of many small effects' mechanism.
+The bell curve is the shape that appears whenever many small, independent contributions are added together. Heights, measurement errors, total scores on a long test: each is a sum of many little pushes, none of them dominant, and the sum piles up near the average with thinning tails on both sides.
+
+The empirical rule is the practical version of that picture. Two standard deviations either side of the mean is the everyday range of a normal quantity; three standard deviations out, you are seeing something that happens about once in $370$ observations. That is why "a three-sigma event" is shorthand for a surprise.
 :::
 
-:::example[Normal probability using z-scores]
-Exam scores: $X\sim N(70, 10^2)$. Find $P(60 \leq X \leq 85)$.
+Normal variables are also closed under addition, which is a stronger statement than it looks — most distributions are not.
+
+:::theorem[Linear combinations of independent normals]{#normal-sums}
+If $X \sim N(\mu_1, \sigma_1^2)$ and $Y \sim N(\mu_2, \sigma_2^2)$ are **independent**, and $a, b$ are constants, then
+
+$$aX + bY \sim N\!\left(a\mu_1 + b\mu_2,\ a^2\sigma_1^2 + b^2\sigma_2^2\right).$$
+:::
+
+:::proof
+The moment generating function of $N(\mu,\sigma^2)$ is $M(t) = \exp(\mu t + \tfrac12\sigma^2 t^2)$. For independent variables the mgf of a sum is the product of the mgfs, and $M_{aX}(t) = M_X(at)$, so
+
+$$M_{aX+bY}(t) = M_X(at)\,M_Y(bt) = \exp\!\left(a\mu_1 t + \tfrac12 a^2\sigma_1^2 t^2\right)\exp\!\left(b\mu_2 t + \tfrac12 b^2\sigma_2^2 t^2\right),$$
+
+$$= \exp\!\left((a\mu_1+b\mu_2)t + \tfrac12(a^2\sigma_1^2 + b^2\sigma_2^2)t^2\right),$$
+
+which is the mgf of $N(a\mu_1+b\mu_2,\ a^2\sigma_1^2+b^2\sigma_2^2)$. Since the mgf determines the distribution when it exists in a neighbourhood of $0$, the claim follows.
+:::
+
+The hypothesis of independence is doing real work in the variance, not in the mean: means add regardless, but variances add only when the variables are uncorrelated. And note the *minus* case: $X - Y$ has variance $\sigma_1^2 + \sigma_2^2$, a sum, not a difference. Subtracting two noisy quantities makes the result noisier, never quieter.
+
+:::corollary[Sums and averages of an independent sample]{#iid-normal}
+If $X_1,\dots,X_n$ are independent $N(\mu,\sigma^2)$, then
+
+$$\sum_{i=1}^n X_i \sim N(n\mu,\ n\sigma^2), \qquad \bar{X} = \frac1n\sum_{i=1}^n X_i \sim N\!\left(\mu,\ \frac{\sigma^2}{n}\right).$$
+:::
+
+:::proof
+Induction on the theorem *Linear combinations of independent normals* with $a = b = 1$ gives the sum. The average is $1/n$ times the sum, so by the proposition *Linearity and the scaling of variance* its mean is $n\mu/n = \mu$ and its variance is $n\sigma^2/n^2 = \sigma^2/n$.
+:::
+
+The standard deviation of the average is therefore $\sigma/\sqrt{n}$, not $\sigma/n$: quadrupling the sample size halves the spread of the sample mean. That $\sqrt{n}$ is the reason large studies are expensive.
+
+:::example[An interval probability by standardising]{#normal-interval-example}
+Exam scores are $X \sim N(70, 10^2)$. Find $P(60 \le X \le 85)$ and $P(X > 85)$.
 :::
 
 :::solution
-1. standardise each endpoint: $z_1 = (60-70)/10 = -1$, $z_2 = (85-70)/10 = 1.5$.
-2. write the interval probability as a difference of left-tails: $P(-1 \leq Z \leq 1.5) = \Phi(1.5) - \Phi(-1)$.
-3. look up the values ($\Phi(-1) = 1 - \Phi(1) = 1 - 0.8413 = 0.1587$): $0.9332 - 0.1587 = 0.7745$.
-4. About $77.5\%$ of students score between $60$ and $85$.
-5. Sanity check: $[60, 85]$ spans from $\mu - \sigma$ to $\mu + 1.5\sigma$, which is a bit wider than the central $\pm 1\sigma$ band (about $68\%$) but narrower than $\pm 2\sigma$ ($95\%$), so $0.77$ sits sensibly between them ✓.
+1. Standardise the endpoints: $z_1 = (60-70)/10 = -1.00$ and $z_2 = (85-70)/10 = 1.50$.
+2. Write the interval as a difference of left tails: $P = \Phi(1.50) - \Phi(-1.00)$.
+3. Look up $\Phi(1.50) = 0.9332$; for the negative argument, $\Phi(-1.00) = 1 - \Phi(1.00) = 1 - 0.8413 = 0.1587$.
+4. Subtract: $P(60 \le X \le 85) = 0.9332 - 0.1587 = 0.7745$. About $77.5\%$ of scores fall in this range.
+5. The upper tail is the complement of the left tail at the same $z$: $P(X > 85) = 1 - \Phi(1.50) = 1 - 0.9332 = 0.0668$.
+6. Sanity check: the interval runs from $\mu - \sigma$ to $\mu + 1.5\sigma$, so it should hold more than the central $\pm 1\sigma$ band ($0.683$) and less than the $\pm 2\sigma$ band ($0.954$). It does. ✓
 :::
 
-:::example[Percentile-to-score and summing normals]
-IQ scores are $X\sim N(100, 15^2)$. (a) What score marks the $97.5$th percentile? (b) If $4$ people are chosen independently, what is the distribution of their total IQ?
+:::figure[The score distribution $N(70, 10^2)$ with the region above $85$ shaded. Its area is $1-\Phi(1.5)=0.0668$, so about $6.7\%$ of candidates score above $85$. The cut lies $1.5$ standard deviations above the mean.]{#normal-tail-figure}
+{
+  "type": "plot",
+  "x": [35, 108],
+  "y": [-0.006, 0.058],
+  "xTicks": 10,
+  "yTicks": 0.01,
+  "xLabel": "score x",
+  "yLabel": "density",
+  "marks": [
+    { "kind": "area", "fn": "exp(-(x-70)^2/200)/(10*sqrt(2*pi))", "from": 85, "to": 105 },
+    { "kind": "function", "fn": "exp(-(x-70)^2/200)/(10*sqrt(2*pi))", "tone": "accent" },
+    { "kind": "line", "through": [[70, 0], [70, 0.0399]], "extend": false, "tone": "muted", "dashed": true },
+    { "kind": "text", "at": [70, 0.0455], "text": "μ = 70" },
+    { "kind": "text", "at": [95.5, 0.0175], "text": "area = 0.0668", "tone": "result" },
+    { "kind": "text", "at": [86.5, 0.0075], "text": "85" }
+  ]
+}
+:::
+
+:::example[Percentiles and a total]{#normal-quantile-example}
+IQ scores are $X \sim N(100, 15^2)$. (a) What score marks the $97.5$th percentile? (b) Four people are chosen independently; what is the distribution of their total, and what is the probability that total exceeds $440$?
 :::
 
 :::solution
-1. Part (a) — invert the standardisation. We need $x$ with $F(x) = 0.975$, i.e. the $z$ with $\Phi(z) = 0.975$; that is $z = 1.96$. Then $x = \mu + z\sigma = 100 + 1.96 \times 15 = 100 + 29.4 = 129.4$.
-2. Part (b) — apply additivity. The sum $S = X_1 + X_2 + X_3 + X_4$ of $4$ independent $N(100, 225)$ variables is $N(4\times 100,\ 4\times 225) = N(400,\ 900)$, so the total has mean $400$ and standard deviation $\sqrt{900} = 30$.
-3. Sanity check (a): the $97.5$th percentile lies to the right of the mean, so a score above $100$ is expected — and $129.4$ is just under $2\sigma$ above, matching the $\approx 95\%$-within-$2\sigma$ rule ✓. Sanity check (b): the total's SD $30$ is $2\times 15$, not $4\times 15$, because standard deviations grow like $\sqrt{n}$, not $n$ ✓.
+1. **(a)** This is the inverse problem: find $z$ with $\Phi(z) = 0.975$. The table gives $z = 1.96$. Untransform: $x = \mu + z\sigma = 100 + 1.96 \times 15 = 129.4$.
+2. **(b)** By the corollary *Sums and averages of an independent sample*, $S = X_1 + \dots + X_4 \sim N(400, 4 \times 225) = N(400, 900)$, so $\sigma_S = 30$.
+3. Standardise: $z = (440 - 400)/30 = 1.333$, and $P(S > 440) = 1 - \Phi(1.33) = 1 - 0.9082 = 0.0918$.
+4. Sanity check (a): the $97.5$th percentile must lie above the mean, and $129.4$ is just under $2\sigma$ above it, matching the $95\%$-within-$2\sigma$ rule with $2.5\%$ left in each tail. ✓ Sanity check (b): the total's standard deviation is $2 \times 15 = 30$, not $4 \times 15 = 60$, because standard deviations grow like $\sqrt{n}$. ✓
 :::
 
-## The Exponential and Uniform Distributions
+## The exponential distribution and the Poisson process
 
 <!-- section: exponential -->
 
 :::definition[Exponential distribution]{#exponential}
-The exponential distribution $\text{Exp}(\lambda)$ has PDF
+$X$ is **exponential** with rate $\lambda > 0$, written $X \sim \text{Exp}(\lambda)$, if
 
-$$f(x) = \lambda e^{-\lambda x} \ \ (x \geq 0), \qquad f(x) = 0 \ \ (x < 0),$$
-
-with mean $1/\lambda$ and variance $1/\lambda^2$. Its CDF is $F(x) = 1 - e^{-\lambda x}$ for $x \geq 0$, so the survival probability is
-
-$$P(X > x) = e^{-\lambda x}.$$
+$$f(x) = \lambda e^{-\lambda x} \ \ (x \ge 0), \qquad f(x) = 0 \ \ (x < 0).$$
 :::
 
-The exponential models the waiting time between events in a Poisson process at rate $\lambda$, and the survival formula is the workhorse for exponential problems.
+:::proposition[Exponential cdf, survival function, mean and variance]{#exponential-moments}
+For $X \sim \text{Exp}(\lambda)$ and $x \ge 0$,
 
-:::theorem[Memorylessness of the exponential]{#memorylessness}
-For $X \sim \text{Exp}(\lambda)$ and any $s, t \geq 0$,
+$$F(x) = 1 - e^{-\lambda x}, \qquad P(X > x) = e^{-\lambda x},$$
 
-$$P(X > s+t \mid X > s) = P(X > t).$$
+$$E[X] = \frac{1}{\lambda}, \qquad \operatorname{Var}(X) = \frac{1}{\lambda^2}, \qquad \text{median} = \frac{\ln 2}{\lambda}.$$
 :::
 
 :::proof
-By the definition of conditional probability and the survival formula,
+The density integrates to $F(x) = \int_0^x \lambda e^{-\lambda t}dt = \left[-e^{-\lambda t}\right]_0^x = 1 - e^{-\lambda x}$, which also confirms the total area is $1$ by letting $x \to \infty$. The **survival function** is the complement, $P(X > x) = 1 - F(x) = e^{-\lambda x}$.
 
-$$\frac{P(X > s+t)}{P(X > s)} = \frac{e^{-\lambda(s+t)}}{e^{-\lambda s}} = e^{-\lambda t} = P(X > t). $$
+For the mean, integrate by parts with $u = x$, $dv = \lambda e^{-\lambda x}dx$:
+
+$$E[X] = \int_0^\infty x\lambda e^{-\lambda x}dx = \Big[-x e^{-\lambda x}\Big]_0^\infty + \int_0^\infty e^{-\lambda x}dx = 0 + \frac{1}{\lambda}.$$
+
+For the second moment, integrate by parts again with $u = x^2$:
+
+$$E[X^2] = \int_0^\infty x^2 \lambda e^{-\lambda x}dx = \Big[-x^2 e^{-\lambda x}\Big]_0^\infty + \int_0^\infty 2x e^{-\lambda x}dx = \frac{2}{\lambda}\int_0^\infty x \lambda e^{-\lambda x}dx = \frac{2}{\lambda}\cdot\frac{1}{\lambda} = \frac{2}{\lambda^2}.$$
+
+Hence $\operatorname{Var}(X) = 2/\lambda^2 - 1/\lambda^2 = 1/\lambda^2$ by the computational formula. The median solves $1 - e^{-\lambda m} = \tfrac12$, so $e^{-\lambda m} = \tfrac12$ and $m = \ln 2/\lambda$.
 :::
 
-The past waiting time provides no information about the future wait. This is the continuous analogue of the geometric distribution's memorylessness, and the exponential is the *only* continuous distribution with this property.
+Three things to notice. The mean is $1/\lambda$ and not $\lambda$: if events arrive at rate $3$ per hour, the average wait is $1/3$ of an hour. The standard deviation equals the mean, so the exponential is a distribution of fixed relative spread. And the median $\ln 2/\lambda \approx 0.693/\lambda$ is strictly less than the mean, the signature of a right-skewed distribution: most waits are short, but the long ones are long enough to drag the average up.
 
-:::definition[Uniform distribution]
-The uniform distribution $U(a,b)$ has PDF
+The exponential's defining structural property is that it forgets.
 
-$$f(x) = \frac{1}{b-a}, \qquad a \leq x \leq b,$$
+:::theorem[Memorylessness]{#memorylessness}
+If $X \sim \text{Exp}(\lambda)$ then for all $s, t \ge 0$,
 
-with mean $(a+b)/2$ and variance $(b-a)^2/12$.
+$$P(X > s + t \mid X > s) = P(X > t).$$
+
+Conversely, if a random variable $X$ with $P(X>0)=1$ satisfies this identity for all $s,t \ge 0$ and has a continuous survival function, then $X$ is exponential for some rate $\lambda > 0$.
 :::
 
-Every sub-interval of equal length is equally probable.
+:::proof
+For the forward direction, use the definition of conditional probability. Since $s+t \ge s$, the event $\{X > s+t\}$ is contained in $\{X > s\}$, so their intersection is $\{X > s+t\}$ and
 
-:::definition[Chi-squared distribution]
-The chi-squared distribution $\chi^2_k$ is the distribution of a sum of $k$ squared independent standard normals,
+$$P(X > s+t \mid X > s) = \frac{P(X > s+t)}{P(X > s)} = \frac{e^{-\lambda(s+t)}}{e^{-\lambda s}} = e^{-\lambda t} = P(X > t).$$
 
-$$\chi^2_k = Z_1^2 + \cdots + Z_k^2,$$
-
-with mean $k$ and variance $2k$.
+For the converse, write $G(t) = P(X > t)$. The identity says $G(s+t) = G(s)G(t)$ for all $s,t \ge 0$. A continuous function satisfying this multiplicative Cauchy equation with $G(0) = 1$ and $0 < G(t) \le 1$ must be $G(t) = e^{-\lambda t}$ for some $\lambda \ge 0$: iterating gives $G(n/m) = G(1/m)^n = G(1)^{n/m}$ for all positive rationals $n/m$, and continuity extends this to $G(t) = G(1)^t$, which is $e^{-\lambda t}$ with $\lambda = -\ln G(1)$. The hypothesis $P(X>0)=1$ rules out $\lambda = 0$ giving a degenerate variable.
 :::
-
-In particular $Z^2 \sim \chi^2_1$. The chi-squared distribution is defined only for $x \geq 0$, is right-skewed, and is used in goodness-of-fit tests and inference about variances.
-
-:::definition[t-distribution]
-The $t$-distribution with $\nu$ degrees of freedom is the distribution of the ratio
-
-$$\frac{Z}{\sqrt{V/\nu}}, \qquad Z\sim N(0,1), \quad V\sim\chi^2_\nu \ \text{independently}.$$
-:::
-
-It is bell-shaped and symmetric about $0$ but heavier-tailed than the normal (the random denominator adds extra spread), converging to $N(0,1)$ as $\nu\to\infty$.
 
 :::intuition
-Exponential: you're waiting for a bus that comes randomly at an average rate of once every $10$ minutes. The exponential distribution models how long you wait. The memoryless property says: having already waited $5$ minutes tells you nothing — the next bus is still just as far away as when you started.
+A light bulb whose lifetime is exponential does not age. Given that it has already burned for $1000$ hours, the distribution of its remaining life is exactly what it was when it was new. The bulb has no memory of the hours it has served, and no wear accumulates.
 
-Uniform: you pick a random number between $0$ and $1$. Every tiny interval of the same width has the same probability. Completely flat.
-
-Chi-squared: throw $k$ independent standard-normal darts, square each miss, and add them up — that total is $\chi^2_k$. Squaring forces it non-negative, and adding $k$ of them makes the typical size grow, which is why its mean is exactly $k$.
-
-$t$-distribution: a normal that has to *estimate* its own spread from a small sample. Because the estimated spread wobbles, the curve is a little shorter and its tails a little fatter than the true normal — and the more data you have (larger $\nu$), the closer it snaps back to $N(0,1)$.
+This is realistic for failures caused by random external shocks — a power surge, a cosmic ray — and unrealistic for anything that wears out. Human lifetimes are emphatically not memoryless, which is why survival analysis needs distributions with an increasing hazard rate. When you assume an exponential, you are assuming that the thing you are waiting for is no closer now than when you started waiting.
 :::
 
-:::example[Exponential waiting time and median]
-Calls arrive at rate $\lambda = 2$ per minute. Find $P(\text{wait} > 1\text{ min})$ and the median wait.
+:::pitfall[Rate and mean are reciprocals]
+"$\lambda = 5$ per hour" and "a mean wait of $5$ hours" are contradictory statements: the first means a mean wait of $0.2$ hours. Whenever a problem hands you an average waiting time, the rate is its reciprocal before anything else happens. Substituting an average time where the formulas want a rate produces answers that are wrong by a factor of the mean squared, and they look plausible, which is the dangerous part.
+:::
+
+The exponential is not an arbitrary choice of decaying curve — it is forced by the Poisson process, which is the standard model of events happening at random at a constant rate.
+
+:::theorem[Poisson counts and exponential gaps]{#poisson-link}
+Suppose events occur so that the number $N(t)$ of events in an interval of length $t$ is Poisson with mean $\lambda t$, and counts over disjoint intervals are independent. Then the waiting time $T$ until the first event is $\text{Exp}(\lambda)$.
+:::
+
+:::proof
+The event $\{T > t\}$ — no event has occurred by time $t$ — is exactly the event $\{N(t) = 0\}$. The Poisson probability of zero events when the mean is $\lambda t$ is
+
+$$P(N(t) = 0) = \frac{(\lambda t)^0 e^{-\lambda t}}{0!} = e^{-\lambda t}.$$
+
+So $P(T > t) = e^{-\lambda t}$, which is the exponential survival function; hence $F_T(t) = 1 - e^{-\lambda t}$ and $T \sim \text{Exp}(\lambda)$. By the independence of disjoint intervals the same argument applies from any starting point, so every inter-arrival gap is $\text{Exp}(\lambda)$ and the gaps are independent.
+:::
+
+The two descriptions are two views of one model: count the events in a fixed window and you get a Poisson; measure the gaps between them and you get exponentials. The rate $\lambda$ is the same number in both, which is why it is worth insisting that $\lambda$ is a rate — events per unit time — rather than a time.
+
+:::example[Waiting for a call]{#exponential-example}
+Calls arrive at a switchboard as a Poisson process at rate $\lambda = 2$ per minute. (a) Find the probability of waiting more than $1$ minute for the next call. (b) Find the median wait. (c) Given that no call has arrived in the first $30$ seconds, find the probability of waiting more than $1$ minute in total.
 :::
 
 :::solution
-1. survival probability. Using $P(X > x) = e^{-\lambda x}$: $P(X > 1) = e^{-2\times 1} = e^{-2} \approx 0.135$. About a $13.5\%$ chance of waiting more than $1$ minute.
-2. median $m$ solves $F(m) = 0.5$, i.e. $1 - e^{-2m} = 0.5 \Rightarrow e^{-2m} = 0.5 \Rightarrow -2m = \ln 0.5 \Rightarrow m = \dfrac{\ln 2}{2} \approx \dfrac{0.693}{2} \approx 0.347$ min.
-3. Sanity check: the mean wait is $1/\lambda = 0.5$ min, and for a right-skewed distribution the median should sit below the mean — indeed $0.347 < 0.5$ ✓.
+1. **(a)** By the proposition *Exponential cdf, survival function, mean and variance*, $P(X > 1) = e^{-2 \times 1} = e^{-2} \approx 0.1353$.
+2. **(b)** The median is $\ln 2 / \lambda = 0.6931/2 \approx 0.3466$ minutes, about $20.8$ seconds.
+3. **(c)** The question asks for $P(X > 1 \mid X > 0.5)$. By the theorem *Memorylessness* with $s = 0.5$ and $t = 0.5$, this equals $P(X > 0.5) = e^{-1} \approx 0.3679$.
+4. Sanity check: the mean wait is $1/\lambda = 0.5$ minutes, and the median $0.347$ falls below it as a right-skewed distribution requires. ✓ In (c), the conditional answer $0.368$ is larger than the unconditional $0.135$, which it must be — half a minute of waiting has already been survived. ✓
 :::
 
-:::example[Uniform probability and spread]
-Wait time at a crossing is $X\sim U(0, 10)$ seconds. Find $P(3 \leq X \leq 7)$, the mean, and the variance.
+## Distributions built from normals
+
+<!-- section: derived -->
+
+Two further distributions appear constantly in inference, and both are manufactured out of standard normals rather than postulated. Their definitions are worth seeing as constructions, because that is what explains their degrees-of-freedom parameters.
+
+:::definition[Chi-squared distribution]{#chi-squared}
+If $Z_1, \dots, Z_k$ are independent standard normals, the distribution of
+
+$$V = Z_1^2 + Z_2^2 + \cdots + Z_k^2$$
+
+is the **chi-squared distribution with $k$ degrees of freedom**, written $\chi^2_k$.
 :::
 
-:::solution
-1. the density is constant: $f(x) = \dfrac{1}{b-a} = \dfrac{1}{10-0} = 0.1$ on $[0,10]$.
-2. probability of an interval is height $\times$ width: $P(3 \leq X \leq 7) = 0.1 \times (7 - 3) = 0.4$.
-3. mean $= \dfrac{a+b}{2} = \dfrac{0+10}{2} = 5$; variance $= \dfrac{(b-a)^2}{12} = \dfrac{100}{12} \approx 8.33$.
-4. Sanity check: $[3,7]$ is $4$ of the $10$ units of width, so it should hold $4/10 = 0.4$ of the (flat) probability — matches ✓.
+:::proposition[Mean and variance of a chi-squared]{#chi-moments}
+If $V \sim \chi^2_k$ then $E[V] = k$ and $\operatorname{Var}(V) = 2k$.
 :::
 
-## Normal Approximation to the Binomial
+:::proof
+For a single standard normal, $E[Z^2] = \operatorname{Var}(Z) = 1$ by the theorem *Standardisation*. For the fourth moment, integrate by parts with $u = z^3$, $dv = ze^{-z^2/2}dz$:
+
+$$E[Z^4] = \frac{1}{\sqrt{2\pi}}\int_{-\infty}^{\infty} z^3 \cdot z e^{-z^2/2}dz = \frac{1}{\sqrt{2\pi}}\left(0 + 3\int_{-\infty}^{\infty}z^2 e^{-z^2/2}dz\right) = 3E[Z^2] = 3.$$
+
+Hence $\operatorname{Var}(Z^2) = E[Z^4] - (E[Z^2])^2 = 3 - 1 = 2$. Because the $Z_i$ are independent, their squares are independent too, so both expectations and variances add over the $k$ terms: $E[V] = k \cdot 1 = k$ and $\operatorname{Var}(V) = k \cdot 2 = 2k$.
+:::
+
+The additivity of the variance is exactly where independence is used; without it the mean would still be $k$ but the variance could be anything. Note also that $V \ge 0$ by construction, so the chi-squared lives on $[0,\infty)$ and is right-skewed, with the skew fading as $k$ grows and the sum starts to behave like a sum of many independent terms.
+
+:::proposition[The square of a standard normal]{#z-squared}
+If $Z \sim N(0,1)$ then $Z^2 \sim \chi^2_1$, and its density is
+
+$$f_{Z^2}(v) = \frac{1}{\sqrt{2\pi v}}e^{-v/2}, \qquad v > 0.$$
+:::
+
+:::proof
+The first claim is the definition with $k = 1$. For the density, compute the cdf of $V = Z^2$ for $v > 0$:
+
+$$P(V \le v) = P(-\sqrt{v} \le Z \le \sqrt{v}) = 2\Phi(\sqrt{v}) - 1,$$
+
+using the symmetry identities. Differentiate with respect to $v$, using $\Phi' = \varphi$ and the chain rule with $\frac{d}{dv}\sqrt{v} = 1/(2\sqrt{v})$:
+
+$$f_V(v) = 2\varphi(\sqrt{v})\cdot\frac{1}{2\sqrt{v}} = \frac{1}{\sqrt{2\pi}}e^{-v/2}\cdot\frac{1}{\sqrt{v}}. $$
+
+Observe that this density is unbounded as $v \to 0^+$ — another reminder that a density is under no obligation to stay below $1$, or indeed to stay finite.
+:::
+
+:::definition[Student's t-distribution]{#t-distribution}
+If $Z \sim N(0,1)$ and $V \sim \chi^2_\nu$ are **independent**, the distribution of
+
+$$T = \frac{Z}{\sqrt{V/\nu}}$$
+
+is the **$t$-distribution with $\nu$ degrees of freedom**.
+:::
+
+:::intuition
+A $t$ variable is a standard normal that has been forced to divide by an *estimate* of its own spread instead of the true one. When that estimate happens to come out small, the ratio is inflated; the estimate wobbles, and the wobble adds spread on top of the numerator's own.
+
+That is why the $t$ curve is shorter in the middle and fatter in the tails than the normal, and why using a normal critical value with a small sample produces confidence intervals that are too narrow. As $\nu$ grows the denominator concentrates at $1$ — by the law of large numbers $V/\nu \to 1$ — and the $t$ curve converges to $N(0,1)$. By $\nu = 30$ the difference is already slight; by $\nu = 100$ it is negligible for most purposes.
+:::
+
+The $t$-distribution is symmetric about $0$ and bell-shaped, but it has a mean only for $\nu > 1$ and a variance only for $\nu > 2$, where $\operatorname{Var}(T) = \nu/(\nu - 2)$. That fraction exceeds $1$ for every finite $\nu > 2$ and decreases to $1$, which is the precise sense in which the $t$ is more spread out than the normal. For $\nu = 1$ the $t$-distribution *is* the Cauchy distribution, with no mean at all.
+
+## The normal approximation to the binomial
 
 <!-- section: approximation -->
 
-:::proposition[Normal approximation to the binomial]{#normal-approximation}
-When $n$ is large and $p$ is not extreme, $X\sim\text{Binomial}(n,p)$ can be approximated by
+A binomial probability is exactly computable — it is a finite sum of terms $\binom{n}{k}p^k(1-p)^{n-k}$ — but for large $n$ that sum has many terms and the binomial coefficients are enormous. Long before computers this made approximation essential, and the approximation is still the right way to *think* about large-$n$ binomials even when a machine does the arithmetic.
 
-$$N(np,\, np(1-p)).$$
+The justification is the Central Limit Theorem. A binomial variable is a sum of $n$ independent Bernoulli indicators,
 
-The usual validity condition is $np \geq 10$ and $n(1-p) \geq 10$.
+$$X = I_1 + I_2 + \cdots + I_n, \qquad E[I_i] = p, \quad \operatorname{Var}(I_i) = p(1-p),$$
+
+so $X$ has mean $np$ and variance $np(1-p)$, and it is a sum of many independent, identically distributed terms with finite variance — precisely the situation the CLT addresses.
+
+:::theorem[Normal approximation to the binomial]{#normal-approximation}
+Let $X \sim \text{Binomial}(n,p)$ with $0 < p < 1$. Then as $n \to \infty$,
+
+$$\frac{X - np}{\sqrt{np(1-p)}} \xrightarrow{\ d\ } N(0,1),$$
+
+so that $P(X \le k) \approx \Phi\!\left(\dfrac{k - np}{\sqrt{np(1-p)}}\right)$ for large $n$.
 :::
 
-When $p$ is close to $0$ or $1$, use the Poisson approximation instead.
+:::proof
+This is the De Moivre–Laplace theorem, the special case of the Central Limit Theorem for Bernoulli summands. *Sketch, via moment generating functions.* Write $S_n = \sum_i I_i$ and let $W_n = (S_n - np)/\sqrt{np(1-p)}$. Each centred, scaled indicator $Y_i = (I_i - p)/\sqrt{np(1-p)}$ has mean $0$ and variance $1/n$, and
 
-:::note
-Continuity correction: because the binomial is discrete, $P(X = k)$ is approximated by $P(k-0.5 \leq X \leq k+0.5)$ using the normal. For $P(X \leq k)$, use
+$$M_{Y_i}(t) = 1 + \frac{t^2}{2n} + O(n^{-3/2}),$$
 
-$$P\!\left(Z \leq \frac{k+0.5-np}{\sqrt{np(1-p)}}\right).$$
+by expanding the mgf and using $E[Y_i] = 0$, $E[Y_i^2] = 1/n$. By independence the mgf of the sum is the product of $n$ such factors, so
+
+$$M_{W_n}(t) = \left(1 + \frac{t^2}{2n} + O(n^{-3/2})\right)^{n} \longrightarrow e^{t^2/2},$$
+
+which is the mgf of $N(0,1)$. Convergence of mgfs in a neighbourhood of $0$ implies convergence in distribution, and because the limiting cdf $\Phi$ is continuous the convergence of $P(W_n \le w) \to \Phi(w)$ is uniform in $w$. That last point is what licenses using the approximation at a *particular* $k$ rather than only in the limit.
+:::
+
+The theorem is an asymptotic statement, so on its own it says nothing about any fixed $n$. The working rule that fills the gap is the following.
+
+:::proposition[When the approximation is legitimate]{#validity-condition}
+The normal approximation to $\text{Binomial}(n,p)$ is accurate enough for ordinary use when
+
+$$np \ge 10 \quad \text{and} \quad n(1-p) \ge 10.$$
+:::
+
+The reasoning behind the rule is worth spelling out, because it is not arbitrary. The binomial lives on $\{0, 1, \dots, n\}$ while the normal lives on all of $\mathbb{R}$, so the approximation must be putting probability where the binomial cannot go. That error is negligible only when the bulk of the normal curve stays inside $[0,n]$ — that is, when the mean is at least a few standard deviations from each boundary. The distance from $0$ to the mean in standard deviations is
+
+$$\frac{np}{\sqrt{np(1-p)}} = \sqrt{\frac{np}{1-p}},$$
+
+and requiring $np \ge 10$ keeps this at roughly $3$ or more; the mirror-image requirement $n(1-p) \ge 10$ does the same at the upper end. The same condition controls the skewness of the binomial, which is $(1-2p)/\sqrt{np(1-p)}$ and must be small for a symmetric curve to fit. When $p$ is extreme and $np$ stays small even for large $n$, the binomial is not close to normal at all — it is close to Poisson, and that is the approximation to use instead.
+
+:::pitfall[Applying the rule to the wrong tail]
+Both conditions must hold. With $n = 200$ and $p = 0.02$ we have $n(1-p) = 196$, comfortably large, but $np = 4 < 10$, and the approximation fails: the true distribution is bunched against zero and visibly skewed. Checking only the condition that passes is how a bad approximation gets shipped.
+:::
+
+The remaining refinement repairs the mismatch between a staircase and a smooth curve.
+
+:::definition[Continuity correction]{#continuity-correction}
+When approximating a discrete integer-valued $X$ by a continuous $Y$, replace each integer boundary by the halfway point beyond it:
+
+$$P(X \le k) \approx P(Y \le k + 0.5), \qquad P(X \ge k) \approx P(Y \ge k - 0.5),$$
+
+$$P(X = k) \approx P(k - 0.5 \le Y \le k + 0.5).$$
 :::
 
 :::intuition
-For large $n$, a binomial histogram starts to look like a smooth bell curve. The normal approximation exploits this: instead of summing many binomial terms, you compute one area under the normal curve. The continuity correction patches up the gap between the 'staircase' (binomial) and the 'smooth curve' (normal): each discrete bar for $X = k$ is really a rectangle spanning $[k-0.5,\ k+0.5]$, so to catch its whole area you widen the endpoint by $0.5$ before switching to the normal.
+Draw the binomial as a histogram of bars of width $1$, the bar for $k$ spanning $[k-0.5,\ k+0.5]$. Its area is $P(X = k)$, and the total area is $1$ — the same convention a density obeys. The normal curve is then fitted *through the tops of those bars*.
+
+Now $P(X \le 5)$ is the area of the bars up to and including the one at $5$, and that block of bars ends at $5.5$, not at $5$. Cutting the normal curve at $5$ slices the last bar in half and throws away the part you were asked for. The $0.5$ is not a fudge factor; it is where the bar actually ends.
 :::
 
-:::example[Normal approximation with continuity correction]
-$X\sim\text{Binomial}(100, 0.5)$. Approximate $P(X \leq 55)$.
+:::figure[The $\text{Binomial}(20, 0.5)$ probabilities as bars of width $1$, with the approximating $N(10, 5)$ density drawn over them. The bars for $k \le 12$ sum to $0.8684$; the normal area up to $12.5$ is $0.8682$, while cutting at $12$ gives only $0.8145$ — the missing half-bar is the whole reason for the continuity correction.]{#binomial-normal-figure}
+{
+  "type": "plot",
+  "x": [0.5, 19.5],
+  "y": [-0.022, 0.235],
+  "xTicks": 2,
+  "yTicks": 0.05,
+  "xLabel": "k",
+  "yLabel": "probability",
+  "marks": [
+    { "kind": "bars", "bars": [
+      [1.5, 2.5, 0.0002], [2.5, 3.5, 0.0011], [3.5, 4.5, 0.0046], [4.5, 5.5, 0.0148],
+      [5.5, 6.5, 0.037], [6.5, 7.5, 0.0739], [7.5, 8.5, 0.1201], [8.5, 9.5, 0.1602],
+      [9.5, 10.5, 0.1762], [10.5, 11.5, 0.1602], [11.5, 12.5, 0.1201], [12.5, 13.5, 0.0739],
+      [13.5, 14.5, 0.037], [14.5, 15.5, 0.0148], [15.5, 16.5, 0.0046], [16.5, 17.5, 0.0011],
+      [17.5, 18.5, 0.0002]
+    ] },
+    { "kind": "function", "fn": "exp(-(x-10)^2/10)/sqrt(10*pi)", "tone": "result" },
+    { "kind": "line", "through": [[12.5, 0], [12.5, 0.135]], "extend": false, "tone": "alt", "dashed": true },
+    { "kind": "text", "at": [15.9, 0.152], "text": "cut at 12.5", "tone": "alt" },
+    { "kind": "text", "at": [4.6, 0.196], "text": "N(10, 5) density", "tone": "result" }
+  ]
+}
+:::
+
+:::recipe[Normal approximation with continuity correction]{#approximation-recipe}
+To approximate a binomial probability:
+
+1. Compute $np$ and $n(1-p)$ and check both are at least $10$. If not, stop and use the exact binomial or a Poisson approximation.
+2. Set $\mu = np$ and $\sigma = \sqrt{np(1-p)}$.
+3. Rewrite the event in terms of integer boundaries, then shift each boundary by $0.5$ *outwards from the region you are keeping*: a $\le k$ becomes $\le k + 0.5$, a $\ge k$ becomes $\ge k - 0.5$, and a strict $< k$ becomes $\le k - 0.5$.
+4. Standardise the shifted boundaries and evaluate with $\Phi$.
+5. Check the answer against intuition: a boundary above the mean must give a cumulative probability above $0.5$.
+:::
+
+:::example[Exact against approximate]{#approximation-example}
+Let $X \sim \text{Binomial}(20, 0.5)$. Approximate $P(X \le 12)$ with and without the continuity correction, and compare with the exact value $0.8684$.
 :::
 
 :::solution
-1. check validity. $np = 100 \times 0.5 = 50 \geq 10$ and $n(1-p) = 50 \geq 10$, so the normal approximation is appropriate.
-2. match the normal. Use $Y\sim N(np,\ np(1-p)) = N(50,\ 25)$, so $\mu = 50$ and $\sigma = \sqrt{25} = 5$.
-3. apply the continuity correction. Since $X \leq 55$ includes the whole bar at $55$, extend the boundary to $55.5$: $P(X \leq 55) \approx P(Y \leq 55.5)$.
-4. standardise and read the table: $z = \dfrac{55.5 - 50}{5} = 1.1$, so $P(Y \leq 55.5) = \Phi(1.1) \approx 0.8643$.
-5. Sanity check: $55$ lies just above the mean $50$, so the accumulated probability should be a bit more than $0.5$ — and $0.86$ is above $0.5$ as expected ✓. (Skipping the correction would give $z = 1.0$, $\Phi(1.0) = 0.8413$; the $0.5$ nudge accounts for the missing half-bar.)
+1. Check validity: $np = 10 \ge 10$ and $n(1-p) = 10 \ge 10$. The rule is satisfied, though only just.
+2. Match the normal: $\mu = 10$, $\sigma^2 = 20 \times 0.5 \times 0.5 = 5$, $\sigma = \sqrt5 \approx 2.2361$.
+3. With the correction, the block of bars up to $k = 12$ ends at $12.5$:
+$$z = \frac{12.5 - 10}{2.2361} = 1.118, \qquad P \approx \Phi(1.118) = 0.8682.$$
+4. Without the correction, cutting at $12$ gives $z = 2/2.2361 = 0.894$ and $\Phi(0.894) = 0.8145$.
+5. Compare: the corrected value $0.8682$ is within $0.0002$ of the exact $0.8684$; the uncorrected value is off by $0.054$. The correction reduces the error by a factor of about $270$.
+6. Sanity check: $12$ lies above the mean $10$, so the cumulative probability must exceed $0.5$; both approximations do, but only one is usable. ✓
+:::
+
+:::example[A large-sample approximation]{#approximation-example-2}
+A fair coin is tossed $100$ times. Approximate the probability of at most $55$ heads.
+:::
+
+:::solution
+1. Here $X \sim \text{Binomial}(100, 0.5)$, with $np = n(1-p) = 50 \ge 10$. ✓
+2. $\mu = 50$ and $\sigma = \sqrt{100 \times 0.5 \times 0.5} = \sqrt{25} = 5$.
+3. Apply the correction: $P(X \le 55) \approx P(Y \le 55.5)$ where $Y \sim N(50,25)$.
+4. Standardise: $z = (55.5 - 50)/5 = 1.10$, so the answer is $\Phi(1.10) = 0.8643$.
+5. Sanity check: the exact binomial value is $0.8644$, so the approximation is good to four decimal places — as expected, since $n$ is five times larger here than in the previous example. ✓
+:::
+
+:::summary
+The load-bearing results of this chapter, with the hypotheses they need.
+
+- **Point probabilities vanish.** If $F$ is continuous at $c$ then $P(X = c) = 0$, so endpoints may be moved in or out of an interval freely. Fails for discrete variables and at jumps of $F$.
+- **Density and distribution.** $F(x) = \int_{-\infty}^x f$, and $F'(x) = f(x)$ *at points where $f$ is continuous*. A density is non-negative with total integral $1$; it is not a probability and may exceed $1$ or be unbounded.
+- **Moments as integrals.** $E[X] = \int x f(x)dx$ and $\operatorname{Var}(X) = E[X^2] - (E[X])^2$, each requiring the corresponding integral to converge absolutely — the Cauchy distribution has neither. $E[aX+b] = aE[X]+b$ and $\operatorname{Var}(aX+b) = a^2\operatorname{Var}(X)$ for any $X$ with the moments in question.
+- **Uniform.** $U(a,b)$ has $F(x) = (x-a)/(b-a)$, mean $(a+b)/2$, variance $(b-a)^2/12$.
+- **Inverse transform.** If $F$ is continuous and strictly increasing and $U \sim U(0,1)$, then $F^{-1}(U)$ has distribution function $F$, and $F(X) \sim U(0,1)$. Strict monotonicity is what makes $F^{-1}$ well defined.
+- **Standardisation.** For $X \sim N(\mu,\sigma^2)$ with $\sigma > 0$, $Z = (X-\mu)/\sigma$ is exactly $N(0,1)$; no approximation and no large sample is involved. Hence $E[X] = \mu$, $\operatorname{Var}(X) = \sigma^2$, and $P(a \le X \le b) = \Phi(z_b) - \Phi(z_a)$.
+- **Symmetry.** $\Phi(-z) = 1 - \Phi(z)$ and $P(|Z| \le z) = 2\Phi(z)-1$, giving the empirical rule $0.6827 / 0.9545 / 0.9973$ at one, two and three standard deviations.
+- **Sums of normals.** $aX + bY \sim N(a\mu_1+b\mu_2,\ a^2\sigma_1^2+b^2\sigma_2^2)$ requires **independence** — for the variance, not the mean. Consequently $\bar X \sim N(\mu, \sigma^2/n)$ for an independent normal sample, so the spread of an average falls like $\sigma/\sqrt n$.
+- **Exponential.** $F(x) = 1-e^{-\lambda x}$, mean $1/\lambda$, variance $1/\lambda^2$, median $\ln 2/\lambda$. Memorylessness, $P(X > s+t \mid X > s) = P(X>t)$, characterises the exponential among continuous distributions, and the exponential is exactly the inter-arrival law of a Poisson process of rate $\lambda$.
+- **Derived distributions.** A sum of $k$ independent squared standard normals is $\chi^2_k$, with mean $k$ and variance $2k$; $Z/\sqrt{V/\nu}$ with $Z$ and $V \sim \chi^2_\nu$ **independent** is $t_\nu$, symmetric, heavier-tailed than the normal, with variance $\nu/(\nu-2)$ for $\nu > 2$.
+- **Normal approximation to the binomial.** $\text{Binomial}(n,p) \approx N(np,\ np(1-p))$ when $np \ge 10$ *and* $n(1-p) \ge 10$, with the continuity correction shifting every integer boundary by $0.5$ outwards. When $np$ stays small, use the Poisson approximation instead.
 :::
 
 ## Common Mistakes
 
-- Computing $P(X = c)$ for a continuous random variable. Point probabilities are always zero. Always specify an interval.
-- Reading the PDF height as a probability. $f(x)$ can exceed $1$; it is a density, not a probability.
-- Applying the normal approximation when $np < 10$ or $n(1-p) < 10$. Use exact binomial or Poisson instead.
-- Forgetting the $z$-table gives left-tail probabilities. For $P(X > x)$, use $1 - \Phi(z)$. For $P(a < X < b)$, use $\Phi(z_b) - \Phi(z_a)$.
-- Confusing the rate $\lambda$ with the mean in the exponential distribution. Mean $= 1/\lambda$, not $\lambda$.
+- **Asking for $P(X = c)$ when $X$ is continuous.** The answer is always $0$. What is wanted is an interval, and the interval has to be supplied before the question has content.
+- **Reading the density height as a probability.** $f(x)$ is probability per unit length; it can exceed $1$ (the $U(0,\tfrac12)$ density equals $2$) and can be unbounded (the $\chi^2_1$ density blows up at the origin). Only areas are probabilities.
+- **Dividing by the variance when standardising.** $Z = (X-\mu)/\sigma$ uses the standard deviation. In $N(100, 15^2)$ the second parameter is the variance $225$ and $\sigma = 15$.
+- **Forgetting that the table gives left tails.** For an upper tail use $1 - \Phi(z)$; for a negative argument use $\Phi(-z) = 1 - \Phi(z)$; for an interval subtract the two left tails.
+- **Confusing the exponential rate with the mean.** The mean is $1/\lambda$. A rate of $4$ per hour is a mean wait of $15$ minutes, not $4$ hours.
+- **Adding standard deviations instead of variances.** For independent variables, *variances* add. The standard deviation of a sum of $n$ independent copies is $\sigma\sqrt n$, not $n\sigma$ — and the difference $X - Y$ has variance $\sigma_1^2 + \sigma_2^2$, not the difference of variances.
+- **Dropping the continuity correction.** For $\text{Binomial}(20,0.5)$ it is the difference between $0.8682$ and $0.8145$ against an exact $0.8684$. The smaller $n$ is, the more it matters.
+- **Checking only one half of the validity condition.** Both $np \ge 10$ and $n(1-p) \ge 10$ are required; with $n=200$, $p=0.02$ the second holds and the first does not, and the approximation is useless.

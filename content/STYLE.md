@@ -97,7 +97,40 @@ the example actually uses, so the picture cannot drift from the prose.
 **Mark kinds.** `function` (an expression in `x`), `path` (explicit points),
 `line` (through two points, extended unless `"extend": false`), `point`,
 `arrow`, `area` (under a curve, or between two), `bars` (histograms), and
-`text` (a label at a data coordinate). Most take `label`, `dashed` and `tone`.
+`text` (a label at a data coordinate). Most take `label`, `dashed` and `tone` —
+`bars` included, so two distributions can share one axis (an observed histogram
+in `accent` against the expected one in `result`). Every bar fill is
+translucent, so the overlap reads as its own colour instead of one series
+hiding the other.
+
+Three more marks cover what those cannot draw:
+
+- `field` — a slope field, `{ "kind": "field", "slope": "x - y", "xStep": 0.6,
+  "yStep": 0.6 }`. The slope is an expression in **`x` and `y`** — the
+  right-hand side of $y' = f(x,y)$ — and a short segment of that gradient is
+  drawn centred on every grid point. Every segment is the same length on
+  screen, so the field shows direction and never magnitude. Steps default to a
+  tenth of each range; leave a margin between the grid and the frame, since a
+  segment is centred on its point and `content:figures` rejects one that hangs
+  over the edge. Draw a field `muted` and put the solution on top of it in
+  `result`, or the solution disappears into the texture.
+- `polar` — a curve $r = f(\theta)$, `{ "kind": "polar", "r": "sin(3*t)",
+  "from": 0, "to": 3.14159 }`. The angle is **`t`**, not `x`, and the range is
+  in radians. A negative `r` plots on the opposite ray, exactly as by hand, so
+  a rose or a limaçon with an inner loop comes out right without special
+  handling. Set `"equalAspect": true`: a rose drawn on unequal axes is an
+  ellipse of a rose.
+- `region` — a shaded polygon, `{ "kind": "region", "points": [[0,0], ...] }`.
+  Use it for what `area` cannot reach: a type II region, a polar sector, any
+  area not lying under a function of `x`. Sample a curved boundary into
+  points; a dozen is usually enough. The `label` sits at the centroid.
+
+**Leader lines.** A `text` mark takes an optional `"leaderTo": [x, y]`, which
+draws a thin muted line from the label to the thing it names. Use it whenever a
+label has to sit in clear space to avoid a collision — the alternative, a label
+floating near three candidate marks, makes the reader guess. The leader starts
+outside its own text, so it never strikes through the label, and
+`content:figures` treats it as a drawn line like any other.
 
 **Colour by role, not by taste.** Every mark takes a `tone`:
 

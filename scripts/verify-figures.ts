@@ -22,7 +22,11 @@ import {
   computeLayout,
   estimateTextBox,
   evaluateExpression,
+  fieldSegments,
+  leaderGeometry,
   parseFigureSpec,
+  polygonCentroid,
+  samplePolar,
   sampleFunction,
   FIGURE_PAD,
   type FigureSpec,
@@ -136,6 +140,60 @@ function checkFigure(where: string, caption: string | undefined, spec: FigureSpe
         }
         break;
 
+      case "polar": {
+        const pts = samplePolar(mark.r, mark.from, mark.to);
+        if (pts.length < 2) {
+          fail(`polar curve "r = ${mark.r}" produces no drawable points on [${mark.from}, ${mark.to}]`);
+          break;
+        }
+        const outside = pts.filter(([x, y]) => x < spec.x[0] || x > spec.x[1] || y < spec.y[0] || y > spec.y[1]).length;
+        if (outside > pts.length / 4) {
+          note(`polar curve "r = ${mark.r}" leaves the frame for ${outside} of ${pts.length} samples — widen the range`);
+        }
+        if (mark.label) {
+          const end = pts[pts.length - 1];
+          addLabel(mark.label, L.sx(end[0]) - 6, L.sy(end[1]) - 10, "end");
+        }
+        break;
+      }
+
+      case "field": {
+        if ((mark.xStep !== undefined && mark.xStep <= 0) || (mark.yStep !== undefined && mark.yStep <= 0)) {
+          fail(`field "${mark.slope}" has a non-positive grid step`);
+          break;
+        }
+        const segs = fieldSegments(mark, spec, L);
+        if (segs.length === 0) {
+          fail(`field "${mark.slope}" draws no segments — the slope never evaluates on this grid, or the steps are larger than the range`);
+        }
+        // A segment is centred on its grid point, so half of it can hang over
+        // the frame edge even though the point itself is inside.
+        for (const [x1, y1, x2, y2] of segs) {
+          if (!inFrameX(x1) || !inFrameX(x2) || !inFrameY(y1) || !inFrameY(y2)) {
+            fail(`field "${mark.slope}" draws a segment over the frame edge — inset the range or reduce the step`);
+            break;
+          }
+        }
+        break;
+      }
+
+      case "region": {
+        if (mark.points.length < 3) {
+          fail(`region has ${mark.points.length} point(s) — a region needs at least three`);
+          break;
+        }
+        for (const p of mark.points) {
+          if (!inFrameX(L.sx(p[0])) || !inFrameY(L.sy(p[1]))) {
+            fail(`region vertex (${p.join(", ")}) lies outside the plotted range`);
+          }
+        }
+        if (mark.label) {
+          const c = polygonCentroid(mark.points);
+          addLabel(mark.label, L.sx(c[0]), L.sy(c[1]));
+        }
+        break;
+      }
+
       case "area":
         for (const expr of [mark.fn, mark.below]) {
           if (expr && ![mark.from, (mark.from + mark.to) / 2, mark.to].some((x) => Number.isFinite(evaluateExpression(expr, x)))) {
@@ -157,6 +215,24 @@ function checkFigure(where: string, caption: string | undefined, spec: FigureSpe
       }
     } else if (mark.kind === "arrow") {
       segments.push([L.sx(mark.from[0]), L.sy(mark.from[1]), L.sx(mark.to[0]), L.sy(mark.to[1])]);
+    } else if (mark.kind === "polar") {
+      const pts = samplePolar(mark.r, mark.from, mark.to, 180);
+      for (let i = 0; i + 1 < pts.length; i++) {
+        segments.push([L.sx(pts[i][0]), L.sy(pts[i][1]), L.sx(pts[i + 1][0]), L.sy(pts[i + 1][1])]);
+      }
+    } else if (mark.kind === "region") {
+      // The boundary is a drawn edge; the wash inside it is not, so a label may
+      // sit in the region but must not straddle its outline.
+      for (let i = 0; i < mark.points.length; i++) {
+        const a = mark.points[i];
+        const b = mark.points[(i + 1) % mark.points.length];
+        segments.push([L.sx(a[0]), L.sy(a[1]), L.sx(b[0]), L.sy(b[1])]);
+      }
+    } else if (mark.kind === "text") {
+      // A leader starts outside its own label, so it is checked against every
+      // OTHER label exactly like any other line.
+      const leader = leaderGeometry(mark, L);
+      if (leader) segments.push([leader.x1, leader.y1, leader.x2, leader.y2]);
     } else if (mark.kind === "line") {
       const [[ax, ay], [bx, by]] = mark.through;
       let p1 = [ax, ay];

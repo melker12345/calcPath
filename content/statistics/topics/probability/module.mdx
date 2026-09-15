@@ -4,226 +4,921 @@ title: Foundations of Probability
 
 # Foundations of Probability
 
-Probability quantifies uncertainty. It assigns a number between $0$ and $1$ to each possible outcome, where $0$ means impossible and $1$ means certain.
+Every other chapter in this subject rests on this one. An estimator is a random variable, a confidence interval is a statement about a probability, a $p$-value *is* a probability, and a regression model is a claim about a conditional distribution. None of those sentences means anything until "probability" has been given a precise definition, so that is what this chapter does.
 
-Probability theory gives us the language to reason about randomness, and it is the foundation that all of statistical inference is built upon.
+The definition is surprisingly economical. Andrey Kolmogorov's 1933 formulation asks for only three things: probabilities are non-negative, the certain event has probability $1$, and the probability of a union of non-overlapping events is the sum of their probabilities. That is the entire foundation. Everything else in this chapter — the complement rule, the addition rule, inclusion–exclusion, the law of total probability, Bayes' theorem — is *derived*, and this chapter derives them rather than asserting them. Where a rule needs a hypothesis, the proof is where you see the hypothesis being used, which is the only reliable way to remember that it is there.
 
-We start with basic rules, then build up to conditional probability, independence, and Bayes' theorem — tools used in everything from medical testing to spam filtering.
+Two ideas do more work than the rest. The first is **conditional probability**, which is not a formula to memorise but a definition: it says what it means to recompute a probability after learning something. The second is **independence**, which says what it means to learn nothing. Almost every modelling assumption you will make in later chapters — random sampling, independent errors, independent trials — is an independence assumption in disguise, and almost every catastrophic failure of a statistical model is an independence assumption that was false.
 
-## Basic Probability Rules
+The chapter closes on Bayes' theorem and the base-rate effect, worked with real numbers on a medical test. The answer there is one that most readers, including most doctors in the studies that asked them, get badly wrong. It is worth arriving at it by proof rather than by intuition, which is the general argument for this chapter.
+
+## Sample spaces, events, and the axioms
 
 <!-- section: basic -->
 
-:::definition[Sample space and event]
-The sample space $S$ is the set of all possible outcomes of an experiment. An event $A$ is any subset of $S$ — a collection of outcomes we care about.
+A probability model has three ingredients: a set of things that could happen, a collection of statements about what happened, and a rule assigning numbers to those statements. We take them in that order.
+
+:::definition[Experiment, outcome, sample space]{#sample-space-definition}
+An **experiment** is any procedure whose result is not determined in advance. Each result it can produce is an **outcome**, and the set of all possible outcomes is the **sample space**, written $S$ (or $\Omega$).
+
+The outcomes in $S$ must be **mutually exclusive** — exactly one of them occurs — and **exhaustive**: no other result is possible.
 :::
 
-:::definition[The probability axioms]{#probability-axioms}
-A probability $P$ assigns a number to each event so that
+The two conditions are what make $S$ a usable bookkeeping device, and they are a modelling choice rather than a fact about the world. For a single roll of a die, $S = \{1,2,3,4,5,6\}$. For two rolls, the outcomes are ordered pairs and $S = \{(i,j) : 1 \le i,j \le 6\}$, which has $36$ elements. For "the number of emails arriving today", $S = \{0,1,2,\ldots\}$ is countably infinite. For "the time until a component fails", $S = [0,\infty)$ is uncountable, and that case is genuinely harder — the last part of this section says why.
 
-- $0 \leq P(A) \leq 1$ (probabilities are fractions of certainty),
-- $P(S) = 1$ (some outcome must occur), and
-- for **mutually exclusive** events (no shared outcomes),
+:::definition[Event]{#event-definition}
+An **event** is a subset $A \subseteq S$. The event $A$ **occurs** when the outcome that actually happened is an element of $A$.
 
-$$P(A_1 \cup A_2 \cup \cdots) = P(A_1)+P(A_2)+\cdots.$$
+An event containing exactly one outcome is an **elementary** or **simple** event. $S$ itself is the **certain** event and $\varnothing$ the **impossible** event.
 :::
 
-Every other rule below is derived from these three.
+Because events are sets, the logical operations you want to perform on statements are already available as set operations. This dictionary is worth learning once rather than re-deriving each time.
 
-For equally likely outcomes,
+:::notation[Events as sets]
+For events $A$ and $B$ in a sample space $S$:
 
-$$P(A) = \frac{|A|}{|S|},$$
+- $A \cup B$ is "$A$ **or** $B$" (inclusive: at least one occurs);
+- $A \cap B$, often written $AB$, is "$A$ **and** $B$" (both occur);
+- $A^c$, also written $\bar{A}$ or $A'$, is "**not** $A$" (the complement of $A$ in $S$);
+- $A \setminus B = A \cap B^c$ is "$A$ **but not** $B$";
+- $A \subseteq B$ means "$A$ **implies** $B$": whenever $A$ occurs, so does $B$;
+- $A \cap B = \varnothing$ means $A$ and $B$ are **mutually exclusive** (disjoint): they cannot both occur.
 
-the number of outcomes in $A$ divided by the total number of outcomes. This shortcut applies *only* when the outcomes are genuinely equally likely (a fair die, a well-shuffled deck); it is wrong for, say, the sum of two dice, where the outcomes $2, 3, \ldots, 12$ are not equally likely.
-
-:::proposition[Complement and addition rules]
-For any events $A$ and $B$,
-
-$$P(A^c) = 1 - P(A), \qquad P(A \cup B) = P(A) + P(B) - P(A \cap B).$$
+De Morgan's laws transfer between them: $(A \cup B)^c = A^c \cap B^c$ and $(A \cap B)^c = A^c \cup B^c$. In words, "not (A or B)" is "neither", and "not (A and B)" is "at least one fails".
 :::
 
-The complement rule is often the easier route: compute what you do not want and subtract. In the addition rule, subtracting the intersection corrects the double-counting; for mutually exclusive events there is nothing to subtract and $P(A \cup B) = P(A) + P(B)$.
-
-:::intuition
-Probability is like assigning percentages to outcomes that must all add up to 100%. If 30% chance of rain, 70% chance of no rain. The addition rule corrects for double-counting: if 40% like cats, 30% like dogs, 10% like both, then cats or dogs = 40+30-10=60%.
-:::
-
-:::example[Addition rule with overlap]
-One card is drawn from a standard $52$-card deck. Find $P(\text{heart or face card})$, where a face card is a Jack, Queen, or King.
+:::example[Events from two dice]
+A red die and a blue die are rolled, so $S = \{(i,j) : 1 \le i, j \le 6\}$ with $|S| = 36$. Let $A$ be "the sum is $7$", $B$ be "the red die shows $4$", and $C$ be "both dice show the same face". Write each as a set, and describe $A \cap B$, $A \cap C$ and $B \cup C$.
 :::
 
 :::solution
-1. $P(\text{heart}) = 13/52$, since there are $13$ hearts.
-2. $P(\text{face}) = 12/52$, since there are $3$ face cards in each of the $4$ suits, $3 \times 4 = 12$.
-3. The overlap "heart AND face card" is the Jack, Queen, and King of hearts, so $P(\text{heart} \cap \text{face}) = 3/52$.
-4. Addition rule: $P = \dfrac{13}{52} + \dfrac{12}{52} - \dfrac{3}{52} = \dfrac{22}{52} = \dfrac{11}{26} \approx 0.423$.
-5. Sanity check: without subtracting the overlap we'd get $25/52$, double-counting the $3$ cards that are both — the intersection must be removed exactly once ✓.
+$A = \{(1,6),(2,5),(3,4),(4,3),(5,2),(6,1)\}$, so $|A| = 6$.
+
+$B = \{(4,1),(4,2),(4,3),(4,4),(4,5),(4,6)\}$, so $|B| = 6$.
+
+$C = \{(1,1),(2,2),(3,3),(4,4),(5,5),(6,6)\}$, so $|C| = 6$.
+
+$A \cap B = \{(4,3)\}$: the sum is $7$ and the red die is $4$, which pins the blue die to $3$. One outcome.
+
+$A \cap C = \varnothing$: a double has an even sum, so it can never total $7$. The events "sum is $7$" and "doubles" are mutually exclusive.
+
+$B \cup C$ contains the six outcomes of $B$ and the six of $C$, but $(4,4)$ lies in both, so $|B \cup C| = 6 + 6 - 1 = 11$. That correction is the addition rule in miniature, and it is proved below.
 :::
 
-## Conditional Probability and Independence
+Now the numbers. Kolmogorov's axioms say what a probability *is* by listing what it must satisfy, and nothing else. Note what is absent: no mention of frequencies, of symmetry, of degrees of belief. Those are interpretations, and the mathematics is the same under all of them.
 
-<!-- section: conditional -->
+:::definition[The Kolmogorov axioms]{#probability-axioms}
+A **probability measure** on a sample space $S$ is a function $P$ assigning a real number $P(A)$ to each event $A$, such that
 
-Before the formula, the intuition: conditioning means we've been told $B$ happened, so we throw away every outcome outside $B$ and treat $B$ as our new, smaller sample space.
+1. **(Non-negativity)** $P(A) \ge 0$ for every event $A$;
+2. **(Normalisation)** $P(S) = 1$;
+3. **(Countable additivity)** if $A_1, A_2, A_3, \ldots$ are pairwise mutually exclusive — meaning $A_i \cap A_j = \varnothing$ whenever $i \neq j$ — then
 
-:::definition[Conditional probability]{#conditional-probability}
-For events $A$ and $B$ with $P(B) > 0$, the conditional probability of $A$ given $B$ is
+$$P\!\left(\bigcup_{i=1}^{\infty} A_i\right) = \sum_{i=1}^{\infty} P(A_i).$$
 
-$$P(A|B) = \frac{P(A \cap B)}{P(B)}.$$
+The triple $(S, \mathcal{F}, P)$, where $\mathcal{F}$ is the collection of events, is a **probability space**.
 :::
 
-The ratio measures how much of that shrunken world is also in $A$. It is defined only when $P(B) > 0$ — you cannot condition on an event that never happens.
+Three remarks on what the axioms do and do not say. First, the upper bound $P(A) \le 1$ is *not* an axiom: it is a theorem, proved below from the three axioms. Stating it as a fourth axiom is a common but redundant presentation. Second, axiom 3 requires the events to be pairwise disjoint; applied to overlapping events it is false, and the addition rule exists precisely to repair it. Third, additivity is stated for *countably* many events rather than finitely many, which is a genuine strengthening and is what makes limits behave.
 
-:::definition[Independence]{#independence}
-Events $A$ and $B$ are independent when
-
-$$P(A \cap B) = P(A) \cdot P(B).$$
+:::note[Why not every subset is an event]
+For a finite or countable $S$ you may take $\mathcal{F}$ to be all subsets of $S$, and nothing goes wrong. For $S = [0,1]$ you cannot: there is no way to assign a length to *every* subset of the line while keeping countable additivity and translation invariance, a fact established by Vitali's construction of a non-measurable set. The fix is to restrict $\mathcal{F}$ to a **$\sigma$-algebra** — a collection of subsets containing $S$ and closed under complements and countable unions — and to define $P$ only there. Every set you can describe in this course is in it. We will not mention $\mathcal{F}$ again, but it is the reason "event" is a technical term rather than a synonym for "subset".
 :::
 
-When $P(B) > 0$ this is the same as saying $P(A|B) = P(A)$: knowing $B$ gives no information about $A$. The product form is the one to state, because it stays valid even when $P(B) = 0$ and it makes the roles of $A$ and $B$ interchangeable. Independence is a property you must *verify* or *justify from the setup* (like separate coin flips) — never assume it.
+The first consequences are immediate, and they show the machine working.
 
-For dependent events (e.g. cards drawn without replacement), rearrange the definition of conditional probability into the multiplication rule.
+:::proposition[The impossible event and finite additivity]{#finite-additivity}
+For any probability measure $P$:
 
-:::proposition[Multiplication rule]
-If $P(A) > 0$, then
-
-$$P(A \cap B) = P(A) \cdot P(B|A).$$
-:::
-
-:::intuition
-Conditional probability is "narrowing the world". $P(\text{rain}\mid\text{cloudy})$ asks: among cloudy days only, what fraction had rain? You ignore all the sunny days entirely. Independence means the world doesn't narrow at all — coin flips have no memory, so hearing "the last three were heads" tells you nothing about the next flip; it's still $1/2$.
-:::
-
-:::example[Cards without replacement]
-Draw two cards from a standard deck without replacement. Find $P(\text{both hearts})$.
-:::
-
-:::solution
-1. Let $A$ = "first is a heart", $B$ = "second is a heart". These are *dependent*: taking a heart changes what's left.
-2. $P(A) = 13/52 = 1/4$, since $13$ of the $52$ cards are hearts.
-3. Given the first card was a heart, $12$ hearts remain among $51$ cards, so $P(B|A) = 12/51$.
-4. Multiplication rule: $P(A \cap B) = P(A)\cdot P(B|A) = \dfrac{13}{52}\cdot\dfrac{12}{51} = \dfrac{156}{2652} \approx 0.059$.
-5. Sanity check: with replacement the two draws would be independent and give $(1/4)^2 = 0.0625$; removing a heart makes the second heart slightly less likely, so $0.059 < 0.0625$ as expected.
-:::
-
-## Bayes' Theorem
-
-<!-- section: bayes -->
-
-Often we know $P(A|B)$ but actually want $P(B|A)$ — the conditioning points the wrong way. A test tells us $P(\text{positive}|\text{disease})$, but a patient cares about $P(\text{disease}|\text{positive})$. Bayes' theorem flips the direction of conditioning.
-
-:::theorem[Bayes' theorem]{#bayes-theorem}
-If $P(A) > 0$ and $P(B) > 0$, then
-
-$$P(B|A) = \frac{P(A|B) \cdot P(B)}{P(A)}.$$
+1. $P(\varnothing) = 0$;
+2. if $A_1, \ldots, A_n$ are pairwise mutually exclusive, then $P(A_1 \cup \cdots \cup A_n) = P(A_1) + \cdots + P(A_n)$.
 :::
 
 :::proof
-Write $P(A \cap B)$ two ways using the definition of conditional probability: $P(A|B)P(B) = P(B|A)P(A)$. Dividing by $P(A)$, which is legitimate because $P(A) > 0$, gives the stated formula.
+(1) Take $A_i = \varnothing$ for every $i \ge 1$. These are pairwise disjoint, since $\varnothing \cap \varnothing = \varnothing$, and their union is $\varnothing$. Countable additivity gives
+
+$$P(\varnothing) = \sum_{i=1}^{\infty} P(\varnothing).$$
+
+Write $c = P(\varnothing) \ge 0$ by non-negativity. If $c > 0$ the right-hand side diverges while the left is finite, a contradiction; so $c = 0$.
+
+(2) Given finitely many disjoint $A_1, \ldots, A_n$, extend the list by setting $A_i = \varnothing$ for $i > n$. The extended list is still pairwise disjoint and has the same union, so countable additivity applies and the tail contributes $\sum_{i>n} P(\varnothing) = 0$ by part (1).
 :::
 
-:::notation
-- $P(B)$ = prior (belief before seeing the data)
-- $P(A|B)$ = likelihood (probability of the data if $B$ is true)
-- $P(B|A)$ = posterior (updated belief after the data)
+So finite additivity is a consequence, not a separate assumption — and it needed $P(\varnothing) = 0$, which in turn needed countable additivity. The axioms are more tightly interlocked than they look.
+
+:::proposition[Complement rule]{#complement-rule}
+For any event $A$, $\;P(A^c) = 1 - P(A)$.
 :::
 
-The denominator $P(A)$ is computed with the law of total probability (see below), typically $P(A) = P(A|B)P(B) + P(A|B^c)P(B^c)$.
+:::proof
+$A$ and $A^c$ are mutually exclusive, since no outcome is both in $A$ and outside it, and their union is $S$. By finite additivity and normalisation,
+
+$$P(A) + P(A^c) = P(A \cup A^c) = P(S) = 1.$$
+
+Subtract $P(A)$.
+:::
+
+The complement rule is the single most useful computational trick in the chapter, because "at least one" is almost always harder to count than "none". Whenever a problem says *at least one*, compute the probability of *none* and subtract.
+
+:::proposition[Monotonicity, and the upper bound]{#monotonicity}
+If $A \subseteq B$ then $P(A) \le P(B)$, and moreover $P(B \setminus A) = P(B) - P(A)$. Consequently $0 \le P(A) \le 1$ for every event $A$.
+:::
+
+:::proof
+Split $B$ along $A$: since $A \subseteq B$,
+
+$$B = A \cup (B \cap A^c),$$
+
+and the two pieces are disjoint, because one lies inside $A$ and the other inside $A^c$. Finite additivity gives $P(B) = P(A) + P(B \cap A^c)$, which is the stated difference formula since $B \setminus A = B \cap A^c$. Non-negativity makes $P(B \cap A^c) \ge 0$, hence $P(B) \ge P(A)$.
+
+For the bound, every event satisfies $A \subseteq S$, so $P(A) \le P(S) = 1$; and $P(A) \ge 0$ is axiom 1.
+:::
 
 :::remark
-Even a very accurate test can have low positive predictive value for a rare disease, because when almost nobody is sick, the few false positives among the huge healthy population can outnumber the true positives.
+Monotonicity is the formal version of "a more demanding requirement is less likely". If every outcome that makes $A$ true also makes $B$ true, $A$ cannot be the more probable of the two. A probability estimate that violates this — the celebrated "Linda is a bank teller *and* a feminist is more likely than Linda is a bank teller" experiment of Tversky and Kahneman — is not merely implausible, it is inconsistent with the axioms.
+:::
+
+Now the rule for events that *do* overlap. Additivity fails for them, and the proof shows exactly by how much.
+
+:::theorem[Addition rule for two events]{#addition-rule}
+For any events $A$ and $B$,
+
+$$P(A \cup B) = P(A) + P(B) - P(A \cap B).$$
+:::
+
+:::proof
+Decompose $A \cup B$ into three pairwise disjoint pieces:
+
+$$A \cup B = (A \cap B^c) \;\cup\; (A \cap B) \;\cup\; (A^c \cap B),$$
+
+which are "$A$ only", "both", and "$B$ only". They are disjoint by construction, and every outcome in $A \cup B$ lies in exactly one of them. Finite additivity gives
+
+$$P(A \cup B) = P(A \cap B^c) + P(A \cap B) + P(A^c \cap B).$$
+
+Applying the same split to $A$ alone, $A = (A \cap B^c) \cup (A \cap B)$ with disjoint pieces, so $P(A \cap B^c) = P(A) - P(A \cap B)$; symmetrically $P(A^c \cap B) = P(B) - P(A \cap B)$. Substituting,
+
+$$P(A \cup B) = \big(P(A) - P(A\cap B)\big) + P(A \cap B) + \big(P(B) - P(A \cap B)\big) = P(A) + P(B) - P(A \cap B). \qquad$$
+:::
+
+The subtraction is there because the outcomes in $A \cap B$ were counted once in $P(A)$ and again in $P(B)$; removing one copy leaves exactly one. When $A$ and $B$ are mutually exclusive, $P(A \cap B) = P(\varnothing) = 0$ and the correction vanishes, recovering additivity.
+
+:::corollary[Boole's inequality]{#booles-inequality}
+For any events $A_1, A_2, \ldots$ — disjoint or not —
+
+$$P\!\left(\bigcup_i A_i\right) \le \sum_i P(A_i).$$
+:::
+
+:::proof
+For two events, the addition rule gives $P(A \cup B) = P(A) + P(B) - P(A \cap B) \le P(A) + P(B)$, since $P(A \cap B) \ge 0$. Induction extends this to any finite union: if it holds for $n$ events, then $P(A_1 \cup \cdots \cup A_{n+1}) \le P(A_1 \cup \cdots \cup A_n) + P(A_{n+1}) \le \sum_{i=1}^{n+1} P(A_i)$.
+
+For a countable union, disjointify: set $B_1 = A_1$ and $B_i = A_i \setminus (A_1 \cup \cdots \cup A_{i-1})$. The $B_i$ are pairwise disjoint with the same union as the $A_i$, and $B_i \subseteq A_i$, so monotonicity gives $P(B_i) \le P(A_i)$. Countable additivity then yields $P(\bigcup_i A_i) = \sum_i P(B_i) \le \sum_i P(A_i)$.
+:::
+
+Boole's inequality is crude — it throws away every overlap — but it needs no assumptions whatsoever, which makes it the workhorse bound for multiple testing in a later chapter, where it becomes the Bonferroni correction.
+
+:::theorem[Inclusion–exclusion for three events]{#inclusion-exclusion}
+For any events $A$, $B$, $C$,
+
+$$P(A \cup B \cup C) = P(A) + P(B) + P(C) - P(A \cap B) - P(A \cap C) - P(B \cap C) + P(A \cap B \cap C).$$
+:::
+
+:::proof
+Apply the two-event addition rule to $(A \cup B)$ and $C$:
+
+$$P(A \cup B \cup C) = P(A \cup B) + P(C) - P\big((A \cup B) \cap C\big).$$
+
+Expand the first term by the addition rule again: $P(A \cup B) = P(A) + P(B) - P(A \cap B)$.
+
+For the last term, distributivity of intersection over union gives $(A \cup B) \cap C = (A \cap C) \cup (B \cap C)$, and a third use of the addition rule gives
+
+$$P\big((A\cap C) \cup (B \cap C)\big) = P(A \cap C) + P(B \cap C) - P(A \cap B \cap C),$$
+
+because $(A \cap C) \cap (B \cap C) = A \cap B \cap C$. Substituting both expansions and collecting signs gives the statement.
 :::
 
 :::intuition
-Bayes answers "given this evidence, how should I update my belief?" Imagine screening $10{,}000$ people for a rare disease. Only about $100$ are actually sick, but the test's small error rate misfires on a slice of the $9{,}900$ healthy people — and that slice can be bigger than $100$. So a positive result, on its own, is often a false alarm. Bayes bakes in "how rare is it to begin with" instead of trusting the test blindly.
+Count everyone once. Adding $P(A)+P(B)+P(C)$ counts anybody in two of the sets twice and anybody in all three of them three times. Subtracting the three pairwise overlaps fixes the doubles, but it also strips the triple-overlap people three times, leaving them counted $3 - 3 = 0$ times — so the final $+P(A\cap B\cap C)$ puts them back. The alternating signs are not a mnemonic; they are the bookkeeping of over- and under-correction.
 :::
 
-:::example[Medical test PPV]
-A disease has prevalence $P(D)=0.01$. The test has sensitivity $P(+|D)=0.99$ and false-positive rate $P(+|D^c)=0.05$. Find $P(D|+)$, the chance a person who tests positive is truly sick.
+:::example[A survey with three overlapping groups]
+In a survey of students, $60\%$ take statistics, $45\%$ take economics, and $30\%$ take computing. Of the overlaps, $25\%$ take statistics and economics, $15\%$ take statistics and computing, $12\%$ take economics and computing, and $8\%$ take all three. What fraction take at least one of the three, and what fraction take none?
 :::
 
 :::solution
-1. Step 1 (prior and complement): $P(D)=0.01$, so $P(D^c)=1-0.01=0.99$.
-2. Step 2 (denominator via total probability): $P(+) = P(+|D)P(D) + P(+|D^c)P(D^c) = 0.99\times0.01 + 0.05\times0.99 = 0.0099 + 0.0495 = 0.0594$.
-3. Step 3 (Bayes): $P(D|+) = \dfrac{P(+|D)P(D)}{P(+)} = \dfrac{0.0099}{0.0594} \approx 0.167$.
-4. Interpretation and sanity check: only about $17\%$ of positive tests are true positives. This feels surprising, but of the $0.0594$ positive rate, $0.0495$ (most of it) comes from healthy people — exactly the "false positives dominate" effect. As a check, the true and false positive pieces sum to the denominator: $0.0099 + 0.0495 = 0.0594$ ✓.
+Write $A$, $B$, $C$ for the three subjects. Inclusion–exclusion gives
+
+$$P(A \cup B \cup C) = 0.60 + 0.45 + 0.30 - 0.25 - 0.15 - 0.12 + 0.08 = 0.91.$$
+
+So $91\%$ take at least one. By the complement rule, $P(\text{none}) = 1 - 0.91 = 0.09$, or $9\%$.
+
+Sanity check by Boole's inequality: the sum $0.60 + 0.45 + 0.30 = 1.35$ exceeds $1$, so the bound is vacuous here but not violated, and the true value $0.91$ must lie at or below it. A second check: the answer must be at least $\max(0.60, 0.45, 0.30) = 0.60$ by monotonicity, since $A \subseteq A \cup B \cup C$. Both hold.
 :::
 
-## Counting Principles
+Finally, the special case that most introductory problems live in. It is a *model*, not a law, and the axioms are what justify it.
+
+:::definition[The equally likely model]{#equally-likely}
+A sample space $S$ with finitely many outcomes is **equiprobable** when every elementary event has the same probability.
+:::
+
+:::proposition[Counting formula for equiprobable spaces]{#counting-formula}
+If $S$ is equiprobable with $|S| = n$ outcomes, then for every event $A$,
+
+$$P(A) = \frac{|A|}{|S|}.$$
+:::
+
+:::proof
+Let $p$ be the common probability of each elementary event $\{s\}$. The $n$ elementary events are pairwise disjoint with union $S$, so finite additivity and normalisation give $np = P(S) = 1$, hence $p = 1/n$. Now any event $A$ is the disjoint union of its $|A|$ elementary events, so finite additivity gives $P(A) = |A| \cdot p = |A|/n$.
+:::
+
+This is why counting matters, and it is the whole content of the next section: once the model is equiprobable, computing a probability means computing two cardinalities.
+
+:::pitfall
+The formula $P(A) = |A|/|S|$ is a theorem about equiprobable spaces, not a definition of probability. Two routine ways to misuse it: applying it to a sample space whose outcomes are *not* equally likely, and choosing a sample space that quietly destroys the symmetry. Rolling two dice and taking $S = \{2,3,\ldots,12\}$ for the sum gives eleven outcomes, but $P(7) = 6/36$ and $P(2) = 1/36$ are not equal, so $P(\text{sum}=7) \ne 1/11$. Use the $36$ ordered pairs, where the symmetry of the physical setup really does make the outcomes equiprobable, and count within that.
+:::
+
+## Counting outcomes
 
 <!-- section: counting -->
 
-We often need to count outcomes before we can divide to get a probability. The workhorse is the multiplication principle.
+Counting is not a separate subject here; it is how probabilities in equiprobable spaces get computed. The results below are the minimum needed for probability, and each is a consequence of one principle.
 
-:::proposition[Multiplication principle]
-If a process has independent steps, the total number of outcomes is the product of the number of choices at each step.
+:::theorem[Multiplication principle]{#multiplication-principle}
+If a procedure consists of $k$ stages, where stage $1$ can be completed in $n_1$ ways and, *for each* way of completing stages $1$ through $i-1$, stage $i$ can be completed in $n_i$ ways, then the whole procedure can be completed in
+
+$$n_1 \times n_2 \times \cdots \times n_k$$
+
+ways.
 :::
 
-For example, $3$ shirts and $4$ pants give $3 \times 4 = 12$ outfits. From that principle, two named formulas handle "pick $k$ of $n$ distinct items".
+:::proof
+Induct on $k$. For $k=1$ the claim is the hypothesis. Suppose it holds for $k-1$ stages, so there are $N = n_1\cdots n_{k-1}$ ways to complete them. Each of those $N$ partial outcomes extends to exactly $n_k$ full outcomes, and two full outcomes built on different partial outcomes are different. So the full outcomes are partitioned into $N$ groups of size $n_k$, giving $N \cdot n_k = n_1 \cdots n_k$ in total.
+:::
 
-:::definition[Permutations and combinations]{#permutations-combinations}
-For $0 \le k \le n$, the number of ordered selections of $k$ items from $n$ distinct items is
+The phrase "for each way of completing the earlier stages" matters: the *number* of options at stage $i$ must not depend on which earlier choices were made, though *which* options they are may. Dealing cards is the standard case — after any first card there are always $51$ possibilities for the second, even though the identity of those $51$ changes.
 
-$$P(n,k) = \frac{n!}{(n-k)!},$$
+:::example[Licence plates]
+A plate is three letters from a $26$-letter alphabet followed by four digits. How many plates are there if repetition is allowed, and how many if all seven characters must be distinct within their groups (no repeated letter, no repeated digit)?
+:::
 
-and the number of unordered selections is
+:::solution
+With repetition: $26^3 \times 10^4 = 17{,}576 \times 10{,}000 = 175{,}760{,}000$.
+
+Without repetition: the letters contribute $26 \times 25 \times 24 = 15{,}600$ and the digits $10 \times 9 \times 8 \times 7 = 5040$, giving $15{,}600 \times 5040 = 78{,}624{,}000$.
+
+Sanity check: the second count must be smaller, since every distinct-character plate is also a plate — and $78{,}624{,}000 < 175{,}760{,}000$. The ratio is about $0.447$, so fewer than half of all plates have all-distinct characters.
+:::
+
+:::definition[Permutation]{#permutation-definition}
+A **permutation** of $k$ objects from a set of $n$ distinct objects is an ordered selection of $k$ of them, without repetition. The number of such permutations is written $P(n,k)$.
+:::
+
+:::notation
+The symbol $P$ is unfortunately overloaded: $P(A)$ is a probability and $P(n,k)$ a count. They are told apart by their arguments — a probability takes an event, a permutation count takes two integers. Some books write $_nP_k$ or $(n)_k$ to avoid the clash.
+:::
+
+:::proposition[Permutation count]{#permutation-count}
+For $0 \le k \le n$,
+
+$$P(n,k) = n(n-1)\cdots(n-k+1) = \frac{n!}{(n-k)!}.$$
+
+In particular $P(n,n) = n!$: there are $n!$ orderings of $n$ distinct objects.
+:::
+
+:::proof
+Build the ordered selection one position at a time. Position $1$ can be filled in $n$ ways; whichever object was used, position $2$ can be filled in $n-1$ ways, and in general position $i$ in $n-i+1$ ways. The count at each stage does not depend on the earlier choices, so the multiplication principle applies and gives the product $n(n-1)\cdots(n-k+1)$, which has $k$ factors. Multiplying and dividing by $(n-k)! = (n-k)(n-k-1)\cdots 1$ turns the product into $n!/(n-k)!$.
+:::
+
+:::definition[Combination]{#combination-definition}
+A **combination** of $k$ objects from $n$ distinct objects is an *unordered* selection of $k$ of them, without repetition — that is, a $k$-element subset. The number of them is the **binomial coefficient** $\binom{n}{k}$, read "$n$ choose $k$".
+:::
+
+:::theorem[Combination count]{#combination-count}
+For $0 \le k \le n$,
 
 $$\binom{n}{k} = \frac{n!}{k!\,(n-k)!}.$$
 :::
 
-The permutation count is just the multiplication principle applied to $k$ distinct positions: $n$ choices for the first, $n-1$ for the second, down to $n-k+1$ for the $k$-th. The combination count then divides by $k!$, because each unordered group of $k$ items was counted $k!$ times, once per ordering.
+:::proof
+Count the ordered selections of $k$ objects in two ways. Directly, there are $P(n,k) = n!/(n-k)!$ of them.
 
-:::intuition
-Permutations are for a race podium — gold, silver, bronze are different jobs, so the *order* of the three finishers matters. Combinations are for picking committee members — once you're on the committee, it doesn't matter whether you were named first or last. Same people, one committee. Dividing by $k!$ erases the ordering you don't care about.
+Alternatively, build an ordered selection in two stages: first choose *which* $k$ objects to use, in $\binom{n}{k}$ ways by definition, then choose an order for them, in $k!$ ways by the permutation count with $k=n$. Every ordered selection arises exactly once this way, so by the multiplication principle there are $\binom{n}{k}\cdot k!$ of them.
+
+Equating the two counts, $\binom{n}{k} \cdot k! = n!/(n-k)!$, and dividing by $k!$ gives the formula.
 :::
 
-The binomial coefficient $\binom{n}{k}$ also appears in binomial probability, where it counts the number of ways $k$ successes can be arranged among $n$ trials.
+That argument — count one set two ways, equate — is called double counting, and it proves the next two facts more cleanly than algebra does.
 
-:::example[Ordered vs. unordered from the same pool]
-A club of $10$ people must (a) elect a president, vice-president, and treasurer (three distinct offices), and (b) separately pick a $3$-person social committee (no offices).
+:::proposition[Symmetry and Pascal's rule]{#pascal-rule}
+For $0 \le k \le n$,
+
+$$\binom{n}{k} = \binom{n}{n-k}, \qquad \binom{n}{k} = \binom{n-1}{k-1} + \binom{n-1}{k} \quad (1 \le k \le n-1).$$
+:::
+
+:::proof
+Symmetry: choosing the $k$ objects to include is the same act as choosing the $n-k$ objects to leave out, so the two collections of subsets are in one-to-one correspondence and have the same size.
+
+Pascal's rule: fix one particular object $x$. Every $k$-subset either contains $x$ or does not. Those containing $x$ are determined by the remaining $k-1$ elements drawn from the other $n-1$ objects, giving $\binom{n-1}{k-1}$; those not containing $x$ are $k$-subsets of the other $n-1$ objects, giving $\binom{n-1}{k}$. The two cases are exclusive and exhaustive, so the counts add.
+:::
+
+:::recipe[Choosing the right count]{#counting-recipe}
+Before computing anything, answer two questions about the selection.
+
+1. **Does order matter?** If rearranging the chosen items gives a genuinely different outcome — offices, rankings, sequences, positions — order matters. If not — committees, hands of cards, subsets — it does not.
+2. **Is repetition allowed?** Drawing *with* replacement, or filling slots from an unlimited supply, allows repetition; dealing from a deck does not.
+
+Then: ordered with repetition gives $n^k$; ordered without repetition gives $P(n,k) = n!/(n-k)!$; unordered without repetition gives $\binom{n}{k}$. (Unordered with repetition is $\binom{n+k-1}{k}$, which probability needs only rarely.)
+
+3. **Use the same convention on top and bottom.** In $P(A) = |A|/|S|$, both cardinalities must count the *same kind* of object. Counting $|S|$ as ordered hands and $|A|$ as unordered hands is the most common arithmetic disaster in this chapter.
+:::
+
+:::example[Ordered versus unordered from one pool]
+A club of $10$ people must (a) elect a president, a vice-president and a treasurer, all distinct offices, and (b) separately pick a $3$-person social committee with no offices. Count each.
 :::
 
 :::solution
-1. Part (a) — order matters, use permutations: $P(10,3) = \dfrac{10!}{7!} = 10 \times 9 \times 8 = 720$.
-2. Part (b) — order does not matter, use combinations: $\binom{10}{3} = \dfrac{10!}{3!\,7!} = \dfrac{720}{6} = 120$.
-3. Sanity check: the only difference between the two questions is whether the $3! = 6$ orderings of a chosen trio count as different outcomes. Indeed $720 / 6 = 120$ ✓, so the committee count is exactly the office count divided by $3!$.
+(a) Order matters, because being president is not the same job as being treasurer. This is a permutation:
+
+$$P(10,3) = \frac{10!}{7!} = 10 \times 9 \times 8 = 720.$$
+
+(b) Order does not matter. This is a combination:
+
+$$\binom{10}{3} = \frac{10!}{3!\,7!} = \frac{720}{6} = 120.$$
+
+Sanity check: the only difference between the two questions is whether the $3! = 6$ orderings of a chosen trio count as distinct, and indeed $720/6 = 120$, exactly as the proof of the combination count predicts.
 :::
 
-## Law of Total Probability
+:::example[Exactly two aces]
+Five cards are dealt from a well-shuffled standard deck. Find the probability that the hand contains exactly two aces.
+:::
+
+:::solution
+Take $S$ to be the set of all $5$-card hands, unordered. Because the deck is well shuffled, all hands are equally likely, so the counting formula applies with
+
+$$|S| = \binom{52}{5} = 2{,}598{,}960.$$
+
+A hand with exactly two aces is built in two stages: choose which $2$ of the $4$ aces appear, then choose the other $3$ cards from the $48$ non-aces. By the multiplication principle,
+
+$$|A| = \binom{4}{2}\binom{48}{3} = 6 \times 17{,}296 = 103{,}776.$$
+
+Therefore
+
+$$P(A) = \frac{103{,}776}{2{,}598{,}960} \approx 0.0399.$$
+
+Sanity check: both counts are unordered, as the recipe demands. Note that "exactly two" required choosing the remaining three cards from the non-aces; drawing them from all $50$ remaining cards would have counted hands with three or four aces as well, and would also have double counted.
+:::
+
+:::example[The birthday problem]
+In a room of $23$ people with birthdays independently uniform over $365$ days, what is the probability that at least two share a birthday?
+:::
+
+:::solution
+"At least one shared birthday" is awkward to count directly — the shares can occur in many patterns — so use the complement rule and count the opposite: all $23$ birthdays distinct.
+
+The sample space of birthday lists has $|S| = 365^{23}$ equally likely elements, by the multiplication principle with repetition allowed. Lists with all birthdays distinct are ordered selections without repetition, so there are $P(365, 23) = 365 \times 364 \times \cdots \times 343$ of them. Hence
+
+$$P(\text{all distinct}) = \frac{365 \times 364 \times \cdots \times 343}{365^{23}} \approx 0.4927,$$
+
+and by the complement rule
+
+$$P(\text{at least one match}) = 1 - 0.4927 \approx 0.5073.$$
+
+Sanity check on the surprise: the relevant count is not people but *pairs*, and $23$ people form $\binom{23}{2} = 253$ pairs, each matching with probability $1/365$. Boole's inequality caps the answer at $253/365 \approx 0.693$, and the true value sits comfortably below it. The intuition that fails here compares $23$ with $365$; the right comparison is $253$ with $365$.
+:::
+
+:::pitfall
+Counting the same outcome twice is far more common than missing one. If you compute "the number of $5$-card hands with at least one ace" as $4 \times \binom{51}{4}$ — pick an ace, then any four other cards — you have counted a two-ace hand twice, once for each ace that could have been "the" chosen one. The safe routes are the complement, $\binom{52}{5} - \binom{48}{5}$, or a sum over disjoint cases by the exact number of aces.
+:::
+
+## Conditional probability
+
+<!-- section: conditional -->
+
+Probabilities are not properties of events alone; they are properties of events *relative to a state of information*. Learning something changes them. The card you are about to draw is a heart with probability $1/4$, but if you are told it is red, the probability becomes $1/2$ — nothing about the card changed, only what you know.
+
+Conditioning formalises that. Learning that $B$ occurred means every outcome outside $B$ is now impossible, so $B$ becomes the new sample space. Probabilities must be recomputed inside it, and they must be rescaled so that the new sample space still has total probability $1$. Dividing by $P(B)$ is exactly that rescaling.
+
+:::definition[Conditional probability]{#conditional-probability}
+Let $A$ and $B$ be events with $P(B) > 0$. The **conditional probability of $A$ given $B$** is
+
+$$P(A \mid B) = \frac{P(A \cap B)}{P(B)}.$$
+
+It is undefined when $P(B) = 0$.
+:::
+
+Two features of the definition repay attention. The numerator is $P(A \cap B)$, not $P(A)$: only the part of $A$ that survives inside $B$ counts. And the requirement $P(B) > 0$ is not a technicality to be waved past — you cannot condition on something that never happens, because the rescaling would divide by zero.
+
+It is worth checking that this construction produces something that is itself a probability. If it did not, every theorem proved so far would have to be re-derived for conditional probabilities, and none of them would be safe to use.
+
+:::theorem[Conditioning yields a probability measure]{#conditional-is-a-measure}
+Fix an event $B$ with $P(B) > 0$ and define $Q(A) = P(A \mid B)$ for every event $A$. Then $Q$ satisfies the Kolmogorov axioms on $S$.
+:::
+
+:::proof
+**Non-negativity.** $Q(A) = P(A \cap B)/P(B)$ is a quotient of a non-negative number by a strictly positive one, hence $Q(A) \ge 0$.
+
+**Normalisation.** $Q(S) = P(S \cap B)/P(B) = P(B)/P(B) = 1$.
+
+**Countable additivity.** Let $A_1, A_2, \ldots$ be pairwise disjoint. Then the sets $A_i \cap B$ are also pairwise disjoint, since $(A_i \cap B) \cap (A_j \cap B) \subseteq A_i \cap A_j = \varnothing$, and $\left(\bigcup_i A_i\right) \cap B = \bigcup_i (A_i \cap B)$ by distributivity. So
+
+$$Q\!\left(\bigcup_i A_i\right) = \frac{P\!\left(\bigcup_i (A_i \cap B)\right)}{P(B)} = \frac{\sum_i P(A_i \cap B)}{P(B)} = \sum_i Q(A_i),$$
+
+using countable additivity of $P$ in the middle step.
+:::
+
+:::corollary[Rules transfer to conditional probabilities]{#conditional-rules}
+For any event $B$ with $P(B) > 0$: $P(A^c \mid B) = 1 - P(A \mid B)$, and
+
+$$P(A_1 \cup A_2 \mid B) = P(A_1 \mid B) + P(A_2 \mid B) - P(A_1 \cap A_2 \mid B).$$
+:::
+
+:::proof
+Both are the complement rule and the addition rule applied to the probability measure $Q(\cdot) = P(\cdot \mid B)$, which is legitimate by Theorem *Conditioning yields a probability measure*: those rules were proved for an arbitrary probability measure, and $Q$ is one.
+:::
+
+:::pitfall
+The transfer works on the event *in front* of the bar, never behind it. $P(A \mid B^c) = 1 - P(A \mid B)$ is false in general, and it is a favourite trap: complementing the condition throws you into a different sample space entirely, where the numerator has no relation to the one you started with. For the medical test later in this chapter, $P(+ \mid D) = 0.99$ while $P(+ \mid D^c) = 0.01$, and those two happen to sum to $1$ only by coincidence of the numbers chosen; with sensitivity $0.99$ and false-positive rate $0.05$ they would sum to $1.04$.
+:::
+
+:::example[Conditioning inside a die roll]
+Two fair dice are rolled. Given that the first die shows $5$, what is the probability that the total is at least $10$? Compare with the unconditional probability.
+:::
+
+:::solution
+Let $A$ be "total at least $10$" and $B$ be "first die is $5$".
+
+Unconditionally, $A = \{(4,6),(5,5),(6,4),(5,6),(6,5),(6,6)\}$, so $P(A) = 6/36 = 1/6 \approx 0.1667$.
+
+Now condition. $B$ has $6$ outcomes, so $P(B) = 6/36 = 1/6$. The intersection $A \cap B = \{(5,5),(5,6)\}$ has $2$ outcomes, so $P(A \cap B) = 2/36 = 1/18$. By the definition,
+
+$$P(A \mid B) = \frac{1/18}{1/6} = \frac{6}{18} = \frac13 \approx 0.3333.$$
+
+The same answer comes from the shrunken sample space directly: inside $B$ there are $6$ equally likely outcomes and $2$ of them qualify, giving $2/6$. Knowing the first die is high doubled the probability, which is what it means for these events to be dependent.
+:::
+
+Rearranging the definition turns it into a rule for building joint probabilities out of sequential ones, which is how almost every multi-stage problem is actually computed.
+
+:::proposition[Multiplication rule]{#multiplication-rule}
+If $P(A) > 0$ then $P(A \cap B) = P(A)\,P(B \mid A)$, and symmetrically, if $P(B) > 0$ then $P(A \cap B) = P(B)\,P(A \mid B)$.
+:::
+
+:::proof
+Multiply both sides of the definition $P(B \mid A) = P(A \cap B)/P(A)$ by $P(A)$, which is legitimate because $P(A) > 0$. The second form is the same computation with the roles exchanged.
+:::
+
+:::theorem[Chain rule]{#chain-rule}
+If $P(A_1 \cap \cdots \cap A_{n-1}) > 0$, then
+
+$$P(A_1 \cap A_2 \cap \cdots \cap A_n) = P(A_1)\,P(A_2 \mid A_1)\,P(A_3 \mid A_1 \cap A_2)\cdots P(A_n \mid A_1 \cap \cdots \cap A_{n-1}).$$
+:::
+
+:::proof
+Induct on $n$. The case $n = 2$ is the multiplication rule. Assume the identity for $n-1$ events and write $E = A_1 \cap \cdots \cap A_{n-1}$. Monotonicity gives $P(E) \ge P(A_1 \cap \cdots \cap A_{n-1}) > 0$ — indeed they are equal — so the multiplication rule applies to $E$ and $A_n$:
+
+$$P(E \cap A_n) = P(E)\,P(A_n \mid E).$$
+
+Every conditioning event appearing in the inductive hypothesis contains $E$, hence has positive probability by monotonicity, so the hypothesis expands $P(E)$ into the first $n-1$ factors. Substituting gives the result.
+:::
+
+:::example[Three hearts in a row]
+Three cards are dealt from a standard deck without replacement. Find the probability that all three are hearts.
+:::
+
+:::solution
+Let $A_i$ be "the $i$-th card is a heart". The draws are dependent: removing a heart changes what remains.
+
+$P(A_1) = 13/52$. Given the first card was a heart, $12$ hearts remain among $51$ cards, so $P(A_2 \mid A_1) = 12/51$. Given the first two were hearts, $P(A_3 \mid A_1 \cap A_2) = 11/50$. By the chain rule,
+
+$$P(A_1 \cap A_2 \cap A_3) = \frac{13}{52}\cdot\frac{12}{51}\cdot\frac{11}{50} = \frac{1716}{132600} \approx 0.0129.$$
+
+Sanity check two ways. With replacement the draws would be independent and give $(1/4)^3 = 0.0156$; removing hearts makes later hearts less likely, and indeed $0.0129 < 0.0156$. Alternatively count unordered hands: $\binom{13}{3}/\binom{52}{3} = 286/22100 \approx 0.0129$, the same number, as it must be — ordering conventions cancel when used consistently on top and bottom.
+:::
+
+:::intuition
+Conditional probability is narrowing the world. $P(\text{rain} \mid \text{cloudy})$ asks: among cloudy days only, what fraction had rain? Sunny days are not counted as evidence against rain — they are not counted at all. That is also why $P(A \mid B)$ and $P(B \mid A)$ are different questions: one restricts to cloudy days and looks for rain, the other restricts to rainy days and looks for cloud. The second is nearly $1$; the first is not.
+:::
+
+:::pitfall
+Reversing the bar is the most consequential error in applied statistics, and it has a name in the courtroom: the **prosecutor's fallacy**. The probability that a randomly chosen innocent person matches the forensic evidence, $P(\text{match} \mid \text{innocent})$, may be one in a million. The probability that a person is innocent given a match, $P(\text{innocent} \mid \text{match})$, can still be large, because the match probability must be weighed against how many people were searched. Converting between the two is exactly what Bayes' theorem does, and it cannot be done without the prior.
+:::
+
+## Independence
+
+<!-- section: independence -->
+
+Dependence was the interesting case above: conditioning changed the number. Independence is the boundary case where it does not — where learning $B$ leaves the probability of $A$ exactly where it was.
+
+:::definition[Independence of two events]{#independence-definition}
+Events $A$ and $B$ are **independent** when
+
+$$P(A \cap B) = P(A)\,P(B).$$
+
+Otherwise they are **dependent**.
+:::
+
+The product form is the right definition even though the conditional form is the better intuition, for two reasons: it is symmetric in $A$ and $B$, so "independent" needs no ordering, and it remains meaningful when $P(B) = 0$, where conditioning is undefined. The two agree whenever both make sense.
+
+:::proposition[Conditional characterisation]{#independence-conditional}
+If $P(B) > 0$, then $A$ and $B$ are independent if and only if $P(A \mid B) = P(A)$.
+:::
+
+:::proof
+Suppose $A$ and $B$ are independent. Then
+
+$$P(A \mid B) = \frac{P(A \cap B)}{P(B)} = \frac{P(A)P(B)}{P(B)} = P(A).$$
+
+Conversely, if $P(A \mid B) = P(A)$, multiply through by $P(B) > 0$ and use the multiplication rule: $P(A \cap B) = P(B)P(A \mid B) = P(A)P(B)$.
+:::
+
+:::proposition[Independence passes to complements]{#independence-complements}
+If $A$ and $B$ are independent, so are $A$ and $B^c$, $A^c$ and $B$, and $A^c$ and $B^c$.
+:::
+
+:::proof
+Split $A$ along $B$: $A = (A \cap B) \cup (A \cap B^c)$, a disjoint union, so
+
+$$P(A \cap B^c) = P(A) - P(A \cap B) = P(A) - P(A)P(B) = P(A)\big(1 - P(B)\big) = P(A)P(B^c),$$
+
+using independence in the second step and the complement rule in the last. So $A$ and $B^c$ are independent. The case of $A^c$ and $B$ follows by symmetry of the definition, and applying the first result to the independent pair $(A^c, B)$ gives $A^c$ and $B^c$.
+:::
+
+This is the formal licence for a habit you will use constantly: if components fail independently, then they also *survive* independently, so $P(\text{all survive}) = \prod_i \big(1 - p_i\big)$.
+
+Now the confusion the chapter must pre-empt. "Mutually exclusive" and "independent" are opposite ideas that students routinely fuse, and they are not merely different — for events that can actually happen, they are incompatible.
+
+:::theorem[Mutually exclusive and independent are incompatible]{#exclusive-not-independent}
+Let $A$ and $B$ be mutually exclusive events with $P(A) > 0$ and $P(B) > 0$. Then $A$ and $B$ are *not* independent.
+:::
+
+:::proof
+Since $A \cap B = \varnothing$, we have $P(A \cap B) = P(\varnothing) = 0$. Independence would require $P(A \cap B) = P(A)P(B)$, and $P(A)P(B) > 0$ because both factors are strictly positive. So $0 = P(A)P(B) > 0$, a contradiction.
+:::
+
+:::intuition
+Mutual exclusivity is the strongest possible *dependence*, not a form of independence. If $A$ and $B$ cannot both occur, then learning that $A$ happened tells you something decisive about $B$: it did not happen. Formally $P(B \mid A) = 0 \ne P(B)$. Independence means learning $A$ tells you nothing; exclusivity means it tells you everything.
+:::
+
+For more than two events, the product rule must hold for every subcollection, not merely for pairs — and the difference is real.
+
+:::definition[Mutual independence]{#mutual-independence}
+Events $A_1, \ldots, A_n$ are **mutually independent** when for *every* subset of indices $I \subseteq \{1, \ldots, n\}$ with $|I| \ge 2$,
+
+$$P\!\left(\bigcap_{i \in I} A_i\right) = \prod_{i \in I} P(A_i).$$
+
+They are **pairwise independent** when this holds for all $I$ with $|I| = 2$.
+:::
+
+Mutual independence implies pairwise independence by definition. The converse fails, and the counterexample is small enough to check by hand.
+
+:::example[Pairwise but not mutually independent]
+Toss two fair coins. Let $A$ = "the first coin is heads", $B$ = "the second coin is heads", and $C$ = "the two coins match". Show that $A, B, C$ are pairwise independent but not mutually independent.
+:::
+
+:::solution
+The sample space $\{HH, HT, TH, TT\}$ is equiprobable, each outcome having probability $1/4$. Then $A = \{HH, HT\}$, $B = \{HH, TH\}$ and $C = \{HH, TT\}$, so $P(A) = P(B) = P(C) = 1/2$.
+
+Each pairwise intersection is the single outcome $HH$:
+
+$$P(A \cap B) = P(A \cap C) = P(B \cap C) = \tfrac14 = \tfrac12 \cdot \tfrac12,$$
+
+so all three pairs are independent.
+
+The triple intersection is also $\{HH\}$, so $P(A \cap B \cap C) = 1/4$, whereas $P(A)P(B)P(C) = 1/8$. Since $1/4 \ne 1/8$, the three events are not mutually independent.
+
+The failure is intelligible: any two of these events determine the third. Knowing the first coin is heads and that the coins match forces the second coin to be heads, so $P(B \mid A \cap C) = 1 \ne P(B)$. Independence survives being checked two at a time and dies at three.
+:::
+
+:::definition[Conditional independence]{#conditional-independence}
+Events $A$ and $B$ are **conditionally independent given $C$**, where $P(C) > 0$, when
+
+$$P(A \cap B \mid C) = P(A \mid C)\,P(B \mid C).$$
+:::
+
+:::remark
+Conditional independence neither implies nor is implied by ordinary independence. Two tests of the same patient are conditionally independent given disease status — the errors are made by the instrument, not by the patient — yet they are strongly dependent unconditionally, because a first positive result raises the chance of disease and therefore the chance of a second positive. That is precisely the structure that makes a repeated test informative, and it is used at the end of this chapter.
+:::
+
+:::example[A redundant system]
+A system has three components that fail independently, each working with probability $0.9$. Find the probability the system works if the components are wired in series (all must work) and if they are wired in parallel (at least one must work).
+:::
+
+:::solution
+Let $W_i$ be "component $i$ works", with $P(W_i) = 0.9$ and the $W_i$ mutually independent.
+
+**Series.** The system works exactly when $W_1 \cap W_2 \cap W_3$ occurs, so by mutual independence
+
+$$P(\text{works}) = 0.9^3 = 0.729.$$
+
+**Parallel.** "At least one works" is awkward directly, so take the complement: the system fails only if all three fail. By Proposition *Independence passes to complements*, the events $W_i^c$ are mutually independent with $P(W_i^c) = 0.1$, so
+
+$$P(\text{all fail}) = 0.1^3 = 0.001, \qquad P(\text{works}) = 1 - 0.001 = 0.999.$$
+
+Sanity check: redundancy should help and duplication should hurt, and indeed $0.729 < 0.9 < 0.999$. Note how much both answers rest on independence — if all three components share a power supply, the failures are positively dependent and $0.999$ is an overstatement, possibly a large one.
+:::
+
+:::pitfall
+Independence is an assumption to be justified, never a default. It is justified by the physical setup — separate coin tosses, separately sampled individuals, a randomised assignment — and not by the events merely feeling unrelated. Multiplying probabilities of dependent events is the error behind the Sally Clark case, in which two infant deaths in one family were treated as independent, producing a "one in $73$ million" figure that a shared genetic or environmental cause makes meaningless.
+:::
+
+## The law of total probability
 
 <!-- section: total -->
 
-Sometimes $P(A)$ is hard to find directly but easy *within each of several scenarios*.
+Some probabilities are hard to compute directly but easy to compute *within each of several scenarios*. A factory's overall defect rate is awkward; the defect rate of each machine is on a datasheet. The technique is to break the sample space into cases, work inside each, and recombine — and the recombination is a weighted average, with the weights being how likely each case is.
 
-:::definition[Partition of the sample space]
-Events $B_1, B_2, \ldots$ form a partition of the sample space when they are mutually exclusive, collectively exhaustive, and each has $P(B_i) > 0$.
+:::definition[Partition]{#partition-definition}
+Events $B_1, B_2, \ldots$ form a **partition** of the sample space $S$ when they are pairwise mutually exclusive, $B_i \cap B_j = \varnothing$ for $i \ne j$; collectively exhaustive, $\bigcup_i B_i = S$; and each has $P(B_i) > 0$.
 :::
+
+All three conditions earn their place. Exclusivity is what lets the pieces be added; exhaustiveness is what stops probability leaking out of the cases; positivity is what makes each conditional probability defined. The simplest partition is $\{B, B^c\}$ for any $B$ with $0 < P(B) < 1$, and it is the one used most often.
 
 :::theorem[Law of total probability]{#total-probability}
-If the events $B_i$ form a partition of the sample space, then for any event $A$,
+If $B_1, B_2, \ldots$ is a partition of $S$, then for every event $A$,
 
-$$P(A) = \sum_i P(A|B_i)\, P(B_i).$$
+$$P(A) = \sum_i P(A \cap B_i) = \sum_i P(A \mid B_i)\,P(B_i).$$
 :::
 
-You compute $A$'s probability inside each case and take a weighted average, where each case's weight is how likely that case is. This sum is the key denominator for Bayes' theorem.
+:::proof
+Because the $B_i$ cover $S$, intersecting with $A$ gives
+
+$$A = A \cap S = A \cap \bigcup_i B_i = \bigcup_i (A \cap B_i),$$
+
+using distributivity. The pieces are pairwise disjoint, since $(A \cap B_i) \cap (A \cap B_j) \subseteq B_i \cap B_j = \varnothing$ for $i \ne j$. Countable additivity therefore gives $P(A) = \sum_i P(A \cap B_i)$, which is the first equality.
+
+For the second, each $B_i$ has $P(B_i) > 0$ by the definition of a partition, so the multiplication rule applies term by term: $P(A \cap B_i) = P(A \mid B_i)P(B_i)$.
+:::
 
 :::intuition
-To get the overall chance of $A$, split the world into non-overlapping cases that cover everything, find the chance of $A$ in each case, then blend them by how likely each case is — exactly like computing a course grade as a weighted average of homework, midterm, and final. The weights (the $P(B_i)$) must add to $1$.
+To find the overall chance of $A$, split the world into non-overlapping cases that cover everything, find the chance of $A$ inside each case, then blend those numbers by how likely each case is. It is exactly a course grade computed as a weighted average of homework, midterm and final — and as there, the weights $P(B_i)$ must sum to $1$, which is what "partition" guarantees.
 :::
 
+:::corollary[Weighted-average bounds]{#total-probability-bounds}
+With $B_1, \ldots, B_n$ a finite partition, $P(A)$ lies between $\min_i P(A \mid B_i)$ and $\max_i P(A \mid B_i)$.
+:::
+
+:::proof
+Write $m = \min_i P(A \mid B_i)$ and $M = \max_i P(A \mid B_i)$. Since every weight satisfies $P(B_i) > 0$ and $\sum_i P(B_i) = P(S) = 1$ by finite additivity,
+
+$$P(A) = \sum_i P(A \mid B_i)P(B_i) \le \sum_i M\,P(B_i) = M,$$
+
+and the same argument with $m$ gives the lower bound.
+:::
+
+That corollary is the free sanity check on every total-probability computation: an answer outside the range of the conditional rates is arithmetic error, not a subtle effect.
+
 :::example[Two machines, one defect rate]
-A factory runs two machines. Machine $A$ makes $60\%$ of parts with a $3\%$ defect rate; machine $B$ makes $40\%$ with a $5\%$ defect rate. What fraction of all parts are defective?
-Step 1 (identify the partition): every part comes from $A$ or $B$, and no part comes from both, so $\{A, B\}$ partitions the sample space with $P(A)=0.6$, $P(B)=0.4$ (and $0.6+0.4=1$ ✓).
-Step 2 (conditional defect rates): $P(D|A)=0.03$, $P(D|B)=0.05$.
-Step 3 (total probability): $P(D) = P(D|A)P(A) + P(D|B)P(B) = 0.03\times0.6 + 0.05\times0.4 = 0.018 + 0.020 = 0.038$.
-Sanity check: the answer $0.038$ (i.e. $3.8\%$) lies between the two per-machine rates $3\%$ and $5\%$, as any weighted average must, and it sits closer to $3\%$ because machine $A$ carries the larger weight ✓.
+A factory runs two machines. Machine $A$ makes $60\%$ of the parts with a $3\%$ defect rate; machine $B$ makes the other $40\%$ with a $5\%$ defect rate. What fraction of all parts are defective?
 :::
 
 :::solution
-**Common Mistakes**
-Forgetting to subtract the overlap in $P(A \cup B)$ when events overlap.
-Confusing mutually exclusive with independent (mutually exclusive events with P>0 cannot be independent).
-Swapping $P(A|B)$ and $P(B|A)$ — Bayes is exactly for converting between them.
-Applying independence multiplication rule without verifying independence.
-Using permutations when combinations needed (ask: does order matter?).
+Every part comes from exactly one machine, so $\{A, B\}$ partitions the sample space, with $P(A) = 0.6$, $P(B) = 0.4$ and $0.6 + 0.4 = 1$ as required. The conditional defect rates are $P(D \mid A) = 0.03$ and $P(D \mid B) = 0.05$.
+
+By the law of total probability,
+
+$$P(D) = P(D \mid A)P(A) + P(D \mid B)P(B) = 0.03 \times 0.6 + 0.05 \times 0.4 = 0.018 + 0.020 = 0.038.$$
+
+So $3.8\%$ of parts are defective.
+
+Sanity check via Corollary *Weighted-average bounds*: the answer must lie in $[0.03, 0.05]$, and it does, sitting nearer $0.03$ because machine $A$ carries the larger weight.
 :::
+
+:::example[Drawing from a randomly chosen urn]
+Urn I holds $3$ red and $7$ white balls; urn II holds $6$ red and $4$ white. A fair coin selects the urn, and one ball is drawn from it. Find the probability the ball is red.
+:::
+
+:::solution
+Let $U_1, U_2$ be the events "urn I chosen", "urn II chosen". They partition the sample space with $P(U_1) = P(U_2) = 0.5$, and $P(R \mid U_1) = 3/10 = 0.3$, $P(R \mid U_2) = 6/10 = 0.6$.
+
+$$P(R) = 0.3 \times 0.5 + 0.6 \times 0.5 = 0.15 + 0.30 = 0.45.$$
+
+Sanity check: with equal weights the answer is the plain average of $0.3$ and $0.6$, namely $0.45$, and it lies between them. Note that pooling the urns into one bag of $20$ balls would give $9/20 = 0.45$ too — but only because the two urns hold equally many balls and the coin is fair. Change the urn sizes and the pooled calculation breaks while the law of total probability does not.
+:::
+
+:::pitfall
+The cases must partition the sample space, not merely be a list of interesting possibilities. Two failures recur. If the cases overlap, the shared outcomes are counted twice and the total can exceed $1$. If they miss something — "the customer is a student, or a pensioner" leaves out everyone else — the weights sum to less than $1$ and the answer is silently too small. Before summing, check that the weights add to exactly $1$; it costs one line and catches both errors.
+:::
+
+## Bayes' theorem and base rates
+
+<!-- section: bayes -->
+
+Conditional probabilities come in pairs pointing opposite ways, and the one you can measure is usually not the one you want. A laboratory can measure $P(+ \mid D)$: take people known to have the disease and see how often the test fires. A patient holding a positive result wants $P(D \mid +)$. Bayes' theorem converts between the two, and the conversion requires one extra ingredient — the prevalence — which is exactly the ingredient intuition leaves out.
+
+:::theorem[Bayes' theorem]{#bayes-theorem}
+If $P(A) > 0$ and $P(B) > 0$, then
+
+$$P(B \mid A) = \frac{P(A \mid B)\,P(B)}{P(A)}.$$
+:::
+
+:::proof
+The multiplication rule computes $P(A \cap B)$ in two ways, both legitimate because both conditioning events have positive probability:
+
+$$P(A \cap B) = P(A \mid B)P(B) \qquad\text{and}\qquad P(A \cap B) = P(B \mid A)P(A).$$
+
+Equate the right-hand sides and divide by $P(A) > 0$.
+:::
+
+:::corollary[Bayes' theorem with a partition]{#bayes-partition}
+If $B_1, B_2, \ldots$ is a partition of $S$ and $P(A) > 0$, then for each $j$,
+
+$$P(B_j \mid A) = \frac{P(A \mid B_j)P(B_j)}{\sum_i P(A \mid B_i)P(B_i)}.$$
+:::
+
+:::proof
+Apply Bayes' theorem to $B_j$ and $A$, then replace the denominator $P(A)$ by its expansion from the law of total probability, which applies because the $B_i$ form a partition.
+:::
+
+So Bayes' theorem is two lines from the definition of conditional probability, and its denominator is the law of total probability. There is nothing else in it.
+
+:::notation[Prior, likelihood, posterior]
+In $P(B \mid A) = P(A \mid B)P(B)/P(A)$, read $B$ as a hypothesis and $A$ as data:
+
+- $P(B)$ is the **prior** — what you believed before seeing the data;
+- $P(A \mid B)$ is the **likelihood** — how probable the data would be if the hypothesis held;
+- $P(A)$ is the **evidence** or marginal likelihood, computed by total probability;
+- $P(B \mid A)$ is the **posterior** — the updated belief.
+
+The whole formula says: posterior is proportional to likelihood times prior.
+:::
+
+The next figure lays out the computation we are about to do. A probability tree makes the two routes to a positive result visible, and the base-rate effect is the observation that the lower branch carries more probability than the upper one.
+
+:::figure[The two routes to a positive test, with prevalence $0.001$, sensitivity $0.99$ and specificity $0.99$. Multiplying along each path gives the leaf probability. The false-positive leaf, $0.00999$, is more than ten times the true-positive leaf, $0.00099$ — which is the whole of the base-rate effect.]{#test-tree}
+{
+  "type": "plot",
+  "x": [-0.6, 5.2],
+  "y": [-2.6, 2.6],
+  "marks": [
+    { "kind": "path", "points": [[0, 0], [1.4, 1.3]], "tone": "accent" },
+    { "kind": "path", "points": [[0, 0], [1.4, -1.3]], "tone": "muted" },
+    { "kind": "path", "points": [[1.4, 1.3], [2.8, 1.9]], "tone": "accent" },
+    { "kind": "path", "points": [[1.4, 1.3], [2.8, 0.7]], "tone": "muted" },
+    { "kind": "path", "points": [[1.4, -1.3], [2.8, -0.7]], "tone": "accent" },
+    { "kind": "path", "points": [[1.4, -1.3], [2.8, -1.9]], "tone": "muted" },
+    { "kind": "point", "at": [0, 0], "tone": "muted" },
+    { "kind": "point", "at": [1.4, 1.3], "tone": "accent" },
+    { "kind": "point", "at": [1.4, -1.3], "tone": "muted" },
+    { "kind": "point", "at": [2.8, 1.9], "tone": "result" },
+    { "kind": "point", "at": [2.8, 0.7], "tone": "muted" },
+    { "kind": "point", "at": [2.8, -0.7], "tone": "result" },
+    { "kind": "point", "at": [2.8, -1.9], "tone": "muted" },
+    { "kind": "text", "at": [0.35, 1.15], "text": "0.001", "tone": "accent" },
+    { "kind": "text", "at": [0.35, -1.15], "text": "0.999", "tone": "muted" },
+    { "kind": "text", "at": [2.0, 2.15], "text": "0.99", "tone": "accent" },
+    { "kind": "text", "at": [2.1, 0.35], "text": "0.01", "tone": "muted" },
+    { "kind": "text", "at": [2.1, -0.28], "text": "0.01", "tone": "accent" },
+    { "kind": "text", "at": [2.0, -2.2], "text": "0.99", "tone": "muted" },
+    { "kind": "text", "at": [1.15, 1.75], "text": "D", "tone": "accent" },
+    { "kind": "text", "at": [1.15, -1.78], "text": "no D", "tone": "muted" },
+    { "kind": "text", "at": [4.0, 1.9], "text": "+  0.00099", "tone": "result" },
+    { "kind": "text", "at": [3.85, 0.7], "text": "-  0.00001", "tone": "muted" },
+    { "kind": "text", "at": [4.0, -0.7], "text": "+  0.00999", "tone": "result" },
+    { "kind": "text", "at": [3.85, -1.9], "text": "-  0.98901", "tone": "muted" }
+  ]
+}
+:::
+
+:::example[A rare disease and an accurate test]{#medical-test}
+A disease affects $1$ in $1000$ people. A screening test has sensitivity $P(+ \mid D) = 0.99$ and specificity $P(- \mid D^c) = 0.99$, so its false-positive rate is $P(+ \mid D^c) = 0.01$. A randomly chosen person tests positive. What is the probability they have the disease?
+:::
+
+:::solution
+Write $D$ for "has the disease". The prior is $P(D) = 0.001$, so $P(D^c) = 0.999$ by the complement rule. The events $\{D, D^c\}$ partition the sample space, both having positive probability, so the law of total probability gives the evidence:
+
+$$P(+) = P(+ \mid D)P(D) + P(+ \mid D^c)P(D^c) = 0.99 \times 0.001 + 0.01 \times 0.999,$$
+
+that is $P(+) = 0.00099 + 0.00999 = 0.01098$. Now Bayes' theorem:
+
+$$P(D \mid +) = \frac{P(+ \mid D)P(D)}{P(+)} = \frac{0.00099}{0.01098} \approx 0.0902.$$
+
+About $9\%$. Roughly nine out of ten positive results from this screen are false alarms, despite a test that is right $99\%$ of the time in both directions.
+
+Sanity check by counting people. Among $100{,}000$ screened, about $100$ have the disease and $99$ of them test positive; about $99{,}900$ do not, and $1\%$ of them — $999$ people — test positive anyway. Of the $99 + 999 = 1098$ positives, $99$ are genuine, and $99/1098 \approx 0.0902$, matching. The two pieces also sum to the denominator: $0.00099 + 0.00999 = 0.01098$.
+:::
+
+The number people guess is usually close to $99\%$, and the gap between $99\%$ and $9\%$ is the base rate doing its work. The reason is visible in the tree: the healthy branch starts with a thousand times more probability than the diseased one, so even a small error rate applied to it produces more positives than a near-perfect detection rate applied to the tiny diseased branch. Ignoring $P(D)$ and reading the posterior off the sensitivity is the **base-rate fallacy**.
+
+:::figure[Prior against posterior for the screening example. A positive result multiplies the probability of disease by about $90$, from $0.001$ to $0.0902$ — a large update in relative terms that still leaves the disease unlikely in absolute terms.]{#prior-posterior}
+{
+  "type": "plot",
+  "x": [-0.4, 3.4],
+  "y": [0, 0.125],
+  "yTicks": 0.025,
+  "yLabel": "P(disease)",
+  "marks": [
+    { "kind": "bars", "bars": [[0.2, 1.2, 0.001], [1.8, 2.8, 0.0902]] },
+    { "kind": "text", "at": [0.7, 0.019], "text": "prior 0.001", "tone": "accent" },
+    { "kind": "text", "at": [2.3, 0.105], "text": "posterior 0.0902", "tone": "result" }
+  ]
+}
+:::
+
+The update is enormous and the conclusion is still "probably not diseased". Both statements are true at once, and holding them together is the skill. In practice the resolution is a second, different test: the positive screen has moved the prior from $0.001$ to $0.09$, and a confirmatory test now starts from that much more favourable base rate.
+
+:::proposition[Odds form of Bayes' theorem]{#odds-form}
+Define the odds of an event $B$ as $\mathrm{odds}(B) = P(B)/P(B^c)$. Then for any data $A$ with $P(A) > 0$,
+
+$$\underbrace{\frac{P(B \mid A)}{P(B^c \mid A)}}_{\text{posterior odds}} = \underbrace{\frac{P(A \mid B)}{P(A \mid B^c)}}_{\text{likelihood ratio}} \times \underbrace{\frac{P(B)}{P(B^c)}}_{\text{prior odds}}.$$
+:::
+
+:::proof
+Apply Bayes' theorem to $B$ and to $B^c$ separately:
+
+$$P(B \mid A) = \frac{P(A \mid B)P(B)}{P(A)}, \qquad P(B^c \mid A) = \frac{P(A \mid B^c)P(B^c)}{P(A)}.$$
+
+Divide the first by the second. The common denominator $P(A)$ cancels, leaving the stated product — which is why the odds form needs no total-probability computation at all.
+:::
+
+:::example[The screening result in odds form]
+Redo the disease calculation using odds, and then find the posterior after a *second* independent positive test.
+:::
+
+:::solution
+Prior odds: $0.001/0.999 = 1/999 \approx 0.001001$. Likelihood ratio for a positive: $0.99/0.01 = 99$.
+
+Posterior odds after one positive: $99/999 = 11/111 \approx 0.09910$. Converting back with $P = \text{odds}/(1 + \text{odds})$,
+
+$$P(D \mid +) = \frac{0.09910}{1.09910} \approx 0.0902,$$
+
+agreeing with the direct computation.
+
+Now a second test, assumed conditionally independent of the first given disease status. Independence given $D$ and given $D^c$ makes the likelihood ratio of the pair the product of the individual ratios, $99 \times 99 = 9801$, so
+
+$$\text{posterior odds} = 9801 \times \frac{1}{999} \approx 9.811, \qquad P(D \mid ++) = \frac{9.811}{10.811} \approx 0.9075.$$
+
+The direct check: $0.99^2 \times 0.001 = 0.0009801$ and $0.01^2 \times 0.999 = 0.0000999$, and $0.0009801/0.00108 = 0.9075$.
+
+Sanity check on the structure: each positive multiplies the odds by $99$, so evidence accumulates multiplicatively on the odds scale — which is precisely why the odds form is the one used in practice. Two positives take the patient from $0.1\%$ to $91\%$.
+:::
+
+:::pitfall
+The second-test calculation rests on **conditional** independence given disease status, and that assumption fails when the two tests share a mechanism. Running the same assay twice on the same sample, on a patient whose blood chemistry is what confuses the assay, gives two positives that carry barely more information than one. The multiplicative update then overstates the evidence badly. A confirmatory test must be a *different* test for the arithmetic above to mean anything.
+:::
+
+The posterior depends on the prevalence, and it is worth seeing how strongly. The figure below holds the test fixed — sensitivity and specificity both $0.99$, as in the example — and sweeps the prevalence.
+
+:::figure[Posterior probability of disease after one positive test, as a function of prevalence, for a test with sensitivity and specificity both $0.99$. The screening example sits at prevalence $0.001$, marked, where the posterior is only $0.0902$; the same test applied to a symptomatic population with prevalence $0.05$ returns a posterior above $0.8$. The test never changed — the base rate did.]{#ppv-vs-prevalence}
+{
+  "type": "plot",
+  "x": [0, 0.08],
+  "y": [0, 1.05],
+  "xTicks": 0.02,
+  "yTicks": 0.25,
+  "xLabel": "prevalence",
+  "yLabel": "P(D | +)",
+  "marks": [
+    { "kind": "function", "fn": "0.99*x/(0.99*x + 0.01*(1-x))", "tone": "result" },
+    { "kind": "point", "at": [0.001, 0.0902], "tone": "accent" },
+    { "kind": "point", "at": [0.05, 0.8390], "tone": "accent" },
+    { "kind": "text", "at": [0.016, 0.115], "text": "0.001 -> 0.09", "tone": "accent" },
+    { "kind": "text", "at": [0.049, 0.735], "text": "0.05 -> 0.84", "tone": "accent" }
+  ]
+}
+:::
+
+:::example[Spam filtering]
+A filter flags $95\%$ of spam messages and wrongly flags $2\%$ of legitimate ones. If $40\%$ of incoming mail is spam, what is the probability that a flagged message really is spam?
+:::
+
+:::solution
+Let $S$ be "spam", $F$ be "flagged". Then $P(S) = 0.4$, $P(F \mid S) = 0.95$, $P(F \mid S^c) = 0.02$.
+
+Total probability: $P(F) = 0.95 \times 0.4 + 0.02 \times 0.6 = 0.38 + 0.012 = 0.392$.
+
+Bayes: $P(S \mid F) = 0.38/0.392 \approx 0.9694$.
+
+Compare with the medical test, where a *more* accurate instrument gave a posterior of $0.09$. The difference is entirely the base rate: spam is common, so the prior odds $0.4/0.6 = 2/3$ start high, and the likelihood ratio $0.95/0.02 = 47.5$ pushes them to $31.67$, giving $31.67/32.67 \approx 0.969$. A rare event needs a far stronger likelihood ratio to reach the same posterior.
+:::
+
+:::summary
+**Axioms.** A probability measure satisfies $P(A) \ge 0$, $P(S) = 1$, and countable additivity over pairwise disjoint events. Everything below is derived from those three, so every one of them holds in *any* probability model.
+
+**Derived rules, no hypotheses needed.** $P(\varnothing) = 0$; finite additivity; $P(A^c) = 1 - P(A)$; monotonicity, $A \subseteq B \Rightarrow P(A) \le P(B)$, hence $0 \le P(A) \le 1$; the addition rule $P(A \cup B) = P(A) + P(B) - P(A\cap B)$; Boole's inequality $P(\bigcup A_i) \le \sum P(A_i)$; and inclusion–exclusion for three events with its $+P(A\cap B\cap C)$ correction.
+
+**Requires equally likely outcomes.** $P(A) = |A|/|S|$ holds only on a finite equiprobable sample space. Counting then uses the multiplication principle, $P(n,k) = n!/(n-k)!$ for ordered selections without repetition, $n^k$ with repetition, and $\binom{n}{k} = n!/(k!(n-k)!)$ for unordered selections — with the same ordering convention used for $|A|$ and $|S|$.
+
+**Requires $P(B) > 0$.** $P(A \mid B) = P(A \cap B)/P(B)$, which is itself a probability measure in $A$, so the complement and addition rules apply in front of the bar but never behind it. The multiplication rule $P(A \cap B) = P(A)P(B \mid A)$ and the chain rule follow.
+
+**Requires independence.** $P(A \cap B) = P(A)P(B)$ is the definition; when $P(B) > 0$ it is equivalent to $P(A \mid B) = P(A)$. Independence passes to complements. Mutually exclusive events of positive probability are never independent. Mutual independence of $n$ events requires the product rule on *every* subcollection, not just on pairs.
+
+**Requires a partition.** With $B_i$ disjoint, exhaustive and each of positive probability, the law of total probability gives $P(A) = \sum_i P(A \mid B_i)P(B_i)$, and $P(A)$ must lie between the smallest and largest $P(A \mid B_i)$.
+
+**Requires $P(A) > 0$.** Bayes' theorem, $P(B \mid A) = P(A \mid B)P(B)/P(A)$, with the denominator supplied by total probability. Equivalently, posterior odds equal the likelihood ratio times the prior odds. The posterior depends on the prior: a $99\%$-accurate test on a disease of prevalence $0.001$ gives a posterior of only $0.0902$, and a second *conditionally independent* positive raises it to $0.9075$.
+:::
+
+## Common Mistakes
+
+- Forgetting to subtract the overlap in $P(A \cup B)$. Additivity is an axiom only for mutually exclusive events; for any others the correction $-P(A \cap B)$ is compulsory.
+- Confusing mutually exclusive with independent. For events of positive probability they are incompatible: exclusivity forces $P(A \cap B) = 0$ while independence forces $P(A)P(B) > 0$.
+- Assuming independence rather than justifying it. Independence comes from the design — separate tosses, random sampling, randomised assignment — never from the events feeling unrelated.
+- Checking independence only in pairs. Three events can be pairwise independent and still fail mutual independence, as two coins and the event "they match" show.
+- Swapping $P(A \mid B)$ and $P(B \mid A)$. These answer different questions, and converting between them requires the prior; doing it without one is the prosecutor's fallacy.
+- Applying the complement rule behind the bar. $P(A \mid B^c) = 1 - P(A \mid B)$ is false; the correct identity is $P(A^c \mid B) = 1 - P(A \mid B)$.
+- Reading a posterior off the sensitivity. With a rare disease the false positives from the large healthy group outnumber the true positives, which is why $99\%$ accuracy can yield a $9\%$ posterior.
+- Using $P(A) = |A|/|S|$ on a sample space whose outcomes are not equally likely, such as the eleven possible sums of two dice.
+- Mixing ordered and unordered counts in the same fraction. Both $|A|$ and $|S|$ must use one convention.
+- Double counting in "at least one" problems. Use the complement, or sum over disjoint cases by exact number.
+- Choosing permutations when order does not matter, or combinations when it does. Ask whether rearranging the selection produces a genuinely different outcome.
+- Conditioning on an event of probability zero. $P(A \mid B)$ is undefined when $P(B) = 0$; the definition divides by it.
+- Using cases that do not partition the sample space in the law of total probability. Overlapping cases double count; incomplete cases lose probability. Check that the weights sum to $1$.
+- Multiplying likelihood ratios for repeated tests that are not conditionally independent. Two runs of the same assay on the same sample are not two pieces of evidence.
+- Treating a large relative update as a large absolute probability. Multiplying a probability by $90$ is dramatic and still leaves $0.001$ below $0.1$.

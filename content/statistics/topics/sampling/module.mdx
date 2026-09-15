@@ -4,202 +4,795 @@ title: Sampling and Data Distributions
 
 # Sampling and Data Distributions
 
-Statistics is fundamentally about inferring properties of a large population from a smaller sample. Understanding how sample statistics vary — their sampling distributions — is what makes that inference valid.
+Every statistical claim you will ever meet has the same shape. Somebody wanted to know something about a large group they could not examine — all voters, all manufactured bearings, all patients with a disease — so they examined a small group instead, computed a number from it, and then asserted something about the large group. The whole of inferential statistics is the study of when that last step is legitimate and how wrong it is likely to be.
 
-The Law of Large Numbers explains why averages stabilize. The Central Limit Theorem explains why they stabilize to a normal distribution — one of the most remarkable facts in all of mathematics.
+This chapter supplies the machinery that makes the step legitimate. The central realisation is deceptively small: *a statistic computed from a random sample is itself a random variable.* The sample mean $\bar{X}$ is not a number waiting to be measured; it is a quantity with a distribution, a centre and a spread, and that distribution — the **sampling distribution** — is the object every confidence interval and every hypothesis test is secretly talking about.
 
-These results are the engine behind confidence intervals and hypothesis tests: once you know the sampling distribution of a statistic, you can quantify exactly how confident you should be in your conclusions.
+Two theorems dominate. The **Law of Large Numbers** says the sample mean settles down on the population mean as the sample grows. The **Central Limit Theorem** says that, once you zoom in on the settling by the right amount, what you see is always a normal curve — whatever the population looked like. The first is why estimation works at all; the second is why one small table of normal probabilities suffices for a whole science.
 
-## Population vs. Sample
+Everything downstream — estimation, confidence intervals, hypothesis testing, regression — rests on the results proved here. The chapter runs in that order: what a population and a sample are and what makes an estimator honest; how samples are actually drawn and what each design costs; the exact mean and variance of $\bar{X}$; the Law of Large Numbers, proved from Chebyshev's inequality, itself proved from Markov's; the Central Limit Theorem, with a proof sketch and honest guidance on when to trust it; and finally the sample proportion, which is the whole apparatus specialised to counting.
+
+## Populations, samples, parameters, statistics
 
 <!-- section: pop-vs-sample -->
 
-:::definition[Parameter and statistic]{#parameter-statistic}
-A population is the complete set of individuals or observations of interest, and a parameter (e.g. $\mu$, $\sigma^2$, $p$) is a fixed numerical characteristic of it. A sample is a subset of the population, and a statistic (e.g. $\bar{x}$, $s^2$, $\hat{p}$) is any quantity computed from the sample data.
+Before anything can be estimated, two vocabularies must be kept rigidly apart: the language of the thing you want to know about, and the language of the thing you actually have.
+
+:::definition[Population and parameter]{#population-parameter}
+A **population** is the entire collection of units under study, together with the measurement taken on each. A **parameter** is a fixed numerical feature of the population — for instance the population mean
+
+$$\mu = E(X), \qquad \text{the population variance} \qquad \sigma^2 = E\!\left[(X-\mu)^2\right],$$
+
+or a population proportion $p$. A parameter is a constant. It does not vary, it is not random, and except in a census it is not known.
 :::
 
-A parameter is unknown and usually unknowable without a census. Statistics are observable but vary from sample to sample — they are random variables.
+:::definition[Sample and statistic]{#sample-statistic}
+A **sample** is a subset of the population that is actually observed, written $X_1, X_2, \ldots, X_n$. A **statistic** is any function of the sample alone — any quantity you could compute knowing only the data, with no knowledge of the parameters. The sample mean
 
-:::definition[Unbiased estimator]{#unbiased-estimator}
-A statistic $\hat{\theta}$ is an unbiased estimator of the parameter $\theta$ when
+$$\bar{X} = \frac{1}{n}\sum_{i=1}^{n} X_i$$
 
-$$E(\hat{\theta}) = \theta.$$
+and the sample variance
+
+$$S^2 = \frac{1}{n-1}\sum_{i=1}^{n}\left(X_i - \bar{X}\right)^2$$
+
+are statistics; so is the sample maximum, the sample median, and the proportion of observations exceeding $17$.
 :::
 
-:::proposition[The sample mean and sample variance are unbiased]
-The sample mean $\bar{X}$ is unbiased for $\mu$, and the sample variance
+The clause *with no knowledge of the parameters* is what makes the definition do work. The quantity $\frac{1}{n}\sum (X_i - \mu)^2$ is not a statistic, because you cannot evaluate it: $\mu$ is exactly what you do not have. That single obstruction is the reason $S^2$ has $n-1$ in its denominator rather than $n$, as the section on the sampling distribution proves.
 
-$$s^2 = \frac{1}{n-1}\sum(x_i-\bar{x})^2$$
+Notation is doing real work here, so it is worth fixing. Roman letters for statistics, Greek for parameters: $\bar{X}$ and $S$ estimate $\mu$ and $\sigma$, and $\hat{p}$ estimates $p$. A capital $X_i$ denotes the random variable — the observation *before* it is drawn — and a lower-case $x_i$ the realised number. So $\bar{X}$ is a random variable, and $\bar{x} = 90$ is one of its values.
 
-is unbiased for $\sigma^2$.
+:::definition[Simple random sample]{#srs}
+A **simple random sample (SRS)** of size $n$ is a sample drawn so that every subset of $n$ units of the population is equally likely to be the one selected.
+
+When the population is large relative to $n$ — or when sampling is done with replacement — the resulting observations $X_1,\ldots,X_n$ are **independent and identically distributed (i.i.d.)**: each has the population distribution, and knowing some of them tells you nothing about the others. This i.i.d. condition, not the word "random", is the hypothesis every theorem in this chapter actually uses.
 :::
-
-Sampling design: simple random sampling (SRS) gives every sample of size $n$ equal probability. Stratified sampling divides the population into groups (strata) and draws SRSs from each, improving precision. Cluster sampling and systematic sampling are used when SRS is impractical.
-
-Bias in sampling: a convenience sample (whoever is available) or voluntary response sample systematically misrepresents the population. No amount of statistical analysis can fix a biased design — always randomise.
 
 :::intuition
-The population is the entire jar of marbles. The sample is the handful you grab. You want your handful to look like the full jar. Random sampling is the only way to make that likely — biased sampling is like always reaching to the top of the jar where red marbles float. A parameter is a fact about the whole jar (fixed but hidden); a statistic is what you measure in your handful (visible but jumpy).
+The population is the whole jar of marbles; the sample is the handful you scoop out. A parameter is a fact about the jar — fixed, hidden, the same whoever asks. A statistic is what you measure in your handful: visible, but jumpy, different for every scoop.
+
+The reason randomising matters is not fairness. It is that random scooping makes the handful's composition *predictable in distribution*, which is the only thing that lets you say how far off you probably are. Reaching deliberately for the top of the jar might give a perfectly fine handful — you just have no way of knowing, and no theorem will help you.
 :::
 
-:::example[parameter vs. statistic, and unbiasedness]
-Suppose a small population of $N=5$ exam scores is $\{70, 80, 90, 100, 110\}$. The population mean is a parameter: $\mu = (70+80+90+100+110)/5 = 450/5 = 90$.
+### A statistic is a random variable
+
+This is the hinge of the subject, and it is worth slowing down for. Draw one sample and compute $\bar{x}$; you get a number. Draw a second sample from the same population and compute $\bar{x}$ again; you get a *different* number. Neither is wrong. The variation is not measurement error, it is **sampling variability**, and it is a feature of the procedure, not a defect in it.
+
+Because $\bar{X}$ takes different values with different probabilities, it has a distribution of its own, and that distribution is what we can reason about. The population parameter $\mu$ sits fixed; the estimator $\bar{X}$ scatters around it. The two questions worth asking are therefore: *does the scatter centre on $\mu$?* (bias), and *how wide is the scatter?* (standard error).
+
+:::definition[Estimator, estimate, bias]{#bias}
+An **estimator** $\hat{\theta}$ of a parameter $\theta$ is a statistic used to approximate it; the number it takes on a particular sample is an **estimate**. Its **bias** is
+
+$$\operatorname{Bias}(\hat{\theta}) = E(\hat{\theta}) - \theta,$$
+
+and $\hat{\theta}$ is **unbiased** when $\operatorname{Bias}(\hat{\theta}) = 0$, that is, when $E(\hat{\theta}) = \theta$.
+:::
+
+Unbiasedness is a statement about the estimator's long-run centre across all possible samples, and about nothing else. An unbiased estimator can be badly wrong on the sample you happen to have. Conversely a slightly biased estimator with a much smaller variance may be preferable in practice; unbiasedness is a desirable property, not a sacred one.
+
+:::pitfall
+"Unbiased" does not mean "accurate on this sample", and it does not mean "the sampling method was fair". It is a property of the *formula*, computed as an average over every sample the design could have produced. A perfectly unbiased formula applied to a badly drawn sample estimates the wrong population's parameter, exactly and reliably.
+:::
+
+:::example[Enumerating a sampling distribution by hand]
+A population of $N=5$ exam scores is $\{70, 80, 90, 100, 110\}$. Samples of size $n=2$ are drawn **with replacement**, so the two draws are i.i.d. List the sampling distribution of $\bar{X}$, and check that $E(\bar{X}) = \mu$ and $\operatorname{Var}(\bar{X}) = \sigma^2/2$.
 :::
 
 :::solution
-1. Now draw the sample $\{80, 100\}$. The sample mean is a statistic: $\bar{x} = (80+100)/2 = 90$. Draw instead $\{70, 90\}$: now $\bar{x} = 80$. Same population, different samples, different statistics — that is why $\bar{X}$ is a random variable while $\mu$ is a fixed number.
-2. Unbiasedness means the statistic is right *on average across all possible samples*, not on any single one. There are $\binom{5}{2}=10$ possible samples of size $2$. Averaging all ten sample means gives back $\mu=90$ exactly — that is what $E(\bar{X}) = \mu$ asserts.
-3. Sanity check: not every sample mean equals $\mu$ (e.g. $\{70,90\}$ gives $\bar{x}=80$), yet the average of all ten sample means lands exactly on $\mu=90$. Unbiased describes the estimator's long-run centre, not its accuracy on one draw.
+The population mean is a parameter:
+
+$$\mu = \frac{70+80+90+100+110}{5} = \frac{450}{5} = 90,$$
+
+and the population variance, which divides by $N$ because this is the whole population and not a sample, is
+
+$$\sigma^2 = \frac{400 + 100 + 0 + 100 + 400}{5} = \frac{1000}{5} = 200.$$
+
+With replacement there are $5^2 = 25$ equally likely ordered samples. Their means run from $70$ (draw $70$ twice) to $110$, and the possible values $70, 75, 80, \ldots, 110$ occur with frequencies $1, 2, 3, 4, 5, 4, 3, 2, 1$ out of $25$ — a little triangle centred on $90$. Averaging all $25$ sample means gives exactly $90$, so $E(\bar{X}) = \mu$. Averaging the $25$ values of $(\bar{x} - 90)^2$ gives $100$, so
+
+$$\operatorname{Var}(\bar{X}) = 100 = \frac{200}{2} = \frac{\sigma^2}{n}.$$
+
+Two lessons. First, no individual sample mean has to equal $90$: the sample $\{70, 90\}$ gives $\bar{x} = 80$, and it is not defective. Second, the spread of $\bar{X}$ is genuinely smaller than the spread of a single observation — $100$ against $200$ — which is the entire reason for averaging.
 :::
+
+:::example[An estimator that is biased, and the fix]
+On the same population and the same $25$ with-replacement samples, compare two candidate estimators of $\sigma^2 = 200$: the "natural" one $\frac{1}{n}\sum(x_i-\bar{x})^2$ and the sample variance $\frac{1}{n-1}\sum(x_i-\bar{x})^2$.
+:::
+
+:::solution
+Averaged over all $25$ samples, the divide-by-$n$ version comes out at $100$ and the divide-by-$(n-1)$ version at $200$.
+
+The first is biased, and severely: its expectation is $100$, half of $\sigma^2 = 200$, so it understates the population variance by a factor of exactly $\frac{n-1}{n} = \frac12$ every time on average. The second hits $\sigma^2$ on the nose.
+
+The reason is visible in the sample $\{70,70\}$, where $\bar{x} = 70$ and the squared deviations are both zero. Deviations are measured from $\bar{x}$, which is pulled toward the data, and never from $\mu$, which is not. Deviations from the sample's own centre are systematically too small, and dividing by $n-1$ rather than $n$ inflates them back by precisely the right amount. The theorem *Unbiasedness of the sample variance* below proves that "precisely" is exact, not approximate.
+:::
+
+## Sampling designs and the biases they control
+
+<!-- section: sampling-designs -->
+
+The theorems in this chapter assume an i.i.d. sample. Real data collection has to *earn* that assumption, and the design used to draw the sample decides both whether it holds and how much precision you get for a fixed budget.
+
+:::definition[Four sampling designs]{#designs}
+Let the population have $N$ units and let $n$ be the sample size.
+
+**Simple random sampling.** Every subset of size $n$ is equally likely. Unbiased and assumption-free; requires a complete list of the population (a *sampling frame*) and can be expensive when units are geographically scattered.
+
+**Stratified sampling.** Partition the population into $H$ **strata** that are internally homogeneous — age bands, regions, production lines — and draw an independent SRS within each. Under *proportional allocation* the stratum sample sizes satisfy $n_h = n \cdot N_h/N$.
+
+**Cluster sampling.** Partition the population into **clusters** — city blocks, schools, shipping crates — that are each meant to resemble the population in miniature, take an SRS of clusters, and measure every unit in the chosen clusters.
+
+**Systematic sampling.** Order the population, pick a random start between $1$ and $k = N/n$, then take every $k$th unit thereafter.
+:::
+
+Stratifying and clustering look superficially similar — both begin by cutting the population into groups — but they are opposites in intent and in effect. Stratification wants groups that differ *from each other* and are uniform *within*, and it samples from every group; it reduces variance. Clustering wants groups that each look like the whole population, and it samples only a few groups; it reduces cost, and it usually *increases* variance, because units within a cluster tend to resemble one another and therefore carry duplicate information.
+
+:::proposition[Stratification cannot hurt, and usually helps]{#strat-variance}
+Write $W_h = N_h/N$ for the stratum weights, $\mu_h$ and $\sigma_h^2$ for the mean and variance within stratum $h$. Then the population variance decomposes as
+
+$$\sigma^2 = \underbrace{\sum_h W_h \sigma_h^2}_{\text{within strata}} \; + \; \underbrace{\sum_h W_h (\mu_h - \mu)^2}_{\text{between strata}},$$
+
+and under proportional allocation the stratified estimator $\bar{X}_{\text{str}} = \sum_h W_h \bar{X}_h$ has variance
+
+$$\operatorname{Var}(\bar{X}_{\text{str}}) = \frac{1}{n}\sum_h W_h \sigma_h^2,$$
+
+against $\operatorname{Var}(\bar{X}_{\text{SRS}}) = \sigma^2/n$. Stratification therefore deletes the entire between-strata term from the variance.
+:::
+
+:::proof
+The decomposition is the law of total variance applied to the stratum label: conditioning on which stratum a unit falls in, $\operatorname{Var}(X) = E[\operatorname{Var}(X \mid H)] + \operatorname{Var}(E[X \mid H])$, and the two terms are exactly the within and between sums.
+
+For the estimator, the $H$ strata samples are drawn independently, so by the variance of a sum of independent variables,
+
+$$\operatorname{Var}\!\left(\sum_h W_h \bar{X}_h\right) = \sum_h W_h^2 \operatorname{Var}(\bar{X}_h) = \sum_h W_h^2 \frac{\sigma_h^2}{n_h}.$$
+
+Proportional allocation sets $n_h = n W_h$, so $W_h^2/n_h = W_h/n$, and the sum collapses to $\frac{1}{n}\sum_h W_h \sigma_h^2$. Comparing with $\sigma^2/n$ and using the decomposition, the difference is $\frac{1}{n}\sum_h W_h(\mu_h - \mu)^2 \ge 0$.
+:::
+
+The inequality is never strict in the wrong direction, which is the practical content: proportional stratification is a free lunch, and the size of the lunch is the spread *between* stratum means. Strata that differ wildly buy you a lot; strata that all have the same mean buy you nothing.
+
+:::example[What stratification is worth]
+A town of $1000$ adults splits into $800$ non-graduates with mean income $40$ (thousand) and standard deviation $5$, and $200$ graduates with mean $90$ and standard deviation $5$. A sample of $n = 100$ is to be drawn. Compare the standard error of the mean under simple random sampling and under proportionally allocated stratified sampling.
+:::
+
+:::solution
+The weights are $W_1 = 0.8$ and $W_2 = 0.2$, and the overall mean is $\mu = 0.8(40) + 0.2(90) = 50$.
+
+Within-strata variance: $0.8(25) + 0.2(25) = 25$. Between-strata variance: $0.8(40-50)^2 + 0.2(90-50)^2 = 0.8(100) + 0.2(1600) = 80 + 320 = 400$. So
+
+$$\sigma^2 = 25 + 400 = 425, \qquad \operatorname{Var}(\bar{X}_{\text{SRS}}) = \frac{425}{100} = 4.25, \qquad SE = \sqrt{4.25} \approx 2.06.$$
+
+Proportional allocation takes $n_1 = 80$ and $n_2 = 20$, and
+
+$$\operatorname{Var}(\bar{X}_{\text{str}}) = \frac{1}{100}\left[0.8(25) + 0.2(25)\right] = \frac{25}{100} = 0.25, \qquad SE = 0.5.$$
+
+The standard error falls from $2.06$ to $0.5$ — a factor of about $4.1$ — for the same $100$ interviews. Achieving that by brute force instead would need $425/25 = 17$ times the sample, or $1700$ interviews. Sanity check: almost all the variation in this population is *between* the two groups, and stratification removes exactly that part, so a dramatic gain is what the proposition predicts.
+:::
+
+### The biases a design can introduce
+
+A design controls variance; it can also create bias that no amount of data will remove.
+
+:::definition[Four failures of a sampling design]{#sampling-bias}
+**Undercoverage** (or frame bias): some part of the population cannot be selected at all, because the sampling frame omits it.
+
+**Nonresponse bias**: selected units do not respond, and the non-responders differ systematically from the responders.
+
+**Voluntary response bias**: respondents select themselves, which over-represents whoever feels strongly.
+
+**Convenience sampling**: units are chosen because they are easy to reach, which over-represents whoever is nearby.
+
+All four shift $E(\hat{\theta})$ away from $\theta$ by an amount that does not depend on $n$.
+:::
+
+That last sentence is the whole point and deserves to be read twice. Sampling variability shrinks like $1/\sqrt{n}$; sampling bias does not shrink at all. A biased design run at enormous scale produces a very precise estimate of the wrong quantity, with a reassuringly narrow confidence interval around it.
+
+:::pitfall
+A large sample is not a defence against a bad design. In 1936 the *Literary Digest* mailed ten million ballots and tabulated about $2.4$ million responses — a sample roughly a thousand times larger than a modern poll — and predicted a landslide for the candidate who then lost $46$ of $48$ states. Its frame was drawn from telephone and automobile registries, which in 1936 meant the affluent, and its respondents were self-selected on top of that. The margin of error computed from $n = 2{,}400{,}000$ was about $0.06\%$, and it was meaningless.
+:::
+
+:::recipe[Choosing a design]
+1. Write down the **target population** explicitly, then the **frame** you can actually sample from. The gap between them is your undercoverage, and it is best confronted before the data are collected rather than after.
+2. If you know a variable that is strongly related to the outcome and available for the whole frame, **stratify** on it. The gain is the between-strata variance, so stratify on something that separates the means.
+3. If the cost of reaching a unit dominates the cost of measuring it, consider **clustering**, and then budget for the variance penalty: clusters whose members resemble each other deliver fewer effective observations than their headcount suggests.
+4. Use **systematic** sampling only when the ordering of the frame is unrelated to the measurement. If the list has a period that matches $k$ — every seventh day, every fourth machine on a four-machine line — systematic sampling locks onto it and the sample is worthless.
+5. Plan for **nonresponse** before it happens. A follow-up protocol on a random subsample of non-responders is worth more than a larger initial mailing.
+:::
+
+## The sampling distribution of the mean
+
+<!-- section: sampling-distribution -->
+
+We can now do the central computation of the chapter: find the exact centre and exact spread of $\bar{X}$, for any population whatsoever, with no assumption of normality anywhere.
+
+:::definition[Sampling distribution]{#sampling-distribution-def}
+The **sampling distribution** of a statistic is its probability distribution, induced by the randomness in the sampling procedure — that is, the distribution of the values the statistic takes across all samples the design could produce.
+:::
+
+Two facts about expectation and variance do all the work, so state them first.
+
+:::lemma[Linearity of expectation and variance of an independent sum]{#lin-exp}
+For any random variables $X$ and $Y$ with finite means and any constants $a, b$,
+
+$$E(aX + bY) = aE(X) + bE(Y).$$
+
+If in addition $X$ and $Y$ are independent with finite variances,
+
+$$\operatorname{Var}(aX + bY) = a^2\operatorname{Var}(X) + b^2\operatorname{Var}(Y).$$
+:::
+
+:::proof
+Linearity of expectation follows from linearity of the sum or integral defining $E$, and needs no independence at all — it holds even for variables that are perfectly dependent.
+
+For the variance, write $\mu_X = E(X)$ and $\mu_Y = E(Y)$ and expand:
+
+$$\operatorname{Var}(aX+bY) = E\!\left[\left(a(X-\mu_X) + b(Y-\mu_Y)\right)^2\right] = a^2 E\!\left[(X-\mu_X)^2\right] + b^2 E\!\left[(Y-\mu_Y)^2\right] + 2ab\, E\!\left[(X-\mu_X)(Y-\mu_Y)\right].$$
+
+The last expectation is the covariance $\operatorname{Cov}(X,Y)$. Independence gives $E(XY) = E(X)E(Y)$, hence $\operatorname{Cov}(X,Y) = E(XY) - \mu_X\mu_Y = 0$, and the cross term vanishes.
+:::
+
+:::remark
+Independence is used *only* for the cross term. The correct hypothesis for the variance formula is therefore the weaker one that the variables be uncorrelated. It matters because the cross term is what a bad design reinstates: cluster sampling produces positively correlated observations, so $\operatorname{Cov} > 0$ and the true variance of $\bar{X}$ exceeds $\sigma^2/n$. Quoting $\sigma^2/n$ for clustered data understates the uncertainty.
+:::
+
+:::theorem[Mean and variance of the sample mean]{#mean-variance-xbar}
+Let $X_1,\ldots,X_n$ be i.i.d. with mean $\mu$ and finite variance $\sigma^2$, and let $\bar{X} = \frac{1}{n}\sum_{i=1}^n X_i$. Then
+
+$$E(\bar{X}) = \mu \qquad\text{and}\qquad \operatorname{Var}(\bar{X}) = \frac{\sigma^2}{n}.$$
+
+No assumption is made about the shape of the population distribution.
+:::
+
+:::proof
+For the mean, apply linearity of expectation to the sum and pull the constant $1/n$ out:
+
+$$E(\bar{X}) = E\!\left(\frac{1}{n}\sum_{i=1}^{n} X_i\right) = \frac{1}{n}\sum_{i=1}^{n} E(X_i) = \frac{1}{n}\cdot n\mu = \mu,$$
+
+where the identical-distribution hypothesis supplies $E(X_i) = \mu$ for every $i$. Independence was not needed.
+
+For the variance, independence *is* needed. Extending the lemma from two summands to $n$ by induction, the variance of an independent sum is the sum of the variances, so
+
+$$\operatorname{Var}\!\left(\sum_{i=1}^{n} X_i\right) = \sum_{i=1}^{n}\operatorname{Var}(X_i) = n\sigma^2.$$
+
+Scaling by the constant $1/n$ multiplies the variance by $(1/n)^2$:
+
+$$\operatorname{Var}(\bar{X}) = \frac{1}{n^2}\operatorname{Var}\!\left(\sum_{i=1}^{n} X_i\right) = \frac{1}{n^2}\cdot n\sigma^2 = \frac{\sigma^2}{n}. \qquad\blacksquare$$
+:::
+
+Look closely at where the $\sqrt{n}$ comes from, because it is the most-quoted and least-understood constant in statistics. Variance is a *squared* quantity, and the two things that happen to it — summing $n$ independent copies, then dividing by $n$ — are not symmetric. Summing multiplies variance by $n$; dividing by the constant $n$ divides variance by $n^2$. The net is $n/n^2 = 1/n$. Taking square roots to get back to the scale of the data turns $1/n$ into $1/\sqrt{n}$.
+
+:::definition[Standard error of the mean]{#standard-error}
+The **standard error** of $\bar{X}$ is the standard deviation of its sampling distribution:
+
+$$SE(\bar{X}) = \sqrt{\operatorname{Var}(\bar{X})} = \frac{\sigma}{\sqrt{n}}.$$
+
+When $\sigma$ is unknown it is estimated by $S$, giving the **estimated standard error** $S/\sqrt{n}$.
+:::
+
+A standard error measures how far the estimate typically lands from the parameter it estimates. It is not a property of the data — $\sigma$ is that — but a property of the *procedure*. Reporting $\sigma$ when you meant $SE$, or the reverse, is the single most common numerical error in applied work: $\sigma$ describes how spread out individual observations are and does not change when you collect more of them, while $SE$ describes how spread out your *estimate* is and shrinks as you do.
+
+:::figure[The standard error $\sigma/\sqrt{n}$ for a population with $\sigma = 20$. Precision improves, but with sharply diminishing returns: going from $n=16$ to $n=64$ — three times the data — only halves the standard error from $5$ to $2.5$.]{#se-decay}
+{
+  "type": "plot",
+  "x": [0, 104],
+  "y": [0, 22],
+  "xTicks": 20,
+  "yTicks": 5,
+  "xLabel": "sample size n",
+  "yLabel": "standard error",
+  "marks": [
+    { "kind": "function", "fn": "20/sqrt(x)", "from": 0.9, "to": 104, "tone": "accent" },
+    { "kind": "line", "through": [[16, 0], [16, 5]], "extend": false, "tone": "muted", "dashed": true },
+    { "kind": "line", "through": [[0, 5], [16, 5]], "extend": false, "tone": "muted", "dashed": true },
+    { "kind": "line", "through": [[64, 0], [64, 2.5]], "extend": false, "tone": "muted", "dashed": true },
+    { "kind": "line", "through": [[0, 2.5], [64, 2.5]], "extend": false, "tone": "muted", "dashed": true },
+    { "kind": "point", "at": [16, 5], "tone": "result" },
+    { "kind": "point", "at": [64, 2.5], "tone": "result" },
+    { "kind": "text", "at": [66, 15.5], "text": "SE = 20 / √n" },
+    { "kind": "text", "at": [36, 8.2], "text": "n = 16, SE = 5", "tone": "result" },
+    { "kind": "text", "at": [72, 6.4], "text": "n = 64, SE = 2.5", "tone": "result" }
+  ]
+}
+:::
+
+:::corollary[The square-root law]{#sqrt-law}
+To divide the standard error by $k$, the sample size must be multiplied by $k^2$. In particular, halving the standard error requires quadrupling the sample.
+:::
+
+:::proof
+$SE(n) = \sigma/\sqrt{n}$, so $SE(k^2 n) = \sigma/\sqrt{k^2 n} = \sigma/(k\sqrt{n}) = SE(n)/k$.
+:::
+
+:::intuition
+Precision is expensive and gets more expensive. The first hundred observations buy a great deal; the next hundred buy much less, because they are diluted into a bigger average. This is why a national poll of $1000$ and a national poll of $2000$ have margins of error of about $3.1\%$ and $2.2\%$ — doubling the budget for a third off the error — and why nobody polls a million people.
+:::
+
+### Why the sample variance divides by $n-1$
+
+:::theorem[Unbiasedness of the sample variance]{#s2-unbiased}
+Let $X_1,\ldots,X_n$ be i.i.d. with mean $\mu$ and finite variance $\sigma^2$, $n \ge 2$. Then
+
+$$E(S^2) = E\!\left[\frac{1}{n-1}\sum_{i=1}^{n}\left(X_i-\bar{X}\right)^2\right] = \sigma^2.$$
+:::
+
+:::proof
+The trick is to compare deviations from $\bar{X}$ with deviations from $\mu$, which is where the expectations are known. Insert and remove $\mu$ inside the square:
+
+$$\sum_{i=1}^{n}(X_i-\bar{X})^2 = \sum_{i=1}^{n}\left[(X_i-\mu)-(\bar{X}-\mu)\right]^2 = \sum_{i=1}^{n}(X_i-\mu)^2 - 2(\bar{X}-\mu)\sum_{i=1}^{n}(X_i-\mu) + n(\bar{X}-\mu)^2.$$
+
+Now $\sum_{i=1}^n (X_i-\mu) = n(\bar{X}-\mu)$, so the middle term equals $-2n(\bar{X}-\mu)^2$ and the last two terms combine:
+
+$$\sum_{i=1}^{n}(X_i-\bar{X})^2 = \sum_{i=1}^{n}(X_i-\mu)^2 - n(\bar{X}-\mu)^2.$$
+
+This identity is worth remembering on its own: the scatter about the sample mean is always less than the scatter about the true mean, by exactly $n$ times the squared error of the sample mean. Take expectations of both sides. Each $E\!\left[(X_i-\mu)^2\right] = \sigma^2$ by definition, and $E\!\left[(\bar{X}-\mu)^2\right] = \operatorname{Var}(\bar{X}) = \sigma^2/n$ by the theorem *Mean and variance of the sample mean* — which is where independence enters. Therefore
+
+$$E\!\left[\sum_{i=1}^{n}(X_i-\bar{X})^2\right] = n\sigma^2 - n\cdot\frac{\sigma^2}{n} = (n-1)\sigma^2.$$
+
+Dividing by $n-1$ gives $E(S^2) = \sigma^2$. $\blacksquare$
+:::
+
+The proof explains the $n-1$ rather than merely confirming it. Sum of squared deviations about $\bar{X}$ has expectation $(n-1)\sigma^2$, not $n\sigma^2$, because $\bar{X}$ is itself built from the data and sits closer to them than $\mu$ does. The deficit is exactly one $\sigma^2$ — one observation's worth — which is the meaning of the phrase *one degree of freedom is spent estimating the mean*. The deviations $X_i - \bar{X}$ satisfy one linear constraint, $\sum (X_i-\bar{X}) = 0$, so only $n-1$ of them are free.
+
+:::pitfall
+$S^2$ is unbiased for $\sigma^2$, but $S$ is **not** unbiased for $\sigma$. Taking a square root is a strictly concave operation, so Jensen's inequality gives $E(S) = E(\sqrt{S^2}) < \sqrt{E(S^2)} = \sigma$: the sample standard deviation underestimates $\sigma$ on average. The bias is small for large $n$ and is almost always ignored, but "unbiasedness is preserved under square roots" is false and the belief causes real errors elsewhere.
+:::
+
+:::example[Computing $\bar{x}$, $s^2$ and the estimated standard error]
+A sample of $n = 5$ bearing diameters (mm) reads $10.2,\ 9.8,\ 10.4,\ 9.6,\ 10.0$. Report $\bar{x}$, $s^2$, $s$, and the estimated standard error of the mean.
+:::
+
+:::solution
+The sample mean is
+
+$$\bar{x} = \frac{10.2+9.8+10.4+9.6+10.0}{5} = \frac{50.0}{5} = 10.0.$$
+
+Deviations are $0.2, -0.2, 0.4, -0.4, 0.0$, which sum to zero as they must. Their squares are $0.04, 0.04, 0.16, 0.16, 0$, totalling $0.40$. Hence
+
+$$s^2 = \frac{0.40}{5-1} = 0.10, \qquad s = \sqrt{0.10} \approx 0.3162,$$
+
+and the estimated standard error of the mean is
+
+$$\frac{s}{\sqrt{n}} = \frac{0.3162}{\sqrt{5}} \approx 0.1414.$$
+
+Sanity check: dividing by $n = 5$ instead would have given $0.08$, which the theorem says is biased downward by the factor $4/5$ — and indeed $0.10 \times 0.8 = 0.08$. Note also the scale: individual bearings scatter by about $0.32$ mm, but the *mean of five* scatters by only about $0.14$ mm.
+:::
+
+### Finite populations and exact normality
+
+Two refinements complete the picture.
+
+:::proposition[Finite population correction]{#fpc}
+When an SRS of size $n$ is drawn **without replacement** from a finite population of size $N$ with variance $\sigma^2$, the draws are no longer independent and
+
+$$\operatorname{Var}(\bar{X}) = \frac{\sigma^2}{n}\cdot\frac{N-n}{N-1}.$$
+
+The factor $\sqrt{(N-n)/(N-1)}$ multiplying the standard error is the **finite population correction (FPC)**.
+:::
+
+The correction is always less than $1$: sampling without replacement is *more* precise, because later draws cannot repeat information already collected. At the extreme $n = N$ the factor is $0$ — a census has no sampling error at all. The usual convention is to ignore the FPC when $n/N \le 0.05$, where it exceeds $0.974$ and changes nothing that matters. On the five-score population above, sampling $2$ without replacement gives $\operatorname{Var}(\bar{X}) = 100 \times \frac{3}{4} = 75$ rather than $100$, which direct enumeration of the ten samples confirms.
+
+:::proposition[A normal population gives an exactly normal mean]{#normal-exact}
+If $X_1,\ldots,X_n$ are i.i.d. $N(\mu,\sigma^2)$, then for **every** $n$, including $n=1$,
+
+$$\bar{X} \sim N\!\left(\mu, \frac{\sigma^2}{n}\right)\qquad\text{exactly.}$$
+:::
+
+:::proof
+The moment generating function of $N(\mu,\sigma^2)$ is $M(t) = \exp(\mu t + \tfrac12\sigma^2 t^2)$. For independent variables the MGF of a sum is the product of the MGFs, and $M_{cX}(t) = M_X(ct)$, so
+
+$$M_{\bar{X}}(t) = \prod_{i=1}^{n} M_{X_i}\!\left(\frac{t}{n}\right) = \left[\exp\!\left(\frac{\mu t}{n} + \frac{\sigma^2 t^2}{2n^2}\right)\right]^{n} = \exp\!\left(\mu t + \frac{(\sigma^2/n)t^2}{2}\right),$$
+
+which is the MGF of $N(\mu, \sigma^2/n)$. Since an MGF finite in a neighbourhood of $0$ determines the distribution, the claim follows.
+:::
+
+This matters because it separates two situations that students routinely merge. If the population is normal, no theorem about large $n$ is needed — $\bar{X}$ is normal from $n=1$. The Central Limit Theorem is required only when the population is *not* normal, and then it delivers normality only in the limit.
 
 ## The Law of Large Numbers
 
 <!-- section: lln -->
 
-:::theorem[Weak law of large numbers]{#lln}
-Let $X_1, X_2, \ldots$ be i.i.d. random variables with mean $\mu$, and let $\bar{X}_n = \frac{1}{n}\sum_{i=1}^n X_i$. Then $\bar{X}_n$ converges in probability to $\mu$: for any $\varepsilon > 0$,
+We now know that $\bar{X}$ sits at $\mu$ on average and that its spread is $\sigma/\sqrt{n}$, which tends to $0$. Intuitively, an estimator centred on the target whose spread collapses must converge to the target. The Law of Large Numbers is that intuition made into a theorem, and the route to it runs through two inequalities that are worth knowing in their own right.
 
-$$P(|\bar{X}_n - \mu| > \varepsilon) \to 0 \quad \text{as } n \to \infty.$$
+:::theorem[Markov's inequality]{#markov}
+Let $Y$ be a **non-negative** random variable with finite mean. Then for every $a > 0$,
+
+$$P(Y \ge a) \le \frac{E(Y)}{a}.$$
 :::
 
-:::theorem[Strong law of large numbers]
-Under the same hypotheses, convergence holds almost surely:
+:::proof
+Define the indicator $\mathbf{1}\{Y \ge a\}$, equal to $1$ when $Y \ge a$ and $0$ otherwise. Then pointwise
 
-$$P(\bar{X}_n \to \mu) = 1.$$
+$$Y \ \ge\ a\,\mathbf{1}\{Y \ge a\},$$
+
+because when $Y \ge a$ the right side is $a \le Y$, and when $Y < a$ the right side is $0 \le Y$, using non-negativity. Expectation is monotone, so taking expectations preserves the inequality:
+
+$$E(Y) \ \ge\ a\,E\!\left[\mathbf{1}\{Y\ge a\}\right] = a\,P(Y \ge a).$$
+
+Dividing by $a > 0$ gives the result. $\blacksquare$
 :::
 
-Almost every sequence of i.i.d. observations has a time-average that converges to the true mean. The LLN justifies using observed frequencies as probability estimates, trusting large studies over small ones, and the general principle that more data gives better estimates.
+Non-negativity is not decoration. Without it the inequality is false: a variable taking $-1000$ and $+1$ can have a small mean and still exceed $a$ with high probability.
+
+:::theorem[Chebyshev's inequality]{#chebyshev}
+Let $X$ have finite mean $\mu$ and finite variance $\sigma^2$. Then for every $k > 0$,
+
+$$P\!\left(|X-\mu| \ge k\right) \le \frac{\sigma^2}{k^2}.$$
+
+Equivalently, with $k = c\sigma$: the probability of landing at least $c$ standard deviations from the mean is at most $1/c^2$.
+:::
+
+:::proof
+Apply Markov's inequality to the non-negative variable $Y = (X-\mu)^2$ with threshold $a = k^2$. The events $\{|X-\mu| \ge k\}$ and $\{(X-\mu)^2 \ge k^2\}$ are the same event, so
+
+$$P\!\left(|X-\mu|\ge k\right) = P\!\left((X-\mu)^2 \ge k^2\right) \le \frac{E\!\left[(X-\mu)^2\right]}{k^2} = \frac{\sigma^2}{k^2}. \qquad\blacksquare$$
+:::
+
+Three lines, and it holds for *every* distribution with a finite variance: at most $25\%$ of any distribution lies two or more standard deviations from its mean, at most $11.1\%$ lies three or more. The price of that universality is looseness — for a normal distribution the true figures are $4.6\%$ and $0.27\%$ — but a bound that needs no assumptions is exactly what is wanted for proving a theorem that needs no assumptions.
+
+:::theorem[Weak Law of Large Numbers]{#lln}
+Let $X_1, X_2, \ldots$ be i.i.d. with mean $\mu$ and finite variance $\sigma^2$, and set $\bar{X}_n = \frac{1}{n}\sum_{i=1}^n X_i$. Then $\bar{X}_n \to \mu$ **in probability**: for every $\varepsilon > 0$,
+
+$$\lim_{n\to\infty} P\!\left(\left|\bar{X}_n - \mu\right| \ge \varepsilon\right) = 0.$$
+:::
+
+:::proof
+Fix $\varepsilon > 0$. By the theorem *Mean and variance of the sample mean*, $\bar{X}_n$ has mean $\mu$ and variance $\sigma^2/n$. Apply Chebyshev's inequality to $\bar{X}_n$ with $k = \varepsilon$:
+
+$$P\!\left(\left|\bar{X}_n - \mu\right| \ge \varepsilon\right) \le \frac{\operatorname{Var}(\bar{X}_n)}{\varepsilon^2} = \frac{\sigma^2}{n\varepsilon^2}.$$
+
+With $\sigma^2$ and $\varepsilon$ fixed, the right-hand side is a constant over $n$, which tends to $0$ as $n \to \infty$. The probability on the left is non-negative and bounded above by something tending to $0$, so it tends to $0$. $\blacksquare$
+:::
+
+The proof is three lines because all the work was done earlier: the variance calculation is what makes it go through, and the finite-variance hypothesis is inherited from Chebyshev. (The weak law is in fact true assuming only a finite *mean*, but that proof needs characteristic functions rather than Chebyshev, and the finite-variance version is the one that illuminates.)
+
+:::theorem[Strong Law of Large Numbers]{#slln}
+Let $X_1, X_2, \ldots$ be i.i.d. with finite mean $\mu$. Then $\bar{X}_n \to \mu$ **almost surely**:
+
+$$P\!\left(\lim_{n\to\infty} \bar{X}_n = \mu\right) = 1.$$
+:::
+
+The difference between the two laws is not a technicality, though it is easy to state badly. The weak law says: *for each fixed large $n$, it is unlikely that $\bar{X}_n$ is far from $\mu$.* It permits the sequence to wander back out beyond $\varepsilon$ infinitely often, as long as it does so ever more rarely. The strong law says: *the sequence of running means, viewed as a single infinite object, converges — for all but a probability-zero set of possible infinite sample sequences.* Excursions beyond $\varepsilon$ eventually stop happening altogether. The strong law implies the weak law; the converse fails.
+
+:::figure[Five hundred flips of a fair coin: the running proportion of heads. The first seven flips all landed heads, and the average does not "correct" for them — it simply dilutes them, drifting to $0.5$ from above. Early swings of $0.2$ shrink to swings of $0.01$, which is the Law of Large Numbers happening.]{#lln-running-mean}
+{
+  "type": "plot",
+  "x": [0, 510],
+  "y": [0.35, 1.08],
+  "xTicks": 100,
+  "yTicks": 0.1,
+  "xLabel": "number of flips n",
+  "yLabel": "running proportion of heads",
+  "marks": [
+    { "kind": "line", "through": [[0, 0.55], [510, 0.55]], "extend": false, "tone": "muted", "dashed": true },
+    { "kind": "line", "through": [[0, 0.45], [510, 0.45]], "extend": false, "tone": "muted", "dashed": true },
+    { "kind": "line", "through": [[0, 0.5], [510, 0.5]], "extend": false, "tone": "result" },
+    { "kind": "path", "tone": "accent", "points": [[1, 1.0], [2, 1.0], [3, 1.0], [4, 1.0], [5, 1.0], [6, 1.0], [7, 1.0], [8, 0.875], [9, 0.7778], [10, 0.8], [11, 0.7273], [12, 0.75], [13, 0.6923], [14, 0.6429], [15, 0.6667], [16, 0.625], [17, 0.6471], [18, 0.6111], [19, 0.6316], [20, 0.65], [21, 0.6667], [22, 0.6818], [23, 0.6957], [24, 0.6667], [25, 0.64], [26, 0.6154], [27, 0.5926], [28, 0.6071], [29, 0.6207], [30, 0.6], [35, 0.5429], [45, 0.5111], [55, 0.5273], [65, 0.5385], [75, 0.5067], [85, 0.5294], [95, 0.5368], [105, 0.5429], [115, 0.5304], [125, 0.512], [135, 0.5037], [145, 0.5103], [155, 0.5032], [165, 0.497], [175, 0.5029], [185, 0.5081], [195, 0.5026], [205, 0.5073], [215, 0.4977], [225, 0.4978], [235, 0.5021], [245, 0.4898], [255, 0.4824], [265, 0.483], [275, 0.4836], [285, 0.4912], [295, 0.4847], [305, 0.4852], [315, 0.4889], [325, 0.4985], [335, 0.5045], [345, 0.5014], [355, 0.4986], [365, 0.4986], [375, 0.496], [385, 0.5013], [395, 0.5038], [405, 0.5012], [415, 0.4988], [425, 0.4918], [435, 0.4874], [445, 0.4899], [455, 0.4879], [465, 0.4903], [475, 0.4947], [485, 0.4928], [495, 0.4929]] },
+    { "kind": "text", "at": [140, 1.01], "text": "seven heads to start" },
+    { "kind": "text", "at": [255, 0.79], "text": "± 0.05 band", "tone": "muted" },
+    { "kind": "text", "at": [430, 0.64], "text": "μ = 0.5", "tone": "result" }
+  ]
+}
+:::
 
 :::pitfall
-The LLN does not imply the 'gambler's fallacy.' After $10$ coin flips all landing heads, the next flip is still $50/50$. The LLN talks about the eventual average, not compensation of past outcomes.
+The Law of Large Numbers is **not** the "law of averages", and the difference is where the gambler's fallacy lives. After seven heads, the coin does not owe you tails. Each flip is still independent and still $50/50$, and the running average returns to $0.5$ by *dilution*, not by compensation: the surplus of seven heads becomes a smaller and smaller fraction of an ever-longer sequence.
+
+The sharp form of the point is that the *count* does not converge at all. The number of heads minus $n/2$ has standard deviation $\tfrac12\sqrt{n}$, which **grows** without bound: at $n = 10{,}000$ you should expect to be off by around $50$ heads, and at $n = 1{,}000{,}000$ by around $500$. It is the *proportion*, $50/10{,}000 = 0.005$, that shrinks. Averages settle; totals drift further apart forever.
 :::
 
-:::intuition
-Flip a fair coin $10$ times and you might get $7$ heads ($70\%$). Flip $10{,}000$ times and you will get very close to $5{,}000$ heads ($50\%$). The LLN says the average stabilises toward the truth as you collect more data. Past outcomes don't 'owe' you future results — each flip is still $50/50$.
-:::
-
-:::example[why the average tightens but the count doesn't]
-Model a fair coin with $X_i = 1$ for heads, $0$ for tails, so $\mu = 0.5$ and each flip is i.i.d. — the LLN's required conditions (independent, identically distributed, finite mean) all hold.
+:::example[How many observations does Chebyshev demand?]
+Observations are i.i.d. with unknown mean $\mu$ and known $\sigma = 1$. How large must $n$ be to guarantee $P(|\bar{X}_n - \mu| \ge 0.1) \le 0.05$ using only Chebyshev's inequality — that is, with no assumption about the population's shape?
 :::
 
 :::solution
-1. The *proportion* of heads is exactly the sample mean $\bar{X}_n$, so the LLN says $\bar{X}_n \to 0.5$. Its spread is $SE = \sigma/\sqrt{n}$ with $\sigma = \sqrt{0.5 \times 0.5} = 0.5$. For $n=100$: $SE = 0.5/\sqrt{100} = 0.05$. For $n=10{,}000$: $SE = 0.5/\sqrt{10{,}000} = 0.005$ — ten times tighter.
-2. A common trap: the *count* of heads does not converge to $n/2$. At $n=10{,}000$ the standard deviation of the count is $\sigma\sqrt{n} = 0.5\times 100 = 50$, so being off by $50$-plus heads is routine. It is the *proportion* $50/10{,}000 = 0.005$ that is tiny.
-3. Sanity check: the LLN promises the average nears the truth, not that heads and tails literally even out in count. As $n$ grows the count typically drifts *further* from exactly $n/2$ in absolute terms, even as the proportion homes in on $0.5$ — which is precisely why the gambler's fallacy is wrong.
+By the bound used in the proof of the weak law,
+
+$$P\!\left(|\bar{X}_n - \mu| \ge 0.1\right) \le \frac{\sigma^2}{n(0.1)^2} = \frac{1}{0.01\,n} = \frac{100}{n}.$$
+
+Requiring $100/n \le 0.05$ gives $n \ge 2000$.
+
+Compare what the Central Limit Theorem will give for the same guarantee in the next section: it needs $z^* = 1.96$ standard errors to cover $95\%$, so $0.1 \ge 1.96/\sqrt{n}$, giving $\sqrt{n} \ge 19.6$ and $n \ge 385$.
+
+Sanity check on the gap: $2000$ against $385$, a factor of about five. Both are correct. Chebyshev's $2000$ is a *guarantee* valid for every distribution with $\sigma=1$, including maximally awkward ones; the CLT's $385$ is an *approximation* that relies on $n$ already being large enough for normality to have set in. The price of assuming nothing is a bound five times too conservative for well-behaved data.
 :::
 
 ## The Central Limit Theorem
 
 <!-- section: clt -->
 
-:::theorem[Central Limit Theorem]{#clt}
-If $X_1, \ldots, X_n$ are i.i.d. with mean $\mu$ and **finite** variance $\sigma^2$, then the standardised mean converges in distribution to a standard normal:
+The Law of Large Numbers tells us $\bar{X}_n$ collapses onto $\mu$. That is a statement about a point, and a point carries no uncertainty, so on its own the LLN cannot produce a confidence interval. To say anything quantitative we must look at the collapse under a microscope: magnify the deviation $\bar{X}_n - \mu$ by just enough to keep it visible, and ask what shape it has. Since the deviation has standard deviation $\sigma/\sqrt{n}$, the right magnification is by $\sqrt{n}/\sigma$ — and the astonishing fact is that what comes into focus is the same curve every time.
 
-$$\frac{\bar{X}-\mu}{\sigma/\sqrt{n}} \to N(0,1) \quad \text{as } n\to\infty.$$
+:::definition[Convergence in distribution]{#conv-dist}
+A sequence of random variables $Z_n$ **converges in distribution** to $Z$, written $Z_n \xrightarrow{d} Z$, if their cumulative distribution functions converge,
 
-Equivalently, $\bar{X} \approx N(\mu, \sigma^2/n)$ for large $n$.
+$$F_{Z_n}(z) \to F_Z(z) \qquad \text{at every } z \text{ where } F_Z \text{ is continuous.}$$
+
+This says the *probabilities* line up in the limit. It says nothing about the values of $Z_n$ tracking the values of $Z$, which is why it is the weakest of the standard convergence modes.
 :::
 
-Both hypotheses matter: the observations must be independent and identically distributed, and the variance must be finite. Granted those, the result is remarkable because it holds regardless of the population's shape — skewed, bimodal, or uniform. The averaging process irons out all non-normality.
+:::theorem[Central Limit Theorem (Lindeberg–Lévy)]{#clt}
+Let $X_1, X_2, \ldots$ be independent and identically distributed with mean $\mu$ and variance $\sigma^2$ satisfying $0 < \sigma^2 < \infty$. Then
 
-:::definition[Standard error of the mean]{#standard-error}
-The standard error of the sample mean is
+$$Z_n = \frac{\bar{X}_n - \mu}{\sigma/\sqrt{n}} = \frac{\sum_{i=1}^{n} X_i - n\mu}{\sigma\sqrt{n}} \ \xrightarrow{d}\ N(0,1).$$
 
-$$SE = \frac{\sigma}{\sqrt{n}}.$$
+Equivalently, for large $n$,
+
+$$\bar{X}_n \ \dot\sim\ N\!\left(\mu, \frac{\sigma^2}{n}\right).$$
+
+No assumption whatsoever is made about the shape of the population distribution beyond the existence of a finite, non-zero variance.
 :::
 
-Doubling $n$ reduces $SE$ by a factor of $\sqrt{2}$, not $2$. To halve the standard error you need to quadruple the sample size.
+Every word of the hypothesis earns its place. **Identically distributed** and **independent** give the mean and variance computed earlier. **Finite variance** is the one that is genuinely restrictive and genuinely fails in practice: for a Cauchy distribution, which has no finite variance (indeed no mean), $\bar{X}_n$ has *exactly the same* Cauchy distribution as a single observation, for every $n$. Averaging Cauchy data achieves literally nothing, and no amount of data repairs it. Heavy-tailed financial returns and city-size distributions live uncomfortably close to this regime, which is why "the CLT always applies eventually" is a dangerous thing to believe.
 
-:::note
-Rule of thumb: $n \geq 30$ is often sufficient for the normal approximation to be good, but heavily skewed populations may require $n \geq 100$ or more. Always check with a histogram of the data.
+Note also what the conclusion is *about*. It is a statement about $\bar{X}_n$, or equivalently about the sum. It is not a statement about the individual $X_i$, which remain exactly as skewed and lumpy as they always were, no matter how many of them you collect.
+
+:::proof
+**(Sketch, via moment generating functions.)** Assume the MGF $M(t) = E(e^{tX})$ exists in a neighbourhood of $0$; the full theorem replaces MGFs by characteristic functions, which always exist, and the structure of the argument is unchanged.
+
+Standardise first: let $Y_i = (X_i - \mu)/\sigma$, so the $Y_i$ are i.i.d. with $E(Y_i) = 0$ and $E(Y_i^2) = 1$, and
+
+$$Z_n = \frac{1}{\sqrt{n}}\sum_{i=1}^{n} Y_i.$$
+
+Let $m(t) = E(e^{tY})$ be the common MGF of the $Y_i$. Differentiating under the expectation gives $m(0) = 1$, $m'(0) = E(Y) = 0$ and $m''(0) = E(Y^2) = 1$, so the second-order Taylor expansion about $0$ is
+
+$$m(t) = 1 + \frac{t^2}{2} + o(t^2).$$
+
+Independence turns the MGF of a sum into a product, and scaling by $1/\sqrt{n}$ evaluates each factor at $t/\sqrt{n}$:
+
+$$M_{Z_n}(t) = \left[m\!\left(\frac{t}{\sqrt{n}}\right)\right]^{n} = \left[1 + \frac{t^2}{2n} + o\!\left(\frac{1}{n}\right)\right]^{n}.$$
+
+Now use $\left(1 + \frac{a}{n} + o(1/n)\right)^n \to e^{a}$ with $a = t^2/2$:
+
+$$M_{Z_n}(t) \ \longrightarrow\ e^{t^2/2},$$
+
+which is the MGF of $N(0,1)$. By the continuity theorem for MGFs — pointwise convergence of MGFs in a neighbourhood of $0$ implies convergence in distribution — $Z_n \xrightarrow{d} N(0,1)$. $\blacksquare$
+
+Two features of the argument explain the theorem's universality. The expansion of $m$ keeps only the terms up to $t^2$, so only the first two moments survive; every higher moment is pushed into the $o(1/n)$ and washed out by the limit. And the normal is the unique distribution whose MGF is $e^{t^2/2}$, so the limit has nowhere else to land. *This is a sketch: the Taylor remainder needs to be controlled uniformly, and MGFs need not exist, both of which the characteristic-function proof handles properly.*
 :::
 
-:::corollary[CLT for sums and proportions]
-The CLT also applies to sums,
-
-$$S_n = \sum X_i \approx N(n\mu,\ n\sigma^2),$$
-
-and to proportions,
-
-$$\hat{p} = X/n \approx N\!\left(p,\ \frac{p(1-p)}{n}\right),$$
-
-the latter when $np \geq 10$ and $n(1-p) \geq 10$.
+:::figure[Sampling distributions of $\bar{X}$ for an exponential population with mean $2$, at $n=1$, $5$ and $30$. At $n=1$ the distribution *is* the population — strongly right-skewed, peaking at $0$. By $n=5$ a hump has formed but the right tail is still long. By $n=30$ the curve is visually symmetric about $2$ and narrow: standard errors are $2$, $0.894$ and $0.365$.]{#clt-narrowing}
+{
+  "type": "plot",
+  "x": [0, 5.2],
+  "y": [0, 1.3],
+  "xTicks": 1,
+  "yTicks": 0.25,
+  "xLabel": "value of the sample mean",
+  "yLabel": "density",
+  "marks": [
+    { "kind": "function", "fn": "0.5*exp(-0.5*x)", "from": 0, "to": 5.2, "tone": "accent" },
+    { "kind": "function", "fn": "4.0690104*x^4*exp(-2.5*x)", "from": 0, "to": 5.2, "tone": "alt", "dashed": true },
+    { "kind": "function", "fn": "21686.9736*x^29*exp(-15*x)", "from": 0.4, "to": 4.2, "tone": "result" },
+    { "kind": "line", "through": [[2, 0], [2, 1.15]], "extend": false, "tone": "muted", "dashed": true },
+    { "kind": "text", "at": [4.35, 0.2], "text": "n = 1" },
+    { "kind": "text", "at": [3.15, 0.56], "text": "n = 5", "tone": "alt" },
+    { "kind": "text", "at": [3.3, 1.02], "text": "n = 30", "tone": "result" },
+    { "kind": "text", "at": [0.95, 1.15], "text": "μ = 2", "tone": "muted" }
+  ]
+}
 :::
 
-:::intuition
-Here is the miracle: it doesn't matter what shape the population has. Pull samples of size $n$, compute the average each time, plot all those averages — they always form a bell curve for large enough $n$. The CLT is why normal distribution tools work across virtually every scientific field.
-:::
+The figure is the theorem in one picture, and it repays a slow look. The three curves are exact densities, not simulations: for an exponential population with mean $2$, the sample mean of $n$ observations has a Gamma distribution with shape $n$, whose density can be written down in closed form. Their standard deviations are $2/\sqrt{1}$, $2/\sqrt{5}$ and $2/\sqrt{30}$, matching the theorem *Mean and variance of the sample mean* exactly. What the CLT adds is the *shape*: the $n=1$ curve is as far from normal as a distribution gets, and $30$ observations are enough to make its average look like a bell.
 
-:::example[CLT probability for a sample mean]
-Population: $\mu=100$, $\sigma=20$, $n=64$.
+:::example[A probability for a sample mean]
+A population has $\mu = 100$ and $\sigma = 20$. A simple random sample of $n = 64$ is drawn. Find $P(\bar{X} > 105)$ and $P(98 < \bar{X} < 102)$.
 :::
 
 :::solution
-1. By CLT: $\bar{X}\sim N(100, 20^2/64)=N(100, 6.25)$, so $SE=2.5$.
-2. $P(\bar{X}>105) = P(Z > (105-100)/2.5) = P(Z > 2) \approx 0.0228$.
-3. Interpretation: there is only a $2.3\%$ chance that a sample of size $64$ has a mean exceeding $105$ when the true mean is $100$.
+First the sampling distribution. By the theorem *Mean and variance of the sample mean*, $E(\bar{X}) = 100$ and $\operatorname{Var}(\bar{X}) = 400/64 = 6.25$, so
+
+$$SE = \frac{20}{\sqrt{64}} = \frac{20}{8} = 2.5.$$
+
+With $n = 64$ the CLT justifies treating $\bar{X}$ as approximately $N(100, 6.25)$. Standardise:
+
+$$P(\bar{X} > 105) = P\!\left(Z > \frac{105-100}{2.5}\right) = P(Z > 2) \approx 0.0228.$$
+
+For the second, $z = \pm(98-100)/2.5 = \mp 0.8$, so
+
+$$P(98 < \bar{X} < 102) = \Phi(0.8) - \Phi(-0.8) = 2\Phi(0.8) - 1 \approx 2(0.7881) - 1 = 0.5762.$$
+
+Sanity check: an individual observation exceeds $105$ with probability $P(Z > 0.25) \approx 0.40$, but a *mean of $64$* exceeds $105$ with probability only $0.023$. That contrast — the same threshold, wildly different probabilities — is the standard error doing its job, and it is the reason a sample mean is informative about $\mu$ when a single observation is not.
 :::
 
-## Sampling Distribution of the Proportion
+### How large is "large enough"?
 
-<!-- section: sampling-distribution -->
+:::note
+The familiar advice is $n \ge 30$. It is a rule of thumb, not a theorem, and it has no mathematical status whatsoever: the CLT is an asymptotic statement, and the rate at which the approximation improves depends on the population. What governs the rate is **skewness**, and the Berry–Esseen theorem makes this precise — the error in the normal approximation to the CDF of $Z_n$ is bounded by a constant times $E|X-\mu|^3/(\sigma^3\sqrt{n})$. The third absolute moment is a measure of asymmetry, and it sits in the numerator.
 
-:::definition[Sample proportion]{#sample-proportion}
-If $X$ counts the successes in $n$ Bernoulli trials, the sample proportion
+Practical consequences:
 
-$$\hat{p} = \frac{X}{n}$$
-
-estimates the population proportion $p$.
+- A **symmetric, light-tailed** population (uniform, triangular) is well approximated by $n$ as small as $5$.
+- A **moderately skewed** population needs something in the region of $n = 30$, which is where the rule of thumb comes from.
+- A **strongly skewed** population — exponential, lognormal, insurance claims, income — may need $n$ in the hundreds, and the approximation fails first and worst in the tails, which is exactly where $p$-values live.
+- **Heavy tails without finite variance** are not fixed by any $n$.
 :::
 
-:::proposition[Mean and standard error of the sample proportion]
-The sample proportion is unbiased, $E(\hat{p}) = p$, and its standard error is
+:::example[Testing the rule of thumb honestly]
+For the exponential population with mean $2$ of the figure above, the exact probability $P(\bar{X} > 2.5)$ can be computed from the Gamma distribution. Compare it with the CLT approximation at several sample sizes.
+:::
 
-$$SE(\hat{p}) = \sqrt{\frac{p(1-p)}{n}}.$$
+:::solution
+The CLT approximation uses $z = (2.5-2)/(2/\sqrt{n}) = 0.25\sqrt{n}$ and reports $1 - \Phi(z)$.
+
+| $n$ | CLT approximation | exact | relative error |
+|---|---|---|---|
+| $5$ | $0.2881$ | $0.2530$ | $+14\%$ |
+| $10$ | $0.2146$ | $0.2014$ | $+7\%$ |
+| $30$ | $0.0855$ | $0.0919$ | $-7\%$ |
+| $100$ | $0.0062$ | $0.0094$ | $-34\%$ |
+
+Read the last column carefully, because it contains a lesson that the rule of thumb hides. The *absolute* error does fall steadily — from $0.035$ at $n=5$ to $0.003$ at $n=100$ — exactly as the CLT promises. But the *relative* error gets worse, because at $n=100$ the probability being approximated is itself tiny and sits far out in the tail, where a skewed distribution departs from normality most stubbornly.
+
+Sanity check and moral: at $n = 30$ a $7\%$ relative error on a probability near $0.09$ is perfectly usable for a confidence interval, so the rule of thumb is not wrong. But quoting $p = 0.0062$ when the truth is $0.0094$ — a claim that is half again more extreme than reality — is how a marginal result becomes a published one. Tail probabilities from skewed data deserve an exact method or a bootstrap, not the CLT.
+:::
+
+:::corollary[The CLT for sums]{#clt-sums}
+Under the hypotheses of the Central Limit Theorem, the sum $S_n = \sum_{i=1}^n X_i$ satisfies
+
+$$S_n \ \dot\sim\ N\!\left(n\mu,\ n\sigma^2\right),$$
+
+so its standard deviation is $\sigma\sqrt{n}$.
 :::
 
 :::proof
-$X$ is a sum of $n$ i.i.d. Bernoulli$(p)$ variables, so $\text{Var}(X) = np(1-p)$. Since $\hat{p} = X/n$, dividing by the constant $n$ scales the variance by $1/n^2$, giving $\text{Var}(\hat{p}) = np(1-p)/n^2 = p(1-p)/n$. Taking the square root gives the standard error.
+$S_n = n\bar{X}_n$, and multiplying by the constant $n$ multiplies the mean by $n$ and the variance by $n^2$: $E(S_n) = n\mu$ and $\operatorname{Var}(S_n) = n^2 \cdot \sigma^2/n = n\sigma^2$. The standardised quantity is the same $Z_n$ in both cases, so the limiting normality transfers.
 :::
 
-By the CLT, $\hat{p} \approx N(p, p(1-p)/n)$ when $np \geq 10$ and $n(1-p) \geq 10$. Because $\hat{p}$ is a sample mean of $0$/$1$ values, it inherits the CLT directly; the two conditions guarantee $n$ is large enough that the discrete binomial is well approximated by a smooth normal curve.
-
-:::proposition[Difference of two independent proportions]
-For two independent samples, the sampling distribution of $\hat{p}_1 - \hat{p}_2$ is approximately
-
-$$N\!\left(p_1-p_2,\ \frac{p_1(1-p_1)}{n_1} + \frac{p_2(1-p_2)}{n_2}\right).$$
-:::
-
-The variances add — not the standard errors — because the samples are independent. This is used for two-proportion $z$-tests and $z$-intervals.
-
-:::note
-**Finite population correction.** The formula $SE = \sigma/\sqrt{n}$ (and its proportion analogue) assumes sampling *with replacement*, or equivalently from an effectively infinite population. When you sample *without replacement* from a finite population of size $N$ and the sample is a sizeable fraction of it, later draws carry less new information, so the true SE is smaller. Multiply by the finite population correction (FPC) factor
-
-$$\sqrt{\frac{N-n}{N-1}}.$$
-
-The standard rule of thumb is to apply it only when $n/N > 0.05$ (the sample exceeds $5\%$ of the population); below that the correction is negligibly close to $1$ and is routinely ignored.
-:::
-
-:::example[sample proportion, condition check, and margin of error]
-A poll of $n = 400$ voters finds $\hat{p} = 0.45$ support. Build a $95\%$ confidence interval for the true proportion $p$.
-:::
-
-:::solution
-1. First check the CLT condition. We don't know $p$, so use $\hat{p}$: $n\hat{p} = 400(0.45) = 180 \geq 10$ and $n(1-\hat{p}) = 400(0.55) = 220 \geq 10$. Both pass, so the normal approximation is justified.
-2. Standard error: $SE = \sqrt{\hat{p}(1-\hat{p})/n} = \sqrt{0.45 \times 0.55 / 400} = \sqrt{0.2475/400} = \sqrt{0.00061875} \approx 0.02488$.
-3. Margin of error at $95\%$ uses $z^* = 1.96$: $ME = 1.96 \times 0.02488 \approx 0.0488$.
-4. Confidence interval: $0.45 \pm 0.0488 = (0.401,\ 0.499)$.
-5. Sanity check: $0.05$ is a believable margin for a poll of a few hundred, and the interval sits just below $0.5$, matching the observed $\hat{p} = 0.45$. Note we did *not* apply the FPC: the voter population vastly exceeds $400$, so $n/N$ is far below $5\%$.
+:::pitfall
+Sums and means scale differently and mixing them up is a standing trap. The standard deviation of the **sum** *grows* like $\sigma\sqrt{n}$; the standard deviation of the **mean** *shrinks* like $\sigma/\sqrt{n}$. Both are the $\sqrt{n}$ law, pointing in opposite directions. When a problem asks about a total load, a total claim amount or a total waiting time, it is asking about $S_n$, and the spread gets larger, not smaller.
 :::
 
 :::intuition
-If you survey $n$ people and count how many say yes, the proportion who say yes ($\hat{p}$) is your estimate of the true population proportion $p$. The sampling distribution tells you how much $\hat{p}$ will bounce around from survey to survey — and for large $n$ it bounces around in a perfectly normal pattern.
+Why should averaging manufacture a bell curve out of anything at all? Because an average is a tug-of-war among many small independent pushes, and no single push can dominate once there are enough of them — finite variance is precisely the condition that stops one observation from dominating. The particular quirks of the population get expressed in the third and higher moments, and the algebra in the proof shows those moments being divided away faster than the first two. All that survives the limit is a centre and a spread, and there is exactly one distribution shape determined by a centre and a spread alone.
+:::
+
+## The sampling distribution of a proportion
+
+<!-- section: proportions -->
+
+Counting is the special case where the whole apparatus becomes concrete, and it is the case that polling, quality control and clinical trials actually use.
+
+:::definition[Sample proportion]{#sample-proportion}
+Let each unit be classified as a success or a failure, with population success probability $p$, and let $X$ be the number of successes in $n$ independent trials, so $X \sim \operatorname{Binomial}(n,p)$. The **sample proportion** is
+
+$$\hat{p} = \frac{X}{n}.$$
+:::
+
+The key observation is that $\hat{p}$ is not a new kind of statistic at all. Code each observation as $X_i = 1$ for a success and $X_i = 0$ for a failure; then $X = \sum X_i$ and $\hat{p} = \bar{X}$. Every theorem proved for the sample mean applies verbatim.
+
+:::proposition[Mean and standard error of the sample proportion]{#prop-se}
+For an i.i.d. Bernoulli$(p)$ sample,
+
+$$E(\hat{p}) = p \qquad\text{and}\qquad SE(\hat{p}) = \sqrt{\frac{p(1-p)}{n}}.$$
+:::
+
+:::proof
+A Bernoulli$(p)$ variable has $E(X_i) = 1\cdot p + 0\cdot(1-p) = p$ and $E(X_i^2) = 1^2\cdot p = p$, so
+
+$$\operatorname{Var}(X_i) = E(X_i^2) - \left[E(X_i)\right]^2 = p - p^2 = p(1-p).$$
+
+Since $\hat{p} = \bar{X}$, the theorem *Mean and variance of the sample mean* applies directly with $\mu = p$ and $\sigma^2 = p(1-p)$, giving $E(\hat{p}) = p$ and $\operatorname{Var}(\hat{p}) = p(1-p)/n$. Taking the square root gives the standard error. $\blacksquare$
+:::
+
+:::remark
+The variance $p(1-p)$ is maximised at $p = 0.5$, where it equals $0.25$, and shrinks to $0$ at either extreme. Proportions near $0$ or $1$ are therefore estimated more precisely than proportions near a half, for the same $n$. This is also why the conservative planning value for a poll's margin of error always uses $p = 0.5$: it is the worst case, so the resulting sample size is safe whatever $p$ turns out to be.
+:::
+
+:::theorem[Normal approximation to the sample proportion]{#prop-normal}
+If $np \ge 10$ and $n(1-p) \ge 10$, then
+
+$$\hat{p} \ \dot\sim\ N\!\left(p,\ \frac{p(1-p)}{n}\right), \qquad\text{equivalently}\qquad X \ \dot\sim\ N\!\left(np,\ np(1-p)\right).$$
+:::
+
+The two conditions are the CLT's "large enough $n$" made checkable. They are needed because a Bernoulli population is maximally skewed when $p$ is near $0$ or $1$ — at $p = 0.02$, a sample of $50$ contains on average a single success and the distribution of $\hat{p}$ is nothing like a bell. Requiring at least about ten expected successes *and* ten expected failures forces $n$ up far enough that the skew has been averaged away. When either condition fails, the normal approximation should be abandoned in favour of exact binomial calculations.
+
+:::figure[The binomial distribution of the number of successes in $n=40$ trials with $p=0.3$ (bars), against the normal density with the same mean $np=12$ and variance $np(1-p)=8.4$ (curve). With $np = 12$ and $n(1-p) = 28$ both comfortably above $10$, the curve tracks the bar tops closely.]{#binomial-normal}
+{
+  "type": "plot",
+  "x": [1, 24],
+  "y": [0, 0.175],
+  "xTicks": 4,
+  "yTicks": 0.05,
+  "xLabel": "number of successes",
+  "yLabel": "probability",
+  "marks": [
+    { "kind": "bars", "bars": [
+      [2.5, 3.5, 0.0005], [3.5, 4.5, 0.0020], [4.5, 5.5, 0.0061], [5.5, 6.5, 0.0151],
+      [6.5, 7.5, 0.0315], [7.5, 8.5, 0.0557], [8.5, 9.5, 0.0849], [9.5, 10.5, 0.1128],
+      [10.5, 11.5, 0.1319], [11.5, 12.5, 0.1366], [12.5, 13.5, 0.1261], [13.5, 14.5, 0.1042],
+      [14.5, 15.5, 0.0774], [15.5, 16.5, 0.0518], [16.5, 17.5, 0.0314], [17.5, 18.5, 0.0172],
+      [18.5, 19.5, 0.0085], [19.5, 20.5, 0.0038], [20.5, 21.5, 0.0016], [21.5, 22.5, 0.0006]
+    ] },
+    { "kind": "function", "fn": "0.13764816*exp(0-(x-12)^2/16.8)", "from": 1, "to": 24, "tone": "result" },
+    { "kind": "text", "at": [5.6, 0.155], "text": "Binomial(40, 0.3)" },
+    { "kind": "text", "at": [19.4, 0.105], "text": "N(12, 8.4)", "tone": "result" }
+  ]
+}
+:::
+
+:::note
+**Continuity correction.** The binomial is discrete and the normal is continuous, so when approximating a probability about a *count*, extend each integer to the interval around it: replace $P(X \le 9)$ by $P(X \le 9.5)$ before standardising. For $n=40$, $p=0.3$ the exact value is $P(X \le 9) = 0.1959$; with the correction the normal gives $0.1942$, and without it $0.1503$ — an error of $23\%$. The correction is worth the half-unit of arithmetic whenever $n$ is small or the probability is needed accurately.
+:::
+
+:::example[A poll, checked and reported]
+A poll of $n = 400$ randomly selected voters finds $180$ in favour. Verify the conditions, then construct a $95\%$ confidence interval for the population proportion $p$.
+:::
+
+:::solution
+The point estimate is $\hat{p} = 180/400 = 0.45$.
+
+Check the conditions first. The true $p$ is unknown, so use $\hat{p}$: $n\hat{p} = 400(0.45) = 180 \ge 10$ and $n(1-\hat{p}) = 400(0.55) = 220 \ge 10$. Both pass comfortably, so the normal approximation is justified.
+
+The estimated standard error is
+
+$$SE = \sqrt{\frac{\hat{p}(1-\hat{p})}{n}} = \sqrt{\frac{0.45 \times 0.55}{400}} = \sqrt{\frac{0.2475}{400}} = \sqrt{0.00061875} \approx 0.02488.$$
+
+At $95\%$ confidence $z^* = 1.96$, so the margin of error is
+
+$$ME = 1.96 \times 0.02488 \approx 0.0488,$$
+
+and the interval is $0.45 \pm 0.0488$, that is $(0.401, 0.499)$.
+
+Sanity check: a margin of about five points is what a poll of a few hundred delivers, and the interval lies entirely below $0.5$ — though only just, so this poll is weak evidence that the true support is under half. No finite population correction is applied, because $400$ voters are a negligible fraction of the electorate.
+:::
+
+:::recipe[Sample size for a target margin of error]
+To achieve a margin of error at most $m$ at confidence level $1-\alpha$ for a proportion:
+
+1. Find the critical value $z^*$ for the level ($1.645$ for $90\%$, $1.96$ for $95\%$, $2.576$ for $99\%$).
+2. Choose a planning value $p^*$: a prior estimate if you have one, otherwise the conservative $p^* = 0.5$.
+3. Solve $m = z^*\sqrt{p^*(1-p^*)/n}$ for $n$:
+
+$$n = \frac{(z^*)^2\,p^*(1-p^*)}{m^2}.$$
+
+4. Round **up** to an integer, and check that $np^*$ and $n(1-p^*)$ both clear $10$.
+
+For $m = 0.03$ at $95\%$ with $p^* = 0.5$: $n = (1.96)^2(0.25)/(0.0009) = 0.9604/0.0009 \approx 1067.1$, so $n = 1068$. That single calculation is why so many published polls report a sample size of about $1000$ and a margin of error of about three points.
+:::
+
+:::proposition[Difference of two independent proportions]{#two-prop}
+Let $\hat{p}_1$ and $\hat{p}_2$ come from independent samples of sizes $n_1$ and $n_2$. Then $E(\hat{p}_1 - \hat{p}_2) = p_1 - p_2$ and
+
+$$\operatorname{Var}(\hat{p}_1 - \hat{p}_2) = \frac{p_1(1-p_1)}{n_1} + \frac{p_2(1-p_2)}{n_2}.$$
+:::
+
+:::proof
+Apply the lemma *Linearity of expectation and variance of an independent sum* with $a = 1$, $b = -1$: expectations subtract, and variances are multiplied by $a^2 = 1$ and $b^2 = (-1)^2 = 1$, so they **add**.
+:::
+
+:::pitfall
+Variances add for a difference of independent estimators; standard errors do not. The correct step is
+
+$$SE(\hat{p}_1 - \hat{p}_2) = \sqrt{SE_1^2 + SE_2^2}, \qquad \textbf{not} \qquad SE_1 + SE_2.$$
+
+Adding the standard errors overstates the uncertainty — for two equal standard errors it inflates by a factor of $\sqrt{2} \approx 1.41$ — and quietly destroys the power of the comparison. The minus sign in $\hat{p}_1 - \hat{p}_2$ does not subtract variance; it is squared away.
+:::
+
+:::summary
+The load-bearing results of the chapter, each with the hypotheses it actually needs.
+
+- **A statistic is a random variable.** Its distribution across all samples the design could produce is its *sampling distribution*; a parameter, by contrast, is a fixed constant.
+- **Unbiasedness.** $E(\hat{\theta}) = \theta$ is a statement about the estimator's average over all possible samples, not about accuracy on one sample. It offers no protection against a biased *design*, whose error does not shrink with $n$.
+- **Stratification.** Under proportional allocation, $\operatorname{Var}(\bar{X}_{\text{str}}) = \frac1n\sum_h W_h\sigma_h^2$, which removes the between-strata variance from $\sigma^2/n$ and can never be larger.
+- **Mean and variance of $\bar{X}$.** For i.i.d. $X_i$ with mean $\mu$ and finite variance $\sigma^2$: $E(\bar{X}) = \mu$ (needs only identical distribution) and $\operatorname{Var}(\bar{X}) = \sigma^2/n$ (needs uncorrelatedness). Hence $SE = \sigma/\sqrt{n}$, and dividing $SE$ by $k$ costs a factor $k^2$ in sample size. Without replacement from a finite population, multiply by the FPC $\sqrt{(N-n)/(N-1)}$.
+- **Unbiasedness of $S^2$.** For i.i.d. $X_i$ with finite variance, $E(S^2) = \sigma^2$ when the divisor is $n-1$. The identity $\sum(X_i-\bar{X})^2 = \sum(X_i-\mu)^2 - n(\bar{X}-\mu)^2$ is why. Note $S$ is *not* unbiased for $\sigma$.
+- **Markov.** $Y \ge 0$ and $E(Y)$ finite give $P(Y\ge a) \le E(Y)/a$. Non-negativity is essential.
+- **Chebyshev.** Finite mean and variance give $P(|X-\mu|\ge k) \le \sigma^2/k^2$, for every distribution — universal, and correspondingly loose.
+- **Weak Law of Large Numbers.** I.i.d. with finite variance: $P(|\bar{X}_n-\mu|\ge\varepsilon) \le \sigma^2/(n\varepsilon^2) \to 0$, so $\bar{X}_n\to\mu$ in probability. The **strong law** upgrades this to almost-sure convergence under only a finite mean. Neither says anything about a *count*, whose deviation from $n\mu$ grows like $\sqrt{n}$.
+- **Central Limit Theorem.** I.i.d. with $0<\sigma^2<\infty$: $(\bar{X}_n-\mu)/(\sigma/\sqrt{n}) \xrightarrow{d} N(0,1)$, whatever the population's shape. Finite variance is indispensable — the Cauchy mean never converges. A normal population gives exact normality at every $n$, no CLT required. The adequacy of the approximation is governed by skewness, so $n\ge30$ is a rule of thumb and tail probabilities from skewed data are the first thing to fail.
+- **Sums versus means.** $S_n \dot\sim N(n\mu, n\sigma^2)$: the spread of a sum *grows* like $\sigma\sqrt{n}$ while the spread of a mean shrinks like $\sigma/\sqrt{n}$.
+- **Proportions.** $\hat{p} = \bar{X}$ for $0/1$ data, so $E(\hat{p}) = p$ and $SE(\hat{p}) = \sqrt{p(1-p)/n}$, normal when $np \ge 10$ and $n(1-p)\ge 10$. For a difference of independent proportions, variances add.
 :::
 
 ## Common Mistakes
 
-- Confusing $\sigma$ (population standard deviation) with $SE = \sigma/\sqrt{n}$ (standard error of the mean). The SE is the standard deviation of the sampling distribution, always smaller than $\sigma$.
-- Applying the CLT with a small $n$ from a heavily skewed population. Check the histogram before assuming normality.
-- The gambler's fallacy: thinking past outcomes will 'balance out' future ones. The LLN applies to long-run averages, not short-run compensation.
-- Forgetting the CLT applies to $\bar{X}$, not to individual observations. Individual $X_i$ values remain non-normal if the population is non-normal.
-- Applying the proportion CLT approximation when $np < 10$ or $n(1-p) < 10$. Use exact binomial methods instead.
+- **Confusing $\sigma$ with $SE = \sigma/\sqrt{n}$.** The population standard deviation describes the spread of individual observations and does not change when you collect more data; the standard error describes the spread of the *estimate* and shrinks like $1/\sqrt{n}$. Using $\sigma$ where $SE$ belongs inflates every interval by a factor of $\sqrt{n}$.
+- **Believing a large sample fixes a biased design.** Sampling variability shrinks like $1/\sqrt{n}$; sampling bias does not shrink at all. A biased design at scale gives a very precise answer to the wrong question.
+- **Applying the CLT to individual observations.** The theorem is about $\bar{X}$ and $S_n$. The $X_i$ stay exactly as skewed as the population is, forever.
+- **Treating $n \ge 30$ as a theorem.** It is a rule of thumb calibrated on moderate skew. Strongly skewed populations need far more, and the approximation degrades first in the tails, which is precisely where $p$-values are read.
+- **Forgetting that the CLT needs finite variance.** For heavy-tailed data with infinite variance, averaging does not help at any $n$: the mean of Cauchy observations has the same distribution as one observation.
+- **The gambler's fallacy.** The LLN says the *average* settles, by dilution. It does not say past outcomes get compensated, and the *count* of heads drifts ever further from $n/2$ as $n$ grows.
+- **Dividing by $n$ in the sample variance.** That estimator has expectation $\frac{n-1}{n}\sigma^2$ and understates the variance every time on average. Divide by $n-1$ unless you genuinely have the whole population.
+- **Assuming $S$ is unbiased for $\sigma$.** $S^2$ is unbiased for $\sigma^2$; the square root is concave, so $E(S) < \sigma$.
+- **Adding standard errors instead of adding variances.** For independent estimators, combine as $\sqrt{SE_1^2 + SE_2^2}$ — never $SE_1 + SE_2$, and never for dependent samples at all.
+- **Using the normal approximation for a proportion when $np < 10$ or $n(1-p) < 10$.** At extreme $p$ the Bernoulli population is too skewed for the sample size; use exact binomial methods.
+- **Quoting $\sigma^2/n$ for clustered or otherwise correlated data.** That formula needs uncorrelated observations. Positive within-cluster correlation makes the true variance larger, so the reported uncertainty is too small.

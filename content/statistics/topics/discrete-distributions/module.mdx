@@ -4,285 +4,929 @@ title: Discrete Probability Distributions
 
 # Discrete Probability Distributions
 
-A discrete probability distribution assigns probabilities to a countable set of outcomes. The binomial and Poisson distributions model the most common real-world counting processes.
+Probability theory, as the previous chapter left it, is a calculus of *events*: subsets of a sample space, combined with unions, intersections and complements. That language is exact but it is not portable. The event "three heads in five flips" and the event "three defectives in a lot of five" are different subsets of different sample spaces, yet they carry the same probability for the same reason, and nothing in the language of events says so.
 
-The foundation is the random variable: a function that assigns a number to each outcome. Expected value and variance summarize its center and spread.
+The device that makes the similarity visible is the **random variable**. Instead of working with the outcomes themselves we work with a *number* attached to each outcome — a count, a waiting time, a payout — and we study the pattern of probabilities that number inherits. Two experiments with nothing physical in common can then turn out to have the same distribution, and one calculation serves both.
 
-Mastering discrete distributions is the first step toward understanding statistical inference — all confidence intervals and hypothesis tests are built on distributional assumptions.
+This chapter builds that machinery and then stocks it. We define random variables, mass functions and distribution functions precisely; we define expectation and variance from the definition and prove the algebra they obey — including linearity of expectation, which is the single most useful fact in the chapter and which holds *whether or not* the variables are independent. Then we derive the standard discrete families: the binomial from a counting argument, the Poisson as a limit of the binomial, the geometric from the waiting-time picture, and the negative binomial and hypergeometric as the two most common variations. The final section is a decision guide, because in practice the hard part is almost never the arithmetic — it is recognising which family the problem belongs to.
 
-## Random Variables and Expected Value
+Everything here is a prerequisite for inference. A confidence interval is a statement about the distribution of an estimator; a $p$-value is a tail probability under an assumed distribution. Neither means anything until "distribution" does.
+
+## Random Variables, Mass Functions, and Distribution Functions
+
+<!-- section: random-variables -->
+
+The word "variable" is a small lie: a random variable does not vary, and it is not a variable in the algebraic sense. It is a function.
+
+:::definition[Random variable]{#random-variable}
+Let $(\Omega, \mathcal{F}, P)$ be a probability space. A **random variable** is a function
+
+$$X : \Omega \to \mathbb{R}$$
+
+such that for every $x \in \mathbb{R}$ the set $\{\omega \in \Omega : X(\omega) \le x\}$ is an event (that is, it belongs to $\mathcal{F}$, so it has a probability).
+
+$X$ is **discrete** if its range $X(\Omega)$ is finite or countably infinite.
+:::
+
+The measurability condition in the definition is there so that questions like "what is the probability that $X$ is at most $3$?" have answers. For a discrete random variable on a finite sample space it is automatic, and we will not fuss over it again; but it is worth seeing once, because it is the reason the definition is a definition and not merely a description.
+
+:::intuition
+Think of the sample space as a bag of tickets, one ticket per possible outcome. A random variable is a rule that reads a number off each ticket. You draw a ticket at random; the number you read is the value of $X$. The randomness lives entirely in *which ticket you drew* — the rule itself is fixed and deterministic.
+
+This is why "$X = 3$" is shorthand for a set of outcomes: it means "the ticket you drew is one of the tickets with a $3$ printed on it".
+:::
+
+:::notation
+$\{X = x\}$ abbreviates the event $\{\omega : X(\omega) = x\}$, and $P(X = x)$ its probability. Likewise $\{X \le x\}$, $\{X > x\}$, $\{a < X \le b\}$. Capital letters denote random variables, lower-case letters the particular values they might take; the distinction is worth preserving, because $P(X = x)$ is a function of $x$ while $X$ is not a number at all.
+:::
+
+:::example[Two coin flips]
+Toss a fair coin twice and let $X$ be the number of heads. Write $X$ explicitly as a function on the sample space, and find the probability of each value.
+:::
+
+:::solution
+1. The sample space is $\Omega = \{HH, HT, TH, TT\}$, each outcome with probability $\tfrac14$.
+2. As a function, $X(HH) = 2$, $X(HT) = X(TH) = 1$, $X(TT) = 0$. The range is $\{0,1,2\}$, so $X$ is discrete.
+3. The event $\{X = 1\}$ is $\{HT, TH\}$, which has probability $\tfrac24 = \tfrac12$. Similarly $P(X=0) = P(X=2) = \tfrac14$.
+4. Notice that $X$ collapses two distinct outcomes into one value. That is the whole point: we no longer care *which* flip was the head.
+:::
+
+### The probability mass function
+
+Listing the probability of each value is the complete description of a discrete random variable, and it deserves a name.
+
+:::definition[Probability mass function]{#pmf}
+The **probability mass function** (pmf) of a discrete random variable $X$ is the function
+
+$$p_X(x) = P(X = x), \qquad x \in \mathbb{R}.$$
+
+Its **support** is the set $S = \{x : p_X(x) > 0\}$, which is finite or countable.
+:::
+
+Not every function of $x$ is a pmf. Two conditions decide it, and they are exactly the conditions the axioms of probability force.
+
+:::theorem[Characterisation of a pmf]{#pmf-conditions}
+A function $p : \mathbb{R} \to \mathbb{R}$ that is nonzero on at most countably many points $x_1, x_2, \ldots$ is the pmf of some discrete random variable if and only if
+
+$$p(x_i) \ge 0 \ \text{ for all } i, \qquad \sum_{i} p(x_i) = 1.$$
+:::
+
+:::proof
+($\Rightarrow$) If $p = p_X$ then $p(x_i) = P(X = x_i) \ge 0$ by nonnegativity of $P$. The events $\{X = x_i\}$ are pairwise disjoint and their union is the certain event, so countable additivity gives $\sum_i P(X = x_i) = P(\Omega) = 1$.
+
+($\Leftarrow$) Conversely, given such a $p$, take $\Omega = \{x_1, x_2, \ldots\}$ with $P(\{x_i\}) = p(x_i)$; this is a legitimate probability measure precisely because the values are nonnegative and sum to $1$. Let $X$ be the identity map $X(x_i) = x_i$. Then $p_X = p$. $\blacksquare$
+:::
+
+The "if and only if" is doing real work. It says that a pmf carries *all* the probabilistic information about $X$ — we never need to go back to $\Omega$ — and it gives a two-line test for whether a proposed formula is legitimate. That test is also how you solve for an unknown constant.
+
+:::example[Finding a normalising constant]
+Let $p(k) = c \cdot 3^{-k}$ for $k = 1, 2, 3, \ldots$ and $p(x) = 0$ otherwise. For which $c$ is this a pmf, and what is $P(X \ge 3)$?
+:::
+
+:::solution
+1. Nonnegativity forces $c \ge 0$.
+2. Summing the geometric series, $\sum_{k=1}^{\infty} 3^{-k} = \frac{1/3}{1 - 1/3} = \tfrac12$.
+3. So the total mass is $c/2$, and it equals $1$ exactly when $c = 2$.
+4. For the tail, $P(X \ge 3) = \sum_{k=3}^{\infty} 2 \cdot 3^{-k} = 2 \cdot \frac{3^{-3}}{1 - 1/3} = 2 \cdot \frac{1/27}{2/3} = \tfrac{1}{9}$.
+5. Sanity check: $P(X=1) = 2/3$ and $P(X=2) = 2/9$, and $\tfrac23 + \tfrac29 + \tfrac19 = 1$ ✓.
+:::
+
+### The cumulative distribution function
+
+The pmf answers "what is the chance of exactly this value?". A great many questions are instead about *accumulated* probability, and those are read off a second function.
+
+:::definition[Cumulative distribution function]{#cdf}
+The **cumulative distribution function** (cdf) of a random variable $X$ is
+
+$$F_X(x) = P(X \le x), \qquad x \in \mathbb{R}.$$
+
+For a discrete $X$, $F_X(x) = \sum_{x_i \le x} p_X(x_i)$.
+:::
+
+:::proposition[Properties of a cdf]{#cdf-properties}
+For any random variable $X$, the function $F = F_X$ satisfies
+
+1. $F$ is non-decreasing;
+2. $\lim_{x \to -\infty} F(x) = 0$ and $\lim_{x \to +\infty} F(x) = 1$;
+3. $F$ is right-continuous: $\lim_{h \downarrow 0} F(x+h) = F(x)$.
+
+Moreover, for a discrete $X$ the jump of $F$ at $x$ equals $p_X(x)$:
+
+$$p_X(x) = F(x) - \lim_{h \downarrow 0} F(x - h).$$
+:::
+
+:::proof
+(1) If $x \le y$ then $\{X \le x\} \subseteq \{X \le y\}$, and probability is monotone on nested events.
+
+(2) The events $\{X \le n\}$ increase to $\Omega$ as $n \to \infty$ and decrease to $\varnothing$ as $n \to -\infty$; continuity of $P$ along monotone sequences of events gives the two limits.
+
+(3) Right-continuity is the same continuity property applied to $\{X \le x + 1/n\} \downarrow \{X \le x\}$; the intersection is $\{X \le x\}$ because the inequality is non-strict.
+
+For the jump, $\{X \le x\} \setminus \bigcup_n \{X \le x - 1/n\} = \{X = x\}$, and the union is the increasing limit whose probability is the left-hand limit of $F$. $\blacksquare$
+:::
+
+So the pmf and the cdf are two encodings of the same object: the cdf is the running total of the pmf, and the pmf is the size of the cdf's jumps. For a discrete variable the cdf is a staircase — flat between the support points, jumping at each of them by exactly that point's probability.
+
+:::figure[The cdf of the payout $X$ with $P(X=-2)=0.6$, $P(X=5)=0.3$, $P(X=10)=0.1$. The staircase is flat between support points and jumps at each one by exactly that point's probability; the filled dot at the top of a jump is the value $F$ actually takes there, which is why $F$ is right-continuous.]{#cdf-staircase}
+{
+  "type": "plot",
+  "x": [-6, 15],
+  "y": [-0.18, 1.3],
+  "xTicks": 5,
+  "yTicks": 0.2,
+  "xLabel": "x",
+  "yLabel": "F(x)",
+  "marks": [
+    { "kind": "path", "points": [[-6, 0], [-2, 0]], "tone": "accent" },
+    { "kind": "path", "points": [[-2, 0.6], [5, 0.6]], "tone": "accent" },
+    { "kind": "path", "points": [[5, 0.9], [10, 0.9]], "tone": "accent" },
+    { "kind": "path", "points": [[10, 1], [15, 1]], "tone": "accent" },
+    { "kind": "point", "at": [-2, 0.6], "tone": "result" },
+    { "kind": "point", "at": [5, 0.9], "tone": "result" },
+    { "kind": "point", "at": [10, 1], "tone": "result" },
+    { "kind": "point", "at": [-2, 0], "open": true, "tone": "muted" },
+    { "kind": "point", "at": [5, 0.6], "open": true, "tone": "muted" },
+    { "kind": "point", "at": [10, 0.9], "open": true, "tone": "muted" },
+    { "kind": "text", "at": [1.5, 1.2], "text": "jumps sum to 1" },
+    { "kind": "text", "at": [1.0, 0.38], "text": "jump 0.6", "tone": "result" },
+    { "kind": "text", "at": [7.5, 0.45], "text": "F(7) = 0.9", "tone": "muted" }
+  ]
+}
+:::
+
+:::pitfall
+For a discrete variable $P(X < x)$ and $P(X \le x)$ are *different*, and the difference is exactly $p_X(x)$. Reading $P(X < 5)$ off a cdf table gives $F(4)$, not $F(5)$, whenever $X$ is integer-valued. This is the single most common arithmetic slip in binomial and Poisson work, and it disappears only for continuous variables, where individual points have probability zero. Write the complement rule out in full whenever you use it:
+
+$$P(X \ge k) = 1 - P(X \le k-1) = 1 - F(k-1).$$
+:::
+
+## Expectation, Variance, and Linearity
 
 <!-- section: expected-value -->
 
-:::definition[Random variable and probability mass function]{#random-variable}
-A random variable $X$ is a function from the sample space to the real numbers. When $X$ is discrete, its probability mass function (PMF) gives $P(X=x_i)$ for each possible value, and must satisfy
+A pmf is a complete description, but it is rarely a usable summary: nobody quotes eleven numbers to describe the outcome of ten coin flips. Two numbers do most of the work — a centre and a spread.
 
-$$P(X=x_i)\geq 0, \qquad \sum_i P(X=x_i) = 1.$$
+:::definition[Expected value]{#expected-value-def}
+Let $X$ be discrete with support $S$ and pmf $p_X$. The **expected value** (or mean, or expectation) of $X$ is
+
+$$\mu = E(X) = \sum_{x \in S} x \, p_X(x),$$
+
+provided the sum converges absolutely, i.e. $\sum_{x \in S} |x| \, p_X(x) < \infty$. If it does not, $E(X)$ does not exist.
 :::
 
-Discrete random variables take a countable set of values (integers, fractions). Continuous random variables take any value in an interval.
+The absolute-convergence proviso is not pedantry. A sum of infinitely many terms with mixed signs can be rearranged to give any value you like, and a mean that depends on the order in which you list the outcomes is no mean at all. Distributions with no expectation exist and are not exotic; the St. Petersburg payout, which pays $2^k$ with probability $2^{-k}$, has $\sum_k 2^k 2^{-k} = \sum_k 1 = \infty$.
 
-:::definition[Expected value and variance]{#expected-value-def}
-The expected value (population mean) of a discrete random variable is
+:::intuition
+$E(X)$ is a weighted average of the possible values, weighted by how often each occurs. Mechanically it is the centre of mass of the pmf: put a mass $p_X(x)$ at position $x$ on a weightless rod, and $E(X)$ is where the rod balances.
 
-$$\mu = E(X) = \sum_i x_i P(X=x_i),$$
-
-and its variance is
-
-$$\sigma^2 = \text{Var}(X) = E[(X-\mu)^2] = E(X^2)-[E(X)]^2.$$
-
-The standard deviation $\sigma = \sqrt{\text{Var}(X)}$ is in the same units as $X$.
+That picture explains why the mean need not be a possible value — the balance point of two equal masses at $1$ and $6$ is $3.5$, where there is no mass at all — and why a single far-out value with small probability can still drag the mean a long way.
 :::
 
-The expected value is the long-run average over infinitely many independent repetitions. It does not need to be a possible value of $X$ — a fair die has $E(X)=3.5$.
+We frequently need the mean not of $X$ but of some function of it, and the following result says we can compute it without ever finding the distribution of that function.
 
-:::proposition[Rules for means and variances]
-For constants $a$ and $b$,
+:::theorem[Law of the unconscious statistician]{#lotus}
+Let $X$ be discrete with pmf $p_X$ and let $g : \mathbb{R} \to \mathbb{R}$. Then
 
-$$E(aX+b)=aE(X)+b, \qquad \text{Var}(aX+b) = a^2\text{Var}(X).$$
+$$E[g(X)] = \sum_{x \in S} g(x) \, p_X(x),$$
 
-Sums add their means always, $E(X+Y)=E(X)+E(Y)$, but variances add only when $X$ and $Y$ are independent:
+whenever the sum converges absolutely.
+:::
 
-$$\text{Var}(X+Y)=\text{Var}(X)+\text{Var}(Y).$$
+:::proof
+Let $Y = g(X)$, with support $T = g(S)$. By the definition of expectation applied to $Y$,
+
+$$E(Y) = \sum_{y \in T} y \, P(Y = y).$$
+
+Now $\{Y = y\} = \bigcup \{X = x\}$ over those $x \in S$ with $g(x) = y$, a disjoint union, so $P(Y = y) = \sum_{x : g(x) = y} p_X(x)$. Substituting,
+
+$$E(Y) = \sum_{y \in T} \ \sum_{x : g(x) = y} y \, p_X(x) = \sum_{y \in T} \ \sum_{x : g(x) = y} g(x) \, p_X(x),$$
+
+since $g(x) = y$ on the inner sum. The sets $\{x : g(x) = y\}$, as $y$ ranges over $T$, partition $S$, so the double sum is just $\sum_{x \in S} g(x) p_X(x)$. Absolute convergence licenses the rearrangement. $\blacksquare$
+:::
+
+The name is a joke at the expense of people who use the formula without noticing it needs proof. The content is that you may evaluate $g$ at each $x$ and weight by $p_X(x)$, rather than first working out the pmf of $g(X)$ — a saving that is enormous in practice.
+
+### Linearity
+
+:::theorem[Linearity of expectation]{#linearity}
+Let $X$ and $Y$ be discrete random variables on the same probability space with finite expectations, and let $a, b, c$ be constants. Then
+
+$$E(aX + bY + c) = a\,E(X) + b\,E(Y) + c.$$
+
+**No independence is required.**
+:::
+
+:::proof
+Write the expectation as a sum over the outcomes rather than over the values. For a discrete $X$ on a countable $\Omega$,
+
+$$E(X) = \sum_{x} x \, P(X = x) = \sum_{x} \ \sum_{\omega : X(\omega) = x} X(\omega) P(\{\omega\}) = \sum_{\omega \in \Omega} X(\omega) P(\{\omega\}),$$
+
+because the events $\{X = x\}$ partition $\Omega$; absolute convergence, which is exactly the finiteness of $E|X|$, justifies collapsing the double sum.
+
+In that form the result is immediate. Let $Z = aX + bY + c$, so $Z(\omega) = aX(\omega) + bY(\omega) + c$ pointwise. Then
+
+$$E(Z) = \sum_{\omega} \big( aX(\omega) + bY(\omega) + c \big) P(\{\omega\}) = a\sum_{\omega} X(\omega)P(\{\omega\}) + b\sum_{\omega} Y(\omega)P(\{\omega\}) + c\sum_{\omega} P(\{\omega\}),$$
+
+and the three sums are $E(X)$, $E(Y)$ and $1$. $\blacksquare$
+:::
+
+Look at what the proof used: only that $X$ and $Y$ are functions on the *same* $\Omega$, so that they can be added pointwise. The joint behaviour of $X$ and $Y$ never appeared. This is why linearity survives arbitrary dependence, and it is what makes it the most useful single fact in the chapter.
+
+:::remark
+The contrast with variance is the thing to remember. Expectation is a sum over outcomes and therefore additive, always. Variance involves a *square*, and $(x+y)^2 \ne x^2 + y^2$; the cross term is what independence kills. Whenever you find yourself wondering whether a rule needs independence, ask whether a product of two variables appears anywhere in it.
 :::
 
 :::intuition
-The expected value is what you would get on average if you played the game an enormous number of times. Roll a fair die a million times and the average will be very close to $3.5$, even though $3.5$ is never an actual outcome. It's the 'gravity center' of the distribution.
-
-Variance measures how unpredictable the outcomes are. Low variance means the outcomes cluster tightly around the mean. High variance means you get wildly different outcomes each time.
+Linearity is a licence to decompose. If a complicated count $X$ can be written as $X = X_1 + X_2 + \cdots + X_n$ for simple pieces — usually indicators, each worth $0$ or $1$ — then $E(X)$ is just the sum of $n$ easy expectations, no matter how tangled the dependence between the pieces. You will see this used to get the binomial mean in two lines rather than half a page of series manipulation, and it is the standard tool for expectations that no direct summation can reach.
 :::
 
-:::example[Expected value and variance of a PMF]
-A game pays \$10 with probability $0.1$, \$5 with probability $0.3$, and -\$2 with probability $0.6$.
+:::lemma[Expectation of an indicator]{#indicator-lemma}
+For an event $A$, define the **indicator** $\mathbf{1}_A$ by $\mathbf{1}_A(\omega) = 1$ if $\omega \in A$ and $0$ otherwise. Then
+
+$$E(\mathbf{1}_A) = P(A), \qquad E(\mathbf{1}_A^2) = P(A), \qquad \text{Var}(\mathbf{1}_A) = P(A)\big(1 - P(A)\big).$$
+:::
+
+:::proof
+$\mathbf{1}_A$ takes the value $1$ with probability $P(A)$ and $0$ with probability $1 - P(A)$, so $E(\mathbf{1}_A) = 1 \cdot P(A) + 0 \cdot (1 - P(A)) = P(A)$. Since $\mathbf{1}_A^2 = \mathbf{1}_A$ (as $0^2 = 0$ and $1^2 = 1$), the second expectation is the same. Then $\text{Var}(\mathbf{1}_A) = E(\mathbf{1}_A^2) - E(\mathbf{1}_A)^2 = P(A) - P(A)^2$. $\blacksquare$
+:::
+
+### Variance
+
+:::definition[Variance and standard deviation]{#variance-def}
+Let $X$ have finite mean $\mu$. The **variance** of $X$ is
+
+$$\sigma^2 = \text{Var}(X) = E\big[(X - \mu)^2\big] = \sum_{x \in S} (x - \mu)^2 p_X(x),$$
+
+and the **standard deviation** is $\sigma = \sqrt{\text{Var}(X)}$.
+:::
+
+Variance is the mean squared distance from the mean. Squaring is what stops positive and negative deviations from cancelling — $E(X - \mu) = 0$ always, by linearity, so the *un*-squared average deviation carries no information. The price is that variance is in squared units, which is why the standard deviation, in the original units, is what gets reported.
+
+:::proposition[Computational formula for the variance]{#var-computational}
+If $E(X^2) < \infty$ then
+
+$$\text{Var}(X) = E(X^2) - [E(X)]^2.$$
+:::
+
+:::proof
+Expand the square inside the expectation and apply linearity, treating $\mu = E(X)$ as the constant it is:
+
+$$E[(X-\mu)^2] = E[X^2 - 2\mu X + \mu^2] = E(X^2) - 2\mu E(X) + \mu^2 = E(X^2) - 2\mu^2 + \mu^2 = E(X^2) - \mu^2. \ \blacksquare$$
+:::
+
+:::corollary[Variance is non-negative, and $E(X^2) \ge [E(X)]^2$]
+Since $\text{Var}(X) = E[(X-\mu)^2]$ is the expectation of a non-negative quantity, $\text{Var}(X) \ge 0$; hence $E(X^2) \ge [E(X)]^2$, with equality if and only if $X$ is constant with probability $1$.
+:::
+
+:::proposition[Variance under a linear change of scale]{#var-affine}
+For constants $a$ and $b$,
+
+$$\text{Var}(aX + b) = a^2 \, \text{Var}(X), \qquad \text{SD}(aX+b) = |a| \, \text{SD}(X).$$
+:::
+
+:::proof
+Let $Y = aX + b$. By linearity $E(Y) = a\mu + b$, so
+
+$$Y - E(Y) = (aX + b) - (a\mu + b) = a(X - \mu).$$
+
+The shift $b$ cancels — it moves $Y$ and its mean by the same amount. Squaring and taking expectations,
+
+$$\text{Var}(Y) = E\big[a^2 (X-\mu)^2\big] = a^2 E\big[(X-\mu)^2\big] = a^2 \text{Var}(X),$$
+
+using linearity to pull the constant $a^2$ out. Taking square roots gives $|a|\sigma$, the absolute value because a standard deviation is non-negative. $\blacksquare$
+:::
+
+The $b$ dropping out is the whole content: adding a constant relocates a distribution without stretching it, so it cannot change the spread. The $a^2$ says spread scales with the *square* of a multiplier — double every payout and the variance quadruples, while the standard deviation merely doubles.
+
+:::lemma[Expectation of a product of independent variables]{#product-lemma}
+If $X$ and $Y$ are independent discrete random variables with finite expectations, then $E(XY) = E(X)E(Y)$.
+:::
+
+:::proof
+Independence means $P(X = x, Y = y) = P(X = x)P(Y = y)$ for all $x, y$. By the two-variable form of the law of the unconscious statistician applied to $g(x,y) = xy$,
+
+$$E(XY) = \sum_{x}\sum_{y} xy \, P(X=x, Y=y) = \sum_{x}\sum_{y} xy \, P(X=x)P(Y=y),$$
+
+and the double sum factors:
+
+$$= \left(\sum_{x} x\,P(X=x)\right)\left(\sum_{y} y\,P(Y=y)\right) = E(X)E(Y). \ \blacksquare$$
+:::
+
+:::theorem[Variance of a sum of independent variables]{#var-sum}
+If $X$ and $Y$ are **independent** with finite variances, then
+
+$$\text{Var}(X + Y) = \text{Var}(X) + \text{Var}(Y).$$
+
+More generally, if $X_1, \ldots, X_n$ are pairwise independent with finite variances, $\text{Var}\!\left(\sum_{i} X_i\right) = \sum_{i} \text{Var}(X_i)$.
+:::
+
+:::proof
+Write $\mu_X = E(X)$, $\mu_Y = E(Y)$. By linearity $E(X+Y) = \mu_X + \mu_Y$, so
+
+$$\text{Var}(X+Y) = E\big[\big((X - \mu_X) + (Y - \mu_Y)\big)^2\big].$$
+
+Expand the square and use linearity:
+
+$$= E[(X-\mu_X)^2] + E[(Y-\mu_Y)^2] + 2E[(X-\mu_X)(Y-\mu_Y)].$$
+
+The first two terms are $\text{Var}(X)$ and $\text{Var}(Y)$. For the third, note that if $X$ and $Y$ are independent then so are $X - \mu_X$ and $Y - \mu_Y$, so by Lemma *Expectation of a product of independent variables*
+
+$$E[(X-\mu_X)(Y-\mu_Y)] = E(X - \mu_X)\,E(Y-\mu_Y) = 0 \cdot 0 = 0.$$
+
+Hence the cross term vanishes and the variances add. The general case follows by induction, and needs only pairwise independence because only pairwise cross terms appear. $\blacksquare$
+:::
+
+:::remark
+The quantity $E[(X-\mu_X)(Y-\mu_Y)]$ that vanished is the **covariance** $\text{Cov}(X,Y)$. Without independence the identity reads
+
+$$\text{Var}(X+Y) = \text{Var}(X) + \text{Var}(Y) + 2\,\text{Cov}(X,Y),$$
+
+which is always true. Independence is a sufficient condition for the covariance to vanish, not a necessary one: uncorrelated variables need not be independent. Note also that *subtracting* independent variables still *adds* their variances, since $\text{Var}(X - Y) = \text{Var}(X) + (-1)^2\text{Var}(Y)$ — uncertainty never cancels.
+:::
+
+:::pitfall
+Standard deviations do not add, ever. If $X$ and $Y$ are independent each with $\sigma = 3$, then $\text{Var}(X+Y) = 9 + 9 = 18$ and $\text{SD}(X+Y) = \sqrt{18} \approx 4.24$, not $6$. Add variances, then take the square root once at the end.
+:::
+
+:::example[Mean and variance of a payout]
+A game pays \$10 with probability $0.1$, \$5 with probability $0.3$, and $-\$2$ with probability $0.6$. Find $E(X)$ and $\text{Var}(X)$, and then the mean and variance of $Y = 3X + 4$.
 :::
 
 :::solution
-1. First check the PMF is valid: the probabilities are all $\geq 0$ and $0.1+0.3+0.6 = 1$ ✓.
-2. $E(X) = 10(0.1)+5(0.3)+(-2)(0.6) = 1+1.5-1.2 = 1.3$.
-3. For the variance, use $\text{Var}(X)=E(X^2)-[E(X)]^2$, which is usually less error-prone than the definition $E[(X-\mu)^2]$.
-4. $E(X^2) = 100(0.1)+25(0.3)+4(0.6) = 10+7.5+2.4 = 19.9$.
-5. $\text{Var}(X) = 19.9 - 1.3^2 = 19.9-1.69 = 18.21$. $\sigma = \sqrt{18.21}\approx 4.27$.
-6. Sanity check: the spread of payouts runs from $-2$ to $10$, so a standard deviation of about $4.3$ is a believable "typical distance from $1.3$".
+1. First verify the pmf: all values are non-negative and $0.1 + 0.3 + 0.6 = 1$ ✓.
+2. $E(X) = 10(0.1) + 5(0.3) + (-2)(0.6) = 1 + 1.5 - 1.2 = 1.3$.
+3. By the law of the unconscious statistician with $g(x) = x^2$: $E(X^2) = 100(0.1) + 25(0.3) + 4(0.6) = 10 + 7.5 + 2.4 = 19.9$.
+4. By the computational formula, $\text{Var}(X) = 19.9 - 1.3^2 = 19.9 - 1.69 = 18.21$, so $\sigma = \sqrt{18.21} \approx 4.27$.
+5. For $Y = 3X + 4$: $E(Y) = 3(1.3) + 4 = 7.9$ and $\text{Var}(Y) = 3^2(18.21) = 163.89$.
+6. Sanity check: the payouts run from $-2$ to $10$, so a typical distance of about $4.3$ from $1.3$ is believable; and $Y$ ranges over $-2, 19, 34$, a threefold stretch, so a ninefold variance is right.
 :::
 
-:::example[Transforming a random variable]
-Let $X$ be the roll of a fair die, so $E(X)=3.5$ and (computing $E(X^2)=\tfrac{1}{6}(1+4+9+16+25+36)=\tfrac{91}{6}$) $\text{Var}(X)=\tfrac{91}{6}-3.5^2 = 15.1\overline{6}-12.25 \approx 2.917$.
+:::example[Linearity without independence]
+Five cards are dealt from a standard $52$-card deck without replacement. Let $X$ be the number of hearts. Find $E(X)$.
 :::
 
 :::solution
-1. A game pays $Y = 2X + 1$ dollars. Find $E(Y)$ and $\text{Var}(Y)$.
-2. Using $E(aX+b)=aE(X)+b$: $E(Y)=2(3.5)+1 = 8$.
-3. Using $\text{Var}(aX+b)=a^2\text{Var}(X)$ (the $+b$ shift does not change spread): $\text{Var}(Y)=2^2(2.917) \approx 11.67$.
-4. Sanity check: doubling the payout doubles the mean-plus-constant and multiplies the variance by $2^2=4$, not by $2$ — spread scales with the *square* of the multiplier.
+1. The draws are *not* independent — dealing a heart makes the next heart less likely — so no product rule is available and the pmf is a hypergeometric one, awkward to sum directly.
+2. Let $X_i = 1$ if the $i$th card dealt is a heart, and $0$ otherwise. Then $X = X_1 + X_2 + \cdots + X_5$.
+3. By symmetry each individual card is equally likely to be any of the $52$, so $P(X_i = 1) = 13/52 = 1/4$ for every $i$, including the fifth. By Lemma *Expectation of an indicator*, $E(X_i) = 1/4$.
+4. Linearity does not care that the $X_i$ are dependent: $E(X) = 5 \times \tfrac14 = 1.25$.
+5. The variance would be a genuinely harder calculation, because there the dependence does not cancel — this is exactly the asymmetry the chapter keeps returning to.
 :::
 
 ## The Binomial Distribution
 
 <!-- section: binomial -->
 
-:::definition[Binomial distribution]{#binomial}
-$X \sim B(n,p)$ counts the number of successes in exactly $n$ independent trials, each with the same success probability $p$. Its PMF is
+The binomial is what you get when you repeat the same two-outcome experiment a fixed number of times and count successes. Its ubiquity comes from how little it assumes.
 
-$$P(X=k) = \binom{n}{k}p^k(1-p)^{n-k}, \qquad k=0,1,\ldots,n,$$
+:::definition[Bernoulli trial and Bernoulli random variable]{#bernoulli}
+A **Bernoulli trial** is an experiment with exactly two outcomes, labelled success and failure, with $P(\text{success}) = p$. The associated **Bernoulli random variable** takes the value $1$ on success and $0$ on failure:
 
-and its mean and standard deviation are
+$$P(X = 1) = p, \qquad P(X = 0) = 1 - p.$$
 
-$$\mu = np, \qquad \sigma = \sqrt{np(1-p)}.$$
+We write $X \sim \text{Bernoulli}(p)$, and by Lemma *Expectation of an indicator*, $E(X) = p$ and $\text{Var}(X) = p(1-p)$.
 :::
 
-The binomial arises in coin flips, quality control, clinical trials, and polling. The $\binom{n}{k}$ term counts the number of ways to arrange exactly $k$ successes among $n$ trials.
+:::definition[Binomial distribution]{#binomial}
+Let $X$ count the successes in $n$ independent Bernoulli trials, each with the same success probability $p$. Then $X$ has the **binomial distribution** with parameters $n$ and $p$, written $X \sim B(n,p)$.
+:::
 
-The four requirements are worth checking every time, and the mnemonic is BINS: **B**inary outcomes only, **I**ndependent trials, **N**umber of trials $n$ fixed in advance, **S**ame probability $p$ for each trial.
+The four conditions are worth stating as a checklist, because a violated one invalidates everything that follows. The mnemonic is **BINS**: **B**inary outcomes; **I**ndependent trials; **N**umber of trials $n$ fixed in advance; **S**ame success probability $p$ throughout. Note what "fixed in advance" rules out — if you keep sampling until you have $10$ successes, $n$ is random and the distribution is negative binomial, not binomial.
 
-When $p=0.5$ the distribution is symmetric; when $p\neq 0.5$ it is skewed toward $0$ (if $p<0.5$) or toward $n$ (if $p>0.5$).
+:::theorem[The binomial pmf]{#binomial-pmf}
+If $X \sim B(n,p)$ then
 
-:::note
-Cumulative probabilities $P(X\leq k)$ are computed by summing the PMF or using tables/software. For $P(X\geq k)$, use the complement: $1-P(X\leq k-1)$.
+$$P(X = k) = \binom{n}{k} p^k (1-p)^{n-k}, \qquad k = 0, 1, \ldots, n.$$
+:::
+
+:::proof
+Fix $k$. Any particular sequence of $n$ trial outcomes containing exactly $k$ successes and $n-k$ failures — say $SSFSF\ldots$ — has probability $p^k(1-p)^{n-k}$, because the trials are independent, so the probability of the sequence is the product of the individual probabilities, and $p$ appears once per success, $1-p$ once per failure. Crucially this product does not depend on the *order*: multiplication is commutative, so every such sequence has the same probability.
+
+The event $\{X = k\}$ is the disjoint union of all such sequences. The number of them is the number of ways to choose which $k$ of the $n$ trial positions are the successes, namely $\binom{n}{k}$. Summing the common probability over those $\binom{n}{k}$ disjoint outcomes gives the claim. $\blacksquare$
+:::
+
+:::corollary[The binomial pmf is a pmf]
+The expressions $\binom{n}{k}p^k(1-p)^{n-k}$ are non-negative and sum to $1$ over $k = 0, \ldots, n$.
+:::
+
+:::proof
+Non-negativity is clear. For the total, the binomial theorem gives
+
+$$\sum_{k=0}^{n} \binom{n}{k} p^k (1-p)^{n-k} = \big(p + (1-p)\big)^n = 1^n = 1. \ \blacksquare$$
+:::
+
+That is the counting argument in full: a per-sequence probability that does not depend on order, times a count of the orders. Every piece of the formula is doing a job, and reading the formula back in those terms — "$p^k(1-p)^{n-k}$ for one arrangement, $\binom{n}{k}$ arrangements" — is the fastest way to reconstruct it when you have forgotten it.
+
+### Mean and variance, the cheap way
+
+You can obtain $E(X)$ by summing $k\binom{n}{k}p^k(1-p)^{n-k}$ and manipulating factorials. It works, and it is unpleasant. The decomposition argument is better, and the technique generalises far beyond this distribution.
+
+:::theorem[Mean and variance of the binomial]{#binomial-moments}
+If $X \sim B(n,p)$ then
+
+$$E(X) = np, \qquad \text{Var}(X) = np(1-p), \qquad \text{SD}(X) = \sqrt{np(1-p)}.$$
+:::
+
+:::proof
+Let $X_i = 1$ if trial $i$ is a success and $0$ otherwise, so each $X_i \sim \text{Bernoulli}(p)$ and
+
+$$X = X_1 + X_2 + \cdots + X_n.$$
+
+This identity is exact — the sum of the indicators literally counts the successes.
+
+For the mean, apply Theorem *Linearity of expectation*, which needs no independence at all:
+
+$$E(X) = \sum_{i=1}^n E(X_i) = \sum_{i=1}^n p = np.$$
+
+For the variance we do need independence, and the binomial model supplies it by hypothesis. By Theorem *Variance of a sum of independent variables*,
+
+$$\text{Var}(X) = \sum_{i=1}^n \text{Var}(X_i) = \sum_{i=1}^n p(1-p) = np(1-p). \ \blacksquare$$
+:::
+
+:::remark
+The proof is worth more than the formula. It shows the two hypotheses are used in *different places*: identical distribution and additivity of expectation give the mean; independence is what gives the variance. If the trials were dependent but still each had success probability $p$ — dealing cards without replacement, say — the mean would still be $np$ and the variance would not be $np(1-p)$. That is exactly what happens with the hypergeometric distribution later in this chapter.
 :::
 
 :::intuition
-The binomial distribution counts 'how many times did I succeed out of $n$ tries?' Each try is a coin flip — it either works or it doesn't, with the same probability each time. The binomial formula accounts for all the different orders in which those successes could have occurred.
+$np$ is the answer you would have guessed: $200$ flips of a coin that lands heads $30\%$ of the time should give around $60$ heads.
+
+The variance $np(1-p)$ is less obvious, but notice where it is largest. As a function of $p$, the product $p(1-p)$ peaks at $p = 0.5$ and vanishes at $p = 0$ and $p = 1$. That is right: a coin that always lands heads produces no uncertainty at all, while a fair coin is the most unpredictable one there is.
 :::
 
-:::example[Binomial probability — exactly $k$ successes]
-A fair coin is flipped $5$ times. Find $P(X=3)$.
+:::figure[Binomial pmfs for $n = 10$. With $p = 0.5$ (line and points) the distribution is symmetric about $5$; with $p = 0.2$ (bars) the mean slides down to $2$ and the distribution is right-skewed, because the values are squeezed against the floor at $0$ while the tail still has room to run toward $10$.]{#binomial-skew}
+{
+  "type": "plot",
+  "x": [-1.2, 11.2],
+  "y": [-0.03, 0.4],
+  "xTicks": 1,
+  "yTicks": 0.1,
+  "xLabel": "k (number of successes)",
+  "yLabel": "P(X = k)",
+  "marks": [
+    { "kind": "bars", "bars": [
+      [-0.42, 0.42, 0.1074], [0.58, 1.42, 0.2684], [1.58, 2.42, 0.302],
+      [2.58, 3.42, 0.2013], [3.58, 4.42, 0.0881], [4.58, 5.42, 0.0264],
+      [5.58, 6.42, 0.0055], [6.58, 7.42, 0.0008], [7.58, 8.42, 0.0001]
+    ] },
+    { "kind": "path", "points": [
+      [0, 0.001], [1, 0.0098], [2, 0.0439], [3, 0.1172], [4, 0.2051],
+      [5, 0.2461], [6, 0.2051], [7, 0.1172], [8, 0.0439], [9, 0.0098], [10, 0.001]
+    ], "tone": "result", "dashed": true },
+    { "kind": "point", "at": [5, 0.2461], "tone": "result" },
+    { "kind": "point", "at": [2, 0.302], "tone": "accent" },
+    { "kind": "text", "at": [1.9, 0.355], "text": "p = 0.2 (bars)" },
+    { "kind": "text", "at": [8.2, 0.30], "text": "p = 0.5 (dashed)", "tone": "result" }
+  ]
+}
+:::
+
+The figure makes a point that the formulas alone do not. For $p = 0.5$ the pmf is symmetric, because swapping the labels "success" and "failure" maps $k \mapsto n-k$ and leaves the probabilities alone. For $p < 0.5$ that symmetry is broken and the distribution leans right; for $p > 0.5$ it leans left. The skew is strongest when $np$ is small — when the mean is close to the hard boundary at $0$ — and it washes out as $n$ grows, which is the seed of the normal approximation you will meet in the sampling chapter.
+
+:::example[Exactly $k$ successes]
+A fair coin is flipped $5$ times. Find $P(X = 3)$, and the mean and standard deviation of $X$.
 :::
 
 :::solution
-1. Check BINS: two outcomes (H/T), independent flips, $n=5$ fixed, $p=0.5$ constant ✓ — the binomial applies.
-2. $\binom{5}{3} = 10$, $p = 0.5$, $1-p=0.5$.
-3. $P(X=3) = 10\cdot(0.5)^3\cdot(0.5)^2 = 10\cdot 0.125\cdot 0.25 = 0.3125$.
-4. Also: $\mu=5(0.5)=2.5$, $\sigma=\sqrt{5(0.5)(0.5)}=\sqrt{1.25}\approx 1.12$.
+1. Check BINS: two outcomes per flip, flips independent, $n = 5$ fixed, $p = 0.5$ constant ✓.
+2. $\binom{5}{3} = 10$, so $P(X=3) = 10 (0.5)^3 (0.5)^2 = 10 (0.5)^5 = \tfrac{10}{32} = 0.3125$.
+3. $E(X) = np = 2.5$; $\text{Var}(X) = 5(0.5)(0.5) = 1.25$, so $\sigma = \sqrt{1.25} \approx 1.118$.
+4. Sanity check: $3$ is within one standard deviation of $2.5$, so a probability near $\tfrac13$ is reasonable for the second-most-likely value.
 :::
 
-:::example[A cumulative probability with the complement]
-For $X\sim B(6,0.3)$, find $P(X\geq 2)$ — the chance of at least two successes.
+:::example[A cumulative probability via the complement]
+For $X \sim B(6, 0.3)$, find $P(X \ge 2)$.
 :::
 
 :::solution
-1. Summing $P(X=2)+P(X=3)+\cdots+P(X=6)$ is five terms; the complement $P(X\geq 2)=1-P(X=0)-P(X=1)$ is only two, so use that.
-2. $P(X=0)=\binom{6}{0}(0.3)^0(0.7)^6 = (0.7)^6 \approx 0.1176$.
-3. $P(X=1)=\binom{6}{1}(0.3)^1(0.7)^5 = 6(0.3)(0.16807) \approx 0.3025$.
-4. $P(X\geq 2) = 1 - 0.1176 - 0.3025 = 0.5799$.
-5. Sanity check: the mean is $\mu=np=1.8$, so "at least $2$" straddles the mean and a probability near $0.58$ is reasonable.
+1. Direct summation needs five terms ($k = 2, \ldots, 6$); the complement needs two. Use $P(X \ge 2) = 1 - P(X = 0) - P(X = 1)$, being careful that "at least $2$" excludes $0$ and $1$ only.
+2. $P(X=0) = (0.7)^6 = 0.117649$.
+3. $P(X=1) = 6(0.3)(0.7)^5 = 6(0.3)(0.16807) = 0.302526$.
+4. $P(X \ge 2) = 1 - 0.117649 - 0.302526 = 0.579825$.
+5. Sanity check: $np = 1.8$, so "at least $2$" straddles the mean from just above; a value a little over one half is what you would expect.
+:::
+
+:::pitfall
+Sampling without replacement breaks the **I** and the **S** in BINS at once: the trials are dependent and $p$ shifts after each draw. The binomial is then wrong, and the hypergeometric is right. The usual rule of thumb is that the binomial remains a serviceable approximation when the sample is no more than about $10\%$ of the population, because then the probabilities barely move; below that threshold, do not use it.
 :::
 
 ## The Poisson Distribution
 
 <!-- section: poisson -->
 
+The binomial needs a fixed $n$. Many counting problems have no natural $n$ at all: the number of calls arriving at a switchboard in an hour, the number of typos on a page, the number of $\alpha$-particles a sample emits in a second. There is no list of trials to count — only a rate and a window.
+
 :::definition[Poisson distribution]{#poisson}
-$X \sim \text{Poisson}(\lambda)$ counts independent events in a fixed interval of time, area, or volume when events occur at a constant average rate $\lambda > 0$. Its PMF is
+For $\lambda > 0$, a random variable $X$ has the **Poisson distribution** with parameter $\lambda$, written $X \sim \text{Poisson}(\lambda)$, if
 
-$$P(X=k) = \frac{e^{-\lambda}\lambda^k}{k!}, \qquad k=0,1,2,\ldots,$$
-
-and its mean and variance are both $\lambda$:
-
-$$E(X)=\text{Var}(X)=\lambda.$$
+$$P(X = k) = \frac{e^{-\lambda} \lambda^k}{k!}, \qquad k = 0, 1, 2, \ldots.$$
 :::
 
-The Poisson distribution has no upper bound — in principle any count is possible — and a Poisson random variable is characterised entirely by $\lambda$.
-
-Typical applications: calls arriving at a call centre per hour, photons hitting a detector per second, mutations in a DNA sequence per million base pairs, accidents at an intersection per month.
-
-:::proposition[Poisson as a limit of the binomial]
-When $n$ is large, $p$ is small, and $np=\lambda$ is moderate, the binomial $B(n,p)$ is well-approximated by Poisson($\lambda$).
+:::proposition[The Poisson pmf is a pmf]
+The stated probabilities are non-negative and sum to $1$.
 :::
 
-This is the rare-event approximation.
+:::proof
+Each term is positive since $e^{-\lambda} > 0$ and $\lambda^k / k! > 0$. Summing and using the exponential series $\sum_{k \ge 0} \lambda^k/k! = e^{\lambda}$,
+
+$$\sum_{k=0}^{\infty} \frac{e^{-\lambda}\lambda^k}{k!} = e^{-\lambda} \sum_{k=0}^{\infty} \frac{\lambda^k}{k!} = e^{-\lambda} e^{\lambda} = 1. \ \blacksquare$$
+:::
+
+The support is all of $\{0, 1, 2, \ldots\}$: there is no upper bound, which is the structural difference from the binomial and the reason the Poisson is the natural model when no maximum count exists.
+
+:::theorem[Mean and variance of the Poisson]{#poisson-moments}
+If $X \sim \text{Poisson}(\lambda)$ then $E(X) = \lambda$ and $\text{Var}(X) = \lambda$.
+:::
+
+:::proof
+For the mean, the $k = 0$ term contributes nothing, so start at $k = 1$ and cancel one factor of $k$ against the factorial:
+
+$$E(X) = \sum_{k=1}^{\infty} k \frac{e^{-\lambda}\lambda^k}{k!} = \lambda e^{-\lambda} \sum_{k=1}^{\infty} \frac{\lambda^{k-1}}{(k-1)!} = \lambda e^{-\lambda} e^{\lambda} = \lambda,$$
+
+after substituting $j = k-1$ in the sum.
+
+For the variance, compute the factorial moment $E[X(X-1)]$, which is easier than $E(X^2)$ because $k(k-1)$ cancels two factors of the factorial. The $k = 0$ and $k=1$ terms vanish, so
+
+$$E[X(X-1)] = \sum_{k=2}^{\infty} k(k-1)\frac{e^{-\lambda}\lambda^k}{k!} = \lambda^2 e^{-\lambda}\sum_{k=2}^{\infty}\frac{\lambda^{k-2}}{(k-2)!} = \lambda^2 e^{-\lambda}e^{\lambda} = \lambda^2.$$
+
+By linearity $E(X^2) = E[X(X-1)] + E(X) = \lambda^2 + \lambda$, and therefore
+
+$$\text{Var}(X) = E(X^2) - [E(X)]^2 = \lambda^2 + \lambda - \lambda^2 = \lambda. \ \blacksquare$$
+:::
+
+That the mean and the variance coincide is a strong and checkable claim about data, and it is the first thing to test before adopting a Poisson model.
+
+### Where the distribution comes from
+
+The Poisson is not an arbitrary formula. It is what the binomial becomes when you chop a window into more and more, smaller and smaller, trials.
+
+:::theorem[Poisson limit of the binomial]{#poisson-limit}
+Fix $\lambda > 0$ and for each $n$ let $X_n \sim B(n, p_n)$ with $n p_n = \lambda$. Then for every fixed $k \ge 0$,
+
+$$\lim_{n \to \infty} P(X_n = k) = \frac{e^{-\lambda}\lambda^k}{k!}.$$
+:::
+
+:::proof
+Write $p_n = \lambda/n$ and expand the binomial pmf:
+
+$$P(X_n = k) = \binom{n}{k}\left(\frac{\lambda}{n}\right)^k \left(1 - \frac{\lambda}{n}\right)^{n-k} = \frac{n(n-1)\cdots(n-k+1)}{k!}\cdot\frac{\lambda^k}{n^k}\cdot\left(1-\frac{\lambda}{n}\right)^{n}\left(1-\frac{\lambda}{n}\right)^{-k}.$$
+
+Group the pieces and take $n \to \infty$ with $k$ fixed.
+
+- The falling factorial over $n^k$ has $k$ factors, each of the form $(n-j)/n = 1 - j/n \to 1$; there are finitely many, so their product tends to $1$.
+- $\left(1 - \frac{\lambda}{n}\right)^{n} \to e^{-\lambda}$, the standard limit defining the exponential.
+- $\left(1 - \frac{\lambda}{n}\right)^{-k} \to 1^{-k} = 1$, again because $k$ is fixed.
+
+The surviving constant factor is $\lambda^k/k!$, so the product tends to $e^{-\lambda}\lambda^k / k!$. $\blacksquare$
+:::
 
 :::intuition
-The Poisson distribution answers: 'how many times will a rare event happen in a fixed window?' If buses arrive randomly at a rate of $3$ per hour, the Poisson($3$) distribution gives you the probability of seeing $0, 1, 2, 3, \ldots$ buses in the next hour.
+Split an hour into $n$ tiny intervals, so small that at most one call can arrive in any one of them. Each interval is then a Bernoulli trial, and if calls arrive at $\lambda$ per hour the success probability in each is about $\lambda/n$. The count of calls is binomial with these parameters — and as you refine the intervals, $n \to \infty$ while $np$ stays pinned at $\lambda$. What you are left with is the Poisson.
+
+The limit also explains the mean and variance. The binomial variance is $np(1-p) = \lambda(1 - \lambda/n) \to \lambda$, which is the binomial mean $np = \lambda$ in the limit. Mean and variance agree for the Poisson because $p$ has been driven to zero, and $1-p$ with it, to $1$.
 :::
 
-:::example[Poisson probability]
-Emails arrive at rate $\lambda=4$ per hour. Find $P(X=2)$ — exactly $2$ emails in one hour.
+:::figure[Binomial$(100, 0.03)$ pmf (bars) against the Poisson$(3)$ pmf that approximates it (dashed line and points). With $n$ large and $p$ small the two are visually indistinguishable — the largest discrepancy anywhere is about $0.003$, at $k = 0$.]{#poisson-approximation}
+{
+  "type": "plot",
+  "x": [-1.2, 9.2],
+  "y": [-0.025, 0.31],
+  "xTicks": 1,
+  "yTicks": 0.05,
+  "xLabel": "k (number of defectives)",
+  "yLabel": "P(X = k)",
+  "marks": [
+    { "kind": "bars", "bars": [
+      [-0.42, 0.42, 0.0476], [0.58, 1.42, 0.1471], [1.58, 2.42, 0.2252],
+      [2.58, 3.42, 0.2275], [3.58, 4.42, 0.1706], [4.58, 5.42, 0.1013],
+      [5.58, 6.42, 0.0496], [6.58, 7.42, 0.0206], [7.58, 8.42, 0.0074]
+    ] },
+    { "kind": "path", "points": [
+      [0, 0.0498], [1, 0.1494], [2, 0.224], [3, 0.224], [4, 0.168],
+      [5, 0.1008], [6, 0.0504], [7, 0.0216], [8, 0.0081]
+    ], "tone": "result", "dashed": true },
+    { "kind": "point", "at": [0, 0.0498], "tone": "result" },
+    { "kind": "point", "at": [3, 0.224], "tone": "result" },
+    { "kind": "text", "at": [1.3, 0.285], "text": "bars: B(100, 0.03)" },
+    { "kind": "text", "at": [6.6, 0.185], "text": "dashed: Poisson(3)", "tone": "result" }
+  ]
+}
+:::
+
+:::recipe[When a Poisson model is appropriate]
+Before fitting a Poisson, check the assumptions behind the limit:
+
+1. **Counts, not measurements.** $X$ must be a count of occurrences in a fixed window of time, length, area or volume.
+2. **Constant rate.** The expected number of events in a window is proportional to its size, with the same constant of proportionality throughout. A call centre busier at $9$am than at $3$am violates this unless you model the hours separately.
+3. **Independence.** Events in disjoint windows are independent, and one occurrence neither encourages nor inhibits another. Contagious diseases and traffic accidents in a pile-up both fail here.
+4. **No simultaneity.** In a sufficiently short window the chance of two or more events is negligible compared with the chance of one.
+5. **Empirical check.** The sample mean and sample variance should be close. If the variance is much larger — *overdispersion*, the usual outcome — the events are clustering and a negative binomial model normally fits better.
+:::
+
+:::proposition[Sums of independent Poissons]{#poisson-sum}
+If $X \sim \text{Poisson}(\lambda_1)$ and $Y \sim \text{Poisson}(\lambda_2)$ are independent, then $X + Y \sim \text{Poisson}(\lambda_1 + \lambda_2)$.
+:::
+
+:::proof
+Condition on the total. For $k \ge 0$, decomposing over the ways $X + Y = k$ and using independence,
+
+$$P(X+Y = k) = \sum_{j=0}^{k} P(X=j)P(Y=k-j) = \sum_{j=0}^{k} \frac{e^{-\lambda_1}\lambda_1^j}{j!}\cdot\frac{e^{-\lambda_2}\lambda_2^{k-j}}{(k-j)!}.$$
+
+Factor out $e^{-(\lambda_1+\lambda_2)}/k!$ and multiply and divide by $k!$ inside the sum:
+
+$$= \frac{e^{-(\lambda_1+\lambda_2)}}{k!}\sum_{j=0}^{k}\binom{k}{j}\lambda_1^j \lambda_2^{k-j} = \frac{e^{-(\lambda_1+\lambda_2)}(\lambda_1+\lambda_2)^k}{k!}$$
+
+by the binomial theorem. $\blacksquare$
+:::
+
+This is the property that lets you rescale a rate. If defects occur at $2$ per metre, then the count in $3$ metres is the sum of three independent Poisson$(2)$ variables, hence Poisson$(6)$ — *rescale $\lambda$ to the window you are actually asked about* before doing anything else.
+
+:::example[A Poisson probability, and a rescaled window]
+Emails arrive at a rate of $\lambda = 4$ per hour. Find the probability of exactly $2$ emails in one hour, and the probability of no emails in a $15$-minute period.
 :::
 
 :::solution
-1. $P(X=2) = e^{-4}\cdot 4^2/2! = e^{-4}\cdot 16/2 = 8e^{-4} \approx 8(0.01832) \approx 0.147$.
-2. Also: $P(X=0) = e^{-4}\approx 0.018$. There is only a $1.8\%$ chance of zero emails.
+1. For one hour, $P(X = 2) = \dfrac{e^{-4}4^2}{2!} = 8e^{-4} \approx 8(0.0183156) \approx 0.1465$.
+2. A quarter of an hour is a quarter of the window, so the rate rescales to $\lambda' = 4 \times \tfrac14 = 1$.
+3. $P(\text{no emails in 15 min}) = e^{-1} \approx 0.3679$.
+4. Sanity check by the sum rule: four independent quarter-hours each empty has probability $(e^{-1})^4 = e^{-4}$, which agrees with $P(X = 0)$ computed directly for the full hour ✓.
 :::
 
-:::example["At least one" via the complement]
-Accidents occur at $\lambda=2$ per week. Find $P(X\geq 1)$ in a given week.
-:::
-
-:::solution
-1. "At least one" spans infinitely many counts ($1,2,3,\ldots$), but its complement is the single term $P(X=0)$, so compute $P(X\geq 1)=1-P(X=0)$.
-2. $P(X=0)=e^{-2}\cdot 2^0/0! = e^{-2} \approx 0.1353$.
-3. $P(X\geq 1) = 1 - 0.1353 = 0.8647$.
-4. Sanity check: with an average of $2$ events per week, a week with zero events should be uncommon, so a large value like $0.86$ is expected.
-:::
-
-:::example[Poisson approximation to the binomial]
-A part is defective with probability $p=0.03$; a lot has $n=100$ parts. Approximate $P(X=0)$ (no defectives).
+:::example[At least one occurrence]
+Accidents at an intersection occur at $\lambda = 2$ per week. Find $P(X \ge 1)$ in a given week.
 :::
 
 :::solution
-1. Here $n$ is large and $p$ is small, so set $\lambda = np = 100(0.03) = 3$ and treat $X$ as approximately Poisson($3$).
-2. $P(X=0) \approx e^{-3} \approx 0.0498$.
-3. Sanity check against the exact binomial: $P(X=0)=(1-0.03)^{100}=(0.97)^{100} \approx 0.0476$. The Poisson value $0.0498$ is within about $0.002$ — a good approximation, and far quicker than the exact power.
+1. "At least one" spans infinitely many values, but its complement is the single term $P(X=0)$.
+2. $P(X = 0) = e^{-2}\lambda^0/0! = e^{-2} \approx 0.135335$.
+3. $P(X \ge 1) = 1 - 0.135335 = 0.864665$.
+4. Sanity check: with two accidents expected per week, a completely clear week should be the exception, so a value near $0.86$ is right.
 :::
 
-## The Geometric and Negative Binomial Distributions
+:::example[Poisson approximation to a binomial]
+A component is defective with probability $p = 0.03$, independently, and a lot contains $n = 100$ components. Approximate $P(X = 0)$ and compare with the exact binomial value.
+:::
+
+:::solution
+1. $n$ is large and $p$ small, so set $\lambda = np = 3$ and treat $X$ as approximately Poisson$(3)$.
+2. Approximation: $P(X=0) \approx e^{-3} \approx 0.049787$.
+3. Exact: $P(X = 0) = (0.97)^{100} \approx 0.047553$.
+4. The absolute error is about $0.0022$ — small, and the approximation replaces a $100$th power by a single exponential. The error is of order $\lambda^2/n$, so it shrinks as $n$ grows with $\lambda$ fixed.
+:::
+
+:::pitfall
+$\lambda$ and $p$ are not interchangeable. $p$ is a probability, so $0 \le p \le 1$; $\lambda$ is a rate, an expected count, and can be any positive number. Seeing "$\lambda = 3$" and computing $3^k(1-3)^{n-k}$ is a category error. Equally, $\lambda$ is attached to a *window*: a rate of $2$ per week is not the parameter to use for a question about a month.
+:::
+
+## The Geometric Distribution and Memorylessness
 
 <!-- section: geometric -->
 
+The binomial fixes the number of trials and lets the number of successes be random. Turn that around — fix the number of successes at one, and let the number of trials be random — and you get a waiting time.
+
 :::definition[Geometric distribution]{#geometric}
-$X$ counts the number of independent trials until (and including) the first success, where each trial succeeds with the same probability $p$, $0 < p \le 1$. Its PMF is
+Perform independent Bernoulli$(p)$ trials with $0 < p \le 1$, and let $X$ be the index of the first success. Then $X$ has the **geometric distribution** with parameter $p$:
 
-$$P(X=k) = (1-p)^{k-1}p, \qquad k = 1, 2, 3, \ldots,$$
+$$P(X = k) = (1-p)^{k-1} p, \qquad k = 1, 2, 3, \ldots.$$
+:::
 
-with mean and variance
+:::notation
+Two conventions are in circulation. The one above counts *trials up to and including* the first success, so $X \in \{1,2,3,\ldots\}$ and $E(X) = 1/p$. The other counts the *failures before* the first success, giving $Y = X - 1 \in \{0,1,2,\ldots\}$ and $E(Y) = (1-p)/p$. The variance is the same for both, since they differ by a constant. Software differs: check which one a function implements before trusting its output. This chapter uses the trial-counting convention throughout.
+:::
+
+The pmf reads directly off the experiment: for the first success to be on trial $k$, the first $k-1$ trials must all fail — probability $(1-p)^{k-1}$ by independence — and the $k$th must succeed, probability $p$. There is no binomial coefficient because there is only one arrangement.
+
+:::proposition[The geometric tail]{#geometric-tail}
+If $X$ is geometric with parameter $p$, then for every integer $n \ge 0$,
+
+$$P(X > n) = (1-p)^n,$$
+
+and consequently $F_X(n) = P(X \le n) = 1 - (1-p)^n$. In particular the probabilities sum to $1$.
+:::
+
+:::proof
+The event $\{X > n\}$ says the first $n$ trials all failed, which by independence has probability $(1-p)^n$ — no summation required. The cdf is the complement. Letting $n \to \infty$, $(1-p)^n \to 0$ because $0 \le 1 - p < 1$, so $P(X = \infty) = 0$ and the pmf accounts for all the mass. $\blacksquare$
+:::
+
+:::theorem[Mean and variance of the geometric]{#geometric-moments}
+If $X$ is geometric with parameter $p$ then
 
 $$E(X) = \frac{1}{p}, \qquad \text{Var}(X) = \frac{1-p}{p^2}.$$
 :::
 
-The PMF reads as "$k-1$ failures, then a success".
+:::proof
+Write $q = 1 - p$. For a non-negative integer-valued $X$ the tail-sum identity $E(X) = \sum_{n \ge 0} P(X > n)$ holds, and by Proposition *The geometric tail* this is a geometric series:
 
-:::proposition[Memorylessness of the geometric]
-For all $m, n \ge 0$,
+$$E(X) = \sum_{n=0}^{\infty} q^n = \frac{1}{1-q} = \frac{1}{p}.$$
 
-$$P(X>m+n \mid X>m) = P(X>n).$$
+For the variance use the factorial moment again. Differentiating the geometric series $\sum_{k \ge 0} q^k = (1-q)^{-1}$ twice with respect to $q$ gives $\sum_{k \ge 2} k(k-1) q^{k-2} = 2(1-q)^{-3}$, so
+
+$$E[X(X-1)] = \sum_{k=1}^{\infty} k(k-1) q^{k-1} p = pq\sum_{k=2}^{\infty}k(k-1)q^{k-2} = pq \cdot \frac{2}{p^3} = \frac{2q}{p^2}.$$
+
+Then $E(X^2) = E[X(X-1)] + E(X) = \dfrac{2q}{p^2} + \dfrac{1}{p}$, and
+
+$$\text{Var}(X) = \frac{2q}{p^2} + \frac{1}{p} - \frac{1}{p^2} = \frac{2q + p - 1}{p^2} = \frac{2q - q}{p^2} = \frac{q}{p^2},$$
+
+using $p - 1 = -q$. $\blacksquare$
 :::
 
-Past failures give no information about how many more trials you will need.
+$E(X) = 1/p$ is the formula everyone remembers and it is the one worth sanity-checking against: if one trial in five succeeds, you wait five trials on average. Note how fast the variance grows as $p$ shrinks — at $p = 0.01$ the mean is $100$ and the standard deviation is about $99.5$, so waiting times of this kind are wildly variable, and the mean alone is a poor summary.
 
-:::definition[Negative binomial distribution]
-$X$ counts the number of trials needed to achieve exactly $r$ successes, each trial succeeding independently with probability $p$. Its PMF is
+### Memorylessness
 
-$$P(X=k) = \binom{k-1}{r-1}(1-p)^{k-r}p^{r}, \qquad k = r, r+1, \ldots,$$
+:::theorem[Memorylessness of the geometric]{#memorylessness}
+Let $X$ be geometric with parameter $p$. Then for all integers $m, n \ge 0$,
 
-with mean $r/p$ and variance $r(1-p)/p^2$.
+$$P(X > m + n \mid X > m) = P(X > n).$$
+
+Conversely, the geometric is the only distribution on $\{1,2,3,\ldots\}$ with this property.
 :::
 
-The negative binomial generalises the geometric, which is the $r=1$ case. Reading the PMF: the last trial must be a success, and the remaining $r-1$ successes fall anywhere among the first $k-1$ trials.
+:::proof
+Since $\{X > m+n\} \subseteq \{X > m\}$, the intersection of the two events is $\{X > m+n\}$ itself. By the definition of conditional probability and Proposition *The geometric tail*,
 
-:::definition[Hypergeometric distribution]
-$X$ counts the "successes" in a sample of $n$ items drawn without replacement from a finite population of size $N$ containing $K$ successes. Its PMF is
+$$P(X > m+n \mid X > m) = \frac{P(X > m+n)}{P(X>m)} = \frac{(1-p)^{m+n}}{(1-p)^m} = (1-p)^n = P(X > n),$$
 
-$$P(X=k) = \binom{K}{k}\binom{N-K}{n-k}\big/\binom{N}{n}.$$
+the division being legitimate because $P(X > m) = (1-p)^m > 0$.
+
+For the converse, suppose $G(n) = P(X > n)$ satisfies $G(m+n) = G(m)G(n)$ for all $m,n \ge 0$ with $G(1) < 1$. Taking $m = n = \cdots = 1$ and inducting gives $G(n) = G(1)^n$. Setting $p = 1 - G(1)$ yields $P(X > n) = (1-p)^n$, whose differences $P(X = k) = G(k-1) - G(k) = (1-p)^{k-1}p$ are exactly the geometric pmf. $\blacksquare$
 :::
-
-Use it when the population is small enough that each draw changes the remaining probabilities — for example, selecting $5$ cards from a deck without replacing them. When $N$ is large relative to $n$, the draws are nearly independent and the binomial is a good approximation.
 
 :::intuition
-The geometric distribution answers: 'how many times do I have to try until I succeed?' If each attempt has a $20\%$ success rate, the geometric distribution tells you the probabilities of succeeding on the first try, second try, third try, and so on. Memorylessness is like a fair slot machine: it does not "owe" you a win no matter how long you have been losing — the odds reset with every pull.
+A coin has no memory. Ten tails in a row do not make a head "due" on the eleventh flip, and the number of further flips you must wait has exactly the distribution it had at the start. Memorylessness is the formal statement of that, and it is the mathematical refutation of the gambler's fallacy.
+
+Be careful about what it does *not* say. Waiting a long time is unlikely in advance — $P(X > 10) = (1-p)^{10}$ is small. What memorylessness says is that *given* you have already waited that long, the future looks brand new. Surprise about the past is not evidence about the future.
 :::
 
-:::example[Geometric probability, mean, and variance]
-A basketball player sinks each free throw independently with probability $p=0.25$. Let $X$ be the shot number of her first make. Find $P(X=3)$, the mean, and the variance.
+:::pitfall
+Memorylessness is a property of independent trials with a constant $p$, and nothing else. A lightbulb that wears out, a machine whose failure probability rises with age, a patient whose risk grows over time — none of these are memoryless, and modelling them as geometric will systematically understate the chance of imminent failure. Among discrete distributions the geometric is the unique memoryless one; among continuous ones it is the exponential, and no others.
 :::
 
-:::solution
-1. $P(X=3) = (1-p)^{3-1}p = (0.75)^2(0.25) = 0.5625 \times 0.25 = 0.140625$ — two misses, then a make.
-2. Mean: $E(X) = 1/p = 1/0.25 = 4$. On average it takes $4$ shots to get the first make.
-3. Variance: $\text{Var}(X) = (1-p)/p^2 = 0.75/0.0625 = 12$.
-4. Sanity check: $P(X>3) = (1-p)^3 = 0.75^3 \approx 0.422$, so there is still a $42\%$ chance the first make has not happened by the third shot — consistent with a mean of $4$.
-:::
-
-:::example[Negative binomial]
-Using the same shooter ($p=0.5$ now, for a cleaner number), let $X$ be the shot on which she records her $r=3$rd make. Find $P(X=5)$.
+:::example[Free throws]
+A player sinks each free throw independently with probability $p = 0.25$. Let $X$ be the number of the shot on which she records her first make. Find $P(X = 3)$, $P(X > 4)$, $E(X)$ and $\text{Var}(X)$.
 :::
 
 :::solution
-1. The 5th shot must be the 3rd make, and exactly $2$ of the first $4$ shots are makes: $P(X=5) = \binom{4}{2}(0.5)^{2}(0.5)^{3} = 6(0.25)(0.125) = 0.1875$.
-2. Check the mean: $E(X) = r/p = 3/0.5 = 6$, so needing exactly $5$ trials (just under the mean) being fairly likely is reasonable.
+1. $P(X = 3) = (0.75)^2(0.25) = 0.5625 \times 0.25 = 0.140625$ — two misses, then a make.
+2. $P(X > 4) = (0.75)^4 = 0.31640625$: still no make after four attempts.
+3. $E(X) = 1/0.25 = 4$ shots on average.
+4. $\text{Var}(X) = (1-p)/p^2 = 0.75/0.0625 = 12$, so $\sigma = \sqrt{12} \approx 3.46$ — nearly as large as the mean.
+5. Sanity check on memorylessness: given she has missed four, the chance she needs more than three further shots is $P(X > 3) = 0.75^3 \approx 0.4219$, the same as it was before she started.
 :::
 
-## Choosing the Right Distribution
+## Negative Binomial and Hypergeometric
+
+<!-- section: negative-binomial -->
+
+Two variations account for most of the remaining discrete problems you will meet. One relaxes the geometric's "first success" to "$r$th success"; the other relaxes the binomial's independence by sampling from a finite pool.
+
+:::definition[Negative binomial distribution]{#negative-binomial}
+Perform independent Bernoulli$(p)$ trials and let $X$ be the index of the trial on which the $r$th success occurs. Then $X$ has the **negative binomial** distribution with parameters $r$ and $p$:
+
+$$P(X = k) = \binom{k-1}{r-1}(1-p)^{k-r}p^{r}, \qquad k = r, r+1, r+2, \ldots.$$
+:::
+
+:::proof
+The formula deserves its derivation. The event $\{X = k\}$ requires two things at once: trial $k$ is a success, and exactly $r-1$ of the first $k-1$ trials are successes. These concern disjoint sets of trials and so are independent. The first has probability $p$. The second is a binomial event on $k-1$ trials, with probability $\binom{k-1}{r-1}p^{r-1}(1-p)^{k-r}$. Multiplying gives $\binom{k-1}{r-1}p^r(1-p)^{k-r}$. $\blacksquare$
+:::
+
+The constraint that the *last* trial is a success is what makes the coefficient $\binom{k-1}{r-1}$ rather than $\binom{k}{r}$ — a very common slip. Setting $r = 1$ recovers the geometric, as it must.
+
+:::proposition[Mean and variance of the negative binomial]{#negbinom-moments}
+If $X$ is negative binomial with parameters $r$ and $p$, then
+
+$$E(X) = \frac{r}{p}, \qquad \text{Var}(X) = \frac{r(1-p)}{p^2}.$$
+:::
+
+:::proof
+Decompose the waiting time into stages. Let $W_1$ be the number of trials up to the first success, $W_2$ the number of further trials from there to the second success, and so on, so that
+
+$$X = W_1 + W_2 + \cdots + W_r.$$
+
+Because the trials are independent with constant $p$, each $W_i$ is geometric$(p)$ — this is memorylessness in action, since after the $(i-1)$th success the process restarts — and the $W_i$ are independent of one another, as they depend on disjoint blocks of trials.
+
+Linearity gives $E(X) = r \cdot 1/p$, and Theorem *Variance of a sum of independent variables* gives $\text{Var}(X) = r(1-p)/p^2$. $\blacksquare$
+:::
+
+:::example[Waiting for the third make]
+A shooter makes each free throw independently with probability $p = 0.5$. Let $X$ be the shot on which she records her third make. Find $P(X = 5)$ and $E(X)$.
+:::
+
+:::solution
+1. Here $r = 3$, $k = 5$. The fifth shot must be a make, and exactly $2$ of the first $4$ must be makes.
+2. $P(X=5) = \binom{4}{2}(0.5)^3(0.5)^{2} = 6(0.5)^5 = \tfrac{6}{32} = 0.1875$.
+3. $E(X) = r/p = 3/0.5 = 6$.
+4. Sanity check: $5$ sits just below the mean of $6$, and it is in fact the modal value together with $4$ — a probability near $0.19$ for the single most likely outcome of a spread-out distribution is plausible.
+:::
+
+### Sampling without replacement
+
+:::definition[Hypergeometric distribution]{#hypergeometric}
+A population of $N$ items contains $K$ successes and $N-K$ failures. Draw $n$ items **without replacement**, all subsets equally likely, and let $X$ be the number of successes drawn. Then $X$ is **hypergeometric**:
+
+$$P(X = k) = \frac{\binom{K}{k}\binom{N-K}{n-k}}{\binom{N}{n}},$$
+
+for $\max(0, n-(N-K)) \le k \le \min(n, K)$.
+:::
+
+The formula is a counting argument, not a product of probabilities: of the $\binom{N}{n}$ equally likely samples, the ones with exactly $k$ successes are obtained by choosing $k$ of the $K$ successes and $n-k$ of the $N-K$ failures.
+
+:::proposition[Mean and variance of the hypergeometric]{#hypergeometric-moments}
+With $p = K/N$ the population success proportion,
+
+$$E(X) = np, \qquad \text{Var}(X) = np(1-p)\cdot\frac{N-n}{N-1}.$$
+:::
+
+:::proof
+(Mean.) Let $X_i = 1$ if the $i$th item drawn is a success. By symmetry every item is equally likely to appear in position $i$, so $P(X_i = 1) = K/N = p$ for every $i$, and $E(X) = \sum_i E(X_i) = np$ by linearity — which, as in the card example, does not care that the $X_i$ are dependent.
+
+(Variance.) The $X_i$ are *not* independent, so the cross terms survive and the calculation of the covariance is the extra work; carrying it out gives the stated factor. We quote the result. $\blacksquare$
+:::
+
+The mean is exactly the binomial mean: sampling without replacement does not bias the count. The variance, however, is smaller, by the **finite population correction** $\frac{N-n}{N-1}$. That factor is at most $1$, equals $1$ when $n = 1$, and drops to $0$ when $n = N$ — as it must, because a census has no sampling variability at all. Sampling without replacement is *more* precise than sampling with replacement, because it cannot waste draws on items it has already seen.
+
+:::corollary[Binomial approximation to the hypergeometric]
+If $n/N$ is small, the correction factor is close to $1$ and the hypergeometric probabilities are close to binomial probabilities with $p = K/N$. The usual working rule is $n \le 0.1N$.
+:::
+
+:::example[Defective fuses]
+A box holds $20$ fuses, $4$ of them defective. Three are drawn without replacement. Find the probability that exactly one is defective, and $E(X)$.
+:::
+
+:::solution
+1. Here $N = 20$, $K = 4$, $n = 3$, $k = 1$.
+2. $\binom{4}{1} = 4$, $\binom{16}{2} = 120$, $\binom{20}{3} = 1140$.
+3. $P(X = 1) = \dfrac{4 \times 120}{1140} = \dfrac{480}{1140} = \dfrac{8}{19} \approx 0.421$.
+4. $E(X) = n K/N = 3 \times 4/20 = 0.6$.
+5. Compare the binomial: $\binom{3}{1}(0.2)(0.8)^2 = 3(0.2)(0.64) = 0.384$. The sample is $15\%$ of the population, above the $10\%$ rule, and the two values differ by nearly $0.04$ — visible evidence that the approximation is being pushed too far here.
+:::
+
+## Choosing a Distribution
 
 <!-- section: choosing -->
 
-:::summary
-- **Binomial**: fixed $n$ trials, each independent with probability $p$, counting the number of successes.
-- **Poisson**: counting rare, independent events in a fixed window; no upper bound on the count; mean and variance are equal.
-- **Geometric**: counting the number of trials until the first success; memoryless.
-- **Hypergeometric**: like the binomial but sampling without replacement from a finite population; used when the population is small relative to the sample.
+Every distribution in this chapter is built from Bernoulli trials or a limit of them, so the differences come down to three questions: what is fixed, what is random, and are the trials independent?
+
+:::recipe[Identifying the distribution]
+1. **Is the quantity a count of successes, or a count of trials?** Successes $\Rightarrow$ binomial or hypergeometric. Trials $\Rightarrow$ geometric or negative binomial.
+2. **If it is a count of successes: is the number of trials fixed in advance?** If yes, and the draws are independent with constant $p$ — sampling with replacement, or from an effectively infinite population — it is **binomial**. If the draws are made without replacement from a finite pool, it is **hypergeometric**.
+3. **If it is a count of trials: how many successes are you waiting for?** One $\Rightarrow$ **geometric**. Exactly $r$ $\Rightarrow$ **negative binomial**.
+4. **Is there no list of trials at all — only a rate over a window of time, length, area or volume?** Then it is **Poisson**, with $\lambda$ rescaled to the window in the question.
+5. **Check the boundary cases.** $n$ large with $p$ small and $np$ moderate: the Poisson approximates the binomial. Sample no more than $10\%$ of the population: the binomial approximates the hypergeometric.
 :::
 
-Decision guide: if $n$ is large, $p$ is small, and $np$ is moderate, the Poisson approximation to the binomial is accurate and simpler to compute.
+The tells in the wording are reliable. "Out of $20$ patients, how many respond?" fixes $n = 20$ and counts successes: binomial. "How many patients must be screened to find $3$ who qualify?" counts trials until the third success: negative binomial. "How many earthquakes next decade?" has no trials at all, only a rate: Poisson. "Five cards from a deck" is drawing from a small finite pool: hypergeometric.
 
-:::intuition
-Binomial = 'I flip this coin exactly $n$ times, how many heads?' Poisson = 'Calls arrive randomly, how many in the next hour?' Geometric = 'I keep flipping until I get a head, how many flips?' Each distribution is the right tool for a specific type of counting question.
-:::
+| Distribution | Fixed | Random | Support | Mean | Variance |
+|---|---|---|---|---|---|
+| Bernoulli$(p)$ | one trial | success or not | $\{0,1\}$ | $p$ | $p(1-p)$ |
+| Binomial$(n,p)$ | $n$ trials | number of successes | $\{0,\ldots,n\}$ | $np$ | $np(1-p)$ |
+| Poisson$(\lambda)$ | a window | number of events | $\{0,1,2,\ldots\}$ | $\lambda$ | $\lambda$ |
+| Geometric$(p)$ | one success | number of trials | $\{1,2,\ldots\}$ | $1/p$ | $(1-p)/p^2$ |
+| NegBinom$(r,p)$ | $r$ successes | number of trials | $\{r,r+1,\ldots\}$ | $r/p$ | $r(1-p)/p^2$ |
+| Hypergeom$(N,K,n)$ | $n$ draws, no replacement | number of successes | see above | $nK/N$ | $np(1-p)\frac{N-n}{N-1}$ |
 
-:::example[Picking the distribution from the wording]
-Scenario A: "A quiz has $10$ true/false questions; a student guesses each. How many does she get right?" There is a fixed number of trials ($n=10$), each independent, each with constant $p=0.5$, and you count successes → **binomial**, $B(10,0.5)$.
+:::example[Reading the distribution off the wording]
+Classify each scenario, and give the parameters.
+
+A. A quiz has $10$ true/false questions and a student guesses every one. How many does she get right?
+
+B. A page of a manuscript averages $0.5$ typos. What is the chance a page is clean?
+
+C. How many pages must an editor read to find the first typo?
+
+D. A box of $20$ fuses contains $4$ defectives; three are drawn without replacement. How many are defective?
 :::
 
 :::solution
-1. Scenario B: "A page averages $0.5$ typos. What is the chance a page has no typos?" You are counting rare events in a fixed window (one page) at a constant rate → **Poisson**, $\lambda=0.5$, giving $P(X=0)=e^{-0.5}\approx 0.607$.
-2. Scenario C: "How many pages must an editor read before finding the first typo?" You are counting trials until the first success → **geometric**.
-3. Scenario D: "A box holds $20$ fuses, $4$ of them defective; you grab $3$ without replacing. How many are defective?" Sampling without replacement from a small population → **hypergeometric**, not binomial, because $p$ changes after each draw.
-4. The tells: *fixed count of trials* → binomial; *rate over an interval* → Poisson; *wait until first success* → geometric; *drawing from a small finite pool without replacement* → hypergeometric.
+1. **A — binomial**, $B(10, 0.5)$. A fixed number of independent trials with constant $p$, counting successes. The mean is $5$.
+2. **B — Poisson**, $\lambda = 0.5$ per page. Counting events in a fixed window with no natural $n$; $P(X=0) = e^{-0.5} \approx 0.6065$.
+3. **C — geometric** on pages, with $p = P(\text{a page has at least one typo}) = 1 - e^{-0.5} \approx 0.3935$. The expected wait is $1/p \approx 2.54$ pages. Note the two-step reading: a Poisson calculation supplies the $p$ that a geometric then consumes.
+4. **D — hypergeometric**, $N=20$, $K=4$, $n=3$, as computed earlier; the binomial would give $0.384$ against the correct $8/19 \approx 0.421$.
+5. The four tells, in order: *fixed count of trials*; *rate over an interval*; *wait until the first success*; *draw from a small finite pool without replacement*.
+:::
+
+:::summary
+The load-bearing results of this chapter, with the hypotheses they need.
+
+- **A pmf** is any non-negative function summing to $1$ over a countable support; the cdf $F(x) = P(X \le x)$ is its running total, and $p_X(x)$ is the size of $F$'s jump at $x$. For discrete $X$, $P(X < x) \ne P(X \le x)$.
+- **Linearity of expectation.** $E(aX + bY + c) = aE(X) + bE(Y) + c$ for any $X, Y$ with finite means on a common sample space. *No independence needed* — this is what makes the indicator decomposition work.
+- **Variance identities.** $\text{Var}(X) = E(X^2) - [E(X)]^2$ and $\text{Var}(aX+b) = a^2\text{Var}(X)$, both unconditionally. But $\text{Var}(X+Y) = \text{Var}(X) + \text{Var}(Y)$ **requires independence** (or at least zero covariance); in general the cross term $2\,\text{Cov}(X,Y)$ is there.
+- **Binomial** $B(n,p)$: $P(X=k) = \binom{n}{k}p^k(1-p)^{n-k}$, needing binary outcomes, independence, fixed $n$ and constant $p$. Mean $np$ (needs only constant $p$), variance $np(1-p)$ (needs independence). Symmetric at $p = 0.5$, right-skewed below it.
+- **Poisson** $(\lambda)$: $P(X=k) = e^{-\lambda}\lambda^k/k!$, the $n \to \infty$, $np \to \lambda$ limit of the binomial. Mean $=$ variance $= \lambda$, which is a testable claim; overdispersed data violates it. Independent Poissons add, so $\lambda$ rescales with the window.
+- **Geometric** $(p)$: $P(X=k) = (1-p)^{k-1}p$ on $k \ge 1$, tail $P(X>n) = (1-p)^n$, mean $1/p$, variance $(1-p)/p^2$. It is the unique memoryless discrete distribution, and memorylessness needs independence and constant $p$ — not true of anything that ages or wears.
+- **Negative binomial** $(r,p)$: the $r$th-success waiting time, a sum of $r$ independent geometrics; mean $r/p$, variance $r(1-p)/p^2$.
+- **Hypergeometric** $(N,K,n)$: sampling without replacement. Mean $nK/N$, the same as the binomial, but variance $np(1-p)\frac{N-n}{N-1}$ — strictly smaller. The binomial approximates it when $n \le 0.1N$.
 :::
 
 ## Common Mistakes
 
-- Applying the binomial formula when trials are not independent or the sample is drawn without replacement from a small population (use hypergeometric instead).
-- Forgetting that Poisson requires events to be independent and the rate to be constant — a traffic jam violates both.
-- Confusing $\lambda$ (Poisson rate) with $p$ (binomial success probability). They measure different things even though both parameterise how often something happens.
-- Computing $P(X \geq k)$ directly when it is easier to use $1-P(X \leq k-1)$.
-- Using the binomial formula for continuous data. The binomial is for counts; for continuous data use normal or other continuous distributions.
+- **Using the binomial when sampling without replacement from a small population.** The trials are neither independent nor identically weighted. Use the hypergeometric unless the sample is under about $10\%$ of the population.
+- **Adding standard deviations instead of variances.** Variances add for independent variables; standard deviations never do. Add the variances, then take one square root.
+- **Assuming independence for a variance.** $E(X+Y) = E(X)+E(Y)$ always; $\text{Var}(X+Y) = \text{Var}(X)+\text{Var}(Y)$ only when the covariance vanishes. Deciding which rule you are using is the first step, not an afterthought.
+- **Forgetting that $\text{Var}(X - Y) = \text{Var}(X) + \text{Var}(Y)$** for independent $X, Y$. The minus sign squares away; uncertainty accumulates whether you add or subtract.
+- **Mixing up $P(X \le k)$ and $P(X < k)$.** For integer-valued $X$, $P(X < k) = P(X \le k-1)$, and $P(X \ge k) = 1 - P(X \le k-1)$. Write the complement out rather than trusting a remembered form.
+- **Confusing $\lambda$ with $p$.** $p$ is a probability in $[0,1]$; $\lambda$ is an expected count and can exceed $1$. Also, $\lambda$ belongs to a stated window — rescale it before answering a question about a different one.
+- **Using $\binom{k}{r}$ in the negative binomial pmf.** The last trial is forced to be a success, so the coefficient is $\binom{k-1}{r-1}$ over the trials that remain free.
+- **Treating an ageing process as memoryless.** Bulbs, machines and patients all have failure probabilities that change with time. The geometric model assumes constant $p$; without it, memorylessness — and the mean $1/p$ — is simply wrong.
+- **Fitting a Poisson to overdispersed counts.** If the sample variance greatly exceeds the sample mean, the events are clustering and the independence assumption has failed. Check mean against variance before you fit.
+- **Reporting a mean for a highly skewed waiting time.** When $p$ is small the geometric has a standard deviation nearly equal to its mean, so "on average $100$ trials" hides an enormous range.
