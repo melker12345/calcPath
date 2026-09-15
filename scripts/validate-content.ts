@@ -47,6 +47,8 @@ function hasMarker(source: string, re: RegExp): boolean {
 
 async function main() {
   const errors: string[] = [];
+/** id -> "subject/topics/topic" where it was first seen. Corpus-wide. */
+const allProblemIds = new Map<string, string>();
   const warnings: string[] = [];
 
   let dirents: Dirent[] = [];
@@ -129,7 +131,6 @@ async function main() {
     }
 
     // per topic
-    const allProblemIds = new Set<string>();
 
     for (const tmeta of declaredTopics) {
       const tid = tmeta.id;
@@ -172,12 +173,20 @@ async function main() {
       // inject topicId like loader (for check)
       questions = questions.map((q) => ({ ...q, topicId: q.topicId ?? tid }));
 
-      // dup ids in topic
+      // Duplicate ids, checked across the WHOLE corpus rather than per subject.
+      // src/lib/question-registry.json maps an id to a single index and carries
+      // no subject, and progress is stored against that index — so two subjects
+      // sharing an id silently share a progress slot, and answering one marks
+      // the other done. That had already happened once, between
+      // mathematical-logic and set-theory.
       for (const q of questions) {
-        if (allProblemIds.has(q.id)) {
-          errors.push(`${slug}/topics/${tid}: duplicate problem id "${q.id}" (global per subject)`);
+        const prior = allProblemIds.get(q.id);
+        if (prior) {
+          errors.push(
+            `${slug}/topics/${tid}: duplicate problem id "${q.id}" — already used by ${prior}. Ids must be unique across every subject, because the question registry is global.`
+          );
         }
-        allProblemIds.add(q.id);
+        allProblemIds.set(q.id, `${slug}/topics/${tid}`);
       }
 
       // mdx
