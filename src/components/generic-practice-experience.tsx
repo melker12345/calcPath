@@ -526,6 +526,15 @@ export function GenericPracticeExperience({
           <div className="mt-4 rounded-xl border theme-border bg-[var(--surface-2)] p-4 text-center sm:mt-6 sm:rounded-2xl sm:p-5">
             <p className="text-lg font-bold theme-text">Congrats! All {displayProblems.length} mastered.</p>
             <p className="mt-1 text-sm theme-text-secondary">You&apos;ve completed the practice for this section.</p>
+            {/* Said at the moment it is most likely to be misread: finishing a
+                bank of computations is easy to mistake for understanding the
+                chapter. These questions check that the mechanics are right;
+                they are not the proof exercises a course would also set. */}
+            <p className="mt-3 text-xs leading-relaxed theme-text-muted">
+              These questions check that you can carry out this chapter&apos;s computations correctly.
+              They are not proof exercises — finishing them means the mechanics are solid, not that
+              you could prove the results. Re-read the chapter&apos;s statements and proofs for that.
+            </p>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:gap-3 sm:justify-center">
               <Link
                 href={backToExplanationHref}

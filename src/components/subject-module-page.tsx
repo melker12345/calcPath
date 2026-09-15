@@ -452,6 +452,18 @@ export function SubjectModulePage({
             </section>
           )}
 
+          {/* What the practice bank does and does not certify. Placed at the end
+              of the chapter, where a reader decides they are done with it: the
+              questions grade a single typed value, so they test execution, and
+              a reader who clears them can easily conclude more than that. */}
+          <div className="mt-12 rounded-xl border theme-border bg-[var(--surface-2)] p-4 text-sm leading-relaxed theme-text-muted sm:p-5" data-no-print>
+            <span className="font-semibold theme-text-secondary">About the practice questions.</span>{" "}
+            They check that you can carry out this chapter&apos;s computations correctly, and each one
+            is graded on a single answer. They are not proof exercises: working through them confirms
+            the mechanics, not that you could prove the results yourself. For that, re-read the
+            statements above and try to reconstruct their proofs with the page closed.
+          </div>
+
           {/* Navigation */}
           <div className="mt-12 flex flex-col gap-3 border-t border-[var(--border)] pt-6 sm:flex-row sm:justify-between" data-no-print>
             {prevTopic ? (

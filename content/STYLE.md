@@ -101,11 +101,33 @@ Cut anything that repeats a point already made. Long explanations feel long
 mostly because the same idea is restated three times in different words; a book
 says it once, precisely, and moves on.
 
-## 4. Number and cross-reference
+## 4. Cross-reference by title, never by number
 
-Because environments are numbered, you can write "by Theorem 4.2" instead of "as
-we saw above". Say which result you are using — it teaches the reader that
-results have names and are reusable.
+Say which result you are using. "As we saw above" makes the reader hunt; naming
+the result teaches them that results are things with names, which can be picked
+up and reused.
+
+Refer to it **by its title**:
+
+```mdx
+by Corollary *Zero determinants by inspection*
+Theorem *Transpose invariance* gives the other direction.
+```
+
+Do **not** write "by Theorem 4.2". The number you see on the page is not in the
+MDX — `math-blocks.ts` computes it at render time from the environment's
+position, as the chapter number plus a running counter over every numbered
+environment in the topic. Insert one definition earlier in the chapter and every
+number after it shifts. A number typed into the prose does not shift with it, so
+it silently starts pointing at the wrong result. Titles are stable under
+insertion; numbers are not.
+
+This is why every numbered environment should carry a `[Title]`. An untitled
+theorem cannot be referred to at all.
+
+(If you want "by Theorem 4.2" to work, it needs a `[ref](#anchor-id)` form that
+resolves an anchor to the live number at render time. The `{#id}` anchors already
+exist for it. Until that is built, titles are the only safe form.)
 
 ## 5. Keep the structural invariants
 
