@@ -4,213 +4,1151 @@ title: Vector Spaces
 
 # Vector Spaces
 
-Vector spaces are the abstract framework that unifies all of linear algebra. The same theory that applies to arrows in $\mathbb{R}^n$ applies equally to polynomials, matrices, functions, and signals. The key insight is that the 'size' of a space is fully captured by a single number: its dimension.
+Up to this point every vector in this course has been a list of numbers. That was a useful fiction. The theorems we proved about $\mathbb{R}^n$ — span, independence, basis, dimension — never once used the fact that a vector is a list. They used only that vectors can be added and scaled, and that those two operations obey a short list of algebraic rules.
 
-The four core concepts — span, linear independence, basis, dimension — provide the language for describing what a set of vectors can and cannot represent. The column space and null space give these abstract ideas concrete computational content.
+That observation is worth a great deal. Polynomials can be added and scaled. So can matrices of a fixed shape, functions on an interval, infinite sequences, solutions of a linear differential equation, and digital signals. Each of those is a *vector space*, and every theorem in this chapter applies to all of them at once. When you prove that any two bases of a space have the same size, you have proved it simultaneously for arrows in the plane, for cubic polynomials, and for the solution set of $y'' + y = 0$.
 
-Understanding vector spaces is the conceptual leap that separates people who use linear algebra from people who understand it. Every major theorem — eigenvalues, the SVD, least squares — is ultimately a statement about the structure of certain vector spaces.
+This chapter builds that framework from the axioms. It defines a vector space over a field, collects the examples you will meet for the rest of your mathematical life, and then develops the four load-bearing ideas — span, independence, basis, dimension — in the general setting. It closes by coming back to matrices, where the abstract machinery pays for itself: the column space, row space and null space of a matrix are vector spaces, their dimensions are locked together by the Rank Theorem, and the whole structure of a linear system is readable off those numbers.
 
-## Subspaces {#subspaces}
+The chapter is proof-carrying. Almost every result here has a short argument, and the arguments are the content: they are what tells you *why* dimension is well defined rather than merely that it is.
+
+## Vector spaces and fields
+
+<!-- section: vector-spaces -->
+
+Before vectors, scalars. The numbers we multiply vectors by must themselves form a system in which we can add, subtract, multiply and divide. Such a system is called a field.
+
+:::definition[Field]{#field-definition}
+A **field** $\mathbb{F}$ is a set with two operations, addition and multiplication, such that both are commutative and associative, multiplication distributes over addition, there are distinct identity elements $0$ and $1$, every element $a$ has an additive inverse $-a$, and every $a \neq 0$ has a multiplicative inverse $a^{-1}$.
+:::
+
+The three fields used in this course are the real numbers $\mathbb{R}$, the complex numbers $\mathbb{C}$, and the two-element field
+
+$$\mathbb{F}_2 = \{0, 1\}, \qquad 1 + 1 = 0,$$
+
+which is the arithmetic of a single bit and is the field underneath error-correcting codes. The rational numbers $\mathbb{Q}$ are a field; the integers $\mathbb{Z}$ are not, because $2$ has no multiplicative inverse in $\mathbb{Z}$. Unless a statement says otherwise, read $\mathbb{F}$ below as $\mathbb{R}$; nothing in this chapter changes if you swap in $\mathbb{C}$.
+
+:::definition[Vector space]{#vector-space-definition}
+A **vector space over a field $\mathbb{F}$** is a set $V$ together with an addition $V \times V \to V$ and a scalar multiplication $\mathbb{F} \times V \to V$ such that for all $\mathbf{u}, \mathbf{v}, \mathbf{w} \in V$ and all $c, d \in \mathbb{F}$:
+
+1. $\mathbf{u} + \mathbf{v} = \mathbf{v} + \mathbf{u}$ (commutativity);
+2. $(\mathbf{u} + \mathbf{v}) + \mathbf{w} = \mathbf{u} + (\mathbf{v} + \mathbf{w})$ (associativity);
+3. there is a $\mathbf{0} \in V$ with $\mathbf{v} + \mathbf{0} = \mathbf{v}$ for all $\mathbf{v}$ (additive identity);
+4. for each $\mathbf{v}$ there is a $-\mathbf{v} \in V$ with $\mathbf{v} + (-\mathbf{v}) = \mathbf{0}$ (additive inverse);
+5. $1\mathbf{v} = \mathbf{v}$ (unit scalar);
+6. $c(d\mathbf{v}) = (cd)\mathbf{v}$ (compatibility of scalars);
+7. $c(\mathbf{u} + \mathbf{v}) = c\mathbf{u} + c\mathbf{v}$ (distributivity over vector addition);
+8. $(c + d)\mathbf{v} = c\mathbf{v} + d\mathbf{v}$ (distributivity over scalar addition).
+
+Elements of $V$ are called **vectors**; elements of $\mathbb{F}$ are called **scalars**.
+:::
+
+Two of the axioms are quietly hidden in the phrase "an addition $V \times V \to V$": the sum of two elements of $V$ must land back in $V$, and likewise $c\mathbf{v} \in V$. These are the **closure** requirements, and in practice they are the conditions that fail most often.
+
+Axiom 5 looks like a triviality. It is not: it is the axiom that ties the scalar $1$ to the vector operation, and without it you can build a perfectly consistent system that satisfies the other seven and is useless. The example at the end of this section does exactly that. Axioms 1–4 say that $V$ is a commutative group under addition, and 5–8 say the scalars act on it compatibly.
+
+:::intuition
+A vector space is a set of things you are allowed to mix. You can take $3$ parts of one thing and $-\tfrac{1}{2}$ parts of another and add them, and the recipe you get is again a thing of the same kind. That is all. Nothing in the definition mentions length, angle, or coordinates — those are extra structure added in a later chapter. A vector space is just a mixing rule that never takes you outside the set.
+:::
+
+The axioms are short enough that the first consequences can be squeezed out immediately, and they are worth seeing derived rather than assumed.
+
+:::proposition[Elementary consequences of the axioms]{#basic-consequences}
+In any vector space $V$ over $\mathbb{F}$:
+
+1. the zero vector is unique, and each $\mathbf{v}$ has exactly one additive inverse;
+2. $0\mathbf{v} = \mathbf{0}$ for every $\mathbf{v} \in V$;
+3. $c\mathbf{0} = \mathbf{0}$ for every $c \in \mathbb{F}$;
+4. $(-1)\mathbf{v} = -\mathbf{v}$;
+5. if $c\mathbf{v} = \mathbf{0}$ then $c = 0$ or $\mathbf{v} = \mathbf{0}$.
+:::
+
+:::proof
+(1) If $\mathbf{0}$ and $\mathbf{0}'$ are both additive identities then $\mathbf{0} = \mathbf{0} + \mathbf{0}' = \mathbf{0}'$, using axiom 3 for each in turn. If $\mathbf{w}$ and $\mathbf{w}'$ are both inverses of $\mathbf{v}$, then
+
+$$\mathbf{w} = \mathbf{w} + \mathbf{0} = \mathbf{w} + (\mathbf{v} + \mathbf{w}') = (\mathbf{w} + \mathbf{v}) + \mathbf{w}' = \mathbf{0} + \mathbf{w}' = \mathbf{w}'.$$
+
+(2) By axiom 8, $0\mathbf{v} + 0\mathbf{v} = (0+0)\mathbf{v} = 0\mathbf{v}$. Add $-(0\mathbf{v})$ to both sides to get $0\mathbf{v} = \mathbf{0}$.
+
+(3) By axiom 7, $c\mathbf{0} + c\mathbf{0} = c(\mathbf{0} + \mathbf{0}) = c\mathbf{0}$; add $-(c\mathbf{0})$ to both sides.
+
+(4) Using axioms 5 and 8, $\mathbf{v} + (-1)\mathbf{v} = 1\mathbf{v} + (-1)\mathbf{v} = (1 + (-1))\mathbf{v} = 0\mathbf{v} = \mathbf{0}$ by (2). So $(-1)\mathbf{v}$ is an additive inverse of $\mathbf{v}$, and by (1) it is *the* additive inverse.
+
+(5) Suppose $c\mathbf{v} = \mathbf{0}$ and $c \neq 0$. Then $c^{-1}$ exists in $\mathbb{F}$, and
+
+$$\mathbf{v} = 1\mathbf{v} = (c^{-1}c)\mathbf{v} = c^{-1}(c\mathbf{v}) = c^{-1}\mathbf{0} = \mathbf{0}$$
+
+by axioms 5 and 6 and part (3).
+:::
+
+Notice where part (5) used the field: it needed $c^{-1}$. This is the one place in the elementary theory where "the scalars form a field" rather than merely a ring does real work, and it is the reason the whole subject is built over fields.
+
+Now the examples. Learn these; they are the vector spaces that the rest of mathematics runs on.
+
+:::example[The standard spaces]
+Verify that each of the following is a vector space over $\mathbb{R}$, and identify its zero vector: $\mathbb{R}^n$; the space $\mathcal{P}_n$ of polynomials of degree at most $n$; the space $M_{m \times n}$ of $m \times n$ real matrices; the space $F(S, \mathbb{R})$ of all functions from a set $S$ to $\mathbb{R}$.
+:::
+
+:::solution
+$\mathbb{R}^n$ with componentwise operations. Every axiom is the corresponding axiom of $\mathbb{R}$ applied in each of the $n$ slots at once. Zero vector: $(0, 0, \ldots, 0)$.
+
+$\mathcal{P}_n = \{a_0 + a_1x + \cdots + a_nx^n : a_i \in \mathbb{R}\}$, with polynomials added coefficient by coefficient and scaled coefficient by coefficient. Closure holds because adding two polynomials of degree at most $n$ cannot raise the degree, and scaling cannot either. Zero vector: the zero polynomial, all of whose coefficients vanish.
+
+The full space $\mathcal{P}$ of polynomials of *any* degree is also a vector space; it is not contained in any $\mathcal{P}_n$, and is our first example of an infinite-dimensional space.
+
+$M_{m \times n}$ with entrywise addition and scaling. The zero vector is the $m \times n$ zero matrix. Note that matrix *multiplication* plays no role here — it is not part of the vector space structure.
+
+$F(S,\mathbb{R})$, where $(f+g)(s) = f(s) + g(s)$ and $(cf)(s) = c\,f(s)$. Each axiom is checked by evaluating both sides at an arbitrary $s \in S$ and citing the corresponding axiom in $\mathbb{R}$. For instance $\big(c(f+g)\big)(s) = c\big(f(s)+g(s)\big) = cf(s) + cg(s) = (cf + cg)(s)$, and since two functions are equal exactly when they agree at every point, $c(f+g) = cf + cg$. Zero vector: the function that is identically $0$.
+
+Sanity check on the pattern: in all four cases the operations are performed "slotwise" — per coordinate, per coefficient, per entry, per input value — and the axioms are inherited slotwise from $\mathbb{R}$.
+:::
+
+Two more families deserve names. $C[a,b]$, the set of continuous real functions on $[a,b]$, is a vector space because a sum of continuous functions is continuous and a scalar multiple of a continuous function is continuous. The set $\mathbb{R}^\infty$ of all infinite real sequences $(a_1, a_2, a_3, \ldots)$ is a vector space under termwise operations. And the smallest example of all, the **zero space** $\{\mathbf{0}\}$, satisfies every axiom trivially; it is the only vector space with finitely many elements when $\mathbb{F} = \mathbb{R}$.
+
+:::example[An exotic vector space]
+Let $V = \mathbb{R}_{>0}$, the set of strictly positive reals, with operations
+
+$$x \oplus y = xy, \qquad c \odot x = x^c.$$
+
+Show $V$ is a vector space over $\mathbb{R}$ and identify its zero vector and the additive inverse of $x$.
+:::
+
+:::solution
+Closure: a product of positive numbers is positive, and $x^c > 0$ for $x > 0$ and any real $c$. So both operations land in $V$.
+
+Axioms 1 and 2 are commutativity and associativity of ordinary multiplication. For axiom 3 we need an element $z$ with $x \oplus z = x$, that is $xz = x$; so $z = 1$. **The zero vector of this space is the number $1$.**
+
+Axiom 4: we need $x \oplus w = 1$, that is $xw = 1$, so $w = 1/x$. The additive inverse of $x$ is its reciprocal.
+
+Axiom 5: $1 \odot x = x^1 = x$. Axiom 6: $c \odot (d \odot x) = (x^d)^c = x^{cd} = (cd) \odot x$. Axiom 7: $c \odot (x \oplus y) = (xy)^c = x^c y^c = (c \odot x) \oplus (c \odot y)$. Axiom 8: $(c+d) \odot x = x^{c+d} = x^c x^d = (c \odot x) \oplus (d \odot x)$.
+
+All eight hold, so $V$ is a vector space. Sanity check: the map $x \mapsto \ln x$ turns $\oplus$ into ordinary addition and $\odot$ into ordinary scalar multiplication, so this space is a disguised copy of $\mathbb{R}^1$. That is why every axiom worked out — the logarithm was doing the work all along, and this space has dimension $1$.
+:::
+
+:::example[Two non-examples]
+For each set below, find one axiom that fails. (a) The first quadrant $Q = \{(x,y) \in \mathbb{R}^2 : x \ge 0,\ y \ge 0\}$ with the usual operations. (b) $\mathbb{R}^2$ with the usual addition but with scalar multiplication redefined as $c \cdot (x, y) = (cx, 0)$.
+:::
+
+:::solution
+(a) Axiom 4 fails. Take $(1,1) \in Q$. Its additive inverse would have to be $(-1,-1)$, which is not in $Q$, and by the uniqueness in the elementary-consequences proposition no other element can serve. Equivalently, $Q$ is not closed under multiplication by $-1$, so scalar multiplication does not map $\mathbb{R} \times Q$ into $Q$.
+
+(b) Axiom 5 fails: $1 \cdot (x, y) = (x, 0) \neq (x,y)$ whenever $y \neq 0$. It is worth checking how much *does* survive: axioms 1–4 are untouched since addition is unchanged; axiom 6 holds since $c \cdot (d \cdot (x,y)) = c \cdot (dx, 0) = (cdx, 0) = (cd)\cdot(x,y)$; axiom 7 and axiom 8 both hold by direct computation. So seven of the eight axioms hold and the system is still worthless — in it, $1 \cdot \mathbf{v}$ forgets half of $\mathbf{v}$. That is precisely why axiom 5 is on the list.
+:::
+
+:::pitfall
+"It has an addition and a scalar multiplication, so it must be a vector space" is the single most common error here. The operations must satisfy all eight axioms *with the operations you were given*, not with the ones you expected. When you are handed a strange $\oplus$ and $\odot$, resist the urge to read $\mathbf{0}$ as "the number zero": the additive identity is whatever element the axiom demands, as the positive-reals example shows.
+:::
+
+## Subspaces
+
+<!-- section: subspaces -->
+
+Inside a vector space sit smaller vector spaces. Rather than re-checking eight axioms each time, we exploit the fact that most of them are inherited automatically.
 
 :::definition[Subspace]{#subspace-definition}
-A subspace of $\mathbb{R}^n$ is a subset $V$ satisfying three conditions:
-
-1. $\mathbf{0} \in V$;
-2. if $\mathbf{u},\mathbf{v}\in V$ then $\mathbf{u}+\mathbf{v}\in V$ (closed under addition);
-3. if $\mathbf{v}\in V$ and $c\in\mathbb{R}$ then $c\mathbf{v}\in V$ (closed under scalar multiplication).
+A subset $U$ of a vector space $V$ over $\mathbb{F}$ is a **subspace** of $V$ if $U$ is itself a vector space over $\mathbb{F}$ under the addition and scalar multiplication it inherits from $V$.
 :::
 
-:::proposition[One-step subspace test]{#subspace-test}
-A nonempty subset $V \subseteq \mathbb{R}^n$ is a subspace if and only if every linear combination $c\mathbf{u}+d\mathbf{v}$ of vectors in $V$ stays in $V$.
-:::
+:::theorem[Subspace criterion]{#subspace-test}
+A subset $U \subseteq V$ is a subspace of $V$ if and only if
 
-Examples of subspaces: $\{\mathbf{0}\}$, any line through the origin, any plane through the origin, $\mathbb{R}^n$ itself, the null space of any matrix $A$, and the column space of any matrix $A$.
-
-Non-examples: a line not through the origin (fails condition 1), a circle (not closed under addition), $\{(x,y): x\geq 0\}$ (fails condition 3 — multiply any vector by $-1$ and you leave the set). The origin condition is always the fastest check.
-
-The intersection $V\cap W$ of two subspaces is always a subspace. The union $V\cup W$ is usually not — to get a subspace from two subspaces, take their sum $V+W = \{\mathbf{v}+\mathbf{w}: \mathbf{v}\in V, \mathbf{w}\in W\}$.
-
-:::intuition
-A subspace is a flat surface (of any dimension) passing through the origin. You can add vectors and scale them all you like and you'll never leave the surface. A tilted plane not through the origin, or a curved surface, is not a subspace.
-:::
-
-:::example[Is $V=\{\langle x,y,z\rangle : x+y+z=0\}$ a subspace of $\mathbb{R}^3$?]
-Check $\mathbf{0}\in V$: for $\langle 0,0,0\rangle$ we have $0+0+0=0$ ✓.
-:::
-
-:::solution
-1. Check closure under addition: take $\mathbf{u}=\langle u_1,u_2,u_3\rangle$ and $\mathbf{v}=\langle v_1,v_2,v_3\rangle$ in $V$, so $u_1+u_2+u_3=0$ and $v_1+v_2+v_3=0$. Their sum satisfies $(u_1+v_1)+(u_2+v_2)+(u_3+v_3) = (u_1+u_2+u_3)+(v_1+v_2+v_3) = 0+0 = 0$, so $\mathbf{u}+\mathbf{v}\in V$ ✓.
-2. Check closure under scaling: for $c\in\mathbb{R}$, $cu_1+cu_2+cu_3 = c(u_1+u_2+u_3) = c\cdot 0 = 0$, so $c\mathbf{u}\in V$ ✓.
-3. All three conditions hold, so $V$ is a subspace. Sanity check: $V$ is a plane through the origin (a single homogeneous equation in $\mathbb{R}^3$), which is exactly the kind of flat-through-origin set the ELI5 describes.
-4. Contrast: $W=\{\langle x,y,z\rangle : x+y+z=1\}$ is **not** a subspace — it fails step 1 since $0+0+0=0\neq 1$, so $\mathbf{0}\notin W$. That single failed check is enough to disqualify it.
-:::
-
-## Span {#span}
-
-:::definition[Span]{#span-definition}
-The span of $\{\mathbf{v}_1,\ldots,\mathbf{v}_k\}$ is the set of every possible linear combination of them:
-
-$$\text{span}\{\mathbf{v}_1,\ldots,\mathbf{v}_k\} = \{c_1\mathbf{v}_1+\cdots+c_k\mathbf{v}_k : c_i\in\mathbb{R}\}.$$
-:::
-
-:::proposition[A span is a subspace]{#span-is-subspace}
-For any vectors $\mathbf{v}_1,\ldots,\mathbf{v}_k \in \mathbb{R}^n$, their span is a subspace of $\mathbb{R}^n$.
+1. $\mathbf{0} \in U$;
+2. $\mathbf{u} + \mathbf{v} \in U$ whenever $\mathbf{u}, \mathbf{v} \in U$;
+3. $c\mathbf{u} \in U$ whenever $c \in \mathbb{F}$ and $\mathbf{u} \in U$.
 :::
 
 :::proof
-The span contains $\mathbf{0}$: set all $c_i=0$. Adding two linear combinations of the $\mathbf{v}_i$ gives another linear combination of them, and scaling one by $c$ multiplies every coefficient by $c$, so the set is closed under addition and scaling. All three conditions of the definition hold.
+If $U$ is a subspace it is a vector space, so it is closed under both operations, giving (2) and (3); and it has an additive identity $\mathbf{z} \in U$ with $\mathbf{z} + \mathbf{z} = \mathbf{z}$, whence adding $-\mathbf{z}$ (computed in $V$) gives $\mathbf{z} = \mathbf{0}$, which is (1).
+
+Conversely suppose (1)–(3). Conditions (2) and (3) say exactly that the two operations of $V$ restrict to operations on $U$. Axioms 1, 2, 5, 6, 7 and 8 are identities between elements; they hold for *all* elements of $V$, so in particular for elements of $U$ — nothing needs re-checking. Axiom 3 is condition (1). For axiom 4, given $\mathbf{u} \in U$, condition (3) with $c = -1$ puts $(-1)\mathbf{u} \in U$, and $(-1)\mathbf{u} = -\mathbf{u}$ by the elementary-consequences proposition. So all eight axioms hold in $U$.
 :::
 
-Geometrically in $\mathbb{R}^3$: one nonzero vector spans a line through the origin; two independent vectors span a plane; three independent vectors span all of $\mathbb{R}^3$.
+The proof is the reason the criterion is only three conditions rather than eight: identities descend to subsets for free, and only the existence claims — a zero, an inverse — and closure need attention. Condition (1) can be weakened to "$U$ is nonempty", because a nonempty $U$ closed under scaling contains $0\mathbf{u} = \mathbf{0}$; but checking $\mathbf{0} \in U$ directly is faster and rules out most impostors in one line.
 
-:::recipe[Testing membership in a span]{#span-membership}
-To check whether $\mathbf{b}\in\text{span}\{\mathbf{v}_1,\ldots,\mathbf{v}_k\}$, set up the augmented matrix $[\mathbf{v}_1\;\cdots\;\mathbf{v}_k\;|\;\mathbf{b}]$ and row-reduce. If the system is consistent, $\mathbf{b}$ is in the span, and the solution gives the coefficients.
+:::proposition[One-step subspace test]{#one-step-test}
+A nonempty subset $U \subseteq V$ is a subspace if and only if $c\mathbf{u} + d\mathbf{v} \in U$ for all $\mathbf{u}, \mathbf{v} \in U$ and all $c, d \in \mathbb{F}$.
 :::
 
-The column space $\text{Col}(A)$ is the span of the columns of $A$. The question 'is $\mathbf{b}\in\text{Col}(A)$?' is identical to 'is $A\mathbf{x}=\mathbf{b}$ consistent?'
+:::proof
+A subspace is closed under scaling and then addition, so the condition holds. Conversely, pick any $\mathbf{u} \in U$ (possible since $U \neq \varnothing$); taking $c = d = 0$ gives $\mathbf{0} \in U$, taking $c = d = 1$ gives closure under addition, and taking $d = 0$ gives closure under scaling.
+:::
+
+Here is the standard stock of subspaces. In $\mathbb{R}^3$: the zero space, every line through the origin, every plane through the origin, and $\mathbb{R}^3$ itself — and, as we will prove once dimension is available, nothing else. In $\mathcal{P}_5$: the subspace $\mathcal{P}_3$, the polynomials with $p(2) = 0$, the even polynomials. In $M_{n\times n}$: the symmetric matrices, the upper-triangular matrices, the matrices of trace zero, the diagonal matrices. In $F(\mathbb{R}, \mathbb{R})$: the continuous functions, the differentiable functions, the polynomials, and the solution set of $y'' + 4y = 0$.
+
+The last of these is worth pausing on. The reason linear differential equations are called linear is exactly that their solution sets are subspaces: if $y_1'' + 4y_1 = 0$ and $y_2'' + 4y_2 = 0$ then $(cy_1 + dy_2)'' + 4(cy_1 + dy_2) = 0$ by linearity of differentiation. The one-step test applies verbatim, and everything this chapter proves about dimension immediately becomes a statement about how many independent solutions such an equation has.
+
+Non-examples are just as instructive. A line not through the origin fails condition (1). The set $\{(x,y) : xy = 0\}$ — the union of the two axes — contains $\mathbf{0}$ and is closed under scaling but not addition: $(1,0) + (0,1) = (1,1)$ is off both axes. The set $\{(x,y) : x \ge 0\}$ is closed under addition but not under multiplication by $-1$. The set of invertible $2\times 2$ matrices fails at once, since it omits the zero matrix. Each non-example fails exactly one condition, and each of the three conditions is genuinely needed.
 
 :::intuition
-The span of a set of vectors is everything you can reach by mixing them together. Vectors are like paint colors: red and blue span all mixtures of red and blue. Purple is in the span; orange is not (you'd need yellow). The span is your palette.
+Think of $V$ as a country and a subspace as a region you can never drive out of, no matter how you combine your moves, and which contains your starting point, the origin. A plane through the origin in $\mathbb{R}^3$ is such a region: add two vectors lying in it, stretch either of them, and you are still in the plane. Tilt that plane up so it misses the origin and the region is no longer closed — scaling any point in it by $0$ drops you out.
 :::
 
-:::example[Is a vector in the span?]
-Is $\mathbf{b}=\langle 1,5,3\rangle$ in $\text{span}\{\mathbf{v}_1,\mathbf{v}_2\}$ with $\mathbf{v}_1=\langle 1,1,1\rangle$, $\mathbf{v}_2=\langle 0,2,1\rangle$?
+:::theorem[Intersections of subspaces]{#intersection-subspace}
+If $U$ and $W$ are subspaces of $V$, then $U \cap W$ is a subspace of $V$. More generally the intersection of any family of subspaces of $V$ is a subspace.
+:::
+
+:::proof
+$\mathbf{0}$ lies in every subspace, hence in the intersection. If $\mathbf{u}, \mathbf{v}$ lie in every member of the family, then so does $c\mathbf{u} + d\mathbf{v}$, since each member is closed under linear combinations. By the one-step test the intersection is a subspace.
+:::
+
+:::proposition[Unions are almost never subspaces]{#union-not-subspace}
+If $U$ and $W$ are subspaces of $V$, then $U \cup W$ is a subspace if and only if $U \subseteq W$ or $W \subseteq U$.
+:::
+
+:::proof
+If one contains the other the union is the larger one, which is a subspace. Conversely suppose $U \cup W$ is a subspace and neither containment holds. Choose $\mathbf{u} \in U \setminus W$ and $\mathbf{w} \in W \setminus U$. Then $\mathbf{u} + \mathbf{w}$ lies in $U \cup W$, so it lies in $U$ or in $W$. If $\mathbf{u} + \mathbf{w} \in U$ then $\mathbf{w} = (\mathbf{u}+\mathbf{w}) - \mathbf{u} \in U$, a contradiction; if $\mathbf{u} + \mathbf{w} \in W$ then $\mathbf{u} \in W$, also a contradiction.
+:::
+
+Geometrically: two distinct lines through the origin in $\mathbb{R}^2$ form an $\times$ shape, and adding one vector from each lands you off both lines. To get a subspace out of two subspaces you must not take their union but their *sum*, which is the subject of the next section.
+
+:::example[Subspaces of a matrix space]
+Let $V = M_{2\times 2}(\mathbb{R})$. Decide which of these are subspaces: (a) the symmetric matrices $S = \{A : A^T = A\}$; (b) the matrices with $\det A = 0$; (c) the matrices of trace $0$.
 :::
 
 :::solution
-1. Row-reduce $[\mathbf{v}_1\;\mathbf{v}_2\;|\;\mathbf{b}]$: $\left(\begin{array}{cc|c}1&0&1\\1&2&5\\1&1&3\end{array}\right)\to\left(\begin{array}{cc|c}1&0&1\\0&1&2\\0&0&0\end{array}\right)$.
-2. Consistent. $c_1=1$, $c_2=2$: $\mathbf{b} = 1\cdot\mathbf{v}_1+2\cdot\mathbf{v}_2$.
-3. Check: $\langle 1,1,1\rangle+2\langle 0,2,1\rangle = \langle 1,5,3\rangle$ ✓.
+(a) The zero matrix is symmetric. If $A^T = A$ and $B^T = B$ then $(cA + dB)^T = cA^T + dB^T = cA + dB$, using that transposition is linear. So $S$ passes the one-step test and is a subspace.
+
+(b) Not a subspace. Both
+
+$$A = \begin{pmatrix} 1 & 0 \\ 0 & 0\end{pmatrix}, \qquad B = \begin{pmatrix} 0 & 0 \\ 0 & 1 \end{pmatrix}$$
+
+have determinant $0$, but $A + B = I$ has determinant $1$. Closure under addition fails. (The set does contain $\mathbf{0}$ and is closed under scaling, so only one condition fails — which is enough.)
+
+(c) The zero matrix has trace $0$, and $\operatorname{tr}(cA + dB) = c\operatorname{tr}A + d\operatorname{tr}B = 0$, since the trace is a linear function of the entries. So the trace-zero matrices form a subspace.
+
+Sanity check: (a) and (c) are each cut out by *linear equations in the entries* ($a_{12} = a_{21}$; $a_{11} + a_{22} = 0$), while (b) is cut out by the quadratic equation $a_{11}a_{22} - a_{12}a_{21} = 0$. Solution sets of homogeneous linear equations are always subspaces; solution sets of nonlinear ones essentially never are.
 :::
 
-## Linear independence {#independence}
+:::example[A subspace inside a function space]
+Let $V = F(\mathbb{R}, \mathbb{R})$ and let $U = \{f \in V : f(3) = 0\}$ and $W = \{f \in V : f(3) = 1\}$. Which is a subspace?
+:::
+
+:::solution
+$U$: the zero function satisfies $f(3) = 0$. If $f(3) = g(3) = 0$ then $(cf + dg)(3) = cf(3) + dg(3) = 0$. So $U$ is a subspace.
+
+$W$: the zero function has $f(3) = 0 \neq 1$, so $\mathbf{0} \notin W$ and $W$ is not a subspace. It also fails closure: if $f(3) = g(3) = 1$ then $(f+g)(3) = 2$.
+
+Sanity check: $U$ is defined by a homogeneous condition, $W$ by an inhomogeneous one. The same dichotomy governs $A\mathbf{x} = \mathbf{0}$ versus $A\mathbf{x} = \mathbf{b}$.
+:::
+
+:::pitfall
+The condition defining a subspace must be homogeneous *and* linear. "$x + y + z = 0$" gives a subspace; "$x + y + z = 1$" does not (no zero vector); "$x^2 = y^2$" does not (not closed under addition: $(1,1)$ and $(1,-1)$ sum to $(2,0)$); "$x \ge 0$" does not (not closed under negative scaling).
+:::
+
+## Sums and direct sums
+
+<!-- section: direct-sums -->
+
+Since the union of two subspaces is a blunt instrument, we take instead the smallest subspace containing both.
+
+:::definition[Sum of subspaces]{#sum-definition}
+If $U$ and $W$ are subspaces of $V$, their **sum** is
+
+$$U + W = \{\mathbf{u} + \mathbf{w} : \mathbf{u} \in U,\ \mathbf{w} \in W\}.$$
+:::
+
+:::proposition[The sum is the smallest subspace containing both]{#sum-is-subspace}
+$U + W$ is a subspace of $V$ containing both $U$ and $W$, and it is contained in every subspace of $V$ that contains both.
+:::
+
+:::proof
+$\mathbf{0} = \mathbf{0} + \mathbf{0} \in U + W$. Given $\mathbf{u}_1 + \mathbf{w}_1$ and $\mathbf{u}_2 + \mathbf{w}_2$ in the sum and scalars $c, d$,
+
+$$c(\mathbf{u}_1 + \mathbf{w}_1) + d(\mathbf{u}_2 + \mathbf{w}_2) = (c\mathbf{u}_1 + d\mathbf{u}_2) + (c\mathbf{w}_1 + d\mathbf{w}_2),$$
+
+where the first bracket lies in $U$ and the second in $W$. So $U + W$ is a subspace. Taking $\mathbf{w} = \mathbf{0}$ shows $U \subseteq U+W$, and similarly $W \subseteq U + W$. Finally if $X$ is a subspace with $U \subseteq X$ and $W \subseteq X$, then for $\mathbf{u} \in U$ and $\mathbf{w} \in W$ both lie in $X$, so $\mathbf{u} + \mathbf{w} \in X$; hence $U + W \subseteq X$.
+:::
+
+A vector of $U + W$ can usually be written as $\mathbf{u} + \mathbf{w}$ in many ways. In $\mathbb{R}^2$, let $U$ be the $x$-axis, $W$ the $y$-axis, and $X$ the line $y = x$. Then $U + W = \mathbb{R}^2$ and also $U + X = \mathbb{R}^2$; but the vector $(3,1)$ is $(3,0) + (0,1)$ in the first decomposition and $(2,0) + (1,1)$ in the second — and in each case that is the *only* decomposition. Contrast $U + W + X = \mathbb{R}^2$, where $(3,1) = (3,0) + (0,1) + (0,0) = (2,0)+(0,0)+(1,1)$ and uniqueness is gone. Uniqueness is the property worth naming.
+
+:::definition[Direct sum]{#direct-sum-definition}
+The sum $U + W$ is called **direct**, written $U \oplus W$, if every vector of $U + W$ can be written as $\mathbf{u} + \mathbf{w}$ with $\mathbf{u} \in U$ and $\mathbf{w} \in W$ in exactly one way. If $V = U \oplus W$ we call $W$ a **complement** of $U$ in $V$.
+:::
+
+:::theorem[Criterion for a direct sum]{#direct-sum-criterion}
+For subspaces $U, W$ of $V$, the sum $U + W$ is direct if and only if $U \cap W = \{\mathbf{0}\}$. Equivalently, it is direct if and only if the only way to write $\mathbf{0} = \mathbf{u} + \mathbf{w}$ with $\mathbf{u} \in U, \mathbf{w} \in W$ is $\mathbf{u} = \mathbf{w} = \mathbf{0}$.
+:::
+
+:::proof
+Suppose the sum is direct and let $\mathbf{v} \in U \cap W$. Then
+
+$$\mathbf{0} = \mathbf{v} + (-\mathbf{v}) = \mathbf{0} + \mathbf{0},$$
+
+and the first expression has its $U$-part equal to $\mathbf{v}$ while the second has $U$-part $\mathbf{0}$. Uniqueness of the decomposition of $\mathbf{0}$ forces $\mathbf{v} = \mathbf{0}$.
+
+Conversely suppose $U \cap W = \{\mathbf{0}\}$ and that $\mathbf{u}_1 + \mathbf{w}_1 = \mathbf{u}_2 + \mathbf{w}_2$ with $\mathbf{u}_i \in U$, $\mathbf{w}_i \in W$. Rearranging,
+
+$$\mathbf{u}_1 - \mathbf{u}_2 = \mathbf{w}_2 - \mathbf{w}_1.$$
+
+The left side lies in $U$ and the right side lies in $W$, so both lie in $U \cap W = \{\mathbf{0}\}$. Hence $\mathbf{u}_1 = \mathbf{u}_2$ and $\mathbf{w}_1 = \mathbf{w}_2$, which is uniqueness.
+:::
+
+The criterion is startlingly cheap to check: intersect two subspaces and see whether anything but $\mathbf{0}$ survives. Note the asymmetry with three or more summands — for $U_1 + U_2 + U_3$ pairwise trivial intersections are *not* enough, as the three lines $U, W, X$ above show: they meet pairwise only at the origin, yet the sum is not direct. The correct general condition is that the only decomposition of $\mathbf{0}$ is the all-zero one.
+
+:::intuition
+A direct sum is a filing system with no ambiguity. Splitting $\mathbb{R}^3$ into the $xy$-plane and the $z$-axis, every vector has one and only one horizontal part and one vertical part — a unique filing. Splitting it into the $xy$-plane and the $xz$-plane instead, the vector $(1,0,0)$ can be filed under either, or half under each, and the system is useless for bookkeeping. The intersection of the two drawers, the $x$-axis, is exactly the ambiguity.
+:::
+
+:::example[Symmetric plus antisymmetric]
+In $V = M_{n\times n}(\mathbb{R})$, let $S$ be the symmetric matrices and $K$ the antisymmetric ones ($A^T = -A$). Show $V = S \oplus K$.
+:::
+
+:::solution
+First, $S$ and $K$ are subspaces (each is cut out by linear conditions on the entries; the argument for $S$ was given earlier and the one for $K$ is identical).
+
+$V = S + K$: given any $A$, write
+
+$$A = \underbrace{\tfrac{1}{2}(A + A^T)}_{\textstyle \in S} + \underbrace{\tfrac{1}{2}(A - A^T)}_{\textstyle \in K},$$
+
+and check the memberships: $\big(\tfrac12(A+A^T)\big)^T = \tfrac12(A^T + A)$, so the first summand is symmetric, and $\big(\tfrac12(A - A^T)\big)^T = \tfrac12(A^T - A)$, the negative of the second summand.
+
+The sum is direct: if $A \in S \cap K$ then $A = A^T = -A$, so $2A = 0$ and $A = 0$. By the direct-sum criterion, $V = S \oplus K$.
+
+Sanity check with $n = 2$ on $A = \begin{pmatrix} 1 & 4 \\ 2 & 3\end{pmatrix}$: the symmetric part is $\begin{pmatrix} 1 & 3 \\ 3 & 3\end{pmatrix}$ and the antisymmetric part is $\begin{pmatrix} 0 & 1 \\ -1 & 0\end{pmatrix}$, and they do sum to $A$.
+:::
+
+:::example[Deciding whether a sum is direct]
+In $\mathbb{R}^4$ let $U = \operatorname{span}\{(1,0,0,0), (0,1,0,0)\}$ and $W = \{(x,y,z,w) : x = y \text{ and } z = w\}$. Is $U + W$ direct, and what is $U + W$?
+:::
+
+:::solution
+A vector of $W$ has the form $(s, s, t, t)$, so $W = \operatorname{span}\{(1,1,0,0),(0,0,1,1)\}$.
+
+Intersection: a vector in $U$ has last two coordinates $0$, so if it also lies in $W$ then $t = 0$ and the vector is $(s,s,0,0)$; being in $U$ imposes nothing further, so $(1,1,0,0) \in U \cap W$ and the intersection is not trivial. The sum is **not** direct.
+
+What is $U + W$? It is spanned by $(1,0,0,0), (0,1,0,0), (1,1,0,0), (0,0,1,1)$. The third is the sum of the first two and can be dropped, leaving three vectors which are visibly independent, so $\dim(U+W) = 3$; in fact $U + W = \{(x,y,z,w) : z = w\}$.
+
+Sanity check against the dimension formula proved later: $\dim U + \dim W - \dim(U \cap W) = 2 + 2 - 1 = 3$, matching.
+:::
+
+:::pitfall
+$U \oplus W$ is not a different set from $U + W$ — it is the *same* set, with a promise attached. Writing $\oplus$ asserts that the intersection is trivial; if you have not checked that, write $+$.
+:::
+
+## Linear combinations and span
+
+<!-- section: span -->
+
+:::definition[Linear combination and span]{#span-definition}
+Let $\mathbf{v}_1, \ldots, \mathbf{v}_k$ be vectors in a vector space $V$ over $\mathbb{F}$. A **linear combination** of them is any vector of the form
+
+$$c_1\mathbf{v}_1 + c_2\mathbf{v}_2 + \cdots + c_k\mathbf{v}_k, \qquad c_i \in \mathbb{F}.$$
+
+Their **span** is the set of all such combinations,
+
+$$\operatorname{span}\{\mathbf{v}_1,\ldots,\mathbf{v}_k\} = \{c_1\mathbf{v}_1 + \cdots + c_k\mathbf{v}_k : c_i \in \mathbb{F}\}.$$
+
+By convention $\operatorname{span}\varnothing = \{\mathbf{0}\}$. For an infinite set $S \subseteq V$, $\operatorname{span} S$ means the set of all *finite* linear combinations of elements of $S$. If $\operatorname{span} S = V$ we say $S$ **spans** $V$, and $V$ is **finite-dimensional** if some finite set spans it.
+:::
+
+The restriction to finite combinations is not a technicality to skip over: an infinite sum has no meaning in a bare vector space, where there is no notion of limit. That is why $\mathcal{P}$, the space of all polynomials, is spanned by $\{1, x, x^2, \ldots\}$ — every polynomial is a finite combination — while the function $e^x$, whose power series needs infinitely many terms, is not in that span.
+
+:::theorem[The span is the smallest subspace containing the vectors]{#span-is-subspace}
+For any $\mathbf{v}_1, \ldots, \mathbf{v}_k \in V$, the set $\operatorname{span}\{\mathbf{v}_1,\ldots,\mathbf{v}_k\}$ is a subspace of $V$ containing each $\mathbf{v}_i$, and it is contained in every subspace of $V$ containing all the $\mathbf{v}_i$.
+:::
+
+:::proof
+Taking all $c_i = 0$ gives $\mathbf{0}$, so the span is nonempty. Given two combinations and scalars $a, b$,
+
+$$a\sum_{i} c_i\mathbf{v}_i + b\sum_i d_i \mathbf{v}_i = \sum_i (ac_i + bd_i)\mathbf{v}_i,$$
+
+again a linear combination of the same vectors; by the one-step test the span is a subspace. Taking $c_i = 1$ and the rest $0$ shows $\mathbf{v}_i$ is in the span. Finally, a subspace $X$ containing every $\mathbf{v}_i$ is closed under scaling and addition, so by induction on $k$ it contains every $c_1\mathbf{v}_1 + \cdots + c_k\mathbf{v}_k$; hence it contains the span.
+:::
+
+The "smallest" clause is what makes span a useful construction rather than a mere abbreviation: $\operatorname{span} S$ is the subspace *generated* by $S$, and any argument that needs "the least subspace containing these vectors" can use it.
+
+:::intuition
+Two colours of paint, red and blue, span every purple you can mix from them, in every proportion, including pure red and pure blue. Yellow is not in the span — no amount of mixing gets you there. Adding yellow to your set does not merely add one colour; it opens up a whole new plane of mixtures. That jump is what a new independent direction does.
+:::
+
+:::proposition[Redundant vectors can be dropped]{#span-drop}
+If $\mathbf{v}_k \in \operatorname{span}\{\mathbf{v}_1, \ldots, \mathbf{v}_{k-1}\}$, then
+
+$$\operatorname{span}\{\mathbf{v}_1,\ldots,\mathbf{v}_k\} = \operatorname{span}\{\mathbf{v}_1,\ldots,\mathbf{v}_{k-1}\}.$$
+:::
+
+:::proof
+The right side is contained in the left, since a combination of the first $k-1$ vectors is a combination of all $k$ with last coefficient $0$. For the other direction write $\mathbf{v}_k = \sum_{i<k} a_i \mathbf{v}_i$. Then
+
+$$\sum_{i<k} c_i\mathbf{v}_i + c_k\mathbf{v}_k = \sum_{i<k}(c_i + c_ka_i)\mathbf{v}_i,$$
+
+which lies in the right side.
+:::
+
+In $\mathbb{R}^n$, testing membership in a span is a linear system, and this is the computational face of the whole chapter.
+
+:::recipe[Testing membership in a span in $\mathbb{R}^n$]{#span-membership}
+To decide whether $\mathbf{b} \in \operatorname{span}\{\mathbf{v}_1, \ldots, \mathbf{v}_k\}$:
+
+1. Form the augmented matrix $[\,\mathbf{v}_1\ \cdots\ \mathbf{v}_k \mid \mathbf{b}\,]$, the $\mathbf{v}_i$ as columns.
+2. Row-reduce.
+3. If a row of the form $[\,0\ \cdots\ 0 \mid c\,]$ with $c \neq 0$ appears, the system is inconsistent and $\mathbf{b}$ is not in the span. Otherwise it is, and any solution gives coefficients.
+:::
+
+In other spaces the same idea works after translating to coordinates: a question about polynomials becomes a question about their coefficient lists, a question about $2\times2$ matrices becomes a question about four-entry lists. That translation is made precise in the section on coordinates.
+
+:::example[Span membership in $\mathbb{R}^3$]
+Is $\mathbf{b} = (1,5,3)$ in $\operatorname{span}\{(1,1,1), (0,2,1)\}$?
+:::
+
+:::solution
+Row-reduce the augmented matrix:
+
+$$\left(\begin{array}{cc|c} 1 & 0 & 1 \\ 1 & 2 & 5 \\ 1 & 1 & 3\end{array}\right) \to \left(\begin{array}{cc|c} 1 & 0 & 1 \\ 0 & 2 & 4 \\ 0 & 1 & 2\end{array}\right) \to \left(\begin{array}{cc|c} 1 & 0 & 1 \\ 0 & 1 & 2 \\ 0 & 0 & 0\end{array}\right).$$
+
+The system is consistent with $c_1 = 1$, $c_2 = 2$. Check: $1(1,1,1) + 2(0,2,1) = (1, 5, 3)$. Yes, $\mathbf{b}$ is in the span.
+:::
+
+:::example[Spanning in a polynomial space]
+Does $\{1 + x,\ 1 - x,\ x^2\}$ span $\mathcal{P}_2$?
+:::
+
+:::solution
+We must hit an arbitrary $a + bx + cx^2$. Write
+
+$$\alpha(1+x) + \beta(1-x) + \gamma x^2 = (\alpha + \beta) + (\alpha - \beta)x + \gamma x^2.$$
+
+Two polynomials are equal exactly when their coefficients agree, so we need $\alpha + \beta = a$, $\alpha - \beta = b$, $\gamma = c$. Solving, $\alpha = \tfrac{a+b}{2}$, $\beta = \tfrac{a-b}{2}$, $\gamma = c$ — always solvable. So the three polynomials span $\mathcal{P}_2$.
+
+Sanity check on $p(x) = 3 + x + 5x^2$: $\alpha = 2$, $\beta = 1$, $\gamma = 5$, and indeed $2(1+x) + 1(1-x) + 5x^2 = 3 + x + 5x^2$.
+:::
+
+:::example[A span that misses]
+In $M_{2\times2}$, describe $\operatorname{span}\{E_{11}, E_{22}\}$ where $E_{ij}$ is the matrix with a $1$ in position $(i,j)$ and zeros elsewhere. Is $\begin{pmatrix}1 & 0 \\ 0 & 1\end{pmatrix}$ in it? Is $\begin{pmatrix}0 & 1 \\ 0 & 0\end{pmatrix}$?
+:::
+
+:::solution
+A combination $aE_{11} + bE_{22}$ is the diagonal matrix $\operatorname{diag}(a,b)$, so the span is exactly the set of diagonal $2\times2$ matrices.
+
+The identity is $\operatorname{diag}(1,1)$, so yes, it is in the span, with $a = b = 1$.
+
+The matrix $E_{12}$ has a nonzero off-diagonal entry, and every element of the span has zeros off the diagonal, so it is not in the span. The span is a subspace of $M_{2\times2}$ of dimension $2$, sitting inside a space of dimension $4$.
+:::
+
+:::pitfall
+"Span" is a set, not a number, and "spans" is a verb with a target. The sentence "these vectors span $3$" is meaningless; either they span a specific space, or their span *has dimension* $3$. Also: a set can span $V$ while being wildly redundant. Spanning says nothing about independence.
+:::
+
+## Linear independence
+
+<!-- section: independence -->
 
 :::definition[Linear independence]{#independence-definition}
-Vectors $\{\mathbf{v}_1,\ldots,\mathbf{v}_k\}$ are linearly independent if
+Vectors $\mathbf{v}_1, \ldots, \mathbf{v}_k$ in $V$ are **linearly independent** if the only scalars with
 
-$$c_1\mathbf{v}_1+\cdots+c_k\mathbf{v}_k=\mathbf{0} \quad\Longrightarrow\quad c_1 = \cdots = c_k = 0.$$
+$$c_1\mathbf{v}_1 + \cdots + c_k\mathbf{v}_k = \mathbf{0}$$
 
-If a non-trivial combination equals $\mathbf{0}$, the vectors are linearly dependent.
+are $c_1 = c_2 = \cdots = c_k = 0$. Otherwise they are **linearly dependent**, and any choice of scalars not all zero satisfying the equation is called a **dependence relation**.
 :::
 
-Dependence means redundancy: at least one vector is expressible as a combination of the others and adds no new direction. Removing it does not shrink the span.
+The definition is about the *only* solution being trivial. There is always the trivial solution; independence says there is no other. An equivalent formulation makes the meaning plainer.
 
-:::proposition[Pivot test for independence]{#independence-test}
-Form $A=[\mathbf{v}_1\;\cdots\;\mathbf{v}_k]$ and row-reduce. The vectors are independent if and only if every column is a pivot column, if and only if $\text{Null}(A)=\{\mathbf{0}\}$.
-:::
-
-:::proposition[Too many vectors are dependent]{#too-many-vectors}
-In $\mathbb{R}^n$, any set of more than $n$ vectors is linearly dependent.
-:::
-
-You cannot have more than $n$ independent directions in $n$-dimensional space.
-
-Any set containing $\mathbf{0}$ is automatically dependent: $1\cdot\mathbf{0}=\mathbf{0}$ provides a non-trivial combination equalling zero.
-
-:::intuition
-Vectors are independent if none of them is 'redundant' — if knowing the others doesn't already tell you where this one points. If $\mathbf{v}_3 = 2\mathbf{v}_1 - \mathbf{v}_2$, then $\mathbf{v}_3$ adds no new information and the set is dependent.
-:::
-
-:::example[Dependence check in $\mathbb{R}^3$]
-Are $\mathbf{v}_1=\langle 1,0,2\rangle$, $\mathbf{v}_2=\langle 0,1,3\rangle$, $\mathbf{v}_3=\langle 2,1,7\rangle$ independent?
-:::
-
-:::solution
-1. Row-reduce: $\begin{pmatrix}1&0&2\\0&1&3\\2&1&7\end{pmatrix}\to\begin{pmatrix}1&0&2\\0&1&3\\0&0&0\end{pmatrix}$. Only 2 pivots — dependent.
-2. From RREF: $\mathbf{v}_3=2\mathbf{v}_1+\mathbf{v}_2$. Check: $2\langle 1,0,2\rangle+\langle 0,1,3\rangle=\langle 2,1,7\rangle$ ✓.
-:::
-
-## Basis and dimension {#basis}
-
-:::definition[Basis]{#basis-definition}
-A basis for a subspace $V$ is a set of vectors that is both linearly independent and spans $V$.
-:::
-
-A basis is simultaneously a minimal spanning set (drop any vector and it no longer spans $V$) and a maximal independent set (add any other vector of $V$ and it becomes dependent) — it sits exactly at the boundary where "enough to reach everything" meets "no redundancy."
-
-:::proposition[Unique representation in a basis]{#unique-coordinates}
-If $\{\mathbf{b}_1,\ldots,\mathbf{b}_n\}$ is a basis for $V$, every vector of $V$ is a linear combination of the $\mathbf{b}_i$ in exactly one way.
-:::
-
-This uniqueness is what makes a basis a coordinate system: each vector has unique coordinates $(c_1,\ldots,c_n)$ relative to the chosen basis.
-
-:::theorem[Dimension is well defined]{#dimension}
-All bases for a subspace $V$ contain the same number of vectors. That number is the dimension $\dim(V)$.
-:::
-
-Dimension is therefore an intrinsic invariant of the space, not an artefact of the basis you happened to choose.
-
-:::recipe[Bases for the column space and the null space]{#basis-recipe}
-To find a basis for $\text{Col}(A)$: row-reduce $A$ and take the original columns (not the RREF columns) at pivot positions.
-
-To find a basis for $\text{Null}(A)$: row-reduce, express the pivot variables in terms of the free variables, and write the general solution as a linear combination of vectors — those vectors are the basis.
-:::
-
-:::intuition
-A basis is the minimum set of directions you need to describe every position in the space. In $\mathbb{R}^2$, any two non-parallel vectors form a basis: one is not enough (you're stuck on a line), three is too many (one is redundant). Dimension is just how many directions you need.
-:::
-
-:::example[Find a basis and the dimension of $V=\{\langle x,y,z\rangle : x+y+z=0\}$.]
-Solve the constraint for one variable in terms of the others. Treat $y=s$ and $z=t$ as free; then $x = -s-t$.
-:::
-
-:::solution
-1. Write the general vector using the free variables: $\langle x,y,z\rangle = \langle -s-t,\; s,\; t\rangle = s\langle -1,1,0\rangle + t\langle -1,0,1\rangle$.
-2. Every vector in $V$ is a combination of $\mathbf{b}_1=\langle -1,1,0\rangle$ and $\mathbf{b}_2=\langle -1,0,1\rangle$, so these two span $V$.
-3. They are independent: neither is a scalar multiple of the other (their $y$ and $z$ entries can't both be matched by one constant). A spanning set of two independent vectors is a basis.
-4. Therefore $\dim(V)=2$. Sanity check: verify each basis vector satisfies the constraint — $-1+1+0=0$ ✓ and $-1+0+1=0$ ✓. This matches the intuition that one equation removes one degree of freedom from $\mathbb{R}^3$, leaving $3-1=2$.
-:::
-
-## Column space and null space {#linear-transformations}
-
-:::definition[Column space and null space]{#col-null-definition}
-For an $m\times n$ matrix $A$,
-
-$$\text{Col}(A) = \{A\mathbf{x}: \mathbf{x}\in\mathbb{R}^n\}, \qquad \text{Null}(A) = \{\mathbf{x}\in\mathbb{R}^n: A\mathbf{x}=\mathbf{0}\}.$$
-
-The column space is the span of the columns of $A$ — all possible outputs — and has dimension $\text{rank}(A)$. The null space is the set of inputs sent to zero; it is always a subspace of $\mathbb{R}^n$, and its dimension is the nullity.
-:::
-
-:::theorem[Rank-nullity theorem]{#rank-nullity}
-For an $m\times n$ matrix $A$,
-
-$$\text{rank}(A)+\text{nullity}(A)=n.$$
+:::proposition[Independence as unique representation]{#independence-unique}
+The vectors $\mathbf{v}_1, \ldots, \mathbf{v}_k$ are independent if and only if every vector in their span is a linear combination of them in exactly one way.
 :::
 
 :::proof
-Row-reduce $A$. Every column either contributes a new independent direction — it holds a pivot, adding $1$ to the rank — or introduces a free variable, adding $1$ to the nullity. No column does both, and every column does one, so the two counts add to the total number $n$ of columns.
+Suppose they are independent and $\sum c_i\mathbf{v}_i = \sum d_i\mathbf{v}_i$. Subtracting, $\sum (c_i - d_i)\mathbf{v}_i = \mathbf{0}$, so every $c_i - d_i = 0$ and the representations coincide. Conversely, if representations are unique then in particular $\mathbf{0}$ has only the representation with all coefficients $0$, which is independence.
 :::
 
-The row space $\text{Row}(A)=\text{Col}(A^T)$ has dimension $\text{rank}(A)$ as well. Keep the ambient spaces straight for an $m\times n$ matrix $A$: $\text{Row}(A)$ and $\text{Null}(A)$ live in the input space $\mathbb{R}^n$, while $\text{Col}(A)$ and $\text{Null}(A^T)$ live in the output space $\mathbb{R}^m$.
+:::lemma[Linear dependence lemma]{#dependence-lemma}
+Suppose $\mathbf{v}_1, \ldots, \mathbf{v}_k$ are linearly dependent and $\mathbf{v}_1 \neq \mathbf{0}$. Then there is an index $j \ge 2$ with
 
-:::theorem[Fundamental theorem of linear algebra]{#fundamental-theorem}
-For an $m\times n$ matrix $A$, each pair of fundamental subspaces splits its ambient space into orthogonal complements:
+$$\mathbf{v}_j \in \operatorname{span}\{\mathbf{v}_1,\ldots,\mathbf{v}_{j-1}\},$$
 
-$$\text{Row}(A)^\perp = \text{Null}(A) \text{ inside } \mathbb{R}^n, \qquad \text{Col}(A)^\perp = \text{Null}(A^T) \text{ inside } \mathbb{R}^m.$$
+and removing $\mathbf{v}_j$ from the list does not change the span.
 :::
 
-"Orthogonal complements" means the two subspaces meet only at $\mathbf{0}$, every vector of one is perpendicular to every vector of the other, and their dimensions add up to the whole space.
+:::proof
+Take a dependence relation $c_1\mathbf{v}_1 + \cdots + c_k\mathbf{v}_k = \mathbf{0}$ with the $c_i$ not all zero, and let $j$ be the largest index with $c_j \neq 0$. If $j = 1$ the relation reads $c_1\mathbf{v}_1 = \mathbf{0}$ with $c_1 \neq 0$, forcing $\mathbf{v}_1 = \mathbf{0}$, contrary to hypothesis. So $j \ge 2$, and solving for $\mathbf{v}_j$,
+
+$$\mathbf{v}_j = -\frac{c_1}{c_j}\mathbf{v}_1 - \cdots - \frac{c_{j-1}}{c_j}\mathbf{v}_{j-1},$$
+
+which puts $\mathbf{v}_j$ in the span of its predecessors. The span is unchanged by the redundancy proposition of the previous section (applied after reordering so that $\mathbf{v}_j$ comes last).
+:::
+
+This lemma is the engine of the chapter: it is what turns any spanning set into a basis, and it is the inductive step in the exchange lemma. Note how it uses division by $c_j$ — the field again.
+
+Some facts fall straight out of the definition. Any list containing $\mathbf{0}$ is dependent, since $1\cdot\mathbf{0}$ together with zero coefficients elsewhere is a nontrivial relation. A single vector $\mathbf{v}$ is independent exactly when $\mathbf{v} \neq \mathbf{0}$. Two vectors are dependent exactly when one is a scalar multiple of the other. Any sublist of an independent list is independent, and any list containing a dependent sublist is dependent.
 
 :::intuition
-The column space is everywhere the matrix can take you — all reachable destinations. The null space is everything the matrix erases — inputs it maps to zero. A large null space means the matrix loses a lot of information; a trivial null space means it is injective (one-to-one).
+Independence is the absence of redundancy in a set of instructions. "Go $3$ km east, then $2$ km north, then $4$ km northeast" is a redundant set of moves: the third is achievable with the first two, so you did not need it in your toolkit. If no instruction can be simulated by the others, the set is independent — each one buys you a genuinely new direction of travel.
 :::
 
-:::example[Find bases for $\text{Col}(A)$ and $\text{Null}(A)$, and verify rank-nullity, for]
-$$A=\begin{pmatrix}1&2&3\\0&1&1\\1&3&4\end{pmatrix}.$$
+:::recipe[Testing independence in $\mathbb{R}^n$]{#independence-test}
+Place the vectors as the columns of a matrix $A$ and row-reduce.
+
+- Independent $\iff$ every column is a pivot column $\iff$ $\operatorname{Null}(A) = \{\mathbf{0}\}$ $\iff$ $\operatorname{rank} A = k$.
+- If $A$ is square, independent $\iff$ $\det A \neq 0$.
+- Any dependence relation is read off from a nonzero null-space vector.
+:::
+
+:::example[Dependence in $\mathbb{R}^3$, with the relation]
+Are $\mathbf{v}_1 = (1,0,2)$, $\mathbf{v}_2 = (0,1,3)$, $\mathbf{v}_3 = (2,1,7)$ independent? If not, exhibit a dependence relation.
 :::
 
 :::solution
-Row-reduce. Subtract row 1 from row 3: $\begin{pmatrix}1&2&3\\0&1&1\\0&1&1\end{pmatrix}$. Subtract row 2 from row 3: $\begin{pmatrix}1&2&3\\0&1&1\\0&0&0\end{pmatrix}$. Clear above the second pivot with row 1 $\to$ row 1 $-2\cdot$ row 2: RREF $=\begin{pmatrix}1&0&1\\0&1&1\\0&0&0\end{pmatrix}$.
-Pivots are in columns 1 and 2, so $\text{rank}(A)=2$. Basis for $\text{Col}(A)$: take the **original** columns at those pivot positions, $\{\langle 1,0,1\rangle,\ \langle 2,1,3\rangle\}$ — not the RREF columns.
-Basis for $\text{Null}(A)$: column 3 is free, so set $x_3=t$. The RREF rows give $x_1+x_3=0$ and $x_2+x_3=0$, i.e. $x_1=-t$, $x_2=-t$. The general solution is $t\langle -1,-1,1\rangle$, so $\{\langle -1,-1,1\rangle\}$ is a basis and $\text{nullity}(A)=1$.
-Check rank-nullity: $\text{rank}+\text{nullity}=2+1=3=n$ ✓ (the matrix has $3$ columns).
-Sanity check the null vector: $A\langle -1,-1,1\rangle$ has entries $1(-1)+2(-1)+3(1)=0$, $0(-1)+1(-1)+1(1)=0$, $1(-1)+3(-1)+4(1)=0$, so $A\langle -1,-1,1\rangle=\mathbf{0}$ ✓.
+Row-reduce the matrix with these as columns:
+
+$$\begin{pmatrix} 1 & 0 & 2 \\ 0 & 1 & 1 \\ 2 & 3 & 7\end{pmatrix} \to \begin{pmatrix} 1 & 0 & 2 \\ 0 & 1 & 1 \\ 0 & 3 & 3\end{pmatrix} \to \begin{pmatrix} 1 & 0 & 2 \\ 0 & 1 & 1 \\ 0 & 0 & 0\end{pmatrix}.$$
+
+Only two pivots, so the columns are dependent. The third column is free; setting $x_3 = 1$ gives $x_2 = -1$, $x_1 = -2$, so $-2\mathbf{v}_1 - \mathbf{v}_2 + \mathbf{v}_3 = \mathbf{0}$, i.e.
+
+$$\mathbf{v}_3 = 2\mathbf{v}_1 + \mathbf{v}_2.$$
+
+Check: $2(1,0,2) + (0,1,3) = (2,1,7)$ ✓.
+:::
+
+:::example[Independence in $\mathcal{P}_2$]
+Show that $\{1, x, x^2\}$ is linearly independent in $\mathcal{P}_2$, without appealing to coordinates.
+:::
+
+:::solution
+Suppose $a + bx + cx^2 = 0$ *as a function*, i.e. for every real $x$. Evaluate at three points:
+
+$$x = 0: \quad a = 0; \qquad x = 1: \quad a + b + c = 0; \qquad x = -1: \quad a - b + c = 0.$$
+
+From the first, $a = 0$. Adding the last two gives $2c = 0$, so $c = 0$; subtracting gives $2b = 0$, so $b = 0$. All coefficients vanish, so the set is independent.
+
+The evaluation trick generalises: a nonzero polynomial of degree $\le n$ has at most $n$ roots, so if it vanishes at $n+1$ distinct points it is the zero polynomial. That single fact proves $\{1, x, \ldots, x^n\}$ independent in $\mathcal{P}_n$ in one line.
+:::
+
+:::example[Independence of exponentials]
+Show $\{e^x, e^{2x}\}$ is independent in $F(\mathbb{R},\mathbb{R})$.
+:::
+
+:::solution
+Suppose $ae^x + be^{2x} = 0$ for all $x$. Two arguments, either suffices.
+
+*Evaluation.* At $x = 0$: $a + b = 0$. At $x = \ln 2$: $2a + 4b = 0$. From the first $a = -b$, so $-2b + 4b = 0$, giving $b = 0$ and then $a = 0$.
+
+*Growth.* Divide by $e^{2x}$ to get $ae^{-x} + b = 0$ for all $x$; letting $x \to \infty$ gives $b = 0$, and then $ae^x = 0$ forces $a = 0$.
+
+Either way the only relation is trivial. The same growth argument shows $\{e^{\lambda_1 x}, \ldots, e^{\lambda_k x}\}$ is independent for distinct exponents $\lambda_i$ — a fact that underlies the solution theory of linear differential equations.
+:::
+
+:::remark[The Wronskian]
+For differentiable functions $f_1, \ldots, f_k$ one can also differentiate the relation $\sum c_i f_i = 0$ repeatedly to get a linear system with coefficient matrix the **Wronskian**
+
+$$W(x) = \begin{pmatrix} f_1(x) & \cdots & f_k(x) \\ f_1'(x) & \cdots & f_k'(x) \\ \vdots & & \vdots \\ f_1^{(k-1)}(x) & \cdots & f_k^{(k-1)}(x)\end{pmatrix}.$$
+
+If $\det W(x_0) \neq 0$ for even one point $x_0$, the only solution is $c = 0$ and the functions are independent. For $f_1 = e^x$, $f_2 = e^{2x}$ the Wronskian at $x=0$ is $\det\begin{pmatrix}1 & 1\\ 1 & 2\end{pmatrix} = 1 \neq 0$, confirming the example. The converse fails: a vanishing Wronskian does not prove dependence.
+:::
+
+:::pitfall
+Independence in a function space means the relation holds *for every input*, not at one convenient point. The functions $x$ and $x^2$ agree at $x = 0$ and at $x = 1$, yet $\{x, x^2\}$ is independent — a relation $ax + bx^2 = 0$ must hold identically, and evaluating at $x = 1$ and $x = 2$ forces $a = b = 0$.
+:::
+
+## Bases
+
+<!-- section: basis -->
+
+:::definition[Basis]{#basis-definition}
+A list $\mathcal{B} = (\mathbf{b}_1, \ldots, \mathbf{b}_n)$ of vectors in $V$ is a **basis** of $V$ if it is linearly independent and spans $V$.
+:::
+
+:::theorem[Unique representation]{#unique-coordinates}
+$\mathcal{B} = (\mathbf{b}_1,\ldots,\mathbf{b}_n)$ is a basis of $V$ if and only if every $\mathbf{v} \in V$ can be written
+
+$$\mathbf{v} = c_1\mathbf{b}_1 + \cdots + c_n\mathbf{b}_n$$
+
+for exactly one choice of scalars $c_1, \ldots, c_n$.
+:::
+
+:::proof
+If $\mathcal{B}$ is a basis, spanning gives at least one representation and independence gives at most one, by the unique-representation proposition. Conversely, existence of a representation for every $\mathbf{v}$ is spanning, and uniqueness applied to $\mathbf{v} = \mathbf{0}$ gives independence.
+:::
+
+This theorem is why a basis is called a coordinate system: choosing $\mathcal{B}$ attaches to each vector an unambiguous list of numbers. A basis is simultaneously the smallest spanning set and the largest independent set, which the next two theorems make precise.
+
+Here are the bases to memorise.
+
+:::notation[Standard bases]
+- $\mathbb{R}^n$: the standard basis $\mathbf{e}_1, \ldots, \mathbf{e}_n$, where $\mathbf{e}_i$ has a $1$ in slot $i$ and zeros elsewhere. Size $n$.
+- $\mathcal{P}_n$: the monomial basis $1, x, x^2, \ldots, x^n$. Size $n+1$, not $n$.
+- $M_{m\times n}$: the matrix units $E_{ij}$, a single $1$ in position $(i,j)$. Size $mn$.
+- $\{\mathbf{0}\}$: the empty list. Size $0$.
+- $\mathcal{P}$, $C[a,b]$, $\mathbb{R}^\infty$: no finite basis exists; these spaces are infinite-dimensional.
+:::
+
+:::intuition
+A basis is the shortest possible set of building blocks that still builds everything. Lego bricks of one shape can build a wall but not a roof — not spanning. Throwing in a duplicate shape adds nothing — not independent. A basis is the catalogue with no gaps and no duplicates, and the unique-representation theorem says the build instructions for any object are then unambiguous.
+:::
+
+:::theorem[Spanning sets contain bases]{#spanning-reduction}
+Every finite spanning list of a vector space $V$ can be reduced to a basis of $V$ by deleting some (possibly no) of its vectors. Consequently every finite-dimensional vector space has a basis.
+:::
+
+:::proof
+Let $\mathbf{v}_1, \ldots, \mathbf{v}_m$ span $V$. Run through the list from left to right. At step $j$, delete $\mathbf{v}_j$ if $\mathbf{v}_j \in \operatorname{span}\{\text{the vectors kept so far}\}$; otherwise keep it. (In particular $\mathbf{v}_1$ is deleted precisely when it is $\mathbf{0}$, since the span of the empty list is $\{\mathbf{0}\}$.)
+
+Each deletion removes a vector lying in the span of the retained predecessors, so by the redundancy proposition the span of the retained list together with the not-yet-processed vectors is unchanged at every step. After the last step the retained list still spans $V$.
+
+The retained list is independent: if it were dependent, the linear dependence lemma would produce a retained vector lying in the span of the retained vectors before it — but such a vector was deleted, not retained. (The lemma applies because the first retained vector is nonzero.) So the retained list is an independent spanning list, i.e. a basis.
+:::
+
+:::theorem[Every independent list extends to a basis]{#basis-extension}
+Let $V$ be finite-dimensional and let $\mathbf{u}_1, \ldots, \mathbf{u}_k$ be linearly independent in $V$. Then there are vectors $\mathbf{w}_1, \ldots, \mathbf{w}_r \in V$ such that $\mathbf{u}_1, \ldots, \mathbf{u}_k, \mathbf{w}_1, \ldots, \mathbf{w}_r$ is a basis of $V$.
+:::
+
+:::proof
+Since $V$ is finite-dimensional it has a finite spanning list $\mathbf{v}_1, \ldots, \mathbf{v}_m$. Consider the combined list
+
+$$\mathbf{u}_1, \ldots, \mathbf{u}_k, \mathbf{v}_1, \ldots, \mathbf{v}_m,$$
+
+which certainly spans $V$. Apply the reduction procedure of the previous theorem to it. No $\mathbf{u}_j$ is ever deleted: at the moment $\mathbf{u}_j$ is processed, the retained vectors are exactly $\mathbf{u}_1, \ldots, \mathbf{u}_{j-1}$, and if $\mathbf{u}_j$ lay in their span the list $\mathbf{u}_1,\ldots,\mathbf{u}_j$ would be dependent, contradicting independence. So the resulting basis contains all the $\mathbf{u}_j$ together with some of the $\mathbf{v}_i$.
+:::
+
+:::example[Reducing a spanning set]
+The list $\mathbf{v}_1 = (1,1,0)$, $\mathbf{v}_2 = (2,2,0)$, $\mathbf{v}_3 = (0,1,1)$, $\mathbf{v}_4 = (1,2,1)$ spans a subspace $U$ of $\mathbb{R}^3$. Reduce it to a basis and give $\dim U$.
+:::
+
+:::solution
+Process left to right. Keep $\mathbf{v}_1$, which is nonzero. Next, $\mathbf{v}_2 = 2\mathbf{v}_1$ lies in the span of what is kept, so delete it. Next, $\mathbf{v}_3$ is not a multiple of $\mathbf{v}_1$ (look at the third coordinate), so keep it. Finally $\mathbf{v}_4 = (1,2,1) = \mathbf{v}_1 + \mathbf{v}_3$, so delete it.
+
+Basis: $\{(1,1,0), (0,1,1)\}$, and $\dim U = 2$.
+
+Sanity check by the column method: put the four vectors as columns and row-reduce; the pivots land in columns $1$ and $3$, agreeing with the vectors retained. $U$ is the plane through the origin spanned by these two vectors.
+:::
+
+:::example[Extending an independent set]
+Extend $\{(1,1,0,0), (0,1,1,0)\}$ to a basis of $\mathbb{R}^4$.
+:::
+
+:::solution
+Append the standard basis and reduce: consider $(1,1,0,0), (0,1,1,0), \mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_3, \mathbf{e}_4$.
+
+Keep the first two (independent, as neither is a multiple of the other). Is $\mathbf{e}_1 = (1,0,0,0)$ in their span? A combination $a(1,1,0,0) + b(0,1,1,0)$ has third coordinate $b$, so $b = 0$; then the second coordinate is $a = 0$, and the first is $0 \neq 1$. Not in the span — keep $\mathbf{e}_1$.
+
+Now $\mathbf{e}_2 = (1,1,0,0) - \mathbf{e}_1$ is in the span, so delete it. Likewise $\mathbf{e}_3 = (0,1,1,0) - (1,1,0,0) + \mathbf{e}_1$ is in the span, so delete it. Finally $\mathbf{e}_4$ has a nonzero fourth coordinate while everything kept so far has fourth coordinate $0$, so keep it.
+
+Basis: $\{(1,1,0,0),\ (0,1,1,0),\ \mathbf{e}_1,\ \mathbf{e}_4\}$. Sanity check: four vectors in $\mathbb{R}^4$, and the matrix with these as columns has determinant $\pm 1 \neq 0$.
+:::
+
+:::example[A basis for a matrix subspace]
+Find a basis for the space $S$ of symmetric $2\times2$ real matrices and for the space $T$ of trace-zero $2\times 2$ real matrices.
+:::
+
+:::solution
+A symmetric matrix is $\begin{pmatrix} a & b \\ b & c\end{pmatrix} = a\begin{pmatrix}1&0\\0&0\end{pmatrix} + b\begin{pmatrix}0&1\\1&0\end{pmatrix} + c\begin{pmatrix}0&0\\0&1\end{pmatrix}$, so those three matrices span $S$. They are independent: if the combination is the zero matrix, then reading off the $(1,1)$, $(1,2)$ and $(2,2)$ entries gives $a = b = c = 0$. So $\dim S = 3$.
+
+A trace-zero matrix is $\begin{pmatrix} a & b \\ c & -a \end{pmatrix} = a\begin{pmatrix}1&0\\0&-1\end{pmatrix} + b\begin{pmatrix}0&1\\0&0\end{pmatrix} + c\begin{pmatrix}0&0\\1&0\end{pmatrix}$, and the same entry-reading argument gives independence. So $\dim T = 3$.
+
+Sanity check: each space is cut out of the $4$-dimensional space $M_{2\times2}$ by one linear equation ($b = c$; $a_{11} + a_{22} = 0$), and one equation costs one dimension.
+:::
+
+:::pitfall
+$\mathcal{P}_n$ has dimension $n+1$, not $n$. The basis $1, x, \ldots, x^n$ has $n+1$ members because the constants count. This off-by-one is the most reliable source of lost marks in the subject.
+:::
+
+## Dimension
+
+<!-- section: dimension -->
+
+Everything so far has quietly assumed that "the number of vectors in a basis" is a property of the space rather than of the basis. That needs proof, and the proof rests on one counting lemma.
+
+:::lemma[Steinitz exchange lemma]{#steinitz}
+In a vector space $V$, suppose $\mathbf{u}_1, \ldots, \mathbf{u}_k$ are linearly independent and $\mathbf{w}_1, \ldots, \mathbf{w}_m$ span $V$. Then $k \le m$.
+:::
+
+:::proof
+We show by induction on $j = 0, 1, \ldots, k$ that after reordering the $\mathbf{w}$'s, the list
+
+$$\mathbf{u}_1, \ldots, \mathbf{u}_j,\ \mathbf{w}_{j+1}, \ldots, \mathbf{w}_m$$
+
+spans $V$. In particular $j \le m$ at every stage, which for $j = k$ gives the claim.
+
+The case $j = 0$ is the hypothesis that the $\mathbf{w}$'s span. Suppose the statement holds for some $j < k$. Then $\mathbf{u}_{j+1}$ lies in the span of $\mathbf{u}_1, \ldots, \mathbf{u}_j, \mathbf{w}_{j+1}, \ldots, \mathbf{w}_m$, so there is a relation
+
+$$\mathbf{u}_{j+1} = a_1\mathbf{u}_1 + \cdots + a_j\mathbf{u}_j + b_{j+1}\mathbf{w}_{j+1} + \cdots + b_m\mathbf{w}_m.$$
+
+Not every $b_i$ can be zero: otherwise $\mathbf{u}_{j+1}$ would be a combination of $\mathbf{u}_1,\ldots,\mathbf{u}_j$, contradicting the independence of the $\mathbf{u}$'s. In particular there is at least one $\mathbf{w}$ left, so $j + 1 \le m$. Reorder so that $b_{j+1} \neq 0$ and solve:
+
+$$\mathbf{w}_{j+1} = \frac{1}{b_{j+1}}\Big(\mathbf{u}_{j+1} - \sum_{i\le j} a_i\mathbf{u}_i - \sum_{i > j+1} b_i \mathbf{w}_i\Big).$$
+
+So $\mathbf{w}_{j+1}$ lies in the span of $\mathbf{u}_1, \ldots, \mathbf{u}_{j+1}, \mathbf{w}_{j+2}, \ldots, \mathbf{w}_m$; adjoining it to that list therefore does not enlarge the span, and the enlarged list spans $V$ by the inductive hypothesis. Hence $\mathbf{u}_1,\ldots,\mathbf{u}_{j+1}, \mathbf{w}_{j+2},\ldots,\mathbf{w}_m$ spans $V$, completing the induction.
+:::
+
+Read the lemma as a slogan: **an independent list is never longer than a spanning list.** Every counting theorem below is a corollary of that one sentence.
+
+:::theorem[Dimension is well defined]{#dimension-theorem}
+Any two bases of a finite-dimensional vector space $V$ have the same number of vectors. That common number is the **dimension** $\dim V$.
+:::
+
+:::proof
+Let $\mathcal{B}$ and $\mathcal{C}$ be bases with $|\mathcal{B}| = k$ and $|\mathcal{C}| = m$. Since $\mathcal{B}$ is independent and $\mathcal{C}$ spans, the exchange lemma gives $k \le m$. Swapping the roles gives $m \le k$. Hence $k = m$.
+:::
+
+From the standard bases listed earlier we read off
+
+$$\dim \mathbb{R}^n = n, \qquad \dim \mathcal{P}_n = n+1, \qquad \dim M_{m\times n} = mn, \qquad \dim\{\mathbf{0}\} = 0,$$
+
+and $\dim \mathbb{C}$ is $1$ as a complex vector space but $2$ as a real one — the field of scalars is part of the data, and the basis $\{1, i\}$ over $\mathbb{R}$ shows why.
+
+:::corollary[Counting shortcuts]{#dimension-corollaries}
+Let $\dim V = n$. Then:
+
+1. any list of more than $n$ vectors in $V$ is dependent;
+2. any list of fewer than $n$ vectors fails to span $V$;
+3. an independent list of exactly $n$ vectors is a basis;
+4. a spanning list of exactly $n$ vectors is a basis.
+:::
+
+:::proof
+(1) and (2) are the exchange lemma applied against a basis, which is both independent and spanning of size $n$.
+
+(3) Let $\mathbf{u}_1,\ldots,\mathbf{u}_n$ be independent. Extend it to a basis by the extension theorem; the resulting basis has size $n$ by the dimension theorem, so nothing was added and the original list was already a basis.
+
+(4) Let $\mathbf{w}_1,\ldots,\mathbf{w}_n$ span $V$. Reduce it to a basis by the reduction theorem; the resulting basis has size $n$, so nothing was deleted.
+:::
+
+Parts (3) and (4) are enormous labour-savers: to check that $n$ specific vectors form a basis of an $n$-dimensional space, verify *either* independence *or* spanning, never both.
+
+:::theorem[Dimension of a subspace]{#subspace-dimension}
+Let $V$ be finite-dimensional and $U$ a subspace of $V$. Then $U$ is finite-dimensional, $\dim U \le \dim V$, and $\dim U = \dim V$ if and only if $U = V$.
+:::
+
+:::proof
+Any independent list in $U$ is an independent list in $V$, so by the exchange lemma it has length at most $\dim V$. Build an independent list in $U$ greedily: start with the empty list and, as long as the current independent list $\mathbf{u}_1,\ldots,\mathbf{u}_j$ does not span $U$, pick $\mathbf{u}_{j+1} \in U$ outside its span; the extended list is still independent, because a relation involving $\mathbf{u}_{j+1}$ with a nonzero coefficient would place $\mathbf{u}_{j+1}$ in the span of the others. The process must stop after at most $\dim V$ steps, and when it stops the list spans $U$ and is independent — a basis of $U$ of size at most $\dim V$. Hence $U$ is finite-dimensional with $\dim U \le \dim V$.
+
+If $U = V$ the dimensions agree. Conversely if $\dim U = \dim V = n$, take a basis of $U$; it is an independent list of $n$ vectors in $V$, hence a basis of $V$ by the counting corollary, so $V = \operatorname{span}(\text{basis of } U) = U$.
+:::
+
+The last clause deserves emphasis: **a subspace of the same dimension is the whole space.** It converts a dimension count into a set equality and is used constantly — for instance to prove two subspaces equal when one obviously sits inside the other.
+
+This also finally justifies the classification of subspaces of $\mathbb{R}^3$: a subspace has dimension $0$, $1$, $2$ or $3$, and these are the zero space, lines through the origin, planes through the origin, and $\mathbb{R}^3$ itself. There is nothing else, and no counting was needed beyond the theorem above.
+
+:::theorem[Dimension of a sum]{#dim-sum-formula}
+If $U$ and $W$ are finite-dimensional subspaces of a vector space $V$, then
+
+$$\dim(U + W) = \dim U + \dim W - \dim(U \cap W).$$
+:::
+
+:::proof
+Let $\mathbf{x}_1,\ldots,\mathbf{x}_p$ be a basis of $U \cap W$, so $\dim(U\cap W) = p$. Since $U \cap W$ is a subspace of $U$, extend that list to a basis
+
+$$\mathbf{x}_1,\ldots,\mathbf{x}_p, \mathbf{u}_1,\ldots,\mathbf{u}_q$$
+
+of $U$, so $\dim U = p + q$; and extend it also to a basis $\mathbf{x}_1,\ldots,\mathbf{x}_p,\mathbf{w}_1,\ldots,\mathbf{w}_r$ of $W$, so $\dim W = p + r$. We claim
+
+$$\mathcal{L} = (\mathbf{x}_1,\ldots,\mathbf{x}_p, \mathbf{u}_1,\ldots,\mathbf{u}_q, \mathbf{w}_1,\ldots,\mathbf{w}_r)$$
+
+is a basis of $U + W$; its length is $p + q + r = (p+q) + (p+r) - p$, which is the formula.
+
+*Spanning.* Any element of $U + W$ is $\mathbf{u} + \mathbf{w}$; expand $\mathbf{u}$ in the basis of $U$ and $\mathbf{w}$ in the basis of $W$, and every term appearing is in $\mathcal{L}$.
+
+*Independence.* Suppose
+
+$$\sum_i a_i\mathbf{x}_i + \sum_j b_j \mathbf{u}_j + \sum_k c_k\mathbf{w}_k = \mathbf{0}.$$
+
+Set $\mathbf{z} = \sum_k c_k\mathbf{w}_k$. Then $\mathbf{z} = -\sum a_i\mathbf{x}_i - \sum b_j\mathbf{u}_j \in U$, and also $\mathbf{z} \in W$, so $\mathbf{z} \in U \cap W$ and therefore $\mathbf{z} = \sum_i d_i \mathbf{x}_i$ for some scalars $d_i$. Comparing the two expressions for $\mathbf{z}$,
+
+$$\sum_k c_k \mathbf{w}_k - \sum_i d_i\mathbf{x}_i = \mathbf{0},$$
+
+a relation among the basis $\mathbf{x}_1,\ldots,\mathbf{x}_p,\mathbf{w}_1,\ldots,\mathbf{w}_r$ of $W$; hence every $c_k = 0$ (and every $d_i = 0$). The original relation now reads $\sum a_i\mathbf{x}_i + \sum b_j\mathbf{u}_j = \mathbf{0}$, a relation among a basis of $U$, so all $a_i$ and $b_j$ vanish too.
+:::
+
+:::corollary[Dimension of a direct sum]{#dim-direct-sum}
+If the sum is direct then $\dim(U \oplus W) = \dim U + \dim W$. Conversely, if $U, W$ are finite-dimensional and $\dim(U+W) = \dim U + \dim W$, the sum is direct.
+:::
+
+:::proof
+Both directions follow from the formula: the sum is direct exactly when $U \cap W = \{\mathbf{0}\}$, which for finite-dimensional subspaces is exactly $\dim(U\cap W) = 0$.
+:::
+
+:::intuition
+The sum formula is inclusion–exclusion for dimensions. Two planes through the origin in $\mathbb{R}^3$ each have dimension $2$, and $2 + 2 = 4$ exceeds $3$ — so they must overlap in at least one dimension. They do: two distinct planes through the origin always meet in a line. The formula turns "counting twice" into a geometric prediction.
+:::
+
+:::example[Two planes in $\mathbb{R}^4$]
+In $\mathbb{R}^4$, let $U = \operatorname{span}\{(1,0,0,0),(0,1,0,0)\}$ and $W = \operatorname{span}\{(0,1,0,0),(0,0,1,0)\}$. Compute $\dim(U\cap W)$, $\dim(U+W)$, and decide whether the sum is direct.
+:::
+
+:::solution
+A vector of $U$ is $(a, b, 0, 0)$ and a vector of $W$ is $(0, c, d, 0)$. For these to coincide we need $a = 0$ and $d = 0$, leaving $(0, b, 0, 0)$. So $U \cap W = \operatorname{span}\{(0,1,0,0)\}$ and $\dim(U\cap W) = 1$.
+
+By the formula, $\dim(U + W) = 2 + 2 - 1 = 3$. Indeed $U + W = \{(x,y,z,0)\}$, which is $3$-dimensional.
+
+The sum is not direct, since the intersection is not trivial — equivalently $3 \neq 2 + 2$.
+:::
+
+:::example[Forcing a nontrivial intersection]
+Let $U$ and $W$ be subspaces of $\mathbb{R}^7$ with $\dim U = 4$ and $\dim W = 5$. What is the smallest possible value of $\dim(U \cap W)$?
+:::
+
+:::solution
+$U + W$ is a subspace of $\mathbb{R}^7$, so $\dim(U+W) \le 7$. By the sum formula,
+
+$$\dim(U \cap W) = \dim U + \dim W - \dim(U+W) \ge 4 + 5 - 7 = 2.$$
+
+So the intersection has dimension at least $2$, and this is attained: take $U = \operatorname{span}\{\mathbf{e}_1,\mathbf{e}_2,\mathbf{e}_3,\mathbf{e}_4\}$ and $W = \operatorname{span}\{\mathbf{e}_3,\mathbf{e}_4,\mathbf{e}_5,\mathbf{e}_6,\mathbf{e}_7\}$, whose intersection is $\operatorname{span}\{\mathbf{e}_3,\mathbf{e}_4\}$. Minimum: $2$.
+:::
+
+:::example[Dimension of a polynomial subspace]
+Let $U = \{p \in \mathcal{P}_3 : p(1) = 0\}$. Find $\dim U$.
+:::
+
+:::solution
+$U$ is a subspace (the condition is linear and homogeneous). A polynomial of degree at most $3$ vanishing at $1$ factors as $p(x) = (x-1)q(x)$ with $\deg q \le 2$, and conversely every such product lies in $U$. The map $q \mapsto (x-1)q$ therefore carries $\mathcal{P}_2$ onto $U$, and it sends the basis $1, x, x^2$ to
+
+$$x - 1, \quad x^2 - x, \quad x^3 - x^2,$$
+
+which span $U$ and are independent (their degrees are $1, 2, 3$, so a nontrivial relation would have a nonzero leading coefficient in its top degree). Hence $\dim U = 3$.
+
+Sanity check: $U$ is cut out of the $4$-dimensional space $\mathcal{P}_3$ by one nontrivial linear condition, which costs exactly one dimension. And $U \neq \mathcal{P}_3$ because $\dim U = 3 < 4$, consistent with $p(x) = 1$ lying outside $U$.
+:::
+
+## Coordinates and the coordinate isomorphism
+
+<!-- section: coordinates -->
+
+Unique representation turns a basis into a dictionary between an abstract space and a concrete list of numbers.
+
+:::definition[Coordinate vector]{#coordinate-definition}
+Let $\mathcal{B} = (\mathbf{b}_1,\ldots,\mathbf{b}_n)$ be a basis of $V$ over $\mathbb{F}$. For $\mathbf{v} \in V$ write $\mathbf{v} = c_1\mathbf{b}_1 + \cdots + c_n\mathbf{b}_n$, which by the unique-representation theorem determines the $c_i$ uniquely. The **coordinate vector of $\mathbf{v}$ relative to $\mathcal{B}$** is
+
+$$[\mathbf{v}]_{\mathcal{B}} = \begin{pmatrix} c_1 \\ \vdots \\ c_n \end{pmatrix} \in \mathbb{F}^n.$$
+:::
+
+A basis is an *ordered* list precisely because coordinates are: reordering the basis permutes the entries of every coordinate vector.
+
+:::theorem[The coordinate map is an isomorphism]{#coordinate-isomorphism}
+Let $\mathcal{B}$ be a basis of an $n$-dimensional space $V$ over $\mathbb{F}$. The map $\Phi: V \to \mathbb{F}^n$, $\Phi(\mathbf{v}) = [\mathbf{v}]_\mathcal{B}$, is a bijection satisfying
+
+$$[\mathbf{u} + \mathbf{v}]_\mathcal{B} = [\mathbf{u}]_\mathcal{B} + [\mathbf{v}]_\mathcal{B}, \qquad [c\mathbf{v}]_\mathcal{B} = c[\mathbf{v}]_\mathcal{B}.$$
+
+Consequently $V \cong \mathbb{F}^n$: every $n$-dimensional space over $\mathbb{F}$ is a relabelled copy of $\mathbb{F}^n$.
+:::
+
+:::proof
+Linearity: if $\mathbf{u} = \sum a_i\mathbf{b}_i$ and $\mathbf{v} = \sum c_i\mathbf{b}_i$ then $\mathbf{u} + \mathbf{v} = \sum (a_i + c_i)\mathbf{b}_i$, and by uniqueness this is *the* representation of $\mathbf{u}+\mathbf{v}$, so its coordinate vector is the sum of the coordinate vectors. The same argument with $c\mathbf{v} = \sum (ca_i)\mathbf{b}_i$ gives the second identity.
+
+Injective: if $[\mathbf{v}]_\mathcal{B} = \mathbf{0}$ then $\mathbf{v} = \sum 0\cdot\mathbf{b}_i = \mathbf{0}$; combined with linearity, $\Phi(\mathbf{u}) = \Phi(\mathbf{v})$ implies $\Phi(\mathbf{u}-\mathbf{v}) = \mathbf{0}$ and so $\mathbf{u} = \mathbf{v}$.
+
+Surjective: given $(c_1,\ldots,c_n) \in \mathbb{F}^n$, the vector $\sum c_i \mathbf{b}_i \in V$ has exactly those coordinates.
+:::
+
+:::corollary[Structure transfers through coordinates]{#coordinates-transfer}
+With $\mathcal{B}$ fixed, vectors $\mathbf{v}_1,\ldots,\mathbf{v}_k \in V$ are linearly independent if and only if their coordinate vectors $[\mathbf{v}_1]_\mathcal{B},\ldots,[\mathbf{v}_k]_\mathcal{B}$ are independent in $\mathbb{F}^n$; they span $V$ if and only if their coordinate vectors span $\mathbb{F}^n$; and $\mathbf{v} \in \operatorname{span}\{\mathbf{v}_i\}$ if and only if $[\mathbf{v}]_\mathcal{B} \in \operatorname{span}\{[\mathbf{v}_i]_\mathcal{B}\}$.
+:::
+
+:::proof
+$\Phi$ carries the linear combination $\sum c_i\mathbf{v}_i$ to $\sum c_i[\mathbf{v}_i]_\mathcal{B}$, and $\Phi(\mathbf{x}) = \mathbf{0}$ only for $\mathbf{x} = \mathbf{0}$. So a relation on one side corresponds to a relation on the other with the same coefficients, and a representation on one side to a representation on the other.
+:::
+
+This is what the abstraction buys. Any question about independence, span, basis or dimension in *any* $n$-dimensional space — polynomials, matrices, solutions of a differential equation — becomes, after a choice of basis, a question about columns of a matrix in $\mathbb{F}^n$, answerable by row reduction. No new machinery is ever needed.
+
+:::intuition
+A basis is a language, and the coordinate map is a translator. The polynomial $3 + 2x - x^2$ and the column $(3, 2, -1)$ are the same idea in two languages; the dictionary is the monomial basis. Switching to a different basis is switching to a different language about the same object, and the object does not change — only its spelling does.
+:::
+
+:::example[Coordinates in a polynomial space]
+Find $[p]_\mathcal{B}$ for $p(x) = 5 - 3x + 2x^2$ relative to (a) the monomial basis $\mathcal{M} = (1, x, x^2)$ and (b) the basis $\mathcal{B} = (1,\ 1+x,\ 1 + x + x^2)$ of $\mathcal{P}_2$.
+:::
+
+:::solution
+(a) Immediate: $[p]_\mathcal{M} = (5, -3, 2)$.
+
+(b) Solve $a(1) + b(1+x) + c(1+x+x^2) = 5 - 3x + 2x^2$. Comparing coefficients from the top down:
+
+$$x^2: \ c = 2; \qquad x^1: \ b + c = -3 \Rightarrow b = -5; \qquad x^0: \ a + b + c = 5 \Rightarrow a = 8.$$
+
+So $[p]_\mathcal{B} = (8, -5, 2)$.
+
+Check: $8 + (-5)(1+x) + 2(1+x+x^2) = (8 - 5 + 2) + (-5+2)x + 2x^2 = 5 - 3x + 2x^2$ ✓. Note that the same vector has different coordinates in different bases; the coordinates are a property of the pair (vector, basis).
+:::
+
+:::example[Independence decided by coordinates]
+Are the matrices $A_1 = \begin{pmatrix}1&2\\0&1\end{pmatrix}$, $A_2 = \begin{pmatrix}0&1\\1&0\end{pmatrix}$, $A_3 = \begin{pmatrix}2&3\\-2&2\end{pmatrix}$ independent in $M_{2\times2}$?
+:::
+
+:::solution
+Use the basis $(E_{11}, E_{12}, E_{21}, E_{22})$, so that a matrix corresponds to the column of its entries read $a_{11}, a_{12}, a_{21}, a_{22}$:
+
+$$[A_1] = (1,2,0,1), \quad [A_2] = (0,1,1,0), \quad [A_3] = (2,3,-2,2).$$
+
+Look for a relation. Trying $A_3 = \alpha A_1 + \beta A_2$: the first entry gives $\alpha = 2$, the third gives $\beta = -2$, and then the second entry is $2(2) + (-2)(1) = 2 \neq 3$. So no such relation, and the general relation $c_1[A_1] + c_2[A_2] + c_3[A_3] = \mathbf{0}$ reduces by the first and third coordinates to $c_1 = -2c_3$, $c_2 = 2c_3$, and then the second coordinate gives $-4c_3 + 2c_3 + 3c_3 = c_3 = 0$, hence all $c_i = 0$.
+
+The matrices are independent, and $\operatorname{span}\{A_1,A_2,A_3\}$ is a $3$-dimensional subspace of the $4$-dimensional space $M_{2\times2}$.
+:::
+
+:::definition[Change-of-coordinates matrix]{#change-of-basis}
+Let $\mathcal{B} = (\mathbf{b}_1,\ldots,\mathbf{b}_n)$ and $\mathcal{C}$ be bases of the same space $V$. The **change-of-coordinates matrix from $\mathcal{B}$ to $\mathcal{C}$** is the $n\times n$ matrix
+
+$$P_{\mathcal{C}\leftarrow\mathcal{B}} = \big[\ [\mathbf{b}_1]_\mathcal{C}\ \ [\mathbf{b}_2]_\mathcal{C}\ \cdots\ [\mathbf{b}_n]_\mathcal{C}\ \big],$$
+
+whose columns are the $\mathcal{C}$-coordinates of the $\mathcal{B}$-basis vectors.
+:::
+
+:::theorem[Change of coordinates]{#change-of-basis-theorem}
+For every $\mathbf{v} \in V$,
+
+$$[\mathbf{v}]_\mathcal{C} = P_{\mathcal{C}\leftarrow\mathcal{B}}\,[\mathbf{v}]_\mathcal{B}.$$
+
+The matrix $P_{\mathcal{C}\leftarrow\mathcal{B}}$ is invertible, with inverse $P_{\mathcal{B}\leftarrow\mathcal{C}}$.
+:::
+
+:::proof
+Write $\mathbf{v} = \sum_i c_i\mathbf{b}_i$ with $(c_i) = [\mathbf{v}]_\mathcal{B}$. Applying the coordinate map for $\mathcal{C}$ and using its linearity,
+
+$$[\mathbf{v}]_\mathcal{C} = \sum_i c_i[\mathbf{b}_i]_\mathcal{C},$$
+
+which is exactly the matrix $P_{\mathcal{C}\leftarrow\mathcal{B}}$ times the column $(c_i)$.
+
+For invertibility, the same identity with the roles of $\mathcal{B}$ and $\mathcal{C}$ swapped gives $[\mathbf{v}]_\mathcal{B} = P_{\mathcal{B}\leftarrow\mathcal{C}}[\mathbf{v}]_\mathcal{C} = P_{\mathcal{B}\leftarrow\mathcal{C}}P_{\mathcal{C}\leftarrow\mathcal{B}}[\mathbf{v}]_\mathcal{B}$ for every $\mathbf{v}$. As $[\mathbf{v}]_\mathcal{B}$ ranges over all of $\mathbb{F}^n$, the product $P_{\mathcal{B}\leftarrow\mathcal{C}}P_{\mathcal{C}\leftarrow\mathcal{B}}$ fixes every column vector and is therefore $I_n$.
+:::
+
+:::recipe[Computing a change of coordinates in $\mathbb{R}^n$]{#change-recipe}
+If $\mathcal{B} = (\mathbf{b}_i)$ and $\mathcal{C} = (\mathbf{c}_i)$ are bases of $\mathbb{R}^n$, let $B = [\mathbf{b}_1 \cdots \mathbf{b}_n]$ and $C = [\mathbf{c}_1 \cdots \mathbf{c}_n]$ be the matrices with those columns. Then $\mathbf{v} = B[\mathbf{v}]_\mathcal{B} = C[\mathbf{v}]_\mathcal{C}$, so
+
+$$P_{\mathcal{C}\leftarrow\mathcal{B}} = C^{-1}B.$$
+
+In practice, row-reduce $[\,C \mid B\,]$ to $[\,I \mid C^{-1}B\,]$.
+:::
+
+:::example[Changing basis in $\mathbb{R}^2$]
+Let $\mathcal{B} = ((1,1),(1,-1))$ and $\mathcal{C} = ((1,0),(1,2))$ be bases of $\mathbb{R}^2$. Find $P_{\mathcal{C}\leftarrow\mathcal{B}}$ and use it to find $[\mathbf{v}]_\mathcal{C}$ for the vector $\mathbf{v}$ with $[\mathbf{v}]_\mathcal{B} = (3,1)$.
+:::
+
+:::solution
+Express each $\mathcal{B}$-vector in $\mathcal{C}$. For $(1,1) = a(1,0) + b(1,2)$: the second coordinate gives $2b = 1$, so $b = \tfrac12$, and then $a + \tfrac12 = 1$, so $a = \tfrac12$. For $(1,-1) = a(1,0)+b(1,2)$: $2b = -1$ gives $b = -\tfrac12$, then $a = \tfrac32$. Hence
+
+$$P_{\mathcal{C}\leftarrow\mathcal{B}} = \begin{pmatrix} \tfrac12 & \tfrac32 \\[2pt] \tfrac12 & -\tfrac12\end{pmatrix}.$$
+
+Then
+
+$$[\mathbf{v}]_\mathcal{C} = \begin{pmatrix} \tfrac12 & \tfrac32 \\[2pt] \tfrac12 & -\tfrac12\end{pmatrix}\begin{pmatrix}3\\1\end{pmatrix} = \begin{pmatrix} 3 \\ 1 \end{pmatrix}.$$
+
+Sanity check directly: $[\mathbf{v}]_\mathcal{B} = (3,1)$ means $\mathbf{v} = 3(1,1) + 1(1,-1) = (4,2)$; and $3(1,0) + 1(1,2) = (4,2)$ ✓. The coincidence that both coordinate vectors equal $(3,1)$ is an accident of these particular bases, not a general phenomenon.
+:::
+
+:::pitfall
+Read the arrow. $P_{\mathcal{C}\leftarrow\mathcal{B}}$ takes $\mathcal{B}$-coordinates *in* and produces $\mathcal{C}$-coordinates *out*, and its columns are the $\mathcal{B}$-vectors written in $\mathcal{C}$. Building the matrix the other way round is the standard error; the cure is to check it on a single basis vector, where the answer must be a standard basis column.
+:::
+
+## Column space, row space and null space
+
+<!-- section: linear-transformations -->
+
+Every matrix carries three subspaces with it, and almost every question about a linear system is a question about one of them.
+
+:::definition[The subspaces of a matrix]{#col-null-definition}
+Let $A$ be an $m\times n$ matrix over $\mathbb{F}$. Its
+
+- **column space** $\operatorname{Col}(A) = \operatorname{span}\{\text{columns of } A\} = \{A\mathbf{x} : \mathbf{x} \in \mathbb{F}^n\} \subseteq \mathbb{F}^m$;
+- **row space** $\operatorname{Row}(A) = \operatorname{span}\{\text{rows of } A\} = \operatorname{Col}(A^T) \subseteq \mathbb{F}^n$;
+- **null space** $\operatorname{Null}(A) = \{\mathbf{x} \in \mathbb{F}^n : A\mathbf{x} = \mathbf{0}\} \subseteq \mathbb{F}^n$.
+:::
+
+:::proposition[All three are subspaces]{#matrix-subspaces}
+$\operatorname{Col}(A)$ is a subspace of $\mathbb{F}^m$; $\operatorname{Row}(A)$ and $\operatorname{Null}(A)$ are subspaces of $\mathbb{F}^n$.
+:::
+
+:::proof
+Column and row spaces are spans, hence subspaces by the span theorem. For the null space: $A\mathbf{0} = \mathbf{0}$, and if $A\mathbf{x} = A\mathbf{y} = \mathbf{0}$ then $A(c\mathbf{x} + d\mathbf{y}) = cA\mathbf{x} + dA\mathbf{y} = \mathbf{0}$ by linearity of matrix multiplication. The one-step test applies.
+:::
+
+The identity $\operatorname{Col}(A) = \{A\mathbf{x}\}$ is worth unwinding, since it is the bridge between the two ways of reading a matrix: $A\mathbf{x}$ is by definition $x_1\mathbf{a}_1 + \cdots + x_n\mathbf{a}_n$ where $\mathbf{a}_i$ are the columns, so the set of all $A\mathbf{x}$ is exactly the set of all combinations of columns. Two consequences are immediate and constantly used:
+
+$$A\mathbf{x} = \mathbf{b} \text{ is consistent} \iff \mathbf{b} \in \operatorname{Col}(A),$$
+
+$$A\mathbf{x} = \mathbf{b} \text{ has at most one solution} \iff \operatorname{Null}(A) = \{\mathbf{0}\}.$$
+
+For the second: if $A\mathbf{x}_1 = A\mathbf{x}_2 = \mathbf{b}$ then $\mathbf{x}_1 - \mathbf{x}_2 \in \operatorname{Null}(A)$, and conversely adding a null vector to a solution gives another solution. So the full solution set of a consistent system is a single particular solution plus the whole null space — a *translate* of a subspace, which is why it is a subspace precisely when $\mathbf{b} = \mathbf{0}$.
+
+:::intuition
+Picture $A$ as a machine. The column space is the set of outputs the machine can actually produce — its reachable catalogue. The null space is the set of inputs it destroys, mapping them to nothing. A machine with a big null space is throwing information away; a machine whose null space is just $\mathbf{0}$ keeps every distinction between its inputs.
+:::
+
+:::theorem[Row operations preserve the row space and the null space]{#row-ops-preserve}
+If $B$ is obtained from $A$ by elementary row operations, then $\operatorname{Row}(B) = \operatorname{Row}(A)$ and $\operatorname{Null}(B) = \operatorname{Null}(A)$. The column space, by contrast, generally changes.
+:::
+
+:::proof
+Each elementary operation replaces the rows of $A$ by linear combinations of them, so every row of $B$ lies in $\operatorname{Row}(A)$ and hence $\operatorname{Row}(B) \subseteq \operatorname{Row}(A)$; since each operation is reversible by another elementary operation, the reverse inclusion holds too.
+
+For the null space, row operations do not change the solution set of $A\mathbf{x} = \mathbf{0}$, which is the definition of $\operatorname{Null}(A)$ — the operations correspond to left multiplication by an invertible matrix $E$, and $EA\mathbf{x} = \mathbf{0}$ has the same solutions as $A\mathbf{x} = \mathbf{0}$.
+
+That the column space changes is shown by an example: $A = \begin{pmatrix}1 \\ 1\end{pmatrix}$ row-reduces to $B = \begin{pmatrix}1 \\ 0\end{pmatrix}$, and $\operatorname{Col}(A)$ is the line $y = x$ while $\operatorname{Col}(B)$ is the $x$-axis. What *is* preserved is which columns are pivot columns, and hence the dimension of the column space, as the next theorem records.
+:::
+
+:::recipe[Bases for the three subspaces]{#three-bases}
+Row-reduce $A$ to an echelon form $R$.
+
+- **Column space:** take the columns of the *original* $A$ in the pivot positions. Never the columns of $R$.
+- **Row space:** take the nonzero rows of $R$.
+- **Null space:** solve $R\mathbf{x} = \mathbf{0}$, write the general solution with one free variable at a time, and read off the resulting vectors.
+:::
+
+:::proof
+For the column space: the dependence relations among the columns are precisely the vectors of $\operatorname{Null}(A)$, and row reduction does not change $\operatorname{Null}(A)$; so a set of columns of $A$ is independent exactly when the corresponding columns of $R$ are. In $R$ the pivot columns are independent and every non-pivot column is a combination of the pivot columns to its left. Transporting both facts back to $A$ shows the pivot columns of $A$ are independent and span $\operatorname{Col}(A)$.
+
+For the row space: $\operatorname{Row}(R) = \operatorname{Row}(A)$ by the previous theorem, and the nonzero rows of an echelon matrix are independent — in any relation, look at the leftmost pivot position occurring among the rows with nonzero coefficient; only one row is nonzero in that column, so its coefficient must be $0$, and induction finishes it.
+
+For the null space: setting one free variable to $1$ and the others to $0$ produces vectors whose free-variable slots form the standard basis, so they are independent, and every solution is the corresponding combination of them.
+:::
+
+:::example[All three subspaces of one matrix]
+For
+
+$$A = \begin{pmatrix} 1 & 2 & 3 \\ 0 & 1 & 1 \\ 1 & 3 & 4\end{pmatrix}$$
+
+find bases for $\operatorname{Col}(A)$, $\operatorname{Row}(A)$ and $\operatorname{Null}(A)$, and their dimensions.
+:::
+
+:::solution
+Row-reduce. Row $3$ minus row $1$ gives $(0,1,1)$; subtracting row $2$ makes it zero. Clearing above the second pivot:
+
+$$R = \begin{pmatrix} 1 & 0 & 1 \\ 0 & 1 & 1 \\ 0 & 0 & 0\end{pmatrix}.$$
+
+Pivots in columns $1$ and $2$, so $\operatorname{rank} A = 2$.
+
+$\operatorname{Col}(A)$: the original columns $1$ and $2$, namely $(1,0,1)$ and $(2,1,3)$. Dimension $2$.
+
+$\operatorname{Row}(A)$: the nonzero rows of $R$, namely $(1,0,1)$ and $(0,1,1)$. Dimension $2$.
+
+$\operatorname{Null}(A)$: column $3$ is free. With $x_3 = t$, the equations $x_1 + x_3 = 0$ and $x_2 + x_3 = 0$ give $x_1 = x_2 = -t$, so the solution is $t(-1,-1,1)$ and $\{(-1,-1,1)\}$ is a basis. Dimension $1$.
+
+Check: $A(-1,-1,1)$ has entries $-1-2+3 = 0$, $0-1+1 = 0$, $-1-3+4 = 0$ ✓. Also $2 + 1 = 3$, the number of columns, as the Rank Theorem below demands.
+:::
+
+:::example[Reading a column space off a consistency question]
+For which $b$ is $(1, 2, b)$ in the column space of $A = \begin{pmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 1\end{pmatrix}$?
+:::
+
+:::solution
+$\operatorname{Col}(A)$ is the span of $(1,0,1)$ and $(0,1,1)$. Asking whether $(1,2,b)$ lies in it is asking whether $c_1(1,0,1) + c_2(0,1,1) = (1,2,b)$ has a solution. The first two coordinates force $c_1 = 1$ and $c_2 = 2$, and the third then reads $b = c_1 + c_2 = 3$.
+
+So $b = 3$, and for any other $b$ the system $A\mathbf{x} = (1,2,b)$ is inconsistent. Geometrically $\operatorname{Col}(A)$ is the plane $x + y = z$ in $\mathbb{R}^3$, and $(1,2,3)$ lies on it.
+:::
+
+:::pitfall
+A basis for $\operatorname{Col}(A)$ comes from the columns of $A$, but a basis for $\operatorname{Row}(A)$ comes from the rows of the *reduced* matrix. The asymmetry is not arbitrary: row operations preserve the row space but move the column space, so the reduced rows are still in the row space while the reduced columns need not be in the column space.
+:::
+
+## Rank, nullity and the four fundamental subspaces
+
+<!-- section: rank -->
+
+:::definition[Rank and nullity]{#rank-definition}
+For an $m\times n$ matrix $A$, the **rank** is $\operatorname{rank} A = \dim \operatorname{Col}(A)$ and the **nullity** is $\operatorname{nullity} A = \dim\operatorname{Null}(A)$.
+:::
+
+:::theorem[Rank Theorem]{#rank-nullity}
+For any $m \times n$ matrix $A$,
+
+$$\operatorname{rank} A + \operatorname{nullity} A = n.$$
+:::
+
+:::proof
+Row-reduce $A$ to an echelon form $R$ with $r$ pivots. By the basis recipe, $\dim\operatorname{Col}(A) = r$, since the pivot columns of $A$ form a basis. Also by the recipe, $\dim\operatorname{Null}(A)$ equals the number of free variables, one basis vector per free column. Every one of the $n$ columns is either a pivot column or a free column, and never both, so $r + (n - r) = n$, which is the claim.
+:::
+
+:::theorem[Row rank equals column rank]{#row-rank-equals-col-rank}
+For any matrix $A$, $\dim\operatorname{Row}(A) = \dim\operatorname{Col}(A)$; equivalently $\operatorname{rank} A^T = \operatorname{rank} A$.
+:::
+
+:::proof
+Row-reduce $A$ to echelon form $R$ with $r$ pivots. The nonzero rows of $R$ form a basis of $\operatorname{Row}(R) = \operatorname{Row}(A)$, and there are exactly $r$ of them, so $\dim\operatorname{Row}(A) = r$. The pivot columns of $A$ form a basis of $\operatorname{Col}(A)$, and there are also exactly $r$ of them. Both dimensions equal the number of pivots, hence each other.
+:::
+
+This is a genuinely surprising theorem. The row space and the column space usually live in different spaces — $\mathbb{R}^n$ and $\mathbb{R}^m$ — and consist of entirely different vectors; there is no reason from the outside that they should have the same dimension. The number of pivots is a single quantity that both computations happen to count, and the rank is best thought of as *that* number: the number of genuinely independent equations in the system, which is simultaneously the number of genuinely independent output directions.
+
+:::corollary[The four fundamental subspaces]{#four-subspaces}
+Let $A$ be $m\times n$ of rank $r$. Then
+
+$$\dim\operatorname{Col}(A) = r, \quad \dim\operatorname{Row}(A) = r, \quad \dim\operatorname{Null}(A) = n - r, \quad \dim\operatorname{Null}(A^T) = m - r.$$
+
+The row space and null space live in $\mathbb{F}^n$ and their dimensions add to $n$; the column space and left null space live in $\mathbb{F}^m$ and their dimensions add to $m$.
+:::
+
+:::proof
+The first three are the two previous theorems. For the fourth, apply the Rank Theorem to $A^T$, which has $m$ columns: $\operatorname{rank}A^T + \operatorname{nullity}A^T = m$, and $\operatorname{rank}A^T = r$ by the row-rank theorem.
+:::
+
+:::theorem[Fundamental theorem of linear algebra, orthogonality part]{#fundamental-theorem}
+For a real $m\times n$ matrix $A$,
+
+$$\operatorname{Null}(A) = \operatorname{Row}(A)^{\perp} \text{ in } \mathbb{R}^n, \qquad \operatorname{Null}(A^T) = \operatorname{Col}(A)^{\perp} \text{ in } \mathbb{R}^m.$$
+:::
+
+:::proof
+$A\mathbf{x} = \mathbf{0}$ says exactly that each row of $A$ has dot product zero with $\mathbf{x}$, that is, $\mathbf{x}$ is orthogonal to every row, hence (by bilinearity of the dot product) to every combination of rows. Conversely a vector orthogonal to all rows satisfies $A\mathbf{x} = \mathbf{0}$. So $\operatorname{Null}(A) = \operatorname{Row}(A)^\perp$. Applying this to $A^T$, whose rows are the columns of $A$, gives the second identity.
+:::
+
+Combined with the dimension count, this says $\mathbb{R}^n = \operatorname{Row}(A) \oplus \operatorname{Null}(A)$ and $\mathbb{R}^m = \operatorname{Col}(A) \oplus \operatorname{Null}(A^T)$: each ambient space splits into a part the matrix handles faithfully and a part it annihilates. The orthogonality is developed properly in the chapter on orthogonality; the dimension bookkeeping above needs nothing beyond this chapter.
+
+:::intuition
+A matrix of rank $r$ is, at bottom, an $r$-dimensional machine wearing an $m \times n$ costume. It takes an $n$-dimensional input, immediately discards an $(n-r)$-dimensional slice of it (the null space), passes the surviving $r$ dimensions through faithfully, and deposits them in an $r$-dimensional slice of the $m$-dimensional output space. Everything else in $\mathbb{R}^m$ — the other $m - r$ dimensions — is simply unreachable.
+:::
+
+:::theorem[The Invertible Matrix Theorem, extended]{#imt-extended}
+For an $n\times n$ matrix $A$ the following are equivalent:
+
+1. $A$ is invertible;
+2. $A\mathbf{x} = \mathbf{0}$ has only the trivial solution;
+3. the columns of $A$ are linearly independent;
+4. the columns of $A$ span $\mathbb{F}^n$;
+5. the columns of $A$ form a basis of $\mathbb{F}^n$;
+6. $\operatorname{Col}(A) = \mathbb{F}^n$;
+7. $\operatorname{Row}(A) = \mathbb{F}^n$;
+8. $\operatorname{rank} A = n$;
+9. $\operatorname{nullity} A = 0$;
+10. $\det A \neq 0$.
+:::
+
+:::proof
+(2) $\iff$ (3) is the definition of independence applied to the columns, since $A\mathbf{x}$ is the combination of columns with coefficients $x_i$. (2) $\iff$ (9) is the definition of nullity. (9) $\iff$ (8) is the Rank Theorem with $n$ columns. (8) $\iff$ (6): $\operatorname{Col}(A)$ is a subspace of $\mathbb{F}^n$ of dimension $\operatorname{rank}A$, and a subspace has full dimension if and only if it is the whole space. (6) $\iff$ (4) is the definition of the column space, and (3) with (4) is (5). (7) $\iff$ (8) by the row-rank theorem and the same full-dimension argument in $\mathbb{F}^n$. Finally (1) $\iff$ (2) and (1) $\iff$ (10) were proved in the chapters on matrix inverses and determinants.
+:::
+
+Notice how much of that proof is pure dimension counting. The clause "a subspace of full dimension is the whole space" is used three times, and it is exactly the subspace-dimension theorem proved earlier in this chapter.
+
+:::example[Rank and nullity from a shape]
+$A$ is a $4\times 7$ matrix whose null space has dimension $4$. Find $\operatorname{rank} A$, $\dim\operatorname{Row}(A)$, $\dim\operatorname{Null}(A^T)$, and decide whether $A\mathbf{x} = \mathbf{b}$ is consistent for every $\mathbf{b} \in \mathbb{R}^4$.
+:::
+
+:::solution
+Rank Theorem with $n = 7$ columns: $\operatorname{rank}A = 7 - 4 = 3$.
+
+$\dim\operatorname{Row}(A) = \operatorname{rank}A = 3$, by row rank equals column rank.
+
+$\dim\operatorname{Null}(A^T) = m - r = 4 - 3 = 1$.
+
+Consistency for every $\mathbf{b}$ would require $\operatorname{Col}(A) = \mathbb{R}^4$, i.e. rank $4$. The rank is $3$, so $\operatorname{Col}(A)$ is a $3$-dimensional subspace of $\mathbb{R}^4$ and there exist $\mathbf{b}$ for which the system is inconsistent.
+:::
+
+:::example[Rank of a product and of an outer product]
+Let $\mathbf{u} \in \mathbb{R}^m$ and $\mathbf{v} \in \mathbb{R}^n$ be nonzero. What is $\operatorname{rank}(\mathbf{u}\mathbf{v}^T)$, and what is the nullity of $\mathbf{u}\mathbf{v}^T$?
+:::
+
+:::solution
+The matrix $A = \mathbf{u}\mathbf{v}^T$ is $m\times n$ with $j$-th column $v_j\mathbf{u}$. Every column is a multiple of $\mathbf{u}$, so $\operatorname{Col}(A) \subseteq \operatorname{span}\{\mathbf{u}\}$, giving $\operatorname{rank}A \le 1$. Since some $v_j \neq 0$ and $\mathbf{u} \neq \mathbf{0}$, some column is nonzero, so $\operatorname{rank}A = 1$.
+
+By the Rank Theorem the nullity is $n - 1$. Concretely, $A\mathbf{x} = \mathbf{u}(\mathbf{v}^T\mathbf{x}) = (\mathbf{v}\cdot\mathbf{x})\mathbf{u}$, which vanishes exactly when $\mathbf{x} \perp \mathbf{v}$ — the hyperplane orthogonal to $\mathbf{v}$, of dimension $n-1$ ✓.
+:::
+
+:::example[Using dimension to prove an equality of spaces]
+Let $A$ be $5\times 5$ with $\operatorname{rank} A = 5$ and let $U = \operatorname{Col}(A)$. Prove $U = \mathbb{R}^5$ without computing anything, and deduce that $A\mathbf{x} = \mathbf{b}$ has exactly one solution for every $\mathbf{b}$.
+:::
+
+:::solution
+$U$ is a subspace of $\mathbb{R}^5$ with $\dim U = \operatorname{rank}A = 5 = \dim\mathbb{R}^5$. By the subspace-dimension theorem, a subspace of equal dimension is the whole space, so $U = \mathbb{R}^5$. Hence every $\mathbf{b}$ lies in $\operatorname{Col}(A)$ and the system is consistent.
+
+For uniqueness, the Rank Theorem gives $\operatorname{nullity}A = 5 - 5 = 0$, so $\operatorname{Null}(A) = \{\mathbf{0}\}$ and any two solutions differ by a null vector, hence coincide. Exactly one solution for every $\mathbf{b}$ — which is statement (1) of the Invertible Matrix Theorem in disguise.
+:::
+
+:::summary
+For an $m\times n$ matrix $A$ of rank $r$: $\operatorname{Col}(A)$ and $\operatorname{Null}(A^T)$ are subspaces of $\mathbb{F}^m$ of dimensions $r$ and $m - r$; $\operatorname{Row}(A)$ and $\operatorname{Null}(A)$ are subspaces of $\mathbb{F}^n$ of dimensions $r$ and $n - r$. The system $A\mathbf{x} = \mathbf{b}$ is consistent for all $\mathbf{b}$ iff $r = m$, and has at most one solution iff $r = n$.
 :::
 
 ## Common Mistakes
 
-- Claiming any subset of $\mathbb{R}^n$ is a subspace without checking all three conditions. The easiest first check: does it contain $\mathbf{0}$?
-- Confusing span with independence. A spanning set can be dependent (redundant); an independent set may not span. A basis must be both.
-- Stating 'the dimension is $2$' because you found two independent vectors, without checking they actually span the space.
-- Extracting the column space basis from the RREF matrix instead of the original matrix. Use pivot positions to identify which original columns to take.
-- Forgetting the zero vector is always in the null space — $\text{Null}(A)$ is never empty.
+- **Checking closure but not the zero vector, or vice versa.** A subspace needs $\mathbf{0} \in U$ *and* closure under both operations. The fastest disqualifier is almost always the missing zero vector.
+- **Assuming a set with an addition is a vector space.** All eight axioms must hold for the operations you were handed. Axiom 5, $1\mathbf{v} = \mathbf{v}$, is the one that fails in the deceptive examples, and the additive identity need not be the number $0$.
+- **Writing $\dim\mathcal{P}_n = n$.** It is $n + 1$: the basis $1, x, \ldots, x^n$ has $n+1$ elements.
+- **Confusing spanning with independence.** A spanning set may be redundant; an independent set may be too small. A basis is exactly both at once, and "I found $k$ independent vectors, so the dimension is $k$" is only valid once you know they span, or once you know $\dim V = k$ already.
+- **Taking a basis for $\operatorname{Col}(A)$ from the reduced matrix.** Use the pivot *positions* to select columns of the **original** $A$. The row space is the opposite: use the nonzero rows of the reduced matrix.
+- **Calling $U + W$ a direct sum without checking $U \cap W = \{\mathbf{0}\}$.** And with three or more summands, pairwise trivial intersections are not enough.
+- **Forgetting that coordinates depend on the basis.** $[\mathbf{v}]_\mathcal{B}$ is a statement about a pair, not about $\mathbf{v}$ alone, and $P_{\mathcal{C}\leftarrow\mathcal{B}}$ has the $\mathcal{B}$-vectors written in $\mathcal{C}$ as its columns, not the other way round.
+- **Treating independence in a function space pointwise.** $\sum c_if_i = 0$ must hold at every point of the domain; agreement at one convenient point proves nothing.
+- **Thinking a union of subspaces is a subspace.** It is one only in the degenerate case where one contains the other.

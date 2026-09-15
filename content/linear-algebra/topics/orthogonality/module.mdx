@@ -4,224 +4,1085 @@ title: Orthogonality and Least Squares
 
 # Orthogonality and Least Squares
 
-Orthogonality — the generalisation of perpendicularity to any number of dimensions — is one of the most powerful structures in linear algebra. Orthogonal vectors carry independent information; orthonormal bases make coordinate computations trivial.
+Orthogonality is perpendicularity, freed from the plane. Two vectors in $\mathbb{R}^{50}$ cannot be drawn, but the single equation $\mathbf{u}\cdot\mathbf{v}=0$ still says everything a right angle ever said: the two directions carry independent information, and lengths add in the Pythagorean way. Almost every computation in this chapter is a consequence of that one equation.
 
-The central application is the least-squares problem: when a system $A\mathbf{x}=\mathbf{b}$ has no solution (more equations than unknowns), find the $\hat{\mathbf{x}}$ that minimises $\|A\hat{\mathbf{x}}-\mathbf{b}\|$. The answer is the projection of $\mathbf{b}$ onto the column space of $A$.
+The reason orthogonality earns a chapter of its own is that it turns hard problems into easy ones. Finding the coordinates of a vector in a general basis means solving a linear system; in an *orthonormal* basis each coordinate is one dot product. Finding the point of a subspace closest to a given vector looks like a minimisation problem in infinitely many candidates; orthogonality reduces it to a single matrix equation. And when a system $A\mathbf{x}=\mathbf{b}$ has no solution at all — the normal situation when there is more data than there are unknowns — orthogonality produces the next best thing: the vector $\hat{\mathbf{x}}$ that makes $\|A\hat{\mathbf{x}}-\mathbf{b}\|$ as small as possible. That is the least-squares problem, and it is the computational heart of statistics, signal processing, and every kind of curve fitting.
 
-Gram-Schmidt orthogonalisation and the QR decomposition are the computational engines. They appear in numerical analysis, statistics (regression), signal processing, and machine learning.
+The chapter runs in the order the ideas depend on one another: the dot product and length; orthogonal complements and the four fundamental subspaces; orthogonal and orthonormal sets; orthogonal projection and the matrix that performs it; the Gram–Schmidt process, which manufactures orthonormal bases on demand; the $QR$ factorization that Gram–Schmidt secretly computes; least squares and the normal equations; and finally linear models, where all of it is applied to data.
 
-## Inner product, length, and orthogonality {#dot}
+Everything here happens in $\mathbb{R}^n$ with the ordinary dot product. The chapter *Inner Product Spaces* takes the same definitions and replaces the dot product by an abstract inner product, so that functions and polynomials acquire lengths and angles too; nothing in this chapter has to be relearned there, only reread.
 
-In $\mathbb{R}^n$, the inner product (dot product) is $\mathbf{u}\cdot\mathbf{v} = \mathbf{u}^T\mathbf{v} = \sum_i u_iv_i$. The length is $\|\mathbf{v}\|=\sqrt{\mathbf{v}\cdot\mathbf{v}}$.
+## The dot product, length, and orthogonality
 
-:::definition[Orthogonal and orthonormal]{#orthonormal-definition}
-Two vectors are orthogonal if $\mathbf{u}\cdot\mathbf{v}=0$. A unit vector has $\|\mathbf{v}\|=1$. A set is orthonormal if its vectors are pairwise orthogonal and each has unit length.
+<!-- section: dot -->
+
+Everything begins with one operation that eats two vectors and returns a number.
+
+:::definition[Dot product]{#dot-product}
+For $\mathbf{u},\mathbf{v}\in\mathbb{R}^n$ written as column vectors, the **dot product** (or inner product) is the scalar
+
+$$\mathbf{u}\cdot\mathbf{v} = \mathbf{u}^T\mathbf{v} = u_1v_1 + u_2v_2 + \cdots + u_nv_n.$$
 :::
 
-:::definition[Orthogonal complement]{#orthogonal-complement}
-The orthogonal complement of a subspace $W \subseteq \mathbb{R}^n$ is
+Reading $\mathbf{u}\cdot\mathbf{v}$ as the matrix product $\mathbf{u}^T\mathbf{v}$ — a $1\times n$ matrix times an $n\times 1$ matrix — is not a cosmetic rewriting. It is what lets us move dot products through matrices: $(A\mathbf{x})\cdot\mathbf{y} = (A\mathbf{x})^T\mathbf{y} = \mathbf{x}^TA^T\mathbf{y} = \mathbf{x}\cdot(A^T\mathbf{y})$. That identity,
 
-$$W^\perp = \{\mathbf{v}: \mathbf{v}\cdot\mathbf{w}=0\text{ for all }\mathbf{w}\in W\}.$$
-:::
+$$(A\mathbf{x})\cdot\mathbf{y} = \mathbf{x}\cdot(A^T\mathbf{y}),$$
 
-The key relationships with the fundamental subspaces are $(\text{Row}(A))^\perp=\text{Null}(A)$ and $(\text{Col}(A))^\perp=\text{Null}(A^T)$.
+is used in almost every proof in this chapter, and it is the reason the transpose appears wherever orthogonality does.
 
-:::theorem[Orthogonal decomposition theorem]{#orthogonal-decomposition}
-Let $W$ be a subspace of $\mathbb{R}^n$. Every $\mathbf{y}\in\mathbb{R}^n$ can be written in exactly one way as
+:::proposition[Algebraic properties of the dot product]{#dot-properties}
+For all $\mathbf{u},\mathbf{v},\mathbf{w}\in\mathbb{R}^n$ and all scalars $c$:
 
-$$\mathbf{y} = \hat{\mathbf{y}} + \mathbf{z}, \qquad \hat{\mathbf{y}}\in W,\ \mathbf{z}\in W^\perp.$$
-:::
-
-:::theorem[Pythagorean theorem in $\mathbb{R}^n$]{#pythagoras}
-If $\mathbf{u}\perp\mathbf{v}$, then
-
-$$\|\mathbf{u}+\mathbf{v}\|^2=\|\mathbf{u}\|^2+\|\mathbf{v}\|^2.$$
-:::
-
-Orthogonality and right angles are the same idea in any dimension, and the hypothesis $\mathbf{u}\perp\mathbf{v}$ is exactly what kills the cross term.
-
-:::intuition
-Orthogonal vectors are like perpendicular compass directions — north and east carry completely independent information. Orthonormal vectors add the requirement that each direction has length exactly $1$. Working in an orthonormal basis is like having a perfectly square grid — every coordinate reads off cleanly with a single dot product.
-:::
-
-:::example[Length, orthogonality check, and Pythagoras]
-Let $\mathbf{u}=\langle 3,4,0\rangle$ and $\mathbf{v}=\langle 0,0,5\rangle$ in $\mathbb{R}^3$.
-Dot product: $\mathbf{u}\cdot\mathbf{v} = (3)(0)+(4)(0)+(0)(5) = 0$, so $\mathbf{u}\perp\mathbf{v}$.
-Lengths: $\|\mathbf{u}\|=\sqrt{3^2+4^2+0^2}=\sqrt{25}=5$ and $\|\mathbf{v}\|=\sqrt{0+0+5^2}=5$.
-Their sum is $\mathbf{u}+\mathbf{v}=\langle 3,4,5\rangle$ with $\|\mathbf{u}+\mathbf{v}\|^2 = 3^2+4^2+5^2 = 9+16+25 = 50$.
-Sanity check against Pythagoras (valid here because $\mathbf{u}\perp\mathbf{v}$): $\|\mathbf{u}\|^2+\|\mathbf{v}\|^2 = 25+25 = 50$ ✓. The two match exactly, as the theorem requires.
-:::
-
-:::solution
-1. Note the hypothesis in step 5: $\|\mathbf{u}+\mathbf{v}\|^2=\|\mathbf{u}\|^2+\|\mathbf{v}\|^2$ holds **only** when $\mathbf{u}\perp\mathbf{v}$. For non-orthogonal vectors the cross term $2\,\mathbf{u}\cdot\mathbf{v}$ does not vanish.
-:::
-
-## Orthogonal sets and projections {#orthogonal-sets}
-
-:::proposition[Orthogonal sets are independent]{#orthogonal-independent}
-An orthogonal set of nonzero vectors is linearly independent.
-:::
-
-Each vector points in a direction not reachable by combining the others.
-
-:::theorem[Best approximation]{#best-approximation}
-The orthogonal projection $\hat{\mathbf{y}}$ of $\mathbf{y}$ onto a subspace $W$ is the unique closest point in $W$ to $\mathbf{y}$, and the error is perpendicular to the subspace:
-
-$$\mathbf{y}-\hat{\mathbf{y}}\in W^\perp.$$
-:::
-
-:::proposition[Projection formulas]{#projection-formulas}
-For a single nonzero vector $\mathbf{u}$, the projection of $\mathbf{y}$ onto the line spanned by $\mathbf{u}$ is
-
-$$\text{proj}_{\mathbf{u}}\mathbf{y} = \frac{\mathbf{y}\cdot\mathbf{u}}{\mathbf{u}\cdot\mathbf{u}}\,\mathbf{u}.$$
-
-If $\{\mathbf{u}_1,\ldots,\mathbf{u}_p\}$ is an *orthonormal* basis for $W$, then
-
-$$\hat{\mathbf{y}} = (\mathbf{y}\cdot\mathbf{u}_1)\mathbf{u}_1 + \cdots + (\mathbf{y}\cdot\mathbf{u}_p)\mathbf{u}_p.$$
-:::
-
-In the first formula the fraction is the signed "how much of $\mathbf{y}$ lies along $\mathbf{u}$"; multiplying by $\mathbf{u}$ turns that scalar back into a vector in the direction of $\mathbf{u}$. When $\mathbf{u}$ is a unit vector the denominator is $1$ and this collapses to $(\mathbf{y}\cdot\mathbf{u})\mathbf{u}$. The second formula just adds up the single-line projections, so each coordinate is one dot product with no system of equations to solve — but it needs the basis to be orthogonal, since for a non-orthogonal basis the pieces interfere and you must use the matrix formula below.
-
-:::definition[Projection matrix]{#projection-matrix}
-If the columns of $A$ form a basis for $W$, the projection matrix onto $W$ is
-
-$$P = A(A^TA)^{-1}A^T, \qquad \hat{\mathbf{y}}=P\mathbf{y}.$$
-:::
-
-Note that $P^2=P$ (idempotent — projecting an already-projected point changes nothing) and $P^T=P$ (symmetric). For the special case of a single unit vector $\mathbf{u}$, this reduces to the rank-one matrix $P=\mathbf{u}\mathbf{u}^T$.
-
-:::intuition
-Projecting $\mathbf{y}$ onto $W$ is like finding your shadow on a surface when the sun is directly overhead. The shadow is the point on the surface closest to you. The vector from shadow to you (the error) is perpendicular to the surface.
-:::
-
-:::example[Projection onto a plane in $\mathbb{R}^3$]
-Project $\mathbf{y}=\langle 1,2,3\rangle$ onto $W=\text{span}\{\mathbf{u}_1,\mathbf{u}_2\}$ with $\mathbf{u}_1=\langle 1,0,0\rangle$, $\mathbf{u}_2=\langle 0,1,0\rangle$ (the $xy$-plane).
-:::
-
-:::solution
-1. $\hat{\mathbf{y}} = (\mathbf{y}\cdot\mathbf{u}_1)\mathbf{u}_1 + (\mathbf{y}\cdot\mathbf{u}_2)\mathbf{u}_2 = 1\cdot\langle 1,0,0\rangle + 2\cdot\langle 0,1,0\rangle = \langle 1,2,0\rangle$.
-2. Error: $\mathbf{y}-\hat{\mathbf{y}} = \langle 0,0,3\rangle$. Check orthogonality to $W$: $\langle 0,0,3\rangle\cdot\langle 1,0,0\rangle=0$ ✓, $\langle 0,0,3\rangle\cdot\langle 0,1,0\rangle=0$ ✓.
-:::
-
-:::example[Projection onto a slanted line (non-standard direction)]
-Project $\mathbf{y}=\langle 4,2\rangle$ onto the line spanned by $\mathbf{u}=\langle 2,1\rangle$. Here $\mathbf{u}$ is not a unit vector, so we use the general formula with the $\mathbf{u}\cdot\mathbf{u}$ denominator.
-:::
-
-:::solution
-1. Numerator: $\mathbf{y}\cdot\mathbf{u} = (4)(2)+(2)(1) = 8+2 = 10$. Denominator: $\mathbf{u}\cdot\mathbf{u} = 2^2+1^2 = 5$.
-2. $\text{proj}_{\mathbf{u}}\mathbf{y} = \dfrac{10}{5}\langle 2,1\rangle = 2\langle 2,1\rangle = \langle 4,2\rangle$. Here $\mathbf{y}$ already lay on the line, so the projection returns $\mathbf{y}$ itself and the error is $\mathbf{0}$ — a useful sanity check that the formula fixes points already in $W$.
-3. Now project the different vector $\mathbf{y}'=\langle 1,3\rangle$ onto the same line: $\mathbf{y}'\cdot\mathbf{u}=(1)(2)+(3)(1)=5$, so $\text{proj}_{\mathbf{u}}\mathbf{y}' = \dfrac{5}{5}\langle 2,1\rangle = \langle 2,1\rangle$.
-4. Verify the error is orthogonal to the line: $\mathbf{y}'-\text{proj} = \langle 1-2,\,3-1\rangle = \langle -1,2\rangle$, and $\langle -1,2\rangle\cdot\langle 2,1\rangle = -2+2 = 0$ ✓.
-:::
-
-:::example[The rank-one projection matrix $P=\mathbf{u}\mathbf{u}^T$]
-Take the unit vector $\mathbf{u}=\left\langle \tfrac{1}{\sqrt{2}},\tfrac{1}{\sqrt{2}}\right\rangle$ (check: $\|\mathbf{u}\|^2=\tfrac12+\tfrac12=1$ ✓, so the $(A^TA)^{-1}$ factor is just $1$).
-:::
-
-:::solution
-1. Outer product: $P=\mathbf{u}\mathbf{u}^T = \begin{pmatrix}\tfrac{1}{\sqrt2}\\[2pt]\tfrac{1}{\sqrt2}\end{pmatrix}\begin{pmatrix}\tfrac{1}{\sqrt2}&\tfrac{1}{\sqrt2}\end{pmatrix} = \begin{pmatrix}\tfrac12&\tfrac12\\[2pt]\tfrac12&\tfrac12\end{pmatrix}$.
-2. Check idempotence: $P^2 = \begin{pmatrix}\tfrac12&\tfrac12\\[2pt]\tfrac12&\tfrac12\end{pmatrix}\begin{pmatrix}\tfrac12&\tfrac12\\[2pt]\tfrac12&\tfrac12\end{pmatrix} = \begin{pmatrix}\tfrac14+\tfrac14&\tfrac14+\tfrac14\\[2pt]\tfrac14+\tfrac14&\tfrac14+\tfrac14\end{pmatrix} = \begin{pmatrix}\tfrac12&\tfrac12\\[2pt]\tfrac12&\tfrac12\end{pmatrix}=P$ ✓.
-3. Apply it to $\mathbf{y}=\langle 3,1\rangle$: $P\mathbf{y}=\left\langle \tfrac12(3)+\tfrac12(1),\ \tfrac12(3)+\tfrac12(1)\right\rangle = \langle 2,2\rangle$, which lies on the line $y=x$ spanned by $\mathbf{u}$ ✓.
-:::
-
-## The Gram-Schmidt process {#gram-schmidt}
-
-Gram-Schmidt converts any linearly independent set $\{\mathbf{x}_1,\ldots,\mathbf{x}_p\}$ into an orthonormal basis $\{\mathbf{u}_1,\ldots,\mathbf{u}_p\}$ for the same subspace.
-
-:::recipe[Gram-Schmidt process]{#gram-schmidt-recipe}
-For each $k = 1, \ldots, p$ in turn:
-
-1. Subtract from $\mathbf{x}_k$ its projections onto all previously constructed vectors $\mathbf{v}_1,\ldots,\mathbf{v}_{k-1}$:
-
-$$\mathbf{v}_k = \mathbf{x}_k - \sum_{j=1}^{k-1}\frac{\mathbf{x}_k\cdot\mathbf{v}_j}{\mathbf{v}_j\cdot\mathbf{v}_j}\mathbf{v}_j.$$
-
-2. Normalise: $\mathbf{u}_k = \mathbf{v}_k/\|\mathbf{v}_k\|$.
-:::
-
-:::theorem[QR decomposition]{#qr-decomposition}
-If $A=[\mathbf{x}_1\;\cdots\;\mathbf{x}_p]$ has linearly independent columns, Gram-Schmidt produces a factorisation
-
-$$A=QR,$$
-
-where $Q=[\mathbf{u}_1\;\cdots\;\mathbf{u}_p]$ has orthonormal columns and $R$ is upper triangular.
-:::
-
-QR is the backbone of modern numerical eigenvalue algorithms.
-
-Why subtract projections? Each new vector $\mathbf{v}_k$ must be orthogonal to all previous $\mathbf{v}_j$. The projection $\text{proj}_{\mathbf{v}_j}\mathbf{x}_k$ is the component of $\mathbf{x}_k$ that lies in the direction of $\mathbf{v}_j$. Subtracting it removes all overlap.
-
-:::intuition
-Gram-Schmidt builds a clean coordinate system one axis at a time. The first axis is just the first vector, normalised. The second axis is the second vector with its shadow onto the first axis subtracted — that makes it perpendicular. The third strips out shadows on both previous axes. Each step removes overlap until you have perfectly perpendicular, unit-length axes.
-:::
-
-:::example[Gram-Schmidt in $\mathbb{R}^3$]
-Orthogonalise $\mathbf{x}_1=\langle 1,1,0\rangle$, $\mathbf{x}_2=\langle 1,0,1\rangle$.
-:::
-
-:::solution
-1. $\mathbf{v}_1=\mathbf{x}_1=\langle 1,1,0\rangle$. Normalise: $\|\mathbf{v}_1\|=\sqrt{2}$, $\mathbf{u}_1=\langle 1/\sqrt{2},1/\sqrt{2},0\rangle$.
-2. $\text{proj}_{\mathbf{v}_1}\mathbf{x}_2 = \frac{\mathbf{x}_2\cdot\mathbf{v}_1}{\mathbf{v}_1\cdot\mathbf{v}_1}\mathbf{v}_1 = \frac{1}{2}\langle 1,1,0\rangle = \langle 1/2,1/2,0\rangle$.
-3. $\mathbf{v}_2 = \mathbf{x}_2 - \langle 1/2,1/2,0\rangle = \langle 1/2,-1/2,1\rangle$.
-4. Normalise: $\|\mathbf{v}_2\|=\sqrt{(1/2)^2+(-1/2)^2+1^2}=\sqrt{1/4+1/4+1}=\sqrt{3/2}$, so $\mathbf{u}_2=\mathbf{v}_2/\sqrt{3/2}=\left\langle \tfrac{1}{\sqrt6},-\tfrac{1}{\sqrt6},\tfrac{2}{\sqrt6}\right\rangle$ (using $\tfrac{1/2}{\sqrt{3/2}}=\tfrac{1}{\sqrt6}$ and $\tfrac{1}{\sqrt{3/2}}=\tfrac{2}{\sqrt6}$).
-5. Check orthogonality on the un-normalised vectors (cheaper, and equivalent since normalising only scales): $\mathbf{v}_1\cdot\mathbf{v}_2 = (1)(1/2)+(1)(-1/2)+(0)(1) = 1/2-1/2 = 0$ ✓. So $\mathbf{u}_1\cdot\mathbf{u}_2=0$ as well.
-6. Sanity check the span is preserved: $\mathbf{x}_2 = \mathbf{v}_2 + \tfrac12\mathbf{v}_1$, so each original vector is recovered as a combination of the new orthogonal ones — the coefficients $\|\mathbf{v}_1\|$, the projection $\tfrac12$, etc. are exactly the entries of $R$ in the resulting $A=QR$.
-:::
-
-## Least-squares problems {#least-squares}
-
-:::definition[Least-squares solution]{#least-squares-definition}
-When $A\mathbf{x}=\mathbf{b}$ is inconsistent, a least-squares solution is a vector $\hat{\mathbf{x}}$ minimising the residual
-
-$$\|A\mathbf{x}-\mathbf{b}\|^2.$$
-:::
-
-It is not an exact solution — it is the best approximation available.
-
-:::theorem[Normal equations]{#normal-equations}
-A vector $\hat{\mathbf{x}}$ is a least-squares solution of $A\mathbf{x}=\mathbf{b}$ if and only if
-
-$$A^TA\hat{\mathbf{x}} = A^T\mathbf{b}.$$
-
-If in addition $A$ has linearly independent columns ($\text{rank}(A)=n$), then $A^TA$ is invertible and $\hat{\mathbf{x}}=(A^TA)^{-1}A^T\mathbf{b}$ is unique.
+1. $\mathbf{u}\cdot\mathbf{v} = \mathbf{v}\cdot\mathbf{u}$ (symmetry);
+2. $(\mathbf{u}+\mathbf{v})\cdot\mathbf{w} = \mathbf{u}\cdot\mathbf{w} + \mathbf{v}\cdot\mathbf{w}$ and $(c\mathbf{u})\cdot\mathbf{v} = c(\mathbf{u}\cdot\mathbf{v})$ (linearity in each slot);
+3. $\mathbf{u}\cdot\mathbf{u}\ge 0$, with equality if and only if $\mathbf{u}=\mathbf{0}$ (positive definiteness).
 :::
 
 :::proof
-The closest point in $\text{Col}(A)$ to $\mathbf{b}$ is $A\hat{\mathbf{x}}=\hat{\mathbf{b}}=\text{proj}_{\text{Col}(A)}\mathbf{b}$, by the best-approximation theorem. That same theorem says the residual $\mathbf{b}-\hat{\mathbf{b}}$ is orthogonal to $\text{Col}(A)$, i.e. orthogonal to every column of $A$, which is exactly $A^T(\mathbf{b}-A\hat{\mathbf{x}})=\mathbf{0}$. Rearranging gives $A^TA\hat{\mathbf{x}} = A^T\mathbf{b}$.
+Properties 1 and 2 are immediate from the formula $\sum_i u_iv_i$, since multiplication of real numbers is commutative and the sum is linear in each factor. For 3, $\mathbf{u}\cdot\mathbf{u} = \sum_i u_i^2$ is a sum of squares, hence $\ge 0$; and a sum of squares of real numbers vanishes exactly when every term vanishes, i.e. when every $u_i=0$.
 :::
 
-Linear regression: fitting $y=\beta_0+\beta_1 x$ to $m$ data points $(x_i,y_i)$ is a least-squares problem with $A=\begin{pmatrix}1&x_1\\\vdots&\vdots\\1&x_m\end{pmatrix}$ and $\mathbf{b}=\begin{pmatrix}y_1\\\vdots\\y_m\end{pmatrix}$. The least-squares solution gives the best-fit line.
+Property 3 is the one that does the real work, and it is worth noticing how little it would take to lose it. If we had defined $\mathbf{u}\cdot\mathbf{v} = u_1v_1 - u_2v_2$, symmetry and linearity would survive but $\langle 1,1\rangle$ would have "length zero" while being a nonzero vector, and the whole geometry of the chapter would collapse. Positive definiteness is what allows a dot product to define a length.
 
-:::definition[Pseudo-inverse]{#pseudo-inverse}
-When $A$ has linearly independent columns, its pseudo-inverse is
+:::definition[Length, unit vector, distance]{#length-definition}
+The **length** (or norm) of $\mathbf{v}\in\mathbb{R}^n$ is
 
-$$A^+ = (A^TA)^{-1}A^T,$$
+$$\|\mathbf{v}\| = \sqrt{\mathbf{v}\cdot\mathbf{v}} = \sqrt{v_1^2+\cdots+v_n^2}.$$
 
-which satisfies $A^+A=I$ and returns the least-squares solution as $\hat{\mathbf{x}}=A^+\mathbf{b}$.
+A vector with $\|\mathbf{v}\|=1$ is a **unit vector**. **Normalising** a nonzero $\mathbf{v}$ means replacing it by $\mathbf{v}/\|\mathbf{v}\|$. The **distance** between $\mathbf{u}$ and $\mathbf{v}$ is $\operatorname{dist}(\mathbf{u},\mathbf{v}) = \|\mathbf{u}-\mathbf{v}\|$.
 :::
 
-The pseudo-inverse generalises the matrix inverse to non-square systems.
+Note that $\|c\mathbf{v}\| = |c|\,\|\mathbf{v}\|$, with the absolute value: scaling by $-3$ triples the length and does not negate it. In particular $\mathbf{v}/\|\mathbf{v}\|$ really is a unit vector, since its length is $\|\mathbf{v}\|/\|\mathbf{v}\| = 1$, and it points the same way as $\mathbf{v}$.
+
+:::theorem[Cauchy–Schwarz inequality]{#cauchy-schwarz}
+For all $\mathbf{u},\mathbf{v}\in\mathbb{R}^n$,
+
+$$|\mathbf{u}\cdot\mathbf{v}| \le \|\mathbf{u}\|\,\|\mathbf{v}\|,$$
+
+with equality if and only if $\mathbf{u}$ and $\mathbf{v}$ are parallel (one is a scalar multiple of the other).
+:::
+
+:::proof
+If $\mathbf{v}=\mathbf{0}$ both sides are $0$ and the vectors are trivially parallel, so assume $\mathbf{v}\neq\mathbf{0}$ and set $t = \dfrac{\mathbf{u}\cdot\mathbf{v}}{\mathbf{v}\cdot\mathbf{v}}$. By positive definiteness,
+
+$$0 \le \|\mathbf{u}-t\mathbf{v}\|^2 = (\mathbf{u}-t\mathbf{v})\cdot(\mathbf{u}-t\mathbf{v}) = \mathbf{u}\cdot\mathbf{u} - 2t(\mathbf{u}\cdot\mathbf{v}) + t^2(\mathbf{v}\cdot\mathbf{v}).$$
+
+Substituting the chosen $t$, the last two terms combine:
+
+$$0 \le \|\mathbf{u}\|^2 - \frac{(\mathbf{u}\cdot\mathbf{v})^2}{\|\mathbf{v}\|^2}.$$
+
+Multiplying by $\|\mathbf{v}\|^2>0$ gives $(\mathbf{u}\cdot\mathbf{v})^2 \le \|\mathbf{u}\|^2\|\mathbf{v}\|^2$, and taking square roots gives the inequality. Equality forces $\|\mathbf{u}-t\mathbf{v}\|^2=0$, hence $\mathbf{u}=t\mathbf{v}$ by positive definiteness; conversely if $\mathbf{u}=t\mathbf{v}$ then both sides equal $|t|\,\|\mathbf{v}\|^2$.
+:::
+
+Because $|\mathbf{u}\cdot\mathbf{v}| \le \|\mathbf{u}\|\|\mathbf{v}\|$, the quotient $\dfrac{\mathbf{u}\cdot\mathbf{v}}{\|\mathbf{u}\|\|\mathbf{v}\|}$ always lies in $[-1,1]$, so there is exactly one angle $\theta\in[0,\pi]$ with
+
+$$\cos\theta = \frac{\mathbf{u}\cdot\mathbf{v}}{\|\mathbf{u}\|\,\|\mathbf{v}\|}.$$
+
+This *defines* the angle between two vectors in $\mathbb{R}^n$; in $\mathbb{R}^2$ and $\mathbb{R}^3$ it agrees with the angle you would measure with a protractor. The case $\theta=\pi/2$ is the case $\mathbf{u}\cdot\mathbf{v}=0$, which is where the chapter's subject begins.
+
+:::theorem[Triangle inequality]{#triangle-inequality}
+For all $\mathbf{u},\mathbf{v}\in\mathbb{R}^n$, $\ \|\mathbf{u}+\mathbf{v}\| \le \|\mathbf{u}\| + \|\mathbf{v}\|$.
+:::
+
+:::proof
+Expand and apply Cauchy–Schwarz to the cross term:
+
+$$\|\mathbf{u}+\mathbf{v}\|^2 = \|\mathbf{u}\|^2 + 2\,\mathbf{u}\cdot\mathbf{v} + \|\mathbf{v}\|^2 \le \|\mathbf{u}\|^2 + 2\|\mathbf{u}\|\|\mathbf{v}\| + \|\mathbf{v}\|^2 = \big(\|\mathbf{u}\|+\|\mathbf{v}\|\big)^2.$$
+
+Both sides are non-negative, so taking square roots preserves the inequality.
+:::
+
+:::definition[Orthogonal vectors]{#orthogonal-definition}
+Two vectors $\mathbf{u},\mathbf{v}\in\mathbb{R}^n$ are **orthogonal**, written $\mathbf{u}\perp\mathbf{v}$, if $\mathbf{u}\cdot\mathbf{v}=0$.
+:::
+
+The zero vector is orthogonal to everything, which is a convention rather than a discovery, but a convenient one: it makes "the set of vectors orthogonal to $W$" a subspace rather than a subspace with a hole at the origin.
+
+:::theorem[Pythagorean theorem in $\mathbb{R}^n$]{#pythagoras}
+$\|\mathbf{u}+\mathbf{v}\|^2 = \|\mathbf{u}\|^2 + \|\mathbf{v}\|^2$ if and only if $\mathbf{u}\perp\mathbf{v}$.
+:::
+
+:::proof
+Expanding as in the previous proof,
+
+$$\|\mathbf{u}+\mathbf{v}\|^2 = \|\mathbf{u}\|^2 + 2\,\mathbf{u}\cdot\mathbf{v} + \|\mathbf{v}\|^2.$$
+
+So the claimed identity holds exactly when the cross term $2\,\mathbf{u}\cdot\mathbf{v}$ is zero, i.e. exactly when $\mathbf{u}\cdot\mathbf{v}=0$.
+:::
+
+The "if and only if" is worth pausing on. Pythagoras is not merely a consequence of perpendicularity in $\mathbb{R}^n$; it is *equivalent* to it. That makes it a usable test: if you compute the three lengths and they satisfy the identity, you have proved a right angle without ever computing the dot product.
 
 :::intuition
-Least squares asks: if I can't hit the target exactly, where should I aim to get as close as possible? The answer is the point in the column space of $A$ closest to $\mathbf{b}$. The normal equations are the algebraic condition that says 'the error vector points away from the column space' — i.e., is perpendicular to it.
+Think of two people pulling a crate, one due north with force $3$ and one due east with force $4$. Because the directions are perpendicular, neither pull helps or hinders the other, and the net force has magnitude $\sqrt{3^2+4^2}=5$. If instead they both pull roughly north-east, their efforts overlap: the same $3$ and $4$ produce a net force close to $7$. The dot product measures exactly that overlap, and it is zero precisely when the efforts are independent.
 :::
 
-:::example[Best-fit line through three points]
-Fit $y=\beta_0+\beta_1 x$ to $(1,1),(2,2),(3,4)$. Stack the model into $A\boldsymbol{\beta}=\mathbf{b}$ with a column of $1$s for the intercept and a column of $x$-values: $A=\begin{pmatrix}1&1\\1&2\\1&3\end{pmatrix}$, $\mathbf{b}=\begin{pmatrix}1\\2\\4\end{pmatrix}$.
+:::example[Lengths, distance, and an angle]
+For $\mathbf{u}=\langle 2,-1,2\rangle$ and $\mathbf{v}=\langle 1,2,2\rangle$, compute $\|\mathbf{u}\|$, $\operatorname{dist}(\mathbf{u},\mathbf{v})$, and the angle between them.
 :::
 
 :::solution
-1. This system is inconsistent (three points not on one line), so we solve the normal equations $A^TA\hat{\boldsymbol{\beta}}=A^T\mathbf{b}$. The columns of $A$ are independent, so $A^TA$ is invertible and the solution is unique.
-2. $A^TA=\begin{pmatrix}1+1+1 & 1+2+3\\ 1+2+3 & 1+4+9\end{pmatrix}=\begin{pmatrix}3&6\\6&14\end{pmatrix}$.
-3. $A^T\mathbf{b}=\begin{pmatrix}1+2+4\\ 1\cdot1+2\cdot2+3\cdot4\end{pmatrix}=\begin{pmatrix}7\\17\end{pmatrix}$.
-4. Solve $\begin{pmatrix}3&6\\6&14\end{pmatrix}\hat{\boldsymbol{\beta}}=\begin{pmatrix}7\\17\end{pmatrix}$. The determinant is $3\cdot14-6\cdot6=42-36=6$, so by the $2\times2$ inverse formula $\hat{\beta}_0=\tfrac{1}{6}(14\cdot7-6\cdot17)=\tfrac{98-102}{6}=-\tfrac{2}{3}$ and $\hat{\beta}_1=\tfrac{1}{6}(3\cdot17-6\cdot7)=\tfrac{51-42}{6}=\tfrac{3}{2}$.
-5. Best-fit line: $y=-\tfrac{2}{3}+\tfrac{3}{2}x$.
-6. Sanity check via the residuals $\mathbf{r}=\mathbf{b}-A\hat{\boldsymbol{\beta}}$. Predicted values are $-\tfrac23+\tfrac32(1)=\tfrac56$, $-\tfrac23+\tfrac32(2)=\tfrac73$, $-\tfrac23+\tfrac32(3)=\tfrac{23}{6}$, giving $\mathbf{r}=\left\langle 1-\tfrac56,\ 2-\tfrac73,\ 4-\tfrac{23}{6}\right\rangle=\left\langle \tfrac16,-\tfrac13,\tfrac16\right\rangle$. The normal equations demand $A^T\mathbf{r}=\mathbf{0}$: summing the residuals gives $\tfrac16-\tfrac13+\tfrac16=0$ ✓, and $\sum x_ir_i=1\cdot\tfrac16+2\cdot(-\tfrac13)+3\cdot\tfrac16=\tfrac16-\tfrac23+\tfrac12=0$ ✓. The residual is orthogonal to both columns of $A$, exactly as required.
+The length is $\|\mathbf{u}\| = \sqrt{2^2+(-1)^2+2^2} = \sqrt{9} = 3$, and likewise $\|\mathbf{v}\| = \sqrt{1+4+4} = 3$.
+
+For the distance, $\mathbf{u}-\mathbf{v} = \langle 1,-3,0\rangle$, so
+
+$$\operatorname{dist}(\mathbf{u},\mathbf{v}) = \sqrt{1^2+(-3)^2+0^2} = \sqrt{10}.$$
+
+The dot product is $\mathbf{u}\cdot\mathbf{v} = 2 - 2 + 4 = 4$, so
+
+$$\cos\theta = \frac{4}{3\cdot 3} = \frac{4}{9},$$
+
+and $\theta = \arccos(4/9) \approx 1.11$ radians, about $63.6^\circ$.
+
+Sanity check with Cauchy–Schwarz: $|\mathbf{u}\cdot\mathbf{v}| = 4 \le 9 = \|\mathbf{u}\|\|\mathbf{v}\|$, comfortably. And since $4/9$ is positive but well below $1$, the vectors should point broadly the same way without being parallel — which matches $63.6^\circ$.
+:::
+
+:::example[Building a unit vector and testing orthogonality]
+Normalise $\mathbf{w}=\langle 1,-2,2,4\rangle$, and decide whether $\mathbf{w}$ is orthogonal to $\mathbf{z}=\langle 2,3,2,-1\rangle$.
+:::
+
+:::solution
+First the length: $\|\mathbf{w}\|^2 = 1+4+4+16 = 25$, so $\|\mathbf{w}\|=5$ and the unit vector is
+
+$$\frac{\mathbf{w}}{\|\mathbf{w}\|} = \left\langle \tfrac15,-\tfrac25,\tfrac25,\tfrac45\right\rangle.$$
+
+Check: $\tfrac{1}{25}(1+4+4+16)=1$ ✓.
+
+Now the test: $\mathbf{w}\cdot\mathbf{z} = (1)(2)+(-2)(3)+(2)(2)+(4)(-1) = 2-6+4-4 = -4 \neq 0$, so they are **not** orthogonal. A second check confirms it: $\|\mathbf{w}+\mathbf{z}\|^2 = \|\langle 3,1,4,3\rangle\|^2 = 9+1+16+9 = 35$, while $\|\mathbf{w}\|^2+\|\mathbf{z}\|^2 = 25 + 18 = 43$. The two disagree by exactly $2(\mathbf{w}\cdot\mathbf{z}) = -8$, as the expansion predicts.
+:::
+
+:::example[Forcing orthogonality by choosing a parameter]
+Find all $t$ for which $\mathbf{a}=\langle t,2,t\rangle$ is orthogonal to $\mathbf{b}=\langle 3,t,-1\rangle$.
+:::
+
+:::solution
+Write the condition out:
+
+$$\mathbf{a}\cdot\mathbf{b} = 3t + 2t - t = 4t.$$
+
+So $\mathbf{a}\perp\mathbf{b}$ exactly when $4t=0$, i.e. $t=0$.
+
+Check at $t=0$: $\mathbf{a}=\langle 0,2,0\rangle$, $\mathbf{b}=\langle 3,0,-1\rangle$, and their dot product is $0+0+0=0$ ✓. Notice how quickly the answer came: orthogonality is one scalar equation, so imposing it on a one-parameter family generically leaves finitely many solutions.
+:::
+
+:::pitfall
+$\|\mathbf{u}+\mathbf{v}\| = \|\mathbf{u}\| + \|\mathbf{v}\|$ is *not* the Pythagorean theorem and is almost never true — it holds only when $\mathbf{u}$ and $\mathbf{v}$ point in the same direction. The Pythagorean identity is about the **squares** of the lengths. Squaring is not optional.
+:::
+
+## Orthogonal complements and the four fundamental subspaces
+
+<!-- section: orthogonal-complements -->
+
+A single orthogonality condition is a fact about two vectors. The useful object is the set of all vectors orthogonal to a whole subspace at once.
+
+:::definition[Orthogonal complement]{#orthogonal-complement}
+Let $W$ be a subspace of $\mathbb{R}^n$. Its **orthogonal complement** is
+
+$$W^{\perp} = \{\mathbf{v}\in\mathbb{R}^n : \mathbf{v}\cdot\mathbf{w}=0 \text{ for all } \mathbf{w}\in W\},$$
+
+read "$W$ perp".
+:::
+
+:::proposition[$W^\perp$ is a subspace, and testing it is finite]{#perp-subspace}
+For any subspace $W\subseteq\mathbb{R}^n$, $W^\perp$ is a subspace of $\mathbb{R}^n$. Moreover, if $W=\operatorname{Span}\{\mathbf{w}_1,\ldots,\mathbf{w}_p\}$, then
+
+$$\mathbf{v}\in W^\perp \iff \mathbf{v}\cdot\mathbf{w}_i = 0 \ \text{ for } i=1,\ldots,p.$$
+:::
+
+:::proof
+The zero vector is orthogonal to everything, so $\mathbf{0}\in W^\perp$. If $\mathbf{v}_1,\mathbf{v}_2\in W^\perp$ and $c$ is a scalar, then for every $\mathbf{w}\in W$,
+
+$$(\mathbf{v}_1+c\mathbf{v}_2)\cdot\mathbf{w} = \mathbf{v}_1\cdot\mathbf{w} + c(\mathbf{v}_2\cdot\mathbf{w}) = 0+0 = 0,$$
+
+so $W^\perp$ is closed under addition and scalar multiplication.
+
+For the second claim, one direction is trivial since each $\mathbf{w}_i\in W$. Conversely, suppose $\mathbf{v}\cdot\mathbf{w}_i=0$ for every $i$. A general $\mathbf{w}\in W$ is $\mathbf{w}=c_1\mathbf{w}_1+\cdots+c_p\mathbf{w}_p$, so by linearity
+
+$$\mathbf{v}\cdot\mathbf{w} = c_1(\mathbf{v}\cdot\mathbf{w}_1)+\cdots+c_p(\mathbf{v}\cdot\mathbf{w}_p) = 0.$$
+:::
+
+The second half of that proposition is what makes orthogonal complements computable. The definition quantifies over infinitely many $\mathbf{w}$; the proposition says you only ever have to test a spanning set. Concretely, if the $\mathbf{w}_i$ are the rows of a matrix $A$, then "$\mathbf{v}$ is orthogonal to every row" is the single matrix equation $A\mathbf{v}=\mathbf{0}$ — and that is the whole content of the next theorem.
+
+:::theorem[The fundamental orthogonality relations]{#fundamental-orthogonality}
+For any $m\times n$ matrix $A$,
+
+$$(\operatorname{Row} A)^{\perp} = \operatorname{Nul} A \quad\text{in } \mathbb{R}^n, \qquad (\operatorname{Col} A)^{\perp} = \operatorname{Nul} A^{T} \quad\text{in } \mathbb{R}^m.$$
+:::
+
+:::proof
+The $i$-th entry of the vector $A\mathbf{x}$ is the dot product of the $i$-th row of $A$ with $\mathbf{x}$. Hence $A\mathbf{x}=\mathbf{0}$ says precisely that $\mathbf{x}$ is orthogonal to every row of $A$, which by the previous proposition says precisely that $\mathbf{x}\in(\operatorname{Row} A)^\perp$. That is the first relation.
+
+Apply the first relation to $A^T$ in place of $A$: $(\operatorname{Row} A^T)^\perp = \operatorname{Nul} A^T$. Since the rows of $A^T$ are the columns of $A$, $\operatorname{Row} A^T = \operatorname{Col} A$, giving the second relation.
+:::
+
+:::theorem[Dimensions of complementary subspaces]{#perp-dimension}
+If $W$ is a subspace of $\mathbb{R}^n$, then
+
+$$\dim W + \dim W^{\perp} = n, \qquad W\cap W^{\perp} = \{\mathbf{0}\}, \qquad (W^{\perp})^{\perp} = W.$$
+:::
+
+:::proof
+For the intersection: if $\mathbf{v}\in W\cap W^\perp$ then $\mathbf{v}$ is orthogonal to itself, so $\mathbf{v}\cdot\mathbf{v}=0$, and positive definiteness forces $\mathbf{v}=\mathbf{0}$.
+
+For the dimension count, choose a basis of $W$ and let $A$ be the $p\times n$ matrix whose rows are those basis vectors, where $p=\dim W$. Then $\operatorname{Row} A = W$ and $\operatorname{rank} A = p$, and by the theorem above $W^\perp = \operatorname{Nul} A$. The Rank–Nullity Theorem for $A$ gives $\operatorname{rank}A + \dim\operatorname{Nul}A = n$, i.e. $\dim W + \dim W^\perp = n$.
+
+Finally, every $\mathbf{w}\in W$ is orthogonal to every element of $W^\perp$ by definition, so $W\subseteq (W^\perp)^\perp$. Applying the dimension count twice, $\dim (W^\perp)^\perp = n - \dim W^\perp = n - (n-\dim W) = \dim W$. A subspace contained in another of the same finite dimension equals it, so $(W^\perp)^\perp = W$.
+:::
+
+Collecting these for a single matrix produces the picture Strang calls the fundamental theorem of linear algebra. Let $A$ be $m\times n$ of rank $r$. Four subspaces appear: $\operatorname{Row}A$ and $\operatorname{Nul}A$ live in the domain $\mathbb{R}^n$, while $\operatorname{Col}A$ and $\operatorname{Nul}A^T$ live in the codomain $\mathbb{R}^m$.
+
+:::summary[The four fundamental subspaces]
+For an $m\times n$ matrix $A$ of rank $r$:
+
+$$\begin{aligned}
+\operatorname{Row}A &\subseteq \mathbb{R}^n, &\dim &= r, &\qquad \operatorname{Nul}A &\subseteq \mathbb{R}^n, &\dim &= n-r,\\
+\operatorname{Col}A &\subseteq \mathbb{R}^m, &\dim &= r, &\qquad \operatorname{Nul}A^T &\subseteq \mathbb{R}^m, &\dim &= m-r,
+\end{aligned}$$
+
+with $\operatorname{Row}A \perp \operatorname{Nul}A$ inside $\mathbb{R}^n$ and $\operatorname{Col}A \perp \operatorname{Nul}A^T$ inside $\mathbb{R}^m$. In each space the two subspaces are orthogonal complements, so their dimensions add to the dimension of the ambient space.
+:::
+
+:::intuition
+Picture $A$ as a machine that takes vectors from $\mathbb{R}^n$ to $\mathbb{R}^m$. The domain splits cleanly into two perpendicular halves: the null space, which the machine crushes to zero, and the row space, which it maps one-to-one onto the column space. Nothing in the row space is wasted and nothing in the null space survives. On the other side, the column space is everything the machine can reach, and the left null space is the perpendicular part of $\mathbb{R}^m$ it can never touch — which is exactly why an inconsistent system $A\mathbf{x}=\mathbf{b}$ is inconsistent: $\mathbf{b}$ has a component in that unreachable direction.
+:::
+
+:::example[Computing an orthogonal complement]
+Let $W=\operatorname{Span}\{\langle 1,1,1\rangle\}\subseteq\mathbb{R}^3$. Find a basis for $W^\perp$ and confirm the dimension count.
+:::
+
+:::solution
+By the finite test, $\mathbf{v}=\langle v_1,v_2,v_3\rangle$ lies in $W^\perp$ exactly when
+
+$$v_1+v_2+v_3 = 0.$$
+
+This is one equation in three unknowns, so $v_2=s$ and $v_3=t$ are free and $v_1=-s-t$. Then
+
+$$\mathbf{v} = s\langle -1,1,0\rangle + t\langle -1,0,1\rangle,$$
+
+so $\{\langle -1,1,0\rangle,\ \langle -1,0,1\rangle\}$ spans $W^\perp$, and the two vectors are not multiples of each other, hence form a basis.
+
+Check: $\dim W + \dim W^\perp = 1+2 = 3 = n$ ✓, and each basis vector dots to $-1+1+0=0$ and $-1+0+1=0$ against $\langle 1,1,1\rangle$ ✓. Geometrically $W$ is a line through the origin and $W^\perp$ is the plane $x+y+z=0$ perpendicular to it.
+:::
+
+:::example[All four subspaces of one matrix]
+For
+
+$$A = \begin{pmatrix} 1 & 2 & 3\\ 2 & 4 & 6\end{pmatrix},$$
+
+find the dimensions of all four fundamental subspaces and a basis for $\operatorname{Nul}A^T$.
+:::
+
+:::solution
+Row reduce: the second row is twice the first, so $A$ reduces to $\begin{pmatrix}1&2&3\\0&0&0\end{pmatrix}$ and $r=\operatorname{rank}A = 1$. Here $m=2$, $n=3$, so
+
+$$\dim\operatorname{Row}A = 1,\quad \dim\operatorname{Nul}A = 3-1 = 2,\quad \dim\operatorname{Col}A = 1,\quad \dim\operatorname{Nul}A^T = 2-1 = 1.$$
+
+For $\operatorname{Nul}A^T$, solve $A^T\mathbf{y}=\mathbf{0}$ with $\mathbf{y}=\langle y_1,y_2\rangle$; all three equations read $y_1+2y_2=0$, $2y_1+4y_2=0$, $3y_1+6y_2=0$, which is the single condition $y_1=-2y_2$. A basis is $\{\langle -2,1\rangle\}$, matching $\dim = 1$ ✓.
+
+Sanity check the orthogonality: $\operatorname{Col}A$ is spanned by $\langle 1,2\rangle$, and $\langle -2,1\rangle\cdot\langle 1,2\rangle = -2+2 = 0$ ✓. So $\mathbf{b}=\langle 1,0\rangle$, which has a nonzero component along $\langle -2,1\rangle$, makes $A\mathbf{x}=\mathbf{b}$ inconsistent — exactly the situation least squares was invented for.
+:::
+
+:::pitfall
+$W^\perp$ is not "the vectors left over" or "the complementary coordinates". It is defined by an orthogonality condition, and it depends on the dot product, not on how you happened to write the vectors. Two subspaces can satisfy $\dim W+\dim U = n$ and $W\cap U = \{\mathbf{0}\}$ without $U$ being $W^\perp$ — the $x$-axis and the line $y=x$ in $\mathbb{R}^2$ are such a pair.
+:::
+
+## Orthogonal and orthonormal sets
+
+<!-- section: orthogonal-sets -->
+
+A basis is useful; an orthogonal basis is useful *and* cheap.
+
+:::definition[Orthogonal and orthonormal sets]{#orthonormal-definition}
+A set $\{\mathbf{u}_1,\ldots,\mathbf{u}_p\}\subseteq\mathbb{R}^n$ is **orthogonal** if $\mathbf{u}_i\cdot\mathbf{u}_j=0$ whenever $i\neq j$. It is **orthonormal** if in addition $\|\mathbf{u}_i\|=1$ for every $i$; equivalently,
+
+$$\mathbf{u}_i\cdot\mathbf{u}_j = \begin{cases}1 & i=j,\\ 0 & i\neq j.\end{cases}$$
+
+An **orthogonal basis** for a subspace $W$ is a basis of $W$ that is an orthogonal set; an **orthonormal basis** is one that is orthonormal.
+:::
+
+:::theorem[Orthogonal sets are linearly independent]{#orthogonal-independent}
+Every orthogonal set of **nonzero** vectors in $\mathbb{R}^n$ is linearly independent.
+:::
+
+:::proof
+Let $\{\mathbf{u}_1,\ldots,\mathbf{u}_p\}$ be orthogonal with every $\mathbf{u}_i\neq\mathbf{0}$, and suppose
+
+$$c_1\mathbf{u}_1 + c_2\mathbf{u}_2 + \cdots + c_p\mathbf{u}_p = \mathbf{0}.$$
+
+Fix an index $j$ and take the dot product of both sides with $\mathbf{u}_j$. On the right we get $0$. On the left, linearity gives $\sum_i c_i(\mathbf{u}_i\cdot\mathbf{u}_j)$, and every term with $i\neq j$ vanishes by orthogonality. What survives is
+
+$$c_j(\mathbf{u}_j\cdot\mathbf{u}_j) = c_j\|\mathbf{u}_j\|^2 = 0.$$
+
+Since $\mathbf{u}_j\neq\mathbf{0}$ we have $\|\mathbf{u}_j\|^2 > 0$, so $c_j=0$. As $j$ was arbitrary, all coefficients vanish and the set is independent.
+:::
+
+The hypothesis "nonzero" cannot be dropped: $\{\mathbf{0},\mathbf{e}_1\}$ is an orthogonal set, since $\mathbf{0}\cdot\mathbf{e}_1=0$, and it is dependent. Apart from that one degenerate case, orthogonality is a strictly stronger condition than independence and it is far easier to check — $\binom{p}{2}$ dot products rather than a row reduction.
+
+The real payoff is that coordinates become free.
+
+:::theorem[Coefficients in an orthogonal basis]{#orthogonal-coefficients}
+Let $\{\mathbf{u}_1,\ldots,\mathbf{u}_p\}$ be an orthogonal basis for a subspace $W$. Every $\mathbf{y}\in W$ has the unique expansion
+
+$$\mathbf{y} = c_1\mathbf{u}_1+\cdots+c_p\mathbf{u}_p, \qquad c_j = \frac{\mathbf{y}\cdot\mathbf{u}_j}{\mathbf{u}_j\cdot\mathbf{u}_j}.$$
+
+If the basis is orthonormal the denominators are $1$ and $c_j = \mathbf{y}\cdot\mathbf{u}_j$.
+:::
+
+:::proof
+Since the set is a basis of $W$, such an expansion exists and is unique; the only question is what the coefficients are. Dot both sides with $\mathbf{u}_j$. As in the previous proof every cross term dies, leaving
+
+$$\mathbf{y}\cdot\mathbf{u}_j = c_j(\mathbf{u}_j\cdot\mathbf{u}_j).$$
+
+Dividing by $\mathbf{u}_j\cdot\mathbf{u}_j = \|\mathbf{u}_j\|^2 \neq 0$ gives the formula.
+:::
+
+Compare the cost. In a general basis, finding coordinates means solving a $p\times p$ linear system — and if you later add a $(p+1)$-st basis vector, every old coordinate changes and you start again. In an orthogonal basis each coefficient is computed by one dot product, independently of all the others, and adding a new orthogonal vector leaves the old coefficients untouched. That independence is the reason Fourier series, wavelets, and principal components are all built on orthogonal bases.
+
+:::intuition
+An orthogonal basis is a set of measuring instruments that do not interfere. Asking "how much north?" and "how much east?" can be done in either order with the same answers. In a skewed basis the questions are entangled: how much of the first direction you need depends on how much of the second you took, so you must solve for all of them at once.
+:::
+
+Matrices whose columns are orthonormal deserve their own name, because the condition has a compact matrix form.
+
+:::theorem[Matrices with orthonormal columns]{#orthonormal-columns}
+Let $U$ be an $m\times n$ matrix. Its columns are orthonormal if and only if
+
+$$U^{T}U = I_n.$$
+
+When this holds, for all $\mathbf{x},\mathbf{y}\in\mathbb{R}^n$:
+
+$$\|U\mathbf{x}\| = \|\mathbf{x}\|, \qquad (U\mathbf{x})\cdot(U\mathbf{y}) = \mathbf{x}\cdot\mathbf{y}.$$
+
+In particular $U\mathbf{x}\perp U\mathbf{y}$ if and only if $\mathbf{x}\perp\mathbf{y}$: multiplication by $U$ preserves lengths and angles.
+:::
+
+:::proof
+Write $U=[\,\mathbf{u}_1\ \cdots\ \mathbf{u}_n\,]$. The $(i,j)$ entry of $U^TU$ is the $i$-th row of $U^T$ times the $j$-th column of $U$, that is $\mathbf{u}_i^T\mathbf{u}_j = \mathbf{u}_i\cdot\mathbf{u}_j$. So $U^TU=I_n$ says exactly that these dot products are $1$ on the diagonal and $0$ off it, which is orthonormality.
+
+Given $U^TU=I$, compute the inner product directly:
+
+$$(U\mathbf{x})\cdot(U\mathbf{y}) = (U\mathbf{x})^T(U\mathbf{y}) = \mathbf{x}^TU^TU\mathbf{y} = \mathbf{x}^TI\mathbf{y} = \mathbf{x}\cdot\mathbf{y}.$$
+
+Taking $\mathbf{y}=\mathbf{x}$ gives $\|U\mathbf{x}\|^2 = \|\mathbf{x}\|^2$, and lengths are non-negative, so $\|U\mathbf{x}\|=\|\mathbf{x}\|$. The statement about orthogonality is the case where one side is zero.
+:::
+
+:::definition[Orthogonal matrix]{#orthogonal-matrix}
+An **orthogonal matrix** is a *square* matrix $Q$ whose columns are orthonormal; equivalently $Q^TQ=I$, equivalently $Q^{-1}=Q^{T}$.
+:::
+
+The word is a historical misnomer — such a matrix ought to be called orthonormal — but it is universal, so it is worth stating the traps plainly. A non-square matrix with orthonormal columns satisfies $U^TU=I_n$ but **not** $UU^T=I_m$; only in the square case does $Q^TQ=I$ force $QQ^T=I$, and then the rows are orthonormal as well.
+
+:::corollary[Determinant and eigenvalues of an orthogonal matrix]{#orthogonal-determinant}
+If $Q$ is orthogonal then $\det Q = \pm 1$, and every real eigenvalue of $Q$ is $\pm 1$.
+:::
+
+:::proof
+From $Q^TQ=I$, take determinants: $\det(Q^T)\det(Q) = 1$. Since $\det(Q^T)=\det(Q)$, this gives $(\det Q)^2=1$, so $\det Q=\pm1$.
+
+If $Q\mathbf{x}=\lambda\mathbf{x}$ with $\mathbf{x}\neq\mathbf{0}$ and $\lambda$ real, then length preservation gives $\|\mathbf{x}\| = \|Q\mathbf{x}\| = |\lambda|\,\|\mathbf{x}\|$. Dividing by $\|\mathbf{x}\|>0$ gives $|\lambda|=1$, so $\lambda=\pm1$.
+:::
+
+(The same argument applied to complex eigenvalues shows every eigenvalue of an orthogonal matrix has modulus $1$; a rotation by $\theta$ in $\mathbb{R}^2$ has eigenvalues $e^{\pm i\theta}$ and no real eigenvalues at all.)
+
+:::example[Verifying an orthogonal basis and reading off coordinates]
+Show that $\mathbf{u}_1=\langle 3,1,1\rangle$, $\mathbf{u}_2=\langle -1,2,1\rangle$, $\mathbf{u}_3=\langle -1,-4,7\rangle$ is an orthogonal basis of $\mathbb{R}^3$, and express $\mathbf{y}=\langle 6,1,-8\rangle$ in it.
+:::
+
+:::solution
+Three dot products settle orthogonality:
+
+$$\mathbf{u}_1\cdot\mathbf{u}_2 = -3+2+1 = 0,\quad \mathbf{u}_1\cdot\mathbf{u}_3 = -3-4+7 = 0,\quad \mathbf{u}_2\cdot\mathbf{u}_3 = 1-8+7 = 0.$$
+
+All three vectors are nonzero, so by the independence theorem they are independent; three independent vectors in $\mathbb{R}^3$ form a basis.
+
+Now the coefficients. The norms squared are $\mathbf{u}_1\cdot\mathbf{u}_1 = 9+1+1 = 11$, $\mathbf{u}_2\cdot\mathbf{u}_2 = 1+4+1 = 6$, $\mathbf{u}_3\cdot\mathbf{u}_3 = 1+16+49 = 66$. The numerators are
+
+$$\mathbf{y}\cdot\mathbf{u}_1 = 18+1-8 = 11,\quad \mathbf{y}\cdot\mathbf{u}_2 = -6+2-8 = -12,\quad \mathbf{y}\cdot\mathbf{u}_3 = -6-4-56 = -66.$$
+
+Hence $c_1 = 11/11 = 1$, $c_2 = -12/6 = -2$, $c_3 = -66/66 = -1$, and
+
+$$\mathbf{y} = \mathbf{u}_1 - 2\mathbf{u}_2 - \mathbf{u}_3.$$
+
+Check by recomputing: $\langle 3,1,1\rangle - 2\langle -1,2,1\rangle - \langle -1,-4,7\rangle = \langle 3+2+1,\ 1-4+4,\ 1-2-7\rangle = \langle 6,1,-8\rangle$ ✓. Notice that no linear system was solved.
+:::
+
+:::example[A matrix with orthonormal columns]
+Let
+
+$$U = \begin{pmatrix} 1/3 & -2/3\\ 2/3 & -1/3 \\ 2/3 & 2/3 \end{pmatrix}.$$
+
+Verify $U^TU=I_2$, compute $\|U\mathbf{x}\|$ for $\mathbf{x}=\langle 3,-4\rangle$, and explain why $UU^T\neq I_3$.
+:::
+
+:::solution
+The columns have squared lengths $\tfrac19+\tfrac49+\tfrac49 = 1$ and $\tfrac49+\tfrac19+\tfrac49 = 1$, and their dot product is
+
+$$-\tfrac{2}{9}-\tfrac{2}{9}+\tfrac{4}{9} = 0,$$
+
+so $U^TU = I_2$ ✓.
+
+Length preservation gives $\|U\mathbf{x}\| = \|\mathbf{x}\| = \sqrt{9+16} = 5$ without computing $U\mathbf{x}$. (If you want the check: $U\mathbf{x} = \langle 1+ \tfrac83,\ 2+\tfrac43,\ 2-\tfrac83\rangle = \langle \tfrac{11}{3},\tfrac{10}{3},-\tfrac23\rangle$, whose squared length is $\tfrac{121+100+4}{9} = \tfrac{225}{9} = 25$ ✓.)
+
+Finally, $UU^T$ is $3\times 3$ but $\operatorname{rank}(UU^T) \le \operatorname{rank} U = 2 < 3$, so $UU^T$ is singular and cannot be $I_3$. In fact $UU^T$ is the matrix that projects $\mathbb{R}^3$ onto the plane spanned by the columns of $U$ — the subject of the next section.
+:::
+
+:::pitfall
+The formula $c_j = \mathbf{y}\cdot\mathbf{u}_j$ with no denominator is for **orthonormal** bases only. With merely orthogonal vectors you must divide by $\mathbf{u}_j\cdot\mathbf{u}_j$. Forgetting the denominator scales every coordinate by the wrong factor and is the single most common error in this chapter.
+:::
+
+## Orthogonal projection
+
+<!-- section: projection -->
+
+We can now answer the question that motivates the rest of the chapter: given a subspace $W$ and a vector $\mathbf{y}$ outside it, what is the point of $W$ closest to $\mathbf{y}$?
+
+:::theorem[Orthogonal Decomposition Theorem]{#orthogonal-decomposition}
+Let $W$ be a subspace of $\mathbb{R}^n$. Every $\mathbf{y}\in\mathbb{R}^n$ can be written in exactly one way as
+
+$$\mathbf{y} = \hat{\mathbf{y}} + \mathbf{z}, \qquad \hat{\mathbf{y}}\in W,\quad \mathbf{z}\in W^{\perp}.$$
+
+If $\{\mathbf{u}_1,\ldots,\mathbf{u}_p\}$ is any orthogonal basis of $W$, then
+
+$$\hat{\mathbf{y}} = \frac{\mathbf{y}\cdot\mathbf{u}_1}{\mathbf{u}_1\cdot\mathbf{u}_1}\mathbf{u}_1 + \cdots + \frac{\mathbf{y}\cdot\mathbf{u}_p}{\mathbf{u}_p\cdot\mathbf{u}_p}\mathbf{u}_p, \qquad \mathbf{z} = \mathbf{y}-\hat{\mathbf{y}}.$$
+
+The vector $\hat{\mathbf{y}}$ is called the **orthogonal projection of $\mathbf{y}$ onto $W$**, written $\operatorname{proj}_W\mathbf{y}$.
+:::
+
+:::proof
+*Existence.* Every subspace of $\mathbb{R}^n$ has an orthogonal basis — the Gram–Schmidt process constructs one from any basis, as the next section shows — so fix one, $\{\mathbf{u}_1,\ldots,\mathbf{u}_p\}$, and define $\hat{\mathbf{y}}$ by the displayed formula and $\mathbf{z}=\mathbf{y}-\hat{\mathbf{y}}$. Then $\hat{\mathbf{y}}\in W$, being a combination of the $\mathbf{u}_i$. To see $\mathbf{z}\in W^\perp$ it suffices, by the finite test, to check $\mathbf{z}\cdot\mathbf{u}_j=0$ for each $j$. Dotting the formula with $\mathbf{u}_j$ kills every term but the $j$-th:
+
+$$\hat{\mathbf{y}}\cdot\mathbf{u}_j = \frac{\mathbf{y}\cdot\mathbf{u}_j}{\mathbf{u}_j\cdot\mathbf{u}_j}(\mathbf{u}_j\cdot\mathbf{u}_j) = \mathbf{y}\cdot\mathbf{u}_j,$$
+
+so $\mathbf{z}\cdot\mathbf{u}_j = \mathbf{y}\cdot\mathbf{u}_j - \hat{\mathbf{y}}\cdot\mathbf{u}_j = 0$.
+
+*Uniqueness.* Suppose $\mathbf{y} = \hat{\mathbf{y}}_1+\mathbf{z}_1 = \hat{\mathbf{y}}_2+\mathbf{z}_2$ with $\hat{\mathbf{y}}_i\in W$ and $\mathbf{z}_i\in W^\perp$. Then
+
+$$\hat{\mathbf{y}}_1-\hat{\mathbf{y}}_2 = \mathbf{z}_2-\mathbf{z}_1.$$
+
+The left side lies in $W$ and the right side lies in $W^\perp$, so the common value lies in $W\cap W^\perp = \{\mathbf{0}\}$. Hence $\hat{\mathbf{y}}_1=\hat{\mathbf{y}}_2$ and $\mathbf{z}_1=\mathbf{z}_2$.
+:::
+
+Uniqueness has a consequence worth stating: although the formula for $\hat{\mathbf{y}}$ mentions a particular orthogonal basis, the answer does not depend on which one you chose. Two different orthogonal bases of $W$ give the same projection, because both produce a decomposition of the required form and there is only one.
+
+The simplest case is a line, $W = \operatorname{Span}\{\mathbf{u}\}$ with $\mathbf{u}\neq\mathbf{0}$, where the sum has one term:
+
+$$\operatorname{proj}_{\mathbf{u}}\mathbf{y} = \frac{\mathbf{y}\cdot\mathbf{u}}{\mathbf{u}\cdot\mathbf{u}}\,\mathbf{u}.$$
+
+The fraction is a scalar — how much of $\mathbf{y}$ lies along $\mathbf{u}$, measured in units of $\mathbf{u}$ — and multiplying by $\mathbf{u}$ turns it back into a vector. The related quantity $\dfrac{\mathbf{y}\cdot\mathbf{u}}{\|\mathbf{u}\|}$ is the **scalar projection**, the signed length of $\operatorname{proj}_{\mathbf{u}}\mathbf{y}$.
+
+:::theorem[Best Approximation Theorem]{#best-approximation}
+Let $W$ be a subspace of $\mathbb{R}^n$, let $\mathbf{y}\in\mathbb{R}^n$, and let $\hat{\mathbf{y}}=\operatorname{proj}_W\mathbf{y}$. Then for every $\mathbf{w}\in W$ with $\mathbf{w}\neq\hat{\mathbf{y}}$,
+
+$$\|\mathbf{y}-\hat{\mathbf{y}}\| < \|\mathbf{y}-\mathbf{w}\|.$$
+
+So $\hat{\mathbf{y}}$ is the unique closest point of $W$ to $\mathbf{y}$, and $\operatorname{dist}(\mathbf{y},W) = \|\mathbf{y}-\hat{\mathbf{y}}\|$.
+:::
+
+:::proof
+Split the error through $\hat{\mathbf{y}}$:
+
+$$\mathbf{y}-\mathbf{w} = (\mathbf{y}-\hat{\mathbf{y}}) + (\hat{\mathbf{y}}-\mathbf{w}).$$
+
+The first piece lies in $W^\perp$ by the decomposition theorem; the second lies in $W$, since $\hat{\mathbf{y}}$ and $\mathbf{w}$ both do. So the two pieces are orthogonal and Pythagoras applies:
+
+$$\|\mathbf{y}-\mathbf{w}\|^2 = \|\mathbf{y}-\hat{\mathbf{y}}\|^2 + \|\hat{\mathbf{y}}-\mathbf{w}\|^2.$$
+
+If $\mathbf{w}\neq\hat{\mathbf{y}}$ the last term is strictly positive, so $\|\mathbf{y}-\mathbf{w}\|^2 > \|\mathbf{y}-\hat{\mathbf{y}}\|^2$, and taking square roots gives the strict inequality.
+:::
+
+That proof is the whole of least squares in three lines, and it is worth seeing what it depends on. It needs *only* that the error $\mathbf{y}-\hat{\mathbf{y}}$ is perpendicular to $W$. Any other candidate $\mathbf{w}$ is penalised by the extra leg $\|\hat{\mathbf{y}}-\mathbf{w}\|^2$, which is a squared length and therefore cannot help. Minimising a distance has been converted into satisfying an orthogonality condition, and orthogonality conditions are linear equations.
+
+:::intuition
+Stand on a ladder above a flat floor. Your shadow with the sun straight overhead is the point of the floor nearest your feet, and the line from shadow to foot is vertical — perpendicular to the floor. Walk your shadow anywhere else on the floor and you have added a horizontal leg to a right triangle whose vertical leg has not changed, so the distance can only grow. The Best Approximation Theorem is that right triangle.
+:::
+
+Now we build the matrix that performs a projection. Suppose the columns of an $n\times p$ matrix $A$ form a basis for $W$ — not necessarily orthogonal. Then $\hat{\mathbf{y}}\in W = \operatorname{Col}A$ means $\hat{\mathbf{y}}=A\hat{\mathbf{x}}$ for some $\hat{\mathbf{x}}$, and the orthogonality of the error says $A^T(\mathbf{y}-A\hat{\mathbf{x}}) = \mathbf{0}$, i.e.
+
+$$A^TA\hat{\mathbf{x}} = A^T\mathbf{y}.$$
+
+To solve for $\hat{\mathbf{x}}$ we need $A^TA$ to be invertible, which is exactly what independent columns buy us.
+
+:::lemma[Invertibility of $A^TA$]{#ata-invertible}
+For an $n\times p$ matrix $A$, the $p\times p$ matrix $A^TA$ is invertible if and only if the columns of $A$ are linearly independent. In that case $A^TA$ is symmetric and positive definite.
+:::
+
+:::proof
+First, $\operatorname{Nul}(A^TA) = \operatorname{Nul}(A)$. Indeed if $A\mathbf{x}=\mathbf{0}$ then certainly $A^TA\mathbf{x}=\mathbf{0}$. Conversely if $A^TA\mathbf{x}=\mathbf{0}$, multiply on the left by $\mathbf{x}^T$:
+
+$$0 = \mathbf{x}^TA^TA\mathbf{x} = (A\mathbf{x})\cdot(A\mathbf{x}) = \|A\mathbf{x}\|^2,$$
+
+so $A\mathbf{x}=\mathbf{0}$ by positive definiteness.
+
+Now $A^TA$ is a square $p\times p$ matrix, so it is invertible if and only if its null space is trivial, if and only if $\operatorname{Nul}A=\{\mathbf{0}\}$, if and only if the columns of $A$ are independent. Symmetry is $(A^TA)^T = A^T(A^T)^T = A^TA$. Positive definiteness follows from the same computation: for $\mathbf{x}\neq\mathbf{0}$, $\mathbf{x}^T(A^TA)\mathbf{x} = \|A\mathbf{x}\|^2 > 0$ because $A\mathbf{x}\neq\mathbf{0}$.
+:::
+
+:::theorem[The projection matrix]{#projection-matrix}
+Let the columns of the $n\times p$ matrix $A$ be a basis for $W\subseteq\mathbb{R}^n$. Then for every $\mathbf{y}$,
+
+$$\operatorname{proj}_W\mathbf{y} = P\mathbf{y}, \qquad P = A(A^TA)^{-1}A^T.$$
+
+If the columns of $A$ are *orthonormal* — write $A=U$ — this simplifies to $P = UU^{T}$, and for a single unit vector $\mathbf{u}$ to the rank-one matrix $P=\mathbf{u}\mathbf{u}^T$.
+:::
+
+:::proof
+By the lemma $A^TA$ is invertible, so the derivation above solves to give $\hat{\mathbf{x}} = (A^TA)^{-1}A^T\mathbf{y}$ and hence $\hat{\mathbf{y}} = A\hat{\mathbf{x}} = A(A^TA)^{-1}A^T\mathbf{y}$. To confirm this is the projection, note $\hat{\mathbf{y}}\in\operatorname{Col}A=W$ and
+
+$$A^T(\mathbf{y}-\hat{\mathbf{y}}) = A^T\mathbf{y} - A^TA(A^TA)^{-1}A^T\mathbf{y} = A^T\mathbf{y}-A^T\mathbf{y} = \mathbf{0},$$
+
+so $\mathbf{y}-\hat{\mathbf{y}}\perp$ every column of $A$, i.e. $\mathbf{y}-\hat{\mathbf{y}}\in W^\perp$. By uniqueness in the Orthogonal Decomposition Theorem, $\hat{\mathbf{y}}=\operatorname{proj}_W\mathbf{y}$.
+
+When the columns are orthonormal, $U^TU=I_p$, so $(U^TU)^{-1}=I_p$ and $P=UI_pU^T=UU^T$.
+:::
+
+:::theorem[Projection matrices are exactly the symmetric idempotents]{#idempotent-characterisation}
+A matrix $P$ of size $n\times n$ satisfies
+
+$$P^2 = P \quad\text{and}\quad P^T = P$$
+
+if and only if $P$ is the orthogonal projection onto the subspace $W=\operatorname{Col}P$. In that case $I-P$ is the orthogonal projection onto $W^\perp$.
+:::
+
+:::proof
+($\Rightarrow$ for the formula.) If $P=A(A^TA)^{-1}A^T$, write $M=(A^TA)^{-1}$, which is symmetric because $A^TA$ is. Then
+
+$$P^T = (AMA^T)^T = A M^T A^T = AMA^T = P,$$
+
+and
+
+$$P^2 = AMA^T\,AMA^T = A M (A^TA) M A^T = A M A^T = P,$$
+
+since $M(A^TA)=I$.
+
+($\Leftarrow$.) Suppose $P^2=P=P^T$, and let $W=\operatorname{Col}P$. Given any $\mathbf{y}$, write $\mathbf{y} = P\mathbf{y} + (I-P)\mathbf{y}$. The first term is in $W$ by definition. For the second, take any $\mathbf{w}\in W$, say $\mathbf{w}=P\mathbf{u}$; then
+
+$$\big((I-P)\mathbf{y}\big)\cdot(P\mathbf{u}) = \mathbf{y}^T(I-P)^TP\mathbf{u} = \mathbf{y}^T(I-P)P\mathbf{u} = \mathbf{y}^T(P-P^2)\mathbf{u} = \mathbf{y}^T\mathbf{0} = \mathbf{0},$$
+
+using symmetry in the second step and idempotence in the fourth. So $(I-P)\mathbf{y}\in W^\perp$, and this is the decomposition of the Orthogonal Decomposition Theorem; by its uniqueness, $P\mathbf{y}=\operatorname{proj}_W\mathbf{y}$. The same display shows $I-P$ is symmetric and idempotent with column space $W^\perp$, so it projects onto $W^\perp$.
+:::
+
+Both hypotheses are needed. The matrix $\begin{pmatrix}1&1\\0&0\end{pmatrix}$ is idempotent but not symmetric: it is a projection onto the $x$-axis, but *along* the line $y=-x$ rather than perpendicularly, and it is not distance-minimising. Symmetry is what makes a projection orthogonal.
+
+:::example[Projecting onto a plane using an orthogonal basis]
+Let $W=\operatorname{Span}\{\mathbf{u}_1,\mathbf{u}_2\}$ with $\mathbf{u}_1=\langle 1,1,0\rangle$ and $\mathbf{u}_2=\langle 1,-1,0\rangle$ (this is the $xy$-plane). Project $\mathbf{y}=\langle 2,4,5\rangle$ onto $W$ and find the distance from $\mathbf{y}$ to $W$.
+:::
+
+:::solution
+The basis is orthogonal: $\mathbf{u}_1\cdot\mathbf{u}_2 = 1-1+0 = 0$ ✓. Both have $\mathbf{u}_i\cdot\mathbf{u}_i = 2$, and
+
+$$\mathbf{y}\cdot\mathbf{u}_1 = 2+4 = 6, \qquad \mathbf{y}\cdot\mathbf{u}_2 = 2-4 = -2.$$
+
+So
+
+$$\hat{\mathbf{y}} = \tfrac{6}{2}\langle 1,1,0\rangle + \tfrac{-2}{2}\langle 1,-1,0\rangle = \langle 3,3,0\rangle + \langle -1,1,0\rangle = \langle 2,4,0\rangle.$$
+
+The error is $\mathbf{z} = \mathbf{y}-\hat{\mathbf{y}} = \langle 0,0,5\rangle$, and $\operatorname{dist}(\mathbf{y},W) = \|\mathbf{z}\| = 5$.
+
+Two checks. First, $\mathbf{z}\cdot\mathbf{u}_1 = 0$ and $\mathbf{z}\cdot\mathbf{u}_2 = 0$ ✓. Second, Pythagoras: $\|\mathbf{y}\|^2 = 4+16+25 = 45$ should equal $\|\hat{\mathbf{y}}\|^2+\|\mathbf{z}\|^2 = (4+16)+25 = 45$ ✓. And the answer is obviously right geometrically: projecting onto the $xy$-plane deletes the $z$-coordinate.
+:::
+
+:::example[A projection matrix from a non-orthogonal basis]
+Let $A=\begin{pmatrix}1&0\\1&1\\0&1\end{pmatrix}$, whose columns are independent but not orthogonal. Compute $P=A(A^TA)^{-1}A^T$ and use it to project $\mathbf{b}=\langle 1,0,0 \rangle$ onto $W=\operatorname{Col}A$.
+:::
+
+:::solution
+First $A^TA = \begin{pmatrix}2&1\\1&2\end{pmatrix}$, with determinant $3$, so
+
+$$(A^TA)^{-1} = \frac13\begin{pmatrix}2&-1\\-1&2\end{pmatrix}.$$
+
+Next $A(A^TA)^{-1} = \dfrac13\begin{pmatrix}1&0\\1&1\\0&1\end{pmatrix}\begin{pmatrix}2&-1\\-1&2\end{pmatrix} = \dfrac13\begin{pmatrix}2&-1\\1&1\\-1&2\end{pmatrix}$, and multiplying by $A^T=\begin{pmatrix}1&1&0\\0&1&1\end{pmatrix}$ gives
+
+$$P = \frac13\begin{pmatrix}2&1&-1\\1&2&1\\-1&1&2\end{pmatrix}.$$
+
+Then $P\mathbf{b}$ is the first column of $P$:
+
+$$\operatorname{proj}_W\mathbf{b} = \left\langle \tfrac23,\ \tfrac13,\ -\tfrac13 \right\rangle.$$
+
+Checks. The trace of $P$ is $\tfrac{2+2+2}{3}=2=\dim W$, as it must be for a projection matrix (a projection's eigenvalues are $1$ with multiplicity $\dim W$ and $0$ otherwise). $P$ is visibly symmetric. And the error $\mathbf{b}-P\mathbf{b} = \langle \tfrac13,-\tfrac13,\tfrac13\rangle$ dots to $\tfrac13-\tfrac13+0 = 0$ against the first column of $A$ and $0-\tfrac13+\tfrac13=0$ against the second ✓.
+:::
+
+:::example[Distance from a point to a plane through the origin]
+Find the distance from $\mathbf{y}=\langle 1,1,0\rangle$ to the plane $W: x+y+z=0$.
+:::
+
+:::solution
+Rather than find a basis for the plane, project onto its orthogonal complement: $W^\perp$ is the line spanned by the normal $\mathbf{n}=\langle 1,1,1\rangle$, and the component of $\mathbf{y}$ in $W^\perp$ *is* the error $\mathbf{z}$. So
+
+$$\mathbf{z} = \frac{\mathbf{y}\cdot\mathbf{n}}{\mathbf{n}\cdot\mathbf{n}}\mathbf{n} = \frac{2}{3}\langle 1,1,1\rangle = \left\langle \tfrac23,\tfrac23,\tfrac23\right\rangle,$$
+
+and the distance is
+
+$$\|\mathbf{z}\| = \frac{2}{3}\sqrt{3} = \frac{2}{\sqrt3}.$$
+
+As a by-product $\operatorname{proj}_W\mathbf{y} = \mathbf{y}-\mathbf{z} = \left\langle \tfrac13,\tfrac13,-\tfrac23\right\rangle$, which indeed satisfies $\tfrac13+\tfrac13-\tfrac23 = 0$ ✓. Projecting onto the complement is almost always the cheaper route when $\dim W^\perp < \dim W$.
+:::
+
+:::pitfall
+The formula $P = A(A^TA)^{-1}A^T$ requires the columns of $A$ to be a **basis** for $W$ — independent. If you include a redundant spanning vector, $A^TA$ is singular and the formula is meaningless. And do not "simplify" $A(A^TA)^{-1}A^T$ to $AA^{-1}(A^T)^{-1}A^T = I$: $A$ is not square, so $A^{-1}$ does not exist.
+:::
+
+## The Gram–Schmidt process
+
+<!-- section: gram-schmidt -->
+
+Orthogonal bases make everything easy, but subspaces do not arrive equipped with one. Gram–Schmidt manufactures one, and it does so by using the only tool we have: projection.
+
+Suppose $\{\mathbf{x}_1,\ldots,\mathbf{x}_p\}$ is a basis for $W$. Take $\mathbf{v}_1=\mathbf{x}_1$; there is nothing yet to be orthogonal to. For $\mathbf{v}_2$ we want a vector in $\operatorname{Span}\{\mathbf{x}_1,\mathbf{x}_2\}$ that is orthogonal to $\mathbf{v}_1$. Write $\mathbf{x}_2$ as its component along $\mathbf{v}_1$ plus what is left over; the leftover is exactly what we want:
+
+$$\mathbf{v}_2 = \mathbf{x}_2 - \frac{\mathbf{x}_2\cdot\mathbf{v}_1}{\mathbf{v}_1\cdot\mathbf{v}_1}\mathbf{v}_1.$$
+
+At the $k$-th step the same idea applies with $W_{k-1}=\operatorname{Span}\{\mathbf{v}_1,\ldots,\mathbf{v}_{k-1}\}$: subtract from $\mathbf{x}_k$ its projection onto everything already built.
+
+:::recipe[The Gram–Schmidt process]{#gram-schmidt-recipe}
+Given a basis $\{\mathbf{x}_1,\ldots,\mathbf{x}_p\}$ of $W$, set $\mathbf{v}_1=\mathbf{x}_1$ and, for $k=2,\ldots,p$,
+
+$$\mathbf{v}_k = \mathbf{x}_k - \sum_{j=1}^{k-1}\frac{\mathbf{x}_k\cdot\mathbf{v}_j}{\mathbf{v}_j\cdot\mathbf{v}_j}\,\mathbf{v}_j.$$
+
+Then $\{\mathbf{v}_1,\ldots,\mathbf{v}_p\}$ is an orthogonal basis of $W$. To obtain an orthonormal basis, normalise at the end:
+
+$$\mathbf{u}_k = \frac{\mathbf{v}_k}{\|\mathbf{v}_k\|}.$$
+:::
+
+:::theorem[Correctness of Gram–Schmidt]{#gram-schmidt-theorem}
+With the notation of the recipe, for each $k=1,\ldots,p$:
+
+1. $\mathbf{v}_k \neq \mathbf{0}$;
+2. $\mathbf{v}_k$ is orthogonal to $\mathbf{v}_1,\ldots,\mathbf{v}_{k-1}$;
+3. $\operatorname{Span}\{\mathbf{v}_1,\ldots,\mathbf{v}_k\} = \operatorname{Span}\{\mathbf{x}_1,\ldots,\mathbf{x}_k\}$.
+
+Consequently $\{\mathbf{v}_1,\ldots,\mathbf{v}_p\}$ is an orthogonal basis of $W$, and the normalised $\{\mathbf{u}_1,\ldots,\mathbf{u}_p\}$ is an orthonormal basis of $W$.
+:::
+
+:::proof
+Induction on $k$. For $k=1$ all three claims are clear: $\mathbf{v}_1=\mathbf{x}_1\neq\mathbf{0}$ since it belongs to a basis, claim 2 is vacuous, and claim 3 is an identity.
+
+Assume the claims for all indices below $k$. By the inductive hypothesis $\{\mathbf{v}_1,\ldots,\mathbf{v}_{k-1}\}$ is an orthogonal set of nonzero vectors spanning $W_{k-1}=\operatorname{Span}\{\mathbf{x}_1,\ldots,\mathbf{x}_{k-1}\}$, hence an orthogonal *basis* of it. The sum subtracted in the recipe is therefore exactly $\operatorname{proj}_{W_{k-1}}\mathbf{x}_k$, by the Orthogonal Decomposition Theorem, and so
+
+$$\mathbf{v}_k = \mathbf{x}_k - \operatorname{proj}_{W_{k-1}}\mathbf{x}_k \in W_{k-1}^{\perp},$$
+
+which gives claim 2.
+
+For claim 1: if $\mathbf{v}_k=\mathbf{0}$ then $\mathbf{x}_k = \operatorname{proj}_{W_{k-1}}\mathbf{x}_k \in W_{k-1} = \operatorname{Span}\{\mathbf{x}_1,\ldots,\mathbf{x}_{k-1}\}$, contradicting the linear independence of the $\mathbf{x}_i$.
+
+For claim 3: $\mathbf{v}_k$ is $\mathbf{x}_k$ plus a combination of $\mathbf{v}_1,\ldots,\mathbf{v}_{k-1}$, all of which lie in $\operatorname{Span}\{\mathbf{x}_1,\ldots,\mathbf{x}_{k-1}\}$; hence $\mathbf{v}_k\in\operatorname{Span}\{\mathbf{x}_1,\ldots,\mathbf{x}_k\}$ and the left span is contained in the right. Rearranging the recipe as $\mathbf{x}_k = \mathbf{v}_k + \sum_{j<k}(\cdots)\mathbf{v}_j$ gives the reverse containment. Both spans then have the same dimension $k$ and one contains the other, so they are equal.
+
+Finally, the $\mathbf{v}_k$ are pairwise orthogonal and nonzero, hence independent, and there are $p=\dim W$ of them inside $W$: an orthogonal basis. Normalising rescales each by a positive number, which changes neither orthogonality nor the span, and makes each length $1$.
+:::
+
+Two remarks on the recipe. First, the projections are subtracted from the *original* $\mathbf{x}_k$, not from a partially updated vector, and they use *all* previous $\mathbf{v}_j$, not just $\mathbf{v}_{k-1}$. Second, it is almost always easier to postpone normalising: dividing by $\|\mathbf{v}_k\|$ early introduces square roots into every subsequent arithmetic step, and since the recipe's denominators $\mathbf{v}_j\cdot\mathbf{v}_j$ handle the scaling automatically, nothing is gained. You may also rescale any $\mathbf{v}_k$ by a nonzero constant to clear fractions before continuing — the span and the orthogonality are unaffected.
+
+:::intuition
+Gram–Schmidt builds a coordinate frame one axis at a time, like squaring up a crooked room. The first wall you simply accept as a reference direction. For the second wall you take the crooked one and shave off however much of it points along the first — what remains is genuinely perpendicular. For the third you shave off its overlap with *both* finished walls. Each vector keeps whatever part of it is new and surrenders whatever part was already accounted for.
+:::
+
+:::example[Gram–Schmidt on two vectors]
+Find an orthogonal basis and then an orthonormal basis for $W=\operatorname{Span}\{\mathbf{x}_1,\mathbf{x}_2\}$, where $\mathbf{x}_1=\langle 3,6,0\rangle$ and $\mathbf{x}_2=\langle 1,2,2\rangle$.
+:::
+
+:::solution
+Set $\mathbf{v}_1=\mathbf{x}_1 = \langle 3,6,0\rangle$. Then $\mathbf{v}_1\cdot\mathbf{v}_1 = 9+36 = 45$ and $\mathbf{x}_2\cdot\mathbf{v}_1 = 3+12+0 = 15$, so
+
+$$\mathbf{v}_2 = \langle 1,2,2\rangle - \frac{15}{45}\langle 3,6,0\rangle = \langle 1,2,2\rangle - \langle 1,2,0\rangle = \langle 0,0,2\rangle.$$
+
+Check: $\mathbf{v}_1\cdot\mathbf{v}_2 = 0$ ✓. An orthogonal basis is $\{\langle 3,6,0\rangle,\ \langle 0,0,2\rangle\}$, or more simply $\{\langle 1,2,0\rangle,\ \langle 0,0,1\rangle\}$ after rescaling.
+
+Normalising: $\|\mathbf{v}_1\| = \sqrt{45} = 3\sqrt5$ and $\|\mathbf{v}_2\|=2$, so
+
+$$\mathbf{u}_1 = \left\langle \tfrac{1}{\sqrt5},\tfrac{2}{\sqrt5},0\right\rangle, \qquad \mathbf{u}_2 = \langle 0,0,1\rangle.$$
+
+Check $\|\mathbf{u}_1\|^2 = \tfrac15+\tfrac45 = 1$ ✓ and $\mathbf{u}_1\cdot\mathbf{u}_2 = 0$ ✓. Span preserved: $\mathbf{x}_2 = \mathbf{v}_2 + \tfrac13\mathbf{v}_1$, so nothing was lost.
+:::
+
+:::example[Gram–Schmidt on three vectors]
+Apply Gram–Schmidt to $\mathbf{x}_1=\langle 1,1,1,1\rangle$, $\mathbf{x}_2=\langle 0,1,1,1\rangle$, $\mathbf{x}_3=\langle 0,0,1,1\rangle$ in $\mathbb{R}^4$.
+:::
+
+:::solution
+Step 1: $\mathbf{v}_1 = \langle 1,1,1,1\rangle$, with $\mathbf{v}_1\cdot\mathbf{v}_1 = 4$.
+
+Step 2: $\mathbf{x}_2\cdot\mathbf{v}_1 = 0+1+1+1 = 3$, so
+
+$$\mathbf{v}_2 = \langle 0,1,1,1\rangle - \tfrac34\langle 1,1,1,1\rangle = \left\langle -\tfrac34,\tfrac14,\tfrac14,\tfrac14\right\rangle.$$
+
+Rescale by $4$ to $\mathbf{v}_2' = \langle -3,1,1,1\rangle$, which is legitimate and keeps the arithmetic in integers. Then $\mathbf{v}_2'\cdot\mathbf{v}_2' = 9+1+1+1 = 12$.
+
+Step 3: $\mathbf{x}_3\cdot\mathbf{v}_1 = 0+0+1+1 = 2$ and $\mathbf{x}_3\cdot\mathbf{v}_2' = 0+0+1+1 = 2$, so
+
+$$\mathbf{v}_3 = \langle 0,0,1,1\rangle - \tfrac24\langle 1,1,1,1\rangle - \tfrac{2}{12}\langle -3,1,1,1\rangle = \langle 0,0,1,1\rangle - \left\langle \tfrac12,\tfrac12,\tfrac12,\tfrac12\right\rangle + \left\langle \tfrac12,-\tfrac16,-\tfrac16,-\tfrac16\right\rangle.$$
+
+Adding componentwise, $\mathbf{v}_3 = \left\langle 0,\ -\tfrac23,\ \tfrac13,\ \tfrac13\right\rangle$, which rescales to $\mathbf{v}_3' = \langle 0,-2,1,1\rangle$.
+
+Checks: $\mathbf{v}_1\cdot\mathbf{v}_3' = 0-2+1+1 = 0$ ✓ and $\mathbf{v}_2'\cdot\mathbf{v}_3' = 0-2+1+1 = 0$ ✓. Normalised, the orthonormal basis is
+
+$$\tfrac12\langle 1,1,1,1\rangle,\qquad \tfrac{1}{2\sqrt3}\langle -3,1,1,1\rangle,\qquad \tfrac{1}{\sqrt6}\langle 0,-2,1,1\rangle.$$
+:::
+
+:::remark[Classical versus modified Gram–Schmidt]
+The recipe as written is *classical* Gram–Schmidt, and in exact arithmetic it is correct. In floating point it is not to be trusted. When the $\mathbf{x}_k$ are nearly dependent, $\mathbf{v}_k$ is a small difference of large vectors, rounding errors are amplified by the cancellation, and the computed vectors drift out of orthogonality — sometimes catastrophically.
+
+*Modified Gram–Schmidt* fixes most of this by subtracting one projection at a time and updating as it goes:
+
+$$\mathbf{v}_k \leftarrow \mathbf{x}_k, \qquad \text{then for } j=1,\ldots,k-1: \quad \mathbf{v}_k \leftarrow \mathbf{v}_k - \frac{\mathbf{v}_k\cdot\mathbf{v}_j}{\mathbf{v}_j\cdot\mathbf{v}_j}\mathbf{v}_j.$$
+
+Mathematically the two produce the same answer — each projection is taken against an already-orthogonal $\mathbf{v}_j$ — but numerically the modified version measures each overlap against the *current* partially-orthogonalised vector, so an error made at step $j$ is corrected at step $j+1$ instead of compounding.
+
+Serious software does neither. LAPACK computes $QR$ by *Householder reflections*: instead of building orthogonal vectors, it applies a sequence of orthogonal reflection matrices that zero out the entries below the diagonal of $A$ one column at a time. Because every step is an exactly orthogonal transformation, the computed $Q$ is orthogonal to machine precision no matter how ill-conditioned $A$ is. Gram–Schmidt remains the right way to *understand* orthogonalisation, and the wrong way to implement it.
+:::
+
+:::pitfall
+Gram–Schmidt depends on the order of the input vectors: reordering $\mathbf{x}_1,\ldots,\mathbf{x}_p$ generally produces a different orthonormal basis, and $\mathbf{u}_1$ is always a multiple of $\mathbf{x}_1$. So "find the orthonormal basis" is never a well-posed question; the order must be specified. The *subspace* spanned is of course the same either way.
+:::
+
+## The $QR$ factorization
+
+<!-- section: qr -->
+
+Gram–Schmidt does more than produce an orthonormal basis: it records, in its own coefficients, how to rebuild the original vectors. Collecting those coefficients into a matrix gives one of the two or three most important factorizations in numerical linear algebra.
+
+:::theorem[$QR$ factorization]{#qr-factorization}
+Let $A$ be an $m\times n$ matrix with linearly independent columns. Then $A$ can be written
+
+$$A = QR,$$
+
+where $Q$ is $m\times n$ with orthonormal columns (so $Q^TQ=I_n$) and $R$ is $n\times n$, upper triangular, with strictly positive diagonal entries. Moreover $R = Q^TA$, and the factorization with positive diagonal is unique.
+:::
+
+:::proof
+*Existence.* Let $\mathbf{x}_1,\ldots,\mathbf{x}_n$ be the columns of $A$ and run Gram–Schmidt to get the orthonormal $\mathbf{u}_1,\ldots,\mathbf{u}_n$; set $Q=[\,\mathbf{u}_1\ \cdots\ \mathbf{u}_n\,]$. By claim 3 of the correctness theorem, $\mathbf{x}_k\in\operatorname{Span}\{\mathbf{u}_1,\ldots,\mathbf{u}_k\}$, so by the orthonormal coefficient formula
+
+$$\mathbf{x}_k = (\mathbf{x}_k\cdot\mathbf{u}_1)\mathbf{u}_1 + \cdots + (\mathbf{x}_k\cdot\mathbf{u}_k)\mathbf{u}_k,$$
+
+with **no** $\mathbf{u}_j$ for $j>k$. Define $r_{jk}=\mathbf{x}_k\cdot\mathbf{u}_j$ for $j\le k$ and $r_{jk}=0$ for $j>k$; then $R=(r_{jk})$ is upper triangular and the display says exactly that the $k$-th column of $A$ equals $Q$ times the $k$-th column of $R$, i.e. $A=QR$.
+
+The diagonal entry is $r_{kk} = \mathbf{x}_k\cdot\mathbf{u}_k$. Since $\mathbf{x}_k = \mathbf{v}_k + \operatorname{proj}_{W_{k-1}}\mathbf{x}_k$ and $\mathbf{u}_k=\mathbf{v}_k/\|\mathbf{v}_k\|$ is orthogonal to $W_{k-1}$,
+
+$$r_{kk} = \mathbf{v}_k\cdot\mathbf{u}_k = \frac{\mathbf{v}_k\cdot\mathbf{v}_k}{\|\mathbf{v}_k\|} = \|\mathbf{v}_k\| > 0.$$
+
+Finally $Q^TA = Q^TQR = R$.
+
+*Uniqueness.* Suppose $Q_1R_1 = Q_2R_2$ with both factorizations of the stated form. Then $Q_2^TQ_1 = R_2R_1^{-1}$. Call this matrix $S$. The right-hand side is a product of upper triangular matrices with positive diagonals, hence upper triangular with positive diagonal. The left-hand side satisfies
+
+$$S^TS = Q_1^TQ_2Q_2^TQ_1 = R_1^{-T}R_2^TR_2R_1^{-1},$$
+
+and from $Q_1 = Q_2 S$ we get $I = Q_1^TQ_1 = S^TQ_2^TQ_2S = S^TS$. So $S$ is an orthogonal matrix that is upper triangular with positive diagonal. Its first column is a unit vector whose only possibly nonzero entry is $s_{11}>0$, so $s_{11}=1$; then orthogonality of the second column to the first forces $s_{12}=0$, and being a unit vector forces $s_{22}=1$; continuing down the columns gives $S=I$. Hence $Q_1=Q_2$ and $R_1=R_2$.
+:::
+
+So $R$ costs nothing extra: its entries are the very dot products Gram–Schmidt already computed. The diagonal $r_{kk}=\|\mathbf{v}_k\|$ measures how much genuinely new direction $\mathbf{x}_k$ contributed, and a tiny $r_{kk}$ is the signal that the columns of $A$ are nearly dependent.
+
+:::example[Computing $Q$ and $R$ explicitly]
+Find the $QR$ factorization of
+
+$$A = \begin{pmatrix} 1 & 1\\ 1 & 0 \\ 0 & 1 \end{pmatrix}.$$
+:::
+
+:::solution
+Columns: $\mathbf{x}_1=\langle 1,1,0\rangle$, $\mathbf{x}_2=\langle 1,0,1\rangle$.
+
+Gram–Schmidt. $\mathbf{v}_1=\langle 1,1,0\rangle$, $\|\mathbf{v}_1\|=\sqrt2$, so $\mathbf{u}_1 = \tfrac{1}{\sqrt2}\langle 1,1,0\rangle$. Next $\mathbf{x}_2\cdot\mathbf{v}_1 = 1$ and $\mathbf{v}_1\cdot\mathbf{v}_1 = 2$, so
+
+$$\mathbf{v}_2 = \langle 1,0,1\rangle - \tfrac12\langle 1,1,0\rangle = \left\langle \tfrac12,-\tfrac12,1\right\rangle,$$
+
+with $\|\mathbf{v}_2\| = \sqrt{\tfrac14+\tfrac14+1} = \sqrt{\tfrac32} = \tfrac{\sqrt6}{2}$. Dividing,
+
+$$\mathbf{u}_2 = \frac{2}{\sqrt6}\left\langle \tfrac12,-\tfrac12,1\right\rangle = \left\langle \tfrac{1}{\sqrt6},-\tfrac{1}{\sqrt6},\tfrac{2}{\sqrt6}\right\rangle.$$
+
+Now $R=Q^TA$ entry by entry:
+
+$$r_{11} = \mathbf{x}_1\cdot\mathbf{u}_1 = \tfrac{1+1+0}{\sqrt2} = \sqrt2, \qquad r_{12} = \mathbf{x}_2\cdot\mathbf{u}_1 = \tfrac{1+0+0}{\sqrt2} = \tfrac{1}{\sqrt2},$$
+
+$$r_{22} = \mathbf{x}_2\cdot\mathbf{u}_2 = \tfrac{1}{\sqrt6}-0+\tfrac{2}{\sqrt6} = \tfrac{3}{\sqrt6} = \sqrt{\tfrac32} = \tfrac{\sqrt6}{2},$$
+
+and $r_{21}=0$. So
+
+$$Q = \begin{pmatrix} 1/\sqrt2 & 1/\sqrt6\\ 1/\sqrt2 & -1/\sqrt6\\ 0 & 2/\sqrt6\end{pmatrix}, \qquad R = \begin{pmatrix} \sqrt2 & 1/\sqrt2\\ 0 & \sqrt6/2\end{pmatrix}.$$
+
+Check $r_{11}=\|\mathbf{v}_1\|=\sqrt2$ ✓ and $r_{22}=\|\mathbf{v}_2\|=\sqrt6/2$ ✓, both positive as the theorem promises. Verify one entry of $QR$: the $(3,2)$ entry is $0\cdot\tfrac{1}{\sqrt2} + \tfrac{2}{\sqrt6}\cdot\tfrac{\sqrt6}{2} = 1$ ✓, matching $A_{32}$.
+:::
+
+:::example[Reading $R$ off the Gram–Schmidt arithmetic]
+In the previous example, obtain $R$ without computing any new dot products.
+:::
+
+:::solution
+Gram–Schmidt already produced everything. The diagonal entries are the lengths of the un-normalised vectors: $r_{11}=\|\mathbf{v}_1\|=\sqrt2$ and $r_{22}=\|\mathbf{v}_2\|=\sqrt6/2$. The off-diagonal entry $r_{12}$ is the coefficient by which $\mathbf{v}_1$ was subtracted, rescaled to match $\mathbf{u}_1$: we had
+
+$$\mathbf{x}_2 = \mathbf{v}_2 + \tfrac12\mathbf{v}_1 = \|\mathbf{v}_2\|\mathbf{u}_2 + \tfrac12\|\mathbf{v}_1\|\mathbf{u}_1 = \tfrac{\sqrt6}{2}\mathbf{u}_2 + \tfrac{\sqrt2}{2}\mathbf{u}_1,$$
+
+so $r_{12} = \tfrac{\sqrt2}{2} = \tfrac{1}{\sqrt2}$ ✓, agreeing with the direct computation. In general, if step $k$ of Gram–Schmidt subtracted $c_{jk}\mathbf{v}_j$, then $r_{jk} = c_{jk}\|\mathbf{v}_j\|$ and $r_{kk}=\|\mathbf{v}_k\|$. The whole of $R$ is a bookkeeping record of the orthogonalisation.
+:::
+
+:::pitfall
+$Q$ is *not* an orthogonal matrix unless $A$ is square. For $m>n$, $Q$ is $m\times n$ and satisfies $Q^TQ=I_n$, but $QQ^T \neq I_m$ — indeed $QQ^T$ is the projection matrix onto $\operatorname{Col}A$. Writing $Q^{-1}$ for a tall $Q$ is a common and fatal slip.
+:::
+
+## Least-squares problems
+
+<!-- section: least-squares -->
+
+An overdetermined system — more equations than unknowns — almost never has a solution. Geometrically, $A\mathbf{x}=\mathbf{b}$ is solvable exactly when $\mathbf{b}\in\operatorname{Col}A$, and when $A$ is $m\times n$ with $m>n$, $\operatorname{Col}A$ is a low-dimensional subspace of $\mathbb{R}^m$ that a measured $\mathbf{b}$ will miss. Declaring defeat is not an option when the equations come from data, so we change the question.
+
+:::definition[Least-squares solution]{#least-squares-definition}
+Let $A$ be $m\times n$ and $\mathbf{b}\in\mathbb{R}^m$. A **least-squares solution** of $A\mathbf{x}=\mathbf{b}$ is a vector $\hat{\mathbf{x}}\in\mathbb{R}^n$ such that
+
+$$\|\mathbf{b}-A\hat{\mathbf{x}}\| \le \|\mathbf{b}-A\mathbf{x}\| \quad \text{for all } \mathbf{x}\in\mathbb{R}^n.$$
+
+The vector $\mathbf{r} = \mathbf{b}-A\hat{\mathbf{x}}$ is the **residual**, and $\|\mathbf{r}\|$ is the **least-squares error**.
+:::
+
+The name comes from the fact that minimising $\|\mathbf{b}-A\mathbf{x}\|$ is the same as minimising its square, $\sum_i (b_i - (A\mathbf{x})_i)^2$ — a sum of squared errors. Squaring is not merely convenient: it makes the objective a differentiable quadratic, which is why the answer is a linear system rather than something harder.
+
+:::theorem[The normal equations]{#normal-equations}
+The set of least-squares solutions of $A\mathbf{x}=\mathbf{b}$ is exactly the solution set of
+
+$$A^TA\,\hat{\mathbf{x}} = A^T\mathbf{b}.$$
+
+This system is always consistent. If the columns of $A$ are linearly independent, $A^TA$ is invertible and the least-squares solution is unique:
+
+$$\hat{\mathbf{x}} = (A^TA)^{-1}A^T\mathbf{b}.$$
+:::
+
+:::proof
+*By projection.* As $\mathbf{x}$ ranges over $\mathbb{R}^n$, $A\mathbf{x}$ ranges over all of $W=\operatorname{Col}A$. By the Best Approximation Theorem the quantity $\|\mathbf{b}-A\mathbf{x}\|$ is smallest exactly when $A\mathbf{x} = \hat{\mathbf{b}} = \operatorname{proj}_W\mathbf{b}$. That equation is consistent because $\hat{\mathbf{b}}\in\operatorname{Col}A$, so least-squares solutions exist. And $A\hat{\mathbf{x}}=\hat{\mathbf{b}}$ holds if and only if $\mathbf{b}-A\hat{\mathbf{x}}\in W^\perp = (\operatorname{Col}A)^\perp = \operatorname{Nul}A^T$, which says
+
+$$A^T(\mathbf{b}-A\hat{\mathbf{x}}) = \mathbf{0},$$
+
+i.e. $A^TA\hat{\mathbf{x}}=A^T\mathbf{b}$.
+
+*By calculus.* Let $f(\mathbf{x}) = \|A\mathbf{x}-\mathbf{b}\|^2$. Expanding,
+
+$$f(\mathbf{x}) = (A\mathbf{x}-\mathbf{b})^T(A\mathbf{x}-\mathbf{b}) = \mathbf{x}^TA^TA\mathbf{x} - 2\,\mathbf{x}^TA^T\mathbf{b} + \mathbf{b}^T\mathbf{b},$$
+
+using $\mathbf{x}^TA^T\mathbf{b} = \mathbf{b}^TA\mathbf{x}$ (a $1\times1$ matrix equals its transpose). The gradient of the quadratic form $\mathbf{x}^TM\mathbf{x}$ with $M=A^TA$ symmetric is $2M\mathbf{x}$, and the gradient of the linear term $2\mathbf{x}^T\mathbf{c}$ is $2\mathbf{c}$, so
+
+$$\nabla f(\mathbf{x}) = 2A^TA\mathbf{x} - 2A^T\mathbf{b}.$$
+
+Setting $\nabla f = \mathbf{0}$ gives the normal equations. Because $A^TA$ is positive semidefinite, $f$ is convex and every critical point is a global minimum, so the condition is sufficient as well as necessary.
+
+*Uniqueness.* By the lemma on $A^TA$, independent columns make $A^TA$ invertible, and the displayed formula follows.
+:::
+
+The two derivations illuminate different things. The projection argument explains *why* the answer is what it is — the residual must be perpendicular to everything the model can produce, otherwise you could still improve the fit by moving in that direction. The calculus argument explains why nothing worse than a linear system appears: the objective is a quadratic, and quadratics have linear gradients. In statistics the first is the geometric picture of regression and the second is the derivation you find in a textbook; they are the same theorem.
+
+:::intuition
+You are trying to reach a target $\mathbf{b}$ but your controls only let you move within a plane $\operatorname{Col}A$. Least squares says: go to the point of the plane directly beneath the target. You know you are there when the remaining gap points straight out of the plane — if the gap had any sideways component, sliding that way would shorten it. "The residual is orthogonal to every column of $A$" is precisely the statement that nothing sideways is left, and written out it is $A^T\mathbf{r}=\mathbf{0}$.
+:::
+
+Once $\hat{\mathbf{x}}$ is known, the error can be computed directly as $\|\mathbf{b}-A\hat{\mathbf{x}}\|$, but there is a shortcut worth knowing. Since $\mathbf{b} = \hat{\mathbf{b}} + \mathbf{r}$ with $\hat{\mathbf{b}}\perp\mathbf{r}$, Pythagoras gives
+
+$$\|\mathbf{b}\|^2 = \|\hat{\mathbf{b}}\|^2 + \|\mathbf{r}\|^2, \qquad\text{so}\qquad \|\mathbf{r}\|^2 = \|\mathbf{b}\|^2 - \|A\hat{\mathbf{x}}\|^2.$$
+
+This identity is the linear-algebra form of the statistician's "total sum of squares = explained + residual".
+
+:::recipe[Solving a least-squares problem]{#least-squares-recipe}
+To find the least-squares solution of $A\mathbf{x}=\mathbf{b}$:
+
+1. Form $A^TA$ and $A^T\mathbf{b}$.
+2. Solve $A^TA\hat{\mathbf{x}}=A^T\mathbf{b}$ by row reduction (or by the inverse, for $2\times2$).
+3. Compute the residual $\mathbf{r}=\mathbf{b}-A\hat{\mathbf{x}}$ and the error $\|\mathbf{r}\|$.
+4. Check: $A^T\mathbf{r}$ should be $\mathbf{0}$.
+:::
+
+Alternatively, if $A=QR$ is available, substitute: the normal equations become $R^TQ^TQR\hat{\mathbf{x}} = R^TQ^T\mathbf{b}$, and since $Q^TQ=I$ and $R^T$ is invertible we may cancel $R^T$ to get
+
+$$R\hat{\mathbf{x}} = Q^{T}\mathbf{b},$$
+
+a triangular system solved by back-substitution. This is how least squares is actually computed. Forming $A^TA$ squares the condition number of the problem — the numerical difficulty roughly doubles in exponent — while the $QR$ route never forms $A^TA$ at all.
+
+:::example[A least-squares solution and its error]
+Find the least-squares solution of $A\mathbf{x}=\mathbf{b}$ and the least-squares error, where
+
+$$A = \begin{pmatrix} 1 & 0\\ 0 & 1\\ 1 & 1 \end{pmatrix}, \qquad \mathbf{b} = \begin{pmatrix} 1\\ 1\\ 0\end{pmatrix}.$$
+:::
+
+:::solution
+The system is inconsistent: the third equation would need $x_1+x_2=0$ while the first two give $x_1=x_2=1$.
+
+Form the normal equations. $A^TA = \begin{pmatrix}2&1\\1&2\end{pmatrix}$ and $A^T\mathbf{b} = \begin{pmatrix}1+0+0\\0+1+0\end{pmatrix} = \begin{pmatrix}1\\1\end{pmatrix}$.
+
+Solve: by symmetry $\hat{x}_1=\hat{x}_2=t$ with $3t=1$, so
+
+$$\hat{\mathbf{x}} = \left\langle \tfrac13,\tfrac13\right\rangle.$$
+
+Residual: $A\hat{\mathbf{x}} = \left\langle \tfrac13,\tfrac13,\tfrac23\right\rangle$, so $\mathbf{r} = \left\langle \tfrac23,\tfrac23,-\tfrac23\right\rangle$ and
+
+$$\|\mathbf{r}\| = \sqrt{3\cdot\tfrac49} = \frac{2}{\sqrt3}.$$
+
+Checks. $A^T\mathbf{r} = \left\langle \tfrac23+0-\tfrac23,\ 0+\tfrac23-\tfrac23\right\rangle = \langle 0,0\rangle$ ✓. And the Pythagorean shortcut: $\|\mathbf{b}\|^2 = 2$, $\|A\hat{\mathbf{x}}\|^2 = \tfrac19+\tfrac19+\tfrac49 = \tfrac23$, and $2-\tfrac23 = \tfrac43 = \|\mathbf{r}\|^2$ ✓.
+:::
+
+:::example[Least squares with dependent columns]
+Find all least-squares solutions of $A\mathbf{x}=\mathbf{b}$ for
+
+$$A = \begin{pmatrix} 1 & 1\\ 1 & 1\\ 1 & 1\end{pmatrix}, \qquad \mathbf{b} = \begin{pmatrix} 1\\ 2\\ 6 \end{pmatrix}.$$
+:::
+
+:::solution
+The columns are identical, so they are dependent and $A^TA$ will be singular. Compute anyway: $A^TA = \begin{pmatrix}3&3\\3&3\end{pmatrix}$ and $A^T\mathbf{b} = \begin{pmatrix}9\\9\end{pmatrix}$.
+
+The normal equations reduce to the single equation $3x_1+3x_2=9$, i.e. $x_1+x_2=3$. The solution set is the line
+
+$$\hat{\mathbf{x}} = \langle 3,0\rangle + t\langle -1,1\rangle, \qquad t\in\mathbb{R}.$$
+
+So there are infinitely many least-squares solutions — but they all give the same prediction: $A\hat{\mathbf{x}} = \langle 3,3,3\rangle$ for every $t$, because the added vector $\langle -1,1\rangle$ lies in $\operatorname{Nul}A$. The projection $\hat{\mathbf{b}}$ is unique even when $\hat{\mathbf{x}}$ is not.
+
+Check: $\mathbf{r} = \langle -2,-1,3\rangle$ and $A^T\mathbf{r} = \langle -2-1+3,\ -2-1+3\rangle = \langle 0,0\rangle$ ✓. The error is $\|\mathbf{r}\| = \sqrt{4+1+9} = \sqrt{14}$. Note $\hat{\mathbf{b}}=\langle 3,3,3\rangle$ is the average of the data repeated — fitting a constant to $1,2,6$ returns their mean $3$, exactly as least squares should.
+:::
+
+:::example[Least squares via $QR$]
+Use the factorization $A=QR$ from the earlier example, with
+
+$$A = \begin{pmatrix} 1&1\\1&0\\0&1\end{pmatrix}, \qquad \mathbf{b} = \begin{pmatrix} 2\\ 0\\ 0\end{pmatrix},$$
+
+to find $\hat{\mathbf{x}}$.
+:::
+
+:::solution
+From before, $\mathbf{u}_1 = \tfrac{1}{\sqrt2}\langle 1,1,0\rangle$, $\mathbf{u}_2 = \tfrac{1}{\sqrt6}\langle 1,-1,2\rangle$, and $R = \begin{pmatrix}\sqrt2 & 1/\sqrt2\\ 0 & \sqrt6/2\end{pmatrix}$.
+
+Compute $Q^T\mathbf{b} = \left\langle \tfrac{2}{\sqrt2},\ \tfrac{2}{\sqrt6}\right\rangle = \left\langle \sqrt2,\ \tfrac{2}{\sqrt6}\right\rangle$.
+
+Back-substitute in $R\hat{\mathbf{x}} = Q^T\mathbf{b}$. The second row gives $\tfrac{\sqrt6}{2}\hat{x}_2 = \tfrac{2}{\sqrt6}$, so
+
+$$\hat{x}_2 = \frac{2}{\sqrt6}\cdot\frac{2}{\sqrt6} = \frac{4}{6} = \frac23.$$
+
+The first row gives $\sqrt2\,\hat{x}_1 + \tfrac{1}{\sqrt2}\cdot\tfrac23 = \sqrt2$, so $\sqrt2\,\hat{x}_1 = \sqrt2 - \tfrac{2}{3\sqrt2} = \sqrt2-\tfrac{\sqrt2}{3} = \tfrac{2\sqrt2}{3}$ and $\hat{x}_1 = \tfrac23$.
+
+Check against the normal equations: $A^TA = \begin{pmatrix}2&1\\1&2\end{pmatrix}$, $A^T\mathbf{b} = \langle 2,2\rangle$, and indeed $\begin{pmatrix}2&1\\1&2\end{pmatrix}\left\langle \tfrac23,\tfrac23\right\rangle = \langle 2,2\rangle$ ✓. Only back-substitution was needed, and $A^TA$ never appeared.
+:::
+
+:::remark[The pseudoinverse]
+When $A$ has independent columns, the map $\mathbf{b}\mapsto\hat{\mathbf{x}}$ is given by the matrix
+
+$$A^{+} = (A^TA)^{-1}A^{T},$$
+
+called the **pseudoinverse** of $A$. It satisfies $A^+A = I_n$ and $AA^+ = P$, the projection onto $\operatorname{Col}A$, so it inverts $A$ as far as anything can. When the columns are dependent this formula fails, but a pseudoinverse still exists and still picks out a canonical least-squares solution — the one of smallest norm. Constructing it requires the singular value decomposition, and it is treated in the chapter *Singular Value Decomposition*.
+:::
+
+:::pitfall
+A least-squares solution does **not** satisfy $A\hat{\mathbf{x}}=\mathbf{b}$, and checking it by substituting back into the original system will always look like failure. The correct check is $A^T(\mathbf{b}-A\hat{\mathbf{x}})=\mathbf{0}$. Relatedly, the normal equations are $A^TA\hat{\mathbf{x}}=A^T\mathbf{b}$ — both sides get multiplied by $A^T$.
+:::
+
+## Applications to linear models
+
+<!-- section: linear-models -->
+
+The reason least squares appears in every quantitative field is that "fit a model to data" is nearly always an overdetermined linear system in disguise. The trick is always the same: the unknowns are the *parameters*, and the data supply the rows.
+
+:::definition[Design matrix and linear model]{#design-matrix}
+A **linear model** predicts observations $y_1,\ldots,y_m$ by
+
+$$\mathbf{y} = X\boldsymbol{\beta} + \boldsymbol{\varepsilon},$$
+
+where $X$ (the **design matrix**) has one row per observation and one column per parameter, $\boldsymbol{\beta}$ is the parameter vector, and $\boldsymbol{\varepsilon}$ is the residual. The least-squares estimate $\hat{\boldsymbol{\beta}}$ solves $X^TX\hat{\boldsymbol{\beta}} = X^T\mathbf{y}$.
+:::
+
+"Linear" refers to linearity in the *parameters*, not in the data. Fitting $y = \beta_0 + \beta_1 x + \beta_2 x^2$ is a linear model, because the unknowns $\beta_j$ enter linearly; the columns of $X$ just happen to be $1$, $x$, and $x^2$. Fitting $y = \beta_0 e^{\beta_1 x}$ is not, because $\beta_1$ sits in an exponent. This is why one method covers lines, polynomials, planes, sinusoids of known frequency, and much else.
+
+For a **line** $y=\beta_0+\beta_1x$ through points $(x_i,y_i)$, the design matrix and its normal equations are
+
+$$X = \begin{pmatrix} 1 & x_1\\ \vdots & \vdots\\ 1 & x_m\end{pmatrix}, \qquad X^TX = \begin{pmatrix} m & \sum x_i\\ \sum x_i & \sum x_i^2\end{pmatrix}, \qquad X^T\mathbf{y} = \begin{pmatrix} \sum y_i\\ \sum x_iy_i\end{pmatrix}.$$
+
+Solving the $2\times2$ system gives the familiar regression formulas
+
+$$\hat{\beta}_1 = \frac{m\sum x_iy_i - \sum x_i\sum y_i}{m\sum x_i^2 - \left(\sum x_i\right)^2}, \qquad \hat{\beta}_0 = \frac{\sum y_i - \hat{\beta}_1\sum x_i}{m}.$$
+
+The first row of $X^T\mathbf{r}=\mathbf{0}$ says $\sum r_i = 0$: a fitted line with an intercept always has residuals summing to zero. The second row says $\sum x_ir_i=0$. Those two identities are free diagnostics.
+
+For a **quadratic** $y = \beta_0+\beta_1x+\beta_2x^2$ the design matrix gains a column of $x_i^2$; for a degree-$d$ polynomial it is the $m\times(d+1)$ Vandermonde matrix with columns $1,x,x^2,\ldots,x^d$. For a **plane** $z = \beta_0+\beta_1x+\beta_2y$ fitted to points $(x_i,y_i,z_i)$, the columns are $1$, $x$ and $y$. Nothing in the method changes; only the columns do.
+
+:::definition[Weighted least squares]{#weighted-least-squares}
+If observation $i$ deserves weight $w_i>0$, the **weighted least-squares** estimate minimises
+
+$$\sum_{i=1}^m w_i^2\big(y_i - (X\boldsymbol{\beta})_i\big)^2 = \|W(\mathbf{y}-X\boldsymbol{\beta})\|^2, \qquad W = \operatorname{diag}(w_1,\ldots,w_m),$$
+
+:::
+
+:::proposition[Weighted normal equations]{#weighted-normal-equations}
+The weighted least-squares estimate is exactly the solution set of
+
+$$X^TW^2X\,\hat{\boldsymbol{\beta}} = X^TW^2\mathbf{y}.$$
+:::
+
+:::proof
+Apply the ordinary normal equations to the rescaled problem $(WX)\boldsymbol{\beta} = W\mathbf{y}$, whose residual norm is exactly the weighted objective. They read $(WX)^T(WX)\hat{\boldsymbol{\beta}} = (WX)^TW\mathbf{y}$, and since $W$ is diagonal, $W^T=W$, giving $X^TW^2X\hat{\boldsymbol{\beta}} = X^TW^2\mathbf{y}$.
+:::
+
+Weights are how you tell the fit which data to trust. A measurement with standard deviation $\sigma_i$ is conventionally given weight $w_i = 1/\sigma_i$, so precise observations pull the fit harder and noisy ones are allowed to miss. Setting some $w_i=0$ removes that observation entirely — a useful way to think about what a weight does.
+
+:::intuition
+Ordinary least squares treats every data point as an equally strong spring pulling the fitted curve towards it, and the curve settles where the spring forces balance. Weighted least squares makes some springs stiffer. A point with weight $3$ pulls as hard as nine equally-placed unweighted points, because the objective squares the weight.
+:::
+
+:::example[Fitting a line]
+Fit $y=\beta_0+\beta_1x$ to $(1,1),(2,2),(3,4)$ by least squares, and report the least-squares error.
+:::
+
+:::solution
+Here $m=3$, $\sum x_i = 6$, $\sum x_i^2 = 1+4+9 = 14$, $\sum y_i = 7$, $\sum x_iy_i = 1+4+12 = 17$. So
+
+$$X^TX = \begin{pmatrix} 3&6\\6&14\end{pmatrix}, \qquad X^T\mathbf{y} = \begin{pmatrix}7\\17\end{pmatrix}.$$
+
+The determinant is $42-36=6$, so
+
+$$\hat{\beta}_0 = \frac{14\cdot 7 - 6\cdot 17}{6} = \frac{98-102}{6} = -\frac23, \qquad \hat{\beta}_1 = \frac{3\cdot 17 - 6\cdot 7}{6} = \frac{51-42}{6} = \frac32.$$
+
+The fitted line is $y = -\tfrac23 + \tfrac32 x$.
+
+Residuals: the predictions are $\tfrac56,\ \tfrac73,\ \tfrac{23}{6}$, so $\mathbf{r} = \left\langle \tfrac16,-\tfrac13,\tfrac16\right\rangle$ and
+
+$$\|\mathbf{r}\| = \sqrt{\tfrac{1}{36}+\tfrac{4}{36}+\tfrac{1}{36}} = \sqrt{\tfrac{6}{36}} = \frac{1}{\sqrt6}.$$
+
+Checks: $\sum r_i = \tfrac16-\tfrac13+\tfrac16 = 0$ ✓ and $\sum x_ir_i = \tfrac16-\tfrac23+\tfrac12 = 0$ ✓.
+:::
+
+:::example[Fitting a parabola]
+Fit $y = \beta_0+\beta_1x+\beta_2x^2$ to the four points $(-1,1),(0,0),(1,1),(2,6)$.
+:::
+
+:::solution
+The design matrix and its products are
+
+$$X = \begin{pmatrix} 1&-1&1\\ 1&0&0\\ 1&1&1\\ 1&2&4\end{pmatrix}, \qquad X^TX = \begin{pmatrix} 4&2&6\\ 2&6&8\\ 6&8&18\end{pmatrix}, \qquad X^T\mathbf{y} = \begin{pmatrix} 8\\ 12\\ 26\end{pmatrix},$$
+
+where the entries of $X^TX$ are $\sum 1 = 4$, $\sum x_i = 2$, $\sum x_i^2 = 6$, $\sum x_i^3 = 8$, $\sum x_i^4 = 18$, and $X^T\mathbf{y}$ collects $\sum y_i = 8$, $\sum x_iy_i = -1+0+1+12 = 12$, $\sum x_i^2y_i = 1+0+1+24 = 26$.
+
+Now solve $X^TX\hat{\boldsymbol{\beta}} = X^T\mathbf{y}$, i.e.
+
+$$4\beta_0+2\beta_1+6\beta_2 = 8,\qquad 2\beta_0+6\beta_1+8\beta_2=12,\qquad 6\beta_0+8\beta_1+18\beta_2=26.$$
+
+Halve the first equation to $2\beta_0+\beta_1+3\beta_2=4$ and subtract it from the second: $5\beta_1+5\beta_2 = 8$. Multiply that halved equation by $3$ and subtract from the third: $5\beta_1+9\beta_2 = 14$. Subtracting the two results gives $4\beta_2 = 6$, so $\beta_2 = \tfrac32$; then $5\beta_1 = 8-\tfrac{15}{2} = \tfrac12$ gives $\beta_1 = \tfrac{1}{10}$, and finally $2\beta_0 = 4-\tfrac{1}{10}-\tfrac92 = -\tfrac35$, so $\beta_0 = -\tfrac{3}{10}$.
+
+The fitted parabola is
+
+$$y = -\tfrac{3}{10} + \tfrac{1}{10}x + \tfrac32 x^2.$$
+
+Check the first normal equation: $4(-\tfrac3{10})+2(\tfrac1{10})+6(\tfrac32) = -\tfrac{12}{10}+\tfrac{2}{10}+9 = -1+9 = 8$ ✓. Third: $6(-\tfrac3{10})+8(\tfrac1{10})+18(\tfrac32) = -\tfrac{18}{10}+\tfrac{8}{10}+27 = -1+27 = 26$ ✓.
+:::
+
+:::example[Weighted least squares]
+Fit a constant $y=\beta$ to the observations $y_1=1,\ y_2=4$ with weights $w_1=1,\ w_2=3$.
+:::
+
+:::solution
+Here $X = \begin{pmatrix}1\\1\end{pmatrix}$ and $W=\operatorname{diag}(1,3)$, so $W^2 = \operatorname{diag}(1,9)$ and
+
+$$X^TW^2X = 1+9 = 10, \qquad X^TW^2\mathbf{y} = 1\cdot 1 + 9\cdot 4 = 37.$$
+
+Hence $\hat\beta = \tfrac{37}{10} = 3.7$.
+
+Compare with the unweighted answer, which is the plain mean $\tfrac{1+4}{2} = 2.5$. The heavily weighted second observation has pulled the estimate from $2.5$ most of the way to $4$, as it should: the second point counts nine times as much as the first. In general, fitting a constant by weighted least squares returns the weighted mean $\sum w_i^2y_i\big/\sum w_i^2$ ✓.
+:::
+
+:::pitfall
+The design matrix has one **column per parameter** and one **row per data point**, not the other way round. If you are fitting three coefficients to twenty points, $X$ is $20\times3$, $X^TX$ is $3\times3$, and the normal equations are a small system no matter how much data you have. Building a $20\times 20$ matrix means you have transposed the model.
 :::
 
 ## Common Mistakes
 
-- Confusing orthogonal with orthonormal. Orthogonal means perpendicular ($\mathbf{u}\cdot\mathbf{v}=0$). Orthonormal adds the unit-length requirement. The simplified projection formula $\hat{\mathbf{y}}=\sum(\mathbf{y}\cdot\mathbf{u}_k)\mathbf{u}_k$ only works for orthonormal bases.
-- Forgetting to subtract all previous projections in Gram-Schmidt. Each new vector must be made orthogonal to every previously constructed vector, not just the previous one.
-- Writing the normal equations as $A\hat{\mathbf{x}}=A^T\mathbf{b}$ or similar. The correct form is $A^TA\hat{\mathbf{x}}=A^T\mathbf{b}$.
-- Trying to apply $(A^TA)^{-1}$ when $A$ does not have full column rank. $A^TA$ is invertible iff the columns of $A$ are linearly independent.
-- Thinking the least-squares solution satisfies $A\hat{\mathbf{x}}=\mathbf{b}$. It does not — it only satisfies the normal equations.
+- **Confusing orthogonal with orthonormal.** Orthogonal means pairwise perpendicular; orthonormal adds unit length. The shortcut $c_j = \mathbf{y}\cdot\mathbf{u}_j$ and the shortcut $P=UU^T$ both require orthonormality. With a merely orthogonal basis you must divide by $\mathbf{u}_j\cdot\mathbf{u}_j$.
+- **Calling a tall matrix with orthonormal columns "orthogonal".** $U^TU=I_n$ always holds; $UU^T=I_m$ holds only when $U$ is square. For tall $U$, $UU^T$ is a projection matrix, not the identity, and $U^{-1}$ does not exist.
+- **Dropping terms in Gram–Schmidt.** Each $\mathbf{v}_k$ must have its projection onto *every* earlier $\mathbf{v}_j$ removed, not just the most recent one, and the projections are subtracted from the original $\mathbf{x}_k$.
+- **Expecting Gram–Schmidt to have a unique answer.** The output depends on the order of the input vectors and on the sign convention; only the span is order-independent.
+- **Writing the normal equations wrongly.** They are $A^TA\hat{\mathbf{x}} = A^T\mathbf{b}$. Not $A\hat{\mathbf{x}}=A^T\mathbf{b}$, and not $A^T\hat{\mathbf{x}} = A^T\mathbf{b}$.
+- **Using $(A^TA)^{-1}$ without checking rank.** $A^TA$ is invertible if and only if the columns of $A$ are independent. With dependent columns, least-squares solutions still exist — infinitely many of them — but the inverse formula does not apply.
+- **Verifying a least-squares solution by substituting into $A\mathbf{x}=\mathbf{b}$.** It will not satisfy it; that was the point. Check $A^T\mathbf{r}=\mathbf{0}$ instead.
+- **Forgetting that the error is a length, not a squared length.** The least-squares *error* is $\|\mathbf{b}-A\hat{\mathbf{x}}\|$; the quantity being minimised is its square. Reporting one for the other is a very common off-by-a-square-root.
+- **Assuming $W^\perp$ is whatever coordinates $W$ does not use.** It is defined by dot products with all of $W$; compute it as the null space of a matrix whose rows span $W$.

@@ -1,0 +1,1220 @@
+---
+title: The Singular Value Decomposition
+---
+
+# The Singular Value Decomposition
+
+Diagonalisation is a beautiful theory with an awkward restriction: it only applies to square matrices, and even then only to those with enough eigenvectors. A $3\times 5$ matrix has no eigenvalues at all, because $A\mathbf{x}=\lambda\mathbf{x}$ cannot even be written down when input and output live in different spaces. Yet rectangular matrices are the ones that carry data — rows are patients, customers or pixels, columns are measurements — and we would like to know their structure too.
+
+The singular value decomposition supplies it. Every real matrix, of every shape and every rank, factors as
+
+$$A = U\Sigma V^T$$
+
+with $U$ and $V$ orthogonal and $\Sigma$ diagonal and nonnegative. There is no hypothesis to check. The price is that we give up on one basis doing both jobs: instead of $A\mathbf{v}=\lambda\mathbf{v}$, we get $A\mathbf{v}_i=\sigma_i\mathbf{u}_i$, an orthonormal basis in the domain sent to an orthonormal basis in the codomain, with a stretch factor attached to each pair.
+
+That single factorisation answers an implausible number of questions. It reads off the rank, bases for all four fundamental subspaces, the two most used matrix norms, the sensitivity of $A\mathbf{x}=\mathbf{b}$ to error, the best low-rank approximation of $A$, the inverse of a matrix that has no inverse, and the principal components of a dataset. This chapter proves each of these from the same factorisation, which is the point: the SVD is not a collection of tricks but one structural fact with many consequences.
+
+We assume the Spectral Theorem for real symmetric matrices — every symmetric $S$ has an orthonormal basis of eigenvectors with real eigenvalues, $S=QDQ^T$ — from the chapter on symmetric matrices. Everything else is built here.
+
+## Singular values and the geometry of a matrix
+
+<!-- section: singular-values -->
+
+An eigenvalue asks which vectors a matrix leaves pointing where they were. A singular value asks a blunter question: how much can this matrix stretch a vector? That question makes sense for any shape, and it has a clean answer.
+
+The device that makes it work is the matrix $A^TA$. If $A$ is $m\times n$ then $A^TA$ is $n\times n$, square no matter what $A$ looked like, and it is symmetric. Better still, it is positive semidefinite, so its eigenvalues are real and nonnegative and their square roots are honest real numbers.
+
+:::proposition[The Gram matrix is symmetric positive semidefinite]{#gram-psd}
+For any real $m\times n$ matrix $A$, the matrix $A^TA$ is symmetric, and $\mathbf{x}^T(A^TA)\mathbf{x}\ge 0$ for every $\mathbf{x}\in\mathbb{R}^n$. Consequently every eigenvalue of $A^TA$ is real and nonnegative.
+:::
+
+:::proof
+Symmetry: $(A^TA)^T = A^T(A^T)^T = A^TA$.
+
+Semidefiniteness: for any $\mathbf{x}$,
+
+$$\mathbf{x}^T(A^TA)\mathbf{x} = (A\mathbf{x})^T(A\mathbf{x}) = \lVert A\mathbf{x}\rVert^2 \ge 0.$$
+
+Now let $\lambda$ be an eigenvalue with unit eigenvector $\mathbf{v}$. Because $A^TA$ is real symmetric, the Spectral Theorem gives $\lambda\in\mathbb{R}$. Multiplying $A^TA\mathbf{v}=\lambda\mathbf{v}$ on the left by $\mathbf{v}^T$ gives
+
+$$\lVert A\mathbf{v}\rVert^2 = \mathbf{v}^T(A^TA)\mathbf{v} = \lambda\lVert\mathbf{v}\rVert^2 = \lambda,$$
+
+so $\lambda = \lVert A\mathbf{v}\rVert^2 \ge 0$.
+:::
+
+The last line of that proof is worth isolating, because it is the whole reason $A^TA$ is the right object: **the eigenvalue of $A^TA$ at a unit eigenvector $\mathbf{v}$ is exactly the squared length of $A\mathbf{v}$**. The eigenvalues of $A^TA$ are not an algebraic accident; they are the squared stretch factors of $A$ itself, already sorted into perpendicular directions by the Spectral Theorem.
+
+:::definition[Singular values]{#singular-values-definition}
+Let $A$ be a real $m\times n$ matrix and let $\lambda_1\ge\lambda_2\ge\cdots\ge\lambda_n\ge 0$ be the eigenvalues of $A^TA$, listed with multiplicity in decreasing order. The **singular values** of $A$ are
+
+$$\sigma_i = \sqrt{\lambda_i},\qquad i=1,\dots,n,$$
+
+so that $\sigma_1\ge\sigma_2\ge\cdots\ge\sigma_n\ge 0$. A unit eigenvector $\mathbf{v}_i$ of $A^TA$ for $\lambda_i$ is a **right singular vector**.
+:::
+
+By the identity above, $\sigma_i = \lVert A\mathbf{v}_i\rVert$: the $i$-th singular value is the length of the image of the $i$-th right singular vector. So an $m\times n$ matrix has $n$ singular values, one for each input direction, and they are the lengths $A$ produces along a well-chosen orthonormal frame in the domain.
+
+:::example[Singular values of a diagonal matrix]
+Find the singular values of $A=\begin{pmatrix}3&0\\0&-4\end{pmatrix}$.
+:::
+
+:::solution
+Compute $A^TA=\begin{pmatrix}3&0\\0&-4\end{pmatrix}\begin{pmatrix}3&0\\0&-4\end{pmatrix}=\begin{pmatrix}9&0\\0&16\end{pmatrix}$.
+
+Its eigenvalues are $16$ and $9$, so $\sigma_1=4$ and $\sigma_2=3$.
+
+Note that the eigenvalues of $A$ are $3$ and $-4$, and the singular values are $4$ and $3$: the absolute values, reordered. Sanity check: $A$ stretches the $y$-axis by $4$ and flips it, and a singular value records only the amount of stretching, never the direction.
+:::
+
+:::example[Singular values of a $3\times 2$ matrix]
+Find the singular values of $A=\begin{pmatrix}1&1\\1&0\\0&1\end{pmatrix}$.
+:::
+
+:::solution
+Here $m=3$, $n=2$, so $A^TA$ is $2\times 2$ and there are two singular values.
+
+$$A^TA=\begin{pmatrix}1&1&0\\1&0&1\end{pmatrix}\begin{pmatrix}1&1\\1&0\\0&1\end{pmatrix}=\begin{pmatrix}2&1\\1&2\end{pmatrix}.$$
+
+Trace $4$ and determinant $3$ give the characteristic polynomial $\lambda^2-4\lambda+3=(\lambda-3)(\lambda-1)$, so $\lambda_1=3$, $\lambda_2=1$ and
+
+$$\sigma_1=\sqrt 3,\qquad \sigma_2=1.$$
+
+Sanity check: $\sigma_1^2+\sigma_2^2 = 3+1 = 4 = \operatorname{tr}(A^TA)$, which is also the sum of the squares of all six entries of $A$. That identity is proved later as the Frobenius norm formula, and it is the cheapest arithmetic check available on any set of singular values.
+:::
+
+Why should $A^TA$ rather than $AA^T$ be the object of study? It is a matter of which side you stand on. $A^TA$ is $n\times n$ and lives in the domain; $AA^T$ is $m\times m$ and lives in the codomain. They have the same nonzero eigenvalues, so either one produces the singular values, and in practice you diagonalise whichever is smaller.
+
+:::proposition[$A^TA$ and $AA^T$ share their nonzero eigenvalues]{#same-nonzero-eigenvalues}
+If $\lambda\ne 0$ is an eigenvalue of $A^TA$ with eigenvector $\mathbf{v}$, then $\lambda$ is an eigenvalue of $AA^T$ with eigenvector $A\mathbf{v}$, and conversely. The nonzero eigenvalues of $A^TA$ and of $AA^T$ agree, with multiplicity.
+:::
+
+:::proof
+Suppose $A^TA\mathbf{v}=\lambda\mathbf{v}$ with $\lambda\ne0$ and $\mathbf{v}\ne\mathbf 0$. Then $A\mathbf{v}\ne\mathbf 0$, because $\lVert A\mathbf{v}\rVert^2=\lambda\lVert\mathbf{v}\rVert^2\ne 0$. Multiply on the left by $A$:
+
+$$(AA^T)(A\mathbf{v}) = A(A^TA\mathbf{v}) = A(\lambda\mathbf{v}) = \lambda(A\mathbf{v}),$$
+
+so $A\mathbf{v}$ is an eigenvector of $AA^T$ for $\lambda$. Exchanging the roles of $A$ and $A^T$ gives the converse. The map $\mathbf{v}\mapsto A\mathbf{v}$ is injective on each $\lambda$-eigenspace of $A^TA$ (again because $\lVert A\mathbf{v}\rVert^2=\lambda\lVert\mathbf{v}\rVert^2$), and its inverse is $\mathbf{u}\mapsto \lambda^{-1}A^T\mathbf{u}$, so the eigenspaces have equal dimension.
+:::
+
+Now the geometric fact the whole chapter rests on. A linear map cannot bend anything, so the image of a sphere ought to be some kind of stretched sphere. The singular values say exactly how stretched.
+
+:::theorem[A matrix maps the unit sphere to an ellipsoid]{#ellipsoid-theorem}
+Let $A$ be $m\times n$ with singular values $\sigma_1\ge\cdots\ge\sigma_n$ and orthonormal right singular vectors $\mathbf{v}_1,\dots,\mathbf{v}_n$. If every $\sigma_i>0$, then the image of the unit sphere $\{\mathbf{x}\in\mathbb{R}^n:\lVert\mathbf{x}\rVert=1\}$ under $A$ is an ellipsoid in $\mathbb{R}^m$ whose semi-axes have lengths $\sigma_1,\dots,\sigma_n$ and point along the mutually orthogonal directions $A\mathbf{v}_i/\sigma_i$. If some $\sigma_i=0$, the image is a flat (degenerate) ellipsoid inside the subspace spanned by the directions with $\sigma_i>0$.
+:::
+
+:::proof
+The vectors $\mathbf{v}_1,\dots,\mathbf{v}_n$ form an orthonormal basis of $\mathbb{R}^n$, so any $\mathbf{x}$ with $\lVert\mathbf{x}\rVert=1$ can be written $\mathbf{x}=c_1\mathbf{v}_1+\cdots+c_n\mathbf{v}_n$ with $c_1^2+\cdots+c_n^2=1$.
+
+Set $\mathbf{u}_i = A\mathbf{v}_i/\sigma_i$ for each $i$ with $\sigma_i>0$. These are orthonormal:
+
+$$\mathbf{u}_i^T\mathbf{u}_j = \frac{\mathbf{v}_i^TA^TA\mathbf{v}_j}{\sigma_i\sigma_j} = \frac{\lambda_j\,\mathbf{v}_i^T\mathbf{v}_j}{\sigma_i\sigma_j} = \frac{\sigma_j^2\,\delta_{ij}}{\sigma_i\sigma_j} = \delta_{ij}.$$
+
+Then
+
+$$A\mathbf{x} = \sum_i c_i A\mathbf{v}_i = \sum_i \sigma_i c_i\,\mathbf{u}_i.$$
+
+Write $y_i = \sigma_i c_i$ for the coordinates of $A\mathbf{x}$ in the orthonormal frame $\{\mathbf{u}_i\}$. The constraint $\sum c_i^2 = 1$ becomes
+
+$$\frac{y_1^2}{\sigma_1^2}+\frac{y_2^2}{\sigma_2^2}+\cdots+\frac{y_n^2}{\sigma_n^2} = 1,$$
+
+which is precisely the equation of an ellipsoid with semi-axes $\sigma_i$ along the axes $\mathbf{u}_i$. Conversely every point satisfying that equation is $A\mathbf{x}$ for the unit vector $\mathbf{x}=\sum (y_i/\sigma_i)\mathbf{v}_i$, so the image is the whole ellipsoid. If some $\sigma_i=0$ then $y_i=0$ identically and the ellipsoid is flattened to zero thickness in that direction.
+:::
+
+:::intuition
+Take a circular pizza dough of radius $1$ and roll it once with a rolling pin. It becomes an ellipse. It does not become a square, a crescent or a figure eight — a linear map has no way to produce those. The longest radius of the resulting ellipse is $\sigma_1$, the shortest is $\sigma_2$, and the directions you had to push in the dough to produce them are $\mathbf{v}_1$ and $\mathbf{v}_2$, which were perpendicular before you started and whose images are perpendicular after. Everything the SVD says is bookkeeping about that picture: $V^T$ turns the dough so the pushing directions line up with the axes, $\Sigma$ rolls along the axes, $U$ turns the result to where it belongs.
+:::
+
+:::example[The ellipse of a $2\times2$ matrix]
+Describe the image of the unit circle under $A=\begin{pmatrix}2&2\\-1&1\end{pmatrix}$.
+:::
+
+:::solution
+$$A^TA = \begin{pmatrix}2&-1\\2&1\end{pmatrix}\begin{pmatrix}2&2\\-1&1\end{pmatrix} = \begin{pmatrix}5&3\\3&5\end{pmatrix}.$$
+
+Trace $10$, determinant $16$, so $\lambda^2-10\lambda+16=(\lambda-8)(\lambda-2)$ and $\lambda_1=8$, $\lambda_2=2$. Hence $\sigma_1=2\sqrt2\approx 2.83$ and $\sigma_2=\sqrt2\approx 1.41$.
+
+For $\lambda=8$: $(A^TA-8I)=\begin{pmatrix}-3&3\\3&-3\end{pmatrix}$ forces $x=y$, giving $\mathbf{v}_1=\tfrac{1}{\sqrt2}(1,1)$. For $\lambda=2$: $x=-y$, giving $\mathbf{v}_2=\tfrac1{\sqrt2}(1,-1)$.
+
+So the unit circle maps to an ellipse with semi-axes $2\sqrt2$ and $\sqrt2$. The long axis lies along $A\mathbf{v}_1/\sigma_1 = \tfrac1{\sqrt2}(4,0)/(2\sqrt2) = (1,0)$ and the short axis along $A\mathbf{v}_2/\sigma_2 = \tfrac1{\sqrt2}(0,-2)/\sqrt2 = (0,-1)$.
+
+Sanity check: the area of the image ellipse is $\pi\sigma_1\sigma_2 = \pi\cdot 2\sqrt2\cdot\sqrt2 = 4\pi$, and the area of the unit circle scaled by $\lvert\det A\rvert = \lvert 2+2\rvert = 4$ is also $4\pi$. For a square matrix, $\sigma_1\sigma_2\cdots\sigma_n = \lvert\det A\rvert$ always, because $\det(A^TA)=(\det A)^2$.
+:::
+
+:::example[A matrix that flattens the circle]
+What does $A=\begin{pmatrix}1&2\\2&4\end{pmatrix}$ do to the unit circle?
+:::
+
+:::solution
+$$A^TA=\begin{pmatrix}1&2\\2&4\end{pmatrix}\begin{pmatrix}1&2\\2&4\end{pmatrix}=\begin{pmatrix}5&10\\10&20\end{pmatrix}.$$
+
+Trace $25$, determinant $100-100=0$, so the eigenvalues are $25$ and $0$: $\sigma_1=5$, $\sigma_2=0$.
+
+The image is therefore a degenerate ellipse — a line segment. The eigenvector for $25$ is found from $\begin{pmatrix}-20&10\\10&-5\end{pmatrix}\mathbf{v}=\mathbf{0}$, i.e. $2x=y$: $\mathbf{v}_1=\tfrac1{\sqrt5}(1,2)$. Its image is $A\mathbf{v}_1 = \tfrac1{\sqrt5}(5,10) = \sqrt5\,(1,2)$, of length $5$ as promised. The unit circle collapses onto the segment of the line $y=2x$ running from $-\tfrac{5}{\sqrt5}(1,2)$ to $\tfrac{5}{\sqrt5}(1,2)$.
+
+Sanity check: $\det A = 4-4=0$, and $\sigma_1\sigma_2 = 0$ agrees.
+:::
+
+:::pitfall
+Singular values are **not** the absolute values of the eigenvalues, except when $A$ is symmetric. For $A=\begin{pmatrix}1&5\\0&1\end{pmatrix}$ the eigenvalues are $1,1$, but $A^TA=\begin{pmatrix}1&5\\5&26\end{pmatrix}$ has eigenvalues $\tfrac{27\pm\sqrt{725}}{2}$, giving $\sigma_1\approx 5.19$ and $\sigma_2\approx 0.19$. A matrix with both eigenvalues equal to $1$ can still stretch some directions by a factor of five: eigenvalues see only the invariant directions, singular values see all of them.
+:::
+
+:::proposition[Singular values of a symmetric matrix]{#symmetric-singular-values}
+If $S$ is real symmetric with eigenvalues $\mu_1,\dots,\mu_n$, then the singular values of $S$ are $\lvert\mu_1\rvert,\dots,\lvert\mu_n\rvert$, sorted downward.
+:::
+
+:::proof
+Write $S=QDQ^T$ with $Q$ orthogonal and $D=\operatorname{diag}(\mu_i)$. Then
+
+$$S^TS = QDQ^TQDQ^T = QD^2Q^T,$$
+
+so the eigenvalues of $S^TS$ are $\mu_i^2$ and the singular values are $\sqrt{\mu_i^2}=\lvert\mu_i\rvert$.
+:::
+
+## The singular value decomposition
+
+<!-- section: svd -->
+
+Everything needed for the factorisation is already in hand. The proof of the ellipsoid theorem manufactured orthonormal vectors $\mathbf{u}_i=A\mathbf{v}_i/\sigma_i$ out of thin air; collecting the identities $A\mathbf{v}_i=\sigma_i\mathbf{u}_i$ into matrix form is the theorem.
+
+:::theorem[Singular value decomposition]{#svd-theorem}
+Let $A$ be any real $m\times n$ matrix of rank $r$. Then there exist an $m\times m$ orthogonal matrix $U$, an $n\times n$ orthogonal matrix $V$, and an $m\times n$ matrix $\Sigma$ whose only nonzero entries are $\Sigma_{ii}=\sigma_i$ for $i=1,\dots,r$, with
+
+$$\sigma_1\ge\sigma_2\ge\cdots\ge\sigma_r>0,$$
+
+such that
+
+$$A = U\Sigma V^T.$$
+
+The numbers $\sigma_1,\dots,\sigma_r$ are the nonzero singular values of $A$, and $r=\operatorname{rank}A$.
+:::
+
+:::proof
+Because $A^TA$ is real symmetric, the Spectral Theorem provides an orthonormal basis $\mathbf{v}_1,\dots,\mathbf{v}_n$ of $\mathbb{R}^n$ with $A^TA\mathbf{v}_i=\lambda_i\mathbf{v}_i$ and $\lambda_1\ge\cdots\ge\lambda_n\ge 0$ (nonnegative by the Gram matrix proposition). Let $r$ be the number of strictly positive $\lambda_i$ and put $\sigma_i=\sqrt{\lambda_i}$.
+
+*Step 1: the tail is the null space.* For $i>r$ we have $\lVert A\mathbf{v}_i\rVert^2 = \lambda_i = 0$, so $A\mathbf{v}_i=\mathbf 0$.
+
+*Step 2: build $\mathbf{u}_1,\dots,\mathbf{u}_r$.* For $i\le r$ set $\mathbf{u}_i = \dfrac{1}{\sigma_i}A\mathbf{v}_i$. As computed in the ellipsoid theorem,
+
+$$\mathbf{u}_i^T\mathbf{u}_j = \frac{\mathbf{v}_i^T A^TA\mathbf{v}_j}{\sigma_i\sigma_j} = \frac{\lambda_j\delta_{ij}}{\sigma_i\sigma_j} = \delta_{ij},$$
+
+so $\{\mathbf{u}_1,\dots,\mathbf{u}_r\}$ is orthonormal in $\mathbb{R}^m$.
+
+*Step 3: complete the basis.* An orthonormal set in $\mathbb{R}^m$ extends to an orthonormal basis $\mathbf{u}_1,\dots,\mathbf{u}_m$ of $\mathbb{R}^m$ — take any basis of the orthogonal complement of $\operatorname{span}\{\mathbf{u}_1,\dots,\mathbf{u}_r\}$ and run Gram–Schmidt on it. (When $r=m$ there is nothing to do.) Let $U=[\mathbf{u}_1\ \cdots\ \mathbf{u}_m]$ and $V=[\mathbf{v}_1\ \cdots\ \mathbf{v}_n]$; both are orthogonal because their columns are orthonormal.
+
+*Step 4: verify the factorisation.* Two matrices are equal when they agree on a basis, so it suffices to check $A\mathbf{v}_j = U\Sigma V^T\mathbf{v}_j$ for each $j$. Since $V^T\mathbf{v}_j=\mathbf{e}_j$ and $\Sigma\mathbf{e}_j=\sigma_j\mathbf{e}_j$ (interpreted as $\mathbf 0$ when $j>r$),
+
+$$U\Sigma V^T\mathbf{v}_j = U(\sigma_j\mathbf{e}_j) = \sigma_j\mathbf{u}_j = A\mathbf{v}_j \quad (j\le r),$$
+
+and for $j>r$ both sides are $\mathbf 0$ by Step 1. Hence $A=U\Sigma V^T$.
+
+*Step 5: $r$ is the rank.* $U$ and $V^T$ are invertible, so $\operatorname{rank}A = \operatorname{rank}\Sigma$, and $\Sigma$ visibly has $r$ nonzero rows.
+:::
+
+Three details of that proof carry all the practical weight, and they are the three places students go wrong.
+
+First, the $\mathbf{u}_i$ are **computed from the $\mathbf{v}_i$**, not diagonalised separately. It is true that the columns of $U$ are orthonormal eigenvectors of $AA^T$ — apply the shared-eigenvalue proposition — but if you diagonalise $AA^T$ on its own you get vectors determined only up to sign, and a wrong sign destroys the identity $A=U\Sigma V^T$. The formula $\mathbf{u}_i=A\mathbf{v}_i/\sigma_i$ pins the signs together.
+
+Second, the completion in Step 3 is where a rank-deficient or tall matrix is handled. If $r<m$ you must produce $m-r$ further orthonormal columns, and they are exactly a basis of $\operatorname{Null}(A^T)$; if $r<n$ the last $n-r$ columns of $V$ are a basis of $\operatorname{Null}(A)$. Nothing about the theorem requires $A$ to have full rank.
+
+Third, $\Sigma$ has the shape of $A$, not of $U$ or $V$. If $A$ is $3\times 2$ then $\Sigma$ is $3\times 2$: a $2\times2$ diagonal block on top and a row of zeros beneath.
+
+:::notation
+We write $\Sigma$ for the $m\times n$ matrix and, when only the top block matters, $\Sigma_r=\operatorname{diag}(\sigma_1,\dots,\sigma_r)$ for the invertible $r\times r$ diagonal matrix of nonzero singular values. Columns are $\mathbf{u}_i$ (left singular vectors) and $\mathbf{v}_i$ (right singular vectors); $U_r$ and $V_r$ denote the matrices of the first $r$ of each.
+:::
+
+:::theorem[Uniqueness of the SVD]{#svd-uniqueness}
+The singular values of $A$ are uniquely determined by $A$. If all the nonzero singular values are distinct, then each pair $(\mathbf{u}_i,\mathbf{v}_i)$ with $\sigma_i>0$ is determined up to a simultaneous sign change $(\mathbf{u}_i,\mathbf{v}_i)\mapsto(-\mathbf{u}_i,-\mathbf{v}_i)$. If a singular value is repeated with multiplicity $k$, the corresponding $\mathbf{v}$'s are determined only up to an arbitrary orthogonal change of basis inside that $k$-dimensional eigenspace.
+:::
+
+:::proof
+Given any factorisation $A=U\Sigma V^T$ with $U,V$ orthogonal, compute
+
+$$A^TA = V\Sigma^TU^TU\Sigma V^T = V(\Sigma^T\Sigma)V^T.$$
+
+This is an orthogonal diagonalisation of $A^TA$, so the diagonal entries of $\Sigma^T\Sigma$ — namely $\sigma_i^2$ — are the eigenvalues of $A^TA$, which depend only on $A$. Since $\sigma_i\ge0$, the $\sigma_i$ themselves are determined, and the ordering convention fixes their arrangement.
+
+The columns of $V$ are then forced to be an orthonormal eigenbasis of $A^TA$. If $\lambda_i=\sigma_i^2$ is a simple eigenvalue its eigenspace is a line, so $\mathbf{v}_i$ is determined up to sign; and $\mathbf{u}_i=A\mathbf{v}_i/\sigma_i$ then flips sign with it. If $\lambda$ has multiplicity $k$, any orthonormal basis of its $k$-dimensional eigenspace will serve.
+:::
+
+:::remark
+Non-uniqueness is not a defect. It is the same freedom you have when choosing an orthonormal basis for a plane: no canonical choice exists, and none is needed, because every quantity we extract from the SVD in this chapter — rank, norms, condition number, the pseudoinverse, the best rank-$k$ approximation — is independent of which admissible choice you make. Only the individual vectors wobble, and question banks therefore pin them with a sign convention.
+:::
+
+:::definition[Full and reduced SVD]{#full-vs-reduced}
+The **full SVD** of an $m\times n$ matrix of rank $r$ is $A=U\Sigma V^T$ with $U$ of size $m\times m$, $\Sigma$ of size $m\times n$ and $V$ of size $n\times n$.
+
+The **reduced (thin) SVD** keeps only the columns that do anything:
+
+$$A = U_r\Sigma_r V_r^T,$$
+
+where $U_r$ is $m\times r$ with orthonormal columns, $\Sigma_r$ is $r\times r$ diagonal and invertible, and $V_r$ is $n\times r$ with orthonormal columns. Equivalently,
+
+$$A = \sum_{i=1}^{r}\sigma_i\,\mathbf{u}_i\mathbf{v}_i^T,$$
+
+the **outer product form**: $A$ is a sum of $r$ rank-one matrices with decreasing weights.
+:::
+
+The outer product form is the one to remember. Each term $\sigma_i\mathbf{u}_i\mathbf{v}_i^T$ is a rank-one matrix of "size" $\sigma_i$, and the decomposition sorts the content of $A$ from most important to least. Low-rank approximation, image compression and PCA are all statements about truncating that sum.
+
+Note the storage difference. A full SVD of a $1000\times 5$ matrix stores a $1000\times1000$ matrix $U$ — a million numbers, $995$ of whose columns are multiplied by zero. The reduced SVD stores $1000\times 5$. Software returns the reduced form by default for exactly this reason.
+
+:::recipe[Computing an SVD by hand]{#svd-recipe}
+Given $A$ of size $m\times n$:
+
+1. Choose the smaller Gram matrix. If $n\le m$ work with $A^TA$ ($n\times n$); if $m<n$ work with $AA^T$ ($m\times m$) and swap the roles of $U$ and $V$ throughout.
+2. Find the eigenvalues $\lambda_1\ge\cdots\ge\lambda_n\ge0$ of $A^TA$ and an orthonormal eigenbasis $\mathbf{v}_1,\dots,\mathbf{v}_n$. Normalise each eigenvector; orthogonalise within a repeated eigenvalue if necessary.
+3. Set $\sigma_i=\sqrt{\lambda_i}$ and let $r$ be the number that are nonzero.
+4. For $i\le r$ set $\mathbf{u}_i = A\mathbf{v}_i/\sigma_i$. Never compute these by diagonalising $AA^T$ separately.
+5. If $r<m$, extend $\mathbf{u}_1,\dots,\mathbf{u}_r$ to an orthonormal basis of $\mathbb{R}^m$ by solving $A^T\mathbf{u}=\mathbf 0$ and applying Gram–Schmidt to a basis of that null space.
+6. Assemble $U$, $\Sigma$ (the shape of $A$) and $V$, and check $U\Sigma V^T=A$ on at least one entry.
+:::
+
+:::example[A square $2\times2$ SVD in full]
+Find the full SVD of $A=\begin{pmatrix}2&2\\-1&1\end{pmatrix}$.
+:::
+
+:::solution
+From the ellipse example we already have $A^TA=\begin{pmatrix}5&3\\3&5\end{pmatrix}$, $\lambda_1=8$, $\lambda_2=2$, hence $\sigma_1=2\sqrt2$, $\sigma_2=\sqrt2$, and
+
+$$\mathbf{v}_1 = \tfrac1{\sqrt2}(1,1),\qquad \mathbf{v}_2=\tfrac1{\sqrt2}(1,-1).$$
+
+Left singular vectors:
+
+$$\mathbf{u}_1 = \frac{A\mathbf{v}_1}{\sigma_1} = \frac{1}{2\sqrt2}\cdot\frac{1}{\sqrt2}\begin{pmatrix}4\\0\end{pmatrix} = \begin{pmatrix}1\\0\end{pmatrix},\qquad
+\mathbf{u}_2 = \frac{A\mathbf{v}_2}{\sigma_2} = \frac{1}{\sqrt2}\cdot\frac{1}{\sqrt2}\begin{pmatrix}0\\-2\end{pmatrix} = \begin{pmatrix}0\\-1\end{pmatrix}.$$
+
+Assemble:
+
+$$U=\begin{pmatrix}1&0\\0&-1\end{pmatrix},\qquad \Sigma=\begin{pmatrix}2\sqrt2&0\\0&\sqrt2\end{pmatrix},\qquad V=\frac1{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix}.$$
+
+Check: $U\Sigma = \begin{pmatrix}2\sqrt2&0\\0&-\sqrt2\end{pmatrix}$ and
+
+$$U\Sigma V^T = \begin{pmatrix}2\sqrt2&0\\0&-\sqrt2\end{pmatrix}\cdot\frac1{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix} = \begin{pmatrix}2&2\\-1&1\end{pmatrix} = A. \checkmark$$
+
+Note $\mathbf{u}_2=(0,-1)$, not $(0,1)$. Had we diagonalised $AA^T$ and picked $(0,1)$, the product would have come out as $\begin{pmatrix}2&2\\1&-1\end{pmatrix}$, which is not $A$.
+:::
+
+:::example[A tall non-square SVD]
+Find the full SVD of $A=\begin{pmatrix}1&1\\1&0\\0&1\end{pmatrix}$.
+:::
+
+:::solution
+This is $3\times 2$, so $U$ is $3\times3$, $\Sigma$ is $3\times2$, $V$ is $2\times2$.
+
+From the earlier example, $A^TA=\begin{pmatrix}2&1\\1&2\end{pmatrix}$ with $\lambda_1=3$, $\lambda_2=1$, so $\sigma_1=\sqrt3$, $\sigma_2=1$ and $r=2$.
+
+For $\lambda=3$: $\begin{pmatrix}-1&1\\1&-1\end{pmatrix}\mathbf{v}=\mathbf0$ gives $x=y$, so $\mathbf{v}_1=\tfrac1{\sqrt2}(1,1)$. For $\lambda=1$: $x=-y$, so $\mathbf{v}_2=\tfrac1{\sqrt2}(1,-1)$.
+
+Left singular vectors:
+
+$$\mathbf{u}_1=\frac{A\mathbf{v}_1}{\sqrt3} = \frac{1}{\sqrt3}\cdot\frac{1}{\sqrt2}\begin{pmatrix}2\\1\\1\end{pmatrix} = \frac{1}{\sqrt6}\begin{pmatrix}2\\1\\1\end{pmatrix},\qquad
+\mathbf{u}_2=\frac{A\mathbf{v}_2}{1} = \frac{1}{\sqrt2}\begin{pmatrix}0\\1\\-1\end{pmatrix}.$$
+
+Since $r=2<3=m$ we need one more column. It must span $\operatorname{Null}(A^T)$: solving
+
+$$A^T\mathbf{u} = \begin{pmatrix}1&1&0\\1&0&1\end{pmatrix}\begin{pmatrix}x\\y\\z\end{pmatrix}=\mathbf 0$$
+
+gives $y=-x$ and $z=-x$, so $\mathbf{u}_3=\tfrac1{\sqrt3}(1,-1,-1)$. Confirm orthogonality: $\mathbf{u}_1\cdot\mathbf{u}_3 \propto 2-1-1=0$ and $\mathbf{u}_2\cdot\mathbf{u}_3\propto 0-1+1=0$. ✓
+
+The full SVD is
+
+$$U=\begin{pmatrix}2/\sqrt6&0&1/\sqrt3\\ 1/\sqrt6&1/\sqrt2&-1/\sqrt3\\ 1/\sqrt6&-1/\sqrt2&-1/\sqrt3\end{pmatrix},\quad
+\Sigma=\begin{pmatrix}\sqrt3&0\\0&1\\0&0\end{pmatrix},\quad
+V=\frac1{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix}.$$
+
+The reduced SVD drops the third column of $U$ and the last row of $\Sigma$:
+
+$$A = \begin{pmatrix}2/\sqrt6&0\\1/\sqrt6&1/\sqrt2\\1/\sqrt6&-1/\sqrt2\end{pmatrix}\begin{pmatrix}\sqrt3&0\\0&1\end{pmatrix}V^T.$$
+
+Sanity check on the $(1,1)$ entry: $\sigma_1 u_{11}v_{11} + \sigma_2 u_{12}v_{12} = \sqrt3\cdot\tfrac{2}{\sqrt6}\cdot\tfrac1{\sqrt2} + 1\cdot0\cdot\tfrac1{\sqrt2} = \tfrac{2\sqrt3}{\sqrt{12}} = 1 = A_{11}$. ✓
+:::
+
+:::example[A wide non-square SVD]
+Find the full SVD of $A=\begin{pmatrix}3&2&2\\2&3&-2\end{pmatrix}$.
+:::
+
+:::solution
+Here $m=2<3=n$, so the recipe says diagonalise the smaller Gram matrix $AA^T$:
+
+$$AA^T = \begin{pmatrix}3&2&2\\2&3&-2\end{pmatrix}\begin{pmatrix}3&2\\2&3\\2&-2\end{pmatrix} = \begin{pmatrix}17&8\\8&17\end{pmatrix}.$$
+
+Trace $34$, determinant $289-64=225$, so $\lambda^2-34\lambda+225=(\lambda-25)(\lambda-9)$: $\lambda_1=25$, $\lambda_2=9$, giving $\sigma_1=5$ and $\sigma_2=3$. Both nonzero, so $r=2$ and $A$ has full row rank.
+
+Eigenvectors of $AA^T$ (these are the $\mathbf{u}$'s): for $25$, $x=y$ gives $\mathbf{u}_1=\tfrac1{\sqrt2}(1,1)$; for $9$, $x=-y$ gives $\mathbf{u}_2=\tfrac1{\sqrt2}(1,-1)$.
+
+Now run the recipe in reverse to get the $\mathbf{v}$'s, using $\mathbf{v}_i=A^T\mathbf{u}_i/\sigma_i$:
+
+$$A^T\mathbf{u}_1 = \frac{1}{\sqrt2}\begin{pmatrix}5\\5\\0\end{pmatrix}\Rightarrow \mathbf{v}_1=\frac{1}{5\sqrt2}\begin{pmatrix}5\\5\\0\end{pmatrix}=\frac1{\sqrt2}\begin{pmatrix}1\\1\\0\end{pmatrix},$$
+
+$$A^T\mathbf{u}_2 = \frac{1}{\sqrt2}\begin{pmatrix}1\\-1\\4\end{pmatrix}\Rightarrow \mathbf{v}_2 = \frac{1}{3\sqrt2}\begin{pmatrix}1\\-1\\4\end{pmatrix}.$$
+
+Check $\lVert\mathbf{v}_2\rVert$: $\sqrt{1+1+16}/(3\sqrt2)=\sqrt{18}/(3\sqrt2)=1$. ✓
+
+$V$ must be $3\times3$, so we need $\mathbf{v}_3$ spanning $\operatorname{Null}(A)$. Solve $3x+2y+2z=0$ and $2x+3y-2z=0$. Adding gives $5x+5y=0$, so $y=-x$; substituting into the first gives $x+2z=0$, so $x=-2z$. Taking $z=1$: $(-2,2,1)$, normalised $\mathbf{v}_3=\tfrac13(-2,2,1)$.
+
+Hence
+
+$$U=\frac{1}{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix},\quad
+\Sigma=\begin{pmatrix}5&0&0\\0&3&0\end{pmatrix},\quad
+V=\begin{pmatrix}1/\sqrt2&1/(3\sqrt2)&-2/3\\ 1/\sqrt2&-1/(3\sqrt2)&2/3\\ 0&4/(3\sqrt2)&1/3\end{pmatrix}.$$
+
+Sanity check: $\sigma_1^2+\sigma_2^2 = 25+9 = 34$, and the sum of squares of the entries of $A$ is $9+4+4+4+9+4=34$. ✓
+:::
+
+:::example[A rank-deficient non-square SVD]
+Find the full SVD of $A=\begin{pmatrix}1&1\\1&1\\1&1\end{pmatrix}$.
+:::
+
+:::solution
+$$A^TA = \begin{pmatrix}3&3\\3&3\end{pmatrix},$$
+
+with trace $6$ and determinant $0$, so $\lambda_1=6$, $\lambda_2=0$. Thus $\sigma_1=\sqrt6$, $\sigma_2=0$ and $r=1$: the matrix is rank one, as its identical columns advertise.
+
+Eigenvectors: for $\lambda=6$, $x=y$ gives $\mathbf{v}_1=\tfrac1{\sqrt2}(1,1)$; for $\lambda=0$, $x=-y$ gives $\mathbf{v}_2=\tfrac1{\sqrt2}(1,-1)$, which indeed satisfies $A\mathbf{v}_2=\mathbf 0$.
+
+Only $\mathbf{u}_1$ comes from the formula:
+
+$$\mathbf{u}_1 = \frac{A\mathbf{v}_1}{\sqrt6} = \frac{1}{\sqrt6}\cdot\frac{1}{\sqrt2}\begin{pmatrix}2\\2\\2\end{pmatrix} = \frac{1}{\sqrt3}\begin{pmatrix}1\\1\\1\end{pmatrix}.$$
+
+We need two more columns of $U$, from $\operatorname{Null}(A^T) = \{\mathbf{u}: u_1+u_2+u_3=0\}$, a plane. Pick $(1,-1,0)$ and $(1,1,-2)$ — already orthogonal to each other and to $\mathbf{u}_1$ — and normalise:
+
+$$\mathbf{u}_2=\frac1{\sqrt2}(1,-1,0),\qquad \mathbf{u}_3=\frac1{\sqrt6}(1,1,-2).$$
+
+Then
+
+$$U=\begin{pmatrix}1/\sqrt3&1/\sqrt2&1/\sqrt6\\ 1/\sqrt3&-1/\sqrt2&1/\sqrt6\\ 1/\sqrt3&0&-2/\sqrt6\end{pmatrix},\quad
+\Sigma=\begin{pmatrix}\sqrt6&0\\0&0\\0&0\end{pmatrix},\quad
+V=\frac1{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix}.$$
+
+In outer product form the whole matrix is a single term:
+
+$$A = \sqrt6\,\mathbf{u}_1\mathbf{v}_1^T = \sqrt6\cdot\frac{1}{\sqrt3}\begin{pmatrix}1\\1\\1\end{pmatrix}\cdot\frac1{\sqrt2}\begin{pmatrix}1&1\end{pmatrix} = \frac{\sqrt6}{\sqrt6}\begin{pmatrix}1&1\\1&1\\1&1\end{pmatrix}=A.\ \checkmark$$
+
+Note that $\mathbf{u}_2,\mathbf{u}_3$ were not forced on us: any orthonormal basis of that plane works, which is the multiplicity clause of the uniqueness theorem in action ($\sigma=0$ here has multiplicity two on the $U$ side).
+:::
+
+:::pitfall
+When $\sigma_i=0$ you cannot compute $\mathbf{u}_i = A\mathbf{v}_i/\sigma_i$ — you would be dividing by zero, and indeed $A\mathbf{v}_i=\mathbf0$ carries no directional information. The remaining columns of $U$ must come from the null space of $A^T$, not from the formula. Similarly, if $A$ is wide ($m<n$), the last $n-r$ columns of $V$ come from $\operatorname{Null}(A)$.
+:::
+
+## The four fundamental subspaces
+
+<!-- section: fundamental-subspaces -->
+
+A matrix has four subspaces attached to it: the column space $\operatorname{Col}A\subseteq\mathbb{R}^m$, the null space $\operatorname{Null}A\subseteq\mathbb{R}^n$, the row space $\operatorname{Row}A = \operatorname{Col}A^T\subseteq\mathbb{R}^n$, and the left null space $\operatorname{Null}A^T\subseteq\mathbb{R}^m$. Row reduction produces bases for all four, but the bases it produces are not orthonormal and the two pairs are related only by a theorem. The SVD produces orthonormal bases for all four at once, and the orthogonality relations become visible rather than proved.
+
+:::theorem[Orthonormal bases from the SVD]{#four-subspaces}
+Let $A=U\Sigma V^T$ be a full SVD of an $m\times n$ matrix of rank $r$. Then
+
+$$\operatorname{Col}A = \operatorname{span}\{\mathbf{u}_1,\dots,\mathbf{u}_r\},\qquad \operatorname{Null}A^T = \operatorname{span}\{\mathbf{u}_{r+1},\dots,\mathbf{u}_m\},$$
+
+$$\operatorname{Row}A = \operatorname{span}\{\mathbf{v}_1,\dots,\mathbf{v}_r\},\qquad \operatorname{Null}A = \operatorname{span}\{\mathbf{v}_{r+1},\dots,\mathbf{v}_n\},$$
+
+and in each case the listed vectors form an orthonormal basis.
+:::
+
+:::proof
+*Null space.* For $j>r$, $A\mathbf{v}_j=\sigma_j\mathbf{u}_j=\mathbf 0$, so $\operatorname{span}\{\mathbf{v}_{r+1},\dots,\mathbf{v}_n\}\subseteq\operatorname{Null}A$. Conversely write any $\mathbf{x}=\sum_j c_j\mathbf{v}_j$; then $A\mathbf{x}=\sum_{j\le r}\sigma_jc_j\mathbf{u}_j$, and since the $\mathbf{u}_j$ are independent, $A\mathbf{x}=\mathbf0$ forces $\sigma_jc_j=0$, hence $c_j=0$ for $j\le r$. So $\mathbf{x}$ lies in the stated span. The vectors are orthonormal as columns of an orthogonal matrix, and there are $n-r$ of them, matching the Rank–Nullity Theorem.
+
+*Column space.* $A\mathbf{x} = \sum_{j\le r}\sigma_jc_j\mathbf{u}_j$ shows every output is a combination of $\mathbf{u}_1,\dots,\mathbf{u}_r$, and taking $\mathbf{x}=\mathbf{v}_j$ realises $\sigma_j\mathbf{u}_j$, so each $\mathbf{u}_j$ ($j\le r$) is attained. Hence $\operatorname{Col}A$ is exactly that span.
+
+*The other two.* Transposing the SVD gives $A^T = V\Sigma^TU^T$, which is a full SVD of $A^T$ with the roles of $U$ and $V$ exchanged and the same nonzero singular values. Applying the two results already proved to $A^T$ yields $\operatorname{Col}A^T=\operatorname{span}\{\mathbf{v}_1,\dots,\mathbf{v}_r\}$ and $\operatorname{Null}A^T=\operatorname{span}\{\mathbf{u}_{r+1},\dots,\mathbf{u}_m\}$.
+:::
+
+:::corollary[The orthogonality of the fundamental subspaces]{#fundamental-orthogonality}
+$\operatorname{Row}A$ and $\operatorname{Null}A$ are orthogonal complements in $\mathbb{R}^n$, and $\operatorname{Col}A$ and $\operatorname{Null}A^T$ are orthogonal complements in $\mathbb{R}^m$.
+:::
+
+:::proof
+$\{\mathbf{v}_1,\dots,\mathbf{v}_n\}$ is an orthonormal basis of $\mathbb{R}^n$, split by the theorem into a basis of $\operatorname{Row}A$ (the first $r$) and a basis of $\operatorname{Null}A$ (the rest). A splitting of an orthonormal basis into two blocks makes the two spans orthogonal complements. The same argument in $\mathbb{R}^m$ with the $\mathbf{u}$'s gives the second statement.
+:::
+
+This is why the SVD is sometimes called the "complete picture" of a matrix. Read from right to left, $A=U\Sigma V^T$ says: express the input in the $\mathbf{v}$ basis, throw away the components in $\operatorname{Null}A$, scale the survivors by $\sigma_i$, and read the result off in the $\mathbf{u}$ basis. The matrix is an isomorphism from $\operatorname{Row}A$ to $\operatorname{Col}A$ — both of dimension $r$ — plus a projection that kills everything else.
+
+:::intuition
+Think of $A$ as a sorting office. Mail arriving in $\mathbb{R}^n$ is first separated into two piles: the row space pile, which gets delivered, and the null space pile, which is incinerated. The delivered pile arrives in the column space of $\mathbb{R}^m$, scaled up or down. The left null space is the set of addresses in $\mathbb{R}^m$ that no mail can ever reach. The SVD hands you orthonormal street maps for all four.
+:::
+
+:::example[Reading the subspaces off an SVD]
+Using the full SVD of $A=\begin{pmatrix}3&2&2\\2&3&-2\end{pmatrix}$ computed above, give orthonormal bases for all four fundamental subspaces and state their dimensions.
+:::
+
+:::solution
+There $r=2$, $m=2$, $n=3$, with
+
+$$\mathbf{u}_1=\tfrac1{\sqrt2}(1,1),\ \mathbf{u}_2=\tfrac1{\sqrt2}(1,-1),\quad
+\mathbf{v}_1=\tfrac1{\sqrt2}(1,1,0),\ \mathbf{v}_2=\tfrac1{3\sqrt2}(1,-1,4),\ \mathbf{v}_3=\tfrac13(-2,2,1).$$
+
+- $\operatorname{Col}A = \operatorname{span}\{\mathbf{u}_1,\mathbf{u}_2\} = \mathbb{R}^2$, dimension $2$.
+- $\operatorname{Null}A^T = \operatorname{span}\{\}$, the zero subspace, dimension $0$ (there are no columns of $U$ past the second).
+- $\operatorname{Row}A = \operatorname{span}\{\mathbf{v}_1,\mathbf{v}_2\}$, dimension $2$.
+- $\operatorname{Null}A = \operatorname{span}\{\mathbf{v}_3\} = \operatorname{span}\{(-2,2,1)\}$, dimension $1$.
+
+Sanity check: $A(-2,2,1)^T = (-6+4+2,\ -4+6-2)^T=(0,0)^T$. ✓ And $\dim\operatorname{Row}A+\dim\operatorname{Null}A = 2+1 = 3 = n$, as Rank–Nullity requires.
+:::
+
+:::example[Subspaces of a rank-one matrix]
+For $A=\begin{pmatrix}1&1\\1&1\\1&1\end{pmatrix}$, use the SVD computed earlier to give orthonormal bases for the four subspaces.
+:::
+
+:::solution
+There $r=1$, $m=3$, $n=2$.
+
+- $\operatorname{Col}A=\operatorname{span}\{\tfrac1{\sqrt3}(1,1,1)\}$, dimension $1$ — the line through $(1,1,1)$, which is indeed where both columns of $A$ live.
+- $\operatorname{Null}A^T=\operatorname{span}\{\tfrac1{\sqrt2}(1,-1,0),\ \tfrac1{\sqrt6}(1,1,-2)\}$, dimension $2$: the plane $u_1+u_2+u_3=0$.
+- $\operatorname{Row}A=\operatorname{span}\{\tfrac1{\sqrt2}(1,1)\}$, dimension $1$.
+- $\operatorname{Null}A = \operatorname{span}\{\tfrac1{\sqrt2}(1,-1)\}$, dimension $1$.
+
+Sanity check: $1+2=3=m$ and $1+1=2=n$. ✓
+:::
+
+## Rank, numerical rank, and matrix norms
+
+<!-- section: rank-and-norms -->
+
+The rank fell out of the existence proof: it is the number of nonzero singular values. That is more than a restatement, because it is the *only* practical way to compute a rank from measured data.
+
+:::proposition[Rank from singular values]{#rank-from-sigma}
+$\operatorname{rank}A$ equals the number of singular values of $A$ that are nonzero.
+:::
+
+:::proof
+Multiplying by an invertible matrix does not change rank, so $\operatorname{rank}A=\operatorname{rank}(U\Sigma V^T)=\operatorname{rank}\Sigma$, and the rank of a diagonal-shaped matrix is its number of nonzero diagonal entries.
+:::
+
+Row reduction also computes a rank, and on exact integer data it is faster. On floating-point data it is worthless. Consider
+
+$$A = \begin{pmatrix}1 & 2\\ 2 & 4.000000001\end{pmatrix}.$$
+
+Row reduction reports rank $2$, because the second pivot is $10^{-9}$ rather than exactly $0$. The singular values are approximately $5.000$ and $2\times 10^{-10}$, which reports the truth: the matrix is a rank-one matrix that has been perturbed. The useful notion is therefore not rank but numerical rank.
+
+:::definition[Numerical rank]{#numerical-rank}
+Fix a tolerance $\varepsilon>0$. The **numerical rank** of $A$ at tolerance $\varepsilon$ is the number of singular values with $\sigma_i>\varepsilon$. A standard default is $\varepsilon = \max(m,n)\cdot\sigma_1\cdot\epsilon_{\text{machine}}$, which scales the tolerance with the size of the matrix and of its largest singular value.
+:::
+
+The justification for this definition is supplied by the Eckart–Young theorem later in the chapter: if $\sigma_{k+1}\le\varepsilon$ then there is a matrix of rank $k$ within distance $\varepsilon$ of $A$, so at resolution $\varepsilon$ the matrix is indistinguishable from one of rank $k$.
+
+:::definition[Spectral norm and Frobenius norm]{#norm-definitions}
+For an $m\times n$ matrix $A$, the **spectral norm** (or operator $2$-norm) is
+
+$$\lVert A\rVert_2 = \max_{\mathbf{x}\ne\mathbf 0}\frac{\lVert A\mathbf{x}\rVert}{\lVert\mathbf{x}\rVert},$$
+
+and the **Frobenius norm** is
+
+$$\lVert A\rVert_F = \sqrt{\sum_{i=1}^{m}\sum_{j=1}^{n}a_{ij}^2}.$$
+:::
+
+The two measure different things. The spectral norm asks how far the matrix can stretch a single vector — it is a worst-case amplification factor. The Frobenius norm treats the matrix as a list of $mn$ numbers and takes their Euclidean length. Both have clean expressions in singular values.
+
+:::theorem[Norms in terms of singular values]{#norms-from-sigma}
+For any real $m\times n$ matrix $A$ of rank $r$,
+
+$$\lVert A\rVert_2 = \sigma_1 \qquad\text{and}\qquad \lVert A\rVert_F = \sqrt{\sigma_1^2+\sigma_2^2+\cdots+\sigma_r^2}.$$
+:::
+
+:::proof
+*Spectral norm.* By homogeneity it suffices to maximise $\lVert A\mathbf{x}\rVert$ over unit $\mathbf{x}$. Expanding $\mathbf{x}=\sum c_i\mathbf{v}_i$ with $\sum c_i^2=1$, the computation in the ellipsoid theorem gives
+
+$$\lVert A\mathbf{x}\rVert^2 = \sum_{i=1}^{n}\sigma_i^2c_i^2 \le \sigma_1^2\sum_i c_i^2 = \sigma_1^2,$$
+
+with equality when $\mathbf{x}=\mathbf{v}_1$ (so $c_1=1$ and the rest vanish). Hence the maximum is $\sigma_1$, attained.
+
+*Frobenius norm.* First note $\lVert A\rVert_F^2 = \operatorname{tr}(A^TA)$, since the $(j,j)$ entry of $A^TA$ is the squared length of the $j$-th column of $A$. The trace of a matrix is the sum of its eigenvalues, and the eigenvalues of $A^TA$ are $\sigma_1^2,\dots,\sigma_n^2$ (zeros included). Therefore
+
+$$\lVert A\rVert_F^2 = \operatorname{tr}(A^TA) = \sum_{i=1}^{n}\sigma_i^2 = \sum_{i=1}^{r}\sigma_i^2.$$
+:::
+
+:::corollary[Both norms are orthogonally invariant]{#orthogonal-invariance}
+If $Q$ and $P$ are orthogonal of the right sizes, then $\lVert QAP\rVert_2 = \lVert A\rVert_2$ and $\lVert QAP\rVert_F = \lVert A\rVert_F$.
+:::
+
+:::proof
+$(QAP)^T(QAP) = P^TA^TQ^TQAP = P^T(A^TA)P$, which is similar to $A^TA$ (as $P^{-1}=P^T$) and hence has the same eigenvalues. So $QAP$ has the same singular values as $A$, and both norms are functions of the singular values alone.
+:::
+
+That corollary is the reason the SVD interacts so well with these norms: rotating the input or the output of a linear map changes neither how much it can stretch nor its total energy.
+
+:::example[Both norms of a $2\times3$ matrix]
+Compute $\lVert A\rVert_2$ and $\lVert A\rVert_F$ for $A=\begin{pmatrix}3&2&2\\2&3&-2\end{pmatrix}$.
+:::
+
+:::solution
+The singular values were found to be $\sigma_1=5$ and $\sigma_2=3$.
+
+$$\lVert A\rVert_2 = \sigma_1 = 5,\qquad \lVert A\rVert_F = \sqrt{25+9}=\sqrt{34}.$$
+
+Sanity check on the Frobenius norm directly from the entries: $9+4+4+4+9+4=34$. ✓ And note $\lVert A\rVert_2\le\lVert A\rVert_F$, which always holds since $\sigma_1^2\le\sum\sigma_i^2$.
+:::
+
+:::example[When the two norms coincide]
+For which matrices is $\lVert A\rVert_2 = \lVert A\rVert_F$?
+:::
+
+:::solution
+$\lVert A\rVert_F^2 - \lVert A\rVert_2^2 = \sigma_2^2+\cdots+\sigma_r^2$, which vanishes exactly when $\sigma_2=\cdots=\sigma_r=0$, i.e. when $r\le 1$.
+
+So the two norms agree precisely for matrices of rank at most one (including the zero matrix). For instance $A=\begin{pmatrix}1&2\\2&4\end{pmatrix}$ has $\lVert A\rVert_F=\sqrt{1+4+4+16}=5$ and $\sigma_1=5$. ✓
+:::
+
+:::example[Numerical rank in practice]
+A $4\times 4$ measurement matrix has singular values $12.4$, $3.1$, $0.0007$, $0.0002$. What is its numerical rank, and what does that tell you?
+:::
+
+:::solution
+Take the standard tolerance with $\epsilon_{\text{machine}}\approx 2\times10^{-16}$: $\varepsilon = 4\cdot 12.4\cdot 2\times10^{-16}\approx 10^{-14}$. By that strict tolerance all four singular values exceed $\varepsilon$ and the numerical rank is $4$.
+
+But the data were measured, and measurement noise is far larger than $10^{-14}$. If the entries are accurate to about $10^{-3}$, the honest tolerance is $\varepsilon\approx 10^{-3}$, and then only two singular values survive: the numerical rank is $2$.
+
+The conclusion is that the four measured variables really carry two independent pieces of information, with the remaining two directions accounted for by noise. The gap between $3.1$ and $0.0007$ — four orders of magnitude — is what makes the conclusion safe; had the values been $12.4, 3.1, 1.2, 0.9$ there would be no defensible cut.
+:::
+
+:::pitfall
+There is no single "the norm" of a matrix. $\lVert A\rVert_2$ and $\lVert A\rVert_F$ differ, sometimes a lot: the $n\times n$ identity has $\lVert I\rVert_2=1$ but $\lVert I\rVert_F=\sqrt n$. Always say which norm you are using, and never assume a statement proved in one holds in the other — the Eckart–Young theorem is remarkable precisely because it happens to hold in both.
+:::
+
+## The condition number
+
+<!-- section: condition-number -->
+
+Solving $A\mathbf{x}=\mathbf{b}$ on a computer means solving it with a $\mathbf{b}$ that is slightly wrong, because measurements and floating-point arithmetic are both inexact. How wrong is the answer? The singular values give a sharp answer.
+
+:::definition[Condition number]{#condition-number-definition}
+For an invertible $n\times n$ matrix $A$ with singular values $\sigma_1\ge\cdots\ge\sigma_n>0$, the **condition number** (in the $2$-norm) is
+
+$$\kappa(A) = \frac{\sigma_1}{\sigma_n} = \lVert A\rVert_2\,\lVert A^{-1}\rVert_2.$$
+
+A singular matrix is assigned $\kappa(A)=\infty$. A matrix with small $\kappa$ is called **well-conditioned**; one with large $\kappa$ is **ill-conditioned**. For a rectangular or rank-deficient matrix one uses $\kappa = \sigma_1/\sigma_r$.
+:::
+
+The second expression needs a line of justification: if $A=U\Sigma V^T$ then $A^{-1}=V\Sigma^{-1}U^T$, which is an SVD of $A^{-1}$ once the diagonal entries $1/\sigma_n\ge\cdots\ge1/\sigma_1$ are reordered. So the largest singular value of $A^{-1}$ is $1/\sigma_n$ and $\lVert A^{-1}\rVert_2 = 1/\sigma_n$.
+
+:::theorem[Error amplification]{#condition-bound}
+Let $A$ be invertible, $A\mathbf{x}=\mathbf{b}$ with $\mathbf{b}\ne\mathbf 0$, and let $A(\mathbf{x}+\delta\mathbf{x}) = \mathbf{b}+\delta\mathbf{b}$. Then
+
+$$\frac{\lVert\delta\mathbf{x}\rVert}{\lVert\mathbf{x}\rVert} \le \kappa(A)\,\frac{\lVert\delta\mathbf{b}\rVert}{\lVert\mathbf{b}\rVert},$$
+
+and the bound is attained for suitable $\mathbf{b}$ and $\delta\mathbf{b}$.
+:::
+
+:::proof
+Subtracting the two equations gives $A\,\delta\mathbf{x}=\delta\mathbf{b}$, so $\delta\mathbf{x}=A^{-1}\delta\mathbf{b}$ and
+
+$$\lVert\delta\mathbf{x}\rVert \le \lVert A^{-1}\rVert_2\lVert\delta\mathbf{b}\rVert = \frac{\lVert\delta\mathbf{b}\rVert}{\sigma_n}.$$
+
+Also $\lVert\mathbf{b}\rVert = \lVert A\mathbf{x}\rVert \le \sigma_1\lVert\mathbf{x}\rVert$, i.e. $\dfrac{1}{\lVert\mathbf{x}\rVert}\le\dfrac{\sigma_1}{\lVert\mathbf{b}\rVert}$. Multiplying the two inequalities,
+
+$$\frac{\lVert\delta\mathbf{x}\rVert}{\lVert\mathbf{x}\rVert} \le \frac{\lVert\delta\mathbf{b}\rVert}{\sigma_n}\cdot\frac{\sigma_1}{\lVert\mathbf{b}\rVert} = \kappa(A)\frac{\lVert\delta\mathbf{b}\rVert}{\lVert\mathbf{b}\rVert}.$$
+
+For attainment take $\mathbf{x}=\mathbf{v}_1$, so $\mathbf{b}=\sigma_1\mathbf{u}_1$ and the second inequality is an equality, and take $\delta\mathbf{b}=\epsilon\,\mathbf{u}_n$, so $\delta\mathbf{x}=(\epsilon/\sigma_n)\mathbf{v}_n$ and the first is an equality too.
+:::
+
+The rule of thumb that follows is worth memorising: if $\kappa(A)\approx 10^{k}$, then solving $A\mathbf{x}=\mathbf{b}$ can lose about $k$ decimal digits of accuracy. Double precision carries roughly $16$ digits, so a condition number near $10^{16}$ means the computed solution may have no correct digits at all.
+
+:::intuition
+Condition number is a lever ratio. A matrix that stretches one direction by $1000$ and another by $1$ has $\kappa=1000$. Ask it to undo itself and it must *shrink* the first direction by $1000$ and leave the second alone — so an error you introduce along the weakly-stretched direction gets magnified by $1000$ on the way back. The trouble is not that $A$ is nearly singular in absolute terms; it is that $A$ is nearly singular *relative to its own scale*. Multiplying a matrix by $10^6$ changes neither its condition number nor its difficulty.
+:::
+
+:::example[A well-conditioned and an ill-conditioned matrix]
+Compute the condition numbers of $D_1=\begin{pmatrix}4&0\\0&2\end{pmatrix}$ and $D_2=\begin{pmatrix}4&0\\0&0.0004\end{pmatrix}$.
+:::
+
+:::solution
+Both are diagonal with positive entries, so the singular values are the diagonal entries.
+
+$$\kappa(D_1)=\frac{4}{2}=2,\qquad \kappa(D_2)=\frac{4}{0.0004}=10^4.$$
+
+$D_1$ is as well-conditioned as a non-scalar matrix gets. $D_2$ will lose roughly four decimal digits: a relative error of $10^{-8}$ in $\mathbf{b}$ can become a relative error of $10^{-4}$ in $\mathbf{x}$.
+
+Sanity check on the claim of attainment: with $\mathbf{b}=(4,0)$ and $\delta\mathbf{b}=(0,4\times 10^{-8})$ we get $\mathbf{x}=(1,0)$ and $\delta\mathbf{x} = (0, 10^{-4})$, exactly $10^4$ times the relative perturbation. ✓
+:::
+
+:::example[Conditioning of a non-diagonal matrix]
+Find $\kappa(A)$ for $A=\begin{pmatrix}1&1\\1&1.01\end{pmatrix}$ and interpret it.
+:::
+
+:::solution
+$$A^TA = \begin{pmatrix}2&2.01\\2.01&2.0201\end{pmatrix}.$$
+
+Trace $=4.0201$ and $\det(A^TA) = (\det A)^2 = (1.01-1)^2 = 10^{-4}$. From $\lambda^2-4.0201\lambda+10^{-4}=0$,
+
+$$\lambda = \frac{4.0201\pm\sqrt{16.1612-0.0004}}{2}.$$
+
+Numerically $\sqrt{16.1608}\approx 4.020050$, so $\lambda_1\approx 4.020075$ and $\lambda_2\approx 2.4876\times10^{-5}$. Hence $\sigma_1\approx 2.00501$, $\sigma_2\approx 4.9876\times10^{-3}$, and
+
+$$\kappa(A)=\frac{\sigma_1}{\sigma_2}\approx 402.$$
+
+Interpretation: the two rows of $A$ are nearly parallel, so the two lines $x+y=b_1$ and $x+1.01y=b_2$ meet at a very shallow angle and their intersection point moves a long way when a line is nudged. A relative error of $1\%$ in $\mathbf{b}$ can produce a relative error of several hundred percent in $\mathbf{x}$.
+
+Sanity check: $\sigma_1\sigma_2 \approx 2.005\times 0.0049876 \approx 0.01 = \lvert\det A\rvert$. ✓
+:::
+
+:::example[Scaling does not help]
+Show that $\kappa(cA)=\kappa(A)$ for any nonzero scalar $c$, and explain why "the determinant is tiny" is not the same as "the matrix is ill-conditioned".
+:::
+
+:::solution
+If $A=U\Sigma V^T$ then $cA = U(\lvert c\rvert\Sigma)V^T$ after absorbing the sign of $c$ into $U$, so every singular value is multiplied by $\lvert c\rvert$ and the ratio $\sigma_1/\sigma_n$ is unchanged.
+
+Now take $A = 10^{-6}I_2$. Its determinant is $10^{-12}$, apparently alarming, but its singular values are both $10^{-6}$ and $\kappa(A)=1$: it is perfectly conditioned. The matrix $\begin{pmatrix}1&0\\0&10^{-12}\end{pmatrix}$ has the same determinant and $\kappa = 10^{12}$.
+
+The determinant is the product of the singular values and so confuses overall scale with the spread between directions. The condition number, a ratio, is immune to scale — which is exactly the property a measure of difficulty should have.
+:::
+
+:::pitfall
+$\kappa(A)\ge 1$ always, since $\sigma_1\ge\sigma_n$. A computed condition number below $1$ is an arithmetic slip, usually the ratio taken upside down.
+:::
+
+## Low-rank approximation
+
+<!-- section: low-rank -->
+
+The outer product form $A=\sum_{i=1}^r\sigma_i\mathbf{u}_i\mathbf{v}_i^T$ orders the content of $A$ by importance. Truncating it after $k$ terms should give the best possible rank-$k$ summary of $A$, and remarkably it does — in both of our norms, which is not something one has any right to expect.
+
+:::definition[Truncated SVD]{#truncated-svd}
+For $1\le k\le r$ the **rank-$k$ truncation** of $A$ is
+
+$$A_k = \sum_{i=1}^{k}\sigma_i\,\mathbf{u}_i\mathbf{v}_i^T = U_k\Sigma_kV_k^T,$$
+
+where $U_k$ and $V_k$ hold the first $k$ columns of $U$ and $V$ and $\Sigma_k=\operatorname{diag}(\sigma_1,\dots,\sigma_k)$. It has rank exactly $k$ (assuming $\sigma_k>0$).
+:::
+
+:::lemma[The truncation error]{#truncation-error}
+$$\lVert A-A_k\rVert_2 = \sigma_{k+1},\qquad \lVert A-A_k\rVert_F = \sqrt{\sigma_{k+1}^2+\cdots+\sigma_r^2},$$
+
+with the convention $\sigma_j=0$ for $j>r$.
+:::
+
+:::proof
+$A-A_k = \sum_{i=k+1}^{r}\sigma_i\mathbf{u}_i\mathbf{v}_i^T$, which is a decomposition of exactly the same form: orthonormal $\mathbf{u}$'s, orthonormal $\mathbf{v}$'s, nonnegative decreasing weights. So its singular values are $\sigma_{k+1},\dots,\sigma_r$, and the norm formulas apply, giving the largest of them for the spectral norm and the root sum of squares for the Frobenius norm.
+:::
+
+:::theorem[Eckart–Young]{#eckart-young}
+Let $A$ be $m\times n$ of rank $r$ and let $1\le k<r$. For every matrix $B$ of rank at most $k$,
+
+$$\lVert A-B\rVert_2 \ge \sigma_{k+1},$$
+
+with equality for $B=A_k$. The same minimisation is solved by $A_k$ in the Frobenius norm, where the minimum value is $\sqrt{\sigma_{k+1}^2+\cdots+\sigma_r^2}$.
+:::
+
+:::proof
+We prove the spectral norm statement in full. Let $B$ have rank at most $k$. Then $\dim\operatorname{Null}B \ge n-k$ by Rank–Nullity. The subspace $W=\operatorname{span}\{\mathbf{v}_1,\dots,\mathbf{v}_{k+1}\}$ has dimension $k+1$, and
+
+$$\dim\operatorname{Null}B + \dim W \ge (n-k)+(k+1) = n+1 > n,$$
+
+so the two subspaces intersect in more than the zero vector. Pick a unit vector $\mathbf{z}\in\operatorname{Null}B\cap W$ and write $\mathbf{z}=\sum_{i=1}^{k+1}c_i\mathbf{v}_i$ with $\sum c_i^2=1$. Then $B\mathbf{z}=\mathbf 0$, so
+
+$$\lVert A-B\rVert_2^2 \ge \lVert (A-B)\mathbf{z}\rVert^2 = \lVert A\mathbf{z}\rVert^2 = \sum_{i=1}^{k+1}\sigma_i^2c_i^2 \ge \sigma_{k+1}^2\sum_{i=1}^{k+1}c_i^2 = \sigma_{k+1}^2,$$
+
+using that $\sigma_i\ge\sigma_{k+1}$ for $i\le k+1$. Hence $\lVert A-B\rVert_2\ge\sigma_{k+1}$, and the truncation lemma shows $A_k$ attains it.
+
+For the Frobenius norm the same conclusion holds; the standard argument writes $\lVert A-B\rVert_F^2\ge\sum_{i>k}\sigma_i^2$ using Weyl's inequality $\sigma_{i+j-1}(A)\le\sigma_i(A-B)+\sigma_j(B)$, which with $j=k+1$ and $\sigma_{k+1}(B)=0$ gives $\sigma_{i+k}(A)\le\sigma_i(A-B)$ for every $i$; summing the squares over $i\ge1$ yields the bound. We take Weyl's inequality on trust here, as its proof is a variational argument belonging to a numerical analysis course.
+:::
+
+:::intuition
+A photograph stored as a $1000\times 1000$ matrix of grey levels is not $10^6$ independent numbers. Sky is nearly constant, walls are nearly constant, edges repeat. In singular value terms, $\sigma_1$ might be $10^4$, $\sigma_{50}$ might be $10$, and $\sigma_{500}$ might be $0.01$. Keeping the first $50$ terms keeps everything a human eye registers and throws away $95\%$ of the storage. Eckart–Young says you cannot do better with any other $50$-dimensional description: the truncated SVD is not a good heuristic, it is the optimum.
+:::
+
+:::example[Best rank-one approximation, by hand]
+Find the best rank-one approximation to $A=\begin{pmatrix}2&2\\-1&1\end{pmatrix}$ and the error in both norms.
+:::
+
+:::solution
+From the earlier SVD, $\sigma_1=2\sqrt2$, $\mathbf{u}_1=(1,0)$, $\mathbf{v}_1=\tfrac1{\sqrt2}(1,1)$, and $\sigma_2=\sqrt2$.
+
+$$A_1 = \sigma_1\mathbf{u}_1\mathbf{v}_1^T = 2\sqrt2\begin{pmatrix}1\\0\end{pmatrix}\frac{1}{\sqrt2}\begin{pmatrix}1&1\end{pmatrix} = \begin{pmatrix}2&2\\0&0\end{pmatrix}.$$
+
+The error is $A-A_1 = \begin{pmatrix}0&0\\-1&1\end{pmatrix}$, and
+
+$$\lVert A-A_1\rVert_2 = \sigma_2 = \sqrt2,\qquad \lVert A-A_1\rVert_F = \sqrt{\sigma_2^2} = \sqrt2.$$
+
+Sanity check directly: the error matrix has entries $0,0,-1,1$, so its Frobenius norm is $\sqrt{0+0+1+1}=\sqrt2$. ✓ (The two norms coincide because the error has rank one.)
+:::
+
+:::example[How much of the matrix does rank $k$ capture?]
+A matrix has singular values $10, 6, 3, 1$. What fraction of $\lVert A\rVert_F^2$ is captured by the best rank-$2$ approximation, and what is the rank-$2$ error in each norm?
+:::
+
+:::solution
+$\lVert A\rVert_F^2 = 100+36+9+1 = 146$. The rank-$2$ truncation captures $\sigma_1^2+\sigma_2^2 = 100+36=136$, a fraction
+
+$$\frac{136}{146} \approx 0.9315,$$
+
+about $93\%$.
+
+Errors: $\lVert A-A_2\rVert_2 = \sigma_3 = 3$ and $\lVert A-A_2\rVert_F = \sqrt{9+1}=\sqrt{10}\approx3.16$.
+
+Sanity check: $136+10 = 146$. ✓ The Pythagorean split $\lVert A\rVert_F^2 = \lVert A_k\rVert_F^2+\lVert A-A_k\rVert_F^2$ always holds, because the two pieces are built from disjoint sets of orthonormal outer products.
+:::
+
+:::example[Image compression: counting the storage]
+A greyscale image is a $1200\times 900$ matrix. It is approximated by its rank-$60$ truncation. How many numbers must be stored, and what is the compression ratio?
+:::
+
+:::solution
+Storing $A$ outright costs $1200\times900 = 1\,080\,000$ numbers.
+
+The rank-$60$ truncation is stored as $U_{60}$ ($1200\times 60$), the $60$ singular values, and $V_{60}$ ($900\times 60$):
+
+$$60\cdot 1200 + 60 + 60\cdot 900 = 72\,000+60+54\,000 = 126\,060.$$
+
+In general the cost is $k(m+n+1)$. The compression ratio is
+
+$$\frac{1\,080\,000}{126\,060}\approx 8.57,$$
+
+so about $11.7\%$ of the original storage, an $8.6\times$ saving.
+
+Sanity check on when this is worth doing: the truncation saves space only when $k(m+n+1) < mn$, i.e. $k < \dfrac{mn}{m+n+1}\approx 514$ here. Taking $k=600$ would store *more* numbers than the original image while still losing information.
+:::
+
+:::example[Choosing $k$ from an energy target]
+The singular values of a data matrix are $20, 14, 9, 4, 2, 1$. Choose the smallest $k$ for which the rank-$k$ truncation retains at least $95\%$ of $\lVert A\rVert_F^2$.
+:::
+
+:::solution
+Squares: $400, 196, 81, 16, 4, 1$; total $698$.
+
+Cumulative: $400$ ($57.3\%$), $596$ ($85.4\%$), $677$ ($97.0\%$), $693$ ($99.3\%$), $697$, $698$.
+
+The first cumulative fraction to reach $0.95$ is at $k=3$, with $677/698\approx 0.970$.
+
+So $k=3$. Sanity check: at $k=2$ the fraction is $596/698\approx 0.854<0.95$, so $3$ is genuinely the smallest. ✓
+:::
+
+:::pitfall
+The best rank-$k$ approximation is *not* obtained by zeroing the small entries of $A$, nor by deleting its least important rows or columns. It is obtained by zeroing the small singular values, which mixes every entry of $A$. Zeroing entries below a threshold in $\begin{pmatrix}1&1\\1&1.0001\end{pmatrix}$ changes nothing, yet the matrix is within $10^{-4}$ of a rank-one matrix.
+:::
+
+## The Moore–Penrose pseudoinverse
+
+<!-- section: pseudoinverse -->
+
+A matrix that is not square, or is square but singular, has no inverse. It does, however, have a best available substitute, and the SVD writes it down in one line: invert what can be inverted and leave the rest alone.
+
+:::definition[Moore–Penrose pseudoinverse]{#pseudoinverse-definition}
+Let $A=U\Sigma V^T$ be a full SVD of an $m\times n$ matrix of rank $r$. Let $\Sigma^+$ be the $n\times m$ matrix with $\Sigma^+_{ii}=1/\sigma_i$ for $i=1,\dots,r$ and zeros elsewhere. The **pseudoinverse** of $A$ is the $n\times m$ matrix
+
+$$A^+ = V\Sigma^+U^T = \sum_{i=1}^{r}\frac{1}{\sigma_i}\,\mathbf{v}_i\mathbf{u}_i^T.$$
+:::
+
+Note carefully what is and is not inverted: the nonzero $\sigma_i$ are replaced by their reciprocals, and the zero ones are **left as zero**. Reciprocating a zero is what an inverse would have to do and cannot; the pseudoinverse simply declines.
+
+The definition appears to depend on the choice of SVD, which is not unique. It does not, and the reason is the Penrose characterisation.
+
+:::theorem[The four Penrose conditions]{#penrose-conditions}
+$X=A^+$ is the unique $n\times m$ matrix satisfying
+
+$$\text{(i) } AXA = A,\quad \text{(ii) } XAX = X,\quad \text{(iii) } (AX)^T = AX,\quad \text{(iv) } (XA)^T = XA.$$
+:::
+
+:::proof
+*Existence.* Write $A = U\Sigma V^T$, $X=V\Sigma^+U^T$. Then $\Sigma\Sigma^+$ is the $m\times m$ diagonal matrix with $r$ ones followed by zeros; call it $P_r$, and note $P_r^T=P_r$ and $P_r\Sigma = \Sigma$. Similarly $\Sigma^+\Sigma = Q_r$, the $n\times n$ diagonal matrix with $r$ ones, with $Q_r^T=Q_r$ and $\Sigma Q_r=\Sigma$. Now
+
+$$AXA = U\Sigma V^TV\Sigma^+U^TU\Sigma V^T = U\Sigma\Sigma^+\Sigma V^T = U P_r\Sigma V^T = U\Sigma V^T = A,$$
+
+which is (i); (ii) is the same computation with the roles exchanged. For (iii), $AX = U\Sigma\Sigma^+U^T = UP_rU^T$, which is symmetric since $P_r$ is; (iv) is $XA = VQ_rV^T$, likewise symmetric.
+
+*Uniqueness.* Suppose $X$ and $Y$ both satisfy all four. Then
+$$X = XAX = X(AX)^T = XX^TA^T = XX^T(AYA)^T = XX^TA^TY^TA^T = X(AX)^T(AY)^T = XAXAY = XAY,$$
+using (ii), (iii), (i) and (iii) again. Symmetrically, using (ii), (iv) and (i),
+$$Y = YAY = (YA)^TY = A^TY^TY = (AXA)^TY^TY = A^TX^TA^TY^TY = (XA)^T(YA)^TY = XAYAY = XAY.$$
+Hence $X=XAY=Y$.
+:::
+
+Because the four conditions mention only $A$, the matrix $A^+$ they determine cannot depend on which SVD produced it.
+
+:::proposition[Special cases]{#pseudoinverse-special-cases}
+1. If $A$ is invertible then $A^+=A^{-1}$.
+2. If $A$ has full column rank ($r=n\le m$) then $A^+=(A^TA)^{-1}A^T$.
+3. If $A$ has full row rank ($r=m\le n$) then $A^+=A^T(AA^T)^{-1}$.
+4. $AA^+$ is the orthogonal projection onto $\operatorname{Col}A$, and $A^+A$ is the orthogonal projection onto $\operatorname{Row}A$.
+:::
+
+:::proof
+(1) If $A$ is invertible, $A^{-1}$ satisfies all four Penrose conditions trivially, so by uniqueness $A^+=A^{-1}$.
+
+(2) With $r=n$, $\Sigma^T\Sigma = \Sigma_n^2$ is invertible, so $A^TA = V\Sigma^T\Sigma V^T = V\Sigma_n^2V^T$ is invertible and
+
+$$(A^TA)^{-1}A^T = V\Sigma_n^{-2}V^T\cdot V\Sigma^TU^T = V\Sigma_n^{-2}\Sigma^TU^T = V\Sigma^+U^T = A^+,$$
+
+because $\Sigma_n^{-2}\Sigma^T$ is the $n\times m$ matrix with diagonal $\sigma_i^{-2}\sigma_i = \sigma_i^{-1}$.
+
+(3) Apply (2) to $A^T$ and use $(A^T)^+=(A^+)^T$, immediate from the definition.
+
+(4) From the proof above, $AA^+ = UP_rU^T = U_rU_r^T$, which is symmetric and idempotent with column space $\operatorname{span}\{\mathbf{u}_1,\dots,\mathbf{u}_r\} = \operatorname{Col}A$ — the defining description of the orthogonal projection onto $\operatorname{Col}A$. Similarly $A^+A = V_rV_r^T$ projects onto $\operatorname{Row}A$.
+:::
+
+Part (4) is what connects the pseudoinverse to least squares, the subject that motivated it.
+
+:::theorem[Least squares and minimum norm]{#pseudoinverse-least-squares}
+For any $A$ and any $\mathbf{b}\in\mathbb{R}^m$, the vector $\hat{\mathbf{x}} = A^+\mathbf{b}$ minimises $\lVert A\mathbf{x}-\mathbf{b}\rVert$ over all $\mathbf{x}\in\mathbb{R}^n$; and among all minimisers it is the one of smallest norm.
+:::
+
+:::proof
+*Least squares.* $A\mathbf{x}$ ranges over $\operatorname{Col}A$ as $\mathbf{x}$ ranges over $\mathbb{R}^n$, so $\lVert A\mathbf{x}-\mathbf{b}\rVert$ is minimised exactly when $A\mathbf{x}$ is the orthogonal projection of $\mathbf{b}$ onto $\operatorname{Col}A$, namely $AA^+\mathbf{b}$ by part (4). Taking $\mathbf{x}=A^+\mathbf{b}$ gives $A\mathbf{x} = AA^+\mathbf{b}$, so $\hat{\mathbf{x}}$ is a minimiser.
+
+*Minimum norm.* If $\mathbf{x}$ is any other minimiser then $A\mathbf{x}=A\hat{\mathbf{x}}$, so $\mathbf{x}-\hat{\mathbf{x}}\in\operatorname{Null}A$. But $\hat{\mathbf{x}}=A^+\mathbf{b} = V\Sigma^+U^T\mathbf{b}$ is a combination of $\mathbf{v}_1,\dots,\mathbf{v}_r$ and hence lies in $\operatorname{Row}A$, which is orthogonal to $\operatorname{Null}A$. Pythagoras gives
+
+$$\lVert\mathbf{x}\rVert^2 = \lVert\hat{\mathbf{x}}\rVert^2 + \lVert\mathbf{x}-\hat{\mathbf{x}}\rVert^2 \ge \lVert\hat{\mathbf{x}}\rVert^2,$$
+
+with equality only when $\mathbf{x}=\hat{\mathbf{x}}$.
+:::
+
+:::intuition
+Least squares with a full-rank $A$ has one answer. When $A$ is rank-deficient — two of your predictors are the same measurement in different units, say — there is a whole flat of equally good answers, and any of them fits the data identically well. The pseudoinverse picks the one closest to the origin: the fit that does not put large, cancelling coefficients on the duplicated predictors. That is both the most stable and the most interpretable choice, and it is what every numerical library returns.
+:::
+
+:::example[Pseudoinverse of a full-column-rank matrix]
+Compute $A^+$ for $A=\begin{pmatrix}1&0\\1&1\\0&1\end{pmatrix}$.
+:::
+
+:::solution
+The columns are independent, so $r=n=2$ and formula (2) applies.
+
+$$A^TA = \begin{pmatrix}1&1&0\\0&1&1\end{pmatrix}\begin{pmatrix}1&0\\1&1\\0&1\end{pmatrix} = \begin{pmatrix}2&1\\1&2\end{pmatrix},\qquad (A^TA)^{-1}=\frac13\begin{pmatrix}2&-1\\-1&2\end{pmatrix}.$$
+
+Then
+
+$$A^+ = (A^TA)^{-1}A^T = \frac13\begin{pmatrix}2&-1\\-1&2\end{pmatrix}\begin{pmatrix}1&1&0\\0&1&1\end{pmatrix} = \frac13\begin{pmatrix}2&1&-1\\-1&1&2\end{pmatrix}.$$
+
+Sanity check with Penrose condition (i): $A^+A = \tfrac13\begin{pmatrix}2+1&0+1-1\\-1+1&1+2\end{pmatrix} = \tfrac13\begin{pmatrix}3&0\\0&3\end{pmatrix}=I_2$. ✓ (For full column rank $A^+A=I_n$ always, since the projection onto $\operatorname{Row}A=\mathbb{R}^n$ is the identity.) Note $AA^+\ne I_3$: it is the projection onto a plane in $\mathbb{R}^3$.
+:::
+
+:::example[Pseudoinverse of a rank-deficient matrix]
+Compute $A^+$ for $A=\begin{pmatrix}1&1\\1&1\end{pmatrix}$, and verify the four Penrose conditions.
+:::
+
+:::solution
+$A^TA=\begin{pmatrix}2&2\\2&2\end{pmatrix}$ has eigenvalues $4$ and $0$, so $\sigma_1=2$, $r=1$, and $(A^TA)^{-1}$ does not exist — formula (2) is unavailable and we must use the SVD.
+
+$\mathbf{v}_1 = \tfrac1{\sqrt2}(1,1)$ and $\mathbf{u}_1 = A\mathbf{v}_1/2 = \tfrac12\cdot\tfrac1{\sqrt2}(2,2) = \tfrac1{\sqrt2}(1,1)$.
+
+$$A^+ = \frac{1}{\sigma_1}\mathbf{v}_1\mathbf{u}_1^T = \frac12\cdot\frac12\begin{pmatrix}1&1\\1&1\end{pmatrix} = \begin{pmatrix}1/4&1/4\\1/4&1/4\end{pmatrix}.$$
+
+Verification: $AA^+ = \begin{pmatrix}1&1\\1&1\end{pmatrix}\begin{pmatrix}1/4&1/4\\1/4&1/4\end{pmatrix} = \begin{pmatrix}1/2&1/2\\1/2&1/2\end{pmatrix}$, which is symmetric (iii) — it is the projection onto the line through $(1,1)$. By symmetry $A^+A$ is the same matrix, giving (iv). Then $AA^+A = \begin{pmatrix}1/2&1/2\\1/2&1/2\end{pmatrix}A = \begin{pmatrix}1&1\\1&1\end{pmatrix}=A$ (i), and $A^+AA^+ = \begin{pmatrix}1/2&1/2\\1/2&1/2\end{pmatrix}A^+ = \begin{pmatrix}1/4&1/4\\1/4&1/4\end{pmatrix}=A^+$ (ii). ✓
+
+Sanity check on the nonsense alternative: $A^{-1}$ does not exist, and no matrix $X$ has $AX=I$, since $\operatorname{Col}A$ is only a line.
+:::
+
+:::example[Minimum-norm least squares]
+Solve $A\mathbf{x}=\mathbf{b}$ in the least-squares, minimum-norm sense for $A=\begin{pmatrix}1&1\\1&1\end{pmatrix}$ and $\mathbf{b}=(2,4)$.
+:::
+
+:::solution
+Using $A^+$ from the previous example,
+
+$$\hat{\mathbf{x}} = A^+\mathbf{b} = \begin{pmatrix}1/4&1/4\\1/4&1/4\end{pmatrix}\begin{pmatrix}2\\4\end{pmatrix} = \begin{pmatrix}3/2\\3/2\end{pmatrix}.$$
+
+Check it is a least-squares solution: $A\hat{\mathbf{x}} = (3,3)$, and the residual $\mathbf{b}-A\hat{\mathbf{x}} = (-1,1)$ is orthogonal to $\operatorname{Col}A=\operatorname{span}\{(1,1)\}$, as required. ✓
+
+Check minimum norm: every vector of the form $(3/2+t,\,3/2-t)$ satisfies $A\mathbf{x}=(3,3)$ too, and its squared norm is $(3/2+t)^2+(3/2-t)^2 = 9/2+2t^2$, minimised at $t=0$. ✓
+
+$\lVert\hat{\mathbf{x}}\rVert = \tfrac{3}{\sqrt2}\approx 2.12$.
+:::
+
+:::example[Pseudoinverse of a wide matrix]
+Compute $A^+$ for $A=\begin{pmatrix}1&2&2\end{pmatrix}$ and use it to find the minimum-norm solution of $A\mathbf{x}=9$.
+:::
+
+:::solution
+$A$ is $1\times3$ of rank $1$, so it has full row rank and formula (3) applies: $AA^T = (1+4+4)=(9)$, so
+
+$$A^+ = A^T(AA^T)^{-1} = \frac19\begin{pmatrix}1\\2\\2\end{pmatrix}.$$
+
+The minimum-norm solution of $x_1+2x_2+2x_3=9$ is
+
+$$\hat{\mathbf{x}} = A^+\cdot 9 = \begin{pmatrix}1\\2\\2\end{pmatrix}.$$
+
+Sanity check: $1+4+4=9$ ✓, and geometrically the closest point of a plane to the origin is along the normal direction, which for $x_1+2x_2+2x_3=9$ is $(1,2,2)$. Its norm is $3$, matching the distance formula $9/\lVert(1,2,2)\rVert = 9/3 = 3$. ✓
+:::
+
+:::pitfall
+$(AB)^+ \ne B^+A^+$ in general — the pseudoinverse does not reverse products the way the inverse does. It is also discontinuous in $A$: for $A_\epsilon=\begin{pmatrix}1&0\\0&\epsilon\end{pmatrix}$ we have $A_\epsilon^+=\begin{pmatrix}1&0\\0&1/\epsilon\end{pmatrix}$, which blows up as $\epsilon\to0$, while $A_0^+=\begin{pmatrix}1&0\\0&0\end{pmatrix}$. This is the practical reason numerical libraries truncate small singular values before pseudo-inverting.
+:::
+
+## Principal component analysis
+
+<!-- section: pca -->
+
+Given a table of measurements — $m$ observations of $n$ variables — which directions in variable space carry the variation, and how many of them are really needed? Principal component analysis answers both questions, and the answer is the SVD of the centred data matrix.
+
+:::definition[Centred data matrix and sample covariance]{#covariance-definition}
+Let the rows of $X_0$ be $m$ observations of $n$ variables. Subtract from each column its mean to obtain the **centred data matrix** $X$, so that every column of $X$ sums to zero. The **sample covariance matrix** is
+
+$$C = \frac{1}{m-1}X^TX,$$
+
+an $n\times n$ matrix whose $(i,j)$ entry is the sample covariance of variables $i$ and $j$, and whose $(i,i)$ entry is the sample variance of variable $i$.
+:::
+
+Centring is not cosmetic. Variance measures spread about the mean, so the formula $\tfrac1{m-1}X^TX$ computes variance only if the mean has already been removed. Skip the centring and the largest "principal component" typically points at the mean vector, describing where the data sits rather than how it varies.
+
+By the Gram matrix proposition, $C$ is symmetric positive semidefinite, so the Spectral Theorem applies and $C$ has an orthonormal eigenbasis with nonnegative eigenvalues. Those eigenvectors are the principal components, and the SVD of $X$ produces them directly.
+
+:::definition[Principal components]{#pc-definition}
+Let $X=U\Sigma V^T$ be an SVD of the centred data matrix. The **$i$-th principal component** is the right singular vector $\mathbf{v}_i$, a unit vector in variable space. The **variance explained** by it is
+
+$$\text{var}_i = \frac{\sigma_i^2}{m-1},$$
+
+and the **scores** of the observations on it are the entries of $X\mathbf{v}_i = \sigma_i\mathbf{u}_i$.
+:::
+
+:::proposition[The principal components diagonalise the covariance]{#pca-svd-link}
+With $X=U\Sigma V^T$,
+
+$$C = \frac{1}{m-1}X^TX = V\!\left(\frac{\Sigma^T\Sigma}{m-1}\right)\!V^T,$$
+
+so the columns of $V$ are orthonormal eigenvectors of $C$ with eigenvalues $\lambda_i = \sigma_i^2/(m-1)$. In particular the variance explained by $\mathbf{v}_i$ is exactly the $i$-th eigenvalue of $C$, and the total variance is
+
+$$\operatorname{tr}C = \sum_{i}\frac{\sigma_i^2}{m-1}.$$
+:::
+
+:::proof
+$X^TX = V\Sigma^TU^TU\Sigma V^T = V(\Sigma^T\Sigma)V^T$, and dividing by $m-1$ gives the display. Since $V$ is orthogonal and $\Sigma^T\Sigma/(m-1)$ is diagonal, this is an orthogonal diagonalisation of $C$ with the stated eigenvalues. The trace of $C$ equals the sum of its eigenvalues, and also the sum of the sample variances of the individual variables, so "total variance" is unambiguous.
+:::
+
+:::theorem[The first principal component maximises variance]{#pc1-maximises}
+Among all unit vectors $\mathbf{w}\in\mathbb{R}^n$, the sample variance of the projected data $X\mathbf{w}$ is largest when $\mathbf{w}=\mathbf{v}_1$, and its value is then $\sigma_1^2/(m-1)$. More generally, among unit vectors orthogonal to $\mathbf{v}_1,\dots,\mathbf{v}_{k-1}$, the maximum is attained at $\mathbf{v}_k$ with value $\sigma_k^2/(m-1)$.
+:::
+
+:::proof
+Because $X$ is centred, the projected values $X\mathbf{w}$ have mean zero, so their sample variance is
+
+$$\frac{\lVert X\mathbf{w}\rVert^2}{m-1} = \frac{\mathbf{w}^TX^TX\mathbf{w}}{m-1} = \mathbf{w}^TC\mathbf{w}.$$
+
+Write $\mathbf{w}=\sum_i c_i\mathbf{v}_i$ with $\sum c_i^2=1$. Then $\mathbf{w}^TC\mathbf{w} = \sum_i\lambda_ic_i^2\le\lambda_1$, with equality at $c_1=1$, i.e. $\mathbf{w}=\mathbf{v}_1$. Restricting to $\mathbf{w}\perp\mathbf{v}_1,\dots,\mathbf{v}_{k-1}$ forces $c_1=\cdots=c_{k-1}=0$, and the same estimate gives the bound $\lambda_k$, attained at $\mathbf{v}_k$.
+:::
+
+:::definition[Explained variance fraction]{#explained-variance}
+The fraction of total variance explained by the first $k$ principal components is
+
+$$\frac{\sigma_1^2+\cdots+\sigma_k^2}{\sigma_1^2+\cdots+\sigma_p^2},\qquad p=\min(m,n),$$
+
+the $(m-1)$'s cancelling. One usually chooses the smallest $k$ meeting a target such as $0.90$ or $0.95$, or reads $k$ off the "elbow" of a scree plot of $\sigma_i^2$ against $i$.
+:::
+
+Notice that this is Eckart–Young wearing different clothes. Projecting the data onto the span of $\mathbf{v}_1,\dots,\mathbf{v}_k$ produces the matrix $X_k = XV_kV_k^T$, which is the rank-$k$ truncation of $X$; the residual sum of squared distances from the data points to that $k$-dimensional subspace is $\lVert X-X_k\rVert_F^2 = \sigma_{k+1}^2+\cdots$, minimised by that choice of subspace. PCA finds the $k$-dimensional plane closest to the data in the least-squares sense.
+
+:::intuition
+A cloud of points shaped like a cigar has one long direction and two short ones. PCA hands you the axis of the cigar first, then the two cross-sectional directions, sorted. If the cigar is very thin you may describe each point by a single number — its position along the axis — and lose almost nothing. The explained variance fraction tells you exactly how much "almost nothing" is.
+:::
+
+:::example[PCA on three points]
+The observations are $(2,1)$, $(-1,-2)$, $(-1,1)$. Find the principal components and the explained variance fractions.
+:::
+
+:::solution
+Mean: $\left(\tfrac{2-1-1}{3},\tfrac{1-2+1}{3}\right)=(0,0)$, so the data is already centred and $X$ is the matrix of the three points as rows.
+
+Covariance with $m=3$: $\sum x^2 = 4+1+1=6$, $\sum y^2 = 1+4+1=6$, $\sum xy = 2+2-1=3$, so
+
+$$C = \frac12\begin{pmatrix}6&3\\3&6\end{pmatrix} = \begin{pmatrix}3&1.5\\1.5&3\end{pmatrix}.$$
+
+Trace $6$, determinant $9-2.25=6.75$: $\lambda^2-6\lambda+6.75=0$ gives $\lambda=\tfrac{6\pm3}{2}$, so $\lambda_1=4.5$, $\lambda_2=1.5$.
+
+For $\lambda_1=4.5$: $\begin{pmatrix}-1.5&1.5\\1.5&-1.5\end{pmatrix}\mathbf{v}=\mathbf 0$ forces $x=y$, so $\mathbf{v}_1=\tfrac1{\sqrt2}(1,1)$; then $\mathbf{v}_2=\tfrac1{\sqrt2}(1,-1)$.
+
+Explained variance: $\lambda_1/(\lambda_1+\lambda_2) = 4.5/6 = 0.75$. Projecting onto the single line through $(1,1)$ retains $75\%$ of the spread.
+
+Sanity check: $\operatorname{tr}C = 3+3 = 6 = \lambda_1+\lambda_2$ ✓ — the trace is unchanged by the orthogonal change of basis PCA performs, which is why "total variance" does not depend on the coordinate system.
+:::
+
+:::example[PCA with centring, and the singular values]
+The observations are $(3,4)$, $(4,3)$, $(6,7)$, $(7,6)$. Centre the data, find the first principal component with the convention that its first entry is positive, and report the fraction of variance it explains.
+:::
+
+:::solution
+Means: $\bar x = (3+4+6+7)/4 = 5$, $\bar y = (4+3+7+6)/4 = 5$. Centred rows:
+
+$$X = \begin{pmatrix}-2&-1\\-1&-2\\1&2\\2&1\end{pmatrix}.$$
+
+Then $\sum x^2 = 4+1+1+4 = 10$, $\sum y^2 = 1+4+4+1 = 10$, $\sum xy = 2+2+2+2 = 8$, so with $m=4$,
+
+$$X^TX = \begin{pmatrix}10&8\\8&10\end{pmatrix},\qquad C = \frac13\begin{pmatrix}10&8\\8&10\end{pmatrix}.$$
+
+Eigenvalues of $X^TX$: trace $20$, determinant $100-64 = 36$, so $\lambda^2-20\lambda+36=(\lambda-18)(\lambda-2)$, giving $18$ and $2$. Hence the singular values of $X$ are $\sigma_1 = \sqrt{18}=3\sqrt2$ and $\sigma_2=\sqrt2$, and the covariance eigenvalues are $18/3=6$ and $2/3$.
+
+The eigenvector for $18$ satisfies $-8x+8y=0$, so $x=y$: with the stated sign convention,
+
+$$\mathbf{v}_1 = \tfrac1{\sqrt2}(1,1)\approx(0.7071,\,0.7071).$$
+
+Explained variance fraction: $\dfrac{18}{18+2} = 0.9$.
+
+Sanity check: total variance $6+2/3 = 20/3$, and $6/(20/3) = 18/20 = 0.9$ ✓ — the $(m-1)$ cancels, as claimed.
+:::
+
+:::example[Choosing $k$ on a real-sized problem]
+A dataset of $101$ observations of $8$ variables has $X$ with singular values $30, 18, 11, 6, 3, 2, 1, 1$. How many components are needed for $90\%$ of the variance, and what is the variance explained by the first component?
+:::
+
+:::solution
+Squares: $900, 324, 121, 36, 9, 4, 1, 1$, totalling $1396$.
+
+Cumulative fractions: $900/1396 = 0.6447$; $1224/1396 = 0.8768$; $1345/1396 = 0.9635$.
+
+So $k=3$ components are needed — two fall just short of the target at $87.7\%$.
+
+The variance explained by the first component in absolute units is $\sigma_1^2/(m-1) = 900/100 = 9$.
+
+Sanity check: the total variance is $1396/100 = 13.96$, and $9/13.96 = 0.6447$, matching the fraction computed from squares alone. ✓
+:::
+
+:::pitfall
+PCA is not scale-invariant. If one variable is measured in millimetres and another in kilometres, the first will dominate the covariance matrix purely because of its units, and the first principal component will point along it. When variables have different units, standardise each column to unit variance first — equivalently, run PCA on the correlation matrix rather than the covariance matrix.
+:::
+
+:::remark
+Two conventions clash in the literature. We put observations in rows, so the principal components are the *right* singular vectors $\mathbf{v}_i$ and $C=\frac{1}{m-1}X^TX$. Some texts put variables in rows, in which case the principal components are the *left* singular vectors. Always check which way the data matrix is oriented before quoting a formula.
+:::
+
+## The polar decomposition
+
+<!-- section: polar -->
+
+A nonzero complex number factors as $z = e^{i\theta}\lvert z\rvert$: a rotation times a stretch. Square matrices do the same, and the SVD proves it in one line.
+
+:::theorem[Polar decomposition]{#polar-theorem}
+Every real $n\times n$ matrix $A$ factors as
+
+$$A = QS,$$
+
+where $Q$ is orthogonal and $S$ is symmetric positive semidefinite. If $A$ is invertible the factorisation is unique, with $S=(A^TA)^{1/2}$ and $Q=AS^{-1}$. There is also a left-handed version $A=S'Q$ with $S'=(AA^T)^{1/2}$.
+:::
+
+:::proof
+Take an SVD $A=U\Sigma V^T$ and insert $V^TV=I$:
+
+$$A = U\Sigma V^T = (UV^T)(V\Sigma V^T) = QS,$$
+
+where $Q=UV^T$ is orthogonal (a product of orthogonal matrices) and $S=V\Sigma V^T$ is symmetric with nonnegative eigenvalues $\sigma_i$, hence positive semidefinite.
+
+For uniqueness when $A$ is invertible, note that $A=QS$ forces
+
+$$A^TA = SQ^TQS = S^2,$$
+
+and a positive definite matrix has exactly one positive definite square root (diagonalise: the square root must act as $\sqrt{\lambda_i}$ on each eigenspace). So $S=(A^TA)^{1/2}$ is determined, and then $Q=AS^{-1}$ is too.
+:::
+
+:::intuition
+In continuum mechanics this is the statement that any deformation of a body is a pure stretch along three perpendicular axes followed by a rigid rotation. $S$ is the stretch tensor, $Q$ the rotation. Engineers care because material response depends on $S$ alone — rotating a steel beam does not stress it.
+:::
+
+:::example[Polar decomposition of a $2\times2$ matrix]
+Find the polar decomposition of $A=\begin{pmatrix}2&2\\-1&1\end{pmatrix}$.
+:::
+
+:::solution
+From the SVD computed earlier, $U=\begin{pmatrix}1&0\\0&-1\end{pmatrix}$, $\Sigma=\operatorname{diag}(2\sqrt2,\sqrt2)$, $V=\tfrac1{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix}$.
+
+$$Q = UV^T = \begin{pmatrix}1&0\\0&-1\end{pmatrix}\cdot\frac1{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix} = \frac1{\sqrt2}\begin{pmatrix}1&1\\-1&1\end{pmatrix},$$
+
+a rotation by $-45^\circ$.
+
+$$S = V\Sigma V^T = \sigma_1\mathbf{v}_1\mathbf{v}_1^T+\sigma_2\mathbf{v}_2\mathbf{v}_2^T = 2\sqrt2\cdot\frac12\begin{pmatrix}1&1\\1&1\end{pmatrix} + \sqrt2\cdot\frac12\begin{pmatrix}1&-1\\-1&1\end{pmatrix} = \frac{\sqrt2}{2}\begin{pmatrix}3&1\\1&3\end{pmatrix}.$$
+
+Check: the $(1,1)$ entry of $QS$ is $\tfrac1{\sqrt2}\cdot\tfrac{\sqrt2}{2}(3+1) = 2$ ✓, and the $(2,1)$ entry is $\tfrac1{\sqrt2}\cdot\tfrac{\sqrt2}{2}(-3+1) = -1$ ✓.
+
+Sanity check on $S$: its eigenvalues should be the singular values of $A$. Trace $3\sqrt2$ and determinant $\tfrac12(9-1)=4$; the eigenvalues of $\tfrac{\sqrt2}2\begin{pmatrix}3&1\\1&3\end{pmatrix}$ are $\tfrac{\sqrt2}2\cdot 4 = 2\sqrt2$ and $\tfrac{\sqrt2}{2}\cdot 2 = \sqrt2$. ✓
+:::
+
+:::example[The nearest orthogonal matrix]
+Show that the $Q$ in the polar decomposition is the orthogonal matrix closest to $A$ in the Frobenius norm, and find it for $A=\begin{pmatrix}2&0\\0&1\end{pmatrix}$.
+:::
+
+:::solution
+For any orthogonal $W$, orthogonal invariance of the Frobenius norm gives
+
+$$\lVert A - W\rVert_F^2 = \lVert U\Sigma V^T - W\rVert_F^2 = \lVert \Sigma - U^TWV\rVert_F^2,$$
+
+and $Z=U^TWV$ ranges over all orthogonal matrices as $W$ does. Expanding,
+
+$$\lVert\Sigma-Z\rVert_F^2 = \lVert\Sigma\rVert_F^2 - 2\operatorname{tr}(\Sigma^TZ) + n,$$
+
+since $\lVert Z\rVert_F^2=n$. So we must maximise $\operatorname{tr}(\Sigma^TZ)=\sum_i\sigma_iz_{ii}$. Every entry of an orthogonal matrix satisfies $\lvert z_{ii}\rvert\le1$, so the sum is at most $\sum\sigma_i$, attained at $Z=I$, i.e. $W=UV^T=Q$.
+
+For $A=\operatorname{diag}(2,1)$, which is already symmetric positive definite, the SVD is $U=V=I$ and $\Sigma=A$, so $Q=I$ and $S=A$. The nearest orthogonal matrix to $\operatorname{diag}(2,1)$ is the identity, at distance $\lVert A-I\rVert_F = \sqrt{1+0}=1$.
+:::
+
+## Applications
+
+<!-- section: applications -->
+
+The three sections above are the theory; this one is a short tour of what practitioners actually do with it. Each application is the same theorem — truncate the outer product sum — applied to a different kind of matrix.
+
+**Latent semantic analysis.** Build a term–document matrix $A$ whose $(i,j)$ entry counts occurrences of word $i$ in document $j$. It is enormous and almost entirely zero, and a keyword search on it fails whenever a query says "car" and a document says "automobile". Truncate to rank $k\approx 100{-}300$. The columns of $U_k$ are "topics" — weighted word combinations — and each document becomes a short vector of topic scores. Two documents about cars now have similar scores even with no word in common, because both words load on the same singular direction. The truncation is doing the synonymy handling, and Eckart–Young is the guarantee that no other $k$-dimensional summary retains more of the original counts.
+
+**Recommender systems.** Let $A$ be a users $\times$ items matrix of ratings. A rank-$k$ model $A\approx U_k\Sigma_kV_k^T$ says each user is a point in a $k$-dimensional taste space and each item a point in the same space, with the predicted rating being an inner product. Fitting $k\approx 20$ to a matrix of a million users and twenty thousand films replaces $2\times10^{10}$ unknown ratings with $2\times10^7$ parameters. (The honest version of this problem has most entries missing, so one minimises the error over the observed entries only; the truncated SVD is the special case where everything is observed, and it is where the idea comes from.)
+
+**Noise filtering.** Suppose a true signal matrix $A_0$ has rank $k$ and you observe $A = A_0+N$ with $N$ small random noise. The singular values of $A$ then look like $k$ large ones, inherited from $A_0$, followed by a shelf of small ones contributed by the noise. Truncating to rank $k$ removes most of $N$ while disturbing $A_0$ by at most $\lVert N\rVert_2$, since
+
+$$\lVert A_k - A_0\rVert_2 \le \lVert A_k - A\rVert_2 + \lVert A - A_0\rVert_2 \le 2\lVert N\rVert_2,$$
+
+using $\lVert A_k-A\rVert_2 = \sigma_{k+1}(A)\le\lVert N\rVert_2$ (because $A_0$ has rank $k$, so $\sigma_{k+1}(A)$ is at most the distance from $A$ to the rank-$k$ set, which is at most $\lVert N\rVert$). The same argument underlies background subtraction in video and denoising in seismic imaging.
+
+**Least squares and regularisation.** Fitting a model with nearly collinear predictors gives an ill-conditioned $A$, and the least-squares coefficients become wild. Truncated SVD regularisation discards the singular directions with $\sigma_i$ below a threshold before pseudo-inverting, which caps the amplification at $1/\varepsilon$ and stabilises the fit at the cost of a small bias.
+
+:::example[A tiny latent semantic analysis]
+Three documents have the term counts
+
+$$A = \begin{pmatrix}2&2&0\\2&2&0\\0&0&3\end{pmatrix},$$
+
+rows indexing the terms *car*, *automobile*, *banana*. Find the singular values and interpret the rank-$2$ structure.
+:::
+
+:::solution
+$A$ is symmetric, so its singular values are the absolute eigenvalues. The block $\begin{pmatrix}2&2\\2&2\end{pmatrix}$ has eigenvalues $4$ and $0$, and the remaining block contributes $3$. So the eigenvalues are $4,3,0$ and
+
+$$\sigma_1 = 4,\quad\sigma_2 = 3,\quad\sigma_3 = 0.$$
+
+The rank is $2$: the third document is about something else entirely, and the first two terms are perfectly redundant. The first singular direction is $\mathbf{u}_1 = \tfrac1{\sqrt2}(1,1,0)$ — a single "vehicle" topic that pools *car* and *automobile* — and the second is $\mathbf{u}_2 = (0,0,1)$, a "fruit" topic.
+
+Sanity check: $\sigma_1^2+\sigma_2^2 = 16+9 = 25$, and the sum of squared entries of $A$ is $4+4+4+4+9 = 25$. ✓ A rank-$2$ truncation loses nothing here, because $\sigma_3=0$.
+:::
+
+:::example[Sizing a recommender model]
+A ratings matrix has $200{,}000$ users and $15{,}000$ items. Compare the storage of the full matrix with a rank-$40$ model.
+:::
+
+:::solution
+Full matrix: $200{,}000\times 15{,}000 = 3\times 10^9$ numbers.
+
+Rank-$40$ model: $40(200{,}000+15{,}000+1) = 40\times 215{,}001 = 8{,}600{,}040$ numbers, about $8.6\times10^6$.
+
+The ratio is $3\times10^9 / 8.6\times10^6 \approx 349$, so the model is roughly $349$ times smaller. Sanity check that $k$ is in the useful range: the break-even rank is $mn/(m+n+1)\approx 3\times10^9/215001\approx 13{,}953$, so $k=40$ is far below it. ✓
+:::
+
+:::summary
+For an $m\times n$ matrix $A$ of rank $r$ with SVD $A=U\Sigma V^T$:
+
+- $\sigma_i = \sqrt{\lambda_i(A^TA)}$, and $\mathbf{u}_i=A\mathbf{v}_i/\sigma_i$ for $\sigma_i>0$.
+- $\operatorname{rank}A = \#\{i:\sigma_i>0\}$; $\lVert A\rVert_2=\sigma_1$; $\lVert A\rVert_F = (\sum\sigma_i^2)^{1/2}$; $\kappa(A)=\sigma_1/\sigma_r$.
+- $\operatorname{Col}A = \operatorname{span}\{\mathbf{u}_{1..r}\}$, $\operatorname{Null}A^T=\operatorname{span}\{\mathbf{u}_{r+1..m}\}$, $\operatorname{Row}A=\operatorname{span}\{\mathbf{v}_{1..r}\}$, $\operatorname{Null}A=\operatorname{span}\{\mathbf{v}_{r+1..n}\}$.
+- $A_k=\sum_{i\le k}\sigma_i\mathbf{u}_i\mathbf{v}_i^T$ is the best rank-$k$ approximation, with errors $\sigma_{k+1}$ (spectral) and $(\sum_{i>k}\sigma_i^2)^{1/2}$ (Frobenius); storage $k(m+n+1)$.
+- $A^+=V\Sigma^+U^T$ gives the minimum-norm least-squares solution $\hat{\mathbf{x}}=A^+\mathbf{b}$.
+- PCA: principal components are the $\mathbf{v}_i$ of the centred $X$, with variances $\sigma_i^2/(m-1)$.
+- Polar: $A=(UV^T)(V\Sigma V^T)$, rotation times stretch.
+:::
+
+## Common Mistakes
+
+1. **Treating singular values as absolute eigenvalues.** True only for symmetric matrices. $\begin{pmatrix}1&5\\0&1\end{pmatrix}$ has both eigenvalues $1$ and singular values about $5.19$ and $0.19$.
+
+2. **Computing $U$ by diagonalising $AA^T$ separately.** The vectors come out right up to sign, and a single wrong sign makes $U\Sigma V^T\ne A$. Use $\mathbf{u}_i = A\mathbf{v}_i/\sigma_i$ and only fall back on the null space of $A^T$ for the columns with $\sigma_i=0$.
+
+3. **Giving $\Sigma$ the wrong shape.** For a $3\times2$ matrix, $\Sigma$ is $3\times2$, not $2\times2$ or $3\times3$. A shape error here is the commonest reason a hand-computed SVD fails to multiply back.
+
+4. **Forgetting to sort.** By convention $\sigma_1\ge\sigma_2\ge\cdots$, and every statement about "the best rank-$k$ approximation", the condition number, and PCA assumes it. Eigenvalue routines do not sort for you.
+
+5. **Dividing by a zero singular value.** In the pseudoinverse, zero singular values stay zero; in the construction of $U$, the corresponding columns come from $\operatorname{Null}(A^T)$.
+
+6. **Confusing $A^+$ with $A^{-1}$.** $AA^+$ is a projection, not the identity, unless $A$ has full row rank. $A^+A=I$ requires full column rank.
+
+7. **Approximating a matrix by zeroing small entries.** The best rank-$k$ approximation zeroes small *singular values*, which is a completely different operation.
+
+8. **Forgetting to centre the data before PCA.** Without centring, the first component usually points at the mean and the "variances" are second moments about the origin.
+
+9. **Running PCA on incomparable units.** Standardise the columns first, or the variable with the largest numerical scale wins by default.
+
+10. **Reading the condition number off the determinant.** $10^{-6}I$ has determinant $10^{-12}$ and condition number $1$. The condition number is a ratio of singular values and is unchanged by scaling.
+
+11. **Assuming Eckart–Young for any norm.** It holds for the spectral and Frobenius norms (indeed all unitarily invariant norms), but not for, say, the entrywise maximum norm.
+
+12. **Expecting the SVD to be unique.** Signs may flip in matched pairs, and repeated singular values leave a whole orthogonal group of freedom. Every derived quantity in this chapter is nevertheless well defined.

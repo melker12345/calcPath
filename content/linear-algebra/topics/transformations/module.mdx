@@ -4,238 +4,1146 @@ title: Linear Transformations
 
 # Linear Transformations
 
-Linear transformations are the central objects of linear algebra. While vectors and matrices are the raw materials, it is the *functions* that map one vector space into another while preserving addition and scaling that give the subject its power and elegance.
+Vectors and matrices are the raw materials of linear algebra; linear transformations are what the subject is actually about. A linear transformation is a function between vector spaces that respects the two operations a vector space has — addition and scalar multiplication — and nothing else. That single requirement is astonishingly restrictive. It forces the function to be completely determined by what it does to a basis, which is a finite amount of data, which is a matrix.
 
-Every linear transformation between finite-dimensional spaces can be represented by a matrix once bases are chosen. This representation lets us compute with abstract maps using the familiar tools of matrix algebra. The same map can look very different depending on the bases we pick.
+That is the central bargain of this chapter. On one side sits a map $T$ that may be described in words ("rotate the plane by thirty degrees"), by a formula ("differentiate the polynomial"), or by a geometric picture. On the other side sits a rectangular array of numbers. Once bases are fixed, the two sides carry exactly the same information, and every question about the map becomes an arithmetic question about the array. Composing maps becomes multiplying matrices. Inverting a map becomes inverting a matrix. Solving $T(\mathbf{x}) = \mathbf{b}$ becomes solving a linear system.
 
-The kernel and image of a transformation capture its most important structural information: what gets sent to zero, and what can be reached. The rank-nullity theorem relates these two subspaces in a fundamental way that appears throughout mathematics and data science.
+The bargain has a catch, and the catch is the other half of the chapter: the matrix depends on the bases you chose, and the map does not. Change the basis and the array changes, sometimes beyond recognition, while the underlying geometry is untouched. Understanding which features of the array survive a change of basis — the rank, the determinant, the trace, the eigenvalues — is understanding which features belong to the map itself. That is what similarity means, and it is why the diagonalisation of the next chapter is worth wanting: among all the matrices representing one map, some are much easier to look at than others.
 
-## What is a linear transformation? {#definition}
+Two subspaces measure what a map does. The kernel is everything the map destroys; the image is everything the map can produce. The rank-nullity theorem says their dimensions add up to the dimension of the domain — nothing is lost and nothing appears from nowhere. It is proved here, in full, from a basis of the kernel extended to a basis of the domain, and almost every dimension count in the rest of the subject is a corollary of it.
+
+## What a linear transformation is
+
+<!-- section: definition -->
+
+A transformation, map, or function $T: V \to W$ assigns to each vector $\mathbf{v}$ in the domain $V$ exactly one vector $T(\mathbf{v})$ in the codomain $W$. The vector $T(\mathbf{v})$ is the **image** of $\mathbf{v}$ under $T$. Nothing so far is special; what follows is.
 
 :::definition[Linear transformation]{#linear-transformation}
-A function $T: V \to W$ between vector spaces is a linear transformation if it preserves the two vector space operations:
+Let $V$ and $W$ be vector spaces over the same field of scalars. A function $T: V \to W$ is a **linear transformation** (or **linear map**) if for all $\mathbf{u}, \mathbf{v} \in V$ and every scalar $c$,
 
-$$T(\mathbf{u} + \mathbf{v}) = T(\mathbf{u}) + T(\mathbf{v}), \qquad T(c\mathbf{v}) = c\,T(\mathbf{v})$$
+$$T(\mathbf{u} + \mathbf{v}) = T(\mathbf{u}) + T(\mathbf{v}) \qquad\text{(additivity)}$$
 
-for all vectors $\mathbf{u}, \mathbf{v} \in V$ and all scalars $c$.
+and
+
+$$T(c\,\mathbf{v}) = c\,T(\mathbf{v}) \qquad\text{(homogeneity)}.$$
+
+When $V = W$ we call $T$ a **linear operator** on $V$.
 :::
 
-:::proposition[Linear maps preserve linear combinations]{#preserves-combinations}
-If $T$ is linear, then for all vectors $\mathbf{v}_1, \ldots, \mathbf{v}_k$ and scalars $c_1, \ldots, c_k$,
+Read the two axioms carefully, because the two sides of each equation live in different places. On the left of the first equation, $\mathbf{u} + \mathbf{v}$ is an addition performed in $V$; on the right, $T(\mathbf{u}) + T(\mathbf{v})$ is an addition performed in $W$. Linearity says that it does not matter whether you combine first and map afterwards, or map first and combine afterwards. The same reading applies to homogeneity, with scaling in $V$ on the left and scaling in $W$ on the right.
 
-$$T(c_1\mathbf{v}_1 + \cdots + c_k\mathbf{v}_k) = c_1 T(\mathbf{v}_1) + \cdots + c_k T(\mathbf{v}_k).$$
+The definition says nothing about $\mathbb{R}^n$, nothing about matrices, and nothing about coordinates. $V$ may be the space $P_n$ of polynomials of degree at most $n$, the space $M_{m\times n}$ of matrices, or a space of functions. This generality is not decoration: differentiation, integration, transposition and evaluation are all linear maps, and every theorem we prove about linear maps applies to all of them at once.
+
+The two axioms can be merged into one, which is often the quickest test in practice.
+
+:::proposition[One-line linearity test]{#one-line-test}
+A function $T: V \to W$ is linear if and only if
+
+$$T(c\,\mathbf{u} + \mathbf{v}) = c\,T(\mathbf{u}) + T(\mathbf{v})$$
+
+for all $\mathbf{u}, \mathbf{v} \in V$ and all scalars $c$.
 :::
 
-This is the defining feature — linear maps send lines through the origin to lines through the origin (or to the zero vector).
+:::proof
+If $T$ is linear then $T(c\mathbf{u} + \mathbf{v}) = T(c\mathbf{u}) + T(\mathbf{v}) = cT(\mathbf{u}) + T(\mathbf{v})$, using additivity and then homogeneity.
+
+Conversely, suppose the displayed identity holds always. Taking $c = 1$ gives $T(\mathbf{u} + \mathbf{v}) = T(\mathbf{u}) + T(\mathbf{v})$, which is additivity. Taking $\mathbf{v} = \mathbf{0}$ gives $T(c\mathbf{u}) = cT(\mathbf{u}) + T(\mathbf{0})$; to finish we need $T(\mathbf{0}) = \mathbf{0}$, which follows from additivity already established: $T(\mathbf{0}) = T(\mathbf{0} + \mathbf{0}) = T(\mathbf{0}) + T(\mathbf{0})$, and subtracting $T(\mathbf{0})$ from both sides leaves $\mathbf{0} = T(\mathbf{0})$. Hence $T(c\mathbf{u}) = cT(\mathbf{u})$.
+:::
+
+That last computation deserves to be recorded separately, because it is the fastest way to disqualify a candidate map.
 
 :::corollary[A linear map fixes the origin]{#linear-fixes-origin}
-Every linear transformation satisfies $T(\mathbf{0}) = \mathbf{0}$.
+Every linear transformation satisfies
+
+$$T(\mathbf{0}) = \mathbf{0},$$
+
+and more generally $T(-\mathbf{v}) = -T(\mathbf{v})$.
 :::
 
-Any map that fails this test cannot be linear, which makes it the fastest disqualifying check.
+:::proof
+Homogeneity with $c = 0$ gives $T(\mathbf{0}) = T(0\cdot\mathbf{0}) = 0\cdot T(\mathbf{0}) = \mathbf{0}$. Homogeneity with $c = -1$ gives $T(-\mathbf{v}) = -T(\mathbf{v})$.
+:::
 
-Common examples: rotation, reflection, projection, differentiation (on polynomials), integration, and matrix multiplication $T(\mathbf{x}) = A\mathbf{x}$. Non-examples: translation, $T(x) = x^2$, or any map that moves the origin.
+The converse fails, and badly: $T(x,y) = (x^2, y)$ fixes the origin and is not linear. So $T(\mathbf{0}) = \mathbf{0}$ is a test that can only ever refute linearity, never confirm it.
+
+Induction extends additivity from two vectors to any finite number, and this is the property that does all the work later.
+
+:::proposition[Linear maps preserve linear combinations]{#preserves-combinations}
+If $T: V \to W$ is linear, then for all $\mathbf{v}_1, \dots, \mathbf{v}_k \in V$ and all scalars $c_1, \dots, c_k$,
+
+$$T(c_1\mathbf{v}_1 + c_2\mathbf{v}_2 + \cdots + c_k\mathbf{v}_k) = c_1 T(\mathbf{v}_1) + c_2 T(\mathbf{v}_2) + \cdots + c_k T(\mathbf{v}_k).$$
+:::
+
+:::proof
+Induct on $k$. For $k = 1$ the claim is homogeneity. Assume it holds for $k-1$ vectors. Then, writing $\mathbf{s} = c_1\mathbf{v}_1 + \cdots + c_{k-1}\mathbf{v}_{k-1}$, additivity gives
+
+$$T(\mathbf{s} + c_k\mathbf{v}_k) = T(\mathbf{s}) + T(c_k\mathbf{v}_k) = T(\mathbf{s}) + c_k T(\mathbf{v}_k),$$
+
+and the inductive hypothesis expands $T(\mathbf{s})$ as $c_1T(\mathbf{v}_1) + \cdots + c_{k-1}T(\mathbf{v}_{k-1})$.
+:::
+
+Here is the consequence to hold on to. If $\{\mathbf{b}_1, \dots, \mathbf{b}_n\}$ spans $V$, then every $\mathbf{v} \in V$ is some combination $\sum c_j \mathbf{b}_j$, and the proposition says $T(\mathbf{v}) = \sum c_j T(\mathbf{b}_j)$. **A linear map is completely determined by its values on a spanning set.** Know the $n$ vectors $T(\mathbf{b}_1), \dots, T(\mathbf{b}_n)$ and you know $T$ everywhere. An arbitrary function on an infinite space needs infinitely much data to specify; a linear map needs $n$ vectors.
 
 :::intuition
-A linear transformation is like a perfectly fair machine: if you feed it a mixture of inputs, it gives you the same mixture of outputs. It never distorts the 'straight-line' relationships between vectors. Scaling an input by 3 always scales the output by 3, and adding two inputs always adds their outputs.
+Think of $T$ as a paint mixer that is scrupulously fair. You know it turns one litre of blue into two litres of grey and one litre of yellow into half a litre of white. Now pour in three litres of blue and four of yellow. You do not need to run the machine to know the answer: six litres of grey and two of white. The machine never notices that the inputs arrived together — it treats each ingredient separately and adds up. That is exactly what $T(3\mathbf{b}_1 + 4\mathbf{b}_2) = 3T(\mathbf{b}_1) + 4T(\mathbf{b}_2)$ says.
 :::
 
-:::example[Checking linearity]
-Is $T(x, y) = (x + y, x - y)$ a linear transformation from $\mathbb{R}^2$ to $\mathbb{R}^2$?
+:::example[A linearity check that passes]
+Is $T: \mathbb{R}^2 \to \mathbb{R}^2$ given by $T(x,y) = (x+y,\; x-y)$ linear?
 :::
 
 :::solution
-1. Check addition: $T((x_1,y_1) + (x_2,y_2)) = T(x_1+x_2, y_1+y_2) = (x_1+x_2+y_1+y_2, x_1+x_2 - (y_1+y_2))$.
-2. And $T(x_1,y_1) + T(x_2,y_2) = (x_1+y_1, x_1-y_1) + (x_2+y_2, x_2-y_2) = (x_1+x_2+y_1+y_2, x_1+x_2-y_1-y_2)$. Same result, so addition is preserved.
-3. Check scaling: $T(c(x,y)) = T(cx, cy) = (cx+cy, cx-cy) = c(x+y, x-y) = c\,T(x,y)$. Scaling is preserved too.
-4. Both properties hold, so $T$ is linear. (Its matrix $\begin{pmatrix} 1 & 1 \\ 1 & -1 \end{pmatrix}$ has determinant $-2 < 0$, so geometrically $T$ is a reflection scaled by a factor of $\sqrt{2}$, not a pure rotation.)
+Use the one-line test. Let $\mathbf{u} = (x_1,y_1)$, $\mathbf{v} = (x_2,y_2)$ and let $c$ be a scalar. Then $c\mathbf{u} + \mathbf{v} = (cx_1 + x_2,\; cy_1 + y_2)$, so
+
+$$T(c\mathbf{u} + \mathbf{v}) = \big(cx_1 + x_2 + cy_1 + y_2,\;\; cx_1 + x_2 - cy_1 - y_2\big).$$
+
+On the other side,
+
+$$c\,T(\mathbf{u}) + T(\mathbf{v}) = c(x_1+y_1,\,x_1-y_1) + (x_2+y_2,\,x_2-y_2) = \big(cx_1+cy_1+x_2+y_2,\;\; cx_1-cy_1+x_2-y_2\big).$$
+
+The two agree componentwise, so $T$ is linear.
+
+Sanity check with numbers: $T(1,0) = (1,1)$ and $T(0,1) = (1,-1)$, so linearity predicts $T(2,3) = 2(1,1) + 3(1,-1) = (5,-1)$. Directly, $T(2,3) = (2+3, 2-3) = (5,-1)$. ✓
 :::
 
-## Kernel and image {#kernel-image}
+:::example[Three linearity checks that fail]
+Decide whether each map $\mathbb{R}^2 \to \mathbb{R}^2$ is linear: (a) $T(x,y) = (x+1,\,y)$; (b) $T(x,y) = (x^2,\,y)$; (c) $T(x,y) = (|x|,\,y)$.
+:::
+
+:::solution
+(a) $T(0,0) = (1,0) \ne \mathbf{0}$, so by the corollary $T$ is not linear. Translation is never linear (unless the shift is zero) — it is *affine*, a linear map followed by a fixed displacement.
+
+(b) Here $T(0,0) = (0,0)$, so the origin test says nothing. Test homogeneity with $c = 2$ and $\mathbf{v} = (1,0)$: $T(2,0) = (4,0)$, but $2\,T(1,0) = 2(1,0) = (2,0)$. These differ, so $T$ is not linear. Squaring scales like $c^2$, not like $c$.
+
+(c) Again $T(\mathbf{0}) = \mathbf{0}$, and additivity even holds for many pairs. But homogeneity fails at $c = -1$: $T(-1,0) = (1,0)$ while $-T(1,0) = (-1,0)$. Not linear. Note that $|\cdot|$ passes the positive-scalar test and fails only for negative scalars — checking $c = 2$ alone would have missed it.
+:::
+
+:::pitfall
+"Linear" in linear algebra is not the "linear" of school algebra. The function $f(x) = 3x + 5$ is called linear in a precalculus course because its graph is a line, but as a map $\mathbb{R} \to \mathbb{R}$ it is not a linear transformation: $f(0) = 5 \ne 0$. The linear maps $\mathbb{R} \to \mathbb{R}$ are exactly $f(x) = mx$, the lines *through the origin*.
+:::
+
+Now the examples that justify the abstract definition. Each of the following is linear, and the verification is a one-line appeal to a rule you already know.
+
+:::example[Linear maps that are not matrix multiplication]
+Verify that each map is linear: (a) differentiation $D: P_3 \to P_2$, $D(p) = p'$; (b) the definite integral $I: C[0,1] \to \mathbb{R}$, $I(f) = \int_0^1 f(t)\,dt$; (c) transposition $\tau: M_{2\times 3} \to M_{3\times 2}$, $\tau(A) = A^{\mathsf{T}}$; (d) evaluation at $5$, $E: P_n \to \mathbb{R}$, $E(p) = p(5)$.
+:::
+
+:::solution
+(a) The sum rule and constant-multiple rule of calculus say precisely $(p+q)' = p' + q'$ and $(cp)' = cp'$. Those are the two axioms. Differentiation is *the* motivating example of a linear operator, and lowering the degree by one is why the codomain is $P_2$.
+
+(b) Linearity of the integral: $\int_0^1 (f+g) = \int_0^1 f + \int_0^1 g$ and $\int_0^1 cf = c\int_0^1 f$. The codomain is the scalars $\mathbb{R}$, which is a perfectly good one-dimensional vector space; a linear map into the scalars is called a **linear functional**.
+
+(c) Entrywise, $(A+B)^{\mathsf{T}} = A^{\mathsf{T}} + B^{\mathsf{T}}$ and $(cA)^{\mathsf{T}} = cA^{\mathsf{T}}$, since transposing only relabels positions.
+
+(d) $(p+q)(5) = p(5) + q(5)$ and $(cp)(5) = c\,p(5)$ by the definition of adding and scaling functions. Note the contrast with $p \mapsto p(5)^2$, which is not linear.
+
+Sanity check on (a) with coordinates: $D(2t^3 - t + 4) = 6t^2 - 1$, and $D(t^3) = 3t^2$, $D(t) = 1$, $D(1) = 0$, so linearity predicts $2(3t^2) - 1(1) + 4(0) = 6t^2 - 1$. ✓
+:::
+
+:::example[Two extreme cases]
+Describe the zero map and the identity map, and confirm both are linear.
+:::
+
+:::solution
+The **zero map** $0: V \to W$ sends every vector to $\mathbf{0}_W$. Then $0(\mathbf{u}+\mathbf{v}) = \mathbf{0} = \mathbf{0} + \mathbf{0} = 0(\mathbf{u}) + 0(\mathbf{v})$, and $0(c\mathbf{v}) = \mathbf{0} = c\mathbf{0}$. Linear.
+
+The **identity map** $I: V \to V$ sends every vector to itself, so both axioms read as trivial identities. Linear.
+
+These are the two ends of the spectrum: the zero map destroys everything ($\ker = V$, image $= \{\mathbf{0}\}$), the identity destroys nothing ($\ker = \{\mathbf{0}\}$, image $= V$). Every other linear map falls between them, and the rank-nullity theorem will say exactly how the ledger balances.
+:::
+
+:::remark
+A linear map between spaces of *different* dimensions can still be described by a formula with no matrices in sight. The map $S: P_2 \to P_3$ defined by $S(p)(t) = \int_0^t p(u)\,du$ raises degree, is linear by the same integral rules as above, and is the closest thing to an inverse of differentiation. We will meet it again when we compute kernels: $\ker D$ is one-dimensional (the constants) while $\ker S = \{0\}$, so these two maps are very far from being inverse to each other.
+:::
+
+## Geometry in the plane
+
+<!-- section: plane-geometry -->
+
+Before coordinates take over, it is worth seeing what linear maps *do*. In $\mathbb{R}^2$ the whole story can be read off the unit square with corners $\mathbf{0}$, $\mathbf{e}_1 = (1,0)$, $\mathbf{e}_2 = (0,1)$ and $\mathbf{e}_1 + \mathbf{e}_2 = (1,1)$. A linear map sends this square to the parallelogram spanned by $T(\mathbf{e}_1)$ and $T(\mathbf{e}_2)$ — a parallelogram, never anything else, because linearity forces $T(\mathbf{e}_1 + \mathbf{e}_2) = T(\mathbf{e}_1) + T(\mathbf{e}_2)$ to be the fourth corner.
+
+:::definition[The standard basic plane maps]{#plane-maps}
+For $\theta$ an angle and $k$ a scalar, define the following linear operators on $\mathbb{R}^2$ by their effect on $\mathbf{e}_1, \mathbf{e}_2$:
+
+- **Rotation** by $\theta$ counterclockwise: $\mathbf{e}_1 \mapsto (\cos\theta, \sin\theta)$, $\mathbf{e}_2 \mapsto (-\sin\theta, \cos\theta)$.
+- **Reflection** across the $x$-axis: $\mathbf{e}_1 \mapsto \mathbf{e}_1$, $\mathbf{e}_2 \mapsto -\mathbf{e}_2$.
+- **Orthogonal projection** onto the $x$-axis: $\mathbf{e}_1 \mapsto \mathbf{e}_1$, $\mathbf{e}_2 \mapsto \mathbf{0}$.
+- **Horizontal shear** by $k$: $\mathbf{e}_1 \mapsto \mathbf{e}_1$, $\mathbf{e}_2 \mapsto (k, 1)$.
+- **Scaling** by $(a,b)$: $\mathbf{e}_1 \mapsto (a, 0)$, $\mathbf{e}_2 \mapsto (0,b)$.
+:::
+
+Each of these is specified by only two vectors, and by the determination principle of the previous section that is enough to pin the map down everywhere. Written as matrices — columns being the images of $\mathbf{e}_1$ and $\mathbf{e}_2$, a recipe justified in the next section — they are
+
+$$R_\theta = \begin{pmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta\end{pmatrix}, \quad F_x = \begin{pmatrix} 1 & 0 \\ 0 & -1\end{pmatrix}, \quad P_x = \begin{pmatrix} 1 & 0 \\ 0 & 0\end{pmatrix}, \quad H_k = \begin{pmatrix} 1 & k \\ 0 & 1\end{pmatrix}.$$
+
+The determinant of each says what happened to area (with a sign for orientation): $\det R_\theta = \cos^2\theta + \sin^2\theta = 1$, so a rotation preserves both area and orientation; $\det F_x = -1$, so a reflection preserves area and reverses orientation; $\det P_x = 0$, so a projection flattens the square to a segment of zero area; $\det H_k = 1$, so a shear slides the top edge sideways without changing area, exactly like pushing over a stack of paper.
+
+:::intuition
+Take a sheet of graph paper and drive a pin through the origin. Every linear map of the plane is something you can do to that sheet while the pin stays put and the grid lines stay parallel and evenly spaced: spin it (rotation), flip it (reflection), stretch or squash it along the axes (scaling), slide the rows sideways by an amount proportional to height (shear), or collapse it onto a line (projection). What you may not do is bend it, tear it, or move the pin. "Grid lines stay parallel and evenly spaced, origin fixed" is the whole content of linearity in a picture.
+:::
+
+:::example[The shear and the unit square]
+Apply the horizontal shear $H_2$ to the unit square. Where does each corner go, and what is the area of the image?
+:::
+
+:::solution
+The corners are $\mathbf{0}, \mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_1 + \mathbf{e}_2$.
+
+$$H_2\mathbf{0} = \mathbf{0}, \qquad H_2\mathbf{e}_1 = (1,0), \qquad H_2\mathbf{e}_2 = (2,1), \qquad H_2(1,1) = (3,1).$$
+
+So the square becomes the parallelogram with those four corners: the bottom edge has not moved, the top edge has slid two units to the right. The base is still $1$ and the vertical height is still $1$, so the area is still $1$, matching $|\det H_2| = 1$.
+
+Sanity check on the linearity of the picture: $H_2\mathbf{e}_1 + H_2\mathbf{e}_2 = (1,0) + (2,1) = (3,1) = H_2(\mathbf{e}_1 + \mathbf{e}_2)$. ✓ The fourth corner was never free to choose.
+:::
+
+:::example[Rotation by an awkward angle]
+Find the image of $(3, -1)$ under rotation by $\theta = 30°$ counterclockwise, and check that the length is unchanged.
+:::
+
+:::solution
+With $\cos 30° = \tfrac{\sqrt3}{2}$ and $\sin 30° = \tfrac12$,
+
+$$R_{30°}\begin{pmatrix}3\\-1\end{pmatrix} = \begin{pmatrix} \tfrac{\sqrt3}{2} & -\tfrac12 \\[2pt] \tfrac12 & \tfrac{\sqrt3}{2}\end{pmatrix}\begin{pmatrix}3\\-1\end{pmatrix} = \begin{pmatrix} \tfrac{3\sqrt3}{2} + \tfrac12 \\[2pt] \tfrac32 - \tfrac{\sqrt3}{2}\end{pmatrix}.$$
+
+Check the length. The input has $\|(3,-1)\|^2 = 10$. The output has squared length
+
+$$\left(\tfrac{3\sqrt3 + 1}{2}\right)^2 + \left(\tfrac{3 - \sqrt3}{2}\right)^2 = \frac{27 + 6\sqrt3 + 1}{4} + \frac{9 - 6\sqrt3 + 3}{4} = \frac{40}{4} = 10.$$
+
+✓ The cross terms in $\sqrt3$ cancelled, as they must for any rotation.
+:::
+
+:::example[Reflection across an arbitrary line through the origin]
+Find the images of $\mathbf{e}_1$ and $\mathbf{e}_2$ under reflection across the line $y = x$, and across the line through the origin at angle $\theta$ to the $x$-axis.
+:::
+
+:::solution
+Reflecting across $y = x$ swaps the roles of the two coordinates, so $\mathbf{e}_1 \mapsto (0,1)$ and $\mathbf{e}_2 \mapsto (1,0)$, giving the swap matrix $\begin{pmatrix}0&1\\1&0\end{pmatrix}$.
+
+For the general line at angle $\theta$: a vector at angle $\alpha$ reflects to one at angle $2\theta - \alpha$ with the same length. So $\mathbf{e}_1$ (at angle $0$) goes to $(\cos 2\theta, \sin 2\theta)$, and $\mathbf{e}_2$ (at angle $90°$) goes to angle $2\theta - 90°$, which is $(\cos(2\theta - 90°), \sin(2\theta-90°)) = (\sin 2\theta, -\cos 2\theta)$. Hence
+
+$$F_\theta = \begin{pmatrix} \cos 2\theta & \sin 2\theta \\ \sin 2\theta & -\cos 2\theta\end{pmatrix}.$$
+
+Check at $\theta = 45°$: $\cos 90° = 0$, $\sin 90° = 1$, giving the swap matrix again. ✓ And $\det F_\theta = -\cos^2 2\theta - \sin^2 2\theta = -1$ for every $\theta$, confirming that a reflection always reverses orientation.
+:::
+
+:::pitfall
+A rotation by $\theta$ and a reflection across the line at angle $\theta/2$ both "move things by an angle", but they are structurally different: composing two rotations gives a rotation, while composing two reflections gives a *rotation*, not a reflection. Watch the determinant: $+1$ can never be the determinant of a reflection, and a product of two $-1$'s is $+1$.
+:::
+
+## The matrix of a map from $\mathbb{R}^n$ to $\mathbb{R}^m$
+
+<!-- section: matrix-representation -->
+
+The determination principle said a linear map is fixed by its values on a basis. In $\mathbb{R}^n$ there is a preferred basis, the standard one, and writing those values as columns produces the matrix of the map.
+
+:::notation
+$\mathbf{e}_j$ denotes the $j$-th standard basis vector of $\mathbb{R}^n$: a $1$ in position $j$ and zeros elsewhere. The standard basis is $\mathcal{E} = \{\mathbf{e}_1, \dots, \mathbf{e}_n\}$.
+:::
+
+:::theorem[Existence and uniqueness of the standard matrix]{#standard-matrix}
+Let $T: \mathbb{R}^n \to \mathbb{R}^m$ be linear. Then there is exactly one $m \times n$ matrix $A$ with
+
+$$T(\mathbf{x}) = A\mathbf{x} \quad\text{for every } \mathbf{x} \in \mathbb{R}^n,$$
+
+namely the matrix whose $j$-th column is $T(\mathbf{e}_j)$:
+
+$$A = \begin{pmatrix} | & & | \\ T(\mathbf{e}_1) & \cdots & T(\mathbf{e}_n) \\ | & & | \end{pmatrix}.$$
+
+$A$ is called the **standard matrix** of $T$.
+:::
+
+:::proof
+*Existence.* Write $\mathbf{x} = (x_1,\dots,x_n)$, so that $\mathbf{x} = x_1\mathbf{e}_1 + \cdots + x_n\mathbf{e}_n$. By preservation of linear combinations,
+
+$$T(\mathbf{x}) = x_1 T(\mathbf{e}_1) + \cdots + x_n T(\mathbf{e}_n).$$
+
+The right-hand side is, by the column definition of matrix–vector multiplication, exactly $A\mathbf{x}$ for the $A$ displayed above.
+
+*Uniqueness.* Suppose $B$ is any matrix with $T(\mathbf{x}) = B\mathbf{x}$ for all $\mathbf{x}$. Take $\mathbf{x} = \mathbf{e}_j$: the product $B\mathbf{e}_j$ is the $j$-th column of $B$, so the $j$-th column of $B$ equals $T(\mathbf{e}_j)$, which is the $j$-th column of $A$. All columns agree, so $B = A$.
+:::
+
+The proof contains the whole method in one line: **to find the matrix of $T$, feed it the standard basis vectors one at a time and stack the answers as columns.** No system to solve, no guessing.
+
+:::recipe[Finding a standard matrix]
+1. Determine $n$ (the size of the input) and $m$ (the size of the output); the matrix will be $m \times n$.
+2. Compute $T(\mathbf{e}_1), T(\mathbf{e}_2), \dots, T(\mathbf{e}_n)$, each a vector in $\mathbb{R}^m$.
+3. Write those $n$ vectors as the columns of $A$, in order.
+4. Check by applying $A$ to a general $\mathbf{x}$ and comparing with the formula for $T$, or by testing one non-basis vector.
+:::
+
+:::intuition
+A linear map is a machine, and the standard basis vectors are the pure test signals you can send through it. Send in a unit of pure $\mathbf{e}_1$, record the output; send in a unit of pure $\mathbf{e}_2$, record the output. Those recordings are the columns of the matrix, and because the machine is linear, any other input is just a recipe mixing the test signals — so the recordings tell you everything. Engineers call this an impulse response; linear algebra calls it a matrix.
+:::
+
+:::example[From formula to matrix]
+Find the standard matrix of $T: \mathbb{R}^3 \to \mathbb{R}^2$ given by $T(x,y,z) = (x + 2y - z,\; 4y + 3z)$.
+:::
+
+:::solution
+The matrix is $2 \times 3$. Feed in the basis vectors:
+
+$$T(1,0,0) = (1,\,0), \qquad T(0,1,0) = (2,\,4), \qquad T(0,0,1) = (-1,\,3).$$
+
+Stack as columns:
+
+$$A = \begin{pmatrix} 1 & 2 & -1 \\ 0 & 4 & 3 \end{pmatrix}.$$
+
+Check: $A(x,y,z)^{\mathsf{T}} = (x + 2y - z,\; 0x + 4y + 3z)^{\mathsf{T}}$. ✓ Notice the shortcut this reveals: when $T$ is given by linear formulas, the matrix is just the table of coefficients, one row per output component.
+:::
+
+:::example[From geometry to matrix]
+Let $T: \mathbb{R}^2 \to \mathbb{R}^2$ first reflect across the $x$-axis and then rotate by $90°$ counterclockwise. Find its standard matrix directly from images of basis vectors.
+:::
+
+:::solution
+Track $\mathbf{e}_1 = (1,0)$. Reflection across the $x$-axis fixes it: still $(1,0)$. Rotating $(1,0)$ by $90°$ gives $(0,1)$. So $T(\mathbf{e}_1) = (0,1)$.
+
+Track $\mathbf{e}_2 = (0,1)$. Reflection sends it to $(0,-1)$. Rotating $(0,-1)$ by $90°$ counterclockwise gives $(1, 0)$. So $T(\mathbf{e}_2) = (1,0)$.
+
+Hence $A = \begin{pmatrix} 0 & 1 \\ 1 & 0\end{pmatrix}$ — the reflection across $y = x$.
+
+Sanity check by determinant: reflection has $\det = -1$, rotation has $\det = 1$, so the composite must have $\det = -1$. Indeed $\det\begin{pmatrix}0&1\\1&0\end{pmatrix} = -1$, and a determinant of $-1$ with $A^2 = I$ is the signature of a reflection. ✓
+:::
+
+:::example[A map determined by non-standard data]
+A linear map $T: \mathbb{R}^2 \to \mathbb{R}^2$ satisfies $T(1,1) = (3,5)$ and $T(1,-1) = (1,1)$. Find $T(4,2)$ and the standard matrix of $T$.
+:::
+
+:::solution
+$(1,1)$ and $(1,-1)$ form a basis, so $T$ is determined. Write $(4,2) = a(1,1) + b(1,-1)$: then $a + b = 4$ and $a - b = 2$, so $a = 3$, $b = 1$. Linearity gives
+
+$$T(4,2) = 3\,T(1,1) + 1\,T(1,-1) = 3(3,5) + (1,1) = (10,16).$$
+
+For the standard matrix we need $T(\mathbf{e}_1)$ and $T(\mathbf{e}_2)$. Since $\mathbf{e}_1 = \tfrac12(1,1) + \tfrac12(1,-1)$,
+
+$$T(\mathbf{e}_1) = \tfrac12(3,5) + \tfrac12(1,1) = (2,3),$$
+
+and since $\mathbf{e}_2 = \tfrac12(1,1) - \tfrac12(1,-1)$,
+
+$$T(\mathbf{e}_2) = \tfrac12(3,5) - \tfrac12(1,1) = (1,2).$$
+
+So $A = \begin{pmatrix} 2 & 1 \\ 3 & 2\end{pmatrix}$. Check against the first computation: $A(4,2)^{\mathsf{T}} = (8+2,\;12+4)^{\mathsf{T}} = (10,16)^{\mathsf{T}}$. ✓
+:::
+
+The matrix form makes the two basic questions about a map — can I always solve $T(\mathbf{x}) = \mathbf{b}$, and is the solution unique? — into questions about columns.
+
+:::theorem[Existence and uniqueness via columns]{#existence-uniqueness-columns}
+Let $T: \mathbb{R}^n \to \mathbb{R}^m$ have standard matrix $A$. Then:
+
+1. $T$ is **onto** $\mathbb{R}^m$ if and only if the columns of $A$ span $\mathbb{R}^m$.
+2. $T$ is **one-to-one** if and only if the columns of $A$ are linearly independent.
+:::
+
+:::proof
+(1) The image of $T$ is $\{A\mathbf{x} : \mathbf{x} \in \mathbb{R}^n\}$, and $A\mathbf{x} = x_1\mathbf{a}_1 + \cdots + x_n\mathbf{a}_n$ runs over exactly the span of the columns as $\mathbf{x}$ varies. So the image equals $\mathbb{R}^m$ precisely when that span is $\mathbb{R}^m$.
+
+(2) Suppose the columns are independent. If $T(\mathbf{u}) = T(\mathbf{v})$ then $A(\mathbf{u} - \mathbf{v}) = \mathbf{0}$, i.e. $\sum (u_j - v_j)\mathbf{a}_j = \mathbf{0}$, so independence forces every $u_j - v_j = 0$ and $\mathbf{u} = \mathbf{v}$. Conversely if the columns are dependent there are scalars $c_j$, not all zero, with $\sum c_j\mathbf{a}_j = \mathbf{0}$; then $\mathbf{c} \ne \mathbf{0}$ and $T(\mathbf{c}) = \mathbf{0} = T(\mathbf{0})$, so $T$ is not one-to-one.
+:::
+
+:::corollary[Dimension obstructions]{#dimension-obstructions}
+If $n > m$ then $T: \mathbb{R}^n \to \mathbb{R}^m$ cannot be one-to-one. If $n < m$ it cannot be onto.
+:::
+
+:::proof
+$n$ vectors in $\mathbb{R}^m$ with $n > m$ are always dependent, so part (2) applies. And $n$ vectors span at most an $n$-dimensional subspace, which cannot be all of $\mathbb{R}^m$ when $n < m$, so part (1) applies.
+:::
+
+:::pitfall
+The matrix of a map is not the map. The formula $T(\mathbf{x}) = A\mathbf{x}$ is a statement about the *standard* basis; in another basis the same $T$ has a different matrix, as the later sections show. Sentences like "the determinant of $T$" are legitimate only because the determinant happens to be the same for every such matrix — a fact that has to be proved, and is, under similarity invariants below.
+:::
+
+## Kernel and image
+
+<!-- section: kernel-image -->
+
+Two subspaces measure a linear map. One lives in the domain and records what the map destroys; the other lives in the codomain and records what the map can reach.
 
 :::definition[Kernel and image]{#kernel-image-definition}
 For a linear map $T: V \to W$,
 
-$$\ker(T) = \{\mathbf{v} \in V : T(\mathbf{v}) = \mathbf{0}\}, \qquad \text{im}(T) = \{T(\mathbf{v}) : \mathbf{v} \in V\}.$$
+$$\ker(T) = \{\,\mathbf{v} \in V : T(\mathbf{v}) = \mathbf{0}\,\} \subseteq V,$$
 
-The kernel (or null space) is always a subspace of $V$; the image (or range) is always a subspace of $W$.
+$$\operatorname{im}(T) = \{\,T(\mathbf{v}) : \mathbf{v} \in V\,\} \subseteq W.$$
+
+The kernel is also called the **null space**, the image the **range**. When they are finite-dimensional we write $\operatorname{nullity}(T) = \dim \ker(T)$ and $\operatorname{rank}(T) = \dim \operatorname{im}(T)$.
 :::
 
-:::theorem[Rank-nullity theorem]{#rank-nullity}
-Let $T: V \to W$ be linear with $V$ finite-dimensional. Then
-
-$$\dim(V) = \dim(\ker(T)) + \dim(\text{im}(T)).$$
-:::
-
-Also called the dimension theorem, this is one of the most important results in linear algebra. It tells us that the 'loss of information' (dimension of the kernel) plus the 'new information produced' (dimension of the image) always equals the dimension of the domain.
-
-:::proposition[Injectivity and surjectivity]{#injective-surjective}
-A linear map $T: V \to W$ is injective (one-to-one) if and only if $\ker(T) = \{\mathbf{0}\}$, and surjective (onto) if and only if $\text{im}(T) = W$.
-:::
-
-:::intuition
-Think of a linear transformation as a machine that processes vectors. The kernel is everything that gets completely destroyed (turned into nothing). The image is everything that can possibly come out the other end. The rank-nullity theorem says that what you put in equals what gets destroyed plus what comes out.
-:::
-
-:::example[Kernel and image of a projection]
-Let $T: \mathbb{R}^3 \to \mathbb{R}^3$ be the projection onto the $xy$-plane: $T(x,y,z) = (x,y,0)$.
-:::
-
-:::solution
-1. Kernel: $T(x,y,z) = \mathbf{0}$ iff $x=0$, $y=0$, and $z$ anything. So $\ker(T) = $ the $z$-axis. Dimension 1.
-2. Image: everything of the form $(x,y,0)$ — the entire $xy$-plane. Dimension 2.
-3. Check: $3 = 1 + 2$. Rank-nullity holds.
-4. $T$ is neither injective nor surjective, as expected.
-:::
-
-:::example[Kernel dimension from a matrix via rank-nullity]
-Let $T(\mathbf{x}) = A\mathbf{x}$ with $A = \begin{pmatrix} 1 & 2 \\ 2 & 4 \end{pmatrix}$, a map $\mathbb{R}^2 \to \mathbb{R}^2$. Find $\dim(\ker T)$.
-:::
-
-:::solution
-1. Row reduce: $R_2 \to R_2 - 2R_1$ turns $A$ into $\begin{pmatrix} 1 & 2 \\ 0 & 0 \end{pmatrix}$. There is one pivot, so the rank (dimension of the image) is $1$.
-2. Rank-nullity: $\dim(\ker T) = \dim(\text{domain}) - \text{rank} = 2 - 1 = 1$.
-3. Sanity check: solve $A\mathbf{x} = \mathbf{0}$ directly. The single equation $x + 2y = 0$ gives $x = -2y$, so the kernel is $\{\,t(-2,1) : t \in \mathbb{R}\,\}$, a line — dimension $1$. ✓
-:::
-
-:::example[Rank-nullity as a pure dimension count]
-Suppose $T: \mathbb{R}^5 \to \mathbb{R}^3$ is linear with rank $2$ (its image is a $2$-dimensional subspace of $\mathbb{R}^3$). Find $\dim(\ker T)$. No formula for $T$ is needed — only the theorem.
-:::
-
-:::solution
-1. The domain is $\mathbb{R}^5$, so $\dim(\text{domain}) = 5$. Rank-nullity gives $5 = \dim(\ker T) + 2$.
-2. Therefore $\dim(\ker T) = 5 - 2 = 3$.
-3. Consistency check: the rank can be at most $\min(5,3) = 3$, and here rank $2 \le 3$ and nullity $3 \le 5$, so the numbers are feasible. Note $T$ cannot be injective, since a nonzero kernel means distinct inputs can share an output.
-:::
-
-## The matrix of a linear transformation {#matrix-representation}
-
-Once we choose bases for the domain and codomain, every linear transformation $T: V \to W$ between finite-dimensional spaces can be represented by a matrix.
-
-:::theorem[Matrix representation of a linear map]{#matrix-representation-theorem}
-Let $\mathcal{B} = \{\mathbf{b}_1, \dots, \mathbf{b}_n\}$ be a basis for $V$ and $\mathcal{C}$ a basis for $W$, and let $A$ be the matrix whose $j$-th column is the coordinate vector of $T(\mathbf{b}_j)$ in the basis $\mathcal{C}$. Then, in coordinates, applying $T$ is matrix multiplication:
-
-$$[T(\mathbf{v})]_{\mathcal{C}} = A\,[\mathbf{v}]_{\mathcal{B}}.$$
+:::theorem[Kernel and image are subspaces]{#kernel-image-subspaces}
+For any linear $T: V \to W$, $\ker(T)$ is a subspace of $V$ and $\operatorname{im}(T)$ is a subspace of $W$.
 :::
 
 :::proof
-Any input decomposes as $\mathbf{v} = v_1\mathbf{b}_1 + \cdots + v_n\mathbf{b}_n$, and by linearity $T(\mathbf{v}) = v_1 T(\mathbf{b}_1) + \cdots + v_n T(\mathbf{b}_n)$. That right-hand side is exactly the matrix-vector product of the matrix whose columns are the $T(\mathbf{b}_j)$ with the coordinate vector $[\mathbf{v}]_{\mathcal{B}}$. So knowing what $T$ does to a basis pins down what it does to everything.
+*Kernel.* It contains $\mathbf{0}$ because $T(\mathbf{0}) = \mathbf{0}$, so it is nonempty. If $\mathbf{u}, \mathbf{v} \in \ker(T)$ and $c$ is a scalar, then
+
+$$T(c\mathbf{u} + \mathbf{v}) = c\,T(\mathbf{u}) + T(\mathbf{v}) = c\mathbf{0} + \mathbf{0} = \mathbf{0},$$
+
+so $c\mathbf{u} + \mathbf{v} \in \ker(T)$. Closed under the one-line combination, hence a subspace.
+
+*Image.* It contains $\mathbf{0}_W = T(\mathbf{0}_V)$. If $\mathbf{w}_1 = T(\mathbf{v}_1)$ and $\mathbf{w}_2 = T(\mathbf{v}_2)$ lie in the image and $c$ is a scalar, then
+
+$$c\mathbf{w}_1 + \mathbf{w}_2 = c\,T(\mathbf{v}_1) + T(\mathbf{v}_2) = T(c\mathbf{v}_1 + \mathbf{v}_2),$$
+
+which is again an output of $T$. Hence the image is closed and is a subspace.
 :::
 
-Different choices of bases produce different matrices for the same transformation. This is why 'the' matrix of a linear map is not unique until bases are specified.
+Notice how little the proof used: only the two axioms. The same argument works for differentiation on $P_n$ and for a $7 \times 3$ matrix, which is the payoff of stating the definition abstractly.
 
-The standard matrix (when using the standard bases) is the most common representation. For $T(\mathbf{x}) = A\mathbf{x}$, the matrix is simply $A$ itself.
+When $T(\mathbf{x}) = A\mathbf{x}$, the kernel is the solution set of the homogeneous system $A\mathbf{x} = \mathbf{0}$ and the image is the column space of $A$. So the computational machinery is the one already built: row reduce, read the free variables for a kernel basis, and read the pivot columns *of the original matrix* for an image basis.
+
+:::proposition[One-to-one means trivial kernel]{#injective-trivial-kernel}
+A linear map $T: V \to W$ is one-to-one if and only if $\ker(T) = \{\mathbf{0}\}$.
+:::
+
+:::proof
+($\Rightarrow$) Suppose $T$ is one-to-one and $\mathbf{v} \in \ker(T)$. Then $T(\mathbf{v}) = \mathbf{0} = T(\mathbf{0})$, and injectivity forces $\mathbf{v} = \mathbf{0}$.
+
+($\Leftarrow$) Suppose $\ker(T) = \{\mathbf{0}\}$ and $T(\mathbf{u}) = T(\mathbf{v})$. Then $T(\mathbf{u} - \mathbf{v}) = T(\mathbf{u}) - T(\mathbf{v}) = \mathbf{0}$, so $\mathbf{u} - \mathbf{v} \in \ker(T) = \{\mathbf{0}\}$, giving $\mathbf{u} = \mathbf{v}$.
+:::
+
+This is one of the genuine gifts of linearity. For a general function, checking injectivity means comparing *every pair* of inputs. For a linear map it is enough to examine one solution set — whether $T(\mathbf{v}) = \mathbf{0}$ has any nonzero solution. The reason is that a linear map has a translation symmetry: the set of inputs sent to $\mathbf{w}$ is either empty or a translate $\mathbf{v}_0 + \ker(T)$ of the kernel, so all fibres are the same size.
+
+:::proposition[The solution set of $T(\mathbf{x}) = \mathbf{b}$]{#fibre-structure}
+Let $T: V \to W$ be linear and suppose $T(\mathbf{v}_0) = \mathbf{b}$. Then
+
+$$\{\mathbf{v} : T(\mathbf{v}) = \mathbf{b}\} = \mathbf{v}_0 + \ker(T) = \{\mathbf{v}_0 + \mathbf{k} : \mathbf{k} \in \ker(T)\}.$$
+:::
+
+:::proof
+If $\mathbf{k} \in \ker(T)$ then $T(\mathbf{v}_0 + \mathbf{k}) = \mathbf{b} + \mathbf{0} = \mathbf{b}$, so the right side is contained in the left. Conversely, if $T(\mathbf{v}) = \mathbf{b}$ then $T(\mathbf{v} - \mathbf{v}_0) = \mathbf{b} - \mathbf{b} = \mathbf{0}$, so $\mathbf{k} = \mathbf{v} - \mathbf{v}_0$ lies in the kernel and $\mathbf{v} = \mathbf{v}_0 + \mathbf{k}$.
+:::
+
+That is the "particular solution plus homogeneous solution" rule of differential equations and of linear systems, in its natural home.
 
 :::intuition
-To describe a machine completely, you only need to know what it does to each "pure ingredient" (each basis vector). Write those outputs side by side as columns and you have captured the whole machine in one matrix. Because the machine is fair (linear), any mixed input is just handled ingredient-by-ingredient.
+Picture $T$ as a camera photographing a room. The kernel is the direction of the lens: everything along that line lands on the same pixel, so depth information is destroyed. The image is the flat photograph — only what fits on the film can ever be an output. Asking "is $T$ one-to-one?" is asking whether the lens direction is trivial, i.e. whether anything is hidden behind anything else. Asking "is $T$ onto?" is asking whether every possible picture can actually be taken.
 :::
 
-:::example[Finding the matrix of a transformation]
-Let $T: \mathbb{R}^2 \to \mathbb{R}^2$ be $T(x,y) = (x+y, x-y)$. Find the standard matrix of $T$.
-:::
-
-:::solution
-1. Apply $T$ to the standard basis vectors: $T(1,0) = (1,1)$, $T(0,1) = (1,-1)$.
-2. The matrix has these images as columns: $A = \begin{pmatrix} 1 & 1 \\ 1 & -1 \end{pmatrix}$.
-3. Verify: $A \begin{pmatrix} x \\ y \end{pmatrix} = \begin{pmatrix} 1 & 1 \\ 1 & -1 \end{pmatrix}\begin{pmatrix} x \\ y \end{pmatrix} = \begin{pmatrix} x+y \\ x-y \end{pmatrix}$ — matches the definition of $T$.
-:::
-
-:::example[A geometric map: reflection across the line $y = x$]
-Reflecting across $y = x$ swaps the two coordinates. Track the standard basis: the reflection sends $(1,0) \mapsto (0,1)$ and $(0,1) \mapsto (1,0)$.
+:::example[Kernel and image of a projection]
+Let $T: \mathbb{R}^3 \to \mathbb{R}^3$ be $T(x,y,z) = (x, y, 0)$. Find $\ker(T)$, $\operatorname{im}(T)$, and their dimensions.
 :::
 
 :::solution
-1. Put those images in as columns: $A = \begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix}$.
-2. Sanity check on a point off the line: $A\begin{pmatrix} 3 \\ 5 \end{pmatrix} = \begin{pmatrix} 5 \\ 3 \end{pmatrix}$ — coordinates swapped, exactly what a reflection across $y=x$ should do.
-3. Since reflecting twice returns the original point, we expect $A^2 = I$. Check: $\begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix}\begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix} = \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix}$. ✓
+$T(x,y,z) = \mathbf{0}$ forces $x = 0$ and $y = 0$, with $z$ free. So $\ker(T) = \{(0,0,z)\} = \operatorname{span}\{(0,0,1)\}$, the $z$-axis, of dimension $1$.
+
+Every output has last coordinate $0$, and every such vector $(a,b,0)$ is achieved (take $(a,b,0)$ as input). So $\operatorname{im}(T)$ is the $xy$-plane, $\operatorname{span}\{\mathbf{e}_1, \mathbf{e}_2\}$, of dimension $2$.
+
+Check: $1 + 2 = 3 = \dim \mathbb{R}^3$. ✓ $T$ is neither one-to-one (nontrivial kernel) nor onto (image is a plane, not all of $\mathbb{R}^3$).
 :::
 
-:::example[Reading eigenvalue sums and products off the matrix]
-Once $T$ is written as a matrix $A$, its eigenvalues are intrinsic to the map. Two shortcuts avoid solving the characteristic polynomial: the **sum** of the eigenvalues equals the **trace** (sum of diagonal entries), and the **product** equals the **determinant**.
+:::example[Kernel and image from row reduction]
+Let $A = \begin{pmatrix} 1 & 2 & 3 & 1 \\ 2 & 4 & 7 & 4 \\ 1 & 2 & 4 & 3\end{pmatrix}$ and $T(\mathbf{x}) = A\mathbf{x}$, a map $\mathbb{R}^4 \to \mathbb{R}^3$. Find the rank and nullity, and a basis for each subspace.
 :::
 
 :::solution
-1. Take $A = \begin{pmatrix} 4 & 1 \\ 0 & 3 \end{pmatrix}$. Trace $= 4 + 3 = 7$, so the eigenvalues sum to $7$.
-2. Determinant $= (4)(3) - (1)(0) = 12$, so the eigenvalues multiply to $12$.
-3. Cross-check directly: $A$ is upper-triangular, so its eigenvalues are the diagonal entries $4$ and $3$. Indeed $4 + 3 = 7$ ✓ and $4 \times 3 = 12$ ✓.
+Row reduce. $R_2 \to R_2 - 2R_1$ and $R_3 \to R_3 - R_1$ give
+
+$$\begin{pmatrix} 1 & 2 & 3 & 1 \\ 0 & 0 & 1 & 2 \\ 0 & 0 & 1 & 2\end{pmatrix},$$
+
+then $R_3 \to R_3 - R_2$ gives
+
+$$\begin{pmatrix} 1 & 2 & 3 & 1 \\ 0 & 0 & 1 & 2 \\ 0 & 0 & 0 & 0\end{pmatrix}.$$
+
+Pivots sit in columns $1$ and $3$, so $\operatorname{rank}(T) = 2$ and a basis for the image is the corresponding columns *of the original $A$*: $(1,2,1)$ and $(3,7,4)$.
+
+Free variables are $x_2$ and $x_4$, so $\operatorname{nullity}(T) = 2$. From the reduced rows, $x_3 = -2x_4$ and $x_1 = -2x_2 - 3x_3 - x_4 = -2x_2 + 6x_4 - x_4 = -2x_2 + 5x_4$. Setting $(x_2,x_4) = (1,0)$ and $(0,1)$ gives the kernel basis $(-2,1,0,0)$ and $(5,0,-2,1)$.
+
+Check: $2 + 2 = 4 = \dim \mathbb{R}^4$ ✓, and $A(-2,1,0,0)^{\mathsf{T}} = (-2+2,\,-4+4,\,-2+2)^{\mathsf{T}} = \mathbf{0}$ ✓.
 :::
 
-## Change of basis {#change-of-basis}
-
-If we have two different bases for the same space, we need a way to convert coordinates from one basis to the other.
-
-:::definition[Change-of-basis matrix]{#change-of-basis-matrix}
-The change-of-basis matrix $P$ from a basis $\mathcal{B}$ to the standard basis has the vectors of $\mathcal{B}$ as its columns. Coordinates in the new basis are then recovered by
-
-$$[\mathbf{v}]_{\mathcal{B}} = P^{-1}\mathbf{v}.$$
+:::example[Kernel of differentiation]
+Let $D: P_3 \to P_3$ be $D(p) = p'$. Find $\ker(D)$ and $\operatorname{im}(D)$ and their dimensions.
 :::
 
-Because $\mathcal{B}$ is a basis, its vectors are linearly independent, so $P$ is always invertible — which is what lets us write $P^{-1}$ at all.
+:::solution
+$p' = 0$ exactly when $p$ is constant, so $\ker(D) = \{a : a \in \mathbb{R}\} = \operatorname{span}\{1\}$, dimension $1$.
 
-:::theorem[Similar matrices represent the same map]{#similarity}
-If a linear transformation has matrix $A$ in the standard basis, then its matrix in the basis $\mathcal{B}$ is the similarity transformation
+Differentiating $a + bt + ct^2 + dt^3$ gives $b + 2ct + 3dt^2$, and by choosing $b, c, d$ freely every polynomial of degree at most $2$ arises. So $\operatorname{im}(D) = P_2$, dimension $3$.
 
-$$P^{-1} A P.$$
-
-Similar matrices represent the same linear transformation in different coordinate systems.
+Check: $\dim P_3 = 4$ and $1 + 3 = 4$ ✓. $D$ is not one-to-one (constants collapse) and, as a map into $P_3$, not onto ($t^3$ is not a derivative of anything in $P_3$).
 :::
 
-This is why eigenvalues are intrinsic to the transformation and do not depend on the basis — they are preserved under similarity.
+:::pitfall
+For an image basis, take the pivot columns of the **original** matrix, not of its row-reduced form. Row operations preserve the *dependence relations* among columns, so they identify which columns to keep — but they change the columns themselves, and the row-reduced columns generally span a different subspace of $\mathbb{R}^m$.
+:::
+
+## The rank-nullity theorem
+
+<!-- section: rank-nullity -->
+
+Everything so far points at a conservation law: the domain has a fixed budget of dimensions, and each one is either destroyed by $T$ or shows up in the image. Here is the theorem and its proof.
+
+:::theorem[Rank-nullity theorem]{#rank-nullity-theorem}
+Let $V$ be finite-dimensional and let $T: V \to W$ be linear. Then $\operatorname{im}(T)$ is finite-dimensional and
+
+$$\dim V = \dim\ker(T) + \dim\operatorname{im}(T) = \operatorname{nullity}(T) + \operatorname{rank}(T).$$
+:::
+
+:::proof
+Let $n = \dim V$ and let $k = \dim \ker(T)$, which is at most $n$ because the kernel is a subspace of $V$. Choose a basis $\{\mathbf{u}_1, \dots, \mathbf{u}_k\}$ of $\ker(T)$ and extend it to a basis
+
+$$\{\mathbf{u}_1, \dots, \mathbf{u}_k, \mathbf{v}_1, \dots, \mathbf{v}_{n-k}\}$$
+
+of $V$ — the extension is possible because any independent set in a finite-dimensional space extends to a basis. We claim that
+
+$$\mathcal{S} = \{T(\mathbf{v}_1), \dots, T(\mathbf{v}_{n-k})\}$$
+
+is a basis of $\operatorname{im}(T)$; since $\mathcal{S}$ has $n-k$ elements, that proves $\operatorname{rank}(T) = n - k$, which is the theorem.
+
+*$\mathcal{S}$ spans the image.* Take any $\mathbf{w} \in \operatorname{im}(T)$, say $\mathbf{w} = T(\mathbf{v})$. Expand $\mathbf{v}$ in the basis:
+
+$$\mathbf{v} = a_1\mathbf{u}_1 + \cdots + a_k\mathbf{u}_k + b_1\mathbf{v}_1 + \cdots + b_{n-k}\mathbf{v}_{n-k}.$$
+
+Apply $T$. Each $T(\mathbf{u}_i) = \mathbf{0}$ because the $\mathbf{u}_i$ lie in the kernel, so
+
+$$\mathbf{w} = b_1 T(\mathbf{v}_1) + \cdots + b_{n-k}T(\mathbf{v}_{n-k}),$$
+
+a combination of $\mathcal{S}$.
+
+*$\mathcal{S}$ is independent.* Suppose $c_1T(\mathbf{v}_1) + \cdots + c_{n-k}T(\mathbf{v}_{n-k}) = \mathbf{0}$. By linearity,
+
+$$T\big(c_1\mathbf{v}_1 + \cdots + c_{n-k}\mathbf{v}_{n-k}\big) = \mathbf{0},$$
+
+so the vector $\mathbf{z} = c_1\mathbf{v}_1 + \cdots + c_{n-k}\mathbf{v}_{n-k}$ lies in $\ker(T)$. But the $\mathbf{u}_i$ form a basis of the kernel, so $\mathbf{z} = d_1\mathbf{u}_1 + \cdots + d_k\mathbf{u}_k$ for some scalars $d_i$. Rearranging,
+
+$$c_1\mathbf{v}_1 + \cdots + c_{n-k}\mathbf{v}_{n-k} - d_1\mathbf{u}_1 - \cdots - d_k\mathbf{u}_k = \mathbf{0}.$$
+
+This is a dependence relation among the $n$ vectors of a *basis* of $V$, so every coefficient vanishes. In particular every $c_j = 0$, which is independence.
+:::
+
+The proof is worth rereading because its mechanism is the theorem's meaning. The basis of $V$ splits into two halves: the part inside the kernel, which $T$ annihilates, and the complementary part, which $T$ carries *faithfully* onto a basis of the image. Nothing in the second half is lost, and nothing in the first half survives. So $n = k + (n-k)$ is not an accident of arithmetic — it is the statement that $T$ restricted to a complement of the kernel is a bijection onto the image.
+
+:::corollary[Rank bounds]{#rank-bounds}
+For linear $T: V \to W$ with $\dim V = n$ and $\dim W = m$, both finite,
+
+$$\operatorname{rank}(T) \le \min(n, m).$$
+:::
+
+:::proof
+$\operatorname{rank}(T) = n - \operatorname{nullity}(T) \le n$ since nullity is non-negative; and $\operatorname{im}(T)$ is a subspace of $W$, so its dimension is at most $m$.
+:::
+
+:::corollary[Square maps: injective $\iff$ surjective]{#square-dichotomy}
+Let $V$ be finite-dimensional and $T: V \to V$ linear. Then $T$ is one-to-one if and only if $T$ is onto.
+:::
+
+:::proof
+Let $n = \dim V$. If $T$ is one-to-one then $\operatorname{nullity}(T) = 0$, so $\operatorname{rank}(T) = n$; an $n$-dimensional subspace of an $n$-dimensional space is the whole space, so $\operatorname{im}(T) = V$ and $T$ is onto. Conversely if $T$ is onto then $\operatorname{rank}(T) = n$, so $\operatorname{nullity}(T) = n - n = 0$, the kernel is trivial and $T$ is one-to-one.
+:::
+
+This dichotomy is special to equal (finite) dimensions. The shift map on infinite sequences, $(a_1,a_2,a_3,\dots) \mapsto (0,a_1,a_2,\dots)$, is one-to-one and not onto, so finite-dimensionality is doing real work.
 
 :::intuition
-Changing basis is like switching from Cartesian coordinates to a different coordinate grid. The same physical arrow has different numerical descriptions depending on which grid you use. The change-of-basis matrix is the translation table between the two descriptions.
+A budget of $\dim V$ dimensions goes into the map, and the map spends every one of them. Some are spent on *collapse* — the kernel directions, which arrive at zero. The rest are spent on *output* — directions that survive to span the image. Rank-nullity is the receipt: collapse plus output equals what you started with. You can trade the two against each other, but you cannot make the total go up, which is why a map from $\mathbb{R}^3$ can never have a $4$-dimensional image.
 :::
 
-:::example[Finding coordinates in a new basis]
-Let $\mathcal{B} = \{(1,1), (1,-1)\}$ be a basis for $\mathbb{R}^2$. Find the $\mathcal{B}$-coordinates of $\mathbf{v} = (3,1)$ — the scalars $c_1, c_2$ with $c_1(1,1) + c_2(1,-1) = (3,1)$.
+:::example[Nullity from rank alone]
+A linear map $T: \mathbb{R}^7 \to \mathbb{R}^4$ has rank $3$. Find its nullity, and decide whether $T$ can be one-to-one or onto.
 :::
 
 :::solution
-1. Writing the two components out gives the system $c_1 + c_2 = 3$ and $c_1 - c_2 = 1$.
-2. Add the equations: $2c_1 = 4$, so $c_1 = 2$. Substitute back: $2 + c_2 = 3$, so $c_2 = 1$. Thus $[\mathbf{v}]_{\mathcal{B}} = (2, 1)$.
-3. Same thing via the matrix formula: $P = \begin{pmatrix} 1 & 1 \\ 1 & -1 \end{pmatrix}$ (basis vectors as columns) changes $\mathcal{B}$-coordinates to standard, so $[\mathbf{v}]_{\mathcal{B}} = P^{-1}\mathbf{v}$. Here $P^{-1} = \frac{1}{-2}\begin{pmatrix} -1 & -1 \\ -1 & 1 \end{pmatrix} = \begin{pmatrix} 1/2 & 1/2 \\ 1/2 & -1/2 \end{pmatrix}$, and $P^{-1}\begin{pmatrix} 3 \\ 1 \end{pmatrix} = \begin{pmatrix} 2 \\ 1 \end{pmatrix}$. ✓
-4. Sanity check: $2(1,1) + 1(1,-1) = (2+1, 2-1) = (3,1)$ — recovers $\mathbf{v}$. ✓
+Rank-nullity: $7 = \operatorname{nullity} + 3$, so $\operatorname{nullity}(T) = 4$.
+
+The nullity is nonzero, so $T$ is not one-to-one. (This was forced anyway: $7 > 4$, so by the dimension obstruction no map $\mathbb{R}^7 \to \mathbb{R}^4$ is one-to-one.) The image has dimension $3 < 4$, so $T$ is not onto either — though a *different* map $\mathbb{R}^7 \to \mathbb{R}^4$ could be onto, since rank $4$ is permitted by the rank bound.
 :::
 
-## Composition and invertibility {#composition}
-
-:::proposition[Composition is linear]{#composition-linear}
-If $T: V \to W$ and $S: W \to U$ are linear, then $S \circ T$ is linear, and its matrix is the product of the individual matrices (in the appropriate order and bases).
+:::example[The rank of a product bounded]
+Let $A$ be $4 \times 6$ with rank $3$ and let $B$ be $6 \times 5$ with rank $5$. What can you say about $\operatorname{rank}(AB)$?
 :::
 
-:::theorem[Invertibility of a linear operator]{#invertible-operator}
-Let $V$ be finite-dimensional. A linear transformation $T: V \to V$ is invertible if and only if it is both injective and surjective — and by the rank-nullity theorem these two conditions are equivalent to each other here, so either one alone suffices: $\ker(T) = \{\mathbf{0}\}$, or $\text{im}(T) = V$.
+:::solution
+Think of $AB$ as the composite map $\mathbb{R}^5 \xrightarrow{B} \mathbb{R}^6 \xrightarrow{A} \mathbb{R}^4$.
+
+Every output of $AB$ is an output of $A$, so $\operatorname{im}(AB) \subseteq \operatorname{im}(A)$ and $\operatorname{rank}(AB) \le \operatorname{rank}(A) = 3$.
+
+Also $\operatorname{im}(AB) = A(\operatorname{im}B)$, and $\operatorname{im}(B)$ has dimension $5$, so applying rank-nullity to $A$ restricted there gives $\operatorname{rank}(AB) \le 5$. Combining, $\operatorname{rank}(AB) \le 3$.
+
+Here we can do better and pin it exactly: $B$ has rank $5$ and $5$ columns, so $\operatorname{nullity}(B) = 0$ and $B$ is one-to-one; hence $\operatorname{im}(B)$ is a $5$-dimensional subspace of $\mathbb{R}^6$. Whether $A$ kills part of it depends on $A$, so in general $\operatorname{rank}(AB)$ can be anything from $2$ to $3$ here: $A$'s kernel has dimension $6 - 3 = 3$, and a $5$-dimensional and a $3$-dimensional subspace of $\mathbb{R}^6$ must meet in dimension at least $5 + 3 - 6 = 2$. So $\operatorname{rank}(AB) = 5 - \dim(\operatorname{im}B \cap \ker A) \le 5 - 2 = 3$. The general fact worth remembering is $\operatorname{rank}(AB) \le \min\{\operatorname{rank}A,\ \operatorname{rank}B\}$.
 :::
 
-The inverse of an invertible linear transformation is also linear. The matrix of the inverse is the matrix inverse of the matrix of the original map.
+:::example[Rank-nullity on a polynomial space]
+Let $T: P_4 \to P_4$ be $T(p)(t) = p(t) - p(0)$. Find the rank and nullity of $T$.
+:::
 
-Invertible linear transformations are precisely the isomorphisms between vector spaces — they preserve all linear-algebraic structure.
+:::solution
+$\dim P_4 = 5$, with basis $1, t, t^2, t^3, t^4$.
 
-One consequence worth internalizing: composition and inversion both **reverse order**. The matrix of $S \circ T$ is $M_S M_T$ (do $T$ first, so its matrix sits on the right, nearest the input vector). And undoing $S \circ T$ means undoing $S$ last-in-first-out: $(S \circ T)^{-1} = T^{-1} \circ S^{-1}$ — put your socks on then your shoes, take your shoes off then your socks.
+Kernel: $T(p) = 0$ means $p(t) = p(0)$ for all $t$, i.e. $p$ is constant. So $\ker(T) = \operatorname{span}\{1\}$ and $\operatorname{nullity}(T) = 1$.
+
+By rank-nullity, $\operatorname{rank}(T) = 5 - 1 = 4$.
+
+Check directly: $T$ fixes $t, t^2, t^3, t^4$ and kills $1$, so the image is $\operatorname{span}\{t,t^2,t^3,t^4\}$, the polynomials with zero constant term — dimension $4$. ✓
+:::
+
+:::pitfall
+Rank-nullity is a statement about the **domain**, not the codomain: $\dim V$ appears on the left, $\dim W$ nowhere. A map $\mathbb{R}^2 \to \mathbb{R}^{100}$ still satisfies $2 = \text{nullity} + \text{rank}$, so its rank is at most $2$ no matter how tall the matrix is.
+:::
+
+## The matrix relative to two bases
+
+<!-- section: coordinate-matrix -->
+
+The standard matrix handled $\mathbb{R}^n \to \mathbb{R}^m$ with the standard bases. Abstract spaces have no standard basis, and even in $\mathbb{R}^n$ a cleverly chosen basis often makes a map far easier to read. Both needs are met by the same construction, once coordinates are in place.
+
+:::definition[Coordinate vector]{#coordinate-vector}
+Let $\mathcal{B} = \{\mathbf{b}_1, \dots, \mathbf{b}_n\}$ be an ordered basis of $V$. Every $\mathbf{v} \in V$ has a unique expansion $\mathbf{v} = c_1\mathbf{b}_1 + \cdots + c_n\mathbf{b}_n$, and the **coordinate vector** of $\mathbf{v}$ relative to $\mathcal{B}$ is
+
+$$[\mathbf{v}]_{\mathcal{B}} = \begin{pmatrix} c_1 \\ \vdots \\ c_n \end{pmatrix} \in \mathbb{R}^n.$$
+:::
+
+Uniqueness of the expansion is exactly what makes this well defined, and it is where the *independence* half of "basis" is used; the *spanning* half is what makes it defined at all.
+
+:::proposition[Coordinates are linear]{#coordinates-linear}
+The map $\mathbf{v} \mapsto [\mathbf{v}]_{\mathcal{B}}$ is a linear map $V \to \mathbb{R}^n$, and it is one-to-one and onto.
+:::
+
+:::proof
+If $\mathbf{u} = \sum c_j\mathbf{b}_j$ and $\mathbf{v} = \sum d_j\mathbf{b}_j$, then $a\mathbf{u} + \mathbf{v} = \sum (ac_j + d_j)\mathbf{b}_j$, and by uniqueness those are its coordinates: $[a\mathbf{u}+\mathbf{v}]_{\mathcal{B}} = a[\mathbf{u}]_{\mathcal{B}} + [\mathbf{v}]_{\mathcal{B}}$. It is onto because any $(c_1,\dots,c_n)$ is the coordinate vector of $\sum c_j\mathbf{b}_j$, and one-to-one because $[\mathbf{v}]_{\mathcal{B}} = \mathbf{0}$ means $\mathbf{v} = \sum 0\,\mathbf{b}_j = \mathbf{0}$.
+:::
+
+:::definition[Matrix of $T$ relative to bases $\mathcal{B}$ and $\mathcal{C}$]{#matrix-two-bases}
+Let $T: V \to W$ be linear, $\mathcal{B} = \{\mathbf{b}_1,\dots,\mathbf{b}_n\}$ an ordered basis of $V$ and $\mathcal{C}$ an ordered basis of $W$ with $m$ elements. The **matrix of $T$ relative to $\mathcal{B}$ and $\mathcal{C}$** is the $m\times n$ matrix
+
+$$[T]_{\mathcal{C}}^{\mathcal{B}} = \Big(\;[T(\mathbf{b}_1)]_{\mathcal{C}} \;\Big|\; [T(\mathbf{b}_2)]_{\mathcal{C}} \;\Big|\; \cdots \;\Big|\; [T(\mathbf{b}_n)]_{\mathcal{C}}\;\Big).$$
+
+When $V = W$ and $\mathcal{C} = \mathcal{B}$ we write $[T]_{\mathcal{B}}$ and call it the matrix of $T$ relative to $\mathcal{B}$.
+:::
+
+:::theorem[The representation theorem]{#representation-theorem}
+With the notation above, for every $\mathbf{v} \in V$,
+
+$$\big[T(\mathbf{v})\big]_{\mathcal{C}} = [T]_{\mathcal{C}}^{\mathcal{B}}\;[\mathbf{v}]_{\mathcal{B}},$$
+
+and $[T]_{\mathcal{C}}^{\mathcal{B}}$ is the only matrix with this property.
+:::
+
+:::proof
+Write $\mathbf{v} = c_1\mathbf{b}_1 + \cdots + c_n\mathbf{b}_n$, so $[\mathbf{v}]_{\mathcal{B}} = (c_1,\dots,c_n)^{\mathsf{T}}$. Then $T(\mathbf{v}) = \sum_j c_j T(\mathbf{b}_j)$, and since taking $\mathcal{C}$-coordinates is linear,
+
+$$[T(\mathbf{v})]_{\mathcal{C}} = \sum_{j=1}^n c_j\,[T(\mathbf{b}_j)]_{\mathcal{C}},$$
+
+which is the matrix with those columns applied to $(c_1,\dots,c_n)^{\mathsf{T}}$.
+
+Uniqueness: if $M[\mathbf{v}]_{\mathcal{B}} = [T(\mathbf{v})]_{\mathcal{C}}$ for all $\mathbf{v}$, take $\mathbf{v} = \mathbf{b}_j$, whose coordinate vector is $\mathbf{e}_j$; then column $j$ of $M$ is $[T(\mathbf{b}_j)]_{\mathcal{C}}$.
+:::
+
+The recipe hidden in the definition has one extra step compared with the standard matrix, and it is the step everybody forgets.
+
+:::recipe[Computing $[T]_{\mathcal{C}}^{\mathcal{B}}$]
+1. Apply $T$ to each vector of $\mathcal{B}$, in order. You now have $n$ vectors in $W$.
+2. **Express each result in the basis $\mathcal{C}$**, i.e. solve for its $\mathcal{C}$-coordinates.
+3. Those coordinate vectors, in order, are the columns.
+4. Check on one vector: pick $\mathbf{v}$, compute $T(\mathbf{v})$ directly, and compare its $\mathcal{C}$-coordinates with the matrix product.
+:::
 
 :::intuition
-Composing transformations is an assembly line: the vector passes through the first machine, then its output feeds the second. In matrix form you write the machines right-to-left in the order the vector meets them. Inverting the whole line means running it backwards, so you reverse the machines' order too.
+A matrix is a translation of a map into two languages at once: the input language $\mathcal{B}$ and the output language $\mathcal{C}$. Column $j$ answers a single question — "if I hand you the $j$-th input word, what does the answer sound like in the output language?" Change the output language and every column gets retranslated, even though the map has not moved an inch.
 :::
 
-:::example[Matrix of a composition: rotate, then scale]
-Let $T$ be a $90°$ counterclockwise rotation and $S$ be scaling by $2$, both on $\mathbb{R}^2$. Find the matrix of $S \circ T$ (apply $T$ first, then $S$).
+:::example[Differentiation as a matrix]
+Let $D: P_3 \to P_2$ be $D(p) = p'$, with $\mathcal{B} = \{1, t, t^2, t^3\}$ and $\mathcal{C} = \{1, t, t^2\}$. Find $[D]_{\mathcal{C}}^{\mathcal{B}}$, and use it to differentiate $p(t) = 5 - 2t + 4t^3$.
 :::
 
 :::solution
-1. Rotation matrix: $T$ sends $(1,0) \mapsto (0,1)$ and $(0,1) \mapsto (-1,0)$, so $M_T = \begin{pmatrix} 0 & -1 \\ 1 & 0 \end{pmatrix}$.
-2. Scaling matrix: $S$ doubles both coordinates, so $M_S = 2I = \begin{pmatrix} 2 & 0 \\ 0 & 2 \end{pmatrix}$.
-3. Since $T$ runs first, its matrix goes on the right: $M_{S \circ T} = M_S M_T = \begin{pmatrix} 2 & 0 \\ 0 & 2 \end{pmatrix}\begin{pmatrix} 0 & -1 \\ 1 & 0 \end{pmatrix} = \begin{pmatrix} 0 & -2 \\ 2 & 0 \end{pmatrix}$.
-4. Sanity check on $(1,0)$: rotating gives $(0,1)$, then scaling gives $(0,2)$. Directly, $\begin{pmatrix} 0 & -2 \\ 2 & 0 \end{pmatrix}\begin{pmatrix} 1 \\ 0 \end{pmatrix} = \begin{pmatrix} 0 \\ 2 \end{pmatrix}$ ✓. (Here $S$ is a scalar multiple of the identity, so $M_S M_T = M_T M_S$; in general the order matters.)
+Apply $D$ to each basis vector and read coordinates in $\mathcal{C}$:
+
+$$D(1) = 0 \to (0,0,0), \quad D(t) = 1 \to (1,0,0), \quad D(t^2) = 2t \to (0,2,0), \quad D(t^3) = 3t^2 \to (0,0,3).$$
+
+Stacking as columns,
+
+$$[D]_{\mathcal{C}}^{\mathcal{B}} = \begin{pmatrix} 0 & 1 & 0 & 0 \\ 0 & 0 & 2 & 0 \\ 0 & 0 & 0 & 3\end{pmatrix}.$$
+
+Now $p = 5 - 2t + 0t^2 + 4t^3$ has $[p]_{\mathcal{B}} = (5,-2,0,4)^{\mathsf{T}}$, and
+
+$$[D]_{\mathcal{C}}^{\mathcal{B}}\,[p]_{\mathcal{B}} = \begin{pmatrix} -2 \\ 0 \\ 12\end{pmatrix},$$
+
+which decodes as $-2 + 0t + 12t^2$. Check by calculus: $p'(t) = -2 + 12t^2$. ✓
+
+Note the shape: $3 \times 4$, because $D$ maps a $4$-dimensional space to a $3$-dimensional one. The column of zeros in position $1$ is the kernel showing itself — constants die.
+:::
+
+:::example[Two different bases on the same space]
+Let $T: \mathbb{R}^2 \to \mathbb{R}^2$ be $T(x,y) = (3x + y,\; x + 3y)$. Take $\mathcal{B} = \{(1,1), (1,-1)\}$ for the domain and $\mathcal{C} = \{(1,0),(1,1)\}$ for the codomain. Find $[T]_{\mathcal{C}}^{\mathcal{B}}$.
+:::
+
+:::solution
+Step 1: images of the $\mathcal{B}$ vectors.
+
+$$T(1,1) = (3+1,\,1+3) = (4,4), \qquad T(1,-1) = (3-1,\,1-3) = (2,-2).$$
+
+Step 2: $\mathcal{C}$-coordinates. Solve $(4,4) = a(1,0) + b(1,1)$: the second coordinate gives $b = 4$, then $a + 4 = 4$ so $a = 0$. Thus $[(4,4)]_{\mathcal{C}} = (0,4)^{\mathsf{T}}$.
+
+Solve $(2,-2) = a(1,0) + b(1,1)$: second coordinate gives $b = -2$, then $a - 2 = 2$ so $a = 4$. Thus $[(2,-2)]_{\mathcal{C}} = (4,-2)^{\mathsf{T}}$.
+
+Step 3: assemble.
+
+$$[T]_{\mathcal{C}}^{\mathcal{B}} = \begin{pmatrix} 0 & 4 \\ 4 & -2 \end{pmatrix}.$$
+
+Step 4: check on $\mathbf{v} = (3,1)$. Its $\mathcal{B}$-coordinates solve $c_1(1,1) + c_2(1,-1) = (3,1)$, giving $c_1 = 2$, $c_2 = 1$, so $[\mathbf{v}]_{\mathcal{B}} = (2,1)^{\mathsf{T}}$. The matrix gives $(0\cdot2 + 4\cdot1,\; 4\cdot 2 - 2\cdot 1)^{\mathsf{T}} = (4,6)^{\mathsf{T}}$, which decodes as $4(1,0) + 6(1,1) = (10,6)$. Directly, $T(3,1) = (9+1, 3+3) = (10,6)$. ✓
+:::
+
+:::example[A basis that diagonalises]
+With the same $T(x,y) = (3x+y,\,x+3y)$, compute $[T]_{\mathcal{B}}$ where $\mathcal{B} = \{(1,1),(1,-1)\}$ is used for *both* domain and codomain.
+:::
+
+:::solution
+From the previous example, $T(1,1) = (4,4) = 4(1,1)$ and $T(1,-1) = (2,-2) = 2(1,-1)$. Their $\mathcal{B}$-coordinates are therefore $(4,0)^{\mathsf{T}}$ and $(0,2)^{\mathsf{T}}$, so
+
+$$[T]_{\mathcal{B}} = \begin{pmatrix} 4 & 0 \\ 0 & 2\end{pmatrix}.$$
+
+Compare with the standard matrix $A = \begin{pmatrix} 3 & 1 \\ 1 & 3\end{pmatrix}$. The same map, two matrices — and the second one tells you at a glance that $T$ stretches by $4$ along $(1,1)$ and by $2$ along $(1,-1)$. This is diagonalisation, seen from the transformation side; the basis vectors that make it work are eigenvectors.
+
+Consistency: both matrices have trace $6$ and determinant $8$. ✓ The next section explains why they must.
+:::
+
+:::pitfall
+Step 2 of the recipe is not optional. Writing $T(\mathbf{b}_j)$ itself as a column — instead of its $\mathcal{C}$-coordinates — gives the right answer only when $\mathcal{C}$ is the standard basis. If $\mathcal{C} = \{(1,0),(1,1)\}$ and $T(\mathbf{b}_1) = (4,4)$, the column is $(0,4)^{\mathsf{T}}$, not $(4,4)^{\mathsf{T}}$.
+:::
+
+## Change of basis and similarity
+
+<!-- section: change-of-basis -->
+
+One space, two bases: the same vector has two coordinate vectors and the same operator has two matrices. A single invertible matrix converts between them.
+
+:::definition[Change-of-coordinates matrix]{#change-of-coordinates}
+Let $\mathcal{B} = \{\mathbf{b}_1,\dots,\mathbf{b}_n\}$ and $\mathcal{C}$ be ordered bases of the same space $V$. The **change-of-coordinates matrix from $\mathcal{B}$ to $\mathcal{C}$** is
+
+$$P_{\mathcal{C}\leftarrow\mathcal{B}} = \Big(\;[\mathbf{b}_1]_{\mathcal{C}}\;\Big|\;\cdots\;\Big|\;[\mathbf{b}_n]_{\mathcal{C}}\;\Big),$$
+
+the matrix whose columns are the $\mathcal{C}$-coordinates of the $\mathcal{B}$ vectors.
+:::
+
+Note that $P_{\mathcal{C}\leftarrow\mathcal{B}} = [\,\mathrm{id}\,]^{\mathcal{B}}_{\mathcal{C}}$: it is the matrix of the identity operator read in $\mathcal{B}$ on the way in and $\mathcal{C}$ on the way out. Every property below is therefore a special case of the representation theorem, which is a good reason not to treat change of basis as a separate topic.
+
+:::theorem[Change of coordinates]{#change-of-coordinates-theorem}
+For every $\mathbf{v} \in V$,
+
+$$[\mathbf{v}]_{\mathcal{C}} = P_{\mathcal{C}\leftarrow\mathcal{B}}\,[\mathbf{v}]_{\mathcal{B}}.$$
+
+Moreover $P_{\mathcal{C}\leftarrow\mathcal{B}}$ is invertible, with
+
+$$\big(P_{\mathcal{C}\leftarrow\mathcal{B}}\big)^{-1} = P_{\mathcal{B}\leftarrow\mathcal{C}}.$$
+:::
+
+:::proof
+The first identity is the representation theorem applied to $T = \mathrm{id}$, since $[\mathrm{id}(\mathbf{v})]_{\mathcal{C}} = [\mathbf{v}]_{\mathcal{C}}$.
+
+For invertibility, apply the identity twice: for every $\mathbf{v}$,
+
+$$[\mathbf{v}]_{\mathcal{B}} = P_{\mathcal{B}\leftarrow\mathcal{C}}[\mathbf{v}]_{\mathcal{C}} = P_{\mathcal{B}\leftarrow\mathcal{C}}P_{\mathcal{C}\leftarrow\mathcal{B}}[\mathbf{v}]_{\mathcal{B}}.$$
+
+As $\mathbf{v}$ ranges over $V$, $[\mathbf{v}]_{\mathcal{B}}$ ranges over all of $\mathbb{R}^n$, so $P_{\mathcal{B}\leftarrow\mathcal{C}}P_{\mathcal{C}\leftarrow\mathcal{B}} = I_n$. Swapping the roles of $\mathcal{B}$ and $\mathcal{C}$ gives the product in the other order, so the two matrices are mutually inverse.
+:::
+
+In $\mathbb{R}^n$ there is a shortcut worth memorising. If $\mathcal{E}$ is the standard basis, then $[\mathbf{b}_j]_{\mathcal{E}} = \mathbf{b}_j$, so
+
+$$P_{\mathcal{E}\leftarrow\mathcal{B}} = \big(\mathbf{b}_1 \mid \cdots \mid \mathbf{b}_n\big),$$
+
+simply the basis vectors written as columns — no work at all. Getting *into* $\mathcal{B}$-coordinates is the harder direction and costs an inverse:
+
+$$[\mathbf{v}]_{\mathcal{B}} = P_{\mathcal{B}\leftarrow\mathcal{E}}\,\mathbf{v} = \big(P_{\mathcal{E}\leftarrow\mathcal{B}}\big)^{-1}\mathbf{v}.$$
+
+For two non-standard bases, route through the standard one: $P_{\mathcal{C}\leftarrow\mathcal{B}} = P_{\mathcal{C}\leftarrow\mathcal{E}}\,P_{\mathcal{E}\leftarrow\mathcal{B}}$, the arrows chaining like function composition.
+
+:::intuition
+A vector is a physical arrow; a coordinate vector is a *measurement* of that arrow against a chosen set of rulers. Change the rulers and the numbers change, though the arrow never moved. $P_{\mathcal{C}\leftarrow\mathcal{B}}$ is the conversion table between two sets of rulers — like converting a distance from feet to metres. It must be invertible for the obvious reason: no information is lost in a change of units, so the conversion can always be undone.
+:::
+
+:::example[Change of coordinates between two bases of $\mathbb{R}^2$]
+Let $\mathcal{B} = \{(1,2),(1,3)\}$ and $\mathcal{C} = \{(1,0),(0,1)\}$ be bases of $\mathbb{R}^2$. Find $P_{\mathcal{C}\leftarrow\mathcal{B}}$, $P_{\mathcal{B}\leftarrow\mathcal{C}}$, and the $\mathcal{B}$-coordinates of $(5,11)$.
+:::
+
+:::solution
+$\mathcal{C}$ is the standard basis, so $P_{\mathcal{C}\leftarrow\mathcal{B}} = \begin{pmatrix} 1 & 1 \\ 2 & 3\end{pmatrix}$, the $\mathcal{B}$ vectors as columns.
+
+Its determinant is $3 - 2 = 1$, so
+
+$$P_{\mathcal{B}\leftarrow\mathcal{C}} = \begin{pmatrix} 1 & 1 \\ 2 & 3\end{pmatrix}^{-1} = \begin{pmatrix} 3 & -1 \\ -2 & 1\end{pmatrix}.$$
+
+Then $[(5,11)]_{\mathcal{B}} = \begin{pmatrix} 3 & -1 \\ -2 & 1\end{pmatrix}\begin{pmatrix}5\\11\end{pmatrix} = \begin{pmatrix} 15 - 11 \\ -10 + 11\end{pmatrix} = \begin{pmatrix}4\\1\end{pmatrix}$.
+
+Check: $4(1,2) + 1(1,3) = (4+1, 8+3) = (5,11)$. ✓
+:::
+
+Now the main event. If an operator has matrix $A$ in one basis, what is its matrix in another?
+
+:::theorem[Change of basis for an operator]{#similarity-theorem}
+Let $T: V \to V$ be linear, let $\mathcal{B}$ and $\mathcal{C}$ be bases of $V$, and write $P = P_{\mathcal{C}\leftarrow\mathcal{B}}$. Then
+
+$$[T]_{\mathcal{B}} = P^{-1}\,[T]_{\mathcal{C}}\,P.$$
+:::
+
+:::proof
+Take any $\mathbf{v} \in V$ and chase coordinates. Starting from $[\mathbf{v}]_{\mathcal{B}}$:
+
+$$P\,[\mathbf{v}]_{\mathcal{B}} = [\mathbf{v}]_{\mathcal{C}}, \qquad [T]_{\mathcal{C}}\,[\mathbf{v}]_{\mathcal{C}} = [T(\mathbf{v})]_{\mathcal{C}}, \qquad P^{-1}[T(\mathbf{v})]_{\mathcal{C}} = [T(\mathbf{v})]_{\mathcal{B}}.$$
+
+Composing the three steps, $P^{-1}[T]_{\mathcal{C}}P\,[\mathbf{v}]_{\mathcal{B}} = [T(\mathbf{v})]_{\mathcal{B}}$ for every $\mathbf{v}$. By the uniqueness half of the representation theorem, $P^{-1}[T]_{\mathcal{C}}P$ must be $[T]_{\mathcal{B}}$.
+:::
+
+Read the right-hand side from right to left, the direction a vector travels: $P$ converts $\mathcal{B}$-coordinates to $\mathcal{C}$-coordinates, $[T]_{\mathcal{C}}$ does the work in the language it understands, and $P^{-1}$ translates the answer back. That is the whole formula, and remembering the story stops you from putting the inverse on the wrong side.
+
+:::definition[Similar matrices]{#similar-matrices}
+Square matrices $A$ and $B$ of the same size are **similar**, written $A \sim B$, if there exists an invertible $P$ with
+
+$$B = P^{-1} A P.$$
+:::
+
+:::proposition[Similarity is an equivalence relation]{#similarity-equivalence}
+$A \sim A$; if $A \sim B$ then $B \sim A$; and if $A \sim B$ and $B \sim C$ then $A \sim C$.
+:::
+
+:::proof
+Reflexive: $A = I^{-1}AI$. Symmetric: if $B = P^{-1}AP$ then $A = PBP^{-1} = (P^{-1})^{-1}B(P^{-1})$, so $B \sim A$ via $P^{-1}$. Transitive: if $B = P^{-1}AP$ and $C = Q^{-1}BQ$ then $C = Q^{-1}P^{-1}APQ = (PQ)^{-1}A(PQ)$, and $PQ$ is invertible.
+:::
+
+Combining the change-of-basis theorem with this proposition gives the slogan: **two matrices are similar exactly when they represent the same operator in two bases.** Similarity classes are operators; individual matrices are operators plus an arbitrary choice.
+
+That makes the following theorem the fundamental one of the chapter. Any quantity computed from a matrix that is the same for all similar matrices is really a property of the *map*.
+
+:::theorem[Similarity invariants]{#similarity-invariants}
+Suppose $B = P^{-1}AP$. Then
+
+1. $\det B = \det A$;
+2. $\operatorname{tr} B = \operatorname{tr} A$;
+3. $\operatorname{rank} B = \operatorname{rank} A$;
+4. $B$ and $A$ have the same characteristic polynomial, hence the same eigenvalues with the same multiplicities;
+5. $B^k = P^{-1}A^kP$ for every $k \ge 0$, and $B$ is invertible iff $A$ is.
+:::
+
+:::proof
+(1) Determinants are multiplicative, and $\det(P^{-1}) = 1/\det P$, so
+
+$$\det B = \det(P^{-1})\det A\det P = \frac{1}{\det P}\,\det A\,\det P = \det A.$$
+
+(2) Use the cyclic property of the trace, $\operatorname{tr}(XY) = \operatorname{tr}(YX)$, which holds because both sides equal $\sum_{i,j} X_{ij}Y_{ji}$. With $X = P^{-1}$ and $Y = AP$,
+
+$$\operatorname{tr}(P^{-1}AP) = \operatorname{tr}(APP^{-1}) = \operatorname{tr}(A).$$
+
+(3) Multiplying by an invertible matrix does not change rank: $P$ is a bijection of $\mathbb{R}^n$, so $\operatorname{im}(AP) = \operatorname{im}(A)$, and $P^{-1}$ being a bijection maps $\operatorname{im}(AP)$ isomorphically onto $\operatorname{im}(P^{-1}AP)$, preserving dimension.
+
+(4) Compute, using $\lambda I = P^{-1}(\lambda I)P$:
+
+$$B - \lambda I = P^{-1}AP - P^{-1}(\lambda I)P = P^{-1}(A - \lambda I)P,$$
+
+so by part (1) applied to the matrix $A - \lambda I$,
+
+$$\det(B - \lambda I) = \det(A - \lambda I)$$
+
+for every $\lambda$. The characteristic polynomials are identical, so the roots and their multiplicities agree.
+
+(5) $B^k = (P^{-1}AP)(P^{-1}AP)\cdots(P^{-1}AP)$; each interior $PP^{-1}$ cancels, leaving $P^{-1}A^kP$. Invertibility follows from (1): $\det B = \det A$, so one is nonzero iff the other is.
+:::
+
+:::corollary[Speaking of the determinant of an operator]{#operator-determinant}
+For a linear operator $T$ on a finite-dimensional space, the quantities $\det T$, $\operatorname{tr} T$, $\operatorname{rank} T$ and the eigenvalues of $T$ are well defined: compute them from $[T]_{\mathcal{B}}$ in any basis $\mathcal{B}$ and the answer is the same.
+:::
+
+:::proof
+Any two such matrices are similar by the change-of-basis theorem, and the four quantities are similarity invariants.
+:::
+
+The invariants give a cheap and often decisive test for *non*-similarity: if two matrices disagree in trace, determinant, rank or characteristic polynomial, they are not similar and no search for $P$ can succeed. The converse fails — agreeing on all four is not enough.
+
+:::example[Testing similarity with invariants]
+Are $A = \begin{pmatrix} 1 & 2 \\ 3 & 4\end{pmatrix}$ and $B = \begin{pmatrix} 0 & 1 \\ -2 & 5\end{pmatrix}$ similar? What about $A$ and $C = \begin{pmatrix} 2 & 0 \\ 0 & 3\end{pmatrix}$?
+:::
+
+:::solution
+Compute invariants. $\operatorname{tr}A = 5$, $\det A = 4 - 6 = -2$. $\operatorname{tr}B = 0 + 5 = 5$, $\det B = 0\cdot5 - 1\cdot(-2) = 2$.
+
+Determinants differ ($-2$ versus $2$), so $A \not\sim B$.
+
+For $C$: $\operatorname{tr}C = 5$ matches, but $\det C = 6 \ne -2$. So $A \not\sim C$ either.
+
+Remark on the limits of the test: $\begin{pmatrix}1&1\\0&1\end{pmatrix}$ and $I_2$ share trace $2$, determinant $1$, rank $2$ and characteristic polynomial $(1-\lambda)^2$, yet they are not similar — $P^{-1}IP = I$ for every $P$, so the only matrix similar to $I$ is $I$ itself.
+:::
+
+:::example[Building a similarity from a change of basis]
+Let $T(x,y) = (3x+y,\,x+3y)$ with standard matrix $A = \begin{pmatrix} 3 & 1 \\ 1 & 3\end{pmatrix}$, and let $\mathcal{B} = \{(1,1),(1,-1)\}$. Verify the change-of-basis formula gives $[T]_{\mathcal{B}} = \operatorname{diag}(4,2)$.
+:::
+
+:::solution
+Here $\mathcal{C}$ is the standard basis, so $P = P_{\mathcal{E}\leftarrow\mathcal{B}} = \begin{pmatrix} 1 & 1 \\ 1 & -1\end{pmatrix}$, with $\det P = -2$ and
+
+$$P^{-1} = \frac{1}{-2}\begin{pmatrix} -1 & -1 \\ -1 & 1\end{pmatrix} = \begin{pmatrix} 1/2 & 1/2 \\ 1/2 & -1/2\end{pmatrix}.$$
+
+First $AP = \begin{pmatrix} 3 & 1 \\ 1 & 3\end{pmatrix}\begin{pmatrix} 1 & 1 \\ 1 & -1\end{pmatrix} = \begin{pmatrix} 4 & 2 \\ 4 & -2\end{pmatrix}$. Then
+
+$$P^{-1}(AP) = \begin{pmatrix} 1/2 & 1/2 \\ 1/2 & -1/2\end{pmatrix}\begin{pmatrix} 4 & 2 \\ 4 & -2\end{pmatrix} = \begin{pmatrix} 4 & 0 \\ 0 & 2\end{pmatrix}.$$
+
+✓ This matches the direct computation done earlier, and it is exactly the diagonalisation $A = PDP^{-1}$ read backwards.
+
+Invariant check: $\operatorname{tr}A = 6 = 4 + 2$ and $\det A = 9 - 1 = 8 = 4\cdot2$. ✓
+:::
+
+:::example[Powers via a friendly basis]
+Using the previous example, compute the $(1,1)$ entry of $A^{10}$ where $A = \begin{pmatrix} 3&1\\1&3\end{pmatrix}$.
+:::
+
+:::solution
+From $[T]_{\mathcal{B}} = D = \operatorname{diag}(4,2)$ and $D = P^{-1}AP$ we get $A = PDP^{-1}$, hence $A^{10} = PD^{10}P^{-1}$ by part (5) of the invariants theorem. Now $D^{10} = \operatorname{diag}(4^{10}, 2^{10})$.
+
+$$A^{10} = \begin{pmatrix} 1 & 1 \\ 1 & -1\end{pmatrix}\begin{pmatrix} 4^{10} & 0 \\ 0 & 2^{10}\end{pmatrix}\begin{pmatrix} 1/2 & 1/2 \\ 1/2 & -1/2\end{pmatrix}.$$
+
+The middle product is $\begin{pmatrix} 4^{10} & 2^{10} \\ 4^{10} & -2^{10}\end{pmatrix}$, and multiplying on the right gives $(1,1)$ entry $\tfrac12(4^{10} + 2^{10}) = \tfrac12(1048576 + 1024) = 524800$.
+
+Sanity check: the entries of $A^{10}$ should be dominated by $4^{10}/2 = 524288$, and $524800$ exceeds it by exactly $512 = 2^{10}/2$. ✓
+:::
+
+:::pitfall
+$B = P^{-1}AP$ and $B = PAP^{-1}$ both define similarity (replace $P$ by $P^{-1}$), so books differ. What matters is internal consistency with *your* definition of $P$. Fix it by the story: $P$ turns new coordinates into old, so it acts first, on the right.
+:::
+
+## Composition, inverses and isomorphism
+
+<!-- section: composition -->
+
+Maps can be applied one after another, and the matrix side of that operation is already familiar.
+
+:::proposition[A composite of linear maps is linear]{#composition-linear}
+If $T: U \to V$ and $S: V \to W$ are linear, so is $S\circ T: U \to W$.
+:::
+
+:::proof
+For $\mathbf{u}_1, \mathbf{u}_2 \in U$ and a scalar $c$,
+
+$$(S\circ T)(c\mathbf{u}_1 + \mathbf{u}_2) = S\big(cT(\mathbf{u}_1) + T(\mathbf{u}_2)\big) = c\,S(T(\mathbf{u}_1)) + S(T(\mathbf{u}_2)),$$
+
+using linearity of $T$ inside and of $S$ outside.
+:::
+
+:::theorem[Composition is matrix multiplication]{#composition-is-product}
+Let $T: U \to V$ and $S: V \to W$ be linear, with ordered bases $\mathcal{A}$ of $U$, $\mathcal{B}$ of $V$ and $\mathcal{C}$ of $W$. Then
+
+$$[S\circ T]_{\mathcal{C}}^{\mathcal{A}} = [S]_{\mathcal{C}}^{\mathcal{B}}\;[T]_{\mathcal{B}}^{\mathcal{A}}.$$
+:::
+
+:::proof
+For every $\mathbf{u} \in U$, two applications of the representation theorem give
+
+$$\big[(S\circ T)(\mathbf{u})\big]_{\mathcal{C}} = \big[S(T(\mathbf{u}))\big]_{\mathcal{C}} = [S]_{\mathcal{C}}^{\mathcal{B}}\big[T(\mathbf{u})\big]_{\mathcal{B}} = [S]_{\mathcal{C}}^{\mathcal{B}}[T]_{\mathcal{B}}^{\mathcal{A}}\,[\mathbf{u}]_{\mathcal{A}}.$$
+
+So the matrix $[S]_{\mathcal{C}}^{\mathcal{B}}[T]_{\mathcal{B}}^{\mathcal{A}}$ represents $S \circ T$ relative to $\mathcal{A}$ and $\mathcal{C}$; by the uniqueness clause of the representation theorem it *is* $[S\circ T]_{\mathcal{C}}^{\mathcal{A}}$.
+:::
+
+This is the real reason matrix multiplication is defined by the strange row-times-column rule rather than entrywise: it is the rule that makes matrices compose the way functions do. Two consequences come free. Matrix multiplication is associative because composition of functions is associative. And matrix multiplication is not commutative because composition is not: rotating then reflecting is generally not the same as reflecting then rotating.
+
+The inner basis $\mathcal{B}$ appears twice in the formula, once as the output basis of $T$ and once as the input basis of $S$. If they disagree, the product means nothing — which is the conceptual version of the rule that the inner dimensions must match.
+
+:::definition[Invertible linear map, isomorphism]{#isomorphism-definition}
+A linear map $T: V \to W$ is **invertible** if there is a map $T^{-1}: W \to V$ with $T^{-1}\circ T = \mathrm{id}_V$ and $T\circ T^{-1} = \mathrm{id}_W$. An invertible linear map is called an **isomorphism**, and $V$ and $W$ are **isomorphic**, written $V \cong W$, if one exists.
+:::
+
+:::proposition[The inverse of a linear map is linear]{#inverse-is-linear}
+If $T: V\to W$ is a linear bijection, then the set-theoretic inverse $T^{-1}$ is linear, so $T$ is an isomorphism.
+:::
+
+:::proof
+Let $\mathbf{w}_1, \mathbf{w}_2 \in W$ and let $c$ be a scalar. Put $\mathbf{v}_i = T^{-1}(\mathbf{w}_i)$, so $T(\mathbf{v}_i) = \mathbf{w}_i$. By linearity of $T$,
+
+$$T(c\mathbf{v}_1 + \mathbf{v}_2) = c\mathbf{w}_1 + \mathbf{w}_2.$$
+
+Applying $T^{-1}$ to both sides gives $c\mathbf{v}_1 + \mathbf{v}_2 = T^{-1}(c\mathbf{w}_1 + \mathbf{w}_2)$, which is exactly the one-line linearity condition for $T^{-1}$.
+:::
+
+:::theorem[Criteria for invertibility of an operator]{#invertible-operator}
+Let $V$ be finite-dimensional and $T: V\to V$ linear, with matrix $A = [T]_{\mathcal{B}}$ in some basis. The following are equivalent:
+
+1. $T$ is invertible;
+2. $T$ is one-to-one;
+3. $T$ is onto;
+4. $\ker(T) = \{\mathbf{0}\}$;
+5. $\operatorname{rank}(T) = \dim V$;
+6. $\det A \ne 0$;
+7. $0$ is not an eigenvalue of $T$.
+:::
+
+:::proof
+(2) $\Leftrightarrow$ (4) is the trivial-kernel proposition, and (2) $\Leftrightarrow$ (3) is the square dichotomy from rank-nullity. (3) $\Leftrightarrow$ (5) since a subspace of $V$ has dimension $\dim V$ iff it is all of $V$. A map that is one-to-one and onto is a bijection, and its inverse is linear by the previous proposition, giving (2)+(3) $\Rightarrow$ (1); conversely an invertible map is a bijection, so (1) $\Rightarrow$ (2). For (6): $A$ is invertible as a matrix iff $\det A \ne 0$, and $A$ invertible corresponds to $T$ invertible because $[T^{-1}]_{\mathcal{B}} = A^{-1}$ by the composition theorem applied to $T^{-1}\circ T = \mathrm{id}$. Finally (7) $\Leftrightarrow$ (4), since $0$ is an eigenvalue exactly when $T(\mathbf{v}) = \mathbf{0}$ has a nonzero solution.
+:::
+
+:::corollary[Inverses and composites reverse order]{#reverse-order}
+If $S$ and $T$ are invertible linear maps and $S\circ T$ is defined, then $S\circ T$ is invertible and
+
+$$(S\circ T)^{-1} = T^{-1}\circ S^{-1}.$$
+:::
+
+:::proof
+Compute $(T^{-1}\circ S^{-1})\circ(S\circ T) = T^{-1}\circ(S^{-1}\circ S)\circ T = T^{-1}\circ T = \mathrm{id}$, and symmetrically in the other order.
+:::
+
+:::intuition
+Socks then shoes. To undo the sequence you take the shoes off first: the last thing done is the first thing undone. In matrix form the same fact reads $(MN)^{-1} = N^{-1}M^{-1}$, and the reason is not an algebraic coincidence — it is what "undoing a sequence" means.
+:::
+
+The isomorphism idea pays off immediately, because it says that in finite dimensions there is essentially only one vector space of each dimension.
+
+:::theorem[Coordinates give an isomorphism]{#coordinate-isomorphism}
+If $\dim V = n$ with ordered basis $\mathcal{B}$, then $\mathbf{v}\mapsto[\mathbf{v}]_{\mathcal{B}}$ is an isomorphism $V \to \mathbb{R}^n$. Hence every $n$-dimensional real vector space satisfies $V \cong \mathbb{R}^n$.
+:::
+
+:::proof
+The coordinate map is linear, one-to-one and onto, as proved when coordinates were defined; by the previous proposition its inverse is linear.
+:::
+
+:::theorem[Classification by dimension]{#classification-by-dimension}
+Let $V$ and $W$ be finite-dimensional vector spaces over the same field. Then
+
+$$V \cong W \iff \dim V = \dim W.$$
+:::
+
+:::proof
+($\Leftarrow$) If $\dim V = \dim W = n$, compose the isomorphisms $V \to \mathbb{R}^n$ and $\mathbb{R}^n \to W$ coming from bases of each; a composite of isomorphisms is an isomorphism, with inverse the composite of the inverses.
+
+($\Rightarrow$) Let $T: V\to W$ be an isomorphism. Since $T$ is one-to-one, $\operatorname{nullity}(T) = 0$; since it is onto, $\operatorname{rank}(T) = \dim W$. Rank-nullity gives $\dim V = 0 + \dim W$.
+:::
+
+So $P_3$, $\mathbb{R}^4$ and $M_{2\times 2}$ are all the same space wearing different clothes: each is four-dimensional. Anything provable about $\mathbb{R}^4$ using only the vector space operations transfers verbatim. This is precisely why it is legitimate to do all concrete computation in coordinates and still claim results about polynomials or matrices.
+
+:::example[Composition two ways]
+Let $T:\mathbb{R}^2\to\mathbb{R}^2$ be rotation by $90°$ counterclockwise and $S$ reflection across the $x$-axis. Compute the standard matrices of $S\circ T$ and $T \circ S$ and compare.
+:::
+
+:::solution
+$M_T = \begin{pmatrix}0&-1\\1&0\end{pmatrix}$ and $M_S = \begin{pmatrix}1&0\\0&-1\end{pmatrix}$.
+
+$$M_{S\circ T} = M_S M_T = \begin{pmatrix}1&0\\0&-1\end{pmatrix}\begin{pmatrix}0&-1\\1&0\end{pmatrix} = \begin{pmatrix}0&-1\\-1&0\end{pmatrix},$$
+
+$$M_{T\circ S} = M_T M_S = \begin{pmatrix}0&-1\\1&0\end{pmatrix}\begin{pmatrix}1&0\\0&-1\end{pmatrix} = \begin{pmatrix}0&1\\1&0\end{pmatrix}.$$
+
+They differ, so composition does not commute. Both have determinant $-1$ and trace $0$, as two reflections should: $M_{S\circ T}$ is reflection across $y = -x$ and $M_{T\circ S}$ is reflection across $y = x$.
+
+Check the first on $\mathbf{e}_1$: rotate $(1,0)$ to $(0,1)$, then reflect across the $x$-axis to $(0,-1)$. And $M_{S\circ T}\mathbf{e}_1 = (0,-1)$. ✓
+:::
+
+:::example[Inverting a map]
+Let $T(x,y) = (2x + y,\; 5x + 3y)$. Show $T$ is invertible and find $T^{-1}(1,3)$.
+:::
+
+:::solution
+$A = \begin{pmatrix}2&1\\5&3\end{pmatrix}$ has $\det A = 6 - 5 = 1 \ne 0$, so $T$ is invertible.
+
+$$A^{-1} = \frac{1}{1}\begin{pmatrix}3&-1\\-5&2\end{pmatrix} = \begin{pmatrix}3&-1\\-5&2\end{pmatrix}.$$
+
+Then $T^{-1}(1,3) = A^{-1}(1,3)^{\mathsf{T}} = (3 - 3,\; -5 + 6)^{\mathsf{T}} = (0, 1)$.
+
+Check: $T(0,1) = (0 + 1,\; 0 + 3) = (1,3)$. ✓
+:::
+
+:::example[An isomorphism between unfamiliar spaces]
+Show that the space $S$ of symmetric $2\times2$ real matrices is isomorphic to $\mathbb{R}^3$, and give the dimension of the space of $3\times 3$ symmetric matrices.
+:::
+
+:::solution
+A symmetric $2\times2$ matrix is $\begin{pmatrix} a & b \\ b & c\end{pmatrix}$, determined by the free entries $a, b, c$. The map $\begin{pmatrix} a&b\\b&c\end{pmatrix}\mapsto (a,b,c)$ is linear (adding matrices adds the triples, scaling scales them), one-to-one (a zero triple gives the zero matrix) and onto (any triple is realised). So $S \cong \mathbb{R}^3$ and $\dim S = 3$.
+
+For $3\times3$: a symmetric matrix is determined by the $3$ diagonal entries and the $3$ entries above the diagonal, so the dimension is $6$, and the space is isomorphic to $\mathbb{R}^6$. In general an $n\times n$ symmetric matrix has $n(n+1)/2$ free entries; at $n = 2$ this gives $3$ ✓ and at $n = 3$ it gives $6$ ✓.
+:::
+
+:::pitfall
+A map can be one-to-one without being onto, or onto without being one-to-one, as soon as the domain and codomain have different dimensions. The equivalences in the invertibility theorem hold for operators $V \to V$ with $\dim V$ finite, and nowhere else. Differentiation $P_3 \to P_2$ is onto and not one-to-one; integration $P_2 \to P_3$ is one-to-one and not onto.
+:::
+
+## The space of linear maps
+
+<!-- section: map-space -->
+
+Linear maps between two fixed spaces can themselves be added and scaled, and doing so produces another vector space — one whose dimension we can compute exactly.
+
+:::definition[The space $\mathcal{L}(V,W)$]{#space-of-maps}
+For vector spaces $V, W$ over the same field, let $\mathcal{L}(V,W)$ denote the set of all linear maps $V \to W$, with operations defined pointwise:
+
+$$(S + T)(\mathbf{v}) = S(\mathbf{v}) + T(\mathbf{v}), \qquad (cT)(\mathbf{v}) = c\,T(\mathbf{v}).$$
+
+Write $\mathcal{L}(V)$ for $\mathcal{L}(V,V)$.
+:::
+
+:::theorem[$\mathcal{L}(V,W)$ is a vector space]{#lvw-is-a-space}
+With those operations, $\mathcal{L}(V,W)$ is a vector space; its zero vector is the zero map.
+:::
+
+:::proof
+First, the operations land inside the set: if $S, T$ are linear then
+
+$$(S+T)(c\mathbf{u}+\mathbf{v}) = S(c\mathbf{u}+\mathbf{v}) + T(c\mathbf{u}+\mathbf{v}) = c\big(S(\mathbf{u})+T(\mathbf{u})\big) + \big(S(\mathbf{v})+T(\mathbf{v})\big),$$
+
+which is $c(S+T)(\mathbf{u}) + (S+T)(\mathbf{v})$, so $S+T$ is linear; the same computation with a scalar shows $cT$ is linear.
+
+The eight vector space axioms then hold because they hold in $W$ pointwise. For instance associativity: $((R+S)+T)(\mathbf{v}) = (R(\mathbf{v}) + S(\mathbf{v})) + T(\mathbf{v}) = R(\mathbf{v}) + (S(\mathbf{v})+T(\mathbf{v})) = (R+(S+T))(\mathbf{v})$, using associativity in $W$. The additive identity is the zero map, which is linear, and the additive inverse of $T$ is $(-1)T$.
+:::
+
+:::theorem[Dimension of $\mathcal{L}(V,W)$]{#dim-lvw}
+If $\dim V = n$ and $\dim W = m$ are finite, then
+
+$$\dim \mathcal{L}(V,W) = mn.$$
+:::
+
+:::proof
+Fix ordered bases $\mathcal{B}$ of $V$ and $\mathcal{C}$ of $W$, and consider
+
+$$\Phi: \mathcal{L}(V,W) \to M_{m\times n}, \qquad \Phi(T) = [T]_{\mathcal{C}}^{\mathcal{B}}.$$
+
+$\Phi$ is linear: the $j$-th column of $\Phi(S+T)$ is $[(S+T)(\mathbf{b}_j)]_{\mathcal{C}} = [S(\mathbf{b}_j)]_{\mathcal{C}} + [T(\mathbf{b}_j)]_{\mathcal{C}}$, since taking coordinates is linear — so $\Phi(S+T) = \Phi(S)+\Phi(T)$, and likewise $\Phi(cT) = c\Phi(T)$.
+
+$\Phi$ is one-to-one: if $[T]_{\mathcal{C}}^{\mathcal{B}} = 0$ then $T(\mathbf{b}_j) = \mathbf{0}$ for every $j$, and a linear map vanishing on a basis is the zero map.
+
+$\Phi$ is onto: given any $m\times n$ matrix $M$, define $T$ on the basis by letting $T(\mathbf{b}_j)$ be the vector of $W$ whose $\mathcal{C}$-coordinates are column $j$ of $M$, and extend by linearity — that is, set $T(\sum c_j\mathbf{b}_j) = \sum c_jT(\mathbf{b}_j)$, which is well defined by uniqueness of coordinates and linear by construction. Then $\Phi(T) = M$.
+
+So $\mathcal{L}(V,W) \cong M_{m\times n}$, and $\dim M_{m\times n} = mn$ because the $mn$ matrices with a single $1$ and zeros elsewhere form a basis. By classification by dimension, $\dim\mathcal{L}(V,W) = mn$.
+:::
+
+:::intuition
+How much freedom is there in choosing a linear map? Exactly as much as choosing where the $n$ basis vectors go — and each destination is a free vector in an $m$-dimensional space. So $n$ independent choices of $m$ numbers each: $mn$ degrees of freedom. The theorem simply counts the knobs on the machine.
+:::
+
+:::example[Counting the dimension of a space of maps]
+Find $\dim\mathcal{L}(P_3, \mathbb{R}^2)$ and $\dim\mathcal{L}(M_{2\times2})$.
+:::
+
+:::solution
+$\dim P_3 = 4$ (basis $1,t,t^2,t^3$) and $\dim\mathbb{R}^2 = 2$, so $\dim\mathcal{L}(P_3,\mathbb{R}^2) = 2\cdot 4 = 8$.
+
+$\dim M_{2\times2} = 4$, and $\mathcal{L}(M_{2\times 2})$ means maps from that space to itself, so the dimension is $4\cdot4 = 16$.
+
+Sanity check on the second: such an operator is represented by a $4\times4$ matrix once a basis of $M_{2\times2}$ is chosen, and $4\times4$ matrices form a $16$-dimensional space. ✓
+:::
+
+:::example[A subspace of a space of maps]
+Inside $\mathcal{L}(\mathbb{R}^3,\mathbb{R})$, let $U$ be the set of linear functionals $f$ with $f(1,1,1) = 0$. Find $\dim U$.
+:::
+
+:::solution
+$\dim\mathcal{L}(\mathbb{R}^3,\mathbb{R}) = 1\cdot3 = 3$: a linear functional is $f(\mathbf{x}) = a_1x_1 + a_2x_2 + a_3x_3$, determined by the triple $(a_1,a_2,a_3)$.
+
+The condition $f(1,1,1) = 0$ reads $a_1 + a_2 + a_3 = 0$, one nontrivial linear equation on that triple. Consider the map $E: \mathcal{L}(\mathbb{R}^3,\mathbb{R}) \to \mathbb{R}$, $E(f) = f(1,1,1)$; it is linear, and it is onto (the functional $x_1$ maps to $1$), so its rank is $1$. By rank-nullity, $\dim U = \dim\ker E = 3 - 1 = 2$.
+
+Check: $U$ is spanned by the functionals $x_1 - x_2$ and $x_2 - x_3$, which are independent — two elements, dimension $2$. ✓
+:::
+
+:::remark
+When $V = W$ the space $\mathcal{L}(V)$ carries more than addition and scaling: composition makes it an *algebra*, matching matrix multiplication on $M_{n\times n}$. The invertible elements of $\mathcal{L}(V)$ form the general linear group $GL(V)$, and the change-of-basis theorem says similarity is the action of that group on $\mathcal{L}(V)$ by conjugation. Classifying operators up to similarity — finding the simplest matrix in each class — is the goal that diagonalisation and the Jordan form answer.
+:::
+
+:::summary
+- A linear map is determined by its values on a basis; those values, written in coordinates, are the columns of its matrix $[T]_{\mathcal{C}}^{\mathcal{B}}$, and $[T(\mathbf{v})]_{\mathcal{C}} = [T]_{\mathcal{C}}^{\mathcal{B}}[\mathbf{v}]_{\mathcal{B}}$.
+- $\ker T$ is a subspace of the domain, $\operatorname{im}T$ of the codomain, and $\dim V = \operatorname{nullity} + \operatorname{rank}$.
+- $T$ is one-to-one iff $\ker T = \{\mathbf{0}\}$ iff the columns are independent; onto iff the columns span the codomain. For an operator on a finite-dimensional space the two coincide.
+- Composition corresponds to matrix multiplication; inversion reverses order.
+- Changing basis conjugates: $[T]_{\mathcal{B}} = P^{-1}[T]_{\mathcal{C}}P$. Determinant, trace, rank, characteristic polynomial and eigenvalues survive, so they belong to the map.
+- $V\cong W$ iff $\dim V = \dim W$; and $\dim\mathcal{L}(V,W) = \dim W \cdot \dim V$.
 :::
 
 ## Common Mistakes
 
-- Claiming a map is linear just because it 'looks linear' — always verify the two defining properties.
-- Forgetting that the kernel is always a subspace of the domain and the image is always a subspace of the codomain.
-- Believing that rank-nullity only applies to square matrices — it applies to any linear map between finite-dimensional spaces.
-- Treating the matrix representation as the transformation itself rather than a coordinate-dependent description.
-- Forgetting that $T(\mathbf{0}) = \mathbf{0}$ must hold for any linear map.
-- Confusing the kernel with the set of vectors that map to a particular nonzero vector.
-- Assuming every linear transformation has an inverse (most do not).
-- Mixing up the order when composing transformations with matrices.
-- Thinking that the matrix of a transformation is unique without specifying bases.
+- Testing only additivity, or only homogeneity with a positive scalar. The map $(x,y)\mapsto(|x|,y)$ survives every positive-scalar test and fails at $c = -1$.
+- Concluding a map is linear because $T(\mathbf{0}) = \mathbf{0}$. That test can refute linearity, never confirm it: $(x,y)\mapsto(x^2,y)$ fixes the origin and is not linear.
+- Calling $f(x) = mx + b$ with $b \ne 0$ a linear transformation. It is affine; linear maps through the origin are $f(x) = mx$.
+- Forgetting step 2 when computing $[T]_{\mathcal{C}}^{\mathcal{B}}$: the columns are the **$\mathcal{C}$-coordinates** of $T(\mathbf{b}_j)$, not $T(\mathbf{b}_j)$ itself. The two agree only when $\mathcal{C}$ is standard.
+- Reading a basis for the image off the *row-reduced* matrix. Row reduction identifies which columns to take; take those columns from the original matrix.
+- Applying rank-nullity with the dimension of the codomain on the left. The formula is about the domain: a map $\mathbb{R}^2\to\mathbb{R}^{100}$ still has $\text{rank} + \text{nullity} = 2$.
+- Assuming injective and surjective are equivalent for any linear map. They are equivalent only for an operator on a finite-dimensional space.
+- Putting the inverse on the wrong side in $P^{-1}AP$, or multiplying composite matrices in reading order. The map applied first sits nearest the vector, on the right.
+- Treating the matrix as the transformation. Without a stated pair of bases, "the matrix of $T$" is not defined.
+- Concluding two matrices are similar because their traces and determinants agree. The invariants can only prove matrices *different*; $\begin{pmatrix}1&1\\0&1\end{pmatrix}$ and $I_2$ agree on every invariant listed and are not similar.
+- Believing every linear operator is invertible. Projections, differentiation and any map with a nonzero kernel are not.

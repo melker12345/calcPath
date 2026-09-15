@@ -4,223 +4,1159 @@ title: Systems of Linear Equations
 
 # Systems of Linear Equations
 
-A system of linear equations is a set of constraints that must hold simultaneously. The question is always: do values of the unknowns exist that satisfy every equation at once, and if so, how many?
+A system of linear equations is a list of constraints that must hold at the same time. The question is always the same: do values of the unknowns exist that satisfy every equation at once, and if so, how many?
 
-Gaussian elimination — systematically row-reducing the augmented matrix — gives a complete algorithmic answer to this question for any system, regardless of size. It is one of the most important algorithms in all of computational mathematics.
+Two things make this question worth a whole chapter. The first is that the answer is completely algorithmic. Gaussian elimination — systematically row-reducing the augmented matrix — settles existence and uniqueness for any system of any size, in finitely many arithmetic steps, with no cleverness required. The second is that the algorithm quietly produces the entire theory. Rank, the null space, span, linear independence, the LU factorization and the structure of solution sets are all read off the same staircase of pivots.
 
-The theory connects directly to rank, the null space, and the fundamental theorem of linear maps. Every statement about when a system has zero, one, or infinitely many solutions follows from these ideas.
+The chapter runs in the order a first course does. We start with the geometry of a system and the three row operations, then build echelon forms and the elimination algorithm, then discover that a row operation is itself a matrix — the elementary matrices, which turn "run the algorithm" into an algebraic identity and which the chapters on matrices and determinants will lean on constantly. From there we take the three views of the same object (equations, vector equations, $A\mathbf{x}=\mathbf{b}$), settle consistency, describe solution sets in parametric vector form, meet linear independence and rank, factor the elimination itself as $A=LU$, and close with two real applications and the numerical facts that decide how this is done on a computer.
 
-## Setting up augmented matrices {#gauss}
+## Linear equations and the geometry of a system
 
-A linear system $a_{11}x_1 + \cdots + a_{1n}x_n = b_1, \ldots, a_{m1}x_1 + \cdots + a_{mn}x_n = b_m$ is written as the matrix equation $A\mathbf{x} = \mathbf{b}$, where $A$ is the $m\times n$ coefficient matrix, $\mathbf{x}$ is the unknown vector, and $\mathbf{b}$ is the right-hand side.
+<!-- section: linear-systems -->
 
-:::definition[Augmented matrix]{#augmented-matrix}
-The augmented matrix of the system $A\mathbf{x} = \mathbf{b}$ is the array
+:::definition[Linear equation]{#linear-equation}
+A linear equation in the unknowns $x_1,\dots,x_n$ is an equation that can be written
+
+$$a_1x_1 + a_2x_2 + \cdots + a_nx_n = b,$$
+
+where the coefficients $a_1,\dots,a_n$ and the constant $b$ are fixed numbers. A system of linear equations (a linear system) is a finite list of such equations in the same unknowns. A solution is a list $(s_1,\dots,s_n)$ that satisfies every equation of the list; the solution set is the collection of all solutions.
+:::
+
+The word *linear* is doing real work. Each unknown appears to the first power, multiplied by a constant, and never multiplied by another unknown. So $3x_1 - 7x_2 + \sqrt{2}\,x_3 = 4$ is linear, while $x_1x_2 = 1$, $x_1^2 = 4$ and $\sin x_1 = x_2$ are not. Everything in this chapter — every theorem, the whole algorithm — fails immediately outside that restriction, which is why it is stated first.
+
+Two systems are called **equivalent** when they have exactly the same solution set. This is the only relation we care about: the entire method consists of replacing a system by an equivalent, simpler one, repeatedly, until the answer is visible. The systems are not equal, and they may not even have the same equations; they only need to constrain the unknowns in exactly the same way.
+
+The geometry is worth carrying in your head. In $\mathbb{R}^2$ the equation $a_1x + a_2y = b$ (with $a_1,a_2$ not both zero) is a line. Two such equations ask for a point on both lines, and there are exactly three pictures: the lines cross once, the lines are parallel and distinct, or the lines coincide. In $\mathbb{R}^3$ each equation $a_1x+a_2y+a_3z=b$ is a plane, and three planes can meet in a single point, in a line, in a plane, or not at all — two planes may be parallel, or the three may form a triangular prism with no common point. Notice that "exactly two solutions" never appears in either list. That is not an accident of small cases; it is the trichotomy we prove later in the chapter.
+
+:::intuition
+Think of each equation as a rule a spy must satisfy: "my latitude plus twice my longitude is $7$." One rule leaves you free to wander along a whole line. A second, genuinely new rule pins you to a single point. A second rule that merely restates the first ("twice my latitude plus four times my longitude is $14$") tells you nothing new and leaves you on the line. A second rule that contradicts the first ("latitude plus twice longitude is $9$") means no such spy exists. Those are the only three things a second rule can do, and that is the whole classification.
+:::
+
+:::example[Reading the three pictures off the equations]
+Classify the solution set of each of these systems in $\mathbb{R}^2$, without any machinery:
+
+(a) $x + y = 3$, $x - y = 1$;  (b) $x + y = 3$, $2x + 2y = 8$;  (c) $x + y = 3$, $2x + 2y = 6$.
+:::
+
+:::solution
+In (a) the two lines have slopes $-1$ and $1$, so they are not parallel and must cross exactly once. Adding the equations gives $2x = 4$, so $x = 2$ and then $y = 1$. The solution set is the single point $(2,1)$. Check: $2+1=3$ and $2-1=1$.
+
+In (b) the left-hand side of the second equation is twice the first, so any solution would satisfy $2\cdot 3 = 8$, which is false. The lines are parallel and distinct, and the solution set is empty.
+
+In (c) the second equation is exactly twice the first, so it carries no information the first did not. The lines coincide and the solution set is the whole line $\{(t,\,3-t) : t \in \mathbb{R}\}$. Sanity check with $t=5$: $(5,-2)$ gives $5+(-2)=3$ and $10+(-4)=6$.
+:::
+
+:::example[A system in three unknowns with a free direction]
+Describe the solution set of the single equation $x + 2y + 3z = 6$ in $\mathbb{R}^3$, and then of the pair $x+2y+3z=6$, $2x+4y+6z=12$.
+:::
+
+:::solution
+A single linear equation in three unknowns with a nonzero coefficient vector is a plane. Solving for $x$ gives $x = 6 - 2y - 3z$, so $y$ and $z$ may be chosen freely and $x$ follows:
+
+$$(x,y,z) = (6-2s-3t,\; s,\; t), \qquad s,t\in\mathbb{R}.$$
+
+Two free parameters, as a plane should have.
+
+The second equation of the pair is twice the first, so it describes the same plane and the solution set is unchanged. Adding an equation can only shrink a solution set, and here it shrinks it not at all. Sanity check at $s=1,t=1$: $(1,1,1)$ satisfies $1+2+3=6$ and $2+4+6=12$.
+:::
+
+:::pitfall
+An equation is linear in its *unknowns*, not in its coefficients. In $kx + 2y = 3$, where $k$ is a parameter to be determined later, the equation is linear in $x$ and $y$ for each fixed $k$ — so the methods of this chapter apply — but the solution may depend on $k$ in a very non-linear way, and the interesting question is usually "for which $k$ does the behaviour change?" Those questions are answered by tracking when a pivot appears or disappears.
+:::
+
+## Augmented matrices and elementary row operations
+
+<!-- section: gauss -->
+
+Writing $x$, $y$ and $z$ over and over is wasted effort: the unknowns never move, so only the coefficients matter. Line the unknowns up in the same order in every equation and record the numbers.
+
+:::definition[Coefficient matrix and augmented matrix]{#augmented-matrix}
+For the system
+
+$$\begin{aligned} a_{11}x_1 + \cdots + a_{1n}x_n &= b_1 \\ &\ \vdots \\ a_{m1}x_1 + \cdots + a_{mn}x_n &= b_m \end{aligned}$$
+
+the coefficient matrix is the $m\times n$ array $A = (a_{ij})$, the right-hand side is the column $\mathbf{b}\in\mathbb{R}^m$, and the augmented matrix is the $m\times(n+1)$ array
 
 $$[A\;|\;\mathbf{b}],$$
 
-whose rows are the equations and whose vertical bar separates coefficients from constants.
+whose rows are the equations and whose vertical bar separates coefficients from constants. The system itself is written $A\mathbf{x}=\mathbf{b}$.
 :::
+
+The size of the augmented matrix already tells you the shape of the problem: $m$ rows is $m$ equations, $n$ columns to the left of the bar is $n$ unknowns. A system with more equations than unknowns ($m > n$) is called overdetermined and is usually inconsistent; one with fewer ($m < n$) is underdetermined and, as we will prove, can never have exactly one solution.
 
 :::definition[Elementary row operations]{#row-operations}
-Three operations may be applied to the rows of an augmented matrix:
+Three operations may be applied to the rows of a matrix:
 
-1. (R1) swap two rows;
-2. (R2) multiply a row by a nonzero scalar;
-3. (R3) add a scalar multiple of one row to another.
+1. (R1) **Interchange**: swap two rows, $R_i \leftrightarrow R_j$.
+2. (R2) **Scaling**: multiply a row by a nonzero scalar, $R_i \leftarrow cR_i$ with $c\neq 0$.
+3. (R3) **Replacement**: add a multiple of one row to a different row, $R_i \leftarrow R_i + cR_j$ with $i \neq j$.
+
+Two matrices are **row equivalent** when one can be turned into the other by a finite sequence of these operations.
 :::
+
+Each operation is reversible, and that is the point. Swapping rows is undone by swapping them back; scaling by $c \neq 0$ is undone by scaling by $1/c$ — which is exactly why $c=0$ is forbidden, since multiplying a row by zero deletes an equation and cannot be undone; and $R_i \leftarrow R_i + cR_j$ is undone by $R_i \leftarrow R_i - cR_j$. Reversibility is what makes row equivalence an equivalence relation, and it is what makes the next proposition true in both directions.
 
 :::proposition[Row operations preserve the solution set]{#row-ops-preserve}
-Elementary row operations turn a system into an equivalent one — a system with an identical solution set.
-:::
-
-Each operation corresponds exactly to a legal algebraic manipulation of the equations, which is why nothing is lost. You are not changing the solutions; you are changing the representation until the solution is obvious.
-
-:::intuition
-Each equation is a constraint on a map: 'I'm somewhere on this line' and 'I'm somewhere on that line.' The solution is where the lines cross.
-
-Gaussian elimination redraws the map so the crossing point is obvious. Instead of two diagonal lines, you draw one horizontal and one vertical line. The answer is immediately readable.
-:::
-
-:::example[Writing a system as an augmented matrix and checking a row operation preserves solutions]
-Take the system $x + 2y = 3,\; 2x + 5y = 8$. Line up the unknowns in the same order in every equation, then read off the coefficients.
-:::
-
-:::solution
-1. Coefficient matrix $A=\begin{pmatrix}1&2\\2&5\end{pmatrix}$, right-hand side $\mathbf{b}=\begin{pmatrix}3\\8\end{pmatrix}$, so the augmented matrix is $\left(\begin{array}{cc|c}1&2&3\\2&5&8\end{array}\right)$.
-2. Apply (R3), $R_2\leftarrow R_2-2R_1$: the new second row is $(2-2\cdot1,\;5-2\cdot2\;|\;8-2\cdot3)=(0,1\,|\,2)$, giving $\left(\begin{array}{cc|c}1&2&3\\0&1&2\end{array}\right)$.
-3. The new second row says $y=2$; the first row then gives $x=3-2y=3-4=-1$.
-4. Sanity check against the *original* equations: $x+2y=-1+4=3$ ✓ and $2x+5y=-2+10=8$ ✓. The row operation left the solution untouched — it only made it easier to read.
-:::
-
-## Gaussian elimination {#elimination}
-
-:::definition[Row echelon form]{#row-echelon-form}
-An augmented matrix is in row echelon form (REF) when it shows a staircase pattern: each row's leading nonzero entry (its pivot) lies to the right of the pivot in the row above, and every entry below a pivot is zero.
-:::
-
-:::recipe[Gaussian elimination]{#gaussian-elimination}
-1. Work column by column from left to right.
-2. Use row operations to create zeros below the current pivot.
-3. Skip a column with no eligible pivot — that column becomes a free variable.
-4. Once the matrix is in row echelon form, back-substitute: starting from the last nonzero row, solve for its pivot variable, then substitute upward through the other equations.
-:::
-
-:::definition[Reduced row echelon form]{#rref}
-Reduced row echelon form (RREF) goes further than REF: each pivot is scaled to $1$, and zeros are created both above and below each pivot.
-:::
-
-From RREF the solution can be read directly, without back substitution.
-
-A useful check: the number of pivots in RREF equals the rank of $A$. The number of non-pivot columns equals the number of free variables.
-
-:::intuition
-Gaussian elimination is like solving a crossword one row at a time. You use each equation to eliminate one unknown, until you have one equation with one unknown. Solve it, substitute back, solve the next, and so on.
-:::
-
-:::example[Solving a 3×3 system]
-System: $x+y+z=6,\; 2x-y+z=3,\; x+2y-z=4$.
-:::
-
-:::solution
-1. Augmented matrix: $\left(\begin{array}{ccc|c}1&1&1&6\\2&-1&1&3\\1&2&-1&4\end{array}\right)$.
-2. Clear the first column below the pivot. $R_2\leftarrow R_2-2R_1$ gives $(0,-3,-1\,|\,-9)$; $R_3\leftarrow R_3-R_1$ gives $(0,1,-2\,|\,-2)$: $\left(\begin{array}{ccc|c}1&1&1&6\\0&-3&-1&-9\\0&1&-2&-2\end{array}\right)$.
-3. Clear the second column below its pivot. $R_3\leftarrow R_3+\tfrac{1}{3}R_2$ turns the $1$ in position $(3,2)$ into $1+\tfrac{1}{3}(-3)=0$, and the rest into $\left(0,0,-2+\tfrac{1}{3}(-1)\,\middle|\,-2+\tfrac{1}{3}(-9)\right)=(0,0,-\tfrac{7}{3}\,|\,-5)$: $\left(\begin{array}{ccc|c}1&1&1&6\\0&-3&-1&-9\\0&0&-\tfrac{7}{3}&-5\end{array}\right)$. This is row echelon form — a clean staircase.
-4. Back-substitute from the bottom. Row 3: $-\tfrac{7}{3}z=-5\Rightarrow z=\tfrac{15}{7}$. Row 2: $-3y-z=-9\Rightarrow y=\tfrac{9-z}{3}=\tfrac{9-15/7}{3}=\tfrac{16}{7}$. Row 1: $x=6-y-z=6-\tfrac{16}{7}-\tfrac{15}{7}=\tfrac{11}{7}$.
-5. Sanity check in the original system: $x+y+z=\tfrac{11+16+15}{7}=\tfrac{42}{7}=6$ ✓, $2x-y+z=\tfrac{22-16+15}{7}=\tfrac{21}{7}=3$ ✓, $x+2y-z=\tfrac{11+32-15}{7}=\tfrac{28}{7}=4$ ✓.
-:::
-
-## Solution types {#consistency}
-
-:::theorem[Trichotomy for linear systems]{#solution-trichotomy}
-A system $A\mathbf{x} = \mathbf{b}$ over $\mathbb{R}$ has exactly one of three outcomes: no solution (the system is inconsistent), exactly one solution, or infinitely many solutions.
-:::
-
-There is no 'two solutions' in linear algebra.
-
-Inconsistency is flagged by a row $[0\;0\;\cdots\;0\;|\;b]$ with $b\neq 0$ — the equation $0=b$ is impossible.
-
-A unique solution exists when the system is consistent *and* every variable is a pivot variable — i.e. the coefficient matrix has full column rank ($\text{rank}(A)=n$). For a square consistent system this means RREF produces $[I\;|\;\mathbf{x}^*]$, reading off the answer directly. (Full column rank alone rules out extra solutions; consistency is what guarantees at least one exists.)
-
-Infinitely many solutions arise when there are free variables — columns with no pivot. Each free variable can take any real value. You parameterise the solution set: express pivot variables in terms of free variables.
-
-:::theorem[Structure of the general solution]{#general-solution}
-If $A\mathbf{x}=\mathbf{b}$ is consistent, its complete solution set is
-
-$$\mathbf{x} = \mathbf{x}_p + \mathbf{x}_h,$$
-
-where $\mathbf{x}_p$ is any one particular solution and $\mathbf{x}_h$ ranges over the solutions of the homogeneous system $A\mathbf{x}=\mathbf{0}$.
-:::
-
-:::intuition
-Two lines either cross at one point (unique solution), are parallel and never meet (no solution), or are the same line (infinitely many solutions). In higher dimensions, replace 'lines' with 'hyperplanes' — the three possibilities are the same.
-:::
-
-:::example[Parameterizing an infinite solution set as $\mathbf{x}_p + \mathbf{x}_h$]
-System: $x+2y+z=4,\; 2x+5y+3z=9,\; x+3y+2z=5$. Augmented matrix $\left(\begin{array}{ccc|c}1&2&1&4\\2&5&3&9\\1&3&2&5\end{array}\right)$.
-:::
-
-:::solution
-1. $R_2\leftarrow R_2-2R_1$ gives $(0,1,1\,|\,1)$; $R_3\leftarrow R_3-R_1$ gives $(0,1,1\,|\,1)$: $\left(\begin{array}{ccc|c}1&2&1&4\\0&1&1&1\\0&1&1&1\end{array}\right)$.
-2. $R_3\leftarrow R_3-R_2$ gives $(0,0,0\,|\,0)$: $\left(\begin{array}{ccc|c}1&2&1&4\\0&1&1&1\\0&0&0&0\end{array}\right)$. The zero row is $0=0$, so the system is consistent; there are two pivots (columns $1,2$) and three variables, so $z$ is a free variable.
-3. Let $z=t$ (any real number). Row 2: $y+z=1\Rightarrow y=1-t$. Row 1: $x=4-2y-z=4-2(1-t)-t=2+t$.
-4. Split the general solution into a particular part plus a homogeneous part: $\begin{pmatrix}x\\y\\z\end{pmatrix}=\begin{pmatrix}2\\1\\0\end{pmatrix}+t\begin{pmatrix}1\\-1\\1\end{pmatrix}$. Setting $t=0$ gives the particular solution $\mathbf{x}_p=(2,1,0)$; the vector $(1,-1,1)$ spans the null space, so $\mathbf{x}_h=t(1,-1,1)$.
-5. Sanity check with $t=1$, i.e. $(x,y,z)=(3,0,1)$: $x+2y+z=3+0+1=4$ ✓, $2x+5y+3z=6+0+3=9$ ✓, $x+3y+2z=3+0+2=5$ ✓.
-:::
-
-## Rank and the rank-nullity theorem {#rank}
-
-:::definition[Rank and nullity]{#rank-definition}
-The rank of a matrix $A$ is the number of pivot columns in its row echelon form — equivalently, the dimension of the column space $\text{Col}(A)$. Its nullity is the number of non-pivot (free) columns — equivalently, the dimension of the null space $\text{Null}(A)$, the solutions of $A\mathbf{x}=\mathbf{0}$ (defined in the next section).
-:::
-
-:::proposition[Consistency and uniqueness in terms of rank]{#rank-consistency}
-The system $A\mathbf{x}=\mathbf{b}$ is consistent if and only if
-
-$$\text{rank}([A\;|\;\mathbf{b}]) = \text{rank}(A),$$
-
-and its solution is unique if and only if $\text{rank}(A)=n$.
-:::
-
-Adding $\mathbf{b}$ as a column must not create a new pivot — $\mathbf{b}$ must already lie in $\text{Col}(A)$. Full column rank, $\text{rank}(A)=n$, is the statement that there are no free variables.
-
-:::theorem[Rank-nullity theorem]{#rank-nullity}
-For any $m\times n$ matrix $A$,
-
-$$\text{rank}(A) + \text{nullity}(A) = n,$$
-
-where $n$ is the number of columns.
+If the augmented matrices $[A\;|\;\mathbf{b}]$ and $[A'\;|\;\mathbf{b}']$ are row equivalent, then the systems $A\mathbf{x}=\mathbf{b}$ and $A'\mathbf{x}=\mathbf{b}'$ are equivalent: they have exactly the same solution set.
 :::
 
 :::proof
-Row-reduce $A$. Pivot columns contribute to the rank; free columns contribute to the nullity. Every column is one or the other, so together they account for all $n$ columns.
+It suffices to check one operation, since a finite sequence of solution-preserving steps preserves solutions.
+
+Let $\mathbf{s}$ be a solution of the original system, so every equation holds at $\mathbf{s}$. (R1) merely reorders the list of equations, and a list of true statements stays true when reordered. For (R2), if equation $i$ reads $\mathbf{a}_i\cdot\mathbf{s} = b_i$ then multiplying both sides by $c$ gives $c\,\mathbf{a}_i\cdot\mathbf{s}=cb_i$, which is the new equation $i$; the other equations are untouched. For (R3), if $\mathbf{a}_i\cdot\mathbf{s}=b_i$ and $\mathbf{a}_j\cdot\mathbf{s}=b_j$, then adding $c$ times the second to the first gives $(\mathbf{a}_i+c\mathbf{a}_j)\cdot\mathbf{s} = b_i+cb_j$, the new equation $i$. So every solution of the old system solves the new one.
+
+For the reverse inclusion, apply the same argument to the inverse operation, which is again of type (R1), (R2) or (R3) and carries the new system back to the old one. Hence the two solution sets contain each other.
 :::
 
-For an $m\times n$ matrix: $\text{rank}(A) \leq \min(m,n)$. Each pivot needs its own row and its own column, so the number of pivots cannot exceed either dimension — you cannot have more independent directions than the smaller dimension.
+Two warnings hide inside that proof. The scalar in (R2) must be nonzero, or the inverse operation does not exist and a solution of the new system need not solve the old one: from $0 = 0$ you cannot recover $0x = 5$. And in (R3) the two rows must be different, or "add $-1$ times row $i$ to row $i$" would erase row $i$ for the same reason.
 
 :::intuition
-Rank counts how many truly independent equations you have. Ten equations might contain only $3$ independent constraints if the rest are just combinations of those $3$. Rank-nullity says: independent constraints plus free variables always adds up to the total number of unknowns.
+Each equation is a constraint on a map: "I am somewhere on this line" and "I am somewhere on that line." The solution is where the lines cross. Row operations redraw the map without moving the crossing point — they replace two slanted lines by one horizontal and one vertical line through the same intersection. Nothing about the answer changes; only how hard it is to read.
 :::
 
-:::example[Reading off rank and nullity, then checking rank-nullity]
-Let $A=\begin{pmatrix}1&2&1&1\\2&4&3&4\\1&2&2&3\end{pmatrix}$, a $3\times4$ matrix, so $n=4$ columns.
+:::example[From a system to an augmented matrix, and one row operation]
+Write $x + 2y = 3$, $2x + 5y = 8$ as an augmented matrix, apply $R_2 \leftarrow R_2 - 2R_1$, and solve.
 :::
 
 :::solution
-1. Row-reduce. $R_2\leftarrow R_2-2R_1$ gives $(0,0,1,2)$; $R_3\leftarrow R_3-R_1$ gives $(0,0,1,2)$: $\begin{pmatrix}1&2&1&1\\0&0&1&2\\0&0&1&2\end{pmatrix}$.
-2. $R_3\leftarrow R_3-R_2$ gives $(0,0,0,0)$: $\begin{pmatrix}1&2&1&1\\0&0&1&2\\0&0&0&0\end{pmatrix}$. This is row echelon form.
-3. Count pivots: there is a leading entry in column $1$ and in column $3$, so there are $2$ pivots. Hence $\text{rank}(A)=2$. Note column $2$ has no pivot even though the matrix has nonzero entries there — rank counts pivot *columns*, not nonzero entries.
-4. Apply rank-nullity: $\text{nullity}(A)=n-\text{rank}(A)=4-2=2$. The two non-pivot columns ($2$ and $4$) correspond to the two free variables, confirming the count.
-5. Sanity check the bound: $\text{rank}(A)=2\le\min(m,n)=\min(3,4)=3$ ✓.
+The coefficient matrix is $A=\begin{pmatrix}1&2\\2&5\end{pmatrix}$ and the right-hand side is $\mathbf{b}=\begin{pmatrix}3\\8\end{pmatrix}$, so the augmented matrix is
+
+$$\left(\begin{array}{cc|c}1&2&3\\2&5&8\end{array}\right).$$
+
+Applying $R_2\leftarrow R_2-2R_1$ replaces the second row $(2,5\mid 8)$ by $(2-2\cdot 1,\;5-2\cdot 2\mid 8-2\cdot 3) = (0,1\mid 2)$:
+
+$$\left(\begin{array}{cc|c}1&2&3\\0&1&2\end{array}\right).$$
+
+The new second row says $y=2$, and the first row then gives $x = 3 - 2y = -1$.
+
+Sanity check against the *original* equations: $x+2y = -1+4 = 3$ and $2x+5y=-2+10=8$. Both hold, as the proposition promised.
 :::
 
-## Homogeneous systems {#homogeneous}
-
-:::definition[Homogeneous system and null space]{#null-space}
-A system is homogeneous when the right-hand side is all zeros:
-
-$$A\mathbf{x}=\mathbf{0}.$$
-
-Its solution set is the null space $\text{Null}(A)$, always a subspace of $\mathbb{R}^n$, whose dimension is the nullity of $A$.
+:::example[Detecting an impossible system by a row operation]
+Apply row operations to $x - 3y = 2$, $-2x + 6y = 1$ and read off the conclusion.
 :::
 
-This is the "background" version of $A\mathbf{x}=\mathbf{b}$ with the constants stripped away — and it controls how many solutions the full system can have. A homogeneous system is always consistent, because the trivial solution $\mathbf{x}=\mathbf{0}$ always works: $A\mathbf{0}=\mathbf{0}$.
+:::solution
+The augmented matrix is $\left(\begin{array}{cc|c}1&-3&2\\-2&6&1\end{array}\right)$. Apply $R_2 \leftarrow R_2 + 2R_1$:
+
+$$\left(\begin{array}{cc|c}1&-3&2\\0&0&5\end{array}\right).$$
+
+The second row is the equation $0x + 0y = 5$, which no pair $(x,y)$ satisfies. Since row operations preserve solutions, the original system has no solutions either. Geometrically the two lines have the same slope $1/3$ but different intercepts: they are parallel and distinct.
+:::
+
+:::pitfall
+When you perform $R_i \leftarrow R_i + cR_j$, only row $i$ changes. Row $j$ is the *source* and keeps its old values — including for the next operation in the same sweep. Changing both rows at once is the single most common bookkeeping error in elimination, and it does not preserve the solution set.
+:::
+
+## Echelon forms and Gaussian elimination
+
+<!-- section: elimination -->
+
+The target of the row operations is a shape from which the solution can be read. There are two such shapes, one weaker and one stronger.
+
+:::definition[Echelon form and reduced echelon form]{#echelon-forms}
+A matrix is in **row echelon form** (REF) when
+
+1. every row consisting entirely of zeros is below every nonzero row, and
+2. the leading entry (the leftmost nonzero entry) of each nonzero row is strictly to the right of the leading entry of the row above it.
+
+The leading entries are called **pivots**, and the positions they occupy are **pivot positions**; a column containing a pivot position is a **pivot column**.
+
+The matrix is in **reduced row echelon form** (RREF) when, in addition,
+
+3. every pivot equals $1$, and
+4. each pivot is the only nonzero entry in its column.
+:::
+
+Condition 2 is what produces the staircase: reading down the rows, the pivots move right, so the zeros pile up in a triangular wedge at the bottom left. Condition 1 is a bookkeeping convention that keeps the staircase from being interrupted. Conditions 3 and 4 do the work that back substitution would otherwise do, at the cost of more arithmetic.
+
+:::definition[Free and basic variables]{#free-variables}
+In a system whose augmented matrix has been reduced to echelon form, a variable whose column is a pivot column is a **basic** (or pivot) variable; a variable whose column has no pivot is a **free** variable.
+:::
+
+The names say exactly what happens: a free variable may be assigned any value at all, and once all free variables are assigned, the basic variables are forced.
+
+:::recipe[Gaussian elimination (row reduction)]{#gaussian-elimination}
+Given a matrix, produce an echelon form:
+
+1. Begin with the leftmost nonzero column. This is a pivot column; the pivot position is at its top.
+2. If necessary, interchange rows to bring a nonzero entry into the pivot position.
+3. Use replacement operations (R3) to create zeros in every position below the pivot.
+4. Ignore the pivot row and everything above it, and repeat steps 1–3 on the submatrix that remains. Stop when no nonzero rows remain.
+
+This is the **forward phase**, and it ends in echelon form. To continue to the reduced form (**backward phase**):
+
+5. Starting with the rightmost pivot and working left, scale its row so the pivot is $1$, and use replacement operations to create zeros *above* it.
+
+To solve a system, run the forward phase on $[A\mid\mathbf{b}]$; if no row of the form $(0\;\cdots\;0\mid c)$ with $c\neq 0$ appears, either back-substitute from the bottom row upward, or run the backward phase and read the answer off directly.
+:::
+
+The forward phase alone already answers the existence and uniqueness questions: consistency is visible from the absence of an impossible row, and uniqueness from the absence of free variables. The backward phase costs extra arithmetic and buys only convenience of reading — which is why hand computation usually stops at echelon form and back-substitutes, while theory prefers the reduced form, because it is unique.
+
+:::theorem[Existence and uniqueness of the reduced echelon form]{#rref-uniqueness}
+Every matrix is row equivalent to one and only one matrix in reduced row echelon form. Consequently the pivot positions of a matrix, and hence the number of pivots, depend only on the matrix and not on the sequence of row operations used.
+:::
+
+:::proof
+Existence is the algorithm: steps 1–5 of Gaussian elimination terminate (each pass consumes at least one row and one column) and end in reduced echelon form.
+
+For uniqueness, suppose $B$ and $C$ are reduced echelon forms of the same matrix, so $B$ and $C$ are row equivalent to each other and therefore, by the proposition on row operations applied to the homogeneous system, $B\mathbf{x}=\mathbf{0}$ and $C\mathbf{x}=\mathbf{0}$ have the same solution set $N$. Argue by induction on the number of columns. Deleting the last column of a reduced echelon matrix leaves a reduced echelon matrix, and deleting the last column of two row-equivalent matrices leaves two row-equivalent matrices, so by induction $B$ and $C$ agree in all columns but the last. If the last column of $B$ is a pivot column but that of $C$ is not, then $C$ has a free variable $x_n$ while $B$ does not, so some vector of $N$ has nonzero last entry while the corresponding equation of $B$ forces the last entry to be $0$ — a contradiction. So the last columns are both pivot columns, in which case both equal the same standard basis column determined by the earlier columns, or both are non-pivot columns, in which case $x_n$ is free and the unique element of $N$ with $x_n=1$ determines the last column of $B$ and of $C$ by the same formula. Either way $B=C$.
+:::
+
+Only the *reduced* form is unique; echelon forms are not. Running the algorithm with different row swaps can produce $\begin{pmatrix}2&4\\0&1\end{pmatrix}$ or $\begin{pmatrix}1&2\\0&3\end{pmatrix}$ from the same matrix. What the theorem guarantees is that the *positions* of the pivots — and therefore which variables are free — are the same every time. That is what makes rank well defined.
+
+:::intuition
+Elimination is the crossword strategy. Each equation is used once, to knock out one unknown from all the equations below it. After the sweep, the last surviving equation involves a single unknown; solve it, feed the value upward, and each equation above now has one unknown again. The staircase of pivots is a record of which unknown each equation was spent on.
+:::
+
+:::example[A $3\times 3$ system with a unique solution]
+Solve $x+y+z=6$, $2x-y+z=3$, $x+2y-z=4$.
+:::
+
+:::solution
+The augmented matrix is
+
+$$\left(\begin{array}{ccc|c}1&1&1&6\\2&-1&1&3\\1&2&-1&4\end{array}\right).$$
+
+Forward phase, column 1. The pivot is the $1$ in position $(1,1)$. Apply $R_2 \leftarrow R_2 - 2R_1$, giving $(0,-3,-1\mid -9)$, and $R_3 \leftarrow R_3 - R_1$, giving $(0,1,-2\mid -2)$:
+
+$$\left(\begin{array}{ccc|c}1&1&1&6\\0&-3&-1&-9\\0&1&-2&-2\end{array}\right).$$
+
+Column 2. The pivot is $-3$ in position $(2,2)$. Apply $R_3 \leftarrow R_3 + \tfrac{1}{3}R_2$: the entry $1$ becomes $1 + \tfrac{1}{3}(-3) = 0$, the next entry becomes $-2+\tfrac{1}{3}(-1) = -\tfrac{7}{3}$, and the constant becomes $-2+\tfrac{1}{3}(-9) = -5$:
+
+$$\left(\begin{array}{ccc|c}1&1&1&6\\0&-3&-1&-9\\0&0&-\tfrac{7}{3}&-5\end{array}\right).$$
+
+This is echelon form, with pivots in columns $1,2,3$ — no free variables, so the solution is unique.
+
+Back substitution. Row 3: $-\tfrac{7}{3}z = -5$, so $z = \tfrac{15}{7}$. Row 2: $-3y - z = -9$, so $y = \tfrac{9-z}{3} = \tfrac{9 - 15/7}{3} = \tfrac{16}{7}$. Row 1: $x = 6 - y - z = 6 - \tfrac{16}{7} - \tfrac{15}{7} = \tfrac{11}{7}$.
+
+Sanity check in the original system: $x+y+z = \tfrac{11+16+15}{7} = 6$; $2x-y+z = \tfrac{22-16+15}{7} = 3$; $x+2y-z = \tfrac{11+32-15}{7} = 4$. All three hold.
+:::
+
+:::example[Running the backward phase to reduced echelon form]
+Reduce $\left(\begin{array}{ccc|c}1&2&-1&3\\2&5&-1&8\\0&1&2&3\end{array}\right)$ all the way to RREF and read off the solution.
+:::
+
+:::solution
+Forward phase. $R_2 \leftarrow R_2 - 2R_1$ gives $(0,1,1\mid 2)$:
+
+$$\left(\begin{array}{ccc|c}1&2&-1&3\\0&1&1&2\\0&1&2&3\end{array}\right).$$
+
+$R_3\leftarrow R_3 - R_2$ gives $(0,0,1\mid 1)$:
+
+$$\left(\begin{array}{ccc|c}1&2&-1&3\\0&1&1&2\\0&0&1&1\end{array}\right).$$
+
+Backward phase, starting with the rightmost pivot in column 3, which is already $1$. Apply $R_2 \leftarrow R_2 - R_3$, giving $(0,1,0\mid 1)$, and $R_1 \leftarrow R_1 + R_3$, giving $(1,2,0\mid 4)$:
+
+$$\left(\begin{array}{ccc|c}1&2&0&4\\0&1&0&1\\0&0&1&1\end{array}\right).$$
+
+Now the pivot in column 2: $R_1 \leftarrow R_1 - 2R_2$ gives $(1,0,0\mid 2)$:
+
+$$\left(\begin{array}{ccc|c}1&0&0&2\\0&1&0&1\\0&0&1&1\end{array}\right).$$
+
+The reduced form is $[I\mid \mathbf{x}]$, so $(x,y,z) = (2,1,1)$ with no further work. Sanity check: $2+2-1=3$, $4+5-1=8$, $0+1+2=3$. All three original equations hold.
+:::
+
+:::example[An echelon form with a free variable]
+Reduce $\left(\begin{array}{cccc|c}1&2&1&3&7\\2&4&3&8&18\\1&2&2&5&11\end{array}\right)$ to echelon form and identify the basic and free variables.
+:::
+
+:::solution
+$R_2 \leftarrow R_2 - 2R_1$ gives $(0,0,1,2\mid 4)$ and $R_3 \leftarrow R_3 - R_1$ gives $(0,0,1,2\mid 4)$:
+
+$$\left(\begin{array}{cccc|c}1&2&1&3&7\\0&0&1&2&4\\0&0&1&2&4\end{array}\right).$$
+
+Then $R_3 \leftarrow R_3 - R_2$ gives a zero row:
+
+$$\left(\begin{array}{cccc|c}1&2&1&3&7\\0&0&1&2&4\\0&0&0&0&0\end{array}\right).$$
+
+Pivots sit in columns $1$ and $3$, so $x_1$ and $x_3$ are basic and $x_2,x_4$ are free. The zero row is the equation $0=0$, which is true, so the system is consistent; with two free variables the solution set is two-dimensional.
+
+Sanity check on the count: $4$ unknowns $= 2$ basic $+\;2$ free.
+:::
+
+:::pitfall
+A zero row *on the left of the bar* with a nonzero constant on the right, $(0\;0\;\cdots\;0\mid c)$ with $c\neq 0$, is the death sentence: the system is inconsistent, and no amount of further reduction changes that. A completely zero row, $(0\;0\;\cdots\;0\mid 0)$, is harmless — it says $0=0$ — and merely signals that one equation was redundant. Confusing the two is the most costly misreading in the chapter.
+:::
+
+## Elementary matrices
+
+<!-- section: elementary-matrices -->
+
+A row operation looks like a procedure, but it is secretly a matrix multiplication. Making that explicit converts "I ran the algorithm" into an equation, and equations can be manipulated, inverted and factored. Everything in the sections on $LU$, on matrix inverses and on determinants depends on this observation.
+
+:::definition[Elementary matrix]{#elementary-matrix}
+An $m\times m$ matrix is **elementary** when it is obtained from the identity matrix $I_m$ by performing a single elementary row operation.
+:::
+
+For $m = 3$ the three types look like
+
+$$E_1 = \begin{pmatrix}0&1&0\\1&0&0\\0&0&1\end{pmatrix},\qquad E_2 = \begin{pmatrix}1&0&0\\0&5&0\\0&0&1\end{pmatrix},\qquad E_3 = \begin{pmatrix}1&0&0\\0&1&0\\-4&0&1\end{pmatrix},$$
+
+obtained from $I_3$ by $R_1\leftrightarrow R_2$, by $R_2\leftarrow 5R_2$ and by $R_3 \leftarrow R_3 - 4R_1$ respectively.
+
+:::theorem[Row operations are left multiplications]{#elementary-multiplication}
+Let $E$ be the elementary matrix obtained by performing a row operation on $I_m$. Then for every $m\times n$ matrix $A$, the matrix $EA$ is the result of performing that same row operation on $A$.
+:::
+
+:::proof
+Row $i$ of a product $EA$ is (row $i$ of $E$) times $A$, that is, the linear combination of the rows of $A$ whose coefficients are the entries of row $i$ of $E$. Row $i$ of $I_m$ is $\mathbf{e}_i^{\mathsf T}$, which picks out row $i$ of $A$; so if $E$ agrees with $I_m$ in row $i$, then $EA$ agrees with $A$ in row $i$.
+
+Now inspect the rows a single operation changes. For an interchange $R_i\leftrightarrow R_j$, rows $i$ and $j$ of $E$ are $\mathbf{e}_j^{\mathsf T}$ and $\mathbf{e}_i^{\mathsf T}$, and these select rows $j$ and $i$ of $A$ — exactly the interchange. For a scaling $R_i \leftarrow cR_i$, row $i$ of $E$ is $c\,\mathbf{e}_i^{\mathsf T}$, which yields $c$ times row $i$ of $A$. For a replacement $R_i \leftarrow R_i + cR_j$, row $i$ of $E$ is $\mathbf{e}_i^{\mathsf T} + c\,\mathbf{e}_j^{\mathsf T}$, which yields (row $i$ of $A$) $+\,c\,$(row $j$ of $A$). In each case $EA$ is $A$ with the operation performed.
+:::
+
+:::corollary[Elementary matrices are invertible]{#elementary-invertible}
+Every elementary matrix $E$ is invertible, and $E^{-1}$ is the elementary matrix of the inverse row operation. Specifically, the inverse of the interchange $R_i\leftrightarrow R_j$ is itself; the inverse of $R_i\leftarrow cR_i$ is $R_i \leftarrow \tfrac{1}{c}R_i$; and the inverse of $R_i \leftarrow R_i + cR_j$ is $R_i \leftarrow R_i - cR_j$.
+:::
+
+:::proof
+Let $F$ be the elementary matrix of the inverse operation. Applying the operation and then its inverse returns any matrix to itself, so by the previous theorem $FEA = A$ for every $A$; taking $A = I$ gives $FE = I$. Applying them in the other order gives $EF=I$ in the same way. Hence $E$ is invertible with $E^{-1}=F$.
+:::
+
+:::corollary[Row equivalence in matrix form]{#row-equivalence-matrix}
+$A$ and $B$ are row equivalent if and only if $B = MA$ for some invertible matrix $M$ that is a product of elementary matrices. In particular, for every $A$ there is an invertible $M$ with $MA = R$, the reduced echelon form of $A$.
+:::
+
+:::proof
+If $B$ is obtained from $A$ by the operations corresponding to $E_1, E_2, \dots, E_k$ in that order, then applying the theorem repeatedly gives $B = E_k\cdots E_2E_1A$, and $M = E_k\cdots E_1$ is invertible as a product of invertibles. Conversely, if $M$ is a product of elementary matrices then $MA$ is reached from $A$ by the corresponding sequence of row operations, so the two are row equivalent.
+:::
+
+This is the payoff. "Row-reduce $A$ to $R$" is now the identity $R = MA$ with $M$ invertible, and an invertible matrix can be moved to the other side. That single move proves the consistency theorem later in this chapter, produces the algorithm for inverting a matrix, and explains why $\det$ changes in a controlled way under row operations.
+
+:::intuition
+An elementary matrix is a row operation frozen into an object you can hold. Once the operation is an object, it has an inverse, it can be multiplied by other operations, and a whole run of the elimination algorithm collapses into a single matrix $M$ — the complete record of what you did to $A$. You no longer have to remember the steps; you carry the product.
+:::
+
+:::example[Building an elementary matrix and checking it]
+Find the $3\times 3$ elementary matrix $E$ that performs $R_3 \leftarrow R_3 - 4R_1$, and verify it on $A = \begin{pmatrix}1&2\\0&1\\4&9\end{pmatrix}$.
+:::
+
+:::solution
+Apply the operation to $I_3$: only row $3$ changes, becoming $(0,0,1) - 4(1,0,0) = (-4,0,1)$. So
+
+$$E = \begin{pmatrix}1&0&0\\0&1&0\\-4&0&1\end{pmatrix}.$$
+
+Now compute $EA$. Rows $1$ and $2$ of $E$ are $\mathbf{e}_1^{\mathsf T},\mathbf{e}_2^{\mathsf T}$, so the first two rows of $EA$ are $(1,2)$ and $(0,1)$. Row $3$ of $EA$ is $-4(1,2) + 0(0,1) + 1(4,9) = (0,1)$. Hence
+
+$$EA = \begin{pmatrix}1&2\\0&1\\0&1\end{pmatrix},$$
+
+which is exactly $A$ with $R_3\leftarrow R_3-4R_1$ performed. Sanity check on the inverse: $E^{-1}$ should have $+4$ in position $(3,1)$, and indeed $\begin{pmatrix}1&0&0\\0&1&0\\4&0&1\end{pmatrix}E = I_3$.
+:::
+
+:::example[Recording a whole elimination as one matrix]
+Reduce $A = \begin{pmatrix}1&2\\3&7\end{pmatrix}$ to $I_2$ by row operations and produce the invertible $M$ with $MA = I_2$.
+:::
+
+:::solution
+Step 1: $R_2 \leftarrow R_2 - 3R_1$, with elementary matrix $E_1 = \begin{pmatrix}1&0\\-3&1\end{pmatrix}$, giving $\begin{pmatrix}1&2\\0&1\end{pmatrix}$.
+
+Step 2: $R_1 \leftarrow R_1 - 2R_2$, with elementary matrix $E_2 = \begin{pmatrix}1&-2\\0&1\end{pmatrix}$, giving $I_2$.
+
+Therefore $M = E_2E_1 = \begin{pmatrix}1&-2\\0&1\end{pmatrix}\begin{pmatrix}1&0\\-3&1\end{pmatrix} = \begin{pmatrix}7&-2\\-3&1\end{pmatrix}$.
+
+Sanity check: $MA = \begin{pmatrix}7&-2\\-3&1\end{pmatrix}\begin{pmatrix}1&2\\3&7\end{pmatrix} = \begin{pmatrix}7-6&14-14\\-3+3&-6+7\end{pmatrix} = I_2$. Note what we have incidentally computed: $M = A^{-1}$, because $MA=I$ for a square $A$. Row reduction is an inversion algorithm.
+:::
+
+:::pitfall
+The order of the product runs opposite to the order of the steps. If you do operation $1$ first and operation $2$ second, the matrix is $E_2E_1$, not $E_1E_2$ — the later operation sits further left, because it acts on the result of the earlier one. Matrix multiplication is not commutative, and $E_1E_2$ is generally a different matrix describing a different pair of operations.
+:::
+
+## Vector equations, span and the equation $A\mathbf{x}=\mathbf{b}$
+
+<!-- section: vector-equations -->
+
+A system can be read in three ways, and fluency means switching between them without thinking. Written out, the system
+
+$$\begin{aligned} x_1 + 2x_2 &= 7\\ 2x_1 + 3x_2 &= 12\\ -x_1 + 0x_2 &= -3\end{aligned}$$
+
+is a list of scalar equations. Collecting the columns, it is a **vector equation**
+
+$$x_1\begin{pmatrix}1\\2\\-1\end{pmatrix} + x_2\begin{pmatrix}2\\3\\0\end{pmatrix} = \begin{pmatrix}7\\12\\-3\end{pmatrix},$$
+
+and abbreviating the left side, it is the **matrix equation** $A\mathbf{x}=\mathbf{b}$.
+
+:::definition[Linear combination and span]{#span}
+Given vectors $\mathbf{v}_1,\dots,\mathbf{v}_p \in \mathbb{R}^m$ and scalars $c_1,\dots,c_p$, the vector
+
+$$c_1\mathbf{v}_1 + c_2\mathbf{v}_2 + \cdots + c_p\mathbf{v}_p$$
+
+is a **linear combination** of $\mathbf{v}_1,\dots,\mathbf{v}_p$ with weights $c_1,\dots,c_p$. The **span** of the list, written $\operatorname{Span}\{\mathbf{v}_1,\dots,\mathbf{v}_p\}$, is the set of all such linear combinations.
+:::
+
+:::definition[The matrix–vector product]{#matrix-vector-product}
+If $A$ has columns $\mathbf{a}_1,\dots,\mathbf{a}_n$ and $\mathbf{x}\in\mathbb{R}^n$, then
+
+$$A\mathbf{x} = x_1\mathbf{a}_1 + x_2\mathbf{a}_2 + \cdots + x_n\mathbf{a}_n.$$
+
+So $A\mathbf{x}$ is the linear combination of the columns of $A$ with weights the entries of $\mathbf{x}$.
+:::
+
+That definition is worth memorising in exactly this form. Most students first learn $A\mathbf{x}$ as "row $i$ dotted with $\mathbf{x}$", which is a correct recipe and a poor idea, because it hides the fact that the set of achievable outputs is the span of the columns.
+
+:::theorem[The three views agree]{#three-views}
+For an $m\times n$ matrix $A$ with columns $\mathbf{a}_1,\dots,\mathbf{a}_n$ and a vector $\mathbf{b}\in\mathbb{R}^m$, the following have exactly the same solution set:
+
+1. the linear system with augmented matrix $[\,\mathbf{a}_1\;\cdots\;\mathbf{a}_n\mid \mathbf{b}\,]$;
+2. the vector equation $x_1\mathbf{a}_1+\cdots+x_n\mathbf{a}_n = \mathbf{b}$;
+3. the matrix equation $A\mathbf{x}=\mathbf{b}$.
+
+In particular, $A\mathbf{x}=\mathbf{b}$ has a solution if and only if $\mathbf{b} \in \operatorname{Span}\{\mathbf{a}_1,\dots,\mathbf{a}_n\}$.
+:::
+
+:::proof
+By the definition of the matrix–vector product, (2) and (3) are literally the same equation. For (1) and (2), compare entry $i$: the $i$-th entry of $x_1\mathbf{a}_1+\cdots+x_n\mathbf{a}_n$ is $a_{i1}x_1+\cdots+a_{in}x_n$, so the vector equation holds if and only if $a_{i1}x_1+\cdots+a_{in}x_n = b_i$ for every $i$ — which is the system. The final sentence is (2) unwound: $\mathbf{b}$ lies in the span exactly when weights exist, and weights are a solution.
+:::
+
+Geometrically, $\operatorname{Span}\{\mathbf{v}\}$ for a nonzero $\mathbf{v}$ is the line through the origin in the direction of $\mathbf{v}$. The span of two vectors that are not multiples of one another is the plane through the origin containing both. In general a span is a subspace: it contains $\mathbf{0}$ (take all weights zero) and is closed under addition and scaling, because a combination of combinations is again a combination. Asking whether $A\mathbf{x}=\mathbf{b}$ is solvable is therefore asking a geometric question — does $\mathbf{b}$ lie in this particular flat object through the origin? — and elimination is how we answer it.
+
+:::intuition
+Think of the columns of $A$ as the only moves you are allowed to make, each usable any number of times (including a negative or fractional number). $A\mathbf{x}$ is the place you end up after choosing how much of each move to use. $\operatorname{Span}$ is the set of reachable destinations, and $A\mathbf{x}=\mathbf{b}$ asks whether $\mathbf{b}$ is reachable. Two moves along the same line reach only that line, no matter how you weight them — which is the geometry behind a matrix with a redundant column.
+:::
+
+:::example[Deciding membership in a span]
+Is $\mathbf{b}=(7,12,-3)$ in $\operatorname{Span}\{(1,2,-1),\,(2,3,0)\}$? Is $\mathbf{c} = (7,4,-3)$?
+:::
+
+:::solution
+For $\mathbf{b}$ we must solve $x_1(1,2,-1)+x_2(2,3,0) = (7,12,-3)$. The third coordinate gives $-x_1 = -3$, so $x_1 = 3$. The first gives $3 + 2x_2 = 7$, so $x_2 = 2$. Check the second: $2(3)+3(2) = 12$, which matches. So $\mathbf{b} = 3(1,2,-1)+2(2,3,0)$ and $\mathbf{b}$ is in the span.
+
+For $\mathbf{c}$ the same first two steps force $x_1 = 3$ and $x_2 = 2$, but the second coordinate then reads $2(3)+3(2)=12 \neq 4$. There is no choice of weights, so $\mathbf{c}$ is not in the span. Geometrically the span is a plane through the origin in $\mathbb{R}^3$, and $\mathbf{c}$ is off it.
+:::
+
+:::example[Describing a span as an equation]
+Describe $\operatorname{Span}\{(1,2,-1),(2,3,0)\}$ as a single equation in $b_1,b_2,b_3$.
+:::
+
+:::solution
+Row-reduce the augmented matrix with a general right-hand side:
+
+$$\left(\begin{array}{cc|c}1&2&b_1\\2&3&b_2\\-1&0&b_3\end{array}\right) \xrightarrow{\;R_2-2R_1,\;R_3+R_1\;} \left(\begin{array}{cc|c}1&2&b_1\\0&-1&b_2-2b_1\\0&2&b_3+b_1\end{array}\right).$$
+
+Now $R_3 \leftarrow R_3 + 2R_2$ gives last row $(0,0\mid b_3+b_1+2b_2-4b_1) = (0,0 \mid -3b_1+2b_2+b_3)$. The system is consistent exactly when that entry vanishes, so
+
+$$-3b_1+2b_2+b_3 = 0$$
+
+is the plane in question. Sanity check with the previous example: $(7,12,-3)$ gives $-21+24-3=0$, and $(7,4,-3)$ gives $-21+8-3=-16\neq 0$, matching what we found.
+:::
+
+## Consistency: when a solution exists
+
+<!-- section: consistency -->
+
+:::definition[Consistent and inconsistent]{#consistent}
+A linear system is **consistent** when it has at least one solution, and **inconsistent** when it has none.
+:::
+
+:::theorem[Existence and uniqueness criterion]{#existence-uniqueness}
+A linear system is consistent if and only if an echelon form of its augmented matrix contains no row of the form
+
+$$(0\;\;0\;\;\cdots\;\;0\mid c) \quad\text{with } c \neq 0,$$
+
+equivalently, if and only if the last column of the augmented matrix is not a pivot column. If the system is consistent, then its solution is unique when there are no free variables, and there are infinitely many solutions when at least one variable is free.
+:::
+
+:::proof
+Row operations preserve the solution set, so we may argue with any echelon form. If such a row appears, it is the equation $0 = c$ with $c\neq 0$, which no $\mathbf{x}$ satisfies, so the system is inconsistent. If no such row appears, every nonzero row has a pivot to the left of the bar; assign arbitrary values to the free variables and solve the pivot equations from the bottom up, each determining one basic variable — this manufactures a solution, so the system is consistent.
+
+For the count: if there are no free variables, the bottom-up procedure leaves no choices anywhere, so the solution just constructed is the only one. If some variable $x_j$ is free, the procedure produces a solution for every real value of $x_j$, and different values of $x_j$ give different solutions, so the solution set is infinite.
+:::
+
+:::corollary[Trichotomy for linear systems]{#solution-trichotomy}
+A linear system over $\mathbb{R}$ has no solution, exactly one solution, or infinitely many solutions. No other count is possible.
+:::
+
+:::proof
+The theorem exhausts the cases: either an impossible row appears (no solutions) or it does not, and then either there are no free variables (exactly one) or there is at least one (infinitely many).
+:::
+
+"Exactly two solutions" is impossible because solution sets are *affine*: if $\mathbf{u}$ and $\mathbf{v}$ both solve $A\mathbf{x}=\mathbf{b}$, then for any $t$,
+
+$$A\big(\mathbf{u} + t(\mathbf{v}-\mathbf{u})\big) = A\mathbf{u} + t(A\mathbf{v}-A\mathbf{u}) = \mathbf{b} + t(\mathbf{b}-\mathbf{b}) = \mathbf{b},$$
+
+so the whole line through $\mathbf{u}$ and $\mathbf{v}$ consists of solutions. Two distinct solutions always drag infinitely many others along with them.
+
+:::theorem[Solvability for every right-hand side]{#pivot-in-every-row}
+Let $A$ be an $m\times n$ matrix. The following are equivalent:
+
+1. $A\mathbf{x}=\mathbf{b}$ is consistent for every $\mathbf{b}\in\mathbb{R}^m$;
+2. every $\mathbf{b}\in\mathbb{R}^m$ is a linear combination of the columns of $A$;
+3. the columns of $A$ span $\mathbb{R}^m$;
+4. $A$ has a pivot position in every row.
+:::
+
+:::proof
+(1) $\Leftrightarrow$ (2) $\Leftrightarrow$ (3) is the theorem on the three views, restated.
+
+(4) $\Rightarrow$ (1). Let $U$ be an echelon form of $A$ with a pivot in every row. Row-reduce the augmented matrix $[A\mid\mathbf{b}]$ using the same operations on the left block; the result is $[U\mid \mathbf{d}]$ for some $\mathbf{d}$. Every row of $U$ has a pivot, so no row of $[U\mid\mathbf{d}]$ is zero to the left of the bar, and the impossible row of the existence criterion cannot occur. Hence the system is consistent, whatever $\mathbf{b}$ was.
+
+(1) $\Rightarrow$ (4). We prove the contrapositive. Suppose some row of the echelon form $U$ has no pivot; being an echelon form, its zero rows are at the bottom, so the last row of $U$ is zero. By the corollary on row equivalence, $U = MA$ for an invertible $M$. Let $\mathbf{d} = \mathbf{e}_m$, the vector with $1$ in the last entry and zeros elsewhere, and set $\mathbf{b}= M^{-1}\mathbf{d}$. The same operations that carry $A$ to $U$ carry $[A\mid \mathbf{b}]$ to $[U\mid M\mathbf{b}] = [U\mid\mathbf{d}]$, whose last row is $(0\;\cdots\;0\mid 1)$. So $A\mathbf{x}=\mathbf{b}$ is inconsistent and (1) fails.
+:::
+
+Notice where the hypotheses live. Condition (4) is about *rows* and governs existence for all $\mathbf{b}$; the companion condition "a pivot in every column" is about *columns* and governs uniqueness. They are independent, and confusing them is the source of most wrong answers about square-versus-rectangular systems. A $3\times 5$ matrix can easily have a pivot in every row (so every system is consistent) and never has a pivot in every column (so no solution is ever unique).
+
+:::intuition
+A pivot in every row means no equation was ever rendered redundant by the others — nothing collapsed to $0=0$ — so no combination of the left-hand sides can be forced to zero, and therefore no right-hand side can be exposed as contradictory. If instead a row does collapse, you have found a combination of the equations whose left side is identically zero; whether the system is solvable now depends on whether the same combination of the right sides also happens to be zero, and for most $\mathbf{b}$ it will not be.
+:::
+
+:::example[Consistency depending on a parameter]
+For which $k$ is the system with augmented matrix $\left(\begin{array}{cc|c}1&2&3\\2&4&k\end{array}\right)$ consistent, and how many solutions does it then have?
+:::
+
+:::solution
+Apply $R_2\leftarrow R_2 - 2R_1$:
+
+$$\left(\begin{array}{cc|c}1&2&3\\0&0&k-6\end{array}\right).$$
+
+The second row is $0 = k-6$. If $k \neq 6$ this is impossible and the system is inconsistent. If $k = 6$ the row is $0=0$; then column $2$ has no pivot, so $x_2$ is free and there are infinitely many solutions, namely $x_1 = 3-2t$, $x_2 = t$.
+
+Sanity check at $k=6$, $t=1$: $(1,1)$ gives $1+2=3$ and $2+4=6$. Correct.
+:::
+
+:::example[A $3\times 3$ system whose behaviour switches twice]
+For which values of $h$ does $\left(\begin{array}{ccc|c}1&0&h&2\\0&1&1&3\\0&0&h^2-1&h-1\end{array}\right)$ have no solution, a unique solution, infinitely many solutions?
+:::
+
+:::solution
+Everything is decided by the last row, $(h^2-1)x_3 = h-1$.
+
+If $h^2 - 1 \neq 0$, that is $h \neq \pm 1$, we may divide: $x_3 = \dfrac{h-1}{h^2-1} = \dfrac{1}{h+1}$. All three columns then hold pivots, so the solution is unique.
+
+If $h = 1$ the last row is $0 = 0$. Two pivots, three unknowns, so $x_3$ is free and there are infinitely many solutions.
+
+If $h = -1$ the last row is $0 = -2$, which is impossible: no solution.
+
+Sanity check at $h=0$: the matrix is $\left(\begin{array}{ccc|c}1&0&0&2\\0&1&1&3\\0&0&-1&-1\end{array}\right)$, giving $x_3 = 1$, $x_2 = 2$, $x_1 = 2$, and indeed $x_3 = 1/(0+1) = 1$.
+:::
+
+:::example[Consistency from ranks]
+A system of $4$ equations in $6$ unknowns has $\operatorname{rank}(A) = 3$ and $\operatorname{rank}([A\mid\mathbf{b}]) = 4$. What can be said about its solutions?
+:::
+
+:::solution
+Adding the column $\mathbf{b}$ created a new pivot, so the last column of the augmented matrix is a pivot column. By the existence criterion the system is inconsistent and there are no solutions, regardless of the fact that there are more unknowns than equations.
+
+Sanity check on the numbers: an echelon form of $[A\mid\mathbf{b}]$ has $4$ pivots in $4$ rows and only $3$ of them lie left of the bar, so one row must read $(0\;0\;0\;0\;0\;0\mid c)$ with $c\neq 0$, as expected.
+:::
+
+:::pitfall
+"More unknowns than equations" guarantees that a solution, *if one exists*, is not unique. It does not guarantee that one exists. The example above has six unknowns, four equations and no solutions at all.
+:::
+
+## Homogeneous systems and the null space
+
+<!-- section: homogeneous -->
+
+:::definition[Homogeneous system, null space]{#null-space}
+A system is **homogeneous** when its right-hand side is zero:
+
+$$A\mathbf{x} = \mathbf{0}.$$
+
+Its solution set is called the **null space** of $A$, written $\operatorname{Null}(A)$. The solution $\mathbf{x}=\mathbf{0}$ is the **trivial** solution; any other is **nontrivial**.
+:::
+
+A homogeneous system is never inconsistent: $A\mathbf{0} = \mathbf{0}$ always. So for these systems the only question is whether the trivial solution is the *only* one, and the existence criterion answers it immediately — nontrivial solutions exist precisely when some variable is free.
+
+:::proposition[The null space is a subspace]{#null-space-subspace}
+If $A$ is $m\times n$, then $\operatorname{Null}(A)$ contains $\mathbf{0}$ and is closed under addition and scalar multiplication: if $\mathbf{u},\mathbf{v}\in\operatorname{Null}(A)$ and $c\in\mathbb{R}$, then $\mathbf{u}+\mathbf{v}$ and $c\mathbf{u}$ lie in $\operatorname{Null}(A)$.
+:::
+
+:::proof
+$A\mathbf{0}=\mathbf{0}$, so $\mathbf{0}$ belongs. If $A\mathbf{u}=\mathbf{0}$ and $A\mathbf{v}=\mathbf{0}$ then $A(\mathbf{u}+\mathbf{v}) = A\mathbf{u}+A\mathbf{v} = \mathbf{0}+\mathbf{0}=\mathbf{0}$ and $A(c\mathbf{u}) = c(A\mathbf{u}) = c\mathbf{0}=\mathbf{0}$, using the distributivity of the matrix–vector product over addition and scalars, which is immediate from the column formula.
+:::
 
 :::proposition[When nontrivial solutions exist]{#nontrivial-solutions}
-The homogeneous system $A\mathbf{x}=\mathbf{0}$ with $n$ unknowns has a nontrivial solution if and only if $\text{rank}(A) < n$.
+The system $A\mathbf{x}=\mathbf{0}$ in $n$ unknowns has a nontrivial solution if and only if $A$ has at least one non-pivot column, that is, if and only if the number of pivots of $A$ is strictly less than $n$.
 :::
 
-There are then more unknowns than pivots, so at least one free variable exists, and the nullity equals the number of free variables.
+:::proof
+If every column is a pivot column there are no free variables, and by the existence criterion the consistent system $A\mathbf{x}=\mathbf{0}$ has exactly one solution — which must be $\mathbf{0}$, since $\mathbf{0}$ is one. If some column is not a pivot column, its variable is free; setting that free variable to $1$ and all other free variables to $0$ and solving upward produces a solution whose entry in that position is $1$, hence nonzero.
+:::
 
-:::theorem[Invertible Matrix Theorem]{#invertible-matrix-theorem}
-For a square $n \times n$ matrix $A$, the following are equivalent:
+:::corollary[Wide homogeneous systems]{#wide-homogeneous}
+If a homogeneous system has more unknowns than equations ($n > m$), it has infinitely many solutions.
+:::
 
-1. $A$ is invertible;
-2. $A\mathbf{x}=\mathbf{0}$ has only the trivial solution;
-3. $\text{nullity}(A)=0$;
-4. $\det(A)\neq 0$.
+:::proof
+Each pivot occupies its own row, so the number of pivots is at most $m < n$. By the previous proposition a nontrivial solution exists, and by the trichotomy a consistent system with a free variable has infinitely many solutions.
 :::
 
 :::intuition
-A homogeneous system asks: what inputs does the matrix send to zero? Zero is always one answer. But if the matrix collapses space — if it's not full rank — then entire lines or planes of inputs get sent to zero. Those make up the null space.
+A homogeneous system asks which inputs the matrix crushes to zero. Zero itself is always crushed, so that answer is free and uninformative. The real content is whether the matrix collapses any *direction*: if two of its columns point the same way, then some combination of them cancels, and the whole line of such combinations lands on zero. The null space is the record of everything the matrix destroys.
 :::
 
-:::example[Finding a basis for the null space]
-Solve $A\mathbf{x}=\mathbf{0}$ for $A=\begin{pmatrix}1&2&-1\\2&4&-2\end{pmatrix}$. Here $n=3$.
+:::example[A null space that is a plane]
+Find all solutions of $A\mathbf{x}=\mathbf{0}$ for $A = \begin{pmatrix}1&2&-1\\2&4&-2\end{pmatrix}$, and give a spanning set.
 :::
 
 :::solution
-1. Row-reduce. $R_2\leftarrow R_2-2R_1$ gives $(0,0,0)$: $\begin{pmatrix}1&2&-1\\0&0&0\end{pmatrix}$. One pivot (column $1$), so $\text{rank}(A)=1$ and the two non-pivot columns $2,3$ give free variables $x_2,x_3$. By rank-nullity the nullity is $3-1=2$.
-2. The surviving equation is $x_1+2x_2-x_3=0$, i.e. $x_1=-2x_2+x_3$.
-3. Set the free variables independently. With $x_2=s,\;x_3=t$: $\mathbf{x}=\begin{pmatrix}-2s+t\\s\\t\end{pmatrix}=s\begin{pmatrix}-2\\1\\0\end{pmatrix}+t\begin{pmatrix}1\\0\\1\end{pmatrix}$.
-4. A basis for $\text{Null}(A)$ is therefore $\left\{(-2,1,0),\,(1,0,1)\right\}$ — two vectors, matching the nullity of $2$. The null space is a plane through the origin in $\mathbb{R}^3$.
-5. Sanity check each basis vector: $A(-2,1,0)^{\mathsf T}$ has first entry $1(-2)+2(1)-1(0)=0$ ✓; $A(1,0,1)^{\mathsf T}$ has first entry $1(1)+2(0)-1(1)=0$ ✓ (the second row is a multiple of the first, so it vanishes too).
+Row-reduce: $R_2\leftarrow R_2-2R_1$ turns the second row into $(0,0,0)$, leaving
+
+$$\begin{pmatrix}1&2&-1\\0&0&0\end{pmatrix}.$$
+
+There is one pivot, in column $1$, so $x_1$ is basic and $x_2,x_3$ are free. The surviving equation is $x_1+2x_2-x_3=0$, so $x_1 = -2x_2+x_3$. Setting $x_2=s$, $x_3=t$:
+
+$$\mathbf{x} = \begin{pmatrix}-2s+t\\ s\\ t\end{pmatrix} = s\begin{pmatrix}-2\\1\\0\end{pmatrix} + t\begin{pmatrix}1\\0\\1\end{pmatrix}.$$
+
+So $\operatorname{Null}(A) = \operatorname{Span}\{(-2,1,0),\,(1,0,1)\}$, a plane through the origin in $\mathbb{R}^3$.
+
+Sanity check each spanning vector: $1(-2)+2(1)-1(0) = 0$ and $1(1)+2(0)-1(1)=0$, and the second row of $A$ is twice the first, so it vanishes too.
+:::
+
+:::example[A null space that is only the origin]
+Show that $A = \begin{pmatrix}1&2\\3&7\end{pmatrix}$ has $\operatorname{Null}(A) = \{\mathbf{0}\}$.
+:::
+
+:::solution
+Row-reduce: $R_2\leftarrow R_2-3R_1$ gives $\begin{pmatrix}1&2\\0&1\end{pmatrix}$. Both columns are pivot columns, so there are no free variables and, by the proposition, only the trivial solution.
+
+Sanity check by hand: the second equation of the reduced system is $x_2=0$, and the first is then $x_1 = -2x_2 = 0$.
+:::
+
+:::example[Reading a homogeneous solution set off a parameter]
+For which $k$ does $\begin{pmatrix}1&2\\ k&6\end{pmatrix}\mathbf{x}=\mathbf{0}$ have a nontrivial solution?
+:::
+
+:::solution
+Apply $R_2 \leftarrow R_2 - kR_1$, giving $\begin{pmatrix}1&2\\0&6-2k\end{pmatrix}$. If $6-2k\neq 0$, that is $k\neq 3$, there are two pivots and only the trivial solution. If $k=3$ the second row vanishes, $x_2$ is free, and $\mathbf{x} = t(-2,1)$ solves the system for every $t$.
+
+Sanity check at $k=3$, $t=1$: $\begin{pmatrix}1&2\\3&6\end{pmatrix}\begin{pmatrix}-2\\1\end{pmatrix} = \begin{pmatrix}-2+2\\-6+6\end{pmatrix}=\mathbf{0}$.
+:::
+
+## Parametric vector form and the shape of a solution set
+
+<!-- section: parametric -->
+
+Once free variables are present, "infinitely many solutions" is not an answer — you must describe the set. The standard description writes the solution as a fixed vector plus a combination of direction vectors, one per free variable.
+
+:::recipe[Parametric vector form]{#parametric-recipe}
+To describe the solution set of a consistent system $A\mathbf{x}=\mathbf{b}$:
+
+1. Row-reduce $[A\mid\mathbf{b}]$ to reduced echelon form.
+2. Identify the basic variables (pivot columns) and the free variables.
+3. Solve each pivot row for its basic variable in terms of the free variables.
+4. Assign a parameter to each free variable and write the general solution as a column vector.
+5. Split that column into the constant vector plus one term for each parameter. The result is
+
+$$\mathbf{x} = \mathbf{p} + t_1\mathbf{v}_1 + \cdots + t_k\mathbf{v}_k,$$
+
+with $k$ the number of free variables.
+:::
+
+:::theorem[Structure of the solution set]{#general-solution}
+Suppose $A\mathbf{x}=\mathbf{b}$ is consistent and $\mathbf{p}$ is any one solution. Then the solution set is exactly
+
+$$\{\mathbf{p} + \mathbf{h} : \mathbf{h} \in \operatorname{Null}(A)\},$$
+
+the translate of the null space of $A$ by the vector $\mathbf{p}$.
+:::
+
+:::proof
+If $\mathbf{h}\in\operatorname{Null}(A)$ then $A(\mathbf{p}+\mathbf{h}) = A\mathbf{p}+A\mathbf{h} = \mathbf{b}+\mathbf{0}=\mathbf{b}$, so every such vector is a solution.
+
+Conversely, let $\mathbf{x}$ be any solution and put $\mathbf{h} = \mathbf{x}-\mathbf{p}$. Then $A\mathbf{h} = A\mathbf{x}-A\mathbf{p} = \mathbf{b}-\mathbf{b}=\mathbf{0}$, so $\mathbf{h}\in\operatorname{Null}(A)$ and $\mathbf{x} = \mathbf{p}+\mathbf{h}$ has the stated form.
+:::
+
+This is the single most useful structural fact about linear systems, and it says two things at once. First, the *shape* of the solution set never depends on $\mathbf{b}$: whatever $\mathbf{b}$ is, as long as the system is consistent the solution set is a parallel copy of one fixed object, $\operatorname{Null}(A)$. If the null space is a line, every consistent right-hand side gives a line of solutions; if it is a point, every consistent right-hand side gives a single point. Second, solving splits into two independent tasks — find any particular solution, and find the null space — and the second task does not mention $\mathbf{b}$ at all.
+
+The translate is not a subspace unless $\mathbf{p}$ can be taken to be $\mathbf{0}$: the solution set of a consistent inhomogeneous system misses the origin. Sets of this shape are called affine.
+
+:::intuition
+Fix a machine $A$ that takes a recipe $\mathbf{x}$ and outputs a product $\mathbf{b}$. The null space is the list of "do-nothing adjustments" — changes to the recipe that alter the output not at all. If you know one recipe that produces $\mathbf{b}$, every other recipe that produces $\mathbf{b}$ is that recipe plus a do-nothing adjustment. The catalogue of adjustments has nothing to do with which product you wanted.
+:::
+
+:::example[Parametric vector form with one free variable]
+Solve $x+2y+z=4$, $2x+5y+3z=9$, $x+3y+2z=5$ and write the answer in parametric vector form.
+:::
+
+:::solution
+Reduce $\left(\begin{array}{ccc|c}1&2&1&4\\2&5&3&9\\1&3&2&5\end{array}\right)$. Applying $R_2\leftarrow R_2-2R_1$ and $R_3\leftarrow R_3-R_1$ gives second and third rows both $(0,1,1\mid 1)$:
+
+$$\left(\begin{array}{ccc|c}1&2&1&4\\0&1&1&1\\0&1&1&1\end{array}\right) \xrightarrow{\;R_3-R_2\;} \left(\begin{array}{ccc|c}1&2&1&4\\0&1&1&1\\0&0&0&0\end{array}\right).$$
+
+Clearing above the second pivot with $R_1 \leftarrow R_1 - 2R_2$ gives the reduced form
+
+$$\left(\begin{array}{ccc|c}1&0&-1&2\\0&1&1&1\\0&0&0&0\end{array}\right).$$
+
+Pivots in columns $1,2$; $z$ is free. Set $z=t$. Then $x = 2+t$ and $y = 1-t$, so
+
+$$\begin{pmatrix}x\\y\\z\end{pmatrix} = \begin{pmatrix}2\\1\\0\end{pmatrix} + t\begin{pmatrix}1\\-1\\1\end{pmatrix}.$$
+
+Here $\mathbf{p}=(2,1,0)$ is a particular solution and $\operatorname{Null}(A) = \operatorname{Span}\{(1,-1,1)\}$, a line — so the solution set is a line in $\mathbb{R}^3$ not through the origin.
+
+Sanity check at $t=1$, i.e. $(3,0,1)$: $3+0+1=4$, $6+0+3=9$, $3+0+2=5$. All hold.
+:::
+
+:::example[Two free variables, and the null space read off]
+Write the solution set of the system with reduced echelon augmented matrix
+
+$$\left(\begin{array}{cccc|c}1&-3&0&2&5\\0&0&1&-4&1\\0&0&0&0&0\end{array}\right)$$
+
+in parametric vector form, and give a spanning set for the null space of the coefficient matrix.
+:::
+
+:::solution
+Pivots are in columns $1$ and $3$, so $x_1,x_3$ are basic and $x_2,x_4$ are free. The rows say $x_1 = 5 + 3x_2 - 2x_4$ and $x_3 = 1 + 4x_4$. Put $x_2 = s$, $x_4 = t$:
+
+$$\mathbf{x} = \begin{pmatrix}5+3s-2t\\ s\\ 1+4t\\ t\end{pmatrix} = \begin{pmatrix}5\\0\\1\\0\end{pmatrix} + s\begin{pmatrix}3\\1\\0\\0\end{pmatrix} + t\begin{pmatrix}-2\\0\\4\\1\end{pmatrix}.$$
+
+By the structure theorem the two parameter vectors span the null space: $\operatorname{Null}(A) = \operatorname{Span}\{(3,1,0,0),\,(-2,0,4,1)\}$. Setting the right-hand column to zero in the same computation confirms it.
+
+Sanity check at $s=1,t=0$: $\mathbf{x} = (8,1,1,0)$, and row 1 gives $8 - 3 + 0 + 0 = 5$, row 2 gives $1 - 0 = 1$. Both hold.
+:::
+
+:::example[Recovering the particular solution from two solutions]
+Suppose $\mathbf{u} = (4,1,0)$ and $\mathbf{v} = (1,3,2)$ both solve $A\mathbf{x}=\mathbf{b}$. Produce a nonzero element of $\operatorname{Null}(A)$ and a third solution.
+:::
+
+:::solution
+By the structure theorem, the difference of two solutions lies in the null space:
+
+$$\mathbf{v}-\mathbf{u} = (1-4,\;3-1,\;2-0) = (-3,2,2) \in \operatorname{Null}(A),$$
+
+and it is nonzero, so $A$ has a free variable and the system has infinitely many solutions.
+
+A third solution is $\mathbf{u} + 2(\mathbf{v}-\mathbf{u}) = (4,1,0)+(-6,4,4) = (-2,5,4)$. In fact $\mathbf{u}+t(-3,2,2)$ solves the system for every real $t$.
+
+Sanity check of the logic: $A(-2,5,4)^{\mathsf T} = A\mathbf{u} + 2A(\mathbf{v}-\mathbf{u}) = \mathbf{b} + 2\cdot\mathbf{0} = \mathbf{b}$.
+:::
+
+:::pitfall
+The particular solution $\mathbf{p}$ is not unique — any solution will do, and setting all free variables to zero is only the most convenient choice. What *is* determined by the system is the set itself and the null space directions. A final answer of the form $\mathbf{p}+t\mathbf{v}$ and one of the form $\mathbf{p}'+s\mathbf{w}$ can both be right, provided $\mathbf{p}'$ is a solution and $\mathbf{w}$ is a nonzero multiple of $\mathbf{v}$.
+:::
+
+## Linear independence in $\mathbb{R}^n$
+
+<!-- section: independence -->
+
+The question "does this system have a free variable?" has a name when it is asked about the columns.
+
+:::definition[Linear independence]{#linear-independence}
+A list of vectors $\mathbf{v}_1,\dots,\mathbf{v}_p$ in $\mathbb{R}^m$ is **linearly independent** when the only solution of
+
+$$x_1\mathbf{v}_1 + x_2\mathbf{v}_2+\cdots+x_p\mathbf{v}_p = \mathbf{0}$$
+
+is $x_1=\cdots=x_p=0$. Otherwise the list is **linearly dependent**, and any solution with some $x_i \neq 0$ is called a linear dependence relation.
+:::
+
+:::proposition[Independence in terms of pivots]{#independence-pivots}
+The columns of a matrix $A$ are linearly independent if and only if $A\mathbf{x}=\mathbf{0}$ has only the trivial solution, if and only if every column of $A$ is a pivot column.
+:::
+
+:::proof
+The vector equation in the definition is exactly $A\mathbf{x}=\mathbf{0}$ written out, by the theorem on the three views. The second equivalence is the proposition on nontrivial solutions.
+:::
+
+:::theorem[Characterisation of dependence]{#dependence-characterisation}
+A list $\mathbf{v}_1,\dots,\mathbf{v}_p$ with $p\ge 2$ is linearly dependent if and only if some $\mathbf{v}_j$ is a linear combination of the others. Moreover, if $\mathbf{v}_1\neq\mathbf{0}$, then such a $j$ may be chosen so that $\mathbf{v}_j$ lies in the span of the vectors that precede it.
+:::
+
+:::proof
+If $\mathbf{v}_j = \sum_{i\neq j}c_i\mathbf{v}_i$, move everything to one side: $\sum_{i\neq j}c_i\mathbf{v}_i + (-1)\mathbf{v}_j = \mathbf{0}$ is a dependence relation, since the coefficient of $\mathbf{v}_j$ is $-1\neq 0$.
+
+Conversely, take a dependence relation $\sum_i x_i\mathbf{v}_i=\mathbf{0}$ with some $x_j\neq 0$; then $\mathbf{v}_j = -\tfrac{1}{x_j}\sum_{i\neq j}x_i\mathbf{v}_i$. For the refinement, let $j$ be the largest index with $x_j \neq 0$; the same formula expresses $\mathbf{v}_j$ using only $\mathbf{v}_1,\dots,\mathbf{v}_{j-1}$, and $j \ge 2$ because $x_1\mathbf{v}_1=\mathbf{0}$ with $\mathbf{v}_1\neq\mathbf{0}$ would force $x_1=0$.
+:::
+
+:::corollary[Too many vectors are dependent]{#too-many-dependent}
+Any list of $p$ vectors in $\mathbb{R}^m$ with $p > m$ is linearly dependent. Any list containing $\mathbf{0}$ is linearly dependent.
+:::
+
+:::proof
+Form the $m\times p$ matrix $A$ with these columns. Pivots occupy distinct rows, so $A$ has at most $m < p$ pivots, leaving a non-pivot column; by the pivot criterion the columns are dependent. If $\mathbf{v}_j=\mathbf{0}$, then $0\mathbf{v}_1+\cdots+1\cdot\mathbf{v}_j+\cdots+0\mathbf{v}_p=\mathbf{0}$ is a nontrivial relation.
+:::
+
+:::intuition
+Independence means no vector in the list is redundant: remove any one and the span genuinely shrinks. Dependence means at least one of them was reachable using the others, so it added no new direction. Three arrows in a plane must be dependent for the same reason that three people cannot each have a private room in a two-room flat — there are more vectors than dimensions to spread them over.
+:::
+
+:::example[Testing three vectors for independence]
+Are $\mathbf{v}_1=(1,2,1)$, $\mathbf{v}_2=(2,1,-1)$, $\mathbf{v}_3=(4,5,1)$ independent? If not, exhibit a dependence relation.
+:::
+
+:::solution
+Row-reduce $A=\begin{pmatrix}1&2&4\\2&1&5\\1&-1&1\end{pmatrix}$. $R_2\leftarrow R_2-2R_1$ gives $(0,-3,-3)$ and $R_3\leftarrow R_3-R_1$ gives $(0,-3,-3)$:
+
+$$\begin{pmatrix}1&2&4\\0&-3&-3\\0&-3&-3\end{pmatrix}\xrightarrow{\;R_3-R_2\;}\begin{pmatrix}1&2&4\\0&-3&-3\\0&0&0\end{pmatrix}.$$
+
+Only two pivots for three columns, so the list is dependent. Column $3$ is free: set $x_3=1$, then $-3x_2 = 3$ gives $x_2=-1$, and $x_1 = -2x_2-4x_3 = 2-4=-2$. So
+
+$$-2\mathbf{v}_1 - \mathbf{v}_2 + \mathbf{v}_3 = \mathbf{0}, \qquad\text{i.e.}\qquad \mathbf{v}_3 = 2\mathbf{v}_1+\mathbf{v}_2.$$
+
+Sanity check: $2(1,2,1)+(2,1,-1) = (4,5,1) = \mathbf{v}_3$.
+:::
+
+:::example[Independence with a parameter]
+For which $h$ are $(1,2,3)$, $(2,4,h)$ linearly independent?
+:::
+
+:::solution
+Two vectors are dependent exactly when one is a multiple of the other. The second is a candidate multiple of the first with factor $2$ (from the first two coordinates), which requires $h = 6$. For any $h\neq 6$ the pair is independent.
+
+Formally: reduce $\begin{pmatrix}1&2\\2&4\\3&h\end{pmatrix}$ by $R_2-2R_1$ and $R_3-3R_1$ to get rows $(0,0)$ and $(0,h-6)$. The second column holds a pivot precisely when $h-6 \neq 0$.
+
+Sanity check at $h=6$: $(2,4,6)=2(1,2,3)$, so the pair is dependent there, as claimed.
+:::
+
+## Rank and the rank theorem
+
+<!-- section: rank -->
+
+:::definition[Rank and nullity]{#rank-definition}
+The **rank** of a matrix $A$, written $\operatorname{rank}(A)$, is the number of pivot positions in an echelon form of $A$ — equivalently, the number of pivot columns. The **nullity** of $A$ is the number of non-pivot columns, equivalently the number of free variables in $A\mathbf{x}=\mathbf{0}$.
+:::
+
+The definition is legitimate only because the pivot positions do not depend on how the reduction was carried out, which is what the uniqueness of the reduced echelon form gave us. Later chapters prove that the rank also equals the dimension of the column space and of the row space, and that the nullity equals the dimension of $\operatorname{Null}(A)$ — the spanning vectors produced by the parametric form turn out to be linearly independent, so the count of free variables really is a dimension. Here we work with the pivot count, which is what the algorithm hands us.
+
+:::theorem[The rank theorem]{#rank-nullity}
+For every $m\times n$ matrix $A$,
+
+$$\operatorname{rank}(A) + \operatorname{nullity}(A) = n.$$
+:::
+
+:::proof
+Reduce $A$ to its reduced echelon form $R$. Every one of the $n$ columns of $R$ either contains a pivot position or does not, and these two cases are mutually exclusive and exhaustive. The first case occurs $\operatorname{rank}(A)$ times by definition, the second $\operatorname{nullity}(A)$ times, and together they count every column exactly once.
+:::
+
+The proof is a sentence, but the statement is not trivial: it says that two numbers computed from completely different-looking questions — "how many independent constraints does $A$ impose?" and "how many degrees of freedom survive?" — must add to the number of unknowns. Every constraint you impose costs you exactly one degree of freedom, or is redundant and costs nothing.
+
+:::proposition[Rank bounds]{#rank-bounds}
+For an $m\times n$ matrix, $0 \le \operatorname{rank}(A) \le \min(m,n)$, with $\operatorname{rank}(A)=0$ if and only if $A$ is the zero matrix.
+:::
+
+:::proof
+Distinct pivots occupy distinct rows and distinct columns, so their number is at most $m$ and at most $n$. If $A\neq 0$ then some entry is nonzero, so some column is nonzero and the leftmost such column yields a pivot, giving rank at least $1$; if $A=0$ no pivot exists.
+:::
+
+:::proposition[Consistency and uniqueness in terms of rank]{#rank-consistency}
+For $A$ an $m \times n$ matrix and $\mathbf{b}\in\mathbb{R}^m$:
+
+1. $A\mathbf{x}=\mathbf{b}$ is consistent if and only if $\operatorname{rank}([A\mid\mathbf{b}]) = \operatorname{rank}(A)$;
+2. a consistent system has a unique solution if and only if $\operatorname{rank}(A)=n$ (full column rank);
+3. $A\mathbf{x}=\mathbf{b}$ is consistent for every $\mathbf{b}$ if and only if $\operatorname{rank}(A)=m$ (full row rank).
+:::
+
+:::proof
+Row-reduce $[A\mid\mathbf{b}]$; the left block becomes an echelon form of $A$. Appending $\mathbf{b}$ can create at most one new pivot, and it does so exactly when the last column is a pivot column, which by the existence criterion is exactly when the system is inconsistent. Hence consistency is equivalent to the two ranks being equal, proving (1).
+
+For (2), a consistent system is uniquely solvable exactly when there are no free variables, i.e. when all $n$ columns are pivot columns, i.e. $\operatorname{rank}(A)=n$. For (3), "a pivot in every row" means the number of pivots equals the number of rows, i.e. $\operatorname{rank}(A)=m$; this is the solvability theorem restated.
+:::
+
+:::intuition
+Rank counts the equations that genuinely say something. Ten equations may contain only three independent constraints if the other seven are combinations of those three; elimination exposes the redundancy by turning the extras into zero rows. Nullity counts what is left undetermined. The rank theorem is the conservation law between them: unknowns in, constraints plus freedoms out.
+:::
+
+:::example[Rank, nullity and the theorem checked]
+Let $A=\begin{pmatrix}1&2&1&1\\2&4&3&4\\1&2&2&3\end{pmatrix}$. Find the rank and nullity.
+:::
+
+:::solution
+$R_2\leftarrow R_2-2R_1$ gives $(0,0,1,2)$ and $R_3\leftarrow R_3-R_1$ gives $(0,0,1,2)$:
+
+$$\begin{pmatrix}1&2&1&1\\0&0&1&2\\0&0&1&2\end{pmatrix}\xrightarrow{\;R_3-R_2\;}\begin{pmatrix}1&2&1&1\\0&0&1&2\\0&0&0&0\end{pmatrix}.$$
+
+Pivots in columns $1$ and $3$, so $\operatorname{rank}(A)=2$. Note that column $2$ has nonzero entries yet holds no pivot — rank counts pivot columns, not nonzero columns.
+
+By the rank theorem $\operatorname{nullity}(A) = 4-2 = 2$, matching the two free variables $x_2,x_4$.
+
+Sanity check the bound: $2 \le \min(3,4)=3$, as required, and since $\operatorname{rank}(A)=2 < 3 = m$, there exist right-hand sides $\mathbf{b}$ for which the system is inconsistent.
+:::
+
+:::example[Rank as a function of a parameter]
+For which $k$ does $A = \begin{pmatrix}1&2&3\\2&k&6\\1&2&3\end{pmatrix}$ have rank $1$? What is the rank otherwise?
+:::
+
+:::solution
+Row $3$ equals row $1$, so $R_3\leftarrow R_3-R_1$ produces a zero row immediately. Then $R_2 \leftarrow R_2-2R_1$ gives $(0,k-4,0)$:
+
+$$\begin{pmatrix}1&2&3\\0&k-4&0\\0&0&0\end{pmatrix}.$$
+
+If $k=4$ the second row vanishes and only one pivot remains, so $\operatorname{rank}(A)=1$. If $k\neq 4$ there is a second pivot in column $2$ and $\operatorname{rank}(A)=2$; the rank never reaches $3$, because the third row is a copy of the first.
+
+Sanity check at $k=4$: every row of $A$ is then a multiple of $(1,2,3)$, namely $1,2,1$ times it, so the rank is certainly $1$.
+:::
+
+:::example[Using rank to predict the solution count]
+$A$ is $5\times 7$ with $\operatorname{rank}(A)=5$. Describe the solution set of $A\mathbf{x}=\mathbf{b}$ for an arbitrary $\mathbf{b}\in\mathbb{R}^5$.
+:::
+
+:::solution
+Since $\operatorname{rank}(A)=5=m$, $A$ has a pivot in every row, so by the solvability theorem the system is consistent for every $\mathbf{b}$. By the rank theorem $\operatorname{nullity}(A) = 7-5=2$, so there are two free variables and the solution set is
+
+$$\mathbf{x} = \mathbf{p} + s\mathbf{v}_1 + t\mathbf{v}_2,$$
+
+a two-parameter family: a translated plane inside $\mathbb{R}^7$. There are infinitely many solutions for every $\mathbf{b}$, and never a unique one.
+
+Sanity check against the bounds: $\operatorname{rank}(A)=5 \le \min(5,7)=5$, so the rank is as large as it could possibly be, which is why consistency never fails.
+:::
+
+:::pitfall
+Rank is a property of a matrix, not of a system, but $A$ and $[A\mid\mathbf{b}]$ are *different matrices*. $\operatorname{rank}([A\mid\mathbf{b}])$ is either $\operatorname{rank}(A)$ or $\operatorname{rank}(A)+1$, never more, and the whole consistency question is which of the two it is.
+:::
+
+## The $LU$ factorization
+
+<!-- section: lu -->
+
+Elimination is usually run once and thrown away. That is wasteful when the same coefficient matrix must be used with many right-hand sides — a structure loaded in a hundred different ways, a circuit driven at a hundred frequencies. The remedy is to store the elimination itself as a product of two triangular matrices.
+
+:::definition[$LU$ factorization]{#lu-definition}
+An **$LU$ factorization** of an $m\times n$ matrix $A$ is a product
+
+$$A = LU,$$
+
+where $L$ is an $m\times m$ **unit lower triangular** matrix (ones on the diagonal, zeros above it) and $U$ is an $m\times n$ **echelon form** of $A$ (in particular upper triangular when $m=n$).
+:::
+
+Where does $L$ come from? Suppose the forward phase of elimination needs no row interchanges: every pivot appears in the right place, and each step is a replacement $R_i\leftarrow R_i - \ell_{ij}R_j$ with $j<i$. By the theorem on elementary matrices, the whole forward phase is
+
+$$E_k\cdots E_2E_1A = U,$$
+
+so, since each $E_s$ is invertible,
+
+$$A = (E_k\cdots E_1)^{-1}U = E_1^{-1}E_2^{-1}\cdots E_k^{-1}\,U = LU,\qquad L := E_1^{-1}\cdots E_k^{-1}.$$
+
+Each $E_s$ is unit lower triangular (a replacement adding a multiple of an earlier row to a later one), so each inverse is too, and a product of unit lower triangular matrices is unit lower triangular. Hence $L$ is unit lower triangular, as promised.
+
+:::theorem[The multipliers are the entries of $L$]{#lu-multipliers}
+If $A$ is reduced to the echelon form $U$ by replacement operations $R_i\leftarrow R_i-\ell_{ij}R_j$ with $j < i$, performed column by column from left to right, then $A=LU$ where $L$ is unit lower triangular with $(i,j)$ entry equal to the multiplier $\ell_{ij}$.
+:::
+
+:::proof
+Work one column at a time. Clearing column $j$ uses the matrices $E_{ij}= I - \ell_{ij}\mathbf{e}_i\mathbf{e}_j^{\mathsf T}$ for the various $i>j$, and each inverse is $E_{ij}^{-1} = I+\ell_{ij}\mathbf{e}_i\mathbf{e}_j^{\mathsf T}$, because $\mathbf{e}_j^{\mathsf T}\mathbf{e}_i = 0$ when $i \neq j$ makes the cross term vanish.
+
+Now multiply the inverses in the order $E_1^{-1}\cdots E_k^{-1}$. A product $(I+\ell_{ij}\mathbf{e}_i\mathbf{e}_j^{\mathsf T})(I+\ell_{pq}\mathbf{e}_p\mathbf{e}_q^{\mathsf T})$ has cross term $\ell_{ij}\ell_{pq}\mathbf{e}_i(\mathbf{e}_j^{\mathsf T}\mathbf{e}_p)\mathbf{e}_q^{\mathsf T}$, which vanishes whenever $j\neq p$. Because the operations are performed columns left to right and always target a row strictly below the source, the pairs that occur always have $j \le q < p$, so $j = p$ never happens with the second factor to the right. All cross terms drop out and
+
+$$L = I + \sum_{i>j}\ell_{ij}\mathbf{e}_i\mathbf{e}_j^{\mathsf T},$$
+
+which is the unit lower triangular matrix whose $(i,j)$ entry is $\ell_{ij}$.
+:::
+
+That is the practical miracle: you do not compute $L$, you *record* it. Each time you perform $R_i \leftarrow R_i - \ell\,R_j$, write $\ell$ into position $(i,j)$ of a lower triangular array. When the forward phase ends you have $U$ in the upper part and $L$ in the lower part, at no extra arithmetic cost.
+
+:::recipe[Solving $A\mathbf{x}=\mathbf{b}$ by $LU$]{#lu-solve}
+Given $A = LU$:
+
+1. **Forward substitution.** Solve $L\mathbf{y}=\mathbf{b}$ from the top down: $y_1 = b_1$, then $y_i = b_i - \sum_{j<i}\ell_{ij}y_j$.
+2. **Back substitution.** Solve $U\mathbf{x}=\mathbf{y}$ from the bottom up.
+
+Then $A\mathbf{x} = L(U\mathbf{x}) = L\mathbf{y}=\mathbf{b}$, so $\mathbf{x}$ solves the original system.
+:::
+
+:::theorem[Existence of an $LU$ factorization]{#lu-existence}
+If $A$ can be reduced to echelon form using only replacement operations that add a multiple of a row to a *lower* row — equivalently, if no row interchange is needed — then $A$ has an $LU$ factorization. If in addition $A$ is square and invertible, the factorization with $L$ unit lower triangular is unique.
+:::
+
+:::proof
+Existence is the construction above. For uniqueness with $A$ square and invertible, suppose $L_1U_1 = L_2U_2$. Then $U_1,U_2$ are invertible (their diagonal entries are the nonzero pivots), so $L_2^{-1}L_1 = U_2U_1^{-1}$. The left side is unit lower triangular and the right side is upper triangular, since inverses and products preserve each triangular class and the unit diagonal. A matrix that is both lower and upper triangular is diagonal, and having a unit diagonal it must be $I$. Hence $L_1=L_2$ and $U_1=U_2$.
+:::
+
+Not every matrix has an $LU$ factorization. The simplest counterexample is $A=\begin{pmatrix}0&1\\1&0\end{pmatrix}$: the $(1,1)$ entry is zero, so no multiple of row $1$ can ever produce a pivot there, and a swap is unavoidable. The fix is to record the swaps too.
+
+:::theorem[$PA=LU$]{#pa-lu}
+For every square matrix $A$ there is a permutation matrix $P$ — a matrix obtained by permuting the rows of $I$ — such that $PA = LU$ with $L$ unit lower triangular and $U$ upper triangular.
+:::
+
+:::proof
+Run Gaussian elimination with the interchanges that the algorithm actually requires, and let $P$ be the product of the corresponding permutation matrices, applied to $A$ in advance. Concretely, if you knew ahead of time which rows would be swapped, you could swap them first and then eliminate with no further interchanges; performing all the interchanges at the start is exactly left multiplication by a single permutation matrix $P$. The matrix $PA$ then reduces by replacements alone, so the previous theorem applies to it.
+:::
+
+:::intuition
+$U$ is the system after elimination and $L$ is the receipt — it lists exactly how much of each earlier equation was subtracted from each later one. Given a new right-hand side you do not redo the elimination; you replay the receipt on $\mathbf{b}$ (forward substitution) and then back-substitute. Solving becomes as cheap as two triangular sweeps, and the expensive part is paid once.
+:::
+
+:::example[A full $3\times 3$ factorization]
+Factor $A = \begin{pmatrix}2&1&1\\4&-6&0\\-2&7&2\end{pmatrix}$ as $LU$.
+:::
+
+:::solution
+Column $1$. The pivot is $2$. The multiplier for row $2$ is $\ell_{21}=4/2=2$, so $R_2\leftarrow R_2-2R_1$ gives $(0,-8,-2)$. The multiplier for row $3$ is $\ell_{31}=-2/2=-1$, so $R_3\leftarrow R_3-(-1)R_1 = R_3+R_1$ gives $(0,8,3)$:
+
+$$\begin{pmatrix}2&1&1\\0&-8&-2\\0&8&3\end{pmatrix}.$$
+
+Column $2$. The pivot is $-8$ and the multiplier for row $3$ is $\ell_{32} = 8/(-8) = -1$, so $R_3\leftarrow R_3+R_2$ gives $(0,0,1)$:
+
+$$U = \begin{pmatrix}2&1&1\\0&-8&-2\\0&0&1\end{pmatrix}.$$
+
+Assemble $L$ from the recorded multipliers $\ell_{21}=2$, $\ell_{31}=-1$, $\ell_{32}=-1$:
+
+$$L = \begin{pmatrix}1&0&0\\2&1&0\\-1&-1&1\end{pmatrix}.$$
+
+Sanity check by multiplying out row $3$ of $LU$: $-1(2,1,1) - 1(0,-8,-2) + 1(0,0,1) = (-2,\,-1+8,\,-1+2+1) = (-2,7,2)$, which is row $3$ of $A$. Row $2$: $2(2,1,1)+(0,-8,-2) = (4,-6,0)$, also correct.
+:::
+
+:::example[Using the factorization to solve]
+With $A=LU$ as above, solve $A\mathbf{x}=\mathbf{b}$ for $\mathbf{b}=(5,-2,9)$.
+:::
+
+:::solution
+Forward substitution on $L\mathbf{y}=\mathbf{b}$, top down:
+
+$$y_1 = 5,\qquad 2y_1+y_2=-2 \Rightarrow y_2 = -12,\qquad -y_1-y_2+y_3 = 9 \Rightarrow y_3 = 9+5-12 = 2.$$
+
+Back substitution on $U\mathbf{x}=\mathbf{y} = (5,-12,2)$, bottom up:
+
+$$x_3 = 2,\qquad -8x_2-2x_3=-12 \Rightarrow -8x_2 = -8 \Rightarrow x_2=1,\qquad 2x_1+x_2+x_3 = 5 \Rightarrow x_1 = 1.$$
+
+So $\mathbf{x}=(1,1,2)$.
+
+Sanity check in $A$: row $1$ gives $2+1+2=5$; row $2$ gives $4-6+0=-2$; row $3$ gives $-2+7+4=9$. All match $\mathbf{b}$.
+:::
+
+:::example[A matrix that needs a permutation]
+Find a permutation matrix $P$ and an $LU$ factorization of $PA$ for $A = \begin{pmatrix}0&2\\3&1\end{pmatrix}$.
+:::
+
+:::solution
+The $(1,1)$ entry is zero, so elimination must begin with $R_1\leftrightarrow R_2$. The corresponding permutation matrix is $P = \begin{pmatrix}0&1\\1&0\end{pmatrix}$, and
+
+$$PA = \begin{pmatrix}3&1\\0&2\end{pmatrix}.$$
+
+This is already upper triangular, so no elimination step is needed: $L=I_2$ and $U=PA$.
+
+Sanity check: $LU = \begin{pmatrix}3&1\\0&2\end{pmatrix} = PA$, and $P$ is indeed $I_2$ with its rows swapped. Note $A$ itself has no $LU$ factorization: any unit lower triangular $L=\begin{pmatrix}1&0\\ \ell&1\end{pmatrix}$ times an upper triangular $U = \begin{pmatrix}u_{11}&u_{12}\\0&u_{22}\end{pmatrix}$ has $(1,1)$ entry $u_{11}$ and $(2,1)$ entry $\ell u_{11}$, so $u_{11}=0$ would force the $(2,1)$ entry to be $0$ as well, contradicting $3\neq 0$.
+:::
+
+:::pitfall
+The multiplier stored in $L$ is the number you *subtracted*, not the number you added. If you perform $R_3 \leftarrow R_3 + R_1$, the operation is $R_3 \leftarrow R_3 - (-1)R_1$, so $\ell_{31} = -1$, not $+1$. Getting the sign wrong produces an $L$ that multiplies out to something other than $A$, which is exactly why the check $LU = A$ is worth the thirty seconds.
+:::
+
+## Two applications
+
+<!-- section: applications -->
+
+Linear systems earn their place because so many quantitative questions are, after one modelling step, exactly this problem. Two standard examples show the modelling step in full.
+
+:::example[Balancing a chemical equation]
+Balance the combustion of propane,
+
+$$x_1\,\mathrm{C_3H_8} + x_2\,\mathrm{O_2} \;\longrightarrow\; x_3\,\mathrm{CO_2} + x_4\,\mathrm{H_2O},$$
+
+with $x_1,\dots,x_4$ positive whole numbers.
+:::
+
+:::solution
+Conservation of each element gives one linear equation. Carbon: the left has $3x_1$ atoms and the right has $x_3$, so $3x_1 = x_3$. Hydrogen: $8x_1 = 2x_4$. Oxygen: $2x_2 = 2x_3 + x_4$. Writing the system as homogeneous equations,
+
+$$3x_1 - x_3 = 0,\qquad 8x_1-2x_4=0,\qquad 2x_2-2x_3-x_4=0.$$
+
+This is $3$ equations in $4$ unknowns, so by the corollary on wide homogeneous systems there are infinitely many solutions — as there must be, since scaling a balanced equation keeps it balanced. Take $x_1$ as the free variable and set $x_1=1$. Then $x_3 = 3$ from the carbon equation and $x_4 = 4$ from the hydrogen equation, and the oxygen equation gives $2x_2 = 2(3)+4 = 10$, so $x_2 = 5$.
+
+The balanced equation is
+
+$$\mathrm{C_3H_8} + 5\,\mathrm{O_2}\;\longrightarrow\; 3\,\mathrm{CO_2} + 4\,\mathrm{H_2O}.$$
+
+Sanity check atom by atom: carbon $3 = 3$; hydrogen $8 = 4\cdot 2$; oxygen $5\cdot 2 = 10$ on the left and $3\cdot 2 + 4 = 10$ on the right.
+:::
+
+:::example[A traffic network]
+Four one-way intersections $A,B,C,D$ are joined in a cycle by internal roads carrying $x_1$ cars per hour from $A$ to $B$, $x_2$ from $B$ to $C$, $x_3$ from $C$ to $D$ and $x_4$ from $D$ to $A$. External traffic enters and leaves at each intersection: $A$ takes in $100$ and releases $60$; $B$ takes in $40$ and releases $90$; $C$ takes in $80$ and releases $50$; $D$ takes in $20$ and releases $40$. Find all possible flows, and the smallest possible value of $x_1$ given that no road carries negative traffic.
+:::
+
+:::solution
+The modelling rule is that flow in equals flow out at each intersection.
+
+At $A$: $x_4 + 100 = x_1 + 60$, so $x_1 = x_4+40$. At $B$: $x_1+40 = x_2+90$, so $x_2 = x_1-50$. At $C$: $x_2+80 = x_3+50$, so $x_3 = x_2+30$. At $D$: $x_3+20 = x_4+40$, so $x_4 = x_3-20$.
+
+Take $x_4 = t$ as the parameter and substitute forward: $x_1 = t+40$, then $x_2 = t-10$, then $x_3 = t+20$, and the equation at $D$ gives $x_4 = (t+20)-20 = t$, which is automatically satisfied. So the fourth equation is redundant: the coefficient matrix has rank $3$ with $4$ unknowns, and in parametric vector form
+
+$$\begin{pmatrix}x_1\\x_2\\x_3\\x_4\end{pmatrix} = \begin{pmatrix}40\\-10\\20\\0\end{pmatrix} + t\begin{pmatrix}1\\1\\1\\1\end{pmatrix}.$$
+
+That the null space direction is $(1,1,1,1)$ is the physical statement that you may add a constant circulation around the loop without changing any external flow.
+
+Now impose $x_i\ge 0$. The binding constraint is $x_2 = t-10\ge 0$, so $t\ge 10$; the others need only $t \ge -40$, $t\ge -20$, $t\ge 0$. Hence the smallest admissible $t$ is $10$, giving the minimum $x_1 = 50$ (with $x_2=0$, $x_3=30$, $x_4=10$).
+
+Sanity check the total: external inflow is $100+40+80+20=240$ and external outflow is $60+90+50+40=240$. Had these differed, the system would have been inconsistent — cars would be accumulating somewhere.
+:::
+
+:::remark
+A third standard application, the Leontief input–output model, has the same shape. If $\mathbf{x}$ is the vector of sectoral outputs, $C$ the consumption matrix whose $(i,j)$ entry is the amount of good $i$ needed to produce one unit of good $j$, and $\mathbf{d}$ the final demand, then production must satisfy $\mathbf{x} = C\mathbf{x}+\mathbf{d}$, that is,
+
+$$(I-C)\mathbf{x} = \mathbf{d},$$
+
+a linear system solved by exactly the methods of this chapter. The economically meaningful question — does a nonnegative $\mathbf{x}$ exist for every nonnegative $\mathbf{d}$? — is the solvability theorem with an extra positivity condition.
+:::
+
+:::pitfall
+In an application, the mathematics does not know what the variables mean. Elimination will happily return a negative traffic flow or a fractional number of molecules. Constraints such as $x_i \ge 0$ or "integer" are *not* part of the linear system and must be imposed afterwards, on the parametric description of the solution set.
+:::
+
+## Numerical notes: cost and stability
+
+<!-- section: numerics -->
+
+Everything above is exact arithmetic. On a computer neither the cost nor the accuracy can be ignored, and both change how the algorithm is written.
+
+:::proposition[Operation count for elimination]{#operation-count}
+Reducing an $n\times n$ matrix to echelon form by Gaussian elimination costs approximately
+
+$$\tfrac{2}{3}n^3$$
+
+floating-point operations, while forward and back substitution each cost approximately $n^2$.
+:::
+
+:::proof
+Clearing column $j$ requires, for each of the $n-j$ rows below the pivot, one division to form the multiplier and then $n-j$ multiply–add pairs across the remaining entries of the row — about $2(n-j)^2$ operations in total for that column. Summing over $j=1,\dots,n-1$ gives
+
+$$\sum_{j=1}^{n-1}2(n-j)^2 = 2\sum_{k=1}^{n-1}k^2 \approx 2\cdot \frac{n^3}{3} = \frac{2n^3}{3}.$$
+
+For back substitution, solving row $i$ costs about $2(n-i)$ operations, and $\sum_i 2(n-i)\approx n^2$.
+:::
+
+Two consequences follow at once. First, doubling $n$ multiplies the work by roughly eight, so the size of solvable dense systems grows only slowly with computing power. Second, once $A$ has been factored as $LU$ at cost $\tfrac{2}{3}n^3$, each additional right-hand side costs only about $2n^2$ — for $n=1000$, a factor of several hundred cheaper. That ratio is the entire commercial argument for storing the factorization.
+
+Cramer's rule, by contrast, needs $n+1$ determinants of size $n$; computed by cofactor expansion this is on the order of $(n+1)!$ operations, which for $n=20$ exceeds the number of operations a fast computer performs in a human lifetime. Cramer's rule is a theoretical formula, not an algorithm.
+
+:::definition[Partial pivoting]{#partial-pivoting}
+**Partial pivoting** is the rule that, before clearing column $j$, one interchanges rows so that the entry of largest absolute value in the remaining part of column $j$ occupies the pivot position.
+:::
+
+Partial pivoting is not about avoiding division by zero, although it does that too. It is about keeping the multipliers small: after the swap every multiplier satisfies $|\ell_{ij}|\le 1$, so the elimination cannot amplify the rounding errors already present in the data.
+
+:::example[Why pivoting matters]
+Solve $0.0001x + y = 1$, $x + y = 2$ in arithmetic that keeps three significant digits, first without and then with a row interchange.
+:::
+
+:::solution
+Without pivoting, the multiplier is $1/0.0001 = 10000$ and $R_2\leftarrow R_2-10000R_1$ gives $(1-10000)y = 2-10000$, i.e. $-9999y = -9998$. Rounding to three significant digits makes both coefficients $-1.00\times 10^4$, so $y = 1.00$. Back substitution then gives
+
+$$x = \frac{1-y}{0.0001} = \frac{1-1.00}{0.0001} = 0,$$
+
+because the tiny difference that carried all the information about $x$ was rounded away.
+
+With pivoting, swap the rows first: $x+y=2$, then $0.0001x+y=1$. The multiplier is now $0.0001$, and $R_2\leftarrow R_2-0.0001R_1$ gives $(1-0.0001)y = 1-0.0002$, i.e. $0.9999y = 0.9998$, so $y=1.00$ and $x = 2-1.00 = 1.00$.
+
+The true solution is $x = 1.0001\ldots$, $y=0.9998\ldots$, so the pivoted computation is accurate to three digits and the unpivoted one gets $x$ completely wrong. Sanity check on the unpivoted answer: $(0,1)$ gives $0.0001(0)+1 = 1$ — the first equation is satisfied — but $0+1 = 1 \neq 2$ in the second. The error hid in the equation that had been scaled up enormously.
+:::
+
+:::definition[Ill-conditioned system]{#ill-conditioned}
+A system is **ill-conditioned** when small relative changes in $A$ or $\mathbf{b}$ produce large relative changes in the solution. Geometrically, the constraint hyperplanes meet at a very shallow angle, so the intersection point slides far when a plane is nudged.
+:::
+
+:::example[An ill-conditioned pair of lines]
+Compare the solutions of $x+y=2$, $x+1.0001y = 2.0001$ and of $x+y=2$, $x+1.0001y=2.0002$.
+:::
+
+:::solution
+Subtract the first equation from the second in each case. In the first system, $0.0001y = 0.0001$ gives $y=1$ and then $x=1$. In the second, $0.0001y = 0.0002$ gives $y=2$ and then $x = 0$.
+
+A change of one part in twenty thousand in a single right-hand entry moved the solution from $(1,1)$ to $(0,2)$. No algorithm can repair this: the difficulty is in the problem, not in the method. Pivoting protects against errors the *algorithm* introduces; conditioning measures how much the *data* can be trusted.
+
+Sanity check of the second solution: $0+2 = 2$ and $0 + 1.0001(2) = 2.0002$, both exact.
+:::
+
+:::remark
+This is why "the matrix is invertible" is an unhelpful answer in numerical work. Invertibility is a yes-or-no property that takes no notice of how nearly singular a matrix is, and a matrix can be invertible while being, for computational purposes, indistinguishable from one that is not. The chapters on determinants and on eigenvalues make that distance precise.
 :::
 
 ## Common Mistakes
 
-- Multiplying a row by zero during elimination. This destroys information and is invalid.
-- Seeing free variables and claiming 'no solution.' Free variables mean infinitely many solutions. Inconsistency requires a row $[0\;\cdots\;0\;|\;b]$ with $b\neq 0$.
-- Confusing $\text{rank}(A)$ with $\text{rank}([A|\mathbf{b}])$. The system is consistent iff these are equal.
-- Back-substituting in the wrong order. Always start from the bottom row and work upward.
-- Forgetting to express the general solution as particular solution plus null-space solution.
+- **Multiplying a row by zero.** Scaling is legal only by a nonzero scalar. Multiplying by zero destroys an equation irreversibly, and the resulting system may have solutions the original did not.
+- **Changing both rows during a replacement.** In $R_i \leftarrow R_i + cR_j$ only row $i$ changes. Row $j$ is the source and must be left exactly as it was.
+- **Reading a zero row as inconsistency.** The row $(0\;\cdots\;0\mid 0)$ says $0=0$ and merely reports a redundant equation; only $(0\;\cdots\;0\mid c)$ with $c\neq 0$ means no solution.
+- **Confusing free variables with no solution.** Free variables mean infinitely many solutions, not zero.
+- **Confusing $\operatorname{rank}(A)$ with $\operatorname{rank}([A\mid\mathbf{b}])$.** They differ by at most one, and the system is consistent exactly when they are equal.
+- **Mixing up the row and column criteria.** A pivot in every row controls *existence for all $\mathbf{b}$*; a pivot in every column controls *uniqueness*. For non-square matrices these are genuinely different conditions.
+- **Assuming "more unknowns than equations" means solutions exist.** It only means a solution, if one exists, cannot be unique. The homogeneous case is the one where existence is automatic.
+- **Stopping at a particular solution.** When free variables are present, the answer is the whole set $\mathbf{p}+\operatorname{Null}(A)$, written in parametric vector form — not one convenient point of it.
+- **Getting the sign of an $LU$ multiplier wrong.** The entry $\ell_{ij}$ of $L$ is the number subtracted in $R_i\leftarrow R_i-\ell_{ij}R_j$. Always verify with $LU=A$.
+- **Multiplying elementary matrices in the order the operations were performed.** The first operation sits furthest right: two steps $E_1$ then $E_2$ give the product $E_2E_1$.
+- **Forgetting that applications impose extra constraints.** Nonnegativity and integrality are conditions on the parametric solution set, not part of the linear algebra.

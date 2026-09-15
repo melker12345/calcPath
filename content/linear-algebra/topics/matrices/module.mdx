@@ -4,262 +4,1154 @@ title: Matrices
 
 # Matrices
 
-A matrix is a rectangular array of numbers. This compact notation encodes systems of equations, linear transformations, data tables, and geometric operations. Everything you do in applied linear algebra involves matrices.
+A matrix is a rectangular array of numbers, and at first sight that is all it is: a table. What makes matrices the central object of linear algebra is that the table carries an *algebra*. You can add matrices, scale them, multiply them, sometimes invert them — and every one of those operations has a meaning. The meaning is always the same one: a matrix records a linear map, and matrix algebra is the algebra of linear maps.
 
-The operations — addition, multiplication, transposition, and inversion — are not arbitrary rules. Each arises from the task of representing and composing linear transformations. Once you understand the motivation, the rules become natural.
+That single idea explains everything in this chapter. Addition is defined entrywise because adding two linear maps means adding their outputs. Multiplication has its strange-looking row-times-column rule because composing two linear maps forces exactly that rule and no other. Multiplication fails to commute because doing one thing and then another is generally not the same as doing them in the opposite order. The inverse exists exactly when the map can be undone.
 
-This chapter lays the algebraic groundwork for solving systems (Chapter 3), understanding vector spaces (Chapter 4), and computing eigenvalues (Chapter 5).
+The chapter runs in the order that dependency suggests. First the linear operations — sum, scalar multiple, transpose — together with the trace, and all their algebraic laws proved rather than listed. Then the product, derived from composition, with associativity and the reversal rule $(AB)^T = B^TA^T$ proved from the index formula. Then the inverse: what it is, why it is unique, the $2\times 2$ formula derived rather than quoted. Then elementary matrices, which turn row reduction itself into matrix multiplication and explain why the $[A \mid I]$ algorithm works. Those tools let us state and prove the Invertible Matrix Theorem, the long list of conditions that all say the same thing. Finally: partitioned matrices, the standard named families of special matrices, and three applications — computer graphics, economics, and Markov chains — that show the algebra doing work.
 
-## Matrix notation and basic operations {#operations}
+You will need the language of systems and row reduction from the previous chapter. Everything else is built here.
 
-An $m \times n$ matrix has $m$ rows and $n$ columns, and the entry in row $i$, column $j$ is written $A_{ij}$. A matrix is square when $m = n$.
+## Matrix notation, the linear operations, and the trace
 
-:::definition[Matrix addition and scalar multiplication]{#matrix-operations}
-For matrices $A, B$ of the *same* dimensions and a scalar $c$, both operations act entry by entry:
+<!-- section: operations -->
 
-$$(A+B)_{ij} = A_{ij}+B_{ij}, \qquad (cA)_{ij} = c\,A_{ij}.$$
+We begin with the vocabulary, because almost every error in a first linear algebra course is a shape error rather than an arithmetic one.
+
+:::definition[Matrix]{#matrix-definition}
+An $m \times n$ **matrix** $A$ is a rectangular array of scalars with $m$ rows and $n$ columns. The scalar in row $i$ and column $j$ is the **$(i,j)$ entry**, written $A_{ij}$ or $a_{ij}$, and we write
+
+$$A = \begin{pmatrix} a_{11} & a_{12} & \cdots & a_{1n} \\ a_{21} & a_{22} & \cdots & a_{2n} \\ \vdots & \vdots & \ddots & \vdots \\ a_{m1} & a_{m2} & \cdots & a_{mn}\end{pmatrix} = (a_{ij}).$$
+
+The pair $m \times n$ is the **size** or **shape** of $A$. The matrix is **square** when $m = n$, and then the entries $a_{11}, a_{22}, \ldots, a_{nn}$ form its **main diagonal**. Two matrices are **equal** when they have the same size and $a_{ij} = b_{ij}$ for every $i$ and $j$.
 :::
 
-The equal-dimensions hypothesis is not a formality: you cannot add a $3\times 2$ to a $2\times 3$, because there is no entry to pair with.
+The row index always comes first. Reading $A_{23}$ as "row $3$, column $2$" is the single most common slip in the whole subject, and it survives for pages before it produces a visible contradiction.
+
+A matrix has two useful decompositions, and both are worth naming now. Writing $\mathbf{a}_1, \ldots, \mathbf{a}_n$ for the columns of $A$ — each a vector in $\mathbb{R}^m$ — we write
+
+$$A = \begin{pmatrix} \mathbf{a}_1 & \mathbf{a}_2 & \cdots & \mathbf{a}_n \end{pmatrix},$$
+
+and similarly $A$ is a stack of $m$ row vectors, each in $\mathbb{R}^n$. Almost every theorem about matrices is easier from one of these two views than from the entrywise view, and a large part of learning the subject is learning which view to take.
+
+Three matrices have standard names. The **zero matrix** $0_{m\times n}$ has every entry zero. The **identity matrix** $I_n$ is the square matrix with ones on the main diagonal and zeros elsewhere; its $(i,j)$ entry is the Kronecker delta $\delta_{ij}$, equal to $1$ if $i = j$ and $0$ otherwise. A **diagonal matrix** has $a_{ij} = 0$ whenever $i \neq j$.
+
+:::definition[Sum and scalar multiple]{#matrix-operations}
+Let $A$ and $B$ be matrices of the *same* size $m\times n$, and let $c$ be a scalar. Their **sum** $A + B$ and the **scalar multiple** $cA$ are the $m\times n$ matrices defined entry by entry:
+
+$$(A+B)_{ij} = A_{ij} + B_{ij}, \qquad (cA)_{ij} = c\,A_{ij}.$$
+
+We write $-A$ for $(-1)A$ and $A - B$ for $A + (-B)$.
+:::
+
+The equal-size hypothesis is not bureaucracy. If $A$ is $3\times 2$ and $B$ is $2\times 3$ there is simply no entry of $B$ sitting in the position of $A_{31}$, so the formula has nothing to evaluate. The sum is undefined — not zero, not "whatever fits", undefined.
+
+Because both operations act entry by entry, every algebraic law they satisfy is inherited directly from the corresponding law for numbers. That is worth stating once and proving once, because it is the last time in this chapter that a proof will be this easy.
+
+:::theorem[Algebra of the linear operations]{#linear-op-laws}
+Let $A, B, C$ be $m\times n$ matrices and $r, s$ scalars. Then
+
+$$\begin{aligned}
+&\text{(i) } A + B = B + A, &&\text{(ii) } (A+B)+C = A+(B+C), \\
+&\text{(iii) } A + 0 = A, &&\text{(iv) } A + (-A) = 0, \\
+&\text{(v) } r(A+B) = rA + rB, &&\text{(vi) } (r+s)A = rA + sA, \\
+&\text{(vii) } r(sA) = (rs)A, &&\text{(viii) } 1A = A.
+\end{aligned}$$
+:::
+
+:::proof
+Every identity asserts that two matrices of the same size are equal, so it suffices to check that their $(i,j)$ entries agree for all $i,j$. For (i), the $(i,j)$ entry of $A+B$ is $A_{ij}+B_{ij}$ and the $(i,j)$ entry of $B+A$ is $B_{ij}+A_{ij}$; these are equal because addition of scalars is commutative. For (vi), the $(i,j)$ entry of $(r+s)A$ is $(r+s)A_{ij} = rA_{ij}+sA_{ij}$, which is the $(i,j)$ entry of $rA + sA$, by distributivity of scalars. The remaining six identities follow the same way, each from the corresponding scalar law.
+:::
+
+These eight laws are exactly the vector space axioms. So the set of all $m\times n$ matrices, with these two operations, *is* a vector space — it behaves like $\mathbb{R}^{mn}$ with the entries relabelled. Chapter 4 will make that observation official; for now it means you may move matrices around inside a sum with the same freedom you use on numbers.
 
 :::definition[Transpose]{#transpose}
-The transpose $A^T$ of an $m\times n$ matrix $A$ is the $n\times m$ matrix obtained by swapping rows and columns:
+The **transpose** of an $m\times n$ matrix $A$ is the $n\times m$ matrix $A^T$ whose $(i,j)$ entry is the $(j,i)$ entry of $A$:
 
 $$(A^T)_{ij} = A_{ji}.$$
+
+Equivalently, the rows of $A$ become the columns of $A^T$, in order.
 :::
 
-Key properties: $(AB)^T = B^TA^T$ (order reverses), $(A^T)^T = A$, $(A+B)^T = A^T+B^T$.
+Note the shape change: transposing a $3\times 5$ matrix gives a $5\times 3$ matrix. Only for square matrices does $A^T$ have the same shape as $A$, and only then can we ask whether $A^T = A$.
 
-:::definition[Symmetric matrix]{#symmetric-matrix}
-A square matrix is symmetric if $A = A^T$, that is $A_{ij} = A_{ji}$ for all $i, j$.
+:::proposition[Transpose laws]{#transpose-laws}
+For matrices of compatible sizes and any scalar $r$,
+
+$$(A^T)^T = A, \qquad (A+B)^T = A^T + B^T, \qquad (rA)^T = r\,A^T.$$
 :::
 
-Symmetric matrices appear ubiquitously in statistics (covariance matrices), physics (inertia tensors), and optimisation (Hessians). They are always square, and their eigenvalues are always real.
+:::proof
+Each side of each identity has the same size, so compare entries. First, $((A^T)^T)_{ij} = (A^T)_{ji} = A_{ij}$. Second, $((A+B)^T)_{ij} = (A+B)_{ji} = A_{ji} + B_{ji} = (A^T)_{ij} + (B^T)_{ij}$. Third, $((rA)^T)_{ij} = (rA)_{ji} = r A_{ji} = r (A^T)_{ij}$.
+:::
 
-The trace of a square matrix is the sum of its diagonal entries: $\text{tr}(A) = \sum_{i=1}^n A_{ii}$. It equals the sum of the eigenvalues of $A$ and satisfies $\text{tr}(AB) = \text{tr}(BA)$ even when $AB \neq BA$.
+The transpose also interacts with the product, and there the order reverses: $(AB)^T = B^T A^T$. That rule needs the product to be defined first, so it is proved in the next section.
+
+:::definition[Symmetric and skew-symmetric]{#symmetric-matrix}
+A square matrix $A$ is **symmetric** if $A^T = A$, that is $A_{ij} = A_{ji}$ for all $i,j$; it is **skew-symmetric** (or antisymmetric) if $A^T = -A$, that is $A_{ij} = -A_{ji}$.
+:::
+
+Symmetric matrices are the most important special class in the subject. Covariance matrices in statistics, Hessians in optimisation, inertia tensors in mechanics and adjacency matrices of undirected graphs are all symmetric, and Chapter 8 will show that a real symmetric matrix always has real eigenvalues and an orthonormal basis of eigenvectors — a conclusion that fails badly for general matrices.
+
+Skew-symmetry has an immediate consequence worth extracting: setting $i = j$ in $A_{ij} = -A_{ji}$ gives $A_{ii} = -A_{ii}$, hence $2A_{ii} = 0$ and $A_{ii} = 0$. Every diagonal entry of a skew-symmetric matrix is zero.
+
+:::proposition[Symmetric–skew decomposition]{#symm-skew-decomposition}
+Every square matrix $A$ can be written in exactly one way as $A = S + K$ with $S$ symmetric and $K$ skew-symmetric, namely
+
+$$S = \tfrac{1}{2}(A + A^T), \qquad K = \tfrac{1}{2}(A - A^T).$$
+:::
+
+:::proof
+These $S$ and $K$ certainly sum to $A$. They have the required types: $S^T = \tfrac12(A^T + (A^T)^T) = \tfrac12(A^T+A) = S$ and $K^T = \tfrac12(A^T - A) = -K$, using the transpose laws. For uniqueness, suppose $A = S' + K'$ with $S'$ symmetric and $K'$ skew. Transposing gives $A^T = S' - K'$. Adding the two equations gives $A + A^T = 2S'$, so $S' = S$; subtracting gives $K' = K$.
+:::
+
+The last of the entrywise notions in this section attaches a single number to a square matrix.
+
+:::definition[Trace]{#trace-definition}
+The **trace** of an $n \times n$ matrix $A$ is the sum of its diagonal entries,
+
+$$\operatorname{tr}(A) = \sum_{i=1}^{n} A_{ii}.$$
+:::
+
+The trace ignores every off-diagonal entry, which makes it look like a crude summary. It is not. It is linear, it is blind to the order of a product, and it is unchanged by a change of basis — and those three facts together make it one of the two basic invariants of a matrix (the determinant is the other).
+
+:::theorem[Properties of the trace]{#trace-properties}
+Let $A$ and $B$ be $n\times n$ and $r$ a scalar. Then
+
+$$\operatorname{tr}(A+B) = \operatorname{tr}(A) + \operatorname{tr}(B), \qquad \operatorname{tr}(rA) = r\operatorname{tr}(A), \qquad \operatorname{tr}(A^T) = \operatorname{tr}(A),$$
+
+and, for any $A$ of size $m\times n$ and $B$ of size $n\times m$,
+
+$$\operatorname{tr}(AB) = \operatorname{tr}(BA).$$
+:::
+
+:::proof
+The first three are immediate from the definition: $\sum_i (A+B)_{ii} = \sum_i A_{ii} + \sum_i B_{ii}$; $\sum_i rA_{ii} = r\sum_i A_{ii}$; and transposing fixes every diagonal entry, since $(A^T)_{ii} = A_{ii}$.
+
+For the last, write out both sides with the product formula $(AB)_{ik} = \sum_j A_{ij}B_{jk}$ proved in the next section. Then
+
+$$\operatorname{tr}(AB) = \sum_{i=1}^{m}(AB)_{ii} = \sum_{i=1}^{m}\sum_{j=1}^{n} A_{ij}B_{ji},$$
+
+while
+
+$$\operatorname{tr}(BA) = \sum_{j=1}^{n}(BA)_{jj} = \sum_{j=1}^{n}\sum_{i=1}^{m} B_{ji}A_{ij}.$$
+
+The two double sums run over exactly the same set of pairs $(i,j)$ and have the same summand $A_{ij}B_{ji}$, since scalars commute. Therefore they are equal.
+:::
+
+Notice how much the last identity says and how little it assumes. $AB$ and $BA$ need not even have the same size — if $A$ is $2\times 5$ and $B$ is $5\times 2$ then $AB$ is $2\times 2$ and $BA$ is $5\times 5$ — and yet their traces agree. When $A$ and $B$ are both square, $AB$ and $BA$ are almost never equal as matrices, and their traces are always equal anyway.
+
+:::corollary[Similarity invariance of the trace]{#trace-similarity}
+If $P$ is invertible and $B = P^{-1}AP$, then $\operatorname{tr}(B) = \operatorname{tr}(A)$.
+:::
+
+:::proof
+Apply $\operatorname{tr}(XY) = \operatorname{tr}(YX)$ with $X = P^{-1}$ and $Y = AP$:
+
+$$\operatorname{tr}(P^{-1}AP) = \operatorname{tr}\big((AP)P^{-1}\big) = \operatorname{tr}(A(PP^{-1})) = \operatorname{tr}(A).$$
+:::
+
+Similar matrices are the same linear map written in two different bases (Chapter 5). The corollary says the trace is a property of the *map*, not of the coordinates we happened to choose — which is why the trace turns up later as the sum of the eigenvalues.
 
 :::intuition
-A matrix is a spreadsheet of numbers. Adding two matrices is adding two spreadsheets cell by cell — they must have the same shape. Multiplying by a scalar scales every cell. Transposing rotates the spreadsheet so rows become columns.
+Think of an $m\times n$ matrix as a spreadsheet with $m$ rows and $n$ columns. Adding two spreadsheets means adding them cell by cell, which is only possible if the grids line up. Scaling multiplies every cell by the same factor. Transposing pivots the sheet about its top-left corner, so what was a row now reads down a column. The trace reads off only the cells on the top-left-to-bottom-right diagonal and adds them: a single number summarising a table of $n^2$ numbers, and remarkably, one that does not change if you re-label the axes.
 :::
 
-:::example[Addition and transpose]
-$A = \begin{pmatrix}1&3\\2&0\end{pmatrix}$, $B = \begin{pmatrix}-1&4\\1&5\end{pmatrix}$.
+:::example[Sum, scalar multiple, transpose, trace]
+For $A = \begin{pmatrix}1&3\\2&0\end{pmatrix}$ and $B = \begin{pmatrix}-1&4\\1&5\end{pmatrix}$, compute $A+B$, $2A - B$, $A^T$, $\operatorname{tr}(A)$, and decide whether $A$ is symmetric.
 :::
 
 :::solution
-1. $A+B = \begin{pmatrix}0&7\\3&5\end{pmatrix}$.
-2. $2A = \begin{pmatrix}2&6\\4&0\end{pmatrix}$.
-3. $A^T = \begin{pmatrix}1&2\\3&0\end{pmatrix}$. Note $A_{12}=3$ became $A^T_{21}=3$.
-4. Is $A$ symmetric? $A_{12}=3 \neq 2=A_{21}$, so no.
-5. Trace: $\text{tr}(A) = A_{11}+A_{22} = 1+0 = 1$. Sanity check the transpose-invariance $\text{tr}(A^T)=\text{tr}(A)$: transposing leaves the diagonal untouched, and indeed $\text{tr}(A^T) = 1+0 = 1$ ✓.
+Add entry by entry:
+
+$$A + B = \begin{pmatrix}1+(-1) & 3+4 \\ 2+1 & 0+5\end{pmatrix} = \begin{pmatrix}0&7\\3&5\end{pmatrix}.$$
+
+For $2A - B$, scale first and then subtract:
+
+$$2A = \begin{pmatrix}2&6\\4&0\end{pmatrix}, \qquad 2A - B = \begin{pmatrix}2-(-1) & 6-4\\ 4-1 & 0-5\end{pmatrix} = \begin{pmatrix}3&2\\3&-5\end{pmatrix}.$$
+
+The transpose swaps the off-diagonal entries: $A^T = \begin{pmatrix}1&2\\3&0\end{pmatrix}$, since $A_{12}=3$ moves to position $(2,1)$.
+
+The trace is $\operatorname{tr}(A) = 1 + 0 = 1$. Sanity check against $\operatorname{tr}(A^T) = \operatorname{tr}(A)$: the diagonal of $A^T$ is also $1, 0$, and the traces agree.
+
+Finally, $A$ is not symmetric, because $A_{12} = 3$ while $A_{21} = 2$.
 :::
 
-## Matrix multiplication {#multiplication}
+:::example[Splitting a matrix into symmetric and skew parts]
+Write $A = \begin{pmatrix}4&6\\2&1\end{pmatrix}$ as $S + K$ with $S$ symmetric and $K$ skew-symmetric.
+:::
+
+:::solution
+First transpose: $A^T = \begin{pmatrix}4&2\\6&1\end{pmatrix}$. Then
+
+$$S = \tfrac12(A+A^T) = \tfrac12\begin{pmatrix}8&8\\8&2\end{pmatrix} = \begin{pmatrix}4&4\\4&1\end{pmatrix},$$
+
+$$K = \tfrac12(A-A^T) = \tfrac12\begin{pmatrix}0&4\\-4&0\end{pmatrix} = \begin{pmatrix}0&2\\-2&0\end{pmatrix}.$$
+
+Check the types: $S$ is symmetric because its two off-diagonal entries are both $4$; $K$ is skew because $K_{12} = 2 = -K_{21}$ and its diagonal is zero, as the definition forces. Sanity check the sum: $S + K = \begin{pmatrix}4+0 & 4+2\\ 4-2 & 1+0\end{pmatrix} = \begin{pmatrix}4&6\\2&1\end{pmatrix} = A$.
+:::
+
+:::example[Trace of a non-square product]
+Let $A = \begin{pmatrix}1&2&3\end{pmatrix}$ (size $1\times 3$) and $B = \begin{pmatrix}4\\5\\6\end{pmatrix}$ (size $3\times 1$). Verify $\operatorname{tr}(AB) = \operatorname{tr}(BA)$.
+:::
+
+:::solution
+The product $AB$ is $1\times 1$: $AB = (1)(4)+(2)(5)+(3)(6) = 32$, so $\operatorname{tr}(AB) = 32$.
+
+The product $BA$ is $3\times 3$, with $(BA)_{ij} = B_{i1}A_{1j}$:
+
+$$BA = \begin{pmatrix}4&8&12\\5&10&15\\6&12&18\end{pmatrix}.$$
+
+Its trace is $4 + 10 + 18 = 32$. The two matrices are nothing like each other — one is a number, the other a $3\times3$ array — and their traces agree, exactly as the theorem promises.
+:::
+
+:::pitfall
+$\operatorname{tr}(AB) = \operatorname{tr}(BA)$ is a statement about *two* factors and does not extend naively. For three factors only the *cyclic* rotations are guaranteed equal:
+
+$$\operatorname{tr}(ABC) = \operatorname{tr}(BCA) = \operatorname{tr}(CAB),$$
+
+and in general $\operatorname{tr}(ABC) \neq \operatorname{tr}(ACB)$. Also note that $\operatorname{tr}(AB)$ is almost never $\operatorname{tr}(A)\operatorname{tr}(B)$: for $A = B = I_2$ the left side is $2$ and the right side is $4$.
+:::
+
+## Matrix multiplication
+
+<!-- section: multiplication -->
+
+Matrix multiplication is the operation that gives the subject its content, and the only one whose definition looks arbitrary. It is not arbitrary; it is forced. We derive it rather than declare it.
+
+Start with the matrix–vector product, which the previous chapter introduced as shorthand for a linear system. If $A$ has columns $\mathbf{a}_1,\ldots,\mathbf{a}_n$ and $\mathbf{x} \in \mathbb{R}^n$, then
+
+$$A\mathbf{x} = x_1\mathbf{a}_1 + x_2\mathbf{a}_2 + \cdots + x_n\mathbf{a}_n.$$
+
+This map $T_A(\mathbf{x}) = A\mathbf{x}$ from $\mathbb{R}^n$ to $\mathbb{R}^m$ is linear, and every linear map $\mathbb{R}^n \to \mathbb{R}^m$ arises this way, with $\mathbf{a}_j = T(\mathbf{e}_j)$ the image of the $j$-th standard basis vector.
+
+Now suppose $B$ sends $\mathbb{R}^p \to \mathbb{R}^n$ and $A$ sends $\mathbb{R}^n \to \mathbb{R}^m$. The composition $\mathbf{x} \mapsto A(B\mathbf{x})$ is a linear map $\mathbb{R}^p \to \mathbb{R}^m$, so it too has a matrix. Call it $AB$. What must its columns be? Column $j$ of any matrix is the image of $\mathbf{e}_j$, so
+
+$$(\text{column } j \text{ of } AB) = A(B\mathbf{e}_j) = A\mathbf{b}_j,$$
+
+where $\mathbf{b}_j$ is the $j$-th column of $B$. There is nothing left to choose.
 
 :::definition[Matrix product]{#matrix-product}
-Let $A$ be $m\times n$ and $B$ be $n\times p$, so that the inner dimensions match. Their product $AB$ is the $m\times p$ matrix with entries
+Let $A$ be $m\times n$ and let $B$ be $n\times p$, with columns $\mathbf{b}_1,\ldots,\mathbf{b}_p$. The **product** $AB$ is the $m\times p$ matrix
 
-$$(AB)_{ij} = \sum_{k=1}^{n} A_{ik}\,B_{kj},$$
+$$AB = \begin{pmatrix} A\mathbf{b}_1 & A\mathbf{b}_2 & \cdots & A\mathbf{b}_p\end{pmatrix}.$$
 
-that is, row $i$ of $A$ dotted with column $j$ of $B$.
+Entrywise, this is the **row–column rule**
+
+$$(AB)_{ij} = \sum_{k=1}^{n} A_{ik}B_{kj},$$
+
+the $i$-th row of $A$ paired term by term with the $j$-th column of $B$. The product is defined only when the number of columns of $A$ equals the number of rows of $B$.
 :::
 
-Why this definition? It encodes composition of linear transformations. If $T_A: \mathbb{R}^n\to\mathbb{R}^m$ and $T_B: \mathbb{R}^p\to\mathbb{R}^n$, then the composed map $T_A \circ T_B$ is represented by $AB$. The rule $(AB)\mathbf{x} = A(B\mathbf{x})$ forces this definition.
+The two descriptions agree: the $i$-th entry of $A\mathbf{b}_j$ is row $i$ of $A$ dotted with $\mathbf{b}_j$, which is $\sum_k A_{ik}B_{kj}$.
 
-Matrix multiplication is not commutative: $AB \neq BA$ in general, even when both products exist and have the same size. It is associative: $(AB)C = A(BC)$, and distributive: $A(B+C) = AB+AC$.
+The shape rule is easiest to remember in the form
 
-The identity matrix $I_n$ (ones on the diagonal, zeros elsewhere) satisfies $AI = IA = A$. It is the matrix analogue of the number $1$.
+$$(m\times \underline{n})(\underline{n}\times p) \longrightarrow m\times p:$$
 
-Powers such as $A^2 = AA$ or $A^n$ only make sense when $A$ is square: the product $AA$ requires the columns of $A$ to match its own rows. There is no $A^2$ for a non-square matrix.
+the inner dimensions must match and then cancel; the outer dimensions survive. A $3\times 4$ times a $4\times 2$ is a $3\times 2$; a $4\times 2$ times a $3\times 4$ is undefined.
 
-:::proposition[Column picture of a matrix-vector product]{#column-picture}
-If $\mathbf{a}_1, \ldots, \mathbf{a}_n$ are the columns of $A$ and $\mathbf{v} \in \mathbb{R}^n$, then
+Counting the arithmetic is also useful. Each of the $mp$ entries of $AB$ costs $n$ multiplications, so forming $AB$ takes $mnp$ scalar multiplications. Multiplying two $n\times n$ matrices by the definition therefore costs $n^3$ multiplications — which is why, for large $n$, people care a great deal about the order in which a chain of products is evaluated.
 
-$$A\mathbf{v} = v_1\mathbf{a}_1 + v_2\mathbf{a}_2 + \cdots + v_n\mathbf{a}_n,$$
+:::proposition[Row and column rules]{#row-col-rules}
+With $A$ of size $m\times n$ and $B$ of size $n\times p$:
 
-a linear combination of the columns of $A$ with coefficients taken from $\mathbf{v}$.
+$$\text{column } j \text{ of } AB = A\,(\text{column } j \text{ of } B), \qquad \text{row } i \text{ of } AB = (\text{row } i \text{ of } A)\,B.$$
 :::
 
-This column view is the key to understanding column spaces and linear independence.
+:::proof
+The column statement is the definition. For the row statement, the $j$-th entry of row $i$ of $AB$ is $\sum_k A_{ik}B_{kj}$, which is exactly the $j$-th entry of the $1\times p$ matrix obtained by multiplying the $1\times n$ row $(A_{i1},\ldots,A_{in})$ by $B$.
+:::
+
+These two rules save enormous amounts of work. If a problem asks only for one column of a product, compute one matrix–vector product, not the whole thing.
+
+:::theorem[Algebra of the product]{#product-laws}
+Whenever the sizes make the expressions defined, and for any scalar $r$:
+
+$$\begin{aligned}
+&\text{(i) } (AB)C = A(BC) && \text{(associativity)},\\
+&\text{(ii) } A(B+C) = AB + AC && \text{(left distributivity)},\\
+&\text{(iii) } (B+C)A = BA + CA && \text{(right distributivity)},\\
+&\text{(iv) } r(AB) = (rA)B = A(rB), \\
+&\text{(v) } I_m A = A = A I_n && \text{for } A \text{ of size } m\times n.
+\end{aligned}$$
+:::
+
+:::proof
+For (i), let $A$ be $m\times n$, $B$ be $n\times q$ and $C$ be $q\times p$, so both sides are $m\times p$. Compute the $(i,j)$ entry of each. Using the row–column rule twice,
+
+$$\big((AB)C\big)_{ij} = \sum_{l=1}^{q}(AB)_{il}C_{lj} = \sum_{l=1}^{q}\left(\sum_{k=1}^{n}A_{ik}B_{kl}\right)C_{lj} = \sum_{l=1}^{q}\sum_{k=1}^{n}A_{ik}B_{kl}C_{lj},$$
+
+$$\big(A(BC)\big)_{ij} = \sum_{k=1}^{n}A_{ik}(BC)_{kj} = \sum_{k=1}^{n}A_{ik}\left(\sum_{l=1}^{q}B_{kl}C_{lj}\right) = \sum_{k=1}^{n}\sum_{l=1}^{q}A_{ik}B_{kl}C_{lj}.$$
+
+Both are the same finite double sum of the products $A_{ik}B_{kl}C_{lj}$ over all pairs $(k,l)$; only the order of summation differs, and a finite sum may be reordered freely. Hence the entries agree.
+
+For (ii), $\big(A(B+C)\big)_{ij} = \sum_k A_{ik}(B+C)_{kj} = \sum_k A_{ik}B_{kj} + \sum_k A_{ik}C_{kj} = (AB)_{ij} + (AC)_{ij}$. Part (iii) is the mirror image, and (iv) follows from $\sum_k (rA_{ik})B_{kj} = r\sum_k A_{ik}B_{kj}$.
+
+For (v), $(I_m A)_{ij} = \sum_k (I_m)_{ik}A_{kj} = \sum_k \delta_{ik}A_{kj} = A_{ij}$, since every term with $k \neq i$ vanishes.
+:::
+
+Associativity is worth a second look, because it is the law that makes the whole subject work and the one whose proof students most often skip. There is a proof with no indices at all: both $(AB)C$ and $A(BC)$ are the matrix of the *same* composed function $\mathbf{x}\mapsto A(B(C\mathbf{x}))$, and composition of functions is associative by definition. Two matrices representing the same linear map are equal, so the two products coincide. The index computation above is the same statement with the scaffolding shown.
+
+Now the law that fails.
+
+:::theorem[Multiplication is not commutative]{#noncommutativity}
+There exist $2\times 2$ matrices $A$ and $B$ with $AB \neq BA$.
+:::
+
+:::proof
+Take $A = \begin{pmatrix}1&1\\0&1\end{pmatrix}$ and $B = \begin{pmatrix}0&1\\1&0\end{pmatrix}$. Then
+
+$$AB = \begin{pmatrix}1&1\\1&0\end{pmatrix}, \qquad BA = \begin{pmatrix}0&1\\1&1\end{pmatrix},$$
+
+and these differ in every entry except the $(1,2)$ and $(2,1)$ positions.
+:::
+
+This is not a technical annoyance; it is the mathematical content of the statement that order of operations matters. Rotating a book about a vertical axis and then about a horizontal one leaves it in a different position than doing the two in the other order — try it. Two further consequences deserve their own warning.
+
+:::pitfall
+Three familiar laws of numbers fail for matrices.
+
+**Commutativity fails.** So $(A+B)^2 = A^2 + AB + BA + B^2$, which equals $A^2 + 2AB + B^2$ only when $A$ and $B$ commute. Likewise $(AB)^2 = ABAB$, not $A^2B^2$.
+
+**Cancellation fails.** $AB = AC$ does not imply $B = C$. With $A = \begin{pmatrix}1&0\\0&0\end{pmatrix}$, $B = \begin{pmatrix}1&2\\3&4\end{pmatrix}$ and $C = \begin{pmatrix}1&2\\5&6\end{pmatrix}$, both products equal $\begin{pmatrix}1&2\\0&0\end{pmatrix}$.
+
+**Zero divisors exist.** $AB = 0$ does not imply $A = 0$ or $B = 0$: take $A = \begin{pmatrix}0&1\\0&0\end{pmatrix}$, so that $A \neq 0$ but $A^2 = 0$.
+
+All three failures disappear when $A$ is invertible — which is one reason the next sections care so much about invertibility.
+:::
+
+Since $AA$ requires the columns of $A$ to match its own rows, powers make sense only for square matrices.
+
+:::definition[Powers of a square matrix]{#matrix-powers}
+For a square matrix $A$ and integer $k \ge 1$, $A^k$ is the product of $k$ copies of $A$, and $A^0 = I$.
+:::
+
+Associativity is what makes this unambiguous: without it, "$A^3$" would depend on the bracketing. The usual index laws $A^{j}A^{k} = A^{j+k}$ and $(A^j)^k = A^{jk}$ follow, but $(AB)^k = A^kB^k$ does not, for exactly the reason above.
+
+Finally, the promised transpose rule.
+
+:::theorem[Transpose of a product]{#transpose-of-product}
+If $A$ is $m\times n$ and $B$ is $n\times p$, then
+
+$$(AB)^T = B^T A^T.$$
+:::
+
+:::proof
+Both sides are $p\times m$, so it suffices to compare entries. For any $i$ and $j$,
+
+$$\big((AB)^T\big)_{ij} = (AB)_{ji} = \sum_{k=1}^{n} A_{jk}B_{ki} = \sum_{k=1}^{n} (B^T)_{ik}(A^T)_{kj} = (B^TA^T)_{ij},$$
+
+where the third equality just rewrites $B_{ki} = (B^T)_{ik}$ and $A_{jk} = (A^T)_{kj}$ and uses commutativity of scalar multiplication to reorder the factors.
+:::
+
+The order *must* reverse, and you can see why from shapes alone before doing any arithmetic: $A^TB^T$ would be $n\times m$ times $p \times n$, which is undefined unless $m = p$. By induction, $(A_1A_2\cdots A_k)^T = A_k^T\cdots A_2^TA_1^T$.
+
+:::corollary[$A^TA$ is symmetric]{#ata-symmetric}
+For any $m\times n$ matrix $A$, both $A^TA$ and $AA^T$ are symmetric.
+:::
+
+:::proof
+$(A^TA)^T = A^T(A^T)^T = A^TA$, using the reversal rule and $(A^T)^T = A$. The same computation gives $(AA^T)^T = AA^T$.
+:::
+
+This little corollary is the engine of least squares (Chapter 7): $A^TA$ is square and symmetric no matter how badly shaped $A$ is.
 
 :::intuition
-Matrix multiplication is like following two sets of instructions in sequence. $B$ maps inputs to an intermediate space; $A$ maps that to the final output. The product $AB$ gives you the combined effect. Because the order of instructions matters, $AB \neq BA$ in general.
+Think of $B$ as a machine that takes a $p$-dimensional input and produces an $n$-dimensional output, and $A$ as a second machine that eats that $n$-dimensional output and produces an $m$-dimensional one. Bolting them together gives a single machine, and $AB$ is its instruction table. The inner dimensions must match because the output plug of $B$ has to fit the input socket of $A$. The order in $AB$ reads right to left because $B$ runs first — the same convention as $f(g(x))$.
 :::
 
-:::example[2×2 matrix multiplication]
-$A = \begin{pmatrix}2&1\\3&4\end{pmatrix}$, $B = \begin{pmatrix}1&0\\-1&2\end{pmatrix}$.
-:::
-
-:::solution
-1. $(AB)_{11}$: row $1$ of $A$ · col $1$ of $B$: $(2)(1)+(1)(-1) = 1$.
-2. $(AB)_{12}$: row $1$ · col $2$: $(2)(0)+(1)(2) = 2$.
-3. $(AB)_{21}$: row $2$ · col $1$: $(3)(1)+(4)(-1) = -1$.
-4. $(AB)_{22}$: row $2$ · col $2$: $(3)(0)+(4)(2) = 8$.
-5. $AB = \begin{pmatrix}1&2\\-1&8\end{pmatrix}$.
-:::
-
-:::example[Matrix powers and non-commutativity]
-A power like $A^2$ just means $AA$ — the same rule, applied to the matrix and itself. Take the "shear" $A = \begin{pmatrix}1&1\\0&1\end{pmatrix}$.
+:::example[A $3\times 3$ product, and one column of it]
+Let $A = \begin{pmatrix}1&2&0\\0&1&3\\2&0&1\end{pmatrix}$ and $B = \begin{pmatrix}1&0&2\\3&1&0\\0&4&1\end{pmatrix}$. Compute $AB$, and then find column $2$ of $AB$ on its own.
 :::
 
 :::solution
-1. $(A^2)_{11} = (1)(1)+(1)(0) = 1$; $(A^2)_{12} = (1)(1)+(1)(1) = 2$; $(A^2)_{21} = (0)(1)+(1)(0) = 0$; $(A^2)_{22} = (0)(1)+(1)(1) = 1$.
-2. So $A^2 = \begin{pmatrix}1&2\\0&1\end{pmatrix}$. The pattern continues: $A^n = \begin{pmatrix}1&n\\0&1\end{pmatrix}$, each power shearing a little more.
-3. Order matters — check it. With $B = \begin{pmatrix}0&1\\1&0\end{pmatrix}$: $AB = \begin{pmatrix}1&1\\1&0\end{pmatrix}$ but $BA = \begin{pmatrix}0&1\\1&1\end{pmatrix}$. Sanity check: $AB \neq BA$, confirming multiplication is not commutative.
+Shapes: $3\times 3$ times $3\times 3$ gives $3\times 3$. Apply the row–column rule nine times. Row $1$ of $A$ is $(1,2,0)$:
+
+$$(AB)_{11} = 1\cdot1 + 2\cdot3 + 0\cdot0 = 7, \quad (AB)_{12} = 1\cdot 0 + 2\cdot 1 + 0\cdot 4 = 2, \quad (AB)_{13} = 1\cdot2+2\cdot0+0\cdot1 = 2.$$
+
+Row $2$ is $(0,1,3)$: the entries are $0+3+0 = 3$, $0+1+12 = 13$, $0+0+3 = 3$. Row $3$ is $(2,0,1)$: $2+0+0 = 2$, $0+0+4 = 4$, $4+0+1 = 5$. So
+
+$$AB = \begin{pmatrix}7&2&2\\3&13&3\\2&4&5\end{pmatrix}.$$
+
+For column $2$ alone, the column rule says compute $A\mathbf{b}_2$ where $\mathbf{b}_2 = (0,1,4)$:
+
+$$A\mathbf{b}_2 = 0\begin{pmatrix}1\\0\\2\end{pmatrix} + 1\begin{pmatrix}2\\1\\0\end{pmatrix} + 4\begin{pmatrix}0\\3\\1\end{pmatrix} = \begin{pmatrix}2\\13\\4\end{pmatrix},$$
+
+which matches the middle column of $AB$. Three multiplications' worth of work instead of twenty-seven.
 :::
 
-## Determinants {#determinants}
-
-The determinant is a scalar assigned to every square matrix that captures whether it is invertible, how it scales area/volume, and whether it preserves orientation.
-
-:::definition[Determinant of a 2×2 matrix]{#det-2x2}
-$$\det\begin{pmatrix}a&b\\c&d\end{pmatrix} = ad - bc,$$
-
-the main-diagonal product minus the anti-diagonal product.
-:::
-
-Geometric meaning: $|\det(A)|$ is the factor by which the transformation $A$ multiplies area ($n=2$) or volume ($n=3$). $\det(A)=2$ means areas are doubled; $\det(A)=0$ means the transformation collapses space to a lower dimension.
-
-Sign of the determinant: $\det(A)>0$ means orientation is preserved (no reflection). $\det(A)<0$ means orientation is reversed.
-
-:::theorem[Determinant criterion for invertibility]{#det-invertibility}
-A square matrix $A$ is invertible if and only if $\det(A) \neq 0$.
-:::
-
-A singular matrix (det $=0$) squashes space and cannot be undone — its inverse does not exist.
-
-Two more facts you will use often. The first is scaling: for an $n\times n$ matrix, $\det(cA) = c^n\det(A)$, because scaling by $c$ stretches all $n$ independent directions by $c$, so volume grows by $c^n$ — not $c$. The second is how to compute a determinant beyond the $2\times 2$ case.
-
-:::recipe[Cofactor expansion]{#cofactor-expansion}
-To evaluate $\det(A)$ for a $3\times 3$ or larger square matrix:
-
-1. Pick any row $i$ (or any column) — preferably one with many zeros.
-2. For each entry $A_{ij}$ in it, delete row $i$ and column $j$ and take the determinant of what remains; this is the minor $M_{ij}$.
-3. Attach the sign $(-1)^{i+j}$ to get the cofactor, a checkerboard pattern starting with $+$ in the top-left.
-4. Sum the products: $\det(A) = \sum_j A_{ij}(-1)^{i+j}M_{ij}$.
-:::
-
-:::intuition
-The determinant measures how much a matrix stretches or squishes space. A value of $3$ means it triples all areas. A value of $-1$ means it reflects without changing size. A value of $0$ means it flattens everything — you lose a whole dimension and can never get it back.
-:::
-
-:::example[3×3 determinant by cofactor expansion]
-Find $\det(A)$ for $A = \begin{pmatrix}2&1&0\\1&3&1\\0&1&2\end{pmatrix}$.
+:::example[Powers of a shear]
+Let $A = \begin{pmatrix}1&1\\0&1\end{pmatrix}$. Compute $A^2$ and $A^3$, guess a formula for $A^n$, and prove it.
 :::
 
 :::solution
-1. Expand along row $1$. The signs on that row are $+,\,-,\,+$.
-2. First term: $+2\cdot\det\begin{pmatrix}3&1\\1&2\end{pmatrix} = 2(3\cdot 2 - 1\cdot 1) = 2(5) = 10$.
-3. Second term: $-1\cdot\det\begin{pmatrix}1&1\\0&2\end{pmatrix} = -1(1\cdot 2 - 1\cdot 0) = -1(2) = -2$.
-4. Third term: $+0\cdot(\cdots) = 0$ — the $0$ entry kills its cofactor, so we skip it. (Tip: always expand along the row or column with the most zeros.)
-5. Sum: $\det(A) = 10 - 2 + 0 = 8$. Since $8 \neq 0$, $A$ is invertible.
+Directly, $A^2 = \begin{pmatrix}1\cdot1+1\cdot0 & 1\cdot1+1\cdot1\\ 0+0 & 0+1\end{pmatrix} = \begin{pmatrix}1&2\\0&1\end{pmatrix}$, and then $A^3 = A^2A = \begin{pmatrix}1&3\\0&1\end{pmatrix}$.
+
+The pattern suggests $A^n = \begin{pmatrix}1&n\\0&1\end{pmatrix}$. Prove it by induction. It holds for $n = 1$. If it holds for $n$, then
+
+$$A^{n+1} = A^nA = \begin{pmatrix}1&n\\0&1\end{pmatrix}\begin{pmatrix}1&1\\0&1\end{pmatrix} = \begin{pmatrix}1& 1+n\\0&1\end{pmatrix},$$
+
+which is the claim for $n+1$. Geometrically $A$ is a shear that slides each point horizontally by its own height; applying it $n$ times slides by $n$ times the height. Sanity check with $n=0$: the formula gives $I$, as it should.
 :::
 
-## Matrix inverse {#inverse}
-
-:::definition[Inverse of a square matrix]{#inverse-definition}
-The inverse of a square matrix $A$ is the square matrix $A^{-1}$ with
-
-$$AA^{-1} = A^{-1}A = I.$$
-
-By the determinant criterion it exists precisely when $\det(A) \neq 0$; a matrix without an inverse is called singular.
+:::example[A rotation matrix and the angle-addition identities]
+Let $R_\theta = \begin{pmatrix}\cos\theta & -\sin\theta\\ \sin\theta & \cos\theta\end{pmatrix}$. Compute $R_\alpha R_\beta$.
 :::
 
-:::proposition[Inverse of a 2×2 matrix]{#inverse-2x2}
-If $A = \begin{pmatrix}a&b\\c&d\end{pmatrix}$ and $ad-bc \neq 0$, then
+:::solution
+Multiply out:
+
+$$R_\alpha R_\beta = \begin{pmatrix}\cos\alpha\cos\beta - \sin\alpha\sin\beta & -\cos\alpha\sin\beta - \sin\alpha\cos\beta \\ \sin\alpha\cos\beta + \cos\alpha\sin\beta & -\sin\alpha\sin\beta + \cos\alpha\cos\beta\end{pmatrix}.$$
+
+Every entry is an angle-addition formula in disguise, and the product collapses to
+
+$$R_\alpha R_\beta = \begin{pmatrix}\cos(\alpha+\beta) & -\sin(\alpha+\beta)\\ \sin(\alpha+\beta) & \cos(\alpha+\beta)\end{pmatrix} = R_{\alpha+\beta}.$$
+
+That is exactly what composition should give: rotating by $\beta$ and then by $\alpha$ is rotating by $\alpha+\beta$. Note as a bonus that rotations *do* commute with each other, since $\alpha+\beta = \beta+\alpha$ — non-commutativity is the general rule, not a universal one. Sanity check: setting $\beta = -\alpha$ gives $R_\alpha R_{-\alpha} = R_0 = I$.
+:::
+
+:::example[Verifying the reversal rule]
+With $A = \begin{pmatrix}1&2\\0&3\end{pmatrix}$ and $B = \begin{pmatrix}4&0\\1&5\end{pmatrix}$, check $(AB)^T = B^TA^T$ and show $A^TB^T$ is something else.
+:::
+
+:::solution
+First $AB = \begin{pmatrix}4+2 & 0+10\\ 0+3 & 0+15\end{pmatrix} = \begin{pmatrix}6&10\\3&15\end{pmatrix}$, so $(AB)^T = \begin{pmatrix}6&3\\10&15\end{pmatrix}$.
+
+Now $B^T = \begin{pmatrix}4&1\\0&5\end{pmatrix}$ and $A^T = \begin{pmatrix}1&0\\2&3\end{pmatrix}$, so
+
+$$B^TA^T = \begin{pmatrix}4+2 & 0+3\\ 0+10 & 0+15\end{pmatrix} = \begin{pmatrix}6&3\\10&15\end{pmatrix},$$
+
+matching. By contrast $A^TB^T = \begin{pmatrix}1&0\\2&3\end{pmatrix}\begin{pmatrix}4&1\\0&5\end{pmatrix} = \begin{pmatrix}4&1\\8&17\end{pmatrix}$, which is not $(AB)^T$. The order genuinely matters.
+:::
+
+## The inverse of a matrix
+
+<!-- section: inverse -->
+
+Division is missing from the list of matrix operations, and it stays missing: there is no useful $A/B$. What there is, for some square matrices, is a multiplicative inverse — a matrix that undoes what $A$ does.
+
+:::definition[Invertible matrix]{#inverse-definition}
+An $n\times n$ matrix $A$ is **invertible** (or **nonsingular**) if there exists an $n\times n$ matrix $C$ with
+
+$$AC = CA = I_n.$$
+
+Such a $C$ is called an **inverse** of $A$. A square matrix with no inverse is **singular**.
+:::
+
+Two restrictions are built into the definition. The matrix must be square: if $A$ is $m\times n$ with $m \neq n$, then $AC$ and $CA$ have different sizes and cannot both be an identity. And both products are demanded. For square matrices it will turn out that either one implies the other (a consequence of the Invertible Matrix Theorem), but that is a theorem, not a definition.
+
+:::theorem[The inverse is unique]{#inverse-unique}
+If $A$ is invertible, its inverse is unique. We may therefore write $A^{-1}$.
+:::
+
+:::proof
+Suppose $B$ and $C$ both satisfy the definition, so $BA = I$ and $AC = I$. Then
+
+$$B = BI = B(AC) = (BA)C = IC = C,$$
+
+using associativity in the middle step. So any two inverses coincide.
+:::
+
+The proof is three lines and uses only associativity, but look at what it actually shows: any *left* inverse equals any *right* inverse. That is a stronger statement than uniqueness and gets reused constantly.
+
+:::proposition[Inverse of a $2\times 2$ matrix]{#inverse-2x2}
+Let $A = \begin{pmatrix}a&b\\c&d\end{pmatrix}$ and set $\Delta = ad - bc$. If $\Delta \neq 0$ then $A$ is invertible, with
 
 $$A^{-1} = \frac{1}{ad-bc}\begin{pmatrix}d&-b\\-c&a\end{pmatrix}.$$
+
+If $\Delta = 0$ then $A$ is not invertible.
 :::
 
-In words: swap the main-diagonal entries, negate the off-diagonal entries, and divide by the determinant.
+:::proof
+Define $\operatorname{adj}(A) = \begin{pmatrix}d&-b\\-c&a\end{pmatrix}$ — swap the diagonal entries, negate the off-diagonal ones. Multiply it out both ways:
 
-:::recipe[Inversion by Gauss-Jordan elimination]{#gauss-jordan-inverse}
-For larger matrices, row-reduce the augmented matrix $[A\;|\;I]$. When the left block reaches $I$, the right block is $A^{-1}$.
+$$A\operatorname{adj}(A) = \begin{pmatrix}ad-bc & -ab+ba\\ cd-dc & -cb+da\end{pmatrix} = \Delta I, \qquad \operatorname{adj}(A)\,A = \begin{pmatrix}da-bc & db-bd\\ -ca+ac & -cb+ad\end{pmatrix} = \Delta I.$$
+
+If $\Delta \neq 0$, dividing by $\Delta$ shows $\Delta^{-1}\operatorname{adj}(A)$ satisfies both halves of the definition.
+
+If $\Delta = 0$, suppose for contradiction that $A$ were invertible. From $A\operatorname{adj}(A) = 0$ we get $\operatorname{adj}(A) = A^{-1}\cdot 0 = 0$, so $a = b = c = d = 0$ and $A = 0$; but the zero matrix is certainly not invertible, since $0C = 0 \neq I$. Contradiction.
 :::
 
-The inverse solves $A\mathbf{x}=\mathbf{b}$ immediately: $\mathbf{x} = A^{-1}\mathbf{b}$. However, computing $A^{-1}$ explicitly is costly. Gaussian elimination solves systems more efficiently without forming the inverse.
+The number $\Delta = ad-bc$ is the determinant of $A$, studied properly in Chapter 6; here we need only the $2\times 2$ case. In words, the recipe is: *swap the diagonal, negate the off-diagonal, divide by the determinant.*
 
-Key properties: $(AB)^{-1} = B^{-1}A^{-1}$ (order reverses), $(A^{-1})^{-1}=A$, $(A^T)^{-1}=(A^{-1})^T$, $\det(A^{-1})=1/\det(A)$.
+:::theorem[Inverse laws]{#inverse-laws}
+Let $A$ and $B$ be invertible $n\times n$ matrices and $r \neq 0$ a scalar. Then each of the following is invertible, with the stated inverse:
 
-Orthogonal matrices satisfy $Q^TQ=I$, so $Q^{-1}=Q^T$. For these matrices (rotations and reflections), the inverse is free — just transpose.
+$$\big(A^{-1}\big)^{-1} = A, \qquad (AB)^{-1} = B^{-1}A^{-1}, \qquad \big(A^T\big)^{-1} = \big(A^{-1}\big)^T, \qquad (rA)^{-1} = \tfrac{1}{r}A^{-1}.$$
+
+More generally $\big(A_1A_2\cdots A_k\big)^{-1} = A_k^{-1}\cdots A_2^{-1}A_1^{-1}$, and $(A^k)^{-1} = (A^{-1})^k$.
+:::
+
+:::proof
+In each case we exhibit a matrix and verify the definition; uniqueness then says it is *the* inverse.
+
+The equations $AA^{-1} = A^{-1}A = I$ are symmetric in $A$ and $A^{-1}$, so they say both that $A^{-1}$ inverts $A$ and that $A$ inverts $A^{-1}$; hence $(A^{-1})^{-1} = A$.
+
+For the product, compute using associativity:
+
+$$(AB)(B^{-1}A^{-1}) = A(BB^{-1})A^{-1} = AIA^{-1} = AA^{-1} = I,$$
+
+$$(B^{-1}A^{-1})(AB) = B^{-1}(A^{-1}A)B = B^{-1}IB = B^{-1}B = I.$$
+
+For the transpose, apply the reversal rule to $AA^{-1} = I$: transposing gives $(A^{-1})^TA^T = I^T = I$, and transposing $A^{-1}A = I$ gives $A^T(A^{-1})^T = I$. So $(A^{-1})^T$ is a two-sided inverse of $A^T$.
+
+For the scalar, $(rA)\big(\tfrac1r A^{-1}\big) = \tfrac{r}{r}AA^{-1} = I$ and similarly on the other side. The general product rule follows by induction on $k$, and $(A^k)^{-1} = (A^{-1})^k$ is the special case $A_1 = \cdots = A_k = A$.
+:::
+
+The reversal in $(AB)^{-1} = B^{-1}A^{-1}$ is not an algebraic accident. To undo "put on socks, then put on shoes", you take off the shoes first. The last operation applied is the first one undone.
+
+:::theorem[Invertibility solves systems]{#inverse-solves}
+If $A$ is an invertible $n\times n$ matrix, then for each $\mathbf{b} \in \mathbb{R}^n$ the equation $A\mathbf{x} = \mathbf{b}$ has the unique solution $\mathbf{x} = A^{-1}\mathbf{b}$.
+:::
+
+:::proof
+*Existence.* Put $\mathbf{x} = A^{-1}\mathbf{b}$. Then $A\mathbf{x} = A(A^{-1}\mathbf{b}) = (AA^{-1})\mathbf{b} = I\mathbf{b} = \mathbf{b}$.
+
+*Uniqueness.* If $A\mathbf{u} = \mathbf{b}$, multiply both sides on the left by $A^{-1}$: $A^{-1}A\mathbf{u} = A^{-1}\mathbf{b}$, so $\mathbf{u} = A^{-1}\mathbf{b}$. Hence any solution equals the one we found.
+:::
+
+Note that "multiply on the left by $A^{-1}$" is the only legal move; multiplying on the right would produce $A\mathbf{u}A^{-1}$, which is not even defined. Because multiplication does not commute, *left* and *right* must be specified every time.
+
+This theorem is a beautiful formula and a poor algorithm. Solving a single $n\times n$ system by row reduction costs about $\tfrac{2}{3}n^3$ operations; computing $A^{-1}$ first costs roughly $2n^3$ and then you still have to multiply. In numerical practice one almost never forms $A^{-1}$ explicitly. The inverse earns its place as a theoretical tool — as a way of writing down and manipulating the solution symbolically — rather than as a computational one.
 
 :::intuition
-The inverse undoes what the matrix does. Rotate $30°$: the inverse rotates $-30°$. Double all lengths: the inverse halves them. A singular matrix flattens space — information is permanently lost and no inverse can recover it.
+A matrix is a machine that transforms space; its inverse is the machine that reverses the transformation. Rotate by $30^\circ$ and the inverse rotates by $-30^\circ$. Stretch every length by $3$ and the inverse shrinks by $3$. But a matrix that flattens the plane onto a line has thrown information away permanently: two different points now sit on top of each other, and no machine can decide which one to send back. That is exactly what "singular" means, and it is why $ad-bc = 0$ — the condition that the two columns lie on one line — is precisely the condition for failure.
 :::
 
-:::example[Inverse of a 2×2 matrix with verification]
-Find $A^{-1}$ for $A = \begin{pmatrix}3&1\\5&2\end{pmatrix}$.
-:::
-
-:::solution
-1. $\det(A) = 6-5 = 1$. Inverse exists.
-2. $A^{-1} = \frac{1}{1}\begin{pmatrix}2&-1\\-5&3\end{pmatrix}$.
-3. Verify: $AA^{-1} = \begin{pmatrix}3&1\\5&2\end{pmatrix}\begin{pmatrix}2&-1\\-5&3\end{pmatrix} = \begin{pmatrix}6-5&-3+3\\10-10&-5+6\end{pmatrix} = \begin{pmatrix}1&0\\0&1\end{pmatrix}$ ✓.
-:::
-
-:::example[Inverse by Gauss-Jordan elimination]
-Invert $A = \begin{pmatrix}1&2\\3&7\end{pmatrix}$ by row-reducing $[A\;|\;I]$ until the left block is $I$.
+:::example[A $2\times2$ inverse, with verification]
+Find $A^{-1}$ for $A = \begin{pmatrix}3&1\\5&2\end{pmatrix}$ and use it to solve $A\mathbf{x} = \begin{pmatrix}4\\7\end{pmatrix}$.
 :::
 
 :::solution
-1. Start: $\left[\begin{array}{cc|cc}1&2&1&0\\3&7&0&1\end{array}\right]$.
-2. Clear the entry below the first pivot: $R_2 \to R_2 - 3R_1$ gives $\left[\begin{array}{cc|cc}1&2&1&0\\0&1&-3&1\end{array}\right]$.
-3. Clear the entry above the second pivot: $R_1 \to R_1 - 2R_2$ gives $\left[\begin{array}{cc|cc}1&0&7&-2\\0&1&-3&1\end{array}\right]$.
-4. The left block is now $I$, so the right block is the inverse: $A^{-1} = \begin{pmatrix}7&-2\\-3&1\end{pmatrix}$.
-5. Sanity check with the determinant formula: $\det(A) = 1\cdot 7 - 2\cdot 3 = 1$, and $\tfrac{1}{1}\begin{pmatrix}7&-2\\-3&1\end{pmatrix}$ matches ✓.
+The determinant is $\Delta = 3\cdot 2 - 1\cdot 5 = 1$, which is nonzero, so the inverse exists:
+
+$$A^{-1} = \frac{1}{1}\begin{pmatrix}2&-1\\-5&3\end{pmatrix} = \begin{pmatrix}2&-1\\-5&3\end{pmatrix}.$$
+
+Verify before using it:
+
+$$AA^{-1} = \begin{pmatrix}3&1\\5&2\end{pmatrix}\begin{pmatrix}2&-1\\-5&3\end{pmatrix} = \begin{pmatrix}6-5 & -3+3\\ 10-10 & -5+6\end{pmatrix} = I.$$
+
+Now $\mathbf{x} = A^{-1}\mathbf{b} = \begin{pmatrix}2\cdot 4 - 1\cdot 7\\ -5\cdot 4 + 3\cdot 7\end{pmatrix} = \begin{pmatrix}1\\1\end{pmatrix}$. Sanity check in the original equation: $A(1,1) = (3+1, 5+2) = (4,7)$.
 :::
 
-## Special matrices {#properties}
+:::example[Solving a matrix equation for an unknown matrix]
+Let $A$ and $B$ be invertible $n\times n$ matrices. Solve $AXB = A + B$ for $X$.
+:::
 
-Symmetric matrices: $A = A^T$. By the Spectral Theorem (Chapter 8), all eigenvalues are real and there exists an orthonormal eigenvector basis. These arise in covariance matrices, Hessians, and physics.
+:::solution
+Strip the factors one at a time, always saying which side you are multiplying on. Multiply on the left by $A^{-1}$:
+
+$$A^{-1}(AXB) = A^{-1}(A+B) \implies XB = A^{-1}(A+B) = I + A^{-1}B.$$
+
+Now multiply on the right by $B^{-1}$:
+
+$$X = (I + A^{-1}B)B^{-1} = B^{-1} + A^{-1}BB^{-1} = B^{-1} + A^{-1}.$$
+
+So $X = A^{-1} + B^{-1}$. Sanity check by substituting back: $A(A^{-1}+B^{-1})B = (I + AB^{-1})B = B + AB^{-1}B = B + A$.
+:::
+
+:::pitfall
+There is no cancellation of a non-invertible factor, and there is no "dividing both sides". From $AX = AY$ you may conclude $X = Y$ *only* after multiplying on the left by $A^{-1}$, which requires $A$ to be invertible. And the expression $\dfrac{B}{A}$ is meaningless: write $A^{-1}B$ or $BA^{-1}$, which are generally different matrices.
+:::
+
+:::pitfall
+$(A+B)^{-1} \neq A^{-1} + B^{-1}$. Take $A = B = I$: the left side is $\tfrac12 I$ and the right side is $2I$. Worse, the sum of two invertible matrices need not be invertible at all — take $B = -A$, giving the zero matrix. There is no useful formula for the inverse of a sum.
+:::
+
+## Elementary matrices and the $[A \mid I]$ algorithm
+
+<!-- section: elementary -->
+
+For matrices larger than $2\times 2$ we need an algorithm, and the right one comes from a beautiful observation: the row operations of the previous chapter are themselves matrix multiplications.
+
+:::definition[Elementary matrix]{#elementary-matrix}
+An **elementary matrix** is a matrix obtained from the identity $I_n$ by performing a single elementary row operation. Correspondingly there are three types:
+
+- **Interchange** $E = P_{ij}$: swap rows $i$ and $j$ of $I$.
+- **Scaling** $E = D_i(c)$ with $c \neq 0$: multiply row $i$ of $I$ by $c$.
+- **Replacement** $E = L_{ij}(k)$: add $k$ times row $j$ of $I$ to row $i$ (with $i \neq j$).
+:::
+
+For $n = 3$, for example,
+
+$$P_{12} = \begin{pmatrix}0&1&0\\1&0&0\\0&0&1\end{pmatrix}, \qquad D_2(5) = \begin{pmatrix}1&0&0\\0&5&0\\0&0&1\end{pmatrix}, \qquad L_{31}(-4) = \begin{pmatrix}1&0&0\\0&1&0\\-4&0&1\end{pmatrix}.$$
+
+:::theorem[Row operations are left multiplications]{#elementary-left-mult}
+Let $E$ be the elementary matrix obtained by performing a row operation on $I_m$. Then for every $m\times n$ matrix $A$, the matrix $EA$ is the result of performing that same row operation on $A$.
+:::
+
+:::proof
+By the row rule, row $i$ of $EA$ equals (row $i$ of $E$) times $A$, which is the linear combination of the rows of $A$ whose coefficients are the entries of row $i$ of $E$. So it is enough to check that row $i$ of $E$ carries the right coefficients, and by construction it does.
+
+Concretely: in $P_{ij}$ row $i$ is $\mathbf{e}_j^T$, so row $i$ of $P_{ij}A$ is row $j$ of $A$, and symmetrically — the two rows are swapped, all other rows of $P_{ij}$ being unchanged rows of $I$ and therefore reproducing the corresponding rows of $A$. In $D_i(c)$ row $i$ is $c\,\mathbf{e}_i^T$, so row $i$ of $D_i(c)A$ is $c$ times row $i$ of $A$. In $L_{ij}(k)$ row $i$ is $\mathbf{e}_i^T + k\,\mathbf{e}_j^T$, so row $i$ of $L_{ij}(k)A$ is (row $i$ of $A$) $+\;k\,$(row $j$ of $A$). In all three cases the other rows are untouched.
+:::
+
+So row reduction is nothing but repeated left multiplication. If $A$ is reduced to $R$ by the operations corresponding to $E_1, E_2, \ldots, E_p$ in that order, then
+
+$$R = E_p \cdots E_2 E_1 A.$$
+
+Note the order: the *first* operation performed sits *closest* to $A$.
+
+:::proposition[Elementary matrices are invertible]{#elementary-invertible}
+Every elementary matrix is invertible, and its inverse is the elementary matrix of the same type that undoes the operation:
+
+$$P_{ij}^{-1} = P_{ij}, \qquad D_i(c)^{-1} = D_i(1/c), \qquad L_{ij}(k)^{-1} = L_{ij}(-k).$$
+:::
+
+:::proof
+Each elementary row operation is reversible by an operation of the same type: swapping rows $i$ and $j$ twice restores the original; scaling row $i$ by $c$ and then by $1/c$ restores it (this is where $c\neq0$ is needed); adding $k$ times row $j$ to row $i$ and then adding $-k$ times row $j$ restores it. Let $E$ and $F$ be the elementary matrices of an operation and its reverse. Applying the operation and then its reverse to $I$ gives $FE = F(EI) = I$, by the previous theorem applied twice, and applying them in the other order gives $EF = I$. So $F = E^{-1}$.
+:::
+
+Everything now falls out.
+
+:::theorem[Row equivalence to the identity]{#row-equiv-identity}
+An $n\times n$ matrix $A$ is invertible if and only if $A$ is row equivalent to $I_n$. In that case, the same sequence of row operations that reduces $A$ to $I_n$ transforms $I_n$ into $A^{-1}$.
+:::
+
+:::proof
+($\Leftarrow$) Suppose row operations with elementary matrices $E_1,\ldots,E_p$ reduce $A$ to $I$, so $E_p\cdots E_1 A = I$. Write $M = E_p\cdots E_1$. Each $E_i$ is invertible, so $M$ is invertible as a product of invertible matrices, with $M^{-1} = E_1^{-1}\cdots E_p^{-1}$. From $MA = I$ we get $A = M^{-1}$, and therefore $A$ is invertible with $A^{-1} = M$.
+
+($\Rightarrow$) Suppose $A$ is invertible. Let $R$ be the reduced echelon form of $A$, so $R = MA$ for an invertible $M$ (a product of elementary matrices). Then $R$ is invertible, being a product of invertible matrices. A square reduced echelon matrix that is invertible must be $I$: if it had a row of zeros, say row $i$, then row $i$ of $RC$ would be zero for every $C$, so $RC = I$ would be impossible. With no zero rows, an $n\times n$ reduced echelon matrix has $n$ pivots, one in each row, and since pivots move strictly right as you go down, the pivot in row $i$ must be in column $i$. Reduced echelon form then forces every other entry of those columns to be zero, so $R = I$.
+
+For the final claim, $A^{-1} = M = MI$, so applying the same operations to $I$ — that is, forming $MI$ — produces $A^{-1}$.
+:::
+
+That last sentence is the whole justification of the standard algorithm, and it is worth reading twice. Row-reducing $A$ multiplies it on the left by $M$; carrying $I$ along in the same rows multiplies $I$ by the same $M$; and $M$ turns out to be $A^{-1}$.
+
+:::recipe[Inverting a matrix by row reduction]{#gauss-jordan-inverse}
+To compute $A^{-1}$ for an $n\times n$ matrix $A$:
+
+1. Form the $n\times 2n$ augmented matrix $[\,A \mid I\,]$.
+2. Row-reduce the whole thing to reduced echelon form, applying every operation to both blocks.
+3. If the left block becomes $I$, the right block is $A^{-1}$: the reduced matrix is $[\,I \mid A^{-1}\,]$.
+4. If at any point the left block produces a row of zeros, stop: $A$ is singular and has no inverse.
+:::
+
+:::intuition
+Imagine $A$ and $I$ sitting side by side and undergoing identical surgery. Each row operation is a small invertible transformation applied to both. You keep operating until $A$ has been ground down to $I$. Whatever total transformation achieved that is, it must be $A^{-1}$ — and the copy of $I$ riding along has recorded it faithfully, because starting from $I$ and applying a transformation just writes that transformation down.
+:::
+
+:::example[A $3\times3$ inverse by row reduction]
+Find $A^{-1}$ for $A = \begin{pmatrix}1&2&3\\0&1&4\\5&6&0\end{pmatrix}$.
+:::
+
+:::solution
+Augment and reduce:
+
+$$\left[\begin{array}{ccc|ccc}1&2&3&1&0&0\\0&1&4&0&1&0\\5&6&0&0&0&1\end{array}\right]
+\xrightarrow{R_3 - 5R_1}
+\left[\begin{array}{ccc|ccc}1&2&3&1&0&0\\0&1&4&0&1&0\\0&-4&-15&-5&0&1\end{array}\right].$$
+
+Clear the second column below the pivot with $R_3 + 4R_2$:
+
+$$\left[\begin{array}{ccc|ccc}1&2&3&1&0&0\\0&1&4&0&1&0\\0&0&1&-5&4&1\end{array}\right].$$
+
+The left block is now upper triangular with pivots $1,1,1$, so $A$ is invertible. Clear upward: $R_2 - 4R_3$ and $R_1 - 3R_3$ give
+
+$$\left[\begin{array}{ccc|ccc}1&2&0&16&-12&-3\\0&1&0&20&-15&-4\\0&0&1&-5&4&1\end{array}\right],$$
+
+and finally $R_1 - 2R_2$:
+
+$$\left[\begin{array}{ccc|ccc}1&0&0&-24&18&5\\0&1&0&20&-15&-4\\0&0&1&-5&4&1\end{array}\right].$$
+
+Hence
+
+$$A^{-1} = \begin{pmatrix}-24&18&5\\20&-15&-4\\-5&4&1\end{pmatrix}.$$
+
+Sanity check one entry of $AA^{-1}$: row $1$ of $A$ times column $1$ of $A^{-1}$ is $1(-24) + 2(20) + 3(-5) = -24+40-15 = 1$, as required. Row $3$ times column $1$: $5(-24)+6(20)+0 = -120+120 = 0$.
+:::
+
+:::example[Detecting a singular matrix]
+Attempt to invert $A = \begin{pmatrix}1&2\\2&4\end{pmatrix}$ by row reduction.
+:::
+
+:::solution
+$$\left[\begin{array}{cc|cc}1&2&1&0\\2&4&0&1\end{array}\right] \xrightarrow{R_2 - 2R_1} \left[\begin{array}{cc|cc}1&2&1&0\\0&0&-2&1\end{array}\right].$$
+
+The left block has a row of zeros, so it can never be reduced to $I$: the algorithm has stalled, and $A$ is singular. The $2\times 2$ formula agrees, since $ad-bc = 1\cdot4 - 2\cdot2 = 0$. The geometric reason is visible in the columns: $(2,4) = 2(1,2)$, so both columns lie on one line and the map crushes the plane onto that line.
+:::
+
+:::example[Factoring a matrix into elementary matrices]
+Write $A = \begin{pmatrix}1&0\\3&2\end{pmatrix}$ as a product of elementary matrices.
+:::
+
+:::solution
+Reduce $A$ to $I$, recording operations. First $R_2 - 3R_1$, with elementary matrix $E_1 = L_{21}(-3) = \begin{pmatrix}1&0\\-3&1\end{pmatrix}$, gives $\begin{pmatrix}1&0\\0&2\end{pmatrix}$. Then $\tfrac12 R_2$, with $E_2 = D_2(\tfrac12) = \begin{pmatrix}1&0\\0&1/2\end{pmatrix}$, gives $I$.
+
+So $E_2E_1A = I$, hence $A = E_1^{-1}E_2^{-1}$, that is
+
+$$A = \begin{pmatrix}1&0\\3&1\end{pmatrix}\begin{pmatrix}1&0\\0&2\end{pmatrix}.$$
+
+Sanity check: that product is $\begin{pmatrix}1&0\\3&2\end{pmatrix}$. As a by-product, $A^{-1} = E_2E_1 = \begin{pmatrix}1&0\\0&1/2\end{pmatrix}\begin{pmatrix}1&0\\-3&1\end{pmatrix} = \begin{pmatrix}1&0\\-3/2&1/2\end{pmatrix}$.
+:::
+
+:::remark
+Because every invertible matrix is a product of elementary matrices, any theorem you can prove for elementary matrices and that survives taking products is automatically true for all invertible matrices. Chapter 6 uses exactly this trick to prove $\det(AB) = \det(A)\det(B)$.
+:::
+
+:::pitfall
+Row operations correspond to multiplication on the **left**. Multiplying on the right by an elementary matrix performs the analogous *column* operation instead: $AE$ is $A$ with a column operation applied. Mixing the two up silently produces the transpose of what you wanted.
+:::
+
+## The Invertible Matrix Theorem
+
+<!-- section: imt -->
+
+We now have enough machinery to prove the central structural theorem about square matrices. It says that a long list of apparently different conditions — about pivots, about solutions, about columns, about maps — are all the same condition wearing different clothes.
+
+:::theorem[The Invertible Matrix Theorem]{#imt}
+Let $A$ be an $n\times n$ matrix. The following statements are equivalent: either all are true of $A$, or all are false.
+
+- **(a)** $A$ is invertible.
+- **(b)** $A$ is row equivalent to $I_n$.
+- **(c)** $A$ has $n$ pivot positions.
+- **(d)** The equation $A\mathbf{x} = \mathbf{0}$ has only the trivial solution $\mathbf{x} = \mathbf{0}$.
+- **(e)** The columns of $A$ are linearly independent.
+- **(f)** The map $\mathbf{x}\mapsto A\mathbf{x}$ is one-to-one.
+- **(g)** The equation $A\mathbf{x} = \mathbf{b}$ has at least one solution for every $\mathbf{b} \in \mathbb{R}^n$.
+- **(h)** The columns of $A$ span $\mathbb{R}^n$.
+- **(i)** The map $\mathbf{x}\mapsto A\mathbf{x}$ is onto $\mathbb{R}^n$.
+- **(j)** There is an $n\times n$ matrix $C$ with $CA = I_n$ (a left inverse).
+- **(k)** There is an $n\times n$ matrix $D$ with $AD = I_n$ (a right inverse).
+- **(l)** $A^T$ is invertible.
+- **(m)** $\operatorname{rank} A = n$, equivalently the null space of $A$ is $\{\mathbf{0}\}$.
+- **(n)** $\det A \neq 0$.
+:::
+
+:::proof
+We prove the cycle $\text{(a)} \Rightarrow \text{(j)} \Rightarrow \text{(d)} \Rightarrow \text{(c)} \Rightarrow \text{(b)} \Rightarrow \text{(a)}$, and then attach the remaining statements to it.
+
+$\text{(a)}\Rightarrow\text{(j)}$: take $C = A^{-1}$.
+
+$\text{(j)}\Rightarrow\text{(d)}$: if $CA = I$ and $A\mathbf{x} = \mathbf{0}$, then $\mathbf{x} = I\mathbf{x} = (CA)\mathbf{x} = C(A\mathbf{x}) = C\mathbf{0} = \mathbf{0}$.
+
+$\text{(d)}\Rightarrow\text{(c)}$: the solution set of $A\mathbf{x} = \mathbf{0}$ has a free variable for every non-pivot column. If some column of $A$ were not a pivot column there would be a free variable and hence infinitely many solutions, contradicting (d). So all $n$ columns are pivot columns, giving $n$ pivots.
+
+$\text{(c)}\Rightarrow\text{(b)}$: $A$ is $n\times n$ with $n$ pivots, so every row contains a pivot and every column contains a pivot. In reduced echelon form the pivots are $1$s that move strictly right as we move down, so the pivot in row $i$ lies in column $i$; and reduced form makes every other entry of a pivot column zero. Therefore the reduced echelon form of $A$ is $I_n$.
+
+$\text{(b)}\Rightarrow\text{(a)}$: this is the theorem on row equivalence to the identity proved in the previous section — writing $E_p\cdots E_1 A = I$ with each $E_i$ elementary and invertible gives $A = E_1^{-1}\cdots E_p^{-1}$, a product of invertible matrices.
+
+The cycle is closed, so (a), (b), (c), (d) and (j) are equivalent.
+
+Now (e) and (f). Saying the columns $\mathbf{a}_1,\ldots,\mathbf{a}_n$ are linearly independent means the only scalars with $x_1\mathbf{a}_1 + \cdots + x_n\mathbf{a}_n = \mathbf{0}$ are all zero, which is literally statement (d) rewritten with the column picture of $A\mathbf{x}$. And a linear map is one-to-one exactly when its kernel is trivial: if $A\mathbf{u} = A\mathbf{v}$ then $A(\mathbf{u}-\mathbf{v}) = \mathbf{0}$, so (d) forces $\mathbf{u} = \mathbf{v}$; conversely if (d) fails, some $\mathbf{x}\neq\mathbf{0}$ has $A\mathbf{x} = A\mathbf{0}$, so the map is not one-to-one. Hence (d) $\Leftrightarrow$ (e) $\Leftrightarrow$ (f). Statement (m) is the same content once more: $\operatorname{rank} A$ counts pivot columns, so $\operatorname{rank} A = n$ is (c).
+
+Next (g), (h), (i), (k). Statement (h) says every $\mathbf{b}$ is a linear combination of the columns, which by the column picture is (g), and (i) is the same sentence in the language of maps. If (a) holds then $\mathbf{x} = A^{-1}\mathbf{b}$ solves the system, giving (g), and $D = A^{-1}$ gives (k). Conversely assume (k), so $AD = I$. For any $\mathbf{b}$, the vector $\mathbf{x} = D\mathbf{b}$ satisfies $A\mathbf{x} = AD\mathbf{b} = \mathbf{b}$, so (g) holds. And (g) implies (c): if $A$ had fewer than $n$ pivots then some row of its echelon form would be zero, and choosing $\mathbf{b}$ to make that row's augmented entry nonzero gives an inconsistent system. Since (c) is in the cycle, (g), (h), (i) and (k) all join it. In particular, for square matrices a one-sided inverse is automatically two-sided, and $C = D = A^{-1}$ by the uniqueness proof.
+
+For (l): if $A$ is invertible then transposing $AA^{-1} = A^{-1}A = I$ gives $(A^{-1})^TA^T = A^T(A^{-1})^T = I$, so $A^T$ is invertible. Applying that implication to $A^T$ in place of $A$ gives the converse, since $(A^T)^T = A$.
+
+Statement (n) is proved in Chapter 6, where the determinant is defined for all $n$; the bridge is that row operations change $\det$ in controlled, nonzero-preserving ways, so $\det A \neq 0$ if and only if $A$ reduces to $I$, which is (b). For $n = 2$ we proved it directly in the $2\times 2$ inverse formula.
+:::
+
+Two consequences deserve to be singled out.
+
+:::corollary[One-sided inverses suffice]{#one-sided-inverse}
+If $A$ and $B$ are $n\times n$ and $AB = I_n$, then both $A$ and $B$ are invertible, $B = A^{-1}$ and $A = B^{-1}$.
+:::
+
+:::proof
+$AB = I$ is statement (k) for $A$, so $A$ is invertible by the theorem. Multiplying $AB = I$ on the left by $A^{-1}$ gives $B = A^{-1}$, and an inverse is itself invertible.
+:::
+
+This fails without squareness. With $A = \begin{pmatrix}1&0&0\\0&1&0\end{pmatrix}$ and $B = \begin{pmatrix}1&0\\0&1\\0&0\end{pmatrix}$ we have $AB = I_2$, but $BA \neq I_3$ and neither matrix is invertible — they are not square.
+
+:::corollary[Products of invertible matrices]{#product-of-invertibles}
+If $A$ and $B$ are $n\times n$ and $AB$ is invertible, then both $A$ and $B$ are invertible.
+:::
+
+:::proof
+Let $M = (AB)^{-1}$. Then $A(BM) = I$, so $A$ has a right inverse and is invertible by (k). Also $(MA)B = I$, so $B$ has a left inverse and is invertible by (j).
+:::
+
+:::intuition
+Every condition in the list is a way of asking: *does this matrix lose information?* A matrix loses information exactly when some nonzero vector is sent to zero (d), exactly when its columns are redundant (e), exactly when two inputs collide (f), exactly when row reduction runs out of pivots (c). And a matrix that loses nothing must also reach everything: in $n$ dimensions you cannot be injective without being surjective, because the $n$ independent columns have nowhere to live but all of $\mathbb{R}^n$. That last equivalence is special to square matrices and finite dimensions; it is false for maps between spaces of different sizes and false in infinite dimensions.
+:::
+
+:::example[Using the theorem instead of computing]
+Decide whether $A = \begin{pmatrix}1&2&3\\2&4&6\\0&1&5\end{pmatrix}$ is invertible.
+:::
+
+:::solution
+Look at the columns before computing anything. Row $2$ is exactly $2$ times row $1$, so $R_2 - 2R_1$ produces a zero row and the echelon form has at most $2$ pivots. By (c), $A$ is not invertible.
+
+Equivalently, via (d): a zero row in the echelon form of the coefficient matrix means a free variable, so $A\mathbf{x} = \mathbf{0}$ has nontrivial solutions. Indeed one can read one off: solving the reduced system gives, for instance, $\mathbf{x} = (7,-5,1)$, and $A(7,-5,1) = (7-10+3,\;14-20+6,\;0-5+5) = \mathbf{0}$.
+:::
+
+:::example[For which $k$ is the matrix invertible?]
+Find all values of $k$ for which $A = \begin{pmatrix}2&k\\3&6\end{pmatrix}$ fails to be invertible.
+:::
+
+:::solution
+By the $2\times 2$ criterion, $A$ is invertible exactly when $ad - bc \neq 0$, that is when $12 - 3k \neq 0$. So $A$ is singular precisely when $k = 4$, and invertible for every other value of $k$.
+
+Sanity check at $k=4$: the matrix is $\begin{pmatrix}2&4\\3&6\end{pmatrix}$, whose second column is twice the first — dependent columns, so (e) fails, as it must.
+:::
+
+:::example[Deducing invertibility from an algebraic identity]
+Suppose the square matrix $A$ satisfies $A^3 - 2A + 5I = 0$. Show $A$ is invertible and find $A^{-1}$ as a polynomial in $A$.
+:::
+
+:::solution
+Rearrange to isolate the identity:
+
+$$5I = 2A - A^3 = A\big(2I - A^2\big).$$
+
+Divide by $5$:
+
+$$A\cdot \tfrac{1}{5}\big(2I - A^2\big) = I.$$
+
+So $A$ has a right inverse, and by the corollary on one-sided inverses it is invertible with
+
+$$A^{-1} = \tfrac{1}{5}\big(2I - A^2\big) = \tfrac{2}{5}I - \tfrac15 A^2.$$
+
+Sanity check on the other side: $\tfrac15(2I - A^2)A = \tfrac15(2A - A^3) = \tfrac15(5I) = I$, since $2I - A^2$ commutes with $A$ (both are polynomials in $A$).
+:::
+
+:::remark
+The Invertible Matrix Theorem is a *square-matrix* theorem, and every one of its equivalences can fail for rectangular $A$. A $3\times 2$ matrix may have independent columns (injective) yet never be surjective onto $\mathbb{R}^3$; a $2\times 3$ matrix may be surjective yet never injective. The theorem is really the statement that in a fixed finite dimension, "loses nothing" and "reaches everything" are the same condition.
+:::
+
+## Partitioned (block) matrices
+
+<!-- section: block -->
+
+Large matrices in practice are not shapeless grids of numbers; they have structure, and the notation should show it. Partitioning draws horizontal and vertical lines through a matrix and treats the resulting rectangles as entries in their own right.
+
+:::definition[Partitioned matrix]{#partitioned-matrix}
+A **partition** of a matrix $A$ is a division of its rows into consecutive groups and its columns into consecutive groups. Writing $A_{IJ}$ for the submatrix in row-group $I$ and column-group $J$, we display $A$ as a matrix of blocks, for example
+
+$$A = \begin{pmatrix} A_{11} & A_{12} \\ A_{21} & A_{22}\end{pmatrix}.$$
+:::
+
+For instance,
+
+$$\left(\begin{array}{cc|c} 1 & 2 & 5 \\ 3 & 4 & 6 \\ \hline 0 & 0 & 7\end{array}\right) = \begin{pmatrix} A_{11} & A_{12}\\ A_{21} & A_{22}\end{pmatrix}, \quad A_{11} = \begin{pmatrix}1&2\\3&4\end{pmatrix},\ A_{12} = \begin{pmatrix}5\\6\end{pmatrix},\ A_{21} = \begin{pmatrix}0&0\end{pmatrix},\ A_{22} = (7).$$
+
+Sums and scalar multiples of partitioned matrices work blockwise in the obvious way, provided both matrices are partitioned identically. The substantial fact is that multiplication does too.
+
+:::theorem[Block multiplication]{#block-multiplication}
+Let $A$ be $m\times n$ partitioned into blocks and $B$ be $n\times p$ partitioned so that the **column** grouping of $A$ matches the **row** grouping of $B$. Then $AB$ may be computed blockwise by the ordinary row–column rule applied to blocks:
+
+$$(AB)_{IJ} = \sum_{K} A_{IK}B_{KJ}.$$
+:::
+
+:::proof
+Consider first the extreme partition in which $A$ is split into its $n$ columns and $B$ into its $n$ rows. Then the claimed formula reads
+
+$$AB = \sum_{k=1}^{n}\mathbf{a}_k\,\mathbf{b}_k^{\,\text{row}},$$
+
+a sum of $n$ outer products. Check it entrywise: the $(i,j)$ entry of $\mathbf{a}_k\mathbf{b}_k^{\,\text{row}}$ is $A_{ik}B_{kj}$, so the $(i,j)$ entry of the sum is $\sum_k A_{ik}B_{kj} = (AB)_{ij}$. This proves the column–row expansion.
+
+A general conforming partition groups these $n$ terms into consecutive bundles: the bundle $K$ collects the indices $k$ in group $K$, and its contribution to the rows of group $I$ and columns of group $J$ is precisely $A_{IK}B_{KJ}$, again by the entrywise computation above restricted to those rows and columns. Summing the bundles recovers the total, which gives $(AB)_{IJ} = \sum_K A_{IK}B_{KJ}$.
+:::
+
+The conformability hypothesis is exactly the shape rule one level up: for $A_{IK}B_{KJ}$ to be defined, the number of columns in column-group $K$ of $A$ must equal the number of rows in row-group $K$ of $B$. If you partition the two matrices inconsistently, the formula is meaningless — precisely as the ordinary product is undefined when inner dimensions clash.
+
+Two kinds of block structure are common enough to be named. A matrix is **block diagonal** if all off-diagonal blocks are zero, and **block upper triangular** if all blocks below the diagonal are zero. For these, inverses are easy.
+
+:::proposition[Inverse of a block triangular matrix]{#block-triangular-inverse}
+Let $M = \begin{pmatrix} A & B \\ 0 & D\end{pmatrix}$ with $A$ and $D$ square. Then $M$ is invertible if and only if $A$ and $D$ are both invertible, and in that case
+
+$$M^{-1} = \begin{pmatrix} A^{-1} & -A^{-1}BD^{-1} \\ 0 & D^{-1}\end{pmatrix}.$$
+
+In particular, for block diagonal $M = \begin{pmatrix}A&0\\0&D\end{pmatrix}$ we get $M^{-1} = \begin{pmatrix}A^{-1}&0\\0&D^{-1}\end{pmatrix}$.
+:::
+
+:::proof
+Suppose $A$ and $D$ are invertible, and let $N$ denote the displayed matrix. Multiply blockwise:
+
+$$MN = \begin{pmatrix} A & B\\ 0 & D\end{pmatrix}\begin{pmatrix} A^{-1} & -A^{-1}BD^{-1}\\ 0 & D^{-1}\end{pmatrix} = \begin{pmatrix} AA^{-1} & -AA^{-1}BD^{-1} + BD^{-1}\\ 0 & DD^{-1}\end{pmatrix} = \begin{pmatrix}I & 0\\0&I\end{pmatrix},$$
+
+since $-BD^{-1} + BD^{-1} = 0$. A similar computation gives $NM = I$, so $M^{-1} = N$.
+
+Conversely, suppose $M$ is invertible. If $A\mathbf{x} = \mathbf{0}$ then $M\begin{pmatrix}\mathbf{x}\\ \mathbf{0}\end{pmatrix} = \begin{pmatrix}A\mathbf{x}\\ \mathbf{0}\end{pmatrix} = \mathbf{0}$, so $\mathbf{x} = \mathbf{0}$ by the Invertible Matrix Theorem applied to $M$; hence $A$ is invertible, again by the theorem. For $D$: given any $\mathbf{y}$, invertibility of $M$ gives $\begin{pmatrix}\mathbf{u}\\ \mathbf{v}\end{pmatrix}$ with $M\begin{pmatrix}\mathbf{u}\\ \mathbf{v}\end{pmatrix} = \begin{pmatrix}\mathbf{0}\\ \mathbf{y}\end{pmatrix}$, whose lower block reads $D\mathbf{v} = \mathbf{y}$. So the columns of $D$ span, and $D$ is invertible.
+:::
+
+When the lower-left block is not zero, one more idea is needed.
+
+:::definition[Schur complement]{#schur-complement}
+For $M = \begin{pmatrix}A&B\\C&D\end{pmatrix}$ with $A$ square and invertible, the **Schur complement of $A$ in $M$** is
+
+$$M/A = D - CA^{-1}B.$$
+:::
+
+The Schur complement is what block elimination leaves behind. Performing the block row operation "subtract $CA^{-1}$ times the first block row from the second" gives the factorisation
+
+$$\begin{pmatrix}A&B\\C&D\end{pmatrix} = \begin{pmatrix}I&0\\ CA^{-1}&I\end{pmatrix}\begin{pmatrix}A&B\\0&D-CA^{-1}B\end{pmatrix},$$
+
+which you can verify by multiplying the right side out. Since the first factor is block triangular with identity diagonal blocks, it is always invertible, so $M$ is invertible exactly when $A$ and $M/A$ are — a clean criterion, and the standard route to the general block inverse formula. This is Gaussian elimination performed on blocks instead of numbers, and it is how large structured systems are actually solved.
+
+:::intuition
+Blocks let you zoom out. A $1000\times1000$ matrix arising from a network of two weakly connected communities may look like noise entrywise, but as a $2\times2$ array of blocks it reads "two big diagonal blocks, small blocks off the diagonal" — and the algebra respects that reading, because block multiplication obeys the same row–column rule. Nothing new has to be learnt; the entries are simply matrices instead of numbers, with the single caveat that these entries do not commute, so $A_{IK}B_{KJ}$ must be kept in that order.
+:::
+
+:::example[Multiplying in blocks]
+Compute $MN$ where
+
+$$M = \begin{pmatrix}1&0&1&2\\0&1&3&4\\0&0&1&0\\0&0&0&1\end{pmatrix}, \qquad N = \begin{pmatrix}1&0&0&1\\0&1&1&0\\0&0&1&0\\0&0&0&1\end{pmatrix}.$$
+:::
+
+:::solution
+Partition both into $2\times2$ blocks. Then $M = \begin{pmatrix}I&B\\0&I\end{pmatrix}$ with $B = \begin{pmatrix}1&2\\3&4\end{pmatrix}$, and $N = \begin{pmatrix}I&C\\0&I\end{pmatrix}$ with $C = \begin{pmatrix}0&1\\1&0\end{pmatrix}$. Block multiplication gives
+
+$$MN = \begin{pmatrix}I\cdot I + B\cdot 0 & I\cdot C + B\cdot I\\ 0\cdot I + I\cdot 0 & 0\cdot C + I\cdot I\end{pmatrix} = \begin{pmatrix}I & B+C\\ 0 & I\end{pmatrix}.$$
+
+Since $B + C = \begin{pmatrix}1&3\\4&4\end{pmatrix}$,
+
+$$MN = \begin{pmatrix}1&0&1&3\\0&1&4&4\\0&0&1&0\\0&0&0&1\end{pmatrix}.$$
+
+Four block operations replaced sixty-four scalar multiplications. Sanity check the $(2,3)$ entry directly: row $2$ of $M$ is $(0,1,3,4)$, column $3$ of $N$ is $(0,1,1,0)$, and their product is $0+1+3+0 = 4$. Notice also that these matrices commute, since $B + C = C + B$.
+:::
+
+:::example[A block triangular inverse]
+Invert $M = \begin{pmatrix}1&2&1&0\\0&1&1&1\\0&0&2&0\\0&0&0&3\end{pmatrix}$ using the block formula.
+:::
+
+:::solution
+Partition into $2\times2$ blocks: $A = \begin{pmatrix}1&2\\0&1\end{pmatrix}$, $B = \begin{pmatrix}1&0\\1&1\end{pmatrix}$, $D = \begin{pmatrix}2&0\\0&3\end{pmatrix}$, lower-left block zero.
+
+The pieces: $A^{-1} = \begin{pmatrix}1&-2\\0&1\end{pmatrix}$ (determinant $1$, swap-and-negate) and $D^{-1} = \begin{pmatrix}1/2&0\\0&1/3\end{pmatrix}$.
+
+Compute the corner block. First $A^{-1}B = \begin{pmatrix}1&-2\\0&1\end{pmatrix}\begin{pmatrix}1&0\\1&1\end{pmatrix} = \begin{pmatrix}-1&-2\\1&1\end{pmatrix}$, then
+
+$$A^{-1}BD^{-1} = \begin{pmatrix}-1&-2\\1&1\end{pmatrix}\begin{pmatrix}1/2&0\\0&1/3\end{pmatrix} = \begin{pmatrix}-1/2 & -2/3\\ 1/2 & 1/3\end{pmatrix},$$
+
+so $-A^{-1}BD^{-1} = \begin{pmatrix}1/2 & 2/3\\ -1/2 & -1/3\end{pmatrix}$. Assembling,
+
+$$M^{-1} = \begin{pmatrix}1&-2&1/2&2/3\\ 0&1&-1/2&-1/3\\ 0&0&1/2&0\\ 0&0&0&1/3\end{pmatrix}.$$
+
+Sanity check the $(1,3)$ entry of $MM^{-1}$: row $1$ of $M$ is $(1,2,1,0)$, column $3$ of $M^{-1}$ is $(1/2,-1/2,1/2,0)$, and the product is $1/2 - 1 + 1/2 = 0$.
+:::
+
+:::pitfall
+Blocks do not commute, so every block formula must preserve order. It is $-A^{-1}BD^{-1}$, never $-BA^{-1}D^{-1}$ or $-D^{-1}BA^{-1}$. And the block formula $\det\begin{pmatrix}A&B\\C&D\end{pmatrix} = \det(A)\det(D) - \det(B)\det(C)$ is **false** in general — it holds for block *triangular* matrices in the form $\det(A)\det(D)$, and otherwise you need the Schur complement.
+:::
+
+## Special families of matrices
+
+<!-- section: properties -->
+
+Certain shapes of matrix recur so often that they have names, and each name comes with a computational shortcut. This section is the catalogue.
+
+:::definition[Diagonal and triangular]{#diagonal-triangular}
+A square matrix $D$ is **diagonal** if $D_{ij} = 0$ whenever $i \neq j$. It is **upper triangular** if $A_{ij} = 0$ whenever $i > j$ (everything below the diagonal is zero), and **lower triangular** if $A_{ij} = 0$ whenever $i < j$.
+:::
+
+Diagonal matrices are the easiest objects in the subject. If $D = \operatorname{diag}(d_1,\ldots,d_n)$ then
+
+$$D^k = \operatorname{diag}(d_1^k,\ldots,d_n^k), \qquad D^{-1} = \operatorname{diag}(1/d_1,\ldots,1/d_n)\ \text{ when all } d_i \neq 0,$$
+
+and $DA$ scales row $i$ of $A$ by $d_i$ while $AD$ scales column $j$ of $A$ by $d_j$. Much of the rest of linear algebra is an attempt to make a given matrix look diagonal by choosing a clever basis; that is what diagonalisation (Chapter 5) and the spectral theorem (Chapter 8) are for.
+
+Triangular matrices are the next best thing. Products and inverses of upper triangular matrices are upper triangular, and a triangular system is solved directly by back substitution ($U\mathbf{x}=\mathbf{b}$) or forward substitution ($L\mathbf{x}=\mathbf{b}$) at a cost of about $n^2$ operations rather than $n^3$. That is the point of the **LU factorisation** $A = LU$ from the previous chapter: elimination is done once, and then each new right-hand side costs only two cheap triangular solves.
+
+:::proposition[Triangular matrices are closed under products]{#triangular-closed}
+If $A$ and $B$ are $n\times n$ upper triangular, so is $AB$, and $(AB)_{ii} = A_{ii}B_{ii}$.
+:::
+
+:::proof
+Take $i > j$; we must show $(AB)_{ij} = 0$. Now $(AB)_{ij} = \sum_k A_{ik}B_{kj}$. A term can survive only if $A_{ik} \neq 0$, which needs $k \ge i$, and $B_{kj}\neq0$, which needs $k \le j$. Together these force $i \le k \le j$, impossible when $i > j$. So every term vanishes. For the diagonal, take $i = j$: the same inequalities force $k = i$, leaving the single term $A_{ii}B_{ii}$.
+:::
 
 :::definition[Orthogonal matrix]{#orthogonal-matrix}
-A square matrix $Q$ is orthogonal if
+A square matrix $Q$ is **orthogonal** if
 
 $$Q^TQ = I,$$
 
-equivalently if its columns are orthonormal. Then $Q^{-1} = Q^T$.
+equivalently if its columns form an orthonormal set. Then $Q^{-1} = Q^T$.
 :::
 
-Orthogonal matrices have $\det(Q) = \pm 1$: they represent rotations ($\det=+1$) and reflections ($\det=-1$), and the inverse costs nothing but a transpose.
+The equivalence is worth spelling out: the $(i,j)$ entry of $Q^TQ$ is (row $i$ of $Q^T$) times (column $j$ of $Q$), which is $\mathbf{q}_i \cdot \mathbf{q}_j$. So $Q^TQ = I$ says exactly that $\mathbf{q}_i\cdot\mathbf{q}_j = \delta_{ij}$: the columns are unit vectors, mutually perpendicular. And since $Q$ is square, $Q^TQ = I$ already gives $QQ^T = I$ by the one-sided-inverse corollary.
 
-Diagonal matrices: nonzero entries only on the main diagonal. Trivial to invert ($D^{-1}_{ii}=1/D_{ii}$), multiply ($(D_1D_2)_{ii}=(D_1)_{ii}(D_2)_{ii}$), and exponentiate. Diagonalisation is the act of finding a basis in which a matrix looks diagonal.
+Orthogonal matrices are the rigid motions of $\mathbb{R}^n$ fixing the origin: they preserve every length and every angle, because
 
-Upper/lower triangular: all entries below/above the diagonal are zero.
+$$(Q\mathbf{x})\cdot(Q\mathbf{y}) = (Q\mathbf{x})^T(Q\mathbf{y}) = \mathbf{x}^TQ^TQ\mathbf{y} = \mathbf{x}^T\mathbf{y} = \mathbf{x}\cdot\mathbf{y}.$$
 
-:::proposition[Determinant of a triangular matrix]{#triangular-determinant}
-If $A$ is square and triangular (upper or lower), then
+They are also the matrices whose inverse is free — no elimination, just a transpose — which makes them the numerical analyst's favourite object. Rotations have $\det Q = +1$ and reflections $\det Q = -1$.
 
-$$\det(A) = A_{11}A_{22}\cdots A_{nn},$$
-
-the product of its diagonal entries.
+:::definition[Idempotent matrix]{#idempotent-matrix}
+A square matrix $P$ is **idempotent** if $P^2 = P$.
 :::
 
-Systems $L\mathbf{x}=\mathbf{b}$ (lower) are solved by forward substitution; $U\mathbf{x}=\mathbf{b}$ (upper) by back substitution. The LU decomposition writes any invertible matrix as $A=LU$.
+Idempotent matrices are precisely the projections: applying the map a second time changes nothing, because the output is already in the target set. If $P$ is idempotent so is $I - P$, since $(I-P)^2 = I - 2P + P^2 = I - P$; the pair $(P, I-P)$ splits every vector as $\mathbf{x} = P\mathbf{x} + (I-P)\mathbf{x}$ into a part that is fixed and a part that is annihilated.
 
-Skew-symmetric (anti-symmetric) matrices: $A^T = -A$. Because $A_{ii} = -A_{ii}$ forces $A_{ii}=0$, every diagonal entry is zero. These encode rotations and cross products.
+:::proposition[Eigenvalues of an idempotent matrix]{#idempotent-eigenvalues}
+If $P^2 = P$ and $P\mathbf{v} = \lambda\mathbf{v}$ with $\mathbf{v}\neq\mathbf{0}$, then $\lambda \in \{0,1\}$.
+:::
 
-Idempotent matrices: $P^2=P$. Projection matrices are idempotent — projecting twice lands you where you already are, so it gives the same result. Because $\lambda^2 = \lambda$ for any eigenvalue, they have eigenvalues $0$ and $1$ only; hence $\det(P)$ is a product of $0$s and $1$s, and is $0$ unless $P=I$.
+:::proof
+Apply $P$ twice: $P^2\mathbf{v} = P(\lambda\mathbf{v}) = \lambda P \mathbf{v} = \lambda^2\mathbf{v}$. But $P^2 = P$, so $\lambda^2\mathbf{v} = \lambda\mathbf{v}$, that is $(\lambda^2-\lambda)\mathbf{v} = \mathbf{0}$. Since $\mathbf{v}\neq\mathbf{0}$ we get $\lambda^2 = \lambda$, so $\lambda(\lambda-1) = 0$.
+:::
+
+Consequently an idempotent matrix is invertible only if it is the identity: an invertible matrix cannot have $0$ as an eigenvalue, so all eigenvalues are $1$, and $P^2 = P$ multiplied by $P^{-1}$ gives $P = I$ directly.
+
+:::definition[Nilpotent matrix]{#nilpotent-matrix}
+A square matrix $N$ is **nilpotent** if $N^k = 0$ for some positive integer $k$. The least such $k$ is its **index of nilpotency**.
+:::
+
+Nilpotent matrices are the opposite extreme from invertible ones: every strictly triangular matrix (triangular with zero diagonal) is nilpotent, and repeated application eventually destroys everything. They are never invertible for $n\ge1$, since $N^k = 0$ with $N$ invertible would give $0 = (N^{-1})^kN^k = I$. Their one convenient feature is a finite geometric series:
+
+$$(I-N)^{-1} = I + N + N^2 + \cdots + N^{k-1},$$
+
+which you verify by multiplying out and watching the sum telescope to $I - N^k = I$.
+
+:::definition[Permutation matrix]{#permutation-matrix}
+A **permutation matrix** $P$ is a square matrix with exactly one $1$ in each row and each column and zeros elsewhere; equivalently, its columns are the standard basis vectors $\mathbf{e}_1,\ldots,\mathbf{e}_n$ in some order.
+:::
+
+:::proposition[Permutation matrices are orthogonal]{#permutation-orthogonal}
+Every permutation matrix satisfies $P^TP = I$, hence $P^{-1} = P^T$.
+:::
+
+:::proof
+The columns of $P$ are the standard basis vectors in some order, so they are unit vectors and any two distinct ones are orthogonal — $\mathbf{e}_i\cdot\mathbf{e}_j = \delta_{ij}$. Therefore $(P^TP)_{ij} = \mathbf{p}_i\cdot\mathbf{p}_j = \delta_{ij}$, that is $P^TP = I$.
+:::
+
+Multiplying by a permutation matrix permutes: $PA$ reorders the rows of $A$, $AP$ reorders its columns. Products of permutation matrices are permutation matrices, and the interchange elementary matrices $P_{ij}$ are exactly the permutation matrices corresponding to a single swap. They are what the "$P$" in the general factorisation $PA = LU$ records.
 
 :::intuition
-Symmetric matrices are perfectly balanced across their diagonal. Orthogonal matrices are rigid rotations — nothing stretches or shrinks. Diagonal matrices are the simplest: each axis is just scaled independently, with no mixing. These are the building blocks everything else reduces to.
+Each family is a way of being simple. Diagonal: the axes do not interact, so the matrix is really $n$ separate numbers. Triangular: the interaction goes only one way, so you can solve for the unknowns one at a time. Orthogonal: nothing stretches — the shape is rigid, a rotation or a reflection. Idempotent: the map is a shadow, and shadows of shadows are the same shadow. Nilpotent: the map is a conveyor belt that pushes everything one step towards the end and off the edge. Permutation: the map only relabels the axes.
 :::
 
-:::example[Recognizing and using special matrices]
-Is $Q = \begin{pmatrix}0&-1\\1&0\end{pmatrix}$ orthogonal? Check $Q^TQ = I$. Here $Q^T = \begin{pmatrix}0&1\\-1&0\end{pmatrix}$.
+:::example[Identifying a matrix from its defining property]
+For $Q = \begin{pmatrix}0&-1\\1&0\end{pmatrix}$, decide which of the named properties hold.
 :::
 
 :::solution
-1. $Q^TQ = \begin{pmatrix}0&1\\-1&0\end{pmatrix}\begin{pmatrix}0&-1\\1&0\end{pmatrix} = \begin{pmatrix}1&0\\0&1\end{pmatrix} = I$ ✓, so $Q$ is orthogonal and its inverse is free: $Q^{-1} = Q^T$.
-2. Notice $Q^T = -Q$, so $Q$ is also skew-symmetric — its diagonal entries are indeed both $0$, as required.
-3. Now use a diagonal matrix's shortcut. For $D = \begin{pmatrix}2&0\\0&3\end{pmatrix}$, powers act entry-wise on the diagonal: $D^3 = \begin{pmatrix}2^3&0\\0&3^3\end{pmatrix} = \begin{pmatrix}8&0\\0&27\end{pmatrix}$.
-4. Sanity check the diagonal rule against the general one: $(D^3)_{22} = $ (product of diagonal $3$-powers) $= 3\cdot 3\cdot 3 = 27$ ✓.
+Transpose first: $Q^T = \begin{pmatrix}0&1\\-1&0\end{pmatrix}$.
+
+*Orthogonal?* $Q^TQ = \begin{pmatrix}0&1\\-1&0\end{pmatrix}\begin{pmatrix}0&-1\\1&0\end{pmatrix} = \begin{pmatrix}1&0\\0&1\end{pmatrix} = I$. Yes, and $Q^{-1} = Q^T$ free of charge. Geometrically $Q$ is the $90^\circ$ rotation.
+
+*Symmetric?* $Q^T \neq Q$, so no. *Skew-symmetric?* $Q^T = -Q$, so yes — consistent with its zero diagonal.
+
+*Idempotent?* $Q^2 = \begin{pmatrix}-1&0\\0&-1\end{pmatrix} = -I \neq Q$, so no. *Nilpotent?* $Q^4 = (-I)^2 = I \neq 0$, and since $Q$ is invertible it can never be nilpotent.
+
+*Permutation?* No: a permutation matrix has entries $0$ and $1$ only, and $Q$ has a $-1$.
+:::
+
+:::example[A projection matrix]
+Show that $P = \tfrac12\begin{pmatrix}1&1\\1&1\end{pmatrix}$ is idempotent, find $\operatorname{tr}(P)$, and describe what it does.
+:::
+
+:::solution
+Square it:
+
+$$P^2 = \tfrac14\begin{pmatrix}1&1\\1&1\end{pmatrix}\begin{pmatrix}1&1\\1&1\end{pmatrix} = \tfrac14\begin{pmatrix}2&2\\2&2\end{pmatrix} = \tfrac12\begin{pmatrix}1&1\\1&1\end{pmatrix} = P,$$
+
+so $P$ is idempotent. Its trace is $\tfrac12+\tfrac12 = 1$.
+
+To see what it does, apply it: $P(x,y) = \big(\tfrac{x+y}{2}, \tfrac{x+y}{2}\big)$, which always lands on the line $y=x$, and fixes every point already on that line. So $P$ is the orthogonal projection onto the line $y = x$. The trace $1$ is exactly the dimension of the line it projects onto — a general fact about projections.
+:::
+
+:::example[Nilpotency and the geometric series]
+For $N = \begin{pmatrix}0&1&0\\0&0&1\\0&0&0\end{pmatrix}$, find the index of nilpotency and compute $(I-N)^{-1}$.
+:::
+
+:::solution
+Square: $N^2 = \begin{pmatrix}0&0&1\\0&0&0\\0&0&0\end{pmatrix}$, which is nonzero. Cube: $N^3 = N^2N = 0$. So the index is $3$.
+
+Then $(I-N)^{-1} = I + N + N^2$:
+
+$$(I-N)^{-1} = \begin{pmatrix}1&1&1\\0&1&1\\0&0&1\end{pmatrix}.$$
+
+Sanity check: $(I-N)$ is $\begin{pmatrix}1&-1&0\\0&1&-1\\0&0&1\end{pmatrix}$, and multiplying gives row $1$ times column $2$ equal to $1\cdot1 + (-1)(1) + 0 = 0$, row $1$ times column $3$ equal to $1 - 1 + 0 = 0$, and the diagonal entries $1$. So the product is $I$.
+:::
+
+## Three applications
+
+<!-- section: applications -->
+
+Matrix algebra was not invented to be admired. Three short applications show the operations of this chapter doing real work — and each points forward to a later chapter.
+
+The first is computer graphics. A rotation, a scaling and a shear of the plane are all linear maps, so each is a $2\times2$ matrix, and composing them is a matrix product. A *translation* $(x,y)\mapsto(x+h, y+k)$ is not linear — it moves the origin — and so has no $2\times2$ matrix. The fix is a famous trick.
+
+:::definition[Homogeneous coordinates]{#homogeneous-coordinates}
+The point $(x,y)$ of the plane is represented in **homogeneous coordinates** by the vector $(x, y, 1) \in \mathbb{R}^3$. A linear map with matrix $A$ and a translation by $(h,k)$ are then both realised by $3\times3$ matrices acting on these vectors:
+
+$$\begin{pmatrix} a_{11} & a_{12} & h \\ a_{21} & a_{22} & k \\ 0 & 0 & 1\end{pmatrix}\begin{pmatrix}x\\y\\1\end{pmatrix} = \begin{pmatrix} a_{11}x + a_{12}y + h \\ a_{21}x + a_{22}y + k \\ 1\end{pmatrix}.$$
+:::
+
+The bottom row $(0\ 0\ 1)$ keeps the last coordinate equal to $1$, so the representation is preserved and such matrices can be composed freely. That is the entire content of the trick, and it is why every graphics pipeline in existence multiplies $4\times4$ matrices to move three-dimensional objects: an affine map becomes a linear one, one dimension up.
+
+:::example[Rotating about a point that is not the origin]
+Find the $3\times3$ homogeneous matrix that rotates the plane by $90^\circ$ counterclockwise about the point $(2,1)$.
+:::
+
+:::solution
+Decompose the motion into three steps: translate $(2,1)$ to the origin, rotate, translate back. In homogeneous coordinates,
+
+$$T_{-} = \begin{pmatrix}1&0&-2\\0&1&-1\\0&0&1\end{pmatrix}, \qquad R = \begin{pmatrix}0&-1&0\\1&0&0\\0&0&1\end{pmatrix}, \qquad T_{+} = \begin{pmatrix}1&0&2\\0&1&1\\0&0&1\end{pmatrix}.$$
+
+The composite is $M = T_{+}RT_{-}$ — rightmost factor applied first. First
+
+$$RT_{-} = \begin{pmatrix}0&-1&1\\1&0&-2\\0&0&1\end{pmatrix},$$
+
+since, for example, the $(1,3)$ entry is $0(-2)+(-1)(-1)+0(1) = 1$. Then
+
+$$M = T_{+}(RT_{-}) = \begin{pmatrix}0&-1&3\\1&0&-1\\0&0&1\end{pmatrix}.$$
+
+Two sanity checks. The centre must be fixed: $M(2,1,1) = (0 - 1 + 3,\; 2 + 0 - 1,\; 1) = (2,1,1)$. And the point $(3,1)$, one unit to the right of the centre, should land one unit above it: $M(3,1,1) = (0-1+3,\; 3+0-1,\;1) = (2,2,1)$.
+:::
+
+The second application is economics. In Leontief's input–output model an economy has $n$ sectors; producing one unit of output in sector $j$ consumes $c_{ij}$ units from sector $i$. Collecting these into the **consumption matrix** $C$, a production vector $\mathbf{x}$ consumes $C\mathbf{x}$ internally, leaving $\mathbf{x} - C\mathbf{x}$ for outside demand $\mathbf{d}$. The model is therefore
+
+$$\mathbf{x} - C\mathbf{x} = \mathbf{d}, \qquad \text{that is} \qquad (I - C)\mathbf{x} = \mathbf{d}.$$
+
+If $I - C$ is invertible, the production needed to meet any demand is $\mathbf{x} = (I-C)^{-1}\mathbf{d}$ — a single matrix inverse answers the question for *every* demand vector at once, which is exactly what makes the inverse valuable as a theoretical object.
+
+:::example[A two-sector Leontief model]
+An economy has two sectors with consumption matrix $C = \begin{pmatrix}0.2 & 0.3\\ 0.4 & 0.1\end{pmatrix}$. Find the production levels meeting an external demand of $\mathbf{d} = (30, 30)$.
+:::
+
+:::solution
+Form $I - C = \begin{pmatrix}0.8 & -0.3\\ -0.4 & 0.9\end{pmatrix}$, whose determinant is $0.72 - 0.12 = 0.6 \neq 0$, so it is invertible:
+
+$$(I-C)^{-1} = \frac{1}{0.6}\begin{pmatrix}0.9 & 0.3\\ 0.4 & 0.8\end{pmatrix} = \begin{pmatrix}1.5 & 0.5\\ 2/3 & 4/3\end{pmatrix}.$$
+
+Then
+
+$$\mathbf{x} = (I-C)^{-1}\mathbf{d} = \begin{pmatrix}1.5(30) + 0.5(30)\\ \tfrac23(30) + \tfrac43(30)\end{pmatrix} = \begin{pmatrix}60\\ 60\end{pmatrix}.$$
+
+Sanity check directly in the model: $C\mathbf{x} = (0.2(60)+0.3(60),\; 0.4(60)+0.1(60)) = (30, 30)$, and $\mathbf{x} - C\mathbf{x} = (60,60)-(30,30) = (30,30) = \mathbf{d}$. Each sector must produce $60$ units: half is eaten by the economy itself, half reaches the outside world.
+:::
+
+The third application points ahead. A **stochastic matrix** (or Markov transition matrix) is a square matrix with non-negative entries whose columns each sum to $1$; entry $P_{ij}$ is the probability of moving from state $j$ to state $i$ in one step. If $\mathbf{x}_0$ is a probability vector describing the current distribution across states, then
+
+$$\mathbf{x}_1 = P\mathbf{x}_0, \qquad \mathbf{x}_2 = P\mathbf{x}_1 = P^2\mathbf{x}_0, \qquad \mathbf{x}_k = P^k\mathbf{x}_0,$$
+
+so the long-run behaviour of the system is a question about the powers of a matrix.
+
+:::example[A two-state Markov chain]
+A city's residents move between downtown ($1$) and the suburbs ($2$) with transition matrix $P = \begin{pmatrix}0.9 & 0.2\\ 0.1 & 0.8\end{pmatrix}$. Verify that $\mathbf{q} = (2/3, 1/3)$ is a steady state, meaning $P\mathbf{q} = \mathbf{q}$.
+:::
+
+:::solution
+Check that $P$ is stochastic: the columns sum to $0.9+0.1 = 1$ and $0.2+0.8 = 1$. Now multiply:
+
+$$P\mathbf{q} = \begin{pmatrix}0.9\cdot\tfrac23 + 0.2\cdot\tfrac13 \\ 0.1\cdot\tfrac23 + 0.8\cdot\tfrac13\end{pmatrix} = \begin{pmatrix}\tfrac{9}{15} + \tfrac{1}{15} \\ \tfrac{1}{15} + \tfrac{4}{15}\end{pmatrix} = \begin{pmatrix}\tfrac{10}{15} \\ \tfrac{5}{15}\end{pmatrix} = \begin{pmatrix}\tfrac{2}{3} \\ \tfrac{1}{3}\end{pmatrix} = \mathbf{q}.$$
+
+Sanity check that $\mathbf{q}$ is a probability vector: its entries are non-negative and sum to $1$.
+
+Two thirds of the population downtown is a self-sustaining split: the flow out of downtown, $0.1\cdot\tfrac23 = \tfrac{1}{15}$, exactly balances the flow in, $0.2\cdot\tfrac13 = \tfrac{1}{15}$.
+:::
+
+The equation $P\mathbf{q} = \mathbf{q}$ says $\mathbf{q}$ is an eigenvector of $P$ with eigenvalue $1$, which is the subject of Chapter 5. Finding steady states is finding eigenvectors; the matrix algebra of this chapter is what makes the question askable.
+
+:::summary
+The operations of this chapter and what they cost. Addition and scalar multiplication act entrywise and require matching shapes. The product $AB$ requires the inner dimensions to agree, costs $mnp$ multiplications, is associative and distributive but not commutative, and represents composition of maps. Transposition reverses products, $(AB)^T = B^TA^T$, and fixes the trace. The trace is linear and cyclic, $\operatorname{tr}(AB) = \operatorname{tr}(BA)$, hence invariant under similarity. The inverse exists only for square matrices, is unique when it exists, reverses products, $(AB)^{-1}=B^{-1}A^{-1}$, and is computed by row-reducing $[A\mid I]$ — which works because row reduction is left multiplication by elementary matrices. The Invertible Matrix Theorem collects fourteen equivalent ways of saying that a square matrix loses no information.
 :::
 
 ## Common Mistakes
 
-- Assuming $AB = BA$. Matrix multiplication is almost never commutative. Even $2\times 2$ matrices fail this.
-- Multiplying matrices with incompatible dimensions. An $m\times n$ matrix can only right-multiply an $n\times p$ matrix.
-- Computing the inverse when $\det(A)=0$. Singular matrices have no inverse. The $2\times 2$ formula gives division by zero.
-- Confusing the transpose with the inverse. $A^T \neq A^{-1}$ unless $A$ is orthogonal.
-- Forgetting that $(AB)^{-1} = B^{-1}A^{-1}$ and $(AB)^T = B^TA^T$ — both reverse the order.
+- **Assuming $AB = BA$.** Matrix multiplication is almost never commutative. This propagates: $(A+B)^2 \neq A^2 + 2AB + B^2$ and $(AB)^2 \neq A^2B^2$ unless $A$ and $B$ commute.
+- **Mismatching dimensions.** $A$ of size $m\times n$ can only multiply $B$ on the left if $B$ has $n$ rows. Check shapes before computing anything; most "impossible" answers are shape errors.
+- **Reading $A_{ij}$ backwards.** Row index first, always. An off-by-one transposition error can survive for pages before it contradicts anything.
+- **Cancelling a non-invertible factor.** $AB = AC$ gives $B = C$ only after multiplying on the left by $A^{-1}$, which needs $A$ invertible. Likewise $AB = 0$ does not force $A = 0$ or $B = 0$.
+- **Forgetting that inverses and transposes reverse order.** $(AB)^{-1} = B^{-1}A^{-1}$ and $(AB)^T = B^TA^T$. Writing $A^{-1}B^{-1}$ is the single most common algebra error in this chapter.
+- **Writing $(A+B)^{-1} = A^{-1}+B^{-1}$.** False, and there is no repair: the sum of two invertible matrices need not be invertible at all.
+- **Multiplying on the wrong side.** From $AX = B$ you get $X = A^{-1}B$, never $BA^{-1}$. Say "left" or "right" out loud each time.
+- **Applying row operations on the right.** Left multiplication by an elementary matrix does a row operation; right multiplication does a column operation.
+- **Using the $2\times2$ inverse formula when $ad-bc = 0$.** There is no inverse; the formula divides by zero and the matrix is singular.
+- **Expecting a one-sided inverse to be enough for non-square matrices.** For square matrices $AB = I$ implies $BA = I$; for rectangular ones it does not, and neither matrix is invertible.
+- **Treating blocks as if they commuted.** Block formulas must preserve the order of the factors, and $\det\begin{pmatrix}A&B\\C&D\end{pmatrix}$ is not $\det A\det D - \det B \det C$.
+- **Confusing the transpose with the inverse.** $A^T = A^{-1}$ only when $A$ is orthogonal.

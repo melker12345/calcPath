@@ -4,183 +4,1040 @@ title: Determinants
 
 # Determinants
 
-The determinant is a single number that encodes the most essential properties of a square matrix: whether it is invertible, how it scales volumes, and whether it preserves or reverses orientation. Despite appearing as an arcane formula, it has deep geometric meaning.
+To every square matrix the determinant attaches a single number, and that number answers a surprising number of questions at once. Is the matrix invertible? By what factor does the associated linear map stretch volume? Does it preserve orientation or flip it? What are the roots of the characteristic polynomial? All of these are read off from one scalar.
 
-The central fact: $A$ is invertible if and only if $\det(A)\neq 0$. A zero determinant means the matrix collapses space to a lower dimension — information is permanently lost and the transformation cannot be undone.
+The central fact, which the chapter proves twice from different directions, is this: $A$ is invertible exactly when $\det(A)\neq 0$. A zero determinant means the matrix flattens space into a lower-dimensional subspace, and flattening is irreversible — once a direction has been crushed to zero, nothing can bring it back.
 
-We compute determinants by cofactor expansion, exploit transformation properties to simplify calculations, and connect the result to Cramer's Rule and geometry.
+There is an honest difficulty in this subject, and the older treatment of this chapter fell into it. It is tempting to *define* the determinant by cofactor expansion along the first row and then announce that expansion along any other row gives the same answer. That announcement is not a small one; it is a theorem, and it cannot be proved from a definition that privileges one row. So we start elsewhere. We first ask what properties a "signed volume" function must have, show those properties force a unique formula, write that formula down explicitly (the permutation or Leibniz definition), and only then derive cofactor expansion — along every row and every column at once — as a consequence. Everything afterwards, from the product rule to Cramer's rule to the volume interpretation, follows from the same small base.
 
-## Cofactor expansion {#cofactor}
+The chapter runs in that order: the characterising properties, the permutation definition, cofactor expansion, the behaviour under row operations, computation by elimination, the adjugate and the inverse formula, Cramer's rule, two families of determinants worth knowing by sight, and finally geometry.
 
-:::definition[Determinant of a 2×2 matrix]{#det-2x2}
-$$\det\begin{pmatrix}a&b\\c&d\end{pmatrix} = ad-bc,$$
+## What a determinant has to be
 
-the main diagonal product minus the anti-diagonal product.
+<!-- section: axioms -->
+
+Before writing a formula, decide what the formula must do. Think of an $n\times n$ matrix as a list of its $n$ rows, each a vector in $\mathbb{R}^n$, and think of the number we want as the signed volume of the box those rows span. Three demands then present themselves, and they turn out to be enough.
+
+:::definition[Multilinear, alternating, normalised]{#det-axioms}
+Let $D$ assign a real number $D(\mathbf{a}_1,\dots,\mathbf{a}_n)$ to each list of $n$ vectors in $\mathbb{R}^n$, thought of as the rows of a matrix. We call $D$
+
+1. **multilinear** if it is linear in each row separately, the others held fixed: for every index $i$, every scalar $c$ and all vectors,
+
+$$D(\dots,\mathbf{u}+c\,\mathbf{v},\dots) = D(\dots,\mathbf{u},\dots) + c\,D(\dots,\mathbf{v},\dots);$$
+
+2. **alternating** if $D=0$ whenever two of the rows are equal;
+3. **normalised** if $D(\mathbf{e}_1,\dots,\mathbf{e}_n)=1$, that is, $D(I)=1$.
 :::
 
-:::definition[Cofactor expansion]{#cofactor-expansion}
-For an $n\times n$ matrix $A$ and any fixed row $i$,
+Each demand encodes something about volume. Multilinearity says that doubling one edge of a box doubles its volume, and that a box built on an edge $\mathbf{u}+\mathbf{v}$ can be cut into the box on $\mathbf{u}$ and the box on $\mathbf{v}$. Alternating says a box two of whose edges coincide is flat, hence has volume zero. Normalisation fixes the unit: the unit cube has volume one, so that we are measuring in the usual units rather than in some rescaled copy of them.
 
-$$\det(A) = \sum_{j=1}^{n}(-1)^{i+j}\,a_{ij}\,M_{ij},$$
+The word "alternating" is used because of the following consequence, which is where the *signs* in every determinant formula come from.
 
-where the $(i,j)$ minor $M_{ij}$ is the determinant of the $(n-1)\times(n-1)$ submatrix obtained by deleting row $i$ and column $j$. The same formula works along any column.
+:::lemma[Alternating forces antisymmetry]{#alternating-swap}
+If $D$ is multilinear and alternating, then swapping two rows multiplies $D$ by $-1$.
 :::
 
-The factor $(-1)^{i+j}$ is the cofactor sign, and it creates a checkerboard starting with $+$ at $(1,1)$: $\begin{pmatrix}+&-&+\\-&+&-\\+&-&+\end{pmatrix}$. Since the expansion is valid along *any* row or column, always pick the one with the most zeros to minimise computation.
+:::proof
+Suppose rows $i$ and $j$ are involved, $i\neq j$, and put the vector $\mathbf{u}+\mathbf{v}$ in both slots, all other rows fixed. Since two rows agree, the alternating property gives
 
-:::proposition[Determinant of a triangular matrix]{#triangular-determinant}
-If $A$ is square and triangular (upper or lower), then $\det(A)$ is the product of its diagonal entries.
+$$D(\dots,\mathbf{u}+\mathbf{v},\dots,\mathbf{u}+\mathbf{v},\dots)=0.$$
+
+Expand the left side by multilinearity in slot $i$ and then in slot $j$:
+
+$$D(\mathbf{u},\mathbf{u}) + D(\mathbf{u},\mathbf{v}) + D(\mathbf{v},\mathbf{u}) + D(\mathbf{v},\mathbf{v}) = 0,$$
+
+where only slots $i$ and $j$ are displayed. The first and last terms vanish, again because two rows agree. Hence $D(\mathbf{u},\mathbf{v}) = -D(\mathbf{v},\mathbf{u})$, which is the claim.
 :::
 
-Row reducing to triangular form is therefore often faster than cofactor expansion for large matrices.
+The converse direction holds over $\mathbb{R}$ as well: if swapping any two rows negates $D$, then putting two equal rows in gives $D=-D$, so $2D=0$ and $D=0$. Over fields where $1+1=0$ the two conditions genuinely differ, which is why careful texts take "vanishes on repeated rows" as the definition rather than "changes sign".
+
+One more consequence, small but used constantly, is worth isolating now.
+
+:::corollary[Row replacement is invisible]{#row-replacement-invisible}
+If $D$ is multilinear and alternating, then adding a multiple of one row to a different row leaves $D$ unchanged.
+:::
+
+:::proof
+Add $c\,\mathbf{a}_j$ to row $i$, where $j\neq i$. By linearity in slot $i$,
+
+$$D(\dots,\mathbf{a}_i+c\,\mathbf{a}_j,\dots) = D(\dots,\mathbf{a}_i,\dots) + c\,D(\dots,\mathbf{a}_j,\dots).$$
+
+In the second term rows $i$ and $j$ are both equal to $\mathbf{a}_j$, so it vanishes.
+:::
 
 :::intuition
-The $2\times 2$ determinant is just 'main diagonal product minus off-diagonal product.' For $3\times 3$, you split the problem into three $2\times 2$ problems, alternating signs. Each step peels off one layer of the calculation.
+Picture a parallelogram with base $\mathbf{a}_1$ and second edge $\mathbf{a}_2$. Replacing $\mathbf{a}_2$ by $\mathbf{a}_2+3\mathbf{a}_1$ slides the top edge sideways by three base-lengths. The base is unchanged and the perpendicular height is unchanged, so the area is unchanged — this is the shear that Euclid used to prove the Pythagorean theorem. Corollary "Row replacement is invisible" is that picture in $n$ dimensions, and it is the reason elimination is a legitimate way to compute a determinant.
 :::
 
-:::example[3×3 determinant by cofactor expansion]
-$A = \begin{pmatrix}1&2&3\\0&4&5\\1&0&6\end{pmatrix}$. Expand along row 1 (start with the most zeros, but row 1 works fine here).
+Here is the payoff of setting things up this way: the three demands do not merely constrain $D$, they determine it completely.
+
+:::theorem[Uniqueness of the determinant]{#det-uniqueness}
+There is at most one multilinear, alternating, normalised function $D$ of the rows of an $n\times n$ matrix, and it is necessarily given by
+
+$$D(A)=\sum_{\sigma}\operatorname{sgn}(\sigma)\,a_{1\sigma(1)}a_{2\sigma(2)}\cdots a_{n\sigma(n)},$$
+
+the sum running over all $n!$ rearrangements $\sigma$ of $\{1,\dots,n\}$, with $\operatorname{sgn}(\sigma)=\pm1$ recording whether $\sigma$ is built from an even or an odd number of swaps.
+:::
+
+:::proof
+Write row $i$ in the standard basis, $\mathbf{a}_i=\sum_{j=1}^{n}a_{ij}\mathbf{e}_j$, and expand $D$ by linearity in the first slot, then the second, and so on. After all $n$ expansions,
+
+$$D(A)=\sum_{f}a_{1f(1)}a_{2f(2)}\cdots a_{nf(n)}\;D(\mathbf{e}_{f(1)},\dots,\mathbf{e}_{f(n)}),$$
+
+where $f$ ranges over all $n^n$ functions from $\{1,\dots,n\}$ to itself. If $f$ takes the same value twice, the corresponding list of basis vectors has a repeated row and the $D$-factor is $0$. So only the bijections $\sigma$ survive.
+
+For a bijection $\sigma$, sort the list $\mathbf{e}_{\sigma(1)},\dots,\mathbf{e}_{\sigma(n)}$ back into the order $\mathbf{e}_1,\dots,\mathbf{e}_n$ using swaps. By Lemma "Alternating forces antisymmetry" each swap contributes a factor $-1$, so $D(\mathbf{e}_{\sigma(1)},\dots,\mathbf{e}_{\sigma(n)})=\operatorname{sgn}(\sigma)D(I)=\operatorname{sgn}(\sigma)$ by normalisation. Substituting gives the displayed formula, so $D$ is forced.
+:::
+
+Notice what this proof does and does not deliver. It shows that *if* such a $D$ exists, it is the permutation sum — no freedom at all. It does not yet show that the permutation sum really is multilinear and alternating, and until that is checked we do not know any such $D$ exists. The next section supplies the check, and from then on the two descriptions can be used interchangeably.
+
+:::example[Uniqueness at work on a $2\times 2$ matrix]
+Without assuming any formula, use only multilinearity, the alternating property and $D(I)=1$ to compute $D\begin{pmatrix}a&b\\c&d\end{pmatrix}$.
 :::
 
 :::solution
-1. $\det(A) = 1\cdot\det\begin{pmatrix}4&5\\0&6\end{pmatrix} - 2\cdot\det\begin{pmatrix}0&5\\1&6\end{pmatrix} + 3\cdot\det\begin{pmatrix}0&4\\1&0\end{pmatrix}$.
-2. $= 1(24-0) - 2(0-5) + 3(0-4)$.
-3. $= 24 + 10 - 12 = 22$.
-4. Sanity check: expand instead along column 1 (entries $1,0,1$). Only the two $1$'s contribute: $1\cdot(+1)\det\begin{pmatrix}4&5\\0&6\end{pmatrix} + 1\cdot(-1)^{3+1}\det\begin{pmatrix}2&3\\4&5\end{pmatrix} = 24 + (10-12) = 22$. Same answer from a different expansion. ✓
+Write the rows as $\mathbf{a}_1=a\mathbf{e}_1+b\mathbf{e}_2$ and $\mathbf{a}_2=c\mathbf{e}_1+d\mathbf{e}_2$, then expand in the first slot:
+
+$$D(\mathbf{a}_1,\mathbf{a}_2)=a\,D(\mathbf{e}_1,\mathbf{a}_2)+b\,D(\mathbf{e}_2,\mathbf{a}_2).$$
+
+Expand each of those in the second slot:
+
+$$D(\mathbf{a}_1,\mathbf{a}_2)=ac\,D(\mathbf{e}_1,\mathbf{e}_1)+ad\,D(\mathbf{e}_1,\mathbf{e}_2)+bc\,D(\mathbf{e}_2,\mathbf{e}_1)+bd\,D(\mathbf{e}_2,\mathbf{e}_2).$$
+
+The first and last terms have a repeated row, so they vanish. The second is $ad\cdot 1$. The third is $bc\cdot D(\mathbf{e}_2,\mathbf{e}_1)=-bc$ by Lemma "Alternating forces antisymmetry". Hence
+
+$$D\begin{pmatrix}a&b\\c&d\end{pmatrix}=ad-bc.$$
+
+Sanity check: the rules were never allowed to choose between $ad-bc$ and $bc-ad$, and indeed they did not — normalisation on $I=\begin{pmatrix}1&0\\0&1\end{pmatrix}$ gives $1\cdot1-0\cdot0=1$, not $-1$.
 :::
 
-:::example[Triangular shortcut]
-$B = \begin{pmatrix}2&7&-3\\0&5&1\\0&0&4\end{pmatrix}$ is upper triangular (all entries below the diagonal are $0$).
+:::pitfall
+Multilinearity is linearity in **one row at a time**. It is not linearity in the matrix. From $\det(2A)$ you must scale each of the $n$ rows, giving $2^n\det(A)$, and $\det(A+B)$ has no useful relation to $\det(A)+\det(B)$ at all: take $A=B=I_2$, where $\det(A+B)=4$ while $\det(A)+\det(B)=2$.
+:::
+
+## The permutation definition
+
+<!-- section: permutation -->
+
+The permutation sum is the definition that makes everything else provable, so it is worth setting up its vocabulary properly.
+
+:::definition[Permutation, inversion, sign]{#permutation-sign}
+A **permutation** of $\{1,2,\dots,n\}$ is a bijection $\sigma$ from that set to itself; we write it as the list $\sigma(1)\,\sigma(2)\,\cdots\,\sigma(n)$. The set of all of them is $S_n$, and it has $n!$ members. An **inversion** of $\sigma$ is a pair of positions $i<j$ with $\sigma(i)>\sigma(j)$: a pair that appears out of order. If $\operatorname{inv}(\sigma)$ is the number of inversions, the **sign** of $\sigma$ is
+
+$$\operatorname{sgn}(\sigma)=(-1)^{\operatorname{inv}(\sigma)}.$$
+
+A permutation is **even** when its sign is $+1$ and **odd** when its sign is $-1$.
+:::
+
+So the sign is decided by a purely mechanical count: read the list left to right and tally every pair that is out of order. The list $3\,1\,2$ has inversions $(3,1)$ and $(3,2)$, so $\operatorname{inv}=2$ and the permutation is even. The list $2\,1\,3$ has the single inversion $(2,1)$, so it is odd.
+
+:::lemma[A transposition is odd]{#transposition-odd}
+Swapping two entries of a permutation changes the parity of the inversion count. In particular every transposition is odd, and $\operatorname{sgn}(\tau\sigma)=-\operatorname{sgn}(\sigma)$ for any transposition $\tau$.
+:::
+
+:::proof
+First take an **adjacent** swap, exchanging the entries in positions $k$ and $k+1$. Every pair of positions other than $\{k,k+1\}$ keeps both its entries and their relative order, so its inversion status is untouched. The pair $\{k,k+1\}$ flips from inverted to not, or the reverse. So $\operatorname{inv}$ changes by exactly $\pm1$ and the parity flips.
+
+Now take a general swap of positions $k$ and $k+m$ with $m\ge 1$. Move the entry at position $k$ rightwards by $m$ adjacent swaps until it sits at position $k+m$; the entry originally at $k+m$ has been pushed back to position $k+m-1$, so move it leftwards by $m-1$ adjacent swaps to position $k$. Every other entry has returned to where it started. That is $2m-1$ adjacent swaps, an odd number, so the parity flips.
+:::
+
+Because the sign flips under every swap, $\operatorname{sgn}$ is multiplicative: $\operatorname{sgn}(\sigma\tau)=\operatorname{sgn}(\sigma)\operatorname{sgn}(\tau)$ for all $\sigma,\tau$, since $\tau$ is a product of transpositions and each contributes one sign flip to both sides. This also settles a worry: a permutation can be written as a product of transpositions in many ways, but the *number* of them is always even or always odd, never both.
+
+:::definition[Determinant, permutation form]{#det-leibniz}
+For an $n\times n$ matrix $A=(a_{ij})$,
+
+$$\det(A)=\sum_{\sigma\in S_n}\operatorname{sgn}(\sigma)\,\prod_{i=1}^{n}a_{i\sigma(i)}.$$
+
+Each term picks exactly one entry from every row and exactly one from every column, multiplies them, and attaches the sign of the corresponding permutation.
+:::
+
+Read the formula as a rule for choosing entries. Lay a rook on the board at $(1,\sigma(1))$, another at $(2,\sigma(2))$, and so on: $n$ non-attacking rooks, one per row and one per column. Multiply the $n$ entries they sit on, sign the product by the parity of the arrangement, and add over all $n!$ placements.
+
+For $n=2$ there are two permutations, $1\,2$ (even, giving $+a_{11}a_{22}$) and $2\,1$ (odd, giving $-a_{12}a_{21}$), recovering $ad-bc$. For $n=3$ there are six terms,
+
+$$\det(A)=a_{11}a_{22}a_{33}+a_{12}a_{23}a_{31}+a_{13}a_{21}a_{32}-a_{13}a_{22}a_{31}-a_{11}a_{23}a_{32}-a_{12}a_{21}a_{33},$$
+
+which is the familiar "rule of Sarrus" pattern of three down-right diagonals minus three down-left ones. For $n=4$ there are $24$ terms, for $n=10$ there are $3{,}628{,}800$, and this is why nobody computes a determinant from this formula. Its value is theoretical: every property in the chapter falls out of it in a few lines.
+
+:::pitfall
+Sarrus' diagonal trick is a $3\times 3$ accident. There is no $4\times 4$ version. Attempting to extend the wrap-around diagonals to a $4\times 4$ matrix produces $8$ terms where $24$ are required, and the answer is simply wrong.
+:::
+
+:::theorem[The permutation sum is a determinant]{#leibniz-is-det}
+The function defined by the permutation form is multilinear in the rows, alternating, and equal to $1$ at $I$. Consequently a multilinear alternating normalised function exists, and by Theorem "Uniqueness of the determinant" it is the only one.
+:::
+
+:::proof
+*Multilinear.* Fix a row index $k$. Every term $\operatorname{sgn}(\sigma)\prod_i a_{i\sigma(i)}$ contains exactly one factor from row $k$, namely $a_{k\sigma(k)}$, and the rest of the product does not involve row $k$. A sum of terms each linear in row $k$ is linear in row $k$.
+
+*Normalised.* For $A=I$ the product $\prod_i \delta_{i\sigma(i)}$ is $0$ unless $\sigma(i)=i$ for every $i$. Only the identity permutation survives, it has no inversions, and its product is $1$. So $\det(I)=1$.
+
+*Alternating.* Suppose rows $p$ and $q$ are equal, $p\neq q$, and let $\tau$ be the transposition exchanging $p$ and $q$. Pair each permutation $\sigma$ with $\sigma\tau$; this pairs up all of $S_n$ into $n!/2$ disjoint couples, since $\sigma\tau\neq\sigma$ and $(\sigma\tau)\tau=\sigma$. Within a couple the products agree: $\sigma\tau$ picks the entry $a_{p\sigma(q)}$ from row $p$ and $a_{q\sigma(p)}$ from row $q$, and because rows $p$ and $q$ are identical, $a_{p\sigma(q)}=a_{q\sigma(q)}$ and $a_{q\sigma(p)}=a_{p\sigma(p)}$ — the same two numbers as $\sigma$ used, in the other order. All other factors are untouched. But the signs are opposite by Lemma "A transposition is odd", so the two terms cancel. Summing over all couples gives $0$.
+:::
+
+:::example[Counting inversions and signing a term]
+For $n=4$, find the sign of the permutation $\sigma = 3\,1\,4\,2$, and name the entry-product it contributes to $\det(A)$.
 :::
 
 :::solution
-1. Rather than a full cofactor expansion, use the rule: the determinant is the product of the diagonal entries.
-2. $\det(B) = 2\cdot 5\cdot 4 = 40$.
-3. Why it works: expanding along column 1, only the top-left $2$ survives, and the remaining $2\times 2$ block $\begin{pmatrix}5&1\\0&4\end{pmatrix}$ is again triangular. Each expansion step just peels off the next diagonal entry.
+List the pairs of positions $i<j$ and check which are inverted. Against the leading $3$: the pairs $(3,1)$ and $(3,2)$ are inverted, while $(3,4)$ is not — two inversions. Against the $1$ in position two: $(1,4)$ and $(1,2)$ are both in order — none. Against the $4$ in position three: $(4,2)$ is inverted — one. Total $\operatorname{inv}(\sigma)=3$, so
+
+$$\operatorname{sgn}(\sigma)=(-1)^3=-1.$$
+
+The term it contributes is $-a_{13}a_{21}a_{34}a_{42}$: row $1$ takes column $3$, row $2$ takes column $1$, row $3$ takes column $4$, row $4$ takes column $2$.
+
+Sanity check by decomposing into swaps instead. Starting from $1\,2\,3\,4$, swap positions to reach $3\,1\,4\,2$: exchange the entries $1$ and $3$ to get $3\,2\,1\,4$, then $2$ and $1$ to get $3\,1\,2\,4$, then $2$ and $4$ to get $3\,1\,4\,2$. Three transpositions, an odd number, sign $-1$. ✓
 :::
 
-## Properties of determinants {#properties}
-
-:::proposition[Row operations and the determinant]{#det-row-operations}
-Let $A$ be square.
-
-1. Swapping two rows multiplies $\det(A)$ by $-1$.
-2. Scaling a row by $c$ multiplies $\det(A)$ by $c$.
-3. Adding a scalar multiple of one row to another leaves $\det(A)$ unchanged.
+:::example[A determinant with only two surviving terms]
+Compute $\det\begin{pmatrix}0&0&2\\0&5&0\\3&0&0\end{pmatrix}$ directly from the permutation definition.
 :::
 
-These three rules make row reduction a fast alternative to cofactor expansion.
+:::solution
+A term is nonzero only if every chosen entry is nonzero. Row $1$ forces column $3$, row $2$ forces column $2$, row $3$ forces column $1$, so the only candidate permutation is $\sigma=3\,2\,1$, and there is exactly one surviving term.
 
-:::theorem[Product rule for determinants]{#det-product}
+Its inversions: $(3,2)$, $(3,1)$ and $(2,1)$ are all out of order, so $\operatorname{inv}=3$ and $\operatorname{sgn}(\sigma)=-1$. The product of entries is $2\cdot5\cdot3=30$, so
+
+$$\det = -30.$$
+
+Sanity check: this matrix is the identity with rows reordered and rescaled. Reversing three rows costs one swap of the outer pair, a factor $-1$, and the diagonal entries $2,5,3$ contribute $30$. ✓
+:::
+
+:::intuition
+Think of the $n!$ terms as the ways to assign $n$ workers (rows) to $n$ distinct jobs (columns), one each. Each assignment has a payoff, the product of the individual entries, and the determinant is the alternating sum of all payoffs. The alternating signs are what make the total collapse to zero exactly when the rows are redundant — when one worker's abilities are a mixture of the others', the assignments cancel in pairs.
+:::
+
+## Cofactor expansion
+
+<!-- section: cofactor -->
+
+Now that a definition is in place we can *prove* the expansion rule, rather than assume it. The idea is to group the $n!$ terms of the permutation sum according to which column a chosen row uses.
+
+:::definition[Minor and cofactor]{#minor-cofactor}
+Let $A$ be $n\times n$ with $n\ge2$. The $(i,j)$ **minor** $M_{ij}$ is the determinant of the $(n-1)\times(n-1)$ matrix obtained by deleting row $i$ and column $j$ from $A$. The $(i,j)$ **cofactor** is
+
+$$C_{ij}=(-1)^{i+j}M_{ij}.$$
+:::
+
+The sign $(-1)^{i+j}$ is easiest to remember as a checkerboard beginning with $+$ in the top-left corner:
+
+$$\begin{pmatrix}+&-&+&\cdots\\-&+&-&\cdots\\+&-&+&\cdots\\\vdots&\vdots&\vdots&\ddots\end{pmatrix}.$$
+
+:::theorem[Laplace expansion along any row or column]{#laplace-expansion}
+Let $A$ be $n\times n$ with $n\ge 2$. For every fixed row index $i$,
+
+$$\det(A)=\sum_{j=1}^{n}a_{ij}C_{ij},$$
+
+and for every fixed column index $j$,
+
+$$\det(A)=\sum_{i=1}^{n}a_{ij}C_{ij}.$$
+
+All $2n$ of these expansions produce the same number.
+:::
+
+:::proof
+We prove the row version; the column version follows from it together with Theorem "Transpose invariance" below, whose own proof does not use this one.
+
+Fix $i$ and split the permutation sum according to the value $j=\sigma(i)$:
+
+$$\det(A)=\sum_{j=1}^{n}a_{ij}\Bigl(\sum_{\sigma:\;\sigma(i)=j}\operatorname{sgn}(\sigma)\prod_{k\neq i}a_{k\sigma(k)}\Bigr).$$
+
+Call the inner bracket $B_{ij}$. It depends only on the entries outside row $i$ and column $j$, since the factors $a_{k\sigma(k)}$ for $k\neq i$ never use row $i$, and never use column $j$ either because $\sigma$ is injective and has already spent column $j$ on row $i$. So $B_{ij}$ is some fixed function of the deleted submatrix.
+
+Identify it. First take $i=n$, $j=n$. Permutations with $\sigma(n)=n$ restrict exactly to permutations of $\{1,\dots,n-1\}$, with the same inversions, so $B_{nn}$ is precisely the permutation sum for the submatrix: $B_{nn}=M_{nn}$, and $(-1)^{n+n}=1$ agrees.
+
+For general $(i,j)$, move row $i$ to the bottom by $n-i$ adjacent row swaps and column $j$ to the right edge by $n-j$ adjacent column swaps. Adjacent swaps preserve the relative order of every other row and column, so the deleted submatrix is unchanged, while each swap negates the determinant — for rows by Lemma "Alternating forces antisymmetry", for columns by the same lemma applied after transposing. The entry $a_{ij}$ now sits at position $(n,n)$, so $B_{ij}=(-1)^{(n-i)+(n-j)}M_{ij}=(-1)^{i+j}M_{ij}=C_{ij}$, using $(-1)^{2n}=1$. Substituting $B_{ij}=C_{ij}$ gives the stated expansion.
+:::
+
+Two things follow immediately and are used more often than the theorem itself. First, the expansion is a licence to be lazy: since *any* row or column works, always pick the one with the most zeros, because every zero entry kills an entire minor before you compute it. Second, the recursion terminates, so cofactor expansion is a genuine algorithm for a $3\times3$ or $4\times4$ matrix done by hand.
+
+:::proposition[Triangular determinants]{#triangular-determinant}
+If $A$ is upper or lower triangular, then $\det(A)=a_{11}a_{22}\cdots a_{nn}$, the product of the diagonal entries. In particular $\det(I)=1$ and a triangular matrix is invertible exactly when no diagonal entry is zero.
+:::
+
+:::proof
+Take $A$ upper triangular, so $a_{ij}=0$ whenever $i>j$, and induct on $n$. For $n=1$ there is nothing to prove. For $n>1$ expand along the first column: every entry below the top is zero, so only the term $a_{11}C_{11}=a_{11}M_{11}$ survives. The submatrix obtained by deleting row $1$ and column $1$ is again upper triangular with diagonal $a_{22},\dots,a_{nn}$, so by the inductive hypothesis $M_{11}=a_{22}\cdots a_{nn}$. Multiplying gives the claim. For lower triangular matrices expand along the first row instead.
+:::
+
+:::intuition
+A $3\times3$ cofactor expansion is a divide-and-conquer step: one $3\times3$ problem becomes three $2\times2$ problems, alternating in sign. That is also its weakness. Each step multiplies the work by roughly $n$, so a $10\times 10$ determinant done this way needs on the order of $10!\approx 3.6$ million multiplications, while the elimination method of a later section needs about $330$. Expansion is for small matrices and for matrices full of zeros.
+:::
+
+:::example[A $3\times3$ determinant, expanded two ways]
+Compute $\det(A)$ for $A=\begin{pmatrix}1&2&3\\0&4&5\\1&0&6\end{pmatrix}$, and check the answer with a second expansion.
+:::
+
+:::solution
+Expand along row $1$:
+
+$$\det(A)=1\cdot\det\begin{pmatrix}4&5\\0&6\end{pmatrix}-2\cdot\det\begin{pmatrix}0&5\\1&6\end{pmatrix}+3\cdot\det\begin{pmatrix}0&4\\1&0\end{pmatrix}.$$
+
+The three $2\times2$ determinants are $24-0=24$, $0-5=-5$ and $0-4=-4$, so
+
+$$\det(A)=1(24)-2(-5)+3(-4)=24+10-12=22.$$
+
+Sanity check by expanding along column $1$, whose entries are $1,0,1$. Only two terms survive, with signs $+$ and $+$ from positions $(1,1)$ and $(3,1)$:
+
+$$\det(A)=1\cdot\det\begin{pmatrix}4&5\\0&6\end{pmatrix}+1\cdot\det\begin{pmatrix}2&3\\4&5\end{pmatrix}=24+(10-12)=22.\;\checkmark$$
+
+Theorem "Laplace expansion along any row or column" guaranteed this agreement in advance.
+:::
+
+:::example[Choosing the cheapest line]
+Compute $\det\begin{pmatrix}2&7&-1&4\\0&3&0&0\\5&1&6&2\\0&-2&0&8\end{pmatrix}$.
+:::
+
+:::solution
+Column $3$ has entries $-1,0,6,0$: two zeros, so only two minors are needed. The checkerboard signs down column $3$ read $+,-,+,-$, so
+
+$$\det(A)=(-1)\det\begin{pmatrix}0&3&0\\5&1&2\\0&-2&8\end{pmatrix}+6\det\begin{pmatrix}2&7&4\\0&3&0\\0&-2&8\end{pmatrix}.$$
+
+The first $3\times3$ has a column of zeros in position $1$ except for the $5$; expand along column $1$, where only the middle entry survives with sign $-$:
+
+$$\det\begin{pmatrix}0&3&0\\5&1&2\\0&-2&8\end{pmatrix}=-5\det\begin{pmatrix}3&0\\-2&8\end{pmatrix}=-5(24)=-120.$$
+
+The second $3\times3$ has first column $2,0,0$; expand along it:
+
+$$\det\begin{pmatrix}2&7&4\\0&3&0\\0&-2&8\end{pmatrix}=2\det\begin{pmatrix}3&0\\-2&8\end{pmatrix}=2(24)=48.$$
+
+Therefore $\det(A)=(-1)(-120)+6(48)=120+288=408$.
+
+Sanity check on the cost: expanding blindly along row $1$ would have required four $3\times3$ minors, each costing three $2\times2$ determinants — twelve of them instead of the three actually used.
+:::
+
+:::example[When zeros are absent, expansion is still fine for $3\times3$]
+Compute $\det\begin{pmatrix}2&-1&3\\1&4&-2\\3&1&5\end{pmatrix}$.
+:::
+
+:::solution
+Expand along row $1$:
+
+$$\det = 2\det\begin{pmatrix}4&-2\\1&5\end{pmatrix}-(-1)\det\begin{pmatrix}1&-2\\3&5\end{pmatrix}+3\det\begin{pmatrix}1&4\\3&1\end{pmatrix}.$$
+
+The minors are $20+2=22$, $5+6=11$ and $1-12=-11$, so
+
+$$\det = 2(22)+1(11)+3(-11)=44+11-33=22.$$
+
+Sanity check by the Sarrus pattern: the down-right products are $2\cdot4\cdot5=40$, $(-1)(-2)(3)=6$ and $3\cdot1\cdot1=3$, summing to $49$; the down-left products are $3\cdot4\cdot3=36$, $2\cdot(-2)\cdot1=-4$ and $(-1)(1)(5)=-5$, summing to $27$. Then $49-27=22$. ✓
+:::
+
+:::pitfall
+The cofactor sign is $(-1)^{i+j}$, attached to the *position*, not to the entry. A negative entry in a $+$ position keeps its own minus sign and gains nothing; a positive entry in a $-$ position gets one. The commonest slip is to expand along row $2$ or column $2$ and start the alternation with $+$ instead of $-$.
+:::
+
+## Properties of determinants
+
+<!-- section: properties -->
+
+Everything in this section is a theorem about the permutation sum, and every one of them has a short proof. These are the facts that make determinants usable.
+
+:::theorem[Transpose invariance]{#det-transpose}
+For every square matrix, $\det(A^{T})=\det(A)$.
+:::
+
+:::proof
+Write $b_{ij}=a_{ji}$ for the entries of $A^{T}$. Then
+
+$$\det(A^{T})=\sum_{\sigma}\operatorname{sgn}(\sigma)\prod_{i=1}^{n}a_{\sigma(i)i}.$$
+
+In each product, relabel the factors by the row index they come from: setting $k=\sigma(i)$, so $i=\sigma^{-1}(k)$, the same $n$ numbers are being multiplied, and
+
+$$\prod_{i}a_{\sigma(i)i}=\prod_{k}a_{k\sigma^{-1}(k)}.$$
+
+Also $\operatorname{sgn}(\sigma^{-1})=\operatorname{sgn}(\sigma)$, because writing $\sigma$ as a product of $m$ transpositions writes $\sigma^{-1}$ as the same transpositions in reverse order, again $m$ of them. Finally, $\sigma\mapsto\sigma^{-1}$ is a bijection of $S_n$ onto itself, so summing over $\sigma$ is the same as summing over $\sigma^{-1}$. Hence
+
+$$\det(A^{T})=\sum_{\sigma}\operatorname{sgn}(\sigma^{-1})\prod_{k}a_{k\sigma^{-1}(k)}=\det(A).$$
+:::
+
+Transpose invariance is a structural statement, not a computational one: it says the determinant does not know the difference between rows and columns. Every theorem about rows therefore has a free column counterpart, and this is the licence used in the proof of Laplace expansion to expand along columns.
+
+:::theorem[Effect of the elementary row operations]{#det-row-operations}
+Let $A$ be square and let $A'$ be obtained from $A$ by one elementary row operation.
+
+1. If $A'$ comes from swapping two rows, then $\det(A')=-\det(A)$.
+2. If $A'$ comes from multiplying one row by $c$, then $\det(A')=c\det(A)$.
+3. If $A'$ comes from adding a multiple of one row to a different row, then $\det(A')=\det(A)$.
+
+The same three statements hold for the corresponding column operations.
+:::
+
+:::proof
+Statement 1 is Lemma "Alternating forces antisymmetry" applied to $\det$, which is alternating by Theorem "The permutation sum is a determinant". Statement 2 is linearity in the scaled row, which is multilinearity. Statement 3 is Corollary "Row replacement is invisible". The column versions follow by transposing, using Theorem "Transpose invariance".
+:::
+
+Each of these has a direct reading in the permutation sum as well. Scaling row $k$ by $c$ multiplies the single factor $a_{k\sigma(k)}$ in every term by $c$, so the whole sum scales by $c$. Swapping rows $p$ and $q$ replaces each $\sigma$ by $\sigma$ composed with the transposition $(p\,q)$, a relabelling of the sum that flips every sign.
+
+:::corollary[Zero determinants by inspection]{#zero-det-tests}
+$\det(A)=0$ whenever $A$ has a zero row, two equal rows, or two proportional rows; and more generally whenever the rows are linearly dependent. The same holds for columns.
+:::
+
+:::proof
+A zero row makes every term of the permutation sum contain a zero factor. Two equal rows give $0$ because $\det$ is alternating. If row $p$ equals $c$ times row $q$ with $c\neq0$, factor out $c$ by statement 2 of Theorem "Effect of the elementary row operations" to reach a matrix with two equal rows. In general, if the rows are dependent then some row is a linear combination of the others; subtract that combination using statement 3, which changes nothing, and the result has a zero row. Columns follow by Theorem "Transpose invariance".
+:::
+
+:::theorem[Scaling the whole matrix]{#det-scalar-multiple}
+For an $n\times n$ matrix $A$ and a scalar $c$, $\det(cA)=c^{n}\det(A)$.
+:::
+
+:::proof
+$cA$ is $A$ with every one of its $n$ rows multiplied by $c$. Apply statement 2 of Theorem "Effect of the elementary row operations" once per row, extracting a factor $c$ each time.
+:::
+
+The next theorem is the deepest one in the chapter, and the route to it goes through elementary matrices. Recall from the chapter on matrix algebra that an elementary matrix $E$ is the result of applying one elementary row operation to $I$, and that $EA$ is $A$ with that operation applied.
+
+:::lemma[Determinants of elementary matrices]{#elementary-det}
+Let $E$ be the elementary matrix for a row operation. Then $\det(E)=-1$ for a swap, $\det(E)=c$ for scaling a row by $c\neq0$, and $\det(E)=1$ for a row replacement. In every case, and for every square $A$ of matching size,
+
+$$\det(EA)=\det(E)\det(A).$$
+:::
+
+:::proof
+For $\det(E)$ itself, apply Theorem "Effect of the elementary row operations" to $A=I$ and use $\det(I)=1$. For the product statement, note that $EA$ is exactly $A$ with the same operation applied, so Theorem "Effect of the elementary row operations" says $\det(EA)$ is $\det(A)$ multiplied by $-1$, by $c$, or by $1$ respectively — which in each case is $\det(E)\det(A)$.
+:::
+
+:::theorem[Singularity criterion]{#det-nonzero-iff-invertible}
+A square matrix $A$ is invertible if and only if $\det(A)\neq0$.
+:::
+
+:::proof
+Row reduce $A$ to its reduced echelon form $R$, so that $R=E_k\cdots E_1A$ for elementary matrices $E_i$. Repeated use of Lemma "Determinants of elementary matrices" gives
+
+$$\det(R)=\det(E_k)\cdots\det(E_1)\det(A),$$
+
+and every $\det(E_i)$ is nonzero. So $\det(A)$ and $\det(R)$ are zero or nonzero together.
+
+Now $R$ is square and in reduced echelon form, so either $R=I$, or $R$ has a row of zeros. If $R=I$ then $\det(R)=1\neq0$ and $A$ is invertible, being a product of invertible elementary matrices inverted. If $R$ has a zero row then $\det(R)=0$ and $R$ is not invertible, hence neither is $A$. The two cases match the two conclusions exactly.
+:::
+
+:::theorem[Multiplicativity]{#det-product}
 For square matrices $A$ and $B$ of the same size,
 
 $$\det(AB)=\det(A)\det(B).$$
 :::
 
-Composition scales volumes multiplicatively. Two consequences follow at once: $\det(A^{-1})=1/\det(A)$ for invertible $A$, and $\det(A^k)=\det(A)^k$.
+:::proof
+Suppose first that $A$ is not invertible. Then $\det(A)=0$ by Theorem "Singularity criterion", and the right side is $0$. Also $AB$ is not invertible: if it had an inverse $C$ then $A(BC)=I$, which for square matrices forces $A$ to be invertible. So $\det(AB)=0$ too, and the identity holds.
 
-Transpose rule: $\det(A^T)=\det(A)$. Rows and columns play symmetric roles in the determinant.
+Now suppose $A$ is invertible. Then $A$ is a product of elementary matrices, $A=E_1E_2\cdots E_k$, because its reduced echelon form is $I$. Apply Lemma "Determinants of elementary matrices" repeatedly, peeling one factor at a time:
 
-Scaling: $\det(cA) = c^n\det(A)$ for an $n\times n$ matrix, because each of the $n$ rows is scaled by $c$.
+$$\det(AB)=\det(E_1\cdots E_kB)=\det(E_1)\det(E_2\cdots E_kB)=\cdots=\det(E_1)\cdots\det(E_k)\det(B).$$
 
-A matrix has $\det=0$ whenever: two rows are equal, a row is all zeros, a row is a linear combination of the others (i.e., the rows are linearly dependent). All of these are equivalent to the columns being linearly dependent.
+The same peeling with $B$ replaced by $I$ gives $\det(A)=\det(E_1)\cdots\det(E_k)$. Substituting yields $\det(AB)=\det(A)\det(B)$.
+:::
+
+:::corollary[Inverses, powers and similarity]{#det-consequences}
+Let $A$ be square.
+
+1. If $A$ is invertible then $\det(A^{-1})=1/\det(A)$.
+2. $\det(A^{k})=\det(A)^{k}$ for every positive integer $k$, and for every integer $k$ when $A$ is invertible.
+3. If $B=P^{-1}AP$ for an invertible $P$, then $\det(B)=\det(A)$: similar matrices have equal determinants.
+:::
+
+:::proof
+For 1, take determinants in $AA^{-1}=I$ to get $\det(A)\det(A^{-1})=1$; since $\det(A)\neq0$ we may divide. Statement 2 is Theorem "Multiplicativity" applied $k-1$ times, extended to negative $k$ by statement 1. For 3,
+
+$$\det(P^{-1}AP)=\det(P^{-1})\det(A)\det(P)=\frac{1}{\det(P)}\det(A)\det(P)=\det(A),$$
+
+the scalars commuting freely.
+:::
+
+Statement 3 is the reason the determinant can be attached to a linear operator and not merely to a matrix. Changing basis replaces the matrix by a similar one, and the determinant does not notice. The same argument shows the trace is basis-independent, and both facts reappear in the chapter on eigenvalues, where the characteristic polynomial $\det(A-\lambda I)$ is shown to be a similarity invariant for exactly this reason.
+
+:::proposition[Orthogonal matrices]{#orthogonal-det}
+If $Q$ is orthogonal, meaning $Q^{T}Q=I$, then $\det(Q)=\pm1$.
+:::
+
+:::proof
+Take determinants: $\det(Q^{T})\det(Q)=\det(I)=1$. By Theorem "Transpose invariance" the left side is $\det(Q)^{2}$, so $\det(Q)^{2}=1$ and $\det(Q)=\pm1$.
+:::
+
+Geometrically this says an orthogonal matrix preserves volume, which is unsurprising since it preserves all lengths and angles. The sign separates the two kinds: $\det(Q)=+1$ for rotations, which preserve orientation, and $\det(Q)=-1$ for reflections and their compositions with rotations, which reverse it.
 
 :::intuition
-Swapping rows is like flipping a shape — same size, opposite orientation, so the sign flips. Scaling a row scales the 'height' of the shape, proportionally scaling the area. Adding a row multiple is a shear — it slides rows without changing area.
+Multiplicativity is the statement that volume scaling factors compose by multiplication. Apply a map that triples volume, then one that halves it, and the composite multiplies volume by $3\cdot\tfrac12=\tfrac32$. Read backwards it also explains the singularity criterion: if $A$ crushes volume to zero, no second map can restore it, so nothing composed with $A$ is the identity.
 :::
 
-:::example[Determinant by row reduction]
-$A = \begin{pmatrix}1&2&3\\2&5&3\\1&0&8\end{pmatrix}$. We reduce to upper triangular using only row-replacement operations, which do **not** change the determinant.
-:::
-
-:::solution
-1. $R_2 \leftarrow R_2 - 2R_1$ gives new row 2 $= (0,\,1,\,-3)$. Determinant unchanged.
-2. $R_3 \leftarrow R_3 - R_1$ gives new row 3 $= (0,\,-2,\,5)$. Determinant unchanged.
-3. $R_3 \leftarrow R_3 + 2R_2$ gives new row 3 $= (0,\,0,\,-1)$. Determinant unchanged. The matrix is now $\begin{pmatrix}1&2&3\\0&1&-3\\0&0&-1\end{pmatrix}$.
-4. Triangular, so $\det(A) = 1\cdot 1\cdot(-1) = -1$.
-5. Sanity check by cofactor expansion along row 1: $1(40-0) - 2(16-3) + 3(0-5) = 40 - 26 - 15 = -1$. ✓ (If we had used a row *swap* or *scaling* here, we would have had to divide out the corresponding factor at the end.)
-:::
-
-:::example[Using the product and inverse rules]
-Suppose $\det(A) = 3$ and $\det(B) = -2$ for two $3\times 3$ matrices. Find $\det(A^2 B^{-1})$.
+:::example[Chaining the rules]
+Let $A$ and $B$ be $4\times4$ with $\det(A)=3$ and $\det(B)=-2$. Compute $\det\bigl(2A^{T}B^{-1}A^{2}\bigr)$.
 :::
 
 :::solution
-1. Product rule: $\det(A^2 B^{-1}) = \det(A)^2\,\det(B^{-1})$.
-2. Inverse rule: $\det(B^{-1}) = 1/\det(B) = 1/(-2) = -\tfrac{1}{2}$ (valid because $\det(B)\neq 0$, so $B$ is invertible).
-3. $\det(A^2 B^{-1}) = 3^2 \cdot (-\tfrac{1}{2}) = 9\cdot(-\tfrac{1}{2}) = -\tfrac{9}{2}$.
+Work outwards. The matrix inside the scalar multiple has determinant
+
+$$\det(A^{T})\det(B^{-1})\det(A)^{2}=3\cdot\left(-\tfrac12\right)\cdot9=-\tfrac{27}{2},$$
+
+using Theorem "Transpose invariance", Corollary "Inverses, powers and similarity" and Theorem "Multiplicativity". Then the factor $2$ multiplies a $4\times4$ matrix, so by Theorem "Scaling the whole matrix" it contributes $2^{4}=16$:
+
+$$\det\bigl(2A^{T}B^{-1}A^{2}\bigr)=16\cdot\left(-\tfrac{27}{2}\right)=-216.$$
+
+Sanity check on the sign: exactly one factor with a negative determinant appears, namely $B^{-1}$, so the answer must be negative. ✓
 :::
 
-## Cramer's Rule {#cramer}
+:::example[A determinant condition on a parameter]
+For which values of $k$ is $A=\begin{pmatrix}k&1&0\\1&k&1\\0&1&k\end{pmatrix}$ singular?
+:::
+
+:::solution
+Expand along row $1$:
+
+$$\det(A)=k\det\begin{pmatrix}k&1\\1&k\end{pmatrix}-1\det\begin{pmatrix}1&1\\0&k\end{pmatrix}=k(k^{2}-1)-k=k^{3}-2k.$$
+
+By Theorem "Singularity criterion", $A$ is singular exactly when $k^{3}-2k=0$, that is $k(k^{2}-2)=0$, giving
+
+$$k=0,\qquad k=\sqrt2,\qquad k=-\sqrt2.$$
+
+Sanity check at $k=0$: the matrix becomes $\begin{pmatrix}0&1&0\\1&0&1\\0&1&0\end{pmatrix}$, whose first and third rows are equal, so its determinant is $0$ by Corollary "Zero determinants by inspection". ✓
+:::
+
+:::example[Determinant of a rank-one perturbation]
+Let $J$ be the $3\times3$ matrix of all ones. Compute $\det(J)$ and $\det(I+J)$.
+:::
+
+:::solution
+All three rows of $J$ are equal, so $\det(J)=0$ by Corollary "Zero determinants by inspection".
+
+For $I+J=\begin{pmatrix}2&1&1\\1&2&1\\1&1&2\end{pmatrix}$, use row operations. Subtract row $3$ from rows $1$ and $2$; by statement 3 of Theorem "Effect of the elementary row operations" the determinant is unchanged:
+
+$$\begin{pmatrix}1&0&-1\\0&1&-1\\1&1&2\end{pmatrix}.$$
+
+Now subtract row $1$ from row $3$, then subtract row $2$ from the new row $3$:
+
+$$\begin{pmatrix}1&0&-1\\0&1&-1\\0&0&4\end{pmatrix}.$$
+
+This is triangular, so $\det(I+J)=1\cdot1\cdot4=4$ by Proposition "Triangular determinants".
+
+Sanity check: the vector $(1,1,1)$ satisfies $(I+J)\mathbf{x}=4\mathbf{x}$, and any vector summing to zero satisfies $(I+J)\mathbf{x}=\mathbf{x}$. So the eigenvalues are $4,1,1$ and their product is $4$. ✓
+:::
+
+:::pitfall
+$\det(A+B)$ is not $\det(A)+\det(B)$, and no amount of multilinearity makes it so. Multilinearity splits a sum in **one row**; $A+B$ changes every row at once. For $2\times2$ matrices the honest expansion has four terms, one for each way of choosing a row from $A$ or from $B$.
+:::
+
+## Computing determinants by row reduction
+
+<!-- section: rowreduction -->
+
+Theorem "Effect of the elementary row operations" together with Proposition "Triangular determinants" gives the method that every piece of software actually uses.
+
+:::recipe[Determinant by elimination]{#det-by-elimination}
+To compute $\det(A)$:
+
+1. Use row replacements to clear out the entries below each pivot, working left to right. These cost nothing.
+2. If a pivot position holds a zero, swap in a lower row that does not, and record a factor $-1$ for each swap.
+3. If you choose to scale a row by $c$ to simplify arithmetic, record a factor $1/c$ to undo it later.
+4. When the matrix is upper triangular, multiply the diagonal entries and then multiply by all the recorded factors.
+5. If a whole row becomes zero at any stage, stop: $\det(A)=0$.
+:::
+
+Step 3 is the one that catches people. Elimination performed to *solve* a system usually normalises pivots to $1$, and that is harmless for solutions but fatal for determinants unless the factors are tracked. The safest discipline when computing a determinant is to use replacements and swaps only, never scaling.
+
+The cost comparison is stark. Clearing column $k$ costs about $(n-k)^2$ multiplications, so the total is about $n^{3}/3$ operations — for $n=20$ that is roughly $2{,}700$. Cofactor expansion on the same matrix needs on the order of $n!$ operations, about $2.4\times10^{18}$. A machine doing a billion operations per second finishes the elimination instantly and would need about $77$ years for the expansion.
+
+:::example[Elimination with replacements only]
+Compute $\det(A)$ for $A=\begin{pmatrix}1&2&3\\2&5&3\\1&0&8\end{pmatrix}$.
+:::
+
+:::solution
+Clear column $1$ with $R_2\leftarrow R_2-2R_1$ and $R_3\leftarrow R_3-R_1$, neither of which changes the determinant:
+
+$$\begin{pmatrix}1&2&3\\0&1&-3\\0&-2&5\end{pmatrix}.$$
+
+Clear column $2$ with $R_3\leftarrow R_3+2R_2$, again free:
+
+$$\begin{pmatrix}1&2&3\\0&1&-3\\0&0&-1\end{pmatrix}.$$
+
+The matrix is upper triangular, so $\det(A)=1\cdot1\cdot(-1)=-1$.
+
+Sanity check by cofactor expansion along row $1$: $1(40-0)-2(16-3)+3(0-5)=40-26-15=-1$. ✓
+:::
+
+:::example[Elimination with a swap]
+Compute $\det(B)$ for $B=\begin{pmatrix}0&2&1\\3&1&4\\1&1&1\end{pmatrix}$.
+:::
+
+:::solution
+The $(1,1)$ entry is zero, so swap rows $1$ and $3$ and record a factor $-1$:
+
+$$B\;\longrightarrow\;\begin{pmatrix}1&1&1\\3&1&4\\0&2&1\end{pmatrix},\qquad \det(B)=-\det\!\begin{pmatrix}1&1&1\\3&1&4\\0&2&1\end{pmatrix}.$$
+
+Now $R_2\leftarrow R_2-3R_1$ gives second row $(0,-2,1)$, and then $R_3\leftarrow R_3+R_2$ gives third row $(0,0,2)$:
+
+$$\begin{pmatrix}1&1&1\\0&-2&1\\0&0&2\end{pmatrix}.$$
+
+The triangular product is $1\cdot(-2)\cdot2=-4$, so $\det(B)=-(-4)=4$.
+
+Sanity check by expanding the original along column $1$, whose entries are $0,3,1$ with signs $+,-,+$:
+
+$$\det(B)=-3\det\begin{pmatrix}2&1\\1&1\end{pmatrix}+1\det\begin{pmatrix}2&1\\1&4\end{pmatrix}=-3(1)+7=4.\;\checkmark$$
+:::
+
+:::example[Spotting dependence mid-elimination]
+Compute $\det\begin{pmatrix}1&2&3\\4&5&6\\7&8&9\end{pmatrix}$.
+:::
+
+:::solution
+Apply $R_2\leftarrow R_2-4R_1$ and $R_3\leftarrow R_3-7R_1$:
+
+$$\begin{pmatrix}1&2&3\\0&-3&-6\\0&-6&-12\end{pmatrix}.$$
+
+Row $3$ is exactly twice row $2$, so $R_3\leftarrow R_3-2R_2$ produces a zero row and the determinant is $0$.
+
+Sanity check without elimination: the columns satisfy $\mathbf{c}_1+\mathbf{c}_3=2\mathbf{c}_2$, a linear dependence, so Corollary "Zero determinants by inspection" applies directly. ✓
+:::
+
+:::pitfall
+Recording the swap factor is not optional, and neither is recording a scaling. A single forgotten swap turns $\det(A)=7$ into $-7$ — a sign error that no amount of arithmetic care downstream will reveal. Write the running factor in the margin as you go.
+:::
+
+:::intuition
+Elimination works because a row replacement is a shear, and shears do not change volume. Every step of the reduction deforms the box spanned by the rows into a new box of exactly the same volume, until the box is axis-aligned and its volume is visibly the product of its side lengths. The swaps are the only steps that touch anything, and all they touch is the sign.
+:::
+
+## The adjugate and the inverse formula
+
+<!-- section: adjugate -->
+
+Laplace expansion says that multiplying the entries of a row by *their own* cofactors and summing gives the determinant. What happens if you multiply them by the cofactors of a *different* row? The answer is the key to an explicit formula for the inverse.
+
+:::lemma[Alien cofactor expansion]{#alien-cofactors}
+If $i\neq k$ then
+
+$$\sum_{j=1}^{n}a_{ij}C_{kj}=0,$$
+
+and likewise $\sum_{i=1}^{n}a_{ij}C_{ik}=0$ for $j\neq k$.
+:::
+
+:::proof
+Let $A'$ be the matrix obtained from $A$ by replacing row $k$ with a copy of row $i$, leaving everything else alone. Since $i\neq k$, the matrix $A'$ has two equal rows, so $\det(A')=0$ by Corollary "Zero determinants by inspection".
+
+Expand $\det(A')$ along row $k$. The cofactors of row $k$ do not involve row $k$ at all — they are determinants of submatrices with row $k$ deleted — and rows other than $k$ are the same in $A'$ as in $A$. So the cofactors of $A'$ along row $k$ are exactly the $C_{kj}$ of $A$, while the entries of row $k$ of $A'$ are the $a_{ij}$. Hence
+
+$$0=\det(A')=\sum_{j=1}^{n}a_{ij}C_{kj},$$
+
+as claimed. The column version follows by transposing.
+:::
+
+:::definition[Cofactor matrix and adjugate]{#adjugate-def}
+The **cofactor matrix** of $A$ is $C=(C_{ij})$, the matrix whose $(i,j)$ entry is the $(i,j)$ cofactor. The **adjugate** (or classical adjoint) is its transpose,
+
+$$\operatorname{adj}(A)=C^{T},\qquad \bigl(\operatorname{adj}A\bigr)_{ij}=C_{ji}.$$
+:::
+
+The transpose in that definition is not decoration; it is what makes the next theorem come out right, and forgetting it is the single most common error in hand computation of an inverse.
+
+:::theorem[The adjugate identity]{#adjugate-identity}
+For every square matrix $A$,
+
+$$A\,\operatorname{adj}(A)=\operatorname{adj}(A)\,A=\det(A)\,I.$$
+
+Consequently, if $\det(A)\neq0$ then
+
+$$A^{-1}=\frac{1}{\det(A)}\operatorname{adj}(A).$$
+:::
+
+:::proof
+Compute the $(i,k)$ entry of $A\operatorname{adj}(A)$:
+
+$$\bigl(A\operatorname{adj}(A)\bigr)_{ik}=\sum_{j=1}^{n}a_{ij}\bigl(\operatorname{adj}A\bigr)_{jk}=\sum_{j=1}^{n}a_{ij}C_{kj}.$$
+
+If $i=k$ this is Laplace expansion along row $i$, hence $\det(A)$. If $i\neq k$ it is $0$ by Lemma "Alien cofactor expansion". So the product is $\det(A)$ on the diagonal and $0$ off it, which is $\det(A)I$. The identity $\operatorname{adj}(A)A=\det(A)I$ is the same computation with columns, using the column form of both expansions. Dividing by the nonzero scalar $\det(A)$ gives the inverse formula.
+:::
+
+For $2\times2$ matrices the formula is the one everyone memorises. The cofactors of $\begin{pmatrix}a&b\\c&d\end{pmatrix}$ are $C_{11}=d$, $C_{12}=-c$, $C_{21}=-b$, $C_{22}=a$, so the cofactor matrix is $\begin{pmatrix}d&-c\\-b&a\end{pmatrix}$ and the adjugate, its transpose, is $\begin{pmatrix}d&-b\\-c&a\end{pmatrix}$ — swap the diagonal, negate the off-diagonal. Hence
+
+$$\begin{pmatrix}a&b\\c&d\end{pmatrix}^{-1}=\frac{1}{ad-bc}\begin{pmatrix}d&-b\\-c&a\end{pmatrix}.$$
+
+The adjugate identity holds even when $A$ is singular, where it says $A\operatorname{adj}(A)=0$. That degenerate case is genuinely useful: it shows every column of $\operatorname{adj}(A)$ lies in the null space of $A$, and one can deduce that $\operatorname{adj}(A)$ has rank $1$ when $A$ has rank $n-1$, and rank $0$ when $A$ has rank below $n-1$.
+
+:::intuition
+Think of $\operatorname{adj}(A)$ as "the inverse before you can afford to divide". Its entries are polynomials in the entries of $A$, with no division anywhere, and the only division in the whole inverse formula is the single final one by $\det(A)$. That is why the formula is the right tool for theoretical work — it makes visible that each entry of $A^{-1}$ is a ratio of two polynomials in the entries of $A$, hence a smooth function of them wherever $\det(A)\neq 0$.
+:::
+
+:::example[The adjugate of a $3\times3$ matrix]
+Let $A=\begin{pmatrix}1&2&3\\0&1&4\\5&6&0\end{pmatrix}$. Compute $\operatorname{adj}(A)$, $\det(A)$ and $A^{-1}$.
+:::
+
+:::solution
+Compute the nine cofactors. Along row $1$:
+
+$$C_{11}=+\det\begin{pmatrix}1&4\\6&0\end{pmatrix}=-24,\quad C_{12}=-\det\begin{pmatrix}0&4\\5&0\end{pmatrix}=20,\quad C_{13}=+\det\begin{pmatrix}0&1\\5&6\end{pmatrix}=-5.$$
+
+Along row $2$:
+
+$$C_{21}=-\det\begin{pmatrix}2&3\\6&0\end{pmatrix}=18,\quad C_{22}=+\det\begin{pmatrix}1&3\\5&0\end{pmatrix}=-15,\quad C_{23}=-\det\begin{pmatrix}1&2\\5&6\end{pmatrix}=4.$$
+
+Along row $3$:
+
+$$C_{31}=+\det\begin{pmatrix}2&3\\1&4\end{pmatrix}=5,\quad C_{32}=-\det\begin{pmatrix}1&3\\0&4\end{pmatrix}=-4,\quad C_{33}=+\det\begin{pmatrix}1&2\\0&1\end{pmatrix}=1.$$
+
+The determinant, by expansion along row $1$, is $1(-24)+2(20)+3(-5)=-24+40-15=1$.
+
+The adjugate is the **transpose** of the cofactor matrix:
+
+$$\operatorname{adj}(A)=\begin{pmatrix}-24&18&5\\20&-15&-4\\-5&4&1\end{pmatrix}.$$
+
+Since $\det(A)=1$, this adjugate *is* the inverse: $A^{-1}=\operatorname{adj}(A)$.
+
+Sanity check on the first row of $A\,A^{-1}$: $1(-24)+2(20)+3(-5)=1$, then $1(18)+2(-15)+3(4)=0$, then $1(5)+2(-4)+3(1)=0$. The row reads $(1,0,0)$ as required. ✓
+:::
+
+:::example[One entry of an inverse, without inverting]
+Let $A=\begin{pmatrix}2&0&1\\3&-1&2\\1&4&0\end{pmatrix}$. Find the $(2,3)$ entry of $A^{-1}$.
+:::
+
+:::solution
+By Theorem "The adjugate identity", $(A^{-1})_{23}=C_{32}/\det(A)$ — note the index reversal, which is the transpose in the adjugate.
+
+The cofactor $C_{32}$ deletes row $3$ and column $2$:
+
+$$C_{32}=(-1)^{3+2}\det\begin{pmatrix}2&1\\3&2\end{pmatrix}=-(4-3)=-1.$$
+
+For the determinant, expand along row $1$:
+
+$$\det(A)=2\det\begin{pmatrix}-1&2\\4&0\end{pmatrix}-0+1\det\begin{pmatrix}3&-1\\1&4\end{pmatrix}=2(-8)+13=-3.$$
+
+Therefore
+
+$$(A^{-1})_{23}=\frac{-1}{-3}=\frac13.$$
+
+Sanity check: the second row of $A^{-1}$ times the third column of $A$ should give $0$, and the third entry of that row times $\dots$ — more directly, solve $A\mathbf{x}=\mathbf{e}_3$ and read off its second component, which is by definition $(A^{-1})_{23}$. Elimination gives $\mathbf{x}=\bigl(-\tfrac13,\tfrac13,\tfrac53\bigr)$, whose second component is $\tfrac13$. ✓
+:::
+
+:::pitfall
+$\operatorname{adj}(A)=C^{T}$, not $C$. The $(i,j)$ entry of the adjugate is $C_{ji}$. Symmetric matrices hide the error, because their cofactor matrices are symmetric too, so test any procedure you have memorised on a non-symmetric example before trusting it.
+:::
+
+## Cramer's Rule
+
+<!-- section: cramer -->
+
+With the adjugate in hand, an explicit formula for the solution of a square system costs two lines.
 
 :::theorem[Cramer's Rule]{#cramers-rule}
-Let $A$ be an $n\times n$ matrix with $\det(A)\neq 0$, so that $A\mathbf{x}=\mathbf{b}$ has a unique solution. Then each component of that solution is
+Let $A$ be $n\times n$ with $\det(A)\neq0$, and let $\mathbf{b}\in\mathbb{R}^{n}$. Write $A_i(\mathbf{b})$ for the matrix $A$ with its $i$-th column replaced by $\mathbf{b}$. Then the unique solution of $A\mathbf{x}=\mathbf{b}$ has components
 
-$$x_i = \frac{\det(A_i)}{\det(A)},$$
-
-where $A_i$ is the matrix $A$ with its $i$-th column replaced by $\mathbf{b}$.
+$$x_i=\frac{\det\bigl(A_i(\mathbf{b})\bigr)}{\det(A)},\qquad i=1,\dots,n.$$
 :::
 
-The hypothesis $\det(A)\neq 0$ is what makes the formula meaningful. If $\det(A)=0$ the rule does not apply — the system has either no solution or infinitely many, and the division by zero signals exactly that failure.
+:::proof
+Since $\det(A)\neq0$, Theorem "Singularity criterion" gives $\mathbf{x}=A^{-1}\mathbf{b}$, and Theorem "The adjugate identity" turns that into
 
-Cramer's Rule is elegant but computationally expensive — computing $n+1$ determinants of $n\times n$ matrices is $O(n!)$ for each determinant via cofactor expansion, far slower than $O(n^3)$ Gaussian elimination.
+$$x_i=\frac{1}{\det(A)}\bigl(\operatorname{adj}(A)\mathbf{b}\bigr)_i=\frac{1}{\det(A)}\sum_{k=1}^{n}C_{ki}b_k.$$
 
-Its primary value is theoretical. The formula shows that solutions are rational functions of the entries of $A$ and $\mathbf{b}$, which is useful in sensitivity analysis and proofs involving matrix calculus (e.g., the derivative of the inverse).
+It remains to recognise that sum. Expand $\det\bigl(A_i(\mathbf{b})\bigr)$ along its $i$-th column, which holds the entries $b_1,\dots,b_n$. The cofactors of that column are computed by deleting column $i$, so they do not see the replacement at all and coincide with the cofactors $C_{ki}$ of $A$. Hence
+
+$$\det\bigl(A_i(\mathbf{b})\bigr)=\sum_{k=1}^{n}b_kC_{ki},$$
+
+which is exactly the sum above. Substituting gives the formula.
+:::
+
+Here is the same idea without the adjugate, in one move that is worth seeing. Let $I_i(\mathbf{x})$ be the identity with its $i$-th column replaced by the solution $\mathbf{x}$. Multiplying block-wise,
+
+$$A\cdot I_i(\mathbf{x})=A_i(\mathbf{b}),$$
+
+because $A$ times the $i$-th column $\mathbf{x}$ is $\mathbf{b}$, and $A$ times $\mathbf{e}_k$ is the $k$-th column of $A$ for the other columns. Taking determinants, $\det(A)\det\bigl(I_i(\mathbf{x})\bigr)=\det\bigl(A_i(\mathbf{b})\bigr)$, and $\det\bigl(I_i(\mathbf{x})\bigr)=x_i$ because that matrix is triangular after ignoring the trivial structure — expanding along any row other than $i$ peels off the ones and leaves $x_i$.
+
+:::remark
+Cramer's rule is a terrible way to compute. Solving an $n\times n$ system needs $n+1$ determinants; done by elimination each costs about $n^{3}/3$ operations, so the total is about $n^{4}/3$ against the $n^{3}/3$ of simply solving the system once. Done by cofactor expansion the cost is $(n+1)!$, which is hopeless past $n=5$ or so. It is also numerically fragile: the separate determinants can each be large while their ratio is tiny, and floating-point cancellation destroys accuracy. Use it for $2\times2$ systems, for symbolic entries, and for proofs — never for numerical work.
+:::
+
+What Cramer's rule is genuinely good for is *structure*. It shows that each $x_i$ is a ratio of polynomials in the entries of $A$ and $\mathbf{b}$, so the solution depends smoothly on the data wherever $\det(A)\neq0$. That fact underlies sensitivity analysis, the implicit function theorem, and the formula for the derivative of a matrix inverse.
 
 :::intuition
-Cramer's Rule gives you each unknown in one formula. It's like having a direct calculator for the answer, without any elimination steps. The problem is the calculator is very slow for big systems. Gaussian elimination is the fast version for practical computation.
+Replacing column $i$ by $\mathbf{b}$ asks: how much of the box's volume is accounted for by the $i$-th ingredient? Since $\mathbf{b}=x_1\mathbf{a}_1+\cdots+x_n\mathbf{a}_n$, swapping $\mathbf{b}$ into slot $i$ and expanding by multilinearity kills every term except $x_i\mathbf{a}_i$ — the others repeat a column already present. So the new volume is $x_i$ times the old one, which is the rule.
 :::
 
-:::example[Cramer's Rule for a 2×2 system]
-Solve $3x+y=7$, $2x+5y=4$ using Cramer's Rule.
+:::example[A $2\times2$ system]
+Solve $3x+y=7$, $2x+5y=4$ by Cramer's rule.
 :::
 
 :::solution
-1. $A=\begin{pmatrix}3&1\\2&5\end{pmatrix}$, $\mathbf{b}=\begin{pmatrix}7\\4\end{pmatrix}$, $\det(A)=15-2=13$.
-2. $x = \det\begin{pmatrix}7&1\\4&5\end{pmatrix}/13 = (35-4)/13 = 31/13$.
-3. $y = \det\begin{pmatrix}3&7\\2&4\end{pmatrix}/13 = (12-14)/13 = -2/13$.
-4. Sanity check by substituting back. Equation 1: $3\cdot\tfrac{31}{13} + \left(-\tfrac{2}{13}\right) = \tfrac{93-2}{13} = \tfrac{91}{13} = 7$. ✓ Equation 2: $2\cdot\tfrac{31}{13} + 5\cdot\left(-\tfrac{2}{13}\right) = \tfrac{62-10}{13} = \tfrac{52}{13} = 4$. ✓
+Here $A=\begin{pmatrix}3&1\\2&5\end{pmatrix}$ and $\mathbf{b}=\begin{pmatrix}7\\4\end{pmatrix}$, so $\det(A)=15-2=13$.
+
+Replace column $1$ by $\mathbf{b}$:
+
+$$x=\frac{1}{13}\det\begin{pmatrix}7&1\\4&5\end{pmatrix}=\frac{35-4}{13}=\frac{31}{13}.$$
+
+Replace column $2$ by $\mathbf{b}$:
+
+$$y=\frac{1}{13}\det\begin{pmatrix}3&7\\2&4\end{pmatrix}=\frac{12-14}{13}=-\frac{2}{13}.$$
+
+Sanity check in both equations: $3\cdot\tfrac{31}{13}-\tfrac{2}{13}=\tfrac{91}{13}=7$ ✓, and $2\cdot\tfrac{31}{13}-\tfrac{10}{13}=\tfrac{52}{13}=4$ ✓.
 :::
 
-## Geometric interpretation {#geometric}
-
-:::theorem[Determinant as area and volume]{#det-volume}
-For a $2\times 2$ matrix $A$,
-
-$$|\det(A)| = \text{area of the parallelogram spanned by the columns of } A,$$
-
-and for a $3\times 3$ matrix it is the volume of the parallelepiped they span.
+:::example[One unknown out of three]
+For the system $x+2y+z=4$, $2x+y+z=5$, $x+y+2z=5$, find $z$ alone.
 :::
 
-If $\det(A)>0$, the transformation preserves orientation (counterclockwise goes to counterclockwise). If $\det(A)<0$, orientation is reversed (a reflection is involved).
+:::solution
+Cramer's rule earns its keep here: one unknown means two determinants, not a full elimination.
 
-If $\det(A)=0$, the columns are linearly dependent and the transformation collapses the full-dimensional space to a lower-dimensional one — it maps $\mathbb{R}^n$ onto a proper subspace.
+$$\det(A)=\det\begin{pmatrix}1&2&1\\2&1&1\\1&1&2\end{pmatrix}.$$
 
-:::proposition[Multilinear and alternating]{#det-multilinear}
-The determinant is multilinear and alternating in the columns: it is linear in each column separately, holding the others fixed, and swapping two columns flips its sign.
+Clear column $1$ with $R_2\leftarrow R_2-2R_1$ and $R_3\leftarrow R_3-R_1$, giving rows $(0,-3,-1)$ and $(0,-1,1)$, then $R_3\leftarrow R_3-\tfrac13R_2$ giving $(0,0,\tfrac43)$. The triangular product is $1\cdot(-3)\cdot\tfrac43=-4$.
+
+Now replace column $3$ by $\mathbf{b}=(4,5,5)$:
+
+$$\det\bigl(A_3(\mathbf{b})\bigr)=\det\begin{pmatrix}1&2&4\\2&1&5\\1&1&5\end{pmatrix}.$$
+
+Expand along row $1$, taking the three minors in turn. Deleting row $1$ and column $1$ leaves $\begin{pmatrix}1&5\\1&5\end{pmatrix}$ with determinant $0$, contributing $+1(0)=0$. Deleting row $1$ and column $2$ leaves $\begin{pmatrix}2&5\\1&5\end{pmatrix}$ with determinant $5$, contributing $-2(5)=-10$. Deleting row $1$ and column $3$ leaves $\begin{pmatrix}2&1\\1&1\end{pmatrix}$ with determinant $1$, contributing $+4(1)=4$. The total is $-6$.
+
+Therefore
+
+$$z=\frac{-6}{-4}=\frac{3}{2}.$$
+
+Sanity check by substituting into the third equation once $x$ and $y$ are known. Solving the first two equations with $z=\tfrac32$ gives $x+2y=\tfrac52$ and $2x+y=\tfrac72$, whence $x=\tfrac{3}{2}$ and $y=\tfrac12$. Then $x+y+2z=\tfrac32+\tfrac12+3=5$ ✓.
 :::
 
-Unpacking that: scaling one column by $c$ scales $\det$ by $c$, and splitting one column into a sum splits the determinant into a sum; "alternating" forces $\det=0$ whenever two columns are equal, since swapping them changes nothing but must flip the sign. The parallelogram area interpretation makes this geometric: scaling a side scales the area; reflecting a side flips orientation.
+:::pitfall
+Cramer's rule replaces a **column**, never a row, and the column replaced is the one matching the unknown you want. Replacing a row gives a number with no meaning. And the rule says nothing at all when $\det(A)=0$: it does not tell you whether the system is inconsistent or has infinitely many solutions, only that it is not uniquely solvable.
+:::
+
+## Block and Vandermonde determinants
+
+<!-- section: special -->
+
+Two families of determinants appear often enough that recognising them saves real work.
+
+:::theorem[Block triangular determinant]{#block-triangular}
+Let $M=\begin{pmatrix}A&B\\0&D\end{pmatrix}$, where $A$ is $p\times p$, $D$ is $q\times q$, and the lower-left block is the $q\times p$ zero matrix. Then
+
+$$\det(M)=\det(A)\det(D).$$
+
+The same holds for $\begin{pmatrix}A&0\\C&D\end{pmatrix}$.
+:::
+
+:::proof
+Fix $D$ and regard $\det(M)$ as a function of the $p$ rows of $\bigl(A\;B\bigr)$. It is multilinear and alternating in those rows, since the full determinant is multilinear and alternating in all rows and we are only varying $p$ of them. Moreover the value does not depend on $B$: in the permutation sum, any $\sigma$ contributing a nonzero term must send the last $q$ rows into the last $q$ columns, because the entries of the zero block are zero and there are $q$ rows to place; those $q$ rows then use up all $q$ of the last columns, forcing the first $p$ rows into the first $p$ columns, which never touches $B$.
+
+So $\det(M)=\phi(A)$ for a multilinear alternating function $\phi$ of the rows of $A$. By the expansion in the proof of Theorem "Uniqueness of the determinant", any such function equals $\det(A)\cdot\phi(I_p)$. And $\phi(I_p)=\det\begin{pmatrix}I_p&B\\0&D\end{pmatrix}$, which after clearing $B$ by row replacements against the identity block is $\det\begin{pmatrix}I_p&0\\0&D\end{pmatrix}=\det(D)$, by expanding along the first $p$ columns one at a time. Hence $\det(M)=\det(A)\det(D)$.
+:::
+
+:::pitfall
+There is no such rule for a general block matrix. For $\begin{pmatrix}A&B\\C&D\end{pmatrix}$ with a nonzero lower-left block, $\det(M)$ is **not** $\det(A)\det(D)-\det(B)\det(C)$. Take
+
+$$M=\begin{pmatrix}1&0&0&0\\0&0&0&1\\0&0&1&0\\0&1&0&0\end{pmatrix},$$
+
+whose four $2\times2$ blocks all have determinant $0$, so the false formula predicts $0$. But $M$ is a permutation matrix for $\sigma=1\,4\,3\,2$, which has three inversions, so $\det(M)=-1$. The correct generalisation, valid when $A$ is invertible, is $\det(M)=\det(A)\det(D-CA^{-1}B)$.
+:::
+
+:::example[A $4\times4$ by blocks]
+Compute $\det\begin{pmatrix}2&1&7&0\\3&4&-2&5\\0&0&1&6\\0&0&2&9\end{pmatrix}$.
+:::
+
+:::solution
+The lower-left $2\times2$ block is zero, so the matrix is block upper triangular with $A=\begin{pmatrix}2&1\\3&4\end{pmatrix}$ and $D=\begin{pmatrix}1&6\\2&9\end{pmatrix}$.
+
+$$\det(A)=8-3=5,\qquad \det(D)=9-12=-3,$$
+
+so by Theorem "Block triangular determinant", $\det(M)=5\cdot(-3)=-15$.
+
+Sanity check: the upper-right block held $7,0,-2,5$, and none of those numbers appeared in the answer, exactly as the theorem promises. ✓
+:::
+
+:::definition[Vandermonde matrix]{#vandermonde-def}
+Given scalars $x_1,\dots,x_n$, the Vandermonde matrix is
+
+$$V=\begin{pmatrix}1&x_1&x_1^{2}&\cdots&x_1^{n-1}\\1&x_2&x_2^{2}&\cdots&x_2^{n-1}\\\vdots&\vdots&\vdots&&\vdots\\1&x_n&x_n^{2}&\cdots&x_n^{n-1}\end{pmatrix}.$$
+:::
+
+:::theorem[Vandermonde determinant]{#vandermonde-det}
+$$\det(V)=\prod_{1\le i<j\le n}(x_j-x_i).$$
+
+In particular $\det(V)\neq0$ exactly when the $x_i$ are distinct.
+:::
+
+:::proof
+Induct on $n$. For $n=2$ the determinant is $x_2-x_1$, matching the single factor.
+
+For the step, fix $x_1,\dots,x_{n-1}$ and let $t$ play the role of $x_n$, so that $\det(V)$ becomes a function $p(t)$. Expanding along the last row shows $p$ is a polynomial in $t$ of degree at most $n-1$, and its coefficient of $t^{n-1}$ is the cofactor of the $(n,n)$ entry, namely the Vandermonde determinant of $x_1,\dots,x_{n-1}$, which by the inductive hypothesis is $\prod_{i<j\le n-1}(x_j-x_i)$.
+
+Now $p(x_k)=0$ for each $k\le n-1$, because setting $t=x_k$ makes the last row equal to row $k$, and Corollary "Zero determinants by inspection" applies. A polynomial of degree at most $n-1$ with the $n-1$ distinct roots $x_1,\dots,x_{n-1}$ and known leading coefficient is determined:
+
+$$p(t)=\Bigl(\prod_{1\le i<j\le n-1}(x_j-x_i)\Bigr)\prod_{k=1}^{n-1}(t-x_k).$$
+
+Setting $t=x_n$ gives exactly $\prod_{1\le i<j\le n}(x_j-x_i)$, completing the induction. (If some $x_i$ coincide, both sides are zero, so the identity holds there too by continuity or by the repeated-row argument.)
+:::
+
+The non-vanishing statement is the reason Vandermonde matrices matter. It says that for $n$ distinct nodes $x_1,\dots,x_n$ the interpolation system has a unique solution: there is exactly one polynomial of degree at most $n-1$ passing through $n$ prescribed values. That single fact underlies polynomial interpolation, Gaussian quadrature and the discrete Fourier transform.
+
+:::example[A $3\times3$ Vandermonde]
+Compute $\det\begin{pmatrix}1&2&4\\1&3&9\\1&5&25\end{pmatrix}$.
+:::
+
+:::solution
+The rows are $1,x,x^{2}$ for $x=2,3,5$, so this is Vandermonde with nodes $x_1=2$, $x_2=3$, $x_3=5$. Theorem "Vandermonde determinant" gives
+
+$$\det=(x_2-x_1)(x_3-x_1)(x_3-x_2)=(3-2)(5-2)(5-3)=1\cdot3\cdot2=6.$$
+
+Sanity check by elimination: subtract row $1$ from rows $2$ and $3$ to get rows $(0,1,5)$ and $(0,3,21)$, then subtract $3$ times the new row $2$ from the new row $3$ to get $(0,0,6)$. The triangular product is $1\cdot1\cdot6=6$. ✓
+:::
+
+:::example[Reading off a repeated node]
+For which values of $a$ is $\begin{pmatrix}1&a&a^{2}\\1&2&4\\1&-1&1\end{pmatrix}$ singular?
+:::
+
+:::solution
+This is Vandermonde with nodes $a$, $2$, $-1$ in that row order, so
+
+$$\det=(2-a)(-1-a)(-1-2)=-3(2-a)(-1-a)=3(2-a)(1+a).$$
+
+It vanishes exactly when $a=2$ or $a=-1$, which is precisely when one node repeats and two rows coincide.
+
+Sanity check at $a=2$: rows $1$ and $2$ both read $(1,2,4)$, so the determinant is zero by Corollary "Zero determinants by inspection". ✓
+:::
 
 :::intuition
-The determinant tells you how much the matrix squishes or stretches space. A value of $3$ means it triples all areas. A value of $0.5$ means it halves them. A negative value means it flips orientation. Zero means it squashes a whole dimension flat — irreversibly.
+Read the Vandermonde formula as a measure of how spread out the nodes are. Every factor $x_j-x_i$ is a gap between two nodes, and the determinant is the product of all the gaps. Nodes that crowd together make the determinant small, the interpolation system nearly singular, and the fitted polynomial wildly sensitive to the data — the reason interpolation at closely spaced points is numerically dangerous.
+:::
+
+## Area, volume and orientation
+
+<!-- section: geometric -->
+
+The three defining demands of the first section were read off from properties of volume. This section closes the circle by showing they really do compute volume.
+
+:::theorem[The $2\times2$ determinant is signed area]{#det-area-2d}
+Let $\mathbf{u}=(u_1,u_2)$ and $\mathbf{v}=(v_1,v_2)$, and let $A$ be the matrix with these as rows. The parallelogram spanned by $\mathbf{u}$ and $\mathbf{v}$ has area $|\det(A)|$.
+:::
+
+:::proof
+If $\mathbf{u}=\mathbf{0}$ the parallelogram is degenerate with area $0$, and $\det(A)=0$ too. Otherwise write $\|\mathbf{u}\|$ for the length of $\mathbf{u}$ and decompose $\mathbf{v}$ into the part along $\mathbf{u}$ and the part perpendicular to it:
+
+$$\mathbf{v}=c\,\mathbf{u}+\mathbf{w},\qquad c=\frac{\mathbf{u}\cdot\mathbf{v}}{\|\mathbf{u}\|^{2}},\qquad \mathbf{u}\cdot\mathbf{w}=0.$$
+
+The parallelogram has base $\|\mathbf{u}\|$ and height $\|\mathbf{w}\|$, since $\mathbf{w}$ is the component of the second edge perpendicular to the base. So its area is $\|\mathbf{u}\|\,\|\mathbf{w}\|$.
+
+On the determinant side, subtracting $c\mathbf{u}$ from the second row changes nothing by Theorem "Effect of the elementary row operations", so $\det(A)=\det\begin{pmatrix}u_1&u_2\\w_1&w_2\end{pmatrix}$. Because $\mathbf{w}\perp\mathbf{u}$, we have $\mathbf{w}=\pm\frac{\|\mathbf{w}\|}{\|\mathbf{u}\|}(-u_2,u_1)$, the perpendicular of $\mathbf{u}$ rescaled. Substituting,
+
+$$\det(A)=\pm\frac{\|\mathbf{w}\|}{\|\mathbf{u}\|}\bigl(u_1u_1-u_2(-u_2)\bigr)=\pm\frac{\|\mathbf{w}\|}{\|\mathbf{u}\|}\bigl(u_1^{2}+u_2^{2}\bigr)=\pm\|\mathbf{u}\|\,\|\mathbf{w}\|.$$
+
+Taking absolute values gives the area.
+:::
+
+The sign that the absolute value discards is itself information.
+
+:::definition[Orientation]{#orientation-def}
+An ordered basis $(\mathbf{a}_1,\dots,\mathbf{a}_n)$ of $\mathbb{R}^{n}$ is **positively oriented** if the determinant of the matrix with those rows is positive, and **negatively oriented** if it is negative. A linear map **preserves orientation** when its determinant is positive and **reverses** it when the determinant is negative.
+:::
+
+In the plane, a positively oriented pair is one where the shorter turn from $\mathbf{a}_1$ to $\mathbf{a}_2$ is anticlockwise. In space, a positively oriented triple obeys the right-hand rule. A reflection has determinant $-1$ and turns a right hand into a left hand; no continuous motion can do that, which is the geometric content of the sign.
+
+:::theorem[Volume scaling]{#volume-scaling}
+Let $T(\mathbf{x})=A\mathbf{x}$ be a linear map on $\mathbb{R}^{n}$ and let $S$ be a region with $n$-dimensional volume $\operatorname{vol}(S)$. Then
+
+$$\operatorname{vol}\bigl(T(S)\bigr)=|\det(A)|\cdot\operatorname{vol}(S).$$
+:::
+
+:::proof
+We argue in the plane; the general case is identical with boxes in place of squares. First take $S$ to be the unit square, spanned by $\mathbf{e}_1$ and $\mathbf{e}_2$. Its image is spanned by $A\mathbf{e}_1$ and $A\mathbf{e}_2$, the columns of $A$, so by Theorem "The $2\times2$ determinant is signed area" applied to $A^{T}$ — legitimate by Theorem "Transpose invariance" — the image has area $|\det(A)|$. That is the claim for the unit square.
+
+Next take any square of side $s$, positioned anywhere. Translation does not change area and commutes with $T$ up to a translation of the image, and scaling the square by $s$ scales both sides of the identity by $s^{2}$. So the claim holds for every square.
+
+Finally, any region whose area is defined can be approximated from inside and outside by finite unions of disjoint small squares, with the two approximations closing in on $\operatorname{vol}(S)$. Applying $T$ to those unions gives inner and outer approximations to $T(S)$ whose areas are $|\det(A)|$ times the originals, because area is additive over disjoint pieces. Passing to the limit gives the result.
+:::
+
+:::corollary[Cross products and triple products]{#triple-product}
+For $\mathbf{u},\mathbf{v},\mathbf{w}\in\mathbb{R}^{3}$, the parallelepiped they span has volume $\bigl|\det\begin{pmatrix}\mathbf{u}\\\mathbf{v}\\\mathbf{w}\end{pmatrix}\bigr|=|\mathbf{u}\cdot(\mathbf{v}\times\mathbf{w})|$, and the three vectors are coplanar exactly when this vanishes.
+:::
+
+:::proof
+The scalar triple product $\mathbf{u}\cdot(\mathbf{v}\times\mathbf{w})$ expands, entry by entry, into the cofactor expansion of that $3\times3$ determinant along its first row. Vanishing means the rows are linearly dependent by Theorem "Singularity criterion", which for three vectors in $\mathbb{R}^{3}$ means they lie in a common plane.
+:::
+
+:::remark
+Theorem "Volume scaling" is the linear ancestor of the change-of-variables formula in multivariable calculus. A differentiable map $\Phi$ is not linear, but near each point it is well approximated by its derivative matrix $D\Phi$, so it scales tiny volumes near that point by $|\det D\Phi|$. That determinant is called the Jacobian, and
+
+$$\int_{\Phi(R)}f\,dV=\int_{R}f\bigl(\Phi(\mathbf{u})\bigr)\,\bigl|\det D\Phi(\mathbf{u})\bigr|\,dV$$
+
+is the precise statement. The determinant is the exchange rate between the two coordinate systems.
+:::
+
+:::intuition
+Take the map with matrix $\begin{pmatrix}3&0\\0&2\end{pmatrix}$. It stretches horizontally by $3$ and vertically by $2$, so a $1\times1$ tile becomes a $3\times2$ tile and area multiplies by $6=\det$. Now shear it with $\begin{pmatrix}1&5\\0&1\end{pmatrix}$, determinant $1$: the tile leans far to the right but its area is unchanged, because the base and the height are unchanged. Composing the two multiplies areas by $6\cdot1=6$, which is multiplicativity seen with the eyes.
 :::
 
 :::example[Area and orientation of a parallelogram]
-Find the area and orientation of the parallelogram spanned by the columns $\mathbf{u}=\langle 3,1\rangle$ and $\mathbf{v}=\langle 1,2\rangle$.
+Find the area of the parallelogram spanned by $\mathbf{u}=(3,1)$ and $\mathbf{v}=(1,2)$, and say whether $(\mathbf{u},\mathbf{v})$ is positively oriented.
 :::
 
 :::solution
-1. Form $A=\begin{pmatrix}3&1\\1&2\end{pmatrix}$ (columns $\mathbf{u}$ and $\mathbf{v}$) and compute $\det(A) = 3\cdot 2 - 1\cdot 1 = 5$.
-2. Area $= |\det(A)| = |5| = 5$.
-3. Orientation: $\det(A) = 5 > 0$, so the ordered pair $(\mathbf{u},\mathbf{v})$ has the same (counterclockwise) orientation as the standard basis — no reflection.
-4. Sanity check with a shear, which preserves area. Replace $\mathbf{v}$ by $\mathbf{v} - \tfrac{1}{3}\mathbf{u} = \langle 1-1,\ 2-\tfrac{1}{3}\rangle = \langle 0,\tfrac{5}{3}\rangle$. The sheared parallelogram spans $\langle 3,1\rangle$ and $\langle 0,\tfrac{5}{3}\rangle$, with $\det\begin{pmatrix}3&0\\1&\tfrac{5}{3}\end{pmatrix} = 3\cdot\tfrac{5}{3} - 0 = 5$. Same area. ✓
+Form the matrix with these rows and take its determinant:
+
+$$\det\begin{pmatrix}3&1\\1&2\end{pmatrix}=6-1=5.$$
+
+The area is $|5|=5$, and since $5>0$ the ordered pair is positively oriented: the turn from $\mathbf{u}$ to $\mathbf{v}$ is anticlockwise.
+
+Sanity check by shearing, which preserves area by Theorem "Effect of the elementary row operations". Replace $\mathbf{v}$ by $\mathbf{v}-\tfrac13\mathbf{u}=\bigl(0,\tfrac53\bigr)$, so the sheared parallelogram is spanned by $(3,1)$ and $\bigl(0,\tfrac53\bigr)$, and
+
+$$\det\begin{pmatrix}3&1\\0&\tfrac53\end{pmatrix}=3\cdot\tfrac53-0=5,$$
+
+unchanged. ✓
+:::
+
+:::example[Volume of a parallelepiped and a test for coplanarity]
+Find the volume of the parallelepiped spanned by $\mathbf{u}=(1,2,3)$, $\mathbf{v}=(0,1,4)$ and $\mathbf{w}=(2,3,2)$.
+:::
+
+:::solution
+Compute the determinant of the matrix with those rows, expanding along column $1$ where the entries are $1,0,2$:
+
+$$\det\begin{pmatrix}1&2&3\\0&1&4\\2&3&2\end{pmatrix}=1\det\begin{pmatrix}1&4\\3&2\end{pmatrix}+2\det\begin{pmatrix}2&3\\1&4\end{pmatrix},$$
+
+the second sign being $(-1)^{3+1}=+$. The minors are $2-12=-10$ and $8-3=5$, so the determinant is $-10+10=0$.
+
+The volume is $0$, so the three vectors are coplanar by Corollary "Cross products and triple products".
+
+Sanity check by finding the dependence explicitly: $2\mathbf{u}-\mathbf{v}=(2,3,2)=\mathbf{w}$. ✓
+:::
+
+:::example[Area of a triangle from a determinant]
+Find the area of the triangle with vertices $P=(1,1)$, $Q=(4,2)$ and $R=(2,5)$.
+:::
+
+:::solution
+Translate $P$ to the origin, which does not change the area. The edge vectors are
+
+$$\mathbf{a}=Q-P=(3,1),\qquad \mathbf{b}=R-P=(1,4).$$
+
+The parallelogram on $\mathbf{a}$ and $\mathbf{b}$ has area $\bigl|\det\begin{pmatrix}3&1\\1&4\end{pmatrix}\bigr|=|12-1|=11$, and the triangle is half of it:
+
+$$\text{area}=\frac{11}{2}.$$
+
+Sanity check with the bounding box: the vertices lie in the rectangle $[1,4]\times[1,5]$ of area $12$, and cutting the three corner right triangles off leaves $12-\tfrac{3\cdot1}{2}-\tfrac{2\cdot3}{2}-\tfrac{1\cdot4}{2}=12-1.5-3-2=5.5$. ✓
+:::
+
+:::example[A linear map's effect on a disc]
+The map $T(\mathbf{x})=A\mathbf{x}$ with $A=\begin{pmatrix}2&1\\1&3\end{pmatrix}$ is applied to the unit disc. What is the area of the image, and is orientation preserved?
+:::
+
+:::solution
+By Theorem "Volume scaling", the area multiplies by $|\det(A)|$ regardless of the shape of the region. Here
+
+$$\det(A)=6-1=5,$$
+
+and the unit disc has area $\pi$, so the image is an ellipse of area $5\pi$. Since $\det(A)=5>0$, orientation is preserved.
+
+Sanity check on the order of magnitude: $A$ maps $\mathbf{e}_1\mapsto(2,1)$ and $\mathbf{e}_2\mapsto(1,3)$, vectors of lengths $\sqrt5\approx2.2$ and $\sqrt{10}\approx3.2$ at a modest angle, so an area factor around $5$ is plausible. ✓
+:::
+
+:::pitfall
+Area is $|\det|$, not $\det$. A determinant of $-5$ describes a parallelogram of area $5$ traversed in the reversed sense. Reporting a negative area is the single most common error in this section, and reporting a positive *orientation* for a negative determinant is the second.
+:::
+
+:::remark
+One more determinant is waiting in the next chapter. For a square matrix $A$ the function $p(\lambda)=\det(A-\lambda I)$ is a polynomial of degree $n$ in $\lambda$, called the characteristic polynomial, and by Theorem "Singularity criterion" its roots are exactly the scalars $\lambda$ for which $A-\lambda I$ is singular — that is, the eigenvalues of $A$. Everything proved here about determinants is what makes that polynomial computable and its coefficients meaningful: the constant term is $\det(A)$, and the coefficient of $\lambda^{n-1}$ is $(-1)^{n-1}$ times the trace.
 :::
 
 ## Common Mistakes
 
-- Applying $\det\begin{pmatrix}a&b\\c&d\end{pmatrix}=ad-bc$ directly to a $3\times 3$ matrix. You must expand.
-- Getting cofactor signs wrong. Entry $(i,j)$ has sign $(-1)^{i+j}$: $(1,1)$ is $+$, $(1,2)$ is $-$, $(2,1)$ is $-$, etc.
-- Writing $\det(cA)=c\,\det(A)$ for an $n\times n$ matrix. The correct formula is $\det(cA)=c^n\det(A)$.
-- Assuming $\det(A+B)=\det(A)+\det(B)$. The determinant is multilinear in each row separately, not in the whole matrix.
-- Expanding along the wrong row and missing the sign pattern. Always recheck the checkerboard before assigning cofactor signs.
+- Using $ad-bc$ on a $3\times3$ matrix, or Sarrus' diagonal rule on a $4\times4$ one. The $2\times2$ and $3\times3$ shortcuts are special cases with no larger analogue; beyond $n=3$ you must expand or eliminate.
+- Starting the cofactor alternation with $+$ no matter which row you expand along. The sign belongs to the position: $(-1)^{i+j}$, so expanding along row $2$ begins with $-$.
+- Writing $\det(cA)=c\det(A)$. Each of the $n$ rows is scaled, so the correct factor is $c^{n}$.
+- Assuming $\det(A+B)=\det(A)+\det(B)$. Multilinearity splits one row at a time, never the whole matrix.
+- Forgetting the sign from a row swap, or the reciprocal factor from scaling a row, during elimination. Track the running factor in the margin.
+- Taking the adjugate to be the cofactor matrix instead of its transpose. The $(i,j)$ entry of $\operatorname{adj}(A)$ is $C_{ji}$, and a non-symmetric example will expose the error.
+- Replacing a row instead of a column in Cramer's rule, or applying the rule at all when $\det(A)=0$.
+- Reporting a negative area or volume. The geometric quantity is $|\det|$; the sign records orientation separately.
+- Believing $\det\begin{pmatrix}A&B\\C&D\end{pmatrix}=\det(A)\det(D)-\det(B)\det(C)$. The block product rule needs a zero block in the corner.
+- Treating a small determinant as a reliable sign of near-singularity. Scaling a matrix by $0.1$ divides the determinant of a $10\times10$ matrix by $10^{10}$ without changing its invertibility at all; the condition number, not the determinant, measures how close to singular a matrix is.

@@ -4,441 +4,1191 @@ title: Integrals
 
 # Integrals
 
-Integration is the reverse of differentiation. Where derivatives break things apart to measure rates, integrals put things together to measure totals.
+Differentiation takes a function apart to measure how fast it changes at each instant. Integration puts the pieces back together to measure how much has accumulated over a whole interval. The two operations turn out to be inverses of one another, and the theorem that says so — the Fundamental Theorem of Calculus — is the center of this chapter.
 
-The integral $\int_a^b f(x)\,dx$ gives the net area between the curve $y=f(x)$ and the $x$-axis from $x=a$ to $x=b$. But integrals are far more than area: they compute distance, work, probability, volume, and any accumulated quantity.
+The definite integral $\int_a^b f(x)\,dx$ begins life as a limit of sums: chop the interval into thin strips, add up thin rectangles, and let the strips shrink. That limit is the net area between the curve $y = f(x)$ and the $x$-axis, but it is also distance traveled from velocity, total flow from a flow rate, work from force, and any other quantity that is built up from a rate. Once the Fundamental Theorem is in hand, the limit is almost never computed directly: an antiderivative does the work.
 
-Mastering integration requires two skills: knowing the antiderivative formulas and knowing the techniques to transform difficult integrals into ones you can solve.
+The chapter has four movements. First the sums themselves — sigma notation, Riemann sums, and the definition of the integral. Then antiderivatives and the Fundamental Theorem, which convert the definition into a computation. Then the substitution rule, the one technique that every later technique relies on. Finally, the numerical rules that take over when no antiderivative can be written down. Integration by parts, trigonometric integrals, partial fractions and improper integrals belong to the next chapter, Techniques of Integration.
 
-## The big idea: Riemann sums
+## Sigma notation and the sums you will need
+
+<!-- section: sigma -->
+
+An integral is a limit of sums with many terms, so a compact way of writing long sums comes first.
+
+:::definition[Sigma notation]{#sigma-notation}
+For integers $m \le n$ and numbers $a_m, a_{m+1}, \ldots, a_n$,
+
+$$\sum_{i=m}^{n} a_i = a_m + a_{m+1} + \cdots + a_n.$$
+
+The letter $i$ is the index of summation, $m$ its lower limit and $n$ its upper limit.
+:::
+
+The index is a dummy variable: $\sum_{i=1}^{n} i^2$ and $\sum_{k=1}^{n} k^2$ are the same number. Anything that does not involve the index is a constant as far as the sum is concerned, which is what makes the following bookkeeping rules true.
+
+:::proposition[Linearity of sums]
+For constants $c$ and sequences $a_i$, $b_i$,
+
+$$\sum_{i=m}^{n} c\,a_i = c\sum_{i=m}^{n} a_i, \qquad \sum_{i=m}^{n}(a_i \pm b_i) = \sum_{i=m}^{n} a_i \pm \sum_{i=m}^{n} b_i, \qquad \sum_{i=1}^{n} c = nc.$$
+:::
+
+:::proof
+Each is the distributive or commutative law applied to a finite sum: $ca_m + \cdots + ca_n = c(a_m + \cdots + a_n)$, the terms of $(a_i + b_i)$ may be regrouped, and $c$ added to itself $n$ times is $nc$.
+:::
+
+Three closed forms carry the whole of the next two sections. They are the only sums a Riemann-sum computation ever needs.
+
+:::theorem[Sums of powers]{#power-sums}
+For every positive integer $n$,
+
+$$\sum_{i=1}^{n} i = \frac{n(n+1)}{2}, \qquad \sum_{i=1}^{n} i^2 = \frac{n(n+1)(2n+1)}{6}, \qquad \sum_{i=1}^{n} i^3 = \left[\frac{n(n+1)}{2}\right]^2.$$
+:::
+
+:::proof
+For the first, write the sum $S$ forwards and backwards and add the two copies column by column:
+
+$$2S = (1+n) + (2+(n-1)) + \cdots + (n+1) = n(n+1),$$
+
+since every column adds to $n+1$ and there are $n$ columns.
+
+For the second, sum the identity $(i+1)^3 - i^3 = 3i^2 + 3i + 1$ from $i = 1$ to $n$. The left side telescopes to $(n+1)^3 - 1$, and the right side is $3\sum i^2 + 3\sum i + n$. Substituting the first formula and solving,
+
+$$3\sum_{i=1}^{n} i^2 = (n+1)^3 - 1 - n - \frac{3n(n+1)}{2} = (n+1)\left[(n+1)^2 - 1 - \frac{3n}{2}\right] = \frac{n(n+1)(2n+1)}{2},$$
+
+which is the claim after dividing by $3$. The third formula follows in exactly the same way from $(i+1)^4 - i^4 = 4i^3 + 6i^2 + 4i + 1$, using the first two formulas to eliminate the lower sums.
+:::
+
+:::intuition
+The first formula is the schoolroom trick attributed to Gauss: to add $1$ through $100$, pair $1$ with $100$, $2$ with $99$, and so on. Fifty pairs, each summing to $101$, give $5050$. The telescoping proof of the other two is the same idea run through a difference of cubes: almost everything cancels, and what survives is the formula.
+:::
+
+:::example[Expanding a sum]
+Evaluate $\sum_{i=1}^{4}(2i-1)$.
+:::
+
+:::solution
+Write out the terms: $i = 1, 2, 3, 4$ give $1, 3, 5, 7$, so the sum is $16$. As a check, linearity gives $2\sum_{i=1}^{4} i - \sum_{i=1}^{4} 1 = 2\cdot 10 - 4 = 16$. (The sum of the first $n$ odd numbers is always $n^2$.)
+:::
+
+:::example[A closed form]
+Find a formula for $\sum_{i=1}^{n}(3i^2 - 2i)$ and evaluate it at $n = 10$.
+:::
+
+:::solution
+1. Split by linearity: $3\sum i^2 - 2\sum i$.
+2. Apply the power sums:
+
+$$3\cdot\frac{n(n+1)(2n+1)}{6} - 2\cdot\frac{n(n+1)}{2} = \frac{n(n+1)(2n+1)}{2} - n(n+1) = \frac{n(n+1)(2n-1)}{2}.$$
+
+3. At $n = 10$ this is $\frac{10\cdot 11\cdot 19}{2} = 1045$. Check directly: $3\cdot 385 - 2\cdot 55 = 1155 - 110 = 1045$.
+:::
+
+:::example[A limit of a sum]
+Compute $\displaystyle\lim_{n\to\infty} \frac{1}{n^3}\sum_{i=1}^{n} i^2$.
+:::
+
+:::solution
+By the theorem,
+
+$$\frac{1}{n^3}\sum_{i=1}^{n} i^2 = \frac{n(n+1)(2n+1)}{6n^3} = \frac{1}{6}\left(1 + \frac{1}{n}\right)\left(2 + \frac{1}{n}\right),$$
+
+and as $n\to\infty$ this tends to $\frac{1}{6}\cdot 1\cdot 2 = \frac{1}{3}$. This is the sum that computes the area under $y = x^2$ on $[0,1]$, as the next section shows.
+:::
+
+:::pitfall
+The number of terms in $\sum_{i=m}^{n}$ is $n - m + 1$, not $n - m$. And $\sum_{i=1}^{n} c$ is $nc$, not $c$: a constant summed $n$ times is counted $n$ times.
+:::
+
+## Areas and distances: Riemann sums
 
 <!-- section: riemann -->
 
-Divide the interval $[a,b]$ into $n$ thin strips of width $\Delta x = (b-a)/n$. In each strip, build a rectangle with height $f(x_i)$.
+Finding the area of a rectangle or a triangle is a formula. Finding the area of the region under a curve is a limit, and the way the limit is set up is the template for every integral in the subject.
+
+Take a function $f \ge 0$ on $[a,b]$ and divide the interval into $n$ subintervals of equal width
+
+$$\Delta x = \frac{b-a}{n}, \qquad x_i = a + i\,\Delta x \quad (i = 0, 1, \ldots, n),$$
+
+so that $x_0 = a$ and $x_n = b$. On the $i$th subinterval $[x_{i-1}, x_i]$ stand a rectangle of width $\Delta x$ whose height is the value of $f$ at some chosen point $x_i^*$ of that subinterval. The rectangles together approximate the region.
 
 :::definition[Riemann sum]{#riemann-sum}
-The total area of all the rectangles is approximately
+With $\Delta x$ and $x_i$ as above and a sample point $x_i^* \in [x_{i-1}, x_i]$ in each subinterval, the sum
 
-$$\sum_{i=1}^{n} f(x_i)\Delta x.$$
+$$\sum_{i=1}^{n} f(x_i^*)\,\Delta x$$
 
-This is a Riemann sum.
+is a Riemann sum for $f$ on $[a,b]$. Choosing $x_i^* = x_{i-1}$ gives the left endpoint sum $L_n$, choosing $x_i^* = x_i$ gives the right endpoint sum $R_n$, and choosing the midpoint $\bar{x}_i = \tfrac{1}{2}(x_{i-1} + x_i)$ gives the midpoint sum $M_n$.
 :::
+
+For a function that is increasing on $[a,b]$, each left rectangle sits below the curve and each right rectangle pokes above it, so
+
+$$L_n \le \text{area} \le R_n,$$
+
+with the inequalities reversed for a decreasing function. The gap $R_n - L_n$ is $[f(b) - f(a)]\Delta x$, the area of a single thin strip, which shrinks to zero as $n$ grows. That squeeze is what makes the following definition reasonable.
+
+:::definition[Area under a curve]{#area-under-curve}
+If $f$ is continuous and $f \ge 0$ on $[a,b]$, the area of the region under $y = f(x)$ from $a$ to $b$ is
+
+$$A = \lim_{n\to\infty} R_n = \lim_{n\to\infty} \sum_{i=1}^{n} f(x_i)\,\Delta x.$$
+
+The same limit results from left endpoints, midpoints, or any other choice of sample points.
+:::
+
+That the limit exists for a continuous function, and does not depend on the sample points, is the content of the integrability theorem in the next section.
+
+:::intuition
+A digital photograph of a curved shape is a grid of square pixels, and the picture's area is just a count of pixels. At low resolution the count is crude; at high resolution the jagged edge becomes invisible and the count is, for every practical purpose, the area. Riemann sums are the resolution dial, and the integral is the picture at infinite resolution.
+:::
+
+:::example[Left, right and midpoint sums]
+Estimate $\int_0^2 x^2\,dx$ with $n = 4$ using right endpoints, left endpoints and midpoints.
+:::
+
+:::solution
+1. Here $\Delta x = \frac{2-0}{4} = 0.5$ and the partition points are $0, 0.5, 1, 1.5, 2$.
+2. Right endpoints $0.5, 1, 1.5, 2$ have heights $0.25, 1, 2.25, 4$, so
+
+$$R_4 = 0.5(0.25 + 1 + 2.25 + 4) = 0.5(7.5) = 3.75.$$
+
+3. Left endpoints $0, 0.5, 1, 1.5$ have heights $0, 0.25, 1, 2.25$, so $L_4 = 0.5(3.5) = 1.75$.
+4. Midpoints $0.25, 0.75, 1.25, 1.75$ have heights $0.0625, 0.5625, 1.5625, 3.0625$, so $M_4 = 0.5(5.25) = 2.625$.
+
+The true area, computed exactly in the next example with $b = 2$, is $\frac{8}{3} \approx 2.667$. Since $x^2$ is increasing on $[0,2]$, $L_4$ underestimates and $R_4$ overestimates, and the truth is trapped between $1.75$ and $3.75$. The midpoint sum is far closer than either, which is a pattern rather than a coincidence: the section on numerical integration explains why.
+:::
+
+:::example[An exact area from the limit of Riemann sums]
+Find the area under $y = x^2$ on $[0,b]$ exactly.
+:::
+
+:::solution
+1. With $n$ subintervals, $\Delta x = \frac{b}{n}$ and $x_i = \frac{ib}{n}$.
+2. The right endpoint sum is
+
+$$R_n = \sum_{i=1}^{n} \left(\frac{ib}{n}\right)^2 \frac{b}{n} = \frac{b^3}{n^3}\sum_{i=1}^{n} i^2 = \frac{b^3}{n^3}\cdot\frac{n(n+1)(2n+1)}{6} = \frac{b^3}{6}\left(1 + \frac{1}{n}\right)\left(2 + \frac{1}{n}\right).$$
+
+3. As $n\to\infty$ both parentheses tend to their leading terms, so
+
+$$A = \lim_{n\to\infty} R_n = \frac{b^3}{6}\cdot 2 = \frac{b^3}{3}.$$
+
+For $b = 2$ this is $\frac{8}{3}$, consistent with the sandwich $1.75 \le A \le 3.75$ above. Archimedes obtained this result two thousand years before calculus; the power-sum formula does in three lines what took him a treatise.
+:::
+
+The same construction measures distance. If a car's velocity were constant, distance would be velocity times time. When the velocity varies, hold it constant over each short time interval, multiply, and add: that is a Riemann sum of the velocity function, and its limit is the distance.
+
+:::example[Distance from velocity readings]
+A car's speedometer is read every two seconds:
+
+$$\begin{array}{c|cccccc} t\ (\text{s}) & 0 & 2 & 4 & 6 & 8 & 10 \\ \hline v\ (\text{m/s}) & 0 & 6 & 10 & 13 & 15 & 16 \end{array}$$
+
+Estimate the distance traveled during the ten seconds.
+:::
+
+:::solution
+1. On each two-second interval, pretend the velocity is the reading at the start: distance $\approx \sum v(t_{i-1})\Delta t$ with $\Delta t = 2$.
+
+$$L_5 = 2(0 + 6 + 10 + 13 + 15) = 88\ \text{m}.$$
+
+2. Using the reading at the end of each interval instead,
+
+$$R_5 = 2(6 + 10 + 13 + 15 + 16) = 120\ \text{m}.$$
+
+3. The velocity is increasing, so the true distance lies between $88$ m and $120$ m. Halving the sampling interval would narrow the bracket; sampling continuously would give the integral $\int_0^{10} v(t)\,dt$ exactly.
+:::
+
+:::pitfall
+The right endpoint sum uses $x_1, \ldots, x_n$ and the left endpoint sum uses $x_0, \ldots, x_{n-1}$; both have exactly $n$ terms, and neither uses all $n+1$ partition points. Using all of them double-counts a strip.
+:::
+
+## The definite integral
+
+<!-- section: defint -->
+
+The area construction did not really use $f \ge 0$; the same limit makes sense for any function, and the only change is the interpretation.
 
 :::definition[Definite integral]{#definite-integral}
-As $n \to \infty$ (strips get infinitely thin), the Riemann sum converges to the definite integral:
+Let $f$ be defined on $[a,b]$. Divide $[a,b]$ into $n$ subintervals of width $\Delta x = (b-a)/n$ with endpoints $x_i = a + i\Delta x$, and let $x_i^*$ be any point in $[x_{i-1}, x_i]$. The definite integral of $f$ from $a$ to $b$ is
 
-$$\int_a^b f(x)\,dx = \lim_{n\to\infty} \sum_{i=1}^{n} f(x_i)\Delta x.$$
+$$\int_a^b f(x)\,dx = \lim_{n\to\infty} \sum_{i=1}^{n} f(x_i^*)\,\Delta x,$$
+
+provided this limit exists and has the same value for every choice of sample points $x_i^*$. When it does, $f$ is integrable on $[a,b]$.
 :::
 
-This is why integrals represent accumulation: you are adding up infinitely many infinitesimally small contributions.
+Every part of the notation has a name. The sign $\int$ is an elongated S for "sum". The function $f(x)$ is the integrand, $a$ and $b$ are the lower and upper limits of integration, and $dx$ records the variable of integration and is the ghost of $\Delta x$. The whole expression is a number; the letter $x$ is a dummy variable, and $\int_a^b f(t)\,dt$ is the same number.
+
+The phrase "for every choice of sample points" is what makes the definition usable. It is also demanding: a function could in principle produce different limits for different sampling schemes, and then it would have no integral. The following theorem, whose proof belongs to real analysis (it rests on the uniform continuity of a continuous function on a closed interval), says this never happens for the functions of this course.
+
+:::theorem[Integrability of continuous functions]{#integrability}
+If $f$ is continuous on $[a,b]$, or bounded on $[a,b]$ with only finitely many jump discontinuities, then $f$ is integrable on $[a,b]$.
+:::
+
+The idea is the squeeze from the previous section. For a continuous function, the largest and smallest values of $f$ on a subinterval of width $\Delta x$ differ by an amount that goes to zero uniformly as $\Delta x \to 0$, so every Riemann sum is trapped between an upper sum and a lower sum whose difference vanishes. Once integrability is known, any convenient sample points may be used, and right endpoints are the usual choice:
+
+$$\int_a^b f(x)\,dx = \lim_{n\to\infty}\sum_{i=1}^{n} f(a + i\Delta x)\,\Delta x, \qquad \Delta x = \frac{b-a}{n}.$$
 
 :::intuition
-To find the area under a wiggly curve, chop it into thin rectangles (or trapezoids), add their areas, then make the slices thinner and thinner until the error disappears. That's the integral.
+A Riemann sum is a stack of thin rectangles, and each rectangle's contribution is height times width. Where the function is negative the "height" is negative, and that rectangle subtracts. The definite integral is the total of the stack at infinite resolution, with contributions above the axis counted positively and those below counted negatively.
 :::
 
-:::example[Setting up a Riemann sum]
-Estimate $\int_0^2 x^2\,dx$ using a right Riemann sum with $n = 4$ rectangles.
+:::example[Recognizing an integral]
+Express $\displaystyle\lim_{n\to\infty}\sum_{i=1}^{n}\frac{1}{n}\sqrt{\frac{i}{n}}$ as a definite integral.
 :::
 
 :::solution
-1. Width of each rectangle: $\Delta x = \frac{2-0}{4} = 0.5$.
-2. Right endpoints: $x_1 = 0.5,\; x_2 = 1.0,\; x_3 = 1.5,\; x_4 = 2.0$.
-3. Heights: $f(0.5) = 0.25,\; f(1) = 1,\; f(1.5) = 2.25,\; f(2) = 4$.
-4. Sum: $0.25(0.5) + 1(0.5) + 2.25(0.5) + 4(0.5) = 0.125 + 0.5 + 1.125 + 2 = 3.75$.
-5. The exact answer (using the FTC) is $\frac{x^3}{3}\Big|_0^2 = \frac{8}{3} \approx 2.667$. Our overestimate of $3.75$ comes from the right endpoints overshooting on an increasing function. With more rectangles, the estimate converges to $\frac{8}{3}$.
+Match the pattern $\sum f(x_i)\Delta x$. The factor $\frac{1}{n}$ is $\Delta x$ for an interval of length $1$; with $a = 0$ that makes $x_i = \frac{i}{n}$, and the summand is $\sqrt{x_i}\,\Delta x$. So the limit is
+
+$$\int_0^1 \sqrt{x}\,dx.$$
+
+The value, $\frac{2}{3}$, is easiest to obtain from the Fundamental Theorem later in the chapter.
 :::
 
-## The Fundamental Theorem of Calculus (FTC)
-
-<!-- section: ftc -->
-
-:::theorem[Fundamental Theorem of Calculus, Part 1]{#ftc-part-1}
-If $f$ is continuous and $F(x) = \int_a^x f(t)\,dt$, then
-
-$$F'(x) = f(x).$$
-
-Differentiation and integration are inverse operations.
-:::
-
-:::theorem[Fundamental Theorem of Calculus, Part 2]{#ftc-part-2}
-If $F$ is any antiderivative of $f$ (meaning $F' = f$), then
-
-$$\int_a^b f(x)\,dx = F(b) - F(a).$$
-:::
-
-Part 2 is the computational powerhouse: instead of computing limits of Riemann sums, just find an antiderivative and evaluate at the bounds.
-
-The connection to derivatives: if position is $s(t)$ and velocity is $v(t) = s'(t)$, then total displacement is $\int_a^b v(t)\,dt = s(b) - s(a)$. Integration recovers position from velocity.
-
-:::intuition
-Imagine you're on a road trip. Your speedometer tells you how fast you're going at each moment (that's the derivative — the rate). The odometer tells you the total distance you've covered (that's the integral — the accumulation).
-
-The FTC says: if you know the speedometer reading at every moment, you can figure out the total distance by 'adding up' all those tiny speeds. And the shortcut is: just check the odometer at the start and end, and subtract.
-
-That's why it's called the Fundamental Theorem — it connects the two main ideas in all of calculus (rates and totals) and gives you a shortcut so you never have to actually add up infinitely many tiny rectangles.
-:::
-
-:::example[Evaluating a definite integral with the FTC]
-Compute $\int_1^3 (2x + 1)\,dx$.
+:::example[An integral from the definition]
+Evaluate $\int_0^3 (x^3 - 6x)\,dx$ directly from the definition.
 :::
 
 :::solution
-1. find an antiderivative: $\int (2x+1)\,dx = x^2 + x + C$. (We don't need the $C$ for definite integrals.)
-2. evaluate at the bounds using FTC Part 2: $F(x) = x^2 + x$.
-3. $F(3) = 9 + 3 = 12$.
-4. $F(1) = 1 + 1 = 2$.
-5. $\int_1^3 (2x+1)\,dx = F(3) - F(1) = 12 - 2 = 10$.
-6. This is the net area under the line $y = 2x+1$ from $x=1$ to $x=3$. Since $2x+1 > 0$ on this interval, the net area equals the total area.
+1. $\Delta x = \frac{3}{n}$ and $x_i = \frac{3i}{n}$, so $f(x_i) = \frac{27i^3}{n^3} - \frac{18i}{n}$.
+2. The right endpoint sum is
+
+$$R_n = \sum_{i=1}^{n}\left(\frac{27i^3}{n^3} - \frac{18i}{n}\right)\frac{3}{n} = \frac{81}{n^4}\sum_{i=1}^{n} i^3 - \frac{54}{n^2}\sum_{i=1}^{n} i.$$
+
+3. Insert the power sums:
+
+$$R_n = \frac{81}{n^4}\cdot\frac{n^2(n+1)^2}{4} - \frac{54}{n^2}\cdot\frac{n(n+1)}{2} = \frac{81}{4}\left(1 + \frac{1}{n}\right)^2 - 27\left(1 + \frac{1}{n}\right).$$
+
+4. Let $n\to\infty$:
+
+$$\int_0^3 (x^3 - 6x)\,dx = \frac{81}{4} - 27 = -\frac{27}{4}.$$
+
+The answer is negative because $x^3 - 6x$ lies below the axis on $(0, \sqrt{6})$ and above it only on $(\sqrt{6}, 3]$; more of the graph is below than above.
 :::
 
-## Net area vs total area
+:::example[An integral from geometry]
+Evaluate $\int_0^4 \sqrt{16 - x^2}\,dx$ and $\int_0^2 (3 - x)\,dx$ without any limits.
+:::
+
+:::solution
+1. The graph of $y = \sqrt{16 - x^2}$ for $0 \le x \le 4$ is the quarter of the circle $x^2 + y^2 = 16$ in the first quadrant, so the integral is one quarter of $\pi\cdot 4^2$, namely $4\pi$.
+2. The graph of $y = 3 - x$ on $[0,2]$ lies above the axis and, with the axis and the lines $x = 0$, $x = 2$, bounds a trapezoid with parallel sides $3$ and $1$ and width $2$. Its area is $\frac{1}{2}(3+1)\cdot 2 = 4$.
+
+Whenever the region is a shape with a known area, the definite integral is that area and no limit is needed.
+:::
+
+## Net area and total area
 
 <!-- section: netarea -->
 
 :::definition[Net area and total area]{#net-vs-total-area}
-The integral $\int_a^b f(x)\,dx$ gives signed (net) area: positive above the $x$-axis, negative below. Total area (geometric) is
+For an integrable $f$ on $[a,b]$, the definite integral $\int_a^b f(x)\,dx$ is the net (signed) area: the area of the region above the $x$-axis and below the graph, minus the area of the region below the axis and above the graph. The total area between the graph and the axis is
 
 $$\int_a^b |f(x)|\,dx.$$
 :::
 
-The two agree only when $f$ does not change sign on $[a,b]$. When it does, split the interval at each zero of $f$ and add the pieces with the sign flipped where $f$ is negative.
+The two agree exactly when $f$ does not change sign on $[a,b]$. When it does, the recipe for total area is to locate the zeros of $f$, split the interval at each of them, integrate on each piece, and add the absolute values. Net area needs no splitting: one integral does it, and the cancellation between positive and negative parts is the point.
 
-## Antiderivatives and the constant of integration
+:::intuition
+Net area is the change in your bank balance after a month of deposits and withdrawals; total area is the total volume of money that moved through the account. A month in which the balance ends exactly where it started may have been a very busy month.
+:::
+
+:::example[Net and total area by geometry]
+Find $\int_0^3 (x-1)\,dx$ and the total area between $y = x - 1$ and the $x$-axis on $[0,3]$.
+:::
+
+:::solution
+1. The line crosses the axis at $x = 1$. On $[0,1]$ the graph is below the axis and bounds a triangle with legs $1$ and $1$, area $\frac{1}{2}$. On $[1,3]$ it is above the axis and bounds a triangle with legs $2$ and $2$, area $2$.
+2. Net area: $\int_0^3 (x-1)\,dx = 2 - \frac{1}{2} = \frac{3}{2}$.
+3. Total area: $\int_0^3 |x-1|\,dx = 2 + \frac{1}{2} = \frac{5}{2}$.
+:::
+
+:::example[A symmetric cancellation]
+Evaluate $\int_{-2}^{2} x\,dx$ and $\int_{-2}^{2} |x|\,dx$.
+:::
+
+:::solution
+The graph of $y = x$ bounds two congruent triangles of area $2$, one below the axis on $[-2,0]$ and one above it on $[0,2]$. The net area is $2 - 2 = 0$ and the total area is $2 + 2 = 4$.
+:::
+
+:::pitfall
+An exam question that says "find the area" wants total area; one that says "evaluate the integral" wants net area. Reading $\int_{-2}^{2} x\,dx = 0$ as "there is no area" is the classic confusion. The area is $4$; the integral is $0$.
+:::
+
+## Properties of the definite integral
+
+<!-- section: properties -->
+
+The definition produces a small set of rules, and every computation in the rest of the chapter leans on them. One convention comes first: the definition assumed $a < b$, and for the other orderings we set
+
+$$\int_b^a f(x)\,dx = -\int_a^b f(x)\,dx, \qquad \int_a^a f(x)\,dx = 0.$$
+
+Both are forced by the Riemann sum: swapping $a$ and $b$ turns $\Delta x = (b-a)/n$ into its negative, and $a = b$ makes $\Delta x = 0$.
+
+:::theorem[Properties of the definite integral]{#integral-properties}
+Let $f$ and $g$ be integrable on an interval containing $a$, $b$ and $c$, and let $k$ be a constant.
+
+1. $\displaystyle\int_a^b k\,dx = k(b-a)$.
+2. Linearity: $\displaystyle\int_a^b [f(x) \pm g(x)]\,dx = \int_a^b f(x)\,dx \pm \int_a^b g(x)\,dx$ and $\displaystyle\int_a^b k f(x)\,dx = k\int_a^b f(x)\,dx$.
+3. Additivity: $\displaystyle\int_a^c f(x)\,dx + \int_c^b f(x)\,dx = \int_a^b f(x)\,dx$, whatever the order of $a$, $b$, $c$.
+4. Positivity: if $f(x) \ge 0$ on $[a,b]$ then $\displaystyle\int_a^b f(x)\,dx \ge 0$.
+5. Comparison: if $f(x) \le g(x)$ on $[a,b]$ then $\displaystyle\int_a^b f(x)\,dx \le \int_a^b g(x)\,dx$.
+6. Bounds: if $m \le f(x) \le M$ on $[a,b]$ then $\displaystyle m(b-a) \le \int_a^b f(x)\,dx \le M(b-a)$.
+7. $\displaystyle\left|\int_a^b f(x)\,dx\right| \le \int_a^b |f(x)|\,dx$.
+:::
+
+:::proof
+Each property is true of every Riemann sum and survives the limit.
+
+1. Every Riemann sum of a constant is $\sum k\,\Delta x = k\cdot n\Delta x = k(b-a)$.
+2. $\sum [f(x_i^*) \pm g(x_i^*)]\Delta x = \sum f(x_i^*)\Delta x \pm \sum g(x_i^*)\Delta x$ and $\sum k f(x_i^*)\Delta x = k\sum f(x_i^*)\Delta x$; now apply the limit laws.
+3. For $a < c < b$, choose partitions of $[a,c]$ and $[c,b]$; together they partition $[a,b]$ (with unequal widths, which the general theory allows), and the Riemann sum over $[a,b]$ is the sum of the two. Passing to the limit gives the identity. The other orderings follow from the reversal convention: for instance if $b < c$, rearrange $\int_a^b + \int_b^c = \int_a^c$.
+4. Every term $f(x_i^*)\Delta x$ is nonnegative, so every Riemann sum is, and so is the limit.
+5. Apply positivity to $g - f$ and use linearity.
+6. Apply comparison to $m \le f$ and $f \le M$ and evaluate the constant integrals by property 1.
+7. Since $-|f(x)| \le f(x) \le |f(x)|$, comparison gives $-\int|f| \le \int f \le \int |f|$, which is the claim.
+:::
+
+The bounds property is the crude version of an idea that recurs constantly: an integral is controlled by the size of its integrand. It is also a useful sanity check, because a computed value outside $[m(b-a), M(b-a)]$ is certainly wrong.
+
+:::intuition
+Think of $\int_a^b f$ as the total rainfall over a stretch of days. Additivity says rain over the week is rain over Monday-to-Wednesday plus rain over Thursday-to-Sunday. Comparison says if it rained at least as hard every hour in Town B as in Town A, then B's total is at least A's. The bounds property says a week whose hourly rate never exceeded $M$ cannot have delivered more than $M$ times the number of hours.
+:::
+
+:::example[Evaluating with the properties]
+Given $\int_0^1 x^2\,dx = \frac{1}{3}$ and $\int_0^1 x\,dx = \frac{1}{2}$, evaluate $\int_0^1 (6x^2 - 4x + 5)\,dx$.
+:::
+
+:::solution
+By linearity and the constant rule,
+
+$$\int_0^1 (6x^2 - 4x + 5)\,dx = 6\cdot\frac{1}{3} - 4\cdot\frac{1}{2} + 5\cdot(1 - 0) = 2 - 2 + 5 = 5.$$
+:::
+
+:::example[Using additivity]
+If $\int_0^{10} f(x)\,dx = 17$ and $\int_0^8 f(x)\,dx = 12$, find $\int_8^{10} f(x)\,dx$.
+:::
+
+:::solution
+Additivity with $a = 0$, $c = 8$, $b = 10$ gives $\int_0^8 f + \int_8^{10} f = \int_0^{10} f$, so $\int_8^{10} f(x)\,dx = 17 - 12 = 5$.
+:::
+
+:::example[Estimating an integral]
+Use the bounds property to estimate $\int_0^1 e^{-x^2}\,dx$.
+:::
+
+:::solution
+1. On $[0,1]$ the exponent $-x^2$ runs from $0$ down to $-1$, so $e^{-x^2}$ is decreasing, with maximum $e^0 = 1$ at $x = 0$ and minimum $e^{-1}$ at $x = 1$.
+2. Property 6 with $m = e^{-1}$, $M = 1$ and $b - a = 1$ gives
+
+$$0.3679 \approx e^{-1} \le \int_0^1 e^{-x^2}\,dx \le 1.$$
+
+This integral has no elementary antiderivative, so estimates of this kind, refined by the numerical rules later in the chapter, are the only way to get at it. (Its value is about $0.7468$.)
+:::
+
+:::pitfall
+There is no product rule for integrals: $\int fg$ is not $\int f\cdot\int g$. Try $f = g = x$ on $[0,1]$: the left side is $\frac{1}{3}$ and the right side is $\frac{1}{4}$. Linearity covers sums and constant multiples, nothing more.
+:::
+
+## Antiderivatives and the indefinite integral
 
 <!-- section: antideriv -->
 
-:::definition[Indefinite integral]{#indefinite-integral}
-The indefinite integral collects every antiderivative of $f$ at once:
+Computing integrals from the definition is possible, as the $x^3 - 6x$ example showed, and hopeless as a general method. The way out is to run differentiation backwards.
 
-$$\int f(x)\,dx = F(x) + C, \qquad \text{where } F' = f.$$
+:::definition[Antiderivative]{#antiderivative}
+A function $F$ is an antiderivative of $f$ on an interval $I$ if $F'(x) = f(x)$ for every $x$ in $I$.
 :::
 
-The $+C$ is crucial: the general antiderivative is a whole family of functions differing by constants. Definite integrals pin it down.
+An antiderivative is never unique: $x^3$ and $x^3 + 7$ are both antiderivatives of $3x^2$. But that is the only freedom there is.
+
+:::theorem[Antiderivatives differ by a constant]{#antiderivatives-constant}
+If $F$ is an antiderivative of $f$ on an interval $I$, then every antiderivative of $f$ on $I$ has the form $F(x) + C$ for some constant $C$.
+:::
+
+:::proof
+Let $G$ be another antiderivative. Then $(G - F)' = f - f = 0$ on $I$, and a function with zero derivative on an interval is constant there (this is the corollary of the Mean Value Theorem proved in the Derivatives chapter). So $G - F = C$.
+:::
+
+The word "interval" is doing real work. The function $1/x$ is defined on $(-\infty,0)\cup(0,\infty)$, and $\ln|x| + 1$ for $x > 0$, $\ln|x| - 5$ for $x < 0$ is a perfectly good antiderivative of $1/x$ on its domain that is not of the form $\ln|x| + C$ for a single $C$. On each interval separately the theorem holds.
+
+:::definition[Indefinite integral]{#indefinite-integral}
+The indefinite integral of $f$ is the family of all its antiderivatives on an interval:
+
+$$\int f(x)\,dx = F(x) + C, \qquad \text{where } F' = f,$$
+
+and $C$ is an arbitrary constant, the constant of integration.
+:::
+
+The notation is deliberately the same as the definite integral, because the Fundamental Theorem will show they are the same idea. But keep the distinction in mind: $\int_a^b f(x)\,dx$ is a number, while $\int f(x)\,dx$ is a family of functions.
 
 :::intuition
-Going backwards from derivative to function loses information about vertical shift. The C represents all the possible 'starting heights'.
+If someone tells you a car's speed at every instant of a trip, you can reconstruct how far it has traveled since the start — but not where it started. Every possible starting position gives a valid position function, and they all differ by a constant. The $+C$ is the unknown starting position, and a single extra piece of information (an initial value) pins it down.
 :::
 
-## Common integrals: your core toolbox
+:::example[The general antiderivative]
+Find the most general antiderivative of $f(x) = 4x^3 - 6x + 2$.
+:::
+
+:::solution
+Guess and check term by term. $x^4$ differentiates to $4x^3$, $3x^2$ to $6x$, and $2x$ to $2$, so
+
+$$F(x) = x^4 - 3x^2 + 2x + C.$$
+
+Check: $F'(x) = 4x^3 - 6x + 2$. An antiderivative is always verified by differentiating it.
+:::
+
+:::example[A second-order initial value problem]
+Find $f$ if $f''(x) = 12x^2 + 6x - 4$, $f(0) = 4$ and $f(1) = 1$.
+:::
+
+:::solution
+1. Antidifferentiate once: $f'(x) = 4x^3 + 3x^2 - 4x + C$.
+2. Antidifferentiate again: $f(x) = x^4 + x^3 - 2x^2 + Cx + D$.
+3. $f(0) = D = 4$.
+4. $f(1) = 1 + 1 - 2 + C + 4 = C + 4 = 1$, so $C = -3$.
+5. Therefore $f(x) = x^4 + x^3 - 2x^2 - 3x + 4$. Check: $f'' = 12x^2 + 6x - 4$, $f(0) = 4$, $f(1) = 1 + 1 - 2 - 3 + 4 = 1$.
+:::
+
+:::example[Position from acceleration]
+A particle moves along a line with acceleration $a(t) = 6t + 4$, initial velocity $v(0) = -6$ and initial position $s(0) = 9$. Find $s(t)$.
+:::
+
+:::solution
+1. Velocity is an antiderivative of acceleration: $v(t) = 3t^2 + 4t + C$, and $v(0) = -6$ gives $C = -6$.
+2. Position is an antiderivative of velocity: $s(t) = t^3 + 2t^2 - 6t + D$, and $s(0) = 9$ gives $D = 9$.
+3. So $s(t) = t^3 + 2t^2 - 6t + 9$.
+
+Each antidifferentiation introduced one constant, and each initial condition removed one.
+:::
+
+## The table of basic antiderivatives
 
 <!-- section: toolbox -->
 
-These are the integral formulas you must know by heart. Every other technique (substitution, by-parts, etc.) ultimately reduces an integral to one of these.
+Every differentiation formula, read from right to left, is an antidifferentiation formula. The table below is the derivative table of the previous chapters reversed, and it is the entire vocabulary of integration: every technique in this chapter and the next is a way of rewriting an integral until it matches a line of this table.
 
-:::theorem[Power rule for integration]{#integral-power-rule}
-$$\int x^n\,dx = \frac{x^{n+1}}{n+1} + C \quad (n \neq -1), \qquad \int \frac{1}{x}\,dx = \ln|x| + C.$$
+:::theorem[Basic antiderivatives]{#basic-antiderivatives}
+Each formula holds on any interval where the integrand is defined; $n \neq -1$, $a > 0$, $a \neq 1$.
+
+$$\begin{aligned}
+\int k\,dx &= kx + C & \int x^n\,dx &= \frac{x^{n+1}}{n+1} + C & \int \frac{1}{x}\,dx &= \ln|x| + C \\[4pt]
+\int e^x\,dx &= e^x + C & \int a^x\,dx &= \frac{a^x}{\ln a} + C & & \\[4pt]
+\int \sin x\,dx &= -\cos x + C & \int \cos x\,dx &= \sin x + C & & \\[4pt]
+\int \sec^2 x\,dx &= \tan x + C & \int \csc^2 x\,dx &= -\cot x + C & & \\[4pt]
+\int \sec x\tan x\,dx &= \sec x + C & \int \csc x\cot x\,dx &= -\csc x + C & & \\[4pt]
+\int \frac{1}{1+x^2}\,dx &= \arctan x + C & \int \frac{1}{\sqrt{1-x^2}}\,dx &= \arcsin x + C & & \\[4pt]
+\int \sinh x\,dx &= \cosh x + C & \int \cosh x\,dx &= \sinh x + C & &
+\end{aligned}$$
+
+Moreover the indefinite integral is linear: $\int [f(x) + g(x)]\,dx = \int f(x)\,dx + \int g(x)\,dx$ and $\int k f(x)\,dx = k\int f(x)\,dx$.
 :::
 
-The first formula works for any real $n$ — including negative and fractional exponents like $\int x^{-3}\,dx$ or $\int \sqrt{x}\,dx = \int x^{1/2}\,dx$.
+:::proof
+Differentiate each right-hand side. The two that need a word: $\frac{d}{dx}\frac{a^x}{\ln a} = \frac{a^x\ln a}{\ln a} = a^x$; and for $x < 0$, $\ln|x| = \ln(-x)$ has derivative $\frac{-1}{-x} = \frac{1}{x}$, which is why the absolute value makes the logarithm formula valid on both sides of $0$. Linearity is the linearity of the derivative read backwards.
+:::
 
-The second covers the one case the first cannot. At $n = -1$ the power rule gives $\frac{x^0}{0}$, which is undefined, so $\ln|x|$ fills this gap. The absolute value is needed because $\ln$ requires a positive input.
-
-Exponentials:
-
-$$\int e^x\,dx = e^x + C, \qquad \int a^x\,dx = \frac{a^x}{\ln a} + C \quad (a > 0,\; a \neq 1).$$
-
-Trigonometric:
-
-$$\int \sin x\,dx = -\cos x + C, \qquad \int \cos x\,dx = \sin x + C, \qquad \int \sec^2 x\,dx = \tan x + C,$$
-
-$$\int \csc^2 x\,dx = -\cot x + C, \qquad \int \sec x \tan x\,dx = \sec x + C, \qquad \int \csc x \cot x\,dx = -\csc x + C.$$
-
-Inverse trigonometric:
-
-$$\int \frac{1}{\sqrt{1-x^2}}\,dx = \arcsin x + C, \qquad \int \frac{1}{1+x^2}\,dx = \arctan x + C.$$
-
-These last two arise constantly after trig substitutions and partial fractions.
-
-Verification: you can always check an antiderivative by differentiating it. If $\frac{d}{dx} F(x) = f(x)$, then $\int f(x)\,dx = F(x) + C$.
+Two entries deserve attention. The power rule fails at $n = -1$, where it would produce $x^0/0$; the logarithm formula fills exactly that hole, and nothing else does. And the last four lines are the reason inverse trigonometric and hyperbolic functions appear in integration at all: they are what comes out when the integrand is $1/(1+x^2)$ or $1/\sqrt{1-x^2}$, shapes that arise constantly from substitutions in the next chapter.
 
 :::intuition
-These formulas are the answers to the question: 'What function has this as its derivative?' You're running the derivative process backward. Since you memorized the derivative table, just reverse it: the derivative of $\sin x$ is $\cos x$, so the integral of $\cos x$ is $\sin x + C$.
-
-If you ever forget a formula, just differentiate your guess. If it gives back the integrand, you're correct.
+The table is a phone book read backwards: you know the number ($3x^2$) and need the name ($x^3$). There is no algorithm for reading a phone book backwards, but for a short list you can simply learn it. And there is a foolproof check that costs nothing: differentiate your candidate. If the derivative is the integrand, the answer is right.
 :::
 
-## Substitution (reverse chain rule)
+:::example[Term by term]
+Find $\int \left(10x^4 - 2\sec^2 x\right)dx$.
+:::
+
+:::solution
+By linearity and the table,
+
+$$\int 10x^4\,dx - 2\int \sec^2 x\,dx = 10\cdot\frac{x^5}{5} - 2\tan x + C = 2x^5 - 2\tan x + C.$$
+
+Check: $\frac{d}{dx}(2x^5 - 2\tan x) = 10x^4 - 2\sec^2 x$.
+:::
+
+:::example[Rewrite before integrating]
+Find $\int \frac{2x^4 + 3x^2 - 1}{x^2}\,dx$ and $\int \frac{\cos\theta}{\sin^2\theta}\,d\theta$.
+:::
+
+:::solution
+1. Divide through: $\frac{2x^4 + 3x^2 - 1}{x^2} = 2x^2 + 3 - x^{-2}$, so the integral is
+
+$$\frac{2x^3}{3} + 3x + \frac{1}{x} + C,$$
+
+using $\int x^{-2}\,dx = \frac{x^{-1}}{-1} = -\frac{1}{x}$ and the minus sign in front of it.
+2. Rewrite $\frac{\cos\theta}{\sin^2\theta} = \frac{1}{\sin\theta}\cdot\frac{\cos\theta}{\sin\theta} = \csc\theta\cot\theta$, which is in the table: the integral is $-\csc\theta + C$.
+
+Neither integrand appears in the table as written; algebra makes it appear. This is the basic move of integration.
+:::
+
+:::example[Exponentials and hyperbolic functions]
+Find $\int \left(3e^x + 2^x + \cosh x\right)dx$.
+:::
+
+:::solution
+Line by line: $\int 3e^x\,dx = 3e^x$, $\int 2^x\,dx = \frac{2^x}{\ln 2}$, $\int \cosh x\,dx = \sinh x$. So the integral is
+
+$$3e^x + \frac{2^x}{\ln 2} + \sinh x + C.$$
+:::
+
+:::pitfall
+$\int \frac{1}{x^2}\,dx$ is $-\frac{1}{x} + C$ by the power rule with $n = -2$, not a logarithm. The logarithm is for $\frac{1}{x}$ only. In the other direction, $\int x^{-1}\,dx$ is not $\frac{x^0}{0}$; it is $\ln|x| + C$.
+:::
+
+## The Mean Value Theorem for integrals
+
+<!-- section: mvtint -->
+
+The proof of the Fundamental Theorem needs one fact about continuous functions: on any interval, the integral equals the length of the interval times some value the function actually takes.
+
+:::theorem[Mean Value Theorem for integrals]{#mvt-integrals}
+If $f$ is continuous on $[a,b]$, then there is a number $c$ in $[a,b]$ such that
+
+$$\int_a^b f(x)\,dx = f(c)\,(b-a).$$
+:::
+
+:::proof
+By the Extreme Value Theorem $f$ has a minimum $m$ and a maximum $M$ on $[a,b]$, so the bounds property gives $m(b-a) \le \int_a^b f \le M(b-a)$, that is,
+
+$$m \le \frac{1}{b-a}\int_a^b f(x)\,dx \le M.$$
+
+The middle number lies between two values of $f$, so by the Intermediate Value Theorem it equals $f(c)$ for some $c$ in $[a,b]$.
+:::
+
+The number $\frac{1}{b-a}\int_a^b f$ is the average value of $f$ on $[a,b]$, and the theorem says a continuous function attains its average. The applications chapter develops average value properly; here it is a tool.
+
+:::intuition
+If a car averages $60$ km/h over a journey, then at some instant its speedometer read exactly $60$: it cannot have been below $60$ the whole way (the average would be lower) or above $60$ the whole way (the average would be higher), and the speedometer moves continuously between the two.
+:::
+
+:::example[Finding the point $c$]
+Find the value $c$ guaranteed by the Mean Value Theorem for integrals for $f(x) = x^2$ on $[0,3]$.
+:::
+
+:::solution
+From the exact area computed earlier, $\int_0^3 x^2\,dx = \frac{3^3}{3} = 9$. The theorem asks for $c$ with $c^2\cdot(3 - 0) = 9$, so $c^2 = 3$ and $c = \sqrt{3}$, which does lie in $[0,3]$. The rectangle of height $f(\sqrt{3}) = 3$ over $[0,3]$ has the same area as the region under the parabola.
+:::
+
+## The Fundamental Theorem of Calculus
+
+<!-- section: ftc -->
+
+The definite integral was defined as a limit of sums and the antiderivative as an inverse of differentiation, two ideas with no visible connection. The Fundamental Theorem joins them, and it does so in two parts. The first says that integrating a function and then differentiating gives the function back; the second says that a definite integral can be evaluated from any antiderivative.
+
+Part 1 is about the function obtained by integrating up to a variable endpoint,
+
+$$g(x) = \int_a^x f(t)\,dt,$$
+
+the accumulated area under $f$ from $a$ to $x$. Note the two different variables: $x$ is the upper limit, $t$ is the dummy variable of integration, and $g(x)$ depends only on $x$.
+
+:::theorem[Fundamental Theorem of Calculus, Part 1]{#ftc-part-1}
+If $f$ is continuous on $[a,b]$, then the function $g(x) = \int_a^x f(t)\,dt$ is continuous on $[a,b]$, differentiable on $(a,b)$, and
+
+$$g'(x) = f(x).$$
+
+In Leibniz notation, $\dfrac{d}{dx}\displaystyle\int_a^x f(t)\,dt = f(x)$.
+:::
+
+:::proof
+Fix $x$ in $(a,b)$ and take $h \ne 0$ small enough that $x + h$ is in $(a,b)$. By additivity,
+
+$$g(x+h) - g(x) = \int_a^{x+h} f(t)\,dt - \int_a^x f(t)\,dt = \int_x^{x+h} f(t)\,dt.$$
+
+By the Mean Value Theorem for integrals there is a point $c_h$ between $x$ and $x + h$ with $\int_x^{x+h} f(t)\,dt = f(c_h)\,h$ (for $h < 0$ the reversal convention supplies the sign). Hence
+
+$$\frac{g(x+h) - g(x)}{h} = f(c_h).$$
+
+As $h \to 0$ the point $c_h$, squeezed between $x$ and $x+h$, tends to $x$, and since $f$ is continuous $f(c_h) \to f(x)$. So $g'(x) = f(x)$. At the endpoints the same argument with one-sided limits gives one-sided derivatives, which implies continuity of $g$ on the closed interval.
+:::
+
+The heart of the proof is the picture: $g(x+h) - g(x)$ is the area of a thin strip of width $h$, and for small $h$ that strip is almost a rectangle of height $f(x)$, so the strip's area divided by its width is almost $f(x)$. Continuity of $f$ is what makes "almost a rectangle" precise; for a function with a jump at $x$, the strip's height depends on which side of $x$ it lies, and $g$ has a corner there rather than a tangent.
+
+Part 1 says every continuous function has an antiderivative, namely $g$, even when no formula for one exists. The function $\int_0^x e^{-t^2}\,dt$ is a perfectly good function with derivative $e^{-x^2}$; it merely has no expression in terms of the functions in the table.
+
+:::corollary[Variable limits and the chain rule]{#ftc-chain-rule}
+If $f$ is continuous and $u$, $v$ are differentiable, then
+
+$$\frac{d}{dx}\int_a^{u(x)} f(t)\,dt = f(u(x))\,u'(x), \qquad \frac{d}{dx}\int_{v(x)}^{u(x)} f(t)\,dt = f(u(x))\,u'(x) - f(v(x))\,v'(x).$$
+:::
+
+:::proof
+With $g(x) = \int_a^x f(t)\,dt$, the first integral is $g(u(x))$, and the chain rule gives $g'(u(x))\,u'(x) = f(u(x))\,u'(x)$. For the second, split at $a$ with additivity: $\int_{v(x)}^{u(x)} f = \int_a^{u(x)} f - \int_a^{v(x)} f$, and differentiate each piece by the first formula.
+:::
+
+:::theorem[Fundamental Theorem of Calculus, Part 2]{#ftc-part-2}
+If $f$ is continuous on $[a,b]$ and $F$ is any antiderivative of $f$ on $[a,b]$, then
+
+$$\int_a^b f(x)\,dx = F(b) - F(a).$$
+:::
+
+:::proof
+Let $g(x) = \int_a^x f(t)\,dt$. By Part 1, $g$ is an antiderivative of $f$ on $[a,b]$, so by the theorem on antiderivatives $F = g + C$ for some constant $C$. Then
+
+$$F(b) - F(a) = [g(b) + C] - [g(a) + C] = g(b) - g(a) = \int_a^b f(t)\,dt - 0,$$
+
+since $g(a) = \int_a^a f = 0$.
+:::
+
+The difference $F(b) - F(a)$ is written $F(x)\big]_a^b$ or $\big[F(x)\big]_a^b$. The constant of integration is irrelevant here: it cancels in the subtraction, which is why definite integrals are computed without a $+C$.
+
+Part 2 is why the definite integral is computable. A limit of Riemann sums that needed the power-sum formulas and a page of algebra for $x^3 - 6x$ now takes one line:
+
+$$\int_0^3 (x^3 - 6x)\,dx = \left[\frac{x^4}{4} - 3x^2\right]_0^3 = \frac{81}{4} - 27 = -\frac{27}{4}.$$
+
+Every integral whose integrand has a table antiderivative is now trivial, and every technique from here on is a way of manufacturing an antiderivative.
+
+:::intuition
+Your speedometer is the derivative and your odometer is the integral. Part 1 says: if you record your odometer continuously and then ask how fast it is increasing at any moment, you get the speedometer reading. Part 2 says: to find how far you drove between two times, you do not need to add up thousands of speedometer readings; just subtract the odometer at the start from the odometer at the end. The odometer is an antiderivative of the speedometer, and any other odometer, one that started at a different reading, gives the same difference.
+:::
+
+:::example[Differentiating an accumulation function]
+Find the derivative of $g(x) = \displaystyle\int_0^x \sqrt{1 + t^2}\,dt$.
+:::
+
+:::solution
+The integrand $\sqrt{1+t^2}$ is continuous, so Part 1 applies directly: $g'(x) = \sqrt{1 + x^2}$. No antiderivative of $\sqrt{1+t^2}$ was needed, and none is easy to find.
+:::
+
+:::example[A variable upper limit]
+Find $\dfrac{d}{dx}\displaystyle\int_1^{x^4} \sec t\,dt$.
+:::
+
+:::solution
+Here $u(x) = x^4$, so by the chain-rule corollary,
+
+$$\frac{d}{dx}\int_1^{x^4}\sec t\,dt = \sec(x^4)\cdot\frac{d}{dx}x^4 = 4x^3\sec(x^4).$$
+
+Forgetting the factor $u'(x) = 4x^3$ is the standard error; the integral is a composite function and the chain rule is not optional.
+:::
+
+:::example[Both limits variable]
+Find $\dfrac{d}{dx}\displaystyle\int_{2x}^{x^2}\sin(t^2)\,dt$.
+:::
+
+:::solution
+With $u(x) = x^2$ and $v(x) = 2x$, the corollary gives
+
+$$\sin\!\left((x^2)^2\right)\cdot 2x - \sin\!\left((2x)^2\right)\cdot 2 = 2x\sin(x^4) - 2\sin(4x^2).$$
+:::
+
+:::example[Evaluating a definite integral]
+Compute $\int_1^3 (2x+1)\,dx$.
+:::
+
+:::solution
+1. An antiderivative is $F(x) = x^2 + x$ (no $+C$ is needed).
+2. By Part 2, $\int_1^3 (2x+1)\,dx = F(3) - F(1) = (9 + 3) - (1 + 1) = 10$.
+3. Check by geometry: the region is a trapezoid with parallel sides $f(1) = 3$ and $f(3) = 7$ and width $2$, area $\frac{1}{2}(3 + 7)\cdot 2 = 10$.
+:::
+
+:::example[Keeping a promise]
+Evaluate $\int_0^1 \sqrt{x}\,dx$, and hence $\displaystyle\lim_{n\to\infty}\sum_{i=1}^{n}\frac{1}{n}\sqrt{\frac{i}{n}}$.
+:::
+
+:::solution
+By Part 2,
+
+$$\int_0^1 x^{1/2}\,dx = \left[\frac{x^{3/2}}{3/2}\right]_0^1 = \frac{2}{3}\cdot 1 - 0 = \frac{2}{3}.$$
+
+The limit was identified earlier as this integral, so it equals $\frac{2}{3}$ too. A sum that has no closed form for finite $n$ has a limit that takes one line.
+:::
+
+:::example[Total area with the FTC]
+Find the net area and the total area between $y = x^2 - 1$ and the $x$-axis on $[0,2]$.
+:::
+
+:::solution
+1. Net area:
+
+$$\int_0^2 (x^2 - 1)\,dx = \left[\frac{x^3}{3} - x\right]_0^2 = \frac{8}{3} - 2 = \frac{2}{3}.$$
+
+2. The integrand is negative on $[0,1)$ and positive on $(1,2]$, so split at $x = 1$:
+
+$$\int_0^1 (x^2 - 1)\,dx = \left[\frac{x^3}{3} - x\right]_0^1 = -\frac{2}{3}, \qquad \int_1^2 (x^2-1)\,dx = \left(\frac{8}{3} - 2\right) - \left(\frac{1}{3} - 1\right) = \frac{4}{3}.$$
+
+3. Total area: $\frac{2}{3} + \frac{4}{3} = 2$. The net area $\frac{2}{3}$ is the same two pieces with the first one subtracted: $\frac{4}{3} - \frac{2}{3}$.
+:::
+
+:::example[When Part 2 does not apply]
+What is wrong with the computation $\displaystyle\int_{-1}^{2}\frac{dx}{x^2} = \left[-\frac{1}{x}\right]_{-1}^{2} = -\frac{1}{2} - 1 = -\frac{3}{2}$?
+:::
+
+:::solution
+The integrand $1/x^2$ is positive wherever it is defined, so by positivity the integral cannot be negative: the answer is impossible. The error is that $1/x^2$ is not continuous on $[-1,2]$ — it is not even defined at $x = 0$ — so the hypothesis of Part 2 fails and the formula $F(b) - F(a)$ has no justification. The integral does not exist as a definite integral; it is an improper integral, and the next chapter shows it diverges.
+:::
+
+:::example[Extrema of an accumulation function]
+Let $F(x) = \displaystyle\int_0^x (t^2 - 4t + 3)\,dt$. Find the local maximum and local minimum of $F$.
+:::
+
+:::solution
+1. By Part 1, $F'(x) = x^2 - 4x + 3 = (x-1)(x-3)$, with zeros at $x = 1$ and $x = 3$.
+2. $F'$ is positive for $x < 1$, negative on $(1,3)$ and positive for $x > 3$. By the first derivative test $F$ has a local maximum at $x = 1$ and a local minimum at $x = 3$.
+3. Their values come from Part 2: $F(1) = \left[\frac{t^3}{3} - 2t^2 + 3t\right]_0^1 = \frac{4}{3}$ and $F(3) = 9 - 18 + 9 = 0$.
+
+The graph of $F$ rises while the integrand is positive (area is being added), falls while it is negative, and turns exactly where the integrand crosses zero.
+:::
+
+:::pitfall
+Part 2 requires $f$ to be continuous on the whole closed interval $[a,b]$. Before writing $F(b) - F(a)$, look for points where the integrand is undefined or blows up: $\frac{1}{x}$, $\frac{1}{x^2}$, $\tan x$, $\sec x$ and $\ln x$ are the usual offenders.
+:::
+
+## The net change theorem
+
+<!-- section: netchange -->
+
+Read with $f = F'$, Part 2 of the Fundamental Theorem becomes a statement about rates.
+
+:::theorem[Net change theorem]{#net-change}
+If $F'$ is continuous on $[a,b]$, then the integral of the rate of change is the net change:
+
+$$\int_a^b F'(x)\,dx = F(b) - F(a).$$
+:::
+
+:::proof
+$F$ is an antiderivative of $F'$; apply Part 2.
+:::
+
+Every rate in science is an instance. If $V(t)$ is the volume of water in a tank, $\int_{t_1}^{t_2} V'(t)\,dt$ is the change in volume. If $C(x)$ is the cost of producing $x$ items, $\int_{x_1}^{x_2} C'(x)\,dx$ is the cost of raising production from $x_1$ to $x_2$. If $s(t)$ is the position of a particle, $\int_{t_1}^{t_2} v(t)\,dt$ is its displacement.
+
+Displacement is not distance. If the particle moves forward $5$ m and back $3$ m, its displacement is $2$ m and the distance it traveled is $8$ m. Displacement is the integral of $v$; distance is the integral of $|v|$, the total area between the velocity graph and the axis, computed by splitting where $v$ changes sign.
+
+:::intuition
+A hiker's altimeter records altitude every second. The integral of the rate of climb over the day is the net change in altitude, which is zero if the hike is a loop. The total climb, the number a hiker actually cares about, is the integral of the absolute rate of climb, and a loop with a mountain in the middle has plenty of it.
+:::
+
+:::example[Displacement versus distance]
+A particle moves along a line with velocity $v(t) = t^2 - t - 6$ (m/s). Find the displacement and the distance traveled for $1 \le t \le 4$.
+:::
+
+:::solution
+1. Displacement is the integral of velocity:
+
+$$\int_1^4 (t^2 - t - 6)\,dt = \left[\frac{t^3}{3} - \frac{t^2}{2} - 6t\right]_1^4 = \left(\frac{64}{3} - 8 - 24\right) - \left(\frac{1}{3} - \frac{1}{2} - 6\right) = -\frac{9}{2}.$$
+
+The particle ends $4.5$ m to the left of where it began.
+2. For distance, find where $v$ changes sign: $v(t) = (t-3)(t+2)$ is negative on $[1,3)$ and positive on $(3,4]$.
+3. Integrate on each piece:
+
+$$\int_1^3 v(t)\,dt = \left(9 - \frac{9}{2} - 18\right) - \left(\frac{1}{3} - \frac{1}{2} - 6\right) = -\frac{22}{3}, \qquad \int_3^4 v(t)\,dt = \left(\frac{64}{3} - 32\right) - \left(9 - \frac{9}{2} - 18\right) = \frac{17}{6}.$$
+
+4. Distance $= \int_1^4 |v(t)|\,dt = \frac{22}{3} + \frac{17}{6} = \frac{61}{6} \approx 10.17$ m.
+
+Sanity check: the two pieces add to the displacement, $-\frac{22}{3} + \frac{17}{6} = -\frac{27}{6} = -\frac{9}{2}$, as they must.
+:::
+
+:::example[Volume from a flow rate]
+Water drains from a tank at the rate $r(t) = 20 - 2t$ liters per minute for $0 \le t \le 10$. How much water leaves during the first five minutes?
+:::
+
+:::solution
+The amount drained is the net change in the volume that has left the tank, the integral of the rate:
+
+$$\int_0^5 (20 - 2t)\,dt = \left[20t - t^2\right]_0^5 = 100 - 25 = 75\ \text{liters}.$$
+
+The rate is positive throughout, so no sign splitting is needed.
+:::
+
+:::example[Cost from marginal cost]
+A manufacturer's marginal cost is $C'(x) = 3 + 0.02x$ dollars per unit. Find the cost of raising production from $100$ to $200$ units.
+:::
+
+:::solution
+$$C(200) - C(100) = \int_{100}^{200}(3 + 0.02x)\,dx = \left[3x + 0.01x^2\right]_{100}^{200} = (600 + 400) - (300 + 100) = 600\ \text{dollars}.$$
+:::
+
+:::pitfall
+$\int_a^b v(t)\,dt$ is displacement. If a problem asks for distance and the velocity changes sign on the interval, you must split at the zeros of $v$ and flip the sign of the negative pieces. Getting a displacement of $0$ for a round trip and reporting "no distance traveled" is the error to avoid.
+:::
+
+## The substitution rule
 
 <!-- section: usub -->
 
+The table handles integrands that are literally table entries. The substitution rule extends it to integrands that are table entries in disguise, and it is the chain rule run backwards.
+
 :::theorem[Substitution rule]{#substitution-rule}
-If the integrand looks like $f(g(x)) \cdot g'(x)$, substitute $u = g(x)$ so that $du = g'(x)\,dx$. Then
+If $u = g(x)$ is a differentiable function whose range is an interval on which $f$ is continuous, then
 
-$$\int f(g(x))\,g'(x)\,dx = \int f(u)\,du,$$
-
-and the integral on the right is usually simpler.
+$$\int f(g(x))\,g'(x)\,dx = \int f(u)\,du.$$
 :::
 
-The rule is the chain rule read backwards: $\frac{d}{dx}F(g(x)) = F'(g(x))g'(x)$, so an integrand of that shape has $F(g(x))$ as its antiderivative.
+:::proof
+Let $F$ be an antiderivative of $f$. By the chain rule,
 
-:::recipe[u-substitution]{#u-substitution}
-1. Look for an "inner function" whose derivative (or a constant multiple of it) appears as a factor in the integrand, and call it $u$.
-2. Compute $du = g'(x)\,dx$ and replace every $x$ in the integral, leaving nothing behind.
+$$\frac{d}{dx}F(g(x)) = F'(g(x))\,g'(x) = f(g(x))\,g'(x),$$
+
+so $F(g(x))$ is an antiderivative of the left-hand integrand: $\int f(g(x))\,g'(x)\,dx = F(g(x)) + C$. On the other side, $\int f(u)\,du = F(u) + C = F(g(x)) + C$. The two agree.
+:::
+
+The rule licenses treating $du = g'(x)\,dx$ as an algebraic identity: replace $g(x)$ by $u$, replace $g'(x)\,dx$ by $du$, and integrate in $u$. If the derivative of the inner function is present only up to a constant factor, adjust with a constant; if it is missing entirely, substitution will not work and another technique is needed.
+
+:::recipe[Substitution for an indefinite integral]{#u-substitution}
+1. Choose $u = g(x)$, an inner function whose derivative appears (up to a constant) as a factor of the integrand.
+2. Compute $du = g'(x)\,dx$ and rewrite the whole integral in terms of $u$ and $du$. No $x$ may remain.
 3. Integrate in $u$.
-4. For a definite integral, either convert the bounds to $u$-values, or back-substitute and use the original bounds.
+4. Substitute $u = g(x)$ back.
+5. Differentiate the result to check.
 :::
-
-Example: $\int 2x \cos(x^2)\,dx$. Let $u = x^2$, $du = 2x\,dx$. Integral becomes $\int \cos u\,du = \sin u + C = \sin(x^2) + C$.
 
 :::intuition
-Substitution is like changing languages to make a sentence easier to read. The math looks complicated in $x$-language, so you switch to $u$-language where it's simpler.
-
-The trick is spotting the 'inside function.' Look at your integral and ask: is there a function stuffed inside another function? If yes, call the inside part $u$. If the derivative of that inside part is also floating around in the integral, you're golden — everything converts cleanly to $u$.
-
-When you're done integrating in $u$-land, just swap back to $x$. It's like translating your answer back to the original language.
+Substitution is renaming. The integral $\int 2x\cos(x^2)\,dx$ looks unfamiliar, but if you call the awkward part $u$ and notice that $2x\,dx$ is exactly what the chain rule would have produced from it, the integral reads $\int \cos u\,du$, which you know. The skill is choosing what to rename: usually the inside of a composite function, the base of a power, the argument of an exponential, or a denominator.
 :::
 
-:::example[u-substitution with a definite integral]
+:::example[The inner function and its derivative]
+Find $\int x^3\cos(x^4 + 2)\,dx$.
+:::
+
+:::solution
+1. The inner function is $x^4 + 2$, whose derivative $4x^3$ matches the factor $x^3$ up to the constant $4$. Let $u = x^4 + 2$, so $du = 4x^3\,dx$ and $x^3\,dx = \frac{1}{4}du$.
+2. Then
+
+$$\int x^3\cos(x^4+2)\,dx = \frac{1}{4}\int\cos u\,du = \frac{1}{4}\sin u + C.$$
+
+3. Back-substitute: $\frac{1}{4}\sin(x^4 + 2) + C$.
+4. Check: $\frac{d}{dx}\frac{1}{4}\sin(x^4+2) = \frac{1}{4}\cos(x^4+2)\cdot 4x^3 = x^3\cos(x^4+2)$.
+:::
+
+:::example[A linear inner function]
+Find $\int \sqrt{2x + 1}\,dx$.
+:::
+
+:::solution
+Let $u = 2x + 1$, $du = 2\,dx$, so $dx = \frac{1}{2}du$. Then
+
+$$\int\sqrt{2x+1}\,dx = \frac{1}{2}\int u^{1/2}\,du = \frac{1}{2}\cdot\frac{u^{3/2}}{3/2} + C = \frac{1}{3}(2x+1)^{3/2} + C.$$
+
+In general $\int f(ax + b)\,dx = \frac{1}{a}F(ax + b) + C$: a linear inner function only costs a factor $\frac{1}{a}$. This is how $\int \cos 3x\,dx = \frac{1}{3}\sin 3x + C$ and $\int e^{5x}\,dx = \frac{1}{5}e^{5x} + C$ come about.
+:::
+
+:::example[Adjusting a constant]
+Find $\int \frac{x}{\sqrt{1 - 4x^2}}\,dx$.
+:::
+
+:::solution
+1. Let $u = 1 - 4x^2$, so $du = -8x\,dx$ and $x\,dx = -\frac{1}{8}du$.
+2. Then
+
+$$\int\frac{x\,dx}{\sqrt{1-4x^2}} = -\frac{1}{8}\int u^{-1/2}\,du = -\frac{1}{8}\cdot 2u^{1/2} + C = -\frac{1}{4}\sqrt{1 - 4x^2} + C.$$
+
+3. Check: $\frac{d}{dx}\left[-\frac{1}{4}(1-4x^2)^{1/2}\right] = -\frac{1}{4}\cdot\frac{1}{2}(1-4x^2)^{-1/2}\cdot(-8x) = \frac{x}{\sqrt{1-4x^2}}$.
+
+Compare $\int\frac{dx}{\sqrt{1-4x^2}}$, which has no factor $x$: there the substitution is $u = 2x$ and the answer is $\frac{1}{2}\arcsin 2x + C$. The presence or absence of the factor $x$ changes everything.
+:::
+
+:::example[The tangent integral]
+Find $\int \tan x\,dx$.
+:::
+
+:::solution
+Write $\tan x = \frac{\sin x}{\cos x}$ and let $u = \cos x$, $du = -\sin x\,dx$:
+
+$$\int\frac{\sin x}{\cos x}\,dx = -\int\frac{du}{u} = -\ln|u| + C = -\ln|\cos x| + C = \ln|\sec x| + C.$$
+
+The last step uses $-\ln|\cos x| = \ln|\cos x|^{-1}$. Both forms are standard.
+:::
+
+For a definite integral there are two ways to finish. Either substitute back and use the original limits, or change the limits along with the variable and never return to $x$.
+
+:::theorem[Substitution for definite integrals]{#definite-substitution}
+If $g'$ is continuous on $[a,b]$ and $f$ is continuous on the range of $u = g(x)$, then
+
+$$\int_a^b f(g(x))\,g'(x)\,dx = \int_{g(a)}^{g(b)} f(u)\,du.$$
+:::
+
+:::proof
+Let $F$ be an antiderivative of $f$. By the substitution rule $F(g(x))$ is an antiderivative of $f(g(x))g'(x)$, so by Part 2 the left side equals $F(g(b)) - F(g(a))$. By Part 2 again, so does the right side.
+:::
+
+The new limits are the $u$-values at the old endpoints, not the old endpoints themselves. Once they are changed, the integral is a number in $u$ and $x$ is gone for good.
+
+:::example[Changing the limits]
+Evaluate $\int_0^4 \sqrt{2x+1}\,dx$ both ways.
+:::
+
+:::solution
+Changing the limits: with $u = 2x + 1$, $du = 2\,dx$, the endpoints $x = 0$ and $x = 4$ become $u = 1$ and $u = 9$, so
+
+$$\int_0^4\sqrt{2x+1}\,dx = \frac{1}{2}\int_1^9 u^{1/2}\,du = \frac{1}{2}\cdot\frac{2}{3}\left[u^{3/2}\right]_1^9 = \frac{1}{3}(27 - 1) = \frac{26}{3}.$$
+
+Back-substituting: from the earlier example the antiderivative is $\frac{1}{3}(2x+1)^{3/2}$, and
+
+$$\left[\frac{1}{3}(2x+1)^{3/2}\right]_0^4 = \frac{1}{3}\left(9^{3/2} - 1^{3/2}\right) = \frac{26}{3}.$$
+
+Same answer, as it must be. Changing the limits is usually shorter; the one thing it forbids is mixing, evaluating a $u$-antiderivative at $x$-limits.
+:::
+
+:::example[A rational integrand]
+Evaluate $\displaystyle\int_1^2 \frac{dx}{(3 - 5x)^2}$.
+:::
+
+:::solution
+1. Let $u = 3 - 5x$, $du = -5\,dx$, so $dx = -\frac{1}{5}du$. When $x = 1$, $u = -2$; when $x = 2$, $u = -7$.
+2. Then
+
+$$\int_1^2\frac{dx}{(3-5x)^2} = -\frac{1}{5}\int_{-2}^{-7} u^{-2}\,du = -\frac{1}{5}\left[-\frac{1}{u}\right]_{-2}^{-7} = \frac{1}{5}\left[\frac{1}{u}\right]_{-2}^{-7} = \frac{1}{5}\left(-\frac{1}{7} + \frac{1}{2}\right) = \frac{1}{5}\cdot\frac{5}{14} = \frac{1}{14}.$$
+
+The integrand is positive on $[1,2]$ and the answer is positive; the lower $u$-limit being larger than the upper one is not a problem, it simply reflects that $u$ decreases as $x$ increases.
+:::
+
+:::example[Substitution with a definite integral]
 Compute $\int_0^1 2x(x^2 + 1)^3\,dx$.
 :::
 
 :::solution
-1. Spot the pattern: the inner function is $x^2 + 1$ and its derivative $2x$ appears as a factor. Perfect for substitution.
-2. Let $u = x^2 + 1$, so $du = 2x\,dx$. The $2x\,dx$ in the integral is exactly $du$.
-3. Convert the bounds: when $x=0$, $u = 0+1 = 1$. When $x=1$, $u = 1+1 = 2$.
-4. The integral becomes $\int_1^2 u^3\,du$.
-5. Integrate: $\frac{u^4}{4}\Big|_1^2 = \frac{16}{4} - \frac{1}{4} = 4 - 0.25 = \frac{15}{4}$.
-6. Final answer: $\frac{15}{4}$. No need to back-substitute since we converted the bounds.
+1. The inner function is $x^2 + 1$ and its derivative $2x$ is present exactly. Let $u = x^2 + 1$, $du = 2x\,dx$.
+2. Limits: $x = 0$ gives $u = 1$; $x = 1$ gives $u = 2$.
+3. In the new variable,
+
+$$\int_0^1 2x(x^2+1)^3\,dx = \int_1^2 u^3\,du = \left[\frac{u^4}{4}\right]_1^2 = 4 - \frac{1}{4} = \frac{15}{4}.$$
 :::
 
-## Integration by parts (reverse product rule)
+:::example[A logarithmic substitution]
+Evaluate $\displaystyle\int_1^e \frac{\ln x}{x}\,dx$.
+:::
 
-<!-- section: parts -->
+:::solution
+Let $u = \ln x$, $du = \frac{1}{x}\,dx$; the limits become $u = \ln 1 = 0$ and $u = \ln e = 1$. Then
 
-:::theorem[Integration by parts]{#integration-by-parts}
-$$\int u\,dv = uv - \int v\,du.$$
+$$\int_1^e\frac{\ln x}{x}\,dx = \int_0^1 u\,du = \frac{1}{2}.$$
+:::
+
+:::pitfall
+After substituting, every $x$ must be gone, including the $x$ hiding in $dx$. An integral like $\int x^2\cos(x^3)\,dx$ becomes $\frac{1}{3}\int\cos u\,du$, but $\int x\cos(x^3)\,dx$ becomes $\frac{1}{3}\int\frac{\cos u}{x}\,du$ with an $x$ left over, which means the substitution has failed and the integral needs a different idea (in this case, it has no elementary antiderivative at all).
+:::
+
+## Symmetry
+
+<!-- section: symmetry -->
+
+An integral over an interval centered at $0$ can often be simplified, or seen to vanish, by the symmetry of the integrand.
+
+:::theorem[Integrals of even and odd functions]{#symmetry-theorem}
+Let $f$ be continuous on $[-a,a]$.
+
+1. If $f$ is even, $f(-x) = f(x)$, then $\displaystyle\int_{-a}^{a} f(x)\,dx = 2\int_0^a f(x)\,dx$.
+2. If $f$ is odd, $f(-x) = -f(x)$, then $\displaystyle\int_{-a}^{a} f(x)\,dx = 0$.
 :::
 
 :::proof
-This is the product rule run backwards. Integrating $(uv)' = u'v + uv'$ gives $uv = \int v\,du + \int u\,dv$, and rearranging isolates $\int u\,dv$.
+Split at $0$: $\int_{-a}^a f = \int_{-a}^0 f + \int_0^a f$. In the first integral substitute $u = -x$, $du = -dx$; the limits $x = -a$, $x = 0$ become $u = a$, $u = 0$, so
+
+$$\int_{-a}^0 f(x)\,dx = -\int_a^0 f(-u)\,du = \int_0^a f(-u)\,du.$$
+
+If $f$ is even this is $\int_0^a f(u)\,du$ and the two halves add to $2\int_0^a f$. If $f$ is odd it is $-\int_0^a f(u)\,du$ and the two halves cancel.
 :::
 
-:::recipe[Choosing $u$ by LIATE]{#liate}
-Choose $u$ and $dv$ using the LIATE heuristic: Logarithms, Inverse trig, Algebraic ($x^n$), Trig, Exponentials. Pick $u$ from higher in this list, since those get simpler when differentiated, and let $dv$ be whatever is left.
-:::
-
-Example: $\int x e^x\,dx$. Let $u = x$ (algebraic), $dv = e^x\,dx$. Then $du = dx$, $v = e^x$.
-
-Result: $x e^x - \int e^x\,dx = x e^x - e^x + C = e^x(x-1) + C$.
-
-Sometimes you need to apply by-parts twice (e.g., $\int x^2 e^x\,dx$) or use the tabular method for repeated applications.
-
-A special case: $\int e^x \sin x\,dx$ requires by-parts twice, then solving for the integral algebraically.
+The geometry is the proof made visible. An even function's graph is a mirror image across the $y$-axis, so the two halves have equal area. An odd function's graph is a half-turn image through the origin, so the region on the left is the region on the right flipped below the axis, and the signed areas cancel.
 
 :::intuition
-Imagine you're trying to find the area of a weird shape made by two things multiplied together. You can't handle both at once, so you break the job into pieces.
-
-The idea: pick one part to differentiate (make simpler) and the other to integrate. You do one step of the problem, and in exchange, the remaining integral becomes easier. It's like trading a hard problem for an easier one.
-
-The LIATE trick tells you which part to pick as $u$: Logs first, then Inverse trig, Algebra ($x$, $x^2$), Trig, and Exponentials last. Pick $u$ from higher in the list because those get simpler when you differentiate them.
+Fold the paper along the $y$-axis. For an even function the two halves of the graph land on top of each other, so you only need to measure one half and double it. For an odd function one half lands on the mirror image of the other, above the axis where the other is below; the two contributions are equal and opposite and the total is zero before any calculation.
 :::
 
-:::example[Integration by parts: x·sin(x)]
-Compute $\int x \sin x\,dx$.
+:::example[An even integrand]
+Evaluate $\int_{-2}^{2}(x^6 + 1)\,dx$.
 :::
 
 :::solution
-1. We have a product of algebraic ($x$) and trig ($\sin x$). By LIATE, pick $u = x$ (algebraic is above trig).
-2. Set $u = x$ and $dv = \sin x\,dx$.
-3. Differentiate $u$: $du = dx$. Integrate $dv$: $v = -\cos x$.
-4. Apply the formula $\int u\,dv = uv - \int v\,du$:
-5. $\int x \sin x\,dx = x(-\cos x) - \int (-\cos x)\,dx = -x\cos x + \int \cos x\,dx$.
-6. The remaining integral is easy: $\int \cos x\,dx = \sin x + C$.
-7. Final answer: $\int x \sin x\,dx = -x\cos x + \sin x + C$.
-8. Check: differentiate $-x\cos x + \sin x$ using the product rule on the first term: $-\cos x + x\sin x + \cos x = x\sin x$. Correct!
+$x^6 + 1$ is even, so
+
+$$\int_{-2}^{2}(x^6+1)\,dx = 2\int_0^2 (x^6+1)\,dx = 2\left[\frac{x^7}{7} + x\right]_0^2 = 2\left(\frac{128}{7} + 2\right) = \frac{284}{7}.$$
 :::
 
-## Trigonometric integrals
-
-<!-- section: trigint -->
-
-Integrals of the form $\int \sin^m x \cos^n x\,dx$ come up constantly and have a systematic strategy based on whether $m$ and $n$ are odd or even.
-
-:::recipe[Powers of sine and cosine]{#sin-cos-powers}
-1. One power is odd: peel off one factor of the odd-powered function, convert the remaining even power using $\sin^2 x + \cos^2 x = 1$, and substitute with $u$ = the other function.
-2. Both powers are even: use the half-angle identities $\sin^2 x = \frac{1-\cos(2x)}{2}$ and $\cos^2 x = \frac{1+\cos(2x)}{2}$ to reduce, repeating as needed. These can be tedious but are completely mechanical.
-:::
-
-Case 1 in action: $\int \cos^3 x\,dx$. Peel: $\int \cos^2 x \cdot \cos x\,dx = \int(1-\sin^2 x)\cos x\,dx$. Let $u = \sin x$: $\int(1-u^2)\,du = u - u^3/3 + C = \sin x - \frac{\sin^3 x}{3} + C$.
-
-Other trig integrals: $\int \tan^n x\,dx$ and $\int \sec^n x\,dx$ have their own patterns. For $\tan$, peel off $\tan^2 x = \sec^2 x - 1$ and reduce. For $\sec$, use integration by parts or reduction formulas.
-
-Two results are worth knowing outright:
-
-$$\int \tan x\,dx = -\ln|\cos x| + C = \ln|\sec x| + C, \qquad \int \sec x\,dx = \ln|\sec x + \tan x| + C.$$
-
-The second is famously non-obvious.
-
-:::intuition
-Trig integrals look intimidating, but they all follow the same playbook: use identities to simplify, then substitute. The decision is just 'odd power or even power?' Odd → peel and substitute. Even → half-angle identities. Once you know the strategy, it's mechanical.
-:::
-
-:::example[Even powers: half-angle identity]
-Compute $\int \sin^2 x\,dx$.
+:::example[An odd integrand]
+Evaluate $\displaystyle\int_{-1}^{1}\frac{\tan x}{1 + x^2 + x^4}\,dx$.
 :::
 
 :::solution
-1. Both powers are even (sin² × cos⁰), so use the half-angle identity.
-2. $\sin^2 x = \frac{1-\cos(2x)}{2}$.
-3. $\int \sin^2 x\,dx = \int \frac{1-\cos(2x)}{2}\,dx = \frac{1}{2}\int 1\,dx - \frac{1}{2}\int \cos(2x)\,dx$.
-4. $= \frac{x}{2} - \frac{1}{2} \cdot \frac{\sin(2x)}{2} + C = \frac{x}{2} - \frac{\sin(2x)}{4} + C$.
-5. This integral appears so often that it's worth remembering the result directly.
+The numerator $\tan x$ is odd and the denominator $1 + x^2 + x^4$ is even, so their quotient is odd: replacing $x$ by $-x$ flips the sign of the top and leaves the bottom alone. The interval is symmetric, so the integral is $0$. Nobody could find this antiderivative; nobody needs to.
 :::
 
-## Trigonometric substitution
-
-<!-- section: trigsub -->
-
-When the integrand involves $\sqrt{a^2 - x^2}$, $\sqrt{a^2 + x^2}$, or $\sqrt{x^2 - a^2}$, no algebraic trick will eliminate the square root. Trig substitution works by exploiting Pythagorean identities to remove the radical.
-
-:::recipe[Trigonometric substitution]{#trig-substitution}
-1. For $\sqrt{a^2 - x^2}$: let $x = a\sin\theta$, $dx = a\cos\theta\,d\theta$. Then $\sqrt{a^2-x^2} = a\cos\theta$. (Think: $1 - \sin^2\theta = \cos^2\theta$.)
-2. For $\sqrt{a^2 + x^2}$: let $x = a\tan\theta$, $dx = a\sec^2\theta\,d\theta$. Then $\sqrt{a^2+x^2} = a\sec\theta$. (Think: $1 + \tan^2\theta = \sec^2\theta$.)
-3. For $\sqrt{x^2 - a^2}$: let $x = a\sec\theta$, $dx = a\sec\theta\tan\theta\,d\theta$. Then $\sqrt{x^2-a^2} = a\tan\theta$. (Think: $\sec^2\theta - 1 = \tan^2\theta$.)
-:::
-
-After substituting, the radical vanishes, leaving a trig integral. Evaluate it, then convert back to $x$ using a reference triangle: draw a right triangle where the side lengths are chosen so $\sin\theta$, $\cos\theta$, or $\tan\theta$ equals $x/a$ (or the appropriate ratio).
-
-Recognition tip: the expression doesn't have to be a clean $\sqrt{a^2-x^2}$. Complete the square first if needed. For instance, $\sqrt{6x-x^2} = \sqrt{9-(x-3)^2}$ after completing the square, and now the $a^2 - u^2$ pattern is visible with $u = x-3$, $a = 3$.
-
-:::intuition
-The three Pythagorean identities ($1-\sin^2 = \cos^2$, $1+\tan^2 = \sec^2$, $\sec^2-1 = \tan^2$) are perfectly shaped to cancel square roots of the form $a^2 - x^2$, $a^2 + x^2$, $x^2 - a^2$. Trig substitution is just choosing the right identity and letting the Pythagorean theorem do the heavy lifting.
-:::
-
-:::example[Trig substitution: $\sqrt{a^2 - x^2}$ pattern]
-Compute $\int \frac{1}{\sqrt{4-x^2}}\,dx$.
+:::example[Splitting by parity]
+Evaluate $\displaystyle\int_{-\pi/2}^{\pi/2}\left(x^3\cos x + \cos x\right)dx$.
 :::
 
 :::solution
-1. This has the form $\sqrt{a^2 - x^2}$ with $a = 2$. Let $x = 2\sin\theta$, $dx = 2\cos\theta\,d\theta$.
-2. $\sqrt{4 - x^2} = \sqrt{4 - 4\sin^2\theta} = 2\sqrt{1-\sin^2\theta} = 2\cos\theta$.
-3. Substitute: $\int \frac{1}{2\cos\theta} \cdot 2\cos\theta\,d\theta = \int 1\,d\theta = \theta + C$.
-4. Convert back: since $x = 2\sin\theta$, we get $\theta = \arcsin(x/2)$.
-5. Final answer: $\int \frac{1}{\sqrt{4-x^2}}\,dx = \arcsin\frac{x}{2} + C$.
+The term $x^3\cos x$ is odd (odd times even) and integrates to $0$; the term $\cos x$ is even. So the integral is
+
+$$2\int_0^{\pi/2}\cos x\,dx = 2\left[\sin x\right]_0^{\pi/2} = 2.$$
 :::
 
-## Partial fractions
-
-<!-- section: partial -->
-
-To integrate a rational function $\frac{P(x)}{Q(x)}$ where $\deg P < \deg Q$, decompose it into simpler fractions, each of which integrates to a logarithm or an arctangent.
-
-:::recipe[Partial fractions]{#partial-fractions}
-1. If $\deg P \geq \deg Q$, perform polynomial long division first, then decompose the remainder.
-2. Factor the denominator and write one term per factor, for instance $\frac{1}{(x-1)(x+2)} = \frac{A}{x-1} + \frac{B}{x+2}$.
-3. Solve for $A$ and $B$ by clearing denominators and comparing coefficients or plugging in strategic $x$ values.
+:::pitfall
+The theorem needs both a symmetric interval and a function of definite parity. $\int_0^2 x^3\,dx$ is not $0$ (the interval is not symmetric), and $\int_{-1}^{1}(x^3 + 1)\,dx$ is not $0$ (the integrand is neither even nor odd; split it into $x^3$, which contributes $0$, and $1$, which contributes $2$).
 :::
 
-Repeated factors: $\frac{1}{(x-1)^2}$ requires terms $\frac{A}{x-1} + \frac{B}{(x-1)^2}$.
+## Numerical integration
 
-Irreducible quadratics: for $(x^2+1)$ in the denominator, the numerator is $Ax+B$, not just $A$.
+<!-- section: numerical -->
 
-:::example[Partial fraction decomposition]
-Compute $\int \frac{5x + 1}{(x+1)(x-2)}\,dx$.
+Two situations defeat the Fundamental Theorem. The integrand may have no elementary antiderivative, as with $e^{x^2}$, $\frac{\sin x}{x}$ or $\sqrt{1 + x^3}$; or the function may be known only from measurements, with no formula at all. In both cases the integral is approximated by a finite sum, and the question is how to choose the sum so that a small number of function values gives a good answer.
+
+Throughout, $[a,b]$ is divided into $n$ equal subintervals of width $\Delta x = \frac{b-a}{n}$ with endpoints $x_i = a + i\Delta x$, and $\bar{x}_i$ is the midpoint of the $i$th subinterval. Left and right endpoint sums are the crudest options: their errors are of size proportional to $\Delta x$, so doubling $n$ only halves the error. The three rules below do much better.
+
+:::definition[Midpoint, Trapezoidal and Simpson's Rules]{#numerical-rules}
+$$M_n = \Delta x\left[f(\bar{x}_1) + f(\bar{x}_2) + \cdots + f(\bar{x}_n)\right],$$
+
+$$T_n = \frac{\Delta x}{2}\left[f(x_0) + 2f(x_1) + 2f(x_2) + \cdots + 2f(x_{n-1}) + f(x_n)\right],$$
+
+$$S_n = \frac{\Delta x}{3}\left[f(x_0) + 4f(x_1) + 2f(x_2) + 4f(x_3) + \cdots + 2f(x_{n-2}) + 4f(x_{n-1}) + f(x_n)\right], \quad n \text{ even}.$$
+:::
+
+The Midpoint Rule is the midpoint Riemann sum. The Trapezoidal Rule replaces each rectangle by the trapezoid with vertices at $(x_{i-1}, 0)$, $(x_i, 0)$, $(x_i, f(x_i))$, $(x_{i-1}, f(x_{i-1}))$, whose area is $\frac{\Delta x}{2}[f(x_{i-1}) + f(x_i)]$; adding these gives every interior value twice and each endpoint once, which is the pattern of coefficients. Equivalently, $T_n = \frac{1}{2}(L_n + R_n)$: the chord through two points on the curve averages the left and right rectangles.
+
+Simpson's Rule replaces the chords by parabolas. Take two adjacent subintervals $[x_0, x_2]$, shift so the middle point is at $0$, and call the width $h = \Delta x$; the three data points are $(-h, y_0)$, $(0, y_1)$, $(h, y_2)$. The parabola $p(x) = Ax^2 + Bx + C$ through them satisfies $y_0 = Ah^2 - Bh + C$, $y_1 = C$, $y_2 = Ah^2 + Bh + C$, and
+
+$$\int_{-h}^{h} p(x)\,dx = \left[\frac{Ax^3}{3} + \frac{Bx^2}{2} + Cx\right]_{-h}^{h} = \frac{2Ah^3}{3} + 2Ch = \frac{h}{3}\left(2Ah^2 + 6C\right).$$
+
+But $y_0 + 4y_1 + y_2 = 2Ah^2 + 6C$ as well, so the parabola's integral is $\frac{h}{3}(y_0 + 4y_1 + y_2)$, in terms of the three function values alone, with $B$ never needed. Doing this on each pair of subintervals and adding gives $S_n$: the endpoints once, the odd-indexed points (middles of pairs) four times, the even-indexed points (shared by two pairs) twice. This is why $n$ must be even. A pleasant consequence of the algebra is that $S_{2n} = \frac{1}{3}T_n + \frac{2}{3}M_n$, a weighted average of the two simpler rules.
+
+The three rules differ in accuracy, and the following bounds say by how much.
+
+:::theorem[Error bounds]{#error-bounds}
+Let $E_T$, $E_M$ and $E_S$ denote the errors $\int_a^b f(x)\,dx - T_n$, and similarly for $M_n$ and $S_n$.
+
+1. If $|f''(x)| \le K$ on $[a,b]$, then
+
+$$|E_T| \le \frac{K(b-a)^3}{12n^2}, \qquad |E_M| \le \frac{K(b-a)^3}{24n^2}.$$
+
+2. If $|f^{(4)}(x)| \le K$ on $[a,b]$ and $n$ is even, then
+
+$$|E_S| \le \frac{K(b-a)^5}{180n^4}.$$
+:::
+
+The proofs belong to numerical analysis. The idea for the trapezoidal bound: on one subinterval the error is the integral of $f$ minus its chord, and Taylor's theorem bounds that difference by $\frac{K}{2}(x - x_{i-1})(x_i - x)$, whose integral is $\frac{K(\Delta x)^3}{12}$; summing $n$ of these and writing $\Delta x = (b-a)/n$ gives the bound. The midpoint bound is the same argument with the tangent line at $\bar{x}_i$ in place of the chord (the midpoint rectangle and the tangent-line trapezoid have equal area), and the factor of $2$ improvement comes from the tangent hugging the curve more closely than the chord. Simpson's parabolas match the function to third order, hence the fourth derivative and the $n^4$.
+
+Three consequences are worth knowing. For a function that is concave up, chords lie above the curve and tangents below, so $T_n$ overestimates and $M_n$ underestimates; concave down reverses both. The midpoint error is about half the trapezoidal error and of opposite sign. And doubling $n$ divides the trapezoidal and midpoint errors by about $4$ but the Simpson error by about $16$, which is why Simpson's Rule is the default in practice.
+
+:::intuition
+To estimate the area of a pond from a few depth soundings across it, you could assume the bottom is flat between soundings (rectangles), sloped in a straight line between them (trapezoids), or gently curved (parabolas). The more the assumed shape resembles a real pond bottom, the fewer soundings you need. Simpson's parabolas are usually the best guess a few numbers can support.
+:::
+
+:::example[All three rules on one integral]
+Approximate $\int_1^2 \frac{1}{x}\,dx$ with $n = 4$ using the Trapezoidal, Midpoint and Simpson's Rules, and compare with the exact value $\ln 2 \approx 0.693147$.
 :::
 
 :::solution
-1. Decompose: $\frac{5x+1}{(x+1)(x-2)} = \frac{A}{x+1} + \frac{B}{x-2}$.
-2. Multiply both sides by $(x+1)(x-2)$: $5x + 1 = A(x-2) + B(x+1)$.
-3. Smart substitution — let $x = 2$: $10 + 1 = A(0) + B(3)$, so $B = \frac{11}{3}$.
-4. Let $x = -1$: $-5 + 1 = A(-3) + B(0)$, so $A = \frac{4}{3}$.
-5. The integral becomes $\int \frac{4/3}{x+1}\,dx + \int \frac{11/3}{x-2}\,dx$.
-6. $= \frac{4}{3}\ln|x+1| + \frac{11}{3}\ln|x-2| + C$.
+1. $\Delta x = 0.25$; the endpoints are $1, 1.25, 1.5, 1.75, 2$ with $f$-values $1, 0.8, 0.666667, 0.571429, 0.5$.
+2. Trapezoidal:
+
+$$T_4 = \frac{0.25}{2}\left[1 + 2(0.8) + 2(0.666667) + 2(0.571429) + 0.5\right] = 0.125(5.576190) \approx 0.697024.$$
+
+3. Midpoint: the midpoints are $1.125, 1.375, 1.625, 1.875$ with $f$-values $0.888889, 0.727273, 0.615385, 0.533333$, so
+
+$$M_4 = 0.25(2.764880) \approx 0.691220.$$
+
+4. Simpson:
+
+$$S_4 = \frac{0.25}{3}\left[1 + 4(0.8) + 2(0.666667) + 4(0.571429) + 0.5\right] = \frac{8.319048}{12} \approx 0.693254.$$
+
+5. Errors: $E_T \approx -0.003877$, $E_M \approx +0.001927$, $E_S \approx -0.000107$. The function $1/x$ is concave up, so the trapezoidal estimate is too big and the midpoint estimate too small, with the midpoint error about half the size. Simpson's Rule, with the same five function values as $T_4$, is thirty-six times more accurate than it.
 :::
 
-## Improper integrals
-
-<!-- section: improper -->
-
-:::definition[Improper integral]{#improper-integral}
-An improper integral has an infinite limit of integration or an integrand that blows up within the interval. In either case, you can't just plug in bounds — the integral is *defined* as a limit of proper integrals.
-:::
-
-Type 1 — infinite bound: replace $\infty$ with a variable and take a limit. $\int_1^{\infty} \frac{1}{x^2}\,dx = \lim_{b\to\infty} \int_1^b \frac{1}{x^2}\,dx = \lim_{b\to\infty} [-1/x]_1^b = \lim_{b\to\infty}(-1/b+1) = 1$. Converges.
-
-Type 2 — infinite discontinuity: the integrand blows up at a point in $[a,b]$. Approach the bad point with a limit. $\int_0^1 \frac{1}{\sqrt{x}}\,dx = \lim_{a\to 0^+} \int_a^1 x^{-1/2}\,dx = \lim_{a\to 0^+} [2\sqrt{x}]_a^1 = 2 - 0 = 2$. Converges.
-
-If the limit is finite, the improper integral converges. If the limit is $\pm\infty$ or does not exist, it diverges.
-
-:::theorem[The $p$-integral]{#p-integral}
-$$\int_1^{\infty} \frac{1}{x^p}\,dx \quad \text{converges if } p > 1 \text{ and diverges if } p \leq 1.$$
-:::
-
-This is the continuous analog of the p-series test ($\sum 1/n^p$) and serves as the benchmark everything else is compared against.
-
-:::theorem[Comparison test for improper integrals]{#improper-comparison}
-Suppose $0 \leq f(x) \leq g(x)$. If $\int g$ converges, then $\int f$ converges. If $\int f$ diverges, then $\int g$ diverges.
-:::
-
-Same logic as for series: a smaller non-negative function cannot enclose more area than a larger one.
-
-:::intuition
-A normal integral asks: 'What's the area under this curve between two finite points?' An improper integral asks: 'What if the region extends to infinity, or the curve shoots up to infinity somewhere?' Surprisingly, some of these infinite regions have finite area.
-
-The trick: sneak up on the infinity with a limit. Instead of integrating all the way to infinity at once, integrate to some large number $b$ and see what happens as $b \to \infty$. If the answer settles down to a finite number, the infinite area is actually finite.
-:::
-
-:::example[Convergence vs. divergence of improper integrals]
-Compare $\int_1^\infty \frac{1}{x}\,dx$ and $\int_1^\infty \frac{1}{x^2}\,dx$.
+:::example[Error bounds and how many subintervals]
+For the integral above, (a) compute the error bounds for $n = 4$ and (b) find how large $n$ must be to guarantee an error below $0.0001$ with each rule.
 :::
 
 :::solution
-1. For $1/x$: $\lim_{b\to\infty} [\ln x]_1^b = \lim_{b\to\infty} (\ln b - 0) = \infty$. Diverges.
-2. For $1/x^2$: $\lim_{b\to\infty} [-1/x]_1^b = \lim_{b\to\infty} (-1/b + 1) = 1$. Converges.
-3. The difference? $1/x$ decays too slowly — its tail has too much area. $1/x^2$ decays fast enough for the total area to be finite.
-4. This is the boundary case: $p=1$ is the critical exponent. For $p > 1$, convergence. For $p \leq 1$, divergence.
+1. For $f(x) = 1/x$, $f''(x) = 2/x^3$, which on $[1,2]$ is largest at $x = 1$: take $K = 2$. Similarly $f^{(4)}(x) = 24/x^5 \le 24$.
+2. With $b - a = 1$ and $n = 4$:
+
+$$|E_T| \le \frac{2}{12\cdot 16} \approx 0.0104, \qquad |E_M| \le \frac{2}{24\cdot 16} \approx 0.0052, \qquad |E_S| \le \frac{24}{180\cdot 256} \approx 0.00052.$$
+
+All three actual errors from the previous example are comfortably inside their bounds; the bounds are guarantees, not predictions.
+3. For the trapezoidal error to be below $0.0001$, it suffices that $\frac{2}{12n^2} < 0.0001$, that is $n^2 > \frac{2}{0.0012} \approx 1667$, so $n > 40.8$: take $n = 41$.
+4. For the midpoint rule, $\frac{2}{24n^2} < 0.0001$ gives $n^2 > 833$, $n > 28.9$: take $n = 29$.
+5. For Simpson, $\frac{24}{180n^4} < 0.0001$ gives $n^4 > 1333$, $n > 6.04$; the smallest even $n$ that works is $n = 8$.
+
+Eight function evaluations with Simpson's Rule buy the accuracy that costs the trapezoidal rule forty-one.
 :::
 
-## Which technique should I use? Decision tree
-
-<!-- section: technique -->
-
-:::recipe[Choosing an integration technique]{#technique-decision-tree}
-1. Is it a basic form or obvious sub? Use basic or u-sub.
-2. Product of different types? Parts.
-3. Rational? Partial fractions (after poly div if needed).
-4. Trig powers or sqrt of quadratics? Trig id or trig sub.
-5. None obvious? Try parts or sub, or numerical.
+:::example[An integral with no elementary antiderivative]
+Use Simpson's Rule with $n = 4$ to approximate $\int_0^1 e^{x^2}\,dx$.
 :::
 
-:::intuition
-Integration is pattern matching. Train your eye to recognize the 'shape' of the integrand and match it to the right undo-button (sub, parts, partials...).
+:::solution
+$\Delta x = 0.25$ and the required values are
+
+$$f(0) = 1, \quad f(0.25) = e^{0.0625} \approx 1.064494, \quad f(0.5) = e^{0.25} \approx 1.284025, \quad f(0.75) = e^{0.5625} \approx 1.755055, \quad f(1) = e \approx 2.718282.$$
+
+Then
+
+$$S_4 = \frac{0.25}{3}\left[1 + 4(1.064494) + 2(1.284025) + 4(1.755055) + 2.718282\right] = \frac{17.564528}{12} \approx 1.4637.$$
+
+The true value is $1.4627$ to four places. No antiderivative exists in elementary terms, so a numerical rule is not a shortcut here but the only route.
 :::
 
-## Area between curves and volumes preview
+:::example[Integrating measured data]
+A car's speed (m/s) was recorded every $10$ seconds for a minute: $0, 12, 18, 22, 25, 27, 28$. Estimate the distance traveled.
+:::
+
+:::solution
+Distance is $\int_0^{60} v(t)\,dt$, with $\Delta t = 10$ and $n = 6$. The Trapezoidal Rule gives
+
+$$T_6 = \frac{10}{2}\left[0 + 2(12 + 18 + 22 + 25 + 27) + 28\right] = 5(236) = 1180\ \text{m},$$
+
+and since $n$ is even Simpson's Rule is available too:
+
+$$S_6 = \frac{10}{3}\left[0 + 4(12) + 2(18) + 4(22) + 2(25) + 4(27) + 28\right] = \frac{10}{3}(358) \approx 1193\ \text{m}.$$
+
+The speed graph is concave down (the increments shrink), so $T_6$ is an underestimate and the truth is likely a little above $1180$ m, consistent with Simpson's figure. With data there is no error bound, because there is no $f''$ to bound.
+:::
+
+:::pitfall
+Simpson's Rule needs an even number of subintervals, and its coefficients alternate $1, 4, 2, 4, \ldots, 2, 4, 1$: the pattern begins and ends with $1$, and the $4$s sit on the odd-indexed points. The most common slip is applying the trapezoidal coefficient $2$ to every interior point, or starting the alternation with $2$ instead of $4$.
+:::
+
+## Area between curves: a preview of applications
 
 <!-- section: areaprev -->
 
-Integration extends naturally from 'area under one curve' to 'area between two curves' and 'volume of a solid.' The strategy is always the same: slice, approximate each slice, and integrate.
+Everything so far has measured the area between one curve and the axis. The same slicing argument measures the area between two curves, and it is the template for volume, arc length, work and every other application in the next chapter.
 
-Area between curves: the area between $y = f(x)$ (top) and $y = g(x)$ (bottom) from $x = a$ to $x = b$ is
+:::theorem[Area between two curves]{#area-between-curves}
+If $f$ and $g$ are continuous and $f(x) \ge g(x)$ on $[a,b]$, the area of the region between $y = f(x)$ and $y = g(x)$ from $x = a$ to $x = b$ is
 
-$$A = \int_a^b [f(x) - g(x)]\,dx.$$
+$$A = \int_a^b \left[f(x) - g(x)\right]dx.$$
+:::
 
-First determine which function is on top in each sub-interval. If the curves cross, split the integral at the crossing points.
+:::proof
+Slice the region into $n$ vertical strips of width $\Delta x$. The $i$th strip is approximately a rectangle of width $\Delta x$ and height $f(x_i^*) - g(x_i^*)$, the vertical distance from the lower curve to the upper one. The total $\sum [f(x_i^*) - g(x_i^*)]\Delta x$ is a Riemann sum for $f - g$, and its limit is the integral. When both curves lie above the axis this is also the area under $f$ minus the area under $g$, but the slicing argument does not need that and works wherever the curves are.
+:::
 
-Volume by disks/washers: revolve a region around the $x$-axis. Each cross-section is a disk (or washer if there's a hole):
-
-$$V = \pi\int_a^b [f(x)]^2\,dx, \qquad V = \pi\int_a^b \left([R(x)]^2 - [r(x)]^2\right)dx,$$
-
-where $f(x)$ is the radius of a solid disk, and $R$ and $r$ are the outer and inner radii of a washer.
-
-Volume by cylindrical shells: revolve around the $y$-axis. Instead of slicing perpendicular to the axis, wrap thin cylindrical shells around it:
-
-$$V = 2\pi\int_a^b x \cdot f(x)\,dx.$$
-
-These topics are expanded in the Applications of Integration module. The key insight here: integration is not just about area — it's a universal tool for accumulating any quantity that can be sliced into thin pieces.
+The single rule to remember is top minus bottom. If the curves cross inside the interval, the roles switch at the crossing, and the region must be split there so that the integrand is never negative.
 
 :::intuition
-Finding area between curves is like measuring the space between two fences. For volumes, imagine spinning a flat shape around a stick (like a potter's wheel) — it carves out a 3D solid. Integration lets you compute the exact volume by adding up infinitely many thin slices.
+The area of a garden between two curved fences is the sum of the areas of thin north-south strips, and each strip is as long as the gap between the fences at that point. Which fence is "top" can change along the way; where it does, the integral must change with it.
 :::
+
+:::example[Top minus bottom]
+Find the area of the region bounded by $y = e^x$, $y = x$, $x = 0$ and $x = 1$.
+:::
+
+:::solution
+On $[0,1]$, $e^x \ge 1 > x$, so $e^x$ is the top curve:
+
+$$A = \int_0^1 (e^x - x)\,dx = \left[e^x - \frac{x^2}{2}\right]_0^1 = \left(e - \frac{1}{2}\right) - 1 = e - \frac{3}{2} \approx 1.218.$$
+:::
+
+:::example[Curves that cross]
+Find the area enclosed by the parabola $y = x^2$ and the line $y = 2x$.
+:::
+
+:::solution
+1. The curves meet where $x^2 = 2x$, that is at $x = 0$ and $x = 2$; these are the limits.
+2. Between them, at $x = 1$ say, $2x = 2 > 1 = x^2$, so the line is on top.
+3. $A = \int_0^2 (2x - x^2)\,dx = \left[x^2 - \frac{x^3}{3}\right]_0^2 = 4 - \frac{8}{3} = \frac{4}{3}$.
+:::
+
+Volume is the next step, and it is the same idea one dimension up: revolve a region about an axis, slice the solid into thin disks, washers or cylindrical shells, and integrate the cross-sectional area. Those formulas, together with arc length, average value, work and the rest, are the subject of the Applications of Integration chapter.
+
+Two other chapters follow directly from this one. Techniques of Integration develops integration by parts (the product rule backwards), trigonometric integrals and substitutions, partial fractions and improper integrals, all of which are ways of turning an integral into one the table can handle. Differential Equations begins where antiderivatives leave off, with equations in which the unknown is a function and the constant of integration becomes an initial condition.
 
 ## Common Mistakes
 
-- Forgetting +C on indefinite integrals.
-- Wrong u in substitution (not including the du factor or forgetting to change limits for definite).
-- Sign errors in by-parts (uv - integral).
-- For partial fractions, forgetting repeated factors or irreducible quadratics.
-- Treating improper integrals as proper (must take the limit).
-- Mixing up net vs total area.
-- Not checking if antiderivative is valid on the whole interval (logs, abs values, domains).
+- Forgetting the $+C$ on an indefinite integral, or adding one to a definite integral, which is a number.
+- Treating $\int fg\,dx$ as $\int f\,dx\cdot\int g\,dx$. Integrals are linear over sums and constant multiples only.
+- Applying the power rule to $x^{-1}$. The antiderivative of $\frac{1}{x}$ is $\ln|x|$, and the antiderivative of $\frac{1}{x^2}$ is $-\frac{1}{x}$, not a logarithm.
+- Using $F(b) - F(a)$ when the integrand is not continuous on $[a,b]$, as in $\int_{-1}^{2} x^{-2}\,dx$. Check for singularities before applying Part 2.
+- Dropping the chain-rule factor in $\frac{d}{dx}\int_a^{u(x)} f(t)\,dt = f(u(x))\,u'(x)$, or forgetting the minus sign from a variable lower limit.
+- Leaving an $x$ behind after a substitution. Every $x$, including the one in $dx$, must be converted to $u$ or the substitution has failed.
+- Evaluating a $u$-antiderivative at the original $x$-limits. Either change the limits to $u$-values or back-substitute first; never mix.
+- Reporting net area when total area was asked, or displacement when distance was asked. Split at the zeros of the integrand and add absolute values.
+- Using the symmetry theorem on a non-symmetric interval, or on a function that is neither even nor odd.
+- Counting the terms of a Riemann sum wrongly: $L_n$ uses $x_0, \ldots, x_{n-1}$ and $R_n$ uses $x_1, \ldots, x_n$, each exactly $n$ terms.
+- Using Simpson's Rule with odd $n$, or getting the coefficient pattern $1, 4, 2, 4, \ldots, 4, 1$ wrong.
+- Trusting a numerical estimate without an error bound when one is available, or reading the bound as the actual error rather than a guarantee.

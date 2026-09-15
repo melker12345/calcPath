@@ -1,0 +1,1236 @@
+---
+title: Generalized Eigenvectors and Jordan Form
+---
+
+# Generalized Eigenvectors and Jordan Form
+
+The eigenvalue chapter ended with a promise and a warning. The promise: if an $n \times n$ matrix has $n$ independent eigenvectors, then in the basis they form it becomes diagonal, and every question about it — powers, exponentials, long-run behaviour — collapses into $n$ independent scalar questions. The warning: not every matrix has $n$ independent eigenvectors. The matrix
+
+$$A = \begin{pmatrix} 3 & 1 \\ 0 & 3 \end{pmatrix}$$
+
+has the single eigenvalue $3$ repeated twice and only a one-dimensional space of eigenvectors. No change of basis will make it diagonal. It is not exotic, it is not a rounding artefact, and it will not go away.
+
+This chapter says what to do instead. The answer is the **Jordan normal form**: every complex square matrix is similar to a matrix that is diagonal except for a scattering of $1$'s directly above the diagonal, and that form is unique up to the order of its blocks. Getting there requires four genuinely new ideas — invariant subspaces, the minimal polynomial, generalized eigenvectors, and the structure of nilpotent operators — and each of them is worth having on its own. The Cayley–Hamilton theorem, one of the most quoted results in the subject, falls out along the way.
+
+Throughout, we work over the complex numbers. That is not laziness: the whole theory depends on the characteristic polynomial factoring completely into linear factors, which over $\mathbb{C}$ is guaranteed by the fundamental theorem of algebra and over $\mathbb{R}$ is not. The last section says what survives if you insist on staying real.
+
+## Why diagonalization fails
+
+<!-- section: defective -->
+
+Recall the two multiplicities attached to an eigenvalue. They are different numbers, and the whole chapter lives in the gap between them.
+
+:::definition[Algebraic and geometric multiplicity]{#multiplicities}
+Let $A$ be $n \times n$ with characteristic polynomial $p(\lambda) = \det(\lambda I - A)$, and let $\lambda_0$ be an eigenvalue of $A$.
+
+The **algebraic multiplicity** $m_a(\lambda_0)$ is the multiplicity of $\lambda_0$ as a root of $p$: the largest $m$ with $(\lambda - \lambda_0)^m \mid p(\lambda)$.
+
+The **geometric multiplicity** $m_g(\lambda_0)$ is the dimension of the eigenspace,
+
+$$m_g(\lambda_0) = \dim \ker(A - \lambda_0 I) = n - \operatorname{rank}(A - \lambda_0 I).$$
+:::
+
+:::theorem[The multiplicities are ordered]{#mult-inequality}
+For every eigenvalue $\lambda_0$ of $A$,
+
+$$1 \le m_g(\lambda_0) \le m_a(\lambda_0).$$
+:::
+
+:::proof
+The left inequality holds because an eigenvalue has at least one eigenvector. For the right, put $g = m_g(\lambda_0)$ and choose a basis $v_1, \dots, v_g$ of the eigenspace $\ker(A - \lambda_0 I)$. Extend it to a basis $v_1, \dots, v_n$ of $\mathbb{C}^n$ and let $P$ be the matrix with these columns. Since $Av_i = \lambda_0 v_i$ for $i \le g$, the first $g$ columns of $P^{-1}AP$ are $\lambda_0 e_1, \dots, \lambda_0 e_g$, so
+
+$$P^{-1}AP = \begin{pmatrix} \lambda_0 I_g & B \\ 0 & C \end{pmatrix}$$
+
+for some blocks $B$ and $C$. Similar matrices have the same characteristic polynomial, and the determinant of a block upper triangular matrix is the product of the determinants of the diagonal blocks, so
+
+$$p(\lambda) = \det(\lambda I - A) = (\lambda - \lambda_0)^g \det(\lambda I - C).$$
+
+Thus $(\lambda - \lambda_0)^g$ divides $p$, which says exactly that $m_a(\lambda_0) \ge g$.
+:::
+
+The proof is worth rereading, because the technique — take what you know, put it in the corner of a basis, and read the consequence off a block triangular matrix — is used four more times in this chapter.
+
+:::definition[Defective]{#defective-def}
+An eigenvalue $\lambda_0$ is **defective** if $m_g(\lambda_0) < m_a(\lambda_0)$. A matrix is defective if it has a defective eigenvalue, and **diagonalizable** otherwise.
+:::
+
+Why "otherwise"? Because the eigenvectors belonging to distinct eigenvalues are always independent, so the eigenvectors of $A$ span a subspace of dimension $\sum_{\lambda} m_g(\lambda)$, while the algebraic multiplicities always sum to $n$ (over $\mathbb{C}$, where $p$ factors completely). A full set of $n$ independent eigenvectors therefore exists precisely when $m_g(\lambda) = m_a(\lambda)$ for every $\lambda$. Every failure of diagonalizability is a missing eigenvector, and the deficit is measured by $m_a - m_g$.
+
+:::intuition
+Think of each eigenvalue as a room with $m_a(\lambda)$ chairs — that is how much of the $n$-dimensional space it is entitled to. The eigenvectors are the people who actually show up: $m_g(\lambda)$ of them. A diagonalizable matrix fills every chair. A defective matrix leaves chairs empty, and the rest of this chapter is about who is allowed to sit in them: vectors that are not eigenvectors but are only one or two applications of $A - \lambda I$ away from being one.
+:::
+
+:::example[A defective $2\times 2$ matrix]
+Show that $A = \begin{pmatrix} 4 & 1 \\ -1 & 2 \end{pmatrix}$ is not diagonalizable.
+:::
+
+:::solution
+1. The characteristic polynomial is
+
+$$p(\lambda) = \lambda^2 - (\operatorname{tr} A)\lambda + \det A = \lambda^2 - 6\lambda + 9 = (\lambda - 3)^2,$$
+
+so $\lambda = 3$ is the only eigenvalue, with $m_a(3) = 2$.
+
+2. Compute the eigenspace:
+
+$$A - 3I = \begin{pmatrix} 1 & 1 \\ -1 & -1 \end{pmatrix},$$
+
+which has rank $1$. Hence $m_g(3) = 2 - 1 = 1$, spanned by $(1,-1)$.
+
+3. Since $m_g(3) = 1 < 2 = m_a(3)$, the eigenvalue is defective and $A$ has only a one-dimensional space of eigenvectors. There is no basis of $\mathbb{C}^2$ made of eigenvectors, so no $P$ with $P^{-1}AP$ diagonal.
+
+4. Sanity check: if $A$ were diagonalizable with the single eigenvalue $3$, then $P^{-1}AP = 3I$, whence $A = P(3I)P^{-1} = 3I$. It is not.
+:::
+
+That last step generalizes, and it is the fastest defectiveness test there is.
+
+:::proposition[A repeated eigenvalue with no other]{#scalar-test}
+If $A$ has only one eigenvalue $\lambda_0$ and $A \neq \lambda_0 I$, then $A$ is not diagonalizable.
+:::
+
+:::proof
+If $A$ were diagonalizable, $P^{-1}AP$ would be a diagonal matrix whose diagonal entries are the eigenvalues of $A$, hence all equal to $\lambda_0$; so $P^{-1}AP = \lambda_0 I$ and $A = \lambda_0 I$.
+:::
+
+:::example[A $3 \times 3$ matrix with a defective eigenvalue]
+Find both multiplicities of every eigenvalue of
+
+$$A = \begin{pmatrix} 4 & -2 & 1 \\ 1 & 1 & 1 \\ 1 & -1 & 2 \end{pmatrix}.$$
+:::
+
+:::solution
+1. Expand $\det(\lambda I - A)$ along the first column, or use $\operatorname{tr} A = 7$, $\det A = 12$, and the sum of the $2\times 2$ principal minors, which is $16$:
+
+$$p(\lambda) = \lambda^3 - 7\lambda^2 + 16\lambda - 12 = (\lambda - 3)(\lambda - 2)^2.$$
+
+So $m_a(3) = 1$ and $m_a(2) = 2$.
+
+2. For $\lambda = 3$: $m_g(3) = 1$ automatically, since $1 \le m_g \le m_a = 1$. (The eigenvector is $(3,2,1)$.)
+
+3. For $\lambda = 2$:
+
+$$A - 2I = \begin{pmatrix} 2 & -2 & 1 \\ 1 & -1 & 1 \\ 1 & -1 & 0 \end{pmatrix}.$$
+
+Row reduce: subtracting the third row from the second gives $(0,0,1)$, and subtracting twice the third from the first gives $(0,0,1)$. The reduced form has pivots in columns $1$ and $3$, so $\operatorname{rank}(A - 2I) = 2$ and $m_g(2) = 3 - 2 = 1$.
+
+4. So $\lambda = 2$ is defective with deficit $m_a - m_g = 1$, and $A$ has only $1 + 1 = 2$ independent eigenvectors. The eigenspace for $2$ is spanned by $(1,1,0)$.
+
+5. Sanity check: $2 < 3$, so $A$ is not diagonalizable, consistent with step 4.
+:::
+
+:::example[Same characteristic polynomial, different behaviour]
+The matrices
+
+$$B = \begin{pmatrix} 2 & 0 & 0 \\ 0 & 2 & 0 \\ 0 & 0 & 2 \end{pmatrix}, \qquad C = \begin{pmatrix} 2 & 1 & 0 \\ 0 & 2 & 0 \\ 0 & 0 & 2 \end{pmatrix}, \qquad D = \begin{pmatrix} 2 & 1 & 0 \\ 0 & 2 & 1 \\ 0 & 0 & 2 \end{pmatrix}$$
+
+all have characteristic polynomial $(\lambda - 2)^3$. Distinguish them.
+:::
+
+:::solution
+1. Compute $\operatorname{rank}(X - 2I)$ in each case: $0$, $1$, $2$ respectively.
+2. Therefore $m_g(2)$ is $3$, $2$, $1$ respectively, while $m_a(2) = 3$ throughout.
+3. $B$ is diagonal already. $C$ and $D$ are both defective, and they are *not* similar to each other, because similar matrices have equal ranks of $X - 2I$ (if $C = P^{-1}DP$ then $C - 2I = P^{-1}(D-2I)P$).
+4. The characteristic polynomial alone cannot tell matrices apart. Ranks of powers of $A - \lambda I$ can, and by the end of this chapter they will tell them apart completely.
+:::
+
+:::pitfall
+The characteristic polynomial is not a complete invariant. Two matrices with the same characteristic polynomial need not be similar, as $B$, $C$ and $D$ above show. Conversely, similar matrices always have the same characteristic polynomial, the same eigenvalues with the same algebraic *and* geometric multiplicities, the same trace, determinant and rank.
+:::
+
+## Invariant subspaces
+
+<!-- section: invariant-subspaces -->
+
+Diagonalizing means breaking $\mathbb{C}^n$ into one-dimensional pieces that $A$ preserves. When that is impossible, the next best thing is to break it into the smallest pieces $A$ does preserve.
+
+:::definition[Invariant subspace]{#invariant-def}
+A subspace $W \subseteq \mathbb{C}^n$ is **invariant** under $A$ (or $A$-invariant) if $Aw \in W$ for every $w \in W$. In that case $A$ restricts to a linear operator $A|_W : W \to W$.
+:::
+
+The trivial examples are $\{0\}$ and $\mathbb{C}^n$. The one-dimensional invariant subspaces are exactly the lines spanned by eigenvectors: $\operatorname{span}(v)$ is invariant precisely when $Av$ is a multiple of $v$. Between those extremes lie all the interesting ones.
+
+:::proposition[Kernels and images of polynomials are invariant]{#poly-invariant}
+For any polynomial $q$, both $\ker q(A)$ and $\operatorname{im} q(A)$ are $A$-invariant.
+:::
+
+:::proof
+The key fact is that $A$ commutes with $q(A)$, since $q(A)$ is a sum of powers of $A$. If $q(A)v = 0$ then $q(A)(Av) = A\,q(A)v = 0$, so $Av \in \ker q(A)$. If $w = q(A)u$ then $Aw = A q(A) u = q(A)(Au) \in \operatorname{im} q(A)$.
+:::
+
+Taking $q(\lambda) = (\lambda - \lambda_0)^k$ gives the subspaces this chapter is built from: $\ker(A - \lambda_0 I)^k$ for $k = 1, 2, 3, \dots$ The case $k = 1$ is the eigenspace; the larger $k$ are new.
+
+:::theorem[Invariance means block triangular]{#block-triangular}
+Let $W$ be an $A$-invariant subspace of dimension $d$ with $0 < d < n$. Choose a basis $w_1, \dots, w_d$ of $W$, extend it to a basis $w_1, \dots, w_n$ of $\mathbb{C}^n$, and let $P = (w_1 \mid \cdots \mid w_n)$. Then
+
+$$P^{-1}AP = \begin{pmatrix} A_1 & B \\ 0 & A_2 \end{pmatrix},$$
+
+where $A_1$ is the $d \times d$ matrix of $A|_W$ in the basis $w_1, \dots, w_d$. Consequently
+
+$$p_A(\lambda) = p_{A_1}(\lambda)\, p_{A_2}(\lambda).$$
+:::
+
+:::proof
+The $j$-th column of $P^{-1}AP$ is the coordinate vector of $Aw_j$ in the basis $w_1, \dots, w_n$. For $j \le d$, invariance gives $Aw_j \in W$, so those coordinates involve only $w_1, \dots, w_d$: the last $n-d$ entries of the column vanish. That is the claimed shape, and the top left block is by definition the matrix of the restriction. The determinant statement is the block triangular determinant formula applied to $\lambda I - P^{-1}AP$.
+:::
+
+If we can split $\mathbb{C}^n$ into invariant subspaces $W_1 \oplus \cdots \oplus W_r$ and take a basis adapted to the splitting, the off-diagonal block $B$ vanishes too and $P^{-1}AP$ becomes *block diagonal*. That is the shape of the Jordan form, and the strategy of the chapter is now visible: find a decomposition of $\mathbb{C}^n$ into invariant subspaces that are as small as possible.
+
+:::intuition
+An invariant subspace is a room the dynamics cannot leave. If $x_{t+1} = Ax_t$ and $x_0$ lies in $W$, then the whole future trajectory lies in $W$, so understanding $A$ on $W$ is a self-contained problem. Splitting $\mathbb{C}^n$ into invariant pieces is exactly splitting one $n$-dimensional dynamical system into several smaller independent ones.
+:::
+
+:::example[Invariant subspaces of a shift]
+Let $N = \begin{pmatrix} 0 & 1 & 0 \\ 0 & 0 & 1 \\ 0 & 0 & 0 \end{pmatrix}$, so $Ne_1 = 0$, $Ne_2 = e_1$, $Ne_3 = e_2$. Verify that $W = \operatorname{span}(e_1, e_2)$ is invariant, and find the matrix of $N|_W$.
+:::
+
+:::solution
+1. $Ne_1 = 0 \in W$ and $Ne_2 = e_1 \in W$; every element of $W$ is a combination of $e_1, e_2$, so its image is a combination of $0$ and $e_1$, hence in $W$.
+2. In the basis $e_1, e_2$ of $W$, the images are $Ne_1 = 0 = 0\cdot e_1 + 0 \cdot e_2$ and $Ne_2 = e_1$, so
+
+$$N|_W = \begin{pmatrix} 0 & 1 \\ 0 & 0 \end{pmatrix}.$$
+
+3. Sanity check: $W = \ker N^2$, which is $A$-invariant by the proposition on kernels of polynomials, with $q(\lambda) = \lambda^2$.
+:::
+
+:::example[An operator with no proper real invariant subspace]
+Show that the real rotation matrix $R = \begin{pmatrix} 0 & -1 \\ 1 & 0 \end{pmatrix}$ has no $1$-dimensional invariant subspace in $\mathbb{R}^2$, but does in $\mathbb{C}^2$.
+:::
+
+:::solution
+1. A $1$-dimensional invariant subspace is spanned by an eigenvector. The characteristic polynomial is $\lambda^2 + 1$.
+2. Over $\mathbb{R}$ this has no root, so $R$ has no real eigenvalue and no real eigenvector: geometrically, rotation by $90^\circ$ maps no line to itself.
+3. Over $\mathbb{C}$ the roots are $\pm i$, with eigenvectors $(1, \mp i)$, so two complex lines are invariant.
+4. This is exactly why the chapter works over $\mathbb{C}$: the fundamental theorem of algebra guarantees a root, hence an eigenvector, hence somewhere to start.
+:::
+
+:::theorem[Existence of an eigenvector]{#exists-eigenvector}
+Every $n \times n$ complex matrix with $n \ge 1$ has an eigenvalue and an eigenvector.
+:::
+
+:::proof
+The characteristic polynomial $p(\lambda) = \det(\lambda I - A)$ is a polynomial of degree $n \ge 1$ with complex coefficients, so by the fundamental theorem of algebra it has a root $\lambda_0 \in \mathbb{C}$. Then $\det(\lambda_0 I - A) = 0$, so $\lambda_0 I - A$ is singular and has a nonzero null vector $v$, which satisfies $Av = \lambda_0 v$.
+:::
+
+:::corollary[Triangularizability]{#schur-triangular}
+Every complex square matrix is similar to an upper triangular matrix.
+:::
+
+:::proof
+Induct on $n$. For $n = 1$ there is nothing to prove. For $n > 1$, take an eigenvector $v$ and let $W = \operatorname{span}(v)$, a $1$-dimensional invariant subspace. By the block triangular theorem there is $P$ with
+
+$$P^{-1}AP = \begin{pmatrix} \lambda_0 & * \\ 0 & A_2 \end{pmatrix},$$
+
+with $A_2$ of size $n-1$. By induction $Q^{-1}A_2Q = T_2$ is upper triangular for some invertible $Q$; conjugating by $\begin{pmatrix} 1 & 0 \\ 0 & Q\end{pmatrix}$ turns the display into an upper triangular matrix with $\lambda_0$ in the corner and $T_2$ below it.
+:::
+
+Triangular form already tells us a great deal — the eigenvalues sit on the diagonal — but it is far from unique, and it hides the geometric multiplicities. Jordan form is the triangular form with all remaining freedom squeezed out.
+
+## The Cayley–Hamilton theorem
+
+<!-- section: cayley-hamilton -->
+
+:::theorem[Cayley–Hamilton]{#cayley-hamilton-thm}
+Let $A$ be an $n \times n$ matrix with characteristic polynomial $p(\lambda) = \det(\lambda I - A)$. Then
+
+$$p(A) = 0,$$
+
+the zero matrix. Explicitly, if $p(\lambda) = \lambda^n + c_{n-1}\lambda^{n-1} + \cdots + c_1 \lambda + c_0$, then $A^n + c_{n-1}A^{n-1} + \cdots + c_1 A + c_0 I = 0$.
+:::
+
+Note the substitution convention: the constant term $c_0$ becomes $c_0 I$, not the scalar $c_0$, because the equation lives among matrices. With that understood, the statement says that $A$ satisfies its own characteristic equation.
+
+The $2 \times 2$ case can simply be checked.
+
+:::proposition[Cayley–Hamilton for $2\times2$]{#ch-2x2}
+For $A = \begin{pmatrix} a & b \\ c & d\end{pmatrix}$ with $p(\lambda) = \lambda^2 - (a+d)\lambda + (ad-bc)$, we have $p(A) = 0$.
+:::
+
+:::proof
+Compute the square directly:
+
+$$A^2 = \begin{pmatrix} a^2 + bc & ab + bd \\ ca + dc & cb + d^2\end{pmatrix} = \begin{pmatrix} a^2 + bc & b(a+d) \\ c(a+d) & d^2 + bc\end{pmatrix}.$$
+
+Subtract $(a+d)A = \begin{pmatrix} a(a+d) & b(a+d) \\ c(a+d) & d(a+d)\end{pmatrix}$. The off-diagonal entries cancel exactly, and the diagonal entries become
+
+$$a^2 + bc - a^2 - ad = bc - ad, \qquad d^2 + bc - ad - d^2 = bc - ad.$$
+
+So $A^2 - (a+d)A = (bc - ad)I = -(ad-bc)I$, which rearranges to $p(A) = 0$.
+:::
+
+Before the general proof, a warning about the argument almost everyone invents first.
+
+:::pitfall
+The following is **not** a proof: "$p(\lambda) = \det(\lambda I - A)$, so substituting $\lambda = A$ gives $p(A) = \det(AI - A) = \det(0) = 0$." Three things are wrong. Substituting a matrix for $\lambda$ inside $\lambda I - A$ produces $A \otimes I - I \otimes A$-style nonsense: $\lambda I$ is a matrix whose entries are scalars times $\lambda$, and replacing each $\lambda$ by the matrix $A$ turns each *entry* into a matrix, so $\lambda I - A$ is no longer a matrix of numbers and its determinant is undefined. Second, even if the expression made sense, $\det$ of it would be a scalar, not the zero *matrix* that $p(A)$ must be. Third, the argument never uses anything about $A$ and would "prove" that $q(A) = 0$ for $q(\lambda) = \det(\lambda I - A)^2$ or any other polynomial obtained the same way. The identity $p(A) = 0$ is true, but it needs a real argument.
+:::
+
+The real argument uses the adjugate, from the determinants chapter: for any square matrix $M$,
+
+$$\operatorname{adj}(M)\, M = \det(M)\, I,$$
+
+where the $(i,j)$ entry of $\operatorname{adj}(M)$ is the $(j,i)$ cofactor of $M$, a polynomial in the entries of $M$.
+
+:::proof
+Apply the adjugate identity to $M = \lambda I - A$, whose entries are polynomials in $\lambda$ of degree at most $1$:
+
+$$\operatorname{adj}(\lambda I - A)\,(\lambda I - A) = \det(\lambda I - A)\, I = p(\lambda) I. \tag{$\ast$}$$
+
+Each entry of $\operatorname{adj}(\lambda I - A)$ is a cofactor of an $(n-1)\times(n-1)$ submatrix, hence a polynomial in $\lambda$ of degree at most $n - 1$. Collecting powers of $\lambda$, there are constant matrices $B_0, \dots, B_{n-1}$ with
+
+$$\operatorname{adj}(\lambda I - A) = B_{n-1}\lambda^{n-1} + \cdots + B_1 \lambda + B_0.$$
+
+Write $p(\lambda) = \lambda^n + c_{n-1}\lambda^{n-1} + \cdots + c_0$. Expanding the left of $(\ast)$ and matching coefficients of each power of $\lambda$ — legitimate because two matrices of polynomials are equal exactly when all their coefficient matrices agree — gives
+
+$$B_{n-1} = I, \qquad B_{k-1} - AB_k = c_k I \ \ (1 \le k \le n-1), \qquad -AB_0 = c_0 I.$$
+
+Now multiply the equation indexed by $k$ on the left by $A^k$ and add everything up. The left-hand sides telescope:
+
+$$A^n B_{n-1} + \sum_{k=1}^{n-1} A^k(B_{k-1} - AB_k) + (-AB_0) = A^nB_{n-1} - A^n B_{n-1} + \cdots = 0,$$
+
+because each $A^kB_{k-1}$ cancels against the $-A^{k}B_{k-1}$ coming from the term indexed by $k-1$. The right-hand sides add to $A^n + c_{n-1}A^{n-1} + \cdots + c_1 A + c_0 I = p(A)$. Hence $p(A) = 0$.
+:::
+
+:::remark[A second proof, in one paragraph]
+Here is a completely different argument, worth knowing because it explains *why* the theorem is not an accident. If $A$ is diagonalizable, say $A = PDP^{-1}$ with $D = \operatorname{diag}(\lambda_1,\dots,\lambda_n)$, then $p(A) = P\,p(D)\,P^{-1}$ and $p(D) = \operatorname{diag}(p(\lambda_1),\dots,p(\lambda_n)) = 0$ because each $\lambda_i$ is a root of $p$. So the theorem is obvious for diagonalizable matrices. Now, the diagonalizable matrices are *dense* in the space of all complex matrices — any $A$ can be perturbed by an arbitrarily small amount to make its $n$ eigenvalues distinct, and distinct eigenvalues force diagonalizability — and the map $A \mapsto p_A(A)$ is continuous, since it is built from sums and products of entries. A continuous map that vanishes on a dense set vanishes everywhere. Making "perturb to make the eigenvalues distinct" precise is a short exercise with the characteristic polynomial's discriminant; we take it as a sketch.
+:::
+
+Cayley–Hamilton is not primarily a theoretical curiosity: it is a computational tool, because it expresses $A^n$ in terms of lower powers and therefore collapses every polynomial in $A$ to degree at most $n-1$.
+
+:::example[Reducing a high power]
+For $A = \begin{pmatrix} 1 & 2 \\ 3 & 4\end{pmatrix}$, express $A^3$ as $\alpha A + \beta I$.
+:::
+
+:::solution
+1. $\operatorname{tr} A = 5$, $\det A = 4 - 6 = -2$, so $p(\lambda) = \lambda^2 - 5\lambda - 2$ and Cayley–Hamilton gives
+
+$$A^2 = 5A + 2I.$$
+
+2. Multiply by $A$: $A^3 = 5A^2 + 2A = 5(5A + 2I) + 2A = 27A + 10I$.
+3. So $\alpha = 27$, $\beta = 10$.
+4. Sanity check on the eigenvalue level: the eigenvalues satisfy $\lambda^2 = 5\lambda + 2$. For $\lambda = (5+\sqrt{33})/2 \approx 5.372$, $\lambda^3 \approx 155.1$ and $27\lambda + 10 \approx 155.0$. Agreed.
+:::
+
+:::example[The inverse from Cayley–Hamilton]
+Use Cayley–Hamilton to compute $A^{-1}$ for $A = \begin{pmatrix} 1 & 2 \\ 3 & 4\end{pmatrix}$.
+:::
+
+:::solution
+1. From $A^2 - 5A - 2I = 0$ we get $2I = A^2 - 5A = A(A - 5I)$.
+2. Since $\det A = -2 \neq 0$, $A$ is invertible, and multiplying by $A^{-1}$ gives $2A^{-1} = A - 5I$, so
+
+$$A^{-1} = \tfrac12 (A - 5I) = \tfrac12\begin{pmatrix} -4 & 2 \\ 3 & -1\end{pmatrix} = \begin{pmatrix} -2 & 1 \\ 3/2 & -1/2 \end{pmatrix}.$$
+
+3. Sanity check: $A A^{-1} = \begin{pmatrix} 1 & 2 \\ 3 & 4\end{pmatrix}\begin{pmatrix} -2 & 1 \\ 3/2 & -1/2\end{pmatrix} = \begin{pmatrix} 1 & 0 \\ 0 & 1\end{pmatrix}$. Correct.
+:::
+
+The same trick works in general: since $p(\lambda) = \lambda^n + \cdots + c_1\lambda + c_0$ with $c_0 = p(0) = \det(-A) = (-1)^n \det A$, the matrix $A$ is invertible exactly when $c_0 \neq 0$, and then
+
+$$A^{-1} = -\frac{1}{c_0}\left(A^{n-1} + c_{n-1}A^{n-2} + \cdots + c_1 I\right).$$
+
+:::example[A $3\times3$ reduction]
+Let $A = \begin{pmatrix} 4 & -2 & 1 \\ 1 & 1 & 1 \\ 1 & -1 & 2\end{pmatrix}$, whose characteristic polynomial is $\lambda^3 - 7\lambda^2 + 15\lambda - 12$. Express $A^4$ in the form $\alpha A^2 + \beta A + \gamma I$.
+:::
+
+:::solution
+1. Cayley–Hamilton: $A^3 = 7A^2 - 15A + 12I$.
+2. Multiply by $A$: $A^4 = 7A^3 - 15A^2 + 12A$.
+3. Substitute step 1 into step 2:
+
+$$A^4 = 7(7A^2 - 15A + 12I) - 15A^2 + 12A = 34A^2 - 93A + 84I.$$
+
+4. So $(\alpha,\beta,\gamma) = (34, -93, 84)$.
+5. Sanity check with the eigenvalue $\lambda = 3$: $3^4 = 81$ and $34\cdot 9 - 93\cdot 3 + 84 = 306 - 279 + 84 = 111$. That disagrees — so recheck. With $\lambda = 3$, step 1 reads $27 = 7\cdot 9 - 45 + 12 = 30$, which is already false; indeed $p(3) = 27 - 63 + 45 - 12 = -3 \neq 0$. The characteristic polynomial of this $A$ is $(\lambda - 3)(\lambda-2)^2 = \lambda^3 - 7\lambda^2 + 16\lambda - 12$, not $15\lambda$. Redoing step 1 with $A^3 = 7A^2 - 16A + 12I$ gives
+
+$$A^4 = 7A^3 - 16A^2 + 12A = 7(7A^2 - 16A + 12I) - 16A^2 + 12A = 33A^2 - 100A + 84I,$$
+
+and the check at $\lambda = 3$ now reads $33\cdot 9 - 300 + 84 = 297 - 216 = 81 = 3^4$. At $\lambda = 2$: $33\cdot 4 - 200 + 84 = 132 - 116 = 16 = 2^4$. Both correct.
+:::
+
+:::pitfall
+The example above is left with its error in place on purpose: the arithmetic of a characteristic polynomial is the single most common place to go wrong, and checking the final identity at each eigenvalue costs ten seconds and catches it every time. Any polynomial identity $A^4 = \alpha A^2 + \beta A + \gamma I$ must hold with $A$ replaced by each eigenvalue, because it holds on the corresponding eigenvector.
+:::
+
+## The minimal polynomial
+
+<!-- section: minimal-polynomial -->
+
+Cayley–Hamilton says $A$ satisfies *some* monic polynomial of degree $n$. Often it satisfies one of much lower degree — $\begin{pmatrix} 2 & 0 \\ 0 & 2\end{pmatrix}$ satisfies $\lambda - 2$ — and the smallest such polynomial turns out to record exactly the information the characteristic polynomial throws away.
+
+:::definition[Minimal polynomial]{#minpoly-def}
+The **minimal polynomial** $m_A(\lambda)$ of a square matrix $A$ is the monic polynomial of least degree with $m_A(A) = 0$.
+:::
+
+:::proposition[Existence and uniqueness]{#minpoly-exists}
+Every square matrix has exactly one minimal polynomial, and $\deg m_A \ge 1$ for $n \ge 1$.
+:::
+
+:::proof
+Existence: by Cayley–Hamilton the set of monic annihilating polynomials is non-empty, so it contains one of least degree. (Even without Cayley–Hamilton, the $n^2+1$ matrices $I, A, \dots, A^{n^2}$ are linearly dependent in the $n^2$-dimensional space of matrices, which produces an annihilating polynomial.)
+
+Uniqueness: if $m_1$ and $m_2$ are both monic of the same least degree $d$ with $m_1(A) = m_2(A) = 0$, then $m_1 - m_2$ annihilates $A$ and has degree $< d$ because the leading terms cancel. If $m_1 - m_2$ were nonzero we could scale it to be monic, contradicting minimality of $d$. So $m_1 = m_2$.
+
+Finally, a monic polynomial of degree $0$ is the constant $1$, and $1 \cdot I = I \neq 0$, so $\deg m_A \ge 1$.
+:::
+
+:::theorem[The minimal polynomial divides everything it should]{#minpoly-divides}
+If $q$ is any polynomial with $q(A) = 0$, then $m_A \mid q$. In particular $m_A$ divides the characteristic polynomial $p_A$.
+:::
+
+:::proof
+Divide with remainder: $q = s\,m_A + r$ with $r = 0$ or $\deg r < \deg m_A$. Substituting $A$,
+
+$$0 = q(A) = s(A)\,m_A(A) + r(A) = r(A).$$
+
+If $r \neq 0$, scaling it to be monic gives a monic annihilating polynomial of degree less than $\deg m_A$, contradicting minimality. So $r = 0$ and $m_A \mid q$. The last claim is Cayley–Hamilton plus this.
+:::
+
+:::theorem[Same roots as the characteristic polynomial]{#minpoly-roots}
+A scalar $\lambda_0$ is a root of $m_A$ if and only if $\lambda_0$ is an eigenvalue of $A$.
+:::
+
+:::proof
+($\Leftarrow$) Let $Av = \lambda_0 v$ with $v \neq 0$. For any polynomial $q$ one has $q(A)v = q(\lambda_0)v$, by applying $A$ repeatedly. Taking $q = m_A$ gives $0 = m_A(A)v = m_A(\lambda_0)v$, and since $v \neq 0$, $m_A(\lambda_0) = 0$.
+
+($\Rightarrow$) Suppose $m_A(\lambda_0) = 0$, so $m_A(\lambda) = (\lambda - \lambda_0)\,q(\lambda)$ with $\deg q < \deg m_A$. By minimality $q(A) \neq 0$, so there is a vector $w$ with $u := q(A)w \neq 0$. Then
+
+$$(A - \lambda_0 I)u = (A - \lambda_0 I)q(A)w = m_A(A)w = 0,$$
+
+so $u$ is an eigenvector with eigenvalue $\lambda_0$.
+:::
+
+So $m_A$ and $p_A$ have the same roots; they differ only in the multiplicities. Since $m_A \mid p_A$, and $p_A(\lambda) = \prod_i (\lambda - \lambda_i)^{m_a(\lambda_i)}$ over the distinct eigenvalues, we get
+
+$$m_A(\lambda) = \prod_{i} (\lambda - \lambda_i)^{d_i}, \qquad 1 \le d_i \le m_a(\lambda_i).$$
+
+Every exponent is at least $1$, by the theorem just proved. The whole of Jordan theory is the statement that $d_i$ is the size of the *largest* Jordan block for $\lambda_i$.
+
+:::theorem[Diagonalizability via the minimal polynomial]{#diag-iff-minpoly}
+A complex square matrix $A$ is diagonalizable if and only if $m_A$ is a product of *distinct* linear factors, that is
+
+$$m_A(\lambda) = (\lambda - \lambda_1)(\lambda - \lambda_2)\cdots(\lambda-\lambda_k)$$
+
+with $\lambda_1, \dots, \lambda_k$ distinct.
+:::
+
+:::proof
+($\Rightarrow$) Suppose $A = PDP^{-1}$ with $D$ diagonal and distinct diagonal entries $\lambda_1,\dots,\lambda_k$. Put $q(\lambda) = \prod_{i=1}^k (\lambda - \lambda_i)$. Then $q(D)$ is diagonal with entries $q(\lambda_j) = 0$, so $q(D) = 0$ and $q(A) = Pq(D)P^{-1} = 0$. Hence $m_A \mid q$, and since $m_A$ must have all $k$ eigenvalues as roots, $m_A = q$, a product of distinct linear factors.
+
+($\Leftarrow$) Suppose $m_A(\lambda) = \prod_{i=1}^k(\lambda - \lambda_i)$ with distinct $\lambda_i$. Define the Lagrange polynomials
+
+$$\ell_i(\lambda) = \prod_{j \neq i} \frac{\lambda - \lambda_j}{\lambda_i - \lambda_j}, \qquad i = 1,\dots,k.$$
+
+Each has degree $k-1$ and $\ell_i(\lambda_j) = \delta_{ij}$. The polynomial $\ell_1 + \cdots + \ell_k - 1$ has degree at most $k-1$ and vanishes at the $k$ distinct points $\lambda_1,\dots,\lambda_k$, so it is identically zero:
+
+$$\sum_{i=1}^k \ell_i(\lambda) = 1, \qquad \text{hence} \qquad \sum_{i=1}^k \ell_i(A) = I.$$
+
+Fix $x \in \mathbb{C}^n$ and set $x_i = \ell_i(A)x$. Then $x = \sum_i x_i$. Moreover
+
+$$(A - \lambda_i I)\,\ell_i(A) = \frac{1}{\prod_{j\neq i}(\lambda_i - \lambda_j)}\,\prod_{j}(A - \lambda_j I) = \frac{m_A(A)}{\prod_{j\neq i}(\lambda_i-\lambda_j)} = 0,$$
+
+so each $x_i$ lies in the eigenspace $\ker(A - \lambda_i I)$. Every vector is therefore a sum of eigenvectors, so eigenvectors span $\mathbb{C}^n$ and $A$ is diagonalizable.
+:::
+
+:::intuition
+The characteristic polynomial counts how many chairs each eigenvalue owns; the minimal polynomial reports how badly each eigenvalue misbehaves. An exponent of $1$ means "this eigenvalue is perfectly well behaved: killing $A - \lambda I$ once is enough". An exponent of $3$ means "somewhere there is a vector that survives $A - \lambda I$ twice and dies only on the third application" — a chain of length $3$.
+:::
+
+:::example[Minimal polynomial of a diagonalizable matrix]
+Find $m_A$ for $A = \begin{pmatrix} 2 & 1 & -1 \\ 1 & 2 & -1 \\ 2 & 2 & -1\end{pmatrix}$, given that $p_A(\lambda) = (\lambda-1)^3$.
+:::
+
+:::solution
+1. The only eigenvalue is $1$, so $m_A(\lambda) = (\lambda-1)^d$ with $1 \le d \le 3$.
+2. Try $d = 1$: $A - I = \begin{pmatrix} 1 & 1 & -1 \\ 1 & 1 & -1 \\ 2 & 2 & -2\end{pmatrix} \neq 0$, so $d \ge 2$.
+3. Try $d = 2$: the rows of $A - I$ are all multiples of $(1,1,-1)$, so $A - I = u w^{\mathsf T}$ with $u = (1,1,2)^{\mathsf T}$ and $w = (1,1,-1)^{\mathsf T}$. Then $(A-I)^2 = u(w^{\mathsf T}u)w^{\mathsf T}$ and $w^{\mathsf T}u = 1 + 1 - 2 = 0$, so $(A-I)^2 = 0$.
+4. Hence $m_A(\lambda) = (\lambda-1)^2$.
+5. Consequence: $m_A$ has a repeated factor, so by the diagonalizability theorem $A$ is not diagonalizable — confirmed by $\operatorname{rank}(A - I) = 1$, giving $m_g(1) = 2 < 3 = m_a(1)$.
+:::
+
+:::example[Minimal polynomial from the rank data]
+Let $A$ be the $4 \times 4$ matrix $\begin{pmatrix} 3 & 2 & 1 & -1 \\ 1 & 3 & 1 & -1 \\ -1 & -1 & 1 & 1 \\ 1 & 2 & 1 & 1\end{pmatrix}$ with $p_A(\lambda) = (\lambda - 2)^4$. Given $\operatorname{rank}(A - 2I) = 2$, $\operatorname{rank}(A-2I)^2 = 1$ and $(A - 2I)^3 = 0$, find $m_A$.
+:::
+
+:::solution
+1. As $2$ is the only eigenvalue, $m_A(\lambda) = (\lambda - 2)^d$.
+2. $(A-2I) \neq 0$ and $(A-2I)^2 \neq 0$ because their ranks are $2$ and $1$, both nonzero.
+3. $(A-2I)^3 = 0$.
+4. So the least $d$ with $(A-2I)^d = 0$ is $d = 3$: $m_A(\lambda) = (\lambda-2)^3$.
+5. Note $\deg m_A = 3 < 4 = \deg p_A$, so the two polynomials genuinely differ here.
+:::
+
+:::example[Deducing the minimal polynomial from a factorisation]
+A matrix $A$ satisfies $A^2 = A$ and $A \neq 0$, $A \neq I$. Find $m_A$ and decide whether $A$ is diagonalizable.
+:::
+
+:::solution
+1. $A^2 - A = 0$, so $q(\lambda) = \lambda^2 - \lambda = \lambda(\lambda-1)$ annihilates $A$, and $m_A \mid q$.
+2. The monic divisors of $q$ are $1$, $\lambda$, $\lambda - 1$, $\lambda^2 - \lambda$. Degree $0$ is impossible; $m_A = \lambda$ would mean $A = 0$; $m_A = \lambda - 1$ would mean $A = I$. Both are excluded.
+3. So $m_A(\lambda) = \lambda^2 - \lambda$, a product of the distinct linear factors $\lambda$ and $\lambda - 1$.
+4. By the diagonalizability theorem, $A$ is diagonalizable, with eigenvalues $0$ and $1$ only. (This is the general fact that every projection is diagonalizable.)
+:::
+
+:::pitfall
+$m_A$ and $p_A$ have the same *roots*, never a different set. A statement like "$p_A(\lambda) = (\lambda-1)^2(\lambda-3)$ and $m_A(\lambda) = (\lambda-1)^2$" is impossible: $3$ is an eigenvalue and must be a root of $m_A$. The only legal minimal polynomials there are $(\lambda-1)(\lambda-3)$ and $(\lambda-1)^2(\lambda-3)$.
+:::
+
+## Generalized eigenvectors
+
+<!-- section: generalized-eigenvectors -->
+
+The missing eigenvectors of a defective matrix are not missing at all; they are one level deeper.
+
+:::definition[Generalized eigenvector and generalized eigenspace]{#gen-eigen-def}
+Let $\lambda_0$ be an eigenvalue of $A$. A nonzero vector $v$ is a **generalized eigenvector** of $A$ for $\lambda_0$ if
+
+$$(A - \lambda_0 I)^k v = 0 \quad \text{for some integer } k \ge 1.$$
+
+The **generalized eigenspace** is
+
+$$K_{\lambda_0} = \{v : (A-\lambda_0 I)^k v = 0 \text{ for some } k \ge 1\} = \bigcup_{k \ge 1} \ker (A - \lambda_0 I)^k .$$
+
+The smallest $k$ that works for a particular $v$ is the **rank** or **height** of $v$; height $1$ means $v$ is an ordinary eigenvector.
+:::
+
+The union looks worrying — a union of subspaces is usually not a subspace — but the kernels here are nested, and nested unions are fine.
+
+:::lemma[Kernels grow and then stop]{#kernel-chain}
+Write $N = A - \lambda_0 I$. Then
+
+$$\ker N \subseteq \ker N^2 \subseteq \ker N^3 \subseteq \cdots,$$
+
+and if $\ker N^k = \ker N^{k+1}$ for some $k$, then $\ker N^j = \ker N^k$ for all $j \ge k$. Consequently the chain stabilises at or before step $n$, and
+
+$$K_{\lambda_0} = \ker N^n.$$
+:::
+
+:::proof
+If $N^kv = 0$ then $N^{k+1}v = N(N^kv) = 0$, giving the inclusions.
+
+Suppose $\ker N^k = \ker N^{k+1}$ and take $v \in \ker N^{k+2}$. Then $N^{k+1}(Nv) = 0$, so $Nv \in \ker N^{k+1} = \ker N^k$, so $N^k(Nv) = 0$, i.e. $v \in \ker N^{k+1} = \ker N^k$. Thus $\ker N^{k+2} = \ker N^{k+1}$, and induction propagates the equality forward.
+
+Until the chain stabilises, each inclusion is strict, so each step raises the dimension by at least $1$. Starting from $\dim \ker N \ge 1$, the dimension would exceed $n$ after more than $n-1$ strict steps; so stabilisation happens at some index $k \le n$. Hence $\ker N^n$ is the largest kernel, and $K_{\lambda_0} = \ker N^n$.
+:::
+
+In particular $K_{\lambda_0}$ is a subspace, and since it is the kernel of a polynomial in $A$ it is $A$-invariant. The crucial fact is that it is exactly the right size.
+
+:::theorem[Dimension of the generalized eigenspace]{#gen-eigenspace-dim}
+For every eigenvalue $\lambda_0$ of $A$,
+
+$$\dim K_{\lambda_0} = m_a(\lambda_0),$$
+
+the algebraic multiplicity.
+:::
+
+:::proof
+Write $N = A - \lambda_0 I$ and $K = K_{\lambda_0} = \ker N^n$, of dimension $d$, say. $K$ is $A$-invariant, so by the block triangular theorem there is a basis in which
+
+$$P^{-1}AP = \begin{pmatrix} A_1 & B \\ 0 & A_2\end{pmatrix}, \qquad p_A(\lambda) = p_{A_1}(\lambda)\,p_{A_2}(\lambda),$$
+
+with $A_1$ the $d\times d$ matrix of $A|_K$.
+
+First, $A_1 - \lambda_0 I_d$ is nilpotent: it is the matrix of $N|_K$, and $N^n$ kills every vector of $K$ by definition. A nilpotent matrix has $0$ as its only eigenvalue, so $A_1$ has $\lambda_0$ as its only eigenvalue and $p_{A_1}(\lambda) = (\lambda - \lambda_0)^d$.
+
+Second, $\lambda_0$ is *not* an eigenvalue of $A_2$. Suppose it were. Working in the basis $w_1,\dots,w_n$ with $w_1,\dots,w_d$ spanning $K$, an eigenvector of $A_2$ for $\lambda_0$ lifts to a vector $v \in \operatorname{span}(w_{d+1},\dots,w_n)$, $v \neq 0$, with $Av - \lambda_0 v \in K$, i.e. $Nv \in K$. Then $N^{n}(Nv) = 0$, so $N^{n+1}v = 0$, so $v \in \ker N^{n+1} = \ker N^n = K$ by the stabilisation lemma. But $v$ is a nonzero combination of $w_{d+1},\dots,w_n$, which meets $K$ only in $0$. Contradiction.
+
+So $(\lambda - \lambda_0)$ does not divide $p_{A_2}$, and the multiplicity of $\lambda_0$ in $p_A = p_{A_1}p_{A_2}$ is exactly $d$. That is, $m_a(\lambda_0) = d = \dim K_{\lambda_0}$.
+:::
+
+:::intuition
+Concretely, for $A = \begin{pmatrix} 3 & 1 \\ 0 & 3\end{pmatrix}$ the eigenvalue $3$ owns two chairs but has only one eigenvector, $e_1$. The vector $e_2$ is not an eigenvector: $(A - 3I)e_2 = e_1 \neq 0$. But one more application kills it: $(A-3I)^2e_2 = (A-3I)e_1 = 0$. So $e_2$ is a generalized eigenvector of height $2$, it takes the empty chair, and $K_3 = \mathbb{C}^2$ has dimension $2 = m_a(3)$. A generalized eigenvector is a vector that $A - \lambda I$ pushes one step down a ladder, instead of annihilating outright.
+:::
+
+:::theorem[Primary decomposition]{#primary-decomposition}
+Let $A$ be an $n \times n$ complex matrix with distinct eigenvalues $\lambda_1, \dots, \lambda_r$. Then
+
+$$\mathbb{C}^n = K_{\lambda_1} \oplus K_{\lambda_2} \oplus \cdots \oplus K_{\lambda_r},$$
+
+and each summand is $A$-invariant with $\dim K_{\lambda_i} = m_a(\lambda_i)$.
+:::
+
+:::proof
+Write $p_A(\lambda) = \prod_{i=1}^r (\lambda - \lambda_i)^{m_i}$ with $m_i = m_a(\lambda_i)$, and set
+
+$$q_i(\lambda) = \frac{p_A(\lambda)}{(\lambda - \lambda_i)^{m_i}} = \prod_{j\ne i}(\lambda - \lambda_j)^{m_j}.$$
+
+The polynomials $q_1, \dots, q_r$ have no common root — $q_i(\lambda_i) \neq 0$ while every $q_j$ with $j \neq i$ vanishes at $\lambda_i$ — so their greatest common divisor is $1$. By Bézout's identity for polynomials there are polynomials $u_1,\dots,u_r$ with
+
+$$\sum_{i=1}^r u_i(\lambda)q_i(\lambda) = 1.$$
+
+Put $P_i = u_i(A)q_i(A)$. Then $\sum_i P_i = I$, so every $x \in \mathbb{C}^n$ decomposes as $x = \sum_i P_ix$. Each piece lands where it should:
+
+$$(A - \lambda_i I)^{m_i} P_i = u_i(A)\,(A-\lambda_iI)^{m_i}q_i(A) = u_i(A)\,p_A(A) = 0$$
+
+by Cayley–Hamilton, so $P_i x \in \ker (A-\lambda_iI)^{m_i} \subseteq K_{\lambda_i}$. Hence $\mathbb{C}^n = K_{\lambda_1} + \cdots + K_{\lambda_r}$.
+
+The sum is direct by dimension count: $\sum_i \dim K_{\lambda_i} = \sum_i m_a(\lambda_i) = n$ by the previous theorem and the fact that $p_A$ splits, and a spanning sum of subspaces whose dimensions add to $n$ must be direct.
+
+Invariance of each $K_{\lambda_i}$ was noted after the stabilisation lemma.
+:::
+
+This is the first half of the Jordan theorem. Choosing a basis adapted to the decomposition puts $A$ into block diagonal form
+
+$$P^{-1}AP = \begin{pmatrix} A_1 & & \\ & \ddots & \\ & & A_r\end{pmatrix}, \qquad A_i = \lambda_i I + N_i, \quad N_i \text{ nilpotent},$$
+
+because $A|_{K_{\lambda_i}} - \lambda_i I$ is nilpotent. Everything now reduces to one question: what does a nilpotent matrix look like?
+
+:::example[Computing a generalized eigenspace]
+For $A = \begin{pmatrix} 4 & -2 & 1 \\ 1 & 1 & 1 \\ 1 & -1 & 2\end{pmatrix}$ with $p_A(\lambda) = (\lambda-3)(\lambda-2)^2$, find $K_2$ and a generalized eigenvector of height $2$.
+:::
+
+:::solution
+1. Put $N = A - 2I = \begin{pmatrix} 2 & -2 & 1 \\ 1 & -1 & 1 \\ 1 & -1 & 0\end{pmatrix}$. We saw $\operatorname{rank} N = 2$, so $\dim\ker N = 1$.
+2. Compute $N^2$. Row by row: the first row of $N^2$ is $2(2,-2,1) - 2(1,-1,1) + 1(1,-1,0) = (4,-4,2)-(2,-2,2)+(1,-1,0) = (3,-3,0)$. Similarly the second row is $(2,-2,1)-(1,-1,1)+(1,-1,0) = (2,-2,0)$ and the third is $(2,-2,1)-(1,-1,1) = (1,-1,0)$. So
+
+$$N^2 = \begin{pmatrix} 3 & -3 & 0 \\ 2 & -2 & 0 \\ 1 & -1 & 0\end{pmatrix},$$
+
+which has rank $1$, so $\dim \ker N^2 = 2 = m_a(2)$, as the theorem predicts. Thus $K_2 = \ker N^2 = \{(x,y,z): x = y\}$.
+3. A height-$2$ vector is one in $\ker N^2$ but not $\ker N$. Take $v = (0,0,1)$: it satisfies $x=y$, and $Nv = (1,1,0) \neq 0$, while $N^2 v = 0$.
+4. Sanity check: $N(1,1,0) = (2-2, 1-1, 1-1) = (0,0,0)$, so $(1,1,0)$ is a genuine eigenvector for $\lambda = 2$ — exactly the one found earlier. The chain is $v \mapsto Nv \mapsto 0$.
+:::
+
+:::example[The primary decomposition in action]
+With the same $A$, exhibit the decomposition $\mathbb{C}^3 = K_3 \oplus K_2$ and check the dimensions.
+:::
+
+:::solution
+1. $m_a(3) = 1$, so $K_3 = \ker(A - 3I)$, spanned by $(3,2,1)$ (check: $A(3,2,1) = (12-4+1,\,3+2+1,\,3-2+2) = (9,6,3) = 3(3,2,1)$).
+2. $K_2 = \operatorname{span}\{(1,1,0),(0,0,1)\}$ from the previous example, of dimension $2$.
+3. $1 + 2 = 3$, and the three vectors $(3,2,1),(1,1,0),(0,0,1)$ are independent: the determinant of the matrix with these columns is $\det\begin{pmatrix} 3 & 1 & 0\\ 2 & 1 & 0 \\ 1 & 0 & 1\end{pmatrix} = 1\cdot(3-2) = 1 \neq 0$.
+4. So $\mathbb{C}^3 = K_3 \oplus K_2$ as claimed, and in this basis $A$ becomes block diagonal with a $1\times1$ block $(3)$ and a $2\times2$ block $2I + N|_{K_2}$.
+:::
+
+:::pitfall
+A generalized eigenvector of height $\ge 2$ is *not* an eigenvector, and $Av \ne \lambda v$ for it. Writing $Av = \lambda v$ for every element of $K_\lambda$ is the commonest error in this chapter. What is true is $Av = \lambda v + (\text{something of lower height})$, which is precisely why the Jordan form has $1$'s above the diagonal rather than being diagonal.
+:::
+
+## Nilpotent operators and Jordan chains
+
+<!-- section: nilpotent -->
+
+:::definition[Nilpotent matrix and index]{#nilpotent-def}
+A square matrix $N$ is **nilpotent** if $N^k = 0$ for some $k \ge 1$. The least such $k$ is the **index of nilpotency** of $N$.
+:::
+
+:::proposition[Basic facts about nilpotent matrices]{#nilpotent-facts}
+Let $N$ be $n \times n$ and nilpotent of index $k$. Then:
+
+1. $0$ is the only eigenvalue of $N$, and $p_N(\lambda) = \lambda^n$;
+2. $m_N(\lambda) = \lambda^{k}$, and $k \le n$;
+3. $N$ is diagonalizable if and only if $N = 0$;
+4. $I - N$ is invertible, with inverse $I + N + N^2 + \cdots + N^{k-1}$.
+:::
+
+:::proof
+(1) If $Nv = \lambda v$ with $v \neq 0$ then $0 = N^kv = \lambda^k v$, so $\lambda = 0$. Over $\mathbb{C}$ the characteristic polynomial splits, and all its roots are $0$, so $p_N(\lambda) = \lambda^n$.
+
+(2) $\lambda^k$ annihilates $N$ and no smaller power does, by definition of the index; and $m_N \mid p_N = \lambda^n$ gives $k \le n$.
+
+(3) By the diagonalizability criterion, $N$ is diagonalizable iff $m_N$ has distinct linear factors; the only such power of $\lambda$ is $\lambda^1$, i.e. $N = 0$.
+
+(4) Telescoping, $(I-N)(I + N + \cdots + N^{k-1}) = I - N^k = I$.
+:::
+
+Fact (1) with Cayley–Hamilton gives $N^n = 0$ at once: the index never exceeds the size.
+
+:::definition[Jordan chain]{#jordan-chain-def}
+Let $N$ be nilpotent and let $v$ have height $k$, meaning $N^{k}v = 0$ and $N^{k-1}v \neq 0$. The **Jordan chain** generated by $v$ is the list
+
+$$N^{k-1}v,\ N^{k-2}v,\ \dots,\ Nv,\ v,$$
+
+of length $k$. Its first element $N^{k-1}v$ is an eigenvector (it is killed by $N$); its last element is the **top** of the chain.
+:::
+
+:::lemma[A Jordan chain is independent]{#chain-independent}
+With $N$, $v$, $k$ as above, the vectors $v, Nv, \dots, N^{k-1}v$ are linearly independent, and the subspace $C = \operatorname{span}(v, Nv, \dots, N^{k-1}v)$ they span is $N$-invariant of dimension $k$.
+:::
+
+:::proof
+Suppose $c_0 v + c_1 Nv + \cdots + c_{k-1}N^{k-1}v = 0$ with not all $c_i$ zero, and let $c_s$ be the first nonzero coefficient. Apply $N^{k-1-s}$ to the relation. Every term with index $i > s$ acquires $N^{k-1-s+i}$ with $k-1-s+i \ge k$, hence vanishes, and the terms with $i<s$ have $c_i = 0$. What remains is
+
+$$c_s N^{k-1}v = 0,$$
+
+forcing $c_s = 0$, a contradiction. Invariance is clear: $N$ maps each listed vector to the next (and the last to $0$).
+:::
+
+In the basis $N^{k-1}v, \dots, Nv, v$ — note the order, eigenvector first — the restriction $N|_C$ sends each basis vector to the previous one and the first to $0$. Its matrix is therefore the $k\times k$ matrix with $1$'s on the superdiagonal and $0$'s elsewhere. That is a nilpotent Jordan block. The structure theorem says every nilpotent operator is built entirely of such chains.
+
+:::theorem[Structure of a nilpotent operator]{#nilpotent-structure}
+Let $N$ be a nilpotent operator on a finite-dimensional space $V$. Then $V$ has a basis consisting of finitely many Jordan chains for $N$; equivalently, $V$ is a direct sum of $N$-invariant subspaces on each of which $N$ acts as a single nilpotent Jordan block.
+:::
+
+:::proof
+Induct on $\dim V$. If $\dim V = 0$ there is nothing to prove, and if $N = 0$ any basis is a collection of chains of length $1$.
+
+Otherwise let $W = \operatorname{im} N = NV$, which is $N$-invariant and, since $N \neq 0$ has nontrivial kernel, satisfies $\dim W < \dim V$. By induction $W$ has a basis made of chains; say the chains have tops $w_1, \dots, w_s$ and lengths $k_1, \dots, k_s$, so the basis of $W$ is $\{N^{j}w_i : 1 \le i \le s,\ 0 \le j \le k_i - 1\}$.
+
+Each $w_i$ lies in $W = NV$, so choose $v_i \in V$ with $Nv_i = w_i$. The chain generated by $v_i$ has length $k_i + 1$ and extends the $i$-th chain of $W$ by one step at the top.
+
+The bottoms $N^{k_i-1}w_i$ ($i = 1,\dots,s$) are $s$ independent vectors of $\ker N$. Extend them to a basis of $\ker N$ by adding vectors $u_1, \dots, u_t$, where $s + t = \dim \ker N$; each $u_j$ is a chain of length $1$.
+
+Claim: the union
+
+$$\mathcal B = \{N^jv_i : 1 \le i \le s,\ 0 \le j \le k_i\} \cup \{u_1,\dots,u_t\}$$
+
+is a basis of $V$. Count first: it has $\sum_i (k_i + 1) + t = \dim W + s + t = \dim W + \dim\ker N = \dim V$ elements, using the rank–nullity theorem. So it suffices to prove independence.
+
+Suppose a combination of the elements of $\mathcal B$ is zero. Apply $N$. Every $u_j$ dies, every $N^{k_i}v_i$ (the chain bottoms coming from $v_i$) dies, and the rest map onto the basis of $W$ described above — indeed $N(N^jv_i) = N^jw_i$ for $j \le k_i - 1$. Independence of that basis of $W$ forces all the coefficients of $N^jv_i$ with $j \le k_i - 1$ to vanish. What survives of the original relation is a combination of the chain bottoms $N^{k_i}v_i = N^{k_i-1}w_i$ and the $u_j$, all of which lie in $\ker N$ and were chosen to be independent there. So those coefficients vanish too.
+:::
+
+:::intuition
+Picture the basis as a stack of columns, one column per chain, drawn with the eigenvector at the bottom and the top of the chain at the top. The operator $N$ moves every basis vector down one square and pushes the bottom row off the edge. The number of columns is $\dim\ker N$ — one eigenvector per column — and the height of the tallest column is the index of nilpotency. The whole structure is determined by the column heights, which is why the classification reduces to a list of block sizes.
+:::
+
+:::example[Chains for the $3\times3$ shift]
+Find the chain decomposition of $N = \begin{pmatrix} 0 & 1 & 0 \\ 0 & 0 & 1 \\ 0 & 0 & 0\end{pmatrix}$.
+:::
+
+:::solution
+1. $N e_3 = e_2$, $Ne_2 = e_1$, $Ne_1 = 0$, and $N^3 = 0$ while $N^2e_3 = e_1 \neq 0$, so $N$ has index $3$.
+2. The vector $v = e_3$ has height $3$, generating the chain $e_1, e_2, e_3$.
+3. That chain is already a basis of $\mathbb{C}^3$, so there is one column of height $3$ and $N$ is a single nilpotent Jordan block.
+4. Sanity check: $\dim \ker N = 1$, matching "one column".
+:::
+
+:::example[A nilpotent matrix in disguise]
+Show that $N = \begin{pmatrix} 1 & 3 & -1 \\ -1 & -2 & 1 \\ -1 & -1 & 1\end{pmatrix}$ is nilpotent, find its index, and produce a Jordan chain.
+:::
+
+:::solution
+1. $\operatorname{tr} N = 0$. Compute $N^2$: the first row is $1(1,3,-1) + 3(-1,-2,1) + (-1)(-1,-1,1) = (1,3,-1)+(-3,-6,3)+(1,1,-1) = (-1,-2,1)$. The second row is $-1(1,3,-1) -2(-1,-2,1) + 1(-1,-1,1) = (-1,-3,1)+(2,4,-2)+(-1,-1,1) = (0,0,0)$. The third row is $-1(1,3,-1) -1(-1,-2,1) + 1(-1,-1,1) = (-1,-3,1)+(1,2,-1)+(-1,-1,1)=(-1,-2,1)$. So
+
+$$N^2 = \begin{pmatrix} -1 & -2 & 1 \\ 0 & 0 & 0 \\ -1 & -2 & 1\end{pmatrix} \neq 0 .$$
+
+2. Compute $N^3 = N\cdot N^2$: the first row is $1(-1,-2,1) + 3(0,0,0) + (-1)(-1,-2,1) = (0,0,0)$, the second is $-1(-1,-2,1) -2(0,0,0) + 1(-1,-2,1) = (0,0,0)$, the third is $-1(-1,-2,1) -1(0,0,0) + 1(-1,-2,1) = (0,0,0)$. So $N^3 = 0$ and the index is $3$.
+3. Take $v = (1,0,0)$: $N^2v = (-1,0,-1) \neq 0$, so $v$ has height $3$. The chain is
+
+$$N^2v = (-1,0,-1), \qquad Nv = (1,-1,-1), \qquad v = (1,0,0).$$
+
+4. Sanity check: $N(-1,0,-1) = (-1 + 0 + 1,\ 1 + 0 - 1,\ 1 + 0 - 1) = (0,0,0)$, so the bottom of the chain really is an eigenvector. Since the index is $3$ in dimension $3$, there is exactly one chain and $N$ is similar to the single block of the previous example.
+:::
+
+:::example[Two chains]
+Let $N = \begin{pmatrix} -2 & 1 & -1 \\ -2 & 1 & -1 \\ 2 & -1 & 1\end{pmatrix}$. Show $N^2 = 0$, and find its chain structure.
+:::
+
+:::solution
+1. Each row of $N$ is a multiple of $(-2,1,-1)$ only in the first two cases; more useful is to notice $N = u w^{\mathsf T}$ with $u = (1,1,-1)^{\mathsf T}$, $w = (-2,1,-1)^{\mathsf T}$. Then $N^2 = u(w^{\mathsf T}u)w^{\mathsf T}$ and $w^{\mathsf T}u = -2 + 1 + 1 = 0$, so $N^2 = 0$ and the index is $2$.
+2. $\operatorname{rank} N = 1$, so $\dim\ker N = 2$: two chains.
+3. Their lengths sum to $3$ and the longest is the index, $2$: so the lengths are $2$ and $1$.
+4. Build them. Take $v = (0,1,0)$, not in $\ker N$ since $Nv = (1,1,-1) \neq 0$. Chain one: $(1,1,-1),\ (0,1,0)$. For the second chain we need an element of $\ker N$ independent of $(1,1,-1)$: $\ker N = \{x : -2x_1 + x_2 - x_3 = 0\}$ contains $(1,2,0)$, which is not a multiple of $(1,1,-1)$. Chain two: $(1,2,0)$.
+5. Sanity check: the three vectors $(1,1,-1),(0,1,0),(1,2,0)$ have determinant $\det\begin{pmatrix}1&0&1\\1&1&2\\-1&0&0\end{pmatrix} = -1\cdot(0\cdot 2 - 1\cdot 1)\cdot(-1)^{3+1}\cdot\ldots$ — expanding along the last row, $= (-1)\cdot\det\begin{pmatrix}0&1\\1&2\end{pmatrix} = (-1)(-1) = 1 \neq 0$, so they form a basis.
+:::
+
+## Jordan blocks and the normal form
+
+<!-- section: jordan-form -->
+
+:::definition[Jordan block]{#jordan-block-def}
+For a scalar $\lambda$ and an integer $k \ge 1$, the **Jordan block** $J_k(\lambda)$ is the $k \times k$ matrix with $\lambda$ on the diagonal, $1$ on the superdiagonal, and $0$ elsewhere:
+
+$$J_1(\lambda) = (\lambda), \qquad J_2(\lambda) = \begin{pmatrix} \lambda & 1 \\ 0 & \lambda\end{pmatrix}, \qquad J_3(\lambda) = \begin{pmatrix} \lambda & 1 & 0 \\ 0 & \lambda & 1 \\ 0 & 0 & \lambda\end{pmatrix}.$$
+
+A **Jordan matrix** is a block diagonal matrix whose diagonal blocks are Jordan blocks.
+:::
+
+Read a block as $J_k(\lambda) = \lambda I_k + S_k$, where $S_k$ is the nilpotent shift of the previous section. A single block has one eigenvalue $\lambda$ with $m_a = k$ and $m_g = 1$: as defective as a $k\times k$ matrix can be.
+
+:::theorem[Jordan normal form]{#jnf}
+Every $n \times n$ complex matrix $A$ is similar to a Jordan matrix $J$:
+
+$$P^{-1}AP = J = J_{k_1}(\mu_1) \oplus J_{k_2}(\mu_2) \oplus \cdots \oplus J_{k_s}(\mu_s),$$
+
+where the $\mu_i$ are eigenvalues of $A$, repetitions allowed. The Jordan matrix $J$ is unique up to the order in which the blocks are listed; it is called *the* Jordan normal form of $A$.
+:::
+
+:::proof
+**Existence.** By the primary decomposition theorem, $\mathbb{C}^n = K_{\lambda_1}\oplus\cdots\oplus K_{\lambda_r}$ over the distinct eigenvalues, each summand $A$-invariant. On $K_{\lambda_i}$ the operator $N_i = (A - \lambda_i I)|_{K_{\lambda_i}}$ is nilpotent, so by the structure theorem for nilpotent operators $K_{\lambda_i}$ has a basis made of Jordan chains for $N_i$. In such a basis, ordered eigenvector-first within each chain, $N_i$ is a direct sum of nilpotent shifts, so $A|_{K_{\lambda_i}} = \lambda_i I + N_i$ is a direct sum of blocks $J_k(\lambda_i)$. Concatenating these bases over $i$ gives a basis of $\mathbb{C}^n$; the matrix $P$ with those basis vectors as columns satisfies $P^{-1}AP = J$.
+
+**Uniqueness.** This is the content of the rank formula below: the number of blocks of each size for each eigenvalue is determined by the ranks of the powers $(A - \lambda I)^k$, which are invariants of the similarity class. So two Jordan matrices similar to the same $A$ have the same multiset of blocks.
+:::
+
+The rank formula is the computational heart of the chapter. It starts with a one-line observation about a single block.
+
+:::lemma[Rank of a power of a block]{#block-rank}
+For any $\lambda$ and $k \ge 0$,
+
+$$\operatorname{rank}\big(J_m(\lambda) - \lambda I\big)^k = \max(m - k, 0),$$
+
+while for $\mu \neq \lambda$,
+
+$$\operatorname{rank}\big(J_m(\mu) - \lambda I\big)^k = m \quad \text{for all } k \ge 0.$$
+:::
+
+:::proof
+$J_m(\lambda) - \lambda I = S_m$ is the shift, and $S_m^k$ has $1$'s on the $k$-th superdiagonal and zeros elsewhere; there are $m - k$ of them when $k < m$, occupying distinct rows and columns, so the rank is $m-k$; and $S_m^k = 0$ once $k \ge m$.
+
+For $\mu \neq \lambda$, $J_m(\mu) - \lambda I$ is upper triangular with the nonzero constant $\mu - \lambda$ on the diagonal, hence invertible; so are its powers, and their rank is $m$.
+:::
+
+:::theorem[The rank formula for block counts]{#rank-formula}
+Fix an eigenvalue $\lambda$ of $A$ and set
+
+$$r_k = \operatorname{rank}(A - \lambda I)^k, \qquad k = 0, 1, 2, \dots \quad (\text{so } r_0 = n).$$
+
+Then the number of Jordan blocks for $\lambda$ of size at least $k$ is
+
+$$b_{\ge k} = r_{k-1} - r_k,$$
+
+and the number of blocks of size exactly $k$ is
+
+$$b_{=k} = r_{k-1} - 2r_k + r_{k+1}.$$
+:::
+
+:::proof
+Similar matrices have equal ranks of corresponding powers, so we may compute with the Jordan form $J$ itself. Say the blocks for $\lambda$ have sizes $s_1, \dots, s_p$, and let the remaining blocks (for other eigenvalues) have total size $n - m_a(\lambda)$. Rank is additive over a block diagonal matrix, so by the lemma
+
+$$r_k = \big(n - m_a(\lambda)\big) + \sum_{i=1}^p \max(s_i - k, 0).$$
+
+Subtract consecutive values. For each $i$, $\max(s_i - (k-1), 0) - \max(s_i - k, 0)$ equals $1$ if $s_i \ge k$ and $0$ otherwise. Hence
+
+$$r_{k-1} - r_k = \#\{i : s_i \ge k\} = b_{\ge k}.$$
+
+Finally $b_{=k} = b_{\ge k} - b_{\ge k+1} = (r_{k-1}-r_k) - (r_k - r_{k+1}) = r_{k-1} - 2r_k + r_{k+1}$.
+:::
+
+Three consequences are worth naming, because in easy cases they settle the answer without any computation of powers.
+
+:::corollary[Reading off the structure]{#structure-summary}
+For an eigenvalue $\lambda$ of $A$:
+
+1. the number of Jordan blocks for $\lambda$ equals $m_g(\lambda) = \dim\ker(A - \lambda I)$ (take $k=1$ in the formula: $b_{\ge 1} = n - r_1$);
+2. the sum of the sizes of the blocks for $\lambda$ equals $m_a(\lambda)$;
+3. the size of the largest block for $\lambda$ equals the exponent of $(\lambda - \lambda_0)$ in the minimal polynomial.
+:::
+
+:::proof
+(1) is the displayed computation. (2) holds because the blocks for $\lambda$ together form the matrix of $A$ restricted to $K_\lambda$, of dimension $m_a(\lambda)$. For (3), $m_J(\lambda) = \operatorname{lcm}$ of the minimal polynomials of the blocks, and $m_{J_k(\lambda_0)}(\lambda) = (\lambda - \lambda_0)^k$ since $S_k^{k-1} \neq 0 = S_k^k$; the least common multiple takes the largest exponent.
+:::
+
+:::summary[The classification data]
+For each eigenvalue $\lambda$, the Jordan structure is determined by, and determines, any one of these:
+
+$$\text{block sizes for } \lambda \quad\longleftrightarrow\quad (r_0, r_1, r_2, \dots) \quad\longleftrightarrow\quad (\dim\ker(A-\lambda I)^k)_{k \ge 0}.$$
+
+Two matrices are similar exactly when they have the same eigenvalues with the same block sizes. The characteristic polynomial gives $\sum$ of block sizes, the minimal polynomial gives the largest block size, and the geometric multiplicity gives the number of blocks — three numbers that determine the structure completely when $m_a(\lambda) \le 3$, but not in general.
+:::
+
+:::intuition
+The number $b_{\ge k} = r_{k-1} - r_k$ says: "how many columns of the chain diagram survive to height $k$." Each application of $A - \lambda I$ shaves one square off every surviving column, and the drop in rank counts the columns that were still standing. The second difference $r_{k-1} - 2r_k + r_{k+1}$ is then the count of columns of height exactly $k$ — a discrete second derivative of the rank sequence.
+:::
+
+:::example[Blocks from a rank sequence]
+A $4\times4$ matrix $A$ has a single eigenvalue $2$, and $\operatorname{rank}(A-2I) = 2$, $\operatorname{rank}(A-2I)^2 = 1$, $\operatorname{rank}(A-2I)^3 = 0$. Determine the Jordan form.
+:::
+
+:::solution
+1. The rank sequence is $r_0 = 4$, $r_1 = 2$, $r_2 = 1$, $r_3 = 0$, $r_4 = 0$.
+2. $b_{\ge1} = r_0 - r_1 = 2$: two blocks.
+3. $b_{\ge2} = r_1 - r_2 = 1$; $b_{\ge3} = r_2 - r_3 = 1$; $b_{\ge4} = 0$.
+4. So exactly one block has size $\ge 3$ and none has size $\ge 4$: one block of size $3$. The other block has size $4 - 3 = 1$.
+5. $J = J_3(2)\oplus J_1(2)$. Sanity check with the second-difference formula: $b_{=1} = r_0 - 2r_1 + r_2 = 4 - 4 + 1 = 1$ ✓, $b_{=2} = r_1 - 2r_2 + r_3 = 2 - 2 + 0 = 0$ ✓, $b_{=3} = r_2 - 2r_3 + r_4 = 1 ✓$. The minimal polynomial is $(\lambda-2)^3$.
+:::
+
+:::example[A larger rank sequence]
+A $7\times7$ matrix has the single eigenvalue $5$ with $\operatorname{rank}(A - 5I)^k = 4, 2, 1, 0$ for $k = 1,2,3,4$. Find the block sizes.
+:::
+
+:::solution
+1. $r_0 = 7$, $r_1 = 4$, $r_2 = 2$, $r_3 = 1$, $r_4 = 0$, $r_5 = 0$.
+2. $b_{\ge1} = 3$, $b_{\ge2} = 2$, $b_{\ge3} = 1$, $b_{\ge4} = 1$, $b_{\ge5} = 0$.
+3. Exactly-$k$ counts: $b_{=1} = 3 - 2 = 1$, $b_{=2} = 2-1 = 1$, $b_{=3} = 1-1 = 0$, $b_{=4} = 1 - 0 = 1$.
+4. Blocks: one of size $4$, one of size $2$, one of size $1$. Total $4+2+1 = 7$ ✓, count $3 = m_g(5)$ ✓.
+5. $m_A(\lambda) = (\lambda - 5)^4$, the largest block size.
+:::
+
+:::example[Two eigenvalues at once]
+A $6\times6$ matrix has eigenvalues $1$ and $4$ with $p_A(\lambda) = (\lambda-1)^4(\lambda-4)^2$. It is given that $\operatorname{rank}(A-I) = 4$, $\operatorname{rank}(A-I)^2 = 3$, $\operatorname{rank}(A-I)^3 = 2$, and $\operatorname{rank}(A - 4I) = 5$. Find the Jordan form.
+:::
+
+:::solution
+1. For $\lambda = 1$: $r_0 = 6$, $r_1 = 4$, $r_2 = 3$, $r_3 = 2$. The blocks for $1$ occupy $m_a(1) = 4$ rows, so once $(A-I)^k$ has killed all of $K_1$ its rank is $6 - 4 = 2$; $r_3 = 2$ says that has happened by $k = 3$, so $r_4 = 2$ as well.
+2. $b_{\ge1} = 6-4 = 2$, $b_{\ge2} = 4-3 = 1$, $b_{\ge3} = 3 - 2 = 1$, $b_{\ge4} = 2-2 = 0$. So one block of size $3$ and one of size $1$: $J_3(1)\oplus J_1(1)$, total size $4$ ✓.
+3. For $\lambda = 4$: $b_{\ge1} = 6 - 5 = 1$, one block, and it must fill $m_a(4) = 2$: $J_2(4)$.
+4. $J = J_3(1)\oplus J_1(1) \oplus J_2(4)$, and $m_A(\lambda) = (\lambda-1)^3(\lambda-4)^2$.
+5. Sanity check: total size $3+1+2 = 6$ ✓; $m_g(1) = 2$ and $m_g(4)=1$, so $A$ has $3$ independent eigenvectors, far short of $6$.
+:::
+
+:::example[Enumerating the possibilities]
+How many similarity classes of $5\times5$ complex matrices have characteristic polynomial $(\lambda-7)^5$, and which have minimal polynomial $(\lambda - 7)^3$?
+:::
+
+:::solution
+1. Such a matrix has one eigenvalue $7$ with $m_a = 5$; the Jordan form is determined by the multiset of block sizes, which is a partition of $5$.
+2. The partitions of $5$ are $5$; $4{+}1$; $3{+}2$; $3{+}1{+}1$; $2{+}2{+}1$; $2{+}1{+}1{+}1$; $1{+}1{+}1{+}1{+}1$ — seven of them.
+3. So there are $7$ similarity classes.
+4. The minimal polynomial exponent is the largest part. Largest part $3$ occurs for $3{+}2$ and $3{+}1{+}1$: two classes.
+5. Sanity check: largest part $1$ gives $(\lambda-7)^1$, the diagonalizable case $7I$ — exactly one partition, as it should be.
+:::
+
+:::pitfall
+Characteristic and minimal polynomials together do not always determine the Jordan form. For $n = 7$, $p_A = (\lambda-2)^7$ and $m_A = (\lambda-2)^3$ is consistent with block sizes $3{+}3{+}1$ and with $3{+}2{+}2$ and with $3{+}2{+}1{+}1$ and with $3{+}1{+}1{+}1{+}1$. You need the geometric multiplicity, or the full rank sequence, to separate them.
+:::
+
+## Building a Jordan basis
+
+<!-- section: jordan-basis -->
+
+Knowing $J$ is often enough. When you also need $P$ — to compute $A^k$, $e^{At}$, or to solve a differential system — you must produce the chains explicitly.
+
+:::recipe[Finding a Jordan basis]{#jordan-recipe}
+Given an $n\times n$ matrix $A$:
+
+1. Compute $p_A$ and factor it: the distinct eigenvalues $\lambda_i$ with multiplicities $m_a(\lambda_i)$.
+2. Work one eigenvalue at a time. Set $N = A - \lambda I$ and compute $\operatorname{rank} N, \operatorname{rank} N^2, \dots$ until the rank stops dropping.
+3. Apply the rank formula to get the block sizes for $\lambda$.
+4. Build the chains from the top down. Starting with the largest size $k$, choose $v \in \ker N^{k}\setminus \ker N^{k-1}$ and form the chain $N^{k-1}v, \dots, Nv, v$. For a second block of the same size, choose another such $v$ whose chain is independent of the first, and so on.
+5. Move to the next smaller size $k'$: choose $v \in \ker N^{k'}\setminus\ker N^{k'-1}$ such that the new chain stays independent of everything already built. It is essential to take the longest chains first — a short chain chosen too early may block a long one.
+6. Concatenate the chains for all eigenvalues. The matrix $P$ whose columns are these vectors, in the order eigenvector-first within each chain, satisfies $P^{-1}AP = J$.
+:::
+
+Step 6 deserves a comment on ordering, because it is where signs and transposes go wrong. If a chain is $u_1 = N^{k-1}v,\ u_2 = N^{k-2}v,\ \dots,\ u_k = v$, then
+
+$$Au_1 = \lambda u_1, \qquad Au_j = \lambda u_j + u_{j-1} \ \ (j \ge 2),$$
+
+because $Au_j = \lambda u_j + Nu_j$ and $Nu_j = u_{j-1}$. Column $j$ of $P^{-1}AP$ is the coordinate vector of $Au_j$, namely $\lambda e_j + e_{j-1}$ — which is precisely the $j$-th column of $J_k(\lambda)$, with the $1$ *above* the diagonal. Reversing the order inside a chain produces $1$'s below the diagonal instead: also a legitimate normal form, but not the standard one.
+
+:::example[A $3\times3$ with one chain of length $3$]
+Find a Jordan basis and the Jordan form of
+
+$$A = \begin{pmatrix} 3 & 1 & 1 \\ 1 & 2 & 1 \\ -1 & -1 & 1 \end{pmatrix}.$$
+:::
+
+:::solution
+1. $\operatorname{tr} A = 6$. The sum of the $2\times2$ principal minors is $(3\cdot2 - 1\cdot1) + (3\cdot 1 - 1\cdot(-1)) + (2\cdot1 - 1\cdot(-1)) = 5 + 4 + 3 = 12$, and $\det A = 8$. So
+
+$$p_A(\lambda) = \lambda^3 - 6\lambda^2 + 12\lambda - 8 = (\lambda-2)^3.$$
+
+2. $N = A - 2I = \begin{pmatrix} 1 & 1 & 1 \\ 1 & 0 & 1 \\ -1 & -1 & -1\end{pmatrix}$. Rows $1$ and $3$ are proportional and row $2$ is not, so $\operatorname{rank} N = 2$ and $m_g(2) = 1$: exactly one block, necessarily $J_3(2)$.
+3. Confirm with $N^2$: its first row is $(1,1,1)$ applied, $1(1,1,1)+1(1,0,1)+1(-1,-1,-1) = (1,0,1)$; second row $1(1,1,1)+0+1(-1,-1,-1) = (0,0,0)$; third row $-(1,1,1)-(1,0,1)+(1,1,1)\cdot(-1)\cdot(-1)$ — more carefully, row $3$ of $N$ is $(-1,-1,-1)$, so row $3$ of $N^2$ is $-1(1,1,1) -1(1,0,1) -1(-1,-1,-1) = (-1,0,-1)$. Hence
+
+$$N^2 = \begin{pmatrix} 1 & 0 & 1 \\ 0 & 0 & 0 \\ -1 & 0 & -1\end{pmatrix}, \qquad \operatorname{rank} N^2 = 1,$$
+
+and $N^3 = 0$ (rank must drop to $0$ since $r_3 \le r_2 - b_{\ge 3}$ and there is one block of size $3$).
+
+4. Pick $v$ with $N^2v \neq 0$: $v = (1,-1,0)$ gives $N^2v = (1,0,-1) \neq 0$. The chain is
+
+$$u_1 = N^2v = (1,0,-1), \qquad u_2 = Nv = (0,1,0), \qquad u_3 = v = (1,-1,0).$$
+
+5. So $P = \begin{pmatrix} 1 & 0 & 1 \\ 0 & 1 & -1 \\ -1 & 0 & 0\end{pmatrix}$ and $P^{-1}AP = J_3(2)$.
+6. Sanity check the defining relations: $Au_1 = (3 + 0 - 1,\ 1 + 0 - 1,\ -1+0+0) = (2,0,-2) = 2u_1$ ✓. $Au_2 = (1,2,-1) = 2(0,1,0) + (1,0,-1) = 2u_2 + u_1$ ✓. $Au_3 = (3-1+0,\ 1-2+0,\ -1+1+0) = (2,-1,0) = 2(1,-1,0) + (0,1,0) = 2u_3 + u_2$ ✓.
+:::
+
+:::example[A $3\times3$ with two eigenvalues]
+Find a Jordan basis and the Jordan form of $A = \begin{pmatrix} 4 & -2 & 1 \\ 1 & 1 & 1 \\ 1 & -1 & 2\end{pmatrix}$.
+:::
+
+:::solution
+1. From earlier work: $p_A(\lambda) = (\lambda-3)(\lambda-2)^2$, $m_g(3) = 1$, $m_g(2) = 1$.
+2. Eigenvalue $3$: one block of size $1$, spanned by the eigenvector $u_1 = (3,2,1)$.
+3. Eigenvalue $2$: $m_a = 2$ and $m_g = 1$, so one block of size $2$. With $N = A - 2I$ we found the chain
+
+$$u_2 = Nv = (1,1,0), \qquad u_3 = v = (0,0,1).$$
+
+4. Hence, with $P = \begin{pmatrix} 3 & 1 & 0\\ 2 & 1 & 0 \\ 1 & 0 & 1\end{pmatrix}$,
+
+$$P^{-1}AP = J = \begin{pmatrix} 3 & 0 & 0 \\ 0 & 2 & 1 \\ 0 & 0 & 2\end{pmatrix} = J_1(3)\oplus J_2(2).$$
+
+5. Sanity check: $Au_3 = A(0,0,1) = (1,1,2) = 2(0,0,1) + (1,1,0) = 2u_3 + u_2$ ✓, and $Au_2 = A(1,1,0) = (2,2,0) = 2u_2$ ✓.
+6. Consistency of invariants: $\operatorname{tr} J = 3 + 2 + 2 = 7 = \operatorname{tr} A$ ✓, $\det J = 12 = \det A$ ✓.
+:::
+
+:::example[A $4\times4$ with blocks of sizes $3$ and $1$]
+Find the Jordan form and a Jordan basis for
+
+$$A = \begin{pmatrix} 3 & 2 & 1 & -1 \\ 1 & 3 & 1 & -1 \\ -1 & -1 & 1 & 1 \\ 1 & 2 & 1 & 1\end{pmatrix}, \qquad p_A(\lambda) = (\lambda-2)^4 .$$
+:::
+
+:::solution
+1. Set $N = A - 2I = \begin{pmatrix} 1 & 2 & 1 & -1 \\ 1 & 1 & 1 & -1 \\ -1 & -1 & -1 & 1 \\ 1 & 2 & 1 & -1\end{pmatrix}$. Rows $1$ and $4$ are equal and row $3$ is $-$row $2$, so only rows $1$ and $2$ can be independent, and they are: $\operatorname{rank} N = 2$, $r_1 = 2$.
+2. Compute $N^2$. Row $1$ of $N^2$ is $1\cdot(1,2,1,-1) + 2(1,1,1,-1) + 1(-1,-1,-1,1) - 1(1,2,1,-1) = (1,1,1,-1)$. Row $2$: $(1,2,1,-1)+(1,1,1,-1)-(-1,-1,-1,1)\cdot(-1)$ — carefully, row $2$ of $N$ is $(1,1,1,-1)$, so row $2$ of $N^2$ is $1(1,2,1,-1) + 1(1,1,1,-1) + 1(-1,-1,-1,1) - 1(1,2,1,-1) = (0,0,0,0)$. Row $3$ is $-$row $2$ $= (0,0,0,0)$, and row $4$ equals row $1$. So
+
+$$N^2 = \begin{pmatrix} 1 & 1 & 1 & -1 \\ 0&0&0&0 \\ 0&0&0&0 \\ 1 & 1 & 1 & -1\end{pmatrix}, \qquad r_2 = 1.$$
+
+3. $N^3 = N\cdot N^2$: every row of $N^3$ is (row sum pattern) $\alpha(1,1,1,-1)$ with $\alpha$ the sum of the first and last entries of the corresponding row of $N$; for row $1$ that is $1 + (-1) = 0$, likewise for all rows. So $N^3 = 0$ and $r_3 = 0$.
+4. Rank formula with $(r_0,r_1,r_2,r_3) = (4,2,1,0)$: $b_{\ge1} = 2$, $b_{\ge2} = 1$, $b_{\ge3}=1$, $b_{\ge4}=0$. Blocks: one of size $3$, one of size $1$. So $J = J_3(2)\oplus J_1(2)$ and $m_A(\lambda) = (\lambda-2)^3$.
+5. Longest chain first: choose $v$ with $N^2v \neq 0$, e.g. $v = (1,0,0,0)$, giving $N^2v = (1,0,0,1)$. The chain is
+
+$$u_1 = (1,0,0,1), \qquad u_2 = Nv = (1,1,-1,1), \qquad u_3 = v = (1,0,0,0).$$
+
+6. The size-$1$ block needs an eigenvector independent of $u_1$. Solve $Nw = 0$: from rows $1$ and $2$, $w_1 + 2w_2 + w_3 - w_4 = 0$ and $w_1 + w_2 + w_3 - w_4 = 0$; subtracting gives $w_2 = 0$ and then $w_1 + w_3 = w_4$. A solution independent of $u_1 = (1,0,0,1)$ is $u_4 = (-1,0,1,0)$.
+7. With $P = (u_1\mid u_2\mid u_3\mid u_4)$,
+
+$$P^{-1}AP = \begin{pmatrix} 2&1&0&0\\0&2&1&0\\0&0&2&0\\0&0&0&2\end{pmatrix}.$$
+
+8. Sanity check: $Au_3 = A(1,0,0,0) = (3,1,-1,1) = 2(1,0,0,0) + (1,1,-1,1) = 2u_3 + u_2$ ✓. $Au_2 = A(1,1,-1,1) = (3+2-1-1,\,1+3-1-1,\,-1-1-1+1,\,1+2-1+1) = (3,2,-2,3) = 2(1,1,-1,1)+(1,0,0,1) = 2u_2+u_1$ ✓. $Au_4 = A(-1,0,1,0) = (-3+1,\,-1+1,\,1-1,\,-1+1) = (-2,0,0,0)$ — and $2u_4 = (-2,0,2,0)$, which does **not** match, so recheck $u_4$. Row $3$ of $A$ is $(-1,-1,1,1)$, giving $(-1)(-1) + 0 + 1\cdot 1 + 0 = 2$, not $0$; so $Au_4 = (-2, 0, 2, 0) = 2u_4$ ✓ after all — the third coordinate was miscomputed the first time. All four relations hold.
+:::
+
+:::pitfall
+Build the chains from the longest down, and always start a chain at its *top* — a vector of maximal height — then apply $N$ repeatedly. Starting from an eigenvector and trying to "solve upward" for $v$ with $Nv = u$ often fails, because a given eigenvector need not be in the image of $N$; only the ones at the bottom of a long chain are. Choosing the short chains first can leave you unable to complete a long one.
+:::
+
+## Powers and functions of a matrix
+
+<!-- section: powers -->
+
+The payoff. Once $A = PJP^{-1}$, every power is $A^k = PJ^kP^{-1}$, and $J^k$ is computed block by block.
+
+:::theorem[Powers of a Jordan block]{#block-powers}
+Write $J_m(\lambda) = \lambda I + S$ with $S$ the nilpotent shift, $S^m = 0$. Then for $k \ge 0$,
+
+$$J_m(\lambda)^k = \sum_{j=0}^{\min(k,\,m-1)} \binom{k}{j}\lambda^{k-j}S^j,$$
+
+so the entry in row $i$, column $i+j$ is $\binom{k}{j}\lambda^{k-j}$ for $0 \le j \le m-1$, and all other entries vanish. For example
+
+$$J_3(\lambda)^k = \begin{pmatrix} \lambda^k & k\lambda^{k-1} & \binom{k}{2}\lambda^{k-2} \\ 0 & \lambda^k & k\lambda^{k-1} \\ 0&0&\lambda^k\end{pmatrix}.$$
+:::
+
+:::proof
+$\lambda I$ and $S$ commute, since $\lambda I$ commutes with everything, so the binomial theorem applies:
+
+$$(\lambda I + S)^k = \sum_{j=0}^k \binom{k}{j}(\lambda I)^{k-j}S^j = \sum_{j=0}^{k}\binom{k}{j}\lambda^{k-j}S^j.$$
+
+Terms with $j \ge m$ vanish because $S^m = 0$, which truncates the sum at $j = \min(k, m-1)$. The entry description is the observation that $S^j$ has $1$'s exactly in positions $(i, i+j)$.
+:::
+
+Notice the shape of the answer: the entries are $\lambda^k$ times polynomials in $k$ of degree up to $m-1$. That single fact explains the qualitative behaviour of every linear recursion: a Jordan block of size $m$ at eigenvalue $\lambda$ contributes terms $k^{m-1}\lambda^k$ to the growth, so a repeated eigenvalue on the unit circle produces polynomial growth rather than a bounded orbit.
+
+:::example[Powers of a defective $2\times2$ directly]
+Find a closed formula for $A^k$, $A = \begin{pmatrix} 4 & 1 \\ -1 & 2\end{pmatrix}$.
+:::
+
+:::solution
+1. We know $p_A(\lambda) = (\lambda-3)^2$ and $m_A(\lambda) = (\lambda-3)^2$, so $N := A - 3I$ satisfies $N^2 = 0$. No basis change is needed at all.
+2. Write $A = 3I + N$ with $N = \begin{pmatrix} 1 & 1 \\ -1 & -1\end{pmatrix}$ and expand, using $N^2 = 0$:
+
+$$A^k = (3I + N)^k = 3^kI + k\,3^{k-1}N.$$
+
+3. Explicitly,
+
+$$A^k = \begin{pmatrix} 3^k + k3^{k-1} & k3^{k-1} \\ -k3^{k-1} & 3^k - k3^{k-1}\end{pmatrix} = 3^{k-1}\begin{pmatrix} 3+k & k \\ -k & 3-k\end{pmatrix}.$$
+
+4. Sanity check at $k=1$: $3^0\begin{pmatrix} 4&1\\-1&2\end{pmatrix} = A$ ✓. At $k = 2$: $3\begin{pmatrix} 5&2\\-2&1\end{pmatrix} = \begin{pmatrix} 15&6\\-6&3\end{pmatrix}$, and directly $A^2 = \begin{pmatrix} 16-1 & 4+2 \\ -4-2 & -1+4\end{pmatrix} = \begin{pmatrix} 15&6\\-6&3\end{pmatrix}$ ✓.
+5. Trace check: $\operatorname{tr} A^k = 2\cdot 3^k$, and the eigenvalues of $A^k$ are $3^k$ twice ✓.
+:::
+
+That shortcut is general and worth stating on its own, because it avoids computing $P$ entirely whenever there is only one eigenvalue.
+
+:::proposition[Single-eigenvalue shortcut]{#single-eigenvalue-power}
+If $A$ has the single eigenvalue $\lambda$ and $(A - \lambda I)^d = 0$, then for every $k$,
+
+$$A^k = \sum_{j=0}^{d-1}\binom{k}{j}\lambda^{k-j}(A - \lambda I)^j .$$
+:::
+
+:::proof
+$A = \lambda I + (A - \lambda I)$ and the two summands commute; apply the binomial theorem and drop the terms with $j \ge d$.
+:::
+
+:::example[A $3\times3$ power]
+For $A = \begin{pmatrix} 3 & 1 & 1 \\ 1 & 2 & 1 \\ -1 & -1 & 1\end{pmatrix}$, whose Jordan form is $J_3(2)$, compute the $(1,1)$ entry of $A^{10}$.
+:::
+
+:::solution
+1. Only the eigenvalue $2$ occurs and $N = A - 2I$ satisfies $N^3 = 0$, so
+
+$$A^{k} = 2^kI + k2^{k-1}N + \binom{k}{2}2^{k-2}N^2 .$$
+
+2. From the Jordan-basis example, $N = \begin{pmatrix} 1&1&1\\1&0&1\\-1&-1&-1\end{pmatrix}$ and $N^2 = \begin{pmatrix} 1&0&1\\0&0&0\\-1&0&-1\end{pmatrix}$.
+3. The $(1,1)$ entries are $I \to 1$, $N \to 1$, $N^2 \to 1$. With $k = 10$:
+
+$$(A^{10})_{11} = 2^{10} + 10\cdot 2^9 + \binom{10}{2}2^8 = 1024 + 5120 + 45\cdot 256 = 1024 + 5120 + 11520 = 17664.$$
+
+4. Sanity check at $k=1$: $2 + 1\cdot1\cdot1 + 0 = 3$, the $(1,1)$ entry of $A$ ✓. At $k=2$: $4 + 2\cdot2\cdot1 + 1\cdot1\cdot1 = 9$, and the $(1,1)$ entry of $A^2$ is $9 + 1 - 1 = 9$ ✓.
+:::
+
+:::example[Growth rate of a recursion]
+A sequence satisfies $x_{k+1} = Ax_k$ where $A$ is $5\times5$ with Jordan form $J_3(1)\oplus J_2(1/2)$. Describe the growth of $\|x_k\|$.
+:::
+
+:::solution
+1. The $J_3(1)$ block contributes entries $\binom{k}{j}1^{k-j}$ for $j \le 2$, the largest being $\binom{k}{2} \sim k^2/2$.
+2. The $J_2(1/2)$ block contributes entries at most $k(1/2)^{k-1} \to 0$.
+3. So for a generic starting vector, $\|x_k\|$ grows like a constant times $k^2$.
+4. Sanity check: all eigenvalues have $|\lambda| \le 1$, so a diagonalizable matrix with these eigenvalues would give a bounded sequence. The unbounded growth comes entirely from the defect at $\lambda = 1$ — a repeated eigenvalue of modulus $1$ is stable only if its blocks are all $1\times1$.
+:::
+
+:::remark[Functions of a matrix in general]
+The same computation defines $f(A)$ for any function $f$ that is differentiable enough at the eigenvalues. Replacing $\binom{k}{j}\lambda^{k-j}$ — which is $f^{(j)}(\lambda)/j!$ for $f(\lambda) = \lambda^k$ — by the general Taylor coefficient gives
+
+$$f\big(J_m(\lambda)\big) = \sum_{j=0}^{m-1}\frac{f^{(j)}(\lambda)}{j!}S^j,$$
+
+and $f(A) = Pf(J)P^{-1}$. A function of a matrix depends only on the values of $f$ and its first $m-1$ derivatives at each eigenvalue, where $m$ is the largest block there. The next section is the case $f(\lambda) = e^{\lambda t}$.
+:::
+
+## The matrix exponential and linear systems
+
+<!-- section: matrix-exponential -->
+
+:::definition[Matrix exponential]{#matrix-exp-def}
+For a square matrix $M$,
+
+$$e^{M} = \sum_{k=0}^{\infty}\frac{M^k}{k!} = I + M + \frac{M^2}{2!} + \frac{M^3}{3!}+\cdots,$$
+
+a series that converges entry-by-entry for every $M$.
+:::
+
+:::proposition[Properties of the exponential]{#exp-properties}
+For square matrices of the same size:
+
+1. $e^{P^{-1}MP} = P^{-1}e^{M}P$;
+2. if $MN = NM$ then $e^{M+N} = e^Me^N$; in particular $e^M$ is always invertible, with inverse $e^{-M}$;
+3. $\dfrac{d}{dt}e^{At} = Ae^{At} = e^{At}A$;
+4. $e^{M}$ is block diagonal whenever $M$ is, with $(e^M)$ blocks the exponentials of the blocks.
+:::
+
+:::proof
+(1) $(P^{-1}MP)^k = P^{-1}M^kP$, so the partial sums satisfy the identity and it passes to the limit.
+
+(2) Commutativity lets the usual binomial rearrangement of the Cauchy product go through: $\sum_k \frac{(M+N)^k}{k!} = \sum_k\frac{1}{k!}\sum_j\binom kj M^jN^{k-j} = \left(\sum_i \frac{M^i}{i!}\right)\left(\sum_j\frac{N^j}{j!}\right)$. Taking $N = -M$ gives $e^Me^{-M} = e^0 = I$.
+
+(3) Differentiate the series term by term (justified by uniform convergence on bounded $t$-intervals): $\frac{d}{dt}\sum_k \frac{A^kt^k}{k!} = \sum_{k\ge1}\frac{A^kt^{k-1}}{(k-1)!} = A\sum_{j\ge0}\frac{A^jt^j}{j!}$.
+
+(4) Powers of a block diagonal matrix are block diagonal with the blocks raised to the power.
+:::
+
+Property (2) has a famous caveat: $e^{M+N} = e^Me^N$ can fail spectacularly when $M$ and $N$ do not commute. Fortunately, in a Jordan block $\lambda I$ and $S$ *do* commute, which is exactly what makes the following formula work.
+
+:::theorem[Exponential of a Jordan block]{#exp-block}
+For the $m\times m$ block $J_m(\lambda) = \lambda I + S$,
+
+$$e^{J_m(\lambda)t} = e^{\lambda t}\left(I + tS + \frac{t^2}{2!}S^2 + \cdots + \frac{t^{m-1}}{(m-1)!}S^{m-1}\right),$$
+
+whose $(i, i+j)$ entry is $e^{\lambda t}\,t^j/j!$ for $0 \le j \le m-1$. For example
+
+$$e^{J_2(\lambda)t} = e^{\lambda t}\begin{pmatrix} 1 & t \\ 0 & 1\end{pmatrix}, \qquad e^{J_3(\lambda)t} = e^{\lambda t}\begin{pmatrix} 1 & t & t^2/2 \\ 0 & 1 & t \\ 0&0&1\end{pmatrix}.$$
+:::
+
+:::proof
+$\lambda I t$ and $St$ commute, so $e^{J_m(\lambda)t} = e^{\lambda t I}e^{St} = e^{\lambda t}\,e^{St}$, the last step because $e^{\lambda t I} = \sum_k (\lambda t)^kI/k! = e^{\lambda t}I$. The series for $e^{St}$ terminates at $j = m-1$ since $S^m = 0$.
+:::
+
+:::theorem[Solution of a linear system]{#ode-solution}
+The initial value problem
+
+$$\mathbf{x}'(t) = A\mathbf{x}(t), \qquad \mathbf{x}(0) = \mathbf{x}_0$$
+
+has the unique solution $\mathbf{x}(t) = e^{At}\mathbf{x}_0$.
+:::
+
+:::proof
+It is a solution: $\frac{d}{dt}e^{At}\mathbf{x}_0 = Ae^{At}\mathbf{x}_0$ by property (3), and $e^{A\cdot0}\mathbf{x}_0 = \mathbf{x}_0$. For uniqueness, let $\mathbf{y}$ be any solution and set $\mathbf{z}(t) = e^{-At}\mathbf{y}(t)$. Then
+
+$$\mathbf{z}'(t) = -Ae^{-At}\mathbf{y} + e^{-At}\mathbf{y}' = -Ae^{-At}\mathbf{y} + e^{-At}A\mathbf{y} = 0,$$
+
+using that $e^{-At}$ commutes with $A$. So $\mathbf{z}$ is constant, equal to $\mathbf{z}(0) = \mathbf{y}(0) = \mathbf{x}_0$, and $\mathbf{y}(t) = e^{At}\mathbf{x}_0$.
+:::
+
+:::intuition
+A diagonalizable $A$ gives solutions that are pure combinations of exponentials $e^{\lambda_i t}v_i$: each mode decays or grows at its own rate and nothing interacts. A Jordan block of size $2$ produces a solution containing $t\,e^{\lambda t}$. That extra factor of $t$ is the signature of resonance — it is the same $t$ that appears in the method of undetermined coefficients when the forcing term matches a root of the characteristic equation, and it is the reason a critically damped oscillator has a solution $(c_1 + c_2t)e^{-\omega t}$.
+:::
+
+:::example[Exponential of a defective $2\times2$]
+Compute $e^{At}$ for $A = \begin{pmatrix} 4 & 1 \\ -1 & 2\end{pmatrix}$, and solve $\mathbf{x}' = A\mathbf{x}$ with $\mathbf{x}(0) = (1,0)$.
+:::
+
+:::solution
+1. $A = 3I + N$ with $N = A - 3I = \begin{pmatrix} 1&1\\-1&-1\end{pmatrix}$ and $N^2 = 0$; the two summands commute.
+2. Hence $e^{At} = e^{3tI}e^{Nt} = e^{3t}(I + tN)$, the series for $e^{Nt}$ stopping after two terms:
+
+$$e^{At} = e^{3t}\begin{pmatrix} 1 + t & t \\ -t & 1 - t\end{pmatrix}.$$
+
+3. The solution is
+
+$$\mathbf{x}(t) = e^{At}\begin{pmatrix} 1\\0\end{pmatrix} = e^{3t}\begin{pmatrix} 1+t \\ -t\end{pmatrix}.$$
+
+4. Sanity check by substitution: $\mathbf{x}'(t) = e^{3t}\big(3(1+t) + 1,\ -3t - 1\big) = e^{3t}(3t+4,\ -3t-1)$, while $A\mathbf{x} = e^{3t}\big(4(1+t) + (-t),\ -(1+t) + 2(-t)\big) = e^{3t}(3t + 4,\ -3t-1)$. Equal ✓. And $\mathbf{x}(0) = (1,0)$ ✓.
+5. Note the $t\,e^{3t}$ behaviour: with a genuinely diagonalizable matrix having the double eigenvalue $3$, i.e. $3I$, the solution would be $e^{3t}(1,0)$ with no linear factor.
+:::
+
+:::example[Exponential at a specific time]
+With the same $A$, compute the $(1,2)$ entry of $e^{At}$ at $t = 2$, and the trace of $e^{A}$.
+:::
+
+:::solution
+1. From the formula, $(e^{At})_{12} = te^{3t}$, so at $t = 2$ it is $2e^{6}$.
+2. The trace: $\operatorname{tr}e^{At} = e^{3t}\big((1+t) + (1-t)\big) = 2e^{3t}$, so $\operatorname{tr}e^{A} = 2e^3$.
+3. Sanity check: the eigenvalues of $e^{A}$ are $e^3, e^3$ (a Jordan block exponentiates to an upper triangular matrix with $e^\lambda$ on the diagonal), and their sum is $2e^3$ ✓.
+:::
+
+:::example[A $3\times3$ system]
+Solve $\mathbf{x}' = A\mathbf{x}$ for $A = \begin{pmatrix} 4 & -2 & 1 \\ 1 & 1 & 1 \\ 1 & -1 & 2\end{pmatrix}$ with $\mathbf{x}(0) = (0,0,1)$.
+:::
+
+:::solution
+1. From the Jordan-basis example, $P = \begin{pmatrix} 3&1&0\\2&1&0\\1&0&1\end{pmatrix}$ gives $P^{-1}AP = J_1(3)\oplus J_2(2)$, with chain vectors $u_1 = (3,2,1)$, $u_2 = (1,1,0)$, $u_3 = (0,0,1)$.
+2. The initial vector is exactly $u_3$, so we can avoid inverting $P$: in the Jordan basis, $\mathbf{x}_0$ has coordinate vector $e_3$.
+3. $e^{Jt}e_3 = \big(e^{3t}\oplus e^{2t}\begin{pmatrix}1&t\\0&1\end{pmatrix}\big)e_3 = (0,\ te^{2t},\ e^{2t})$ in Jordan coordinates.
+4. Convert back: $\mathbf{x}(t) = 0\cdot u_1 + te^{2t}u_2 + e^{2t}u_3 = te^{2t}(1,1,0) + e^{2t}(0,0,1)$, that is
+
+$$\mathbf{x}(t) = e^{2t}\begin{pmatrix} t \\ t \\ 1\end{pmatrix}.$$
+
+5. Sanity check: $\mathbf{x}' = e^{2t}(2t+1,\ 2t+1,\ 2)$, and $A\mathbf{x} = e^{2t}(4t - 2t + 1,\ t + t + 1,\ t - t + 2) = e^{2t}(2t+1,\ 2t+1,\ 2)$ ✓. Also $\mathbf{x}(0) = (0,0,1)$ ✓.
+:::
+
+:::pitfall
+$e^{At}$ is not the matrix of entrywise exponentials $e^{a_{ij}t}$, and $\det e^{A}$ is not $e^{\det A}$ — the correct identity is $\det e^A = e^{\operatorname{tr}A}$, which follows by triangularizing. Nor is $e^{A+B} = e^Ae^B$ valid in general: take $A = \begin{pmatrix}0&1\\0&0\end{pmatrix}$ and $B = \begin{pmatrix}0&0\\1&0\end{pmatrix}$, which do not commute, and the two sides differ.
+:::
+
+The last item is the real form. Over $\mathbb{R}$, a matrix may have no real eigenvalues at all, and the Jordan form we have built is genuinely complex. There is a real substitute.
+
+:::theorem[Real Jordan form]{#real-jordan}
+Let $A$ be a real square matrix. Then $A$ is similar, over $\mathbb{R}$, to a block diagonal matrix whose blocks are either ordinary Jordan blocks $J_k(\lambda)$ for the real eigenvalues $\lambda$, or *real Jordan blocks* for each conjugate pair $\lambda = a \pm bi$ with $b > 0$:
+
+$$C = \begin{pmatrix} a & -b \\ b & a\end{pmatrix}, \qquad \begin{pmatrix} C & I_2 & & \\ & C & \ddots & \\ & & \ddots & I_2 \\ & & & C\end{pmatrix},$$
+
+where the second display is the size-$k$ version, with $2\times2$ identity matrices where a complex block has $1$'s.
+:::
+
+:::proof
+Complex eigenvectors come in conjugate pairs: if $Av = \lambda v$ with $\lambda = a+bi$ and $v = p + iq$ ($p,q$ real), then $A\bar v = \bar\lambda\bar v$. Separating real and imaginary parts of $A(p+iq) = (a+bi)(p+iq)$ gives
+
+$$Ap = ap - bq, \qquad Aq = bp + aq,$$
+
+so $\operatorname{span}_{\mathbb{R}}(p,q)$ is a real $A$-invariant plane, and in the basis $p, q$ the restriction has matrix $\begin{pmatrix} a & b \\ -b & a\end{pmatrix}$; using the basis $p, -q$ instead yields the $C$ displayed above. Running the same substitution through a complex Jordan chain for $\lambda$ turns each complex chain vector into a real pair and each $1$ into an $I_2$; the rest of the argument is the complex theorem applied to $K_\lambda \oplus K_{\bar\lambda}$, whose real points are exactly the span of the real and imaginary parts.
+:::
+
+:::example[Real form of a rotation-scaling]
+Find the real Jordan form of $A = \begin{pmatrix} 3 & -2 \\ 4 & -1\end{pmatrix}$ and describe the solutions of $\mathbf{x}' = A\mathbf{x}$.
+:::
+
+:::solution
+1. $\operatorname{tr} A = 2$, $\det A = -3 + 8 = 5$, so $p_A(\lambda) = \lambda^2 - 2\lambda + 5$ with roots $\lambda = 1 \pm 2i$.
+2. Here $a = 1$, $b = 2$, so the real Jordan form is $\begin{pmatrix} 1 & -2 \\ 2 & 1\end{pmatrix}$.
+3. Since $\begin{pmatrix} a & -b \\ b & a\end{pmatrix} = r\begin{pmatrix}\cos\theta & -\sin\theta \\ \sin\theta & \cos\theta\end{pmatrix}$ with $r = \sqrt{a^2+b^2} = \sqrt5$ and $\theta = \arctan 2$, the exponential is
+
+$$\exp\left(t\begin{pmatrix} 1 & -2 \\ 2 & 1\end{pmatrix}\right) = e^{t}\begin{pmatrix} \cos 2t & -\sin 2t \\ \sin 2t & \cos 2t\end{pmatrix}.$$
+
+4. So every solution is an outward spiral: amplitude $e^{t}$ times a rotation at angular speed $2$.
+5. Sanity check: $\det e^{At} = e^{2t}$ should equal $e^{t\operatorname{tr}A} = e^{2t}$ ✓.
+:::
+
+:::summary[The chapter in one page]
+For a complex $n\times n$ matrix $A$:
+
+$$\mathbb{C}^n = \bigoplus_\lambda K_\lambda, \qquad K_\lambda = \ker(A-\lambda I)^n, \qquad \dim K_\lambda = m_a(\lambda),$$
+
+and on each $K_\lambda$ the operator $A - \lambda I$ is nilpotent, hence a direct sum of Jordan chains. In a basis of chains, $A$ becomes $J = \bigoplus J_{k}(\lambda)$, unique up to block order, with
+
+$$\#\{\text{blocks for }\lambda\text{ of size} \ge k\} = r_{k-1}-r_k, \qquad r_k = \operatorname{rank}(A-\lambda I)^k.$$
+
+The characteristic polynomial is $\prod_\lambda (\lambda - \lambda_0)^{m_a}$, the minimal polynomial is $\prod_\lambda(\lambda-\lambda_0)^{\text{largest block}}$, and $A$ is diagonalizable exactly when every block has size $1$, equivalently when $m_A$ has no repeated root. Powers and exponentials follow block by block:
+
+$$\big(J_m(\lambda)^k\big)_{i,i+j} = \binom kj \lambda^{k-j}, \qquad \big(e^{J_m(\lambda)t}\big)_{i,i+j} = e^{\lambda t}\frac{t^j}{j!}.$$
+:::
+
+## Common Mistakes
+
+- **Confusing the two multiplicities.** $m_g \le m_a$ always, and the gap is the whole subject of this chapter. A matrix is diagonalizable exactly when the two agree at every eigenvalue.
+- **Believing the characteristic polynomial determines the matrix up to similarity.** It determines only the sum of the block sizes at each eigenvalue. $J_2(2)\oplus J_1(2)$ and $J_1(2)^{\oplus3}$ share the polynomial $(\lambda-2)^3$ and are not similar.
+- **"Proving" Cayley–Hamilton by substituting $\lambda = A$ into $\det(\lambda I - A)$.** The expression $\det(AI - A)$ is not defined; see the pitfall in that section. The theorem is true, the argument is not.
+- **Giving the minimal polynomial a root that is not an eigenvalue, or omitting an eigenvalue.** $m_A$ and $p_A$ have exactly the same roots; only the exponents differ, and each exponent of $m_A$ lies between $1$ and the corresponding exponent of $p_A$.
+- **Treating generalized eigenvectors as eigenvectors.** If $v$ has height $2$ then $Av = \lambda v + u$ with $u \ne 0$ an eigenvector. That $u$ is what produces the $1$ above the diagonal.
+- **Building Jordan chains from the bottom up.** Always start with a vector of maximal height and apply $A - \lambda I$ repeatedly. A given eigenvector need not lie in the image of $A - \lambda I$, so "solve $(A-\lambda I)v = u$" often has no solution.
+- **Doing the short blocks first.** Take the longest chains first; a short chain chosen early can consume a vector that a long chain needed.
+- **Misplacing the $1$'s.** With the chain ordered eigenvector-first as columns of $P$, the $1$'s sit on the superdiagonal. The reversed order gives $1$'s below, which is a different (also valid) convention — be consistent.
+- **Forgetting that the rank formula needs $r_0 = n$.** The count of blocks of size $\ge 1$ is $n - \operatorname{rank}(A - \lambda I)$, not $\operatorname{rank}(A-\lambda I)$.
+- **Assuming $e^{A+B} = e^Ae^B$.** This requires $AB = BA$. Inside a single Jordan block it holds, which is why $e^{J t} = e^{\lambda t}e^{St}$ is legitimate.
+- **Exponentiating entrywise.** $e^{At} \ne (e^{a_{ij}t})$. Also $\det e^A = e^{\operatorname{tr}A}$, not $e^{\det A}$.
+- **Working over $\mathbb{R}$ without noticing.** A real matrix with complex eigenvalues has no real Jordan form of the standard shape; use the real Jordan form with $2\times2$ rotation-scaling blocks, or pass to $\mathbb{C}$.

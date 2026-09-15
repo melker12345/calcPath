@@ -1,9 +1,9 @@
 # Questions Guidelines for New Topics
 
-**Strong preference going forward: heavily prioritize `numeric` (math-input) questions over MCQ.**
+**Strong preference going forward: heavily prioritize `numeric` (math-input) questions over MCQ. MCQ is capped at 5% of a topic's bank.**
 
 ## Core Principle
-- **Target 75%+ numeric per new topic** (ideally higher for computational/procedural subjects like algebra, calculus, geometry, number theory, precalculus, combinatorics, statistics, etc.).
+- **Target 95%+ numeric per topic** — at most 5% MCQ (3–5 questions in a bank of 70–100). Computational and procedural subjects (algebra, calculus, geometry, number theory, precalculus, combinatorics, statistics, etc.) should sit at or above that bar.
 - Use `type: "mcq"` **only** when it is genuinely the better pedagogical choice: conceptual identification, distinguishing similar ideas, or when the options themselves teach important nuances that a single numeric answer cannot.
 - Numeric questions (free-response via MathInput) are superior for building actual calculation and problem-solving skills. MCQs are a fallback for quick conceptual checks.
 

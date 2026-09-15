@@ -1,86 +1,337 @@
 ---
-title: Series & Sequences
+title: Sequences & Series
 ---
 
-# Series & Sequences
+# Sequences & Series
 
-Sequences are ordered lists of numbers, and series are their sums. The fundamental question of this entire topic: when you add up infinitely many numbers, can you get a finite answer?
+A sequence is an infinite list of numbers; a series is what you get when you try to add one up. The whole chapter turns on a single question: when does adding infinitely many numbers produce a finite answer, and what is it?
 
-Series are not just theoretical: they underpin how computers calculate $\sin x$, $e^x$, and $\ln x$. Taylor series let you approximate any smooth function with a polynomial. Power series extend calculus into the realm of infinite-degree polynomials.
+The question is not idle. Every time a calculator returns $\sin(0.5)$ or $e^{1.3}$ it is summing a series, stopping when the remaining terms are too small to matter. Taylor series turn every smooth function into an "infinite polynomial", which is why they are the working tool of physics, numerical analysis and probability. And the convergence tests in the middle of the chapter are the reason we can trust those sums at all.
 
-This module covers convergence tests (the toolkit for determining if a series converges), power series, and Taylor/Maclaurin series. Master the tests systematically and you'll always know which tool to reach for.
+The chapter builds in layers. Sequences come first, because a series is defined through a sequence of partial sums. Then the two families whose sums we can actually compute, geometric and telescoping. Then the tests: divergence, integral, comparison, alternating, ratio and root, each proved and each worked on series where it succeeds and on series where it fails. The last third applies everything to power series, Taylor series and their uses.
 
 ## Sequences and their limits
 
 <!-- section: sequences -->
 
+:::definition[Sequence]{#sequence}
+A sequence is a function whose domain is the positive integers. We write its values as $a_1, a_2, a_3, \ldots$ and the whole sequence as $\{a_n\}$ or $\{a_n\}_{n=1}^{\infty}$. The value $a_n$ is the $n$th term.
+:::
+
+A sequence may be given by a formula, such as $a_n = n/(n+1)$, by a recursion, such as $a_1 = 1$ and $a_{n+1} = \sqrt{2 + a_n}$, or by a description, such as "the $n$th digit of $\pi$". The only thing that matters for calculus is what the terms do as $n$ grows.
+
 :::definition[Limit of a sequence]{#sequence-limit}
-A sequence $\{a_n\}$ has limit $L$ if its terms approach $L$ as $n \to \infty$ (with $n$ ranging over the positive integers). We write $\lim_{n\to\infty} a_n = L$, and the precise meaning is that for every $\varepsilon > 0$ there exists an integer $N$ such that
+A sequence $\{a_n\}$ has limit $L$, written $\lim_{n\to\infty} a_n = L$ or $a_n \to L$, if for every $\varepsilon > 0$ there is an integer $N$ such that
 
 $$n > N \quad\Longrightarrow\quad |a_n - L| < \varepsilon.$$
+
+If such an $L$ exists the sequence converges; otherwise it diverges. We write $\lim_{n\to\infty} a_n = \infty$ when for every $M$ there is an $N$ with $a_n > M$ whenever $n > N$.
 :::
 
-The definition mirrors the $\varepsilon$-$\delta$ idea for functions, but discretely: instead of getting close to a point $a$, you go far enough out along the list.
+The definition is the $\varepsilon$-$\delta$ definition of Limits & Continuity with one change: instead of moving $x$ close to a point, you move $n$ far out along the list. Name any tolerance $\varepsilon$, and the definition promises a place $N$ in the list beyond which every term sits within $\varepsilon$ of $L$. A sequence like $(-1)^n$ fails: its terms are $-1, 1, -1, 1, \ldots$, and no $L$ is within $\varepsilon = 1/2$ of both $-1$ and $1$.
 
-:::theorem[Monotone Convergence Theorem]{#monotone-convergence}
-Every sequence that is **monotonic** (always increasing or always decreasing) and **bounded** converges.
+Because $a_n = f(n)$ often comes from a function $f(x)$ that makes sense for real $x$, the limits at infinity you already know transfer directly.
+
+:::theorem[Sequence limits from function limits]{#function-to-sequence}
+If $\lim_{x\to\infty} f(x) = L$ and $a_n = f(n)$ for every integer $n$, then $\lim_{n\to\infty} a_n = L$.
 :::
 
-This is the key existence theorem for sequences, and it underlies many convergence arguments because it guarantees a limit exists without naming it.
+:::proof
+Given $\varepsilon > 0$, the function limit supplies a real number $X$ with $|f(x) - L| < \varepsilon$ for all $x > X$. Take $N$ to be any integer at least $X$; then every integer $n > N$ satisfies $|a_n - L| = |f(n) - L| < \varepsilon$.
+:::
+
+The theorem hands sequences every tool built for functions, L'Hôpital's Rule included. The converse fails: $\sin(\pi n) = 0$ for every integer $n$, so the sequence converges to $0$, while $\sin(\pi x)$ has no limit as $x\to\infty$.
+
+:::theorem[Limit laws for sequences]{#sequence-limit-laws}
+If $a_n \to L$ and $b_n \to M$ then $a_n + b_n \to L + M$, $c\,a_n \to cL$ for any constant $c$, $a_n b_n \to LM$, and $a_n/b_n \to L/M$ provided $M \neq 0$. If $f$ is continuous at $L$ then $f(a_n) \to f(L)$.
+:::
+
+:::theorem[Squeeze Theorem for sequences]{#sequence-squeeze}
+If $a_n \le b_n \le c_n$ for all $n$ beyond some $N_0$, and $a_n \to L$ and $c_n \to L$, then $b_n \to L$.
+:::
+
+:::proof
+Given $\varepsilon > 0$, choose $N \ge N_0$ so large that both $|a_n - L| < \varepsilon$ and $|c_n - L| < \varepsilon$ when $n > N$. Then $L - \varepsilon < a_n \le b_n \le c_n < L + \varepsilon$, which is $|b_n - L| < \varepsilon$.
+:::
+
+:::corollary[Absolute values]{#abs-to-zero}
+If $|a_n| \to 0$ then $a_n \to 0$.
+:::
+
+:::proof
+Squeeze: $-|a_n| \le a_n \le |a_n|$, and both outer sequences tend to $0$.
+:::
+
+The corollary is the standard way to handle a factor of $(-1)^n$. It says nothing when $|a_n|$ tends to a nonzero limit; $(-1)^n$ itself has $|a_n| = 1 \to 1$ and diverges.
+
+:::example[Limits of explicit sequences]
+Find the limits of $a_n = \dfrac{n}{n+1}$, $b_n = \dfrac{\ln n}{n}$ and $c_n = \dfrac{(-1)^n}{n}$, and decide whether $d_n = (-1)^n$ converges.
+:::
+
+:::solution
+For $a_n$, divide top and bottom by $n$:
+
+$$\lim_{n\to\infty} \frac{n}{n+1} = \lim_{n\to\infty} \frac{1}{1 + 1/n} = \frac{1}{1+0} = 1.$$
+
+For $b_n$, the form is $\infty/\infty$, so pass to the function $f(x) = (\ln x)/x$ and use L'Hôpital's Rule:
+
+$$\lim_{x\to\infty} \frac{\ln x}{x} = \lim_{x\to\infty} \frac{1/x}{1} = 0,$$
+
+so $b_n \to 0$ by the theorem on sequence limits from function limits. For $c_n$, $|c_n| = 1/n \to 0$, so $c_n \to 0$ by the corollary on absolute values. For $d_n$, the terms alternate between $-1$ and $1$ and never settle, so $\{(-1)^n\}$ diverges.
+
+Sanity check: $a_{100} = 100/101 \approx 0.99$, and $b_{100} = (\ln 100)/100 \approx 0.046$ is already small and falling.
+:::
+
+:::example[The sequence $r^n$]
+For which real numbers $r$ does the sequence $\{r^n\}$ converge, and to what?
+:::
+
+:::solution
+If $r > 1$ then $r^x$ is an increasing exponential, so $r^n \to \infty$. If $r = 1$ every term is $1$. If $0 < r < 1$ then $r^x$ decays to $0$, so $r^n \to 0$. If $r = 0$ every term is $0$. If $-1 < r < 0$ then $|r^n| = |r|^n \to 0$ by the previous case, so $r^n \to 0$ by the corollary. If $r = -1$ the sequence is $-1, 1, -1, \ldots$, which diverges. If $r < -1$ then $|r|^n \to \infty$ with alternating signs, which also diverges.
+
+The whole story in one line: $\{r^n\}$ converges exactly when $-1 < r \le 1$, with limit $0$ for $|r| < 1$ and limit $1$ for $r = 1$. This fact drives the geometric series below.
+:::
+
+:::example[Squeezing a factorial]
+Show that $\dfrac{n!}{n^n} \to 0$.
+:::
+
+:::solution
+Write out the quotient as a product of $n$ fractions:
+
+$$\frac{n!}{n^n} = \frac{1}{n}\cdot\frac{2}{n}\cdot\frac{3}{n}\cdots\frac{n}{n}.$$
+
+Every factor after the first is at most $1$, so the product is at most its first factor:
+
+$$0 < \frac{n!}{n^n} \le \frac{1}{n}.$$
+
+Both bounds tend to $0$, so the Squeeze Theorem gives $n!/n^n \to 0$. Check: for $n = 5$ the value is $120/3125 \approx 0.038$, safely below $1/5$.
+:::
+
+Some sequences have no closed formula, and for those a second route to convergence is needed: one that guarantees a limit exists without naming it.
+
+:::definition[Monotone and bounded sequences]{#monotone-bounded}
+A sequence is increasing if $a_{n+1} \ge a_n$ for all $n$, decreasing if $a_{n+1} \le a_n$ for all $n$, and monotone if it is either. It is bounded above if $a_n \le M$ for some $M$ and all $n$, bounded below if $a_n \ge m$ for some $m$ and all $n$, and bounded if both hold.
+:::
+
+:::theorem[Monotone Sequence Theorem]{#monotone-convergence}
+Every bounded monotone sequence converges. In particular an increasing sequence bounded above converges to the least upper bound of its terms, and a decreasing sequence bounded below converges to the greatest lower bound.
+:::
+
+:::proof
+Suppose $\{a_n\}$ is increasing and bounded above. The completeness axiom of the real numbers says that every nonempty set with an upper bound has a least upper bound; let $L$ be the least upper bound of the set of terms. Given $\varepsilon > 0$, the number $L - \varepsilon$ is not an upper bound (it is smaller than the least one), so some term satisfies $a_N > L - \varepsilon$. Since the sequence is increasing, $a_n \ge a_N > L - \varepsilon$ for every $n > N$, while $a_n \le L$ always. So $|a_n - L| < \varepsilon$ for $n > N$, which is $a_n \to L$. The decreasing case is the same argument turned upside down.
+:::
+
+The completeness axiom is the one ingredient here that belongs to real analysis rather than calculus; it is what distinguishes the real numbers from the rationals, where an increasing bounded sequence like $1, 1.4, 1.41, 1.414, \ldots$ can have no limit because $\sqrt 2$ is missing. Both hypotheses are needed: $n$ is monotone but unbounded, and $(-1)^n$ is bounded but not monotone, and neither converges.
 
 :::intuition
-A sequence converges when its terms eventually crowd around a single value and stay there. If the terms only ever move one direction but can never escape past a ceiling (or floor), they have no choice but to settle down.
+Picture a rising water level in a tank with a lid. The water can only rise, and it can never pass the lid, so it must settle at some height, even if you cannot see where. The Monotone Sequence Theorem is that picture made precise, and it is the tool for recursively defined sequences, where you can prove the terms rise and stay under a lid long before you can write a formula for them.
 :::
 
-## Series, partial sums, and convergence
+:::example[A recursive sequence]
+Let $a_1 = 2$ and $a_{n+1} = \dfrac{a_n + 6}{2}$. Show that $\{a_n\}$ converges and find its limit.
+:::
+
+:::solution
+Compute a few terms to guess the behavior: $a_1 = 2$, $a_2 = 4$, $a_3 = 5$, $a_4 = 5.5$, $a_5 = 5.75$. The terms seem to increase toward $6$.
+
+Bounded above by $6$: this holds for $a_1 = 2$, and if $a_n < 6$ then $a_{n+1} = (a_n + 6)/2 < (6 + 6)/2 = 6$. By induction every term is below $6$.
+
+Increasing: $a_{n+1} - a_n = (a_n + 6)/2 - a_n = (6 - a_n)/2$, which is positive because $a_n < 6$.
+
+So the sequence is increasing and bounded above, and by the Monotone Sequence Theorem it converges to some $L$. Now take the limit of both sides of the recursion. Since $a_{n+1} \to L$ as well,
+
+$$L = \frac{L + 6}{2} \quad\Longrightarrow\quad 2L = L + 6 \quad\Longrightarrow\quad L = 6.$$
+
+Check: $a_5 = 5.75$ and $a_6 = 5.875$, closing in on $6$ by halving the gap each step.
+:::
+
+:::pitfall
+Solving $L = (L+6)/2$ is only legitimate once you know the limit exists. The recursion $a_{n+1} = 2a_n$ with $a_1 = 1$ gives the equation $L = 2L$, whose solution $L = 0$ is nonsense: the sequence $1, 2, 4, 8, \ldots$ diverges. Prove convergence first, then solve for the limit.
+:::
+
+## Series and partial sums
 
 <!-- section: partialsums -->
 
-:::definition[Convergence of a series]{#series-convergence}
-The series $\sum_{n=1}^{\infty} a_n$ converges to $S$ if the sequence of partial sums $s_N = a_1 + a_2 + \cdots + a_N$ satisfies
+Adding infinitely many numbers is not an operation anyone can perform. What we can do is add the first $N$ of them, watch the running total, and ask whether it settles.
 
-$$\lim_{N\to\infty} s_N = S.$$
+:::definition[Series, partial sums, convergence]{#series-convergence}
+Given a sequence $\{a_n\}$, the expression $\sum_{n=1}^{\infty} a_n = a_1 + a_2 + a_3 + \cdots$ is a series, and its $N$th partial sum is
 
-If the partial sums do not approach a finite limit (they grow without bound or oscillate), the series **diverges**.
+$$s_N = \sum_{n=1}^{N} a_n = a_1 + a_2 + \cdots + a_N.$$
+
+The series converges to the sum $S$ if $\lim_{N\to\infty} s_N = S$, and we then write $\sum_{n=1}^{\infty} a_n = S$. If the sequence of partial sums has no finite limit, the series diverges.
 :::
 
-In other words, an infinite sum is *defined* as the limit of its finite partial sums. Nothing is ever added infinitely often; a limit does all the work.
-
-A necessary condition for convergence: the terms must satisfy $a_n \to 0$. This is necessary but **not** sufficient — the harmonic series $\sum 1/n$ has terms going to zero yet still diverges.
+So a series is a sequence in disguise: the sequence $s_1, s_2, s_3, \ldots$ of partial sums. Everything about series convergence is a statement about that sequence, and every theorem about series is proved by looking at it. The symbol $\sum_{n=1}^{\infty} a_n$ does double duty: it names the series, and when the series converges it also names the number the partial sums approach.
 
 :::intuition
-Adding infinitely many numbers. The running total has to settle down to a single number, not keep growing or oscillating forever.
+Think of a savings account into which you deposit $a_1$ on day one, $a_2$ on day two, and so on forever. The series converges if the balance approaches a definite ceiling: you can name a number the account will never exceed but will get arbitrarily close to. It diverges if the balance grows without limit, or if it keeps swinging (deposits alternating with withdrawals that never fade).
+:::
+
+:::example[Reading a series from its partial sums]
+Suppose the partial sums of a series $\sum a_n$ are $s_N = \dfrac{2N}{3N+1}$. Find $a_1$, a formula for $a_n$, and the sum of the series.
+:::
+
+:::solution
+The first partial sum is the first term: $a_1 = s_1 = 2/4 = 1/2$. Each later term is the difference of consecutive partial sums, $a_n = s_n - s_{n-1}$:
+
+$$a_n = \frac{2n}{3n+1} - \frac{2(n-1)}{3n-2} = \frac{2n(3n-2) - 2(n-1)(3n+1)}{(3n+1)(3n-2)} = \frac{2}{(3n+1)(3n-2)}.$$
+
+(Check at $n=1$: $2/(4\cdot 1) = 1/2$, matching $a_1$.) The sum is the limit of the partial sums,
+
+$$\sum_{n=1}^{\infty} a_n = \lim_{N\to\infty} \frac{2N}{3N+1} = \frac{2}{3}.$$
+:::
+
+:::example[A series that visibly converges]
+Find the partial sums of $\sum_{n=1}^{\infty} \dfrac{1}{2^n}$ and hence its sum.
+:::
+
+:::solution
+Computing directly, $s_1 = 1/2$, $s_2 = 3/4$, $s_3 = 7/8$, $s_4 = 15/16$, which suggests $s_N = 1 - 1/2^N$. To confirm it, note $s_{N+1} = s_N + 1/2^{N+1}$, and if $s_N = 1 - 1/2^N$ then $s_{N+1} = 1 - 1/2^N + 1/2^{N+1} = 1 - 1/2^{N+1}$; the formula holds by induction. Then
+
+$$\sum_{n=1}^{\infty} \frac{1}{2^n} = \lim_{N\to\infty}\left(1 - \frac{1}{2^N}\right) = 1.$$
+
+The general machinery for this is the geometric series formula of the next section; here the point is that "sum equals one" means exactly "the partial sums approach one".
+:::
+
+The single most useful consequence of the definition is that the terms of a convergent series must fade.
+
+:::theorem[Terms of a convergent series tend to zero]{#terms-to-zero}
+If $\sum a_n$ converges, then $\lim_{n\to\infty} a_n = 0$.
+:::
+
+:::proof
+Since $a_n = s_n - s_{n-1}$ and both $s_n$ and $s_{n-1}$ tend to the sum $S$, the limit laws give $a_n \to S - S = 0$.
+:::
+
+The converse is false, and this is the most important warning in the chapter: $a_n \to 0$ does not make $\sum a_n$ converge. The harmonic series $\sum 1/n$ has terms tending to $0$ and diverges, as proved in the section on $p$-series. What the theorem gives is a quick way to see divergence, formalized below as the Divergence Test.
+
+:::theorem[Algebra of convergent series]{#series-algebra}
+If $\sum a_n$ and $\sum b_n$ converge and $c$ is a constant, then $\sum c\,a_n$, $\sum (a_n + b_n)$ and $\sum (a_n - b_n)$ converge, and
+
+$$\sum_{n=1}^{\infty} c\,a_n = c\sum_{n=1}^{\infty} a_n, \qquad \sum_{n=1}^{\infty} (a_n \pm b_n) = \sum_{n=1}^{\infty} a_n \pm \sum_{n=1}^{\infty} b_n.$$
+:::
+
+:::proof
+The $N$th partial sum of $\sum (a_n + b_n)$ is $s_N + t_N$, where $s_N$ and $t_N$ are the partial sums of the two given series; apply the limit laws for sequences. The other two statements are the same.
+:::
+
+:::remark
+Changing, adding or removing finitely many terms never affects whether a series converges, because it changes every partial sum beyond some point by the same constant. It does change the sum. So $\sum_{n=1}^{\infty} a_n$ and $\sum_{n=5}^{\infty} a_n$ converge or diverge together, and if they converge they differ by $a_1 + a_2 + a_3 + a_4$.
+:::
+
+:::pitfall
+The algebra theorem needs both series to converge. From $\sum 1/n$ and $\sum (-1/n)$ you cannot conclude anything about $\sum 0 = 0$ term by term: the individual series diverge, so the theorem does not apply, and in general "$\infty - \infty$" is meaningless for series just as it is for limits.
 :::
 
 ## Geometric series
 
 <!-- section: geometric -->
 
-A geometric series has the form $\sum_{n=0}^{\infty} ar^n$ where $a$ is the first term and $r$ is the common ratio.
+A geometric series is one in which each term is a fixed multiple of the one before it. It is the most important series in the chapter: the one family whose sum we can always compute exactly, and the yardstick that the ratio and root tests measure everything else against.
 
-:::theorem[Geometric series]{#geometric-series}
-The series $\sum_{n=0}^{\infty} ar^n$ converges if and only if $|r| < 1$, and then
+:::definition[Geometric series]{#geometric-definition}
+A geometric series with first term $a \neq 0$ and common ratio $r$ is
 
-$$\sum_{n=0}^{\infty} ar^n = \frac{a}{1-r}.$$
+$$\sum_{n=0}^{\infty} ar^n = a + ar + ar^2 + ar^3 + \cdots.$$
+
+Equivalently, written from $n = 1$, it is $\sum_{n=1}^{\infty} ar^{n-1}$.
 :::
 
-Example: $\sum_{n=0}^{\infty} \frac{3}{2^n} = \frac{3}{1-1/2} = 6$.
+:::theorem[Geometric series]{#geometric-series}
+The geometric series $\sum_{n=0}^{\infty} ar^n$ converges if and only if $|r| < 1$, and then
 
-This is the only common series where we can easily compute the exact sum. Many convergence tests compare other series to geometric ones.
+$$\sum_{n=0}^{\infty} ar^n = \frac{a}{1-r}.$$
+
+If $|r| \ge 1$ the series diverges.
+:::
+
+:::proof
+If $r = 1$ the partial sums are $s_N = (N+1)a$, which diverge because $a \neq 0$. Otherwise write the partial sum and $r$ times it:
+
+$$s_N = a + ar + \cdots + ar^N, \qquad r s_N = ar + ar^2 + \cdots + ar^{N+1}.$$
+
+Subtracting, every term cancels except the first of $s_N$ and the last of $rs_N$: $s_N - rs_N = a - ar^{N+1}$, so
+
+$$s_N = \frac{a(1 - r^{N+1})}{1 - r}.$$
+
+By the example on the sequence $r^n$, $r^{N+1} \to 0$ when $|r| < 1$, giving $s_N \to a/(1-r)$. When $|r| > 1$ or $r = -1$ the sequence $r^{N+1}$ diverges, so $s_N$ diverges too.
+:::
+
+The formula is worth reading as "first term over one minus the ratio". That phrasing does not care where the index starts: $\sum_{n=3}^{\infty} 5\cdot(1/2)^n$ has first term $5/8$ and ratio $1/2$, so it sums to $(5/8)/(1/2) = 5/4$. Always identify the first term actually present rather than the $a$ in a formula.
 
 :::intuition
-Each term is a fixed fraction of the previous. If the fraction $|r|<1$, the leftovers get smaller fast enough that the infinite sum is finite.
+Walk toward a wall, covering half the remaining distance with each step. Your steps are $1/2, 1/4, 1/8, \ldots$ of the way, and after $N$ steps you have covered $1 - 1/2^N$: never all of it, but as close as you like. The sum $\sum_{n=1}^{\infty} 1/2^n = 1$ says the wall is exactly one unit away. With ratio $r = 0.9$ instead, each step covers only a tenth of what remains, and the same reasoning puts the wall at $a/(1-r) = 10a$ times the first step. With $r \ge 1$ the steps never shrink and you march off to infinity.
 :::
 
 :::example[Summing a geometric series]
-Compute $\sum_{n=0}^{\infty} \frac{(-1)^n}{4^n}$.
+Compute $\sum_{n=0}^{\infty} \dfrac{(-1)^n}{4^n}$.
 :::
 
 :::solution
-1. Rewrite: this is $\sum_{n=0}^{\infty} \left(-\frac{1}{4}\right)^n$. So $a = 1$ and $r = -1/4$.
-2. Check: $|r| = 1/4 < 1$, so it converges.
-3. Apply the formula: $\frac{a}{1-r} = \frac{1}{1-(-1/4)} = \frac{1}{5/4} = \frac{4}{5}$.
-4. The sum is $\frac{4}{5}$. Note: even though terms alternate sign, the geometric series formula handles this perfectly.
+Rewrite the term as $(-1/4)^n$, so $a = 1$ and $r = -1/4$. Since $|r| = 1/4 < 1$ the series converges, and
+
+$$\sum_{n=0}^{\infty} \left(-\frac14\right)^n = \frac{1}{1 - (-1/4)} = \frac{1}{5/4} = \frac{4}{5}.$$
+
+The alternating signs need no special handling; the formula is valid for negative $r$. Check: $1 - 0.25 + 0.0625 - 0.0156 \approx 0.797$, close to $0.8$.
+:::
+
+:::example[Identifying $a$ and $r$ from a written-out series]
+Find the sum of $5 - \dfrac{10}{3} + \dfrac{20}{9} - \dfrac{40}{27} + \cdots$.
+:::
+
+:::solution
+Each term is the previous one multiplied by $-2/3$: $5 \cdot (-2/3) = -10/3$, and $(-10/3)(-2/3) = 20/9$. So $a = 5$ and $r = -2/3$, with $|r| < 1$, and the sum is
+
+$$\frac{5}{1 - (-2/3)} = \frac{5}{5/3} = 3.$$
+
+Check: the partial sums $5, 1.67, 3.89, 2.41, 3.40, \ldots$ oscillate around $3$ with shrinking swings.
+:::
+
+:::example[A geometric series in disguise]
+Does $\sum_{n=1}^{\infty} 2^{2n}\, 3^{1-n}$ converge?
+:::
+
+:::solution
+Rewrite the term in the form $ar^{n-1}$:
+
+$$2^{2n}\,3^{1-n} = \frac{4^n}{3^{n-1}} = 4\cdot\frac{4^{n-1}}{3^{n-1}} = 4\left(\frac{4}{3}\right)^{n-1}.$$
+
+This is geometric with $a = 4$ and $r = 4/3 > 1$, so it diverges. The terms $4, 16/3, 64/9, \ldots$ grow, which the Divergence Test of a later section would also catch.
+:::
+
+:::example[A repeating decimal as a fraction]
+Write $2.3\overline{17} = 2.3171717\ldots$ as a ratio of integers.
+:::
+
+:::solution
+Separate the non-repeating part from the repeating block:
+
+$$2.3171717\ldots = 2.3 + \frac{17}{10^3} + \frac{17}{10^5} + \frac{17}{10^7} + \cdots.$$
+
+After $2.3$ the terms form a geometric series with $a = 17/1000$ and $r = 1/100$, whose sum is
+
+$$\frac{17/1000}{1 - 1/100} = \frac{17/1000}{99/100} = \frac{17}{990}.$$
+
+So $2.3\overline{17} = 23/10 + 17/990 = 2277/990 + 17/990 = 2294/990 = 1147/495$. Check: $1147/495 \approx 2.31717$.
+:::
+
+:::example[A geometric series with a variable]
+For which $x$ does $\sum_{n=0}^{\infty} x^n$ converge, and what is its sum?
+:::
+
+:::solution
+This is geometric with $a = 1$ and $r = x$, so it converges exactly when $|x| < 1$, and then
+
+$$\sum_{n=0}^{\infty} x^n = 1 + x + x^2 + x^3 + \cdots = \frac{1}{1-x}, \qquad |x| < 1.$$
+
+This single identity is the seed of every power series in the chapter: substituting, differentiating and integrating it will produce series for $\ln(1+x)$, $\arctan x$ and much else.
+:::
+
+:::pitfall
+The formula $a/(1-r)$ is only true when $|r| < 1$. Plugging $r = 2$ into it gives $1/(1-2) = -1$ for $1 + 2 + 4 + 8 + \cdots$, which is absurd; the series diverges and the formula says nothing about it. Check the ratio before you sum.
 :::
 
 ## Telescoping series
@@ -88,379 +339,1414 @@ Compute $\sum_{n=0}^{\infty} \frac{(-1)^n}{4^n}$.
 <!-- section: telescoping -->
 
 :::definition[Telescoping series]{#telescoping}
-A telescoping series is one where consecutive terms in the partial sum cancel, leaving only a few surviving terms — like a collapsing telescope.
+A series $\sum a_n$ is telescoping if its terms can be written as $a_n = b_n - b_{n+1}$ for some sequence $\{b_n\}$, so that the partial sums collapse:
+
+$$s_N = (b_1 - b_2) + (b_2 - b_3) + \cdots + (b_N - b_{N+1}) = b_1 - b_{N+1}.$$
+
+The series then converges if and only if $\{b_n\}$ converges, and its sum is $b_1 - \lim_{n\to\infty} b_n$.
 :::
 
-The classic example: $\sum_{n=1}^{\infty} \frac{1}{n(n+1)}$. Use partial fractions: $\frac{1}{n(n+1)} = \frac{1}{n} - \frac{1}{n+1}$.
-
-Write out the partial sum: $S_N = \left(1 - \frac{1}{2}\right) + \left(\frac{1}{2} - \frac{1}{3}\right) + \left(\frac{1}{3} - \frac{1}{4}\right) + \cdots + \left(\frac{1}{N} - \frac{1}{N+1}\right)$. Almost everything cancels! What survives: $S_N = 1 - \frac{1}{N+1}$. As $N \to \infty$, $S_N \to 1$.
-
-To recognize telescoping: use partial fractions to split the general term into a difference $f(n) - f(n+1)$ (or $f(n) - f(n+k)$ for wider telescoping). If consecutive terms cancel, the partial sum collapses to a simple expression.
-
-Telescoping series are one of the few types where you can find the exact sum, not just determine convergence. Always check for this pattern when partial fractions reveal a clean difference.
+Telescoping series and geometric series are the two families whose sums can be computed directly from the definition. The usual way to expose the telescoping structure is partial fractions, which turn a term like $1/(n(n+1))$ into a difference of two simpler terms.
 
 :::intuition
-Imagine a row of dominoes where each one knocks down the next, but also picks up the previous one. After all the dominoes have fallen, only the first and last are still standing. That's telescoping — massive cancellation leaves only the endpoints.
+Imagine a hiking trail marked with altitude signs $b_1, b_2, b_3, \ldots$ at successive posts. Each term $b_n - b_{n+1}$ is the drop between consecutive posts. Add up all the drops and you learn only the total descent from the first post to wherever the trail ends; everything in between cancels out. If the trail levels off at altitude $L$, the total descent is $b_1 - L$.
 :::
 
-:::example[Telescoping with a shifted difference]
-Compute $\sum_{n=1}^{\infty} \frac{1}{n(n+2)}$.
+:::example[The basic telescoping series]
+Compute $\sum_{n=1}^{\infty} \dfrac{1}{n(n+1)}$.
 :::
 
 :::solution
-1. Partial fractions: $\frac{1}{n(n+2)} = \frac{1}{2}\left(\frac{1}{n} - \frac{1}{n+2}\right)$.
-2. This is a 'step-2' telescope. Write out terms: $\frac{1}{2}\left[\left(\frac{1}{1}-\frac{1}{3}\right) + \left(\frac{1}{2}-\frac{1}{4}\right) + \left(\frac{1}{3}-\frac{1}{5}\right) + \left(\frac{1}{4}-\frac{1}{6}\right) + \cdots\right]$.
-3. After cancellation, only $\frac{1}{1}$ and $\frac{1}{2}$ survive from the positive terms. $S = \frac{1}{2}\left(1 + \frac{1}{2}\right) = \frac{3}{4}$.
+Partial fractions give $\dfrac{1}{n(n+1)} = \dfrac{1}{n} - \dfrac{1}{n+1}$, so with $b_n = 1/n$,
+
+$$s_N = \left(1 - \frac12\right) + \left(\frac12 - \frac13\right) + \cdots + \left(\frac1N - \frac{1}{N+1}\right) = 1 - \frac{1}{N+1}.$$
+
+As $N \to \infty$, $s_N \to 1$, so the sum is $1$. Check: $s_3 = 1/2 + 1/6 + 1/12 = 3/4 = 1 - 1/4$.
 :::
 
-## The divergence test (nth-term test)
+:::example[Telescoping with a gap of two]
+Compute $\sum_{n=1}^{\infty} \dfrac{1}{n(n+2)}$.
+:::
+
+:::solution
+Partial fractions: $\dfrac{1}{n(n+2)} = \dfrac12\left(\dfrac1n - \dfrac{1}{n+2}\right)$. Now the cancellation skips one term, so write out enough to see which survive:
+
+$$2s_N = \left(1 - \frac13\right) + \left(\frac12 - \frac14\right) + \left(\frac13 - \frac15\right) + \cdots + \left(\frac1N - \frac{1}{N+2}\right).$$
+
+Every negative $-1/k$ with $3 \le k \le N$ is cancelled by a later positive $1/k$. What survives is the two leading positives $1 + 1/2$ and the two trailing negatives $-1/(N+1) - 1/(N+2)$:
+
+$$s_N = \frac12\left(\frac32 - \frac{1}{N+1} - \frac{1}{N+2}\right) \to \frac{3}{4}.$$
+
+Check: $s_2 = 1/3 + 1/8 = 11/24 \approx 0.458$, and the formula gives $\frac12(3/2 - 1/3 - 1/4) = 11/24$.
+:::
+
+:::example[A telescoping series that diverges]
+Show that $\sum_{n=1}^{\infty} \ln\!\left(1 + \dfrac1n\right)$ diverges even though its terms tend to $0$.
+:::
+
+:::solution
+Since $\ln(1 + 1/n) = \ln\dfrac{n+1}{n} = \ln(n+1) - \ln n$, the partial sums telescope:
+
+$$s_N = (\ln 2 - \ln 1) + (\ln 3 - \ln 2) + \cdots + (\ln(N+1) - \ln N) = \ln(N+1) - \ln 1 = \ln(N+1).$$
+
+Since $\ln(N+1) \to \infty$, the series diverges. The terms do tend to $0$, so this is a second example, after the harmonic series, of shrinking terms whose sum still grows without bound.
+:::
+
+:::pitfall
+Telescoping needs the partial sum written out with care. Cancelling "everything" in $\sum (1/n - 1/(n+2))$ and answering $1$ is wrong: the two-step gap leaves two survivors at the front, not one. Always write $s_N$ explicitly, then take the limit.
+:::
+
+## The Divergence Test
 
 <!-- section: divergence -->
 
-:::theorem[Divergence test]{#divergence-test}
-If $\lim_{n\to\infty} a_n \neq 0$ (or the limit does not exist), then $\sum a_n$ diverges.
-:::
+The theorem that the terms of a convergent series tend to zero, read in the contrapositive, is the fastest test in the chapter.
 
-This is the first test to try because it is so quick: glance at the terms, and if they do not shrink to zero you are already done.
-
-The converse fails: if $a_n \to 0$, the test is inconclusive — the series could converge or diverge, so you must apply another test.
-
-:::intuition
-If the pieces you keep adding don't shrink toward zero, the running total can never settle. But pieces shrinking to zero is no guarantee on its own — they might shrink too slowly to ever stop the total from growing.
-:::
-
-## p-series and the harmonic series
-
-<!-- section: pseries -->
-
-A p-series has the form $\sum_{n=1}^{\infty} \frac{1}{n^p}$ where $p$ is a positive constant. These are the most important benchmark series in all of convergence testing.
-
-:::theorem[p-series test]{#p-series}
-$$\sum_{n=1}^{\infty} \frac{1}{n^p} \quad \text{converges if } p > 1 \text{ and diverges if } p \leq 1.$$
-
-The critical boundary is $p = 1$.
-:::
-
-Key examples: $p=1$: the harmonic series $\sum 1/n$ diverges (this is the most important single fact about series). $p=2$: $\sum 1/n^2 = \pi^2/6$ (Euler proved this in 1734 — a celebrated result). $p=1/2$: $\sum 1/\sqrt{n}$ diverges (the terms shrink, but too slowly).
-
-:::proposition[Divergence of the harmonic series]{#harmonic-diverges}
-The case $p = 1$ of the p-series test: $\sum_{n=1}^{\infty} \frac{1}{n}$ diverges.
+:::theorem[Divergence Test]{#divergence-test}
+If $\lim_{n\to\infty} a_n$ does not exist, or exists and is not $0$, then $\sum a_n$ diverges.
 :::
 
 :::proof
-Group terms in powers of $2$. Each group contributes at least $1/2$:
-
-$$1 + \frac{1}{2} + \left(\frac{1}{3}+\frac{1}{4}\right) + \left(\frac{1}{5}+\frac{1}{6}+\frac{1}{7}+\frac{1}{8}\right) + \cdots > 1 + \frac{1}{2} + \frac{1}{2} + \frac{1}{2} + \cdots = \infty.$$
+This is the contrapositive of the theorem that the terms of a convergent series tend to zero: if the series converged, the terms would have limit $0$.
 :::
 
-p-series serve as the go-to comparison: when you encounter a series with terms that 'look like' $1/n^p$ for large $n$, use the limit comparison test against the appropriate p-series.
+Apply it first, every time. If the terms do not shrink, no other test is needed. If they do shrink, the test says nothing at all, and you move on to the tests that follow. It never proves convergence.
 
 :::intuition
-The harmonic series is the ultimate counterexample in mathematics: the terms $1, 1/2, 1/3, 1/4, \ldots$ clearly shrink to zero, yet their sum is infinite! It grows incredibly slowly (since $H_N \approx \ln N + \gamma$, you need about $10^{43}$ terms — roughly $e^{99}$ — to reach a partial sum of $100$), but it does grow forever. The p-series rule tells you exactly how fast the terms need to shrink: faster than $1/n$ (meaning $p > 1$) to get a finite sum.
+A leaking bucket is being filled with cups of water. If the cups never get smaller than, say, a tenth of a litre, the bucket overflows no matter how slowly you pour. That is the test. But cups that do shrink are no guarantee: pour $1, 1/2, 1/3, 1/4, \ldots$ litres and the bucket still overflows eventually, just very slowly.
 :::
 
-## The integral test
-
-<!-- section: integraltest -->
-
-:::theorem[Integral test]{#integral-test}
-If $f(x)$ is positive, continuous, and decreasing for $x \geq N$, and $a_n = f(n)$, then
-
-$$\sum_{n=N}^{\infty} a_n \quad \text{and} \quad \int_N^{\infty} f(x)\,dx$$
-
-either both converge or both diverge.
-:::
-
-:::proof
-The sum $\sum a_n$ is a left Riemann sum for $\int f(x)\,dx$ (or a right Riemann sum, depending on the direction), with rectangles of width $1$ and height $f(n)$. Since $f$ is decreasing, these Riemann sums sandwich the integral. If one is finite, the other must be too.
-:::
-
-The series and the integral live or die together, but the integral test does not give the exact sum — just convergence or divergence. The integral's value is related to but not equal to the series sum.
-
-Example: does $\sum_{n=2}^{\infty} \frac{1}{n(\ln n)^2}$ converge? Let $f(x) = \frac{1}{x(\ln x)^2}$. It's positive, continuous, and decreasing for $x \geq 2$. $\int_2^\infty \frac{1}{x(\ln x)^2}\,dx$: substitute $u = \ln x$, giving $\int_{\ln 2}^{\infty} u^{-2}\,du = \frac{1}{\ln 2}$. The integral converges, so the series converges.
-
-:::proposition[Remainder estimate for the integral test]{#integral-remainder}
-Let $R_N = \sum_{n=N+1}^{\infty} a_n$ be the error from truncating at $N$ terms. Then
-
-$$\int_{N+1}^{\infty} f(x)\,dx \leq R_N \leq \int_N^{\infty} f(x)\,dx.$$
-:::
-
-The same picture of sandwiching rectangles that proves the test also gives these concrete error bounds.
-
-:::intuition
-Drawing rectangles under a curve approximates the area (integral). Each rectangle's height is $a_n = f(n)$, and its width is $1$. Since the function is decreasing, the rectangles' total area is close to the integral's area. If the area under the infinite curve is finite, the total rectangle area is finite too — and vice versa.
-:::
-
-## Comparison and limit comparison tests
-
-<!-- section: comparison -->
-
-:::theorem[Comparison test]{#comparison-test}
-Suppose $0 \leq a_n \leq b_n$ for all sufficiently large $n$. If $\sum b_n$ converges, then $\sum a_n$ converges. Conversely, if $\sum a_n$ diverges, then $\sum b_n$ diverges.
-:::
-
-A smaller series is forced to converge if a larger one does. The catch is that direct comparison requires an inequality that holds term by term, which can be tricky to establish. The limit comparison test removes that difficulty.
-
-:::theorem[Limit comparison test]{#limit-comparison-test}
-If $a_n, b_n > 0$ and
-
-$$\lim_{n\to\infty} \frac{a_n}{b_n} = L \quad \text{with } 0 < L < \infty,$$
-
-then $\sum a_n$ and $\sum b_n$ either both converge or both diverge.
-:::
-
-The two series behave the same because their terms are proportional for large $n$.
-
-Strategy: look at your series for large $n$ and simplify by dropping lower-order terms. $\frac{n}{n^3+1}$ behaves like $\frac{n}{n^3} = \frac{1}{n^2}$ for large $n$. Use $b_n = 1/n^2$ in the limit comparison test. Since $\sum 1/n^2$ converges ($p = 2 > 1$), the original series converges.
-
-Choosing $b_n$: almost always a p-series or geometric series. Keep only the highest-power terms in the numerator and denominator, cancel, and you'll get $b_n = 1/n^p$ for some $p$. Then the p-series rule tells you the answer.
-
-:::intuition
-Direct comparison: 'I earn less than my neighbor, and my neighbor can afford rent, so I can too.' (If a bigger series converges, a smaller one must as well.)
-
-Limit comparison: 'For large $n$, my series and a known series look practically the same — they differ by just a constant multiple. So if one converges, the other must too.' You're comparing behavior, not individual terms.
-:::
-
-## Ratio and root tests
-
-<!-- section: ratioroot -->
-
-:::theorem[Ratio test]{#ratio-test}
-Compute
-
-$$L = \lim_{n\to\infty} \left|\frac{a_{n+1}}{a_n}\right|.$$
-
-If $L < 1$ the series converges absolutely; if $L > 1$ it diverges; if $L = 1$ the test is inconclusive.
-:::
-
-:::theorem[Root test]{#root-test}
-Compute
-
-$$L = \lim_{n\to\infty} \sqrt[n]{|a_n|},$$
-
-and read off the conclusion by the same criteria as the ratio test.
-:::
-
-The ratio test excels for series with factorials (like $n!/3^n$) or products. The root test is ideal for terms raised to the $n$th power (like $(2/3)^n$).
-
-:::pitfall
-Both tests are inconclusive when $L=1$. This happens for all p-series, so you can't use ratio/root tests on $\sum 1/n^p$.
-:::
-
-:::example[Ratio test on a factorial series]
-Does $\sum_{n=1}^{\infty} \frac{n!}{3^n}$ converge or diverge?
+:::example[Terms that do not tend to zero]
+Decide whether $\sum_{n=1}^{\infty} \dfrac{n^2}{5n^2 + 4}$ and $\sum_{n=1}^{\infty} \cos\!\left(\dfrac1n\right)$ converge.
 :::
 
 :::solution
-1. Use the ratio test. Compute $\frac{a_{n+1}}{a_n} = \frac{(n+1)!}{3^{n+1}} \cdot \frac{3^n}{n!}$.
-2. Simplify: $(n+1)!/n! = n+1$ and $3^n/3^{n+1} = 1/3$.
-3. So $\frac{a_{n+1}}{a_n} = \frac{n+1}{3}$.
-4. Take the limit: $L = \lim_{n\to\infty} \frac{n+1}{3} = \infty$.
-5. Since $L > 1$ (in fact $L = \infty$), the series diverges. The factorial grows so much faster than $3^n$ that the terms blow up.
+For the first, divide top and bottom by $n^2$:
+
+$$\lim_{n\to\infty} \frac{n^2}{5n^2+4} = \lim_{n\to\infty} \frac{1}{5 + 4/n^2} = \frac15 \neq 0,$$
+
+so the series diverges by the Divergence Test. For the second, $1/n \to 0$ and $\cos$ is continuous, so $\cos(1/n) \to \cos 0 = 1 \neq 0$: the series diverges. The partial sums of the second series are roughly $N$ after $N$ terms, which the Divergence Test predicts without any computation.
 :::
 
-## Alternating series test
+:::example[An alternating series with no limit]
+Does $\sum_{n=1}^{\infty} (-1)^n \dfrac{n}{n+1}$ converge?
+:::
+
+:::solution
+The absolute values $n/(n+1)$ tend to $1$, so the terms themselves approach $-1, 1, -1, 1, \ldots$ and have no limit. By the Divergence Test the series diverges. The Alternating Series Test of a later section will not rescue it: that test requires the absolute values to tend to zero, and here they do not.
+:::
+
+:::example[When the test is silent]
+What does the Divergence Test say about $\sum_{n=1}^{\infty} \dfrac1n$ and $\sum_{n=1}^{\infty} \dfrac{1}{n^2}$?
+:::
+
+:::solution
+Nothing. In both cases the terms tend to $0$, so the hypothesis of the test is not met and it draws no conclusion. As later sections show, the first series diverges and the second converges, which is exactly why $a_n \to 0$ cannot decide the question either way.
+:::
+
+:::pitfall
+"The terms go to zero, so the series converges" is the most common false statement in this subject. The Divergence Test runs in one direction only. Terms going to zero is necessary for convergence, never sufficient.
+:::
+
+## The Integral Test and estimates of sums
+
+<!-- section: integraltest -->
+
+For a series with positive, decreasing terms there is a picture that decides convergence: draw the terms as rectangles and compare their area with the area under a curve.
+
+:::theorem[Integral Test]{#integral-test}
+Let $f$ be continuous, positive and decreasing on $[1, \infty)$, and let $a_n = f(n)$. Then $\sum_{n=1}^{\infty} a_n$ converges if and only if $\int_1^{\infty} f(x)\,dx$ converges. The same holds with $1$ replaced by any starting integer $N$.
+:::
+
+:::proof
+Draw the graph of $f$ over $[1, N]$ and two sets of rectangles of width $1$. First, rectangles with heights $a_2, a_3, \ldots, a_N$ placed on $[1,2], [2,3], \ldots, [N-1,N]$; because $f$ is decreasing, each rectangle sits under the curve on its interval, so
+
+$$a_2 + a_3 + \cdots + a_N \le \int_1^N f(x)\,dx.$$
+
+Second, rectangles with heights $a_1, a_2, \ldots, a_{N-1}$ on the same intervals; each now pokes above the curve, so
+
+$$\int_1^N f(x)\,dx \le a_1 + a_2 + \cdots + a_{N-1}.$$
+
+If the integral converges, the first inequality gives $s_N \le a_1 + \int_1^{\infty} f(x)\,dx$, so the partial sums are bounded above; they increase because the terms are positive, and by the Monotone Sequence Theorem the series converges. If the integral diverges, the second inequality gives $s_{N-1} \ge \int_1^N f(x)\,dx \to \infty$, so the series diverges.
+:::
+
+The three hypotheses each do a job. Positivity makes the partial sums monotone, so that boundedness is enough for convergence. Decreasing is what lets the rectangles be trapped on one side of the curve. Continuity makes the integral meaningful. The conclusion is only about convergence: the integral and the sum are related by the inequalities in the proof but are not equal.
+
+:::intuition
+Suppose the terms are the monthly cost of a service whose price decreases smoothly over time, and $f$ is the price as a continuous function of time. The total you pay over the years (the sum) and the area under the price curve (the integral) differ by at most the first month's bill; neither can be finite while the other is infinite. So to learn whether your lifetime bill is finite, integrate the curve, which calculus knows how to do, rather than summing the rectangles, which it does not.
+:::
+
+:::example[The Integral Test on two $p$-series]
+Decide whether $\sum_{n=1}^{\infty} \dfrac{1}{n^2}$ and $\sum_{n=1}^{\infty} \dfrac{1}{\sqrt n}$ converge.
+:::
+
+:::solution
+Both $f(x) = 1/x^2$ and $g(x) = 1/\sqrt x$ are continuous, positive and decreasing on $[1,\infty)$, so the Integral Test applies. For the first,
+
+$$\int_1^{\infty} \frac{dx}{x^2} = \lim_{t\to\infty}\left[-\frac1x\right]_1^t = \lim_{t\to\infty}\left(1 - \frac1t\right) = 1,$$
+
+which is finite, so $\sum 1/n^2$ converges. For the second,
+
+$$\int_1^{\infty} \frac{dx}{\sqrt x} = \lim_{t\to\infty}\left[2\sqrt x\right]_1^t = \lim_{t\to\infty}\left(2\sqrt t - 2\right) = \infty,$$
+
+so $\sum 1/\sqrt n$ diverges. Note that the convergent integral equals $1$ while the sum $\sum 1/n^2 = \pi^2/6 \approx 1.645$: the test decides convergence, not the value.
+:::
+
+:::example[A series that needs a substitution]
+Decide whether $\sum_{n=2}^{\infty} \dfrac{1}{n(\ln n)^2}$ converges.
+:::
+
+:::solution
+Let $f(x) = 1/(x(\ln x)^2)$, which is continuous, positive and decreasing for $x \ge 2$ (numerator constant, denominator increasing). With $u = \ln x$, $du = dx/x$:
+
+$$\int_2^{\infty} \frac{dx}{x(\ln x)^2} = \int_{\ln 2}^{\infty} \frac{du}{u^2} = \left[-\frac1u\right]_{\ln 2}^{\infty} = \frac{1}{\ln 2}.$$
+
+The integral is finite, so the series converges. By contrast $\sum 1/(n\ln n)$ diverges: the same substitution gives $\int du/u = \ln u$, which is unbounded. The extra power of $\ln n$ is just enough.
+:::
+
+:::example[Checking "decreasing" with a derivative]
+Decide whether $\sum_{n=1}^{\infty} \dfrac{\ln n}{n}$ converges.
+:::
+
+:::solution
+Let $f(x) = (\ln x)/x$, which is positive for $x > 1$. It is not obviously decreasing, so differentiate: $f'(x) = (1 - \ln x)/x^2$, which is negative for $x > e$. So $f$ is decreasing on $[3, \infty)$, and the Integral Test applies from $n = 3$ (the first two terms do not affect convergence). With $u = \ln x$,
+
+$$\int_3^{\infty} \frac{\ln x}{x}\,dx = \int_{\ln 3}^{\infty} u\,du = \lim_{t\to\infty}\frac{u^2}{2}\Big|_{\ln 3}^{t} = \infty.$$
+
+The series diverges.
+:::
+
+When a series converges, the same rectangles that prove the test also say how far a partial sum is from the true sum.
+
+:::theorem[Remainder estimate for the Integral Test]{#integral-remainder}
+Under the hypotheses of the Integral Test, if $\sum a_n$ converges with sum $S$ and $R_N = S - s_N = a_{N+1} + a_{N+2} + \cdots$, then
+
+$$\int_{N+1}^{\infty} f(x)\,dx \le R_N \le \int_N^{\infty} f(x)\,dx.$$
+
+Consequently
+
+$$s_N + \int_{N+1}^{\infty} f(x)\,dx \le S \le s_N + \int_N^{\infty} f(x)\,dx.$$
+:::
+
+:::proof
+The rectangles of heights $a_{N+1}, a_{N+2}, \ldots$ placed on $[N, N+1], [N+1, N+2], \ldots$ lie under the curve, giving $R_N \le \int_N^{\infty} f$. Placed on $[N+1, N+2], [N+2, N+3], \ldots$ they lie above it, giving $R_N \ge \int_{N+1}^{\infty} f$. Add $s_N$ throughout for the second display.
+:::
+
+:::example[How many terms for a given accuracy?]
+How many terms of $\sum_{n=1}^{\infty} \dfrac{1}{n^3}$ are needed to approximate the sum with error at most $0.0005$?
+:::
+
+:::solution
+The remainder satisfies
+
+$$R_N \le \int_N^{\infty} \frac{dx}{x^3} = \left[-\frac{1}{2x^2}\right]_N^{\infty} = \frac{1}{2N^2}.$$
+
+We need $1/(2N^2) \le 0.0005$, that is $N^2 \ge 1000$, so $N \ge 31.6$: take $N = 32$ terms. Check: $1/(2\cdot 32^2) = 1/2048 \approx 0.00049 < 0.0005$, while $N = 31$ gives $1/1922 \approx 0.00052$, not quite enough.
+:::
+
+:::example[Sharpening an estimate with both bounds]
+Estimate $\sum_{n=1}^{\infty} \dfrac{1}{n^3}$ using $s_{10}$ and the two-sided bound.
+:::
+
+:::solution
+Direct addition gives $s_{10} = 1 + 1/8 + 1/27 + \cdots + 1/1000 \approx 1.197532$. The bounds are
+
+$$\int_{11}^{\infty} \frac{dx}{x^3} = \frac{1}{2\cdot 121} \approx 0.004132, \qquad \int_{10}^{\infty} \frac{dx}{x^3} = \frac{1}{200} = 0.005,$$
+
+so $1.201664 \le S \le 1.202532$. Taking the midpoint, $S \approx 1.2021$ with error at most $0.0005$: the same accuracy as $32$ terms, from only ten. (The true value is $1.2020569\ldots$)
+:::
+
+:::pitfall
+The Integral Test needs decreasing terms, and it needs positive ones. It says nothing about $\sum (-1)^n/n$, and it can be applied to $\sum (\ln n)/n$ only after checking where $(\ln x)/x$ actually starts to decrease. Also, never report the integral as the sum: $\int_1^{\infty} dx/x^2 = 1$ but $\sum 1/n^2 = \pi^2/6$.
+:::
+
+## $p$-series and the harmonic series
+
+<!-- section: pseries -->
+
+:::definition[$p$-series]{#p-series-definition}
+For a constant $p > 0$, the series
+
+$$\sum_{n=1}^{\infty} \frac{1}{n^p}$$
+
+is called a $p$-series. The case $p = 1$, namely $\sum 1/n$, is the harmonic series.
+:::
+
+:::theorem[$p$-series test]{#p-series}
+The $p$-series $\sum_{n=1}^{\infty} 1/n^p$ converges if $p > 1$ and diverges if $p \le 1$.
+:::
+
+:::proof
+For $p \le 0$ the terms do not tend to $0$, so the Divergence Test applies. For $p > 0$ the function $f(x) = x^{-p}$ is continuous, positive and decreasing on $[1,\infty)$, so the Integral Test applies. If $p \neq 1$,
+
+$$\int_1^{t} x^{-p}\,dx = \frac{t^{1-p} - 1}{1-p},$$
+
+and as $t \to \infty$ the numerator tends to $-1$ when $p > 1$ (so the integral converges to $1/(p-1)$) and to $\infty$ when $p < 1$. If $p = 1$, $\int_1^t dx/x = \ln t \to \infty$. The series follows the integral.
+:::
+
+Because the Integral Test was itself proved from the Monotone Sequence Theorem, this settles the whole family from first principles. The harmonic series also has a famous direct proof, which is worth seeing because it shows *how slowly* the divergence happens.
+
+:::proposition[Divergence of the harmonic series]{#harmonic-diverges}
+$\sum_{n=1}^{\infty} \dfrac1n$ diverges.
+:::
+
+:::proof
+Group the terms in blocks whose lengths are powers of $2$. Each block after the first has all its terms at least as large as its last term, and there are enough of them to total at least $1/2$:
+
+$$\underbrace{\frac13 + \frac14}_{\ge\, 2\cdot\frac14 = \frac12} + \underbrace{\frac15 + \frac16 + \frac17 + \frac18}_{\ge\, 4\cdot\frac18 = \frac12} + \underbrace{\frac19 + \cdots + \frac{1}{16}}_{\ge\, 8\cdot\frac{1}{16} = \frac12} + \cdots$$
+
+So $s_{2^k} \ge 1 + k/2$, which grows without bound. The partial sums increase past every level, so the series diverges.
+:::
+
+:::intuition
+The harmonic series is the great counterexample of the subject: terms $1, \tfrac12, \tfrac13, \ldots$ that plainly shrink to zero, summing to infinity. The grouping proof explains how: it takes twice as many terms to add the next half, so the growth is logarithmic. Concretely $H_N \approx \ln N + 0.5772$, so reaching a partial sum of $100$ needs about $e^{99.42} \approx 1.5\times 10^{43}$ terms. It diverges, but no computer will ever watch it happen.
+:::
+
+The $p$-series are the reference family for every comparison in the chapter. Once you know that $p = 1$ is the exact dividing line, a glance at how fast a term decays usually predicts the answer.
+
+:::example[Reading off $p$]
+Decide whether $\sum_{n=1}^{\infty} \dfrac{1}{n^{4/3}}$, $\sum_{n=1}^{\infty} \dfrac{1}{\sqrt[3]{n}}$ and $\sum_{n=1}^{\infty} \dfrac{3}{n^{1.001}}$ converge.
+:::
+
+:::solution
+The first has $p = 4/3 > 1$, so it converges. The second is $\sum n^{-1/3}$ with $p = 1/3 \le 1$, so it diverges. The third is $3\sum n^{-1.001}$; the constant $3$ does not affect convergence by the algebra of series, and $p = 1.001 > 1$, so it converges — although extremely slowly, since $\int_1^\infty x^{-1.001}dx = 1000$.
+:::
+
+:::example[A series that is not quite a $p$-series]
+Decide whether $\sum_{n=1}^{\infty} \dfrac{\sqrt{n}+2}{n^2}$ converges.
+:::
+
+:::solution
+Split it using the algebra of series:
+
+$$\sum_{n=1}^{\infty} \frac{\sqrt n + 2}{n^2} = \sum_{n=1}^{\infty} \frac{1}{n^{3/2}} + 2\sum_{n=1}^{\infty} \frac{1}{n^2}.$$
+
+Both pieces are convergent $p$-series ($p = 3/2$ and $p = 2$), so the original series converges. Splitting is legitimate here because each piece converges on its own; if one had diverged the split would prove nothing.
+:::
+
+:::example[Where the exponent hides]
+Decide whether $\sum_{n=1}^{\infty} \dfrac{n^2 + 1}{n^4}$ converges, and bound its sum below.
+:::
+
+:::solution
+Split: $\dfrac{n^2+1}{n^4} = \dfrac{1}{n^2} + \dfrac{1}{n^4}$. Both are convergent $p$-series, so the sum converges, and its value is $\pi^2/6 + \pi^4/90 \approx 1.645 + 1.082 = 2.727$. Since every term is positive and the first term is $2$, the sum is certainly at least $2$, consistent with that value.
+:::
+
+:::pitfall
+A $p$-series has a constant exponent. The series $\sum 1/2^n$ is not a $p$-series (the variable is in the exponent, so it is geometric), and $\sum 1/n^n$ is neither. Match the shape before you apply the rule.
+:::
+
+## Comparison tests
+
+<!-- section: comparison -->
+
+If a series with positive terms is smaller than one you know converges, it converges too. That is the whole idea, and it turns the geometric and $p$-series into a library of reference points.
+
+:::theorem[Direct Comparison Test]{#comparison-test}
+Suppose $0 \le a_n \le b_n$ for all $n$ beyond some index. If $\sum b_n$ converges, then $\sum a_n$ converges. If $\sum a_n$ diverges, then $\sum b_n$ diverges.
+:::
+
+:::proof
+Assume the inequality holds for all $n$ (dropping finitely many terms changes nothing). Let $s_N$ and $t_N$ be the partial sums of $\sum a_n$ and $\sum b_n$; both are increasing because the terms are nonnegative, and $s_N \le t_N$. If $\sum b_n$ converges to $T$, then $s_N \le t_N \le T$ for every $N$, so $\{s_N\}$ is increasing and bounded above and converges by the Monotone Sequence Theorem. The second statement is the contrapositive of the first.
+:::
+
+The test needs the right direction. To prove convergence you must dominate your series by a convergent one; to prove divergence you must minorise it by a divergent one. Bounding a series above by a divergent series proves nothing at all.
+
+Building the inequality is the work. Making the numerator larger or the denominator smaller makes a fraction larger; making the numerator smaller or the denominator larger makes it smaller.
+
+:::example[Comparison proving convergence]
+Decide whether $\sum_{n=1}^{\infty} \dfrac{1}{n^2 + 1}$ and $\sum_{n=1}^{\infty} \dfrac{\cos^2 n}{n^2}$ converge.
+:::
+
+:::solution
+For the first, enlarging the fraction by shrinking the denominator gives
+
+$$0 < \frac{1}{n^2+1} < \frac{1}{n^2},$$
+
+and $\sum 1/n^2$ is a convergent $p$-series, so the series converges. For the second, $0 \le \cos^2 n \le 1$ gives
+
+$$0 \le \frac{\cos^2 n}{n^2} \le \frac{1}{n^2},$$
+
+so it converges as well. In both cases the comparison series was chosen by asking what the term looks like when the small part is discarded.
+:::
+
+:::example[Comparison proving divergence]
+Decide whether $\sum_{n=2}^{\infty} \dfrac{1}{\ln n}$ converges.
+:::
+
+:::solution
+For $n \ge 2$ we have $\ln n < n$, so shrinking the denominator enlarges the fraction:
+
+$$\frac{1}{\ln n} > \frac1n > 0.$$
+
+The harmonic series $\sum 1/n$ diverges, and our series dominates it term by term, so $\sum 1/\ln n$ diverges by the Direct Comparison Test.
+:::
+
+Direct comparison fails often, because the inequality can point the wrong way. The series $\sum 1/(n^2 - 1)$ behaves like $\sum 1/n^2$ but is *larger* than it, so the convergent comparison is unavailable. The fix is to compare growth rates rather than values.
+
+:::theorem[Limit Comparison Test]{#limit-comparison-test}
+Suppose $a_n > 0$ and $b_n > 0$ for all large $n$ and
+
+$$\lim_{n\to\infty} \frac{a_n}{b_n} = L \quad\text{with } 0 < L < \infty.$$
+
+Then $\sum a_n$ and $\sum b_n$ either both converge or both diverge.
+:::
+
+:::proof
+Let $m = L/2$ and $M = 2L$, both positive and finite. Since $a_n/b_n \to L$, there is an $N$ beyond which $m < a_n/b_n < M$, that is
+
+$$m\,b_n < a_n < M\,b_n.$$
+
+If $\sum b_n$ converges then so does $\sum M b_n$, and $a_n < Mb_n$ gives convergence of $\sum a_n$ by direct comparison. If $\sum b_n$ diverges then so does $\sum m b_n$, and $a_n > m b_n$ gives divergence of $\sum a_n$.
+:::
+
+:::recipe[Choosing the comparison series]{#choose-comparison}
+1. Keep only the dominant power of $n$ in the numerator and in the denominator.
+2. Simplify; the result is almost always $b_n = 1/n^p$ or $b_n = r^n$.
+3. Compute $\lim a_n/b_n$ and confirm it is a finite positive number.
+4. Decide $\sum b_n$ by the $p$-series or geometric rule; $\sum a_n$ does the same thing.
+:::
+
+:::intuition
+Two runners set off around an infinite track. Direct comparison says one is always behind the other, so if the leader stops at a finite distance the follower must too. Limit comparison is weaker but more usable: it only says the two runners' speeds stay within a constant factor of one another for the whole race. That is still enough — a constant factor cannot turn a finite total distance into an infinite one.
+:::
+
+:::example[Limit comparison, divergent case]
+Decide whether $\sum_{n=1}^{\infty} \dfrac{n}{n^2+3}$ converges.
+:::
+
+:::solution
+For large $n$ the term behaves like $n/n^2 = 1/n$, so take $b_n = 1/n$:
+
+$$\lim_{n\to\infty} \frac{a_n}{b_n} = \lim_{n\to\infty} \frac{n}{n^2+3}\cdot\frac{n}{1} = \lim_{n\to\infty}\frac{n^2}{n^2+3} = 1,$$
+
+which is finite and positive. The harmonic series diverges, so $\sum n/(n^2+3)$ diverges. Note that direct comparison would have been awkward here: $n/(n^2+3) < 1/n$, the wrong direction for proving divergence.
+:::
+
+:::example[Limit comparison, convergent case]
+Decide whether $\sum_{n=1}^{\infty} \dfrac{2n^2 + 3n}{\sqrt{5 + n^7}}$ converges.
+:::
+
+:::solution
+Dominant behaviour: the numerator is like $2n^2$, the denominator like $\sqrt{n^7} = n^{7/2}$, so the term is like $2n^2/n^{7/2} = 2/n^{3/2}$. Take $b_n = 1/n^{3/2}$:
+
+$$\frac{a_n}{b_n} = \frac{(2n^2+3n)\,n^{3/2}}{\sqrt{5+n^7}} = \frac{2 + 3/n}{\sqrt{5/n^7 + 1}} \longrightarrow 2,$$
+
+after dividing numerator and denominator by $n^{7/2}$. Since $0 < 2 < \infty$ and $\sum n^{-3/2}$ converges ($p = 3/2 > 1$), the series converges.
+:::
+
+:::example[A comparison against a geometric series]
+Decide whether $\sum_{n=1}^{\infty} \dfrac{2^n}{3^n + n}$ converges.
+:::
+
+:::solution
+For large $n$ the $n$ in the denominator is negligible, so compare with $b_n = (2/3)^n$:
+
+$$\frac{a_n}{b_n} = \frac{2^n}{3^n+n}\cdot\frac{3^n}{2^n} = \frac{3^n}{3^n+n} = \frac{1}{1 + n/3^n} \longrightarrow 1,$$
+
+because $n/3^n \to 0$. Since $\sum (2/3)^n$ is a convergent geometric series, the original converges. Direct comparison also works here: $2^n/(3^n+n) < (2/3)^n$.
+:::
+
+:::example[When the limit is zero or infinite]
+Decide whether $\sum_{n=1}^{\infty} \dfrac{\ln n}{n^3}$ converges.
+:::
+
+:::solution
+Comparing with $b_n = 1/n^3$ gives $a_n/b_n = \ln n \to \infty$, which the Limit Comparison Test does not allow. Choose a slightly weaker comparison instead: $\ln n \le n^{1/2}$ for large $n$ (since $(\ln x)/\sqrt x \to 0$), so
+
+$$0 \le \frac{\ln n}{n^3} \le \frac{n^{1/2}}{n^3} = \frac{1}{n^{5/2}}$$
+
+for $n$ large. As $\sum n^{-5/2}$ converges, direct comparison gives convergence.
+
+(The extended form of limit comparison covers this too: if $a_n/b_n \to 0$ and $\sum b_n$ converges, so does $\sum a_n$. It is the same argument with only the upper inequality.)
+:::
+
+The comparison series also bounds the error of a partial sum, because whatever dominates the terms dominates the tail.
+
+:::remark[Estimating sums by comparison]
+If $0 \le a_n \le b_n$ for all $n$ and $\sum b_n$ converges, then the remainders satisfy
+
+$$R_N = \sum_{n=N+1}^{\infty} a_n \le \sum_{n=N+1}^{\infty} b_n,$$
+
+so any estimate for the tail of the comparison series (a geometric tail summed exactly, or an integral bound for a $p$-series tail) is also an estimate for the tail of $\sum a_n$.
+:::
+
+:::example[Error estimate through a comparison series]
+How many terms of $\sum_{n=1}^{\infty} \dfrac{1}{2^n + n}$ guarantee an error below $0.001$?
+:::
+
+:::solution
+Since $2^n + n > 2^n$, we have $0 < \dfrac{1}{2^n+n} < \dfrac{1}{2^n}$, and the geometric tail sums exactly:
+
+$$R_N \le \sum_{n=N+1}^{\infty} \frac{1}{2^n} = \frac{1/2^{N+1}}{1 - 1/2} = \frac{1}{2^N}.$$
+
+We need $1/2^N < 0.001$, that is $2^N > 1000$, so $N = 10$ terms suffice ($2^{10} = 1024$, while $2^9 = 512$ is not enough). Check: the first omitted term is $1/(2^{11}+11) \approx 0.00049$, comfortably below the bound.
+:::
+
+:::pitfall
+Both comparison tests require positive terms. For $\sum (-1)^n/n$ they say nothing; use the Alternating Series Test, or test $\sum |a_n|$ and invoke absolute convergence.
+:::
+
+## Alternating series
 
 <!-- section: alternating -->
 
-:::theorem[Alternating series test]{#alternating-series-test}
-An alternating series $\sum (-1)^n b_n$ (with $b_n > 0$) converges provided two conditions hold: the terms are eventually decreasing ($b_{n+1} \leq b_n$) and $b_n \to 0$.
+:::definition[Alternating series]{#alternating-definition}
+An alternating series is one whose terms alternate in sign, written $\sum_{n=1}^{\infty} (-1)^{n-1} b_n$ or $\sum_{n=1}^{\infty} (-1)^{n} b_n$ with $b_n > 0$.
 :::
 
-This is Leibniz's test, and the two conditions are exactly what keeps the partial sums nested inside one another.
+:::theorem[Alternating Series Test]{#alternating-series-test}
+If the positive numbers $b_n$ satisfy
 
-:::proposition[Alternating series error bound]{#alternating-error}
-The truncation error is bounded by the first omitted term,
+$$b_{n+1} \le b_n \text{ for all large } n \qquad\text{and}\qquad \lim_{n\to\infty} b_n = 0,$$
 
-$$|S - s_N| \leq b_{N+1},$$
-
-and the remainder has the same sign as that first omitted term.
+then the alternating series $\sum (-1)^{n-1} b_n$ converges.
 :::
 
-This makes alternating series especially easy to approximate: to be sure of three decimal places, keep adding terms until the next one is smaller than $0.0005$.
+:::proof
+Look at the even partial sums. Grouping in pairs,
+
+$$s_{2N} = (b_1 - b_2) + (b_3 - b_4) + \cdots + (b_{2N-1} - b_{2N}),$$
+
+and every bracket is $\ge 0$ because the $b_n$ decrease, so $\{s_{2N}\}$ is increasing. Grouping the other way,
+
+$$s_{2N} = b_1 - (b_2 - b_3) - \cdots - (b_{2N-2} - b_{2N-1}) - b_{2N} \le b_1,$$
+
+so $\{s_{2N}\}$ is bounded above by $b_1$. By the Monotone Sequence Theorem it converges, say to $S$. The odd partial sums satisfy $s_{2N+1} = s_{2N} + b_{2N+1} \to S + 0 = S$. Both subsequences tend to $S$, so $s_N \to S$ and the series converges.
+:::
+
+Both hypotheses matter. Without $b_n \to 0$ the Divergence Test kills the series, as with $\sum (-1)^n n/(n+1)$. Without the decreasing condition the test simply does not apply, and convergence may genuinely fail even when $b_n \to 0$.
+
+The proof does more than prove convergence: it shows the partial sums straddle the limit, alternately overshooting and undershooting, which is exactly where the error bound comes from.
+
+:::theorem[Alternating Series Estimation Theorem]{#alternating-error}
+Under the hypotheses of the Alternating Series Test, if $S = \sum (-1)^{n-1}b_n$ and $s_N$ is the $N$th partial sum, then
+
+$$|S - s_N| \le b_{N+1},$$
+
+and $S - s_N$ has the same sign as the first omitted term.
+:::
+
+:::proof
+The remainder after $N$ terms is itself an alternating series whose first term is $\pm b_{N+1}$:
+
+$$S - s_N = \pm(b_{N+1} - b_{N+2} + b_{N+3} - \cdots).$$
+
+By the bracketing in the previous proof, the quantity in parentheses lies between $0$ and $b_{N+1}$, which gives both the bound and the sign.
+:::
 
 :::intuition
-The partial sums bounce back and forth across the target, overshooting then undershooting by ever-smaller amounts. Each step lands closer, so the leftover is always smaller than the next single term.
+Think of a pendulum losing energy, swinging past the vertical by ever-smaller amounts: right by $b_1$, back left by $b_2$, right again by $b_3$. Each swing crosses the resting point, so the true value is always caught between two consecutive partial sums, and the distance left to travel is never more than the next swing. That is why alternating series are the easiest of all to approximate: the error bound is the next term, with no integral or derivative to estimate.
 :::
 
-## Absolute vs conditional convergence
+:::example[The alternating harmonic series]
+Show that $\sum_{n=1}^{\infty} \dfrac{(-1)^{n-1}}{n}$ converges.
+:::
+
+:::solution
+Here $b_n = 1/n$. It is positive, decreasing ($1/(n+1) < 1/n$), and $b_n \to 0$. Both hypotheses hold, so by the Alternating Series Test the series converges. Its sum is $\ln 2$, as the section on building series will show. Note that $\sum |a_n| = \sum 1/n$ diverges: the convergence here relies entirely on the cancellation of signs.
+:::
+
+:::example[Checking "decreasing" properly]
+Does $\sum_{n=1}^{\infty} (-1)^n \dfrac{n^2}{n^3+1}$ converge?
+:::
+
+:::solution
+Let $b_n = n^2/(n^3+1)$. Then $b_n \to 0$, since dividing by $n^3$ gives $(1/n)/(1 + 1/n^3) \to 0$. For the decreasing condition, differentiate $f(x) = x^2/(x^3+1)$:
+
+$$f'(x) = \frac{2x(x^3+1) - x^2\cdot 3x^2}{(x^3+1)^2} = \frac{x(2 - x^3)}{(x^3+1)^2},$$
+
+which is negative once $x^3 > 2$, that is for $x \ge 2$. So $b_n$ decreases from $n = 2$ on, and the test applies (ignoring the first term, which does not affect convergence). The series converges.
+:::
+
+:::example[Failure of the decreasing hypothesis]
+Explain why the Alternating Series Test does not apply to
+
+$$\frac{1}{1} - \frac{1}{2^2} + \frac{1}{3} - \frac{1}{4^2} + \frac{1}{5} - \frac{1}{6^2} + \cdots$$
+:::
+
+:::solution
+Here $b_n$ is $1/n$ for odd $n$ and $1/n^2$ for even $n$, and the sequence is not decreasing: $b_2 = 1/4$ while $b_3 = 1/3 > b_2$. So the test says nothing. In fact the series diverges: the odd-indexed terms alone form $\sum 1/(2k+1)$, which diverges like the harmonic series, while the even-indexed terms form a convergent $p$-series, so the partial sums grow without bound. Alternating signs do not by themselves save a series.
+:::
+
+:::example[Error control]
+How many terms of $\sum_{n=1}^{\infty} \dfrac{(-1)^{n-1}}{n^3}$ are needed to estimate the sum with error less than $0.001$? Give that estimate to three decimal places.
+:::
+
+:::solution
+By the Alternating Series Estimation Theorem the error after $N$ terms is at most $b_{N+1} = 1/(N+1)^3$. We need
+
+$$\frac{1}{(N+1)^3} < 0.001 \iff (N+1)^3 > 1000 \iff N + 1 > 10,$$
+
+so $N = 10$ terms suffice (and $N = 9$ gives exactly $0.001$, not less). Adding them:
+
+$$s_{10} = 1 - \frac18 + \frac{1}{27} - \frac{1}{64} + \frac{1}{125} - \frac{1}{216} + \frac{1}{343} - \frac{1}{512} + \frac{1}{729} - \frac{1}{1000} \approx 0.9011.$$
+
+So $S \approx 0.901$ with error below $0.001$. (The true value is $0.901543\ldots$, and the next partial sum $s_{11} \approx 0.9019$ lies on the other side of it, as the sign statement of the theorem predicts.)
+:::
+
+:::pitfall
+The estimation theorem applies only when both hypotheses of the Alternating Series Test hold. If the $b_n$ are not decreasing, the first omitted term is not a bound, and for non-alternating series it is not even close — for $\sum 1/n^2$ the tail after $N$ terms is about $1/N$, far bigger than the next term $1/(N+1)^2$.
+:::
+
+## Absolute and conditional convergence
 
 <!-- section: absconv -->
 
+The tests so far split into two camps: those for positive terms and one for alternating terms. A series with irregular signs, such as $\sum \sin n/n^2$, fits neither. The way in is to strip the signs off.
+
 :::definition[Absolute and conditional convergence]{#absolute-convergence}
-A series is **absolutely convergent** if $\sum |a_n|$ converges. It is **conditionally convergent** if $\sum a_n$ converges but $\sum |a_n|$ diverges.
+The series $\sum a_n$ converges absolutely if $\sum |a_n|$ converges. It converges conditionally if $\sum a_n$ converges but $\sum |a_n|$ diverges.
 :::
 
 :::theorem[Absolute convergence implies convergence]{#abs-implies-conv}
-If $\sum |a_n|$ converges, then $\sum a_n$ converges, and the terms may be rearranged freely without changing the sum.
+If $\sum |a_n|$ converges, then $\sum a_n$ converges, and $\left|\sum a_n\right| \le \sum |a_n|$.
 :::
 
-The classic conditionally convergent series is the alternating harmonic series $\sum (-1)^{n+1}/n = \ln 2$. For such series, rearranging the terms can change the sum to *any* value (the Riemann rearrangement theorem) — so order matters.
+:::proof
+For every $n$, $0 \le a_n + |a_n| \le 2|a_n|$. Since $\sum 2|a_n|$ converges, the Direct Comparison Test makes $\sum (a_n + |a_n|)$ converge. Then
+
+$$\sum a_n = \sum \big(a_n + |a_n|\big) - \sum |a_n|$$
+
+converges as a difference of two convergent series, by the algebra of series. The inequality follows from $|s_N| \le \sum_{n\le N}|a_n|$ and taking limits.
+:::
+
+This is what makes the positive-term tests universal: apply any of them to $\sum |a_n|$, and a "converges" verdict transfers to the original series with its signs restored. A "diverges" verdict does not transfer — $\sum |(-1)^{n-1}/n| = \sum 1/n$ diverges, yet the alternating harmonic series converges.
 
 :::intuition
-Absolute convergence is robust — the series converges even if you ignore all the signs, so shuffling terms is harmless. Conditional convergence is fragile — it only works because positive and negative terms delicately cancel, and rearranging breaks that balance.
+Absolute convergence means the series converges for the robust reason: the terms are small. Conditional convergence means it converges for a fragile reason: the terms are not small enough on their own, and only the cancellation between positives and negatives saves it. The difference shows up when you reorder the terms — a robust sum does not notice, a fragile one can be broken.
 :::
 
-## Power series
+:::remark[Rearrangement]
+If $\sum a_n$ converges absolutely, every rearrangement of its terms converges to the same sum. If it converges conditionally, Riemann's rearrangement theorem says the terms can be reordered to sum to any prescribed real number, or to diverge. The alternating harmonic series sums to $\ln 2$ in its usual order, but a suitable reordering sums to $\tfrac32\ln 2$, or to $7$, or to $-\pi$. The proof belongs to real analysis; the idea is that the positive terms alone and the negative terms alone each add up to infinity, so you can always take as many of one sign as you need before switching.
+:::
+
+:::example[Absolute convergence via comparison]
+Classify $\sum_{n=1}^{\infty} \dfrac{\sin n}{n^2}$.
+:::
+
+:::solution
+Take absolute values: $\left|\dfrac{\sin n}{n^2}\right| \le \dfrac{1}{n^2}$, and $\sum 1/n^2$ converges. By the Direct Comparison Test $\sum |\sin n / n^2|$ converges, so the series converges absolutely. The erratic signs of $\sin n$ never had to be understood, only bounded.
+:::
+
+:::example[Telling the two kinds apart]
+Classify $\sum_{n=1}^{\infty} \dfrac{(-1)^{n-1}}{\sqrt n}$ and $\sum_{n=1}^{\infty} \dfrac{(-1)^{n-1}}{n^2}$ as absolutely convergent, conditionally convergent or divergent.
+:::
+
+:::solution
+First series: the absolute values give $\sum 1/\sqrt n$, a $p$-series with $p = 1/2 \le 1$, which diverges, so it is not absolutely convergent. But $b_n = 1/\sqrt n$ is positive, decreasing and tends to $0$, so the Alternating Series Test gives convergence. It converges conditionally.
+
+Second series: $\sum 1/n^2$ converges ($p = 2$), so this one converges absolutely.
+
+The only structural difference is the exponent, and it lands on either side of the $p = 1$ boundary.
+:::
+
+:::example[Divergence detected through absolute values]
+Classify $\sum_{n=1}^{\infty} \dfrac{(-1)^n n}{2n+5}$.
+:::
+
+:::solution
+Do not start with absolute values here; start with the Divergence Test. The absolute values $n/(2n+5) \to 1/2 \neq 0$, so $a_n$ has no limit and the series diverges. Neither the alternating test (which needs $b_n \to 0$) nor absolute convergence applies.
+:::
+
+:::pitfall
+Absolute convergence is a one-way street. Showing that $\sum |a_n|$ diverges tells you nothing about $\sum a_n$; you must still test the signed series, usually with the Alternating Series Test.
+:::
+
+## The Ratio and Root Tests
+
+<!-- section: ratioroot -->
+
+The comparison tests need a reference series supplied by hand. The Ratio and Root Tests automate the comparison with a geometric series: they measure the eventual ratio (or the eventual $n$th root) of the terms and compare it with $1$.
+
+:::theorem[Ratio Test]{#ratio-test}
+Let $\displaystyle L = \lim_{n\to\infty}\left|\frac{a_{n+1}}{a_n}\right|$ (allowing $L = \infty$).
+
+If $L < 1$, then $\sum a_n$ converges absolutely. If $L > 1$ (including $L = \infty$), then $\sum a_n$ diverges. If $L = 1$, the test is inconclusive.
+:::
+
+:::proof
+Suppose $L < 1$ and pick $r$ with $L < r < 1$. Since the ratios converge to $L$, there is an $N$ beyond which $|a_{n+1}/a_n| < r$, that is $|a_{n+1}| < r|a_n|$. Iterating from $N$,
+
+$$|a_{N+k}| < r^k |a_N| \quad\text{for every } k \ge 1.$$
+
+So the tail $\sum_{k\ge1} |a_{N+k}|$ is dominated term by term by the convergent geometric series $|a_N|\sum r^k$, and converges by direct comparison. Hence $\sum|a_n|$ converges and $\sum a_n$ converges absolutely.
+
+Suppose $L > 1$. Then beyond some $N$ we have $|a_{n+1}| > |a_n|$, so $|a_n|$ is increasing from that point and cannot tend to $0$. The Divergence Test applies.
+:::
+
+:::theorem[Root Test]{#root-test}
+Let $\displaystyle L = \lim_{n\to\infty} \sqrt[n]{|a_n|}$. If $L < 1$ the series converges absolutely; if $L > 1$ it diverges; if $L = 1$ the test is inconclusive.
+:::
+
+:::proof
+If $L < 1$, choose $r$ with $L < r < 1$. Beyond some $N$, $\sqrt[n]{|a_n|} < r$, so $|a_n| < r^n$ and comparison with the convergent geometric series $\sum r^n$ finishes it. If $L > 1$ then $|a_n| > 1$ for infinitely many $n$, so the terms do not tend to $0$.
+:::
+
+Both proofs are the same manoeuvre: show the terms are eventually dominated by a geometric sequence with ratio less than $1$. That is why both fail at $L = 1$, the boundary where geometric comparison carries no information — and why every $p$-series gives $L = 1$ under both tests.
+
+:::recipe[Which of the two to use]{#ratio-or-root}
+1. Factorials, or products of consecutive integers: use the Ratio Test, where $(n+1)!/n! = n+1$ collapses.
+2. Whole expressions raised to the $n$th power, such as $\left(\frac{3n+1}{2n+5}\right)^n$: use the Root Test, where the $n$th root removes the exponent.
+3. Powers of a constant alone, such as $2^n$: either works.
+4. Rational functions of $n$ alone: neither works ($L = 1$); use comparison or the Integral Test.
+:::
+
+:::intuition
+The Ratio Test asks: by what factor does a term shrink compared with the one before? If that factor settles at $0.6$, then far out the series is behaving like $\sum 0.6^n$ — geometric, ratio below $1$, convergent — no matter what the early terms look like. If the factor settles at $1$, the terms are shrinking by less and less, and geometric behaviour tells you nothing: that is exactly the borderland where $\sum 1/n$ and $\sum 1/n^2$ live, one on each side.
+:::
+
+:::example[Ratio Test with a factorial]
+Decide whether $\sum_{n=1}^{\infty} \dfrac{n!}{3^n}$ converges.
+:::
+
+:::solution
+Form the ratio:
+
+$$\left|\frac{a_{n+1}}{a_n}\right| = \frac{(n+1)!}{3^{n+1}}\cdot\frac{3^n}{n!} = \frac{n+1}{3}.$$
+
+Then $L = \lim_{n\to\infty}(n+1)/3 = \infty > 1$, so the series diverges. The factorial eventually outgrows any fixed exponential, and the terms blow up.
+:::
+
+:::example[Ratio Test, convergent case]
+Decide whether $\sum_{n=1}^{\infty} \dfrac{3^n}{n!}$ and $\sum_{n=1}^{\infty} \dfrac{n^2}{2^n}$ converge.
+:::
+
+:::solution
+For the first,
+
+$$\frac{a_{n+1}}{a_n} = \frac{3^{n+1}}{(n+1)!}\cdot\frac{n!}{3^n} = \frac{3}{n+1} \longrightarrow 0 < 1,$$
+
+so it converges absolutely. For the second,
+
+$$\frac{a_{n+1}}{a_n} = \frac{(n+1)^2}{2^{n+1}}\cdot\frac{2^n}{n^2} = \frac12\left(1 + \frac1n\right)^2 \longrightarrow \frac12 < 1,$$
+
+so it converges too. Sanity check on the second: the terms $1/2, 1, 9/8, 1, 25/32, \ldots$ rise before they fall, which is fine — the test only cares about eventual behaviour.
+:::
+
+:::example[Root Test]
+Decide whether $\sum_{n=1}^{\infty} \left(\dfrac{2n+3}{3n+2}\right)^n$ converges.
+:::
+
+:::solution
+The whole term is an $n$th power, so take $n$th roots:
+
+$$\sqrt[n]{|a_n|} = \frac{2n+3}{3n+2} \longrightarrow \frac23 < 1.$$
+
+By the Root Test the series converges absolutely. The Ratio Test here would require simplifying $\left(\frac{2n+5}{3n+5}\right)^{n+1}\!\big/\left(\frac{2n+3}{3n+2}\right)^{n}$, which is far more work for the same answer.
+:::
+
+:::example[Root Test with an $n$th power and a factorial-free growth]
+Decide whether $\sum_{n=1}^{\infty} \dfrac{n^n}{3^{1+3n}}$ converges.
+:::
+
+:::solution
+Take $n$th roots:
+
+$$\sqrt[n]{|a_n|} = \frac{n}{3^{1/n}\cdot 3^{3}} = \frac{n}{27\cdot 3^{1/n}} \longrightarrow \infty,$$
+
+since $3^{1/n} \to 1$. As $L > 1$ the series diverges.
+:::
+
+:::example[Both tests inconclusive]
+What do the Ratio and Root Tests say about $\sum 1/n$ and $\sum 1/n^2$?
+:::
+
+:::solution
+For $\sum 1/n$, the ratio is $n/(n+1) \to 1$ and the root is $(1/n)^{1/n} = 1/n^{1/n} \to 1$ (because $n^{1/n}\to 1$). For $\sum 1/n^2$, the ratio is $n^2/(n+1)^2 \to 1$ and the root again tends to $1$. Both tests return $L = 1$ for both series, yet one diverges and the other converges — which is precisely what "inconclusive" means. Use the $p$-series rule or the Integral Test instead.
+:::
+
+:::pitfall
+When the Ratio Test gives $L=1$, do not report "diverges". It reports nothing, and you must start over with a different test. The one case where $L = 1$ does settle matters is when you can see directly that the terms fail to tend to $0$.
+:::
+
+## A strategy for testing series
+
+<!-- section: strategy -->
+
+With eight tests available, the skill is choosing. The order below works because each step is cheaper than the one after it.
+
+:::recipe[Choosing a convergence test]{#test-strategy}
+1. Do the terms tend to $0$? If not, the series diverges by the Divergence Test. This costs one limit and is never wrong.
+2. Is it a $p$-series $\sum 1/n^p$ or a geometric series $\sum ar^n$? Then quote the rule; the geometric case also gives the sum.
+3. Does it look like a $p$-series or geometric series with clutter attached, such as a rational function of $n$? Use limit comparison against the clean version.
+4. Does it contain a factorial or an $n$th power? Use the Ratio Test for factorials, the Root Test for $n$th powers.
+5. Is it alternating? Check $b_n \downarrow 0$ and use the Alternating Series Test; if you want more, test $\sum|a_n|$ for absolute convergence.
+6. Are the signs irregular? Test $\sum |a_n|$ with a positive-term test and use absolute convergence.
+7. Is $a_n = f(n)$ for an $f$ you can integrate, positive and decreasing? Use the Integral Test — often the last resort, and the only route for terms involving $\ln n$.
+8. Do consecutive terms cancel after partial fractions? It telescopes; compute the partial sum directly.
+:::
+
+:::intuition
+The tests are tools with grips shaped for particular handles: factorials fit the Ratio Test, $n$th powers fit the Root Test, logarithms fit the Integral Test, rational functions fit limit comparison, and alternating signs fit Leibniz's test. Diagnosing the shape takes a second; the computation takes a minute. Spend the second.
+:::
+
+:::example[Diagnosing four series]
+For each series, name the test you would use and state the conclusion: (a) $\sum \dfrac{n^2-1}{3n^2+1}$, (b) $\sum \dfrac{\sqrt{n^2+1}}{3n^3+2n^2+11}$, (c) $\sum n^2 e^{-n^3}$, (d) $\sum \dfrac{(-1)^n}{\ln n}$ from $n=2$.
+:::
+
+:::solution
+(a) The terms tend to $1/3 \neq 0$: Divergence Test, diverges.
+
+(b) A rational-looking expression: for large $n$ the term is like $n/(3n^3) = 1/(3n^2)$, so limit comparison with $1/n^2$ gives $L = 1/3$, and the series converges.
+
+(c) The term is $f(n)$ with $f(x) = x^2e^{-x^3}$, positive and decreasing for $x\ge1$, and integrable by substituting $u = x^3$:
+
+$$\int_1^{\infty} x^2 e^{-x^3}dx = \frac13\int_1^{\infty}e^{-u}du = \frac{1}{3e}.$$
+
+Integral Test: converges. (The Ratio Test also works, giving $L=0$.)
+
+(d) Alternating with $b_n = 1/\ln n$ decreasing to $0$: the Alternating Series Test gives convergence. Since $1/\ln n > 1/n$, the absolute series diverges, so the convergence is conditional.
+:::
+
+:::example[Two that look alike]
+Decide the convergence of $\sum_{n=1}^{\infty} \dfrac{1}{2 + 3^n}$ and $\sum_{n=1}^{\infty} \dfrac{1}{2 + 3n}$.
+:::
+
+:::solution
+The first has an exponential in the denominator: compare with the geometric series $\sum 3^{-n}$. Since $1/(2+3^n) < 1/3^n$ and $\sum (1/3)^n$ converges, so does the series.
+
+The second has a linear denominator: compare with the harmonic series. Limit comparison against $b_n = 1/n$ gives $n/(2+3n) \to 1/3$, finite and positive, so the series diverges with $\sum 1/n$.
+
+One character changes the answer, which is why step 2 of the recipe — identifying the family — comes before any computation.
+:::
+
+:::example[A series needing two tests]
+Classify $\sum_{n=1}^{\infty} \dfrac{(-1)^n\, n}{n^2 + 4}$.
+:::
+
+:::solution
+First, absolute convergence: $|a_n| = n/(n^2+4)$ behaves like $1/n$, and limit comparison with the harmonic series gives $L = 1$, so $\sum|a_n|$ diverges. Not absolutely convergent.
+
+Second, the signed series: $b_n = n/(n^2+4)$ tends to $0$, and $f(x) = x/(x^2+4)$ has $f'(x) = (4-x^2)/(x^2+4)^2 < 0$ for $x > 2$, so the terms eventually decrease. The Alternating Series Test gives convergence.
+
+The series converges conditionally.
+:::
+
+## Power series: radius and interval of convergence
 
 <!-- section: power -->
 
-:::definition[Power series and radius of convergence]{#power-series}
-A power series centered at $a$ has the form
+Everything so far has tested one fixed series. A power series is a whole family at once: a series of powers of $x$, which converges for some values of $x$ and diverges for others. The set where it converges is the function's domain.
 
-$$\sum_{n=0}^{\infty} c_n (x-a)^n.$$
+:::definition[Power series]{#power-series}
+A power series centred at $a$ is a series of the form
 
-Every power series has a radius of convergence $R$ (where $0 \leq R \leq \infty$) describing the set of $x$ for which it converges.
+$$\sum_{n=0}^{\infty} c_n (x-a)^n = c_0 + c_1(x-a) + c_2(x-a)^2 + \cdots,$$
+
+where the $c_n$ are constants called the coefficients. When $a = 0$ it is simply $\sum c_n x^n$. By convention $(x-a)^0 = 1$ even at $x = a$, so every power series converges at its centre.
 :::
 
-For $|x - a| < R$ the series converges absolutely; for $|x - a| > R$ it diverges; at the two endpoints $x = a \pm R$ you must test convergence separately (the behavior can differ at each endpoint). The radius is usually found with the ratio or root test.
+:::theorem[Convergence of a power series]{#power-convergence}
+For the power series $\sum c_n(x-a)^n$ exactly one of three things happens:
 
-:::theorem[Term-by-term differentiation and integration]{#term-by-term}
-Inside the radius of convergence you may differentiate or integrate the series term by term, and the resulting series has the same radius $R$ (though endpoint behavior may change).
+1. it converges only at $x = a$;
+2. it converges for every real $x$;
+3. there is a number $R > 0$ such that the series converges absolutely for $|x - a| < R$ and diverges for $|x-a| > R$.
+
+The number $R$ is the radius of convergence, with $R = 0$ in case 1 and $R = \infty$ in case 2. The interval of convergence is the set of $x$ where the series converges: one of $(a-R, a+R)$, $[a-R, a+R)$, $(a-R, a+R]$ or $[a-R, a+R]$, according to what happens at each endpoint.
+:::
+
+:::proof
+The heart of the matter is this: if the series converges at some $x_1$ with $x_1 \neq a$, then it converges absolutely for every $x$ with $|x-a| < |x_1-a|$. Indeed, convergence at $x_1$ forces $c_n(x_1-a)^n \to 0$, so those terms are bounded by some $M$. Then for such an $x$,
+
+$$|c_n(x-a)^n| = |c_n(x_1-a)^n|\left|\frac{x-a}{x_1-a}\right|^n \le M\,t^n, \qquad t = \left|\frac{x-a}{x_1-a}\right| < 1,$$
+
+and comparison with the convergent geometric series $M\sum t^n$ gives absolute convergence. Contrapositively, divergence at $x_2$ forces divergence for every $x$ farther from $a$ than $x_2$. So the set of $x$ where the series converges is an interval about $a$, and taking $R$ to be half its length (the least upper bound of $|x-a|$ over that set) gives the statement. The endpoints are left undecided because the argument needs a strict inequality.
+:::
+
+The radius is almost always found by applying the Ratio Test to $\sum |c_n(x-a)^n|$ and demanding that the resulting limit be less than $1$. The endpoints are then substituted one at a time and the two resulting numerical series are tested by hand — the Ratio Test cannot help there, because it returns $L = 1$ at exactly those points.
+
+:::recipe[Finding the interval of convergence]{#interval-recipe}
+1. Apply the Ratio Test to $|a_n| = |c_n(x-a)^n|$ and simplify the limit to the form $|x-a|\cdot K$.
+2. Solve $|x-a|K < 1$ for $|x-a|$; the bound is $R$.
+3. Substitute $x = a - R$ into the original series and test the resulting numerical series.
+4. Substitute $x = a + R$ and test that one.
+5. Report the interval, with a square bracket at each endpoint that converged.
 :::
 
 :::intuition
-A power series is like an infinite polynomial. It behaves like a well-defined function inside its interval of convergence and blows up outside it.
+A power series is an infinite polynomial, and like a polynomial it is only as good as the numbers you feed it. The radius measures how far from the centre the terms still shrink fast enough for the sum to settle. Inside that distance the powers $(x-a)^n$ beat the coefficients and everything converges; outside it the powers win the other way and the series explodes. At exactly the radius the two effects are in balance, which is why the endpoints have to be examined by hand and why they can behave differently from one another.
+:::
+
+:::example[A radius and both endpoints divergent]
+Find the interval of convergence of $\displaystyle\sum_{n=1}^{\infty} \frac{x^n}{2^n}$.
+:::
+
+:::solution
+Ratio Test on absolute values:
+
+$$\left|\frac{a_{n+1}}{a_n}\right| = \frac{|x|^{n+1}}{2^{n+1}}\cdot\frac{2^n}{|x|^n} = \frac{|x|}{2}.$$
+
+This is less than $1$ exactly when $|x| < 2$, so $R = 2$ and the centre is $0$.
+
+At $x = 2$: the series is $\sum 2^n/2^n = \sum 1$, whose terms do not tend to $0$; it diverges. At $x = -2$: the series is $\sum(-1)^n$, which also has terms not tending to $0$ and diverges.
+
+Interval of convergence: $(-2, 2)$. (Inside it the sum is geometric: $\sum (x/2)^n = \frac{x/2}{1 - x/2}$ from $n=1$.)
+:::
+
+:::example[One endpoint in, one out]
+Find the interval of convergence of $\displaystyle\sum_{n=1}^{\infty} \frac{(x-1)^n}{n}$.
+:::
+
+:::solution
+Ratio Test:
+
+$$\left|\frac{a_{n+1}}{a_n}\right| = \frac{|x-1|^{n+1}}{n+1}\cdot\frac{n}{|x-1|^n} = |x-1|\cdot\frac{n}{n+1} \longrightarrow |x-1|.$$
+
+So the series converges for $|x-1| < 1$, giving $R = 1$ and centre $a = 1$: the candidate interval is $(0,2)$.
+
+At $x = 2$: $\sum 1/n$, the harmonic series, diverges. At $x = 0$: $\sum (-1)^n/n$, which converges by the Alternating Series Test ($1/n$ decreasing to $0$).
+
+Interval of convergence: $[0, 2)$.
+:::
+
+:::example[Both endpoints convergent]
+Find the interval of convergence of $\displaystyle\sum_{n=1}^{\infty} \frac{(-1)^n (x+2)^n}{n^2 3^n}$.
+:::
+
+:::solution
+Ratio Test:
+
+$$\left|\frac{a_{n+1}}{a_n}\right| = \frac{|x+2|^{n+1}}{(n+1)^2 3^{n+1}}\cdot\frac{n^2 3^n}{|x+2|^n} = \frac{|x+2|}{3}\left(\frac{n}{n+1}\right)^2 \longrightarrow \frac{|x+2|}{3}.$$
+
+Convergence needs $|x+2| < 3$, so $R = 3$ about the centre $a = -2$: the candidate interval is $(-5, 1)$.
+
+At $x = 1$: the term becomes $(-1)^n 3^n/(n^2 3^n) = (-1)^n/n^2$, which converges absolutely ($p = 2$). At $x = -5$: the term becomes $(-1)^n(-3)^n/(n^2 3^n) = 1/n^2$, a convergent $p$-series.
+
+Interval of convergence: $[-5, 1]$.
+:::
+
+:::example[Infinite and zero radius]
+Find the intervals of convergence of $\displaystyle\sum_{n=0}^{\infty}\frac{x^n}{n!}$ and $\displaystyle\sum_{n=0}^{\infty} n!\,x^n$.
+:::
+
+:::solution
+For the first,
+
+$$\left|\frac{a_{n+1}}{a_n}\right| = \frac{|x|^{n+1}}{(n+1)!}\cdot\frac{n!}{|x|^n} = \frac{|x|}{n+1}\longrightarrow 0$$
+
+for every $x$. The limit is always below $1$, so $R = \infty$ and the interval is $(-\infty,\infty)$. (This series is $e^x$.)
+
+For the second, with $x \neq 0$,
+
+$$\left|\frac{a_{n+1}}{a_n}\right| = \frac{(n+1)!|x|^{n+1}}{n!|x|^n} = (n+1)|x| \longrightarrow \infty,$$
+
+so it diverges for every $x \neq 0$ and converges only at $x = 0$: $R = 0$, interval $\{0\}$.
+:::
+
+:::example[When only even powers appear]
+Find the radius and interval of convergence of $\displaystyle\sum_{n=0}^{\infty} \frac{(-1)^n x^{2n}}{4^n}$.
+:::
+
+:::solution
+Consecutive terms differ by $x^2$, not $x$, so the ratio is
+
+$$\left|\frac{a_{n+1}}{a_n}\right| = \frac{|x|^{2n+2}}{4^{n+1}}\cdot\frac{4^n}{|x|^{2n}} = \frac{x^2}{4}.$$
+
+This is less than $1$ when $x^2 < 4$, that is $|x| < 2$, so $R = 2$. At $x = \pm 2$ the term is $(-1)^n 4^n/4^n = (-1)^n$, which does not tend to $0$, so both endpoints diverge.
+
+Interval: $(-2,2)$. Note that the radius came from solving $x^2 < 4$, not from reading the limit directly — a step easy to skip when only even powers appear.
+:::
+
+:::pitfall
+The endpoints are not optional. The three examples above produced $(-2,2)$, $[0,2)$ and $[-5,1]$, all with the same kind of ratio computation; nothing but a direct test at $x = a \pm R$ distinguishes them. And a numerical series at an endpoint needs a real test: "it is alternating" is not enough without $b_n \downarrow 0$.
+:::
+
+## Representing functions as power series
+
+<!-- section: building -->
+
+A power series defines a function on its interval of convergence, and inside that interval it behaves exactly like a polynomial: it can be differentiated and integrated term by term. That single permission turns the geometric series into a machine for producing series representations of unfamiliar functions.
+
+:::theorem[Term-by-term differentiation and integration]{#term-by-term}
+Suppose $\sum c_n(x-a)^n$ has radius of convergence $R > 0$ and let $f(x)$ be its sum on $(a-R, a+R)$. Then $f$ is differentiable there, and
+
+$$f'(x) = \sum_{n=1}^{\infty} n\,c_n (x-a)^{n-1}, \qquad \int f(x)\,dx = C + \sum_{n=0}^{\infty} \frac{c_n (x-a)^{n+1}}{n+1}.$$
+
+Both new series have the same radius of convergence $R$, though their behaviour at the endpoints may differ from the original's.
+:::
+
+:::proof
+The full proof is an exercise in uniform convergence and belongs to real analysis. The radius claim, though, is a short computation: the differentiated series has coefficients $n c_n$, and since $\sqrt[n]{n} \to 1$, the root test limit $\limsup \sqrt[n]{n|c_n|}$ equals $\limsup\sqrt[n]{|c_n|}$. The same numbers control both radii, so both are $R$.
+:::
+
+The starting point for everything is the geometric series, read as an identity between a function and a series:
+
+$$\frac{1}{1-x} = \sum_{n=0}^{\infty} x^n = 1 + x + x^2 + \cdots, \qquad |x| < 1.$$
+
+:::recipe[Building a series from a known one]{#building-series}
+1. Substitute: replace $x$ by another expression (such as $-x^2$ or $x/3$) and translate the convergence condition accordingly.
+2. Multiply by a power of $x$ or by a constant.
+3. Differentiate term by term.
+4. Integrate term by term, then fix the constant by evaluating at one point.
+5. Add or multiply two known series.
+:::
+
+:::intuition
+Five series — for $1/(1-x)$, $e^x$, $\sin x$, $\cos x$ and $\ln(1+x)$ — plus these five moves generate essentially every series a calculus course asks for. Computing $n$ derivatives of $\arctan x$ by hand is a miserable afternoon; recognising $\arctan' x = 1/(1+x^2)$ as a geometric series in $-x^2$ and integrating takes two lines.
+:::
+
+:::example[Substitution]
+Find a power series for $\dfrac{1}{1+4x^2}$ and its interval of convergence.
+:::
+
+:::solution
+Write the function as $\dfrac{1}{1 - (-4x^2)}$ and substitute $-4x^2$ for $x$ in the geometric series:
+
+$$\frac{1}{1+4x^2} = \sum_{n=0}^{\infty} (-4x^2)^n = \sum_{n=0}^{\infty} (-1)^n 4^n x^{2n} = 1 - 4x^2 + 16x^4 - \cdots$$
+
+The condition $|{-4x^2}| < 1$ becomes $x^2 < 1/4$, that is $|x| < 1/2$. At $x = \pm 1/2$ the terms are $(-1)^n$, which do not tend to $0$, so the interval is $(-1/2, 1/2)$.
+:::
+
+:::example[Differentiating a known series]
+Find a power series for $\dfrac{1}{(1-x)^2}$ and use it to evaluate $\sum_{n=1}^{\infty} \dfrac{n}{2^n}$.
+:::
+
+:::solution
+Differentiate the geometric series term by term:
+
+$$\frac{d}{dx}\frac{1}{1-x} = \frac{1}{(1-x)^2}, \qquad \frac{d}{dx}\sum_{n=0}^{\infty}x^n = \sum_{n=1}^{\infty} n x^{n-1},$$
+
+so $\dfrac{1}{(1-x)^2} = \sum_{n=1}^{\infty} n x^{n-1} = 1 + 2x + 3x^2 + \cdots$ for $|x|<1$.
+
+To get the requested sum, multiply by $x$: $\dfrac{x}{(1-x)^2} = \sum_{n=1}^{\infty} n x^n$. Setting $x = 1/2$ (legal, since $|1/2| < 1$):
+
+$$\sum_{n=1}^{\infty}\frac{n}{2^n} = \frac{1/2}{(1/2)^2} = 2.$$
+
+Check: $1/2 + 2/4 + 3/8 + 4/16 + 5/32 \approx 1.78$, climbing toward $2$.
+:::
+
+:::example[Integrating to get the logarithm]
+Derive the Maclaurin series for $\ln(1+x)$ and give its interval of convergence.
+:::
+
+:::solution
+Start from the geometric series with $-t$ in place of $x$:
+
+$$\frac{1}{1+t} = \sum_{n=0}^{\infty}(-1)^n t^n, \qquad |t| < 1.$$
+
+Integrate both sides from $0$ to $x$, which is legal for $|x| < 1$:
+
+$$\ln(1+x) = \int_0^x \frac{dt}{1+t} = \sum_{n=0}^{\infty} \frac{(-1)^n x^{n+1}}{n+1} = x - \frac{x^2}{2} + \frac{x^3}{3} - \frac{x^4}{4} + \cdots$$
+
+The constant of integration is $0$ because both sides vanish at $x = 0$. Reindexing, $\ln(1+x) = \sum_{n=1}^{\infty}(-1)^{n-1}x^n/n$. The radius is still $1$; at $x = 1$ the series is the convergent alternating harmonic series, and at $x = -1$ it is $-\sum 1/n$, which diverges. So the interval is $(-1, 1]$, and setting $x = 1$ gives the striking identity
+
+$$\ln 2 = 1 - \frac12 + \frac13 - \frac14 + \cdots$$
+:::
+
+:::example[Integrating to get the arctangent]
+Derive the Maclaurin series for $\arctan x$.
+:::
+
+:::solution
+Substitute $-t^2$ into the geometric series:
+
+$$\frac{1}{1+t^2} = \sum_{n=0}^{\infty}(-1)^n t^{2n}, \qquad |t| < 1.$$
+
+Since $\arctan x = \int_0^x dt/(1+t^2)$, integrate term by term:
+
+$$\arctan x = \sum_{n=0}^{\infty} \frac{(-1)^n x^{2n+1}}{2n+1} = x - \frac{x^3}{3} + \frac{x^5}{5} - \frac{x^7}{7}+\cdots$$
+
+for $|x| < 1$; both endpoints converge by the Alternating Series Test, so the interval is $[-1,1]$. At $x = 1$ this gives Leibniz's formula $\pi/4 = 1 - 1/3 + 1/5 - \cdots$, beautiful but useless for computation: the error bound $1/(2N+1)$ means that an error below $0.001$ needs $500$ terms.
+:::
+
+:::example[Using a series to sum a number series]
+Evaluate $\sum_{n=1}^{\infty} \dfrac{1}{n\,2^n}$.
+:::
+
+:::solution
+Recognise the shape: $\sum x^n/n$ with $x = 1/2$. From the logarithm series with $-x$ in place of $x$,
+
+$$-\ln(1-x) = \sum_{n=1}^{\infty}\frac{x^n}{n}, \qquad |x| < 1.$$
+
+At $x = 1/2$ this gives $-\ln(1/2) = \ln 2$. So the sum is $\ln 2 \approx 0.693$. Check: $0.5 + 0.125 + 0.0417 + 0.0156 + 0.00625 \approx 0.688$, converging on $0.693$.
+:::
+
+:::pitfall
+Term-by-term differentiation and integration are guaranteed only *inside* the radius of convergence. The endpoints can change: $\sum x^n$ has interval $(-1,1)$, but its integral $\sum x^{n+1}/(n+1)$ converges at $x = -1$ as well. Always retest the endpoints after operating on a series.
 :::
 
 ## Taylor and Maclaurin series
 
 <!-- section: taylor -->
 
+The previous section built series for functions that happened to be disguised geometric series. Taylor's idea is to go the other way: assume a function *has* a power series representation and read off what the coefficients must be.
+
+Suppose $f(x) = \sum_{n=0}^{\infty} c_n(x-a)^n$ on some interval about $a$. Setting $x = a$ kills every term but the first, so $c_0 = f(a)$. Differentiating term by term and setting $x = a$ gives $c_1 = f'(a)$. Differentiating twice gives $f''(a) = 2c_2$, and after $n$ differentiations the constant term is $n!\,c_n$. So the coefficients are forced.
+
 :::definition[Taylor and Maclaurin series]{#taylor-series}
-The Taylor series of $f(x)$ centered at $a$ is
+The Taylor series of $f$ centred at $a$ is
 
-$$f(x) = \sum_{n=0}^{\infty} \frac{f^{(n)}(a)}{n!}(x-a)^n.$$
+$$\sum_{n=0}^{\infty} \frac{f^{(n)}(a)}{n!}(x-a)^n = f(a) + f'(a)(x-a) + \frac{f''(a)}{2!}(x-a)^2 + \cdots,$$
 
-A Maclaurin series is a Taylor series centered at $a=0$.
+defined whenever $f$ has derivatives of all orders at $a$. The case $a = 0$ is the Maclaurin series. The $n$th Taylor polynomial $T_n(x)$ is the partial sum through the $(x-a)^n$ term.
 :::
 
-Essential Maclaurin series to memorize:
+:::theorem[Uniqueness of power series coefficients]{#taylor-uniqueness}
+If $f(x) = \sum c_n(x-a)^n$ for all $x$ in some interval about $a$, then $c_n = f^{(n)}(a)/n!$ for every $n$. A function has at most one power series representation about a given centre.
+:::
 
-$e^x = \sum_{n=0}^{\infty} \frac{x^n}{n!} = 1 + x + \frac{x^2}{2!} + \frac{x^3}{3!} + \cdots$ for all $x$.
+:::proof
+Differentiate the series $n$ times term by term (legal inside the radius of convergence by the term-by-term theorem). Every term of degree below $n$ is annihilated, and every term of degree above $n$ retains a factor $(x-a)$. Setting $x = a$ leaves $f^{(n)}(a) = n!\,c_n$.
+:::
 
-$\sin x = \sum_{n=0}^{\infty} \frac{(-1)^n x^{2n+1}}{(2n+1)!} = x - \frac{x^3}{3!} + \frac{x^5}{5!} - \cdots$ for all $x$.
+Uniqueness is what licenses all the shortcuts of the previous section: a series obtained by substituting into or integrating a known one *is* the Taylor series, so there is never any need to compute derivatives when a shortcut exists.
 
-$\cos x = \sum_{n=0}^{\infty} \frac{(-1)^n x^{2n}}{(2n)!} = 1 - \frac{x^2}{2!} + \frac{x^4}{4!} - \cdots$ for all $x$.
-
-$\ln(1+x) = \sum_{n=1}^{\infty} \frac{(-1)^{n+1} x^n}{n} = x - \frac{x^2}{2} + \frac{x^3}{3} - \cdots$ for $-1 < x \leq 1$.
-
-$\frac{1}{1-x} = \sum_{n=0}^{\infty} x^n$ for $|x| < 1$.
+:::pitfall
+A function can have a Taylor series that converges but does not equal the function. The standard example is $f(x) = e^{-1/x^2}$ for $x \neq 0$ with $f(0)=0$: every derivative at $0$ is $0$, so its Maclaurin series is $0 + 0x + 0x^2 + \cdots = 0$, which converges everywhere and agrees with $f$ only at $x = 0$. Writing $f(x) = \sum f^{(n)}(a)(x-a)^n/n!$ therefore requires proof, and the tool for that proof is the remainder.
+:::
 
 :::intuition
-A Taylor series is like building a copy of a function out of simple polynomial building blocks ($1, x, x^2, x^3, \ldots$).
-
-Imagine you want to recreate a complicated curve. First, you match the value at one point (constant term). Then you match the slope (linear term). Then the curvature ($x^2$ term). Each new term makes your copy more accurate, like adding more detail to a sketch.
-
-With enough terms, your polynomial copy becomes indistinguishable from the original function. That's how your calculator computes $\sin(0.5)$ — it's not drawing a circle, it's evaluating a polynomial like $0.5 - 0.5^3/6 + 0.5^5/120 - \cdots$ that happens to equal $\sin(0.5)$ to many decimal places.
+Building a Taylor polynomial is matching the function at one point with increasing fidelity. The constant term matches the value; the linear term matches the slope; the quadratic term matches the curvature; each further term matches one more derivative. Near the centre those matches accumulate into an excellent copy of the function — which is precisely how a calculator computes $\sin(0.5)$: not by geometry but by adding $0.5 - 0.5^3/6 + 0.5^5/120$ and stopping when the next term is below the display precision.
 :::
 
-:::example[Computing a Taylor series from scratch]
-Find the Maclaurin series for $f(x) = e^x$ (centered at $a = 0$).
-:::
+The standard Maclaurin series, all derived in this chapter or by the same methods, are worth memorising.
 
-:::solution
-1. We need $f^{(n)}(0)$ for each $n$. Since $\frac{d}{dx}e^x = e^x$, every derivative of $e^x$ is $e^x$.
-2. So $f(0) = 1$, $f'(0) = 1$, $f''(0) = 1$, $f'''(0) = 1$, and so on. Every derivative at $0$ equals $1$.
-3. Plug into the Taylor formula: $e^x = \sum_{n=0}^{\infty} \frac{f^{(n)}(0)}{n!} x^n = \sum_{n=0}^{\infty} \frac{x^n}{n!}$.
-4. Written out: $e^x = 1 + x + \frac{x^2}{2} + \frac{x^3}{6} + \frac{x^4}{24} + \cdots$
-5. This converges for all $x$. For example, $e^1 \approx 1 + 1 + 0.5 + 0.167 + 0.042 + 0.008 + \cdots \approx 2.718$.
-:::
+$$\frac{1}{1-x} = \sum_{n=0}^{\infty} x^n, \quad |x|<1; \qquad e^x = \sum_{n=0}^{\infty}\frac{x^n}{n!}, \quad \text{all } x;$$
 
-:::example[Deriving a series by substitution]
-Find the Maclaurin series for $e^{-x^2}$.
+$$\sin x = \sum_{n=0}^{\infty}\frac{(-1)^n x^{2n+1}}{(2n+1)!}, \quad \text{all } x; \qquad \cos x = \sum_{n=0}^{\infty}\frac{(-1)^n x^{2n}}{(2n)!}, \quad \text{all } x;$$
+
+$$\ln(1+x) = \sum_{n=1}^{\infty}\frac{(-1)^{n-1}x^n}{n}, \quad -1 < x \le 1; \qquad \arctan x = \sum_{n=0}^{\infty}\frac{(-1)^n x^{2n+1}}{2n+1}, \quad |x|\le 1.$$
+
+:::example[A Maclaurin series from the definition]
+Find the Maclaurin series for $f(x) = e^x$ and its radius of convergence.
 :::
 
 :::solution
-1. Instead of computing derivatives (which get very messy), use the known series for $e^x$ and substitute $-x^2$ for $x$.
-2. We know: $e^x = \sum_{n=0}^{\infty} \frac{x^n}{n!}$.
-3. Replace $x$ with $-x^2$: $e^{-x^2} = \sum_{n=0}^{\infty} \frac{(-x^2)^n}{n!} = \sum_{n=0}^{\infty} \frac{(-1)^n x^{2n}}{n!}$.
-4. Written out: $e^{-x^2} = 1 - x^2 + \frac{x^4}{2} - \frac{x^6}{6} + \cdots$
-5. This is the Gaussian function used in probability and statistics. Its integral $\int_0^\infty e^{-x^2}dx = \frac{\sqrt{\pi}}{2}$ has no closed form — but we can integrate the series term by term!
+Every derivative of $e^x$ is $e^x$, so $f^{(n)}(0) = e^0 = 1$ for every $n$, and
+
+$$e^x = \sum_{n=0}^{\infty} \frac{x^n}{n!} = 1 + x + \frac{x^2}{2!} + \frac{x^3}{3!} + \cdots$$
+
+(pending the proof below that the series really equals $e^x$). The Ratio Test gives $|x|/(n+1) \to 0$ for every $x$, so $R = \infty$. Check at $x=1$: $1 + 1 + 0.5 + 0.1667 + 0.0417 + 0.0083 = 2.7167$, approaching $e = 2.71828$.
 :::
 
-## Taylor remainder and error bounds
+:::example[A Taylor series about a nonzero centre]
+Find the Taylor series of $f(x) = \ln x$ centred at $a = 1$.
+:::
+
+:::solution
+Differentiate repeatedly: $f'(x) = x^{-1}$, $f''(x) = -x^{-2}$, $f'''(x) = 2x^{-3}$, $f^{(4)}(x) = -6x^{-4}$, and in general $f^{(n)}(x) = (-1)^{n-1}(n-1)!\,x^{-n}$ for $n \ge 1$. At $x = 1$ this is $(-1)^{n-1}(n-1)!$, so the coefficient is
+
+$$\frac{f^{(n)}(1)}{n!} = \frac{(-1)^{n-1}(n-1)!}{n!} = \frac{(-1)^{n-1}}{n}.$$
+
+With $f(1) = 0$,
+
+$$\ln x = \sum_{n=1}^{\infty} \frac{(-1)^{n-1}}{n}(x-1)^n, \qquad 0 < x \le 2.$$
+
+This agrees with the series for $\ln(1+u)$ under $u = x-1$, as uniqueness demands.
+:::
+
+:::example[Series by substitution and multiplication]
+Find the Maclaurin series for $x\cos(x^2)$ through the $x^9$ term.
+:::
+
+:::solution
+Substitute $x^2$ into the cosine series:
+
+$$\cos(x^2) = \sum_{n=0}^{\infty}\frac{(-1)^n x^{4n}}{(2n)!} = 1 - \frac{x^4}{2} + \frac{x^8}{24} - \cdots$$
+
+Multiply by $x$:
+
+$$x\cos(x^2) = x - \frac{x^5}{2} + \frac{x^9}{24} - \cdots = \sum_{n=0}^{\infty}\frac{(-1)^n x^{4n+1}}{(2n)!}.$$
+
+Computing nine derivatives of $x\cos(x^2)$ would have taken an hour; uniqueness says this answer is the same one.
+:::
+
+Two series can also be multiplied or divided, at least to as many terms as you need. The justification is that inside a common interval of convergence, both are genuine functions, and the product's Taylor series is unique.
+
+:::example[Multiplying two series]
+Find the Maclaurin series for $e^x\sin x$ through the $x^4$ term.
+:::
+
+:::solution
+Write both factors out to enough terms that every product of total degree at most $4$ is available:
+
+$$e^x = 1 + x + \frac{x^2}{2} + \frac{x^3}{6} + \frac{x^4}{24}+\cdots, \qquad \sin x = x - \frac{x^3}{6}+\cdots$$
+
+Collect by degree. Degree $1$: $1\cdot x = x$. Degree $2$: $x\cdot x = x^2$. Degree $3$: $1\cdot(-x^3/6) + (x^2/2)\cdot x = -\tfrac16 x^3 + \tfrac12 x^3 = \tfrac13 x^3$. Degree $4$: $x\cdot(-x^3/6) + (x^3/6)\cdot x = -\tfrac16 x^4 + \tfrac16 x^4 = 0$. So
+
+$$e^x\sin x = x + x^2 + \frac{x^3}{3} + 0\cdot x^4 + \cdots$$
+
+Check numerically at $x = 0.2$: the polynomial gives $0.2 + 0.04 + 0.00267 = 0.24267$, while $e^{0.2}\sin(0.2) = 1.2214\times 0.19867 = 0.24265$.
+:::
+
+:::example[Dividing two series]
+Find the Maclaurin series for $\tan x$ through the $x^3$ term.
+:::
+
+:::solution
+Use $\tan x = \sin x/\cos x$ and long division of series. Write $\tan x = c_1x + c_3x^3 + \cdots$ (only odd powers, since $\tan$ is odd) and require $\tan x\cdot\cos x = \sin x$:
+
+$$(c_1x + c_3x^3+\cdots)\left(1 - \frac{x^2}{2}+\cdots\right) = x - \frac{x^3}{6}+\cdots$$
+
+Matching the coefficient of $x$: $c_1 = 1$. Matching the coefficient of $x^3$: $c_3 - c_1/2 = -1/6$, so $c_3 = 1/2 - 1/6 = 1/3$. Hence
+
+$$\tan x = x + \frac{x^3}{3} + \frac{2x^5}{15}+\cdots$$
+
+Check at $x = 0.3$: $0.3 + 0.009 = 0.309$ versus $\tan(0.3) = 0.30934$.
+:::
+
+The last standard family generalises the binomial theorem from whole-number exponents to arbitrary ones.
+
+:::theorem[Binomial series]{#binomial-series}
+For any real number $k$ and $|x| < 1$,
+
+$$(1+x)^k = \sum_{n=0}^{\infty}\binom{k}{n}x^n, \qquad \binom{k}{n} = \frac{k(k-1)(k-2)\cdots(k-n+1)}{n!},$$
+
+with $\binom{k}{0} = 1$. If $k$ is a nonnegative integer the coefficients vanish beyond $n = k$ and the series is the ordinary binomial theorem.
+:::
+
+:::proof
+Let $f(x) = (1+x)^k$. Then $f^{(n)}(x) = k(k-1)\cdots(k-n+1)(1+x)^{k-n}$, so $f^{(n)}(0) = k(k-1)\cdots(k-n+1)$ and the Maclaurin coefficients are exactly $\binom{k}{n}$. The Ratio Test gives
+
+$$\left|\frac{c_{n+1}x^{n+1}}{c_nx^n}\right| = \left|\frac{k-n}{n+1}\right||x| \longrightarrow |x|,$$
+
+so the radius is $1$. That the series actually sums to $(1+x)^k$ follows by checking that its sum $g$ satisfies the differential equation $(1+x)g'(x) = k\,g(x)$ with $g(0)=1$, which has the unique solution $(1+x)^k$.
+:::
+
+:::example[Square root as a binomial series]
+Find the Maclaurin series for $\sqrt{1+x}$ through the $x^3$ term.
+:::
+
+:::solution
+Take $k = 1/2$. The coefficients are
+
+$$\binom{1/2}{1} = \frac12, \qquad \binom{1/2}{2} = \frac{\frac12\left(-\frac12\right)}{2} = -\frac18, \qquad \binom{1/2}{3} = \frac{\frac12\left(-\frac12\right)\left(-\frac32\right)}{6} = \frac{1}{16}.$$
+
+So
+
+$$\sqrt{1+x} = 1 + \frac{x}{2} - \frac{x^2}{8} + \frac{x^3}{16} - \cdots, \qquad |x|<1.$$
+
+Check at $x = 0.2$: $1 + 0.1 - 0.005 + 0.0005 = 1.0955$ against $\sqrt{1.2} = 1.09545$.
+:::
+
+:::example[Forcing a binomial series into shape]
+Find the Maclaurin series for $\dfrac{1}{\sqrt{4-x}}$ and its radius of convergence.
+:::
+
+:::solution
+Factor out the constant so the bracket reads $1 + (\text{something})$:
+
+$$\frac{1}{\sqrt{4-x}} = \frac{1}{\sqrt{4\left(1 - \frac{x}{4}\right)}} = \frac12\left(1 - \frac{x}{4}\right)^{-1/2}.$$
+
+Apply the binomial series with $k = -1/2$ and $-x/4$ in place of $x$. Since
+
+$$\binom{-1/2}{n} = \frac{(-\frac12)(-\frac32)\cdots(-\frac{2n-1}{2})}{n!} = \frac{(-1)^n (2n)!}{4^n (n!)^2},$$
+
+we get
+
+$$\frac{1}{\sqrt{4-x}} = \frac12\sum_{n=0}^{\infty}\frac{(2n)!}{16^n (n!)^2}x^n = \frac12 + \frac{x}{16} + \frac{3x^2}{256}+\cdots$$
+
+Convergence requires $|x/4| < 1$, so $R = 4$. Check at $x=1$: $0.5 + 0.0625 + 0.0117 = 0.5742$ against $1/\sqrt 3 = 0.57735$; the next term, $5/2048 \approx 0.0024$, closes most of the gap.
+:::
+
+## Taylor's Inequality and error bounds
 
 <!-- section: remainder -->
 
+A Taylor polynomial is only useful with a guarantee attached. The guarantee comes from the remainder.
+
 :::definition[Taylor remainder]{#taylor-remainder}
-The $n$th degree Taylor polynomial $T_n(x)$ approximates $f(x)$ near $x = a$. The error (remainder) is
+For a function $f$ with $n+1$ derivatives near $a$, the $n$th remainder is
 
 $$R_n(x) = f(x) - T_n(x),$$
 
-the difference between the true function and the polynomial approximation.
+the exact error made by replacing $f$ with its $n$th Taylor polynomial. The Taylor series of $f$ converges to $f(x)$ precisely when $R_n(x) \to 0$ as $n \to \infty$.
 :::
 
-:::theorem[Taylor's inequality]{#taylors-inequality}
-If $M$ is an upper bound for $|f^{(n+1)}(t)|$ on the interval between $a$ and $x$, then
+:::theorem[Taylor's Theorem, Lagrange form]{#taylor-theorem}
+If $f$ has $n+1$ continuous derivatives on an interval containing $a$ and $x$, then there is a number $z$ strictly between $a$ and $x$ with
 
-$$|R_n(x)| \leq \frac{M}{(n+1)!}|x-a|^{n+1}.$$
+$$R_n(x) = \frac{f^{(n+1)}(z)}{(n+1)!}(x-a)^{n+1}.$$
 :::
 
-This is the Lagrange error bound. The $(n+1)!$ in the denominator grows extremely fast, which is why Taylor polynomials get accurate quickly.
+:::proof
+This is the Mean Value Theorem applied $n+1$ times. For $n = 0$ it reads $f(x) - f(a) = f'(z)(x-a)$, which is the Mean Value Theorem itself. In general, fix $x$ and define $g(t) = f(x) - T_n(t;x)$ where $T_n(t;x)$ is the Taylor polynomial of $f$ about $t$ evaluated at $x$; repeated application of the generalised Mean Value Theorem to $g$ against $(x-t)^{n+1}$ produces the stated formula. The detailed bookkeeping belongs to a first analysis course.
+:::
 
-For alternating Taylor series (like $\sin x$, $\cos x$, $\ln(1+x)$), the alternating series estimation applies: $|R_n| \leq |a_{n+1}|$ (the first omitted term). This is usually easier to use than the Lagrange bound.
+:::theorem[Taylor's Inequality]{#taylors-inequality}
+If $|f^{(n+1)}(t)| \le M$ for all $t$ between $a$ and $x$, then
 
-Practical use: 'How many terms of the Maclaurin series for $e^x$ do I need to approximate $e^{0.5}$ to within $0.0001$?' Find the smallest $n$ such that $\frac{(0.5)^{n+1}}{(n+1)!} < 0.0001$. With $n = 5$: $\frac{0.5^6}{720} \approx 0.0000217 < 0.0001$. So 6 terms suffice (through the $x^5$ term).
+$$|R_n(x)| \le \frac{M}{(n+1)!}|x-a|^{n+1}.$$
+:::
 
-This is how calculators and computers evaluate functions like $\sin$, $\cos$, and $e^x$ — they use Taylor polynomials with enough terms to guarantee the desired precision.
+:::proof
+Immediate from the Lagrange form: the unknown $z$ lies between $a$ and $x$, so $|f^{(n+1)}(z)| \le M$.
+:::
+
+The bound has two competing pieces. The factor $|x-a|^{n+1}$ says accuracy degrades as you move away from the centre, which is why Taylor polynomials are local tools. The factor $(n+1)!$ in the denominator says accuracy improves explosively with degree, because factorials outrun every power. For $|x-a| \le 1$ the $10$th-degree bound already carries $1/11! \approx 2.5\times10^{-8}$.
 
 :::intuition
-When you approximate a function with a Taylor polynomial, you're sketching it with a limited number of pencil strokes. The error bound tells you: 'your sketch is at most this far from the real thing.' Add more terms (more pencil strokes), and the bound shrinks — your sketch gets closer to the original.
-
-The $(n+1)!$ in the denominator is your best friend here. Factorials grow so fast that even a few extra terms dramatically improve accuracy. That's why Taylor series work so well in practice.
+Taylor's Inequality is an insurance policy on an approximation. You do not know the true error, but you know the worst the $(n+1)$st derivative can be on the stretch between the centre and your point, and that worst case buys a guarantee. The guarantee is usually pessimistic — the real error is often an order of magnitude smaller — which is fine: a bound you can compute beats an error you cannot.
 :::
 
-## Building new series from known ones
-
-<!-- section: building -->
-
-Instead of computing Taylor coefficients from scratch (which requires evaluating $n$ derivatives), you can derive new series from known ones.
-
-:::recipe[Building a series from a known one]{#building-series}
-1. Substitute an expression for $x$ in a known series.
-2. Differentiate a known series term by term.
-3. Integrate a known series term by term.
-4. Add or multiply known series.
+:::theorem[The exponential equals its series]{#exp-equals-series}
+For every real $x$, $\displaystyle e^x = \sum_{n=0}^{\infty}\frac{x^n}{n!}$.
 :::
 
-Substitution: replace $x$ in a known series with an expression. $e^{-x^2}$? Start with $e^u = \sum u^n/n!$ and substitute $u = -x^2$: $e^{-x^2} = \sum \frac{(-1)^n x^{2n}}{n!}$. No derivatives needed.
+:::proof
+Fix $x$ and let $d = |x|$. Every derivative of $e^t$ is $e^t$, which on the interval between $0$ and $x$ is bounded by $M = e^{d}$. Taylor's Inequality gives
 
-Term-by-term differentiation: differentiate a known series to get a new one. $\frac{1}{1-x} = \sum x^n$ for $|x|<1$. Differentiate both sides: $\frac{1}{(1-x)^2} = \sum n x^{n-1}$. The radius of convergence is preserved.
+$$|R_n(x)| \le \frac{e^{d}}{(n+1)!}d^{\,n+1}.$$
 
-Term-by-term integration: integrate a known series. $\frac{1}{1+t^2} = \sum (-1)^n t^{2n}$ for $|t|<1$. Integrate from $0$ to $x$: $\arctan x = \sum \frac{(-1)^n x^{2n+1}}{2n+1}$. This gives the series for $\arctan$ without ever differentiating $\arctan$.
+Now $d^{n+1}/(n+1)! \to 0$ as $n\to\infty$ for every fixed $d$, because it is the general term of the convergent series $\sum d^n/n!$ (Ratio Test limit $0$), and terms of a convergent series tend to $0$. So $R_n(x)\to0$ and the series converges to $e^x$.
+:::
 
-Multiplication and addition: you can add or multiply series. $\frac{x}{1-x^2} = x \cdot \frac{1}{1-x^2} = x \sum x^{2n} = \sum x^{2n+1}$.
+:::corollary[The sine equals its series]{#sin-equals-series}
+For every real $x$, $\displaystyle \sin x = \sum_{n=0}^{\infty}\frac{(-1)^n x^{2n+1}}{(2n+1)!}$, and likewise for $\cos x$.
+:::
 
-These techniques are immensely powerful. In practice, almost every Taylor series you encounter can be derived from the five basic series ($e^x$, $\sin x$, $\cos x$, $\ln(1+x)$, $1/(1-x)$) using these operations.
+:::proof
+Every derivative of $\sin$ is $\pm\sin$ or $\pm\cos$, so $|f^{(n+1)}(t)| \le 1 = M$ everywhere. Taylor's Inequality gives $|R_n(x)| \le |x|^{n+1}/(n+1)! \to 0$ for every $x$, exactly as above. The Maclaurin coefficients of $\sin$ cycle $0, 1, 0, -1$, producing the stated odd-power series.
+:::
+
+:::example[Bounding the error of a specific approximation]
+Estimate $e$ by $T_3(1)$ for $f(x)=e^x$ about $0$, and bound the error using $e < 3$.
+:::
+
+:::solution
+The polynomial is $T_3(x) = 1 + x + x^2/2 + x^3/6$, so $T_3(1) = 1+1+0.5+0.1\overline{6} = 8/3 \approx 2.667$. For the bound, $f^{(4)}(t) = e^t \le e^1 < 3$ on $[0,1]$, so with $M = 3$, $n = 3$ and $|x - a| = 1$:
+
+$$|R_3(1)| \le \frac{3}{4!}\cdot1^4 = \frac{3}{24} = \frac18 = 0.125.$$
+
+The true error is $2.71828 - 2.66667 = 0.0516$, comfortably inside the guarantee — a reminder that the bound is an upper limit, not an estimate.
+:::
+
+:::example[Choosing the degree to meet a tolerance]
+How many terms of the Maclaurin series for $e^x$ guarantee $e^{0.5}$ to within $0.0001$?
+:::
+
+:::solution
+On $[0, 0.5]$, $|f^{(n+1)}(t)| = e^t \le e^{0.5} < 2$, so take $M = 2$:
+
+$$|R_n(0.5)| \le \frac{2\,(0.5)^{n+1}}{(n+1)!}.$$
+
+Test values of $n$: $n=4$ gives $2(0.03125)/120 = 5.2\times10^{-4}$, too big; $n=5$ gives $2(0.015625)/720 = 4.3\times10^{-5} < 10^{-4}$. So $n = 5$ works: six terms, through $x^5$. Their sum is $1.6487$, and $e^{0.5} = 1.64872$.
+:::
+
+:::example[Sine near its centre]
+Show that $T_3(x) = x - x^3/6$ approximates $\sin x$ to within $0.0001$ when $|x| \le 0.3$, and compare with the alternating-series bound.
+:::
+
+:::solution
+Since $\sin$ has $T_4 = T_3$ (the $x^4$ coefficient is $0$), use $n = 4$, which gives a sharper bound. With $M = 1$:
+
+$$|R_4(x)| \le \frac{|x|^5}{5!} \le \frac{0.3^5}{120} = \frac{0.00243}{120} = 2.03\times10^{-5} < 0.0001.$$
+
+The alternating series estimation gives the same number: the first omitted term of $x - x^3/6 + x^5/120 - \cdots$ is $x^5/120$. For alternating Taylor series the two methods agree, and the alternating one is less work.
+:::
+
+:::pitfall
+$M$ must bound the $(n+1)$st derivative on the *whole* interval between the centre and the point, not just at one end. For $f(x)=e^x$ on $[0,2]$ the bound is $e^2 \approx 7.4$, not $1$. Choosing $M$ too small produces a guarantee that is simply false.
+:::
+
+## Applications of Taylor polynomials
+
+<!-- section: applications -->
+
+Taylor series earn their place in three ways: they compute integrals that have no elementary antiderivative, they settle limits without repeated use of L'Hôpital's Rule, and they justify the simplified formulas that physics uses in the small-quantity regime.
+
+:::example[An integral with no elementary antiderivative]
+Approximate $\displaystyle\int_0^1 e^{-x^2}\,dx$ to three decimal places.
+:::
+
+:::solution
+No elementary function differentiates to $e^{-x^2}$, so integrate the series instead. Substituting $-x^2$ into the exponential series,
+
+$$e^{-x^2} = \sum_{n=0}^{\infty}\frac{(-1)^n x^{2n}}{n!} = 1 - x^2 + \frac{x^4}{2} - \frac{x^6}{6} + \frac{x^8}{24} - \cdots,$$
+
+valid for all $x$. Integrating term by term from $0$ to $1$:
+
+$$\int_0^1 e^{-x^2}dx = \sum_{n=0}^{\infty}\frac{(-1)^n}{n!(2n+1)} = 1 - \frac13 + \frac{1}{10} - \frac{1}{42} + \frac{1}{216} - \frac{1}{1320} + \frac{1}{9360}-\cdots$$
+
+This alternates with decreasing terms, so the error after a partial sum is at most the next term. To get three decimals we need a term below $0.0005$: $1/1320 \approx 0.00076$ is not small enough, $1/9360 \approx 0.000107$ is. Summing through $1/9360$:
+
+$$1 - 0.33333 + 0.1 - 0.02381 + 0.00463 - 0.00076 + 0.00011 = 0.74684.$$
+
+So the integral is $0.747$ to three decimal places. (The true value is $0.746824\ldots$)
+:::
+
+:::example[A limit by series]
+Compute $\displaystyle\lim_{x\to0}\frac{e^x - 1 - x}{x^2}$.
+:::
+
+:::solution
+Substitute the series for $e^x$ into the numerator:
+
+$$e^x - 1 - x = \left(1 + x + \frac{x^2}{2} + \frac{x^3}{6}+\cdots\right) - 1 - x = \frac{x^2}{2} + \frac{x^3}{6} + \cdots$$
+
+Divide by $x^2$:
+
+$$\frac{e^x-1-x}{x^2} = \frac12 + \frac{x}{6} + \frac{x^2}{24}+\cdots \longrightarrow \frac12$$
+
+as $x \to 0$, since a power series is continuous inside its interval of convergence. Two applications of L'Hôpital's Rule give the same answer, but the series also shows *how* the quotient approaches $1/2$: linearly in $x$, with slope $1/6$.
+:::
+
+:::example[A harder limit]
+Compute $\displaystyle\lim_{x\to0}\frac{\sin x - x + x^3/6}{x^5}$.
+:::
+
+:::solution
+The numerator is $\sin x$ minus its own third-degree Taylor polynomial, so it is exactly the tail of the sine series:
+
+$$\sin x - x + \frac{x^3}{6} = \frac{x^5}{120} - \frac{x^7}{5040} + \cdots$$
+
+Dividing by $x^5$ gives $\dfrac{1}{120} - \dfrac{x^2}{5040}+\cdots \to \dfrac{1}{120}$. Doing this by L'Hôpital's Rule would take five differentiations of numerator and denominator.
+:::
+
+:::example[Relativistic kinetic energy]
+In special relativity the kinetic energy of a mass $m$ at speed $v$ is
+
+$$K = mc^2\left(\frac{1}{\sqrt{1 - v^2/c^2}} - 1\right).$$
+
+Show that for $v$ much smaller than $c$ this reduces to the Newtonian $\tfrac12mv^2$, and estimate the error at $v = 100$ m/s.
+:::
+
+:::solution
+Let $u = v^2/c^2$, a small positive number, and apply the binomial series with $k = -1/2$:
+
+$$(1-u)^{-1/2} = 1 + \frac{u}{2} + \frac{3u^2}{8} + \frac{5u^3}{16}+\cdots$$
+
+Therefore
+
+$$K = mc^2\left(\frac{u}{2} + \frac{3u^2}{8}+\cdots\right) = \frac12 m c^2\frac{v^2}{c^2} + \frac38 mc^2\frac{v^4}{c^4}+\cdots = \frac12 mv^2 + \frac38\frac{mv^4}{c^2}+\cdots$$
+
+The leading term is the Newtonian kinetic energy; relativity corrects it by a term smaller by a factor of order $v^2/c^2$. At $v = 100$ m/s with $c = 3\times10^8$ m/s, $v^2/c^2 \approx 1.1\times10^{-13}$, so the correction is about $10^{-13}$ of the Newtonian value: entirely invisible, which is why Newton's formula stood for two centuries.
+:::
+
+:::example[Small-angle approximation in optics]
+The path difference in a lens calculation involves $\cos\theta$ for small $\theta$. Replace $\cos\theta$ by $1 - \theta^2/2$ and bound the error for $|\theta| \le 0.1$ radians.
+:::
+
+:::solution
+The Maclaurin series is $\cos\theta = 1 - \theta^2/2 + \theta^4/24 - \cdots$, so the proposed approximation is $T_3$ (and also $T_2$). By the alternating series estimate the error is at most the first omitted term,
+
+$$\frac{\theta^4}{24} \le \frac{(0.1)^4}{24} = \frac{10^{-4}}{24} \approx 4.2\times10^{-6}.$$
+
+So for angles up to about $6$ degrees the quadratic replacement is accurate to five decimal places — the justification for every "small-angle approximation" in physics. Dropping one term further, to $\cos\theta \approx 1$, costs $\theta^2/2 = 0.005$, a thousand times worse.
+:::
 
 :::intuition
-You've memorized five basic series. From those five, you can build hundreds of others — just by plugging in different expressions, differentiating, or integrating. It's like having five LEGO base plates and building anything on top of them.
+Each of these applications follows the same move: replace a function you cannot handle by a polynomial you can, then carry an error bound along so the answer means something. The bound is what separates an approximation from a guess. A physicist writing $\sin\theta \approx \theta$ is silently invoking $|R| \le \theta^3/6$, and would notice immediately if $\theta$ grew large enough to make that number matter.
 :::
 
-## Choosing the right convergence test strategy
-
-<!-- section: strategy -->
-
-:::recipe[Choosing a convergence test]{#test-strategy}
-- Terms →0? No → divergence test.
-- Looks geometric or p? Try those.
-- Factorials/exponentials? Ratio/root.
-- Alternating? Alternating test.
-- Positive terms, compare to known? Comparison or limit comp or integral.
-- At endpoint of power series? Plug in and test the resulting numerical series.
-:::
-
-:::intuition
-Series convergence is detective work. Look at the 'shape' of the general term and pick the tool that matches.
+:::pitfall
+Series manipulations are valid only where the series converge. Integrating the series for $1/(1-x)$ from $0$ to $2$ is meaningless, since the representation fails past $x = 1$. Always check that the interval of integration or the point of evaluation lies inside the interval of convergence.
 :::
 
 ## Common Mistakes
 
-- Using the divergence test backwards: $a_n \to 0$ does NOT imply convergence (the harmonic series is the counterexample).
-- Forgetting to check the endpoints of a power series interval of convergence.
-- Applying the ratio or root test to a p-series, where the limit is always $1$ (inconclusive).
-- Rearranging a conditionally convergent series (the sum can become anything).
-- Confusing the radius $R$ with the full interval of convergence (the endpoints matter).
-- In a Taylor series, using the wrong center $a$ or forgetting the $n!$ in the denominator.
-- Not using a remainder bound to justify the truncation error of an approximation.
+- Concluding that $\sum a_n$ converges because $a_n \to 0$. The harmonic series is the standing counterexample; the Divergence Test only ever proves divergence.
+- Using the geometric formula $a/(1-r)$ without checking $|r| < 1$, or reading off $a$ as the coefficient rather than as the first term actually present in the series.
+- Applying the Ratio or Root Test to a rational function of $n$. Both give $L = 1$ there and decide nothing; use a comparison or the Integral Test.
+- Reporting "diverges" when a test is inconclusive. $L = 1$ in the Ratio Test is silence, not a verdict.
+- Comparing in the wrong direction: bounding a series above by a divergent series, or below by a convergent one, proves nothing.
+- Using a comparison or the Integral Test on a series with negative terms. Pass to $\sum|a_n|$ first, or use the Alternating Series Test.
+- Forgetting to check that $b_n$ is decreasing in the Alternating Series Test, and then quoting the first-omitted-term error bound, which requires the same hypothesis.
+- Treating the value of $\int_N^\infty f$ as the sum of the series. The Integral Test compares them; it does not equate them.
+- Skipping the endpoints of a power series. The radius is only half the answer, and the two endpoints can behave differently from each other.
+- Cancelling "everything" in a telescoping series without writing out $s_N$; a gap of two leaves two survivors at each end, not one.
+- Assuming a function equals its Taylor series without checking $R_n \to 0$ (or citing a standard series). The function $e^{-1/x^2}$ shows the two can differ.
+- Choosing $M$ in Taylor's Inequality from the value of the derivative at one endpoint instead of its maximum over the whole interval.
+- Dropping the $n!$ in a Taylor coefficient, or centring at $0$ a series that was asked for about $a$.
