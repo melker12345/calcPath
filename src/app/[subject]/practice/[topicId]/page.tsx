@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { getFileSystemContentBundle, loadSubjectIndex } from "@/lib/content/loader";
 import { getLegacyTopicRedirect } from "@/lib/content/legacy-topic-redirects";
 import { getPracticePath } from "@/lib/subject-urls";
@@ -62,8 +62,8 @@ export default async function DynamicPracticePage({ params, searchParams }: Prop
 
   const legacy = await getLegacyTopicRedirect(subjectSlug, topicId);
   if (legacy) {
-    const target = getPracticePath(subjectSlug, legacy.chapterId);
-    redirect(`${target}?section=${encodeURIComponent(legacy.section)}`);
+    const target = getPracticePath(legacy.subject ?? subjectSlug, legacy.chapterId);
+    permanentRedirect(`${target}?section=${encodeURIComponent(legacy.section)}`);
   }
 
   let bundle;

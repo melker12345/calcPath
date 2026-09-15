@@ -3,6 +3,13 @@ import "server-only";
 type LegacyTopicRedirect = {
   chapterId: string;
   section: string;
+  /**
+   * Target subject, when a chapter has moved to a different subject entirely.
+   * Omitted for the common case of a chapter merging into another within the
+   * same subject. Without this, splitting a subject would 404 every indexed URL
+   * of the chapters that moved.
+   */
+  subject?: string;
 };
 
 const cache = new Map<string, Record<string, LegacyTopicRedirect>>();

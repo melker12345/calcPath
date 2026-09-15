@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { SubjectModulePage } from "@/components/subject-module-page";
 import type { ModuleContent } from "@/lib/modules";
 import type { Problem, Topic } from "@/lib/shared-types";
@@ -13,7 +13,9 @@ export default async function SubjectModulePageRoute({ params }: Props) {
 
   const legacy = await getLegacyTopicRedirect(slug, topicId);
   if (legacy) {
-    redirect(getSectionHref(slug, legacy.chapterId, legacy.section));
+    // legacy.subject is set when the chapter moved to another subject, as when
+    // probability was split out of statistics; otherwise it moved within this one.
+    permanentRedirect(getSectionHref(legacy.subject ?? slug, legacy.chapterId, legacy.section));
   }
   let subjectLabel: string;
   try {
