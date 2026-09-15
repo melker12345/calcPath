@@ -20,7 +20,10 @@ const CATEGORY_LABELS: Record<string, string> = {
   discrete: "Discrete",
   linear: "Linear algebra",
   logic: "Logic",
-  stats: "Statistics",
+  // Covers both Probability and Statistics. Labelling this one "Statistics"
+  // made the Probability card read "Statistics / Probability", which says the
+  // wrong thing outright rather than merely repeating itself.
+  stats: "Probability & statistics",
 };
 
 export type SubjectCardData = {
