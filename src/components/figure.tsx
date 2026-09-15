@@ -159,13 +159,27 @@ export function Figure({ spec, alt }: { spec: FigureSpec; alt?: string }) {
           />
         ))}
 
+        {/* Axis labels live outside the plot rectangle — centred beneath it and
+            rotated up its left side — so they cannot land on a bar, a curve or
+            another label no matter what the figure contains. */}
         {spec.xLabel && (
-          <text x={PAD.left + plotW} y={axisY - 10} className="fig-axis-label" textAnchor="end">
+          <text
+            x={PAD.left + plotW / 2}
+            y={H - 16}
+            className="fig-axis-label"
+            textAnchor="middle"
+          >
             {spec.xLabel}
           </text>
         )}
         {spec.yLabel && (
-          <text x={axisX + 10} y={PAD.top + 4} className="fig-axis-label" textAnchor="start">
+          <text
+            x={18}
+            y={PAD.top + plotH / 2}
+            className="fig-axis-label"
+            textAnchor="middle"
+            transform={`rotate(-90 18 ${(PAD.top + plotH / 2).toFixed(2)})`}
+          >
             {spec.yLabel}
           </text>
         )}

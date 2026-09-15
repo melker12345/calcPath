@@ -368,7 +368,11 @@ export function sampleFunction(
 
 /** viewBox units. Not pixels: the SVG scales to its container. */
 export const FIGURE_W = 800;
-export const FIGURE_PAD = { top: 26, right: 30, bottom: 44, left: 52 };
+// Bottom and left carry the axis labels, which sit OUTSIDE the plot rectangle.
+// They used to be placed inside it — the y label in the top-left corner, the x
+// label above the right-hand end of the axis — where they collided with
+// whatever the figure actually drew there.
+export const FIGURE_PAD = { top: 26, right: 30, bottom: 62, left: 66 };
 
 export type FigureLayout = {
   width: number;
