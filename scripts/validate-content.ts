@@ -29,9 +29,11 @@ import type {
   DiagnosticFile,
 } from "../src/lib/content/schema";
 import { extractMdxSectionSlugs } from "../src/lib/content/mdx";
+import { parseFigureSpec, evaluateExpression } from "../src/lib/content/figure-spec";
 import {
   MATH_BLOCK_SPECS,
   isMathBlockClose,
+  segmentMathBlocks,
   type MathBlockSpec,
 } from "../src/lib/content/math-blocks";
 
@@ -262,6 +264,40 @@ async function main() {
       }
       if (openFence) {
         errors.push(`${slug}/topics/${tid}/module.mdx: ":::${openFence.kind}" (line ${openFence.line}) is never closed`);
+      }
+
+      // Figure specs. A :::figure body is JSON, not prose, and an unparseable
+      // one degrades at runtime to a plain note box — the chapter still renders,
+      // so a broken figure would otherwise ship unnoticed. Catch it here, and
+      // check every expression actually evaluates: a typo like "x*" silently
+      // draws an empty plot.
+      for (const segment of segmentMathBlocks(mdx)) {
+        if (segment.type !== "block" || segment.kind !== "figure") continue;
+        const where = `${slug}/topics/${tid}/module.mdx`;
+        const figure = parseFigureSpec(segment.body);
+        if (!figure) {
+          errors.push(`${where}: :::figure "${segment.title ?? segment.id ?? "untitled"}" has an invalid spec (must be JSON with type "plot", numeric x/y ranges and a marks array)`);
+          continue;
+        }
+        if (!segment.title) {
+          warnings.push(`${where}: :::figure ${segment.id ?? ""} has no caption — give it a [Caption], since the caption is what a reader reads first`);
+        }
+        // Three probes across the drawn range: all-NaN means the expression
+        // never evaluates, which draws nothing at all.
+        const checkExpression = (expr: string, from: number, to: number) => {
+          const probes = [from, (from + to) / 2, to].map((x) => evaluateExpression(expr, x));
+          if (probes.every((v) => !Number.isFinite(v))) {
+            errors.push(`${where}: :::figure expression "${expr}" does not evaluate anywhere on [${from}, ${to}] (multiplication must be explicit: 2*x, not 2x)`);
+          }
+        };
+        for (const mark of figure.marks) {
+          if (mark.kind === "function") {
+            checkExpression(mark.fn, mark.from ?? figure.x[0], mark.to ?? figure.x[1]);
+          } else if (mark.kind === "area") {
+            checkExpression(mark.fn, mark.from, mark.to);
+            if (mark.below) checkExpression(mark.below, mark.from, mark.to);
+          }
+        }
       }
 
       // optional nice markers (recommended for best UX cards per ARCHITECTURE.md)

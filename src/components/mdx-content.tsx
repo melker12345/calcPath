@@ -4,6 +4,8 @@ import React, { useRef, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { marked, type Tokens } from "marked";
 import { MathText } from "@/components/math-text";
+import { Figure } from "@/components/figure";
+import { parseFigureSpec } from "@/lib/content/figure-spec";
 import { BlockMath } from "react-katex";
 import {
   MATH_BLOCK_SPECS,
@@ -488,6 +490,41 @@ export function MathBlockView({
   className?: string;
 }) {
   const spec = MATH_BLOCK_SPECS[segment.kind];
+
+  // A figure inverts the usual layout: the graphic comes first and the label
+  // sits underneath as a caption, the way a printed figure is set. Its body is
+  // a JSON spec rather than prose, so it never goes through renderProse.
+  if (segment.kind === "figure") {
+    const figureSpec = parseFigureSpec(segment.body);
+    if (!figureSpec) {
+      // A malformed spec must not take the page down mid-chapter: fall back to
+      // showing the body as prose so the author can see what they wrote.
+      return (
+        <section id={segment.id} className={`mb-env mb-env-aside mb-env-note ${className}`}>
+          {renderProse(segment.body)}
+        </section>
+      );
+    }
+    return (
+      <figure id={segment.id} className={`mb-env mb-env-figure ${className}`} data-environment="figure">
+        <Figure spec={figureSpec} alt={segment.title} />
+        <figcaption className="fig-caption">
+          <span className="mb-env-label">
+            {spec.label}
+            {number ? ` ${number}` : ""}
+          </span>
+          {segment.title ? (
+            <>
+              <span className="mb-env-stop">.</span>{" "}
+              <MathText text={segment.title} />
+            </>
+          ) : (
+            <span className="mb-env-stop">.</span>
+          )}
+        </figcaption>
+      </figure>
+    );
+  }
   const head = (
     <span className="mb-env-head">
       <span className="mb-env-label">

@@ -59,10 +59,60 @@ two consecutive fences, not one inside the other.
 | `:::remark` / `:::note` / `:::notation` | aside | no | a side comment, a notational convention |
 | `:::pitfall` | aside, amber rule | no | a specific trap, in place |
 | `:::summary` | aside | no | the section's results gathered in one place |
+| `:::figure` | Figure 4.6, caption below | yes | a diagram, drawn from a JSON spec |
 
 Numbering is automatic: one counter runs through the whole topic, so a reader
 sees Definition 4.1, Theorem 4.2, Example 4.3 in order, and it renumbers itself
 when you insert something. Never write the number yourself.
+
+## 1a. Figures
+
+A figure is authored as a **JSON spec**, never as SVG or an image file:
+
+```mdx
+:::figure[Secants through $P$ close in on the tangent as $Q$ slides toward $P$.]{#secant-to-tangent}
+{
+  "type": "plot",
+  "x": [-0.2, 2.4], "y": [-0.8, 5.2],
+  "xTicks": 1, "yTicks": 1, "xLabel": "x", "yLabel": "y",
+  "marks": [
+    { "kind": "function", "fn": "x^2" },
+    { "kind": "line", "through": [[1, 1], [2, 4]], "muted": true, "dashed": true },
+    { "kind": "point", "at": [1, 1], "label": "P" },
+    { "kind": "text", "at": [0.45, 3.4], "text": "y = x²" }
+  ]
+}
+:::
+```
+
+The `[Caption]` is the caption, set below the graphic; the figure numbers itself
+in the same sequence as the theorems around it, so a chapter runs Theorem 4.2,
+Figure 4.3, Example 4.4.
+
+Why a spec rather than an image: every colour is a CSS variable, so a figure
+re-themes itself in dark mode — a downloaded PNG carries a baked white
+background into a dark page. It also means a histogram is built from the numbers
+the example actually uses, so the picture cannot drift from the prose.
+
+**Mark kinds.** `function` (an expression in `x`), `path` (explicit points),
+`line` (through two points, extended unless `"extend": false`), `point`,
+`arrow`, `area` (under a curve, or between two), `bars` (histograms), and
+`text` (a label at a data coordinate). Most take `label`, `dashed` and `muted`.
+
+**Rules that matter:**
+
+- Coordinates are in **data space**, never pixels.
+- Multiplication is explicit: `2*x`, not `2x`. `content:validate` rejects an
+  expression that never evaluates, so a typo fails the build rather than drawing
+  an empty plot.
+- Set `"equalAspect": true` for anything geometric — a projection, a right
+  angle, a circle. Without it the frame decides the scale and draws the wrong
+  angle.
+- **Place labels with `text` marks when a figure has more than two of them.**
+  The automatic `label` positions are naive offsets and will collide; the
+  renderer does not lay labels out for you. Check the rendered figure.
+- Long right tails, asymptotes and domain gaps break the curve rather than
+  spanning them, which is intended — do not try to "fix" a gap at a pole.
 
 ## 2. Display the equations that matter
 

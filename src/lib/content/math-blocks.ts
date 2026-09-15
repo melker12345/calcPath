@@ -52,7 +52,8 @@ export type MathBlockKind =
   | "intuition"
   | "pitfall"
   | "recipe"
-  | "summary";
+  | "summary"
+  | "figure";
 
 export type MathBlockStyle =
   /** Numbered statement, italic body — theorem family. */
@@ -62,7 +63,9 @@ export type MathBlockStyle =
   /** Unnumbered, run-in head, closing tombstone — proofs and solutions. */
   | "argument"
   /** Unnumbered aside — intuition, remarks, notation, pitfalls, summaries. */
-  | "aside";
+  | "aside"
+  /** Numbered graphic with a caption below it. */
+  | "figure";
 
 export type MathBlockSpec = {
   kind: MathBlockKind;
@@ -91,6 +94,10 @@ export const MATH_BLOCK_SPECS: Record<MathBlockKind, MathBlockSpec> = {
   intuition: { kind: "intuition", label: "Intuition", numbered: false, style: "aside" },
   pitfall: { kind: "pitfall", label: "Pitfall", numbered: false, style: "aside" },
   summary: { kind: "summary", label: "Summary", numbered: false, style: "aside" },
+  // Numbered, and sharing the one topic counter with every other numbered
+  // environment: a printed book runs "Theorem 4.2, Figure 4.3, Example 4.4" in
+  // a single sequence, so a reader scanning for 4.3 finds it in order.
+  figure: { kind: "figure", label: "Figure", numbered: true, style: "figure" },
 };
 
 export const MATH_BLOCK_KINDS = Object.keys(MATH_BLOCK_SPECS) as MathBlockKind[];
