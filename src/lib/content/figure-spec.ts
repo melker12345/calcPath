@@ -331,3 +331,66 @@ export function sampleFunction(
   if (run.length > 0) runs.push(run);
   return runs.filter((r) => r.length > 1);
 }
+
+/* ------------------------------------------------------------------ *
+ * Layout
+ *
+ * Exported so the renderer and the figure linter agree by construction.
+ * When these two disagree, the linter passes figures that draw wrong —
+ * which is exactly the failure mode the linter exists to catch.
+ * ------------------------------------------------------------------ */
+
+/** viewBox units. Not pixels: the SVG scales to its container. */
+export const FIGURE_W = 800;
+export const FIGURE_PAD = { top: 26, right: 30, bottom: 44, left: 52 };
+
+export type FigureLayout = {
+  width: number;
+  height: number;
+  plotW: number;
+  plotH: number;
+  /** Data space -> viewBox space. */
+  sx: (x: number) => number;
+  sy: (y: number) => number;
+  /** viewBox units per data unit. Equal on both axes iff equalAspect. */
+  unitX: number;
+  unitY: number;
+};
+
+export function computeLayout(spec: PlotSpec): FigureLayout {
+  const [x0, x1] = spec.x;
+  const [y0, y1] = spec.y;
+  const plotW = FIGURE_W - FIGURE_PAD.left - FIGURE_PAD.right;
+  const plotH = spec.equalAspect
+    ? (plotW * (y1 - y0)) / (x1 - x0)
+    : FIGURE_W / (spec.aspect ?? 1.6) - FIGURE_PAD.top - FIGURE_PAD.bottom;
+  const height = Math.round(plotH + FIGURE_PAD.top + FIGURE_PAD.bottom);
+  return {
+    width: FIGURE_W,
+    height,
+    plotW,
+    plotH,
+    sx: (x: number) => FIGURE_PAD.left + ((x - x0) / (x1 - x0)) * plotW,
+    sy: (y: number) => FIGURE_PAD.top + plotH - ((y - y0) / (y1 - y0)) * plotH,
+    unitX: plotW / (x1 - x0),
+    unitY: plotH / (y1 - y0),
+  };
+}
+
+/**
+ * Approximate on-screen box for a label. Real text metrics need a font engine;
+ * for collision detection an estimate is enough, and erring wide is the safe
+ * direction — it flags near-misses rather than missing real overlaps.
+ */
+export function estimateTextBox(
+  text: string,
+  cx: number,
+  cy: number,
+  anchor: "start" | "middle" | "end" = "middle",
+  fontSize = 17
+) {
+  const width = text.length * fontSize * 0.52;
+  const height = fontSize * 1.15;
+  const left = anchor === "middle" ? cx - width / 2 : anchor === "end" ? cx - width : cx;
+  return { left, right: left + width, top: cy - height * 0.78, bottom: cy + height * 0.32 };
+}

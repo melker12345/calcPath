@@ -110,7 +110,13 @@ the example actually uses, so the picture cannot drift from the prose.
   angle.
 - **Place labels with `text` marks when a figure has more than two of them.**
   The automatic `label` positions are naive offsets and will collide; the
-  renderer does not lay labels out for you. Check the rendered figure.
+  renderer does not lay labels out for you.
+- **Give a figure a grid** (`xTicks` / `yTicks`) whenever a reader might want to
+  read a coordinate off it. A vector diagram without one cannot be checked by
+  eye, and a figure nobody can check is one nobody should trust.
+- Run `npm run content:figures` before committing. It measures the real drawn
+  output and rejects labels that overlap, labels outside the frame, curves that
+  never appear, and arrows in a figure that has not set `equalAspect`.
 - Long right tails, asymptotes and domain gaps break the curve rather than
   spanning them, which is intended — do not try to "fix" a gap at a pole.
 

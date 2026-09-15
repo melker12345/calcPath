@@ -11,34 +11,24 @@
 
 import { useId } from "react";
 import {
+  computeLayout,
   evaluateExpression,
   sampleFunction,
+  FIGURE_PAD as PAD,
+  FIGURE_W as W,
   type FigureSpec,
   type Mark,
   type Point,
 } from "@/lib/content/figure-spec";
 
-/** viewBox units. Not pixels — the SVG scales to its container. */
-const W = 800;
-const PAD = { top: 26, right: 30, bottom: 44, left: 52 };
-
 export function Figure({ spec, alt }: { spec: FigureSpec; alt?: string }) {
   const uid = useId().replace(/:/g, "");
   const [x0, x1] = spec.x;
   const [y0, y1] = spec.y;
-  const plotW = W - PAD.left - PAD.right;
 
-  // equalAspect derives the height so a unit in x and a unit in y are the same
-  // length on screen. Without it a projection diagram draws its right angle at
-  // whatever angle the frame happens to impose.
-  const plotH = spec.equalAspect
-    ? (plotW * (y1 - y0)) / (x1 - x0)
-    : W / (spec.aspect ?? 1.6) - PAD.top - PAD.bottom;
-  const H = Math.round(plotH + PAD.top + PAD.bottom);
-
-  /** Data space -> viewBox space. y is flipped: SVG grows downward. */
-  const sx = (x: number) => PAD.left + ((x - x0) / (x1 - x0)) * plotW;
-  const sy = (y: number) => PAD.top + plotH - ((y - y0) / (y1 - y0)) * plotH;
+  // Layout lives in figure-spec so the linter measures exactly what the
+  // renderer draws; a second copy here would drift and pass broken figures.
+  const { height: H, plotW, plotH, sx, sy } = computeLayout(spec);
   const project = ([x, y]: Point) => `${sx(x).toFixed(2)},${sy(y).toFixed(2)}`;
 
   const showAxes = spec.axes !== false;
