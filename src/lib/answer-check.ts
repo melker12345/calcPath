@@ -207,6 +207,31 @@ const UNICODE_LETTERS: Array<[RegExp, string]> = [
 const latexToPlain = (latex: string) => {
   let s = removeLatexSizing(latex);
 
+  // A matrix environment is a nested list: \begin{pmatrix}1&2\\3&4\end{pmatrix}
+  // becomes [[1,2],[3,4]], the spelling stored answers use. Without this a
+  // learner typing into a MathQuill matrix field could never match a stored
+  // matrix answer, whatever they entered.
+  s = s.replace(
+    /\\begin\{([pbBvV]?matrix)\}([\s\S]*?)\\end\{\1\}/g,
+    (_m, _env, body: string) => {
+      const rows = body
+        .split(/\\\\/)
+        .map((row) => row.trim())
+        .filter((row) => row !== "");
+      if (rows.length === 0) return "[]";
+      const cells = rows.map((row) => row.split("&").map((cell) => cell.trim()));
+      // A single column is a vector; keep it one level deep so that a column
+      // vector and the list a learner types agree.
+      if (cells.every((row) => row.length === 1)) {
+        return `(${cells.map((row) => row[0]).join(",")})`;
+      }
+      return `[${cells.map((row) => `[${row.join(",")}]`).join(",")}]`;
+    },
+  );
+
+  // \langle 1,2,3 \rangle is the same tuple as (1,2,3).
+  s = s.replace(/\\langle/g, "(").replace(/\\rangle/g, ")");
+
   // Replace \cdot / \times with *
   s = s.replace(/\\cdot/g, "*");
   s = s.replace(/\\times/g, "*");
@@ -392,6 +417,14 @@ const canonicalizeInput = (input: string) => {
   out = out.replace(/_/g, "");
   // A sentence-ending period is punctuation, not arithmetic.
   out = out.replace(/\.$/, "");
+  // Angle brackets around a list are vector notation: <1,2,3> and \langle
+  // 1,2,3 \rangle (already turned into parentheses above) both mean the tuple
+  // (1,2,3). Square brackets are deliberately NOT folded in — "[0,2)" and
+  // "[-1,5]" are intervals, where the bracket carries the meaning.
+  if (/^<[^<>[\]()]*>$/.test(out) && out.includes(",")) {
+    out = `(${out.slice(1, -1)})`;
+  }
+
   return out;
 };
 
@@ -615,6 +648,66 @@ const tryEval = (
   }
 };
 
+// // Sample points (avoid 0 to reduce log/div issues).
+// The last four sit inside (-0.5, 0.5) so that answers defined only on a small
+// interval — arcsin/arccos derivatives such as 2/sqrt(1-4x^2) — still produce
+// the three usable pairs this check requires. Without them a correct answer
+// could only ever pass by spelling the stored string exactly.
+const SAMPLE_SCOPES = [
+  { x: -1.7, y: 0.8, z: -0.4, t: 1.2, n: 2, p: 1.5, s: 0.6, r: 1.1, a: 2.3, b: -1.1, c: 0.7, lambda: 1.9 },
+  { x: -0.8, y: -1.3, z: 0.6, t: -0.7, n: 3, p: 2.1, s: -1.2, r: 0.4, a: -0.9, b: 1.4, c: 2.2, lambda: -1.2 },
+  { x: 0.2, y: 1.1, z: 0.9, t: 0.5, n: 4, p: -0.8, s: 2.1, r: -0.7, a: 1.6, b: 0.4, c: -1.7, lambda: 0.6 },
+  { x: 0.9, y: -0.5, z: -1.4, t: 1.7, n: 5, p: 0.3, s: -0.5, r: 1.8, a: -2.5, b: 2.8, c: 1.1, lambda: 2.4 },
+  { x: 1.6, y: 0.3, z: 1.5, t: -1.1, n: 6, p: -2.2, s: 1.4, r: -1.3, a: 0.8, b: -0.6, c: 3.1, lambda: -0.9 },
+  { x: 2.1, y: -0.9, z: 0.2, t: 0.4, n: 7, p: 1.9, s: 0.9, r: 2.2, a: 1.2, b: 1.7, c: -2.6, lambda: 1.3 },
+  { x: 0.35, y: 0.45, z: -0.25, t: 0.3, n: 2, p: 0.4, s: 0.25, r: 0.35, a: 0.45, b: -0.3, c: 0.2, lambda: 0.4 },
+  { x: -0.3, y: -0.25, z: 0.4, t: -0.35, n: 3, p: -0.45, s: 0.3, r: -0.2, a: -0.4, b: 0.25, c: -0.35, lambda: -0.3 },
+  { x: 0.15, y: 0.3, z: 0.15, t: 0.45, n: 4, p: 0.2, s: -0.35, r: 0.15, a: 0.25, b: 0.35, c: 0.45, lambda: 0.2 },
+  { x: -0.45, y: 0.2, z: -0.4, t: -0.15, n: 5, p: -0.25, s: 0.45, r: -0.45, a: 0.35, b: -0.2, c: 0.3, lambda: -0.45 },
+];
+
+/** "L=R" split into its two sides, or null when the string is not one equation. */
+const equationSides = (s: string): [string, string] | null => {
+  const idx = s.indexOf("=");
+  if (idx <= 0 || idx !== s.lastIndexOf("=") || idx === s.length - 1) return null;
+  return [s.slice(0, idx), s.slice(idx + 1)];
+};
+
+/**
+ * Two equations with free variables describe the same curve, surface or plane
+ * when their "left minus right" sides are nonzero constant multiples of each
+ * other: 2x-y+4z=12, 4z+2x-y=12, -2x+y-4z=-12 and 2x-y+4z-12=0 are one plane,
+ * and 9x^2+5y^2=45 is the ellipse x^2/5+y^2/9=1. Sampling both differences at
+ * the shared scopes and checking that their ratio is one nonzero constant
+ * decides it; an equation whose difference vanishes everywhere (0=0) matches
+ * nothing. Labelled forms such as "y=x^2" never reach here — their label is
+ * stripped earlier and the remaining side is compared as an expression.
+ */
+const equationsEquivalent = async (a: string, b: string): Promise<boolean> => {
+  const aSides = equationSides(a);
+  const bSides = equationSides(b);
+  if (!aSides || !bSides) return false;
+  const m = await getMath();
+  const fa = prepareExpressionForEvaluation(`(${aSides[0]})-(${aSides[1]})`);
+  const fb = prepareExpressionForEvaluation(`(${bSides[0]})-(${bSides[1]})`);
+  const ratios: number[] = [];
+  for (const scope of SAMPLE_SCOPES) {
+    const va = tryEval(m, fa, scope);
+    const vb = tryEval(m, fb, scope);
+    if (va === null || vb === null) continue;
+    if (Math.abs(vb) < 1e-9) {
+      if (Math.abs(va) >= 1e-9) return false;
+      continue;
+    }
+    ratios.push(va / vb);
+    if (ratios.length >= 5) break;
+  }
+  if (ratios.length < 3) return false;
+  const base = ratios[0];
+  if (Math.abs(base) < 1e-9) return false;
+  return ratios.every((r) => Math.abs(r - base) <= 1e-6 * Math.max(1, Math.abs(base)));
+};
+
 const expressionsEquivalent = async (
   aExpr: string,
   bExpr: string,
@@ -624,26 +717,9 @@ const expressionsEquivalent = async (
   const aPrepared = prepareExpressionForEvaluation(aExpr);
   const bPrepared = prepareExpressionForEvaluation(bExpr);
 
-  // Sample points (avoid 0 to reduce log/div issues).
-  // The last four sit inside (-0.5, 0.5) so that answers defined only on a small
-  // interval — arcsin/arccos derivatives such as 2/sqrt(1-4x^2) — still produce
-  // the three usable pairs this check requires. Without them a correct answer
-  // could only ever pass by spelling the stored string exactly.
-  const scopes = [
-    { x: -1.7, y: 0.8, z: -0.4, t: 1.2, n: 2, p: 1.5, s: 0.6, r: 1.1, a: 2.3, b: -1.1, c: 0.7, lambda: 1.9 },
-    { x: -0.8, y: -1.3, z: 0.6, t: -0.7, n: 3, p: 2.1, s: -1.2, r: 0.4, a: -0.9, b: 1.4, c: 2.2, lambda: -1.2 },
-    { x: 0.2, y: 1.1, z: 0.9, t: 0.5, n: 4, p: -0.8, s: 2.1, r: -0.7, a: 1.6, b: 0.4, c: -1.7, lambda: 0.6 },
-    { x: 0.9, y: -0.5, z: -1.4, t: 1.7, n: 5, p: 0.3, s: -0.5, r: 1.8, a: -2.5, b: 2.8, c: 1.1, lambda: 2.4 },
-    { x: 1.6, y: 0.3, z: 1.5, t: -1.1, n: 6, p: -2.2, s: 1.4, r: -1.3, a: 0.8, b: -0.6, c: 3.1, lambda: -0.9 },
-    { x: 2.1, y: -0.9, z: 0.2, t: 0.4, n: 7, p: 1.9, s: 0.9, r: 2.2, a: 1.2, b: 1.7, c: -2.6, lambda: 1.3 },
-    { x: 0.35, y: 0.45, z: -0.25, t: 0.3, n: 2, p: 0.4, s: 0.25, r: 0.35, a: 0.45, b: -0.3, c: 0.2, lambda: 0.4 },
-    { x: -0.3, y: -0.25, z: 0.4, t: -0.35, n: 3, p: -0.45, s: 0.3, r: -0.2, a: -0.4, b: 0.25, c: -0.35, lambda: -0.3 },
-    { x: 0.15, y: 0.3, z: 0.15, t: 0.45, n: 4, p: 0.2, s: -0.35, r: 0.15, a: 0.25, b: 0.35, c: 0.45, lambda: 0.2 },
-    { x: -0.45, y: 0.2, z: -0.4, t: -0.15, n: 5, p: -0.25, s: 0.45, r: -0.45, a: 0.35, b: -0.2, c: 0.3, lambda: -0.45 },
-  ];
   const pairs: Array<{ a: number; b: number }> = [];
 
-  for (const scope of scopes) {
+  for (const scope of SAMPLE_SCOPES) {
     const a = tryEval(m, aPrepared, scope);
     const b = tryEval(m, bPrepared, scope);
     if (a === null || b === null) continue;
@@ -774,6 +850,7 @@ const valuesEquivalent = async (a: string, b: string): Promise<boolean> => {
   if (aIdentity !== null || bIdentity !== null) {
     return valuesEquivalent(aIdentity ?? aNoC, bIdentity ?? bNoC);
   }
+  if (await equationsEquivalent(aNoC, bNoC)) return true;
   const allowConstantOffset = /\+?c$/i.test(b);
   return expressionsEquivalent(aNoC, bNoC, allowConstantOffset);
 };

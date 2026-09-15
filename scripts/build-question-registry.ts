@@ -67,13 +67,24 @@ function buildAppendOnlyRegistry(existing: Registry | null, discovered: Registry
     return { version: 1, entries: discovered };
   }
 
+  // Positions are what progress bitsets depend on, so existing entries never move
+  // or disappear. Their topicId is only metadata and is refreshed in place, so a
+  // question that moves to another chapter keeps its progress under the new one.
+  const discoveredById = new Map(discovered.map((e) => [e.id, e]));
+  let retagged = 0;
+  const refreshed = existing.entries.map((e) => {
+    const now = discoveredById.get(e.id);
+    if (!now || now.topicId === e.topicId) return e;
+    retagged += 1;
+    return { id: e.id, topicId: now.topicId };
+  });
   const known = new Set(existing.entries.map((e) => e.id));
   const appended = discovered.filter((e) => !known.has(e.id));
-  if (appended.length === 0) return existing;
+  if (appended.length === 0 && retagged === 0) return existing;
 
   return {
     version: existing.version + 1,
-    entries: [...existing.entries, ...appended.sort((a, b) => a.id.localeCompare(b.id))],
+    entries: [...refreshed, ...appended.sort((a, b) => a.id.localeCompare(b.id))],
   };
 }
 
