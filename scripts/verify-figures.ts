@@ -146,7 +146,44 @@ function checkFigure(where: string, caption: string | undefined, spec: FigureSpe
     }
   }
 
-  // 3. No two labels may overlap. This is the defect that has actually bitten:
+  // 3. A label must not sit on a line either. Caught this one by eye twice —
+  //    "v = (3, 1)" printed across the dashed line it was naming — which is
+  //    exactly the kind of thing a label-vs-label check alone lets through.
+  const segments: Array<[number, number, number, number]> = [];
+  for (const mark of spec.marks) {
+    if (mark.kind === "path") {
+      for (let i = 0; i + 1 < mark.points.length; i++) {
+        segments.push([L.sx(mark.points[i][0]), L.sy(mark.points[i][1]), L.sx(mark.points[i + 1][0]), L.sy(mark.points[i + 1][1])]);
+      }
+    } else if (mark.kind === "arrow") {
+      segments.push([L.sx(mark.from[0]), L.sy(mark.from[1]), L.sx(mark.to[0]), L.sy(mark.to[1])]);
+    } else if (mark.kind === "line") {
+      const [[ax, ay], [bx, by]] = mark.through;
+      let p1 = [ax, ay];
+      let p2 = [bx, by];
+      if (mark.extend !== false) {
+        if (Math.abs(bx - ax) < 1e-12) {
+          p1 = [ax, spec.y[0]];
+          p2 = [ax, spec.y[1]];
+        } else {
+          const slope = (by - ay) / (bx - ax);
+          p1 = [spec.x[0], ay + slope * (spec.x[0] - ax)];
+          p2 = [spec.x[1], ay + slope * (spec.x[1] - ax)];
+        }
+      }
+      segments.push([L.sx(p1[0]), L.sy(p1[1]), L.sx(p2[0]), L.sy(p2[1])]);
+    }
+  }
+  for (const label of labels) {
+    for (const [x1, y1, x2, y2] of segments) {
+      if (segmentHitsBox(x1, y1, x2, y2, label.box)) {
+        fail(`label "${label.text}" is drawn across a line — move it clear so the label does not sit on what it names`);
+        break;
+      }
+    }
+  }
+
+  // 4. No two labels may overlap. This is the defect that has actually bitten:
   //    "tangent, slope 2" printed across the point label P, and "v = (3, 1)"
   //    sitting on the line it named.
   for (let i = 0; i < labels.length; i++) {
@@ -159,6 +196,24 @@ function checkFigure(where: string, caption: string | undefined, spec: FigureSpe
       }
     }
   }
+}
+
+
+/** Does a segment pass through a label's box? Sampled, which is enough here. */
+function segmentHitsBox(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  box: { left: number; right: number; top: number; bottom: number }
+) {
+  const steps = 160;
+  for (let i = 0; i <= steps; i++) {
+    const x = x1 + ((x2 - x1) * i) / steps;
+    const y = y1 + ((y2 - y1) * i) / steps;
+    if (x >= box.left && x <= box.right && y >= box.top && y <= box.bottom) return true;
+  }
+  return false;
 }
 
 function walk(dir: string) {

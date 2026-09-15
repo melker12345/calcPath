@@ -33,6 +33,16 @@
 
 export type Point = [number, number];
 
+/**
+ * A mark's role, which is what picks its colour.
+ *
+ * "accent" is the given data, "result" is what the construction produces, and
+ * "muted" is scaffolding — construction lines, extensions, right-angle marks.
+ * Colour by role rather than per mark, so a reader learns one code across every
+ * figure instead of re-reading a legend each time.
+ */
+export type Tone = "accent" | "muted" | "result";
+
 /** A curve given by an expression in x, sampled by the renderer. */
 export type FunctionMark = {
   kind: "function";
@@ -43,8 +53,9 @@ export type FunctionMark = {
   to?: number;
   label?: string;
   dashed?: boolean;
-  /** Draw in the muted colour rather than the accent. */
+  /** Shorthand for tone: "muted". */
   muted?: boolean;
+  tone?: Tone;
 };
 
 /** A polyline through explicit data points — measured data, not a formula. */
@@ -54,6 +65,7 @@ export type PathMark = {
   label?: string;
   dashed?: boolean;
   muted?: boolean;
+  tone?: Tone;
 };
 
 /** An infinite-ish straight line drawn through two points (secants, tangents, fits). */
@@ -65,6 +77,7 @@ export type LineMark = {
   label?: string;
   dashed?: boolean;
   muted?: boolean;
+  tone?: Tone;
 };
 
 export type PointMark = {
@@ -73,6 +86,7 @@ export type PointMark = {
   label?: string;
   /** Hollow circle instead of filled — an excluded endpoint. */
   open?: boolean;
+  tone?: Tone;
 };
 
 /** An arrow from one point to another — vectors, projections. */
@@ -83,6 +97,7 @@ export type ArrowMark = {
   label?: string;
   dashed?: boolean;
   muted?: boolean;
+  tone?: Tone;
 };
 
 /** Region under a curve or between two curves, over [from, to]. */
@@ -110,6 +125,7 @@ export type TextMark = {
   at: Point;
   text: string;
   muted?: boolean;
+  tone?: Tone;
 };
 
 export type Mark =
@@ -146,6 +162,16 @@ export type PlotSpec = {
 };
 
 export type FigureSpec = PlotSpec;
+
+/**
+ * The tone a mark draws in, resolving the `muted` shorthand. Accepts any mark,
+ * including the kinds that carry no tone of their own (an area is always the
+ * accent wash, bars are always the bar fill).
+ */
+export function markTone(mark: Mark | { tone?: Tone; muted?: boolean }): Tone {
+  const m = mark as { tone?: Tone; muted?: boolean };
+  return m.tone ?? (m.muted ? "muted" : "accent");
+}
 
 /**
  * Parse a figure body. Returns null for anything malformed, so a bad spec

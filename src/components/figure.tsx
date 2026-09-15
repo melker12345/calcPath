@@ -13,6 +13,7 @@ import { useId } from "react";
 import {
   computeLayout,
   evaluateExpression,
+  markTone,
   sampleFunction,
   FIGURE_PAD as PAD,
   FIGURE_W as W,
@@ -58,6 +59,17 @@ export function Figure({ spec, alt }: { spec: FigureSpec; alt?: string }) {
         preserveAspectRatio="xMidYMid meet"
       >
         <defs>
+          <marker
+            id={`arrow-result-${uid}`}
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--fig-result)" />
+          </marker>
           <marker
             id={`arrow-${uid}`}
             viewBox="0 0 10 10"
@@ -174,7 +186,7 @@ type Projector = {
 };
 
 function MarkView({ mark, spec, uid, sx, sy, project }: Projector) {
-  const tone = "muted" in mark && mark.muted ? "fig-muted" : "fig-accent";
+  const tone = `fig-${markTone(mark)}`;
   const dash = "dashed" in mark && mark.dashed ? "fig-dashed" : "";
 
   switch (mark.kind) {
@@ -254,10 +266,10 @@ function MarkView({ mark, spec, uid, sx, sy, project }: Projector) {
             cx={sx(mark.at[0])}
             cy={sy(mark.at[1])}
             r={5}
-            className={mark.open ? "fig-point-open" : "fig-point"}
+            className={`${mark.open ? "fig-point-open" : "fig-point"} ${tone}`}
           />
           {mark.label && (
-            <text x={sx(mark.at[0]) + 9} y={sy(mark.at[1]) - 9} className="fig-label fig-accent">
+            <text x={sx(mark.at[0]) + 9} y={sy(mark.at[1]) - 9} className={`fig-label ${tone}`}>
               {mark.label}
             </text>
           )}
@@ -265,7 +277,8 @@ function MarkView({ mark, spec, uid, sx, sy, project }: Projector) {
       );
 
     case "arrow": {
-      const marker = "muted" in mark && mark.muted ? `arrow-muted-${uid}` : `arrow-${uid}`;
+      const t = markTone(mark);
+      const marker = t === "muted" ? `arrow-muted-${uid}` : t === "result" ? `arrow-result-${uid}` : `arrow-${uid}`;
       const mid: Point = [(mark.from[0] + mark.to[0]) / 2, (mark.from[1] + mark.to[1]) / 2];
       return (
         <>
@@ -338,7 +351,7 @@ function MarkView({ mark, spec, uid, sx, sy, project }: Projector) {
         <text
           x={sx(mark.at[0])}
           y={sy(mark.at[1])}
-          className={`fig-label ${mark.muted ? "fig-muted" : "fig-accent"}`}
+          className={`fig-label ${tone}`}
           textAnchor="middle"
         >
           {mark.text}

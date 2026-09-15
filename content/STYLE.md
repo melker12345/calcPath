@@ -97,7 +97,22 @@ the example actually uses, so the picture cannot drift from the prose.
 **Mark kinds.** `function` (an expression in `x`), `path` (explicit points),
 `line` (through two points, extended unless `"extend": false`), `point`,
 `arrow`, `area` (under a curve, or between two), `bars` (histograms), and
-`text` (a label at a data coordinate). Most take `label`, `dashed` and `muted`.
+`text` (a label at a data coordinate). Most take `label`, `dashed` and `tone`.
+
+**Colour by role, not by taste.** Every mark takes a `tone`:
+
+| tone | means | use it for |
+|---|---|---|
+| `accent` (default) | the data you were given | the curve, the vectors in the problem |
+| `result` | what the construction produces | the projection, the tangent, the fitted line |
+| `muted` | scaffolding | construction lines, extensions, right-angle marks |
+
+A reader then learns one code that holds across every figure, instead of a
+legend per picture. It also forces the useful question while authoring: *which
+of these things is the answer?* In the limits figure the secants are `muted` and
+the tangent is `result`, because the tangent is what the limiting process
+produces — and colouring it that way is what finally separated it from the
+curve it touches.
 
 **Rules that matter:**
 
