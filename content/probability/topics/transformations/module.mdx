@@ -1,0 +1,1091 @@
+---
+title: Transformations and Generating Functions
+---
+
+# Transformations and Generating Functions
+
+Almost nothing you actually want to know about is a random variable you were handed. You were handed a measurement error; you want the squared error. You were handed the daily returns of a stock; you want their sum over a month. You were handed the lifetimes of five components; you want the moment the first one fails. In each case a new random variable $Y = g(X)$, or $Y = g(X_1,\ldots,X_n)$, has been built out of old ones, and the question is what its distribution is.
+
+This chapter answers that question twice, with two quite different technologies.
+
+The first is **direct**: push the distribution through the function. For one variable this is the cdf method, and the change-of-variables density formula is its corollary; for two it is a Jacobian, exactly as in a double integral; for a sum it specialises to the convolution integral; and for the smallest, largest or $k$-th smallest of a sample it gives the theory of order statistics. Direct methods are honest and general, and they are also laborious — a sum of thirty independent variables is thirty nested convolutions, which nobody computes.
+
+The second technology is **indirect**. Attach to each random variable a single function of a dummy variable $t$ — its moment generating function $M_X(t) = E[e^{tX}]$ — chosen so that the operations you care about become easy. Adding independent variables becomes *multiplying* their generating functions. Extracting the mean and variance becomes *differentiating* at zero. A calculation that was thirty convolutions becomes a thirtieth power. The price is a uniqueness theorem: you must know that the generating function determines the distribution, so that recognising the answer's transform counts as identifying the answer. That theorem is true, it is stated here, and its proof genuinely lies outside this course — so it is stated as an import rather than dressed up as a derivation.
+
+Two earlier results are the obvious precedents and are not repeated. The theorem *Inverse transform* in the chapter on continuous random variables is a transformation result: it is the special case $Y = F^{-1}(U)$, and it is the reason a computer can simulate anything from uniform noise. The proposition *The square of a standard normal* in that same chapter is a non-monotone transformation worked by hand, and the chi-squared, $t$ and $F$ families built there are all defined as functions of independent normals. What was missing was the general machinery, and the moment generating function that chapter used twice — once for sums of normals, once for the De Moivre–Laplace sketch — without ever defining it. Both gaps are filled here.
+
+## Functions of one random variable
+
+<!-- section: cdf-method -->
+
+Everything in this section rests on one observation, which is so simple that it is easy to mistake for a triviality: the event $\{g(X) \le y\}$ is an event about $X$. It says that $X$ landed in the set $g^{-1}((-\infty,y])$, and the probability of *that* is something the distribution of $X$ already knows. So the cdf of $Y$ is computable before anything is known about the density of $Y$, and the density is then obtained by differentiating.
+
+:::recipe[The cdf method]{#cdf-method}
+To find the distribution of $Y = g(X)$ from the distribution of $X$:
+
+1. Determine the range of $Y$ — the set of values $g(x)$ takes as $x$ runs over the support of $X$. Outside it the density is zero and there is nothing to compute.
+2. For $y$ in that range, rewrite the event $\{Y \le y\}$ as an event about $X$, by solving the inequality $g(X) \le y$ for $X$.
+3. Evaluate its probability using $F_X$, giving $F_Y(y)$.
+4. Differentiate: $f_Y(y) = F_Y'(y)$ at every $y$ where $F_Y$ is differentiable.
+:::
+
+The method is completely general. It needs no monotonicity, no invertibility, no continuity of $g$; step 2 may produce a union of intervals, or an empty set, or a half-line, and step 3 handles whichever it is. It is the method to fall back on whenever a shortcut formula's hypotheses are in doubt, and it is the method the shortcut formula is *proved* from.
+
+:::example[A square root]{#sqrt-example}
+Let $X$ have density $f_X(x) = 2x$ on $[0,1]$. Find the density of $Y = \sqrt{X}$.
+:::
+
+:::solution
+As $x$ runs over $[0,1]$, $\sqrt{x}$ runs over $[0,1]$, so $Y$ is supported on $[0,1]$.
+
+For $0 \le y \le 1$, the inequality $\sqrt{X} \le y$ is equivalent to $X \le y^2$, because both sides are non-negative and squaring is increasing there. Hence
+
+$$F_Y(y) = P(X \le y^2) = \int_0^{y^2} 2x\,dx = y^4 .$$
+
+Differentiating, $f_Y(y) = 4y^3$ on $[0,1]$, and zero elsewhere.
+
+Check: $\int_0^1 4y^3\,dy = 1$. ✓
+:::
+
+Notice what step 2 quietly used: that $g(x) = \sqrt{x}$ is increasing, so the inequality could be inverted without flipping. When $g$ is *decreasing* the inequality flips and a complement appears, and it is worth seeing that case once explicitly before the general formula absorbs both.
+
+:::example[A decreasing transformation]{#decreasing-example}
+Let $X \sim U(0,1)$ and let $Y = -\ln X$. Find the density of $Y$ and name the distribution.
+:::
+
+:::solution
+As $x$ runs over $(0,1)$, $-\ln x$ runs over $(0,\infty)$.
+
+For $y > 0$, the inequality $-\ln X \le y$ is equivalent to $\ln X \ge -y$, that is $X \ge e^{-y}$ — the inequality has reversed, because $-\ln$ is decreasing. So
+
+$$F_Y(y) = P(X \ge e^{-y}) = 1 - e^{-y},$$
+
+using $P(X \ge a) = 1 - a$ for $X \sim U(0,1)$ and $a \in (0,1)$. Differentiating gives $f_Y(y) = e^{-y}$ on $(0,\infty)$: $Y$ is exponential with rate $1$.
+:::
+
+:::remark
+That last example is the theorem *Inverse transform* in disguise, since $-\ln U$ and $-\ln(1-U)$ have the same distribution, and the second is $F^{-1}(U)$ for the rate-$1$ exponential. Reaching the same answer by the cdf method is a useful consistency check: the two routes must agree, because they are computing the same probability.
+:::
+
+### The change-of-variables formula
+
+When $g$ is monotone the cdf method always goes the same way, and the bookkeeping can be done once and for all. The result is the formula most people reach for.
+
+:::theorem[Change of variables for a density]{#change-of-variables}
+Let $X$ be a continuous random variable with density $f_X$, supported on an interval $I$. Let $g : I \to \mathbb{R}$ be differentiable and **strictly monotone** on $I$, with $g'(x) \neq 0$ throughout, and set $Y = g(X)$. Write $x = g^{-1}(y)$ for the inverse, defined on $J = g(I)$. Then $Y$ is continuous with density
+
+$$f_Y(y) = f_X\!\big(g^{-1}(y)\big)\left|\frac{d}{dy}g^{-1}(y)\right|, \qquad y \in J,$$
+
+and $f_Y(y) = 0$ for $y \notin J$.
+:::
+
+:::proof
+Suppose first that $g$ is strictly increasing. Then $g^{-1}$ exists on $J$ and is strictly increasing, and for $y \in J$ the events $\{g(X) \le y\}$ and $\{X \le g^{-1}(y)\}$ are the same event. Therefore
+
+$$F_Y(y) = P\big(X \le g^{-1}(y)\big) = F_X\big(g^{-1}(y)\big).$$
+
+Both $F_X$ and $g^{-1}$ are differentiable — the latter by the inverse function theorem, since $g' \neq 0$ — so the chain rule applies:
+
+$$f_Y(y) = F_Y'(y) = f_X\big(g^{-1}(y)\big)\cdot\frac{d}{dy}g^{-1}(y).$$
+
+Because $g^{-1}$ is increasing its derivative is positive, so the factor equals its own absolute value and the stated formula holds.
+
+Now suppose $g$ is strictly decreasing. Then $g^{-1}$ is decreasing, and $\{g(X) \le y\}$ is the event $\{X \ge g^{-1}(y)\}$: the inequality reverses. So
+
+$$F_Y(y) = 1 - F_X\big(g^{-1}(y)\big),$$
+
+using $P(X \ge a) = 1 - F_X(a)$, which is valid because $X$ is continuous and so $P(X = a) = 0$. Differentiating,
+
+$$f_Y(y) = -f_X\big(g^{-1}(y)\big)\cdot\frac{d}{dy}g^{-1}(y),$$
+
+and here $\frac{d}{dy}g^{-1}(y) < 0$, so the leading minus sign makes the product positive and again equal to $f_X(g^{-1}(y))\,|\,(g^{-1})'(y)|$.
+
+The two cases give one formula, and monotonicity is what allowed step one in each: without it, $\{g(X)\le y\}$ need not be a single interval and the cdf cannot be read off as a single value of $F_X$.
+
+Finally, $f_Y$ integrates to one: substituting $y = g(x)$ in $\int_J f_X(g^{-1}(y))|(g^{-1})'(y)|\,dy$ returns $\int_I f_X(x)\,dx = 1$, which is the same substitution rule, run backwards.
+:::
+
+:::intuition
+A density is probability *per unit length*, so it responds to a change of variable the way a physical density responds to stretching a wire. Take the little interval $[x, x+dx]$; it holds probability $f_X(x)\,dx$. The map $g$ sends it to an interval of length $|g'(x)|\,dx$ around $y = g(x)$. The probability inside cannot change — it is the same outcomes — but the length it is spread over has been multiplied by $|g'(x)|$. So the density must be divided by that factor:
+
+$$f_Y(y) = \frac{f_X(x)}{|g'(x)|}, \qquad x = g^{-1}(y),$$
+
+which is the theorem again, since $|(g^{-1})'(y)| = 1/|g'(x)|$. Where $g$ stretches, the density thins; where $g$ compresses, the density piles up. That single factor is the whole content of the formula, and it is why the absolute value is there: lengths are positive whether the map reverses orientation or not.
+:::
+
+:::figure[A uniform density on $[0,2]$ pushed through $y = x^2$. The flat input density $f_X(x) = 1/2$ becomes $f_Y(y) = 1/(4\sqrt{y})$, which is unbounded at the origin and thin at the right. The map compresses the left end and stretches the right, so the density piles up where lengths shrink. At $y=1$ the stretch factor is $|dg^{-1}/dy| = 1/(2\sqrt{1}) = 1/2$, and $f_Y(1) = (1/2)(1/2) = 1/4$; at $y=4$ it is $1/4$, and $f_Y(4)=1/8$.]{#change-of-variables-figure}
+{
+  "type": "plot",
+  "x": [-0.45, 4.6],
+  "y": [-0.12, 1.15],
+  "xTicks": 0.5,
+  "yTicks": 0.25,
+  "xLabel": "value",
+  "yLabel": "density",
+  "marks": [
+    { "kind": "function", "fn": "0.5", "from": 0, "to": 2, "tone": "accent" },
+    { "kind": "function", "fn": "1/(4*sqrt(x))", "from": 0.055, "to": 4, "tone": "result" },
+    { "kind": "line", "through": [[1, 0], [1, 0.25]], "extend": false, "tone": "muted", "dashed": true },
+    { "kind": "line", "through": [[4, 0], [4, 0.125]], "extend": false, "tone": "muted", "dashed": true },
+    { "kind": "point", "at": [1, 0.25], "tone": "result" },
+    { "kind": "point", "at": [4, 0.125], "tone": "result" },
+    { "kind": "text", "at": [2.8, 0.68], "text": "f_X(x) = 1/2 on [0,2]", "tone": "accent", "leaderTo": [1.7, 0.5] },
+    { "kind": "text", "at": [1.1, 0.87], "text": "f_Y(y) = 1/(4 sqrt(y))", "tone": "result", "leaderTo": [0.35, 0.4226] },
+    { "kind": "text", "at": [1.15, 0.13], "text": "1/4", "tone": "result" },
+    { "kind": "text", "at": [3.55, 0.05], "text": "1/8", "tone": "result" }
+  ]
+}
+:::
+
+:::example[Scaling an exponential]{#exp-scale-example}
+Let $X \sim \text{Exp}(\lambda)$ and let $Y = cX$ for a constant $c > 0$. Find the density of $Y$.
+:::
+
+:::solution
+Here $g(x) = cx$ is strictly increasing on $(0,\infty)$ with $g^{-1}(y) = y/c$ and $\frac{d}{dy}g^{-1}(y) = 1/c > 0$. By the theorem *Change of variables for a density*,
+
+$$f_Y(y) = f_X(y/c)\cdot\frac1c = \lambda e^{-\lambda y/c}\cdot\frac1c = \frac{\lambda}{c}\,e^{-(\lambda/c)y}, \qquad y > 0 .$$
+
+That is the $\text{Exp}(\lambda/c)$ density: rescaling an exponential divides the rate by $c$, which is the only possible answer given that the mean must scale to $c/\lambda$. The exponential family is *closed* under scaling, and this is why one only ever needs to tabulate the rate-$1$ case.
+:::
+
+:::corollary[Linear transformations]{#linear-transform}
+If $X$ has density $f_X$ and $Y = aX + b$ with $a \neq 0$, then
+
+$$f_Y(y) = \frac{1}{|a|}f_X\!\left(\frac{y-b}{a}\right).$$
+:::
+
+:::proof
+$g(x) = ax+b$ is strictly monotone (increasing if $a > 0$, decreasing if $a<0$) with $g^{-1}(y) = (y-b)/a$ and $(g^{-1})'(y) = 1/a$. The theorem *Change of variables for a density* gives the result, with $|1/a| = 1/|a|$.
+:::
+
+Applying this to $X \sim N(\mu,\sigma^2)$ and $Y = (X-\mu)/\sigma$ recovers the theorem *Standardisation* from the chapter on continuous random variables in one line, which is a fair advertisement for having the general formula.
+
+### When $g$ is not monotone
+
+The hypothesis of strict monotonicity is not decoration. Drop it and the formula is simply wrong, because the event $\{g(X) \le y\}$ stops being a single interval. The repair is to go back to the cdf method, which never needed the hypothesis, or equivalently to split the domain into pieces on which $g$ *is* monotone and add up their contributions.
+
+:::theorem[Non-monotone change of variables]{#non-monotone}
+Let $X$ have density $f_X$, and suppose the support of $X$ splits into finitely many intervals $I_1,\ldots,I_m$ with disjoint interiors, on each of which $g$ is differentiable and strictly monotone with non-vanishing derivative. Write $g_j$ for the restriction of $g$ to $I_j$ and $h_j = g_j^{-1}$. Then
+
+$$f_Y(y) = \sum_{j \,:\, y \in g(I_j)} f_X\big(h_j(y)\big)\,\big|h_j'(y)\big| .$$
+:::
+
+:::proof
+Fix $y$ and let $A = \{x : g(x) \le y\}$. Since the $I_j$ cover the support up to a set of zero probability and overlap only at endpoints, which carry zero probability for a continuous $X$,
+
+$$F_Y(y) = P(X \in A) = \sum_{j=1}^m P(X \in A \cap I_j).$$
+
+On $I_j$ the function $g$ is strictly monotone, so $A \cap I_j$ is an interval with one endpoint at an endpoint of $I_j$ and the other at $h_j(y)$ whenever $y \in g(I_j)$; otherwise $A \cap I_j$ is all of $I_j$ or empty, and in either case its probability is constant in $y$ and differentiates away. Each non-constant term is $F_X(h_j(y))$ or $1 - F_X(h_j(y))$, exactly as in the proof of the theorem *Change of variables for a density*, and differentiating each gives $f_X(h_j(y))|h_j'(y)|$. Summing the derivatives gives the claim.
+:::
+
+The prototype is the square, and it is worth doing in full because the factor of two that appears in the symmetric case is a standing source of error.
+
+:::example[The density of $X^2$]{#x-squared-example}
+Let $X$ be continuous with density $f_X$ and let $Y = X^2$. Find $f_Y$, and then specialise to $X \sim U(-1,1)$ and to $X \sim N(0,1)$.
+:::
+
+:::solution
+The map $g(x) = x^2$ is decreasing on $(-\infty,0]$ and increasing on $[0,\infty)$, with $g'(0) = 0$; take $I_1 = (-\infty,0)$ and $I_2 = (0,\infty)$. For $y > 0$ the branch inverses are $h_1(y) = -\sqrt{y}$ and $h_2(y) = +\sqrt{y}$, both with $|h_j'(y)| = 1/(2\sqrt{y})$. The theorem *Non-monotone change of variables* gives
+
+$$f_Y(y) = \frac{f_X(\sqrt{y}) + f_X(-\sqrt{y})}{2\sqrt{y}}, \qquad y > 0,$$
+
+and $f_Y(y) = 0$ for $y \le 0$, since a square is never negative.
+
+Equivalently, and this is the cdf method doing the same work: $P(Y \le y) = P(-\sqrt y \le X \le \sqrt y) = F_X(\sqrt y) - F_X(-\sqrt y)$, and differentiating reproduces the display.
+
+**Uniform case.** For $X \sim U(-1,1)$, $f_X \equiv 1/2$ on $(-1,1)$, so for $0 < y < 1$ both branches contribute $1/2$ and
+
+$$f_Y(y) = \frac{1/2 + 1/2}{2\sqrt y} = \frac{1}{2\sqrt y}.$$
+
+Check: $\int_0^1 \tfrac12 y^{-1/2}dy = \big[\sqrt y\big]_0^1 = 1$. ✓ The density is unbounded at $0$ — squaring crushes the neighbourhood of the origin, so probability piles up there.
+
+**Normal case.** For $X \sim N(0,1)$ the density is even, so $f_X(\sqrt y) = f_X(-\sqrt y) = \varphi(\sqrt y)$ and
+
+$$f_Y(y) = \frac{2\varphi(\sqrt y)}{2\sqrt y} = \frac{1}{\sqrt{2\pi y}}e^{-y/2},$$
+
+which is the $\chi^2_1$ density found in the proposition *The square of a standard normal*. The general formula reproduces it without any special argument about symmetry.
+:::
+
+:::pitfall[The single-branch trap]
+Writing $f_Y(y) = f_X(\sqrt y)\cdot\frac{1}{2\sqrt y}$ for $Y = X^2$ — using only the positive root — loses exactly half the probability when $X$ is symmetric about zero, and an unpredictable amount otherwise. The integral of the result is then $1/2$, which is the cheapest available check.
+
+The rule to remember: **count the solutions of $g(x) = y$.** One solution, one term; two solutions, two terms. If $X \ge 0$ almost surely then $x = -\sqrt y$ is outside the support, $f_X(-\sqrt y) = 0$, and the second term vanishes on its own — the formula does the bookkeeping for you provided you write it down.
+:::
+
+:::pitfall[A transformation can destroy continuity]
+The theorem assumes $g$ is differentiable and strictly monotone. If $g$ is constant on a set of positive probability the output is not continuous at all: for $X \sim U(-1,1)$ and $Y = \max(X,0)$, the value $Y = 0$ occurs with probability $1/2$. Such a $Y$ has neither a density nor a pmf; its distribution is a mixture, described by its cdf and nothing simpler. Check that $g$ is non-constant before reaching for any density formula.
+:::
+
+## Sums, convolution, and the two-variable Jacobian
+
+<!-- section: jacobian -->
+
+One variable in, one variable out was the easy case. The interesting transformations take several inputs: a sum, a ratio, a maximum. The organising device is the same — rewrite the event, or equivalently change variables in the integral — but now the stretching factor is a determinant rather than a derivative.
+
+We start with the single most useful case, the sum, and prove it by the cdf method so that nothing new is needed.
+
+:::theorem[Convolution formula]{#convolution}
+Let $X$ and $Y$ be **independent** continuous random variables with densities $f_X$ and $f_Y$. Then $Z = X+Y$ has density
+
+$$f_Z(z) = \int_{-\infty}^{\infty} f_X(x)\,f_Y(z-x)\,dx = \int_{-\infty}^{\infty} f_X(z-y)\,f_Y(y)\,dy .$$
+
+This function is called the **convolution** of $f_X$ and $f_Y$, written $f_X * f_Y$.
+:::
+
+:::proof
+Independence means the joint density factorises, $f_{X,Y}(x,y) = f_X(x)f_Y(y)$. The event $\{Z \le z\}$ is the half-plane $\{(x,y) : x + y \le z\}$, so
+
+$$F_Z(z) = \iint_{x+y \le z} f_X(x)f_Y(y)\,dy\,dx = \int_{-\infty}^{\infty} f_X(x)\left(\int_{-\infty}^{z-x} f_Y(y)\,dy\right)dx = \int_{-\infty}^{\infty} f_X(x)F_Y(z-x)\,dx .$$
+
+Differentiate under the integral sign with respect to $z$. This is legitimate because the inner integrand $f_X(x)f_Y(z-x)$ is non-negative and integrates to a finite value, so dominated convergence applies. Since $\frac{\partial}{\partial z}F_Y(z-x) = f_Y(z-x)$,
+
+$$f_Z(z) = \int_{-\infty}^{\infty} f_X(x)f_Y(z-x)\,dx .$$
+
+The second form follows by the substitution $y = z - x$, or by symmetry: $X+Y = Y+X$, so the roles may be exchanged.
+:::
+
+:::pitfall[Convolution needs independence]
+The factorisation $f_{X,Y} = f_X f_Y$ is the only place independence entered, and without it the formula is false. Take $Y = -X$ with $X \sim U(0,1)$: each of $X$ and $Y$ has a perfectly good density, but $Z = X + Y$ is identically $0$ and has no density at all. The convolution integral of the two marginals would return the triangular density on $(-1,1)$, which is not the distribution of $Z$ by any stretch. Marginals do not determine the distribution of a sum; the joint distribution does.
+:::
+
+:::example[The sum of two independent uniforms]{#uniform-sum-example}
+Let $X, Y$ be independent $U(0,1)$. Find the density of $Z = X+Y$.
+:::
+
+:::solution
+Here $f_X(x) = 1$ for $0<x<1$ and $f_Y(z-x) = 1$ for $0 < z-x < 1$, that is $z-1 < x < z$. The integrand is $1$ exactly on the overlap of $(0,1)$ and $(z-1,z)$, and zero elsewhere, so $f_Z(z)$ is the *length* of that overlap.
+
+- For $0 \le z \le 1$ the overlap is $(0,z)$, of length $z$.
+- For $1 \le z \le 2$ the overlap is $(z-1,1)$, of length $2-z$.
+- Outside $[0,2]$ the overlap is empty.
+
+So $f_Z$ is the triangular density, rising linearly to a peak of $1$ at $z = 1$ and falling back. Check: the triangle has base $2$ and height $1$, area $1$. ✓
+
+The qualitative lesson outlives the example. Adding two flat distributions produces a peaked one, because there are many ways to make a middling total and only one way to make an extreme one. Add a third uniform and the peak sharpens further; this is the Central Limit Theorem beginning to act, visibly, at $n = 2$.
+:::
+
+:::example[The sum of two independent exponentials]{#exp-sum-example}
+Let $X, Y$ be independent $\text{Exp}(\lambda)$. Find the density of $Z = X+Y$.
+:::
+
+:::solution
+Both densities vanish off $(0,\infty)$, so the integrand $f_X(x)f_Y(z-x)$ is non-zero only when $x > 0$ *and* $z - x > 0$, i.e. $0 < x < z$. Getting those limits right is the whole difficulty. For $z > 0$,
+
+$$f_Z(z) = \int_0^z \lambda e^{-\lambda x}\,\lambda e^{-\lambda (z-x)}\,dx = \lambda^2 e^{-\lambda z}\int_0^z dx = \lambda^2 z\,e^{-\lambda z}.$$
+
+The exponentials in $x$ cancelled exactly, leaving a constant integrand — which is why this particular convolution is so clean. The answer is the $\text{Gamma}(2,\lambda)$ density. With $\lambda = 2$ it is $f_Z(z) = 4ze^{-2z}$, whose mean is $2/\lambda = 1$ and which, unlike an exponential, is zero at the origin: two waits cannot both be short at once as easily as one can.
+:::
+
+:::remark[Sums of $n$ terms]
+Iterating gives the $\text{Gamma}(n,\lambda)$ density $\lambda^n z^{n-1}e^{-\lambda z}/(n-1)!$ for a sum of $n$ independent $\text{Exp}(\lambda)$ waits, which is the Erlang law of the $n$-th arrival in a Poisson process. Doing it by iterated convolution is an induction with an integral at every step. The section *Moment generating functions* below obtains it in two lines, and that contrast is the argument for generating functions in a single picture.
+:::
+
+### The general two-variable change of variables
+
+The convolution formula is a special case of a general principle that is simply the multivariable substitution rule of calculus, read probabilistically.
+
+:::theorem[Two-variable Jacobian formula]{#jacobian-theorem}
+Let $(X_1,X_2)$ have joint density $f_{X_1,X_2}$ supported on an open set $S \subseteq \mathbb{R}^2$, and let
+
+$$(Y_1,Y_2) = \big(g_1(X_1,X_2),\,g_2(X_1,X_2)\big)$$
+
+where $g = (g_1,g_2)$ is a **one-to-one**, continuously differentiable map from $S$ onto an open set $T$, whose inverse $x_1 = h_1(y_1,y_2)$, $x_2 = h_2(y_1,y_2)$ is also continuously differentiable. Define the **Jacobian**
+
+$$J(y_1,y_2) = \det\begin{pmatrix} \dfrac{\partial h_1}{\partial y_1} & \dfrac{\partial h_1}{\partial y_2} \\[4pt] \dfrac{\partial h_2}{\partial y_1} & \dfrac{\partial h_2}{\partial y_2}\end{pmatrix},$$
+
+and suppose $J \neq 0$ on $T$. Then $(Y_1,Y_2)$ has joint density
+
+$$f_{Y_1,Y_2}(y_1,y_2) = f_{X_1,X_2}\big(h_1(y_1,y_2),\,h_2(y_1,y_2)\big)\,\big|J(y_1,y_2)\big|, \qquad (y_1,y_2)\in T,$$
+
+and zero outside $T$.
+:::
+
+:::proof
+Let $B \subseteq T$ be any region and let $A = g^{-1}(B) \subseteq S$, which is exactly the set of inputs producing an output in $B$. Because $g$ is a bijection from $S$ to $T$, the events $\{(Y_1,Y_2) \in B\}$ and $\{(X_1,X_2) \in A\}$ are the same event, so
+
+$$P\big((Y_1,Y_2)\in B\big) = \iint_A f_{X_1,X_2}(x_1,x_2)\,dx_1\,dx_2 .$$
+
+Now apply the change-of-variables theorem for double integrals with the substitution $(x_1,x_2) = (h_1(y_1,y_2), h_2(y_1,y_2))$, whose hypotheses — a continuously differentiable bijection with non-vanishing Jacobian — are exactly what was assumed. It converts the integral over $A$ into an integral over $B$:
+
+$$\iint_A f_{X_1,X_2}(x_1,x_2)\,dx_1\,dx_2 = \iint_B f_{X_1,X_2}\big(h_1(\mathbf{y}),h_2(\mathbf{y})\big)\,|J(\mathbf{y})|\,dy_1\,dy_2 .$$
+
+So for *every* region $B$ the probability $P((Y_1,Y_2)\in B)$ equals the integral over $B$ of the stated function. A non-negative function with that property is by definition the joint density of $(Y_1,Y_2)$.
+:::
+
+:::intuition
+This is the one-variable picture with areas in place of lengths. A small rectangle of area $dy_1\,dy_2$ in the output plane is the image of a small parallelogram in the input plane, and $|J|$ is the factor by which the map $h$ scales area — that is what a determinant measures. The probability sitting in the patch is unchanged, the area it occupies has been multiplied by $|J|$, so the density is divided by the reciprocal — which, written with $J$ as the Jacobian of the *inverse* map, is multiplication by $|J|$.
+:::
+
+:::note[Getting a single output]
+The theorem needs two outputs because it needs a bijection of the plane. To find the distribution of a single quantity $Y_1 = g_1(X_1,X_2)$, invent a convenient second coordinate $Y_2$ — very often $Y_2 = X_2$ — apply the theorem, and then integrate $y_2$ out of the joint density to recover the marginal of $Y_1$. The auxiliary variable is scaffolding and is discarded at the end.
+:::
+
+:::example[Convolution recovered from the Jacobian]{#convolution-from-jacobian}
+Derive the convolution formula from the theorem *Two-variable Jacobian formula*.
+:::
+
+:::solution
+Take $Y_1 = X_1 + X_2$ and the auxiliary $Y_2 = X_2$. The map is linear and invertible: $x_1 = y_1 - y_2$, $x_2 = y_2$. Its Jacobian is
+
+$$J = \det\begin{pmatrix} 1 & -1 \\ 0 & 1\end{pmatrix} = 1,$$
+
+so $|J| = 1$ and the joint density of $(Y_1,Y_2)$ is $f_{X_1,X_2}(y_1-y_2,\,y_2)$. Integrating out the auxiliary variable,
+
+$$f_{Y_1}(y_1) = \int_{-\infty}^{\infty} f_{X_1,X_2}(y_1-y_2,\,y_2)\,dy_2,$$
+
+which under independence factorises into $\int f_{X_1}(y_1-y_2)f_{X_2}(y_2)\,dy_2$ — the theorem *Convolution formula*. Note that the first display is valid **without** independence; it is the general formula for the density of a sum, and independence is only what turns it into a convolution.
+:::
+
+:::example[Splitting an exponential pair into total and fraction]{#exp-split-example}
+Let $X_1, X_2$ be independent $\text{Exp}(1)$. Put $Y_1 = X_1 + X_2$ and $Y_2 = X_1/(X_1+X_2)$. Find the joint density of $(Y_1,Y_2)$ and describe what it says.
+:::
+
+:::solution
+The map sends $(0,\infty)^2$ onto $T = (0,\infty)\times(0,1)$ bijectively, with inverse $x_1 = y_1y_2$, $x_2 = y_1(1-y_2)$. The Jacobian of the inverse is
+
+$$J = \det\begin{pmatrix} y_2 & y_1 \\ 1-y_2 & -y_1 \end{pmatrix} = -y_1y_2 - y_1(1-y_2) = -y_1,$$
+
+so $|J| = y_1$. The joint density of the inputs is $e^{-x_1}e^{-x_2} = e^{-(x_1+x_2)} = e^{-y_1}$, and therefore
+
+$$f_{Y_1,Y_2}(y_1,y_2) = y_1e^{-y_1}\cdot 1, \qquad y_1 > 0,\ 0 < y_2 < 1 .$$
+
+The right-hand side factorises into a function of $y_1$ alone times a function of $y_2$ alone over a rectangular region, which is exactly the criterion for independence. So $Y_1$ and $Y_2$ are **independent**, $Y_1 \sim \text{Gamma}(2,1)$ — matching the example *The sum of two independent exponentials* — and $Y_2 \sim U(0,1)$.
+
+That is a genuinely surprising fact and a useful one: knowing the total waiting time tells you nothing about how it was split between the two waits, and the split is uniform. It is also a warning about intuition, since $Y_1$ and $Y_2$ are both built from the same two variables and might have been expected to be entangled.
+:::
+
+## Order statistics
+
+<!-- section: order-statistics -->
+
+Sort a sample. That single operation produces a family of new random variables — the smallest observation, the largest, the median, the range — which is where a great deal of applied probability lives: the largest flood in a century, the first component to fail, the sample median as a robust centre.
+
+:::definition[Order statistics]{#order-statistics-definition}
+Let $X_1,\ldots,X_n$ be random variables. Their **order statistics** are the same values sorted into increasing order, written
+
+$$X_{(1)} \le X_{(2)} \le \cdots \le X_{(n)},$$
+
+so that $X_{(1)} = \min_i X_i$, $X_{(n)} = \max_i X_i$, and $X_{(k)}$ is the $k$-th smallest. The **sample range** is $R = X_{(n)} - X_{(1)}$, and for odd $n = 2m+1$ the **sample median** is $X_{(m+1)}$.
+:::
+
+:::pitfall[Order statistics are never independent]
+Even when $X_1,\ldots,X_n$ are independent, the order statistics are not: $X_{(1)} \le X_{(n)}$ always holds, so learning that the maximum is small forces the minimum to be small. Sorting destroys independence by construction. Every formula below is derived from the independence of the *unsorted* sample, and none may be applied to the sorted one.
+:::
+
+Throughout this section $X_1,\ldots,X_n$ are **independent and identically distributed** with common cdf $F$ and density $f$. Both hypotheses are used: independence to multiply probabilities, identical distribution to use the same $F$ for each factor.
+
+:::theorem[Distribution of the maximum and the minimum]{#max-min}
+For an iid sample with common cdf $F$ and density $f$,
+
+$$F_{X_{(n)}}(x) = F(x)^n, \qquad f_{X_{(n)}}(x) = n\,F(x)^{n-1}f(x),$$
+
+$$F_{X_{(1)}}(x) = 1 - \big(1-F(x)\big)^n, \qquad f_{X_{(1)}}(x) = n\big(1-F(x)\big)^{n-1}f(x).$$
+:::
+
+:::proof
+For the maximum, the event $\{X_{(n)} \le x\}$ says that *every* observation is at most $x$ — if even one exceeded $x$ the maximum would too. Hence
+
+$$F_{X_{(n)}}(x) = P(X_1 \le x,\ldots,X_n \le x) = \prod_{i=1}^n P(X_i \le x) = F(x)^n,$$
+
+the middle step by independence and the last by identical distribution. Differentiating with the chain rule gives $nF(x)^{n-1}f(x)$.
+
+For the minimum, take complements: $\{X_{(1)} > x\}$ says every observation exceeds $x$, so
+
+$$P(X_{(1)} > x) = \prod_{i=1}^n P(X_i > x) = \big(1-F(x)\big)^n,$$
+
+and $F_{X_{(1)}}(x) = 1 - (1-F(x))^n$. Differentiating, and remembering the chain rule brings out a factor $-f(x)$ which cancels the leading minus sign, gives $n(1-F(x))^{n-1}f(x)$.
+:::
+
+:::intuition
+Both formulas are the same sentence twice. "The largest is below $x$" means "all of them are below $x$", and independent events multiply. "The smallest is above $x$" means "all of them are above $x$". Everything else is differentiation. This is also why maxima are best handled through the cdf and minima through the survival function $1-F$: each is the one that turns into a clean product.
+:::
+
+:::example[The first of five components to fail]{#min-exp-example}
+Five components have independent $\text{Exp}(\lambda)$ lifetimes. When does the first failure occur?
+:::
+
+:::solution
+Here $1 - F(x) = e^{-\lambda x}$, so
+
+$$P(X_{(1)} > x) = \big(e^{-\lambda x}\big)^5 = e^{-5\lambda x},$$
+
+which is the survival function of $\text{Exp}(5\lambda)$. The minimum of $n$ independent exponentials with rate $\lambda$ is exponential with rate $n\lambda$, and its mean is $1/(5\lambda)$ — five times shorter than a single component's life.
+
+The maximum is not so tidy: $F_{X_{(5)}}(x) = (1-e^{-\lambda x})^5$ is not an exponential cdf for any rate. Its mean turns out to be $\frac{1}{\lambda}(1 + \frac12 + \frac13 + \frac14 + \frac15) = \frac{137}{60\lambda}$, a harmonic sum which grows like $\ln n$: the last component to fail lasts only logarithmically longer as the system grows, while the first fails proportionally faster.
+:::
+
+:::theorem[Density of the $k$-th order statistic]{#kth-order-statistic}
+For an iid sample of size $n$ from a continuous distribution with cdf $F$ and density $f$, the $k$-th order statistic has density
+
+$$f_{X_{(k)}}(x) = \frac{n!}{(k-1)!\,(n-k)!}\,F(x)^{k-1}\big(1-F(x)\big)^{n-k}f(x).$$
+:::
+
+:::proof
+Start from the cdf, and count. The event $\{X_{(k)} \le x\}$ says the $k$-th smallest observation is at most $x$, which happens exactly when **at least $k$** of the $n$ observations are at most $x$. Each observation independently lands in $(-\infty,x]$ with probability $F(x)$, so the number that do is $\text{Binomial}(n,F(x))$ and
+
+$$F_{X_{(k)}}(x) = \sum_{j=k}^{n}\binom{n}{j}F(x)^j\big(1-F(x)\big)^{n-j}.$$
+
+Write $p = F(x)$ and differentiate the sum with respect to $p$, then multiply by $dp/dx = f(x)$. Term by term, for $k \le j \le n$,
+
+$$\frac{d}{dp}\binom{n}{j}p^j(1-p)^{n-j} = \binom{n}{j}\Big[j\,p^{j-1}(1-p)^{n-j} - (n-j)p^j(1-p)^{n-j-1}\Big].$$
+
+The sum telescopes. Using $\binom{n}{j}j = n\binom{n-1}{j-1}$ and $\binom{n}{j}(n-j) = n\binom{n-1}{j}$, the derivative becomes
+
+$$n\sum_{j=k}^{n}\Big[\binom{n-1}{j-1}p^{j-1}(1-p)^{n-j} - \binom{n-1}{j}p^{j}(1-p)^{n-j-1}\Big],$$
+
+in which the second part of the $j$-th bracket cancels the first part of the $(j+1)$-th. Only the first part of the $j=k$ bracket survives, the final negative term vanishing because $\binom{n-1}{n} = 0$. Hence
+
+$$\frac{d}{dp}F_{X_{(k)}} = n\binom{n-1}{k-1}p^{k-1}(1-p)^{n-k},$$
+
+and multiplying by $f(x)$ and writing $n\binom{n-1}{k-1} = n!/((k-1)!(n-k)!)$ gives the claim.
+:::
+
+:::intuition
+The formula can be read off directly, which is how it is usually remembered. For $X_{(k)}$ to sit in $[x, x+dx]$: one observation must land in that tiny interval, contributing $f(x)\,dx$; exactly $k-1$ of the others must fall below it, each with probability $F(x)$; and the remaining $n-k$ must fall above, each with probability $1-F(x)$. The multinomial coefficient $n!/((k-1)!\,1!\,(n-k)!)$ counts the ways of assigning which observation plays which role.
+
+That argument is correct and is the right thing to carry in your head. The proof above is the version that does not require interpreting $dx$ as a quantity, which is why it goes through the binomial cdf instead.
+:::
+
+Setting $k=n$ and $k=1$ in the theorem *Density of the $k$-th order statistic* returns the two densities in the theorem *Distribution of the maximum and the minimum*, as it must: the coefficients collapse to $n$ in both cases.
+
+### The uniform case
+
+The uniform sample is where all of this becomes explicit, because $F(u) = u$ makes the cdf disappear from the formulas.
+
+:::proposition[Order statistics of a uniform sample]{#uniform-order-statistics}
+Let $U_1,\ldots,U_n$ be iid $U(0,1)$. Then
+
+$$f_{U_{(k)}}(u) = \frac{n!}{(k-1)!\,(n-k)!}\,u^{k-1}(1-u)^{n-k}, \qquad 0<u<1,$$
+
+which is the $\text{Beta}(k,\,n-k+1)$ density. Its mean is
+
+$$E\big[U_{(k)}\big] = \frac{k}{n+1}.$$
+:::
+
+:::proof
+The density is immediate from the theorem *Density of the $k$-th order statistic* with $F(u) = u$ and $f(u) = 1$ on $(0,1)$.
+
+For the mean, write $C = n!/((k-1)!(n-k)!)$ and use the Beta integral $\int_0^1 u^{a-1}(1-u)^{b-1}du = (a-1)!(b-1)!/(a+b-1)!$ for positive integers $a,b$ — itself provable by repeated integration by parts. Then
+
+$$E\big[U_{(k)}\big] = C\int_0^1 u^{k}(1-u)^{n-k}du = \frac{n!}{(k-1)!(n-k)!}\cdot\frac{k!\,(n-k)!}{(n+1)!} = \frac{k}{n+1}.$$
+
+The same integral with $u^{k+1}$ gives $E[U_{(k)}^2] = k(k+1)/((n+1)(n+2))$, whence
+
+$$\operatorname{Var}\big(U_{(k)}\big) = \frac{k(n-k+1)}{(n+1)^2(n+2)}.$$
+:::
+
+:::intuition
+The mean $k/(n+1)$ says that $n$ points dropped uniformly at random cut $[0,1]$ into $n+1$ gaps whose *expected* lengths are all equal, namely $1/(n+1)$. The $k$-th point sits after $k$ of those gaps. Three uniform points have expected positions $1/4$, $2/4$, $3/4$ — not $1/3, 2/3$, and not $1/6, 1/2, 5/6$. The endpoints count as boundaries of gaps too, and that is exactly what the $+1$ in the denominator records.
+:::
+
+:::figure[The minimum, median and maximum of five iid $U(0,1)$ observations. Each is a Beta density: $5(1-u)^4$, $30u^2(1-u)^2$ and $5u^4$. The means are $1/6$, $1/2$ and $5/6$, the six equal expected gaps of the proposition *Order statistics of a uniform sample*. The extremes are pushed towards the ends and are strongly skewed; the median is symmetric and much tighter, with variance $1/28$ against the sample mean's $1/60$.]{#uniform-order-figure}
+{
+  "type": "plot",
+  "x": [-0.1, 1.28],
+  "y": [-0.45, 5.6],
+  "xTicks": 0.25,
+  "yTicks": 1,
+  "xLabel": "u",
+  "yLabel": "density",
+  "marks": [
+    { "kind": "function", "fn": "5*(1-x)^4", "from": 0, "to": 1, "tone": "accent" },
+    { "kind": "function", "fn": "30*x^2*(1-x)^2", "from": 0, "to": 1, "tone": "result", "dashed": true },
+    { "kind": "function", "fn": "5*x^4", "from": 0, "to": 1, "tone": "alt" },
+    { "kind": "text", "at": [0.12, 4.75], "text": "minimum", "tone": "accent", "leaderTo": [0.035, 4.35] },
+    { "kind": "text", "at": [0.5, 2.45], "text": "median", "tone": "result", "leaderTo": [0.5, 1.95] },
+    { "kind": "text", "at": [0.9, 4.75], "text": "maximum", "tone": "alt", "leaderTo": [0.975, 4.35] },
+    { "kind": "point", "at": [0.16667, 0], "tone": "accent" },
+    { "kind": "point", "at": [0.5, 0], "tone": "result" },
+    { "kind": "point", "at": [0.83333, 0], "tone": "alt" },
+    { "kind": "text", "at": [0.16667, -0.3], "text": "1/6", "tone": "accent" },
+    { "kind": "text", "at": [0.5, -0.3], "text": "1/2", "tone": "result" },
+    { "kind": "text", "at": [0.83333, -0.3], "text": "5/6", "tone": "alt" }
+  ]
+}
+:::
+
+### The range
+
+The range needs the *joint* density of the two extremes, because it is a function of both.
+
+:::proposition[Joint density of the extremes and the range]{#range-density}
+For an iid sample of size $n \ge 2$ from a continuous distribution with cdf $F$ and density $f$, the joint density of $(X_{(1)}, X_{(n)})$ is
+
+$$f_{X_{(1)},X_{(n)}}(a,b) = n(n-1)\big(F(b)-F(a)\big)^{n-2}f(a)f(b), \qquad a < b .$$
+
+Consequently the range $R = X_{(n)}-X_{(1)}$ has density
+
+$$f_R(r) = n(n-1)\int_{-\infty}^{\infty}\big(F(a+r)-F(a)\big)^{n-2}f(a)\,f(a+r)\,da, \qquad r>0 .$$
+:::
+
+:::proof
+For $a<b$ let $G(a,b) = P(X_{(1)} > a,\ X_{(n)} \le b)$, the probability that every observation lies in $(a,b]$. By independence and identical distribution this is $(F(b)-F(a))^n$. Writing the joint cdf in terms of $G$ and differentiating, or directly: $P(X_{(n)} \le b) - P(X_{(1)} > a, X_{(n)} \le b) = P(X_{(1)} \le a, X_{(n)} \le b)$, so the joint cdf is
+
+$$F_{X_{(1)},X_{(n)}}(a,b) = F(b)^n - \big(F(b)-F(a)\big)^n .$$
+
+Take $\partial^2/\partial a\,\partial b$. The first term has no $a$ in it and dies. For the second, $\partial/\partial a$ of $-(F(b)-F(a))^n$ is $n(F(b)-F(a))^{n-1}f(a)$, and then $\partial/\partial b$ of that is $n(n-1)(F(b)-F(a))^{n-2}f(a)f(b)$, which is the first claim.
+
+For the range, apply the theorem *Two-variable Jacobian formula* with $R = X_{(n)}-X_{(1)}$ and the auxiliary $A = X_{(1)}$. The inverse map is $a = A$, $b = A + R$, whose Jacobian determinant is $1$, so the joint density of $(A,R)$ is $n(n-1)(F(a+r)-F(a))^{n-2}f(a)f(a+r)$. Integrating out $a$ gives the marginal density of $R$.
+:::
+
+:::example[The range of a uniform sample]{#uniform-range-example}
+Find the density and mean of the range of $n$ iid $U(0,1)$ observations, and evaluate for $n=5$.
+:::
+
+:::solution
+With $F(u)=u$ and $f \equiv 1$ on $(0,1)$, the integrand is $(\,(a+r)-a\,)^{n-2} = r^{n-2}$, a constant in $a$. The constraint is $0 < a$ and $a + r < 1$, so $a$ ranges over an interval of length $1-r$. Hence
+
+$$f_R(r) = n(n-1)r^{n-2}(1-r), \qquad 0<r<1 .$$
+
+This is the $\text{Beta}(n-1,2)$ density, so
+
+$$E[R] = \frac{n-1}{(n-1)+2} = \frac{n-1}{n+1}.$$
+
+For $n=5$: $f_R(r) = 20r^3(1-r)$ and $E[R] = 4/6 = 2/3$. Consistency check: $E[R] = E[U_{(5)}] - E[U_{(1)}] = 5/6 - 1/6 = 4/6$. ✓ — and note that this check works even though $U_{(1)}$ and $U_{(5)}$ are dependent, because expectation is linear whether or not the variables are independent.
+
+As $n$ grows, $E[R] = (n-1)/(n+1) \to 1$: a large uniform sample eventually fills its interval, and the range is a consistent estimator of the width of the support.
+:::
+
+## Moment generating functions
+
+<!-- section: mgf -->
+
+Every method so far has been direct: to find the distribution of a sum, integrate over the region where the sum is small. That is honest and it does not scale. The alternative is to encode the whole distribution in a single function, chosen so that the operations you perform on random variables turn into easier operations on functions.
+
+:::definition[Moment generating function]{#mgf-definition}
+The **moment generating function** (mgf) of a random variable $X$ is
+
+$$M_X(t) = E\big[e^{tX}\big],$$
+
+defined for those real $t$ at which the expectation is finite. Explicitly,
+
+$$M_X(t) = \sum_x e^{tx}p(x) \quad\text{(discrete)}, \qquad M_X(t) = \int_{-\infty}^{\infty}e^{tx}f(x)\,dx \quad\text{(continuous)}.$$
+
+We say the mgf **exists** if $M_X(t)$ is finite for all $t$ in some open interval $(-h,h)$ containing $0$.
+:::
+
+The variable $t$ is a formal handle with no probabilistic meaning; it is a place to hang information. What matters is that $e^{tX}$ turns multiplication of exponents into addition of random variables, and that its Taylor expansion in $t$ has the moments of $X$ sitting in the coefficients. Those two facts are the whole subject.
+
+:::proposition[Elementary properties]{#mgf-properties}
+Whenever the quantities involved are finite:
+
+1. $M_X(0) = 1$ for every random variable $X$;
+2. $M_{aX+b}(t) = e^{bt}M_X(at)$ for constants $a,b$;
+3. if $X$ is a constant $c$, then $M_X(t) = e^{ct}$.
+:::
+
+:::proof
+(1) $M_X(0) = E[e^{0\cdot X}] = E[1] = 1$, and this is finite for every $X$ without exception — which is why $t=0$ is never the interesting point and why "the mgf exists" has to mean existence on an *interval* around $0$ rather than at $0$.
+
+(2) $M_{aX+b}(t) = E[e^{t(aX+b)}] = E[e^{tb}e^{(ta)X}] = e^{tb}E[e^{(at)X}] = e^{bt}M_X(at)$, pulling the constant $e^{tb}$ out of the expectation by linearity.
+
+(3) Immediate from the definition, since $e^{tX} = e^{tc}$ is not random.
+:::
+
+:::proposition[Value of $M_X(0)$ as a check]{#mgf-check}
+Any candidate mgf must satisfy $M(0)=1$ and $M(t) > 0$ for all $t$ at which it is finite.
+:::
+
+:::proof
+The first is part (1) above. For the second, $e^{tX} > 0$ always, and the expectation of a strictly positive random variable is strictly positive. So a formula that returns $0$ or a negative number, or that fails to return $1$ at the origin, is not an mgf; substituting $t=0$ is the fastest way to catch an algebra slip.
+:::
+
+### Why it generates moments
+
+:::theorem[Moments from derivatives at zero]{#moments-from-mgf}
+Suppose $M_X(t)$ is finite on an open interval $(-h,h)$ with $h>0$. Then $E[X^n]$ is finite for every $n \ge 1$, $M_X$ is infinitely differentiable on $(-h,h)$, and
+
+$$M_X^{(n)}(0) = E\big[X^n\big].$$
+
+Equivalently, $M_X$ has the convergent expansion
+
+$$M_X(t) = \sum_{n=0}^{\infty}\frac{E[X^n]}{n!}t^n \qquad \text{for } |t|<h .$$
+:::
+
+:::proof
+Expand the exponential inside the expectation. For each fixed $t$,
+
+$$e^{tX} = \sum_{n=0}^{\infty}\frac{(tX)^n}{n!} = \sum_{n=0}^{\infty}\frac{t^n X^n}{n!},$$
+
+a series converging for every value of $X$. Take expectations and interchange the sum with the expectation:
+
+$$M_X(t) = \sum_{n=0}^{\infty}\frac{t^n}{n!}E[X^n].$$
+
+The interchange is the only delicate step, and finiteness on $(-h,h)$ is exactly what licenses it. Fix $0 < s < h$. Since $|x|^n/n! \le e^{|x|}$ termwise and $e^{s|X|} \le e^{sX} + e^{-sX}$, we get $E[e^{s|X|}] \le M_X(s) + M_X(-s) < \infty$; so every $E[|X|^n] \le n!\,s^{-n}E[e^{s|X|}]$ is finite and the partial sums are dominated by the integrable random variable $e^{s|X|}$ for $|t| \le s$. Dominated convergence permits the interchange, and the resulting power series converges on $|t| < h$.
+
+A power series may be differentiated term by term inside its interval of convergence, and its $n$-th derivative evaluated at the centre picks out $n!$ times the $n$-th coefficient. Here the $n$-th coefficient is $E[X^n]/n!$, so $M_X^{(n)}(0) = E[X^n]$.
+:::
+
+:::intuition
+Differentiating $e^{tX}$ with respect to $t$ brings down a factor of $X$: $\frac{d}{dt}e^{tX} = Xe^{tX}$. Do it $n$ times and you have $X^ne^{tX}$; set $t=0$ and the exponential becomes $1$, leaving $X^n$. The expectation of that is $E[X^n]$. The whole theorem is "differentiating pulls down powers of $X$", and the technical work is only in justifying the swap of $\frac{d}{dt}$ with $E$.
+:::
+
+:::recipe[Mean and variance from an mgf]{#mgf-recipe}
+Given $M_X(t)$:
+
+1. Check $M_X(0) = 1$.
+2. Differentiate once and set $t=0$: this is $\mu = E[X]$.
+3. Differentiate again and set $t=0$: this is $E[X^2]$.
+4. Then $\operatorname{Var}(X) = E[X^2] - \mu^2$.
+
+When $M_X$ is a product or a power, differentiating $\ln M_X$ is usually faster: $\frac{d}{dt}\ln M_X\big|_{t=0} = E[X]$ and $\frac{d^2}{dt^2}\ln M_X\big|_{t=0} = \operatorname{Var}(X)$, since the second derivative of the logarithm is $(M''M - (M')^2)/M^2$, which at $t=0$ is $E[X^2]-\mu^2$ because $M(0)=1$. The function $K_X(t) = \ln M_X(t)$ is called the **cumulant generating function** for this reason.
+:::
+
+### Sums become products
+
+This is the property that makes the whole apparatus worth building.
+
+:::theorem[The mgf of a sum of independent variables]{#mgf-of-sum}
+If $X_1,\ldots,X_n$ are **independent** and each $M_{X_i}$ is finite on a common interval $(-h,h)$, then $S = X_1 + \cdots + X_n$ has
+
+$$M_S(t) = \prod_{i=1}^{n}M_{X_i}(t), \qquad |t| < h .$$
+
+If in addition the $X_i$ are identically distributed with common mgf $M$, then $M_S(t) = M(t)^n$.
+:::
+
+:::proof
+By definition and the law of exponents,
+
+$$M_S(t) = E\big[e^{t(X_1+\cdots+X_n)}\big] = E\big[e^{tX_1}e^{tX_2}\cdots e^{tX_n}\big].$$
+
+The random variables $e^{tX_1},\ldots,e^{tX_n}$ are functions of independent random variables and are therefore themselves independent. The expectation of a product of independent random variables is the product of their expectations, so
+
+$$M_S(t) = \prod_{i=1}^{n}E\big[e^{tX_i}\big] = \prod_{i=1}^{n}M_{X_i}(t).$$
+
+The iid case is the same statement with equal factors.
+:::
+
+:::pitfall[Independence is doing all the work]
+The step $E[\prod e^{tX_i}] = \prod E[e^{tX_i}]$ is false without independence, and nothing else in the proof is doing anything. With $Y=X$ and $X\sim N(0,1)$, $M_{X+Y}(t) = M_{2X}(t) = e^{2t^2}$, while $M_X(t)M_Y(t) = e^{t^2}$. Correlated variables have no product rule. Note also that the converse fails: $M_{X+Y} = M_XM_Y$ can hold for dependent $X$ and $Y$, so matching mgfs is evidence of nothing about independence.
+:::
+
+:::example[The Gamma law of a sum of exponentials, again]{#gamma-by-mgf}
+Let $X_1,\ldots,X_n$ be iid $\text{Exp}(\lambda)$ and $S = \sum_i X_i$. Identify the distribution of $S$ from its mgf.
+:::
+
+:::solution
+The exponential mgf, derived below in the proposition *Moment generating functions of the standard families*, is $M(t) = \lambda/(\lambda-t)$ for $t<\lambda$. By the theorem *The mgf of a sum of independent variables*,
+
+$$M_S(t) = \left(\frac{\lambda}{\lambda-t}\right)^{n}, \qquad t < \lambda,$$
+
+which is the mgf of $\text{Gamma}(n,\lambda)$. By the theorem *Uniqueness of the moment generating function*, $S \sim \text{Gamma}(n,\lambda)$.
+
+Set that beside the remark *Sums of $n$ terms*, where the same conclusion required $n-1$ nested convolutions. Here it is one line and an $n$-th power, and the mgf never had to know how many terms there were.
+:::
+
+### The uniqueness theorem
+
+Recognising $(\lambda/(\lambda-t))^n$ as a Gamma mgf only settles the distribution if no *other* distribution has that mgf. That is the theorem which makes the method legal, and it is deeper than anything else in this chapter.
+
+:::theorem[Uniqueness of the moment generating function]{#mgf-uniqueness}
+Let $X$ and $Y$ be random variables whose moment generating functions are both finite on a common open interval $(-h,h)$ with $h>0$. If
+
+$$M_X(t) = M_Y(t) \qquad \text{for all } |t| < h,$$
+
+then $X$ and $Y$ have the same distribution: $F_X(u) = F_Y(u)$ for every $u$.
+
+Moreover, if $M_{X_n}(t) \to M_X(t)$ for every $t$ in such an interval, and $M_X$ is the mgf of a distribution, then $X_n \to X$ **in distribution**, meaning $F_{X_n}(u) \to F_X(u)$ at every continuity point $u$ of $F_X$.
+:::
+
+**This theorem is stated without proof, and the omission is genuine.** A correct argument identifies $M_X$ on a strip of the complex plane with a two-sided Laplace transform of the distribution and then inverts that transform, which requires complex analysis and an inversion theorem — Lévy's, or the Laplace inversion formula — that is beyond this course. The second statement is the continuity theorem, and it needs the same machinery. Any "proof" you meet that consists only of matching Taylor coefficients is not one, for a reason the pitfall below makes concrete.
+
+:::pitfall[Matching moments is not matching distributions]
+The moments do *not* in general determine the distribution, so "$X$ and $Y$ have the same moments, hence the same law" is invalid. The standard counterexample is the log-normal: if $X$ is log-normal and
+
+$$f_a(x) = f_X(x)\big(1 + a\sin(2\pi\ln x)\big), \qquad |a|\le 1,$$
+
+then every $f_a$ is a genuine density and all of them have exactly the same moments as $X$, for every $n$. An uncountable family of distinct distributions, one moment sequence.
+
+What rescues the uniqueness theorem is the hypothesis that the mgf is *finite on an interval* — a condition the log-normal fails, as shown in the section *Where generating functions fail*. Finiteness on an interval is strictly stronger than having all moments finite, and that gap is exactly where the counterexample lives.
+:::
+
+## The generating functions of the named families
+
+<!-- section: named-mgfs -->
+
+Each standard family has an mgf that can be written in closed form, and once the table exists, means and variances that originally cost a sum or an integral cost two derivatives instead.
+
+:::proposition[Moment generating functions of the standard families]{#family-mgfs}
+| distribution | $M_X(t)$ | valid for |
+|---|---|---|
+| $\text{Bernoulli}(p)$ | $1-p+pe^t$ | all $t$ |
+| $\text{Binomial}(n,p)$ | $(1-p+pe^t)^n$ | all $t$ |
+| $\text{Poisson}(\lambda)$ | $\exp\!\big(\lambda(e^t-1)\big)$ | all $t$ |
+| $\text{Geometric}(p)$ on $\{1,2,\ldots\}$ | $\dfrac{pe^t}{1-(1-p)e^t}$ | $t < -\ln(1-p)$ |
+| $\text{Exp}(\lambda)$ | $\dfrac{\lambda}{\lambda-t}$ | $t<\lambda$ |
+| $\text{Gamma}(\alpha,\lambda)$ | $\left(\dfrac{\lambda}{\lambda-t}\right)^{\alpha}$ | $t<\lambda$ |
+| $N(\mu,\sigma^2)$ | $\exp\!\big(\mu t + \tfrac12\sigma^2t^2\big)$ | all $t$ |
+| $U(a,b)$ | $\dfrac{e^{tb}-e^{ta}}{t(b-a)}$ for $t\neq0$, and $1$ at $t=0$ | all $t$ |
+:::
+
+:::proof
+**Bernoulli.** $X$ takes the value $1$ with probability $p$ and $0$ with probability $1-p$, so $M(t) = e^{t\cdot1}p + e^{t\cdot0}(1-p) = pe^t + 1 - p$. The sum is finite, so it converges for every $t$.
+
+**Binomial.** A $\text{Binomial}(n,p)$ variable is a sum of $n$ independent Bernoulli$(p)$ variables, so the theorem *The mgf of a sum of independent variables* gives $(1-p+pe^t)^n$ immediately. (Directly: $\sum_k \binom nk (pe^t)^k(1-p)^{n-k}$ is the binomial theorem.)
+
+**Poisson.** With $p(k) = e^{-\lambda}\lambda^k/k!$,
+
+$$M(t) = \sum_{k=0}^{\infty}e^{tk}\frac{e^{-\lambda}\lambda^k}{k!} = e^{-\lambda}\sum_{k=0}^{\infty}\frac{(\lambda e^t)^k}{k!} = e^{-\lambda}e^{\lambda e^t} = \exp\!\big(\lambda(e^t-1)\big),$$
+
+recognising the exponential series with argument $\lambda e^t$, which converges for every real $t$.
+
+**Geometric.** With $q = 1-p$ and $p(k) = q^{k-1}p$ for $k \ge 1$,
+
+$$M(t) = \sum_{k=1}^{\infty}e^{tk}q^{k-1}p = pe^t\sum_{j=0}^{\infty}(qe^t)^{j} = \frac{pe^t}{1-qe^t},$$
+
+a geometric series which converges precisely when $qe^t < 1$, that is $t < -\ln q$. Since $q<1$ that bound is strictly positive, so the mgf exists on an interval around $0$ — but only just.
+
+**Exponential.** For $t < \lambda$,
+
+$$M(t) = \int_0^{\infty}e^{tx}\lambda e^{-\lambda x}dx = \lambda\int_0^{\infty}e^{-(\lambda-t)x}dx = \frac{\lambda}{\lambda-t},$$
+
+the integral converging exactly when $\lambda - t > 0$. For $t \ge \lambda$ the integrand does not decay and the integral diverges: the exponential's mgf exists only on a half-line, which is the first sign that heavy tails and mgfs are in tension.
+
+**Gamma.** For $t<\lambda$, using the density $\lambda^{\alpha}x^{\alpha-1}e^{-\lambda x}/\Gamma(\alpha)$,
+
+$$M(t) = \frac{\lambda^{\alpha}}{\Gamma(\alpha)}\int_0^{\infty}x^{\alpha-1}e^{-(\lambda-t)x}dx = \frac{\lambda^{\alpha}}{\Gamma(\alpha)}\cdot\frac{\Gamma(\alpha)}{(\lambda-t)^{\alpha}} = \left(\frac{\lambda}{\lambda-t}\right)^{\alpha},$$
+
+where the middle step is the Gamma integral $\int_0^\infty x^{\alpha-1}e^{-cx}dx = \Gamma(\alpha)/c^{\alpha}$ for $c>0$.
+
+**Normal.** Take $Z \sim N(0,1)$ first and complete the square in the exponent:
+
+$$M_Z(t) = \int_{-\infty}^{\infty}e^{tz}\frac{1}{\sqrt{2\pi}}e^{-z^2/2}dz = \frac{1}{\sqrt{2\pi}}\int_{-\infty}^{\infty}\exp\!\left(-\frac{z^2-2tz}{2}\right)dz.$$
+
+Since $z^2 - 2tz = (z-t)^2 - t^2$,
+
+$$M_Z(t) = e^{t^2/2}\cdot\frac{1}{\sqrt{2\pi}}\int_{-\infty}^{\infty}e^{-(z-t)^2/2}dz = e^{t^2/2},$$
+
+because the remaining integral is the total mass of an $N(t,1)$ density, namely $1$. For a general $X = \mu + \sigma Z \sim N(\mu,\sigma^2)$, part (2) of the proposition *Elementary properties* gives
+
+$$M_X(t) = e^{\mu t}M_Z(\sigma t) = e^{\mu t}e^{\sigma^2t^2/2} = \exp\!\big(\mu t + \tfrac12\sigma^2t^2\big).$$
+
+**Uniform.** $M(t) = \frac{1}{b-a}\int_a^b e^{tx}dx = \frac{e^{tb}-e^{ta}}{t(b-a)}$ for $t\neq0$; the singularity at $t=0$ is removable, and L'Hôpital's rule gives the value $1$ there, as the proposition *Value of $M_X(0)$ as a check* requires.
+:::
+
+Every entry satisfies $M(0)=1$: substitute $t=0$ and read off $1-p+p=1$, $e^{0}=1$, $\lambda/\lambda = 1$ and so on. That takes ten seconds and catches most transcription errors.
+
+### Cheaper moments
+
+:::proposition[Poisson mean and variance from the mgf]{#poisson-moments-mgf}
+If $X \sim \text{Poisson}(\lambda)$ then $E[X] = \lambda$ and $\operatorname{Var}(X) = \lambda$.
+:::
+
+:::proof
+Use the cumulant route of the recipe *Mean and variance from an mgf*. With $M(t) = \exp(\lambda(e^t-1))$,
+
+$$K(t) = \ln M(t) = \lambda(e^t-1), \qquad K'(t) = \lambda e^t, \qquad K''(t) = \lambda e^t .$$
+
+At $t=0$: $E[X] = K'(0) = \lambda$ and $\operatorname{Var}(X) = K''(0) = \lambda$.
+
+Compare the direct route, which required re-indexing $\sum_k k\,e^{-\lambda}\lambda^k/k!$ to recognise a shifted Poisson series, and then the same trick again on $\sum k^2 p(k)$ after splitting $k^2 = k(k-1)+k$. Here the answer is two derivatives of a linear function.
+:::
+
+:::proposition[Exponential mean and variance from the mgf]{#exp-moments-mgf}
+If $X\sim\text{Exp}(\lambda)$ then $E[X] = 1/\lambda$ and $\operatorname{Var}(X) = 1/\lambda^2$.
+:::
+
+:::proof
+$M(t) = \lambda(\lambda-t)^{-1}$ on $t<\lambda$, so
+
+$$M'(t) = \lambda(\lambda-t)^{-2}, \qquad M''(t) = 2\lambda(\lambda-t)^{-3}.$$
+
+Evaluating at $t=0$ gives $E[X] = \lambda/\lambda^2 = 1/\lambda$ and $E[X^2] = 2\lambda/\lambda^3 = 2/\lambda^2$, so
+
+$$\operatorname{Var}(X) = \frac{2}{\lambda^2}-\frac{1}{\lambda^2} = \frac{1}{\lambda^2}.$$
+
+More generally $M^{(n)}(0) = n!/\lambda^n$, so $E[X^n] = n!/\lambda^n$ — every moment of the exponential, from one pattern of differentiation, where the direct route needs $n$ integrations by parts.
+:::
+
+:::proposition[Normal mean and variance from the mgf]{#normal-moments-mgf}
+If $X\sim N(\mu,\sigma^2)$ then $E[X]=\mu$ and $\operatorname{Var}(X)=\sigma^2$ — so the parameters are what their names claim.
+:::
+
+:::proof
+$K(t) = \ln M_X(t) = \mu t + \tfrac12\sigma^2t^2$ is a quadratic. Then $K'(t) = \mu + \sigma^2 t$ and $K''(t) = \sigma^2$, so $E[X] = K'(0) = \mu$ and $\operatorname{Var}(X) = K''(0) = \sigma^2$.
+
+The direct proof of $E[X]=\mu$ needs a substitution and an odd-symmetry argument; the direct proof of $\operatorname{Var}(X)=\sigma^2$ needs integration by parts on $\int z^2\varphi(z)dz$. Notice also what the vanishing of $K^{(n)}$ for $n\ge3$ says: every cumulant of the normal beyond the second is zero, which is one precise sense in which the normal is the distribution with no structure past its mean and variance.
+:::
+
+:::example[Sums of independent Poissons]{#poisson-sum-example}
+Let $X\sim\text{Poisson}(\lambda_1)$ and $Y\sim\text{Poisson}(\lambda_2)$ be independent. Identify the distribution of $X+Y$.
+:::
+
+:::solution
+By the theorem *The mgf of a sum of independent variables*,
+
+$$M_{X+Y}(t) = e^{\lambda_1(e^t-1)}e^{\lambda_2(e^t-1)} = e^{(\lambda_1+\lambda_2)(e^t-1)},$$
+
+the mgf of $\text{Poisson}(\lambda_1+\lambda_2)$. By the theorem *Uniqueness of the moment generating function*, $X+Y\sim\text{Poisson}(\lambda_1+\lambda_2)$.
+
+The same argument in the binomial case: $(1-p+pe^t)^{m}(1-p+pe^t)^{n} = (1-p+pe^t)^{m+n}$, so independent binomials with a **common** $p$ add. With different success probabilities the exponents cannot be combined, and indeed the sum is not binomial — the algebra records the hypothesis for you.
+:::
+
+:::example[Linear combinations of independent normals]{#normal-combination-example}
+Let $X\sim N(\mu_1,\sigma_1^2)$ and $Y\sim N(\mu_2,\sigma_2^2)$ be independent and let $W = aX+bY$. Find the distribution of $W$.
+:::
+
+:::solution
+By part (2) of the proposition *Elementary properties*, $M_{aX}(t) = M_X(at) = \exp(a\mu_1t+\tfrac12a^2\sigma_1^2t^2)$, and similarly for $bY$. Multiplying,
+
+$$M_W(t) = \exp\!\Big((a\mu_1+b\mu_2)t + \tfrac12\big(a^2\sigma_1^2+b^2\sigma_2^2\big)t^2\Big),$$
+
+which is the mgf of $N(a\mu_1+b\mu_2,\ a^2\sigma_1^2+b^2\sigma_2^2)$. Uniqueness finishes it.
+
+This is the theorem *Linear combinations of independent normals* from the chapter on continuous random variables, whose proof there had to wave at mgfs it had not defined. Note the squares on $a$ and $b$: the variance of $X-Y$ is $\sigma_1^2+\sigma_2^2$, because $(-1)^2 = +1$. Variances of independent things add no matter which sign the combination carries.
+:::
+
+## Probability generating functions
+
+<!-- section: pgf -->
+
+For a random variable taking values in $\{0,1,2,\ldots\}$ there is a better-behaved relative of the mgf, obtained by writing $s = e^t$.
+
+:::definition[Probability generating function]{#pgf-definition}
+Let $X$ take values in the non-negative integers with $p_k = P(X=k)$. Its **probability generating function** (pgf) is
+
+$$G_X(s) = E\big[s^X\big] = \sum_{k=0}^{\infty}p_k s^k .$$
+
+The series has radius of convergence at least $1$ and is finite for every $|s|\le1$, since $\sum p_k = 1$.
+:::
+
+:::note[The relationship to the mgf]
+$G_X(s) = M_X(\ln s)$ for $s>0$, and $M_X(t) = G_X(e^t)$. They carry the same information where both are defined, but the pgf is always finite on $[-1,1]$ whatever the distribution, whereas the mgf may exist nowhere but the origin. The pgf is also literally a *list* of the probabilities: the coefficient of $s^k$ is $p_k$, so recovering a pmf from a pgf is reading off a power series, which is often easier than any inversion.
+:::
+
+:::proposition[Properties of the pgf]{#pgf-properties}
+For a non-negative integer valued $X$ with pgf $G$:
+
+1. $G(0) = p_0 = P(X=0)$ and $G(1) = 1$;
+2. $p_k = G^{(k)}(0)/k!$, so $G$ determines the distribution;
+3. $E[X] = G'(1)$ and more generally $E\big[X(X-1)\cdots(X-r+1)\big] = G^{(r)}(1)$, the $r$-th **factorial moment**, whenever it is finite;
+4. $\operatorname{Var}(X) = G''(1) + G'(1) - G'(1)^2$;
+5. if $X_1,\ldots,X_n$ are independent then $G_{X_1+\cdots+X_n}(s) = \prod_i G_{X_i}(s)$.
+:::
+
+:::proof
+(1) Setting $s=0$ kills every term but $k=0$, leaving $p_0$; setting $s=1$ gives $\sum_k p_k = 1$.
+
+(2) $G$ is a power series with coefficients $p_k$, and the $k$-th derivative of a power series at the centre is $k!$ times the $k$-th coefficient. Since a convergent power series has unique coefficients, two variables with the same pgf have the same pmf — unlike the mgf, the uniqueness here needs no transform theory at all.
+
+(3) Differentiating term by term inside the radius of convergence,
+
+$$G'(s) = \sum_{k\ge1}kp_ks^{k-1}, \qquad G^{(r)}(s) = \sum_{k\ge r}k(k-1)\cdots(k-r+1)p_ks^{k-r}.$$
+
+Setting $s=1$ gives $\sum_k k(k-1)\cdots(k-r+1)p_k = E[X(X-1)\cdots(X-r+1)]$. (At $s=1$ this is a one-sided limit if the radius of convergence is exactly $1$; Abel's theorem guarantees the limit equals the sum whenever that sum is finite, and equals $+\infty$ otherwise.)
+
+(4) From (3) with $r=2$, $G''(1) = E[X(X-1)] = E[X^2]-E[X]$, so $E[X^2] = G''(1)+G'(1)$. Subtract $E[X]^2 = G'(1)^2$.
+
+(5) $E[s^{\sum X_i}] = E[\prod_i s^{X_i}] = \prod_i E[s^{X_i}]$, the middle step by independence exactly as in the theorem *The mgf of a sum of independent variables*.
+:::
+
+:::example[Reading a pgf]{#pgf-table-example}
+Compute the pgfs of the Bernoulli, binomial, Poisson and geometric laws, and recover the Poisson mean and variance.
+:::
+
+:::solution
+Substituting $s = e^t$ in the proposition *Moment generating functions of the standard families*:
+
+$$G_{\text{Ber}(p)}(s) = 1-p+ps, \qquad G_{\text{Bin}(n,p)}(s) = (1-p+ps)^n,$$
+
+$$G_{\text{Poisson}(\lambda)}(s) = e^{\lambda(s-1)}, \qquad G_{\text{Geom}(p)}(s) = \frac{ps}{1-(1-p)s}\ \ \text{for } |s|<\tfrac{1}{1-p}.$$
+
+For the Poisson, $G'(s) = \lambda e^{\lambda(s-1)}$ and $G''(s) = \lambda^2e^{\lambda(s-1)}$, so $G'(1) = \lambda$ and $G''(1) = \lambda^2$. Then $E[X] = \lambda$ and, by part (4),
+
+$$\operatorname{Var}(X) = \lambda^2 + \lambda - \lambda^2 = \lambda . \checkmark$$
+:::
+
+### Sums of a random number of terms
+
+The pgf earns its keep on a problem the direct methods handle badly: a sum whose *number of terms is itself random*. Insurance claims in a year, offspring in a generation, customers served in a shift — all have this shape.
+
+:::theorem[Compounding: the pgf of a random sum]{#random-sum}
+Let $N$ be a non-negative integer valued random variable with pgf $G_N$, and let $X_1,X_2,\ldots$ be iid non-negative integer valued with common pgf $G_X$, independent of $N$. Put
+
+$$S = \sum_{i=1}^{N}X_i \qquad (\text{with } S = 0 \text{ when } N=0).$$
+
+Then $G_S(s) = G_N\big(G_X(s)\big)$. Consequently, if the means and variances are finite,
+
+$$E[S] = E[N]E[X], \qquad \operatorname{Var}(S) = E[N]\operatorname{Var}(X) + \operatorname{Var}(N)E[X]^2 .$$
+:::
+
+:::proof
+Condition on $N$ and use the tower property $E[Y] = E\big[E[Y\mid N]\big]$. Given $N=n$, the sum is of $n$ iid terms independent of the conditioning event, so by part (5) of the proposition *Properties of the pgf*,
+
+$$E\big[s^S \mid N=n\big] = G_X(s)^n .$$
+
+Therefore
+
+$$G_S(s) = E\big[s^S\big] = \sum_{n=0}^{\infty}P(N=n)\,G_X(s)^n = G_N\big(G_X(s)\big),$$
+
+the last step being the definition of $G_N$ evaluated at the number $G_X(s)$, which lies in $[0,1]$ for $s\in[0,1]$ so the series converges.
+
+For the moments, differentiate with the chain rule and use $G_X(1)=1$:
+
+$$G_S'(s) = G_N'\big(G_X(s)\big)G_X'(s) \implies G_S'(1) = G_N'(1)G_X'(1) = E[N]E[X].$$
+
+Differentiating again,
+
+$$G_S''(s) = G_N''\big(G_X(s)\big)G_X'(s)^2 + G_N'\big(G_X(s)\big)G_X''(s),$$
+
+so $G_S''(1) = G_N''(1)E[X]^2 + E[N]G_X''(1)$. Substituting into part (4) of the proposition *Properties of the pgf* and writing $G''(1) = E[\cdot^2]-E[\cdot]$ throughout, the terms rearrange into $E[N]\operatorname{Var}(X) + \operatorname{Var}(N)E[X]^2$.
+:::
+
+:::example[Thinning a Poisson stream]{#thinning-example}
+A shop receives $N\sim\text{Poisson}(\lambda)$ customers in a day, and each independently buys something with probability $p$. How many buyers are there?
+:::
+
+:::solution
+Let $X_i$ be the indicator that customer $i$ buys, so $G_X(s) = 1-p+ps$, and let $S$ be the number of buyers. By the theorem *Compounding: the pgf of a random sum*,
+
+$$G_S(s) = G_N\big(G_X(s)\big) = \exp\!\Big(\lambda\big((1-p+ps)-1\big)\Big) = e^{\lambda p(s-1)},$$
+
+which is the pgf of $\text{Poisson}(\lambda p)$. So thinning a Poisson stream by independent coin flips leaves a Poisson stream, with the rate multiplied by the retention probability.
+
+Sanity check against the moment formulas: $E[S] = E[N]E[X] = \lambda p$ ✓, and $\operatorname{Var}(S) = \lambda\cdot p(1-p) + \lambda\cdot p^2 = \lambda p$ ✓, matching a Poisson's equal mean and variance.
+:::
+
+### Branching processes
+
+:::definition[Galton–Watson branching process]{#branching-definition}
+Start with $Z_0 = 1$ individual. Each individual in generation $n$ independently produces a random number of offspring with pmf $p_k$ and pgf $G$, and
+
+$$Z_{n+1} = \sum_{i=1}^{Z_n}X_{n,i}$$
+
+where the $X_{n,i}$ are iid with pgf $G$ and independent of $Z_n$. The **extinction probability** is $q = P(Z_n = 0 \text{ for some } n)$.
+:::
+
+:::proposition[Generation sizes and their means]{#branching-pgf}
+Let $G_n$ be the pgf of $Z_n$ and $\mu = G'(1) = E[X]$ the mean offspring number. Then $G_n$ is the $n$-fold composition of $G$ with itself,
+
+$$G_n(s) = G\big(G_{n-1}(s)\big) = \underbrace{G(G(\cdots G}_{n}(s)\cdots)),$$
+
+and $E[Z_n] = \mu^n$.
+:::
+
+:::proof
+$Z_n$ is a random sum of $Z_{n-1}$ iid terms each with pgf $G$, so the theorem *Compounding: the pgf of a random sum* gives $G_n(s) = G_{n-1}(G(s))$; iterating from $G_0(s)=s$ gives the composition, and composition of a function with itself may be read in either order here, so $G_n = G\circ G_{n-1}$ as well.
+
+For the mean, the chain rule at $s=1$ with $G(1)=1$ gives $G_n'(1) = G_{n-1}'(1)G'(1)$, that is $E[Z_n] = \mu E[Z_{n-1}]$, and $E[Z_0]=1$. Induction gives $\mu^n$.
+:::
+
+:::theorem[Extinction criterion]{#extinction}
+Assume $p_1 \neq 1$. The extinction probability $q$ is the smallest root in $[0,1]$ of the fixed-point equation
+
+$$s = G(s).$$
+
+Moreover $q = 1$ if $\mu \le 1$, and $q<1$ if $\mu>1$.
+:::
+
+:::proof
+*Sketch — the analytic details of the last step are indicated but not fully verified.* Let $q_n = P(Z_n = 0) = G_n(0)$. The sequence $(q_n)$ is non-decreasing, since extinction by generation $n$ implies extinction by generation $n+1$, and bounded by $1$, so it converges to $q$. Applying the recursion, $q_{n+1} = G(q_n)$, and letting $n\to\infty$ with $G$ continuous on $[0,1]$ gives $q = G(q)$: the extinction probability is a fixed point.
+
+That it is the *smallest* non-negative fixed point follows by induction: if $r \in [0,1]$ satisfies $r = G(r)$, then $q_0 = 0 \le r$, and $q_n \le r$ implies $q_{n+1} = G(q_n)\le G(r) = r$ because $G$ is non-decreasing on $[0,1]$. So $q_n \le r$ for all $n$ and hence $q \le r$.
+
+For the dichotomy, note $G$ is convex on $[0,1]$ — its second derivative $\sum_{k\ge2}k(k-1)p_ks^{k-2}$ is non-negative — and $G(1)=1$. A convex function meeting the line $y=s$ at $s=1$ crosses it at most once more in $[0,1)$, and it does so exactly when its slope at $1$, namely $\mu$, exceeds $1$. If $\mu\le1$ the only fixed point in $[0,1]$ is $s=1$ and so $q=1$; if $\mu>1$ the curve dips below the diagonal just left of $1$ and, since $G(0)=p_0\ge0$, must cross it at some $q<1$.
+:::
+
+:::intuition
+Each individual has $\mu$ children on average, so a population of size $z$ becomes $\mu z$ on average: the mean grows geometrically. When $\mu<1$ the mean decays to zero and extinction is unsurprising. The delicate case is $\mu=1$, where the mean population is exactly $1$ forever — and yet extinction is still certain. The reason is that a population that happens to hit $0$ can never recover, so the process eventually finds the absorbing state; the constant mean is propped up by increasingly unlikely, increasingly enormous surviving lines.
+:::
+
+:::example[A branching process with $\mu = 5/4$]{#branching-example}
+An individual has $0$, $1$ or $2$ offspring with probabilities $\tfrac14, \tfrac14, \tfrac12$. Find the mean offspring number and the extinction probability.
+:::
+
+:::solution
+The offspring pgf is
+
+$$G(s) = \tfrac14 + \tfrac14 s + \tfrac12 s^2 .$$
+
+Then $G'(s) = \tfrac14 + s$ and $\mu = G'(1) = \tfrac54 > 1$, so the theorem *Extinction criterion* promises $q<1$.
+
+Solve $s = G(s)$: multiply by $4$ to get $4s = 1 + s + 2s^2$, that is
+
+$$2s^2 - 3s + 1 = 0 \implies (2s-1)(s-1) = 0 \implies s = \tfrac12 \text{ or } s=1 .$$
+
+The smallest root in $[0,1]$ is $q = \tfrac12$. So despite a growth rate above $1$, this population dies out half the time. Expected size in generation $n$ is $(5/4)^n\to\infty$, and yet the *typical* outcome is extinction — the mean is carried by the surviving half.
+:::
+
+## Where generating functions fail
+
+<!-- section: existence -->
+
+Every construction above began "suppose the mgf is finite on an interval". That hypothesis is not free, and two standard distributions break it.
+
+:::theorem[The Cauchy distribution has no mgf]{#cauchy-no-mgf}
+Let $X$ have the standard Cauchy density $f(x) = \dfrac{1}{\pi(1+x^2)}$ on $\mathbb{R}$. Then $E[e^{tX}] = \infty$ for every $t \neq 0$, so $M_X(t)$ is finite only at $t=0$.
+:::
+
+:::proof
+Take $t>0$; the case $t<0$ is the same argument on the left tail, by the symmetry $f(-x)=f(x)$. All terms are positive, so it suffices to bound the integral over $[1,\infty)$ from below:
+
+$$E[e^{tX}] \ge \int_1^{\infty}\frac{e^{tx}}{\pi(1+x^2)}dx .$$
+
+For $x \ge 1$ we have $1+x^2 \le 2x^2$, so the integrand is at least $e^{tx}/(2\pi x^2)$. Since $e^{tx}$ grows faster than any power, $e^{tx}/x^2 \to \infty$; in particular $e^{tx}/(2\pi x^2) \ge 1$ for all $x$ beyond some $x_0$, and the integral over $[x_0,\infty)$ of a function bounded below by $1$ is infinite.
+:::
+
+:::remark[And no mean either]
+The same tail is why $E[X]$ does not exist for the Cauchy: $\int_1^\infty x/(\pi(1+x^2))dx$ diverges logarithmically. The Cauchy is exactly the $t$-distribution with one degree of freedom mentioned in the chapter on continuous random variables, and it is the standard counterexample to the law of large numbers — the average of $n$ iid Cauchy variables is again standard Cauchy, for every $n$, so averaging achieves nothing at all.
+:::
+
+:::theorem[The log-normal has no mgf on any interval to the right]{#lognormal-no-mgf}
+Let $X = e^{Z}$ with $Z\sim N(0,1)$, the standard log-normal. Then $E[X^n] = e^{n^2/2}$ is finite for every $n$, but $E[e^{tX}] = \infty$ for every $t>0$.
+:::
+
+:::proof
+The moments are the normal mgf in disguise: $E[X^n] = E[e^{nZ}] = M_Z(n) = e^{n^2/2}$, finite for every $n$. So every moment exists.
+
+For the mgf, fix $t>0$ and bound below by the part of the integral with $z \ge 0$:
+
+$$E\big[e^{tX}\big] = \int_{-\infty}^{\infty}\exp\!\big(te^{z}\big)\frac{1}{\sqrt{2\pi}}e^{-z^2/2}dz \ge \frac{1}{\sqrt{2\pi}}\int_0^{\infty}\exp\!\left(te^{z}-\frac{z^2}{2}\right)dz .$$
+
+The exponent is $te^z - z^2/2$. As $z\to\infty$, $e^z$ beats $z^2$, so the exponent tends to $+\infty$ and the integrand tends to $+\infty$; an integral over an infinite interval of a function tending to infinity diverges.
+:::
+
+:::pitfall[All moments finite does not give an mgf]
+The log-normal has every moment and no mgf, so the two conditions are genuinely different. This is not a curiosity: it is the loophole through which the counterexample of the pitfall *Matching moments is not matching distributions* passes, and it is why the uniqueness theorem is stated with "finite on an interval" rather than "all moments finite". The moments grow like $e^{n^2/2}$, far too fast for $\sum E[X^n]t^n/n!$ to converge for any $t>0$ — and it is that convergence, not the finiteness of the individual terms, that the mgf needs.
+:::
+
+:::definition[Characteristic function]{#characteristic-function}
+The **characteristic function** of $X$ is
+
+$$\varphi_X(t) = E\big[e^{itX}\big] = E\big[\cos(tX)\big] + i\,E\big[\sin(tX)\big], \qquad t\in\mathbb{R},$$
+
+where $i^2=-1$.
+:::
+
+Because $|e^{itX}| = 1$ for every real $t$ and every value of $X$, the expectation is an average of quantities of modulus one and is therefore always finite: **every** random variable has a characteristic function, on the whole real line, with no hypotheses whatever. The Cauchy's is $\varphi(t) = e^{-|t|}$; the log-normal's exists too, though it has no elementary closed form.
+
+The characteristic function has all the structural properties proved above for the mgf — $\varphi(0)=1$, $\varphi_{aX+b}(t) = e^{ibt}\varphi_X(at)$, the product rule for sums of independent variables, and derivatives at $0$ giving moments when those moments exist — and, crucially, a uniqueness and continuity theorem that requires no integrability hypothesis at all.
+
+This is why the real proof of the Central Limit Theorem uses characteristic functions and not mgfs. The mgf argument sketched in the chapter on continuous random variables for the normal approximation to the binomial is fine there, because a bounded random variable has an mgf everywhere. But the Central Limit Theorem is true for *any* iid sequence with finite variance, including ones with no mgf — and an argument that begins "expand $M_X(t)$" has assumed away the general case in its first line. Swapping $e^{tX}$ for $e^{itX}$ removes the assumption at the cost of doing analysis in the complex plane, which is the trade the professional proof makes.
+
+:::summary[What to carry away]
+- **The cdf method** is the general technique: rewrite $\{g(X)\le y\}$ as an event about $X$, evaluate with $F_X$, differentiate. It never needs monotonicity.
+- **Change of variables:** for strictly monotone differentiable $g$, $f_Y(y) = f_X(g^{-1}(y))|(g^{-1})'(y)|$. The absolute-value factor is the local stretch; density thins where the map stretches. For non-monotone $g$, sum one such term per solution of $g(x)=y$ — two terms for $Y=X^2$, which is where the $\chi^2_1$ density comes from.
+- **Sums:** $f_{X+Y} = f_X * f_Y$ by convolution, valid only under independence. The general two-variable tool is the Jacobian formula $f_{\mathbf{Y}}(\mathbf{y}) = f_{\mathbf{X}}(h(\mathbf{y}))|J|$, with an auxiliary second coordinate invented and then integrated out.
+- **Order statistics:** $f_{X_{(k)}}(x) = \frac{n!}{(k-1)!(n-k)!}F(x)^{k-1}(1-F(x))^{n-k}f(x)$, specialising to $nF^{n-1}f$ for the maximum and $n(1-F)^{n-1}f$ for the minimum. For a $U(0,1)$ sample, $X_{(k)}\sim\text{Beta}(k,n-k+1)$ with mean $k/(n+1)$ and the range has mean $(n-1)/(n+1)$.
+- **Mgf:** $M_X(t) = E[e^{tX}]$, with $M_X(0)=1$, $M_X^{(n)}(0) = E[X^n]$, $M_{aX+b}(t) = e^{bt}M_X(at)$, and $M_{\sum X_i} = \prod M_{X_i}$ under independence. Uniqueness — equal mgfs on an interval force equal distributions — is what licenses identifying a distribution by its transform, and its proof is imported.
+- **The table:** $\text{Poisson}(\lambda)$ has $e^{\lambda(e^t-1)}$, $\text{Exp}(\lambda)$ has $\lambda/(\lambda-t)$ for $t<\lambda$, $N(\mu,\sigma^2)$ has $e^{\mu t+\sigma^2t^2/2}$, $\text{Binomial}(n,p)$ has $(1-p+pe^t)^n$, $\text{Gamma}(\alpha,\lambda)$ has $(\lambda/(\lambda-t))^\alpha$. Differentiating $\ln M$ twice at $0$ gives mean and variance directly.
+- **Pgf:** $G_X(s) = E[s^X]$ for count variables, with $p_k = G^{(k)}(0)/k!$, $E[X]=G'(1)$, and $\operatorname{Var}(X) = G''(1)+G'(1)-G'(1)^2$. A random sum has $G_S = G_N\circ G_X$; a branching process has $G_n = G^{\circ n}$ and extinction probability the smallest root of $s=G(s)$, which is $1$ exactly when $\mu\le1$.
+- **Failure:** the Cauchy has no mgf away from $0$ and the log-normal none for $t>0$ despite having every moment. Characteristic functions $E[e^{itX}]$ always exist, which is why the general Central Limit Theorem is proved with them.
+:::
+
+## Common Mistakes
+
+- **Using the change-of-variables formula on a non-monotone map.** $f_Y(y) = f_X(g^{-1}(y))|(g^{-1})'(y)|$ requires strict monotonicity. For $Y=X^2$ with $X$ symmetric it loses exactly half the probability. Count the solutions of $g(x)=y$ and write one term for each; if the integral of your answer is not $1$, a branch is missing.
+- **Forgetting the absolute value.** A decreasing transformation gives a negative $(g^{-1})'$, and a negative "density" is the signal. The Jacobian version has the same trap: $|J|$, never $J$.
+- **Differentiating $F_X$ instead of composing.** The formula is $F_Y(y) = F_X(g^{-1}(y))$ — substitute *then* differentiate. Writing $f_X(y)$ where $f_X(g^{-1}(y))$ belongs drops the transformation entirely.
+- **Getting the convolution limits wrong.** For non-negative variables $\int f_X(x)f_Y(z-x)dx$ runs over $0<x<z$, not $0<x<\infty$: both arguments must lie in their supports. This is where most convolution errors live.
+- **Convolving without independence.** $f_{X+Y} = f_X*f_Y$ fails for dependent variables; with $Y=-X$ the true sum is the constant $0$ while the convolution returns a triangular density.
+- **Treating order statistics as independent.** They never are, even for an independent sample. $P(X_{(1)}>a,\,X_{(n)}\le b)$ is $(F(b)-F(a))^n$, not a product of the two marginals.
+- **Mixing up $k$ and $n-k$ in the order statistic density.** $F^{k-1}(1-F)^{n-k}$: the number of observations *below* carries the exponent $k-1$. Check against the minimum ($k=1$ must give $n(1-F)^{n-1}f$) and the maximum ($k=n$ must give $nF^{n-1}f$).
+- **Believing the median of $n$ uniforms has mean $1/2$ only by symmetry.** It does, but for even $n$ there is no single middle order statistic, and for $X_{(k)}$ in general the mean is $k/(n+1)$, not $k/n$.
+- **Multiplying mgfs of dependent variables.** $M_{X+Y} = M_XM_Y$ needs independence, and it is the entire content of the theorem. Equally, the converse is invalid: matching mgfs does not establish independence.
+- **Reading $M_X(0)=1$ as information.** It holds for every random variable, so it is a consistency check and never an identification. "The mgf exists" means finite on an *interval* around $0$.
+- **Using $M'(0)$ when the mgf is only finite on a half-line.** The exponential's mgf exists for $t<\lambda$, an interval containing $0$, so derivatives at $0$ are legitimate. The Cauchy's exists only at $t=0$, where no derivative can be formed at all.
+- **Assuming all moments determine the distribution.** They do not — the log-normal family of the pitfall *Matching moments is not matching distributions* is the counterexample. Uniqueness needs the mgf finite on an interval.
+- **Forgetting the $+G'(1)$ in the pgf variance.** $G''(1)$ is $E[X(X-1)]$, not $E[X^2]$, so $\operatorname{Var}(X) = G''(1)+G'(1)-G'(1)^2$.
+- **Composing a random sum's pgf the wrong way round.** It is $G_S = G_N \circ G_X$ — the *outer* function counts the terms. $G_X \circ G_N$ is a different function and answers a different question.
+- **Concluding a branching process survives because $\mu>1$.** $\mu>1$ makes survival possible, not certain; with $G(s) = \tfrac14+\tfrac14s+\tfrac12s^2$ the growth rate is $5/4$ and extinction still has probability $1/2$.

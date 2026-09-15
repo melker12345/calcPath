@@ -1,0 +1,1026 @@
+---
+title: Joint Distributions
+---
+
+# Joint Distributions
+
+Everything so far has studied one random variable at a time. A single $X$ has a distribution, a mean, a variance, and a tail; you can compute $P(X > 3)$ and be done. But almost no question worth asking is about one quantity in isolation. Does a tall parent have a tall child? Does a long queue at the till predict a long wait at the door? Is the second die showing what the first die showed? Each of these compares *two* random quantities, and to compare them you need them on the same probability space, described by one object that records how they vary together.
+
+That object is the **joint distribution**. It is not two distributions side by side. Knowing everything about $X$ and everything about $Y$ separately is strictly less information than knowing the pair $(X,Y)$ — a fact this chapter proves by exhibiting two visibly different joint distributions whose separate descriptions agree exactly. The extra information is precisely the dependence between them, and dependence is what the rest of probability is built on.
+
+The chapter builds the two-variable machinery in the order the one-variable machinery was built: first the descriptions — joint pmfs, joint densities, the joint cdf — then the operations, which are marginalising, testing independence, and conditioning one variable on the other. Conditioning in the continuous case means conditioning on an event of probability zero, and the chapter proves that this is legitimate rather than assuming it. Two results then carry everything downstream: the two-dimensional law of the unconscious statistician, which computes $E[g(X,Y)]$ without ever finding the distribution of $g(X,Y)$, and the convolution formula for the distribution of a sum. It closes on the bivariate normal, the one family where every question has a closed-form answer, and on the exact sense in which it is exceptional.
+
+Covariance, correlation, conditional expectation, the law of large numbers, the central limit theorem and Markov chains all live on top of what is built here.
+
+## Joint mass functions, densities and the joint cdf
+
+<!-- section: joint-pmf -->
+
+Two random variables defined on the same sample space $\Omega$ combine into a single map $\omega \mapsto (X(\omega), Y(\omega))$ taking values in the plane. That map is a **random vector**, and asking for its distribution means asking, for each region $B \subseteq \mathbb{R}^2$, what $P((X,Y) \in B)$ is. The discrete case answers this with a table.
+
+:::definition[Joint probability mass function]{#joint-pmf-def}
+Let $X$ and $Y$ be discrete random variables on the same probability space. Their **joint probability mass function** is
+
+$$p_{X,Y}(x,y) = P(X = x \text{ and } Y = y) = P(\{X = x\} \cap \{Y = y\}).$$
+
+It satisfies $p_{X,Y}(x,y) \ge 0$ for all $(x,y)$ and
+
+$$\sum_{x}\sum_{y} p_{X,Y}(x,y) = 1,$$
+
+the sums running over the countably many values each variable can take.
+:::
+
+The two conditions are the axioms again. Non-negativity is inherited from $P$; the total is one because the events $\{X = x, Y = y\}$, as $(x,y)$ ranges over all value pairs, are disjoint and exhaust $\Omega$. Any non-negative table summing to one is a legitimate joint pmf, and every question about the pair is answered by adding up entries of it.
+
+:::proposition[Probability of a discrete region]{#discrete-region}
+For any set $B \subseteq \mathbb{R}^2$,
+
+$$P((X,Y) \in B) = \sum_{(x,y) \in B} p_{X,Y}(x,y).$$
+:::
+
+:::proof
+The event $\{(X,Y) \in B\}$ is the disjoint union of the events $\{X = x, Y = y\}$ over those pairs $(x,y) \in B$ at which the pmf is positive. There are countably many such pairs, so countable additivity applies and the probabilities add. Pairs with $p_{X,Y}(x,y) = 0$ contribute nothing, which is why the sum may be written over all of $B$.
+:::
+
+So a "region" in the discrete case is just a list of cells to add. The work is in identifying which cells the region contains, not in the summation.
+
+:::example[Reading a joint table]{#joint-table-example}
+The pair $(X,Y)$ takes values in $\{0,1,2\}^2$ with joint pmf
+
+$$
+\begin{array}{c|ccc}
+p(x,y) & y=0 & y=1 & y=2 \\ \hline
+x=0 & 1/12 & 1/12 & 2/12 \\
+x=1 & 2/12 & 1/12 & 1/12 \\
+x=2 & 1/12 & 2/12 & 1/12
+\end{array}
+$$
+
+Verify that this is a joint pmf and compute $P(X = Y)$, $P(X > Y)$ and $P(X + Y \le 2)$.
+:::
+
+:::solution
+1. Every entry is non-negative, and the nine entries total $\tfrac{1+1+2+2+1+1+1+2+1}{12} = \tfrac{12}{12} = 1$. It is a joint pmf.
+2. $P(X = Y)$ adds the diagonal cells $(0,0)$, $(1,1)$, $(2,2)$:
+$$P(X=Y) = \tfrac1{12} + \tfrac1{12} + \tfrac1{12} = \tfrac3{12} = \tfrac14.$$
+3. $P(X > Y)$ adds the cells strictly below the diagonal — $(1,0)$, $(2,0)$, $(2,1)$:
+$$P(X>Y) = \tfrac2{12} + \tfrac1{12} + \tfrac2{12} = \tfrac5{12}.$$
+4. $P(X + Y \le 2)$ adds the six cells with $x + y \le 2$: $(0,0), (0,1), (0,2), (1,0), (1,1), (2,0)$, giving
+$$\tfrac{1 + 1 + 2 + 2 + 1 + 1}{12} = \tfrac{8}{12} = \tfrac23.$$
+5. Check: $P(X=Y) + P(X>Y) + P(X<Y) = \tfrac14 + \tfrac5{12} + P(X<Y) = 1$ forces $P(X<Y) = \tfrac13$, and adding the cells above the diagonal — $\tfrac1{12} + \tfrac2{12} + \tfrac1{12} = \tfrac4{12}$ — confirms it. ✓
+:::
+
+This table is the chapter's discrete running example, built so that its two variables are *dependent* while looking, from the outside, as symmetric as possible.
+
+For continuous pairs the table is replaced by a surface, exactly as a one-variable pmf was replaced by a density. The reasoning is the same: a single point $(x,y)$ in the plane has zero area, so it must carry zero probability, and probability has to be spread rather than placed.
+
+:::definition[Joint probability density function]{#joint-pdf-def}
+A function $f_{X,Y} : \mathbb{R}^2 \to \mathbb{R}$ is a **joint probability density function** for the pair $(X,Y)$ if
+
+$$f_{X,Y}(x,y) \ge 0 \quad \text{for all } (x,y), \qquad \int_{-\infty}^{\infty}\!\!\int_{-\infty}^{\infty} f_{X,Y}(x,y)\,dx\,dy = 1,$$
+
+and for every region $B \subseteq \mathbb{R}^2$ over which the integral makes sense,
+
+$$P((X,Y) \in B) = \iint_B f_{X,Y}(x,y)\,dA.$$
+
+The pair is then called **jointly continuous**.
+:::
+
+:::intuition
+Spread one kilogram of dust over a tabletop. No single point holds any dust, because a point has no area; what a point has is a *surface density*, grams per square centimetre. To find the dust lying over some patch of the table, integrate that density across the patch.
+
+A joint density is that surface density with probability in place of dust. The height $f_{X,Y}(x,y)$ says how thickly probability is piled up near $(x,y)$; the volume sitting over a region is the probability of landing in it. Probability that used to be area under a curve is now volume under a surface.
+:::
+
+:::pitfall[Jointly continuous is stronger than "each is continuous"]
+It is possible for $X$ and $Y$ each to have a perfectly good one-variable density while the pair $(X,Y)$ has no joint density at all. Take $X \sim U(0,1)$ and set $Y = X$. Then $Y \sim U(0,1)$ too, so both are continuous. But all the probability of the pair sits on the diagonal line $y = x$, and a line in the plane has zero area. If a joint density $f$ existed, the probability of the diagonal would be the integral of $f$ over a set of zero area, which is $0$ — yet the pair lies on the diagonal with probability $1$.
+
+So "jointly continuous" is a genuine assumption about the *pair*, not a consequence of assumptions about each part. This is the two-variable echo of the fact that marginals do not determine the joint.
+:::
+
+Both cases are covered at once by accumulating probability to the lower left.
+
+:::definition[Joint cumulative distribution function]{#joint-cdf-def}
+The **joint cumulative distribution function** of $(X,Y)$ is
+
+$$F_{X,Y}(x,y) = P(X \le x \text{ and } Y \le y).$$
+:::
+
+:::theorem[Properties of a joint cdf]{#joint-cdf-props}
+Let $F = F_{X,Y}$. Then
+
+1. $F$ is non-decreasing in each argument separately;
+2. $\lim_{x \to -\infty} F(x,y) = \lim_{y \to -\infty} F(x,y) = 0$, and $\lim_{x,y \to \infty} F(x,y) = 1$;
+3. $F$ is right-continuous in each argument;
+4. for $a < b$ and $c < d$, the **rectangle inequality** holds:
+$$P(a < X \le b,\ c < Y \le d) = F(b,d) - F(a,d) - F(b,c) + F(a,c) \ \ge\ 0.$$
+
+If $(X,Y)$ is jointly continuous with density $f$, then $F(x,y) = \int_{-\infty}^{y}\int_{-\infty}^{x} f(u,v)\,du\,dv$ and, at every point where $f$ is continuous,
+
+$$f(x,y) = \frac{\partial^2 F}{\partial x \, \partial y}(x,y).$$
+:::
+
+:::proof
+(1) If $x_1 \le x_2$ then $\{X \le x_1, Y \le y\} \subseteq \{X \le x_2, Y \le y\}$, and probability is monotone under inclusion; the same argument applies in $y$.
+
+(2) The events $\{X \le -n, Y \le y\}$ decrease to the empty set and $\{X \le n, Y \le n\}$ increase to $\Omega$, so continuity of probability along monotone sequences gives the limits $0$ and $1$.
+
+(3) Apply continuity from above to $\{X \le x + \tfrac1n, Y \le y\}$, whose intersection is $\{X \le x, Y \le y\}$.
+
+(4) Write $R = (a,b] \times (c,d]$ and decompose the quarter-plane events. Let $A = \{X \le b, Y \le d\}$. Removing the strip $\{X \le a, Y \le d\}$ and the strip $\{X \le b, Y \le c\}$ from $A$ removes their overlap $\{X \le a, Y \le c\}$ twice, so inclusion–exclusion restores it once:
+
+$$P(R) = F(b,d) - F(a,d) - F(b,c) + F(a,c).$$
+
+Being a probability, $P(R) \ge 0$.
+
+The density statements are the two-variable Fundamental Theorem of Calculus: integrating $f$ over the quarter-plane $(-\infty,x] \times (-\infty,y]$ is the definition of $F$, and differentiating that iterated integral once in each variable recovers the integrand wherever it is continuous.
+:::
+
+Property (4) is the condition with no one-variable analogue, and it is where hand-built "cdfs" fail. A function can be monotone in each variable and right-continuous with the correct limits, and still assign a *negative* probability to some rectangle. The rectangle inequality is the genuine two-dimensional monotonicity condition, and monotonicity along each axis does not imply it.
+
+:::example[A joint density on the unit square]{#square-density-example}
+Let $f(x,y) = x + y$ for $0 \le x \le 1$, $0 \le y \le 1$, and $f = 0$ elsewhere. Check that $f$ is a density, and compute $P(X + Y < 1)$ and $P(X \le \tfrac12, Y \le \tfrac12)$.
+:::
+
+:::solution
+1. Non-negativity is clear on the square. For the total,
+$$\int_0^1\!\!\int_0^1 (x+y)\,dx\,dy = \int_0^1 \left[\frac{x^2}{2} + xy\right]_{x=0}^{1} dy = \int_0^1 \left(\frac12 + y\right) dy = \frac12 + \frac12 = 1. \checkmark$$
+2. For $P(X+Y<1)$ the region is the lower triangle of the square, so for each $x \in [0,1]$ the variable $y$ runs from $0$ to $1-x$:
+$$P(X+Y<1) = \int_0^1\!\!\int_0^{1-x} (x+y)\,dy\,dx = \int_0^1 \left[xy + \frac{y^2}{2}\right]_{y=0}^{1-x} dx = \int_0^1 \left(x(1-x) + \frac{(1-x)^2}{2}\right) dx.$$
+The integrand simplifies to $\tfrac{1-x^2}{2}$, so the value is $\tfrac12\left(1 - \tfrac13\right) = \tfrac13$.
+3. The second region is a rectangle, so both limits are constants:
+$$P\!\left(X \le \tfrac12, Y \le \tfrac12\right) = \int_0^{1/2}\!\!\int_0^{1/2} (x+y)\,dx\,dy = \int_0^{1/2}\left(\frac18 + \frac{y}{2}\right) dy = \frac1{16} + \frac1{16} = \frac18.$$
+4. Sanity check on step 3: the quarter-square nearest the origin is where $f$ is *smallest*, so its probability should fall below the $\tfrac14$ that a flat density would give. It does: $\tfrac18 < \tfrac14$. ✓
+:::
+
+Step 2 against step 3 is the whole computational content of the section. A rectangle gives constant limits and the double integral factors into two one-variable integrals; any other region makes the inner limits depend on the outer variable, and getting those limits right is the entire difficulty. The integrand is rarely the hard part.
+
+:::recipe[Computing $P((X,Y) \in B)$ for a jointly continuous pair]{#region-recipe}
+1. **Sketch** the support of $f$ — where $f > 0$ — and sketch $B$. The region of integration is their intersection; probability outside the support is zero no matter what $B$ says.
+2. **Choose a slicing direction.** Slicing vertically ("type I") fixes $x$ and lets $y$ run between two functions of $x$; slicing horizontally ("type II") does the reverse. Pick whichever needs fewer pieces.
+3. **Write the inner limits as functions of the outer variable**, and the outer limits as constants. If the inner limits would need a case split, break the region into pieces and add.
+4. **Integrate inside out**, and check the answer lies in $[0,1]$.
+5. **Sanity-check against a flat density**: compare your answer to the fraction of the support's area that $B$ covers, and confirm the difference points the way the density's tilt does.
+:::
+
+:::figure[The support of $f(x,y) = 8xy$ is the triangle $0 < x < y < 1$ (outlined). The shaded sub-region is where $Y > 2X$; integrating the density over it gives $P(Y > 2X) = 1/4$. Because the support is a triangle rather than a rectangle, the inner limit for $x$ depends on $y$ — and, as the section on independence shows, no density with this support can factor.]{#triangle-region-figure}
+{
+  "type": "plot",
+  "x": [-0.22, 1.35],
+  "y": [-0.22, 1.35],
+  "xTicks": 0.25,
+  "yTicks": 0.25,
+  "xLabel": "x",
+  "yLabel": "y",
+  "equalAspect": true,
+  "marks": [
+    { "kind": "region", "points": [[0, 0], [0.5, 1], [0, 1]], "tone": "result" },
+    { "kind": "path", "points": [[0, 0], [1, 1], [0, 1], [0, 0]], "tone": "accent" },
+    { "kind": "path", "points": [[0, 0], [0.5, 1]], "tone": "muted", "dashed": true },
+    { "kind": "text", "at": [0.19, 0.74], "text": "y > 2x", "tone": "result" },
+    { "kind": "text", "at": [0.98, 0.52], "text": "support 0 < x < y < 1", "leaderTo": [0.55, 0.72] },
+    { "kind": "text", "at": [0.62, 1.16], "text": "area of shaded volume = 1/4", "tone": "result" }
+  ]
+}
+:::
+
+:::example[A density on a triangle]{#triangle-density-example}
+Let $f(x,y) = 8xy$ on the triangle $0 < x < y < 1$ and $f = 0$ elsewhere. Verify that $f$ is a density and compute $P(Y > 2X)$.
+:::
+
+:::solution
+1. Slice horizontally: for fixed $y \in (0,1)$, $x$ runs from $0$ to $y$. Then
+$$\int_0^1\!\!\int_0^y 8xy\,dx\,dy = \int_0^1 8y \cdot \frac{y^2}{2}\,dy = \int_0^1 4y^3\,dy = 1. \checkmark$$
+2. The event $\{Y > 2X\}$ means $x < y/2$, which already implies $x < y$, so the region is the sub-triangle $0 < x < y/2$, $0 < y < 1$:
+$$P(Y > 2X) = \int_0^1\!\!\int_0^{y/2} 8xy\,dx\,dy = \int_0^1 8y\cdot\frac{(y/2)^2}{2}\,dy = \int_0^1 y^3\,dy = \frac14.$$
+3. Check the direction: the density $8xy$ grows with $x$, so it favours points near the line $y = x$ — that is, points where $Y$ is *not* much bigger than $X$. A value of $\tfrac14$, well below a half, is consistent. ✓
+:::
+
+## Marginal distributions
+
+<!-- section: marginals -->
+
+Given the joint distribution of the pair, the distribution of $X$ alone must be recoverable: $X$ is a random variable in its own right and had a distribution before $Y$ was ever mentioned. Recovering it is called taking a **marginal**, a name inherited from the practice of writing the row and column totals of a joint table in its margins.
+
+:::definition[Marginal distributions]{#marginal-def}
+For a discrete pair, the **marginal pmfs** are
+
+$$p_X(x) = \sum_y p_{X,Y}(x,y), \qquad p_Y(y) = \sum_x p_{X,Y}(x,y).$$
+
+For a jointly continuous pair, the **marginal densities** are
+
+$$f_X(x) = \int_{-\infty}^{\infty} f_{X,Y}(x,y)\,dy, \qquad f_Y(y) = \int_{-\infty}^{\infty} f_{X,Y}(x,y)\,dx.$$
+:::
+
+The definition asserts that these formulas produce the distribution of $X$; that assertion needs proof.
+
+:::theorem[Marginalisation recovers the distribution]{#marginalisation}
+Let $(X,Y)$ have joint pmf $p_{X,Y}$ (discrete) or joint density $f_{X,Y}$ (jointly continuous). Then $p_X$ as defined above is the pmf of $X$, and $f_X$ as defined above is a density for $X$.
+:::
+
+:::proof
+**Discrete.** Fix $x$. The event $\{X = x\}$ is the disjoint union, over the countably many values $y$ that $Y$ can take, of the events $\{X = x, Y = y\}$: every outcome with $X = x$ has exactly one value of $Y$. Countable additivity gives
+
+$$P(X = x) = \sum_y P(X = x, Y = y) = \sum_y p_{X,Y}(x,y) = p_X(x).$$
+
+**Continuous.** Fix $a \le b$ and take the region $B = [a,b] \times \mathbb{R}$, so that $\{(X,Y) \in B\} = \{a \le X \le b\}$. By the defining property of the joint density and Fubini's theorem, which permits the order of integration to be exchanged because $f_{X,Y} \ge 0$,
+
+$$P(a \le X \le b) = \int_a^b\!\!\int_{-\infty}^{\infty} f_{X,Y}(x,y)\,dy\,dx = \int_a^b f_X(x)\,dx.$$
+
+So $f_X$ reproduces every interval probability for $X$. It is non-negative, being an integral of a non-negative function, and taking $a \to -\infty$, $b \to \infty$ gives $\int f_X = 1$. Hence $f_X$ satisfies the definition of a density for $X$.
+:::
+
+:::intuition
+To find out how often $X$ lands near $x$, you do not care what $Y$ was doing — so you collect every outcome with that value of $x$, whatever $y$ came with it, and add up their probabilities. In the table that is a row total. In the continuous picture it is a vertical slice through the density surface: stand at $x$, cut straight down the $y$ direction, and the *area* of that cut is the height $f_X(x)$ of the one-variable density.
+
+Marginalising is summing out, or integrating out, the variable you have stopped caring about.
+:::
+
+:::example[Marginals of the unit-square density]{#square-marginal-example}
+Find both marginal densities of $f(x,y) = x + y$ on the unit square, and use one of them to compute $E[X]$.
+:::
+
+:::solution
+1. Integrate out $y$, remembering that $f$ vanishes outside the square so the $y$-integral runs only over $[0,1]$:
+$$f_X(x) = \int_0^1 (x+y)\,dy = \left[xy + \frac{y^2}{2}\right]_0^1 = x + \frac12, \qquad 0 \le x \le 1.$$
+2. By the symmetry of $f$ in its two arguments, $f_Y(y) = y + \tfrac12$ on $[0,1]$.
+3. Check that $f_X$ is a density: $\int_0^1 (x + \tfrac12)\,dx = \tfrac12 + \tfrac12 = 1$. ✓
+4. Then
+$$E[X] = \int_0^1 x\left(x + \frac12\right) dx = \frac13 + \frac14 = \frac{7}{12} \approx 0.5833.$$
+5. Sanity check: $f_X$ increases across $[0,1]$, so it piles mass to the right, and the mean should sit above the midpoint $\tfrac12$. It does. ✓
+:::
+
+:::example[Marginals of the triangular density]{#triangle-marginal-example}
+Find both marginals of $f(x,y) = 8xy$ on $0 < x < y < 1$.
+:::
+
+:::solution
+1. For $f_X(x)$, fix $x \in (0,1)$ and integrate over the $y$ values compatible with it, namely $y \in (x,1)$:
+$$f_X(x) = \int_x^1 8xy\,dy = 8x\left[\frac{y^2}{2}\right]_x^1 = 4x\left(1 - x^2\right), \qquad 0 < x < 1.$$
+2. For $f_Y(y)$, fix $y$ and integrate over $x \in (0,y)$:
+$$f_Y(y) = \int_0^y 8xy\,dx = 8y \cdot \frac{y^2}{2} = 4y^3, \qquad 0 < y < 1.$$
+3. Both integrate to one: $\int_0^1 4x(1-x^2)dx = 2 - 1 = 1$ and $\int_0^1 4y^3 dy = 1$. ✓
+4. Note the shapes. $f_Y(y) = 4y^3$ pushes $Y$ hard towards $1$, which is right — $Y$ is the larger coordinate. And $f_X$ vanishes at both ends, peaking at $x = 1/\sqrt3$, which is right too: $X$ cannot be large (it must stay below $Y$) and cannot be near zero either (the density $8xy$ is small there).
+:::
+
+The **limits of integration carry the support**. In the last example the $x$-integral ran to $y$ and the $y$-integral ran from $x$, and getting that backwards is the single most common error in marginalising. Write the support as a system of inequalities first, then solve it for the variable being integrated out.
+
+Now the central negative result of the chapter.
+
+:::theorem[Marginals do not determine the joint]{#marginals-insufficient}
+There exist joint pmfs $p$ and $q$ with $p \neq q$ but with identical marginals: $p_X = q_X$ and $p_Y = q_Y$.
+:::
+
+:::proof
+Let $p$ be the joint pmf of the running table,
+
+$$
+\begin{array}{c|ccc}
+p(x,y) & y=0 & y=1 & y=2 \\ \hline
+x=0 & 1/12 & 1/12 & 2/12 \\
+x=1 & 2/12 & 1/12 & 1/12 \\
+x=2 & 1/12 & 2/12 & 1/12
+\end{array}
+$$
+
+and let $q(x,y) = \tfrac19$ for every $(x,y) \in \{0,1,2\}^2$.
+
+Each row of $p$ totals $\tfrac{4}{12} = \tfrac13$, so $p_X(x) = \tfrac13$ for $x = 0,1,2$. Each column also totals $\tfrac{4}{12} = \tfrac13$, so $p_Y(y) = \tfrac13$. For $q$, each row and each column totals $3 \times \tfrac19 = \tfrac13$. The marginals therefore agree: both pairs have $X$ uniform on $\{0,1,2\}$ and $Y$ uniform on $\{0,1,2\}$.
+
+But $p \neq q$, since $p(0,0) = \tfrac1{12} \neq \tfrac19 = q(0,0)$. Indeed the two are distinguishable by an observable probability: under $p$,
+
+$$P(X = Y) = \tfrac{3}{12} = \tfrac14,$$
+
+while under $q$,
+
+$$P(X = Y) = 3 \times \tfrac19 = \tfrac13.$$
+
+Hence no function of the marginals alone can determine $P(X = Y)$.
+:::
+
+:::intuition
+The marginals are the row totals and the column totals of the table. Fixing them fixes nine unknowns with only six equations — and one of those six is redundant, since the row totals and column totals both sum to one. The table has genuine freedom left over after its margins are pinned down, and that leftover freedom *is* the dependence between $X$ and $Y$.
+
+Two economies can have identical income distributions and identical education distributions, and in one of them education predicts income perfectly while in the other it predicts nothing at all. The margins are blind to the pairing.
+:::
+
+:::pitfall[You cannot reconstruct a joint from two marginals]
+Given $f_X$ and $f_Y$, the product $f_X(x) f_Y(y)$ is *a* joint density with those marginals — it is the independent one. It is not *the* joint density unless you have independently established independence. Multiplying marginals to get a joint is an assumption, not a derivation, and it is the assumption that $X$ and $Y$ carry no information about each other.
+
+This is why a problem that gives you "the distribution of the height and the distribution of the weight" has not given you enough to find the distribution of height minus weight, and why every result about sums of random variables in this chapter states an independence hypothesis explicitly.
+:::
+
+## Independence of random variables
+
+<!-- section: independence -->
+
+Two events are independent when the probability of both is the product of the probabilities of each. Two random variables are independent when *every* pair of events built from them is independent — a condition over infinitely many pairs, which would be unusable if it did not reduce to a single factorisation.
+
+:::definition[Independent random variables]{#independence-def}
+Random variables $X$ and $Y$ are **independent** if for every pair of sets $A, B \subseteq \mathbb{R}$,
+
+$$P(X \in A,\ Y \in B) = P(X \in A)\,P(Y \in B).$$
+
+Write $X \perp Y$.
+:::
+
+:::theorem[Factorisation criteria for independence]{#factorisation}
+Let $X$ and $Y$ be random variables with joint cdf $F_{X,Y}$ and marginal cdfs $F_X$, $F_Y$. The following are equivalent.
+
+1. $X$ and $Y$ are independent.
+2. $F_{X,Y}(x,y) = F_X(x)\,F_Y(y)$ for all $x, y$.
+3. If the pair is discrete: $p_{X,Y}(x,y) = p_X(x)\,p_Y(y)$ for all $x,y$.
+4. If the pair is jointly continuous: $f_{X,Y}(x,y) = f_X(x)\,f_Y(y)$ for all $(x,y)$ except possibly on a set of zero area.
+:::
+
+:::proof
+**(1) $\Rightarrow$ (2).** Take $A = (-\infty, x]$ and $B = (-\infty, y]$ in the definition.
+
+**(2) $\Rightarrow$ (1)** *(sketch).* Rectangles $(a,b] \times (c,d]$ have their probabilities determined by $F_{X,Y}$ through the rectangle inequality of the theorem *Properties of a joint cdf*, and factorisation of $F$ makes each such probability
+
+$$[F_X(b) - F_X(a)]\,[F_Y(d) - F_Y(c)] = P(a < X \le b)\,P(c < Y \le d).$$
+
+So the two measures — the law of $(X,Y)$ and the product of the marginal laws — agree on all such rectangles. These rectangles generate the Borel sets of the plane and form a $\pi$-system, so by the uniqueness theorem for measures the two laws agree on every Borel set, which is (1). The measure-theoretic step is beyond this course, and this is a sketch, not a full proof; nothing later depends on the omitted detail.
+
+**(3) $\Leftrightarrow$ (1)** in the discrete case. If (1) holds, take $A = \{x\}$ and $B = \{y\}$ to get (3). Conversely, if (3) holds then for any $A, B$,
+
+$$P(X \in A, Y \in B) = \sum_{x \in A}\sum_{y \in B} p_X(x)p_Y(y) = \left(\sum_{x \in A} p_X(x)\right)\left(\sum_{y \in B} p_Y(y)\right) = P(X \in A)P(Y \in B),$$
+
+the middle step being the distributive law applied to two absolutely convergent sums.
+
+**(4) $\Leftrightarrow$ (1)** in the jointly continuous case. If $f_{X,Y} = f_X f_Y$ then for any $A, B$,
+
+$$P(X \in A, Y \in B) = \int_B\!\!\int_A f_X(x)f_Y(y)\,dx\,dy = \left(\int_A f_X\right)\left(\int_B f_Y\right) = P(X \in A)P(Y\in B).$$
+
+Conversely, independence gives $F_{X,Y}(x,y) = F_X(x)F_Y(y)$ by (2), and differentiating once in each variable,
+
+$$f_{X,Y}(x,y) = \frac{\partial^2}{\partial x\,\partial y}\left[F_X(x)F_Y(y)\right] = F_X'(x)F_Y'(y) = f_X(x)f_Y(y)$$
+
+wherever the densities are continuous. Since densities are determined only up to sets of zero area, the exceptional set in the statement cannot be removed.
+:::
+
+Criterion (4) is the one used in practice, and it comes with a trap and a shortcut. The trap is that the factorisation must hold *everywhere*, including where the density is zero. The shortcut is that this makes the shape of the support decisive.
+
+:::proposition[Independence forces a product support]{#product-support}
+If $X$ and $Y$ are independent and jointly continuous, then the support of $f_{X,Y}$ — the set where it is positive — is, up to a set of zero area, a product set $S_X \times S_Y$.
+
+Consequently, if a joint density is positive exactly on a region that is not a rectangle (possibly infinite) — a triangle, a disc, the region under a curve — then $X$ and $Y$ are **not** independent, whatever the algebraic form of the density looks like.
+:::
+
+:::proof
+By the theorem *Factorisation criteria for independence*, $f_{X,Y}(x,y) = f_X(x)f_Y(y)$ off a set of zero area. A product of two numbers is positive exactly when both factors are positive, so
+
+$$\{f_{X,Y} > 0\} = \{x : f_X(x) > 0\} \times \{y : f_Y(y) > 0\} = S_X \times S_Y,$$
+
+again off a set of zero area.
+
+For the consequence, suppose the support is the triangle $T = \{0 < x < y < 1\}$. The point $(0.9, 0.95)$ lies in $T$, so $f_X(0.9) > 0$; the point $(0.1, 0.2)$ lies in $T$, so $f_Y(0.2) > 0$. If the support were a product set it would then have to contain $(0.9, 0.2)$ — but $0.9 > 0.2$, so that point is outside $T$ and the density there is zero. Since a product set cannot contain two points without containing the two "corner" points that pair their coordinates, $T$ is not a product set and independence fails.
+:::
+
+:::pitfall[A density that "looks separable" on a non-rectangular support]
+The density $f(x,y) = 8xy$ on $0 < x < y < 1$ is a product of a function of $x$ and a function of $y$ — written that way it is the very picture of separability — and $X$ and $Y$ are nonetheless dependent.
+
+The resolution is that the honest way to write $f$ includes an indicator of the support:
+
+$$f(x,y) = 8xy \cdot \mathbf{1}\{0 < x < y < 1\},$$
+
+and it is $\mathbf{1}\{x < y\}$, not $8xy$, that refuses to split. Knowing $Y = 0.2$ confines $X$ to $(0, 0.2)$; knowing $Y = 0.9$ opens $X$ up to $(0, 0.9)$. That is information passing between them, which is exactly what dependence means.
+
+The check that survives this trap: compare the support with a rectangle *before* looking at the formula. If the support is not a rectangle, stop — the variables are dependent.
+:::
+
+:::example[Testing independence three ways]{#independence-test-example}
+For each pair, decide whether $X$ and $Y$ are independent.
+(a) The running joint table.
+(b) $f(x,y) = x + y$ on the unit square.
+(c) $f(x,y) = 4xy$ on the unit square.
+:::
+
+:::solution
+1. **(a)** Both marginals are uniform on $\{0,1,2\}$, so the independent table would have every entry $\tfrac13 \times \tfrac13 = \tfrac19 = \tfrac{1.333\ldots}{12}$. The actual entry at $(0,0)$ is $\tfrac1{12}$. Since $\tfrac1{12} \neq \tfrac19$, factorisation fails at that single cell, and one failure is enough: $X$ and $Y$ are **dependent**.
+2. **(b)** The support *is* the unit square, a rectangle, so the support test is inconclusive and the algebra must be done. The marginals are $f_X(x) = x + \tfrac12$ and $f_Y(y) = y + \tfrac12$, so the independent density would be
+$$\left(x + \tfrac12\right)\left(y + \tfrac12\right) = xy + \tfrac{x}{2} + \tfrac{y}{2} + \tfrac14,$$
+which is not $x + y$ — at $(0,0)$ it gives $\tfrac14$ while $f(0,0) = 0$. **Dependent**.
+3. **(c)** The support is again the unit square. Marginalising, $f_X(x) = \int_0^1 4xy\,dy = 2x$ and likewise $f_Y(y) = 2y$. Their product is $4xy$, which is $f$ on the square and $0$ off it. **Independent**.
+4. The contrast between (b) and (c) is instructive: a *sum* $x + y$ never factors, while a *product* $4xy$ on a rectangular support always does. Sums couple; products on rectangles do not.
+:::
+
+:::theorem[Functions of independent variables are independent]{#functions-independent}
+If $X \perp Y$ and $g, h : \mathbb{R} \to \mathbb{R}$ are functions for which $g(X)$ and $h(Y)$ are random variables, then $g(X) \perp h(Y)$.
+:::
+
+:::proof
+Fix sets $A, B \subseteq \mathbb{R}$ and let $A' = g^{-1}(A) = \{x : g(x) \in A\}$, $B' = h^{-1}(B)$. Then $\{g(X) \in A\} = \{X \in A'\}$ and $\{h(Y) \in B\} = \{Y \in B'\}$ as events, so
+
+$$P(g(X) \in A, h(Y) \in B) = P(X \in A', Y \in B') = P(X \in A')P(Y \in B') = P(g(X) \in A)P(h(Y) \in B),$$
+
+using independence of $X$ and $Y$ in the middle step.
+:::
+
+This small theorem does more work than its length suggests. It is why $X^2$ and $e^{Y}$ are independent whenever $X$ and $Y$ are, and it is the step that licenses factorising $E[g(X)h(Y)]$ in the next section and the moment generating function argument in the section on sums.
+
+## Conditional distributions
+
+<!-- section: conditional -->
+
+Independence is the case where learning $Y$ tells you nothing about $X$. The general case is that it tells you something, and the conditional distribution records exactly what.
+
+:::definition[Conditional pmf]{#conditional-pmf-def}
+Let $(X,Y)$ be discrete and let $y$ be a value with $p_Y(y) > 0$. The **conditional pmf** of $X$ given $Y = y$ is
+
+$$p_{X \mid Y}(x \mid y) = \frac{p_{X,Y}(x,y)}{p_Y(y)}.$$
+:::
+
+This is nothing but conditional probability, $P(A \mid B) = P(A \cap B)/P(B)$, applied to $A = \{X = x\}$ and $B = \{Y = y\}$. What deserves a proof is that the result is a genuine distribution over $x$.
+
+:::proposition[The conditional pmf is a pmf]{#conditional-is-pmf}
+For each fixed $y$ with $p_Y(y) > 0$, the function $x \mapsto p_{X \mid Y}(x \mid y)$ is a probability mass function.
+:::
+
+:::proof
+Non-negativity is inherited: the numerator is a probability and the denominator is positive. For the total,
+
+$$\sum_x p_{X\mid Y}(x \mid y) = \frac{1}{p_Y(y)}\sum_x p_{X,Y}(x,y) = \frac{p_Y(y)}{p_Y(y)} = 1,$$
+
+the middle step by the theorem *Marginalisation recovers the distribution* applied in the other variable.
+:::
+
+:::example[Conditioning in the running table]{#conditional-table-example}
+For the running joint table, find the conditional pmf of $X$ given $Y = 1$, and compute $E[X \mid Y = 1]$. Compare with $E[X]$.
+:::
+
+:::solution
+1. The column $y = 1$ holds $\tfrac1{12}, \tfrac1{12}, \tfrac2{12}$, totalling $p_Y(1) = \tfrac4{12} = \tfrac13$.
+2. Divide each entry by that total:
+$$p_{X \mid Y}(0 \mid 1) = \frac{1/12}{1/3} = \frac14, \quad p_{X\mid Y}(1 \mid 1) = \frac14, \quad p_{X \mid Y}(2 \mid 1) = \frac{2/12}{1/3} = \frac12.$$
+These sum to $1$, as they must.
+3. Then
+$$E[X \mid Y = 1] = 0\cdot\tfrac14 + 1\cdot\tfrac14 + 2\cdot\tfrac12 = \tfrac54 = 1.25.$$
+4. The unconditional mean is $E[X] = 0\cdot\tfrac13 + 1\cdot\tfrac13 + 2\cdot\tfrac13 = 1$. Learning that $Y = 1$ has raised the expected value of $X$ from $1$ to $1.25$, which is precisely what dependence buys you: information.
+5. Repeating for the other columns gives $E[X \mid Y = 0] = 1$ and $E[X \mid Y = 2] = \tfrac34$. Note that the three conditional means average back to the unconditional one, $\tfrac13(1 + \tfrac54 + \tfrac34) = 1$ — a first sighting of the tower property of conditional expectation.
+:::
+
+The continuous case has an obstruction that must be faced head on. The event $\{Y = y\}$ has probability zero, so the quotient defining conditional probability reads $0/0$ and the usual definition says nothing at all. Yet conditioning on a continuous measurement is something people do constantly — "given that the temperature was $21.4^\circ$" — so the notion has to be rescued.
+
+:::definition[Conditional density]{#conditional-density-def}
+Let $(X,Y)$ be jointly continuous and let $y$ be a value with $f_Y(y) > 0$. The **conditional density** of $X$ given $Y = y$ is
+
+$$f_{X \mid Y}(x \mid y) = \frac{f_{X,Y}(x,y)}{f_Y(y)}.$$
+:::
+
+:::theorem[Conditioning on a null event is legitimate]{#null-conditioning}
+Let $(X,Y)$ be jointly continuous, and suppose $f_{X,Y}$ and $f_Y$ are continuous at the relevant points with $f_Y(y) > 0$. Then for any $a \le b$,
+
+$$\lim_{\varepsilon \to 0^+} P\!\left(a \le X \le b \;\middle|\; y - \varepsilon \le Y \le y + \varepsilon\right) = \int_a^b f_{X \mid Y}(x \mid y)\,dx.$$
+
+That is, the conditional density is the limit of honest conditional probabilities on shrinking events of positive probability.
+:::
+
+:::proof
+For $\varepsilon > 0$ small enough that $f_Y > 0$ on $[y - \varepsilon, y+\varepsilon]$, the conditioning event has positive probability and ordinary conditional probability applies:
+
+$$P\!\left(a \le X \le b \mid |Y - y| \le \varepsilon\right) = \frac{\displaystyle\int_{y-\varepsilon}^{y+\varepsilon}\!\!\int_a^b f_{X,Y}(x,v)\,dx\,dv}{\displaystyle\int_{y-\varepsilon}^{y+\varepsilon} f_Y(v)\,dv}.$$
+
+Divide numerator and denominator by $2\varepsilon$. Each becomes an average of a continuous function over an interval shrinking to $y$, so each converges to the value of that function at $y$:
+
+$$\frac{1}{2\varepsilon}\int_{y-\varepsilon}^{y+\varepsilon} f_Y(v)\,dv \longrightarrow f_Y(y),$$
+
+and, exchanging the order of integration in the numerator by Fubini's theorem, which is permitted because the integrand is non-negative,
+
+$$\frac{1}{2\varepsilon}\int_a^b\!\!\int_{y-\varepsilon}^{y+\varepsilon} f_{X,Y}(x,v)\,dv\,dx \longrightarrow \int_a^b f_{X,Y}(x,y)\,dx.$$
+
+Since $f_Y(y) > 0$, the quotient converges to the quotient of the limits,
+
+$$\frac{\int_a^b f_{X,Y}(x,y)\,dx}{f_Y(y)} = \int_a^b \frac{f_{X,Y}(x,y)}{f_Y(y)}\,dx = \int_a^b f_{X\mid Y}(x \mid y)\,dx,$$
+
+which is the claim.
+:::
+
+:::intuition
+Conditioning on $\{Y = y\}$ in the continuous case means: take a thin horizontal strip of the density surface at height $y$, and rescale what you find there so that it totals one. The strip has vanishing probability, but the *shape* of the density across the strip has a perfectly good limit, and that shape — normalised — is the conditional density.
+
+The $0/0$ never actually happens, because numerator and denominator both shrink at the same rate, proportionally to the strip's thickness. Cancelling that common factor is all the theorem does.
+:::
+
+:::pitfall[Which variable is fixed, and which is the argument]
+In $f_{X \mid Y}(x \mid y)$ the second slot is *frozen*. The function integrates to one over $x$, not over $y$:
+
+$$\int f_{X\mid Y}(x \mid y)\,dx = 1, \qquad \text{but in general} \quad \int f_{X \mid Y}(x \mid y)\,dy \neq 1.$$
+
+The denominator $f_Y(y)$ is a constant for the purposes of the $x$-integration, and treating it as a variable is the most common source of wrong normalising constants. When a conditional density fails to integrate to one, the first thing to check is whether you divided by the wrong marginal.
+:::
+
+Rearranging the definition gives the tool that generates joint distributions out of a story told in stages.
+
+:::theorem[Multiplication rule for densities]{#multiplication-rule}
+For a jointly continuous pair, at every $(x,y)$ with $f_Y(y) > 0$,
+
+$$f_{X,Y}(x,y) = f_{X \mid Y}(x \mid y)\,f_Y(y),$$
+
+and symmetrically $f_{X,Y}(x,y) = f_{Y \mid X}(y \mid x) f_X(x)$ wherever $f_X(x) > 0$. Consequently
+
+$$f_{X\mid Y}(x \mid y) = \frac{f_{Y \mid X}(y \mid x)\,f_X(x)}{f_Y(y)},$$
+
+which is **Bayes' theorem for densities**, and
+
+$$f_Y(y) = \int_{-\infty}^{\infty} f_{Y \mid X}(y \mid x)\,f_X(x)\,dx,$$
+
+the **law of total probability for densities**.
+:::
+
+:::proof
+The first identity is the definition of the conditional density multiplied through by $f_Y(y)$; the symmetric one is the same manipulation with the roles exchanged. Setting the two expressions for $f_{X,Y}(x,y)$ equal,
+
+$$f_{X\mid Y}(x\mid y)f_Y(y) = f_{Y \mid X}(y \mid x)f_X(x),$$
+
+and dividing by $f_Y(y) > 0$ gives Bayes' theorem. For the last identity, marginalise the second factorisation using the theorem *Marginalisation recovers the distribution*:
+
+$$f_Y(y) = \int f_{X,Y}(x,y)\,dx = \int f_{Y \mid X}(y\mid x)f_X(x)\,dx.$$
+:::
+
+Read left to right, the multiplication rule *builds* a joint distribution: draw $Y$ from its own distribution, then draw $X$ from a distribution depending on the value $Y$ took. That is how most real models are specified — a rate is drawn, then counts are drawn given the rate — and the joint density is the product of the two stages.
+
+:::example[Conditioning on the triangle]{#triangle-conditional-example}
+For $f(x,y) = 8xy$ on $0 < x < y < 1$, find $f_{X \mid Y}(x \mid y)$, identify the conditional distribution, and compute $P(X < \tfrac14 \mid Y = \tfrac12)$ and $E[X \mid Y = \tfrac12]$.
+:::
+
+:::solution
+1. The marginal was found above: $f_Y(y) = 4y^3$ on $(0,1)$. Divide:
+$$f_{X\mid Y}(x \mid y) = \frac{8xy}{4y^3} = \frac{2x}{y^2}, \qquad 0 < x < y.$$
+2. Check the normalisation over the correct range: $\int_0^y \tfrac{2x}{y^2}dx = \tfrac{y^2}{y^2} = 1$. ✓ Note how the support of the conditional depends on $y$ — the clearest possible statement that $Y$ carries information about $X$.
+3. At $y = \tfrac12$ the conditional density is $f(x \mid \tfrac12) = \frac{2x}{1/4} = 8x$ on $(0, \tfrac12)$. Then
+$$P\!\left(X < \tfrac14 \;\middle|\; Y = \tfrac12\right) = \int_0^{1/4} 8x\,dx = 4\left(\tfrac14\right)^2 = \tfrac14.$$
+4. And
+$$E\!\left[X \mid Y = \tfrac12\right] = \int_0^{1/2} x \cdot 8x\,dx = \frac{8}{3}\left(\tfrac12\right)^3 = \frac13 \approx 0.3333.$$
+5. Sanity check: conditioned on $Y = \tfrac12$, $X$ lives in $(0,\tfrac12)$ with a density increasing linearly, so its mean must exceed the midpoint $\tfrac14$ and fall below $\tfrac12$. It does, at $\tfrac13$ — in fact exactly two-thirds of the way along, as for any triangular-shaped density on $(0,c)$.
+:::
+
+:::example[Conditioning on the square]{#square-conditional-example}
+For $f(x,y) = x+y$ on the unit square, find $f_{Y \mid X}(y \mid x)$ and compute $P(Y < \tfrac12 \mid X = \tfrac12)$.
+:::
+
+:::solution
+1. With $f_X(x) = x + \tfrac12$,
+$$f_{Y \mid X}(y \mid x) = \frac{x+y}{x + \tfrac12}, \qquad 0 < y < 1.$$
+2. At $x = \tfrac12$ the denominator is $1$, so the conditional density is simply $f(y \mid \tfrac12) = \tfrac12 + y$ on $(0,1)$.
+3. Hence
+$$P\!\left(Y < \tfrac12 \;\middle|\; X = \tfrac12\right) = \int_0^{1/2}\left(\tfrac12 + y\right) dy = \tfrac14 + \tfrac18 = \tfrac38 = 0.375.$$
+4. Compare with the unconditional $P(Y < \tfrac12) = \int_0^{1/2}(y + \tfrac12)dy = \tfrac38$ as well. The two agree *here* by coincidence of the chosen conditioning value, not because the variables are independent — at $x = 0$ the conditional density is $2y$ and $P(Y < \tfrac12 \mid X = 0) = \tfrac14 \neq \tfrac38$. One matching value proves nothing; independence requires the conditional to be free of $x$ for **every** $x$.
+:::
+
+:::proposition[Independence in conditional form]{#independence-conditional}
+$X$ and $Y$ are independent if and only if $f_{X \mid Y}(x \mid y) = f_X(x)$ for all $y$ with $f_Y(y) > 0$ (and correspondingly for pmfs).
+:::
+
+:::proof
+If $X \perp Y$ then $f_{X,Y} = f_X f_Y$, so $f_{X\mid Y}(x\mid y) = f_X(x)f_Y(y)/f_Y(y) = f_X(x)$. Conversely, if $f_{X\mid Y}(x \mid y) = f_X(x)$ for all such $y$, then by the theorem *Multiplication rule for densities*, $f_{X,Y}(x,y) = f_X(x)f_Y(y)$ wherever $f_Y(y) > 0$; where $f_Y(y) = 0$ the marginalisation identity forces $f_{X,Y}(x,y) = 0$ for almost every $x$, so the product form holds off a set of zero area. By the theorem *Factorisation criteria for independence*, $X \perp Y$.
+:::
+
+This is the most quotable form of independence: *the conditional distribution does not depend on what you conditioned on*. It also shows why dependence is informative: a conditional that moves with $y$ is a forecast that updates on data.
+
+## Several variables: pairwise and mutual independence
+
+<!-- section: mutual -->
+
+Nothing so far needed exactly two variables. A joint pmf of $n$ discrete variables is $p(x_1,\dots,x_n) = P(X_1 = x_1, \dots, X_n = x_n)$; a joint density of $n$ continuous variables integrates to one over $\mathbb{R}^n$; a marginal is obtained by summing or integrating out every variable you do not want. The one genuinely new phenomenon at $n \ge 3$ is that independence splits into two inequivalent notions.
+
+:::definition[Pairwise and mutual independence]{#mutual-independence-def}
+Random variables $X_1, \dots, X_n$ are **pairwise independent** if $X_i \perp X_j$ for every $i \neq j$.
+
+They are **mutually independent** (usually just "independent") if for every choice of sets $A_1,\dots,A_n$,
+
+$$P(X_1 \in A_1, \dots, X_n \in A_n) = \prod_{i=1}^n P(X_i \in A_i),$$
+
+equivalently if the joint pmf or density factors completely:
+
+$$f_{X_1,\dots,X_n}(x_1,\dots,x_n) = \prod_{i=1}^n f_{X_i}(x_i).$$
+:::
+
+Mutual independence obviously implies pairwise independence: take $A_k = \mathbb{R}$ for every index $k$ outside the chosen pair, and those factors contribute $1$ each. The converse fails, and the failure is not exotic.
+
+:::theorem[Pairwise independence is strictly weaker]{#pairwise-weaker}
+There exist random variables $X, Y, Z$ that are pairwise independent but not mutually independent.
+:::
+
+:::proof
+Toss two fair coins. Let $X = 1$ if the first is heads and $0$ otherwise, $Y = 1$ if the second is heads and $0$ otherwise, and let
+
+$$Z = X \oplus Y = \begin{cases} 1 & \text{if exactly one coin is heads},\\ 0 & \text{otherwise},\end{cases}$$
+
+so $Z$ records whether the two coins *differ*.
+
+Each of the four outcomes $(X,Y) \in \{0,1\}^2$ has probability $\tfrac14$, so $X$ and $Y$ are independent Bernoulli$(\tfrac12)$ variables. $Z = 1$ on the two outcomes $(1,0)$ and $(0,1)$, so $P(Z = 1) = \tfrac12$ and $Z$ is Bernoulli$(\tfrac12)$ too.
+
+*Pairwise.* $X \perp Y$ by construction. For $X$ and $Z$: $P(X=1, Z=1) = P(\{(1,0)\}) = \tfrac14 = \tfrac12 \times \tfrac12 = P(X=1)P(Z=1)$, and the same computation at each of the other three combinations gives $\tfrac14$ likewise. So $X \perp Z$, and by symmetry $Y \perp Z$. All three pairs are independent.
+
+*Not mutual.* Any two of the three determine the third, since $Z = X \oplus Y$ forces $X = Y \oplus Z$ and $Y = X \oplus Z$. Concretely,
+
+$$P(X = 1, Y = 1, Z = 1) = 0,$$
+
+because $X = Y = 1$ makes the coins agree and hence $Z = 0$, whereas mutual independence would require
+
+$$P(X=1)P(Y=1)P(Z=1) = \tfrac12 \cdot \tfrac12 \cdot \tfrac12 = \tfrac18 \neq 0.$$
+
+Equally, $P(X=1,Y=1,Z=0) = \tfrac14 \neq \tfrac18$. So the triple factorisation fails while every pair factorises.
+:::
+
+:::intuition
+Pairwise independence says no single variable is predictable from any one other variable. Mutual independence says no variable is predictable from *all* the others together. In the coin example each of $X$, $Y$, $Z$ is a fair coin flip on its own and remains one after you learn any single companion — but the three are bound by the relation $X \oplus Y \oplus Z = 0$, so the last one is determined once you know two. The dependence is a three-way conspiracy invisible to any two-way check.
+:::
+
+:::pitfall[Checking independence one pair at a time]
+Verifying $X \perp Y$, $X \perp Z$ and $Y \perp Z$ does **not** establish that $X$, $Y$, $Z$ are independent, and almost every result that needs independence — variances adding, moment generating functions multiplying, the law of large numbers, the central limit theorem in its standard form — needs the mutual version. There are $\binom{n}{2}$ pairwise conditions but $2^n - n - 1$ conditions for mutual independence, so for $n \ge 3$ there is strictly more to check.
+
+The exception worth knowing: for *jointly normal* variables, pairwise zero correlation does imply mutual independence. That is a property of the normal family, established below, not a general fact.
+:::
+
+:::definition[Independent and identically distributed]{#iid-def}
+Random variables $X_1,\dots,X_n$ are **i.i.d.** if they are mutually independent and all have the same distribution. A sequence of i.i.d. variables is the standard model of "repeating the same experiment under identical conditions, with no carry-over between trials".
+:::
+
+Both halves of that assumption do work: identical distribution makes it meaningful to speak of "the" mean being estimated, and mutual independence is what makes the variance of a sample mean shrink like $1/n$.
+
+## Functions of two variables and two-dimensional LOTUS
+
+<!-- section: lotus -->
+
+Having a joint distribution means being able to compute the expectation of anything built from the pair — $X + Y$, $XY$, $\max(X,Y)$, $|X - Y|$ — and the striking fact is that you never need the distribution of the new variable in order to do it.
+
+:::theorem[Two-dimensional law of the unconscious statistician]{#lotus-2d}
+Let $g : \mathbb{R}^2 \to \mathbb{R}$. If $(X,Y)$ is discrete with joint pmf $p$, then
+
+$$E[g(X,Y)] = \sum_x \sum_y g(x,y)\,p(x,y),$$
+
+and if $(X,Y)$ is jointly continuous with joint density $f$,
+
+$$E[g(X,Y)] = \int_{-\infty}^{\infty}\!\!\int_{-\infty}^{\infty} g(x,y)\,f(x,y)\,dx\,dy,$$
+
+in both cases provided the sum or integral converges absolutely.
+:::
+
+:::proof
+**Discrete case.** Let $W = g(X,Y)$ and let $w$ range over the values $W$ takes. The event $\{W = w\}$ is the disjoint union of the cells $\{X = x, Y = y\}$ with $g(x,y) = w$, so
+
+$$P(W = w) = \sum_{(x,y):\,g(x,y) = w} p(x,y).$$
+
+Therefore, by the definition of expectation,
+
+$$E[W] = \sum_w w\,P(W=w) = \sum_w w \sum_{(x,y):\,g(x,y)=w} p(x,y) = \sum_w \sum_{(x,y):\,g(x,y)=w} g(x,y)\,p(x,y),$$
+
+where in the last step $w$ was replaced by $g(x,y)$, legitimate because the inner sum only touches cells where those are equal. The cells are partitioned by the value of $g$, so the double sum runs over every cell exactly once and collapses to $\sum_x\sum_y g(x,y)p(x,y)$. Absolute convergence is what permits the rearrangement.
+
+**Continuous case** *(sketch).* The same partition argument applies with the level sets $\{g = w\}$ replaced by thin bands $\{w \le g < w + \Delta w\}$; the probability of a band is the integral of $f$ over it, and summing $w$ times the band probabilities is a Riemann sum for the double integral. Making this exact requires the change-of-variables theorem for the distribution of $g(X,Y)$, which is beyond this course; the argument above is a sketch and is labelled as one.
+:::
+
+:::intuition
+Expectation is a weighted average of outputs. LOTUS says you may average over the *inputs* instead, weighting each input pair by its own probability, rather than first working out how likely each output is. The bookkeeping differs; the total does not, because each input pair contributes the same amount either way. The word "unconscious" is the joke that you get the right answer without ever consciously finding the distribution of $g(X,Y)$.
+:::
+
+:::example[Four expectations from one density]{#lotus-example}
+For $f(x,y) = x+y$ on the unit square, compute $E[X+Y]$, $E[XY]$ and $E[X]E[Y]$, and say what the comparison of the last two reveals.
+:::
+
+:::solution
+1. With $g(x,y) = x+y$,
+$$E[X+Y] = \int_0^1\!\!\int_0^1 (x+y)(x+y)\,dx\,dy = \int_0^1\!\!\int_0^1 (x^2 + 2xy + y^2)\,dx\,dy = \tfrac13 + \tfrac12 + \tfrac13 = \tfrac76.$$
+Check against linearity: $E[X] + E[Y] = \tfrac7{12} + \tfrac7{12} = \tfrac76$. ✓
+2. With $g(x,y) = xy$,
+$$E[XY] = \int_0^1\!\!\int_0^1 xy(x+y)\,dx\,dy = \int_0^1\!\!\int_0^1 (x^2 y + x y^2)\,dx\,dy = \tfrac13\cdot\tfrac12 + \tfrac12\cdot\tfrac13 = \tfrac13.$$
+3. The product of the means is $\left(\tfrac7{12}\right)^2 = \tfrac{49}{144}$.
+4. These differ: $\tfrac13 = \tfrac{48}{144}$, so
+$$E[XY] - E[X]E[Y] = -\tfrac{1}{144} \approx -0.00694.$$
+That difference is the **covariance**, and its being non-zero is another proof that $X$ and $Y$ are dependent here. Its being *negative* says that large $X$ comes with slightly small $Y$ — which is right, since the density $x+y$ is largest at the two corners $(1,0)$ and $(0,1)$ relative to what independence would predict.
+:::
+
+:::theorem[Expectation is linear without any independence]{#linearity-2d}
+For any $(X,Y)$ with finite means and any constants $a,b$,
+
+$$E[aX + bY] = a\,E[X] + b\,E[Y].$$
+:::
+
+:::proof
+Take $g(x,y) = ax + by$ in the theorem *Two-dimensional law of the unconscious statistician*. In the continuous case,
+
+$$E[aX+bY] = \iint (ax + by) f(x,y)\,dx\,dy = a\iint x f(x,y)\,dy\,dx + b\iint y f(x,y)\,dx\,dy,$$
+
+the split being valid by absolute convergence. In the first term the inner integral over $y$ produces $f_X(x)$ by the theorem *Marginalisation recovers the distribution*, giving $a\int x f_X(x)dx = aE[X]$; the second term gives $bE[Y]$ the same way. The discrete case is the identical computation with sums.
+:::
+
+The hypothesis list of that theorem is conspicuously empty, and that is the point: expectations add whether or not the variables are independent or related in any way. Variances are not so accommodating, which is why the next theorem has a hypothesis.
+
+:::theorem[Expectation of a product under independence]{#product-expectation}
+If $X \perp Y$ and both have finite means, then $E[XY] = E[X]\,E[Y]$. More generally $E[g(X)h(Y)] = E[g(X)]\,E[h(Y)]$ whenever the right-hand side is finite.
+:::
+
+:::proof
+Apply LOTUS with $g(x,y) = xy$ and factor the density using the theorem *Factorisation criteria for independence*:
+
+$$E[XY] = \iint xy\,f_X(x)f_Y(y)\,dx\,dy = \left(\int x f_X(x)\,dx\right)\left(\int y f_Y(y)\,dy\right) = E[X]E[Y],$$
+
+the separation being valid by Fubini's theorem under the assumed absolute convergence. For the general version, apply the same computation to $g(x)h(y)$, or note that $g(X) \perp h(Y)$ by the theorem *Functions of independent variables are independent* and use the first part.
+:::
+
+:::pitfall[The converse is false]
+$E[XY] = E[X]E[Y]$ does **not** imply independence. Let $X$ take the values $-1, 0, 1$ each with probability $\tfrac13$ and set $Y = X^2$. Then $E[X] = 0$ and $E[XY] = E[X^3] = \tfrac13(-1) + 0 + \tfrac13(1) = 0$, so $E[XY] = 0 = E[X]E[Y]$. Yet $Y$ is a function of $X$: knowing $X = 0$ tells you $Y = 0$ with certainty, while $P(Y = 0) = \tfrac13$ unconditionally. The variables are as dependent as it is possible to be.
+
+Uncorrelated is strictly weaker than independent. The relation $E[XY] = E[X]E[Y]$ detects only *linear* association, and a perfect parabola has none.
+:::
+
+:::example[Two expectations for a pair of independent uniforms]{#uniform-pair-example}
+Let $X, Y$ be independent $U(0,1)$. Compute $E[|X - Y|]$ and $E[\max(X,Y)]$.
+:::
+
+:::solution
+1. Independence gives the joint density $f(x,y) = 1$ on the unit square. By LOTUS,
+$$E[|X-Y|] = \int_0^1\!\!\int_0^1 |x-y|\,dx\,dy = 2\int_0^1\!\!\int_0^y (y - x)\,dx\,dy,$$
+using the symmetry of $|x-y|$ about the diagonal to replace the absolute value by twice the integral over $x < y$.
+2. The inner integral is $y^2 - y^2/2 = y^2/2$, so
+$$E[|X-Y|] = 2\int_0^1 \frac{y^2}{2}\,dy = \frac13 \approx 0.3333.$$
+3. For the maximum, use the identity $\max(x,y) = \tfrac{x + y + |x-y|}{2}$ and linearity:
+$$E[\max(X,Y)] = \frac{E[X] + E[Y] + E[|X-Y|]}{2} = \frac{\tfrac12 + \tfrac12 + \tfrac13}{2} = \frac23 \approx 0.6667.$$
+4. Check by the direct route: $P(\max \le t) = P(X \le t)P(Y\le t) = t^2$ by independence, so the density of the maximum is $2t$ and its mean is $\int_0^1 2t^2 dt = \tfrac23$. ✓ Two independent derivations agreeing is the cheapest insurance available.
+:::
+
+## The bivariate normal distribution
+
+<!-- section: bivariate-normal -->
+
+One two-variable family answers every question in closed form, and it is the one that appears whenever two measurements are each the accumulation of many small independent effects. It is the two-dimensional relative of the normal law.
+
+:::definition[Bivariate normal distribution]{#bvn-def}
+The pair $(X,Y)$ is **bivariate normal** with parameters $\mu_X, \mu_Y \in \mathbb{R}$, $\sigma_X, \sigma_Y > 0$ and $\rho \in (-1,1)$ if it has joint density
+
+$$f(x,y) = \frac{1}{2\pi\sigma_X\sigma_Y\sqrt{1-\rho^2}}\exp\left(-\frac{Q(x,y)}{2\left(1-\rho^2\right)}\right),$$
+
+where, writing $u = \dfrac{x-\mu_X}{\sigma_X}$ and $v = \dfrac{y - \mu_Y}{\sigma_Y}$,
+
+$$Q(x,y) = u^2 - 2\rho\,u v + v^2.$$
+
+The **standard** bivariate normal is the case $\mu_X = \mu_Y = 0$, $\sigma_X = \sigma_Y = 1$.
+:::
+
+The exponent is a quadratic form, so the level sets $\{Q = c\}$ are ellipses; the density is a bell-shaped hill whose contours are those ellipses, tilted by $\rho$. At $\rho = 0$ the cross term vanishes and the contours are axis-aligned; as $\rho \to \pm 1$ they collapse towards a line and the normalising constant $\sqrt{1-\rho^2}$ blows up, which is why $|\rho| = 1$ is excluded — the pair then lies on a line and has no joint density at all, exactly as in the pitfall *Jointly continuous is stronger than "each is continuous"*.
+
+:::figure[Contours of the standard bivariate normal with $\rho = 0.6$, at $Q = 1$ and $Q = 4$. The contours are ellipses tilted towards the line $y = x$; the dashed line $y = 0.6\,x$ is the conditional mean $E[Y \mid X = x]$, which passes through the points where each ellipse is vertically widest, not through its extreme corners. Conditioned on $X = x$, $Y$ is normal about that line with standard deviation $\sqrt{1 - 0.6^2} = 0.8$, whatever $x$ is.]{#bvn-contour-figure}
+{
+  "type": "plot",
+  "x": [-3.1, 3.1],
+  "y": [-3.1, 3.1],
+  "xTicks": 1,
+  "yTicks": 1,
+  "xLabel": "x",
+  "yLabel": "y",
+  "equalAspect": true,
+  "marks": [
+    { "kind": "path", "points": [[1.00, 0.60], [0.97, 0.79], [0.87, 0.92], [0.71, 0.99], [0.50, 0.99], [0.26, 0.93], [0.00, 0.80], [-0.26, 0.62], [-0.50, 0.39], [-0.71, 0.14], [-0.87, -0.12], [-0.97, -0.37], [-1.00, -0.60], [-0.97, -0.79], [-0.87, -0.92], [-0.71, -0.99], [-0.50, -0.99], [-0.26, -0.93], [0.00, -0.80], [0.26, -0.62], [0.50, -0.39], [0.71, -0.14], [0.87, 0.12], [0.97, 0.37], [1.00, 0.60]], "tone": "accent" },
+    { "kind": "path", "points": [[2.00, 1.20], [1.93, 1.57], [1.73, 1.84], [1.41, 1.98], [1.00, 1.99], [0.52, 1.86], [0.00, 1.60], [-0.52, 1.23], [-1.00, 0.79], [-1.41, 0.28], [-1.73, -0.24], [-1.93, -0.75], [-2.00, -1.20], [-1.93, -1.57], [-1.73, -1.84], [-1.41, -1.98], [-1.00, -1.99], [-0.52, -1.86], [0.00, -1.60], [0.52, -1.23], [1.00, -0.79], [1.41, -0.28], [1.73, 0.24], [1.93, 0.75], [2.00, 1.20]], "tone": "accent", "dashed": true },
+    { "kind": "line", "through": [[-2.6, -1.56], [2.6, 1.56]], "extend": false, "tone": "result", "dashed": true },
+    { "kind": "text", "at": [2.25, 2.15], "text": "y = 0.6x", "tone": "result" },
+    { "kind": "text", "at": [-1.65, 2.55], "text": "Q = 4", "leaderTo": [-1.1, 1.75] },
+    { "kind": "text", "at": [-2.4, 0.75], "text": "Q = 1", "leaderTo": [-0.95, 0.3] }
+  ]
+}
+:::
+
+:::theorem[Marginals and conditionals of a bivariate normal]{#bvn-marginals}
+Let $(X,Y)$ be bivariate normal with the parameters above. Then
+
+$$X \sim N\!\left(\mu_X, \sigma_X^2\right), \qquad Y \sim N\!\left(\mu_Y, \sigma_Y^2\right),$$
+
+and for every $x$,
+
+$$Y \mid X = x \ \sim\ N\!\left(\mu_Y + \rho\,\frac{\sigma_Y}{\sigma_X}\left(x - \mu_X\right),\ \ \sigma_Y^2\left(1-\rho^2\right)\right).$$
+:::
+
+:::proof
+Work in standardised coordinates $u, v$; the general case follows by the linear change of variables $x = \mu_X + \sigma_X u$, $y = \mu_Y + \sigma_Y v$, whose Jacobian $\sigma_X \sigma_Y$ cancels the corresponding factor in the normalising constant.
+
+Complete the square in $v$ inside the quadratic form:
+
+$$Q = u^2 - 2\rho uv + v^2 = \left(v - \rho u\right)^2 + u^2\left(1 - \rho^2\right).$$
+
+Substituting into the density and splitting the exponential,
+
+$$f(u,v) = \underbrace{\frac{1}{\sqrt{2\pi}}e^{-u^2/2}}_{\text{a } N(0,1) \text{ density in } u} \cdot \underbrace{\frac{1}{\sqrt{2\pi}\sqrt{1-\rho^2}}\exp\left(-\frac{(v - \rho u)^2}{2(1-\rho^2)}\right)}_{\text{a } N(\rho u,\ 1-\rho^2) \text{ density in } v}.$$
+
+Integrating over $v$, the second factor is a probability density in $v$ for each fixed $u$, so it contributes exactly $1$, leaving $f_U(u) = \frac{1}{\sqrt{2\pi}}e^{-u^2/2}$. Hence $U \sim N(0,1)$ and, untransforming, $X \sim N(\mu_X, \sigma_X^2)$. Symmetry of $Q$ under exchanging $u \leftrightarrow v$ gives the statement for $Y$.
+
+For the conditional, divide the displayed factorisation by $f_U(u)$:
+
+$$f_{V \mid U}(v \mid u) = \frac{f(u,v)}{f_U(u)} = \frac{1}{\sqrt{2\pi\left(1-\rho^2\right)}}\exp\left(-\frac{(v-\rho u)^2}{2(1-\rho^2)}\right),$$
+
+which is the $N(\rho u, 1 - \rho^2)$ density. Untransforming, $v = (y - \mu_Y)/\sigma_Y$ and $u = (x - \mu_X)/\sigma_X$, so the conditional mean $\rho u$ becomes $\mu_Y + \rho\sigma_Y(x-\mu_X)/\sigma_X$ and the conditional variance $1-\rho^2$ scales by $\sigma_Y^2$.
+:::
+
+Three things in that conclusion deserve to be said out loud. The conditional mean is a *straight line* in $x$ — which is why linear regression is the natural estimator under a normal model and not merely a convenient one. The conditional variance $\sigma_Y^2(1-\rho^2)$ does **not** depend on $x$: the scatter about the line is the same everywhere. And the conditioning shrinks the variance by the factor $1 - \rho^2$, so a correlation of $0.6$ removes $36\%$ of the variance of $Y$ and no more.
+
+:::theorem[Zero correlation implies independence for the bivariate normal]{#bvn-zero-correlation}
+If $(X,Y)$ is bivariate normal with $\rho = 0$, then $X$ and $Y$ are independent.
+:::
+
+:::proof
+Set $\rho = 0$ in the density. The quadratic form loses its cross term, $Q = u^2 + v^2$, and $\sqrt{1-\rho^2} = 1$, so
+
+$$f(x,y) = \frac{1}{2\pi\sigma_X\sigma_Y}\exp\left(-\frac{u^2 + v^2}{2}\right) = \left[\frac{1}{\sigma_X\sqrt{2\pi}}e^{-u^2/2}\right]\left[\frac{1}{\sigma_Y\sqrt{2\pi}}e^{-v^2/2}\right] = f_X(x)f_Y(y),$$
+
+using the marginals identified in the theorem *Marginals and conditionals of a bivariate normal*. The joint density factors as a function of $x$ times a function of $y$ on all of $\mathbb{R}^2$, which is a product support, so by the theorem *Factorisation criteria for independence* the variables are independent.
+:::
+
+:::pitfall[This implication is a property of the family, not of probability]
+"Uncorrelated implies independent" is true for jointly normal pairs and false in general — and the counterexample can have normal marginals, which is what makes it sharp.
+
+Let $X \sim N(0,1)$ and let $S$ be independent of $X$ with $P(S = 1) = P(S = -1) = \tfrac12$. Put $Y = SX$. By symmetry of the normal density, $Y \sim N(0,1)$ as well, so both marginals are perfectly normal. The covariance is
+
+$$E[XY] - E[X]E[Y] = E[S X^2] - 0 = E[S]\,E[X^2] = 0 \times 1 = 0,$$
+
+using independence of $S$ and $X$. So $X$ and $Y$ are uncorrelated. But $|Y| = |X|$ always, so $P(|Y| > 2 \mid |X| = 0.5) = 0$ while $P(|Y| > 2) \approx 0.0455$: the variables are wildly dependent.
+
+There is no contradiction with the theorem, because $(X,Y)$ is *not* bivariate normal — all of its probability sits on the two lines $y = \pm x$, so it has no joint density at all. Normal marginals do not make a normal pair. The hypothesis of the theorem is joint normality, and it must be checked, not assumed from the margins.
+:::
+
+:::example[Conditioning in a bivariate normal]{#bvn-example}
+Height $X$ (in cm) and weight $Y$ (in kg) of adults in a population are bivariate normal with $\mu_X = 170$, $\sigma_X = 10$, $\mu_Y = 70$, $\sigma_Y = 12$, and $\rho = 0.5$. Someone is $180$ cm tall. Find the conditional distribution of their weight, and the probability it exceeds $85$ kg.
+:::
+
+:::solution
+1. By the theorem *Marginals and conditionals of a bivariate normal*, the conditional mean is
+$$E[Y \mid X = 180] = 70 + 0.5 \times \frac{12}{10}\left(180 - 170\right) = 70 + 6 = 76.$$
+2. The conditional variance is $\sigma_Y^2(1-\rho^2) = 144 \times 0.75 = 108$, so the conditional standard deviation is $\sqrt{108} \approx 10.392$.
+3. Standardise within the conditional distribution:
+$$P(Y > 85 \mid X = 180) = P\!\left(Z > \frac{85 - 76}{10.392}\right) = P(Z > 0.866) = 1 - \Phi(0.866) \approx 0.1932.$$
+4. Compare with the unconditional $P(Y > 85) = 1 - \Phi\!\left(\tfrac{85-70}{12}\right) = 1 - \Phi(1.25) \approx 0.1056$. Knowing the person is tall roughly doubles the probability that they are over $85$ kg — the entire content of a correlation of $0.5$, made numerical.
+5. Note that $\rho = 0.5$ cut the standard deviation only from $12$ to $10.39$, a $13\%$ reduction. Correlations reduce *variance* by $\rho^2$, and $\rho^2 = 0.25$ is a good deal less impressive than $\rho = 0.5$ sounds.
+:::
+
+## Sums of independent random variables: convolution
+
+<!-- section: sums -->
+
+The single most-asked question about a pair is the distribution of their sum. Expectation already adds without any hypothesis, by the theorem *Expectation is linear without any independence*, but the *distribution* of $X + Y$ needs the whole joint law — and under independence it takes a clean and memorable form.
+
+:::theorem[Convolution formula]{#convolution}
+Let $X$ and $Y$ be independent and set $S = X + Y$.
+
+If both are discrete with pmfs $p_X$, $p_Y$, then
+
+$$p_S(s) = \sum_{x} p_X(x)\,p_Y(s - x).$$
+
+If both are continuous with densities $f_X$, $f_Y$, then $S$ is continuous with density
+
+$$f_S(s) = \int_{-\infty}^{\infty} f_X(x)\,f_Y(s-x)\,dx.$$
+
+This operation is written $f_S = f_X * f_Y$ and is called the **convolution** of the two densities.
+:::
+
+:::proof
+**Discrete.** Partition $\{S = s\}$ according to the value of $X$: the outcomes with $S = s$ and $X = x$ are exactly those with $X = x$ and $Y = s - x$. These events are disjoint over $x$ and exhaust $\{S = s\}$, so
+
+$$p_S(s) = \sum_x P(X = x,\ Y = s - x) = \sum_x p_X(x)\,p_Y(s-x),$$
+
+the last step by independence.
+
+**Continuous.** Compute the cdf of $S$ by integrating the joint density $f_X(x)f_Y(y)$ over the half-plane $\{x + y \le s\}$, slicing vertically so that for each $x$ the inner variable runs over $y \le s - x$:
+
+$$F_S(s) = P(X + Y \le s) = \int_{-\infty}^{\infty}\!\!\int_{-\infty}^{s-x} f_X(x)f_Y(y)\,dy\,dx = \int_{-\infty}^{\infty} f_X(x)\,F_Y(s-x)\,dx.$$
+
+Differentiate with respect to $s$. The parameter $s$ appears only in the upper limit of the inner integral, so differentiating under the integral sign — justified here because $f_X f_Y \ge 0$ and the integrals converge — replaces $F_Y(s-x)$ by $f_Y(s-x)$:
+
+$$f_S(s) = F_S'(s) = \int_{-\infty}^{\infty} f_X(x)\,f_Y(s-x)\,dx.$$
+
+Since $F_S$ has a derivative given by an integral of a non-negative function, $S$ is continuous with that density.
+:::
+
+:::intuition
+To land a total of $s$, the first variable must land somewhere — call it $x$ — and the second must then land at exactly the complement $s - x$. Independence says the chance of that pair is the product of the two chances, and summing (or integrating) over every possible split of $s$ into $x$ and $s - x$ accounts for every way the total can be reached.
+
+The formula is a sliding overlap: hold one density fixed, reflect the other and slide it along by $s$, and the overlap area at each position is the density of the sum there.
+:::
+
+:::pitfall[Convolution needs independence, and the limits need the supports]
+The convolution formula is false without independence — the joint density does not factor, and there is nothing to convolve.
+
+Even with independence, the written integral is over all of $\mathbb{R}$ only because the densities vanish off their supports. In practice you must impose *both* constraints, $x \in S_X$ and $s - x \in S_Y$, and integrate over their intersection, which usually depends on $s$ and usually forces a case split. Forgetting the second constraint is the standard error, and it shows up as a "density" that fails to integrate to one.
+:::
+
+:::example[The sum of two independent uniforms]{#uniform-sum-example}
+Let $X, Y$ be independent $U(0,1)$ and let $S = X + Y$. Find the density of $S$ and compute $P(0.8 \le S \le 1.2)$.
+:::
+
+:::solution
+1. Both densities equal $1$ on $[0,1]$ and $0$ elsewhere, so the integrand $f_X(x)f_Y(s-x)$ equals $1$ exactly when $0 \le x \le 1$ *and* $0 \le s - x \le 1$, i.e. when $s - 1 \le x \le s$. The integrand is therefore the indicator of
+$$\max(0,\, s-1) \ \le\ x\ \le\ \min(1,\, s),$$
+and $f_S(s)$ is simply the length of that interval.
+2. For $0 \le s \le 1$ the interval is $[0, s]$, of length $s$. For $1 \le s \le 2$ it is $[s-1, 1]$, of length $2 - s$. Outside $[0,2]$ it is empty. Hence
+$$f_S(s) = \begin{cases} s, & 0 \le s \le 1,\\ 2-s, & 1 \le s \le 2,\\ 0 & \text{otherwise},\end{cases}$$
+the **triangular density** on $[0,2]$.
+3. Check: the triangle has base $2$ and height $1$, so its area is $\tfrac12 \times 2 \times 1 = 1$. ✓ And $E[S] = 1 = \tfrac12 + \tfrac12$. ✓
+4. For the probability, integrate the triangle over $[0.8, 1.2]$. By symmetry about $s=1$ it is easier to remove the two tails: $F_S(0.8) = \int_0^{0.8} s\,ds = 0.32$, and by symmetry $P(S > 1.2) = 0.32$ too. So
+$$P(0.8 \le S \le 1.2) = 1 - 0.32 - 0.32 = 0.36.$$
+5. Compare with what a flat guess would give. If $S$ were uniform on $[0,2]$ the answer would be $0.4/2 = 0.2$. The true answer is nearly twice that, because sums pile up in the middle.
+:::
+
+:::figure[The density of $S = X+Y$ for independent $X, Y \sim U(0,1)$: the triangular density on $[0,2]$, shown against the uniform density on $[0,2]$ that intuition wrongly suggests. The shaded band over $[0.8,1.2]$ has area $0.36$, against $0.2$ for the flat comparison. Adding two flat distributions does not give a flat one — the middle has many ways to be reached and the ends have almost none.]{#triangular-sum-figure}
+{
+  "type": "plot",
+  "x": [-0.25, 2.5],
+  "y": [-0.16, 1.32],
+  "xTicks": 0.25,
+  "yTicks": 0.25,
+  "xLabel": "s",
+  "yLabel": "density of S",
+  "marks": [
+    { "kind": "region", "points": [[0.8, 0], [0.8, 0.8], [1, 1], [1.2, 0.8], [1.2, 0]], "tone": "result" },
+    { "kind": "path", "points": [[0, 0], [1, 1], [2, 0]], "tone": "accent" },
+    { "kind": "path", "points": [[0, 0.5], [2, 0.5]], "tone": "muted", "dashed": true },
+    { "kind": "text", "at": [1.0, 0.28], "text": "0.36", "tone": "result" },
+    { "kind": "text", "at": [0.52, 1.18], "text": "triangular" },
+    { "kind": "text", "at": [1.72, 0.95], "text": "uniform on [0,2]", "leaderTo": [1.9, 0.5] }
+  ]
+}
+:::
+
+:::theorem[Sum of independent normals]{#normal-sum}
+If $X \sim N(\mu_1, \sigma_1^2)$ and $Y \sim N(\mu_2, \sigma_2^2)$ are **independent**, then
+
+$$X + Y \sim N\!\left(\mu_1 + \mu_2,\ \sigma_1^2 + \sigma_2^2\right).$$
+:::
+
+:::proof
+It suffices to prove the standard case $\mu_1 = \mu_2 = 0$: shifting $X$ and $Y$ by constants shifts $S$ by their sum, and a shift of a normal is normal with the shifted mean.
+
+Apply the theorem *Convolution formula*:
+
+$$f_S(s) = \int_{-\infty}^{\infty} \frac{1}{\sigma_1\sqrt{2\pi}}e^{-x^2/(2\sigma_1^2)}\cdot\frac{1}{\sigma_2\sqrt{2\pi}}e^{-(s-x)^2/(2\sigma_2^2)}\,dx.$$
+
+Write $\tau^2 = \sigma_1^2 + \sigma_2^2$ and combine the exponents over the common denominator $2\sigma_1^2\sigma_2^2$:
+
+$$\frac{\sigma_2^2 x^2 + \sigma_1^2 (s-x)^2}{2\sigma_1^2\sigma_2^2} = \frac{\tau^2 x^2 - 2\sigma_1^2 s x + \sigma_1^2 s^2}{2\sigma_1^2\sigma_2^2}.$$
+
+Complete the square in $x$. With $a = \sigma_1^2 s/\tau^2$,
+
+$$\tau^2 x^2 - 2\sigma_1^2 s x + \sigma_1^2 s^2 = \tau^2\left(x - a\right)^2 + \sigma_1^2 s^2 - \frac{\sigma_1^4 s^2}{\tau^2} = \tau^2 (x-a)^2 + \frac{\sigma_1^2\sigma_2^2 s^2}{\tau^2},$$
+
+the last step because $\sigma_1^2 - \sigma_1^4/\tau^2 = \sigma_1^2(\tau^2 - \sigma_1^2)/\tau^2 = \sigma_1^2\sigma_2^2/\tau^2$. Substituting back, the part depending on $s$ alone comes outside the integral:
+
+$$f_S(s) = \frac{1}{2\pi\sigma_1\sigma_2}\,e^{-s^2/(2\tau^2)}\int_{-\infty}^{\infty}\exp\left(-\frac{\tau^2 (x-a)^2}{2\sigma_1^2\sigma_2^2}\right) dx.$$
+
+The remaining integral is a Gaussian integral in $x$ with variance $\sigma_1^2\sigma_2^2/\tau^2$, so it equals $\sqrt{2\pi}\,\sigma_1\sigma_2/\tau$. Therefore
+
+$$f_S(s) = \frac{1}{2\pi\sigma_1\sigma_2}\cdot\frac{\sqrt{2\pi}\,\sigma_1\sigma_2}{\tau}\,e^{-s^2/(2\tau^2)} = \frac{1}{\tau\sqrt{2\pi}}e^{-s^2/(2\tau^2)},$$
+
+which is the $N(0, \tau^2) = N(0, \sigma_1^2 + \sigma_2^2)$ density.
+:::
+
+:::remark
+Independence is used exactly once, at the first line, to write the joint density as a product. Without it the variance of the sum picks up a covariance term, $\operatorname{Var}(X+Y) = \sigma_1^2 + \sigma_2^2 + 2\operatorname{Cov}(X,Y)$, and the sum of two dependent normals need not be normal at all — the counterexample $X$ and $Y = SX$ from the pitfall above has $X + Y$ equal to $2X$ half the time and $0$ the other half, so $P(X+Y = 0) = \tfrac12$ and the sum is not even continuous.
+:::
+
+:::example[A sum of two independent normals]{#normal-sum-example}
+Let $X \sim N(1, 4)$ and $Y \sim N(3, 9)$ be independent, and let $S = X + Y$. Find the distribution of $S$ and compute $P(S > 6)$.
+:::
+
+:::solution
+1. By the theorem *Sum of independent normals*, $S \sim N(1 + 3,\ 4 + 9) = N(4, 13)$, so the standard deviation is $\sqrt{13} \approx 3.6056$.
+2. Standardise:
+$$P(S > 6) = P\!\left(Z > \frac{6-4}{\sqrt{13}}\right) = P(Z > 0.5547) = 1 - \Phi(0.5547) \approx 0.2895.$$
+3. The commonest error here is to add the standard deviations, $2 + 3 = 5$, which would give $z = 0.4$ and $P \approx 0.3446$. Variances add; standard deviations do not.
+:::
+
+:::proposition[Sums of independent Poissons and binomials]{#discrete-convolutions}
+If $X \sim \text{Poisson}(\lambda)$ and $Y \sim \text{Poisson}(\mu)$ are independent then $X + Y \sim \text{Poisson}(\lambda + \mu)$. If $X \sim \text{Binomial}(m,p)$ and $Y \sim \text{Binomial}(n,p)$ are independent **with the same $p$**, then $X + Y \sim \text{Binomial}(m+n, p)$.
+:::
+
+:::proof
+For the Poisson case apply the discrete convolution of the theorem *Convolution formula*, with $k \ge 0$ and $x$ running from $0$ to $k$:
+
+$$p_S(k) = \sum_{x=0}^{k} \frac{e^{-\lambda}\lambda^x}{x!}\cdot\frac{e^{-\mu}\mu^{k-x}}{(k-x)!} = \frac{e^{-(\lambda+\mu)}}{k!}\sum_{x=0}^k \binom{k}{x}\lambda^x \mu^{k-x} = \frac{e^{-(\lambda+\mu)}(\lambda+\mu)^k}{k!},$$
+
+where the middle step multiplied and divided by $k!$ to build the binomial coefficient and the last step is the binomial theorem.
+
+For the binomial case, $X$ counts successes in $m$ independent trials with success probability $p$ and $Y$ counts successes in a further $n$ such trials, independent of the first block. The union of the two blocks is $m+n$ independent trials all with the same success probability $p$, and $X + Y$ is the total number of successes among them, which is $\text{Binomial}(m+n, p)$ by definition. The shared $p$ is essential: with different success probabilities the pooled trials are not identically distributed and the total is not binomial.
+:::
+
+:::summary
+- **Joint descriptions.** A discrete pair is described by a joint pmf $p(x,y) \ge 0$ summing to one; a jointly continuous pair by a joint density $f(x,y) \ge 0$ integrating to one, with $P((X,Y) \in B) = \iint_B f$. Both are covered by the joint cdf $F(x,y) = P(X\le x, Y \le y)$, which must satisfy the rectangle inequality as well as monotonicity in each variable.
+- **Marginals.** $p_X(x) = \sum_y p(x,y)$ and $f_X(x) = \int f(x,y)\,dy$: sum or integrate out the variable you do not want, taking the limits from the support. Marginals **do not determine the joint** — the running table and the uniform table on $\{0,1,2\}^2$ share both marginals and disagree about $P(X=Y)$, $\tfrac14$ against $\tfrac13$.
+- **Independence.** Equivalent to $F = F_XF_Y$, to $p = p_Xp_Y$, and to $f = f_Xf_Y$ off a null set. A non-rectangular support — a triangle, a disc — rules independence out immediately, however separable the formula looks.
+- **Conditioning.** $f_{X\mid Y}(x\mid y) = f(x,y)/f_Y(y)$, legitimate despite $P(Y=y)=0$ because it is the limit of conditioning on $|Y-y|\le\varepsilon$. The multiplication rule $f(x,y) = f_{X\mid Y}(x\mid y)f_Y(y)$ builds joints from two-stage stories, and independence is exactly the statement that the conditional does not move with $y$.
+- **Three or more.** Mutual independence is strictly stronger than pairwise: with two fair coins, $X$, $Y$ and $Z = X \oplus Y$ are pairwise independent and satisfy $P(X=Y=Z=1) = 0 \neq \tfrac18$.
+- **LOTUS and products.** $E[g(X,Y)] = \iint g f$ needs no independence, and neither does $E[aX+bY] = aE[X]+bE[Y]$. But $E[XY] = E[X]E[Y]$ **does** need it, and its converse is false.
+- **Bivariate normal.** Marginals normal, conditionals normal with mean linear in the conditioning value and variance $\sigma_Y^2(1-\rho^2)$ free of it. Zero correlation implies independence *for this family only*; $X \sim N(0,1)$ with $Y = SX$ has normal marginals, zero correlation and total dependence.
+- **Sums.** Under independence, $f_S = f_X * f_Y$. Two independent uniforms on $[0,1]$ give the triangular density on $[0,2]$; independent normals give $N(\mu_1+\mu_2, \sigma_1^2+\sigma_2^2)$; independent Poissons add their rates.
+:::
+
+## Common Mistakes
+
+- **Building a joint out of two marginals.** $f_X(x)f_Y(y)$ is the joint density *only if* the variables are independent. Two different joints can share both marginals, and no amount of information about the margins recovers the pairing.
+- **Getting the limits of a double integral from the integrand.** The limits come from the support, written as inequalities and then solved for the inner variable. For $0 < x < y < 1$ the inner $x$-integral runs from $0$ to $y$, not from $0$ to $1$.
+- **Declaring independence because the formula factors.** $8xy$ on the triangle $0 < x < y < 1$ factors algebraically and the variables are dependent, because the indicator of the support does not factor. Check the *support* first.
+- **Marginalising over the wrong variable.** $f_X$ is obtained by integrating out $y$. Integrating out $x$ leaves a function of $y$, which cannot be a density for $X$ — the surviving variable is the one you keep.
+- **Treating $f_{X\mid Y}(x \mid y)$ as a function of $y$.** The conditional density integrates to one over its *first* argument. The marginal in the denominator is a constant for that integration.
+- **Reading a conditional density as a probability.** $f_{X\mid Y}(x\mid y)$ can exceed $1$, like any density. Only its integral over a range of $x$ is a probability.
+- **Checking independence pair by pair.** For three or more variables, pairwise independence does not give mutual independence, and it is mutual independence that every downstream theorem assumes.
+- **Concluding independence from zero covariance.** $E[XY] = E[X]E[Y]$ detects linear association only. With $X$ uniform on $\{-1,0,1\}$ and $Y = X^2$ the covariance is zero and $Y$ is a function of $X$. The implication runs the other way, and back only inside the bivariate normal family.
+- **Assuming normal marginals make a normal pair.** Joint normality is an assumption about the pair. $X$ and $SX$ for an independent random sign $S$ both look perfectly normal and are not jointly normal.
+- **Adding standard deviations when summing independent variables.** Variances add; standard deviations do not. $N(1,4) + N(3,9) = N(4,13)$, with standard deviation $\sqrt{13} \approx 3.61$, not $5$.
+- **Convolving dependent variables.** The convolution formula is derived from $f(x,y) = f_X(x)f_Y(y)$. Without independence, the distribution of $X+Y$ requires the actual joint density and the half-plane integral, and may not even be continuous.

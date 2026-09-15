@@ -1,0 +1,978 @@
+---
+title: Expectation, Covariance and Conditional Expectation
+---
+
+# Expectation, Covariance and Conditional Expectation
+
+Two results from earlier chapters sit awkwardly next to each other. The theorem *Linearity of expectation* holds with no hypotheses at all: $E[X+Y] = E[X] + E[Y]$ whether $X$ and $Y$ are independent, dependent, or the same variable twice over. The theorem *Variance of a sum of independent variables* is not like that. It says $\operatorname{Var}(X+Y) = \operatorname{Var}(X) + \operatorname{Var}(Y)$, and it says so only for independent $X$ and $Y$ — and when we proved it, independence entered at exactly one step and was never mentioned again.
+
+That asymmetry is not an accident of the proof, and it is not a limitation we are stuck with. There is a number that measures precisely what independence was buying us, and once we name it the variance of a sum becomes an identity with no hypotheses whatsoever. The number is the **covariance**, and the corrected statement is
+
+$$\operatorname{Var}(X+Y) = \operatorname{Var}(X) + \operatorname{Var}(Y) + 2\operatorname{Cov}(X,Y).$$
+
+Independence forces the covariance to vanish, which is why the earlier theorem is true; but the identity above is true always. Half of this chapter is the study of that one extra term — its algebra, its normalised cousin the correlation coefficient, the sharp bound $|\rho| \le 1$, and, crucially, the fact that a zero covariance does **not** buy independence back. The converse fails, and it fails for an example so simple that you can compute both sides by hand.
+
+The other half is about a harder and more valuable object. Suppose you are told the value of $Y$ and asked for your best guess at $X$. The answer is a conditional expectation, and the surprising thing is that the most useful version of it is not a number but a *random variable*: $E[X \mid Y]$ is a function of $Y$, and since $Y$ is random, so is it. Nearly every difficulty students have with this topic traces back to that one point, so we will belabour it. Out of it come three results that carry a great deal of weight — the tower property, which computes an expectation by conditioning on whatever you happen to know; the law of total variance, which splits uncertainty into a within-group part and a between-group part; and the theorem that $E[X \mid Y]$ is the best possible predictor of $X$ from $Y$ in the mean-square sense, which is the precise reason regression is about conditional means and not about anything else.
+
+The chapter closes with Jensen's inequality, the general statement about convex functions of which $E[X^2] \ge (E[X])^2$ is the smallest special case. Together these results are the working vocabulary of every later subject that uses probability: portfolio variance, the bias-variance decomposition, random-effects models, martingales, and the entire theory of estimation.
+
+## Covariance
+
+<!-- section: covariance -->
+
+Variance measures how far a single variable strays from its own mean. If we have two variables, there is a second question available: when $X$ is above its mean, does $Y$ tend to be above its mean as well? The obvious way to measure that is to multiply the two deviations together and average.
+
+:::definition[Covariance]{#covariance-def}
+Let $X$ and $Y$ be random variables with finite means $\mu_X = E[X]$ and $\mu_Y = E[Y]$, and suppose $E[|XY|] < \infty$. The **covariance** of $X$ and $Y$ is
+
+$$\operatorname{Cov}(X,Y) = E\big[(X - \mu_X)(Y - \mu_Y)\big].$$
+:::
+
+Read the product inside the expectation one outcome at a time. If an outcome has $X$ above its mean and $Y$ above its mean, both factors are positive and the product contributes a positive amount. If both are below their means, both factors are negative and the product is again positive. Only outcomes where the two deviations point in *opposite* directions contribute negatively. So the covariance is an average of signed contributions, positive when the variables move together and negative when they move against each other, and its sign is the summary of which tendency wins.
+
+:::intuition
+Draw the joint distribution as a cloud of points and put the crosshairs at $(\mu_X, \mu_Y)$. The crosshairs cut the plane into four quadrants. Points in the upper-right and lower-left quadrants push the covariance up; points in the upper-left and lower-right push it down. The covariance is the average push, weighted by probability and by how far out the point sits — a point far from both means counts for much more than one near the crosshairs, because the contribution is a *product* of the two deviations, not a count.
+:::
+
+:::figure[The four points of the joint distribution in the example *A joint distribution with positive covariance*, each with probability $\tfrac14$. Dashed crosshairs sit at $(\mu_X,\mu_Y) = (2.5, 2.5)$. The two points on the diagonal contribute $+2.25$ each and the two off it contribute $-0.25$ each; the average of the four contributions is $\operatorname{Cov}(X,Y) = 1$.]{#covariance-quadrants}
+{
+  "type": "plot",
+  "x": [0, 6.4],
+  "y": [0, 5.4],
+  "xTicks": 1,
+  "yTicks": 1,
+  "xLabel": "x",
+  "yLabel": "y",
+  "equalAspect": true,
+  "marks": [
+    { "kind": "path", "points": [[2.5, 0], [2.5, 5.4]], "tone": "muted", "dashed": true },
+    { "kind": "path", "points": [[0, 2.5], [5.4, 2.5]], "tone": "muted", "dashed": true },
+    { "kind": "point", "at": [1, 1], "tone": "accent" },
+    { "kind": "point", "at": [2, 3], "tone": "accent" },
+    { "kind": "point", "at": [3, 2], "tone": "accent" },
+    { "kind": "point", "at": [4, 4], "tone": "accent" },
+    { "kind": "text", "at": [1.35, 0.55], "text": "+2.25", "tone": "result", "leaderTo": [1, 1] },
+    { "kind": "text", "at": [4.35, 4.6], "text": "+2.25", "tone": "result", "leaderTo": [4, 4] },
+    { "kind": "text", "at": [1.15, 3.7], "text": "-0.25", "tone": "alt", "leaderTo": [2, 3] },
+    { "kind": "text", "at": [3.9, 1.5], "text": "-0.25", "tone": "alt", "leaderTo": [3, 2] },
+    { "kind": "text", "at": [5.9, 2.75], "text": "y = 2.5", "tone": "muted" },
+    { "kind": "text", "at": [3.3, 5.15], "text": "x = 2.5", "tone": "muted", "leaderTo": [2.5, 4.9] }
+  ]
+}
+:::
+
+The defining formula is the one to think with, but it is almost never the one to compute with, because it asks you to know both means before you start and then to average a product of deviations. Expanding the product gives a form built out of raw moments instead.
+
+:::proposition[Computational formula for the covariance]{#cov-computational}
+If $X$ and $Y$ have finite second moments, then
+
+$$\operatorname{Cov}(X,Y) = E[XY] - E[X]\,E[Y].$$
+:::
+
+:::proof
+Expand the product inside the expectation:
+
+$$(X-\mu_X)(Y-\mu_Y) = XY - \mu_X Y - \mu_Y X + \mu_X\mu_Y.$$
+
+The right-hand side is a linear combination of the random variables $XY$, $Y$ and $X$ together with a constant, so the theorem *Linearity of expectation* applies term by term:
+
+$$\operatorname{Cov}(X,Y) = E[XY] - \mu_X E[Y] - \mu_Y E[X] + \mu_X \mu_Y = E[XY] - \mu_X\mu_Y - \mu_Y\mu_X + \mu_X\mu_Y,$$
+
+which collapses to $E[XY] - \mu_X\mu_Y$. The finite second moments guarantee $E[|XY|] < \infty$ by the theorem *Cauchy–Schwarz for random variables* proved in the next section, so every expectation written here exists. $\blacksquare$
+:::
+
+This is the exact analogue of the proposition *Computational formula for the variance*, and for the same reason: setting $Y = X$ in one turns it into the other. That is worth recording as a statement of its own, because it is the fact that makes covariance a genuine generalisation of variance rather than a new and unrelated quantity.
+
+:::proposition[Variance is a self-covariance]{#cov-self}
+For any $X$ with finite variance, $\operatorname{Cov}(X,X) = \operatorname{Var}(X)$.
+:::
+
+:::proof
+Put $Y = X$ in the definition: $\operatorname{Cov}(X,X) = E[(X-\mu_X)(X-\mu_X)] = E[(X-\mu_X)^2]$, which is the definition of $\operatorname{Var}(X)$. $\blacksquare$
+:::
+
+:::example[A joint distribution with positive covariance]{#joint-example}
+Let the pair $(X,Y)$ take each of the four values $(1,1)$, $(2,3)$, $(3,2)$, $(4,4)$ with probability $\tfrac14$. Compute $\operatorname{Cov}(X,Y)$, $\operatorname{Var}(X)$ and $\operatorname{Var}(Y)$.
+:::
+
+:::solution
+1. The marginal of $X$ puts mass $\tfrac14$ on each of $1,2,3,4$, so $\mu_X = \tfrac{1+2+3+4}{4} = 2.5$. The marginal of $Y$ is the same set of values, so $\mu_Y = 2.5$ as well.
+2. For the cross moment, $E[XY] = \tfrac14(1\cdot 1 + 2\cdot 3 + 3 \cdot 2 + 4 \cdot 4) = \tfrac14(1 + 6 + 6 + 16) = \tfrac{29}{4} = 7.25$.
+3. By the proposition *Computational formula for the covariance*, $\operatorname{Cov}(X,Y) = 7.25 - (2.5)(2.5) = 7.25 - 6.25 = 1$.
+4. For the variances, $E[X^2] = \tfrac14(1+4+9+16) = 7.5$, so $\operatorname{Var}(X) = 7.5 - 6.25 = 1.25$, and by symmetry $\operatorname{Var}(Y) = 1.25$ too.
+5. Check against the definition: the four deviation products are $(-1.5)(-1.5) = 2.25$, $(-0.5)(0.5) = -0.25$, $(0.5)(-0.5) = -0.25$ and $(1.5)(1.5) = 2.25$, averaging to $\tfrac{2.25 - 0.25 - 0.25 + 2.25}{4} = 1$ ✓.
+:::
+
+### The algebra of covariance
+
+Covariance is a *bilinear* form: linear in each argument when the other is held fixed, and symmetric. Everything computational in this chapter follows from that one structural fact, so it deserves a careful statement and a careful proof.
+
+:::theorem[Bilinearity and symmetry of covariance]{#cov-bilinear}
+Let $X$, $Y$, $Z$ be random variables with finite second moments and let $a$, $b$, $c$ be constants. Then
+
+1. **Symmetry:** $\operatorname{Cov}(X,Y) = \operatorname{Cov}(Y,X)$.
+2. **Constants:** $\operatorname{Cov}(X,c) = 0$, and $\operatorname{Cov}(aX + b,\, Y) = a\operatorname{Cov}(X,Y)$.
+3. **Additivity:** $\operatorname{Cov}(X + Y,\, Z) = \operatorname{Cov}(X,Z) + \operatorname{Cov}(Y,Z)$.
+
+Consequently, for any constants $a_i$, $b_j$ and variables $X_i$, $Y_j$,
+
+$$\operatorname{Cov}\Big(\sum_{i=1}^m a_i X_i,\ \sum_{j=1}^n b_j Y_j\Big) = \sum_{i=1}^m \sum_{j=1}^n a_i b_j \operatorname{Cov}(X_i, Y_j).$$
+:::
+
+:::proof
+(1) The product $(X-\mu_X)(Y-\mu_Y)$ is the same random variable as $(Y-\mu_Y)(X-\mu_X)$, so the two expectations are equal.
+
+(2) A constant $c$ has $E[c] = c$, so its deviation $c - E[c]$ is the zero random variable and the product is identically zero. For the affine case, $aX + b$ has mean $a\mu_X + b$, so its deviation is $(aX + b) - (a\mu_X + b) = a(X - \mu_X)$: the shift $b$ cancels itself. Hence
+
+$$\operatorname{Cov}(aX+b, Y) = E\big[a(X-\mu_X)(Y-\mu_Y)\big] = a\operatorname{Cov}(X,Y)$$
+
+by linearity of expectation.
+
+(3) The mean of $X + Y$ is $\mu_X + \mu_Y$ by the theorem *Linearity of expectation*, so the deviation of the sum is the sum of the deviations. Then
+
+$$\operatorname{Cov}(X+Y, Z) = E\big[\big((X-\mu_X) + (Y - \mu_Y)\big)(Z - \mu_Z)\big],$$
+
+and expanding the bracket and applying linearity of expectation to the two terms gives $\operatorname{Cov}(X,Z) + \operatorname{Cov}(Y,Z)$.
+
+The general formula follows by induction: (2) and (3) together give linearity in the first argument for a finite linear combination, and (1) transfers it to the second. $\blacksquare$
+:::
+
+Part (2) contains a fact worth isolating: **covariance does not see additive shifts**. Measuring temperature from a different zero, or counting profits net of a fixed cost, changes neither variance nor covariance. Multiplicative rescaling, by contrast, is seen in full — and that is the source of the interpretive problem we solve in the next section.
+
+:::pitfall
+The *magnitude* of a covariance means nothing on its own. If $X$ is a length in metres and $Y$ a length in centimetres, then $\operatorname{Cov}(X, Y)$ carries units of metre-centimetres, and switching $Y$ to metres divides the number by $100$ without changing the relationship one bit. A covariance of $0.003$ is not evidence of a weak association, and a covariance of $4{,}000{,}000$ is not evidence of a strong one. Only the **sign** of a covariance is interpretable by itself; for magnitude, normalise it into a correlation.
+:::
+
+### The variance of a sum, without hypotheses
+
+Now we can repay the debt from the start of the chapter.
+
+:::theorem[Variance of a sum]{#var-sum-general}
+For any $X$ and $Y$ with finite variances,
+
+$$\operatorname{Var}(X+Y) = \operatorname{Var}(X) + \operatorname{Var}(Y) + 2\operatorname{Cov}(X,Y),$$
+
+and likewise $\operatorname{Var}(X - Y) = \operatorname{Var}(X) + \operatorname{Var}(Y) - 2\operatorname{Cov}(X,Y)$. No independence is assumed.
+:::
+
+:::proof
+By the proposition *Variance is a self-covariance*, $\operatorname{Var}(X+Y) = \operatorname{Cov}(X+Y, X+Y)$. Expand by the theorem *Bilinearity and symmetry of covariance*:
+
+$$\operatorname{Cov}(X+Y,X+Y) = \operatorname{Cov}(X,X) + \operatorname{Cov}(X,Y) + \operatorname{Cov}(Y,X) + \operatorname{Cov}(Y,Y).$$
+
+The two middle terms are equal by symmetry, and the outer two are $\operatorname{Var}(X)$ and $\operatorname{Var}(Y)$. For the difference, write $X - Y = X + (-1)Y$ and use $\operatorname{Cov}(X, -Y) = -\operatorname{Cov}(X,Y)$ from part (2) of the same theorem. $\blacksquare$
+:::
+
+Compare this with the theorem *Variance of a sum of independent variables*. That result is now a corollary of this one plus a single extra fact — that independence makes the covariance vanish — which is the content of the section *Independence and Zero Covariance*. What we have gained is an identity that survives dependence, and a diagnosis of what dependence costs: a positively correlated pair is *more* variable in aggregate than two independent ones, a negatively correlated pair *less*. That single sentence is the mathematical content of diversification.
+
+:::corollary[Variance of a linear combination]{#var-linear-combination}
+Let $X_1, \ldots, X_n$ have finite variances and let $a_1, \ldots, a_n$, $b$ be constants. Then
+
+$$\operatorname{Var}\Big(b + \sum_{i=1}^n a_i X_i\Big) = \sum_{i=1}^n a_i^2 \operatorname{Var}(X_i) + 2\sum_{i < j} a_i a_j \operatorname{Cov}(X_i, X_j).$$
+
+If the $X_i$ are pairwise uncorrelated, the double sum vanishes and $\operatorname{Var}(\sum a_i X_i) = \sum a_i^2\operatorname{Var}(X_i)$.
+:::
+
+:::proof
+The constant $b$ contributes nothing, by the proposition *Variance under a linear change of scale*. Write $S = \sum_i a_i X_i$. By the proposition *Variance is a self-covariance* and the general bilinearity formula,
+
+$$\operatorname{Var}(S) = \operatorname{Cov}\Big(\sum_i a_i X_i, \sum_j a_j X_j\Big) = \sum_{i}\sum_j a_i a_j \operatorname{Cov}(X_i, X_j).$$
+
+Split the double sum into the $n$ diagonal terms $i = j$, each equal to $a_i^2 \operatorname{Var}(X_i)$, and the off-diagonal terms. By symmetry the pair $(i,j)$ and $(j,i)$ contribute the same amount, which is why the off-diagonal sum is written once over $i<j$ and doubled. $\blacksquare$
+:::
+
+:::example[Two assets]
+An investor puts a fraction $w$ of her money in asset $A$ and $1-w$ in asset $B$. Returns have $\operatorname{Var}(A) = 4$, $\operatorname{Var}(B) = 9$ and $\operatorname{Cov}(A,B) = -3$ (in squared percent). Find the variance of the portfolio return $R = wA + (1-w)B$ at $w = \tfrac12$, and find the $w$ that minimises it.
+:::
+
+:::solution
+1. By the corollary *Variance of a linear combination*, $\operatorname{Var}(R) = 4w^2 + 9(1-w)^2 + 2w(1-w)(-3)$.
+2. At $w = \tfrac12$: $4(\tfrac14) + 9(\tfrac14) - 6(\tfrac14) = \tfrac{4 + 9 - 6}{4} = \tfrac74 = 1.75$. Both assets alone are far more variable than the mixture, because the negative covariance subtracts.
+3. Expand in general: $\operatorname{Var}(R) = 4w^2 + 9 - 18w + 9w^2 - 6w + 6w^2 = 19w^2 - 24w + 9$.
+4. This is a upward parabola in $w$; setting the derivative $38w - 24$ to zero gives $w^{*} = \tfrac{24}{38} = \tfrac{12}{19} \approx 0.632$.
+5. The minimum value is $19(\tfrac{12}{19})^2 - 24\cdot\tfrac{12}{19} + 9 = 9 - \tfrac{144}{19} = \tfrac{27}{19} \approx 1.42$, smaller still. The general rule behind the arithmetic: mixing helps most when the covariance is most negative.
+:::
+
+:::remark
+There is a useful sanity check hidden in the corollary *Variance of a linear combination*. Because $\operatorname{Var}(S) \ge 0$ for every choice of the $a_i$, the matrix of covariances $\Sigma_{ij} = \operatorname{Cov}(X_i, X_j)$ must be positive semidefinite. Not every symmetric matrix is a legitimate covariance matrix, and a set of pairwise correlations quoted without regard to that constraint can be jointly impossible — three variables cannot all be correlated $-0.9$ with each other, for instance.
+:::
+
+## Correlation and the Cauchy–Schwarz Bound
+
+<!-- section: correlation -->
+
+The pitfall above says covariance has the wrong units. The fix is the standard one in statistics: divide by the natural scale of each variable, which is its standard deviation.
+
+:::definition[Correlation coefficient]{#correlation-def}
+Let $X$ and $Y$ have finite, strictly positive variances. The **correlation** (or Pearson correlation coefficient) of $X$ and $Y$ is
+
+$$\rho(X,Y) = \frac{\operatorname{Cov}(X,Y)}{\sigma_X \sigma_Y}, \qquad \sigma_X = \sqrt{\operatorname{Var}(X)},\ \ \sigma_Y = \sqrt{\operatorname{Var}(Y)}.$$
+
+$X$ and $Y$ are called **uncorrelated** when $\rho(X,Y) = 0$, equivalently when $\operatorname{Cov}(X,Y) = 0$.
+:::
+
+The requirement that the variances be strictly positive is not a technicality to skip past: a degenerate variable, one that equals a constant with probability one, has no correlation with anything, because the definition would divide by zero. That is the right answer rather than a defect — a quantity that never varies cannot be said to vary along with anything else.
+
+:::proposition[Correlation is unit-free]{#rho-scale-free}
+Let $a, c \neq 0$ and $b,d$ be constants. Then
+
+$$\rho(aX + b,\ cY + d) = \operatorname{sign}(ac)\,\rho(X,Y).$$
+
+In particular $\rho$ is unchanged by any change of units with positive scale factors, and by any shift of origin.
+:::
+
+:::proof
+By part (2) of the theorem *Bilinearity and symmetry of covariance*, $\operatorname{Cov}(aX+b, cY+d) = ac\operatorname{Cov}(X,Y)$. By the proposition *Variance under a linear change of scale*, the standard deviations become $|a|\sigma_X$ and $|c|\sigma_Y$. Dividing,
+
+$$\rho(aX+b, cY+d) = \frac{ac\operatorname{Cov}(X,Y)}{|a||c|\sigma_X\sigma_Y} = \frac{ac}{|ac|}\rho(X,Y),$$
+
+which is $\rho(X,Y)$ when $ac > 0$ and $-\rho(X,Y)$ when $ac < 0$. $\blacksquare$
+:::
+
+So converting a temperature from Celsius to Fahrenheit, or a price from euros to yen, leaves every correlation in a study untouched, while reversing a scale (measuring debt instead of wealth) flips every sign. This is exactly the behaviour one wants from a measure of association, and it is why correlations, not covariances, get reported.
+
+### Cauchy–Schwarz
+
+The second thing one wants is a fixed scale — a number that means the same thing in every problem, with a known maximum. That maximum exists, and proving it is the same argument that proves the Cauchy–Schwarz inequality in linear algebra, run in the vector space of random variables with $E[X^2] < \infty$.
+
+:::theorem[Cauchy–Schwarz for random variables]{#cauchy-schwarz}
+Let $U$ and $V$ be random variables with $E[U^2] < \infty$ and $E[V^2] < \infty$. Then $E[|UV|] < \infty$ and
+
+$$\big(E[UV]\big)^2 \le E[U^2]\,E[V^2].$$
+
+Equality holds if and only if there are constants $\alpha, \beta$, not both zero, with $P(\alpha U + \beta V = 0) = 1$ — that is, if and only if $U$ and $V$ are proportional almost surely.
+:::
+
+:::proof
+First, integrability: since $|uv| \le \tfrac12(u^2 + v^2)$ for all reals, monotonicity of expectation gives $E[|UV|] \le \tfrac12(E[U^2] + E[V^2]) < \infty$, so $E[UV]$ exists.
+
+If $E[V^2] = 0$ then $V = 0$ almost surely, so $UV = 0$ almost surely, both sides are $0$, and the equality case holds with $\alpha = 0$, $\beta = 1$. So assume $E[V^2] > 0$.
+
+For every real $t$ consider the non-negative random variable $(U - tV)^2$. Expectation preserves the inequality $\ge 0$, so
+
+$$q(t) := E\big[(U - tV)^2\big] = E[U^2] - 2t\,E[UV] + t^2 E[V^2] \ \ge \ 0 \quad\text{for all } t,$$
+
+using linearity of expectation to expand. Thus $q$ is a quadratic in $t$ with positive leading coefficient $E[V^2]$ that is never negative, so its discriminant cannot be positive:
+
+$$\big(2E[UV]\big)^2 - 4E[V^2]E[U^2] \le 0,$$
+
+which rearranges to the stated inequality.
+
+For equality: $(E[UV])^2 = E[U^2]E[V^2]$ says the discriminant is exactly zero, so $q$ has a repeated real root $t_0 = E[UV]/E[V^2]$, i.e. $E[(U - t_0V)^2] = 0$. A non-negative random variable with zero expectation is zero almost surely, so $P(U = t_0 V) = 1$, giving the stated relation with $\alpha = 1$, $\beta = -t_0$. Conversely, if $P(\alpha U + \beta V = 0) = 1$ with, say, $\alpha \neq 0$, then $U = -(\beta/\alpha)V$ almost surely and substituting shows both sides equal $(\beta/\alpha)^2 (E[V^2])^2$. $\blacksquare$
+:::
+
+:::intuition
+Think of $E[UV]$ as a dot product of two vectors, with $E[U^2]$ the squared length of $U$. Cauchy–Schwarz then reads $|\langle U, V\rangle| \le \|U\|\,\|V\|$, which is the statement that a dot product is $\|U\|\|V\|\cos\theta$ and a cosine cannot exceed $1$ in size. Equality is the case $\cos\theta = \pm 1$: the vectors are parallel. Every clause of the theorem, including the almost-sure proportionality in the equality case, is the geometry of that picture transcribed.
+:::
+
+Applying the theorem to the *centred* variables is what bounds the correlation.
+
+:::corollary[The correlation bound]{#rho-bound}
+If $X$ and $Y$ have finite, positive variances then
+
+$$-1 \le \rho(X,Y) \le 1.$$
+
+Moreover $|\rho(X,Y)| = 1$ if and only if $Y = a + bX$ almost surely for some constants $b \neq 0$ and $a$; the sign of $\rho$ is then the sign of $b$.
+:::
+
+:::proof
+Apply the theorem *Cauchy–Schwarz for random variables* to $U = X - \mu_X$ and $V = Y - \mu_Y$. Then $E[UV] = \operatorname{Cov}(X,Y)$, $E[U^2] = \sigma_X^2$ and $E[V^2] = \sigma_Y^2$, so
+
+$$\operatorname{Cov}(X,Y)^2 \le \sigma_X^2 \sigma_Y^2 .$$
+
+Both variances are positive, so dividing and taking square roots gives $|\operatorname{Cov}(X,Y)| \le \sigma_X\sigma_Y$, i.e. $|\rho| \le 1$.
+
+Equality holds exactly when $U$ and $V$ are proportional almost surely: $Y - \mu_Y = b(X - \mu_X)$ for some constant $b$, which is $Y = a + bX$ with $a = \mu_Y - b\mu_X$. (The constant $b$ cannot be $0$, since that would force $\sigma_Y = 0$.) Finally $\operatorname{Cov}(X, a + bX) = b\sigma_X^2$ by bilinearity, and $\sigma_{a+bX} = |b|\sigma_X$, so $\rho = b\sigma_X^2/(|b|\sigma_X^2) = \operatorname{sign}(b)$. $\blacksquare$
+:::
+
+So $\rho$ lives on a fixed scale with interpretable endpoints: $\rho = 1$ means an exact increasing straight-line relationship, $\rho = -1$ an exact decreasing one, and values in between measure how close the cloud comes to a line. That last phrase is the whole warning label, and we return to it in the next section.
+
+:::example[Correlation of the four-point distribution]
+Find $\rho(X,Y)$ for the distribution of the example *A joint distribution with positive covariance*, and find $\rho(X, 5 - 2Y)$.
+:::
+
+:::solution
+1. We computed $\operatorname{Cov}(X,Y) = 1$ and $\operatorname{Var}(X) = \operatorname{Var}(Y) = 1.25$.
+2. Hence $\sigma_X = \sigma_Y = \sqrt{1.25}$ and $\rho = \dfrac{1}{1.25} = 0.8$.
+3. Strong positive association, but not perfect — consistent with the picture, where the four points do not lie on a line.
+4. For the transformed variable, apply the proposition *Correlation is unit-free* with $a = 1$, $c = -2$: since $ac < 0$, $\rho(X, 5-2Y) = -0.8$.
+:::
+
+:::example[Correlation of a variable with its own sum]
+Let $X$ and $Y$ be independent with the same variance $\sigma^2 > 0$, and let $S = X + Y$. Find $\rho(X, S)$.
+:::
+
+:::solution
+1. By bilinearity, $\operatorname{Cov}(X, S) = \operatorname{Cov}(X,X) + \operatorname{Cov}(X,Y) = \sigma^2 + 0 = \sigma^2$, the covariance term vanishing by independence.
+2. By the theorem *Variance of a sum*, $\operatorname{Var}(S) = 2\sigma^2$, so $\sigma_S = \sigma\sqrt2$.
+3. Therefore $\rho(X,S) = \dfrac{\sigma^2}{\sigma \cdot \sigma\sqrt 2} = \dfrac{1}{\sqrt 2} \approx 0.707$.
+4. Note the answer does not depend on $\sigma$ at all — as the proposition *Correlation is unit-free* promises, a correlation cannot depend on the scale of measurement.
+:::
+
+:::pitfall
+A correlation of $0.8$ does not mean "$80\%$ of a perfect relationship", and it is not twice as strong as $0.4$ in any meaningful sense. The quantity that admits a proportional reading is $\rho^2$, which the section *Conditional Expectation as the Best Predictor* identifies as the fraction of the variance of $Y$ removed by the best linear prediction from $X$. So $\rho = 0.8$ accounts for $64\%$ of the variance and $\rho = 0.4$ for $16\%$ — a factor of four, not two.
+:::
+
+## Independence and Zero Covariance
+
+<!-- section: independence-and-covariance -->
+
+We come to the implication that makes the earlier variance theorem work, and to the converse that fails.
+
+:::theorem[Independence implies zero covariance]{#independence-implies-uncorrelated}
+If $X$ and $Y$ are independent random variables with finite variances, then $\operatorname{Cov}(X,Y) = 0$ and hence $\rho(X,Y) = 0$.
+:::
+
+:::proof
+The lemma *Expectation of a product of independent variables* gives $E[XY] = E[X]E[Y]$ for independent $X$ and $Y$. Substituting into the proposition *Computational formula for the covariance*,
+
+$$\operatorname{Cov}(X,Y) = E[XY] - E[X]E[Y] = 0 .$$
+
+Dividing by the positive number $\sigma_X\sigma_Y$ gives $\rho = 0$. $\blacksquare$
+:::
+
+:::corollary[Variance adds under independence]
+If $X_1,\dots,X_n$ are pairwise independent with finite variances, then $\operatorname{Var}(X_1 + \cdots + X_n) = \sum_i \operatorname{Var}(X_i)$.
+:::
+
+:::proof
+Every cross term in the corollary *Variance of a linear combination* is a covariance between an independent pair, hence zero by the theorem *Independence implies zero covariance*; the diagonal terms remain. Note that only *pairwise* independence is used — full mutual independence is more than this result needs. $\blacksquare$
+:::
+
+That recovers the theorem *Variance of a sum of independent variables* and, better, isolates the exact role independence played: it killed one term. Any other hypothesis that kills the same term would do just as well, and "uncorrelated" is precisely the name of that weaker hypothesis. The natural question is whether the two hypotheses are actually the same. They are not.
+
+:::theorem[Zero covariance does not imply independence]{#uncorrelated-not-independent}
+There exist random variables $X$ and $Y$ with $\operatorname{Cov}(X,Y) = 0$ for which $Y$ is a deterministic function of $X$ — so they are as dependent as it is possible to be.
+:::
+
+:::proof
+Let $X$ be uniform on $[-1,1]$, so its density is $\tfrac12$ on that interval, and set $Y = X^2$. All moments exist because the range is bounded.
+
+By symmetry of the density about $0$, every odd moment vanishes:
+
+$$E[X] = \int_{-1}^{1} x\cdot\tfrac12\,dx = 0, \qquad E[X^3] = \int_{-1}^{1} x^3 \cdot \tfrac12\,dx = 0 .$$
+
+(Each integrand is an odd function integrated over an interval symmetric about the origin.) Now compute the covariance from the proposition *Computational formula for the covariance*, using $XY = X\cdot X^2 = X^3$:
+
+$$\operatorname{Cov}(X,Y) = E[X^3] - E[X]E[X^2] = 0 - 0\cdot E[X^2] = 0 .$$
+
+So $X$ and $Y$ are uncorrelated. But $Y = X^2$ is a function of $X$: knowing $X$ determines $Y$ exactly. Independence would require $P(Y \le \tfrac14 \mid X = \tfrac12) = P(Y \le \tfrac14)$, whereas the left side is $1$ and the right side is $P(|X| \le \tfrac12) = \tfrac12$. Hence $X$ and $Y$ are not independent. $\blacksquare$
+:::
+
+:::figure[The counterexample: $X$ is uniform on $[-1,1]$ and $Y = X^2$. Knowing $X$ determines $Y$ completely, yet $\rho(X,Y)=0$. The reason is visible — the relationship is symmetric about $x=0$, so the positive contributions to the covariance from the right half exactly cancel the negative contributions from the left.]{#zero-correlation-counterexample}
+{
+  "type": "plot",
+  "x": [-1.35, 1.75],
+  "y": [-0.35, 1.45],
+  "xTicks": 0.5,
+  "yTicks": 0.25,
+  "xLabel": "x",
+  "yLabel": "y",
+  "marks": [
+    { "kind": "function", "fn": "x^2", "tone": "accent" },
+    { "kind": "path", "points": [[-1.35, 0.3333], [1.35, 0.3333]], "tone": "alt", "dashed": true },
+    { "kind": "path", "points": [[0, -0.35], [0, 1.45]], "tone": "muted", "dashed": true },
+    { "kind": "point", "at": [-0.8, 0.64], "tone": "result" },
+    { "kind": "point", "at": [0.8, 0.64], "tone": "result" },
+    { "kind": "point", "at": [-0.4, 0.16], "tone": "result" },
+    { "kind": "point", "at": [0.4, 0.16], "tone": "result" },
+    { "kind": "text", "at": [1.15, 1.25], "text": "Y = X^2", "tone": "accent", "leaderTo": [1.0, 1.0] },
+    { "kind": "text", "at": [1.45, 0.42], "text": "E[Y] = 1/3", "tone": "alt" },
+    { "kind": "text", "at": [-0.62, 1.25], "text": "mirror pair", "tone": "muted", "leaderTo": [-0.8, 0.66] },
+    { "kind": "text", "at": [0.16, -0.22], "text": "E[X] = 0", "tone": "muted" }
+  ]
+}
+:::
+
+The figure says in one glance what the algebra says in five lines. The dependence here is real and strong — $Y$ is *determined* by $X$ — but it is perfectly symmetric, and correlation only ever detects the *linear* component of a relationship. A symmetric U-shape has no linear component at all: the best straight line through it is flat.
+
+:::intuition
+Correlation asks one question and one question only: "does a straight line through this cloud tilt up or down, and by how much relative to the scatter?" For the parabola the answer is "it does not tilt", and $\rho = 0$ is a correct answer to the question asked. It is simply not an answer to the question "are these variables related?", which is what people hear.
+:::
+
+:::pitfall
+"Uncorrelated" and "independent" are not synonyms, and the direction of the implication matters in practice.
+
+- Independent $\Rightarrow$ uncorrelated. **Always true.**
+- Uncorrelated $\Rightarrow$ independent. **False in general.**
+
+So a sample correlation near zero is never evidence of independence; it is evidence of no *linear* trend. Conversely, if you know only that a pair is uncorrelated, you may still use $\operatorname{Var}(X+Y) = \operatorname{Var}(X) + \operatorname{Var}(Y)$ — that identity needs only the covariance term to vanish — but you may **not** use $E[g(X)h(Y)] = E[g(X)]E[h(Y)]$ for general functions $g,h$, which needs genuine independence. Indeed in the counterexample, $g(x) = x^2$ and $h(y) = y$ already break it.
+:::
+
+There is one important setting where the converse does hold, and it is worth knowing precisely because it is so often over-generalised.
+
+:::proposition[The jointly normal exception]{#jointly-normal}
+If $(X,Y)$ has a **bivariate normal** distribution and $\rho(X,Y) = 0$, then $X$ and $Y$ are independent.
+:::
+
+:::proof
+*Sketch.* The bivariate normal density is a single exponential whose exponent is a quadratic form in $x$ and $y$; the only term coupling $x$ to $y$ carries a factor $\rho$. Setting $\rho = 0$ makes the exponent split as a function of $x$ plus a function of $y$, so the joint density factors as the product of the two marginal normal densities, which is the definition of independence. A full proof needs the explicit bivariate density, which the chapter *Continuous Random Variables* does not develop, so we record this as a sketch. $\blacksquare$
+:::
+
+:::pitfall
+The hypothesis in the proposition *The jointly normal exception* is that the **pair** is jointly normal, not merely that each of $X$ and $Y$ is normal on its own. Two normal marginals do not make a normal joint distribution. For a counterexample, let $Z \sim N(0,1)$ and let $S$ be $\pm 1$ with probability $\tfrac12$ each, independent of $Z$; put $X = Z$ and $Y = SZ$. Then $Y$ is also standard normal, and $\operatorname{Cov}(X,Y) = E[SZ^2] = E[S]E[Z^2] = 0$, yet $|Y| = |X|$ always. Uncorrelated, normal marginals, and wildly dependent.
+:::
+
+## Conditional Expectation
+
+<!-- section: conditional-expectation -->
+
+Everything so far summarises a joint distribution with a single number. We now ask a sharper question: given that $Y$ has turned out to equal $y$, what do we expect $X$ to be? The chapter *Foundations of Probability* already defined conditional probability; conditional expectation is the expectation computed under that conditional distribution.
+
+:::definition[Conditional expectation given an event value]{#cond-exp-value}
+Let $X$ and $Y$ be discrete. For any $y$ with $P(Y = y) > 0$, the **conditional pmf** of $X$ given $Y=y$ is
+
+$$p_{X\mid Y}(x \mid y) = \frac{P(X = x,\, Y = y)}{P(Y = y)},$$
+
+and the **conditional expectation of $X$ given $Y = y$** is
+
+$$E[X \mid Y = y] = \sum_x x\, p_{X \mid Y}(x \mid y),$$
+
+provided the sum converges absolutely. In the jointly continuous case, with joint density $f_{X,Y}$ and marginal $f_Y(y) > 0$, the conditional density is $f_{X\mid Y}(x\mid y) = f_{X,Y}(x,y)/f_Y(y)$ and
+
+$$E[X \mid Y = y] = \int_{-\infty}^{\infty} x\, f_{X\mid Y}(x \mid y)\,dx .$$
+:::
+
+Nothing here is new machinery: a conditional pmf is a pmf — it is non-negative and sums to $1$, since dividing the joint masses on the slice $\{Y = y\}$ by the total mass of that slice is exactly what makes them add to one — and $E[X \mid Y = y]$ is its mean in the ordinary sense. Every theorem about expectation therefore holds verbatim for conditional expectation, with all probabilities computed in the conditional world.
+
+:::example[Conditioning on a die]{#die-example}
+Roll a fair six-sided die to get $Y$, then toss $Y$ fair coins and let $X$ be the number of heads. Find $E[X \mid Y = y]$ for each $y$, and find $E[X \mid Y = 3]$ explicitly.
+:::
+
+:::solution
+1. Given $Y = y$, the variable $X$ is binomial with $n = y$ and $p = \tfrac12$.
+2. By the theorem *Mean and variance of the binomial*, applied inside the conditional distribution, $E[X \mid Y = y] = y/2$.
+3. So $E[X \mid Y = 3] = 1.5$. The value is a plain number: we were told $Y$, and conditional on that information $X$ has a definite mean.
+4. The six numbers are $0.5, 1, 1.5, 2, 2.5, 3$ for $y = 1, \ldots, 6$.
+:::
+
+### The random variable $E[X \mid Y]$
+
+Look at step 4 above. We produced not one number but a *table*: a number for each possible value of $y$. That table is a function of $y$, call it $g(y) = y/2$. Now feed the random variable $Y$ into that function. The result, $g(Y) = Y/2$, is itself a random variable — it takes the value $1.5$ when the die shows $3$, the value $3$ when the die shows $6$, and so on, with the probabilities of $Y$. This object is what the rest of the chapter is about.
+
+:::definition[Conditional expectation as a random variable]{#cond-exp-rv}
+Let $g(y) = E[X \mid Y = y]$, defined for every $y$ in the support of $Y$. The **conditional expectation of $X$ given $Y$** is the random variable
+
+$$E[X \mid Y] := g(Y).$$
+
+It is a function of $Y$ alone; it takes the value $E[X\mid Y=y]$ on the event $\{Y = y\}$.
+:::
+
+:::pitfall
+**$E[X \mid Y = y]$ and $E[X \mid Y]$ are different kinds of object, and confusing them is the single largest source of error in this topic.**
+
+- $E[X \mid Y = y]$ is a **number** (once $y$ is fixed). It is the mean of $X$ in the sub-population where $Y = y$. Asking for its variance, or writing $E\big[E[X\mid Y = y]\big]$, is a type error.
+- $E[X \mid Y]$ is a **random variable**. Its randomness is inherited entirely from $Y$: nothing about $X$ is left un-averaged. It has a distribution, a mean and a variance of its own, and the next two sections are precisely the statements that its mean is $E[X]$ and that its variance is part of $\operatorname{Var}(X)$.
+
+The relation between them is substitution: $E[X\mid Y]$ is the function $y \mapsto E[X \mid Y = y]$ evaluated at the random $Y$. In the example *Conditioning on a die*, $E[X \mid Y = 3] = 1.5$ is a number, while $E[X\mid Y] = Y/2$ is a random variable taking six values with probability $\tfrac16$ each.
+:::
+
+:::intuition
+Imagine a population split into groups by the value of $Y$. For each group, compute the average of $X$ within that group; write that group average on a card and give the same card to everyone in the group. Now draw a person at random. The number on their card is $E[X \mid Y]$ — random, because which group you land in is random, but *less* random than $X$ itself, because all the within-group variation has been averaged away. $E[X\mid Y]$ is $X$ with its fine detail blurred out and only the part that $Y$ can see retained.
+:::
+
+The properties of $E[X\mid Y]$ are the properties of ordinary expectation plus one new rule that has no unconditional analogue.
+
+:::theorem[Properties of conditional expectation]{#cond-exp-properties}
+Let $X$, $X_1$, $X_2$ have finite expectations, let $a,b$ be constants and let $h$ be a function with $E[|h(Y)X|]<\infty$. Then, with all equalities holding almost surely:
+
+1. **Linearity:** $E[a X_1 + b X_2 \mid Y] = a E[X_1 \mid Y] + b E[X_2 \mid Y]$.
+2. **Taking out what is known:** $E[h(Y) X \mid Y] = h(Y)\, E[X \mid Y]$; in particular $E[h(Y)\mid Y] = h(Y)$.
+3. **Independence:** if $X$ and $Y$ are independent, $E[X \mid Y] = E[X]$, a constant.
+4. **Monotonicity:** if $X_1 \le X_2$ almost surely then $E[X_1\mid Y] \le E[X_2 \mid Y]$.
+:::
+
+:::proof
+Fix $y$ with $P(Y=y) > 0$ and argue in the conditional distribution; the discrete case is written out and the continuous case replaces sums by integrals throughout.
+
+(1) The conditional pmf is a pmf, so the theorem *Linearity of expectation* applies to it: $E[aX_1 + bX_2 \mid Y = y] = aE[X_1\mid Y=y] + bE[X_2\mid Y=y]$. This holds for every $y$, so the corresponding functions of $y$ agree, and evaluating both at $Y$ gives the claim.
+
+(2) On the event $\{Y = y\}$ the factor $h(Y)$ equals the constant $h(y)$, so
+
+$$E[h(Y)X \mid Y = y] = \sum_x h(y)\,x\; p_{X\mid Y}(x\mid y) = h(y)\sum_x x\, p_{X\mid Y}(x\mid y) = h(y) E[X\mid Y=y].$$
+
+As functions of $y$ the two sides agree, and substituting $Y$ for $y$ gives $E[h(Y)X\mid Y] = h(Y)E[X\mid Y]$. Taking $X \equiv 1$ gives the special case.
+
+(3) Independence makes the conditional pmf equal to the marginal: $p_{X\mid Y}(x\mid y) = P(X=x,Y=y)/P(Y=y) = P(X=x)$. Hence $E[X\mid Y=y] = \sum_x xP(X=x) = E[X]$ for every $y$, so the function $g$ is constant and $E[X\mid Y] = E[X]$.
+
+(4) If $X_1 \le X_2$ almost surely then the same holds under each conditional distribution, and expectation is monotone. $\blacksquare$
+:::
+
+Property (2) is the one with no unconditional counterpart and the one that does the most work. It says that *conditional on $Y$, any function of $Y$ behaves like a constant* — because it is one, once you know $Y$. Every calculation in the next two sections uses it.
+
+:::example[Taking out what is known]
+With $X$ and $Y$ as in the example *Conditioning on a die*, compute $E[XY \mid Y]$ and $E[XY]$.
+:::
+
+:::solution
+1. $Y$ is a function of $Y$, so by property (2) of the theorem *Properties of conditional expectation*, $E[XY \mid Y] = Y\,E[X\mid Y]$.
+2. We found $E[X \mid Y] = Y/2$, so $E[XY\mid Y] = Y^2/2$.
+3. To get the unconditional $E[XY]$ we will need the tower property of the next section, which gives $E[XY] = E[Y^2/2] = \tfrac12 E[Y^2]$.
+4. For a fair die $E[Y^2] = \tfrac16(1+4+9+16+25+36) = \tfrac{91}{6}$, so $E[XY] = \tfrac{91}{12} \approx 7.583$.
+:::
+
+## The Tower Property
+
+<!-- section: tower-property -->
+
+The example above ended with a promise: that an unconditional expectation can be recovered by averaging conditional ones. That is the tower property, and it is the workhorse of the chapter.
+
+:::theorem[The tower property]{#tower}
+Let $X$ have finite expectation and let $Y$ be any random variable. Then
+
+$$E\big[E[X \mid Y]\big] = E[X].$$
+
+Equivalently, in the discrete case,
+
+$$E[X] = \sum_y E[X \mid Y = y]\,P(Y = y),$$
+
+and in the jointly continuous case $E[X] = \int E[X\mid Y=y] f_Y(y)\,dy$. The identity is also called the **law of total expectation**.
+:::
+
+:::proof
+Write $g(y) = E[X\mid Y=y]$, so that $E[X\mid Y] = g(Y)$. By the theorem *Law of the unconscious statistician* applied to the function $g$ of the variable $Y$,
+
+$$E\big[E[X\mid Y]\big] = E[g(Y)] = \sum_y g(y)\,P(Y=y).$$
+
+Now substitute the definition of $g$ and expand the conditional pmf:
+
+$$\sum_y \Big(\sum_x x\,\frac{P(X=x, Y=y)}{P(Y=y)}\Big) P(Y=y) = \sum_y \sum_x x\, P(X = x, Y = y).$$
+
+The factor $P(Y=y)$ cancels — which is exactly why the conditional expectation must be weighted by $P(Y=y)$ and not averaged plainly. Absolute convergence, which holds because $E|X| < \infty$, licenses swapping the order of summation:
+
+$$\sum_x x \sum_y P(X=x, Y=y) = \sum_x x\,P(X = x) = E[X],$$
+
+the inner sum being the marginal pmf of $X$. The continuous case is the same computation with integrals in place of sums. $\blacksquare$
+:::
+
+:::intuition
+The overall average is the average of the group averages — *weighted by group size*. A university's mean starting salary is not the plain average of the departmental means; a department with four hundred graduates counts a hundred times as much as one with four. The weight $P(Y=y)$ is the group size, and forgetting it is the classic error.
+:::
+
+:::recipe[Computing an expectation by conditioning]{#tower-recipe}
+To find $E[X]$ when $X$ is hard to describe directly:
+
+1. Choose a variable $Y$ such that, *given $Y$*, the distribution of $X$ is something you recognise. The right choice is usually the quantity whose randomness is causing the trouble — a random sample size, an unknown parameter, the outcome of a first step.
+2. Write down $E[X \mid Y = y]$ as a formula in $y$, using known results inside the conditional world.
+3. Replace $y$ by $Y$ to get the random variable $E[X\mid Y]$.
+4. Take its expectation, weighting by the distribution of $Y$. The tower property says the answer is $E[X]$.
+:::
+
+:::example[Expected number of heads, revisited]
+For the die-then-coins experiment of the example *Conditioning on a die*, find $E[X]$.
+:::
+
+:::solution
+1. Conditioning on $Y$ is step 1, and we already know $E[X\mid Y] = Y/2$.
+2. By the theorem *The tower property*, $E[X] = E[Y/2] = \tfrac12 E[Y]$.
+3. A fair die has $E[Y] = 3.5$, so $E[X] = 1.75$.
+4. Direct computation would require the pmf of $X$, a mixture of six binomials — a page of arithmetic for a number that conditioning gives in one line.
+:::
+
+### A random sum of random variables
+
+The most valuable application of the tower property is to a sum whose *number of terms* is itself random. Insurance claims in a month, customers served in a day, offspring in a generation: all are sums of a random number of random terms, and none has an obvious distribution.
+
+:::theorem[Wald's identity]{#wald}
+Let $X_1, X_2, \ldots$ be independent and identically distributed with finite mean $\mu = E[X_1]$, and let $N$ be a non-negative integer-valued random variable with finite mean, independent of the sequence $(X_i)$. Put
+
+$$S_N = \sum_{i=1}^{N} X_i, \qquad S_0 = 0 .$$
+
+Then $E[S_N] = E[N]\,\mu$.
+:::
+
+:::proof
+Condition on $N$. On the event $\{N = n\}$ the sum has exactly $n$ terms, and since $N$ is independent of the $X_i$, conditioning on $N = n$ does not change the distribution of $X_1, \dots, X_n$. Hence, by linearity of expectation inside the conditional world,
+
+$$E[S_N \mid N = n] = E\Big[\sum_{i=1}^{n} X_i \;\Big|\; N = n\Big] = E\Big[\sum_{i=1}^n X_i\Big] = n\mu .$$
+
+As a function of $n$ this is $g(n) = n\mu$, so the random variable is $E[S_N \mid N] = N\mu$. Applying the theorem *The tower property*,
+
+$$E[S_N] = E\big[E[S_N\mid N]\big] = E[N\mu] = \mu\,E[N] . \qquad \blacksquare$$
+:::
+
+:::pitfall
+Wald's identity is $E[S_N] = E[N]E[X_1]$, and it looks so much like linearity of expectation that it is tempting to skip the hypotheses. The independence of $N$ from the $X_i$ is doing real work, and it fails in the most natural-looking setting: whenever $N$ is chosen *by looking at the $X_i$*.
+
+For a concrete failure, let the $X_i$ be $\pm 1$ with probability $\tfrac12$ each, so $\mu = 0$, and let $N = 1$ if $X_2 = 1$ and $N = 2$ otherwise. Then $E[N]\mu = 0$, but
+
+$$E[S_N] = \tfrac12 E[X_1] + \tfrac12 E[X_1 + X_2 \mid X_2 = -1] = 0 + \tfrac12(0 - 1) = -\tfrac12 .$$
+
+The rule peeked at a term it had not yet taken. The correct general hypothesis, weaker than independence, is that $N$ be a **stopping time**: the decision to stop after $n$ terms may depend on $X_1,\dots,X_n$ but not on anything later.
+:::
+
+:::example[Insurance claims]{#claims-example}
+The number $N$ of claims filed against a policy in a year is Poisson with mean $\lambda = 12$. Claim sizes $X_i$ are independent of $N$ and of each other, each with mean $\mu = 800$ and standard deviation $\sigma = 600$ (in dollars). Find the expected total claim amount $E[S_N]$.
+:::
+
+:::solution
+1. The hypotheses of the theorem *Wald's identity* hold: the $X_i$ are i.i.d. with finite mean and $N$ is independent of them.
+2. Therefore $E[S_N] = E[N]\mu = 12 \times 800 = 9600$ dollars.
+3. Notice how little was needed: no distributional assumption about the claim sizes beyond their mean, and only the mean of $N$. The variance of $S_N$ needs more, and the next section supplies it.
+:::
+
+:::remark
+The tower property generalises: for any two variables $Y, Z$ one has $E\big[E[X\mid Y,Z]\mid Y\big] = E[X\mid Y]$, sometimes stated as "the coarser conditioning wins". The version proved above is the case where $Y$ carries no information at all. The general form is the defining property of a martingale and is the reason this chapter is a prerequisite for that theory.
+:::
+
+## The Law of Total Variance
+
+<!-- section: total-variance -->
+
+The tower property splits an expectation. Variance splits too, but into two pieces rather than being simply averaged — and the reason is the whole point of the result.
+
+Why can we not just average the conditional variances? Because two sources of uncertainty are at work. Even if every group had zero internal variation, $X$ would still be uncertain, since which group you land in is uncertain. Total uncertainty is the *within*-group variation plus the *between*-group variation, and that sentence is the theorem.
+
+:::theorem[Law of total variance]{#eve}
+Let $X$ have finite variance and let $Y$ be any random variable. Then
+
+$$\operatorname{Var}(X) = E\big[\operatorname{Var}(X \mid Y)\big] + \operatorname{Var}\big(E[X\mid Y]\big),$$
+
+where $\operatorname{Var}(X\mid Y)$ is the random variable taking the value $\operatorname{Var}(X\mid Y=y) = E[X^2\mid Y=y] - (E[X\mid Y=y])^2$ on $\{Y=y\}$. The two terms are called the **within** (or unexplained) and **between** (or explained) components. The result is also known as **Eve's law**.
+:::
+
+:::proof
+Write $m(Y) = E[X \mid Y]$. By the conditional form of the proposition *Computational formula for the variance*, applied inside each conditional distribution,
+
+$$\operatorname{Var}(X\mid Y) = E[X^2 \mid Y] - m(Y)^2 .$$
+
+Take expectations of both sides and use the theorem *The tower property* on the first term:
+
+$$E\big[\operatorname{Var}(X\mid Y)\big] = E\big[E[X^2\mid Y]\big] - E\big[m(Y)^2\big] = E[X^2] - E\big[m(Y)^2\big]. \tag{i}$$
+
+Separately, $m(Y)$ is an ordinary random variable, so by the computational formula for its own variance,
+
+$$\operatorname{Var}\big(E[X\mid Y]\big) = E\big[m(Y)^2\big] - \big(E[m(Y)]\big)^2 = E\big[m(Y)^2\big] - \big(E[X]\big)^2, \tag{ii}$$
+
+the last step again by the tower property, which says $E[m(Y)] = E[X]$.
+
+Add (i) and (ii). The term $E[m(Y)^2]$ cancels, leaving
+
+$$E[X^2] - (E[X])^2 = \operatorname{Var}(X). \qquad \blacksquare$$
+:::
+
+:::intuition
+Split a population into groups by $Y$. The first term, $E[\operatorname{Var}(X\mid Y)]$, is the average spread *inside* a group — the variation that knowing $Y$ does not help you with. The second, $\operatorname{Var}(E[X\mid Y])$, is the spread *of the group means themselves* — the variation that knowing $Y$ does explain. Every bit of the total is in one bucket or the other, and nothing is double-counted.
+
+Two extreme cases pin the idea down. If $X$ is a function of $Y$, then knowing $Y$ removes all uncertainty: the within term is $0$ and the between term is everything. If $X$ is independent of $Y$, then $E[X\mid Y] = E[X]$ is constant, the between term is $0$, and knowing $Y$ has explained nothing.
+:::
+
+:::example[Within and between, exactly]{#eve-example}
+Let $Y$ be uniform on $\{1,2,3\}$ and, given $Y = y$, let $X$ be uniform on the three integers $\{3y-2, 3y-1, 3y\}$ — so $Y=1$ gives $X \in \{1,2,3\}$, $Y=2$ gives $X\in\{4,5,6\}$, and $Y=3$ gives $X\in\{7,8,9\}$. Verify Eve's law.
+:::
+
+:::solution
+1. **Conditional means.** Each group is symmetric about its midpoint, so $E[X\mid Y=y] = 3y - 1$; that is, $E[X\mid Y] = 3Y-1$, taking the values $2, 5, 8$.
+2. **Conditional variances.** Three consecutive integers with equal probability have variance $\tfrac13\big((-1)^2 + 0^2 + 1^2\big) = \tfrac23$, whatever the group. So $\operatorname{Var}(X\mid Y) = \tfrac23$ identically, and the within term is $E[\operatorname{Var}(X\mid Y)] = \tfrac23$.
+3. **Between term.** $E[X\mid Y]$ takes $2,5,8$ with probability $\tfrac13$ each. Its mean is $5$ and its variance is $\tfrac13\big(9 + 0 + 9\big) = 6$.
+4. **Eve's law predicts** $\operatorname{Var}(X) = \tfrac23 + 6 = \tfrac{20}{3}$.
+5. **Direct check.** Unconditionally $X$ is uniform on $\{1,\dots,9\}$, whose variance is $\frac{9^2-1}{12} = \frac{80}{12} = \frac{20}{3}$ ✓.
+6. The between term dominates by a factor of nine: the groups are far apart relative to their internal spread, so $Y$ explains most of what $X$ does.
+:::
+
+:::figure[The decomposition in the example *Within and between, exactly*. Each group's three values (accent) are tightly clustered about its own mean (the short solid bars at $2$, $5$ and $8$), while the group means are spread widely about the grand mean $5$ (dashed). The within component is $\tfrac23$, the between component is $6$, and their sum is the total variance $\tfrac{20}{3}$.]{#eve-decomposition}
+{
+  "type": "plot",
+  "x": [0.2, 6.6],
+  "y": [0, 10.6],
+  "xTicks": 1,
+  "yTicks": 2,
+  "xLabel": "group y",
+  "yLabel": "value of X",
+  "marks": [
+    { "kind": "path", "points": [[0.2, 5], [6.6, 5]], "tone": "alt", "dashed": true },
+    { "kind": "path", "points": [[0.7, 2], [1.3, 2]], "tone": "result" },
+    { "kind": "path", "points": [[1.7, 5], [2.3, 5]], "tone": "result" },
+    { "kind": "path", "points": [[2.7, 8], [3.3, 8]], "tone": "result" },
+    { "kind": "point", "at": [1, 1], "tone": "accent" },
+    { "kind": "point", "at": [1, 2], "tone": "accent" },
+    { "kind": "point", "at": [1, 3], "tone": "accent" },
+    { "kind": "point", "at": [2, 4], "tone": "accent" },
+    { "kind": "point", "at": [2, 5], "tone": "accent" },
+    { "kind": "point", "at": [2, 6], "tone": "accent" },
+    { "kind": "point", "at": [3, 7], "tone": "accent" },
+    { "kind": "point", "at": [3, 8], "tone": "accent" },
+    { "kind": "point", "at": [3, 9], "tone": "accent" },
+    { "kind": "text", "at": [4.9, 2.2], "text": "within: 2/3", "tone": "result", "leaderTo": [3.05, 7.6] },
+    { "kind": "text", "at": [4.9, 9.6], "text": "between: 6", "tone": "alt", "leaderTo": [3.3, 6.5] },
+    { "kind": "text", "at": [5.2, 5.4], "text": "grand mean 5", "tone": "alt" }
+  ]
+}
+:::
+
+:::corollary[Variance of a random sum]{#random-sum-variance}
+Under the hypotheses of the theorem *Wald's identity*, with $\sigma^2 = \operatorname{Var}(X_1)$ finite and $\operatorname{Var}(N)$ finite,
+
+$$\operatorname{Var}(S_N) = E[N]\,\sigma^2 + \operatorname{Var}(N)\,\mu^2 .$$
+:::
+
+:::proof
+Condition on $N$. Given $N = n$ the sum is of $n$ i.i.d. terms independent of the conditioning, so by the corollary *Variance adds under independence*, $\operatorname{Var}(S_N \mid N = n) = n\sigma^2$, and from the proof of Wald's identity $E[S_N\mid N=n] = n\mu$. As random variables, $\operatorname{Var}(S_N\mid N) = N\sigma^2$ and $E[S_N\mid N] = N\mu$. Now apply the theorem *Law of total variance*:
+
+$$\operatorname{Var}(S_N) = E[N\sigma^2] + \operatorname{Var}(N\mu) = \sigma^2 E[N] + \mu^2\operatorname{Var}(N),$$
+
+the second term by the proposition *Variance under a linear change of scale*. $\blacksquare$
+:::
+
+:::example[Insurance claims, variance]
+Continue the example *Insurance claims*: $N \sim \text{Poisson}(12)$, claim sizes with $\mu = 800$ and $\sigma = 600$. Find the standard deviation of the total claim amount.
+:::
+
+:::solution
+1. A Poisson has $E[N] = \operatorname{Var}(N) = 12$, by the theorem *Mean and variance of the Poisson*.
+2. By the corollary *Variance of a random sum*, $\operatorname{Var}(S_N) = 12(600)^2 + 12(800)^2 = 12(360000) + 12(640000) = 4{,}320{,}000 + 7{,}680{,}000 = 12{,}000{,}000$.
+3. So $\text{SD}(S_N) = \sqrt{12{,}000{,}000} \approx 3464$ dollars against a mean of $9600$.
+4. Read the two terms: $36\%$ of the variance comes from not knowing how big the claims are, and $64\%$ from not knowing how many there will be. For this portfolio, the count is the bigger risk — which is the kind of conclusion the decomposition exists to deliver.
+:::
+
+:::pitfall
+Variances do not average the way means do. Writing $\operatorname{Var}(X) = E[\operatorname{Var}(X\mid Y)]$ and stopping there throws away the between-group term and *always* understates the total. The error is easy to spot once named: if the groups have wildly different means but each is internally tight, the formula would report almost no variation in a population that is obviously spread out. Compare the means before you trust a pooled variance.
+:::
+
+## Conditional Expectation as the Best Predictor
+
+<!-- section: best-predictor -->
+
+We have treated $E[X\mid Y]$ as a computational device. It is also the answer to a genuine optimisation problem, and that is what elevates it from a trick to the central object of prediction theory.
+
+Fix the situation: you will observe $Y$ and must then produce a guess at $X$. A prediction rule is any function $g$, and your guess is $g(Y)$. Score the rule by its **mean squared error** $E[(X - g(Y))^2]$. Which $g$ is best?
+
+:::theorem[Conditional expectation minimises mean squared error]{#best-predictor}
+Let $X$ have finite variance. Among all functions $g$ with $E[g(Y)^2] < \infty$,
+
+$$E\big[(X - g(Y))^2\big] \ \ge \ E\big[(X - E[X\mid Y])^2\big],$$
+
+with equality if and only if $g(Y) = E[X\mid Y]$ almost surely. That is, $m(Y) = E[X\mid Y]$ is the best mean-square predictor of $X$ from $Y$, and its mean squared error is $E[\operatorname{Var}(X\mid Y)]$.
+:::
+
+:::proof
+Write $m(Y) = E[X\mid Y]$ and split the error by adding and subtracting it:
+
+$$X - g(Y) = \underbrace{\big(X - m(Y)\big)}_{=:\,D} + \underbrace{\big(m(Y) - g(Y)\big)}_{=:\,H} .$$
+
+Note that $H$ is a function of $Y$. Squaring and taking expectations,
+
+$$E\big[(X-g(Y))^2\big] = E[D^2] + 2E[DH] + E[H^2].$$
+
+The cross term vanishes. To see it, condition on $Y$ and use the tower property:
+
+$$E[DH] = E\big[E[DH \mid Y]\big] = E\big[H\,E[D\mid Y]\big],$$
+
+where $H$ came out of the inner expectation by property (2) of the theorem *Properties of conditional expectation*, since $H$ is a function of $Y$. But
+
+$$E[D \mid Y] = E\big[X - m(Y) \mid Y\big] = E[X\mid Y] - m(Y) = 0$$
+
+by linearity and by the same take-out rule applied to $m(Y)$. Hence $E[DH] = E[H\cdot 0] = 0$ and
+
+$$E\big[(X-g(Y))^2\big] = E\big[(X - m(Y))^2\big] + E\big[(m(Y)-g(Y))^2\big] \ \ge\ E\big[(X-m(Y))^2\big],$$
+
+since the discarded term is the expectation of a square. Equality forces $E[(m(Y)-g(Y))^2] = 0$, and a non-negative variable with zero mean is zero almost surely, so $g(Y) = m(Y)$ almost surely.
+
+For the value of the minimum, $E[(X - m(Y))^2] = E\big[E[(X-m(Y))^2 \mid Y]\big]$ by the tower property, and the inner quantity is by definition $\operatorname{Var}(X\mid Y)$. $\blacksquare$
+:::
+
+:::intuition
+The proof is an orthogonality argument wearing probabilistic clothes. The error $D = X - E[X\mid Y]$ is uncorrelated with *every* function of $Y$ — that is what $E[DH]=0$ says — so $E[X\mid Y]$ is the orthogonal projection of $X$ onto the space of functions of $Y$. Prediction is projection, and the Pythagorean identity in the display above is the theorem. Read that way, the law of total variance is just Pythagoras: $\operatorname{Var}(X)$ is the hypotenuse squared, the within term the error leg, the between term the projection leg.
+:::
+
+:::corollary[The best constant predictor]{#best-constant}
+Among constants $c$, the minimiser of $E[(X-c)^2]$ is $c = E[X]$, and the minimum value is $\operatorname{Var}(X)$.
+:::
+
+:::proof
+Take $Y$ to be a constant random variable, so that the only functions of $Y$ are constants, and $E[X\mid Y] = E[X]$ by property (3) of the theorem *Properties of conditional expectation*. The theorem *Conditional expectation minimises mean squared error* then gives the claim, the minimum value being $E[(X-E[X])^2] = \operatorname{Var}(X)$. Alternatively, expand directly: $E[(X-c)^2] = \operatorname{Var}(X) + (E[X]-c)^2$, which is minimised by matching $c$ to $E[X]$. $\blacksquare$
+:::
+
+This is the reason the mean, rather than any other centre, is the default summary of a distribution: it is the number that is closest to the whole distribution in the squared-error sense. (Under absolute error the answer would be the median instead — the loss function chooses the summary.)
+
+### The best *linear* predictor, and what $\rho^2$ measures
+
+In practice one often restricts to predictors of the form $a + bY$, either because the conditional mean is unknown or because a straight line is all the data supports. That problem has a closed-form answer in terms of exactly the quantities of this chapter.
+
+:::proposition[Best linear predictor]{#best-linear}
+Let $X, Y$ have finite positive variances. The function $a + bY$ minimising $E[(X - a - bY)^2]$ has
+
+$$b^{*} = \frac{\operatorname{Cov}(X,Y)}{\operatorname{Var}(Y)} = \rho\,\frac{\sigma_X}{\sigma_Y}, \qquad a^{*} = E[X] - b^{*}E[Y],$$
+
+and the resulting minimum mean squared error is
+
+$$\operatorname{Var}(X)\big(1 - \rho^2\big).$$
+:::
+
+:::proof
+Fix $b$ and optimise over $a$ first. By the corollary *The best constant predictor* applied to the variable $X - bY$, the best $a$ is $a = E[X - bY] = E[X] - bE[Y]$, and with that choice
+
+$$E\big[(X - a - bY)^2\big] = \operatorname{Var}(X - bY) = \operatorname{Var}(X) - 2b\operatorname{Cov}(X,Y) + b^2\operatorname{Var}(Y),$$
+
+using the theorem *Variance of a sum*. This is a quadratic in $b$ with positive leading coefficient $\operatorname{Var}(Y)$; differentiating and setting to zero gives $-2\operatorname{Cov}(X,Y) + 2b\operatorname{Var}(Y) = 0$, so $b^{*} = \operatorname{Cov}(X,Y)/\operatorname{Var}(Y)$, which equals $\rho\sigma_X/\sigma_Y$ by the definition of $\rho$.
+
+Substituting back,
+
+$$\operatorname{Var}(X) - \frac{\operatorname{Cov}(X,Y)^2}{\operatorname{Var}(Y)} = \operatorname{Var}(X) - \frac{\rho^2\sigma_X^2\sigma_Y^2}{\sigma_Y^2} = \sigma_X^2(1-\rho^2). \qquad \blacksquare$$
+:::
+
+:::corollary[Interpretation of $\rho^2$]
+The best linear predictor of $X$ from $Y$ removes a fraction $\rho^2$ of the variance of $X$:
+
+$$\frac{\operatorname{Var}(X) - \text{MSE}^{*}}{\operatorname{Var}(X)} = \rho^2 .$$
+:::
+
+:::proof
+Immediate from the proposition *Best linear predictor*: the minimum error is $\sigma_X^2(1-\rho^2)$, so the reduction is $\sigma_X^2\rho^2$, a fraction $\rho^2$ of $\sigma_X^2$. Since the error is non-negative, this also re-proves $\rho^2 \le 1$. $\blacksquare$
+:::
+
+Two things follow. First, this is the population version of the least-squares regression line: the slope $\rho\sigma_X/\sigma_Y$ and the "variance explained" $\rho^2$ are exactly the regression coefficient and $R^2$ that a statistics course computes from data. Regression is conditional expectation, estimated. Second, the restriction to linear rules costs something in general, and nothing in one important case.
+
+:::example[When the best predictor is not linear]
+For $X$ uniform on $[-1,1]$ and $Y = X^2$ as in the theorem *Zero covariance does not imply independence*, compare the best predictor of $Y$ from $X$ with the best linear one.
+:::
+
+:::solution
+1. The best predictor is $E[Y\mid X]$. Since $Y = X^2$ is a function of $X$, property (2) of the theorem *Properties of conditional expectation* gives $E[Y\mid X] = X^2$, with mean squared error $0$: perfect prediction.
+2. The best linear predictor has slope $b^{*} = \operatorname{Cov}(X,Y)/\operatorname{Var}(X) = 0$, so it is the constant $a^{*} = E[Y] = E[X^2] = \tfrac13$.
+3. Its mean squared error is $\operatorname{Var}(Y)(1-0) = \operatorname{Var}(X^2) = E[X^4] - (E[X^2])^2 = \tfrac15 - \tfrac19 = \tfrac{4}{45}$.
+4. The gap between $0$ and $\tfrac{4}{45}$ is the entire cost of insisting on a straight line. Linearity, not conditioning, is what failed here.
+:::
+
+:::remark
+When $(X,Y)$ is bivariate normal the two coincide: $E[X\mid Y]$ is exactly the linear function $\mu_X + \rho\frac{\sigma_X}{\sigma_Y}(Y - \mu_Y)$, and $\operatorname{Var}(X\mid Y) = \sigma_X^2(1-\rho^2)$ is the same for every $y$. That is why linear regression and normal-theory inference fit together so neatly, and why neither is safe when the joint distribution is far from normal.
+:::
+
+## Jensen's Inequality
+
+<!-- section: jensen -->
+
+One inequality has been used repeatedly without being named. The corollary *Variance is non-negative, and $E(X^2) \ge [E(X)]^2$* already told us $E[X^2] \ge (E[X])^2$, which says that squaring and averaging do not commute, and that the error goes in a definite direction. That is a special case of a statement about every convex function.
+
+:::definition[Convex function]{#convex-def}
+A function $\varphi : I \to \mathbb{R}$ on an interval $I$ is **convex** if for all $x, y \in I$ and all $t \in [0,1]$,
+
+$$\varphi\big(tx + (1-t)y\big) \le t\varphi(x) + (1-t)\varphi(y).$$
+
+It is **strictly convex** if the inequality is strict whenever $x \neq y$ and $0 < t < 1$. A function $\varphi$ is **concave** when $-\varphi$ is convex. If $\varphi$ is twice differentiable, $\varphi$ is convex exactly when $\varphi'' \ge 0$ on $I$.
+:::
+
+Geometrically, convexity says the chord between any two points of the graph lies on or above the graph. The dual statement, and the one we need, is that the graph lies on or above each of its tangents.
+
+:::lemma[Supporting line]{#supporting-line}
+Let $\varphi$ be convex on an open interval $I$ and let $\mu \in I$. Then there is a constant $c$ with
+
+$$\varphi(x) \ \ge\ \varphi(\mu) + c\,(x - \mu) \qquad \text{for all } x \in I,$$
+
+and if $\varphi$ is strictly convex the inequality is strict for every $x \neq \mu$.
+:::
+
+:::proof
+Convexity is equivalent to the statement that the difference quotient
+
+$$Q(s,u) = \frac{\varphi(u)-\varphi(s)}{u - s}$$
+
+is non-decreasing in each argument. Consequently, for $s < \mu < u$ in $I$ we have $Q(s,\mu) \le Q(\mu,u)$, so the set of left slopes is bounded above by the set of right slopes. Let
+
+$$c^{-} = \sup_{s<\mu} Q(s,\mu) \le \inf_{u>\mu} Q(\mu,u) = c^{+},$$
+
+both finite, and choose any $c \in [c^-, c^+]$. For $x > \mu$, $c \le c^+ \le Q(\mu,x)$ gives $\varphi(x) - \varphi(\mu) \ge c(x-\mu)$; for $x < \mu$, $c \ge c^- \ge Q(x,\mu)$ gives $\varphi(\mu)-\varphi(x) \le c(\mu - x)$, which rearranges to the same inequality. At $x = \mu$ both sides agree. Strict convexity makes the difference quotients strictly increasing, so each inequality above is strict for $x \neq \mu$. (When $\varphi$ is differentiable, $c^- = c^+ = \varphi'(\mu)$ and the supporting line is simply the tangent.) $\blacksquare$
+:::
+
+:::theorem[Jensen's inequality]{#jensen}
+Let $\varphi$ be convex on an interval $I$, and let $X$ be a random variable with $P(X \in I) = 1$ and finite mean $\mu = E[X] \in I$. If $E[\varphi(X)]$ exists, then
+
+$$\varphi\big(E[X]\big) \ \le\ E\big[\varphi(X)\big].$$
+
+If $\varphi$ is strictly convex, equality holds if and only if $X = \mu$ almost surely. For concave $\varphi$ the inequality reverses.
+:::
+
+:::proof
+By the lemma *Supporting line* there is a $c$ with $\varphi(x) \ge \varphi(\mu) + c(x-\mu)$ for every $x \in I$. Since $X$ takes values in $I$ with probability one, the inequality holds between random variables:
+
+$$\varphi(X) \ \ge\ \varphi(\mu) + c\,(X - \mu) \quad \text{almost surely}.$$
+
+Expectation is monotone, so taking expectations of both sides and applying the theorem *Linearity of expectation* to the right-hand side gives
+
+$$E[\varphi(X)] \ \ge\ \varphi(\mu) + c\big(E[X] - \mu\big) = \varphi(\mu) = \varphi(E[X]),$$
+
+because $E[X] - \mu = 0$. That is the inequality.
+
+For the equality case with $\varphi$ strictly convex, let $D = \varphi(X) - \varphi(\mu) - c(X-\mu)$, a non-negative random variable which is strictly positive wherever $X \neq \mu$. Equality in Jensen says $E[D] = 0$, so $D = 0$ almost surely, so $P(X \neq \mu) = 0$. The concave case follows by applying the convex case to $-\varphi$. $\blacksquare$
+:::
+
+:::intuition
+Averaging then bending is not the same as bending then averaging, and for a convex bend the second is always larger. Picture the graph as a valley: take two points on its walls and join them by a chord. The midpoint of the chord — the average of the two heights — sits above the valley floor at the average position. Jensen is that picture with any number of points and any weights.
+:::
+
+:::corollary[Standard consequences of Jensen]{#jensen-corollaries}
+Let $X$ be a random variable with the relevant moments finite.
+
+1. $E[X^2] \ge (E[X])^2$, with equality if and only if $X$ is constant almost surely.
+2. If $P(X>0)=1$, then $E[1/X] \ge 1/E[X]$.
+3. If $P(X>0)=1$, then $E[\log X] \le \log E[X]$.
+4. $|E[X]| \le E|X|$.
+:::
+
+:::proof
+(1) Apply the theorem *Jensen's inequality* to $\varphi(x) = x^2$, which has $\varphi'' = 2 > 0$ and so is strictly convex on $\mathbb{R}$. Equality iff $X$ is almost surely constant, by the equality clause. Rearranged, this says $\operatorname{Var}(X) \ge 0$ with equality only for a degenerate variable, which is the corollary *Variance is non-negative, and $E(X^2) \ge [E(X)]^2$* proved a second way.
+
+(2) On $(0,\infty)$, $\varphi(x) = 1/x$ has $\varphi''(x) = 2/x^3 > 0$, so it is strictly convex; Jensen gives $E[1/X] \ge 1/E[X]$.
+
+(3) On $(0,\infty)$, $\varphi(x) = \log x$ has $\varphi''(x) = -1/x^2 < 0$, so it is strictly concave and the inequality reverses.
+
+(4) $\varphi(x) = |x|$ is convex, so $|E[X]| = \varphi(E[X]) \le E[\varphi(X)] = E|X|$. (It is not strictly convex, which is why equality can occur for non-constant $X$ — any $X$ of one sign achieves it.) $\blacksquare$
+:::
+
+:::example[The average speed trap]
+A cyclist rides a fixed course at a speed $V$ which is $10$ or $30$ km/h with probability $\tfrac12$ each. Compare the expected time per kilometre with the reciprocal of the expected speed.
+:::
+
+:::solution
+1. $E[V] = 20$, so $1/E[V] = 0.05$ hours per kilometre.
+2. The time per kilometre is $1/V$, with $E[1/V] = \tfrac12(\tfrac1{10}) + \tfrac12(\tfrac1{30}) = \tfrac{1}{20} + \tfrac{1}{60} = \tfrac{4}{60} = \tfrac{1}{15} \approx 0.0667$ hours.
+3. Indeed $E[1/V] > 1/E[V]$, as part (2) of the corollary *Standard consequences of Jensen* requires, and the gap is not small: $33\%$.
+4. The reason is concrete. The slow leg takes three times as long as the fast one, so the ride spends most of its *time* going slowly, and the time-average speed is the harmonic mean $15$, not the arithmetic mean $20$.
+:::
+
+:::pitfall
+$E[g(X)] \neq g(E[X])$ for any $g$ that is not affine, and Jensen says which way the error runs. Plugging an average into a nonlinear formula and reporting the result is a mistake with a name — the flaw of averages — and it is systematically biased, not merely noisy. Average sales into a profit formula with a nonlinear cost, average a rate into a doubling time, average a portfolio return into a growth factor: each one is wrong in a predictable direction. The only functions for which substituting the mean is exact are $g(x) = ax+b$, precisely because those are the ones that are both convex and concave.
+:::
+
+:::remark
+Jensen's inequality has a conditional form, proved by running the same supporting-line argument inside each conditional distribution: for convex $\varphi$,
+
+$$\varphi\big(E[X\mid Y]\big) \le E\big[\varphi(X)\mid Y\big] \quad\text{almost surely}.$$
+
+Taking $\varphi(x)=x^2$ and then expectations recovers $\operatorname{Var}(E[X\mid Y]) \le \operatorname{Var}(X)$ — conditioning never increases variance — which is the law of total variance read as an inequality.
+:::
+
+:::summary
+**Covariance.** $\operatorname{Cov}(X,Y) = E[(X-\mu_X)(Y-\mu_Y)] = E[XY]-E[X]E[Y]$. It is symmetric, bilinear, blind to additive shifts, and satisfies $\operatorname{Cov}(X,X)=\operatorname{Var}(X)$. Its magnitude carries units and means nothing alone.
+
+**Variance of a sum.** $\operatorname{Var}(X+Y) = \operatorname{Var}(X)+\operatorname{Var}(Y)+2\operatorname{Cov}(X,Y)$, with no hypotheses; more generally $\operatorname{Var}(\sum a_iX_i) = \sum a_i^2\operatorname{Var}(X_i) + 2\sum_{i<j}a_ia_j\operatorname{Cov}(X_i,X_j)$.
+
+**Correlation.** $\rho = \operatorname{Cov}(X,Y)/(\sigma_X\sigma_Y)$ is unit-free and, by Cauchy–Schwarz, lies in $[-1,1]$; $|\rho|=1$ exactly when $Y = a+bX$ almost surely.
+
+**The asymmetry.** Independent $\Rightarrow$ uncorrelated, always. Uncorrelated $\Rightarrow$ independent, never in general: $X$ uniform on $[-1,1]$ with $Y=X^2$ has $\rho=0$ and $Y$ determined by $X$. The converse does hold for a jointly normal pair.
+
+**Conditional expectation.** $E[X\mid Y=y]$ is a number; $E[X\mid Y]$ is a random variable, a function of $Y$. It is linear, monotone, satisfies $E[h(Y)X\mid Y] = h(Y)E[X\mid Y]$, and equals $E[X]$ when $X$ and $Y$ are independent.
+
+**Tower property.** $E[E[X\mid Y]] = E[X]$ — average the group means weighted by group size. With it, $E[S_N] = E[N]E[X_1]$ for a random sum independent of its length (Wald).
+
+**Law of total variance.** $\operatorname{Var}(X) = E[\operatorname{Var}(X\mid Y)] + \operatorname{Var}(E[X\mid Y])$: within plus between. For a random sum, $\operatorname{Var}(S_N) = E[N]\sigma^2 + \operatorname{Var}(N)\mu^2$.
+
+**Best prediction.** $E[X\mid Y]$ minimises $E[(X-g(Y))^2]$ over all $g$, with minimum $E[\operatorname{Var}(X\mid Y)]$; the best constant is $E[X]$; the best linear rule has slope $\operatorname{Cov}(X,Y)/\operatorname{Var}(Y)$ and leaves $\sigma_X^2(1-\rho^2)$, so $\rho^2$ is the fraction of variance explained linearly.
+
+**Jensen.** $\varphi$ convex $\Rightarrow \varphi(E[X]) \le E[\varphi(X)]$, strictly unless $X$ is constant. Hence $E[X^2]\ge(E[X])^2$, $E[1/X]\ge 1/E[X]$ and $E[\log X]\le \log E[X]$ for positive $X$.
+:::
+
+## Common Mistakes
+
+- **Reading a covariance's size as a strength of association.** Covariance carries the product of the two units, so its magnitude changes with the scale. Normalise to $\rho$ before comparing two pairs of variables, and quote only the sign of a raw covariance.
+- **Treating "uncorrelated" as "independent".** Independence implies zero covariance; the reverse fails, as $X$ uniform on $[-1,1]$ with $Y = X^2$ shows. Zero correlation rules out a linear trend and nothing else.
+- **Assuming independence to add variances when uncorrelatedness would do.** The corollary *Variance of a linear combination* needs only the covariances to vanish. Claiming more than you need is not an error of arithmetic, but it is an error of proof — and it invites the reverse error of assuming full independence elsewhere.
+- **Dropping the cross term in $\operatorname{Var}(X-Y)$.** For dependent variables $\operatorname{Var}(X-Y) = \operatorname{Var}(X)+\operatorname{Var}(Y)-2\operatorname{Cov}(X,Y)$; the minus sign attaches to the covariance, not to the variances, which still add.
+- **Confusing $E[X\mid Y=y]$ with $E[X\mid Y]$.** The first is a number attached to one value of $y$; the second is a random variable. Only the second can be put inside another expectation or have a variance taken — expressions like $\operatorname{Var}(E[X\mid Y=3])$ are meaningless.
+- **Averaging conditional expectations without weights.** The tower property weights $E[X\mid Y=y]$ by $P(Y=y)$. A plain average of group means is the right answer only when the groups are equally likely.
+- **Forgetting the between-group term in the law of total variance.** $\operatorname{Var}(X)$ is $E[\operatorname{Var}(X\mid Y)]$ *plus* $\operatorname{Var}(E[X\mid Y])$. Omitting the second term understates the spread whenever the group means differ.
+- **Using Wald's identity when the number of terms is chosen by looking at the terms.** $E[S_N] = E[N]\mu$ needs $N$ independent of the sequence (or, more generally, a stopping time). "Keep buying until I have lost enough" is neither.
+- **Believing that zero correlation makes the best predictor a constant.** The best *linear* predictor is constant when $\rho = 0$; the best predictor may still be an exact formula, as $E[X^2\mid X] = X^2$ shows.
+- **Reporting $\rho$ as a percentage of a perfect relationship.** The quantity with a proportional reading is $\rho^2$, the fraction of variance removed by linear prediction. A correlation of $0.5$ explains a quarter of the variance, not half of it.
+- **Substituting a mean into a nonlinear function.** By Jensen's inequality the result is biased in a known direction: too low for a convex function, too high for a concave one. Average the outputs, not the inputs.
+- **Assuming normal marginals make a pair jointly normal.** The proposition *The jointly normal exception* needs joint normality; two normal marginals can be uncorrelated and still deterministic in one another.

@@ -1,0 +1,1085 @@
+---
+title: Markov Chains
+---
+
+# Markov Chains
+
+Most of this subject so far has been about a *fixed* collection of random variables: one draw, or $n$ independent draws, or a sum of them. A Markov chain is the first model in the course where the randomness *unfolds*, and where the interesting questions are about the long run rather than any single step.
+
+What makes such a model tractable is a drastic simplification, worth stating up front so that you can judge it honestly: **the present screens off the past**. Given where the process is now, how it got there tells you nothing about where it goes next. That is false for many real systems, and this chapter says where it fails — though the repair is usually not to abandon the model but to enlarge the state until the assumption becomes true.
+
+What the assumption buys is a great deal. The entire law of the process collapses into one matrix $P$; looking $n$ steps ahead becomes matrix multiplication, so the eigenvalue machinery of linear algebra transfers over intact and delivers not just the limit but the *rate*; long-run behaviour becomes the single equation $\pi P = \pi$; and "how long until?" becomes a linear system you can solve by hand.
+
+The chapter builds that machinery in order: the Markov property and the transition matrix, Chapman–Kolmogorov and matrix powers, a classification of states, stationary distributions, the convergence theorem and the exact hypothesis — aperiodicity — it cannot do without, reversibility, and finally the two computations that come up most in practice, absorption and hitting times, both worked end to end on gambler's ruin. Everything is proved except where a full argument needs machinery beyond this course, and those places are labelled as proof sketches.
+
+## The Markov property and the transition matrix
+
+<!-- section: markov-property -->
+
+We work throughout with **discrete time** — the process is observed at steps $n = 0, 1, 2, \ldots$ — and a **discrete state space** $S$, finite or countably infinite, with $X_n$ the state occupied at step $n$. When $S$ is finite we take it to be $\{1, \ldots, m\}$, labelling states with words in the examples.
+
+:::definition[The Markov property]{#markov-property}
+A sequence of random variables $X_0, X_1, X_2, \ldots$ taking values in a discrete set $S$ has the **Markov property** if for every $n \ge 0$, every $j \in S$ and every history $i_0, i_1, \ldots, i_n \in S$ with $P(X_n = i_n, \ldots, X_0 = i_0) > 0$,
+
+$$P(X_{n+1} = j \mid X_n = i_n,\, X_{n-1} = i_{n-1},\, \ldots,\, X_0 = i_0) \;=\; P(X_{n+1} = j \mid X_n = i_n).$$
+
+Such a sequence is a **Markov chain**.
+:::
+
+Read this as an equality of two *conditional distributions*: the law of the next state given the whole history, and its law given only the current state. The positivity condition is not fussiness — conditional probability is undefined on a null event, so the requirement has to be imposed on histories the chain can actually produce.
+
+:::intuition
+Imagine a token moving between rooms. The Markov property says someone who knows only which room it is in predicts the next move exactly as well as someone holding its entire itinerary: the room is a *sufficient summary* of the past.
+
+This is not to say the past is irrelevant — it determined where the token is now. The property says the past exerts its influence *only through* the current position; once you know that, the route adds nothing.
+:::
+
+The Markov property says the conditional law depends on the history only through $i_n$. It does *not* say the law is the same at every time $n$. That is a second, independent assumption, so often left silent that it deserves its own name.
+
+:::definition[Time-homogeneity]{#time-homogeneity}
+A Markov chain is **time-homogeneous** if the one-step conditional probabilities do not depend on the time index: for all $i, j \in S$ and all $n \ge 0$ with $P(X_n = i) > 0$,
+
+$$P(X_{n+1} = j \mid X_n = i) \;=\; P(X_1 = j \mid X_0 = i).$$
+
+The common value is written $p_{ij}$, and the matrix $P = (p_{ij})$ is the **(one-step) transition matrix** of the chain.
+:::
+
+Every chain here is assumed time-homogeneous, and every theorem below uses it. A queue whose arrival rate changes between morning and afternoon still has the Markov property, but no single matrix $P$ describes it and none of this chapter's long-run theory applies.
+
+:::notation[Row $i$ is the future of state $i$]
+In $p_{ij}$ the **first** index is where you are and the **second** where you go, so row $i$ of $P$ is the conditional distribution of the next state given the chain is at $i$. Some books use the transpose convention, with column-vector distributions and every product below reversed; mixing the two is the commonest source of wrong answers in this material.
+:::
+
+:::definition[Stochastic matrix]{#stochastic-matrix}
+A square matrix $P$ with non-negative entries whose every row sums to $1$ is a **stochastic matrix**. A **probability vector** is a row vector $\mu$ with $\mu_i \ge 0$ and $\sum_i \mu_i = 1$.
+:::
+
+:::proposition[A transition matrix is stochastic]{#transition-is-stochastic}
+Let $P$ be the transition matrix of a time-homogeneous Markov chain on a discrete state space $S$. Then $p_{ij} \ge 0$ for all $i, j$, and $\sum_{j \in S} p_{ij} = 1$ for every $i$ with $P(X_0 = i) > 0$.
+:::
+
+:::proof
+Non-negativity is immediate: each $p_{ij}$ is a conditional probability.
+
+For the row sums, fix $i$. The events $\{X_1 = j\}$, as $j$ ranges over $S$, are pairwise mutually exclusive and their union is certain, because the chain must be somewhere at time $1$. Since $P(\cdot \mid X_0 = i)$ is itself a probability measure, countable additivity and normalisation give
+
+$$\sum_{j \in S} p_{ij} = \sum_{j \in S} P(X_1 = j \mid X_0 = i) = P\!\left(\bigcup_{j \in S} \{X_1 = j\} \,\Big|\, X_0 = i\right) = 1 . \qquad$$
+:::
+
+The converse also holds: *any* stochastic matrix together with any initial probability vector defines a Markov chain. So the objects of study are exactly the stochastic matrices.
+
+:::theorem[The law of the chain factorises]{#factorisation}
+Let $(X_n)$ be a time-homogeneous Markov chain with transition matrix $P$ and initial distribution $\mu_0$, meaning $\mu_0(i) = P(X_0 = i)$. Then for every $n \ge 1$ and every $i_0, \ldots, i_n \in S$,
+
+$$P(X_0 = i_0, X_1 = i_1, \ldots, X_n = i_n) \;=\; \mu_0(i_0)\, p_{i_0 i_1} p_{i_1 i_2} \cdots p_{i_{n-1} i_n}.$$
+
+Consequently the pair $(\mu_0, P)$ determines the joint law of the whole process.
+:::
+
+:::proof
+Induction on $n$. For $n = 1$ the multiplication rule gives $P(X_0 = i_0, X_1 = i_1) = \mu_0(i_0)\,p_{i_0 i_1}$.
+
+Suppose the formula holds for $n-1$. If $P(X_0 = i_0, \ldots, X_{n-1} = i_{n-1}) = 0$ then both sides vanish — the left is the probability of a subset of a null event, and the right contains the factor the induction hypothesis equates to $0$. Otherwise the multiplication rule gives
+
+$$P(X_0 = i_0, \ldots, X_n = i_n) = P(X_0 = i_0, \ldots, X_{n-1} = i_{n-1}) \cdot P(X_n = i_n \mid X_{n-1} = i_{n-1}, \ldots, X_0 = i_0).$$
+
+By the Markov property the second factor equals $P(X_n = i_n \mid X_{n-1} = i_{n-1})$, and by time-homogeneity that is $p_{i_{n-1}i_n}$. Applying the induction hypothesis to the first factor completes the step.
+:::
+
+This is the precise sense in which the matrix "is" the model, and note where each hypothesis entered: the Markov property collapsed the conditioning to one state, time-homogeneity made the resulting number independent of $n$. Drop either and the product formula fails. One consequence governs every numerical computation below.
+
+:::proposition[Marginal distributions by matrix multiplication]{#marginal-rule}
+With $\mu_n(j) = P(X_n = j)$ regarded as a row vector,
+
+$$\mu_{n+1} = \mu_n P, \qquad \text{and hence} \qquad \mu_n = \mu_0 P^n .$$
+:::
+
+:::proof
+By the law of total probability, partitioning on the state at time $n$,
+
+$$\mu_{n+1}(j) = P(X_{n+1} = j) = \sum_{i \in S} P(X_n = i)\, P(X_{n+1} = j \mid X_n = i) = \sum_{i \in S} \mu_n(i)\, p_{ij},$$
+
+where the terms with $P(X_n = i) = 0$ contribute nothing and may be included harmlessly. The right-hand side is precisely the $j$-th entry of the row-vector-times-matrix product $\mu_n P$. Iterating from $\mu_0$ gives $\mu_n = \mu_0 P^n$.
+:::
+
+:::pitfall[Which side do you multiply on?]
+Distributions are **row** vectors and multiply $P$ on the **left**: $\mu P$. A column vector multiplied on the right, $Pf$, is different and equally useful — the vector of *conditional expectations* $(Pf)(i) = E[f(X_1) \mid X_0 = i]$, which is what the first-step equations later compute. Keep track of which you are holding: $\mu P$ pushes a distribution forward in time, $Pf$ pulls a payoff backward.
+:::
+
+Every later numerical statement about "the weather chain" refers to this one.
+
+:::example[The weather chain]{#weather-chain}
+A crude model of daily weather has three states — Sunny, Cloudy, Rainy — and assumes tomorrow's weather depends only on today's, with probabilities
+
+$$P = \begin{bmatrix} 0.7 & 0.2 & 0.1 \\ 0.3 & 0.6 & 0.1 \\ 0.3 & 0.1 & 0.6 \end{bmatrix},$$
+
+the states ordered Sunny, Cloudy, Rainy. Check that $P$ is stochastic, and find the distribution of the weather two days after a sunny day.
+:::
+
+:::solution
+Every entry is non-negative and each row sums to $1$: $0.7 + 0.2 + 0.1 = 1$, $0.3 + 0.6 + 0.1 = 1$, $0.3 + 0.1 + 0.6 = 1$. So $P$ is stochastic, as Proposition *A transition matrix is stochastic* requires.
+
+Take $\mu_0 = (1, 0, 0)$. By Proposition *Marginal distributions by matrix multiplication*, $\mu_1 = \mu_0 P$ is the first row of $P$:
+
+$$\mu_1 = (0.7,\; 0.2,\; 0.1).$$
+
+Then $\mu_2 = \mu_1 P$, entry by entry:
+
+$$\mu_2(\text{Sunny}) = 0.49 + 0.06 + 0.03 = 0.58, \quad \mu_2(\text{Cloudy}) = 0.14 + 0.12 + 0.01 = 0.27, \quad \mu_2(\text{Rainy}) = 0.07 + 0.02 + 0.06 = 0.15.$$
+
+So $\mu_2 = (0.58, 0.27, 0.15)$, which sums to $1$. The probability of sun has fallen from $1$ to $0.7$ to $0.58$: the chain is losing memory of its sunny start. How far that goes, and how fast, is the subject of the convergence section.
+:::
+
+A small chain is clearer as a picture: one node per state, one labelled arrow per positive transition probability, a loop for $p_{ii} > 0$.
+
+:::figure[The weather chain as a transition diagram. Each arrow carries the probability of that one-step move, and each loop the probability of staying put. Reading the three numbers leaving a node gives a row of $P$: they must sum to $1$, which is the picture of Proposition *A transition matrix is stochastic*.]{#weather-diagram}
+{"type": "plot", "x": [-0.6, 6.6],
+  "y": [-1.1, 4.9], "equalAspect": true, "marks": [
+  {"kind": "point", "at": [1.0, 3.2], "tone": "result"},
+  {"kind": "point", "at": [5.0, 3.2], "tone": "result"},
+  {"kind": "point", "at": [3.0, 0.6], "tone": "result"},
+  {"kind": "arrow", "from": [1.44, 3.4], "to": [4.56, 3.4], "tone": "accent"},
+  {"kind": "arrow", "from": [4.56, 3.0], "to": [1.44, 3.0], "tone": "accent"},
+  {"kind": "arrow", "from": [1.427, 2.973], "to": [2.89, 1.071], "tone": "accent"},
+  {"kind": "arrow", "from": [2.573, 0.827], "to": [1.11, 2.729], "tone": "accent"},
+  {"kind": "arrow", "from": [4.89, 2.729], "to": [3.427, 0.827], "tone": "accent"},
+  {"kind": "arrow", "from": [3.11, 1.071], "to": [4.573, 2.973], "tone": "accent"},
+  {"kind": "path", "points": [[0.892,3.482],[0.787,3.662],[0.599,3.754],[0.392,3.727],[0.235,3.589],[0.181,3.387],[0.248,3.189],[0.414,3.062],[0.622,3.048],[0.72,3.086]], "tone": "muted"},
+  {"kind": "path", "points": [[5.28,3.086],[5.483,3.04],[5.678,3.114],[5.8,3.283],[5.807,3.492],[5.696,3.669],[5.506,3.756],[5.3,3.722],[5.148,3.58],[5.108,3.482]], "tone": "muted"},
+  {"kind": "path", "points": [[2.785,0.388],[2.661,0.22],[2.651,0.012],[2.759,-0.167],[2.947,-0.256],[3.154,-0.226],[3.309,-0.086],[3.36,0.117],[3.29,0.314],[3.215,0.388]], "tone": "muted"},
+  {"kind": "text", "at": [3.0, 3.76], "text": "0.2"},
+  {"kind": "text", "at": [3.0, 2.64], "text": "0.3"},
+  {"kind": "text", "at": [2.444, 2.241], "text": "0.1"},
+  {"kind": "text", "at": [1.556, 1.559], "text": "0.3"},
+  {"kind": "text", "at": [4.444, 1.559], "text": "0.1"},
+  {"kind": "text", "at": [3.556, 2.241], "text": "0.1"},
+  {"kind": "text", "at": [-0.083, 3.669], "text": "0.7"},
+  {"kind": "text", "at": [6.083, 3.669], "text": "0.6"},
+  {"kind": "text", "at": [3.0, -0.58], "text": "0.6"},
+  {"kind": "text", "at": [1.6, 4.35], "text": "Sunny", "leaderTo": [1.0, 3.2]},
+  {"kind": "text", "at": [4.4, 4.35], "text": "Cloudy", "leaderTo": [5.0, 3.2]},
+  {"kind": "text", "at": [1.75, 0.35], "text": "Rainy", "leaderTo": [3.0, 0.6]}]}
+:::
+
+It is worth seeing the assumption fail, because the repair is standard.
+
+:::example[A process that is not Markov, and how to fix it]
+Let $Y_1, Y_2, \ldots$ be independent fair coin flips coded $0$ and $1$, and $Z_n = Y_n + Y_{n+1}$ the number of heads in the $n$-th consecutive *pair*. Is $(Z_n)$ a Markov chain on $\{0,1,2\}$?
+:::
+
+:::solution
+No. The event $\{Z_n = 1\}$ means $(Y_n, Y_{n+1})$ is $(0,1)$ or $(1,0)$, each with conditional probability $\tfrac12$. In the first case $Z_{n+1} = 2$ requires $Y_{n+2} = 1$, probability $\tfrac12$; in the second $Y_{n+1} = 0$ and $Z_{n+1} = 2$ is impossible. So $P(Z_{n+1} = 2 \mid Z_n = 1) = \tfrac14$.
+
+Now add history. If additionally $Z_{n-1} = 0$, then $Y_{n-1} = Y_n = 0$, so $Z_n = 1$ forces $Y_{n+1} = 1$, and $P(Z_{n+1} = 2 \mid Z_n = 1, Z_{n-1} = 0) = P(Y_{n+2} = 1) = \tfrac12 \ne \tfrac14$. The past changes the prediction, so the Markov property fails.
+
+The repair is to **enlarge the state space**. Take $W_n = (Y_n, Y_{n+1}) \in \{0,1\}^2$. Then $W_{n+1}$ depends on $W_n$ only through its second coordinate plus a fresh independent flip, so $(W_n)$ *is* a Markov chain, with transition matrix (states ordered $00, 01, 10, 11$)
+
+$$\begin{bmatrix} 0.5 & 0.5 & 0 & 0 \\ 0 & 0 & 0.5 & 0.5 \\ 0.5 & 0.5 & 0 & 0 \\ 0 & 0 & 0.5 & 0.5\end{bmatrix},$$
+
+and $Z_n$ is a deterministic function of $W_n$. Remember more, and the process becomes Markov: that is how memory of depth $k$ is handled in general.
+:::
+
+:::pitfall[Markov is a property of the state space, not of the world]
+"Is this process Markov?" is not well posed until you say what the state is: the same system is non-Markov in a coarse description and Markov in a finer one. When a model seems to need memory, ask what you would have to record to make memory unnecessary — that record is the right state space.
+:::
+
+## Chapman-Kolmogorov and $n$-step transitions
+
+<!-- section: chapman-kolmogorov -->
+
+One step is described by $P$. What describes $n$ steps?
+
+:::definition[$n$-step transition probability]{#n-step}
+For $n \ge 0$ the **$n$-step transition probability** is
+
+$$p_{ij}^{(n)} = P(X_n = j \mid X_0 = i),$$
+
+defined whenever $P(X_0 = i) > 0$. We write $P^{(n)}$ for the matrix $(p^{(n)}_{ij})$, and set $p^{(0)}_{ij} = \delta_{ij}$, so $P^{(0)} = I$.
+:::
+
+By time-homogeneity $p^{(n)}_{ij} = P(X_{m+n} = j \mid X_m = i)$ for every $m$: only the *elapsed* number of steps matters.
+
+:::theorem[Chapman-Kolmogorov equations]{#chapman-kolmogorov}
+For all $m, n \ge 0$ and all $i, j \in S$,
+
+$$p^{(m+n)}_{ij} \;=\; \sum_{k \in S} p^{(m)}_{ik}\, p^{(n)}_{kj}.$$
+
+Equivalently, $P^{(m+n)} = P^{(m)} P^{(n)}$.
+:::
+
+:::proof
+Fix $i$ with $P(X_0 = i) > 0$. The events $\{X_m = k\}$ are pairwise mutually exclusive and exhaustive, so the law of total probability under $P(\cdot \mid X_0 = i)$ gives
+
+$$P(X_{m+n} = j \mid X_0 = i) = \sum_{k \in S} P(X_{m+n} = j \mid X_m = k,\, X_0 = i)\; P(X_m = k \mid X_0 = i),$$
+
+(terms with zero probability omitted). By the Markov property the conditioning on $X_0 = i$ in the first factor may be dropped — $X_m = k$ screens off everything earlier — and time-homogeneity makes it $p^{(n)}_{kj}$. The second factor is $p^{(m)}_{ik}$. The resulting sum is the $(i,j)$ entry of $P^{(m)}P^{(n)}$.
+:::
+
+:::intuition
+To get from $i$ to $j$ in $m+n$ steps you must be *somewhere* after $m$. Enumerate that stop, multiply the probability of reaching it by the probability of finishing from it, and add. What makes the multiplication legitimate is the Markov property: on arriving at $k$ the chain continues as though freshly started there.
+:::
+
+:::corollary[$n$-step transitions are matrix powers]{#powers}
+$P^{(n)} = P^n$ for every $n \ge 0$. In particular $p^{(n)}_{ij}$ is the $(i,j)$ entry of the $n$-th power of the one-step transition matrix.
+:::
+
+:::proof
+Induction on $n$. The case $n = 0$ is $P^{(0)} = I = P^0$, and $n = 1$ is the definition. Assuming $P^{(n)} = P^n$, take $m = n$ and $n = 1$ in Chapman–Kolmogorov: $P^{(n+1)} = P^{(n)} P^{(1)} = P^n P = P^{n+1}$.
+:::
+
+This corollary is the bridge to linear algebra, and it carries real weight: a transition matrix *is* a stochastic matrix in the sense of the linear algebra chapter on eigenvalues, so everything proved there applies here unchanged.
+
+:::theorem[Eigenvalue $1$ and the spectral bound]{#eigenvalue-one}
+Let $P$ be a finite stochastic matrix. Then:
+
+1. $P \mathbf{1} = \mathbf{1}$, where $\mathbf{1}$ is the all-ones column vector; so $1$ is an eigenvalue of $P$.
+2. Every eigenvalue $\lambda$ of $P$ satisfies $|\lambda| \le 1$.
+
+Consequently $1$ is a dominant eigenvalue of $P$.
+:::
+
+:::proof
+(1) The $i$-th entry of $P\mathbf{1}$ is $\sum_j p_{ij} \cdot 1 = 1$ by the row-sum property. So $P\mathbf{1} = \mathbf{1}$, and $\mathbf{1} \ne 0$ is an eigenvector for $\lambda = 1$. This is Theorem *Every stochastic matrix has eigenvalue $1$* from the linear algebra chapter on eigenvalues, restated in probabilistic clothing.
+
+(2) Let $Pv = \lambda v$ with $v \ne 0$, possibly complex. Choose an index $i$ maximising $|v_i|$, so $|v_i| > 0$. Taking absolute values in the $i$-th row of the eigenvalue equation and using the triangle inequality,
+
+$$|\lambda|\,|v_i| = \Big|\sum_j p_{ij} v_j\Big| \le \sum_j p_{ij} |v_j| \le \Big(\sum_j p_{ij}\Big) |v_i| = |v_i|,$$
+
+where the second inequality uses $p_{ij} \ge 0$ and $|v_j| \le |v_i|$. Dividing by $|v_i| > 0$ gives $|\lambda| \le 1$.
+:::
+
+Notice what part (1) is and is not. The right eigenvector for $\lambda = 1$ is the uninformative $\mathbf{1}$; the interesting object is the **left** eigenvector $\pi$ with $\pi P = \pi$, which exists because $P$ and $P^{\mathsf T}$ share a characteristic polynomial. Whether it can be scaled to a *probability* vector, and whether it is unique, is what the section on stationary distributions settles; Theorem *Perron–Frobenius for regular chains* and Definition *Steady-state vector* are the matrix-side statements of the same facts.
+
+The spectrum also fixes the *rate*, via Theorem *Powers of a diagonalizable matrix*: if $P = VDV^{-1}$ then $P^n = VD^nV^{-1}$, and every $\lambda_k^n$ with $|\lambda_k| < 1$ decays geometrically. Only the eigenvalue $1$ survives, which is why $P^n$ tends to a rank-one matrix when the chain is well behaved.
+
+:::example[Powers of the weather chain]{#weather-powers}
+For the weather chain of Example *The weather chain*, compute $P^2$, $P^3$ and $P^4$, find the eigenvalues of $P$, and read off $P(X_3 = \text{Rainy} \mid X_0 = \text{Sunny})$.
+:::
+
+:::solution
+Squaring $P$ by rows gives
+
+$$P^2 = \begin{bmatrix} 0.58 & 0.27 & 0.15 \\ 0.42 & 0.43 & 0.15 \\ 0.42 & 0.18 & 0.40 \end{bmatrix}, \qquad P^3 = \begin{bmatrix} 0.532 & 0.293 & 0.175 \\ 0.468 & 0.357 & 0.175 \\ 0.468 & 0.232 & 0.300 \end{bmatrix},$$
+
+$$P^4 = \begin{bmatrix} 0.5128 & 0.2997 & 0.1875 \\ 0.4872 & 0.3253 & 0.1875 \\ 0.4872 & 0.2628 & 0.2500 \end{bmatrix}.$$
+
+Every row sums to $1$, as it must, since $P^{n}\mathbf 1 = \mathbf 1$. The requested probability is the $(\text{Sunny}, \text{Rainy})$ entry of $P^3$, namely $p^{(3)}_{13} = 0.175$.
+
+For the eigenvalues, one root of $\det(P-\lambda I)$ is $\lambda = 1$ by Theorem *Eigenvalue $1$ and the spectral bound*; dividing $(\lambda-1)$ out of the characteristic cubic leaves $\lambda^2 - 0.9\lambda + 0.2 = (\lambda - 0.5)(\lambda - 0.4)$, so
+
+$$\lambda_1 = 1, \qquad \lambda_2 = 0.5, \qquad \lambda_3 = 0.4 .$$
+
+Three distinct eigenvalues in a $3\times3$ matrix means $P$ is diagonalisable, by Corollary *Distinct eigenvalues suffice*, so $P^n = VD^nV^{-1}$ with $D^n = \operatorname{diag}(1, 0.5^n, 0.4^n)$: the deviation from the limit is a combination of $0.5^n$ and $0.4^n$, with $0.5^n$ eventually dominating. The third column above reads $0.15, 0.175, 0.1875$, so the gaps to the limiting $0.2$ are $0.05, 0.025, 0.0125$ — halving each step, which is $0.5^n$ made visible.
+:::
+
+:::pitfall[$p^{(n)}_{ij}$ is not the probability of first reaching $j$ at step $n$]
+The entry $p^{(n)}_{ij}$ counts *all* paths of length $n$ from $i$ to $j$, including those that visit $j$ earlier and come back. The probability of arriving at $j$ for the **first** time at step $n$ is a different quantity $f^{(n)}_{ij}$, related to it by a convolution. That distinction is the whole content of the recurrence criterion proved next.
+:::
+
+## Classification of states
+
+<!-- section: classification -->
+
+Before asking about long-run behaviour we need vocabulary for how a chain can be structured, all of it readable off the diagram: which states reach which, whether the chain can get stuck, and whether returns run on a rigid timetable.
+
+:::definition[Accessibility and communication]{#accessibility}
+State $j$ is **accessible** from state $i$, written $i \to j$, if $p^{(n)}_{ij} > 0$ for some $n \ge 0$. States $i$ and $j$ **communicate**, written $i \leftrightarrow j$, if $i \to j$ and $j \to i$.
+:::
+
+Allowing $n = 0$ is deliberate: it makes $i \to i$ automatic, which is what turns communication into an equivalence relation.
+
+:::theorem[Communication is an equivalence relation]{#communication-equivalence}
+On any state space $S$, the relation $\leftrightarrow$ is reflexive, symmetric and transitive.
+:::
+
+:::proof
+**Reflexive.** $p^{(0)}_{ii} = 1 > 0$, so $i \to i$, and hence $i \leftrightarrow i$.
+
+**Symmetric.** The definition of $i \leftrightarrow j$ is the conjunction of $i \to j$ and $j \to i$, which is symmetric in $i$ and $j$ by inspection.
+
+**Transitive.** Suppose $i \leftrightarrow j$ and $j \leftrightarrow k$. We show $i \to k$; the reverse direction $k \to i$ follows by the same argument with the roles exchanged. Since $i \to j$ there is $m \ge 0$ with $p^{(m)}_{ij} > 0$, and since $j \to k$ there is $n \ge 0$ with $p^{(n)}_{jk} > 0$. By Chapman–Kolmogorov,
+
+$$p^{(m+n)}_{ik} = \sum_{\ell \in S} p^{(m)}_{i\ell}\, p^{(n)}_{\ell k} \;\ge\; p^{(m)}_{ij}\, p^{(n)}_{jk} \;>\; 0,$$
+
+the inequality because every term of the sum is non-negative, so dropping all terms but $\ell = j$ can only decrease it. Hence $i \to k$.
+:::
+
+The proof is short but the consequence is large: an equivalence relation partitions $S$ into disjoint **communicating classes**, so every chain decomposes into blocks, and "where can it go?" and "where does it end up?" become questions about how those blocks are arranged.
+
+:::definition[Irreducible chain, closed class]{#irreducible}
+A class $C$ is **closed** if $p_{ij} = 0$ whenever $i \in C$ and $j \notin C$ — once in $C$, the chain never leaves. A chain is **irreducible** if $S$ is a single communicating class, that is, if every state is accessible from every other.
+:::
+
+:::example[Reading classes off a matrix]
+Classify the states of the chain with
+
+$$P = \begin{bmatrix} 0.5 & 0.5 & 0 & 0 \\ 0.5 & 0.5 & 0 & 0 \\ 0.25 & 0 & 0.25 & 0.5 \\ 0 & 0 & 0 & 1 \end{bmatrix}.$$
+:::
+
+:::solution
+From $1$ the chain reaches only $1$ and $2$, and likewise from $2$, so $\{1,2\}$ is a class, closed because rows $1$ and $2$ put no mass outside it. State $4$ has $p_{44} = 1$: it is **absorbing**, and $\{4\}$ is a closed class alone. State $3$ reaches $1$, $2$ and $4$, but column $3$ is zero except for $p_{33}$, so nothing ever returns to $3$; hence $\{3\}$ is a class by itself and is *not* closed.
+
+The classes are $\{1,2\}$, $\{3\}$, $\{4\}$, so the chain is not irreducible. The weather chain, with every entry positive, is.
+:::
+
+The second structural feature is periodicity, which concerns the *timetable* of returns rather than their possibility.
+
+:::definition[Period]{#period}
+For a state $i$ with $p^{(n)}_{ii} > 0$ for at least one $n \ge 1$, the **period** of $i$ is
+
+$$d(i) = \gcd\{\, n \ge 1 : p^{(n)}_{ii} > 0 \,\}.$$
+
+State $i$ is **aperiodic** if $d(i) = 1$, and **periodic** with period $d$ if $d(i) = d > 1$.
+:::
+
+:::proposition[A self-loop forces aperiodicity]{#self-loop-aperiodic}
+If $p_{ii} > 0$ then $d(i) = 1$.
+:::
+
+:::proof
+$p^{(1)}_{ii} = p_{ii} > 0$, so $1$ belongs to the set whose greatest common divisor defines $d(i)$. Any common divisor of a set containing $1$ is $1$.
+:::
+
+:::theorem[Period is a class property]{#period-class}
+If $i \leftrightarrow j$ then $d(i) = d(j)$.
+:::
+
+:::proof
+Since $i \leftrightarrow j$, pick $r, s \ge 0$ with $p^{(r)}_{ij} > 0$ and $p^{(s)}_{ji} > 0$. By the Chapman–Kolmogorov inequality used in Theorem *Communication is an equivalence relation*,
+
+$$p^{(r+s)}_{ii} \ge p^{(r)}_{ij} p^{(s)}_{ji} > 0,$$
+
+so $d(i) \mid r+s$.
+
+Now let $n$ be any integer with $p^{(n)}_{jj} > 0$. Then
+
+$$p^{(r+n+s)}_{ii} \;\ge\; p^{(r)}_{ij}\, p^{(n)}_{jj}\, p^{(s)}_{ji} \;>\; 0,$$
+
+so $d(i) \mid r + n + s$. Subtracting, $d(i) \mid (r+n+s) - (r+s) = n$. Thus $d(i)$ divides every element of $\{n \ge 1 : p^{(n)}_{jj} > 0\}$, and therefore divides their greatest common divisor: $d(i) \mid d(j)$. Exchanging the roles of $i$ and $j$ gives $d(j) \mid d(i)$, and two positive integers dividing each other are equal.
+:::
+
+So for an irreducible chain the period is a single number attached to the chain, and one may speak of an *aperiodic chain*. The weather chain is aperiodic, immediately from Proposition *A self-loop forces aperiodicity* applied to any of its three diagonal entries.
+
+:::example[A chain of period $2$ and a chain of period $3$]{#period-examples}
+Compute the period of the two-state chain $A = \begin{bmatrix} 0 & 1 \\ 1 & 0\end{bmatrix}$ and of the three-state cycle $B$ sending $1 \to 2 \to 3 \to 1$ with probability $1$.
+:::
+
+:::solution
+For $A$, $A^2 = I$ and $A^3 = A$, so $p^{(n)}_{11} > 0$ exactly for even $n$; the gcd of the even positive integers is $2$, so both states have period $2$. Started at $1$ the chain is at $1$ at every even time and at $2$ at every odd time, with no randomness at all in *when*. For $B$, $B^3 = I$ and returns to $1$ occur exactly at multiples of $3$, so $d = 3$.
+
+Both chains are irreducible, which shows irreducibility does not imply aperiodicity. The two conditions are logically independent, and the convergence theorem needs both.
+:::
+
+Now the deeper dichotomy: does the chain come back?
+
+:::definition[First-return probabilities, recurrence and transience]{#recurrence-definition}
+Let
+
+$$f^{(n)}_{ii} = P(X_n = i,\ X_k \ne i \text{ for } 1 \le k \le n-1 \mid X_0 = i)$$
+
+be the probability of returning to $i$ for the **first** time at step $n$, and let $f_{ii} = \sum_{n=1}^{\infty} f^{(n)}_{ii}$ be the probability of ever returning.
+
+State $i$ is **recurrent** if $f_{ii} = 1$ and **transient** if $f_{ii} < 1$.
+:::
+
+The criterion that makes this computable replaces first returns, awkward because they involve avoiding $i$ in between, by total returns, which are matrix entries.
+
+:::theorem[The sum-of-return-probabilities criterion]{#recurrence-criterion}
+A state $i$ is recurrent if and only if
+
+$$\sum_{n=0}^{\infty} p^{(n)}_{ii} = \infty,$$
+
+and transient if and only if the sum is finite. Moreover, writing $V_i$ for the total number of visits to $i$ (counting time $0$), if $i$ is transient then $E[V_i \mid X_0 = i] = \dfrac{1}{1 - f_{ii}} < \infty$, while if $i$ is recurrent then $V_i = \infty$ almost surely.
+:::
+
+:::proof
+By the Markov property and time-homogeneity the chain restarts every time it is at $i$: given that it has returned $k$ times, the probability of at least one more return is $f_{ii}$, whatever $k$ is. So the number of returns after time $0$ has the geometric-type law
+
+$$P(V_i \ge k+1 \mid X_0 = i) = f_{ii}^{\,k}, \qquad k = 0, 1, 2, \ldots$$
+
+**Transient case.** If $f_{ii} < 1$ then $P(V_i \ge k+1 \mid X_0 = i) = f_{ii}^k \to 0$, so $V_i$ is finite almost surely, and summing the tail probabilities of a non-negative integer variable,
+
+$$E[V_i \mid X_0 = i] = \sum_{k \ge 0} P(V_i \ge k+1 \mid X_0 = i) = \sum_{k\ge 0} f_{ii}^{\,k} = \frac{1}{1 - f_{ii}} < \infty .$$
+
+**Recurrent case.** If $f_{ii} = 1$ then $P(V_i \ge k+1 \mid X_0 = i) = 1$ for every $k$, so $P(V_i = \infty \mid X_0 = i) = 1$ and the expectation is infinite.
+
+It remains to connect $E[V_i \mid X_0 = i]$ to the sum of the $p^{(n)}_{ii}$. Write $V_i = \sum_{n=0}^{\infty} \mathbf{1}\{X_n = i\}$. Expectations of non-negative terms may be exchanged with the sum (monotone convergence, or simply Tonelli for non-negative series), so
+
+$$E[V_i \mid X_0 = i] = \sum_{n=0}^{\infty} E\big[\mathbf{1}\{X_n = i\} \,\big|\, X_0 = i\big] = \sum_{n=0}^{\infty} P(X_n = i \mid X_0 = i) = \sum_{n=0}^{\infty} p^{(n)}_{ii}.$$
+
+Combining: the sum is infinite exactly when $E[V_i \mid X_0 = i] = \infty$, which by the two cases above happens exactly when $f_{ii} = 1$, that is, exactly when $i$ is recurrent.
+:::
+
+:::intuition
+A recurrent state is one the chain keeps coming back to, and "keeps" is literal: each return resets the clock, so the chain gets infinitely many independent chances. A transient state is visited a geometric number of times and then abandoned. The criterion tells the two apart by adding the diagonal entries of the powers of $P$: divergence means returns forever, convergence means the visits dry up.
+:::
+
+:::example[Using the criterion on a three-state chain]{#transient-example}
+For
+
+$$P = \begin{bmatrix} 0.5 & 0.25 & 0.25 \\ 0 & 1/3 & 2/3 \\ 0 & 3/4 & 1/4\end{bmatrix},$$
+
+classify each state as recurrent or transient.
+:::
+
+:::solution
+Column $1$ is zero below the diagonal, so states $2$ and $3$ can never reach state $1$; once the chain leaves $1$, which it does with probability $0.5$ per step, it is gone for good. So being at $1$ at time $n$ requires having stayed there every step, giving $p^{(n)}_{11} = (0.5)^n$ and
+
+$$\sum_{n \ge 0} p^{(n)}_{11} = \sum_{n\ge 0} (0.5)^n = \frac{1}{1 - 0.5} = 2 < \infty,$$
+
+so state $1$ is transient by Theorem *The sum-of-return-probabilities criterion*, which also gives $E[V_1 \mid X_0 = 1] = 2$ — consistent with $f_{11} = 0.5$ and $1/(1-0.5) = 2$.
+
+States $2$ and $3$ form a closed communicating class. A finite closed class cannot be abandoned, so the chain inside it visits some state infinitely often; recurrence then spreads across the class by the proposition below. Both are recurrent.
+:::
+
+:::proposition[Recurrence is a class property]{#recurrence-class}
+If $i \leftrightarrow j$ and $i$ is recurrent, then $j$ is recurrent.
+:::
+
+:::proof
+Choose $r, s \ge 1$ with $p^{(r)}_{ji} > 0$ and $p^{(s)}_{ij} > 0$. For every $n \ge 0$, Chapman–Kolmogorov applied twice and the term-dropping inequality give
+
+$$p^{(r+n+s)}_{jj} \;\ge\; p^{(r)}_{ji}\, p^{(n)}_{ii}\, p^{(s)}_{ij}.$$
+
+Summing over $n \ge 0$ and writing $c = p^{(r)}_{ji}p^{(s)}_{ij} > 0$,
+
+$$\sum_{m \ge 0} p^{(m)}_{jj} \;\ge\; \sum_{n\ge 0} p^{(r+n+s)}_{jj} \;\ge\; c \sum_{n \ge 0} p^{(n)}_{ii} = \infty,$$
+
+the last equality because $i$ is recurrent. By Theorem *The sum-of-return-probabilities criterion*, $j$ is recurrent.
+:::
+
+Recurrence says the chain returns, but nothing about how long the return takes. That is the last distinction.
+
+:::definition[Positive and null recurrence]{#positive-recurrence}
+Let $T_i = \min\{n \ge 1 : X_n = i\}$ be the **first return time** to $i$, and $m_i = E[T_i \mid X_0 = i]$ its mean. A recurrent state is **positive recurrent** if $m_i < \infty$ and **null recurrent** if $m_i = \infty$.
+:::
+
+Null recurrence sounds paradoxical — returns certain, expected waiting time infinite — but it is just a heavy-tailed return-time distribution: returns happen, but occasionally take so long that the mean diverges. The standard example is the simple symmetric random walk on $\mathbb{Z}$, where $f_{00} = 1$ but $m_0 = \infty$. Finite chains cannot do this.
+
+:::theorem[Finite irreducible chains are positive recurrent]{#finite-positive}
+Every state of a finite irreducible Markov chain is positive recurrent.
+:::
+
+:::proof
+**Proof sketch.** Two steps, the second using a limit theorem beyond this course. First, not every state can be transient. If all $m$ states were, then by Theorem *The sum-of-return-probabilities criterion* the expected number of visits to each would be finite, so the expected total number of time steps would be a finite sum of finite numbers — yet the chain occupies some state at each of infinitely many times. Contradiction. So some state is recurrent, and by Proposition *Recurrence is a class property* with irreducibility, all are.
+
+Second, recurrence upgrades to positive recurrence. The step needing machinery we do not develop is the renewal-theoretic fact that the long-run fraction of time at a recurrent $i$ is $1/m_i$, with $1/\infty = 0$. If every state were null recurrent every fraction would be $0$, yet over $m$ states they must sum to $1$ — impossible when $m$ is finite. So some $m_i$ is finite, and a class argument propagates positive recurrence everywhere.
+
+Both halves use finiteness essentially, which is why the theorem fails for infinite chains: the symmetric random walk on $\mathbb{Z}$ is irreducible and recurrent, but null recurrent.
+:::
+
+## Stationary distributions
+
+<!-- section: stationary -->
+
+Now the question the whole theory is built around: is there a distribution the chain, once in it, stays in?
+
+:::definition[Stationary distribution]{#stationary-distribution}
+A probability vector $\pi = (\pi_i)_{i \in S}$ is a **stationary distribution** (or invariant distribution) for the transition matrix $P$ if
+
+$$\pi P = \pi, \qquad \text{that is} \qquad \pi_j = \sum_{i \in S} \pi_i\, p_{ij} \ \text{ for every } j, \qquad \text{and} \qquad \sum_{i \in S} \pi_i = 1 .$$
+:::
+
+The component equations are the **global balance equations**: the probability flowing into $j$ in one step equals the probability already sitting at $j$.
+
+:::proposition[Stationarity is preserved for all time]{#stationary-preserved}
+If $\mu_0 = \pi$ is stationary, then $\mu_n = \pi$ for every $n \ge 0$; in fact the process $(X_n)$ started from $\pi$ is *strictly stationary*, meaning the law of $(X_{k}, X_{k+1}, \ldots, X_{k+n})$ does not depend on $k$.
+:::
+
+:::proof
+The first claim is induction: if $\mu_n = \pi$ then $\mu_{n+1} = \mu_n P = \pi P = \pi$, by Proposition *Marginal distributions by matrix multiplication*. For the second, Theorem *The law of the chain factorises* started at time $k$ gives
+
+$$P(X_k = i_0, \ldots, X_{k+n} = i_n) = \mu_k(i_0)\, p_{i_0i_1}\cdots p_{i_{n-1}i_n} = \pi(i_0)\, p_{i_0i_1}\cdots p_{i_{n-1}i_n},$$
+
+which has no $k$ in it.
+:::
+
+:::intuition
+Think of probability as a fluid of volume $1$ spread over the states, with $P$ describing how it is stirred each step. A stationary distribution is an arrangement the stirring leaves unchanged: particles keep moving, but the *amount* at each state stays in balance, every departure matched by an arrival.
+:::
+
+:::theorem[Existence and uniqueness for a finite irreducible chain]{#existence-uniqueness}
+Let $P$ be the transition matrix of an irreducible Markov chain on a finite state space. Then $P$ has exactly one stationary distribution $\pi$, and $\pi_i > 0$ for every state $i$.
+:::
+
+:::proof
+**Proof sketch.** By Theorem *Eigenvalue $1$ and the spectral bound* the eigenvalue $1$ belongs to $P$, hence to $P^{\mathsf T}$, since a matrix and its transpose share a characteristic polynomial. So some non-zero row vector $v$ has $vP = v$. What needs more than linear algebra is that $v$ may be chosen with all entries of one sign, so it can be normalised, and that the eigenspace is one-dimensional.
+
+Both follow from Theorem *Perron–Frobenius for regular chains*: for a non-negative irreducible matrix the dominant eigenvalue is simple with a strictly positive eigenvector on each side. Applied to $P$, whose dominant eigenvalue is $1$, it yields a strictly positive left eigenvector unique up to scale; dividing by the sum of its entries, positive and finite because $S$ is finite, gives $\pi$.
+
+A probabilistic route avoiding Perron–Frobenius builds $\pi_i = 1/m_i$ from mean return times, the identity stated as Theorem *Expected return time is the reciprocal of the stationary probability*.
+:::
+
+Both hypotheses work. Irreducibility forces uniqueness: a chain with two closed classes has a stationary distribution supported in each, and every mixture of them is stationary too. Finiteness forces existence: on $\mathbb{Z}$ the symmetric random walk's only invariant vectors are constant, and cannot be normalised.
+
+:::recipe[Solving $\pi P = \pi$]{#solve-pi}
+1. Write the balance equations $\pi_j = \sum_i \pi_i p_{ij}$, one per state — read *down the columns* of $P$.
+2. Discard one. The system $\pi(P-I) = 0$ has rank at most $m-1$, since the columns of $P-I$ sum to zero, so one equation is redundant.
+3. Solve the remaining $m-1$ for the $\pi_i$ up to a common scale.
+4. Impose $\sum_i \pi_i = 1$ to fix the scale. This is not optional bookkeeping: $\pi P = \pi$ is homogeneous, so without it $\pi$ is determined only up to a multiple.
+5. Check by computing $\pi P$ and confirming you get $\pi$ back.
+:::
+
+:::example[The stationary distribution of the weather chain]{#weather-stationary}
+Find $\pi$ for the weather chain of Example *The weather chain*.
+:::
+
+:::solution
+Write $\pi = (a, b, c)$ for the probabilities of Sunny, Cloudy, Rainy. Reading down the columns of $P$:
+
+$$\text{(Sunny)}\quad a = 0.7a + 0.3b + 0.3c,$$
+$$\text{(Cloudy)}\quad b = 0.2a + 0.6b + 0.1c,$$
+$$\text{(Rainy)}\quad c = 0.1a + 0.1b + 0.6c .$$
+
+Discard the first, as Method *Solving $\pi P = \pi$* permits. The Cloudy equation gives $0.4b = 0.2a + 0.1c$ and the Rainy equation $0.4c = 0.1a + 0.1b$, so $c = (a+b)/4$. Substituting, $0.4b = 0.2a + 0.025a + 0.025b$, hence $0.375b = 0.225a$, $b = 0.6a$, and $c = 0.4a$. Normalising, $2a = 1$, so
+
+$$\pi = (0.5,\; 0.3,\; 0.2) = \left(\tfrac12, \tfrac{3}{10}, \tfrac15\right).$$
+
+Check: the entries of $\pi P$ are $0.35 + 0.09 + 0.06 = 0.5$, then $0.10 + 0.18 + 0.02 = 0.3$, then $0.05 + 0.03 + 0.12 = 0.2$. So $\pi P = \pi$ exactly.
+
+Every row of the $P^4$ computed in Example *Powers of the weather chain* is already close to $(0.5, 0.3, 0.2)$ — the next section's convergence theorem, previewed.
+:::
+
+:::example[A chain with infinitely many stationary distributions]{#nonunique-stationary}
+Show that
+
+$$P = \begin{bmatrix} 1 & 0 & 0 \\ 0.25 & 0.5 & 0.25 \\ 0 & 0 & 1\end{bmatrix}$$
+
+has a whole family of stationary distributions, and identify which hypothesis of Theorem *Existence and uniqueness for a finite irreducible chain* fails.
+:::
+
+:::solution
+States $1$ and $3$ are absorbing. Try $\pi = (t, u, 1-t-u)$. The balance equation for state $2$ reads $u = 0.5u$, forcing $u = 0$, after which the equations for states $1$ and $3$ become $t = t$ and $1-t = 1-t$, true for every $t$.
+
+So every $\pi = (t, 0, 1-t)$ with $t \in [0,1]$ is stationary: a one-parameter family. The failed hypothesis is irreducibility — the classes are $\{1\}$, $\{2\}$, $\{3\}$, with $\{1\}$ and $\{3\}$ closed. Note also that no stationary distribution charges the transient state $2$, which is general.
+:::
+
+:::pitfall[$\pi$ is a left eigenvector, and the system is deliberately rank-deficient]
+Two errors account for most wrong stationary distributions. The first is solving $P\pi^{\mathsf T} = \pi^{\mathsf T}$ — the *right* eigenvector problem — whose answer is the useless $\mathbf 1$, by Theorem *Eigenvalue $1$ and the spectral bound*. Always read down the columns.
+
+The second is expecting $\pi(P-I) = 0$ to have a unique solution, and concluding that something is wrong when it does not. The deficiency is structural: $(P - I)\mathbf 1 = 0$ makes the rows dependent, and the vanishing column sums make the columns dependent too. The normalisation $\sum_i \pi_i = 1$ is the extra equation that restores uniqueness, and must be imposed by hand.
+:::
+
+## The convergence theorem
+
+<!-- section: convergence -->
+
+Example *Powers of the weather chain* showed every row of $P^n$ drifting toward the same $(0.5, 0.3, 0.2)$. That is the general behaviour, under exactly the hypotheses accumulated so far.
+
+:::theorem[Convergence to the stationary distribution]{#convergence-theorem}
+Let $P$ be the transition matrix of an irreducible, aperiodic Markov chain on a finite state space, with stationary distribution $\pi$. Then for all states $i, j$,
+
+$$\lim_{n \to \infty} p^{(n)}_{ij} = \pi_j .$$
+
+Equivalently $P^n \to \mathbf{1}\pi$, the matrix every one of whose rows is $\pi$; and for *any* initial distribution $\mu_0$, $\mu_n = \mu_0 P^n \to \pi$.
+:::
+
+:::proof
+**Proof sketch.** The argument is a coupling, worth carrying even though its measure-theoretic details are beyond this course.
+
+Run two independent copies on one probability space: $(X_n)$ from state $i$, and $(Y_n)$ from $\pi$, so $Y_n \sim \pi$ for every $n$ by Proposition *Stationarity is preserved for all time*. The pair $Z_n = (X_n, Y_n)$ is a Markov chain on $S\times S$ with $p_{(i,k)(j,\ell)} = p_{ij}p_{k\ell}$.
+
+The step that uses aperiodicity is that $(Z_n)$ is irreducible. Irreducibility of $P$ alone is not enough: in a period-$2$ chain with the copies on opposite phases they are never in the same state at the same time. Aperiodicity repairs this, because for an irreducible aperiodic chain there is an $N$ with $p^{(n)}_{ij} > 0$ for *all* $n \ge N$ — positive return times with gcd $1$ eventually fill in every large integer. The product chain is then irreducible and finite, so by Theorem *Finite irreducible chains are positive recurrent* it is recurrent and hits the diagonal $\{(s,s)\}$ with probability $1$.
+
+Let $T$ be the first time $X_T = Y_T$, and after $T$ swap the copies: by the Markov property the process following $X$ before $T$ and $Y$ after has the same law as $X$. Since the two agree on $\{T \le n\}$,
+
+$$|p^{(n)}_{ij} - \pi_j| = |P(X_n = j) - P(Y_n = j)| \le P(T > n) \to 0 .$$
+
+The bound is stronger than the statement: it controls the total variation distance $\tfrac12\sum_j |p^{(n)}_{ij} - \pi_j|$ by $P(T>n)$, so the whole distribution converges at the rate two independent copies meet.
+:::
+
+Aperiodicity, in one sentence, is what allows two independent copies of the chain to be in the same state at the same time. Without it they march out of phase forever, and nothing converges.
+
+:::example[The period-$2$ counterexample]{#period-two-counterexample}
+For the alternating chain $A = \begin{bmatrix} 0 & 1 \\ 1 & 0 \end{bmatrix}$ of Example *A chain of period $2$ and a chain of period $3$*, show that a unique stationary distribution exists but $A^n$ does not converge, and identify what does.
+:::
+
+:::solution
+The chain is irreducible, so Theorem *Existence and uniqueness for a finite irreducible chain* applies: $\pi A = \pi$ gives $\pi_1 = \pi_2$, hence $\pi = (0.5, 0.5)$, uniquely. But the powers oscillate:
+
+$$A^n = \begin{cases} I = \begin{bmatrix} 1 & 0 \\ 0 & 1\end{bmatrix}, & n \text{ even},\\[2mm] A = \begin{bmatrix} 0 & 1 \\ 1 & 0 \end{bmatrix}, & n \text{ odd}.\end{cases}$$
+
+So $p^{(n)}_{11}$ alternates between $1$ and $0$ and has no limit, while $\pi_1 = 0.5$. The conclusion of Theorem *Convergence to the stationary distribution* fails, and the only hypothesis that fails with it is aperiodicity — the chain is irreducible, finite and positive recurrent. This is why aperiodicity cannot be dropped.
+
+What *does* converge is the average:
+
+$$\frac{1}{n}\sum_{k=0}^{n-1} A^k \longrightarrow \begin{bmatrix} 0.5 & 0.5 \\ 0.5 & 0.5\end{bmatrix} = \mathbf 1 \pi,$$
+
+since exactly half the terms are $I$ and half are $A$. So $\pi_j$ keeps its meaning as the long-run *fraction of time* in state $j$ — half the steps in each — even though it is not the limiting probability of being there at a named time.
+:::
+
+:::intuition
+Irreducibility says the chain cannot get stuck in a corner, which makes the long-run answer independent of where you started. Aperiodicity says returns are not on a rigid timetable, which makes "where is it at time $n$?" have a limit rather than a cycle. One guarantees a unique answer; the other guarantees the question has an answer at all.
+:::
+
+The rate is governed by the spectrum, exactly as the linear algebra suggests.
+
+:::proposition[Geometric rate from the second eigenvalue]{#convergence-rate}
+Suppose $P$ is finite, diagonalisable, with eigenvalues $1 = \lambda_1$ and $|\lambda_2| \ge |\lambda_3| \ge \cdots \ge |\lambda_m|$ where $|\lambda_2| < 1$. Then there is a constant $C$ with
+
+$$\big|p^{(n)}_{ij} - \pi_j\big| \le C\,|\lambda_2|^n \qquad \text{for all } n .$$
+:::
+
+:::proof
+Diagonalise $P = VDV^{-1}$ as in Theorem *Powers of a diagonalizable matrix*, so $P^n = VD^nV^{-1}$ with $D^n = \operatorname{diag}(1, \lambda_2^n, \ldots, \lambda_m^n)$. Split $D^n = E + F_n$ with $E = \operatorname{diag}(1,0,\ldots,0)$, giving $P^n = VEV^{-1} + VF_nV^{-1}$.
+
+The first term does not depend on $n$; since $P^n \to \mathbf 1\pi$ and the second term tends to $0$, it must equal $\mathbf 1 \pi$. Every entry of $VF_nV^{-1}$ is a fixed linear combination of $\lambda_2^n, \ldots, \lambda_m^n$, each of modulus at most $|\lambda_2|^n$, so taking $C$ to be the largest coefficient sum gives the bound.
+:::
+
+:::example[The weather chain converges at rate $0.5^n$]{#weather-convergence}
+Using $\lambda_2 = 0.5$ from Example *Powers of the weather chain*, track how fast the distribution started at Sunny approaches $\pi = (0.5, 0.3, 0.2)$.
+:::
+
+:::solution
+Applying $\mu_{n+1} = \mu_n P$ repeatedly from $\mu_0 = (1,0,0)$:
+
+| $n$ | $\mu_n(\text{Sunny})$ | $\mu_n(\text{Cloudy})$ | $\mu_n(\text{Rainy})$ | $d_{\mathrm{TV}}(\mu_n, \pi)$ |
+|---|---|---|---|---|
+| $0$ | $1$ | $0$ | $0$ | $0.5$ |
+| $1$ | $0.7$ | $0.2$ | $0.1$ | $0.2$ |
+| $2$ | $0.58$ | $0.27$ | $0.15$ | $0.08$ |
+| $3$ | $0.532$ | $0.293$ | $0.175$ | $0.032$ |
+| $4$ | $0.5128$ | $0.2997$ | $0.1875$ | $0.0128$ |
+| $5$ | $0.50512$ | $0.30113$ | $0.19375$ | $0.00625$ |
+| $6$ | $0.502048$ | $0.301077$ | $0.196875$ | $0.003125$ |
+| $8$ | $0.500328$ | $0.300454$ | $0.199219$ | $0.00078125$ |
+
+The last column is the total variation distance $d_{\mathrm{TV}}(\mu_n,\pi) = \tfrac12\sum_j|\mu_n(j) - \pi_j|$. From $n = 4$ it halves exactly each step — $0.0128 \to 0.00625 \to 0.003125$ — which is $0.5^n$ taking over from the faster-decaying $0.4^n$, as Proposition *Geometric rate from the second eigenvalue* predicts. Within eight days the model has forgotten the sunny start to one part in a thousand.
+:::
+
+:::figure[The distribution after $n$ steps of the weather chain started from a sunny day, one path per state, converging to the stationary distribution $\pi = (0.5, 0.3, 0.2)$ shown as dashed levels. All three curves are within $0.001$ of their limits by $n = 8$; the gaps halve each step once $n \ge 4$, which is the second eigenvalue $\lambda_2 = 0.5$ made visible.]{#convergence-figure}
+{
+  "type": "plot",
+  "x": [-0.6, 11.8],
+  "y": [-0.08, 1.14],
+  "xTicks": 1,
+  "yTicks": 0.1,
+  "xLabel": "n (steps)",
+  "yLabel": "probability",
+  "marks": [
+    {"kind": "path", "points": [[0, 0.5], [8, 0.5]], "tone": "muted", "dashed": true},
+    {"kind": "path", "points": [[0, 0.3], [8, 0.3]], "tone": "muted", "dashed": true},
+    {"kind": "path", "points": [[0, 0.2], [8, 0.2]], "tone": "muted", "dashed": true},
+    {"kind": "path", "points": [[0, 1], [1, 0.7], [2, 0.58], [3, 0.532], [4, 0.5128], [5, 0.50512], [6, 0.502048], [7, 0.500819], [8, 0.500328]], "tone": "accent"},
+    {"kind": "path", "points": [[0, 0], [1, 0.2], [2, 0.27], [3, 0.293], [4, 0.2997], [5, 0.30113], [6, 0.301077], [7, 0.300743], [8, 0.300454]], "tone": "result"},
+    {"kind": "path", "points": [[0, 0], [1, 0.1], [2, 0.15], [3, 0.175], [4, 0.1875], [5, 0.19375], [6, 0.196875], [7, 0.198437], [8, 0.199219]], "tone": "alt", "dashed": true},
+    {"kind": "point", "at": [8, 0.500328], "tone": "accent"},
+    {"kind": "point", "at": [8, 0.300454], "tone": "result"},
+    {"kind": "point", "at": [8, 0.199219], "tone": "alt"},
+    {"kind": "text", "at": [10.3, 0.66], "text": "Sunny", "leaderTo": [8, 0.500328]},
+    {"kind": "text", "at": [10.3, 0.4], "text": "Cloudy", "leaderTo": [8, 0.300454]},
+    {"kind": "text", "at": [10.3, 0.1], "text": "Rainy", "leaderTo": [8, 0.199219]},
+    {"kind": "text", "at": [4.2, 0.93], "text": "start: Sunny with probability 1"}
+  ]
+}
+:::
+
+:::corollary[Long-run fraction of time]{#ergodic-corollary}
+For a finite irreducible chain with stationary distribution $\pi$, the long-run fraction of steps spent in state $j$,
+
+$$\lim_{n\to\infty} \frac{1}{n}\sum_{k=0}^{n-1} \mathbf 1\{X_k = j\},$$
+
+equals $\pi_j$ almost surely, regardless of the starting state, and regardless of whether the chain is aperiodic.
+:::
+
+:::proof
+**Proof sketch.** This is the ergodic theorem for Markov chains. It rests on the strong law of large numbers applied to the excursions between successive visits to $j$, which are i.i.d. with mean $m_j$ by the renewal structure in Theorem *The sum-of-return-probabilities criterion*: so $n$ steps contain about $n/m_j$ visits and the fraction is $1/m_j = \pi_j$, by Theorem *Expected return time is the reciprocal of the stationary probability*. Aperiodicity is not needed, because time averages survive periodicity intact — see Example *The period-$2$ counterexample*.
+:::
+
+## Detailed balance and reversibility
+
+<!-- section: reversibility -->
+
+Solving $\pi P = \pi$ means solving a linear system. For many chains there is a shortcut, and it carries a structural meaning.
+
+:::definition[Detailed balance and reversibility]{#detailed-balance}
+A probability vector $\pi$ satisfies the **detailed balance equations** for $P$ if
+
+$$\pi_i\, p_{ij} \;=\; \pi_j\, p_{ji} \qquad \text{for all } i, j \in S .$$
+
+A chain for which such a $\pi$ exists is called **reversible**, and $\pi$ is a reversible measure for it.
+:::
+
+:::theorem[Detailed balance implies stationarity]{#db-implies-stationary}
+If $\pi$ is a probability vector satisfying the detailed balance equations for $P$, then $\pi P = \pi$; that is, $\pi$ is stationary.
+:::
+
+:::proof
+Fix $j$ and sum the detailed balance equations over $i$:
+
+$$\sum_{i \in S} \pi_i p_{ij} = \sum_{i \in S} \pi_j p_{ji} = \pi_j \sum_{i \in S} p_{ji} = \pi_j \cdot 1 = \pi_j,$$
+
+using the row-sum property of Proposition *A transition matrix is stochastic* at the second-to-last step. The left side is the $j$-th entry of $\pi P$, so $\pi P = \pi$.
+:::
+
+:::intuition
+Global balance says the total flow into each state matches the total flow out. Detailed balance is far stronger: the flow balances **across every individual edge** separately, so a reversible chain has no net circulation anywhere.
+
+The name comes from the fact that, started in $\pi$, such a chain is statistically identical run backwards: $P(X_0 = i, X_1 = j) = \pi_i p_{ij} = \pi_j p_{ji} = P(X_0 = j, X_1 = i)$, so a film of it gives no clue which way time runs.
+:::
+
+The converse fails, which is the point the definition usually comes with.
+
+:::example[Stationary but not reversible]{#not-reversible}
+Consider a three-state chain that prefers to move "clockwise":
+
+$$P = \begin{bmatrix} 0 & 2/3 & 1/3 \\ 1/3 & 0 & 2/3 \\ 2/3 & 1/3 & 0 \end{bmatrix}.$$
+
+Show that the uniform distribution is stationary but that no distribution satisfies detailed balance.
+:::
+
+:::solution
+Every column of $P$ sums to $1$ as well as every row — $P$ is *doubly stochastic* — so with $\pi = (\tfrac13,\tfrac13,\tfrac13)$ we get $(\pi P)_j = \tfrac13\sum_i p_{ij} = \tfrac13$, and $\pi$ is stationary. (The uniform distribution is stationary for any doubly stochastic matrix.)
+
+Now suppose a probability vector $\rho$ satisfied detailed balance. The pair $i=1,j=2$ gives $\rho_1\tfrac23 = \rho_2\tfrac13$, so $\rho_2 = 2\rho_1$; the pair $2,3$ gives $\rho_3 = 2\rho_2 = 4\rho_1$; the pair $3,1$ gives $\rho_1 = 2\rho_3 = 8\rho_1$, forcing $\rho_1 = 0$ and hence $\rho = 0$. That is not a probability vector, so no reversible measure exists.
+
+So **detailed balance is sufficient for stationarity but not necessary**. The chain has a perfectly good stationary distribution; what it lacks is edgewise balance. There is a persistent net circulation $1 \to 2 \to 3 \to 1$, and this film run backwards shows the circulation reversed — visibly a different process.
+:::
+
+:::proposition[Kolmogorov's cycle criterion]{#kolmogorov-cycle}
+If a chain is reversible, then for every cycle of states $i_0, i_1, \ldots, i_k = i_0$,
+
+$$p_{i_0i_1}p_{i_1i_2}\cdots p_{i_{k-1}i_k} \;=\; p_{i_0 i_{k-1}} p_{i_{k-1}i_{k-2}} \cdots p_{i_1 i_0}.$$
+
+(The converse also holds for irreducible chains, giving a test that never mentions $\pi$.)
+:::
+
+:::proof
+Let $\pi$ satisfy detailed balance; it is strictly positive by Theorem *Existence and uniqueness for a finite irreducible chain*. Rewrite each left-hand factor as $p_{i_{r}i_{r+1}} = \pi_{i_{r+1}}p_{i_{r+1}i_r}/\pi_{i_r}$ and multiply over $r = 0, \ldots, k-1$. Around a closed cycle every $\pi_{i_r}$ appears once in a numerator and once in a denominator, so the $\pi$-factors telescope away, leaving the product of the reversed transitions.
+:::
+
+This is exactly what failed in Example *Stationary but not reversible*: around $1\to2\to3\to1$ the product is $(\tfrac23)^3 = \tfrac{8}{27}$, against $(\tfrac13)^3 = \tfrac1{27}$ the other way. The workhorse example of a chain that passes the test is a random walk on a line of states.
+
+:::definition[Birth-death chain]{#birth-death}
+A **birth–death chain** on $\{1, \ldots, m\}$ has $p_{ij} = 0$ whenever $|i-j| \ge 2$: from $i$ the chain moves only to $i-1$, $i$ or $i+1$.
+:::
+
+:::theorem[Every birth-death chain is reversible]{#bd-reversible}
+Let $P$ be an irreducible birth–death chain on $\{1,\ldots,m\}$, with up-probabilities $b_i = p_{i,i+1} > 0$ for $i < m$ and down-probabilities $d_i = p_{i,i-1} > 0$ for $i > 1$. Then
+
+$$\pi_i \;=\; \frac{1}{Z}\prod_{k=1}^{i-1} \frac{b_k}{d_{k+1}}, \qquad Z = \sum_{j=1}^{m} \prod_{k=1}^{j-1}\frac{b_k}{d_{k+1}},$$
+
+(with the empty product equal to $1$) satisfies detailed balance, and is therefore the stationary distribution.
+:::
+
+:::proof
+For $|i-j| \ge 2$ both sides of $\pi_i p_{ij} = \pi_j p_{ji}$ are $0$, and for $i = j$ it is a tautology, so only neighbouring pairs need checking: $\pi_i b_i = \pi_{i+1} d_{i+1}$ for $i < m$. The stated formula gives $\pi_{i+1}/\pi_i = b_i/d_{i+1}$, which rearranges to exactly that. Since $\pi$ is positive and normalised by $Z$, it is a probability vector satisfying detailed balance, hence stationary by Theorem *Detailed balance implies stationarity*.
+:::
+
+:::example[A four-state birth-death chain]{#bd-example}
+Find the stationary distribution of
+
+$$P = \begin{bmatrix} 1/2 & 1/2 & 0 & 0 \\ 1/4 & 1/4 & 1/2 & 0 \\ 0 & 1/4 & 1/2 & 1/4 \\ 0 & 0 & 1/2 & 1/2 \end{bmatrix}$$
+
+using detailed balance, and verify the answer.
+:::
+
+:::solution
+The up-probabilities are $b_1 = b_2 = \tfrac12$, $b_3 = \tfrac14$; the down-probabilities $d_2 = d_3 = \tfrac14$, $d_4 = \tfrac12$. Theorem *Every birth-death chain is reversible* gives
+
+$$\frac{\pi_2}{\pi_1} = \frac{b_1}{d_2} = \frac{1/2}{1/4} = 2, \qquad \frac{\pi_3}{\pi_2} = \frac{b_2}{d_3} = \frac{1/2}{1/4} = 2, \qquad \frac{\pi_4}{\pi_3} = \frac{b_3}{d_4} = \frac{1/4}{1/2} = \frac12 .$$
+
+So with $\pi_1 = t$ we get $\pi_2 = 2t$, $\pi_3 = 4t$, $\pi_4 = 2t$, and $9t = 1$:
+
+$$\pi = \left(\tfrac19,\ \tfrac29,\ \tfrac49,\ \tfrac29\right).$$
+
+Checking edge by edge: $\pi_1 b_1 = \tfrac1{18} = \pi_2 d_2$ ✓; $\pi_2 b_2 = \tfrac19 = \pi_3 d_3$ ✓; $\pi_3 b_3 = \tfrac19 = \pi_4 d_4$ ✓.
+
+Solving $\pi P = \pi$ directly would have meant a $4\times 4$ linear system; detailed balance needed three ratios. That is why reversibility is worth checking for before reaching for linear algebra — and why Markov chain Monte Carlo methods, which must *construct* a chain with a prescribed stationary distribution, construct reversible ones.
+:::
+
+:::pitfall[Not every chain is reversible, and the shortcut fails silently]
+For a chain that is not reversible the equations $\pi_ip_{ij} = \pi_jp_{ji}$ are inconsistent, yet a subset of them will still "solve" and hand you a vector that is not stationary. In Example *Stationary but not reversible*, the edges $1\text{–}2$ and $2\text{–}3$ alone give $\rho \propto (1,2,4)$, that is $(\tfrac17,\tfrac27,\tfrac47)$, which is *not* stationary. Always verify against $\pi P = \pi$, as Method *Solving $\pi P = \pi$* step 5 instructs.
+:::
+
+## Absorbing chains and the fundamental matrix
+
+<!-- section: absorbing -->
+
+Not every chain is irreducible, and often the interesting question is not where the chain settles but where it *stops*.
+
+:::definition[Absorbing state, absorbing chain]{#absorbing-chain}
+A state $i$ is **absorbing** if $p_{ii} = 1$. A chain is an **absorbing chain** if it has at least one absorbing state and from every state some absorbing state is accessible.
+:::
+
+Relabelling the states so that the $t$ transient ones come first and the $r$ absorbing ones last puts $P$ into **canonical form**
+
+$$P = \begin{bmatrix} Q & R \\ 0 & I_r \end{bmatrix},$$
+
+where $Q$ is $t \times t$ (transient to transient) and $R$ is $t \times r$ (transient to absorbing); the zero block records that an absorbing state never returns to a transient one, and $I_r$ that it stays put. Block multiplication gives
+
+$$P^n = \begin{bmatrix} Q^n & (I + Q + \cdots + Q^{n-1})R \\ 0 & I_r\end{bmatrix},$$
+
+which is the whole computational content of this section in one line: everything is governed by powers of $Q$.
+
+:::lemma[The transient block decays]{#q-decays}
+For an absorbing chain, $Q^n \to 0$ entrywise as $n \to \infty$.
+:::
+
+:::proof
+**Proof sketch.** From each transient state $i$ some absorbing state is reachable within $n_i$ steps with probability $\varepsilon_i > 0$. Put $n_0 = \max_i n_i$ and $\varepsilon = \min_i \varepsilon_i > 0$, both over the finitely many transient states. From any transient state the probability of *not* being absorbed within $n_0$ steps is at most $1 - \varepsilon$, and this applies afresh over each successive block of $n_0$ steps, so the probability of surviving $kn_0$ steps is at most $(1-\varepsilon)^k \to 0$. Entries of $Q^n$ are bounded by that and are monotone, so $Q^n \to 0$. What the argument glosses is the formal use of the strong Markov property to restart at each block boundary.
+:::
+
+:::theorem[The fundamental matrix]{#fundamental-matrix}
+For an absorbing chain with transient block $Q$, the matrix $I - Q$ is invertible, and
+
+$$N := (I-Q)^{-1} = \sum_{n=0}^{\infty} Q^n .$$
+
+Moreover $N_{ij}$ is the expected number of visits to transient state $j$ before absorption, starting from transient state $i$ (counting time $0$).
+:::
+
+:::proof
+**Invertibility.** If $(I-Q)v = 0$ then $Qv = v$, so $Q^n v = v$ for every $n$ by induction; letting $n \to \infty$ with Lemma *The transient block decays* gives $v = 0$. The null space is trivial, so $I-Q$ is invertible.
+
+**The series.** From the telescoping identity $(I-Q)(I + Q + \cdots + Q^{n-1}) = I - Q^n$,
+
+$$\sum_{k=0}^{n-1} Q^k = (I-Q)^{-1}(I - Q^n) \longrightarrow (I-Q)^{-1} = N,$$
+
+since $Q^n \to 0$; in particular the series converges.
+
+**The interpretation.** Let $V_j = \sum_{n\ge0}\mathbf 1\{X_n = j\}$ count visits to the transient state $j$. Exchanging expectation and a sum of non-negative terms, as in the proof of Theorem *The sum-of-return-probabilities criterion*,
+
+$$E[V_j \mid X_0 = i] = \sum_{n=0}^{\infty} P(X_n = j \mid X_0 = i) = \sum_{n=0}^{\infty} (Q^n)_{ij} = N_{ij},$$
+
+where $P(X_n = j \mid X_0 = i) = (Q^n)_{ij}$ because a path between transient states stays transient throughout: it cannot pass through an absorbing state and come back.
+:::
+
+:::theorem[Expected time to absorption]{#absorption-time}
+Let $T$ be the number of steps until absorption. Starting from transient state $i$,
+
+$$t_i := E[T \mid X_0 = i] = \sum_{j} N_{ij}, \qquad \text{that is} \qquad t = N\mathbf 1 .$$
+:::
+
+:::proof
+Until absorption the chain occupies transient states, so $T = \sum_{j \text{ transient}} V_j$. Taking expectations and using Theorem *The fundamental matrix*,
+
+$$E[T \mid X_0 = i] = \sum_j E[V_j \mid X_0 = i] = \sum_j N_{ij},$$
+
+which is the $i$-th entry of $N\mathbf 1$.
+:::
+
+:::theorem[Absorption probabilities]{#absorption-probabilities}
+Let $B_{ik}$ be the probability that the chain, started at transient state $i$, is eventually absorbed in absorbing state $k$. Then
+
+$$B = NR .$$
+:::
+
+:::proof
+Absorption into $k$ happens at some step $n+1$, from a transient state $j$ occupied at step $n$. Partitioning on $(n,j)$ and using the Markov property,
+
+$$B_{ik} = \sum_{n=0}^{\infty}\sum_{j \text{ transient}} P(X_n = j \mid X_0 = i)\, p_{jk} = \sum_{j}\left(\sum_{n=0}^{\infty}(Q^n)_{ij}\right) R_{jk} = \sum_j N_{ij}R_{jk},$$
+
+the interchange being legitimate because all terms are non-negative. The right side is $(NR)_{ik}$.
+:::
+
+Now the classical application, worked from those matrices.
+
+:::example[Gambler's ruin, end to end]{#gamblers-ruin}
+A gambler starts with $i$ chips and makes repeated independent bets, winning a chip with probability $p = 0.4$ and losing one with probability $q = 0.6$, stopping at $0$ (ruin) or $N = 5$ (target). For each starting fortune $i = 1,2,3,4$ find the fundamental matrix, the expected number of bets, and the probability of reaching $5$ before $0$.
+:::
+
+:::solution
+The state is the current fortune, $S = \{0,\ldots,5\}$, a birth–death chain with $0$ and $5$ absorbing. Ordering the states $1,2,3,4$ then $0,5$,
+
+$$Q = \begin{bmatrix} 0 & 0.4 & 0 & 0 \\ 0.6 & 0 & 0.4 & 0 \\ 0 & 0.6 & 0 & 0.4 \\ 0 & 0 & 0.6 & 0 \end{bmatrix}, \qquad R = \begin{bmatrix} 0.6 & 0 \\ 0 & 0 \\ 0 & 0 \\ 0 & 0.4\end{bmatrix},$$
+
+the columns of $R$ being absorption at $0$ and at $5$.
+
+**The fundamental matrix.** Inverting the tridiagonal $I - Q$, whose determinant is $211/625$, gives exactly
+
+$$N = (I-Q)^{-1} = \frac{1}{211}\begin{bmatrix} 325 & 190 & 100 & 40 \\ 285 & 475 & 250 & 100 \\ 225 & 375 & 475 & 190 \\ 135 & 225 & 285 & 325\end{bmatrix} \approx \begin{bmatrix} 1.540 & 0.900 & 0.474 & 0.190 \\ 1.351 & 2.251 & 1.185 & 0.474 \\ 1.066 & 1.777 & 2.251 & 0.900 \\ 0.640 & 1.066 & 1.351 & 1.540\end{bmatrix}.$$
+
+Entry $N_{11} \approx 1.540$ says a gambler starting with one chip holds one chip on about $1.54$ occasions before the game ends, counting the start; $N_{14} \approx 0.190$ says she rarely reaches four.
+
+**Expected duration.** By Theorem *Expected time to absorption*, $t = N\mathbf 1$ is the row sums:
+
+$$t_1 = \frac{655}{211} \approx 3.104, \quad t_2 = \frac{1110}{211} \approx 5.261, \quad t_3 = \frac{1265}{211} \approx 5.995, \quad t_4 = \frac{970}{211} \approx 4.597 .$$
+
+The longest games start in the middle, furthest from absorption in either direction.
+
+**Absorption probabilities.** By Theorem *Absorption probabilities*, $B = NR$; since $R$ has only $0.6$ in row $1$ of its first column and $0.4$ in row $4$ of its second, $B_{i,\text{ruin}} = 0.6\,N_{i1}$ and $B_{i,\text{win}} = 0.4\,N_{i4}$:
+
+$$B = \frac{1}{211}\begin{bmatrix} 195 & 16 \\ 171 & 40 \\ 135 & 76 \\ 81 & 130\end{bmatrix} \approx \begin{bmatrix} 0.924 & 0.076 \\ 0.810 & 0.190 \\ 0.640 & 0.360 \\ 0.384 & 0.616 \end{bmatrix}.$$
+
+So from $2$ chips the chance of reaching $5$ before $0$ is only $40/211 \approx 0.1896$, though she needs to gain just $3$ and can afford to lose $2$. Each row sums to $1$: absorption is certain.
+
+**Cross-check.** For $p \ne q$, with $r = q/p = 1.5$, the classical formula for reaching $N$ before $0$ from $i$ is
+
+$$P_i = \frac{1 - r^i}{1 - r^N} .$$
+
+With $i = 2$, $N = 5$: $P_2 = \dfrac{1 - 2.25}{1 - 7.59375} = \dfrac{40}{211} \approx 0.1896$ ✓, matching $B$ exactly.
+:::
+
+:::figure[Probability of reaching $5$ before $0$ in gambler's ruin, as a function of the starting fortune. With a fair game ($p = 0.5$, dashed) the probability is exactly $i/5$, a straight line. With $p = 0.4$ (solid, with points) the curve sags far below it: from $2$ chips the chance is $40/211 \approx 0.19$ rather than $0.4$. A small per-bet disadvantage compounds into a large disadvantage over the whole game.]{#ruin-figure}
+{
+  "type": "plot",
+  "x": [-0.6, 7.6],
+  "y": [-0.1, 1.28],
+  "xTicks": 1,
+  "yTicks": 0.2,
+  "xLabel": "starting fortune i",
+  "yLabel": "P(reach 5 before 0)",
+  "marks": [
+    {"kind": "path", "points": [[0, 0], [1, 0.2], [2, 0.4], [3, 0.6], [4, 0.8], [5, 1]], "tone": "muted", "dashed": true},
+    {"kind": "path", "points": [[0, 0], [1, 0.0758], [2, 0.1896], [3, 0.3602], [4, 0.6161], [5, 1]], "tone": "result"},
+    {"kind": "point", "at": [1, 0.0758], "tone": "result"},
+    {"kind": "point", "at": [2, 0.1896], "tone": "result"},
+    {"kind": "point", "at": [3, 0.3602], "tone": "result"},
+    {"kind": "point", "at": [4, 0.6161], "tone": "result"},
+    {"kind": "text", "at": [6.4, 0.44], "text": "p = 0.4", "leaderTo": [4, 0.6161]},
+    {"kind": "text", "at": [2.1, 0.86], "text": "fair game, p = 0.5", "leaderTo": [3, 0.6]}
+  ]
+}
+:::
+
+:::example[The fair game, for contrast]{#fair-ruin}
+Repeat the calculation with $p = q = 0.5$, $N = 5$.
+:::
+
+:::solution
+Now $Q$ has the same tridiagonal pattern with $0.5$ off the diagonal, and
+
+$$N = \frac{1}{5}\begin{bmatrix} 8 & 6 & 4 & 2 \\ 6 & 12 & 8 & 4 \\ 4 & 8 & 12 & 6 \\ 2 & 4 & 6 & 8 \end{bmatrix}, \qquad t = N\mathbf 1 = (4,\ 6,\ 6,\ 4), \qquad B_{i,\text{win}} = \tfrac{i}{5}.$$
+
+So $t_i = i(N-i)$ and $P_i = i/N$, the familiar fair-game answers. Against Example *Gambler's ruin, end to end*: shifting $p$ from $0.5$ to $0.4$ cuts the chance of success from $2$ chips from $0.4$ to $0.19$, and shortens the expected game from $6$ bets to $5.3$ — it ends sooner because it ends badly sooner.
+:::
+
+:::pitfall[Order the states before you read off $Q$ and $R$]
+The formulas $N = (I-Q)^{-1}$, $t = N\mathbf 1$ and $B = NR$ assume canonical form, transient states first. Take $Q$ in the natural ordering $0,1,\ldots,5$ of the gambler's fortunes and you get a $6\times6$ matrix with $I-Q$ singular, and nothing works. Relabel first, and read the answer back through the relabelling.
+:::
+
+## Hitting times and expected return times
+
+<!-- section: hitting-times -->
+
+Absorption answers "where does it stop?". The same technique answers "how long until it first reaches a given state?" for any chain, absorbing or not.
+
+:::definition[Hitting time]{#hitting-time}
+For a set $A \subseteq S$, the **hitting time** of $A$ is
+
+$$T_A = \min\{ n \ge 0 : X_n \in A\},$$
+
+with $T_A = \infty$ if the chain never enters $A$. For a single state we write $T_j$, and the **first return time** to $j$ is $\min\{n \ge 1: X_n = j\}$, which differs from $T_j$ only in that it ignores $n = 0$.
+:::
+
+:::theorem[First-step equations for hitting times]{#first-step-equations}
+Let $k_i = E[T_A \mid X_0 = i]$. Then $k_i = 0$ for $i \in A$, and for $i \notin A$,
+
+$$k_i = 1 + \sum_{j \in S} p_{ij}\, k_j .$$
+
+If the chain is finite and $A$ is reachable from every state, this system has a unique finite solution.
+:::
+
+:::proof
+For $i \in A$ the chain is already in $A$ at time $0$, so $k_i = 0$. For $i \notin A$ at least one step is needed; condition on the first move:
+
+$$E[T_A \mid X_0 = i] = \sum_{j} p_{ij}\, E[T_A \mid X_1 = j, X_0 = i].$$
+
+By the Markov property and time-homogeneity, given $X_1 = j$ the remaining time is the hitting time of a chain started at $j$, with one step already elapsed: $E[T_A \mid X_1 = j, X_0 = i] = 1 + k_j$. Substituting,
+
+$$k_i = \sum_j p_{ij}(1 + k_j) = \sum_j p_{ij} + \sum_j p_{ij}k_j = 1 + \sum_j p_{ij}k_j,$$
+
+using the row-sum property for the first term.
+:::
+
+:::intuition
+"Take one step, then you are facing the same problem from wherever you landed." Every calculation in this section is that sentence turned into a linear equation. The $+1$ counts the step you just took; the sum averages the remaining cost over where the step put you.
+:::
+
+The same one-step argument with a payoff instead of a cost gives absorption probabilities without the matrix machinery.
+
+:::proposition[First-step equations for hitting probabilities]{#hitting-probabilities}
+Let $A$ and $B$ be disjoint sets of states and let $h_i = P(\text{the chain reaches } A \text{ before } B \mid X_0 = i)$. Then $h_i = 1$ for $i \in A$, $h_i = 0$ for $i \in B$, and for $i \notin A \cup B$,
+
+$$h_i = \sum_{j \in S} p_{ij}\, h_j .$$
+:::
+
+:::proof
+The boundary values are immediate. For $i \notin A\cup B$, partition on the first step: by the law of total probability and the Markov property, the probability from $i$ is the $p_{ij}$-weighted average of the same probability from $j$. No $+1$ appears, because we are accumulating probability rather than counting time.
+:::
+
+:::example[Hitting times in the weather chain]{#weather-hitting}
+In the weather chain, find the expected number of days until the first rainy day, starting from a sunny day and from a cloudy day; then the probability that, starting from Sunny, the first non-sunny day is rainy rather than cloudy.
+:::
+
+:::solution
+Take $A = \{\text{Rainy}\}$, so $k_3 = 0$, and write $k_1, k_2$ for the hitting times from Sunny and Cloudy. Theorem *First-step equations for hitting times* gives
+
+$$k_1 = 1 + 0.7k_1 + 0.2k_2, \qquad k_2 = 1 + 0.3k_1 + 0.6k_2,$$
+
+that is $0.3k_1 - 0.2k_2 = 1$ and $-0.3k_1 + 0.4k_2 = 1$. Adding, $0.2k_2 = 2$, so $k_2 = 10$; then $0.3k_1 = 3$, so $k_1 = 10$ too.
+
+So from either a sunny or a cloudy day the model expects $10$ days until rain. The two agree because Sunny and Cloudy both send probability $0.1$ to Rainy in one step, and the route between them does not change the total wait.
+
+For the second question take $A = \{\text{Rainy}\}$, $B = \{\text{Cloudy}\}$ in Proposition *First-step equations for hitting probabilities*, so $h_3 = 1$ and $h_2 = 0$:
+
+$$h_1 = 0.7h_1 + 0.2(0) + 0.1(1) \implies 0.3h_1 = 0.1 \implies h_1 = \tfrac13 .$$
+
+So a sunny spell ends in rain one time in three and in cloud two times in three — the ratio $0.1 : 0.2$ of the two ways of leaving Sunny, as it must be, since the only alternative to leaving is staying.
+:::
+
+The last result of the chapter ties hitting times back to $\pi$, and gives it its most concrete meaning.
+
+:::theorem[Expected return time is the reciprocal of the stationary probability]{#return-time}
+Let $(X_n)$ be an irreducible positive recurrent Markov chain with stationary distribution $\pi$, and let $m_j = E[T_j \mid X_0 = j]$ be the mean first return time to $j$ as in Definition *Positive and null recurrence*. Then
+
+$$m_j = \frac{1}{\pi_j} \qquad \text{for every state } j .$$
+:::
+
+:::proof
+**Proof sketch.** By Corollary *Long-run fraction of time* the long-run fraction of steps at $j$ is $\pi_j$. Now split the trajectory at successive visits to $j$: by the Markov property the excursions between consecutive visits are i.i.d. with mean length $m_j$, so $n$ steps contain about $n/m_j$ of them and hence about $n/m_j$ visits, a long-run visit fraction of $1/m_j$. Equating the two expressions for the same fraction gives $\pi_j = 1/m_j$.
+
+The step needing machinery beyond this course is the renewal-reward argument turning "about $n/m_j$ excursions" into an almost-sure limit, where the strong law is applied to the i.i.d. excursion lengths.
+:::
+
+:::example[Return times in the weather chain]{#weather-return}
+Use $\pi = (0.5, 0.3, 0.2)$ to find the mean return time to each state, and verify two of them from first-step equations.
+:::
+
+:::solution
+By Theorem *Expected return time is the reciprocal of the stationary probability*,
+
+$$m_{\text{Sunny}} = \frac{1}{0.5} = 2, \qquad m_{\text{Cloudy}} = \frac{1}{0.3} = \frac{10}{3} \approx 3.33, \qquad m_{\text{Rainy}} = \frac{1}{0.2} = 5 .$$
+
+Rain occurs on one day in five, so rainy days average five days apart — a long-run frequency converted into a waiting time.
+
+**Direct verification for Rainy.** Conditioning on the first step out of Rainy,
+
+$$m_{\text{Rainy}} = 1 + 0.3\,k_1 + 0.1\,k_2 + 0.6\,(0 \text{ extra, already at Rainy}),$$
+
+where $k_1 = k_2 = 10$ come from Example *Hitting times in the weather chain*. The last term adds nothing beyond the step already counted, since $p_{33} = 0.6$ returns the chain to Rainy at once. Hence
+
+$$m_{\text{Rainy}} = 1 + 0.3(10) + 0.1(10) = 1 + 3 + 1 = 5 \ \checkmark,$$
+
+matching $1/\pi_3 = 5$ exactly.
+
+**And for Sunny.** The hitting times of $\{\text{Sunny}\}$ solve $g_2 = 1 + 0.6g_2 + 0.1g_3$ and $g_3 = 1 + 0.1g_2 + 0.6g_3$, giving $g_2 = g_3 = 10/3$, so
+
+$$m_{\text{Sunny}} = 1 + 0.2\left(\tfrac{10}{3}\right) + 0.1\left(\tfrac{10}{3}\right) = 1 + \tfrac{2}{3} + \tfrac13 = 2 \ \checkmark = \frac{1}{\pi_1}.$$
+:::
+
+:::pitfall[The hitting time of $j$ from $j$ is zero, not $m_j$]
+Definition *Hitting time* sets $T_j = \min\{n \ge 0 : X_n = j\}$, so starting at $j$ gives $T_j = 0$. The mean *return* time $m_j$ requires $n \ge 1$ and is a different number. Setting $k_j = 0$ and solving the first-step equations therefore returns $m_j = 0$. Compute the hitting times from every *other* state instead, and assemble $m_j = 1 + \sum_{i \ne j} p_{ji}k_i$, as in Example *Return times in the weather chain*.
+:::
+
+:::summary[The chapter in one page]
+- A **Markov chain** depends on the past only through the present, and is assumed **time-homogeneous**, so one stochastic matrix $P$ describes it; distributions evolve by $\mu_n = \mu_0P^n$.
+- **Chapman–Kolmogorov** gives $P^{(m+n)} = P^{(m)}P^{(n)}$, hence $P^{(n)} = P^n$. The eigenvalue $1$ is dominant; the sub-dominant eigenvalue sets the rate at which powers settle.
+- **Communication** is an equivalence relation partitioning states into classes; **irreducible** means one class. Period and recurrence are class properties, and $i$ is recurrent exactly when $\sum_n p^{(n)}_{ii} = \infty$. Finite irreducible chains are positive recurrent.
+- A **stationary distribution** solves $\pi P = \pi$ with $\sum_i\pi_i = 1$, and is unique and strictly positive for a finite irreducible chain.
+- **Convergence** to $\pi$ needs irreducibility *and* aperiodicity: $\left[\begin{smallmatrix}0&1\\1&0\end{smallmatrix}\right]$ has a unique $\pi$ but $P^n$ oscillates forever. Time averages converge regardless.
+- **Detailed balance** $\pi_ip_{ij}=\pi_jp_{ji}$ implies stationarity but is strictly stronger; birth–death chains are reversible, cyclic chains generally are not.
+- **Absorbing chains**: in canonical form $\begin{bmatrix}Q&R\\0&I\end{bmatrix}$, the fundamental matrix $N=(I-Q)^{-1}$ gives expected visits, $t=N\mathbf 1$ the expected time to absorption, and $B=NR$ the absorption probabilities.
+- **Hitting times** solve $k_i = 1 + \sum_j p_{ij}k_j$; the mean return time to $j$ is $1/\pi_j$.
+:::
+
+## Common Mistakes
+
+- **Multiplying on the wrong side.** Distributions are row vectors: $\mu_{n+1} = \mu_n P$. The right eigenvector of $P$ for $\lambda = 1$ is the uninformative $\mathbf 1$.
+- **Forgetting the normalisation.** $\pi P = \pi$ is homogeneous and rank-deficient by construction, so without $\sum_i \pi_i = 1$ you have $\pi$ only up to a scalar — and $(2, 1.2, 0.8)$ is not a distribution.
+- **Assuming convergence without aperiodicity.** Irreducibility alone gives a unique $\pi$ but not $P^n \to \mathbf 1\pi$. A single $p_{ii} > 0$ in an irreducible finite chain settles aperiodicity at a glance.
+- **Treating $p^{(n)}_{ij}$ as a first-passage probability.** It counts every path of length $n$, including those that reach $j$ early and return. First passage needs the first-step equations, not a matrix power.
+- **Assuming detailed balance.** Sufficient for stationarity, never necessary. A chain with circulation has a stationary distribution the detailed balance equations cannot find, and an inconsistent subset of them yields a confident wrong answer.
+- **Using $N = (I-Q)^{-1}$ without canonical form.** Transient states first; $Q$ is the transient-to-transient block only. Including absorbing states in $Q$ makes $I - Q$ singular.
+- **Confusing hitting time with return time.** $T_j$ started at $j$ is $0$; the mean return time is $1/\pi_j$, which for the weather chain's rainy state is $5$.
+- **Applying the finite theory to an infinite chain.** Positive recurrence, existence of $\pi$ and convergence all used finiteness. The symmetric random walk on $\mathbb{Z}$ is irreducible, aperiodic and recurrent, yet has no stationary distribution at all.

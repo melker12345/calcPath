@@ -1,0 +1,886 @@
+---
+title: Inequalities and Limit Theorems
+---
+
+# Inequalities and Limit Theorems
+
+This is where the subject pays out. Everything built so far — sample spaces, random variables, expectation, the named families — describes what happens on one draw, or on finitely many. The questions people actually bring to probability are about the long run: does the average of a long sequence settle down, and if so on what, and how fast, and with what shape around the limit? Those questions have answers, the answers are theorems, and the theorems are the reason a casino stays solvent, a poll of a thousand people says anything about a country of fifty million, and a physicist can quote an error bar.
+
+The chapter has two halves that look unrelated and are not. The first half is about **inequalities**: crude, assumption-free bounds on how much probability can sit far from the mean. Markov's inequality is almost embarrassingly simple, and Chebyshev's, Cantelli's and the whole Chernoff family are got from it by feeding it a cleverer non-negative variable. These bounds are not sharp for any particular distribution you care about — we will exhibit, for each one, a distribution that attains it with equality, which is exactly what proves they cannot be improved without extra hypotheses, and therefore exactly why they are so loose on a normal.
+
+The second half is about **limits**, and it needs the first half as fuel. A sequence of random variables is not a sequence of numbers, so "converges" has to be defined, and there are four genuinely different definitions — in distribution, in probability, almost surely, and in $L^2$. We prove the implications that hold between them and give counterexamples showing that every converse fails. With that vocabulary in place, the two headline theorems become sayable: the **law of large numbers**, in a weak form (convergence in probability, provable in four lines from Chebyshev) and a strong form (convergence almost surely, which is a genuinely different and much stronger claim), and the **central limit theorem**, which says that once you magnify the error of the law of large numbers by exactly $\sqrt{n}$, a bell curve appears no matter what you started with.
+
+A word on the relationship to the statistics course. The chapter *Sampling Distributions* proves Markov, Chebyshev and the weak law, and sketches the central limit theorem, because it needs them immediately for the sampling distribution of $\bar{X}$. That is the applied statement: those results specialised to one estimator, with the constants that a data analyst needs. This chapter is the general theory. The notation agrees deliberately — $\bar{X}_n$ for the running mean, $\varepsilon$ for a tolerance, $\xrightarrow{d}$ for convergence in distribution — and nothing here contradicts anything there. What is here that is not there: one-sided bounds, exponential bounds, the modes of convergence and their counterexamples, an honest proof of a strong law, the Berry–Esseen rate, and the delta method.
+
+## Markov, Chebyshev, and the price of assuming nothing
+
+<!-- section: inequalities -->
+
+Suppose you know only that a random variable is non-negative and has mean $3$. How much probability can sit above $100$? Not much, and you can see why without any calculation: if a mass $p$ sits at or above $100$, it contributes at least $100p$ to the mean all by itself, and nothing elsewhere can contribute negatively, so $100p \le 3$. That argument is the whole content of Markov's inequality, and the formal proof below is the same sentence written with an indicator.
+
+:::theorem[Markov's inequality]{#markov}
+Let $Y$ be a **non-negative** random variable with finite mean. Then for every $a > 0$,
+
+$$P(Y \ge a) \ \le\ \frac{E(Y)}{a}.$$
+:::
+
+:::proof
+Consider the indicator $\mathbf{1}\{Y \ge a\}$, which equals $1$ on the event $\{Y \ge a\}$ and $0$ elsewhere. We claim the pointwise inequality
+
+$$Y \ \ge\ a\,\mathbf{1}\{Y \ge a\}.$$
+
+Check it outcome by outcome. On $\{Y \ge a\}$ the right-hand side is $a$, and $Y \ge a$ there by definition. Off that event the right-hand side is $0$, and $Y \ge 0$ by hypothesis. So the inequality holds everywhere, and this is the only place non-negativity is used — but it is used.
+
+Expectation is monotone: if $U \ge V$ pointwise then $E(U) \ge E(V)$. Applying it,
+
+$$E(Y) \ \ge\ a\,E\!\left[\mathbf{1}\{Y \ge a\}\right] \ =\ a\,P(Y \ge a),$$
+
+using the fact that the expectation of an indicator is the probability of its event. Divide by $a > 0$. $\blacksquare$
+:::
+
+:::intuition
+A non-negative variable cannot hide mass far from zero. Every unit of probability you place at height $a$ costs you $a$ of mean, and your mean budget is $E(Y)$. Markov's inequality is the receipt.
+:::
+
+Two hypotheses deserve a moment. **Non-negativity** is essential and not a technicality: let $X$ equal $-1000$ with probability $0.99$ and $+1$ with probability $0.01$. Then $E(X) = -989.99$, and $P(X \ge 1) = 0.01$, while $E(X)/1$ is negative. The inequality is not merely loose, it is false. **Finiteness of the mean** is needed for the right-hand side to say anything; if $E(Y) = \infty$ the bound is true and vacuous.
+
+The inequality is also, in a precise sense, the best possible statement about non-negative variables of a given mean.
+
+:::example[A distribution attaining Markov's bound]
+Fix $a > 0$ and $p \in (0,1]$. Exhibit a non-negative random variable for which $P(Y \ge a) = E(Y)/a$ exactly.
+:::
+
+:::solution
+Let $Y$ take the value $a$ with probability $p$ and the value $0$ with probability $1-p$. Then $Y \ge 0$, and
+
+$$E(Y) = a p + 0\cdot(1-p) = ap, \qquad P(Y \ge a) = p = \frac{ap}{a} = \frac{E(Y)}{a}.$$
+
+Equality, for every $a$ and every $p$. So no bound of the form $P(Y\ge a) \le c\,E(Y)/a$ with $c < 1$ can be true for all non-negative $Y$: this two-point family already forces $c \ge 1$.
+
+Sanity check: with $a = 100$ and $p = 0.03$ the mean is $3$ and exactly $3\%$ of the mass sits at $100$, which is the opening paragraph's example run at its extreme.
+:::
+
+That example is the key to understanding every bound in this chapter. Markov's inequality is *tight*, meaning it cannot be improved as a statement about all non-negative variables — and it is *weak*, meaning that for any specific well-behaved variable it is far from the truth. Those two facts are the same fact. The extremal distribution is a spike at $a$ and nothing in between, which is nothing like an exponential or a normal; a bound forced to cover the spike has no choice but to be generous to everything else.
+
+### Chebyshev's inequality
+
+Markov's inequality applies to non-negative variables, and most variables are not. The repair is to apply it not to $X$ but to a non-negative *function* of $X$ that is large exactly when $X$ is far from where we expect it. The squared deviation is the first such function anyone tries, and it produces Chebyshev.
+
+:::theorem[Chebyshev's inequality]{#chebyshev}
+Let $X$ have finite mean $\mu$ and finite variance $\sigma^2$. Then for every $k > 0$,
+
+$$P\!\left(|X - \mu| \ge k\right) \ \le\ \frac{\sigma^2}{k^2}.$$
+:::
+
+:::proof
+The variable $Y = (X-\mu)^2$ is non-negative and has $E(Y) = \operatorname{Var}(X) = \sigma^2 < \infty$, so Markov's inequality applies to it. Take the threshold $a = k^2 > 0$. The events
+
+$$\{|X-\mu| \ge k\} \quad\text{and}\quad \{(X-\mu)^2 \ge k^2\}$$
+
+are the *same event* — squaring is strictly increasing on $[0,\infty)$, so $|X-\mu| \ge k$ if and only if $(X-\mu)^2 \ge k^2$ — and therefore have the same probability. Hence
+
+$$P\!\left(|X-\mu| \ge k\right) \ =\ P\!\left((X-\mu)^2 \ge k^2\right) \ \le\ \frac{E\!\left[(X-\mu)^2\right]}{k^2} \ =\ \frac{\sigma^2}{k^2}. \qquad\blacksquare$$
+:::
+
+:::corollary[Chebyshev in standard deviations]{#chebyshev-sigma}
+If $\sigma > 0$, then for every $c > 0$,
+
+$$P\!\left(|X-\mu| \ge c\,\sigma\right) \ \le\ \frac{1}{c^2}.$$
+:::
+
+:::proof
+Put $k = c\sigma$ in Chebyshev's inequality: the bound is $\sigma^2/(c\sigma)^2 = 1/c^2$. $\blacksquare$
+:::
+
+This is the form worth memorising, because it is scale-free. At most $1/4$ of *any* distribution with finite variance lies two or more standard deviations from its mean; at most $1/9 \approx 11.1\%$ lies three or more; at most $1/16 = 6.25\%$ lies four or more. No hypothesis about shape, symmetry, unimodality or anything else is used. For $c \le 1$ the bound exceeds $1$ and says nothing, which is correct — a variable can easily be more than one standard deviation from its mean with probability $1$.
+
+And again the bound is attained.
+
+:::example[A distribution attaining Chebyshev's bound]
+For a given $c \ge 1$, construct a random variable with $P(|X-\mu| \ge c\sigma) = 1/c^2$ exactly.
+:::
+
+:::solution
+Let $X$ take the values $-1$, $0$ and $+1$ with probabilities $\frac{1}{2c^2}$, $1 - \frac{1}{c^2}$ and $\frac{1}{2c^2}$. (Since $c \ge 1$ these are legitimate probabilities.) By symmetry $\mu = 0$, and
+
+$$\sigma^2 = E(X^2) = 1\cdot\frac{1}{2c^2} + 0 + 1\cdot\frac{1}{2c^2} = \frac{1}{c^2}, \qquad \sigma = \frac{1}{c}.$$
+
+Then $c\sigma = 1$, so the event $\{|X - \mu| \ge c\sigma\}$ is $\{|X| \ge 1\} = \{X = \pm 1\}$, whose probability is $1/c^2$ — exactly the bound.
+
+Take $c = 3$ for a concrete instance: $X$ is $\pm 1$ with probability $1/18$ each and $0$ with probability $8/9$; then $\sigma = 1/3$, three standard deviations is $1$, and the chance of being three or more standard deviations out is $1/9$, which is what Chebyshev allows and not a hair less.
+:::
+
+:::figure[Chebyshev's guarantee $1/c^2$ against the truth for a normal distribution, $P(|Z| \ge c) = 2(1-\Phi(c))$. At $c=2$ the bound allows $0.25$ and the truth is $0.0455$; at $c=3$ it allows $0.1111$ against $0.0027$; at $c=4$ it allows $0.0625$ against $0.000063$, a factor of nearly a thousand. The bound is not wrong, and it is not improvable without assumptions — it is simply paying for a three-point distribution it will never meet.]{#chebyshev-vs-normal}
+{
+  "type": "plot",
+  "x": [0.4, 4.3],
+  "y": [-0.05, 1.12],
+  "xTicks": 0.5,
+  "yTicks": 0.2,
+  "xLabel": "c, deviation in standard deviations",
+  "yLabel": "probability",
+  "marks": [
+    { "kind": "function", "fn": "1/x^2", "tone": "accent" },
+    { "kind": "path", "tone": "result", "dashed": true, "points": [[0.5, 0.61708], [0.625, 0.53197], [0.75, 0.45325], [0.875, 0.38157], [1.0, 0.31731], [1.125, 0.26059], [1.25, 0.2113], [1.375, 0.16913], [1.5, 0.13361], [1.625, 0.10416], [1.75, 0.08012], [1.875, 0.06079], [2.0, 0.0455], [2.125, 0.03359], [2.25, 0.02445], [2.375, 0.01755], [2.5, 0.01242], [2.625, 0.00866], [2.75, 0.00596], [2.875, 0.00404], [3.0, 0.0027], [3.125, 0.00178], [3.25, 0.00115], [3.375, 0.00074], [3.5, 0.00047], [3.625, 0.00029], [3.75, 0.00018], [3.875, 0.00011], [4.0, 0.00006]] },
+    { "kind": "point", "at": [2, 0.25], "tone": "accent" },
+    { "kind": "point", "at": [2, 0.0455], "tone": "result" },
+    { "kind": "text", "at": [2.3, 0.90], "text": "Chebyshev bound 1/c²", "tone": "accent", "leaderTo": [1.4, 0.52] },
+    { "kind": "text", "at": [3.1, 0.34], "text": "true normal tail", "tone": "result", "leaderTo": [2.5, 0.015] },
+    { "kind": "text", "at": [3.1, 0.62], "text": "0.25 vs 0.0455", "leaderTo": [2.05, 0.15] }
+  ]
+}
+:::
+
+### The one-sided bound: Cantelli's inequality
+
+Chebyshev bounds a two-sided event. Very often the question is one-sided — how likely is the yield to come in *at least* $t$ below target, how likely is the queue to run *at least* $t$ above capacity — and simply halving Chebyshev's bound is not legitimate, because nothing in the hypotheses forces symmetry. The correct one-sided statement is due to Cantelli, and it is strictly better than $\sigma^2/t^2$, not merely half of it.
+
+:::theorem[Cantelli's inequality (the one-sided Chebyshev)]{#cantelli}
+Let $X$ have finite mean $\mu$ and finite variance $\sigma^2$. Then for every $t > 0$,
+
+$$P(X - \mu \ge t) \ \le\ \frac{\sigma^2}{\sigma^2 + t^2},$$
+
+and symmetrically $P(X - \mu \le -t) \le \sigma^2/(\sigma^2+t^2)$.
+:::
+
+:::proof
+Write $Y = X - \mu$, so $E(Y) = 0$ and $\operatorname{Var}(Y) = E(Y^2) = \sigma^2$. The trick is to shift before squaring: for any constant $u > 0$, the event $\{Y \ge t\}$ implies $\{Y + u \ge t+u\}$, and since $t + u > 0$ the latter implies $\{(Y+u)^2 \ge (t+u)^2\}$. Probabilities respect implication, so by Markov's inequality applied to the non-negative variable $(Y+u)^2$,
+
+$$P(Y \ge t) \ \le\ P\!\left((Y+u)^2 \ge (t+u)^2\right) \ \le\ \frac{E\!\left[(Y+u)^2\right]}{(t+u)^2} = \frac{\sigma^2 + u^2}{(t+u)^2},$$
+
+where we expanded $E[(Y+u)^2] = E(Y^2) + 2uE(Y) + u^2 = \sigma^2 + u^2$ using $E(Y)=0$.
+
+This holds for *every* $u > 0$, so we may take the best one. Minimising $g(u) = (\sigma^2+u^2)/(t+u)^2$, the derivative is
+
+$$g'(u) = \frac{2u(t+u)^2 - 2(t+u)(\sigma^2+u^2)}{(t+u)^4} = \frac{2\left[u(t+u) - (\sigma^2+u^2)\right]}{(t+u)^3} = \frac{2\left(ut - \sigma^2\right)}{(t+u)^3}.$$
+
+The numerator is negative for $u < \sigma^2/t$ and positive for $u > \sigma^2/t$, so $g$ decreases then increases and the minimum is at $u^{*} = \sigma^2/t$. Substituting,
+
+$$g(u^{*}) = \frac{\sigma^2 + \sigma^4/t^2}{\left(t + \sigma^2/t\right)^2} = \frac{\sigma^2\left(t^2+\sigma^2\right)/t^2}{\left(t^2+\sigma^2\right)^2/t^2} = \frac{\sigma^2}{\sigma^2+t^2}.$$
+
+The second statement follows by applying the first to $-X$, which has mean $-\mu$ and the same variance. $\blacksquare$
+:::
+
+:::remark
+The free parameter $u$ is the engine of the proof, and the same device — introduce a parameter, bound, then optimise over it — is exactly what will produce the Chernoff bounds in the next section, with $u$ replaced by a parameter inside an exponential. It is worth recognising the move now, because it is the single most productive technique in this chapter.
+:::
+
+Notice how much is gained. For a deviation of $t = 2\sigma$, Chebyshev's two-sided bound is $1/4$ and gives no one-sided information at all without symmetry; Cantelli gives $\sigma^2/(\sigma^2+4\sigma^2) = 1/5 = 0.2$ on each side separately. And this too is attained.
+
+:::example[A distribution attaining Cantelli's bound]
+Take $\sigma = 1$ and $t = 2$, so Cantelli's bound is $1/(1+4) = 0.2$. Find a random variable with mean $0$ and variance $1$ for which $P(X \ge 2) = 0.2$ exactly.
+:::
+
+:::solution
+Try a two-point distribution: $X = 2$ with probability $p$ and $X = -q$ with probability $1-p$, for some $q>0$. Mean zero forces $2p = (1-p)q$. Guess $p = 0.2$; then $q = 2(0.2)/0.8 = 0.5$.
+
+Check the variance:
+
+$$E(X^2) = 0.2 \times 4 + 0.8 \times 0.25 = 0.8 + 0.2 = 1,$$
+
+and since the mean is $0.2(2) + 0.8(-0.5) = 0.4 - 0.4 = 0$, the variance is $1$ as required. Finally $P(X \ge 2) = 0.2$, which equals the bound exactly.
+
+The general extremal distribution is the same shape: $X = t$ with probability $p = \sigma^2/(\sigma^2+t^2)$ and $X = -pt/(1-p)$ otherwise. Two atoms, one of them far out on the side you are asking about, and everything else piled just barely on the other side of the mean.
+:::
+
+:::pitfall
+Do not "halve Chebyshev" to get a one-sided bound. $P(X - \mu \ge t) \le \sigma^2/(2t^2)$ is **false** in general — the example above has $\sigma^2/(2t^2) = 1/8 = 0.125$ while the true one-sided probability is $0.2$. Halving is valid only when you have separately assumed that the distribution is symmetric about $\mu$, and symmetry is not one of Chebyshev's hypotheses. Use Cantelli, which needs no symmetry and is stronger than the halved bound would have been whenever $t < \sigma$, weaker when $t > \sigma$, and always correct.
+:::
+
+## Exponential tails: Chernoff and Hoeffding bounds
+
+<!-- section: chernoff -->
+
+Chebyshev's bound decays like $1/k^2$. For a sum of $n$ independent terms that is disappointing, because the truth decays like $e^{-cn}$ — the difference between a bound of $0.09$ and a truth of $0.0009$, as we are about to see. The reason Chebyshev loses so much is that squaring is a feeble way to punish large deviations. Replace the square by an exponential and the whole tail structure of the distribution comes into play, through the moment generating function.
+
+:::definition[Moment generating function]{#mgf}
+The moment generating function of a random variable $X$ is
+
+$$M_X(s) = E\!\left(e^{sX}\right),$$
+
+defined for those real $s$ at which the expectation is finite. We say the MGF *exists near the origin* if it is finite for all $s$ in some interval $(-s_0, s_0)$ with $s_0 > 0$.
+:::
+
+:::theorem[The generic Chernoff bound]{#chernoff-generic}
+Let $X$ be a random variable whose MGF is finite for some $s > 0$. Then for every real $a$,
+
+$$P(X \ge a) \ \le\ \inf_{s > 0} \ e^{-sa} M_X(s).$$
+:::
+
+:::proof
+Fix $s > 0$. The function $x \mapsto e^{sx}$ is strictly increasing, so the events $\{X \ge a\}$ and $\{e^{sX} \ge e^{sa}\}$ are identical. The variable $e^{sX}$ is non-negative and, by hypothesis, has finite mean $M_X(s)$, so Markov's inequality applies with threshold $e^{sa} > 0$:
+
+$$P(X \ge a) = P\!\left(e^{sX} \ge e^{sa}\right) \ \le\ \frac{E\!\left(e^{sX}\right)}{e^{sa}} = e^{-sa}M_X(s).$$
+
+The left-hand side does not depend on $s$, so the inequality holds for the infimum of the right-hand side over all admissible $s > 0$. $\blacksquare$
+:::
+
+Strictly, then, Chernoff's bound *is* Markov's inequality — applied to $e^{sX}$ and then optimised over $s$, exactly the parameter-and-optimise move from Cantelli's proof. Everything interesting happens in the optimisation, and the reason the result is so much stronger is worth stating plainly: $e^{-sa}M_X(s)$ decays exponentially in $a$ whenever the MGF is finite, whereas $\sigma^2/a^2$ can only ever decay quadratically. Chebyshev uses two moments. Chernoff uses all of them at once, since $M_X(s) = \sum_k E(X^k)s^k/k!$ packages every moment into one function.
+
+:::pitfall
+The MGF must actually exist for some $s > 0$, and for heavy-tailed variables it does not. For a Cauchy, a Pareto with any index, or a lognormal, $E(e^{sX}) = \infty$ for every $s>0$ and the Chernoff bound degenerates to the useless statement $P(X \ge a) \le \infty$. Chebyshev survives wherever a variance exists; Chernoff demands exponentially light tails and, in exchange, reports them.
+:::
+
+:::example[Chernoff for a sum of independent Bernoulli trials]
+Let $S_n = X_1 + \cdots + X_n$ with the $X_i$ i.i.d. Bernoulli$(1/2)$ — a thousand fair coin flips, $n = 1000$. Bound $P(S_n \ge 550)$ by Chernoff and compare with Chebyshev, Cantelli and the exact binomial value.
+:::
+
+:::solution
+Independence makes the MGF of a sum the product of the MGFs, so $M_{S_n}(s) = \left(\tfrac{1}{2} + \tfrac{1}{2}e^{s}\right)^{n}$. With $a = 550 = na$ where the per-trial threshold is $\alpha = 0.55$, the Chernoff bound reads
+
+$$P(S_n \ge n\alpha) \ \le\ \inf_{s>0}\ \exp\!\left[-sn\alpha\right]\left(\tfrac{1}{2}+\tfrac{1}{2}e^{s}\right)^{n} = \exp\!\left[-n\, \sup_{s>0}\left(s\alpha - \log\left(\tfrac{1}{2}+\tfrac{1}{2}e^{s}\right)\right)\right].$$
+
+Differentiating the exponent in $s$ and setting it to zero gives $\alpha = \tfrac{1}{2}e^{s}/(\tfrac{1}{2}+\tfrac{1}{2}e^{s})$, that is $e^{s} = \alpha/(1-\alpha) = 0.55/0.45$, so $s^{*} = \log(11/9) \approx 0.2007$. Substituting turns the exponent into a relative entropy:
+
+$$P(S_n \ge n\alpha) \ \le\ \exp\!\left[-n\left(\alpha\log\frac{\alpha}{1/2} + (1-\alpha)\log\frac{1-\alpha}{1/2}\right)\right].$$
+
+With $\alpha = 0.55$ the bracket is $0.55\log(1.1) + 0.45\log(0.9) = 0.052421 - 0.047412 = 0.005008$, so the bound is
+
+$$P(S_{1000} \ge 550) \ \le\ e^{-1000 \times 0.005008} = e^{-5.008} = 0.006682.$$
+
+Now the comparison, all four numbers for the same event:
+
+| method | bound on $P(S_{1000} \ge 550)$ | hypotheses used |
+|---|---|---|
+| Chebyshev (two-sided, $k=50$, $\sigma^2 = 250$) | $0.1000$ | finite variance |
+| Cantelli (one-sided) | $0.0909$ | finite variance |
+| Chernoff | $0.006682$ | MGF exists |
+| exact binomial | $0.000865$ | — |
+
+Sanity check: each bound exceeds the exact value, as every valid bound must, and they tighten in the order of how much distributional information each one uses. Chebyshev and Cantelli see two moments and are loose by factors of $116$ and $105$; Chernoff sees the entire MGF and is loose by a factor of $7.7$. That is the whole argument for exponential bounds in one table.
+
+Note also the shape of the exponent: it is $-n$ times a quantity depending only on $\alpha$, so the bound decays *exponentially in the sample size*. Chebyshev's $\sigma^2/k^2 = n p(1-p)/(n\varepsilon)^2 = p(1-p)/(n\varepsilon^2)$ decays like $1/n$. At $n=1000$ that is the difference between $10^{-1}$ and $10^{-3}$; at $n=10{,}000$ it is the difference between $10^{-2}$ and $10^{-22}$.
+:::
+
+### Hoeffding's inequality
+
+The Bernoulli calculation above generalises, and the generalisation is one of the most used inequalities in modern probability, statistics and machine learning. It requires only that each summand be **bounded**, with no assumption about its distribution within those bounds.
+
+:::lemma[Hoeffding's lemma]{#hoeffding-lemma}
+Let $X$ satisfy $a \le X \le b$ almost surely and $E(X) = 0$. Then for every real $s$,
+
+$$E\!\left(e^{sX}\right) \ \le\ \exp\!\left(\frac{s^2(b-a)^2}{8}\right).$$
+:::
+
+:::proof
+**(Sketch, with the one analytic step isolated.)** Because $e^{sx}$ is convex in $x$ and $X$ lies in $[a,b]$, we may write $X = \lambda b + (1-\lambda)a$ with $\lambda = (X-a)/(b-a) \in [0,1]$ and use convexity pointwise:
+
+$$e^{sX} \ \le\ \frac{b - X}{b-a}e^{sa} + \frac{X-a}{b-a}e^{sb}.$$
+
+Take expectations, using $E(X) = 0$:
+
+$$E\!\left(e^{sX}\right) \ \le\ \frac{b}{b-a}e^{sa} - \frac{a}{b-a}e^{sb} = e^{\varphi(u)}, \qquad u = s(b-a),$$
+
+where, writing $\theta = -a/(b-a) \in [0,1]$, a line of algebra gives $\varphi(u) = -\theta u + \log\!\left(1-\theta+\theta e^{u}\right)$. The analytic step is to check that $\varphi(0) = 0$, $\varphi'(0) = 0$, and $\varphi''(u) = p(1-p) \le 1/4$ where $p = \theta e^{u}/(1-\theta+\theta e^{u})$ — the last inequality being the elementary fact that $p(1-p) \le 1/4$ for $p\in[0,1]$. Taylor's theorem with remainder then gives $\varphi(u) \le u^2/8$, which is the claim. *This is a sketch only in that the Taylor remainder step is quoted rather than written out; every inequality used is elementary.* $\blacksquare$
+:::
+
+:::theorem[Hoeffding's inequality]{#hoeffding}
+Let $X_1,\dots,X_n$ be **independent** with $a_i \le X_i \le b_i$ almost surely, and let $S_n = \sum_{i=1}^n X_i$. Then for every $t > 0$,
+
+$$P\!\left(S_n - E(S_n) \ge t\right) \ \le\ \exp\!\left(-\frac{2t^2}{\sum_{i=1}^n (b_i-a_i)^2}\right).$$
+
+In particular, if every $X_i$ lies in $[0,1]$ and $\bar{X}_n = S_n/n$ with $\mu = E(\bar X_n)$, then
+
+$$P\!\left(\bar{X}_n - \mu \ge \varepsilon\right) \le e^{-2n\varepsilon^2}, \qquad P\!\left(\left|\bar{X}_n - \mu\right| \ge \varepsilon\right) \le 2e^{-2n\varepsilon^2}.$$
+:::
+
+:::proof
+Centre each term: let $Y_i = X_i - E(X_i)$, so $E(Y_i)=0$ and $Y_i$ ranges in an interval of the same width $b_i - a_i$. For $s > 0$, the generic Chernoff bound applied to $\sum Y_i$ gives
+
+$$P\!\left(\sum_i Y_i \ge t\right) \le e^{-st}\,E\!\left(e^{s\sum_i Y_i}\right) = e^{-st}\prod_{i=1}^{n} E\!\left(e^{sY_i}\right),$$
+
+where the factorisation uses **independence** — this is the only place it is used, and without it the product step fails and the theorem is false. By Hoeffding's lemma each factor is at most $\exp\!\left(s^2(b_i-a_i)^2/8\right)$, so
+
+$$P\!\left(\sum_i Y_i \ge t\right) \ \le\ \exp\!\left(-st + \frac{s^2}{8}\sum_i (b_i-a_i)^2\right).$$
+
+Now optimise over $s$, as always. The exponent is a quadratic in $s$ minimised at $s^{*} = 4t/\sum_i (b_i-a_i)^2$, and substituting gives exponent $-2t^2/\sum_i (b_i-a_i)^2$. The special case follows by taking $b_i - a_i = 1$ for all $i$ and $t = n\varepsilon$, since then $\sum_i(b_i-a_i)^2 = n$ and $-2(n\varepsilon)^2/n = -2n\varepsilon^2$. The two-sided version is the one-sided version applied to $\pm X_i$ and Boole's inequality. $\blacksquare$
+:::
+
+:::example[How many flips to pin down a coin's bias?]
+A coin has unknown bias $p$. How many flips guarantee $P(|\hat{p}_n - p| \ge 0.01) \le 0.05$, with no assumption about $p$? Compare Chebyshev's answer with Hoeffding's.
+:::
+
+:::solution
+**Chebyshev.** $\operatorname{Var}(\hat p_n) = p(1-p)/n \le 1/(4n)$, so $P(|\hat p_n - p| \ge \varepsilon) \le 1/(4n\varepsilon^2)$. Setting $1/(4n \times 10^{-4}) \le 0.05$ gives $n \ge 1/(4 \times 10^{-4} \times 0.05) = 50{,}000$.
+
+**Hoeffding.** $2e^{-2n\varepsilon^2} \le 0.05$ requires $2n(10^{-4}) \ge \log(40) = 3.6889$, so $n \ge 18{,}444.4$, that is $n \ge 18{,}445$.
+
+Hoeffding needs under $37\%$ of Chebyshev's sample. The structural reason is visible in the algebra: Chebyshev's requirement is $n \propto 1/\delta$ in the failure probability $\delta$, while Hoeffding's is $n \propto \log(1/\delta)$. Demanding $\delta = 0.001$ instead of $0.05$ multiplies Chebyshev's $n$ by $50$ and Hoeffding's by only $\log(2000)/\log(40) \approx 2.06$.
+
+Sanity check against the truth: the central limit theorem, which assumes normality has set in, would ask for $1.96\sqrt{p(1-p)/n} \le 0.01$, worst case $p=1/2$, giving $n \ge 9604$. So the ordering is CLT $9{,}604$ < Hoeffding $18{,}445$ < Chebyshev $50{,}000$, and only the middle one is a genuine guarantee valid at every $n$ and every $p$.
+:::
+
+:::figure[Three bounds on $P(S_{1000} - 500 \ge t)$ for a thousand fair coin flips, against the exact binomial tail. Cantelli decays like $1/t^2$ and is still at $0.091$ when the truth has fallen to $0.00087$; Hoeffding's $e^{-2t^2/1000}$ tracks the exact curve down through four orders of magnitude. Both are valid upper bounds everywhere — the difference is entirely how much they give away.]{#tail-bounds}
+{
+  "type": "plot",
+  "x": [0, 82],
+  "y": [-0.04, 1.1],
+  "xTicks": 10,
+  "yTicks": 0.1,
+  "xLabel": "deviation t above the mean 500",
+  "yLabel": "tail probability",
+  "marks": [
+    { "kind": "path", "tone": "accent", "points": [[0, 1.0], [5, 0.90909], [10, 0.71429], [15, 0.52632], [20, 0.38462], [25, 0.28571], [30, 0.21739], [35, 0.16949], [40, 0.13514], [45, 0.10989], [50, 0.09091], [55, 0.07634], [60, 0.06494], [65, 0.05587], [70, 0.04854], [75, 0.04255], [80, 0.03759]] },
+    { "kind": "path", "tone": "alt", "dashed": true, "points": [[0, 1.0], [5, 0.95123], [10, 0.81873], [15, 0.63763], [20, 0.44933], [25, 0.2865], [30, 0.1653], [35, 0.08629], [40, 0.04076], [45, 0.01742], [50, 0.00674], [55, 0.00236], [60, 0.00075], [65, 0.00021], [70, 0.00006], [75, 0.00001], [80, 0.0]] },
+    { "kind": "path", "tone": "result", "points": [[0, 1.0], [5, 0.38798], [10, 0.27399], [15, 0.17956], [20, 0.10872], [25, 0.06061], [30, 0.03101], [35, 0.01453], [40, 0.00622], [45, 0.00243], [50, 0.00087], [55, 0.00028], [60, 0.00008], [65, 0.00002], [70, 0.00001], [75, 0.0], [80, 0.0]] },
+    { "kind": "text", "at": [63, 0.22], "text": "Cantelli, decay 1/t²", "tone": "accent", "leaderTo": [55, 0.078] },
+    { "kind": "text", "at": [40, 0.55], "text": "Hoeffding, decay e^(-2t²/n)", "tone": "alt", "leaderTo": [27, 0.23] },
+    { "kind": "text", "at": [22, 0.78], "text": "exact binomial tail", "tone": "result", "leaderTo": [12, 0.25] }
+  ]
+}
+:::
+
+## Jensen's inequality
+
+<!-- section: jensen -->
+
+The inequalities so far bound probabilities. Jensen's bounds *expectations*, and it is the reason a great many quantities in probability and statistics are biased in a predictable direction. It is stated in the chapter on expectation; the proof is here, in the form the limit theorems need.
+
+:::definition[Convex function]{#convex}
+A function $g$ on an interval $I$ is **convex** if for all $x, y \in I$ and $\lambda \in [0,1]$,
+
+$$g\!\left(\lambda x + (1-\lambda)y\right) \ \le\ \lambda g(x) + (1-\lambda)g(y).$$
+
+It is **concave** if $-g$ is convex. If $g$ is twice differentiable, convexity is equivalent to $g'' \ge 0$ on $I$.
+:::
+
+:::lemma[Supporting line]{#supporting-line}
+Let $g$ be convex on an open interval $I$ and let $m \in I$. Then there is a real number $c$ with
+
+$$g(x) \ \ge\ g(m) + c\,(x-m) \qquad \text{for all } x \in I.$$
+:::
+
+:::proof
+For $x > m > y$ in $I$, convexity implies that the slope of a chord is non-decreasing in each endpoint: the difference quotient $q(x) = \frac{g(x)-g(m)}{x-m}$ is non-decreasing on $I \setminus \{m\}$. Hence
+
+$$c^{-} = \sup_{y < m} \frac{g(m)-g(y)}{m-y} \ \le\ \inf_{x>m} \frac{g(x)-g(m)}{x-m} = c^{+},$$
+
+both being finite because $I$ is open. Choose any $c \in [c^{-}, c^{+}]$ — for differentiable $g$ the only choice is $c = g'(m)$. For $x > m$ we get $\frac{g(x)-g(m)}{x-m} \ge c^{+} \ge c$, so $g(x) \ge g(m) + c(x-m)$; for $x < m$ we get $\frac{g(m)-g(x)}{m-x} \le c^{-} \le c$, which rearranges to the same inequality with the direction preserved because $x - m < 0$. At $x=m$ it is an equality. $\blacksquare$
+:::
+
+:::theorem[Jensen's inequality]{#jensen}
+Let $X$ be a random variable with finite mean $\mu$ taking values in an open interval $I$, and let $g$ be convex on $I$ with $E\!\left(g(X)\right)$ defined. Then
+
+$$E\!\left(g(X)\right) \ \ge\ g\!\left(E(X)\right).$$
+
+If $g$ is concave the inequality reverses. If $g$ is *strictly* convex, equality holds if and only if $X$ is almost surely constant.
+:::
+
+:::proof
+Apply the supporting-line lemma at $m = \mu$: there is $c$ with $g(x) \ge g(\mu) + c(x-\mu)$ for all $x \in I$. Since $X$ takes values in $I$, this holds pointwise with $x$ replaced by $X$:
+
+$$g(X) \ \ge\ g(\mu) + c\,(X - \mu).$$
+
+Take expectations, using monotonicity and linearity:
+
+$$E\!\left(g(X)\right) \ \ge\ g(\mu) + c\,\left(E(X) - \mu\right) = g(\mu) + 0 = g\!\left(E(X)\right).$$
+
+For the equality case with $g$ strictly convex, the supporting line touches $g$ only at $\mu$, so $g(X) - g(\mu) - c(X-\mu)$ is a non-negative random variable that vanishes only when $X = \mu$. A non-negative variable with expectation zero is almost surely zero, so equality forces $P(X = \mu)=1$. $\blacksquare$
+:::
+
+:::intuition
+Convexity means the chord lies above the curve. Averaging $X$ first and then applying $g$ evaluates $g$ at one point on the curve; applying $g$ first and then averaging averages heights on the curve, which convexity pushes up to the chord. Jensen says the second is always at least the first, and the gap is exactly the curvature times the spread.
+:::
+
+:::corollary[Two consequences used constantly]{#jensen-corollaries}
+For a positive random variable $X$ with finite mean,
+
+$$E\!\left(\frac{1}{X}\right) \ \ge\ \frac{1}{E(X)}, \qquad E\!\left(\log X\right) \ \le\ \log E(X),$$
+
+and for any $X$ with finite second moment, $E(|X|) \le \sqrt{E(X^2)}$.
+:::
+
+:::proof
+The function $g(x)=1/x$ has $g''(x) = 2/x^3 > 0$ on $(0,\infty)$, so it is convex there and Jensen gives $E(1/X) \ge 1/E(X)$. The function $\log$ has second derivative $-1/x^2 < 0$, hence is concave, and Jensen reversed gives $E(\log X) \le \log E(X)$. For the last, apply Jensen to the convex $g(x)=x^2$ and the variable $|X|$: $E(|X|)^2 \le E(X^2)$, and take square roots, both sides being non-negative. $\blacksquare$
+:::
+
+:::pitfall
+Jensen's inequality is why "the expected value of the reciprocal is the reciprocal of the expected value" is wrong, and wrong in a known direction. If a journey of $100$ km is driven at a speed that is equally likely to be $50$ or $100$ km/h, the mean speed is $75$ but the mean *time* is $\frac{1}{2}(2) + \frac{1}{2}(1) = 1.5$ hours, whereas $100/75 = 1.333$ hours. The expected time exceeds the time at the expected speed, exactly as $E(1/X) \ge 1/E(X)$ predicts. Any plan built on plugging an average input into a nonlinear function is optimistic or pessimistic by the curvature, never neutral.
+:::
+
+## Four ways a sequence of random variables can converge
+
+<!-- section: convergence -->
+
+A limit theorem asserts that $\bar{X}_n$ "converges to $\mu$". But $\bar{X}_n$ is a function on the sample space, not a number, and there is more than one reasonable way to say that a sequence of such functions settles down. Four definitions matter, they are genuinely different, and the differences are exactly what separates the weak law from the strong law.
+
+Throughout, $X_1, X_2, \ldots$ and $X$ are random variables **defined on the same probability space** (except for convergence in distribution, which does not need that).
+
+:::definition[Convergence in distribution]{#conv-dist}
+$X_n \xrightarrow{d} X$ if $F_{X_n}(x) \to F_X(x)$ at every $x$ where $F_X$ is continuous.
+:::
+
+:::definition[Convergence in probability]{#conv-prob}
+$X_n \xrightarrow{P} X$ if for every $\varepsilon > 0$,
+
+$$\lim_{n\to\infty} P\!\left(\left|X_n - X\right| \ge \varepsilon\right) = 0.$$
+:::
+
+:::definition[Almost sure convergence]{#conv-as}
+$X_n \xrightarrow{a.s.} X$ if
+
+$$P\!\left(\left\{\omega : \lim_{n\to\infty} X_n(\omega) = X(\omega)\right\}\right) = 1.$$
+:::
+
+:::definition[Convergence in $L^2$ (mean square)]{#conv-l2}
+$X_n \xrightarrow{L^2} X$ if $E(X_n^2) < \infty$ for all $n$ and
+
+$$\lim_{n\to\infty} E\!\left[(X_n - X)^2\right] = 0.$$
+:::
+
+:::intuition
+Read the quantifiers, because that is all that differs. Convergence in probability asks, for each fixed $n$, how much probability is misbehaving *at that moment*; the misbehaving set may move around from $n$ to $n$ forever, as long as it shrinks. Almost sure convergence fixes the outcome $\omega$ first and demands that the single numerical sequence $X_1(\omega), X_2(\omega), \dots$ converge, for all but a null set of $\omega$. The first is a statement about a sequence of probabilities; the second is a probability of a statement about a sequence. Convergence in distribution is weakest of all: it forgets which $\omega$ produced which value and compares only the shapes.
+:::
+
+:::notation
+The four are written $\xrightarrow{d}$, $\xrightarrow{P}$, $\xrightarrow{a.s.}$ and $\xrightarrow{L^2}$, and the implications proved below are usually drawn as
+$$\xrightarrow{a.s.} \ \Longrightarrow\ \xrightarrow{P}\ \Longrightarrow\ \xrightarrow{d}, \qquad \xrightarrow{L^2}\ \Longrightarrow\ \xrightarrow{P}.$$
+No arrow points the other way, and $\xrightarrow{a.s.}$ and $\xrightarrow{L^2}$ imply neither of each other.
+:::
+
+:::theorem[$L^2$ convergence implies convergence in probability]{#l2-implies-p}
+If $X_n \xrightarrow{L^2} X$ then $X_n \xrightarrow{P} X$.
+:::
+
+:::proof
+Fix $\varepsilon > 0$. Apply Markov's inequality to the non-negative variable $(X_n - X)^2$ at threshold $\varepsilon^2$, exactly as in the proof of Chebyshev's inequality:
+
+$$P\!\left(|X_n - X| \ge \varepsilon\right) = P\!\left((X_n-X)^2 \ge \varepsilon^2\right) \ \le\ \frac{E\!\left[(X_n-X)^2\right]}{\varepsilon^2}.$$
+
+By hypothesis the numerator tends to $0$ and $\varepsilon$ is fixed, so the right-hand side tends to $0$; the left-hand side is non-negative and dominated by it, hence tends to $0$. $\blacksquare$
+:::
+
+:::example[In probability but not in $L^2$]
+Let $X_n$ equal $n$ with probability $1/n$ and $0$ with probability $1 - 1/n$. Does $X_n \to 0$ in probability? In $L^2$?
+:::
+
+:::solution
+For any $\varepsilon \in (0,1)$, $P(|X_n| \ge \varepsilon) = P(X_n = n) = 1/n \to 0$, so $X_n \xrightarrow{P} 0$.
+
+But $E(X_n^2) = n^2 \cdot \frac{1}{n} = n \to \infty$, so $X_n$ does not converge to $0$ in $L^2$ — it diverges in $L^2$ while converging in probability. The spike is rare enough to vanish in probability and tall enough that squaring it outruns the rarity. Replacing $n$ by $n^{1/4}$ as the spike height gives $E(X_n^2) = n^{1/2}/n \to 0$, so the same shape can converge in both senses; it is the trade-off between height and rarity that decides, and no implication runs from convergence in probability to $L^2$.
+:::
+
+:::theorem[Almost sure convergence implies convergence in probability]{#as-implies-p}
+If $X_n \xrightarrow{a.s.} X$ then $X_n \xrightarrow{P} X$.
+:::
+
+:::proof
+Fix $\varepsilon > 0$ and define the "bad from $n$ onwards" events
+
+$$B_n = \bigcup_{m \ge n} \left\{ |X_m - X| \ge \varepsilon \right\}.$$
+
+These are nested decreasing, $B_1 \supseteq B_2 \supseteq \cdots$, since each drops one term from the union. Let $B = \bigcap_n B_n$, the event that $|X_m - X| \ge \varepsilon$ for infinitely many $m$. If $\omega \in B$ then $X_m(\omega) \not\to X(\omega)$, so $B$ is contained in the divergence set, which has probability $0$ by hypothesis; hence $P(B)=0$.
+
+By continuity of probability from above (valid since $P(B_1) \le 1 < \infty$),
+
+$$\lim_{n\to\infty} P(B_n) = P(B) = 0.$$
+
+Finally $\{|X_n - X| \ge \varepsilon\} \subseteq B_n$, so $P(|X_n - X| \ge \varepsilon) \le P(B_n) \to 0$. $\blacksquare$
+:::
+
+:::remark
+The proof shows more than the statement: almost sure convergence controls the whole tail $\sup_{m\ge n}|X_m - X|$ at once, while convergence in probability controls only the single term $|X_n - X|$. That gap — one term versus the whole tail — is the entire difference between the two modes, and it is the difference between the weak and strong laws of large numbers.
+:::
+
+### The typewriter sequence
+
+The converse of the last theorem fails, and the standard counterexample is worth drawing because it makes the quantifier difference visible. Take the probability space $[0,1]$ with the uniform distribution. Divide $[0,1]$ into $1$ piece, then $2$, then $3$, then $4$, and let each $X_n$ be the indicator of the next piece in that enumeration, sweeping left to right and starting over with a finer partition each time. The bump marches across the interval like a typewriter carriage returning, narrower on each pass.
+
+:::example[The typewriter sequence]
+On $\Omega = [0,1]$ with the uniform probability, define for each $m \ge 1$ and $j = 0, 1, \ldots, m-1$ the indicator of the interval $\left[\frac{j}{m}, \frac{j+1}{m}\right)$, and list these as $X_1, X_2, X_3, \ldots$ in order of increasing $m$ and then increasing $j$. Show that $X_n \xrightarrow{P} 0$ but that $X_n(\omega)$ converges for **no** $\omega \in [0,1)$.
+:::
+
+:::solution
+**In probability.** If $X_n$ is the indicator of an interval of length $1/m$, then for any $\varepsilon \in (0,1)$,
+
+$$P\!\left(|X_n - 0| \ge \varepsilon\right) = P\!\left(X_n = 1\right) = \frac{1}{m}.$$
+
+As $n \to \infty$ the block index $m$ also tends to infinity — the $n$th variable has $m \approx \sqrt{2n}$, since the first $m$ blocks use $1+2+\cdots+m = m(m+1)/2$ variables. So the probability is $1/m \to 0$ and $X_n \xrightarrow{P} 0$.
+
+**Not almost surely — in fact nowhere.** Fix any $\omega \in [0,1)$. Within each block $m$, the $m$ intervals partition $[0,1)$, so exactly one of them contains $\omega$: for every $m$ there is precisely one $n$ in that block with $X_n(\omega) = 1$. Hence the numerical sequence $X_1(\omega), X_2(\omega), \ldots$ contains infinitely many $1$s, and (for $m \ge 2$) infinitely many $0$s as well. A sequence with infinitely many $1$s and infinitely many $0$s does not converge. So the set of $\omega$ where convergence happens is empty, and certainly does not have probability $1$.
+
+Sanity check on the two claims coexisting: at stage $n$ the misbehaving set has measure $1/m \to 0$, so "at any given moment, almost nothing is wrong". But the misbehaving set *moves*, visiting every $\omega$ infinitely often, so "for every $\omega$, something is wrong infinitely often". Both sentences are true; they are not the same sentence.
+:::
+
+:::figure[The typewriter sequence: each horizontal bar is the interval on which $X_n$ equals $1$, plotted at height $n$. Block $m$ cuts $[0,1)$ into $m$ pieces, so the bar narrows as it climbs, and its width $1/m$ is exactly $P(X_n = 1)$. The dashed vertical line marks one outcome, $\omega = 0.3$; the bars it meets are the $n$ with $X_n(0.3)=1$, one in every block, forever — which is why no outcome enjoys convergence even though the bars are vanishing.]{#typewriter}
+{
+  "type": "plot",
+  "x": [-0.05, 1.32],
+  "y": [0, 11.6],
+  "xTicks": 0.25,
+  "yTicks": 1,
+  "xLabel": "ω in [0, 1)",
+  "yLabel": "index n",
+  "marks": [
+    { "kind": "region", "points": [[0, 0.75], [1, 0.75], [1, 1.25], [0, 1.25]], "tone": "alt" },
+    { "kind": "region", "points": [[0, 1.75], [0.5, 1.75], [0.5, 2.25], [0, 2.25]], "tone": "alt" },
+    { "kind": "region", "points": [[0.5, 2.75], [1, 2.75], [1, 3.25], [0.5, 3.25]], "tone": "accent" },
+    { "kind": "region", "points": [[0, 3.75], [0.3333, 3.75], [0.3333, 4.25], [0, 4.25]], "tone": "alt" },
+    { "kind": "region", "points": [[0.3333, 4.75], [0.6667, 4.75], [0.6667, 5.25], [0.3333, 5.25]], "tone": "accent" },
+    { "kind": "region", "points": [[0.6667, 5.75], [1, 5.75], [1, 6.25], [0.6667, 6.25]], "tone": "accent" },
+    { "kind": "region", "points": [[0, 6.75], [0.25, 6.75], [0.25, 7.25], [0, 7.25]], "tone": "accent" },
+    { "kind": "region", "points": [[0.25, 7.75], [0.5, 7.75], [0.5, 8.25], [0.25, 8.25]], "tone": "alt" },
+    { "kind": "region", "points": [[0.5, 8.75], [0.75, 8.75], [0.75, 9.25], [0.5, 9.25]], "tone": "accent" },
+    { "kind": "region", "points": [[0.75, 9.75], [1, 9.75], [1, 10.25], [0.75, 10.25]], "tone": "accent" },
+    { "kind": "line", "through": [[0.3, 0], [0.3, 11]], "extend": false, "tone": "result", "dashed": true },
+    { "kind": "text", "at": [1.08, 10.6], "text": "ω = 0.3", "tone": "result", "leaderTo": [0.31, 10.1] },
+    { "kind": "text", "at": [1.12, 7.6], "text": "bars hit", "tone": "alt", "leaderTo": [0.16, 8.0] },
+    { "kind": "text", "at": [1.12, 4.2], "text": "width 1/m", "leaderTo": [0.72, 5.95] }
+  ]
+}
+:::
+
+:::theorem[Convergence in probability implies convergence in distribution]{#p-implies-d}
+If $X_n \xrightarrow{P} X$ then $X_n \xrightarrow{d} X$.
+:::
+
+:::proof
+Let $x$ be a continuity point of $F_X$ and fix $\varepsilon > 0$. Split the event $\{X_n \le x\}$ according to whether $X$ is within $\varepsilon$ of $X_n$:
+
+$$\{X_n \le x\} \subseteq \{X \le x+\varepsilon\} \cup \{|X_n - X| > \varepsilon\},$$
+
+because if $X_n \le x$ and $|X_n - X| \le \varepsilon$ then $X \le x + \varepsilon$. Taking probabilities and using Boole's inequality,
+
+$$F_{X_n}(x) \ \le\ F_X(x+\varepsilon) + P\!\left(|X_n - X| > \varepsilon\right).$$
+
+Symmetrically, $\{X \le x - \varepsilon\} \subseteq \{X_n \le x\} \cup \{|X_n-X| > \varepsilon\}$, giving
+
+$$F_X(x-\varepsilon) - P\!\left(|X_n-X| > \varepsilon\right) \ \le\ F_{X_n}(x).$$
+
+Letting $n \to \infty$, the probability terms vanish, so
+
+$$F_X(x-\varepsilon) \ \le\ \liminf_n F_{X_n}(x) \ \le\ \limsup_n F_{X_n}(x) \ \le\ F_X(x+\varepsilon).$$
+
+This holds for every $\varepsilon > 0$. Now let $\varepsilon \downarrow 0$: since $x$ is a continuity point of $F_X$, both $F_X(x-\varepsilon)$ and $F_X(x+\varepsilon)$ tend to $F_X(x)$, squeezing the limit. Hence $F_{X_n}(x) \to F_X(x)$. $\blacksquare$
+:::
+
+:::remark
+The continuity-point restriction is not a technical nicety that could be dropped. Let $X_n$ be the constant $1/n$ and $X$ the constant $0$. Then $X_n \to X$ in every sense, yet $F_{X_n}(0) = 0$ for all $n$ while $F_X(0) = 1$: the CDFs fail to converge at the single discontinuity point $x=0$. Convergence in distribution is defined to ignore exactly this.
+:::
+
+:::example[In distribution but not in probability]
+Let $X \sim N(0,1)$ and set $X_n = -X$ for every $n$. Show $X_n \xrightarrow{d} X$ but $X_n \not\xrightarrow{P} X$.
+:::
+
+:::solution
+By symmetry of the standard normal, $-X$ has the same distribution as $X$, so $F_{X_n} = F_X$ for every $n$ and convergence in distribution is immediate (and exact, not merely asymptotic).
+
+But $|X_n - X| = |{-X} - X| = 2|X|$, which does not depend on $n$ at all. So for $\varepsilon = 1$,
+
+$$P\!\left(|X_n - X| \ge 1\right) = P\!\left(|X| \ge 0.5\right) = 2\left(1-\Phi(0.5)\right) = 0.6171$$
+
+for every $n$, which does not tend to $0$. The sequence is *always* far from $X$ and always has the right distribution. This is the essential limitation of $\xrightarrow{d}$: it compares laws, not values, so it cannot tell you where the random variable is, only what it looks like from a distance.
+:::
+
+:::proposition[The one case where the converse holds]{#d-to-p-constant}
+If $X_n \xrightarrow{d} c$ for a constant $c$, then $X_n \xrightarrow{P} c$.
+:::
+
+:::proof
+The limit CDF is $F(x) = 0$ for $x < c$ and $1$ for $x \ge c$, continuous everywhere except at $c$. Fix $\varepsilon>0$. Then
+
+$$P\!\left(|X_n - c| \ge \varepsilon\right) \le P\!\left(X_n \le c-\varepsilon\right) + P\!\left(X_n > c + \varepsilon/2\right) = F_{X_n}(c-\varepsilon) + 1 - F_{X_n}(c+\varepsilon/2).$$
+
+Both $c - \varepsilon$ and $c + \varepsilon/2$ are continuity points of $F$, so the right-hand side converges to $F(c-\varepsilon) + 1 - F(c+\varepsilon/2) = 0 + 1 - 1 = 0$. $\blacksquare$
+:::
+
+This proposition is the bridge that lets the law of large numbers be stated either way round when the limit is a constant, and it is used constantly in statistics: consistency of an estimator is convergence in probability to a constant, and it can be checked through distributions.
+
+:::summary
+**Definitions differ in the quantifiers, not the spirit.** $\xrightarrow{L^2}$ controls a mean squared error; $\xrightarrow{P}$ controls one term's probability at each $n$; $\xrightarrow{a.s.}$ controls the whole tail simultaneously; $\xrightarrow{d}$ controls only the CDFs.
+
+**Implications that hold:** $\xrightarrow{a.s.} \Rightarrow \xrightarrow{P} \Rightarrow \xrightarrow{d}$, and $\xrightarrow{L^2} \Rightarrow \xrightarrow{P}$ (by Markov applied to the squared difference).
+
+**Converses that fail, with their standard witnesses:** the typewriter sequence converges in probability and at no point almost surely; the spike $X_n = n\cdot\mathbf{1}$ with probability $1/n$ converges in probability and diverges in $L^2$; $X_n = -X$ for symmetric $X$ converges in distribution and never in probability. The single exception is a constant limit, where $\xrightarrow{d}$ and $\xrightarrow{P}$ coincide.
+:::
+
+## The laws of large numbers
+
+<!-- section: lln -->
+
+With the vocabulary settled, the two laws can be stated as what they are: the same intuition under two different modes of convergence. The weak law is a statement in probability, and it falls out of Chebyshev in four lines. The strong law is a statement almost surely, and it is genuinely harder.
+
+:::theorem[Weak Law of Large Numbers]{#wlln}
+Let $X_1, X_2, \ldots$ be i.i.d. with mean $\mu$ and finite variance $\sigma^2$, and let $\bar{X}_n = \frac{1}{n}\sum_{i=1}^{n} X_i$. Then $\bar{X}_n \xrightarrow{P} \mu$: for every $\varepsilon > 0$,
+
+$$\lim_{n\to\infty} P\!\left(\left|\bar{X}_n - \mu\right| \ge \varepsilon\right) = 0.$$
+:::
+
+:::proof
+Independence and identical distribution give $E(\bar X_n) = \frac{1}{n}\sum_i E(X_i) = \mu$ and, since variances of independent variables add,
+
+$$\operatorname{Var}(\bar{X}_n) = \frac{1}{n^2}\sum_{i=1}^{n}\operatorname{Var}(X_i) = \frac{n\sigma^2}{n^2} = \frac{\sigma^2}{n}.$$
+
+Fix $\varepsilon > 0$ and apply Chebyshev's inequality to $\bar X_n$ with $k = \varepsilon$:
+
+$$P\!\left(\left|\bar{X}_n - \mu\right| \ge \varepsilon\right) \ \le\ \frac{\operatorname{Var}(\bar X_n)}{\varepsilon^2} = \frac{\sigma^2}{n\varepsilon^2}.$$
+
+With $\sigma^2$ and $\varepsilon$ fixed this tends to $0$ as $n \to \infty$, and the left-hand side is squeezed between $0$ and it. $\blacksquare$
+:::
+
+Observe what the proof actually establishes: $E[(\bar X_n - \mu)^2] = \sigma^2/n \to 0$, which is convergence in $L^2$, and the theorem *$L^2$ convergence implies convergence in probability* finishes it. So the weak law under finite variance is really an $L^2$ statement in disguise — which is a hint that the finite-variance hypothesis is an artefact of the method, not of the truth.
+
+:::theorem[Khinchin's Weak Law]{#khinchin}
+Let $X_1, X_2, \ldots$ be i.i.d. with finite mean $\mu$ — no assumption at all about the variance, which may be infinite. Then $\bar{X}_n \xrightarrow{P} \mu$.
+:::
+
+Khinchin's theorem is not proved here, and it is worth saying exactly what proves it. The tool is the **characteristic function** $\phi_X(t) = E(e^{itX})$, which exists for every random variable because $|e^{itX}| = 1$, unlike the MGF. A finite mean is exactly the condition making $\phi$ differentiable at $0$ with $\phi'(0) = i\mu$, so $\phi_{\bar X_n}(t) = \left[\phi(t/n)\right]^n \to e^{it\mu}$, the characteristic function of the constant $\mu$; Lévy's continuity theorem converts this into $\bar X_n \xrightarrow{d} \mu$, and the proposition *The one case where the converse holds* upgrades it to convergence in probability. An alternative elementary route is truncation: cut each $X_i$ at level $n$, apply Chebyshev to the truncated variables whose variance is now finite, and show the discarded part is negligible because $E|X| < \infty$.
+
+:::pitfall
+"The weak law needs finite variance" is a statement about the *proof*, not the theorem. Chebyshev's route needs $\sigma^2 < \infty$; the theorem needs only $E|X| < \infty$. Conversely, when even the mean is infinite — the Cauchy distribution, or a Pareto with index $\le 1$ — the law of large numbers genuinely fails, and no amount of data repairs it.
+:::
+
+### The strong law
+
+:::theorem[Strong Law of Large Numbers (Kolmogorov)]{#slln}
+Let $X_1, X_2, \ldots$ be i.i.d. with finite mean $\mu$. Then $\bar{X}_n \xrightarrow{a.s.} \mu$:
+
+$$P\!\left(\left\{\omega : \lim_{n\to\infty}\bar{X}_n(\omega) = \mu\right\}\right) = 1.$$
+:::
+
+The distinction from the weak law is easy to state badly, so state it concretely. Imagine the infinite sequence of tosses as a single outcome $\omega$ — one infinite string of heads and tails — and let $A$ be the set of strings whose running proportion of heads tends to $1/2$. The strong law says $P(A) = 1$: the strings that fail, such as the all-heads string or any string whose proportion oscillates forever between $0.4$ and $0.6$, form a set of probability zero. Note that this set is not empty; the all-heads string exists. Probability zero is not impossibility.
+
+The weak law, by contrast, never mentions the infinite string at all. For each $n$ separately it says that the set of $\omega$ with $|\bar X_n(\omega) - \mu| \ge \varepsilon$ is small, and it permits that set to be non-empty for every $n$ and to move around — precisely the typewriter behaviour. The strong law forbids the movement: for almost every $\omega$ there is a last time the running mean is more than $\varepsilon$ from $\mu$, and after it the excursions stop for good.
+
+:::theorem[Strong law under a fourth moment]{#slln-fourth}
+Let $X_1, X_2, \ldots$ be i.i.d. with mean $\mu$ and **finite fourth central moment** $E\!\left[(X-\mu)^4\right] = \kappa < \infty$. Then $\bar{X}_n \xrightarrow{a.s.} \mu$.
+:::
+
+:::remark
+The fourth-moment hypothesis is a **simplifying assumption**, not part of the theorem being illustrated. Kolmogorov's strong law needs only $E|X| < \infty$; its proof requires maximal inequalities and a truncation argument beyond this course. What follows is a complete and honest proof of the weaker statement, and it is instructive because it exhibits the mechanism — summable tail probabilities — by which almost sure convergence is actually obtained.
+:::
+
+:::lemma[Borel–Cantelli, first lemma]{#borel-cantelli}
+Let $A_1, A_2, \ldots$ be events with $\sum_{n=1}^{\infty} P(A_n) < \infty$. Then
+
+$$P\!\left(A_n \text{ occurs for infinitely many } n\right) = 0.$$
+:::
+
+:::proof
+The event "infinitely many $A_n$ occur" is $A^{*} = \bigcap_{n\ge1}\bigcup_{m \ge n} A_m$: an outcome lies in it precisely when, no matter how far out you start, some later $A_m$ still occurs. For each $n$, $A^{*} \subseteq \bigcup_{m\ge n}A_m$, so by monotonicity and Boole's inequality
+
+$$P(A^{*}) \ \le\ P\!\left(\bigcup_{m\ge n} A_m\right) \ \le\ \sum_{m \ge n} P(A_m).$$
+
+The right-hand side is the tail of a convergent series, so it tends to $0$ as $n \to \infty$. Since $P(A^{*})$ is a fixed number bounded above by quantities tending to $0$, and is non-negative, $P(A^{*}) = 0$. $\blacksquare$
+:::
+
+:::proof
+**(Of the strong law under a fourth moment.)** Assume without loss of generality that $\mu = 0$, replacing $X_i$ by $X_i - \mu$; this changes neither the hypothesis nor what is to be proved. Write $S_n = \sum_{i=1}^n X_i$.
+
+**Step 1: a fourth-moment computation.** Expand $S_n^4 = \left(\sum_i X_i\right)^4$. Multiplying out gives a sum of terms $X_{i}X_{j}X_{k}X_{l}$. By independence the expectation of such a term factorises, and any term in which some index appears exactly once contains a factor $E(X_i) = 0$ and so vanishes. The surviving terms are those where indices appear in pairs or in a single group of four:
+
+- $n$ terms of the form $E(X_i^4) = \kappa$;
+- terms of the form $E(X_i^2 X_j^2) = \sigma^4$ with $i \ne j$, of which the multinomial coefficient count is $3n(n-1)$.
+
+Hence
+
+$$E\!\left(S_n^4\right) = n\kappa + 3n(n-1)\sigma^4 \ \le\ n\kappa + 3n^2\sigma^4 \ \le\ C n^2$$
+
+for the constant $C = \kappa + 3\sigma^4$, using $n \le n^2$. (Note $\sigma^2 \le \sqrt{\kappa}$ is finite by Jensen's inequality applied to $g(x)=x^2$ and the variable $(X-\mu)^2$, so $C$ is a genuine finite constant.)
+
+**Step 2: summable tail probabilities.** Fix $\varepsilon > 0$ and let $A_n = \left\{\left|\bar X_n\right| \ge \varepsilon\right\} = \left\{S_n^4 \ge n^4\varepsilon^4\right\}$. Markov's inequality applied to the non-negative $S_n^4$ gives
+
+$$P(A_n) \ \le\ \frac{E(S_n^4)}{n^4 \varepsilon^4} \ \le\ \frac{Cn^2}{n^4\varepsilon^4} = \frac{C}{\varepsilon^4}\cdot\frac{1}{n^2}.$$
+
+This is the crucial gain over Chebyshev, which would have given $\sigma^2/(n\varepsilon^2)$ — a $1/n$ bound, and $\sum 1/n$ diverges. The fourth moment buys $1/n^2$, and $\sum_n 1/n^2 = \pi^2/6 < \infty$. So $\sum_n P(A_n) \le \frac{C\pi^2}{6\varepsilon^4} < \infty$.
+
+**Step 3: Borel–Cantelli.** By the lemma, $P(A_n \text{ infinitely often}) = 0$. So for almost every $\omega$, there is $N(\omega)$ beyond which $|\bar X_n(\omega)| < \varepsilon$ always.
+
+**Step 4: from one $\varepsilon$ to all of them.** Apply Step 3 with $\varepsilon = 1/j$ for each positive integer $j$, obtaining null sets $N_j$. Their union $N = \bigcup_j N_j$ is a countable union of null sets and so is null, by countable subadditivity. For $\omega \notin N$ and any $\varepsilon > 0$, choose $j$ with $1/j < \varepsilon$; then $|\bar X_n(\omega)| < 1/j < \varepsilon$ for all large $n$. That is precisely $\bar X_n(\omega) \to 0$. Hence $P\left(\bar X_n \to 0\right) \ge 1 - P(N) = 1$. $\blacksquare$
+:::
+
+:::intuition
+Almost sure convergence is bought with a *summable* sequence of failure probabilities. The weak law's bound $\sigma^2/(n\varepsilon^2)$ tends to zero but sums to infinity, which is exactly enough room for the typewriter to keep typing forever. Push the bound to $1/n^2$ and the total failure budget over all time is finite, so failures must stop. That is the whole mechanism, and it is why the fourth moment is the natural price of an elementary proof.
+:::
+
+:::example[Where the strong law is the one you need]
+A gambler plays a game with i.i.d. payoffs of mean $\mu = -0.01$ per round. Which law tells him he goes broke, and why is the weak law not enough?
+:::
+
+:::solution
+The weak law says that for each large $n$, the average payoff per round is probably near $-0.01$. Taken literally, that leaves open the possibility that the cumulative fortune $S_n = n\bar X_n$ dips and recovers above zero infinitely often — an $n$-by-$n$ statement says nothing about the trajectory as a single object.
+
+The strong law says $P(\bar X_n \to -0.01) = 1$. Fix such an $\omega$: there is an $N$ beyond which $\bar X_n < -0.005$, and therefore $S_n < -0.005n \to -\infty$. So along almost every single realisation the fortune is eventually below any level and stays there. It is a statement about the gambler's actual life, not about a hypothetical ensemble of gamblers at time $n$, and that is why the strong law is the right tool.
+
+Sanity check on the direction of the inequality: $\bar X_n \to -0.01$ means the average eventually enters $(-0.015,-0.005)$, so the upper end $-0.005$ is the safe bound to use, and $-0.005n$ still diverges.
+:::
+
+## The central limit theorem
+
+<!-- section: clt -->
+
+The law of large numbers says $\bar X_n - \mu \to 0$. That is a statement about a point, and points carry no uncertainty, so on its own it cannot produce an error bar. The central limit theorem looks at the collapse under a microscope. The deviation $\bar X_n - \mu$ has standard deviation $\sigma/\sqrt{n}$, so the magnification that keeps it visible — neither collapsing to $0$ nor blowing up — is exactly $\sqrt{n}/\sigma$. The theorem is that what comes into focus under that magnification is the same curve every time.
+
+:::theorem[Central Limit Theorem (Lindeberg–Lévy)]{#clt}
+Let $X_1, X_2, \ldots$ be independent and identically distributed with mean $\mu$ and variance $\sigma^2$ satisfying $0 < \sigma^2 < \infty$. Then
+
+$$Z_n = \frac{\bar{X}_n - \mu}{\sigma/\sqrt{n}} = \frac{\sum_{i=1}^{n}X_i - n\mu}{\sigma\sqrt{n}} \ \xrightarrow{d}\ N(0,1).$$
+
+Equivalently, for every real $z$, $P(Z_n \le z) \to \Phi(z)$.
+:::
+
+Each hypothesis earns its place, and it is worth naming what each one is for before the proof consumes them. **Identical distribution** gives a single MGF to expand. **Independence** is what turns the MGF of a sum into a product — remove it and the theorem is false, as a sequence of identical copies $X_1 = X_2 = \cdots$ shows, for which $Z_n = (X_1-\mu)/\sigma$ for every $n$ and nothing converges to anything normal. **$\sigma^2 > 0$** rules out a degenerate constant, for which the standardisation divides by zero. And **$\sigma^2 < \infty$** is the one that fails in practice.
+
+:::proof
+Assume the MGF $M(t) = E(e^{tX})$ is finite in a neighbourhood of $0$. Standardise first: put $Y_i = (X_i-\mu)/\sigma$, so the $Y_i$ are i.i.d. with $E(Y_i) = 0$, $E(Y_i^2)=1$, and
+
+$$Z_n = \frac{1}{\sqrt{n}}\sum_{i=1}^{n} Y_i.$$
+
+Let $m(t) = E(e^{tY})$ be the common MGF of the $Y_i$, finite on $(-t_0,t_0)$. Differentiating under the expectation, which is legitimate inside the interval of convergence, gives $m(0)=1$, $m'(0)=E(Y)=0$, $m''(0)=E(Y^2)=1$. Taylor's theorem to second order about $0$ therefore reads
+
+$$m(t) = 1 + 0\cdot t + \frac{1}{2}t^2 + o(t^2) = 1 + \frac{t^2}{2} + o(t^2) \qquad (t \to 0).$$
+
+**Independence** makes the MGF of a sum the product of MGFs, and scaling the sum by $1/\sqrt{n}$ evaluates each factor at $t/\sqrt{n}$:
+
+$$M_{Z_n}(t) = E\!\left(e^{tZ_n}\right) = \prod_{i=1}^{n} E\!\left(e^{(t/\sqrt{n})Y_i}\right) = \left[m\!\left(\frac{t}{\sqrt n}\right)\right]^{n}.$$
+
+Fix $t$ and let $n$ grow, so that $t/\sqrt n \to 0$ and the expansion applies:
+
+$$M_{Z_n}(t) = \left[1 + \frac{t^2}{2n} + o\!\left(\frac{1}{n}\right)\right]^{n}.$$
+
+Taking logarithms and using $\log(1+u) = u + O(u^2)$ for small $u$,
+
+$$\log M_{Z_n}(t) = n\log\!\left[1 + \frac{t^2}{2n} + o\!\left(\tfrac1n\right)\right] = n\left[\frac{t^2}{2n} + o\!\left(\tfrac1n\right)\right] \longrightarrow \frac{t^2}{2},$$
+
+so $M_{Z_n}(t) \to e^{t^2/2}$ for every $t$ in a neighbourhood of $0$.
+
+The final step is where a named theorem must be invoked, and it is worth being explicit about it. The function $e^{t^2/2}$ is the MGF of $N(0,1)$. Pointwise convergence of MGFs does not by itself give convergence of distributions; what supplies that is the **continuity theorem** (Lévy's, in the characteristic-function form; the MGF version is due to Curtiss), which states that if $M_{Z_n}(t) \to M(t)$ for all $t$ in an open interval containing $0$ and $M$ is the MGF of some distribution, then $Z_n \xrightarrow{d}$ that distribution. Behind the continuity theorem sits the **uniqueness theorem** for transforms: a distribution is determined by its MGF on a neighbourhood of the origin, so $e^{t^2/2}$ identifies the limit as $N(0,1)$ and nothing else. Invoking uniqueness is exactly what licenses the conclusion; without it, we would only know that some sequence of MGFs converges. $\blacksquare$
+:::
+
+:::remark
+Two features of the argument explain the theorem's universality. First, only the terms up to $t^2$ in the expansion of $m$ survive; every higher moment is swallowed by the $o(1/n)$ and washed out. The limit therefore cannot depend on anything beyond the first two moments — which is precisely why the shape of the population is irrelevant. Second, the hypothesis that the MGF exists is a genuine restriction that the theorem does not need; replacing $m$ by the characteristic function $\phi(t) = E(e^{itY})$, which always exists, and quoting Lévy's continuity theorem instead, gives the same argument with no moment-generating assumption at all. The structure is unchanged; only the transform is.
+:::
+
+### What fails without finite variance
+
+:::example[The Cauchy counterexample]
+Let $X_1, X_2, \ldots$ be i.i.d. standard Cauchy, with density $f(x) = \frac{1}{\pi(1+x^2)}$. What is the distribution of $\bar X_n$?
+:::
+
+:::solution
+The Cauchy has no finite mean, since $\int |x| f(x)\,dx$ diverges logarithmically, and *a fortiori* no finite variance. So neither the law of large numbers nor the central limit theorem applies.
+
+The characteristic function of the standard Cauchy is $\phi(t) = e^{-|t|}$. By independence,
+
+$$\phi_{\bar X_n}(t) = \left[\phi\!\left(\frac{t}{n}\right)\right]^{n} = \left[e^{-|t|/n}\right]^{n} = e^{-|t|} = \phi(t).$$
+
+By the uniqueness theorem for characteristic functions, $\bar X_n$ has **exactly** the standard Cauchy distribution, for every $n$. Not approximately, not in the limit: the average of a million Cauchy observations is distributed identically to a single one.
+
+Sanity check on what this rules out: $P(|\bar X_n| > 10) = \frac{2}{\pi}\arctan\!\left(\frac{1}{10}\right) \approx 0.0635$ for every $n$. No convergence in probability to any constant, no shrinking standard error, no bell curve — and it is the failure of the *finite variance* hypothesis (indeed of the finite mean) that is responsible, nothing else.
+:::
+
+:::pitfall
+"The CLT applies eventually to everything" is false, and the places it fails are not exotic. Financial returns, insurance losses, city sizes and file sizes are routinely modelled with tails heavy enough that the finite-variance hypothesis is at best borderline. When it fails, larger $n$ does not help; the limit law, if there is one, is a non-normal stable law and the normalisation is not $\sqrt{n}$.
+:::
+
+### How fast: Berry–Esseen
+
+The CLT is an asymptotic statement and says nothing about any particular $n$. The rate is supplied by a separate theorem, whose content is that skewness governs everything.
+
+:::theorem[Berry–Esseen]{#berry-esseen}
+Let $X_1,\dots,X_n$ be i.i.d. with mean $\mu$, variance $\sigma^2 > 0$ and finite third absolute central moment $\rho = E\!\left|X-\mu\right|^3$. Then for every $n$ and every $z$,
+
+$$\left|P(Z_n \le z) - \Phi(z)\right| \ \le\ \frac{C\rho}{\sigma^3\sqrt{n}},$$
+
+where $C$ is an absolute constant, valid at $C = 0.4748$.
+:::
+
+Read the bound structurally. The error falls like $1/\sqrt{n}$ — slowly; to halve it you must quadruple the sample. And the numerator is the **standardised third absolute moment** $\rho/\sigma^3$, a measure of how asymmetric and heavy-tailed the population is. A symmetric population has a small $\rho/\sigma^3$ and converges quickly; a strongly skewed one does not. This is the honest content of the folklore rule $n \ge 30$: it is not a theorem, it is a guess at when $\rho/\sigma^3$ is small enough.
+
+:::example[Berry–Esseen for an exponential population]
+For $X \sim \text{Exponential}(1)$, so $\mu = \sigma = 1$, the third absolute central moment is $\rho = E|X-1|^3 = 2.4146$. What does Berry–Esseen guarantee at $n = 100$, and what is the true worst-case error?
+:::
+
+:::solution
+The bound is
+
+$$\frac{0.4748 \times 2.4146}{1^3 \times \sqrt{100}} = \frac{1.1464}{10} = 0.1146.$$
+
+So the guarantee is that no normal approximation to a CDF of a standardised sum of $100$ exponentials is off by more than about $0.115$ — which is a weak guarantee, wide enough to be nearly useless for a $95\%$ interval.
+
+The truth is far better. The sum of $n$ i.i.d. Exponential$(1)$ variables is Gamma$(n,1)$ exactly, so the error $\sup_z |F_{Z_n}(z)-\Phi(z)|$ can be computed: it is $0.0243$ at $n = 30$ and $0.0133$ at $n=100$.
+
+Sanity check on the ratio: the true error falls by a factor $0.0243/0.0133 = 1.83$ between $n=30$ and $n=100$, against the $\sqrt{100/30} = 1.83$ that Berry–Esseen predicts. The *rate* is right to three significant figures; only the constant is generous. That is the usual situation with these bounds, and it is why Berry–Esseen is used to reason about how error scales rather than to certify a particular number.
+:::
+
+### The delta method
+
+Finally, a corollary that extends the CLT from the sample mean to almost any smooth function of it, and is the reason standard errors exist for quantities like $\log \hat p$, $1/\bar X$ and a correlation coefficient.
+
+:::theorem[The delta method]{#delta-method}
+Suppose $\sqrt{n}\left(T_n - \theta\right) \xrightarrow{d} N(0, \tau^2)$ and $g$ is differentiable at $\theta$ with $g'(\theta) \ne 0$. Then
+
+$$\sqrt{n}\left(g(T_n) - g(\theta)\right) \ \xrightarrow{d}\ N\!\left(0,\ \left[g'(\theta)\right]^2\tau^2\right).$$
+:::
+
+:::proof
+**(Sketch; the one step quoted is Slutsky's theorem.)** Differentiability at $\theta$ means we may write, for $t$ near $\theta$,
+
+$$g(t) = g(\theta) + g'(\theta)(t-\theta) + R(t)(t-\theta), \qquad R(t) \to 0 \text{ as } t \to \theta.$$
+
+Substituting $t = T_n$ and multiplying by $\sqrt n$,
+
+$$\sqrt{n}\left(g(T_n)-g(\theta)\right) = \left[g'(\theta) + R(T_n)\right]\cdot \sqrt{n}\left(T_n-\theta\right).$$
+
+The hypothesis $\sqrt n(T_n-\theta) \xrightarrow{d} N(0,\tau^2)$ forces $T_n \xrightarrow{P} \theta$ — divide by $\sqrt n$ and use the proposition *The one case where the converse holds* — and hence $R(T_n)\xrightarrow{P} 0$ by continuity. **Slutsky's theorem**, which says that if $A_n \xrightarrow{d} A$ and $B_n \xrightarrow{P} b$ for a constant $b$ then $A_nB_n \xrightarrow{d} bA$, now applies with $A_n = \sqrt n (T_n-\theta)$ and $B_n = g'(\theta)+R(T_n) \xrightarrow{P} g'(\theta)$. The conclusion is that the product converges in distribution to $g'(\theta)\cdot N(0,\tau^2)$, which is $N(0, [g'(\theta)]^2\tau^2)$. *This is a sketch in that Slutsky's theorem is quoted rather than proved.* $\blacksquare$
+:::
+
+:::intuition
+Over the scale on which $T_n$ actually varies — a window of width $O(1/\sqrt n)$ around $\theta$ — a differentiable $g$ is indistinguishable from its tangent line. A linear function of a normal is normal, and multiplying by the slope $g'(\theta)$ multiplies the standard deviation by $|g'(\theta)|$. That is the whole theorem; the $g'(\theta) \ne 0$ hypothesis is there because at a stationary point the tangent line is flat and the first-order approximation says nothing, in which case the correct limit is a scaled $\chi^2$ obtained from the second-order term.
+:::
+
+:::example[A standard error for an estimated rate]
+Service times are i.i.d. Exponential with rate $\lambda = 0.5$, so $\mu = 1/\lambda = 2$ and $\sigma^2 = 1/\lambda^2 = 4$. The natural estimator is $\hat\lambda_n = 1/\bar X_n$. Find its approximate distribution for $n = 100$.
+:::
+
+:::solution
+The CLT gives $\sqrt n (\bar X_n - 2) \xrightarrow{d} N(0,4)$, so $\tau^2 = 4$ and $\theta = 2$. Take $g(x) = 1/x$, so $g'(x) = -1/x^2$ and $g'(2) = -1/4$, which is non-zero as required. The delta method gives
+
+$$\sqrt n\left(\hat\lambda_n - 0.5\right) \ \xrightarrow{d}\ N\!\left(0,\ \left(\tfrac{1}{4}\right)^2 \times 4\right) = N(0, 0.25).$$
+
+For $n=100$ this reads $\hat\lambda_{100} \ \dot\sim\ N(0.5, 0.25/100)$, a standard error of $\sqrt{0.0025} = 0.05$, that is $10\%$ of $\lambda$ — and note the general pattern that falls out: the asymptotic variance of $\hat\lambda$ is $\lambda^2/n$, so the *relative* standard error is $1/\sqrt n$ regardless of the rate.
+
+Sanity check by Jensen: $g(x)=1/x$ is convex, so $E(1/\bar X_n) > 1/E(\bar X_n) = 0.5$. The estimator is biased upward, and the delta method — being a first-order, asymptotic statement — does not see that bias, which is $O(1/n)$ and therefore negligible beside the $O(1/\sqrt n)$ standard error. Knowing which order of magnitude an approximation is blind to is the point of doing the check.
+:::
+
+:::summary
+**Markov.** $Y \ge 0$, finite mean: $P(Y \ge a) \le E(Y)/a$. Non-negativity is essential. Attained by a two-point spike at $a$.
+
+**Chebyshev.** Finite $\mu,\sigma^2$: $P(|X-\mu|\ge k)\le\sigma^2/k^2$, or $P(|X-\mu|\ge c\sigma) \le 1/c^2$. Attained by a three-point distribution on $\{-1,0,1\}$; against a normal it is loose by a factor of $5$ at $c=2$ and nearly $1000$ at $c=4$.
+
+**Cantelli.** One-sided, no symmetry assumed: $P(X-\mu\ge t) \le \sigma^2/(\sigma^2+t^2)$. Attained by a two-point distribution. Halving Chebyshev is not a valid substitute.
+
+**Chernoff.** MGF finite for some $s>0$: $P(X\ge a)\le \inf_{s>0}e^{-sa}M_X(s)$ — Markov applied to $e^{sX}$, then optimised. **Hoeffding** specialises it to independent bounded summands: $P(\bar X_n - \mu \ge \varepsilon)\le e^{-2n\varepsilon^2}$ for $X_i\in[0,1]$. Sample size scales as $\log(1/\delta)$ rather than Chebyshev's $1/\delta$.
+
+**Jensen.** $g$ convex: $E(g(X)) \ge g(E(X))$, with equality for strictly convex $g$ only at a constant $X$. Hence $E(1/X)\ge 1/E(X)$ and $E(\log X) \le \log E(X)$.
+
+**Modes of convergence.** $\xrightarrow{a.s.}\Rightarrow\xrightarrow{P}\Rightarrow\xrightarrow{d}$ and $\xrightarrow{L^2}\Rightarrow\xrightarrow{P}$; all converses fail except that $\xrightarrow{d}$ to a constant implies $\xrightarrow{P}$.
+
+**Weak law.** I.i.d., finite variance: $\bar X_n \xrightarrow{P}\mu$, by Chebyshev, with rate $\sigma^2/(n\varepsilon^2)$. Khinchin's theorem drops the variance hypothesis, using characteristic functions.
+
+**Strong law.** I.i.d., finite mean: $P(\bar X_n\to\mu)=1$. Proved here under a finite fourth moment, which gives $P(|\bar X_n - \mu|\ge\varepsilon) \le C/(\varepsilon^4 n^2)$, a summable bound, and Borel–Cantelli converts summability into almost sure convergence.
+
+**Central limit theorem.** I.i.d., $0<\sigma^2<\infty$: $(\bar X_n-\mu)/(\sigma/\sqrt n)\xrightarrow{d}N(0,1)$, proved by expanding the MGF to second order and invoking the continuity and uniqueness theorems for transforms. Cauchy data violate the hypothesis and $\bar X_n$ stays Cauchy at every $n$. **Berry–Esseen** bounds the CDF error by $0.4748\rho/(\sigma^3\sqrt n)$. The **delta method** carries the CLT through a differentiable $g$ with asymptotic variance $[g'(\theta)]^2\tau^2$.
+:::
+
+## Common Mistakes
+
+- Applying Markov's inequality to a variable that can be negative. The proof uses $Y \ge 0$ at exactly one point, and without it the conclusion is false, not merely loose.
+- Treating Chebyshev's bound as an estimate of the tail probability. It is an upper bound covering a worst-case three-point distribution; for a normal it overstates the two-sided tail at $c=3$ by a factor of $41$.
+- Halving Chebyshev's bound to get a one-sided statement. That requires symmetry, which is not a hypothesis. Use Cantelli's $\sigma^2/(\sigma^2+t^2)$.
+- Using a Chernoff or Hoeffding bound when the MGF does not exist or the summands are unbounded. Heavy-tailed data get no exponential bound; Chebyshev still applies if a variance exists.
+- Forgetting to optimise over $s$ in a Chernoff bound. Any single $s>0$ gives a valid bound, but usually a badly inflated one; the whole strength is in the infimum.
+- Dropping independence in Hoeffding's inequality. The MGF of a sum factorises only under independence, and that step is where the theorem is made.
+- Reversing Jensen's inequality by mis-identifying convexity. $\log$ is concave and $1/x$ is convex on $(0,\infty)$; getting the direction wrong reverses the conclusion exactly.
+- Plugging an average into a nonlinear formula and calling the result an average. $E(g(X)) \ne g(E(X))$ whenever $g$ has curvature, and Jensen says which way the error runs.
+- Confusing convergence in probability with almost sure convergence. The typewriter sequence converges in probability to $0$ and converges at no single outcome whatsoever.
+- Reading convergence in distribution as convergence of values. $X_n = -X$ with $X$ standard normal converges in distribution to $X$ while staying $2|X|$ away from it forever.
+- Expecting CDFs to converge at discontinuity points. They need not, which is why the definition of $\xrightarrow{d}$ excludes them.
+- Claiming that the weak law requires finite variance. The Chebyshev *proof* does; the theorem needs only a finite mean (Khinchin). When the mean itself is infinite, the law genuinely fails.
+- Treating the strong law as a slightly better weak law. They are statements about different objects — one about the probability of an event at time $n$, the other about the probability of a property of the entire infinite trajectory.
+- Concluding from "probability zero" that something is impossible. The all-heads sequence lies outside the strong law's convergence set and is a perfectly legitimate outcome.
+- Applying the central limit theorem to individual observations. The theorem is about $\bar X_n$ and $S_n$; the $X_i$ stay exactly as skewed as the population is, forever.
+- Using the CLT without checking that the variance is finite. For Cauchy data, the mean of a million observations has the same distribution as one observation.
+- Quoting $n \ge 30$ as though it were a theorem. Berry–Esseen shows the error is governed by $\rho/\sigma^3$ and falls only like $1/\sqrt n$; a badly skewed population needs far more, and far-tail probabilities are where it fails first.
+- Applying the delta method at a point where $g'(\theta) = 0$. The first-order term vanishes and the limit is not normal; the second-order expansion gives a scaled chi-squared instead.
+- Forgetting that the delta method is asymptotic and first-order. It describes the $O(1/\sqrt n)$ spread and is blind to the $O(1/n)$ bias that Jensen's inequality guarantees is there for any curved $g$.
