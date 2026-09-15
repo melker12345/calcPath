@@ -103,9 +103,15 @@ the example actually uses, so the picture cannot drift from the prose.
 
 | tone | means | use it for |
 |---|---|---|
-| `accent` (default) | the data you were given | the curve, the vectors in the problem |
-| `result` | what the construction produces | the projection, the tangent, the fitted line |
+| `accent` (default) | the data you were given | the curve, the vectors in the problem, the bars |
+| `result` | what the construction produces | the projection, the tangent, the median |
+| `alt` | a second derived quantity, told apart from the first | the mean beside the median |
 | `muted` | scaffolding | construction lines, extensions, right-angle marks |
+
+`alt` is violet rather than a green, which a red-green-deficient reader can
+confuse with the orange of `result`. Even so, give two marks that differ only in
+tone a different dash pattern as well, so colour is never the only thing
+carrying the distinction.
 
 A reader then learns one code that holds across every figure, instead of a
 legend per picture. It also forces the useful question while authoring: *which

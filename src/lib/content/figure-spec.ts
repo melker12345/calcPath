@@ -36,12 +36,13 @@ export type Point = [number, number];
 /**
  * A mark's role, which is what picks its colour.
  *
- * "accent" is the given data, "result" is what the construction produces, and
- * "muted" is scaffolding — construction lines, extensions, right-angle marks.
- * Colour by role rather than per mark, so a reader learns one code across every
- * figure instead of re-reading a legend each time.
+ * "accent" is the given data, "result" is what the construction produces,
+ * "alt" is a second derived quantity that has to be told apart from the first
+ * (a mean beside a median), and "muted" is scaffolding — construction lines,
+ * extensions, right-angle marks. Colour by role rather than per mark, so a
+ * reader learns one code across every figure instead of re-reading a legend.
  */
-export type Tone = "accent" | "muted" | "result";
+export type Tone = "accent" | "muted" | "result" | "alt";
 
 /** A curve given by an expression in x, sampled by the renderer. */
 export type FunctionMark = {

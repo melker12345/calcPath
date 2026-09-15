@@ -60,6 +60,17 @@ export function Figure({ spec, alt }: { spec: FigureSpec; alt?: string }) {
       >
         <defs>
           <marker
+            id={`arrow-alt-${uid}`}
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--fig-alt)" />
+          </marker>
+          <marker
             id={`arrow-result-${uid}`}
             viewBox="0 0 10 10"
             refX="9"
@@ -292,7 +303,14 @@ function MarkView({ mark, spec, uid, sx, sy, project }: Projector) {
 
     case "arrow": {
       const t = markTone(mark);
-      const marker = t === "muted" ? `arrow-muted-${uid}` : t === "result" ? `arrow-result-${uid}` : `arrow-${uid}`;
+      const marker =
+        t === "muted"
+          ? `arrow-muted-${uid}`
+          : t === "result"
+            ? `arrow-result-${uid}`
+            : t === "alt"
+              ? `arrow-alt-${uid}`
+              : `arrow-${uid}`;
       const mid: Point = [(mark.from[0] + mark.to[0]) / 2, (mark.from[1] + mark.to[1]) / 2];
       return (
         <>
