@@ -339,24 +339,30 @@ export function evaluateExpression(expr: string, at: number | Scope): number {
   };
 
   const parseTerm = (): number => {
-    let value = parsePower();
+    let value = parseUnary();
     for (;;) {
-      if (eat("*")) value *= parsePower();
-      else if (eat("/")) value /= parsePower();
+      if (eat("*")) value *= parseUnary();
+      else if (eat("/")) value /= parseUnary();
       else return value;
     }
   };
 
-  const parsePower = (): number => {
-    const base = parseUnary();
-    if (eat("^")) return Math.pow(base, parsePower());
-    return base;
-  };
-
+  // Unary minus binds LOOSER than "^", so -x^2 is -(x^2) as it is everywhere
+  // else in mathematics. It used to bind tighter, which made exp(-x^2/2)
+  // evaluate as exp(+x^2/2): every normal density written the natural way drew
+  // upside down and shot off the frame, and the linter passed it, because
+  // nothing had left the frame.
   const parseUnary = (): number => {
     if (eat("-")) return -parseUnary();
     if (eat("+")) return parseUnary();
-    return parsePrimary();
+    return parsePower();
+  };
+
+  const parsePower = (): number => {
+    const base = parsePrimary();
+    // The exponent may itself be signed (x^-2); "^" is right associative.
+    if (eat("^")) return Math.pow(base, parseUnary());
+    return base;
   };
 
   const parsePrimary = (): number => {

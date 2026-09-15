@@ -350,7 +350,7 @@ function MarkView({ mark, spec, uid, layout, sx, sy, project }: Projector) {
       const d = `M ${[...top, ...bottom].map(project).join(" L ")} Z`;
       return (
         <>
-          <path d={d} className="fig-area" />
+          <path d={d} className={`fig-area ${tone}`} />
           {mark.label && (
             <text
               x={sx((mark.from + mark.to) / 2)}
@@ -419,7 +419,7 @@ function MarkView({ mark, spec, uid, layout, sx, sy, project }: Projector) {
       const c = polygonCentroid(mark.points);
       return (
         <>
-          <path d={`M ${mark.points.map(project).join(" L ")} Z`} className="fig-area" />
+          <path d={`M ${mark.points.map(project).join(" L ")} Z`} className={`fig-area ${tone}`} />
           {mark.label && (
             <text x={sx(c[0])} y={sy(c[1])} className="fig-label fig-accent" textAnchor="middle">
               {mark.label}
