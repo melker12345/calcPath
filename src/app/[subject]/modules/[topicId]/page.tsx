@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { SubjectModulePage } from "@/components/subject-module-page";
 import type { ModuleContent } from "@/lib/modules";
 import type { Problem, Topic } from "@/lib/shared-types";
-import { getFileSystemContentBundle, requireSubjectConfig } from "@/lib/content/loader";
+import { getFileSystemContentBundle, loadSubjectIndex, requireSubjectConfig } from "@/lib/content/loader";
 import { getLegacyTopicRedirect } from "@/lib/content/legacy-topic-redirects";
 import { getSectionHref } from "@/lib/subject-urls";
 
@@ -23,18 +23,24 @@ export default async function SubjectModulePageRoute({ params }: Props) {
     notFound();
   }
 
+  // Only THIS chapter's prose crosses to the client. Handing the page every
+  // chapter of the subject put all of them in the RSC payload — the reader of
+  // one 11k-word chapter was downloading the other eleven too, which at
+  // textbook depth is megabytes of text they never see.
   let modules: ModuleContent[] = [];
   let topics: Topic[] = [];
   let topicProblems: Problem[] = [];
   try {
-    const { getLegacyModulesAndTopicsForSubject } = await import("@/lib/content/adapters");
-    const data = await getLegacyModulesAndTopicsForSubject(slug);
-    if (data) {
-      modules = data.modules;
-      topics = data.topics;
-    }
-    // Load problems for this topic so the (restored) print button can offer "Text + Questions" worksheet
-    // and render a clean print-only list of prompts (works for all subjects, not just legacy calculus).
+    const { getLegacyModuleContentForTopic } = await import("@/lib/content/adapters");
+    const lessonModule = await getLegacyModuleContentForTopic(slug, topicId);
+    if (lessonModule) modules = [lessonModule];
+    // Titles and order only, for the chapter number and the prev/next links.
+    // The subject index carries exactly the Topic fields those need, with none
+    // of the chapter bodies.
+    const index = await loadSubjectIndex(slug);
+    topics = [...index.topics].sort((a, b) => a.order - b.order);
+    // Problems for this topic so the print button can offer a "Text + Questions"
+    // worksheet and render a print-only list of prompts.
     const bundle = await getFileSystemContentBundle(slug);
     topicProblems = bundle.problems.filter((p) => p.topicId === topicId);
   } catch {

@@ -113,7 +113,11 @@ export default async function SubjectHome({ params }: Props) {
           subjectSlug={subject.slug}
           topics={topics}
           modules={modules}
-          problems={problems}
+          // The contents page counts questions per chapter; it never renders one.
+          // Sending whole Problems shipped every prompt, answer and explanation
+          // in the subject to draw a progress bar, so only the two fields it
+          // reads cross to the client.
+          problems={problems.map((p) => ({ id: p.id, topicId: p.topicId }))}
           testCounts={testCounts}
         />
       </ProgressBoundary>
