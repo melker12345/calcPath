@@ -4,317 +4,807 @@ title: Lebesgue Integration
 
 # Lebesgue Integration
 
-Measure-theoretic integration, convergence theorems, and the dominated convergence theorem.
+The Riemann integral, built in *Riemann Integration*, is a complete success at what it was designed for: it integrates every continuous function on a closed bounded interval, it obeys the Fundamental Theorem of Calculus, and it computes the areas that calculus asks about. Its failure is of a different kind, and it is a failure of *closure*. The class of Riemann-integrable functions is not closed under pointwise limits. Take a sequence of perfectly well-behaved Riemann-integrable functions, let them converge pointwise to a limit, and the limit may not be Riemann integrable at all — so the question "does $\int f_n \to \int f$?" cannot even be asked, because the right-hand side does not exist.
 
-The Lebesgue integral is a generalization of the Riemann integral that integrates over a much larger class of functions (including all Riemann integrable functions) and has far superior convergence properties (monotone convergence, dominated convergence, Fatou's lemma).
+That is fatal for analysis, because analysis is the subject of limits. A Fourier series is a limit. A solution of a differential equation obtained by iteration is a limit. An expectation in probability is an integral, and the laws of large numbers are statements about limits of such integrals. A theory of integration that loses its objects when you take a limit cannot support any of this.
 
-It is the integral used in modern analysis, probability theory (expectation), and functional analysis (L^p spaces).
+Lebesgue's repair is a change of the primitive operation. Riemann slices the *domain* into small intervals and asks that the function be nearly constant on each — which is a demand about the function's continuity. Lebesgue slices the *range* into horizontal bands and asks how big the set of inputs landing in each band is — which is a demand only that those sets have a size. The demand on the function is thereby weakened enormously, and the price is that we must first say what "how big" means for a set that is not an interval. That is measure theory, and the first two sections build exactly as much of it as the integral needs.
 
-## Measure and Measurable Functions (Brief)
+The payoff is three convergence theorems — monotone convergence, Fatou's lemma, dominated convergence — which together say that under hypotheses one can actually check, the limit may be moved inside the integral. They are proved here in a chain: monotone convergence from the definition, Fatou from monotone convergence, dominated convergence from Fatou. The chapter closes with differentiation under the integral sign, which is dominated convergence applied to difference quotients, and with the counterexamples that show each hypothesis is doing real work.
+
+Throughout, $m$ denotes Lebesgue measure on $\mathbb{R}$, $m^*$ outer measure, $\chi_E$ the characteristic function of $E$, and "a.e." means "except on a set of measure zero". Facts about suprema and infima come from *The Real Number System*; facts about pointwise and uniform convergence come from *Sequences and Series*; Riemann sums and Darboux criteria come from *Riemann Integration*.
+
+## Why the Riemann integral is not enough
+
+<!-- section: failure-of-riemann -->
+
+Before building anything, it is worth seeing the failure concretely, because the shape of the counterexample dictates the shape of the repair.
+
+:::definition[The Dirichlet function]{#dirichlet}
+The **Dirichlet function** $D : [0,1] \to \mathbb{R}$ is
+
+$$D(x) = \begin{cases} 1, & x \in \mathbb{Q},\\ 0, & x \notin \mathbb{Q}.\end{cases}$$
+:::
+
+:::proposition[Dirichlet's function is not Riemann integrable]{#dirichlet-not-riemann}
+$D$ is bounded on $[0,1]$ but not Riemann integrable there.
+:::
+
+:::proof
+Let $P$ be any partition of $[0,1]$ into subintervals $[x_{i-1},x_i]$ of positive length. Every such subinterval contains both a rational and an irrational, since $\mathbb{Q}$ and its complement are each dense in $\mathbb{R}$ — density of $\mathbb{Q}$ is the theorem *Density of the rationals* of *The Real Number System*, and density of the irrationals follows by adding $\sqrt2/k$ to a rational in a suitably shrunken subinterval. Hence
+
+$$M_i = \sup_{[x_{i-1},x_i]} D = 1, \qquad m_i = \inf_{[x_{i-1},x_i]} D = 0$$
+
+for every $i$. The upper and lower Darboux sums are therefore $U(D,P) = \sum_i 1\cdot(x_i - x_{i-1}) = 1$ and $L(D,P) = 0$ for *every* partition $P$, so the upper integral is $1$, the lower integral is $0$, and they do not agree. $\blacksquare$
+:::
+
+The proposition alone is only mildly annoying: $D$ is an artificial function. What makes it fatal is that $D$ is a pointwise limit of functions that are as tame as one could wish.
+
+:::theorem[Riemann integrability is not closed under pointwise limits]{#riemann-not-closed}
+There is a sequence $(f_n)$ of Riemann-integrable functions on $[0,1]$, each with $\int_0^1 f_n = 0$, converging pointwise on $[0,1]$ to a function that is not Riemann integrable.
+:::
+
+:::proof
+Enumerate the rationals of $[0,1]$ as $q_1, q_2, q_3, \ldots$; this is possible because $\mathbb{Q}\cap[0,1]$ is countable. Define
+
+$$f_n = \chi_{\{q_1,\ldots,q_n\}}, \qquad\text{that is,}\qquad f_n(x) = \begin{cases}1, & x \in \{q_1,\ldots,q_n\},\\ 0,&\text{otherwise.}\end{cases}$$
+
+Each $f_n$ differs from the zero function at exactly $n$ points, so it is Riemann integrable with $\int_0^1 f_n = 0$: given $\varepsilon>0$, cover the $n$ offending points by $n$ subintervals of total length less than $\varepsilon$, and any partition refining that cover has $U(f_n,P) < \varepsilon$ while $L(f_n,P)=0$.
+
+The sequence increases, $f_n \le f_{n+1}$, and it converges pointwise to $D$: if $x$ is irrational then $f_n(x)=0$ for all $n$; if $x$ is rational then $x = q_N$ for some $N$, and $f_n(x)=1$ for all $n \ge N$. By the proposition *Dirichlet's function is not Riemann integrable*, the limit is not Riemann integrable. $\blacksquare$
+:::
+
+So a monotone, uniformly bounded sequence of Riemann-integrable functions, with all integrals equal to $0$, can converge pointwise to something outside the theory entirely. Note where the trouble is not: the integrals $\int f_n = 0$ converge perfectly well. The defect is that the limit function has no integral to converge *to*.
+
+:::intuition
+Riemann's method surveys a landscape by walking left to right and measuring the height at each step, so it needs the height to change slowly as you walk. Lebesgue's method surveys the same landscape by asking, for each altitude band, *how much land lies at that altitude* — and then adding up altitude times area. The second question never cared whether neighbouring points had similar heights, which is exactly why $D$, whose neighbouring points have wildly different heights, is easy for it: the set at height $1$ is $\mathbb{Q}$, a set of total length $0$, so it contributes nothing.
+:::
+
+:::figure[Riemann partitions the domain into vertical strips and needs the function nearly constant on each; Lebesgue partitions the range into horizontal bands and needs only the preimage of each band to have a measure.]{#slicing}
+{
+  "type": "plot",
+  "x": [-0.15, 3.3], "y": [-0.35, 2.6],
+  "xTicks": 1, "yTicks": 0.5, "xLabel": "x", "yLabel": "y",
+  "marks": [
+    { "kind": "function", "fn": "1.1 + 0.9*sin(2*x)", "tone": "accent" },
+    { "kind": "line", "through": [[0, 0.7], [3, 0.7]], "extend": false, "tone": "muted", "dashed": true },
+    { "kind": "line", "through": [[0, 1.4], [3, 1.4]], "extend": false, "tone": "muted", "dashed": true },
+    { "kind": "line", "through": [[0.5, 0], [0.5, 2.0]], "extend": false, "tone": "result" },
+    { "kind": "line", "through": [[0.9, 0], [0.9, 2.0]], "extend": false, "tone": "result" },
+    { "kind": "text", "at": [1.9, 2.35], "text": "horizontal band", "leaderTo": [2.5, 1.05] },
+    { "kind": "text", "at": [0.3, -0.25], "text": "vertical strip", "leaderTo": [0.7, 0.25] }
+  ]
+}
+:::
+
+## Outer measure and measurable sets
 
 <!-- section: measure-measurable -->
 
-Lebesgue measure on ℝ^n assigns to intervals their usual volume and extends by countable additivity to a large class of sets (measurable sets).
+The repair needs a notion of the size of an arbitrary subset of $\mathbb{R}$. The construction is in two steps: define an outer size for every set by economical covering, then restrict attention to the sets on which that outer size behaves additively.
 
-:::definition[Measure zero]{#measure-zero}
-A set has measure zero if it can be covered by intervals of arbitrarily small total volume. Countable sets, the Cantor set and the rationals are all of measure zero.
+:::definition[Lebesgue outer measure]{#outer-measure}
+For $E \subseteq \mathbb{R}$, the **outer measure** of $E$ is
+
+$$m^*(E) = \inf\left\{ \sum_{k=1}^{\infty} \ell(I_k) \;:\; E \subseteq \bigcup_{k=1}^{\infty} I_k,\ I_k \text{ open intervals} \right\},$$
+
+where $\ell((a,b)) = b-a$. The infimum is over all countable covers of $E$ by open intervals.
 :::
 
-:::definition[Measurable function]{#measurable}
-A function $f$ is measurable if the super-level sets
-
-$$\{\, x : f(x) > a \,\}$$
-
-are measurable for every $a$ (or under any of the equivalent conditions).
+:::definition[Null set]{#null-set}
+$E$ is a **null set**, or has **measure zero**, if $m^*(E)=0$: for every $\varepsilon>0$ there is a countable cover of $E$ by open intervals of total length less than $\varepsilon$. A property holds **almost everywhere** (a.e.) if the set where it fails is null.
 :::
 
-The intuition: Lebesgue integration works by slicing the *range* into horizontal bands and asking "how big is the set of inputs landing above height a?" — so a function is admissible precisely when every such "above height a" set has a well-defined size. All continuous functions, all monotone functions, and (crucially) pointwise limits of measurable functions are measurable; this closure under limits is what makes the convergence theorems possible.
+:::proposition[Basic properties of outer measure]{#outer-measure-props}
+Outer measure satisfies: (i) $m^*(\emptyset)=0$; (ii) monotonicity, $A \subseteq B \implies m^*(A) \le m^*(B)$; (iii) countable subadditivity,
 
-:::intuition
-Lebesgue measure is "length/area/volume" made rigorous so that it works for very wild sets (as long as they are not too pathological).
+$$m^*\left(\bigcup_{k=1}^\infty A_k\right) \le \sum_{k=1}^{\infty} m^*(A_k);$$
 
-Measurable functions are those for which we can sensibly talk about "the set where the function is above a certain height" having a well-defined size.
+and (iv) $m^*(I) = \ell(I)$ for every interval $I$.
 :::
 
-:::example
-Show the Dirichlet function $D(x) = 1$ for $x \in \mathbb{Q}$, $D(x) = 0$ otherwise, is measurable on $\mathbb{R}$.
+:::proof
+(i) and (ii) are immediate: the empty set is covered by an interval of any length, and any cover of $B$ covers $A$, so the infimum for $A$ is over a larger collection.
+
+(iii) Fix $\varepsilon>0$. For each $k$ choose a cover $\{I_{k,j}\}_j$ of $A_k$ with $\sum_j \ell(I_{k,j}) \le m^*(A_k) + \varepsilon 2^{-k}$, which is possible by the definition of the infimum (if some $m^*(A_k)=\infty$ the inequality is trivial). The doubly-indexed family $\{I_{k,j}\}_{k,j}$ is countable and covers $\bigcup_k A_k$, so
+
+$$m^*\left(\bigcup_k A_k\right) \le \sum_{k}\sum_j \ell(I_{k,j}) \le \sum_k m^*(A_k) + \varepsilon\sum_k 2^{-k} = \sum_k m^*(A_k) + \varepsilon.$$
+
+As $\varepsilon>0$ was arbitrary, (iii) follows.
+
+(iv) For a bounded closed interval $[a,b]$: the cover $\{(a-\varepsilon, b+\varepsilon)\}$ gives $m^*([a,b]) \le b-a+2\varepsilon$ for every $\varepsilon$, hence $m^*([a,b]) \le b-a$. For the reverse, let $\{I_k\}$ cover $[a,b]$. By compactness of $[a,b]$ — the Heine–Borel theorem of *Metric Spaces* — finitely many $I_1,\ldots,I_N$ already cover it, and an induction on $N$ over a chain of overlapping intervals gives $\sum_{k=1}^{N}\ell(I_k) \ge b-a$. Hence every cover has total length at least $b-a$, so $m^*([a,b]) \ge b-a$. The other interval types differ from $[a,b]$ by at most two points, which are null, so (iii) and (ii) force the same value. $\blacksquare$
+:::
+
+:::corollary[Countable sets are null]{#countable-null}
+Every countable set $E = \{x_1,x_2,\ldots\} \subseteq \mathbb{R}$ has $m^*(E)=0$.
+:::
+
+:::proof
+Each singleton satisfies $m^*(\{x_k\}) \le \ell\big((x_k - \varepsilon, x_k+\varepsilon)\big) = 2\varepsilon$ for every $\varepsilon>0$, so $m^*(\{x_k\})=0$. Countable subadditivity from the proposition *Basic properties of outer measure* gives $m^*(E) \le \sum_k 0 = 0$. $\blacksquare$
+:::
+
+In particular $m^*(\mathbb{Q})=0$, which is already the whole explanation of why the Dirichlet function will turn out to have integral $0$.
+
+Outer measure is defined for every set, which sounds like a triumph but is in fact the problem: it is not additive on disjoint sets in general. Vitali's construction produces disjoint sets $V_1, V_2, \ldots$ whose union is contained in $[0,3]$ but with $\sum_k m^*(V_k)$ either $0$ or $\infty$, neither compatible with a finite total. The fix is to discard the offenders.
+
+:::definition[Measurable set (Carathéodory)]{#measurable-set}
+A set $E \subseteq \mathbb{R}$ is **Lebesgue measurable** if for every $A \subseteq \mathbb{R}$,
+
+$$m^*(A) = m^*(A \cap E) + m^*(A \cap E^c).$$
+
+For measurable $E$ we write $m(E) = m^*(E)$ and call it the **Lebesgue measure** of $E$. The collection of measurable sets is denoted $\mathcal{M}$.
+:::
+
+The condition says $E$ splits *every* test set additively, not merely itself. By subadditivity the inequality $\le$ always holds, so only $\ge$ needs checking in practice.
+
+:::theorem[The measurable sets form a σ-algebra and $m$ is countably additive]{#sigma-algebra}
+$\mathcal{M}$ contains $\emptyset$ and $\mathbb{R}$, is closed under complements and under countable unions and intersections, and contains every interval and every null set. Moreover, if $E_1,E_2,\ldots \in \mathcal{M}$ are pairwise disjoint then
+
+$$m\left(\bigcup_{k=1}^{\infty} E_k\right) = \sum_{k=1}^{\infty} m(E_k).$$
+:::
+
+:::proof
+Closure under complement is immediate, the Carathéodory condition being symmetric in $E$ and $E^c$. For null $E$: $m^*(A\cap E) \le m^*(E)=0$ and $m^*(A\cap E^c) \le m^*(A)$ by monotonicity, so the two terms sum to at most $m^*(A)$, and $\ge$ is subadditivity.
+
+For finite unions, let $E,F\in\mathcal{M}$ and test with $A$. Applying the condition for $E$, then for $F$ with test set $A\cap E^c$:
+
+$$m^*(A) = m^*(A\cap E) + m^*(A\cap E^c\cap F) + m^*(A\cap E^c\cap F^c).$$
+
+Since $A\cap(E\cup F) = (A\cap E)\cup(A\cap E^c\cap F)$, subadditivity bounds $m^*(A\cap(E\cup F))$ by the sum of the first two terms, so $m^*(A) \ge m^*(A\cap(E\cup F)) + m^*(A\cap(E\cup F)^c)$, which is the required inequality. Hence $\mathcal{M}$ is an algebra.
+
+For disjoint $E_1,\ldots,E_N \in \mathcal{M}$ and any $A$, an induction using the condition for $E_N$ with test set $A \cap \bigcup_{k\le N}E_k$ gives
+
+$$m^*\left(A\cap\bigcup_{k=1}^{N}E_k\right) = \sum_{k=1}^{N} m^*(A\cap E_k). \tag{$*$}$$
+
+Now let $E=\bigcup_{k=1}^\infty E_k$ with the $E_k$ disjoint and measurable, and put $F_N = \bigcup_{k\le N}E_k \in \mathcal{M}$. For any $A$,
+
+$$m^*(A) = m^*(A\cap F_N) + m^*(A\cap F_N^c) \ge \sum_{k=1}^{N}m^*(A\cap E_k) + m^*(A\cap E^c),$$
+
+using $(*)$ and $F_N^c \supseteq E^c$. Letting $N\to\infty$ and then applying countable subadditivity to $A \cap E = \bigcup_k (A\cap E_k)$,
+
+$$m^*(A) \ge \sum_{k=1}^{\infty}m^*(A\cap E_k) + m^*(A\cap E^c) \ge m^*(A\cap E) + m^*(A\cap E^c),$$
+
+so $E\in\mathcal{M}$; a general countable union is disjointified by $E_k' = E_k \setminus \bigcup_{j<k}E_j$, each measurable since $\mathcal{M}$ is an algebra. Taking $A = E$ in the displayed chain turns both inequalities into equalities and yields countable additivity. Intersections follow from unions by De Morgan. Finally $(a,\infty)\in\mathcal{M}$ by a direct check on covers, and the intervals generate from these by complement and intersection. $\blacksquare$
+:::
+
+:::example[The Cantor set is uncountable and null]
+Let $C \subseteq [0,1]$ be the Cantor set, obtained by removing the open middle third of $[0,1]$, then the open middle thirds of the two remaining intervals, and so on. Compute $m(C)$.
 :::
 
 :::solution
-To check measurability we test the super-level sets $\{x \mid D(x) > a\}$ for every real $a$.
-Step 2: If $a \geq 1$, then $D(x) > a$ is impossible, so the set is $\emptyset$, which is measurable.
-Step 3: If $0 \leq a < 1$, then $D(x) > a$ exactly where $D(x) = 1$, i.e. the set is $\mathbb{Q}$, which is measurable (it is countable, hence a countable union of the measurable singletons $\{q\}$).
-Step 4: If $a < 0$, then $D(x) > a$ everywhere, so the set is $\mathbb{R}$, which is measurable.
-Step 5: Every super-level set is measurable, so $D$ is measurable.
-Sanity check: $\mathbb{Q}$ is countable, so $m(\mathbb{Q}) = 0$; thus $D = 0$ except on a null set. It is *not* Riemann integrable, because it is discontinuous at every point, so its discontinuity set has measure $1 > 0$ on $[0,1]$, violating Lebesgue's criterion. Measurability is a much weaker demand than Riemann integrability.
+1. At stage $n$ the set $C_n$ retained is a union of $2^n$ closed intervals each of length $3^{-n}$, and $C = \bigcap_n C_n$.
+2. Each $C_n$ is a finite union of intervals, hence measurable, and $m(C_n) = 2^n \cdot 3^{-n} = (2/3)^n$ by finite additivity from the theorem *The measurable sets form a σ-algebra and $m$ is countably additive*.
+3. $C \subseteq C_n$ for every $n$, so monotonicity gives $m^*(C) \le (2/3)^n$ for every $n$. Since $(2/3)^n \to 0$, $m^*(C)=0$ and $C$ is null, hence measurable.
+4. Alternatively, sum the removed pieces: at stage $n$ one removes $2^{n-1}$ intervals of length $3^{-n}$, total $\sum_{n\ge1} 2^{n-1}3^{-n} = \tfrac13\sum_{n\ge0}(2/3)^n = \tfrac13\cdot 3 = 1$, leaving measure $1-1=0$.
+5. Yet $C$ is uncountable: the map sending a $\{0,2\}$-valued ternary expansion $\sum a_k 3^{-k}$ to the binary number $\sum (a_k/2)2^{-k}$ is a surjection $C \to [0,1]$.
+6. Sanity check on the moral: "null" is a statement about length, not about cardinality. The corollary *Countable sets are null* gives one direction only — countable forces null, null does not force countable.
 :::
 
-## Simple Functions and the Integral Definition
+:::example[A fat Cantor set: nowhere dense with positive measure]
+Repeat the Cantor construction but at stage $n$ remove from each of the $2^{n-1}$ surviving intervals a centred open interval of length $4^{-n}$. Find the measure of the resulting set $F$.
+:::
+
+:::solution
+1. At stage $n$ there are $2^{n-1}$ intervals, and from each one removes length $4^{-n}$, so the total removed at stage $n$ is $2^{n-1}4^{-n}$.
+2. Summing over $n$: $\displaystyle\sum_{n=1}^{\infty} 2^{n-1}4^{-n} = \frac{1}{2}\sum_{n=1}^{\infty}\left(\frac{2}{4}\right)^{n} = \frac12 \cdot \frac{1/2}{1-1/2} = \frac12.$
+3. By countable additivity, $m(F) = 1 - \tfrac12 = \tfrac12$.
+4. $F$ contains no interval — every surviving interval at stage $n$ has length at most $2^{-n} \to 0$ — so $F$ is nowhere dense, and its complement in $[0,1]$ is dense and open.
+5. Sanity check: a nowhere dense set with measure $\tfrac12$ shows "small in the topological sense" and "small in the measure sense" are genuinely different notions. This is exactly why $\chi_F$ is a bounded function whose discontinuity set is $F$ itself, so by the theorem *Lebesgue's criterion for Riemann integrability* below it is not Riemann integrable.
+:::
+
+:::pitfall
+Null does not mean empty, finite, countable, or closed under any topological operation. The Cantor set is null, uncountable, closed and perfect; a fat Cantor set is nowhere dense with measure $\tfrac12$; $\mathbb{Q}$ is null and dense. The only thing $m(E)=0$ asserts is that $E$ can be hidden inside open intervals of arbitrarily small total length.
+:::
+
+## Measurable functions
+
+<!-- section: measurable-functions -->
+
+With a notion of size for sets, the class of admissible functions is determined by the slicing picture: we need every "above height $a$" set to be measurable.
+
+:::definition[Measurable function]{#measurable-function}
+An extended-real-valued function $f$ on a measurable set $E$ is **measurable** if
+
+$$\{x \in E : f(x) > a\} \in \mathcal{M} \quad\text{for every } a\in\mathbb{R}.$$
+:::
+
+:::proposition[Equivalent forms of measurability]{#measurability-equivalents}
+For $f$ on a measurable $E$, the following are equivalent: $\{f>a\}$ measurable for all $a$; $\{f\ge a\}$ measurable for all $a$; $\{f<a\}$ measurable for all $a$; $\{f\le a\}$ measurable for all $a$.
+:::
+
+:::proof
+$\{f \ge a\} = \bigcap_{n\ge1}\{f > a - 1/n\}$ is a countable intersection of measurable sets, so the first condition gives the second. $\{f<a\} = E\setminus\{f\ge a\}$ gives the third from the second by complementation, $\{f\le a\} = \bigcap_n \{f< a+1/n\}$ gives the fourth from the third, and $\{f>a\} = E\setminus\{f\le a\}$ closes the cycle. Each step uses only that $\mathcal{M}$ is a σ-algebra, by the theorem *The measurable sets form a σ-algebra and $m$ is countably additive*. $\blacksquare$
+:::
+
+:::theorem[Measurability is preserved by limits]{#measurable-limits}
+If $f_1,f_2,\ldots$ are measurable on $E$, then $\sup_n f_n$, $\inf_n f_n$, $\limsup_n f_n$ and $\liminf_n f_n$ are measurable. In particular a pointwise limit of measurable functions is measurable.
+:::
+
+:::proof
+For the supremum, $x$ satisfies $\sup_n f_n(x) > a$ exactly when $f_n(x)>a$ for at least one $n$, so
+
+$$\left\{\sup_n f_n > a\right\} = \bigcup_{n=1}^{\infty}\{f_n > a\},$$
+
+a countable union of measurable sets. For the infimum, $\{\inf_n f_n < a\} = \bigcup_n \{f_n < a\}$, measurable by the proposition *Equivalent forms of measurability*. Then
+
+$$\limsup_n f_n = \inf_{k\ge1}\ \sup_{n\ge k} f_n, \qquad \liminf_n f_n = \sup_{k\ge1}\ \inf_{n\ge k} f_n,$$
+
+each an iterated sup/inf of measurable functions, hence measurable. If $f_n \to f$ pointwise then $f = \limsup_n f_n$. $\blacksquare$
+:::
+
+This theorem is the whole point. Compare it with the theorem *Riemann integrability is not closed under pointwise limits*: the class of measurable functions is closed under exactly the operation that destroyed the Riemann class. Continuous functions are measurable, since $\{f>a\} = f^{-1}((a,\infty))$ is open; monotone functions are measurable, since $\{f>a\}$ is an interval; and everything obtainable from these by countable limiting operations stays inside.
+
+:::example[Measurability of the Dirichlet function]
+Show that $D = \chi_{\mathbb{Q}}$ is measurable on $\mathbb{R}$.
+:::
+
+:::solution
+1. Test $\{D > a\}$ for each real $a$. If $a \ge 1$ the set is $\emptyset$; if $0 \le a < 1$ it is $\mathbb{Q}$; if $a<0$ it is $\mathbb{R}$.
+2. $\emptyset$ and $\mathbb{R}$ are measurable, and $\mathbb{Q}$ is null by the corollary *Countable sets are null*, hence measurable by the theorem *The measurable sets form a σ-algebra and $m$ is countably additive*.
+3. Every super-level set is measurable, so $D$ is measurable.
+4. Sanity check: measurability is a far weaker demand than Riemann integrability. $D$ fails the latter by the proposition *Dirichlet's function is not Riemann integrable*, yet passes the former with three lines of checking.
+:::
+
+:::note
+Measurability of $f$ does not require $f$ to be finite: the extended values $\pm\infty$ are allowed, and one checks $\{f=\infty\} = \bigcap_n\{f>n\}$ is measurable automatically. This matters because $\sup_n f_n$ may genuinely be infinite somewhere, and the monotone convergence theorem below is stated so that an infinite limit is permitted rather than excluded.
+:::
+
+## Simple functions and the integral
 
 <!-- section: simple-functions-definition -->
 
-:::definition[Simple function]
-A simple function is a finite linear combination of characteristic functions of measurable sets,
+The integral is now built in three stages, each forced by the previous one.
 
-$$\varphi = \sum_k c_k \chi_{E_k}.$$
+:::definition[Simple function]{#simple-function}
+A measurable function $\varphi$ is **simple** if it takes only finitely many values. Writing its distinct nonzero values as $c_1,\ldots,c_N$ and $E_k = \varphi^{-1}(\{c_k\})$, the **canonical form** is
+
+$$\varphi = \sum_{k=1}^{N} c_k \chi_{E_k},$$
+
+with the $E_k$ measurable and pairwise disjoint.
 :::
 
-:::definition[Lebesgue integral]{#lebesgue-integral}
-For a nonnegative simple $\varphi$ the integral is
+:::definition[Integral of a nonnegative simple function]{#simple-integral}
+For a nonnegative simple $\varphi = \sum_{k=1}^N c_k\chi_{E_k}$ in canonical form and measurable $A$,
 
-$$\int \varphi = \sum_k c_k\, m(E_k),$$
+$$\int_A \varphi \,dm = \sum_{k=1}^{N} c_k\, m(E_k \cap A),$$
 
-with $m$ Lebesgue measure and the convention $0 \cdot \infty = 0$. For a general nonnegative measurable $f$ the integral is the supremum of $\int \varphi$ over simple functions $0 \le \varphi \le f$. For signed $f$ one splits into positive and negative parts, provided at least one has finite integral.
+with the convention $0\cdot\infty = 0$.
 :::
 
-The definition builds upward in three stages, and each later stage is forced by the one before it — which is why the integral is unambiguous.
+:::definition[Integral of a nonnegative measurable function]{#nonneg-integral}
+For measurable $f \ge 0$ on $A$,
 
-:::intuition
-First integrate the simplest possible functions: constants on measurable "bricks". The integral is height times measure of the brick.
-
-For a general nonnegative function, approximate it from below by simple functions (like a histogram that gets finer); the integral is the least upper bound of the areas of those approximations.
+$$\int_A f\,dm = \sup\left\{ \int_A \varphi\,dm \;:\; \varphi \text{ simple},\ 0 \le \varphi \le f \text{ on } A \right\} \in [0,\infty].$$
 :::
 
-:::example[(simple function on disjoint bricks):]
-Integrate the simple function $\varphi = 2\,\chi_{[0,1)} + 5\,\chi_{[1,3)} + 0 \cdot \chi_{[3,\infty)}$ over $\mathbb{R}$.
+:::definition[Integrable function and the general integral]{#general-integral}
+For measurable $f$, write $f^+ = \max(f,0)$ and $f^- = \max(-f,0)$, so $f = f^+ - f^-$ and $|f| = f^+ + f^-$. If $\int_A |f|\,dm < \infty$ we call $f$ **integrable** on $A$ and set
+
+$$\int_A f\,dm = \int_A f^+\,dm - \int_A f^-\,dm.$$
+:::
+
+The stages are forced in this order because each supplies what the next needs. Stage one is a definition rather than a theorem only because "height times measure" is what we decided the integral should mean. Stage two is a supremum rather than a limit because no canonical approximating sequence has been singled out yet; the next theorem supplies one and shows the supremum is achieved along it. Stage three splits a signed function because the supremum in stage two is meaningless without a sign.
+
+:::figure[A nonnegative simple function is a finite stack of blocks; its integral is the sum of height times the measure of the base of each block.]{#simple-blocks}
+{
+  "type": "plot",
+  "x": [-0.3, 5.4], "y": [-0.5, 4.2], "xTicks": 1, "yTicks": 1,
+  "xLabel": "x", "yLabel": "y",
+  "marks": [
+    { "kind": "bars", "bars": [[0, 1, 2], [1, 3, 3], [3, 4, 1], [4, 5, 2.5]], "tone": "accent" },
+    { "kind": "text", "at": [0.5, 3.9], "text": "2*m([0,1)) = 2", "leaderTo": [0.5, 1.9] },
+    { "kind": "text", "at": [3.3, 3.6], "text": "3*m([1,3)) = 6", "leaderTo": [2.0, 2.9] }
+  ]
+}
+:::
+
+:::theorem[Simple approximation theorem]{#simple-approximation}
+Let $f \ge 0$ be measurable on $E$. There is an increasing sequence of nonnegative simple functions $\varphi_1 \le \varphi_2 \le \cdots$ with $\varphi_n \to f$ pointwise on $E$. The convergence is uniform on any set where $f$ is bounded.
+:::
+
+:::proof
+For each $n$, cut the range $[0,n)$ into $n2^n$ bands of height $2^{-n}$ and define
+
+$$\varphi_n(x) = \begin{cases} \dfrac{k-1}{2^{n}}, & \text{if } \dfrac{k-1}{2^n} \le f(x) < \dfrac{k}{2^n},\ k = 1,\ldots,n2^n,\\[6pt] n, & \text{if } f(x) \ge n.\end{cases}$$
+
+Each level set of $\varphi_n$ is of the form $\{a \le f < b\}$ or $\{f \ge n\}$, measurable by the proposition *Equivalent forms of measurability*, and $\varphi_n$ takes at most $n2^n+1$ values, so it is simple; clearly $0 \le \varphi_n \le f$.
+
+Monotonicity: refining from level $n$ to level $n+1$ halves each band, so the value assigned to $x$ either stays put or increases by $2^{-(n+1)}$; and where $f(x)\ge n$, the new value is at least $n$. Hence $\varphi_n \le \varphi_{n+1}$.
+
+Convergence: if $f(x)<\infty$, then for all $n > f(x)$ we have $0 \le f(x)-\varphi_n(x) < 2^{-n} \to 0$. If $f(x)=\infty$ then $\varphi_n(x) = n \to \infty = f(x)$. Where $f \le M$, every $n>M$ gives the uniform bound $\|f - \varphi_n\|_\infty \le 2^{-n}$. $\blacksquare$
+:::
+
+This is the "range-slicing" picture made into an algorithm, and it is what the theorem *Monotone Convergence Theorem* below will be applied to constantly: to prove something about $\int f$ for general $f\ge0$, prove it for simple functions and pass to the limit along $\varphi_n$.
+
+:::proposition[Linearity and monotonicity of the integral]{#integral-linearity}
+For integrable $f,g$ and $\alpha,\beta \in \mathbb{R}$, $\alpha f + \beta g$ is integrable with
+
+$$\int_A(\alpha f + \beta g)\,dm = \alpha\int_A f\,dm + \beta\int_A g\,dm,$$
+
+and if $f \le g$ a.e. then $\int_A f\,dm \le \int_A g\,dm$. Moreover $\left|\int_A f\,dm\right| \le \int_A |f|\,dm$.
+:::
+
+:::proof
+For nonnegative simple $\varphi,\psi$, refine to the common partition generated by the level sets of both; on each piece of that finite partition $\varphi+\psi$ is constant, and finite additivity of $m$ gives $\int(\varphi+\psi) = \int\varphi + \int\psi$, while $\int(\alpha\varphi) = \alpha\int\varphi$ for $\alpha\ge0$ is immediate from the definition. For nonnegative measurable $f,g$, take simple sequences $\varphi_n\uparrow f$ and $\psi_n \uparrow g$ from the theorem *Simple approximation theorem*; then $\varphi_n+\psi_n \uparrow f+g$, and the theorem *Monotone Convergence Theorem* transfers additivity to the limit. For signed integrable $f,g$, write $h=f+g$ and note $h^+ - h^- = f^+-f^-+g^+-g^-$, so $h^+ + f^- + g^- = h^- + f^+ + g^+$; integrating this identity between nonnegative functions and rearranging the (finite) terms gives additivity. Negative scalars are handled by $(-f)^{\pm} = f^{\mp}$.
+
+Monotonicity: if $f\le g$ a.e. then every simple $\varphi$ with $0\le\varphi\le f$ satisfies $\varphi \le g$ off a null set, and altering a function on a null set does not change the integral, since the corresponding term $c\,m(\emptyset\text{-up-to-null})$ contributes $0$. So the supremum defining $\int f$ is over a subfamily of that defining $\int g$. The final bound follows from $-|f| \le f \le |f|$. $\blacksquare$
+:::
+
+:::corollary[Vanishing on null sets]{#null-integral}
+If $m(E)=0$ then $\int_E f\,dm = 0$ for every measurable $f$. Consequently, if $f = g$ a.e. then $\int_A f\,dm = \int_A g\,dm$.
+:::
+
+:::proof
+Any simple $0\le\varphi\le|f|$ has $\int_E \varphi = \sum_k c_k m(E_k\cap E) = 0$, since each $m(E_k\cap E)\le m(E)=0$. Taking the supremum, $\int_E|f|\,dm=0$, so $\int_E f = 0$. If $f=g$ a.e., let $N$ be the null set where they differ and split $A = (A\setminus N)\cup N$; the integrals agree on $A\setminus N$ and both vanish on $N$. $\blacksquare$
+:::
+
+:::example[Integrating a simple function]
+Compute $\int_{\mathbb{R}} \varphi\,dm$ for $\varphi = 2\chi_{[0,1)} + 5\chi_{[1,3)} + 4\chi_{[3,3.5)}$.
 :::
 
 :::solution
-Read off the constant heights and their level sets: $c_1 = 2$ on $E_1 = [0,1)$, $c_2 = 5$ on $E_2 = [1,3)$, $c_3 = 0$ elsewhere.
-Step 2: Measure each brick: $m(E_1) = 1 - 0 = 1$, $m(E_2) = 3 - 1 = 2$.
-Step 3: Apply $\int \varphi = \sum_k c_k\, m(E_k) = 2 \cdot 1 + 5 \cdot 2 + 0 = 2 + 10 = 12$.
-Sanity check: $\varphi$ is an ordinary step function here, so its Riemann integral is the sum of rectangle areas $2\cdot 1 + 5 \cdot 2 = 12$ — the two integrals agree, as they must for a step function.
+1. The function is already in canonical form: distinct values $2,5,4$ on disjoint sets.
+2. Measures of the bricks: $m([0,1))=1$, $m([1,3))=2$, $m([3,3.5))=0.5$.
+3. By the definition *Integral of a nonnegative simple function*, $\int\varphi = 2(1)+5(2)+4(0.5) = 2+10+2 = 14$.
+4. Sanity check: $\varphi$ is a step function, so its Riemann integral over $[0,3.5]$ is the same sum of rectangle areas, $14$ — as the theorem *Riemann and Lebesgue agree* below requires.
 :::
 
-:::example[(a genuinely non-Riemann case):]
-The characteristic function of the rationals in $[0,1]$ is simple: $1 \cdot \chi_{\mathbb{Q} \cap [0,1]} + 0 \cdot \chi_{\text{irrationals} \cap [0,1]}$. Its integral is $1 \cdot m(\mathbb{Q} \cap [0,1]) + 0 = 0$, because $\mathbb{Q}\cap[0,1]$ is countable, hence $m(\mathbb{Q} \cap [0,1]) = 0$. Here the convention $0 \cdot \infty = 0$ is not even needed; the point is that Lebesgue's "height times measure" recipe handles a set with no length at all.
-:::
-
-## Comparison with Riemann Integral; When They Agree
-
-<!-- section: comparison-riemann-agree -->
-
-:::theorem[Riemann integrable implies Lebesgue integrable]
-If $f$ is Riemann integrable on $[a,b]$ then it is Lebesgue integrable and the two integrals coincide.
-:::
-
-The converse is false: the Dirichlet function is Lebesgue integrable, with integral $0$, but not Riemann integrable.
-
-:::theorem[Lebesgue's criterion]{#lebesgue-criterion}
-A bounded function on $[a,b]$ is Riemann integrable if and only if its set of discontinuities has Lebesgue measure zero.
-:::
-
-:::intuition
-Every "nice" function you integrated with Riemann sums in calculus is also Lebesgue integrable and gives the same number.
-
-Lebesgue can handle functions that jump on dense sets (as long as the jumps are on a set of measure zero) because it doesn't care about values on measure-zero sets.
-:::
-
-:::example[(the two functions side by side):]
-Compare Thomae's function and the Dirichlet function on $[0,1]$; both equal $0$ almost everywhere, but only one is Riemann integrable.
+:::example[A simple function on a null set]
+Compute $\int_{[0,1]} \big(7\chi_{\mathbb{Q}} + 3\chi_{C}\big)\,dm$, where $C$ is the Cantor set.
 :::
 
 :::solution
-Thomae's function is $T(x) = 1/q$ if $x = p/q$ in lowest terms with $q > 0$, and $T(x) = 0$ if $x$ is irrational. It is continuous at every irrational and discontinuous at every rational.
-Step 2: The discontinuity set of $T$ is $\mathbb{Q} \cap [0,1]$, which is countable and therefore has measure zero. By Lebesgue's criterion (bounded $+$ discontinuities of measure zero), $T$ is Riemann integrable.
-Step 3: Its Riemann integral is $0$: for any $\varepsilon > 0$ only finitely many points have $T(x) \geq \varepsilon$, so the upper sums can be made arbitrarily small while the lower sums are $0$. Hence the Lebesgue integral also equals $0$.
-Step 4: The Dirichlet function $D$ is discontinuous *everywhere*, so its discontinuity set is all of $[0,1]$, of measure $1$. Lebesgue's criterion fails, so $D$ is not Riemann integrable.
-Step 5: But $D = 0$ almost everywhere, so its Lebesgue integral is $0$.
-Sanity check: both functions equal $0$ a.e. and have Lebesgue integral $0$; the discriminator is the *size of the discontinuity set* ($0$ for $T$, $1$ for $D$), which is exactly what Riemann integrability sees and the Lebesgue integral ignores.
+1. Both $\mathbb{Q}\cap[0,1]$ and $C$ are null: the first by the corollary *Countable sets are null*, the second by the example *The Cantor set is uncountable and null*.
+2. The function is simple, taking values in $\{0,3,7,10\}$ on measurable sets.
+3. Every set carrying a nonzero value is contained in the null set $(\mathbb{Q}\cap[0,1])\cup C$, whose measure is $0$ by subadditivity.
+4. By the corollary *Vanishing on null sets*, the integral is $0$.
+5. Sanity check: the function is unbounded in neither value nor support, and is $0$ a.e.; the Lebesgue integral cannot see anything else. It is not Riemann integrable, being discontinuous at every point of $[0,1]$.
 :::
 
-## Convergence Theorems (Monotone, Dominated, Fatou)
+## The Monotone Convergence Theorem
 
 <!-- section: convergence-theorems -->
 
-:::theorem[The three convergence theorems]{#convergence-theorems}
-**Monotone Convergence Theorem.** If $0 \leq f_n \uparrow f$ pointwise, with each $f_n$ measurable, then $\int f_n \uparrow \int f$ (possibly $\infty$).
+We now have an integral. The question that motivated the whole construction is whether it commutes with pointwise limits, and the first answer is the best one available.
 
-**Fatou's lemma.** For nonnegative measurable $f_n$,
+:::theorem[Monotone Convergence Theorem]{#mct}
+Let $f_n$ be measurable on $E$ with $0 \le f_1 \le f_2 \le \cdots$ and $f_n \to f$ pointwise. Then $f$ is measurable and
 
-$$\int \liminf_n f_n \leq \liminf_n \int f_n.$$
+$$\lim_{n\to\infty}\int_E f_n\,dm = \int_E f\,dm,$$
 
-**Dominated Convergence Theorem.** If $f_n \to f$ pointwise and $|f_n| \leq g$ with $g$ integrable, then $f$ is integrable and $\int f_n \to \int f$.
+both sides being allowed the value $+\infty$.
 :::
 
-Note that all three ask only for *pointwise* convergence of $f_n$ to $f$. That is the decisive advantage over the Riemann theory, where interchanging a limit with an integral generally needs uniform convergence.
+:::proof
+$f = \lim f_n = \sup_n f_n$ is measurable by the theorem *Measurability is preserved by limits*. Since $f_n \le f_{n+1} \le f$, monotonicity of the integral gives an increasing sequence $\int f_n$, bounded above by $\int f$; let $L = \lim_n \int_E f_n \le \int_E f$. Only $L \ge \int_E f$ remains.
 
-These are the reasons Lebesgue theory is vastly superior for passing limits inside integrals.
+Fix a simple $\varphi$ with $0\le\varphi\le f$, and fix $c\in(0,1)$. Put
 
-:::intuition
-Monotone: if you increase the function pointwise the areas can only increase, and in the limit you get the area of the limit function (no "mass escapes to infinity").
+$$E_n = \{x\in E : f_n(x) \ge c\,\varphi(x)\}.$$
 
-Fatou: think of it as an "anti-cheating" rule — you can lose area in the limit (mass can leak away), but you can never *gain* area out of nowhere. So the area of the limit is at most the smallest area the sequence settles toward: $\int \liminf f_n \leq \liminf \int f_n$.
+Each $E_n$ is measurable, $E_n \subseteq E_{n+1}$ because $f_n$ increases, and $\bigcup_n E_n = E$: if $\varphi(x)=0$ then $x\in E_1$; if $\varphi(x)>0$ then $c\varphi(x) < \varphi(x) \le f(x)$, so $f_n(x)$, increasing to $f(x)$, eventually exceeds $c\varphi(x)$. Now
 
-Dominated: if everything is squeezed under an integrable "umbrella" g, then you can pass the limit inside; the domination prevents the areas from oscillating or escaping.
+$$\int_E f_n\,dm \ \ge\ \int_{E_n} f_n\,dm \ \ge\ c\int_{E_n}\varphi\,dm = c\sum_{k} c_k\, m(A_k\cap E_n),$$
+
+writing $\varphi = \sum_k c_k\chi_{A_k}$ in canonical form. For each $k$ the sets $A_k \cap E_n$ increase to $A_k\cap E$, so $m(A_k\cap E_n) \to m(A_k\cap E)$ by countable additivity — write the increasing union as a disjoint union of the successive differences and apply the theorem *The measurable sets form a σ-algebra and $m$ is countably additive*. Letting $n\to\infty$ in the display, the sum being finite,
+
+$$L \ \ge\ c\sum_k c_k\,m(A_k\cap E) = c\int_E \varphi\,dm.$$
+
+Let $c \uparrow 1$: $L \ge \int_E\varphi\,dm$. Taking the supremum over all simple $\varphi \le f$, the definition *Integral of a nonnegative measurable function* gives $L \ge \int_E f\,dm$. $\blacksquare$
 :::
 
-:::example[(DCT succeeds):]
-Compute $\lim_{n \to \infty} \int_0^\infty \dfrac{e^{-x}}{1 + n\,x^2}\,dx$.
+Note what the theorem does *not* require: no bound on the $f_n$, no integrability of $f$, no uniformity. Monotonicity alone is enough, because mass cannot escape from an increasing sequence — it can only be added. When $\int f = \infty$ the conclusion is that $\int f_n \to \infty$ too, which is a genuine statement, not a vacuous one.
+
+:::corollary[Term-by-term integration of nonnegative series]{#series-integration}
+If $g_k \ge 0$ are measurable on $E$, then
+
+$$\int_E \sum_{k=1}^{\infty} g_k \,dm= \sum_{k=1}^{\infty}\int_E g_k\,dm.$$
+:::
+
+:::proof
+The partial sums $s_n = \sum_{k\le n} g_k$ are measurable, nonnegative and increasing, with $s_n \to \sum_k g_k$ pointwise. By linearity, $\int s_n = \sum_{k \le n}\int g_k$, and the theorem *Monotone Convergence Theorem* lets $n\to\infty$ on both sides. $\blacksquare$
+:::
+
+:::example[Monotone convergence in action]
+Evaluate $\displaystyle\lim_{n\to\infty}\int_0^1 \frac{n x^{n-1}}{2}\,dx$ and then $\displaystyle\lim_{n\to\infty}\int_0^\infty \frac{x}{1+x^{n}}\,dm$ on $(0,1)$, deciding in each case whether monotone convergence applies.
 :::
 
 :::solution
-Identify the pointwise limit. For each fixed $x > 0$, $\dfrac{e^{-x}}{1 + n x^2} \to 0$ as $n \to \infty$ (the denominator blows up); at $x = 0$ the value is $e^{0} = 1$ for every $n$, but $\{0\}$ has measure zero, so the pointwise limit a.e. is $f(x) = 0$.
-Step 2: Find a dominator independent of $n$. Since $1 + n x^2 \geq 1$, we have $\dfrac{e^{-x}}{1 + n x^2} \leq e^{-x} =: g(x)$ for all $n \geq 1$ and all $x \geq 0$.
-Step 3: Check $g$ is integrable: $\int_0^\infty e^{-x}\,dx = [-e^{-x}]_0^\infty = 0 - (-1) = 1 < \infty$. Good.
-Step 4: DCT applies, so $\lim_n \int_0^\infty \dfrac{e^{-x}}{1 + n x^2}\,dx = \int_0^\infty 0\,dx = 0$.
-Sanity check: each integrand is squeezed between $0$ and the fixed integrable umbrella $e^{-x}$, and it collapses to $0$ pointwise, so the areas must collapse to $0$ too. The answer is $0$.
+1. First integral, directly: $\int_0^1 \tfrac{n}{2}x^{n-1}\,dx = \tfrac{n}{2}\cdot\tfrac{1}{n} = \tfrac12$ for every $n$, so the limit is $\tfrac12$. The pointwise limit of the integrand is $0$ for $x\in(0,1)$, so here the limit of the integrals is **not** the integral of the limit — and indeed the sequence $nx^{n-1}/2$ is not monotone in $n$ at any fixed $x$, so the theorem never applied.
+2. Second, on $(0,1)$ the functions $h_n(x) = x/(1+x^n)$ *increase* with $n$, since $x^n$ decreases for $0<x<1$ and the denominator therefore shrinks.
+3. Pointwise, $x^n\to0$ on $(0,1)$, so $h_n(x) \to x$.
+4. The theorem *Monotone Convergence Theorem* applies: $\lim_n \int_0^1 h_n\,dm = \int_0^1 x\,dm = \tfrac12$.
+5. Sanity check on the contrast: both limits equal $\tfrac12$, but only the second is *obtained* by moving the limit inside. The first is a warning that computing $\lim\int$ and $\int\lim$ and finding them equal does not mean any theorem licensed the exchange.
 :::
 
-:::example[(limit and integral do NOT commute):]
-Consider $f_n = \chi_{[n,\,n+1]}$ on $\mathbb{R}$ with Lebesgue measure.
+:::example[Summing a series under the integral sign]
+Compute $\displaystyle\int_0^1 \sum_{k=1}^{\infty} \frac{x^{k}}{2^{k}}\,dm$.
 :::
 
 :::solution
-Pointwise limit. Fix $x$; for all $n > x$ we have $x \notin [n, n+1]$, so $f_n(x) = 0$ eventually. Hence $f_n \to 0$ pointwise everywhere.
-Step 2: Integrals. $\int f_n = m([n,n+1]) = 1$ for every $n$, so $\lim_n \int f_n = 1$.
-Step 3: Compare with the integral of the limit: $\int \lim_n f_n = \int 0 = 0 \neq 1$.
-Step 4: Why DCT does not save us: any $g$ with $g \geq f_n$ for all $n$ must satisfy $g \geq 1$ on each of the disjoint unit intervals $[n, n+1]$, so $\int g \geq \sum_{n} 1 = \infty$. No integrable dominator exists — the "mass" of size $1$ marches off to $+\infty$.
+1. Each term $g_k(x)=x^k/2^k$ is nonnegative and measurable on $[0,1]$, so the corollary *Term-by-term integration of nonnegative series* applies with no further hypotheses.
+2. $\displaystyle\int_0^1 \frac{x^k}{2^k}\,dx = \frac{1}{2^k(k+1)}$.
+3. Hence the answer is $\displaystyle\sum_{k=1}^{\infty}\frac{1}{2^k(k+1)}$. Multiply and divide by $2$: $\sum_{k\ge1}\frac{2}{2^{k+1}(k+1)} = 2\sum_{j\ge2}\frac{(1/2)^{j}}{j} = 2\big(-\ln(1-\tfrac12) - \tfrac12\big) = 2\ln 2 - 1.$
+4. Sanity check: $2\ln2 - 1 \approx 0.3863$. Directly, the sum inside is the geometric series $\frac{x/2}{1-x/2} = \frac{x}{2-x}$, and $\int_0^1 \frac{x}{2-x}\,dx = \int_0^1\left(\frac{2}{2-x}-1\right)dx = 2\ln 2 - 1$. The two agree.
 :::
 
-## Common Mistakes
+## Fatou's lemma
 
-- **Thinking Lebesgue integral is always 'harder' to compute**: For most explicit functions the value is the same as Riemann; the advantage is theoretical (theorems) and for wilder functions.
-- **Forgetting that the domination or monotonicity hypotheses are necessary**: Without them limits and integrals may not commute (escaping mass, oscillation).
-- **Confusing 'almost everywhere' with 'everywhere'**: Functions are identified if they differ on a set of measure zero; derivatives and integrals recover the function only a.e.
-- **Believing every derivative is Lebesgue integrable**: There exist functions differentiable everywhere with non-Lebesgue-integrable derivative on [a,b]; the FTC holds in a more subtle way.
-- **Mixing Lebesgue measure zero with 'empty' or 'finite'**: The Cantor set has measure zero but is uncountable and perfect; the rationals are countable hence measure zero.
+<!-- section: fatou -->
 
-The dominated convergence theorem (DCT) is one of the most powerful and frequently invoked results in Lebesgue integration theory. It justifies passing limits inside integrals under a domination hypothesis that is often easy to check in practice.
+Monotonicity is a strong hypothesis. Dropping it entirely still leaves one inequality, and that inequality is the engine for everything else.
 
-It is the reason we can differentiate under the integral sign, interchange limits and expectations in probability, and prove many approximation and convergence results in analysis.
+:::lemma[Fatou's lemma]{#fatou}
+Let $f_n \ge 0$ be measurable on $E$. Then
 
-## Statement of the Theorem
+$$\int_E \liminf_{n\to\infty} f_n \,dm\ \le\ \liminf_{n\to\infty}\int_E f_n\,dm.$$
+:::
+
+:::proof
+Put $g_k = \inf_{n \ge k} f_n$. Each $g_k$ is measurable by the theorem *Measurability is preserved by limits*, nonnegative, and the sequence increases with $k$ because the infimum is over a shrinking family. By definition $g_k \uparrow \liminf_n f_n$ pointwise.
+
+The theorem *Monotone Convergence Theorem* applies to $(g_k)$ and gives
+
+$$\int_E \liminf_n f_n\,dm = \lim_{k\to\infty}\int_E g_k\,dm.$$
+
+For every $n \ge k$ we have $g_k \le f_n$, so monotonicity of the integral gives $\int_E g_k \le \int_E f_n$ for all $n\ge k$, hence
+
+$$\int_E g_k\,dm \ \le\ \inf_{n\ge k}\int_E f_n\,dm.$$
+
+Letting $k\to\infty$, the left side tends to $\int_E \liminf_n f_n$ and the right side tends to $\liminf_n \int_E f_n$ by definition of the lower limit. $\blacksquare$
+:::
+
+The inequality is genuinely one-directional, and the direction has a physical reading: mass can *leak away* in the limit, so the limit function may have less integral than the sequence did, but mass cannot be manufactured, so the limit function can never have more.
+
+:::example[Fatou's inequality is strict]
+Exhibit nonnegative measurable $f_n$ on $\mathbb{R}$ for which Fatou's inequality is strict.
+:::
+
+:::solution
+1. Take $f_n = \chi_{[n,n+1]}$.
+2. Pointwise: fix $x$; for all $n > x$ we have $f_n(x)=0$, so $\liminf_n f_n = 0$ everywhere and the left side of Fatou is $\int 0 = 0$.
+3. Integrals: $\int_{\mathbb{R}} f_n\,dm = m([n,n+1]) = 1$ for every $n$, so $\liminf_n \int f_n = 1$.
+4. The inequality reads $0 \le 1$: strict, by exactly the amount of mass that walked off to $+\infty$.
+5. Sanity check with the spike $g_n = n\chi_{(0,1/n)}$: again $\liminf g_n = 0$ but $\int g_n = 1$, so $0 \le 1$. Horizontal escape and vertical escape are the two ways a sequence loses mass, and Fatou tolerates both.
+:::
+
+## The Dominated Convergence Theorem
 
 <!-- section: statement-dct -->
 
+Fatou is an inequality, and an inequality is not an interchange. To get equality one needs a hypothesis that forbids mass from escaping, and that hypothesis is a single integrable envelope.
+
 :::theorem[Dominated Convergence Theorem]{#dct}
-Let $(X, \mu)$ be a measure space. Let $f_n$ be measurable with $f_n(x) \to f(x)$ for almost every $x$, and suppose there is an integrable $g$, so $\int |g|\,d\mu < \infty$, with $|f_n(x)| \leq g(x)$ for almost every $x$ and every $n$. Then $f$ is integrable and
+Let $f_n$ be measurable on $E$ with $f_n \to f$ a.e., and suppose there is an integrable $g$ with $|f_n| \le g$ a.e., for every $n$. Then $f$ is integrable and
 
-$$\int f_n\,d\mu \to \int f\,d\mu.$$
+$$\lim_{n\to\infty}\int_E f_n\,dm = \int_E f\,dm. $$
 
-Moreover $\int |f_n - f|\,d\mu \to 0$, that is, $f_n \to f$ in $L^1$.
+Moreover $\displaystyle\int_E |f_n - f|\,dm \to 0$, that is, $f_n \to f$ in $L^1$.
 :::
 
-The single dominator $g$ must work for every $n$ at once. A bound that drifts with $n$ is no bound at all, as the tall-spike example below shows.
+:::proof
+Passing to the limit in $|f_n|\le g$ gives $|f|\le g$ a.e., so $\int_E|f| \le \int_E g <\infty$ and $f$ is integrable; altering everything on the union of the countably many null sets involved changes no integral, by the corollary *Vanishing on null sets*, so we may assume the hypotheses hold everywhere.
 
-:::intuition
-If the functions are all dominated in absolute value by a single integrable "umbrella" g, and they converge pointwise a.e., then their integrals converge to the integral of the limit, and the areas of the differences go to zero.
+Apply the lemma *Fatou's lemma* to the nonnegative sequence $g + f_n$:
 
-The domination prevents the "mass" from escaping to infinity or oscillating too wildly.
+$$\int_E g + \int_E f = \int_E (g+f) \le \liminf_n \int_E (g+f_n) = \int_E g + \liminf_n \int_E f_n,$$
+
+using linearity and $\liminf_n(g+f_n) = g+f$. Since $\int_E g$ is *finite*, it cancels, leaving
+
+$$\int_E f\,dm \le \liminf_n \int_E f_n\,dm.$$
+
+Now apply Fatou to the nonnegative sequence $g - f_n$:
+
+$$\int_E g - \int_E f \le \liminf_n\int_E(g - f_n) = \int_E g - \limsup_n \int_E f_n,$$
+
+because $\liminf(-a_n) = -\limsup(a_n)$. Cancelling the finite $\int_E g$ and negating reverses the inequality to
+
+$$\limsup_n \int_E f_n\,dm \le \int_E f\,dm.$$
+
+Combining, $\limsup_n\int f_n \le \int f \le \liminf_n \int f_n$, which forces all three to coincide. For the $L^1$ statement, apply the same argument to $h_n = |f_n - f|$, which satisfies $h_n \to 0$ a.e. and $h_n \le 2g$ with $2g$ integrable; the conclusion is $\int_E h_n \to \int_E 0 = 0$. $\blacksquare$
 :::
 
-:::example[(hypotheses must be checked — a "tall spike"):]
-On $\mathbb{R}$ with Lebesgue measure, let $f_n(x) = n\,\chi_{(0,\,1/n)}(x)$ (height $n$ on the shrinking interval $(0, 1/n)$, zero elsewhere).
+Three points about the hypotheses deserve emphasis. The dominator must be a *single* $g$ working for all $n$ simultaneously — a bound $|f_n| \le g_n$ that drifts with $n$ is no bound at all. The dominator must be *integrable*, which on an infinite-measure space rules out constants. And the finiteness of $\int g$ is what licenses the cancellations in the proof; with $\int g = \infty$ the two displays would read $\infty \le \infty$ and say nothing.
+
+:::example[A DCT computation]
+Compute $\displaystyle\lim_{n\to\infty}\int_0^\infty \frac{e^{-x}}{1+n x^2}\,dm$.
 :::
 
 :::solution
-Pointwise limit. Fix $x$. If $x \leq 0$, then $f_n(x) = 0$ for all $n$. If $x > 0$, then once $n > 1/x$ we have $x \geq 1/n$, so $x \notin (0, 1/n)$ and $f_n(x) = 0$. Thus $f_n \to 0$ pointwise everywhere (no exceptional point at all here).
-Step 2: Integrals. $\int f_n = n \cdot m\big((0, 1/n)\big) = n \cdot \tfrac{1}{n} = 1$ for every $n$, so $\lim_n \int f_n = 1$.
-Step 3: Integral of the limit: $\int \lim_n f_n = \int 0 = 0 \neq 1$.
-Step 4: Locate the missing hypothesis. The candidate envelope $\sup_n f_n$ satisfies $\sup_n f_n(x) = \lfloor 1/x \rfloor$-order growth near $0$; concretely any dominating $g$ must obey $g(x) \geq f_n(x) = n$ on $(0, 1/n)$, forcing $g(x) \geq 1/x$ for small $x > 0$. But $\int_0^1 \tfrac{1}{x}\,dx = \infty$, so no *integrable* dominator $g$ exists. DCT simply does not apply — its conclusion genuinely fails.
-Sanity check: the "mass" here is $1$ for every $n$ but is concentrated on an ever-thinner spike, so it never disperses to the limit function $0$. This is the escaping-mass phenomenon in vertical form, complementing the $\chi_{[n,n+1]}$ horizontal version.
+1. Pointwise limit: for $x>0$ the denominator $\to\infty$, so the integrand $\to 0$. At $x=0$ the value is $1$ for every $n$, but $\{0\}$ is null, so $f_n \to 0$ a.e.
+2. Dominator: $1+nx^2 \ge 1$ gives $0 \le f_n(x) \le e^{-x} =: g(x)$ for all $n\ge1$, and $g$ does not depend on $n$.
+3. Integrability of $g$: $\int_0^\infty e^{-x}\,dx = 1 < \infty$.
+4. The theorem *Dominated Convergence Theorem* gives $\lim_n\int_0^\infty f_n\,dm = \int_0^\infty 0\,dm = 0$.
+5. Sanity check: the areas are squeezed under a fixed envelope of area $1$ and collapse pointwise to $0$, so they must collapse to $0$.
 :::
 
-## Proof Sketch (Using Fatou and Monotone Convergence)
+:::example[Bounded convergence on a finite-measure space]
+On $[0,1]$, compute $\lim_n \int_0^1 x^n\,dm$ using domination, and confirm directly.
+:::
+
+:::solution
+1. Pointwise, $x^n \to 0$ for $0\le x<1$ and $1^n=1$; since $\{1\}$ is null, $f_n \to 0$ a.e.
+2. Dominator: $|x^n| \le 1$ on $[0,1]$, and the constant $1$ is integrable there because $\int_0^1 1\,dm = m([0,1]) = 1 < \infty$.
+3. By the theorem *Dominated Convergence Theorem*, the limit is $\int_0^1 0\,dm = 0$.
+4. Direct confirmation: $\int_0^1 x^n\,dx = \frac{1}{n+1} \to 0$.
+5. Sanity check: the constant dominator worked only because $m([0,1])<\infty$. On $[0,\infty)$ the constant $1$ has infinite integral and dominates nothing usefully.
+:::
+
+:::example[The domination hypothesis is necessary: the moving bump]
+Let $f_n = \chi_{[n,n+1]}$ on $\mathbb{R}$. Show that the conclusion of dominated convergence fails, and identify precisely which hypothesis is absent.
+:::
+
+:::solution
+1. Pointwise: for each fixed $x$, $f_n(x)=0$ once $n>x$, so $f_n \to 0$ everywhere — the convergence hypothesis holds in its strongest form.
+2. Integrals: $\int_{\mathbb{R}} f_n\,dm = 1$ for every $n$, so $\lim_n \int f_n = 1$.
+3. Integral of the limit: $\int_{\mathbb{R}} 0\,dm = 0 \ne 1$. The conclusion fails.
+4. Which hypothesis is missing: any $g$ with $g \ge f_n$ for every $n$ must satisfy $g \ge 1$ on each of the disjoint intervals $[n,n+1]$, $n = 1,2,\ldots$. By countable additivity, $\int_{\mathbb{R}} g\,dm \ge \sum_{n=1}^{\infty} m([n,n+1]) = \sum_{n=1}^\infty 1 = \infty$. No integrable dominator exists.
+5. Sanity check against Fatou: the lemma *Fatou's lemma* still holds here and reads $0 \le 1$ — it never promised equality, and it is exactly the gap between $0$ and $1$ that domination is designed to close.
+:::
+
+:::example[The domination hypothesis is necessary: the tall spike]
+Let $f_n = n\chi_{(0,1/n)}$ on $\mathbb{R}$. Repeat the analysis.
+:::
+
+:::solution
+1. Pointwise: if $x \le 0$ then $f_n(x)=0$ always; if $x>0$ then $n > 1/x$ forces $x \notin (0,1/n)$, so $f_n(x)=0$ eventually. Thus $f_n\to0$ everywhere.
+2. $\int f_n = n\cdot m((0,1/n)) = n\cdot\frac1n = 1$ for every $n$, so $\lim_n\int f_n = 1 \ne 0 = \int\lim_n f_n$.
+3. Missing hypothesis: a dominator must satisfy $g(x) \ge n$ whenever $0<x<1/n$, that is $g(x) \ge \lfloor 1/x\rfloor$, so $g(x) \ge 1/x - 1$ for $0<x<1$. But $\int_0^1 (1/x - 1)\,dm = \infty$, since $\int_\varepsilon^1 dx/x = -\ln\varepsilon \to \infty$.
+4. Sanity check on the contrast with the moving bump: there the mass escaped horizontally to $+\infty$; here it escapes vertically at the origin. Both are ruled out by a single integrable envelope, which is a finite-area ceiling in space as well as in height.
+:::
+
+:::figure[Two ways a sequence loses its mass: the bump walks off to the right, the spike grows narrow and tall. Both have integral 1 for every n and both converge pointwise to 0.]{#escaping-mass}
+{
+  "type": "plot",
+  "x": [-0.4, 6.0], "y": [-0.8, 5.0], "xTicks": 1, "yTicks": 1,
+  "xLabel": "x", "yLabel": "y",
+  "marks": [
+    { "kind": "bars", "bars": [[0, 0.25, 4], [0, 0.5, 2], [0, 1, 1]], "tone": "result" },
+    { "kind": "bars", "bars": [[3, 4, 1], [4, 5, 1]], "tone": "accent" },
+    { "kind": "text", "at": [1.6, 4.5], "text": "spike: n on (0, 1/n)", "leaderTo": [0.15, 3.9] },
+    { "kind": "text", "at": [2.6, -0.55], "text": "bump: on [n, n+1]", "leaderTo": [3.8, 0.1] }
+  ]
+}
+:::
+
+## Fatou and monotone convergence as the engine of the proof
 
 <!-- section: proof-sketch-fatou-monotone -->
 
+The three theorems are not independent facts to be memorised in parallel; they are a chain, and knowing which link you are standing on tells you what you are allowed to do next.
+
+:::summary
+- **Monotone convergence** is proved directly from the definition of the integral as a supremum over simple functions, using only countable additivity of $m$.
+- **Fatou's lemma** is proved from monotone convergence by replacing $f_n$ with $g_k=\inf_{n\ge k}f_n$, which is increasing by construction.
+- **Dominated convergence** is proved from Fatou applied twice, to $g+f_n$ and to $g-f_n$; the finiteness of $\int g$ is what lets the common term cancel.
+:::
+
+Each link costs a hypothesis and buys a conclusion. Monotone convergence demands an ordering and gives equality for free, even when the answer is $\infty$. Fatou demands nothing beyond nonnegativity and gives only an inequality. Dominated convergence buys back equality by paying for an envelope.
+
+:::proposition[Monotone convergence from Fatou]{#mct-from-fatou}
+The Monotone Convergence Theorem can also be deduced from Fatou's lemma together with monotonicity of the integral.
+:::
+
 :::proof
-Apply Fatou's lemma to the nonnegative functions $g + f_n$ and $g - f_n$.
-
-Since $|f_n| \leq g$ a.e., we have $g \pm f_n \geq g - |f_n| \geq 0$ a.e. for *every* $n$, so both sequences are nonnegative and measurable — exactly the setting Fatou's lemma requires. Here $g$ is integrable, and $f$ is integrable too, since $|f| \leq g$ a.e. by taking the limit of $|f_n| \leq g$.
-
-Fatou gives
-
-$$\int (g + f) \leq \liminf \int (g + f_n) = \int g + \liminf \int f_n,$$
-
-which rearranges to $\int f \leq \liminf \int f_n$. Applying the same to $g - f_n$ yields the reverse inequality $\limsup \int f_n \leq \int f$. Hence the limit exists and equals $\int f$. For $L^1$ convergence one applies the same argument to $|f_n - f|$, dominated by $2g$.
+Let $0 \le f_n \uparrow f$. Since $f_n \le f$ for every $n$, monotonicity of the integral gives $\int f_n \le \int f$, hence $\limsup_n \int f_n \le \int f$. The lemma *Fatou's lemma* gives the other direction: $\liminf_n f_n = f$ pointwise, so $\int f \le \liminf_n\int f_n$. Combining, $\int f \le \liminf_n \int f_n \le \limsup_n \int f_n \le \int f$, so all are equal. $\blacksquare$
 :::
 
-:::intuition
-By adding and subtracting the dominator $g$ you turn the signed $f_n$ into nonnegative sequences to which Fatou applies.
+The proposition is not circular — it merely records that once Fatou is available by *any* route, monotone convergence is two lines. In the development above, Fatou was derived from monotone convergence, so the logical order is fixed; some books reverse it, proving Fatou first from the definition.
 
-The resulting inequalities squeeze liminf and limsup of the integrals to be equal to the integral of the limit.
-:::
-
-:::example[(running the squeeze on a concrete integral):]
-Show $\displaystyle \lim_{n \to \infty} \int_0^\infty \frac{e^{-x} \sin(n x)}{n}\,dx = 0$ by imitating the DCT proof machinery.
+:::example[Running the DCT squeeze by hand]
+Show $\displaystyle\lim_{n\to\infty}\int_0^\infty \frac{e^{-x}\sin(nx)}{n}\,dm = 0$ by imitating the proof of the theorem *Dominated Convergence Theorem* rather than quoting it.
 :::
 
 :::solution
-Set $f_n(x) = \dfrac{e^{-x}\sin(n x)}{n}$ and $g(x) = e^{-x}$. Since $|\sin(n x)| \leq 1$ and $n \geq 1$, we get $|f_n(x)| = \dfrac{e^{-x}\,|\sin(nx)|}{n} \leq e^{-x} = g(x)$ for all $x \geq 0$.
-Step 2: $g$ is integrable: $\int_0^\infty e^{-x}\,dx = 1 < \infty$.
-Step 3: Pointwise, $|f_n(x)| \leq e^{-x}/n \to 0$, so $f_n \to 0$ a.e. (in fact everywhere).
-Step 4: Now the Fatou argument at the heart of DCT: $g + f_n \geq 0$ and $g - f_n \geq 0$ because $|f_n| \leq g$. Fatou on $g + f_n$ gives $\int g + \int 0 \leq \liminf \int (g + f_n) = \int g + \liminf \int f_n$, so $0 \leq \liminf \int f_n$. Fatou on $g - f_n$ gives, after the same rearrangement, $\limsup \int f_n \leq 0$.
-Step 5: Combining, $0 \leq \liminf \int f_n \leq \limsup \int f_n \leq 0$, so $\lim_n \int f_n = 0$.
-Sanity check: the amplitude of the oscillating integrand is $e^{-x}/n$, which is uniformly killed by the $1/n$ factor under the fixed umbrella $e^{-x}$; the areas are forced to $0$. Answer: $0$.
+1. Set $f_n(x) = e^{-x}\sin(nx)/n$ and $g(x)=e^{-x}$. Since $|\sin(nx)|\le1$ and $n\ge1$, $|f_n| \le e^{-x} = g$, and $\int_0^\infty g\,dm = 1<\infty$.
+2. Pointwise, $|f_n(x)| \le e^{-x}/n \to 0$, so $f_n \to 0$ everywhere.
+3. Fatou on $g+f_n \ge 0$: $\int g + 0 = \int(g + \lim f_n) \le \liminf_n\int(g+f_n) = \int g + \liminf_n\int f_n$, and cancelling the finite $\int g = 1$ gives $0 \le \liminf_n \int f_n$.
+4. Fatou on $g - f_n \ge 0$ gives, after the same cancellation, $\limsup_n \int f_n \le 0$.
+5. Therefore $0 \le \liminf_n \int f_n \le \limsup_n\int f_n \le 0$, so the limit exists and equals $0$.
+6. Sanity check by direct computation: $\int_0^\infty e^{-x}\sin(nx)\,dx = \frac{n}{1+n^2}$, so $\int f_n = \frac{1}{1+n^2} \to 0$. The squeeze gave the right answer without needing that formula.
 :::
 
-## Differentiation under the Integral Sign (Parametrized Integrals)
+## Riemann and Lebesgue agree where both exist
+
+<!-- section: comparison-riemann-agree -->
+
+A new integral that disagreed with the old one on the functions calculus cares about would be useless. It does not.
+
+:::theorem[Lebesgue's criterion for Riemann integrability]{#lebesgue-criterion}
+A bounded function $f$ on $[a,b]$ is Riemann integrable if and only if its set of discontinuities is null.
+:::
+
+:::proof
+Let $\omega(x)$ denote the oscillation of $f$ at $x$, the infimum of $\sup_I f - \inf_I f$ over open intervals $I \ni x$; then $f$ is continuous at $x$ exactly when $\omega(x)=0$, and the discontinuity set is $\bigcup_{k\ge1} D_k$ with $D_k = \{\omega \ge 1/k\}$, each $D_k$ closed.
+
+($\Rightarrow$) Suppose $f$ is Riemann integrable and fix $k$. Given $\varepsilon>0$ choose a partition with $U(f,P)-L(f,P) < \varepsilon/k$. Every open subinterval of $P$ meeting $D_k$ contributes at least $(1/k)\times$ its length to that difference, so those subintervals have total length below $\varepsilon$; the finitely many partition points are null. Hence $m^*(D_k)\le\varepsilon$ for every $\varepsilon$, so $D_k$ is null, and $\bigcup_k D_k$ is null by subadditivity.
+
+($\Leftarrow$) Suppose the discontinuity set is null and $|f| \le M$. Fix $\varepsilon>0$ and $k$ with $1/k < \varepsilon$. Since $D_k$ is null and closed, hence compact, it is covered by finitely many open intervals of total length under $\varepsilon$. On the compact complement of that cover, $\omega < 1/k$ at every point, so by compactness there is $\delta>0$ such that every subinterval of length $<\delta$ meeting it has oscillation below $1/k$. Take a partition of mesh $<\delta$ refining the cover's endpoints. Subintervals inside the cover contribute at most $2M\varepsilon$ to $U-L$; the rest contribute at most $(1/k)(b-a) < \varepsilon(b-a)$. So $U(f,P)-L(f,P) < (2M + b - a)\varepsilon$, and $f$ is Riemann integrable by the Riemann criterion of *Riemann Integration*. $\blacksquare$
+:::
+
+:::theorem[Riemann and Lebesgue agree]{#riemann-lebesgue-agree}
+If $f$ is Riemann integrable on $[a,b]$, then $f$ is Lebesgue measurable and integrable there, and
+
+$$\int_a^b f(x)\,dx = \int_{[a,b]} f\,dm.$$
+:::
+
+:::proof
+Take partitions $P_n$ of mesh tending to $0$, each refining the last, and let $\ell_n$ and $u_n$ be the step functions equal to $\inf f$ and $\sup f$ on each subinterval of $P_n$. Then $\ell_n \le f \le u_n$, the $\ell_n$ increase, the $u_n$ decrease, and the Lebesgue integrals of these step functions are exactly the Darboux sums:
+
+$$\int_{[a,b]}\ell_n\,dm = L(f,P_n), \qquad \int_{[a,b]}u_n\,dm = U(f,P_n),$$
+
+by the definition *Integral of a nonnegative simple function* applied after adding the constant $M$ to make everything nonnegative.
+
+Set $\ell = \lim_n \ell_n$ and $u = \lim_n u_n$, both measurable by the theorem *Measurability is preserved by limits*, with $\ell \le f \le u$. All functions are bounded by $M$ on the finite-measure set $[a,b]$, so the constant $M$ is an integrable dominator and the theorem *Dominated Convergence Theorem* gives
+
+$$\int_{[a,b]}\ell\,dm = \lim_n L(f,P_n) = \int_a^b f, \qquad \int_{[a,b]}u\,dm = \lim_n U(f,P_n) = \int_a^b f,$$
+
+the last equalities because $f$ is Riemann integrable. Hence $\int_{[a,b]}(u - \ell)\,dm = 0$ with $u-\ell \ge 0$, which forces $u = \ell$ a.e.: otherwise $\{u-\ell > 1/k\}$ would have positive measure for some $k$ and contribute a positive amount to the integral. Squeezed between two functions equal a.e., $f$ agrees with $\ell$ a.e., so $f$ is measurable (differing from a measurable function on a null set) and, by the corollary *Vanishing on null sets*, $\int_{[a,b]}f\,dm = \int_{[a,b]}\ell\,dm = \int_a^b f$. $\blacksquare$
+:::
+
+The converse fails, and the theorem *Riemann integrability is not closed under pointwise limits* already told us it must: $D$ is Lebesgue integrable with $\int_{[0,1]}D\,dm = 1\cdot m(\mathbb{Q}\cap[0,1]) = 0$, and not Riemann integrable.
+
+:::example[Thomae against Dirichlet]
+Both Thomae's function $T$ — $T(p/q) = 1/q$ in lowest terms, $T=0$ on irrationals — and the Dirichlet function vanish a.e. on $[0,1]$. Decide Riemann integrability of each and compute both integrals.
+:::
+
+:::solution
+1. $T$ is continuous at every irrational and discontinuous at every rational: near an irrational $x$, all fractions with small denominator are bounded away, so $T$ is small nearby; at a rational $p/q$, irrationals arbitrarily close carry value $0$ while $T(p/q)=1/q>0$.
+2. So the discontinuity set of $T$ is $\mathbb{Q}\cap[0,1]$, null by the corollary *Countable sets are null*. By the theorem *Lebesgue's criterion for Riemann integrability*, $T$ is Riemann integrable.
+3. Its value: $T = 0$ a.e., so $\int_{[0,1]}T\,dm = 0$ by the corollary *Vanishing on null sets*, and the theorem *Riemann and Lebesgue agree* makes the Riemann integral $0$ as well.
+4. $D$ is discontinuous at every point, so its discontinuity set has measure $1$; Lebesgue's criterion fails and $D$ is not Riemann integrable. Its Lebesgue integral is nonetheless $0$.
+5. Sanity check on what distinguishes them: not their values (both are $0$ a.e.), not their integrals (both $0$), but the *size of the discontinuity set* — which is the only thing Riemann integrability can see and the only thing the Lebesgue integral ignores.
+:::
+
+:::pitfall
+"Improper Riemann integrable" and "Lebesgue integrable" are not the same. $\int_0^\infty \frac{\sin x}{x}\,dx$ converges as an improper Riemann integral to $\pi/2$, but $\int_0^\infty\left|\frac{\sin x}{x}\right|dm = \infty$, so $\sin(x)/x$ is *not* Lebesgue integrable on $(0,\infty)$. The Lebesgue integral is absolute by construction, since it is built from $f^+$ and $f^-$ separately; a conditionally convergent improper integral depends on the order of cancellation, which the Lebesgue theory refuses to consider.
+:::
+
+## Differentiation under the integral sign
 
 <!-- section: differentiation-under-integral -->
 
-:::theorem[Differentiation under the integral sign]{#differentiation-under-integral}
-Let $I(\alpha) = \int_a^b f(x,\alpha)\,dx$. Under suitable domination on the partial derivative $\partial f/\partial \alpha$ — a single integrable bound valid for all $\alpha$ in a neighbourhood — one may differentiate under the integral:
+The most-used corollary of dominated convergence is not about sequences at all. It is about a parameter, and it is dominated convergence applied to difference quotients.
 
-$$I'(\alpha) = \int_a^b \frac{\partial f}{\partial \alpha}(x,\alpha)\,dx.$$
+:::theorem[Differentiation under the integral sign]{#diff-under-integral}
+Let $I \subseteq \mathbb{R}$ be an open interval and $f : E \times I \to \mathbb{R}$ satisfy: (i) $x \mapsto f(x,t)$ is integrable on $E$ for each $t\in I$; (ii) $\partial f/\partial t$ exists for every $x\in E$ and $t \in I$; (iii) there is an integrable $g$ on $E$ with
+
+$$\left|\frac{\partial f}{\partial t}(x,t)\right| \le g(x) \quad\text{for all } x\in E,\ t\in I.$$
+
+Then $F(t) = \int_E f(x,t)\,dm(x)$ is differentiable on $I$ and
+
+$$F'(t) = \int_E \frac{\partial f}{\partial t}(x,t)\,dm(x).$$
 :::
 
-The domination hypothesis of DCT (applied to difference quotients) justifies the passage to the limit that defines the derivative.
+:::proof
+Fix $t\in I$ and any sequence $h_n \to 0$ with $h_n \ne 0$ and $t + h_n \in I$. Put
 
-:::intuition
-If you have a family of functions parametrized by α, and the rate of change with respect to α is controlled by an integrable function independent of α (in a neighborhood), then you can compute the derivative of the total integral by integrating the partial derivative.
+$$q_n(x) = \frac{f(x,t+h_n)-f(x,t)}{h_n}.$$
 
-This is the rigorous justification for many calculations in physics and probability (e.g. differentiating moment generating functions).
+Each $q_n$ is measurable, being a difference of integrable functions divided by a constant, and by linearity
+
+$$\frac{F(t+h_n)-F(t)}{h_n} = \int_E q_n\,dm.$$
+
+Pointwise, $q_n(x) \to \partial f/\partial t(x,t)$ by hypothesis (ii). For the dominator, the Mean Value Theorem of *Differentiation* applied to $s\mapsto f(x,s)$ on the interval between $t$ and $t+h_n$ gives a point $\xi$ there with
+
+$$q_n(x) = \frac{\partial f}{\partial t}(x,\xi), \qquad\text{so}\qquad |q_n(x)| \le g(x)$$
+
+by hypothesis (iii), for every $n$ and $x$ — one dominator, valid for all $n$ at once.
+
+The theorem *Dominated Convergence Theorem* therefore gives
+
+$$\lim_{n\to\infty}\frac{F(t+h_n)-F(t)}{h_n} = \int_E \frac{\partial f}{\partial t}(x,t)\,dm(x).$$
+
+The limit is the same for every null sequence $(h_n)$, so the two-sided limit defining $F'(t)$ exists and equals that integral. $\blacksquare$
 :::
 
-:::example[(differentiate under the sign and verify both ways):]
-Let $\displaystyle I(\alpha) = \int_0^1 e^{\alpha x}\,dx$ and compute $I'(\alpha)$ at a fixed $\alpha_0$.
+The Mean Value Theorem step is where the hypothesis on the *derivative* rather than on $f$ itself earns its keep: it converts a bound on $\partial f/\partial t$ into a bound on every difference quotient, which is what dominated convergence needs.
+
+:::example[Differentiating under the sign, verified two ways]
+Let $F(t) = \int_0^1 e^{tx}\,dm(x)$. Compute $F'(t)$ by differentiating under the integral, and check against the closed form.
 :::
 
 :::solution
-Justify the interchange. The integrand is $f(x, \alpha) = e^{\alpha x}$, with $\dfrac{\partial f}{\partial \alpha} = x\, e^{\alpha x}$. Restrict $\alpha$ to a bounded neighborhood $|\alpha| \leq M$. Then for $x \in [0,1]$ we have $\big|x\, e^{\alpha x}\big| \leq 1 \cdot e^{M} = e^{M} =: g(x)$, and $g$ is integrable on $[0,1]$ since $\int_0^1 e^{M}\,dx = e^{M} < \infty$. The dominator is independent of $\alpha$, so DCT applied to the difference quotients licenses differentiating under the integral.
-Step 2: Differentiate under the sign: $I'(\alpha) = \displaystyle\int_0^1 \frac{\partial}{\partial \alpha} e^{\alpha x}\,dx = \int_0^1 x\, e^{\alpha x}\,dx$.
-Step 3: Evaluate that integral by parts with $u = x$, $dv = e^{\alpha x}\,dx$ (assume $\alpha \neq 0$): $\int_0^1 x\, e^{\alpha x}\,dx = \Big[\tfrac{x}{\alpha}e^{\alpha x}\Big]_0^1 - \int_0^1 \tfrac{1}{\alpha}e^{\alpha x}\,dx = \tfrac{e^{\alpha}}{\alpha} - \tfrac{1}{\alpha}\cdot\tfrac{e^{\alpha}-1}{\alpha} = \tfrac{e^{\alpha}}{\alpha} - \tfrac{e^{\alpha}-1}{\alpha^2}$.
-Step 4: Cross-check against the closed form. For $\alpha \neq 0$, $I(\alpha) = \dfrac{e^{\alpha}-1}{\alpha}$. By the quotient rule, $I'(\alpha) = \dfrac{\alpha\, e^{\alpha} - (e^{\alpha}-1)}{\alpha^2} = \dfrac{e^{\alpha}}{\alpha} - \dfrac{e^{\alpha}-1}{\alpha^2}$.
-Sanity check: the two expressions in Steps 3 and 4 are identical, confirming the interchange was valid. (At $\alpha = 0$ both approaches give $I'(0) = \int_0^1 x\,dx = \tfrac12$, consistent with the limit of the closed form.)
+1. Justify: restrict to $|t| \le M$. Then $|\partial_t e^{tx}| = |x e^{tx}| \le e^{M}$ for $x\in[0,1]$, and the constant $e^M$ is integrable on $[0,1]$, which has finite measure. Hypothesis (iii) of the theorem *Differentiation under the integral sign* holds with $g \equiv e^M$.
+2. Differentiate inside: $F'(t) = \int_0^1 x e^{tx}\,dm(x)$.
+3. Evaluate by parts, for $t\ne0$: $\int_0^1 xe^{tx}dx = \left[\frac{x}{t}e^{tx}\right]_0^1 - \frac1t\int_0^1 e^{tx}dx = \frac{e^t}{t} - \frac{e^t-1}{t^2}$.
+4. Closed form: $F(t) = \frac{e^t-1}{t}$ for $t\ne0$, so by the quotient rule $F'(t) = \frac{te^t - (e^t-1)}{t^2} = \frac{e^t}{t} - \frac{e^t-1}{t^2}$. The two agree.
+5. Sanity check at $t=0$: differentiating inside gives $F'(0) = \int_0^1 x\,dm = \tfrac12$, matching $\lim_{t\to0}\left(\frac{e^t}{t}-\frac{e^t-1}{t^2}\right) = \tfrac12$ from the series $\frac{e^t-1}{t} = 1+\frac t2+\frac{t^2}{6}+\cdots$.
 :::
 
-## Relation to Other Convergence Theorems; When DCT Is Not Needed
+:::example[A definite integral evaluated by a parameter]
+Evaluate $\displaystyle\int_0^\infty \frac{e^{-x}-e^{-3x}}{x}\,dm$ by introducing a parameter.
+:::
+
+:::solution
+1. Write $F(t) = \int_0^\infty \frac{e^{-x}-e^{-tx}}{x}\,dm$ for $t \ge 1$; the integrand extends continuously by $t-1$ at $x=0$, and the target is $F(3)$, with $F(1)=0$.
+2. Formally $\partial_t \frac{e^{-x}-e^{-tx}}{x} = e^{-tx}$. On a neighbourhood $t \in (a,b)$ with $1 < a < b$, $|e^{-tx}| \le e^{-ax}$, which is integrable with $\int_0^\infty e^{-ax}dm = 1/a<\infty$. Hypothesis (iii) holds.
+3. So $F'(t) = \int_0^\infty e^{-tx}\,dm = \dfrac{1}{t}$.
+4. Integrate: $F(3) = F(1) + \int_1^3 \frac{dt}{t} = 0 + \ln 3$.
+5. Sanity check numerically: $\ln 3 \approx 1.0986$, and this is the Frullani integral $\int_0^\infty\frac{e^{-ax}-e^{-bx}}{x}dx = \ln(b/a)$ with $a=1$, $b=3$ — the same value by an independent route.
+:::
+
+:::pitfall
+The dominator in hypothesis (iii) must bound $\partial f/\partial t$ *uniformly in $t$ over a neighbourhood*, not merely at the single point where you want the derivative. A bound that degenerates as $t$ approaches an endpoint gives no conclusion there. This is why the previous example restricted to $t \in (a,b)$ with $a>1$ rather than working on all of $[1,\infty)$ at once: the bound $e^{-ax}$ needs a strictly positive $a$.
+:::
+
+## Where each theorem applies, and the theorems it generates
 
 <!-- section: relation-other-theorems -->
 
-- Monotone convergence requires only monotonicity and nonnegativity; no domination needed (but the limit integral may be infinite).
-- Fatou's lemma is a one-sided inequality that often serves as a stepping stone to DCT.
+The three convergence theorems are rarely interchangeable in practice. Choosing correctly is a matter of reading which hypothesis you can actually verify.
 
-:::corollary[Bounded convergence theorem]
-On a finite-measure space, if $f_n \to f$ a.e. and $|f_n| \leq M$ for a constant $M$, then $\int f_n \to \int f$. This is the special case of dominated convergence in which the dominator is a constant, which is integrable precisely because the measure is finite.
+:::recipe[Choosing a convergence theorem]
+1. Is the sequence nonnegative and increasing in $n$ at each point? Use the theorem *Monotone Convergence Theorem* — no bound is needed and the answer may be $\infty$.
+2. Is it a sum of nonnegative terms? Use the corollary *Term-by-term integration of nonnegative series*, which is monotone convergence in disguise.
+3. Otherwise, hunt for a single integrable $g$ with $|f_n|\le g$ for all $n$. If the measure space is finite and the $f_n$ are uniformly bounded, a constant will do.
+4. If no dominator exists, you still have the lemma *Fatou's lemma*, an inequality — often enough to prove that a limit is finite, or that an integral vanishes.
+5. If the conclusion fails, look for escaping mass: a bump translating to infinity, or a spike concentrating at a point.
 :::
 
-When the measure space is finite (e.g. probability space) and the $f_n$ are uniformly bounded, DCT reduces to bounded convergence and is very easy to apply.
-
-:::intuition
-On a probability space, if your random variables are bounded by a fixed constant (or by an integrable random variable), you can pass limits inside expectations freely.
-
-Monotone convergence is the tool for increasing sequences without needing an a-priori bound.
+:::corollary[Bounded Convergence Theorem]{#bct}
+Let $m(E)<\infty$, let $f_n$ be measurable on $E$ with $f_n \to f$ a.e., and suppose $|f_n| \le M$ a.e. for a constant $M$. Then $\int_E f_n\,dm \to \int_E f\,dm$.
 :::
 
-:::example[(bounded convergence on a finite-measure space):]
-On $[0,1]$ with Lebesgue measure, let $f_n(x) = x^n$. Show $\int_0^1 f_n\,dx \to 0$ via bounded convergence, then confirm directly.
+:::proof
+The constant function $g \equiv M$ satisfies $\int_E g\,dm = M\,m(E) < \infty$ because $m(E)$ is finite, so $g$ is integrable and dominates every $f_n$. Apply the theorem *Dominated Convergence Theorem*. $\blacksquare$
+:::
+
+:::corollary[Countable additivity of the integral]{#integral-countably-additive}
+If $E = \bigsqcup_{k=1}^{\infty}E_k$ is a disjoint union of measurable sets and $f$ is integrable on $E$, then
+
+$$\int_E f\,dm = \sum_{k=1}^{\infty}\int_{E_k} f\,dm,$$
+
+the series converging absolutely.
+:::
+
+:::proof
+For $f\ge0$ apply the corollary *Term-by-term integration of nonnegative series* to $g_k = f\chi_{E_k}$, whose pointwise sum is $f\chi_E$. For general integrable $f$, do this for $f^+$ and $f^-$ separately, both series having finite sums since $\int_E f^\pm \le \int_E|f| < \infty$, and subtract. Absolute convergence follows from applying the nonnegative case to $|f|$. $\blacksquare$
+:::
+
+:::corollary[Absolute continuity of the integral]{#absolute-continuity}
+If $f$ is integrable on $E$, then for every $\varepsilon>0$ there is $\delta>0$ such that $m(A) < \delta$ and $A\subseteq E$ imply $\int_A |f|\,dm < \varepsilon$.
+:::
+
+:::proof
+Let $f_n = \min(|f|, n)$. These are nonnegative, increase to $|f|$, so the theorem *Monotone Convergence Theorem* gives $\int_E f_n \to \int_E|f| < \infty$; choose $n$ with $\int_E(|f|-f_n)\,dm < \varepsilon/2$. Now take $\delta = \varepsilon/(2n)$. For $m(A)<\delta$,
+
+$$\int_A|f|\,dm = \int_A (|f| - f_n)\,dm + \int_A f_n\,dm \le \frac{\varepsilon}{2} + n\,m(A) < \frac\varepsilon2 + \frac\varepsilon2 = \varepsilon. \qquad \blacksquare$$
+:::
+
+:::example[Choosing the right theorem]
+For each sequence on the indicated set, name the theorem that applies and give $\lim_n \int f_n$: (a) $f_n = \chi_{[0,n]}$ on $[0,\infty)$; (b) $f_n(x) = \frac{\sin(x/n)}{x^2+1}$ on $\mathbb{R}$; (c) $f_n(x) = \frac{n}{1+n^2x^2}$ on $[1,2]$.
 :::
 
 :::solution
-Pointwise limit. For $0 \leq x < 1$, $x^n \to 0$; at $x = 1$, $x^n = 1$ for all $n$. So $f_n \to f$ where $f(x) = 0$ on $[0,1)$ and $f(1) = 1$. Since $\{1\}$ has measure zero, $f_n \to 0$ almost everywhere.
-Step 2: Uniform bound. $|f_n(x)| = x^n \leq 1$ for all $x \in [0,1]$ and all $n$, so the constant $M = 1$ dominates. On the finite-measure space $[0,1]$ the constant $1$ is integrable ($\int_0^1 1\,dx = 1 < \infty$), so the bounded convergence theorem applies — no cleverness needed to find $g$.
-Step 3: Conclude $\int_0^1 x^n\,dx \to \int_0^1 0\,dx = 0$.
-Sanity check (direct computation): $\int_0^1 x^n\,dx = \dfrac{1}{n+1} \to 0$ as $n \to \infty$. This matches the bounded-convergence conclusion, confirming the interchange. Note that on the infinite line a constant bound would *not* be integrable, which is exactly why the finite-measure hypothesis matters here.
+1. **(a)** The sequence is nonnegative and increasing to $\chi_{[0,\infty)}$. The theorem *Monotone Convergence Theorem* applies with no bound needed, and gives $\lim_n\int f_n = \int_{[0,\infty)}1\,dm = \infty$. Indeed $\int f_n = n \to \infty$. Dominated convergence is unavailable — there is no integrable dominator — and it is not needed.
+2. **(b)** $|f_n(x)| \le \frac{1}{x^2+1} =: g(x)$, with $\int_{\mathbb{R}}g\,dm = \pi < \infty$, and $f_n(x)\to 0$ pointwise. The theorem *Dominated Convergence Theorem* gives $\lim_n\int f_n = 0$. The sequence is not monotone, so monotone convergence does not apply.
+3. **(c)** On $[1,2]$, $f_n(x) = \frac{n}{1+n^2x^2} \le \frac{n}{n^2 x^2} = \frac{1}{nx^2} \le 1$, so the constant $1$ dominates on a set of finite measure, and $f_n \to 0$ pointwise. The corollary *Bounded Convergence Theorem* gives $\lim_n \int_1^2 f_n\,dm = 0$.
+4. Sanity check on (c) directly: $\int_1^2 \frac{n\,dx}{1+n^2x^2} = [\arctan(nx)]_1^2 = \arctan(2n)-\arctan(n) \to \frac\pi2-\frac\pi2 = 0$.
+:::
+
+:::example[Fatou where no dominator exists]
+Suppose $f_n \ge 0$ are measurable on $E$ with $\int_E f_n\,dm \le 5$ for every $n$, and $f_n \to f$ pointwise. What can be concluded about $\int_E f\,dm$?
+:::
+
+:::solution
+1. No dominator is assumed, so the theorem *Dominated Convergence Theorem* is unavailable; no monotonicity is assumed, so the theorem *Monotone Convergence Theorem* is unavailable too.
+2. The lemma *Fatou's lemma* needs only nonnegativity: $\int_E f\,dm = \int_E \liminf_n f_n\,dm \le \liminf_n \int_E f_n\,dm \le 5$.
+3. So $f$ is integrable with $\int_E f\,dm \le 5$. Equality need not hold: the moving bump has $\int f_n = 1 \le 5$ for all $n$ and $\int f = 0$.
+4. Sanity check on how much was extracted from how little: from a uniform bound and pointwise convergence alone, we get integrability of the limit and a bound on its integral. That is exactly the service Fatou performs, and it is the reason it appears as a hypothesis-free safety net in the recipe above.
+:::
+
+:::intuition
+A useful mental ranking. Monotone convergence is the theorem for *building up*: you are assembling a function out of an increasing approximation and want the integral to assemble too. Dominated convergence is the theorem for *staying put*: nothing is growing, everything sits under one ceiling of finite area, and the only question is whether the limit passes through. Fatou is the theorem for *when you know nothing*: it gives you the one inequality that cannot fail, and half of an answer is often all a proof needs.
 :::
 
 ## Common Mistakes
 
-- **Forgetting to verify the domination hypothesis**: Pointwise convergence alone is not enough (escaping mass counter-examples).
-- **Using a dominator that depends on n**: The g must work for all n simultaneously.
-- **Applying DCT on an infinite-measure space with a constant bound**: A constant is not integrable over $\mathbb{R}$; one needs decay (e.g. $g(x) = e^{-|x|}$, which has $\int_{\mathbb{R}} e^{-|x|}\,dx = 2$).
-- **Confusing almost-everywhere convergence with everywhere**: The theorem only requires a.e. convergence and a.e. domination; values on a null set can be redefined arbitrarily.
-- **Thinking DCT implies $L^1$ convergence of $f_n$ to $f$**: It does, under the stated hypotheses ($\int |f_n - f| \to 0$). This is sometimes called "dominated convergence in $L^1$".
+- **Using a dominator that depends on $n$.** The theorem *Dominated Convergence Theorem* requires a single integrable $g$ with $|f_n| \le g$ for every $n$ at once. "$|f_n| \le n e^{-x}$, and each $ne^{-x}$ is integrable" establishes nothing.
+- **Applying a constant dominator on an infinite-measure space.** A constant is integrable over $[0,1]$ and not over $\mathbb{R}$. The corollary *Bounded Convergence Theorem* carries the hypothesis $m(E)<\infty$ for exactly this reason; drop it and the moving bump $\chi_{[n,n+1]}$, which is bounded by $1$, becomes a counterexample.
+- **Concluding that an interchange was legitimate because the two answers agreed.** In the example *Monotone convergence in action* the sequence $nx^{n-1}/2$ has $\lim\int = \tfrac12$ while $\int\lim = 0$; the agreement in the other half of that example was earned by checking monotonicity.
+- **Confusing null with small in other senses.** The Cantor set is null and uncountable; a fat Cantor set is nowhere dense with measure $\tfrac12$; $\mathbb{Q}$ is null and dense. Only "coverable by intervals of arbitrarily small total length" is being asserted.
+- **Assuming improper Riemann integrability implies Lebesgue integrability.** $\sin(x)/x$ on $(0,\infty)$ has a convergent improper integral and is not Lebesgue integrable, because $\int|\sin x / x|\,dm = \infty$ and the Lebesgue integral is absolute.
+- **Forgetting that monotone convergence permits an infinite answer.** $\int f_n \to \infty$ is a valid conclusion, not a failure of the theorem; the theorem *Monotone Convergence Theorem* has no finiteness hypothesis and needs none.
+- **Applying Fatou in the wrong direction.** The inequality is $\int\liminf \le \liminf\int$. Mass can leak away, never appear from nowhere, so it is the *limit function* that can be deficient — writing it the other way around asserts that area is created in the limit.
+- **Treating a.e. equality as everywhere equality when pointwise values matter.** The integral cannot distinguish $f$ from $g$ when $f=g$ a.e., but continuity, differentiability and pointwise bounds at a specific point are not a.e. properties and are not preserved.
