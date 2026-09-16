@@ -1,290 +1,749 @@
 ---
-title: Statistical Inference: Estimation
+title: "Statistical Inference: Estimation"
 ---
 
 # Statistical Inference: Estimation
 
-Estimation is the process of using sample data to infer the value of an unknown population parameter. The two main tools are point estimates (a single best guess) and interval estimates (a range of plausible values).
+The previous chapter established what a sample mean does across repeated samples: it is unbiased for $\mu$, its standard error is $\sigma/\sqrt n$, and for large $n$ it is approximately normal whatever the population looks like. Those are facts about one particular statistic. This chapter asks the general questions behind them.
 
-The sampling distribution tells us how a statistic varies from sample to sample. Understanding it is the key to constructing valid confidence intervals.
+There are two, and they occupy the two halves of the chapter. First, **where do estimators come from, and how do we compare them?** Nothing so far explains why $\bar X$ rather than the median, or the midrange, or the first observation — all of which are unbiased for a symmetric population. Comparing them needs a criterion, and it turns out the natural one, mean squared error, splits cleanly into bias and variance, which is why an estimator that is deliberately *wrong* on average can still be the better choice. Then two general recipes — the method of moments and maximum likelihood — manufacture estimators for any model at all, and the Cramér–Rao bound says how good an unbiased estimator is even permitted to be.
 
-Maximum Likelihood Estimation (MLE) provides a principled general-purpose method for finding the best-fitting parameter value given observed data.
+Second, **how do we report uncertainty rather than hide it?** A single number is a claim no data can support: the probability that $\bar X$ lands exactly on $\mu$ is zero for any continuous population. A confidence interval reports the estimate together with its precision, and it is constructed by a mechanical device — a pivot — that we set up once and then reuse for means, for means with unknown $\sigma$, and for proportions. The proportion case is the one where the textbook formula is genuinely defective, and we show why and what to use instead.
 
-## Sampling Distributions and Standard Error
+What is *not* here: hypothesis tests, $p$-values, and the two kinds of error. Those belong to the next chapter, and separating them is deliberate — an interval answers "what values are plausible?", a test answers "is this specific value refuted?", and treating the second as the primary question is the habit that makes statistics feel like ritual rather than reasoning.
+
+Notation follows the rest of the subject: $\theta$ is an unknown parameter, $\hat\theta$ an estimator of it, $\bar X$ and $S^2$ the sample mean and variance, $\Phi$ the standard normal distribution function, and $z_{\alpha}$ the value with $P(Z > z_\alpha) = \alpha$. Everything about the sampling distribution of $\bar X$ — the theorem *Mean and variance of the sample mean*, the definition *Standard error of the mean*, the *Central Limit Theorem (Lindeberg–Lévy)* — is proved in *Sampling and Data Distributions* and used here without reproof.
+
+## What makes an estimator good: bias, variance, and error
 
 <!-- section: sampling-distribution -->
 
-:::definition[Sampling distribution]{#sampling-distribution-def}
-The sampling distribution of a statistic (such as $\bar{X}$) is its probability distribution across all possible random samples of size $n$ from a population.
+An estimator is a random variable, because it is a function of a random sample. Judging one therefore means judging a whole distribution, not a number, and there are several honest ways to do it that do not always agree.
+
+:::definition[Estimator, bias, and mean squared error]{#mse}
+Let $\hat\theta = \hat\theta(X_1,\ldots,X_n)$ be an estimator of a parameter $\theta$. Its **bias** and **mean squared error** are
+
+$$\operatorname{Bias}(\hat\theta) = E(\hat\theta) - \theta, \qquad \operatorname{MSE}(\hat\theta) = E\big[(\hat\theta - \theta)^2\big].$$
+
+The estimator is **unbiased** if $\operatorname{Bias}(\hat\theta)=0$ for every value of $\theta$.
 :::
 
-It describes how the statistic varies from sample to sample.
+Unbiasedness says the estimator is correct *on average over repeated samples*. It says nothing about any particular sample, and on its own it is a weak requirement — an estimator can be unbiased and useless, as the example below shows. Mean squared error is the more honest single number, because it penalises an estimator for being far from $\theta$ regardless of the direction, and it decomposes in a way that explains exactly what an estimator can trade.
 
-:::definition[Standard error of the mean]
-The standard error of the mean is
+:::theorem[Bias-variance decomposition]{#bias-variance}
+For any estimator with finite second moment,
 
-$$SE_{\bar{X}} = \frac{\sigma}{\sqrt{n}},$$
-
-estimated by $s/\sqrt{n}$ when $\sigma$ is unknown.
+$$\operatorname{MSE}(\hat\theta) = \operatorname{Var}(\hat\theta) + \big[\operatorname{Bias}(\hat\theta)\big]^2.$$
 :::
 
-The standard error quantifies the precision of $\bar{X}$ as an estimator of $\mu$ — larger $n$ gives smaller $SE$ and therefore more precise estimates.
+:::proof
+Write $m = E(\hat\theta)$ and insert it:
 
-By the Central Limit Theorem, $\bar{X}$ is approximately $N(\mu, \sigma^2/n)$ for large $n$. This holds regardless of the shape of the population distribution, making normal-based inference broadly applicable.
+$$\operatorname{MSE}(\hat\theta) = E\big[(\hat\theta - m + m - \theta)^2\big] = E\big[(\hat\theta-m)^2\big] + 2(m-\theta)E\big[\hat\theta - m\big] + (m-\theta)^2 .$$
 
-A statistic is an unbiased estimator of a parameter $\theta$ if $E(\hat{\theta}) = \theta$. The sample mean $\bar{X}$ is unbiased for $\mu$, and the sample variance $s^2$ (with $n-1$) is unbiased for $\sigma^2$.
-
-:::definition[Bias and mean squared error]{#mse}
-The bias of an estimator is
-
-$$\text{Bias}(\hat{\theta}) = E(\hat{\theta}) - \theta,$$
-
-so an unbiased estimator has zero bias. The mean squared error combines bias and variance into a single measure of accuracy:
-
-$$\text{MSE}(\hat{\theta}) = \text{Var}(\hat{\theta}) + [\text{Bias}(\hat{\theta})]^2.$$
+The first term is $\operatorname{Var}(\hat\theta)$ by definition. The middle term vanishes because $E[\hat\theta - m] = 0$, the quantity $m - \theta$ being a constant that comes out of the expectation. The last term is $[\operatorname{Bias}(\hat\theta)]^2$. $\blacksquare$
 :::
 
-A good estimator minimises MSE — and because shrinking one term can grow the other, there is a bias-variance trade-off: a slightly biased estimator with much smaller variance can beat an unbiased one on MSE.
+The decomposition is worth reading as a statement about what you are allowed to buy. Total error is the sum of two non-negative pieces, so an estimator can be improved by shrinking either one — and since the pieces move in opposite directions under most modifications, the question is never "is it unbiased?" but "is the bias worth the variance it bought?".
 
-:::intuition
-Imagine repeatedly drawing samples of size $n$ and computing the mean each time. You would get a slightly different mean every time, but they would cluster around the true $\mu$. The standard error measures how tightly they cluster. The bigger the sample, the tighter the cluster.
-:::
-
-:::example[standard error and the MSE trade-off]
-A population has $\sigma = 30$. We take a sample of size $n = 36$.
+:::example[An unbiased estimator that should never be used]
+A population has mean $\mu$ and variance $\sigma^2$, and a sample of size $n=100$ is available. Compare two estimators of $\mu$: $\hat\theta_1 = X_1$, the first observation alone, and $\hat\theta_2 = \bar X$.
 :::
 
 :::solution
-1. Standard error of the mean: $SE_{\bar{X}} = \sigma/\sqrt{n} = 30/\sqrt{36} = 30/6 = 5$.
-2. Now quadruple the sample to $n = 144$: $SE_{\bar{X}} = 30/\sqrt{144} = 30/12 = 2.5$. Sanity check: to halve the $SE$ we needed $4\times$ the data, matching the $\sqrt{n}$ law.
-3. MSE comparison. Estimator A is unbiased with $\text{Var} = 5$, so $\text{MSE}_A = 5 + 0^2 = 5$. Estimator B has $\text{Bias} = 1$ but $\text{Var} = 2$, so $\text{MSE}_B = 2 + 1^2 = 3$.
-4. Since $3 < 5$, the biased estimator B is actually more accurate on average — a concrete instance of the bias-variance trade-off.
+1. Both are unbiased: $E(X_1) = \mu$ and $E(\bar X) = \mu$ by the theorem *Mean and variance of the sample mean*.
+2. Their variances differ by a factor of $n$: $\operatorname{Var}(X_1) = \sigma^2$ while $\operatorname{Var}(\bar X) = \sigma^2/100$.
+3. By the theorem *Bias-variance decomposition*, with zero bias for both, $\operatorname{MSE}_1 = \sigma^2$ and $\operatorname{MSE}_2 = \sigma^2/100$. The sample mean is a hundred times better on this criterion.
+4. The moral is that unbiasedness alone ranks nothing: $\hat\theta_1$ throws away $99\%$ of the data and remains perfectly unbiased. Bias controls where the estimator points on average; variance controls whether any single estimate is close. Only the two together are informative.
 :::
 
-## Point Estimation and MLE
-
-A point estimate is a single numerical value used as a best guess for a population parameter. Common examples: $\bar{x}$ estimates $\mu$; $s^2$ estimates $\sigma^2$; $\hat{p} = x/n$ estimates $p$.
-
-:::definition[Likelihood and the maximum likelihood estimator]{#mle}
-The likelihood of the observed data $x_1,\ldots,x_n$ under a parameter $\theta$ is
-
-$$L(\theta) = \prod_{i=1}^n f(x_i;\theta),$$
-
-read as the probability of observing the actual data, viewed as a function of $\theta$. The maximum likelihood estimator $\hat{\theta}$ is the value of $\theta$ that maximises $L(\theta)$.
+:::example[A biased estimator that beats every unbiased one]
+Estimate $\mu$ from a sample of size $n$ by shrinking the sample mean toward zero: $\hat\mu_c = c\bar X$ for a constant $c \in [0,1]$. Find the $c$ minimising MSE.
 :::
+
+:::solution
+1. $E(\hat\mu_c) = c\mu$, so the bias is $(c-1)\mu$, and $\operatorname{Var}(\hat\mu_c) = c^2\sigma^2/n$.
+2. By the decomposition,
+
+$$\operatorname{MSE}(c) = \frac{c^2\sigma^2}{n} + (c-1)^2\mu^2 .$$
+
+3. Differentiate and set to zero: $2c\sigma^2/n + 2(c-1)\mu^2 = 0$, giving
+
+$$c^* = \frac{\mu^2}{\mu^2 + \sigma^2/n}.$$
+
+4. Since $c^* < 1$ strictly whenever $\sigma^2 > 0$, the best estimator in this family is **biased**, and it beats $\bar X$ (the case $c=1$) on MSE for every $n$.
+5. Sanity check on the two extremes: as $n\to\infty$ the variance term dies and $c^*\to 1$, recovering $\bar X$ — with enough data there is nothing to gain by shrinking. And if $\mu$ is near zero relative to $\sigma/\sqrt n$, then $c^*\to 0$ and the best estimate is simply $0$, which is right: when the signal is far smaller than the noise, the data are not worth listening to.
+6. The catch, and it is a real one: $c^*$ depends on the unknown $\mu$, so this estimator cannot actually be used as stated. It establishes that unbiasedness is not optimal, not that a usable better estimator is in hand. Making the idea practical is the business of shrinkage estimation.
+:::
+
+:::pitfall
+"Unbiased" is not a synonym for "good", and "biased" is not a synonym for "wrong". The maximum likelihood estimator of a normal variance, derived later in this chapter, is biased downward — and it still has smaller MSE than the unbiased $S^2$ for every $n$ and every normal population. Reporting an estimator as acceptable *because* it is unbiased, without looking at its variance, is the most common way to choose a worse estimator on purpose.
+:::
+
+A second criterion asks not about a fixed $n$ but about what happens as data accumulate.
+
+:::definition[Consistency]{#consistency}
+An estimator $\hat\theta_n$ based on a sample of size $n$ is **consistent** for $\theta$ if $\hat\theta_n \to \theta$ in probability: for every $\varepsilon > 0$,
+
+$$P\big(|\hat\theta_n - \theta| \ge \varepsilon\big) \longrightarrow 0 \qquad \text{as } n \to \infty.$$
+:::
+
+:::theorem[MSE consistency]{#mse-consistency}
+If $\operatorname{MSE}(\hat\theta_n) \to 0$ as $n\to\infty$ — equivalently, if both the bias and the variance tend to zero — then $\hat\theta_n$ is consistent.
+:::
+
+:::proof
+Apply Chebyshev's inequality in the form proved in *Sampling and Data Distributions*, to the non-negative variable $(\hat\theta_n - \theta)^2$ at threshold $\varepsilon^2$:
+
+$$P\big(|\hat\theta_n - \theta| \ge \varepsilon\big) = P\big((\hat\theta_n-\theta)^2 \ge \varepsilon^2\big) \le \frac{E\big[(\hat\theta_n-\theta)^2\big]}{\varepsilon^2} = \frac{\operatorname{MSE}(\hat\theta_n)}{\varepsilon^2}.$$
+
+The right-hand side tends to $0$ by hypothesis, and the equivalence with "bias and variance both vanish" is the theorem *Bias-variance decomposition*, both terms being non-negative. $\blacksquare$
+:::
+
+:::corollary[The sample mean is consistent]{#xbar-consistent}
+For a population with finite variance, $\bar X_n$ is a consistent estimator of $\mu$.
+:::
+
+:::proof
+$\bar X_n$ is unbiased, so its bias is $0$, and its variance is $\sigma^2/n \to 0$. Apply the theorem *MSE consistency*. $\blacksquare$
+:::
+
+That corollary is the weak law of large numbers arriving by a different road, and the agreement is not a coincidence — consistency *is* the weak law, stated about an estimator rather than about a running average.
+
+:::intuition
+Bias, variance and consistency answer three different questions, and a good estimator needs all three answers to be satisfactory.
+
+Picture a rifle sighted on a target. **Bias** is whether the shots centre on the bullseye or systematically off to the left. **Variance** is how tightly they group, wherever they are centred. **Consistency** is whether the group tightens onto the bullseye as you fire more rounds. A rifle can be perfectly sighted and hopelessly inaccurate (unbiased, huge variance), or slightly off-centre and very tight — and on a scoring criterion that counts total distance from the centre, the second rifle wins.
+:::
+
+## Two recipes: the method of moments and maximum likelihood
+
+<!-- section: point-estimation-and-mle -->
+
+The estimators so far arrived by common sense. For a model with an unfamiliar parameter, common sense runs out, and a general procedure is needed. There are two, and they are worth having both because they fail in different places.
+
+The older one simply matches sample moments to population moments.
+
+:::definition[Method of moments estimator]{#mom}
+Let $X_1,\ldots,X_n$ be i.i.d. from a distribution with parameters $\theta_1,\ldots,\theta_k$, and write $\mu_j(\theta) = E(X^j)$ for the population moments. The **method of moments estimator** solves the $k$ equations
+
+$$\mu_j(\hat\theta_1,\ldots,\hat\theta_k) = \frac{1}{n}\sum_{i=1}^n X_i^{\,j}, \qquad j = 1,\ldots,k,$$
+
+equating each population moment to its sample counterpart.
+:::
+
+The justification is consistency: each sample moment converges to the corresponding population moment by the law of large numbers, so solving the matched equations returns something converging to the truth. The method is easy, requires no calculus, and can produce estimates that are frankly absurd.
+
+:::example[The method of moments, working and failing]
+(a) For a Poisson population with parameter $\lambda$, find the method of moments estimator. (b) For a Uniform$(0,\theta)$ population, find it, and evaluate it on the sample $\{1, 2, 9\}$.
+:::
+
+:::solution
+1. **(a)** A Poisson has $E(X) = \lambda$, so the single equation is $\hat\lambda = \bar X$. Sensible, and it agrees with maximum likelihood below.
+2. **(b)** A Uniform$(0,\theta)$ has $E(X) = \theta/2$, so the equation $\hat\theta/2 = \bar X$ gives $\hat\theta = 2\bar X$.
+3. On the sample $\{1,2,9\}$: $\bar x = 4$, so $\hat\theta = 8$.
+4. But the sample contains the value $9$, and a Uniform$(0,8)$ population cannot produce a $9$. The estimate is not merely imprecise — it is **logically impossible**, assigning probability zero to data that were actually observed.
+5. Sanity check on why this happens: the method uses only the sample mean and ignores the sample maximum, which for this model carries almost all the information about $\theta$. A recipe that discards the informative statistic can be expected to misbehave, and here it does so visibly.
+:::
+
+The second recipe never makes that mistake, because it is built from the probability of the observed data directly.
+
+:::definition[Likelihood, log-likelihood, and the MLE]{#mle}
+Given observed data $x_1,\ldots,x_n$ from a model with density or mass function $f(x;\theta)$, the **likelihood** and **log-likelihood** are
+
+$$L(\theta) = \prod_{i=1}^{n} f(x_i;\theta), \qquad \ell(\theta) = \log L(\theta) = \sum_{i=1}^{n}\log f(x_i;\theta).$$
+
+The **maximum likelihood estimator** $\hat\theta$ is the value of $\theta$ maximising $L$ over the parameter space.
+:::
+
+Two remarks on reading the definition. The likelihood is *not* a probability distribution over $\theta$ — it does not integrate to $1$ in $\theta$, and treating it as a distribution is the step that turns frequentist inference into Bayesian inference, which the last chapter of this subject takes deliberately. And maximising $\ell$ rather than $L$ is legitimate because $\log$ is strictly increasing, so the two have their maxima at the same $\theta$; it converts a product into a sum, which is the difference between a tractable derivative and an intractable one.
 
 :::recipe[Finding a maximum likelihood estimate]
-1. Write the likelihood $L(\theta) = \prod_i f(x_i;\theta)$.
-2. Take logs: maximise $\ell(\theta) = \ln L(\theta)$ instead. Because $\ln$ is strictly increasing it has its maximum at the same $\theta$, but it turns the product into a sum that is far easier to differentiate.
-3. Set $d\ell/d\theta = 0$ and solve.
-4. Check the second derivative is negative to confirm a maximum.
+1. Write the likelihood $L(\theta) = \prod_i f(x_i;\theta)$ and take logs.
+2. Differentiate: $\ell'(\theta)$, the **score**, and solve $\ell'(\theta) = 0$.
+3. Confirm a maximum, by checking $\ell''(\hat\theta) < 0$ or by inspecting the shape of $\ell$.
+4. **Check the boundary.** If $\ell$ has no interior stationary point, or if the parameter space is restricted by the data, the maximum may sit at an endpoint, where the derivative is not zero.
 :::
 
-For a normal population, MLE gives $\hat{\mu}=\bar{x}$ and $\hat{\sigma}^2 = \frac{1}{n}\sum(x_i-\bar{x})^2$ — note that the MLE uses $n$, not $n-1$, so it is slightly biased downward for $\sigma^2$.
+Step 4 is the one omitted by every treatment that presents maximum likelihood as "differentiate and solve", and the uniform example below exists to show what it catches.
 
-An alternative recipe is the **method of moments**: set the population moments equal to the sample moments and solve. For example, matching $E(X)=\mu$ to $\bar{x}$ gives an estimate for $\mu$; the two methods often agree but need not.
-
-Two properties describe how good an estimator gets as data accumulates.
-
-:::definition[Consistency and efficiency]
-An estimator is consistent if it converges in probability to the true value as $n\to\infty$. Among *unbiased* estimators, the most efficient is the one with the smallest possible variance, achieving the Cramér-Rao lower bound
-
-$$\text{Var}(\hat{\theta})\geq \frac{1}{I(\theta)},$$
-
-where $I(\theta)$ is the Fisher information.
-:::
-
-Consistency says: collect enough data and you home in on the truth.
-
-:::theorem[Asymptotic properties of the MLE]
-Under mild regularity conditions the maximum likelihood estimator is consistent, asymptotically efficient, and asymptotically normal:
-
-$$\sqrt{n}(\hat{\theta}_{MLE}-\theta)\to N\!\left(0,\ 1/I(\theta)\right).$$
-:::
-
-For large samples the MLE is the go-to estimation method.
-
-:::intuition
-MLE asks: given the data I observed, which parameter value would have made this data most likely? It's like tuning a radio — you turn the dial until the signal is clearest. The dial setting that gives the clearest signal is your maximum likelihood estimate.
-:::
-
-:::example[deriving the MLE for a Bernoulli proportion]
-Observe $n$ independent coin flips with $k$ heads (each flip is Bernoulli$(p)$). We want $\hat{p}$.
+:::example[Maximum likelihood for a Bernoulli proportion]
+Let $X_1,\ldots,X_n$ be i.i.d. Bernoulli$(p)$ with $\sum x_i = k$ successes. Find $\hat p$.
 :::
 
 :::solution
-1. Likelihood: each head contributes $p$, each tail contributes $1-p$, so $L(p) = p^{k}(1-p)^{n-k}$.
-2. Log-likelihood: $\ell(p) = k\ln p + (n-k)\ln(1-p)$.
-3. Differentiate and set to zero: $\dfrac{d\ell}{dp} = \dfrac{k}{p} - \dfrac{n-k}{1-p} = 0$.
-4. Solve: $k(1-p) = (n-k)p \Rightarrow k - kp = np - kp \Rightarrow k = np \Rightarrow \hat{p} = k/n$.
-5. Sanity check: with $k=3$ heads in $n=5$ flips, $\hat{p} = 3/5 = 0.6$ — exactly the observed frequency, which is the intuitive "best guess" for a coin's bias.
+1. The mass function is $f(x;p) = p^x(1-p)^{1-x}$, so
+
+$$L(p) = p^{k}(1-p)^{n-k}, \qquad \ell(p) = k\log p + (n-k)\log(1-p).$$
+
+2. Differentiate: $\ell'(p) = \dfrac{k}{p} - \dfrac{n-k}{1-p}$.
+3. Set to zero and cross-multiply: $k(1-p) = (n-k)p$, so $k = np$ and $\hat p = k/n = \bar x$.
+4. Confirm a maximum: $\ell''(p) = -k/p^2 - (n-k)/(1-p)^2 < 0$ everywhere in $(0,1)$, so $\ell$ is strictly concave and the stationary point is the global maximum.
+5. Sanity check: the estimate is the observed success fraction, which is what anyone would have guessed — but it is now derived rather than assumed, and the same machinery will work where guessing fails.
 :::
 
-:::example[MLE for a Poisson rate]
-Data $\{2,3,1,4,2\}$ are counts modelled as Poisson$(\lambda)$, with pmf $f(x;\lambda)=e^{-\lambda}\lambda^{x}/x!$.
+:::example[Maximum likelihood for a normal population]
+Let $X_1,\ldots,X_n$ be i.i.d. $N(\mu,\sigma^2)$ with both parameters unknown. Find the MLEs.
 :::
 
 :::solution
-1. Log-likelihood: $\ell(\lambda) = \sum_i\big(-\lambda + x_i\ln\lambda - \ln x_i!\big) = -n\lambda + \big(\textstyle\sum_i x_i\big)\ln\lambda - \sum_i\ln x_i!$.
-2. Set $\dfrac{d\ell}{d\lambda} = -n + \dfrac{\sum_i x_i}{\lambda} = 0 \Rightarrow \hat{\lambda} = \dfrac{\sum_i x_i}{n} = \bar{x}$.
-3. Compute: $\sum_i x_i = 2+3+1+4+2 = 12$, $n=5$, so $\hat{\lambda} = 12/5 = 2.4$.
-4. Sanity check: the Poisson mean *is* $\lambda$, so estimating it by the sample mean is exactly what we would hope.
+1. The log-likelihood is
+
+$$\ell(\mu,\sigma^2) = -\frac{n}{2}\log(2\pi) - \frac{n}{2}\log\sigma^2 - \frac{1}{2\sigma^2}\sum_{i=1}^n (x_i-\mu)^2 .$$
+
+2. Differentiating in $\mu$: $\partial\ell/\partial\mu = \frac{1}{\sigma^2}\sum(x_i-\mu)$, which vanishes when $\sum(x_i - \mu)=0$, that is at $\hat\mu = \bar x$. This is the theorem *The mean minimises total squared deviation* of the first chapter arriving from a different direction: maximising the normal likelihood *is* minimising a sum of squares.
+3. Differentiating in $\sigma^2$: $\partial\ell/\partial\sigma^2 = -\dfrac{n}{2\sigma^2} + \dfrac{1}{2\sigma^4}\sum(x_i-\mu)^2$. Setting this to zero at $\mu = \hat\mu$ gives
+
+$$\hat\sigma^2 = \frac{1}{n}\sum_{i=1}^{n}(x_i - \bar x)^2 .$$
+
+4. Note the divisor: $n$, not $n-1$. By the theorem *Unbiasedness of the sample variance* the unbiased estimator uses $n-1$, so the MLE is **biased downward**, with $E(\hat\sigma^2) = \frac{n-1}{n}\sigma^2$.
+5. Sanity check on the direction of the bias: $\hat\sigma^2$ measures spread about $\bar x$ rather than about the unknown $\mu$, and $\bar x$ is by construction the point closest to the data, so deviations about it are systematically too small. Maximum likelihood does not correct for that, and it does not claim to — it optimises fit, not unbiasedness.
 :::
 
-## Confidence Intervals
+:::example[Maximum likelihood where the derivative is useless]
+Let $X_1,\ldots,X_n$ be i.i.d. Uniform$(0,\theta)$. Find $\hat\theta$, and compare with the method of moments estimate on the sample $\{1,2,9\}$.
+:::
+
+:::solution
+1. The density is $f(x;\theta) = 1/\theta$ for $0\le x\le\theta$ and $0$ otherwise. The likelihood is therefore
+
+$$L(\theta) = \begin{cases} \theta^{-n}, & \theta \ge \max_i x_i,\\[2pt] 0, & \theta < \max_i x_i,\end{cases}$$
+
+because a single observation above $\theta$ makes one factor zero and kills the whole product.
+2. On its support, $L(\theta) = \theta^{-n}$ is strictly *decreasing*, so $\ell'(\theta) = -n/\theta$ is never zero. There is no interior stationary point, and "differentiate and solve" returns nothing.
+3. The maximum is at the left endpoint of the allowed range: $L$ is as large as possible when $\theta$ is as small as it is permitted to be, namely
+
+$$\hat\theta = \max_i x_i = x_{(n)}.$$
+
+4. On $\{1,2,9\}$ this gives $\hat\theta = 9$, against the method of moments' impossible $8$. Maximum likelihood cannot produce an impossible estimate, because any $\theta$ contradicting the data has likelihood exactly zero.
+5. The MLE here is biased downward — it can never exceed $\theta$, so $E(\hat\theta) < \theta$ strictly. In fact $E(x_{(n)}) = \frac{n}{n+1}\theta$, so $\frac{n+1}{n}x_{(n)}$ is unbiased. Sanity check: that correction inflates the estimate slightly, which is right, since the largest of $n$ draws systematically falls short of the ceiling.
+:::
+
+:::theorem[Invariance of maximum likelihood]{#mle-invariance}
+If $\hat\theta$ is a maximum likelihood estimator of $\theta$ and $g$ is any function, then $g(\hat\theta)$ is a maximum likelihood estimator of $g(\theta)$.
+:::
+
+:::proof
+Take $g$ one-to-one first. Reparametrise by $\eta = g(\theta)$, so that $\theta = g^{-1}(\eta)$ and the likelihood in the new parameter is $L^*(\eta) = L(g^{-1}(\eta))$. As $\eta$ ranges over the image, $g^{-1}(\eta)$ ranges over the original parameter space, so the two functions take exactly the same set of values and attain their maxima at corresponding points: $L^*$ is maximised at $\eta = g(\hat\theta)$ precisely because $L$ is maximised at $\hat\theta$.
+
+For general $g$, define the induced likelihood $L^*(\eta) = \max\{L(\theta) : g(\theta) = \eta\}$, the standard convention. Then
+
+$$\max_\eta L^*(\eta) = \max_\eta \max_{\theta : g(\theta)=\eta} L(\theta) = \max_\theta L(\theta) = L(\hat\theta),$$
+
+since every $\theta$ lies in exactly one of the sets being maximised over. The outer maximum is therefore attained at $\eta = g(\hat\theta)$. $\blacksquare$
+:::
+
+Invariance is a genuine convenience and has no analogue for unbiasedness — if $\hat\theta$ is unbiased for $\theta$, then $g(\hat\theta)$ is in general *biased* for $g(\theta)$, by Jensen's inequality whenever $g$ is convex or concave. So the MLE of $\sigma$ is the square root of the MLE of $\sigma^2$, whereas the square root of the unbiased $S^2$ is *not* unbiased for $\sigma$.
+
+:::example[Invariance in use]
+For a Bernoulli sample with $\hat p = 0.4$, estimate the odds $p/(1-p)$ and the log-odds.
+:::
+
+:::solution
+1. By the theorem *Invariance of maximum likelihood*, the MLE of any function of $p$ is that function of $\hat p$; no new derivation is needed.
+2. Odds: $\hat p/(1-\hat p) = 0.4/0.6 = 2/3 \approx 0.6667$.
+3. Log-odds: $\log(2/3) = -0.4055$.
+4. Sanity check: $\hat p < 0.5$ makes the odds less than $1$ and the log-odds negative ✓. Note that $E[\hat p/(1-\hat p)] \ne p/(1-p)$ — the transformation is convex, so the odds estimator is biased upward by Jensen even though $\hat p$ is unbiased. Invariance is a statement about maximisation, not about expectation.
+:::
+
+## Efficiency, information, and the Cramér-Rao bound
+
+<!-- section: efficiency -->
+
+Among unbiased estimators, smaller variance is better, and the natural question is how far that can be pushed. Remarkably, there is a floor — determined by the model alone, before any estimator is proposed — and an estimator attaining it cannot be improved upon.
+
+:::definition[Score and Fisher information]{#fisher-information}
+For a model $f(x;\theta)$ differentiable in $\theta$, the **score** of a single observation is $\partial_\theta \log f(X;\theta)$, and the **Fisher information** is its variance,
+
+$$I(\theta) = E\left[\left(\frac{\partial}{\partial\theta}\log f(X;\theta)\right)^{2}\right].$$
+:::
+
+:::lemma[The score has mean zero, and information as curvature]{#score-lemma}
+Under regularity conditions permitting differentiation under the integral sign,
+
+$$E\left[\frac{\partial}{\partial\theta}\log f(X;\theta)\right] = 0, \qquad I(\theta) = -E\left[\frac{\partial^2}{\partial\theta^2}\log f(X;\theta)\right].$$
+:::
+
+:::proof
+For the first claim, differentiate the identity $\int f(x;\theta)\,dx = 1$ with respect to $\theta$ and exchange the order:
+
+$$0 = \int \frac{\partial f}{\partial\theta}\,dx = \int \frac{\partial_\theta f}{f}\,f\,dx = E\big[\partial_\theta \log f\big],$$
+
+using $\partial_\theta \log f = (\partial_\theta f)/f$.
+
+For the second, differentiate that same identity once more. Since $\partial_\theta^2 \log f = \dfrac{\partial_\theta^2 f}{f} - \left(\dfrac{\partial_\theta f}{f}\right)^2$, taking expectations gives
+
+$$E\big[\partial_\theta^2\log f\big] = \int \partial_\theta^2 f\,dx - E\big[(\partial_\theta\log f)^2\big] = 0 - I(\theta),$$
+
+the first integral vanishing because it is the second derivative of the constant $1$. $\blacksquare$
+:::
+
+The second form is the one to hold onto: information is the *expected curvature* of the log-likelihood. A sharply peaked log-likelihood has large curvature, pins $\theta$ down tightly, and carries a lot of information; a flat one is consistent with a wide range of $\theta$ and carries little. Information is a property of the model and the true parameter, not of the data in hand.
+
+:::theorem[Cramer-Rao lower bound]{#cramer-rao}
+Let $X_1,\ldots,X_n$ be i.i.d. from $f(x;\theta)$ satisfying the regularity conditions, and let $\hat\theta$ be any unbiased estimator of $\theta$. Then
+
+$$\operatorname{Var}(\hat\theta) \ \ge\ \frac{1}{n\,I(\theta)}.$$
+:::
+
+:::proof
+Write the total score $S = \sum_{i=1}^n \partial_\theta\log f(X_i;\theta)$. By the lemma *The score has mean zero, and information as curvature* applied to each term, $E(S) = 0$, and by independence $\operatorname{Var}(S) = nI(\theta)$.
+
+Now compute $\operatorname{Cov}(\hat\theta, S)$. Since $E(S)=0$, it equals $E(\hat\theta S)$, and writing the joint density as $\prod_i f(x_i;\theta)$ and using $\partial_\theta \log \prod_i f = S$,
+
+$$E(\hat\theta S) = \int \hat\theta(x)\,\Big(\partial_\theta \textstyle\prod_i f\Big)\,dx = \frac{\partial}{\partial\theta}\int \hat\theta(x)\prod_i f\,dx = \frac{\partial}{\partial\theta}E(\hat\theta) = \frac{\partial\theta}{\partial\theta} = 1,$$
+
+where the third equality uses unbiasedness, $E(\hat\theta) = \theta$.
+
+Apply the Cauchy-Schwarz inequality to the covariance:
+
+$$1 = \big[\operatorname{Cov}(\hat\theta,S)\big]^2 \le \operatorname{Var}(\hat\theta)\operatorname{Var}(S) = \operatorname{Var}(\hat\theta)\cdot nI(\theta),$$
+
+and dividing by $nI(\theta) > 0$ gives the bound. $\blacksquare$
+:::
+
+:::definition[Efficiency]{#efficiency-def}
+An unbiased estimator attaining the Cramer-Rao bound is called **efficient**. The **efficiency** of an unbiased $\hat\theta$ is the ratio of the bound to its actual variance, a number in $(0,1]$.
+:::
+
+:::proposition[The sample mean is efficient for a normal population]{#xbar-efficient}
+For $X_i \sim N(\mu,\sigma^2)$ with $\sigma^2$ known, $I(\mu) = 1/\sigma^2$, and $\bar X$ attains the Cramer-Rao bound.
+:::
+
+:::proof
+For a single observation, $\log f(x;\mu) = -\tfrac12\log(2\pi\sigma^2) - (x-\mu)^2/(2\sigma^2)$, so $\partial_\mu \log f = (x-\mu)/\sigma^2$ and $\partial^2_\mu \log f = -1/\sigma^2$. By the lemma, $I(\mu) = -E[-1/\sigma^2] = 1/\sigma^2$.
+
+The bound is therefore $1/(n\cdot \sigma^{-2}) = \sigma^2/n$, which is exactly $\operatorname{Var}(\bar X)$ by the theorem *Mean and variance of the sample mean*. $\blacksquare$
+:::
+
+That proposition is the precise sense in which the sample mean is not merely reasonable but optimal: for a normal population **no unbiased estimator of $\mu$ whatsoever** — not the median, not a trimmed mean, not anything yet to be invented — can have smaller variance. It also shows the limits of the claim, since the hypothesis of normality is doing real work. For a heavy-tailed population the median can beat the mean handily, and the Cramér–Rao bound for that model is a different number.
+
+:::remark[Why maximum likelihood is the default]
+Under regularity conditions, the MLE is consistent and **asymptotically efficient**: as $n$ grows,
+
+$$\sqrt{n}\,(\hat\theta - \theta) \xrightarrow{d} N\!\left(0, \frac{1}{I(\theta)}\right),$$
+
+so its variance approaches the Cramér–Rao bound. The proof needs a Taylor expansion of the score together with the law of large numbers and the central limit theorem, and we quote the result rather than prove it.
+
+This is the whole case for maximum likelihood as a default method. It is not that the MLE is unbiased — it usually is not, as the normal variance and the uniform ceiling both showed. It is that for large samples it is approximately unbiased and approximately as precise as any unbiased estimator is permitted to be, and it can be computed for any model you can write down.
+:::
+
+:::figure[Log-likelihood for a Bernoulli proportion from $n=20$ observations with $12$ successes, against the same curve for $n=80$ with $48$ successes — the same $\hat p = 0.6$ in both cases, marked where each curve peaks. Each curve is shifted to peak at zero so the shapes can be compared. More data does not move the estimate; it makes the peak sharper, and that curvature is exactly the Fisher information. The flatter curve is consistent with a wide range of $p$; the sharper one rules the same values out.]{#loglik-curvature}
+{
+  "type": "plot",
+  "x": [0.18, 1.0],
+  "y": [-13.5, 2.2],
+  "xTicks": 0.1,
+  "yTicks": 2,
+  "xLabel": "p",
+  "yLabel": "log-likelihood (shifted)",
+  "marks": [
+    { "kind": "function", "fn": "12*log(x) + 8*log(1-x) - (12*log(0.6) + 8*log(0.4))", "tone": "accent" },
+    { "kind": "function", "fn": "48*log(x) + 32*log(1-x) - (48*log(0.6) + 32*log(0.4))", "tone": "result" },
+    { "kind": "line", "through": [[0.6, -13.5], [0.6, 0]], "tone": "muted", "dashed": true, "extend": false },
+    { "kind": "point", "at": [0.6, 0], "tone": "muted" },
+    { "kind": "text", "at": [0.88, -1.15], "text": "n = 20", "tone": "accent", "leaderTo": [0.78, -3.1] },
+    { "kind": "text", "at": [0.42, -10.6], "text": "n = 80", "tone": "result", "leaderTo": [0.48, -5.0] },
+    { "kind": "text", "at": [0.68, 1.5], "text": "p-hat = 0.6", "tone": "muted", "leaderTo": [0.605, 0.05] }
+  ]
+}
+:::
+
+## Confidence intervals and the pivotal method
 
 <!-- section: confidence-intervals -->
 
-:::definition[Confidence interval for a mean]{#confidence-interval}
-A $100(1-\alpha)\%$ confidence interval is a range of plausible values for an unknown parameter, constructed as
+A point estimate answers the wrong question. For a continuous population $P(\bar X = \mu) = 0$, so the estimate is certainly wrong, and reporting it alone conceals whether it is wrong by a little or by a lot. An interval estimate reports the precision along with the estimate, and the machinery for producing one is entirely mechanical once the right object is identified.
 
-$$\bar{x} \pm z_{\alpha/2}\cdot SE$$
-
-when $\sigma$ is known, and as
-
-$$\bar{x} \pm t_{\alpha/2,\,n-1}\cdot\frac{s}{\sqrt{n}}$$
-
-when $\sigma$ is estimated from the data.
+:::definition[Pivotal quantity]{#pivot}
+A **pivotal quantity** is a function $Q(X_1,\ldots,X_n;\theta)$ of the data and the parameter whose distribution is completely known — it does not depend on $\theta$ or on any other unknown.
 :::
 
-:::remark
-The confidence level is a property of the *procedure*, not of any one interval. If we were to repeat the sampling procedure many times, approximately $100(1-\alpha)\%$ of the resulting intervals would contain the true parameter. A particular interval either contains $\mu$ or it does not — after construction, there is no probability to speak of.
+The definition is doing something subtle. $\bar X$ is not pivotal, because its distribution involves the unknown $\mu$. But $\bar X - \mu$, measured in units of its own standard error, has a distribution that is the same whatever $\mu$ happens to be, and that is what makes it usable: we can make a probability statement about it *before* knowing $\theta$, then rearrange.
+
+:::recipe[The pivotal method]
+1. Find a pivot $Q$ containing the parameter of interest.
+2. Find constants $a, b$ with $P(a \le Q \le b) = 1-\alpha$, using the known distribution of $Q$.
+3. **Rearrange the inequality** $a \le Q \le b$ into the form $L \le \theta \le U$, where $L$ and $U$ involve only the data.
+4. Report $(L, U)$.
 :::
 
-The margin of error $E = z^*\cdot SE$ determines the half-width of the interval.
+:::theorem[Confidence interval for a mean, known variance]{#z-interval}
+Let $X_1,\ldots,X_n$ be i.i.d. $N(\mu,\sigma^2)$ with $\sigma^2$ known. Then
 
-:::proposition[Sample size for a target margin of error]
-To achieve a margin of error $E$ for a mean with known $\sigma$, take
+$$\left(\bar X - z_{\alpha/2}\frac{\sigma}{\sqrt n},\ \ \bar X + z_{\alpha/2}\frac{\sigma}{\sqrt n}\right)$$
 
-$$n = \left(\frac{z^*\sigma}{E}\right)^2.$$
+is a $100(1-\alpha)\%$ confidence interval for $\mu$: the probability that this random interval contains $\mu$ is exactly $1-\alpha$.
 :::
 
-The $t$-distribution has heavier tails than the normal and is appropriate when $\sigma$ is estimated from data. As degrees of freedom $df = n-1$ increases, the $t$-distribution converges to the standard normal. For $n \geq 30$ the difference is minimal in practice.
+:::proof
+By the proposition *A normal population gives an exactly normal mean*, $\bar X \sim N(\mu, \sigma^2/n)$, so
 
-:::definition[Confidence interval for a proportion]
-For a population proportion $p$, the interval is
+$$Q = \frac{\bar X - \mu}{\sigma/\sqrt n} \sim N(0,1),$$
 
-$$\hat{p} \pm z^*\sqrt{\frac{\hat{p}(1-\hat{p})}{n}},$$
+a distribution free of $\mu$ and $\sigma$ — hence a pivot. By the definition of $z_{\alpha/2}$,
 
-valid when $n\hat{p}\geq 10$ and $n(1-\hat{p})\geq 10$.
+$$P\left(-z_{\alpha/2} \le \frac{\bar X - \mu}{\sigma/\sqrt n} \le z_{\alpha/2}\right) = 1-\alpha .$$
+
+Now rearrange the event, which is a chain of algebraic equivalences and so leaves the probability unchanged. Multiplying through by $\sigma/\sqrt n > 0$,
+
+$$-z_{\alpha/2}\frac{\sigma}{\sqrt n} \le \bar X - \mu \le z_{\alpha/2}\frac{\sigma}{\sqrt n},$$
+
+then subtracting $\bar X$ and multiplying by $-1$ (which reverses both inequalities, exchanging the roles of the two bounds),
+
+$$\bar X - z_{\alpha/2}\frac{\sigma}{\sqrt n} \ \le\ \mu \ \le\ \bar X + z_{\alpha/2}\frac{\sigma}{\sqrt n}.$$
+
+The event has not changed, so its probability is still $1-\alpha$. $\blacksquare$
 :::
 
-:::intuition
-A $95\%$ confidence interval is like saying: 'I used a method that catches the true value $95\%$ of the time.' It's like fishing with a net that lands fish $95\%$ of the time. This particular net either caught the fish or didn't — the $95\%$ refers to the reliability of the net, not this specific cast.
+For a non-normal population the same interval is *approximately* valid for large $n$, because the *Central Limit Theorem (Lindeberg–Lévy)* makes $Q$ approximately standard normal; the coverage is then $1-\alpha$ only in the limit.
+
+:::remark[What the confidence level is a statement about]
+In the probability statement above, $\mu$ is a fixed constant and $\bar X$ is the random quantity. The randomness lives entirely in the endpoints: it is the *interval* that varies from sample to sample, not the parameter.
+
+So "$95\%$ confidence" is a property of the **procedure**. Repeat the sampling and the construction many times, and about $95\%$ of the intervals produced will contain $\mu$. Once you have computed $(47.7, 56.3)$ from actual data, that particular interval either contains $\mu$ or does not; there is no remaining randomness and therefore no probability to assign. Saying "there is a $95\%$ probability that $\mu$ lies in $(47.7, 56.3)$" treats $\mu$ as random, which is a Bayesian statement requiring a prior — legitimate, but a different framework, and the subject of *Bayesian Inference*.
 :::
 
-:::example[95% t-interval for a mean]
-$\bar{x}=52$, $s=8$, $n=16$. Construct a $95\%$ CI.
+:::pitfall
+A confidence interval quantifies **sampling** error only — the variability from having $n$ observations rather than the whole population. It makes no allowance for a biased sampling design, a leading question, non-response, or a miscalibrated instrument. A $95\%$ interval computed from a badly drawn sample is a precise statement about the wrong population, and increasing $n$ narrows it without making it any less wrong. The four failures catalogued in the definition *Four failures of a sampling design* are not repaired by any amount of data.
 :::
 
-:::solution
-1. Check conditions: $\sigma$ is unknown (we only have $s$) and $n$ is small, so we use the $t$-distribution with $df=n-1=15$.
-2. $SE = s/\sqrt{n} = 8/\sqrt{16} = 8/4 = 2$.
-3. $t^*_{0.025,15} = 2.131$ (from $t$-table with $df=15$).
-4. CI: $52 \pm 2.131(2) = 52 \pm 4.262 = (47.74,\; 56.26)$.
-5. Interpretation: we are $95\%$ confident the true population mean falls between $47.74$ and $56.26$.
-:::
-
-:::example[95% CI for a proportion]
-A poll finds $\hat{p}=0.6$ in a sample of $n=100$. Construct a $95\%$ CI for $p$.
-:::
-
-:::solution
-1. Check conditions: $n\hat{p} = 100(0.6) = 60 \geq 10$ and $n(1-\hat{p}) = 100(0.4) = 40 \geq 10$, so the normal approximation is valid.
-2. $SE = \sqrt{\hat{p}(1-\hat{p})/n} = \sqrt{0.6(0.4)/100} = \sqrt{0.0024} \approx 0.049$.
-3. Margin of error: $E = z^*\cdot SE = 1.96(0.049) \approx 0.096$.
-4. CI: $0.6 \pm 0.096 = (0.504,\; 0.696)$.
-5. Sanity check: the whole interval lies above $0.5$, so we can be $95\%$ confident of a genuine majority.
-:::
-
-:::example[sample size for a target margin of error]
-We want a $95\%$ CI for a mean with margin of error $E \leq 3$, and we believe $\sigma = 15$.
+:::example[A z-interval, and what changing the level costs]
+A machine fills bottles with $\sigma = 4$ ml known from long experience. A sample of $n=25$ bottles has $\bar x = 498$ ml. Give $90\%$, $95\%$ and $99\%$ intervals for $\mu$.
 :::
 
 :::solution
-1. Rearrange $E = z^*\sigma/\sqrt{n}$ to solve for $n$: $n = (z^*\sigma/E)^2$.
-2. Substitute: $n = (1.96\times 15/3)^2 = (9.8)^2 = 96.04$.
-3. Always round *up* (rounding down would exceed the target margin): $n = 97$.
-4. Sanity check: with $n=97$, $SE = 15/\sqrt{97}\approx 1.523$ and $E = 1.96(1.523)\approx 2.99 \leq 3$. ✓
+1. The standard error is $\sigma/\sqrt n = 4/5 = 0.8$ ml.
+2. The three critical values are $z_{0.05}=1.645$, $z_{0.025}=1.960$, $z_{0.005}=2.576$, giving margins $1.316$, $1.568$ and $2.061$ ml.
+3. The intervals are $(496.68,\ 499.32)$, $(496.43,\ 499.57)$ and $(495.94,\ 500.06)$.
+4. Note what higher confidence costs: going from $90\%$ to $99\%$ widens the interval by $57\%$. Confidence and precision are traded against each other at a fixed $n$, and the only way to buy both is more data.
+5. Sanity check: only the $99\%$ interval contains the nominal $500$ ml. So the data are mildly inconsistent with the machine being correctly calibrated — at the $95\%$ level $500$ is excluded, at the $99\%$ level it is not. That is the same information a hypothesis test would deliver, which is no accident and is taken up in the next chapter.
 :::
 
-## Type I and Type II Errors
+## Unknown variance: the t-distribution
 
-<!-- section: errors -->
+<!-- section: t-interval -->
 
-:::definition[Type I and Type II errors]{#type-errors}
-A Type I error (false positive) occurs when $H_0$ is true but we reject it; its probability is the significance level $\alpha$. A Type II error (false negative) occurs when $H_0$ is false but we fail to reject it; its probability is denoted $\beta$.
+The $z$-interval assumed $\sigma$ known, which it essentially never is. Substituting $s$ for $\sigma$ seems harmless and is not: it introduces a second source of variability, because $s$ itself changes from sample to sample. Ignoring that gives intervals that are systematically too narrow, and the correction is a different distribution.
+
+:::definition[Student's t-distribution]{#t-dist}
+If $Z \sim N(0,1)$ and $V \sim \chi^2_k$ are independent, then
+
+$$T = \frac{Z}{\sqrt{V/k}}$$
+
+has the **$t$-distribution with $k$ degrees of freedom**. It is symmetric about $0$, bell-shaped, and has heavier tails than the standard normal, converging to it as $k \to \infty$.
 :::
 
-We control the Type I error rate by choosing $\alpha$ before testing.
+:::theorem[The studentised mean is pivotal]{#t-pivot}
+Let $X_1,\ldots,X_n$ be i.i.d. $N(\mu,\sigma^2)$. Then
 
-:::definition[Power]{#power}
-The power of a test against a specific alternative is
+$$T = \frac{\bar X - \mu}{S/\sqrt n} \sim t_{\,n-1},$$
 
-$$1-\beta,$$
-
-the probability of correctly detecting a real effect of that size.
+a distribution depending on neither $\mu$ nor $\sigma$.
 :::
 
-Factors that increase power: larger sample size $n$ (reduces $SE$, making it easier to detect real differences); larger true effect size (bigger signal); larger $\alpha$ (less strict rejection criterion); smaller $\sigma$ (less variability).
+:::proof
+Two facts about sampling from a normal population are needed, and we quote them: that $(n-1)S^2/\sigma^2 \sim \chi^2_{n-1}$, and that $\bar X$ and $S^2$ are **independent**. (The independence is special to the normal distribution and is what makes the construction work; proving it requires an orthogonal change of variables beyond this chapter.)
 
-Sample size planning: choose $n$ to achieve a desired power (typically $80\%$ or $90\%$) at a specified effect size and significance level $\alpha$.
+Given those, write
 
-:::intuition
-Type I error: you shout 'fire!' when there is no fire (false alarm). Type II error: there is a fire but you say nothing (miss). To reduce false alarms, raise the bar for shouting fire ($\alpha$ gets smaller) — but then you will miss more real fires. Only collecting more information (larger $n$) reduces both simultaneously.
+$$T = \frac{\bar X - \mu}{S/\sqrt n} = \frac{(\bar X - \mu)\big/(\sigma/\sqrt n)}{\sqrt{\dfrac{(n-1)S^2/\sigma^2}{n-1}}} = \frac{Z}{\sqrt{V/(n-1)}},$$
+
+obtained by dividing numerator and denominator by $\sigma/\sqrt n$. Here $Z = (\bar X-\mu)/(\sigma/\sqrt n)$ is standard normal, $V = (n-1)S^2/\sigma^2$ is $\chi^2_{n-1}$, and the two are independent because $\bar X$ and $S^2$ are. That is precisely the definition of $t_{n-1}$. Both $\mu$ and $\sigma$ have cancelled. $\blacksquare$
 :::
 
-:::example[reading the two error rates from a decision table]
-Suppose a test is run at $\alpha = 0.05$ and, for a specific alternative, has power $= 0.80$.
+:::corollary[Confidence interval for a mean, unknown variance]{#t-interval-cor}
+Under the same hypotheses, a $100(1-\alpha)\%$ confidence interval for $\mu$ is
+
+$$\bar X \pm t_{\alpha/2,\;n-1}\,\frac{S}{\sqrt n}.$$
+:::
+
+:::proof
+Apply the recipe *The pivotal method* to the pivot of the theorem *The studentised mean is pivotal*, exactly as in the proof of the theorem *Confidence interval for a mean, known variance*, with $t_{\alpha/2,n-1}$ in place of $z_{\alpha/2}$. $\blacksquare$
+:::
+
+The degrees of freedom are $n-1$ rather than $n$ for the same reason the unbiased variance divides by $n-1$: the residuals $x_i - \bar x$ satisfy one linear constraint, summing to zero by the proposition *Deviations from the mean sum to zero*, so only $n-1$ of them are free to vary. One degree of freedom was spent estimating $\mu$.
+
+:::figure[The $t$ density with $3$ and $15$ degrees of freedom against the standard normal. All three are symmetric and peak at zero, but the $t$ is lower in the middle and heavier in the tails, and that extra tail mass is what pushes its critical values outward: $t_{0.025,3}=3.182$ against $z_{0.025}=1.960$. The heavier tails are the price of estimating $\sigma$ from the data, and they shrink as the estimate improves — by $15$ degrees of freedom the curve is already close to the normal.]{#t-vs-normal}
+{
+  "type": "plot",
+  "x": [-4.4, 4.4],
+  "y": [-0.035, 0.475],
+  "xTicks": 1,
+  "yTicks": 0.1,
+  "xLabel": "t",
+  "yLabel": "density",
+  "marks": [
+    { "kind": "function", "fn": "0.3989423*exp(-x^2/2)", "tone": "result" },
+    { "kind": "function", "fn": "0.3675526*(1+x^2/3)^(-2)", "tone": "accent" },
+    { "kind": "function", "fn": "0.3939886*(1+x^2/15)^(-8)", "tone": "alt", "dashed": true },
+    { "kind": "text", "at": [1.62, 0.432], "text": "normal", "tone": "result", "leaderTo": [0.42, 0.366] },
+    { "kind": "text", "at": [-3.15, 0.318], "text": "t, df = 3", "tone": "accent", "leaderTo": [-1.35, 0.128] },
+    { "kind": "text", "at": [3.1, 0.238], "text": "t, df = 15", "tone": "alt", "leaderTo": [1.5, 0.116] }
+  ]
+}
+:::
+
+:::example[A t-interval, and the error from using z]
+A sample of $n=16$ has $\bar x = 52$ and $s = 8$. Give a $95\%$ interval for $\mu$, and compare with what the $z$-interval would have given.
 :::
 
 :::solution
-1. $\alpha = 0.05$ is the Type I error rate: if $H_0$ is in fact true, there is a $5\%$ chance we wrongly reject it.
-2. $\beta = 1 - \text{power} = 1 - 0.80 = 0.20$ is the Type II error rate: if $H_0$ is in fact false (at that effect size), there is a $20\%$ chance we fail to detect it.
-3. Now suppose we tighten to $\alpha = 0.01$ to cut false positives. With everything else fixed the rejection region shrinks, so real effects are harder to detect: $\beta$ rises and power falls below $0.80$.
-4. Sanity check: $\alpha$ and $\beta$ move in opposite directions when only the threshold changes; the one lever that lowers *both* is increasing $n$.
+1. $\sigma$ is unknown, so the pivot is $t$ with $df = n-1 = 15$. The standard error estimate is $s/\sqrt n = 8/4 = 2$.
+2. $t_{0.025,15} = 2.131$, so the interval is $52 \pm 2.131(2) = 52 \pm 4.262 = (47.74,\ 56.26)$.
+3. Using $z_{0.025}=1.960$ instead would give $52 \pm 3.920 = (48.08,\ 55.92)$ — narrower by $8\%$.
+4. That narrowness is not a bonus but an error: the $z$-interval's true coverage here is about $92\%$, not the $95\%$ claimed, because it ignores the variability of $s$. The $t$ correction widens the interval by exactly enough to restore the advertised coverage.
+5. Sanity check on the size of the correction: at $df=15$ the ratio $t/z = 2.131/1.960 = 1.087$, so the penalty is under $9\%$. At $df=5$ it would be $2.571/1.960 = 1.31$, and at $df=100$ only $1.008$. The correction matters for small samples and is negligible for large ones, which is why the two intervals are often described as interchangeable for $n \ge 30$.
 :::
 
-## Practical vs. Statistical Significance
+:::remark[How much normality is really needed]
+The theorem assumed a normal population, and real populations are not normal. In practice the $t$-interval is **robust**: for moderate $n$ its coverage stays close to the nominal level for any population that is not strongly skewed or heavy-tailed, because the central limit theorem is already making $\bar X$ near-normal while the $t$ correction absorbs the remaining uncertainty in $s$.
 
-<!-- section: p-value -->
-
-:::definition[Statistical and practical significance]
-Statistical significance ($p \leq \alpha$) means the data is unlikely under $H_0$. Practical significance means the effect is large enough to matter in the real world.
+The failure case is skew, not mere non-normality. For a strongly right-skewed population, $\bar X$ and $S$ are positively correlated — a sample that happens to catch a large value inflates both — and the interval's coverage can fall well below the nominal level even at $n=50$. Symmetry is what the procedure really wants, not normality.
 :::
 
-The two are independent: large samples make tiny effects statistically significant; small samples may miss large effects.
+## Intervals for a variance, and for a difference of means
 
-:::definition[Effect size]
-An effect size measures the magnitude of an effect independently of sample size. For means, Cohen's $d$ is
+<!-- section: two-sample -->
 
-$$d = \frac{\bar{x}-\mu_0}{s},$$
+The pivotal method is not tied to means. Any quantity with a known distribution once the parameter is absorbed will do, and two more cases come up constantly: the spread of a single population, and the gap between two of them.
 
-with $r$ or $r^2$ playing the same role for correlations and the odds ratio for proportions.
+:::theorem[Confidence interval for a normal variance]{#chi-square-interval}
+Let $X_1,\ldots,X_n$ be i.i.d. $N(\mu,\sigma^2)$. A $100(1-\alpha)\%$ confidence interval for $\sigma^2$ is
+
+$$\left(\frac{(n-1)S^2}{\chi^2_{\alpha/2,\;n-1}},\ \ \frac{(n-1)S^2}{\chi^2_{1-\alpha/2,\;n-1}}\right),$$
+
+where $\chi^2_{q,k}$ denotes the value with $P(\chi^2_k > \chi^2_{q,k}) = q$.
 :::
 
-Always report effect size alongside $p$-values.
+:::proof
+The pivot is $V = (n-1)S^2/\sigma^2 \sim \chi^2_{n-1}$, quoted in the proof of the theorem *The studentised mean is pivotal*; its distribution involves neither $\mu$ nor $\sigma$. By definition of the critical values,
 
-Confidence intervals are more informative than $p$-values alone: they show both the direction, magnitude, and uncertainty of an estimate — not merely a binary decision.
+$$P\left(\chi^2_{1-\alpha/2,\,n-1} \le \frac{(n-1)S^2}{\sigma^2} \le \chi^2_{\alpha/2,\,n-1}\right) = 1-\alpha .$$
 
-:::intuition
-With a huge sample, even a change of $0.001$ degrees in temperature becomes 'statistically significant' — but nobody cares about $0.001$ degrees. Statistical significance just means 'the data is very unlikely under $H_0$.' Practical significance asks the more important question: 'Does this actually matter?'
+Invert the chain. All three quantities are positive, so taking reciprocals reverses both inequalities:
+
+$$\frac{1}{\chi^2_{\alpha/2,\,n-1}} \le \frac{\sigma^2}{(n-1)S^2} \le \frac{1}{\chi^2_{1-\alpha/2,\,n-1}},$$
+
+and multiplying through by $(n-1)S^2 > 0$ gives the stated interval. $\blacksquare$
 :::
 
-:::example[significant but trivial (Cohen's $d$)]
-A study of $n = 40{,}000$ finds $\bar{x} = 100.2$ against $H_0: \mu_0 = 100$, with $s = 15$.
+:::pitfall
+This interval is **not symmetric** about $s^2$, and it cannot be written as "estimate $\pm$ margin". The $\chi^2$ distribution is right-skewed, so the two critical values are not mirror images and the upper arm is longer than the lower one. Reporting $s^2 \pm$ something is wrong here, not merely approximate.
+
+It is also the least robust procedure in this chapter. The $t$-interval survives moderate non-normality because the central limit theorem is working on $\bar X$; nothing correspondingly helpful acts on $S^2$, whose distribution depends on the population's fourth moment. For a heavy-tailed population the coverage of this interval can be far below its nominal level at any $n$.
+:::
+
+:::example[An interval for a variance, and for a standard deviation]
+A sample of $n=20$ gives $s^2 = 45$. Construct a $95\%$ interval for $\sigma^2$, and for $\sigma$. Use $\chi^2_{0.025,19} = 32.852$ and $\chi^2_{0.975,19} = 8.907$.
 :::
 
 :::solution
-1. Test statistic: $SE = s/\sqrt{n} = 15/\sqrt{40000} = 15/200 = 0.075$, so $z = (\bar{x}-\mu_0)/SE = 0.2/0.075 \approx 2.67$, giving $p \approx 0.008 < 0.05$ — statistically significant.
-2. Effect size: $d = (\bar{x}-\mu_0)/s = 0.2/15 \approx 0.013$. This is a *tiny* effect (Cohen's benchmarks: $0.2$ small, $0.5$ medium, $0.8$ large).
-3. Sanity check: unlike the $z$-statistic, $d$ has no $\sqrt{n}$ in it, so it does not grow with sample size. The effect is negligible whatever $n$ is, even though the large sample pushed $p$ below $0.05$. Report both: "significant, but the effect is negligible."
+1. The numerator is $(n-1)s^2 = 19 \times 45 = 855$.
+2. Lower endpoint: $855/32.852 = 26.03$. Upper endpoint: $855/8.907 = 95.99$.
+3. So the interval for $\sigma^2$ is $(26.03,\ 95.99)$.
+4. For $\sigma$, take square roots of both endpoints — legitimate because $x\mapsto\sqrt x$ is increasing, so the event $\sigma^2 \in (L,U)$ is the same event as $\sigma \in (\sqrt L,\sqrt U)$ and the coverage is unchanged. This gives $(5.10,\ 9.80)$.
+5. Sanity check on the asymmetry: $s = \sqrt{45} = 6.71$ sits $1.61$ above the lower endpoint and $3.09$ below the upper one — nearly twice as far. With $n = 20$ the data are compatible with a standard deviation anywhere from $5$ to almost $10$, a reminder that variances are estimated far less precisely than means at the same sample size.
+:::
+
+Now two populations. The parameter of interest is $\mu_1 - \mu_2$, and the construction is the one-sample argument applied to a difference.
+
+:::theorem[Confidence interval for a difference of means]{#two-sample-t}
+Let two independent samples of sizes $n_1, n_2$ come from $N(\mu_1,\sigma^2)$ and $N(\mu_2,\sigma^2)$ with a **common** unknown variance. Define the pooled variance
+
+$$S_p^2 = \frac{(n_1-1)S_1^2 + (n_2-1)S_2^2}{n_1+n_2-2}.$$
+
+Then a $100(1-\alpha)\%$ interval for $\mu_1-\mu_2$ is
+
+$$(\bar X_1 - \bar X_2) \pm t_{\alpha/2,\;n_1+n_2-2}\;S_p\sqrt{\frac{1}{n_1}+\frac{1}{n_2}}.$$
+:::
+
+:::proof
+The two sample means are independent and normal, so by the lemma *Linearity of expectation and variance of an independent sum* their difference is normal with
+
+$$E(\bar X_1 - \bar X_2) = \mu_1-\mu_2, \qquad \operatorname{Var}(\bar X_1-\bar X_2) = \frac{\sigma^2}{n_1} + \frac{\sigma^2}{n_2} = \sigma^2\left(\frac{1}{n_1}+\frac{1}{n_2}\right).$$
+
+Standardising gives a $Z$. For the denominator, $(n_1-1)S_1^2/\sigma^2$ and $(n_2-1)S_2^2/\sigma^2$ are independent $\chi^2$ variables with $n_1-1$ and $n_2-1$ degrees of freedom, and a sum of independent chi-squares is chi-square with the degrees of freedom added, so
+
+$$\frac{(n_1+n_2-2)S_p^2}{\sigma^2} \sim \chi^2_{n_1+n_2-2},$$
+
+independently of the two sample means. Forming $Z/\sqrt{V/k}$ as in the definition *Student's t-distribution* gives a $t_{n_1+n_2-2}$ pivot, and $\sigma$ cancels. Inverting it by the recipe *The pivotal method* yields the interval. $\blacksquare$
+:::
+
+:::remark[When the variances are not equal]
+The pooling step used the common-variance assumption twice, and it is a real restriction. If the two variances differ, use the **Welch** interval, which estimates each variance separately,
+
+$$(\bar X_1 - \bar X_2) \pm t_{\alpha/2,\;\nu}\sqrt{\frac{S_1^2}{n_1}+\frac{S_2^2}{n_2}},$$
+
+with degrees of freedom given by the Welch-Satterthwaite approximation
+
+$$\nu = \frac{\left(\dfrac{S_1^2}{n_1}+\dfrac{S_2^2}{n_2}\right)^{2}}{\dfrac{(S_1^2/n_1)^2}{n_1-1} + \dfrac{(S_2^2/n_2)^2}{n_2-1}} .$$
+
+This $\nu$ is generally not an integer, and the resulting $t$ distribution is an approximation rather than an exact sampling distribution — which is why the pooled version is stated as a theorem and this one as a remark. Welch is nonetheless the safer default: it is barely less precise when the variances are in fact equal, and markedly more accurate when they are not, especially with unequal sample sizes.
+:::
+
+:::example[Comparing two treatments]
+Two independent groups give $n_1=12$, $\bar x_1 = 84.2$, $s_1 = 6.4$ and $n_2 = 15$, $\bar x_2 = 78.9$, $s_2 = 5.8$. Assume a common variance and construct a $95\%$ interval for $\mu_1-\mu_2$, using $t_{0.025,25} = 2.060$.
+:::
+
+:::solution
+1. The point estimate is $\bar x_1 - \bar x_2 = 84.2 - 78.9 = 5.3$.
+2. Pooled variance: $s_p^2 = \dfrac{11(6.4)^2 + 14(5.8)^2}{25} = \dfrac{11(40.96)+14(33.64)}{25} = \dfrac{450.56 + 470.96}{25} = \dfrac{921.52}{25} = 36.861$, so $s_p = 6.071$.
+3. Standard error: $s_p\sqrt{1/12+1/15} = 6.071\sqrt{0.08333+0.06667} = 6.071\sqrt{0.15} = 6.071 \times 0.38730 = 2.351$.
+4. Margin: $2.060 \times 2.351 = 4.843$. The interval is $5.3 \pm 4.84 = (0.46,\ 10.14)$.
+5. Sanity check on the pooled variance: it must lie between $s_1^2 = 40.96$ and $s_2^2 = 33.64$, and $36.86$ does, nearer the larger sample's value as the weighting requires ✓.
+6. Reading the result: the interval excludes $0$, but only just — the data support a real difference, while leaving its size anywhere from half a point to ten points. Reporting "the treatments differ" without the interval would suggest far more precision than $27$ observations can deliver.
+:::
+
+## Intervals for a proportion, and why the textbook formula fails
+
+<!-- section: proportion-interval -->
+
+For a proportion the obvious pivot is the standardised sample proportion, and following the recipe produces the interval found in most introductory texts. It is also, over much of the parameter space, badly wrong — a rare case where the standard formula is not merely crude but delivers far less coverage than it advertises.
+
+:::definition[The Wald interval for a proportion]{#wald}
+From a sample of size $n$ with sample proportion $\hat p$, the **Wald interval** is
+
+$$\hat p \pm z_{\alpha/2}\sqrt{\frac{\hat p(1-\hat p)}{n}},$$
+
+obtained by substituting $\hat p$ for $p$ in the standard error $\sqrt{p(1-p)/n}$.
+:::
+
+:::pitfall
+The substitution in that definition is the defect. The quantity $(\hat p - p)/\sqrt{p(1-p)/n}$ *is* an honest pivot, approximately standard normal by the theorem *Normal approximation to the sample proportion*. Replacing the $p$ inside the square root by $\hat p$ produces something that is no longer pivotal, and the error is worst exactly where $\hat p$ is a poor estimate of $p$ — near $0$ and $1$.
+
+The degenerate case makes it vivid. If $\hat p = 0$, the Wald interval is $0 \pm 0$, the single point $\{0\}$, claiming $95\%$ confidence in a zero-width interval. Observing no successes in $20$ trials is entirely consistent with $p = 0.1$, and the interval excludes it with certainty.
+:::
+
+The repair is to *not* make the substitution, and instead solve the pivotal inequality honestly.
+
+:::theorem[The Wilson score interval]{#wilson}
+Solving $\left|\dfrac{\hat p - p}{\sqrt{p(1-p)/n}}\right| \le z$ for $p$ gives the interval with centre and half-width
+
+$$\tilde p = \frac{\hat p + \dfrac{z^2}{2n}}{1 + \dfrac{z^2}{n}}, \qquad w = \frac{z}{1+\dfrac{z^2}{n}}\sqrt{\frac{\hat p(1-\hat p)}{n} + \frac{z^2}{4n^2}},$$
+
+where $z = z_{\alpha/2}$. The interval $(\tilde p - w,\ \tilde p + w)$ lies inside $[0,1]$ always and has coverage close to $1-\alpha$ across the whole range of $p$.
+:::
+
+:::proof
+Square both sides of the inequality, which is legitimate as both are non-negative, and clear the denominator:
+
+$$(\hat p - p)^2 \le \frac{z^2 p(1-p)}{n}.$$
+
+Expand and collect as a quadratic in $p$:
+
+$$p^2\left(1 + \frac{z^2}{n}\right) - p\left(2\hat p + \frac{z^2}{n}\right) + \hat p^{\,2} \ \le\ 0 .$$
+
+The leading coefficient is positive, so the solution set is the closed interval between the two roots. By the quadratic formula the roots are
+
+$$p = \frac{\left(2\hat p + \dfrac{z^2}{n}\right) \pm \sqrt{\left(2\hat p + \dfrac{z^2}{n}\right)^2 - 4\left(1+\dfrac{z^2}{n}\right)\hat p^{\,2}}}{2\left(1+\dfrac{z^2}{n}\right)} .$$
+
+Expand the discriminant: the $4\hat p^{\,2}$ terms cancel, leaving
+
+$$\frac{4z^2}{n}\hat p - \frac{4z^2}{n}\hat p^{\,2} + \frac{z^4}{n^2} = \frac{4z^2}{n}\hat p(1-\hat p) + \frac{z^4}{n^2},$$
+
+whose square root is $2z\sqrt{\hat p(1-\hat p)/n + z^2/(4n^2)}$. Dividing numerator and denominator by $2$ gives the stated centre and half-width. $\blacksquare$
+:::
+
+:::remark[Reading the Wilson interval]
+Three features are worth noticing, and each fixes a specific Wald failure.
+
+The centre $\tilde p$ is not $\hat p$ but is pulled toward $1/2$ — it is the weighted average of $\hat p$ and $1/2$ with weights $n$ and $z^2$, which for a $95\%$ interval means adding about $2$ successes and $2$ failures. That shrinkage is what keeps the interval inside $[0,1]$.
+
+The half-width contains the extra term $z^2/(4n^2)$, which never vanishes. So at $\hat p = 0$ the interval still has positive width, unlike Wald's.
+
+And as $n\to\infty$ with $\hat p$ fixed, $z^2/n \to 0$ and the whole thing collapses back to the Wald interval. Wald is the large-sample limit of Wilson, which is why it is not *wrong* so much as prematurely applied.
+:::
+
+:::example[Wald against Wilson at a small count]
+A safety trial reports $0$ adverse events in $n=20$ patients. Give the $95\%$ Wald and Wilson intervals for the event rate $p$.
+:::
+
+:::solution
+1. **Wald.** $\hat p = 0$, so $\sqrt{\hat p(1-\hat p)/n} = 0$ and the interval is $(0,\,0)$ — a claim that the rate is exactly zero, with $95\%$ confidence, from $20$ patients.
+2. **Wilson.** With $z = 1.96$, $z^2 = 3.8416$ and $z^2/n = 0.19208$:
+
+$$\tilde p = \frac{0 + 3.8416/40}{1.19208} = \frac{0.09604}{1.19208} = 0.08056,$$
+
+$$w = \frac{1.96}{1.19208}\sqrt{0 + \frac{3.8416}{1600}} = 1.64418\times 0.049 = 0.08056 .$$
+
+3. So the Wilson interval is $(0.0000,\ 0.1611)$ — the lower endpoint lands exactly at zero, as it must when no events were seen, and the upper endpoint says a rate as high as $16\%$ remains consistent with the data.
+4. Sanity check by direct computation: if $p = 0.16$, the chance of seeing zero events in $20$ patients is $(1-0.16)^{20} = 0.84^{20} \approx 0.0310$ — small but not negligible, which is exactly what an endpoint of a $95\%$ interval should look like. At Wald's endpoint of $p=0$, the chance of zero events is $1$, which is not the boundary of anything.
+5. The practical consequence is the "rule of three": with no events in $n$ trials, the upper $95\%$ bound is about $3/n$, here $3/20 = 0.15$, close to the Wilson answer. Reporting $(0,0)$ instead would be a serious misstatement of what the trial established.
+:::
+
+## Choosing the sample size
+
+<!-- section: sample-size -->
+
+The interval's half-width is the **margin of error**, and every term in it is known before any data are collected except the estimate itself. That makes the relation invertible: fix the margin you need and solve for $n$.
+
+:::proposition[Sample size for a target margin of error]{#sample-size-mean}
+To obtain a $100(1-\alpha)\%$ interval for a mean with margin of error at most $E$, when $\sigma$ is known or can be guessed, take
+
+$$n \ \ge\ \left(\frac{z_{\alpha/2}\,\sigma}{E}\right)^{2},$$
+
+rounding up to the next integer.
+:::
+
+:::proof
+The margin is $E' = z_{\alpha/2}\sigma/\sqrt n$. Requiring $E' \le E$ and solving: $\sqrt n \ge z_{\alpha/2}\sigma/E$, and squaring — both sides being positive — gives the bound. Rounding up is necessary because $E'$ is decreasing in $n$, so any $n$ below the threshold gives too wide an interval. $\blacksquare$
+:::
+
+The square in that formula is the whole economics of sample size, and it is the square-root law of the previous chapter read backwards. Halving the margin requires **four times** the data; cutting it to a tenth requires a hundred times. Precision is bought at quadratic cost, which is why very precise estimates are expensive and why beyond a point it is cheaper to reduce $\sigma$ — by measuring better or stratifying, per the proposition *Stratification cannot hurt, and usually helps* — than to collect more observations.
+
+:::proposition[Worst-case sample size for a proportion]{#sample-size-prop}
+For a proportion, $p(1-p) \le 1/4$ for all $p\in[0,1]$, with equality at $p=1/2$. Hence
+
+$$n \ge \frac{z_{\alpha/2}^{2}}{4E^2}$$
+
+guarantees a margin of at most $E$ whatever the true $p$ turns out to be.
+:::
+
+:::proof
+The function $g(p) = p(1-p) = p - p^2$ has $g'(p) = 1-2p$, vanishing at $p=1/2$, and $g''(p) = -2 < 0$, so $p=1/2$ is the global maximum on $[0,1]$ with $g(1/2)=1/4$. Substituting the worst case into the margin $z\sqrt{p(1-p)/n} \le E$ and solving for $n$ as in the previous proposition gives the bound. $\blacksquare$
+:::
+
+:::example[Sizing two studies]
+(a) A $95\%$ interval for a mean is required with margin at most $3$, and $\sigma$ is believed to be $15$. (b) A poll needs a $95\%$ margin of at most $3$ percentage points, with no prior information about $p$.
+:::
+
+:::solution
+1. **(a)** $n \ge (1.96\times 15/3)^2 = (9.8)^2 = 96.04$, so take $n = 97$.
+2. Verify: with $n=97$, the margin is $1.96\times 15/\sqrt{97} = 1.96\times 1.5232 = 2.985 \le 3$ ✓. With $n = 96$ it would be $3.001$, just over — which is why the rounding must go up.
+3. **(b)** $n \ge 1.96^2/(4\times 0.03^2) = 3.8416/0.0036 = 1067.1$, so take $n = 1068$.
+4. Sanity check against practice: national polls quote a margin of error of about $3$ points and use samples of roughly a thousand. That is not a coincidence — it is this calculation, and it explains why polling a country of $70$ million needs about the same sample as polling a city, since $n$ depends on the margin and not on the population size.
+5. Note what halving the margin to $1.5$ points would cost in (b): $n \ge 4268$, four times as many respondents for one extra digit of precision.
+:::
+
+:::figure[Margin of error against sample size for a $95\%$ proportion interval at the worst case $p=1/2$. The curve is $0.98/\sqrt n$, and the quadratic cost of precision is the whole shape: reaching a $3$-point margin takes $1{,}068$ respondents, a $2$-point margin $2{,}401$, and a $1$-point margin $9{,}604$. The flatness on the right is why polls cluster around a thousand — past that, each additional point of precision costs more than the entire survey so far.]{#margin-vs-n}
+{
+  "type": "plot",
+  "x": [-400, 10400],
+  "y": [-0.004, 0.058],
+  "xTicks": 2000,
+  "yTicks": 0.01,
+  "xLabel": "sample size n",
+  "yLabel": "margin of error",
+  "marks": [
+    { "kind": "function", "fn": "0.98/sqrt(x)", "tone": "accent" },
+    { "kind": "point", "at": [1068, 0.03], "tone": "result" },
+    { "kind": "point", "at": [2401, 0.02], "tone": "result" },
+    { "kind": "point", "at": [9604, 0.01], "tone": "result" },
+    { "kind": "text", "at": [2450, 0.0455], "text": "3 points, n = 1068", "tone": "result", "leaderTo": [1120, 0.0305] },
+    { "kind": "text", "at": [4300, 0.0315], "text": "2 points, n = 2401", "tone": "result", "leaderTo": [2460, 0.0205] },
+    { "kind": "text", "at": [6500, 0.0175], "text": "1 point, n = 9604", "tone": "result", "leaderTo": [9560, 0.0105] }
+  ]
+}
 :::
 
 ## Common Mistakes
 
-- Interpreting a $95\%$ CI as '$95\%$ probability the parameter is inside.' The parameter is fixed. The randomness is in the interval.
-- Confusing 'fail to reject $H_0$' with 'accept $H_0$.' Failing to reject only means evidence is insufficient — it is not proof of $H_0$.
-- Using a $z$-interval when $\sigma$ is unknown and $n$ is small. Use the $t$-interval with $n-1$ degrees of freedom.
-- Ignoring effect size and reporting only the $p$-value. A small $p$-value with a trivially small effect size is not a scientifically important finding.
-- Claiming $p = 0.049$ is strong evidence and $p = 0.051$ is no evidence at all. The $p$-value is a continuous measure of evidence, not a binary threshold.
+- **Treating unbiasedness as the goal.** MSE is the criterion that counts both ways of being wrong; a biased estimator with small variance frequently wins, and the maximum likelihood estimator of a variance is a standard example.
+- **Differentiating the likelihood without checking the boundary.** For Uniform$(0,\theta)$ the score never vanishes and the MLE sits at $\max x_i$. Any model whose support depends on the parameter needs step 4 of the recipe.
+- **Saying "there is a 95% probability that $\mu$ is in this interval."** After the data are in, nothing is random: the level describes the procedure across repeated samples. The probability statement requires a prior and belongs to Bayesian inference.
+- **Using $z$ when $\sigma$ was estimated.** The interval comes out too narrow and its true coverage falls short of the advertised level. Use $t_{n-1}$ unless $\sigma$ is genuinely known.
+- **Using the Wald interval for a proportion near $0$ or $1$.** Its coverage collapses, and at $\hat p = 0$ it returns a zero-width interval. Use Wilson, which costs two extra terms.
+- **Thinking a wider interval is a worse result.** A wide interval is an honest report of limited information. Narrowing it by lowering the confidence level, or by using a formula that under-covers, hides the uncertainty rather than reducing it.
+- **Forgetting the quadratic cost of precision.** Halving the margin of error takes four times the data, not twice.
+- **Believing a confidence interval accounts for bad sampling.** It quantifies sampling variability alone. Non-response and selection bias are invisible to it, and more data makes the interval narrower without making it more correct.
