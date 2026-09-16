@@ -4,370 +4,897 @@ title: Logic and Proofs
 
 # Logic and Proofs
 
-Logic is the language of rigorous reasoning. In discrete mathematics and computer science, we use formal logic to express statements precisely, determine when they are true, and construct airtight proofs. Without clear logic, algorithms, program correctness, and mathematical theorems cannot be trusted.
+A program either returns the right answer on every input or it does not. Testing it on a thousand inputs establishes something about those thousand inputs and nothing whatever about the thousand-and-first. The only instrument that settles the general case is a proof, and a proof is an object with a grammar: it is built out of statements, combined by a small fixed set of connectives, quantified over domains, and chained together by rules that preserve truth. This chapter is about that grammar.
 
-This topic introduces propositions (the building blocks), the connectives that combine them, quantifiers for talking about "all" or "some", and the main techniques for proving statements: direct proof, contradiction, and mathematical induction. These tools appear everywhere from verifying software to proving the correctness of sorting algorithms.
+Two things make the subject unexpectedly concrete for a computer scientist. The first is that the connectives of propositional logic are exactly the gates of a circuit, and the question *which gates do I need?* has a sharp answer: a single gate type, NAND, suffices to build every boolean function there is. That is a theorem about logic and simultaneously a fact about silicon. The second is that a truth table is a finite object, so every question about a formula in $n$ variables — is it a tautology, is it satisfiable, are these two formulas the same? — can be decided by checking $2^n$ rows. Finite does not mean cheap: $2^n$ rows for $n = 60$ is more rows than there have been seconds since the Big Bang, and the question of whether satisfiability can be decided substantially faster is the P versus NP problem. But it does mean the semantics of this chapter never requires an act of faith.
 
-## Propositions and Truth Values
+The second half turns to proof itself. We isolate the three moves that do almost all the work — direct argument, contraposition, contradiction — and, crucially, *prove that they are valid*, rather than asserting them. Proof by contradiction is not a convention we agree to; it is a consequence of the truth table for implication. Then comes induction, the one technique genuinely peculiar to the discrete world, in its ordinary and strong forms, together with the well-ordering principle, which turns out to be the same statement wearing a different hat. We finish by dissecting a famous induction that proves all horses are the same colour, because knowing precisely which step of that argument fails is worth more than any number of correct inductions.
+
+Throughout, $\mathbb{Z}$ is the integers and $\mathbb{N} = \{1, 2, 3, \dots\}$. We work informally, in the sense that our object of study is mathematical reasoning as practised rather than a formal deductive calculus with its own axioms and derivation rules. That formal turn — where "provable" becomes a syntactic notion, and one asks whether it coincides with "true" — belongs to *Mathematical Logic*, and we will point at the door without walking through it.
+
+## Propositions and truth values
 
 <!-- section: propositions -->
 
+Everything begins with a restriction on what counts as a sentence we may reason about.
+
 :::definition[Proposition]{#proposition}
-A **proposition** (or statement) is a declarative sentence with a definite truth value: it is either true or false, but not both and not neither.
+A **proposition** is a declarative sentence that is either true or false, and not both. Its **truth value** is $\mathrm{T}$ (true) or $\mathrm{F}$ (false). We write propositional variables $p, q, r, \dots$ for propositions whose particular content does not matter.
 :::
 
-Examples: "2 + 2 = 4" (true), "The moon is made of cheese" (false). Commands, questions, and open expressions without assigned values are not propositions.
+The definition excludes three large families of English sentences. Questions ("Is $7$ prime?") assert nothing. Commands ("Return $-1$ on failure") assert nothing. Open sentences ("$x > 3$") assert something only once $x$ is supplied; until then they are *predicates*, which we take up in the section on quantifiers. And a fourth family is excluded for a subtler reason: sentences like "this sentence is false" are declarative and yet cannot consistently be assigned either value. We simply do not admit them. Ruling out self-reference by fiat is a blunt instrument, and the delicate version of the question — what happens to a formal system rich enough to talk about its own provability — is the subject of Gödel's incompleteness theorems in *Mathematical Logic*.
 
-Every proposition has exactly one of two possible truth values: true (often denoted T or 1) or false (F or 0). This binary nature is what makes logic computable and foundational to digital circuits and Boolean algebra.
-
-:::definition[Logical equivalence]{#logical-equivalence}
-Two propositions are **logically equivalent** if they always have the same truth value. We write $p \equiv q$.
-:::
-
-:::intuition
-A proposition is like a light switch that is definitely on or off — no "maybe" or "it depends without context." "The light is on right now" can be checked; "Turn the light on" cannot.
-
-In code, propositions become boolean expressions: `isRaining && temperature < 0` evaluates to a single true/false.
-:::
-
-### Worked Examples
-
-:::example[Identifying propositions]
-"Every even integer greater than 2 is the sum of two primes." — This is a proposition (Goldbach conjecture; its truth value is unknown but definite).
+:::example[Which sentences are propositions?]
+Classify each as a proposition (with its truth value) or not: (a) $17$ is prime. (b) Every even integer greater than $2$ is a sum of two primes. (c) Sort the array. (d) $n^2 \geq n$. (e) $3 + 4 = 8$.
 :::
 
 :::solution
-1. "What is the capital of France?" — Not a proposition (question).
-2. "x + 1 > 5" — Not a proposition by itself (open; becomes one only when x is given a value).
-3. "This sentence is false." — Paradoxical; not a well-formed proposition in classical logic.
+1. (a) is a proposition, true.
+2. (b) is a proposition — Goldbach's conjecture. It is either true or false; nobody currently knows which. Being a proposition is about having a truth value, not about our access to it.
+3. (c) is imperative, so not a proposition.
+4. (d) is an open sentence: its truth depends on $n$. It becomes a proposition once $n$ is fixed, or once it is quantified ("for all integers $n$, $n^2 \geq n$" — false, take $n = 0$... in fact true for integers, but false for reals, take $n = 1/2$).
+5. (e) is a proposition, false. Falsity is no obstacle: a proposition need not be true.
 :::
 
-## Logical Connectives and Truth Tables
+:::notation
+We reserve $\mathrm{T}$ and $\mathrm{F}$ for truth values and use $1$ and $0$ for them only where the arithmetic is the point, as when counting satisfying assignments. In code the same two values appear as `true`/`false`, and the correspondence between a boolean expression in a program and a compound proposition is exact — which is why the laws of this chapter are the laws a compiler uses to simplify a conditional.
+:::
+
+A compound proposition built from $n$ variables is completely described by what it does to each assignment of truth values to those variables. This is the fundamental finiteness that makes propositional logic decidable.
+
+:::definition[Truth assignment and truth table]{#truth-table}
+A **truth assignment** for the variables $p_1, \dots, p_n$ is a function giving each $p_i$ a value in $\{\mathrm{T}, \mathrm{F}\}$. The **truth table** of a compound proposition lists its value under every truth assignment, one assignment per row.
+:::
+
+:::theorem[Size of a truth table]{#truth-table-size}
+A compound proposition in $n$ distinct variables has exactly $2^n$ truth assignments, so its truth table has $2^n$ rows.
+:::
+
+:::proof
+A truth assignment chooses one of two values independently for each of the $n$ variables. The choices are unconstrained and independent, so by the multiplication principle the number of assignments is $2 \cdot 2 \cdots 2$ with $n$ factors, which is $2^n$.
+:::
+
+:::intuition
+Reading a row of a truth table as an $n$-bit binary string makes the count obvious: the rows of a table for $p, q, r$ are exactly the eight strings $000$ through $111$, and listing them in that order is why the standard layout alternates the last column fastest. A truth table is a complete enumeration of a finite universe of possibilities, which is precisely why it decides every propositional question — and precisely why it is useless for $n$ in the hundreds.
+:::
+
+Two propositions with the same truth table are indistinguishable by any argument that treats their variables as arbitrary. This suggests counting not formulas but tables, and the count is startling.
+
+:::theorem[Number of boolean functions]{#boolean-function-count}
+There are exactly $2^{2^n}$ distinct functions from $\{\mathrm{T}, \mathrm{F}\}^n$ to $\{\mathrm{T}, \mathrm{F}\}$.
+:::
+
+:::proof
+Such a function is determined by its output on each of the $2^n$ inputs, by the theorem *Size of a truth table*, and conversely any choice of outputs determines a function. Choosing an output is choosing one of two values, and the $2^n$ choices are independent, so the number of functions is $2$ raised to the number of inputs, namely $2^{2^n}$.
+:::
+
+:::figure[The number of $n$-variable boolean functions, drawn as the number of decimal digits of $2^{2^n}$ — that is, bar height $= 2^n \log_{10} 2$. Plotting the count itself is impossible: at $n = 5$ it is a $10$-digit number, at $n = 6$ a $20$-digit one, and each step doubles the height of the bar. Only $2^{2^0} = 2$ and $2^{2^1} = 4$ of these are small enough to name comfortably.]{#boolean-growth}
+{
+  "type": "plot",
+  "x": [-0.4, 7.2],
+  "y": [0, 24],
+  "xTicks": 1,
+  "yTicks": 4,
+  "xLabel": "n (number of variables)",
+  "yLabel": "decimal digits of 2^(2^n)",
+  "marks": [
+    { "kind": "bars", "bars": [[0.1, 0.9, 0.301], [1.1, 1.9, 0.602], [2.1, 2.9, 1.204], [3.1, 3.9, 2.408], [4.1, 4.9, 4.816], [5.1, 5.9, 9.633], [6.1, 6.9, 19.266]] },
+    { "kind": "text", "at": [1.9, 17.5], "text": "16 functions of 2 variables", "leaderTo": [1.5, 1.0] },
+    { "kind": "text", "at": [4.6, 13.0], "text": "256 of 3 variables", "leaderTo": [2.5, 1.5] },
+    { "kind": "text", "at": [4.1, 21.5], "text": "each step squares the count", "leaderTo": [6.5, 19.6] }
+  ]
+}
+:::
+
+:::example[Counting three-variable tables]
+How many distinct compound propositions in the variables $p, q, r$ are there, up to having the same truth table? How many of those are tautologies, and how many are satisfiable?
+:::
+
+:::solution
+1. By the theorem *Number of boolean functions* with $n = 3$ there are $2^{2^3} = 2^8 = 256$ distinct truth tables.
+2. A tautology is true in every row, which pins down all eight outputs, so there is exactly $1$.
+3. A proposition fails to be satisfiable only when every output is $\mathrm{F}$, again exactly one table, so $256 - 1 = 255$ are satisfiable.
+4. Note the moral: almost everything is satisfiable, and being a tautology is extraordinarily special. This is why checking satisfiability is the interesting computational problem.
+:::
+
+:::pitfall
+"The same proposition" is ambiguous and the ambiguity matters. As *strings*, $p \wedge q$ and $q \wedge p$ are different; as *functions*, they are the same. Every theorem in this chapter is about the functions. Two formulas with identical truth tables are interchangeable inside any larger formula, which is exactly the licence a compiler needs to rewrite `a && b` as `b && a`, and exactly the licence it does *not* have when evaluating `a` has a side effect.
+:::
+
+## Connectives, conditionals and functional completeness
 
 <!-- section: connectives -->
 
-We combine simple propositions using **logical connectives** (operators) to form compound propositions. Each connective is fixed entirely by what it does to truth values.
+Five connectives generate everything we will write.
 
-:::definition[The logical connectives]{#connectives}
-- **Conjunction** ($\land$, "and"): $p \land q$ holds precisely when $p$ is true and $q$ is true.
-- **Disjunction** ($\lor$, "or"): $p \lor q$ holds when at least one of $p$ or $q$ is true (inclusive or).
-- **Negation** ($\neg$, "not"): $\neg p$ flips the truth value of $p$.
-- **Implication** ($\to$, "if ... then"): $p \to q$ is false only when $p$ is true and $q$ is false. The antecedent $p$ is the "if" part; $q$ the consequent.
-- **Biconditional** ($\leftrightarrow$, "if and only if"): $p \leftrightarrow q$ is true when $p$ and $q$ have the same truth value.
+:::definition[The five connectives]{#connectives}
+For propositions $p$ and $q$:
+
+- **Negation** $\neg p$ ("not $p$") is true exactly when $p$ is false.
+- **Conjunction** $p \wedge q$ ("$p$ and $q$") is true exactly when both are true.
+- **Disjunction** $p \vee q$ ("$p$ or $q$") is true exactly when at least one is true. This is the *inclusive* or.
+- **Conditional** $p \to q$ ("if $p$ then $q$") is false exactly when $p$ is true and $q$ is false, and true otherwise.
+- **Biconditional** $p \leftrightarrow q$ ("$p$ if and only if $q$") is true exactly when $p$ and $q$ have the same truth value.
+
+In $p \to q$ we call $p$ the **antecedent** and $q$ the **consequent**.
 :::
 
-:::definition[Truth table]{#truth-table}
-A **truth table** lists every possible combination of truth values for the component propositions and shows the resulting value of the compound statement. For two propositions there are $2^2 = 4$ rows; for three, 8 rows.
+The first three match ordinary usage closely enough to cause no trouble, with one exception: English "or" is often exclusive ("soup or salad"), and mathematical $\vee$ never is. The exclusive version is a separate connective, $p \oplus q$, true when exactly one of $p, q$ holds; it is the parity bit, the XOR gate, and the operation that makes a one-time pad work.
+
+The conditional is where every student stumbles, because three of its four rows are true and two of those three feel like cheating.
+
+:::figure[The truth table of $p \to q$ drawn as a grid, with the single false row isolated. The conditional asserts nothing except that the case "$p$ true, $q$ false" does not occur; the two rows where $p$ is false are true *vacuously*, since there is nothing for the promise to break.]{#conditional-table}
+{
+  "type": "plot",
+  "x": [0, 12],
+  "y": [0, 6.4],
+  "xTicks": 2,
+  "yTicks": 1,
+  "xLabel": "column",
+  "yLabel": "row",
+  "marks": [
+    { "kind": "text", "at": [1.4, 5.4], "text": "p" },
+    { "kind": "text", "at": [4.4, 5.4], "text": "q" },
+    { "kind": "text", "at": [8.2, 5.4], "text": "p -> q" },
+    { "kind": "text", "at": [1.4, 4.2], "text": "T" },
+    { "kind": "text", "at": [4.4, 4.2], "text": "T" },
+    { "kind": "text", "at": [8.2, 4.2], "text": "T" },
+    { "kind": "text", "at": [1.4, 3.0], "text": "T" },
+    { "kind": "text", "at": [4.4, 3.0], "text": "F" },
+    { "kind": "text", "at": [8.2, 3.0], "text": "F", "tone": "result" },
+    { "kind": "text", "at": [1.4, 1.8], "text": "F" },
+    { "kind": "text", "at": [4.4, 1.8], "text": "T" },
+    { "kind": "text", "at": [8.2, 1.8], "text": "T" },
+    { "kind": "text", "at": [1.4, 0.6], "text": "F" },
+    { "kind": "text", "at": [4.4, 0.6], "text": "F" },
+    { "kind": "text", "at": [8.2, 0.6], "text": "T" },
+    { "kind": "line", "through": [[0.4, 4.9], [11.0, 4.9]], "extend": false, "tone": "muted" },
+    { "kind": "line", "through": [[6.4, 0.2], [6.4, 5.9]], "extend": false, "tone": "muted", "dashed": true },
+    { "kind": "line", "through": [[0.4, 2.4], [11.0, 2.4]], "extend": false, "tone": "muted", "dashed": true }
+  ]
+}
 :::
 
-The implication is subtle: "If it rains, then the ground is wet" is true whenever it does not rain (vacuous truth). In mathematics we routinely use implications this way.
-
-:::intuition
-$\land$ is both conditions must hold (like getting dessert only if you finish vegetables AND clean your plate).
-
-$\lor$ is "at least one" (you may have cake or ice cream or both).
-
-Implication is a one-way promise: when the premise happens, the conclusion must follow. If the premise never happens, the promise is kept vacuously.
+:::definition[Vacuous truth]{#vacuous-truth}
+A conditional $p \to q$ whose antecedent $p$ is false is said to be **vacuously true**. Its truth value is $\mathrm{T}$ regardless of $q$.
 :::
 
-### Worked Examples
+This convention is not arbitrary, and it is not chosen for convenience. It is forced, in the following precise sense.
 
-:::example[Building a truth table for $p \to (q \land \neg r)$]
-Tabulate every assignment of truth values to $p$, $q$ and $r$, and evaluate $p \to (q \land \neg r)$ in each row.
-:::
+:::theorem[The conditional's truth table is forced]{#conditional-forced}
+Suppose a binary connective $\Rightarrow$ satisfies both of the following:
 
-:::solution
-1. We have three atomic propositions, so 8 rows.
-2. Compute inner: $\neg r$ is the flip of r.
-3. Then $q \land \neg r$: true only if q true and r false.
-4. Finally $p \to$ that result: false only in the row where p=true and (q and not r)=false.
+1. From $p$ and $p \Rightarrow q$ one may always infer $q$ (the rule is sound).
+2. For every predicate $P$ over a domain $D$, the sentence "for all $x \in D$, $P(x) \Rightarrow P(x)$" is true.
 
-Full table (T=1, F=0):
-
-| p | q | r | ¬r | q∧¬r | p→(q∧¬r) |
-|---|---|---|---|------|-----------|
-| T | T | T | F | F | F |
-| T | T | F | T | T | T |
-| T | F | T | F | F | F |
-| T | F | F | T | F | F |
-| F | T | T | F | F | T |
-| F | T | F | T | T | T |
-| F | F | T | F | F | T |
-| F | F | F | T | F | T |
-
-:::
-
-## Logical Equivalences and Laws
-
-<!-- section: equivalences -->
-
-Two compound propositions are **logically equivalent** if their truth tables are identical in the final column. We can prove equivalence by truth table or by using a small set of basic laws (identities) that hold for all propositions.
-
-:::theorem[Laws of logical equivalence]{#equivalence-laws}
-The following equivalences hold for all propositions, and all can be verified by truth tables.
-
-- Double negation: $\neg(\neg p) \equiv p$
-- De Morgan's laws: the negation of a conjunction is the disjunction of negations, and vice versa.
-- Distributive: $p \land (q \lor r) \equiv (p \land q) \lor (p \land r)$ and $p \lor (q \land r) \equiv (p \lor q) \land (p \lor r)$
-- Absorption, idempotent, etc.
-- Implication as disjunction: $p \to q$ is equivalent to $\neg p \lor q$ .
-- Contrapositive: $p \to q \equiv \neg q \to \neg p$ (extremely useful in proofs)
-:::
-
-:::definition[Tautology and contradiction]{#tautology}
-A **tautology** is always true (e.g., $p \lor \neg p$). A **contradiction** is always false (e.g., $p \land \neg p$). These are the logical analogues of "1=1" and "1=0".
-:::
-
-:::intuition
-De Morgan's laws are like "not (both A and B)" means "not A or not B" — the same rule that turns "I will not eat both cake and pie" into "I will skip cake or skip pie (or both)".
-
-Equivalences let us rewrite statements into forms easier to prove or implement in code.
-:::
-
-### Worked Examples
-
-:::example[Simplifying with the laws]
-Simplify $\neg(\neg p \lor q) \land p$.
-:::
-
-:::solution
-1. Apply De Morgan to the negation: $\neg(\neg p \lor q) \equiv p \land \neg q$.
-2. Now the expression is $(p \land \neg q) \land p$.
-3. Idempotent law (p ∧ p ≡ p): $p \land \neg q \land p \equiv p \land \neg q$.
-4. Result: $p \land \neg q$, which is "p and not q".
-:::
-
-:::example[Verifying an equivalence by truth table]
-Check that $p \to q \equiv \neg p \lor q$ by tabulating both sides.
-:::
-
-:::solution
-1. List all four assignments of $p, q$ and compute both columns.
-
-| $p$ | $q$ | $p \to q$ | $\neg p$ | $\neg p \lor q$ |
-|---|---|---|---|---|
-| T | T | T | F | T |
-| T | F | F | F | F |
-| F | T | T | T | T |
-| F | F | T | T | T |
-
-2. The $p \to q$ and $\neg p \lor q$ columns are identical row for row, so the two are logically equivalent. This is the rewrite that lets you eliminate implications when simplifying.
-:::
-
-The contrapositive $p \to q \equiv \neg q \to \neg p$ (verifiable the same way) lets you prove the harder-looking direction by proving the easier one.
-
-:::example[Choosing the contrapositive to make a proof easy]
-Show that if $n$ is divisible by 4 then $n$ is even.
-:::
-
-:::solution
-1. Proving the claim directly means starting from $n = 4a$ — doable, but the contrapositive is even cleaner.
-2. Contrapositive: "if $n$ is odd then $n$ is not divisible by 4."
-3. Assume $n$ is odd: $n = 2m + 1$. A multiple of 4 is even, but $n$ is odd, so $n$ cannot equal $4a$ for any integer $a$. Hence $n$ is not divisible by 4.
-4. Having proved the contrapositive, the original implication holds.
-:::
-
-## Quantifiers
-
-<!-- section: quantifiers -->
-
-:::definition[Quantifiers]{#quantifiers}
-**Quantifiers** let us make statements about collections of objects.
-
-- Universal quantifier $\forall$ ("for all"): $\forall x \in S, P(x)$ means "for every x in set S, P(x) holds".
-- Existential quantifier $\exists$ ("there exists"): $\exists x \in S, P(x)$ means "there is at least one x in S such that P(x) holds".
-:::
-
-:::proposition[Negation of quantifiers]{#quantifier-negation}
-The **negation** of a quantified statement flips the quantifier and negates the predicate:
-
-$$\neg(\forall x, P(x)) \equiv \exists x, \neg P(x), \qquad \neg(\exists x, P(x)) \equiv \forall x, \neg P(x).$$
-:::
-
-Order matters: $\forall x \exists y$ ("for every x there is a y") is different from $\exists y \forall x$ ("there is a single y that works for every x").
-
-:::intuition
-$\forall$ is "no exceptions allowed" — like "every student in the class passed" (check all of them).
-
-$\exists$ is "at least one" — "someone in the class got 100%" (you only need to find one).
-
-Negating "all students passed" gives "there exists a student who did not pass".
-:::
-
-### Worked Examples
-
-:::example[Negating a quantified statement]
-Write down the negation of "Every integer greater than 1 has a prime factor," and use it to check the original.
-:::
-
-:::solution
-1. Original: "Every integer greater than 1 has a prime factor," written $\forall n \in \mathbb{Z}, \, (n > 1) \to (\exists p \text{ prime}, \, p \mid n)$.
-2. To negate, flip each quantifier as you move inward and negate the predicate. First flip the outer $\forall$ to $\exists$: $\exists n \in \mathbb{Z}$ such that $\neg\big((n>1) \to (\exists p \text{ prime}, p \mid n)\big)$.
-3. Negate the implication using $\neg(P \to Q) \equiv P \land \neg Q$: the inner part becomes $(n > 1) \land \neg(\exists p \text{ prime}, p \mid n)$.
-4. Finally flip the inner $\exists$ to $\forall$: $\neg(\exists p \text{ prime}, p \mid n) \equiv \forall p \text{ prime}, \, p \nmid n$.
-5. Full negation: "There exists an integer $n > 1$ such that no prime divides $n$." This negation is *false* (every integer $> 1$ has a prime factor), which is exactly why the original statement is true.
-:::
-
-:::example[A sanity check on a second statement]
-Negate $\forall x \in \mathbb{R}, \, x^2 \geq 0$ and use the negation to confirm the original.
-:::
-
-:::solution
-1. Flip $\forall$ to $\exists$ and negate $x^2 \geq 0$ to $x^2 < 0$: the negation is $\exists x \in \mathbb{R}, \, x^2 < 0$.
-2. The negation asserts some real number has a negative square, which is impossible, so the negation is false — confirming the original is true. Whenever a statement is true, its correctly-formed negation must come out false; that is the check.
-:::
-
-## Direct Proofs and Proof Strategies
-
-<!-- section: direct-proofs -->
-
-:::recipe[Direct proof]{#direct-proof}
-A **direct proof** of an implication "if P then Q" proceeds by assuming P is true and deriving Q using definitions, previously proved theorems, and logical rules.
-:::
-
-Common strategies:
-
-- Use definitions (e.g., "even" means "divisible by 2").
-- Work forward from assumptions or backward from the goal.
-- Use the contrapositive when the original implication is awkward.
-- Cases: split into exhaustive mutually exclusive cases (e.g., n even or n odd).
-
-A proof is a chain of justified statements ending at the desired conclusion. Every step must be reversible or clearly follow from prior steps and axioms.
-
-:::intuition
-Direct proof is like following a recipe: start with the ingredients (assumptions), apply allowed operations step by step, and arrive at the finished dish (the conclusion). You must justify why each step is legal.
-:::
-
-### Worked Examples
-
-:::theorem[Sum of two even integers]
-If $m$ and $n$ are even integers, then $m + n$ is even.
+Then $\Rightarrow$ agrees with $\to$ on all four rows.
 :::
 
 :::proof
-Let $m$ and $n$ be even integers. By definition, $m = 2a$ and $n = 2b$ for some integers $a$, $b$. Then
+Row $\mathrm{T}\mathrm{F}$ is settled by condition 1: if $p$ is true and $q$ is false, then $p \Rightarrow q$ must be false, since otherwise both premises of the rule would be true and we could infer the false $q$.
 
-$$m + n = 2a + 2b = 2(a + b),$$
+Row $\mathrm{T}\mathrm{T}$ is settled by condition 2. Take any predicate $P$ and any $a \in D$ with $P(a)$ true. Condition 2 makes $P(a) \Rightarrow P(a)$ true, and that is an instance of the connective applied to a true antecedent and a true consequent.
 
-and since $a + b$ is an integer, $m + n$ is even by definition.
+Now the two rows with false antecedent. Take $D = \mathbb{Z}$ and $P(x)$ the predicate "$x > 5$". Condition 2 makes "$x > 5 \Rightarrow x > 5$" true for every integer $x$, in particular for $x = 0$, where both sides are false; so row $\mathrm{F}\mathrm{F}$ is true. For row $\mathrm{F}\mathrm{T}$, take $Q(x)$ to be "$x > 5$" and $R(x)$ to be "$x > 1$". The sentence "for all integers $x$, $Q(x) \Rightarrow R(x)$" is one we certainly wish to call true, and at $x = 3$ its antecedent is false while its consequent is true. So that row is true as well.
 :::
-
-:::proposition[Square of an odd integer]{#odd-square}
-If $n$ is odd, then $n^2$ is odd.
-:::
-
-:::proof
-Let $n$ be odd. By definition $n = 2m + 1$ for some integer $m$. Squaring it and factoring a 2 out of the first two terms,
-
-$$n^2 = (2m+1)^2 = 4m^2 + 4m + 1 = 2(2m^2 + 2m) + 1.$$
-
-Since $2m^2 + 2m$ is an integer, $n^2$ has the form $2(\text{integer}) + 1$, which is odd by definition.
-:::
-
-Sanity check: $n = 3$ gives $n^2 = 9 = 2(4) + 1$, odd. ✓
-
-:::recipe[Proof by contrapositive]{#contrapositive-proof}
-To prove "if P then Q", prove "if not Q then not P" instead. The two are logically equivalent, so proving the contrapositive proves the original.
-:::
-
-The contrapositive of "if $n$ is odd then $n^2$ is odd" is the following statement.
-
-:::proposition[Even squares come from even integers]
-If $n^2$ is even, then $n$ is even.
-:::
-
-:::proof
-Assume $n^2$ is even; we argue by cases on the parity of $n$. If $n$ were odd, then $n^2$ would be odd because the square of an odd integer is odd, contradicting that $n^2$ is even. The only remaining case is that $n$ is even.
-:::
-
-This is the contrapositive of the previous proposition, so proving it is a second route to the same fact.
-
-## Proof by Contradiction
-
-<!-- section: contradiction -->
-
-:::recipe[Proof by contradiction]{#contradiction-proof}
-**Proof by contradiction** (reductio ad absurdum): to prove P, assume both P is false (¬P) and any other given premises, then derive a logical contradiction (something known to be false, like 0=1 or "n is both even and odd").
-:::
-
-Because the assumption ¬P led to impossibility, ¬P must itself be false, so P is true.
-
-This is powerful for statements that are hard to prove directly, such as "√2 is irrational", "there are infinitely many primes", or "no rational number squared equals 2".
 
 :::intuition
-Assume the opposite of what you want to prove, then show that the world explodes into nonsense (a contradiction). Therefore your opposite assumption was wrong, and the original claim must be correct. Like detective work: "if the butler didn't do it, then the clock must have been lying and the door locked from the inside — impossible, so the butler did it."
+Read $p \to q$ as a *promise*: "if you give me $p$, I will give you $q$." You have broken the promise only if $p$ arrived and $q$ did not. If $p$ never arrived, the promise stands unbroken — not because you kept it in any interesting sense, but because there is no evidence against it. "Every element of the empty list is negative" is true for the same reason, and any convention that made it false would force us to say the empty list contains a non-negative element.
 :::
 
-### Worked Examples
+:::example[Vacuous truth in a loop invariant]
+A function scans a list and returns `true` if every element is even. On the empty list it returns `true`. Justify this using the conditional's truth table.
+:::
 
-:::theorem[Irrationality of the square root of 2]{#sqrt-two-irrational}
-$\sqrt{2}$ is irrational.
+:::solution
+1. The claim is "for every index $i$ in the list, the element at $i$ is even", which unpacks to "$i$ is a valid index $\to$ element at $i$ is even" for every $i$.
+2. On the empty list no $i$ is a valid index, so every antecedent is false.
+3. Each conditional is therefore vacuously true, and the universally quantified claim holds. Returning `true` is correct, and a loop `for i in list: if odd: return false` followed by `return true` implements exactly this.
+4. The alternative convention would make the function's answer on the empty list depend on nothing at all in the list, which is the definition of an arbitrary choice.
+:::
+
+:::definition[Tautology, contradiction, satisfiable]{#tautology}
+A compound proposition is a **tautology** if it is true under every truth assignment, a **contradiction** if it is false under every truth assignment, and **satisfiable** if it is true under at least one. A **contingency** is a proposition that is neither a tautology nor a contradiction.
+:::
+
+:::example[Classifying by truth table]
+Classify $(p \to q) \vee (q \to p)$ and $(p \vee q) \wedge \neg p \wedge \neg q$, and count the satisfying assignments of $(p \to q) \wedge (q \to r)$.
+:::
+
+:::solution
+1. For the first, suppose it were false under some assignment. Then $p \to q$ and $q \to p$ are both false, so $p$ is true and $q$ is false from the first, and $q$ is true from the second — a contradiction. Hence it is a tautology.
+2. For the second, if $\neg p$ and $\neg q$ both hold then $p \vee q$ is false, so the conjunction is false; it is a contradiction.
+3. For the third, of the eight assignments to $(p,q,r)$ the formula fails exactly when $p$ is true and $q$ false, or $q$ true and $r$ false. Listing: $\mathrm{TTT}$ ✓, $\mathrm{TTF}$ ✗, $\mathrm{TFT}$ ✗, $\mathrm{TFF}$ ✗, $\mathrm{FTT}$ ✓, $\mathrm{FTF}$ ✗, $\mathrm{FFT}$ ✓, $\mathrm{FFF}$ ✓. So $4$ assignments satisfy it.
+:::
+
+Now to the structural question. We introduced five connectives, but nothing so far says we needed five. The next theorem shows that any truth table whatsoever can be realised, which will make the reduction to fewer connectives straightforward.
+
+:::definition[Literal and disjunctive normal form]{#dnf}
+A **literal** is a variable or its negation. A compound proposition is in **disjunctive normal form** (DNF) if it is a disjunction of conjunctions of literals, such as $(p \wedge \neg q) \vee (\neg p \wedge q \wedge r)$.
+:::
+
+:::theorem[Every truth table has a DNF]{#dnf-theorem}
+Let $f$ be any function from $\{\mathrm{T},\mathrm{F}\}^n$ to $\{\mathrm{T},\mathrm{F}\}$ with $n \geq 1$. Then some compound proposition in disjunctive normal form, using only $\neg$, $\wedge$ and $\vee$, has truth table $f$.
 :::
 
 :::proof
-1. Assume for contradiction that √2 is rational: √2 = a/b where a, b are integers with no common factors (b > 0) and gcd(a,b)=1.
-2. Square both sides: 2 = a²/b² ⇒ a² = 2 b².
-3. Thus a² is even, so a must be even (if a odd, a² odd). Let a = 2c.
-4. Then (2c)² = 2 b² ⇒ 4c² = 2 b² ⇒ 2 c² = b². So b² even ⇒ b even.
-5. But then a and b share common factor 2, contradicting gcd(a,b)=1.
-6. The contradiction shows our only assumption — that √2 = a/b in lowest terms — is impossible. Therefore √2 is irrational.
+If $f$ is false on every input, take the proposition $p_1 \wedge \neg p_1$, which is a conjunction of literals and so a DNF with one disjunct.
+
+Otherwise, let $a^{(1)}, \dots, a^{(m)}$ be the assignments on which $f$ is true. For each such assignment $a$ define the conjunction
+$$C_a = \ell_1 \wedge \ell_2 \wedge \cdots \wedge \ell_n, \qquad \ell_i = \begin{cases} p_i & \text{if } a(p_i) = \mathrm{T},\\ \neg p_i & \text{if } a(p_i) = \mathrm{F}.\end{cases}$$
+By construction $C_a$ is true under the assignment $a$ and false under every other assignment, since any other assignment differs from $a$ at some $p_i$ and so makes $\ell_i$ false.
+
+Put $\varphi = C_{a^{(1)}} \vee \cdots \vee C_{a^{(m)}}$. Under an assignment $b$: if $b = a^{(j)}$ for some $j$ then $C_{a^{(j)}}$ is true so $\varphi$ is true; if $b$ is none of them then every disjunct is false so $\varphi$ is false. Thus $\varphi$ has truth table $f$, and it uses only $\neg$, $\wedge$, $\vee$.
+:::
+
+:::definition[Functional completeness]{#functional-completeness}
+A set $S$ of connectives is **functionally complete** if every boolean function of every arity $n \geq 1$ is the truth table of some proposition built using only connectives from $S$.
+:::
+
+:::theorem[Completeness of NOT and AND]{#nand-and-not-complete}
+The set $\{\neg, \wedge\}$ is functionally complete. So are $\{\neg, \vee\}$ and $\{\neg, \to\}$.
+:::
+
+:::proof
+By the theorem *Every truth table has a DNF*, it is enough to express $\vee$ using $\neg$ and $\wedge$. Compare truth tables of $p \vee q$ and $\neg(\neg p \wedge \neg q)$: the latter is false exactly when $\neg p \wedge \neg q$ is true, that is exactly when $p$ and $q$ are both false, which is exactly when $p \vee q$ is false. They agree on all four rows. Replacing every $\vee$ in a DNF by this expression gives a formula over $\{\neg, \wedge\}$ with the same table, so $\{\neg,\wedge\}$ is complete.
+
+For $\{\neg, \vee\}$, dually $p \wedge q$ and $\neg(\neg p \vee \neg q)$ agree on all four rows, and we rewrite every $\wedge$. For $\{\neg, \to\}$, note $p \vee q$ and $\neg p \to q$ agree: both are false exactly when $p$ is false and $q$ is false. So $\{\neg,\to\}$ expresses $\vee$, hence expresses everything $\{\neg,\vee\}$ does.
+
+Finally the remaining two connectives are definable in any of these sets, since $p \to q$ has the table of $\neg p \vee q$ and $p \leftrightarrow q$ has the table of $(p \to q) \wedge (q \to p)$.
+:::
+
+A natural next question is how small a complete set can be. One connective is enough, and the one that works is the gate a chip fabricator would rather build than any other.
+
+:::definition[NAND and NOR]{#nand}
+The **Sheffer stroke** or NAND is $p \mid q$, defined to be false exactly when $p$ and $q$ are both true; equivalently $p \mid q$ has the truth table of $\neg(p \wedge q)$. The **Peirce arrow** or NOR is $p \downarrow q$, with the table of $\neg(p \vee q)$.
+:::
+
+:::theorem[NAND alone is functionally complete]{#nand-complete}
+The single connective $\{\mid\}$ is functionally complete.
+:::
+
+:::proof
+By the theorem *Completeness of NOT and AND* it suffices to express $\neg$ and $\wedge$ using only $\mid$.
+
+For negation, consider $p \mid p$. It is false exactly when $p$ and $p$ are both true, that is exactly when $p$ is true; so $p \mid p$ has the truth table of $\neg p$.
+
+For conjunction, $p \mid q$ has the table of $\neg(p \wedge q)$, so applying the negation just constructed gives
+$$(p \mid q) \mid (p \mid q),$$
+whose table is $\neg\neg(p \wedge q)$, that is $p \wedge q$.
+
+Every boolean function therefore has a DNF over $\{\neg, \wedge, \vee\}$, which rewrites over $\{\neg, \wedge\}$, which rewrites over $\{\mid\}$.
 :::
 
 :::remark
-Where the hypotheses mattered: the step "$a^2$ even $\Rightarrow a$ even" relies on the fact that odd × odd is odd (so an even square forces an even base), and the final contradiction relies on having fixed gcd(a,b)=1 at the start. Drop either and the argument collapses.
+The same argument with $\downarrow$ in place of $\mid$ shows NOR is complete too: $p \downarrow p$ is $\neg p$ and $(p\downarrow q)\downarrow(p \downarrow q)$ is $p \vee q$. These are the only two binary connectives that are complete on their own, which can be checked by eliminating the other fourteen. The practical consequence is that a chip needs one gate type: a NAND is two transistors in series and two in parallel, and everything from an adder to a flip-flop is built from copies of it.
 :::
 
-## Mathematical Induction
-
-<!-- section: induction -->
-
-:::recipe[Mathematical induction]{#induction}
-**Mathematical induction** proves statements of the form "P(n) holds for all integers n ≥ n₀". It consists of two parts:
-
-1. **Base case**: Prove P(n₀) directly.
-2. **Inductive step**: Assume P(k) is true for some arbitrary k ≥ n₀ (the inductive hypothesis, IH). Using the IH, prove that P(k+1) is true.
+:::example[Building XOR from NAND]
+Express $p \oplus q$ (exclusive or) using only the Sheffer stroke, and check the count of strokes.
 :::
 
-If both succeed, then by the "domino effect" P holds for all n ≥ n₀: base falls, knocks over the next, and so on forever.
-
-:::recipe[Strong induction]{#strong-induction}
-**Strong induction** assumes $P(n_0), P(n_0+1), \dots, P(k)$ (all cases up to $k$) to prove $P(k+1)$, which helps when $P(k+1)$ depends on more than just the immediately preceding case.
+:::solution
+1. $p \oplus q$ is true exactly on $\mathrm{TF}$ and $\mathrm{FT}$, so a DNF is $(p \wedge \neg q) \vee (\neg p \wedge q)$.
+2. Write $a = p \mid q$. Then $p \mid a$ has the table of $\neg(p \wedge \neg(p\wedge q))$, and one checks directly that
+$$p \oplus q \;=\; (p \mid (p\mid q)) \;\mid\; (q \mid (p \mid q)).$$
+3. Verify on the four rows: at $\mathrm{TT}$, $p\mid q = \mathrm{F}$, so $p \mid \mathrm{F} = \mathrm{T}$ and $q \mid \mathrm{F} = \mathrm{T}$, and $\mathrm{T}\mid\mathrm{T} = \mathrm{F}$ ✓. At $\mathrm{TF}$, $p \mid q = \mathrm{T}$, so $p \mid \mathrm{T} = \mathrm{F}$ and $q \mid \mathrm{T} = \mathrm{T}$, and $\mathrm{F}\mid\mathrm{T} = \mathrm{T}$ ✓. The remaining rows are symmetric.
+4. The expression uses $4$ stroke symbols, and no expression with $3$ works — this is the standard four-NAND XOR of digital design.
 :::
 
-Induction is the proof counterpart of recursion in programming: the base case is the recursion's stopping condition, and the inductive step mirrors how a recursive call reduces to smaller inputs.
-
-:::intuition
-Imagine an infinite line of dominoes. You prove the first one falls (base). You prove that if any domino falls, the next one must fall (inductive step). Therefore they all fall.
-:::
-
-### Worked Examples
-
-:::theorem[Sum of the first n positive integers]{#gauss-sum}
-For all integers $n \geq 1$,
-
-$$1 + 2 + \dots + n = \frac{n(n+1)}{2}.$$
+:::proposition[A complete set must contain a connective that is false somewhere]{#incomplete-set}
+The set $\{\wedge, \vee\}$ is not functionally complete.
 :::
 
 :::proof
-Base case ($n = 1$): the left side is $1$; the right side is $\frac{1(1+1)}{2} = \frac{2}{2} = 1$. They match, so $P(1)$ holds.
-
-Inductive hypothesis: assume $P(k)$ holds for some integer $k \geq 1$, i.e. $1 + 2 + \dots + k = \frac{k(k+1)}{2}$.
-
-Inductive step: we must show $P(k+1)$, i.e. that $1 + 2 + \dots + k + (k+1) = \frac{(k+1)(k+2)}{2}$. Start from the left side, split off the last term, substitute the IH for the bracketed sum, put the result over a common denominator and factor out $(k+1)$:
-
-$$\big(1 + 2 + \dots + k\big) + (k+1) = \frac{k(k+1)}{2} + (k+1) = \frac{k(k+1) + 2(k+1)}{2} = \frac{(k+1)(k+2)}{2}.$$
-
-This is exactly the formula with $n$ replaced by $k+1$, so $P(k+1)$ holds. Base case plus inductive step give, by induction, the result for all integers $n \geq 1$.
+Every proposition built from $\wedge$ and $\vee$ alone is true under the all-true assignment: this holds for a single variable, and if $\varphi$ and $\psi$ are true under that assignment then so are $\varphi \wedge \psi$ and $\varphi \vee \psi$, so the claim propagates up the structure of the formula. But $\neg p$ is false under the all-true assignment. Hence $\neg p$ is not expressible, and the set is incomplete.
 :::
 
-Sanity check with $n = 3$: the formula gives $\frac{3 \cdot 4}{2} = 6$, and indeed $1 + 2 + 3 = 6$. ✓
+## Logical equivalence and the laws of algebra for propositions
+
+<!-- section: equivalences -->
+
+:::definition[Logical equivalence]{#logical-equivalence}
+Propositions $\varphi$ and $\psi$ are **logically equivalent**, written $\varphi \equiv \psi$, if they have the same truth value under every truth assignment — equivalently, if $\varphi \leftrightarrow \psi$ is a tautology.
+:::
+
+:::notation
+The symbols $\leftrightarrow$ and $\equiv$ do different jobs. $\varphi \leftrightarrow \psi$ is itself a proposition, with a truth table, which may be true in some rows and false in others. $\varphi \equiv \psi$ is a claim *about* those two propositions, made in our own language rather than in the object language, and it is either right or wrong. The same distinction separates $=$ from "is identically equal to" in algebra.
+:::
+
+Equivalence is what licenses rewriting. If $\varphi \equiv \psi$ then either may be substituted for the other inside any larger formula without changing its table, because the table of the larger formula depends on its parts only through their tables. The standard rewrites, together, make the propositions into an algebra:
+
+$$\neg\neg p \equiv p, \qquad p \wedge p \equiv p, \qquad p \vee (q \wedge r) \equiv (p \vee q) \wedge (p \vee r).$$
+
+We prove the two families that are used constantly and are most often got wrong.
+
+:::theorem[De Morgan's laws]{#de-morgan}
+For all propositions $p$ and $q$,
+$$\neg(p \wedge q) \equiv \neg p \vee \neg q, \qquad \neg(p \vee q) \equiv \neg p \wedge \neg q.$$
+:::
+
+:::proof
+Take the first. The left side is true exactly when $p \wedge q$ is false, that is exactly when it is not the case that both $p$ and $q$ are true, that is exactly when at least one of $p$, $q$ is false. The right side is true exactly when at least one of $\neg p$, $\neg q$ is true, that is exactly when at least one of $p$, $q$ is false. The two conditions are the same, so the tables agree in all four rows.
+
+For the second, apply the first to $\neg p$ and $\neg q$: $\neg(\neg p \wedge \neg q) \equiv \neg\neg p \vee \neg \neg q \equiv p \vee q$. Negating both sides and using $\neg\neg\varphi \equiv \varphi$ gives $\neg p \wedge \neg q \equiv \neg(p \vee q)$.
+:::
+
+:::intuition
+Negation turns the connective inside out. "It is not the case that the file exists and is readable" does not mean the file fails both tests; it means at least one test failed, and you do not know which. Pushing a negation through a compound condition and forgetting to flip $\wedge$ to $\vee$ is the single most common bug in a hand-simplified `if` statement.
+:::
+
+:::example[Negating a guard condition]
+A program takes a branch when `0 <= i && i < n && a[i] != 0`. Write the condition for taking the other branch, with negation applied to the individual comparisons only.
+:::
+
+:::solution
+1. Write $p$ for $0 \le i$, $q$ for $i < n$, $r$ for $a[i] \neq 0$. The guard is $p \wedge q \wedge r$.
+2. By *De Morgan's laws*, applied twice, $\neg(p \wedge q \wedge r) \equiv \neg p \vee \neg q \vee \neg r$.
+3. Translating back: $i < 0$ or $i \geq n$ or $a[i] = 0$.
+4. Note the "or": a single failing test is enough. Writing the negation as $i < 0$ and $i \ge n$ and $a[i] = 0$ would describe a condition that never holds.
+:::
+
+Next, the three relatives of a conditional. Distinguishing them is the highest-yield piece of vocabulary in the chapter.
+
+:::definition[Converse, contrapositive, inverse]{#converse-contrapositive}
+Given the conditional $p \to q$, its **converse** is $q \to p$, its **contrapositive** is $\neg q \to \neg p$, and its **inverse** is $\neg p \to \neg q$.
+:::
+
+:::theorem[A conditional is equivalent to its contrapositive]{#contrapositive-equivalence}
+For all propositions $p, q$,
+$$p \to q \equiv \neg q \to \neg p.$$
+:::
+
+:::proof
+Both sides are false in exactly one circumstance. The left side is false precisely when $p$ is true and $q$ is false. The right side is false precisely when its antecedent $\neg q$ is true and its consequent $\neg p$ is false, that is when $q$ is false and $p$ is true. These are the same circumstance, and a proposition that takes the value $\mathrm{F}$ on exactly the same assignments takes $\mathrm{T}$ on exactly the same assignments. Hence the tables agree in all four rows.
+
+Alternatively, chain equivalences: $p \to q \equiv \neg p \vee q \equiv q \vee \neg p \equiv \neg\neg q \vee \neg p \equiv \neg q \to \neg p$.
+:::
+
+:::theorem[A conditional is not equivalent to its converse]{#converse-nonequivalence}
+There exist propositions $p, q$ with $p \to q$ true and $q \to p$ false. Hence $p \to q \not\equiv q \to p$. The same holds for the inverse.
+:::
+
+:::proof
+Take the assignment $p$ false, $q$ true. Then $p \to q$ is true, since its antecedent is false, while $q \to p$ has a true antecedent and a false consequent and so is false. One disagreeing row is enough to refute an equivalence.
+
+For the inverse, $\neg p \to \neg q$ is the contrapositive of $q \to p$, so by the theorem *A conditional is equivalent to its contrapositive* it is equivalent to the converse, and therefore fails to be equivalent to $p \to q$ on the same row.
+:::
+
+:::example[A concrete converse that fails]
+Let $n$ range over the integers, $p$ be "$n$ is divisible by $4$" and $q$ be "$n$ is even". Evaluate the conditional, its converse, its contrapositive and its inverse.
+:::
+
+:::solution
+1. $p \to q$: if $4 \mid n$ then $n = 4k = 2(2k)$ is even. True for every $n$.
+2. The converse $q \to p$: if $n$ is even then $4 \mid n$. False, and $n = 6$ is a witness — $6$ is even and $4 \nmid 6$. This is exactly the assignment $p$ false, $q$ true used in the theorem *A conditional is not equivalent to its converse*.
+3. The contrapositive $\neg q \to \neg p$: if $n$ is odd then $4 \nmid n$. True for every $n$, as it must be.
+4. The inverse $\neg p \to \neg q$: if $4 \nmid n$ then $n$ is odd. False, again at $n = 6$.
+5. The pattern to carry away: conditional and contrapositive stand or fall together; converse and inverse stand or fall together; the two pairs are independent.
+:::
+
+:::pitfall
+"$p$ only if $q$" means $p \to q$, not $q \to p$. "$p$ if $q$" means $q \to p$. English word order is not a reliable guide to which is the antecedent, so translate through the truth conditions: ask which situation the sentence forbids. "You may board only if you have a ticket" forbids boarding without a ticket, so it is *board* $\to$ *ticket*.
+:::
+
+:::proposition[Negating a conditional]{#negating-conditional}
+For all propositions $p, q$,
+$$\neg(p \to q) \equiv p \wedge \neg q.$$
+:::
+
+:::proof
+$p \to q$ is false in exactly one row, the one where $p$ is true and $q$ is false; so $\neg(p \to q)$ is true in exactly that row. And $p \wedge \neg q$ is true in exactly that row as well. The tables agree.
+:::
+
+Notice what this says: the negation of a conditional is *not* a conditional. The denial of "if it compiles then it runs" is not "if it compiles then it does not run"; it is "it compiles and it does not run" — a single counterexample. That asymmetry is why refuting an implication is usually far easier than proving one.
+
+:::example[Simplifying with the laws]
+Simplify $\neg(p \to (q \wedge \neg r))$ to a conjunction of literals and a disjunction.
+:::
+
+:::solution
+1. By *Negating a conditional*, the expression is $p \wedge \neg(q \wedge \neg r)$.
+2. By *De Morgan's laws*, $\neg(q \wedge \neg r) \equiv \neg q \vee \neg\neg r \equiv \neg q \vee r$.
+3. So the whole thing is $p \wedge (\neg q \vee r)$.
+4. Sanity check on a row: at $p = \mathrm{T}$, $q = \mathrm{T}$, $r = \mathrm{F}$ the original is $\neg(\mathrm{T} \to \mathrm{T}) = \mathrm{F}$, and the simplified form is $\mathrm{T} \wedge (\mathrm{F} \vee \mathrm{F}) = \mathrm{F}$ ✓.
+:::
+
+## Predicates and quantifiers
+
+<!-- section: quantifiers -->
+
+Propositional logic cannot express "every integer has a successor", because the sentence is about all integers at once and propositional variables are atoms with no internal structure. We need variables ranging over a domain, and two operators that bind them.
+
+:::definition[Predicate]{#predicate}
+A **predicate** $P$ over a domain $D$ assigns to each $x \in D$ a proposition $P(x)$. The predicate itself has no truth value; $P(a)$ does, for each $a \in D$.
+:::
+
+:::definition[Quantifiers]{#quantifiers-def}
+Let $P$ be a predicate over a nonempty domain $D$.
+
+- The **universal** statement $\forall x \, P(x)$ is true if $P(a)$ is true for every $a \in D$.
+- The **existential** statement $\exists x \, P(x)$ is true if $P(a)$ is true for at least one $a \in D$.
+
+A value $a$ with $P(a)$ false is a **counterexample** to $\forall x\, P(x)$; a value $a$ with $P(a)$ true is a **witness** for $\exists x\, P(x)$.
+:::
+
+:::pitfall
+The domain is part of the statement, never an afterthought. "$\forall x\,(x^2 \geq x)$" is true over $\mathbb{Z}$ and false over $\mathbb{R}$, where $x = 1/2$ is a counterexample. Writing a quantified sentence without saying what $x$ ranges over is writing half a sentence.
+:::
+
+Over a finite domain $D = \{a_1, \dots, a_n\}$ the quantifiers are abbreviations: $\forall x\,P(x)$ is $P(a_1) \wedge \cdots \wedge P(a_n)$ and $\exists x\,P(x)$ is $P(a_1) \vee \cdots \vee P(a_n)$. That is the right mental model, and it immediately predicts how negation behaves.
+
+:::theorem[De Morgan's laws for quantifiers]{#quantifier-de-morgan}
+For any predicate $P$ over any domain $D$,
+$$\neg \forall x\, P(x) \equiv \exists x\, \neg P(x), \qquad \neg \exists x\, P(x) \equiv \forall x\, \neg P(x).$$
+:::
+
+:::proof
+Take the first. Suppose $\neg\forall x\,P(x)$ is true. Then $\forall x\,P(x)$ is false, so by the definition of $\forall$ it is not the case that $P(a)$ holds for every $a \in D$; hence some $a \in D$ has $P(a)$ false, that is $\neg P(a)$ true, and this $a$ witnesses $\exists x\,\neg P(x)$.
+
+Conversely, suppose $\exists x\,\neg P(x)$ is true, with witness $a$. Then $P(a)$ is false, so $P$ does not hold of every element, so $\forall x\,P(x)$ is false and $\neg\forall x\,P(x)$ is true. The two statements hold under exactly the same circumstances.
+
+For the second law, apply the first to the predicate $\neg P$: $\neg\forall x\,\neg P(x) \equiv \exists x\,\neg\neg P(x) \equiv \exists x\, P(x)$. Negating both sides gives $\forall x\,\neg P(x) \equiv \neg\exists x\,P(x)$.
+:::
+
+:::intuition
+To deny "everything works", you need one broken thing. To deny "something works", you must certify that all of them are broken. Negation swaps the quantifier and pushes inward, exactly as it swaps $\wedge$ and $\vee$ — which is no coincidence, since over a finite domain the quantifiers *are* iterated $\wedge$ and $\vee$.
+:::
+
+:::definition[Nested quantifiers]{#nested-quantifiers}
+Quantifiers may be applied in sequence, as in $\forall x \,\exists y\, P(x,y)$, where $P$ is a predicate of two variables. The quantifiers are read left to right, and the value chosen for a variable may depend on the variables quantified to its left.
+:::
+
+:::corollary[Negating a nested quantifier string]{#nested-negation}
+For a block of quantifiers $Q_1 x_1 \, Q_2 x_2 \cdots Q_n x_n\, P(x_1,\dots,x_n)$, the negation is obtained by replacing every $\forall$ with $\exists$ and every $\exists$ with $\forall$, in place, and negating $P$:
+$$\neg\, Q_1x_1 \cdots Q_nx_n\, P \;\equiv\; \overline{Q_1}x_1 \cdots \overline{Q_n}x_n\, \neg P,$$
+where $\overline{\forall} = \exists$ and $\overline{\exists} = \forall$.
+:::
+
+:::proof
+Induct on the number $n$ of quantifiers. For $n = 1$ this is exactly the theorem *De Morgan's laws for quantifiers*.
+
+Suppose it holds for blocks of $n$ quantifiers, and consider $Q_1 x_1 (R)$ where $R = Q_2x_2\cdots Q_{n+1}x_{n+1}\,P$ is a block of $n$. For each fixed value of $x_1$, $R$ is a statement about the remaining variables, so the case $n = 1$ gives $\neg Q_1x_1 (R) \equiv \overline{Q_1}x_1(\neg R)$. By the inductive hypothesis $\neg R \equiv \overline{Q_2}x_2\cdots\overline{Q_{n+1}}x_{n+1}\,\neg P$. Substituting completes the step.
+:::
+
+:::example[Negating a limit-style statement]
+Negate: "for every $\varepsilon > 0$ there exists $N \in \mathbb{N}$ such that for all $n > N$, $|a_n - L| < \varepsilon$."
+:::
+
+:::solution
+1. Symbolically, $\forall \varepsilon > 0\;\exists N\;\forall n > N\;(|a_n - L| < \varepsilon)$.
+2. By *Negating a nested quantifier string*, flip all three quantifiers and negate the core: $\exists \varepsilon > 0\;\forall N\;\exists n > N\;(|a_n - L| \geq \varepsilon)$.
+3. In words: some $\varepsilon$ is bad, in the sense that however far out you go there is still a later term at distance at least $\varepsilon$ from $L$.
+4. Notice each flip happens in place; the order of the variables never changes, and $\varepsilon$ stays outermost.
+:::
+
+:::theorem[Order of quantifiers matters]{#quantifier-order}
+There is a predicate $P$ over a domain $D$ for which $\forall x\,\exists y\,P(x,y)$ is true and $\exists y\,\forall x\,P(x,y)$ is false. The two are therefore not equivalent.
+:::
+
+:::proof
+Take $D = \mathbb{Z}$ and $P(x,y)$ the statement $y > x$.
+
+$\forall x\,\exists y\,(y > x)$ is true: given any integer $x$, the integer $y = x+1$ satisfies $y > x$, so a witness exists for each $x$.
+
+$\exists y\,\forall x\,(y > x)$ is false: it asserts a single integer $y$ exceeding every integer, and taking $x = y$ gives $y > y$, which is false. So no such $y$ exists.
+
+One statement true and the other false is exactly a failure of equivalence.
+:::
+
+:::intuition
+In $\forall x\,\exists y$ the witness $y$ may be chosen *after* seeing $x$, and may depend on it. In $\exists y\,\forall x$ the witness must be committed to *first* and then work for every $x$. "Every lock has a key" is not "some key opens every lock". Reading the quantifier prefix as an order of play — the $\forall$ moves are the adversary's, the $\exists$ moves are yours — makes the asymmetry hard to forget.
+:::
+
+:::example[Translating and negating a database claim]
+Let $S(x,y)$ mean "student $x$ has submitted assignment $y$", over students $X$ and assignments $Y$. Express "some student has submitted every assignment", and its negation, in words.
+:::
+
+:::solution
+1. The claim is $\exists x \in X\;\forall y \in Y\; S(x,y)$.
+2. Its negation flips both quantifiers: $\forall x \in X\;\exists y \in Y\;\neg S(x,y)$.
+3. In words: every student has missed at least one assignment — and which assignment they missed may differ from student to student, since $y$ is chosen after $x$.
+4. Contrast with the negation of $\forall y\,\exists x\,S(x,y)$ ("every assignment has been submitted by someone"), which is $\exists y\,\forall x\,\neg S(x,y)$: some assignment nobody submitted.
+:::
+
+:::proposition[Universal quantification distributes over conjunction only]{#quantifier-distribution}
+For predicates $P, Q$ over a domain $D$,
+$$\forall x\,(P(x) \wedge Q(x)) \equiv (\forall x\,P(x)) \wedge (\forall x\, Q(x)),$$
+but $\forall x\,(P(x) \vee Q(x))$ and $(\forall x\,P(x)) \vee (\forall x\,Q(x))$ are not equivalent.
+:::
+
+:::proof
+For the equivalence: if $P(a) \wedge Q(a)$ holds for every $a$ then in particular $P(a)$ holds for every $a$ and $Q(a)$ holds for every $a$, giving the right side. Conversely if both conjuncts on the right hold, then for any $a$ both $P(a)$ and $Q(a)$ hold, so $P(a) \wedge Q(a)$ does.
+
+For the non-equivalence, let $D = \mathbb{Z}$, $P(x)$ be "$x$ is even" and $Q(x)$ be "$x$ is odd". Every integer is one or the other, so $\forall x\,(P(x)\vee Q(x))$ is true; but neither "every integer is even" nor "every integer is odd" is true, so the right side is false.
+:::
+
+## Rules of inference
+
+<!-- section: inference -->
+
+An equivalence says two statements carry the same information. An *inference* is different: it takes premises and produces a conclusion that may say strictly less, and the demand on it is only that it never manufactures a falsehood from truths.
+
+:::definition[Argument and validity]{#validity}
+An **argument** is a list of premises $\varphi_1, \dots, \varphi_k$ together with a conclusion $\psi$. It is **valid** if under every truth assignment making all the premises true, $\psi$ is also true — equivalently, if $(\varphi_1 \wedge \cdots \wedge \varphi_k) \to \psi$ is a tautology. An argument is **sound** if it is valid and its premises are in fact true.
+:::
+
+Validity is about form and nothing else. A valid argument from false premises can have a false conclusion, and that is no defect in the argument. What a valid argument guarantees is only this: you will never pass from truth to falsehood.
+
+:::theorem[Modus ponens]{#modus-ponens}
+The argument with premises $p$ and $p \to q$ and conclusion $q$ is valid.
+:::
+
+:::proof
+Consider any truth assignment making both premises true. Since $p$ is true, the row in question has a true antecedent. Since $p \to q$ is true and $p \to q$ is false exactly when $p$ is true and $q$ is false, that combination is excluded; so $q$ is not false. Hence $q$ is true, which is what validity requires.
+:::
+
+:::theorem[Modus tollens]{#modus-tollens}
+The argument with premises $\neg q$ and $p \to q$ and conclusion $\neg p$ is valid.
+:::
+
+:::proof
+By the theorem *A conditional is equivalent to its contrapositive*, the premise $p \to q$ may be replaced by the equivalent $\neg q \to \neg p$ without changing any truth value. The argument is then: premises $\neg q$ and $\neg q \to \neg p$, conclusion $\neg p$, which is an instance of *Modus ponens* with $\neg q$ for $p$ and $\neg p$ for $q$. Hence it is valid.
+:::
+
+:::theorem[Hypothetical syllogism]{#hypothetical-syllogism}
+The argument with premises $p \to q$ and $q \to r$ and conclusion $p \to r$ is valid.
+:::
+
+:::proof
+Take an assignment making both premises true, and suppose for the sake of the argument that $p \to r$ is false under it. Then $p$ is true and $r$ is false. From $p$ true and $p \to q$ true, *Modus ponens* gives $q$ true. From $q$ true and $q \to r$ true, *Modus ponens* gives $r$ true. But $r$ is false. So $p \to r$ cannot be false under such an assignment, and it is therefore true whenever both premises are.
+:::
+
+:::proposition[Affirming the consequent is invalid]{#affirming-consequent}
+The argument with premises $q$ and $p \to q$ and conclusion $p$ is not valid. Neither is the argument with premises $\neg p$ and $p \to q$ and conclusion $\neg q$.
+:::
+
+:::proof
+Take $p$ false and $q$ true. Then the premise $q$ is true, and $p \to q$ is true because its antecedent is false; but the conclusion $p$ is false. A single such assignment refutes validity. The same assignment refutes the second argument: $\neg p$ is true, $p \to q$ is true, and the conclusion $\neg q$ is false.
+:::
+
+:::example[Diagnosing three arguments]
+Which of these are valid? (a) If the input is sorted the search returns in $O(\log n)$; the search returned in $O(\log n)$; therefore the input was sorted. (b) If a number is divisible by $6$ it is divisible by $3$; $n$ is not divisible by $3$; therefore $n$ is not divisible by $6$. (c) If it rains the match is cancelled; if the match is cancelled refunds are issued; therefore if it rains refunds are issued.
+:::
+
+:::solution
+1. (a) has the form $q$, $p \to q$, therefore $p$ — affirming the consequent, invalid by *Affirming the consequent is invalid*. A sorted-input guarantee says nothing about unsorted inputs that happen to finish fast, such as a one-element array.
+2. (b) has the form $\neg q$, $p \to q$, therefore $\neg p$ — *Modus tollens*, valid. It is also sound, since the premise about $6$ and $3$ is true.
+3. (c) has the form $p \to q$, $q \to r$, therefore $p \to r$ — *Hypothetical syllogism*, valid. Note it is valid whether or not it ever rains.
+:::
+
+:::remark
+One can go further and ask for a *complete* list of rules: a fixed finite set from which every valid propositional argument can be derived by pure symbol manipulation, and a theorem saying derivability and validity coincide. Such systems exist, and the theorem is the completeness theorem for propositional logic. Building the calculus and proving that theorem is the business of *Mathematical Logic*; here we use the rules informally and justify each by its truth table.
+:::
+
+## Direct proof and proof by contraposition
+
+<!-- section: direct-proofs -->
+
+Almost every theorem worth stating has the form $\forall x \in D\,(P(x) \to Q(x))$. A **direct proof** attacks it head on: fix an arbitrary $x$, assume $P(x)$, and derive $Q(x)$ by a chain of definitions and previously established results. The word *arbitrary* is carrying the weight — because nothing beyond $P(x)$ was assumed about $x$, the argument applies to every element of $D$, and that is how a finite argument establishes an infinite family of statements.
+
+:::definition[Parity]{#parity}
+An integer $n$ is **even** if $n = 2k$ for some integer $k$, and **odd** if $n = 2k+1$ for some integer $k$. Every integer is exactly one of the two.
+:::
+
+:::example[A direct proof about parity]
+Prove that the sum of two odd integers is even, and that the product of two odd integers is odd.
+:::
+
+:::solution
+1. Let $m$ and $n$ be arbitrary odd integers. By the definition of *Parity* write $m = 2a+1$ and $n = 2b+1$ with $a, b \in \mathbb{Z}$.
+2. Then $m + n = 2a + 2b + 2 = 2(a+b+1)$. Since $a+b+1$ is an integer, $m+n$ is even.
+3. And $mn = (2a+1)(2b+1) = 4ab + 2a + 2b + 1 = 2(2ab + a + b) + 1$, with $2ab+a+b$ an integer, so $mn$ is odd.
+4. The proof used nothing about $m$ and $n$ beyond oddness, so it holds for every odd pair — including negative ones, since $a$ and $b$ were allowed to be any integers.
+:::
+
+Direct proof runs out of road when the hypothesis is hard to use. "If $n^2$ is even then $n$ is even" gives you a fact about $n^2$, and prying $n$ out of it requires the fundamental theorem of arithmetic. The contrapositive hands you $n$ odd, which is an immediate construction.
+
+:::theorem[Validity of proof by contraposition]{#contraposition-valid}
+To prove $P \to Q$ it suffices to prove $\neg Q \to \neg P$.
+:::
+
+:::proof
+Suppose $\neg Q \to \neg P$ has been established. By the theorem *A conditional is equivalent to its contrapositive*, $\neg Q \to \neg P \equiv P \to Q$, since the contrapositive of $\neg Q \to \neg P$ is $\neg\neg P \to \neg \neg Q$, which is $P \to Q$. Logically equivalent statements have the same truth value under every assignment, so $P \to Q$ is true as well.
+:::
+
+:::proposition[Squares and parity]{#square-parity}
+For every integer $n$: if $n^2$ is even then $n$ is even.
+:::
+
+:::proof
+We prove the contrapositive: if $n$ is odd then $n^2$ is odd, which by *Validity of proof by contraposition* establishes the claim.
+
+Let $n$ be odd, so $n = 2k+1$ for some integer $k$. Then
+$$n^2 = (2k+1)^2 = 4k^2 + 4k + 1 = 2(2k^2 + 2k) + 1,$$
+and $2k^2 + 2k$ is an integer, so $n^2$ is odd.
+:::
+
+:::intuition
+Contraposition is not a different logic; it is the same statement read from the other end. The reason it helps so often is purely practical: a negated conclusion is frequently a *constructive* hypothesis. "$n$ is not even" means "$n = 2k+1$", something you can substitute into an expression, whereas "$n^2$ is even" means "$n^2 = 2m$" for an $m$ you know nothing about.
+:::
+
+:::example[Choosing between direct and contrapositive]
+Prove: for integers $a, b$, if $a + b \geq 15$ then $a \geq 8$ or $b \geq 8$.
+:::
+
+:::solution
+1. The conclusion is a disjunction, awkward to produce directly. Negate it: by *De Morgan's laws*, $\neg(a \ge 8 \vee b \ge 8)$ is $a \le 7 \wedge b \le 7$.
+2. So prove the contrapositive: if $a \le 7$ and $b \le 7$ then $a + b \le 14$, that is $a + b < 15$.
+3. That is immediate: adding the two inequalities gives $a + b \le 7 + 7 = 14$.
+4. By *Validity of proof by contraposition* the original statement follows. Contraposition turned a disjunctive conclusion into a conjunctive hypothesis, which is the general reason to reach for it here.
+:::
+
+:::definition[Proving a biconditional]{#biconditional-proof}
+To prove $P \leftrightarrow Q$ one proves both $P \to Q$ and $Q \to P$; each direction may use whichever technique suits it. For a chain $P_1 \leftrightarrow P_2 \leftrightarrow \cdots \leftrightarrow P_k$ it suffices to prove the cycle $P_1 \to P_2 \to \cdots \to P_k \to P_1$.
+:::
+
+:::example[A biconditional in two directions]
+Prove that an integer $n$ is odd if and only if $n^2$ is odd.
+:::
+
+:::solution
+1. ($\Rightarrow$) If $n$ is odd then $n^2$ is odd, proved directly inside *Squares and parity*.
+2. ($\Leftarrow$) If $n^2$ is odd then $n$ is odd. Contrapositive: if $n$ is even, $n = 2k$, then $n^2 = 4k^2 = 2(2k^2)$ is even.
+3. Both directions hold, so the biconditional holds. Note that each direction was proved by a *different* route; that is normal and is why a biconditional is two theorems.
+:::
+
+:::pitfall
+Proving $P \to Q$ and then also proving $P \to Q$ again in different words is not proving a biconditional. Before writing the second half, check that you have genuinely swapped hypothesis and conclusion. The commonest way to lose marks on an "if and only if" is to prove one direction twice.
+:::
+
+## Proof by contradiction
+
+<!-- section: contradiction -->
+
+Contraposition assumes the negation of the conclusion and aims at the negation of the hypothesis. Contradiction is more aggressive: it assumes the negation of the *whole statement* and aims at anything impossible at all.
+
+:::theorem[Validity of proof by contradiction]{#contradiction-valid}
+Let $S$ be a proposition. If $\neg S \to (r \wedge \neg r)$ is true for some proposition $r$, then $S$ is true.
+:::
+
+:::proof
+The proposition $r \wedge \neg r$ is false under every truth assignment: whichever value $r$ takes, one of the two conjuncts is false.
+
+Now suppose $\neg S \to (r \wedge \neg r)$ is true and suppose, towards the conclusion, that $S$ is false. Then $\neg S$ is true, and a conditional with true antecedent and true value must have true consequent — by *Modus ponens* we infer $r \wedge \neg r$. But that proposition is false under every assignment. So $S$ false is impossible, and since $S$ takes one of two values, $S$ is true.
+:::
+
+:::intuition
+A contradiction is the only thing a consistent set of assumptions can never produce. So if your assumptions yield one, at least one of them is wrong — and if every assumption but $\neg S$ was already established, the wrong one is $\neg S$. The technique is powerful precisely because the target is so cheap: you may aim at *any* absurdity, not a specific conclusion, which is why it works on statements that assert non-existence, where there is nothing to construct.
+:::
+
+:::definition[Rational and irrational]{#rational}
+A real number $x$ is **rational** if $x = a/b$ for integers $a, b$ with $b \neq 0$, and **irrational** otherwise. Every rational may be written in **lowest terms**, with $a$ and $b$ sharing no common factor greater than $1$.
+:::
+
+:::theorem[Irrationality of the square root of two]{#sqrt-two}
+There is no rational number $x$ with $x^2 = 2$. That is, $\sqrt{2}$ is irrational.
+:::
+
+:::proof
+Suppose, for contradiction, that $\sqrt 2$ is rational. Then we may write
+$$\sqrt 2 = \frac{a}{b}$$
+with $a, b$ integers, $b \neq 0$, and the fraction in lowest terms, so that $a$ and $b$ have no common factor greater than $1$.
+
+Squaring and clearing the denominator gives $a^2 = 2b^2$. Hence $a^2$ is even, and by the proposition *Squares and parity*, $a$ is even. Write $a = 2c$ with $c$ an integer.
+
+Substituting, $4c^2 = 2b^2$, so $b^2 = 2c^2$. Hence $b^2$ is even, and by *Squares and parity* again, $b$ is even.
+
+So $a$ and $b$ are both even, and therefore share the common factor $2$. This contradicts the choice of the fraction in lowest terms. The assumption that $\sqrt 2$ is rational is therefore untenable, and by *Validity of proof by contradiction* no rational squares to $2$.
+:::
+
+:::remark
+The lowest-terms hypothesis is doing real work and it is where the finiteness hides. Without it the argument still runs — one gets an infinite descent $a > a/2 > a/4 > \cdots$ of positive integers, which is impossible by well-ordering. Both versions ultimately appeal to the fact that a set of positive integers cannot descend forever, the same principle that will underwrite induction in the next section.
+:::
+
+:::example[Contradiction where construction is unavailable]
+Prove that there is no smallest positive rational number.
+:::
+
+:::solution
+1. Suppose for contradiction that $q$ is the smallest positive rational.
+2. Then $q/2$ is rational, since the rationals are closed under division by $2$, and $q/2 > 0$ since $q > 0$.
+3. But $q/2 < q$, contradicting the minimality of $q$.
+4. Hence no smallest positive rational exists. Notice there was nothing to construct here — the statement asserts a non-existence, so contradiction is the natural tool.
+:::
+
+:::pitfall
+Two failure modes look like proof by contradiction and are not. The first is assuming $\neg S$, deriving $\neg P$ where $P$ was a hypothesis, and calling it a contradiction — that is contraposition, correctly done, and should be written as such; dressing it up as contradiction adds an unused assumption and obscures the argument. The second is deriving something merely *surprising* rather than logically impossible. "Therefore $n$ is very large" is not a contradiction. You must exhibit a proposition and its negation.
+:::
+
+## Mathematical induction, strong induction and well-ordering
+
+<!-- section: induction -->
+
+Induction proves infinitely many statements with two finite arguments. It is the characteristic technique of discrete mathematics because its domain is $\mathbb{N}$, a set with a starting point and a successor operation and nothing in between.
+
+:::theorem[Principle of mathematical induction]{#pmi}
+Let $P(n)$ be a predicate over the integers $n \geq n_0$. Suppose
+
+1. $P(n_0)$ is true (the **base case**), and
+2. for every $k \geq n_0$, $P(k) \to P(k+1)$ (the **inductive step**).
+
+Then $P(n)$ is true for every integer $n \geq n_0$.
+:::
+
+:::proof
+Let $C = \{n \in \mathbb{Z} : n \geq n_0 \text{ and } P(n) \text{ is false}\}$ be the set of counterexamples, and suppose it is nonempty. Shifting by $n_0$, the set $\{n - n_0 : n \in C\}$ is a nonempty set of non-negative integers, so by the well-ordering principle it has a least element; hence $C$ has a least element $m$.
+
+By hypothesis 1, $P(n_0)$ is true, so $m \neq n_0$ and therefore $m > n_0$. Then $m - 1 \geq n_0$, and $m-1 \notin C$ by minimality of $m$, so $P(m-1)$ is true. Hypothesis 2 applied at $k = m-1$ gives $P(m-1) \to P(m)$, and *Modus ponens* yields $P(m)$ true. But $m \in C$ means $P(m)$ is false.
+
+So $C$ is empty, which says $P(n)$ holds for every $n \ge n_0$.
+:::
+
+:::figure[Induction as a chain of dominoes. The base case topples the first domino; the inductive step is the guarantee that any domino that falls knocks over its successor. Neither half alone does anything: a first push with a gap in the chain stops at the gap, and a perfect chain nobody pushes stands forever.]{#domino-chain}
+{
+  "type": "plot",
+  "x": [0, 10],
+  "y": [0, 4],
+  "equalAspect": true,
+  "xTicks": 1,
+  "yTicks": 1,
+  "xLabel": "n",
+  "yLabel": "",
+  "marks": [
+    { "kind": "arrow", "from": [0.4, 1.2], "to": [1.1, 1.2], "tone": "result" },
+    { "kind": "path", "points": [[1.4, 0.4], [1.4, 2.2]], "tone": "accent" },
+    { "kind": "path", "points": [[2.4, 0.4], [2.4, 2.2]], "tone": "accent" },
+    { "kind": "path", "points": [[3.4, 0.4], [3.4, 2.2]], "tone": "accent" },
+    { "kind": "path", "points": [[4.4, 0.4], [4.4, 2.2]], "tone": "accent" },
+    { "kind": "path", "points": [[5.4, 0.4], [5.4, 2.2]], "tone": "accent" },
+    { "kind": "path", "points": [[6.4, 0.4], [6.4, 2.2]], "tone": "accent" },
+    { "kind": "path", "points": [[7.4, 0.4], [7.4, 2.2]], "tone": "accent" },
+    { "kind": "arrow", "from": [2.6, 2.6], "to": [3.3, 2.35], "tone": "muted" },
+    { "kind": "arrow", "from": [3.6, 2.6], "to": [4.3, 2.35], "tone": "muted" },
+    { "kind": "text", "at": [1.6, 3.4], "text": "base case P(1)", "leaderTo": [0.8, 1.45] },
+    { "kind": "text", "at": [6.2, 3.4], "text": "step: P(k) implies P(k+1)", "leaderTo": [4.0, 2.75] },
+    { "kind": "text", "at": [8.6, 1.3], "text": "forever", "leaderTo": [7.6, 1.3] }
+  ]
+}
+:::
+
+:::theorem[Sum of the first n positive integers]{#sum-formula}
+For every integer $n \geq 1$,
+$$1 + 2 + \cdots + n = \frac{n(n+1)}{2}.$$
+:::
+
+:::proof
+Let $P(n)$ be the displayed statement.
+
+*Base case.* For $n = 1$ the left side is $1$ and the right side is $1 \cdot 2/2 = 1$, so $P(1)$ holds.
+
+*Inductive step.* Let $k \geq 1$ and assume $P(k)$, that is $1 + \cdots + k = k(k+1)/2$. Then
+$$1 + \cdots + k + (k+1) = \frac{k(k+1)}{2} + (k+1) = (k+1)\left(\frac{k}{2} + 1\right) = \frac{(k+1)(k+2)}{2},$$
+which is the statement $P(k+1)$.
+
+Both hypotheses of the *Principle of mathematical induction* hold with $n_0 = 1$, so $P(n)$ holds for every $n \ge 1$.
+:::
+
+:::example[An inequality by induction]
+Prove that $2^n > n$ for every integer $n \geq 1$, and identify where the inductive hypothesis is used.
+:::
+
+:::solution
+1. Base case $n = 1$: $2^1 = 2 > 1$ ✓.
+2. Step: assume $2^k > k$ for some $k \ge 1$. Then $2^{k+1} = 2 \cdot 2^k > 2k$, where the inductive hypothesis was used to replace $2^k$.
+3. Since $k \geq 1$ we have $2k = k + k \geq k + 1$, so $2^{k+1} > 2k \ge k+1$.
+4. By the *Principle of mathematical induction*, $2^n > n$ for all $n \ge 1$. The hypothesis $k \ge 1$ was needed at step 3; the argument would break at $k = 0$, where $2k = 0 < k+1$.
+:::
+
+Sometimes $P(k)$ alone is not enough and one needs the whole history below $k$. The classic case is a statement about factorisation, where splitting $n = ab$ produces two smaller numbers, neither of which is $n - 1$.
+
+:::theorem[Strong induction]{#strong-induction}
+Let $P(n)$ be a predicate over integers $n \geq n_0$. Suppose that for every $k \geq n_0$,
+$$\big(P(n_0) \wedge P(n_0+1) \wedge \cdots \wedge P(k-1)\big) \to P(k).$$
+Then $P(n)$ holds for all $n \geq n_0$.
+:::
+
+:::proof
+We derive this from the *Principle of mathematical induction* applied to a different predicate. Define
+$$Q(n): \quad P(j) \text{ holds for every integer } j \text{ with } n_0 \le j \le n.$$
+
+*Base case.* At $k = n_0$ the hypothesis has an empty conjunction of antecedents, which is vacuously true, so the hypothesis delivers $P(n_0)$ outright. Hence $Q(n_0)$ holds.
+
+*Inductive step.* Assume $Q(k)$ for some $k \ge n_0$; that is, $P(j)$ holds for all $j$ from $n_0$ to $k$. This is exactly the antecedent of the hypothesis at $k+1$, so $P(k+1)$ follows. Combining with $Q(k)$, $P(j)$ holds for all $j$ from $n_0$ to $k+1$, which is $Q(k+1)$.
+
+By the *Principle of mathematical induction*, $Q(n)$ holds for every $n \ge n_0$. Since $Q(n)$ implies $P(n)$, the conclusion follows.
+:::
+
+:::remark
+Strong induction is therefore not a stronger axiom — it proves nothing that ordinary induction cannot. It is a stronger *convenience*: the inductive hypothesis you are handed is larger, and you may reach back as far as you like. Note also that a separate base case is usually still written out in practice, because checking that the step really does work at the smallest values is where flawed inductions are caught.
+:::
+
+:::proposition[Every integer above one has a prime divisor]{#prime-divisor}
+Every integer $n \geq 2$ has a prime divisor.
+:::
+
+:::proof
+By strong induction on $n \geq 2$. Let $k \geq 2$ and assume every integer $j$ with $2 \le j < k$ has a prime divisor.
+
+If $k$ is prime, then $k$ is a prime divisor of itself and we are done. Otherwise $k$ is composite, so $k = ab$ with integers $2 \le a < k$ and $2 \le b < k$. The inductive hypothesis applies to $a$, giving a prime $p$ with $p \mid a$. Since $a \mid k$, transitivity of divisibility gives $p \mid k$.
+
+By the theorem *Strong induction*, every $n \ge 2$ has a prime divisor. Notice that ordinary induction is useless here: knowing about $k-1$ tells us nothing about the factors of $k$.
+:::
+
+:::theorem[Well-ordering is equivalent to induction]{#well-ordering}
+The following are equivalent over the integers.
+
+1. **(Well-ordering)** Every nonempty set of non-negative integers has a least element.
+2. **(Induction)** Any predicate $P$ with $P(0)$ true and $P(k) \to P(k+1)$ for all $k \geq 0$ holds for all $n \geq 0$.
+:::
+
+:::proof
+$(1) \Rightarrow (2)$ is the proof of the *Principle of mathematical induction* given above, with $n_0 = 0$: the set of counterexamples is a nonempty set of non-negative integers, so it has a least element, and that least element is neither $0$ nor a successor of a non-counterexample.
+
+$(2) \Rightarrow (1)$. Let $S$ be a set of non-negative integers with no least element; we show $S$ is empty. Let $P(n)$ be the statement "no integer $j$ with $0 \le j \le n$ lies in $S$".
+
+$P(0)$ holds: if $0 \in S$ then $0$ would be a least element of $S$, since no non-negative integer is smaller.
+
+Assume $P(k)$. If $k+1 \in S$, then since no $j \le k$ is in $S$, every element of $S$ is at least $k+1$, making $k+1$ a least element of $S$ — contrary to assumption. So $k+1 \notin S$, and with $P(k)$ this gives $P(k+1)$.
+
+By (2), $P(n)$ holds for all $n \ge 0$, so no non-negative integer belongs to $S$, and $S$ is empty. Contrapositively, a nonempty such set has a least element.
+:::
+
+:::intuition
+The two principles are the same fact about $\mathbb{N}$ seen from opposite ends. Induction says you can climb the ladder from the bottom; well-ordering says you cannot fall down it forever. Both fail for the rationals in $[0,1]$: there is no "next" rational after $0$, and $\{q \in \mathbb{Q} : q > 0\}$ has no least element, which is exactly what the example about the smallest positive rational showed.
+:::
+
+### An induction that proves something false
+
+Every hypothesis in the *Principle of mathematical induction* is load-bearing, and the fastest way to feel that is to watch an argument that satisfies neither carefully enough.
+
+:::example[All horses are the same colour]
+The following argues that in any set of $n \geq 1$ horses, all the horses have the same colour. Find the error.
+
+*Base case.* A set of one horse: all its horses trivially share a colour. ✓
+
+*Inductive step.* Assume any set of $k$ horses is monochromatic, and take a set $H$ of $k+1$ horses, labelled $h_1, \dots, h_{k+1}$. The set $A = \{h_1, \dots, h_k\}$ has $k$ horses, so all of them share a colour. The set $B = \{h_2, \dots, h_{k+1}\}$ also has $k$ horses, so all of them share a colour. The two sets overlap — $h_2$ lies in both — so the colour of $A$ equals the colour of $h_2$ equals the colour of $B$, and all $k+1$ horses share one colour.
+:::
+
+:::solution
+1. The base case is fine, and the inductive step is fine *for every $k \geq 2$*. The failure is at exactly one value: $k = 1$.
+2. At $k = 1$ the set $H$ has two horses, $A = \{h_1\}$ and $B = \{h_2\}$. The step's argument needs a horse lying in both $A$ and $B$ so that the two colours can be identified. Here $A \cap B = \varnothing$: the sentence "$h_2$ lies in both" is false, because $A$ stops at $h_1$.
+3. So the implication $P(1) \to P(2)$ was never established, and the chain is broken at its first link. Everything after it — $P(2)\to P(3)$, and so on — is genuinely valid, but there is nothing to propagate, since $P(2)$ is false.
+4. The diagnosis in one line: the inductive step used an unstated hypothesis, $k \geq 2$, while the base case supplied only $k = 1$. The fix would be to verify $P(2)$ directly, which is of course impossible, since $P(2)$ says any two horses match.
+:::
+
+:::pitfall
+Whenever an inductive step involves splitting, overlapping, or removing elements, check the step at the *smallest* value of $k$ it is meant to cover, by substituting that number and reading the resulting sentences literally. Arguments that are obviously correct "in general" routinely collapse at $k = 1$ or $k = 2$, where a set becomes empty, an overlap disappears, or a sum has no terms.
+:::
+
+:::summary
+The chapter's spine: a compound proposition is determined by a truth table of $2^n$ rows, so there are $2^{2^n}$ of them; every table has a **DNF**, hence $\{\neg,\wedge\}$ and even $\{\mid\}$ alone are **functionally complete**. Equivalence licenses rewriting, and the two rewrites that matter most are **De Morgan** and **contraposition** — the latter valid, the converse not. Quantifiers extend this to predicates, with De Morgan reappearing as $\neg\forall = \exists\neg$, and with the order of nested quantifiers carrying real content. The valid inference patterns — **modus ponens**, **modus tollens**, **hypothetical syllogism** — are each read off a truth table. Those tables then justify the proof techniques themselves: contraposition from the contrapositive equivalence, contradiction from the fact that $r \wedge \neg r$ is never true. Finally, **induction**, **strong induction** and **well-ordering** are three presentations of one fact about $\mathbb{N}$, and each derives from either of the others.
+:::
 
 ## Common Mistakes
 
-- **Converse is not automatic**: Treating "p implies q" as "q implies p" is invalid. The converse is not automatically true (counterexamples exist).
-- **Vacuous truth is real**: The implication $p \to q$ is true whenever $p$ is false, regardless of $q$. Do not forget this case.
-- **De Morgan duality**: "not (A and B)" is "not A or not B" (and vice versa). It is not "not A and not B".
-- **Induction requires both parts**: Forgetting the base case, or assuming the conclusion inside the inductive step (circular reasoning), breaks the proof.
-- **Quantifier negation rules**: $\neg \forall x \, P(x) \equiv \exists x \, \neg P(x)$ (and dually for $\exists$). Order and scope matter; swapping without care is invalid.
-- **Choose the right technique**: Use contradiction only when a direct proof is hard or unnatural; direct proofs are often clearer when available.
-- **Quantifier order is not commutative**: $\forall \exists$ is not the same as $\exists \forall$ in general; they are not equivalent.
+<!-- section: common-mistakes -->
+
+1. **Confusing a conditional with its converse.** "If $4 \mid n$ then $n$ is even" is true; the converse is false at $n = 6$. Only the contrapositive comes free.
+
+2. **Denying a conditional with another conditional.** By *Negating a conditional*, $\neg(p \to q)$ is $p \wedge \neg q$, not $p \to \neg q$. Refuting an implication means exhibiting one case, not proving a new implication.
+
+3. **Refusing vacuous truth.** "Every element of the empty set is red" is true. Any other convention would force the empty set to contain a non-red element.
+
+4. **Forgetting to flip the connective under De Morgan.** $\neg(p \wedge q)$ is $\neg p \vee \neg q$. Turning an `&&` guard into a negated `&&` guard is the classic off-by-one-connective bug.
+
+5. **Swapping nested quantifiers.** $\forall x\,\exists y$ lets $y$ depend on $x$; $\exists y\,\forall x$ does not. "Every lock has a key" is not "some key opens every lock", as the theorem *Order of quantifiers matters* makes precise.
+
+6. **Negating a quantifier block out of order.** Flip each quantifier *in place* and negate the innermost predicate; never move a variable past another.
+
+7. **Affirming the consequent.** From $p \to q$ and $q$, nothing follows about $p$. Validity is a property of the form, and this form has a counterexample row.
+
+8. **Confusing validity with truth.** A valid argument from false premises proves nothing about the world; an invalid argument may still have a true conclusion, by luck.
+
+9. **Proving a universal statement with an example.** One case establishes $\exists$, never $\forall$. Conversely, one counterexample refutes $\forall$ completely — no further work is needed.
+
+10. **Calling a surprise a contradiction.** Proof by contradiction needs an explicit $r \wedge \neg r$. "This makes $n$ enormous" is not a contradiction.
+
+11. **Dressing contraposition up as contradiction.** If your contradiction proof assumes $\neg Q$ and derives $\neg P$, it is a contraposition proof with a spare assumption. Write it as one; it is shorter and clearer.
+
+12. **Omitting or faking the base case.** The step alone proves nothing: "$n = n+1$ implies $n+1 = n+2$" is a perfectly valid step for a false statement.
+
+13. **Running the inductive step below the range where it works.** This is the horses error. Check the step at its smallest $k$, literally.
+
+14. **Assuming what is to be proved.** The inductive hypothesis is $P(k)$, for one fixed unspecified $k$ — never $P(n)$ for all $n$, and never $P(k+1)$.
+
+15. **Reaching for strong induction without needing it, or refusing it when you do.** Splitting $n = ab$ lands at two arbitrary smaller values, so ordinary induction cannot reach them; a recurrence in $n-1$ alone does not need the stronger form.

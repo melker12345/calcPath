@@ -4,389 +4,792 @@ title: Combinatorics
 
 # Combinatorics
 
-Combinatorics is the art and science of counting. While it may sound elementary, clever counting arguments solve hard problems in probability, computer science (algorithm analysis, complexity), cryptography, and optimization. The fundamental question is "how many ways can this happen?" under various constraints.
+Counting sounds like the first thing a person learns and the last thing worth a chapter. But the sets a computer scientist wants to count are never small enough to count one at a time. How many passwords of length eight are there over a $94$-character keyboard? How many distinct ways can a hash function scatter $23$ keys into $365$ buckets without a collision? How many subsets of a $40$-flag configuration space must a test suite cover? Each of these is a number no one will ever enumerate, and each is computed in one line by the rules of this chapter.
 
-We begin with the basic rules (product and sum), move to permutations (ordered selections) and combinations (unordered), introduce binomial coefficients that appear everywhere from Pascal's triangle to probability, then the pigeonhole principle (existence proofs via counting), and finish with inclusion-exclusion for counting unions with overlaps.
+The subject has a characteristic style of argument. To count a set $S$, you do not inspect $S$; you build a *bijection* between $S$ and a set whose size you already know, or you *decompose* $S$ into pieces you can count separately, or you count something larger and divide by the exact factor by which you overcounted. Almost every result below is one of those three moves, and the value of learning them is that they compose: the count of poker hands, of binary strings with a fixed number of ones, and of the ways to distribute identical tasks over distinct servers are all the same calculation wearing different clothes.
 
-Mastering these tools lets you compute the size of huge sets without enumerating them and proves statements that would otherwise require exhaustive casework.
+We begin with the two rules everything rests on — the sum rule and the product rule — stated carefully enough that their hypotheses are visible, since almost every wrong count in practice is one of those two rules applied where its hypothesis fails. From there we get functions, injections and permutations, then combinations and the binomial coefficients, whose identities are proved twice over: once by algebra and once by counting a set in two ways, which is the more instructive proof and often the shorter one. The pigeonhole principle then shows that counting proves *existence*, not just size. We finish with inclusion–exclusion, the systematic way to count a union whose pieces overlap.
+
+Throughout, all sets are finite, $|S|$ denotes the number of elements of $S$, and $[n] = \{1, 2, \dots, n\}$. The deeper theory — generating functions, the transfer-matrix method, enumerative and extremal combinatorics — belongs to the separate subject *Combinatorics*; here we build the vocabulary it presumes.
 
 ## Basic Counting Principles
 
 <!-- section: counting -->
 
-Everything in this chapter is built from two fundamental rules.
+Two rules generate the entire chapter. They correspond to the two ways a decision can be structured: a choice *between* alternatives, and a sequence of choices made *one after another*. Getting a count wrong almost always means one of these was applied when its hypothesis did not hold, so we state the hypotheses explicitly and then break each rule on purpose to see what the hypothesis was doing.
 
-:::theorem[Product rule]{#product-rule}
-The multiplication principle: if a process consists of $k$ stages made *in sequence*, where stage $i$ can be completed in $n_i$ ways **no matter how the earlier stages turned out**, then the number of ways to complete the whole process is
-
-$$n_1 \times n_2 \times \cdots \times n_k.$$
-
-The key condition is that the *count* $n_i$ at each stage does not depend on the previous choices (the specific options may differ, but their number must be fixed).
+:::definition[Disjoint sets and a partition]{#partition}
+Two sets $A$ and $B$ are **disjoint** if $A \cap B = \varnothing$. A family $A_1, \dots, A_k$ is **pairwise disjoint** if $A_i \cap A_j = \varnothing$ whenever $i \neq j$, and it is a **partition** of $S$ if in addition $A_1 \cup \cdots \cup A_k = S$.
 :::
 
 :::theorem[Sum rule]{#sum-rule}
-The addition principle: if the outcomes split into $k$ categories that are **mutually exclusive** (no outcome lies in two categories at once) with $n_i$ options in category $i$, then the total is
+Let $A_1, A_2, \dots, A_k$ be pairwise disjoint finite sets. Then
 
-$$n_1 + n_2 + \cdots + n_k.$$
-
-If the categories can overlap, the plain sum overcounts — you need inclusion-exclusion (last section).
+$$|A_1 \cup A_2 \cup \cdots \cup A_k| = |A_1| + |A_2| + \cdots + |A_k|.$$
 :::
 
-A useful way to decide which rule applies: use the product rule for "AND" (do this *and then* that), and the sum rule for "OR" (do this *or* that, from separate piles).
+:::proof
+Induct on $k$. For $k = 1$ there is nothing to prove.
 
-These extend to more complex situations via trees of decisions or partitioning the set of outcomes.
+For $k = 2$, suppose $|A_1| = m$ and $|A_2| = n$, witnessed by bijections $f : A_1 \to [m]$ and $g : A_2 \to [n]$. Define $h : A_1 \cup A_2 \to [m+n]$ by $h(x) = f(x)$ for $x \in A_1$ and $h(x) = m + g(x)$ for $x \in A_2$. This is well defined precisely because $A_1 \cap A_2 = \varnothing$: no $x$ receives two values. It is injective, since $f$ and $g$ are injective and their images $[m]$ and $\{m+1, \dots, m+n\}$ are disjoint, and it is surjective because every element of $[m+n]$ lies in one of those two images. So $|A_1 \cup A_2| = m + n$.
+
+For the induction step, write $A_1 \cup \cdots \cup A_{k+1} = (A_1 \cup \cdots \cup A_k) \cup A_{k+1}$. The set $A_{k+1}$ is disjoint from each $A_i$ with $i \le k$, hence from their union, so the case $k = 2$ applies and the inductive hypothesis finishes the sum.
+:::
+
+:::pitfall
+Drop disjointness and the rule fails immediately. Among the integers in $[10]$, let $A$ be the even ones and $B$ the multiples of $3$. Then $|A| = 5$ and $|B| = 3$, but $|A \cup B| = |\{2,3,4,6,8,9,10\}| = 7$, not $8$ — the element $6$ was counted twice. Repairing that double count in general is exactly what the section *Inclusion-Exclusion* is for.
+:::
+
+:::theorem[Product rule]{#product-rule}
+Suppose an object is built by a sequence of $k$ choices, where the first choice has $n_1$ options and, for each $i \ge 2$, the number of options at step $i$ is $n_i$ **no matter how steps $1$ through $i-1$ turned out**. Suppose also that distinct sequences of choices produce distinct objects. Then the number of objects built is
+
+$$n_1 n_2 \cdots n_k.$$
+
+In particular, for finite sets $S_1, \dots, S_k$, $\;|S_1 \times \cdots \times S_k| = |S_1| \cdots |S_k|$.
+:::
+
+:::proof
+Induct on $k$. For $k = 1$ the claim is the definition of $n_1$.
+
+Suppose it holds for $k$ and consider a process of $k+1$ steps. Partition the objects by the outcome of the first step: for each of the $n_1$ options $c$, let $A_c$ be the set of objects whose first choice was $c$. These sets are pairwise disjoint, since distinct choice sequences give distinct objects and an object records its first choice. Within $A_c$ the remaining $k$ steps have $n_2, \dots, n_{k+1}$ options, independent of prior outcomes, so the inductive hypothesis gives $|A_c| = n_2 \cdots n_{k+1}$. The theorem *Sum rule* now gives
+
+$$\sum_{c} |A_c| = n_1 \cdot (n_2 \cdots n_{k+1}),$$
+
+as claimed. The product form for Cartesian products is the special case where step $i$ chooses a coordinate from $S_i$.
+:::
+
+The hypothesis that the *number* of options at step $i$ is constant is weaker than it first looks, and weaker than it needs to be in practice. The options themselves may change wildly; only the count must not. Choosing an ordered pair of distinct letters from $\{a,b,c,d\}$ has $4$ options at step one and $3$ at step two — a different three letters each time, but always three — so the product rule applies and gives $12$.
+
+:::pitfall
+When the count at step two genuinely depends on step one, the product rule is simply false. Count the strings of length two over $\{a, b, c\}$ in which the second character differs from the first and, if the first character is $a$, the second must also avoid $b$. Step one has $3$ options; step two has $2$ options after $b$ or after $c$, but only $1$ after $a$ (namely $c$). The true count is $1 + 2 + 2 = 5$, whereas $3 \times 2 = 6$. The repair is always the same: split into cases with the theorem *Sum rule* first, then apply the product rule inside each case, where the counts are constant.
+:::
+
+:::theorem[Counting functions]{#count-functions}
+Let $|A| = k$ and $|B| = n$. The number of functions $f : A \to B$ is $n^k$.
+:::
+
+:::proof
+List the elements of $A$ as $a_1, \dots, a_k$. A function $f$ is determined by, and determines, the sequence of values $(f(a_1), \dots, f(a_k))$, so the set of functions is in bijection with $B^k$. Each coordinate is chosen from $B$ freely and independently of the others, so the theorem *Product rule* applies with $n_1 = \cdots = n_k = n$, giving $n^k$.
+:::
+
+:::corollary[Strings and subsets]{#strings-subsets}
+Over an alphabet of $n$ symbols there are $n^k$ strings of length $k$. A set with $n$ elements has exactly $2^n$ subsets.
+:::
+
+:::proof
+A string of length $k$ is a function from the positions $[k]$ to the alphabet, so the theorem *Counting functions* gives $n^k$.
+
+For subsets, fix $S = \{s_1, \dots, s_n\}$ and map each subset $T \subseteq S$ to its **indicator string** $\chi(T) \in \{0,1\}^n$, whose $i$-th bit is $1$ exactly when $s_i \in T$. Distinct subsets differ at some $s_i$ and so have different strings, making $\chi$ injective; and any bit string $b$ is the image of $T = \{s_i : b_i = 1\}$, making $\chi$ surjective. So subsets are in bijection with binary strings of length $n$, of which there are $2^n$.
+:::
 
 :::intuition
-Product: "to make an outfit you choose a shirt (5 options) AND pants (4 options) AND shoes (3) → 5×4×3=60 possible outfits."
-
-Sum: "number of desserts = number of cakes + number of pies + number of ice creams" (categories don't overlap).
+The indicator string is the reason a set of $n$ feature flags has $2^n$ configurations, and the reason a subset is stored as a bitmask. "Choose a subset" and "answer $n$ independent yes/no questions" are the same act.
 :::
 
-### Worked Examples
-
-:::example[License plates]
-A license plate has 3 letters (A-Z, 26 possibilities) followed by 4 digits (0-9), and repetition *is* allowed.
+:::example[Counting passwords]
+A system requires passwords of length exactly $8$ over the $62$ alphanumeric characters. How many are there, and how many contain at least one digit?
 :::
 
 :::solution
-identify the stages: there are 7 independent stages (3 letter slots, then 4 digit slots).
-Step 2 — count each stage: each letter slot has $26$ choices; each digit slot has $10$ choices. Because repetition is allowed, these counts stay fixed regardless of earlier picks, so the product rule applies.
-Step 3 — multiply: $26 \times 26 \times 26 \times 10 \times 10 \times 10 \times 10 = 26^3 \times 10^4 = 17576 \times 10000 = 175{,}760{,}000$.
+1. Each of the $8$ positions is filled independently from $62$ symbols, so by the corollary *Strings and subsets* there are $62^8 = 218{,}340{,}105{,}584{,}896$ passwords.
+2. Counting those with at least one digit directly would require splitting on how many digits appear. Count the complement instead: a password with no digit uses only the $52$ letters, and there are $52^8 = 53{,}459{,}728{,}531{,}456$ of those.
+3. The digit-free passwords and the rest partition the whole set, so by the theorem *Sum rule* the answer is $62^8 - 52^8 = 164{,}880{,}377{,}053{,}440$.
+:::
 
-Now suppose repetition is **not** allowed for the letters (all three letters distinct). Then the second letter slot has only $25$ choices left and the third has $24$, giving $26 \times 25 \times 24 \times 10^4 = 15{,}600 \times 10{,}000 = 156{,}000{,}000$.
+:::remark
+Step 2 is the **complement trick**, and it is worth naming because it recurs: "at least one" is almost always easier to count as "total minus none". The alternative — summing over exactly one digit, exactly two, and so on — is the same number obtained with seven times the work.
+:::
 
-Sanity check: forbidding repeats can only remove plates, and indeed $156{,}000{,}000 < 175{,}760{,}000$. ✓
+:::theorem[Counting injections]{#count-injections}
+Let $|A| = k$ and $|B| = n$. The number of injective functions $f : A \to B$ is
+
+$$n(n-1)(n-2)\cdots(n-k+1),$$
+
+which is $0$ when $k > n$.
+:::
+
+:::proof
+Order $A$ as $a_1, \dots, a_k$ and build $f$ by choosing $f(a_1), f(a_2), \dots$ in turn. Injectivity says exactly that each value must avoid the values already used. When $f(a_i)$ is chosen, $i - 1$ values have been used and they are distinct, so exactly $n - (i-1)$ elements of $B$ remain available — a count that does not depend on *which* values were used, only how many. The theorem *Product rule* therefore applies and yields $\prod_{i=1}^{k} (n-i+1)$. Distinct choice sequences give distinct functions, since the sequence is the list of values. If $k > n$ the factor with $i = n+1$ is zero, matching the fact that no injection exists.
+:::
+
+:::example[Hash collisions]
+A hash function maps $12$ distinct keys into a table of $365$ slots, each key landing in a slot independently and uniformly. How many of the possible outcomes place every key in a different slot, and what fraction of all outcomes is that?
+:::
+
+:::solution
+1. An outcome is a function from the $12$ keys to the $365$ slots, so by the theorem *Counting functions* there are $365^{12}$ outcomes.
+2. A collision-free outcome is an injection, so by the theorem *Counting injections* there are $365 \cdot 364 \cdots 354$ of them.
+3. The fraction is $\dfrac{365 \cdot 364 \cdots 354}{365^{12}} \approx 0.833$. So even with only $12$ keys and $365$ slots, a collision occurs about $17\%$ of the time — this is the birthday problem, and it is why hash tables are designed to handle collisions rather than to avoid them.
+:::
+
+:::example[Splitting before multiplying]
+How many strings of length $4$ over $\{a, b, c, d, e\}$ begin with a vowel or end with the letter $e$?
+:::
+
+:::solution
+1. Let $V$ be the set of such strings beginning with $a$ or $e$, and $E$ those ending with $e$. The two sets are not disjoint, so the theorem *Sum rule* does not apply directly to $V \cup E$.
+2. Partition instead by the first letter. If the first letter is $a$ or $e$ ($2$ ways), the remaining three positions are free: $2 \cdot 5^3 = 250$ strings.
+3. If the first letter is one of the three consonants, the string must end in $e$: $3 \cdot 5 \cdot 5 \cdot 1 = 75$ strings.
+4. These two cases are disjoint and exhaust $V \cup E$, so the count is $250 + 75 = 325$.
 :::
 
 ## Permutations
 
 <!-- section: permutations -->
 
-:::definition[Permutation]{#permutation}
-A **permutation** of $n$ distinct objects is an ordering of them.
+An arrangement is an injection whose target is the same set as its source, or a list of distinct items drawn from a pool. The counting was already done in the theorem *Counting injections*; this section names the result, packages it in factorials, and then handles the case that the items are not all distinguishable.
+
+:::definition[Factorial]{#factorial}
+For an integer $n \ge 0$ define
+
+$$n! = n \cdot (n-1) \cdots 2 \cdot 1, \qquad 0! = 1.$$
+
+The convention $0! = 1$ is forced, not arbitrary: there is exactly one way to arrange nothing, namely the empty arrangement, and every formula below would need a special case without it.
 :::
 
-:::theorem[Number of permutations]{#permutation-count}
-There are
-
-$$n! = n \times (n-1) \times \cdots \times 1$$
-
-orderings of $n$ distinct objects.
+:::definition[Permutation and $k$-permutation]{#permutation}
+A **permutation** of a finite set $S$ is a linear arrangement of all its elements, equivalently a bijection $S \to S$. A **$k$-permutation** of $S$ is an ordered list of $k$ distinct elements of $S$. The number of $k$-permutations of an $n$-set is written $P(n,k)$.
 :::
 
-:::proof
-This is the product rule: the first position has $n$ candidates, the next has $n-1$ (one is already used), then $n-2$, down to $1$.
-:::
+:::theorem[The $k$-permutation count]{#kperm-count}
+For $0 \le k \le n$,
 
-By convention $0! = 1$ (there is exactly one way to arrange nothing — the empty arrangement).
-
-:::theorem[Ordered selections]{#k-permutation}
-The number of ways to choose and arrange $k$ distinct items from $n$ (with $0 \le k \le n$), where order matters, is the **$k$-permutation**
-
-$$P(n,k) = \dfrac{n!}{(n-k)!} = n \times (n-1) \times \cdots \times (n-k+1).$$
-:::
-
-Note the last factor: the product has exactly $k$ terms, counting down from $n$.
-
-:::theorem[Permutations of a multiset]{#multiset-permutations}
-For a multiset whose distinct symbols occur with counts $n_1, n_2, \ldots$ (so $n_1 + n_2 + \cdots = n$), the number of distinct permutations is
-
-$$\dfrac{n!}{n_1!\, n_2! \cdots}.$$
+$$P(n,k) = n(n-1)\cdots(n-k+1) = \frac{n!}{(n-k)!}.$$
 :::
 
 :::proof
-When some objects are identical, distinct orderings are fewer, because swapping two identical items does not create a new arrangement. Each $n_i!$ divides out the orderings among the identical copies of symbol $i$ that we would otherwise overcount.
+A $k$-permutation of $S$ is exactly an injection $[k] \to S$, read as the list $(f(1), \dots, f(k))$, so the theorem *Counting injections* gives $P(n,k) = n(n-1)\cdots(n-k+1)$.
+
+For the factorial form, multiply and divide by the missing tail:
+
+$$n(n-1)\cdots(n-k+1) = \frac{n(n-1)\cdots(n-k+1) \cdot (n-k)(n-k-1)\cdots 1}{(n-k)(n-k-1)\cdots 1} = \frac{n!}{(n-k)!}.$$
+:::
+
+:::corollary[Permutations of an $n$-set]{#n-factorial}
+A set with $n$ elements has exactly $n!$ permutations.
+:::
+
+:::proof
+A permutation uses all $n$ elements, so it is a $k$-permutation with $k = n$. The theorem *The $k$-permutation count* gives $n!/0! = n!$.
 :::
 
 :::intuition
-Permutations answer "in how many different sequences can these people stand in line?" or "how many different ways can these tasks be scheduled?"
-
-If two people are twins (indistinguishable), you overcounted by swapping the twins, so divide by 2!.
+The factorial grows faster than any exponential you are likely to meet: $10! \approx 3.6 \times 10^6$, but $20! \approx 2.4 \times 10^{18}$ and $70!$ exceeds the number of atoms in the observable universe. This is precisely why brute-force search over all orderings — the naive travelling-salesman algorithm — is hopeless past about twelve cities, and why *Combinatorics* devotes a whole subject to smarter enumeration.
 :::
 
-### Worked Examples
-
-:::example[Ordered selection (order matters)]
-A club of 5 people elects a president, a vice-president, and a treasurer, with no one holding two posts. How many outcomes?
+:::example[Ordered and unordered officers]
+A club of $12$ members elects a president, a secretary and a treasurer, no member holding two posts. In how many ways? And how many ways to choose three members to form an unranked steering group?
 :::
 
 :::solution
-- Order matters here, because assigning Alice as president vs. as treasurer are different outcomes. So this is a $k$-permutation with $n = 5$, $k = 3$.
-- Apply the formula: $P(5,3) = \dfrac{5!}{(5-3)!} = \dfrac{5!}{2!} = \dfrac{120}{2} = 60$.
-- Cross-check by the product rule: $5$ choices for president $\times\, 4$ for VP $\times\, 3$ for treasurer $= 60$. ✓
+1. The three posts are distinguishable, so an outcome is an ordered list of three distinct members: $P(12,3) = 12 \cdot 11 \cdot 10 = 1320$.
+2. For the unranked group, each set of three members was counted once for each of its $3! = 6$ orderings in step 1, so the count is $1320/6 = 220$. That division is the argument formalised in the theorem *The combination formula*.
 :::
 
-:::example[Arranging letters with repeats]
-How many distinct arrangements does "MISSISSIPPI" have? It has 11 letters with counts M:1, I:4, S:4, P:2 (and $1 + 4 + 4 + 2 = 11$ ✓, so we have accounted for every letter).
-:::
+:::theorem[Permutations with repeated objects]{#multiset-perm}
+Suppose a multiset consists of $n$ objects of $r$ types, with $n_1$ copies of type $1$, …, $n_r$ copies of type $r$, where $n_1 + \cdots + n_r = n$ and copies of the same type are indistinguishable. The number of distinguishable arrangements in a row is
 
-:::solution
-- If all 11 letters were distinct, there would be $11! = 39{,}916{,}800$ arrangements.
-- Divide out the indistinguishable swaps: the four I's can be reordered $4!$ ways with no visible change, likewise the four S's ($4!$) and the two P's ($2!$).
-- Compute: $\dfrac{11!}{1!\,4!\,4!\,2!} = \dfrac{39{,}916{,}800}{1 \times 24 \times 24 \times 2} = \dfrac{39{,}916{,}800}{1152} = 34{,}650$.
-:::
-
-:::theorem[Circular permutations]{#circular-permutations}
-For $n$ distinct people around a round table where rotations are considered the same seating, there are
-
-$$(n-1)!$$
-
-ways to seat them.
+$$\frac{n!}{n_1!\, n_2! \cdots n_r!}.$$
 :::
 
 :::proof
-The $n!$ linear orderings each get counted $n$ times (once per rotation of the same circular arrangement), so divide by $n$ to get $\dfrac{n!}{n} = (n-1)!$. Equivalently, *fix one person's seat* to kill the rotational symmetry and arrange the remaining $n-1$ people in $(n-1)!$ ways.
+Temporarily label the copies of each type to make all $n$ objects distinct — write the three copies of a type as $x^{(1)}, x^{(2)}, x^{(3)}$. The corollary *Permutations of an $n$-set* says the labelled objects have $n!$ arrangements.
+
+Now group the labelled arrangements by the unlabelled arrangement they produce when the superscripts are erased. Fix one unlabelled arrangement $w$. Which labelled arrangements erase to $w$? Precisely those obtained from one of them by permuting the superscripts within each type independently, and by the theorem *Product rule* there are $n_1! n_2! \cdots n_r!$ of these, a count that does not depend on $w$.
+
+So the $n!$ labelled arrangements fall into groups of equal size $n_1! \cdots n_r!$, one group per unlabelled arrangement, and the theorem *Sum rule* gives $n! = (\text{number of unlabelled arrangements}) \cdot n_1! \cdots n_r!$. Divide.
 :::
 
-For example, $6$ people around a table give $(6-1)! = 5! = 120$ distinct seatings.
+:::example[Arrangements of a word]
+How many distinguishable strings can be made from all the letters of $\texttt{MISSISSIPPI}$? How many of those begin with $\texttt{M}$?
+:::
+
+:::solution
+1. The word has $11$ letters: one $\texttt{M}$, four $\texttt{I}$, four $\texttt{S}$, two $\texttt{P}$. By the theorem *Permutations with repeated objects* the count is
+
+$$\frac{11!}{1!\,4!\,4!\,2!} = \frac{39916800}{1152} = 34650.$$
+
+2. Fixing $\texttt{M}$ in position one leaves the multiset $\{\texttt{I}^4, \texttt{S}^4, \texttt{P}^2\}$ of $10$ letters to arrange, giving $10!/(4!\,4!\,2!) = 3150$.
+3. As a check, $\texttt{M}$ is equally likely to occupy any of the $11$ positions by symmetry, and indeed $34650/11 = 3150$.
+:::
+
+:::example[Lattice paths]
+A robot on a grid moves only right or up, from $(0,0)$ to $(7,4)$, one unit per step. How many routes are there?
+:::
+
+:::solution
+1. Every route consists of exactly $7$ right-steps and $4$ up-steps in some order, and the route is determined by that order — so routes correspond bijectively to strings of seven $\texttt{R}$s and four $\texttt{U}$s.
+2. By the theorem *Permutations with repeated objects*, the number of such strings is $\dfrac{11!}{7!\,4!} = 330$.
+:::
+
+:::remark
+Circular arrangements need one adjustment: seating $n$ people around a round table, where only the cyclic order matters, gives $n!/n = (n-1)!$ arrangements, because each cyclic arrangement corresponds to $n$ linear ones — one per choice of who is listed first. The same divide-by-the-overcount reasoning as in the theorem *Permutations with repeated objects*.
+:::
 
 ## Combinations
 
 <!-- section: combinations -->
 
-:::definition[Combination]{#combination}
-A **combination** is an unordered selection: a choice of $k$ items from $n$ distinct items in which order does not matter.
+A permutation records *which* items were taken and *in what order*. Discard the order and you have a combination — a subset. Because the discarded information is the same amount for every selection, the count follows by dividing, and that single division is the most used formula in the subject.
+
+:::definition[Binomial coefficient]{#binom-def}
+For integers $0 \le k \le n$, the **binomial coefficient** $\binom{n}{k}$, read "$n$ choose $k$", is the number of $k$-element subsets of an $n$-element set. For $k > n$ or $k < 0$ we set $\binom{n}{k} = 0$, since no such subset exists.
 :::
 
-:::theorem[Number of combinations]{#binomial-coefficient}
-The number of ways to choose $k$ items from $n$ distinct items, where order does not matter, is the **binomial coefficient** (or combination)
+:::theorem[The combination formula]{#choose-formula}
+For $0 \le k \le n$,
 
-$$\binom{n}{k} = \frac{n!}{k!(n-k)!} = \frac{n (n-1) \cdots (n-k+1)}{k!}.$$
+$$\binom{n}{k} = \frac{P(n,k)}{k!} = \frac{n!}{k!\,(n-k)!}.$$
 :::
 
 :::proof
-Why the $k!$ in the denominator? First count *ordered* selections, $P(n,k) = \dfrac{n!}{(n-k)!}$, then notice that each unordered group of $k$ items was counted $k!$ times (once per ordering of those same $k$ items), so divide by $k!$.
+Count the $k$-permutations of an $n$-set $S$ in two ways.
+
+Directly, the theorem *The $k$-permutation count* gives $P(n,k)$.
+
+Alternatively, build a $k$-permutation in two steps: first choose the *set* of $k$ elements that will appear, then choose the order in which to list them. There are $\binom{n}{k}$ ways to do the first step by definition, and whichever set is chosen, the corollary *Permutations of an $n$-set* gives exactly $k!$ orders — a number independent of the set chosen, which is what the theorem *Product rule* requires. Distinct pairs (set, order) give distinct lists, and every list arises this way, so the count is $\binom{n}{k} \cdot k!$.
+
+Equating the two counts, $\binom{n}{k}\, k! = P(n,k)$, and dividing by $k! \neq 0$ gives $\binom{n}{k} = P(n,k)/k! = n!/(k!(n-k)!)$.
 :::
 
-This is defined for integers $0 \le k \le n$; outside that range we take $\binom{n}{k} = 0$ (you cannot choose more items than you have, and you cannot choose a negative number).
-
-:::proposition[Symmetry of binomial coefficients]{#binomial-symmetry}
-The key identity
-
-$$\binom{n}{k} = \binom{n}{n-k}$$
-
-holds, since choosing who is *in* is the same as choosing who is *out*.
+:::pitfall
+The formula divides by $k!$ because *every* $k$-subset is overcounted by exactly the same factor $k!$. Division is legitimate only when the overcounting is uniform. If you try the same move on arrangements of $\texttt{AAB}$ by writing $3!/2$, you are lucky; on a problem where different objects are overcounted different numbers of times, dividing gives a non-integer and a wrong answer. When in doubt, partition into classes of equal size and divide inside each class, as the theorem *Permutations with repeated objects* does.
 :::
 
-Combinations appear when we care only about the group, not roles inside it.
+:::proposition[Symmetry]{#choose-symmetry}
+For $0 \le k \le n$, $\;\binom{n}{k} = \binom{n}{n-k}$.
+:::
+
+:::proof
+Let $S$ be an $n$-set and let $\mathcal{A}$ be its family of $k$-subsets, $\mathcal{B}$ its family of $(n-k)$-subsets. Define $c : \mathcal{A} \to \mathcal{B}$ by complementation, $c(T) = S \setminus T$. This lands in $\mathcal{B}$ because $|S \setminus T| = n - k$.
+
+It is a bijection because it is its own inverse: $c(c(T)) = S \setminus (S \setminus T) = T$ for every $T \subseteq S$. A map with a two-sided inverse is a bijection, so $|\mathcal{A}| = |\mathcal{B}|$.
+:::
 
 :::intuition
-Combination: "how many different teams of 5 can I pick from 12 players?" — the team is the same set regardless of who is captain on Tuesday.
-
-Contrast with permutations: if the 5 then get assigned distinct jerseys 1-5, multiply by 5! to get P(12,5).
+Choosing which $k$ of $n$ features to enable is the same act as choosing which $n-k$ to disable. Symmetry also says where the work is: to compute $\binom{100}{97}$, compute $\binom{100}{3} = 161700$ instead — three multiplications rather than ninety-seven.
 :::
 
-### Worked Examples
-
-:::example[Basic combination]
-How many committees of 3 can be chosen from 8 people (no roles, order irrelevant)?
+:::example[Committees with constraints]
+From $7$ developers and $5$ designers, how many teams of $4$ contain at least one designer?
 :::
 
 :::solution
-- Order does not matter, so use $\binom{8}{3}$.
-- $\binom{8}{3} = \dfrac{8 \times 7 \times 6}{3!} = \dfrac{336}{6} = 56$.
-- Sanity check via the symmetry identity: $\binom{8}{3} = \binom{8}{5}$, and choosing the 3 who serve is the same as choosing the 5 who don't. ✓
+1. All teams of $4$ from the $12$ people: $\binom{12}{4} = 495$.
+2. Teams with no designer are teams of $4$ chosen from the $7$ developers: $\binom{7}{4} = 35$.
+3. By the complement trick, teams with at least one designer number $495 - 35 = 460$.
+4. The direct route confirms it: $\binom{5}{1}\binom{7}{3} + \binom{5}{2}\binom{7}{2} + \binom{5}{3}\binom{7}{1} + \binom{5}{4}\binom{7}{0} = 175 + 210 + 70 + 5 = 460$.
 :::
 
-:::example[Committee selection with constraints]
-From 7 men and 5 women (12 people total), form a committee of 4. Count the committees in total, the all-male ones, and those with exactly 2 women.
+:::example[Bit strings with a fixed weight]
+How many bit strings of length $16$ contain exactly $5$ ones? How many contain at most $2$ ones?
 :::
 
 :::solution
-- Total committees, no constraint: $\binom{12}{4} = \dfrac{12 \times 11 \times 10 \times 9}{4!} = \dfrac{11880}{24} = 495$.
-- All-male committees: pick all 4 from the 7 men: $\binom{7}{4} = \dfrac{7 \times 6 \times 5 \times 4}{24} = 35$.
-- Exactly 2 women: this is an "AND" — choose 2 of the 5 women **and** choose the remaining 2 of the 4 members from the 7 men, so multiply (product rule): $\binom{5}{2} \times \binom{7}{2} = 10 \times 21 = 210$.
+1. A string is determined by the *set* of positions carrying a one, so strings of weight $5$ correspond bijectively to $5$-subsets of $[16]$: $\binom{16}{5} = 4368$.
+2. "At most two" splits into three disjoint cases by the theorem *Sum rule*: $\binom{16}{0} + \binom{16}{1} + \binom{16}{2} = 1 + 16 + 120 = 137$.
+:::
 
-Sanity check on the last one: $210 < 495$, as it must be, since committees with exactly 2 women are only a slice of all committees. ✓
+Sometimes the items being selected may be taken more than once — three coffees of four available kinds, or ten identical background jobs assigned to four servers. Order still does not matter; only how many of each kind were taken. The count is again a binomial coefficient, and the reason is a bijection worth seeing in full.
+
+:::theorem[Combinations with repetition (stars and bars)]{#stars-and-bars}
+The number of ways to choose $k$ items from $n$ types, with repetition allowed and order irrelevant, is
+
+$$\binom{n + k - 1}{k}.$$
+
+Equivalently, this is the number of solutions in non-negative integers of $x_1 + x_2 + \cdots + x_n = k$.
+:::
+
+:::proof
+A selection is recorded by the multiplicities $(x_1, \dots, x_n)$, where $x_i \ge 0$ counts the copies taken of type $i$; two selections are the same exactly when their multiplicity vectors agree, and the total is $\sum_i x_i = k$. So the two statements count the same set $X$ of solutions.
+
+Let $W$ be the set of strings of length $n + k - 1$ over $\{\star, \mid\}$ containing exactly $k$ stars and $n-1$ bars. Define $\Phi : X \to W$ by sending $(x_1, \dots, x_n)$ to
+
+$$\underbrace{\star\cdots\star}_{x_1} \mid \underbrace{\star\cdots\star}_{x_2} \mid \;\cdots\; \mid \underbrace{\star\cdots\star}_{x_n},$$
+
+that is, $x_1$ stars, a bar, $x_2$ stars, a bar, and so on, ending with $x_n$ stars. The string has $\sum_i x_i = k$ stars and exactly $n-1$ bars, so $\Phi(x) \in W$.
+
+$\Phi$ is injective: from the string one recovers $x_i$ as the number of stars strictly between bar $i-1$ and bar $i$ (with the ends of the string playing the role of bar $0$ and bar $n$). Two distinct vectors differ in some $x_i$, hence the strings differ in that block.
+
+$\Phi$ is surjective: given any $w \in W$, the $n-1$ bars cut $w$ into $n$ blocks of stars; let $x_i$ be the length of block $i$. Each $x_i \ge 0$, the total is the number of stars, which is $k$, so $(x_1, \dots, x_n) \in X$, and applying $\Phi$ to it rebuilds $w$ block by block.
+
+Hence $|X| = |W|$. Finally, a string in $W$ is determined by which $k$ of its $n+k-1$ positions hold stars, so $|W| = \binom{n+k-1}{k}$ by the definition *Binomial coefficient*.
+:::
+
+:::figure[Stars and bars: one arrangement of $k=7$ stars and $n-1=3$ bars encodes one solution of $x_1+x_2+x_3+x_4=7$.]{#fig-stars-bars}
+{
+  "type": "plot",
+  "x": [0, 11], "y": [0, 4.4],
+  "equalAspect": false,
+  "marks": [
+    { "kind": "text", "at": [1, 3.6], "text": "★" },
+    { "kind": "text", "at": [2, 3.6], "text": "★" },
+    { "kind": "text", "at": [3, 3.6], "text": "|", "tone": "result" },
+    { "kind": "text", "at": [4, 3.6], "text": "★" },
+    { "kind": "text", "at": [5, 3.6], "text": "★" },
+    { "kind": "text", "at": [6, 3.6], "text": "★" },
+    { "kind": "text", "at": [7, 3.6], "text": "|", "tone": "result" },
+    { "kind": "text", "at": [8, 3.6], "text": "|", "tone": "result" },
+    { "kind": "text", "at": [9, 3.6], "text": "★" },
+    { "kind": "text", "at": [10, 3.6], "text": "★" },
+    { "kind": "text", "at": [1.5, 2.5], "text": "x1 = 2", "leaderTo": [1.5, 3.2] },
+    { "kind": "text", "at": [5, 2.5], "text": "x2 = 3", "leaderTo": [5, 3.2] },
+    { "kind": "text", "at": [7.5, 1.4], "text": "x3 = 0", "leaderTo": [7.5, 3.2] },
+    { "kind": "text", "at": [9.5, 2.5], "text": "x4 = 2", "leaderTo": [9.5, 3.2] },
+    { "kind": "text", "at": [5.5, 0.5], "text": "10 positions, choose 7 for stars" }
+  ]
+}
+:::
+
+:::example[Distributing identical jobs]
+Ten identical background jobs are assigned to four distinct servers. How many assignments are there? How many give every server at least one job?
+:::
+
+:::solution
+1. An assignment is a solution of $x_1 + x_2 + x_3 + x_4 = 10$ in non-negative integers, so the theorem *Combinations with repetition (stars and bars)* gives $\binom{10 + 4 - 1}{10} = \binom{13}{10} = \binom{13}{3} = 286$.
+2. For "at least one each", set $y_i = x_i - 1 \ge 0$. Then $y_1 + y_2 + y_3 + y_4 = 6$, and $x \mapsto y$ is a bijection between the two solution sets. So the count is $\binom{6 + 4 - 1}{6} = \binom{9}{6} = \binom{9}{3} = 84$.
+:::
+
+:::pitfall
+Identical objects into distinct boxes is stars and bars; *distinct* objects into distinct boxes is the theorem *Counting functions*, giving $4^{10} = 1048576$ instead of $286$. Ask first whether swapping two of the objects changes the outcome. Identical objects into *identical* boxes is a harder problem — the partition function — and belongs to the subject *Combinatorics*.
 :::
 
 ## Binomial Coefficients and the Binomial Theorem
 
 <!-- section: binomial -->
 
-:::theorem[Binomial theorem]{#binomial-theorem}
-For any real or complex $x, y$ and any non-negative integer $n$,
+The numbers $\binom{n}{k}$ satisfy a dense web of identities. Each can be proved by manipulating factorials, and each can also be proved by counting one set in two different ways — a **double counting** or **combinatorial** proof. The second kind is preferred here, and not only for elegance: an algebraic proof verifies that two expressions agree, while a combinatorial proof explains *why* they agree, and the explanation generalises where the algebra does not.
 
-$$(x + y)^n = \sum_{k=0}^n \binom{n}{k} x^{n-k} y^k.$$
+:::theorem[Pascal's identity]{#pascal}
+For $1 \le k \le n-1$,
+
+$$\binom{n}{k} = \binom{n-1}{k-1} + \binom{n-1}{k}.$$
 :::
 
 :::proof
-Expanding $(x+y)^n = \underbrace{(x+y)(x+y)\cdots(x+y)}_{n \text{ factors}}$ means picking either $x$ or $y$ from each factor. The term $x^{n-k}y^k$ arises exactly once for each way to choose which $k$ of the $n$ factors contribute a $y$ — and there are $\binom{n}{k}$ such choices. So each term's coefficient counts the ways to pick the $y$'s (equivalently the $x$'s) in the expansion.
+Let $S$ be a set of $n$ elements and distinguish one of them, say $s \in S$; write $S' = S \setminus \{s\}$, so $|S'| = n-1$. The left side counts the $k$-subsets of $S$.
+
+Partition those $k$-subsets by whether they contain $s$.
+
+*Subsets containing $s$.* Such a subset is $\{s\} \cup T$ where $T$ is a $(k-1)$-subset of $S'$, and distinct $T$ give distinct subsets, while every subset containing $s$ arises from exactly one $T$, namely $T = (\text{the subset}) \setminus \{s\}$. So there are $\binom{n-1}{k-1}$ of them.
+
+*Subsets not containing $s$.* Such a subset is exactly a $k$-subset of $S'$, so there are $\binom{n-1}{k}$ of them.
+
+The two classes are disjoint and together are all $k$-subsets of $S$, so the theorem *Sum rule* gives the identity.
 :::
 
-:::proposition[Pascal's identity]{#pascals-identity}
-$$\binom{n}{k} = \binom{n-1}{k} + \binom{n-1}{k-1}.$$
+:::remark
+The algebraic proof is available too, and is worth doing once to see how much less it tells you. With $1 \le k \le n-1$,
+
+$$\binom{n-1}{k-1} + \binom{n-1}{k} = \frac{(n-1)!}{(k-1)!(n-k)!} + \frac{(n-1)!}{k!(n-k-1)!} = \frac{(n-1)!\,k + (n-1)!\,(n-k)}{k!\,(n-k)!} = \frac{n!}{k!(n-k)!},$$
+
+using $\frac{1}{(k-1)!} = \frac{k}{k!}$ and $\frac{1}{(n-k-1)!} = \frac{n-k}{(n-k)!}$ to put the two fractions over a common denominator. Correct, but it does not mention the distinguished element $s$, and it is the distinguished element that makes the identity memorable and transplantable.
 :::
 
-This generates Pascal's triangle, where each entry is sum of the two above it.
+Pascal's identity is a recurrence, so the whole table of binomial coefficients can be built from the boundary values $\binom{n}{0} = \binom{n}{n} = 1$ by additions alone — no factorials, no division, no overflow from intermediate values that dwarf the answer. That table is **Pascal's triangle**.
 
-Other useful identities: $\sum_{k=0}^n \binom{n}{k} = 2^n$ (total subsets), $\binom{n}{k} = \frac{n}{k} \binom{n-1}{k-1}$.
+:::figure[Pascal's triangle. Each entry is the sum of the two above it, which is Pascal's identity read downwards.]{#fig-pascal}
+{
+  "type": "plot",
+  "x": [-5.6, 5.6], "y": [-0.6, 6.4],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "text", "at": [0, 6], "text": "1" },
+    { "kind": "text", "at": [-0.9, 5], "text": "1" },
+    { "kind": "text", "at": [0.9, 5], "text": "1" },
+    { "kind": "text", "at": [-1.8, 4], "text": "1" },
+    { "kind": "text", "at": [0, 4], "text": "2" },
+    { "kind": "text", "at": [1.8, 4], "text": "1" },
+    { "kind": "text", "at": [-2.7, 3], "text": "1" },
+    { "kind": "text", "at": [-0.9, 3], "text": "3" },
+    { "kind": "text", "at": [0.9, 3], "text": "3" },
+    { "kind": "text", "at": [2.7, 3], "text": "1" },
+    { "kind": "text", "at": [-3.6, 2], "text": "1" },
+    { "kind": "text", "at": [-1.8, 2], "text": "4" },
+    { "kind": "text", "at": [0, 2], "text": "6" },
+    { "kind": "text", "at": [1.8, 2], "text": "4" },
+    { "kind": "text", "at": [3.6, 2], "text": "1" },
+    { "kind": "text", "at": [-4.5, 1], "text": "1" },
+    { "kind": "text", "at": [-2.7, 1], "text": "5" },
+    { "kind": "text", "at": [-0.9, 1], "text": "10" },
+    { "kind": "text", "at": [0.9, 1], "text": "10" },
+    { "kind": "text", "at": [2.7, 1], "text": "5" },
+    { "kind": "text", "at": [4.5, 1], "text": "1" },
+    { "kind": "arrow", "from": [-1.6, 1.85], "to": [-1.05, 1.15], "tone": "result" },
+    { "kind": "arrow", "from": [0.15, 1.85], "to": [-0.7, 1.15], "tone": "result" },
+    { "kind": "text", "at": [3.3, 0], "text": "4 + 6 = 10", "tone": "result" }
+  ]
+}
+:::
+
+:::example[Building a row by addition]
+Use Pascal's identity to extend the triangle to the row $n = 6$, and read off $\binom{6}{2}$.
+:::
+
+:::solution
+1. Row $5$ is $1, 5, 10, 10, 5, 1$.
+2. Each interior entry of row $6$ is the sum of its two neighbours above: $1,\; 1+5,\; 5+10,\; 10+10,\; 10+5,\; 5+1,\; 1$, giving $1, 6, 15, 20, 15, 6, 1$.
+3. So $\binom{6}{2} = 15$, which matches $\frac{6!}{2!\,4!} = 15$.
+:::
+
+:::theorem[Binomial theorem]{#binomial-theorem}
+For any numbers $x, y$ and any integer $n \ge 0$,
+
+$$(x+y)^n = \sum_{k=0}^{n} \binom{n}{k} x^k y^{n-k}.$$
+:::
+
+:::proof
+Write the power as a product of $n$ identical factors:
+
+$$(x+y)^n = \underbrace{(x+y)(x+y)\cdots(x+y)}_{n \text{ factors}}.$$
+
+Expanding by distributivity without collecting terms means: from each factor choose either the $x$ or the $y$, multiply the $n$ chosen symbols, and sum over all choices. By the theorem *Counting functions* there are $2^n$ such choices, and each contributes one term.
+
+A choice is determined by the *set* of factors from which $x$ was taken. If that set has size $k$, the term is $x^k y^{n-k}$, since the other $n-k$ factors contributed a $y$. So the terms equal to $x^k y^{n-k}$ are in bijection with the $k$-subsets of the $n$ factors, of which there are $\binom{n}{k}$ by the definition *Binomial coefficient*.
+
+Grouping the $2^n$ terms by the value of $k$ — a partition, so the theorem *Sum rule* applies — the coefficient of $x^k y^{n-k}$ is $\binom{n}{k}$, and $k$ ranges over $0, 1, \dots, n$.
+:::
+
+:::example[Extracting one coefficient]
+Find the coefficient of $x^5$ in $(2x - 3)^8$.
+:::
+
+:::solution
+1. Apply the theorem *Binomial theorem* with the two summands $2x$ and $-3$: $(2x-3)^8 = \sum_{k=0}^{8} \binom{8}{k}(2x)^k(-3)^{8-k}$.
+2. The term with $x^5$ is $k = 5$: $\binom{8}{5} 2^5 x^5 (-3)^3$.
+3. Compute: $\binom{8}{5} = 56$, $2^5 = 32$, $(-3)^3 = -27$, so the coefficient is $56 \cdot 32 \cdot (-27) = -48384$.
+:::
+
+:::corollary[Row sums]{#row-sum}
+For every $n \ge 0$,
+
+$$\sum_{k=0}^{n} \binom{n}{k} = 2^n, \qquad \text{and for } n \ge 1, \quad \sum_{k=0}^{n} (-1)^k \binom{n}{k} = 0.$$
+:::
+
+:::proof
+*First identity, algebraically.* Put $x = y = 1$ in the theorem *Binomial theorem*: the left side is $2^n$ and the right side is $\sum_k \binom{n}{k}$.
+
+*First identity, combinatorially.* Count the subsets of an $n$-set in two ways. The corollary *Strings and subsets* gives $2^n$. Alternatively, partition the subsets by their size $k$; the class of size $k$ has $\binom{n}{k}$ members by the definition *Binomial coefficient*, and $k$ ranges over $0$ to $n$, so the theorem *Sum rule* gives $\sum_k \binom{n}{k}$. The two counts must agree.
+
+*Second identity.* Put $x = -1$, $y = 1$ in the theorem *Binomial theorem*: the left side is $(-1+1)^n = 0$ for $n \ge 1$, and the right side is $\sum_k (-1)^k \binom{n}{k}$.
+:::
 
 :::intuition
-Binomial coefficients count paths through a grid (right and down moves), subsets, and the ways terms multiply in (x+y) multiplied n times.
-
-Pascal's triangle is a beautiful number pyramid where every number is the sum of the two parents — and it secretly counts everything from coin flips to committee choices.
+The second identity says an $n$-set has as many even-sized subsets as odd-sized ones, for $n \ge 1$. There is a bijection that proves it directly: fix an element $s$ and toggle it — add $s$ if absent, remove it if present. This changes the size by one, hence changes its parity, and applying it twice returns the original set, so it is a bijection between the even and odd families.
 :::
 
-### Worked Examples
+:::theorem[Vandermonde's identity]{#vandermonde}
+For non-negative integers $m, n, k$,
 
-:::example[Coefficient extraction]
-Find the coefficient of $x^3 y^2$ in $(x+y)^5$.
+$$\binom{m+n}{k} = \sum_{j=0}^{k} \binom{m}{j}\binom{n}{k-j}.$$
+:::
+
+:::proof
+Let $A$ be a set of $m$ elements and $B$ a disjoint set of $n$ elements, so $|A \cup B| = m+n$ by the theorem *Sum rule*. Count the $k$-subsets of $A \cup B$ in two ways.
+
+Directly there are $\binom{m+n}{k}$ of them.
+
+Alternatively, partition them by $j = |T \cap A|$, the number of chosen elements coming from $A$; then $|T \cap B| = k - j$. For a fixed $j$, such a $T$ is determined by a $j$-subset of $A$ together with a $(k-j)$-subset of $B$, freely and independently chosen, so the theorem *Product rule* gives $\binom{m}{j}\binom{n}{k-j}$ such subsets. Since $j$ can be anything from $0$ to $k$ (terms where $j > m$ or $k - j > n$ contribute $0$ by the convention in the definition *Binomial coefficient*), the theorem *Sum rule* gives the sum.
+:::
+
+:::corollary[Sum of squares of a row]{#sum-squares}
+For every $n \ge 0$, $\;\displaystyle\sum_{j=0}^{n} \binom{n}{j}^2 = \binom{2n}{n}$.
+:::
+
+:::proof
+Take $m = n$ and $k = n$ in the theorem *Vandermonde's identity*: $\binom{2n}{n} = \sum_{j=0}^{n}\binom{n}{j}\binom{n}{n-j}$. By the proposition *Symmetry*, $\binom{n}{n-j} = \binom{n}{j}$, so each summand is $\binom{n}{j}^2$.
+:::
+
+:::theorem[Hockey-stick identity]{#hockey-stick}
+For integers $0 \le r \le n$,
+
+$$\sum_{i=r}^{n} \binom{i}{r} = \binom{n+1}{r+1}.$$
+:::
+
+:::proof
+Count the $(r+1)$-subsets of $\{1, 2, \dots, n+1\}$ by conditioning on their **largest** element.
+
+If the largest element is $m$, the remaining $r$ elements form an $r$-subset of $\{1, \dots, m-1\}$, and conversely any such $r$-subset together with $m$ gives an $(r+1)$-subset with largest element $m$. So there are $\binom{m-1}{r}$ subsets with largest element $m$.
+
+The largest element is at least $r+1$ (there must be $r$ smaller elements available) and at most $n+1$. These classes are disjoint and exhaust the $(r+1)$-subsets, so the theorem *Sum rule* gives
+
+$$\binom{n+1}{r+1} = \sum_{m=r+1}^{n+1} \binom{m-1}{r} = \sum_{i=r}^{n} \binom{i}{r}$$
+
+after substituting $i = m-1$.
+:::
+
+:::remark
+The name comes from the picture: the terms $\binom{r}{r}, \binom{r+1}{r}, \dots, \binom{n}{r}$ lie along a diagonal of Pascal's triangle and the answer $\binom{n+1}{r+1}$ sits just off the end of it, so the shaded cells look like a hockey stick. With $r = 1$ it reads $1 + 2 + \cdots + n = \binom{n+1}{2} = \frac{n(n+1)}{2}$, the schoolbook sum.
+:::
+
+:::example[Summing a diagonal]
+Evaluate $\binom{3}{3} + \binom{4}{3} + \binom{5}{3} + \binom{6}{3} + \binom{7}{3}$.
 :::
 
 :::solution
-- Match the general term $\binom{5}{k} x^{5-k} y^k$ to $x^3 y^2$: we need $k = 2$ (the exponent on $y$), which also gives $x^{5-2} = x^3$. ✓
-- The coefficient is $\binom{5}{2} = \dfrac{5 \times 4}{2} = 10$. Equivalently $\binom{5}{3} = 10$ by the symmetry $\binom{n}{k} = \binom{n}{n-k}$ (choose the 3 factors giving $x$, or the 2 giving $y$).
+1. This is the theorem *Hockey-stick identity* with $r = 3$ and $n = 7$, so the sum is $\binom{8}{4}$.
+2. $\binom{8}{4} = 70$.
+3. Check term by term: $1 + 4 + 10 + 20 + 35 = 70$.
 :::
 
-:::example[Verifying an identity numerically]
-Set $x = 2$, $y = 1$, $n = 4$; the theorem should reproduce $(2+1)^4 = 3^4 = 81$.
+:::example[Counting comparisons in a double loop]
+A program runs `for i in 1..n: for j in i+1..n:` and does one comparison in the body. How many comparisons are made?
 :::
 
 :::solution
-- Term-by-term: $\binom{4}{0}2^4 + \binom{4}{1}2^3 + \binom{4}{2}2^2 + \binom{4}{3}2^1 + \binom{4}{4}2^0$.
-- Substitute the coefficients $1, 4, 6, 4, 1$: $1\cdot 16 + 4\cdot 8 + 6\cdot 4 + 4\cdot 2 + 1\cdot 1 = 16 + 32 + 24 + 8 + 1 = 81$. ✓
+1. The body runs once for each pair $(i,j)$ with $1 \le i < j \le n$ — that is, once for each $2$-element subset of $[n]$, since a set $\{i,j\}$ determines the ordered pair with $i < j$ uniquely.
+2. So the count is $\binom{n}{2} = \frac{n(n-1)}{2}$, the familiar quadratic cost of a naive all-pairs scan.
 :::
-
-**The subset-count identity**
-
-Setting $x = y = 1$ collapses the theorem to $\sum_{k=0}^{n} \binom{n}{k} = (1+1)^n = 2^n$. This says the total number of subsets of an $n$-element set is $2^n$: grouping subsets by their size $k$, there are $\binom{n}{k}$ of each size, and summing over all sizes must recover every subset. For $n = 3$: $\binom{3}{0} + \binom{3}{1} + \binom{3}{2} + \binom{3}{3} = 1 + 3 + 3 + 1 = 8 = 2^3$. ✓
 
 ## The Pigeonhole Principle
 
 <!-- section: pigeonhole -->
 
+So far counting has answered "how many?". The pigeonhole principle turns counting into a tool for proving that something *exists*, without producing it. It is almost insultingly obvious in statement, and the skill it demands lies entirely in choosing what the pigeons are and what the holes are.
+
 :::theorem[Pigeonhole principle]{#pigeonhole}
-(Dirichlet principle.) If $n$ objects are placed into $m$ boxes and $n > m$, then at least one box contains more than one object.
+If $n+1$ or more objects are placed into $n$ boxes, then some box contains at least two objects. Equivalently: if $|A| > |B|$ then no function $f : A \to B$ is injective.
 :::
 
 :::proof
-Contrapositive: if *every* box had at most one object, the total would be at most $m$, contradicting $n > m$.
+Suppose, for contradiction, that every box contains at most one object. Let $B_1, \dots, B_n$ be the sets of objects in each box. These are pairwise disjoint and their union is the whole collection, so the theorem *Sum rule* gives
+
+$$\text{number of objects} = |B_1| + \cdots + |B_n| \le \underbrace{1 + 1 + \cdots + 1}_{n} = n.$$
+
+That contradicts there being at least $n+1$ objects. Hence some box holds two or more.
+
+For the restatement, take the boxes to be the elements of $B$ and place each $a \in A$ into box $f(a)$. A box with two objects is a pair $a \neq a'$ with $f(a) = f(a')$, which is a failure of injectivity.
 :::
 
-:::theorem[Generalized pigeonhole principle]{#generalized-pigeonhole}
-If $n$ pigeons go into $m$ holes, then at least one hole contains at least
-
-$$\left\lceil \dfrac{n}{m} \right\rceil$$
-
-pigeons (the ceiling, i.e. round up).
-:::
-
-:::proof
-If every hole had at most $\lceil n/m \rceil - 1$ pigeons, the total would fall short of $n$.
-:::
-
-:::corollary[Forcing k pigeons into one hole]{#pigeonhole-threshold}
-To *guarantee* at least $k$ pigeons in some one hole you need at least
-
-$$(k-1)\times m + 1$$
-
-pigeons.
+:::theorem[Generalised pigeonhole principle]{#gen-pigeonhole}
+If $N$ objects are placed into $n$ boxes, then some box contains at least $\left\lceil N/n \right\rceil$ objects.
 :::
 
 :::proof
-The worst case spreads $k-1$ into each of the $m$ holes ($(k-1)m$ pigeons, no hole yet at $k$), and one more pigeon then forces some hole up to $k$.
+Suppose every box held at most $\lceil N/n \rceil - 1$ objects. Summing over the boxes as in the theorem *Pigeonhole principle*,
+
+$$N \le n\left(\left\lceil \frac{N}{n} \right\rceil - 1\right) < n\left(\left(\frac{N}{n} + 1\right) - 1\right) = N,$$
+
+using the bound $\lceil x \rceil < x + 1$. This gives $N < N$, a contradiction.
 :::
 
-It is an "existence proof" tool: you prove something must exist without constructing it.
-
-:::intuition
-With only 12 months, you need 13 people to guarantee at least two share a birth month — you don't need to look at names, pure counting forces it.
-
-Grabbing socks in the dark: with only 2 colors in the drawer, any 3 socks you pull must include a matching pair — 3 socks into 2 color-boxes leaves no way to keep them all different.
-:::
-
-### Worked Examples
-
-:::example[Guarantee at least 3 in one hole]
-There are $m = 4$ holes. How many pigeons force some hole to hold at least $k = 3$?
+:::example[Shared birth months]
+A lecture hall holds $100$ students. What is the largest $m$ for which you can guarantee that $m$ of them share a birth month?
 :::
 
 :::solution
-- Worst case: put $k - 1 = 2$ pigeons in every hole. That is $2 \times 4 = 8$ pigeons, and no hole has reached 3 yet.
-- One more pigeon (the 9th) must land in some already-full-of-2 hole, pushing it to 3.
-- Answer: $(k-1)m + 1 = 2\times 4 + 1 = 9$ pigeons. (Note this is the *guaranteed* threshold; with 8 or fewer it is possible to avoid any triple.)
-:::
-
-:::example[Guarantee a shared birthday (simplified)]
-Ignoring leap years there are $365$ possible birthdays (the "holes"). How many people guarantee a shared birthday?
-:::
-
-:::solution
-- To guarantee two people share a birthday, treat people as pigeons and days as holes with $m = 365$, $k = 2$: need $(2-1)\times 365 + 1 = 366$ people. Worst case, the first 365 all have distinct days; the 366th must collide.
-- To guarantee at least $3$ people share some one day ($k = 3$): need $(3-1)\times 365 + 1 = 730 + 1 = 731$ people.
+1. Take the students as objects and the $12$ months as boxes.
+2. The theorem *Generalised pigeonhole principle* gives a month shared by at least $\lceil 100/12 \rceil = \lceil 8.33 \rceil = 9$ students.
+3. No better guarantee is possible: four months with $9$ students and eight with $8$ totals $36 + 64 = 100$ with no month exceeding $9$. So $m = 9$.
 :::
 
 :::pitfall
-This is *guaranteeing* a collision with certainty — a very different question from the famous "birthday problem," which only asks when a collision becomes more likely than not (that happens at just 23 people).
+The principle guarantees existence, never location. It says *some* month is shared by nine students; it does not say which, and it gives no way to find it short of looking. This is the price of an argument that never examines the objects.
 :::
 
-:::theorem[Friends and strangers]{#ramsey-3-3}
-In any group of 6 people, there are always either 3 who are mutual friends or 3 who are mutual strangers ($R(3,3) = 6$).
+The next two results are the reason the principle is worth a name. In each, the difficulty is entirely in inventing the boxes.
+
+:::proposition[Two people with the same number of friends]{#party}
+At any gathering of $n \ge 2$ people, where friendship is mutual and nobody is their own friend, two people have exactly the same number of friends present.
 :::
 
 :::proof
-Sketch: fix one person $P$; among the other 5, each is either a friend or a stranger of $P$, so by pigeonhole ($5$ people into $2$ categories) at least $\lceil 5/2 \rceil = 3$ fall in the same category — say 3 friends of $P$. If any two of those 3 are friends of each other, they plus $P$ form 3 mutual friends; if none of them are, those 3 are mutual strangers. Either way we get a monochromatic triangle.
+Assign to each person the number of friends they have at the gathering. Each such number lies in $\{0, 1, \dots, n-1\}$, which is $n$ possible values for $n$ people — not yet a pigeonhole.
+
+But the values $0$ and $n-1$ cannot both occur. A person with $n-1$ friends is a friend of everybody else present, so nobody present has $0$ friends; conversely a person with $0$ friends is nobody's friend, so nobody has $n-1$. Hence the friend counts actually lie in one of the two sets $\{0, 1, \dots, n-2\}$ or $\{1, 2, \dots, n-1\}$, each of size $n-1$.
+
+Now $n$ people are assigned values from a set of $n-1$ values, so the theorem *Pigeonhole principle* gives two people with the same count.
+:::
+
+:::proposition[Coprime pairs among n+1 integers]{#coprime-pair}
+Let $n \ge 1$ and choose any $n+1$ distinct integers from $\{1, 2, \dots, 2n\}$. Then two of the chosen integers are coprime.
+:::
+
+:::proof
+Partition $\{1, \dots, 2n\}$ into the $n$ consecutive pairs
+
+$$\{1,2\},\ \{3,4\},\ \{5,6\},\ \dots,\ \{2n-1, 2n\},$$
+
+and take these as the boxes, placing each chosen integer into the box containing it. With $n+1$ chosen integers and $n$ boxes, the theorem *Pigeonhole principle* puts two chosen integers in the same box.
+
+Two integers in the same box are consecutive, say $m$ and $m+1$. Any common divisor $d$ of $m$ and $m+1$ divides their difference $(m+1) - m = 1$, so $d = 1$ and the two are coprime.
+:::
+
+:::remark
+The same $\{1, \dots, 2n\}$ set with $n+1$ choices yields a second gem by a different choice of box: write each chosen integer as $2^a q$ with $q$ odd. There are only $n$ odd numbers available in $\{1, \dots, 2n\}$, so two chosen integers share the same odd part $q$, say $2^a q$ and $2^b q$ with $a < b$ — and then the first divides the second. Both statements are sharp: the set $\{2, 4, 6, \dots, 2n\}$ of size $n$ contains no coprime pair, so $n+1$ choices really are needed.
+:::
+
+:::example[Sock drawer and a stronger guarantee]
+A drawer holds socks of $4$ colours, mixed at random in the dark. How many socks must be drawn to guarantee a matching pair? To guarantee three of one colour?
+:::
+
+:::solution
+1. Four socks might be four different colours, so four is not enough; with $5$ socks and $4$ colours the theorem *Pigeonhole principle* forces a repeated colour. The answer is $5$.
+2. For three of one colour, $8$ socks might be two of each colour. With $N = 9$ the theorem *Generalised pigeonhole principle* gives a colour used at least $\lceil 9/4 \rceil = 3$ times. The answer is $9$.
+3. The pattern: to force $m$ of one of $c$ types, draw $c(m-1) + 1$.
 :::
 
 ## Inclusion-Exclusion Principle
 
 <!-- section: inclusion -->
 
-The inclusion-exclusion principle gives the exact count for the union of sets when there are overlaps.
+The theorem *Sum rule* needs disjointness. When the sets overlap, adding their sizes counts each overlap more than once, and inclusion–exclusion is the exact correction: add the sets, subtract the pairwise intersections, add back the triples, and so on in alternating signs.
 
-:::theorem[Inclusion-exclusion principle]{#inclusion-exclusion}
-For two sets,
+:::theorem[Inclusion-exclusion for two sets]{#ie-two}
+For finite sets $A$ and $B$,
 
-$$|A \cup B| = |A| + |B| - |A \cap B|,$$
-
-and for three,
-
-$$|A \cup B \cup C| = |A| + |B| + |C| - |A\cap B| - |A\cap C| - |B\cap C| + |A\cap B\cap C|.$$
-
-In general, alternate signs: add singles, subtract pairwise intersections, add triple, subtract quadruples, etc.
+$$|A \cup B| = |A| + |B| - |A \cap B|.$$
 :::
 
-It is derived by counting how many times each element is overcounted in the naive sum.
+:::proof
+Split $A \cup B$ into three pairwise disjoint pieces: $A \setminus B$, $B \setminus A$, and $A \cap B$. Every element of the union lies in exactly one of them, according to whether it belongs to $A$ only, to $B$ only, or to both, so the theorem *Sum rule* gives
+
+$$|A \cup B| = |A \setminus B| + |B \setminus A| + |A \cap B|.$$
+
+Also $A$ is the disjoint union of $A \setminus B$ and $A \cap B$, so $|A \setminus B| = |A| - |A \cap B|$, and likewise $|B \setminus A| = |B| - |A \cap B|$. Substituting,
+
+$$|A \cup B| = \big(|A| - |A \cap B|\big) + \big(|B| - |A \cap B|\big) + |A \cap B| = |A| + |B| - |A \cap B|.$$
+:::
+
+:::figure[Two overlapping sets. Adding $|A| = 47$ and $|B| = 40$ counts the $12$ elements of the overlap twice, so one copy is subtracted.]{#fig-venn}
+{
+  "type": "plot",
+  "x": [-4.2, 4.6], "y": [-2.9, 2.9],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "path", "points": [[1.0,0.0],[0.983,0.261],[0.932,0.518],[0.848,0.765],[0.732,1.0],[0.587,1.218],[0.414,1.414],[0.218,1.587],[0.0,1.732],[-0.235,1.848],[-0.482,1.932],[-0.739,1.983],[-1.0,2.0],[-1.261,1.983],[-1.518,1.932],[-1.765,1.848],[-2.0,1.732],[-2.218,1.587],[-2.414,1.414],[-2.587,1.218],[-2.732,1.0],[-2.848,0.765],[-2.932,0.518],[-2.983,0.261],[-3.0,0.0],[-2.983,-0.261],[-2.932,-0.518],[-2.848,-0.765],[-2.732,-1.0],[-2.587,-1.218],[-2.414,-1.414],[-2.218,-1.587],[-2.0,-1.732],[-1.765,-1.848],[-1.518,-1.932],[-1.261,-1.983],[-1.0,-2.0],[-0.739,-1.983],[-0.482,-1.932],[-0.235,-1.848],[0.0,-1.732],[0.218,-1.587],[0.414,-1.414],[0.587,-1.218],[0.732,-1.0],[0.848,-0.765],[0.932,-0.518],[0.983,-0.261],[1.0,0.0]] },
+    { "kind": "path", "tone": "alt", "points": [[3.0,0.0],[2.983,0.261],[2.932,0.518],[2.848,0.765],[2.732,1.0],[2.587,1.218],[2.414,1.414],[2.218,1.587],[2.0,1.732],[1.765,1.848],[1.518,1.932],[1.261,1.983],[1.0,2.0],[0.739,1.983],[0.482,1.932],[0.235,1.848],[0.0,1.732],[-0.218,1.587],[-0.414,1.414],[-0.587,1.218],[-0.732,1.0],[-0.848,0.765],[-0.932,0.518],[-0.983,0.261],[-1.0,0.0],[-0.983,-0.261],[-0.932,-0.518],[-0.848,-0.765],[-0.732,-1.0],[-0.587,-1.218],[-0.414,-1.414],[-0.218,-1.587],[0.0,-1.732],[0.235,-1.848],[0.482,-1.932],[0.739,-1.983],[1.0,-2.0],[1.261,-1.983],[1.518,-1.932],[1.765,-1.848],[2.0,-1.732],[2.218,-1.587],[2.414,-1.414],[2.587,-1.218],[2.732,-1.0],[2.848,-0.765],[2.932,-0.518],[2.983,-0.261],[3.0,0.0]] },
+    { "kind": "text", "at": [-2.1, 0.0], "text": "35" },
+    { "kind": "text", "at": [0.0, 0.0], "text": "12" },
+    { "kind": "text", "at": [2.1, 0.0], "text": "28" },
+    { "kind": "text", "at": [-3.2, 1.6], "text": "A" },
+    { "kind": "text", "at": [3.2, 1.6], "text": "B" },
+    { "kind": "text", "at": [0.0, -2.5], "text": "35 + 12 + 28 = 75" }
+  ]
+}
+:::
+
+:::example[Divisible by 3 or by 5]
+How many integers in $\{1, 2, \dots, 1000\}$ are divisible by $3$ or by $5$?
+:::
+
+:::solution
+1. Let $A$ be the multiples of $3$ and $B$ the multiples of $5$. Then $|A| = \lfloor 1000/3 \rfloor = 333$ and $|B| = \lfloor 1000/5 \rfloor = 200$.
+2. An integer lies in $A \cap B$ exactly when it is divisible by $15$, so $|A \cap B| = \lfloor 1000/15 \rfloor = 66$.
+3. By the theorem *Inclusion-exclusion for two sets*, $|A \cup B| = 333 + 200 - 66 = 467$.
+:::
+
+:::theorem[Inclusion-exclusion for three sets]{#ie-three}
+For finite sets $A$, $B$, $C$,
+
+$$|A \cup B \cup C| = |A| + |B| + |C| - |A \cap B| - |A \cap C| - |B \cap C| + |A \cap B \cap C|.$$
+:::
+
+:::proof
+Apply the theorem *Inclusion-exclusion for two sets* to the two sets $A \cup B$ and $C$:
+
+$$|A \cup B \cup C| = |A \cup B| + |C| - |(A \cup B) \cap C|.$$
+
+Expand the first term by the same theorem: $|A \cup B| = |A| + |B| - |A \cap B|$.
+
+For the last term, distributivity gives $(A \cup B) \cap C = (A \cap C) \cup (B \cap C)$, and applying the two-set theorem once more,
+
+$$|(A \cup B) \cap C| = |A \cap C| + |B \cap C| - |(A \cap C) \cap (B \cap C)| = |A \cap C| + |B \cap C| - |A \cap B \cap C|.$$
+
+Substituting both expansions and collecting signs gives the stated formula.
+:::
+
+:::example[Three-language survey]
+Of $200$ students, $120$ know Python, $90$ know Java, $70$ know C; $50$ know Python and Java, $40$ Python and C, $30$ Java and C, and $20$ know all three. How many know none of the three?
+:::
+
+:::solution
+1. By the theorem *Inclusion-exclusion for three sets*, the number knowing at least one is
+
+$$120 + 90 + 70 - 50 - 40 - 30 + 20 = 180.$$
+
+2. The remaining students know none, so the answer is $200 - 180 = 20$.
+3. Sanity check on the innermost regions: all three, $20$; exactly Python and Java, $50 - 20 = 30$; exactly Python and C, $20$; exactly Java and C, $10$; Python only, $120 - 30 - 20 - 20 = 50$; Java only, $90 - 30 - 10 - 20 = 30$; C only, $70 - 20 - 10 - 20 = 20$. These seven disjoint regions total $180$.
+:::
+
+:::theorem[Inclusion-exclusion, general form]{#ie-general}
+For finite sets $A_1, \dots, A_n$,
+
+$$\left| \bigcup_{i=1}^{n} A_i \right| = \sum_{\varnothing \neq J \subseteq [n]} (-1)^{|J|+1} \left| \bigcap_{i \in J} A_i \right|.$$
+:::
+
+:::proof
+Both sides count elements of the union, so it suffices to show that each element $x$ of the union contributes the same amount to each side.
+
+Fix $x \in \bigcup_i A_i$ and let $m \ge 1$ be the number of indices $i$ with $x \in A_i$; write $M \subseteq [n]$ for that set of indices, so $|M| = m$. On the left, $x$ contributes exactly $1$.
+
+On the right, $x$ is counted by the term for $J$ precisely when $x \in \bigcap_{i \in J} A_i$, which happens exactly when $J \subseteq M$. The non-empty subsets $J \subseteq M$ of size $j$ number $\binom{m}{j}$ by the definition *Binomial coefficient*, and each contributes $(-1)^{j+1}$. So the total contribution of $x$ to the right side is
+
+$$\sum_{j=1}^{m} (-1)^{j+1}\binom{m}{j} = -\sum_{j=1}^{m} (-1)^{j}\binom{m}{j} = -\left(\sum_{j=0}^{m} (-1)^{j}\binom{m}{j} - 1\right) = -(0 - 1) = 1,$$
+
+where the alternating sum vanishes by the corollary *Row sums*, valid since $m \ge 1$.
+
+Every element of the union therefore contributes $1$ to each side, and elements outside the union contribute $0$ to both, so the two sides are equal.
+:::
+
+:::corollary[Counting derangements]{#derangements}
+Let $D_n$ be the number of permutations of $[n]$ with no fixed point — no element mapped to itself. Then
+
+$$D_n = n! \sum_{j=0}^{n} \frac{(-1)^j}{j!}.$$
+:::
+
+:::proof
+Let $A_i$ be the set of permutations fixing $i$. A permutation has *some* fixed point exactly when it lies in $A_1 \cup \cdots \cup A_n$, so $D_n = n! - |A_1 \cup \cdots \cup A_n|$.
+
+For $J \subseteq [n]$ with $|J| = j \ge 1$, a permutation in $\bigcap_{i \in J} A_i$ fixes every element of $J$ and permutes the remaining $n - j$ elements arbitrarily, so $\left|\bigcap_{i \in J} A_i\right| = (n-j)!$ by the corollary *Permutations of an $n$-set*. There are $\binom{n}{j}$ such $J$, so the theorem *Inclusion-exclusion, general form* gives
+
+$$|A_1 \cup \cdots \cup A_n| = \sum_{j=1}^{n} (-1)^{j+1}\binom{n}{j}(n-j)! = \sum_{j=1}^{n} (-1)^{j+1}\frac{n!}{j!}.$$
+
+Therefore
+
+$$D_n = n! - \sum_{j=1}^{n}(-1)^{j+1}\frac{n!}{j!} = n! + \sum_{j=1}^{n}(-1)^{j}\frac{n!}{j!} = n!\sum_{j=0}^{n}\frac{(-1)^j}{j!},$$
+
+the last step absorbing $n! = n!\cdot\frac{(-1)^0}{0!}$ into the sum.
+:::
 
 :::intuition
-When you add "people who like cats" + "people who like dogs", the cat-dog lovers were counted twice, so subtract them once to correct.
-
-For three clubs, the triple-overlap people were added 3 times then subtracted 3 times → net 0, but they belong in the union once, so add them back at the end.
+The sum is the truncated series for $e^{-1}$, so $D_n/n! \to 1/e \approx 0.3679$ very fast — already correct to four decimals at $n = 7$. Shuffle a deck of any size and hand the cards back to their owners at random: the chance that nobody gets their own card is essentially $37\%$, independent of the number of people.
 :::
 
-### Worked Examples
-
-:::example[Survey problem (two sets)]
-Among 30 students, 18 read novel A, 12 read novel B, and 5 read both. How many read at least one, and how many read neither?
+:::example[A derangement count]
+Five students hand in five assignments, which are then returned at random, one to each student. In how many ways does nobody get their own back?
 :::
 
 :::solution
-- At least one: $|A \cup B| = |A| + |B| - |A \cap B| = 18 + 12 - 5 = 25$. We subtract the 5 "both" readers once because they were counted inside the 18 *and* inside the 12.
-- Neither: everyone else, $30 - 25 = 5$.
-- Sanity check by parts: only A $= 18 - 5 = 13$, only B $= 12 - 5 = 7$, both $= 5$, neither $= 5$; total $13 + 7 + 5 + 5 = 30$. ✓
+1. This is $D_5$. By the corollary *Counting derangements*, $D_5 = 5!\left(1 - 1 + \tfrac{1}{2} - \tfrac{1}{6} + \tfrac{1}{24} - \tfrac{1}{120}\right)$.
+2. The bracket is $\frac{60 - 20 + 5 - 1}{120} = \frac{44}{120}$, so $D_5 = 120 \cdot \frac{44}{120} = 44$.
+3. So $44$ of the $120$ possible returns are deranged, a fraction $0.3667$, already close to $1/e$.
 :::
 
-:::example[Three sets]
-Given $|A| = 20$, $|B| = 15$, $|C| = 10$; $|A \cap B| = 5$, $|A \cap C| = 4$, $|B \cap C| = 3$; and $|A \cap B \cap C| = 2$, find $|A \cup B \cup C|$.
+:::example[Counting surjections]
+How many functions from a $5$-element set onto a $3$-element set are surjective?
 :::
 
 :::solution
-- Add the singles: $20 + 15 + 10 = 45$.
-- Subtract the pairwise overlaps (each was counted twice): $45 - (5 + 4 + 3) = 45 - 12 = 33$.
-- Add back the triple overlap: elements in all three sets were added 3 times in the first step and subtracted 3 times in the second, netting to 0, so we must add them once: $33 + 2 = 35$.
-- Result: $|A \cup B \cup C| = 35$.
+1. Let $A_i$ be the functions missing the $i$-th target value. A function fails to be surjective exactly when it lies in $A_1 \cup A_2 \cup A_3$.
+2. A function avoiding a fixed set of $j$ targets maps into the remaining $3-j$ values, so by the theorem *Counting functions* there are $(3-j)^5$ of them, and there are $\binom{3}{j}$ such index sets.
+3. The theorem *Inclusion-exclusion, general form* gives $|A_1 \cup A_2 \cup A_3| = 3 \cdot 2^5 - 3 \cdot 1^5 + 1 \cdot 0^5 = 96 - 3 = 93$.
+4. Total functions: $3^5 = 243$. Surjections: $243 - 93 = 150$.
+:::
 
-Sanity check: the union cannot exceed the sum of the parts, and indeed $35 \le 45$; nor can it be smaller than the largest single set, and $35 \ge 20$. ✓
+:::remark
+The same computation in general gives the number of surjections from an $n$-set onto a $k$-set as $\sum_{j=0}^{k}(-1)^j \binom{k}{j}(k-j)^n$, and dividing by $k!$ gives the Stirling number of the second kind — the count of ways to partition an $n$-set into $k$ unlabelled non-empty blocks. Those numbers, and the generating functions that tame them, belong to the subject *Combinatorics*.
 :::
 
 ## Common Mistakes
 
-- Using n! for permutations when items are not distinct — always divide by the repeats.
-- Confusing P(n,k) (order matters) with C(n,k) (order irrelevant). Ask: "does the arrangement/assignment matter?"
-- Forgetting that $0! = 1$ (empty product) and $\binom{n}{0} = 1$.
-- Applying pigeonhole without the "+1" for the guarantee (the worst-case +1).
-- In inclusion-exclusion, messing up the sign pattern or forgetting the triple intersections get added back.
-- Computing $\binom{n}{k}$ with $k > n$ or $k < 0$ (taken as $0$ by convention, not a positive count).
-- Assuming all outcomes equally likely when using counting for probability — only true in uniform spaces.
-- For circular arrangements, forgetting to divide by n (or fix one position) and overcounting rotations.
+- **Applying the sum rule to overlapping cases.** "Divisible by $3$ or by $5$" is not $333 + 200$. If the cases can both happen, either make them disjoint by conditioning, or use the theorem *Inclusion-exclusion for two sets*.
+- **Applying the product rule when the option count varies.** If the number of choices at step two depends on what happened at step one, split into cases first and multiply inside each case. A product of averages is not a count.
+- **Confusing ordered with unordered.** "President, secretary, treasurer" is $P(12,3)$; "three-member committee" is $\binom{12}{3}$. The tell is whether swapping two chosen items gives a different outcome.
+- **Dividing away a non-uniform overcount.** Dividing by $k!$ is legitimate only when *every* outcome was produced exactly $k!$ times. When different outcomes are overcounted different numbers of times, the division is meaningless — and a non-integer answer is the symptom.
+- **Confusing $n^k$ with $\binom{n+k-1}{k}$.** Distinct objects into distinct boxes is the theorem *Counting functions*; identical objects into distinct boxes is the theorem *Combinations with repetition (stars and bars)*. Ask whether swapping two objects changes anything.
+- **Forgetting the complement trick.** "At least one" almost always means *total minus none*. Summing over exactly one, exactly two, … is correct but invites arithmetic slips.
+- **Double-counting in stars and bars.** The bars are indistinguishable from one another and so are the stars; what is distinguishable is the *positions*. If you find yourself multiplying by $(n-1)!$ to order the bars, you have left the bijection.
+- **Reading the pigeonhole principle as a construction.** It proves a box with two objects exists; it never says which box, and no amount of restating it will produce one.
+- **Off-by-one in pigeonhole thresholds.** To force $m$ objects in one of $c$ boxes you need $c(m-1)+1$ objects, not $cm$. Always check the extremal arrangement that just fails.
+- **Misusing $0! = 1$.** It is not a special case to be worked around; formulas like $\binom{n}{0} = 1$ and $P(n,n) = n!/0!$ depend on it. Writing $0! = 0$ makes $\binom{n}{n}$ undefined.

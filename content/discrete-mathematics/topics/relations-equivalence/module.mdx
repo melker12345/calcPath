@@ -4,301 +4,887 @@ title: Relations and Equivalence
 
 # Relations and Equivalence
 
-While sets collect objects, relations describe how objects stand to one another. The most important relations are those that behave like "equality" (equivalence relations) and those that behave like "less than or equal" (partial and total orders). These concepts underlie modular arithmetic, database normalization, sorting, topological sorting in compilers, and the ordering of tasks in project management.
+A set knows only which objects belong to it. It has nothing to say about how those objects stand to one another — which files depend on which, which records share a key, which version supersedes which. That information is carried by a *relation*, and a relation is a startlingly cheap object: just a set of ordered pairs. Everything in this chapter is extracted from that one definition by imposing conditions on the pairs.
 
-A relation is simply a set of ordered pairs, yet the properties we impose on it — reflexivity, symmetry, transitivity, antisymmetry — turn it into a powerful organizational tool.
+Two families of conditions matter above all others. Impose reflexivity, symmetry and transitivity and you get an **equivalence relation**, which behaves like equality: it declares certain objects interchangeable for the purpose at hand. Impose reflexivity, antisymmetry and transitivity and you get a **partial order**, which behaves like $\le$: it ranks objects, but tolerates pairs it refuses to rank. These two are not arbitrary picks from the sixteen-odd combinations available. Each is the exact structure that answers a question that keeps recurring: *when may I treat two things as the same?* and *when must one thing come before another?*
 
-## Binary Relations
+The centrepiece of the chapter is the theorem that equivalence relations on a set are the *same data* as partitions of it. Not merely that one produces the other — that the correspondence is a bijection, so that every fact about equivalence relations translates into a fact about partitions and back. It is the first place in a mathematics course where two definitions that look nothing alike turn out to be two descriptions of one object, and the proof is worth the care it takes.
+
+For orders, the payoff is algorithmic. Every finite partially ordered set can be flattened into a linear list that respects all the constraints it did impose — that is *topological sorting*, which is what a build system does when it decides the order to compile your files, what a package manager does when it installs dependencies, and what a spreadsheet does when it decides which cells to recalculate. We will prove that it is always possible, and the proof is essentially the algorithm.
+
+Throughout, $A$ denotes a set, and $|A| = n$ when $A$ is finite. We write $\mathbb{Z}$ for the integers and $[n]$ for $\{1, 2, \dots, n\}$.
+
+## Relations, their representations, and composition
 
 <!-- section: relations -->
 
+Start with the definition, which is deliberately thin. A relation is not required to be meaningful, computable, or describable by a rule; it is a set of pairs and nothing else. The thinness is the point, because it means the theorems we prove apply to every relation, including the ones nobody would think to write down.
+
 :::definition[Binary relation]{#binary-relation}
-A **binary relation** $R$ on a set $A$ is a subset of the Cartesian product $A \times A$ (the set of all ordered pairs $(a,b)$ with $a,b \in A$). We write $a\,R\,b$ (or $(a,b) \in R$) to mean that $a$ is related to $b$.
+Let $A$ and $B$ be sets. A **binary relation from $A$ to $B$** is a subset $R \subseteq A \times B$ of the Cartesian product. We write $a \mathrel{R} b$ as shorthand for $(a, b) \in R$, and $a \not\mathrel{R} b$ when $(a,b) \notin R$.
+
+A **relation on $A$** is a relation from $A$ to $A$, that is, a subset of $A \times A$.
 :::
 
-"Binary" means it relates two things at a time; because both components come from the same set $A$, we can draw the whole relation on a single picture of $A$.
+Unless stated otherwise every relation in this chapter is a relation *on* a single set, because the properties we care about — reflexivity, transitivity and the rest — compare the two coordinates and so need them drawn from the same place.
 
-:::definition[Domain and range of a relation]{#relation-domain-range}
-- The **domain** of $R$ is the set of all first components that actually appear in some pair of $R$.
-- The **range** of $R$ is the set of all second components that appear.
+:::intuition
+Picture the elements of $A$ as dots. A relation is a choice, for each ordered pair of dots, of whether to draw an arrow from the first to the second. A dot may point at itself. The arrows $a \to b$ and $b \to a$ are different choices and may be made independently.
 :::
 
-Relations can be represented as:
-- Lists of pairs
-- Directed graphs (nodes = elements of $A$, an arrow $a \to b$ exactly when $a\,R\,b$)
-- $0$-$1$ matrices (rows and columns indexed by $A$, with a $1$ at position $(i,j)$ iff $i\,R\,j$)
+:::definition[Domain, range, inverse, identity]{#relation-derived}
+Let $R$ be a relation on $A$.
+
+- $\operatorname{dom}(R) = \{a \in A : (a,b) \in R \text{ for some } b\}$, the **domain**.
+- $\operatorname{ran}(R) = \{b \in A : (a,b) \in R \text{ for some } a\}$, the **range**.
+- $R^{-1} = \{(b,a) : (a,b) \in R\}$, the **inverse** (or converse) relation.
+- $\Delta_A = \{(a,a) : a \in A\}$, the **identity** or **diagonal** relation on $A$.
+:::
+
+The diagonal $\Delta_A$ is the relation of literal equality, and it will keep reappearing: reflexivity is the statement $\Delta_A \subseteq R$, and antisymmetry is the statement $R \cap R^{-1} \subseteq \Delta_A$. Translating conditions into set containments like these is not a stylistic preference; it is what makes them provable in one line instead of three.
 
 :::proposition[How many relations a set carries]{#counting-relations}
-A set with $n$ elements has
+A set $A$ with $|A| = n$ carries exactly
 
-$$2^{(n^2)}$$
+$$2^{n^2}$$
 
-possible relations on it — for example, $n = 3$ gives $2^9 = 512$.
+relations.
 :::
 
 :::proof
-A relation is *any* subset of $A \times A$, and $|A \times A| = |A|^2 = n^2$. The relations on $A$ are therefore exactly the subsets of an $n^2$-element set, and there are $2^{(n^2)}$ of those.
+A relation on $A$ is by definition an arbitrary subset of $A \times A$, and no condition restricts which subsets qualify. Since $|A \times A| = n \cdot n = n^2$, and a set of size $m$ has exactly $2^m$ subsets, the number of relations is $2^{n^2}$.
 :::
 
-Examples: "is parent of", "is greater than", "divides", "is congruent modulo $m$".
+For $n = 3$ that is $2^9 = 512$, and for $n = 4$ it is $2^{16} = 65536$. The count grows so fast that exhaustive search over relations is hopeless past $n = 5$; this is why we reason about relations by their properties rather than by enumerating them.
 
-:::intuition
-A relation is a directed "friendship" or "arrow" between members of the same club. Some people point to themselves (loops), some point one way, some both ways.
+### Two representations
 
-Not every pair needs an arrow; the relation picks which connections exist.
+A relation on a finite set can be written down in two ways that are genuinely useful, as opposed to merely listing the pairs.
+
+:::definition[Matrix of a relation]{#relation-matrix}
+Let $A = \{a_1, \dots, a_n\}$ with a fixed ordering of its elements, and let $R$ be a relation on $A$. The **matrix of $R$** is the $n \times n$ array $M_R$ with entries in $\{0,1\}$ given by
+
+$$(M_R)_{ij} = \begin{cases} 1 & \text{if } (a_i, a_j) \in R, \\ 0 & \text{otherwise.}\end{cases}$$
 :::
 
-### Worked Examples
+:::definition[Digraph of a relation]{#relation-digraph}
+The **digraph** (directed graph) of $R$ has one vertex for each element of $A$ and a directed edge from $a$ to $b$ exactly when $(a,b) \in R$. An edge from a vertex to itself is a **loop**.
+:::
 
-:::example
-Matrix representation of a relation.
+The matrix is what a computer stores; the digraph is what a human draws. They carry identical information, and different properties are easy to see in each. Reflexivity is a glance at the diagonal of the matrix; transitivity is a statement about paths in the digraph.
+
+:::example[Both representations of one relation]
+Let $A = \{1,2,3\}$ and $R = \{(1,1),(1,2),(2,1),(3,3)\}$. Write the matrix of $R$, list $\operatorname{dom}(R)$ and $\operatorname{ran}(R)$, and describe the digraph.
 :::
 
 :::solution
-Let $A = \{1,2,3\}$ and $R = \{(1,1),(1,2),(2,1),(3,3)\}$. We build the $3 \times 3$ matrix $M$ where the entry in row $i$, column $j$ is $1$ when $(i,j) \in R$ and $0$ otherwise.
+1. Row $i$ of $M_R$ records which elements $i$ points at. Row $1$: $(1,1)$ and $(1,2)$ are present, $(1,3)$ is not, giving $1\,1\,0$. Row $2$: only $(2,1)$, giving $1\,0\,0$. Row $3$: only $(3,3)$, giving $0\,0\,1$. So
 
-Row 1: $(1,1)\in R$ and $(1,2)\in R$, but $(1,3)\notin R$ → $1\ 1\ 0$.
-Row 2: $(2,1)\in R$, but $(2,2)\notin R$ and $(2,3)\notin R$ → $1\ 0\ 0$.
-Row 3: $(3,1),(3,2)\notin R$, but $(3,3)\in R$ → $0\ 0\ 1$.
+$$M_R = \begin{pmatrix} 1 & 1 & 0 \\ 1 & 0 & 0 \\ 0 & 0 & 1\end{pmatrix}.$$
 
-$$M = \begin{pmatrix} 1 & 1 & 0 \\ 1 & 0 & 0 \\ 0 & 0 & 1 \end{pmatrix}$$
+2. The first coordinates occurring are $1, 2, 3$, so $\operatorname{dom}(R) = \{1,2,3\}$. The second coordinates occurring are $1, 2, 3$ as well, so $\operatorname{ran}(R) = \{1,2,3\}$.
+3. The digraph has loops at $1$ and $3$, no loop at $2$, and a two-way pair of edges between $1$ and $2$. Vertex $3$ is isolated apart from its loop.
 
-**Sanity check:** count the $1$s: there are $4$ of them ($M_{11}, M_{12}, M_{21}, M_{33}$), which matches $|R| = 4$. The diagonal is $1,0,1$, so this relation has self-loops on $1$ and $3$ but not on $2$ — it is not reflexive on all of $A$.
+The number of $1$s in the matrix is $4 = |R|$, which is the check to run every time: $|R|$ counts entries, not rows.
 :::
 
-## Properties of Relations
+### Composition and powers
+
+Composition is where relations start to do work. If $R$ records "imports directly" and we want "imports, possibly through a chain", we need to follow two arrows and then many.
+
+:::definition[Composition of relations]{#relation-composition}
+Let $R$ and $S$ be relations on $A$. Their **composition** is
+
+$$S \circ R = \{(a,c) \in A \times A : (a,b) \in R \text{ and } (b,c) \in S \text{ for some } b \in A\}.$$
+
+In words: $a$ reaches $c$ by first taking an $R$-step and then an $S$-step.
+:::
+
+:::notation
+The order in $S \circ R$ follows the convention for functions, where $(g \circ f)(x) = g(f(x))$ applies $f$ first. Some books write $R \, ; S$ for the same thing with the steps in reading order. We will mostly compose a relation with itself, where the question does not arise.
+:::
+
+:::definition[Powers of a relation]{#relation-powers}
+For a relation $R$ on $A$ define $R^1 = R$ and $R^{k+1} = R \circ R^{k}$ for $k \ge 1$.
+:::
+
+Unwinding the definition, $(a,b) \in R^k$ exactly when there is a chain $a = x_0, x_1, \dots, x_k = b$ of elements of $A$ with $(x_{i-1}, x_i) \in R$ for each $i$ — that is, a walk of length exactly $k$ from $a$ to $b$ in the digraph of $R$. We record this because it is the fact every later proof about closures uses.
+
+:::lemma[Powers are walks]{#powers-are-walks}
+For every $k \ge 1$ and all $a, b \in A$, we have $(a,b) \in R^k$ if and only if there exist $x_0, x_1, \dots, x_k \in A$ with $x_0 = a$, $x_k = b$ and $(x_{i-1}, x_i) \in R$ for $i = 1, \dots, k$.
+:::
+
+:::proof
+Induct on $k$. For $k = 1$ the claim is that $(a,b) \in R$ if and only if there is a chain $a = x_0, x_1 = b$ with $(x_0,x_1) \in R$, which is a restatement.
+
+Suppose the claim holds for $k$. By definition $(a,b) \in R^{k+1} = R \circ R^k$ means there is some $c \in A$ with $(a,c) \in R^k$ and $(c,b) \in R$. By the induction hypothesis, $(a,c) \in R^k$ is equivalent to the existence of a walk $a = x_0, \dots, x_k = c$ of length $k$; appending $x_{k+1} = b$ using the edge $(c,b) \in R$ produces a walk of length $k+1$ from $a$ to $b$. Conversely, a walk $x_0, \dots, x_{k+1}$ from $a$ to $b$ splits at $x_k$: its initial segment is a walk of length $k$ from $a$ to $x_k$, so $(a,x_k) \in R^k$ by the induction hypothesis, and $(x_k, b) \in R$, so $(a,b) \in R \circ R^k$.
+:::
+
+Now the connection to linear algebra. Define the **Boolean product** of two $0$-$1$ matrices $M$ and $N$ of size $n \times n$ by
+
+$$(M \odot N)_{ij} = \bigvee_{k=1}^{n} \big( M_{ik} \wedge N_{kj} \big),$$
+
+where $\wedge$ is logical and ($1$ if both are $1$) and $\bigvee$ is logical or ($1$ if any term is $1$). This is the ordinary matrix product with $+$ replaced by "or" and $\times$ by "and"; equivalently, it is the ordinary product followed by replacing every nonzero entry with $1$.
+
+:::theorem[Composition is Boolean matrix product]{#composition-matrix}
+Let $R$ and $S$ be relations on a finite set $A$ with a fixed ordering of elements. Then
+
+$$M_{S \circ R} = M_R \odot M_S.$$
+
+Consequently $M_{R^k}$ is the $k$-fold Boolean power of $M_R$.
+:::
+
+:::proof
+Both sides are $0$-$1$ matrices, so it suffices to show they have a $1$ in the same positions. Fix $i$ and $j$.
+
+The entry $(M_{S \circ R})_{ij}$ is $1$ exactly when $(a_i, a_j) \in S \circ R$, which by the definition of composition holds exactly when there exists an index $k$ with $(a_i, a_k) \in R$ and $(a_k, a_j) \in S$.
+
+The entry $(M_R \odot M_S)_{ij}$ is $1$ exactly when the disjunction $\bigvee_k \big((M_R)_{ik} \wedge (M_S)_{kj}\big)$ is $1$, which holds exactly when there is some index $k$ for which both $(M_R)_{ik} = 1$ and $(M_S)_{kj} = 1$ — that is, some $k$ with $(a_i,a_k) \in R$ and $(a_k, a_j) \in S$.
+
+The two conditions are word for word the same, so the entries agree for every $i, j$. The statement about powers follows by induction on $k$, the inductive step being the case $S = R$, $R = R^{k}$ of what was just proved.
+:::
+
+:::remark
+This is why reachability in a graph on $n$ vertices can be computed with matrix multiplications rather than by an explicit search: $\log_2 n$ Boolean squarings of the adjacency matrix suffice to find all walks of length up to $n$. It is also why the same code that multiplies matrices of numbers computes transitive closures if you swap the two arithmetic operations.
+:::
+
+:::example[Composing a small relation with itself]
+Let $A = \{1,2,3,4\}$ and $R = \{(1,2),(2,3),(3,4)\}$. Compute $R^2$ and $R^3$, and say how many pairs $R^4$ has.
+:::
+
+:::solution
+1. By the lemma *Powers are walks*, $R^2$ consists of the pairs joined by a walk of length $2$. The walks are $1 \to 2 \to 3$ and $2 \to 3 \to 4$, so $R^2 = \{(1,3),(2,4)\}$.
+2. Walks of length $3$: only $1 \to 2 \to 3 \to 4$, so $R^3 = \{(1,4)\}$.
+3. A walk of length $4$ would need five distinct steps' worth of vertices in a chain that stops at $4$; since $R$ has no edge out of $4$, no walk of length $4$ exists and $R^4 = \emptyset$, which has $0$ pairs.
+
+Notice the sizes $3, 2, 1, 0$: each extra step costs one starting point, which is what a path-shaped relation does.
+:::
+
+## The five properties and their independence
 
 <!-- section: properties -->
 
-:::definition[Properties of a relation]{#relation-properties}
-The important properties, for a relation R on A, are:
+Five conditions on a relation account for almost everything that follows. Each is a single quantified sentence, and each has a one-line translation into the matrix and into the digraph.
 
-- **Reflexive**: for every a in A we have (a,a) in R. (Everyone relates to self; diagonal of matrix is all 1s.)
-- **Irreflexive**: ∀a, (a,a) ∉ R. (No self-loops.)
-- **Symmetric**: aRb ⇒ bRa. (Arrows come in both directions or none.)
-- **Antisymmetric**: aRb and bRa ⇒ a = b. (The only two-way arrows are self-loops.)
-- **Transitive**: aRb and bRc ⇒ aRc. (Arrows compose: if path of length 2 then direct arrow.)
-- **Total (connected)**: for all a ≠ b, either aRb or bRa (or both).
+:::definition[The five properties]{#relation-properties}
+Let $R$ be a relation on $A$. Then $R$ is
+
+- **reflexive** if $(a,a) \in R$ for every $a \in A$;
+- **irreflexive** if $(a,a) \notin R$ for every $a \in A$;
+- **symmetric** if $(a,b) \in R$ implies $(b,a) \in R$, for all $a, b \in A$;
+- **antisymmetric** if $(a,b) \in R$ and $(b,a) \in R$ together imply $a = b$, for all $a,b \in A$;
+- **transitive** if $(a,b) \in R$ and $(b,c) \in R$ together imply $(a,c) \in R$, for all $a,b,c \in A$.
+
+$R$ is **connex** (or total, or complete) if for all $a, b \in A$ at least one of $(a,b) \in R$ and $(b,a) \in R$ holds.
 :::
 
-These are independent in general; combinations produce the named classes of relations we care about.
-
-:::intuition
-Reflexive: "I am the same age as myself" — always true for equality-like things.
-
-Symmetric: "is a sibling of" — if Alice is sibling of Bob, Bob is sibling of Alice.
-
-Transitive: "is an ancestor of" — if A ancestor of B and B of C, then A of C.
-
-Antisymmetric: "is less than or equal" — if a ≤ b and b ≤ a then a must equal b.
+:::pitfall
+"Antisymmetric" is not the negation of "symmetric", and the two are not alternatives. The negation of symmetric is: *some* pair is related one way only. Antisymmetric is: *no* pair of distinct elements is related both ways. A relation can be both, and a relation can be neither — we prove exactly that below. Likewise "irreflexive" is not the negation of "reflexive": a relation with a loop at $a$ but not at $b$ is neither reflexive nor irreflexive.
 :::
 
-### Worked Examples
+:::proposition[The properties read off the matrix]{#properties-matrix}
+Let $R$ be a relation on the finite set $A = \{a_1, \dots, a_n\}$, with matrix $M = M_R$.
 
-:::example
-Checking all four properties on a small relation.
+1. $R$ is reflexive if and only if $M_{ii} = 1$ for all $i$; irreflexive if and only if $M_{ii} = 0$ for all $i$.
+2. $R$ is symmetric if and only if $M = M^{T}$.
+3. $R$ is antisymmetric if and only if $M_{ij} \wedge M_{ji} = 0$ for all $i \ne j$.
+4. $R$ is transitive if and only if $R \circ R \subseteq R$, equivalently $(M \odot M)_{ij} = 1$ implies $M_{ij} = 1$.
+:::
+
+:::proof
+Parts 1 to 3 are the definitions rewritten with $(M)_{ij} = 1 \iff (a_i,a_j) \in R$ substituted throughout. For 1, "$(a,a) \in R$ for all $a$" becomes "$M_{ii} = 1$ for all $i$". For 2, symmetry says $(a_i,a_j) \in R \iff (a_j,a_i) \in R$, that is $M_{ij} = M_{ji}$ for all $i,j$, which is exactly $M = M^{T}$. For 3, antisymmetry forbids $(a_i,a_j)$ and $(a_j,a_i)$ both lying in $R$ when $i \ne j$, that is, forbids $M_{ij} = M_{ji} = 1$.
+
+For 4, unfold the composition: $(a,c) \in R \circ R$ means there is $b$ with $(a,b) \in R$ and $(b,c) \in R$. So the containment $R \circ R \subseteq R$ says precisely that whenever such a $b$ exists, $(a,c) \in R$ — which is transitivity. The matrix form is then the theorem *Composition is Boolean matrix product* applied with $S = R$.
+:::
+
+Part 4 is the useful one. It replaces a statement with three quantified variables by a containment between two sets, and containments can be manipulated. Every proof of transitivity in the rest of the chapter can be run either way; we will pick whichever is shorter.
+
+:::proposition[Counting relations with a given property]{#counting-by-property}
+Let $|A| = n$. The number of relations on $A$ that are
+
+1. reflexive is $2^{n^2 - n}$;
+2. symmetric is $2^{n(n+1)/2}$;
+3. both reflexive and symmetric is $2^{n(n-1)/2}$.
+:::
+
+:::proof
+Each part counts matrices with a constraint, using the fact that free entries may be filled in independently.
+
+1. Reflexivity fixes the $n$ diagonal entries to $1$ and constrains nothing else. The remaining $n^2 - n$ off-diagonal entries are free, giving $2^{n^2-n}$ choices.
+2. Symmetry means the matrix is determined by its entries on and above the diagonal, of which there are $n + (n-1) + \dots + 1 = n(n+1)/2$, and any assignment to those extends uniquely to a symmetric matrix. Hence $2^{n(n+1)/2}$.
+3. Imposing both, the diagonal is forced and the strictly-upper entries — there are $n(n-1)/2$ of them — are free and determine the strictly-lower ones. Hence $2^{n(n-1)/2}$.
+:::
+
+:::example[Counting on a four-element set]
+With $|A| = 4$, how many relations on $A$ are reflexive? How many are symmetric? How many are both?
 :::
 
 :::solution
-Let $A = \{a,b,c\}$ and $R = \{(a,a),(b,b),(c,c),(a,b),(b,a),(a,c)\}$. To test each property we scan every relevant pair; a property holds only if *no* pair violates it.
+1. Reflexive: $2^{16-4} = 2^{12} = 4096$.
+2. Symmetric: $2^{4 \cdot 5/2} = 2^{10} = 1024$.
+3. Both: $2^{4 \cdot 3 / 2} = 2^{6} = 64$.
 
-**Reflexive?** We need $(a,a),(b,b),(c,c)$ all present. All three are in $R$, so **yes**.
-**Symmetric?** For each $(x,y)\in R$ with $x\neq y$ we need $(y,x)\in R$ too. We have $(a,b)$ and its mirror $(b,a)$ ✓, but $(a,c)\in R$ while $(c,a)\notin R$ ✗. So **no**.
-**Antisymmetric?** A violation is a pair $x\neq y$ with both $(x,y)$ and $(y,x)$ in $R$. Here $(a,b)$ and $(b,a)$ are both present with $a\neq b$, so **no**.
-**Transitive?** We need: whenever $(x,y)\in R$ and $(y,z)\in R$, then $(x,z)\in R$. Check every length-2 chain among the non-loop pairs: $(a,b)$ then $(b,a)$ requires $(a,a)$ ✓; $(b,a)$ then $(a,b)$ requires $(b,b)$ ✓; $(b,a)$ then $(a,c)$ requires $(b,c)$ — but $(b,c)\notin R$ ✗. So **no**.
-
-**Sanity check:** notice symmetric and antisymmetric both failed here — a relation can lack both at once (they are not opposites). And the single missing pair $(b,c)$ is what breaks transitivity, showing how one absent arrow can spoil a property.
+As a check, every relation counted in part 3 is counted in both parts 1 and 2, and $64$ is indeed a common divisor's worth smaller than each — in fact $4096 \cdot 1024 / 65536 = 64$, which is the inclusion–exclusion identity for two independent constraints on disjoint sets of matrix entries.
 :::
 
-## Equivalence Relations
+### The properties are genuinely independent
+
+It is easy to believe, after seeing $\le$ and $=$, that the properties come in fixed bundles: that symmetric and antisymmetric are opposites, that transitive implies reflexive, and so on. They do not. The following proposition settles the question by exhibiting, for each of the combinations that students conflate, a relation realising it.
+
+:::proposition[Independence of the five properties]{#independence}
+Let $A = \{1,2,3\}$. Then:
+
+1. There is a relation on $A$ that is both symmetric and antisymmetric.
+2. There is a relation on $A$ that is neither symmetric nor antisymmetric.
+3. There is a relation on $A$ that is symmetric and transitive but not reflexive.
+4. There is a relation on $A$ that is reflexive and symmetric but not transitive.
+5. There is a relation on $A$ that is reflexive and transitive but not symmetric and not antisymmetric.
+6. There is a relation on $A$ that is both irreflexive and transitive, and one that is neither reflexive nor irreflexive.
+:::
+
+:::proof
+We exhibit a relation in each case and verify the claims directly from the definition of *The five properties*.
+
+1. Take $R = \Delta_A = \{(1,1),(2,2),(3,3)\}$. It is symmetric, since the reverse of $(a,a)$ is $(a,a)$. It is antisymmetric, since the only pairs $(a,b) \in R$ have $a = b$ already, so the implication's conclusion holds vacuously whenever its hypothesis does. More generally any $R \subseteq \Delta_A$ is both, and these are the only such relations: if $R$ is symmetric and antisymmetric and $(a,b) \in R$, then $(b,a) \in R$ by symmetry and hence $a = b$ by antisymmetry.
+2. Take $R = \{(1,2),(2,1),(1,3)\}$. It fails symmetry because $(1,3) \in R$ but $(3,1) \notin R$. It fails antisymmetry because $(1,2)$ and $(2,1)$ are both in $R$ while $1 \ne 2$. So the two properties are not exhaustive either.
+3. Take $R = \{(1,1)\}$. Symmetric and transitive by the same vacuous reasoning as in part 1, but not reflexive since $(2,2) \notin R$. This example matters: it is the standard refutation of the false claim that symmetry plus transitivity imply reflexivity. The bogus argument reads "$a \mathrel{R} b$ gives $b \mathrel{R} a$ by symmetry, then $a \mathrel{R} a$ by transitivity", and it breaks for any $a$ that is related to nothing at all.
+4. Take $R = \Delta_A \cup \{(1,2),(2,1),(2,3),(3,2)\}$. It is reflexive by construction and symmetric because the non-diagonal pairs were added in mirrored couples. It is not transitive: $(1,2) \in R$ and $(2,3) \in R$ but $(1,3) \notin R$. (Read $R$ as "differs by at most one", which is exactly the relation that is not transitive in everyday life: near-duplicates in a database are pairwise similar without all being the same record.)
+5. Take $R = \Delta_A \cup \{(1,2),(2,1),(1,3),(2,3)\}$. Reflexive by construction. Not symmetric, since $(1,3) \in R$ and $(3,1) \notin R$. Not antisymmetric, since $(1,2), (2,1) \in R$ with $1 \ne 2$. For transitivity, the only composable non-diagonal chains are $(1,2)$ then $(2,1)$, needing $(1,1) \in R$ ✓; $(2,1)$ then $(1,2)$, needing $(2,2) \in R$ ✓; $(1,2)$ then $(2,3)$, needing $(1,3) \in R$ ✓; $(2,1)$ then $(1,3)$, needing $(2,3) \in R$ ✓. Chains through a diagonal pair add nothing new. So $R$ is transitive.
+6. For the first, take $R = \{(1,2),(2,3),(1,3)\}$: no loops, so irreflexive, and the only composable chain $(1,2),(2,3)$ has its shortcut $(1,3)$ present, so transitive. For the second, take $R = \{(1,1)\}$ again on $A$: it has a loop at $1$, so it is not irreflexive, and lacks a loop at $2$, so it is not reflexive.
+:::
+
+:::intuition
+The useful mental picture is that each property constrains a different feature of the digraph — loops (reflexive, irreflexive), the pairing of opposite edges (symmetric, antisymmetric), and shortcuts across two-step paths (transitive) — and these features can be adjusted independently. That is why so many combinations occur.
+:::
+
+### Closures
+
+Given a relation that fails a property, the natural repair is to add the missing pairs and nothing more.
+
+:::definition[Closure with respect to a property]{#closure-definition}
+Let $P$ be one of the properties reflexive, symmetric, transitive, and let $R$ be a relation on $A$. The **$P$-closure** of $R$ is a relation $S$ such that (i) $S$ has property $P$, (ii) $R \subseteq S$, and (iii) $S \subseteq T$ for every relation $T$ with property $P$ and $R \subseteq T$.
+:::
+
+Condition (iii) is what makes the closure unique if it exists: two relations each contained in the other are equal. The reflexive closure is easy, being $R \cup \Delta_A$, and the symmetric closure is $R \cup R^{-1}$. The transitive closure is the interesting one, and it is not obtained by one pass of adding shortcuts.
+
+:::definition[Transitive closure]{#transitive-closure}
+The transitive closure of $R$ is written $R^{+}$, and the **reflexive transitive closure** is $R^{*} = R^{+} \cup \Delta_A$.
+:::
+
+:::theorem[The transitive closure is the union of the powers]{#closure-theorem}
+Let $R$ be a relation on a set $A$ and put
+
+$$R^{+} = \bigcup_{k \ge 1} R^{k}.$$
+
+Then $R^{+}$ is transitive, contains $R$, and is contained in every transitive relation containing $R$. That is, $R^{+}$ is the transitive closure of $R$, and it consists exactly of the pairs $(a,b)$ joined by a walk of positive length in the digraph of $R$.
+:::
+
+:::proof
+**$R^{+}$ contains $R$.** Immediate, since $R = R^1$ is one of the sets in the union.
+
+**$R^{+}$ is transitive.** Suppose $(a,b) \in R^{+}$ and $(b,c) \in R^{+}$. Then $(a,b) \in R^{j}$ and $(b,c) \in R^{k}$ for some $j, k \ge 1$. By the lemma *Powers are walks* there is a walk of length $j$ from $a$ to $b$ and a walk of length $k$ from $b$ to $c$; concatenating them at $b$ gives a walk of length $j + k$ from $a$ to $c$, so $(a,c) \in R^{j+k} \subseteq R^{+}$.
+
+**$R^{+}$ is smallest.** Let $T$ be any transitive relation with $R \subseteq T$. We show $R^{k} \subseteq T$ for every $k \ge 1$ by induction on $k$. For $k = 1$ this is the hypothesis $R \subseteq T$. Assume $R^{k} \subseteq T$ and let $(a,c) \in R^{k+1}$. By definition there is $b$ with $(a,b) \in R^{k}$ and $(b,c) \in R$. Then $(a,b) \in T$ by the induction hypothesis and $(b,c) \in T$ since $R \subseteq T$, so $(a,c) \in T$ by transitivity of $T$. Hence $R^{k+1} \subseteq T$, and taking the union over $k$ gives $R^{+} \subseteq T$.
+
+The description in terms of walks is the lemma *Powers are walks* read across the union: $(a,b) \in R^{+}$ if and only if $(a,b) \in R^{k}$ for some $k \ge 1$, if and only if some walk of positive length runs from $a$ to $b$.
+:::
+
+:::corollary[A finite bound on the union]{#closure-finite}
+If $|A| = n$ then $R^{+} = R^1 \cup R^2 \cup \dots \cup R^{n}$.
+:::
+
+:::proof
+One containment is clear, since the right-hand side is part of the union defining $R^{+}$. For the other, suppose $(a,b) \in R^{k}$ with $k$ minimal. By the lemma *Powers are walks* there is a walk $a = x_0, \dots, x_k = b$. If two of $x_0, \dots, x_k$ coincided, say $x_i = x_j$ with $i < j$, then deleting the steps between them would leave a walk of length $k - (j-i) < k$ from $a$ to $b$, contradicting minimality of $k$. So the $k+1$ vertices $x_0, \dots, x_k$ are distinct, and since they all lie in $A$ we get $k + 1 \le n$, hence $k \le n - 1 < n$.
+:::
+
+:::figure[A relation $R$ on $\{1,2,3,4\}$ with edges $1 \to 2 \to 3 \to 4$ in the accent tone, and the three edges the transitive closure adds — $1 \to 3$, $2 \to 4$ and $1 \to 4$ — drawn dashed in the result tone. Adding shortcuts once would supply only the first two; the pair $(1,4)$ appears at the second pass, which is why the closure is a union over all powers rather than a single sweep.]{#closure-digraph}
+{
+  "type": "plot",
+  "x": [-1.6, 3.8],
+  "y": [-1.4, 3.2],
+  "equalAspect": true,
+  "xTicks": 1,
+  "yTicks": 1,
+  "xLabel": "",
+  "yLabel": "",
+  "marks": [
+    { "kind": "point", "at": [0, 0] },
+    { "kind": "point", "at": [0, 2] },
+    { "kind": "point", "at": [2, 2] },
+    { "kind": "point", "at": [2, 0] },
+    { "kind": "arrow", "from": [0, 0], "to": [0, 2] },
+    { "kind": "arrow", "from": [0, 2], "to": [2, 2] },
+    { "kind": "arrow", "from": [2, 2], "to": [2, 0] },
+    { "kind": "arrow", "from": [0, 0], "to": [2, 2], "tone": "result", "dashed": true },
+    { "kind": "arrow", "from": [0, 2], "to": [2, 0], "tone": "result", "dashed": true },
+    { "kind": "arrow", "from": [0, 0], "to": [2, 0], "tone": "result", "dashed": true },
+    { "kind": "text", "at": [-1.1, -0.6], "text": "1", "leaderTo": [0, 0] },
+    { "kind": "text", "at": [-1.1, 2.7], "text": "2", "leaderTo": [0, 2] },
+    { "kind": "text", "at": [3.1, 2.7], "text": "3", "leaderTo": [2, 2] },
+    { "kind": "text", "at": [3.1, -0.6], "text": "4", "leaderTo": [2, 0] },
+    { "kind": "text", "at": [0.2, -1.1], "text": "added by closure", "tone": "result", "leaderTo": [1, 0] }
+  ]
+}
+:::
+
+:::example[Computing a transitive closure]
+Let $A = \{1,2,3,4\}$ and $R = \{(1,2),(2,3),(3,4),(4,1)\}$, a directed cycle. Compute $R^{+}$ and give $|R^{+}|$.
+:::
+
+:::solution
+1. By the theorem *The transitive closure is the union of the powers*, $(a,b) \in R^{+}$ exactly when some walk of positive length runs from $a$ to $b$.
+2. In a directed $4$-cycle you may walk any number of steps forward, so from any vertex you can reach every vertex, including itself after four steps.
+3. Hence $R^{+} = A \times A$, and $|R^{+}| = 4^2 = 16$.
+
+The closure of a cycle is everything, which is worth contrasting with the path $1 \to 2 \to 3 \to 4$ of the figure, whose closure has only $\binom{4}{2} = 6$ pairs. A single extra edge closing the loop takes the closure from $6$ pairs to $16$.
+:::
+
+:::example[Closure under dependency]
+A build system records that module $b$ depends directly on $a$, $c$ on $b$, and $e$ on $d$. Which rebuilds are triggered by a change to $a$?
+:::
+
+:::solution
+1. Model the direct dependencies as $R = \{(a,b),(b,c),(d,e)\}$ on $\{a,b,c,d,e\}$, where $(x,y) \in R$ reads "a change to $x$ forces a rebuild of $y$".
+2. The set of modules needing a rebuild is $\{y : (a,y) \in R^{+}\}$. Powers: $R^2 = \{(a,c)\}$ and $R^3 = \emptyset$.
+3. So $R^{+} = \{(a,b),(b,c),(d,e),(a,c)\}$ and changing $a$ rebuilds $b$ and $c$, two modules. The component $\{d,e\}$ is untouched, which is exactly the property a build system exploits to avoid rebuilding the world.
+:::
+
+## Equivalence relations
 
 <!-- section: equivalence -->
 
 :::definition[Equivalence relation]{#equivalence-relation}
-An **equivalence relation** is one that satisfies reflexivity, symmetry, and transitivity all at once.
+A relation $\sim$ on $A$ is an **equivalence relation** if it is reflexive, symmetric and transitive. We write $a \sim b$ and say $a$ and $b$ are **equivalent**.
 :::
 
-It captures the idea of "being the same in some respect" or "indistinguishable for our purposes".
-
-Famous examples:
-- Equality itself.
-- Congruence modulo m: a ≡ b (mod m) iff m divides (a-b).
-- "Has the same birthday" on people (assuming no leap issues).
-- "Is the same connected component" in a graph.
+The three conditions are exactly the three properties of literal equality that any notion of "same for present purposes" must retain. Drop reflexivity and some object fails to be the same as itself; drop symmetry and sameness acquires a direction; drop transitivity and sameness fails to propagate, which is the failure of "differs by at most one" in the proposition *Independence of the five properties*.
 
 :::intuition
-Equivalence is "sameness" that is consistent: if I'm the same type as you, you're the same as me (sym), I'm same as myself (refl), and if you're same as her then I am too (trans).
-
-It lets us treat whole groups as single "super elements".
+An equivalence relation is a way of deciding to forget information. Congruence mod $12$ forgets everything about an integer except its clock position. Comparing files by content hash forgets their names. What survives the forgetting is exactly what the relation cannot tell apart.
 :::
 
-### Worked Examples
+:::proposition[Two extreme examples]{#extreme-equivalences}
+On any set $A$, both $\Delta_A$ and $A \times A$ are equivalence relations. Moreover, if $\sim$ is any equivalence relation on $A$, then $\Delta_A \subseteq \mathord{\sim} \subseteq A \times A$.
+:::
 
-:::example
-Verifying congruence mod 3 is an equivalence relation.
+:::proof
+$\Delta_A$ is reflexive by definition; it is symmetric and transitive because, as in part 1 of the proposition *Independence of the five properties*, every pair in it has equal coordinates. $A \times A$ contains every pair, so all three conditions hold trivially. For the containments: $\Delta_A \subseteq \mathord{\sim}$ is precisely reflexivity of $\sim$, and $\mathord{\sim} \subseteq A \times A$ holds because every relation on $A$ is a subset of $A \times A$.
+:::
+
+So equivalence relations on $A$ form a range from the finest ($\Delta_A$: nothing is identified with anything else) to the coarsest ($A \times A$: everything is identified with everything). Every interesting equivalence lies strictly between.
+
+:::proposition[The kernel of a function]{#kernel-equivalence}
+Let $f : A \to B$ be any function and define $a \sim_f a'$ to mean $f(a) = f(a')$. Then $\sim_f$ is an equivalence relation on $A$, called the **kernel** of $f$.
+:::
+
+:::proof
+Reflexive: $f(a) = f(a)$ for every $a$, since equality in $B$ is reflexive. Symmetric: if $f(a) = f(a')$ then $f(a') = f(a)$. Transitive: if $f(a) = f(a')$ and $f(a') = f(a'')$ then $f(a) = f(a'')$. Each of the three conditions is the corresponding property of equality in $B$, transported along $f$.
+:::
+
+This little proposition is more powerful than it looks: it says that *every* way of grouping objects by a computed value is automatically an equivalence relation. Grouping records by department, files by hash, integers by remainder, strings by length — all are kernels, so none of them needs a separate three-part verification. In fact the theorem *Equivalence relations are partitions*, proved in the next section, will show the converse: every equivalence relation is the kernel of some function.
+
+:::definition[Congruence modulo $n$]{#congruence-mod-n}
+Fix an integer $n \ge 1$. For $a, b \in \mathbb{Z}$ write
+
+$$a \equiv b \pmod n \quad \text{to mean} \quad n \mid (a - b),$$
+
+that is, $a - b = nk$ for some $k \in \mathbb{Z}$.
+:::
+
+:::theorem[Congruence mod $n$ is an equivalence with $n$ classes]{#congruence-theorem}
+For every integer $n \ge 1$, congruence modulo $n$ is an equivalence relation on $\mathbb{Z}$, and it has exactly $n$ distinct equivalence classes, represented by $0, 1, \dots, n-1$.
+:::
+
+:::proof
+**Equivalence.** Reflexive: $a - a = 0 = n \cdot 0$, so $n \mid (a-a)$. Symmetric: if $a - b = nk$ then $b - a = n(-k)$ and $-k \in \mathbb{Z}$. Transitive: if $a - b = nk$ and $b - c = nm$ then $a - c = (a-b) + (b-c) = n(k+m)$ with $k + m \in \mathbb{Z}$.
+
+**At most $n$ classes.** Let $a \in \mathbb{Z}$. Division with remainder gives unique integers $q$ and $r$ with $a = qn + r$ and $0 \le r < n$. Then $a - r = qn$, so $a \equiv r \pmod n$ with $r \in \{0, 1, \dots, n-1\}$. Hence every integer is congruent to one of these $n$ values, so there are at most $n$ classes.
+
+**At least $n$ classes.** Suppose $r \equiv s \pmod n$ with $0 \le r, s < n$. Then $n \mid (r - s)$, while $|r - s| < n$ because both lie in an interval of length $n$. The only multiple of $n$ of absolute value less than $n$ is $0$, so $r - s = 0$ and $r = s$. Hence the $n$ values $0, 1, \dots, n-1$ lie in pairwise distinct classes, giving at least $n$ classes.
+
+Combining the two counts, there are exactly $n$ classes.
+:::
+
+:::remark
+Congruence mod $n$ is also the kernel of the function $a \mapsto a \bmod n$, so the proposition *The kernel of a function* gives the equivalence half of the theorem instantly. The counting half is the part that needs division with remainder, which is where the arithmetic actually enters.
+:::
+
+:::example[Congruence in practice]
+On $\mathbb{Z}$, how many equivalence classes does congruence mod $7$ have, and which class contains $-3$?
 :::
 
 :::solution
-On the integers $\mathbb{Z}$, define $a \sim b$ iff $3 \mid (a-b)$ (read "$3$ divides $a-b$", i.e. $a-b = 3k$ for some integer $k$). We check all three defining properties.
+1. By the theorem *Congruence mod $n$ is an equivalence with $n$ classes*, there are exactly $7$ classes.
+2. Divide with remainder: $-3 = (-1)\cdot 7 + 4$, and $0 \le 4 < 7$, so $-3 \equiv 4 \pmod 7$.
+3. The class is therefore $[4] = \{\dots, -10, -3, 4, 11, 18, \dots\}$.
 
-**Reflexive:** for any $a$, $a - a = 0 = 3\cdot 0$, so $3 \mid (a-a)$. Thus $a \sim a$ ✓.
-**Symmetric:** if $a \sim b$ then $a - b = 3k$ for some integer $k$. Then $b - a = -(a-b) = 3(-k)$, and $-k$ is an integer, so $3 \mid (b-a)$, giving $b \sim a$ ✓.
-**Transitive:** if $a \sim b$ and $b \sim c$ then $a - b = 3k$ and $b - c = 3m$ for integers $k,m$. Adding, $a - c = (a-b)+(b-c) = 3k + 3m = 3(k+m)$, and $k+m$ is an integer, so $3 \mid (a-c)$, giving $a \sim c$ ✓.
-
-All three hold, so $\sim$ is an equivalence relation.
-
-**Sanity check with numbers:** $7 \sim 1$ because $7 - 1 = 6 = 3 \cdot 2$; and $1 \sim 4$ because $1 - 4 = -3 = 3\cdot(-1)$; transitivity then predicts $7 \sim 4$, and indeed $7 - 4 = 3 = 3\cdot 1$ ✓. The distinct classes are $[0], [1], [2]$, where $[k] = \{\, n \in \mathbb{Z} \mid n \equiv k \pmod 3 \,\}$ — every integer lands in exactly one of these three.
+The trap is answering $-3$ or $3$: the remainder is required to be non-negative, so the quotient is $-1$, not $0$.
 :::
 
-## Equivalence Classes and Partitions
+:::definition[Equivalence class]{#equivalence-class}
+Let $\sim$ be an equivalence relation on $A$ and $a \in A$. The **equivalence class of $a$** is
+
+$$[a] = \{b \in A : b \sim a\} \subseteq A.$$
+
+Any element $b$ with $[b] = [a]$ is called a **representative** of the class.
+:::
+
+The next lemma is short but it is the engine of the whole theory: it says that a class does not depend on which of its members you name it after.
+
+:::lemma[Classes coincide exactly for equivalent elements]{#class-equality}
+Let $\sim$ be an equivalence relation on $A$ and $a, b \in A$. The following are equivalent:
+
+1. $a \sim b$;
+2. $[a] = [b]$;
+3. $[a] \cap [b] \ne \emptyset$.
+:::
+
+:::proof
+**(1) implies (2).** Suppose $a \sim b$. Let $x \in [a]$, so $x \sim a$. Combined with $a \sim b$, transitivity gives $x \sim b$, so $x \in [b]$; hence $[a] \subseteq [b]$. Symmetry of $\sim$ gives $b \sim a$, and the same argument with the roles exchanged gives $[b] \subseteq [a]$. Therefore $[a] = [b]$.
+
+**(2) implies (3).** By reflexivity $a \sim a$, so $a \in [a] = [b]$, and thus $a \in [a] \cap [b]$, which is therefore non-empty.
+
+**(3) implies (1).** Let $x \in [a] \cap [b]$. Then $x \sim a$ and $x \sim b$. By symmetry $a \sim x$, and with $x \sim b$ transitivity gives $a \sim b$.
+:::
+
+:::pitfall
+Every step of that proof used a different one of the three axioms, and none was decorative. Reflexivity is what makes $[a]$ non-empty; symmetry is what lets the argument run in both directions; transitivity is what glues two chains together. A "proof" of the lemma that names only transitivity has a gap.
+:::
+
+## Partitions and the fundamental correspondence
 
 <!-- section: partitions -->
 
-:::definition[Equivalence class]{#equivalence-class}
-Given an equivalence relation $\sim$ on $A$, the **equivalence class** of $a$ is
+:::definition[Partition]{#partition-definition}
+A **partition** of a set $A$ is a collection $\mathcal{P}$ of subsets of $A$, called **blocks**, such that
 
-$$[a] = \{\, b \in A \mid b \sim a \,\}.$$
+1. every block is non-empty;
+2. the blocks cover $A$: every $a \in A$ lies in some block;
+3. the blocks are pairwise disjoint: distinct blocks $B, C \in \mathcal{P}$ satisfy $B \cap C = \emptyset$.
+
+Equivalently: every element of $A$ lies in exactly one block.
 :::
 
-:::theorem[Equivalence classes partition the set]{#classes-partition}
-Let $\sim$ be an equivalence relation on A.
+:::figure[A partition of an eight-element set into three blocks, drawn as disjoint regions. Each element sits in exactly one region — the regions do not overlap and nothing is left outside them, which is conditions 2 and 3 of the definition made visible. Reading the picture as a relation, two elements are equivalent precisely when the same region encloses both.]{#partition-blocks}
+{
+  "type": "plot",
+  "x": [-0.6, 9.6],
+  "y": [-1.4, 5.0],
+  "equalAspect": true,
+  "xTicks": 1,
+  "yTicks": 1,
+  "xLabel": "",
+  "yLabel": "",
+  "marks": [
+    { "kind": "region", "points": [[0.2, 0.4], [2.8, 0.4], [3.2, 2.0], [2.4, 3.2], [0.6, 3.0], [0.0, 1.6]] },
+    { "kind": "region", "points": [[4.0, 0.6], [6.2, 0.4], [6.6, 2.2], [5.4, 3.0], [4.0, 2.4]], "tone": "result" },
+    { "kind": "region", "points": [[7.2, 1.0], [9.2, 1.2], [9.0, 2.8], [7.4, 2.6]], "tone": "alt" },
+    { "kind": "point", "at": [0.8, 1.2] },
+    { "kind": "point", "at": [1.8, 0.9] },
+    { "kind": "point", "at": [2.3, 2.1] },
+    { "kind": "point", "at": [1.2, 2.4] },
+    { "kind": "point", "at": [4.7, 1.3], "tone": "result" },
+    { "kind": "point", "at": [5.7, 2.0], "tone": "result" },
+    { "kind": "point", "at": [5.8, 1.0], "tone": "result" },
+    { "kind": "point", "at": [8.2, 1.9], "tone": "alt" },
+    { "kind": "text", "at": [1.4, 4.2], "text": "block of size 4", "leaderTo": [1.6, 3.0] },
+    { "kind": "text", "at": [5.2, 4.2], "text": "block of size 3", "leaderTo": [5.2, 2.9] },
+    { "kind": "text", "at": [8.2, 4.0], "text": "block of size 1", "tone": "alt", "leaderTo": [8.2, 2.7] },
+    { "kind": "text", "at": [4.0, -0.9], "text": "8 elements, 3 blocks, no overlaps", "tone": "muted" }
+  ]
+}
+:::
 
-- Every element belongs to exactly one class (its own).
-- Classes are either equal or disjoint.
-- The set of all distinct equivalence classes forms a **partition** of A: the blocks are nonempty, pairwise disjoint, and cover A.
+The last sentence of the definition is worth checking against the three conditions, because it is the form we will actually use. Coverage says "at least one block"; disjointness says "at most one block"; together they say "exactly one". Non-emptiness is a separate normalisation that rules out padding a partition with copies of $\emptyset$, which would otherwise break the correspondence we are about to prove by making infinitely many partitions out of one.
 
-Conversely, every partition of A defines an equivalence relation: a ~ b iff a and b are in the same block of the partition.
+Here, then, is the central theorem of the chapter.
+
+:::theorem[Equivalence relations are partitions]{#fundamental-theorem}
+Let $A$ be a set.
+
+1. If $\sim$ is an equivalence relation on $A$, then the collection of its equivalence classes
+
+$$A/\mathord{\sim} \; = \; \{[a] : a \in A\}$$
+
+is a partition of $A$.
+
+2. If $\mathcal{P}$ is a partition of $A$, then the relation $\sim_{\mathcal{P}}$ defined by
+
+$$a \sim_{\mathcal{P}} b \iff \text{$a$ and $b$ lie in the same block of } \mathcal{P}$$
+
+is an equivalence relation on $A$.
+
+3. These constructions are mutually inverse: starting from an equivalence relation $\sim$, forming its classes and then forming the same-block relation returns $\sim$; and starting from a partition $\mathcal{P}$, forming the same-block relation and then its classes returns $\mathcal{P}$.
+
+Hence the map $\sim \; \mapsto \; A/\mathord{\sim}$ is a bijection from the set of equivalence relations on $A$ to the set of partitions of $A$.
+:::
+
+:::proof
+**Part 1: classes form a partition.** Let $\sim$ be an equivalence relation.
+
+*Blocks are non-empty.* Every block of $A/\mathord{\sim}$ has the form $[a]$ for some $a \in A$. By reflexivity $a \sim a$, so $a \in [a]$ and $[a] \ne \emptyset$.
+
+*Blocks cover $A$.* Given $a \in A$, the block $[a]$ belongs to $A/\mathord{\sim}$ and contains $a$, again by reflexivity.
+
+*Blocks are pairwise disjoint.* Let $[a]$ and $[b]$ be blocks with $[a] \cap [b] \ne \emptyset$. By the lemma *Classes coincide exactly for equivalent elements*, condition (3) implies condition (2), so $[a] = [b]$. Contrapositively, two blocks that are not equal have empty intersection, which is exactly condition 3 of the definition of *Partition*.
+
+**Part 2: a partition induces an equivalence.** Let $\mathcal{P}$ be a partition. By the definition of *Partition*, each $a \in A$ lies in exactly one block; write $B(a)$ for that block, so that $a \sim_{\mathcal{P}} b$ means $B(a) = B(b)$.
+
+*Reflexive.* $B(a) = B(a)$, so $a \sim_{\mathcal{P}} a$.
+
+*Symmetric.* If $B(a) = B(b)$ then $B(b) = B(a)$.
+
+*Transitive.* If $B(a) = B(b)$ and $B(b) = B(c)$ then $B(a) = B(c)$.
+
+(Each is the corresponding property of equality between blocks; this is the proposition *The kernel of a function* applied to $B : A \to \mathcal{P}$, and the fact that $B$ is a well-defined function is precisely where "exactly one block" is used.)
+
+**Part 3, first direction: classes then same-block returns $\sim$.** Let $\sim$ be an equivalence relation, let $\mathcal{P} = A/\mathord{\sim}$, and let $\approx$ be the same-block relation of $\mathcal{P}$. By part 1, $\mathcal{P}$ is a partition, and by part 1's first bullet the block containing $a$ is $[a]$ — it contains $a$, and by disjointness it is the only block that does. So $a \approx b$ means $[a] = [b]$, which by the lemma *Classes coincide exactly for equivalent elements* holds if and only if $a \sim b$. Hence $\approx$ and $\sim$ contain the same pairs, so $\approx \; = \; \sim$.
+
+**Part 3, second direction: same-block then classes returns $\mathcal{P}$.** Let $\mathcal{P}$ be a partition and $\sim_{\mathcal{P}}$ its same-block relation, with $B(a)$ as above. We claim $[a] = B(a)$ for every $a$, where $[a]$ is the $\sim_{\mathcal{P}}$-class.
+
+If $b \in [a]$ then $b \sim_{\mathcal{P}} a$, that is $B(b) = B(a)$; since $b \in B(b)$, we get $b \in B(a)$. Conversely if $b \in B(a)$ then $B(a)$ is a block containing $b$, and since $b$ lies in exactly one block, $B(b) = B(a)$, so $b \sim_{\mathcal{P}} a$ and $b \in [a]$. Hence $[a] = B(a)$.
+
+It follows that $A/\mathord{\sim_{\mathcal{P}}} = \{[a] : a \in A\} = \{B(a) : a \in A\}$. Every $B(a)$ is a block of $\mathcal{P}$, so this collection is contained in $\mathcal{P}$; conversely every block $B \in \mathcal{P}$ is non-empty, so it contains some $a$, and then $B = B(a)$ lies in the collection. Therefore $A/\mathord{\sim_{\mathcal{P}}} = \mathcal{P}$.
+
+**Conclusion.** Parts 1 and 2 give maps in both directions between equivalence relations on $A$ and partitions of $A$, and part 3 shows each composite is the identity. A pair of mutually inverse maps is a bijection.
+:::
+
+:::remark
+Note where non-emptiness of blocks was used: only in the very last step, to recover $\mathcal{P}$ from the classes. Allow $\emptyset$ as a block and the correspondence stops being injective, since $\mathcal{P}$ and $\mathcal{P} \cup \{\emptyset\}$ would induce the same relation. Small hypotheses of this kind usually earn their place at exactly one point in a proof, and finding that point is how you tell whether a hypothesis is needed.
 :::
 
 :::definition[Quotient set]{#quotient-set}
-The set of equivalence classes is called the **quotient set** A / ~ .
+The set $A/\mathord{\sim}$ of equivalence classes is called the **quotient** of $A$ by $\sim$. The map $\pi : A \to A/\mathord{\sim}$ with $\pi(a) = [a]$ is the **canonical projection**.
 :::
 
-:::intuition
-Each equivalence class is a "bucket" or "team". Everyone in a bucket is equivalent; different buckets are distinct.
-
-The buckets cover the whole group and don't overlap — a clean division of the club into teams.
+:::corollary[Every equivalence is a kernel]{#every-equivalence-is-kernel}
+Every equivalence relation $\sim$ on $A$ is the kernel of a function, namely of the canonical projection $\pi : A \to A/\mathord{\sim}$.
 :::
 
-### Worked Examples
+:::proof
+By definition $\pi(a) = \pi(b)$ means $[a] = [b]$, which by the lemma *Classes coincide exactly for equivalent elements* is equivalent to $a \sim b$. So the kernel of $\pi$, in the sense of the proposition *The kernel of a function*, is exactly $\sim$.
+:::
 
-:::example
-Building the partition from an equivalence relation on a finite set.
+Together with that proposition this closes the circle: equivalence relations, partitions, and "group by a computed value" are three descriptions of one idea. A database index on a column is a partition of the rows; the equivalence relation is "these rows agree in that column"; the quotient set is the set of distinct keys.
+
+:::definition[Bell and Stirling numbers]{#bell-numbers}
+The **Bell number** $B_n$ is the number of partitions of an $n$-element set, and the **Stirling number of the second kind** $S(n,k)$ is the number of partitions into exactly $k$ non-empty blocks. Thus
+
+$$B_n = \sum_{k=0}^{n} S(n,k).$$
+:::
+
+:::corollary[Counting equivalence relations]{#counting-equivalences}
+The number of equivalence relations on an $n$-element set is $B_n$, and the number with exactly $k$ classes is $S(n,k)$.
+:::
+
+:::proof
+By the theorem *Equivalence relations are partitions*, the map sending an equivalence relation to its set of classes is a bijection onto the partitions of $A$, so the two collections have the same size, which is $B_n$ by definition. The bijection sends an equivalence with $k$ classes to a partition with $k$ blocks and back, so it restricts to a bijection between those subcollections, giving $S(n,k)$.
+:::
+
+The first Bell numbers are $B_0 = 1$, $B_1 = 1$, $B_2 = 2$, $B_3 = 5$, $B_4 = 15$, $B_5 = 52$, $B_6 = 203$. Compare with the $2^{n^2}$ relations of the proposition *How many relations a set carries*: on a $4$-element set, $15$ of the $65536$ relations are equivalences. The conditions are extremely restrictive, which is another way of saying that an equivalence relation carries a lot of structure.
+
+:::example[Listing the equivalence relations on a three-element set]
+List all partitions of $\{1,2,3\}$ and confirm the count $B_3 = 5$. How many have exactly two blocks?
 :::
 
 :::solution
-Take $A = \{0,1,2,3,4,5\}$ with $a \sim b$ iff $a \equiv b \pmod 3$. To find the classes, compute each element's remainder mod $3$ and group equal remainders:
+1. One block: the only option is $\{\{1,2,3\}\}$, so $S(3,1) = 1$.
+2. Two blocks: one block is a pair and the other a singleton. Choosing the singleton in $3$ ways gives $\{\{1\},\{2,3\}\}$, $\{\{2\},\{1,3\}\}$, $\{\{3\},\{1,2\}\}$, so $S(3,2) = 3$.
+3. Three blocks: all singletons, $\{\{1\},\{2\},\{3\}\}$, so $S(3,3) = 1$.
+4. Total $1 + 3 + 1 = 5 = B_3$, and exactly $3$ have two blocks.
 
-Remainder $0$: $0$ and $3$ → $[0] = \{0,3\}$.
-Remainder $1$: $1$ and $4$ → $[1] = \{1,4\}$.
-Remainder $2$: $2$ and $5$ → $[2] = \{2,5\}$.
-
-So there are $3$ distinct classes: $\{0,3\},\ \{1,4\},\ \{2,5\}$.
-
-**Sanity check that this is a partition:** each block is nonempty ✓; the blocks are pairwise disjoint (no element appears twice) ✓; their union is $\{0,1,2,3,4,5\} = A$ ✓. The sizes add up: $2+2+2 = 6 = |A|$. Going the other direction, if you were *handed* the partition $\{\{0,3\},\{1,4\},\{2,5\}\}$, defining "$a \sim b$ iff $a,b$ lie in the same block" recovers exactly this relation — this is the two-way correspondence between partitions and equivalence relations.
+The corresponding equivalence relations have $9$, $5$, $5$, $5$ and $3$ pairs respectively — a relation with blocks of sizes $n_1, \dots, n_k$ has $\sum n_i^2$ pairs, since it is the union of the full relations on each block.
 :::
 
-## Partial Orders and Posets
+:::example[Size of an equivalence relation as a set of pairs]
+An equivalence relation on a $7$-element set has classes of sizes $3, 3, 1$. How many ordered pairs does it contain?
+:::
+
+:::solution
+1. By the theorem *Equivalence relations are partitions*, $a \sim b$ holds exactly when $a$ and $b$ lie in the same class, so the relation is the disjoint union of $B \times B$ over the classes $B$.
+2. A class of size $m$ contributes $m^2$ pairs.
+3. Total: $3^2 + 3^2 + 1^2 = 9 + 9 + 1 = 19$.
+
+The smallest possible value for a $7$-element set is $7$ (all singletons) and the largest is $49$ (one class), and every equivalence sits between.
+:::
+
+:::example[Rows of a database table]
+A table has $12$ rows and a column `dept` taking exactly $4$ distinct values, with $5$, $4$, $2$ and $1$ rows respectively. Describe the induced equivalence and give the size of the quotient set.
+:::
+
+:::solution
+1. Define $r \sim r'$ when the two rows agree in `dept`. By the proposition *The kernel of a function* this is an equivalence relation, no verification needed.
+2. Its classes are the four groups of rows, of sizes $5, 4, 2, 1$, which sum to $12$ as a partition must.
+3. The quotient set has one element per distinct value, so $|A/\mathord{\sim}| = 4$ — which is precisely what a `SELECT COUNT(DISTINCT dept)` returns.
+:::
+
+## Partial orders
 
 <!-- section: partial-orders -->
 
-:::definition[Partial order]{#partial-order}
-A **partial order** (or poset) is a relation satisfying reflexivity, antisymmetry, and transitivity.
+Swap symmetry for antisymmetry and the character of the relation changes completely: instead of identifying elements, it ranks them.
+
+:::definition[Partial order and poset]{#partial-order}
+A relation $\preceq$ on $A$ is a **partial order** if it is reflexive, antisymmetric and transitive. The pair $(A, \preceq)$ is a **partially ordered set**, or **poset**.
+
+Elements $a, b$ are **comparable** if $a \preceq b$ or $b \preceq a$, and **incomparable** otherwise. We write $a \prec b$ for "$a \preceq b$ and $a \ne b$".
 :::
 
-:::notation
-We often write ≤ or | (divides) or ⊆ for a partial order.
+:::proposition[Three standard posets]{#standard-posets}
+Each of the following is a partial order:
+
+1. $\subseteq$ on the power set $\mathcal{P}(X)$ of any set $X$;
+2. divisibility $\mid$ on the positive integers $\mathbb{N}$;
+3. $\le$ on $\mathbb{R}$.
 :::
 
-Not every pair of elements needs to be comparable. When a and b have neither a ≤ b nor b ≤ a they are **incomparable**.
-
-Examples:
-- Subset inclusion on the power set of any set.
-- Divisibility on positive integers (1 divides everything; primes are minimal above 1).
-- "Is a prerequisite for" on university courses (some courses have no prereq relation either way).
-- Task dependency graphs in project management (DAGs induce posets).
-
-:::definition[Poset]{#poset}
-A **poset** is a set equipped with a partial order.
+:::proof
+1. Reflexive: $S \subseteq S$, since every element of $S$ is in $S$. Antisymmetric: if $S \subseteq T$ and $T \subseteq S$ then $S$ and $T$ have the same elements, so $S = T$ by extensionality. Transitive: if $S \subseteq T \subseteq U$ and $x \in S$, then $x \in T$, hence $x \in U$.
+2. Reflexive: $a = a \cdot 1$, so $a \mid a$. Transitive: if $b = aj$ and $c = bk$ then $c = a(jk)$. Antisymmetric: if $a \mid b$ and $b \mid a$ with $a, b \ge 1$, write $b = aj$ and $a = bk$ with $j,k \ge 1$; then $a = ajk$, so $jk = 1$, forcing $j = k = 1$ and $a = b$. (The restriction to positive integers is essential: on $\mathbb{Z}$ we have $2 \mid -2$ and $-2 \mid 2$ with $2 \ne -2$, so divisibility on $\mathbb{Z}$ is not antisymmetric.)
+3. The three properties of $\le$ on $\mathbb{R}$ are standard: $a \le a$; $a \le b$ and $b \le a$ give $a = b$; and $a \le b \le c$ gives $a \le c$.
 :::
+
+In (1) the sets $\{1\}$ and $\{2\}$ are incomparable, and in (2) the integers $4$ and $6$ are incomparable, neither dividing the other. In (3) no pair is incomparable, which is the extra condition that makes $\le$ a *total* order — the subject of the next section.
 
 :::intuition
-Partial order is "can be lined up some but not all ways". Some people are taller than others, but two people of same height are equal; two unrelated people may not have height order in our data.
-
-"Divides" : 2 divides 8, 4 divides 8, but 3 and 4 are incomparable under divides.
+A partial order encodes constraints that *must* be respected while staying silent about everything else. "This task must finish before that one" is a constraint; two tasks with no dependency between them are incomparable, and the order deliberately declines to say which runs first. That silence is what lets a scheduler run them in parallel.
 :::
 
-### Worked Examples
+:::definition[Covering relation and Hasse diagram]{#hasse-diagram}
+In a poset $(A, \preceq)$, we say $b$ **covers** $a$, written $a \lessdot b$, if $a \prec b$ and there is no $c$ with $a \prec c \prec b$.
 
-:::example
-Verifying a poset and reading its Hasse diagram.
+The **Hasse diagram** of a finite poset draws each element as a point, placed so that $b$ sits higher than $a$ whenever $a \prec b$, and joins $a$ to $b$ by a line segment exactly when $a \lessdot b$.
+:::
+
+The Hasse diagram omits loops (implied by reflexivity) and every edge forced by transitivity, leaving only the covers. Nothing is lost: for a finite poset the full order is recovered by taking the reflexive transitive closure of the covering relation, since $a \prec b$ holds exactly when an upward path of covers runs from $a$ to $b$.
+
+:::figure[The Hasse diagram of the divisors of $12$ ordered by divisibility. An upward path from $a$ to $b$ means $a \mid b$; the absence of any path between $3$ and $4$ — or between $4$ and $6$ — records that those pairs are incomparable. The edges drawn are exactly the covers, so the edge from $1$ to $12$ implied by transitivity is deliberately absent.]{#divisors-of-12}
+{
+  "type": "plot",
+  "x": [-1.6, 3.8],
+  "y": [-0.9, 4.1],
+  "equalAspect": true,
+  "xTicks": 1,
+  "yTicks": 1,
+  "xLabel": "",
+  "yLabel": "",
+  "marks": [
+    { "kind": "path", "points": [[1, 0], [0, 1]], "tone": "muted" },
+    { "kind": "path", "points": [[1, 0], [2, 1]], "tone": "muted" },
+    { "kind": "path", "points": [[0, 1], [0, 2]], "tone": "muted" },
+    { "kind": "path", "points": [[0, 1], [2, 2]], "tone": "muted" },
+    { "kind": "path", "points": [[2, 1], [2, 2]], "tone": "muted" },
+    { "kind": "path", "points": [[0, 2], [1, 3]], "tone": "muted" },
+    { "kind": "path", "points": [[2, 2], [1, 3]], "tone": "muted" },
+    { "kind": "point", "at": [1, 0] },
+    { "kind": "point", "at": [0, 1] },
+    { "kind": "point", "at": [2, 1] },
+    { "kind": "point", "at": [0, 2] },
+    { "kind": "point", "at": [2, 2] },
+    { "kind": "point", "at": [1, 3], "tone": "result" },
+    { "kind": "text", "at": [1.0, -0.6], "text": "1", "leaderTo": [1, 0] },
+    { "kind": "text", "at": [-1.0, 0.8], "text": "2", "leaderTo": [0, 1] },
+    { "kind": "text", "at": [3.1, 0.8], "text": "3", "leaderTo": [2, 1] },
+    { "kind": "text", "at": [-1.0, 2.2], "text": "4", "leaderTo": [0, 2] },
+    { "kind": "text", "at": [3.1, 2.2], "text": "6", "leaderTo": [2, 2] },
+    { "kind": "text", "at": [1.0, 3.7], "text": "12", "tone": "result", "leaderTo": [1, 3] }
+  ]
+}
+:::
+
+:::definition[Extremal elements]{#extremal-elements}
+Let $(A, \preceq)$ be a poset and $a \in A$.
+
+- $a$ is **maximal** if no $b \in A$ satisfies $a \prec b$; **minimal** if no $b$ satisfies $b \prec a$.
+- $a$ is a **greatest** element if $b \preceq a$ for every $b \in A$; a **least** element if $a \preceq b$ for every $b$.
+:::
+
+The distinction between *maximal* and *greatest* is the one students lose. Maximal means "nothing is above it"; greatest means "it is above everything". In a total order they coincide, which is why the difference is invisible until you meet a genuine poset.
+
+:::proposition[Greatest implies maximal, and greatest is unique]{#greatest-unique}
+Let $(A, \preceq)$ be a poset.
+
+1. A greatest element, if one exists, is maximal.
+2. There is at most one greatest element.
+3. A maximal element need not be greatest.
+:::
+
+:::proof
+1. Let $a$ be greatest and suppose $a \prec b$ for some $b$. Since $a$ is greatest, $b \preceq a$; combined with $a \preceq b$, antisymmetry gives $a = b$, contradicting $a \prec b$, which requires $a \ne b$. So no such $b$ exists and $a$ is maximal.
+2. Let $a$ and $a'$ both be greatest. Then $a' \preceq a$ because $a$ is greatest, and $a \preceq a'$ because $a'$ is greatest; antisymmetry gives $a = a'$.
+3. Take $A = \{1,2,3\}$ ordered by divisibility. Then $2$ is maximal, since neither $1$ nor $3$ is a proper multiple of $2$ inside $A$, and $3$ is maximal for the same reason. But neither is greatest, since $2 \nmid 3$ and $3 \nmid 2$. Indeed part 2 already shows that two distinct maximal elements cannot both be greatest.
+:::
+
+:::theorem[Every finite non-empty poset has a maximal element]{#finite-maximal}
+Let $(A, \preceq)$ be a poset with $A$ finite and non-empty. Then $A$ has at least one maximal element, and likewise at least one minimal element.
+:::
+
+:::proof
+Suppose, for contradiction, that no element of $A$ is maximal. Pick any $a_0 \in A$, which is possible since $A \ne \emptyset$. Since $a_0$ is not maximal, there is $a_1$ with $a_0 \prec a_1$. Since $a_1$ is not maximal, there is $a_2$ with $a_1 \prec a_2$, and continuing we obtain an infinite sequence $a_0 \prec a_1 \prec a_2 \prec \cdots$.
+
+All the $a_i$ are distinct. Indeed if $i < j$ then repeated transitivity along the chain gives $a_i \preceq a_j$, and in fact $a_i \prec a_j$: if $a_i = a_j$ then from $a_i \preceq a_{i+1}$ and $a_{i+1} \preceq a_j = a_i$ antisymmetry would force $a_i = a_{i+1}$, contradicting $a_i \prec a_{i+1}$.
+
+So $A$ contains infinitely many distinct elements, contradicting finiteness. Hence some element is maximal. The statement about minimal elements is the same argument applied to the reverse order $\succeq$, which is a partial order because reflexivity, antisymmetry and transitivity are each unchanged when both coordinates are swapped.
+:::
+
+:::remark
+Finiteness is not a technicality here. The poset $(\mathbb{Z}, \le)$ has no maximal element, and the poset of finite subsets of $\mathbb{N}$ ordered by $\subseteq$ has none either. What the proof actually needs is that no infinite strictly ascending chain exists, a condition called the *ascending chain condition*, which finite posets satisfy automatically.
+:::
+
+:::example[Extremal elements of a divisibility poset]
+In the poset $(\{2,3,4,6,9,12\}, \mid)$, list the minimal elements, the maximal elements, and say whether a greatest element exists.
 :::
 
 :::solution
-Order the power set of $\{1,2\}$ — that is, $\{\emptyset, \{1\}, \{2\}, \{1,2\}\}$ — by subset inclusion $\subseteq$. First confirm $\subseteq$ is a partial order:
-
-**Reflexive:** every set satisfies $S \subseteq S$ ✓.
-**Antisymmetric:** if $S \subseteq T$ and $T \subseteq S$, then $S$ and $T$ have exactly the same elements, so $S = T$ ✓.
-**Transitive:** if $S \subseteq T$ and $T \subseteq U$, then every element of $S$ is in $T$, hence in $U$, so $S \subseteq U$ ✓.
-
-All three hold, so $(\,\mathcal{P}(\{1,2\}), \subseteq\,)$ is a poset. Now list the comparabilities. $\emptyset$ is a subset of all four sets; $\{1,2\}$ is a superset of all four; $\{1\} \subseteq \{1,2\}$ and $\{2\} \subseteq \{1,2\}$. The only pair with **neither** containment is $\{1\}$ and $\{2\}$: neither is a subset of the other, so they are **incomparable**.
-
-The Hasse diagram (which draws only *covering* relations, omitting loops and edges forced by transitivity) has three levels:
-
-Bottom: $\emptyset$.
-Middle: $\{1\}$ and $\{2\}$, side by side with no line between them (incomparable).
-Top: $\{1,2\}$, sitting above both.
-
-**Sanity check:** among the $\binom{4}{2} = 6$ unordered pairs of distinct sets, exactly $5$ are comparable and $1$ (namely $\{1\}$ vs $\{2\}$) is incomparable. This is the Boolean lattice of rank $2$ — a square standing on one corner.
+1. Minimal: an element is minimal when nothing else in the set properly divides it. Nothing in the set divides $2$ or $3$ other than themselves, so $2$ and $3$ are minimal. Every other element is a proper multiple of $2$ or of $3$, so the minimal elements are $2, 3$ — two of them.
+2. Maximal: nothing in the set is a proper multiple of $9$, and nothing is a proper multiple of $12$. But $4 \mid 12$ and $6 \mid 12$, so $4$ and $6$ are not maximal. The maximal elements are $9, 12$.
+3. A greatest element would have to be a multiple of every element, in particular of both $9$ and $12$, hence of $36$, which is not in the set. Moreover by the proposition *Greatest implies maximal, and greatest is unique* a greatest element would be the unique maximal element, and there are two. So no greatest element exists.
 :::
 
-## Total Orders
+:::definition[Chains and antichains]{#chains-antichains}
+In a poset, a **chain** is a subset in which every two elements are comparable, and an **antichain** is a subset in which every two distinct elements are incomparable. The **height** of a finite poset is the size of its largest chain, and its **width** is the size of its largest antichain.
+:::
+
+:::example[A chain and an antichain in the subsets of a three-set]
+In $(\mathcal{P}(\{1,2,3\}), \subseteq)$, give a chain of maximum size and an antichain of maximum size.
+:::
+
+:::solution
+1. A chain must be a nested family; each step up can add at least one element, and going from $\emptyset$ to $\{1,2,3\}$ takes three steps. So $\emptyset \subset \{1\} \subset \{1,2\} \subset \{1,2,3\}$ is a chain of size $4$, and no chain is longer, since the sizes of the sets in a chain are strictly increasing integers between $0$ and $3$.
+2. The three two-element subsets $\{1,2\}, \{1,3\}, \{2,3\}$ are pairwise incomparable, giving an antichain of size $3$. So is the family of singletons. No antichain of size $4$ exists here — that is Sperner's theorem, whose answer $\binom{3}{1} = 3$ matches.
+3. So the height is $4$ and the width is $3$.
+:::
+
+## Total orders, linear extensions and Zorn's lemma
 
 <!-- section: total-orders -->
 
 :::definition[Total order]{#total-order}
-A **total order** (linear order, chain) is a partial order where every pair of elements is comparable (for any a, b either aRb or bRa).
+A partial order $\preceq$ on $A$ is a **total order** (or **linear order**) if every two elements are comparable: for all $a, b \in A$, either $a \preceq b$ or $b \preceq a$. A totally ordered set is also called a **chain**.
 :::
 
-Examples: the usual ordering of numbers, alphabetical order on strings, chronological order on dates.
+Equivalently, a total order is a partial order whose only antichains are the subsets with at most one element. The usual order on $\mathbb{N}$, $\mathbb{Z}$, $\mathbb{Q}$ and $\mathbb{R}$ is total; so is dictionary order on strings, and so is chronological order on timestamps. Subset inclusion and divisibility are not.
 
-In a total order there are no "branches": every element sits in one definite position, so the whole set can be laid out as a single line with no side-by-side incomparable pairs.
-
-:::definition[Well-order]{#well-order}
-A **well-order** is a total order in which *every* nonempty subset has a least element.
+:::proposition[Totality strengthens antisymmetry to trichotomy]{#trichotomy}
+If $\preceq$ is a total order on $A$, then for all $a, b \in A$ exactly one of $a \prec b$, $a = b$, $b \prec a$ holds.
 :::
 
-The natural numbers under $\le$ are well-ordered (any nonempty set of naturals has a smallest member). The integers and the reals under $\le$ are **not**: $\mathbb{Z}$ itself has no least element (you can always go more negative), and the open interval $(0,1)$ has no least element (whatever candidate you pick, half of it is smaller). Every well-order is a total order, but not conversely.
+:::proof
+*At least one.* By totality, $a \preceq b$ or $b \preceq a$. In the first case either $a = b$ or $a \prec b$; in the second either $a = b$ or $b \prec a$.
+
+*At most one.* If $a = b$ then neither $a \prec b$ nor $b \prec a$ can hold, since both require $a \ne b$. And $a \prec b$ and $b \prec a$ cannot both hold: they give $a \preceq b$ and $b \preceq a$, so $a = b$ by antisymmetry, contradicting $a \ne b$.
+:::
+
+:::definition[Linear extension]{#linear-extension}
+A **linear extension** of a poset $(A, \preceq)$ is a total order $\le^{*}$ on the same set $A$ such that $a \preceq b$ implies $a \le^{*} b$. Producing one from a finite poset is called **topological sorting**.
+:::
+
+:::theorem[Every finite poset has a linear extension]{#topological-sort}
+Let $(A, \preceq)$ be a poset with $A$ finite. Then a linear extension of $\preceq$ exists. Concretely, repeatedly extracting a minimal element from what remains produces a listing $a_1, a_2, \dots, a_n$ of $A$ such that $a_i \preceq a_j$ implies $i \le j$.
+:::
+
+:::proof
+Induct on $n = |A|$.
+
+*Base case.* If $n = 0$ the empty order is a linear extension, vacuously.
+
+*Inductive step.* Let $n \ge 1$ and assume the result for all posets with fewer than $n$ elements. Since $A$ is finite and non-empty, the theorem *Every finite non-empty poset has a maximal element* supplies a minimal element; call it $m$.
+
+Let $A' = A \setminus \{m\}$ and let $\preceq'$ be the restriction of $\preceq$ to $A'$. Restricting a partial order to a subset again gives a partial order, since reflexivity, antisymmetry and transitivity are statements about elements that remain true when fewer elements are available. As $|A'| = n - 1$, the induction hypothesis gives a listing $a_2, \dots, a_n$ of $A'$ with $a_i \preceq a_j \implies i \le j$ for $i, j \ge 2$.
+
+Set $a_1 = m$ and consider the listing $a_1, a_2, \dots, a_n$ of $A$. We must check that $a_i \preceq a_j$ implies $i \le j$. If $i, j \ge 2$ this is the induction hypothesis. If $i = 1$ then $i \le j$ holds automatically. The remaining case is $j = 1$ and $i \ge 2$: then $a_i \preceq m$ with $a_i \ne m$, that is $a_i \prec m$, contradicting minimality of $m$. So this case does not occur.
+
+Finally, define $a_i \le^{*} a_j$ to mean $i \le j$. This is a total order, being a copy of the usual order on $\{1, \dots, n\}$ transported along the bijection $i \mapsto a_i$, and by the property just verified $a \preceq b$ implies $a \le^{*} b$. Hence $\le^{*}$ is a linear extension.
+:::
 
 :::intuition
-Total order is a complete ranking: first place, second, third... with no two people left "side by side with no ranking between them".
-
-Partial allows side-by-side incomparable items; total forces a decision on every pair.
+The proof is a program. Keep a set of "ready" items — those with no unmet prerequisite, that is, the minimal elements — emit one, delete it, and repeat. That is Kahn's algorithm, and the theorem says it never gets stuck on a finite poset: a non-empty remainder always has a minimal element to emit. A scheduler that *does* get stuck is looking at a digraph with a cycle, which is therefore not a poset at all, since a cycle $a \prec b \prec a$ violates antisymmetry.
 :::
 
-### Worked Examples
-
-:::example
-Extending a partial order to a total order (linear extension).
+:::example[Counting linear extensions]
+The poset on $\{a,b,c,d\}$ has $a \prec b$, $a \prec c$, $b \prec d$ and $c \prec d$ (plus what reflexivity and transitivity force), with $b$ and $c$ incomparable. How many linear extensions does it have?
 :::
 
 :::solution
-Start with the poset on $\{a,b,c\}$ where $a \le b$ and $a \le c$, but $b$ and $c$ are incomparable. A **linear extension** is a total order that keeps every relation already present and adds enough new ones to make *every* pair comparable. The only undecided pair is $b$ versus $c$, so we choose an order for it:
+1. A linear extension is an ordering of the four elements respecting all constraints. Since $a \prec b \prec d$ and $a \prec c \prec d$, the element $a$ must come first and $d$ last.
+2. That leaves $b$ and $c$ in the two middle positions, in either order, and both choices respect every constraint because $b$ and $c$ are incomparable.
+3. So there are $2$ linear extensions: $a, b, c, d$ and $a, c, b, d$.
 
-Put $b$ before $c$: this gives $a \le b \le c$.
-Put $c$ before $b$: this gives $a \le c \le b$.
+This poset is the "diamond". Contrast the four-element antichain, which has $4! = 24$ extensions, and the four-element chain, which has exactly $1$: the number of extensions measures how much freedom the order leaves.
+:::
 
-Both keep $a$ below $b$ and $a$ below $c$, so both respect the original poset. (These are exactly the *topological sorts* of the Hasse diagram — the orderings a compiler or task scheduler would produce.)
+:::example[Topological sort of a dependency graph]
+A package manager must install packages with these direct dependencies: $B$ needs $A$; $C$ needs $A$; $D$ needs $B$ and $C$; $E$ needs $C$. Give an installation order, and count how many valid orders exist.
+:::
 
-**Sanity check:** why exactly two? A total order on a 3-element set is just a ranking of the three items, and there are $3! = 6$ rankings in total. The constraint "$a$ must come first" fixes the top slot, leaving $2! = 2$ ways to arrange $b$ and $c$ — matching the two extensions found above. Without any constraints, all $6$ orderings would be valid total orders.
+:::solution
+1. Take the reflexive transitive closure of the dependency digraph; it is a partial order because the digraph is acyclic. Minimal elements are packages with no unmet dependency.
+2. Run the extraction: only $A$ is minimal, so emit $A$. Now $B$ and $C$ are minimal; emit $B$, then $C$; now $D$ and $E$ are minimal; emit $D$, then $E$. The order $A, B, C, D, E$ works.
+3. Counting all valid orders: $A$ must be first. Of the remaining $4! = 24$ arrangements of $B,C,D,E$, we need $B$ before $D$, $C$ before $D$ and $C$ before $E$. Enumerating the orders of $B,C,D,E$ that satisfy all three gives $BCDE$, $BCED$, $CBDE$, $CBED$, $CEBD$ — five of them. So there are $5$ valid installation orders.
+:::
+
+:::theorem[A finite total order is a numbering]{#finite-total-order-iso}
+Let $(A, \preceq)$ be a totally ordered set with $|A| = n$. Then there is a bijection $f : A \to \{1, 2, \dots, n\}$ such that
+
+$$a \preceq b \iff f(a) \le f(b).$$
+
+Such an $f$ is unique, so up to relabelling there is exactly one total order on an $n$-element set.
+:::
+
+:::proof
+**Existence.** Apply the theorem *Every finite poset has a linear extension* to $(A, \preceq)$, obtaining a listing $a_1, \dots, a_n$ with $a_i \preceq a_j \implies i \le j$, and set $f(a_i) = i$. This $f$ is a bijection onto $\{1,\dots,n\}$ because the listing enumerates each element of $A$ exactly once.
+
+It remains to prove the equivalence. The forward implication $a \preceq b \implies f(a) \le f(b)$ is the property of the listing. For the converse, suppose $f(a_i) \le f(a_j)$, that is $i \le j$. If $i = j$ then $a_i = a_j$ and $a_i \preceq a_j$ by reflexivity. If $i < j$, totality gives $a_i \preceq a_j$ or $a_j \preceq a_i$; in the latter case the forward implication would give $j \le i$, contradicting $i < j$. So $a_i \preceq a_j$.
+
+(This is the step where totality is indispensable. For a general poset the listing produced by topological sorting satisfies only the forward implication, and indeed the diamond poset above has two different listings, so no such $f$ can be canonical.)
+
+**Uniqueness.** Suppose $f$ and $g$ both have the stated property, and suppose $f \ne g$. Among the elements where they differ, and using the total order on $\{1,\dots,n\}$, pick $a$ with $f(a)$ least. Let $k = f(a)$. The set $\{b \in A : b \preceq a\}$ is mapped by $f$ onto $\{1, \dots, k\}$: it is mapped into that set by the stated property, and onto it because $f$ is a bijection and any $c$ with $f(c) \le k$ satisfies $c \preceq a$. The same argument applies to $g$, so both $f$ and $g$ send $a$ to the size of $\{b : b \preceq a\}$, that is $f(a) = g(a)$ — contradicting the choice of $a$. Hence $f = g$.
+:::
+
+The theorem is the reason sorting is a well-posed problem. Whatever finite set of comparable items you are handed — version numbers, timestamps, strings — there is exactly one arrangement consistent with the order, so "sort this list" has a single right answer, and any two correct sorting algorithms must produce the same output.
+
+:::definition[Well-order]{#well-order}
+A total order on $A$ is a **well-order** if every non-empty subset of $A$ has a least element.
+:::
+
+:::proposition[Finite total orders are well-orders]{#finite-well-order}
+Every total order on a finite set is a well-order.
+:::
+
+:::proof
+Let $S \subseteq A$ be non-empty with $A$ finite. Then $(S, \preceq)$ is a finite non-empty poset, so by the theorem *Every finite non-empty poset has a maximal element* it has a minimal element $m$. Since $\preceq$ is total, every $s \in S$ is comparable to $m$, and $m \preceq s$ must hold — otherwise $s \prec m$, contradicting minimality. So $m$ is a least element of $S$.
+:::
+
+$(\mathbb{N}, \le)$ is well-ordered, which is exactly the principle that makes induction and "least counterexample" arguments work. $(\mathbb{Z}, \le)$ is not, since $\mathbb{Z}$ itself has no least element, and $((0,1), \le)$ is not, since the interval has no least element either: for any candidate $x$, the number $x/2$ is smaller and still in the interval. Both are total orders, so well-ordering is a strictly stronger condition.
+
+:::theorem[Zorn's lemma, stated without proof]{#zorns-lemma}
+Let $(A, \preceq)$ be a non-empty poset in which every chain has an upper bound in $A$. Then $A$ has a maximal element.
+:::
+
+:::remark
+Zorn's lemma is the infinite analogue of the theorem *Every finite non-empty poset has a maximal element*, and it is emphatically not a theorem of the kind proved in this chapter: it is equivalent to the axiom of choice and to the well-ordering theorem (that every set admits a well-order), and it is proved — or adopted — in *Set Theory*, not here. No argument in this chapter uses it, and none needs to, because every poset we meet is finite. Where it does earn its keep is in algebra and analysis: that every vector space has a basis, and that every non-trivial ring has a maximal ideal, are Zorn's lemma applied to a poset of subsets ordered by inclusion.
+:::
+
+:::example[Version ordering]
+Semantic versions are compared by major, then minor, then patch. Is this a total order on a finite set of versions, and what is the first version in the list $1.2.0$, $1.10.3$, $1.2.9$, $0.9.9$?
+:::
+
+:::solution
+1. Comparison is lexicographic on triples of integers. Given two distinct versions, the first coordinate where they differ decides, so every pair is comparable and the order is total; reflexivity, antisymmetry and transitivity are inherited coordinatewise.
+2. By the theorem *A finite total order is a numbering*, the four versions have a unique correct arrangement.
+3. Compare major numbers first: $0.9.9$ has major $0$, the others have major $1$, so $0.9.9$ is least.
+
+The classic bug is comparing versions as strings, which puts $1.10.3$ before $1.2.0$ because the character `1` precedes `2`. Lexicographic order on *strings* and lexicographic order on *tuples of integers* are different total orders on the same set.
 :::
 
 ## Common Mistakes
 
-- Confusing symmetric with antisymmetric. "Is sibling of" is symmetric; "≤" is antisymmetric. They are almost opposites.
-- Forgetting reflexivity when checking equivalence or partial orders (many students remember sym+trans but drop refl).
-- Thinking every equivalence relation is equality — no, it can collapse many elements into one class (modular arithmetic).
-- Believing that in a poset every pair must be comparable — that would make it total. Partial allows incomparables.
-- Mixing up "partition" (the blocks) with the equivalence relation itself.
-- Forgetting that antisymmetry only kicks in when both directions hold: it forces a=b, but allows one-way relations freely.
-- Assuming the inverse of a relation automatically inherits the same properties (symmetry yes, transitivity no in general).
+- **Treating "symmetric" and "antisymmetric" as opposites.** The proposition *Independence of the five properties* exhibits a relation that is both (any subset of the diagonal) and one that is neither. The same applies to reflexive and irreflexive: a relation with some loops but not all is neither.
+- **"Symmetric plus transitive implies reflexive."** The argument "$a \mathrel{R} b$, so $b \mathrel{R} a$, so $a \mathrel{R} a$" silently assumes that $a$ is related to something. The relation $\{(1,1)\}$ on $\{1,2,3\}$ is symmetric and transitive but not reflexive.
+- **Computing a transitive closure with one pass.** Adding every shortcut $(a,c)$ for existing pairs $(a,b),(b,c)$ does not in general produce a transitive relation, because the new pairs create new two-step paths. The closure is a union over *all* powers, bounded by $n$ terms on an $n$-element set.
+- **Confusing maximal with greatest.** Maximal means nothing is above it; greatest means it is above everything. A poset can have many maximal elements and no greatest one, as in $(\{2,3\}, \mid)$.
+- **Counting relations instead of pairs.** On an $n$-set there are $2^{n^2}$ relations but only $n^2$ pairs available; and an equivalence relation with class sizes $n_1, \dots, n_k$ contains $\sum n_i^2$ pairs, not $k$ or $n$.
+- **Forgetting that a class is a set, not an element.** $[a]$ is a subset of $A$; $\pi(a) = [a]$ lives in the quotient $A/\mathord{\sim}$. Writing $a \in A/\mathord{\sim}$ is a type error.
+- **Allowing the empty block in a partition.** Non-emptiness is what makes the correspondence of the theorem *Equivalence relations are partitions* a bijection rather than merely a surjection.
+- **Assuming every digraph gives a poset.** A digraph with a directed cycle through two distinct vertices violates antisymmetry, so no topological sort exists — which is exactly what a build tool reports as a circular dependency.
+- **Expecting a maximal element in an infinite poset.** The theorem needs finiteness (or the ascending chain condition). In the infinite case you need Zorn's lemma, and Zorn's lemma has a hypothesis — every chain has an upper bound — that must be checked.

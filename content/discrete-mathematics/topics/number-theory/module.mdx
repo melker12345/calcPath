@@ -4,311 +4,782 @@ title: Number Theory
 
 # Number Theory
 
-Number theory is the study of the integers and their properties — especially divisibility, primes, and modular arithmetic. Though ancient, it powers modern cryptography (RSA, Diffie-Hellman), hashing, random number generation, and error-correcting codes.
+Every other chapter of a discrete mathematics course teaches you to reason about finite structures. This one teaches you to *compute* inside one — the integers under addition and multiplication, cut down to a finite world by the single operation of taking remainders. That is a narrower subject than the number theory a mathematics department teaches, and deliberately so. The site's separate *Number Theory* subject develops divisibility, congruences and the classical theorems in their full generality, with the arithmetic of ideals waiting at the end of it. What follows is the working toolkit a computing student actually reaches for: how to decide whether a number is prime, how to compute a greatest common divisor quickly, how to invert and exponentiate modulo $n$, how to reassemble a number from its remainders, and why those four skills are exactly what a public-key cryptosystem is built out of.
 
-We focus on the computational side: recognizing primes, computing gcd efficiently, solving linear congruences, and using the Chinese Remainder Theorem to combine modular information. These algorithms are efficient and form the backbone of public-key cryptography.
+The word *quickly* is doing real work in that sentence, and it is the reason this material belongs in a computer science curriculum rather than being left to the mathematicians. Two problems about a $2048$-bit integer $n$ look superficially alike: *find $\gcd(n, m)$* and *find the prime factors of $n$*. The first is over in a few thousand machine operations. The second has resisted sixty years of concentrated effort and is believed to need more operations than there are atoms available to run them on. The gap between those two costs is not a footnote to the theory; it is the load-bearing wall under RSA, and the whole chapter is arranged to let you see where the gap comes from. Every algorithm here is stated with an operation count, and every operation count is proved.
 
-## Prime Numbers
+The plan is linear. We start from division with remainder, which is the only primitive we assume, and from it derive the primes and the $\sqrt{n}$ bound that makes small-scale primality testing feasible. Then we iterate division with remainder to get the Euclidean algorithm, prove that it is correct and that it runs in a number of steps proportional to the number of *digits* of its input — the Fibonacci numbers turn out to be its worst case, which is the prettiest complexity result in elementary mathematics. Running the same algorithm backwards produces Bézout coefficients, and Bézout coefficients produce modular inverses. Inverses plus fast exponentiation give us everything needed for the Chinese Remainder Theorem and then for RSA, whose decryption step we prove correct in the last section.
+
+Throughout, $\mathbb{Z}$ is the set of integers and $\mathbb{N} = \{1, 2, 3, \dots\}$. We assume one property of $\mathbb{Z}$ without proof, the **well-ordering principle**: every nonempty set of non-negative integers contains a least element. Every existence proof below is ultimately an appeal to it.
+
+## Division with Remainder and the Primes
 
 <!-- section: primes -->
 
-Prime numbers are the atoms out of which every integer is built by multiplication. Their distribution and arithmetic properties have fascinated mathematicians for millennia and today underwrite the security of internet commerce through RSA and related cryptosystems.
+Nothing in this chapter predates the operation you learned in primary school: divide, and keep the remainder. Stated precisely it is a theorem, not a definition, and the two clauses that make it useful — that the remainder exists, and that it is *unique* — both need an argument.
 
-A prime is an integer greater than 1 whose only positive divisors are 1 and itself. The fundamental theorem of arithmetic asserts that every integer greater than 1 factors uniquely into primes (up to order). Euclid's ancient proof that there are infinitely many primes is still the simplest and most elegant; modern proofs use analysis, topology, and probability as well.
+:::theorem[The division algorithm]{#division-algorithm}
+Let $a \in \mathbb{Z}$ and $n \in \mathbb{N}$. Then there exist **unique** integers $q$ and $r$ with
 
-In this section you will learn the definition, Euclid's proof of infinitude, the fundamental theorem, basic properties of divisibility and gcd, and the computational techniques (trial division, sieves, Euclidean algorithm) that make number theory practical.
+$$a = qn + r, \qquad 0 \le r < n.$$
 
-:::definition[Prime and composite]{#prime}
-A positive integer $p > 1$ is **prime** if it has no positive divisors other than $1$ and itself. Otherwise it is **composite**.
+We call $q$ the **quotient** and $r$ the **remainder**, and write $r = a \bmod n$.
 :::
 
-Note the hypothesis $p > 1$: it is part of the definition, not an afterthought. $1$ is neither prime nor composite. It is excluded on purpose — if $1$ were prime, factorizations would no longer be unique (you could paste in extra copies of $1$), and the theorem below would fail.
+:::proof
+*Existence.* Consider the set $S = \{a - kn : k \in \mathbb{Z}, \; a - kn \ge 0\}$ of non-negative numbers of that shape. It is nonempty: taking $k = -|a|$ gives $a + |a|n \ge a + |a| \ge 0$, since $n \ge 1$. By well-ordering $S$ has a least element $r = a - qn$ for some $q$. If we had $r \ge n$ then $r - n = a - (q+1)n$ would be a smaller non-negative member of $S$, contradicting minimality. Hence $0 \le r < n$.
+
+*Uniqueness.* Suppose $a = qn + r = q'n + r'$ with both remainders in $[0, n)$. Subtracting, $(q - q')n = r' - r$. The right-hand side satisfies $|r' - r| < n$, while the left-hand side is a multiple of $n$; the only multiple of $n$ of absolute value less than $n$ is $0$. So $r = r'$, and then $(q - q')n = 0$ with $n \neq 0$ forces $q = q'$.
+:::
+
+:::remark
+The insistence that $0 \le r < n$ is what makes $a \bmod n$ a function rather than a family of choices, and it is where hand computation and machine computation part company. In C, Java and Go the `%` operator takes the sign of the *dividend*, so `-7 % 3` is $-1$, not the mathematical $2$. Python's `%` agrees with this theorem. When a congruence in your code behaves strangely for negative inputs, this is almost always why; the repair is `((a % n) + n) % n`.
+:::
+
+:::definition[Divisibility]{#divides}
+For integers $d$ and $a$ we say $d$ **divides** $a$, written $d \mid a$, if $a = dk$ for some integer $k$. Equivalently, when $d \in \mathbb{N}$: $d \mid a$ exactly when $a \bmod d = 0$.
+:::
+
+:::definition[Prime and composite]{#prime}
+An integer $p > 1$ is **prime** if its only positive divisors are $1$ and $p$. An integer $n > 1$ that is not prime is **composite**, and then $n = ab$ for some integers $a, b$ with $1 < a \le b < n$.
+:::
+
+The exclusion of $1$ is not squeamishness. If $1$ counted as prime, then $12 = 2^2 \cdot 3 = 1 \cdot 2^2 \cdot 3 = 1^2 \cdot 2^2 \cdot 3$ would have infinitely many prime factorisations and the theorem that makes the primes worth naming would be false. A unit is not an atom.
+
+:::lemma[Every integer above one has a prime divisor]{#has-prime-divisor}
+Every integer $n > 1$ has at least one prime divisor.
+:::
+
+:::proof
+Let $D$ be the set of divisors of $n$ that are greater than $1$. It is nonempty, since $n \in D$, so by well-ordering it has a least element $p$. If $p$ were composite it would have a divisor $d$ with $1 < d < p$, and $d \mid p$ together with $p \mid n$ gives $d \mid n$, so $d$ would be a member of $D$ smaller than $p$. That is impossible, so $p$ is prime.
+:::
+
+That lemma is the engine of two very different results: the $\sqrt{n}$ bound, which makes primality testing cheap for small numbers, and Euclid's proof that the primes never run out.
+
+:::theorem[The square-root bound]{#sqrt-bound}
+If $n > 1$ is composite, then $n$ has a prime divisor $p$ with $p \le \sqrt{n}$. Consequently, if no prime $p \le \sqrt{n}$ divides $n$, then $n$ is prime.
+:::
+
+:::proof
+Write $n = ab$ with $1 < a \le b < n$, which is possible because $n$ is composite. If both factors exceeded $\sqrt{n}$ we would have $n = ab > \sqrt{n}\cdot\sqrt{n} = n$, a contradiction; so $a \le \sqrt{n}$. Since $a > 1$, the lemma *Every integer above one has a prime divisor* gives a prime $p \mid a$, and $p \le a \le \sqrt{n}$. Transitivity of divisibility gives $p \mid n$.
+
+The second sentence is the contrapositive of the first, together with the observation that $n$ is either prime or composite.
+:::
+
+:::recipe[Trial division]{#trial-division}
+To test $n > 1$ for primality: for each integer $d = 2, 3, 4, \dots$ while $d^2 \le n$, test whether $d \mid n$. If some $d$ divides $n$, report *composite* with witness $d$. If the loop finishes, report *prime*.
+:::
+
+Note the loop condition `d*d <= n` rather than `d <= sqrt(n)`: it avoids a floating-point square root whose rounding could cut the search one step short. Testing every $d$ rather than every prime $d$ costs a constant factor and saves you from needing a list of primes before you can test for primality.
+
+:::proposition[The cost of trial division]{#trial-division-cost}
+Trial division performs at most $\sqrt{n}$ divisions. In terms of the input *length* $\ell = \lceil \log_2 n \rceil$ — the number of bits actually written down — this is about $2^{\ell/2}$ divisions, which is exponential in $\ell$.
+:::
+
+:::proof
+The loop variable runs over $2 \le d \le \sqrt{n}$, so there are fewer than $\sqrt{n}$ iterations, each one division. Substituting $n \approx 2^{\ell}$ gives $\sqrt{n} \approx 2^{\ell/2}$.
+:::
+
+:::intuition
+Halving an exponent sounds like progress, and for a $30$-bit number it is: $2^{15}$ divisions is nothing. For a $2048$-bit RSA modulus it is $2^{1024}$ divisions, which is not a large number of operations so much as a way of writing "never". The moral to carry forward is that a cost of $\sqrt{n}$ is *slow* when $n$ is an input written in binary, while a cost of $\log n$ is fast. Every algorithm in the rest of the chapter is on the $\log n$ side of that line, and trial division is the only one that is not.
+:::
+
+:::example[Certifying 211 prime]
+Show that $211$ is prime, and count the divisions performed.
+:::
+
+:::solution
+1. Since $14^2 = 196 \le 211$ and $15^2 = 225 > 211$, the loop runs over $d = 2, \dots, 14$: thirteen divisions at most.
+2. $211$ is odd, so $2 \nmid 211$. Its digit sum is $4$, so $3 \nmid 211$. It does not end in $0$ or $5$, so $5 \nmid 211$. Then $211 = 7\cdot 30 + 1$, $211 = 11 \cdot 19 + 2$, $211 = 13 \cdot 16 + 3$, and the composite values of $d$ cannot divide $211$ if no prime below them does.
+3. The loop finishes with no witness, so by the theorem *The square-root bound*, $211$ is prime.
+:::
+
+:::example[Factoring 8633 by trial division]
+Factor $8633$ completely.
+:::
+
+:::solution
+1. $\sqrt{8633} \approx 92.9$, so a prime factor at or below $92$ must exist if the number is composite.
+2. Testing in order, $2, 3, 5, 7, 11, \dots$ all fail until $d = 89$: $8633 = 89 \cdot 97$.
+3. Both $89$ and $97$ are prime — neither has a prime factor at or below $9$ — so $8633 = 89 \cdot 97$ is the complete factorisation.
+4. Notice how hard the search worked: twenty-three divisions to split a four-digit number whose factors are nearly equal. Factoring is easy only when a small factor exists, and a cryptographer chooses $p$ and $q$ of equal size precisely to deny you that.
+:::
+
+:::theorem[Fundamental Theorem of Arithmetic]{#fta}
+Every integer $n > 1$ can be written as a product of primes,
+
+$$n = p_1^{e_1} p_2^{e_2} \cdots p_k^{e_k}$$
+
+with $p_1 < p_2 < \cdots < p_k$ and each $e_i \ge 1$, and this expression is unique.
+:::
+
+:::proof
+*Existence*, by strong induction on $n$. If $n$ is prime the factorisation is $n$ itself. Otherwise $n = ab$ with $1 < a \le b < n$; both $a$ and $b$ are smaller than $n$ and greater than $1$, so by the induction hypothesis each is a product of primes, and concatenating those two products expresses $n$ as a product of primes. Collecting equal primes into powers and sorting gives the stated form.
+
+*Uniqueness* needs Euclid's lemma — if a prime divides a product it divides one of the factors — which in turn needs Bézout's identity, proved below as *Bézout's identity*. The argument is carried out in full in the chapter *Divisibility and Primes*, and we use the result here without repeating it.
+:::
+
+:::corollary[Reading off exponents]{#exponent-comparison}
+Let $m$ and $n$ be positive integers written over a common list of primes as $m = \prod_i p_i^{a_i}$ and $n = \prod_i p_i^{b_i}$, where an exponent of $0$ records an absent prime. Then $m \mid n$ if and only if $a_i \le b_i$ for every $i$.
+:::
+
+:::proof
+If $a_i \le b_i$ for all $i$, then $n = m \cdot \prod_i p_i^{b_i - a_i}$ and the second factor is a positive integer, so $m \mid n$. Conversely if $n = mc$, factor $c$ into primes; the factorisation of $n$ obtained by concatenating those of $m$ and $c$ must, by uniqueness, be the factorisation of $n$, so every exponent in $m$ is at most the corresponding exponent in $n$.
+:::
+
+The primes are therefore a coordinate system: a positive integer is a vector of exponents, multiplication is vector addition, and divisibility is coordinatewise $\le$. The catch — the one that keeps cryptography in business — is that converting a number into those coordinates is the hard problem of the previous example.
 
 :::theorem[Infinitude of the primes]{#infinitely-many-primes}
 There are infinitely many primes.
 :::
 
 :::proof
-Euclid's proof by contradiction: suppose there were only finitely many, $p_1, p_2, \dots, p_k$. Form $N = p_1 p_2 \cdots p_k + 1$. Dividing $N$ by any $p_i$ leaves remainder $1$, so no $p_i$ divides $N$. But every integer $> 1$ has at least one prime divisor, so $N$ has a prime factor not in our list — contradiction. Hence no finite list can contain all primes.
+Suppose there were only finitely many, say $p_1, \dots, p_k$, and set
+
+$$N = p_1 p_2 \cdots p_k + 1.$$
+
+Then $N > 1$, so by the lemma *Every integer above one has a prime divisor* it has a prime divisor $p$, which must be some $p_i$ from the list. But $p_i$ divides the product $p_1 \cdots p_k$, and it divides $N$, hence it divides their difference $N - p_1\cdots p_k = 1$. No prime divides $1$, a contradiction. So no finite list contains every prime.
 :::
 
-:::theorem[Fundamental Theorem of Arithmetic]{#fta}
-Every integer $n > 1$ factors uniquely (up to the order of the factors) as a product of prime powers:
-
-$$n = p_1^{e_1} p_2^{e_2} \cdots p_k^{e_k}.$$
+:::pitfall
+Euclid's argument does **not** claim that $p_1 p_2 \cdots p_k + 1$ is prime. It claims that its prime factors are missing from the list. The distinction is easy to check: $2 \cdot 3 \cdot 5 \cdot 7 \cdot 11 \cdot 13 + 1 = 30031 = 59 \cdot 509$, which is composite, yet both $59$ and $509$ are indeed absent from $\{2,3,5,7,11,13\}$, exactly as the proof predicts.
 :::
 
-**Prime factorization** is the key to many divisibility questions: gcd, lcm, divisor counts, and perfect-square tests all fall out of the exponents $e_i$.
-
-:::recipe[Trial division for primality]{#trial-division}
-To test whether $n$ is prime, you only need to try dividing by primes up to $\sqrt{n}$.
+:::recipe[Sieve of Eratosthenes]{#sieve}
+To list every prime up to $N$: create a boolean array indexed $2 \dots N$, all initially true. For each $p$ from $2$ while $p^2 \le N$, if $p$ is still marked true, mark false every entry $p^2, p^2 + p, p^2 + 2p, \dots$ up to $N$. The indices still true at the end are exactly the primes.
 :::
 
-Why $\sqrt{n}$? If $n = a \cdot b$ with $a \le b$, then $a \le \sqrt{n}$ — a composite number always has a factor at or below its square root, so if none is found, $n$ is prime.
-
-:::intuition
-Primes are the "atoms" of the integers — you can't break them into smaller integer factors greater than $1$.
-
-Every number is built by multiplying these atoms (with repeats allowed). The factorization is like the unique "ingredient list" with quantities: $180$ is "two 2's, two 3's, and one 5," and no other recipe makes $180$.
+:::proposition[The sieve is correct]{#sieve-correct}
+After the sieve terminates, index $m$ is marked true if and only if $m$ is prime.
 :::
 
-### Worked Examples
+:::proof
+No prime is ever marked false: the entries marked in the pass for $p$ are the multiples $kp$ with $k \ge p$, all of which are composite.
 
-:::example[Is 91 prime?]
-1. Compute the search bound. $\sqrt{91} \approx 9.54$, so we only need to test prime divisors $\le 9$: that is $2, 3, 5, 7$.
-2. Test each. $91$ is odd (not divisible by $2$); its digit sum is $9+1 = 10$, not a multiple of $3$; it doesn't end in $0$ or $5$; but $91 = 7 \times 13$.
-3. We found a factor, so $91$ is **not prime**.
-4. Sanity check: $7 \times 13 = 91$ ✓, and both $7$ and $13$ are prime, so $91 = 7 \times 13$ is its full factorization.
+Conversely let $m \le N$ be composite. By the theorem *The square-root bound* it has a prime divisor $p \le \sqrt{m} \le \sqrt{N}$, so the pass for $p$ does occur, and $p$ is still true at that moment since no prime is ever marked false. Write $m = kp$; from $p \le \sqrt m$ we get $k = m/p \ge p$, so $m = kp$ lies in the marked progression $p^2, p^2 + p, \dots$ and is set false.
 :::
 
-:::example[Prime factorization of 180]
-1. Peel off the smallest prime repeatedly. $180 = 2 \times 90$; $90 = 2 \times 45$; $45$ is odd, so we move on from $2$.
-2. $45 = 3 \times 15$; $15 = 3 \times 5$; and $5$ is prime.
-3. Collect the factors: $180 = 2 \times 2 \times 3 \times 3 \times 5 = 2^2 \times 3^2 \times 5$.
-4. Sanity check: $2^2 \times 3^2 \times 5 = 4 \times 9 \times 5 = 180$ ✓.
+Starting each pass at $p^2$ rather than $2p$ is worth noticing: every smaller multiple of $p$ has a prime factor below $p$ and was therefore already struck out. The total work is $\sum_{p \le \sqrt N} N/p$, which is about $N \ln \ln N$ — essentially linear, and the reason a sieve is the right way to get *all* primes below a bound while trial division is the right way to test *one* number.
+
+:::example[Sieving up to 30]
+Run the sieve to $N = 30$ and count the primes found.
 :::
 
-## Divisors and the Greatest Common Divisor
+:::solution
+1. $p = 2$: strike $4, 6, 8, \dots, 30$.
+2. $p = 3$: still true, so strike $9, 15, 21, 27$ (even multiples are already gone).
+3. $p = 4$: already false, skip. $p = 5$: strike $25$. Then $6^2 = 36 > 30$, so the loop ends.
+4. Survivors: $2, 3, 5, 7, 11, 13, 17, 19, 23, 29$ — that is $\pi(30) = 10$ primes.
+:::
+
+:::remark
+The prime counting function $\pi(x)$ satisfies $\pi(x) \sim x/\ln x$, the Prime Number Theorem. For a working programmer the useful reading is: a random odd integer near $2^{1024}$ is prime with probability about $2/\ln(2^{1024}) \approx 1/355$, so generating an RSA prime means testing a few hundred candidates. The analytic machinery behind that estimate is developed in *Analytic Number Theory*; the estimate itself is all we need.
+:::
+
+## Divisors, gcd and lcm
 
 <!-- section: divisors -->
 
-:::definition[Divisor]{#divisor}
-If $d$ divides $n$ (written $d \mid n$), then $n = d \cdot k$ for some integer $k$; $d$ is a **divisor** (factor) of $n$.
+Divisibility rarely appears alone. What a computation usually needs is the largest thing two numbers have in common, or the smallest thing that contains both.
+
+:::proposition[Linearity of divisibility]{#linearity}
+If $d \mid a$ and $d \mid b$, then $d \mid (ax + by)$ for all integers $x, y$.
 :::
 
-:::notation
-Read the bar as "divides": $d \mid n$ is a true/false statement, not the fraction $d/n$.
+:::proof
+Write $a = d\alpha$ and $b = d\beta$. Then $ax + by = d(\alpha x + \beta y)$, and $\alpha x + \beta y$ is an integer.
 :::
+
+Small as it is, this proposition is used in almost every proof that follows; whenever an argument concludes "so $d$ divides the remainder too", this is why.
 
 :::definition[Greatest common divisor]{#gcd}
-The **greatest common divisor** $\gcd(a, b)$ is the largest positive integer that divides both $a$ and $b$. When $\gcd(a,b) = 1$ we call $a$ and $b$ **coprime** (relatively prime).
+For integers $a, b$ not both zero, $\gcd(a,b)$ is the largest positive integer dividing both. If $\gcd(a,b) = 1$ we call $a$ and $b$ **coprime**. By convention $\gcd(a, 0) = |a|$ for $a \neq 0$.
 :::
 
 :::definition[Least common multiple]{#lcm}
-The **least common multiple** $\operatorname{lcm}(a, b)$ is the smallest positive integer that both $a$ and $b$ divide.
+For positive integers $a, b$, $\operatorname{lcm}(a,b)$ is the smallest positive integer that both $a$ and $b$ divide.
 :::
 
-:::proposition[gcd and lcm multiply to the product]{#gcd-lcm-product}
-For positive $a, b$,
+The gcd is well defined because the common divisors of $a$ and $b$ all lie in $[1, \max(|a|,|b|)]$ when one of them is nonzero, so the set of them is finite and nonempty — it contains $1$.
 
-$$\gcd(a, b) \cdot \operatorname{lcm}(a, b) = a \cdot b.$$
-:::
+:::theorem[gcd and lcm from the factorisations]{#gcd-from-factorisation}
+Let $a = \prod_i p_i^{a_i}$ and $b = \prod_i p_i^{b_i}$ over a common list of primes. Then
 
-:::proposition[Reading gcd and lcm off the factorizations]{#gcd-from-factorization}
-If $a = p_1^{a_1} p_2^{a_2} \cdots$ and $b = p_1^{b_1} p_2^{b_2} \cdots$ (using the same list of primes, with a zero exponent when a prime is absent), then the gcd takes the **minimum** exponent of each prime and the lcm takes the **maximum**:
-
-$$\gcd(a,b) = \prod_i p_i^{\min(a_i, b_i)}, \qquad \operatorname{lcm}(a,b) = \prod_i p_i^{\max(a_i, b_i)}.$$
-:::
-
-:::proposition[Counting divisors]{#divisor-count}
-The number of positive divisors of $n = p_1^{e_1} \cdots p_k^{e_k}$ is
-
-$$\prod_{i=1}^{k} (e_i + 1).$$
+$$\gcd(a,b) = \prod_i p_i^{\min(a_i,b_i)}, \qquad \operatorname{lcm}(a,b) = \prod_i p_i^{\max(a_i,b_i)}.$$
 :::
 
 :::proof
-Each divisor independently chooses an exponent from $0$ up to $e_i$ for prime $p_i$ — that is $e_i + 1$ choices per prime, and the product rule multiplies the choices together.
+Let $g = \prod_i p_i^{\min(a_i,b_i)}$. By the corollary *Reading off exponents*, an integer $d = \prod_i p_i^{d_i}$ divides $a$ exactly when $d_i \le a_i$ for all $i$, and divides $b$ exactly when $d_i \le b_i$. So $d$ is a common divisor precisely when $d_i \le \min(a_i, b_i)$ for every $i$, which says exactly that $d \mid g$. Every common divisor divides $g$, hence is at most $g$, and $g$ is itself a common divisor; so $g$ is the greatest.
+
+The lcm argument is the same with the inequalities reversed: $a \mid m$ and $b \mid m$ hold together precisely when $m_i \ge \max(a_i, b_i)$ for each $i$, and the least such $m$ takes equality throughout.
 :::
 
-:::intuition
-Divisors of $12$ are $1, 2, 3, 4, 6, 12$. The common divisors of $12$ and $18$ are $1, 2, 3, 6$; the greatest is $6$.
-
-The gcd is the largest "shared building block" you can make from the primes both numbers own; the lcm is the smallest number roomy enough to contain both as building blocks. Every prime a number owns "min" for the gcd (only the overlap) and "max" for the lcm (whatever either needs).
+:::corollary[Product of gcd and lcm]{#gcd-lcm-product}
+For positive integers $a$ and $b$, $\gcd(a,b) \cdot \operatorname{lcm}(a,b) = ab$.
 :::
 
-### Worked Examples
-
-:::example[Divisor count of 60]
-1. Factor. $60 = 2^2 \times 3 \times 5$, so the exponents are $2, 1, 1$.
-2. Apply the formula. Number of divisors $= (2+1)(1+1)(1+1) = 3 \times 2 \times 2 = 12$.
-3. List them to confirm: $1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60$ — that is $12$ divisors ✓.
+:::proof
+For any two real numbers, $\min(a_i,b_i) + \max(a_i,b_i) = a_i + b_i$. Multiplying the two formulas of the theorem *gcd and lcm from the factorisations* adds the exponents prime by prime, giving $\prod_i p_i^{a_i + b_i} = ab$.
 :::
 
-:::example[gcd and lcm via prime factorizations]
-1. Factor both. $48 = 2^4 \times 3$ and $180 = 2^2 \times 3^2 \times 5$.
-2. gcd = minimum exponent on each shared prime. For $2$: $\min(4, 2) = 2$. For $3$: $\min(1, 2) = 1$. The prime $5$ appears only in $180$, so its min exponent is $0$. Thus $\gcd(48, 180) = 2^2 \times 3 = 12$.
-3. lcm = maximum exponent on each prime. For $2$: $\max(4,2)=4$; for $3$: $\max(1,2)=2$; for $5$: $\max(0,1)=1$. Thus $\operatorname{lcm}(48,180) = 2^4 \times 3^2 \times 5 = 16 \times 9 \times 5 = 720$.
-4. Sanity check: $\gcd \cdot \operatorname{lcm} = 12 \times 720 = 8640$ and $48 \times 180 = 8640$ ✓.
+That corollary is how lcm is computed in practice: never by factoring, but as `a / gcd(a,b) * b`, dividing first so the intermediate value does not overflow.
+
+:::theorem[Divisor-counting formula]{#divisor-count}
+If $n = p_1^{e_1}\cdots p_k^{e_k}$ then the number of positive divisors of $n$ is
+
+$$\tau(n) = (e_1+1)(e_2+1)\cdots(e_k+1).$$
 :::
 
-## The Euclidean Algorithm
+:::proof
+By the corollary *Reading off exponents*, the divisors of $n$ correspond exactly to the exponent tuples $(d_1,\dots,d_k)$ with $0 \le d_i \le e_i$, and distinct tuples give distinct integers by uniqueness of factorisation. There are $e_i + 1$ choices for each coordinate, chosen independently, so the product rule gives $\prod_i (e_i+1)$ tuples.
+:::
+
+:::example[Divisors, gcd and lcm of 84 and 360]
+Compute $\tau(360)$, $\gcd(84,360)$ and $\operatorname{lcm}(84,360)$.
+:::
+
+:::solution
+1. Factor: $84 = 2^2\cdot 3\cdot 7$ and $360 = 2^3 \cdot 3^2 \cdot 5$.
+2. $\tau(360) = (3+1)(2+1)(1+1) = 24$.
+3. Minimum exponents: $2^{\min(2,3)} 3^{\min(1,2)} 5^{\min(0,1)} 7^{\min(1,0)} = 2^2 \cdot 3 = 12$, so $\gcd = 12$.
+4. Maximum exponents: $2^3 \cdot 3^2 \cdot 5 \cdot 7 = 2520$, so $\operatorname{lcm} = 2520$.
+5. Check: $12 \cdot 2520 = 30240 = 84 \cdot 360$, as the corollary *Product of gcd and lcm* requires.
+:::
+
+:::pitfall
+This section's formulas are correct and almost useless for large inputs, because they all begin "factor $n$". A $2048$-bit gcd computed by factoring would take longer than the universe has existed; the same gcd by the algorithm of the next section takes under a millisecond. Keep the factorisation picture for understanding *what* the gcd is, and use Euclid to *get* it.
+:::
+
+## The Euclidean Algorithm and its Cost
 
 <!-- section: euclid -->
 
-Factoring big numbers is slow, so we rarely compute gcd from prime factorizations. The **Euclidean algorithm** computes $\gcd(a, b)$ efficiently without any factoring, and it rests on one identity.
+Euclid's algorithm is the oldest non-trivial algorithm still in daily use, and it is the first place where a student sees a proof of correctness and a proof of running time sitting side by side. Both are short. Both matter.
 
-:::theorem[Euclid's identity]{#euclid-identity}
-For $a > b > 0$,
+:::lemma[Euclid's identity]{#euclid-identity}
+For integers $a$ and $n$ with $n > 0$,
 
-$$\gcd(a, b) = \gcd(b, \; a \bmod b).$$
+$$\gcd(a, n) = \gcd(n, \; a \bmod n).$$
 :::
 
 :::proof
-Write $a = qb + r$ where $r = a \bmod b$. Any common divisor of $a$ and $b$ also divides $r = a - qb$, and any common divisor of $b$ and $r$ also divides $a = qb + r$. So the pair $(a,b)$ and the pair $(b, r)$ have exactly the same set of common divisors — and therefore the same greatest one.
+Write $a = qn + r$ with $r = a \bmod n$, as the theorem *The division algorithm* permits. If $d$ divides both $a$ and $n$, then by *Linearity of divisibility* it divides $a - qn = r$, so $d$ is a common divisor of $n$ and $r$. Conversely if $d$ divides both $n$ and $r$, the same proposition gives $d \mid qn + r = a$, so $d$ is a common divisor of $a$ and $n$.
+
+The two pairs therefore have identical sets of common divisors, and so the same greatest one.
 :::
 
 :::recipe[Euclidean algorithm]{#euclidean-algorithm}
-Repeat, replacing the pair $(a, b)$ by $(b, \; a \bmod b)$, until the remainder is $0$; the **last nonzero remainder is the gcd**.
+Given $a \ge b \ge 0$, repeat $(a, b) \leftarrow (b, \; a \bmod b)$ until $b = 0$. Then output $a$.
 :::
 
-:::theorem[Bézout's identity]{#bezout}
-For every pair of integers there exist integers $x, y$ (the **Bézout coefficients**) with
-
-$$\gcd(a, b) = a x + b y.$$
+:::theorem[Correctness of the Euclidean algorithm]{#euclid-correct}
+On input $(a,b)$ with $a \ge b \ge 0$ and $a > 0$, the algorithm terminates and outputs $\gcd(a,b)$.
 :::
 
-The **extended Euclidean algorithm** finds such $x$ and $y$: you recover them by back-substituting the remainders from the ordinary Euclidean steps. This is exactly how you find modular inverses in the next sections.
+:::proof
+*Termination.* The second component of the pair is a sequence of non-negative integers, and after the first step each is a remainder modulo its predecessor, hence strictly smaller: $b > a \bmod b \ge 0$. A strictly decreasing sequence of non-negative integers is finite, so some component eventually equals $0$ and the loop stops.
 
-Running time is $O(\log \min(a, b))$ — very fast even for numbers with hundreds of digits.
+*Correctness.* The quantity $\gcd(a,b)$ is an invariant of the loop body: the lemma *Euclid's identity* says precisely that replacing $(a,b)$ by $(b, a \bmod b)$ leaves it unchanged. It holds on entry, so it holds on exit, where the pair is $(g, 0)$ for some $g$. Since $\gcd(g,0) = g$, the returned value is the gcd of the original inputs.
+:::
+
+Termination is one thing; speed is another. A decreasing sequence of integers could take $a$ steps to reach zero. It does not, and the reason is that a remainder is not merely smaller than the divisor — it is smaller by a lot, at least every other step.
+
+:::lemma[Two steps at least halve]{#halving}
+If $a \ge b > 0$, then $a \bmod b < a/2$.
+:::
+
+:::proof
+Two cases. If $b \le a/2$ then $a \bmod b < b \le a/2$, since a remainder is always less than the divisor. If $b > a/2$ then the quotient is $1$, because $b \le a < 2b$, and so $a \bmod b = a - b < a - a/2 = a/2$.
+:::
+
+:::theorem[The Euclidean algorithm runs in logarithmic time]{#euclid-cost}
+On input $(a,b)$ with $a \ge b \ge 0$, the Euclidean algorithm performs at most $2\log_2 a + 1$ division steps. In terms of the input length $\ell$ in bits, this is $O(\ell)$ divisions.
+:::
+
+:::proof
+Let $r_0 = a$, $r_1 = b$ and $r_{i+1} = r_{i-1} \bmod r_i$ be the sequence of values. The lemma *Two steps at least halve* applied to the pair $(r_{i-1}, r_i)$ gives $r_{i+1} < r_{i-1}/2$. So along either the even-indexed or the odd-indexed subsequence, the values at least halve each time, and therefore
+
+$$r_{2k} < \frac{r_0}{2^{k}}.$$
+
+Since the values are non-negative integers, the sequence must reach $0$ once $r_0/2^k$ drops to $1$ or below, i.e. by $k = \lfloor\log_2 a\rfloor + 1$. Each increment of $k$ covers two steps, giving at most $2\log_2 a + 1$ divisions.
+
+An integer with $\ell$ bits satisfies $a < 2^{\ell}$, so the bound is at most $2\ell + 1$ divisions.
+:::
 
 :::intuition
-Instead of listing all divisors of both numbers and hunting for the biggest shared one, you repeatedly replace the bigger number by the remainder it leaves against the smaller — like the ancient "keep subtracting the smaller" game, but sped up by using $\bmod$ to subtract many copies at once.
-
-The extended version rewinds those remainder steps to express the gcd as a combination $a x + b y$ — like figuring out how many of each of two coin denominations add up to a target amount.
+Compare the two costs honestly. Factoring a $2048$-bit number to get its gcd would take about $2^{1024}$ operations; Euclid takes about $4096$ divisions. The algorithm never learns a single prime factor of either input, and that is exactly why it is fast — it extracts the one piece of shared structure you asked for without solving the hard problem that also contains it. Almost every fast number-theoretic algorithm has this shape.
 :::
 
-### Worked Examples
+The bound $2\log_2 a$ is not tight, and the exact worst case is a small miracle: it is the input on which every quotient is as small as possible, namely $1$, which forces the sequence of remainders to run backwards through the Fibonacci numbers.
 
-:::example[gcd(1071, 462)]
-1. $1071 = 2 \times 462 + 147$ (remainder $147$).
-2. $462 = 3 \times 147 + 21$ (remainder $21$).
-3. $147 = 7 \times 21 + 0$ (remainder $0$ — stop).
-4. The last nonzero remainder is $21$, so $\gcd(1071, 462) = 21$.
-5. Sanity check: $21 \mid 1071$ since $1071 = 21 \times 51$, and $21 \mid 462$ since $462 = 21 \times 22$; and $\gcd(51, 22) = 1$, so $21$ is indeed the *greatest* common divisor ✓.
+:::theorem[Fibonacci inputs are the worst case]{#lame}
+Let $F_1 = F_2 = 1$ and $F_{k+1} = F_k + F_{k-1}$. If the Euclidean algorithm on input $(a,b)$ with $a > b > 0$ performs exactly $k$ division steps, then $a \ge F_{k+2}$ and $b \ge F_{k+1}$. The pair $(F_{k+2}, F_{k+1})$ attains this, taking exactly $k$ steps.
 :::
 
-:::example[Extended Euclidean for gcd(48, 18)]
-1. Run the forward algorithm, keeping every equation.
-2. $$48 = 2 \times 18 + 12, \qquad 18 = 1 \times 12 + 6, \qquad 12 = 2 \times 6 + 0.$$
-3. The last nonzero remainder is $6$, so $\gcd(48, 18) = 6$.
-4. Back-substitute, starting from the equation that produced the gcd. From the second equation, $6 = 18 - 1 \times 12$.
-5. From the first equation, $12 = 48 - 2 \times 18$. Substitute:
-6. $$6 = 18 - 1 \times (48 - 2 \times 18) = 18 - 48 + 2 \times 18 = 3 \times 18 - 1 \times 48.$$
-7. So $6 = (-1)\times 48 + 3 \times 18$, giving Bézout coefficients $x = -1$, $y = 3$.
-8. Sanity check: $(-1)(48) + (3)(18) = -48 + 54 = 6$ ✓.
+:::proof
+Induct on $k$. For $k = 1$ the algorithm stops after one division, which needs $b \ge 1 = F_2$ and $a > b$ so $a \ge 2 = F_3$.
+
+Suppose the claim holds for $k-1$ and let $(a,b)$ take $k$ steps. The first step produces the pair $(b, r)$ with $r = a \bmod b$, which takes $k - 1$ steps, so by induction $b \ge F_{k+1}$ and $r \ge F_k$. The first division gives $a = qb + r$ with $q \ge 1$ because $a > b$, hence
+
+$$a \ge b + r \ge F_{k+1} + F_k = F_{k+2}.$$
+
+For the attainment, run the algorithm on $(F_{k+2}, F_{k+1})$: since $F_{k+2} = 1\cdot F_{k+1} + F_k$ and $0 \le F_k < F_{k+1}$ for $k \ge 2$, every quotient is $1$ and the pair becomes $(F_{k+1}, F_k)$. Repeating, the algorithm descends the Fibonacci sequence one index per step and halts on $(F_2, F_1) = (1,1) \to (1,0)$ after exactly $k$ steps.
 :::
 
-## Modular Arithmetic and Congruences
+:::corollary[Lamé's bound]{#lame-digits}
+The number of division steps on input $(a,b)$ with $b \le a$ is at most $5$ times the number of decimal digits of $b$.
+:::
+
+:::proof
+If the algorithm takes $k$ steps then $b \ge F_{k+1}$ by the theorem *Fibonacci inputs are the worst case*. Since $F_{k+1} \ge \varphi^{k-1}$ where $\varphi = (1+\sqrt5)/2$, taking base-$10$ logarithms gives $(k-1)\log_{10}\varphi \le \log_{10} b$, and $\log_{10}\varphi \approx 0.2090 > 1/5$. Hence $k - 1 < 5\log_{10} b$, so $k \le 5 d$ where $d$ is the number of decimal digits of $b$.
+:::
+
+:::figure[The remainder sequence collapses on a typical input and crawls on the Fibonacci worst case. Both start near $1000$; one is finished in four steps, the other needs fifteen.]{#euclid-staircase}
+{
+  "type": "plot",
+  "x": [0, 16], "y": [0, 1150],
+  "xTicks": 2, "yTicks": 200, "xLabel": "step", "yLabel": "remainder",
+  "marks": [
+    { "kind": "path", "points": [[0,1071],[1,462],[2,147],[3,21],[4,0]], "tone": "accent" },
+    { "kind": "path", "points": [[0,987],[1,610],[2,377],[3,233],[4,144],[5,89],[6,55],[7,34],[8,21],[9,13],[10,8],[11,5],[12,3],[13,2],[14,1],[15,0]], "tone": "alt", "dashed": true },
+    { "kind": "text", "at": [5.6, 900], "text": "gcd(1071, 462)", "leaderTo": [1, 462] },
+    { "kind": "text", "at": [9.5, 560], "text": "gcd(987, 610)", "leaderTo": [4, 144] }
+  ]
+}
+:::
+
+:::example[Counting the steps on a Fibonacci pair]
+How many division steps does the Euclidean algorithm take on $(89, 55)$, and what is the gcd?
+:::
+
+:::solution
+1. $89 = F_{11}$ and $55 = F_{10}$, so the theorem *Fibonacci inputs are the worst case* predicts $k$ steps where $k + 2 = 11$, that is $k = 9$.
+2. Running it: $89 = 1\cdot55 + 34$, $55 = 1\cdot34+21$, $34=1\cdot21+13$, $21=1\cdot13+8$, $13=1\cdot8+5$, $8=1\cdot5+3$, $5=1\cdot3+2$, $3=1\cdot2+1$, $2=2\cdot1+0$. That is nine divisions.
+3. The last nonzero remainder is $1$, so $\gcd(89,55)=1$ — consecutive Fibonacci numbers are always coprime.
+4. For comparison, $\gcd(1000, 999)$ takes two steps despite the larger inputs. Size is not what makes the algorithm work hard; small quotients are.
+:::
+
+### Running the algorithm backwards: Bézout
+
+Every division step wrote a remainder as a combination of the two numbers above it. Keeping those combinations as we go expresses the gcd itself in terms of the original inputs, which is the single most useful by-product in the chapter.
+
+:::theorem[Bézout's identity]{#bezout}
+For any integers $a, b$ not both zero there exist integers $x, y$ with
+
+$$ax + by = \gcd(a,b).$$
+:::
+
+:::proof
+We prove it by exhibiting the algorithm that produces $x$ and $y$. Alongside the remainder sequence $r_0 = a$, $r_1 = b$, $r_{i+1} = r_{i-1} - q_i r_i$, maintain coefficient sequences
+
+$$x_0 = 1,\ x_1 = 0, \quad y_0 = 0,\ y_1 = 1, \qquad x_{i+1} = x_{i-1} - q_i x_i, \quad y_{i+1} = y_{i-1} - q_i y_i,$$
+
+using the same quotients $q_i$. We claim the invariant $r_i = a x_i + b y_i$ holds for every $i$.
+
+It holds at $i = 0$ and $i = 1$ by the initial values. Assuming it for $i-1$ and $i$,
+
+$$r_{i+1} = r_{i-1} - q_i r_i = (a x_{i-1} + b y_{i-1}) - q_i (a x_i + b y_i) = a(x_{i-1} - q_i x_i) + b(y_{i-1} - q_i y_i) = a x_{i+1} + b y_{i+1}.$$
+
+By the theorem *Correctness of the Euclidean algorithm* the last nonzero remainder $r_m$ equals $\gcd(a,b)$, and the invariant at $i = m$ reads $\gcd(a,b) = a x_m + b y_m$.
+:::
+
+:::recipe[Extended Euclidean algorithm]{#ext-euclid}
+Keep a table with columns $r$, $q$, $x$, $y$. Seed the first two rows with $(a, -, 1, 0)$ and $(b, -, 0, 1)$. At each step compute $q = \lfloor r_{i-1}/r_i \rfloor$, then subtract $q$ times the current row from the row above it, componentwise, to produce the next row. Stop when $r$ reaches $0$; the previous row reads $(\gcd, \cdot, x, y)$ with $ax + by = \gcd$.
+:::
+
+:::example[A full extended Euclid trace]
+Compute $\gcd(240, 46)$ and Bézout coefficients.
+:::
+
+:::solution
+1. Set up the table and run it. Each row is (remainder, quotient used to make it, $x$, $y$):
+
+$$
+\begin{array}{r|r|r|r}
+r & q & x & y\\\hline
+240 & - & 1 & 0\\
+46 & - & 0 & 1\\
+10 & 5 & 1 & -5\\
+6 & 4 & -4 & 21\\
+4 & 1 & 5 & -26\\
+2 & 1 & -9 & 47\\
+0 & 2 & & \\
+\end{array}
+$$
+
+2. Row three, for instance, comes from $240 - 5\cdot 46 = 10$ applied to all three columns: $1 - 5\cdot 0 = 1$ and $0 - 5 \cdot 1 = -5$.
+3. The last nonzero remainder is $2$, so $\gcd(240,46) = 2$, with $x = -9$ and $y = 47$.
+4. Check the invariant on the final row: $240\cdot(-9) + 46\cdot 47 = -2160 + 2162 = 2$.
+:::
+
+:::corollary[The gcd is the least positive combination]{#least-combination}
+$\gcd(a,b)$ is the smallest positive integer expressible as $ax + by$ with $x, y \in \mathbb{Z}$. Consequently $ax + by = c$ has an integer solution if and only if $\gcd(a,b) \mid c$.
+:::
+
+:::proof
+Let $g = \gcd(a,b)$. By *Bézout's identity*, $g$ is expressible. By *Linearity of divisibility*, $g$ divides every combination $ax+by$, so every positive combination is at least $g$; hence $g$ is the least.
+
+For the second claim: if $ax+by = c$ then $g \mid c$ by the same linearity. Conversely if $c = gk$, multiply a Bézout expression by $k$ to get $a(xk) + b(yk) = c$.
+:::
+
+:::example[When can a linear Diophantine equation be solved?]
+Does $6x + 15y = 21$ have an integer solution? Does $6x + 15y = 20$?
+:::
+
+:::solution
+1. $\gcd(6,15) = 3$. Since $3 \mid 21$, the corollary *The gcd is the least positive combination* guarantees a solution to the first.
+2. Bézout for $(6,15)$: $6\cdot 3 + 15 \cdot (-1) = 3$. Multiplying through by $7$ gives $6 \cdot 21 + 15 \cdot (-7) = 21$, so $(x,y) = (21,-7)$ works.
+3. For the second, $3 \nmid 20$, so no integer solution exists — every value of $6x+15y$ is a multiple of $3$.
+:::
+
+## Modular Arithmetic
 
 <!-- section: modular -->
 
-Fix a positive integer $m$, called the **modulus**.
+Reducing modulo $n$ throws away everything about an integer except its remainder. What survives is still a system in which you can add, subtract and multiply, and it is finite — which is why a computer can work in it exactly, with no overflow and no rounding, for arbitrarily long computations.
 
-:::definition[Congruence modulo m]{#congruence}
-We say $a \equiv b \pmod{m}$ (read "$a$ is congruent to $b$ modulo $m$") if $m$ divides $a - b$ — equivalently, $a$ and $b$ leave the same remainder when divided by $m$.
+:::definition[Congruence]{#congruence}
+For $n \in \mathbb{N}$ and integers $a, b$, write $a \equiv b \pmod n$ if $n \mid (a-b)$; equivalently, if $a$ and $b$ leave the same remainder on division by $n$.
 :::
 
-Congruence modulo $m$ is an equivalence relation, so it partitions the integers into $m$ **residue classes** represented by $0, 1, \dots, m-1$. Working "mod $m$" means working with these classes rather than with individual integers.
+:::definition[Residue classes]{#residue-classes}
+Congruence modulo $n$ is an equivalence relation, and its classes are the **residue classes** modulo $n$. There are exactly $n$ of them, represented by $0, 1, \dots, n-1$; the set of classes with its induced arithmetic is written $\mathbb{Z}_n$.
+:::
 
 :::proposition[Arithmetic respects congruence]{#congruence-arithmetic}
-If $a \equiv b \pmod m$ and $c \equiv d \pmod m$, then
+If $a \equiv b$ and $c \equiv d \pmod n$, then
 
-$$a + c \equiv b + d, \qquad a - c \equiv b - d, \qquad a c \equiv b d \pmod{m},$$
+$$a + c \equiv b + d, \qquad a - c \equiv b - d, \qquad ac \equiv bd \pmod n,$$
 
-and consequently $a^k \equiv b^k \pmod{m}$ for every positive integer $k$.
+and hence $a^k \equiv b^k \pmod n$ for every $k \ge 1$.
 :::
 
-This is what lets you reduce numbers *before* adding or multiplying, keeping intermediate values small.
+:::proof
+Write $a - b = ns$ and $c - d = nt$. Then $(a+c)-(b+d) = n(s+t)$ and $(a-c)-(b-d) = n(s-t)$, both multiples of $n$. For the product,
+
+$$ac - bd = ac - bc + bc - bd = c(a-b) + b(c-d) = n(cs + bt),$$
+
+again a multiple of $n$. The power statement follows by induction on $k$, multiplying the congruence $a^{k-1} \equiv b^{k-1}$ by $a \equiv b$.
+:::
+
+This proposition is a licence to reduce early and often. It is what keeps intermediate values bounded by $n^2$ in a computation that would otherwise produce numbers with millions of digits.
+
+:::figure[Arithmetic modulo $12$ lives on a dial. Adding $5$ to the class of $10$ walks five places clockwise and lands on $3$, because $15 - 3$ is a multiple of $12$.]{#clock-dial}
+{
+  "type": "plot",
+  "x": [-1.75, 1.75], "y": [-1.6, 1.6],
+  "equalAspect": true,
+  "marks": [{"kind": "polar", "r": "1", "from": 0, "to": 6.2832, "tone": "muted"}, {"kind": "point", "at": [0.0, 1.0]}, {"kind": "point", "at": [0.5, 0.866]}, {"kind": "point", "at": [0.866, 0.5]}, {"kind": "point", "at": [1.0, 0.0]}, {"kind": "point", "at": [0.866, -0.5]}, {"kind": "point", "at": [0.5, -0.866]}, {"kind": "point", "at": [0.0, -1.0]}, {"kind": "point", "at": [-0.5, -0.866]}, {"kind": "point", "at": [-0.866, -0.5]}, {"kind": "point", "at": [-1.0, -0.0]}, {"kind": "point", "at": [-0.866, 0.5]}, {"kind": "point", "at": [-0.5, 0.866]}, {"kind": "text", "at": [0.0, 1.28], "text": "0"}, {"kind": "text", "at": [0.64, 1.109], "text": "1"}, {"kind": "text", "at": [1.109, 0.64], "text": "2"}, {"kind": "text", "at": [1.28, 0.0], "text": "3"}, {"kind": "text", "at": [1.109, -0.64], "text": "4"}, {"kind": "text", "at": [0.64, -1.109], "text": "5"}, {"kind": "text", "at": [0.0, -1.28], "text": "6"}, {"kind": "text", "at": [-0.64, -1.109], "text": "7"}, {"kind": "text", "at": [-1.109, -0.64], "text": "8"}, {"kind": "text", "at": [-1.28, -0.0], "text": "9"}, {"kind": "text", "at": [-1.109, 0.64], "text": "10"}, {"kind": "text", "at": [-0.64, 1.109], "text": "11"},
+    { "kind": "arrow", "from": [0, 0], "to": [-0.866, 0.5], "tone": "accent" },
+    { "kind": "arrow", "from": [0, 0], "to": [1.0, 0.0], "tone": "result" }
+  ]
+}
+:::
 
 :::pitfall
-**Division is different.** You may *not* freely cancel a common factor: $a c \equiv b c \pmod m$ does **not** imply $a \equiv b \pmod m$ unless $\gcd(c, m) = 1$. (For example $2 \cdot 3 \equiv 2 \cdot 0 \pmod 6$ but $3 \not\equiv 0 \pmod 6$.)
+Cancellation is the one rule that does not carry over. From $ac \equiv bc \pmod n$ you may **not** conclude $a \equiv b$. Modulo $12$, $4 \cdot 3 \equiv 4 \cdot 6$ (both are $0$), yet $3 \not\equiv 6$. The precise condition under which cancelling $c$ is legal is $\gcd(c, n) = 1$, and the next theorem says why.
+:::
+
+:::definition[Modular inverse]{#inverse-def}
+An integer $x$ is an **inverse** of $a$ modulo $n$ if $ax \equiv 1 \pmod n$. We then write $x \equiv a^{-1} \pmod n$.
+:::
+
+:::theorem[Inverses exist exactly for coprime residues]{#inverse-exists}
+Let $n \in \mathbb{N}$ and $a \in \mathbb{Z}$. Then $a$ has an inverse modulo $n$ if and only if $\gcd(a,n) = 1$, and in that case the inverse is unique modulo $n$.
+:::
+
+:::proof
+($\Leftarrow$) Suppose $\gcd(a,n) = 1$. By *Bézout's identity* there are integers $x, y$ with $ax + ny = 1$. Reading this modulo $n$ kills the term $ny$, leaving $ax \equiv 1 \pmod n$.
+
+($\Rightarrow$) Suppose $ax \equiv 1 \pmod n$, so $ax - 1 = nk$ for some $k$, that is $ax - nk = 1$. Any common divisor $d$ of $a$ and $n$ divides the left side by *Linearity of divisibility*, hence divides $1$; so $\gcd(a,n) = 1$.
+
+*Uniqueness.* If $ax \equiv 1$ and $ax' \equiv 1$, multiply the first congruence by $x'$ to get $x'ax \equiv x'$, and the second by $x$ to get $xax' \equiv x$. The left sides are equal, so $x \equiv x' \pmod n$.
+:::
+
+The proof is an algorithm: to invert $a$ modulo $n$, run extended Euclid on $(a, n)$, check the gcd is $1$, and reduce the coefficient $x$ into $[0,n)$. The cost is the cost of Euclid — logarithmic — which is why inversion is a cheap operation even for cryptographic-size moduli.
+
+:::example[Inverting 17 modulo 43]
+Find $17^{-1} \bmod 43$.
+:::
+
+:::solution
+1. Extended Euclid on $(43, 17)$: $43 = 2\cdot 17 + 9$, $17 = 1 \cdot 9 + 8$, $9 = 1\cdot 8 + 1$, $8 = 8 \cdot 1 + 0$. So $\gcd = 1$ and an inverse exists.
+2. Back-substitute: $1 = 9 - 8 = 9 - (17 - 9) = 2\cdot 9 - 17 = 2(43 - 2\cdot17) - 17 = 2\cdot 43 - 5\cdot 17$.
+3. Hence $-5 \cdot 17 \equiv 1 \pmod{43}$, so $17^{-1} \equiv -5 \equiv 38 \pmod{43}$.
+4. Check: $17 \cdot 38 = 646 = 15\cdot 43 + 1$.
+:::
+
+:::corollary[Cancellation modulo n]{#cancellation}
+If $\gcd(c,n)=1$ and $ac \equiv bc \pmod n$, then $a \equiv b \pmod n$.
+:::
+
+:::proof
+By the theorem *Inverses exist exactly for coprime residues*, $c^{-1}$ exists modulo $n$. Multiply both sides of $ac \equiv bc$ by it and use *Arithmetic respects congruence*: $a \equiv acc^{-1} \equiv bcc^{-1} \equiv b$.
 :::
 
 :::theorem[Solving a linear congruence]{#linear-congruence}
-The equation
-
-$$a x \equiv b \pmod{m}$$
-
-has a solution **if and only if** $d = \gcd(a, m)$ divides $b$. When it does, there are exactly $d$ solutions among the residues $0, 1, \dots, m-1$.
+Let $d = \gcd(a,n)$. The congruence $ax \equiv b \pmod n$ has a solution if and only if $d \mid b$, and then it has exactly $d$ solutions modulo $n$, forming one residue class modulo $n/d$.
 :::
 
-:::theorem[Existence of a multiplicative inverse]{#modular-inverse}
-The special case $a x \equiv 1 \pmod m$ has a solution — the **inverse** $a^{-1}$ of $a$ modulo $m$ — if and only if $\gcd(a, m) = 1$, and then that inverse is unique modulo $m$.
+:::proof
+The congruence says $ax - b = nk$ for some integer $k$, i.e. $ax - nk = b$, which by the corollary *The gcd is the least positive combination* is solvable exactly when $d \mid b$.
+
+Suppose $d \mid b$ and write $a = d a'$, $b = d b'$, $n = d n'$ with $\gcd(a', n') = 1$. Dividing the equation $ax \equiv b \pmod n$ through by $d$ gives the equivalent congruence $a'x \equiv b' \pmod{n'}$, whose unique solution modulo $n'$ is $x \equiv (a')^{-1}b' \pmod{n'}$, the inverse existing by *Inverses exist exactly for coprime residues*. A single class modulo $n' = n/d$ splits into exactly $d$ classes modulo $n$, namely $x_0, x_0 + n', \dots, x_0 + (d-1)n'$.
 :::
 
-You can compute it with the extended Euclidean algorithm: if $a x + m y = 1$ then $a x \equiv 1 \pmod m$, so $x$ is the inverse.
+:::example[A congruence with three solutions]
+Solve $6x \equiv 9 \pmod{15}$.
+:::
+
+:::solution
+1. $d = \gcd(6,15) = 3$ and $3 \mid 9$, so solutions exist — three of them modulo $15$.
+2. Divide through by $3$: $2x \equiv 3 \pmod 5$. Since $2^{-1} \equiv 3 \pmod 5$, we get $x \equiv 9 \equiv 4 \pmod 5$.
+3. Lifting to modulus $15$: $x \in \{4, 9, 14\}$.
+4. Check $x = 9$: $6\cdot 9 = 54 = 3\cdot 15 + 9$.
+:::
+
+### Fast modular exponentiation
+
+Computing $a^k \bmod n$ by multiplying $a$ by itself $k-1$ times is hopeless when $k$ has hundreds of digits — and in RSA it always does. The fix is to exploit the binary expansion of the exponent.
+
+:::recipe[Square-and-multiply]{#square-multiply}
+Write $k$ in binary as $k = \sum_{i=0}^{t} b_i 2^i$ with $b_t = 1$. Set $y \leftarrow 1$ and, reading the bits from the most significant down to the least, at each bit replace $y \leftarrow y^2 \bmod n$ and then, if that bit is $1$, replace $y \leftarrow y\cdot a \bmod n$.
+:::
+
+:::theorem[Correctness and cost of square-and-multiply]{#sqm-correct}
+Square-and-multiply outputs $a^k \bmod n$ using at most $2\lfloor \log_2 k\rfloor$ modular multiplications: one squaring per bit of $k$ after the first, plus one extra multiplication for each $1$-bit.
+:::
+
+:::proof
+*Correctness.* Let $k_j = \sum_{i = j}^{t} b_i 2^{i-j}$ be the number formed by the top $t - j + 1$ bits of $k$. We claim that after processing bit $b_j$ the variable satisfies $y \equiv a^{k_j} \pmod n$, by downward induction on $j$.
+
+Before any bit is processed, $y = 1 = a^0$, the empty prefix. Suppose $y \equiv a^{k_{j+1}}$ before bit $b_j$ is processed. Appending a bit to a binary numeral doubles the value and adds the bit: $k_j = 2k_{j+1} + b_j$. The step squares, giving $y^2 \equiv a^{2k_{j+1}}$, and then multiplies by $a$ exactly when $b_j = 1$, giving $y \equiv a^{2k_{j+1} + b_j} = a^{k_j}$. Each congruence is legitimate by *Arithmetic respects congruence*, which also permits the reduction modulo $n$ at every step.
+
+After the last bit, $k_0 = k$ and $y \equiv a^k \pmod n$.
+
+*Cost.* The number of bits is $t + 1 = \lfloor\log_2 k\rfloor + 1$. Each contributes one squaring, and the $1$-bits contribute one multiplication each; there are at most $t+1$ of those. The leading squaring acts on $y = 1$ and can be skipped, leaving at most $2\lfloor\log_2 k\rfloor + 1$ multiplications, all of operands smaller than $n$.
+:::
 
 :::intuition
-Modular arithmetic is "clock arithmetic": $10$ o'clock $+ 5$ hours $= 3$ o'clock (mod $12$). You only care about the remainder, so the clock wraps around.
-
-Two numbers are "the same mod $m$" if they differ by a whole number of full laps around the clock (a multiple of $m$).
-
-An inverse of $a$ is the number of laps that undoes multiplying by $a$ — and it only exists when $a$ shares no factor with the clock size, so multiplying by $a$ visits every hour instead of getting stuck on a few.
+Repeated squaring gets you $a, a^2, a^4, a^8, \dots$ — exponents that double — so after $60$ squarings you have reached $a^{2^{60}}$. The binary digits of $k$ tell you which of those doubling milestones to keep and multiply together. This is the same doubling trick as binary search or fast integer multiplication by shifts, and it is the reason a $2048$-bit RSA exponentiation costs a few thousand multiplications instead of $2^{2048}$ of them.
 :::
 
-### Worked Examples
-
-:::example[Compute $7^3 \bmod 5$]
-1. Reduce the base first. $7 \equiv 2 \pmod 5$, so $7^3 \equiv 2^3 \pmod 5$.
-2. $2^3 = 8 \equiv 3 \pmod 5$ (since $8 = 1 \times 5 + 3$).
-3. Sanity check by direct computation: $7^3 = 343 = 68 \times 5 + 3$, remainder $3$ ✓.
+:::figure[Naive exponentiation costs one multiplication per unit of the exponent; square-and-multiply costs at most two per *bit*. The gap is already a factor of ten by $k = 64$ and grows without bound.]{#sqm-cost}
+{
+  "type": "plot",
+  "x": [1, 64], "y": [0, 66],
+  "xTicks": 8, "yTicks": 10, "xLabel": "exponent k", "yLabel": "multiplications",
+  "marks": [
+    { "kind": "function", "fn": "x - 1", "tone": "accent" },
+    { "kind": "function", "fn": "2*ln(x)/ln(2)", "tone": "result" },
+    { "kind": "text", "at": [20, 52], "text": "naive: k - 1", "leaderTo": [46, 45] },
+    { "kind": "text", "at": [36, 22], "text": "square-and-multiply: 2 log2 k", "leaderTo": [56, 11.6] }
+  ]
+}
 :::
 
-:::example[Solve $5x \equiv 3 \pmod 7$]
-1. Check solvability. $\gcd(5, 7) = 1$, and $1 \mid 3$, so a (unique) solution exists.
-2. Find the inverse of $5$ modulo $7$. We need $5y \equiv 1 \pmod 7$; testing, $5 \times 3 = 15 = 2\times 7 + 1 \equiv 1$, so $5^{-1} \equiv 3 \pmod 7$.
-3. Multiply both sides of $5x \equiv 3$ by $3$: $x \equiv 3 \times 3 = 9 \equiv 2 \pmod 7$.
-4. Sanity check: $5 \times 2 = 10 = 7 + 3 \equiv 3 \pmod 7$ ✓.
+:::example[Computing $7^{13} \bmod 11$ by hand]
+Evaluate $7^{13} \bmod 11$ with square-and-multiply, and count the multiplications.
+:::
+
+:::solution
+1. $13 = 1101_2$, so the bits from the top are $1, 1, 0, 1$.
+2. Start $y = 1$. Bit $1$: square to $1$, multiply by $7$, giving $y = 7$ ($= a^1$).
+3. Bit $1$: $y = 7^2 = 49 \equiv 5$, then $y = 5\cdot 7 = 35 \equiv 2$ ($= a^3$).
+4. Bit $0$: $y = 2^2 = 4$ ($= a^6$).
+5. Bit $1$: $y = 4^2 = 16 \equiv 5$, then $y = 5 \cdot 7 = 35 \equiv 2$ ($=a^{13}$).
+6. So $7^{13} \equiv 2 \pmod{11}$, using three squarings and three multiplications after the trivial first step — six operations in place of twelve, on numbers never exceeding $49$.
+:::
+
+:::remark
+Hash tables are the other everyday use of this section. A division hash sends a key $k$ to $k \bmod m$; the theory says the result is uniform only if the keys are, and that a modulus sharing a factor with structure in the keys (say $m = 2^p$ when keys are pointers, always multiples of $8$) collapses the table into a fraction of its buckets. Choosing $m$ to be a prime not close to a power of two is the standard defence, and it is the theorem *Inverses exist exactly for coprime residues* in disguise: multiplying by a unit modulo a prime permutes the residues, so no bucket is privileged.
+:::
+
+### Fermat's little theorem
+
+:::definition[Euler's totient]{#totient}
+$\varphi(n)$ is the number of integers in $\{1, 2, \dots, n\}$ that are coprime to $n$. Equivalently, by the theorem *Inverses exist exactly for coprime residues*, it counts the invertible residues modulo $n$.
+:::
+
+:::theorem[Fermat's little theorem]{#flt}
+Let $p$ be prime and let $a$ be an integer with $p \nmid a$. Then
+
+$$a^{p-1} \equiv 1 \pmod p.$$
+:::
+
+:::proof
+Consider the $p-1$ numbers $a, 2a, \dots, (p-1)a$ reduced modulo $p$. None is $\equiv 0$, since $p \nmid a$ and $p \nmid j$ for $1 \le j \le p-1$. They are pairwise incongruent: if $ia \equiv ja$ then, since $\gcd(a,p)=1$, the corollary *Cancellation modulo n* gives $i \equiv j$, and both lie in $[1,p-1]$, so $i = j$.
+
+So these $p-1$ residues are distinct and nonzero, hence are exactly $1, 2, \dots, p-1$ in some order. Multiplying them together,
+
+$$a^{p-1}(p-1)! \equiv (p-1)! \pmod p.$$
+
+Since $p$ is prime, $(p-1)!$ is coprime to $p$ and may be cancelled, leaving $a^{p-1} \equiv 1$.
+:::
+
+:::remark
+This is the special case $n = p$ of Euler's theorem, $a^{\varphi(n)} \equiv 1 \pmod n$ whenever $\gcd(a,n)=1$, whose proof is the same argument run over the invertible residues instead of all nonzero ones. Both, with the group theory that explains them and the primality tests built on them, are treated at length in *Classical Theorems*; here we need only the two statements.
+:::
+
+:::example[An exponent reduced by Fermat]
+Compute $3^{100} \bmod 7$.
+:::
+
+:::solution
+1. $7$ is prime and $7 \nmid 3$, so *Fermat's little theorem* gives $3^6 \equiv 1 \pmod 7$.
+2. Write $100 = 6\cdot 16 + 4$. Then $3^{100} = (3^6)^{16}\cdot 3^4 \equiv 1^{16}\cdot 3^4 \pmod 7$.
+3. $3^4 = 81 = 11\cdot 7 + 4$, so $3^{100} \equiv 4 \pmod 7$.
+4. The exponent dropped from $100$ to $4$ before any work was done — reducing the exponent modulo $p-1$ is always the first move.
 :::
 
 ## The Chinese Remainder Theorem
 
 <!-- section: chinese -->
 
-Sometimes we know a number only by its remainders against several moduli, and want to pin down the number itself. When the moduli are **pairwise coprime**, the Chinese Remainder Theorem (CRT) guarantees this is always possible, uniquely, modulo their product.
+A number can be described by its remainders against several moduli instead of by its value. The Chinese Remainder Theorem says that when the moduli are pairwise coprime this description loses nothing, and that the translation back is a formula you can run.
 
 :::theorem[Chinese Remainder Theorem]{#crt}
-Let $m_1, m_2, \dots, m_k$ be **pairwise coprime** (that is, $\gcd(m_i, m_j) = 1$ whenever $i \neq j$). Then the system
+Let $n_1, \dots, n_k$ be pairwise coprime positive integers, $N = n_1 n_2 \cdots n_k$, and let $a_1, \dots, a_k$ be any integers. Then the system
 
-$$x \equiv a_1 \pmod{m_1}, \quad x \equiv a_2 \pmod{m_2}, \quad \dots, \quad x \equiv a_k \pmod{m_k}$$
+$$x \equiv a_1 \!\!\pmod {n_1}, \quad \dots, \quad x \equiv a_k \!\!\pmod {n_k}$$
 
-has a **unique solution modulo** $M = m_1 m_2 \cdots m_k$.
+has a solution, and it is unique modulo $N$. Explicitly, writing $N_i = N/n_i$ and letting $y_i$ be an inverse of $N_i$ modulo $n_i$,
+
+$$x \equiv \sum_{i=1}^{k} a_i N_i y_i \pmod N.$$
 :::
 
-The pairwise-coprime hypothesis is essential: without it the system may have no solution at all, or several incompatible ones. (For instance $x \equiv 0 \pmod 2$ and $x \equiv 1 \pmod 4$ is impossible, since $\gcd(2,4) \neq 1$.)
+:::proof
+*The inverses exist.* Fix $i$. For each $j \neq i$ we have $\gcd(n_i, n_j) = 1$, and a number coprime to each of several factors is coprime to their product: any prime dividing $n_i$ and $N_i$ would divide some $n_j$, contradicting coprimality. So $\gcd(N_i, n_i) = 1$ and the theorem *Inverses exist exactly for coprime residues* supplies $y_i$.
 
-:::recipe[Constructing the CRT solution]{#crt-construction}
-Let $M_i = M / m_i$ (the product of all the other moduli). Since the moduli are pairwise coprime, $\gcd(M_i, m_i) = 1$, so $M_i$ has an inverse $y_i$ modulo $m_i$. Then
+*The formula solves the system.* Fix $j$ and reduce $x = \sum_i a_i N_i y_i$ modulo $n_j$. For $i \neq j$ the factor $N_i$ contains $n_j$, so that term vanishes. The surviving term is $a_j N_j y_j \equiv a_j \cdot 1 = a_j \pmod{n_j}$, by the defining property of $y_j$. Hence $x \equiv a_j \pmod {n_j}$ for every $j$.
 
-$$x \equiv \sum_{i=1}^{k} a_i \, M_i \, y_i \pmod{M}.$$
+*Uniqueness.* If $x$ and $x'$ both solve the system then $n_j \mid (x - x')$ for every $j$. The $n_j$ are pairwise coprime, so by the theorem *gcd and lcm from the factorisations* their lcm is their product $N$, and a number divisible by each $n_j$ is divisible by that lcm. Hence $N \mid (x-x')$, i.e. $x \equiv x' \pmod N$.
 :::
 
-The trick works because $M_i \equiv 0 \pmod{m_j}$ for $j \neq i$, so the $i$-th term contributes to exactly the $i$-th congruence and vanishes in the others. In practice, **successive substitution** (solve two congruences into one, then fold in the next) is often quicker by hand.
+:::corollary[Splitting a modulus]{#crt-iso}
+If $n = n_1 n_2$ with $\gcd(n_1,n_2) = 1$, the map sending $x \bmod n$ to the pair $(x \bmod n_1, \; x \bmod n_2)$ is a bijection from $\mathbb{Z}_n$ to $\mathbb{Z}_{n_1}\times\mathbb{Z}_{n_2}$ that preserves sums and products. In particular $\varphi(n) = \varphi(n_1)\varphi(n_2)$.
+:::
 
-CRT lets us break a big-modulus problem into smaller coprime pieces, solve each, then recombine — a technique used heavily in RSA decryption and fast modular arithmetic.
+:::proof
+The map is well defined, and it is onto by the existence half of the *Chinese Remainder Theorem* and one-to-one by its uniqueness half; both sides have $n$ elements. Sums and products are preserved because reduction modulo $n_1$ and modulo $n_2$ each respect arithmetic, by *Arithmetic respects congruence*.
+
+For the totient: $x$ is invertible modulo $n$ exactly when $\gcd(x,n)=1$, which happens exactly when $\gcd(x,n_1)=1$ and $\gcd(x,n_2)=1$. So the bijection matches invertible elements with pairs of invertible elements, and counting gives $\varphi(n) = \varphi(n_1)\varphi(n_2)$.
+:::
+
+:::proposition[Totient of a prime and of a semiprime]{#totient-values}
+For a prime $p$, $\varphi(p) = p - 1$. For distinct primes $p \neq q$, $\varphi(pq) = (p-1)(q-1)$.
+:::
+
+:::proof
+Every one of $1, \dots, p-1$ is coprime to $p$ since $p$ has no divisors strictly between $1$ and $p$, and $p$ itself is not; so $\varphi(p)=p-1$. The second claim is the corollary *Splitting a modulus* applied to $n_1 = p$, $n_2 = q$, which are coprime because they are distinct primes.
+:::
 
 :::intuition
-If you know a number's remainder mod $3$, mod $5$, and mod $7$ (all coprime), you can reconstruct the one number between $0$ and $104$ that matches all three — like reading three gears of different tooth counts and figuring out the single position that lines them all up.
-
-Coprimeness is what makes the gears mesh without a shared factor, so the combined cycle has full length $M = 3\times 5 \times 7 = 105$ and no position repeats early.
+Think of two gears with $n_1$ and $n_2$ teeth. Coprimality means no tooth alignment repeats until both gears have completed a whole number of turns, so the combined pattern has full period $n_1 n_2$ and every pair of positions occurs exactly once. When the gears share a factor the combined period collapses, some pairs never occur — which is why $x\equiv 0 \pmod 2$, $x \equiv 1\pmod 4$ has no solution — and the theorem fails.
 :::
 
-### Worked Examples
-
-:::example[$x \equiv 2 \pmod 3$, $\;x \equiv 3 \pmod 5$, $\;x \equiv 2 \pmod 7$]
-1. Check the hypothesis. $3, 5, 7$ are pairwise coprime, so a unique solution exists modulo $M = 3 \times 5 \times 7 = 105$.
-2. Fold the first two congruences together by successive substitution. From $x \equiv 3 \pmod 5$ write $x = 5t + 3$. Substitute into $x \equiv 2 \pmod 3$: $5t + 3 \equiv 2 \pmod 3$. Since $5 \equiv 2$ and $3 \equiv 0 \pmod 3$, this is $2t \equiv 2 \pmod 3$, so $t \equiv 1 \pmod 3$ (multiplying by $2^{-1} \equiv 2 \pmod 3$). Write $t = 3s + 1$, giving $x = 5(3s+1) + 3 = 15s + 8$, i.e. $x \equiv 8 \pmod{15}$.
-3. Fold in the third congruence. From $x = 15s + 8$, require $15s + 8 \equiv 2 \pmod 7$. Since $15 \equiv 1$ and $8 \equiv 1 \pmod 7$, this is $s + 1 \equiv 2 \pmod 7$, so $s \equiv 1 \pmod 7$. Write $s = 7u + 1$: $x = 15(7u + 1) + 8 = 105u + 23$, i.e. $x \equiv 23 \pmod{105}$.
-4. Sanity check: $23 = 7\times 3 + 2$ so $23 \equiv 2 \pmod 3$ ✓; $23 = 4 \times 5 + 3$ so $23 \equiv 3 \pmod 5$ ✓; $23 = 3 \times 7 + 2$ so $23 \equiv 2 \pmod 7$ ✓. The full solution set is $\{23 + 105k\}$.
+:::example[Reconstructing a number from three remainders]
+Find the smallest non-negative $x$ with $x \equiv 2 \pmod 3$, $x \equiv 3 \pmod 5$, $x \equiv 2 \pmod 7$, using the constructive formula.
 :::
 
-:::example[Two moduli, $x \equiv 2 \pmod 3$, $\;x \equiv 3 \pmod 5$]
-1. $3$ and $5$ are coprime, so there is a unique solution mod $M = 15$.
-2. Write $x = 5k + 3$ from the second congruence. Then $5k + 3 \equiv 2 \pmod 3 \Rightarrow 2k \equiv 2 \pmod 3 \Rightarrow k \equiv 1 \pmod 3$, so $k = 3m + 1$ and $x = 15m + 8$.
-3. The unique solution is $x \equiv 8 \pmod{15}$.
-4. Sanity check: $8 \bmod 3 = 2$ ✓ and $8 \bmod 5 = 3$ ✓. The next few solutions are $8, 23, 38, \dots$ (adding $15$ each time).
+:::solution
+1. $N = 105$, and $N_1 = 35$, $N_2 = 21$, $N_3 = 15$.
+2. Inverses: $35 \equiv 2 \pmod 3$ and $2\cdot 2 = 4\equiv 1$, so $y_1 = 2$. $21 \equiv 1 \pmod 5$, so $y_2 = 1$. $15 \equiv 1 \pmod 7$, so $y_3 = 1$.
+3. Assemble: $x \equiv 2\cdot35\cdot2 + 3\cdot21\cdot1 + 2\cdot15\cdot1 = 140 + 63 + 30 = 233$.
+4. Reduce: $233 = 2\cdot 105 + 23$, so $x \equiv 23 \pmod{105}$, and the smallest non-negative solution is $23$.
+5. Check: $23 = 7\cdot3+2$, $23 = 4\cdot5+3$, $23=3\cdot7+2$.
+:::
+
+:::example[Successive substitution instead of the formula]
+Solve $x \equiv 4 \pmod 9$ and $x \equiv 7 \pmod{11}$.
+:::
+
+:::solution
+1. From the first congruence write $x = 9t + 4$ and substitute into the second: $9t + 4\equiv 7 \pmod{11}$, so $9t \equiv 3 \pmod{11}$.
+2. Invert $9$ modulo $11$: $9\cdot 5 = 45 = 4\cdot 11 + 1$, so $9^{-1}\equiv 5$. Then $t \equiv 15 \equiv 4 \pmod{11}$.
+3. So $t = 11s + 4$ and $x = 9(11s+4)+4 = 99s + 40$, i.e. $x \equiv 40 \pmod{99}$.
+4. Check: $40 = 4\cdot 9 + 4$ and $40 = 3\cdot 11 + 7$. By hand, substitution is usually faster than the formula; the formula is what you implement, because it parallelises over $i$.
+:::
+
+:::remark
+CRT is not only an existence theorem, it is an optimisation. RSA private-key operations are routinely performed by reducing modulo $p$ and modulo $q$ separately, exponentiating on numbers half as long, and recombining with the formula above. Since multiplication cost grows faster than linearly in operand length, the two half-size exponentiations together cost roughly a quarter of the full one — a speedup of about four, for free.
+:::
+
+## RSA: Putting the Toolkit to Work
+
+<!-- section: rsa -->
+
+Everything so far assembles into one system. RSA is worth the last section not because a first-year student will implement it, but because it is the only place where each tool's cost is visibly what makes the scheme possible or impossible: key generation needs primality testing, decryption needs modular inverses and fast exponentiation, and security needs factoring to be slow.
+
+:::recipe[RSA key generation, encryption and decryption]{#rsa-recipe}
+1. Choose distinct large primes $p, q$ and set $n = pq$ and $\varphi(n) = (p-1)(q-1)$.
+2. Choose $e$ with $1 < e < \varphi(n)$ and $\gcd(e, \varphi(n)) = 1$; compute $d \equiv e^{-1} \pmod{\varphi(n)}$ with extended Euclid.
+3. Publish $(n, e)$; keep $d$ (and $p, q$) secret.
+4. Encrypt a message $m$ with $0 \le m < n$ as $c = m^e \bmod n$; decrypt as $m = c^d \bmod n$, both by square-and-multiply.
+:::
+
+:::theorem[Correctness of RSA decryption]{#rsa-correct}
+Let $p \neq q$ be primes, $n = pq$, and let $e, d$ satisfy $ed \equiv 1 \pmod{\varphi(n)}$. Then for **every** integer $m$ with $0 \le m < n$,
+
+$$(m^e)^d \equiv m \pmod n.$$
+:::
+
+:::proof
+Write $ed = 1 + k\varphi(n) = 1 + k(p-1)(q-1)$ for some integer $k \ge 0$, which is possible because $\varphi(n) \mid ed - 1$.
+
+We show $m^{ed} \equiv m \pmod p$, and the same argument with $q$ in place of $p$ gives $m^{ed}\equiv m \pmod q$.
+
+If $p \mid m$ then both sides are $\equiv 0 \pmod p$ and the congruence holds. Otherwise $p \nmid m$, so *Fermat's little theorem* applies and $m^{p-1}\equiv 1 \pmod p$. Then
+
+$$m^{ed} = m^{1 + k(p-1)(q-1)} = m\cdot\left(m^{p-1}\right)^{k(q-1)} \equiv m \cdot 1^{k(q-1)} = m \pmod p.$$
+
+Now $p$ and $q$ both divide $m^{ed} - m$, and they are distinct primes, hence coprime; by the uniqueness half of the *Chinese Remainder Theorem* — or directly, since $\operatorname{lcm}(p,q) = pq$ — we get $pq = n$ divides $m^{ed}-m$, that is $m^{ed}\equiv m \pmod n$.
+
+Finally both $m$ and $m^{ed}\bmod n$ lie in $[0,n)$, so the congruence is an equality of representatives and decryption returns exactly the message sent.
+:::
+
+Notice which case made the proof delicate. The naive argument — "$m^{\varphi(n)} \equiv 1$ by Euler, so $m^{ed} = m\cdot(m^{\varphi(n)})^k \equiv m$" — needs $\gcd(m,n) = 1$ and therefore says nothing about messages that happen to be divisible by $p$ or by $q$. Splitting into the two prime moduli and handling $p \mid m$ separately is what upgrades the statement to *every* $m$, which is what a correct decryption routine requires: a cryptosystem that fails on a one-in-$\sqrt n$ set of messages is still broken.
+
+:::example[A complete RSA round trip]
+Take $p = 11$, $q = 13$, $e = 7$. Find $d$, then encrypt $m = 9$ and decrypt the result.
+:::
+
+:::solution
+1. $n = 143$ and $\varphi(n) = 10\cdot 12 = 120$. Since $\gcd(7,120)=1$, the exponent $e = 7$ is legal.
+2. Extended Euclid on $(7,120)$: $120 = 17\cdot 7 + 1$, so $1 = 120 - 17\cdot 7$, giving $7^{-1}\equiv -17 \equiv 103 \pmod{120}$. So $d = 103$.
+3. Encrypt: $9^7 \bmod 143$. By square-and-multiply with $7 = 111_2$: $9^1 = 9$, then $9^2 = 81$, $81\cdot 9 = 729 \equiv 14$ (as $729 = 5\cdot143+14$), then $14^2 = 196\equiv 53$, $53\cdot 9 = 477 \equiv 48$. So $c = 48$.
+4. Decrypt: $48^{103}\bmod 143$. Rather than grind, use the theorem *Correctness of RSA decryption* — $ed = 721 = 1 + 6\cdot 120$, so $48^{103}\equiv 9$.
+5. Check the theorem's hypothesis really is met: $\gcd(9,143)=1$ here, but the proof did not need it.
+:::
+
+:::example[Breaking a small key]
+The public key is $(n, e) = (3233, 17)$. Recover $d$.
+:::
+
+:::solution
+1. Factor $n$ by trial division: $\sqrt{3233}\approx 56.9$, and testing primes finds $3233 = 53\cdot 61$.
+2. Hence $\varphi(n) = 52\cdot 60 = 3120$.
+3. Invert $e$: extended Euclid on $(17, 3120)$ gives $17\cdot 2753 = 46801 = 15\cdot 3120 + 1$, so $d = 2753$.
+4. The entire attack is three lines because $n$ has four digits. At $2048$ bits step 1 is the wall — the security of the scheme is exactly the statement that factoring stays on the wrong side of the $\sqrt n$ versus $\log n$ divide from the first section.
+:::
+
+:::pitfall
+Textbook RSA as stated here is deterministic: the same message always encrypts to the same ciphertext, so an eavesdropper who suspects the plaintext can simply encrypt their guess and compare. Real deployments pad the message with randomness before exponentiating (OAEP). The mathematics of this section is correct and is not, by itself, a secure cryptosystem.
 :::
 
 ## Common Mistakes
 
-- Thinking $1$ is prime (it is not — and if it were, unique factorization would break).
-- Forgetting that gcd via primes requires factoring first; the Euclidean algorithm is usually faster and needs no factorization.
-- Confusing the "divides" statement $a \mid b$ ("$a$ divides $b$", true/false) with the fraction $a / b$.
-- Assuming every linear congruence $ax \equiv b \pmod m$ has a solution — it needs $\gcd(a, m) \mid b$.
-- Forgetting that a modular inverse of $a$ exists only when $\gcd(a, m) = 1$.
-- Cancelling a common factor in a congruence: $ac \equiv bc \pmod m$ gives $a \equiv b$ only when $\gcd(c, m) = 1$.
-- Applying CRT when the moduli are **not** pairwise coprime (there may be no solution, or several modulo the lcm).
-- Reporting $a \bmod m$ as a negative remainder instead of normalizing to $\{0, 1, \dots, m-1\}$.
-- Believing unique factorization holds in every number system — it holds for the integers, but fails in some other rings.
-- Running the Euclidean algorithm wrong by not replacing the larger number with the remainder at each step.
-- Sign errors when back-substituting the Bézout coefficients in the extended Euclidean algorithm.
+- Treating $1$ as prime. It is a unit, and admitting it would destroy uniqueness of factorisation.
+- Believing Euclid's proof shows $p_1\cdots p_k + 1$ is prime. It shows only that its prime factors are new; $2\cdot3\cdot5\cdot7\cdot11\cdot13+1 = 59\cdot509$.
+- Stopping trial division at $n/2$ instead of $\sqrt n$, or writing `d <= sqrt(n)` in floating point where `d*d <= n` is exact.
+- Confusing the statement $d \mid a$ with the number $a/d$. The bar is a relation, not an operation.
+- Calling the Euclidean algorithm fast because the numbers get small, then computing the gcd by factoring anyway. Factoring is the expensive step you were avoiding.
+- Quoting the running time as $O(\log n)$ *arithmetic operations* and then claiming $O(\log n)$ *bit operations*. Each division on $\ell$-bit numbers costs more than constant time.
+- Sign errors in the extended algorithm. Always check the final row against $ax + by = \gcd$ before using it.
+- Cancelling a common factor in a congruence without checking that it is coprime to the modulus.
+- Asserting that $ax \equiv b \pmod n$ always has a solution, or that it has only one when $\gcd(a,n) > 1$. It has $\gcd(a,n)$ solutions, or none.
+- Reducing the exponent modulo $n$ rather than modulo $\varphi(n)$ (or $p-1$) in a modular power. Bases reduce mod $n$; exponents do not.
+- Reporting a negative remainder from a language whose `%` follows the dividend's sign, instead of normalising into $\{0,\dots,n-1\}$.
+- Applying CRT to moduli that are not pairwise coprime, and being surprised by no solution or by solutions modulo the lcm rather than the product.
+- Choosing RSA exponents with $\gcd(e,\varphi(n)) \neq 1$, which leaves $e$ non-invertible and the key pair unusable.
+- Computing $\varphi(n)$ as $n - 1$ for a composite $n$. That formula is for primes; for $n = pq$ it is $(p-1)(q-1)$.
