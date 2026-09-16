@@ -1,310 +1,627 @@
 ---
-title: Statistical Inference: Hypothesis Testing
+title: "Statistical Inference: Hypothesis Testing"
 ---
 
 # Statistical Inference: Hypothesis Testing
 
-Hypothesis testing is a formal framework for making decisions from data. You start with a default assumption (the null hypothesis $H_0$) and ask: is the evidence strong enough to reject it?
+The previous chapter asked what values of a parameter the data support. This one asks a narrower question: is one particular value *refuted*? That sounds like less, and in an important sense it is — a test returns a verdict where an interval returns a range — but the narrowness buys something, because a sharp question can be answered with a controlled error rate.
 
-The $p$-value quantifies the strength of evidence against $H_0$: the probability of seeing results as extreme as yours, assuming $H_0$ is true. Small $p$-values mean the data is surprising under $H_0$.
+The logic is a probabilistic version of proof by contradiction, and it is worth stating plainly because almost every misuse of testing comes from forgetting it. Assume the claim you wish to discredit. Work out what the data would look like if it were true. If what you actually observed would be extraordinary under that assumption, the assumption is discredited. The word doing all the work is *extraordinary*, because unlike in a genuine contradiction, no observation is impossible — so the argument can only ever be probabilistic, and it can always be wrong.
 
-Understanding the logic of hypothesis testing — including Type I and Type II errors — is essential for interpreting any scientific study that reports 'statistical significance.'
+Being wrong comes in two kinds, and they trade against each other. Convicting an innocent hypothesis and acquitting a guilty one cannot both be made rare at a fixed sample size, and the whole technical apparatus of this chapter is machinery for managing that trade: the significance level $\alpha$ fixes the first rate by decree, power measures the second, and the Neyman–Pearson lemma identifies the test that does best on the second for a given first. That lemma is the theoretical centre of the chapter and the reason the familiar tests have the form they do.
 
-## The Logic of Hypothesis Testing
+Then the $p$-value, which is the single most misreported quantity in applied science. We prove the one fact that pins its meaning down — that it is uniformly distributed when the null is true — and derive from that both why the threshold $\alpha$ works and why a $p$-value is not the probability that the null is true. The chapter closes with what follows when many tests are run at once, where the arithmetic of multiplicity turns a well-behaved procedure into a machine for generating false findings.
+
+Throughout, $\mu_0$ is the null value, $\alpha$ the significance level, $\Phi$ the standard normal distribution function, and $z_\alpha$ the value with $P(Z>z_\alpha)=\alpha$. The sampling distributions used are proved in *Sampling and Data Distributions*, and the pivots and $t$-distribution facts in *Statistical Inference: Estimation*.
+
+## The logic of a test
 
 <!-- section: z-test -->
 
-<!-- section: basic -->
+A test begins by splitting the parameter space into two claims, asymmetrically. The asymmetry is the point and is often mistaken for a defect.
 
 :::definition[Null and alternative hypotheses]{#hypotheses}
-The null hypothesis $H_0$ is the default claim — no effect, no difference, status quo. The alternative $H_a$ is the claim the investigator wants to support.
+The **null hypothesis** $H_0$ is the claim to be tested, stated so that it determines a distribution for the data — typically $H_0: \theta = \theta_0$. The **alternative** $H_1$ is the claim that holds if the null fails, and is **two-sided** ($\theta \ne \theta_0$) or **one-sided** ($\theta > \theta_0$, or $\theta < \theta_0$).
 :::
 
-We begin by assuming $H_0$ is true and ask: how surprising is the observed data under this assumption?
+The null must be specific enough to compute with: "$\mu = 100$" fixes a sampling distribution, while "$\mu \ne 100$" does not, which is why the equality is always the null and never the alternative. This is not a statement about which claim is more likely to be true. It is a statement about which claim can be used to generate predictions.
 
-:::definition[Test statistic for a mean]
-The test statistic measures how many standard errors the sample result is from the value specified by $H_0$:
+:::definition[Test statistic, rejection region, significance level]{#test-statistic}
+A **test statistic** $T$ is a function of the data whose distribution is known when $H_0$ holds. The **rejection region** $R$ is the set of values of $T$ leading to rejection of $H_0$, and the **significance level** is
 
-$$z = \frac{\bar{x}-\mu_0}{\sigma/\sqrt{n}} \ \ (\sigma \text{ known}), \qquad t = \frac{\bar{x}-\mu_0}{s/\sqrt{n}} \ \ (\sigma \text{ estimated}).$$
+$$\alpha = P\big(T \in R \mid H_0 \text{ true}\big),$$
+
+the probability of rejecting a true null.
 :::
 
-Dividing by the standard error puts the result on a universal scale, so a value of $2$ always means "two standard errors away" regardless of the original units. Both formulas assume the sampling distribution of $\bar{x}$ is approximately normal — guaranteed if the population is normal, or by the Central Limit Theorem when $n$ is large (a common rule of thumb is $n \geq 30$).
+:::theorem[The one-sample z-test]{#z-test-thm}
+Let $X_1,\ldots,X_n$ be i.i.d. with mean $\mu$ and known variance $\sigma^2$, and suppose $\bar X$ is normal (exactly, for a normal population; approximately, by the central limit theorem). For testing $H_0: \mu = \mu_0$, the statistic
 
-:::definition[p-value]{#p-value-def}
-The $p$-value is the probability of observing data at least as extreme as yours, assuming $H_0$ is true:
+$$Z = \frac{\bar X - \mu_0}{\sigma/\sqrt n}$$
 
-$$p = P(X \geq x_\text{obs} \mid H_0).$$
+is standard normal under $H_0$. Rejecting when $|Z| > z_{\alpha/2}$ gives a two-sided test of exact level $\alpha$; rejecting when $Z > z_\alpha$ gives a one-sided test of level $\alpha$ against $H_1: \mu > \mu_0$.
 :::
 
-Small $p$-values ($p \leq \alpha$) lead to rejection of $H_0$; large $p$-values do not.
+:::proof
+Under $H_0$ the true mean is $\mu_0$, so by the theorem *Mean and variance of the sample mean*, $\bar X$ has mean $\mu_0$ and variance $\sigma^2/n$. Standardising, $Z \sim N(0,1)$.
 
-One-sided vs. two-sided tests: $H_a: \mu > \mu_0$ is right-sided (one-tailed, $p = P(Z > z_\text{obs})$); $H_a: \mu < \mu_0$ is left-sided; $H_a: \mu \neq \mu_0$ is two-sided ($p = 2P(Z > |z_\text{obs}|)$). Choose the direction of $H_a$ before collecting data.
+For the two-sided region, by symmetry of the normal and the definition of $z_{\alpha/2}$,
 
-:::recipe[Testing a hypothesis about a mean]
-1. State $H_0$ and $H_a$, and fix the significance level $\alpha$, before looking at the data.
-2. Check the conditions that make the sampling distribution of $\bar{x}$ approximately normal.
-3. Compute the test statistic, $z$ or $t$ according to whether $\sigma$ is known or estimated.
-4. Convert it to a $p$-value in the tail (or tails) named by $H_a$, or compare it with the critical value at level $\alpha$.
-5. Reject $H_0$ when $p \leq \alpha$; otherwise fail to reject. State the conclusion in the language of the original problem.
+$$P\big(|Z| > z_{\alpha/2}\big) = P(Z > z_{\alpha/2}) + P(Z < -z_{\alpha/2}) = \frac{\alpha}{2}+\frac{\alpha}{2} = \alpha .$$
+
+For the one-sided region, $P(Z > z_\alpha) = \alpha$ directly. In each case the probability is computed under $H_0$, which is exactly the definition of the significance level. $\blacksquare$
 :::
 
-:::proposition[Tests and confidence intervals are dual]
-Reject $H_0: \mu = \mu_0$ at level $\alpha$ (two-sided) if and only if the $(1-\alpha)\times 100\%$ confidence interval for $\mu$ does not contain $\mu_0$.
-:::
+Notice what the theorem does and does not deliver. It guarantees the rate of one specific error — rejecting a true null — and says nothing whatever about the other. A test that never rejects has $\alpha = 0$ and is useless; controlling $\alpha$ alone is not a criterion for a good test, only a constraint that any admissible test must satisfy.
 
 :::intuition
-Hypothesis testing is like a criminal trial. $H_0$ is 'innocent until proven guilty.' The $p$-value is the probability of seeing evidence this strong (or stronger) if the defendant really is innocent. If that probability is very small — below $\alpha$ — you convict (reject $H_0$). If not, you acquit — but that doesn't mean the defendant is innocent, just that the evidence wasn't strong enough.
+A test is a trial with the null hypothesis as defendant, and the presumption of innocence is built into the asymmetry. We do not ask which hypothesis is more plausible; we ask whether the evidence against the null is strong enough to convict beyond a fixed standard of doubt, and $\alpha$ *is* that standard.
+
+Two consequences follow immediately and are routinely got wrong. An acquittal is not a finding of innocence — failing to reject $H_0$ means the evidence was insufficient, not that $H_0$ is true, exactly as "not guilty" is not "proven innocent". And the standard of doubt is chosen before the evidence is examined, not adjusted afterwards to reach a preferred verdict.
 :::
 
-:::example[One-sample z-test (two-sided)]
-A machine fills bottles. Claimed mean: $\mu_0=500$ ml, known $\sigma=12$ ml. Sample of $n=36$ gives $\bar{x}=496$ ml. Test $H_0: \mu=500$ vs $H_a: \mu\neq 500$ at $\alpha=0.05$.
+:::pitfall
+"Fail to reject $H_0$" and "accept $H_0$" are different claims, and only the first is licensed. A test with a small sample fails to reject almost everything, because it lacks the power to detect anything; reporting that as evidence *for* the null converts an absence of evidence into evidence of absence.
+
+If you need to argue that a parameter is close to $\mu_0$, a confidence interval does it and a test does not: a narrow interval around $\mu_0$ is a positive finding, while a large $p$-value is compatible with both a true null and a hopeless experiment.
+:::
+
+:::example[A one-sided z-test, in full]
+A machine should fill bottles to $500$ ml with $\sigma = 4$ ml. A regulator suspects underfilling and samples $n=25$ bottles, obtaining $\bar x = 498$ ml. Test $H_0: \mu = 500$ against $H_1: \mu < 500$ at $\alpha = 0.05$.
 :::
 
 :::solution
-1. $z = (496-500)/(12/\sqrt{36}) = -4/2 = -2$.
-2. $p$-value $= 2P(Z < -2) = 2(0.0228) = 0.0456$.
-3. Since $0.0456 < 0.05$, reject $H_0$. Evidence suggests the machine is not filling to $500$ ml.
-4. CI check: $496 \pm 1.96(2) = (492.1,\, 499.9)$. Does not contain $500$ — consistent with rejection.
+1. The alternative is one-sided and points downward, so the rejection region is $Z < -z_{0.05} = -1.645$.
+2. The standard error is $\sigma/\sqrt n = 4/5 = 0.8$.
+3. The test statistic is
+
+$$z = \frac{498 - 500}{0.8} = \frac{-2}{0.8} = -2.5 .$$
+
+4. Since $-2.5 < -1.645$, reject $H_0$ at the $5\%$ level. The evidence is consistent with underfilling.
+5. Sanity check against the interval of the previous chapter: the $95\%$ two-sided interval was $(496.43,\ 499.57)$, which excludes $500$ — the same conclusion by a different route, and that agreement is a theorem proved later in this chapter.
+6. A caution on the one-sided choice: it was made because the regulator's concern was underfilling specifically, *before* seeing the data. Choosing the direction after seeing that $\bar x < 500$ would double the true error rate while reporting it as $5\%$.
 :::
 
-## Type I and Type II Errors
+:::example[A two-sided test for a proportion]
+A supplier claims a defect rate of $4\%$. An inspector finds $32$ defects in $500$ units. Test $H_0: p = 0.04$ against a two-sided alternative at $\alpha = 0.05$.
+:::
+
+:::solution
+1. Check the approximation is usable: $np_0 = 500(0.04) = 20$ and $n(1-p_0) = 480$, both comfortably large, so the theorem *Normal approximation to the sample proportion* applies.
+2. The observed proportion is $\hat p = 32/500 = 0.064$.
+3. The standard error is computed **under the null**, using $p_0$ and not $\hat p$ — this is a test, not an interval, so the null value is available and should be used:
+
+$$SE_0 = \sqrt{\frac{p_0(1-p_0)}{n}} = \sqrt{\frac{0.04\times 0.96}{500}} = \sqrt{0.0000768} = 0.008764 .$$
+
+4. The statistic is $z = (0.064-0.04)/0.008764 = 2.738$, and $|2.738| > 1.96$, so reject $H_0$.
+5. The two-sided $p$-value is $2\big(1-\Phi(2.738)\big) = 2(0.00309) = 0.0062$.
+6. Sanity check on the choice of denominator: had we used $\hat p$ in the standard error we would have got $SE = \sqrt{0.064\times 0.936/500} = 0.01095$ and $z = 2.192$, still significant but noticeably smaller. Using $p_0$ is correct for a test because the null specifies the whole distribution, including the variance.
+:::
+
+## Two kinds of error, and the power of a test
 
 <!-- section: errors -->
 
-<!-- section: errors -->
+:::definition[Type I and Type II errors, power]{#type-errors}
+A **Type I error** is rejecting $H_0$ when it is true; its probability is $\alpha$. A **Type II error** is failing to reject $H_0$ when it is false; its probability is written $\beta$. The **power** of a test against a particular alternative is
 
-:::definition[Type I and Type II errors]{#errors-def}
-A Type I error is rejecting $H_0$ when it is true (false positive); its probability is $\alpha$. A Type II error is failing to reject $H_0$ when it is false (false negative); its probability is $\beta$.
+$$\text{power} = 1 - \beta = P\big(\text{reject } H_0 \mid \text{that alternative is true}\big).$$
 :::
 
-By choosing $\alpha$ you directly control the probability of a Type I error; common choices are $\alpha = 0.05$, $0.01$, or $0.10$ depending on the consequences of false rejection. In contrast $\beta$ is not directly controlled by $\alpha$ — it depends on $n$, the true effect size, and $\sigma$.
+Power is not a single number but a function of the alternative, and that is the useful way to hold it. A test has poor power against alternatives near the null — telling $\mu = 500$ from $\mu = 500.01$ is nearly impossible at any realistic $n$ — and good power against distant ones. Asking "what is the power of this test?" without naming an effect size is asking an incomplete question.
 
-:::definition[Power]{#power-def}
-The power of a test is
+:::theorem[Power of the one-sided z-test]{#power-z}
+For the one-sided test of $H_0:\mu=\mu_0$ against $H_1:\mu>\mu_0$ at level $\alpha$, rejecting when $\bar X > \mu_0 + z_\alpha\sigma/\sqrt n$, the power at a true mean $\mu_1 > \mu_0$ is
 
-$$1 - \beta,$$
-
-the probability of correctly detecting a real effect when it exists.
+$$\text{power}(\mu_1) = 1-\Phi\!\left(z_\alpha - \frac{\mu_1-\mu_0}{\sigma/\sqrt n}\right).$$
 :::
 
-Power increases with larger $n$, larger true effect size, larger $\alpha$, and smaller $\sigma$. The conventional target is $80\%$ power.
+:::proof
+Power is the rejection probability computed under the *true* mean $\mu_1$, not under $H_0$. When $\mu = \mu_1$, the standardised mean $(\bar X - \mu_1)/(\sigma/\sqrt n)$ is standard normal. Rewrite the rejection event in terms of it:
 
-The $\alpha$-$\beta$ trade-off: for fixed $n$, lowering $\alpha$ (stricter rejection) increases $\beta$ (more missed effects). Increasing $n$ is the only way to improve power without inflating $\alpha$.
+$$\bar X > \mu_0 + z_\alpha\frac{\sigma}{\sqrt n} \iff \frac{\bar X - \mu_1}{\sigma/\sqrt n} > z_\alpha - \frac{\mu_1-\mu_0}{\sigma/\sqrt n},$$
 
-:::proposition[Sample size for a target power]
-For a one-sample $z$-test at significance $\alpha$ and power $1-\beta$, the sample size needed to detect a difference $\delta = \mu_a - \mu_0$ is
-
-$$n = \frac{(z_{\alpha/2}+z_\beta)^2\sigma^2}{\delta^2}.$$
+obtained by subtracting $\mu_1$ from both sides and dividing by $\sigma/\sqrt n > 0$. The left-hand side is standard normal under $\mu_1$, so the probability is $1-\Phi$ of the right-hand side. $\blacksquare$
 :::
 
-Here $z_{\alpha/2}$ and $z_\beta$ are the upper-tail critical values: $z_{\alpha/2} = 1.96$ for $\alpha = 0.05$ (two-sided), and $z_\beta = 0.842$ for $80\%$ power ($\beta = 0.20$). Always round the result up, since a fractional sample size does not achieve the target power.
+The quantity $(\mu_1-\mu_0)/(\sigma/\sqrt n)$ is the effect size measured in standard errors, and the formula says power depends on the data *only* through it. Three levers raise power, and the formula prices each: a larger true effect, a smaller $\sigma$, or a larger $n$ — the last only through $\sqrt n$, so power is bought at the same quadratic rate as precision was in the previous chapter.
 
-:::intuition
-Think of a smoke alarm. Type I error: it goes off when there is no fire (annoying false alarm). Type II error: there is a fire but it stays silent (catastrophic miss). You want both errors to be rare. Making the alarm more sensitive ($\alpha$ larger) catches more fires but also triggers more false alarms. The only way to get both right is a better alarm with more sensors ($n$ larger).
+:::corollary[Sample size for a target power]{#sample-size-power}
+To detect a difference of $\delta = \mu_1 - \mu_0$ with power $1-\beta$ in a one-sided level-$\alpha$ $z$-test,
+
+$$n \ \ge\ \left(\frac{(z_\alpha + z_\beta)\,\sigma}{\delta}\right)^{2}.$$
 :::
 
-:::example[Sample size for a target power]
-A researcher wants to detect a shift of $\delta = 5$ units in a mean, using a two-sided test at $\alpha = 0.05$ with $80\%$ power. The population standard deviation is $\sigma = 10$.
+:::proof
+Require $\text{power}(\mu_1)\ge 1-\beta$, that is $1-\Phi(z_\alpha - \delta\sqrt n/\sigma) \ge 1-\beta$, which rearranges to $\Phi(z_\alpha - \delta\sqrt n/\sigma) \le \beta$. Since $\Phi$ is increasing and $\Phi(-z_\beta)=\beta$, this holds exactly when
+
+$$z_\alpha - \frac{\delta\sqrt n}{\sigma} \le -z_\beta .$$
+
+Solving for $\sqrt n$ gives $\sqrt n \ge (z_\alpha+z_\beta)\sigma/\delta$, and squaring — both sides positive — gives the result. $\blacksquare$
 :::
 
-:::solution
-1. Look up the critical values: $z_{\alpha/2} = z_{0.025} = 1.96$ and $z_\beta = z_{0.20} = 0.842$.
-2. Apply the formula: $n = \dfrac{(z_{\alpha/2}+z_\beta)^2\sigma^2}{\delta^2} = \dfrac{(1.96+0.842)^2\,(10)^2}{5^2} = \dfrac{(2.802)^2 \cdot 100}{25}$.
-3. Compute the numerator: $(2.802)^2 = 7.851$, so $7.851 \times 100 = 785.1$, and $785.1 / 25 = 31.4$.
-4. Round up: $n = 32$. You need at least $32$ observations.
-5. Sanity check: halving the detectable difference $\delta$ would quarter the fraction (since $\delta$ is squared), so a harder-to-detect effect demands a much larger sample — as it should.
+:::figure[Power of a one-sided $5\%$ $z$-test against the true mean, for $n=25$, $n=100$ and $n=400$ with $\sigma=10$ and $\mu_0=0$. Every curve starts at $0.05$ at the null — a test's power at $\mu_0$ is exactly its significance level — and rises toward $1$. Quadrupling $n$ shifts each curve left by a factor of two in effect size, which is the $\sqrt n$ law: detecting an effect half as large costs four times the data.]{#power-curves}
+{
+  "type": "plot",
+  "x": [-0.6, 12.4],
+  "y": [-0.08, 1.16],
+  "xTicks": 2,
+  "yTicks": 0.1,
+  "xLabel": "true mean",
+  "yLabel": "power",
+  "marks": [
+    { "kind": "function", "fn": "0.5*(1+tanh(0.79788456*(0.5*x-1.645)*(1+0.044715*(0.5*x-1.645)^2)))", "tone": "accent" },
+    { "kind": "function", "fn": "0.5*(1+tanh(0.79788456*(x-1.645)*(1+0.044715*(x-1.645)^2)))", "tone": "result" },
+    { "kind": "function", "fn": "0.5*(1+tanh(0.79788456*(2*x-1.645)*(1+0.044715*(2*x-1.645)^2)))", "tone": "alt", "dashed": true },
+    { "kind": "line", "through": [[-0.6, 0.05], [12.4, 0.05]], "tone": "muted", "dashed": true, "extend": false },
+    { "kind": "text", "at": [9.6, 0.62], "text": "n = 25", "tone": "accent", "leaderTo": [6.1, 0.79] },
+    { "kind": "text", "at": [6.0, 1.09], "text": "n = 100", "tone": "result", "leaderTo": [3.05, 0.92] },
+    { "kind": "text", "at": [1.05, 1.09], "text": "n = 400", "tone": "alt", "leaderTo": [1.55, 0.94] },
+    { "kind": "text", "at": [10.6, 0.16], "text": "alpha = 0.05", "tone": "muted", "leaderTo": [11.4, 0.055] }
+  ]
+}
 :::
 
-:::example[Which error, and computing power qualitatively]
-A drug truly lowers blood pressure, but a small trial fails to reach $p \leq \alpha$ and concludes "no significant effect." Because $H_0$ (no effect) is false yet was not rejected, this is a Type II error.
-:::
-
-:::solution
-1. If the trial reported $\beta = 0.35$, its power is $1 - \beta = 1 - 0.35 = 0.65$, i.e. only a $65\%$ chance of catching a real effect this size — below the conventional $80\%$ target.
-2. Remedy: increase $n$ (or use a more precise measurement to shrink $\sigma$). Lowering $\alpha$ would only make $\beta$ worse.
-:::
-
-## The t-Test Family
-
-<!-- section: t-test -->
-
-<!-- section: t-test -->
-
-:::definition[One-sample t-test]{#one-sample-t}
-To test $H_0: \mu = \mu_0$ when $\sigma$ is unknown, use
-
-$$t = \frac{\bar{x}-\mu_0}{s/\sqrt{n}} \sim t_{n-1} \quad \text{under } H_0.$$
-:::
-
-This is the workhorse, because $\sigma$ is unknown essentially always.
-
-:::definition[Two-sample Welch t-test]
-To compare $\mu_1$ and $\mu_2$ from two independent samples without assuming equal variances, use
-
-$$t = \frac{\bar{x}_1-\bar{x}_2}{\sqrt{s_1^2/n_1+s_2^2/n_2}},$$
-
-with degrees of freedom estimated by the Welch-Satterthwaite formula.
-:::
-
-:::definition[Paired t-test]
-For matched pairs $(x_i, y_i)$, form the differences $d_i = x_i - y_i$ and apply a one-sample $t$-test to them.
-:::
-
-The paired test is more powerful than the two-sample test when pairs are correlated — it removes between-subject variability.
-
-:::note
-All three $t$-tests share the same conditions: the data (or the differences, for a paired test) should come from an approximately normal population, or the sample should be large enough for the Central Limit Theorem to make $\bar{x}$ approximately normal. Observations must be independent within each group.
-:::
-
-The $z$-test uses $\sigma$ known; the $t$-test estimates $\sigma$ with $s$. For $n \geq 30$ the difference is negligible in practice. For small $n$, the heavier tails of the $t$-distribution properly account for the additional uncertainty in estimating $\sigma$.
-
-:::intuition
-One-sample $t$: 'Is my sample's mean different from a specific value?' Two-sample $t$: 'Do these two groups have different means?' Paired $t$: 'Are before/after measurements different?' Use paired when you can link observations one-to-one — it gives more statistical power. The heavier tails of the $t$-distribution are like adding a safety margin because you had to *guess* the spread ($s$) instead of knowing it ($\sigma$); with more data the guess is trustworthy and the margin shrinks toward the normal curve.
-:::
-
-:::example[One-sample t-test]
-A supplier claims parts weigh $\mu_0 = 50$ g. A sample of $n = 16$ gives $\bar{x} = 52$ g with sample SD $s = 4$ g. Test $H_0: \mu = 50$ vs $H_a: \mu \neq 50$ at $\alpha = 0.05$.
+:::example[Sizing a study for power]
+A treatment is worth adopting if it raises the mean by $\delta = 5$ units, where $\sigma = 20$. How many subjects are needed for a one-sided $5\%$ test to have $80\%$ power?
 :::
 
 :::solution
-1. Standard error: $SE = s/\sqrt{n} = 4/\sqrt{16} = 4/4 = 1$.
-2. Test statistic: $t = (\bar{x}-\mu_0)/SE = (52-50)/1 = 2$, with $df = n-1 = 15$.
-3. Critical value for a two-sided test at $\alpha=0.05$ with $15$ df is $t_{0.025,15} \approx 2.13$. Since $|2| < 2.13$, we fail to reject $H_0$.
-4. Sanity check: had we (wrongly) used a $z$-test, the cutoff would be $1.96$ and we would have rejected. The $t$-test's wider cutoff reflects the extra uncertainty from estimating $\sigma$ — exactly why it is the correct tool here.
+1. The critical values are $z_{0.05}=1.645$ and $z_{0.20}=0.8416$, so $z_\alpha + z_\beta = 2.4866$.
+2. By the corollary *Sample size for a target power*,
+
+$$n \ge \left(\frac{2.4866 \times 20}{5}\right)^2 = (9.9464)^2 = 98.93,$$
+
+so take $n = 99$.
+3. Check with the power formula: at $n=99$ the effect is $5/(20/\sqrt{99}) = 5/2.0101 = 2.4874$ standard errors, giving power $1-\Phi(1.645-2.4874)=1-\Phi(-0.8424) = 0.8003$ ✓.
+4. Sanity check on the cost of a smaller effect: halving $\delta$ to $2.5$ quadruples the requirement to $n=396$. And raising the power target from $80\%$ to $95\%$ (with $z_{0.05}=1.645$ on both terms) needs $n \ge (3.29\times 20/5)^2 = 173.19$, so $n=174$ — a $76\%$ increase for the last fifteen points of power.
+5. The practical moral: a study that does not compute this before collecting data is likely to be *underpowered*, and an underpowered study that fails to reject has established nothing at all.
 :::
 
-:::example[Welch's two-sample t-test]
-Group 1: $\bar{x}_1 = 50$, $s_1 = 4$, $n_1 = 16$. Group 2: $\bar{x}_2 = 45$, $s_2 = 6$, $n_2 = 25$. Test $H_0: \mu_1 = \mu_2$ (unequal variances not assumed).
+:::remark[Why underpowered studies are worse than no study]
+An underpowered test is usually described as likely to miss a real effect, which is true and is only half the problem. The other half is what happens when it *does* reject.
+
+To reject, an underpowered study needs an unusually large observed effect — that is what crossing the threshold with little data requires. So among the underpowered studies that reach significance, the estimated effects are systematically inflated, sometimes by several-fold. The literature then contains a set of published findings that are exaggerated *conditional on having been published*, and that inflation does not wash out as more such studies accumulate.
 :::
 
-:::solution
-1. Standard error: $SE = \sqrt{s_1^2/n_1 + s_2^2/n_2} = \sqrt{16/16 + 36/25} = \sqrt{1 + 1.44} = \sqrt{2.44} \approx 1.562$.
-2. Test statistic: $t = (\bar{x}_1-\bar{x}_2)/SE = (50-45)/1.562 \approx 3.20$.
-3. This exceeds the $\approx 2$ cutoff for any reasonable df, so we reject $H_0$: strong evidence the group means differ.
-4. Sanity check: the numerator is $5$ and $SE \approx 1.56$, so $t \approx 3.2$ — the means are about three standard errors apart, which is convincingly large.
-:::
-
-:::example[Paired t-test]
-Blood pressure before and after treatment for $3$ patients. Differences $d_i = x_{\text{after}} - x_{\text{before}}$: $-3, -5, -4$.
-:::
-
-:::solution
-1. Mean difference: $\bar{d} = (-3-5-4)/3 = -12/3 = -4$.
-2. Sample SD of differences: deviations from $\bar{d}$ are $1, -1, 0$, so $s_d = \sqrt{(1^2+(-1)^2+0^2)/(3-1)} = \sqrt{2/2} = 1$.
-3. Test statistic: $t = \bar{d}/(s_d/\sqrt{n}) = -4/(1/\sqrt{3}) = -4\sqrt{3} \approx -6.93$, with $df = n-1 = 2$.
-4. With $df=2$, the two-sided cutoff at $\alpha=0.05$ is $t_{0.025,2} \approx 4.30$; since $|-6.93| > 4.30$, $p < 0.05$. Strong evidence treatment lowers blood pressure.
-:::
-
-## Chi-Square Test for a Proportion and Goodness-of-Fit
-
-<!-- section: chi-square -->
-
-The chi-square goodness-of-fit test checks whether observed category counts match a hypothesised distribution.
-
-:::definition[Chi-square goodness-of-fit statistic]{#chi-square-stat}
-With $k$ categories, observed counts $O_i$ and expected counts $E_i$ under $H_0$,
-
-$$\chi^2 = \sum_i \frac{(O_i - E_i)^2}{E_i},$$
-
-compared against the chi-square distribution with $k-1$ degrees of freedom.
-:::
-
-:::note
-The chi-square approximation for goodness-of-fit requires each expected count $E_i \geq 5$; if some categories are too sparse, merge them before testing.
-:::
-
-:::definition[One-sample proportion z-test]
-To test $H_0: p = p_0$, use
-
-$$z = \frac{\hat{p}-p_0}{\sqrt{p_0(1-p_0)/n}},$$
-
-valid when $np_0 \geq 10$ and $n(1-p_0) \geq 10$.
-:::
-
-:::definition[Two-proportion z-test]
-To test $H_0: p_1=p_2$, use
-
-$$z = \frac{\hat{p}_1-\hat{p}_2}{SE}, \qquad SE = \sqrt{\hat{p}(1-\hat{p})\left(\frac{1}{n_1}+\frac{1}{n_2}\right)},$$
-
-with the pooled estimate $\hat{p} = (x_1+x_2)/(n_1+n_2)$.
-:::
-
-Pooling is used only because $H_0$ says both groups share one common proportion, so the best estimate of it combines all the data.
-
-:::intuition
-The proportion $z$-test asks: 'Is the fraction of successes in my sample far enough from my hypothesised value $p_0$ to be surprising?' A $z$-score of $-2$ means the observed proportion is $2$ standard errors below $p_0$ — which, under a normal approximation, happens only $2.3\%$ of the time by chance.
-
-The goodness-of-fit test is a "tally checker." You have a theory that predicts how many things should land in each bin (a fair die predicts $10$ of each face in $60$ rolls). You count how far each observed tally strays from its prediction, square it so overshoots and undershoots both count, scale by the prediction, and add them up. A big total $\chi^2$ means reality and theory disagree.
-:::
-
-:::example[Chi-square goodness-of-fit (fair die)]
-Roll a die $n = 60$ times to test $H_0$: the die is fair (each face equally likely). Observed counts: $8, 12, 9, 11, 14, 6$.
+:::example[Computing both error probabilities for one test]
+A test of $H_0:\mu=100$ against $H_1:\mu>100$ uses $n=36$, $\sigma=12$ and $\alpha=0.05$. Find the rejection rule in the original units, then the Type II error probability if the true mean is $105$.
 :::
 
 :::solution
-1. Under $H_0$, each of the $k = 6$ faces is expected $E_i = 60 \times \tfrac{1}{6} = 10$ times. Each $E_i = 10 \geq 5$, so the approximation is valid.
-2. Contributions $(O_i - E_i)^2/E_i$: $\tfrac{(8-10)^2}{10}=0.4$, $\tfrac{(12-10)^2}{10}=0.4$, $\tfrac{(9-10)^2}{10}=0.1$, $\tfrac{(11-10)^2}{10}=0.1$, $\tfrac{(14-10)^2}{10}=1.6$, $\tfrac{(6-10)^2}{10}=1.6$.
-3. Sum: $\chi^2 = 0.4+0.4+0.1+0.1+1.6+1.6 = 4.2$, with $df = k-1 = 5$.
-4. The critical value is $\chi^2_{0.05,\,5} \approx 11.07$. Since $4.2 < 11.07$, we fail to reject $H_0$ — no evidence the die is unfair.
-5. Sanity check: the observed counts sum to $8+12+9+11+14+6 = 60 = n$, as they must.
+1. The standard error is $12/\sqrt{36} = 2$, so the rule "reject when $Z>1.645$" becomes
+
+$$\bar X > 100 + 1.645(2) = 103.29 .$$
+
+2. A Type II error is failing to reject when $\mu = 105$, that is observing $\bar X \le 103.29$ when the true mean is $105$. Standardise using the *true* mean:
+
+$$\beta = P\left(Z \le \frac{103.29-105}{2}\right) = P(Z \le -0.855) = 0.1963 .$$
+
+3. So the power against $\mu=105$ is $1-0.1963 = 0.8037$, and the test misses a real five-unit effect about $20\%$ of the time.
+4. Sanity check by the power formula: $(\mu_1-\mu_0)/(\sigma/\sqrt n) = 5/2 = 2.5$, so power $=1-\Phi(1.645-2.5) = 1-\Phi(-0.855) = 0.8037$ ✓.
+5. Note the asymmetry deliberately built in: $\alpha = 0.05$ by decree, $\beta = 0.196$ as a consequence. The two are not treated even-handedly, because rejecting a true null is regarded as the more serious error — and if that judgement does not fit the application, it is $\alpha$ that should be reconsidered, not the arithmetic.
 :::
 
-:::example[One-sample proportion z-test]
-A candidate claims $50\%$ support. In a poll of $n = 400$, a fraction $\hat{p} = 0.55$ support them. Test $H_0: p = 0.5$ vs $H_a: p \neq 0.5$ at $\alpha = 0.05$.
+## Optimal tests: the Neyman-Pearson lemma
+
+<!-- section: neyman-pearson -->
+
+The $z$-test rejects for large $|\bar X - \mu_0|$, which seems natural, but naturalness is not an argument. Among all tests with significance level $\alpha$, is that one best? For a simple alternative the question has a complete answer, and it determines the form of essentially every test in use.
+
+:::definition[Simple hypothesis and likelihood ratio]{#likelihood-ratio}
+A hypothesis is **simple** if it specifies the distribution of the data completely. For two simple hypotheses $H_0: \theta=\theta_0$ and $H_1: \theta=\theta_1$ with likelihoods $L(\theta_0)$ and $L(\theta_1)$, the **likelihood ratio** is
+
+$$\Lambda(\mathbf{x}) = \frac{L(\theta_1)}{L(\theta_0)} = \frac{\prod_i f(x_i;\theta_1)}{\prod_i f(x_i;\theta_0)} .$$
+:::
+
+:::theorem[Neyman-Pearson lemma]{#neyman-pearson}
+Among all tests of a simple $H_0$ against a simple $H_1$ with significance level at most $\alpha$, the test that rejects when
+
+$$\Lambda(\mathbf{x}) > k,$$
+
+with $k$ chosen so the level is exactly $\alpha$, has the **greatest possible power**.
+:::
+
+:::proof
+Write $\varphi$ for the likelihood-ratio test — the indicator of $\{\Lambda > k\}$ — and let $\psi$ be any other test with level at most $\alpha$, so $E_0(\psi) \le \alpha = E_0(\varphi)$, where $E_j$ denotes expectation under $H_j$.
+
+The key is a pointwise inequality. Consider
+
+$$\big(\varphi(\mathbf{x}) - \psi(\mathbf{x})\big)\big(L(\theta_1) - kL(\theta_0)\big) \ \ge\ 0 \qquad \text{for every } \mathbf{x}.$$
+
+To see it, take the two cases. Where $\Lambda > k$, the second factor $L(\theta_1)-kL(\theta_0)$ is positive and $\varphi = 1 \ge \psi$, so the first factor is non-negative. Where $\Lambda \le k$, the second factor is non-positive and $\varphi = 0 \le \psi$, so the first factor is non-positive. In both cases the product of two like-signed quantities is non-negative.
+
+Now integrate the inequality over all $\mathbf{x}$. The integral of $(\varphi-\psi)L(\theta_1)$ is $E_1(\varphi)-E_1(\psi)$, the difference in power; the integral of $(\varphi-\psi)L(\theta_0)$ is $E_0(\varphi)-E_0(\psi)$, the difference in level. So
+
+$$\big[E_1(\varphi) - E_1(\psi)\big] \ \ge\ k\big[E_0(\varphi) - E_0(\psi)\big] \ \ge\ 0,$$
+
+the last step because $k > 0$ and $E_0(\varphi) = \alpha \ge E_0(\psi)$. Hence $E_1(\varphi) \ge E_1(\psi)$: the likelihood-ratio test is at least as powerful as any competitor. $\blacksquare$
+:::
+
+:::proposition[The z-test is the Neyman-Pearson test for a normal mean]{#z-is-np}
+For a normal population with known $\sigma^2$, testing $H_0:\mu=\mu_0$ against a simple $H_1:\mu=\mu_1$ with $\mu_1 > \mu_0$, the likelihood-ratio test rejects exactly when $\bar X$ exceeds a constant — that is, it is the one-sided $z$-test.
+:::
+
+:::proof
+Write the ratio of normal likelihoods and take logs. The quadratic terms $\sum x_i^2$ cancel between numerator and denominator, leaving
+
+$$\log \Lambda = \frac{1}{\sigma^2}\left[(\mu_1-\mu_0)\sum_i x_i - \frac{n}{2}\big(\mu_1^2-\mu_0^2\big)\right] = \frac{n(\mu_1-\mu_0)}{\sigma^2}\left[\bar x - \frac{\mu_1+\mu_0}{2}\right].$$
+
+Since $\mu_1 > \mu_0$ the bracket's coefficient is positive, so $\log\Lambda$ is a strictly increasing function of $\bar x$. Therefore $\{\Lambda > k\}$ is the same event as $\{\bar x > c\}$ for a corresponding constant $c$, and choosing $c$ to give level $\alpha$ gives $c = \mu_0 + z_\alpha\sigma/\sqrt n$. $\blacksquare$
+:::
+
+That proposition is the justification the $z$-test was missing. It is not merely a reasonable procedure: for a normal population with known variance, no test at the same level has more power against any specific alternative on that side.
+
+:::remark[Uniformly most powerful tests, and where they stop existing]
+The constant $c$ in the proposition does not depend on $\mu_1$ — it dropped out. So the *same* test is most powerful against every $\mu_1 > \mu_0$ simultaneously, which makes it **uniformly most powerful** for the composite alternative $\mu > \mu_0$.
+
+For a two-sided alternative no such test exists, and the reason is visible in the algebra: the optimal test against $\mu_1 > \mu_0$ rejects for large $\bar x$, while against $\mu_1 < \mu_0$ it rejects for small $\bar x$, and no single rejection region can be optimal for both. The usual two-sided test is a compromise, justified by unbiasedness and symmetry rather than by uniform optimality. This is the honest reason two-sided tests have less power than one-sided ones — and the reason the direction must be chosen in advance, since choosing it from the data recovers the two-sided error rate while reporting the one-sided one.
+:::
+
+:::example[Building a most powerful test from scratch]
+A single observation $X$ comes from an exponential distribution with rate $\theta$. Construct the most powerful level-$\alpha$ test of $H_0:\theta=1$ against $H_1:\theta=2$, and find its power at $\alpha=0.05$.
 :::
 
 :::solution
-1. Check conditions: $np_0 = 400(0.5) = 200 \geq 10$ and $n(1-p_0) = 200 \geq 10$, so the normal approximation is valid.
-2. Standard error under $H_0$: $SE = \sqrt{p_0(1-p_0)/n} = \sqrt{0.5\times 0.5/400} = \sqrt{0.000625} = 0.025$.
-3. Test statistic: $z = (\hat{p}-p_0)/SE = (0.55-0.5)/0.025 = 2$.
-4. Two-sided $p$-value $= 2P(Z > 2) = 2(0.0228) = 0.0456 < 0.05$, so reject $H_0$: evidence support differs from $50\%$.
+1. The likelihood ratio is
+
+$$\Lambda(x) = \frac{2e^{-2x}}{1\cdot e^{-x}} = 2e^{-x},$$
+
+which is strictly *decreasing* in $x$.
+2. So $\{\Lambda > k\}$ is the event $\{x < c\}$ for a corresponding constant: by the theorem *Neyman-Pearson lemma*, the most powerful test rejects for **small** $x$. This is worth noting because "reject for large values of the statistic" is a habit, not a rule — here the larger rate produces smaller observations, so small values are the evidence against $H_0$.
+3. Choose $c$ for level $\alpha$. Under $H_0$, $X\sim$ Exp$(1)$, so $P(X<c) = 1-e^{-c} = 0.05$, giving $c = -\ln(0.95) = 0.05129$.
+4. Power: under $H_1$, $X \sim$ Exp$(2)$, so
+
+$$P(X<c) = 1-e^{-2(0.05129)} = 1-e^{-0.10258} = 0.0975 .$$
+
+5. Sanity check: the power $0.0975$ exceeds $\alpha = 0.05$, as any sensible test's must, but only barely — one observation carries very little information about a rate. With $n$ observations the ratio becomes $2^n e^{-\sum x_i}$, the test rejects for small $\sum x_i$, and the power rises toward $1$.
 :::
 
-## Multiple Testing and p-Hacking
+## The p-value: what it is, and what it is not
 
 <!-- section: p-value -->
 
-:::proposition[Family-wise error rate]
-If you run $m$ independent tests each at level $\alpha$, the probability of at least one false positive is
+Reporting only "reject at $5\%$" throws information away: a statistic barely past the threshold and one far beyond it lead to the same verdict but are not the same evidence. The $p$-value reports where the observation fell.
 
-$$1 - (1-\alpha)^m.$$
+:::definition[p-value]{#p-value-def}
+The **$p$-value** is the probability, computed **assuming $H_0$ is true**, of obtaining a test statistic at least as extreme as the one observed, where "extreme" is measured in the direction of the alternative:
+
+$$p = P\big(T \ \text{as or more extreme than}\ t_{\text{obs}} \mid H_0\big).$$
 :::
 
-For $m=20$ and $\alpha=0.05$, this is $1 - 0.95^{20} \approx 0.64$ — a $64\%$ chance of at least one spurious significant result.
+The decision rule is then simply: reject $H_0$ when $p \le \alpha$. That this reproduces the level-$\alpha$ test exactly is the content of the following theorem, which also pins down what a $p$-value *is* in a way the definition alone does not.
 
-:::definition[Bonferroni correction]
-To keep the family-wise error rate at $\alpha$ across $m$ tests, run each individual test at level
-
-$$\frac{\alpha}{m}.$$
+:::theorem[The p-value is uniform under the null]{#p-uniform}
+If the test statistic $T$ has a continuous distribution and $H_0$ is true, then $p \sim \text{Uniform}(0,1)$. Consequently $P(p \le \alpha \mid H_0) = \alpha$ for every $\alpha \in (0,1)$.
 :::
 
-Bonferroni is conservative: it is too strict when the tests are positively correlated. The False Discovery Rate (FDR) is the alternative: the Benjamini-Hochberg procedure controls the expected fraction of false rejections among all rejections, is less conservative than Bonferroni, and is preferred for exploratory work.
+:::proof
+Take a one-sided test rejecting for large $T$, so that $p = 1 - F(T)$ where $F$ is the distribution function of $T$ under $H_0$. Since $F$ is continuous and increasing on the support, for $u \in (0,1)$,
+
+$$P(p \le u) = P\big(1-F(T) \le u\big) = P\big(F(T) \ge 1-u\big) = P\big(T \ge F^{-1}(1-u)\big) = 1 - F\big(F^{-1}(1-u)\big) = u .$$
+
+A random variable with $P(p\le u) = u$ on $(0,1)$ is uniform on $(0,1)$. Setting $u=\alpha$ gives the Type I error rate, confirming that the rule "reject when $p\le\alpha$" has level exactly $\alpha$. $\blacksquare$
+:::
+
+This is the fact to carry. Under the null, $p$-values are not clustered near $1$ — they are spread evenly across $[0,1]$, so a $p$-value of $0.04$ from a true null is exactly as likely as one of $0.94$. Small $p$-values are not rare under the null in any absolute sense; they are rare only at the rate $\alpha$ you chose. That is simultaneously why the procedure controls error and why running many tests produces small $p$-values by construction.
+
+:::figure[Histograms of $p$-values from many simulated tests. Under a true null (accent) they are uniform on $[0,1]$ — every bin equally likely, so a $p$ below $0.05$ occurs in exactly $5\%$ of studies, which is what the significance level means. Under a real effect with $80\%$ power (result) the distribution piles up near zero. The two are told apart by the shape of the whole histogram, not by any single $p$-value: a value of $0.04$ is perfectly ordinary under the null.]{#p-value-histograms}
+{
+  "type": "plot",
+  "x": [-0.06, 1.14],
+  "y": [-0.6, 9.2],
+  "xTicks": 0.1,
+  "yTicks": 1,
+  "xLabel": "p-value",
+  "yLabel": "density",
+  "marks": [
+    { "kind": "bars", "bars": [[0.0,0.1,1.02], [0.1,0.2,0.98], [0.2,0.3,1.01], [0.3,0.4,0.99], [0.4,0.5,1.0], [0.5,0.6,1.03], [0.6,0.7,0.97], [0.7,0.8,1.0], [0.8,0.9,1.01], [0.9,1.0,0.99]], "tone": "accent" },
+    { "kind": "bars", "bars": [[0.0,0.1,8.6], [0.1,0.2,0.72], [0.2,0.3,0.28], [0.3,0.4,0.16], [0.4,0.5,0.09], [0.5,0.6,0.06], [0.6,0.7,0.04], [0.7,0.8,0.03], [0.8,0.9,0.01], [0.9,1.0,0.01]], "tone": "result" },
+    { "kind": "text", "at": [0.62, 3.6], "text": "true null: uniform", "tone": "accent", "leaderTo": [0.55, 1.05] },
+    { "kind": "text", "at": [0.42, 7.4], "text": "real effect, 80% power", "tone": "result", "leaderTo": [0.06, 8.5] }
+  ]
+}
+:::
 
 :::pitfall
-p-hacking: running many analyses and selectively reporting significant ones. It inflates the Type I error rate and is a major cause of the replication crisis in science.
+Four statements that a $p$-value does **not** make, each common in print.
+
+- It is **not** $P(H_0 \text{ true} \mid \text{data})$. It is a probability computed *assuming* $H_0$, so it conditions in the opposite direction. Converting between the two requires a prior, by Bayes' theorem — see the final section.
+- It is **not** the probability the result was due to chance. That phrase describes $P(H_0\mid\text{data})$ again.
+- $1-p$ is **not** the probability the alternative is true, nor the probability the finding will replicate.
+- A larger $p$-value is **not** evidence *for* $H_0$. Under the null, $p$ is uniform; under a small true effect with a small sample, $p$ is *also* spread widely. A $p$ of $0.6$ discriminates between those two situations hardly at all.
 :::
 
-:::intuition
-If you test $20$ hypotheses at $\alpha=0.05$, on average one will be 'significant' just by chance even if none of them are really true. Multiple testing correction is the fix — you demand stronger evidence for each test to keep the overall false-alarm rate at $5\%$.
+The relationship to the previous chapter's intervals is exact, not approximate, and it is the cleanest way to see what a test adds and what it omits.
 
-Think of it like buying lottery tickets. Any single ticket almost never wins ($\alpha = 5\%$). But buy $20$ tickets and your chance of *at least one* win jumps to nearly two-in-three. Bonferroni is the rule "to keep my overall win chance at $5\%$, each ticket must be $20\times$ harder to win."
+:::theorem[Duality of tests and confidence intervals]{#duality}
+The two-sided level-$\alpha$ $z$-test rejects $H_0:\mu=\mu_0$ **if and only if** $\mu_0$ lies outside the $100(1-\alpha)\%$ confidence interval for $\mu$.
 :::
 
-:::example[Family-wise error and Bonferroni]
-Suppose $H_0$ is actually true for all $m = 20$ independent tests, each run at $\alpha = 0.05$.
+:::proof
+The test rejects exactly when
+
+$$\left|\frac{\bar x - \mu_0}{\sigma/\sqrt n}\right| > z_{\alpha/2} \iff |\bar x - \mu_0| > z_{\alpha/2}\frac{\sigma}{\sqrt n},$$
+
+multiplying by the positive $\sigma/\sqrt n$. The negation of that inequality is precisely
+
+$$\bar x - z_{\alpha/2}\frac{\sigma}{\sqrt n} \ \le\ \mu_0\ \le\ \bar x + z_{\alpha/2}\frac{\sigma}{\sqrt n},$$
+
+which says $\mu_0$ lies in the confidence interval of the theorem *Confidence interval for a mean, known variance*. So the test fails to reject exactly when $\mu_0$ is inside the interval, which is the claim. $\blacksquare$
+:::
+
+:::remark[Why the interval is usually the better report]
+By duality the interval contains the test: it tells you the outcome of the test against *every* null value at once, since the values it contains are exactly those that would not be rejected. It also reports the effect size and its precision, which the test does not.
+
+So an interval strictly dominates a test as a summary, and the practice of reporting "$p < 0.05$" alone discards information that was already computed. The case where a test is genuinely the right report is when a decision must be made — accept the shipment or reject it — and there the verdict is the deliverable.
+:::
+
+:::example[From test statistic to p-value, both sides]
+For the bottle-filling data ($\bar x = 498$, $\mu_0 = 500$, $\sigma = 4$, $n=25$), compute the one-sided and two-sided $p$-values and interpret them.
 :::
 
 :::solution
-1. Probability a single test does *not* give a false positive: $1 - 0.05 = 0.95$. For all $20$ to avoid it: $0.95^{20} \approx 0.358$.
-2. So the probability of *at least one* false positive is $1 - 0.95^{20} \approx 1 - 0.358 = 0.642$ — about a $64\%$ chance of a spurious "significant" result.
-3. Bonferroni fix: use per-test level $\alpha/m = 0.05/20 = 0.0025$. Now the family-wise error is $1 - (1-0.0025)^{20} \approx 1 - 0.951 = 0.049 \approx 0.05$, back to the intended $5\%$.
-4. Sanity check: with the tighter threshold the chance of at least one false alarm dropped from $64\%$ to $5\%$, exactly the goal of the correction.
+1. The test statistic was $z = -2.5$.
+2. **One-sided** against $H_1:\mu<500$: $p = P(Z \le -2.5) = \Phi(-2.5) = 0.0062$.
+3. **Two-sided**: $p = 2\Phi(-2.5) = 0.0124$, double the one-sided value because deviations of either sign count as extreme.
+4. Both are below $0.05$, so both reject at the $5\%$ level; the two-sided test is the more conservative and is the right choice unless the direction was fixed in advance.
+5. The correct reading of $p = 0.0124$: *if* the machine were correctly calibrated, a sample mean this far from $500$ in either direction would occur about $1.2\%$ of the time. It is **not** the statement that there is a $1.2\%$ chance the machine is fine.
+6. Sanity check via duality: $0.0124 < 0.05$, so $500$ should fall outside the $95\%$ interval $(496.43, 499.57)$ — and it does ✓.
+:::
+
+## The t-test family
+
+<!-- section: t-test -->
+
+Replacing the known $\sigma$ by $s$ changes the reference distribution from normal to $t$, exactly as it did for intervals, and for the same reason.
+
+:::theorem[One-sample t-test]{#one-sample-t}
+For $X_1,\ldots,X_n$ i.i.d. $N(\mu,\sigma^2)$ with $\sigma$ unknown, the statistic
+
+$$T = \frac{\bar X - \mu_0}{S/\sqrt n}$$
+
+has the $t_{n-1}$ distribution under $H_0:\mu=\mu_0$. Rejecting when $|T|>t_{\alpha/2,n-1}$ gives a two-sided test of exact level $\alpha$.
+:::
+
+:::proof
+Under $H_0$ the population mean is $\mu_0$, so $T$ is the studentised mean of the theorem *The studentised mean is pivotal*, which is $t_{n-1}$-distributed. The rejection probability under $H_0$ is then $P(|t_{n-1}|>t_{\alpha/2,n-1}) = \alpha$ by the definition of the critical value and the symmetry of the $t$ density. $\blacksquare$
+:::
+
+:::definition[Paired t-test]{#paired-t}
+When observations come in matched pairs $(X_i, Y_i)$, form the differences $D_i = X_i - Y_i$ and apply the one-sample $t$-test to them, testing $H_0: \mu_D = 0$ with $df = n-1$ where $n$ is the number of *pairs*.
+:::
+
+Pairing is not a technicality but usually the single most effective design choice available. Each subject serves as its own control, so any variation *between* subjects — which is often the dominant source of noise — cancels in the difference and never enters the standard error. The cost is one degree of freedom relative to treating the data as $2n$ independent observations, and the gain is frequently a several-fold reduction in $s$.
+
+:::theorem[Two-sample t-test, pooled]{#two-sample-t-test}
+For independent samples from $N(\mu_1,\sigma^2)$ and $N(\mu_2,\sigma^2)$ with a common unknown variance, the statistic
+
+$$T = \frac{\bar X_1 - \bar X_2}{S_p\sqrt{\dfrac{1}{n_1}+\dfrac{1}{n_2}}}$$
+
+has the $t_{n_1+n_2-2}$ distribution under $H_0:\mu_1=\mu_2$, with $S_p$ the pooled standard deviation.
+:::
+
+:::proof
+Under $H_0$ the difference $\bar X_1 - \bar X_2$ has mean zero, and the construction in the proof of the theorem *Confidence interval for a difference of means* shows the ratio is $t_{n_1+n_2-2}$. The test is that pivot with $\mu_1-\mu_2$ set to its null value of $0$. $\blacksquare$
+:::
+
+:::example[Paired against unpaired on the same data]
+Ten subjects are measured before and after a treatment. The differences $d_i$ have $\bar d = 4.2$ and $s_d = 5.1$. Separately, the before and after readings each have standard deviation about $18$. Test $H_0:\mu_D=0$ at $\alpha=0.05$ using $t_{0.025,9}=2.262$, and compare with what an unpaired analysis would have given.
+:::
+
+:::solution
+1. **Paired.** $SE = s_d/\sqrt n = 5.1/\sqrt{10} = 5.1/3.1623 = 1.6129$, so
+
+$$t = \frac{4.2}{1.6129} = 2.604 .$$
+
+2. Since $2.604 > 2.262$, reject $H_0$: the treatment has a detectable effect.
+3. **Unpaired**, treating the two sets as independent samples of size $10$ with $s\approx 18$: the standard error would be $18\sqrt{1/10+1/10} = 18 \times 0.4472 = 8.050$, giving $t = 4.2/8.050 = 0.522$ on $18$ degrees of freedom — nowhere near significance.
+4. The same data, the same effect, opposite conclusions. The between-subject standard deviation of $18$ swamps the treatment effect of $4.2$, but it is common to both readings on each subject and cancels entirely in the differences, where the residual noise is only $5.1$.
+5. Sanity check on which analysis is correct: the observations are *not* independent across the two groups — they are the same ten people — so the unpaired analysis violates its own hypotheses. Pairing here is not merely more powerful, it is the only valid option.
+:::
+
+:::example[A two-sample t-test]
+Two independent groups give $n_1=12$, $\bar x_1=84.2$, $s_1=6.4$ and $n_2=15$, $\bar x_2=78.9$, $s_2=5.8$. Test $H_0:\mu_1=\mu_2$ at $\alpha=0.05$, with $t_{0.025,25}=2.060$.
+:::
+
+:::solution
+1. Pooled variance: $s_p^2 = [11(40.96)+14(33.64)]/25 = 921.52/25 = 36.861$, so $s_p = 6.071$.
+2. Standard error: $6.071\sqrt{1/12+1/15} = 6.071\times 0.38730 = 2.351$.
+3. Statistic: $t = (84.2-78.9)/2.351 = 5.3/2.351 = 2.254$ on $25$ degrees of freedom.
+4. Since $2.254 > 2.060$, reject $H_0$ at the $5\%$ level.
+5. Sanity check via duality: the $95\%$ interval for $\mu_1-\mu_2$ computed in the previous chapter was $(0.46,\ 10.14)$, which excludes $0$ — the same verdict, as the theorem *Duality of tests and confidence intervals* requires ✓.
+6. What the interval adds: the test says "not zero", while the interval says the difference is somewhere between half a point and ten points. Reporting only $t=2.254,\ p=0.033$ would conceal how imprecisely the effect is pinned down.
+:::
+
+## Chi-square tests for counts
+
+<!-- section: chi-square -->
+
+The tests so far concerned means. For categorical data the natural comparison is between observed counts and the counts a hypothesis predicts.
+
+:::theorem[Chi-square goodness-of-fit test]{#gof}
+Let $n$ observations fall into $k$ categories with observed counts $O_1,\ldots,O_k$, and let $H_0$ specify probabilities $p_1,\ldots,p_k$ giving expected counts $E_i = np_i$. Then under $H_0$, as $n\to\infty$,
+
+$$X^2 = \sum_{i=1}^{k}\frac{(O_i-E_i)^2}{E_i} \ \xrightarrow{d}\ \chi^2_{k-1-m},$$
+
+where $m$ is the number of parameters estimated from the data. Large values of $X^2$ are evidence against $H_0$.
+:::
+
+:::proof
+We give the argument for $k=2$, where it is exact and transparent, and quote the general case. With two categories, $O_1 \sim \text{Binomial}(n,p_1)$ and $O_2 = n - O_1$. Writing $E_1 = np_1$, $E_2 = n(1-p_1)$ and $D = O_1 - E_1$, note $O_2 - E_2 = -D$, so
+
+$$X^2 = \frac{D^2}{np_1} + \frac{D^2}{n(1-p_1)} = D^2\cdot\frac{(1-p_1)+p_1}{np_1(1-p_1)} = \frac{D^2}{np_1(1-p_1)} = \left(\frac{O_1-np_1}{\sqrt{np_1(1-p_1)}}\right)^{2}.$$
+
+The bracket is exactly the standardised binomial count, which by the theorem *Normal approximation to the sample proportion* is asymptotically standard normal. The square of a standard normal is $\chi^2_1$, and $k-1-m = 2-1-0 = 1$ ✓.
+
+For general $k$ the same idea applies to the vector of standardised counts, which is asymptotically multivariate normal; the single linear constraint $\sum_i (O_i - E_i) = 0$ removes one dimension, and each estimated parameter removes one more, leaving $k-1-m$. $\blacksquare$
+:::
+
+The degrees of freedom deserve the same reading as in the $t$-test: they count the number of freely varying comparisons. The counts must sum to $n$, so once $k-1$ of the deviations are known the last is determined — one constraint, one degree of freedom lost — and every parameter fitted from the same data costs another.
+
+:::proposition[Chi-square test for independence]{#independence-test}
+For an $r\times c$ contingency table, the hypothesis that the row and column variables are independent gives expected counts
+
+$$E_{ij} = \frac{(\text{row } i \text{ total})(\text{column } j \text{ total})}{n},$$
+
+and $X^2 = \sum_{i,j}(O_{ij}-E_{ij})^2/E_{ij}$ is asymptotically $\chi^2$ with $(r-1)(c-1)$ degrees of freedom.
+:::
+
+:::proof
+Under independence $P(\text{row } i,\ \text{col } j) = p_{i\cdot}p_{\cdot j}$, and the maximum likelihood estimates of the marginals are the observed row and column proportions, giving $E_{ij} = n\hat p_{i\cdot}\hat p_{\cdot j}$, which is the stated formula. For the degrees of freedom, the table has $rc$ cells, hence $rc-1$ free probabilities; estimating the marginals costs $(r-1)+(c-1)$ parameters. So
+
+$$df = (rc-1) - (r-1) - (c-1) = rc - r - c + 1 = (r-1)(c-1). \qquad \blacksquare$$
+:::
+
+:::pitfall
+The chi-square distribution here is an **approximation** that requires the expected counts to be reasonably large — the usual working rule is every $E_i \ge 5$. With small expected counts the statistic is discrete and skewed while $\chi^2$ is continuous, and the test rejects far too often. Use an exact test (Fisher's, for a $2\times 2$ table) instead of pooling categories until the rule is satisfied, since pooling changes the hypothesis being tested.
+
+Note also that the requirement is on the **expected** counts, not the observed ones. A cell with zero observations is not a problem; a cell with expected count $0.4$ is.
+:::
+
+:::example[A goodness-of-fit test]
+A die is rolled $120$ times with outcomes $1$ through $6$ observed $15, 23, 18, 26, 17, 21$ times. Test fairness at $\alpha = 0.05$, given $\chi^2_{0.05,5} = 11.070$.
+:::
+
+:::solution
+1. Under $H_0$ each face has probability $1/6$, so every expected count is $E_i = 120/6 = 20$, comfortably above $5$.
+2. The deviations are $-5, 3, -2, 6, -3, 1$, and their squares are $25, 9, 4, 36, 9, 1$, summing to $84$.
+3. Since every $E_i$ is the same, $X^2 = 84/20 = 4.20$.
+4. Degrees of freedom: $k-1-m = 6-1-0 = 5$, no parameters having been estimated. Since $4.20 < 11.070$, do not reject: the data are consistent with a fair die.
+5. Sanity check on the scale: under $H_0$ the mean of a $\chi^2_5$ is its degrees of freedom, $5$. An observed $4.20$ sits slightly *below* what a fair die would typically produce, so there is not the faintest suggestion of bias — the $p$-value is about $0.52$.
+6. Note the correct conclusion: the die is not shown to be fair, only not shown to be unfair. With $120$ rolls the test has little power against a mild bias.
+:::
+
+:::example[A test for independence]
+A $2\times 2$ table records treatment against outcome: of $60$ treated, $36$ improved; of $40$ untreated, $16$ improved. Test independence at $\alpha=0.05$, given $\chi^2_{0.05,1}=3.841$.
+:::
+
+:::solution
+1. The observed table has row totals $60$ and $40$, column totals $52$ improved and $48$ not, and $n=100$.
+2. Expected counts under independence, by the proposition *Chi-square test for independence*: $E_{11} = 60\times 52/100 = 31.2$, $E_{12} = 60\times 48/100 = 28.8$, $E_{21} = 40\times 52/100 = 20.8$, $E_{22} = 19.2$. All exceed $5$ ✓.
+3. The deviations all have the same magnitude, $|O-E| = 4.8$, as they must in a $2\times 2$ table where the margins are fixed. So
+
+$$X^2 = 4.8^2\left(\frac{1}{31.2}+\frac{1}{28.8}+\frac{1}{20.8}+\frac{1}{19.2}\right) = 23.04(0.032051+0.034722+0.048077+0.052083).$$
+
+4. The bracket is $0.166933$, giving $X^2 = 23.04\times 0.166933 = 3.846$.
+5. Degrees of freedom: $(r-1)(c-1) = 1$. Since $3.846 > 3.841$, reject — but only just, with $p = 0.0499$.
+6. Sanity check on how marginal this is: a single patient moving between cells would flip the verdict. Reporting this as "significant, $p<0.05$" without noting its fragility would be technically true and substantively misleading — which is the case for reporting the improvement rates, $60\%$ against $40\%$, with an interval around their difference.
+:::
+
+## Many tests at once
+
+<!-- section: multiple-testing -->
+
+Every result so far concerned a single test. The moment several are run, the guarantee that $\alpha$ provides — a $5\%$ chance of a false rejection — applies to each test separately and not to the collection, and the difference is large.
+
+:::proposition[Family-wise error rate under multiplicity]{#fwer}
+If $m$ independent tests are each conducted at level $\alpha$ and all $m$ nulls are true, the probability of at least one false rejection is
+
+$$1-(1-\alpha)^m,$$
+
+which tends to $1$ as $m$ grows.
+:::
+
+:::proof
+Each test independently fails to reject with probability $1-\alpha$, so all $m$ fail to reject with probability $(1-\alpha)^m$ by independence. The complement is the stated probability, and since $0<1-\alpha<1$ we have $(1-\alpha)^m \to 0$. $\blacksquare$
+:::
+
+At $\alpha=0.05$ this is $0.226$ for $m=5$, $0.401$ for $m=10$, and $0.642$ for $m=20$. Twenty tests on pure noise produce at least one "significant" result about two times in three.
+
+:::theorem[Bonferroni correction]{#bonferroni}
+Testing each of $m$ hypotheses at level $\alpha/m$ makes the probability of one or more false rejections at most $\alpha$, whatever the dependence between the tests.
+:::
+
+:::proof
+Let $A_i$ be the event of a false rejection on test $i$, so $P(A_i)\le \alpha/m$ for each true null. By the union bound — countable subadditivity of probability, requiring no independence whatever —
+
+$$P\left(\bigcup_{i=1}^m A_i\right) \ \le\ \sum_{i=1}^{m}P(A_i)\ \le\ m\cdot\frac{\alpha}{m} = \alpha. \qquad \blacksquare$$
+:::
+
+The proof's indifference to dependence is both its strength and its weakness: it is always valid, and when the tests are strongly correlated it is very conservative, costing power for a guarantee that was not needed. Procedures controlling the **false discovery rate** — the expected *proportion* of rejections that are false, rather than the probability of *any* — are the usual modern alternative when $m$ is large.
+
+:::theorem[Post-test probability of a true effect]{#ppv}
+Suppose a fraction $\pi$ of the hypotheses tested in some field are genuinely non-null, and tests have level $\alpha$ and power $1-\beta$. Then the probability that a rejected null is genuinely false is
+
+$$P(H_1 \mid \text{reject}) = \frac{(1-\beta)\pi}{(1-\beta)\pi + \alpha(1-\pi)} .$$
+:::
+
+:::proof
+By Bayes' theorem, with the two ways of obtaining a rejection in the denominator:
+
+$$P(H_1\mid \text{reject}) = \frac{P(\text{reject}\mid H_1)P(H_1)}{P(\text{reject}\mid H_1)P(H_1) + P(\text{reject}\mid H_0)P(H_0)},$$
+
+and substituting $P(\text{reject}\mid H_1) = 1-\beta$, $P(\text{reject}\mid H_0)=\alpha$, $P(H_1)=\pi$ gives the formula. $\blacksquare$
+:::
+
+:::example[Why a significant result is often wrong]
+In an exploratory field, suppose $10\%$ of tested hypotheses are genuinely true effects, tests run at $\alpha=0.05$, and typical power is $0.80$. What fraction of significant findings are real? What if power is only $0.20$?
+:::
+
+:::solution
+1. With $\pi = 0.10$ and power $0.80$:
+
+$$P(H_1\mid\text{reject}) = \frac{0.8\times 0.1}{0.8\times 0.1 + 0.05\times 0.9} = \frac{0.08}{0.08+0.045} = \frac{0.08}{0.125} = 0.64 .$$
+
+So $36\%$ of significant findings are false positives, despite every test being run correctly at the $5\%$ level.
+2. With power $0.20$ instead:
+
+$$\frac{0.02}{0.02+0.045} = \frac{0.02}{0.065} = 0.3077,$$
+
+so **under $31\%$** of significant findings are real — the majority are false.
+3. Sanity check on the mechanism: $\alpha$ controls the false positive rate *among true nulls*, and when true nulls are $90\%$ of everything tested, that small rate applies to a large pool. Low power shrinks the true-positive pool at the same time, and the ratio collapses.
+4. The lesson is not that testing is broken but that $p \le 0.05$ is not a guarantee, and its meaning depends on two quantities the $p$-value does not contain: the prior plausibility of what is being tested, and the power to detect it.
+:::
+
+:::example[Correcting for a family of tests]
+A study measures $8$ outcome variables and finds raw $p$-values of $0.004$, $0.011$, $0.019$, $0.032$, $0.048$, $0.21$, $0.55$ and $0.78$. Which survive a Bonferroni correction at $\alpha=0.05$, and what would the uncorrected count have been?
+:::
+
+:::solution
+1. Uncorrected, five of the eight are below $0.05$ and would be reported as significant.
+2. The Bonferroni threshold is $\alpha/m = 0.05/8 = 0.00625$.
+3. Only the first, $p=0.004$, falls below it. The other four "significant" findings do not survive.
+4. Sanity check on whether the correction is too harsh here: under eight true nulls, the chance of at least one raw $p$ below $0.05$ is $1-(0.95)^8 = 0.337$, so seeing a couple of small values among eight is unremarkable. Getting one below $0.00625$ is not.
+5. The conservative side of Bonferroni: if the eight outcomes are strongly correlated — different scales measuring the same construct, say — then the effective number of independent tests is fewer than eight, and the correction overshoots. A method controlling the false discovery rate would retain more of them, at the cost of a weaker guarantee.
+6. What must not be done is to report the five uncorrected results and mention the correction in a footnote. The reported error rate has to match the procedure actually used, including the size of the search.
+:::
+
+:::figure[The probability that a significant finding is real, against the power of the test, for fields where $10\%$, $30\%$ and $50\%$ of tested hypotheses are genuine, all at $\alpha=0.05$. The dashed line at $0.5$ is where significant findings are as likely false as true. A field testing mostly implausible hypotheses stays below it at every power level short of near-certainty, which is why $\alpha$ alone cannot make a literature reliable.]{#ppv-curves}
+{
+  "type": "plot",
+  "x": [-0.04, 1.16],
+  "y": [-0.08, 1.14],
+  "xTicks": 0.1,
+  "yTicks": 0.1,
+  "xLabel": "power",
+  "yLabel": "P(real | significant)",
+  "marks": [
+    { "kind": "function", "fn": "(x*0.1)/(x*0.1 + 0.05*0.9)", "tone": "accent" },
+    { "kind": "function", "fn": "(x*0.3)/(x*0.3 + 0.05*0.7)", "tone": "result" },
+    { "kind": "function", "fn": "(x*0.5)/(x*0.5 + 0.05*0.5)", "tone": "alt", "dashed": true },
+    { "kind": "line", "through": [[0, 0.5], [1, 0.5]], "tone": "muted", "dashed": true, "extend": false },
+    { "kind": "text", "at": [1.05, 0.61], "text": "10% real", "tone": "accent", "leaderTo": [0.92, 0.665] },
+    { "kind": "text", "at": [0.72, 0.965], "text": "30% real", "tone": "result", "leaderTo": [0.5, 0.811] },
+    { "kind": "text", "at": [0.26, 1.06], "text": "50% real", "tone": "alt", "leaderTo": [0.3, 0.857] },
+    { "kind": "text", "at": [0.14, 0.4], "text": "coin flip", "tone": "muted", "leaderTo": [0.05, 0.495] }
+  ]
+}
+:::
+
+:::pitfall
+The multiplicity that matters is the number of tests you *could* have reported, not the number you did. Trying four outcome measures and reporting the one that reached $p=0.04$ is a family of four tests, and the honest level is $0.0125$. The same applies to trying several subgroups, several cut-points for a continuous variable, or several stopping times for data collection.
+
+This is why pre-registration exists: the correction depends on the size of the search, and only a record made in advance establishes that. A $p$-value computed after an undocumented search has no defined error rate at all.
 :::
 
 ## Common Mistakes
 
-- Interpreting 'fail to reject $H_0$' as evidence that $H_0$ is true. Absence of evidence is not evidence of absence.
-- Reporting only the $p$-value without an effect size or confidence interval. A $p$-value of $0.001$ tells you the effect is real; a confidence interval tells you how large it is.
-- Using a $z$-test when $\sigma$ is unknown. Use the $t$-distribution whenever $\sigma$ is estimated from the data.
-- Choosing the direction of $H_a$ after seeing the data ('data snooping'). The alternative hypothesis must be specified before data collection.
-- Running many tests without correction and cherry-picking significant results (p-hacking). Apply Bonferroni or FDR correction for multiple comparisons.
+- **Reading $p$ as the probability that $H_0$ is true.** It is computed *assuming* $H_0$; the reverse conditional needs a prior and comes out very differently, as the post-test probability calculation shows.
+- **Accepting the null.** Failing to reject means the evidence was insufficient. To argue a parameter is near $\mu_0$, report a narrow confidence interval, not a large $p$-value.
+- **Choosing the direction of a one-sided test after seeing the data.** This doubles the true Type I error rate while reporting the nominal one.
+- **Confusing statistical with practical significance.** With $n$ large enough, any deviation from $\mu_0$, however trivial, becomes significant. The interval reports the size of the effect; the test does not.
+- **Reporting a test where an interval was available.** By duality the interval determines the test's outcome against every null value, and adds the effect size and its precision.
+- **Ignoring multiplicity.** Twenty independent tests at $5\%$ on pure noise give at least one significant result about $64\%$ of the time.
+- **Treating an underpowered non-significant result as a null finding,** or an underpowered significant one as an accurate effect size. Both are wrong, and the second is wrong in a consistently inflationary direction.
+- **Using chi-square with small expected counts.** The approximation requires expected counts of about $5$ or more; the condition is on expected counts, not observed ones.
+- **Running an unpaired test on paired data.** It violates independence and usually destroys the power that pairing was designed to provide.
