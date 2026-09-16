@@ -1,188 +1,600 @@
 ---
-title: Analysis of Variance
+title: "Analysis of Variance"
 ---
 
 # Analysis of Variance
 
-ANOVA extends the two-sample $t$-test to compare three or more group means simultaneously. Running multiple $t$-tests would inflate the Type I error rate; ANOVA controls it with a single $F$-test.
+Comparing two means is a $t$-test. Comparing several is not simply more $t$-tests, and the reason is the multiplicity arithmetic of the previous chapter: six pairwise comparisons among four groups, each at $5\%$, reject at least one true null about $26\%$ of the time. A procedure is needed that asks the single question "are these means all equal?" at a single controlled error rate.
 
-The key insight is partitioning total variability: ANOVA asks whether the variability between groups is large relative to the variability within groups. If yes, at least one mean differs.
+Analysis of variance is that procedure, and its name records the idea that makes it work. To decide whether several means differ, do not look at the means directly — look at **variation**, and split it in two. Some of the spread in the pooled data is variation *between* the groups, and some is variation *within* them. If the groups genuinely differ, the between-group part is inflated relative to what the within-group part predicts; if they do not, the two are estimating the same thing and their ratio hovers around one. The whole chapter is that comparison made precise: a theorem that the split is exact, two expectation calculations showing what each piece estimates, and the distribution of their ratio.
 
-One-way ANOVA handles one categorical factor; two-way ANOVA handles two factors and can detect interactions between them.
+Three things follow, and they occupy the rest of the chapter. A significant $F$ says *some* means differ but not which, so a second stage is needed that identifies pairs without giving back the error rate the $F$-test protected. The assumptions deserve scrutiny, because one of them matters much more than the other two. And two-way designs let a second factor enter, which introduces something genuinely new — interaction, the possibility that a factor's effect depends on the level of another.
 
-## One-Way ANOVA
+The last section makes a connection that is usually left implicit: ANOVA is not a separate theory. It is a linear model with indicator predictors, and its $F$-test is the model-comparison test of the next chapter. Seeing that now means the regression chapter has less to prove.
+
+Notation: $k$ groups indexed by $i$, with $n_i$ observations $x_{ij}$ in group $i$, total $N=\sum_i n_i$, group means $\bar x_i$ and grand mean $\bar x$. The $t$-test facts used are from *Statistical Inference: Hypothesis Testing*.
+
+## Comparing several means: the F-test
 
 <!-- section: f-test -->
 
-:::definition[One-way ANOVA]{#one-way}
-One-way ANOVA tests
+:::definition[The one-way ANOVA model and hypotheses]{#anova-model}
+The **one-way model** writes each observation as a group mean plus noise,
 
-$$H_0: \mu_1 = \mu_2 = \cdots = \mu_k$$
+$$X_{ij} = \mu_i + \varepsilon_{ij}, \qquad \varepsilon_{ij} \stackrel{\text{iid}}{\sim} N(0,\sigma^2), \qquad i=1,\ldots,k,\ \ j=1,\ldots,n_i,$$
 
-— all $k$ group means are equal — against $H_a$: at least one pair of means differs.
+and tests
+
+$$H_0: \mu_1 = \mu_2 = \cdots = \mu_k \quad \text{against} \quad H_1: \text{at least two } \mu_i \text{ differ.}$$
 :::
 
-It replaces the multiple $t$-test approach, which would inflate the Type I error rate.
+Note the alternative. It is not "all differ" but "not all equal", which is why a rejection identifies no particular pair — a point that the post-hoc section exists to address.
 
-:::proposition[Partition of variability]{#ss-partition}
-The total sum of squares splits into a between-group and a within-group part,
+The construction rests on an exact algebraic identity, true of any numbers whatever, with no probability in it at all.
 
-$$SS_{\text{total}} = SS_{\text{between}} + SS_{\text{within}},$$
+:::theorem[Decomposition of the total sum of squares]{#ss-decomposition}
+With $SST = \sum_{i,j}(x_{ij}-\bar x)^2$, $SSB = \sum_i n_i(\bar x_i - \bar x)^2$ and $SSW = \sum_{i,j}(x_{ij}-\bar x_i)^2$,
 
-where
-
-$$SS_{\text{between}} = \sum_j n_j(\bar{x}_j - \bar{x})^2, \qquad SS_{\text{within}} = \sum_j \sum_i (x_{ij}-\bar{x}_j)^2.$$
+$$SST = SSB + SSW .$$
 :::
 
-The first term measures how much the group means vary around the grand mean; the second measures variability within each group.
+:::proof
+Insert the group mean and expand:
 
-:::definition[The F-statistic]{#f-statistic}
-With $MS = SS/df$, the test statistic is
+$$SST = \sum_{i,j}\big[(x_{ij}-\bar x_i) + (\bar x_i - \bar x)\big]^2 = \sum_{i,j}(x_{ij}-\bar x_i)^2 + 2\sum_{i,j}(x_{ij}-\bar x_i)(\bar x_i-\bar x) + \sum_{i,j}(\bar x_i-\bar x)^2 .$$
 
-$$F = \frac{MS_{\text{between}}}{MS_{\text{within}}}, \qquad df_{\text{between}} = k-1, \quad df_{\text{within}} = N-k,$$
+The first term is $SSW$. In the third, the summand does not depend on $j$, so summing over $j$ multiplies it by $n_i$, giving $SSB$.
 
-for $N$ total observations in $k$ groups. Under $H_0$, $F \sim F_{k-1,\,N-k}$.
+The cross term vanishes. Fix $i$ and factor out $(\bar x_i - \bar x)$, which is constant in $j$:
+
+$$\sum_j (x_{ij}-\bar x_i)(\bar x_i - \bar x) = (\bar x_i-\bar x)\sum_j (x_{ij}-\bar x_i) = 0,$$
+
+because deviations from a group's own mean sum to zero, by the proposition *Deviations from the mean sum to zero*. Summing over $i$ leaves zero. $\blacksquare$
 :::
 
-Interpretation: a large $F$ means the between-group variation is large relative to within-group noise — the group means differ more than chance would predict. Reject $H_0$ if $F > F_{\alpha, k-1, N-k}$ (critical value from $F$-table).
+The identity is exact and unconditional, which is worth pausing on: it holds for any data set, whether or not the model is true. What the probability assumptions determine is not the split but what the two pieces *estimate*, and that is the content of the next two results.
 
-The ANOVA table summarises the decomposition: Source, SS, df, MS, $F$, $p$-value. Each row represents one source of variability.
+:::definition[Mean squares and the F statistic]{#mean-squares}
+The **mean squares** divide each sum of squares by its degrees of freedom,
 
-:::intuition
-ANOVA asks: is the spread between the group averages bigger than the typical spread within each group? If you have three fertiliser treatments and the plants' heights are very different across groups but quite consistent within each group, $F$ will be large and you'll conclude the fertiliser type matters.
+$$MSB = \frac{SSB}{k-1}, \qquad MSW = \frac{SSW}{N-k},$$
+
+and the **F statistic** is their ratio, $F = MSB/MSW$.
 :::
 
-:::example[One-way ANOVA computation]
-Three groups ($k=3$, $n_j=4$ each, so $N=12$). Group means: $\bar{x}_1=5$, $\bar{x}_2=8$, $\bar{x}_3=6$. With equal group sizes the grand mean is just the average of the group means: $\bar{x}=(5+8+6)/3=19/3\approx 6.33$.
+The degrees of freedom count freely varying comparisons, exactly as before. The $k$ group means must reproduce the grand mean, one constraint, leaving $k-1$; and within the groups, each of the $k$ samples loses one degree of freedom to its own mean, leaving $N-k$. The two add to $N-1$, the degrees of freedom of $SST$, mirroring the sum-of-squares identity.
+
+:::theorem[What the two mean squares estimate]{#ms-expectations}
+Under the one-way model,
+
+$$E(MSW) = \sigma^2 \quad \text{always}, \qquad E(MSB) = \sigma^2 + \frac{1}{k-1}\sum_{i=1}^{k} n_i(\mu_i - \bar\mu)^2,$$
+
+where $\bar\mu = \sum_i n_i\mu_i/N$. In particular $E(MSB)=\sigma^2$ when $H_0$ holds, and $E(MSB) > \sigma^2$ otherwise.
+:::
+
+:::proof
+**For $MSW$.** Within group $i$, the quantity $\sum_j (x_{ij}-\bar x_i)^2$ is $(n_i-1)$ times that group's sample variance, whose expectation is $\sigma^2$ by the theorem *Unbiasedness of the sample variance*. So $E\big[\sum_j(x_{ij}-\bar x_i)^2\big] = (n_i-1)\sigma^2$, and summing over $i$,
+
+$$E(SSW) = \sum_i (n_i-1)\sigma^2 = (N-k)\sigma^2 .$$
+
+Dividing by $N-k$ gives $E(MSW)=\sigma^2$. Nothing about the $\mu_i$ entered, which is why this holds whether or not $H_0$ is true.
+
+**For $MSB$.** Write $\bar X_i = \mu_i + \bar\varepsilon_i$ with $\bar\varepsilon_i$ of mean $0$ and variance $\sigma^2/n_i$, and $\bar X = \bar\mu + \bar\varepsilon$. Then $\bar X_i - \bar X = (\mu_i - \bar\mu) + (\bar\varepsilon_i - \bar\varepsilon)$, and since the second piece has mean zero,
+
+$$E\big[(\bar X_i-\bar X)^2\big] = (\mu_i-\bar\mu)^2 + \operatorname{Var}(\bar\varepsilon_i - \bar\varepsilon).$$
+
+A computation using $\operatorname{Cov}(\bar\varepsilon_i,\bar\varepsilon) = \sigma^2/N$ gives $\operatorname{Var}(\bar\varepsilon_i-\bar\varepsilon) = \sigma^2/n_i - \sigma^2/N$. Multiplying by $n_i$ and summing,
+
+$$E(SSB) = \sum_i n_i(\mu_i-\bar\mu)^2 + \sum_i\left(\sigma^2 - \frac{n_i\sigma^2}{N}\right) = \sum_i n_i(\mu_i-\bar\mu)^2 + (k-1)\sigma^2 .$$
+
+Dividing by $k-1$ gives the stated expectation. The sum $\sum_i n_i(\mu_i-\bar\mu)^2$ is non-negative and is zero exactly when all $\mu_i$ are equal. $\blacksquare$
+:::
+
+That theorem is the entire logic of the $F$-test in one line. Both mean squares estimate $\sigma^2$ when the null holds, so their ratio should sit near $1$; when the means differ, only the numerator is inflated, and by an amount measuring exactly how spread out the true means are. A large $F$ is evidence against equality, and a small $F$ is not evidence of anything in particular.
+
+:::theorem[Null distribution of F]{#f-null}
+Under the one-way model with $H_0$ true,
+
+$$F = \frac{MSB}{MSW} \sim F_{k-1,\;N-k},$$
+
+the $F$ distribution with $k-1$ and $N-k$ degrees of freedom. The test rejects for large $F$.
+:::
+
+:::proof
+We quote Cochran's theorem, which states that under normality $SSB/\sigma^2$ and $SSW/\sigma^2$ are independent chi-square variables with $k-1$ and $N-k$ degrees of freedom when $H_0$ holds. Given that, $F$ is the ratio of two independent chi-squares each divided by its degrees of freedom,
+
+$$F = \frac{(SSB/\sigma^2)/(k-1)}{(SSW/\sigma^2)/(N-k)},$$
+
+with $\sigma^2$ cancelling — which is the definition of the $F$ distribution. The test is one-sided in the upper tail because, by the theorem *What the two mean squares estimate*, departures from $H_0$ inflate the numerator only. $\blacksquare$
+:::
+
+:::proposition[With two groups, F is the square of t]{#f-equals-t-squared}
+When $k=2$, the ANOVA $F$ statistic equals the square of the pooled two-sample $t$ statistic, and the two tests reject on exactly the same data.
+:::
+
+:::proof
+With two groups the grand mean is $\bar x = (n_1\bar x_1+n_2\bar x_2)/N$, so $\bar x_1 - \bar x = n_2(\bar x_1-\bar x_2)/N$ and $\bar x_2-\bar x = -n_1(\bar x_1-\bar x_2)/N$. Hence, writing $d = \bar x_1 - \bar x_2$,
+
+$$SSB = n_1\frac{n_2^2d^2}{N^2} + n_2\frac{n_1^2d^2}{N^2} = \frac{n_1n_2 d^2(n_2+n_1)}{N^2} = \frac{n_1n_2}{N}d^2 = \frac{d^2}{\frac{1}{n_1}+\frac{1}{n_2}} .$$
+
+With $k=2$ we have $MSB = SSB$, and $MSW = SSW/(N-2) = S_p^2$ is precisely the pooled variance. Therefore
+
+$$F = \frac{d^2}{S_p^2\left(\frac{1}{n_1}+\frac{1}{n_2}\right)} = \left(\frac{\bar x_1-\bar x_2}{S_p\sqrt{1/n_1+1/n_2}}\right)^{2} = t^2 .$$
+
+The critical values match as well, since $F_{\alpha,1,\nu} = t_{\alpha/2,\nu}^2$. $\blacksquare$
+:::
+
+So ANOVA does not replace the $t$-test; it extends it, agreeing exactly where both apply. Note that the squaring makes the $F$-test inherently two-sided — the sign of $d$ is lost — which is why one-sided alternatives have no place in ANOVA.
+
+:::figure[Two data sets with identical group means ($10$, $12$, $17$) and very different verdicts. On the left the within-group spread is small, so the separation between group means is large relative to the noise and $F$ is large; on the right the same means sit inside much wider groups and $F$ is near $1$. The group means are marked in the result tone and the grand mean is the dashed line. Comparing means without reference to within-group spread is exactly what ANOVA refuses to do.]{#anova-spread}
+{
+  "type": "plot",
+  "x": [-0.4, 8.0],
+  "y": [0.5, 26.5],
+  "xTicks": 1,
+  "yTicks": 5,
+  "xLabel": "group",
+  "yLabel": "value",
+  "marks": [
+    { "kind": "line", "through": [[-0.4, 13], [8.0, 13]], "tone": "muted", "dashed": true, "extend": false },
+    { "kind": "path", "points": [[0.5, 8.6], [0.5, 11.4]], "tone": "accent" },
+    { "kind": "path", "points": [[1.0, 10.6], [1.0, 13.4]], "tone": "accent" },
+    { "kind": "path", "points": [[1.5, 15.6], [1.5, 18.4]], "tone": "accent" },
+    { "kind": "point", "at": [0.5, 10], "tone": "result" },
+    { "kind": "point", "at": [1.0, 12], "tone": "result" },
+    { "kind": "point", "at": [1.5, 17], "tone": "result" },
+    { "kind": "path", "points": [[5.0, 2.0], [5.0, 18.0]], "tone": "accent" },
+    { "kind": "path", "points": [[5.8, 4.0], [5.8, 20.0]], "tone": "accent" },
+    { "kind": "path", "points": [[6.6, 9.0], [6.6, 25.0]], "tone": "accent" },
+    { "kind": "point", "at": [5.0, 10], "tone": "result" },
+    { "kind": "point", "at": [5.8, 12], "tone": "result" },
+    { "kind": "point", "at": [6.6, 17], "tone": "result" },
+    { "kind": "text", "at": [1.0, 22.0], "text": "F large", "tone": "result", "leaderTo": [1.5, 17.4] },
+    { "kind": "text", "at": [4.3, 23.5], "text": "F near 1", "tone": "result", "leaderTo": [6.6, 17.4] },
+    { "kind": "text", "at": [3.2, 11.0], "text": "grand mean", "tone": "muted", "leaderTo": [3.7, 12.9] }
+  ]
+}
+:::
+
+:::example[A complete one-way ANOVA]
+Three teaching methods are compared on $n=5$ students each. The group means are $10$, $12$ and $17$, and each group has sample variance $8$. Test equality at $\alpha=0.05$, given $F_{0.05,2,12}=3.885$.
 :::
 
 :::solution
-1. Between-group sum of squares (each group's mean deviation from the grand mean, weighted by its size): $SS_{\text{between}} = 4[(5-6.33)^2+(8-6.33)^2+(6-6.33)^2] = 4[1.77+2.79+0.11] = 4(4.67) = 18.67$. Since there are $k=3$ groups, $df_{\text{between}}=k-1=2$.
-2. Suppose the pooled within-group scatter gives $SS_{\text{within}}=27$. Then $df_{\text{within}}=N-k=12-3=9$.
-3. Convert each SS to a mean square (a variance estimate) by dividing by its df: $MS_{\text{between}}=18.67/2=9.33$ and $MS_{\text{within}}=27/9=3$.
-4. $F=MS_{\text{between}}/MS_{\text{within}}=9.33/3=3.11$. Compare to the critical value $F_{0.05,\,2,\,9}=4.26$. Since $3.11<4.26$, we **fail to reject** $H_0$: the group means are not significantly different at $\alpha=0.05$.
-5. Sanity check: $F$ measures signal-to-noise. Here between-group variance ($9.33$) is only about $3\times$ the within-group noise ($3$), which sounds like a lot but is not enough for just $k=3$ groups and $9$ error df — the $F$-table demands more. As a further check, the effect size $\eta^2=SS_{\text{between}}/SS_{\text{total}}=18.67/(18.67+27)=18.67/45.67\approx 0.41$: about $41\%$ of the variation is between groups, a large descriptive effect that the small sample simply cannot certify.
+1. **Grand mean.** Equal group sizes, so $\bar x = (10+12+17)/3 = 13$.
+2. **Between.** $SSB = 5\big[(10-13)^2+(12-13)^2+(17-13)^2\big] = 5(9+1+16) = 5(26) = 130$, on $k-1=2$ degrees of freedom, so $MSB = 65$.
+3. **Within.** $SSW = \sum_i (n_i-1)s_i^2 = 3\times 4\times 8 = 96$, on $N-k = 15-3 = 12$ degrees of freedom, so $MSW = 8$.
+4. **Statistic.** $F = 65/8 = 8.125$. Since $8.125 > 3.885$, reject: the methods do not all have the same mean.
+5. **Check the identity.** $SST = SSB + SSW = 130+96 = 226$, on $2+12 = 14 = N-1$ degrees of freedom ✓, which is the theorem *Decomposition of the total sum of squares* used as an arithmetic check.
+6. Sanity check on $MSW$: it estimates $\sigma^2$, and each group's sample variance was $8$, so $MSW = 8$ exactly as it should — with equal group sizes $MSW$ is just the average of the group variances.
+7. What has *not* been established: which methods differ. The alternative was "not all equal", and all the test reports is that. The post-hoc section takes that up.
 :::
 
-## Assumptions of ANOVA
+:::definition[Effect size: eta-squared]{#eta-squared}
+The proportion of total variation attributable to group membership is
+
+$$\eta^2 = \frac{SSB}{SST} \in [0,1].$$
+:::
+
+:::pitfall
+A significant $F$ and a large $\eta^2$ are different claims, and with enough data the first arrives without the second. In the example $\eta^2 = 130/226 = 0.575$, a large effect — but with $n=500$ per group the same $F$-test would reject for group means differing by a fraction of a standard deviation, where $\eta^2$ might be $0.01$.
+
+Always report $\eta^2$, or the group means with intervals, alongside the $F$-test. The test answers "is there a difference?"; only the effect size answers "does it matter?".
+:::
+
+:::figure[The $F_{2,12}$ density with the $5\%$ rejection region beyond $3.885$ shaded, and the observed $F=8.125$ marked. The distribution is right-skewed and concentrated near $1$, which is what the theorem *What the two mean squares estimate* predicts under the null: both mean squares estimate the same $\sigma^2$, so their ratio should sit near one. Values far into the right tail are evidence that the numerator is estimating something larger.]{#f-density}
+{
+  "type": "plot",
+  "x": [-0.35, 9.4],
+  "y": [-0.06, 0.88],
+  "xTicks": 1,
+  "yTicks": 0.1,
+  "xLabel": "F",
+  "yLabel": "density",
+  "marks": [
+    { "kind": "function", "fn": "(1+x/6)^(-7)*(1+0*x)", "tone": "accent" },
+    { "kind": "area", "fn": "(1+x/6)^(-7)", "from": 3.885, "to": 9.4, "tone": "result" },
+    { "kind": "point", "at": [8.125, 0.0], "tone": "alt" },
+    { "kind": "text", "at": [5.6, 0.53], "text": "rejection region", "tone": "result", "leaderTo": [4.5, 0.11] },
+    { "kind": "text", "at": [7.3, 0.28], "text": "observed F = 8.125", "tone": "alt", "leaderTo": [8.12, 0.02] },
+    { "kind": "text", "at": [2.35, 0.78], "text": "F(2, 12) under H0", "tone": "accent", "leaderTo": [0.72, 0.52] }
+  ]
+}
+:::
+
+:::example[When F does not reject, and why that is not a null result]
+Four fertilisers are compared on $n=6$ plots each. The yields give $SSB = 42$ and $SSW = 540$. Test at $\alpha = 0.05$, given $F_{0.05,3,20} = 3.098$, and report the effect size.
+:::
+
+:::solution
+1. Degrees of freedom: $k-1 = 3$ between, $N-k = 24-4 = 20$ within.
+2. $MSB = 42/3 = 14$ and $MSW = 540/20 = 27$.
+3. $F = 14/27 = 0.519$. Since $0.519 < 3.098$, do not reject.
+4. Note $F < 1$. By the theorem *What the two mean squares estimate* that is entirely ordinary under the null — the ratio of two estimates of the same $\sigma^2$ falls below one about half the time — and it is never evidence *for* $H_0$ beyond what the test already says.
+5. Effect size: $SST = 42+540 = 582$, so $\eta^2 = 42/582 = 0.0722$. About $7\%$ of the variation is between fertilisers.
+6. Sanity check on what can be claimed: with $n=6$ per group and $MSW = 27$ (so $s \approx 5.2$), the standard error of a difference of two group means is $\sqrt{27(1/6+1/6)} = 3.0$. A genuine difference of $6$ units — over a standard deviation — would be only two standard errors out, so this design has poor power. "No significant difference" here means the experiment was too small to tell, not that the fertilisers are equivalent.
+:::
+
+## What the assumptions do, and which one matters
 
 <!-- section: assumptions -->
 
-:::definition[Assumptions of one-way ANOVA]{#anova-assumptions}
-- **Independence**: all observations are independent within and across groups.
-- **Normality**: each group's population is approximately normally distributed.
-- **Homoscedasticity**: all groups share the same variance $\sigma^2$.
+The one-way model made three assumptions, and they are not equally important. Knowing which is which is the difference between a useful diagnostic habit and superstition.
+
+:::definition[The three ANOVA assumptions]{#anova-assumptions}
+1. **Independence** — observations are independent within and across groups.
+2. **Normality** — the errors $\varepsilon_{ij}$ are normally distributed.
+3. **Homoscedasticity** — every group has the same variance $\sigma^2$.
 :::
 
-Each assumption has its own diagnostic and its own failure mode. Independence is violated by repeated measures on the same subjects — use repeated-measures ANOVA instead. Normality can be checked with Q-Q plots of residuals; ANOVA is robust to moderate violations when group sizes are equal and $n_j \geq 5$. Equal variance is checked with Levene's test or by comparing the largest to smallest sample standard deviation (ratio $\leq 2$ is a common rule of thumb); Welch's one-way ANOVA does not require equal variances.
+**Independence is the one that matters.** It cannot be checked from the data alone — it is a property of how the data were collected — and violating it invalidates everything, because the whole degrees-of-freedom bookkeeping assumes each observation contributes one independent piece of information. Repeated measures on the same subjects, students clustered in classrooms, measurements taken in time order with drift: each breaks independence, and each requires a different model rather than a correction.
 
-:::note
-If assumptions are seriously violated, consider transforming the data (e.g. a log-transform for right-skewed data) or using the Kruskal-Wallis test, the non-parametric alternative to one-way ANOVA.
+**Normality matters least.** The $F$ statistic is built from sample means, and the central limit theorem is already making those approximately normal; for moderate group sizes the test's actual level stays close to nominal for any population that is not wildly skewed or heavy-tailed. Checking normality of the raw data is in any case the wrong check — the assumption is about the *residuals* $x_{ij}-\bar x_i$, and the raw data are expected to look multimodal when the means genuinely differ.
+
+**Equal variance matters conditionally**, and the condition is the group sizes. With equal $n_i$ the $F$-test is remarkably robust to unequal variances; with unequal $n_i$ it is not, and it fails in a specific direction.
+
+:::pitfall
+The dangerous combination is small groups with large variances. Then $MSW$, a weighted average of the group variances with weights $n_i-1$, is pulled toward the variances of the *large* groups and so understates the noise affecting the small ones. The result is an $F$ that is too large and a test that rejects far more often than $5\%$.
+
+The reverse pairing — large groups with large variances — makes the test conservative instead. Either way the remedy is Welch's ANOVA, which does not pool, and it is the sensible default whenever the group sizes are unequal.
 :::
 
-:::intuition
-ANOVA needs the data to be independent (no repeated measures), roughly bell-shaped in each group (normality), and spread about the same in each group (equal variances). It is fairly forgiving of mild violations when group sizes are balanced and roughly similar. Think of it as a fair race: everyone must run separately (independence), on lanes of the same width (equal variance), so the only thing that can explain different finish times is the runner (the group), not the track.
-:::
-
-:::example[checking the equal-variance rule of thumb]
-Three groups have sample standard deviations $s_1=4.0$, $s_2=6.0$, $s_3=7.5$.
+:::example[Diagnosing a design before trusting the F]
+Three groups have $n = 30, 8, 7$ and sample standard deviations $4$, $15$ and $14$. Should the ordinary $F$-test be used?
 :::
 
 :::solution
-1. Apply the rule of thumb: compare the largest SD to the smallest. Ratio $=s_{\max}/s_{\min}=7.5/4.0=1.875$.
-2. Since $1.875\leq 2$, the spreads are close enough that ordinary one-way ANOVA is reasonable — no red flag on homoscedasticity.
-3. Now suppose group 3 instead had $s_3=9.0$. Ratio $=9.0/4.0=2.25>2$: this exceeds the threshold, so you would confirm with Levene's test and, if it is significant, switch to **Welch's ANOVA** (does not assume equal variances) rather than trusting the standard $F$-test.
-4. Sanity check: the rule compares standard deviations, but ANOVA works with *variances*. A SD ratio of $2$ is a variance ratio of $2^2=4$ — so this "ratio $\leq 2$" guideline is already fairly permissive.
+1. The group sizes are badly unequal and so are the variances: the ratio of the largest to smallest variance is $15^2/4^2 = 225/16 = 14.1$, far beyond the informal factor-of-four rule of thumb.
+2. Worse, the pairing is the dangerous one. $MSW$ weights by $n_i-1$, so it is dominated by the large group with the *small* variance:
+
+$$MSW = \frac{29(16) + 7(225) + 6(196)}{42} = \frac{464 + 1575 + 1176}{42} = \frac{3215}{42} = 76.5 .$$
+
+3. That figure understates the noise in groups 2 and 3, whose variances are $225$ and $196$, so any difference involving those groups is divided by too small a denominator and the $F$ is inflated.
+4. Sanity check on the direction: had the large group been the variable one, $MSW$ would have been pulled *up* and the test made conservative. The asymmetry is entirely about which groups carry the weight.
+5. Conclusion: use Welch's ANOVA, which estimates each group's variance separately and adjusts the degrees of freedom, exactly as Welch's $t$-test does for two groups.
 :::
 
-## Post-Hoc Tests and Multiple Comparisons
+:::remark[On formal tests of equal variance]
+Bartlett's and Levene's tests test $H_0$: all variances equal. Bartlett's is powerful under normality and notoriously sensitive to non-normality, so it frequently rejects for the wrong reason; Levene's, which applies ANOVA to the absolute deviations from group medians, is the robust choice.
+
+But the more important point is that using either as a gatekeeper — test variances, then choose the main test accordingly — is itself a two-stage procedure with an error rate nobody computes. With unequal group sizes it is simpler and safer to use Welch's ANOVA unconditionally, which costs almost nothing when the variances are in fact equal.
+:::
+
+:::example[Checking the right thing]
+A researcher pools all $45$ observations from three groups, plots a histogram, finds it clearly bimodal, and concludes the normality assumption fails. Is the reasoning sound?
+:::
+
+:::solution
+1. No — the check is on the wrong quantity. The model assumes the **errors** $\varepsilon_{ij}$ are normal, which corresponds to the residuals $x_{ij}-\bar x_i$, not to the raw pooled data.
+2. If the group means genuinely differ, the pooled data is a mixture of three distributions centred at different points, and a mixture of well-separated normals is bimodal or trimodal by construction. Finding that shape is evidence that the *means differ*, which is what the analysis is trying to establish.
+3. The correct procedure: compute the residuals $x_{ij}-\bar x_i$, which recentre every group at zero, and examine those — by a normal quantile plot, ideally, since histograms of $45$ points are unstable.
+4. Sanity check on how much it would matter anyway: normality is the least critical of the three assumptions, since the $F$ statistic is built from group means that the central limit theorem is already normalising. With $15$ per group and no extreme skew, a modest departure changes the true level very little.
+5. Contrast with what *would* be worth worrying about: if those $45$ observations were $15$ subjects each measured three times, independence fails, and no amount of residual checking would reveal it from the numbers alone.
+:::
+
+## After a significant F: multiple comparisons
 
 <!-- section: post-hoc -->
 
-:::definition[Post-hoc test and family-wise error rate]
-A significant $F$-test tells you at least one mean differs — not which pairs. A post-hoc test identifies the specific differences while controlling the family-wise error rate (FWER), the probability of at least one false rejection across the whole family of comparisons.
+A rejected $F$ says the means are not all equal. Finding out which differ means making pairwise comparisons, and doing that naively hands back exactly the error rate the $F$-test was constructed to protect.
+
+:::definition[Comparisonwise and familywise error rates]{#error-rates}
+The **comparisonwise** error rate is the probability that a single comparison falsely rejects. The **familywise** error rate is the probability that *at least one* of the comparisons in the set does. With $k$ groups there are $\binom{k}{2}$ pairs.
 :::
 
-Tukey's HSD (Honest Significant Difference): tests all $\binom{k}{2}$ pairwise comparisons and controls the FWER at $\alpha$ exactly. It is the most commonly used post-hoc method for balanced designs.
+For $k=4$ that is six comparisons, and by the proposition *Family-wise error rate under multiplicity*, running each at $5\%$ gives a familywise rate of about $1-(0.95)^6 = 0.265$. The whole point of post-hoc procedures is to control the second rate rather than the first.
 
-Bonferroni correction: for $m$ comparisons, use $\alpha/m$ for each test. Simple and widely applicable, but more conservative (lower power) than Tukey's when $m$ is large.
+:::theorem[Tukey's honestly significant difference]{#tukey}
+For equal group sizes $n$, all pairwise differences may be compared against
 
-Scheffé's method: allows any contrast (not just pairwise) while controlling FWER. Most conservative but most flexible.
+$$\text{HSD} = q_{\alpha,\,k,\,N-k}\sqrt{\frac{MSW}{n}},$$
 
-:::note
-Planned contrasts: if specific comparisons are hypothesised in advance, before seeing data, they can be tested at level $\alpha$ without correction. Only pre-specified comparisons qualify.
+where $q$ is the upper-$\alpha$ point of the **studentised range** distribution for $k$ groups and $N-k$ degrees of freedom. Declaring $\mu_i \ne \mu_j$ whenever $|\bar x_i - \bar x_j| > \text{HSD}$ holds the familywise error rate at exactly $\alpha$.
 :::
 
-:::intuition
-A significant $F$-test is like knowing 'someone in this class got a very different grade than the others' — but you don't know who. Post-hoc tests then check each pair of groups to find which ones are actually different, while making sure the overall chance of a false alarm stays at $5\%$.
+:::proof
+We quote the distribution of the studentised range and show why it is the right reference. A familywise error occurs when *any* pair is falsely separated, and under the complete null the largest of all the pairwise differences is $\max_i \bar X_i - \min_i \bar X_i$ — the **range** of the group means. So
+
+$$P(\text{any false rejection}) = P\left(\frac{\max_i \bar X_i - \min_i \bar X_i}{\sqrt{MSW/n}} > q\right),$$
+
+since a threshold is exceeded by some pair exactly when it is exceeded by the most extreme pair. The quantity on the left is by definition the studentised range statistic, so choosing $q$ as its upper-$\alpha$ point makes this probability exactly $\alpha$. $\blacksquare$
 :::
 
-:::example[Bonferroni vs. the inflated error rate]
-You have $k=4$ groups and a significant ANOVA. You want to compare every pair.
+That proof explains why Tukey beats Bonferroni here. Bonferroni bounds the familywise rate by the union bound, which ignores the fact that the comparisons are highly dependent — they share the same group means and the same $MSW$. Tukey uses the exact joint distribution of the most extreme comparison, so it is not conservative: it achieves $\alpha$ rather than staying under it, and its intervals are correspondingly narrower.
+
+:::example[Tukey against Bonferroni on the teaching data]
+For the three teaching methods ($\bar x = 10, 12, 17$; $n=5$; $MSW = 8$ on $12$ df), find which pairs differ at familywise $\alpha=0.05$. Use $q_{0.05,3,12}=3.77$ and $t_{0.00833,12}=2.779$.
 :::
 
 :::solution
-1. Number of pairwise comparisons: $\binom{4}{2}=\dfrac{4\cdot 3}{2}=6$.
-2. If you ran all $6$ tests at $\alpha=0.05$ with no correction, the family-wise error rate (chance of *at least one* false positive, assuming independent tests) is $1-(1-0.05)^6 = 1-0.95^6 = 1-0.735 = 0.265$ — about a $26.5\%$ chance of a spurious "difference." That is why a correction is needed.
-3. Bonferroni fix: test each pair at $\alpha^*=\alpha/m=0.05/6\approx 0.0083$. A pair is declared different only if its $p$-value falls below $0.0083$.
-4. Sanity check on Bonferroni's conservatism: the union bound guarantees the true FWER is at most $m\cdot\alpha^*=6\times 0.0083=0.05$ — it never *exceeds* $5\%$, but for many comparisons it usually falls *below* $5\%$, which is why it loses power. Tukey's HSD, tailored to exactly this all-pairs setting, keeps FWER at $5\%$ more tightly and so detects real differences more often.
+1. **Tukey.** $\text{HSD} = 3.77\sqrt{8/5} = 3.77\sqrt{1.6} = 3.77\times 1.26491 = 4.769$.
+2. The three differences are $|10-12| = 2$, $|10-17| = 7$, $|12-17| = 5$. Comparing with $4.769$: methods 1 and 2 do not differ; method 3 differs from both.
+3. **Bonferroni.** With three comparisons the per-comparison level is $0.05/3 = 0.0167$, two-sided, so the margin is
+
+$$t\sqrt{MSW\left(\tfrac1n+\tfrac1n\right)} = 2.779\sqrt{8\times 0.4} = 2.779\sqrt{3.2} = 2.779\times 1.78885 = 4.971 .$$
+
+4. Bonferroni's threshold $4.971$ exceeds Tukey's $4.769$, so Bonferroni is stricter and would reach the same conclusions here with less power to spare.
+5. Sanity check on the ordering: Bonferroni must be the more conservative of the two, since it bounds a probability that Tukey computes exactly ✓. The gap widens with $k$ — at $k=6$ there are $15$ comparisons and Bonferroni's penalty becomes severe.
+6. Note the conclusion is not transitive-looking nonsense but a genuine finding: the data separate method 3 from the other two and cannot separate those two from each other.
 :::
 
-## Two-Way ANOVA
+:::example[The cost of more groups]
+Four treatments are compared, $n=8$ each, with $MSW = 12$ on $28$ degrees of freedom and means $20, 23, 24, 29$. Apply Tukey at familywise $\alpha=0.05$, with $q_{0.05,4,28}=3.861$.
+:::
+
+:::solution
+1. $\text{HSD} = 3.861\sqrt{12/8} = 3.861\sqrt{1.5} = 3.861\times 1.224745 = 4.729$.
+2. The six pairwise differences are $|20-23|=3$, $|20-24|=4$, $|20-29|=9$, $|23-24|=1$, $|23-29|=6$, $|24-29|=5$.
+3. Against $4.729$: significant are $(20,29)$, $(23,29)$ and $(24,29)$. Treatment 4 differs from all three others; the first three are indistinguishable from one another.
+4. Sanity check on the multiplicity: had each comparison been run at an uncorrected $5\%$, the margin would be $t_{0.025,28}\sqrt{12(1/8+1/8)} = 2.048\times 1.732 = 3.547$, which would also declare $(20,24)$ significant — a fourth finding, bought by abandoning the familywise guarantee.
+5. The familywise rate of that uncorrected procedure would be about $1-(0.95)^6 = 0.265$, so roughly a one-in-four chance of at least one false claim even if all four treatments were identical.
+:::
+
+Pairwise comparisons are not the only question one might ask, and often not the interesting one.
+
+:::definition[Contrast]{#contrast}
+A **contrast** is a linear combination of the group means
+
+$$L = \sum_{i=1}^{k} c_i\mu_i \qquad \text{with} \qquad \sum_{i=1}^{k} c_i = 0 .$$
+
+It is estimated by $\hat L = \sum_i c_i\bar x_i$, with standard error $\sqrt{MSW\sum_i c_i^2/n_i}$.
+:::
+
+The constraint $\sum c_i = 0$ is what makes a contrast a comparison rather than a level: it is unaffected by adding a constant to every mean. A pairwise difference is the contrast $(1,-1,0)$; "treatments versus control" is $(-1, \tfrac12, \tfrac12)$; a linear trend across ordered doses is $(-1,0,1)$.
+
+:::example[A planned contrast]
+Test whether teaching method 3 differs from the average of methods 1 and 2, using the same data.
+:::
+
+:::solution
+1. The contrast is $c = (-\tfrac12, -\tfrac12, 1)$, which sums to zero ✓.
+2. Estimate: $\hat L = -\tfrac12(10) - \tfrac12(12) + 17 = -11 + 17 = 6$.
+3. Standard error: $\sum c_i^2/n_i = (0.25+0.25+1)/5 = 0.3$, so $SE = \sqrt{8\times 0.3} = \sqrt{2.4} = 1.5492$.
+4. Statistic: $t = 6/1.5492 = 3.873$ on $12$ degrees of freedom. Against $t_{0.025,12}=2.179$, this is significant.
+5. **If the contrast was chosen after seeing the data**, the $t$ critical value is not legitimate — any of infinitely many contrasts could have been picked. Scheffé's method covers all contrasts simultaneously, using the critical value $\sqrt{(k-1)F_{\alpha,k-1,N-k}} = \sqrt{2\times 3.885} = \sqrt{7.77} = 2.787$.
+6. Since $3.873 > 2.787$, the contrast survives even the fully conservative Scheffé standard ✓ — so the conclusion holds whether it was planned or discovered.
+:::
+
+## Two factors at once, and interaction
 
 <!-- section: two-way -->
 
-:::definition[Two-way ANOVA]{#two-way-def}
-Two-way ANOVA has two categorical factors $A$ (with $a$ levels) and $B$ (with $b$ levels), and tests three hypotheses: the main effect of $A$, the main effect of $B$, and the $A\times B$ interaction.
+With two factors, a third question appears alongside the two obvious ones, and it is usually the interesting one.
+
+:::definition[The two-way model with interaction]{#two-way-model}
+With factor $A$ at $a$ levels, factor $B$ at $b$ levels and $n$ observations per cell,
+
+$$X_{ijl} = \mu + \alpha_i + \beta_j + (\alpha\beta)_{ij} + \varepsilon_{ijl}, \qquad \varepsilon_{ijl}\stackrel{\text{iid}}{\sim}N(0,\sigma^2),$$
+
+where $\alpha_i$ and $\beta_j$ are **main effects**, $(\alpha\beta)_{ij}$ is the **interaction**, and the effects are constrained to sum to zero over each index.
 :::
 
-:::definition[Interaction]
-An interaction $A\times B$ means the effect of $A$ on the response depends on the level of $B$, and vice versa.
+:::theorem[Two-way decomposition]{#two-way-decomposition}
+The total sum of squares splits into four orthogonal pieces,
+
+$$SST = SSA + SSB + SSAB + SSE,$$
+
+with degrees of freedom $a-1$, $b-1$, $(a-1)(b-1)$ and $ab(n-1)$ summing to $abn-1$. Each effect is tested by its mean square over $MSE$, giving an $F$ with the corresponding degrees of freedom.
 :::
 
-When an interaction is significant, interpret main effects cautiously — they may be misleading averages of varying effects.
+:::proof
+The argument is the one-way proof applied twice. Write each deviation from the grand mean as a telescoping sum
 
-:::proposition[Two-way partition of variability]
-The total sum of squares splits into four pieces,
+$$x_{ijl} - \bar x = (\bar x_{i\cdot}-\bar x) + (\bar x_{\cdot j}-\bar x) + (\bar x_{ij}-\bar x_{i\cdot}-\bar x_{\cdot j}+\bar x) + (x_{ijl}-\bar x_{ij}),$$
 
-$$SS_{\text{total}} = SS_A + SS_B + SS_{AB} + SS_{\text{error}},$$
+which is an identity — the four right-hand terms telescope to the left-hand side, every intermediate mean cancelling. Squaring and summing, all six cross terms vanish because each is a product in which one factor is constant over an index and the other sums to zero over that index, exactly as in the one-way proof. The degrees of freedom follow from the sum-to-zero constraints on each set of effects.
 
-each with an associated $F$-ratio and $p$-value.
+That the interaction term is the residual from additivity is worth reading off directly: $\bar x_{ij} - \bar x_{i\cdot} - \bar x_{\cdot j} + \bar x$ is exactly the amount by which cell $(i,j)$ departs from what the two main effects alone predict. $\blacksquare$
 :::
-
-Two-way ANOVA with replication (more than one observation per cell) is needed to estimate $SS_{\text{error}}$ and test the interaction. Without replication, you must assume no interaction exists.
-
-Balanced designs (equal cell sizes) simplify computation and interpretation; unbalanced designs require more care with the order of entering terms (Type I vs. Type III sums of squares).
 
 :::intuition
-Two-way ANOVA asks three questions at once: Does factor $A$ matter? Does factor $B$ matter? Does the combination of $A$ and $B$ matter in a way that's more than just their individual effects? Interactions are the surprising case: factor $A$ helps women but hurts men, for example. Main effects alone would miss that.
+A main effect asks whether a factor moves the response on average. An interaction asks whether *how much it moves it* depends on the other factor.
+
+On a plot of cell means with one factor on the horizontal axis and one line per level of the other, no interaction means **parallel lines** — the vertical gap between them is the same everywhere, which is precisely additivity. Interaction means the lines converge, diverge, or cross. Crossing is the extreme case: the factor helps at one level of the other factor and hurts at another, so no single statement about its effect is true.
 :::
 
-:::example[degrees of freedom and reading an interaction]
-Design: Factor $A$ (drug, $a=3$ levels), Factor $B$ (dose, $b=2$ levels), with $n=5$ replicates per cell. Total observations $N=a\cdot b\cdot n=3\times 2\times 5=30$.
-Degrees of freedom, which must sum to $df_{\text{total}}=N-1=29$:
-$df_A=a-1=2$
-$df_B=b-1=1$
-$df_{AB}=(a-1)(b-1)=2\times 1=2$
-$df_{\text{error}}=ab(n-1)=3\times 2\times(5-1)=24$
-Sanity check: $df_A+df_B+df_{AB}+df_{\text{error}}=2+1+2+24=29=df_{\text{total}}$. ✓ The partition accounts for every degree of freedom.
-Reading the result with a small interaction table of cell means (response = recovery score):
+:::example[Additive effects, and then an interaction]
+Two designs, each with factor $A$ at $2$ levels, $B$ at $3$ levels, $n=4$ per cell. Compute $SSA$, $SSB$ and $SSAB$ for cell means
+
+(a) $A_1: 10, 14, 18$ and $A_2: 12, 16, 20$; (b) $A_1: 10, 14, 18$ and $A_2: 20, 16, 12$.
 :::
 
 :::solution
-| | Dose low | Dose high |
-|---|---|---|
-| Drug X | $10$ | $20$ |
-| Drug Y | $12$ | $22$ |
-| Drug Z | $11$ | $6$ |
+1. **(a)** Row means $14$ and $16$; column means $11, 15, 19$; grand mean $15$.
+2. $SSA = bn\sum_i(\bar x_{i\cdot}-\bar x)^2 = 12\big[1+1\big] = 24$. $SSB = an\sum_j(\bar x_{\cdot j}-\bar x)^2 = 8\big[16+0+16\big] = 256$.
+3. Interaction: cell $(1,1)$ is predicted by $14+11-15 = 10$, and it *is* $10$. Every cell matches, so $SSAB = 0$. The design is exactly additive: $A_2$ is $2$ above $A_1$ at every level of $B$.
+4. **(b)** Row means still $14$ and $16$; but column means are now $15, 15, 15$ and the grand mean $15$.
+5. $SSA = 12[1+1] = 24$, unchanged. $SSB = 8[0+0+0] = \mathbf{0}$ — factor $B$ has **no main effect at all**.
+6. Interaction: cell $(1,1)$ is predicted by $14+15-15 = 14$ but is $10$, a departure of $-4$. The six departures are $-4, 0, 4, 4, 0, -4$, so
 
-For drugs X and Y, raising the dose *adds* about $10$ points. For drug Z, raising the dose *subtracts* $5$. Because the effect of dose flips direction depending on the drug, the lines in an interaction plot would cross rather than run parallel — a hallmark of a significant $A\times B$ interaction. Here you should report the **simple main effects** (effect of dose within each drug) instead of a single averaged "dose effect," which would be a misleading blend of $+10$, $+10$, and $-5$.
+$$SSAB = n\sum_{i,j}(\cdot)^2 = 4\big[16+0+16+16+0+16\big] = 4(64) = 256 .$$
+
+7. Sanity check on what this means: in (b) the response rises with $B$ under $A_1$ and falls with $B$ under $A_2$, so the two effects cancel exactly in the column means. Reporting "factor $B$ has no effect" from $SSB = 0$ would be badly wrong — $B$ has a large effect whose direction depends on $A$.
+:::
+
+:::pitfall
+When the interaction is significant, **do not interpret the main effects**. Design (b) above is the reason: $SSB = 0$ while $B$ moves the response by $8$ units in opposite directions at the two levels of $A$. A main effect is an average over the other factor's levels, and averaging over a sign change destroys the information.
+
+The correct report when interaction is present is the cell means themselves, or the simple effects — the effect of $B$ within $A_1$, and separately within $A_2$.
+:::
+
+:::figure[Interaction plots for the two designs. On the left the lines are parallel: the gap between $A_1$ and $A_2$ is $2$ units at every level of $B$, which is exactly additivity and $SSAB=0$. On the right they cross: $B$ raises the response under $A_1$ and lowers it under $A_2$, so the column means are all equal and $SSB=0$ even though $B$ has a large effect. Parallel lines are the picture of no interaction; crossing lines are the picture of a main effect that cannot be interpreted.]{#interaction-plot}
+{
+  "type": "plot",
+  "x": [0.6, 8.4],
+  "y": [7.5, 25.5],
+  "xTicks": 1,
+  "yTicks": 2,
+  "xLabel": "level of B",
+  "yLabel": "cell mean",
+  "marks": [
+    { "kind": "path", "points": [[1, 10], [2, 14], [3, 18]], "tone": "accent" },
+    { "kind": "path", "points": [[1, 12], [2, 16], [3, 20]], "tone": "result", "dashed": true },
+    { "kind": "point", "at": [1, 10], "tone": "accent" },
+    { "kind": "point", "at": [2, 14], "tone": "accent" },
+    { "kind": "point", "at": [3, 18], "tone": "accent" },
+    { "kind": "point", "at": [1, 12], "tone": "result" },
+    { "kind": "point", "at": [2, 16], "tone": "result" },
+    { "kind": "point", "at": [3, 20], "tone": "result" },
+    { "kind": "path", "points": [[6, 10], [7, 14], [8, 18]], "tone": "accent" },
+    { "kind": "path", "points": [[6, 20], [7, 16], [8, 12]], "tone": "result", "dashed": true },
+    { "kind": "point", "at": [6, 10], "tone": "accent" },
+    { "kind": "point", "at": [7, 14], "tone": "accent" },
+    { "kind": "point", "at": [8, 18], "tone": "accent" },
+    { "kind": "point", "at": [6, 20], "tone": "result" },
+    { "kind": "point", "at": [7, 16], "tone": "result" },
+    { "kind": "point", "at": [8, 12], "tone": "result" },
+    { "kind": "text", "at": [2.1, 24.4], "text": "(a) parallel: no interaction", "tone": "accent", "leaderTo": [2.0, 14.4] },
+    { "kind": "text", "at": [6.6, 24.4], "text": "(b) crossing: interaction", "tone": "result", "leaderTo": [7.0, 16.4] },
+    { "kind": "text", "at": [4.3, 11.2], "text": "A1 solid, A2 dashed", "tone": "muted", "leaderTo": [3.05, 18.0] }
+  ]
+}
+:::
+
+:::example[A complete two-way ANOVA table]
+For design (b) — $SSA = 24$, $SSB = 0$, $SSAB = 256$ — the within-cell sum of squares is $SSE = 216$, with $a=2$, $b=3$, $n=4$. Build the ANOVA table and test each effect at $\alpha=0.05$, given $F_{0.05,1,18}=4.414$ and $F_{0.05,2,18}=3.555$.
+:::
+
+:::solution
+1. Degrees of freedom: $A$ has $a-1=1$; $B$ has $b-1=2$; $AB$ has $(a-1)(b-1)=2$; error has $ab(n-1) = 6\times 3 = 18$. These sum to $23 = abn-1$ ✓.
+2. Mean squares: $MSA = 24/1 = 24$; $MSB = 0/2 = 0$; $MSAB = 256/2 = 128$; $MSE = 216/18 = 12$.
+3. The three $F$ statistics, each over $MSE$:
+
+$$F_A = \frac{24}{12} = 2.00, \qquad F_B = \frac{0}{12} = 0, \qquad F_{AB} = \frac{128}{12} = 10.67 .$$
+
+4. Against the critical values: $F_A = 2.00 < 4.414$, not significant; $F_B = 0 < 3.555$, not significant; $F_{AB} = 10.67 > 3.555$, **strongly significant**.
+5. So the table reports no main effects and a large interaction — which by the pitfall above is precisely the situation in which the main effects must not be interpreted. Concluding "neither factor matters" from the first two rows would be the exact opposite of the truth.
+6. Sanity check by looking at the cell means directly: under $A_1$ the response goes $10 \to 14 \to 18$, and under $A_2$ it goes $20 \to 16 \to 12$. Factor $B$ moves the response by $8$ units in both cases — in opposite directions. The correct report is the simple effects, not the main effects.
+:::
+
+## Fixed and random effects
+
+<!-- section: random-effects -->
+
+Everything so far treated the $k$ groups as the only groups of interest — three specific teaching methods, four specific fertilisers. Sometimes the groups are instead a *sample* from a population of groups, and then the interesting question changes.
+
+:::definition[Fixed and random effects]{#fixed-random}
+In a **fixed-effects** model the levels of the factor are the only ones of interest, and the parameters $\mu_1,\ldots,\mu_k$ are unknown constants. In a **random-effects** model the levels are a random sample from a population of levels, and the model is
+
+$$X_{ij} = \mu + A_i + \varepsilon_{ij}, \qquad A_i \stackrel{\text{iid}}{\sim} N(0,\sigma_A^2), \qquad \varepsilon_{ij}\stackrel{\text{iid}}{\sim}N(0,\sigma^2),$$
+
+with the $A_i$ independent of the $\varepsilon_{ij}$. The hypothesis of interest becomes $H_0:\sigma_A^2 = 0$.
+:::
+
+The distinction is about the inference intended, not about the arithmetic. Testing three specific teaching methods you wish to choose between is fixed. Sampling twenty schools from a district to ask how much schools vary is random: the twenty schools themselves are of no interest, and the estimand is the variance $\sigma_A^2$ across all schools.
+
+:::theorem[Expected mean squares under random effects]{#random-ems}
+For the balanced random-effects model with $n$ observations in each of $k$ groups,
+
+$$E(MSW) = \sigma^2, \qquad E(MSB) = \sigma^2 + n\sigma_A^2 .$$
+:::
+
+:::proof
+The within-group calculation is unchanged from the theorem *What the two mean squares estimate*, since conditional on the $A_i$ the observations within group $i$ are i.i.d. normal about $\mu + A_i$; the argument never used the group centres.
+
+For the between-group part, note $\bar X_i = \mu + A_i + \bar\varepsilon_i$, so
+
+$$\operatorname{Var}(\bar X_i) = \sigma_A^2 + \frac{\sigma^2}{n},$$
+
+the two terms independent. The $\bar X_i$ are i.i.d. across $i$ with this variance, and $SSB/(k-1) = \frac{n}{k-1}\sum_i(\bar X_i - \bar X)^2$ is $n$ times their sample variance, which is unbiased for $\operatorname{Var}(\bar X_i)$. Hence
+
+$$E(MSB) = n\left(\sigma_A^2 + \frac{\sigma^2}{n}\right) = n\sigma_A^2 + \sigma^2 . \qquad \blacksquare$$
+:::
+
+The same $F = MSB/MSW$ tests $H_0$ in both models, because under either null both mean squares estimate $\sigma^2$ — which is why the arithmetic is identical and the distinction is easy to miss. What differs is what a rejection *means*, and what is estimated afterwards.
+
+:::corollary[Estimating the variance component]{#variance-component}
+Equating the mean squares to their expectations gives the method-of-moments estimator
+
+$$\hat\sigma_A^2 = \frac{MSB - MSW}{n},$$
+
+truncated at zero when the numerator is negative.
+:::
+
+:::proof
+Set $MSB = \sigma^2 + n\sigma_A^2$ and $MSW = \sigma^2$ and solve, which is the method of moments of the definition *Method of moments estimator* applied to the mean squares. $\blacksquare$
+:::
+
+:::pitfall
+That estimator can be negative, and a negative variance estimate is not a computational error — it happens whenever $MSB < MSW$, which under $H_0:\sigma_A^2=0$ occurs about half the time. Truncating at zero is the usual fix and introduces an upward bias. It is a genuine awkwardness of the moment approach, and the reason maximum likelihood or its restricted variant is preferred in practice for variance components.
+:::
+
+:::example[How much do schools vary?]
+Twenty schools are sampled and $n=25$ pupils tested in each. The ANOVA gives $MSB = 410$ and $MSW = 160$. Estimate the between-school variance and the proportion of variation attributable to schools.
+:::
+
+:::solution
+1. By the corollary *Estimating the variance component*,
+
+$$\hat\sigma_A^2 = \frac{410-160}{25} = \frac{250}{25} = 10 .$$
+
+2. The within-school variance is estimated by $MSW = 160$.
+3. The proportion of total variation between schools — the **intraclass correlation** — is
+
+$$\frac{\hat\sigma_A^2}{\hat\sigma_A^2+\hat\sigma^2} = \frac{10}{10+160} = \frac{10}{170} = 0.0588 .$$
+
+4. So about $6\%$ of the variation in pupil scores is between schools and $94\%$ within them — a finding about the population of schools, not about these twenty.
+5. Sanity check on the contrast with a fixed-effects reading: $F = 410/160 = 2.56$ on $19$ and $480$ degrees of freedom is highly significant, so schools certainly differ. But "significantly different" and "an important source of variation" are different claims, and here the second is modest while the first is emphatic. The variance component is what answers the question actually asked.
+:::
+
+## ANOVA is a linear model
+
+<!-- section: anova-regression -->
+
+Analysis of variance is often taught as a separate technique with its own vocabulary. It is not: it is a regression with categorical predictors, and seeing that unifies this chapter with the next one.
+
+:::definition[Indicator coding]{#indicator-coding}
+For $k$ groups, define $k-1$ **indicator** (dummy) variables
+
+$$D_{i} = \begin{cases}1 & \text{if the observation is in group } i,\\ 0 & \text{otherwise,}\end{cases} \qquad i = 2,\ldots,k,$$
+
+taking group $1$ as the reference. The model $X = \beta_0 + \beta_2 D_2 + \cdots + \beta_k D_k + \varepsilon$ has $\beta_0 = \mu_1$ and $\beta_i = \mu_i - \mu_1$.
+:::
+
+:::proposition[The F-test is a model comparison]{#anova-as-regression}
+Under indicator coding, the hypothesis $H_0:\mu_1=\cdots=\mu_k$ is exactly $H_0: \beta_2 = \cdots = \beta_k = 0$, and the one-way ANOVA $F$ statistic is the statistic comparing the full model against the intercept-only model:
+
+$$F = \frac{(SST - SSE_{\text{full}})/(k-1)}{SSE_{\text{full}}/(N-k)} .$$
+:::
+
+:::proof
+Fitting the full model by least squares sets each group's fitted value to its own mean — the theorem *The mean minimises total squared deviation* applied within each group, since the indicators let every group have a free level. So the residual sum of squares of the full model is $\sum_{i,j}(x_{ij}-\bar x_i)^2 = SSW$.
+
+The intercept-only model fits the grand mean to everything, with residual sum of squares $SST$. Therefore $SST - SSE_{\text{full}} = SST - SSW = SSB$ by the theorem *Decomposition of the total sum of squares*, and substituting,
+
+$$F = \frac{SSB/(k-1)}{SSW/(N-k)} = \frac{MSB}{MSW},$$
+
+which is the ANOVA statistic. The hypotheses match because $\beta_i = \mu_i-\mu_1$, so all $\beta_i$ vanish exactly when all group means equal $\mu_1$. $\blacksquare$
+:::
+
+:::remark[Why the reference level is arbitrary but the F is not]
+Choosing group $1$ as reference makes each $\beta_i$ a comparison against group $1$, so the individual coefficients depend on that choice — a different reference gives different coefficients describing the same fit. What does not change is the set of fitted values, hence $SSE$, hence $F$.
+
+This is worth knowing because a table of regression coefficients for a categorical predictor invites the reader to compare each level against the reference and stop there, which is both an arbitrary set of comparisons and an uncorrected one. The $F$-test asks the question that does not depend on the coding.
+:::
+
+:::example[The same test, twice]
+For the three teaching methods, write the indicator model, give the least-squares coefficients, and confirm the $F$-test agrees with the ANOVA computed earlier.
+:::
+
+:::solution
+1. With method 1 as reference, $D_2$ and $D_3$ indicate methods 2 and 3. The fitted coefficients are the group means recoded:
+
+$$\hat\beta_0 = \bar x_1 = 10, \qquad \hat\beta_2 = \bar x_2 - \bar x_1 = 2, \qquad \hat\beta_3 = \bar x_3 - \bar x_1 = 7 .$$
+
+2. The fitted value for any observation is its own group's mean, so $SSE_{\text{full}} = SSW = 96$ and $SST = 226$.
+3. Model comparison: $(226-96)/2 = 65$ over $96/12 = 8$, giving $F = 8.125$ ✓ — identical to the ANOVA computation.
+4. Sanity check on the coefficients: $\hat\beta_3 = 7$ is the difference between methods 3 and 1, and the Tukey analysis found exactly that pair to differ. But note that reading significance off the individual coefficients would be three uncorrected comparisons against the reference, which is why the $F$ comes first.
+5. Had method 3 been the reference instead, the coefficients would be $\hat\beta_0 = 17$, $\hat\beta_1 = -7$, $\hat\beta_2 = -5$ — different numbers, identical fit, identical $F$.
 :::
 
 ## Common Mistakes
 
-- Running multiple pairwise $t$-tests instead of ANOVA. With $k=5$ groups and $10$ tests at $\alpha=0.05$, FWER $\approx 40\%$.
-- Stopping at a significant $F$ without running post-hoc tests. You need post-hoc comparisons to identify which groups differ.
-- Ignoring a significant interaction and interpreting only main effects. If $A\times B$ is significant, main effects can be misleading.
-- Violating the homoscedasticity assumption without correction. Use Welch's ANOVA or the Kruskal-Wallis test when variances differ substantially.
-- Claiming a non-significant interaction proves the factors are independent. Non-significance only means insufficient evidence for an interaction.
+- **Running pairwise $t$-tests instead of ANOVA.** Six comparisons at $5\%$ reject at least one true null about $26\%$ of the time. Use the $F$-test first, then a procedure that controls the familywise rate.
+- **Concluding which groups differ from a significant $F$.** The alternative is "not all equal". Identifying pairs requires Tukey, Bonferroni or a planned contrast.
+- **Interpreting main effects when the interaction is significant.** A main effect averages over the other factor, and averaging over a sign change can give exactly zero for a large effect.
+- **Checking normality of the raw data rather than the residuals.** When the means genuinely differ, the pooled raw data *should* look multimodal; the assumption concerns $x_{ij}-\bar x_i$.
+- **Ignoring unequal variances when the group sizes are unequal.** Small groups with large variances inflate $F$ and the test rejects far too often. Use Welch's ANOVA.
+- **Treating independence as checkable from the data.** It is a property of the design. Repeated measures and clustered observations need a different model, not a correction.
+- **Reporting significance without an effect size.** With enough data any difference is significant; $\eta^2$ or the group means with intervals say whether it matters.
+- **Using a one-sided ANOVA.** $F$ is a squared quantity and loses the sign; the test is inherently two-sided.
