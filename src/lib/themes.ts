@@ -55,7 +55,7 @@ export const graphPaperTheme: SubjectTheme = {
     accentText: "#ffffff",
     text: "#1e293b",
     textMuted: "#475569",
-    textDim: "#94a3b8",
+    textDim: "#687281",
     texture:
       "background-image:linear-gradient(rgba(147,197,253,0.11) 1px,transparent 1px),linear-gradient(90deg,rgba(147,197,253,0.11) 1px,transparent 1px);background-size:24px 24px;",
   },
@@ -68,7 +68,7 @@ export const graphPaperTheme: SubjectTheme = {
     accentText: "#0b1220",
     text: "#e2e8f0",
     textMuted: "rgba(226,232,240,0.85)",
-    textDim: "rgba(226,232,240,0.5)",
+    textDim: "rgba(226,232,240,0.52)",
     texture:
       "background-image:linear-gradient(rgba(96,165,250,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(96,165,250,0.05) 1px,transparent 1px);background-size:24px 24px;",
   },
@@ -87,7 +87,7 @@ export const chalkboardTheme: SubjectTheme = {
     accentText: "#ffffff",
     text: "#1e293b",
     textMuted: "#475569",
-    textDim: "#94a3b8",
+    textDim: "#636d7b",
     texture:
       "background-image:radial-gradient(ellipse at 30% 20%, rgba(21,128,61,0.028) 0%, transparent 50%);",
   },
@@ -100,7 +100,7 @@ export const chalkboardTheme: SubjectTheme = {
     accentText: "#122a1f",
     text: "#e8e4d9",
     textMuted: "rgba(232,228,217,0.85)",
-    textDim: "rgba(232,228,217,0.5)",
+    textDim: "rgba(232,228,217,0.63)",
     texture:
       "background-image:radial-gradient(ellipse at 30% 20%, #1f4433 0%, transparent 50%),radial-gradient(ellipse at 70% 60%, #1f4433 0%, transparent 40%);",
   },
@@ -119,7 +119,7 @@ export const blueprintTheme: SubjectTheme = {
     accentText: "#ffffff",
     text: "#1e293b",
     textMuted: "#475569",
-    textDim: "#94a3b8",
+    textDim: "#636d7b",
     // Classic blueprint: fine grid + coarse major grid (dual scale).
     texture:
       "background-image:linear-gradient(rgba(45,106,159,0.088) 1px,transparent 1px),linear-gradient(90deg,rgba(45,106,159,0.088) 1px,transparent 1px),linear-gradient(rgba(45,106,159,0.039) 1px,transparent 1px),linear-gradient(90deg,rgba(45,106,159,0.039) 1px,transparent 1px);background-size:50px 50px,50px 50px,10px 10px,10px 10px;",
@@ -135,7 +135,7 @@ export const blueprintTheme: SubjectTheme = {
     // Body/prose text: raised from 0.62 -> 0.85 so it reads close to white but
     // still clearly below the solid headings/bold above it.
     textMuted: "rgba(226,232,240,0.85)",
-    textDim: "rgba(226,232,240,0.45)",
+    textDim: "rgba(226,232,240,0.53)",
     // Blueprint grid dialed back (0.14/0.06 -> 0.08/0.035) so the decorative
     // lines stay subtle and don't fight the brighter body text.
     texture:
@@ -156,7 +156,7 @@ export const notebookTheme: SubjectTheme = {
     accentText: "#ffffff",
     text: "#292524",
     textMuted: "#44403c",
-    textDim: "#a8a29e",
+    textDim: "#76716f",
     // Ruled lines + the classic red margin line.
     texture:
       "background-image:linear-gradient(90deg,transparent 44px,rgba(220,38,38,0.11) 44px,rgba(220,38,38,0.11) 45px,transparent 45px),repeating-linear-gradient(transparent,transparent 27px,rgba(217,119,6,0.066) 27px,rgba(217,119,6,0.066) 28px);",
@@ -170,7 +170,7 @@ export const notebookTheme: SubjectTheme = {
     accentText: "#1c1917",
     text: "#e7e5e4",
     textMuted: "rgba(231,229,228,0.85)",
-    textDim: "rgba(231,229,228,0.5)",
+    textDim: "rgba(231,229,228,0.54)",
     texture:
       "background-image:linear-gradient(90deg,transparent 44px,rgba(248,113,113,0.121) 44px,rgba(248,113,113,0.121) 45px,transparent 45px),repeating-linear-gradient(transparent,transparent 27px,rgba(251,191,36,0.055) 27px,rgba(251,191,36,0.055) 28px);",
   },
@@ -189,7 +189,7 @@ export const whiteboardTheme: SubjectTheme = {
     accentText: "#ffffff",
     text: "#1e293b",
     textMuted: "#475569",
-    textDim: "#94a3b8",
+    textDim: "#6b7584",
     // Corner glow + a faint diagonal marker swipe.
     texture:
       "background-image:linear-gradient(115deg,transparent 58%,rgba(234,88,12,0.028) 58%,rgba(234,88,12,0.028) 76%,transparent 76%),radial-gradient(ellipse at 0% 0%, rgba(234,88,12,0.039) 0%, transparent 55%);",
@@ -203,7 +203,7 @@ export const whiteboardTheme: SubjectTheme = {
     accentText: "#191411",
     text: "#e7e5e4",
     textMuted: "rgba(231,229,228,0.85)",
-    textDim: "rgba(231,229,228,0.5)",
+    textDim: "rgba(231,229,228,0.53)",
     texture:
       "background-image:linear-gradient(115deg,transparent 58%,rgba(251,146,60,0.033) 58%,rgba(251,146,60,0.033) 76%,transparent 76%),radial-gradient(ellipse at 0% 0%, rgba(251,146,60,0.055) 0%, transparent 55%);",
   },
@@ -222,7 +222,7 @@ export const vellumTheme: SubjectTheme = {
     accentText: "#ffffff",
     text: "#1e293b",
     textMuted: "#475569",
-    textDim: "#94a3b8",
+    textDim: "#687281",
     texture:
       "background-image:linear-gradient(0deg,rgba(13,148,136,0.05) 1px,transparent 1px),linear-gradient(60deg,rgba(13,148,136,0.039) 1px,transparent 1px),linear-gradient(120deg,rgba(13,148,136,0.039) 1px,transparent 1px);background-size:28px 28px;",
   },
@@ -235,7 +235,7 @@ export const vellumTheme: SubjectTheme = {
     accentText: "#0e1716",
     text: "#e2e8f0",
     textMuted: "rgba(226,232,240,0.85)",
-    textDim: "rgba(226,232,240,0.5)",
+    textDim: "rgba(226,232,240,0.52)",
     texture:
       "background-image:linear-gradient(0deg,rgba(45,212,191,0.033) 1px,transparent 1px),linear-gradient(60deg,rgba(45,212,191,0.028) 1px,transparent 1px),linear-gradient(120deg,rgba(45,212,191,0.028) 1px,transparent 1px);background-size:28px 28px;",
   },
@@ -254,7 +254,7 @@ export const vennSlateTheme: SubjectTheme = {
     accentText: "#ffffff",
     text: "#292524",
     textMuted: "#44403c",
-    textDim: "#a8a29e",
+    textDim: "#726e6b",
     // One big Venn diagram — two overlapping rings, FIXED size and anchored in
     // the upper-centre so it stays a bounded, centred backdrop (never scaling
     // with page height into the footer).
@@ -270,7 +270,7 @@ export const vennSlateTheme: SubjectTheme = {
     accentText: "#1c1917",
     text: "#e7e5e4",
     textMuted: "rgba(231,229,228,0.85)",
-    textDim: "rgba(231,229,228,0.5)",
+    textDim: "rgba(231,229,228,0.57)",
     texture:
       "background-image:radial-gradient(circle at 40% 50%, transparent 27%, rgba(52,211,153,0.077) 27.4%, rgba(52,211,153,0.077) 28.4%, transparent 28.8%),radial-gradient(circle at 60% 50%, transparent 27%, rgba(52,211,153,0.061) 27.4%, rgba(52,211,153,0.061) 28.4%, transparent 28.8%);background-size:760px 600px,760px 600px;background-position:calc(50% - 150px) 130px,calc(50% - 150px) 130px;background-repeat:no-repeat,no-repeat;",
   },
@@ -289,7 +289,7 @@ export const parchmentTheme: SubjectTheme = {
     accentText: "#ffffff",
     text: "#292524",
     textMuted: "#44403c",
-    textDim: "#a8a29e",
+    textDim: "#6f6b68",
     // Ledger columns + aged-edge vignette.
     texture:
       "background-image:radial-gradient(ellipse at 50% 40%, transparent 55%, rgba(180,83,9,0.05) 100%),repeating-linear-gradient(90deg,transparent,transparent 55px,rgba(180,83,9,0.05) 55px,rgba(180,83,9,0.05) 56px);",
@@ -303,7 +303,7 @@ export const parchmentTheme: SubjectTheme = {
     accentText: "#1f1a12",
     text: "#ede4d3",
     textMuted: "rgba(237,228,211,0.85)",
-    textDim: "rgba(237,228,211,0.5)",
+    textDim: "rgba(237,228,211,0.54)",
     texture:
       "background-image:radial-gradient(ellipse at 50% 40%, transparent 55%, rgba(234,179,8,0.039) 100%),repeating-linear-gradient(90deg,transparent,transparent 55px,rgba(234,179,8,0.05) 55px,rgba(234,179,8,0.05) 56px);",
   },
@@ -322,7 +322,7 @@ export const dotLatticeTheme: SubjectTheme = {
     accentText: "#ffffff",
     text: "#1e293b",
     textMuted: "#475569",
-    textDim: "#94a3b8",
+    textDim: "#687281",
     texture:
       "background-image:radial-gradient(circle, rgba(219,39,119,0.11) 1.5px, transparent 1.5px);background-size:18px 18px;",
   },
@@ -335,7 +335,7 @@ export const dotLatticeTheme: SubjectTheme = {
     accentText: "#18181b",
     text: "#e4e4e7",
     textMuted: "rgba(228,228,231,0.85)",
-    textDim: "rgba(228,228,231,0.5)",
+    textDim: "rgba(228,228,231,0.54)",
     texture:
       "background-image:radial-gradient(circle, rgba(244,114,182,0.077) 1px, transparent 1px);background-size:18px 18px;",
   },
@@ -354,7 +354,7 @@ export const terminalTheme: SubjectTheme = {
     accentText: "#ffffff",
     text: "#1e293b",
     textMuted: "#475569",
-    textDim: "#94a3b8",
+    textDim: "#66707f",
     texture:
       "background-image:repeating-linear-gradient(transparent,transparent 5px,rgba(8,145,178,0.028) 5px,rgba(8,145,178,0.028) 6px);",
   },
@@ -386,7 +386,7 @@ export const proofSheetTheme: SubjectTheme = {
     accentText: "#ffffff",
     text: "#1e293b",
     textMuted: "#475569",
-    textDim: "#94a3b8",
+    textDim: "#687281",
     // Fitch-style proof: one strong vertical rule + faint horizontal steps.
     texture:
       "background-image:linear-gradient(90deg,transparent 26px,rgba(2,132,199,0.154) 26px,rgba(2,132,199,0.154) 28px,transparent 28px),repeating-linear-gradient(transparent,transparent 25px,rgba(2,132,199,0.033) 25px,rgba(2,132,199,0.033) 26px);",
@@ -400,7 +400,7 @@ export const proofSheetTheme: SubjectTheme = {
     accentText: "#0d1520",
     text: "#e2e8f0",
     textMuted: "rgba(226,232,240,0.85)",
-    textDim: "rgba(226,232,240,0.5)",
+    textDim: "rgba(226,232,240,0.52)",
     texture:
       "background-image:linear-gradient(90deg,transparent 26px,rgba(56,189,248,0.165) 26px,rgba(56,189,248,0.165) 28px,transparent 28px),repeating-linear-gradient(transparent,transparent 25px,rgba(56,189,248,0.039) 25px,rgba(56,189,248,0.039) 26px);",
   },
@@ -419,7 +419,7 @@ export const signalTheme: SubjectTheme = {
     accentText: "#ffffff",
     text: "#1e293b",
     textMuted: "#475569",
-    textDim: "#94a3b8",
+    textDim: "#687281",
     // Two overlaid bar rhythms — a bit-pattern, not plain stripes.
     texture:
       "background-image:repeating-linear-gradient(90deg,rgba(101,163,13,0.044) 0,rgba(101,163,13,0.044) 3px,transparent 3px,transparent 9px),repeating-linear-gradient(90deg,rgba(101,163,13,0.028) 0,rgba(101,163,13,0.028) 2px,transparent 2px,transparent 23px);",
@@ -433,7 +433,7 @@ export const signalTheme: SubjectTheme = {
     accentText: "#131c16",
     text: "#e8f0e4",
     textMuted: "rgba(232,240,228,0.85)",
-    textDim: "rgba(232,240,228,0.5)",
+    textDim: "rgba(232,240,228,0.52)",
     texture:
       "background-image:repeating-linear-gradient(90deg,rgba(163,230,53,0.039) 0,rgba(163,230,53,0.039) 3px,transparent 3px,transparent 9px),repeating-linear-gradient(90deg,rgba(163,230,53,0.025) 0,rgba(163,230,53,0.025) 2px,transparent 2px,transparent 23px);",
   },
@@ -452,7 +452,7 @@ export const manuscriptTheme: SubjectTheme = {
     accentText: "#ffffff",
     text: "#292524",
     textMuted: "#44403c",
-    textDim: "#a8a29e",
+    textDim: "#76716f",
     // Paired manuscript ruling (double lines), distinct from single-ruled notebook.
     texture:
       "background-image:repeating-linear-gradient(transparent,transparent 30px,rgba(159,18,57,0.044) 30px,rgba(159,18,57,0.044) 31px,transparent 31px,transparent 34px,rgba(159,18,57,0.044) 34px,rgba(159,18,57,0.044) 35px);",
@@ -466,7 +466,7 @@ export const manuscriptTheme: SubjectTheme = {
     accentText: "#1c1214",
     text: "#eae2e4",
     textMuted: "rgba(234,226,228,0.85)",
-    textDim: "rgba(234,226,228,0.5)",
+    textDim: "rgba(234,226,228,0.53)",
     texture:
       "background-image:repeating-linear-gradient(transparent,transparent 30px,rgba(251,113,133,0.044) 30px,rgba(251,113,133,0.044) 31px,transparent 31px,transparent 34px,rgba(251,113,133,0.044) 34px,rgba(251,113,133,0.044) 35px);",
   },
@@ -485,7 +485,7 @@ export const obsidianTheme: SubjectTheme = {
     accentText: "#ffffff",
     text: "#1e293b",
     textMuted: "#475569",
-    textDim: "#94a3b8",
+    textDim: "#656f7d",
     texture:
       "background-image:radial-gradient(ellipse at 50% 0%, rgba(124,58,237,0.044) 0%, transparent 55%),radial-gradient(ellipse at 100% 100%, rgba(124,58,237,0.028) 0%, transparent 45%);",
   },
@@ -498,7 +498,7 @@ export const obsidianTheme: SubjectTheme = {
     accentText: "#17131f",
     text: "#e8e4f3",
     textMuted: "rgba(232,228,243,0.85)",
-    textDim: "rgba(232,228,243,0.5)",
+    textDim: "rgba(232,228,243,0.53)",
     texture:
       "background-image:radial-gradient(ellipse at 50% 0%, rgba(167,139,250,0.05) 0%, transparent 55%);",
   },
