@@ -1,239 +1,501 @@
 ---
-title: Logistic Regression
+title: "Logistic Regression"
 ---
 
 # Logistic Regression
 
-Logistic regression is the go-to method for modeling binary outcomes (yes/no, success/failure, disease/no disease). Instead of predicting the value of $y$ directly, it predicts the *probability* that $y=1$.
+The previous chapter modelled a quantitative response. A great many responses are not quantitative: a patient recovers or does not, a customer buys or does not, an email is spam or is not. The natural target is then a **probability**, and probabilities are awkward in a way that forces a change of model rather than a patch on the old one.
 
-The key idea is the logistic (sigmoid) function, which transforms any real number into a probability between 0 and 1. This gives us a principled way to do classification while still allowing familiar regression-style interpretation via log-odds (logits).
+The awkwardness is that probabilities live in $[0,1]$ and a linear function does not. Fit a straight line to a binary response and it will predict negative probabilities at one end and probabilities above one at the other, not as a rare pathology but as a certainty for extreme enough predictors. Two further problems come with it, and the first section sets out all three before proposing anything, because the shape of the fix is determined by the shape of the failure.
 
-It is the foundation of many modern machine learning classifiers and is widely used in medicine, marketing, credit scoring, and the social sciences.
+The fix is to model a transformed version of the probability — the **log-odds** — linearly, which maps $[0,1]$ onto the whole real line and so removes the range problem at a stroke. What that buys, and what it costs in interpretability, is the business of the second section: coefficients become log odds ratios, which is less immediate than "units of $y$ per unit of $x$" and is exactly as precise.
 
-## Why Linear Regression Fails for Binary Data
+Estimation changes too. Least squares no longer applies, and there is no closed-form solution at all; the coefficients are found by maximum likelihood, iteratively. That sounds like a loss and is largely a gain, because the likelihood machinery of the estimation chapter comes with it — the log-likelihood turns out to be concave, so the iteration cannot get stuck, and likelihood-ratio tests replace the $F$-tests of the linear model.
+
+The final section places logistic regression in the larger family it belongs to. It is one **generalised linear model** among several, differing from ordinary regression only in two choices — a distribution for the response and a link function — and once that is seen, Poisson regression for counts and the ordinal and multinomial extensions require no new theory.
+
+Notation follows the regression chapter: $\mathbf{X}$ is the design matrix, $\boldsymbol\beta$ the coefficient vector, and $\mathbf{x}_i^{\top}$ the $i$-th row. The response $Y_i \in \{0,1\}$, and $p_i = P(Y_i=1\mid \mathbf{x}_i)$. Maximum likelihood facts are from *Statistical Inference: Estimation*.
+
+## Why a straight line will not do
 
 <!-- section: why-logistic -->
 
-If $y$ is 0 or 1, fitting a linear model $\hat{y} = b_0 + b_1 x$ can produce predictions outside $[0,1]$. A predicted probability of 1.3 or -0.2 is nonsensical.
+Suppose we fit $Y_i = \beta_0+\beta_1x_i+\varepsilon_i$ by least squares with $Y_i$ binary. This is the **linear probability model**, and since $E(Y_i)=p_i$ for a binary variable, it is a model for the probability. Three things go wrong, of increasing seriousness.
 
-The variance of a binary outcome is
+:::proposition[Three failures of the linear probability model]{#lpm-failures}
+For a binary response modelled as $E(Y_i) = \beta_0+\beta_1x_i$ with $\beta_1\ne 0$:
 
-$$p(1-p),$$
-
-which is not constant — it is largest when $p=0.5$ and smallest near 0 or 1. This violates the constant variance assumption of ordinary linear regression.
-
-The relationship between a predictor and a probability is typically S-shaped (sigmoid), not linear.
-
-:::intuition
-Trying to use ordinary linear regression on yes/no data is like using a ruler to measure temperature in a system that only has two states: ice or steam. The ruler will give you numbers outside the possible range and the errors won't behave nicely.
+1. the fitted probability leaves $[0,1]$ for all sufficiently large or small $x$;
+2. the error variance is $p_i(1-p_i)$, which depends on $x_i$, so the errors are heteroscedastic;
+3. the errors are not normal — for given $x_i$ the error takes only the two values $1-p_i$ and $-p_i$.
 :::
 
-:::example[Linear regression predicting an impossible probability]
-Suppose we fit a straight line to predict whether a loan defaults ($y=1$) from income (in \$1000s), and get $\hat{y} = 0.9 - 0.01 x$.
+:::proof
+1. The fitted value $\beta_0+\beta_1x$ is an unbounded linear function of $x$; with $\beta_1 \ne 0$ it exceeds $1$ once $x > (1-\beta_0)/\beta_1$ and falls below $0$ once $x < -\beta_0/\beta_1$ (with the inequalities reversed for $\beta_1<0$).
+2. $Y_i$ is Bernoulli$(p_i)$, so $\operatorname{Var}(Y_i) = p_i(1-p_i)$, and $\varepsilon_i = Y_i - p_i$ inherits it. Since $p_i$ varies with $x_i$, so does the variance.
+3. $\varepsilon_i = Y_i - p_i$ takes the value $1-p_i$ with probability $p_i$ and $-p_i$ with probability $1-p_i$. A two-point distribution is not normal. $\blacksquare$
+:::
+
+:::example[Watching the linear probability model fail]
+A linear probability model of purchase on income (in thousands) is fitted as $\hat p = -0.15 + 0.008\,x$. Find the income range over which it produces valid probabilities, and evaluate it at $\$20{,}000$ and $\$160{,}000$.
 :::
 
 :::solution
-1. For a low earner with $x = 20$: $\hat{y} = 0.9 - 0.01 \cdot 20 = 0.9 - 0.2 = 0.7$. Fine so far — this reads as a 70% chance.
-2. For a high earner with $x = 100$: $\hat{y} = 0.9 - 0.01 \cdot 100 = 0.9 - 1.0 = -0.1$. A probability of $-0.1$ is impossible.
-3. Sanity check: a valid probability must lie in $[0,1]$, but the line is unbounded, so far enough out in either direction it *must* leave $[0,1]$. This is the structural failure logistic regression fixes by squashing the output through the sigmoid.
+1. **Valid range.** $\hat p \ge 0$ requires $x \ge 0.15/0.008 = 18.75$; $\hat p\le 1$ requires $x \le 1.15/0.008 = 143.75$. So the model is only usable for incomes between $\$18{,}750$ and $\$143{,}750$.
+2. At $x = 20$: $\hat p = -0.15+0.16 = 0.01$, just inside the range and plausible.
+3. At $x = 160$: $\hat p = -0.15 + 1.28 = 1.13$ — a probability of $113\%$.
+4. The problem is not that the estimate is imprecise; no confidence interval around $1.13$ can help, because the quantity being estimated cannot exceed $1$. This is failure (1) of the proposition, and it is why a new functional form is needed rather than a correction.
+5. Sanity check on the variance failure too: at $x=20$ the fitted $p=0.01$ gives error variance $0.01(0.99)=0.0099$, while at $x=80$ the fitted $p=0.49$ gives $0.2499$ — a twenty-five-fold difference across the data, so a single $\sigma^2$ describes neither.
+6. A logistic fit to the same data cannot produce either pathology: its predictions approach $0$ and $1$ asymptotically and never cross them.
 :::
 
-## The Logistic Model
+The three failures are not equally damaging, and ranking them is what determines the remedy. Heteroscedasticity and non-normality are familiar complaints from the regression chapter: by Gauss-Markov the estimates stay unbiased, and only the standard errors are wrong, which weighted least squares or robust standard errors could repair.
+
+The first failure is different in kind. A model that predicts a probability of $1.3$ is not imprecise; it is making a statement that cannot be true, and no adjustment of standard errors helps. That is the failure that forces a new model, and the fix is to choose a functional form that cannot leave $[0,1]$ in the first place.
+
+:::definition[The logistic function and the logit]{#logistic-function}
+The **logistic** (sigmoid) function and its inverse, the **logit**, are
+
+$$\sigma(z) = \frac{1}{1+e^{-z}} = \frac{e^z}{1+e^z}, \qquad \operatorname{logit}(p) = \log\frac{p}{1-p} .$$
+:::
+
+:::proposition[Properties of the logistic function]{#sigmoid-props}
+$\sigma$ maps $\mathbb{R}$ onto $(0,1)$, is strictly increasing, satisfies $\sigma(0)=\tfrac12$ and $\sigma(-z)=1-\sigma(z)$, and has derivative
+
+$$\sigma'(z) = \sigma(z)\big(1-\sigma(z)\big).$$
+
+It is the inverse of the logit: $\operatorname{logit}(\sigma(z))=z$.
+:::
+
+:::proof
+Since $e^{-z} > 0$ always, the denominator $1+e^{-z}$ exceeds $1$, so $\sigma(z) \in (0,1)$; as $z\to\infty$ the denominator tends to $1$ and as $z\to-\infty$ it grows without bound, giving the limits $1$ and $0$.
+
+For the derivative, differentiate $\sigma(z) = (1+e^{-z})^{-1}$ by the chain rule:
+
+$$\sigma'(z) = -(1+e^{-z})^{-2}\cdot(-e^{-z}) = \frac{e^{-z}}{(1+e^{-z})^2} = \frac{1}{1+e^{-z}}\cdot\frac{e^{-z}}{1+e^{-z}} = \sigma(z)\big(1-\sigma(z)\big),$$
+
+the last step because $\dfrac{e^{-z}}{1+e^{-z}} = 1 - \dfrac{1}{1+e^{-z}}$. Positivity of $\sigma'$ gives strict monotonicity.
+
+For the inverse, with $p=\sigma(z)$ we have $1-p = e^{-z}/(1+e^{-z})$, so $p/(1-p) = e^{z}$ and $\log\{p/(1-p)\} = z$. $\blacksquare$
+:::
+
+The identity $\sigma' = \sigma(1-\sigma)$ is not a curiosity — it is the Bernoulli variance $p(1-p)$, and it will reappear as the weight in the estimation section. That the derivative of the mean function equals the variance function is characteristic of the exponential family and is what makes these models tractable.
+
+:::figure[The logistic curve against a fitted straight line for the same binary data (points at $y=0$ and $y=1$). The line leaves the unit interval at both ends, predicting probabilities below $0$ and above $1$; the logistic curve approaches the bounds without reaching them. Both are steepest in the middle, but the logistic flattens where the outcome is nearly certain, which is the behaviour a probability should have — moving a predictor further does little once the answer is already almost settled.]{#logistic-vs-linear}
+{
+  "type": "plot",
+  "x": [-6.5, 6.5],
+  "y": [-0.35, 1.38],
+  "xTicks": 2,
+  "yTicks": 0.2,
+  "xLabel": "linear predictor",
+  "yLabel": "probability",
+  "marks": [
+    { "kind": "line", "through": [[-6.5, 0], [6.5, 0]], "tone": "muted", "dashed": true, "extend": false },
+    { "kind": "line", "through": [[-6.5, 1], [6.5, 1]], "tone": "muted", "dashed": true, "extend": false },
+    { "kind": "function", "fn": "0.5+0.11*x", "tone": "alt", "dashed": true },
+    { "kind": "function", "fn": "1/(1+exp(-x))", "tone": "result" },
+    { "kind": "point", "at": [-5, 0], "tone": "accent" }, { "kind": "point", "at": [-3.5, 0], "tone": "accent" },
+    { "kind": "point", "at": [-2, 0], "tone": "accent" }, { "kind": "point", "at": [-0.6, 0], "tone": "accent" },
+    { "kind": "point", "at": [0.8, 1], "tone": "accent" }, { "kind": "point", "at": [2.2, 1], "tone": "accent" },
+    { "kind": "point", "at": [3.6, 1], "tone": "accent" }, { "kind": "point", "at": [5, 1], "tone": "accent" },
+    { "kind": "text", "at": [3.05, 0.53], "text": "logistic", "tone": "result", "leaderTo": [1.6, 0.83] },
+    { "kind": "text", "at": [-3.4, 0.76], "text": "linear", "tone": "alt", "leaderTo": [-1.2, 0.368] },
+    { "kind": "text", "at": [-4.3, 1.28], "text": "p = 1", "tone": "muted", "leaderTo": [-5.4, 1.01] },
+    { "kind": "text", "at": [4.2, -0.27], "text": "p = 0", "tone": "muted", "leaderTo": [5.4, -0.01] }
+  ]
+}
+:::
+
+## The model, and what its coefficients mean
 
 <!-- section: model -->
 
-First, some vocabulary.
+:::definition[The logistic regression model]{#logistic-model}
+With $p_i = P(Y_i=1\mid\mathbf{x}_i)$, the model is linear on the log-odds scale:
 
-:::definition[Odds and log-odds]{#odds}
-The odds of an event are the ratio of the probability it happens to the probability it does not,
+$$\operatorname{logit}(p_i) = \log\frac{p_i}{1-p_i} = \mathbf{x}_i^{\top}\boldsymbol\beta, \qquad \text{equivalently} \qquad p_i = \sigma\big(\mathbf{x}_i^{\top}\boldsymbol\beta\big),$$
 
-$$\text{odds} = \frac{p}{1-p},$$
-
-and the log-odds, or logit, is
-
-$$\log\!\left(\frac{p}{1-p}\right).$$
+with the $Y_i$ independent Bernoulli given the predictors.
 :::
 
-Odds of 3 (often written "3 to 1") mean the event is three times as likely to occur as not. Because $p$ is trapped in $[0,1]$ but odds range over $(0, \infty)$, and the log-odds range over all of $(-\infty, \infty)$, the log-odds live on exactly the same unbounded scale as a linear predictor. That is the trick: we do the linear modeling on the log-odds scale, where nothing can go out of bounds.
+The linearity is on the logit scale, not on the probability scale, and everything that is initially confusing about logistic regression follows from that. A one-unit change in $x_j$ changes the log-odds by exactly $\beta_j$ regardless of where you start; it changes the *probability* by an amount that depends on where you start, being largest near $p=\tfrac12$ and vanishing near $0$ and $1$.
 
-:::definition[The logistic regression model]{#logit-model}
-The model takes the log-odds to be a linear function of the predictors,
+:::definition[Odds and odds ratio]{#odds-ratio}
+The **odds** of an event of probability $p$ are $p/(1-p)$. For two groups with probabilities $p_1,p_2$, the **odds ratio** is
 
-$$\log\left(\frac{p}{1-p}\right) = b_0 + b_1 x_1 + \dots + b_k x_k,$$
-
-valid for $0 < p < 1$; the logit is undefined at $p=0$ and $p=1$. Solving for the probability gives the logistic (sigmoid) function
-
-$$p = \frac{1}{1 + e^{-(b_0 + b_1 x_1 + \dots + b_k x_k)}}.$$
+$$\text{OR} = \frac{p_1/(1-p_1)}{p_2/(1-p_2)} .$$
 :::
 
-:::proposition[Interpreting a logistic coefficient]
-The coefficient $b_j$ is the change in the log-odds of the outcome for a one-unit increase in $x_j$, holding the other variables constant. Exponentiating gives the odds ratio,
-
-$$e^{b_j},$$
-
-the multiplicative change in the odds.
+:::theorem[Coefficients are log odds ratios]{#coef-log-or}
+In the logistic model, increasing $x_j$ by one unit with all other predictors held fixed multiplies the odds by $e^{\beta_j}$. That is, $e^{\beta_j}$ is the odds ratio associated with a one-unit increase in $x_j$, and $\beta_j = \log(\text{OR})$.
 :::
 
-For example, if $b_1 = 0.693$ for a binary predictor, then $e^{0.693} \approx 2$, meaning the odds of the outcome are doubled when that predictor is present (holding others fixed).
+:::proof
+Write $\eta = \mathbf{x}^{\top}\boldsymbol\beta$ for the linear predictor. By the definition of the logit, the odds are
+
+$$\frac{p}{1-p} = e^{\eta}.$$
+
+Increasing $x_j$ by one with the others fixed replaces $\eta$ by $\eta + \beta_j$, so the odds become $e^{\eta+\beta_j} = e^{\eta}e^{\beta_j}$. The ratio of the new odds to the old is therefore $e^{\beta_j}$, independent of the starting value of $\eta$. $\blacksquare$
+:::
+
+The independence of the starting point is the whole reason the logit scale was chosen. On the probability scale no such constant statement exists — which is why "increases the probability by $\beta_j$" is never a correct reading of a logistic coefficient.
+
+:::pitfall
+An odds ratio is **not** a relative risk, and the two diverge badly for common outcomes. If a treatment moves a probability from $0.4$ to $0.6$, the relative risk is $0.6/0.4 = 1.5$ while the odds ratio is $(0.6/0.4)/(0.4/0.6) = 2.25$. Reporting the odds ratio in the language of risk overstates the effect by half again.
+
+The two agree only when the outcome is rare, since then $1-p\approx 1$ and the odds $p/(1-p)\approx p$. For an outcome with probability $0.01$ the two differ by about $1\%$; for one with probability $0.5$ they differ enormously.
+:::
+
+:::example[Reading a fitted logistic model]
+A model of loan default gives $\operatorname{logit}(\hat p) = -4 + 0.05\,(\text{age of debt in months})$. Compute the probability of default at $60$ months, the odds ratio per month, and per year.
+:::
+
+:::solution
+1. **Linear predictor** at $x=60$: $\eta = -4 + 0.05(60) = -4+3 = -1$.
+2. **Probability**: $\hat p = \sigma(-1) = 1/(1+e^{1}) = 1/3.71828 = 0.2689$.
+3. **Odds ratio per month**: $e^{0.05} = 1.0513$, so each extra month multiplies the odds of default by about $1.05$ — a $5.1\%$ increase in the odds.
+4. **Per year**: twelve months multiply the log-odds by $12\times 0.05 = 0.6$, so the odds ratio is $e^{0.6} = 1.8221$ — the odds nearly double over a year.
+5. Sanity check on the non-linearity: at $x=80$, $\eta = 0$ and $\hat p = 0.5$; at $x=100$, $\eta = 1$ and $\hat p = 0.7311$. The same $20$-month increase raises the probability by $0.231$ in the first step and by $0.231$ in the second — symmetric about $p=\tfrac12$, as $\sigma(-z)=1-\sigma(z)$ requires ✓ — but a further $20$ months to $x=120$ gives $\hat p = 0.8808$, a rise of only $0.150$. The probability effect shrinks as the curve flattens while the odds effect stays exactly constant.
+:::
 
 :::intuition
-Instead of predicting the probability directly, logistic regression predicts the 'log-odds' on a straight line. The S-curve (sigmoid) then converts those log-odds back into a clean probability between 0 and 1. The coefficients tell you how much each variable multiplies the odds of the event happening.
+Why odds rather than probabilities? Because odds multiply cleanly and probabilities do not.
+
+Probabilities are bounded above, so "doubling" one is not always possible — you cannot double $0.7$. Odds range over $(0,\infty)$ with no upper bound, so multiplying them is always meaningful, and taking logarithms turns that multiplication into addition. A model that is additive in log-odds is therefore multiplicative in odds, and can never produce an impossible value however extreme the predictors.
+
+The price is that the natural summary is a ratio of odds, which most people do not have an intuition for. That is a real cost, and it is why reporting predicted probabilities at a few representative predictor values is usually more informative to a reader than the coefficient table.
 :::
 
-:::example[Odds and probability convert both ways]
-Say the probability a customer buys is $p = 0.8$. The odds are $\frac{p}{1-p} = \frac{0.8}{0.2} = 4$ — a "4 to 1" chance of buying.
+:::figure[Equal steps in the linear predictor produce very unequal steps in probability. Each marked point is one unit further along $\eta$, and the vertical gaps between consecutive points shrink as the curve flattens: from $\eta=0$ to $1$ the probability rises by $0.231$, from $2$ to $3$ by only $0.072$, and from $4$ to $5$ by $0.011$. The odds ratio is the same $e^1=2.72$ at every step. This is why a logistic coefficient has no fixed meaning on the probability scale.]{#equal-logit-steps}
+{
+  "type": "plot",
+  "x": [-0.6, 6.4],
+  "y": [-0.12, 1.22],
+  "xTicks": 1,
+  "yTicks": 0.1,
+  "xLabel": "linear predictor",
+  "yLabel": "probability",
+  "marks": [
+    { "kind": "line", "through": [[-0.6, 1], [6.4, 1]], "tone": "muted", "dashed": true, "extend": false },
+    { "kind": "function", "fn": "1/(1+exp(-x))", "tone": "result" },
+    { "kind": "point", "at": [0, 0.5], "tone": "accent" },
+    { "kind": "point", "at": [1, 0.731], "tone": "accent" },
+    { "kind": "point", "at": [2, 0.881], "tone": "accent" },
+    { "kind": "point", "at": [3, 0.953], "tone": "accent" },
+    { "kind": "point", "at": [4, 0.982], "tone": "accent" },
+    { "kind": "point", "at": [5, 0.993], "tone": "accent" },
+    { "kind": "text", "at": [1.15, 0.36], "text": "+0.231", "tone": "alt", "leaderTo": [0.55, 0.62] },
+    { "kind": "text", "at": [3.3, 0.66], "text": "+0.072", "tone": "alt", "leaderTo": [2.55, 0.92] },
+    { "kind": "text", "at": [5.3, 0.78], "text": "+0.011", "tone": "alt", "leaderTo": [4.55, 0.988] },
+    { "kind": "text", "at": [1.5, 1.16], "text": "p = 1", "tone": "muted", "leaderTo": [0.4, 1.005] }
+  ]
+}
+:::
+
+:::example[The same coefficient, three different probability effects]
+For a model with $\beta_1 = 0.8$, compute the change in probability produced by a one-unit increase in $x$ starting from a linear predictor of $\eta = -2$, $\eta = 0$ and $\eta = 2$.
 :::
 
 :::solution
-1. Going the other way, suppose we are told the odds of an event are $3$. Solve $\frac{p}{1-p} = 3$: multiply out to get $p = 3(1-p) = 3 - 3p$, so $4p = 3$ and $p = 0.75$.
-2. Sanity check: $p = 0.75$ gives odds $\frac{0.75}{0.25} = 3$ ✓, and $p = 0.8$ gives back $p = \frac{4}{1+4} = 0.8$ ✓ (using $p = \frac{\text{odds}}{1+\text{odds}}$).
+1. **From $\eta=-2$:** $\sigma(-2) = 0.1192$ and $\sigma(-1.2) = 0.2315$, a rise of $0.1123$.
+2. **From $\eta=0$:** $\sigma(0)=0.5$ and $\sigma(0.8)=0.6900$, a rise of $0.1900$.
+3. **From $\eta=2$:** $\sigma(2)=0.8808$ and $\sigma(2.8)=0.9427$, a rise of $0.0619$.
+4. The same coefficient produces probability changes of $0.112$, $0.190$ and $0.062$ — differing by a factor of three depending only on the starting point.
+5. What *is* constant: the odds ratio $e^{0.8} = 2.2255$ at all three. Check the middle case directly: odds go from $0.5/0.5=1$ to $0.69/0.31 = 2.2258$ ✓.
+6. Sanity check on the pattern: the largest effect is at $\eta=0$, where the logistic curve is steepest ($\sigma' = 0.25$, its maximum), and it falls away symmetrically. That is the derivative $\sigma(1-\sigma)$ of the proposition *Properties of the logistic function*, visible as a rate of change.
 :::
 
-:::example[From coefficients to a predicted probability]
-Model for heart attack risk: $\text{logit}(p) = -4.2 + 0.8 \cdot \text{smoker} + 0.05 \cdot \text{age}$.
-:::
-
-:::solution
-1. Take a 50-year-old smoker: plug in $\text{smoker}=1$, $\text{age}=50$. The logit is $-4.2 + 0.8(1) + 0.05(50) = -4.2 + 0.8 + 2.5 = -0.9$.
-2. Convert the log-odds back to a probability with the sigmoid: $p = \frac{1}{1 + e^{-(-0.9)}} = \frac{1}{1 + e^{0.9}} = \frac{1}{1 + 2.46} \approx 0.29$.
-3. Sanity check: the logit is negative, so we expect $p < 0.5$, and indeed $0.29 < 0.5$ ✓.
-:::
-
-:::example[Interpreting an odds ratio]
-Using the same heart attack model, focus on the 'smoker' variable, whose coefficient is $b = 0.8$.
-:::
-
-:::solution
-1. The odds ratio is $e^{b} = e^{0.8} \approx 2.23$.
-2. Interpretation: holding age fixed, smokers have $2.23$ times the odds of a heart attack compared with non-smokers.
-3. Sanity check via the two logits: for a 50-year-old non-smoker the logit is $-4.2 + 0 + 2.5 = -1.7$, versus $-0.9$ for the smoker above. The difference is $-0.9 - (-1.7) = 0.8 = b$, and exponentiating that log-odds difference gives $e^{0.8} \approx 2.23$ — the same odds ratio ✓.
-:::
-
-## Estimation and Inference
+## Fitting by maximum likelihood
 
 <!-- section: estimation -->
 
-Parameters are estimated by maximum likelihood, not least squares. Each observation contributes its predicted probability of the outcome that actually occurred: $p_i$ if $y_i = 1$ and $1 - p_i$ if $y_i = 0$.
+Least squares does not apply: there is no constant-variance normal error to minimise squares of. Maximum likelihood does, and the model was in fact constructed so that it would.
 
-:::definition[Likelihood of a logistic model]
-For independent observations, the likelihood is the product of those contributions,
+:::theorem[The log-likelihood and the score equations]{#logistic-likelihood}
+With $p_i = \sigma(\mathbf{x}_i^{\top}\boldsymbol\beta)$, the log-likelihood is
 
-$$L = \prod_i p_i^{y_i}(1 - p_i)^{1 - y_i},$$
+$$\ell(\boldsymbol\beta) = \sum_{i=1}^{n}\Big[y_i\,\mathbf{x}_i^{\top}\boldsymbol\beta - \log\big(1+e^{\mathbf{x}_i^{\top}\boldsymbol\beta}\big)\Big],$$
 
-and the fitted coefficients are the ones that make it as large as possible — equivalently, that maximise its logarithm, the log-likelihood.
+and its gradient is
+
+$$\nabla\ell(\boldsymbol\beta) = \sum_{i=1}^{n}(y_i-p_i)\mathbf{x}_i = \mathbf{X}^{\top}(\mathbf{y}-\mathbf{p}).$$
 :::
 
-There is no closed-form solution — we use iterative numerical methods (Newton-Raphson or iteratively reweighted least squares). Wald tests (similar to t-tests) and likelihood ratio tests are used for inference on individual coefficients and groups of coefficients.
+:::proof
+Each $Y_i$ is Bernoulli$(p_i)$, so its contribution to the likelihood is $p_i^{y_i}(1-p_i)^{1-y_i}$ and to the log-likelihood
 
-Model fit is assessed with deviance, pseudo-$R^2$ measures (McFadden, Cox-Snell, Nagelkerke), and classification tables. Once we have predicted probabilities, we turn them into 0/1 predictions by comparing to a threshold, $0.5$ by default.
+$$y_i\log p_i + (1-y_i)\log(1-p_i) = y_i\log\frac{p_i}{1-p_i} + \log(1-p_i).$$
 
-:::definition[Sensitivity, specificity and the ROC curve]{#roc}
-Sensitivity is the fraction of true positives caught, and specificity is the fraction of true negatives correctly cleared. An ROC curve traces sensitivity against $1 - \text{specificity}$ as the threshold sweeps from 1 down to 0.
+The first term is $y_i\mathbf{x}_i^{\top}\boldsymbol\beta$ by the definition of the model. For the second, $1-p_i = 1-\sigma(\eta_i) = 1/(1+e^{\eta_i})$, so $\log(1-p_i) = -\log(1+e^{\eta_i})$. Summing gives $\ell$.
+
+For the gradient, differentiate with respect to $\boldsymbol\beta$ using $\partial\eta_i/\partial\boldsymbol\beta = \mathbf{x}_i$:
+
+$$\nabla\ell = \sum_i\left[y_i\mathbf{x}_i - \frac{e^{\eta_i}}{1+e^{\eta_i}}\mathbf{x}_i\right] = \sum_i (y_i - p_i)\mathbf{x}_i,$$
+
+since $e^{\eta}/(1+e^{\eta}) = \sigma(\eta) = p_i$. $\blacksquare$
 :::
 
-:::intuition
-Instead of minimizing squared errors, logistic regression chooses the coefficients that make the observed data as probable as possible under the model. It's like tuning a recipe until the outcomes you actually saw become the most likely ones the model would have predicted.
+The score equations $\mathbf{X}^{\top}(\mathbf{y}-\mathbf{p}) = \mathbf{0}$ are worth comparing with the normal equations $\mathbf{X}^{\top}(\mathbf{y}-\hat{\mathbf{y}}) = \mathbf{0}$ of the linear model. They have exactly the same form: the residuals are orthogonal to the predictors. The difference is that $\mathbf{p}$ depends on $\boldsymbol\beta$ non-linearly, so the equations cannot be solved in closed form.
+
+:::theorem[The log-likelihood is concave]{#logistic-concave}
+The Hessian of the log-likelihood is
+
+$$\nabla^2\ell(\boldsymbol\beta) = -\mathbf{X}^{\top}\mathbf{W}\mathbf{X}, \qquad \mathbf{W} = \operatorname{diag}\big(p_i(1-p_i)\big),$$
+
+which is negative semidefinite. Hence $\ell$ is concave, and if $\mathbf{X}$ has full rank and the $p_i$ lie strictly in $(0,1)$ it is strictly concave, so any stationary point is the unique global maximum.
 :::
 
-:::example[Computing a likelihood]
-Three independent observations with outcomes $y = (1, 0, 1)$. A candidate model predicts probabilities of "1" of $p = (0.8,\ 0.3,\ 0.6)$.
+:::proof
+Differentiate the gradient. Since $\partial p_i/\partial\boldsymbol\beta = \sigma'(\eta_i)\mathbf{x}_i = p_i(1-p_i)\mathbf{x}_i$ by the proposition *Properties of the logistic function*,
+
+$$\nabla^2\ell = -\sum_i p_i(1-p_i)\,\mathbf{x}_i\mathbf{x}_i^{\top} = -\mathbf{X}^{\top}\mathbf{W}\mathbf{X}.$$
+
+For any vector $\mathbf{v}$, writing $\mathbf{u} = \mathbf{X}\mathbf{v}$,
+
+$$\mathbf{v}^{\top}\big(\mathbf{X}^{\top}\mathbf{W}\mathbf{X}\big)\mathbf{v} = \mathbf{u}^{\top}\mathbf{W}\mathbf{u} = \sum_i p_i(1-p_i)u_i^2 \ \ge\ 0,$$
+
+every weight being non-negative. So $-\nabla^2\ell$ is positive semidefinite and $\ell$ is concave. Under full rank and $0<p_i<1$ the weights are strictly positive and $\mathbf{u}=\mathbf{0}$ forces $\mathbf{v}=\mathbf{0}$, giving strict concavity. $\blacksquare$
+:::
+
+Concavity is the guarantee that makes the iterative fit trustworthy: there are no local maxima to get trapped in, and Newton's method converges from essentially any starting point. The standard algorithm, **iteratively reweighted least squares**, is Newton's method written suggestively — each step solves a weighted least-squares problem with weights $p_i(1-p_i)$ and an adjusted response, so a logistic fit is a sequence of linear fits.
+
+:::example[One Newton step by hand]
+A single-parameter logistic model $\operatorname{logit}(p) = \beta$ (intercept only) is fitted to $n=10$ observations of which $7$ are successes. Starting from $\beta^{(0)}=0$, take one Newton step and compare with the exact maximiser.
 :::
 
 :::solution
-1. Each point contributes the probability of what actually happened: obs 1 was a 1, contributes $0.8$; obs 2 was a 0, contributes $1 - 0.3 = 0.7$; obs 3 was a 1, contributes $0.6$.
-2. Multiply (independence): $L = 0.8 \times 0.7 \times 0.6 = 0.336$.
-3. Sanity check that this beats a know-nothing model that predicts $p = 0.5$ for everyone: $L = 0.5 \times 0.5 \times 0.5 = 0.125$. Since $0.336 > 0.125$, the first model explains the data better ✓ — and maximum likelihood is the search for the coefficients that push $L$ as high as it will go.
+1. At $\beta^{(0)}=0$, every $p_i = \sigma(0) = 0.5$.
+2. The gradient is $\sum_i(y_i-p_i) = 7 - 10(0.5) = 2$.
+3. The Hessian is $-\sum_i p_i(1-p_i) = -10(0.25) = -2.5$.
+4. Newton's step is $\beta^{(1)} = \beta^{(0)} - \big(\nabla^2\ell\big)^{-1}\nabla\ell = 0 - (-2.5)^{-1}(2) = 0.8$.
+5. **Exact answer.** For an intercept-only model the MLE of $p$ is the sample proportion $0.7$ — the Bernoulli MLE from the estimation chapter, transported through invariance — so $\hat\beta = \operatorname{logit}(0.7) = \log(7/3) = 0.8473$.
+6. Sanity check: one step moved from $0$ to $0.8$, most of the way to $0.8473$. A second step would land within about $0.001$; Newton's method converges quadratically near the optimum, and by the theorem *The log-likelihood is concave* there is nowhere else for it to go.
 :::
 
-:::example[How the threshold trades sensitivity for specificity]
-Five patients, actual disease status ($1$ = disease) and model-predicted probabilities:
+
+:::definition[Deviance]{#deviance}
+The **deviance** of a fitted model is
+
+$$D = -2\,\ell(\hat{\boldsymbol\beta}),$$
+
+for binary data, measuring lack of fit; smaller is better. It plays the role $SSE$ plays in the linear model.
+:::
+
+:::theorem[Likelihood ratio test for nested models]{#lr-test}
+For a reduced model nested in a full model differing by $k$ parameters, under the null that the extra coefficients are all zero,
+
+$$D_{\text{red}} - D_{\text{full}} = 2\big[\ell_{\text{full}}-\ell_{\text{red}}\big] \ \xrightarrow{d}\ \chi^2_{k},$$
+
+rejecting for large values.
+:::
+
+:::proof
+This is Wilks' theorem, which we quote: twice the log-likelihood ratio between nested models converges in distribution to $\chi^2$ with degrees of freedom equal to the difference in the number of free parameters. The equality of the two expressions is immediate from the definition of deviance, the factors of $-2$ cancelling. $\blacksquare$
+:::
+
+This is the exact analogue of the nested $F$-test of the regression chapter, with deviance in place of $SSE$ and a $\chi^2$ reference in place of $F$. Individual coefficients can also be tested by the **Wald** statistic $\hat\beta_j/SE(\hat\beta_j)$, referred to a standard normal, with standard errors from the diagonal of $(\mathbf{X}^{\top}\mathbf{W}\mathbf{X})^{-1}$ — the observed information, exactly as the Cramér–Rao discussion of the estimation chapter would predict.
+
+:::example[Testing a fitted model]
+A model of default with two predictors has deviance $412.6$; dropping both gives deviance $431.9$. Test at $\alpha=0.05$ using $\chi^2_{0.05,2}=5.991$. Separately, one coefficient is $0.05$ with standard error $0.018$ — test it.
 :::
 
 :::solution
-| Patient | Actual $y$ | Predicted $p$ |
-|--------:|:----------:|:-------------:|
-| 1 | 1 | 0.90 |
-| 2 | 1 | 0.60 |
-| 3 | 0 | 0.40 |
-| 4 | 1 | 0.35 |
-| 5 | 0 | 0.20 |
-
-At threshold $0.5$ (predict disease if $p \ge 0.5$): flagged = patients 1, 2. Of the three true cases (1, 2, 4), we catch 2, so sensitivity $= 2/3 \approx 0.67$; both true non-cases (3, 5) are correctly cleared, so specificity $= 2/2 = 1$.
-Lower the threshold to $0.3$: flagged = patients 1, 2, 3, 4. Now all three true cases are caught, sensitivity $= 3/3 = 1$, but patient 3 (a non-case) is now a false positive, so specificity $= 1/2 = 0.5$.
-Sanity check: dropping the threshold raised sensitivity ($0.67 \to 1$) and lowered specificity ($1 \to 0.5$), exactly the trade-off the ROC curve traces out ✓.
+1. **Likelihood ratio test.** The difference is $431.9-412.6 = 19.3$ on $k=2$ degrees of freedom.
+2. Since $19.3 > 5.991$, reject: the two predictors jointly carry information about default.
+3. **Wald test.** $z = 0.05/0.018 = 2.778$, and $|2.778| > 1.96$, so that coefficient is significant at the $5\%$ level.
+4. Confidence interval for the coefficient: $0.05 \pm 1.96(0.018) = 0.05\pm 0.0353 = (0.0147,\ 0.0853)$.
+5. On the odds-ratio scale, exponentiate the endpoints — legitimate because $\exp$ is increasing, so the coverage is unchanged: $(e^{0.0147},\ e^{0.0853}) = (1.0148,\ 1.0890)$.
+6. Sanity check on the interval: it excludes $1$, agreeing with the significant Wald test ✓. Note that the interval is computed on the log-odds scale and then transformed, never the reverse — the sampling distribution is approximately normal for $\hat\beta$, not for $e^{\hat\beta}$, which is skewed.
 :::
 
-## Assumptions and Diagnostics
+## Assumptions, and the failure modes peculiar to this model
 
 <!-- section: assumptions -->
 
 :::definition[Assumptions of logistic regression]{#logistic-assumptions}
-- **Linearity in the logit**: the log-odds is a linear function of the predictors.
-- **Independence** of observations, the same requirement as in linear regression.
-- **No perfect separation**, complete or quasi-complete.
+1. **Independence** of the observations.
+2. **Linearity in the logit** — the log-odds is linear in the predictors.
+3. **No perfect multicollinearity**, so $\mathbf{X}$ has full rank.
+4. Adequate **sample size** relative to the number of predictors and the rarity of the outcome.
 :::
 
-Check linearity in the logit with LOWESS smoothed plots of the logit against each continuous predictor. Separation is the distinctive failure mode here: when a predictor perfectly predicts the outcome, the maximum likelihood estimates become infinite.
+Note what is *absent*: there is no normality assumption and no equal-variance assumption, because the response distribution is Bernoulli by construction and its variance $p_i(1-p_i)$ is determined by the mean rather than being a free parameter. Two of the four LINE conditions simply do not arise.
 
-:::note
-Large sample sizes are generally needed for reliable inference. The rule of thumb is at least 10 events per predictor variable.
+:::theorem[Separation destroys the maximum likelihood estimate]{#separation}
+If there is a vector $\mathbf{b}$ such that $\mathbf{x}_i^{\top}\mathbf{b} > 0$ whenever $y_i = 1$ and $\mathbf{x}_i^{\top}\mathbf{b} < 0$ whenever $y_i=0$ — the data are **completely separated** — then the likelihood has no maximum: $\ell(t\mathbf{b}) \to 0$ from below as $t\to\infty$, and the maximum likelihood estimate does not exist.
 :::
 
-:::intuition
-The key new assumption is that the relationship is linear on the log-odds scale, not on the probability scale. A variable can have a very nonlinear-looking effect on probability but still be perfectly linear in log-odds.
+:::proof
+Consider $\boldsymbol\beta = t\mathbf{b}$ for $t>0$. For an observation with $y_i=1$ the linear predictor is $t\,\mathbf{x}_i^{\top}\mathbf{b} \to +\infty$, so $p_i \to 1$ and its log-likelihood contribution $\log p_i \to 0$. For an observation with $y_i=0$ the predictor tends to $-\infty$, so $p_i\to 0$ and the contribution $\log(1-p_i)\to 0$.
+
+Every term therefore increases toward its supremum of $0$, so $\ell(t\mathbf{b})$ increases to $0$ as $t\to\infty$ — the supremum of the log-likelihood is $0$, and $0$ is not attained by any finite $\boldsymbol\beta$ since that would require some $p_i$ to equal exactly $0$ or $1$. Hence no maximiser exists, and the fitted coefficients diverge. $\blacksquare$
 :::
 
-:::example[Spotting perfect separation]
-Suppose every patient with cholesterol below $200$ is healthy ($y=0$) and every patient at or above $200$ is sick ($y=1$), with no overlap.
+:::pitfall
+Separation is easy to create accidentally and is reported confusingly by software: coefficients of magnitude $20$ or more with standard errors in the hundreds, or a warning about fitted probabilities numerically $0$ or $1$. It is not a convergence failure to be fixed by more iterations — the estimate genuinely does not exist.
+
+It happens most often with a categorical predictor having a category in which every outcome is the same, and it becomes more likely with small samples or many predictors. The usual remedies are to merge categories, drop the offending predictor, or use a penalised fit — Firth's correction, or a ridge-style penalty, both of which make the penalised likelihood attain a finite maximum.
+:::
+
+:::remark[Checking linearity in the logit, and how much data is needed]
+Linearity in the logit is checked by grouping the data on a continuous predictor, computing the empirical log-odds within each group, and plotting them against the predictor: the plot should be roughly straight. Curvature is repaired as it would be in ordinary regression, by adding a quadratic term or splines.
+
+For sample size, the binding constraint is not $n$ but the number of observations in the **rarer** outcome class. A common working rule asks for at least ten such observations per predictor, so a model with five predictors and a $5\%$ event rate wants at least $50$ events, hence about $1000$ observations. Below that, coefficients are biased away from zero and the Wald standard errors are unreliable.
+:::
+
+:::example[Checking linearity in the logit]
+A continuous predictor is grouped into five bins, giving success counts $3/40$, $9/40$, $20/40$, $31/40$, $36/40$ at bin midpoints $1,2,3,4,5$. Assess linearity in the logit.
 :::
 
 :::solution
-1. The likelihood is maximized by making the fitted probability jump from $0$ to $1$ right at $200$, which requires an infinitely steep sigmoid — i.e. the slope coefficient is driven toward $\pm\infty$.
-2. Symptom you would actually see: the software warns of non-convergence, or reports a huge coefficient with a gigantic standard error (e.g. $b = 34$ with SE $= 12000$).
-3. Fix: this is *complete separation*. Remedies include penalized/Firth logistic regression, dropping or combining the offending predictor, or gathering data that overlaps the boundary. Contrast with *quasi-complete separation*, where the split is perfect only along a tie.
+1. Compute the empirical proportions: $0.075$, $0.225$, $0.500$, $0.775$, $0.900$.
+2. Convert to log-odds, $\log\{p/(1-p)\}$:
+
+$$\log\tfrac{0.075}{0.925} = -2.512,\quad \log\tfrac{0.225}{0.775} = -1.237,\quad 0,\quad 1.237,\quad 2.197 .$$
+
+3. The successive differences are $1.275$, $1.237$, $1.237$, $0.960$ — close to constant across the middle and tailing off slightly at the top.
+4. A straight line is a good description, so linearity in the logit is supported, and the common difference of about $1.2$ estimates the slope.
+5. Sanity check on the raw proportions: their successive differences are $0.150, 0.275, 0.275, 0.125$ — markedly *not* constant, rising then falling. That is exactly the S-shape the logit transform is there to straighten, and it confirms that linearity should be assessed on the logit scale rather than the probability scale.
+6. What would have indicated a problem: log-odds differences that changed systematically, say $2.0, 1.2, 0.6, 0.2$, which would call for a quadratic term or a spline.
 :::
 
-:::example[Applying the events-per-variable rule]
-You want to fit a model with $5$ predictors. The rule of thumb asks for at least $10$ events (occurrences of the *less common* outcome) per predictor, so you need about $10 \times 5 = 50$ events.
+:::example[Diagnosing an implausible fit]
+A model predicting loan default from twelve predictors on $180$ loans, of which $14$ defaulted, reports one coefficient of $22.4$ with standard error $4{,}812$. What has happened?
 :::
 
 :::solution
-1. Your dataset has $600$ patients but only $40$ have the disease. The binding count is the events ($40$), not the total sample, giving $40 / 5 = 8$ events per variable — below $10$.
-2. Conclusion: with only $8$ events per predictor the estimates and their standard errors may be unstable; you should reduce the number of predictors (to at most $4$) or collect more cases before trusting the inference.
+1. A coefficient of $22.4$ means an odds ratio of $e^{22.4} \approx 5.4\times 10^{9}$ per unit — not a finding, an artefact.
+2. The enormous standard error is the tell. Recall that $SE$ comes from $(\mathbf{X}^{\top}\mathbf{W}\mathbf{X})^{-1}$ with weights $p_i(1-p_i)$; as fitted probabilities approach $0$ or $1$ the weights approach zero, the information matrix becomes near-singular, and its inverse blows up.
+3. This is separation, by the theorem *Separation destroys the maximum likelihood estimate*: some predictor (or combination) perfectly divides the defaulters from the rest, and the likelihood is being maximised by pushing that coefficient toward infinity. The iteration simply stopped at whatever the convergence tolerance allowed.
+4. The sample size makes it likely. With $14$ events and $12$ predictors, the events-per-predictor ratio is $14/12 = 1.2$, far below the working rule of $10$ — with that many dimensions and that few events, a perfect divider almost always exists.
+5. Sanity check on the direction of the fix: more iterations will not help, since there is no finite maximum to converge to. Reduce the predictors to at most one or two, or fit with Firth's penalty, which guarantees finite estimates.
 :::
 
-## Extensions and Related Models
+### Assessing a fitted classifier
+
+A logistic model returns probabilities. Turning those into decisions requires a threshold, and judging the result requires more than one number.
+
+:::definition[Confusion matrix and its rates]{#confusion-matrix}
+Classifying as positive when $\hat p_i > c$ produces counts of true positives $TP$, false positives $FP$, true negatives $TN$ and false negatives $FN$. Define
+
+$$\text{sensitivity} = \frac{TP}{TP+FN}, \qquad \text{specificity} = \frac{TN}{TN+FP}, \qquad \text{precision} = \frac{TP}{TP+FP}.$$
+:::
+
+:::proposition[The threshold trades the two error rates]{#threshold-tradeoff}
+Sensitivity is non-increasing in the threshold $c$ and specificity is non-decreasing. At $c=0$ sensitivity is $1$ and specificity $0$; at $c=1$ the reverse.
+:::
+
+:::proof
+Raising $c$ can only move cases from predicted-positive to predicted-negative, never the other way. So $TP$ cannot rise and $FN$ cannot fall, making sensitivity non-increasing; simultaneously $TN$ cannot fall and $FP$ cannot rise, making specificity non-decreasing. At $c=0$ every case is called positive, so $FN=0$ and $TN=0$, giving sensitivity $1$ and specificity $0$; at $c=1$ every case is called negative. $\blacksquare$
+:::
+
+Because the two rates move against each other, no threshold is "correct" without a statement of what the two errors cost. A screening test where a missed case is fatal and a false alarm means one more test should use a low threshold; a test triggering an invasive procedure should not.
+
+:::definition[ROC curve and AUC]{#roc}
+The **ROC curve** plots sensitivity against $1-$specificity as the threshold sweeps from $1$ to $0$. The **area under the curve** (AUC) summarises it in one number, and equals the probability that a randomly chosen positive case receives a higher fitted probability than a randomly chosen negative one.
+:::
+
+:::figure[ROC curves for three models. The diagonal is chance: a model whose scores carry no information about the outcome traces it, with AUC $0.5$. The curve for the stronger model bows further toward the top-left corner, where sensitivity is high while the false-positive rate is still low. AUC measures the whole curve and so is independent of any particular threshold — useful for comparing models, and useless for choosing an operating point, which requires knowing what the two errors cost.]{#roc-curves}
+{
+  "type": "plot",
+  "x": [-0.05, 1.28],
+  "y": [-0.08, 1.16],
+  "xTicks": 0.1,
+  "yTicks": 0.1,
+  "xLabel": "1 - specificity",
+  "yLabel": "sensitivity",
+  "marks": [
+    { "kind": "line", "through": [[0, 0], [1, 1]], "tone": "muted", "dashed": true, "extend": false },
+    { "kind": "function", "fn": "x^(1/4)", "tone": "result" },
+    { "kind": "function", "fn": "x^(1/2)", "tone": "accent" },
+    { "kind": "text", "at": [0.62, 1.1], "text": "AUC = 0.80", "tone": "result", "leaderTo": [0.3, 0.74] },
+    { "kind": "text", "at": [0.92, 0.6], "text": "AUC = 0.67", "tone": "accent", "leaderTo": [0.56, 0.748] },
+    { "kind": "text", "at": [0.8, 0.22], "text": "chance, AUC = 0.50", "tone": "muted", "leaderTo": [0.52, 0.52] }
+  ]
+}
+:::
+
+:::example[Reading a confusion matrix]
+At threshold $0.5$, a model applied to $200$ cases gives $TP=45$, $FN=15$, $FP=25$, $TN=115$. Compute the rates, and say what changes if the threshold is raised to $0.7$ giving $TP=32$, $FN=28$, $FP=8$, $TN=132$.
+:::
+
+:::solution
+1. **At $c=0.5$:** sensitivity $=45/60 = 0.75$; specificity $=115/140 = 0.8214$; precision $=45/70 = 0.6429$; accuracy $=(45+115)/200 = 0.80$.
+2. **At $c=0.7$:** sensitivity $=32/60 = 0.5333$; specificity $=132/140 = 0.9429$; precision $=32/40 = 0.80$; accuracy $=164/200 = 0.82$.
+3. Raising the threshold cut sensitivity by $0.217$ and raised specificity by $0.121$ — the trade of the proposition *The threshold trades the two error rates*, in both required directions ✓.
+4. Accuracy rose slightly, from $0.80$ to $0.82$, which illustrates why accuracy is a poor summary: it improved while the model became much worse at finding the cases it exists to find.
+5. Sanity check on the prevalence: only $60$ of $200$ cases are positive, so predicting "negative" for everything would score $140/200 = 0.70$ accuracy while detecting nothing at all. Any accuracy figure must be read against that baseline.
+:::
+
+:::pitfall
+**Accuracy is the wrong metric for an imbalanced outcome.** With a $1\%$ event rate, a model that never predicts the event is $99\%$ accurate and worthless. Report sensitivity and specificity, or precision and recall, and choose the threshold from the relative cost of the two errors.
+
+A second caution: AUC and calibration are different properties. A model whose fitted probabilities are all half their correct values ranks cases perfectly — so its AUC is unchanged — while every probability it reports is wrong. If the probabilities themselves will be used, check **calibration** by grouping cases into bins of predicted probability and comparing the mean prediction in each bin with the observed proportion; the pairs should lie near the diagonal.
+:::
+
+## Generalised linear models
 
 <!-- section: extensions -->
 
-Multinomial logistic regression handles more than two outcome categories.
+Logistic regression is not a special technique but an instance of a pattern, and naming the pattern makes several other models immediate.
 
-Ordinal logistic regression is appropriate when the outcome has a natural ordering (e.g., low/medium/high satisfaction).
+:::definition[Generalised linear model]{#glm}
+A **generalised linear model** specifies three things: a **distribution** for the response from the exponential family, a **linear predictor** $\eta_i = \mathbf{x}_i^{\top}\boldsymbol\beta$, and a **link function** $g$ connecting them through
 
-Regularized logistic regression (lasso, ridge) is very common in high-dimensional settings (genomics, text classification).
-
-:::remark
-Logistic regression is a special case of generalized linear models (GLMs), with a binomial distribution and logit link function.
+$$g\big(E(Y_i)\big) = \eta_i .$$
 :::
 
-:::intuition
-Once you understand binary logistic regression, the extensions are natural: predicting among several categories (multinomial), respecting order in the categories (ordinal), or adding shrinkage when you have thousands of predictors.
+Ordinary linear regression is the choice (normal, identity link); logistic regression is (Bernoulli, logit link). Two more choices cover most of what remains.
+
+| Response | Distribution | Link | Model |
+|---|---|---|---|
+| continuous | normal | identity | linear regression |
+| binary | Bernoulli | logit | logistic regression |
+| count | Poisson | log | Poisson regression |
+| count, over-dispersed | negative binomial | log | negative binomial regression |
+
+:::proposition[Poisson regression coefficients are log rate ratios]{#poisson-regression}
+In the model $\log E(Y_i) = \mathbf{x}_i^{\top}\boldsymbol\beta$ with $Y_i$ Poisson, increasing $x_j$ by one multiplies the expected count by $e^{\beta_j}$.
 :::
 
-:::example[Multinomial prediction via softmax]
-A model for three fruit classes produces raw scores (logits) $z = (z_{\text{apple}}, z_{\text{banana}}, z_{\text{cherry}}) = (1, 2, 0)$ for one item.
+:::proof
+$E(Y) = e^{\eta}$, so replacing $\eta$ by $\eta+\beta_j$ multiplies the mean by $e^{\beta_j}$, independently of the starting value — the same argument as the theorem *Coefficients are log odds ratios*, with the log link in place of the logit. $\blacksquare$
+:::
+
+:::remark[Why the log link for counts, and what over-dispersion means]
+The log link is chosen for counts for the same reason the logit was chosen for probabilities: it maps the constrained range of the mean — here $(0,\infty)$ — onto the whole real line, so no combination of predictors can produce an impossible negative expected count.
+
+The Poisson model carries a strong implication: by the properties of the Poisson distribution the variance equals the mean. Real count data frequently has variance well above the mean, a condition called **over-dispersion**, which leaves the coefficients roughly unbiased but makes the standard errors too small — the same pattern as heteroscedasticity in the linear model. The negative binomial distribution adds a dispersion parameter and is the standard remedy.
+:::
+
+:::remark[More than two categories]
+Two extensions handle responses with $k>2$ categories.
+
+**Multinomial logistic regression** picks a reference category and fits $k-1$ separate logit equations, each comparing one category against the reference — exactly the indicator coding of the ANOVA chapter, applied to the response instead of a predictor. It makes no assumption about ordering, and costs $k-1$ coefficients per predictor.
+
+**Ordinal logistic regression** exploits an ordering when there is one (a rating from "poor" to "excellent"). The usual form, the proportional odds model, fits $k-1$ intercepts but a *single* slope per predictor, assuming the effect on the log-odds of being above any threshold is the same at every threshold. That assumption buys a great deal of parsimony and should be checked rather than assumed.
+:::
+
+:::example[Choosing a model]
+For each response, name the appropriate GLM: (a) number of customer complaints per store per month; (b) whether a subscriber renews; (c) a satisfaction rating from 1 to 5; (d) time in minutes spent on a page.
 :::
 
 :::solution
-1. Softmax exponentiates and normalizes so the class probabilities sum to 1: compute $e^{1} \approx 2.72$, $e^{2} \approx 7.39$, $e^{0} = 1$, with sum $2.72 + 7.39 + 1 = 11.11$.
-2. Divide each by the sum: apple $\approx 2.72/11.11 = 0.245$, banana $\approx 7.39/11.11 = 0.665$, cherry $\approx 1/11.11 = 0.090$.
-3. Sanity check: the three probabilities add to $0.245 + 0.665 + 0.090 = 1.000$ ✓, and the largest logit (banana) gets the largest probability ✓. Binary logistic regression is exactly this with two classes, where softmax collapses to the ordinary sigmoid.
+1. **(a)** A count with no fixed upper bound: Poisson regression with a log link. Check for over-dispersion; if the variance much exceeds the mean, use negative binomial.
+2. **(b)** Binary: logistic regression.
+3. **(c)** Ordered categories: ordinal logistic regression, which respects the ordering and spends one slope per predictor rather than four. Multinomial would also fit but discards the ordering and estimates four times as many coefficients.
+4. **(d)** Continuous and positive, and likely right-skewed: ordinary regression on the log of the time is the simplest option, or a gamma GLM with a log link if the skew is severe.
+5. Sanity check on the pattern: in every case the link is chosen so that the linear predictor, which ranges over all of $\mathbb{R}$, maps onto the range the mean is allowed to occupy. That single requirement determines the identity link for an unconstrained mean, the log link for a positive one, and the logit for one confined to $(0,1)$.
 :::
 
 ## Common Mistakes
 
-- Interpreting the coefficients as changes in probability instead of changes in log-odds or odds ratios.
-- Reporting only accuracy on imbalanced data (a model that always predicts the majority class can have high accuracy but be useless).
-- Ignoring the linearity-in-the-logit assumption for continuous predictors.
-- Using logistic regression when the outcome is not truly binary or when events are not independent (e.g., clustered data).
-- Over-interpreting odds ratios as risk ratios when the outcome is common (odds ratios exaggerate effects when baseline risk is high).
+- **Reading a coefficient as a change in probability.** It is a change in log-odds; the probability effect depends on where you start and is largest near $p=\tfrac12$.
+- **Reporting an odds ratio as a relative risk.** They agree only for rare outcomes; at $p=0.4\to 0.6$ the odds ratio is $2.25$ against a relative risk of $1.5$.
+- **Exponentiating a confidence interval the wrong way round.** Build the interval on the log-odds scale, where the estimate is approximately normal, then transform the endpoints.
+- **Fitting a linear probability model and ignoring predictions outside $[0,1]$.** Heteroscedasticity can be patched; an impossible probability cannot.
+- **Treating separation as a convergence problem.** The maximum likelihood estimate does not exist; more iterations cannot find it. Use a penalised fit or fewer predictors.
+- **Counting $n$ rather than events.** The binding constraint is the number of observations in the rarer class, with about ten per predictor as a working minimum.
+- **Assuming Poisson regression fits any count.** It forces the variance to equal the mean; over-dispersed data needs a negative binomial or a robust standard error.
+- **Using multinomial regression for an ordered response.** It works, but discards the ordering and multiplies the number of coefficients.
