@@ -1,239 +1,808 @@
 ---
-title: Linear Regression and Correlation
+title: "Correlation and Regression"
 ---
 
-# Linear Regression and Correlation
+# Correlation and Regression
 
-Regression and correlation are tools for understanding relationships between variables. Correlation measures the strength and direction of a linear relationship; regression builds a predictive model.
+Every method so far has compared groups. Regression asks a different question: given a quantitative predictor, how does the response change as the predictor moves? The groups become a continuum, the $k$ means become a line, and almost everything from the previous chapter carries over — because, as that chapter's last section showed, ANOVA was already a regression.
 
-Simple linear regression fits a line $\hat{y} = b_0 + b_1 x$ to data, minimizing the sum of squared residuals. It is the workhorse of statistical modeling.
+The chapter has three movements. The first builds the simple case in scalar algebra, where every formula can be derived by hand: what correlation measures and what it provably cannot exceed, the least-squares line obtained by minimising a sum of squares, and the decomposition of variation that gives $R^2$ its meaning. The second adds inference — the sampling distribution of the slope, why the least-squares estimator is optimal among a large class, and the difference between predicting a mean and predicting an observation, which is the distinction most often collapsed in practice.
 
-These tools are the starting point for more complex models (multiple regression, logistic regression) that power modern data science.
+The third rewrites everything in matrix form and adds predictors. This is not a new theory but the same one written compactly, and the compression pays immediately: the normal equations become a single matrix equation, the fitted values become an orthogonal projection, and the residual-orthogonality facts that looked like lucky algebra in the scalar case become geometry. With that in hand, the genuinely multivariate problems — predictors that carry the same information, and choosing among models — can be stated properly.
+
+A warning that the chapter returns to at the end: none of this establishes causation, and the mathematics is completely silent on the question. A regression coefficient is a statement about association in the data at hand, and converting it into a claim about intervention requires assumptions that no amount of fitting can supply.
+
+Notation: $n$ paired observations $(x_i,y_i)$, means $\bar x$ and $\bar y$, and the shorthand sums
+
+$$S_{xx} = \sum_i (x_i-\bar x)^2, \qquad S_{yy} = \sum_i (y_i-\bar y)^2, \qquad S_{xy} = \sum_i (x_i-\bar x)(y_i-\bar y).$$
 
 ## Correlation
 
 <!-- section: correlation -->
 
-:::definition[Pearson correlation coefficient]{#pearson-r}
-The Pearson correlation coefficient measures the strength and direction of the linear association between two quantitative variables:
+Before fitting anything, ask how strongly two variables move together. The raw measure of co-movement is the covariance, and its defect is that it carries units.
 
-$$r = \frac{\sum(x_i-\bar{x})(y_i-\bar{y})}{\sqrt{\sum(x_i-\bar{x})^2\sum(y_i-\bar{y})^2}}.$$
+:::definition[Covariance and correlation]{#correlation-def}
+The **sample covariance** and **sample correlation** of paired data are
 
-It is dimensionless and always lies in $[-1,1]$.
+$$s_{xy} = \frac{S_{xy}}{n-1}, \qquad r = \frac{S_{xy}}{\sqrt{S_{xx}S_{yy}}} = \frac{s_{xy}}{s_x s_y}.$$
 :::
 
-$r = +1$: perfect positive linear relationship; $r = -1$: perfect negative linear relationship; $r = 0$: no linear relationship (a nonlinear one may still exist). Guidelines: $|r| \geq 0.8$ is typically considered strong; $0.5 \leq |r| < 0.8$ moderate; $|r| < 0.5$ weak.
+The covariance of heights in centimetres against weights in kilograms changes if you switch to inches and pounds; the correlation does not. Dividing by both standard deviations strips the units, and the result is confined to a fixed range — which is the content of the next theorem and the reason $r$ is interpretable at all.
 
-:::proposition[Test for zero correlation]
-Under $H_0: \rho = 0$, the statistic
+:::theorem[Correlation lies between -1 and 1]{#r-bounded}
+For any paired data with $S_{xx}, S_{yy} > 0$,
 
-$$t = \frac{r\sqrt{n-2}}{\sqrt{1-r^2}}$$
+$$-1 \le r \le 1,$$
 
-follows a $t$-distribution with $n-2$ degrees of freedom.
+with $r = \pm 1$ if and only if the points lie exactly on a straight line of non-zero slope.
 :::
 
-A statistically significant correlation does not imply a practically important one.
+:::proof
+Write $u_i = x_i - \bar x$ and $v_i = y_i - \bar y$. The Cauchy-Schwarz inequality for sums states
+
+$$\left(\sum_i u_iv_i\right)^2 \le \left(\sum_i u_i^2\right)\left(\sum_i v_i^2\right),$$
+
+that is $S_{xy}^2 \le S_{xx}S_{yy}$. Dividing by the positive $S_{xx}S_{yy}$ gives $r^2 \le 1$, hence $|r|\le 1$.
+
+For the equality case, recall that Cauchy-Schwarz is an equality exactly when the two vectors are proportional: $v_i = cu_i$ for all $i$ and some constant $c \ne 0$. That says $y_i - \bar y = c(x_i - \bar x)$ for every $i$, which is the equation of a line through $(\bar x,\bar y)$ with slope $c$. The sign of $r$ matches the sign of $c$. $\blacksquare$
+:::
+
+:::proposition[Correlation is invariant under increasing linear rescaling]{#r-invariant}
+If $x_i' = a + bx_i$ and $y_i' = c + dy_i$ with $b,d \ne 0$, then $r' = \operatorname{sign}(bd)\,r$. In particular $r$ is unchanged when both scales are multiplied by positive constants or shifted.
+:::
+
+:::proof
+Centring removes the additive constants: $x_i'-\bar x' = b(x_i-\bar x)$ and similarly for $y$. Hence $S_{xy}' = bd\,S_{xy}$, $S_{xx}' = b^2S_{xx}$ and $S_{yy}' = d^2S_{yy}$. Substituting,
+
+$$r' = \frac{bd\,S_{xy}}{\sqrt{b^2S_{xx}\,d^2S_{yy}}} = \frac{bd}{|b||d|}\cdot r = \operatorname{sign}(bd)\,r. \qquad \blacksquare$$
+:::
 
 :::pitfall
-Correlation does not imply causation. A positive $r$ between ice cream sales and drownings does not mean ice cream causes drownings — both are driven by hot weather (a confounding variable).
+$r$ measures **linear** association and nothing else. Data lying exactly on the parabola $y=x^2$ over a symmetric range of $x$ has $r=0$ — a perfect, deterministic relationship that the correlation reports as no association at all.
+
+The converse failure is equally common: a single outlying point can move $r$ from near zero to near one, since every term in $S_{xy}$ is a product of two deviations and an extreme point contributes an enormous one. Always plot the data. A correlation quoted without a scatterplot is a number whose meaning has not been checked.
 :::
 
-:::definition[Spearman's rank correlation]
-Spearman's $r_s$ is the Pearson correlation of the ranks of $x$ and $y$.
-:::
-
-Because it uses only ranks, $r_s$ is robust to outliers and appropriate for ordinal data or monotone (but not necessarily linear) relationships.
-
-:::intuition
-Correlation asks: when one variable goes up, does the other tend to go up too ($r > 0$), go down ($r < 0$), or do its own thing ($r \approx 0$)? A value of $r = 0.9$ means the two variables move together almost perfectly in a straight-line pattern.
-:::
-
-:::example[Computing $r$ and testing its significance]
-Data: $x = \{1,2,3,4,5\}$, $y = \{2,4,5,4,5\}$, so $\bar{x}=3$, $\bar{y}=4$, $n=5$.
+:::example[Computing r by hand]
+For the data $x = 1,2,3,4,5$ and $y = 2,4,5,4,5$, compute $r$.
 :::
 
 :::solution
-1. Numerator (already needed for the slope): $\sum(x_i-\bar{x})(y_i-\bar{y}) = (-2)(-2)+(-1)(0)+(0)(1)+(1)(0)+(2)(1) = 6$.
-2. $\sum(x_i-\bar{x})^2 = 4+1+0+1+4 = 10$; $\sum(y_i-\bar{y})^2 = 4+0+1+0+1 = 6$.
-3. $r = \dfrac{6}{\sqrt{10 \cdot 6}} = \dfrac{6}{\sqrt{60}} = \dfrac{6}{7.746} = 0.775$. This is positive and $|r|<0.8$, so a moderate-to-strong positive linear association.
-4. Test $H_0: \rho = 0$ with $t = \dfrac{r\sqrt{n-2}}{\sqrt{1-r^2}} = \dfrac{0.775\sqrt{3}}{\sqrt{1-0.6}} = \dfrac{1.342}{0.632} = 2.12$ on $n-2 = 3$ df.
-5. Sanity check: $r^2 = 6^2/60 = 36/60 = 0.6$, which we will see below equals $R^2$ for the regression of $y$ on this same $x$. Also $r$ lies in $[-1,1]$ as required. With only $n=5$ points, $t=2.12$ falls short of the two-sided $5\%$ critical value $t^*_{0.025,3}=3.182$, so we would not reject $H_0$ here — a small sample makes even a fairly high $r$ non-significant.
+1. Means: $\bar x = 3$, $\bar y = 4$.
+2. Deviations: $u = -2,-1,0,1,2$ and $v = -2,0,1,0,1$.
+3. $S_{xx} = 4+1+0+1+4 = 10$; $S_{yy} = 4+0+1+0+1 = 6$; $S_{xy} = 4+0+0+0+2 = 6$.
+4. Therefore
+
+$$r = \frac{6}{\sqrt{10\times 6}} = \frac{6}{\sqrt{60}} = \frac{6}{7.74597} = 0.7746 .$$
+
+5. Sanity check: $|r| \le 1$ ✓ as the theorem requires, and the value is positive, matching the generally upward drift of the data. Note it is not close to $1$ despite the upward trend — the point $(4,4)$ breaks the pattern, and $r$ registers that.
 :::
 
-## Simple Linear Regression
+:::example[One point moving the correlation]
+To the data $x=1,2,3,4,5$, $y=2,4,5,4,5$ (with $r=0.7746$) add a sixth point $(20,25)$. Recompute $r$.
+:::
+
+:::solution
+1. New means: $\bar x = 35/6 = 5.8333$, $\bar y = 45/6 = 7.5$.
+2. The new point's deviations are $u_6 = 14.1667$ and $v_6 = 17.5$, contributing $14.1667\times 17.5 = 247.92$ to $S_{xy}$ — against a total of $6$ from all five original points.
+3. Computing the full sums: $S_{xx} = 250.83$, $S_{yy} = 373.50$, $S_{xy} = 303.50$. Hence
+
+$$r = \frac{303.50}{\sqrt{250.83\times 373.50}} = \frac{303.50}{306.08} = 0.9916 .$$
+
+4. A single point has moved the correlation from $0.77$ to $0.99$, and it contributes $247.92/303.50 = 82\%$ of $S_{xy}$ by itself.
+5. Sanity check on why: every term of $S_{xy}$ is a product of two deviations, so a point far from both means contributes quadratically. One observation at ten times the spread of the others dominates the sum entirely.
+6. The reported $r=0.99$ is not describing the five original points at all — it is describing the fact that one point sits far away in a consistent direction. This is why the pitfall above insists on a scatterplot.
+:::
+
+## The least-squares line
 
 <!-- section: linear -->
 
-:::definition[Least-squares regression line]{#ols}
-Simple linear regression fits a line $\hat{y} = b_0 + b_1 x$ to data by minimising the sum of squared residuals
+Correlation summarises association with one number. A regression goes further and produces a function, which can be used to predict.
 
-$$\text{SSE} = \sum(y_i-\hat{y}_i)^2,$$
+:::definition[The simple linear regression model]{#slr-model}
+The model treats the predictor as fixed and the response as random,
 
-the ordinary least-squares (OLS) criterion.
+$$Y_i = \beta_0 + \beta_1 x_i + \varepsilon_i, \qquad \varepsilon_i \stackrel{\text{iid}}{\sim} N(0,\sigma^2),$$
+
+so that $E(Y_i) = \beta_0+\beta_1x_i$ and each observation deviates from that line by independent noise of constant variance.
 :::
 
-:::proposition[The least-squares slope and intercept]
-The minimising coefficients are
+:::theorem[The least-squares estimates]{#least-squares}
+The values of $b_0,b_1$ minimising the residual sum of squares $Q(b_0,b_1) = \sum_i (y_i - b_0 - b_1x_i)^2$ are
 
-$$b_1 = r\cdot\frac{s_y}{s_x} = \frac{\sum(x_i-\bar{x})(y_i-\bar{y})}{\sum(x_i-\bar{x})^2}, \qquad b_0 = \bar{y} - b_1\bar{x}.$$
+$$b_1 = \frac{S_{xy}}{S_{xx}}, \qquad b_0 = \bar y - b_1\bar x,$$
+
+and this minimum is unique whenever $S_{xx}>0$.
 :::
 
-Because $b_0 = \bar{y} - b_1\bar{x}$, the fitted line always passes through $(\bar{x}, \bar{y})$.
+:::proof
+$Q$ is a quadratic in two variables with positive-definite Hessian, so setting both partial derivatives to zero locates the unique global minimum.
 
-Interpretation: $b_1$ is the estimated change in $y$ for a one-unit increase in $x$, holding all else equal (in simple regression, 'all else' is trivially satisfied). $b_0$ is the predicted $y$ when $x = 0$ — it may lack practical meaning if $x = 0$ is outside the observed range.
+Differentiating in $b_0$:
 
-:::proposition[Sampling distribution of the slope]
-Under the standard assumptions — the LINE conditions below, in particular independent, normally distributed errors with constant variance $\sigma^2$ —
+$$\frac{\partial Q}{\partial b_0} = -2\sum_i (y_i - b_0 - b_1x_i) = 0 \iff \sum_i y_i = nb_0 + b_1\sum_i x_i,$$
 
-$$b_1 \sim N\!\left(\beta_1,\ \frac{\sigma^2}{\text{SS}_x}\right), \qquad \text{SS}_x = \sum(x_i-\bar{x})^2.$$
+which on dividing by $n$ gives $\bar y = b_0 + b_1\bar x$ — the line passes through the point of means.
+
+Differentiating in $b_1$:
+
+$$\frac{\partial Q}{\partial b_1} = -2\sum_i x_i(y_i-b_0-b_1x_i) = 0 \iff \sum_i x_iy_i = b_0\sum_i x_i + b_1\sum_i x_i^2 .$$
+
+These two are the **normal equations**. Substitute $b_0 = \bar y - b_1\bar x$ into the second and rearrange:
+
+$$\sum_i x_iy_i - n\bar x\bar y = b_1\left(\sum_i x_i^2 - n\bar x^2\right),$$
+
+and the two sides are precisely $S_{xy}$ and $b_1S_{xx}$, by the computational identity of the theorem *Computational formula for the variance*. Hence $b_1 = S_{xy}/S_{xx}$.
+
+For uniqueness, the Hessian of $Q$ is $2\begin{pmatrix} n & \sum x_i \\ \sum x_i & \sum x_i^2\end{pmatrix}$, whose determinant is $4n\big(\sum x_i^2 - n\bar x^2\big) = 4nS_{xx} > 0$; with positive diagonal it is positive definite, so the stationary point is a strict minimum. $\blacksquare$
 :::
 
-We estimate $\sigma$ by $s = \sqrt{\text{SSE}/(n-2)}$, giving the standard error $SE_{b_1} = s/\sqrt{\text{SS}_x}$. The test statistic $t = (b_1-0)/SE_{b_1}$ follows $t_{n-2}$ (the $-2$ is because two parameters, $b_0$ and $b_1$, are estimated). The $95\%$ CI for $\beta_1$ is $b_1 \pm t^*_{n-2}\cdot SE_{b_1}$; if this interval contains $0$, the slope is not significant at the $5\%$ level.
+:::corollary[Slope, correlation and the regression effect]{#slope-r}
+The slope and the correlation are related by
 
-Multiple linear regression extends the model to several predictors, $\hat{y} = b_0 + b_1 x_1 + \cdots + b_k x_k$, where each $b_j$ is the estimated effect of $x_j$ holding the other predictors constant. The OLS estimates are given in matrix form by
+$$b_1 = r\,\frac{s_y}{s_x}.$$
+:::
 
-$$\hat{\boldsymbol{\beta}} = (X^TX)^{-1}X^T\mathbf{y}.$$
+:::proof
+$b_1 = S_{xy}/S_{xx}$, and $r = S_{xy}/\sqrt{S_{xx}S_{yy}}$, so $S_{xy} = r\sqrt{S_{xx}S_{yy}}$. Substituting,
+
+$$b_1 = \frac{r\sqrt{S_{xx}S_{yy}}}{S_{xx}} = r\sqrt{\frac{S_{yy}}{S_{xx}}} = r\frac{s_y}{s_x}. \qquad \blacksquare$$
+:::
 
 :::intuition
-Regression fits the 'best straight line' through a scatter plot. 'Best' means the line minimises the total squared vertical distance from the points to the line. The slope tells you the predicted change in $y$ per unit increase in $x$.
+That corollary contains the phenomenon that gave regression its name. Measure both variables in standard units and the slope *is* $r$, which has absolute value at most $1$. So a subject one standard deviation above average in $x$ is predicted to be only $r$ standard deviations above average in $y$ — closer to the mean, in relative terms, than they were.
+
+This is **regression to the mean**, and it is a property of imperfect correlation, not a force acting on anything. Tall fathers have sons who are tall but on average less exceptionally so; a season of exceptional performance is typically followed by a more ordinary one. Nothing is pulling anyone back: the second measurement simply contains its own independent noise, and an extreme first measurement was probably extreme partly by luck.
 :::
 
-:::example[Computing and interpreting regression coefficients]
-Data: $x = \{1,2,3,4,5\}$, $y = \{2,4,5,4,5\}$. $\bar{x}=3$, $\bar{y}=4$.
+:::proposition[Two properties of least-squares residuals]{#residual-props}
+With $e_i = y_i - b_0 - b_1x_i$ the residuals from the least-squares fit,
+
+$$\sum_i e_i = 0 \qquad \text{and} \qquad \sum_i x_ie_i = 0 .$$
+:::
+
+:::proof
+These are exactly the two normal equations of the previous proof, rewritten. The first derivative condition says $\sum_i(y_i-b_0-b_1x_i)=0$, which is $\sum_i e_i = 0$; the second says $\sum_i x_i(y_i-b_0-b_1x_i)=0$, which is $\sum_i x_ie_i=0$. $\blacksquare$
+:::
+
+The second identity says the residuals are **orthogonal to the predictor**: whatever structure is left over carries no remaining linear relationship with $x$. That is a consequence of how the line was chosen, not a property of the data, and it is why a plot of residuals against $x$ can never show a linear trend — only curvature or changing spread, which is exactly what makes such a plot a useful diagnostic.
+
+:::example[Fitting the line]
+Fit the least-squares line to $x = 1,2,3,4,5$, $y = 2,4,5,4,5$, and predict $y$ at $x=6$.
 :::
 
 :::solution
-1. $\sum(x_i-\bar{x})(y_i-\bar{y}) = (-2)(-2)+(-1)(0)+(0)(1)+(1)(0)+(2)(1) = 4+0+0+0+2 = 6$.
-2. $\sum(x_i-\bar{x})^2 = 4+1+0+1+4 = 10$.
-3. $b_1 = 6/10 = 0.6$. $b_0 = 4 - 0.6(3) = 4-1.8 = 2.2$.
-4. Model: $\hat{y} = 2.2 + 0.6x$. Interpretation: each unit increase in $x$ is associated with a $0.6$-unit increase in predicted $y$.
-5. Prediction at $x=3$: $\hat{y} = 2.2 + 0.6(3) = 4$.
-6. Sanity check: the line must pass through $(\bar{x},\bar{y}) = (3,4)$, and indeed $\hat{y}=4$ at $x=3$. ✓
+1. From the correlation example, $S_{xx}=10$, $S_{xy}=6$, $\bar x = 3$, $\bar y = 4$.
+2. Slope: $b_1 = 6/10 = 0.6$. Intercept: $b_0 = 4 - 0.6(3) = 4-1.8 = 2.2$.
+3. The fitted line is $\hat y = 2.2 + 0.6x$.
+4. Check against the corollary *Slope, correlation and the regression effect*: $s_y/s_x = \sqrt{6/10} = 0.7746$, and $r\,s_y/s_x = 0.7746 \times 0.7746 = 0.6$ ✓.
+5. Fitted values at $x=1,\ldots,5$: $2.8,\ 3.4,\ 4.0,\ 4.6,\ 5.2$. Residuals: $-0.8,\ 0.6,\ 1.0,\ -0.6,\ -0.2$, which sum to $0$ ✓ as the proposition requires.
+6. Prediction at $x=6$: $\hat y = 2.2+3.6 = 5.8$. But $x=6$ is outside the observed range $[1,5]$, so this is extrapolation — see the last section for why that number deserves less confidence than the arithmetic suggests.
 :::
 
-:::example[Testing whether the slope is significant]
-Continuing the fit $\hat{y} = 2.2 + 0.6x$ above, the fitted values are $\{2.8, 3.4, 4.0, 4.6, 5.2\}$, so the residuals are $y_i-\hat{y}_i = \{-0.8,\,0.6,\,1.0,\,-0.6,\,-0.2\}$.
-:::
-
-:::solution
-1. $\text{SSE} = (-0.8)^2+0.6^2+1.0^2+(-0.6)^2+(-0.2)^2 = 0.64+0.36+1.00+0.36+0.04 = 2.4$.
-2. $s = \sqrt{\text{SSE}/(n-2)} = \sqrt{2.4/3} = \sqrt{0.8} = 0.894$.
-3. $SE_{b_1} = s/\sqrt{\text{SS}_x} = 0.894/\sqrt{10} = 0.894/3.162 = 0.283$.
-4. $t = b_1/SE_{b_1} = 0.6/0.283 = 2.12$ on $n-2 = 3$ df — identical to the correlation test statistic above, as it must be, since testing $\beta_1=0$ and $\rho=0$ are the same test.
-5. $95\%$ CI for $\beta_1$: $0.6 \pm 3.182(0.283) = 0.6 \pm 0.90 = (-0.30,\,1.50)$. Since this interval contains $0$, we cannot conclude the slope differs from zero at the $5\%$ level.
-:::
-
-## Residuals and Model Assessment
+## Residuals, R-squared, and what the fit explains
 
 <!-- section: residuals -->
 
-:::definition[Residual]
-The residual of observation $i$ is the difference between observed and fitted value,
+The same decomposition that drove ANOVA reappears here, and for the same reason: the fitted values play the role the group means played.
 
-$$e_i = y_i - \hat{y}_i.$$
+:::theorem[Decomposition of variation in regression]{#regression-decomposition}
+With $SST = S_{yy}$, $SSR = \sum_i(\hat y_i - \bar y)^2$ and $SSE = \sum_i (y_i-\hat y_i)^2$,
+
+$$SST = SSR + SSE .$$
 :::
 
-By construction of the least-squares fit, $\sum e_i = 0$ and $\sum x_i e_i = 0$.
+:::proof
+Write $y_i - \bar y = (\hat y_i - \bar y) + (y_i - \hat y_i)$, square and sum:
+
+$$SST = SSR + SSE + 2\sum_i (\hat y_i-\bar y)(y_i-\hat y_i) .$$
+
+The cross term vanishes. Since $\hat y_i = b_0+b_1x_i$ and $\bar y = b_0 + b_1\bar x$, we have $\hat y_i - \bar y = b_1(x_i-\bar x)$, and $y_i - \hat y_i = e_i$. So the cross term is
+
+$$2b_1\sum_i (x_i-\bar x)e_i = 2b_1\left(\sum_i x_ie_i - \bar x\sum_i e_i\right) = 2b_1(0 - 0) = 0$$
+
+by the proposition *Two properties of least-squares residuals*. $\blacksquare$
+:::
 
 :::definition[Coefficient of determination]{#r-squared}
-The coefficient of determination
+The proportion of variation in $y$ accounted for by the fit is
 
-$$R^2 = 1 - \frac{\text{SSE}}{\text{SST}}$$
-
-is the proportion of total variance in $y$ explained by the model.
+$$R^2 = \frac{SSR}{SST} = 1 - \frac{SSE}{SST} \in [0,1].$$
 :::
 
-For simple linear regression, $R^2 = r^2$. Adjusted $R^2$ penalises for the number of predictors and is used in multiple regression.
-
-A residual plot (residuals vs. $\hat{y}$ or vs. $x$) should show a random scatter around $0$ with roughly constant spread. Systematic patterns indicate violations of linearity or homoscedasticity.
-
-A Q-Q plot of residuals checks for normality. The standard error of the regression $s = \sqrt{\text{SSE}/(n-2)}$ estimates the typical size of a residual.
-
-Influential observations: leverage measures how unusual an $x$-value is; Cook's distance combines leverage and residual size to measure overall influence on the fitted model.
-
-:::intuition
-Residuals are the errors your model makes — how far each prediction is from the true value. A good model has residuals that look like pure noise: no pattern, roughly the same size everywhere. If the residuals fan out (get bigger for larger $x$), or show a curve, the model needs revision.
+:::proposition[For simple regression, R-squared is r squared]{#r2-equals-r-squared}
+In simple linear regression, $R^2 = r^2$, and $SSR = b_1 S_{xy} = b_1^2 S_{xx}$.
 :::
 
-:::example[Residuals, $R^2$, and the constraints]
-Using the fit $\hat{y} = 2.2 + 0.6x$ on $x = \{1,2,3,4,5\}$, $y = \{2,4,5,4,5\}$: the residuals are $e = \{-0.8,\,0.6,\,1.0,\,-0.6,\,-0.2\}$.
+:::proof
+Using $\hat y_i - \bar y = b_1(x_i-\bar x)$,
+
+$$SSR = b_1^2\sum_i (x_i-\bar x)^2 = b_1^2 S_{xx} = \frac{S_{xy}^2}{S_{xx}^2}\cdot S_{xx} = \frac{S_{xy}^2}{S_{xx}},$$
+
+which also equals $b_1 S_{xy}$. Dividing by $SST = S_{yy}$,
+
+$$R^2 = \frac{S_{xy}^2}{S_{xx}S_{yy}} = r^2 . \qquad \blacksquare$$
+:::
+
+:::definition[Residual standard error]{#residual-se}
+The error variance is estimated by
+
+$$s^2 = \frac{SSE}{n-2},$$
+
+the divisor being $n-2$ because two parameters were estimated from the data.
+:::
+
+:::pitfall
+$R^2$ measures how much variation the fit accounts for, and that is all. It does not say the model is correct, that the relationship is linear, or that $x$ causes $y$.
+
+Anscombe's quartet is the standard demonstration: four data sets with identical means, identical variances, identical $r$, identical fitted lines and identical $R^2$, of which only one is appropriately described by a straight line — the others contain a clear curve, a single high-leverage point driving everything, and an outlier. Every summary statistic agrees; the scatterplots do not.
+
+$R^2$ also rises mechanically with every predictor added, which is what the adjusted version in the model-selection section corrects.
+:::
+
+:::example[Decomposing the variation]
+For the fitted line $\hat y = 2.2+0.6x$ on the running example, compute $SSR$, $SSE$, $R^2$ and $s$.
 :::
 
 :::solution
-1. Constraint 1: $\sum e_i = -0.8+0.6+1.0-0.6-0.2 = 0$. ✓ (OLS forces this.)
-2. Constraint 2: $\sum x_i e_i = 1(-0.8)+2(0.6)+3(1.0)+4(-0.6)+5(-0.2) = -0.8+1.2+3.0-2.4-1.0 = 0$. ✓
-3. $\text{SSE} = \sum e_i^2 = 2.4$ (from the previous example). $\text{SST} = \sum(y_i-\bar{y})^2 = 4+0+1+0+1 = 6$.
-4. $R^2 = 1 - \text{SSE}/\text{SST} = 1 - 2.4/6 = 1 - 0.4 = 0.6$. The model explains $60\%$ of the variance in $y$.
-5. Sanity check: for simple regression $R^2 = r^2$, and earlier $r = 0.775$, so $r^2 = 0.600$. ✓ The residual standard error is $s = \sqrt{2.4/3} = 0.894$, the typical size of a prediction error, which is consistent with residuals ranging from $-0.8$ to $1.0$.
+1. By the proposition *For simple regression, R-squared is r squared*, $SSR = b_1S_{xy} = 0.6\times 6 = 3.6$.
+2. $SST = S_{yy} = 6$, so $SSE = 6 - 3.6 = 2.4$.
+3. Confirm directly from the residuals $-0.8, 0.6, 1.0, -0.6, -0.2$: their squares are $0.64, 0.36, 1.00, 0.36, 0.04$, summing to $2.40$ ✓.
+4. $R^2 = 3.6/6 = 0.6$, and indeed $r^2 = 0.7746^2 = 0.6$ ✓.
+5. $s^2 = SSE/(n-2) = 2.4/3 = 0.8$, so $s = 0.894$.
+6. Reading the result: the line accounts for $60\%$ of the variation in $y$, and a typical observation sits about $0.89$ units off it. With $\bar y = 4$, that residual spread is not small relative to the response, which is the honest counterweight to a respectable-sounding $R^2$.
 :::
 
-## Conditions for Regression (LINE)
+:::figure[The fitted line $\hat y = 2.2+0.6x$ with the five data points and their residuals drawn as vertical segments. Least squares chooses the line minimising the total squared length of those segments — not their total length, and not the perpendicular distances. The dashed horizontal line is $\bar y = 4$, the prediction the model would make with no predictor at all; $R^2$ compares the squared lengths against that baseline.]{#least-squares-fit}
+{
+  "type": "plot",
+  "x": [0.3, 5.9],
+  "y": [1.2, 6.5],
+  "xTicks": 1,
+  "yTicks": 1,
+  "xLabel": "x",
+  "yLabel": "y",
+  "marks": [
+    { "kind": "line", "through": [[0.3, 4], [5.9, 4]], "tone": "muted", "dashed": true, "extend": false },
+    { "kind": "function", "fn": "2.2 + 0.6*x", "tone": "result" },
+    { "kind": "path", "points": [[1, 2], [1, 2.8]], "tone": "alt" },
+    { "kind": "path", "points": [[2, 4], [2, 3.4]], "tone": "alt" },
+    { "kind": "path", "points": [[3, 5], [3, 4.0]], "tone": "alt" },
+    { "kind": "path", "points": [[4, 4], [4, 4.6]], "tone": "alt" },
+    { "kind": "path", "points": [[5, 5], [5, 5.2]], "tone": "alt" },
+    { "kind": "point", "at": [1, 2], "tone": "accent" },
+    { "kind": "point", "at": [2, 4], "tone": "accent" },
+    { "kind": "point", "at": [3, 5], "tone": "accent" },
+    { "kind": "point", "at": [4, 4], "tone": "accent" },
+    { "kind": "point", "at": [5, 5], "tone": "accent" },
+    { "kind": "text", "at": [4.55, 6.2], "text": "fitted line", "tone": "result", "leaderTo": [5.3, 5.38] },
+    { "kind": "text", "at": [1.75, 1.75], "text": "residual", "tone": "alt", "leaderTo": [1.02, 2.4] },
+    { "kind": "text", "at": [3.5, 3.3], "text": "mean of y", "tone": "muted", "leaderTo": [3.4, 3.95] }
+  ]
+}
+:::
+
+## The conditions, and why least squares is optimal
 
 <!-- section: conditions -->
 
 :::definition[The LINE conditions]{#line-conditions}
-The inference of the previous sections is valid under four assumptions.
+The simple regression model assumes
 
-- **Linearity**: the mean of $y$ is a linear function of $x$.
-- **Independence**: observations are independent.
-- **Normality**: residuals are approximately normally distributed.
-- **Equal variance** (homoscedasticity): the variance of the residuals is constant across all values of $x$.
+- **L**inearity — $E(Y\mid x)$ really is $\beta_0+\beta_1x$;
+- **I**ndependence — the errors are independent of one another;
+- **N**ormality — the errors are normally distributed;
+- **E**qual variance — $\operatorname{Var}(\varepsilon_i)=\sigma^2$ for every $i$ (homoscedasticity).
 :::
 
-Each condition has its own diagnostic. Check linearity with a scatter plot before fitting. Independence is violated by time-series data with autocorrelated errors. Normality is required for exact $t$ and $F$ inference and is less critical for large samples by the CLT. Equal variance is violated when residuals fan out — check with a residual plot.
+These are not equally important, and the following theorem says exactly which ones the central result needs. Notice what is *absent* from its hypotheses.
 
-:::note
-Transformations (log, square root) of $x$ or $y$ can often fix non-linearity or non-constant variance and restore the LINE conditions.
+:::theorem[Gauss-Markov]{#gauss-markov}
+Assume linearity, independence and equal variance, with $E(\varepsilon_i)=0$ — **normality is not required**. Then among all estimators of $\beta_1$ that are linear in the $Y_i$ and unbiased, the least-squares estimator $b_1$ has the smallest variance. It is the **best linear unbiased estimator**.
 :::
 
-:::intuition
-The LINE acronym is the checklist for valid regression: the relationship must be Linear, observations Independent, residuals Normally distributed, and the spread of residuals Equal across $x$-values. Violating any condition may invalidate $p$-values and confidence intervals.
+:::proof
+First write $b_1$ in linear form. Since $\sum_i(x_i-\bar x)\bar y = 0$,
+
+$$b_1 = \frac{S_{xy}}{S_{xx}} = \sum_i w_iY_i \qquad \text{with} \qquad w_i = \frac{x_i-\bar x}{S_{xx}},$$
+
+and these weights satisfy two identities used repeatedly below:
+
+$$\sum_i w_i = 0, \qquad \sum_i w_ix_i = \frac{\sum_i (x_i-\bar x)x_i}{S_{xx}} = \frac{S_{xx}}{S_{xx}} = 1 .$$
+
+**Unbiasedness.** $E(b_1) = \sum_i w_i(\beta_0+\beta_1x_i) = \beta_0\sum_i w_i + \beta_1\sum_i w_ix_i = 0 + \beta_1 = \beta_1$.
+
+**Variance.** By independence and equal variance, $\operatorname{Var}(b_1) = \sigma^2\sum_i w_i^2 = \sigma^2 S_{xx}/S_{xx}^2 = \sigma^2/S_{xx}$.
+
+**Optimality.** Let $\tilde b = \sum_i c_iY_i$ be any other linear unbiased estimator. Unbiasedness for every $\beta_0,\beta_1$ forces $\sum_i c_i = 0$ and $\sum_i c_ix_i = 1$, by the same expansion. Write $c_i = w_i + d_i$; then the two constraints give $\sum_i d_i = 0$ and $\sum_i d_ix_i = 0$. Now
+
+$$\sum_i c_i^2 = \sum_i w_i^2 + 2\sum_i w_id_i + \sum_i d_i^2,$$
+
+and the cross term vanishes:
+
+$$\sum_i w_id_i = \frac{1}{S_{xx}}\sum_i (x_i-\bar x)d_i = \frac{1}{S_{xx}}\left(\sum_i x_id_i - \bar x\sum_i d_i\right) = 0 .$$
+
+Therefore $\operatorname{Var}(\tilde b) = \sigma^2\sum_i c_i^2 = \sigma^2\big(\sum_i w_i^2 + \sum_i d_i^2\big) \ge \sigma^2\sum_i w_i^2 = \operatorname{Var}(b_1)$, with equality only when every $d_i=0$, that is $\tilde b = b_1$. $\blacksquare$
 :::
 
-:::example[Diagnosing the conditions from residuals]
-Suppose we regress $y$ on $x$ and, ordering the residuals by increasing $x$, we observe $e = \{0.1,\,-0.3,\,0.2,\,-1.0,\,2.5,\,-3.1\}$.
+The theorem is doing more than it appears. It says least squares is not an arbitrary choice of loss function: under three assumptions that say nothing about the shape of the error distribution, minimising squared error delivers the best estimator in a large and natural class. Normality is needed only later, for the $t$-distributions used in inference — and even there the central limit theorem makes the requirement soft for large $n$.
+
+:::corollary[Precision of the slope]{#slope-variance}
+$\operatorname{Var}(b_1) = \sigma^2/S_{xx}$, estimated by $s^2/S_{xx}$, so the standard error of the slope is $s/\sqrt{S_{xx}}$.
+:::
+
+:::proof
+Contained in the proof above; the estimate substitutes $s^2$ for $\sigma^2$. $\blacksquare$
+:::
+
+:::remark[How to make a slope precise]
+$S_{xx}$ in the denominator is the design lever. It grows with the sample size *and* with the spread of the predictor values, so a slope is estimated precisely when the $x$'s are spread widely, and imprecisely when they are bunched together however many there are.
+
+That has a concrete design consequence: if the linear model is trusted and the only goal is estimating the slope, the optimal allocation puts half the observations at each extreme of the feasible $x$ range. The reason not to do that in practice is that such a design has no ability whatever to detect curvature — with two distinct $x$ values, every fit is a perfect straight line through two means. Spreading $x$ buys precision; keeping intermediate values buys the ability to check the assumption.
+:::
+
+:::pitfall
+Of the four conditions, **independence** is again the one that cannot be repaired after the fact and cannot be checked from the fitted values alone. Time-ordered data with correlated errors produces standard errors that are too small — sometimes by a large factor — so slopes look significant when they are not.
+
+**Equal variance** is checked by plotting residuals against fitted values and looking for a funnel shape. A widening funnel does not bias $b_1$, which stays unbiased by Gauss-Markov's independence of the normality assumption, but it invalidates the standard errors and therefore every $p$-value and interval.
+
+**Linearity** is checked on the same plot, looking for curvature. A residual plot showing a clear U shape means the model is wrong in a way that $R^2$ may not reveal.
+:::
+
+:::figure[Three residual-versus-fitted plots. The first shows what a satisfied model looks like: residuals scattered in a horizontal band of constant width, centred on zero, with no pattern. The second funnels outward — the variance grows with the fitted value, so equal variance fails and every standard error is wrong. The third bends — the true relationship is curved, so linearity fails and the fitted line is systematically too low at the ends and too high in the middle. Only the first licenses the inference in this chapter.]{#residual-diagnostics}
+{
+  "type": "plot",
+  "x": [-0.5, 32.5],
+  "y": [-4.6, 5.6],
+  "xTicks": 5,
+  "yTicks": 2,
+  "xLabel": "fitted value",
+  "yLabel": "residual",
+  "marks": [
+    { "kind": "line", "through": [[-0.5, 0], [32.5, 0]], "tone": "muted", "dashed": true, "extend": false },
+    { "kind": "point", "at": [1, 1.1], "tone": "accent" }, { "kind": "point", "at": [2, -0.9], "tone": "accent" },
+    { "kind": "point", "at": [3, 0.6], "tone": "accent" }, { "kind": "point", "at": [4, -1.2], "tone": "accent" },
+    { "kind": "point", "at": [5, 0.9], "tone": "accent" }, { "kind": "point", "at": [6, -0.4], "tone": "accent" },
+    { "kind": "point", "at": [7, 1.3], "tone": "accent" }, { "kind": "point", "at": [8, -1.0], "tone": "accent" },
+    { "kind": "point", "at": [12, 0.2], "tone": "result" }, { "kind": "point", "at": [13, -0.3], "tone": "result" },
+    { "kind": "point", "at": [14, 0.7], "tone": "result" }, { "kind": "point", "at": [15, -0.9], "tone": "result" },
+    { "kind": "point", "at": [16, 1.6], "tone": "result" }, { "kind": "point", "at": [17, -1.9], "tone": "result" },
+    { "kind": "point", "at": [18, 2.8], "tone": "result" }, { "kind": "point", "at": [19, -3.2], "tone": "result" },
+    { "kind": "point", "at": [23, -2.4], "tone": "alt" }, { "kind": "point", "at": [24, -1.0], "tone": "alt" },
+    { "kind": "point", "at": [25, 0.4], "tone": "alt" }, { "kind": "point", "at": [26, 1.3], "tone": "alt" },
+    { "kind": "point", "at": [27, 1.5], "tone": "alt" }, { "kind": "point", "at": [28, 0.9], "tone": "alt" },
+    { "kind": "point", "at": [29, -0.6], "tone": "alt" }, { "kind": "point", "at": [30, -2.5], "tone": "alt" },
+    { "kind": "text", "at": [4.5, 4.6], "text": "(a) healthy", "tone": "accent", "leaderTo": [5.0, 1.15] },
+    { "kind": "text", "at": [14.6, 4.6], "text": "(b) funnel", "tone": "result", "leaderTo": [18.0, 3.05] },
+    { "kind": "text", "at": [25.4, 4.0], "text": "(c) curved", "tone": "alt", "leaderTo": [26.5, 1.75] }
+  ]
+}
+:::
+
+:::example[Reading a residual plot]
+A regression of sales on advertising spend gives $R^2 = 0.88$, and the residual plot funnels outward. What is compromised, and what is not?
 :::
 
 :::solution
-1. Linearity: scan for a systematic curve in residuals vs. $x$. Here the residuals do not simply rise then fall (no clear U-shape), so linearity is plausible — but always confirm on the scatter plot first.
-2. Equal variance: the residual magnitudes grow from about $0.1$–$0.3$ at small $x$ to $2.5$–$3.1$ at large $x$. This fanning-out is textbook heteroscedasticity, so the equal-variance condition fails. A remedy is to model $\log y$ instead of $y$, or use weighted least squares.
-3. Independence: if these $6$ points are a time series, check for runs of same-signed residuals (a Durbin–Watson statistic far from $2$). With unordered cross-sectional data collected independently, this condition is usually met by design.
-4. Normality: with only $6$ points a Q–Q plot is uninformative; normality is checked more reliably with a larger sample, and by the CLT it matters least for large $n$.
-5. Conclusion: the equal-variance condition is violated, so the reported $t$ tests and CIs are untrustworthy until the fan pattern is fixed. Sanity check: whatever transform we apply, re-plot the new residuals and confirm the spread is now roughly constant before trusting inference.
+1. **Still valid.** By the theorem *Gauss-Markov*... almost. Gauss-Markov assumes equal variance, so strictly the optimality claim goes too. But unbiasedness of $b_1$ survives — it needs only $E(\varepsilon_i)=0$ and linearity, neither of which a funnel violates. The fitted line is still estimating the right slope on average.
+2. **Compromised.** Every standard error, every $t$ statistic, every confidence and prediction interval. All of them were computed from a single $\sigma^2$, and there is no single $\sigma^2$.
+3. The direction of the error is not uniform: the intervals are too narrow where the spread is large and too wide where it is small, so the overall coverage can look roughly right while being wrong at every individual $x$.
+4. Remedies: model the variance (weighted least squares, weighting each observation by $1/\hat\sigma_i^2$), transform the response (a log transform often stabilises a funnel that widens proportionally), or use standard errors robust to heteroscedasticity.
+5. Sanity check on the role of $R^2 = 0.88$: it says nothing about this. $R^2$ is computed from the sums of squares and is entirely blind to how the residuals are distributed across the range — which is exactly the pitfall about Anscombe's quartet, met here in the wild.
 :::
 
-## Extrapolation and Limitations
+## Inference for the slope, and two kinds of prediction
+
+<!-- section: inference -->
+
+:::theorem[Sampling distribution of the slope]{#slope-t}
+Under the full LINE conditions,
+
+$$\frac{b_1 - \beta_1}{s/\sqrt{S_{xx}}} \sim t_{\,n-2},$$
+
+so a $100(1-\alpha)\%$ confidence interval for $\beta_1$ is $b_1 \pm t_{\alpha/2,n-2}\,s/\sqrt{S_{xx}}$, and $H_0:\beta_1=0$ is tested by referring $b_1/(s/\sqrt{S_{xx}})$ to $t_{n-2}$.
+:::
+
+:::proof
+By the theorem *Gauss-Markov*, $b_1$ is a linear combination of the $Y_i$; under normality that combination is normal, with mean $\beta_1$ and variance $\sigma^2/S_{xx}$. So $(b_1-\beta_1)/(\sigma/\sqrt{S_{xx}})$ is standard normal.
+
+Independently of it, $SSE/\sigma^2 \sim \chi^2_{n-2}$ — quoted, as the analogous fact was in the $t$-test chapter, the degrees of freedom being $n-2$ because two parameters were fitted. Forming the ratio $Z/\sqrt{V/(n-2)}$ as in the definition *Student's t-distribution* replaces $\sigma$ by $s$ and gives $t_{n-2}$. $\blacksquare$
+:::
+
+Testing $H_0:\beta_1=0$ is testing whether the predictor carries any linear information about the response. For simple regression this is the same test as the ANOVA $F$ of the previous chapter, and indeed $F = t^2$ again — the model comparison being between the fitted line and the intercept-only model.
+
+Prediction needs more care, because there are two different questions and they have different answers.
+
+:::theorem[Confidence and prediction intervals]{#prediction-intervals}
+At a predictor value $x_0$, with $\hat y_0 = b_0+b_1x_0$, a $100(1-\alpha)\%$ interval for the **mean response** $E(Y\mid x_0)$ is
+
+$$\hat y_0 \pm t_{\alpha/2,n-2}\;s\sqrt{\frac{1}{n} + \frac{(x_0-\bar x)^2}{S_{xx}}},$$
+
+while a $100(1-\alpha)\%$ **prediction interval** for a single new observation at $x_0$ is
+
+$$\hat y_0 \pm t_{\alpha/2,n-2}\;s\sqrt{1 + \frac{1}{n} + \frac{(x_0-\bar x)^2}{S_{xx}}}.$$
+:::
+
+:::proof
+Write $\hat y_0 = \bar y + b_1(x_0-\bar x)$, using $b_0 = \bar y - b_1\bar x$. The two terms are independent — $\bar Y$ and $b_1$ are uncorrelated, since $\operatorname{Cov}(\bar Y, b_1) = \sigma^2\sum_i w_i/n = 0$ by the weight identity — so
+
+$$\operatorname{Var}(\hat y_0) = \frac{\sigma^2}{n} + (x_0-\bar x)^2\frac{\sigma^2}{S_{xx}} = \sigma^2\left(\frac1n + \frac{(x_0-\bar x)^2}{S_{xx}}\right),$$
+
+which gives the first interval on replacing $\sigma$ by $s$ and using $t_{n-2}$.
+
+For a new observation $Y_0 = \beta_0+\beta_1x_0+\varepsilon_0$, the prediction error is $Y_0 - \hat y_0$, and $\varepsilon_0$ is independent of the data used to fit. Variances therefore add:
+
+$$\operatorname{Var}(Y_0 - \hat y_0) = \sigma^2 + \operatorname{Var}(\hat y_0) = \sigma^2\left(1 + \frac1n + \frac{(x_0-\bar x)^2}{S_{xx}}\right),$$
+
+which is the second interval. $\blacksquare$
+:::
+
+:::intuition
+The extra $1$ under the square root is the whole difference, and it never goes away. Estimating the *average* response at $x_0$ gets easier with more data, and the interval shrinks toward zero width as $n\to\infty$. Predicting a *single* new observation does not, because that observation has its own noise $\varepsilon_0$, which no amount of data about other observations can reduce.
+
+So the prediction interval has a floor at roughly $\pm t\,s$, and with infinite data it converges to the interval you would draw around the true line from knowing $\sigma$ alone. Confusing the two produces prediction intervals far too narrow, which is one of the more consequential errors in applied work.
+:::
+
+:::example[Both intervals, at the centre and at the edge]
+For the running example ($n=5$, $s=0.894$, $S_{xx}=10$, $\bar x = 3$, $\hat y = 2.2+0.6x$, $t_{0.025,3}=3.182$), give the $95\%$ confidence and prediction intervals at $x_0=3$ and at $x_0=5$.
+:::
+
+:::solution
+1. **At $x_0=3=\bar x$.** $\hat y_0 = 2.2+1.8 = 4.0$, and $(x_0-\bar x)^2 = 0$.
+2. Mean response: $s\sqrt{1/5} = 0.894\times 0.4472 = 0.400$, margin $3.182\times 0.400 = 1.273$, interval $(2.73,\ 5.27)$.
+3. New observation: $s\sqrt{1+1/5} = 0.894\times 1.0954 = 0.980$, margin $3.182\times 0.980 = 3.118$, interval $(0.88,\ 7.12)$ — nearly two and a half times as wide.
+4. **At $x_0=5$.** $\hat y_0 = 5.2$, and $(x_0-\bar x)^2/S_{xx} = 4/10 = 0.4$.
+5. Mean response: $s\sqrt{0.2+0.4} = 0.894\times 0.7746 = 0.693$, margin $2.204$, interval $(3.00,\ 7.40)$.
+6. Sanity check on the shape: both intervals are narrowest at $\bar x$ and widen as $x_0$ moves away, because the $(x_0-\bar x)^2$ term grows. The fitted line pivots about the point of means, so a small error in the slope has little effect near $\bar x$ and a growing effect further out — which is the mathematical reason extrapolation is dangerous, quantified.
+:::
+
+:::example[Testing the slope]
+Test $H_0:\beta_1=0$ for the running example at $\alpha = 0.05$.
+:::
+
+:::solution
+1. Standard error: $s/\sqrt{S_{xx}} = 0.894/\sqrt{10} = 0.894/3.1623 = 0.2828$.
+2. Statistic: $t = 0.6/0.2828 = 2.121$ on $n-2 = 3$ degrees of freedom.
+3. Against $t_{0.025,3} = 3.182$: do not reject. The slope is not distinguishable from zero.
+4. Sanity check against $R^2$: the fit accounts for $60\%$ of the variation, which sounds substantial, yet the slope is not significant — because $n=5$ leaves only $3$ degrees of freedom and the critical value is correspondingly large. A high $R^2$ on tiny data is not evidence of a real relationship.
+5. Confirm via $F$: $F = t^2 = 4.5$, and $MSR/MSE = 3.6/(2.4/3) = 3.6/0.8 = 4.5$ ✓, the equivalence noted after the theorem *Sampling distribution of the slope*.
+6. The confidence interval says the same thing more usefully: $0.6 \pm 3.182(0.2828) = 0.6\pm 0.900 = (-0.30,\ 1.50)$. It contains zero, and it is wide enough to be compatible with a substantial positive slope as well — the experiment has not settled the question either way.
+:::
+
+:::figure[Confidence and prediction bands for the fitted line. Both are narrowest at $\bar x = 3$ and flare outwards, because the fitted line pivots about the point of means. The prediction band (outer) stays far wider than the confidence band (inner) at every $x$, and the gap never closes: more data shrinks the uncertainty about the line but not the noise in a future observation.]{#regression-bands}
+{
+  "type": "plot",
+  "x": [0.5, 5.6],
+  "y": [-0.9, 9.5],
+  "xTicks": 1,
+  "yTicks": 2,
+  "xLabel": "x",
+  "yLabel": "y",
+  "marks": [
+    { "kind": "function", "fn": "2.2+0.6*x + 3.182*0.894*sqrt(1+0.2+(x-3)^2/10)", "tone": "muted", "dashed": true },
+    { "kind": "function", "fn": "2.2+0.6*x - 3.182*0.894*sqrt(1+0.2+(x-3)^2/10)", "tone": "muted", "dashed": true },
+    { "kind": "function", "fn": "2.2+0.6*x + 3.182*0.894*sqrt(0.2+(x-3)^2/10)", "tone": "alt" },
+    { "kind": "function", "fn": "2.2+0.6*x - 3.182*0.894*sqrt(0.2+(x-3)^2/10)", "tone": "alt" },
+    { "kind": "function", "fn": "2.2+0.6*x", "tone": "result" },
+    { "kind": "point", "at": [1, 2], "tone": "accent" },
+    { "kind": "point", "at": [2, 4], "tone": "accent" },
+    { "kind": "point", "at": [3, 5], "tone": "accent" },
+    { "kind": "point", "at": [4, 4], "tone": "accent" },
+    { "kind": "point", "at": [5, 5], "tone": "accent" },
+    { "kind": "text", "at": [1.35, 8.9], "text": "prediction band", "tone": "muted", "leaderTo": [2.0, 7.0] },
+    { "kind": "text", "at": [3.95, 7.6], "text": "confidence band", "tone": "alt", "leaderTo": [4.3, 6.2] },
+    { "kind": "text", "at": [4.6, 1.2], "text": "fitted line", "tone": "result", "leaderTo": [4.85, 5.0] }
+  ]
+}
+:::
+
+## Many predictors: the matrix formulation
+
+<!-- section: matrix -->
+
+With several predictors the scalar formulas become unmanageable, and rewriting in matrix notation does more than save ink: it turns the algebra into geometry, and the geometry explains results that looked accidental.
+
+:::definition[The multiple regression model in matrix form]{#matrix-model}
+With $p$ parameters (an intercept and $p-1$ predictors), collect the data into
+
+$$\mathbf{y} = \begin{pmatrix} y_1\\ \vdots\\ y_n\end{pmatrix}, \qquad \mathbf{X} = \begin{pmatrix} 1 & x_{11} & \cdots & x_{1,p-1}\\ \vdots & \vdots & & \vdots \\ 1 & x_{n1} & \cdots & x_{n,p-1}\end{pmatrix}, \qquad \boldsymbol\beta = \begin{pmatrix}\beta_0\\ \vdots\\ \beta_{p-1}\end{pmatrix},$$
+
+with $\mathbf{X}$ the **design matrix**. The model is
+
+$$\mathbf{y} = \mathbf{X}\boldsymbol\beta + \boldsymbol\varepsilon, \qquad E(\boldsymbol\varepsilon)=\mathbf{0},\quad \operatorname{Var}(\boldsymbol\varepsilon)=\sigma^2\mathbf{I}.$$
+:::
+
+The single equation $\operatorname{Var}(\boldsymbol\varepsilon)=\sigma^2\mathbf{I}$ encodes two of the LINE conditions at once: the off-diagonal zeros are independence, and the constant diagonal is equal variance.
+
+:::theorem[The normal equations and the least-squares solution]{#matrix-normal-equations}
+The vector minimising $\|\mathbf{y}-\mathbf{X}\mathbf{b}\|^2$ satisfies the **normal equations**
+
+$$\mathbf{X}^{\!\top}\mathbf{X}\,\hat{\boldsymbol\beta} = \mathbf{X}^{\!\top}\mathbf{y},$$
+
+and if $\mathbf{X}$ has full column rank then $\mathbf{X}^{\!\top}\mathbf{X}$ is invertible and
+
+$$\hat{\boldsymbol\beta} = (\mathbf{X}^{\!\top}\mathbf{X})^{-1}\mathbf{X}^{\!\top}\mathbf{y}.$$
+:::
+
+:::proof
+Expand the objective:
+
+$$Q(\mathbf{b}) = (\mathbf{y}-\mathbf{X}\mathbf{b})^{\!\top}(\mathbf{y}-\mathbf{X}\mathbf{b}) = \mathbf{y}^{\!\top}\mathbf{y} - 2\mathbf{b}^{\!\top}\mathbf{X}^{\!\top}\mathbf{y} + \mathbf{b}^{\!\top}\mathbf{X}^{\!\top}\mathbf{X}\mathbf{b},$$
+
+using $\mathbf{b}^{\!\top}\mathbf{X}^{\!\top}\mathbf{y} = \mathbf{y}^{\!\top}\mathbf{X}\mathbf{b}$, both being scalars. Differentiating with respect to $\mathbf{b}$,
+
+$$\nabla Q = -2\mathbf{X}^{\!\top}\mathbf{y} + 2\mathbf{X}^{\!\top}\mathbf{X}\mathbf{b},$$
+
+and setting it to zero gives the normal equations.
+
+For full rank: if $\mathbf{X}^{\!\top}\mathbf{X}\mathbf{v}=\mathbf{0}$ then $\mathbf{v}^{\!\top}\mathbf{X}^{\!\top}\mathbf{X}\mathbf{v} = \|\mathbf{X}\mathbf{v}\|^2 = 0$, so $\mathbf{X}\mathbf{v}=\mathbf{0}$, and full column rank forces $\mathbf{v}=\mathbf{0}$. Hence $\mathbf{X}^{\!\top}\mathbf{X}$ is invertible, and being positive definite by the same computation, the stationary point is the unique minimum. $\blacksquare$
+:::
+
+:::definition[Hat matrix]{#hat-matrix}
+The **hat matrix** is $\mathbf{H} = \mathbf{X}(\mathbf{X}^{\!\top}\mathbf{X})^{-1}\mathbf{X}^{\!\top}$, so that the fitted values and residuals are
+
+$$\hat{\mathbf{y}} = \mathbf{X}\hat{\boldsymbol\beta} = \mathbf{H}\mathbf{y}, \qquad \mathbf{e} = \mathbf{y}-\hat{\mathbf{y}} = (\mathbf{I}-\mathbf{H})\mathbf{y}.$$
+:::
+
+:::theorem[Least squares is orthogonal projection]{#projection}
+$\mathbf{H}$ is symmetric and idempotent ($\mathbf{H}^2=\mathbf{H}$), satisfies $\mathbf{H}\mathbf{X}=\mathbf{X}$, and is the orthogonal projection onto the column space of $\mathbf{X}$. Consequently $\mathbf{X}^{\!\top}\mathbf{e}=\mathbf{0}$: the residual vector is orthogonal to every predictor.
+:::
+
+:::proof
+Symmetry: $\mathbf{H}^{\!\top} = \mathbf{X}\big((\mathbf{X}^{\!\top}\mathbf{X})^{-1}\big)^{\!\top}\mathbf{X}^{\!\top} = \mathbf{H}$, since $\mathbf{X}^{\!\top}\mathbf{X}$ is symmetric and so is its inverse.
+
+Idempotence: the inner factors cancel,
+
+$$\mathbf{H}^2 = \mathbf{X}(\mathbf{X}^{\!\top}\mathbf{X})^{-1}\underbrace{\mathbf{X}^{\!\top}\mathbf{X}(\mathbf{X}^{\!\top}\mathbf{X})^{-1}}_{=\;\mathbf{I}}\mathbf{X}^{\!\top} = \mathbf{H}.$$
+
+Likewise $\mathbf{H}\mathbf{X} = \mathbf{X}(\mathbf{X}^{\!\top}\mathbf{X})^{-1}\mathbf{X}^{\!\top}\mathbf{X} = \mathbf{X}$, so $\mathbf{H}$ fixes the column space pointwise. A symmetric idempotent matrix fixing a subspace pointwise is the orthogonal projection onto it.
+
+Finally, from the normal equations $\mathbf{X}^{\!\top}\mathbf{X}\hat{\boldsymbol\beta}=\mathbf{X}^{\!\top}\mathbf{y}$ we get
+
+$$\mathbf{X}^{\!\top}\mathbf{e} = \mathbf{X}^{\!\top}(\mathbf{y}-\mathbf{X}\hat{\boldsymbol\beta}) = \mathbf{X}^{\!\top}\mathbf{y} - \mathbf{X}^{\!\top}\mathbf{X}\hat{\boldsymbol\beta} = \mathbf{0}. \qquad \blacksquare$$
+:::
+
+:::intuition
+The geometry makes the whole method obvious in hindsight. The vector $\mathbf{y}$ lives in $\mathbb{R}^n$; the fitted values $\mathbf{X}\mathbf{b}$, as $\mathbf{b}$ ranges over all coefficient vectors, sweep out a $p$-dimensional subspace — the column space of $\mathbf{X}$, the set of all predictions the model is capable of making.
+
+Least squares asks for the point of that subspace closest to $\mathbf{y}$, and the closest point of a subspace is the foot of the perpendicular. So the fit *is* the orthogonal projection, and the residual is the perpendicular component. Every algebraic identity in this chapter is that picture written in coordinates: residuals summing to zero is orthogonality to the intercept column of ones, $\sum x_ie_i=0$ is orthogonality to the predictor column, and $SST=SSR+SSE$ is Pythagoras' theorem on the right triangle with legs $\hat{\mathbf{y}}-\bar y\mathbf{1}$ and $\mathbf{e}$.
+:::
+
+:::theorem[Mean and variance of the coefficient estimates]{#beta-moments}
+Under the model, $\hat{\boldsymbol\beta}$ is unbiased with
+
+$$E(\hat{\boldsymbol\beta}) = \boldsymbol\beta, \qquad \operatorname{Var}(\hat{\boldsymbol\beta}) = \sigma^2(\mathbf{X}^{\!\top}\mathbf{X})^{-1},$$
+
+and $s^2 = SSE/(n-p)$ is unbiased for $\sigma^2$. The standard error of $\hat\beta_j$ is $s\sqrt{[(\mathbf{X}^{\!\top}\mathbf{X})^{-1}]_{jj}}$, and $(\hat\beta_j-\beta_j)/SE(\hat\beta_j) \sim t_{\,n-p}$.
+:::
+
+:::proof
+Write $\mathbf{A} = (\mathbf{X}^{\!\top}\mathbf{X})^{-1}\mathbf{X}^{\!\top}$, a fixed matrix, so $\hat{\boldsymbol\beta} = \mathbf{A}\mathbf{y}$ is linear in $\mathbf{y}$. Then
+
+$$E(\hat{\boldsymbol\beta}) = \mathbf{A}E(\mathbf{y}) = \mathbf{A}\mathbf{X}\boldsymbol\beta = (\mathbf{X}^{\!\top}\mathbf{X})^{-1}\mathbf{X}^{\!\top}\mathbf{X}\boldsymbol\beta = \boldsymbol\beta .$$
+
+For the variance, the rule $\operatorname{Var}(\mathbf{A}\mathbf{y}) = \mathbf{A}\operatorname{Var}(\mathbf{y})\mathbf{A}^{\!\top}$ with $\operatorname{Var}(\mathbf{y})=\sigma^2\mathbf{I}$ gives
+
+$$\operatorname{Var}(\hat{\boldsymbol\beta}) = \sigma^2\mathbf{A}\mathbf{A}^{\!\top} = \sigma^2(\mathbf{X}^{\!\top}\mathbf{X})^{-1}\mathbf{X}^{\!\top}\mathbf{X}(\mathbf{X}^{\!\top}\mathbf{X})^{-1} = \sigma^2(\mathbf{X}^{\!\top}\mathbf{X})^{-1}.$$
+
+The degrees of freedom $n-p$ arise because $\mathbf{e}=(\mathbf{I}-\mathbf{H})\mathbf{y}$ lies in the orthogonal complement of a $p$-dimensional subspace, which has dimension $n-p$; the unbiasedness of $s^2$ and the $t$ distribution then follow as in the simple case. $\blacksquare$
+:::
+
+:::pitfall
+In multiple regression, $\beta_j$ is the change in $E(Y)$ per unit change in $x_j$ **with all other predictors held fixed**. That is a different quantity from the simple-regression slope of $y$ on $x_j$ alone, and the two can have opposite signs.
+
+The classic instance: regressing income on years of education gives a positive slope; adding occupation to the model can shrink or reverse it, because education's effect operates partly *through* occupation, and holding occupation fixed removes that pathway. Neither coefficient is wrong; they answer different questions. Reporting a multiple-regression coefficient as "the effect of $x_j$" without naming what is being held fixed is ambiguous at best.
+:::
+
+:::example[A two-predictor fit read correctly]
+A model of house price (thousands) on floor area ($x_1$, in $100\,\text{m}^2$) and age ($x_2$, years) gives $\hat y = 120 + 85x_1 - 1.4x_2$ with standard errors $9.2$ and $0.35$, from $n = 60$ houses. Interpret, and test each coefficient at $\alpha=0.05$ with $t_{0.025,57}=2.002$.
+:::
+
+:::solution
+1. **Interpretation.** Among houses *of the same age*, each additional $100\,\text{m}^2$ is associated with $\$85{,}000$ more. Among houses *of the same size*, each additional year of age is associated with $\$1{,}400$ less.
+2. Degrees of freedom: $n-p = 60-3 = 57$, since $p=3$ parameters were fitted.
+3. Area: $t = 85/9.2 = 9.24$, far beyond $2.002$ — strongly significant.
+4. Age: $t = -1.4/0.35 = -4.00$, and $|-4.00| > 2.002$ — significant.
+5. Confidence interval for the area coefficient: $85 \pm 2.002(9.2) = 85\pm 18.4 = (66.6,\ 103.4)$. The association is clearly positive but its magnitude is pinned down only to within about $\pm 22\%$.
+6. Sanity check on the intercept: $\hat\beta_0 = 120$ is the predicted price of a brand-new house of zero floor area, which does not exist. An intercept is frequently meaningless in isolation and is not evidence of anything wrong with the model — it is a fitted constant, not a prediction at a real design point.
+:::
+
+:::example[The normal equations by hand]
+For the running data $x = 1,2,3,4,5$, $y = 2,4,5,4,5$, write $\mathbf{X}^{\!\top}\mathbf{X}$ and $\mathbf{X}^{\!\top}\mathbf{y}$ and solve the normal equations, confirming the scalar answer.
+:::
+
+:::solution
+1. The design matrix has a column of ones and the $x$ column, so
+
+$$\mathbf{X}^{\!\top}\mathbf{X} = \begin{pmatrix} n & \sum x_i \\ \sum x_i & \sum x_i^2 \end{pmatrix} = \begin{pmatrix} 5 & 15 \\ 15 & 55\end{pmatrix}, \qquad \mathbf{X}^{\!\top}\mathbf{y} = \begin{pmatrix} \sum y_i \\ \sum x_iy_i\end{pmatrix} = \begin{pmatrix} 20 \\ 66 \end{pmatrix},$$
+
+using $\sum x_i^2 = 1+4+9+16+25 = 55$ and $\sum x_iy_i = 2+8+15+16+25 = 66$.
+2. The determinant is $5(55)-15^2 = 275-225 = 50$, so
+
+$$(\mathbf{X}^{\!\top}\mathbf{X})^{-1} = \frac{1}{50}\begin{pmatrix} 55 & -15\\ -15 & 5\end{pmatrix}.$$
+
+3. Therefore
+
+$$\hat{\boldsymbol\beta} = \frac{1}{50}\begin{pmatrix} 55 & -15\\ -15 & 5\end{pmatrix}\begin{pmatrix}20\\66\end{pmatrix} = \frac{1}{50}\begin{pmatrix} 1100-990 \\ -300+330\end{pmatrix} = \frac{1}{50}\begin{pmatrix}110\\30\end{pmatrix} = \begin{pmatrix}2.2\\0.6\end{pmatrix}.$$
+
+4. This is exactly $b_0 = 2.2$, $b_1 = 0.6$ from the scalar computation ✓.
+5. Sanity check on the determinant: $n\sum x_i^2 - (\sum x_i)^2 = nS_{xx} = 5\times 10 = 50$ ✓, which is the same quantity that appeared in the Hessian in the proof of the theorem *The least-squares estimates*. It is non-zero exactly when the $x$'s are not all identical — the full-rank condition in this simplest case.
+6. Standard errors follow from the same inverse: $\operatorname{Var}(\hat\beta_1) = \sigma^2\times 5/50 = \sigma^2/10 = \sigma^2/S_{xx}$ ✓, matching the corollary *Precision of the slope*.
+:::
+
+## When predictors carry the same information
+
+<!-- section: multicollinearity -->
+
+The matrix formula $\operatorname{Var}(\hat{\boldsymbol\beta}) = \sigma^2(\mathbf{X}^{\!\top}\mathbf{X})^{-1}$ warns of a specific failure mode: if $\mathbf{X}^{\!\top}\mathbf{X}$ is near-singular, its inverse has enormous entries and the coefficients are estimated terribly.
+
+:::definition[Multicollinearity and the variance inflation factor]{#vif}
+**Multicollinearity** is strong linear association among the predictors. Its effect on predictor $j$ is measured by the **variance inflation factor**
+
+$$\text{VIF}_j = \frac{1}{1-R_j^2},$$
+
+where $R_j^2$ is the coefficient of determination from regressing $x_j$ on all the *other* predictors.
+:::
+
+:::theorem[Variance inflation]{#variance-inflation}
+The variance of the $j$-th coefficient estimate is
+
+$$\operatorname{Var}(\hat\beta_j) = \frac{\sigma^2}{S_{jj}}\cdot\frac{1}{1-R_j^2} = \frac{\sigma^2}{S_{jj}}\,\text{VIF}_j,$$
+
+where $S_{jj}=\sum_i(x_{ij}-\bar x_j)^2$. So the variance is that of a simple regression on $x_j$ alone, multiplied by the inflation factor.
+:::
+
+:::proof
+We quote the standard identity, whose derivation uses the partitioned-inverse formula for $(\mathbf{X}^{\!\top}\mathbf{X})^{-1}$. The content is readable directly: regress $x_j$ on the other predictors and let $\mathbf{r}_j$ be the residual vector, the part of $x_j$ *not* explained by the others. Then $\hat\beta_j$ depends on the data only through $\mathbf{r}_j$, with
+
+$$\operatorname{Var}(\hat\beta_j) = \frac{\sigma^2}{\|\mathbf{r}_j\|^2}, \qquad \|\mathbf{r}_j\|^2 = S_{jj}(1-R_j^2),$$
+
+the second equality being the definition of $R_j^2$ applied to that auxiliary regression. Substituting gives the claim. $\blacksquare$
+:::
+
+That proof says exactly what is going on, and it is more useful than the formula. A coefficient is estimated from the part of its predictor that the other predictors *cannot* account for. If $x_j$ is nearly a linear combination of the others, that leftover part is tiny, and the coefficient is being estimated from almost no information.
+
+:::remark[What multicollinearity does and does not break]
+It inflates standard errors, so individual coefficients become insignificant and unstable — dropping one observation can swing them wildly, and two highly correlated predictors often produce large coefficients of opposite sign that nearly cancel.
+
+It does **not** bias the estimates, and it does **not** harm prediction within the range of the observed data: the fitted values and $R^2$ are unaffected, because the column space of $\mathbf{X}$ is unchanged. This is the resolution of a common puzzle — a model with a highly significant $F$ and not one significant coefficient. The predictors jointly explain a great deal; the data simply cannot apportion the credit.
+
+So the remedy depends on the goal. For prediction, do nothing. For interpreting individual coefficients, drop one of the redundant predictors, combine them into an index, or collect data that breaks the association.
+:::
+
+:::example[Reading VIFs]
+A model has $R_j^2 = 0.90$ for one predictor and $0.20$ for another. Compare their variance inflation factors and the effect on the standard errors.
+:::
+
+:::solution
+1. $\text{VIF} = 1/(1-0.90) = 10$ for the first; $\text{VIF} = 1/(1-0.20) = 1.25$ for the second.
+2. Standard errors scale as $\sqrt{\text{VIF}}$, so the first coefficient's standard error is $\sqrt{10} = 3.16$ times what it would be with an uncorrelated predictor; the second's is $\sqrt{1.25}=1.12$ times.
+3. To compensate, the first predictor would need about $10$ times as many observations to reach the same precision, since variance falls as $1/n$.
+4. Sanity check on the usual thresholds: rules of thumb flag $\text{VIF} > 5$ or $> 10$. Those correspond to $R_j^2 > 0.8$ and $R_j^2 > 0.9$ — very strong association among predictors, and the thresholds are conventions rather than results.
+5. Note what is *not* implied: the first predictor may still belong in the model. A large VIF is a statement about precision, not about relevance.
+:::
+
+## Choosing a model
+
+<!-- section: selection -->
+
+Adding a predictor can never increase $SSE$ — the larger model contains the smaller one as the special case where the new coefficient is zero, so its minimised sum of squares is at least as small. $R^2$ therefore rises with every predictor added, including pure noise, and cannot be used to compare models of different sizes.
+
+:::theorem[Nested model comparison]{#partial-f}
+Let a **full** model with $p$ parameters contain a **reduced** model with $q < p$ parameters as a special case. To test whether the $p-q$ extra coefficients are all zero,
+
+$$F = \frac{(SSE_{\text{red}} - SSE_{\text{full}})/(p-q)}{SSE_{\text{full}}/(n-p)} \sim F_{\,p-q,\;n-p} \quad\text{under } H_0,$$
+
+rejecting for large $F$.
+:::
+
+:::proof
+Both residual sums of squares are squared lengths of projections onto orthogonal complements of nested subspaces, so $SSE_{\text{red}} \ge SSE_{\text{full}}$ and the difference is the squared length of the projection onto the $(p-q)$-dimensional part of the full column space orthogonal to the reduced one — by the theorem *Least squares is orthogonal projection* applied twice.
+
+Under $H_0$ that component consists of noise alone, so $(SSE_{\text{red}}-SSE_{\text{full}})/\sigma^2 \sim \chi^2_{p-q}$, independently of $SSE_{\text{full}}/\sigma^2\sim\chi^2_{n-p}$ since the two live in orthogonal subspaces. The ratio of independent chi-squares each over its degrees of freedom is $F$, with $\sigma^2$ cancelling. $\blacksquare$
+:::
+
+Taking the reduced model to be intercept-only recovers the overall $F$-test of the whole regression, and taking $p-q=1$ recovers the $t$-test of a single coefficient, since $F_{1,\nu}=t_\nu^2$. It is the same machinery as the ANOVA $F$, which the previous chapter showed was this test all along.
+
+:::example[Do three predictors earn their place?]
+A model with $n=40$ has $SSE = 120$ with $p=6$ parameters. Dropping three predictors gives $SSE = 165$ with $q=3$. Test at $\alpha=0.05$, given $F_{0.05,3,34}=2.883$.
+:::
+
+:::solution
+1. The reduction in $SSE$ from the three predictors is $165-120 = 45$, on $p-q = 3$ degrees of freedom, so the numerator is $45/3 = 15$.
+2. The denominator is $SSE_{\text{full}}/(n-p) = 120/34 = 3.529$.
+3. $F = 15/3.529 = 4.250$. Since $4.250 > 2.883$, reject: at least one of the three carries information beyond the reduced model.
+4. Sanity check on what this does *not* say: the joint test does not identify which of the three matters, exactly as a significant one-way ANOVA does not identify which groups differ. Examining the three individual $t$ statistics afterwards is three more comparisons.
+5. Note the contrast with the individual tests: under multicollinearity all three coefficients could be individually insignificant while this joint test is highly significant, because the three together explain a lot even when no one of them is separable from the others.
+:::
+
+
+:::definition[Adjusted R-squared]{#adjusted-r2}
+$$R^2_{\text{adj}} = 1 - \frac{SSE/(n-p)}{SST/(n-1)} = 1 - (1-R^2)\frac{n-1}{n-p}.$$
+:::
+
+:::proposition[Adjusted R-squared penalises useless predictors]{#adj-r2-penalty}
+Adding a predictor increases $R^2_{\text{adj}}$ only if it reduces $SSE$ by more than the factor by which it reduces the remaining degrees of freedom. A predictor whose $t$ statistic has $|t| < 1$ always decreases $R^2_{\text{adj}}$.
+:::
+
+:::proof
+$R^2_{\text{adj}}$ increases exactly when $SSE/(n-p)$ — the estimate $s^2$ — decreases, since $SST/(n-1)$ is fixed. Adding a predictor changes the numerator from $SSE_{\text{small}}$ to $SSE_{\text{small}} - \Delta$ and the denominator from $n-p$ to $n-p-1$, so $s^2$ falls exactly when
+
+$$\frac{SSE - \Delta}{n-p-1} < \frac{SSE}{n-p} \iff \Delta > \frac{SSE}{n-p} = s^2_{\text{small}} .$$
+
+The reduction $\Delta$ in $SSE$ from adding one predictor equals $t^2 s^2_{\text{large}}$ for that predictor's $t$ statistic, so the condition is essentially $t^2 > 1$. $\blacksquare$
+:::
+
+:::remark[Information criteria and regularisation]
+Two other approaches trade fit against complexity more formally. **AIC** $= n\log(SSE/n) + 2p$ and **BIC** $= n\log(SSE/n) + p\log n$ both add a penalty per parameter, with BIC's penalty larger for $n > 7$, so BIC selects smaller models. Lower is better for both, and neither is a hypothesis test — they rank models rather than accepting or rejecting.
+
+A different strategy shrinks the coefficients instead of dropping predictors. **Ridge** regression minimises $\|\mathbf{y}-\mathbf{X}\mathbf{b}\|^2 + \lambda\|\mathbf{b}\|^2$, which has the closed form $\hat{\boldsymbol\beta}_{\text{ridge}} = (\mathbf{X}^{\!\top}\mathbf{X}+\lambda\mathbf{I})^{-1}\mathbf{X}^{\!\top}\mathbf{y}$ — note that adding $\lambda\mathbf{I}$ makes the matrix invertible even when $\mathbf{X}^{\!\top}\mathbf{X}$ is not, which is precisely the multicollinearity cure. **Lasso** uses $\lambda\sum_j|b_j|$ instead and sets some coefficients exactly to zero, performing selection and fitting at once.
+
+Both are deliberately **biased**, and by the theorem *Bias-variance decomposition* that is the point: they accept bias to buy a larger reduction in variance, and can beat least squares on mean squared error despite Gauss-Markov — which constrains only *unbiased* estimators.
+:::
+
+:::pitfall
+Selecting predictors by looking at $p$-values, then reporting the final model's $p$-values as though the search had not happened, is the multiplicity error of the testing chapter in its most common form. Stepwise selection over $20$ candidate predictors examines far more than $20$ hypotheses, and the surviving coefficients are biased away from zero *because* they survived.
+
+If the model was chosen using the data, its reported standard errors and intervals are not valid for that data. The honest options are to select on one part of the data and assess on another, to use cross-validation, or to report the selection procedure and treat the result as exploratory.
+:::
+
+:::example[Adjusted R-squared in use]
+A model with $n=50$ and $p=4$ has $R^2 = 0.62$. A fifth predictor raises $R^2$ to $0.63$. Compute both adjusted values and decide.
+:::
+
+:::solution
+1. Four parameters: $R^2_{\text{adj}} = 1 - (1-0.62)\dfrac{49}{46} = 1 - 0.38\times 1.06522 = 1-0.40478 = 0.5952$.
+2. Five parameters: $R^2_{\text{adj}} = 1 - (1-0.63)\dfrac{49}{45} = 1 - 0.37\times 1.08889 = 1-0.40289 = 0.5971$.
+3. The adjusted value rises very slightly, from $0.5952$ to $0.5971$, so the predictor just about pays for itself.
+4. Sanity check via the $t$ criterion: by the proposition *Adjusted R-squared penalises useless predictors*, the increase means the new predictor's $|t|$ exceeds $1$ — which is a very weak bar, far below the $|t| > 2.0$ needed for significance. So "improves adjusted $R^2$" is not the same as "is worth keeping".
+5. The gain of $0.0019$ in adjusted $R^2$ is not a reason to prefer the larger model. With this little to separate them, the simpler model is the better default.
+:::
+
+## Extrapolation, and the limits of what a fit can say
 
 <!-- section: extrapolation -->
 
-:::definition[Extrapolation]
-Extrapolation is predicting $y$ for $x$ values outside the range of the training data.
+:::definition[Extrapolation]{#extrapolation-def}
+**Extrapolation** is prediction at a predictor value outside the range spanned by the observed data.
 :::
 
-Outside that range the linear relationship may break down, making extrapolated predictions unreliable.
+The intervals of the theorem *Confidence and prediction intervals* already price part of the cost: the term $(x_0-\bar x)^2/S_{xx}$ grows quadratically as $x_0$ leaves the data, so both bands flare outward. But that widening assumes the model still holds, and the real danger is that it does not. A relationship linear over the observed range may bend, saturate, or reverse outside it, and the data contain no information whatever about which.
 
 :::pitfall
-Correlation and regression describe association, not causation. Only randomised controlled experiments allow causal claims. Lurking variables (confounders) can create spurious correlations, so always consider whether a third variable might explain an apparent association.
+The most consequential limitation is that **a regression coefficient is not a causal effect**. Least squares fits a conditional mean; nothing in the derivation licenses a claim about what would happen under intervention.
+
+Three mechanisms break the inference, and none is detectable from the fit:
+
+- **Confounding.** A variable associated with both $x$ and $y$ creates an association between them with no causal path. Ice cream sales predict drownings; temperature drives both.
+- **Reverse causation.** The regression is symmetric in a sense the causal claim is not — fitting $x$ on $y$ gives a slope $r\,s_x/s_y$, and both fits describe the same data equally well.
+- **Selection.** If inclusion in the sample depends on both variables, an association appears among those selected even when none exists in the population.
+
+Adding controls addresses only confounders you measured and thought of, and adding the wrong control — one on the causal pathway, or one caused by both variables — can create bias rather than remove it. Design is what licenses causal claims, which is the subject of the next chapter.
 :::
 
-:::intuition
-Using a regression line to predict outside the range you measured is like extending a map you drew by hand: you know the territory you measured, but beyond the edge of your map, things might look completely different.
-:::
-
-:::example[Interpolation vs. extrapolation]
-Model $\hat{y} = 2.2 + 0.6x$ was fit on $x$ ranging over $\{1,2,3,4,5\}$.
+:::example[The same data, two regressions]
+For the running example, fit $x$ on $y$ as well as $y$ on $x$, and compare.
 :::
 
 :::solution
-1. Prediction at $x = 2.5$ (inside the observed range): $\hat{y} = 2.2 + 0.6(2.5) = 2.2 + 1.5 = 3.7$. This is interpolation, and it is supported by data on both sides.
-2. Prediction at $x = 20$ (far outside the range): the formula gives $\hat{y} = 2.2 + 0.6(20) = 2.2 + 12 = 14.2$, but this is extrapolation. Nothing in the data $x \le 5$ guarantees the linear pattern continues to $x = 20$; the true relationship could curve, plateau, or reverse.
-3. Sanity check: the danger scales with distance. At $x=6$ (just past the edge) the extrapolation is mildly risky; at $x=20$ it is $15$ units beyond any data we have, so the prediction should carry little confidence regardless of how large $R^2$ was.
+1. $y$ on $x$: slope $S_{xy}/S_{xx} = 6/10 = 0.6$, giving $\hat y = 2.2+0.6x$.
+2. $x$ on $y$: slope $S_{xy}/S_{yy} = 6/6 = 1.0$, and intercept $\bar x - 1.0\bar y = 3-4 = -1$, giving $\hat x = -1 + 1.0y$.
+3. If the first line could simply be inverted, it would give $x = (y-2.2)/0.6 = -3.667 + 1.667y$ — a slope of $1.667$, not $1.0$. The two fits are **different lines**.
+4. The product of the two slopes is $0.6\times 1.0 = 0.6 = r^2$, which is exact and general: $b_{y|x}b_{x|y} = S_{xy}^2/(S_{xx}S_{yy}) = r^2$. The lines coincide only when $r^2=1$.
+5. Sanity check on what this means: each regression minimises errors in a different direction — vertical for $y$ on $x$, horizontal for $x$ on $y$ — so asking "which variable causes which" cannot be settled by fitting, since both fits are equally valid descriptions. The asymmetry of a causal claim has no counterpart in the algebra.
 :::
 
 ## Common Mistakes
 
-- Claiming causation from a regression. Regression shows association, not causation, unless data comes from a randomised experiment.
-- Extrapolating far beyond the range of the data. The model is reliable only near the observed $x$ range.
-- Interpreting $R^2$ as the correlation. $R^2 = r^2$: if $R^2 = 0.81$ then $r = \pm 0.9$, not $0.81$.
-- Ignoring residual plots. A high $R^2$ does not guarantee LINE conditions are met — always check the residuals.
-- Comparing $R^2$ across models with different numbers of predictors. Use adjusted $R^2$ or information criteria (AIC, BIC) instead.
+- **Reading $r$ as a measure of association in general.** It measures *linear* association; $y=x^2$ over a symmetric range gives $r=0$.
+- **Quoting a correlation or a fit without plotting the data.** Anscombe's quartet shares every summary statistic across four data sets that demand four different models.
+- **Treating $R^2$ as a verdict on the model.** It says how much variation the fit accounts for, not whether the form is right, and it rises with every predictor added.
+- **Confusing a confidence interval for the mean response with a prediction interval.** The second carries an extra $\sigma^2$ that never shrinks with more data.
+- **Reading a multiple-regression coefficient without saying what is held fixed.** It is a partial effect, and can differ in sign from the simple-regression slope.
+- **Concluding a predictor is useless because its coefficient is insignificant under multicollinearity.** Inflated standard errors say the data cannot apportion credit, not that the predictor is irrelevant.
+- **Reporting $p$-values from a model selected using the same data.** The surviving coefficients are biased away from zero precisely because they survived.
+- **Extrapolating.** The bands widen quadratically outside the data, and even that assumes the model still holds, which the data cannot confirm.
+- **Calling a coefficient an effect.** Confounding, reverse causation and selection all produce coefficients, and none is visible in the residual plots.
