@@ -4,895 +4,1187 @@ title: Modular Arithmetic
 
 # Modular Arithmetic
 
-Congruences, the Chinese remainder theorem, and quadratic residues with Jacobi and Legendre symbols.
+Arithmetic modulo $n$ is what remains of the integers after you agree to stop distinguishing numbers that differ by a multiple of $n$. That single act of forgetting is astonishingly productive. It turns an infinite ring into a finite one, so questions that are open over $\mathbb{Z}$ become finite checks; it turns the multiplicative structure of $\mathbb{Z}$ into a finite abelian group, so Lagrange's theorem applies and exponents start to repeat; and it turns divisibility statements into equations, which can be added, multiplied and solved.
 
-Modular arithmetic is arithmetic on the "clock": after reaching the modulus you wrap around. Formally, we work in the ring of residue classes $\mathbb{Z}/n\mathbb{Z}$. It lets us ignore multiples of the modulus and focus only on remainders, which simplifies calculations involving divisibility, cyclic patterns, and large exponents.
+The chapter is built in four movements. The first develops the congruence relation itself: that it is an equivalence relation compatible with addition and multiplication, that a residue is invertible exactly when it is coprime to the modulus, that the inverse is produced by the extended Euclidean algorithm, and that powers can be computed in logarithmically many multiplications. The second is the Chinese Remainder Theorem, proved with existence, uniqueness and an explicit reconstruction formula, and then pushed past its usual hypothesis to say exactly when a system with non-coprime moduli is solvable. The third recasts everything structurally: $\mathbb{Z}/n\mathbb{Z}$ is a quotient ring, congruence is the congruence relation attached to the ideal $n\mathbb{Z}$, and the Chinese Remainder Theorem becomes an isomorphism of rings.
 
-This is the language of modern cryptography (Diffie-Hellman, RSA, elliptic curves), checksums, hashing, and computer science (hash tables, cyclic buffers). Many Diophantine problems and congruences become tractable only after translating them into modular equations.
+The fourth movement asks a question the first three cannot answer: *which residues are squares?* Linear equations mod $n$ are settled completely by the Euclidean algorithm, but $x^2 \equiv a \pmod p$ is a genuinely different problem, and the theory that answers it — Euler's criterion, the Legendre symbol, quadratic reciprocity and its computational cousin the Jacobi symbol — is the first place in elementary number theory where the answer is deep rather than merely careful.
 
-Key concepts: congruence relation, arithmetic operations that are well-defined on classes, inverses when they exist, and the Chinese Remainder Theorem for combining information from several moduli.
+Throughout, $n$ and $m$ denote positive integers, $p$ denotes a prime, and $\gcd$ is always taken to be non-negative. Divisibility and the Euclidean algorithm are assumed, as developed in *Divisibility and Primes*; the language of rings and ideals is used from the third movement onward, but the arithmetic never depends on it.
 
-## Congruences and Residue Classes
+## Congruences and residue classes
 
 <!-- section: congruences-residues -->
 
-:::definition[Congruence modulo $m$]{#congruence}
-For a positive integer $m$, we say $a \equiv b \pmod{m}$ ($a$ is congruent to $b$ modulo $m$) if and only if $m$ divides $(a-b)$, that is,
+The definition is a piece of deliberate economy: instead of recording a number, record only what it leaves behind after division by $n$.
 
-$$a - b = m k \quad \text{for some integer } k.$$
+:::definition[Congruence modulo $n$]{#congruence}
+Let $n$ be a positive integer. For integers $a$ and $b$ we write
+
+$$a \equiv b \pmod{n}$$
+
+and say $a$ is **congruent to $b$ modulo $n$**, when $n \mid a - b$, that is, when $a - b = nk$ for some integer $k$. The integer $n$ is the **modulus**.
 :::
 
-This is an equivalence relation on $\mathbb{Z}$: reflexive, symmetric, transitive.
+Everything in this chapter follows from the fact that this relation is an equivalence relation *and* that it respects the ring operations. Neither half is automatic: the relation "$a$ and $b$ have the same number of digits" is an equivalence relation that respects nothing, and the relation "$a \le b$" respects addition but is not an equivalence relation.
 
-:::definition[Residue classes]
-The equivalence classes are the residue classes $[0], [1], \dots, [m-1]$. We usually represent each class by its least nonnegative residue $r$ with $0 \leq r < m$.
+:::theorem[Congruence is an equivalence relation]{#congruence-equivalence}
+For each fixed $n \ge 1$, congruence modulo $n$ is reflexive, symmetric and transitive on $\mathbb{Z}$.
 :::
 
-:::proposition[Arithmetic is well-defined on classes]{#congruence-arithmetic}
-Addition, subtraction, and multiplication are well-defined on classes: if $a\equiv a' \pmod m$ and $b\equiv b' \pmod m$ then $a+b \equiv a'+b'$, $a-b \equiv a'-b'$, and $a b \equiv a' b' \pmod m$.
+:::proof
+*Reflexive:* $a - a = 0 = n \cdot 0$, so $n \mid a - a$.
+
+*Symmetric:* if $a - b = nk$ then $b - a = n(-k)$, and $-k$ is an integer.
+
+*Transitive:* if $a - b = nk$ and $b - c = n\ell$, then adding gives $a - c = n(k + \ell)$, and $k + \ell$ is an integer.
+
+Each step used only that the multiples of $n$ form a set containing $0$, closed under negation and closed under addition.
 :::
+
+:::definition[Residue class]{#residue-class}
+The equivalence class of $a$ under congruence modulo $n$ is the **residue class**
+
+$$[a]_n = \{\, a + nk : k \in \mathbb{Z} \,\},$$
+
+written $[a]$ or $\bar a$ when $n$ is clear. The set of all residue classes modulo $n$ is denoted $\mathbb{Z}/n\mathbb{Z}$.
+:::
+
+:::proposition[Least residues classify the classes]{#least-residues}
+Every integer is congruent modulo $n$ to exactly one of $0, 1, \dots, n-1$. Consequently $\mathbb{Z}/n\mathbb{Z}$ has exactly $n$ elements, and $a \equiv b \pmod n$ if and only if $a$ and $b$ leave the same remainder on division by $n$.
+:::
+
+:::proof
+Division with remainder gives unique integers $q, r$ with $a = qn + r$ and $0 \le r < n$. Then $a - r = qn$, so $a \equiv r$, which proves that at least one such representative exists.
+
+For uniqueness, suppose $0 \le r < s < n$ with $r \equiv s \pmod n$. Then $n \mid s - r$ while $0 < s - r < n$, and no positive multiple of $n$ is smaller than $n$. So $s - r$ cannot be a multiple of $n$, a contradiction.
+
+Finally, if $a = q_1 n + r_1$ and $b = q_2 n + r_2$ with $0 \le r_1, r_2 < n$, then $a - b = (q_1-q_2)n + (r_1 - r_2)$, so $n \mid a-b$ exactly when $n \mid r_1 - r_2$, which by the uniqueness just proved happens exactly when $r_1 = r_2$.
+:::
+
+The number $r$ produced here is the **least nonnegative residue** of $a$ modulo $n$, written $a \bmod n$. Note the typographical distinction that will be kept throughout: $a \bmod n$ is a *number*, the remainder; $a \equiv b \pmod n$ is a *statement* about two numbers.
 
 :::intuition
-On a 12-hour clock, 10 o'clock + 5 hours is 3 o'clock, not 15. 15 ≡ 3 mod 12 because they differ by a multiple of 12 (the full cycles).
-
-All numbers that leave the same remainder when divided by m are "the same" for purposes of mod-m arithmetic.
+A clock face is the whole of the definition. The hour hand at $15$ o'clock and at $3$ o'clock points at the same place, because the two readings differ by one full revolution. Arithmetic mod $12$ is what a clock does: you may add and multiply hour-readings and the answer is again a reading, because a whole number of revolutions added anywhere along the way changes nothing about where the hand ends up.
 :::
 
-:::example[Compute $17 + 25 \pmod{12}$]
-The point is that we may replace each number by its residue *before* adding, because addition is well-defined on classes.
+:::figure[The residue classes modulo $12$ arranged on a dial. Adding $5$ to a reading rotates the hand five steps clockwise, so $10 + 5$ lands on $3$, exactly as $15 \equiv 3 \pmod{12}$.]{#clock-dial}
+{
+  "type": "plot",
+  "x": [-1.75, 1.75], "y": [-1.6, 1.6],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "path", "points": [[0,1],[0.5,0.866],[0.866,0.5],[1,0],[0.866,-0.5],[0.5,-0.866],[0,-1],[-0.5,-0.866],[-0.866,-0.5],[-1,0],[-0.866,0.5],[-0.5,0.866],[0,1]], "muted": true },
+    { "kind": "point", "at": [0, 1] },
+    { "kind": "point", "at": [0.866, 0.5] },
+    { "kind": "point", "at": [0.866, -0.5] },
+    { "kind": "point", "at": [0, -1] },
+    { "kind": "point", "at": [-0.866, -0.5] },
+    { "kind": "point", "at": [-0.866, 0.5] },
+    { "kind": "point", "at": [0.5, 0.866], "tone": "muted" },
+    { "kind": "point", "at": [1, 0], "tone": "muted" },
+    { "kind": "point", "at": [0.5, -0.866], "tone": "muted" },
+    { "kind": "point", "at": [-0.5, -0.866], "tone": "muted" },
+    { "kind": "point", "at": [-1, 0], "tone": "muted" },
+    { "kind": "point", "at": [-0.5, 0.866], "tone": "result" },
+    { "kind": "arrow", "from": [0, 0], "to": [-0.44, 0.76], "tone": "result" },
+    { "kind": "arrow", "from": [0, 0], "to": [0.76, 0.44] },
+    { "kind": "text", "at": [0, 1.3], "text": "0" },
+    { "kind": "text", "at": [1.15, 0.66], "text": "2" },
+    { "kind": "text", "at": [1.15, -0.66], "text": "4" },
+    { "kind": "text", "at": [0, -1.3], "text": "6" },
+    { "kind": "text", "at": [-1.15, -0.66], "text": "8" },
+    { "kind": "text", "at": [-1.25, 0.9], "text": "10" },
+    { "kind": "text", "at": [1.35, 0.1], "text": "3", "leaderTo": [0.82, 0.48] }
+  ]
+}
+:::
+
+The reason congruence is worth a symbol as heavy as $\equiv$, rather than being phrased as a divisibility statement each time, is that it can be manipulated like an equation.
+
+:::theorem[Congruence is compatible with the ring operations]{#congruence-compatible}
+Fix $n \ge 1$ and suppose $a \equiv a' \pmod n$ and $b \equiv b' \pmod n$. Then
+
+$$a + b \equiv a' + b', \qquad a - b \equiv a' - b', \qquad ab \equiv a'b' \pmod n .$$
+:::
+
+:::proof
+Write $a - a' = nk$ and $b - b' = n\ell$.
+
+For the sum, $(a+b) - (a'+b') = (a - a') + (b - b') = n(k + \ell)$. For the difference, replace $\ell$ by $-\ell$.
+
+For the product, the trick is to change one factor at a time:
+
+$$ab - a'b' = ab - a'b + a'b - a'b' = b(a - a') + a'(b - b') = n\big(bk + a'\ell\big),$$
+
+and $bk + a'\ell$ is an integer. Hence $n \mid ab - a'b'$.
+:::
+
+:::corollary[Polynomials respect congruence]{#polynomial-congruence}
+Let $f$ be a polynomial with integer coefficients. If $a \equiv b \pmod n$ then $f(a) \equiv f(b) \pmod n$.
+:::
+
+:::proof
+By the theorem *Congruence is compatible with the ring operations* and induction on $j$, $a \equiv b$ implies $a^j \equiv b^j$ for every $j \ge 0$: the case $j = 0$ is $1 \equiv 1$, and $a^{j+1} = a^j \cdot a \equiv b^j \cdot b = b^{j+1}$. Multiplying by the integer coefficient $c_j$ gives $c_j a^j \equiv c_j b^j$, and summing the finitely many terms gives $f(a) \equiv f(b)$.
+:::
+
+This corollary is the engine behind every elementary divisibility test. Since $10 \equiv 1 \pmod 9$, any integer written as $\sum c_j 10^j$ satisfies $\sum c_j 10^j \equiv \sum c_j \pmod 9$: a number is congruent to its digit sum mod $9$. Since $10 \equiv -1 \pmod{11}$, the same argument gives the alternating digit sum mod $11$.
+
+:::example[A divisibility test from a congruence]
+Determine $8\,675\,309 \bmod 9$ and $8\,675\,309 \bmod 11$ without dividing.
 :::
 
 :::solution
-Reduce the first term: $17 = 12 + 5$, so $17 \equiv 5 \pmod{12}$.
-Reduce the second term: $25 = 24 + 1 = 2\cdot 12 + 1$, so $25 \equiv 1 \pmod{12}$.
-Add the residues: $5 + 1 = 6$, so $17 + 25 \equiv 6 \pmod{12}$.
-
-Sanity check by adding first, then reducing: $17 + 25 = 42$, and $42 = 3\cdot 12 + 6$, so $42 \equiv 6 \pmod{12}$. Both routes agree, which is exactly what "well-defined on classes" guarantees.
+1. Mod $9$: since $10 \equiv 1$, the number is congruent to its digit sum, $8+6+7+5+3+0+9 = 38$.
+2. Repeat on $38$: $3 + 8 = 11$, then $1 + 1 = 2$. So $8\,675\,309 \equiv 2 \pmod 9$.
+3. Mod $11$: since $10 \equiv -1$, the number is congruent to the alternating sum of its digits taken from the units end, $9 - 0 + 3 - 5 + 7 - 6 + 8 = 16$.
+4. And $16 \equiv 5 \pmod{11}$. So the two remainders are $2$ and $5$.
 :::
 
-## Modular Inverses and Linear Congruences
+:::example[Ruling out a solution by choosing a modulus]
+Show that $x^2 + y^2 = 2\,023$ has no solution in integers.
+:::
+
+:::solution
+1. Work modulo $4$. By the corollary *Polynomials respect congruence* it is enough to know the squares of the four residue classes: $0^2 \equiv 0$, $1^2 \equiv 1$, $2^2 \equiv 0$, $3^2 \equiv 1$.
+2. So every square is $\equiv 0$ or $1 \pmod 4$, and a sum of two squares is $\equiv 0, 1$ or $2 \pmod 4$ — never $3$.
+3. But $2\,023 = 4 \cdot 505 + 3$, so $2\,023 \equiv 3 \pmod 4$.
+4. No solution exists. The whole argument is a finite check on four residue classes, replacing a search over infinitely many integers.
+:::
+
+:::definition[Complete residue system]{#complete-residue-system}
+A set of integers $\{r_1, \dots, r_n\}$ is a **complete residue system modulo $n$** if every integer is congruent modulo $n$ to exactly one $r_i$.
+:::
+
+:::proposition[Recognising a complete residue system]{#crs-test}
+A set of $n$ integers is a complete residue system modulo $n$ if and only if its elements are pairwise incongruent modulo $n$. Moreover, if $\{r_1,\dots,r_n\}$ is a complete residue system and $\gcd(a, n) = 1$, then so is $\{ar_1 + b, \dots, ar_n + b\}$ for any integer $b$.
+:::
+
+:::proof
+If the $n$ elements are pairwise incongruent they meet $n$ distinct classes, and there are only $n$ classes by the proposition *Least residues classify the classes*, so they meet every class exactly once. The converse is immediate from "exactly one".
+
+For the second claim, suppose $ar_i + b \equiv ar_j + b \pmod n$. Subtracting $b$ and using compatibility, $ar_i \equiv ar_j$, so $n \mid a(r_i - r_j)$. Since $\gcd(a,n) = 1$, Euclid's lemma gives $n \mid r_i - r_j$, hence $i = j$. So the $n$ new elements are pairwise incongruent, and the first claim applies.
+:::
+
+## Modular inverses and linear congruences
 
 <!-- section: inverses-congruences -->
 
-:::definition[Multiplicative inverse]{#modular-inverse}
-An integer $a$ has a **multiplicative inverse** modulo $m$ (written $a^{-1} \bmod m$) if there exists $x$ with
+Addition, subtraction and multiplication descend to residue classes. Division does not, and the question of exactly when it does is the first genuinely arithmetic question of the chapter.
 
-$$a x \equiv 1 \pmod m.$$
+:::definition[Modular inverse]{#modular-inverse}
+An integer $a$ is **invertible modulo $n$** (a **unit** mod $n$) if there is an integer $x$ with
+
+$$ax \equiv 1 \pmod n .$$
+
+Such an $x$ is an **inverse of $a$ modulo $n$**, written $a^{-1}$.
 :::
 
-:::theorem[When an inverse exists]
-The inverse $a^{-1} \bmod m$ exists if and only if $\gcd(a,m) = 1$, that is, $a$ and $m$ are coprime.
+:::theorem[Invertibility criterion]{#inverse-criterion}
+Let $n \ge 1$. An integer $a$ is invertible modulo $n$ if and only if $\gcd(a, n) = 1$. When it is, an inverse is obtained from any Bézout identity $au + nv = 1$ by taking $x = u$.
 :::
 
-:::recipe[Solving a linear congruence $ax \equiv b \pmod m$]
-- Compute d = gcd(a,m).
-- Solutions exist iff d divides b.
-- If so, there are exactly d distinct solutions modulo m.
-- First find one particular solution using extended gcd (scale), then add multiples of m/d.
+:::proof
+($\Leftarrow$) Suppose $\gcd(a,n) = 1$. By Bézout's identity there are integers $u, v$ with $au + nv = 1$. Reducing modulo $n$ kills the term $nv$, leaving $au \equiv 1 \pmod n$, so $u$ is an inverse.
+
+($\Rightarrow$) Suppose $ax \equiv 1 \pmod n$, so $ax - 1 = nk$ for some $k$, that is $ax - nk = 1$. Let $d = \gcd(a,n)$. Then $d$ divides both $ax$ and $nk$, hence divides their difference $1$, so $d = 1$.
 :::
 
-:::intuition
-The inverse is the "undo" multiplier: multiply by it and you get back to 1 (mod m). Only possible when a and m share no common factors other than 1.
+The proof is not merely an existence statement: the extended Euclidean algorithm computes the Bézout coefficients $u, v$ explicitly and in $O(\log n)$ steps, so the inverse is as cheap as the gcd.
 
-Solving ax ≡ b mod m is like "divide both sides by a" but you must check the gcd condition and accept multiple answers when d>1.
+:::corollary[Inverses are unique modulo $n$]{#inverse-unique}
+If $a$ is invertible modulo $n$, its inverse is unique modulo $n$.
 :::
 
-:::example[Solve $5x \equiv 3 \pmod 7$]
-Check solvability: $d = \gcd(5,7) = 1$, and $1 \mid 3$, so a solution exists. Because $d = 1$ there is exactly one solution modulo $7$.
-Find the inverse of $5$ via the extended Euclidean algorithm: we want integers with $5s + 7t = 1$. Here $5\cdot 3 + 7\cdot(-2) = 15 - 14 = 1$, so $5\cdot 3 \equiv 1 \pmod 7$ and $5^{-1} \equiv 3 \pmod 7$.
-Multiply both sides of the congruence by $3$: $x \equiv 3\cdot 3 \equiv 9 \equiv 2 \pmod 7$.
+:::proof
+Suppose $ax \equiv 1$ and $ay \equiv 1 \pmod n$. Then
+
+$$x \equiv x(ay) = (xa)y \equiv 1 \cdot y = y \pmod n,$$
+
+where each congruence used compatibility of multiplication with congruence.
+:::
+
+:::recipe[Inverting $a$ modulo $n$ by the extended Euclidean algorithm]{#invert-recipe}
+1. Run the Euclidean algorithm on $(n, a)$, recording each quotient.
+2. If the last nonzero remainder is not $1$, then $\gcd(a,n) > 1$ and no inverse exists; stop.
+3. Otherwise back-substitute to write $1 = au + nv$.
+4. Reduce $u$ modulo $n$ to the least nonnegative residue. That is $a^{-1}$.
+5. Check: multiply out $a \cdot u$ and confirm the remainder is $1$.
+:::
+
+:::example[An inverse by back-substitution]
+Compute $17^{-1} \bmod 101$.
 :::
 
 :::solution
-1. Sanity check: $5\cdot 2 = 10 \equiv 3 \pmod 7$ (since $10 - 7 = 3$). Correct, and it is the unique solution modulo $7$.
+1. Euclid: $101 = 5 \cdot 17 + 16$, then $17 = 1 \cdot 16 + 1$, then $16 = 16 \cdot 1 + 0$. The gcd is $1$, so the inverse exists.
+2. Back-substitute from the second-to-last line: $1 = 17 - 1 \cdot 16$.
+3. Substitute $16 = 101 - 5 \cdot 17$: $1 = 17 - (101 - 5\cdot 17) = 6 \cdot 17 - 1 \cdot 101$.
+4. So $6 \cdot 17 \equiv 1 \pmod{101}$, giving $17^{-1} \equiv 6$.
+5. Check: $6 \cdot 17 = 102 = 101 + 1 \equiv 1$. ✓
 :::
 
-:::example[(many solutions):]
-**Solve $6x \equiv 8 \pmod{10}$**
+:::example[When the inverse does not exist]
+Does $14$ have an inverse modulo $35$?
 :::
 
 :::solution
-$d = \gcd(6,10) = 2$, and $2 \mid 8$, so solutions exist; there will be exactly $d = 2$ of them modulo $10$.
-Divide the whole congruence (both sides *and* the modulus) by $d = 2$: $3x \equiv 4 \pmod 5$.
-Now $\gcd(3,5) = 1$; the inverse of $3$ mod $5$ is $2$ (since $3\cdot 2 = 6 \equiv 1$). So $x \equiv 2\cdot 4 = 8 \equiv 3 \pmod 5$.
-Lift back to modulus $10$ by adding multiples of $m/d = 5$: $x \equiv 3$ and $x \equiv 8 \pmod{10}$.
-
-Sanity check: $6\cdot 3 = 18 \equiv 8 \pmod{10}$ and $6\cdot 8 = 48 \equiv 8 \pmod{10}$. Two solutions, as predicted.
+1. $\gcd(14, 35) = 7 \neq 1$, so by the theorem *Invertibility criterion* there is no inverse.
+2. To see the failure concretely, note $14 \cdot x$ is always a multiple of $7$ modulo $35$, since $35$ is too: every value of $14x \bmod 35$ lies in $\{0, 7, 14, 21, 28\}$, and $1$ is not among them.
 :::
 
-## Powers and Euler/Fermat (preview)
+With inverses in hand, the general linear congruence can be solved completely — including the case where no inverse exists.
+
+:::theorem[Linear congruence]{#linear-congruence}
+Let $a, b$ be integers, $n \ge 1$, and $d = \gcd(a,n)$. The congruence
+
+$$ax \equiv b \pmod n$$
+
+has a solution if and only if $d \mid b$. In that case the solutions form exactly $d$ residue classes modulo $n$: if $x_0$ is one solution, they are
+
+$$x_0, \; x_0 + \tfrac{n}{d}, \; x_0 + 2\tfrac{n}{d}, \; \dots, \; x_0 + (d-1)\tfrac{n}{d} \pmod n,$$
+
+equivalently a single residue class modulo $n/d$.
+:::
+
+:::proof
+The congruence says $ax - b = nk$ for some $k$, i.e. that $b = ax - nk$ lies in the set $\{ax + ny\}$ of integer combinations of $a$ and $n$. That set is exactly $d\mathbb{Z}$, so a solution exists if and only if $d \mid b$.
+
+Assume $d \mid b$ and write $a = da'$, $b = db'$, $n = dn'$ with $\gcd(a', n') = 1$. Dividing the relation $ax - b = nk$ through by $d$ shows that $ax \equiv b \pmod n$ is equivalent to
+
+$$a'x \equiv b' \pmod{n'} .$$
+
+Since $\gcd(a', n') = 1$, the theorem *Invertibility criterion* gives $(a')^{-1}$ mod $n'$, and multiplying by it shows the solution set is the single class $x \equiv (a')^{-1}b' \pmod{n'}$ — in particular non-empty, and a class modulo $n' = n/d$.
+
+Finally, one class modulo $n/d$ splits into exactly $d$ classes modulo $n$, namely those listed, because two integers congruent mod $n/d$ differ by a multiple of $n/d$, and the multiples of $n/d$ fall into exactly $d$ classes mod $n$, represented by $0, n/d, \dots, (d-1)n/d$.
+:::
+
+:::example[A linear congruence with several solutions]
+Solve $14x \equiv 30 \pmod{100}$.
+:::
+
+:::solution
+1. $d = \gcd(14, 100) = 2$ and $2 \mid 30$, so by the theorem *Linear congruence* there are exactly $2$ solution classes mod $100$.
+2. Divide through by $2$: $7x \equiv 15 \pmod{50}$.
+3. Invert $7$ mod $50$: $7 \cdot 43 = 301 = 6 \cdot 50 + 1$, so $7^{-1} \equiv 43$.
+4. Then $x \equiv 43 \cdot 15 = 645 \equiv 645 - 12\cdot 50 = 45 \pmod{50}$.
+5. Lifting to modulus $100$: $x \equiv 45$ or $x \equiv 95 \pmod{100}$.
+6. Check: $14 \cdot 45 = 630 \equiv 30$, and $14 \cdot 95 = 1330 \equiv 30 \pmod{100}$. ✓
+:::
+
+:::pitfall
+You may not "cancel" a common factor from both sides of a congruence while leaving the modulus alone. From $6 \equiv 16 \pmod{10}$, cancelling $2$ gives the false $3 \equiv 8 \pmod{10}$. The correct cancellation law is: if $ca \equiv cb \pmod n$ then $a \equiv b \pmod{n/\gcd(c,n)}$. Cancelling $c$ from the modulus as well is only free when $\gcd(c,n) = 1$.
+:::
+
+## Powers, orders and fast exponentiation
 
 <!-- section: modular-powers -->
 
-A number like $3^{100}$ has $48$ digits, yet $3^{100} \bmod 7$ is a single digit. The trick is never to build the giant number: because multiplication is well-defined on residue classes, we may reduce modulo $m$ after every multiplication (or, faster, use repeated squaring), keeping every intermediate value below $m^2$.
+A quantity like $7^{1000} \bmod 13$ is hopeless to compute by first forming $7^{1000}$, an integer with over eight hundred digits. Two ideas make it trivial: reduce after every multiplication, and never perform more than $O(\log e)$ multiplications.
 
-Even the exponent can shrink.
+:::theorem[Correctness of square-and-multiply]{#fast-exponentiation}
+Let $e \ge 1$ have binary expansion $e = \sum_{i=0}^{k} b_i 2^i$ with $b_i \in \{0,1\}$ and $b_k = 1$. Define $r_k = a$ and, for $i = k-1$ down to $0$,
 
-:::theorem[Fermat's little theorem]{#fermat-little}
-If $p$ is prime and $\gcd(a,p) = 1$, then
+$$r_i = \begin{cases} r_{i+1}^2 \bmod n, & b_i = 0,\\ a \cdot r_{i+1}^2 \bmod n, & b_i = 1.\end{cases}$$
 
-$$a^{p-1} \equiv 1 \pmod p.$$
+Then $r_0 \equiv a^e \pmod n$, and the computation uses at most $2k \le 2\log_2 e$ modular multiplications of numbers below $n^2$.
 :::
 
-So the powers of $a$ cycle with period dividing $p-1$; hence $a^{k} \bmod p$ depends only on $k \bmod (p-1)$.
+:::proof
+Let $e_i = \sum_{j=i}^{k} b_j 2^{j-i}$ be the integer whose binary digits are the leading bits $b_k \dots b_i$ of $e$. Then $e_k = 1$ and $e_i = 2e_{i+1} + b_i$, and $e_0 = e$.
 
-:::theorem[Euler's theorem]{#euler-theorem}
-If $\gcd(a,m) = 1$, then
+We show by downward induction that $r_i \equiv a^{e_i}$. The base case is $r_k = a = a^{e_k}$. If $r_{i+1} \equiv a^{e_{i+1}}$, then since congruence is compatible with multiplication, $r_{i+1}^2 \equiv a^{2e_{i+1}}$ and $a \cdot r_{i+1}^2 \equiv a^{2e_{i+1}+1}$; in both cases the recursion yields $r_i \equiv a^{2e_{i+1} + b_i} = a^{e_i}$. Taking $i = 0$ gives $r_0 \equiv a^e$.
 
-$$a^{\varphi(m)} \equiv 1 \pmod m,$$
-
-where $\varphi$ is Euler's totient.
+Each of the $k$ steps costs one squaring and at most one further multiplication, so at most $2k$ multiplications; and since each $r_i$ is reduced below $n$, every product formed is below $n^2$.
 :::
 
-The exponent can therefore be reduced modulo $\varphi(m)$. Fermat is the special case $m = p$ prime, where $\varphi(p) = p-1$.
+Reducing at every step is the whole point: it is what keeps the operands small, and by the theorem *Congruence is compatible with the ring operations* it changes no answer.
 
-:::intuition
-Exponents wrap around in the exponent "clock" whose size is related to how many invertible residues there are.
-
-You can reduce the exponent first using the theorem, making huge exponents trivial.
-:::
-
-:::example[Compute $3^{100} \bmod 7$ using Fermat (preview)]
-Hypotheses: $7$ is prime and $\gcd(3,7) = 1$, so Fermat's Little Theorem applies: $3^{6} \equiv 1 \pmod 7$.
-Reduce the exponent modulo $p - 1 = 6$: $100 = 16\cdot 6 + 4$, so the exponent is congruent to $4$.
-Therefore $3^{100} = (3^{6})^{16}\cdot 3^{4} \equiv 1^{16}\cdot 3^{4} \equiv 3^{4} \pmod 7$.
-Evaluate the small leftover: $3^{4} = 81$, and $81 = 11\cdot 7 + 4$, so $3^{4} \equiv 4 \pmod 7$.
+:::example[Square-and-multiply in practice]
+Compute $7^{100} \bmod 13$.
 :::
 
 :::solution
-1. So $3^{100} \equiv 4 \pmod 7$.
-2. Sanity check by squaring: $3^{2} = 9 \equiv 2$, so $3^{4} \equiv 2^{2} = 4 \pmod 7$, matching the answer.
-3. Note the subtlety that keeps this rigorous: you reduce the *exponent* modulo $p-1$, but the *base* modulo $p$. Reducing the exponent modulo $p$ would be wrong.
+1. Write $100 = 1100100_2$, so the bit string is $1,1,0,0,1,0,0$.
+2. Start $r = 7$. Bit $1$: $r \gets 7^2 \cdot 7 = 343 \equiv 5 \pmod{13}$.
+3. Bit $0$: $r \gets 5^2 = 25 \equiv 12$. Bit $0$: $r \gets 12^2 = 144 \equiv 1$.
+4. Bit $1$: $r \gets 1^2 \cdot 7 = 7$. Bit $0$: $r \gets 49 \equiv 10$. Bit $0$: $r \gets 100 \equiv 9$.
+5. So $7^{100} \equiv 9 \pmod{13}$. Six squarings and two extra multiplications replaced ninety-nine.
 :::
 
-## The Ring Z/nZ
+Once exponents are cheap, the question becomes which exponents matter. Powers of a fixed unit must eventually repeat, because there are only finitely many residues, and the first repeat happens at $1$.
+
+:::definition[Multiplicative order]{#order}
+Let $\gcd(a,n) = 1$. The **order** of $a$ modulo $n$, written $\operatorname{ord}_n(a)$, is the least positive integer $d$ with $a^d \equiv 1 \pmod n$.
+:::
+
+:::proposition[The order divides every exponent that works]{#order-divides}
+Let $\gcd(a,n)=1$ and $d = \operatorname{ord}_n(a)$. Then for a positive integer $e$,
+
+$$a^e \equiv 1 \pmod n \iff d \mid e .$$
+
+In particular $a^i \equiv a^j \pmod n$ if and only if $i \equiv j \pmod d$.
+:::
+
+:::proof
+If $d \mid e$, say $e = dm$, then $a^e = (a^d)^m \equiv 1^m = 1$.
+
+Conversely suppose $a^e \equiv 1$. Divide: $e = qd + r$ with $0 \le r < d$. Then
+
+$$1 \equiv a^e = (a^d)^q a^r \equiv a^r \pmod n .$$
+
+If $r > 0$ this contradicts minimality of $d$, so $r = 0$ and $d \mid e$. For the last claim, assume $i \ge j$ and multiply $a^i \equiv a^j$ by $(a^{-1})^j$, which exists because $a$ is a unit, to get $a^{i-j} \equiv 1$.
+:::
+
+:::theorem[Fermat's little theorem]{#fermat-little}
+Let $p$ be prime and $p \nmid a$. Then
+
+$$a^{p-1} \equiv 1 \pmod p, \qquad \text{and hence } a^p \equiv a \pmod p \text{ for every } a .$$
+:::
+
+:::proof
+Since $p \nmid a$ we have $\gcd(a,p)=1$, so by the proposition *Recognising a complete residue system* the list $a\cdot 1, a \cdot 2, \dots, a(p-1)$ is pairwise incongruent mod $p$, and none is $\equiv 0$. Hence it is a permutation of $1, 2, \dots, p-1$ modulo $p$. Multiplying the two lists together,
+
+$$a^{p-1}(p-1)! \equiv (p-1)! \pmod p .$$
+
+Each of $1, \dots, p-1$ is coprime to $p$, so $(p-1)!$ is a unit mod $p$ and may be cancelled, leaving $a^{p-1} \equiv 1$. Multiplying by $a$ gives $a^p \equiv a$, which also holds when $p \mid a$ since then both sides are $\equiv 0$.
+:::
+
+:::corollary[Euler's theorem]{#euler-theorem}
+If $\gcd(a, n) = 1$ then $a^{\varphi(n)} \equiv 1 \pmod n$, where $\varphi(n)$ counts the integers in $\{1,\dots,n\}$ coprime to $n$. Consequently $\operatorname{ord}_n(a) \mid \varphi(n)$.
+:::
+
+:::proof
+Let $u_1, \dots, u_{\varphi(n)}$ be the least residues coprime to $n$. Multiplication by $a$ permutes them: each $au_i$ is coprime to $n$ (a product of two units is a unit), and $au_i \equiv au_j$ forces $u_i \equiv u_j$ after multiplying by $a^{-1}$. Multiplying all of them,
+
+$$a^{\varphi(n)} \prod_i u_i \equiv \prod_i u_i \pmod n,$$
+
+and the product of units is a unit, so it cancels. The divisibility statement is then the proposition *The order divides every exponent that works*.
+:::
+
+:::example[Reducing an exponent with the order]
+Compute $2^{1000} \bmod 11$ and the order of $2$ modulo $11$.
+:::
+
+:::solution
+1. The powers of $2$ mod $11$ are $2, 4, 8, 5, 10, 9, 7, 3, 6, 1$, so $\operatorname{ord}_{11}(2) = 10 = \varphi(11)$.
+2. By the proposition *The order divides every exponent that works*, only $1000 \bmod 10$ matters, and $1000 \equiv 0$.
+3. Hence $2^{1000} \equiv 2^{0} = 1 \pmod{11}$.
+:::
+
+:::pitfall
+Euler's theorem reduces the exponent modulo $\varphi(n)$, not modulo $n$, and only when $\gcd(a,n)=1$. Computing $2^{10} \bmod 10$ as $2^{10 \bmod 4} = 2^2 = 4$ is wrong twice over: $\gcd(2,10)\ne 1$, and the true value is $1024 \equiv 4$ only by coincidence — the same false step gives $2^{12} \equiv 2^0 = 1$, whereas $2^{12} = 4096 \equiv 6 \pmod{10}$.
+:::
+
+## The ring $\mathbb{Z}/n\mathbb{Z}$
 
 <!-- section: ring-structure -->
 
-:::definition[The ring $\mathbb{Z}/n\mathbb{Z}$]{#z-mod-n}
-The set of residue classes modulo $n$, with the induced $+$ and $\cdot$, forms a ring $\mathbb{Z}/n\mathbb{Z}$.
+The theorem *Congruence is compatible with the ring operations* says precisely that the operations of $\mathbb{Z}$ descend to residue classes. Naming the resulting object is what lets the rest of algebra be applied to it.
+
+:::definition[The ring of residues]{#znz-ring}
+On the set $\mathbb{Z}/n\mathbb{Z}$ of residue classes modulo $n$, define
+
+$$[a] + [b] = [a+b], \qquad [a]\cdot[b] = [ab] .$$
 :::
 
-:::theorem[$\mathbb{Z}/n\mathbb{Z}$ is a field exactly for prime $n$]
-$\mathbb{Z}/n\mathbb{Z}$ is a field precisely when $n$ is prime, i.e. every nonzero element has an inverse.
+:::theorem[$\mathbb{Z}/n\mathbb{Z}$ is a commutative ring]{#znz-is-ring}
+The operations above are well defined, and with them $\mathbb{Z}/n\mathbb{Z}$ is a commutative ring with zero $[0]$ and identity $[1]$.
 :::
 
-When n composite the ring has zero-divisors: e.g. mod 6, 2*3≡0 but neither is 0 mod6.
+:::proof
+*Well defined:* the definitions refer to representatives, so we must check the answer does not depend on which ones. If $[a]=[a']$ and $[b]=[b']$ then $a \equiv a'$ and $b \equiv b'$, so by the theorem *Congruence is compatible with the ring operations* $a + b \equiv a'+b'$ and $ab \equiv a'b'$, i.e. $[a+b]=[a'+b']$ and $[ab]=[a'b']$.
 
-This algebraic structure explains why some equations have more or fewer solutions mod n than over the reals.
-
-:::intuition
-Modulo a prime everything (nonzero) has an inverse, like the usual numbers. Modulo composite some numbers "eat" others to give zero, which has no inverse.
-
-The ring view lets us import all the usual algebra rules (distributivity etc.) while remembering the wrap-around.
+*Axioms:* each is inherited. For instance associativity of multiplication reads $([a][b])[c] = [(ab)c] = [a(bc)] = [a]([b][c])$, where the middle equality is associativity in $\mathbb{Z}$. Commutativity, distributivity, the additive identity $[0]$, additive inverses $-[a]=[-a]$ and the multiplicative identity $[1]$ all transfer by the same one-line argument, because every axiom is an identity between polynomial expressions in the elements.
 :::
 
-:::example[Zero divisors mod 6]
-Take the classes $[2]$ and $[3]$ in $\mathbb{Z}/6\mathbb{Z}$. Neither is the zero class: $2 \not\equiv 0$ and $3 \not\equiv 0 \pmod 6$.
-Multiply: $2\cdot 3 = 6 \equiv 0 \pmod 6$. So two nonzero elements multiply to zero. These are **zero divisors**, and $6$ is composite ($6 = 2\cdot 3$), which is exactly why they exist.
-Consequence: $2$ cannot have an inverse mod $6$. If it did, multiplying $2\cdot 3 \equiv 0$ by $2^{-1}$ would give $3 \equiv 0 \pmod 6$, which is false. (Indeed $\gcd(2,6) = 2 \neq 1$.)
+:::theorem[The group of units]{#unit-group}
+The invertible elements of $\mathbb{Z}/n\mathbb{Z}$ are exactly the classes $[a]$ with $\gcd(a,n)=1$. They form a group $(\mathbb{Z}/n\mathbb{Z})^\times$ under multiplication, of order $\varphi(n)$.
+:::
+
+:::proof
+The description of the units is the theorem *Invertibility criterion* restated, noting that $\gcd(a,n)$ depends only on $[a]$: if $a \equiv a' \pmod n$ then $a' = a + nk$, and any common divisor of $a$ and $n$ divides $a'$, and conversely.
+
+The units of any commutative ring form a group: $1$ is a unit; if $a, b$ are units then $(ab)(b^{-1}a^{-1}) = 1$, so $ab$ is; and $a^{-1}$ is a unit with inverse $a$. Associativity is inherited. Counting: the classes coprime to $n$ are represented by the integers in $\{1, \dots, n\}$ coprime to $n$, and there are $\varphi(n)$ of those.
+:::
+
+:::theorem[$\mathbb{Z}/n\mathbb{Z}$ is a field exactly when $n$ is prime]{#field-iff-prime}
+For $n \ge 2$, the following are equivalent: $\mathbb{Z}/n\mathbb{Z}$ is a field; $\mathbb{Z}/n\mathbb{Z}$ is an integral domain; $n$ is prime.
+:::
+
+:::proof
+*Prime $\Rightarrow$ field.* If $n = p$ is prime, every $a$ with $[a] \neq [0]$ satisfies $p \nmid a$, hence $\gcd(a,p)=1$, hence $[a]$ is a unit by the theorem *The group of units*. So every nonzero element is invertible and $[1] \neq [0]$ because $p \ge 2$.
+
+*Field $\Rightarrow$ domain.* In any field, if $[a][b]=[0]$ with $[a]\neq[0]$, multiplying by $[a]^{-1}$ gives $[b]=[0]$.
+
+*Domain $\Rightarrow$ prime.* If $n$ is composite, write $n = st$ with $1 < s, t < n$. Then $[s]$ and $[t]$ are nonzero — neither $s$ nor $t$ is divisible by $n$, being smaller and positive — while $[s][t] = [n] = [0]$. So $\mathbb{Z}/n\mathbb{Z}$ has zero divisors and is not a domain.
+:::
+
+:::notation
+When $n = p$ is prime the field $\mathbb{Z}/p\mathbb{Z}$ is written $\mathbb{F}_p$. Its multiplicative group $\mathbb{F}_p^\times$ has order $p-1$, which is the group-theoretic content of Fermat's little theorem: the order of an element divides the order of the group.
+:::
+
+:::example[Zero divisors and units modulo $12$]
+List the units and the zero divisors of $\mathbb{Z}/12\mathbb{Z}$, and solve $x^2 \equiv 4 \pmod{12}$.
 :::
 
 :::solution
-1. Contrast with a prime modulus: mod $5$ there are no zero divisors, since $5$ prime means $5 \mid ab$ forces $5 \mid a$ or $5 \mid b$. That absence of zero divisors is what makes $\mathbb{Z}/5\mathbb{Z}$ a field.
+1. Units: the $a \in \{1,\dots,12\}$ with $\gcd(a,12)=1$, namely $1, 5, 7, 11$ — four of them, and indeed $\varphi(12)=4$.
+2. Each is its own inverse here: $5^2 = 25 \equiv 1$, $7^2 = 49 \equiv 1$, $11^2 = 121 \equiv 1$.
+3. Zero divisors: the nonzero non-units $2,3,4,6,8,9,10$; for instance $3 \cdot 4 \equiv 0$ and $6 \cdot 2 \equiv 0$.
+4. Testing all twelve classes, $x^2 \equiv 4$ holds for $x \equiv 2, 4, 8, 10$: **four** solutions to a quadratic. Over a field that is impossible, and the theorem *$\mathbb{Z}/n\mathbb{Z}$ is a field exactly when $n$ is prime* explains why it is possible here.
 :::
 
-## Common Mistakes
-
-- **Reducing inconsistently**: You may reduce each term before combining *or* combine first and reduce at the end, but do it consistently. For example $5 + 7 = 12 \equiv 0 \pmod 6$, and reducing first gives $5 + 7 \equiv (-1) + 1 = 0 \pmod 6$ — same answer. The error is stopping halfway (e.g. reducing one term and forgetting to finish reducing the sum).
-- **Inverses exist for all a**: Only when coprime to m. 2 has no inverse mod 4 (2x even, never 1 mod4).
-- **Number of solutions to ax≡b mod m**: Exactly d=gcd(a,m) solutions when d|b, not always 1 or always 0.
-- **Negative remainders**: We conventionally use 0 ≤ r < m. -1 ≡ m-1 mod m is the standard positive representative.
-- **Confusing ≡ with =**: a ≡ b mod m does not mean a=b; it means they differ by multiple of m. Never drop the "mod m" when it matters.
-
-The Chinese Remainder Theorem (CRT) tells us when and how we can combine several modular conditions into a single congruence modulo the product of the moduli. It is named after ancient Chinese mathematicians who used it to solve calendar and astronomical problems.
-
-In modern terms, if the moduli m1, m2, ..., mk are pairwise coprime, then the system
-$x \equiv a_i \pmod{m_i}$ (for $i=1$ to $k$)
-has a unique solution modulo M = m1 m2 ... mk.
-
-CRT is indispensable in cryptography (RSA, secret sharing), computing with large numbers (break into small-modulus pieces), and in the structure theory of rings (Z/MZ ≅ product of Z/miZ when coprime).
-
-The constructive proof gives an explicit formula for the solution using the inverses of the partial products.
-
-## Statement and Pairwise Coprime Condition
+## The Chinese Remainder Theorem
 
 <!-- section: crt-statement -->
 
+A congruence modulo $n$ is a piece of partial information about an integer. The Chinese Remainder Theorem says that when the moduli are pairwise coprime, several such pieces fit together in exactly one way — no consistency conditions to check, and no ambiguity beyond the obvious one.
+
 :::theorem[Chinese Remainder Theorem]{#crt}
-Let $m_1, \dots, m_k$ be positive integers that are **pairwise coprime** ($\gcd(m_i, m_j) = 1$ for $i \neq j$). Let $a_1, \dots, a_k$ be any integers. Then the system of congruences
+Let $n_1, \dots, n_k$ be pairwise coprime positive integers, that is $\gcd(n_i, n_j) = 1$ whenever $i \neq j$, and set $N = n_1 n_2 \cdots n_k$. For any integers $a_1, \dots, a_k$ the system
 
-$$
-x \equiv a_i \pmod{m_i} \quad (i=1,\dots,k)
-$$
+$$x \equiv a_1 \pmod{n_1}, \quad x \equiv a_2 \pmod{n_2}, \quad \dots, \quad x \equiv a_k \pmod{n_k}$$
 
-has a solution, and the solution is unique modulo $M = m_1 m_2 \cdots m_k$.
+has a solution, and the solution is unique modulo $N$.
 :::
 
 :::proof
-Coprimeness gives *exactly one* class: the product $M = m_1 m_2 \cdots m_k$ has one residue class for each combination of remainders $(a_1, \dots, a_k)$. There are $m_1 m_2 \cdots m_k = M$ possible combinations and $M$ residue classes mod $M$, and coprimeness makes the correspondence a bijection — so every combination is hit exactly once.
+*Uniqueness.* Suppose $x$ and $y$ both satisfy the system. Then $n_i \mid x - y$ for every $i$. Since the $n_i$ are pairwise coprime, their product divides $x-y$: inductively, if $n_1 \cdots n_{j}$ and $n_{j+1}$ both divide $x-y$ and are coprime — $\gcd(n_1\cdots n_j,\, n_{j+1}) = 1$ because $n_{j+1}$ is coprime to each factor — then their product divides $x - y$. Hence $N \mid x-y$, i.e. $x \equiv y \pmod N$.
+
+*Existence.* Consider the map
+
+$$\Phi: \mathbb{Z}/N\mathbb{Z} \longrightarrow \mathbb{Z}/n_1\mathbb{Z} \times \cdots \times \mathbb{Z}/n_k\mathbb{Z}, \qquad [x]_N \mapsto ([x]_{n_1}, \dots, [x]_{n_k}),$$
+
+which is well defined because $n_i \mid N$, so $x \equiv y \pmod N$ implies $x \equiv y \pmod{n_i}$. Uniqueness, just proved, says $\Phi$ is injective. Both sides are finite sets of the same size $N = n_1\cdots n_k$, so an injective map between them is surjective. Surjectivity is exactly the assertion that every tuple $(a_1,\dots,a_k)$ is achieved, i.e. that the system has a solution.
 :::
 
-If the mi are not pairwise coprime, solutions may still exist but are not guaranteed for arbitrary ai, and when they exist the modulus is the lcm of the mi rather than the product.
+The counting argument is short but gives no number. The next section repairs that with an explicit formula; the pigeonhole version is worth keeping because it is the one that generalises, and because it makes clear that existence and uniqueness are not two facts but one.
 
-:::intuition
-Imagine several clocks of different sizes (the mi) that are "coprime in size". There is exactly one time that satisfies all the hand positions ai simultaneously, and it repeats every full product of the clock sizes.
-
-Pairwise coprime means no two clocks share a common "tick factor", so their cycles combine fully without overlap or gaps in the combined period.
-:::
-
-:::example[Solve the classic system by search (to see uniqueness concretely)]
-$$
-x \equiv 2 \pmod 3, \qquad x \equiv 3 \pmod 5, \qquad x \equiv 2 \pmod 7.
-$$
+:::example[Two congruences by inspection]
+Solve $x \equiv 2 \pmod 5$ and $x \equiv 3 \pmod 7$.
 :::
 
 :::solution
-Here $m = 3, 5, 7$ are pairwise coprime, so $M = 3\cdot 5\cdot 7 = 105$ and CRT promises exactly one solution modulo $105$. We can find it by successive sieving:
-
-Start from the last condition: $x \equiv 2 \pmod 7$ gives candidates $2, 9, 16, 23, 30, \dots$
-Keep those with $x \equiv 3 \pmod 5$: of the list, $23$ works ($23 = 4\cdot 5 + 3$). So now $x \equiv 23 \pmod{35}$.
-Finally impose $x \equiv 2 \pmod 3$: $23 = 7\cdot 3 + 2$, so $23 \equiv 2 \pmod 3$ already holds.
-
-So $x \equiv 23 \pmod{105}$.
-
-Sanity check: $23 \bmod 3 = 2$, $23 \bmod 5 = 3$, $23 \bmod 7 = 2$ — all three conditions hold, and by CRT no other class mod $105$ does. The next section derives the same answer with the explicit formula.
+1. The moduli are coprime, so by the theorem *Chinese Remainder Theorem* there is exactly one solution class mod $35$.
+2. List the integers $\equiv 3 \pmod 7$ below $35$: $3, 10, 17, 24, 31$.
+3. Reduce each mod $5$: $3, 0, 2, 4, 1$. The value $2$ occurs at $17$.
+4. So $x \equiv 17 \pmod{35}$. Searching the five candidates rather than all thirty-five is the small-scale version of the constructive method below.
 :::
 
-## Constructive Proof and Explicit Solution
+## The constructive formula
 
 <!-- section: constructive-crt -->
 
-Write $M_i = M / m_i$ for the product of all moduli except $m_i$. Since $\gcd(M_i, m_i) = 1$ (by pairwise coprimeness), $M_i$ has an inverse $y_i \bmod m_i$, that is $M_i y_i \equiv 1 \pmod{m_i}$.
+To solve the system rather than merely know it is solvable, build a residue that is $1$ at one coordinate and $0$ at all the others, then take the obvious combination.
 
-:::theorem[Explicit CRT solution]{#crt-formula}
-With $M_i$ and $y_i$ as above, the solution of the system is
+:::theorem[Explicit CRT reconstruction]{#crt-formula}
+With $n_1,\dots,n_k$ pairwise coprime and $N = n_1\cdots n_k$, put
 
-$$
-x = \sum_{i=1}^k a_i M_i y_i \pmod{M}.
-$$
+$$N_i = \frac{N}{n_i}, \qquad M_i \equiv N_i^{-1} \pmod{n_i} .$$
+
+Each $M_i$ exists, and
+
+$$x \equiv \sum_{i=1}^{k} a_i N_i M_i \pmod N$$
+
+is the unique solution of the system $x \equiv a_i \pmod{n_i}$.
 :::
 
 :::proof
-Each term $a_i M_i y_i \equiv a_i \cdot 1 \equiv a_i \pmod{m_i}$, and $\equiv 0$ mod the other $m_j$ (because $M_i$ is divisible by $m_j$). Summing gives the correct $a_i$ mod each $m_i$, and uniqueness follows from the ring isomorphism, or by noting the difference of two solutions is $0$ mod each $m_i$ and hence mod $M$.
+First, $M_i$ exists: $N_i$ is the product of the $n_j$ with $j \neq i$, each coprime to $n_i$, so $\gcd(N_i, n_i) = 1$ and the theorem *Invertibility criterion* applies.
+
+Now fix $j$ and reduce the sum modulo $n_j$. For $i \neq j$ the factor $N_i$ contains $n_j$ as a divisor, so $a_i N_i M_i \equiv 0 \pmod {n_j}$ and every such term drops out. Only the term $i = j$ survives, and there $N_j M_j \equiv 1 \pmod{n_j}$ by the choice of $M_j$. Hence
+
+$$\sum_i a_i N_i M_i \equiv a_j \cdot 1 = a_j \pmod{n_j},$$
+
+so the stated $x$ solves the system. By the theorem *Chinese Remainder Theorem* it is the only solution mod $N$.
 :::
 
-:::intuition
-For each condition, build a number that is 0 mod every other modulus but "1" mod its own (using the inverse). Scale it by the desired ai and add them all up. The total satisfies all conditions at once.
+The elements $e_i = N_i M_i$ deserve a name: they satisfy $e_i \equiv 1 \pmod{n_i}$ and $e_i \equiv 0 \pmod{n_j}$ for $j \neq i$, so they behave like a basis of indicator functions, and the formula $x = \sum a_i e_i$ reads as "assemble $x$ from its coordinates". They depend only on the moduli, so they are computed once and reused for every right-hand side.
 
-The big modulus M is the "least common multiple period" guaranteed by coprimeness.
+:::recipe[Solving a CRT system]{#crt-recipe}
+1. Check the moduli are pairwise coprime; if not, use the theorem *Systems with non-coprime moduli* instead.
+2. Form $N = \prod n_i$ and each $N_i = N/n_i$.
+3. Invert $N_i$ modulo $n_i$ by the extended Euclidean algorithm to get $M_i$.
+4. Form $x = \sum a_i N_i M_i$ and reduce modulo $N$.
+5. Verify by reducing the answer modulo each $n_i$ in turn.
 :::
 
-:::example[Solve $x\equiv 2 \pmod 3,\ x\equiv 3 \pmod 5,\ x\equiv 2 \pmod 7$ with the explicit formula]
-Set $M = 3\cdot 5\cdot 7 = 105$. For each modulus compute $M_i = M/m_i$ and then the inverse $y_i \equiv M_i^{-1} \pmod{m_i}$.
+:::example[Three congruences by the formula]
+Solve $x \equiv 2 \pmod 3$, $x \equiv 3 \pmod 5$, $x \equiv 2 \pmod 7$.
 :::
 
 :::solution
-$i=1$ ($m_1 = 3$): $M_1 = 105/3 = 35$, and $35 \equiv 2 \equiv -1 \pmod 3$. We need $y_1$ with $(-1)\,y_1 \equiv 1$, so $y_1 \equiv -1 \equiv 2 \pmod 3$.
-$i=2$ ($m_2 = 5$): $M_2 = 105/5 = 21$, and $21 \equiv 1 \pmod 5$. So $y_2 \equiv 1 \pmod 5$.
-$i=3$ ($m_3 = 7$): $M_3 = 105/7 = 15$, and $15 \equiv 1 \pmod 7$. So $y_3 \equiv 1 \pmod 7$.
-
-Assemble the solution $x = \sum_i a_i M_i y_i$:
-$$
-x = 2\cdot 35\cdot 2 \;+\; 3\cdot 21\cdot 1 \;+\; 2\cdot 15\cdot 1 = 140 + 63 + 30 = 233.
-$$
-Reduce mod $105$: $233 = 2\cdot 105 + 23$, so $x \equiv 23 \pmod{105}$.
-
-Sanity check: $23 \bmod 3 = 2$, $23 \bmod 5 = 3$, $23 \bmod 7 = 2$. All three hold, and this matches the answer found by sieving in the previous section.
+1. $N = 105$, and $N_1 = 35$, $N_2 = 21$, $N_3 = 15$.
+2. Inverses: $35 \equiv 2 \pmod 3$ and $2^{-1} \equiv 2$, so $M_1 = 2$. $21 \equiv 1 \pmod 5$, so $M_2 = 1$. $15 \equiv 1 \pmod 7$, so $M_3 = 1$.
+3. Assemble: $x = 2(35)(2) + 3(21)(1) + 2(15)(1) = 140 + 63 + 30 = 233$.
+4. Reduce: $233 - 2 \cdot 105 = 23$, so $x \equiv 23 \pmod{105}$.
+5. Check: $23 = 7\cdot3+2$, $23 = 4\cdot 5+3$, $23 = 3\cdot 7 + 2$. ✓
 :::
 
-## When Moduli Are Not Coprime
+:::figure[The correspondence $k \mapsto (k \bmod 3,\, k \bmod 5)$ for $k = 0, \dots, 14$. Every cell of the $3 \times 5$ grid is hit exactly once, which is the Chinese Remainder Theorem for the moduli $3$ and $5$.]{#crt-grid}
+{
+  "type": "plot",
+  "x": [-0.6, 3.1], "y": [-0.6, 5.1],
+  "xTicks": 1, "yTicks": 1, "xLabel": "k mod 3", "yLabel": "k mod 5",
+  "marks": [
+    { "kind": "point", "at": [0, 0] }, { "kind": "point", "at": [1, 1] },
+    { "kind": "point", "at": [2, 2] }, { "kind": "point", "at": [0, 3] },
+    { "kind": "point", "at": [1, 4] }, { "kind": "point", "at": [2, 0] },
+    { "kind": "point", "at": [0, 1] }, { "kind": "point", "at": [1, 2] },
+    { "kind": "point", "at": [2, 3] }, { "kind": "point", "at": [0, 4] },
+    { "kind": "point", "at": [1, 0] }, { "kind": "point", "at": [2, 1] },
+    { "kind": "point", "at": [0, 2] }, { "kind": "point", "at": [1, 3] },
+    { "kind": "point", "at": [2, 4], "tone": "result" },
+    { "kind": "text", "at": [-0.3, 0.25], "text": "0" },
+    { "kind": "text", "at": [0.7, 1.25], "text": "1" },
+    { "kind": "text", "at": [1.7, 2.25], "text": "2" },
+    { "kind": "text", "at": [-0.3, 3.25], "text": "3" },
+    { "kind": "text", "at": [0.7, 4.25], "text": "4" },
+    { "kind": "text", "at": [2.3, 0.25], "text": "5" },
+    { "kind": "text", "at": [0.25, 0.75], "text": "6" },
+    { "kind": "text", "at": [1.25, 1.75], "text": "7" },
+    { "kind": "text", "at": [2.25, 2.75], "text": "8" },
+    { "kind": "text", "at": [0.25, 3.75], "text": "9" },
+    { "kind": "text", "at": [1.3, -0.35], "text": "10" },
+    { "kind": "text", "at": [2.3, 0.75], "text": "11" },
+    { "kind": "text", "at": [0.25, 2.3], "text": "12" },
+    { "kind": "text", "at": [1.25, 3.3], "text": "13" },
+    { "kind": "text", "at": [2.3, 4.3], "text": "14" }
+  ]
+}
+:::
+
+## Systems with non-coprime moduli
 
 <!-- section: non-coprime-case -->
 
-:::theorem[CRT with general moduli]
-If $\gcd(m_i, m_j) > 1$ for some pair, a solution exists if and only if for every such pair
+Drop the coprimality hypothesis and both halves of the theorem change. Solutions need no longer exist — $x \equiv 1 \pmod 2$ and $x \equiv 2 \pmod 4$ is contradictory, since the second forces $x$ even — and when they do exist, uniqueness is modulo the least common multiple rather than the product.
 
-$$a_i \equiv a_j \pmod{\gcd(m_i, m_j)}.$$
+:::theorem[Two congruences, general moduli]{#two-congruences}
+Let $m, n$ be positive integers and $d = \gcd(m,n)$. The system
 
-When solutions exist, they are unique modulo $\operatorname{lcm}(m_1, \dots, m_k)$, which is smaller than the product.
+$$x \equiv a \pmod m, \qquad x \equiv b \pmod n$$
+
+has a solution if and only if $d \mid a - b$. When it does, the solution is unique modulo $\operatorname{lcm}(m,n) = mn/d$.
 :::
 
-The general case can be handled by iteratively solving two at a time, or using the explicit formula with care on the lcm.
+:::proof
+*Necessity.* If $x$ solves both, then $d \mid m \mid x - a$ and $d \mid n \mid x - b$, so $d$ divides $(x-b)-(x-a) = a - b$.
 
-:::intuition
-If two conditions conflict on the overlapping part (the gcd), no solution. E.g. x≡1 mod 4 and x≡2 mod 6: gcd=2, but 1≢2 mod2, impossible.
+*Sufficiency.* The first congruence says $x = a + mt$ for some integer $t$. Substituting into the second, we need
 
-If consistent on overlaps, the combined period is the lcm, not the full product.
+$$a + mt \equiv b \pmod n, \qquad \text{i.e.} \qquad mt \equiv b - a \pmod n .$$
+
+By the theorem *Linear congruence* this is solvable in $t$ exactly when $\gcd(m,n) = d$ divides $b-a$, which is the hypothesis, and then $t$ is determined modulo $n/d$. Writing $t = t_0 + (n/d)s$ gives
+
+$$x = a + mt_0 + \frac{mn}{d}s,$$
+
+so $x$ is determined modulo $mn/d = \operatorname{lcm}(m,n)$.
 :::
 
-:::example[Consistent non-coprime system]
-$$
-x \equiv 3 \pmod 4, \qquad x \equiv 7 \pmod 6.
-$$
+:::corollary[General systems]{#general-crt}
+A system $x \equiv a_i \pmod{n_i}$, $i = 1,\dots,k$, has a solution if and only if
+
+$$\gcd(n_i, n_j) \mid a_i - a_j \quad \text{for all } i \neq j,$$
+
+and the solution is then unique modulo $\operatorname{lcm}(n_1,\dots,n_k)$.
+:::
+
+:::proof
+Necessity is the necessity half of the theorem *Two congruences, general moduli* applied to each pair.
+
+For sufficiency, induct on $k$. The case $k = 1$ is trivial. Suppose the first $k-1$ congruences have been merged into a single congruence $x \equiv c \pmod{L}$ with $L = \operatorname{lcm}(n_1, \dots, n_{k-1})$; note $c \equiv a_i \pmod {n_i}$ for each $i < k$. We must merge it with $x \equiv a_k \pmod{n_k}$, so by the theorem *Two congruences, general moduli* it suffices to show $g := \gcd(L, n_k)$ divides $c - a_k$.
+
+Let $q$ be any prime power dividing $g$ exactly, say $q = p^\alpha \| g$. Then $p^\alpha \mid n_k$ and $p^\alpha \mid L$, and since $L$ is a least common multiple, $p^\alpha \mid n_i$ for some $i < k$. Hence $p^\alpha \mid \gcd(n_i, n_k)$, which divides $a_i - a_k$ by hypothesis; and $p^\alpha \mid n_i \mid c - a_i$. Adding, $p^\alpha \mid c - a_k$. As this holds for every prime power exactly dividing $g$, we get $g \mid c - a_k$. The merged modulus is $\operatorname{lcm}(L, n_k) = \operatorname{lcm}(n_1,\dots,n_k)$.
+:::
+
+:::example[A solvable system with overlapping moduli]
+Solve $x \equiv 5 \pmod{12}$ and $x \equiv 11 \pmod{18}$.
 :::
 
 :::solution
-Check the compatibility condition first. Here $\gcd(4,6) = 2$, so we need $3 \equiv 7 \pmod 2$. Both $3$ and $7$ are odd, i.e. $3 \equiv 7 \equiv 1 \pmod 2$, so the system is consistent and a solution exists.
-Substitute the first congruence: write $x = 4k + 3$ and plug into the second: $4k + 3 \equiv 7 \pmod 6$, i.e. $4k \equiv 4 \pmod 6$.
-Divide through by $\gcd(4,6) = 2$, remembering the modulus also divides by $2$: $2k \equiv 2 \pmod 3$. Since $\gcd(2,3) = 1$, cancel the $2$: $k \equiv 1 \pmod 3$.
-Back-substitute $k = 3m + 1$: $x = 4(3m + 1) + 3 = 12m + 7$.
-
-So $x \equiv 7 \pmod{12}$, and note $\mathrm{lcm}(4,6) = 12$ — the period is the lcm, not the product $24$.
-
-Sanity check: $7 \bmod 4 = 3$ (target $3$, good) and $7 \bmod 6 = 1$. The second target was written as $7 \pmod 6$, and $7 \equiv 1 \pmod 6$, so both conditions hold.
+1. $d = \gcd(12,18) = 6$ and $a - b = 5 - 11 = -6$, which is divisible by $6$. So a solution exists, unique mod $\operatorname{lcm}(12,18)=36$.
+2. Write $x = 5 + 12t$ and substitute: $5 + 12t \equiv 11 \pmod{18}$, so $12t \equiv 6 \pmod{18}$.
+3. Divide through by $6$: $2t \equiv 1 \pmod 3$, so $t \equiv 2 \pmod 3$.
+4. Take $t = 2$: $x = 5 + 24 = 29$. Hence $x \equiv 29 \pmod{36}$.
+5. Check: $29 = 2\cdot 12 + 5$ and $29 = 18 + 11$. ✓
 :::
 
-## Applications
+:::example[An unsolvable system]
+Show that $x \equiv 3 \pmod{10}$, $x \equiv 8 \pmod{15}$ has no solution.
+:::
+
+:::solution
+1. $\gcd(10,15) = 5$ and $3 - 8 = -5$, which *is* divisible by $5$ — so this pair alone is fine, and in fact $x \equiv 23 \pmod{30}$ works.
+2. Adjoin a third congruence $x \equiv 1 \pmod 6$. Now $\gcd(10,6) = 2$ must divide $3 - 1 = 2$ ✓, but $\gcd(15,6) = 3$ must divide $8 - 1 = 7$, and it does not.
+3. By the corollary *General systems* the three-congruence system is unsolvable, even though every pair but one is compatible. Pairwise checking is genuinely necessary, and checking only consecutive pairs is not enough.
+:::
+
+## The isomorphism and its applications
 
 <!-- section: crt-applications -->
 
-- RSA decryption: compute mod p and mod q separately then combine via CRT (much faster for large exponents).
-- Secret sharing and threshold schemes.
-- Fast multiplication of huge integers by splitting via CRT into smaller pieces.
-- Solving systems of linear Diophantine equations.
-- In computing, representing numbers in mixed-radix systems.
+The Chinese Remainder Theorem is a statement about sets of solutions, but the map in its proof respects addition and multiplication, and that upgrade is what makes the theorem a computational tool rather than a curiosity.
 
-:::theorem[Ring form of the CRT]
-When the $m_i$ are pairwise coprime and $M = m_1 \cdots m_k$, there is a ring isomorphism
+:::theorem[CRT as a ring isomorphism]{#crt-isomorphism}
+If $\gcd(m,n)=1$ then the reduction map
 
-$$\mathbb{Z}/M\mathbb{Z} \cong \prod_i \mathbb{Z}/m_i \mathbb{Z},$$
+$$\Phi : \mathbb{Z}/mn\mathbb{Z} \longrightarrow \mathbb{Z}/m\mathbb{Z} \times \mathbb{Z}/n\mathbb{Z}, \qquad [x]_{mn} \mapsto ([x]_m, [x]_n)$$
 
-and this is the algebraic heart of the CRT.
+is an isomorphism of rings, where the right-hand side has componentwise operations. More generally $\mathbb{Z}/N\mathbb{Z} \cong \prod_i \mathbb{Z}/n_i\mathbb{Z}$ for pairwise coprime $n_i$ with product $N$.
 :::
 
-:::intuition
-Big hard problems mod a composite can be broken into easy problems mod the prime power factors, solved independently, then glued back together uniquely.
-
-This "divide and conquer" via coprime pieces is why RSA can use huge moduli safely yet compute efficiently.
+:::proof
+$\Phi$ is well defined and bijective by the theorem *Chinese Remainder Theorem*. It is a ring homomorphism because reduction is: $[x+y]_m = [x]_m + [y]_m$ and $[xy]_m = [x]_m[y]_m$ by the definition of the operations in $\mathbb{Z}/m\mathbb{Z}$, and the same in the second coordinate, while $[1]_{mn} \mapsto ([1]_m,[1]_n)$ is the identity of the product. A bijective ring homomorphism is an isomorphism, its set-theoretic inverse being automatically a homomorphism.
 :::
 
-:::example[RSA-style small CRT]
-Suppose we work modulo $M = pq$ with $p = 5$, $q = 13$, so $M = 65$. A CRT-based RSA decryption computes the message separately mod each prime and then glues the pieces. Say the two partial results are
-$$
-m \equiv 3 \pmod 5, \qquad m \equiv 6 \pmod{13},
-$$
-and we want $m \bmod 65$. Apply the explicit formula with $M_1 = 65/5 = 13$ and $M_2 = 65/13 = 5$:
+:::corollary[$\varphi$ is multiplicative]{#phi-multiplicative}
+If $\gcd(m,n) = 1$ then $\varphi(mn) = \varphi(m)\varphi(n)$.
+:::
+
+:::proof
+An isomorphism of rings carries units to units bijectively, so $(\mathbb{Z}/mn\mathbb{Z})^\times \cong (\mathbb{Z}/m\mathbb{Z} \times \mathbb{Z}/n\mathbb{Z})^\times$. A pair is invertible componentwise exactly when both components are, so the units of a product are the product of the unit groups. Counting with the theorem *The group of units* gives $\varphi(mn) = \varphi(m)\varphi(n)$.
+:::
+
+The practical consequence is a divide-and-conquer strategy: to compute something modulo $N$, compute it modulo each prime power dividing $N$ — where the arithmetic is small and the structure is simpler — and reassemble.
+
+:::example[A large power by splitting the modulus]
+Compute $2^{100} \bmod 35$.
 :::
 
 :::solution
-$y_1 \equiv M_1^{-1} \pmod 5$: $13 \equiv 3 \pmod 5$, and $3\cdot 2 = 6 \equiv 1$, so $y_1 = 2$.
-$y_2 \equiv M_2^{-1} \pmod{13}$: $5 \cdot 8 = 40 \equiv 1 \pmod{13}$, so $y_2 = 8$.
-
-Then
-$$
-m = 3\cdot 13\cdot 2 + 6\cdot 5\cdot 8 = 78 + 240 = 318, \qquad 318 = 4\cdot 65 + 58,
-$$
-so $m \equiv 58 \pmod{65}$.
-
-Sanity check: $58 \bmod 5 = 3$ and $58 \bmod 13 = 58 - 4\cdot 13 = 6$. Both partial results are recovered — this "gluing" is exactly what makes CRT-RSA faster than working mod $pq$ directly, since the per-prime exponentiations are on smaller numbers.
+1. $35 = 5 \cdot 7$ with $\gcd(5,7)=1$, so work in $\mathbb{Z}/5\mathbb{Z} \times \mathbb{Z}/7\mathbb{Z}$.
+2. Mod $5$: $\operatorname{ord}_5(2) = 4$ and $100 \equiv 0 \pmod 4$, so $2^{100} \equiv 1 \pmod 5$.
+3. Mod $7$: $\operatorname{ord}_7(2) = 3$ and $100 \equiv 1 \pmod 3$, so $2^{100} \equiv 2^1 = 2 \pmod 7$.
+4. Reassemble: solve $x \equiv 1 \pmod 5$, $x \equiv 2 \pmod 7$. The candidates $\equiv 2 \pmod 7$ are $2,9,16,23,30$, and $16 \equiv 1 \pmod 5$.
+5. So $2^{100} \equiv 16 \pmod{35}$.
 :::
 
-## Common Mistakes
+:::example[Counting square roots of $1$]
+How many solutions does $x^2 \equiv 1 \pmod{105}$ have?
+:::
 
-- **Forgetting the pairwise coprime hypothesis**: The simple product modulus and guaranteed unique solution require gcd(mi,mj)=1 for all pairs. Counterexamples exist otherwise.
-- **Using the formula without inverses existing**: If not coprime, $M_i$ may not be invertible $\bmod m_i$; the construction fails.
-- **Claiming no solution when consistent on gcds**: Even if not pairwise coprime, check the compatibility a_i ≡ a_j mod gcd(mi,mj) before declaring impossibility.
-- **Solution unique mod product always**: When not coprime the period is lcm ≤ product; multiple solutions mod product may exist or none.
-- **Sign errors in explicit formula**: The $y_i$ are inverses of $M_i \bmod m_i$; easy to pick the wrong sign or representative when computing by hand.
+:::solution
+1. $105 = 3 \cdot 5 \cdot 7$, so by the theorem *CRT as a ring isomorphism*, $x$ corresponds to a triple and $x^2 \equiv 1$ holds exactly when it holds in each coordinate.
+2. Modulo an odd prime $p$, $x^2 \equiv 1$ means $p \mid (x-1)(x+1)$, so $x \equiv \pm 1$: two solutions each.
+3. The triples therefore number $2 \cdot 2 \cdot 2 = 8$, so there are $8$ solutions mod $105$.
+4. Explicitly they are $1, 29, 34, 41, 64, 71, 76, 104$ — and note $8 \ne 2$, another reminder that a quadratic over a non-field can have many roots.
+:::
 
-The congruence relation a ≡ b mod m is the central equivalence relation of number theory. It turns the integers into a ring of residue classes and allows us to do arithmetic while "ignoring" multiples of m. Understanding its algebraic properties (it is a congruence in the algebraic sense: compatible with + and *) is what makes modular arithmetic powerful.
-
-This topic formalizes what we used intuitively in the previous modular arithmetic topic: the quotient ring construction, the ideal (m), and how congruences interact with divisibility and gcd.
-
-It sets the stage for rings Z/nZ, Euler's theorem generalizations, and the isomorphism theorems via CRT.
-
-## Definition and Equivalence Relation Properties
+## Congruence as an equivalence relation
 
 <!-- section: definition-equivalence -->
 
-The relation $a \equiv b \pmod m$ means $m \mid (a-b)$.
+It is worth pausing over what the theorem *Congruence is an equivalence relation* buys, because the payoff is structural rather than computational: an equivalence relation is the same thing as a partition, and a partition is the same thing as a new set whose points are the old set's classes.
 
-:::proposition[Congruence is an equivalence relation]
-For a fixed modulus $m$, congruence mod $m$ is reflexive, symmetric and transitive.
+:::theorem[Classes partition the integers]{#partition}
+Fix $n \ge 1$. The residue classes modulo $n$ are non-empty, pairwise disjoint, and their union is $\mathbb{Z}$. Moreover $[a] = [b]$ if and only if $a \equiv b \pmod n$.
 :::
 
 :::proof
-- Reflexive: a ≡ a mod m (m divides 0).
-- Symmetric: if a≡b then b≡a ( - (a-b) ).
-- Transitive: if a≡b and b≡c then a-c = (a-b)+(b-c) divisible by m.
+Each class is non-empty since $a \in [a]$ by reflexivity, and the union is all of $\mathbb{Z}$ for the same reason.
+
+Suppose $[a] \cap [b] \neq \varnothing$, say $c$ lies in both. Then $c \equiv a$ and $c \equiv b$, so by symmetry and transitivity $a \equiv b$. Now for any $x \in [a]$ we get $x \equiv a \equiv b$, so $x \in [b]$, and symmetrically; hence $[a] = [b]$. So two classes are either disjoint or equal.
+
+Finally, if $a \equiv b$ then $b \in [a] \cap [b]$, which by the previous paragraph forces $[a]=[b]$; conversely $[a]=[b]$ gives $a \in [b]$, i.e. $a \equiv b$.
 :::
 
-:::definition[Residue class]
-The equivalence classes are $[r] = \{ \dots, r-2m, r-m, r, r+m, r+2m, \dots \}$ for $r = 0, 1, \dots, m-1$, the standard representatives.
+:::definition[Quotient set and canonical projection]{#projection}
+The set of classes is the **quotient** $\mathbb{Z}/n\mathbb{Z}$, and the **canonical projection** is
+
+$$\pi_n : \mathbb{Z} \to \mathbb{Z}/n\mathbb{Z}, \qquad \pi_n(a) = [a]_n .$$
 :::
 
-:::intuition
-"Same mod m" means they are identical after you throw away complete cycles of m. Like two times on different days that show the same clock position.
+The projection is surjective by construction and is very far from injective: each fibre $\pi_n^{-1}([a])$ is an infinite arithmetic progression of common difference $n$. What the theorem *Least residues classify the classes* adds is a canonical choice of representative in each fibre, which is what makes the quotient a *computable* object and not merely a well-defined one.
 
-The three properties (reflexive/symmetric/transitive) are exactly what is needed for "being the same" to be consistent and partition the integers into clean buckets.
+:::remark
+Choosing representatives is a convention, not a fact. The least nonnegative residues $\{0,\dots,n-1\}$ are standard, but the **least absolute residues** $\{-\lfloor (n-1)/2 \rfloor, \dots, \lfloor n/2 \rfloor\}$ are often better: modulo $13$ they let one write $12 \equiv -1$, turning $12^{2} \equiv 1$ into a one-line observation. Both are complete residue systems, so nothing mathematical distinguishes them.
 :::
 
-:::example[The four classes mod 4]
-Modulo $4$ there are exactly $4$ residue classes, each an arithmetic progression with common difference $4$:
+:::example[Least absolute residues shorten a computation]
+Compute $12^{34} \bmod 13$ and $11^{20} \bmod 13$ using signed representatives.
 :::
 
 :::solution
-$[0] = \{\dots, -8, -4, 0, 4, 8, \dots\}$ (the multiples of $4$).
-$[1] = 1 + 4\mathbb{Z} = \{\dots, -7, -3, 1, 5, 9, \dots\}$.
-$[2] = 2 + 4\mathbb{Z} = \{\dots, -6, -2, 2, 6, 10, \dots\}$.
-$[3] = 3 + 4\mathbb{Z} = \{\dots, -5, -1, 3, 7, 11, \dots\}$.
-
-Verify these really partition $\mathbb{Z}$: every integer lands in exactly one class (its remainder on division by $4$), and no integer is in two. For instance $-1 \equiv 3 \pmod 4$ because $-1 - 3 = -4$ is a multiple of $4$; this is why $-1$ is a handy stand-in for the "top" class $m-1$ when handling signs.
+1. $12 \equiv -1 \pmod{13}$, so $12^{34} \equiv (-1)^{34} = 1$.
+2. $11 \equiv -2 \pmod{13}$, so $11^{20} \equiv (-2)^{20} = 2^{20}$.
+3. By Fermat's little theorem $2^{12} \equiv 1$, so $2^{20} \equiv 2^{8} = 256 = 19\cdot 13 + 9 \equiv 9$.
+4. Hence $12^{34} \equiv 1$ and $11^{20} \equiv 9 \pmod{13}$.
 :::
 
-## Congruence is a Ring Congruence
+## Congruence as a ring congruence
 
 <!-- section: ring-congruence -->
 
-:::proposition[Congruence is compatible with $+$ and $\times$]
-If $a_1 \equiv b_1 \pmod m$ and $a_2 \equiv b_2 \pmod m$, then
+Abstract algebra isolates the property that made $\mathbb{Z}/n\mathbb{Z}$ possible, and gives it a name.
 
-$$a_1 + a_2 \equiv b_1 + b_2, \qquad a_1 - a_2 \equiv b_1 - b_2, \qquad a_1 a_2 \equiv b_1 b_2 \pmod m.$$
+:::definition[Ring congruence]{#ring-congruence-def}
+An equivalence relation $\sim$ on a ring $R$ is a **congruence relation** if it is compatible with the operations: whenever $a \sim a'$ and $b \sim b'$,
+
+$$a + b \sim a' + b' \quad\text{and}\quad ab \sim a'b' .$$
+:::
+
+By the theorem *Congruence is compatible with the ring operations*, congruence mod $n$ is a congruence relation on $\mathbb{Z}$. The next result says that on $\mathbb{Z}$ there are no others.
+
+:::theorem[Every congruence on $\mathbb{Z}$ is a congruence mod $n$]{#congruences-classified}
+Let $\sim$ be a congruence relation on the ring $\mathbb{Z}$. Then there is a unique integer $n \ge 0$ such that $a \sim b \iff a \equiv b \pmod n$, where $n = 0$ gives equality.
 :::
 
 :::proof
-This follows immediately from the definition: the differences are multiples of $m$, and $(a_1-b_1) + (a_2-b_2)$ is again a multiple of $m$ for the sum, with the cross term handling multiplication.
+Let $I = \{ a \in \mathbb{Z} : a \sim 0 \}$. Then $0 \in I$; if $a, b \in I$ then $a - b \sim 0 - 0 = 0$ by compatibility with addition and negation, so $a - b \in I$; and if $a \in I$ and $r \in \mathbb{Z}$ then $ra \sim r\cdot 0 = 0$, so $ra \in I$. Thus $I$ is closed under subtraction and under multiplication by arbitrary integers.
+
+If $I = \{0\}$ take $n = 0$. Otherwise let $n$ be the least positive element of $I$, which exists by well-ordering since $I$ contains a nonzero element and is closed under negation. For any $a \in I$, divide: $a = qn + r$ with $0 \le r < n$; then $r = a - qn \in I$, so minimality forces $r = 0$ and $n \mid a$. Conversely every multiple of $n$ is in $I$. Hence $I = n\mathbb{Z}$.
+
+Finally $a \sim b$ if and only if $a - b \sim 0$ — subtract $b \sim b$ from one side, add it back for the converse — if and only if $a - b \in I = n\mathbb{Z}$, which is $a \equiv b \pmod n$. Uniqueness holds because $n$ is recovered from $\sim$ as the least positive element of $I$.
 :::
 
-Consequently the set of classes with induced + and * forms the quotient ring Z/mZ (also written Z_m).
-
-:::intuition
-You can add or multiply two "clock readings" and the result doesn't depend on which representative you chose for each. The arithmetic is well-defined on the classes themselves.
-
-This is why  (10 mod12) + (5 mod12) = 3 mod12 no matter if you think of 10 as 22 or -2.
+:::remark
+The set $I$ built in that proof is exactly an *ideal*, and the correspondence "congruence relations $\leftrightarrow$ ideals" holds in every ring, not just $\mathbb{Z}$. What is special about $\mathbb{Z}$ is the division algorithm, which forced $I$ to be generated by one element.
 :::
 
-:::example[Well-defined multiplication mod 5]
-The claim is that the product of two classes does not depend on which representatives you pick. Test it with $[7]\cdot[8]$ mod $5$, where $7 \equiv 2$ and $8 \equiv 3 \pmod 5$.
-:::
-
-:::solution
-Using the original representatives: $7\cdot 8 = 56 = 11\cdot 5 + 1$, so $56 \equiv 1 \pmod 5$.
-Using the reduced representatives: $2\cdot 3 = 6 \equiv 1 \pmod 5$.
-
-Same class, as promised. To see *why* the choice is irrelevant, replace $7$ by another representative, say $7 = 2 + 5$: $(2 + 5)\cdot 3 = 6 + 15$, and $15 \equiv 0 \pmod 5$, so the extra $15$ contributes nothing and we again get $\equiv 1$. The general reason is the identity $(a + km)(c) = ac + m(kc)$: shifting a representative by a multiple of $m$ only adds a multiple of $m$ to the product.
-:::
-
-## Connection to Ideals and Divisibility
+## Ideals, divisibility and containment
 
 <!-- section: ideals-divisibility -->
 
-:::definition[The ideal $m\mathbb{Z}$]
-The set $m\mathbb{Z} = \{\text{multiples of } m\}$ is the principal ideal generated by $m$, and congruence $a \equiv b \pmod m$ means
-
-$$a - b \in m\mathbb{Z}.$$
+:::definition[Ideal of $\mathbb{Z}$]{#ideal}
+A subset $I \subseteq \mathbb{Z}$ is an **ideal** if $0 \in I$, $I$ is closed under subtraction, and $ra \in I$ for every $r \in \mathbb{Z}$ and $a \in I$. The **principal ideal** generated by $n$ is $n\mathbb{Z} = \{nk : k \in \mathbb{Z}\}$.
 :::
 
-The gcd appears naturally: the common solutions to x≡a mod m, x≡b mod n etc.
-
-:::proposition[Solvability of $kx \equiv c \pmod m$]
-If $d = \gcd(k,m)$ then the congruence $k x \equiv c \pmod m$ has solutions if and only if $d \mid c$, and then exactly $d$ solutions modulo $m$, as seen earlier.
+:::theorem[$\mathbb{Z}$ is a principal ideal domain]{#pid}
+Every ideal of $\mathbb{Z}$ equals $n\mathbb{Z}$ for a unique $n \ge 0$.
 :::
 
-Z/mZ is a field iff m prime (i.e. the ideal (m) is maximal).
-
-:::intuition
-The "ignore multiples of m" bucket is literally the ideal mZ, the multiples.
-
-Divisibility questions translate into membership in ideals or kernels of maps.
+:::proof
+This is the middle paragraph of the proof of the theorem *Every congruence on $\mathbb{Z}$ is a congruence mod $n$*, which used only the three closure properties now taken as the definition: if $I = \{0\}$ take $n=0$, otherwise take $n$ least positive in $I$ and divide with remainder to show $I = n\mathbb{Z}$. Uniqueness: $n\mathbb{Z} = m\mathbb{Z}$ with $m, n \ge 0$ forces $m \mid n$ and $n \mid m$, hence $m = n$.
 :::
 
-:::example[Solve 6x ≡ 9 mod 15]
-d=gcd(6,15)=3, 3 divides 9, ok.
+:::proposition[Divisibility is containment]{#divides-contains}
+For positive integers $m, n$:
+
+$$m \mid n \iff n\mathbb{Z} \subseteq m\mathbb{Z} .$$
+
+Moreover $\gcd(m,n)\mathbb{Z} = m\mathbb{Z} + n\mathbb{Z}$ and $\operatorname{lcm}(m,n)\mathbb{Z} = m\mathbb{Z} \cap n\mathbb{Z}$.
 :::
 
-:::solution
-1. Divide eq by 3: 2x ≡3 mod5.
-2. Inverse of 2 mod5 is 3 (2*3=6≡1).
-3. x≡9≡4 mod5.
-4. Solutions mod15: x=5k +4 for k=0,1,2 (the d=3 lifts).
-5. Check: x=4: 6*4=24≡9 mod15? 24-15=9 yes.
-6. x=9: 6*9=54, 54/15=3.6, 15*3=45,54-45=9 yes.
-7. x=14: 6*14=84, 15*5=75,84-75=9 yes.
+:::proof
+If $m \mid n$ then every multiple of $n$ is a multiple of $m$, giving containment. Conversely if $n\mathbb{Z} \subseteq m\mathbb{Z}$ then $n \in m\mathbb{Z}$, so $m \mid n$.
+
+The set $m\mathbb{Z} + n\mathbb{Z} = \{mu + nv\}$ is an ideal, so by the theorem *$\mathbb{Z}$ is a principal ideal domain* it equals $d\mathbb{Z}$ for some $d \ge 0$. Since $m$ and $n$ lie in it, $d$ divides both; and $d = mu+nv$ for some $u,v$, so every common divisor of $m$ and $n$ divides $d$. That is the defining property of the greatest common divisor. The intersection $m\mathbb{Z}\cap n\mathbb{Z}$ is likewise an ideal $\ell\mathbb{Z}$, and $\ell$ is a common multiple divided by every common multiple, i.e. the least one.
 :::
 
-## Induced Maps and Homomorphisms
+:::remark
+"To contain is to divide" inverts the intuition that a divisor is *smaller*. The bigger ideal belongs to the smaller number: $2\mathbb{Z} \supset 6\mathbb{Z}$ because $2 \mid 6$. Bézout's identity, the Chinese Remainder Theorem and the classification above are all statements about the lattice of these ideals.
+:::
+
+## Homomorphisms and induced maps
 
 <!-- section: homomorphisms -->
 
-:::proposition[The reduction map is a homomorphism]
-The natural projection $\pi\colon \mathbb{Z} \to \mathbb{Z}/m\mathbb{Z}$, $a \mapsto [a]$, is a ring homomorphism with kernel $m\mathbb{Z}$.
+:::theorem[First isomorphism theorem for $\mathbb{Z}$]{#first-iso}
+The projection $\pi_n : \mathbb{Z}\to\mathbb{Z}/n\mathbb{Z}$ is a surjective ring homomorphism with kernel $n\mathbb{Z}$. Conversely, if $f : \mathbb{Z}\to R$ is a ring homomorphism whose kernel contains $n\mathbb{Z}$, then $f$ factors uniquely as $f = \bar f \circ \pi_n$ for a ring homomorphism $\bar f : \mathbb{Z}/n\mathbb{Z} \to R$.
 :::
 
-By the first isomorphism theorem Z / mZ ≅ image.
+:::proof
+That $\pi_n$ is a homomorphism is the definition of the operations on classes; it is surjective because every class is $[a]$ for some $a$; and $\pi_n(a) = [0]$ means $n \mid a$, so the kernel is $n\mathbb{Z}$.
 
-More generally, congruences let us define maps on residue classes consistently.
-
-This is the beginning of quotient constructions used throughout algebra.
-
-:::intuition
-The map that sends every integer to its "remainder bucket" respects addition and multiplication. It "forgets" the exact value but keeps the modular information.
-
-Kernels capture exactly what is being set to zero (the multiples of m).
+For the factorisation, there is no choice about $\bar f$: the requirement $f = \bar f \circ \pi_n$ forces $\bar f([a]) = f(a)$, which gives uniqueness. It is well defined: if $[a]=[b]$ then $a - b \in n\mathbb{Z} \subseteq \ker f$, so $f(a) - f(b) = f(a-b) = 0$. And it is a homomorphism because $\bar f([a]+[b]) = \bar f([a+b]) = f(a+b) = f(a)+f(b)$, similarly for products, and $\bar f([1]) = f(1) = 1$.
 :::
 
-:::example[The projection mod 3]
-Let $\pi\colon \mathbb{Z} \to \mathbb{Z}/3\mathbb{Z}$ send each integer to its class. Check that it respects addition:
+:::corollary[When reduction descends]{#reduction-descends}
+For positive integers $m, n$ there is a ring homomorphism $\mathbb{Z}/n\mathbb{Z} \to \mathbb{Z}/m\mathbb{Z}$ sending $[a]_n \mapsto [a]_m$ if and only if $m \mid n$, and it is then the unique ring homomorphism between them.
 :::
 
-:::solution
-$\pi(5) = [2]$ (since $5 \equiv 2$) and $\pi(7) = [1]$ (since $7 \equiv 1$).
-Add the inputs first: $\pi(5 + 7) = \pi(12) = [0]$ (since $12 \equiv 0 \pmod 3$).
-Add the outputs: $[2] + [1] = [3] = [0]$.
+:::proof
+($\Leftarrow$) If $m \mid n$ then $n\mathbb{Z} \subseteq m\mathbb{Z} = \ker \pi_m$ by the proposition *Divisibility is containment*, so the theorem *First isomorphism theorem for $\mathbb{Z}$* applies to $f = \pi_m$ and produces the map.
 
-The two agree, so $\pi(5+7) = \pi(5) + \pi(7)$, confirming $\pi$ is a homomorphism on this example. Its kernel is $\pi^{-1}([0]) = \{a : a \equiv 0 \pmod 3\} = 3\mathbb{Z}$, the multiples of $3$ — exactly the elements "forgotten" (sent to zero) by the map.
+($\Rightarrow$) If such a map $g$ exists then $g([n]_n) = [n]_m$, but $[n]_n = [0]_n$ and $g([0]_n) = [0]_m$, so $m \mid n$. Uniqueness: any ring homomorphism out of $\mathbb{Z}/n\mathbb{Z}$ is determined by the image of $[1]$, which must be the identity, and $[a] = a\cdot[1]$.
 :::
 
-## Common Mistakes
-
-- **Thinking congruence only for positive remainders**: Classes include negatives; -1 is always a valid representative equivalent to m-1.
-- **Dropping the modulus when manipulating**: a≡b mod m and c≡d mod m does NOT imply a/c ≡ b/d unless inverses exist.
-- **Confusing the ideal (m) with the number m**: The congruence is membership of difference in the ideal mZ.
-- **Assuming all rings Z/nZ behave like fields**: Only when n prime; otherwise zero divisors exist and not every equation has unique solution.
-- **Forgetting that transitivity requires the same m**: a≡b mod m, b≡c mod n with m≠n does not imply a≡c mod anything in particular without lcm.
-
-The Jacobi symbol (a/n) generalizes the Legendre symbol to odd composite n: if n= product p_i^{e_i} odd, (a/n) = product (a/p_i)^{e_i} (Legendre).
-
-It is completely multiplicative in a, and (a/n)=0 if gcd(a,n)>1.
-
-Unlike Legendre, (a/n)=1 does not imply a is quadratic residue mod n (it can be 1 even if non-residue mod some p| n, as long as the product of signs is +1).
-
-It is still useful because it can be computed using a reciprocity law similar to Legendre, in time comparable to gcd, without factoring n.
-
-Used in the Solovay-Strassen primality test (a probabilistic test using the Jacobi symbol).
-
-## Definition
-
-<!-- section: jacobi-def -->
-
-:::definition[Jacobi symbol]{#jacobi-symbol}
-For an odd positive integer $n > 1$ and an integer $a$, the **Jacobi symbol** is defined by factoring $n$ into odd primes (with multiplicity) and multiplying the Legendre symbols: if $n = \prod_i p_i^{e_i}$, then
-
-$$\left(\frac{a}{n}\right) = \prod_i \left(\frac{a}{p_i}\right)^{e_i},$$
-
-where the factors on the right are Legendre symbols. If $\gcd(a,n) > 1$ then $\left(\frac{a}{n}\right) = 0$, and for $n = 1$ we set $\left(\frac{a}{1}\right) = 1$ by convention.
-:::
-
-:::intuition
-It is the "product of the yes/no answers" for the prime power factors of n.
-
-It can say +1 even when there is no square root mod n, because the "no" from one prime can be canceled by "yes" from another.
-:::
-
-:::example[Compute the Jacobi symbol $\left(\tfrac{2}{15}\right)$]
-Factor the (odd) modulus: $15 = 3\cdot 5$, so by definition $\left(\tfrac{2}{15}\right) = \left(\tfrac{2}{3}\right)\left(\tfrac{2}{5}\right)$, a product of Legendre symbols.
+:::example[A congruence pulled back along reduction]
+Given that $x \equiv 7 \pmod{60}$, what can be said about $x$ modulo $4$, and modulo $8$?
 :::
 
 :::solution
-Use the rule $\left(\tfrac{2}{p}\right) = 1$ if $p \equiv 1$ or $7 \pmod 8$, and $-1$ if $p \equiv 3$ or $5 \pmod 8$:
-
-$3 \equiv 3 \pmod 8$, so $\left(\tfrac{2}{3}\right) = -1$.
-$5 \equiv 5 \pmod 8$, so $\left(\tfrac{2}{5}\right) = -1$.
-
-Hence $\left(\tfrac{2}{15}\right) = (-1)(-1) = 1$.
-
-Sanity check that this does **not** mean $2$ is a square mod $15$: a solution to $x^2 \equiv 2 \pmod{15}$ would require $x^2 \equiv 2 \pmod 3$. But mod $3$ the only squares are $0$ and $1$, never $2$, so there is no solution mod $3$ and therefore none mod $15$. This is the classic warning: for composite $n$, $\left(\tfrac{a}{n}\right) = 1$ can arise because the two $-1$ factors cancel, even though $a$ is a non-residue.
+1. $4 \mid 60$, so the corollary *When reduction descends* gives a well-defined reduction: $x \equiv 7 \equiv 3 \pmod 4$.
+2. $8 \nmid 60$, so no such map exists and the class of $x$ mod $8$ is genuinely not determined: $x = 7$ gives $7 \pmod 8$, while $x = 67$ gives $3 \pmod 8$.
+3. What *is* determined is $x$ modulo $\gcd(60, 8) = 4$ — consistent with step 1.
 :::
 
-## Properties and Reciprocity
-
-<!-- section: jacobi-properties -->
-
-:::proposition[Properties of the Jacobi symbol]
-The Jacobi symbol satisfies:
-
-- $\left(\frac{a}{n}\right) = \left(\frac{b}{n}\right)$ if $a \equiv b \pmod n$, so $\left(\frac{a}{n}\right) = \left(\frac{a \bmod n}{n}\right)$.
-- It is completely multiplicative in the top: $\left(\frac{ab}{n}\right) = \left(\frac{a}{n}\right)\left(\frac{b}{n}\right)$.
-- The supplementary rules $\left(\frac{-1}{n}\right) = (-1)^{(n-1)/2}$ and $\left(\frac{2}{n}\right) = (-1)^{(n^2-1)/8}$.
-:::
-
-:::theorem[Reciprocity for the Jacobi symbol]
-If $m, n$ are odd, positive and coprime, then
-
-$$\left(\frac{m}{n}\right)\left(\frac{n}{m}\right) = (-1)^{\frac{m-1}{2}\cdot\frac{n-1}{2}},$$
-
-the same law as for primes.
-:::
-
-These allow computing (a/n) by a Euclidean-like algorithm (repeatedly flip using reciprocity, reduce mod, factor out 2 and -1 using the rules), without ever factoring n.
-
-The running time is O(log^2 n) like gcd.
-
-:::intuition
-The reciprocity law works for the composite Jacobi just as for Legendre, letting you swap the arguments with a sign.
-
-Combined with the special rules for 2 and -1, you can reduce the size like Euclid algorithm for gcd, computing the symbol fast.
-:::
-
-:::example[Compute the Jacobi symbol $\left(\tfrac{5}{21}\right)$ using reciprocity]
-Here $m = 5$ and $n = 21$ are odd, positive, and coprime, so Jacobi reciprocity applies. The whole point of the reciprocity route is that it works *without factoring* $21$.
-:::
-
-:::solution
-Apply the law: $\left(\tfrac{5}{21}\right)\left(\tfrac{21}{5}\right) = (-1)^{\frac{5-1}{2}\cdot\frac{21-1}{2}} = (-1)^{2\cdot 10} = 1$. Since the sign is $+1$, $\left(\tfrac{5}{21}\right) = \left(\tfrac{21}{5}\right)$.
-Reduce the top mod the bottom: $21 \equiv 1 \pmod 5$, so $\left(\tfrac{21}{5}\right) = \left(\tfrac{1}{5}\right) = 1$.
-
-Hence $\left(\tfrac{5}{21}\right) = 1$.
-
-Cross-check via the definition (which *does* factor $21 = 3\cdot 7$): $\left(\tfrac{5}{21}\right) = \left(\tfrac{5}{3}\right)\left(\tfrac{5}{7}\right)$.
-
-$\left(\tfrac{5}{3}\right) = \left(\tfrac{2}{3}\right) = -1$ (since $5 \equiv 2 \pmod 3$ and $3 \equiv 3 \pmod 8$).
-$\left(\tfrac{5}{7}\right)$: both $5 \equiv 1$ and — no, use reciprocity directly. The exponent is $\frac{5-1}{2}\cdot\frac{7-1}{2} = 2\cdot 3 = 6$ (even), so $\left(\tfrac{5}{7}\right) = \left(\tfrac{7}{5}\right) = \left(\tfrac{2}{5}\right)$, and $5 \equiv 5 \pmod 8$ gives $\left(\tfrac{2}{5}\right) = -1$. So $\left(\tfrac{5}{7}\right) = -1$.
-
-Product: $(-1)(-1) = 1$, matching the reciprocity computation.
-:::
-
-## Use in Primality Tests
-
-<!-- section: jacobi-primality -->
-
-:::recipe[Solovay-Strassen test]
-For random $a$, compute the Jacobi symbol $\left(\frac{a}{n}\right)$ and the power $a^{(n-1)/2} \bmod n$. If $n$ is prime they are equal by Euler's criterion (the power equals Legendre = Jacobi).
-
-- If for some $a$ they differ, $n$ is composite.
-- If they agree for many $a$, declare $n$ a probable prime.
-:::
-
-It detects Carmichael numbers (for which the power is 1, but Jacobi may differ for some a).
-
-:::intuition
-For prime, the power must equal the Jacobi symbol.
-
-If for a witness a the power mod n does not equal the easily computed Jacobi, then n cannot be prime.
-:::
-
-:::example[Solovay-Strassen on a small composite]
-Take $n = 9$ (obviously composite, but small enough to compute by hand) and witness $a = 2$. The test compares $a^{(n-1)/2} \bmod n$ against the Jacobi symbol $\left(\tfrac{a}{n}\right)$.
-:::
-
-:::solution
-Compute the power: $(n-1)/2 = 4$, and $2^{4} = 16 \equiv 7 \pmod 9$.
-Compute the Jacobi symbol: $\left(\tfrac{2}{9}\right)$. Since $9 = 3^2$, $\left(\tfrac{2}{9}\right) = \left(\tfrac{2}{3}\right)^2 = (-1)^2 = 1$.
-Compare: $7 \not\equiv 1 \pmod 9$. The two disagree, so $a = 2$ is a **witness** proving $9$ is composite.
-
-Why it works: for a genuine prime $p$, Euler's criterion forces $a^{(p-1)/2} \equiv \left(\tfrac{a}{p}\right) \pmod p$ for every $a$ coprime to $p$. Any single $a$ that violates this equality certifies compositeness. For a Carmichael number such as $561$ the Fermat test can be fooled ($a^{560} \equiv 1 \pmod{561}$ for all coprime $a$), yet the stronger Solovay-Strassen equality still fails for many $a$, which is why this test catches Carmichael numbers that the plain Fermat test misses.
-:::
-
-## Common Mistakes
-
-- **(a/n)=1 implies quadratic residue mod n**: False for composite n; it is necessary but not sufficient.
-- **Jacobi requires factoring n**: No, the reciprocity algorithm computes it without factoring n (that's its point).
-- **Jacobi defined for even n**: No, n must be odd positive.
-- **Confusing with Legendre**: Legendre is the special case when n prime; Jacobi can be 1 for non-residues.
-
-The Legendre symbol (a/p) is a compact notation that is 1 if a is quadratic residue mod p (p odd prime not dividing a), -1 if non-residue, and 0 if p divides a.
-
-It is a character mod p, completely multiplicative in a, and satisfies the law of quadratic reciprocity that allows computing it in logarithmic time without finding square roots (like a Jacobi symbol but for prime).
-
-It is the main tool for deciding quadratic residuosity and appears in many formulas (class numbers, L-functions, etc).
-
-## Definition
-
-<!-- section: legendre-def -->
-
-:::definition[Legendre symbol]{#legendre-symbol}
-For an odd prime $p$ and an integer $a$, the **Legendre symbol** $\left(\frac{a}{p}\right)$ is
-
-- 0 if p | a
-
-- 1 if p ∤ a and a is quadratic residue mod p
-
-- -1 if p ∤ a and a is quadratic non-residue mod p.
-:::
-
-It can be computed via Euler's criterion,
-
-$$\left(\frac{a}{p}\right) \equiv a^{(p-1)/2} \pmod p,$$
-
-taking the representative $-1$ or $1$.
-
-:::intuition
-A compact +1 / -1 / 0 "yes/no/ divisible" answer to "is a a square mod p?"
-
-Like a "sign" that tells the residuosity.
-:::
-
-:::example[Compute the Legendre symbol $\left(\tfrac{3}{7}\right)$]
-Here $p = 7$ is an odd prime and $7 \nmid 3$, so the symbol is $\pm 1$. Use Euler's criterion, $\left(\tfrac{a}{p}\right) \equiv a^{(p-1)/2} \pmod p$:
-:::
-
-:::solution
-$(p-1)/2 = 3$, so compute $3^{3} = 27$.
-Reduce: $27 = 3\cdot 7 + 6$, so $27 \equiv 6 \equiv -1 \pmod 7$.
-
-Since the result is $-1$, $\left(\tfrac{3}{7}\right) = -1$: $3$ is a quadratic non-residue mod $7$.
-
-Sanity check against the squares mod $7$, which are $\{1, 2, 4\}$: indeed $3$ is not among them.
-:::
-
-## Properties
-
-<!-- section: legendre-properties -->
-
-:::proposition[Properties of the Legendre symbol]
-For an odd prime $p$:
-
-- $\left(\frac{a}{p}\right) = \left(\frac{b}{p}\right)$ if $a \equiv b \pmod p$; equivalently $\left(\frac{a}{p}\right) = \left(\frac{a \bmod p}{p}\right)$, and the symbol is $0$ when $p \mid a$.
-- Completely multiplicative in the top: $\left(\frac{ab}{p}\right) = \left(\frac{a}{p}\right)\left(\frac{b}{p}\right)$.
-- $\left(\frac{-1}{p}\right) = (-1)^{(p-1)/2}$, which is $1$ iff $p \equiv 1 \pmod 4$.
-- $\left(\frac{2}{p}\right) = (-1)^{(p^2-1)/8}$, which is $1$ iff $p \equiv 1$ or $7 \pmod 8$.
-:::
-
-:::intuition
-It only depends on a mod p.
-
-Multiplicativity lets you factor the top argument into primes and compute for each.
-:::
-
-:::example[Compute $\left(\tfrac{6}{7}\right)$ via multiplicativity]
-Factor the top: $6 = 2\cdot 3$, so $\left(\tfrac{6}{7}\right) = \left(\tfrac{2}{7}\right)\left(\tfrac{3}{7}\right)$.
-:::
-
-:::solution
-$\left(\tfrac{2}{7}\right)$: the rule is $\left(\tfrac{2}{p}\right) = 1$ when $p \equiv \pm 1 \pmod 8$ and $-1$ when $p \equiv \pm 3 \pmod 8$. Since $7 \equiv 7 \equiv -1 \pmod 8$, we get $\left(\tfrac{2}{7}\right) = 1$.
-$\left(\tfrac{3}{7}\right) = -1$ from the previous example.
-
-So $\left(\tfrac{6}{7}\right) = 1\cdot(-1) = -1$: $6$ is a non-residue mod $7$.
-
-Sanity check: the squares mod $7$ are $\{1, 2, 4\}$, and $6$ is not among them. (Watch the $\left(\tfrac{2}{p}\right)$ rule carefully here: $7 \equiv 7 \pmod 8$ falls in the $\pm 1$ case, giving $+1$, not $-1$.)
-:::
-
-## Quadratic Reciprocity Preview
-
-<!-- section: legendre-reciprocity-preview -->
-
-:::theorem[Law of quadratic reciprocity]{#quadratic-reciprocity}
-For distinct odd primes $p, q$,
-
-$$\left(\frac{p}{q}\right)\left(\frac{q}{p}\right) = (-1)^{\frac{p-1}{2}\cdot\frac{q-1}{2}}.$$
-:::
-
-This lets you flip the symbol and reduce the size, like Euclid algorithm for computing the symbol in log time.
-
-:::intuition
-The symbols (p/q) and (q/p) are almost the same, except a sign flip when both p and q are 3 mod4.
-
-This reciprocity is what makes the symbol computable efficiently.
-:::
-
-:::example[Compute $\left(\tfrac{5}{13}\right)$ by repeated reduction]
-Both $5$ and $13$ are odd primes, so reciprocity applies at each flip. The strategy mirrors the Euclidean algorithm: flip, then reduce the top mod the bottom.
-:::
-
-:::solution
-Flip $\left(\tfrac{5}{13}\right)$: the exponent is $\frac{5-1}{2}\cdot\frac{13-1}{2} = 2\cdot 6 = 12$ (even), so the sign is $+1$ and $\left(\tfrac{5}{13}\right) = \left(\tfrac{13}{5}\right)$. (Both $5 \equiv 1$ and $13 \equiv 1 \pmod 4$, and the sign is $-1$ only when *both* are $\equiv 3 \pmod 4$.)
-Reduce: $13 \equiv 3 \pmod 5$, so $\left(\tfrac{13}{5}\right) = \left(\tfrac{3}{5}\right)$.
-Flip $\left(\tfrac{3}{5}\right)$: the exponent is $\frac{3-1}{2}\cdot\frac{5-1}{2} = 1\cdot 2 = 2$ (even), so again $+1$ and $\left(\tfrac{3}{5}\right) = \left(\tfrac{5}{3}\right)$.
-Reduce: $5 \equiv 2 \pmod 3$, so $\left(\tfrac{5}{3}\right) = \left(\tfrac{2}{3}\right)$.
-Evaluate $\left(\tfrac{2}{3}\right)$: since $3 \equiv 3 \pmod 8$, $\left(\tfrac{2}{3}\right) = -1$.
-
-Chaining the equalities, $\left(\tfrac{5}{13}\right) = -1$, so $5$ is a non-residue mod $13$.
-
-Sanity check by listing the squares mod $13$ (it suffices to square $1$ through $6$, since $x$ and $-x$ give the same square):
-$$
-1^2 = 1,\quad 2^2 = 4,\quad 3^2 = 9,\quad 4^2 \equiv 3,\quad 5^2 \equiv 12,\quad 6^2 \equiv 10.
-$$
-The residues are $\{1, 3, 4, 9, 10, 12\}$, and $5$ is not among them — confirming $\left(\tfrac{5}{13}\right) = -1$. The recurring lesson: track the reciprocity sign carefully, since a single mis-parity flips the whole answer.
-:::
-
-## Common Mistakes
-
-- **(a/p) defined only for p odd prime**: For p=2 use other (Kronecker or direct).
-- **Forgetting 0 case**: (0/p)=0.
-- **Thinking the symbol gives the square root**: It only decides existence, not computes the root (which is harder, Tonelli-Shanks).
-- **Sign errors in reciprocity**: The exponent (p-1)/2 *(q-1)/2 is the number of 3 mod4 primes in the pair; flip sign only if both 3 mod4.
-
-A number a is a quadratic residue modulo m if there exists x such that x^2 ≡ a mod m (and usually gcd(a,m)=1 for the nonzero case).
-
-The theory of quadratic residues is central to number theory, with applications to cryptography (quadratic residuosity assumption in some protocols), primality tests, and the law of quadratic reciprocity which gives an efficient way to decide residuosity without finding the square root.
-
-This topic introduces the basic definitions, Euler's criterion, and the Legendre symbol (next topic).
-
-## Definition and Examples
+## Quadratic residues
 
 <!-- section: quadratic-residue-def -->
 
-:::definition[Quadratic residue]{#quadratic-residue}
-Let $m > 1$ and let $a$ be an integer with $\gcd(a,m) = 1$. Then $a$ is a **quadratic residue** mod $m$ if the congruence
+Linear congruences are settled: $ax \equiv b \pmod n$ is solved by the Euclidean algorithm. The quadratic case $x^2 \equiv a \pmod p$ is not settled by anything so mechanical, and deciding solvability without searching is the subject of the rest of the chapter.
 
-$$x^2 \equiv a \pmod m$$
-
-has a solution $x$. Otherwise $a$ is a quadratic non-residue mod $m$.
+:::definition[Quadratic residue]{#qr-def}
+Let $p$ be an odd prime and $p \nmid a$. Then $a$ is a **quadratic residue** modulo $p$ if $x^2 \equiv a \pmod p$ has a solution, and a **quadratic non-residue** otherwise. The set of residues is written $QR_p$.
 :::
 
-We usually consider a mod m in 1 to m-1 coprime.
+The class of $0$ is excluded by convention: $x^2 \equiv 0$ always has the single solution $x \equiv 0$, and including it would break every counting statement below.
 
-:::proposition[Exactly half the classes are residues]
-For $m = p$ an odd prime, there are exactly $(p-1)/2$ nonzero quadratic residues and the same number of non-residues.
+:::theorem[Exactly half the nonzero residues are squares]{#half-are-residues}
+Let $p$ be an odd prime. Of the $p-1$ nonzero classes mod $p$, exactly $\tfrac{p-1}{2}$ are quadratic residues and exactly $\tfrac{p-1}{2}$ are non-residues. The residues are listed without repetition by $1^2, 2^2, \dots, \big(\tfrac{p-1}{2}\big)^2$.
 :::
 
 :::proof
-The squaring map $x \mapsto x^2$ on the $p-1$ nonzero classes is two-to-one, since $x$ and $-x$ have the same square and are distinct for $p > 2$. So its image — the set of nonzero residues — has size $(p-1)/2$.
+The squaring map $s : \mathbb{F}_p^\times \to \mathbb{F}_p^\times$, $s(x) = x^2$, has image $QR_p$ by definition. Each fibre has exactly two elements: if $s(x) = s(y)$ then $p \mid x^2 - y^2 = (x-y)(x+y)$, and since $\mathbb{F}_p$ is a field by the theorem *$\mathbb{Z}/n\mathbb{Z}$ is a field exactly when $n$ is prime*, $x \equiv y$ or $x \equiv -y$. These two possibilities are distinct because $x \equiv -x$ would give $p \mid 2x$, impossible for $p$ odd and $p \nmid x$.
+
+So $s$ is two-to-one onto its image, and $|QR_p| = (p-1)/2$; the remaining $(p-1) - (p-1)/2 = (p-1)/2$ classes are non-residues. Since $k$ and $p-k$ have the same square, the values $1^2,\dots,((p-1)/2)^2$ already cover the image, and they are pairwise distinct because $1 \le j < k \le (p-1)/2$ gives $j \not\equiv \pm k$.
 :::
 
-:::intuition
-Is there an integer x whose square "lands on" a when you look only at remainders mod m?
-
-Half the possible nonzero remainders are "perfect squares" mod p, the other half are not.
+:::figure[The nonzero residues modulo $13$ on a dial: the six quadratic residues $1, 3, 4, 9, 10, 12$ are marked in the result tone, the six non-residues are muted. Exactly half of each.]{#qr-dial}
+{
+  "type": "plot",
+  "x": [-1.8, 1.8], "y": [-1.6, 1.6],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "path", "points": [[1,0],[0.885,0.466],[0.568,0.823],[0.121,0.993],[-0.355,0.935],[-0.749,0.663],[-0.971,0.239],[-0.971,-0.239],[-0.749,-0.663],[-0.355,-0.935],[0.121,-0.993],[0.568,-0.823],[0.885,-0.466],[1,0]], "muted": true },
+    { "kind": "point", "at": [0.885, 0.466], "tone": "result" },
+    { "kind": "point", "at": [0.568, 0.823], "tone": "muted" },
+    { "kind": "point", "at": [0.121, 0.993], "tone": "result" },
+    { "kind": "point", "at": [-0.355, 0.935], "tone": "result" },
+    { "kind": "point", "at": [-0.749, 0.663], "tone": "muted" },
+    { "kind": "point", "at": [-0.971, 0.239], "tone": "muted" },
+    { "kind": "point", "at": [-0.971, -0.239], "tone": "muted" },
+    { "kind": "point", "at": [-0.749, -0.663], "tone": "result" },
+    { "kind": "point", "at": [-0.355, -0.935], "tone": "result" },
+    { "kind": "point", "at": [0.121, -0.993], "tone": "muted" },
+    { "kind": "point", "at": [0.568, -0.823], "tone": "muted" },
+    { "kind": "point", "at": [0.885, -0.466], "tone": "result" },
+    { "kind": "text", "at": [1.18, 0.62], "text": "1" },
+    { "kind": "text", "at": [0.16, 1.28], "text": "3" },
+    { "kind": "text", "at": [-0.47, 1.21], "text": "4" },
+    { "kind": "text", "at": [-1.0, -0.88], "text": "9" },
+    { "kind": "text", "at": [-0.5, -1.25], "text": "10" },
+    { "kind": "text", "at": [1.25, -0.62], "text": "12" }
+  ]
+}
 :::
 
-:::example[Quadratic residues mod 7]
-Square every nonzero residue and reduce mod $7$:
-$$
-1^2 = 1,\quad 2^2 = 4,\quad 3^2 = 9 \equiv 2,\quad 4^2 = 16 \equiv 2,\quad 5^2 = 25 \equiv 4,\quad 6^2 = 36 \equiv 1.
-$$
-The distinct values are $\{1, 2, 4\}$, so those three are the quadratic residues and $\{3, 5, 6\}$ are the non-residues.
+:::example[The residues modulo $11$]
+List the quadratic residues mod $11$ and decide whether $x^2 \equiv 5 \pmod{11}$ and $x^2 \equiv 6 \pmod{11}$ are solvable.
 :::
 
 :::solution
-1. Note the symmetry that halves the work: $x$ and $-x = 7 - x$ produce the same square, so the six nonzero elements pair up as $(1,6), (2,5), (3,4)$, giving only $(p-1)/2 = 3$ distinct squares. This is why exactly half of the nonzero residues mod an odd prime are quadratic residues.
+1. By the theorem *Exactly half the nonzero residues are squares* it suffices to square $1$ through $5$: $1, 4, 9, 16 \equiv 5, 25 \equiv 3$.
+2. So $QR_{11} = \{1, 3, 4, 5, 9\}$, five of the ten nonzero classes, and the non-residues are $\{2, 6, 7, 8, 10\}$.
+3. $5 \in QR_{11}$, so $x^2 \equiv 5$ is solvable, with $x \equiv \pm 4$.
+4. $6 \notin QR_{11}$, so $x^2 \equiv 6$ has no solution.
 :::
 
-## Euler's Criterion
+## Euler's criterion
 
 <!-- section: euler-criterion -->
 
-:::theorem[Euler's criterion]{#euler-criterion}
-For an odd prime $p$ not dividing $a$, the integer $a$ is a quadratic residue mod $p$ if and only if
+Listing squares decides membership in $QR_p$ in $O(p)$ work. Euler's criterion decides it in $O(\log p)$ multiplications, by turning a question about solvability into a single modular power.
 
-$$a^{(p-1)/2} \equiv 1 \pmod p,$$
+:::theorem[Euler's criterion]{#euler-criterion-thm}
+Let $p$ be an odd prime and $p \nmid a$. Then
 
-and $a^{(p-1)/2} \equiv -1 \pmod p$ when $a$ is a non-residue.
+$$a^{(p-1)/2} \equiv \begin{cases} \;\; 1 \pmod p & \text{if } a \in QR_p,\\ -1 \pmod p & \text{if } a \notin QR_p.\end{cases}$$
 :::
 
 :::proof
-By Fermat, $a^{p-1} \equiv 1 \pmod p$, so $\big(a^{(p-1)/2} - 1\big)\big(a^{(p-1)/2} + 1\big) \equiv 0 \pmod p$. Since $\mathbb{Z}/p\mathbb{Z}$ is a field (no zero divisors), $a^{(p-1)/2}$ must be $\equiv +1$ or $\equiv -1$ — never anything else. To see which sign corresponds to residues, use that the group $(\mathbb{Z}/p\mathbb{Z})^\times$ is cyclic with a generator $g$: write $a = g^{k}$, so $a$ is a square exactly when $k$ is even. Then $a^{(p-1)/2} = g^{k(p-1)/2} = \big(g^{(p-1)/2}\big)^{k} = (-1)^{k}$, because $g^{(p-1)/2} \equiv -1$ ($g$ has order $p-1$). So the power is $+1$ for even $k$ (residues) and $-1$ for odd $k$ (non-residues).
+First, $\big(a^{(p-1)/2}\big)^2 = a^{p-1} \equiv 1 \pmod p$ by Fermat's little theorem, so $p$ divides $(y-1)(y+1)$ where $y = a^{(p-1)/2}$. As $\mathbb{F}_p$ is a field, $y \equiv \pm 1$: the value is always one of the two.
+
+If $a \in QR_p$, write $a \equiv x^2$ with $p \nmid x$. Then
+
+$$a^{(p-1)/2} \equiv x^{p-1} \equiv 1 \pmod p,$$
+
+again by Fermat's little theorem. So every residue gives $+1$.
+
+It remains to show no non-residue gives $+1$. The congruence $y^{(p-1)/2} \equiv 1$ is a polynomial equation of degree $(p-1)/2$ over the field $\mathbb{F}_p$, so it has at most $(p-1)/2$ solutions. The theorem *Exactly half the nonzero residues are squares* supplies exactly $(p-1)/2$ solutions already, namely the quadratic residues. There is no room for another, so the non-residues must give $-1$.
 :::
 
-:::intuition
-Raise a to the "half" power (p-1)/2 mod p; if you get 1 it is a square, if -1 it is not. This is a quick test without searching for x.
-
-It works because in the cyclic group the squares are exactly the even powers, and raising to (p-1)/2 sends even to 1 and odd to -1.
-:::
-
-:::example[Is $3$ a quadratic residue mod $7$?]
-Apply Euler's criterion with $p = 7$ (odd prime, $7 \nmid 3$): compute $3^{(p-1)/2} = 3^{3} \pmod 7$.
+:::example[Euler's criterion on a larger prime]
+Is $7$ a quadratic residue modulo the prime $p = 37$?
 :::
 
 :::solution
-$3^{3} = 27 = 3\cdot 7 + 6$, so $3^{3} \equiv 6 \equiv -1 \pmod 7$.
-The result is $-1$, so by Euler's criterion $3$ is a **non-residue** mod $7$.
-
-Sanity check: the residues mod $7$ are $\{1, 2, 4\}$ (from the earlier example), and $3$ is not among them. Contrast $2^{3} = 8 \equiv 1 \pmod 7$, which correctly flags $2$ as a residue.
+1. Compute $7^{18} \bmod 37$ by squaring: $7^2 = 49 \equiv 12$, $7^4 \equiv 12^2 = 144 \equiv 144 - 111 = 33 \equiv -4$.
+2. $7^8 \equiv (-4)^2 = 16$, and $7^{16} \equiv 16^2 = 256 \equiv 256 - 222 = 34 \equiv -3$.
+3. Then $7^{18} = 7^{16}\cdot 7^2 \equiv (-3)(12) = -36 \equiv 1 \pmod{37}$.
+4. By the theorem *Euler's criterion*, $7$ is a quadratic residue mod $37$. Indeed $9^2 = 81 = 2\cdot 37 + 7$.
 :::
 
-## Number of Solutions and -1 as Residue
+## Counting solutions, and $-1$ as a residue
 
 <!-- section: number-solutions-minus-one -->
 
-:::proposition[Counting square roots]
-For $p$ an odd prime, the equation $x^2 \equiv a \pmod p$ has
-
-$$1 + \left(\frac{a}{p}\right) \text{ solutions},$$
-
-where $\left(\frac{a}{p}\right)$ is the Legendre symbol ($1$ if $a$ is a residue, $-1$ if not, $0$ if $p \mid a$).
+:::proposition[A square congruence has $0$ or $2$ solutions]{#zero-or-two}
+Let $p$ be an odd prime and $p \nmid a$. Then $x^2 \equiv a \pmod p$ has exactly two solutions if $a \in QR_p$ and none otherwise; the two solutions are $x_0$ and $p - x_0$.
 :::
 
-:::corollary[When $-1$ is a square]
-$-1$ is a quadratic residue mod $p$ if and only if $p \equiv 1 \pmod 4$, since $(-1)^{(p-1)/2} = 1$ exactly when $(p-1)/2$ is even.
+:::proof
+If there is no solution the count is $0$ by definition. If $x_0$ is a solution then so is $-x_0$, and these are incongruent because $x_0 \equiv -x_0$ would give $p \mid 2x_0$, impossible. There are no others: $x^2 \equiv x_0^2$ gives $p \mid (x-x_0)(x+x_0)$, and $\mathbb{F}_p$ being a field forces $x \equiv \pm x_0$.
 :::
 
-:::intuition
-A nonzero square root comes in a $\pm$ pair: if $x$ works, so does $-x$, and for $p > 2$ these are distinct. So a nonzero residue has exactly $2$ roots and a non-residue has $0$ — never exactly one. (The lone exception is $a \equiv 0$, whose only root is $x = 0$.)
+:::theorem[The first supplement]{#first-supplement}
+Let $p$ be an odd prime. Then $-1$ is a quadratic residue modulo $p$ if and only if $p \equiv 1 \pmod 4$. Equivalently,
 
-Whether $-1$ itself is a square depends only on $p \bmod 4$: yes when $p \equiv 1 \pmod 4$ (e.g. mod $5$, since $2^2 = 4 \equiv -1$), no when $p \equiv 3 \pmod 4$.
+$$(-1)^{(p-1)/2} = \begin{cases} 1 & p \equiv 1 \pmod 4,\\ -1 & p \equiv 3 \pmod 4.\end{cases}$$
 :::
 
-:::example[Is $-1$ a quadratic residue mod $5$ and mod $7$?]
-The test is $p \equiv 1 \pmod 4 \iff -1$ is a residue.
+:::proof
+By the theorem *Euler's criterion* with $a = -1$, the class $-1$ is a quadratic residue exactly when $(-1)^{(p-1)/2} \equiv 1 \pmod p$. Since $p$ is odd and $p > 2$, the integers $1$ and $-1$ are incongruent mod $p$, so the congruence holds exactly when the integer $(-1)^{(p-1)/2}$ equals $1$, i.e. when $(p-1)/2$ is even.
+
+Write $p$ as $4k+1$ or $4k+3$, the only odd options. If $p = 4k+1$ then $(p-1)/2 = 2k$ is even; if $p = 4k+3$ then $(p-1)/2 = 2k+1$ is odd. So the condition is precisely $p \equiv 1 \pmod 4$.
+:::
+
+:::corollary[Square roots of $-1$ modulo a prime]{#sqrt-minus-one}
+For $p \equiv 1 \pmod 4$ the congruence $x^2 \equiv -1 \pmod p$ has exactly two solutions, and one of them is $\big(\tfrac{p-1}{2}\big)!$ modulo $p$. For $p \equiv 3 \pmod 4$ it has none.
+:::
+
+:::proof
+The counts follow from the theorem *The first supplement* together with the proposition *A square congruence has $0$ or $2$ solutions*.
+
+For the explicit root, put $m = (p-1)/2$ and pair each factor of $(p-1)!$ with its negative: $p - j \equiv -j$, so
+
+$$(p-1)! = \prod_{j=1}^{m} j \cdot \prod_{j=1}^{m}(p-j) \equiv (m!)\cdot(-1)^m (m!) = (-1)^m (m!)^2 \pmod p .$$
+
+Wilson's theorem states $(p-1)! \equiv -1 \pmod p$. When $p \equiv 1 \pmod 4$, $m$ is even, so $(m!)^2 \equiv -1$.
+:::
+
+:::example[Building a square root of $-1$]
+Find a solution of $x^2 \equiv -1 \pmod{13}$.
 :::
 
 :::solution
-Mod $5$: $5 \equiv 1 \pmod 4$, so $-1$ should be a residue. Confirm directly: $-1 \equiv 4 \pmod 5$, and $2^2 = 4$, so $x = 2$ (and $x = 3$) solve $x^2 \equiv -1 \pmod 5$. The count is $1 + \left(\tfrac{-1}{5}\right) = 1 + 1 = 2$ solutions, as expected.
-Mod $7$: $7 \equiv 3 \pmod 4$, so $-1$ should be a non-residue. Confirm: $-1 \equiv 6 \pmod 7$, and the squares mod $7$ are $\{1, 2, 4\}$, which excludes $6$. The count is $1 + \left(\tfrac{-1}{7}\right) = 1 + (-1) = 0$ solutions.
+1. $13 \equiv 1 \pmod 4$, so by the theorem *The first supplement* a solution exists.
+2. The corollary *Square roots of $-1$ modulo a prime* offers $m! = 6! = 720$.
+3. Reduce: $720 = 55 \cdot 13 + 5$, so $x \equiv 5$.
+4. Check: $5^2 = 25 = 26 - 1 \equiv -1 \pmod{13}$. ✓ The other solution is $13 - 5 = 8$.
+:::
 
-Both match the $p \bmod 4$ rule and the "$1 + \left(\tfrac{a}{p}\right)$" solution-count formula.
+:::remark
+The first supplement is the engine of Fermat's two-square theorem: a prime $p \equiv 1 \pmod 4$ is a sum of two squares, and the proof begins by choosing $u$ with $u^2 \equiv -1 \pmod p$ — which exists for exactly these primes. It also settles which primes divide some value of $x^2+1$, a question that looks unrelated to congruence classes until this theorem is available.
+:::
+
+## The Legendre symbol
+
+<!-- section: legendre-def -->
+
+Euler's criterion computes a value in $\{1, -1\}$ that records whether $a$ is a square. Packaging that value as a symbol turns quadratic-residue statements into algebraic identities.
+
+:::definition[Legendre symbol]{#legendre}
+Let $p$ be an odd prime. For an integer $a$, define
+
+$$\left(\frac{a}{p}\right) = \begin{cases} 0 & \text{if } p \mid a,\\ 1 & \text{if } a \in QR_p,\\ -1 & \text{if } a \notin QR_p.\end{cases}$$
+:::
+
+:::proposition[Euler's criterion in symbol form]{#legendre-euler}
+For every integer $a$ and odd prime $p$,
+
+$$\left(\frac{a}{p}\right) \equiv a^{(p-1)/2} \pmod p,$$
+
+and the symbol depends only on $a \bmod p$.
+:::
+
+:::proof
+If $p \mid a$ both sides are $\equiv 0$. Otherwise the congruence is the theorem *Euler's criterion*, read through the definition of the symbol. Dependence on $a \bmod p$ only: if $a \equiv a'$ then $a^{(p-1)/2}\equiv (a')^{(p-1)/2}$ by the corollary *Polynomials respect congruence*, and two values in $\{0, 1, -1\}$ that are congruent mod an odd prime $p \ge 3$ are equal.
+:::
+
+## Multiplicativity of the Legendre symbol
+
+<!-- section: legendre-properties -->
+
+:::theorem[The Legendre symbol is completely multiplicative]{#legendre-multiplicative}
+For an odd prime $p$ and all integers $a, b$,
+
+$$\left(\frac{ab}{p}\right) = \left(\frac{a}{p}\right)\left(\frac{b}{p}\right).$$
+:::
+
+:::proof
+By the proposition *Euler's criterion in symbol form*,
+
+$$\left(\frac{ab}{p}\right) \equiv (ab)^{(p-1)/2} = a^{(p-1)/2}b^{(p-1)/2} \equiv \left(\frac{a}{p}\right)\left(\frac{b}{p}\right) \pmod p .$$
+
+Both sides lie in $\{0, 1, -1\}$, and distinct members of that set are incongruent modulo an odd prime $p \ge 3$ — the largest difference is $2 < 3 \le p$. So the congruence is an equality.
+:::
+
+:::corollary[Products of residues and non-residues]{#qr-product-rules}
+For $p \nmid ab$: residue times residue is a residue, residue times non-residue is a non-residue, and non-residue times non-residue is a **residue**. Also $\left(\frac{a^2}{p}\right) = 1$ whenever $p \nmid a$.
+:::
+
+:::proof
+Each statement is the multiplication table of $\{1,-1\}$ read through the theorem *The Legendre symbol is completely multiplicative*: $1\cdot 1 = 1$, $1 \cdot (-1) = -1$, $(-1)(-1)=1$. Taking $b = a$ gives $\left(\frac{a^2}{p}\right) = \left(\frac{a}{p}\right)^2 = 1$.
+:::
+
+:::pitfall
+That two non-residues multiply to a residue is the standard surprise, and it kills the naive analogy with divisibility. It also means the Legendre symbol cannot be used to *find* a square root: knowing $\left(\frac{a}{p}\right) = 1$ tells you a root exists and nothing about where it is.
+:::
+
+:::example[Factoring a symbol]
+Evaluate $\left(\frac{60}{13}\right)$.
+:::
+
+:::solution
+1. Reduce first: $60 = 4\cdot 13 + 8$, so $\left(\frac{60}{13}\right) = \left(\frac{8}{13}\right)$ by the proposition *Euler's criterion in symbol form*.
+2. Factor $8 = 4 \cdot 2$ and split by multiplicativity: $\left(\frac{8}{13}\right)=\left(\frac{4}{13}\right)\left(\frac{2}{13}\right) = \left(\frac{2}{13}\right)$, since $\left(\frac{4}{13}\right)=1$ by the corollary *Products of residues and non-residues*.
+3. The squares mod $13$ are $\{1,3,4,9,10,12\}$, and $2$ is not among them, so $\left(\frac{2}{13}\right) = -1$.
+4. Hence $\left(\frac{60}{13}\right) = -1$.
+:::
+
+## Quadratic reciprocity: a preview
+
+<!-- section: legendre-reciprocity-preview -->
+
+Multiplicativity reduces $\left(\frac{a}{p}\right)$ to the symbols of the prime factors of $a$. What it does not do is evaluate $\left(\frac{q}{p}\right)$ for a prime $q$; the numerator and denominator are unrelated as far as anything proved so far can tell. Quadratic reciprocity asserts that they are not unrelated at all — it is proved in the following chapter, and stated here because every computation below uses it.
+
+:::theorem[Law of quadratic reciprocity]{#reciprocity}
+Let $p \neq q$ be odd primes. Then
+
+$$\left(\frac{p}{q}\right)\left(\frac{q}{p}\right) = (-1)^{\frac{p-1}{2}\cdot\frac{q-1}{2}} .$$
+
+Equivalently, $\left(\frac{p}{q}\right) = \left(\frac{q}{p}\right)$ unless $p \equiv q \equiv 3 \pmod 4$, in which case $\left(\frac{p}{q}\right) = -\left(\frac{q}{p}\right)$. The two supplements are
+
+$$\left(\frac{-1}{p}\right) = (-1)^{\frac{p-1}{2}}, \qquad \left(\frac{2}{p}\right) = (-1)^{\frac{p^2-1}{8}},$$
+
+so $2$ is a quadratic residue modulo $p$ exactly when $p \equiv \pm 1 \pmod 8$.
+:::
+
+The first supplement is already proved above as the theorem *The first supplement*; the second and the reciprocity law itself are not proved here.
+
+:::recipe[Evaluating $\left(\frac{a}{p}\right)$ by reciprocity]{#reciprocity-recipe}
+1. Reduce $a$ modulo $p$ to a least residue, using signed representatives if that shortens the factorisation.
+2. Factor the numerator and split the symbol by multiplicativity.
+3. Handle $-1$ and $2$ by the supplements; drop any square factor, whose symbol is $1$.
+4. For an odd prime $q$ in the numerator, flip $\left(\frac{q}{p}\right)$ to $\left(\frac{p}{q}\right)$, inserting a sign $-1$ only when $p \equiv q \equiv 3 \pmod 4$.
+5. Reduce $p$ modulo $q$ and recurse. The numbers shrink, so the process terminates.
+:::
+
+:::example[Reciprocity in action]
+Evaluate $\left(\frac{43}{97}\right)$.
+:::
+
+:::solution
+1. $97 \equiv 1 \pmod 4$, so no sign appears when flipping: $\left(\frac{43}{97}\right) = \left(\frac{97}{43}\right)$.
+2. Reduce: $97 = 2\cdot 43 + 11$, so this is $\left(\frac{11}{43}\right)$.
+3. Both $11$ and $43$ are $\equiv 3 \pmod 4$, so flipping costs a sign: $\left(\frac{11}{43}\right) = -\left(\frac{43}{11}\right) = -\left(\frac{10}{11}\right)$.
+4. Split: $\left(\frac{10}{11}\right) = \left(\frac{2}{11}\right)\left(\frac{5}{11}\right)$. Now $11 \equiv 3 \pmod 8$ so $\left(\frac{2}{11}\right) = -1$; and $5 \equiv 1 \pmod 4$, so $\left(\frac{5}{11}\right) = \left(\frac{11}{5}\right) = \left(\frac{1}{5}\right) = 1$.
+5. So $\left(\frac{10}{11}\right) = -1$ and $\left(\frac{43}{97}\right) = -(-1) = 1$: $43$ is a quadratic residue mod $97$.
+:::
+
+## The Jacobi symbol
+
+<!-- section: jacobi-def -->
+
+The recipe above has an ugly step: reducing $p$ modulo $q$ produces a composite numerator, which must be factored before reciprocity can be applied again, and factoring is expensive. The Jacobi symbol removes the need to factor by extending the definition to composite denominators.
+
+:::definition[Jacobi symbol]{#jacobi}
+Let $n$ be an odd positive integer with prime factorisation $n = p_1^{e_1}\cdots p_r^{e_r}$ (repetitions allowed in the exponents). For any integer $a$ define
+
+$$\left(\frac{a}{n}\right) = \prod_{i=1}^{r} \left(\frac{a}{p_i}\right)^{e_i},$$
+
+a product of Legendre symbols. By convention $\left(\frac{a}{1}\right) = 1$.
+:::
+
+:::pitfall
+When $n$ is prime the Jacobi symbol *is* the Legendre symbol, so the notation is consistent. But for composite $n$, $\left(\frac{a}{n}\right) = 1$ does **not** mean $a$ is a square mod $n$. Modulo $15$, $\left(\frac{2}{15}\right) = \left(\frac{2}{3}\right)\left(\frac{2}{5}\right) = (-1)(-1) = 1$, while the squares mod $15$ are $\{1,4,6,9,10\}$ and $2$ is not among them. Two non-residues cancelled. The implication that survives is one-directional: if $a$ is a square mod $n$ then $\left(\frac{a}{n}\right) = 1$, so the value $-1$ is a genuine proof of non-residuity.
+:::
+
+## Properties of the Jacobi symbol
+
+<!-- section: jacobi-properties -->
+
+Every formal rule of the Legendre symbol survives the extension — which is exactly why the extension is useful, since the rules can now be applied without factoring.
+
+:::theorem[Jacobi symbol rules]{#jacobi-rules}
+Let $m, n$ be odd positive integers and $a, b$ integers. Then
+
+$$\left(\frac{ab}{n}\right) = \left(\frac{a}{n}\right)\left(\frac{b}{n}\right), \qquad \left(\frac{a}{mn}\right) = \left(\frac{a}{m}\right)\left(\frac{a}{n}\right),$$
+
+the symbol depends only on $a \bmod n$, and $\left(\frac{a}{n}\right) = 0$ exactly when $\gcd(a,n) > 1$. Moreover the supplements and reciprocity hold verbatim:
+
+$$\left(\frac{-1}{n}\right) = (-1)^{\frac{n-1}{2}}, \qquad \left(\frac{2}{n}\right) = (-1)^{\frac{n^2-1}{8}}, \qquad \left(\frac{m}{n}\right)\left(\frac{n}{m}\right) = (-1)^{\frac{m-1}{2}\cdot\frac{n-1}{2}}$$
+
+for $\gcd(m,n)=1$.
+:::
+
+:::proof
+Multiplicativity in the numerator is the theorem *The Legendre symbol is completely multiplicative* applied factor by factor; multiplicativity in the denominator is immediate from the definition, since the prime factorisation of $mn$ is the concatenation of those of $m$ and $n$. Dependence on $a \bmod n$ follows because $p_i \mid n$, so $a \bmod n$ determines $a \bmod p_i$. The value is $0$ exactly when some $p_i \mid a$, i.e. when $\gcd(a,n)>1$.
+
+For the supplements and reciprocity, the point is a parity computation. If $u, v$ are odd then
+
+$$\frac{uv-1}{2} - \frac{u-1}{2} - \frac{v-1}{2} = \frac{(u-1)(v-1)}{2} \equiv 0 \pmod 2,$$
+
+since $(u-1)(v-1)$ is divisible by $4$. So $u \mapsto \frac{u-1}{2} \bmod 2$ is additive over products of odd numbers; the same computation with $\frac{u^2-1}{8}$ shows it too is additive, using $8 \mid (u^2-1)(v^2-1)$. Writing $n = \prod p_i$ as a product of $\sum e_i$ primes with repetition, $\left(\frac{-1}{n}\right) = \prod (-1)^{(p_i-1)/2} = (-1)^{\sum (p_i-1)/2} = (-1)^{(n-1)/2}$ by additivity, and likewise for $2$. Reciprocity follows by applying the Legendre law to every pair $(p_i, q_j)$ of primes from $m$ and $n$ and collecting the exponent $\sum_{i,j}\frac{p_i-1}{2}\frac{q_j-1}{2} \equiv \frac{m-1}{2}\cdot\frac{n-1}{2} \pmod 2$ by the same additivity.
+:::
+
+:::example[A Jacobi computation with no factoring]
+Evaluate $\left(\frac{1001}{9907}\right)$.
+:::
+
+:::solution
+1. $9907 \equiv 3 \pmod 4$ and $1001 \equiv 1 \pmod 4$, so flipping is free: $\left(\frac{1001}{9907}\right) = \left(\frac{9907}{1001}\right)$.
+2. Reduce: $9907 = 9\cdot 1001 + 898$, giving $\left(\frac{898}{1001}\right) = \left(\frac{2}{1001}\right)\left(\frac{449}{1001}\right)$.
+3. $1001 \equiv 1 \pmod 8$, so $\left(\frac{2}{1001}\right) = 1$.
+4. $449 \equiv 1 \pmod 4$, so flip freely: $\left(\frac{449}{1001}\right) = \left(\frac{1001}{449}\right) = \left(\frac{103}{449}\right)$, using $1001 = 2\cdot 449 + 103$.
+5. $449 \equiv 1 \pmod 4$, so $\left(\frac{103}{449}\right) = \left(\frac{449}{103}\right) = \left(\frac{37}{103}\right)$; then $37 \equiv 1 \pmod 4$ gives $\left(\frac{103}{37}\right) = \left(\frac{29}{37}\right) = \left(\frac{37}{29}\right) = \left(\frac{8}{29}\right)$.
+6. $\left(\frac{8}{29}\right) = \left(\frac{2}{29}\right)^3 = \left(\frac{2}{29}\right)$, and $29 \equiv 5 \pmod 8$ so this is $-1$.
+7. Hence $\left(\frac{1001}{9907}\right) = -1$. At no point was any number factored.
+:::
+
+## Jacobi symbols and primality testing
+
+<!-- section: jacobi-primality -->
+
+The Jacobi symbol is computable in $O(\log^2 n)$ bit operations by the recipe above, without factoring $n$. Euler's criterion says that for a *prime* $n$ the symbol agrees with a modular power. Comparing the two quantities therefore tests primality.
+
+:::definition[Euler witness and Euler pseudoprime]{#euler-witness}
+Let $n$ be an odd composite number and $\gcd(a,n)=1$. Then $a$ is an **Euler witness** for $n$ if
+
+$$a^{(n-1)/2} \not\equiv \left(\frac{a}{n}\right) \pmod n .$$
+
+If instead the congruence holds, $n$ is an **Euler pseudoprime to base $a$** and $a$ is a liar.
+:::
+
+:::proposition[The test is sound]{#solovay-sound}
+If $n$ is an odd prime then $a^{(n-1)/2} \equiv \left(\frac{a}{n}\right) \pmod n$ for every $a$. Hence an Euler witness proves $n$ composite.
+:::
+
+:::proof
+For prime $n$ the Jacobi symbol is the Legendre symbol, and the congruence is the proposition *Euler's criterion in symbol form*. The contrapositive is the second sentence: if some $a$ fails the congruence, $n$ cannot be prime.
+:::
+
+:::theorem[At least half the bases are witnesses]{#solovay-strassen}
+Let $n$ be odd and composite. Then the set of liars
+
+$$L = \Big\{\, a \in (\mathbb{Z}/n\mathbb{Z})^\times : a^{(n-1)/2} \equiv \left(\tfrac{a}{n}\right) \pmod n \,\Big\}$$
+
+is a proper subgroup of $(\mathbb{Z}/n\mathbb{Z})^\times$. Consequently $|L| \le \varphi(n)/2$, so a base chosen uniformly at random from $\{1,\dots,n-1\}$ is an Euler witness with probability at least $1/2$.
+:::
+
+:::proof
+$L$ is a subgroup: the map $a \mapsto a^{(n-1)/2}\left(\frac{a}{n}\right)^{-1}$ is a homomorphism $(\mathbb{Z}/n\mathbb{Z})^\times \to (\mathbb{Z}/n\mathbb{Z})^\times$, because both $a \mapsto a^{(n-1)/2}$ and the Jacobi symbol are multiplicative by the theorem *Jacobi symbol rules*, and $L$ is exactly its kernel.
+
+That $L$ is *proper* is the substantive half, and we show it in the two shapes a composite $n$ can take. If $n$ is divisible by the square of a prime, say $p^2 \mid n$, take $a = 1 + n/p$; then $a^{(n-1)/2}$ has order divisible by $p$ in $(\mathbb{Z}/n\mathbb{Z})^\times$ while $\left(\frac{a}{n}\right) = \pm 1$ has order dividing $2$, and $p$ is odd, so $a \notin L$. Otherwise $n = p\,m$ with $p$ prime, $m > 1$ and $\gcd(p,m)=1$; choose a non-residue $c$ mod $p$ and, by the theorem *Chinese Remainder Theorem*, an $a$ with $a \equiv c \pmod p$ and $a \equiv 1 \pmod m$. Then $\left(\frac{a}{n}\right) = \left(\frac{c}{p}\right)\left(\frac{1}{m}\right) = -1$, whereas $a^{(n-1)/2} \equiv 1 \pmod m$, so $a^{(n-1)/2} \equiv -1 \pmod n$ is impossible. Hence $a \notin L$.
+
+A proper subgroup has index at least $2$ by Lagrange's theorem, so $|L| \le \varphi(n)/2 \le (n-1)/2$, and the bases in $\{1,\dots,n-1\}$ that are not in $L$ — including every $a$ with $\gcd(a,n)>1$, which fail immediately — number at least $(n-1)/2$.
+:::
+
+This is the Solovay–Strassen primality test: pick $k$ random bases, declare $n$ composite the moment a witness appears, and otherwise declare it prime with error probability at most $2^{-k}$. Unlike the Fermat test, it has no analogue of the Carmichael numbers — there is no composite $n$ for which every coprime base lies — and that is exactly what the theorem above rules out.
+
+:::example[Detecting a composite with one base]
+Use the base $a = 2$ to show $n = 561$ is composite, given that $561$ passes the Fermat test to base $2$.
+:::
+
+:::solution
+1. $561 = 3 \cdot 11 \cdot 17$, and indeed $2^{560}\equiv 1 \pmod{561}$, so the Fermat test learns nothing: $561$ is a Carmichael number.
+2. Jacobi: $\left(\frac{2}{561}\right) = (-1)^{(561^2-1)/8}$. Since $561 \equiv 1 \pmod 8$, this is $+1$.
+3. Modular power: $2^{280} \bmod 561$. Squaring gives $2^{10}\equiv 463$, $2^{20}\equiv 463^2 \equiv 67$, $2^{40}\equiv 67^2 \equiv 1$, so the order of $2$ divides $40$; then $280 = 7\cdot 40$ gives $2^{280}\equiv 1^{7} = 1$.
+4. Here the two agree, so $2$ is a liar. Try $a = 5$: $\left(\frac{5}{561}\right) = \left(\frac{5}{3}\right)\left(\frac{5}{11}\right)\left(\frac{5}{17}\right) = (-1)(1)(-1) = 1$, while $5^{280} \equiv 67 \pmod{561}$.
+5. Since $67 \not\equiv 1$, the base $5$ is an Euler witness and $561$ is composite. The theorem *At least half the bases are witnesses* guarantees such a base is easy to find — unlike for the Fermat test, where for $561$ almost none exists.
 :::
 
 ## Common Mistakes
 
-- **Including a divisible by p as residue**: Usually we say nonzero quadratic residue, excluding 0 which trivially is 0^2.
-- **For composite moduli the count is more complicated**: Not necessarily half; use Jacobi or CRT to combine.
-- **Euler criterion requires p odd prime not dividing a**: For p=2 separate case; for a multiple of p, 0.
-- **Confusing residue with the square root existing in integers**: Residue is existence mod m, not that a is a perfect square in Z.
+- **Cancelling a factor without touching the modulus.** From $ca \equiv cb \pmod n$ one may only conclude $a \equiv b \pmod{n/\gcd(c,n)}$. Cancelling $2$ from $6 \equiv 16 \pmod{10}$ gives the false $3 \equiv 8 \pmod{10}$; the true conclusion is $3 \equiv 8 \pmod 5$.
+- **Inverting when no inverse exists.** Writing $x \equiv b/a$ presumes $\gcd(a,n) = 1$. When $d = \gcd(a,n) > 1$ the congruence $ax\equiv b$ has $d$ solutions or none, and the theorem *Linear congruence* is the correct tool.
+- **Reducing an exponent modulo $n$.** Exponents reduce modulo $\varphi(n)$ — or modulo the order of the base — never modulo $n$, and only when the base is coprime to $n$. $2^{12} \bmod 10$ is not $2^{12 \bmod 10}$.
+- **Applying the CRT without checking coprimality.** The clean statement needs pairwise coprime moduli. Otherwise use the corollary *General systems*: the system is solvable exactly when $\gcd(n_i,n_j) \mid a_i - a_j$ for every pair, and checking only consecutive pairs is not enough.
+- **Expecting two square roots modulo a composite.** $x^2 \equiv 1 \pmod{105}$ has eight solutions, one for each choice of sign in each of the three CRT coordinates. Only modulo a prime is the count $0$ or $2$.
+- **Reading a Jacobi symbol as a residue test.** $\left(\frac{a}{n}\right) = 1$ for composite $n$ does not make $a$ a square mod $n$ — two hidden non-residues can cancel, as with $\left(\frac{2}{15}\right)=1$. Only the value $-1$ is conclusive.
+- **Forgetting that a symbol depends on the numerator modulo $p$, not on its size.** Always reduce first; $\left(\frac{60}{13}\right)$ is a symbol about $8$, and signed residues often shorten the work further.
+- **Confusing $a \bmod n$ with $a \equiv b \pmod n$.** The first is a number, the least nonnegative remainder; the second is a relation between two numbers. Writing "$\equiv$" between an integer and a remainder computation is harmless, but writing "$=$" where the classes only agree is not.
