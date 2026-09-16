@@ -2,309 +2,924 @@
 title: Poisson Processes and Brownian Motion
 ---
 
-# Stochastic Processes
+# Poisson Processes and Brownian Motion
 
-A stochastic process is a collection of random variables indexed by time (or space). While a single random variable describes one uncertain quantity, a stochastic process describes how uncertainty evolves over time.
+The previous chapter ran a process forward in discrete steps. This one lets time run continuously, and the first thing that changes is that "the next step" no longer exists: between any two instants there are infinitely many others, so a model cannot be specified by saying what happens next. It has to be specified by saying what happens on *intervals*.
 
-The two most important classes are Markov chains (memoryless discrete-state processes) and Poisson processes (counting processes with independent increments). These models power queueing theory, reliability engineering, finance, and machine learning (e.g., Hidden Markov Models).
+That single shift in viewpoint organises the whole chapter. A process with independent, stationary increments is determined by the law of one increment, and it turns out there are essentially only two ways to build such a thing out of elementary pieces. Either the process moves by **jumps** that are rare and scattered, in which case it counts them and it is a Poisson process; or it moves by **infinitesimal wobbles** that accumulate, in which case the central limit theorem forces those wobbles to be Gaussian and it is Brownian motion. Every process in this chapter is one of these two, a transformation of one, or a sum of both.
 
-Brownian motion is the continuous-time analog that underlies modern financial modeling (Black-Scholes) and many physical diffusion processes. Time series analysis extends these ideas to real data with trends, seasonality, and autocorrelation.
+The Poisson process comes first and gets the longer treatment, because it can be built by hand. We give three definitions that look entirely unrelated — one counting, one infinitesimal, one about waiting times — and prove they describe the same object. That equivalence is the real content: it is why a modelling assumption as innocuous as "events are rare, independent, and arrive at a constant rate" forces the Poisson law on you whether you wanted it or not, and it is why the exponential distribution and the Poisson distribution are two views of one process rather than two unrelated formulas that happen to share a parameter.
 
-## What is a Stochastic Process?
+Brownian motion is harder, and we are honest about where the honesty runs out. That a process with the stated properties *exists* is a genuine theorem requiring machinery beyond this course, and it is quoted rather than proved. Everything downstream of existence is proved: that it is the scaling limit of a random walk, that its paths have quadratic variation $t$ and are therefore of unbounded variation and nowhere differentiable, and that the reflection principle turns questions about a running maximum into questions about a single Gaussian.
+
+Notation agrees with the rest of the subject. $N(t)$ counts events in $[0,t]$, $T_n$ is the time of the $n$-th event, $W_t$ is standard Brownian motion, and $\Phi$ is the standard normal distribution function. Results about the exponential and Poisson distributions themselves — memorylessness, the gamma convolution, the moment generating functions — are proved in *Random Variables and Discrete Distributions* and *Continuous Random Variables* and are used here freely.
+
+## Counting processes, increments, and what makes a model tractable
 
 <!-- section: intro -->
 
-:::definition[Stochastic process]{#stochastic-process}
-A stochastic process is a family of random variables
+A stochastic process is a family of random variables on one probability space, indexed by time. The definition is so permissive that it says almost nothing; everything interesting comes from the *dependence* imposed across the index.
 
-$$\{X_t : t \in T\},$$
+:::definition[Stochastic process and sample path]{#stochastic-process}
+A **stochastic process** is a family $\{X_t : t \in T\}$ of random variables defined on a common probability space, indexed by a set $T$ — here $T = [0,\infty)$ or $T = \{0,1,2,\ldots\}$.
 
-where $T$ is an index set, usually time. Each $X_t$ is a random variable, and the collection describes how the system evolves.
+Fixing a single outcome $\omega$ of the underlying randomness and letting $t$ vary gives one function $t \mapsto X_t(\omega)$, called a **sample path**. The process is the ensemble of all sample paths together with their probabilities.
 :::
 
-The key distinction from ordinary random variables is the dependence structure across time. We care about joint distributions, transition probabilities, and long-run behavior.
-
-Common types: discrete-time vs continuous-time, discrete-state vs continuous-state, Markovian (memoryless) vs non-Markovian.
-
-To be precise, "random variable" here means each $X_t$ is a measurable function on a common probability space, so all the $X_t$ live on the same underlying source of randomness.
-
-:::definition[Sample path]
-Fixing that randomness — one draw of "how the universe rolls out" — gives a single sample path, one concrete trajectory $t \mapsto X_t$.
-:::
-
-The process is the whole *ensemble* of possible paths together with their probabilities.
+The insistence on a *common* probability space is what makes the object more than a list of distributions. It is what allows the question "what is the chance the path ever exceeds $5$?" to have an answer: that event involves all the $X_t$ at once, and it is only meaningful because one draw of $\omega$ fixes all of them simultaneously.
 
 :::intuition
-Think of the weather as a stochastic process. Each day's weather is random, but today's weather affects tomorrow's. The whole sequence of daily weather over a year is one realization of the process.
+A single random variable is a photograph; a process is the film. Knowing the distribution of every frame separately does not tell you the film — a flicker between two values and a slow drift between the same two values can have identical frame-by-frame distributions and completely different plots.
+
+What distinguishes them is the joint behaviour across times, and that is exactly what a process specifies and a list of marginals does not.
 :::
 
-:::example[Reading a process vs. a single variable]
-Let $X_t$ be the number of customers in a shop at hour $t$, for $t \in \{9, 10, \dots, 17\}$ (a discrete-time, discrete-state process).
+Most of this chapter concerns processes that count.
+
+:::definition[Counting process]{#counting-process}
+A **counting process** is a process $\{N(t) : t \ge 0\}$ with $N(0) = 0$ whose sample paths are non-decreasing, right-continuous, and integer-valued, increasing by jumps of size $1$.
+
+For $s < t$, the **increment** $N(t) - N(s)$ is the number of events in the interval $(s,t]$.
 :::
 
-:::solution
-1. A single random variable answers "how many customers at 2 pm?" — that is just $X_{14}$, described by one distribution.
-2. The *process* answers richer questions that involve several times at once, e.g. "given $X_{14} = 20$, what is the distribution of $X_{15}$?" (a transition) or "what fraction of the day is the shop empty?" (long-run behaviour). These need the *joint* distribution of $(X_9, \dots, X_{17})$, not just one marginal.
-3. Sanity check: if the $X_t$ were all independent, knowing $X_{14}$ would tell us nothing about $X_{15}$. The whole point of a process is that the dependence structure across $t$ carries information — that is what we model.
+Right-continuity is a bookkeeping convention with teeth: it declares that an event occurring exactly at time $t$ is already counted in $N(t)$, so $N(t)$ is the count on the closed interval $[0,t]$ and $N(t)-N(s)$ is the count on the half-open $(s,t]$. Adopt the other convention and every interval in the chapter shifts its endpoint. The convention matters nowhere in the answers, because the processes we study put probability zero on an event landing at any prescribed instant, but it matters everywhere in the derivations.
+
+Two structural assumptions turn an arbitrary counting process into something computable.
+
+:::definition[Independent and stationary increments]{#increments}
+A process $\{X_t\}$ has **independent increments** if for every $n$ and every $0 \le t_0 < t_1 < \cdots < t_n$ the random variables
+
+$$X_{t_1} - X_{t_0},\quad X_{t_2} - X_{t_1},\quad \ldots,\quad X_{t_n} - X_{t_{n-1}}$$
+
+are mutually independent. It has **stationary increments** if the distribution of $X_{t+h} - X_{t}$ depends on $h$ alone and not on $t$.
 :::
 
-## Markov Chains
+These are the continuous-time counterparts of the two assumptions of the previous chapter, and they are worth comparing to it directly. Independent increments are much stronger than the Markov property: the Markov property says the future is conditionally independent of the past *given the present state*, whereas independent increments say the future *displacement* is independent of the past outright, whatever the present state. Stationary increments are the exact analogue of time-homogeneity. A process with both is called a **Lévy process**, and the last section of the chapter returns to that name once we have two examples of it.
 
-<!-- section: markov -->
+:::remark[Why these two assumptions are so productive]
+Together they reduce an infinite-dimensional object to a one-parameter family. Independence means the law of $(X_{t_1}, \ldots, X_{t_n})$ factorises into the laws of the increments; stationarity means each increment's law depends only on the gap. So the entire process is determined by the single family of distributions $\mu_h = \operatorname{law}(X_h)$, $h > 0$ — and since $X_{s+h} = X_s + (X_{s+h}-X_s)$ is a sum of two independent pieces, that family must satisfy $\mu_{s+h} = \mu_s * \mu_h$.
 
-:::definition[Markov chain and transition matrix]{#markov-chain}
-A Markov chain is a stochastic process with the Markov property — the future depends only on the present state, not on the past:
-
-$$P(X_{n+1} \mid X_n, X_{n-1}, \dots) = P(X_{n+1} \mid X_n).$$
-
-Its dynamics are described completely by the one-step transition matrix $P$ with entries
-
-$$P_{ij} = P(X_{n+1}=j \mid X_n=i),$$
-
-each row summing to $1$.
+That convolution identity is a severe constraint. It is the reason there are so few Lévy processes, and the reason the two in this chapter are not an arbitrary choice of examples but very nearly the whole story.
 :::
 
-:::theorem[Chapman-Kolmogorov identity]
-The $n$-step transition probabilities are given by matrix powers,
-
-$$P(X_{n+m}=j \mid X_m=i) = (P^n)_{ij}, \qquad P^{(m+n)} = P^{(m)} P^{(n)}.$$
-:::
-
-This is exactly what the Markov property buys us — to look $n$ steps ahead you just multiply $P$ by itself, no history required.
-
-States can be transient, recurrent, or absorbing.
-
-:::definition[Stationary distribution]{#stationary-distribution}
-A stationary distribution is a probability vector $\pi$ with
-
-$$\pi P = \pi, \qquad \sum_i \pi_i = 1.$$
-:::
-
-:::theorem[Ergodic theorem for Markov chains]
-For an irreducible, aperiodic, positive recurrent (ergodic) chain, the stationary distribution is unique and is also the long-run proportion of time spent in each state, independent of the starting state.
-:::
-
-To find $\pi$, solve the linear system $\pi (P - I) = 0$ together with the normalization condition. These are the global balance equations: flow into each state equals flow out in the long run.
-
-Applications: page ranking (Google's original algorithm), board games like Monopoly, customer brand switching models, and reinforcement learning (MDPs).
-
-:::intuition
-A Markov chain is like a frog jumping between lily pads where the next jump only depends on which pad it's currently on — it has no memory of how it got there. The probability of going to each other pad is fixed.
-
-Over a very long time, the frog will settle into a steady pattern: it spends a fixed fraction of time on each pad, no matter where it started. That long-run fraction is the stationary distribution — you can calculate it from the jump probabilities alone.
-:::
-
-:::example[Two-state weather Markov chain]
-Suppose tomorrow's weather depends only on today: Sunny → Sunny with prob 0.8, Rainy with 0.2. Rainy → Sunny 0.4, Rainy 0.6. Label state 1 = Sunny, state 2 = Rainy.
+:::example[Independent increments is strictly stronger than Markov]
+Let $X_0 = 0$ and let $X_{n+1} = X_n + \varepsilon_n$ where $\varepsilon_n$ is $+1$ with probability $p(X_n)$ and $-1$ otherwise, with $p(x) = 0.9$ for $x \le 0$ and $p(x) = 0.1$ for $x > 0$ — a walk pulled back toward the origin. Does it have the Markov property? Independent increments?
 :::
 
 :::solution
-1. Transition matrix $P = \begin{bmatrix} 0.8 & 0.2 \\ 0.4 & 0.6 \end{bmatrix}$. (Each row sums to 1, as required.)
-2. If today is sunny, the probability of sunny two days from now is the (Sunny, Sunny) entry of $P^2$. Compute it as a dot product of row 1 of $P$ with column 1 of $P$: $(P^2)_{11} = 0.8\times 0.8 + 0.2\times 0.4 = 0.64 + 0.08 = 0.72$.
-3. So $P(\text{sunny in 2 days}\mid \text{sunny today}) = 0.72$.
-4. Sanity check: the full second row of $P^2$ must also sum to 1. The other first-row entry is $(P^2)_{12} = 0.8\times 0.2 + 0.2\times 0.6 = 0.16 + 0.12 = 0.28$, and $0.72 + 0.28 = 1$ ✓.
+1. It is Markov by construction: the law of $X_{n+1}$ given the whole history depends on the history only through $X_n$, since $p$ is a function of $X_n$ alone.
+2. It does **not** have independent increments. The increment $\varepsilon_1 = X_2 - X_1$ is $+1$ with probability $0.1$ when $X_1 = 1$ and with probability $0.9$ when $X_1 = -1$, and $X_1 = \varepsilon_0$ is the first increment. So $P(\varepsilon_1 = 1 \mid \varepsilon_0 = 1) = 0.1 \ne 0.9 = P(\varepsilon_1 = 1 \mid \varepsilon_0 = -1)$, and the two increments are dependent.
+3. Sanity check on the direction of the implication: independent increments *does* imply Markov, since if the future displacement is independent of everything up to now, then in particular conditioning on the full history gives the same answer as conditioning on the present. The example shows the converse fails, so the containment is strict.
 :::
 
-:::example[Finding the stationary distribution (weather example)]
-This chain is irreducible (you can get from either state to the other) and aperiodic, so a unique stationary distribution exists and equals the long-run fraction of days in each state. Let $\pi = [\pi_S, \pi_R]$. Solve $\pi P = \pi$ together with $\pi_S + \pi_R = 1$.
-:::
+The distinction in that example is the one to carry forward. A Markov process may have a drift that depends on where it is; a process with independent increments may not. Brownian motion and the Poisson process are both, which is exactly why they are so much more tractable than a general Markov process — and why the mean-reverting walk above, a perfectly reasonable model, sits outside this chapter's methods.
 
-:::solution
-1. Writing $\pi P = \pi$ column by column gives: $\pi_S = 0.8\pi_S + 0.4\pi_R$ (column Sunny) and $\pi_R = 0.2\pi_S + 0.6\pi_R$ (column Rainy).
-2. Take the first equation: $\pi_S - 0.8\pi_S = 0.4\pi_R$, i.e. $0.2\pi_S = 0.4\pi_R$, so $\pi_S = 2\pi_R$. (The two equations are linearly dependent — one is redundant — which is why we need the normalization $\pi_S + \pi_R = 1$ to pin down a unique answer.)
-3. Substituting: $2\pi_R + \pi_R = 1 \Rightarrow \pi_R = 1/3$, hence $\pi_S = 2/3$.
-4. Sanity check: verify $\pi P = \pi$ directly. First component: $0.8\cdot\tfrac{2}{3} + 0.4\cdot\tfrac{1}{3} = \tfrac{1.6}{3} + \tfrac{0.4}{3} = \tfrac{2}{3} = \pi_S$ ✓.
-5. In the long run, no matter the starting weather, about 67% of days are sunny and 33% rainy.
-:::
-
-## Poisson Processes
+## The Poisson process: three definitions that agree
 
 <!-- section: poisson -->
 
-:::definition[Poisson process]{#poisson-process}
-A Poisson process with rate $\lambda$ counts the events occurring in an interval. It has independent increments, and the number of events in an interval of length $t$ is Poisson with mean $\lambda t$:
+Here is the modelling situation the Poisson process answers. Events occur along a timeline — calls, decays, claims, photons. You are willing to assume that they occur at a constant average rate, that non-overlapping stretches of time are independent, and that they do not arrive in simultaneous batches. You are *not* willing to assume anything else, and in particular you have no idea what distribution the counts should follow.
 
-$$P(X(t)=k) = \frac{e^{-\lambda t} (\lambda t)^k}{k!}.$$
+The remarkable fact is that you have already decided. Those three assumptions determine the law of the counts completely, and the answer is Poisson. The purpose of this section is to prove that, because the proof is what converts the Poisson distribution from a formula you are asked to accept into a conclusion you are forced into.
+
+We give the three standard definitions and then prove them equivalent.
+
+:::definition[Poisson process — the counting definition]{#poisson-counting}
+A counting process $\{N(t) : t \ge 0\}$ is a **Poisson process with rate** $\lambda > 0$ if
+
+1. $N(0) = 0$;
+2. it has independent increments;
+3. for every $s < t$, the increment $N(t)-N(s)$ has the Poisson distribution with mean $\lambda(t-s)$:
+
+$$P\big(N(t)-N(s) = k\big) = e^{-\lambda(t-s)}\frac{\big(\lambda(t-s)\big)^k}{k!}, \qquad k = 0,1,2,\ldots$$
 :::
 
-:::proposition[Inter-arrival times are exponential]
-The inter-arrival times of a Poisson process with rate $\lambda$ are independent exponential random variables with rate $\lambda$, and the time until the $k$-th event is Gamma (Erlang-$k$) distributed with rate $\lambda$.
+Condition 3 contains stationarity of increments, since the right-hand side depends on $s$ and $t$ only through $t-s$. This definition is the most convenient to *use* and the least convincing to assume: nothing about a call centre suggests the Poisson formula. The next definition is the one a modeller can actually justify.
+
+:::definition[Poisson process — the infinitesimal definition]{#poisson-infinitesimal}
+A counting process $\{N(t)\}$ satisfies the **infinitesimal conditions** with rate $\lambda > 0$ if $N(0)=0$, the process has independent and stationary increments, and as $h \downarrow 0$,
+
+$$P\big(N(h) = 1\big) = \lambda h + o(h), \qquad P\big(N(h) \ge 2\big) = o(h).$$
 :::
 
-Memorylessness is what makes Poisson processes the natural model for arrivals in queues: the waiting time for the next event never 'ages' — it always has the same distribution.
+Read the two conditions as *rate* and *no batching*. The first says that in a short window the chance of exactly one event is proportional to the window's length, with $\lambda$ the constant of proportionality — this is what "occurs at rate $\lambda$" means operationally. The second says two events at essentially the same instant are negligible even relative to the short window: events arrive one at a time. Together with independence these are assumptions a modeller can inspect against reality, which the Poisson formula is not.
 
-:::proposition[Superposition and thinning]
-Merging independent Poisson processes with rates $\lambda_i$ gives a Poisson process with rate $\sum \lambda_i$. Thinning a Poisson process — keeping each event independently with probability $p$ — yields two independent Poisson processes, with rates $p\lambda$ and $(1-p)\lambda$.
+:::definition[Poisson process — the inter-arrival definition]{#poisson-interarrival}
+Let $T_1, T_2, \ldots$ be the successive event times of a counting process, and let
+
+$$\tau_1 = T_1, \qquad \tau_n = T_n - T_{n-1} \ (n \ge 2)$$
+
+be the **inter-arrival times**. The process satisfies the **inter-arrival conditions** with rate $\lambda$ if the $\tau_n$ are independent and identically distributed, each exponential with rate $\lambda$.
 :::
 
-Applications: customer arrivals, radioactive decay, insurance claims, website hits, bus arrivals, and as a building block for more complex point processes (e.g., Hawkes processes for self-exciting events).
+This third view is the one to simulate from and the one that explains where memorylessness enters. Now the theorem.
+
+:::theorem[The three definitions are equivalent]{#poisson-equivalence}
+For a counting process $\{N(t) : t \ge 0\}$ and a constant $\lambda > 0$, the counting definition, the infinitesimal conditions, and the inter-arrival conditions are equivalent: each implies the other two.
+:::
+
+We prove the cycle infinitesimal $\Rightarrow$ counting $\Rightarrow$ inter-arrival $\Rightarrow$ counting, and note that counting $\Rightarrow$ infinitesimal is a one-line expansion. The first implication is the substantial one and is worth seeing in full, because the method — write down the equations governing $P(N(t)=k)$ over a short interval, pass to a differential equation, solve — is the standard technique for every continuous-time Markov model.
+
+:::proof
+**Infinitesimal $\Rightarrow$ counting.** Write $p_k(t) = P(N(t) = k)$, and note first that the two infinitesimal conditions force
+
+$$P(N(h)=0) = 1 - P(N(h)=1) - P(N(h)\ge 2) = 1 - \lambda h + o(h).$$
+
+*The case $k=0$.* The event $\{N(t+h) = 0\}$ is exactly $\{N(t)=0\} \cap \{N(t+h)-N(t) = 0\}$, and these two are independent with the second having probability $1-\lambda h + o(h)$ by stationarity. Hence
+
+$$p_0(t+h) = p_0(t)\big(1 - \lambda h + o(h)\big),$$
+
+so that $\frac{p_0(t+h)-p_0(t)}{h} = -\lambda p_0(t) + \frac{o(h)}{h}$. Letting $h \downarrow 0$ gives $p_0'(t) = -\lambda p_0(t)$, and the same computation with $-h$ handles the left derivative. With $p_0(0)=1$ the unique solution is
+
+$$p_0(t) = e^{-\lambda t}.$$
+
+*The case $k \ge 1$.* Decompose $\{N(t+h)=k\}$ according to how many events fall in $(t, t+h]$:
+
+$$p_k(t+h) = p_k(t)P\big(N(h)=0\big) + p_{k-1}(t)P\big(N(h)=1\big) + \sum_{j\ge 2} p_{k-j}(t) P\big(N(h)=j\big).$$
+
+The final sum is at most $P(N(h) \ge 2) = o(h)$. Substituting the infinitesimal conditions,
+
+$$p_k(t+h) = p_k(t)\big(1-\lambda h\big) + p_{k-1}(t)\lambda h + o(h),$$
+
+and rearranging and letting $h \downarrow 0$ gives the system
+
+$$p_k'(t) = -\lambda p_k(t) + \lambda p_{k-1}(t), \qquad k \ge 1,$$
+
+with $p_k(0) = 0$. Solve it by the integrating factor $e^{\lambda t}$: writing $q_k(t) = e^{\lambda t}p_k(t)$, the equation becomes $q_k'(t) = \lambda q_{k-1}(t)$ with $q_k(0)=0$ and $q_0 \equiv 1$. Induction is now immediate — $q_1(t) = \lambda t$, and if $q_{k-1}(t) = (\lambda t)^{k-1}/(k-1)!$ then
+
+$$q_k(t) = \int_0^t \lambda \frac{(\lambda u)^{k-1}}{(k-1)!}\,du = \frac{(\lambda t)^k}{k!}.$$
+
+Therefore $p_k(t) = e^{-\lambda t}(\lambda t)^k/k!$, which is the Poisson law with mean $\lambda t$. Stationarity of increments upgrades this from $N(t)$ to every increment $N(t)-N(s)$, giving condition 3.
+
+**Counting $\Rightarrow$ inter-arrival.** For the first arrival, $\{T_1 > t\}$ and $\{N(t) = 0\}$ are the same event, so
+
+$$P(T_1 > t) = p_0(t) = e^{-\lambda t},$$
+
+which is exactly the exponential survival function with rate $\lambda$. For the later gaps, fix $s$ and condition on $T_{n-1} = s$. The event $\{\tau_n > t\}$ says no event occurs in $(s, s+t]$, that is $N(s+t)-N(s) = 0$, and the increment over $(s,s+t]$ is independent of everything determined by the process up to time $s$ — in particular of $T_1, \ldots, T_{n-1}$. So
+
+$$P\big(\tau_n > t \mid T_1, \ldots, T_{n-1}\big) = P\big(N(s+t)-N(s)=0\big) = e^{-\lambda t},$$
+
+a constant. A conditional probability that does not depend on the conditioning variables establishes both that $\tau_n$ is independent of $\tau_1,\ldots,\tau_{n-1}$ and that its law is exponential with rate $\lambda$. Induction on $n$ completes the claim.
+
+**Inter-arrival $\Rightarrow$ counting.** With $T_n = \tau_1 + \cdots + \tau_n$ a sum of $n$ i.i.d. exponentials, $T_n$ has the gamma (Erlang) density $\lambda^n t^{n-1}e^{-\lambda t}/(n-1)!$ — this is the convolution computed in *Transformations and Generating Functions*. Now use the identity relating counts to arrival times, $\{N(t) \ge n\} = \{T_n \le t\}$, which holds because the $n$-th event has occurred by time $t$ precisely when the count has reached $n$. Hence
+
+$$P(N(t) = n) = P(T_n \le t) - P(T_{n+1} \le t) = \int_0^t \frac{\lambda^n u^{n-1}e^{-\lambda u}}{(n-1)!}du - \int_0^t \frac{\lambda^{n+1} u^{n}e^{-\lambda u}}{n!}du.$$
+
+Integrating the first integral by parts with $u^{n-1}\,du$ against $e^{-\lambda u}$ produces exactly the second integral plus the boundary term $e^{-\lambda t}(\lambda t)^n/n!$, so the difference collapses to
+
+$$P(N(t)=n) = e^{-\lambda t}\frac{(\lambda t)^n}{n!}.$$
+
+Independence and stationarity of the increments follow from the memorylessness of the exponential: given the history up to time $t$, the time remaining until the next arrival is exponential with rate $\lambda$ regardless of how long the current gap has already run, so the process restarts at $t$ with the same law and independently of the past.
+
+**Counting $\Rightarrow$ infinitesimal.** Expand the Poisson law at small $h$: $P(N(h)=1) = \lambda h e^{-\lambda h} = \lambda h + O(h^2)$ and $P(N(h)\ge 2) = 1 - e^{-\lambda h} - \lambda h e^{-\lambda h} = O(h^2)$. $\blacksquare$
+:::
+
+The equivalence deserves a moment's reflection before we start using it. Three descriptions with nothing obvious in common — a discrete distribution on counts, a statement about vanishingly short intervals, a continuous distribution on waiting times — turn out to specify the same process. That is why the Poisson and exponential distributions are always found together: they are not two models, they are the count and the gap of one model.
 
 :::intuition
-Imagine customers arriving at a coffee shop. The exact moment each person walks in is random, but on average 4 people arrive per hour. A Poisson process is the mathematical model for this 'random but steady rate' arrival pattern. The time between customers is like rolling an exponential die — sometimes short waits, sometimes long, but averaging 15 minutes.
+The infinitesimal conditions are the honest assumptions and the Poisson formula is their consequence. Chop $[0,t]$ into $n$ tiny slices. Each slice independently contains an event with probability about $\lambda t/n$ and essentially never contains two, so the count is a sum of $n$ independent near-Bernoulli trials — a binomial with $n$ large and $p$ small and $np = \lambda t$ fixed. That binomial converges to Poisson($\lambda t$), which is the law of rare events, and the proof above is that heuristic made exact.
 
-The memoryless part is wild: even if you've already waited 10 minutes for the next customer, the expected remaining wait is still exactly 15 minutes. The process has no memory of how long you've been standing there.
+The exponential gaps come from the same picture read sideways. Waiting for the first event means failing in slice after slice, a geometric number of trials, and a geometric with small success probability and finely divided time is an exponential.
 :::
 
-:::example[Calls to a call center]
-A call center receives calls at an average rate of 12 per hour. What is the probability of exactly 5 calls in the next 30 minutes?
+:::pitfall
+The rate $\lambda$ carries units of *events per unit time*, and the Poisson parameter is the dimensionless product $\lambda t$. Almost every wrong answer in this material is a units error: a rate of $12$ per hour over $30$ minutes gives mean $12 \times 0.5 = 6$, not $12$. Check the parameter is a pure number before using it, and check its size against the interval — if a half-hour window produces a larger mean than the hour containing it, something has been inverted.
 :::
 
-:::solution
-1. For a Poisson process, the number of events in an interval of length $t$ is Poisson with mean $\lambda t$. Keep the time units consistent: with $\lambda = 12$ per hour and $t = 0.5$ hours, the mean is $\lambda t = 12 \times 0.5 = 6$ calls.
-2. Plug $k = 5$ into the Poisson pmf: $P(X = 5) = \dfrac{e^{-6}\, 6^{5}}{5!} = \dfrac{e^{-6}\cdot 7776}{120}$.
-3. Numerically $e^{-6} \approx 0.002479$, so $P(X=5) \approx \dfrac{0.002479 \times 7776}{120} \approx 0.1606$.
-4. So there is about a 16% chance of exactly 5 calls in 30 minutes.
-5. Sanity check: the mean is 6, and for a Poisson the most likely counts cluster around the mean, so a value of 5 should carry a moderate probability of order 0.15 — consistent with what we got. (Had we forgotten to convert 30 minutes to $t=0.5$ and used mean 12, the answer would be a tiny $\approx 0.013$, a red flag that the units were wrong.)
-:::
-
-:::example[Superposition and thinning (two coffee shops)]
-Two *independent* Poisson arrival streams merge at a combined counter: Shop A at $\lambda_A=3$/hr, Shop B at $\lambda_B=5$/hr. By superposition the merged process is Poisson with rate $\lambda = \lambda_A + \lambda_B = 3 + 5 = 8$/hr.
+:::example[A call centre, and the two ways to ask the same question]
+Calls arrive as a Poisson process at $\lambda = 12$ per hour. (a) What is the probability of exactly $5$ calls in the next $30$ minutes? (b) What is the probability that the next call takes more than $10$ minutes to arrive? (c) Given that no call has come in the last $10$ minutes, what is the probability of waiting more than $10$ minutes more?
 :::
 
 :::solution
-1. Now thin the merged stream: label each arriving customer 'takeout' independently with probability $p = 0.25$. The takeout stream is Poisson with rate $p\lambda = 0.25 \times 8 = 2$/hr, and the dine-in stream is Poisson with rate $(1-p)\lambda = 0.75 \times 8 = 6$/hr; crucially, these two thinned streams are *independent* of each other.
-2. Sanity check: the two thinned rates must add back to the original, $2 + 6 = 8$ ✓. And the expected number of takeout customers in an 8-hour day is $2 \times 8 = 16$.
-3. This is why Poisson processes are so convenient: merging and splitting preserve the Poisson property (independence of increments is what makes both work).
+1. **(a)** Work in hours, so $t = 0.5$ and the mean is $\lambda t = 6$. Then
+
+$$P(N(0.5)=5) = e^{-6}\frac{6^5}{5!} = \frac{0.0024788 \times 7776}{120} \approx 0.1606.$$
+
+2. **(b)** This is a question about the gap, so use the exponential: $P(\tau_1 > 1/6) = e^{-12/6} = e^{-2} \approx 0.1353$.
+3. Or equivalently via the count, which must give the same number: "no call in ten minutes" is $\{N(1/6) = 0\}$, with probability $e^{-\lambda t} = e^{-2}$. ✓ The agreement is the equivalence theorem in one line.
+4. **(c)** By memorylessness of the exponential the answer is again $e^{-2} \approx 0.1353$ — the elapsed ten minutes is discarded.
+5. Sanity check on (a): the mean count is $6$, and Poisson probabilities near the mean are of order $1/\sqrt{2\pi \cdot 6} \approx 0.16$. Our answer matches that scale. Had we used $\lambda t = 12$ by forgetting to convert, we would have got $0.0127$ — two orders of magnitude off, and the kind of error the pitfall above is about.
 :::
 
-## Brownian Motion and Diffusion
+:::example[Checking the assumptions before using the formula]
+For each model, say which of the three infinitesimal conditions fails, if any. (a) Goals in a football match. (b) Cars passing a point on a motorway at rush hour. (c) Customers entering a shop, where families arrive together.
+:::
+
+:::solution
+1. **(a)** Goals are rare, roughly independent across disjoint stretches, and essentially never simultaneous. All three conditions are defensible, and the Poisson process is the standard model — its predictions for goal counts match data well.
+2. **(b)** Independence fails. Cars are not free to arrive independently: one car's position constrains the next through a minimum headway, so a short interval that already contains a car is *less* likely to contain another. The counts are under-dispersed relative to Poisson, meaning $\operatorname{Var}(N(t)) < E(N(t))$, which a Poisson model cannot produce since it forces the two to be equal.
+3. **(c)** The "no batching" condition fails: $P(N(h)\ge 2)$ is not $o(h)$, because a family of four arriving is a single instant carrying four events. The repair is a compound Poisson process — families arrive as a Poisson process, and each carries a random size.
+4. The diagnostic to remember is the variance-to-mean ratio. A Poisson process forces it to $1$; a value below signals negative dependence as in (b), and a value above signals batching as in (c). $\blacksquare$
+:::
+
+:::figure[The Poisson count $N(t)$ against the arrival times it is built from, for one realisation with $\lambda = 2$. The path is a staircase: right-continuous, flat between arrivals, jumping by exactly $1$ at each $T_n$ (the solid dots), which is the content of the identity $\{N(t) \ge n\} = \{T_n \le t\}$ used in the proof. The dashed line is the mean $E(N(t)) = \lambda t$; the staircase wanders around it, and the gaps $\tau_n$ between jumps are the i.i.d. exponentials of the inter-arrival definition.]{#poisson-staircase}
+{
+  "type": "plot",
+  "x": [-0.15, 4.3],
+  "y": [-0.6, 9.4],
+  "xTicks": 0.5,
+  "yTicks": 1,
+  "xLabel": "t",
+  "yLabel": "N(t)",
+  "marks": [
+    { "kind": "line", "through": [[0, 0], [4, 8]], "tone": "muted", "dashed": true, "extend": false },
+    { "kind": "path", "points": [[0, 0], [0.31, 0]], "tone": "accent" },
+    { "kind": "path", "points": [[0.31, 1], [0.94, 1]], "tone": "accent" },
+    { "kind": "path", "points": [[0.94, 2], [1.12, 2]], "tone": "accent" },
+    { "kind": "path", "points": [[1.12, 3], [1.83, 3]], "tone": "accent" },
+    { "kind": "path", "points": [[1.83, 4], [2.05, 4]], "tone": "accent" },
+    { "kind": "path", "points": [[2.05, 5], [2.72, 5]], "tone": "accent" },
+    { "kind": "path", "points": [[2.72, 6], [3.44, 6]], "tone": "accent" },
+    { "kind": "path", "points": [[3.44, 7], [3.61, 7]], "tone": "accent" },
+    { "kind": "path", "points": [[3.61, 8], [4.2, 8]], "tone": "accent" },
+    { "kind": "point", "at": [0.31, 1], "tone": "result" },
+    { "kind": "point", "at": [0.94, 2], "tone": "result" },
+    { "kind": "point", "at": [1.12, 3], "tone": "result" },
+    { "kind": "point", "at": [1.83, 4], "tone": "result" },
+    { "kind": "point", "at": [2.05, 5], "tone": "result" },
+    { "kind": "point", "at": [2.72, 6], "tone": "result" },
+    { "kind": "point", "at": [3.44, 7], "tone": "result" },
+    { "kind": "point", "at": [3.61, 8], "tone": "result" },
+    { "kind": "text", "at": [3.02, 8.8], "text": "mean 2t", "tone": "muted", "leaderTo": [3.9, 7.8] },
+    { "kind": "text", "at": [0.86, 0.35], "text": "T1", "leaderTo": [0.31, 0.02] },
+    { "kind": "text", "at": [1.72, 1.35], "text": "T2", "leaderTo": [0.94, 1.02] }
+  ]
+}
+:::
+
+## Arrival times: exponential gaps and Erlang waits
+
+<!-- section: arrivals -->
+
+The equivalence theorem gives two dual descriptions of the same process, and choosing the right one is most of the skill in this material. Questions about *how many* are Poisson questions; questions about *how long* are exponential or gamma questions. This section develops the second column of that dictionary.
+
+:::proposition[The law of the $n$-th arrival time]{#erlang-law}
+Let $\{N(t)\}$ be a Poisson process with rate $\lambda$ and let $T_n$ be the time of the $n$-th event. Then $T_n$ has the **Erlang** (gamma) density
+
+$$f_{T_n}(t) = \frac{\lambda^n t^{n-1}e^{-\lambda t}}{(n-1)!}, \qquad t > 0,$$
+
+with $E(T_n) = n/\lambda$ and $\operatorname{Var}(T_n) = n/\lambda^2$.
+:::
+
+:::proof
+By the inter-arrival definition $T_n = \tau_1 + \cdots + \tau_n$ is a sum of $n$ independent exponentials of rate $\lambda$, whose density is the $n$-fold convolution computed in *Transformations and Generating Functions*.
+
+Alternatively and more quickly, differentiate the distribution function. The identity $\{N(t) \ge n\} = \{T_n \le t\}$ gives
+
+$$F_{T_n}(t) = P(N(t) \ge n) = 1 - \sum_{k=0}^{n-1} e^{-\lambda t}\frac{(\lambda t)^k}{k!},$$
+
+and differentiating term by term, the derivative of $e^{-\lambda t}(\lambda t)^k/k!$ is $\lambda e^{-\lambda t}\big[(\lambda t)^{k-1}/(k-1)! - (\lambda t)^k/k!\big]$, so the sum telescopes and leaves $f_{T_n}(t) = \lambda e^{-\lambda t}(\lambda t)^{n-1}/(n-1)!$.
+
+The moments follow from linearity and independence applied to the sum: each $\tau_i$ has mean $1/\lambda$ and variance $1/\lambda^2$. $\blacksquare$
+:::
+
+The identity $\{N(t)\ge n\} = \{T_n \le t\}$ used twice now is worth naming to yourself as the **counting–waiting duality**. It is the bridge between the two columns, and every translation between a count question and a time question goes through it.
+
+:::example[Counting-waiting duality, both directions]
+A machine fails as a Poisson process at rate $\lambda = 0.4$ per year. (a) What is the probability that the third failure occurs after year $10$? (b) What is the expected time of the third failure? (c) What is the probability of at most two failures in ten years?
+:::
+
+:::solution
+1. **(a)** and **(c)** are the same question. By duality, $\{T_3 > 10\} = \{N(10) \le 2\}$, and the right-hand form is easier: with mean $\lambda t = 4$,
+
+$$P(N(10)\le 2) = e^{-4}\left(1 + 4 + \frac{16}{2}\right) = 13e^{-4} \approx 13 \times 0.018316 \approx 0.2381.$$
+
+2. **(b)** $E(T_3) = 3/\lambda = 3/0.4 = 7.5$ years.
+3. Sanity check: the mean of $T_3$ is $7.5$ years, so year $10$ is beyond the mean, and the chance of exceeding it should be well under a half — $0.238$ fits. The Erlang is right-skewed, so the median sits below $7.5$ and the tail beyond $10$ is thinner than a symmetric guess would suggest.
+4. Note what would have gone wrong had we treated the third failure as "three times the first": $P(T_1 > 10/3)$ is $e^{-4/3} \approx 0.264$, close enough here to look plausible and wrong in general, because a sum of exponentials is not a scaled exponential — it has a different shape, as the variance $3/\lambda^2$ against $(3/\lambda)^2$ shows.
+:::
+
+:::pitfall
+$T_n$ is a *sum* of exponentials, not a scaled one. The coefficient of variation of $T_n$ is $\sqrt{n}/\lambda \div (n/\lambda) = 1/\sqrt n$, so the $n$-th arrival time becomes *relatively* less variable as $n$ grows — the law of large numbers acting on the gaps. Treating $T_n$ as exponential with mean $n/\lambda$ keeps the mean right and inflates the spread by a factor $\sqrt n$.
+:::
+
+:::example[The inspection paradox]
+Buses arrive as a Poisson process at rate $\lambda = 1$ per $10$ minutes, so the mean gap between buses is $10$ minutes. You arrive at the stop at an arbitrary moment. What is your expected wait, and what is the expected length of the gap you landed in?
+:::
+
+:::solution
+1. Your wait is the time to the next arrival. By memorylessness the elapsed part of the current gap is irrelevant, so the wait is exponential with mean $10$ minutes.
+2. By symmetry — run time backwards, which leaves a Poisson process a Poisson process — the time since the *previous* bus is also exponential with mean $10$ minutes, and it is independent of the forward wait.
+3. So the gap you landed in has expected length $10 + 10 = 20$ minutes, twice the mean gap.
+4. This is not a contradiction, and it is not an error. Gaps are not sampled uniformly by a person arriving at a random time: a long gap covers more of the timeline and is correspondingly more likely to be the one you land in. Length-biased sampling doubles the mean here because for an exponential the size-biased mean is exactly twice the mean.
+5. Sanity check against a degenerate case: if buses ran *exactly* every $10$ minutes, the gap you land in would have length $10$ with certainty and your expected wait would be $5$. The doubling is a consequence of variability in the gaps, and it vanishes when that variability does. ✓
+:::
+
+## Conditional uniformity and the order statistics property
+
+<!-- section: conditioning -->
+
+Here is the result that most distinguishes a Poisson process from a generic counting process, and the one that makes simulation and many computations trivial. Condition on the number of events in an interval. What do you then know about *where* they fell?
+
+The answer is: nothing beyond what pure chance would give. The events are scattered uniformly and independently over the interval, and all the structure of the process has been used up by fixing the count.
+
+:::theorem[Conditional uniformity]{#conditional-uniformity}
+Let $\{N(t)\}$ be a Poisson process with rate $\lambda$. Conditional on $\{N(t) = n\}$, the unordered set of arrival times $\{T_1, \ldots, T_n\}$ has the same distribution as an unordered sample of $n$ independent Uniform$(0,t)$ random variables. Equivalently, the ordered vector $(T_1, \ldots, T_n)$ has the joint density
+
+$$f(t_1,\ldots,t_n \mid N(t)=n) = \frac{n!}{t^n}, \qquad 0 < t_1 < t_2 < \cdots < t_n < t,$$
+
+which is the joint density of the order statistics of $n$ i.i.d. Uniform$(0,t)$ variables.
+:::
+
+:::proof
+Fix $0 < t_1 < \cdots < t_n < t$ and let $h$ be small enough that the intervals $(t_i, t_i + h]$ are disjoint and contained in $(0,t)$. The event that exactly one arrival falls in each $(t_i, t_i+h]$ and none elsewhere in $(0,t)$ decomposes over $2n+1$ disjoint intervals, on which the increments are independent. Its probability is therefore the product
+
+$$\Big[\prod_{i=1}^{n} \lambda h e^{-\lambda h}\Big]\cdot e^{-\lambda(t - nh)} = (\lambda h)^n e^{-\lambda t},$$
+
+since the $n$ factors $e^{-\lambda h}$ and the final factor $e^{-\lambda(t-nh)}$ multiply to $e^{-\lambda t}$ exactly. Divide by $P(N(t)=n) = e^{-\lambda t}(\lambda t)^n/n!$:
+
+$$P\big(T_i \in (t_i, t_i+h] \ \forall i \,\big|\, N(t)=n\big) = \frac{(\lambda h)^n e^{-\lambda t}}{e^{-\lambda t}(\lambda t)^n/n!} = \frac{n!\,h^n}{t^n}.$$
+
+Dividing by $h^n$ and letting $h \downarrow 0$ gives the conditional density $n!/t^n$ on the ordered region, which is precisely the order-statistic density of $n$ i.i.d. uniforms on $(0,t)$. Note that $\lambda$ has cancelled. $\blacksquare$
+:::
+
+The cancellation of $\lambda$ at the end is the whole theorem in one symbol. The rate governs *how many* events occur; given how many, it says nothing at all about *where*. A process whose rate varied over the interval would not have this property, and the non-homogeneous case below shows exactly how it fails.
+
+:::intuition
+Scatter $n$ points uniformly at random in $(0,t)$ and you have simulated a Poisson process conditioned on its count. This is genuinely how one simulates a Poisson process on a fixed window: draw $N \sim$ Poisson$(\lambda t)$, then drop $N$ uniform points. No sequential waiting required.
+
+The reason it works is that the Poisson process has no preference for any location — its rate is constant, so all placements of a given number of points are equally likely. Fixing the count removes every other piece of information the process carried.
+:::
+
+:::corollary[Expected sum of arrival times]{#sum-arrivals}
+Conditional on $N(t) = n$, the sum of the arrival times satisfies
+
+$$E\left(\sum_{i=1}^{n} T_i \,\Big|\, N(t)=n\right) = \frac{nt}{2}.$$
+:::
+
+:::proof
+The sum is unchanged by ordering, so by the theorem *Conditional uniformity* it is distributed as a sum of $n$ i.i.d. Uniform$(0,t)$ variables. Linearity of expectation gives $n \cdot t/2$. $\blacksquare$
+:::
+
+:::example[Total waiting time in a queue]
+Customers arrive at an unattended counter as a Poisson process of rate $\lambda$ over $[0,t]$, and all are served at time $t$. Find the expected total waiting time accumulated by all customers.
+:::
+
+:::solution
+1. A customer arriving at $T_i$ waits $t - T_i$, so the total wait is $W = \sum_{i=1}^{N(t)} (t - T_i)$, a sum with a random number of terms.
+2. Condition on $N(t) = n$. By the corollary *Expected sum of arrival times*,
+
+$$E(W \mid N(t)=n) = nt - \frac{nt}{2} = \frac{nt}{2}.$$
+
+3. Now average over $N(t)$, using the tower property and $E(N(t)) = \lambda t$:
+
+$$E(W) = E\left(\frac{N(t)\,t}{2}\right) = \frac{t}{2}\lambda t = \frac{\lambda t^2}{2}.$$
+
+4. Sanity check on the shape: the expected wait is quadratic in $t$, which is right — doubling the window doubles the number of customers *and* doubles the average wait each endures, so the total should scale by four. A unit check confirms it: $\lambda t^2$ has units of (events/time)(time²) = event·time, the units of a total wait. ✓
+:::
+
+## Superposition, thinning, and marked processes
+
+<!-- section: superposition -->
+
+Poisson processes are closed under the two operations you would most want to perform on them, and that closure is the main reason they dominate applied modelling. Merge two independent streams and you get a Poisson process. Split one stream at random and you get independent Poisson processes. Neither statement is true of counting processes in general.
+
+:::theorem[Superposition]{#superposition}
+Let $N_1, \ldots, N_m$ be independent Poisson processes with rates $\lambda_1, \ldots, \lambda_m$. Then $N = N_1 + \cdots + N_m$ is a Poisson process with rate $\lambda = \lambda_1 + \cdots + \lambda_m$.
+:::
+
+:::proof
+$N$ is a counting process with $N(0)=0$. Its increments over disjoint intervals are sums of the corresponding increments of the $N_i$, which are independent within each process by assumption and across processes by the independence of the processes, so $N$ has independent increments. For the marginal law, the increment $N(t)-N(s)$ is a sum of $m$ independent Poisson variables with means $\lambda_i(t-s)$, and a sum of independent Poissons is Poisson with the summed mean — proved by the moment generating function in *Transformations and Generating Functions*. Hence $N(t)-N(s) \sim$ Poisson$\big(\lambda(t-s)\big)$, which is the counting definition. $\blacksquare$
+:::
+
+:::proposition[Which stream produced the next event]{#which-stream}
+Under the hypotheses of the theorem *Superposition*, the probability that the first event of the merged process comes from stream $i$ is $\lambda_i/\lambda$, independently of when that event occurs.
+:::
+
+:::proof
+For $m=2$ the first event of stream $i$ occurs at $\tau^{(i)} \sim$ Exp$(\lambda_i)$, independent across $i$, and we need $P(\tau^{(1)} < \tau^{(2)})$. Conditioning on $\tau^{(1)} = u$ and integrating,
+
+$$P(\tau^{(1)} < \tau^{(2)}) = \int_0^\infty \lambda_1 e^{-\lambda_1 u}\,e^{-\lambda_2 u}\,du = \frac{\lambda_1}{\lambda_1+\lambda_2}.$$
+
+The general $m$ follows by treating the other $m-1$ streams as one superposed stream of rate $\lambda - \lambda_i$. Independence of the identity from the time follows because the joint density of (minimum, identity of minimiser) factorises: $P(\tau^{(1)} < \tau^{(2)}, \min > u) = \frac{\lambda_1}{\lambda}e^{-\lambda u}$, a product of a function of the identity and a function of $u$. $\blacksquare$
+:::
+
+:::theorem[Thinning]{#thinning}
+Let $\{N(t)\}$ be a Poisson process with rate $\lambda$, and mark each event independently as type $1$ with probability $p$ and type $2$ with probability $1-p$, independently of the process. Let $N_1(t)$ and $N_2(t)$ count events of each type. Then $N_1$ and $N_2$ are Poisson processes with rates $p\lambda$ and $(1-p)\lambda$, and they are **independent**.
+:::
+
+:::proof
+Fix $t$ and compute the joint law of $(N_1(t), N_2(t))$. Conditional on $N(t) = n$, the type-$1$ count is binomial$(n,p)$, so for non-negative integers $j,k$ with $n = j+k$,
+
+$$P\big(N_1(t)=j,\,N_2(t)=k\big) = P(N(t)=n)\binom{n}{j}p^j(1-p)^k = e^{-\lambda t}\frac{(\lambda t)^{j+k}}{(j+k)!}\cdot\frac{(j+k)!}{j!\,k!}p^j(1-p)^k.$$
+
+The factorials cancel. Splitting $e^{-\lambda t} = e^{-p\lambda t}e^{-(1-p)\lambda t}$ and regrouping,
+
+$$P\big(N_1(t)=j,\,N_2(t)=k\big) = \left[e^{-p\lambda t}\frac{(p\lambda t)^j}{j!}\right]\cdot\left[e^{-(1-p)\lambda t}\frac{((1-p)\lambda t)^k}{k!}\right],$$
+
+a product of a Poisson$(p\lambda t)$ mass and a Poisson$((1-p)\lambda t)$ mass. So the two counts are independent with the stated marginals. Independent increments for each thinned process follow from those of $N$ together with the independence of the marks, and the same factorisation applied on each interval extends independence from one time $t$ to the whole processes. $\blacksquare$
+:::
+
+The independence in that theorem is genuinely surprising and worth pausing on. $N_1(t) + N_2(t) = N(t)$, so the two counts are built from a common total — for a *fixed* total they are perfectly negatively dependent, since one determines the other. What rescues independence is that the total is itself Poisson and therefore random in exactly the right way. Replace $N(t)$ by a fixed $n$ and the conclusion fails immediately.
+
+:::pitfall
+Thinning gives independence only because the count being split is Poisson. If you split a *fixed* batch of $n$ items into two types, the two counts are binomial and emphatically dependent — $j + k = n$ always. The Poisson is the unique distribution for which random splitting produces independent parts, and that fact is what the cancellation of factorials above is really recording.
+:::
+
+:::example[Superposition and thinning together]
+Two independent streams arrive at a counter: stream A at $\lambda_A = 3$/hr, stream B at $\lambda_B = 5$/hr. Each arriving customer independently orders takeout with probability $0.25$. (a) What is the rate of the takeout stream? (b) What is the probability that in one hour there are exactly $2$ takeout and exactly $6$ dine-in customers? (c) Given that the first customer of the day has just arrived, what is the probability they came from stream A?
+:::
+
+:::solution
+1. **(a)** Superposition first: the merged stream is Poisson with $\lambda = 3+5 = 8$/hr. Thinning it at $p = 0.25$ gives takeout at rate $p\lambda = 2$/hr and dine-in at $(1-p)\lambda = 6$/hr.
+2. **(b)** By the theorem *Thinning* the two counts are independent, so the joint probability is a product:
+
+$$P(N_1(1)=2)\,P(N_2(1)=6) = e^{-2}\frac{2^2}{2!}\cdot e^{-6}\frac{6^6}{6!} = (0.27067)(0.16062) \approx 0.04348.$$
+
+3. **(c)** By the proposition *Which stream produced the next event*, the answer is $\lambda_A/\lambda = 3/8 = 0.375$.
+4. Sanity check on (b): had we wrongly assumed the counts were dependent through the total, we would have had to condition on $N(1)=8$ and compute a binomial — $P(N(1)=8)\binom{8}{2}(0.25)^2(0.75)^6 = 0.13959 \times 28 \times 0.0625 \times 0.17798 \approx 0.04348$ ✓. The two routes agree exactly, which is the content of the theorem and a useful check that the factorisation was applied correctly.
+:::
+
+## Compound and non-homogeneous Poisson processes
+
+<!-- section: compound -->
+
+Two of the three modelling assumptions can be relaxed while keeping the machinery. Dropping "one at a time" gives the compound Poisson process, in which each event carries a random size. Dropping "constant rate" gives the non-homogeneous process, in which $\lambda$ becomes a function of time. Dropping *independence* is what would genuinely break everything, and that is not attempted here.
+
+:::definition[Compound Poisson process]{#compound-poisson}
+Let $\{N(t)\}$ be a Poisson process with rate $\lambda$ and let $Y_1, Y_2, \ldots$ be i.i.d. random variables independent of $N$. The **compound Poisson process** is
+
+$$X(t) = \sum_{i=1}^{N(t)} Y_i, \qquad X(t) = 0 \text{ when } N(t)=0.$$
+:::
+
+The classic reading is insurance: claims arrive as a Poisson process and $Y_i$ is the size of claim $i$, so $X(t)$ is the total amount claimed by time $t$. Any "events arrive at random and each carries an amount" model has this shape.
+
+:::theorem[Mean and variance of a compound Poisson process]{#compound-moments}
+With $\mu = E(Y_1)$ and $\sigma^2 = \operatorname{Var}(Y_1)$ both finite,
+
+$$E\big(X(t)\big) = \lambda t \mu, \qquad \operatorname{Var}\big(X(t)\big) = \lambda t \big(\sigma^2 + \mu^2\big) = \lambda t\,E(Y_1^2).$$
+:::
+
+:::proof
+Condition on $N(t)$ and use the tower property. Given $N(t)=n$, the sum has $n$ i.i.d. terms independent of the conditioning, so $E(X(t)\mid N(t)=n) = n\mu$ and $\operatorname{Var}(X(t) \mid N(t)=n) = n\sigma^2$. Hence $E(X(t)) = E(N(t)\mu) = \lambda t\mu$.
+
+For the variance apply the law of total variance, proved in *Expectation, Covariance and Conditional Expectation*:
+
+$$\operatorname{Var}(X(t)) = E\big(\operatorname{Var}(X(t)\mid N(t))\big) + \operatorname{Var}\big(E(X(t)\mid N(t))\big) = E\big(N(t)\sigma^2\big) + \operatorname{Var}\big(N(t)\mu\big).$$
+
+Since $N(t)$ is Poisson its mean and variance are both $\lambda t$, so this is $\lambda t \sigma^2 + \mu^2 \lambda t = \lambda t(\sigma^2 + \mu^2)$. $\blacksquare$
+:::
+
+:::remark[Where the extra variance comes from]
+The variance $\lambda t(\sigma^2 + \mu^2)$ has two sources, and the decomposition above names them: $\lambda t \sigma^2$ is uncertainty about *how big* each claim is, and $\lambda t \mu^2$ is uncertainty about *how many* claims there are. Even with every claim of a fixed size $\mu$ — so $\sigma^2 = 0$ — the total is still random, with variance $\lambda t \mu^2$, because the count is. Forgetting the second term is the standard error here, and it is usually the larger of the two.
+:::
+
+:::example[An insurance portfolio]
+Claims arrive at $\lambda = 20$ per month. Claim sizes are independent with mean $\$4{,}000$ and standard deviation $\$3{,}000$. Find the mean and standard deviation of the total claimed in one month, and give a rough interval covering the total with high probability.
+:::
+
+:::solution
+1. Mean: $E(X) = \lambda t \mu = 20 \times 4000 = \$80{,}000$.
+2. Second moment of a claim: $E(Y^2) = \sigma^2 + \mu^2 = 3000^2 + 4000^2 = 9{,}000{,}000 + 16{,}000{,}000 = 25{,}000{,}000$.
+3. Variance: $\operatorname{Var}(X) = \lambda t E(Y^2) = 20 \times 25{,}000{,}000 = 5 \times 10^8$, so the standard deviation is $\sqrt{5\times 10^8} \approx \$22{,}361$.
+4. A two-standard-deviation interval is roughly $80{,}000 \pm 44{,}700$, i.e. about $\$35{,}000$ to $\$125{,}000$.
+5. Sanity check on the split: of the variance, $\lambda t\mu^2 = 20 \times 16{,}000{,}000 = 3.2\times 10^8$ comes from the random *number* of claims and only $1.8\times10^8$ from their random *sizes*. Ignoring the count variation would have understated the standard deviation as $\sqrt{1.8\times10^8} \approx \$13{,}400$, a 40% error in the direction that matters for a reserve. ✓
+:::
+
+Now the second relaxation.
+
+:::definition[Non-homogeneous Poisson process]{#nhpp}
+Let $\lambda(\cdot)$ be a non-negative locally integrable function, the **intensity**, and define the **mean-value function**
+
+$$m(t) = \int_0^t \lambda(u)\,du.$$
+
+A counting process $\{N(t)\}$ is a **non-homogeneous Poisson process** with intensity $\lambda(\cdot)$ if $N(0)=0$, it has independent increments, and
+
+$$N(t)-N(s) \sim \text{Poisson}\big(m(t)-m(s)\big) \quad \text{for all } s < t.$$
+:::
+
+Increments are still independent and still Poisson, but no longer stationary: an interval's mean depends on *where* it sits, through the integral of the intensity over it. Everything that used only independence survives; everything that used stationarity — memorylessness, exponential gaps, conditional uniformity — does not.
+
+:::theorem[Time change to a standard Poisson process]{#time-change}
+Let $N$ be a non-homogeneous Poisson process with continuous, strictly positive intensity $\lambda(\cdot)$ and mean-value function $m$. Then
+
+$$M(s) = N\big(m^{-1}(s)\big)$$
+
+is a Poisson process of rate $1$. Conversely, if $M$ is a rate-$1$ Poisson process then $N(t) = M(m(t))$ is non-homogeneous with intensity $\lambda(\cdot)$.
+:::
+
+:::proof
+$m$ is continuous and strictly increasing, hence invertible. For $s_1 < s_2$ write $t_i = m^{-1}(s_i)$. Then $M(s_2)-M(s_1) = N(t_2)-N(t_1)$ is Poisson with mean $m(t_2)-m(t_1) = s_2 - s_1$, which is the rate-$1$ Poisson law with stationary increments restored. Increments of $M$ over disjoint $s$-intervals correspond to increments of $N$ over disjoint $t$-intervals, hence are independent, and $M(0) = N(0) = 0$. The converse is the same computation run backwards. $\blacksquare$
+:::
+
+:::intuition
+A non-homogeneous process is a homogeneous one watched on a distorted clock. Where the intensity is high, the new clock runs fast and more events are packed into a unit of calendar time; where it is low, the clock crawls. Measure time in *expected events* rather than in hours — which is exactly what $m(t)$ does — and every non-homogeneous process becomes the same standard rate-$1$ process.
+
+This is why so few results are genuinely lost. Conditional uniformity, for instance, does not fail; it becomes conditional uniformity *on the $m$-scale*, which on the calendar scale reads as: given $n$ events in $[0,t]$, their times are i.i.d. with density $\lambda(u)/m(t)$, proportional to the intensity.
+:::
+
+:::example[A rush-hour arrival rate]
+Traffic arrives at a toll booth with intensity $\lambda(u) = 60 + 40\sin(\pi u/12)$ vehicles per hour, where $u$ is hours after midnight. Find the expected number of vehicles between $6$ and $12$ hours, and the probability that none arrives in the five minutes after $u=6$.
+:::
+
+:::solution
+1. Integrate the intensity to get the mean count:
+
+$$m(12)-m(6) = \int_6^{12}\!\left(60 + 40\sin\frac{\pi u}{12}\right)du = 360 + 40\left[-\frac{12}{\pi}\cos\frac{\pi u}{12}\right]_6^{12}.$$
+
+2. The bracket evaluates as $-\frac{12}{\pi}(\cos\pi - \cos\frac{\pi}{2}) = -\frac{12}{\pi}(-1 - 0) = \frac{12}{\pi}$. So the mean is $360 + 480/\pi \approx 360 + 152.8 = 512.8$ vehicles.
+3. For the five-minute window, the interval is short enough to use the intensity at its left endpoint: $\lambda(6) = 60 + 40\sin(\pi/2) = 100$ per hour, and $t = 1/12$ hour, so the mean is about $100/12 = 8.33$ and $P(\text{none}) \approx e^{-8.33} \approx 0.00024$.
+4. Sanity check: the average intensity over $[6,12]$ is $512.8/6 \approx 85.5$ per hour, which sits between the endpoint values $\lambda(6)=100$ and $\lambda(12)=60$ and above their midpoint $80$, as it must since $\sin$ is concave on $[\pi/2, \pi]$ and so lies above the chord. ✓
+:::
+
+## Brownian motion and the random-walk limit
 
 <!-- section: brownian -->
 
+The Poisson process moves by jumps and stands still in between. The other way for a process with independent stationary increments to behave is to move constantly by amounts too small to see individually, and that is Brownian motion. Its definition is short, and every clause in it is forced.
+
 :::definition[Standard Brownian motion]{#brownian-motion}
-Standard Brownian motion (the Wiener process) $W_t$ is a continuous-time process with independent, normally distributed increments,
+A process $\{W_t : t \ge 0\}$ is a **standard Brownian motion** (or Wiener process) if
 
-$$W_t - W_s \sim N(0, t-s) \quad \text{for } t > s,$$
-
-and continuous paths almost surely.
+1. $W_0 = 0$;
+2. it has independent increments;
+3. $W_t - W_s \sim N(0, t-s)$ for all $0 \le s < t$;
+4. the sample paths $t \mapsto W_t$ are continuous almost surely.
 :::
 
-It is the scaling limit of simple symmetric random walks — Donsker's theorem.
+Condition 3 contains stationarity, as it did for the Poisson process, and it also fixes the scale: the variance of an increment equals the length of the interval. That is not an arbitrary normalisation, as the next result shows — it is the only choice under which the increments can be consistent.
 
-:::proposition[Paths and quadratic variation]
-Brownian motion is nowhere differentiable, its paths being too jagged, yet it has quadratic variation
+:::remark[Why the variance must be linear in time, and why Gaussian]
+Suppose a process has independent stationary increments with finite variance and $v(h) = \operatorname{Var}(X_{t+h}-X_t)$. Splitting an interval of length $s+h$ into two independent pieces gives $v(s+h) = v(s)+v(h)$, and a measurable solution of that additive equation is $v(h) = ch$. So linear growth of the variance is not an assumption but a consequence.
 
-$$\langle W \rangle_t = t.$$
+The Gaussian shape is forced by the same argument run through the central limit theorem. The increment over $[0,t]$ is the sum of $n$ i.i.d. increments over intervals of length $t/n$, for every $n$. A variable expressible as a sum of $n$ i.i.d. pieces for arbitrarily large $n$, with the pieces individually negligible, must be normal. That is the content of the next theorem in its cleanest special case.
 :::
 
-That quadratic variation is what makes stochastic integrals (Itô integrals) different from ordinary calculus — the 'dt' terms don't vanish.
+**Existence.** That a process satisfying all four conditions exists is a real theorem — Wiener's — and it is not obvious, because conditions 1–3 constrain only finite collections of times while condition 4 is a statement about uncountably many at once. Constructing one requires either Kolmogorov's extension theorem plus a continuity criterion, or an explicit series construction, and both are beyond this course. We take existence as given and prove everything that follows from it.
 
-Key properties: Markovian, martingale (fair game), strong Markov property, and the reflection principle for hitting times and maxima.
+The best justification for the definition is that it is what a random walk becomes when you look at it from far away.
 
-:::definition[Geometric Brownian motion]{#gbm}
-$$S_t = S_0 \exp\!\left(\left(\mu - \frac{\sigma^2}{2}\right)t + \sigma W_t\right).$$
+:::theorem[The random-walk scaling limit, at a fixed time]{#donsker-fixed}
+Let $\xi_1, \xi_2, \ldots$ be i.i.d. with mean $0$ and variance $1$, and let $S_n = \xi_1 + \cdots + \xi_n$ be the random walk. Define the rescaled process
+
+$$W^{(n)}_t = \frac{1}{\sqrt n} S_{\lfloor nt \rfloor}.$$
+
+Then for each fixed $t > 0$, $W^{(n)}_t \xrightarrow{d} N(0,t)$ as $n \to \infty$; and for $t_1 < t_2$ the increments $W^{(n)}_{t_2} - W^{(n)}_{t_1}$ and $W^{(n)}_{t_1}$ are independent for every $n$.
 :::
 
-Geometric Brownian motion is the model underlying Black-Scholes option pricing, because it keeps prices positive and has log-normal returns.
+:::proof
+Fix $t>0$. The sum $S_{\lfloor nt\rfloor}$ has $\lfloor nt \rfloor$ i.i.d. terms of mean $0$ and variance $1$, so by the central limit theorem proved in *Inequalities and Limit Theorems*,
 
-Applications: stock prices, physical Brownian motion of particles, noise in electrical circuits, particle diffusion, and many machine learning diffusion models (score-based generative models).
+$$\frac{S_{\lfloor nt \rfloor}}{\sqrt{\lfloor nt \rfloor}} \xrightarrow{d} N(0,1).$$
 
-:::intuition
-Picture a tiny pollen grain floating in a glass of water, constantly being bumped by invisible water molecules. Its path is completely erratic at small scales (Brownian motion). Over longer time, it slowly drifts. This same math describes how stock prices wiggle around a trend.
+Since $\lfloor nt\rfloor / (nt) \to 1$, the factor $\sqrt{\lfloor nt\rfloor/n} \to \sqrt t$ is deterministic and convergent, so by Slutsky's theorem
 
-A key surprise: Brownian motion wiggles so much that its 'speed' is infinite in a certain sense (infinite total variation), yet the accumulated squared changes grow exactly like ordinary time t. That quadratic variation is the secret sauce that powers stochastic calculus and option pricing.
+$$W^{(n)}_t = \sqrt{\frac{\lfloor nt\rfloor}{n}}\cdot\frac{S_{\lfloor nt\rfloor}}{\sqrt{\lfloor nt\rfloor}} \xrightarrow{d} \sqrt t \cdot N(0,1) = N(0,t).$$
+
+Independence of the increments holds exactly, before any limit: $W^{(n)}_{t_1}$ is a function of $\xi_1,\ldots,\xi_{\lfloor nt_1\rfloor}$ and the increment is a function of the disjoint block $\xi_{\lfloor nt_1\rfloor+1},\ldots,\xi_{\lfloor nt_2\rfloor}$, and disjoint blocks of an i.i.d. sequence are independent. $\blacksquare$
 :::
 
-:::example[Simulating a stock price path (GBM)]
-Start with $S_0 = 100$, drift $\mu=0.08$, volatility $\sigma=0.2$, simulate over 1 year ($t=1$). Here $W_1 \sim N(0,1)$, so we can write $W_1 = Z$ with $Z \sim N(0,1)$.
+Extending this from finitely many fixed times to convergence of the whole *path* — so that quantities like the running maximum also converge — is **Donsker's invariance principle**, which we quote without proof. The name records the important part: the limit does not depend on the law of $\xi$. Any step distribution with mean $0$ and finite variance produces the same limit, which is why Brownian motion appears as the scaling limit of so many unrelated models.
+
+:::figure[Rescaled random walks $S_{\lfloor nt\rfloor}/\sqrt n$ for $n = 25$ and $n = 400$ steps, against the $\pm\sqrt t$ standard-deviation envelope. Refining the walk does not shrink the path toward a line: the envelope grows like $\sqrt t$ no matter how fine the steps, because each halving of the step size is compensated by four times as many steps. That invariance is why a limit exists at all, and why it is the same for every step distribution.]{#walk-to-bm}
+{
+  "type": "plot",
+  "x": [-0.05, 1.08],
+  "y": [-1.75, 1.95],
+  "xTicks": 0.25,
+  "yTicks": 0.5,
+  "xLabel": "t",
+  "yLabel": "rescaled position",
+  "marks": [
+    { "kind": "function", "fn": "sqrt(x)", "tone": "muted", "dashed": true },
+    { "kind": "function", "fn": "-sqrt(x)", "tone": "muted", "dashed": true },
+    { "kind": "path", "points": [[0,0],[0.04,0.2],[0.08,0],[0.12,0.2],[0.16,0.4],[0.2,0.2],[0.24,0.4],[0.28,0.6],[0.32,0.4],[0.36,0.2],[0.4,0.4],[0.44,0.2],[0.48,0],[0.52,-0.2],[0.56,0],[0.6,-0.2],[0.64,-0.4],[0.68,-0.2],[0.72,-0.4],[0.76,-0.6],[0.8,-0.4],[0.84,-0.6],[0.88,-0.8],[0.92,-0.6],[0.96,-0.8],[1,-0.6]], "tone": "accent" },
+    { "kind": "path", "points": [[0,0],[0.05,0.15],[0.1,0.35],[0.15,0.2],[0.2,0.45],[0.25,0.3],[0.3,0.55],[0.35,0.8],[0.4,0.6],[0.45,0.85],[0.5,0.7],[0.55,0.95],[0.6,1.15],[0.65,0.9],[0.7,1.1],[0.75,0.85],[0.8,1.05],[0.85,0.8],[0.9,1.0],[0.95,1.25],[1,1.05]], "tone": "result" },
+    { "kind": "text", "at": [0.52, 1.72], "text": "n = 400", "tone": "result", "leaderTo": [0.75, 0.85] },
+    { "kind": "text", "at": [0.3, -1.42], "text": "n = 25", "tone": "accent", "leaderTo": [0.62, -0.28] },
+    { "kind": "text", "at": [0.92, 1.68], "text": "+sqrt(t)", "tone": "muted", "leaderTo": [1.0, 1.0] }
+  ]
+}
+:::
+
+:::proposition[Basic properties of Brownian motion]{#bm-properties}
+Let $W$ be a standard Brownian motion. Then
+
+1. $E(W_t) = 0$ and $\operatorname{Var}(W_t) = t$;
+2. $\operatorname{Cov}(W_s, W_t) = \min(s,t)$;
+3. **scaling**: for any $c>0$, the process $\tilde W_t = c^{-1/2}W_{ct}$ is again a standard Brownian motion;
+4. **symmetry**: $-W_t$ is a standard Brownian motion.
+:::
+
+:::proof
+(1) is condition 3 with $s=0$. For (2) take $s < t$ and write $W_t = W_s + (W_t - W_s)$, the second term independent of $W_s$ and of mean zero:
+
+$$\operatorname{Cov}(W_s,W_t) = \operatorname{Cov}(W_s, W_s) + \operatorname{Cov}\big(W_s, W_t-W_s\big) = s + 0 = s = \min(s,t).$$
+
+For (3), $\tilde W_0 = 0$; increments of $\tilde W$ are scalar multiples of increments of $W$ over disjoint intervals, hence independent; $\tilde W_t - \tilde W_s = c^{-1/2}(W_{ct}-W_{cs})$ is normal with mean $0$ and variance $c^{-1}\cdot c(t-s) = t-s$; and continuity is preserved under the time and space rescaling. (4) is immediate since $-N(0,v) = N(0,v)$. $\blacksquare$
+:::
+
+Property 3 is the one to remember, and it is the source of everything strange in the next section. **Brownian motion is statistically identical to itself viewed under a microscope**, provided you magnify space by the square root of the factor you magnify time by. Zoom in on a tiny interval, blow it up, and you see the same picture — not a smoother one. A differentiable function looks like a straight line when you zoom in far enough; Brownian motion never does.
+
+:::example[Joint probabilities from the covariance structure]
+Let $W$ be standard Brownian motion. Find (a) $P(W_2 > 0 \mid W_1 = 1)$, (b) $\operatorname{Corr}(W_1, W_4)$, and (c) the distribution of $W_1 + W_2$.
 :::
 
 :::solution
-1. The Itô drift correction is $\mu - \tfrac{\sigma^2}{2} = 0.08 - \tfrac{0.2^2}{2} = 0.08 - 0.02 = 0.06$. A single realization is $S_1 = 100\exp\!\big(0.06\cdot 1 + 0.2\,Z\big)$.
-2. Concrete draw: suppose $Z = +1$ (a one-standard-deviation up move). Then $S_1 = 100\exp(0.06 + 0.2) = 100\exp(0.26) \approx 100 \times 1.2969 = 129.69$. A draw of $Z = -1$ instead gives $S_1 = 100\exp(0.06 - 0.2) = 100\exp(-0.14) \approx 86.94$ — note the up and down moves are *not* symmetric around 100, because exp is convex; that is the log-normal shape.
-3. Expected ending price: for $S_1 = S_0\exp((\mu-\tfrac{\sigma^2}{2})t + \sigma W_t)$, the $-\tfrac{\sigma^2}{2}$ correction is exactly what makes $E[S_t] = S_0 e^{\mu t}$. Here $E[S_1] = 100\,e^{0.08} \approx 108.33$.
-4. Sanity check on why the correction is needed: for $X \sim N(m, v)$, $E[e^{X}] = e^{m + v/2}$. With $m = (\mu-\tfrac{\sigma^2}{2})t$ and $v = \sigma^2 t$, the exponent becomes $(\mu-\tfrac{\sigma^2}{2})t + \tfrac{\sigma^2 t}{2} = \mu t$, so the $\sigma^2/2$ terms cancel and the mean grows cleanly at rate $\mu$ ✓. Without the correction, the mean would be inflated by a factor $e^{\sigma^2 t/2}$.
+1. **(a)** Write $W_2 = W_1 + (W_2-W_1)$. Given $W_1 = 1$, the increment $W_2-W_1 \sim N(0,1)$ is independent of $W_1$, so $W_2 \mid W_1{=}1 \sim N(1,1)$. Hence $P(W_2>0\mid W_1{=}1) = P(Z > -1) = \Phi(1) = 0.8413$.
+2. **(b)** By the proposition *Basic properties of Brownian motion*, $\operatorname{Cov}(W_1,W_4) = \min(1,4) = 1$, and the standard deviations are $1$ and $2$. So the correlation is $1/(1\cdot 2) = 0.5$.
+3. **(c)** Again split: $W_1 + W_2 = 2W_1 + (W_2-W_1)$, a sum of independent normals with variances $4\cdot 1 = 4$ and $1$. So $W_1+W_2 \sim N(0,5)$.
+4. Sanity check on (b): $\operatorname{Corr}(W_s,W_t) = \sqrt{s/t}$ for $s<t$, which is $\sqrt{1/4} = 0.5$ ✓. Note it depends only on the *ratio* of the times — a consequence of the scaling property, since rescaling time cannot change a correlation.
+5. The technique in all three parts is the same and is the only one needed: split at the earlier time so that a known quantity and an independent increment appear, never work with $W_s$ and $W_t$ directly as a correlated pair.
 :::
 
-## Time Series Basics
+## Path properties: quadratic variation and roughness
 
-<!-- section: timeseries -->
+<!-- section: paths -->
 
-A time series is a sequence of observations taken at successive points in time. Unlike pure stochastic processes, we usually have only one realization and must infer the underlying dynamics from data.
+The scaling relation $\Delta W \sim \sqrt{\Delta t}$ is dimensionally unlike anything in ordinary calculus, where a differentiable function has $\Delta f \sim \Delta t$. Squaring is what makes the difference visible: $(\Delta W)^2 \sim \Delta t$ does *not* vanish relative to $\Delta t$ when summed, whereas $(\Delta f)^2 \sim (\Delta t)^2$ does. That single observation is the following theorem, and it is the foundation of stochastic calculus.
 
-:::definition[Stationarity]{#stationarity}
-A time series is (weakly) stationary when its mean and autocovariance function do not change over time.
+:::theorem[Quadratic variation of Brownian motion]{#quadratic-variation}
+Fix $t > 0$ and let $\Pi_n = \{0 = t_0^n < t_1^n < \cdots < t_{k_n}^n = t\}$ be partitions of $[0,t]$ with mesh $\|\Pi_n\| = \max_i (t_i^n - t_{i-1}^n) \to 0$. Then
+
+$$Q_n = \sum_{i=1}^{k_n}\big(W_{t_i^n} - W_{t_{i-1}^n}\big)^2 \longrightarrow t \qquad \text{in } L^2,$$
+
+and hence in probability. One writes $\langle W\rangle_t = t$.
 :::
 
-The other working concepts are the autocorrelation function (ACF), the partial autocorrelation (PACF), trend, seasonality, and the invertibility and stationarity conditions for ARMA models.
+:::proof
+Write $\Delta_i = W_{t_i}-W_{t_{i-1}}$ and $\delta_i = t_i - t_{i-1}$, so $\Delta_i \sim N(0,\delta_i)$ and the $\Delta_i$ are independent. For the mean,
 
-:::definition[AR, MA and ARMA models]
-An AR($p$) model writes the current value as a linear combination of $p$ past values plus noise. An MA($q$) model writes it in terms of $q$ past shocks. ARMA($p,q$) combines both, and ARIMA adds differencing (integration) for non-stationary series with unit roots.
+$$E(Q_n) = \sum_i E(\Delta_i^2) = \sum_i \delta_i = t,$$
+
+so $Q_n$ is unbiased for every partition — that part is exact, not asymptotic. For the variance, independence makes the variance of the sum the sum of the variances, and for a centred normal $E(\Delta_i^4) = 3\delta_i^2$, so
+
+$$\operatorname{Var}(\Delta_i^2) = E(\Delta_i^4) - \big(E\Delta_i^2\big)^2 = 3\delta_i^2 - \delta_i^2 = 2\delta_i^2.$$
+
+Therefore
+
+$$\operatorname{Var}(Q_n) = \sum_i 2\delta_i^2 \le 2\max_i \delta_i \sum_i \delta_i = 2\|\Pi_n\|\,t \longrightarrow 0.$$
+
+Since $E(Q_n) = t$ and $\operatorname{Var}(Q_n)\to 0$, we get $E\big[(Q_n - t)^2\big] = \operatorname{Var}(Q_n) \to 0$, which is $L^2$ convergence; convergence in probability follows by Chebyshev's inequality. $\blacksquare$
 :::
 
-:::note
-The ACF decays exponentially for AR, cuts off after lag $q$ for MA, and has a mixed pattern for ARMA. PACF helps identify the AR order. Diagnostics include checking residuals for whiteness (Ljung-Box test) and normality.
+:::corollary[Brownian paths have unbounded variation]{#unbounded-variation}
+Almost every Brownian path has infinite total variation on every interval $[0,t]$ with $t>0$: along a sequence of partitions with mesh tending to zero,
+
+$$\sum_i \big|W_{t_i} - W_{t_{i-1}}\big| \longrightarrow \infty.$$
 :::
 
-Forecasting and diagnostics (residual analysis, Ljung-Box test) are central to practical time series work in economics, finance, and operations.
+:::proof
+Suppose along some sequence of partitions the total variation stayed bounded by a finite $V$ on a set of positive probability. Bound the quadratic sum by the largest increment times the total variation:
+
+$$Q_n = \sum_i \Delta_i^2 \le \Big(\max_i |\Delta_i|\Big)\sum_i |\Delta_i| \le V \max_i |\Delta_i|.$$
+
+Brownian paths are continuous by definition, hence uniformly continuous on the compact $[0,t]$, so $\max_i|\Delta_i| \to 0$ as the mesh tends to $0$. The right-hand side therefore tends to $0$, forcing $Q_n \to 0$. But $Q_n \to t > 0$ in probability by the theorem *Quadratic variation of Brownian motion*, so along a subsequence $Q_n \to t$ almost surely, a contradiction on a set of positive probability. $\blacksquare$
+:::
+
+:::proposition[Brownian motion is not differentiable at a fixed time]{#not-differentiable}
+Fix $t \ge 0$. Then with probability $1$ the difference quotients of $W$ at $t$ are unbounded:
+
+$$\limsup_{h\downarrow 0}\left|\frac{W_{t+h}-W_t}{h}\right| = \infty.$$
+:::
+
+:::proof
+The increment $W_{t+h}-W_t$ is $N(0,h)$, so the quotient $(W_{t+h}-W_t)/h$ is normal with mean $0$ and standard deviation $h^{-1/2}$. Hence for any fixed $K$,
+
+$$P\left(\left|\frac{W_{t+h}-W_t}{h}\right| > K\right) = P\big(|Z| > K\sqrt h\,\big) \longrightarrow 1 \quad \text{as } h \downarrow 0,$$
+
+where $Z$ is standard normal. Taking $h = 1/n$ and applying this along the sequence, the events $A_n = \{|W_{t+1/n}-W_t|\,n > K\}$ have $P(A_n)\to 1$, so $P(\limsup_n A_n) = 1$ by Fatou's lemma for events; that is, the quotient exceeds $K$ for infinitely many $n$, almost surely. Intersecting over integer $K$ gives the claim. $\blacksquare$
+:::
+
+The stronger statement — that almost every path is differentiable at *no* time whatsoever — is a theorem of Paley, Wiener and Zygmund, and it is genuinely harder, because the set of bad times is uncountable and cannot be handled one time at a time. We quote it. The proposition above is the honest, provable shadow of it, and it already contains the reason: the difference quotient has standard deviation $h^{-1/2}$, which diverges.
 
 :::intuition
-Daily temperature in a city is a time series. It has trends (warmer in summer), seasonality (daily and yearly cycles), and random noise (a cold snap or heat wave). Time series models try to separate the predictable patterns from the random noise so we can forecast tomorrow's temperature.
+Where does the roughness come from? Scaling. Over an interval of length $\delta$, Brownian motion moves about $\sqrt\delta$, so its average *speed* over that interval is $\sqrt\delta/\delta = 1/\sqrt\delta$, which blows up as the interval shrinks. A differentiable function has speed converging to a finite derivative; Brownian motion's apparent speed grows without bound the closer you look.
 
-The ACF is like a 'memory scan': it tells you how much today's temperature is correlated with yesterday's, two days ago, etc. If the correlation fades slowly, you probably have an AR process (momentum). If it drops to zero after a fixed lag, it's more like an MA (the shock from a heatwave only affects the next few days).
+Quadratic variation is the bookkeeping for exactly this. The path travels infinitely far — infinite total variation — but its *squared* displacements add up to precisely $t$, no more and no less, with no randomness left in the limit. That a random object has a deterministic quadratic variation is why Itô calculus works: $(dW)^2$ can be replaced by $dt$ rather than being another random quantity to track.
 :::
 
-:::example[AR(1) autocorrelation structure]
-For the AR(1) process $X_t = \phi X_{t-1} + \epsilon_t$ with $|\phi|<1$ and white noise $\epsilon_t$ (mean 0, variance $\sigma^2$, uncorrelated with past $X$), the lag-$k$ autocorrelation is $\rho_k = \phi^k$. The condition $|\phi|<1$ is essential: it is exactly what makes the process stationary (if $|\phi|\ge 1$ the variance below blows up).
+:::pitfall
+"Nowhere differentiable" is a statement about the path, not about the distribution, and it does not make Brownian motion badly behaved as a *random variable*. $W_t$ is a perfectly ordinary $N(0,t)$ for each $t$; it is the joint behaviour across $t$ that is rough. Equally, do not conclude that the path has infinite length "because it is random" — a Poisson path is random too and has perfectly finite variation on any interval, since it is a finite staircase. Roughness comes specifically from the $\sqrt{\Delta t}$ scaling of Gaussian increments.
+:::
+
+:::example[Quadratic variation against ordinary variation, numerically]
+Take $t=1$ and a uniform partition into $n$ pieces. Compare the expected quadratic sum $E(Q_n)$, its standard deviation, and the expected total variation $E\big(\sum_i|\Delta_i|\big)$, as $n$ grows.
 :::
 
 :::solution
-1. Derive the variance $\gamma_0 = \mathrm{Var}(X_t)$. By stationarity $\mathrm{Var}(X_t) = \mathrm{Var}(X_{t-1}) = \gamma_0$. Taking the variance of both sides of the AR(1) equation and using that $\epsilon_t$ is independent of $X_{t-1}$: $\gamma_0 = \phi^2 \gamma_0 + \sigma^2$. Solving, $\gamma_0(1-\phi^2) = \sigma^2$, hence $\gamma_0 = \dfrac{\sigma^2}{1-\phi^2}$.
-2. So ACF at lag 1 is $\phi$, at lag 2 is $\phi^2$, etc. — geometric decay. When $\phi > 0$, $\gamma_0 > \sigma^2$: positive autocorrelation (persistence) amplifies variability above the raw innovation variance.
-3. Numeric instance: with $\phi = 0.6$ and $\sigma^2 = 4$, $\gamma_0 = \dfrac{4}{1 - 0.6^2} = \dfrac{4}{1 - 0.36} = \dfrac{4}{0.64} = 6.25$, and $\rho_1 = 0.6$, $\rho_2 = 0.36$.
-4. Sanity check: $\gamma_0 = 6.25 > 4 = \sigma^2$ ✓, as expected for positive $\phi$; and as $\phi \to 0$ the formula returns $\gamma_0 \to \sigma^2$ (pure white noise, no persistence) ✓.
-5. To identify from data: plot the sample ACF; if it decays geometrically and PACF cuts off after lag 1, an AR(1) is a good candidate.
+1. **Quadratic sum.** From the proof of the theorem *Quadratic variation of Brownian motion*, $E(Q_n) = 1$ for every $n$, and $\operatorname{Var}(Q_n) = \sum_i 2(1/n)^2 = 2/n$. So the standard deviation is $\sqrt{2/n}$: at $n=100$ it is $0.141$, at $n=10{,}000$ it is $0.0141$. The sum concentrates on $1$.
+2. **Total variation.** Each $|\Delta_i| = |N(0,1/n)|$ has mean $\sqrt{2/(\pi n)}$, so
+
+$$E\left(\sum_{i=1}^{n}|\Delta_i|\right) = n\sqrt{\frac{2}{\pi n}} = \sqrt{\frac{2n}{\pi}}.$$
+
+3. At $n=100$ that is $7.98$; at $n=10{,}000$ it is $79.8$; at $n=10^6$ it is $798$. It grows like $\sqrt n$ without bound, which is the corollary *Brownian paths have unbounded variation* seen as a number.
+4. Sanity check on the contrast: refining the partition leaves the quadratic sum fixed at $1$ and multiplies the ordinary sum by $\sqrt{10}$ per hundredfold refinement. Exactly one of the two has a limit, and that is why $(dW)^2$ behaves like $dt$ while $|dW|$ behaves like nothing at all. ✓
 :::
 
-## Connections and Advanced Directions
+:::example[Median against mean for a growth model]
+A fund's value follows geometric Brownian motion with $S_0 = 100$, $\mu = 0.10$ and $\sigma = 0.40$ over $t = 10$ years. Compare the expected value with the median value.
+:::
+
+:::solution
+1. **Mean.** By the proposition *Moments of geometric Brownian motion*, $E(S_{10}) = 100e^{0.10\times 10} = 100e^{1} \approx 271.8$.
+2. **Median.** $\log(S_{10}/100)$ is normal with mean $(\mu - \sigma^2/2)t = (0.10 - 0.08)\times 10 = 0.2$, and the median of a normal is its mean, so the median of $S_{10}$ is $100e^{0.2}\approx 122.1$.
+3. The mean is more than twice the median. A typical outcome is a $22\%$ gain over a decade while the average outcome is a $172\%$ gain, and both are correct statements about the same model.
+4. The reconciliation is skew: the mean is pulled up by a thin tail of very large outcomes. $P(S_{10} > 271.8)$ is $P(Z > (1 - 0.2)/(0.4\sqrt{10})) = P(Z > 0.632) = 0.264$, so barely a quarter of paths beat the average.
+5. Sanity check on the direction: raising $\sigma$ lowers the median while leaving the mean untouched, since only the median carries the $-\sigma^2/2$. At $\sigma = 0.45$ the drift correction $\mu - \sigma^2/2$ turns negative and the median *falls below* $100$ even though the mean still grows at $10\%$ a year. ✓ Volatility is a drag on the typical path and not on the average one.
+:::
+
+:::definition[Brownian motion with drift and geometric Brownian motion]{#gbm}
+For $\mu \in \mathbb{R}$ and $\sigma > 0$, **Brownian motion with drift** is $X_t = \mu t + \sigma W_t$, and **geometric Brownian motion** is its exponential
+
+$$S_t = S_0\exp\left(\left(\mu - \tfrac{\sigma^2}{2}\right)t + \sigma W_t\right).$$
+:::
+
+:::proposition[Moments of geometric Brownian motion]{#gbm-mean}
+With $S_t$ as above, $E(S_t) = S_0e^{\mu t}$, and $\log(S_t/S_0)$ is normal with mean $(\mu - \sigma^2/2)t$ and variance $\sigma^2 t$.
+:::
+
+:::proof
+The exponent is normal with mean $m = (\mu-\sigma^2/2)t$ and variance $v = \sigma^2 t$, which is the second claim. For the first, use the lognormal mean $E(e^X) = e^{m+v/2}$ — the normal moment generating function at $s=1$, from *Continuous Random Variables*:
+
+$$E(S_t) = S_0\exp\left(\left(\mu-\tfrac{\sigma^2}{2}\right)t + \tfrac{\sigma^2 t}{2}\right) = S_0e^{\mu t}. \qquad \blacksquare$$
+:::
+
+:::remark[What the $-\sigma^2/2$ is for]
+The correction term exists precisely so that $\mu$ means what one wants it to mean — the growth rate of the *average*. Drop it and $E(S_t) = S_0e^{(\mu+\sigma^2/2)t}$, so the average would grow faster than the stated rate, by an amount depending on the volatility.
+
+The correction also encodes a real asymmetry, not just bookkeeping. Because $\exp$ is convex, the *median* of $S_t$ is $S_0e^{(\mu-\sigma^2/2)t}$, strictly below the mean $S_0e^{\mu t}$. A typical path grows more slowly than the average path, and the gap widens with volatility — the same Jensen effect proved in *Expectation, Covariance and Conditional Expectation*, appearing here as the difference between a mean and a median.
+:::
+
+## The reflection principle, maxima, and hitting times
+
+<!-- section: reflection -->
+
+Everything so far has concerned $W$ at fixed times. Many questions instead concern the path as a whole: whether it ever reaches a level, when it first does, how high it got. The reflection principle answers all three, and it does so by reducing them to a single normal probability.
+
+:::definition[Running maximum and hitting time]{#hitting-time}
+For a standard Brownian motion $W$ and a level $a > 0$, the **running maximum** and the **first hitting time** of $a$ are
+
+$$M_t = \max_{0\le s\le t} W_s, \qquad T_a = \inf\{s \ge 0 : W_s = a\}.$$
+:::
+
+The two are linked by an identity that is immediate once stated but does all the work: the path has reached $a$ by time $t$ exactly when its maximum by time $t$ is at least $a$, so
+
+$$\{T_a \le t\} = \{M_t \ge a\}.$$
+
+This is the counting–waiting duality of the Poisson section wearing different clothes — a statement about *how far* is converted into a statement about *how soon*.
+
+:::theorem[The reflection principle]{#reflection-principle}
+For a standard Brownian motion and any $a > 0$ and $t>0$,
+
+$$P(M_t \ge a) = P(T_a \le t) = 2\,P(W_t \ge a) = 2\big(1 - \Phi(a/\sqrt t)\big).$$
+:::
+
+:::proof
+Split the event $\{M_t \ge a\}$ according to where the path finishes:
+
+$$P(M_t\ge a) = P\big(M_t \ge a,\ W_t > a\big) + P\big(M_t\ge a,\ W_t < a\big),$$
+
+the case $W_t = a$ having probability zero. The first term is simply $P(W_t > a)$, because a path finishing above $a$ must have reached $a$ by continuity — this is the intermediate value theorem applied to a continuous path, which is where condition 4 of the definition earns its place.
+
+For the second term, use the **strong Markov property**: at the stopping time $T_a$ the process restarts as a fresh Brownian motion from level $a$, independent of the past. (This is the continuous-time analogue of the strong Markov property for chains, and we quote it.) Given $T_a = s \le t$, the remaining increment $W_t - a$ is symmetric about $0$, so finishing below $a$ and finishing above $a$ are equally likely:
+
+$$P\big(M_t \ge a,\ W_t < a\big) = P\big(M_t\ge a,\ W_t > a\big) = P(W_t > a).$$
+
+Adding the two equal terms gives $P(M_t \ge a) = 2P(W_t > a)$. Finally $W_t \sim N(0,t)$, so $P(W_t \ge a) = 1 - \Phi(a/\sqrt t)$. $\blacksquare$
+:::
+
+:::intuition
+Reflect the path in the horizontal line at height $a$, but only after it first touches $a$. By symmetry the reflected path is just as likely as the original, and reflection swaps "touched $a$ and ended below" with "touched $a$ and ended above". Those two cases therefore have equal probability, and since the second is the easy event "ended above $a$", the whole thing is twice a single normal tail.
+
+The factor of $2$ is the entire content: reaching a level is exactly twice as likely as finishing beyond it.
+:::
+
+:::figure[The reflection argument. One path (accent) touches the barrier $a$ at time $T_a$ and finishes below it; reflecting everything after $T_a$ in the dashed barrier produces the second path (result), which finishes above $a$ by the same amount. Reflection is a bijection between the two families and preserves probability, because after $T_a$ the process restarts as a fresh Brownian motion whose increments are symmetric. So "touched and finished below" and "touched and finished above" are equally likely, and the second is just the event $W_t > a$ — hence the factor of $2$.]{#reflection-figure}
+{
+  "type": "plot",
+  "x": [-0.05, 1.12],
+  "y": [-0.55, 1.55],
+  "xTicks": 0.25,
+  "yTicks": 0.25,
+  "xLabel": "t",
+  "yLabel": "W",
+  "marks": [
+    { "kind": "line", "through": [[0, 1], [1, 1]], "tone": "muted", "dashed": true, "extend": false },
+    { "kind": "path", "points": [[0,0],[0.08,0.22],[0.16,0.12],[0.24,0.4],[0.32,0.55],[0.4,0.78],[0.48,1.0]], "tone": "accent" },
+    { "kind": "path", "points": [[0.48,1.0],[0.56,0.82],[0.64,0.95],[0.72,0.7],[0.8,0.78],[0.88,0.52],[0.96,0.6],[1,0.45]], "tone": "accent" },
+    { "kind": "path", "points": [[0.48,1.0],[0.56,1.18],[0.64,1.05],[0.72,1.3],[0.8,1.22],[0.88,1.48],[0.96,1.4],[1,1.55]], "tone": "result", "dashed": true },
+    { "kind": "point", "at": [0.48, 1.0], "tone": "result" },
+    { "kind": "point", "at": [1, 0.45], "tone": "accent" },
+    { "kind": "point", "at": [1, 1.55], "tone": "result" },
+    { "kind": "text", "at": [0.2, 1.32], "text": "barrier a", "tone": "muted", "leaderTo": [0.62, 1.0] },
+    { "kind": "text", "at": [0.26, 0.86], "text": "T(a)", "leaderTo": [0.475, 0.985] },
+    { "kind": "text", "at": [0.78, 0.2], "text": "original", "tone": "accent", "leaderTo": [0.98, 0.46] },
+    { "kind": "text", "at": [0.6, -0.36], "text": "reflected after T(a)", "tone": "result", "leaderTo": [0.9, 1.44] }
+  ]
+}
+:::
+
+:::corollary[The hitting time is almost surely finite but has infinite mean]{#hitting-time-moments}
+For every $a>0$, $P(T_a < \infty) = 1$, yet $E(T_a) = \infty$.
+:::
+
+:::proof
+For finiteness, let $t \to\infty$ in the theorem *The reflection principle*: $a/\sqrt t \to 0$, so $P(T_a \le t) = 2(1-\Phi(a/\sqrt t)) \to 2(1-\Phi(0)) = 1$.
+
+For the mean, differentiate the distribution function or bound the tail directly. From the theorem, $P(T_a > t) = 2\Phi(a/\sqrt t)-1$. For large $t$ the argument $x = a/\sqrt t$ is small and $2\Phi(x)-1 = \sqrt{2/\pi}\,x + O(x^3)$, so $P(T_a > t) \sim \sqrt{2/\pi}\,a\,t^{-1/2}$. Then
+
+$$E(T_a) = \int_0^\infty P(T_a > t)\,dt$$
+
+diverges, because the integrand decays like $t^{-1/2}$ and $\int^\infty t^{-1/2}dt = \infty$. $\blacksquare$
+:::
+
+That pair of facts is worth holding together, because it is the sharpest illustration in this course of a distribution with an infinite mean. Brownian motion is certain to reach any level, however high — and the expected time it takes is infinite, for every level, however low. Both statements are true simultaneously, and there is no contradiction: the hitting time is finite on every path, but its tail is so heavy that the average diverges.
+
+:::example[Will the price reach the barrier?]
+A stock price follows $S_t = 100e^{0.2W_t}$ with $W$ standard Brownian motion and $t$ in years. (a) What is the probability the price reaches $120$ within one year? (b) Within four years?
+:::
+
+:::solution
+1. Translate the barrier into a level for $W$. $S_t \ge 120$ means $100e^{0.2W_t}\ge 120$, that is $W_t \ge \frac{1}{0.2}\log 1.2 = 5\log 1.2$. With $\log 1.2 = 0.18232$, the level is $a = 0.91161$. Since $S$ is an increasing function of $W$, the price reaches $120$ exactly when $W$ reaches $a$.
+2. **(a)** By the theorem *The reflection principle* with $t=1$:
+
+$$P(T_a \le 1) = 2\big(1-\Phi(0.91161)\big) = 2(1 - 0.81902) = 0.36196.$$
+
+3. **(b)** With $t=4$ the argument becomes $a/\sqrt4 = 0.45581$:
+
+$$P(T_a\le 4) = 2\big(1-\Phi(0.45581)\big) = 2(1-0.67575) = 0.64850.$$
+
+4. Sanity check on the scaling: quadrupling the time horizon halves the standardised barrier, because the spread grows like $\sqrt t$. The probability rose from $0.36$ to $0.65$ — a substantial increase, but far from four times, which is the $\sqrt{t}$ law showing up in an answer.
+5. Contrast with the probability of *finishing* above $120$ at $t=1$, which is $1-\Phi(0.91161) = 0.181$ — exactly half. Any barrier-crossing question answered with a single normal tail has forgotten the factor of $2$.
+:::
+
+:::pitfall
+The reflection principle as stated needs a driftless Brownian motion. With drift $\mu t + \sigma W_t$ the reflected path is *not* equally likely as the original — reflection reverses the drift — and the correct formula acquires an extra exponential term. Apply the clean factor of $2$ to a drifting process and the answer is wrong in the direction of the drift.
+:::
+
+## Renewal and Lévy processes: where these two sit
 
 <!-- section: advanced -->
 
-Many real systems combine these ideas: a Poisson process can drive a Markov-modulated rate (Markov-modulated Poisson process), Brownian motion can be used to approximate queue lengths in heavy traffic (diffusion approximations), and time series models can be cast as state-space models with Kalman filtering for online estimation.
+Both processes of this chapter are special cases of two larger families, and naming those families shows which of their properties were essential and which were incidental.
 
-:::definition[Hidden Markov model]{#hmm}
-A hidden Markov model combines a hidden Markov chain — the 'state of the world' — with an observation (emission) model conditional on the hidden state.
+:::definition[Renewal process]{#renewal-process}
+Let $\tau_1,\tau_2,\ldots$ be i.i.d. strictly positive random variables with finite mean $\mu$, let $T_n = \tau_1+\cdots+\tau_n$, and let
+
+$$N(t) = \max\{n : T_n \le t\}$$
+
+count the renewals by time $t$. The process $\{N(t)\}$ is a **renewal process**.
 :::
 
-The Viterbi algorithm finds the most likely state sequence; the forward-backward algorithm computes posterior probabilities. HMMs are foundational in speech recognition, bioinformatics (gene finding), and quantitative finance (regime-switching models).
+This drops exactly one assumption: the gaps need no longer be exponential. The Poisson process is the renewal process with exponential gaps, and it is the only one that keeps independent increments — memorylessness is what makes the future independent of how long the current gap has already run. Lose that and most of the chapter's exact formulas go with it. What survives is the long-run behaviour.
 
-Lévy processes generalize Brownian motion and Poisson processes, allowing both diffusion and jumps. They are used in advanced financial modeling (jump-diffusion models for crashes and spikes) and insurance mathematics (ruin theory).
+:::theorem[Elementary renewal theorem]{#elementary-renewal}
+For a renewal process with mean inter-renewal time $\mu \in (0,\infty)$,
 
-:::definition[Renewal process]
-A renewal process is one that 'restarts' at random times, its inter-renewal times being i.i.d.
+$$\frac{N(t)}{t} \longrightarrow \frac{1}{\mu} \quad \text{almost surely as } t\to\infty.$$
 :::
 
-Renewal theory studies the long-run behavior of such processes; the elementary renewal theorem and key renewal theorem give asymptotic rates and age/residual life distributions.
+:::proof
+By construction $T_{N(t)} \le t < T_{N(t)+1}$, so dividing through by $N(t)$,
 
-:::intuition
-A call center where the arrival rate itself changes randomly between 'busy' and 'slow' periods is a Markov-modulated Poisson process — the underlying 'mood' of the system is a Markov chain, and the calls arrive as a Poisson process whose rate depends on the current mood.
+$$\frac{T_{N(t)}}{N(t)} \ \le\ \frac{t}{N(t)} \ <\ \frac{T_{N(t)+1}}{N(t)+1}\cdot\frac{N(t)+1}{N(t)}.$$
 
-An HMM is like listening to someone speaking a secret language with noisy audio: the hidden states are the intended phonemes (following Markov grammar rules), and what you hear is a garbled emission from each phoneme. The model lets you guess the most likely sequence of intended sounds.
+Since the gaps are i.i.d. with finite mean and are strictly positive, $N(t)\to\infty$ almost surely, and the strong law of large numbers proved in *Inequalities and Limit Theorems* gives $T_n/n \to \mu$ almost surely. Both outer terms therefore converge to $\mu$ — the right-hand one because $(N(t)+1)/N(t)\to 1$ — and the squeeze gives $t/N(t)\to\mu$, hence $N(t)/t \to 1/\mu$. $\blacksquare$
 :::
 
-:::example[Long-run replacement rate (renewal theorem)]
-A machine part is replaced each time it fails; the successive lifetimes are i.i.d. positive random variables — a renewal process. Suppose each lifetime is uniform on $[2, 6]$ years, so the mean inter-renewal time is $\mu = \tfrac{2+6}{2} = 4$ years.
-:::
+The theorem says the long-run rate is one over the mean gap, and nothing else about the gap distribution matters. For a Poisson process $\mu = 1/\lambda$ and it returns the rate $\lambda$, as it must.
 
-:::solution
-1. The **elementary renewal theorem** says the long-run rate of renewals is the reciprocal of the mean inter-renewal time: $\displaystyle \lim_{t\to\infty} \frac{N(t)}{t} = \frac{1}{\mu}$, where $N(t)$ counts renewals up to time $t$. (This requires $0 < \mu < \infty$; the individual lifetime distribution need not be exponential — that is the payoff of renewal theory over the Poisson process.)
-2. Here the long-run replacement rate is $1/\mu = 1/4 = 0.25$ parts per year, i.e. one replacement every 4 years on average, so about $0.25 \times 40 = 10$ replacements over a 40-year horizon.
-3. Sanity check: the Poisson process is the special case with exponential lifetimes of mean $1/\lambda$; there $1/\mu = \lambda$, recovering the familiar Poisson rate ✓. The theorem generalizes that fact to *any* i.i.d. lifetime distribution.
-:::
-
-:::example[Why a Poisson process is a Lévy process (but a renewal process need not be)]
-A Lévy process needs increments that are both *independent* and *stationary* (same distribution over equal-length intervals), starting from 0.
+:::example[Replacement rate for a non-exponential lifetime]
+A component's lifetime is uniform on $[2,6]$ years and it is replaced on failure. Find the long-run replacement rate, and say what the Poisson formulas would have got wrong.
 :::
 
 :::solution
-1. Poisson process: the count in $(s, s+h]$ is Poisson$(\lambda h)$ regardless of $s$ (stationary) and independent of counts on disjoint intervals (independent) — so it qualifies. Brownian motion qualifies for the same two reasons with Gaussian increments.
-2. A general renewal process with, say, uniform$[2,6]$ lifetimes does *not* have independent increments: knowing a renewal just happened at time $s$ changes the distribution of how long until the next one, so counts over adjacent intervals are dependent. This is exactly why only the *exponential*-lifetime renewal process (the Poisson process) is a Lévy process — the memoryless property is what restores independent increments.
+1. The mean lifetime is $\mu = (2+6)/2 = 4$ years, so by the theorem *Elementary renewal theorem* the long-run rate is $1/\mu = 0.25$ replacements per year — about $10$ over a $40$-year horizon.
+2. The rate is all the Poisson machinery would have got right. It would have been wrong about everything finer: a Poisson process with $\lambda = 0.25$ has $P(\text{no failure in 2 years}) = e^{-0.5} \approx 0.607$, whereas the true component *cannot* fail before year $2$, so that probability is exactly $1$.
+3. It would also be wrong about variability. A uniform$[2,6]$ lifetime has standard deviation $4/\sqrt{12}\approx 1.155$, while an exponential of the same mean has standard deviation $4$ — more than three times as variable. Modelling a wear-out part as memoryless overstates the spread of the replacement schedule badly.
+4. Sanity check: an exponential lifetime has its mode at $0$ — failure is most likely immediately — which is exactly the wrong shape for a component that wears out. The renewal framework is what lets the model use the right lifetime distribution and still deliver a long-run rate. ✓
+:::
+
+The other generalisation goes in the opposite direction, keeping independent stationary increments and dropping everything else.
+
+:::definition[Lévy process]{#levy-process}
+A process $\{X_t : t\ge 0\}$ with $X_0 = 0$ is a **Lévy process** if it has independent increments, stationary increments, and is continuous in probability: $X_s \to X_t$ in probability as $s\to t$.
+:::
+
+:::proposition[Both chapter processes are Lévy; a general renewal process is not]{#levy-examples}
+The Poisson process, standard Brownian motion, Brownian motion with drift and the compound Poisson process are all Lévy processes. A renewal process whose gaps are not exponential is not.
+:::
+
+:::proof
+For the Poisson process and Brownian motion, independence and stationarity of increments are clauses of their definitions, and continuity in probability follows since $P(|N(t)-N(s)|\ge 1) = 1-e^{-\lambda|t-s|}\to 0$ and $\operatorname{Var}(W_t-W_s) = |t-s| \to 0$. Adding a deterministic drift preserves all three. For the compound process, increments over disjoint intervals involve disjoint blocks of the i.i.d. marks and independent increments of $N$.
+
+For the negative claim, suppose a renewal process had stationary independent increments. Then its gaps would inherit the memoryless property — the time to the next renewal, measured from any fixed instant, would have to have the same law regardless of how long the current gap had already been running — and the only distribution on $(0,\infty)$ that is memoryless is the exponential, proved in *Continuous Random Variables*. So exponential gaps are not merely sufficient for the Lévy property but necessary. $\blacksquare$
+:::
+
+:::remark[The two building blocks, made precise]
+The chapter opened by claiming that jumps and wobbles are the only two ways to build a process with independent stationary increments. The **Lévy–Itô decomposition** is the theorem behind that claim: every Lévy process decomposes uniquely into a deterministic drift, a Brownian part, and a jump part built from Poisson processes of various jump sizes. Nothing else can occur.
+
+That is why this chapter has the shape it does. The Poisson process and Brownian motion are not two examples selected for convenience; up to drift and superposition they are the complete list of ingredients, and a jump-diffusion model in finance — Brownian motion plus a compound Poisson process of crashes — is simply a process using both.
 :::
 
 ## Common Mistakes
 
-- Confusing a Markov chain's stationary distribution with its long-run proportion of time in each state (they are the same for ergodic chains, but the intuition matters).
-- Assuming all stochastic processes are Markovian. Most real processes have memory.
-- Treating Brownian motion paths as differentiable (they are not).
-- Ignoring the difference between a Poisson process (counts) and its inter-arrival exponential times.
-- Fitting ARMA models to non-stationary data without differencing first.
+- **Confusing the rate with the mean.** $\lambda$ is per unit time; the Poisson parameter is $\lambda t$. Converting minutes to hours is where most numerical errors in this material begin.
+- **Treating $T_n$ as an exponential.** The $n$-th arrival time is a *sum* of $n$ exponentials, with mean $n/\lambda$ but standard deviation $\sqrt n/\lambda$, not $n/\lambda$.
+- **Expecting thinning to work on a fixed total.** Two thinned counts are independent only because the total being split is Poisson. Split a fixed $n$ and the parts are binomial and dependent.
+- **Forgetting the count variance in a compound process.** $\operatorname{Var}(X(t)) = \lambda t(\sigma^2+\mu^2)$, and the $\mu^2$ term — uncertainty in *how many* — is usually the larger one.
+- **Using conditional uniformity on a non-homogeneous process.** Given the count, arrival times are uniform only when the rate is constant; otherwise their density is proportional to $\lambda(u)$.
+- **Applying the reflection principle to a process with drift.** The factor of $2$ requires symmetry, which drift destroys.
+- **Treating Brownian paths as differentiable,** or writing $(dW)^2 = 0$. The quadratic variation is $t$, not $0$, and that is the whole reason stochastic calculus differs from ordinary calculus.
+- **Assuming a memoryless lifetime for a wearing part.** An exponential lifetime has its mode at zero. Renewal theory exists so that the long-run rate can be computed without that assumption.
