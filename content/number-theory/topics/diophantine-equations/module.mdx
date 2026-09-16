@@ -4,941 +4,1185 @@ title: Diophantine Equations
 
 # Diophantine Equations
 
-Linear and classical Diophantine equations: Pythagorean triples, Pell's equation, Hasse principle, Thue's theorem, and Fermat's Last Theorem.
+A Diophantine equation is a polynomial equation with integer coefficients, asked over the integers. The restriction to integer unknowns is the whole difficulty: $x^2 - 2 = 0$ is trivial over $\mathbb{R}$ and unsolvable over $\mathbb{Z}$, and no continuity argument, no intermediate value theorem, no derivative is available to help. What replaces them is arithmetic — divisibility, congruences, factorisation in a larger ring, and the pigeonhole principle.
 
-A Diophantine equation is a polynomial equation with integer coefficients for which one seeks integer solutions (or rational, or in other rings).
+The subject has no single method because it has no single answer. For $ax + by = c$ there is a complete theory: a one-line solvability criterion, a formula for every solution, an algorithm. For a quadratic in two variables the theory is still complete but much deeper, and Pell's equation $x^2 - dy^2 = 1$ turns out to be a statement about a unit group. For quadratic forms in any number of variables the Hasse–Minkowski theorem reduces solvability over $\mathbb{Q}$ to a finite list of congruence conditions. Past degree two everything changes: Thue proved that a homogeneous equation of degree at least three in two variables has only finitely many solutions, Faltings proved a vast generalisation, Wiles proved Fermat's Last Theorem, and Matiyasevich proved that no algorithm can decide the general case at all.
 
-The theory studies existence, finiteness, parametrization, or effective bounds for solutions in various cases.
+This chapter runs that arc. Three things are proved here in full because they are completely within reach and because they are the ones worth carrying away: the classification of solutions of $ax+by=c$, the parametrisation of primitive Pythagorean triples (twice — once by elementary parity analysis, once by unique factorisation in $\mathbb{Z}[i]$), and Fermat's Last Theorem for $n = 4$ by infinite descent. Results whose proofs need machinery far beyond this chapter — MRDP, Hasse–Minkowski, Thue, Faltings, modularity — are stated precisely and then given a **proof sketch** that says exactly what it is assuming. Nothing is asserted silently.
 
-Linear: solved by extended Euclid.
+Throughout, $\gcd(a,b)$ is taken non-negative, "solution" means integer solution unless stated otherwise, and familiarity with congruences and the Euclidean algorithm, as in *Divisibility and the Euclidean Algorithm*, is assumed.
 
-Quadratic: Hasse principle, Pell, etc.
-
-Higher degree: Fermat, Thue, Mordell, elliptic curves (finitely many integral points by Siegel), and in general undecidable by Matiyasevich (Hilbert 10th negative).
-
-This topic introduces the general notion and basic examples before the specialized chapters.
-
-## General Notions
+## The shape of the problem
 
 <!-- section: diophantine-general -->
 
-:::definition[Diophantine equation]{#diophantine-equation}
-A Diophantine equation is
+:::definition[Diophantine equation]{#dioph-def}
+Let $f \in \mathbb{Z}[x_1,\dots,x_n]$. The **Diophantine equation** attached to $f$ is the problem of determining
 
-$$f(x_1,\dots,x_k) = 0,$$
+$$\{(a_1,\dots,a_n) \in \mathbb{Z}^n : f(a_1,\dots,a_n) = 0\}.$$
 
-where $f$ is a polynomial with integer coefficients, and we look for solutions $(x_1,\dots,x_k) \in \mathbb{Z}^k$. The inhomogeneous form $f(x_1,\dots,x_k) = h$ (with $h$ a fixed integer) is the same thing after moving $h$ to the left.
+The equation is **solvable** if this set is non-empty. Its **degree** is $\deg f$ and its **dimension** is the number of unknowns $n$.
 :::
 
-Sometimes we instead ask for rational solutions in $\mathbb{Q}^k$. These two questions are closely linked: any rational solution can be scaled by a common denominator into an integer solution of a related *homogeneous* equation, so rational and integer questions often translate into each other.
+Three questions can be asked, in increasing order of ambition: is there a solution at all; are there finitely or infinitely many; and can they all be written down. Pell's equation answers all three affirmatively; for a general $f$, even the first has no algorithmic answer.
 
-The main tools of the subject are: **congruence obstructions** (checking solvability mod $m$), **local–global principles** (checking over $\mathbb{R}$ and the $p$-adics), **descent** (turning a solution into a strictly smaller one), and **heights** (measuring the arithmetic size of solutions to prove finiteness).
+The cheapest tool is reduction modulo $m$. A solution in $\mathbb{Z}$ is in particular a solution in $\mathbb{Z}/m\mathbb{Z}$, and the latter is checked by finitely many substitutions.
 
-:::intuition
-Polynomial eq with integer coeff, want integer (or rational) answers for the variables.
+:::proposition[Congruence obstruction]{#congruence-obstruction}
+Let $f \in \mathbb{Z}[x_1,\dots,x_n]$ and let $m \ge 2$. If the congruence
 
-Some have none, some infinitely many (parametrized), some finite but hard to find all.
+$$f(x_1,\dots,x_n) \equiv 0 \pmod{m}$$
+
+has no solution in $(\mathbb{Z}/m\mathbb{Z})^n$, then $f = 0$ has no solution in $\mathbb{Z}^n$.
 :::
 
-:::proposition[Congruence obstruction]
-If an equation has an integer solution, it must also be solvable modulo every integer $m$. So finding one $m$ where it fails proves there are no integer solutions.
+:::proof
+Reduction modulo $m$ is a ring homomorphism $\pi : \mathbb{Z} \to \mathbb{Z}/m\mathbb{Z}$, and a ring homomorphism commutes with the polynomial operations that build $f$ out of its variables and coefficients. Hence for any $a \in \mathbb{Z}^n$,
+
+$$\pi\big(f(a_1,\dots,a_n)\big) = \bar f\big(\pi(a_1),\dots,\pi(a_n)\big),$$
+
+where $\bar f$ is $f$ with its coefficients reduced. If $f(a) = 0$ in $\mathbb{Z}$ then the left side is $\bar 0$, so $(\pi(a_1),\dots,\pi(a_n))$ solves the congruence. Contrapositively, no solution of the congruence means no integer solution.
 :::
 
-:::example
-Show $x^2 + y^2 = 3$ has no integer solutions.
+The proposition is one-directional, and the gap is the entire subject: a congruence may be solvable for every $m$ with the equation still having no integer solution, as the theorem *Selmer's counterexample to the local–global principle* shows. What congruences give cheaply is the *negative* answer, and the art is the choice of modulus — in practice $4$ or $8$ for squares, $9$ for cubes, and a prime $p$ for anything governed by $(\mathbb{Z}/p\mathbb{Z})^\times$.
+
+:::example[A sum of two squares that is never $3$ modulo $4$]
+Show that $x^2 + y^2 = 4003$ has no integer solutions.
 :::
 
 :::solution
-1. Work modulo $4$. Every square is $\equiv 0$ or $1 \pmod 4$: if $x$ is even then $x^2 \equiv 0$, and if $x$ is odd then $x = 2k+1$ so $x^2 = 4k^2 + 4k + 1 \equiv 1 \pmod 4$.
-2. So the sum $x^2 + y^2$ can only be $0+0=0$, $0+1=1$, or $1+1=2 \pmod 4$. It can never be $3 \pmod 4$.
-3. But $3 \equiv 3 \pmod 4$, which is not in the reachable set $\{0,1,2\}$.
-4. Step 4 (conclusion). No integer $x,y$ can satisfy the equation. Sanity check: the smallest candidates $0^2+1^2=1$, $1^2+1^2=2$, $0^2+2^2=4$ indeed skip over $3$. $\checkmark$
-5. (Note this is a *sufficient* test, not a necessary one: passing every congruence check does not guarantee an integer solution exists — that is exactly the subtlety the Hasse principle addresses later in this topic.)
+1. Every square is $0$ or $1$ modulo $4$: if $x = 2k$ then $x^2 = 4k^2 \equiv 0$, and if $x = 2k+1$ then $x^2 = 4k^2+4k+1 \equiv 1$.
+2. So $x^2 + y^2 \pmod 4$ lies in $\{0+0,\,0+1,\,1+0,\,1+1\} = \{0,1,2\}$, and never equals $3$.
+3. But $4003 = 4\cdot 1000 + 3 \equiv 3 \pmod 4$.
+4. By the proposition *Congruence obstruction* there is no solution. Note how little was used: nothing about $4003$ except its residue.
 :::
 
-## Hilbert Tenth Problem
+## Hilbert's tenth problem
 
 <!-- section: diophantine-hilbert10 -->
 
-Hilbert's 10th problem (1900): is there an algorithm that, given a Diophantine eq, decides if it has integer solutions?
+In 1900 Hilbert asked, as the tenth of his twenty-three problems, for "a process according to which it can be determined by a finite number of operations whether the equation is solvable in rational integers". The answer, completed by Matiyasevich in 1970 on the basis of work of Davis, Putnam and Robinson, is that no such process exists. The mechanism is that Diophantine equations are expressive enough to encode computation itself.
 
-:::theorem[Matiyasevich: Hilbert's tenth problem is unsolvable]
-Answered negatively by Matiyasevich (1970, building on Davis-Putnam-Robinson): the recursively enumerable sets are exactly the Diophantine sets. Since the halting problem is undecidable, there is no algorithm deciding solvability of Diophantine equations.
+:::definition[Diophantine set]{#dioph-set}
+A set $S \subseteq \mathbb{Z}_{\ge 0}^k$ is **Diophantine** if there is a polynomial $f \in \mathbb{Z}[t_1,\dots,t_k, x_1,\dots,x_n]$ such that
+
+$$(t_1,\dots,t_k) \in S \iff \exists\, x_1,\dots,x_n \in \mathbb{Z}_{\ge 0} : f(t_1,\dots,t_k,x_1,\dots,x_n) = 0 .$$
+
+The variables $t_i$ are **parameters** and the $x_j$ are **unknowns**.
 :::
 
-:::intuition
-There is no general computer program that can look at any polynomial eq with integer coeffs and always correctly say "yes there are integer solutions" or "no".
+Many familiar sets are Diophantine, by elementary encodings. Non-negativity is Diophantine inside $\mathbb{Z}$ by Lagrange's four-square theorem, $t \ge 0 \iff \exists a,b,c,d : t = a^2+b^2+c^2+d^2$; divisibility is, since $a \mid b \iff \exists x : b = ax$; coprimality is, by Bézout; compositeness is, since $n = (u+2)(v+2)$. Logical operations come free: $f = 0 \wedge g = 0$ is the single equation $f^2+g^2 = 0$, and $f = 0 \vee g = 0$ is $fg = 0$. What is not obvious — and is the content of the theorem — is that exponentiation, and through it the step relation of a Turing machine, is captured this way.
 
-Some families are decidable (linear, quadratic in some cases, elliptic curves under conjectures), but not uniformly for all.
+:::theorem[MRDP: Diophantine equals recursively enumerable, and Hilbert's tenth problem is unsolvable]{#mrdp}
+A set $S \subseteq \mathbb{Z}_{\ge 0}^k$ is Diophantine if and only if it is recursively enumerable. Consequently there is no algorithm which, given $f \in \mathbb{Z}[x_1,\dots,x_n]$, decides whether $f = 0$ has a solution in integers.
 :::
 
-:::example
-How the negative answer is proved (the idea, made concrete).
+:::proof
+**Proof sketch — assumes the theory of computability and Matiyasevich's theorem on the exponential; the hard direction is not proved here.**
+
+($\Rightarrow$) Easy and complete. Given a Diophantine definition of $S$, enumerate all tuples $(t,x) \in \mathbb{Z}_{\ge 0}^{k+n}$ in some computable order, evaluate $f$, and output $t$ whenever $f(t,x) = 0$. This enumerates exactly $S$, so $S$ is recursively enumerable.
+
+($\Leftarrow$) The deep direction. Davis, Putnam and Robinson showed that every recursively enumerable set has an *exponential* Diophantine definition, one allowing terms $a^b$ with $b$ a variable, by encoding a machine's computation history as one large number and extracting its digits by the Chinese remainder theorem. What remained was Robinson's hypothesis, that $\{(a,b,c) : c=a^b\}$ is itself Diophantine; Matiyasevich proved it using the Pell-type equation $x^2-(a^2-1)y^2=1$, whose solutions grow exponentially and can be pinned down by congruences.
+
+**The consequence.** Let $H$ be the halting set, recursively enumerable but not recursive. By the equivalence there is $f$ with $t \in H$ iff $f(t,x)=0$ is solvable in non-negative integers. An algorithm deciding solvability of arbitrary Diophantine equations, applied to $f(t,x)=0$ for each fixed $t$, would decide membership in $H$ — contradiction. Passing from non-negative to arbitrary integer unknowns costs only the substitution $x_j = a_j^2+b_j^2+c_j^2+d_j^2$.
 :::
 
-:::solution
-1. Step 1 (what "Diophantine set" means). A set $S \subseteq \mathbb{Z}$ is *Diophantine* if there is a polynomial $P$ with integer coefficients such that $n \in S$ exactly when $P(n, x_1, \dots, x_k) = 0$ has a solution in nonnegative integers $x_1,\dots,x_k$. For example, the composite numbers form a Diophantine set: $n$ is composite iff $n = (x_1 + 2)(x_2 + 2)$ has a solution, i.e. iff $n - (x_1+2)(x_2+2) = 0$ is solvable.
-2. Step 2 (the DPRM theorem). Davis, Putnam, Robinson, and Matiyasevich proved that the Diophantine sets are *exactly* the recursively enumerable (computably listable) sets. The hardest ingredient was showing the exponential relation $y = 2^x$ is Diophantine, done using solutions of a Pell-type equation whose growth mimics exponentials (this is where continued-fraction / Fibonacci-like recurrences enter).
-3. Step 3 (the reduction). The halting problem "does Turing machine $M$ halt on input $w$?" defines a recursively enumerable set that is known to be undecidable. By Step 2 we can build a specific polynomial $P_{M,w}$ so that $P_{M,w}(x_1,\dots,x_k) = 0$ has a solution *iff* $M$ halts on $w$.
-4. Step 4 (conclusion). If some algorithm could decide solvability of every Diophantine equation, feeding it $P_{M,w}$ would decide the halting problem — impossible. Hence no such algorithm exists.
+:::remark
+The undecidability is not an artefact of allowing many variables or huge degree: nine unknowns suffice over $\mathbb{Z}_{\ge 0}$, and degree $4$ suffices at the cost of more variables. It does depend on the ring: the analogous question over $\mathbb{Q}$ is open, and over $\mathbb{R}$ or $\mathbb{C}$ it is decidable by Tarski's quantifier elimination.
 :::
 
-## Finiteness Results
+## Finiteness: how many solutions can there be
 
 <!-- section: diophantine-finiteness -->
 
-:::definition[Genus of a curve]
-The **genus** of a curve is a measure of its geometric complexity: lines and conics have genus $0$, smooth cubics (elliptic curves) have genus $1$, and higher-degree curves generally have genus $\ge 2$.
+Before asking for solutions it is worth asking how many to expect, and the answer is governed by geometry. A plane curve $f(x,y) = 0$ has a *genus*, an integer $g \ge 0$ measuring how far it is from being parametrisable by rational functions. Lines and conics have genus $0$; a smooth plane cubic has genus $1$; a smooth plane curve of degree $d$ has genus $(d-1)(d-2)/2$. The number of integer or rational points is controlled by $g$ with remarkable precision.
+
+:::theorem[Siegel and Faltings]{#siegel-faltings}
+Let $C : f(x,y) = 0$ be an irreducible curve over $\mathbb{Q}$ of genus $g$.
+
+1. *(Siegel, 1929.)* If $g \ge 1$, then $C$ has only finitely many integer points. The same holds for $g = 0$ if the curve has at least three points at infinity.
+2. *(Faltings, 1983; Mordell's conjecture.)* If $g \ge 2$, then $C$ has only finitely many **rational** points.
 :::
 
-The genus controls how many rational or integer points the curve can have.
+:::proof
+**Proof sketch — assumes Diophantine approximation on abelian varieties (Siegel) and the theory of heights on moduli spaces (Faltings); neither argument is reproduced here.**
 
-:::theorem[Faltings' theorem, the Mordell conjecture]
-A smooth projective curve of genus $\ge 2$ defined over $\mathbb{Q}$ has only *finitely many* rational points. (Proved 1983.)
+For (1): Siegel embeds the curve in its Jacobian. An infinite sequence of integer points must escape to infinity, and pulling back along multiplication-by-$m$ on the Jacobian produces from it algebraic numbers approximated by rationals far better than the theorem *Thue's approximation theorem, and Thue–Siegel–Roth* permits.
+
+For (2): Faltings deduced Mordell's conjecture from the Shafarevich conjecture on abelian varieties with good reduction outside a finite set of primes, itself obtained from the Tate conjecture by a height-descent argument on a moduli space. Vojta later reproved it directly in the language of Diophantine approximation.
+
+Both results are **ineffective**: they bound the *number* of solutions but give no computable bound on their *size*, so neither can certify that a list of found solutions is complete.
 :::
 
-:::theorem[Siegel's theorem]
-An affine curve of genus $\ge 1$ (for instance an elliptic curve $y^2 = x^3 + ax + b$) has only finitely many *integer* points, even though it may have infinitely many *rational* points. (1929.)
-:::
+Genus $0$ is where infinitude is the rule: a conic with one rational point has infinitely many, cut out by the pencil of rational lines through it, which is exactly the mechanism behind the theorem *Parametrisation of primitive Pythagorean triples*. Genus $1$ is the delicate middle — infinitely many rational points are possible while integer points are always finite. Genus $\ge 2$ is rigid, and $x^n+y^n=1$ has genus $\ge 3$ for $n \ge 4$, so Faltings already gives finiteness for Fermat's equation at each fixed $n$ — which nevertheless falls short of the theorem *Fermat's Last Theorem*, because "finitely many" is not "none".
 
-Specialized finiteness results — Thue (fixed-value binary forms of degree $\ge 3$), Mordell, and others — are special cases or precursors of these theorems.
-
-A key caveat: Faltings' and Siegel's proofs are **ineffective** — they guarantee finiteness but do not, by themselves, bound the size of the solutions, so they don't tell you when to stop searching. Baker's method (linear forms in logarithms) gives *effective* but astronomically large bounds in many cases, which combined with computation can list all solutions.
-
-:::intuition
-High genus curves (complicated shapes) can't have too many rational points; only finite.
-
-This solves many Dioph eq by viewing as points on curves.
-:::
-
-:::example
-Finiteness of integer points on a Mordell curve $y^2 = x^3 + k$.
-:::
-
-:::solution
-1. Take $k = 1$, so $y^2 = x^3 + 1$. Siegel's theorem guarantees finitely many integer points; let us actually pin them down.
-2. Rewrite as $y^2 - 1 = x^3$, i.e. $(y-1)(y+1) = x^3$.
-3. Try small values. For $x = -1$: $y^2 = 0$, so $y = 0$, giving $(-1, 0)$. For $x = 0$: $y^2 = 1$, so $y = \pm 1$, giving $(0, 1)$ and $(0, -1)$. For $x = 2$: $y^2 = 9$, so $y = \pm 3$, giving $(2, 3)$ and $(2, -3)$.
-4. For $x = 1$: $y^2 = 2$, not a square. For $x = 3$: $y^2 = 28$, not a square. For $x = 4$: $y^2 = 65$, not a square. As $x$ grows, $x^3 + 1$ falls strictly between the consecutive squares near it and rarely lands on one.
-5. Step 4 (conclusion). It is a classical fact (provable by factoring in $\mathbb{Z}[\sqrt{-1}]$-style descent, or read off tables) that the *only* integer points are $(-1,0)$, $(0,\pm 1)$, $(2,\pm 3)$ — a finite list, as Siegel promised. Sanity check on $(2,3)$: $3^2 = 9$ and $2^3 + 1 = 9$. $\checkmark$
-:::
-
-## Common Mistakes
-
-- **All Dioph eq are decidable**: No, Hilbert 10 negative.
-- **Rational solutions always exist if real do**: No, Hasse fails for higher deg.
-- **Finiteness means we can find them all**: Finiteness yes, but finding may be hard without effective proofs.
-- **Linear always solvable if gcd divides**: Yes for two vars; for more vars similar but with more params.
-
-A linear Diophantine equation is $ax + by = c$ with $a,b,c$ integers, and we seek integer solutions $x,y$.
-
-It has solutions if and only if $\gcd(a,b)$ divides $c$.
-
-The general solution is found from one particular solution using the extended Euclidean algorithm, then adding the homogeneous solutions (integer multiples of $(b/d, -a/d)$, where $d = \gcd(a,b)$).
-
-This is the most basic Diophantine equation and the starting point for the theory of linear equations in more variables and for the geometry of numbers.
-
-## Solvability Condition
+## Linear equations: when is $ax + by = c$ solvable
 
 <!-- section: linear-dioph-solvability -->
 
-:::theorem[Solvability of a linear Diophantine equation]{#linear-solvability}
-The equation
+The linear case is the one place where the theory is complete, algorithmic, and short. Everything rests on a single structural fact about $\mathbb{Z}$: the set of integer combinations of $a$ and $b$ is not merely closed under addition, it is the set of multiples of one number.
+
+:::theorem[Bézout's identity]{#bezout}
+Let $a, b \in \mathbb{Z}$, not both zero, and put $d = \gcd(a,b)$. Then
+
+$$\{ax + by : x, y \in \mathbb{Z}\} = d\,\mathbb{Z},$$
+
+and in particular there exist $u, v \in \mathbb{Z}$ with $au + bv = d$.
+:::
+
+:::proof
+Let $I = \{ax+by : x,y \in \mathbb{Z}\}$. It is closed under addition and under multiplication by any integer, and it contains a positive element (one of $\pm a, \pm b$ is positive since not both are zero). Let $e$ be the **least positive** element of $I$, say $e = au + bv$.
+
+*Every element of $I$ is a multiple of $e$.* Take $n = ax + by \in I$ and divide: $n = qe + r$ with $0 \le r < e$. Then
+
+$$r = n - qe = a(x - qu) + b(y - qv) \in I .$$
+
+If $r > 0$ this contradicts minimality of $e$, so $r = 0$ and $e \mid n$. Since $a, b \in I$ we get $e \mid a$ and $e \mid b$, so $e$ is a common divisor and $e \le d$.
+
+*Conversely $d \mid e$.* As $d \mid a$ and $d \mid b$, $d$ divides $au + bv = e$, hence $d \le e$ because $e > 0$.
+
+Therefore $e = d$, and $I = e\mathbb{Z} = d\mathbb{Z}$. The element $e = au+bv$ furnishes the identity.
+:::
+
+The proof never factors and never mentions primes. It uses only that a non-empty set of positive integers has a least element and that division with remainder exists — which is why the same argument gives Bézout identities in $F[x]$ and $\mathbb{Z}[i]$, as developed in *Polynomial Rings and Unique Factorization*.
+
+:::theorem[Solvability criterion for $ax+by=c$]{#linear-criterion}
+Let $a, b, c \in \mathbb{Z}$ with $a, b$ not both zero, and $d = \gcd(a,b)$. The equation
 
 $$ax + by = c$$
 
-has integer solutions $x,y$ if and only if $d = \gcd(a,b)$ divides $c$.
+has an integer solution **if and only if** $d \mid c$.
 :::
 
 :::proof
-"Only if": if $(x,y)$ is a solution, then $d \mid a$ and $d \mid b$, so $d$ divides $ax + by = c$.
+($\Rightarrow$) If $ax_0 + by_0 = c$ then, since $d \mid a$ and $d \mid b$, $d$ divides $ax_0 + by_0 = c$.
 
-"If": if $d \mid c$, use the extended Euclidean algorithm to find $x_0, y_0$ with $a x_0 + b y_0 = d$ (this is always possible — Bézout's identity). Multiplying through by $c/d$ (an integer, since $d \mid c$) gives $a\left(x_0 \tfrac{c}{d}\right) + b\left(y_0 \tfrac{c}{d}\right) = c$, an explicit solution.
+($\Leftarrow$) Suppose $c = dk$. By the theorem *Bézout's identity* choose $u, v$ with $au + bv = d$. Multiplying by $k$,
+
+$$a(uk) + b(vk) = dk = c,$$
+
+so $(x_0, y_0) = (uk, vk)$ is a solution.
+
+Equivalently and more briefly: the set of representable $c$ is exactly $\{ax+by\} = d\mathbb{Z}$ by the theorem *Bézout's identity*, and $c \in d\mathbb{Z}$ says $d \mid c$.
 :::
 
-:::intuition
-The left side a x + b y is always a multiple of the greatest common "step" d=gcd(a,b). So c must be reachable, i.e. multiple of d.
-
-If yes, then you can reach it.
+:::figure[The integer points of $6x + 15y = 9$ are the lattice points on the line, spaced by the vector $(15/3, -6/3) = (5,-2)$. The parallel line $6x+15y=8$ misses every lattice point, because $3 \nmid 8$.]{#linear-lattice}
+{
+  "type": "plot",
+  "x": [-6.5, 11.5], "y": [-3.4, 3.4],
+  "xTicks": 1, "yTicks": 1, "xLabel": "x", "yLabel": "y",
+  "marks": [
+    { "kind": "line", "through": [[-1, 1], [4, -1]], "tone": "accent" },
+    { "kind": "line", "through": [[-1.8333333, 1.2666667], [3.1666667, -0.7333333]], "tone": "muted", "dashed": true },
+    { "kind": "point", "at": [-6, 3], "tone": "result" },
+    { "kind": "point", "at": [-1, 1], "tone": "result" },
+    { "kind": "point", "at": [4, -1], "tone": "result" },
+    { "kind": "point", "at": [9, -3], "tone": "result" },
+    { "kind": "text", "at": [7.2, 1.9], "text": "6x + 15y = 9", "leaderTo": [6.0, -1.7] },
+    { "kind": "text", "at": [1.0, -2.5], "text": "6x + 15y = 8: no solutions", "leaderTo": [-0.6, 0.55] },
+    { "kind": "text", "at": [1.9, 2.3], "text": "step (5, -2)", "leaderTo": [1.5, 0.0] }
+  ]
+}
 :::
 
-:::example
-Solve $6x + 9y = 3$ completely.
+:::example[Two nearly identical equations]
+Decide whether $6x + 15y = 8$ and $6x + 15y = 9$ are solvable, and solve the one that is.
 :::
 
 :::solution
-Step 1 (solvability check). $d = \gcd(6,9) = 3$, and $3 \mid 3$, so solutions exist.
-
-Step 2 (find a Bézout combination for $d$). We want $6u + 9v = 3$. By inspection $6(-1) + 9(1) = -6 + 9 = 3$, so $u = -1, v = 1$.
-
-Step 3 (scale to $c$). Here $c/d = 3/3 = 1$, so the particular solution is already $x_0 = -1$, $y_0 = 1$.
-
-Step 4 (add the homogeneous solutions). The homogeneous steps are $b/d = 9/3 = 3$ and $a/d = 6/3 = 2$, so the general solution is
-$$x = -1 + 3t, \qquad y = 1 - 2t, \qquad t \in \mathbb{Z}.$$
-
-Step 5 (sanity check). $6(-1 + 3t) + 9(1 - 2t) = -6 + 18t + 9 - 18t = 3$ for every $t$. $\checkmark$ For $t = 1$ this gives $(2, -1)$, and $6(2) + 9(-1) = 12 - 9 = 3$. $\checkmark$
+1. $\gcd(6,15) = 3$.
+2. $3 \nmid 8$, so by the theorem *Solvability criterion for $ax+by=c$* the first equation has no integer solution. (Directly: the left side is always a multiple of $3$.)
+3. $3 \mid 9$, so the second is solvable. Bézout for $(6,15)$: $6\cdot 3 + 15\cdot(-1) = 3$.
+4. Multiply by $9/3 = 3$: $6\cdot 9 + 15\cdot(-3) = 9$, so $(x,y) = (9,-3)$.
+5. Check: $54 - 45 = 9$. ✓
 :::
 
-## Finding All Solutions
+## The complete solution set
 
 <!-- section: linear-dioph-general -->
 
-:::theorem[General solution of $ax + by = c$]{#linear-general-solution}
-Once you have one particular solution $(x_0, y_0)$ to $ax + by = c$, every solution is given by
+Because the equation is linear its solution set is a coset: one particular solution plus every solution of the homogeneous equation, and the homogeneous equation is easy to solve outright.
 
-$$x = x_0 + \frac{b}{d}\,t, \qquad y = y_0 - \frac{a}{d}\,t, \qquad t \in \mathbb{Z},$$
+:::theorem[All solutions of a linear Diophantine equation]{#linear-general}
+Let $d = \gcd(a,b)$ with $a,b \neq 0$, suppose $d \mid c$, and let $(x_0,y_0)$ be any one solution of $ax+by = c$. Then the complete solution set is
 
-where $d = \gcd(a,b)$.
+$$\left\{\left(x_0 + \frac{b}{d}\,t,\ \ y_0 - \frac{a}{d}\,t\right) : t \in \mathbb{Z}\right\},$$
+
+and distinct $t$ give distinct solutions.
 :::
 
 :::proof
-The difference of any two solutions satisfies the homogeneous equation $a x + b y = 0$, i.e. it lies in the kernel of the map $(x,y) \mapsto ax + by$. That kernel is generated by $(b/d, -a/d)$: it clearly satisfies $a(b/d) + b(-a/d) = 0$, and dividing by $d$ makes it the *smallest* integer step (using coprimeness of $a/d$ and $b/d$), so no solutions are skipped.
+**These are solutions.** For any $t$,
+
+$$a\Big(x_0 + \tfrac{b}{d}t\Big) + b\Big(y_0 - \tfrac{a}{d}t\Big) = ax_0 + by_0 + \tfrac{ab}{d}t - \tfrac{ab}{d}t = c .$$
+
+Note $b/d$ and $a/d$ are integers, so these are integer points.
+
+**Every solution has this form.** Let $(x,y)$ be any solution. Subtracting $ax_0 + by_0 = c$ from $ax + by = c$ gives
+
+$$a(x - x_0) = -\,b(y-y_0).$$
+
+Write $a = d a'$, $b = d b'$ with $\gcd(a',b') = 1$ — this is where the gcd is divided out, and it is the only step that needs an idea. Cancelling $d$,
+
+$$a'(x-x_0) = -\,b'(y - y_0).$$
+
+Thus $b' \mid a'(x-x_0)$, and since $\gcd(a',b')=1$, Euclid's lemma gives $b' \mid (x - x_0)$. Write $x - x_0 = b't$ for some $t \in \mathbb{Z}$. Substituting, $a'b't = -b'(y-y_0)$, and $b' \neq 0$ cancels to $y - y_0 = -a't$. Hence
+
+$$x = x_0 + \tfrac{b}{d}t, \qquad y = y_0 - \tfrac{a}{d}t,$$
+
+as claimed.
+
+**Distinctness.** If $t \neq s$ gave the same point then $\tfrac{b}{d}(t-s) = 0$, impossible since $b \neq 0$.
 :::
 
-:::intuition
-From one solution, you can add "full cycles" of the smaller coefficient and subtract from the other to stay at the same total c.
+Geometrically, the integer points on $ax+by=c$ form a one-dimensional lattice with step vector $(b/d,-a/d)$ — the primitive integer direction of the line — which is what the figure *The integer points of $6x + 15y = 9$…* draws. The step is not $(b,-a)$: dividing out $d$ is exactly what makes the vector primitive, and a non-primitive step skips solutions.
 
-The step size is b/d and a/d because dividing by d gives the primitive equation.
+:::recipe[Solving $ax+by=c$ completely]{#linear-recipe}
+1. Compute $d = \gcd(a,b)$ by the Euclidean algorithm, keeping the quotients.
+2. If $d \nmid c$, stop: there is no solution.
+3. Back-substitute through the algorithm to get $u,v$ with $au+bv=d$.
+4. Scale: $(x_0,y_0) = (u\cdot c/d,\ v\cdot c/d)$ is a particular solution.
+5. Write the general solution $x = x_0 + (b/d)t$, $y = y_0 - (a/d)t$.
+6. If a constraint such as $x,y \ge 0$ is imposed, translate it into an inequality on $t$ and count the integers in the resulting interval.
 :::
 
-:::example
-List several solutions of $6x + 9y = 3$ from the particular solution $(-1, 1)$.
+:::example[Every solution, and the ones in a box]
+Find all integer solutions of $34x + 55y = 1$, and then all with $|x| \le 100$.
 :::
 
 :::solution
-The general solution is $x = -1 + 3t$, $y = 1 - 2t$ (from the previous section).
-
-Enumerate a few values of $t$:
-
-$t = -1$: $(x,y) = (-4, 3)$, and $6(-4) + 9(3) = -24 + 27 = 3$. $\checkmark$
-$t = 0$: $(x,y) = (-1, 1)$, and $6(-1) + 9(1) = -6 + 9 = 3$. $\checkmark$
-$t = 1$: $(x,y) = (2, -1)$, and $6(2) + 9(-1) = 12 - 9 = 3$. $\checkmark$
-$t = 2$: $(x,y) = (5, -3)$, and $6(5) + 9(-3) = 30 - 27 = 3$. $\checkmark$
-
-Step 3 (observation). Consecutive $x$-values differ by $3 = b/d$ and consecutive $y$-values differ by $-2 = -a/d$, exactly the homogeneous step. Every integer solution appears for exactly one $t$.
+1. $\gcd(34,55) = 1$ (consecutive Fibonacci numbers), so it is solvable.
+2. The extended algorithm gives $34\cdot(-21) + 55\cdot 13 = -714 + 715 = 1$, so $(x_0,y_0) = (-21, 13)$.
+3. General solution: $x = -21 + 55t$, $y = 13 - 34t$, $t \in \mathbb{Z}$.
+4. $|x| \le 100$ means $-100 \le -21+55t \le 100$, i.e. $-79/55 \le t \le 121/55$, i.e. $-1.436 \le t \le 2.2$, so $t \in \{-1,0,1,2\}$.
+5. Those give $(-76, 47),\ (-21, 13),\ (34,-21),\ (89,-55)$ — four solutions. ✓
 :::
 
-## Applications to Frobenius and Chicken Nugget
+:::example[Counting non-negative solutions]
+How many solutions of $7x + 11y = 1000$ have $x \ge 0$ and $y \ge 0$?
+:::
+
+:::solution
+1. $\gcd(7,11)=1 \mid 1000$, so solutions exist. Bézout: $7\cdot(-3) + 11\cdot 2 = 1$, so $(x_0,y_0) = (-3000, 2000)$.
+2. General solution: $x = -3000 + 11t$, $y = 2000 - 7t$.
+3. $x \ge 0$ gives $t \ge 3000/11 = 272.72\ldots$, so $t \ge 273$.
+4. $y \ge 0$ gives $t \le 2000/7 = 285.71\ldots$, so $t \le 285$.
+5. The count is $285 - 273 + 1 = 13$.
+6. Sanity check at the endpoints: $t = 273$ gives $(3, 89)$ and $7\cdot 3 + 11\cdot 89 = 21+979 = 1000$ ✓; $t=285$ gives $(135, 5)$ and $945+55 = 1000$ ✓.
+:::
+
+:::remark
+In general the number of non-negative solutions of $ax+by=N$ with $\gcd(a,b)=1$ is $\lfloor N/(ab)\rfloor$ or $\lfloor N/(ab)\rfloor+1$, since the admissible range of $t$ has length exactly $N/(ab)$. Above, $1000/77 = 12.98\ldots$ and the count was $13$.
+:::
+
+## Frobenius: what cannot be represented
 
 <!-- section: linear-dioph-applications -->
 
-:::theorem[Frobenius number for two coins]{#frobenius-number}
-For two *coprime* positive integers $a, b$, the largest integer **not** representable as a nonnegative combination $ax + by$ (with $x, y \ge 0$) is the **Frobenius number**
+If $a,b$ are coprime positive integers then $ax+by=N$ is solvable in *integers* for every $N$. Restricting to $x,y \ge 0$ — buying $N$ nuggets in boxes of $a$ and $b$ — changes the answer completely, and the failures stop after a computable point.
 
-$$g(a,b) = ab - a - b.$$
+:::theorem[Frobenius number of two coprime denominations]{#frobenius}
+Let $a, b \ge 2$ be coprime integers. Call $N \ge 0$ **representable** if $N = ax+by$ for some integers $x, y \ge 0$. Then:
+
+1. $ab - a - b$ is not representable;
+2. every integer $N > ab-a-b$ is representable;
+3. exactly $(a-1)(b-1)/2$ non-negative integers are not representable.
 :::
 
-Coprimality is essential: if $\gcd(a,b) = e > 1$, then only multiples of $e$ are ever representable, so there is no largest non-representable number and the formula does not apply.
+:::proof
+Since $\gcd(a,b)=1$, every $N$ has integer solutions, and by the theorem *All solutions of a linear Diophantine equation* they are $x = x_0+bt$, $y = y_0-at$. Exactly one of them has $0 \le x \le b-1$; call it $(x_N,y_N)$. Then
 
-For three or more coin denominations there is no simple closed formula, and computing the Frobenius number is NP-hard in general.
+$$N \text{ is representable} \iff y_N \ge 0. \tag{$\ast$}$$
 
-In programming and contest math, the linear Diophantine equation is used to solve "make exactly amount $c$ using packs of size $a$ and $b$".
+If $y_N \ge 0$ we have a non-negative representation; conversely any representation with $x \ge 0$ has $x \ge x_N$, since $x \equiv x_N \bmod b$ and $x_N$ is least non-negative, so $y \le y_N$ and $y \ge 0$ forces $y_N \ge 0$.
+
+**(1)** Suppose $ab-a-b = ax+by$ with $x,y \ge 0$. Reduce mod $a$: $-b \equiv by \pmod a$, so $b(y+1) \equiv 0 \pmod a$, and $\gcd(a,b)=1$ gives $a \mid y+1$. Since $y \ge 0$, $y + 1 \ge 1$, so $y+1 \ge a$, i.e. $y \ge a-1$. Symmetrically $x \ge b-1$. But then
+
+$$ax + by \ge a(b-1) + b(a-1) = 2ab - a - b > ab - a - b,$$
+
+since $ab > 0$. Contradiction.
+
+**(2)** Let $N > ab-a-b$ and take the representative with $0 \le x_N \le b-1$. Then
+
+$$by_N = N - ax_N > (ab - a - b) - a(b-1) = -b,$$
+
+so $y_N > -1$, and being an integer, $y_N \ge 0$. By $(\ast)$, $N$ is representable.
+
+**(3)** Let $F = ab-a-b$. By (2) every non-representable $N$ lies in $[0,F]$, a set of $F+1 = (a-1)(b-1)$ integers, an even count since $a,b$ are not both even. We show the involution $N \mapsto F-N$ of $[0,F]$ swaps representable with non-representable; exactly half the range is then non-representable, giving $(a-1)(b-1)/2$.
+
+If both $N$ and $F-N$ were representable, adding the two representations would represent $ab-a-b$, contradicting (1). So at most one of $N, F-N$ is representable.
+
+Conversely suppose $N$ is **not** representable, $0 \le N \le F$, with representative $(x_N,y_N)$, $0 \le x_N \le b-1$; by $(\ast)$, $y_N \le -1$. Then
+
+$$F - N = ab - a - b - ax_N - by_N = a(b - 1 - x_N) + b(-1 - y_N),$$
+
+and both coefficients are $\ge 0$. So $F-N$ is representable. The involution therefore swaps the two classes exactly, completing the count.
+:::
 
 :::intuition
-With coins of value $a$ and $b$ (coprime), the amounts you cannot make are finite; the biggest is $ab - a - b$.
-
-Once you can make $a$ consecutive amounts in a row, you can make every larger amount too: just keep adding one more coin of value $a$ to whichever of those you already have.
+Picture the non-negative multiples of $a$ arranged in $b$ columns according to their residue mod $b$. Each residue class mod $b$ first becomes reachable at some multiple of $a$, and after that it is reachable forever, since one may keep adding $b$. The Frobenius number is the largest of those $b$ thresholds, minus $b$ — the last gap before all $b$ columns have switched on.
 :::
 
-:::example
-Frobenius number for $a = 4$, $b = 7$.
+:::example[Chicken nuggets in boxes of $6$ and $11$]
+With coprime box sizes $6$ and $11$, what is the largest unattainable order, and how many orders are unattainable?
 :::
 
 :::solution
-Step 1 (formula). $\gcd(4,7) = 1$, so $g(4,7) = 4\cdot 7 - 4 - 7 = 28 - 11 = 17$.
-
-Step 2 (verify $17$ is not representable). We need $4x + 7y = 17$ with $x,y \ge 0$. Try each $y$: $y=0 \Rightarrow 4x = 17$ (no); $y = 1 \Rightarrow 4x = 10$ (no); $y = 2 \Rightarrow 4x = 3$ (no); $y \ge 3 \Rightarrow 7y \ge 21 > 17$. So $17$ is impossible. $\checkmark$
-
-Step 3 (verify everything above $17$ works). It suffices to hit $4$ consecutive values, then add $4$'s:
-$$18 = 4(1) + 7(2), \quad 19 = 4(3) + 7(1), \quad 20 = 4(5) + 7(0), \quad 21 = 4(0) + 7(3).$$
-From these four consecutive amounts $18,19,20,21$, adding copies of $4$ reaches $22, 23, 24, 25, \dots$ and hence every integer $\ge 18$.
-
-Step 4 (conclusion). $17$ is the largest non-representable amount, matching the formula. $\checkmark$
+1. $\gcd(6,11)=1$, so the theorem *Frobenius number of two coprime denominations* applies.
+2. Largest unattainable: $6\cdot 11 - 6 - 11 = 66 - 17 = 49$.
+3. Count unattainable: $(6-1)(11-1)/2 = 50/2 = 25$.
+4. Check $49$ directly: $49 - 11y$ for $y = 0,1,2,3,4$ is $49, 38, 27, 16, 5$, none divisible by $6$. ✓ And $50 = 6\cdot 4 + 11\cdot 2 = 24+22$ ✓, $51 = 6\cdot 5+11\cdot 2$? $30+22 = 52$ no — try $51 = 11\cdot 3 + 6\cdot 3 = 33+18$ ✓.
 :::
 
-## Common Mistakes
-
-- **Forgetting the d | c check**: Many solutions claimed when impossible.
-- **Negative solutions allowed**: Diophantine usually allows negative x,y unless specified nonnegative (Frobenius is nonnegative).
-- **Unique solution**: There are infinitely many if any, parametrized by t.
-- **d= gcd(a,b) in the steps**: Always divide the coefficients by d when writing the general solution.
-
-A Pythagorean triple is a triple of positive integers $a,b,c$ with $a^2 + b^2 = c^2$ (the side lengths of a right triangle with integer sides).
-
-Primitive triples (those with $\gcd(a,b,c) = 1$) are parametrized by two integers $m > n > 0$ of opposite parity with $\gcd(m,n) = 1$: taking $a = m^2 - n^2$, $b = 2mn$, $c = m^2 + n^2$ (or with $a, b$ swapped).
-
-Every Pythagorean triple is a positive-integer multiple of a primitive one.
-
-This is one of the oldest Diophantine problems, solved by Euclid or earlier, with connections to Gaussian integers (unique factorization in $\mathbb{Z}[i]$ gives the parametrization).
-
-## Definition and Examples
+## Pythagorean triples: the objects
 
 <!-- section: pythagorean-def -->
 
-:::definition[Pythagorean triple]{#pythagorean-triple}
-Positive integers $a \le b < c$ with
+:::definition[Pythagorean triple]{#pyth-def}
+A **Pythagorean triple** is a triple $(x,y,z)$ of positive integers with
 
-$$a^2 + b^2 = c^2.$$
+$$x^2 + y^2 = z^2 .$$
+
+It is **primitive** if $\gcd(x,y,z) = 1$.
 :::
 
-Examples: 3,4,5 ; 5,12,13 ; 8,15,17 ; 7,24,25 ; 20,21,29 etc.
+Every triple is a multiple of a primitive one: if $g = \gcd(x,y,z)$ then dividing the equation by $g^2$ shows $(x/g,y/g,z/g)$ is a primitive triple, and conversely $k$ times a primitive triple is a triple. So the classification problem is exactly the primitive one.
 
-Multiples: 6,8,10 =2*(3,4,5).
-
-:::intuition
-Integer sided right triangles. The sides satisfy the Pythagorean theorem exactly.
-
-The primitive ones are the "basic" shapes; others are scaled versions.
+:::lemma[Coprimality and parity in a primitive triple]{#pyth-parity}
+Let $(x,y,z)$ be a primitive Pythagorean triple. Then $x, y, z$ are pairwise coprime, exactly one of $x,y$ is even, and $z$ is odd.
 :::
 
-:::example
-Generate the triple $5, 12, 13$.
+:::proof
+**Pairwise coprime.** Suppose a prime $p$ divides two of them. If $p \mid x$ and $p \mid y$ then $p^2 \mid x^2+y^2 = z^2$, so $p \mid z$, contradicting primitivity. If $p \mid x$ and $p \mid z$ then $p^2 \mid z^2 - x^2 = y^2$, so $p \mid y$, again a contradiction. The case $p \mid y, p \mid z$ is symmetric.
+
+**Not both odd.** By pairwise coprimality $x,y$ are not both even. Suppose both are odd. Every odd square is $1 \bmod 4$, since $(2k+1)^2 = 4k(k+1)+1$. Then $z^2 = x^2+y^2 \equiv 1 + 1 = 2 \pmod 4$. But a square is $0$ or $1$ mod $4$, never $2$. Contradiction.
+
+Hence exactly one of $x,y$ is even, and then $z^2 = x^2+y^2$ is odd $+$ even $=$ odd, so $z$ is odd.
+:::
+
+:::notation
+Having shown exactly one leg is even, we fix the convention throughout: in a primitive triple $(x,y,z)$ the entry $x$ is odd and $y$ is even. Every primitive triple can be written this way after swapping the legs, and the swap is the only ambiguity.
+:::
+
+:::example[Sorting triples with hypotenuse $25$]
+Find all Pythagorean triples with $z = 25$ and say which are primitive.
 :::
 
 :::solution
-1. Step 1 (pick parameters). Choose $m = 3$, $n = 2$. Check the hypotheses: $m > n > 0$ $\checkmark$; opposite parity ($3$ odd, $2$ even) $\checkmark$; $\gcd(3,2) = 1$ $\checkmark$. So the output will be primitive.
-2. Step 2 (apply the formulas). $a = m^2 - n^2 = 9 - 4 = 5$, $b = 2mn = 2\cdot 3\cdot 2 = 12$, $c = m^2 + n^2 = 9 + 4 = 13$.
-3. Step 3 (sanity check). $a^2 + b^2 = 25 + 144 = 169 = 13^2 = c^2$. $\checkmark$ And $\gcd(5,12,13) = 1$, so it is primitive as expected. $\checkmark$
+1. Need $x^2 + y^2 = 625$ with $x,y \ge 1$. Testing $x = 7$: $625-49 = 576 = 24^2$ ✓. $x=15$: $625-225=400=20^2$ ✓. $x = 20, 24$ repeat these with legs swapped.
+2. So the triples are $(7,24,25)$ and $(15,20,25)$, up to order.
+3. $\gcd(7,24,25)=1$: primitive. $\gcd(15,20,25)=5$: not primitive — it is $5\cdot(3,4,5)$.
+4. Consistency with the lemma *Coprimality and parity in a primitive triple*: in $(7,24,25)$ one leg is odd, one even, $z$ odd ✓. In $(15,20,25)$ the entries are not pairwise coprime, as the lemma predicts for a non-primitive triple.
 :::
 
-## The Parametrization Theorem
+## The parametrisation theorem
 
 <!-- section: pythagorean-parametrization -->
 
-:::theorem[Parametrization of Pythagorean triples]{#pythagorean-parametrization}
-Every primitive Pythagorean triple is of the form
+Generating triples is easy; proving that a formula catches *all* of them is the real content. The engine is a divisibility principle about squares, used again below for Fermat.
 
-$$(m^2 - n^2,\; 2mn,\; m^2 + n^2)$$
-
-for integers $m > n > 0$ with $\gcd(m,n) = 1$ and $m, n$ of opposite parity (not both odd, not both even). Every triple is $k$ times a primitive one for some integer $k \ge 1$.
+:::lemma[Coprime factors of a square are squares]{#coprime-squares}
+Let $u, v, w$ be positive integers with $uv = w^2$ and $\gcd(u,v)=1$. Then $u$ and $v$ are each perfect squares.
 :::
 
 :::proof
-Elementary sketch. In a primitive triple exactly one leg is even; say $a$ is odd and $b$ is even (otherwise swap). Then
-$$b^2 = c^2 - a^2 = (c - a)(c + a).$$
-Since $a$ is odd and $c$ is odd, both $c - a$ and $c + a$ are even; write $c - a = 2u$, $c + a = 2v$. Then $b^2 = 4uv$, so $(b/2)^2 = uv$. One checks $\gcd(u,v) = 1$ (any common factor would divide $c$ and $a$, contradicting primitivity), and a product of coprime integers being a perfect square forces each factor to be a perfect square: $u = n^2$, $v = m^2$. Back-substituting $c = m^2 + n^2$, $a = m^2 - n^2$, $b = 2mn$ gives the parametrization.
+Let $p$ be a prime and let $\alpha, \beta, \gamma$ be the exponents of $p$ in $u, v, w$. Unique factorisation gives $\alpha + \beta = 2\gamma$. Coprimality gives $\min(\alpha,\beta) = 0$, so one of $\alpha,\beta$ is $0$ and the other equals $2\gamma$, which is even. Hence every prime occurs to an even power in $u$, and likewise in $v$; a positive integer all of whose prime exponents are even is a square, namely $\prod p^{\alpha_p/2}$ squared.
 :::
 
-The same result drops out cleanly in the Gaussian integers $\mathbb{Z}[i]$: the equation factors as $(a + bi)(a - bi) = c^2$, and for a primitive triple the two factors are coprime, so unique factorization forces each to be a unit times a square, yielding the same $m, n$ (see the next section).
+:::theorem[Parametrisation of primitive Pythagorean triples]{#pyth-param}
+The primitive Pythagorean triples with $x$ odd and $y$ even are exactly
 
-:::intuition
-All primitive triples come from picking two "parameters" m>n with the conditions, and the formulas spit out the sides.
+$$x = m^2 - n^2, \qquad y = 2mn, \qquad z = m^2+n^2,$$
 
-The even leg is always the 2mn one.
+where $m > n \ge 1$ are integers with $\gcd(m,n)=1$ and $m \not\equiv n \pmod 2$. Moreover distinct such pairs $(m,n)$ give distinct triples.
 :::
 
-:::example
-Apply the parametrization with $m = 4$, $n = 1$.
+:::proof
+**Every such $(m,n)$ gives a primitive triple.** First,
+
+$$(m^2-n^2)^2 + (2mn)^2 = m^4 - 2m^2n^2 + n^4 + 4m^2n^2 = m^4 + 2m^2n^2 + n^4 = (m^2+n^2)^2 ,$$
+
+so the triple satisfies the equation, and $m>n\ge1$ makes all three entries positive. Since $m,n$ have opposite parity, $m^2-n^2$ and $m^2+n^2$ are odd and $2mn$ is even, so the parity convention holds. For primitivity, suppose an odd prime $p$ divides $x = m^2-n^2$ and $z = m^2+n^2$. Then $p$ divides their sum $2m^2$ and difference $2n^2$, and $p$ being odd gives $p \mid m^2$ and $p \mid n^2$, so $p \mid m$ and $p\mid n$, contradicting $\gcd(m,n)=1$. The prime $2$ cannot divide $z$, which is odd. So $\gcd(x,z)=1$ and a fortiori $\gcd(x,y,z)=1$.
+
+**Every primitive triple arises this way.** This is the substantial half. Let $(x,y,z)$ be primitive with $x$ odd, $y$ even, as allowed by the lemma *Coprimality and parity in a primitive triple*; then $z$ is odd. Rewrite the equation as
+
+$$y^2 = z^2 - x^2 = (z-x)(z+x).$$
+
+Both $z-x$ and $z+x$ are even, being differences and sums of two odd numbers, so write $z - x = 2s$, $z + x = 2r$ with $r,s$ positive integers ($z > x$ because $y \ge 1$). Also $y = 2q$ with $q$ a positive integer. Substituting and dividing by $4$,
+
+$$q^2 = rs .$$
+
+*Claim: $\gcd(r,s) = 1$.* A common divisor $e$ of $r$ and $s$ divides $r+s = z$ and $r - s = x$. But $\gcd(x,z)=1$ by the lemma, so $e = 1$.
+
+By the lemma *Coprime factors of a square are squares* applied to $rs = q^2$, there are positive integers $m, n$ with
+
+$$r = m^2, \qquad s = n^2 .$$
+
+Now unwind:
+
+$$z = r + s = m^2 + n^2, \qquad x = r - s = m^2 - n^2, \qquad y^2 = 4rs = 4m^2n^2 \Rightarrow y = 2mn ,$$
+
+taking positive square roots. Finally $m > n \ge 1$ because $x = m^2-n^2 > 0$ and $s = n^2 \ge 1$; $\gcd(m,n) = 1$ because a common prime divisor of $m$ and $n$ would divide $r$ and $s$; and $m \not\equiv n \pmod 2$ because $z = m^2+n^2$ is odd, which forces exactly one of $m^2, n^2$ to be odd.
+
+**Distinctness.** From the triple one recovers $m^2 = (z+x)/2$ and $n^2 = (z-x)/2$, so $(m,n)$ is determined by $(x,y,z)$ among positive pairs. Hence the correspondence is a bijection.
+:::
+
+The proof is a template: rearrange into "a square equals a product of coprime factors", apply the lemma *Coprime factors of a square are squares* to conclude each factor is a square, substitute. The same three steps, applied twice in succession, drive the descent in the theorem *No solutions to $x^4+y^4=z^2$*.
+
+:::figure[Primitive triples $(m^2-n^2,\,2mn)$ for coprime $m>n$ of opposite parity, plotted as points $(x,y)$; the imprimitive multiples of $(3,4,5)$ lie along the ray through $(3,4)$.]{#pyth-scatter}
+{
+  "type": "plot",
+  "x": [0, 46], "y": [0, 46],
+  "equalAspect": true,
+  "xTicks": 5, "yTicks": 5, "xLabel": "x (odd leg)", "yLabel": "y (even leg)",
+  "marks": [
+    { "kind": "line", "through": [[0,0],[3,4]], "tone": "muted", "dashed": true },
+    { "kind": "point", "at": [3, 4], "tone": "result" },
+    { "kind": "point", "at": [15, 8], "tone": "result" },
+    { "kind": "point", "at": [5, 12], "tone": "result" },
+    { "kind": "point", "at": [35, 12], "tone": "result" },
+    { "kind": "point", "at": [21, 20], "tone": "result" },
+    { "kind": "point", "at": [7, 24], "tone": "result" },
+    { "kind": "point", "at": [45, 28], "tone": "result" },
+    { "kind": "point", "at": [9, 40], "tone": "result" },
+    { "kind": "point", "at": [33, 44], "tone": "result" },
+    { "kind": "point", "at": [6, 8], "tone": "accent" },
+    { "kind": "point", "at": [9, 12], "tone": "accent" },
+    { "kind": "point", "at": [12, 16], "tone": "accent" },
+    { "kind": "point", "at": [15, 20], "tone": "accent" },
+    { "kind": "text", "at": [24, 8.5], "text": "primitive (15, 8): m=4, n=1", "leaderTo": [15.4, 8.2] },
+    { "kind": "text", "at": [13.5, 36], "text": "multiples of (3, 4, 5)", "leaderTo": [12.3, 16.4] },
+    { "kind": "text", "at": [35, 33], "text": "(33, 44) = 11(3, 4)", "leaderTo": [33.2, 43.6] }
+  ]
+}
+:::
+
+:::example[Generating a triple from $(m,n)$]
+Compute the primitive triple attached to $m=7$, $n=4$, and check the hypotheses.
 :::
 
 :::solution
-1. Step 1 (check hypotheses). $m > n > 0$ $\checkmark$; $\gcd(4,1) = 1$ $\checkmark$; opposite parity ($4$ even, $1$ odd) $\checkmark$.
-2. Step 2 (formulas). $a = m^2 - n^2 = 16 - 1 = 15$, $b = 2mn = 8$, $c = m^2 + n^2 = 16 + 1 = 17$.
-3. Step 3 (sanity check). $8^2 + 15^2 = 64 + 225 = 289 = 17^2$. $\checkmark$ Since $\gcd(15,8,17) = 1$, the triple is primitive. $\checkmark$
+1. $\gcd(7,4)=1$ ✓, $7$ odd and $4$ even so opposite parity ✓, $7>4\ge1$ ✓.
+2. $x = 49-16 = 33$, $y = 2\cdot7\cdot4 = 56$, $z = 49+16 = 65$.
+3. Check: $33^2 + 56^2 = 1089 + 3136 = 4225 = 65^2$ ✓.
+4. Primitive: $\gcd(33,56) = 1$ since $33 = 3\cdot 11$ and $56 = 2^3\cdot 7$. ✓
 :::
 
-## Proof via Gaussian Integers (optional advanced)
+## The same theorem from $\mathbb{Z}[i]$
 
 <!-- section: pythagorean-gaussian -->
 
-:::definition[Gaussian integers and their norm]{#gaussian-integers}
-The ring of Gaussian integers is $\mathbb{Z}[i] = \{a + bi : a,b \in \mathbb{Z}\}$. It is a unique factorization domain (UFD), and its norm
+The parity juggling above looks like a trick. It is not: it is the shadow of a factorisation. Over $\mathbb{Z}$ the form $x^2+y^2$ is irreducible, but over the **Gaussian integers** $\mathbb{Z}[i] = \{a+bi : a,b\in\mathbb{Z}\}$ it splits as $(x+iy)(x-iy)$, and $\mathbb{Z}[i]$ has unique factorisation. The equation then reads "a product of two coprime Gaussian integers is a square".
 
-$$N(a + bi) = a^2 + b^2$$
+Recall from *Polynomial Rings and Unique Factorization* that $\mathbb{Z}[i]$ is Euclidean for the norm $N(a+bi) = a^2+b^2$, hence a UFD; that $N$ is multiplicative; and that $\alpha$ is a unit iff $N(\alpha)=1$, so $\mathbb{Z}[i]^\times = \{1,-1,i,-i\}$.
 
-is multiplicative: $N(zw) = N(z)N(w)$.
+:::theorem[Gaussian derivation of the Pythagorean parametrisation]{#pyth-gaussian}
+Let $(x,y,z)$ be a primitive Pythagorean triple with $x$ odd and $y$ even. Then in $\mathbb{Z}[i]$ there are coprime integers $m > n \ge 1$ of opposite parity and a unit $\varepsilon$ with
+
+$$x + iy = \varepsilon\,(m+ni)^2 ,$$
+
+and expanding this identity reproduces $x = m^2-n^2$, $y = 2mn$, $z = m^2+n^2$.
 :::
 
 :::proof
-If $a^2 + b^2 = c^2$ with $\gcd(a,b,c) = 1$ (so $a, b$ are not both odd), then $a + bi$ and $a - bi$ are coprime in $\mathbb{Z}[i]$: any common divisor would divide their sum $2a$ and difference $2bi$, and one checks this contradicts primitivity. Their product is $(a+bi)(a-bi) = a^2 + b^2 = c^2$.
+Set $\alpha = x + iy$ and $\bar\alpha = x - iy$. Then
 
-In a UFD, when a product of two coprime elements is a perfect square, each factor is a unit times a square. The units of $\mathbb{Z}[i]$ are $\{1, -1, i, -i\}$, so $a + bi = u\,(m + ni)^2$ for some unit $u$; expanding $(m+ni)^2 = (m^2 - n^2) + 2mn\, i$ recovers the parametrization.
+$$\alpha \bar\alpha = x^2+y^2 = z^2 .$$
+
+**Step 1: $\alpha$ and $\bar\alpha$ are coprime in $\mathbb{Z}[i]$.** Let $\delta$ be a common divisor. Then $\delta$ divides $\alpha + \bar\alpha = 2x$ and $\alpha - \bar\alpha = 2iy$, hence divides $\gcd(2x, 2iy)$; since $\gcd(x,y)=1$ in $\mathbb{Z}$ by the lemma *Coprimality and parity in a primitive triple*, and $i$ is a unit, $\delta \mid 2$. Now $2 = -i(1+i)^2$, so the only Gaussian primes dividing $2$ are associates of $1+i$, of norm $2$. If $(1+i) \mid \alpha$ then $2 = N(1+i)$ divides $N(\alpha) = z^2$, forcing $z$ even — but $z$ is odd. So $\delta$ is a unit.
+
+**Step 2: a square splits into squares.** In the UFD $\mathbb{Z}[i]$, write $z^2 = \alpha\bar\alpha$ and compare factorisations. Every Gaussian prime $\pi$ occurs in $z^2$ to an even exponent. Because $\alpha$ and $\bar\alpha$ share no prime, all of that exponent sits in one of the two factors. Hence every prime occurs to an even exponent in $\alpha$, and therefore
+
+$$\alpha = \varepsilon\,\beta^2 \quad\text{for some } \beta \in \mathbb{Z}[i] \text{ and unit } \varepsilon .$$
+
+(The unit appears because a UFD determines factorisations only up to units.)
+
+**Step 3: absorb the unit.** The squares of units are $\{1,-1\}$, since $(\pm1)^2=1$ and $(\pm i)^2=-1$; so modulo squares of units only $\varepsilon \in \{1, i\}$ need be considered, the cases $\varepsilon=-1$ and $\varepsilon=-i$ being absorbed into $\beta$ by replacing $\beta$ with $i\beta$. Write $\beta = m+ni$. If $\varepsilon = i$ then
+
+$$\alpha = i(m+ni)^2 = -2mn + (m^2-n^2)i$$
+
+has **even** real part, contradicting $x$ odd. Hence $\varepsilon = 1$, and replacing $(m,n)$ by $(-m,-n)$ if necessary we may take $m>0$.
+
+**Step 4: expand.**
+
+$$x + iy = (m+ni)^2 = (m^2-n^2) + 2mn\,i,$$
+
+so $x = m^2-n^2$ and $y = 2mn$, whence $z^2 = N(\alpha) = N(\beta)^2 = (m^2+n^2)^2$ and $z = m^2+n^2$ as $z>0$. Finally $\gcd(m,n)=1$ (a common factor would divide $\alpha$ and contradict Step 1 via $N$), $m>n\ge1$ since $x>0$ and $y>0$, and $m \not\equiv n \pmod 2$ since $x$ is odd.
 :::
 
-:::intuition
-The equation says the norm of a+bi is a square (c^2).
-
-In a UFD with the right units, this forces a+bi itself to be (up unit) a square in the ring, which expands to the param.
+:::remark
+Compare the two proofs. The elementary one factored $y^2 = (z-x)(z+x)$ over $\mathbb{Z}$, with the parity analysis doing all the work of proving the factors coprime. The Gaussian one factored $z^2 = (x+iy)(x-iy)$ over $\mathbb{Z}[i]$, needed the same coprimality statement, and then got the parametrisation for free as $(m+ni)^2$. The lesson generalises — and so does its limit: Kummer's discovery that $\mathbb{Z}[\zeta_p]$ can fail to be a UFD is exactly why the naive factorisation proof of Fermat's Last Theorem collapses.
 :::
 
-:::example
-Recover $(3,4,5)$ from a Gaussian square.
+:::example[Factoring a Gaussian integer to read off a triple]
+Factor $\alpha = 3 + 4i$ in $\mathbb{Z}[i]$ and identify the Pythagorean triple.
 :::
 
 :::solution
-1. Step 1 (norm is a square). $N(3 + 4i) = 3^2 + 4^2 = 25 = 5^2$, matching $c = 5$.
-2. Step 2 (extract the square root in $\mathbb{Z}[i]$). Try $m = 2$, $n = 1$: $(2 + i)^2 = 4 + 4i + i^2 = 4 + 4i - 1 = 3 + 4i$. $\checkmark$
-3. Step 3 (read off the parametrization). With $m = 2, n = 1$: $a = m^2 - n^2 = 3$, $b = 2mn = 4$, $c = m^2 + n^2 = 5$ — exactly the $(3,4,5)$ triple. $\checkmark$
+1. $N(3+4i) = 9+16 = 25 = 5^2$, so the factors have norms multiplying to $25$.
+2. $5 = (2+i)(2-i)$ with $N(2\pm i)=5$, and these are non-associate Gaussian primes.
+3. Try $(2+i)^2 = 4 + 4i + i^2 = 3+4i$ ✓. So $\alpha = (2+i)^2$ exactly, with $\varepsilon = 1$, $m=2$, $n=1$.
+4. The theorem then reads off $x = 4-1 = 3$, $y = 2\cdot2\cdot1 = 4$, $z = 4+1=5$: the triple $(3,4,5)$.
 :::
 
-## Common Mistakes
-
-- **Both m n odd gives non-primitive or not triple**: Both odd makes a,b,c all odd, but then a^2+b^2 ≡1+1=2 mod4, not a square (squares 0 or1 mod4).
-- **Forgetting the k multiple for non-primitive**: Many triples are multiples.
-- **a and b order**: The formula gives one even leg; swap if needed for a odd.
-- **n=0 or m=n**: Gives degenerate  m,0,m not positive triple.
-
-Pell's equation is the Diophantine equation $x^2 - d y^2 = 1$, where $d > 0$ is a square-free integer (if $d$ were a perfect square the left side would factor and the equation would have only trivial solutions).
-
-It always has infinitely many integer solutions, generated from the fundamental solution (the smallest nontrivial $x_1, y_1 > 0$) via $(x_1 + y_1\sqrt{d})^k$ for $k = 1, 2, \dots$
-
-The solutions come from the continued-fraction convergents to $\sqrt{d}$; the fundamental solution corresponds to the end of the period (or a multiple of it).
-
-Pell's equation is the key to the negative Pell equation $x^2 - d y^2 = -1$ (which is solvable only for some $d$), to units in real quadratic fields, and to approximating $\sqrt{d}$ by rationals.
-
-Named after John Pell, though studied by Fermat, Euler, etc.
-
-## The Equation and Trivial Solutions
+## Pell's equation
 
 <!-- section: pell-def -->
 
-:::definition[Pell's equation]{#pell-equation}
-Pell's equation is
+:::definition[Pell's equation]{#pell-def}
+Let $d$ be a positive integer. **Pell's equation** for $d$ is
 
-$$x^2 - d y^2 = 1$$
+$$x^2 - d\,y^2 = 1, \qquad x,y \in \mathbb{Z} .$$
 
-with $d > 0$ not a perfect square. The **trivial solutions** are $(x, y) = (\pm 1, 0)$, which work for every $d$.
+The solutions $(\pm 1, 0)$ are **trivial**; any other is **nontrivial**. A nontrivial solution with $x, y > 0$ and $x$ minimal is called the **fundamental solution**.
 :::
 
-:::theorem[Infinitely many solutions]
-Beyond the trivial ones there are always infinitely many **nontrivial** integer solutions.
+The name is a historical accident — Euler attributed to Pell an equation solved by Brouncker and studied centuries earlier by Brahmagupta — but the equation is central: it is the multiplicative structure hiding in a quadratic form, it powers Matiyasevich's proof of the theorem *MRDP*, and it computes the unit group of a real quadratic order.
+
+:::proposition[Square $d$ collapses the equation]{#pell-square}
+If $d = k^2$ is a perfect square, then $x^2 - dy^2 = 1$ has only the trivial solutions.
 :::
 
-For $d = 2$: $3^2 - 2\cdot 2^2 = 9 - 8 = 1$, so the fundamental solution is $(3, 2)$.
+:::proof
+The equation factors over $\mathbb{Z}$:
 
-For $d = 3$: $2^2 - 3\cdot 1^2 = 4 - 3 = 1$, so the fundamental solution is $(2, 1)$.
+$$1 = x^2 - k^2y^2 = (x - ky)(x + ky).$$
 
-:::intuition
-Think of it as a "best rational approximation" game: find integers $x, y$ so that $x/y$ is an astonishingly good approximation to $\sqrt{d}$ (error roughly $1/y^2$).
-
-Algebraically the equation factors as $(x - y\sqrt{d})(x + y\sqrt{d}) = 1$, so a solution is exactly a "unit of norm $1$" in $\mathbb{Z}[\sqrt{d}]$ — a number you can multiply by another to get back to $1$.
+Two integers multiplying to $1$ are both $1$ or both $-1$. In the first case $x-ky = x+ky = 1$ gives $2ky = 0$; in the second, $x = -1$ and again $ky = 0$. Since $d > 0$ we have $k \neq 0$, so $y = 0$ and $x = \pm1$.
 :::
 
-:::example
-Find the fundamental solution of $x^2 - 7y^2 = 1$ by a short search.
+So the interesting case is $d$ **not** a perfect square, which is assumed from here on. Then $\sqrt d$ is irrational and $x^2 - dy^2$ does not factor over $\mathbb{Z}$ — it factors over $\mathbb{Z}[\sqrt d\,]$, and that is the whole point. The following identity, due to Brahmagupta in the seventh century and usually called Brahmagupta's composition law, is the statement that the solution set is closed under a multiplication.
+
+:::proposition[Brahmagupta composition]{#brahmagupta}
+If $x_1^2 - dy_1^2 = 1$ and $x_2^2 - dy_2^2 = 1$, then
+
+$$(x_1x_2 + d\,y_1y_2)^2 - d\,(x_1y_2 + x_2y_1)^2 = 1 .$$
+
+Equivalently, $(x_1+y_1\sqrt d)(x_2+y_2\sqrt d) = (x_1x_2+dy_1y_2) + (x_1y_2+x_2y_1)\sqrt d$ is again a solution.
 :::
 
-:::solution
-Step 1 (search over $y$). For each $y = 1, 2, 3, \dots$ check whether $1 + 7y^2$ is a perfect square:
+:::proof
+Expand both sides. Writing $X = x_1x_2+dy_1y_2$ and $Y = x_1y_2+x_2y_1$,
 
-$y = 1$: $1 + 7 = 8$, not a square.
-$y = 2$: $1 + 28 = 29$, not a square.
-$y = 3$: $1 + 63 = 64 = 8^2$. $\checkmark$
+$$X^2 - dY^2 = x_1^2x_2^2 + 2d x_1x_2y_1y_2 + d^2y_1^2y_2^2 - d\big(x_1^2y_2^2 + 2x_1x_2y_1y_2 + x_2^2y_1^2\big).$$
 
-Step 2 (read off the solution). $y = 3$ gives $x = 8$, so the fundamental solution is $(8, 3)$.
+The cross terms $2dx_1x_2y_1y_2$ cancel, leaving
 
-Step 3 (sanity check). $8^2 - 7\cdot 3^2 = 64 - 63 = 1$. $\checkmark$
+$$X^2-dY^2 = x_1^2x_2^2 + d^2y_1^2y_2^2 - dx_1^2y_2^2 - dx_2^2y_1^2 = (x_1^2 - dy_1^2)(x_2^2-dy_2^2) = 1\cdot 1 = 1 .$$
 
-The fundamental solution can be small (like $(8,3)$ here) or enormous: for $d = 61$ it is already $x = 1766319049$, $y = 226153980$, far beyond any hand search — which is exactly why the continued-fraction method of the next section is needed.
+The factorisation in the last step is just $(A - B)(C-D)$ regrouped; it is the multiplicativity of the norm $N(x+y\sqrt d) = x^2-dy^2$ on $\mathbb{Z}[\sqrt d\,]$, which is the conceptual reason the identity exists at all.
 :::
 
-## Solutions from Continued Fractions
+## Existence: continued fractions and the pigeonhole
 
 <!-- section: pell-continued-fractions -->
 
-The continued fraction expansion of $\sqrt{d}$ is eventually periodic, of the form $\sqrt{d} = [a_0; \overline{a_1, a_2, \dots, a_\ell}]$, where the bar marks the repeating block of length $\ell$ (the period).
+Composition manufactures infinitely many solutions from one, but only if one exists. That is the hard part, and it is genuinely a theorem: for $d = 61$ the fundamental solution is $x = 1\,766\,319\,049$, $y = 226\,153\,980$, so no search that stops early will find it. The proof below is complete and rests on nothing beyond the pigeonhole principle.
 
-Its convergents $p_k / q_k$ (the best rational approximations to $\sqrt{d}$) satisfy $|p_k^2 - d\, q_k^2|$ small — in fact bounded independently of $k$ — and the values $\pm 1$ occur precisely at the ends of periods.
+:::lemma[Dirichlet's approximation theorem]{#dirichlet-approx}
+Let $\theta$ be irrational. Then there are infinitely many pairs of integers $(p,q)$ with $q \ge 1$ and
 
-:::theorem[Pell solutions at the end of a period]
-The convergent $p_{\ell-1}/q_{\ell-1}$ (just before the period repeats) gives
-
-$$p_{\ell-1}^2 - d\, q_{\ell-1}^2 = (-1)^{\ell}.$$
-
-So:
-
-- If the period $\ell$ is **even**, this convergent already solves the $+1$ Pell equation, and it is the fundamental solution.
-- If the period $\ell$ is **odd**, this convergent solves the **negative** Pell equation $x^2 - dy^2 = -1$; squaring the corresponding unit (equivalently, going one more period to index $2\ell - 1$) then yields the fundamental solution of the $+1$ equation.
+$$\left|\theta - \frac{p}{q}\right| < \frac{1}{q^2}, \qquad\text{equivalently}\qquad |q\theta - p| < \frac1q .$$
 :::
 
-The fundamental unit of $\mathbb{Z}[\sqrt{d}]$ is $p_{\ell-1} + q_{\ell-1}\sqrt{d}$.
+:::proof
+Fix $Q \ge 1$. Consider the $Q+1$ numbers $\{q\theta\}$ for $q = 0,1,\dots,Q$, where $\{\cdot\}$ is the fractional part, all lying in $[0,1)$. Partition $[0,1)$ into the $Q$ intervals $[\tfrac{j}{Q}, \tfrac{j+1}{Q})$, $j = 0,\dots,Q-1$. By the pigeonhole principle two of the $Q+1$ numbers lie in the same interval, say $\{q_1\theta\}$ and $\{q_2\theta\}$ with $q_1 < q_2$. Put $q = q_2-q_1 \in [1,Q]$ and $p = \lfloor q_2\theta\rfloor - \lfloor q_1\theta \rfloor$. Then
 
-:::intuition
-$\sqrt{d}$ has a repeating "decimal" in its continued fraction. The best rational approximations (convergents) give the solutions to $x^2 - d y^2 = \pm 1$, appearing at the ends of the repeating block.
+$$|q\theta - p| = \big|\{q_2\theta\} - \{q_1\theta\}\big| < \frac1Q \le \frac1q .$$
 
-The smallest solution comes from the first repeat of the pattern.
+Dividing by $q$ gives $|\theta - p/q| < 1/(qQ) \le 1/q^2$.
+
+For infinitude: since $\theta$ is irrational, $|q\theta - p| > 0$ for each such pair, so we may choose $Q' > 1/|q\theta - p|$ and repeat, obtaining a pair $(p',q')$ with $|q'\theta - p'| < 1/Q' < |q\theta - p|$, hence a genuinely new pair. Iterating produces infinitely many.
 :::
 
-:::example
-Solve Pell for $d = 2$ via the continued fraction of $\sqrt{2}$.
+:::theorem[Pell's equation always has a nontrivial solution]{#pell-existence}
+Let $d > 0$ be a non-square integer. Then $x^2 - dy^2 = 1$ has a solution with $y \neq 0$.
+:::
+
+:::proof
+**Step 1: many pairs with $|x^2-dy^2|$ small.** Apply the lemma *Dirichlet's approximation theorem* to $\theta = \sqrt d$, which is irrational because $d$ is not a square. It gives infinitely many $(p,q)$, $q \ge 1$, with $|p - q\sqrt d| < 1/q$. For each,
+
+$$|p + q\sqrt d| \le |p - q\sqrt d| + 2q\sqrt d < \frac1q + 2q\sqrt d \le q\left(1 + 2\sqrt d\right),$$
+
+using $1/q \le q$. Multiplying the two bounds,
+
+$$|p^2 - dq^2| = |p-q\sqrt d|\cdot|p+q\sqrt d| < \frac1q \cdot q(1+2\sqrt d) = 1 + 2\sqrt d .$$
+
+So infinitely many pairs $(p,q)$ satisfy $|p^2-dq^2| < 1 + 2\sqrt d$, a bound independent of $p,q$.
+
+**Step 2: pigeonhole on the value.** The integer $k = p^2-dq^2$ is nonzero (else $d$ would be a square) and lies in a finite set, so some fixed $k \ne 0$ occurs for infinitely many pairs.
+
+**Step 3: pigeonhole on residues.** Among those pairs, $(p \bmod |k|,\ q \bmod |k|)$ takes at most $k^2$ values, so two distinct pairs $(p_1,q_1) \neq (p_2,q_2)$ agree in both residues:
+
+$$p_1 \equiv p_2, \qquad q_1 \equiv q_2 \pmod{|k|} .$$
+
+We may also assume $(p_1,q_1) \neq \pm(p_2,q_2)$, since infinitely many pairs are available and each $\pm$ class is finite.
+
+**Step 4: divide.** Work in $\mathbb{Z}[\sqrt d\,]$ with norm $N(u+v\sqrt d) = u^2-dv^2$. Compute
+
+$$(p_1 + q_1\sqrt d)(p_2 - q_2\sqrt d) = (p_1p_2 - dq_1q_2) + (q_1p_2 - p_1q_2)\sqrt d =: X + Y\sqrt d .$$
+
+Its norm is $N(p_1+q_1\sqrt d)\,N(p_2 - q_2\sqrt d) = k \cdot k = k^2$, so
+
+$$X^2 - dY^2 = k^2 .$$
+
+Now the congruences: $p_1p_2 - dq_1q_2 \equiv p_1^2 - dq_1^2 = k \equiv 0 \pmod{|k|}$, and $q_1p_2 - p_1q_2 \equiv q_1p_1 - p_1q_1 = 0 \pmod{|k|}$. Hence $X = k\,x$ and $Y = k\,y$ for integers $x,y$, and dividing $X^2-dY^2 = k^2$ by $k^2$ gives
+
+$$x^2 - d y^2 = 1 .$$
+
+**Step 5: nontriviality.** If $y = 0$ then $x = \pm1$ and $X+Y\sqrt d = \pm k$, so $p_1+q_1\sqrt d = \pm k/(p_2-q_2\sqrt d) = \pm(p_2+q_2\sqrt d)$, using $N(p_2+q_2\sqrt d) = k$. That contradicts $(p_1,q_1)\neq\pm(p_2,q_2)$. Hence $y \neq 0$.
+:::
+
+:::theorem[Continued fractions locate the fundamental solution]{#pell-cf}
+Let $d>0$ be a non-square, and let $\sqrt d = [a_0;\overline{a_1,\dots,a_\ell}\,]$ be its (purely periodic after the first term) continued fraction expansion, with convergents $p_k/q_k$. Then the fundamental solution of $x^2-dy^2 = 1$ is
+
+$$(x,y) = \begin{cases} (p_{\ell-1}, q_{\ell-1}) & \text{if } \ell \text{ is even},\\[2pt] (p_{2\ell-1}, q_{2\ell-1}) & \text{if } \ell \text{ is odd},\end{cases}$$
+
+and every solution of $x^2-dy^2 = \pm1$ in positive integers arises as a convergent of $\sqrt d$.
+:::
+
+:::proof
+**Proof sketch — assumes the standard theory of continued fractions (best-approximation property, periodicity of quadratic irrationals); only the shape of the argument is given.**
+
+Two classical facts do the work. First, Lagrange's theorem: the expansion of $\sqrt d$ is periodic of the palindromic shape $[a_0;\overline{a_1,\dots,a_{\ell-1},2a_0}\,]$. Second, best approximation: if $|x^2-dy^2| < \sqrt d$ with $x,y>0$ then $|x/y - \sqrt d| < 1/(2y^2)$, and by Legendre's theorem every such rational is a convergent — so for $d \ge 2$ a solution of $x^2-dy^2=1$ can only be a convergent. Running the convergent recursion with the periodicity gives $p_k^2-dq_k^2 = (-1)^{k+1}Q_{k+1}$ for the auxiliary quantities $Q_k$ of the expansion, with $Q_{k+1}=1$ exactly when $\ell \mid k+1$; the sign selects the stated index.
+:::
+
+:::example[Fundamental solutions for small $d$]
+Find the fundamental solutions for $d = 2, 3, 5, 6, 7, 13$.
 :::
 
 :::solution
-Step 1 (expand). $\sqrt{2} = 1.4142\ldots$, so $a_0 = 1$ and $\sqrt{2} - 1 = 0.4142\ldots$; its reciprocal is $2.4142\ldots$, giving $a_1 = 2$, and the pattern repeats. Thus $\sqrt{2} = [1; \overline{2}]$ with period $\ell = 1$ (odd).
-
-Step 2 (convergents). The first convergents are:
-$$\frac{p_0}{q_0} = \frac{1}{1}, \qquad \frac{p_1}{q_1} = 1 + \frac{1}{2} = \frac{3}{2}.$$
-
-Step 3 (evaluate $p^2 - 2q^2$).
-$p_0^2 - 2 q_0^2 = 1 - 2\cdot 1 = -1$ — this is the *negative* Pell solution (as expected since $\ell = 1$ is odd).
-$p_1^2 - 2 q_1^2 = 9 - 2\cdot 4 = 9 - 8 = 1$ — the fundamental solution $(3, 2)$ of the $+1$ equation.
-
-Step 4 (sanity check). $3^2 - 2\cdot 2^2 = 9 - 8 = 1$ $\checkmark$, matching the fundamental solution found earlier by direct search.
+1. For small $d$ one can simply increase $y$ until $dy^2+1$ is a square.
+2. $d=2$: $y=2 \Rightarrow 9 = 3^2$, so $(3,2)$.
+3. $d=3$: $y=1 \Rightarrow 4 = 2^2$, so $(2,1)$.
+4. $d=5$: $y=1,2,3$ give $6,21,46$; $y=4$ gives $81 = 9^2$, so $(9,4)$.
+5. $d=6$: $y=2 \Rightarrow 25 = 5^2$, so $(5,2)$.
+6. $d=7$: $y=3 \Rightarrow 64 = 8^2$, so $(8,3)$.
+7. $d=13$: the search runs to $y = 180$, giving $x = 649$; check $649^2 = 421201$ and $13\cdot180^2 = 421200$ ✓. The jump from $d=7$ to $d=13$ is the phenomenon the theorem *Continued fractions locate the fundamental solution* explains: the period of $\sqrt{13}$ is $5$, odd, so one must go to index $2\ell - 1 = 9$.
 :::
 
-## The Group of Solutions and Units
+:::figure[Integer points on the hyperbola $x^2 - 2y^2 = 1$: the trivial $(1,0)$ and the solutions $(3,2)$, $(17,12)$ generated by powers of $3+2\sqrt2$. The asymptote $y = x/\sqrt 2$ is the line the points crowd against.]{#pell-hyperbola}
+{
+  "type": "plot",
+  "x": [0, 19], "y": [0, 13.4],
+  "xTicks": 2, "yTicks": 2, "xLabel": "x", "yLabel": "y",
+  "marks": [
+    { "kind": "function", "fn": "sqrt((x^2 - 1)/2)", "from": 1, "to": 19, "tone": "accent" },
+    { "kind": "line", "through": [[0,0],[18, 12.7279]], "tone": "muted", "dashed": true },
+    { "kind": "point", "at": [1, 0], "tone": "result" },
+    { "kind": "point", "at": [3, 2], "tone": "result" },
+    { "kind": "point", "at": [17, 12], "tone": "result" },
+    { "kind": "text", "at": [7.5, 1.6], "text": "x^2 - 2y^2 = 1", "leaderTo": [8.0, 5.55] },
+    { "kind": "text", "at": [4.6, 9.9], "text": "asymptote y = x / sqrt(2)", "leaderTo": [13.0, 9.19] },
+    { "kind": "text", "at": [13.4, 4.1], "text": "(3,2) squared gives (17,12)", "leaderTo": [16.8, 11.6] }
+  ]
+}
+:::
+
+## Pell solutions as a group of units
 
 <!-- section: pell-units -->
 
-:::theorem[Every solution is a power of the fundamental unit]
-The solutions $(x_k, y_k)$ satisfy
+The composition law of the proposition *Brahmagupta composition* is not an identity that happens to hold; it is multiplication in a ring, and once that is said, the structure of the solution set is forced.
 
-$$x_k + y_k\sqrt{d} = (x_1 + y_1\sqrt{d})^k,$$
+:::notation
+For a non-square $d>0$ set $\mathbb{Z}[\sqrt d\,] = \{u + v\sqrt d : u,v \in \mathbb{Z}\}$, a subring of $\mathbb{R}$. Its **conjugation** is $\overline{u+v\sqrt d} = u - v\sqrt d$ and its **norm** is
 
-where $\varepsilon = x_1 + y_1\sqrt{d} > 1$ is the fundamental unit.
+$$N(u+v\sqrt d) = (u+v\sqrt d)(u-v\sqrt d) = u^2 - dv^2 \in \mathbb{Z}.$$
+
+Conjugation is a ring automorphism, so $N$ is multiplicative: $N(\alpha\beta) = N(\alpha)N(\beta)$.
 :::
 
-:::theorem[Unit group of a real quadratic field]
-The unit group of the ring of integers of the real quadratic field $\mathbb{Q}(\sqrt{d})$ is $\{\pm\varepsilon^k : k \in \mathbb{Z}\}$; Dirichlet's unit theorem gives rank $1$ here.
+:::theorem[Every solution is a power of the fundamental one]{#pell-generation}
+Let $d>0$ be a non-square and let $\varepsilon = x_1 + y_1\sqrt d$ correspond to the fundamental solution, i.e. the solution with $x_1,y_1 > 0$ and $x_1$ least. Write $U_1 = \{\alpha \in \mathbb{Z}[\sqrt d\,] : N(\alpha)=1\}$. Then every solution of $x^2-dy^2=1$ is
+
+$$x + y\sqrt d = \pm\,\varepsilon^{\,n} \quad\text{for a unique } n \in \mathbb{Z},$$
+
+so that $U_1 = \{\pm\varepsilon^n\} \cong \mathbb{Z}/2\mathbb{Z} \times \mathbb{Z}$.
 :::
 
-Taking the norm $N(x + y\sqrt{d}) = x^2 - d y^2$, this describes all units of norm $+1$ (the Pell solutions) and, when the fundamental unit itself has norm $-1$, the norm $-1$ units (negative-Pell solutions) as well.
+:::proof
+**Step 0: $U_1$ is a group, identified with the solution set by $(x,y)\mapsto x+y\sqrt d$.** The map is injective because $\sqrt d$ is irrational, and surjective onto $U_1$ by definition of $N$. Multiplicativity of $N$ makes $U_1$ closed under products, and $N(\alpha)=1$ means $\alpha\bar\alpha=1$, so $\alpha^{-1}=\bar\alpha \in U_1$. Hence $U_1$ is a subgroup of $\mathbb{Z}[\sqrt d\,]^\times$.
 
-:::intuition
-The solutions "multiply" using the ring multiplication: if two solutions, their "product" (x1 x2 + d y1 y2 , x1 y2 + y1 x2) is another solution.
+A fundamental solution exists: nontrivial solutions exist by the theorem *Pell's equation always has a nontrivial solution*, and if $(x,y)$ is one then so are $(\pm x, \pm y)$, so there is one with $x,y>0$; among these $x$ takes a least value, and that $x$ determines $y = \sqrt{(x^2-1)/d}$ uniquely.
 
-Powers of the smallest nontrivial give all others.
+**Monotonicity.** For solutions with $x,y > 0$, the quantity $\alpha = x+y\sqrt d$ increases with $x$: if $x < x'$ then $y < y'$ too (since $y = \sqrt{(x^2-1)/d}$ is increasing in $x$), so $\alpha < \alpha'$. Thus $\varepsilon$ is the **smallest** element of $U_1$ that exceeds $1$: any $\alpha \in U_1$ with $\alpha > 1$ has $\alpha^{-1} = \bar\alpha = x - y\sqrt d \in (0,1)$, so $x = \tfrac12(\alpha + \alpha^{-1}) > 0$ and $y = \tfrac{1}{2\sqrt d}(\alpha-\alpha^{-1}) > 0$, making $(x,y)$ a positive solution; minimality of $x_1$ then gives $\alpha \ge \varepsilon$.
+
+**Generation.** Let $\alpha \in U_1$ with $\alpha > 1$; we show $\alpha = \varepsilon^n$ for some $n \ge 1$. Since $\varepsilon > 1$, the powers $\varepsilon^n \to \infty$, so there is a unique $n \ge 1$ with
+
+$$\varepsilon^{\,n} \le \alpha < \varepsilon^{\,n+1} .$$
+
+Put $\beta = \alpha\,\varepsilon^{-n}$. By Step 0, $\beta \in U_1$, and by construction $1 \le \beta < \varepsilon$. If $\beta > 1$ then $\beta$ is an element of $U_1$ strictly between $1$ and $\varepsilon$, contradicting the minimality established above. Hence $\beta = 1$ and $\alpha = \varepsilon^n$.
+
+**All of $U_1$.** Let $\alpha \in U_1$. If $\alpha = \pm1$ take $n=0$. Otherwise $|\alpha|$ and $|\alpha|^{-1}$ are reciprocal positive reals, so exactly one of $\pm\alpha, \pm\alpha^{-1}$ exceeds $1$; by the previous paragraph it equals $\varepsilon^n$ for some $n \ge 1$, so $\alpha = \pm\varepsilon^{\pm n}$.
+
+**Uniqueness and structure.** If $\pm\varepsilon^n = \pm\varepsilon^m$ then comparing signs and taking logarithms of absolute values gives $n\log\varepsilon = m\log\varepsilon$ with $\log\varepsilon>0$, so $n=m$. Hence $\pm\varepsilon^n \mapsto (\pm1,n)$ is an isomorphism $U_1 \to \{\pm1\}\times\mathbb{Z}$.
 :::
 
-:::example
-Generate the next Pell solution for $d = 2$ by powering the fundamental unit.
+:::example[The first four solutions for $d=3$]
+List the four smallest positive solutions of $x^2-3y^2=1$.
 :::
 
 :::solution
-Step 1 (fundamental unit). From the previous sections, the fundamental solution of $x^2 - 2y^2 = 1$ is $(3, 2)$, so $\varepsilon = 3 + 2\sqrt{2}$.
-
-Step 2 (square it). 
-$$\varepsilon^2 = (3 + 2\sqrt{2})^2 = 9 + 2\cdot 3\cdot 2\sqrt{2} + (2\sqrt{2})^2 = 9 + 12\sqrt{2} + 8 = 17 + 12\sqrt{2}.$$
-Reading off coordinates, the next solution is $(x_2, y_2) = (17, 12)$.
-
-Step 3 (sanity check). $17^2 - 2\cdot 12^2 = 289 - 288 = 1$. $\checkmark$
-
-Step 4 (equivalent recurrence). Multiplying $(x_{k+1} + y_{k+1}\sqrt 2) = (x_k + y_k\sqrt 2)(3 + 2\sqrt 2)$ gives $x_{k+1} = 3x_k + 4y_k$, $y_{k+1} = 2x_k + 3y_k$. From $(3,2)$: $x_2 = 3\cdot 3 + 4\cdot 2 = 17$, $y_2 = 2\cdot 3 + 3\cdot 2 = 12$ — same answer. $\checkmark$
+1. Fundamental: $y=1$ gives $3+1 = 4 = 2^2$, so $\varepsilon = 2+\sqrt3$, $(x_1,y_1)=(2,1)$.
+2. Recursion with $x_1=2,y_1=1,d=3$: $x_{n+1} = 2x_n+3y_n$, $y_{n+1} = 2y_n + x_n$.
+3. $(2,1) \to (4+3, 2+2) = (7,4)$. Check $49 - 48 = 1$ ✓.
+4. $(7,4) \to (14+12, 8+7) = (26,15)$. Check $676 - 675 = 1$ ✓.
+5. $(26,15)\to(52+45, 30+26) = (97,56)$. Check $9409 - 3\cdot3136 = 9409-9408=1$ ✓.
 :::
 
-## Common Mistakes
+:::remark
+Dirichlet's unit theorem, in this smallest interesting case, asserts that the unit group of $\mathbb{Z}[\sqrt d\,]$ has rank $1$; the theorem *Every solution is a power of the fundamental one* is the concrete form of that statement. The generator $\varepsilon$ is the **fundamental unit** and $\log\varepsilon$ the **regulator**, an invariant that grows erratically with $d$ — which is why $d=61$ is so much worse than $d=60$.
+:::
 
-- **All d have solutions to x^2 - d y^2 = -1**: No, only when the fundamental unit has norm -1 (period odd).
-- **The fundamental solution is always small**: For some d like 61 it is huge (10 digits).
-- **Pell equation always has only trivial**: No, infinitely many for every square-free d>0.
-- **Confusing with x^2 + d y^2 =1**: That has only ±1,0 for d>0.
-- **Solutions in rationals**: Trivial by clearing, the interest is integers.
-
-The Hasse (or local-global) principle for quadratic forms says that a quadratic form over the rationals represents $0$ non-trivially if and only if it represents $0$ non-trivially over the reals $\mathbb{R}$ and over all $p$-adic fields $\mathbb{Q}_p$.
-
-In other words, a homogeneous quadratic equation has a nontrivial rational solution if and only if it has a nontrivial real solution and nontrivial solutions in every $p$-adic completion.
-
-For quadratic forms this holds (Hasse-Minkowski theorem), but for higher degree it fails (counterexamples by Selmer etc).
-
-It is a fundamental principle in arithmetic geometry: local solubility everywhere implies global.
-
-## The Local-Global Principle for Quadratics
+## The local–global principle
 
 <!-- section: hasse-local-global -->
 
-:::theorem[Hasse-Minkowski, local-global principle]{#hasse-minkowski}
-A homogeneous quadratic equation in several variables has a nontrivial rational solution if and only if it has one over $\mathbb{R}$ and over every $\mathbb{Q}_p$. Equivalently, the projective quadric has a rational point if and only if it has real and $p$-adic points for all $p$.
+Congruence conditions give necessary criteria for solvability. The remarkable fact, for quadratic forms, is that they are also sufficient — together with the obvious real condition. Making this precise needs a way to speak of "all congruences at $p$ at once", which is what the $p$-adic numbers $\mathbb{Q}_p$ provide.
+
+:::notation
+A homogeneous $f \in \mathbb{Q}[x_1,\dots,x_n]$ is **locally soluble** if it has a nontrivial zero in $\mathbb{R}$ and one in $\mathbb{Q}_p$ for every prime $p$, and **globally soluble** if it has a nontrivial zero in $\mathbb{Q}$. The **local–global (Hasse) principle** holds for a family of equations if, within it, local solubility implies global solubility.
 :::
 
-The "only if" direction is easy: a rational solution *is* automatically a real and $p$-adic solution, since $\mathbb{Q}$ embeds into $\mathbb{R}$ and into each $\mathbb{Q}_p$.
+Solubility in $\mathbb{Q}_p$ is decidable by a finite computation: by Hensel's lemma a nonsingular solution of the congruence modulo a sufficiently high, explicit power of $p$ lifts to $\mathbb{Q}_p$. So local solubility is *checkable*, which is what makes the principle useful when it holds.
 
-The "if" is the deep Hasse-Minkowski theorem, proved using the theory of quadratic forms over local fields, Hilbert symbol, and class field or genus theory.
-
-:::intuition
-To decide if a quadratic thing has a rational solution, you can check "locally" in every completion (real numbers and p-adics, which are like numbers with p-adic "decimal" expansion).
-
-For quadratics, if it works everywhere locally, it works globally over Q.
+:::theorem[Hasse–Minkowski]{#hasse-minkowski}
+Let $q(x_1,\dots,x_n)$ be a nondegenerate quadratic form over $\mathbb{Q}$. Then $q$ has a nontrivial zero over $\mathbb{Q}$ if and only if it has a nontrivial zero over $\mathbb{R}$ and over $\mathbb{Q}_p$ for every prime $p$.
 :::
 
-:::example
-Use a local obstruction to show $x^2 + y^2 = 3z^2$ has no nontrivial rational solution.
+:::proof
+**Proof sketch — assumes $p$-adic numbers, the theory of the Hilbert symbol, Dirichlet's theorem on primes in arithmetic progressions, and (for $n=4$) the Hasse–Minkowski statement for $n=3$; the induction is described but the cases are not carried out.**
+
+One direction is trivial: $\mathbb{Q}$ embeds in $\mathbb{R}$ and in each $\mathbb{Q}_p$, so a rational zero is a zero everywhere locally.
+
+The converse is an induction on $n$ after diagonalising $q$ as $a_1x_1^2+\cdots+a_nx_n^2$.
+
+- $n = 1$: only the trivial zero, locally as well as globally.
+- $n = 2$: $a_1x_1^2+a_2x_2^2$ is isotropic iff $-a_2/a_1$ is a square, and a rational that is a square in every $\mathbb{Q}_p$ and in $\mathbb{R}$ is a square, by comparing valuation parities and the sign.
+- $n = 3$: Legendre's theorem — $ax^2+by^2+cz^2=0$ with $a,b,c$ squarefree and pairwise coprime is soluble iff the signs are not all equal and $-bc,-ac,-ab$ are quadratic residues modulo $|a|,|b|,|c|$. The classical proof is a descent using the geometry of numbers.
+- $n = 4$: the hard case. Split $q = (a_1x_1^2+a_2x_2^2) - (-a_3x_3^2-a_4x_4^2)$ and ask which rationals are represented by both binary forms. Hilbert symbols describe the two sets, and Dirichlet's theorem on primes in arithmetic progressions produces a rational represented by both.
+- $n \ge 5$: every $p$-adic form in five variables is isotropic, so only the real condition survives; an indefinite rational form in $\ge 5$ variables splits off a hyperbolic plane, and one inducts.
+
+Dirichlet's theorem is not a formal device here: it is where the arithmetic of $\mathbb{Q}$ enters.
+:::
+
+:::example[A conic with no rational points]
+Decide whether $3x^2 + 5y^2 = 7z^2$ has a nontrivial rational solution.
 :::
 
 :::solution
-1. Step 1 (reduce to integers). A nontrivial rational solution can be scaled to a nontrivial *integer* solution $(x,y,z)$; divide out any common factor so that $\gcd(x,y,z) = 1$.
-2. Step 2 (work modulo $3$). Squares are $\equiv 0$ or $1 \pmod 3$. Since $3z^2 \equiv 0 \pmod 3$, we need $x^2 + y^2 \equiv 0 \pmod 3$. The only way to write $0$ as a sum of two elements of $\{0,1\}$ mod $3$ is $0 + 0$, so $x \equiv y \equiv 0 \pmod 3$.
-3. Step 3 (descend). Write $x = 3x'$, $y = 3y'$. Then $9x'^2 + 9y'^2 = 3z^2$, so $z^2 = 3(x'^2 + y'^2)$, forcing $3 \mid z^2$ and hence $3 \mid z$.
-4. Step 4 (contradiction). Now $3$ divides $x, y, z$, contradicting $\gcd(x,y,z) = 1$. So no nontrivial solution exists. $\checkmark$
-5. The same argument runs verbatim in $\mathbb{Q}_3$, so the form fails to be isotropic *locally at $3$* — this single failed local condition already rules out a rational solution, exactly as the Hasse principle predicts (local failure $\Rightarrow$ global failure).
-6. For a *positive* illustration, $x^2 + y^2 = 2z^2$ **does** have local solutions everywhere, and correspondingly it has the rational (indeed integer) solution $(x,y,z) = (1,1,1)$: $1 + 1 = 2\cdot 1$. $\checkmark$
-7. By contrast, the classic *higher-degree* counterexample $3x^3 + 4y^3 + 5z^3 = 0$ (Selmer) has solutions over $\mathbb{R}$ and every $\mathbb{Q}_p$ yet **no** nontrivial rational solution — the Hasse principle is a theorem for quadratics but fails for cubics.
+1. Rewrite as the form $q = 3x^2+5y^2-7z^2$. Over $\mathbb{R}$ it is indefinite, so it is soluble there.
+2. Check $p = 7$. If $7 \nmid x, y$ then modulo $7$: $3x^2 + 5y^2 \equiv 0$, i.e. $y^2 \equiv -3\cdot 5^{-1} x^2$. Now $5^{-1} \equiv 3 \pmod 7$ since $15 \equiv 1$, so $y^2 \equiv -9x^2 \equiv -2x^2 \equiv 5x^2 \pmod 7$.
+3. So we need $5$ to be a quadratic residue mod $7$. The squares mod $7$ are $\{1,2,4\}$, and $5 \notin \{1,2,4\}$.
+4. Hence $7 \mid x$ and $7 \mid y$; then $49 \mid 3x^2+5y^2 = 7z^2$, so $7 \mid z^2$, so $7 \mid z$. Scaling down by $7$ repeats forever — a descent — so the only $7$-adic solution is trivial.
+5. The form is not locally soluble at $7$, so by the theorem *Hasse–Minkowski* (the easy direction suffices) it has no nontrivial rational solution.
 :::
 
-## Hilbert Symbol and Local Invariants
+## Hilbert symbols: making the check finite
 
 <!-- section: hasse-hilbert -->
 
-:::definition[Hilbert symbol]{#hilbert-symbol}
-The Hilbert symbol $(a,b)_p \in \{+1, -1\}$ records local solubility: $(a,b)_p = +1$ exactly when
+Hasse–Minkowski demands a check at infinitely many primes, which would be useless without a bookkeeping device. For $a,b \in \mathbb{Q}^\times$ and a place $v$ of $\mathbb{Q}$ — a prime $p$, or $\infty$ standing for $\mathbb{R}$ — the **Hilbert symbol** is
 
-$$z^2 = a x^2 + b y^2$$
+$$(a,b)_v = \begin{cases} +1 & \text{if } ax^2+by^2 = z^2 \text{ has a nontrivial solution in } \mathbb{Q}_v,\\ -1 & \text{otherwise.}\end{cases}$$
 
-has a nontrivial solution in $\mathbb{Q}_p$ (equivalently, when $a$ is a norm from the extension $\mathbb{Q}_p(\sqrt{b})$). Here $p$ ranges over all primes *and* the "infinite place" $p = \infty$ corresponding to $\mathbb{R}$.
+It is multiplicative in each argument and symmetric, and for odd $p$ with $a,b$ $p$-adic units it equals $+1$ — so only finitely many places can possibly give $-1$.
+
+:::theorem[Hilbert's product formula]{#hilbert-product}
+For all $a, b \in \mathbb{Q}^\times$, the symbol $(a,b)_v$ equals $+1$ for all but finitely many places $v$, and
+
+$$\prod_{v} (a,b)_v = 1,$$
+
+the product running over $\infty$ and all primes.
 :::
 
-:::theorem[Product formula]
-For fixed nonzero rationals $a, b$,
+:::proof
+**Proof sketch — assumes the explicit formulas for $(a,b)_p$ in terms of Legendre symbols, and quadratic reciprocity; the reduction is given, the case-checking is not.**
 
-$$\prod_p (a,b)_p = +1$$
+By bimultiplicativity it suffices to treat $a,b$ each ranging over $-1$ and the primes. For odd $p$ and $p$-adic units $a,b$ one has $(a,b)_p = 1$, which already gives finiteness: only $\infty$, the prime $2$, and the primes occurring in $a$ and $b$ can contribute.
 
-over all places (including $\infty$), and all but finitely many factors are $+1$.
+The rest is a handful of cases. For $a=p$, $b=q$ distinct odd primes the explicit formulas give $(p,q)_p = \left(\tfrac{q}{p}\right)$, $(p,q)_q = \left(\tfrac{p}{q}\right)$, $(p,q)_2 = (-1)^{\frac{p-1}{2}\frac{q-1}{2}}$ and $(p,q)_v = 1$ elsewhere. The product formula in this case therefore reads
+
+$$\left(\frac{q}{p}\right)\left(\frac{p}{q}\right)(-1)^{\frac{p-1}{2}\frac{q-1}{2}} = 1,$$
+
+which is exactly quadratic reciprocity; the cases $a=-1$ and $a=2$ reproduce the two supplementary laws. The product formula is a repackaging of reciprocity, and conversely.
 :::
-
-This reciprocity is what makes the local conditions consistent: you cannot have exactly one place where solubility fails, so the local data glues into global existence for quadratic forms.
 
 :::intuition
-The Hilbert symbol is a local "does this pair of numbers behave like a norm or square" yes/no at each p and real place.
-
-The product of all these local yes/no is always +1; this is the only global obstruction for quadratic forms.
+Think of $(a,b)_v$ as a local "obstruction sign". The product formula says the signs cannot be assigned independently: if you know all but one of them, the last is determined. That is precisely what makes Hasse–Minkowski in four variables work, and it is also why, when checking a conic for solubility, it is enough to check all places but one.
 :::
 
-:::example
-Verify the product formula for $a = b = -1$.
-:::
-
-:::solution
-We evaluate $(-1, -1)_p$ at every place, using the meaning "does $z^2 = -x^2 - y^2$ have a nontrivial solution in $\mathbb{Q}_p$?"
-
-Step 1 (the real place $p = \infty$). Over $\mathbb{R}$, $z^2 = -x^2 - y^2$ forces $x = y = z = 0$ (a sum of squares is negative only when all are zero). No nontrivial real solution, so $(-1,-1)_\infty = -1$.
-
-Step 2 (the prime $p = 2$). It is a standard computation that $z^2 = -x^2 - y^2$ has no nontrivial solution in $\mathbb{Q}_2$ either (equivalently $-1$ is not a sum of two squares that are $2$-adic units in the required way), so $(-1,-1)_2 = -1$.
-
-Step 3 (odd primes $p$). For every odd prime $p$, the form $z^2 + x^2 + y^2$ is isotropic over $\mathbb{Q}_p$ (any nondegenerate ternary quadratic form over $\mathbb{Q}_p$ with $p$ odd represents $0$ nontrivially), so $(-1,-1)_p = +1$ for all odd $p$.
-
-Step 4 (take the product). Only two factors are $-1$:
-$$\prod_p (-1,-1)_p = (-1)_\infty \cdot (-1)_2 \cdot \prod_{p \text{ odd}} (+1) = (-1)(-1) = +1.$$
-The product is $+1$, confirming the product formula. $\checkmark$ Notice the two "failures" (at $\infty$ and at $2$) are forced to come in a compatible pair — a single lone failure is impossible.
-:::
-
-## Failure for Higher Degree and Brauer-Manin
+## Where the principle fails
 
 <!-- section: hasse-failure -->
 
-For cubic and higher, the Hasse principle fails: there are varieties with points everywhere locally but no global point.
+Hasse–Minkowski is a theorem about quadratic forms, and the hypothesis is not decorative: in degree three the principle is false, and the counterexample is explicit.
 
-The Brauer-Manin obstruction (from the Brauer group of the variety) explains many (but not all) failures.
+:::theorem[Selmer's counterexample to the local–global principle]{#selmer}
+The cubic curve
 
-For quadratics the Brauer group is trivial in the relevant sense, so Hasse holds.
+$$3x^3 + 4y^3 + 5z^3 = 0$$
 
-:::intuition
-For more complicated equations, being solvable "in every p-adic world and the reals" is not enough; there can be a global "entanglement" obstruction.
-
-For squares (quadratic), no such extra obstruction.
+has a nontrivial solution in $\mathbb{R}$ and in $\mathbb{Q}_p$ for every prime $p$, but its only rational solution is $(0,0,0)$.
 :::
 
-:::example
-Why the Selmer cubic $3X^3 + 4Y^3 + 5Z^3 = 0$ is a genuine Hasse failure.
+:::proof
+**Local solubility, proved.** Over $\mathbb{R}$ take $(-\sqrt[3]{3},1,1)$, since $3(-3)+4+5=0$. For $p \ge 7$ the projective plane cubic $C$ is smooth over $\mathbb{F}_p$ and the Hasse–Weil bound gives $\#C(\mathbb{F}_p) \ge p+1-2\sqrt p>0$, so a smooth $\mathbb{F}_p$-point exists and Hensel lifts it. For $p \in \{2,5\}$ cubing is a bijection on $\mathbb{F}_p^\times$, since $3 \nmid p-1$, so any $x,y$ with $3x^3+4y^3 \ne 0$ is completed by a unique $z$, again nonsingular. For $p=3$ one exhibits a nonsingular solution modulo $27$ directly.
+
+**Global insolubility — proof sketch, assumes the arithmetic of the cubic field $K = \mathbb{Q}(\sqrt[3]{60})$; Selmer's computation is not reproduced.** Scale a nonzero rational solution to coprime integers; substituting converts the equation into a norm equation $N_{K/\mathbb{Q}}(\alpha) = c$ with $\alpha$ confined to a specific coset. Selmer computed the class and unit groups of $K$ and showed the required $\alpha$ would force a relation among the units that does not hold. In modern language the Tate–Shafarevich group of the associated elliptic curve has a nontrivial $3$-part, and that element is the obstruction the local conditions cannot see; it is captured by the **Brauer–Manin** pairing, since every rational point pairs to zero against the Brauer group while here some Brauer class kills the entire local adelic set.
+:::
+
+:::remark
+The moral is sharp. Local solubility is a cheap *necessary* condition which for quadratic forms happens also to be sufficient; past degree two it is merely necessary, and the failure is measured by a cohomological invariant. Even the Brauer–Manin obstruction is not always the whole story: Skorobogatov produced a surface with no rational points and no Brauer–Manin obstruction.
+:::
+
+:::example[Checking local solubility is not hard]
+Verify that $3x^3+4y^3+5z^3 \equiv 0$ has a nontrivial solution modulo $7$, and explain why that implies solubility in $\mathbb{Q}_7$.
 :::
 
 :::solution
-1. Step 1 (real solubility). Over $\mathbb{R}$ the equation is easy: fix $Z = 1$, then $3X^3 + 4Y^3 = -5$ describes a smooth real curve, so infinitely many real points exist. Hence there is a nontrivial real solution.
-2. Step 2 ($p$-adic solubility). For every prime $p$, Selmer showed the equation has a nontrivial solution in $\mathbb{Q}_p$ (checked via Hensel's lemma lifting a solution mod $p$, with the finitely many "bad" primes handled by hand). So it is soluble in $\mathbb{R}$ and in *every* $\mathbb{Q}_p$.
-3. Step 3 (no rational solution). Despite being soluble everywhere locally, the equation has **no** nontrivial solution in $\mathbb{Q}$. The obstruction is not visible from any single completion; it lives in the Brauer–Manin pairing (equivalently, in the Tate–Shafarevich group of the associated elliptic curve).
-4. Step 4 (contrast). For a *quadratic* form no such obstruction exists (its Brauer contribution is trivial), which is precisely why Hasse–Minkowski holds for quadratics but breaks for this cubic. $\checkmark$
+1. Cubes mod $7$: since $\gcd(3, 6) = 3$, the cubes are the cubic residues $\{0,1,6\}$, each nonzero one hit three times.
+2. Try $z = 0$: need $3x^3 \equiv -4y^3 \equiv 3y^3 \pmod 7$, i.e. $x^3 \equiv y^3$. Take $x=y=1$: $3+4 = 7 \equiv 0$ ✓. So $(1,1,0)$ is a nontrivial solution mod $7$.
+3. Smoothness: the partial derivatives are $9x^2, 12y^2, 15z^2$, and at $(1,1,0)$ the first is $9 \equiv 2 \not\equiv 0 \pmod 7$, so the point is a nonsingular zero.
+4. Hensel's lemma lifts a nonsingular zero modulo $p$ to a zero in $\mathbb{Z}_p$, hence a nontrivial $\mathbb{Q}_7$-point. ✓ The equation passes every such test and still has no rational point — that is the content of the theorem *Selmer's counterexample to the local–global principle*.
 :::
 
-## Common Mistakes
-
-- **Hasse holds for all varieties**: No, only for quadratics (and some other classes like Severi-Brauer).
-- **Local always implies global for integers**: No, even for linear sometimes (but for linear it does by Hasse for degree 1).
-- **p-adics are hard**: In practice for quadratic forms there are explicit criteria using Hilbert symbols that reduce to Legendre/Jacobi at the primes dividing the discriminant.
-- **The real place is important**: Sometimes the only obstruction is the real place (signature of the form).
-
-Thue's theorem (1909) says that if $f(x,y)$ is an irreducible binary form of degree $d \ge 3$ with integer coefficients, then the equation $f(x,y) = h$ has only finitely many integer solutions $(x,y)$ for any fixed nonzero $h$.
-
-In particular, the Thue equation $f(x,y) = 1$ with $\deg f \ge 3$ irreducible has only finitely many solutions.
-
-This is a far-reaching generalization of FLT for fixed exponent (the homogeneous form x^n + y^n - z^n but projective), and is proved using Diophantine approximation (how well algebraic numbers can be approximated by rationals, Thue's improvement on Liouville).
-
-It is one of the first major results in the theory of Diophantine equations using approximation.
-
-## Statement
+## Thue's theorem
 
 <!-- section: thue-statement -->
 
-:::theorem[Thue's theorem]{#thue-theorem}
-Let $f(X,Y) \in \mathbb{Z}[X,Y]$ be a *binary form* (homogeneous polynomial) of degree $d \ge 3$ that is irreducible over $\mathbb{Q}$. Then for any fixed nonzero integer $h$, the equation
+Past degree two, the governing result for two-variable equations is Thue's. It says that a homogeneous form of degree at least three, set equal to a constant, has only finitely many integer solutions — an enormous strengthening of anything congruences could give.
 
-$$f(x,y) = h$$
+:::theorem[Thue's theorem]{#thue}
+Let $F(x,y) \in \mathbb{Z}[x,y]$ be homogeneous of degree $k \ge 3$, irreducible over $\mathbb{Q}$. Then for every nonzero $c \in \mathbb{Z}$ the **Thue equation**
 
-has only finitely many solutions in integers $x, y$.
+$$F(x,y) = c$$
+
+has only finitely many solutions $(x,y) \in \mathbb{Z}^2$.
 :::
 
-The hypotheses all matter: degree $d \ge 3$ (degree $2$ can give infinitely many, as Pell shows), irreducibility (a reducible form can hide a Pell-type factor), and $h \ne 0$ (the equation $f(x,y) = 0$ asks for rational points on a curve, which is a different question).
+:::proof
+**Proof — complete, assuming the theorem *Thue's approximation theorem* stated in the next section.** Write $F(x,y) = a_0\prod_{j=1}^{k}(x - \alpha_j y)$ where $\alpha_1,\dots,\alpha_k$ are the (distinct, since $F$ is irreducible and separable) roots of $F(t,1)$, algebraic numbers of degree $k$ over $\mathbb{Q}$.
 
-:::intuition
-A "curvy" homogeneous polynomial equation of degree 3 or higher (irreducible) can only equal a fixed h for finitely many integer points (x,y).
+Suppose there were infinitely many solutions. Since for fixed $y$ there are at most $k$ values of $x$, the values $|y|$ must be unbounded; pass to a subsequence with $|y| \to \infty$. Then
 
-Unlike linear or quadratic (Pell infinite), higher degree "curves" have finite integer points for fixed height h.
+$$|c| = |F(x,y)| = |a_0|\,|y|^k \prod_{j=1}^{k}\left|\frac{x}{y} - \alpha_j\right| .$$
+
+Because $|c|$ is fixed and $|y|^k \to \infty$, the product of the $k$ factors tends to $0$, so $x/y$ approaches one of the $\alpha_j$; passing to a further subsequence, say $x/y \to \alpha_1$. Then the other factors $|x/y - \alpha_j|$, $j\ge2$, are bounded below by a positive constant $\delta$ (half the minimal distance from $\alpha_1$ to the others, eventually). Hence
+
+$$\left|\frac{x}{y}-\alpha_1\right| \le \frac{|c|}{|a_0|\,\delta^{\,k-1}}\cdot\frac{1}{|y|^k} = \frac{C}{|y|^{k}} .$$
+
+But $\alpha_1$ is an algebraic number of degree $k \ge 3$, so the theorem *Thue's approximation theorem* says there are only finitely many rationals $x/y$ with
+
+$$\left|\frac{x}{y} - \alpha_1\right| < \frac{1}{|y|^{\,k/2 + 1 + \epsilon}} ,$$
+
+and since $k > k/2 + 1$ for $k \ge 3$, the displayed inequality is eventually stronger than this. That contradicts having infinitely many solutions.
 :::
 
-:::example
-The Thue equation $x^3 - 2y^3 = 1$ has only finitely many integer solutions.
+:::remark
+The deduction is genuine but inherits the ineffectivity of its input: "finitely many" says nothing about how large they can be, so the argument cannot certify a found list as complete. Repairing that is what Baker's method below is for.
+:::
+
+:::example[A Thue equation solved by hand]
+Find all integer solutions of $x^3 - 2y^3 = 1$.
 :::
 
 :::solution
-Step 1 (check the hypotheses). The form $f(x,y) = x^3 - 2y^3$ is homogeneous of degree $3 \ge 3$. It is irreducible over $\mathbb{Q}$ because $f(x,1) = x^3 - 2$ has no rational root ($\sqrt[3]{2}$ is irrational). And $h = 1 \ne 0$. So Thue's theorem applies and guarantees *finitely many* solutions.
-
-Step 2 (find the solutions by a bounded search). Test small $y$:
-$y = 0$: $x^3 = 1 \Rightarrow x = 1$, giving $(1, 0)$.
-$y = -1$: $x^3 = 1 + 2(-1)^3 = 1 - 2 = -1 \Rightarrow x = -1$, giving $(-1, -1)$.
-$y = 1$: $x^3 = 1 + 2 = 3$, not a cube.
-$y = 2$: $x^3 = 1 + 16 = 17$, not a cube; $y = -2$: $x^3 = 1 - 16 = -15$, not a cube.
-
-Step 3 (sanity check). $(1)^3 - 2(0)^3 = 1$ $\checkmark$ and $(-1)^3 - 2(-1)^3 = -1 + 2 = 1$ $\checkmark$.
-
-Step 4 (conclusion). The only integer solutions are $(1,0)$ and $(-1,-1)$ — a finite set, as Thue guarantees. (Proving no *large* solutions exist is exactly the hard content of the theorem, addressed next.)
+1. $F(x,y) = x^3-2y^3$ is homogeneous of degree $3$ and irreducible (its root $\sqrt[3]2$ has degree $3$), so the theorem *Thue's theorem* applies and there are finitely many solutions.
+2. Obvious solution: $(1,0)$.
+3. Small search: $y = 1$ needs $x^3 = 3$, no; $y=-1$ needs $x^3 = -1$, so $x = -1$: check $-1 - 2(-1) = -1+2 = 1$ ✓, giving $(-1,-1)$.
+4. $y = \pm2$: $x^3 = 1 \pm 16$, i.e. $17$ or $-15$, neither a cube. $y = \pm3$: $x^3 = 1 \pm 54 = 55$ or $-53$, neither.
+5. In fact $(1,0)$ and $(-1,-1)$ are the only solutions — a result of Delone and Nagell, who proved that $x^3 - dy^3 = 1$ has at most one nontrivial solution. Thue's theorem guarantees finiteness; this sharper theorem supplies the count.
 :::
 
-## Proof Idea via Approximation
+## Approximation: Liouville, Thue, Roth
 
 <!-- section: thue-approximation -->
 
-:::theorem[Liouville's approximation theorem]
-If $\alpha$ is a real algebraic number of degree $d$, there is a constant $c > 0$ with
+The engine behind Thue is one principle: **algebraic numbers are badly approximable by rationals**. The elementary version is Liouville's, short enough to prove in full.
 
-$$\left|\alpha - \frac{p}{q}\right| > \frac{c}{q^d}$$
+:::theorem[Liouville's approximation theorem]{#liouville}
+Let $\alpha$ be an irrational algebraic number of degree $k \ge 2$ over $\mathbb{Q}$. Then there is a constant $C = C(\alpha) > 0$ such that for all integers $p,q$ with $q \ge 1$,
 
-for all rationals $p/q$. (1844.)
+$$\left|\alpha - \frac{p}{q}\right| > \frac{C}{q^{k}} .$$
 :::
-
-:::theorem[Thue's improvement]
-The exponent $d$ can be lowered to roughly $\tfrac{d}{2} + 1 + \epsilon$, so algebraic numbers are *harder* to approximate than Liouville's weaker bound suggested. (1909.)
-:::
-
-Here is how that yields finiteness.
 
 :::proof
-Suppose $f(x,y) = h$ with $y \ne 0$. Factor the form over its roots: $f(X,Y) = a_d \prod_{i=1}^{d} (X - \alpha_i Y)$, where the $\alpha_i$ are the (distinct) roots of $f(T,1) = 0$, each algebraic of degree $d \ge 3$. Dividing $f(x,y) = h$ by $y^d$,
-$$a_d \prod_{i=1}^{d}\left(\frac{x}{y} - \alpha_i\right) = \frac{h}{y^d}.$$
+Let $f(t) = a_kt^k+\cdots+a_0 \in \mathbb{Z}[t]$ be a minimal polynomial of $\alpha$; being irreducible of degree $k \ge 2$ it has no rational root.
 
-If $y$ is large, the right side is tiny, so at least one factor $\left|\dfrac{x}{y} - \alpha_i\right|$ must be tiny — meaning $x/y$ is an extremely good rational approximation to that root $\alpha_i$: the other factors stay bounded away from $0$, forcing
-$$\left|\frac{x}{y} - \alpha_i\right| \approx \frac{C}{|y|^{d}}$$
-for a constant $C$. But Thue's theorem forbids approximations that good (the exponent $d$ beats his improved bound $\tfrac{d}{2}+1+\epsilon < d$ for $d \ge 3$). This is a contradiction for all sufficiently large $|y|$, so only finitely many $(x,y)$ can occur.
+Fix $p/q$. If $|\alpha - p/q| \ge 1$ the bound holds with $C \le 1$, so assume $p/q \in [\alpha-1,\alpha+1]$, and set $M = \max_{|t-\alpha|\le1}|f'(t)|$, finite by continuity on a compact interval and positive after enlarging if necessary.
+
+**Lower bound on $|f(p/q)|$.** Since $f$ has no rational root, $f(p/q) \neq 0$. Clearing denominators,
+
+$$q^k f(p/q) = a_kp^k + a_{k-1}p^{k-1}q + \cdots + a_0q^k$$
+
+is a nonzero integer, so $|q^kf(p/q)| \ge 1$, i.e.
+
+$$\left|f\!\left(\frac pq\right)\right| \ge \frac{1}{q^k} .$$
+
+**Upper bound via the mean value theorem.** There is $\xi$ between $\alpha$ and $p/q$, hence in $[\alpha-1,\alpha+1]$, with
+
+$$f\!\left(\frac pq\right) = f\!\left(\frac pq\right) - f(\alpha) = f'(\xi)\left(\frac pq - \alpha\right),$$
+
+so $|f(p/q)| \le M\,|\alpha - p/q|$.
+
+**Combine.** $M|\alpha - p/q| \ge 1/q^k$, giving $|\alpha - p/q| \ge \tfrac{1}{M}q^{-k}$. Taking $C = \min(1, 1/(2M))$ makes the inequality strict and covers the discarded case.
 :::
 
-:::intuition
-A rational x/y that makes f(x/y,1) very small (1/y^d) would be an extremely good approximation to the algebraic root α of f(T,1)=0.
+Liouville's exponent $k$ is the trivial one, and lowering it is the entire subject of Diophantine approximation: Thue reached roughly $k/2$, Siegel, Dyson and Gelfond pushed further, and Roth reached the optimal $2$.
 
-Thue proved that algebraic numbers cannot be approximated that well by rationals (the exponent is too good), hence only small y possible.
+:::theorem[Thue's approximation theorem, and Thue–Siegel–Roth]{#roth}
+Let $\alpha$ be algebraic of degree $k \ge 2$.
+
+1. *(Thue, 1909.)* For every $\epsilon > 0$ there are only finitely many rationals $p/q$ with $\big|\alpha - \tfrac pq\big| < q^{-(k/2+1+\epsilon)}$.
+2. *(Roth, 1955.)* For every $\epsilon > 0$ there are only finitely many rationals $p/q$ with $\big|\alpha - \tfrac pq\big| < q^{-(2+\epsilon)}$. The exponent $2$ is optimal, since the lemma *Dirichlet's approximation theorem* produces infinitely many $p/q$ with $|\alpha - p/q| < q^{-2}$.
 :::
 
-:::example
-The exponent gap for $x^3 - 2y^3 = 1$.
+:::proof
+**Proof sketch — assumes the theory of auxiliary polynomials in many variables, Siegel's lemma, and Roth's index/Wronskian machinery; none of these is developed here.**
+
+Both are contradiction arguments of the same shape. Assume infinitely many very good approximations $p_1/q_1,\dots,p_m/q_m$ with rapidly increasing denominators. By Siegel's lemma — a pigeonhole statement about integer solutions of underdetermined linear systems — construct a nonzero auxiliary polynomial $P(t_1,\dots,t_m) \in \mathbb{Z}[t]$ of controlled height vanishing to high order at $(\alpha,\dots,\alpha)$. The approximations force $P$ to be extremely small at $(p_1/q_1,\dots,p_m/q_m)$, while clearing denominators makes it a nonzero integer, hence at least $1$. Tuning the parameters makes the two bounds conflict — provided $P$ really is nonzero there, which is the technical heart (Roth's lemma, via generalised Wronskians). Thue uses $m=2$; Roth needs $m$ growing with $1/\epsilon$.
+
+The ineffectivity is intrinsic: the argument shows a *second* very good approximation cannot exist once a first does, but never locates the first.
+:::
+
+:::example[Liouville's bound applied to $\sqrt[3]{2}$]
+Give an explicit lower bound for $|\sqrt[3]{2} - p/q|$.
 :::
 
 :::solution
-1. Step 1 (identify the root). Here $\alpha = \sqrt[3]{2}$ is the real root of $f(T,1) = T^3 - 2 = 0$, algebraic of degree $d = 3$.
-2. Step 2 (what a large solution would imply). If $(x,y)$ solved the equation with $|y|$ large, the identity above gives $\left|\dfrac{x}{y} - \sqrt[3]{2}\right| \approx \dfrac{C}{|y|^{3}}$ — an approximation of quality $1/|y|^3$.
-3. Step 3 (compare with Thue's bound). Thue's improved exponent for $d = 3$ is about $\tfrac{d}{2} + 1 + \epsilon = 2.5 + \epsilon$, so he guarantees $\left|\dfrac{x}{y} - \sqrt[3]{2}\right| > \dfrac{c}{|y|^{2.5+\epsilon}}$.
-4. Step 4 (contradiction). For large $|y|$ we would need $\dfrac{c}{|y|^{2.5+\epsilon}} < \dfrac{C}{|y|^{3}}$, i.e. $|y|^{3 - (2.5+\epsilon)} = |y|^{0.5 - \epsilon} < C/c$ — impossible once $|y|$ is large enough. Hence only finitely many solutions, consistent with the two we found: $(1,0)$ and $(-1,-1)$. $\checkmark$
-5. (Even Liouville's weaker exponent $d = 3$ is not quite enough here — the size $1/|y|^3$ matches it exactly — which is precisely why Thue's *improvement* of the exponent is what does the work.)
+1. $\alpha = 2^{1/3}$ has minimal polynomial $f(t) = t^3-2$, of degree $k = 3$.
+2. $f'(t) = 3t^2$, and on $[\alpha-1,\alpha+1] \subseteq [0.26, 2.26]$ we have $|f'(t)| \le 3(2.26)^2 = 15.33$, so take $M = 16$.
+3. The proof gives $|\alpha - p/q| \ge \tfrac{1}{16}q^{-3}$ for every rational $p/q$.
+4. Sanity check with $p/q = 5/4 = 1.25$: $|2^{1/3} - 1.25| = |1.2599 - 1.25| = 0.0099$, while $\tfrac{1}{16}\cdot 4^{-3} = 1/1024 = 0.00098$. The bound holds with room to spare ✓.
+5. Roth's theorem improves the exponent from $3$ to $2+\epsilon$ but with a constant nobody can write down — the trade-off in one line.
 :::
 
-## Effective Versions and Baker's Method
+## Effective versions and Baker's method
 
 <!-- section: thue-effective -->
 
-Thue's proof is ineffective (does not give bound on the size of solutions).
+An **ineffective** finiteness theorem bounds the number of solutions without bounding their size; an **effective** one supplies a computable $B$ with $\max(|x|,|y|) \le B$ for every solution, so that a finite search settles the equation. Thue's theorem is ineffective; the repair came sixty years later, from transcendence theory.
 
-Effective bounds came later with Baker's theory of linear forms in logarithms, which give explicit (huge) bounds on solutions to Thue equations.
+:::theorem[Baker's bound and effective Thue equations]{#baker}
+*(Baker, 1966–68.)* Let $\alpha_1,\dots,\alpha_n$ be nonzero algebraic numbers with $\log\alpha_1,\dots,\log\alpha_n$ linearly independent over $\mathbb{Q}$, and let $b_1,\dots,b_n$ be integers, not all zero, with $B = \max|b_i|$. Then there are effectively computable $C, \kappa > 0$ depending only on the $\alpha_i$ and their degrees with
 
-Today Thue equations can be solved completely for reasonable coefficients using computational methods combining Baker, lattice reduction (LLL), and enumeration.
+$$|b_1\log\alpha_1 + \cdots + b_n\log\alpha_n| > C\,B^{-\kappa}, \qquad\text{whenever the left side is nonzero.}$$
 
-:::intuition
-Thue proves "only finitely many solutions" but never tells you how large to search — like knowing a treasure chest holds finitely many coins without knowing the number.
-
-Baker's linear-forms-in-logarithms give a concrete (if gigantic) ceiling like $\max(|x|,|y|) < 10^{10^{10}}$: still enormous, but finite, and clever reduction plus a computer then finds them all.
+Consequently, for a Thue equation $F(x,y)=c$ of degree $k \ge 3$ every solution satisfies an effectively computable bound $\max(|x|,|y|) \le B(F,c)$.
 :::
 
-:::example
-Effective vs. ineffective, on $x^3 - 2y^3 = 1$.
+:::proof
+**Proof sketch — assumes transcendence methods (auxiliary functions, Siegel's lemma, extrapolation) and the unit theorem for number fields; the two halves are outlined only.**
+
+*The linear-forms bound.* Assume $\Lambda = \sum b_i\log\alpha_i$ is very small and build an auxiliary analytic function out of the $\alpha_i^{z}$, vanishing to high order on a grid of integer points. Smallness of $\Lambda$ extrapolates that vanishing to a larger grid, until the function vanishes identically, contradicting linear independence of the logarithms. Every constant is explicit, which is why the conclusion is effective.
+
+*The application to Thue.* Factor $F(x,y) = a_0\prod(x-\alpha_j y) = c$. Each $\beta_j = x-\alpha_j y$ is an algebraic integer of bounded norm, hence lies in one of finitely many classes modulo units; writing $\beta_j = \gamma_j\eta_1^{b_1}\cdots\eta_r^{b_r}$ in fundamental units and feeding this into Siegel's identity $(\alpha_1-\alpha_2)\beta_3+(\alpha_2-\alpha_3)\beta_1+(\alpha_3-\alpha_1)\beta_2 = 0$ forces a linear form in logarithms to be exponentially small in $B = \max|b_i|$. Baker's bound caps $B$, hence $x$ and $y$.
+
+The resulting bounds are astronomically large, typically iterated exponentials, but they are *bounds*, and lattice reduction (LLL) routinely brings them down to a searchable range.
 :::
 
-:::solution
-1. Step 1 (what Thue alone gives). Thue's 1909 proof says: "there are finitely many solutions." It gives *no* number $B$ with $|x|, |y| \le B$, so in principle you could search forever without knowing you were done.
-2. Step 2 (what Baker's method adds). Rewrite $x^3 - 2y^3 = 1$ as a statement about a unit in the cubic field $\mathbb{Q}(\sqrt[3]{2})$; a solution corresponds to a small value of a *linear form in logarithms* of the field's units. Baker's theorem gives an explicit lower bound for how small such a linear form can be, which converts into an explicit (astronomically large) upper bound like $\max(|x|,|y|) < 10^{10^{k}}$.
-3. Step 3 (reduce and finish). That bound is far too big for brute force, but the LLL lattice-reduction algorithm shrinks it to a search of a few thousand candidates, which a computer checks in seconds — confirming the only solutions are $(1,0)$ and $(-1,-1)$.
-4. Step 4 (takeaway). "Finite" (Thue) and "computable in practice" (Baker + LLL) are different guarantees; modern Thue solvers routinely close out such equations completely.
-:::
-
-## Connection to FLT and Other Equations
+## Thue's theorem and Fermat's equation
 
 <!-- section: thue-flt-connection -->
 
-FLT for fixed n is a special case of Thue (the form x^n + y^n , but it is reducible over Q(ζ), but one can reduce to irreducible factors or use in the cyclotomic).
+Fermat's equation has three unknowns, so Thue does not apply to it. It applies at once to the two-variable family alongside it, with a consequence that was out of reach before 1909.
 
-Thue's work was motivated by trying to prove FLT.
-
-More generally, superelliptic equations, generalized Fermat equations are attacked with similar approximation or modular methods.
-
-:::intuition
-Proving no solutions to x^n + y^n =1 for n>2 is a Thue-type statement (after homogenizing or projectivizing).
-
-Thue gave the first general finiteness for such "higher degree" Diophantine.
+:::theorem[$x^n+y^n=c$ has finitely many solutions]{#fermat-thue}
+Let $n \ge 3$ and let $c$ be a nonzero integer. Then $x^n + y^n = c$ has only finitely many integer solutions.
 :::
 
-:::example
-$x^3 + y^3 = 1$ as a Thue-type equation.
+:::proof
+The form $F(x,y) = x^n+y^n$ is homogeneous of degree $n \ge 3$. Over $\mathbb{Q}$ it factors as
+
+$$x^n+y^n = \prod_{j}\Phi_j(x,y)$$
+
+into irreducible homogeneous factors, corresponding to the factorisation of $t^n+1$ into cyclotomic-type irreducibles over $\mathbb{Q}$. If $n$ is odd, $x+y$ is one such factor and the complementary factor $x^{n-1}-x^{n-2}y+\cdots+y^{n-1}$ has degree $n-1 \ge 2$; if $n$ is even there is no linear factor at all, since $t^n+1$ has no real root.
+
+Each solution gives a factorisation $c = \prod_j \Phi_j(x,y)$ into integers, and $c$ has only finitely many such factorisations. Fix one, so that $\Phi_j(x,y) = c_j$ for each $j$. A factor with $\deg\Phi_j \ge 3$ gives a Thue equation, finite by the theorem *Thue's theorem*. A factor of degree $2$ is definite — $x^2-xy+y^2$ and its analogues are positive definite, being $\tfrac12(x^2+y^2+(x-y)^2)$ up to scaling — so $\Phi_j = c_j$ describes an ellipse, containing finitely many lattice points. A factor of degree $1$, $x+y = c_1$, can be substituted into any other factor equation, which is then a nonconstant one-variable polynomial equation with finitely many roots; and at least one other factor exists whenever $n \ge 3$, since $\deg(x^n+y^n) \ge 3$. Every branch gives finitely many solutions and there are finitely many branches.
+:::
+
+:::example[Sums of two cubes equal to $9$]
+Find the integer solutions of $x^3+y^3 = 9$ and explain the role of the factorisation.
 :::
 
 :::solution
-1. Step 1 (fit the shape). The form $f(x,y) = x^3 + y^3$ has degree $3$ and fixed value $h = 1 \ne 0$. (It factors as $(x+y)(x^2 - xy + y^2)$ over $\mathbb{Q}$, so it is *reducible*; Thue's finiteness still holds after handling the quadratic factor, which here contributes nothing infinite because $x^2 - xy + y^2 > 0$ is bounded once $x+y$ is bounded.)
-2. Step 2 (find the integer solutions). Test small values: $(1, 0)$ gives $1 + 0 = 1$ $\checkmark$; $(0, 1)$ gives $0 + 1 = 1$ $\checkmark$. For $|x|, |y| \ge 2$ with both nonzero, $|x^3 + y^3|$ is either far from $1$ or the terms cancel to $0$ (when $y = -x$), never landing on $1$.
-3. Step 3 (conclusion). The only integer solutions are $(1,0)$ and $(0,1)$ — a finite set. This is the exponent-$3$ shadow of Fermat's Last Theorem: writing $x^3 + y^3 = 1$ as $a^3 + b^3 = c^3$ with $c = 1$ shows there is no solution in *positive* integers, exactly FLT for $n = 3$. $\checkmark$
+1. Factor: $x^3+y^3 = (x+y)(x^2-xy+y^2) = 9$. Both factors are integers.
+2. Note $x^2-xy+y^2 = \tfrac12\big(x^2+y^2+(x-y)^2\big) \ge 0$, so both factors have the same sign, and their product is $9 > 0$, so both are positive.
+3. The positive factorisations of $9$ are $1\cdot 9$, $3\cdot 3$, $9\cdot 1$.
+4. $x+y=1$, $x^2-xy+y^2=9$: substituting $y = 1-x$ gives $x^2 - x(1-x) + (1-x)^2 = 3x^2-3x+1 = 9$, i.e. $3x^2-3x-8=0$, discriminant $9+96 = 105$, not a square. No integer solution.
+5. $x+y=3$, $x^2-xy+y^2=3$: $3x^2-9x+9 = 3$, i.e. $x^2-3x+2=0$, so $x = 1$ or $2$, giving $(1,2)$ and $(2,1)$. Check $1+8 = 9$ ✓.
+6. $x+y=9$, $x^2-xy+y^2=1$: $3x^2-27x+81 = 1$ has no integer root since $3x^2-27x+80=0$ has discriminant $729-960<0$.
+7. So the only solutions are $(1,2)$ and $(2,1)$ — finitely many, as the theorem *$x^n+y^n=c$ has finitely many solutions* predicts, and here the factorisation made the finiteness explicit without any appeal to Thue.
 :::
 
-## Common Mistakes
-
-- **Thue gives effective bounds**: The original proof does not; effective versions require Baker theory.
-- **Applies to all forms**: The form must be irreducible (or one reduces to the irreducible factors).
-- **Degree 2**: For degree 2 it can have infinitely many (Pell-like).
-- **h=0**: For h=0 it is about rational points on the curve, which may be infinite if genus 0 or 1 with rank.
-- **Binary form only**: The theorem is for two variables; more variables need other tools (Schmidt subspace theorem etc).
-
-Fermat's Last Theorem (FLT) states that there are no positive integers $a, b, c$ and integer $n > 2$ such that $a^n + b^n = c^n$.
-
-Stated by Pierre de Fermat in 1637 in the margin of a book, with the claim "I have a truly marvelous proof which this margin is too narrow to contain."
-
-It was proved by Andrew Wiles in 1994-95 (with a correction in 1995 with Taylor), using elliptic curves, modular forms, and the modularity theorem for semistable elliptic curves (the Taniyama-Shimura conjecture in the needed case).
-
-The proof is one of the highest achievements of 20th century mathematics, connecting Diophantine equations to the Langlands program.
-
-## Statement and Small Cases
+## Fermat's Last Theorem
 
 <!-- section: flt-statement -->
 
 :::theorem[Fermat's Last Theorem]{#flt}
-For $n > 2$, the equation
+For every integer $n \ge 3$ the equation
 
-$$a^n + b^n = c^n$$
+$$x^n + y^n = z^n$$
 
-has no solution in positive integers $a, b, c$.
+has no solution in nonzero integers $x,y,z$.
 :::
 
-For $n = 1$ it is trivial (many solutions, e.g. $1 + 2 = 3$).
-
-For $n = 2$ there are infinitely many solutions — the Pythagorean triples.
-
-Fermat proved the case $n = 4$ using infinite descent (a solution would force a strictly smaller one, contradiction).
-
-Euler proved $n = 3$ (his original argument had a gap, later filled).
-
-Dirichlet and Legendre handled $n = 5$, Lamé and others further cases. It suffices to prove FLT for $n = 4$ and for every odd *prime* exponent $p$, since any $n > 2$ has such a factor. The general case (all primes at once) stayed open until Wiles.
-
-:::intuition
-You cannot have two perfect powers with exponent >2 that add to another perfect power with the same exponent.
-
-For squares it works (Pythagoras), for cubes and higher, no.
+:::proof
+By the proposition *Reduction to $n=4$ and odd primes* it suffices to rule out $n=4$ and $n=p$ an odd prime. The case $n=4$ is the corollary *Fermat's Last Theorem for $n=4$*, proved in full below by descent. The case $p=3$ is Euler's descent in $\mathbb{Z}[\zeta_3]$, equivalently Kummer's theorem applied to the regular prime $3$. Every prime $p \ge 5$ is part (3) of the theorem *Modularity, Ribet's theorem, and Fermat*. Only the first of the three is proved in this chapter; the other two are quoted, with a sketch, where they are stated.
 :::
 
-:::example
-Spot-check $n = 3$ on small numbers (illustrating, not proving, FLT).
+Fermat wrote the statement in about 1637 in the margin of his copy of Diophantus, with the remark that he had a marvellous proof which the margin was too narrow to contain. Whatever he had, the one case he did write out is the descent for $n=4$ below. The general case resisted for 358 years and was proved by Wiles in 1995, with a crucial step joint with Taylor.
+
+The first move costs nothing and cuts the problem down enormously.
+
+:::proposition[Reduction to $n=4$ and odd primes]{#flt-reduction}
+If Fermat's equation has no nonzero solutions for $n=4$ and for every odd prime $n = p$, then it has none for any $n \ge 3$.
 :::
 
-:::solution
-Step 1 (test sums of two cubes). Look for $a^3 + b^3$ equal to a cube $c^3$:
-$1^3 + 2^3 = 1 + 8 = 9$, and $9$ lies between $2^3 = 8$ and $3^3 = 27$ — not a cube.
-$2^3 + 3^3 = 8 + 27 = 35$, between $3^3 = 27$ and $4^3 = 64$ — not a cube.
-$3^3 + 4^3 = 27 + 64 = 91$, between $4^3 = 64$ and $5^3 = 125$ — not a cube.
-$3^3 + 5^3 = 27 + 125 = 152$, between $125$ and $6^3 = 216$ — not a cube.
+:::proof
+Let $n \ge 3$. Either $4 \mid n$, or $n$ has an odd prime factor $p$ — indeed if $n$ is not divisible by any odd prime then $n$ is a power of $2$, and $n \ge 3$ forces $n \ge 4$, so $4 \mid n$.
 
-Step 2 (a famous near-miss). $3^3 + 4^3 + 5^3 = 27 + 64 + 125 = 216 = 6^3$ — but this is a sum of *three* cubes, which is allowed; FLT only forbids a sum of *two*.
+Suppose first $n = 4m$. If $x^n+y^n=z^n$ with $xyz \neq 0$, put $X = x^m$, $Y = y^m$, $Z = z^m$; then $X^4+Y^4=Z^4$ with $XYZ \neq 0$, contradicting the case $n=4$.
 
-Step 3 (caution). No amount of checking proves FLT — there are infinitely many candidates. Euler's actual proof for $n = 3$ uses descent in the ring $\mathbb{Z}[\omega]$ with $\omega = e^{2\pi i/3}$. The point of this check is only to build the expectation that no small solutions exist. $\checkmark$
+Otherwise $n = pm$ with $p$ an odd prime. Put $X = x^m, Y=y^m, Z=z^m$; then $X^p+Y^p=Z^p$ with $XYZ \neq 0$, contradicting the case $n=p$.
+
+So no $n \ge 3$ admits a solution.
 :::
 
-## Fermat's Proof for n=4 by Descent
+:::remark
+The reduction explains the shape of the historical record: Euler did $n=3$, Dirichlet and Legendre $n=5$, Lamé $n=7$, and Kummer — inventing ideal numbers to repair the failure of unique factorisation in $\mathbb{Z}[\zeta_p]$ — every **regular** prime at once, covering all $p<100$ except $37$, $59$, $67$. What no nineteenth-century method reached was *all* $p$ at once, since each argument needed control of the class number of $\mathbb{Q}(\zeta_p)$.
+:::
+
+## The case $n=4$: infinite descent
 
 <!-- section: flt-n4-descent -->
 
-:::proposition[Fermat's descent statement]
-The equation
+This is the one case of Fermat's Last Theorem that is elementary, and it is proved here completely. The method is Fermat's own **infinite descent**: from a putative solution manufacture a strictly smaller one; positive integers cannot decrease forever. It is proved in the stronger form $x^4+y^4=z^2$, which is what makes the descent close up.
 
-$$a^4 + b^4 = c^2$$
+:::theorem[No solutions to $x^4+y^4=z^2$]{#flt4}
+There are no positive integers $x,y,z$ with
 
-has no solution in positive integers.
+$$x^4 + y^4 = z^2 .$$
 :::
-
-This is stronger than FLT for $n = 4$, and implies it: if $a^4 + b^4 = c^4$, then setting $C = c^2$ gives $a^4 + b^4 = C^2$, which is forbidden.
 
 :::proof
-The idea: $a^4 + b^4 = c^2$ means $(a^2)^2 + (b^2)^2 = c^2$, so $(a^2, b^2, c)$ is a Pythagorean triple whose two legs are themselves perfect squares. Feeding this into the Pythagorean parametrization forces the existence of a *strictly smaller* triple of the same special form — legs again perfect squares. Iterating produces an infinite strictly decreasing sequence of positive integers, which is impossible. Hence no solution exists.
+Suppose solutions exist. Among all of them choose one, $(x,y,z)$, with $z$ **minimal**; this is legitimate because any non-empty set of positive integers has a least element.
+
+**Step 1: the triple is primitive.** If a prime $p$ divides $x$ and $y$, then $p^4 \mid z^2$, so $p^2 \mid z$, and $(x/p, y/p, z/p^2)$ is a smaller solution — smaller because $z/p^2 < z$. This contradicts minimality, so $\gcd(x,y)=1$, and then $\gcd(x^2,y^2)=1$.
+
+**Step 2: apply the Pythagorean parametrisation.** $(x^2, y^2, z)$ is a Pythagorean triple, primitive by Step 1. By the lemma *Coprimality and parity in a primitive triple* exactly one of $x^2,y^2$ is even; relabel so that $x^2$ is odd and $y^2$ is even. The theorem *Parametrisation of primitive Pythagorean triples* gives coprime $m>n\ge1$ of opposite parity with
+
+$$x^2 = m^2-n^2, \qquad y^2 = 2mn, \qquad z = m^2+n^2 .$$
+
+**Step 3: a second Pythagorean triple.** Rewrite the first equation as
+
+$$x^2 + n^2 = m^2 .$$
+
+Since $\gcd(m,n)=1$, this triple $(x,n,m)$ is primitive. Its even member must be $n$: $m$ and $n$ have opposite parity and $x$ is odd, so if $n$ were odd then $m$ would be even and $x^2 = m^2-n^2 \equiv 0 - 1 \equiv 3 \pmod 4$, impossible for a square. So $n$ is even and $m$ is odd. Apply the parametrisation again: there are coprime $a > b \ge 1$ of opposite parity with
+
+$$x = a^2-b^2, \qquad n = 2ab, \qquad m = a^2+b^2 .$$
+
+**Step 4: extract squares.** Substitute into $y^2 = 2mn$:
+
+$$y^2 = 2m\cdot 2ab = 4abm, \qquad\text{so}\qquad \left(\frac y2\right)^2 = a\,b\,m .$$
+
+(The left side is an integer since $y$ is even.) Now $a, b, m$ are **pairwise coprime**: $\gcd(a,b)=1$ by construction; and any prime dividing $m = a^2+b^2$ and $a$ would divide $b^2$, hence $b$, contradiction — likewise for $b$. By the lemma *Coprime factors of a square are squares*, applied twice (first to $a\cdot(bm)$, then to $b \cdot m$), each of $a, b, m$ is a perfect square:
+
+$$a = X^2, \qquad b = Y^2, \qquad m = Z^2$$
+
+for positive integers $X,Y,Z$.
+
+**Step 5: descend.** Substituting into $m = a^2+b^2$,
+
+$$Z^2 = m = a^2 + b^2 = X^4 + Y^4 .$$
+
+So $(X,Y,Z)$ is another solution of the same equation, in positive integers. Compare sizes:
+
+$$z = m^2+n^2 > m^2 \ge m = Z^2 \ge Z,$$
+
+using $n \ge 1$ and $Z \ge 1$. Hence $Z < z$, contradicting the minimality of $z$.
+
+The assumption that a solution exists is therefore untenable.
 :::
 
-:::intuition
-Assume a solution for exponent 4. Then it gives a Pythagorean triple where the legs are themselves squares. The param for that triple forces even smaller solution of the same form, and so on forever, impossible in positive integers.
+:::figure[The descent of the theorem *No solutions to $x^4+y^4=z^2$*: each supposed solution with hypotenuse $z$ produces a strictly smaller one with $Z^2 = m < z$. The heights are the successive $z$-values, which must strictly decrease and cannot.]{#descent-tree}
+{
+  "type": "plot",
+  "x": [0, 6.6], "y": [0, 10.6],
+  "xTicks": 1, "yTicks": 2, "xLabel": "descent step", "yLabel": "value of z",
+  "marks": [
+    { "kind": "bars", "bars": [[0.2, 1.0, 10], [1.3, 2.1, 6.4], [2.4, 3.2, 3.5], [3.5, 4.3, 1.9], [4.6, 5.4, 0.9], [5.7, 6.5, 0.3]] },
+    { "kind": "path", "points": [[0.6, 10], [1.7, 6.4], [2.8, 3.5], [3.9, 1.9], [5.0, 0.9], [6.1, 0.3]], "tone": "result" },
+    { "kind": "text", "at": [3.1, 9.4], "text": "each step: z becomes Z with Z^2 = m < z", "leaderTo": [1.0, 9.6] },
+    { "kind": "text", "at": [4.4, 5.2], "text": "no least element: contradiction", "leaderTo": [6.1, 0.55] }
+  ]
+}
 :::
 
-:::example
-One descent step for $a^4 + b^4 = c^2$.
+:::corollary[Fermat's Last Theorem for $n=4$]{#flt4-cor}
+The equation $x^4+y^4=z^4$ has no solution in nonzero integers.
 :::
 
-:::solution
-Assume a solution in positive integers with $\gcd(a,b) = 1$ and $c$ minimal; say $a$ odd, $b$ even.
-
-Step 1 (first parametrization). $(a^2)^2 + (b^2)^2 = c^2$ is a primitive triple, so there exist coprime $m > n > 0$ of opposite parity with
-$$a^2 = m^2 - n^2, \qquad b^2 = 2mn, \qquad c = m^2 + n^2.$$
-
-Step 2 (second parametrization). From $a^2 + n^2 = m^2$ (another primitive triple, with $n$ even since $a$ is odd), there are coprime $r > s > 0$ with
-$$a = r^2 - s^2, \qquad n = 2rs, \qquad m = r^2 + s^2.$$
-
-Step 3 (a new square identity). Substitute into $b^2 = 2mn = 2(r^2 + s^2)(2rs) = 4rs(r^2 + s^2)$, so
-$$\left(\frac{b}{2}\right)^2 = rs\,(r^2 + s^2).$$
-The three factors $r$, $s$, $r^2 + s^2$ are pairwise coprime, and their product is a perfect square, so each is a perfect square: $r = x^2$, $s = y^2$, $r^2 + s^2 = z^2$.
-
-Step 4 (the smaller solution). Then $x^4 + y^4 = r^2 + s^2 = z^2$ — a new solution of the *same* equation. And its "$c$" is $z$, with
-$$z \le z^2 = r^2 + s^2 = m \le m^2 < m^2 + n^2 = c,$$
-so $z < c$, contradicting the minimality of $c$.
-
-Step 5 (conclusion). No minimal solution can exist, hence no solution at all. This is Fermat's infinite descent. $\checkmark$
+:::proof
+A solution with $xyz \\neq 0$ may be taken with $x,y,z>0$ by changing signs, since every exponent is even. Then $x^4+y^4 = (z^2)^2$ is a solution of $x^4+y^4=w^2$ in positive integers with $w = z^2$, contradicting the theorem *No solutions to $x^4+y^4=z^2$*.
 :::
 
-## The Modularity Approach for General n
+:::remark
+The stronger statement is what makes the descent close up, and this is a recurring feature of the method: proving more can be easier, because a stronger conclusion feeds the induction. The same theorem also shows that no right triangle with integer sides has area a perfect square — equivalently, that $1$ is not a **congruent number** — which is the form in which Fermat himself recorded the argument.
+:::
+
+## The modularity route to the general case
 
 <!-- section: flt-wiles-proof -->
 
-Wiles' proof: assume a solution to a^p + b^p = c^p for odd prime p (the hard case; p=2 done).
+For odd prime exponents no elementary argument is known, and the successful strategy came from elliptic curves. To a hypothetical solution $a^p+b^p=c^p$ Frey attached the curve
 
-:::definition[Frey curve]
-To such a solution associate the elliptic curve
+$$E_{a,b} : \quad Y^2 = X(X - a^p)(X + b^p),$$
 
-$$y^2 = x (x - a^p) (x + b^p),$$
+now called the **Frey curve**. Its discriminant $16(abc)^{2p}$ is a constant times a perfect $p$-th power, which makes the curve's ramification absurdly mild: it is semistable, and at every prime of bad reduction the $p$-torsion of $E$ is unramified. Serre and Ribet made "absurdly mild" precise; Wiles supplied what was needed to make the contradiction bite.
 
-the **Frey curve**.
+:::theorem[Modularity, Ribet's theorem, and Fermat]{#modularity-flt}
+1. *(Modularity, Wiles–Taylor 1995 for semistable curves; Breuil–Conrad–Diamond–Taylor 2001 in general.)* Every elliptic curve over $\mathbb{Q}$ is modular: its $L$-function coincides with that of a weight-$2$ newform.
+2. *(Ribet 1990, the epsilon conjecture.)* If the Frey curve $E_{a,b}$ were modular, the associated newform could be taken of level $2$.
+3. Consequently, Fermat's equation $x^p+y^p=z^p$ has no nonzero solutions for any prime $p \ge 5$.
 :::
 
-This curve is semistable, and if the solution exists it would be a counterexample to the modularity theorem (every elliptic curve over Q is modular, i.e. comes from a modular form).
+:::proof
+**Proof of (3) from (1) and (2) — complete modulo those two inputs, which are not proved here. A sketch of (1) follows.**
 
-:::theorem[Modularity for semistable elliptic curves]
-Wiles (with Taylor) proved modularity for semistable elliptic curves over $\mathbb{Q}$; hence no such Frey curve exists, hence no solution.
+Suppose $a^p+b^p=c^p$ with $abc \neq 0$ and $p \ge 5$ prime; scale so $\gcd(a,b,c)=1$, and arrange $a \equiv 3 \pmod 4$ and $b$ even (possible after permuting and changing signs, since exactly one of $a,b,c$ is even). Form the Frey curve $E = E_{a,b}$. Its discriminant $\Delta = 16(abc)^{2p}$ and conductor $N = \prod_{\ell \mid abc}\ell$ make $E$ semistable.
+
+By (1), $E$ corresponds to a weight-$2$ newform of level $N$. By (2) — Ribet's level-lowering theorem, applicable because the mod-$p$ representation of $E$ is irreducible (Mazur) and unramified outside $2p$ — that newform may be taken of level $2$.
+
+But the space of weight-$2$ cusp forms of level $2$ is **zero-dimensional**: the modular curve $X_0(2)$ has genus $0$, and the dimension of the space of cusp forms of weight $2$ and level $N$ equals the genus of $X_0(N)$. So there is no such newform, and the assumed solution cannot exist.
+
+**Sketch of (1) — assumes deformation theory of Galois representations and Hecke algebras.** Wiles proved a modularity lifting theorem: if the mod-$p$ representation $\bar\rho$ attached to $E$ is modular, so is every lift with prescribed ramification, the $p$-adic representation of $E$ included. The proof identifies a universal deformation ring $R$ with a Hecke algebra $\mathbb{T}$ by showing the natural surjection $R \twoheadrightarrow \mathbb{T}$ is an isomorphism. To start, $\bar\rho$ must itself be modular: Langlands–Tunnell supplies this for $p=3$, and the "$3$–$5$ switch" handles curves with reducible mod-$3$ representation. The original gap, in an Euler-system bound on a Selmer group, was closed by Taylor and Wiles with a patching argument.
 :::
 
-The proof involved deformation theory of Galois representations, Hecke rings, etc.
-
-:::intuition
-A hypothetical solution for large exponent would create a very special elliptic curve (Frey) that cannot exist because all elliptic curves are "modular" (have a corresponding modular form or Galois rep coming from automorphic), but this one wouldn't.
-
-The contradiction proves no solution.
-:::
-
-:::example
-Trace the logical chain of Wiles' proof.
-:::
-
-:::solution
-1. Step 1 (assume a counterexample). Suppose $a^p + b^p = c^p$ has a solution in positive integers for some odd prime $p$, chosen coprime and with $b$ even.
-2. Step 2 (build the Frey curve). Form the elliptic curve $E : y^2 = x(x - a^p)(x + b^p)$. Its discriminant is (up to a constant) $(abc)^{2p}$, a perfect $p$-th power in a very structured way — this makes $E$ *semistable* with unusually simple ramification.
-3. Step 3 (what modularity would say). The modularity theorem (Wiles–Taylor, for semistable curves) says every such $E$ over $\mathbb{Q}$ arises from a modular form; its mod-$p$ Galois representation must match one coming from a modular form of a specific, small level.
-4. Step 4 (Ribet's contradiction). Ribet's level-lowering theorem (the "epsilon conjecture") shows the Frey curve's Galois representation would have to come from a modular form of level $2$ — but there are **no** nonzero cusp forms of weight $2$ and level $2$. Contradiction.
-5. Step 5 (conclusion). The assumed solution cannot exist, so $a^p + b^p = c^p$ has no positive-integer solution for any odd prime $p$; combined with Fermat's $n = 4$ case, FLT holds for all $n > 2$. $\checkmark$
-6. There is no numerical instance to display precisely *because* the theorem says none exists — the "example" is the chain of implications that forces that conclusion.
+:::remark
+Notice what was *not* used: no congruence obstruction, no bound on the size of solutions, nothing in the spirit of the first half of this chapter. The proof works by showing that a solution would create a mathematical object — a weight-$2$ newform of level $2$ — which provably does not exist.
 :::
 
 ## Common Mistakes
 
-- **FLT for n=2**: There are solutions, the Pythagorean triples.
-- **Fermat had a simple proof**: Unlikely; the full proof is hundreds of pages of advanced machinery developed over centuries.
-- **Checked for small a b c**: Yes, but the theorem is for all, and the proof is global.
-- **Counterexamples in other rings**: In some number rings FLT fails, but over Z for n>2 no.
-- **"Last" theorem**: It was the last of Fermat's claims to be proved; he proved or claimed several others.
+**Concluding solvability from congruences.** The proposition *Congruence obstruction* runs one way only, and the theorem *Selmer's counterexample to the local–global principle* is the standard witness. The one place where local information suffices is quadratic forms over $\mathbb{Q}$, by the theorem *Hasse–Minkowski* — and even there the conclusion is about *rational*, not integral, solubility.
+
+**Using the wrong step in the linear general solution.** The step vector is $(b/d, -a/d)$, not $(b,-a)$. Writing $x = x_0 + bt$, $y = y_0 - at$ produces valid solutions but misses $d-1$ out of every $d$ of them. Divide by the gcd.
+
+**Forgetting to check $d \mid c$ before solving.** The extended algorithm on $6x+15y=8$ yields $6\cdot3+15\cdot(-1)=3$, and then an irresistible urge to multiply by $8/3$. The result is not an integer point.
+
+**Dropping a hypothesis in the Pythagorean parametrisation.** All four conditions on $(m,n)$ matter: $m > n \ge 1$ for positivity, $\gcd(m,n)=1$ and opposite parity for primitivity. Taking $m=3,n=1$ (both odd) gives $(8,6,10)$ — a genuine triple, but not primitive, and not in the list the theorem enumerates.
+
+**Assuming every triple already has $x$ odd.** The convention is a *labelling*, imposed after the lemma *Coprimality and parity in a primitive triple*. Given $(20,21,29)$, identify $21$ as the odd leg before applying $m^2 = (z+x)/2$; using $x=20$ gives $m^2 = 24.5$.
+
+**Assuming every quadratic ring is a UFD.** The theorem *Gaussian derivation of the Pythagorean parametrisation* works because $\mathbb{Z}[i]$ has unique factorisation. The same manoeuvre in $\mathbb{Z}[\sqrt{-5}]$ is invalid: $6 = 2\cdot3 = (1+\sqrt{-5})(1-\sqrt{-5})$. Name the ring and justify unique factorisation in it.
+
+**Searching for a Pell solution and giving up.** For $d=61$ the fundamental solution has ten digits, for $d=109$ fifteen. A search that finds nothing up to $y = 10^6$ has proved nothing: the theorem *Pell's equation always has a nontrivial solution* guarantees one exists, and continued fractions find it.
+
+**Believing $x^2-dy^2=-1$ always has a solution.** It does not. $x^2-3y^2=-1$ is insoluble, since modulo $3$ it would need $x^2 \equiv -1 \equiv 2$, and $2$ is not a square mod $3$. Solubility of the $-1$ equation depends on the period of $\sqrt d$ being odd, and is a genuinely different question from the theorem *Pell's equation always has a nontrivial solution*.
+
+**Confusing "finitely many" with "effectively listable".** The theorems *Thue's theorem* and *Siegel and Faltings* bound the number of solutions, not their size, so they never certify a list as complete. Only the theorem *Baker's bound and effective Thue equations* supplies a computable bound. In particular Faltings does not settle Fermat: for fixed $n \ge 4$ it gives finitely many rational points on $x^n+y^n=1$, and "finitely many" is not "none".
+
+**Attempting the $n=4$ descent without the stronger statement.** The descent works for $x^4+y^4=z^2$, not for $x^4+y^4=z^4$: starting from the fourth-power version, Step 2 produces $z^2 = m^2+n^2$ with $z$ itself a square, and the induction does not close.
