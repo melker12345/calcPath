@@ -1,255 +1,523 @@
 ---
-title: Non-Parametric Statistics
+title: "Nonparametric Methods"
 ---
 
-# Non-Parametric Statistics
+# Nonparametric Methods
 
-Non-parametric tests make no assumption about the shape of the population distribution. They are the tool of choice when data is ordinal, heavily skewed, or when normality cannot be assumed.
+Every test so far has assumed a shape. The $t$-tests assumed normal populations, the $F$-tests assumed normal errors with equal variances, and logistic regression assumed a Bernoulli response with a logit-linear mean. Those assumptions buy efficiency: when they hold, the resulting procedures extract about as much from the data as anything can.
 
-The chi-square tests handle categorical data: the goodness-of-fit test checks whether observed frequencies match a theoretical distribution; the test for independence checks whether two categorical variables are associated.
+When they fail the picture is mixed rather than catastrophic, and it is worth being precise about that, because "the data are not normal, so use a nonparametric test" is a reflex that is often wrong. The $t$-test is robust to moderate non-normality because the central limit theorem is already working on the sample mean. What it is *not* robust to is heavy tails and outliers, where a single extreme observation can dominate $\bar x$ and inflate $s$ — and that failure is not repaired by a larger sample, because a larger sample from a heavy-tailed population brings more extremes with it.
 
-Rank-based tests (Mann-Whitney U, Wilcoxon signed-rank) are non-parametric alternatives to $t$-tests. By converting data to ranks, they become robust to outliers and distributional assumptions.
+The methods in this chapter avoid the problem by throwing away information deliberately. Replace the observations by their **ranks** and an outlier at $10^6$ becomes simply the largest value, no more influential than one at $10$. The null distribution of a rank statistic can then be computed by counting permutations, with no assumption about the population at all — which is where the name comes from, and why "distribution-free" is the more accurate one.
 
-## Chi-Square Goodness-of-Fit Test
+That freedom costs something, and the chapter quantifies it: against a genuinely normal population the Wilcoxon test needs about $5\%$ more data than the $t$-test to achieve the same power. Against heavy tails it can need dramatically *less*. The last section covers the computational approach that has largely superseded both — permutation and bootstrap methods, which make almost no assumptions and require almost no distribution theory, only the willingness to resample.
+
+The chi-square tests of *Statistical Inference: Hypothesis Testing* belong to this family too, being tests about counts that assume nothing about an underlying continuous distribution. They are derived there and used here, with the exact alternatives that chapter did not cover.
+
+## Goodness of fit without a parametric model
 
 <!-- section: chi-square -->
 
-The goodness-of-fit test checks whether observed category frequencies match a hypothesised distribution.
+The chi-square goodness-of-fit test asks whether observed counts match a hypothesised set of probabilities, and it is proved in the testing chapter. Its limitations set up everything else in this section.
 
-:::definition[Chi-square goodness-of-fit test]{#gof}
-For $k$ categories with observed counts $O_i$ and expected counts $E_i = n\cdot p_i$, where the $p_i$ are the hypothesised probabilities, the test statistic is
+:::remark[What the chi-square test needs, and when it fails]
+By the theorem *Chi-square goodness-of-fit test*, $X^2 = \sum_i (O_i-E_i)^2/E_i$ is asymptotically $\chi^2_{k-1-m}$. Two conditions are doing work.
 
-$$\chi^2 = \sum_{i=1}^k \frac{(O_i-E_i)^2}{E_i}.$$
+The distribution is **asymptotic**, requiring expected counts of roughly $5$ or more; with small expected counts the statistic is discrete and skewed while $\chi^2$ is continuous, and the test rejects too often.
 
-Under $H_0$, $\chi^2 \sim \chi^2_{k-1}$.
+And the data must be **categorical**, or made so. Applying it to a continuous variable requires binning, and the result depends on the bins chosen — a real arbitrariness, since different binnings of the same data give different $p$-values.
 :::
 
-The degrees of freedom are $k-1$, with one more subtracted for each parameter estimated from the data — for example if $\mu$ and $\sigma$ are estimated for a normal fit.
+The second limitation is removed by comparing distribution functions directly rather than counts.
 
-The test is always right-tailed: a large $\chi^2$ means the observed counts deviate substantially from expected. A small $\chi^2$ (not significant) means the data is consistent with $H_0$.
+:::definition[Kolmogorov-Smirnov statistic]{#ks-statistic}
+For a sample $x_1,\ldots,x_n$ with empirical distribution function
 
-:::note
-Validity condition: all expected counts $E_i \geq 5$. If some are too small, merge adjacent categories or use the exact multinomial test.
+$$F_n(x) = \frac{1}{n}\#\{i : x_i \le x\},$$
+
+and a hypothesised continuous distribution function $F_0$, the **Kolmogorov-Smirnov statistic** is
+
+$$D_n = \sup_x \big|F_n(x) - F_0(x)\big| .$$
 :::
 
-Applications: testing whether a die is fair, whether genetic ratios follow Mendelian predictions, or whether a sample comes from a specified distribution.
-
-:::intuition
-Roll a die $600$ times. If it's fair, you expect $100$ of each face. The $\chi^2$ statistic sums up how far off each actual count is from $100$, scaled by $100$. A large sum means the die is probably loaded; a small sum means the counts are consistent with fairness.
+:::theorem[The null distribution of the KS statistic is distribution-free]{#ks-distribution-free}
+If the data really come from the continuous distribution $F_0$, the distribution of $D_n$ does not depend on $F_0$.
 :::
 
-:::example[Goodness-of-fit for a fair die]
-Roll a die $120$ times. Observed counts: $\{25, 17, 15, 23, 19, 21\}$. $H_0$: fair die ($p_i=1/6$ for all $i$).
+:::proof
+Apply the probability integral transform: if $X$ has continuous distribution function $F_0$, then $U = F_0(X)$ is Uniform$(0,1)$. Since $F_0$ is non-decreasing, $x_i \le x$ if and only if $F_0(x_i)\le F_0(x)$ at continuity points, so the empirical distribution function of the $u_i = F_0(x_i)$ at the point $u = F_0(x)$ equals $F_n(x)$.
+
+Writing $G_n$ for the empirical distribution function of the uniforms,
+
+$$D_n = \sup_x\big|F_n(x)-F_0(x)\big| = \sup_{u\in(0,1)}\big|G_n(u) - u\big|,$$
+
+which involves only a uniform sample. No feature of $F_0$ survives. $\blacksquare$
+:::
+
+That is the pattern the whole chapter repeats: transform the data into something whose distribution is fixed regardless of the population — here by the probability integral transform, later by ranking — and the null distribution becomes computable once and for all.
+
+:::figure[The empirical distribution function of a sample of $10$ against a hypothesised continuous distribution. $F_n$ is a staircase rising by $1/10$ at each observation; the smooth curve is $F_0$. The Kolmogorov-Smirnov statistic is the largest vertical gap between them, marked here just after the sixth observation. Because the comparison is with the whole distribution function rather than with binned counts, nothing depends on an arbitrary choice of bins.]{#ks-figure}
+{
+  "type": "plot",
+  "x": [-2.9, 2.9],
+  "y": [-0.08, 1.16],
+  "xTicks": 1,
+  "yTicks": 0.1,
+  "xLabel": "x",
+  "yLabel": "cumulative probability",
+  "marks": [
+    { "kind": "function", "fn": "1/(1+exp(-1.7*x))", "tone": "result" },
+    { "kind": "path", "points": [[-2.9,0],[-1.6,0]], "tone": "accent" },
+    { "kind": "path", "points": [[-1.6,0.1],[-1.05,0.1]], "tone": "accent" },
+    { "kind": "path", "points": [[-1.05,0.2],[-0.62,0.2]], "tone": "accent" },
+    { "kind": "path", "points": [[-0.62,0.3],[-0.15,0.3]], "tone": "accent" },
+    { "kind": "path", "points": [[-0.15,0.4],[0.18,0.4]], "tone": "accent" },
+    { "kind": "path", "points": [[0.18,0.5],[0.52,0.5]], "tone": "accent" },
+    { "kind": "path", "points": [[0.52,0.6],[1.1,0.6]], "tone": "accent" },
+    { "kind": "path", "points": [[1.1,0.7],[1.55,0.7]], "tone": "accent" },
+    { "kind": "path", "points": [[1.55,0.8],[2.1,0.8]], "tone": "accent" },
+    { "kind": "path", "points": [[2.1,0.9],[2.5,0.9]], "tone": "accent" },
+    { "kind": "path", "points": [[2.5,1.0],[2.9,1.0]], "tone": "accent" },
+    { "kind": "path", "points": [[0.52,0.6],[0.52,0.708]], "tone": "alt" },
+    { "kind": "text", "at": [1.62, 0.33], "text": "KS distance", "tone": "alt", "leaderTo": [0.56, 0.655] },
+    { "kind": "text", "at": [-1.85, 0.86], "text": "F_0", "tone": "result", "leaderTo": [-0.9, 0.175] },
+    { "kind": "text", "at": [-2.2, 0.55], "text": "F_n", "tone": "accent", "leaderTo": [-1.3, 0.105] }
+  ]
+}
+:::
+
+:::example[The KS statistic by hand]
+A sample of five values has $F_0(x_i) = 0.12, 0.30, 0.41, 0.78, 0.94$ when evaluated at the ordered observations. Compute $D_5$.
 :::
 
 :::solution
-1. Expected: $E_i = 120/6 = 20$ for each face.
-2. $\chi^2 = \frac{(25-20)^2}{20}+\frac{(17-20)^2}{20}+\frac{(15-20)^2}{20}+\frac{(23-20)^2}{20}+\frac{(19-20)^2}{20}+\frac{(21-20)^2}{20}$
-3. $= \frac{25+9+25+9+1+1}{20} = \frac{70}{20} = 3.5$. $df=5$.
-4. $\chi^2_{0.05,5}=11.07$. Since $3.5 < 11.07$, fail to reject $H_0$. The data is consistent with a fair die.
+1. The empirical distribution function jumps to $i/5$ at the $i$-th ordered observation, so at each $x_i$ it takes the value $i/5$ just after the jump and $(i-1)/5$ just before.
+2. Both gaps must be checked at every point. The "after" gaps $|i/5 - F_0(x_i)|$ are
+
+$$|0.2-0.12| = 0.08,\quad |0.4-0.30|=0.10,\quad |0.6-0.41|=0.19,\quad |0.8-0.78|=0.02,\quad |1.0-0.94|=0.06 .$$
+
+3. The "before" gaps $|(i-1)/5 - F_0(x_i)|$ are $0.12$, $0.10$, $0.01$, $0.18$, $0.14$.
+4. The largest of all ten is $0.19$, so $D_5 = 0.19$.
+5. Sanity check on why both sides are needed: at the fourth observation the "before" gap $0.18$ is far larger than the "after" gap $0.02$, so checking only one side would have missed a near-maximum. The supremum of $|F_n-F_0|$ is always attained at a jump, from one side or the other.
+6. Against the $5\%$ critical value for $n=5$, about $0.565$, this is nowhere near significant — five observations can rule out very little.
 :::
 
-## Chi-Square Test for Independence
+:::pitfall
+The theorem assumes $F_0$ is **fully specified in advance**. Estimating parameters from the same data — testing normality with $\bar x$ and $s$ plugged in — makes $D_n$ stochastically smaller, so the standard critical values are too large and the test rejects too rarely. The Lilliefors correction exists for exactly this case.
+
+More generally, testing for normality before choosing a test is a two-stage procedure whose overall error rate nobody computes, and it is a poor use of the data besides: with small $n$ the normality test has no power to detect anything, and with large $n$ it rejects departures too small to matter for the $t$-test that follows.
+:::
+
+:::definition[Fisher's exact test]{#fishers-exact}
+For a $2\times 2$ table with fixed margins, the probability of the observed table under independence is given by the hypergeometric distribution,
+
+$$P = \frac{\binom{a+b}{a}\binom{c+d}{c}}{\binom{n}{a+c}},$$
+
+and the test sums this probability over all tables at least as extreme as the one observed.
+:::
+
+Fisher's test is exact for any sample size, which is what recommends it when expected counts are small and the chi-square approximation cannot be trusted.
+
+:::example[When the approximation cannot be used]
+A $2\times 2$ table has counts $\begin{pmatrix} 8 & 2\\ 1 & 9\end{pmatrix}$. Check whether the chi-square test is appropriate.
+:::
+
+:::solution
+1. Margins: rows $10$ and $10$, columns $9$ and $11$, total $20$.
+2. Expected counts under independence: $E_{11} = 10(9)/20 = 4.5$, $E_{12} = 10(11)/20 = 5.5$, and the same for the second row.
+3. Two of the four expected counts are $4.5$, below the working threshold of $5$, so the chi-square approximation is questionable — and with $n=20$ the statistic is very discrete.
+4. Use Fisher's exact test. The observed table's probability is
+
+$$\frac{\binom{10}{8}\binom{10}{1}}{\binom{20}{9}} = \frac{45\times 10}{167960} = 0.00268,$$
+
+and summing over the more extreme tables ($a=9$ and $a=10$) gives a one-sided $p$ of about $0.0029$.
+5. Sanity check: the association is stark — $8$ of $10$ in one row against $1$ of $10$ in the other — so a very small $p$ is expected, and the exact computation confirms it without relying on an approximation the counts cannot support.
+6. Note what *not* to do: pooling categories to force expected counts above $5$ changes the hypothesis being tested, and here there is nothing to pool.
+:::
+
+## Association in tables
 
 <!-- section: chi-square-independence -->
 
-A two-way contingency table displays the joint frequencies of two categorical variables. The test of independence asks $H_0$: the two variables are independent, so that knowing one gives no information about the other.
+The chi-square test of independence is proved in the testing chapter, with $(r-1)(c-1)$ degrees of freedom. What it does not provide is a measure of *how strong* an association is, and with a large sample it will declare significance for associations of no practical size.
 
-:::definition[Chi-square test for independence]{#independence-test}
-Under independence, the expected count in cell $(i,j)$ is
+:::definition[Cramer's V]{#cramers-v}
+For an $r\times c$ table with chi-square statistic $X^2$ and sample size $n$,
 
-$$E_{ij} = \frac{(\text{row}_i \text{ total}) \times (\text{col}_j \text{ total})}{n},$$
-
-and the test statistic is
-
-$$\chi^2 = \sum_{i,j} \frac{(O_{ij}-E_{ij})^2}{E_{ij}}$$
-
-with $(r-1)(c-1)$ degrees of freedom.
+$$V = \sqrt{\frac{X^2}{n\,\min(r-1,\,c-1)}} \in [0,1].$$
 :::
 
-The chi-square test detects association but not direction or causation. For a $2\times 2$ table, the odds ratio or relative risk quantifies the strength of association beyond just significance.
-
-:::note
-Fisher's exact test: for small samples where $\chi^2$ is unreliable (expected counts $< 5$), compute the exact probability of the observed table and all more extreme ones. It is exact regardless of sample size.
+:::proposition[Cramer's V is bounded by one]{#v-bounded}
+$X^2 \le n\min(r-1,c-1)$, so $V\in[0,1]$, with $V=0$ under exact independence and $V=1$ for a perfect association.
 :::
 
-:::proposition[Equivalence with the two-proportion z-test]
-In a $2\times 2$ table, the $\chi^2$ test for independence and the $z$-test for comparing two proportions are the same test:
-
-$$z^2 = \chi^2.$$
+:::proof
+We use the standard bound $X^2 \le n\min(r-1,c-1)$, which is attained when each row has all its mass in one column (or each column in one row). Dividing by $n\min(r-1,c-1)$ and taking the square root gives $V\le 1$. When the observed counts equal the expected ones exactly, $X^2=0$ and so is $V$. $\blacksquare$
 :::
 
-:::intuition
-You survey men and women about their coffee preference (tea or coffee). A contingency table records the counts. The test asks: does gender have anything to do with the drink preference? If men and women prefer coffee at the same rate, the variables are independent and $\chi^2$ will be small.
+The important feature is the $n$ in the denominator. $X^2$ grows proportionally with the sample size for a fixed pattern of association, so it measures evidence; $V$ divides that out and measures strength. Reporting both separates "are we sure?" from "does it matter?", exactly as $\eta^2$ did beside the ANOVA $F$.
+
+:::definition[McNemar's test]{#mcnemar}
+For paired binary data — the same subjects measured twice — with $b$ subjects changing from $0$ to $1$ and $c$ changing from $1$ to $0$, the test statistic is
+
+$$X^2 = \frac{(b-c)^2}{b+c} \ \sim\ \chi^2_1 \quad\text{under } H_0,$$
+
+the concordant pairs being ignored entirely.
 :::
 
-:::example[Chi-square test for independence]
-Contingency table (Gender vs. Preference): Coffee: Men $30$, Women $20$; Tea: Men $10$, Women $40$. $n=100$.
+:::proof
+Under the null that the two measurements have the same marginal distribution, a subject who changes is equally likely to change in either direction. So conditional on $b+c$ changers, $b$ is Binomial$(b+c,\tfrac12)$, with mean $(b+c)/2$ and variance $(b+c)/4$. The standardised value is
+
+$$Z = \frac{b - (b+c)/2}{\sqrt{(b+c)/4}} = \frac{(b-c)/2}{\sqrt{b+c}/2} = \frac{b-c}{\sqrt{b+c}},$$
+
+and $Z^2$ is the stated statistic, asymptotically $\chi^2_1$. $\blacksquare$
+:::
+
+That the concordant pairs drop out is the same idea as pairing in the $t$-test: subjects who gave the same answer twice carry no information about a change, so conditioning on the changers removes a nuisance and keeps only the comparison.
+
+:::example[Association: significance against strength]
+A $2\times 3$ table on $n=2000$ subjects gives $X^2 = 12.8$. Test independence at $\alpha=0.05$ with $\chi^2_{0.05,2}=5.991$, and assess the strength of the association.
 :::
 
 :::solution
-1. Row totals: Coffee $50$, Tea $50$. Column totals: Men $40$, Women $60$.
-2. Expected counts: $E_{\text{Men,Coffee}} = 50(40)/100=20$; $E_{\text{Women,Coffee}} = 50(60)/100=30$; $E_{\text{Men,Tea}} = 20$; $E_{\text{Women,Tea}} = 30$.
-3. $\chi^2 = (30-20)^2/20 + (20-30)^2/30 + (10-20)^2/20 + (40-30)^2/30 = 5+3.33+5+3.33=16.67$.
-4. $df=(2-1)(2-1)=1$. $\chi^2_{0.05,1}=3.84$. Since $16.67>3.84$, reject $H_0$. Gender and drink preference are associated.
+1. Degrees of freedom: $(2-1)(3-1) = 2$. Since $12.8 > 5.991$, reject independence — the association is statistically significant, with $p\approx 0.0017$.
+2. Strength: $\min(r-1,c-1) = 1$, so
+
+$$V = \sqrt{\frac{12.8}{2000\times 1}} = \sqrt{0.0064} = 0.08 .$$
+
+3. A Cramér's $V$ of $0.08$ is a very weak association — the variables are related, but knowing one tells you almost nothing about the other.
+4. Sanity check on the role of $n$: the same pattern in a table of $n=200$ would give $X^2 = 1.28$, nowhere near significance, with the identical $V=0.08$. The statistic tracks the sample size; $V$ does not.
+5. The honest report is both numbers. "Significant association ($p=0.002$)" alone invites a reader to imagine a strong relationship that is not there.
 :::
 
-## Rank-Based Tests: Mann-Whitney and Wilcoxon
+## Rank tests
 
 <!-- section: rank-tests -->
 
+The central idea of the chapter: replace each observation by its rank, and the null distribution becomes a counting problem over permutations, free of any assumption about the population.
+
+:::definition[Sign test]{#sign-test}
+For paired data, let $S$ be the number of pairs with a positive difference, discarding ties. Under the null that the median difference is zero, $S \sim \text{Binomial}(n, \tfrac12)$.
+:::
+
+:::proof
+If the median of the difference distribution is $0$, then each difference is positive with probability $\tfrac12$ independently of the others, so the count of positives is a sum of $n$ independent Bernoulli$(\tfrac12)$ variables. No other feature of the distribution is used — not symmetry, not shape, not variance. $\blacksquare$
+:::
+
+The sign test uses only the *direction* of each difference and is therefore valid under almost nothing. It is also wasteful: a difference of $+0.01$ and one of $+50$ count the same. The Wilcoxon test recovers the discarded magnitude information by ranking it.
+
+:::definition[Wilcoxon signed-rank test]{#wilcoxon-signed-rank}
+For paired data with differences $d_i$, rank the $|d_i|$ from $1$ to $n$ and let $W^+$ be the sum of the ranks belonging to positive differences. Under the null that the differences are symmetric about $0$, large or small $W^+$ is evidence against.
+:::
+
+:::theorem[Null moments of the signed-rank statistic]{#signed-rank-moments}
+Under the null,
+
+$$E(W^+) = \frac{n(n+1)}{4}, \qquad \operatorname{Var}(W^+) = \frac{n(n+1)(2n+1)}{24}.$$
+:::
+
+:::proof
+Write $W^+ = \sum_{i=1}^{n} i\,Z_i$, where $Z_i$ indicates that the observation with absolute rank $i$ had a positive sign. Under symmetry about zero, each sign is independently $+$ or $-$ with probability $\tfrac12$, so the $Z_i$ are i.i.d. Bernoulli$(\tfrac12)$ — and, crucially, independent of the ranks, since symmetry makes sign and magnitude independent.
+
+Hence, using $\sum_{i=1}^n i = n(n+1)/2$,
+
+$$E(W^+) = \sum_{i=1}^{n} i\cdot\tfrac12 = \frac{n(n+1)}{4}.$$
+
+For the variance, independence makes the variance of the sum the sum of the variances, and $\operatorname{Var}(Z_i)=\tfrac14$:
+
+$$\operatorname{Var}(W^+) = \sum_{i=1}^{n} i^2\cdot\frac14 = \frac14\cdot\frac{n(n+1)(2n+1)}{6} = \frac{n(n+1)(2n+1)}{24}. \qquad \blacksquare$$
+:::
+
 :::definition[Mann-Whitney U test]{#mann-whitney}
-The Mann-Whitney U test (Wilcoxon rank-sum test) is the non-parametric alternative to the two-sample $t$-test for two **independent** groups. The strict null is $H_0$: the two populations have identical distributions.
+For two independent samples of sizes $n_1,n_2$, let
+
+$$U = \#\{(i,j) : x_i < y_j\}$$
+
+count the pairs in which the second sample's observation is larger. Equivalently, $U = W - n_1(n_1+1)/2$ where $W$ is the sum of the ranks of the first sample in the combined ranking.
 :::
 
-When the two distributions are assumed to differ only by a shift in location, this is equivalent to testing whether one group tends to produce larger values than the other — formally, whether $P(X_1 > X_2) = 0.5$. Note that this is *not* the same null as the $t$-test's equality of means.
+:::theorem[Null moments of U]{#u-moments}
+Under the null that both samples come from the same continuous distribution,
 
-:::recipe[Computing the Mann-Whitney U statistic]
-1. Combine both groups and rank all $n_1+n_2$ observations from smallest ($1$) to largest.
-2. Sum the ranks for each group, giving $R_1$ and $R_2$.
-3. Form $U_1 = R_1 - n_1(n_1+1)/2$, and likewise $U_2 = R_2 - n_2(n_2+1)/2$.
-4. Report the smaller of $U_1$ and $U_2$ against the critical value.
+$$E(U) = \frac{n_1n_2}{2}, \qquad \operatorname{Var}(U) = \frac{n_1n_2(n_1+n_2+1)}{12}.$$
 :::
 
-The subtracted term $n_1(n_1+1)/2$ is the smallest rank sum group $1$ could possibly have — the case where it held ranks $1,2,\dots,n_1$ — so $U_1$ counts how much group $1$ exceeds that floor. The two statistics satisfy $U_1 + U_2 = n_1 n_2$, which is a useful arithmetic check.
+:::proof
+Write $U = \sum_{i}\sum_{j} I(x_i < y_j)$, a sum of $n_1n_2$ indicators. Under the null, any particular $x_i$ and $y_j$ are two draws from the same continuous distribution, so $P(x_i<y_j) = \tfrac12$ by symmetry (ties having probability zero). Linearity of expectation — which needs no independence, and the indicators are certainly dependent — gives
 
-:::recipe[Wilcoxon signed-rank test]
-The paired version, and the non-parametric alternative to the paired $t$-test.
+$$E(U) = n_1n_2\cdot\tfrac12 = \frac{n_1n_2}{2}.$$
 
-1. Compute the differences $d_i = x_i - y_i$.
-2. **Discard any pair with $d_i = 0$.**
-3. Rank the remaining absolute values $|d_i|$ from smallest to largest.
-4. Reattach the original signs; the statistic $W$ is the sum of the positive ranks (equivalently, of the negative ranks).
+The variance requires accounting for the dependence between indicators sharing an index, and we quote the standard result. $\blacksquare$
 :::
 
-Under $H_0$ — the differences are symmetric about $0$ — the positive and negative rank sums should be close; a lopsided split is evidence against $H_0$. Because it uses the ranks of the magnitudes, the signed-rank test uses more information than the sign test, which uses only the direction of each difference.
-
-Rank-based tests are resistant to outliers because they use only the ordering of observations, not their actual values. A single extreme outlier changes only one rank: turning a value from $50$ into $5000$ still leaves it the largest observation, so its rank is unchanged.
-
-Efficiency: when the normal distribution holds, the Mann-Whitney U test has about $95.5\%$ efficiency relative to the $t$-test (i.e., it needs about $5\%$ more observations to achieve the same power). For non-normal data, it can be more powerful than the $t$-test.
-
-:::intuition
-Instead of comparing actual test scores between two teaching methods, rank all students from $1$ (lowest score) to $n$ (highest score). Then ask: do students from Method A tend to have higher ranks? By using ranks instead of raw values, you don't need to assume anything about the distribution of scores.
-:::
-
-:::example[Mann-Whitney U by hand]
-Group A $=\{1,3,5\}$ ($n_1=3$), Group B $=\{2,4,6\}$ ($n_2=3$). $H_0$: the two groups have the same distribution.
+:::example[A Mann-Whitney test]
+Two independent samples of sizes $n_1=8$ and $n_2=10$ give a rank sum of $60$ for the first sample in the combined ranking. Test at $\alpha=0.05$ using the normal approximation.
 :::
 
 :::solution
-1. Pool and rank all $6$ values from smallest to largest. Since the values $1,2,3,4,5,6$ are already in order, each value's rank equals itself: A gets ranks $1,3,5$ and B gets ranks $2,4,6$.
-2. Rank sums: $R_1 = 1+3+5 = 9$ (group A), $R_2 = 2+4+6 = 12$ (group B).
-3. $U_1 = R_1 - \dfrac{n_1(n_1+1)}{2} = 9 - \dfrac{3(4)}{2} = 9 - 6 = 3$.
-4. $U_2 = R_2 - \dfrac{n_2(n_2+1)}{2} = 12 - 6 = 6$ (or directly $U_2 = n_1 n_2 - U_1 = 9 - 3 = 6$).
-5. Sanity check: $U_1 + U_2 = 3 + 6 = 9 = n_1 n_2 = 3\times 3$. ✓ Report $U = \min(U_1,U_2) = 3$; with such tiny samples this is far from significant.
+1. Convert the rank sum to $U$: by the definition, $U = W - n_1(n_1+1)/2 = 60 - 8(9)/2 = 60-36 = 24$.
+2. Null moments from the theorem *Null moments of U*:
+
+$$E(U) = \frac{8\times 10}{2} = 40, \qquad \operatorname{Var}(U) = \frac{8\times 10\times 19}{12} = \frac{1520}{12} = 126.667,$$
+
+so the standard deviation is $\sqrt{126.667} = 11.2546$.
+3. Standardise: $z = (24-40)/11.2546 = -16/11.2546 = -1.4216$.
+4. Against $\pm 1.96$, do not reject; the two-sided $p$ is about $0.155$.
+5. Sanity check on the range of $U$: it must lie between $0$ and $n_1n_2 = 80$, and $24$ does ✓. The midpoint $40$ is the null expectation, and $24$ sits below it, indicating the first sample tends to be smaller — but not by enough to rule out chance with these sample sizes.
+6. Note the conclusion's form: the evidence does not establish that the *distributions* are identical, only that it is insufficient to distinguish them — and by the pitfall above, a rejection would not have established a difference in medians either without a shift assumption.
 :::
 
-:::example[Wilcoxon signed-rank by hand]
-Before/after scores for $5$ subjects, $d_i = \text{after} - \text{before}$: $d = \{+4,\ -1,\ +3,\ 0,\ +6\}$.
+:::pitfall
+The Mann-Whitney test is often described as testing whether the medians are equal. That is **not** what it tests in general. Its null is that the two distributions are identical, and its alternative is a stochastic ordering — $P(X<Y) \ne \tfrac12$.
+
+Two distributions can have equal medians and different shapes, and Mann-Whitney will reject; two can have different medians and the test may not reject. The median interpretation is valid only under the extra assumption that the distributions differ by a **shift** and are otherwise the same shape. State that assumption if you rely on it.
+:::
+
+:::definition[Kruskal-Wallis test]{#kruskal-wallis}
+For $k$ independent samples, rank all $N$ observations together and let $R_i$ be the rank sum of group $i$. The statistic
+
+$$H = \frac{12}{N(N+1)}\sum_{i=1}^{k}\frac{R_i^2}{n_i} - 3(N+1)$$
+
+is asymptotically $\chi^2_{k-1}$ under the null that all groups share a distribution.
+:::
+
+Kruskal-Wallis is to one-way ANOVA what Mann-Whitney is to the two-sample $t$-test — indeed for $k=2$ it reduces to Mann-Whitney, exactly as the $F$-test reduced to the $t$-test in the proposition *With two groups, F is the square of t*.
+
+:::example[A Wilcoxon signed-rank test in full]
+Ten subjects give differences $+3.1, -0.4, +2.2, +5.6, -1.1, +0.9, +4.3, +1.8, -2.9, +6.2$. Test $H_0$ that the differences are symmetric about zero, using the normal approximation at $\alpha=0.05$.
 :::
 
 :::solution
-1. Discard the pair with $d_i = 0$; four differences remain: $\{+4,\ -1,\ +3,\ +6\}$.
-2. Rank the absolute values $\{4,1,3,6\}$ from smallest to largest: $|{-1}|\to 1$, $|{+3}|\to 2$, $|{+4}|\to 3$, $|{+6}|\to 4$.
-3. Reattach signs: positive ranks are $2,3,4$ (from $+3,+4,+6$); the only negative rank is $1$ (from $-1$).
-4. $W^+ = 2+3+4 = 9$, $W^- = 1$.
-5. Sanity check: $W^+ + W^- = 9 + 1 = 10 = \dfrac{m(m+1)}{2} = \dfrac{4(5)}{2}$ for the $m=4$ retained pairs. ✓ The large imbalance ($9$ vs. $1$) points to a positive shift.
+1. Rank the absolute values $0.4, 0.9, 1.1, 1.8, 2.2, 2.9, 3.1, 4.3, 5.6, 6.2$ as $1$ through $10$.
+2. The negative differences are $-0.4$, $-1.1$ and $-2.9$, with ranks $1$, $3$ and $6$. So the negative rank sum is $10$, and since all ranks sum to $55$,
+
+$$W^+ = 55 - 10 = 45 .$$
+
+3. Null moments from the theorem *Null moments of the signed-rank statistic* with $n=10$:
+
+$$E(W^+) = \frac{10(11)}{4} = 27.5, \qquad \operatorname{Var}(W^+) = \frac{10(11)(21)}{24} = \frac{2310}{24} = 96.25,$$
+
+so the standard deviation is $\sqrt{96.25} = 9.8107$.
+4. Standardise: $z = (45-27.5)/9.8107 = 17.5/9.8107 = 1.784$. Against $1.96$, do not reject at the $5\%$ level; the two-sided $p$ is about $0.074$.
+5. Sanity check against the sign test, which uses less information: $7$ of $10$ differences are positive, and $P(S\ge 7) $ for Binomial$(10,\tfrac12)$ is $0.1719$, two-sided about $0.34$ — far from significant. The Wilcoxon result is much stronger because the positive differences are also the larger ones, which the sign test cannot see.
+6. Note what the data suggest: seven positives, and the three negatives are among the four smallest in magnitude. The evidence points one way but ten observations cannot settle it.
 :::
 
-## Kruskal-Wallis and Spearman Correlation
+## Rank correlation
 
 <!-- section: spearman -->
 
-The Kruskal-Wallis test is the non-parametric equivalent of one-way ANOVA. It tests whether $k$ independent groups have the same distribution (equivalently, the same median), by ranking all $N$ observations and comparing rank sums across groups.
+Pearson's $r$ measures linear association and is sensitive to outliers, both for the reason given in the regression chapter: it is built from products of deviations, so one extreme point dominates. Ranking the data first fixes both problems at once.
 
-:::definition[Kruskal-Wallis test]{#kruskal-wallis}
-With $N$ the total sample size, $R_j$ the rank sum for group $j$ and $n_j$ its size, ranking done over all $N$ observations pooled together,
-
-$$H = \frac{12}{N(N+1)}\sum_{j=1}^k \frac{R_j^2}{n_j} - 3(N+1).$$
-
-Under $H_0$, that all groups share the same distribution, $H \approx \chi^2_{k-1}$.
+:::definition[Spearman's rank correlation]{#spearman-rho}
+Rank the $x$'s and the $y$'s separately. **Spearman's $\rho_s$** is Pearson's correlation computed on the two sets of ranks.
 :::
 
-The chi-square approximation improves as each $n_j$ grows; a common rule of thumb is $n_j \geq 5$.
+:::theorem[Computing formula for Spearman's rho]{#spearman-formula}
+When there are no ties, with $d_i$ the difference between the ranks of observation $i$,
 
-:::note
-If Kruskal-Wallis is significant, use a rank-based post-hoc procedure such as Dunn's test with Bonferroni correction for the pairwise comparisons — this controls the family-wise error rate the way the omnibus $H$ does not.
+$$\rho_s = 1 - \frac{6\sum_{i=1}^{n} d_i^2}{n(n^2-1)} .$$
 :::
 
-:::definition[Spearman's rank correlation]{#spearman-rs}
-Compute the ranks of $x$ and $y$ separately, then apply the Pearson correlation formula to the ranks. When there are **no ties** this simplifies to
+:::proof
+The ranks of each variable are a permutation of $1,\ldots,n$, so both have mean $\bar r = (n+1)/2$ and the same sum of squared deviations,
 
-$$r_s = 1 - \frac{6\sum d_i^2}{n(n^2-1)},$$
+$$S_{rr} = S_{ss} = \sum_{i=1}^{n}\left(i - \frac{n+1}{2}\right)^2 = \frac{n(n^2-1)}{12},$$
 
-where $d_i$ is the difference between the two ranks of the $i$-th pair and $n$ is the number of pairs.
+a standard identity. Now expand $\sum d_i^2$ with $d_i = r_i - s_i$, inserting $\bar r$ twice since the two rank means are equal:
+
+$$\sum_i d_i^2 = \sum_i\big[(r_i-\bar r)-(s_i-\bar r)\big]^2 = S_{rr} + S_{ss} - 2S_{rs},$$
+
+so $S_{rs} = \tfrac12(S_{rr}+S_{ss}-\sum d_i^2) = S_{rr} - \tfrac12\sum d_i^2$. Therefore
+
+$$\rho_s = \frac{S_{rs}}{\sqrt{S_{rr}S_{ss}}} = \frac{S_{rr}-\tfrac12\sum d_i^2}{S_{rr}} = 1 - \frac{\sum d_i^2}{2S_{rr}} = 1 - \frac{6\sum d_i^2}{n(n^2-1)}. \qquad \blacksquare$$
 :::
 
-Spearman's $r_s$ measures monotone (not just linear) relationships and is robust to outliers and non-normality. Like Pearson's $r$, it lies in $[-1, 1]$: $r_s = +1$ is a perfect increasing monotone relationship, $r_s = -1$ a perfect decreasing one, and $r_s = 0$ no monotone trend.
+:::definition[Kendall's tau]{#kendall-tau}
+For all $\binom{n}{2}$ pairs of observations, a pair is **concordant** if the two variables order it the same way and **discordant** otherwise. With $C$ and $D$ the counts,
 
-:::intuition
-Kruskal-Wallis is ANOVA with ranks: instead of comparing the actual group means, it compares the average rank positions of each group. Spearman correlation is Pearson correlation with ranks: instead of asking 'do $x$ and $y$ increase together linearly?', it asks 'do the rankings of $x$ and $y$ increase together?'
+$$\tau = \frac{C-D}{\binom{n}{2}} \in [-1,1].$$
 :::
 
-:::example[Kruskal-Wallis $H$]
-Three groups, each of size $n_j = 4$, total $N = 12$. Pooled rank sums: $R_1 = 30$, $R_2 = 24$, $R_3 = 24$.
+:::remark[Choosing between the two]
+Both are distribution-free and both detect any monotone relationship, not merely a linear one — an important gain over Pearson, since $y=e^x$ gives $\rho_s = 1$ exactly while $r$ is well below $1$.
+
+$\tau$ has the more direct interpretation: it is the difference between the probability that a random pair is ordered the same way by both variables and the probability that it is not. It is also more robust to a few discrepant pairs, since each pair contributes $\pm 1$ regardless of how far apart the observations are, and its null distribution converges to normality faster at small $n$.
+
+$\rho_s$ is more familiar and easier to compute by hand. For most data they lead to the same conclusion, with $|\tau|$ typically smaller than $|\rho_s|$ for the same data — roughly $\tau \approx \tfrac23\rho_s$ for a bivariate normal.
+:::
+
+:::figure[Nine points on a rising line plus one outlier far below the trend at the right. Pearson's $r$ is dragged down to $0.24$ by that single point, because each term of $S_{xy}$ is a product of deviations and this one contributes a large negative product. Spearman's $\rho_s$ stays at $0.65$: the outlier is merely the tenth-ranked $y$ value, no more influential than any other rank. Ranking bounds how much one observation can matter.]{#outlier-correlation}
+{
+  "type": "plot",
+  "x": [0.2, 11.2],
+  "y": [-4.5, 13.5],
+  "xTicks": 1,
+  "yTicks": 2,
+  "xLabel": "x",
+  "yLabel": "y",
+  "marks": [
+    { "kind": "point", "at": [1, 1.2], "tone": "accent" },
+    { "kind": "point", "at": [2, 2.4], "tone": "accent" },
+    { "kind": "point", "at": [3, 2.9], "tone": "accent" },
+    { "kind": "point", "at": [4, 4.3], "tone": "accent" },
+    { "kind": "point", "at": [5, 5.1], "tone": "accent" },
+    { "kind": "point", "at": [6, 6.4], "tone": "accent" },
+    { "kind": "point", "at": [7, 7.2], "tone": "accent" },
+    { "kind": "point", "at": [8, 8.6], "tone": "accent" },
+    { "kind": "point", "at": [9, 9.3], "tone": "accent" },
+    { "kind": "point", "at": [10, -3.5], "tone": "result" },
+    { "kind": "text", "at": [7.3, -2.2], "text": "outlier", "tone": "result", "leaderTo": [9.9, -3.4] },
+    { "kind": "text", "at": [2.2, 11.6], "text": "nine points on a rising trend", "tone": "accent", "leaderTo": [5.2, 5.4] }
+  ]
+}
+:::
+
+:::example[One point, two correlations]
+Nine points lie close to a rising line and a tenth sits far below the trend. Pearson's $r$ falls to $0.24$ while Spearman's $\rho_s$ is $0.65$. Explain the gap, and say which to report.
 :::
 
 :::solution
-1. Sanity check on the ranks: the total of all ranks must be $\frac{N(N+1)}{2} = \frac{12\cdot 13}{2} = 78$, and indeed $30 + 24 + 24 = 78$. ✓
-2. $\sum_j \dfrac{R_j^2}{n_j} = \dfrac{30^2}{4} + \dfrac{24^2}{4} + \dfrac{24^2}{4} = \dfrac{900 + 576 + 576}{4} = \dfrac{2052}{4} = 513$.
-3. $H = \dfrac{12}{N(N+1)}\cdot 513 - 3(N+1) = \dfrac{12}{12\cdot 13}\cdot 513 - 3(13) = \dfrac{513}{13} - 39 = 39.46 - 39 = 0.46$.
-4. $df = k-1 = 2$, so compare to $\chi^2_{0.05,2} = 5.99$. Since $0.46 < 5.99$, fail to reject $H_0$: no evidence the groups differ.
+1. **Pearson.** $S_{xy}=\sum(x_i-\bar x)(y_i-\bar y)$, and the outlier has a large positive $x$ deviation and a large negative $y$ deviation. Their product is a large negative number that offsets much of the positive contribution from the other nine points.
+2. Its influence is quadratic in how far out it lies: doubling its distance from the means roughly doubles its contribution to $S_{xy}$ while the other nine are unchanged.
+3. **Spearman.** On the rank scale the outlier is simply the observation with the largest $x$ and the smallest $y$ — ranks $10$ and $1$. Its rank difference is $9$, the largest possible, and it contributes $81$ to $\sum d_i^2$, but that is bounded no matter how extreme the raw value.
+4. So $\rho_s = 0.65$ reports a strong-but-imperfect monotone association, which describes the ten points fairly, while $r = 0.24$ reports almost no association, which describes none of them.
+5. **Which to report?** Neither, alone. The right response is to show the scatterplot and say there is a strong association among nine points and one observation that does not fit. Choosing the statistic that gives the preferred answer is the error; the statistics are flagging a real feature of the data that a single number cannot express.
+6. Sanity check on the general principle: rank methods bound the influence of any one observation, which is robustness, and that is a different property from being assumption-free.
 :::
 
-:::example[Spearman's $r_s$]
-Five students ranked on a midterm ($x$) and a final ($y$): $x$-ranks $= 1,2,3,4,5$ and $y$-ranks $= 2,4,1,3,5$.
+:::example[Rank correlation against Pearson]
+Six observations give ranks $x: 1,2,3,4,5,6$ and $y: 2,1,4,3,6,5$. Compute $\rho_s$, and say what Pearson's $r$ on the original data would be if $y$ grew exponentially with $x$.
 :::
 
 :::solution
-1. Rank differences $d_i = x_i - y_i$: $-1,\ -2,\ +2,\ +1,\ 0$.
-2. Squared differences $d_i^2$: $1,\ 4,\ 4,\ 1,\ 0$, so $\sum d_i^2 = 10$.
-3. No ties, so use the shortcut with $n = 5$: $r_s = 1 - \dfrac{6\sum d_i^2}{n(n^2-1)} = 1 - \dfrac{6(10)}{5(25-1)} = 1 - \dfrac{60}{120} = 0.5$.
-4. Sanity check: $0.5 \in [-1, 1]$ and is positive, matching the fact that the two rankings broadly agree (both start low and end at $5$). ✓
+1. Rank differences, taking $d_i = r_i - s_i$ pair by pair: $1-2, 2-1, 3-4, 4-3, 5-6, 6-5$, that is $-1, +1, -1, +1, -1, +1$.
+2. Every $d_i^2 = 1$, so $\sum d_i^2 = 6$.
+3. By the theorem *Computing formula for Spearman's rho* with $n=6$, so $n(n^2-1) = 6(35) = 210$:
+
+$$\rho_s = 1 - \frac{6(6)}{210} = 1 - \frac{36}{210} = 1 - 0.1714 = 0.8286 .$$
+
+4. **On the exponential question.** If the underlying relationship were $y = e^x$ exactly, then $y$ is a strictly increasing function of $x$, so the ranks match perfectly and $\rho_s = 1$ exactly — rank correlation detects any monotone relationship, whatever its shape.
+5. Pearson's $r$ on the raw values would be well below $1$, since the relationship is curved and $r$ measures only the linear part. For $x=1,\ldots,6$ and $y=e^x$, $r \approx 0.90$.
+6. Sanity check on the direction: $\rho_s = 0.83$ here reflects a strong but imperfect monotone association — each adjacent pair is swapped, which is a small departure and is penalised accordingly. ✓
 :::
 
-## When to Use Non-Parametric Tests
+## Permutation and bootstrap methods
 
 <!-- section: nonparametric -->
 
-Use non-parametric tests when: the data is ordinal (e.g., satisfaction ratings on a $1$–$5$ scale); the sample size is small and normality cannot be assumed; there are severe outliers that resist transformation; or the outcome is inherently rank-based.
+The rank tests replaced the data with ranks so that the null distribution could be computed once and tabulated. Modern computing removes the need for the tabulation, and with it the need to use ranks at all.
 
-With large samples and continuous data, parametric tests are usually robust by the CLT. Non-parametric tests are most valuable for small $n$ with non-normal data.
+:::definition[Permutation test]{#permutation-test}
+To test whether two groups differ, compute the observed statistic $T_{\text{obs}}$ — a difference in means, say. Then repeatedly reassign the group labels at random among the pooled observations, recomputing $T$ each time. The $p$-value is the proportion of relabellings giving a $T$ at least as extreme as $T_{\text{obs}}$.
+:::
 
-Power trade-off: when parametric assumptions hold, non-parametric tests have somewhat lower power (need larger $n$ to detect the same effect). When assumptions are violated, non-parametric tests are often more powerful.
+:::theorem[Permutation tests are exact]{#permutation-exact}
+If the null hypothesis is that the two groups have identical distributions, then under the null every assignment of labels is equally likely, and the permutation test has significance level exactly $\alpha$ for any sample size — with no asymptotic approximation and no assumption about the population.
+:::
 
-:::summary
-Each parametric test has a rank-based counterpart:
+:::proof
+Under the null the pooled observations are exchangeable: every one of the $\binom{n_1+n_2}{n_1}$ label assignments produces a data set with the same probability. So conditional on the observed multiset of values, $T$ is uniformly distributed over the values it takes across those assignments.
 
-- two-sample $t$-test $\leftrightarrow$ Mann-Whitney U
-- paired $t$-test $\leftrightarrow$ Wilcoxon signed-rank
-- one-way ANOVA $\leftrightarrow$ Kruskal-Wallis
-- Pearson $r$ $\leftrightarrow$ Spearman $r_s$
+Rejecting when $T_{\text{obs}}$ falls in the upper $\alpha$ fraction of that finite set therefore has probability exactly $\alpha$, by the definition of a quantile of a uniform distribution on a finite set. $\blacksquare$
+:::
+
+Two things about that proof deserve emphasis. Exchangeability is the *only* assumption, and it is implied directly by the null hypothesis rather than added to it. And the statistic $T$ is arbitrary — a difference of means, of medians, of trimmed means, of anything — because the argument never used its form. That freedom is what makes permutation tests so general: a statistic with no tractable distribution theory is no harder than one with.
+
+:::definition[Bootstrap]{#bootstrap}
+To estimate the sampling distribution of a statistic $\hat\theta$, draw $B$ resamples of size $n$ **with replacement** from the observed data, compute $\hat\theta^*_b$ on each, and use the spread of those values. The **bootstrap standard error** is the standard deviation of the $\hat\theta^*_b$, and a **percentile interval** takes the $\alpha/2$ and $1-\alpha/2$ quantiles.
 :::
 
 :::intuition
-Non-parametric tests are your fall-back when you can't trust the bell-curve assumption. They're less picky — they work with ranks and counts rather than raw values — but they pay a small price in power when the normal assumption actually holds.
+The bootstrap substitutes the sample for the population. The sampling distribution one wants describes how $\hat\theta$ would vary across fresh samples from the population — which is unavailable. So take the empirical distribution of the data as a stand-in and draw fresh samples from *that*, which is exactly resampling with replacement.
+
+It works because the empirical distribution converges to the true one, so the resampling distribution converges to the sampling distribution. Sampling *with* replacement is essential: without it, every resample would be the original data in a different order, and nothing would vary.
+
+The striking consequence is that a standard error can be obtained for a statistic whose sampling distribution has never been derived — a median, a trimmed mean, a ratio of quantiles, the output of a fitting procedure. No formula is needed, only the ability to recompute the statistic.
 :::
 
-:::example[Choosing the right test]
-Scenario A: comparing pain relief between a drug and a placebo, $n_1 = 8$ and $n_2 = 8$ patients, outcome rated on a $1$–$5$ ordinal scale. Data are ordinal and $n$ is small, so a $t$-test's normality assumption is untrustworthy. Two independent groups $\Rightarrow$ **Mann-Whitney U**.
+:::pitfall
+The bootstrap resamples whatever unit was independent in the original sampling. For clustered data, resampling individual observations destroys the clustering and understates the variability — the clusters must be resampled instead. This is the pseudoreplication error of the design chapter, in resampling form.
+
+It also fails for statistics that depend on extreme order statistics, such as the sample maximum. The resample's maximum can never exceed the observed maximum, so the bootstrap distribution is systematically wrong at the boundary — precisely the Uniform$(0,\theta)$ situation from the estimation chapter.
+:::
+
+:::example[A bootstrap standard error]
+A sample of $9$ incomes has median $\$42{,}000$. Bootstrap resampling with $B=2000$ gives resample medians with standard deviation $\$5{,}800$ and $2.5\%$ and $97.5\%$ quantiles of $\$33{,}500$ and $\$56{,}000$. Report the results and comment on the interval's shape.
 :::
 
 :::solution
-1. Scenario B: same patients' symptom scores measured before and after a treatment (paired), scores skewed. Paired design with non-normal differences $\Rightarrow$ **Wilcoxon signed-rank**.
-2. Scenario C: comparing recovery time across four hospitals, one hospital has an extreme outlier. Three or more independent groups with an outlier $\Rightarrow$ **Kruskal-Wallis** (then Dunn's test if significant).
-3. Scenario D: relating exam rank to hours-studied rank, monotone but curved. Association of two quantitative variables without a linear form $\Rightarrow$ **Spearman's $r_s$**.
-4. Reasoning pattern: identify (i) how many groups / whether paired, and (ii) whether parametric assumptions hold; the two answers pick the test.
+1. **Bootstrap standard error** of the median: $\$5{,}800$ — obtained without any distribution theory for the sample median, which has no simple closed-form standard error.
+2. **Percentile interval**: $(\$33{,}500,\ \$56{,}000)$.
+3. The interval is **not symmetric** about the estimate: it extends $\$8{,}500$ below and $\$14{,}000$ above. That asymmetry is informative and would be lost by reporting $42{,}000 \pm 1.96(5{,}800) = (\$30{,}632,\ \$53{,}368)$, which forces symmetry the data do not support.
+4. Sanity check on the source of the skew: incomes are right-skewed, so resamples that happen to include more of the upper tail move the median further up than unlucky resamples move it down. The percentile method inherits that shape automatically.
+5. A caution about the sample size: with $n=9$ the median takes only a handful of distinct values across resamples — it is always one of the nine observed incomes — so the bootstrap distribution is coarse and the quantiles are crude. The bootstrap does not manufacture information that nine observations lack.
+6. For a smoother result at this size, a bootstrap of a trimmed mean would behave better, since it varies continuously with the resample rather than jumping between order statistics.
+:::
+
+:::theorem[Asymptotic relative efficiency of the Wilcoxon test]{#are}
+Against a normal population, the asymptotic relative efficiency of the Wilcoxon signed-rank test compared with the $t$-test is
+
+$$\text{ARE} = \frac{3}{\pi} \approx 0.955 .$$
+
+For heavy-tailed populations the efficiency exceeds $1$, sometimes greatly.
+:::
+
+:::proof
+We quote the value, whose derivation requires the asymptotic distribution theory of rank statistics. Its meaning is what matters: to achieve the same power, the Wilcoxon test needs about $1/0.955 = 1.047$ times as many observations as the $t$-test when the data really are normal. $\blacksquare$
+:::
+
+That number is the honest summary of the trade. Against the population most favourable to it, the $t$-test's advantage over Wilcoxon is under $5\%$ — a remarkably small price for dropping the normality assumption entirely. Against a heavy-tailed population the comparison reverses dramatically: for a Cauchy-like distribution the $t$-test is not merely less efficient but inconsistent, since the sample mean does not converge, while the rank test proceeds unaffected.
+
+:::example[A permutation test by hand]
+Two groups give $x = 5, 7$ and $y = 9, 12$. Use a permutation test on the difference in means, one-sided against $\bar y > \bar x$.
+:::
+
+:::solution
+1. Observed: $\bar x = 6$, $\bar y = 10.5$, so $T_{\text{obs}} = 4.5$.
+2. There are $\binom{4}{2} = 6$ ways to split the pooled values $\{5,7,9,12\}$ into two groups of two. Listing them with $T = \bar y - \bar x$:
+
+| group 1 | group 2 | $T$ |
+|---|---|---|
+| $5,7$ | $9,12$ | $4.5$ |
+| $5,9$ | $7,12$ | $2.5$ |
+| $5,12$ | $7,9$ | $-0.5$ |
+| $7,9$ | $5,12$ | $0.5$ |
+| $7,12$ | $5,9$ | $-2.5$ |
+| $9,12$ | $5,7$ | $-4.5$ |
+
+3. The observed $T=4.5$ is the largest of the six, so exactly one of the six permutations is at least as extreme.
+4. The one-sided $p$-value is $1/6 = 0.1667$.
+5. Sanity check on the floor: with $n_1=n_2=2$ the smallest attainable $p$-value is $1/6$, so **no result whatever** could reach $\alpha=0.05$. The data separate perfectly and the test still cannot reject — a limitation of the sample size, not of the method, and one the exact computation makes unmistakable where an approximation would have hidden it.
+6. Note the symmetry of the table: the six values come in $\pm$ pairs, which is the exchangeability of the theorem *Permutation tests are exact* visible in six rows.
+:::
+
+:::figure[The permutation null distribution of the difference in means for the four-observation example. All six relabellings are shown; the observed value $4.5$ (result tone) is the largest, so exactly one of six permutations is at least as extreme and the one-sided $p$-value is $1/6 = 0.167$. The distribution is symmetric about zero, which is exchangeability made visible — every relabelling has a mirror image that swaps the two groups.]{#permutation-null}
+{
+  "type": "plot",
+  "x": [-6.2, 7.6],
+  "y": [-0.1, 1.5],
+  "xTicks": 1,
+  "yTicks": 0.5,
+  "xLabel": "difference in means",
+  "yLabel": "count",
+  "marks": [
+    { "kind": "bars", "bars": [[-4.9,-4.1,1],[-2.9,-2.1,1],[-0.9,-0.1,1],[0.1,0.9,1],[2.1,2.9,1]], "tone": "accent" },
+    { "kind": "bars", "bars": [[4.1,4.9,1]], "tone": "result" },
+    { "kind": "text", "at": [6.2, 1.34], "text": "observed 4.5", "tone": "result", "leaderTo": [4.6, 1.02] },
+    { "kind": "text", "at": [-3.4, 1.34], "text": "five other relabellings", "tone": "accent", "leaderTo": [-2.5, 1.02] }
+  ]
+}
 :::
 
 ## Common Mistakes
 
-- Using chi-square when expected cell counts are below $5$. Merge adjacent categories or use Fisher's exact test.
-- Confusing the chi-square test for independence with the Pearson correlation. Chi-square tests association between categorical variables; correlation measures linear association between quantitative ones.
-- Thinking the Mann-Whitney U test the same null hypothesis as the $t$-test. It tests stochastic dominance (which group tends to be larger), not equality of means.
-- Over-using non-parametric tests. When normality holds and $n$ is large, parametric tests are more powerful. Reserve non-parametric tests for situations where parametric assumptions clearly fail.
-- Applying the Kruskal-Wallis test without post-hoc comparisons after a significant result. Like ANOVA, a significant $H$ only says the groups differ — you need pairwise tests to say which ones.
+- **Switching to a nonparametric test because a normality test rejected.** That is a two-stage procedure with an uncomputed error rate; with large $n$ it flags departures too small to affect the $t$-test, and with small $n$ it has no power.
+- **Describing Mann-Whitney as a test of medians.** Its null is that the distributions are identical; the median reading needs the extra assumption of a pure shift.
+- **Assuming rank tests are assumption-free.** The Wilcoxon signed-rank test assumes the differences are symmetric about the null value; without symmetry, use the sign test.
+- **Using chi-square with small expected counts.** Fisher's exact test is exact at any size; pooling categories changes the hypothesis.
+- **Reporting a chi-square $p$-value without a measure of strength.** $X^2$ grows with $n$ for a fixed association; Cramér's $V$ does not.
+- **Testing goodness of fit with parameters estimated from the same data.** The standard KS critical values are then too large and the test rejects too rarely.
+- **Bootstrapping individual observations from clustered data.** Resample the independent unit, which is the cluster.
+- **Bootstrapping a statistic that depends on the extremes.** A resample's maximum never exceeds the sample's, so the distribution is wrong where it matters.
+- **Believing rank tests cost a great deal of power.** Against a normal population the Wilcoxon needs about $5\%$ more data; against heavy tails it needs far less.
