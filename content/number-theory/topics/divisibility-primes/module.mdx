@@ -4,664 +4,1045 @@ title: Divisors & Primes
 
 # Divisors & Primes
 
-Divisors, prime numbers, unique factorization, and the Euclidean algorithm for computing GCD.
+Multiplication takes two integers and returns one. Reversing it — given $n$, which pairs multiply to give it? — is the whole of this chapter, and it is very much harder than the forward direction. The forward direction is a single algorithm you learned at seven. The reverse direction supports an industry: the security of most public-key cryptography rests on the belief that recovering the two factors of a $2048$-bit product is infeasible, while forming the product takes microseconds.
 
-Divisibility is the most basic relation in number theory. When we say one integer "divides" another, we are expressing that one is a building block of the other through multiplication. This simple idea underlies primes, factorization, gcd computations, and almost every advanced theorem in the subject.
+That asymmetry is not the only surprise. The atoms of multiplication, the primes, are simultaneously rigid and unruly. Rigid, because every integer above $1$ breaks into primes in exactly one way — the Fundamental Theorem of Arithmetic, which is so familiar that its content is easy to miss and whose proof genuinely needs an idea. Unruly, because no formula produces the primes, they thin out but never stop, and the gaps between them can be made as large as you please while pairs of them apparently stay two apart forever.
 
-Understanding divisors lets us answer questions like "does 7 divide 1001?", "how many divisors does 60 have?", and "what makes a number perfect or abundant?" These concepts appear in cryptography, computer science (hashing, divisibility checks), and pure mathematics.
+The chapter is built around one algorithm and one theorem. The algorithm is division with remainder, and everything in the second half is a consequence of iterating it: the Euclidean algorithm, Bézout's identity, Euclid's lemma, and through Euclid's lemma the uniqueness half of the Fundamental Theorem. The theorem is the Fundamental Theorem itself, whose two halves — existence and uniqueness — are proved separately, by completely different arguments, and are kept visibly apart here because conflating them is the classic way to produce a proof that proves nothing.
 
-## Definition of Divisor and Divisibility
+Along the way we count divisors, sum them, sieve for primes, certify primality with a $\sqrt{n}$ bound, and finish with Lamé's theorem: the Euclidean algorithm's worst input is a pair of consecutive Fibonacci numbers, and consequently the algorithm never takes more than about five times the number of decimal digits of the smaller argument. Throughout, *integer* means element of $\mathbb{Z}$, and $\mathbb{N} = \{1, 2, 3, \dots\}$. The one axiom we lean on repeatedly is **well-ordering**: every nonempty set of non-negative integers has a least element.
+
+## Divisibility: the definition and its immediate consequences
 
 <!-- section: definition-of-divisor -->
 
+Divisibility is a relation between integers, defined by an existence statement. It is worth noticing at the outset that the definition never mentions division, remainders or fractions — only multiplication. That is what makes it usable inside $\mathbb{Z}$, where division is not available.
+
 :::definition[Divisibility]{#divides}
-An integer $d$ **divides** an integer $n$, written $d \mid n$, if there exists an integer $k$ such that
+Let $d$ and $n$ be integers. We say $d$ **divides** $n$, written $d \mid n$, if there exists an integer $k$ with
 
-$$n = d \cdot k.$$
+$$n = dk.$$
 
-Equivalently, $n$ is a multiple of $d$, or the remainder when $n$ is divided by $d$ is zero. We then call $d$ a **divisor** (or factor) of $n$.
+We then call $d$ a **divisor** or **factor** of $n$, and $n$ a **multiple** of $d$. If no such $k$ exists we write $d \nmid n$.
 :::
-
-Every integer $n$ has at least the trivial divisors $\pm 1$ and $\pm n$. If $d \mid n$ and $d > 0$, we often focus on positive divisors.
-
-Note that divisibility is defined for all integers, including negatives and zero: $0 \mid 0$ is sometimes left undefined or treated specially, but $d \mid 0$ for any $d \neq 0$ since $0 = d \cdot 0$.
 
 :::intuition
-Think of division as "does this number fit evenly into that number with nothing left over?" Like cookies: 3 divides 12 because you can give exactly 4 cookies to each of 3 people with none left.
-
-The symbol $\mid$ is like a "goes into" arrow that only points one way when it works perfectly.
+$d \mid n$ says that $n$ objects can be laid out in rows of $d$ with nothing left over. The quotient $k$ is the number of rows. Negative and zero cases are the same statement read literally: $d \mid 0$ for every $d$ because $0 = d \cdot 0$, and $0 \mid n$ only for $n = 0$ because $0 \cdot k$ is always $0$.
 :::
 
-:::example[Checking divisibility]
-Does $6$ divide $42$? We look for an integer $k$ with $42 = 6 \cdot k$. Testing $k = 7$ gives $6 \cdot 7 = 42$, so such a $k$ exists and $6 \mid 42$.
-:::
+The asymmetry of $0$ trips people up, so state it once. Every integer divides $0$; $0$ divides nothing except $0$. This is not a convention adopted for convenience — it is forced by the definition, and any rule below that would fail at $0$ carries the hypothesis $n \neq 0$ explicitly.
 
-:::solution
-1. Does $5$ divide $42$? Apply the division algorithm: $42 = 5 \cdot 8 + 2$, so the remainder is $2 \neq 0$. Equivalently, $42 / 5 = 8.4$ is not an integer. There is no integer $k$ with $42 = 5k$ (since $8 \cdot 5 = 40 < 42 < 45 = 9 \cdot 5$), so $5 \nmid 42$.
-2. Sanity check: $6 \cdot 7 = 42$ recovers the original number, confirming the first divisibility.
-:::
+:::proposition[Elementary consequences of the definition]{#divides-basics}
+For all integers $a, b, n$:
 
-## Proper Divisors and Classification of Numbers
-
-<!-- section: proper-divisors -->
-
-:::definition[Proper divisor]
-A **proper divisor** of $n$ is a positive divisor of $n$ other than $n$ itself.
-:::
-
-Some definitions exclude 1 as well (aliquot parts), but the common modern usage for "proper divisors" includes 1 but excludes $n$.
-
-The **sum of proper divisors** function is the basis for classifying numbers.
-
-:::definition[Perfect, abundant, deficient]
-Write $s(n)$ for the sum of the proper divisors of $n$. Then $n$ is
-
-- **Perfect**: sum of proper divisors equals $n$ (e.g., 6: 1+2+3=6)
-- **Abundant**: sum > $n$ (e.g., 12: 1+2+3+4+6=16 >12)
-- **Deficient**: sum < $n$ (most numbers)
-:::
-
-These ideas go back to Pythagoras and the ancient Greeks.
-
-:::intuition
-Proper divisors are the "friends" or "parts" of the number excluding the number itself. For 6 they are 1,2,3 and they add back exactly to 6 — a perfect number, rare and "balanced."
-
-Abundant numbers have "too many" parts; deficient have "too few."
-:::
-
-:::example[Classify 28]
-1. list all positive divisors of $28$. Since $28 = 2^2 \cdot 7$, its divisors are $1, 2, 4, 7, 14, 28$.
-2. drop $28$ itself to get the proper divisors: $1, 2, 4, 7, 14$.
-3. sum them: $1 + 2 + 4 + 7 + 14 = 28$.
-4. The sum equals $28$, so $28$ is a **perfect** number. (The next perfect number after $6$ and $28$ is $496$.)
-:::
-
-:::example[Classify 12]
-Divisors of $12$ are $1, 2, 3, 4, 6, 12$; the proper divisors are $1, 2, 3, 4, 6$. Their sum is $1 + 2 + 3 + 4 + 6 = 16$. Since $16 > 12$, the number $12$ is **abundant** — its parts overflow it. By contrast, $8$ has proper divisors $1, 2, 4$ summing to $7 < 8$, so $8$ is **deficient**.
-:::
-
-## Basic Properties of Divisibility
-
-<!-- section: divisibility-properties -->
-
-Divisibility satisfies several important properties that behave like a partial order (when restricted to positives).
-
-:::proposition[Basic properties of divisibility]{#divisibility-rules}
-For all integers $a, b, c, k, n$:
-
-- Reflexive: $n \mid n$ for all $n$.
-- Antisymmetric (on positives): if $a \mid b$ and $b \mid a$ then $a = b$ (up to units $\pm1$).
-- Transitive: if $a \mid b$ and $b \mid c$ then $a \mid c$.
-- If $a \mid b$ and $a \mid c$ then $a \mid (b+c)$ and $a \mid (b-c)$.
-- If $a \mid b$ then $a \mid (b \cdot k)$ for any integer $k$.
-:::
-
-Also, 1 divides everything, and everything divides 0 (nonzero).
-
-These rules let us manipulate divisibility statements algebraically without always going back to multiplication.
-
-:::intuition
-Transitivity is the "chain rule" of divisibility: if A builds B and B builds C, then A builds C.
-
-If a number divides two things, it divides any integer linear combination of them (key to gcd proofs).
-:::
-
-:::example[Linear combinations]
-Given $3 \mid 12$ and $3 \mid 9$, the combination rule says $3$ divides any sum or difference: $3 \mid (12 + 9) = 21$ (indeed $21 = 3 \cdot 7$) and $3 \mid (12 - 9) = 3$ (indeed $3 = 3 \cdot 1$). More generally, $3 \mid (12x + 9y)$ for all integers $x, y$: writing $12 = 3 \cdot 4$ and $9 = 3 \cdot 3$, we get $12x + 9y = 3(4x + 3y)$, a multiple of $3$.
-:::
-
-:::example[Transitivity chain]
-Suppose $4 \mid 20$ and $20 \mid 60$. Since $20 = 4 \cdot 5$ and $60 = 20 \cdot 3$, substitute to get $60 = (4 \cdot 5) \cdot 3 = 4 \cdot 15$. So $4 \mid 60$, exactly as transitivity predicts. The key move is that the two witnesses ($k = 5$ and $k = 3$) multiply into a single witness ($k = 15$).
-:::
-
-## Counting the Divisors
-
-<!-- section: counting-divisors -->
-
-:::theorem[Number of divisors]{#divisor-count}
-If $n = p_1^{e_1} p_2^{e_2} \cdots p_k^{e_k}$ is the prime factorization, then the total number of positive divisors of $n$ is
-
-$$d(n) = (e_1+1)(e_2+1)\cdots(e_k+1).$$
+1. $1 \mid n$ and $n \mid n$ and $n \mid 0$.
+2. If $a \mid b$ and $b \neq 0$, then $|a| \le |b|$.
+3. If $a \mid b$ and $b \mid a$, then $a = \pm b$.
 :::
 
 :::proof
-Any divisor is of form $p_1^{a_1} \cdots p_k^{a_k}$ with $0 \leq a_i \leq e_i$, giving $e_i + 1$ choices per prime. The choices are independent, so multiplying them counts every divisor exactly once.
+For (1), take $k = n$, $k = 1$ and $k = 0$ respectively in the definition.
+
+For (2), write $b = ak$. Since $b \neq 0$, neither $a$ nor $k$ is zero, so $|k| \ge 1$ and $|b| = |a||k| \ge |a|$.
+
+For (3), if either of $a, b$ is $0$ then the other is too, by the remark that $0$ divides only $0$, and the conclusion holds. Otherwise both are nonzero and (2) applies in both directions, giving $|a| \le |b|$ and $|b| \le |a|$, hence $|a| = |b|$, which for integers means $a = \pm b$.
 :::
 
-This formula is extremely useful for quickly determining how many divisors a number has without listing them.
+Part (2) is the workhorse of every finiteness argument in the chapter: the divisors of a nonzero $n$ all lie in $[-|n|, |n|]$, so there are finitely many of them and a search for them terminates. Part (3) says divisibility is antisymmetric up to sign, which is why it is a partial order on $\mathbb{N}$ rather than on $\mathbb{Z}$.
+
+:::example[Reading the definition off a product]
+Decide whether $17 \mid 1054$, and whether $6 \mid -138$.
+:::
+
+:::solution
+1. For the first, look for an integer $k$ with $1054 = 17k$. Since $17 \cdot 62 = 1054$, such a $k$ exists and $17 \mid 1054$.
+2. For the second, $-138 = 6 \cdot (-23)$, and $-23$ is an integer, so $6 \mid -138$. The sign of the quotient is irrelevant: the definition asks only that $k$ be an integer.
+:::
+
+:::pitfall
+$d \mid n$ and $\tfrac{n}{d}$ are different kinds of object. The first is a *statement*, true or false; the second is a *number*, and only meaningful when $d \neq 0$. Writing "$6 \mid 4 = 0.666\ldots$" confuses the two. The vertical bar is not a slash.
+:::
+
+## Proper divisors and the classification of numbers
+
+<!-- section: proper-divisors -->
+
+Once we can list the divisors of $n$, we can add them up, and comparing that sum with $n$ itself produces the oldest classification in arithmetic.
+
+:::definition[Proper divisor]{#proper-divisor}
+A **proper divisor** of a positive integer $n$ is a positive divisor $d$ of $n$ with $d < n$. Thus $n$ itself is excluded, while $1$ is included whenever $n > 1$.
+:::
+
+:::definition[Divisor functions]{#divisor-functions}
+For a positive integer $n$ write
+
+$$\tau(n) = \#\{d \in \mathbb{N} : d \mid n\}, \qquad \sigma(n) = \sum_{d \mid n, \, d \in \mathbb{N}} d,$$
+
+the **number of divisors** and the **sum of divisors**. The sum of the proper divisors is then $s(n) = \sigma(n) - n$.
+:::
+
+:::definition[Perfect, abundant, deficient]{#perfect-numbers}
+A positive integer $n$ is **perfect** if $s(n) = n$, equivalently $\sigma(n) = 2n$; **abundant** if $s(n) > n$; and **deficient** if $s(n) < n$.
+:::
 
 :::intuition
-Each prime power in the factorization is like a "slot" with a certain number of choices (exponent $0$ up to the max). Multiply the options together.
-
-For $12 = 2^2 \cdot 3^1$ the choices are $(2+1)(1+1) = 6$ divisors: $1, 2, 4, 3, 6, 12$.
+Think of $n$ as a budget and its proper divisors as the pieces you are allowed to spend. A perfect number spends its budget exactly: $6 = 1 + 2 + 3$. An abundant number overshoots, a deficient one falls short. Deficiency is overwhelmingly the common case — every prime is deficient, with $s(p) = 1$ — and perfection is rare enough that only $51$ perfect numbers are known.
 :::
 
-:::example[Number of divisors of 360]
-1. factorize: $360 = 2^3 \cdot 3^2 \cdot 5^1$.
-2. read off the exponents $3, 2, 1$ and add one to each (the exponent of each prime in a divisor can be anything from $0$ up to the max, inclusive): $3+1 = 4$ choices for the power of $2$, $2+1 = 3$ for $3$, and $1+1 = 2$ for $5$.
-3. multiply the independent choices: $(3+1)(2+1)(1+1) = 4 \cdot 3 \cdot 2 = 24$.
-4. So $360$ has $24$ positive divisors.
-5. Sanity check on a small case: $12 = 2^2 \cdot 3^1$ predicts $(2+1)(1+1) = 6$ divisors, and listing them gives exactly $\{1, 2, 3, 4, 6, 12\}$ — six of them. Note the formula needs the *prime* factorization: applying "add one to each exponent" to a non-prime grouping like $12 = 4^1 \cdot 3^1$ would wrongly give $4$.
+:::example[Classifying 28 and 12]
+Classify $28$ and $12$ as perfect, abundant or deficient.
 :::
 
-## Common Mistakes
+:::solution
+1. The positive divisors of $28$ are $1, 2, 4, 7, 14, 28$, so $\sigma(28) = 56$ and $s(28) = 56 - 28 = 28$. Since $s(28) = 28$, the number $28$ is perfect.
+2. The positive divisors of $12$ are $1, 2, 3, 4, 6, 12$, so $\sigma(12) = 28$ and $s(12) = 16 > 12$. Hence $12$ is abundant.
+3. For contrast, $\sigma(15) = 1 + 3 + 5 + 15 = 24$ and $s(15) = 9 < 15$, so $15$ is deficient.
+:::
 
-- **Forgetting negatives and 1**: Every nonzero integer has positive and negative divisors; 1 and -1 always divide. Do not list only positives when the definition allows all.
-- **1 is not prime and not composite**: 1 has only one positive divisor (itself), so by definition it is excluded from both primes and composites.
-- **Divides vs is divided by**: $a \mid b$ means $a$ divides $b$ (b is multiple of a). Confusing the direction is common in word problems.
-- **Zero issues**: Nonzero d always divides 0, but 0 never divides nonzero n. Division by zero is undefined in this context too.
-- **Assuming "divisor" implies positive**: In many problems we restrict to positive divisors for counting, but the relation $d \mid n$ holds for negatives as well.
+:::remark
+Euclid proved that if $2^p - 1$ is prime then $2^{p-1}(2^p - 1)$ is perfect, and Euler proved that every *even* perfect number has that shape. Whether an odd perfect number exists is open after more than two thousand years; it is known that one would have to exceed $10^{1500}$.
+:::
 
-Prime numbers are the indivisible building blocks of the integers under multiplication. Every integer greater than 1 can be written uniquely as a product of primes (the Fundamental Theorem of Arithmetic). This unique factorization is the foundation upon which most of number theory is built.
+## Transitivity and linearity
 
-Primes appear in cryptography (RSA relies on the difficulty of factoring large semiprimes), random number generation, hash functions, and even in nature and art through their irregular distribution. Euclid proved there are infinitely many over 2000 years ago, yet their distribution remains full of deep mysteries studied by analytic number theory.
+<!-- section: divisibility-properties -->
 
-Understanding primes means mastering their definition, proofs of infinitude, sieves for finding them, and basic tests for primality.
+Two rules carry almost all the weight in divisibility arguments. The first says the relation composes; the second says the set of multiples of $d$ is closed under integer combinations. Nearly every "show that $d$ divides..." exercise is one of these two applied once or twice.
 
-## Definition and Fundamental Properties
+:::theorem[Transitivity of divisibility]{#transitivity}
+If $a \mid b$ and $b \mid c$, then $a \mid c$.
+:::
+
+:::proof
+By hypothesis there are integers $j$ and $k$ with $b = aj$ and $c = bk$. Substituting the first into the second,
+
+$$c = bk = (aj)k = a(jk).$$
+
+Since $jk$ is an integer, the definition of divisibility is satisfied with quotient $jk$.
+:::
+
+:::theorem[Linearity of divisibility]{#linearity}
+If $d \mid a$ and $d \mid b$, then for all integers $x$ and $y$,
+
+$$d \mid (ax + by).$$
+:::
+
+:::proof
+Write $a = d\alpha$ and $b = d\beta$ with $\alpha, \beta \in \mathbb{Z}$. Then
+
+$$ax + by = d\alpha x + d\beta y = d(\alpha x + \beta y),$$
+
+and $\alpha x + \beta y$ is an integer, so $d$ divides $ax + by$.
+:::
+
+An expression $ax + by$ with $x, y \in \mathbb{Z}$ is called an **integer linear combination** of $a$ and $b$. The theorem *Linearity of divisibility* therefore reads: any common divisor of $a$ and $b$ divides every linear combination of them. That single sentence is the seed of the Euclidean algorithm, of Bézout's identity, and of the contradiction in Euclid's proof that the primes do not stop.
+
+:::corollary[Divisors of a difference]{#divides-difference}
+If $d \mid a$ and $d \mid (a + b)$, then $d \mid b$.
+:::
+
+:::proof
+Apply the theorem *Linearity of divisibility* to the two multiples $a + b$ and $a$ with coefficients $x = 1$ and $y = -1$: $d$ divides $(a+b) \cdot 1 + a \cdot (-1) = b$.
+:::
+
+:::example[A divisibility chain]
+Given that $d \mid 12$ and $d \mid 20$ for some positive integer $d$, what are the possible values of $d$, and what does the theorem *Linearity of divisibility* predict about $d \mid 4$?
+:::
+
+:::solution
+1. Linearity with $x = 2$, $y = -1$ gives $d \mid (2 \cdot 12 - 20) = 4$.
+2. So every common divisor of $12$ and $20$ divides $4$, leaving $d \in \{1, 2, 4\}$.
+3. All three do occur, since $1, 2, 4$ each divide both $12$ and $20$. Notice how the argument found the answer without listing the divisors of either number.
+:::
+
+:::example[Transitivity applied twice]
+Show that if $a \mid b$ and $b \mid c$ and $c \mid 360$, then $a \mid 360$, and give the largest such $a$ when $b = 12$.
+:::
+
+:::solution
+1. Two applications of the theorem *Transitivity of divisibility*: from $a \mid b$ and $b \mid c$ we get $a \mid c$, and from $a \mid c$ and $c \mid 360$ we get $a \mid 360$.
+2. With $b = 12$ the constraint $a \mid 12$ already forces $a \le 12$, and $a = 12$ works since $12 \mid 360$.
+3. Largest value: $12$.
+:::
+
+## Counting and summing the divisors
+
+<!-- section: counting-divisors -->
+
+If $n$ is given in factored form the divisors can be counted without being listed, and the counting argument is a clean piece of combinatorics. It presumes the Fundamental Theorem of Arithmetic, proved later in this chapter in *Existence of a prime factorisation* and *Uniqueness of the prime factorisation*; nothing below is circular, since those proofs do not use anything from this section.
+
+:::theorem[The divisor-counting formula]{#divisor-count}
+Let $n > 1$ have prime factorisation
+
+$$n = p_1^{a_1} p_2^{a_2} \cdots p_r^{a_r}$$
+
+with distinct primes $p_i$ and exponents $a_i \ge 1$. Then
+
+$$\tau(n) = (a_1 + 1)(a_2 + 1) \cdots (a_r + 1).$$
+:::
+
+:::proof
+We exhibit a bijection between the positive divisors of $n$ and the tuples $(e_1, \dots, e_r)$ of integers with $0 \le e_i \le a_i$.
+
+If $d = p_1^{e_1} \cdots p_r^{e_r}$ with $0 \le e_i \le a_i$, then $n = d \cdot p_1^{a_1 - e_1} \cdots p_r^{a_r - e_r}$, and the second factor is an integer, so $d \mid n$. This maps tuples to divisors.
+
+Conversely let $d$ be a positive divisor, say $n = dm$. Factor $d$ and $m$ into primes; concatenating those two factorisations gives a prime factorisation of $n$, which by uniqueness must be the one we started with. Hence every prime occurring in $d$ is some $p_i$, and its exponent $e_i$ in $d$ is at most its exponent $a_i$ in $n$. So $d$ has the stated form, and the map is onto.
+
+It is injective because uniqueness of factorisation says two distinct exponent tuples give distinct integers. Finally, the number of tuples is $\prod_{i=1}^r (a_i + 1)$, since $e_i$ is chosen independently from a set of $a_i + 1$ values.
+:::
+
+:::intuition
+Building a divisor is shopping from $r$ shelves. Shelf $i$ holds the powers $p_i^0, p_i^1, \dots, p_i^{a_i}$ — that is $a_i + 1$ options — and you must take exactly one item from each shelf. Multiply the options.
+:::
+
+:::theorem[The divisor-sum formula]{#divisor-sum}
+With $n$ as in the theorem *The divisor-counting formula*,
+
+$$\sigma(n) = \prod_{i=1}^{r} \frac{p_i^{a_i + 1} - 1}{p_i - 1}.$$
+:::
+
+:::proof
+By the bijection established in the proof of *The divisor-counting formula*, summing over divisors is summing over exponent tuples:
+
+$$\sigma(n) = \sum_{e_1 = 0}^{a_1} \cdots \sum_{e_r = 0}^{a_r} p_1^{e_1} \cdots p_r^{e_r} = \prod_{i=1}^{r} \left( \sum_{e = 0}^{a_i} p_i^{e} \right),$$
+
+where the second equality is the distributive law: expanding the product of the $r$ sums produces each tuple's term exactly once. Each inner sum is a finite geometric series with ratio $p_i \neq 1$, whose value is $(p_i^{a_i+1} - 1)/(p_i - 1)$.
+:::
+
+:::corollary[Odd divisor count characterises squares]{#square-tau}
+A positive integer $n$ has an odd number of positive divisors if and only if $n$ is a perfect square.
+:::
+
+:::proof
+By the theorem *The divisor-counting formula*, $\tau(n) = \prod (a_i + 1)$ is odd exactly when every factor $a_i + 1$ is odd, that is when every exponent $a_i$ is even. Writing $a_i = 2b_i$ gives $n = \left( \prod p_i^{b_i} \right)^2$, a square. Conversely a square has all exponents even, since squaring doubles every exponent. For $n = 1$ both sides hold, as $\tau(1) = 1$.
+:::
+
+:::intuition
+Divisors pair off as $d \leftrightarrow n/d$, which consumes them two at a time. The only way a divisor can fail to have a distinct partner is $d = n/d$, that is $d = \sqrt{n}$ — which exists exactly when $n$ is a square. That is why $36$ has the odd count $9$ and $35$ the even count $4$.
+:::
+
+:::example[Divisors of 360]
+Compute $\tau(360)$ and $\sigma(360)$.
+:::
+
+:::solution
+1. Factor: $360 = 2^3 \cdot 3^2 \cdot 5$.
+2. By *The divisor-counting formula*, $\tau(360) = (3+1)(2+1)(1+1) = 4 \cdot 3 \cdot 2 = 24$.
+3. By *The divisor-sum formula*, $\sigma(360) = \frac{2^4-1}{1} \cdot \frac{3^3-1}{2} \cdot \frac{5^2-1}{4} = 15 \cdot 13 \cdot 6 = 1170$.
+4. Since $s(360) = 1170 - 360 = 810 > 360$, the number $360$ is abundant.
+:::
+
+:::example[Designing a number with a prescribed divisor count]
+Find the smallest positive integer with exactly $12$ divisors.
+:::
+
+:::solution
+1. We need exponents $a_i$ with $\prod (a_i + 1) = 12$. The possible multisets of $(a_i+1)$ are $\{12\}$, $\{6,2\}$, $\{4,3\}$, $\{3,2,2\}$ and $\{2,2,3\}$ — the last two coincide.
+2. To minimise the integer, assign the largest exponents to the smallest primes. The candidates are $2^{11} = 2048$, $2^5 3 = 96$, $2^3 3^2 = 72$, and $2^2 \cdot 3 \cdot 5 = 60$.
+3. The smallest is $60$, and indeed $\tau(60) = (2+1)(1+1)(1+1) = 12$.
+:::
+
+## Primes: the atoms of multiplication
 
 <!-- section: definition-and-properties -->
 
 :::definition[Prime and composite]{#prime-definition}
-A positive integer $p > 1$ is **prime** if its only positive divisors are 1 and $p$. Equivalently, it cannot be expressed as a product of two integers both strictly between 1 and $p$. A positive integer $n > 1$ that is not prime is **composite**.
+An integer $p > 1$ is **prime** if its only positive divisors are $1$ and $p$. An integer $n > 1$ that is not prime is **composite**; equivalently $n = ab$ for some integers $a, b$ with $1 < a, b < n$. The integer $1$ is neither prime nor composite.
 :::
 
-The number 1 is neither prime nor composite; it has exactly one positive divisor.
+:::remark
+Excluding $1$ is not squeamishness. If $1$ counted as prime then $12 = 2^2 \cdot 3 = 1 \cdot 2^2 \cdot 3 = 1^2 \cdot 2^2 \cdot 3$ would have infinitely many prime factorisations and the Fundamental Theorem of Arithmetic would be false as stated. The convention is chosen to make uniqueness true.
+:::
 
-:::theorem[Euclid: infinitude of primes]{#euclid-infinitude}
-There are infinitely many primes.
+:::lemma[Every integer above 1 has a prime divisor]{#has-prime-divisor}
+Every integer $n > 1$ has at least one prime divisor.
 :::
 
 :::proof
-Suppose there are only finitely many primes $p_1, p_2, \dots, p_k$. Consider $N = p_1 p_2 \cdots p_k + 1$. $N > 1$, so $N$ has a prime factor $q$. But $q$ cannot equal any $p_i$ (remainder 1), contradiction. Hence infinitely many primes.
+Consider the set $S$ of divisors of $n$ that are greater than $1$. It is nonempty, since $n \in S$, and consists of positive integers, so by well-ordering it has a least element $p$.
+
+Suppose $p$ were composite. Then $p = ab$ with $1 < a < p$, and $a \mid p$ with $p \mid n$ gives $a \mid n$ by the theorem *Transitivity of divisibility*. So $a \in S$ and $a < p$, contradicting minimality of $p$. Hence $p$ is prime, and $p \mid n$.
 :::
 
-:::intuition
-Primes are the "atoms" of multiplication: you cannot split them further into smaller integer factors greater than 1.
+This is the first of many arguments in the chapter that run on well-ordering. The pattern — take the least element of a set of positive integers, show that any failure of the desired property would produce a smaller element — recurs in the division algorithm, in Bézout's identity and in the existence half of the Fundamental Theorem.
 
-Like the periodic table elements, every larger "molecule" (composite number) is uniquely built from these prime atoms.
-:::
-
-:::example[Is 91 prime?]
-We only need to test prime divisors up to $\sqrt{91} \approx 9.54$, namely $2, 3, 5, 7$. (If $91$ had a factor larger than $\sqrt{91}$, the cofactor would be smaller than $\sqrt{91}$ and we would catch it first.)
+:::example[Smallest prime factor by hand]
+Find the smallest prime factor of $391$.
 :::
 
 :::solution
-$2$: $91$ is odd, so $2 \nmid 91$.
-$3$: digit sum $9 + 1 = 10$, not a multiple of $3$, so $3 \nmid 91$.
-$5$: $91$ ends in $1$, not $0$ or $5$, so $5 \nmid 91$.
-$7$: $91 = 7 \cdot 13$ exactly, so $7 \mid 91$.
-
-We found a nontrivial factor, so $91 = 7 \cdot 13$ is **composite**. Sanity check: $7 \cdot 13 = 91$. This is a classic trap — $91$ "feels prime" but fails at the last witness.
+1. Test primes in increasing order. $391$ is odd, its digit sum $13$ is not divisible by $3$, and it does not end in $0$ or $5$.
+2. $391 = 7 \cdot 55 + 6$, so $7 \nmid 391$; $391 = 11 \cdot 35 + 6$, so $11 \nmid 391$; $391 = 13 \cdot 30 + 1$, so $13 \nmid 391$.
+3. $391 = 17 \cdot 23$, so the smallest prime factor is $17$. (There was no need to test beyond $19$, since $19^2 = 361 < 391 < 441 = 21^2$ — see *Trial division stops at the square root*.)
 :::
 
-## Infinitude and Distribution
+## Infinitude of the primes
 
 <!-- section: infinitude -->
 
-Euclid's proof shows infinitude but gives no information on how dense primes are. That question is answered by the central theorem of analytic number theory.
+That the primes never stop is the first theorem in mathematics whose proof is a genuine argument rather than a computation, and it has been reproved in dozens of ways. Two are given here: Euclid's, which is a one-line application of linearity, and a second, due to Goldbach, which produces an infinite family of pairwise coprime integers and reads off a distinct prime from each.
 
-:::theorem[Prime Number Theorem, growth of $p_n$]
-The $n$th prime $p_n$ grows roughly like
-
-$$p_n \approx n \log n.$$
+:::theorem[Euclid: there are infinitely many primes]{#euclid-infinitude}
+The set of prime numbers is infinite.
 :::
 
-Infinitude does not mean the primes come at regular intervals.
+:::proof
+Suppose, for contradiction, that the primes are exactly $p_1, p_2, \dots, p_r$, a finite list. Put
 
-:::proposition[Arbitrarily large prime gaps]
-There are arbitrarily large gaps between primes: for $n \geq 2$, the $n-1$ consecutive integers between $n!+2$ and $n!+n$ are all composite.
+$$N = p_1 p_2 \cdots p_r + 1.$$
+
+Then $N > 1$, so by the lemma *Every integer above 1 has a prime divisor* it has a prime divisor $q$, and $q$ must be one of the $p_i$ since the list is all of them. Now $q$ divides the product $p_1 \cdots p_r$ and, by assumption, divides $N$; so by the corollary *Divisors of a difference*, $q$ divides $N - p_1 \cdots p_r = 1$. But no prime divides $1$, since a prime exceeds $1$ and part (2) of *Elementary consequences of the definition* forbids a divisor of $1$ from exceeding $1$. This contradiction shows no finite list can contain every prime.
 :::
 
-Twin primes (pairs differing by 2) are conjectured infinite but unproven. The largest known primes are Mersenne primes of form $2^p-1$.
-
-:::intuition
-Primes get rarer as numbers get bigger, but never stop appearing. You can always find a bigger one, even if the gaps between them sometimes get huge.
-
-Euclid's trick of adding 1 to the product forces a new prime factor to appear somewhere.
+:::pitfall
+Euclid's argument does **not** claim that $p_1 \cdots p_r + 1$ is prime. Taking the first five primes, $2 \cdot 3 \cdot 5 \cdot 7 \cdot 11 + 1 = 2311$ is prime, but $2 \cdot 3 \cdot 5 \cdot 7 \cdot 11 \cdot 13 + 1 = 30031 = 59 \cdot 509$ is not. The claim is only that $N$ has a prime factor outside the list — which is exactly what is needed.
 :::
 
-:::example[Constructing a number with a new prime factor]
-Take the first four primes $2, 3, 5, 7$. Their product is $2 \cdot 3 \cdot 5 \cdot 7 = 210$, and Euclid's construction gives $N = 210 + 1 = 211$.
+:::definition[Fermat numbers]{#fermat-numbers}
+The $n$-th **Fermat number** is $F_n = 2^{2^n} + 1$ for $n \ge 0$. The first few are $F_0 = 3$, $F_1 = 5$, $F_2 = 17$, $F_3 = 257$, $F_4 = 65537$.
 :::
 
-:::solution
-1. By construction $N \equiv 1 \pmod{p}$ for each of $2, 3, 5, 7$ (dividing $211$ by any of them leaves remainder $1$), so none of them divides $N$. Therefore $N$'s prime factors are all new.
-2. Here $N = 211$ happens to be prime itself: checking primes up to $\sqrt{211} \approx 14.5$ ($2, 3, 5, 7, 11, 13$), none divides $211$. But note the construction does *not* claim $N$ is prime — it only guarantees a prime factor outside the starting list. For instance $2 \cdot 3 \cdot 5 \cdot 7 \cdot 11 \cdot 13 + 1 = 30031 = 59 \cdot 509$, which is composite yet still exposes the new primes $59$ and $509$.
+:::lemma[Fermat numbers telescope]{#fermat-telescope}
+For every $n \ge 1$,
+
+$$F_0 F_1 \cdots F_{n-1} = F_n - 2.$$
 :::
 
-## Sieve of Eratosthenes and Primality
+:::proof
+Induct on $n$. For $n = 1$ the left side is $F_0 = 3$ and the right side is $F_1 - 2 = 5 - 2 = 3$.
+
+Assume the identity for $n$. Then
+
+$$F_0 \cdots F_{n-1} F_n = (F_n - 2)F_n = \left(2^{2^n} - 1\right)\left(2^{2^n} + 1\right) = 2^{2^{n+1}} - 1 = F_{n+1} - 2,$$
+
+using $\left(2^{2^n}\right)^2 = 2^{2 \cdot 2^n} = 2^{2^{n+1}}$. This is the identity for $n+1$.
+:::
+
+:::theorem[Goldbach: a second proof of infinitude]{#goldbach-infinitude}
+Distinct Fermat numbers have no common divisor greater than $1$. Consequently there are infinitely many primes.
+:::
+
+:::proof
+Let $m < n$ and let $d > 0$ divide both $F_m$ and $F_n$. By the lemma *Fermat numbers telescope*, $F_m$ divides the product $F_0 \cdots F_{n-1}$, which equals $F_n - 2$; hence $d \mid F_n - 2$. Since also $d \mid F_n$, the corollary *Divisors of a difference* gives $d \mid 2$, so $d \in \{1, 2\}$. But every Fermat number is odd, being $1$ more than a power of $2$, so $d \neq 2$ and therefore $d = 1$.
+
+Now for each $n$ choose, by the lemma *Every integer above 1 has a prime divisor*, a prime $q_n \mid F_n$. If $q_m = q_n$ for some $m < n$ then that prime would be a common divisor of $F_m$ and $F_n$ exceeding $1$, which we have just excluded. So $n \mapsto q_n$ is injective and produces infinitely many distinct primes.
+:::
+
+:::remark
+Euclid's proof is non-constructive about *which* new prime appears; Goldbach's produces an explicit infinite list of pairwise coprime numbers, one prime harvested from each. A third classical proof, Euler's, observes that $\sum_p 1/p$ diverges, which says far more: the primes are not merely infinite but reasonably dense.
+:::
+
+:::theorem[Arbitrarily large prime gaps]{#prime-gaps}
+For every integer $k \ge 1$ there exist $k$ consecutive composite integers.
+:::
+
+:::proof
+Consider the $k$ integers
+
+$$(k+1)! + 2, \ (k+1)! + 3, \ \dots, \ (k+1)! + (k+1).$$
+
+For each $j$ with $2 \le j \le k+1$, the integer $j$ divides $(k+1)!$ because $j$ is one of the factors in that product, and $j$ divides itself; so by the theorem *Linearity of divisibility*, $j \mid (k+1)! + j$. Since $2 \le j < (k+1)! + j$, this exhibits a divisor strictly between $1$ and the number, so $(k+1)! + j$ is composite. There are $k$ such $j$, and the integers are consecutive.
+:::
+
+:::remark
+The primes thin out in a precise sense. Writing $\pi(x)$ for the number of primes not exceeding $x$, the Prime Number Theorem asserts $\pi(x) \sim x/\ln x$, meaning the ratio tends to $1$. Its proof requires complex analysis and belongs to *Analytic Number Theory*; the figure below shows how good the approximation already is by $x = 1000$. Yet the gaps theorem above shows that within this smooth average behaviour there are deserts of any prescribed length, and the twin prime conjecture asserts that there are also infinitely many gaps of size exactly $2$. Average regularity and local irregularity coexist.
+:::
+
+:::figure[The prime counting function $\pi(x)$ against the Prime Number Theorem's estimate $x/\ln x$, for $x$ up to $1000$. The counted primes (points) run consistently above the estimate, and the ratio $\pi(x)\ln x / x$ creeps towards $1$ very slowly — it is still only about $1.16$ at $x = 1000$.]{#pi-vs-x-over-log}
+{
+  "type": "plot",
+  "x": [0, 1080],
+  "y": [0, 200],
+  "xTicks": 200,
+  "yTicks": 50,
+  "xLabel": "x",
+  "yLabel": "count of primes up to x",
+  "marks": [
+    { "kind": "function", "fn": "x/ln(x)", "tone": "result" },
+    { "kind": "path", "points": [[100, 25], [200, 46], [300, 62], [400, 78], [500, 95], [600, 109], [700, 125], [800, 139], [900, 154], [1000, 168]], "tone": "accent" },
+    { "kind": "point", "at": [100, 25] },
+    { "kind": "point", "at": [500, 95] },
+    { "kind": "point", "at": [1000, 168] },
+    { "kind": "text", "at": [430, 175], "text": "pi(x), counted", "leaderTo": [700, 128] },
+    { "kind": "text", "at": [700, 55], "text": "x / ln(x)", "tone": "result", "leaderTo": [880, 128] }
+  ]
+}
+:::
+
+## Sieving and primality testing
 
 <!-- section: sieves-and-tests -->
 
-The Sieve of Eratosthenes finds all primes up to $N$ by marking multiples of each prime starting from 2.
+To decide whether one number is prime, divide by candidate factors. To find every prime up to a bound, do something much better: cross out multiples. Both procedures rest on the same observation about square roots.
 
-:::recipe[Sieve of Eratosthenes]
-1. Start with the list $2$ to $N$.
-2. For each unmarked $p$, mark all multiples $2p, 3p, \dots$ as composite.
-3. The remaining unmarked numbers are the primes.
-:::
-
-A useful optimization: you can begin marking at $p^2$, since every smaller multiple of $p$ already carries a smaller prime factor and was crossed out earlier. This also means you only need to *start new passes* for $p \le \sqrt{N}$.
-
-For testing whether a single large number is prime, trial division up to $\sqrt{n}$ works for small $n$. For larger numbers, probabilistic tests (Miller–Rabin) or deterministic variants valid below certain bounds are used in practice.
-
-:::proposition[Trial division bound]{#trial-division-bound}
-An integer $n > 1$ is prime if and only if it is not divisible by any prime $p \leq \sqrt{n}$.
+:::proposition[Trial division stops at the square root]{#trial-division-bound}
+If $n > 1$ is composite, then $n$ has a prime divisor $p$ with $p \le \sqrt{n}$. Consequently, if no prime $p \le \sqrt{n}$ divides $n$, then $n$ is prime.
 :::
 
 :::proof
-The bound $\sqrt{n}$ is what makes trial division cheap: a composite $n = ab$ with $a \le b$ forces $a \le \sqrt{n}$, so the smaller factor always shows up first.
+Since $n$ is composite, write $n = ab$ with $1 < a \le b < n$. If both factors exceeded $\sqrt n$ we would get $n = ab > \sqrt n \cdot \sqrt n = n$, which is absurd; so $a \le \sqrt n$. By the lemma *Every integer above 1 has a prime divisor*, $a$ has a prime divisor $p$, and $p \le a \le \sqrt n$. Transitivity of divisibility gives $p \mid n$.
+
+The second sentence is the contrapositive: if no prime up to $\sqrt n$ divides $n$, then $n$ cannot be composite, and being greater than $1$ it is prime.
 :::
 
 :::intuition
-The sieve is like crossing out every second number (evens), then every third, etc. What survives are the primes — an efficient way to list them all at once.
-
-For a single suspect number, you only need to check "witness" primes up to its square root; anything larger cannot be a factor pair.
+Divisors come in pairs $d$ and $n/d$ straddling $\sqrt n$ — if one is above, the other is below. So a search below $\sqrt n$ misses nothing. The saving is enormous: certifying $997$ prime needs trial divisions by the primes up to $31$, of which there are eleven, not by the $996$ numbers below it.
 :::
 
-:::example[Sieve up to 30]
-Start with the list $2, 3, 4, \dots, 30$. Since $\sqrt{30} \approx 5.48$, we only need to start passes for the primes $2, 3, 5$.
+:::recipe[Sieve of Eratosthenes]{#sieve-recipe}
+To list every prime up to $N$:
+
+1. Write the integers $2, 3, \dots, N$, all initially unmarked.
+2. Let $p$ be the smallest unmarked number not yet used as a sieving prime.
+3. Mark every multiple $p^2, p^2 + p, p^2 + 2p, \dots$ up to $N$ as composite.
+4. Repeat from step 2 while $p^2 \le N$.
+5. The unmarked numbers are exactly the primes up to $N$.
+:::
+
+:::theorem[Correctness of the sieve]{#sieve-correctness}
+After the procedure *Sieve of Eratosthenes* halts, an integer $m$ with $2 \le m \le N$ is unmarked if and only if $m$ is prime.
+:::
+
+:::proof
+Suppose $m$ is prime. A number gets marked only as a multiple $kp$ with $k \ge p \ge 2$, so a marked number has a divisor $p$ with $1 < p < kp$, hence is composite. A prime is therefore never marked.
+
+Conversely suppose $m \le N$ is composite. By the proposition *Trial division stops at the square root*, $m$ has a prime divisor $p \le \sqrt m \le \sqrt N$; take $p$ least such. Write $m = pk$. Every prime factor of $k$ is at least $p$ by minimality of $p$, and $k > 1$, so $k \ge p$ and therefore $m = pk \ge p^2$. Thus $m$ lies in the range $p^2, p^2+p, \dots$ that step 3 marks. It remains to check that the loop actually reaches $p$: the loop runs while $p^2 \le N$, and $p^2 \le m \le N$, so it does. Hence $m$ is marked.
+
+Starting step 3 at $p^2$ rather than at $2p$ loses nothing, precisely because any smaller multiple $kp$ with $k < p$ has a prime factor of $k$ below $p$ and was already marked in an earlier pass.
+:::
+
+:::figure[The sieve up to $60$, laid out ten to a row with $n$ at position $(\text{column}, \text{row})$. Crossing out multiples of $2$, $3$, $5$ and $7$ — the primes up to $\sqrt{60} \approx 7.7$ — leaves the seventeen primes marked in the result tone. After the pass for $7$ nothing new is removed, which is the loop's stopping condition made visible.]{#sieve-grid}
+{
+  "type": "plot",
+  "x": [0, 11.5],
+  "y": [0, 7.4],
+  "equalAspect": true,
+  "xTicks": 1,
+  "yTicks": 1,
+  "xLabel": "units digit position",
+  "yLabel": "row (tens)",
+  "marks": [
+    { "kind": "point", "at": [2, 6], "tone": "result" },
+    { "kind": "point", "at": [3, 6], "tone": "result" },
+    { "kind": "point", "at": [4, 6], "tone": "muted" },
+    { "kind": "point", "at": [5, 6], "tone": "result" },
+    { "kind": "point", "at": [6, 6], "tone": "muted" },
+    { "kind": "point", "at": [7, 6], "tone": "result" },
+    { "kind": "point", "at": [8, 6], "tone": "muted" },
+    { "kind": "point", "at": [9, 6], "tone": "muted" },
+    { "kind": "point", "at": [10, 6], "tone": "muted" },
+    { "kind": "point", "at": [1, 5], "tone": "result" },
+    { "kind": "point", "at": [2, 5], "tone": "muted" },
+    { "kind": "point", "at": [3, 5], "tone": "result" },
+    { "kind": "point", "at": [4, 5], "tone": "muted" },
+    { "kind": "point", "at": [5, 5], "tone": "muted" },
+    { "kind": "point", "at": [6, 5], "tone": "muted" },
+    { "kind": "point", "at": [7, 5], "tone": "result" },
+    { "kind": "point", "at": [8, 5], "tone": "muted" },
+    { "kind": "point", "at": [9, 5], "tone": "result" },
+    { "kind": "point", "at": [10, 5], "tone": "muted" },
+    { "kind": "point", "at": [1, 4], "tone": "muted" },
+    { "kind": "point", "at": [2, 4], "tone": "muted" },
+    { "kind": "point", "at": [3, 4], "tone": "result" },
+    { "kind": "point", "at": [4, 4], "tone": "muted" },
+    { "kind": "point", "at": [5, 4], "tone": "muted" },
+    { "kind": "point", "at": [6, 4], "tone": "muted" },
+    { "kind": "point", "at": [7, 4], "tone": "muted" },
+    { "kind": "point", "at": [8, 4], "tone": "muted" },
+    { "kind": "point", "at": [9, 4], "tone": "result" },
+    { "kind": "point", "at": [10, 4], "tone": "muted" },
+    { "kind": "point", "at": [1, 3], "tone": "result" },
+    { "kind": "point", "at": [2, 3], "tone": "muted" },
+    { "kind": "point", "at": [3, 3], "tone": "result" },
+    { "kind": "point", "at": [4, 3], "tone": "muted" },
+    { "kind": "point", "at": [5, 3], "tone": "muted" },
+    { "kind": "point", "at": [6, 3], "tone": "muted" },
+    { "kind": "point", "at": [7, 3], "tone": "result" },
+    { "kind": "point", "at": [8, 3], "tone": "muted" },
+    { "kind": "point", "at": [9, 3], "tone": "muted" },
+    { "kind": "point", "at": [10, 3], "tone": "muted" },
+    { "kind": "point", "at": [1, 2], "tone": "result" },
+    { "kind": "point", "at": [2, 2], "tone": "muted" },
+    { "kind": "point", "at": [3, 2], "tone": "result" },
+    { "kind": "point", "at": [4, 2], "tone": "muted" },
+    { "kind": "point", "at": [5, 2], "tone": "muted" },
+    { "kind": "point", "at": [6, 2], "tone": "muted" },
+    { "kind": "point", "at": [7, 2], "tone": "result" },
+    { "kind": "point", "at": [8, 2], "tone": "muted" },
+    { "kind": "point", "at": [9, 2], "tone": "result" },
+    { "kind": "point", "at": [10, 2], "tone": "muted" },
+    { "kind": "point", "at": [1, 1], "tone": "result" },
+    { "kind": "point", "at": [2, 1], "tone": "muted" },
+    { "kind": "point", "at": [3, 1], "tone": "result" },
+    { "kind": "point", "at": [4, 1], "tone": "muted" },
+    { "kind": "point", "at": [5, 1], "tone": "muted" },
+    { "kind": "point", "at": [6, 1], "tone": "muted" },
+    { "kind": "point", "at": [7, 1], "tone": "muted" },
+    { "kind": "point", "at": [8, 1], "tone": "muted" },
+    { "kind": "point", "at": [9, 1], "tone": "result" },
+    { "kind": "point", "at": [10, 1], "tone": "muted" },
+    { "kind": "text", "at": [3.2, 7.0], "text": "primes kept", "tone": "result", "leaderTo": [2, 6.15] },
+    { "kind": "text", "at": [8.6, 7.0], "text": "crossed out", "leaderTo": [9, 6.15] }
+  ]
+}
+:::
+
+:::example[Sieving up to 30]
+Carry out the procedure *Sieve of Eratosthenes* for $N = 30$ and state how many sieving passes are needed.
 :::
 
 :::solution
-Pass $p = 2$ (start at $2^2 = 4$): cross out $4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30$.
-Pass $p = 3$ (start at $3^2 = 9$): cross out $9, 12, 15, 18, 21, 24, 27, 30$ (some already gone).
-Pass $p = 5$ (start at $5^2 = 25$): cross out $25, 30$.
-
-We can stop: $7 > \sqrt{30}$, so any composite $\le 30$ has already been marked by one of $2, 3, 5$. The survivors are
-
-$$2, 3, 5, 7, 11, 13, 17, 19, 23, 29.$$
-
-Sanity check: that is $10$ primes below $30$, and each survivor (e.g. $23$) is indeed not a multiple of $2, 3,$ or $5$.
+1. Since the loop runs while $p^2 \le 30$, and $5^2 = 25 \le 30 < 36 = 6^2$, only the primes $2, 3, 5$ are used as sieving primes: three passes.
+2. Pass $p = 2$ marks $4, 6, 8, \dots, 30$. Pass $p = 3$ marks $9, 15, 21, 27$ (the even multiples already went). Pass $p = 5$ marks $25$ alone.
+3. Unmarked: $2, 3, 5, 7, 11, 13, 17, 19, 23, 29$ — ten primes, so $\pi(30) = 10$.
 :::
 
-## Prime Factorization Uniqueness (preview)
+:::example[Certifying a prime by trial division]
+How many trial divisions does *Trial division stops at the square root* require to certify that $211$ is prime?
+:::
+
+:::solution
+1. $\sqrt{211} \approx 14.5$, so we test the primes $p \le 14$: these are $2, 3, 5, 7, 11, 13$.
+2. None divides $211$: it is odd, digit sum $4$, does not end in $0$ or $5$, and $211 = 7\cdot30+1 = 11\cdot19+2 = 13\cdot16+3$.
+3. Six trial divisions suffice, and $211$ is prime.
+:::
+
+## A first look at factorisation
 
 <!-- section: factorization-preview -->
 
-The full proof of unique factorization comes later, but one fact is available right away.
+Before the theorem is stated in full, it pays to factor a few numbers by hand and watch what happens: repeatedly strip off the smallest prime factor. The lemma below is what guarantees the procedure never gets stuck, and the observation that the answer never depends on the order of stripping is the uniqueness claim in embryo.
 
-:::lemma[Every composite has a small prime factor]
-Every composite $n$ has at least one prime factor $p \leq \sqrt{n}$.
+:::lemma[The least divisor above 1 is prime]{#least-divisor-prime}
+If $n > 1$ and $p$ is the smallest divisor of $n$ exceeding $1$, then $p$ is prime and $p \le \sqrt n$ unless $n$ itself is prime.
 :::
 
 :::proof
-Write $n = ab$ with $1 < a \le b < n$; then $a^2 \le ab = n$, so $a \le \sqrt{n}$, and any prime dividing $a$ is a prime $\le \sqrt{n}$ dividing $n$.
+Primality of $p$ is exactly the argument in *Every integer above 1 has a prime divisor*: a composite $p$ would have a divisor strictly between $1$ and $p$ which, by transitivity, also divides $n$, contradicting minimality.
+
+For the bound, suppose $n$ is not prime. Then $p < n$, and $n/p$ is an integer greater than $1$, so $n/p$ has a divisor above $1$, hence $n/p \ge p$ by minimality of $p$ among divisors of $n$. Multiplying by $p$ gives $n \ge p^2$.
 :::
 
-Repeated division by the smallest prime factor at each stage yields the complete factorization: keep dividing out the smallest prime that fits until the quotient reaches $1$.
-
-:::intuition
-To break a number down, always try the smallest possible prime first. Once you cannot divide anymore, you have the prime "ingredients."
-
-Uniqueness means no matter the order you find the factors, you end up with the same primes with the same powers.
-:::
-
-:::example[Factorize 180]
-Divide out the smallest prime that fits at each step:
+:::example[Factorising 180 by repeated stripping]
+Factor $180$ into primes by repeatedly dividing out the smallest prime factor, and check the result against $\tau(180)$.
 :::
 
 :::solution
-$180 \div 2 = 90$
-$90 \div 2 = 45$
-$45$ is odd, so try the next prime: $45 \div 3 = 15$
-$15 \div 3 = 5$
-$5$ is prime: $5 \div 5 = 1$
-
-Collecting the primes we divided out gives $180 = 2 \cdot 2 \cdot 3 \cdot 3 \cdot 5 = 2^2 \cdot 3^2 \cdot 5^1$.
-
-Sanity check: $2^2 \cdot 3^2 \cdot 5 = 4 \cdot 9 \cdot 5 = 180$. And by the divisor-counting formula this predicts $(2+1)(2+1)(1+1) = 18$ divisors.
+1. $180 / 2 = 90$, $90 / 2 = 45$; $45$ is odd, so the powers of $2$ stop at $2^2$.
+2. $45 / 3 = 15$, $15 / 3 = 5$; so $3^2$ divides and no more.
+3. $5$ is prime, so $180 = 2^2 \cdot 3^2 \cdot 5$.
+4. Check: $\tau(180) = 3 \cdot 3 \cdot 2 = 18$, and $\sigma(180) = 7 \cdot 13 \cdot 6 = 546$.
 :::
 
-## Common Mistakes
+:::example[Order does not matter]
+Factor $600$ by stripping the *largest* prime factor first, and compare with the usual order.
+:::
 
-- **1 is not prime**: 1 has only one positive divisor. Including it breaks unique factorization (e.g. 6=2*3=1*2*3 etc.).
-- **Checking only even numbers or obvious divisors**: For primality you must check *all* primes up to sqrt(n), not just 2 and 3. 91 looks "prime-ish" but is 7*13.
-- **Negative primes**: By convention primes are positive; -5 is a unit times 5, not considered a separate prime.
-- **Gaps vs density**: Large gaps exist, but that does not contradict infinitude. Euclid guarantees new primes keep appearing.
-- **"Every odd number is prime" fallacy**: Many composites are odd (9,15,21,25,27,33,...). Trial division must continue past small primes.
+:::solution
+1. Largest first: $600/5 = 120$, $120/5 = 24$, then $24/3 = 8$, then $8/2 = 4/1 \dots$ giving $2^3$.
+2. The multiset collected is $\{5, 5, 3, 2, 2, 2\}$, so $600 = 2^3 \cdot 3 \cdot 5^2$.
+3. Smallest first gives $600/2 = 300$, $300/2 = 150$, $150/2 = 75$, $75/3 = 25$, $25/5 = 5$, $5/5 = 1$ — the same multiset in a different order. That this always happens is the content of *Uniqueness of the prime factorisation*.
+:::
 
-The Fundamental Theorem of Arithmetic (FTA) states that every integer greater than 1 can be expressed as a product of primes in exactly one way, up to the order of the factors. This unique factorization is what makes the integers a unique factorization domain (UFD) and is the single most important structural fact about the multiplicative semigroup of positive integers.
+## The division algorithm
 
-Without FTA, many results about divisors, gcd, lcm, and arithmetic functions would collapse or require much more complicated statements. It justifies the prime factorization "canonical form" used everywhere in number theory, algebra, and cryptography.
+<!-- section: division-algorithm -->
 
-The theorem has two parts: existence of a factorization into primes, and uniqueness of that factorization (up to ordering).
+Everything remaining in the chapter comes from one statement: you can always divide, provided you accept a remainder, and the quotient and remainder are uniquely determined. It is called an algorithm for historical reasons; as stated it is a theorem, and the proof of existence is the well-ordering argument again.
 
-## Statement of the Theorem
+:::theorem[Division algorithm]{#division-algorithm}
+Let $a$ and $b$ be integers with $b > 0$. Then there exist **unique** integers $q$ and $r$ with
+
+$$a = bq + r, \qquad 0 \le r < b.$$
+:::
+
+:::proof
+**Existence.** Consider the set
+
+$$S = \{ a - bk : k \in \mathbb{Z}, \ a - bk \ge 0 \}.$$
+
+$S$ is nonempty: taking $k = -|a|$ gives $a + b|a| \ge a + |a| \ge 0$, since $b \ge 1$. So $S$ is a nonempty set of non-negative integers and by well-ordering has a least element $r = a - bq$ for some integer $q$. By construction $r \ge 0$ and $a = bq + r$.
+
+Suppose $r \ge b$. Then $r - b = a - b(q+1) \ge 0$, so $r - b \in S$; but $r - b < r$ because $b > 0$, contradicting minimality. Hence $r < b$.
+
+**Uniqueness.** Suppose $a = bq_1 + r_1 = bq_2 + r_2$ with $0 \le r_1, r_2 < b$. Subtracting,
+
+$$b(q_1 - q_2) = r_2 - r_1.$$
+
+The right-hand side satisfies $-b < r_2 - r_1 < b$, so $|b(q_1-q_2)| < b$, which forces $|q_1 - q_2| < 1$. An integer of absolute value below $1$ is zero, so $q_1 = q_2$, and then $r_1 = r_2$.
+:::
+
+:::corollary[Division by a nonzero divisor of either sign]{#division-any-sign}
+For integers $a$ and $b$ with $b \neq 0$ there are unique integers $q, r$ with $a = bq + r$ and $0 \le r < |b|$.
+:::
+
+:::proof
+If $b > 0$ this is the theorem *Division algorithm*. If $b < 0$ apply that theorem to $a$ and $|b| = -b$, obtaining $a = |b|q' + r$ with $0 \le r < |b|$, and set $q = -q'$, so $a = bq + r$. Uniqueness transfers the same way: any representation with divisor $b$ gives one with divisor $|b|$ by negating the quotient, and those are unique.
+:::
+
+:::intuition
+On the number line, mark the multiples of $b$. They cut $\mathbb{Z}$ into blocks of length $b$, and $a$ lies in exactly one block: $q$ names the block and $r$ names the position inside it. Existence is "the blocks cover everything"; uniqueness is "the blocks do not overlap".
+:::
+
+:::pitfall
+The remainder is always taken **non-negative**, even when $a$ is negative. Dividing $-17$ by $5$ gives $q = -4$ and $r = 3$, since $-17 = 5(-4) + 3$; it does **not** give $q = -3, r = -2$. Many programming languages disagree with the theorem here, returning $-2$ for `-17 % 5`, so never trust a language's `%` to implement the division algorithm without checking.
+:::
+
+:::example[Dividing with a negative dividend]
+Find the $q$ and $r$ guaranteed by *Division algorithm* for $a = -100$, $b = 7$.
+:::
+
+:::solution
+1. We need the largest multiple of $7$ at or below $-100$. Since $7 \cdot (-15) = -105 \le -100$ and $7 \cdot (-14) = -98 > -100$, take $q = -15$.
+2. Then $r = -100 - 7(-15) = -100 + 105 = 5$, and indeed $0 \le 5 < 7$.
+3. So $q = -15$, $r = 5$.
+:::
+
+## The Euclidean algorithm
+
+<!-- section: euclidean-algorithm-proper -->
+
+:::definition[Greatest common divisor]{#gcd-definition}
+For integers $a, b$ not both zero, the **greatest common divisor** $\gcd(a,b)$ is the largest integer dividing both. It exists because the set of common divisors is nonempty (it contains $1$) and bounded above by $\max(|a|,|b|)$, using part (2) of *Elementary consequences of the definition*. We set $\gcd(0,0) = 0$, and call $a, b$ **coprime** when $\gcd(a,b) = 1$.
+:::
+
+:::definition[Least common multiple]{#lcm-definition}
+For nonzero integers $a, b$, the **least common multiple** $\operatorname{lcm}(a,b)$ is the smallest positive integer divisible by both. It exists by well-ordering, since $|ab|$ is one such multiple.
+:::
+
+The naive way to compute $\gcd(a,b)$ is to factor both. That is hopeless for large inputs — factoring is the hard problem — and completely unnecessary, because the following one-line identity lets us shrink the problem instead.
+
+:::lemma[The gcd is invariant under division]{#gcd-invariance}
+If $a = bq + r$ then $\gcd(a, b) = \gcd(b, r)$.
+:::
+
+:::proof
+It suffices to show that the pairs $(a,b)$ and $(b,r)$ have the *same* set of common divisors; the greatest element of that set is then the same number.
+
+If $d \mid a$ and $d \mid b$, then $d \mid a - bq = r$ by the theorem *Linearity of divisibility*, so $d$ is a common divisor of $b$ and $r$. Conversely if $d \mid b$ and $d \mid r$ then $d \mid bq + r = a$, again by linearity, so $d$ is a common divisor of $a$ and $b$.
+:::
+
+:::recipe[Euclidean algorithm]{#euclid-recipe}
+To compute $\gcd(a,b)$ with $a \ge b > 0$:
+
+1. Divide: $a = bq_1 + r_1$ with $0 \le r_1 < b$.
+2. If $r_1 = 0$, stop and return $b$.
+3. Otherwise replace $(a, b)$ by $(b, r_1)$ and go back to step 1.
+:::
+
+:::theorem[Correctness and termination of the Euclidean algorithm]{#euclid-correct}
+For $a \ge b > 0$ the procedure *Euclidean algorithm* halts after finitely many divisions, and the last nonzero remainder is $\gcd(a,b)$.
+:::
+
+:::proof
+**Termination.** Write the successive remainders $r_1 > r_2 > \cdots$, where $r_{k+1}$ is the remainder on dividing $r_{k-1}$ by $r_k$. The theorem *Division algorithm* guarantees $0 \le r_{k+1} < r_k$, so the remainders form a strictly decreasing sequence of non-negative integers. No such sequence is infinite — by well-ordering, the set of remainders produced has a least element, and the step after it must yield remainder $0$. Hence the algorithm halts.
+
+**Correctness.** Set $r_{-1} = a$, $r_0 = b$, and let $r_n$ be the last nonzero remainder, so $r_{n+1} = 0$. Repeated application of the lemma *The gcd is invariant under division* gives
+
+$$\gcd(a,b) = \gcd(r_0, r_1) = \gcd(r_1, r_2) = \cdots = \gcd(r_{n-1}, r_n) = \gcd(r_n, 0).$$
+
+Finally $\gcd(r_n, 0) = r_n$, since every integer divides $0$ and the greatest divisor of $r_n$ is $r_n$ itself. So the returned value $r_n$ is $\gcd(a,b)$.
+:::
+
+:::figure[The Euclidean algorithm on $\gcd(1071, 462)$ as a descending staircase: each bar is a remainder, and each is strictly shorter than the one before. The run $1071, 462, 147, 21$ ends when the next remainder is $0$, so the answer is the last nonzero bar, $21$. The strict decrease is exactly what the termination argument uses.]{#euclid-staircase}
+{
+  "type": "plot",
+  "x": [0, 6.2],
+  "y": [0, 1300],
+  "xTicks": 1,
+  "yTicks": 200,
+  "xLabel": "step",
+  "yLabel": "remainder",
+  "marks": [
+    { "kind": "bars", "bars": [[0.2, 1.0, 1071], [1.2, 2.0, 462], [2.2, 3.0, 147], [3.2, 4.0, 21], [4.2, 5.0, 8]] },
+    { "kind": "path", "points": [[0.6, 1071], [1.6, 462], [2.6, 147], [3.6, 21], [4.6, 8]], "tone": "result" },
+    { "kind": "text", "at": [2.3, 1180], "text": "strictly decreasing", "leaderTo": [1.6, 500] },
+    { "kind": "text", "at": [4.4, 330], "text": "gcd = 21, then 0", "leaderTo": [3.6, 60] }
+  ]
+}
+:::
+
+:::example[Euclid on 1071 and 462]
+Compute $\gcd(1071, 462)$ and count the divisions used.
+:::
+
+:::solution
+1. $1071 = 2 \cdot 462 + 147$.
+2. $462 = 3 \cdot 147 + 21$.
+3. $147 = 7 \cdot 21 + 0$.
+4. The last nonzero remainder is $21$, so $\gcd(1071,462) = 21$, found in three divisions. Factoring would have required discovering $1071 = 3 \cdot 7 \cdot 51 = 3^2 \cdot 7 \cdot 17$ and $462 = 2 \cdot 3 \cdot 7 \cdot 11$ — more work for the same answer.
+:::
+
+:::example[A coprime pair]
+Compute $\gcd(1234, 4321)$.
+:::
+
+:::solution
+1. $4321 = 3 \cdot 1234 + 619$.
+2. $1234 = 1 \cdot 619 + 615$.
+3. $619 = 1 \cdot 615 + 4$; $615 = 153 \cdot 4 + 3$; $4 = 1 \cdot 3 + 1$; $3 = 3 \cdot 1 + 0$.
+4. Last nonzero remainder $1$, so the two numbers are coprime.
+:::
+
+## Bézout's identity and the extended algorithm
+
+<!-- section: extended-euclid -->
+
+The Euclidean algorithm computes $\gcd(a,b)$; run backwards it does more, expressing that gcd as an integer combination of $a$ and $b$. This is the single most useful fact in elementary number theory, and it is what finally pays for Euclid's lemma and hence for uniqueness of factorisation.
+
+:::theorem[Bézout's identity]{#bezout}
+Let $a, b$ be integers, not both zero. Then there exist integers $x, y$ with
+
+$$ax + by = \gcd(a,b).$$
+:::
+
+:::proof
+We may assume $a \ge b > 0$, since changing signs only changes the signs of $x, y$, and the case $b = 0$ is $a \cdot 1 + 0 \cdot 0 = a = \gcd(a,0)$.
+
+Run the *Euclidean algorithm*, producing $r_{-1} = a$, $r_0 = b$ and
+
+$$r_{k-1} = q_{k+1} r_k + r_{k+1}, \qquad k = 0, 1, \dots, n,$$
+
+with $r_{n+1} = 0$ and $r_n = \gcd(a,b)$ by *Correctness and termination of the Euclidean algorithm*.
+
+We prove by strong induction on $k$ that each $r_k$ is an integer combination of $a$ and $b$. For $k = -1$ and $k = 0$ this is clear: $r_{-1} = a\cdot 1 + b \cdot 0$ and $r_0 = a \cdot 0 + b \cdot 1$. For the step, suppose $r_{k-1} = ax_{k-1} + by_{k-1}$ and $r_k = ax_k + by_k$. Rearranging the division equation,
+
+$$r_{k+1} = r_{k-1} - q_{k+1}r_k = a(x_{k-1} - q_{k+1}x_k) + b(y_{k-1} - q_{k+1}y_k),$$
+
+which is again an integer combination. Taking $k = n$ gives the claim for $\gcd(a,b) = r_n$.
+:::
+
+The induction in that proof is an algorithm: carry the pair $(x_k, y_k)$ alongside each remainder and update it by the same recurrence, $x_{k+1} = x_{k-1} - q_{k+1}x_k$, and likewise for $y$. That is the **extended Euclidean algorithm**, and it costs no more divisions than the plain one.
+
+:::corollary[The gcd is the least positive combination]{#gcd-least-combination}
+For $a, b$ not both zero, $\gcd(a,b)$ is the smallest positive integer of the form $ax + by$ with $x, y \in \mathbb{Z}$. Moreover an integer $c$ is of the form $ax+by$ if and only if $\gcd(a,b) \mid c$.
+:::
+
+:::proof
+Let $g = \gcd(a,b)$ and let $m$ be the least positive integer of the form $ax + by$, which exists by well-ordering since the set of such positive values is nonempty (it contains $|a|$). By the theorem *Linearity of divisibility*, $g \mid ax + by = m$, so $g \le m$. By *Bézout's identity*, $g$ is itself of that form, so $m \le g$. Hence $m = g$.
+
+For the second claim, if $c = ax + by$ then $g \mid c$ by linearity. Conversely if $c = gt$ then writing $g = ax_0 + by_0$ gives $c = a(x_0t) + b(y_0t)$.
+:::
+
+:::corollary[Common divisors divide the gcd]{#common-divides-gcd}
+If $d \mid a$ and $d \mid b$ then $d \mid \gcd(a,b)$.
+:::
+
+:::proof
+Write $\gcd(a,b) = ax + by$ by *Bézout's identity* and apply the theorem *Linearity of divisibility*.
+:::
+
+This is a strengthening worth pausing on. The definition only says the gcd is the *largest* common divisor; the corollary says it is a multiple of *every* common divisor — greatest in the divisibility order, not merely in size. That is the property which generalises to rings where "largest" makes no sense.
+
+:::theorem[Euclid's lemma]{#euclids-lemma}
+If $p$ is prime and $p \mid ab$, then $p \mid a$ or $p \mid b$.
+:::
+
+:::proof
+Suppose $p \nmid a$. The only positive divisors of $p$ are $1$ and $p$, so $\gcd(p,a) \in \{1, p\}$; it cannot be $p$, since $p \mid a$ would follow. Hence $\gcd(p,a) = 1$, and by *Bézout's identity* there are integers $x, y$ with
+
+$$px + ay = 1.$$
+
+Multiply through by $b$:
+
+$$pbx + aby = b.$$
+
+Now $p$ divides $pbx$ outright, and $p$ divides $aby$ because $p \mid ab$ by hypothesis. By the theorem *Linearity of divisibility*, $p$ divides their sum, which is $b$.
+:::
+
+:::pitfall
+Primality is essential. $6 \mid 4 \cdot 9 = 36$, yet $6 \nmid 4$ and $6 \nmid 9$. The step that fails for a composite $m$ is $\gcd(m, a) \in \{1, m\}$: for $m = 6, a = 4$ the gcd is $2$, neither of the two.
+:::
+
+:::corollary[Euclid's lemma for several factors]{#euclid-lemma-many}
+If a prime $p$ divides a product $a_1a_2\cdots a_k$, then $p \mid a_i$ for some $i$.
+:::
+
+:::proof
+Induct on $k$. The case $k = 1$ is trivial. For $k > 1$ write the product as $a_1 \cdot (a_2 \cdots a_k)$; by *Euclid's lemma* either $p \mid a_1$, and we are done, or $p$ divides $a_2 \cdots a_k$, to which the inductive hypothesis applies.
+:::
+
+:::example[Extended Euclid on 240 and 46]
+Find integers $x, y$ with $240x + 46y = \gcd(240,46)$.
+:::
+
+:::solution
+1. Forward: $240 = 5 \cdot 46 + 10$; $46 = 4 \cdot 10 + 6$; $10 = 1 \cdot 6 + 4$; $6 = 1 \cdot 4 + 2$; $4 = 2 \cdot 2 + 0$. So $\gcd = 2$.
+2. Back-substitute: $2 = 6 - 1\cdot 4 = 6 - (10 - 6) = 2\cdot 6 - 10$.
+3. Continue: $= 2(46 - 4\cdot 10) - 10 = 2 \cdot 46 - 9 \cdot 10 = 2\cdot 46 - 9(240 - 5 \cdot 46) = 47 \cdot 46 - 9 \cdot 240$.
+4. So $x = -9$, $y = 47$, and a check gives $-2160 + 2162 = 2$.
+:::
+
+:::example[Solving a linear Diophantine equation]
+Does $18x + 30y = 24$ have an integer solution? Find one if it does.
+:::
+
+:::solution
+1. By *The gcd is the least positive combination*, a solution exists exactly when $\gcd(18,30) \mid 24$. Here $\gcd(18,30) = 6$ and $6 \mid 24$, so yes.
+2. Bézout for the gcd: $6 = 18 \cdot 2 + 30 \cdot (-1)$.
+3. Scale by $24/6 = 4$: $24 = 18 \cdot 8 + 30 \cdot (-4)$, so $(x,y) = (8,-4)$.
+:::
+
+## The Fundamental Theorem of Arithmetic: statement
 
 <!-- section: statement-of-fta -->
 
 :::theorem[Fundamental Theorem of Arithmetic]{#fta}
-Every integer $n > 1$ can be written as a product of primes
+Every integer $n > 1$ can be written as a product of primes,
 
-$$
-n = p_1^{e_1} p_2^{e_2} \cdots p_k^{e_k}
-$$
+$$n = p_1 p_2 \cdots p_k,$$
 
-where the $p_i$ are distinct primes and the exponents $e_i \geq 1$ are positive integers. This representation is unique up to the ordering of the prime factors.
+and this representation is unique up to the order of the factors. Collecting equal primes, every $n > 1$ has a unique **canonical factorisation**
+
+$$n = p_1^{a_1} p_2^{a_2} \cdots p_r^{a_r}, \qquad p_1 < p_2 < \cdots < p_r, \quad a_i \ge 1 .$$
 :::
 
-:::definition[Canonical factorization]
-The product above is the **prime factorization** or **canonical factorization** of $n$. By convention we write primes in increasing order.
+The theorem makes two independent claims, and they are proved below in two separate sections because they need entirely different tools. **Existence** — that a factorisation exists at all — is a induction on size and uses nothing about primes beyond the definition. **Uniqueness** — that there is only one — is the deep half, and it needs Euclid's lemma, hence Bézout, hence the division algorithm.
+
+:::remark
+The temptation is to think uniqueness is obvious. It is not, and the standard way to see this is to look at a number system where it fails. In the set $E = \{2, 4, 6, 8, \dots\}$ of even numbers, closed under multiplication, call an element "irreducible" if it is not a product of two elements of $E$. Then $2, 6, 10, 30$ are all irreducible in $E$, and
+
+$$60 = 2 \cdot 30 = 6 \cdot 10$$
+
+gives two genuinely different factorisations. Nothing in the existence argument is violated; what fails is Euclid's lemma, since $6 \mid 2 \cdot 30$ but $6$ divides neither $2$ nor $30$ within $E$. Uniqueness is a theorem about $\mathbb{Z}$, not a law of thought.
 :::
 
-The theorem does not apply directly to 1 (empty product) or negatives (handled by units).
-
-:::intuition
-Every number >1 has a unique "ingredient list" of prime atoms with quantities (exponents). No matter how you discover the factors, you always get the same list.
-
-It is like saying every molecule has a unique atomic composition; you cannot rearrange atoms to get a different valid formula for the same molecule.
+:::note
+Adopting the convention that the empty product equals $1$ lets the theorem include $n = 1$, factored as the product of no primes. This also makes the statement "$\tau(1) = 1$" consistent with the divisor-counting formula read as an empty product.
 :::
 
-:::example[Prime factorization of 360, two different starting points]
-The theorem promises that *however* we start breaking $360$ apart, we land on the same canonical form. Start one way:
-:::
-
-:::solution
-$$360 = 8 \cdot 45 = (2^3)(3^2 \cdot 5) = 2^3 \cdot 3^2 \cdot 5.$$
-
-Start a completely different way:
-
-$$360 = 36 \cdot 10 = (2^2 \cdot 3^2)(2 \cdot 5) = 2^{2+1} \cdot 3^2 \cdot 5 = 2^3 \cdot 3^2 \cdot 5.$$
-
-Both routes produce $2^3 \cdot 3^2 \cdot 5^1$ — same primes, same exponents. That inevitability is exactly what "unique up to ordering" means. Sanity check: $2^3 \cdot 3^2 \cdot 5 = 8 \cdot 9 \cdot 5 = 360$.
-:::
-
-## Existence of Factorization
+## Existence of a factorisation
 
 <!-- section: existence -->
 
-:::proposition[Existence of a prime factorization]
-Every integer $n > 1$ is a product of primes.
+:::theorem[Existence of a prime factorisation]{#fta-existence}
+Every integer $n > 1$ is a product of (one or more) primes.
 :::
 
 :::proof
-By strong induction on $n$. Base: $n = 2$ is prime, done. Assume every integer from $2$ to $n-1$ has a prime factorization. If $n$ is prime, done. If $n$ is composite, then $n = ab$ with $1 < a, b < n$; by induction both $a$ and $b$ have prime factorizations, and concatenating them gives one for $n$.
+Strong induction on $n$. Suppose the claim holds for every integer $m$ with $1 < m < n$.
+
+If $n$ is prime, it is a product of one prime and there is nothing to prove.
+
+Otherwise $n$ is composite, so $n = ab$ with $1 < a < n$ and $1 < b < n$. Both $a$ and $b$ fall in the range covered by the inductive hypothesis, so $a = p_1 \cdots p_s$ and $b = q_1 \cdots q_t$ for primes $p_i, q_j$. Concatenating,
+
+$$n = p_1 \cdots p_s q_1 \cdots q_t ,$$
+
+a product of primes. By strong induction the claim holds for every $n > 1$.
 :::
 
-This works because the process terminates (factors strictly decrease).
-
-:::intuition
-If the number is already prime, stop. If not, split it into two smaller pieces, each of which (by assumption for smaller) can be fully broken down, then combine the pieces.
-
-Like recursively dismantling a machine into subassemblies until only indivisible parts remain.
+:::remark
+The same argument can be run as a minimal-counterexample proof, which some find clearer: if some integer above $1$ had no prime factorisation, well-ordering would give a least such $n$; $n$ could not be prime, so $n = ab$ with both factors smaller and above $1$, and both would then factor by minimality, giving a factorisation of $n$ after all. Strong induction and least-counterexample are the same argument in two dresses.
 :::
 
-:::example[Existence for 30 by recursive splitting]
-$30$ is composite, so split it: $30 = 5 \cdot 6$, with $1 < 5, 6 < 30$.
+Notice what the existence proof did *not* use: nothing about Bézout, nothing about Euclid's lemma, and no property of primes except the definition of composite. That is why it also works in the even-numbers system of the remark above, where uniqueness fails — existence is cheap.
+
+:::example[Existence made explicit]
+Follow the existence proof on $n = 1386$, recording the splits it performs.
 :::
 
 :::solution
-1. By the induction hypothesis each smaller factor already has a prime factorization. Here $5$ is prime (done), and $6 = 2 \cdot 3$ splits into the primes $2$ and $3$.
-2. Concatenating the pieces: $30 = 5 \cdot (2 \cdot 3) = 2 \cdot 3 \cdot 5$. Every factor we produced is strictly smaller than $30$, which is why the recursion is legitimate and why it must terminate. Sanity check: $2 \cdot 3 \cdot 5 = 30$.
+1. $1386$ is composite: $1386 = 2 \cdot 693$.
+2. $693$ is composite: $693 = 3 \cdot 231$, and $231 = 3 \cdot 77$, and $77 = 7 \cdot 11$.
+3. Every leaf of this splitting tree is prime, so $1386 = 2 \cdot 3 \cdot 3 \cdot 7 \cdot 11 = 2 \cdot 3^2 \cdot 7 \cdot 11$.
+4. Each split strictly decreased the numbers involved, which is exactly why the recursion terminates.
 :::
 
-## Uniqueness of Factorization
+## Uniqueness of the factorisation
 
 <!-- section: uniqueness -->
 
-Uniqueness is deeper, and it rests on one lemma.
+:::theorem[Uniqueness of the prime factorisation]{#fta-uniqueness}
+If
 
-:::lemma[Euclid's lemma]{#euclids-lemma}
-If a prime $p$ divides a product $ab$, then $p \mid a$ or $p \mid b$.
+$$p_1 p_2 \cdots p_s = q_1 q_2 \cdots q_t$$
+
+with all $p_i$ and $q_j$ prime, then $s = t$ and the list $q_1, \dots, q_t$ is a rearrangement of $p_1, \dots, p_s$.
 :::
 
 :::proof
-Suppose $p \mid ab$ but $p \nmid a$. Since $p$ is prime we have $\gcd(p, a) = 1$, so by Bézout's identity there are integers $x, y$ with $px + ay = 1$. Multiply by $b$: $p(xb) + (ab)y = b$. Now $p$ divides both terms on the left ($p \mid p(xb)$ trivially, and $p \mid (ab)y$ because $p \mid ab$), so $p \mid b$.
-:::
+Induct on $s$.
 
-By induction the lemma extends to any number of factors: if $p$ divides $a_1 a_2 \cdots a_m$, it divides at least one $a_i$.
+**Base case $s = 1$.** Then $p_1 = q_1 \cdots q_t$. If $t \ge 2$ the right-hand side has the divisor $q_1$ with $1 < q_1 < p_1$, contradicting primality of $p_1$. So $t = 1$ and $p_1 = q_1$.
 
-:::proposition[Uniqueness of the prime factorization]
-If $n = p_1 p_2 \cdots p_r = q_1 q_2 \cdots q_s$ with all $p_i$ and $q_j$ prime, then the two lists of primes are identical up to order.
-:::
+**Inductive step.** Let $s \ge 2$ and assume the statement for products of $s-1$ primes. The prime $p_1$ divides the left side, hence divides $q_1 \cdots q_t$; by the corollary *Euclid's lemma for several factors*, $p_1 \mid q_j$ for some $j$. Reordering the $q$'s, take $j = 1$. Since $q_1$ is prime its only divisors above $1$ are $1$ and $q_1$, and $p_1 > 1$, so $p_1 = q_1$.
 
-:::proof
-Suppose $n$ had two factorizations into primes
+Cancel this common factor — legitimate because $p_1 \neq 0$ and $\mathbb{Z}$ has no zero divisors — to get
 
-$$n = p_1 p_2 \cdots p_r = q_1 q_2 \cdots q_s,$$
+$$p_2 \cdots p_s = q_2 \cdots q_t .$$
 
-where the $p_i$ and $q_j$ are primes (not necessarily distinct). Then $p_1$ divides the right-hand side $q_1 \cdots q_s$, so by Euclid's lemma $p_1 \mid q_j$ for some $j$. But $q_j$ is prime, so its only divisors are $1$ and $q_j$; hence $p_1 = q_j$. Cancel that common prime from both sides and repeat. Each step matches one prime on the left with an equal one on the right, so the two lists must be identical up to order.
+The left side is a product of $s - 1$ primes, so the inductive hypothesis gives $s - 1 = t - 1$ and a matching of the remaining factors. Restoring $p_1 = q_1$ completes the matching of the full lists.
 :::
 
 :::intuition
-Suppose two different recipes give the same cake. Then the first ingredient of the first recipe must appear in the second recipe (otherwise it couldn't divide the product). Cancel it and repeat; the recipes must match.
-
-Euclid's lemma is the "prime ingredient cannot be split across the other factors" rule.
+The whole weight sits on the single sentence "$p_1$ divides the product, so it divides one of the factors". Without Euclid's lemma a prime could sneak in as a divisor of a product while dividing no individual factor, and the two factorisations would never be forced to align — which is precisely what happens in the even-numbers system, where $6$ divides $2 \cdot 30$ but neither factor.
 :::
 
-:::example[Running the cancellation argument on 12]
-Suppose someone hands us two prime factorizations of $12$ and we run the uniqueness proof to force them to agree. Say
-$$12 = p_1 p_2 p_3 = q_1 q_2 q_3,$$
-with (by convention, increasing order) the true factorization $2 \cdot 2 \cdot 3$ on both sides. Take $p_1 = 2$. It divides $q_1 q_2 q_3 = 12$, so by Euclid's lemma $2$ divides one of the $q_j$; since each $q_j$ is prime, that $q_j$ must equal $2$. Cancel: $6 = p_2 p_3 = 2 \cdot 3$ on the reduced lists. Repeat with $p_2 = 2$: it divides $6$, matches the remaining $2$, cancel to $3 = 3$. The lists matched at every step.
+:::example[Uniqueness as a constraint]
+Given that $n = 2^a 3^b$ and $n^2$ has $45$ divisors, find $n$.
 :::
 
 :::solution
-1. Where does this fail if we cheat with a composite factor? Writing $12 = 3 \cdot 4$ is *not* a prime factorization, because $4 = 2 \cdot 2$ is not prime; Euclid's lemma applies only when the factors are genuine primes, which is precisely why uniqueness is stated for prime factorizations.
+1. $n^2 = 2^{2a}3^{2b}$, so by *The divisor-counting formula*, $\tau(n^2) = (2a+1)(2b+1) = 45$.
+2. Both factors are odd; the factorisations of $45$ into two odd factors are $45 \cdot 1$, $15 \cdot 3$, $9\cdot 5$ and their reversals. These give $(a,b) \in \{(22,0),(0,22),(7,1),(1,7),(4,2),(2,4)\}$.
+3. Requiring both exponents positive and $a \ge b$ leaves $(7,1)$ and $(4,2)$, that is $n = 384$ or $n = 144$. Uniqueness of factorisation is what makes the exponent bookkeeping in step 1 valid at all.
 :::
 
-## Consequences for Divisibility, GCD, and LCM
+## gcd and lcm from the factorisations
 
 <!-- section: consequences-gcd-lcm -->
 
-:::proposition[Divisibility, gcd and lcm read off the exponents]
-From unique factorization one immediately obtains:
+With uniqueness in hand, both the gcd and the lcm can be read off the exponents. This is the conceptually clean description; the Euclidean algorithm remains the one you actually compute with, because it does not require factoring.
 
-- $a \mid b$ iff every exponent in a's factorization is ≤ the corresponding in b.
-- $\gcd(a,b)$ is obtained by taking min exponents for each prime.
-- $\operatorname{lcm}(a,b)$ by taking max exponents.
-- $\gcd(a,b) \cdot \operatorname{lcm}(a,b) = |a b|$
+:::theorem[gcd and lcm by exponents]{#gcd-lcm-exponents}
+Let $a, b$ be positive integers and write them over a common set of primes,
+
+$$a = \prod_{i} p_i^{a_i}, \qquad b = \prod_i p_i^{b_i}, \qquad a_i, b_i \ge 0 .$$
+
+Then
+
+$$\gcd(a,b) = \prod_i p_i^{\min(a_i,b_i)}, \qquad \operatorname{lcm}(a,b) = \prod_i p_i^{\max(a_i,b_i)} .$$
 :::
 
 :::proof
-For the last identity, compare the exponent of a fixed prime on the two sides: $\min(e, f) + \max(e, f) = e + f$, so multiplying the gcd by the lcm restores the exponent that prime carries in $ab$.
+As in the proof of *The divisor-counting formula*, uniqueness of factorisation says $d = \prod p_i^{e_i}$ divides $a$ if and only if $e_i \le a_i$ for every $i$. So $d$ is a common divisor of $a$ and $b$ exactly when $e_i \le a_i$ and $e_i \le b_i$ for all $i$, that is $e_i \le \min(a_i,b_i)$. The largest such $d$ takes $e_i = \min(a_i,b_i)$ throughout, which is the stated formula.
+
+The multiple case is dual: $m = \prod p_i^{f_i}$ is divisible by $a$ exactly when $f_i \ge a_i$, so a common multiple needs $f_i \ge \max(a_i,b_i)$, and the smallest one takes equality.
 :::
 
-These give algorithmic ways to compute gcd/lcm once factorizations are known, and explain why they are multiplicative.
+:::theorem[Product of gcd and lcm]{#gcd-lcm-product}
+For positive integers $a$ and $b$,
 
-:::intuition
-To see if one number divides another, just check that it doesn't "use more" of any prime than the bigger one has.
-
-GCD is the "shared ingredients" at the lowest quantities; LCM is "all ingredients needed to cover both" at highest quantities.
-:::
-
-:::example[GCD and LCM of 12 and 18 via exponents]
-Line up the two factorizations over the *same* set of primes ($2$ and $3$):
-:::
-
-:::solution
-$$12 = 2^2 \cdot 3^1, \qquad 18 = 2^1 \cdot 3^2.$$
-
-Take the **minimum** exponent of each prime for the gcd:
-$$\gcd(12, 18) = 2^{\min(2,1)} \cdot 3^{\min(1,2)} = 2^1 \cdot 3^1 = 6.$$
-
-Take the **maximum** exponent of each prime for the lcm:
-$$\operatorname{lcm}(12, 18) = 2^{\max(2,1)} \cdot 3^{\max(1,2)} = 2^2 \cdot 3^2 = 4 \cdot 9 = 36.$$
-
-Sanity check the identity $\gcd \cdot \operatorname{lcm} = |ab|$: $6 \cdot 36 = 216$ and $12 \cdot 18 = 216$. It works because $\min(e, f) + \max(e, f) = e + f$ for every prime, so the two exponents recombine into $a \cdot b$.
-:::
-
-## Common Mistakes
-
-- **Forgetting the empty product for 1**: 1 has no prime factors; its factorization is the empty product (by convention). It is the multiplicative identity.
-- **Treating order or grouping as different factorizations**: 12=2*(2*3) is the same as (2*2)*3 = 2^2 * 3; uniqueness is up to order and association.
-- **Assuming FTA holds in other rings**: In $\mathbb{Z}[\sqrt{-5}]$ we have $6 = 2 \cdot 3 = (1+\sqrt{-5})(1-\sqrt{-5})$ with irreducibles that are not associates and not prime in the ring sense; unique factorization fails.
-- **Exponents must be positive**: Writing p^0 is just omitting the prime; zero exponents are not part of the factorization.
-- **Uniqueness requires primality**: If you allow composites in the "factors", uniqueness obviously fails (12=3*4=2*6).
-
-The Euclidean algorithm computes the greatest common divisor of two integers efficiently by repeated division and taking remainders. It is one of the oldest algorithms still in use, dating back to Euclid's Elements (~300 BC), and remains the basis for almost all modern gcd computations, extended gcd for finding Bézout coefficients, and many cryptographic protocols (RSA key generation, modular inverses).
-
-Its efficiency comes from the fact that the numbers shrink rapidly (at least by half every two steps in the worst case, Fibonacci numbers give the worst case). The algorithm also yields the extended form that expresses gcd as integer linear combination ax + by.
-
-Mastering it is essential before studying modular arithmetic, continued fractions, and Diophantine equations.
-
-## The Division Algorithm and GCD Definition
-
-<!-- section: division-algorithm -->
-
-:::theorem[Division algorithm]{#division-algorithm}
-For any integers $a$ and $b$ with $b > 0$ there exist unique integers $q$ (quotient) and $r$ (remainder) such that
-
-$$
-a = b q + r, \quad 0 \leq r < b.
-$$
-:::
-
-:::definition[Greatest common divisor]{#gcd-definition}
-The **greatest common divisor** $\gcd(a,b)$ is the largest positive integer $d$ that divides both $a$ and $b$ (defined whenever $a, b$ are not both zero).
-:::
-
-Since $d \mid a \iff d \mid (-a)$, the gcd depends only on absolute values, so we may assume $a, b \ge 0$; the gcd is always taken positive.
-
-:::lemma[Euclidean reduction]{#gcd-reduction}
-For $b > 0$ and $r = a \bmod b$,
-
-$$\gcd(a,b) = \gcd(b, r).$$
+$$\gcd(a,b) \cdot \operatorname{lcm}(a,b) = ab .$$
 :::
 
 :::proof
-Any common divisor of $a$ and $b$ also divides the combination $a - bq = r$, and conversely any common divisor of $b$ and $r$ divides $a = bq + r$. So $\{a, b\}$ and $\{b, r\}$ have exactly the same common divisors, hence the same greatest one.
+Fix a prime $p_i$ and compare exponents on both sides. On the left, by the theorem *gcd and lcm by exponents*, the exponent is $\min(a_i,b_i) + \max(a_i,b_i)$. On the right it is $a_i + b_i$. For any two numbers, the smaller plus the larger is the sum of the two, so $\min(a_i,b_i) + \max(a_i,b_i) = a_i + b_i$. The two sides have identical exponents at every prime, and by uniqueness of factorisation two positive integers with the same canonical factorisation are equal.
 :::
 
-:::intuition
-When you divide cookies (a) into groups of size b, the leftover r is what you have after as many full groups as possible. The common "group size" that works for both the original and the leftovers is the same.
-
-The gcd doesn't change if you replace the larger number by the remainder after subtracting multiples of the smaller.
+:::corollary[lcm from the Euclidean algorithm]{#lcm-via-gcd}
+For positive $a, b$, $\operatorname{lcm}(a,b) = ab / \gcd(a,b)$, so the lcm is computable without factoring.
 :::
 
-:::example[Division algorithm on 1071 and 462]
-Apply $\gcd(a, b) = \gcd(b, a \bmod b)$ repeatedly:
+:::proof
+Divide the identity of *Product of gcd and lcm* by $\gcd(a,b)$, which is positive and hence nonzero.
 :::
 
-:::solution
-$1071 = 2 \cdot 462 + 147$, so $\gcd(1071, 462) = \gcd(462, 147)$.
-$462 = 3 \cdot 147 + 21$, so $\gcd(462, 147) = \gcd(147, 21)$.
-$147 = 7 \cdot 21 + 0$, so $\gcd(147, 21) = \gcd(21, 0) = 21$.
-
-When the remainder hits $0$, the last nonzero remainder is the gcd: $\gcd(1071, 462) = 21$.
-
-Sanity check: $1071 = 21 \cdot 51$ and $462 = 21 \cdot 22$, and $\gcd(51, 22) = 1$, confirming $21$ is the greatest common divisor.
+:::pitfall
+The identity $\gcd \cdot \operatorname{lcm} = ab$ is a statement about **two** numbers only. For three it fails: $\gcd(2,3,4) = 1$ and $\operatorname{lcm}(2,3,4) = 12$, but $1 \cdot 12 \neq 24$.
 :::
 
-## The Euclidean Algorithm
-
-<!-- section: euclidean-algorithm-proper -->
-
-:::recipe[Euclidean algorithm]{#euclidean-algorithm}
-To compute $\gcd(a,b)$, assume $a \ge b > 0$:
-
-1. While $b \neq 0$, replace $(a,b)$ by $(b,\; a \bmod b)$.
-2. Return $a$ (the last nonzero remainder).
-:::
-
-It terminates because remainders form a strictly decreasing sequence of nonnegative integers.
-
-The number of steps is O(log min(a,b)), very fast even for huge numbers (hundreds of digits).
-
-:::intuition
-Repeatedly replace the big number by the leftover when divided by the small one, then swap roles. Eventually the remainder becomes zero and the other number is the gcd.
-
-Like the game of subtracting multiples until nothing is left; the last pile size that fits evenly is the answer.
-:::
-
-:::example[gcd(48, 18)]
-$48 = 2 \cdot 18 + 12 \quad\Rightarrow\quad \gcd(48, 18) = \gcd(18, 12)$
-$18 = 1 \cdot 12 + 6 \quad\Rightarrow\quad \gcd(18, 12) = \gcd(12, 6)$
-$12 = 2 \cdot 6 + 0 \quad\Rightarrow\quad \gcd(12, 6) = 6$
+:::example[gcd and lcm two ways]
+Compute $\gcd(84, 360)$ and $\operatorname{lcm}(84, 360)$, first from factorisations and then check with the Euclidean algorithm.
 :::
 
 :::solution
-1. The last nonzero remainder is $6$, so $\gcd(48, 18) = 6$ in only three steps. Sanity check with factorizations: $48 = 2^4 \cdot 3$ and $18 = 2 \cdot 3^2$ give $\gcd = 2^1 \cdot 3^1 = 6$. We reuse this run below for the extended algorithm.
+1. $84 = 2^2 \cdot 3 \cdot 7$ and $360 = 2^3 \cdot 3^2 \cdot 5$.
+2. Exponentwise minima: $2^2 \cdot 3^1 \cdot 5^0 \cdot 7^0 = 12$. Maxima: $2^3 \cdot 3^2 \cdot 5 \cdot 7 = 2520$.
+3. Euclid: $360 = 4\cdot 84 + 24$, $84 = 3 \cdot 24 + 12$, $24 = 2\cdot 12 + 0$, giving $\gcd = 12$ as expected.
+4. Check the product law: $12 \cdot 2520 = 30240 = 84 \cdot 360$.
 :::
 
-## The Extended Euclidean Algorithm
-
-<!-- section: extended-euclid -->
-
-By working backwards through the remainders, we can express the gcd as a combination $ax + by$ for some integers $x, y$. That such integers always exist is the theorem behind the whole method.
-
-:::theorem[Bézout's identity]{#bezout}
-For integers $a, b$ not both zero and $d = \gcd(a,b)$, there exist integers $x, y$ with
-
-$$ax + by = d,$$
-
-and $d$ is the *smallest positive value* the expression $ax + by$ can take as $x, y$ range over the integers.
-:::
-
-The extended version augments each step with coefficients: keep track of how each remainder is written as a combination of the original $a$ and $b$. When the remainder $0$ appears, the previous line already expresses the gcd in the form $ax + by$.
-
-This is crucial for finding **modular inverses**.
-
-:::corollary[Modular inverse from Bézout]
-If $\gcd(a, m) = 1$, then $ax + my = 1$ for some $x, y$, which means
-
-$$ax \equiv 1 \pmod{m}$$
-
-— so $x$ is the inverse of $a$ modulo $m$, read straight off the extended algorithm.
-:::
-
-:::intuition
-Not only do we find the size of the greatest common "measure", but we also discover exactly how many of each original quantity to combine (positive and negative) to obtain exactly that measure.
-
-It's like finding the recipe: "3 of the first ingredient minus 1 of the second gives the gcd."
-:::
-
-:::example[Extended gcd for 48 and 18 (back-substitution)]
-Take the two division steps that produced nonzero remainders above and solve each for its remainder:
+:::example[Recovering a number from gcd and lcm]
+Two positive integers have gcd $6$ and lcm $180$, and one of them is $36$. Find the other.
 :::
 
 :::solution
-$$6 = 18 - 1 \cdot 12, \qquad 12 = 48 - 2 \cdot 18.$$
-
-Substitute the expression for $12$ into the expression for $6$, then collect the $48$ and $18$ terms:
-
-$$6 = 18 - 1 \cdot (48 - 2 \cdot 18) = 18 - 1 \cdot 48 + 2 \cdot 18 = 3 \cdot 18 - 1 \cdot 48.$$
-
-So $6 = (-1) \cdot 48 + 3 \cdot 18$, giving Bézout coefficients $x = -1$, $y = 3$.
-
-Verify: $(-1) \cdot 48 + 3 \cdot 18 = -48 + 54 = 6$. Correct — and note the coefficients have opposite signs, which is typical, since one term must overshoot and the other pull back.
+1. By *Product of gcd and lcm*, the product of the two numbers is $6 \cdot 180 = 1080$.
+2. Dividing by the known one: $1080 / 36 = 30$.
+3. Check: $\gcd(36,30) = 6$ and $\operatorname{lcm}(36,30) = 180$. The other number is $30$.
 :::
 
-## Applications and Complexity
+## How fast is Euclid? Lamé's theorem
 
 <!-- section: applications-complexity -->
 
-:::proposition[Linear Diophantine equations]
-The linear equation $ax + by = c$ has integer solutions precisely when $\gcd(a,b)$ divides $c$, and the extended gcd produces one: scale the Bézout coefficients by $c / \gcd(a,b)$.
+The Euclidean algorithm terminates; the practical question is how quickly. The answer, found by Lamé in 1844 and often called the first theorem in computational complexity, is that the worst inputs are consecutive Fibonacci numbers, and that the step count is linear in the number of digits.
+
+:::definition[Fibonacci numbers]{#fibonacci}
+The **Fibonacci numbers** are defined by $F_1 = F_2 = 1$ and $F_{k} = F_{k-1} + F_{k-2}$ for $k \ge 3$, giving $1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, \dots$
 :::
 
-It is used in RSA to compute the private exponent d from e and φ(n).
+:::lemma[Fibonacci pairs are the slowest]{#fib-worst-case}
+If the *Euclidean algorithm* applied to $a > b > 0$ performs exactly $n$ divisions, then $a \ge F_{n+2}$ and $b \ge F_{n+1}$.
+:::
 
-For Fibonacci numbers F_{n+1}, F_n the algorithm takes the maximum number of steps (n-1 divisions), showing the worst-case bound is tight.
+:::proof
+Induct on $n$. For $n = 1$ the algorithm halts at once, so $b \ge 1 = F_2$ and $a > b$ gives $a \ge 2 = F_3$.
 
-Modern implementations use binary gcd (Stein's algorithm) avoiding divisions for hardware, but the classic version is simplest to understand and prove correct.
+Assume the statement for $n - 1$ and suppose the run on $(a,b)$ takes $n$ divisions, the first being $a = q_1 b + r_1$ with $0 < r_1 < b$. The remaining run is on the pair $(b, r_1)$ and takes $n - 1$ divisions, so by the inductive hypothesis $b \ge F_{n+1}$ and $r_1 \ge F_n$. Since $r_1 < b$ and $q_1 \ge 1$,
+
+$$a = q_1 b + r_1 \ge b + r_1 \ge F_{n+1} + F_n = F_{n+2}.$$
+:::
+
+:::theorem[Lamé's theorem]{#lame}
+If $a > b > 0$ and the *Euclidean algorithm* takes $n$ divisions to compute $\gcd(a,b)$, then $n$ is at most five times the number of decimal digits of $b$. The bound is attained by consecutive Fibonacci numbers.
+:::
+
+:::proof
+By the lemma *Fibonacci pairs are the slowest*, $b \ge F_{n+1}$. A standard induction shows $F_{k+1} > \varphi^{k-1}$ for $k \ge 2$, where $\varphi = (1+\sqrt5)/2$: it holds at $k=2,3$, and $F_{k+1} = F_k + F_{k-1} > \varphi^{k-2} + \varphi^{k-3} = \varphi^{k-3}(\varphi + 1) = \varphi^{k-3}\varphi^2 = \varphi^{k-1}$, using $\varphi^2 = \varphi + 1$.
+
+Hence $b > \varphi^{n-1}$, so taking base-$10$ logarithms, $\log_{10} b > (n-1)\log_{10}\varphi$. Now $\log_{10}\varphi = 0.20898\ldots > 1/5$, so
+
+$$n - 1 < \frac{\log_{10} b}{\log_{10}\varphi} < 5\log_{10} b .$$
+
+If $b$ has $D$ decimal digits then $\log_{10} b < D$, so $n < 5D + 1$, that is $n \le 5D$.
+
+For attainment, run the algorithm on $(F_{k+1}, F_k)$: since $F_{k+1} = 1 \cdot F_k + F_{k-1}$ with $0 \le F_{k-1} < F_k$, every quotient is $1$ and the remainder sequence is the Fibonacci sequence run backwards, so the number of divisions is as large as the lemma permits.
+:::
 
 :::intuition
-Once you can write the gcd as combination, you can solve "make exactly c using a and b amounts" whenever possible.
-
-The algorithm is so fast that even 1000-digit numbers are handled in milliseconds; the steps grow only with the number of digits, not the value itself.
+Every quotient of $1$ is a wasted step: the pair barely shrinks. The Fibonacci recurrence is the extreme case where *every* quotient is $1$, so the algorithm crawls. Any quotient of $2$ or more at least halves the larger argument, which is why typical inputs finish far faster than the bound — on random inputs the expected number of divisions is about $0.843 \ln b$.
 :::
 
-:::example[Solve $30x + 18y = 6$]
-1. check solvability. A solution exists iff $\gcd(30, 18)$ divides the right-hand side $6$. Run the algorithm:
-2. $30 = 1 \cdot 18 + 12$
-3. $18 = 1 \cdot 12 + 6$
-4. $12 = 2 \cdot 6 + 0 \quad\Rightarrow\quad \gcd(30, 18) = 6.$
-5. Since $6 \mid 6$, solutions exist.
-6. find one solution by back-substitution. Solve the nonzero-remainder steps for their remainders and substitute:
-7. $$6 = 18 - 1 \cdot 12, \qquad 12 = 30 - 1 \cdot 18,$$
-8. $$6 = 18 - 1 \cdot (30 - 1 \cdot 18) = 2 \cdot 18 - 1 \cdot 30.$$
-9. So $6 = (-1) \cdot 30 + 2 \cdot 18$, giving the particular solution $x_0 = -1$, $y_0 = 2$. Check: $-30 + 36 = 6$.
-10. write the general solution. Add any multiple of $b/\gcd = 18/6 = 3$ to $x$ and subtract the same multiple of $a/\gcd = 30/6 = 5$ from $y$ (these shifts cancel in the equation):
-11. $$x = -1 + 3t, \qquad y = 2 - 5t, \qquad t \in \mathbb{Z}.$$
-12. Check with $t = 1$: $x = 2, y = -3$, and $30 \cdot 2 + 18 \cdot (-3) = 60 - 54 = 6$. Correct.
+:::example[The worst case at five digits]
+How many divisions does the *Euclidean algorithm* use on $\gcd(89, 55)$, and how does that compare with Lamé's bound?
+:::
+
+:::solution
+1. $89 = 1\cdot 55 + 34$; $55 = 1 \cdot 34 + 21$; $34 = 1\cdot 21+13$; $21 = 1\cdot 13+8$; $13 = 1\cdot 8+5$; $8 = 1\cdot5+3$; $5=1\cdot3+2$; $3=1\cdot2+1$; $2 = 2\cdot1+0$.
+2. That is nine divisions, every quotient $1$ until the last — the Fibonacci signature.
+3. $b = 55$ has $D = 2$ digits, so Lamé allows up to $5 \cdot 2 = 10$ divisions. Nine is just under the bound, showing the bound is tight to within one step here.
+:::
+
+:::example[Bounding work before doing it]
+Before computing, bound the number of divisions the Euclidean algorithm can need for $\gcd(1\,000\,003, 987\,654)$.
+:::
+
+:::solution
+1. The smaller argument $b = 987654$ has $D = 6$ decimal digits.
+2. By *Lamé's theorem* the algorithm uses at most $5 \cdot 6 = 30$ divisions.
+3. In fact it uses far fewer; the bound is a worst-case guarantee, and worst cases are Fibonacci-shaped, which $987654$ is not.
+:::
+
+:::summary
+The chapter's logical spine, in order of dependence: **well-ordering** gives the **division algorithm**; iterating division gives the **Euclidean algorithm**, which terminates because remainders strictly decrease; running it backwards gives **Bézout's identity**; Bézout gives **Euclid's lemma**; Euclid's lemma gives **uniqueness** in the Fundamental Theorem, whose **existence** half is a separate and much easier strong induction. On top of the Fundamental Theorem sit the exponent formulas for $\tau$, $\sigma$, $\gcd$ and $\operatorname{lcm}$; on top of the Euclidean algorithm sits Lamé's bound.
 :::
 
 ## Common Mistakes
 
-- **Stopping too early**: The gcd is the last *nonzero* remainder, not the first remainder or the quotient.
-- **Forgetting signs in extended**: x or y can be negative; that is perfectly valid and often necessary.
-- **Assuming it only works for positives**: The algorithm extends to negatives by taking absolutes at the end for the gcd value; coefficients handle signs naturally.
-- **Confusing with subtraction version**: Repeated subtraction works but is exponentially slower; always use modulo/remainder for efficiency.
-- **When gcd does not divide c**: No integer solutions exist for ax+by=c; many students forget to check the divisibility condition before claiming a solution.
+<!-- section: common-mistakes -->
+
+1. **Confusing $d \mid n$ with $d/n$ or $n/d$.** The bar is a relation and produces a truth value; the slash is an operation and produces a number. "$3 \mid 12 = 4$" is not a sentence.
+
+2. **Getting the direction of the bar backwards.** $3 \mid 12$ says three divides twelve. Reading it as "3 divided by 12" reverses every subsequent inference.
+
+3. **Mishandling zero.** Every integer divides $0$; $0$ divides only $0$. In particular $\gcd(0, n) = |n|$, and the bound $|a| \le |b|$ from *Elementary consequences of the definition* needs $b \neq 0$.
+
+4. **Calling $1$ prime.** It is a unit, not a prime, and admitting it would destroy uniqueness in the Fundamental Theorem of Arithmetic.
+
+5. **Claiming Euclid's proof produces a prime.** $p_1\cdots p_r + 1$ need not be prime — $30031 = 59 \cdot 509$ — only that it has a prime factor outside the list.
+
+6. **Trial dividing past $\sqrt n$.** By *Trial division stops at the square root* the search may stop there; going further is wasted work, and stopping *short* of it is an error. Test $\sqrt n$ itself when it is an integer.
+
+7. **Assuming a negative remainder is allowed.** The division algorithm demands $0 \le r < |b|$, so $-17 = 5(-4) + 3$, not $5(-3) - 2$. A language's `%` operator may disagree.
+
+8. **Using Euclid's lemma with a composite modulus.** $6 \mid 4 \cdot 9$ but $6$ divides neither factor. The lemma is a statement about primes.
+
+9. **Proving only existence and calling it the Fundamental Theorem.** The existence half is a three-line induction; uniqueness is the content, and it needs Euclid's lemma.
+
+10. **Extending $\gcd \cdot \operatorname{lcm} = ab$ to three or more numbers.** It is false: $\gcd(2,3,4)\operatorname{lcm}(2,3,4) = 12 \neq 24$.
+
+11. **Reversing the Bézout coefficients.** In $240(-9) + 46(47) = 2$ the coefficient $-9$ belongs to $240$. Always substitute back and check the arithmetic; a sign slip here is the most common error in the extended algorithm.
+
+12. **Reading Lamé's bound as a count rather than a ceiling.** Five times the digit count is the worst case, achieved only by Fibonacci-like inputs; typical pairs finish in a fraction of that.
