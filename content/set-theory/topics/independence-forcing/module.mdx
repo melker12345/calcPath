@@ -4,742 +4,1211 @@ title: Independence & Forcing
 
 # Independence & Forcing
 
-Independence results, forcing, proper forcing, inner models, and Gödel's constructible universe.
+Every other chapter of mathematics answers questions. This one explains why some questions have no answer — not "no answer yet", but provably no answer from the axioms we have agreed to use.
 
-A statement φ is *independent* of a formal theory T (assumed consistent) if neither φ nor its negation ¬φ can be proved from the axioms of T.
+The question that forced the issue is Cantor's. He proved that $\mathbb{R}$ is uncountable, so $2^{\aleph_0} > \aleph_0$, and then asked whether there is a set of reals whose size falls strictly between $\aleph_0$ and $2^{\aleph_0}$. His guess — that there is not — is the **continuum hypothesis**, and it stood first on Hilbert's 1900 list. It took sixty-three years and two completely different inventions to settle, and the settlement was not "yes" or "no". Gödel showed in 1938 that CH cannot be refuted from the axioms of ZFC, by exhibiting a sparse inner universe $L$ in which it holds. Cohen showed in 1963 that CH cannot be proved from them either, by inventing **forcing**, a method for enlarging a model of set theory in a controlled way until CH fails. Between them, CH is *independent*.
 
-In other words, both T + φ and T + ¬φ are consistent (relative to the consistency of T).
+Two techniques run through everything here, and they are exact mirror images. An **inner model** is built by throwing sets away: keep only the sets some construction can name, and you obtain a thinner universe which still satisfies every axiom, but in which the continuum has had no room to grow. A **forcing extension** is built by adding sets: choose a partially ordered set of finite approximations, adjoin an idealised object that no approximation alone describes, and check that the axioms survive. Thinning gives consistency of CH; fattening gives consistency of its negation. Neither can decide CH, and that is the theorem.
 
-Independence results show that certain mathematical questions cannot be settled by a given list of axioms, no matter how long one works inside the theory.
+A warning about the shape of the arguments. Nothing in this chapter proves CH, or $\neg$CH, or the consistency of ZFC. Everything is **relative**: statements of the form "if ZFC is consistent, then so is ZFC + CH". Gödel's second incompleteness theorem forbids anything stronger, and one section below derives exactly why. Keeping the conditional visible is not pedantry — it is the difference between a correct theorem and a claim that is provably false.
 
-## Definition and Basic Examples
+Throughout, ZFC is Zermelo–Fraenkel set theory with choice, ZF is the same without choice, $\mathrm{Ord}$ is the class of ordinals, $V_\alpha$ is the cumulative hierarchy, and $\mathrm{Con}(T)$ abbreviates the arithmetical sentence asserting that the theory $T$ proves no contradiction. Lower-case $p, q, r$ always denote conditions in a forcing poset; $M$ always denotes a ground model; $G$ always denotes a generic filter.
 
-<!-- section: definition-independence -->
+## Independence: what the word means
 
-Proving "T does not prove φ" directly — inspecting every possible proof — is hopeless. The standard route is semantic: exhibit a *model* where φ fails, since a provable statement is true in all models. This is licensed by Gödel's completeness theorem, which says provability and truth-in-all-models coincide for first-order logic.
+<!-- section: what-is-independence -->
 
-:::definition[Independence]{#independence-definition}
-φ is independent of T if and only if there exists a model of T + φ and a model of T + ¬φ: the first model shows T cannot refute φ, the second shows T cannot prove it.
+Independence is a statement about a *theory*, not about a mathematical object. It says that a particular list of axioms does not settle a particular question, and it is proved by producing two worlds that obey the axioms and disagree about the question.
+
+:::definition[Independence]{#independence-def}
+Let $T$ be a first-order theory and $\varphi$ a sentence in its language. We say $\varphi$ is **independent of** $T$ if
+
+$$T \nvdash \varphi \quad \text{and} \quad T \nvdash \neg\varphi.$$
+
+Equivalently, $T$ **decides** $\varphi$ if it proves one of the two, and $\varphi$ is independent exactly when $T$ does not decide it.
 :::
 
-Classic examples in set theory:
-- The continuum hypothesis (CH) is independent of ZFC.
-- The axiom of choice (AC) is independent of ZF.
-- The existence of a measurable cardinal is independent of ZFC (in the consistency-strength sense).
+Written this way, independence is a claim about the non-existence of a proof, and non-existence claims about proofs are hopeless to attack directly: there are infinitely many candidate derivations and no way to inspect them all. The whole subject rests on converting the claim into a claim about *models*, where ordinary mathematical construction can get a grip.
 
-:::intuition
-The axioms are like the rules of a game. Independence means that the rules do not force the answer to a particular question; both "yes" and "no" are still possible without breaking the rules.
-
-You need a bigger or different rulebook (extra axioms) to decide the question.
-:::
-
-:::example
-Let us verify, step by step, that CH is independent of ZFC (assuming $\text{Con}(\text{ZFC})$).
-:::
-
-:::solution
-Step 1 (what must be shown). By definition, $CH$ is independent of ZFC iff neither $\text{ZFC} \vdash CH$ nor $\text{ZFC} \vdash \neg CH$. Equivalently (completeness theorem), iff there is a model of $\text{ZFC} + CH$ and a model of $\text{ZFC} + \neg CH$.
-Step 2 (a model of $\text{ZFC} + CH$). Inside any model of ZFC, form the constructible universe $L$. Gödel proved $L \models \text{ZFC} + CH$ (indeed $L \models \text{GCH}$). So $\text{ZFC} + CH$ is consistent, hence $\text{ZFC} \nvdash \neg CH$.
-Step 3 (a model of $\text{ZFC} + \neg CH$). Cohen forcing adjoins $\aleph_2$ new reals to a ground model while preserving cardinals (the poset is ccc), so the extension satisfies $2^{\aleph_0} \geq \aleph_2 > \aleph_1$, i.e. $\neg CH$. So $\text{ZFC} + \neg CH$ is consistent, hence $\text{ZFC} \nvdash CH$.
-Step 4 (conclusion). ZFC proves neither $CH$ nor $\neg CH$, so $CH$ is independent of ZFC.
-Sanity check: independence is symmetric here because both sides are equiconsistent with ZFC (no jump in consistency strength) — contrast this with a large-cardinal statement, whose consistency strength strictly exceeds that of ZFC.
-:::
-
-## Methods for Proving Independence
-
-<!-- section: methods-for-independence -->
-
-The two main techniques are:
-1. *Inner models*: Construct a definable sub-universe (such as Gödel's constructible universe L) inside any model of the base theory, in which the statement holds (or fails).
-2. *Forcing / outer models*: Starting from a model M of the base theory, adjoin new generic objects via a poset to produce an extension M[G] in which the statement holds (or fails) while the base theory remains true.
-
-For statements of high consistency strength (large cardinals), one also uses *consistency-strength comparisons*: showing that the statement implies Con(T + ψ) for some ψ, while the negation does not, or vice versa.
-
-:::intuition
-Inner models are like "looking inside the current mathematical universe for a smaller, better-behaved sub-universe where the statement becomes true."
-
-Forcing is like "carefully adding new objects from outside to make the statement true, without breaking the old rules."
-:::
-
-:::example
-Let us sketch, concretely, why $\text{Con}(\text{ZF}) \Rightarrow \text{Con}(\text{ZF} + \neg\text{AC})$ using the classic Cohen symmetric model.
-:::
-
-:::solution
-Step 1 (add reals with an index set). Force with $P = \text{Fn}(\omega \times \omega, 2)$ over $M \models \text{ZFC}$, giving generic reals $\langle a_n : n \in \omega\rangle$ (the $n$-th column) and let $A = \{a_n : n \in \omega\}$.
-Step 2 (blur the labels). Let the group $G$ of permutations $\pi$ of $\omega$ act on $P$ by permuting the first coordinate: $\pi \cdot p (\, (n,k),\, i\,) = p(\,(\pi^{-1}n, k),\, i\,)$. This induces an action on $P$-names. Fix the finite-support symmetry filter: a name is *symmetric* if some finite $e \subseteq \omega$ fixes it (every $\pi$ pointwise-fixing $e$ fixes the name), and *hereditarily symmetric* if this holds hereditarily.
-Step 3 (take the symmetric submodel). Let $N$ be the class of sets with hereditarily symmetric names. Then $N \models \text{ZF}$, $A \in N$, and each $a_n \in N$, but the *enumeration* $n \mapsto a_n$ is not in $N$ (any name for it would have to fix all labels, needing infinite support).
-Step 4 (no choice function on $A$). Suppose $f \in N$ chose distinctly among finitely-supported "unordered" data; a permutation moving two labels outside the finite support of $f$'s name would move $f$'s output while fixing $f$, a contradiction. Concretely $A$ is an infinite, Dedekind-finite set (it has no countable subset in $N$): it cannot be well-ordered, so $N \models \neg\text{AC}$.
-Conclusion + sanity check: $N \models \text{ZF} + \neg\text{AC}$, built inside a model of ZFC, so $\text{Con}(\text{ZF}) \Rightarrow \text{Con}(\text{ZF} + \neg\text{AC})$. Sanity check on why AC fails but ZF survives: symmetry is preserved by the ZF operations (pairing, union, power set, etc.), so $N \models \text{ZF}$; but a well-ordering of $A$ would break the symmetry, so it is exactly AC that is lost.
-:::
-
-## Examples in Set Theory
-
-<!-- section: examples-in-set-theory -->
-
-Besides CH and AC, independence abounds:
-- Suslin's hypothesis (there is no Suslin tree) is independent of ZFC.
-- The Whitehead problem (every Whitehead group is free) is independent.
-- Many statements about the structure of the real line under measure or category (e.g., "all sets of reals have the property of Baire") are independent.
-- The existence of 0^# (a real coding truth about L) is independent of ZFC; its existence implies that L is not the whole universe in a strong sense.
-- Large cardinal axioms are independent of ZFC in the sense that their consistency strength strictly exceeds that of ZFC.
-
-:::intuition
-Set theory is extremely rich; once you have the basic rules for sets, there is still enormous freedom in how "wide" or "tall" the universe of sets is allowed to be.
-
-Different choices produce different answers to questions about the continuum, about trees, about definable sets of reals, etc.
-:::
-
-:::example
-The existence of a measurable cardinal implies that 0^# exists and that every uncountable cardinal in L is inaccessible, Mahlo, etc., in L. If there is no measurable, then in L there may be no such large cardinals. The statement "there is a measurable" is therefore not provable in ZFC — its consistency strength strictly exceeds that of ZFC, so ZFC cannot even prove Con(ZFC + "there is a measurable").
-:::
-
-## Philosophical Significance
-
-<!-- section: philosophical-significance -->
-
-Independence results, especially for "natural" mathematical statements such as CH, have been interpreted in several ways:
-- The ZFC axioms are incomplete; we need to adopt additional axioms (large cardinals, forcing axioms, determinacy, etc.) to decide them.
-- There may be no single "true" universe of sets; different legitimate universes give different answers.
-- Some questions (especially those of very high consistency strength) may remain permanently undecided by any "reasonable" extension of ZFC.
-
-Gödel himself believed that CH is false and that new axioms (large cardinals) would eventually decide it negatively. Modern research has produced many candidates for such axioms, some implying CH, others implying ¬CH.
-
-:::intuition
-Independence shows that the current rulebook is not powerful enough to answer every question we can meaningfully ask.
-
-Mathematicians then debate which extra rules to add. Different extra rules give different answers and different mathematics downstream.
-:::
-
-:::example
-Large cardinals (measurable, Woodin, supercompact, etc.) decide the truth value of many statements about projective sets of reals (projective determinacy) and about the fine structure of L. Forcing axioms such as PFA decide that 2^ℵ₀ = ℵ₂ and that many combinatorial objects on ω₁ do not exist. Both are "natural" in different communities and decide CH differently.
-:::
-
-## Common Mistakes
-
-- **Thinking that independence means 'we can never know the answer'**: It means only that the *current* axioms do not decide it. Stronger axioms often do decide it.
-- **Confusing independence with undecidability in the sense of Gödel's incompleteness for arithmetic**: Independence in set theory is usually proved by exhibiting models on both sides, not merely by a diagonal argument.
-- **Believing that if a statement is independent then both it and its negation are 'equally true'**: In practice one may have strong reasons (from inner-model theory, from maximality considerations, from consequences for other fields) to prefer one side.
-- **Assuming every interesting statement is independent of ZFC**: Many statements *are* decided by ZFC (e.g., the basic properties of ordinals and cardinals, the existence of non-constructible reals if 0^# exists is decided in certain ways, etc.).
-- **Forgetting consistency-strength hierarchies**: "Con(ZFC + φ)" can be strictly stronger than "Con(ZFC)"; independence in that case is not symmetric.
-
-Forcing is a powerful technique invented by Paul Cohen in 1963 to prove independence results in set theory. It allows one to start from a model of ZFC and adjoin new "generic" sets in a controlled way, producing a larger model in which previously undecidable statements become true or false.
-
-Cohen used forcing to show that the continuum hypothesis and the axiom of choice are independent of ZF (more precisely, that ¬CH and ¬AC are consistent with ZF, assuming ZF itself is consistent).
-
-## What Forcing Is
-
-<!-- section: what-is-forcing -->
-
-:::definition[The generic extension]{#generic-extension}
-Given a ground model M of (a fragment of) ZFC and a partial order (poset) P ∈ M that M thinks is a forcing notion, one constructs a *generic filter* G ⊆ P that is "generic over M" (intersects every dense subset of P that belongs to M).
-
-One then builds the *generic extension* M[G] consisting of all sets that can be "named" by P-names in M and interpreted using G.
-:::
-
-:::theorem[The extension is again a model]{#extension-models-zfc}
-If M ⊨ ZFC then M[G] ⊨ ZFC. It contains new sets (the generic object decoded from G) while preserving a great deal of the structure of M.
-:::
-
-:::intuition
-Think of P as a collection of "partial descriptions" or "promises" about a new object you want to add (e.g., finite pieces of a new real number).
-
-A generic G is an infinite coherent collection of these promises that "answers every question" that the ground model M can ask (by meeting all dense sets M can define).
-
-M[G] is the universe you get by adding the object described by G and closing under the set-theoretic operations that M already knew.
-:::
-
-:::example
-The simplest forcing: Cohen forcing to add one new real, worked out step by step.
-:::
-
-:::solution
-Step 1 (the poset). Let $P = 2^{<\omega}$ be the set of all finite binary sequences $p: n \to 2$ (here $n \in \omega$ is the length), ordered by end-extension: $q \leq p$ ("$q$ is stronger") iff $q \supseteq p$, i.e. $q$ extends $p$ as a function. The empty sequence $\emptyset$ is the weakest condition (the maximum $1$). This poset lives in $M$.
-Step 2 (conditions as partial information). A condition $p$ of length $n$ is a promise "the new real $c$ starts with these $n$ bits." A stronger $q \supseteq p$ makes a longer, more informative promise consistent with $p$.
-Step 3 (density of "grow longer"). For each $n$, the set $E_n = \{p \in P : \text{length}(p) \geq n\}$ is dense: any condition $p$ can be extended (e.g. by appending zeros) to a condition of length $\geq n$. Since $E_n \in M$, an $M$-generic $G$ meets each $E_n$, so $G$ contains conditions of every finite length.
-Step 4 (decode the generic). Because $G$ is a filter (any two of its conditions are compatible, hence comparable here), $c = \bigcup G$ is a single well-defined function. By Step 3 its domain is all of $\omega$, so $c : \omega \to 2$ is a total infinite binary sequence — a real.
-Step 5 (the real is new). For each ground-model real $r \in 2^\omega \cap M$, the set $D_r = \{p \in P : p(k) \neq r(k) \text{ for some } k < \text{length}(p)\}$ is dense (extend any $p$ by one bit chosen to differ from $r$ at the next position). $D_r \in M$, so $G$ meets $D_r$, forcing $c \neq r$. This holds for every $r \in M$, so $c \notin M$.
-Sanity check: $c$ really is a subset of $\omega$ (identify it with $\{k : c(k) = 1\}$), it lies in $M[G]$ by Step 4, and it is genuinely new by Step 5. Thus $M[G]$ has a real that $M$ did not — the Cohen real.
-:::
-
-## Posets and Generic Filters
-
-<!-- section: posets-and-generics -->
-
-A poset P is a partial order (usually assumed separative or with a maximum element 1). Stronger conditions give more information.
-
-:::definition[M-generic filter]{#m-generic-filter}
-A filter G on P is *M-generic* if for every dense D ⊆ P with D ∈ M we have G ∩ D ≠ ∅.
-:::
-
-Density means that below any condition there is a stronger condition in D; genericity says G "decides" every question M can pose.
-
-:::intuition
-Conditions are like "finite approximations to the object being added."
-
-Dense sets are "requirements" or "questions" that M can express ("make sure the real is not equal to this particular old real", "make sure this ordinal is collapsed or preserved", etc.).
-
-Genericity guarantees every requirement is eventually satisfied.
-:::
-
-:::example
-Let us check carefully that a certain set of Cohen conditions is dense and see what genericity then buys us. Fix a ground-model real $r \in 2^\omega \cap M$ and let
-$$D_r = \{\, p \in 2^{<\omega} : p(k) \neq r(k) \text{ for some } k < \text{length}(p) \,\}.$$
-:::
-
-:::solution
-Step 1 (density). Take an arbitrary condition $p$ of length $n$. If $p$ already disagrees with $r$ somewhere, then $p \in D_r$ and we are done. Otherwise $p = r{\restriction}n$. Define $q = p ^\frown \langle 1 - r(n)\rangle$, i.e. append the bit that is the opposite of $r(n)$. Then $q \leq p$ (stronger, since $q \supseteq p$) and $q(n) = 1 - r(n) \neq r(n)$, so $q \in D_r$. Hence below every condition there is one in $D_r$: $D_r$ is dense.
-Step 2 (it is in $M$). $D_r$ is defined from $r$ and $P$, both in $M$, so $D_r \in M$. Genericity therefore applies to it.
-Step 3 (genericity acts). Since $G$ is $M$-generic and $D_r \in M$, we have $G \cap D_r \neq \emptyset$. Pick $p \in G \cap D_r$; then $c = \bigcup G$ extends $p$ and disagrees with $r$ at the witnessing $k$, so $c \neq r$.
-Step 4 (quantify over all old reals). $M$ has at most $|2^\omega \cap M|$ many reals $r$, and each gives a dense $D_r \in M$; genericity meets all of them, so $c$ differs from every ground-model real.
-Sanity check: the argument never used the generic $G$ to prove density — density was verified purely inside $M$ (Step 1). Genericity is what upgrades "$D_r$ is dense in $M$" into "$c \neq r$." This division of labor (combinatorics in $M$, decoding via $G$) is the whole method.
-:::
-
-## Using Forcing to Prove Independence
-
-<!-- section: forcing-to-prove-independence -->
-
-:::recipe[Proving unprovability by forcing]{#forcing-recipe}
-To show that a statement φ is not provable from ZFC (assuming consistency):
-1. Start with a model M ⊨ ZFC.
-2. Find a poset P ∈ M such that M thinks "there is a condition that forces ¬φ" (or that in M[G] we will have ¬φ).
-3. Show that the forcing preserves enough of ZFC (or at least the consistency strength) so that M[G] ⊨ ZFC + ¬φ.
-:::
-
-Cohen's original argument for ¬CH: force with a poset that adds ℵ₂ many new reals (or a product/iteration that makes 2^ℵ₀ ≥ ℵ₂) while preserving cardinals (using ccc posets). In the extension the old ℵ₁ is still uncountable but there are at least ℵ₂ many reals.
-
-For ¬AC one uses symmetric extensions or permutation models (or class forcing) in which a Dedekind-finite infinite set of reals or a countable family of pairs without a choice function appears.
-
-:::intuition
-You design a "recipe" (the poset) for adding exactly the kind of new object that will make the statement you want to be independent become true (or false).
-
-You prove that the recipe does not destroy the axioms of set theory and does not accidentally make the statement true in the old model.
-:::
-
-:::example
-Let us force $2^{\aleph_0} = \aleph_2$ from a ground model $M \models \text{ZFC} + \text{GCH}$, tracking why each cardinal survives.
-:::
-
-:::solution
-Step 1 (the poset). Let $P = \text{Fn}(\aleph_2 \times \omega, 2)$, the finite partial functions $p : \aleph_2 \times \omega \rightharpoonup 2$, ordered by $\supseteq$. (Here $\aleph_2$ is computed in $M$.) This is the finite-support product of $\aleph_2$ copies of Cohen forcing.
-Step 2 (it is ccc). Any antichain of size $\aleph_1$ would give $\aleph_1$ conditions whose finite domains form an uncountable family of finite sets; by the $\Delta$-system lemma there is an uncountable subfamily with a common "root," and two conditions agreeing on the root are compatible — contradiction. So $P$ is ccc.
-Step 3 (cardinals preserved). By the ccc preservation theorem (see the ccc worked example), all cardinals and cofinalities of $M$ are preserved. In particular $\aleph_1^M = \aleph_1^{M[G]}$ and $\aleph_2^M = \aleph_2^{M[G]}$.
-Step 4 (lower bound on the continuum). For each $\xi < \aleph_2$, the slice $c_\xi = \{n : G \ni p,\ p(\xi, n) = 1\}$ is a real, and a density argument (as in the single Cohen real) shows $\xi \neq \eta \Rightarrow c_\xi \neq c_\eta$. So $M[G]$ has $\geq \aleph_2$ distinct reals: $2^{\aleph_0} \geq \aleph_2$.
-Step 5 (upper bound). $|P| = \aleph_2$ (finitely many entries drawn from a set of size $\aleph_2$), so there are at most $|P|^{\aleph_0} = \aleph_2^{\aleph_0}$ nice names for reals; under GCH in $M$, $\aleph_2^{\aleph_0} = \aleph_2$. Hence $2^{\aleph_0} \leq \aleph_2$.
-Conclusion + sanity check: $\aleph_2 \leq 2^{\aleph_0} \leq \aleph_2$, so $2^{\aleph_0} = \aleph_2$ in $M[G]$, and since $\aleph_1$ was preserved this is genuine $\neg CH$. The upper-bound step is essential — without counting names one only gets $2^{\aleph_0} \geq \aleph_2$, not equality.
-:::
-
-## Preservation Theorems
-
-<!-- section: preservation-theorems -->
-
-A central part of forcing technology is proving that certain posets preserve cardinals, cofinalities, or other properties.
-
-:::theorem[Preservation theorems]{#preservation}
-- ccc (countable chain condition) posets preserve all cardinals and cofinalities ≥ ℵ₁.
-- Proper posets preserve ℵ₁ and stationary subsets of ω₁.
-- More generally, one classifies posets by how much they destroy (or preserve) of the ground model.
-:::
-
-:::definition[The forcing relation]{#forcing-relation}
-The forcing relation p ⊩ φ ("p forces φ") means: for *every* generic G with p ∈ G, the extension M[G] satisfies φ. Crucially it is defined inside the ground model M by recursion on the complexity of φ, using only the poset P (never the generic itself).
-:::
-
-:::theorem[Definability and Truth Lemmas]{#definability-truth}
-Two lemmas make the forcing relation work: the **Definability Lemma** — the relation {(p, ⌜φ⌝) : p ⊩ φ} is a definable class in M — and the **Truth Lemma** — M[G] ⊨ φ iff some p ∈ G forces φ.
-:::
-
-Together they reduce "what is true after forcing" to a computation M can perform in advance, which is why all the combinatorics (density, chain conditions, preservation) can be checked without ever exhibiting G.
-
-:::intuition
-Not every "recipe" for adding new sets is harmless; some posets collapse cardinals or destroy stationary sets.
-
-Preservation theorems tell you which posets are safe for which purposes (e.g., "if you only care about not collapsing ℵ₁, you may use any proper poset").
-:::
-
-:::example
-Let us prove that Cohen forcing $P = 2^{<\omega}$ is ccc, and then see why ccc gives cardinal preservation.
-:::
-
-:::solution
-Step 1 (what ccc means). An antichain is a set of pairwise incompatible conditions; two conditions $p, q \in 2^{<\omega}$ are compatible iff one extends the other. $P$ is ccc iff every antichain is countable.
-Step 2 ($P$ is even countable). $2^{<\omega} = \bigcup_{n \in \omega} 2^n$ is a countable union of finite sets, so $|P| = \aleph_0$. Any subset of a countable set is countable, so in particular every antichain is countable. Hence $P$ is ccc. (The delta-system lemma is the tool needed for larger ccc posets such as the product $\text{Fn}(\aleph_2 \times \omega, 2)$ that adds $\aleph_2$ reals; for a single Cohen real countability alone suffices.)
-Step 3 (ccc ⇒ preserves cofinalities $\geq \omega_1$). Suppose $\dot f$ is a name and $p \Vdash "\dot f : \omega \to \text{Ord}"$. For each $n$, the set of possible values is bounded: by ccc, a maximal antichain deciding $\dot f(n)$ is countable, so $\{\alpha : \exists q \leq p,\ q \Vdash \dot f(n) = \alpha\}$ is countable. Thus in $M$ there is a function $F : \omega \to [\text{Ord}]^{\leq \aleph_0}$ with $p \Vdash \dot f(n) \in F(n)$ for all $n$: the extension's new $\omega$-sequences of ordinals are "captured" by ground-model countable sets.
-Step 4 (conclusion). Consequently no new cofinal $\omega$-sequence can appear in a ground-model regular uncountable cardinal $\kappa$, so $\text{cf}(\kappa)$ is unchanged and $\kappa$ stays a cardinal. In particular $\aleph_1$ is preserved.
-Sanity check: preservation would fail for a poset that collapses $\aleph_1$ (e.g. $\text{Coll}(\omega,\omega_1)$, which adds a surjection $\omega \to \omega_1$); that poset is not ccc — it has an antichain of size $\aleph_1$ — consistent with our theorem.
-:::
-
-## Common Mistakes
-
-- **Thinking forcing 'adds' sets directly to the true universe V**: Forcing is a relative consistency technique inside a model M; the extension M[G] is another model, not necessarily a subclass of the true V.
-- **Confusing the poset with the generic object**: The poset P lives in the ground model and describes possible approximations; the generic G is the actual infinite coherent object (usually not in M).
-- **Believing every forcing destroys cardinals**: Many important posets (ccc, proper, semi-proper) are carefully designed *not* to collapse cardinals or to collapse only specific ones.
-- **Forgetting the definability of the forcing relation**: All the combinatorial work (density arguments, preservation) is done inside the ground model using the definable relation ⊩; you never need the generic to be present to reason about what it will force.
-- **Assuming forcing is the only way to obtain independence**: There are other methods (inner models, large cardinals, symmetric extensions, etc.), but forcing is the most flexible for "making the continuum large" or "adding counterexamples to choice."
-
-*Proper forcing* is a class of partial orders introduced by Shelah that is large enough to include many useful posets (including all ccc and all countably closed posets) while still preserving ω₁ and stationary subsets of ω₁ in a controlled way.
-
-The Proper Forcing Axiom (PFA) is the natural forcing axiom for this class at the level of ℵ₁ many dense sets. It has extremely strong consequences, including 2^ℵ₀ = ℵ₂ and the failure of square principles at all cardinals.
-
-Proper forcing and PFA form one of the central pillars of modern set theory of the reals and of ω₁.
-
-## Definition of Properness
-
-<!-- section: what-is-proper -->
-
-:::definition[Proper poset]{#proper-poset}
-A poset P is *proper* if for all sufficiently large regular θ, for every countable elementary submodel N ≺ H_θ with P ∈ N, and for every p ∈ P ∩ N, there exists q ≤ p such that q is (N, P)-generic: for every dense set D ∈ N, q forces that the generic filter intersects D (i.e., the interpretation of the name for the generic meets D ∩ N).
-:::
-
-Equivalently (by a standard characterization), P does not collapse ω₁ when forced over any countable transitive model containing it.
-
-Properness is preserved by countable support iterations (under mild conditions), which makes it a very useful iteration class.
-
-:::intuition
-Countable elementary submodels N are like "countable approximations to the universe" that contain the poset.
-
-A master condition q for N is a condition below p that "promises" that the generic will be generic over N — it will meet all the dense sets that N thinks are dense.
-
-Proper posets are those for which you can always find such master conditions; they respect countable models without collapsing ω₁.
-:::
-
-:::example
-We show two standard classes are proper, checking the master-condition property directly. Fix a large regular $\theta$, a countable $N \prec H_\theta$ with $P \in N$, and $p \in P \cap N$.
-:::
-
-:::solution
-Case A ($P$ is ccc ⇒ proper). Claim: $q = p$ itself is $(N,P)$-generic. Take any dense $D \in N$; we must show $p \Vdash "\dot G \cap D \cap N \neq \emptyset"$. Let $A \in N$ be a maximal antichain of conditions in $D$. By ccc, $A$ is countable; and $A \in N$ with $N \prec H_\theta$ containing a countable set forces $A \subseteq N$ (each element of a countable set in $N$ is in $N$). So $A = A \cap N \subseteq D \cap N$. Any generic filter meets the maximal antichain $A$, hence meets $D \cap N$. Thus $p$ works — no strengthening needed.
-Case B ($P$ is countably closed ⇒ proper). Countably closed means every descending $\omega$-sequence of conditions has a lower bound. Enumerate the dense sets of $P$ lying in $N$ as $\langle D_n : n \in \omega\rangle$ (possible since $N$ is countable). Build $p = q_0 \geq q_1 \geq q_2 \geq \cdots$ with $q_{n+1} \in D_n \cap N$, using density of $D_n$ inside $N$ (elementarity of $N$ supplies the witness in $N$). By countable closure there is a lower bound $q \leq q_n$ for all $n$. Then $q \leq p$ and $q$ meets every $D_n \cap N$, so $q$ is $(N,P)$-generic.
-Sanity check on the hierarchy: Case A used no strengthening, Case B built a decreasing chain; both are special cases of "find a master condition." Since ccc and countably closed posets are both proper but neither class contains the other, properness is strictly larger than each — consistent with the claim that many tree forcings, club-shooting through fat stationary sets, and (semi)proper posets like Namba forcing lie in the proper/semiproper zone but outside ccc.
-:::
-
-## Proper Forcing Axiom (PFA)
-
-<!-- section: proper-forcing-axiom -->
-
-:::definition[Proper forcing axiom]{#pfa}
-PFA: for every proper poset P and every collection of ℵ₁ many dense subsets of P, there exists a filter G ⊆ P that intersects all of them.
-:::
-
-PFA is a very strong forcing axiom. It implies MA (since ccc posets are proper) and much more.
-
-:::intuition
-Instead of only ccc posets (as in MA), PFA lets you find filters generic for ℵ₁ many dense sets in *any* proper poset.
-
-This is a powerful "maximality" principle: the universe is closed under generic constructions coming from a very large class of posets, as long as you only have ℵ₁ many requirements.
-:::
-
-:::example
-The poset for shooting a club through a fat stationary set on ω₁ (or for threading a square sequence) can be made proper. PFA applied to it and ℵ₁ dense sets produces the club or thread, which can be used to derive contradictions with square or to force reflection.
-:::
-
-## Major Consequences of PFA
-
-<!-- section: consequences-of-pfa -->
-
-:::theorem[Consequences of PFA]{#pfa-consequences}
-PFA has dramatic global effects:
-- 2^ℵ₀ = ℵ₂.
-- Failure of □_κ for all κ (no square sequences at any cardinal).
-- NS_ω₁ is ℵ₂-saturated.
-- Every stationary subset of ω₁ reflects or is killed in a controlled way; many combinatorial principles on ω₁ fail.
-- The non-stationary ideal on ω₁ is precipitous, etc.
-- Many consequences for topology, algebra, and analysis on uncountable objects (e.g., no S-spaces or L-spaces under certain strengthenings, automatic continuity results, etc.).
-:::
-
-The proof that PFA implies 2^ℵ₀ = ℵ₂ usually proceeds by showing that if the continuum were larger, there would be a proper poset (a club-shooting or collapse poset) whose application under PFA would force the continuum down to ℵ₂, a contradiction.
-
-:::intuition
-PFA is so strong that it pins down the exact size of the continuum and destroys most "pathological" combinatorial objects on ω₁ that can exist under CH or in L.
-
-It is one of the strongest "anti-CH" principles that is still consistent (relative to a supercompact cardinal).
-:::
-
-:::example
-Suppose 2^ℵ₀ > ℵ₂. Then there is a stationary costationary set S ⊆ ω₁ that codes (in a suitable way) a collapse of all cardinals between ℵ₁ and the continuum down to ℵ₁. There is a proper poset that shoots a club through S. PFA applied to this poset and ℵ₁ many dense sets (one for each possible name or dense set in the bookkeeping) produces the club, which in turn forces the collapse, contradicting that the continuum was larger than ℵ₂. Hence PFA ⇒ 2^ℵ₀ = ℵ₂.
-:::
-
-## Proper versus Semiproper Forcing
-
-<!-- section: proper-vs-semiproper -->
-
-:::definition[Semiproper poset]{#semiproper}
-*Semiproper* posets are a larger class: they preserve stationary subsets of ω₁ (or at least do not collapse ω₁) but may collapse ω₂ or higher.
-:::
-
-The semiproper forcing axiom (SPFA) is the analogue of PFA for semiproper posets. It also implies 2^ℵ₀ = ℵ₂ and is consistent relative to a supercompact cardinal (by revised countable support iterations).
-
-Many important posets (Namba forcing, Prikry-type forcings, certain Radin forcings) are semiproper but not proper.
-
-The distinction is important for preservation theorems in iterated forcing.
-
-:::intuition
-Proper posets are "very respectful" of countable models and preserve a lot.
-
-Semiproper posets are a bit wilder; they may change ω₂ but still keep ω₁ from collapsing.
-
-SPFA is the corresponding maximality principle for this larger class and has similar strong global effects.
-:::
-
-:::example
-Namba forcing (changing the cofinality of ℵ₂ to ω while preserving ℵ₁) is semiproper but not proper. SPFA applied to it can be used to force the failure of CH or to thread squares at ℵ₂, etc.
-:::
-
-## Consistency Strength
-
-<!-- section: role-modern -->
-
-:::theorem[Consistency strength of PFA]{#pfa-strength}
-The consistency of PFA (or SPFA) requires a supercompact cardinal (roughly):
-- If there is a supercompact, one can force PFA by a (revised) countable support iteration of length the supercompact, preserving enough supercompactness to apply the axiom.
-- Conversely, PFA implies (via core model theory or the existence of certain inner models with Woodin cardinals or stronger) the consistency of ZFC + "there is a supercompact cardinal."
-:::
-
-Thus PFA sits at a high but precisely calibrated level in the consistency-strength hierarchy.
-
-:::intuition
-PFA is not a "mild" axiom like MA; it has substantial large-cardinal strength.
-
-The supercompact is used to "prepare" the universe so that the iteration that forces PFA does not destroy the very cardinals needed to carry out the bookkeeping and preservation.
-:::
-
-:::example
-The standard consistency proof uses a Laver diamond or a master condition preparation at a supercompact κ to iterate all proper posets of size < κ while preserving the supercompactness of κ long enough that at the end one can argue that the generic extension satisfies PFA (because any proper poset in the extension was considered at some stage, and the master conditions ensure the generics were added).
-:::
-
-## Role in Modern Set Theory
-
-<!-- section: role-modern-forcing -->
-
-Proper and semiproper forcing, together with their associated axioms PFA/SPFA and Martin's Maximum, are the main tools for obtaining "maximal" or "saturated" combinatorial behavior at ω₁ while controlling the continuum.
-
-They compete with (and are often incompatible with) very large cardinals in inner models, but are compatible with moderate large cardinals.
-
-They have settled many classical questions from topology, algebra, and infinitary combinatorics (existence of Countryman lines, automatic continuity of homomorphisms, reflection principles, etc.).
-
-:::intuition
-If you want the continuum to be ℵ₂ and you want almost no "bad" combinatorial objects on ω₁, PFA or SPFA is the axiom to assume.
-
-The price is a supercompact in the background for consistency, and the loss of some very large cardinals that would contradict the forcing axiom.
-:::
-
-:::example
-Under PFA there are no ℵ₁-Aronszajn trees that are special in certain ways, no square sequences, the non-stationary ideal is saturated, every two ℵ₁-dense ideals on ω₁ are isomorphic after forcing, etc. These are theorems that calibrate exactly what "ω₁ combinatorics looks like" when the universe is maximal with respect to proper forcing.
-:::
-
-## Common Mistakes
-
-- **Confusing proper with ccc**: All ccc posets are proper, but many proper posets are not ccc (e.g., Namba forcing under CH, club shooting through fat stationary sets).
-- **Thinking PFA is consistent relative to ZFC alone**: It requires a supercompact for the upper bound; the lower bound is also high (inner models with Woodins or supercompacts).
-- **Assuming PFA decides everything**: It decides the continuum (ℵ₂) and kills square, but many questions about higher cardinals or about arbitrary sets of reals remain open or require stronger axioms.
-- **Forgetting that properness is preserved by countable support iterations**: This is the key technical fact that makes iterated proper forcing possible and is what allows the consistency proofs.
-- **Believing that semiproper is the same as proper**: Semiproper is strictly larger; the difference appears when one wants to change cofinalities of ℵ₂ or higher while preserving ω₁.
-
-An *inner model* is a transitive class M ⊆ V that contains all the ordinals and satisfies (at least) the axioms of ZF. Inner models are "universes inside the universe" that are well-behaved and often satisfy extra axioms (AC, GCH, large cardinals) that the full universe V may not satisfy.
-
-They are the primary tool for proving relative consistency results and for measuring the "distance" between V and L-like universes.
-
-## Definition and Basic Properties
-
-<!-- section: what-is-inner-model -->
-
-:::definition[Inner model]{#inner-model}
-A class M is an inner model of ZF if:
-- M is transitive (x ∈ y ∈ M ⇒ x ∈ M),
-- Ord ⊆ M (M contains every ordinal),
-- (M, ∈) ⊨ ZF.
-
-If M also satisfies the axiom of choice we say it is an inner model of ZFC.
-:::
-
-Because M is transitive, the ordinals and the membership relation are computed absolutely: α is an ordinal in M iff it is an ordinal in V, and x ∈^M y iff x ∈ y.
-
-:::intuition
-An inner model is like a "sub-universe" that is closed under the set-theoretic operations and sees the same ordinals you do.
-
-Because it is transitive it does not have "fake" ordinals or wrong membership; it is an honest initial segment of the true universe in the membership sense.
-:::
-
-:::theorem[L is the smallest inner model]{#l-smallest}
-If $M$ is any inner model of ZF, then $L \subseteq M$.
+:::theorem[Independence is a statement about models]{#independence-models}
+Let $T$ be consistent. Then $\varphi$ is independent of $T$ if and only if both $T + \varphi$ and $T + \neg\varphi$ have models.
 :::
 
 :::proof
-The operation $X \mapsto \text{Def}(X)$ is defined by a $\Delta_0$-style recursion that any model of enough of ZF can carry out. So the function $\alpha \mapsto L_\alpha$ is *absolute* between $V$ and any inner model $M$: $(L_\alpha)^M = L_\alpha$ for every ordinal $\alpha$.
+Suppose first that both $T + \varphi$ and $T + \neg\varphi$ have models. If $T \vdash \varphi$ then $\varphi$ is true in every model of $T$, by soundness; but the model of $T + \neg\varphi$ is a model of $T$ in which $\varphi$ fails, a contradiction. So $T \nvdash \varphi$, and the symmetric argument with the model of $T + \varphi$ gives $T \nvdash \neg\varphi$. Hence $\varphi$ is independent.
 
-By hypothesis $\text{Ord} \subseteq M$, so for every ordinal $\alpha$, $M$ can form $L_\alpha$ and, by absoluteness, gets the *same* set $L_\alpha$ that $V$ does. Since $M \models \text{ZF}$, $M$ is closed under this recursion, so $L_\alpha \in M$ for all $\alpha$.
+Conversely, suppose $\varphi$ is independent of $T$. If $T + \varphi$ had no model then, by Gödel's completeness theorem in its contrapositive form — a theory with no model is inconsistent — the theory $T + \varphi$ would be inconsistent, so $T + \varphi \vdash \bot$, and by the deduction theorem $T \vdash \neg\varphi$, contradicting independence. So $T + \varphi$ has a model, and likewise $T + \neg\varphi$.
+:::
 
-Every constructible set $x$ lies in some $L_{\alpha+1}$, hence $x \in M$ by the previous paragraph. Therefore $L = \bigcup_\alpha L_\alpha \subseteq M$.
+The proof used the completeness theorem in exactly one direction and soundness in the other, and it is worth being explicit about which does what. Soundness ("provable implies true in all models") is what lets a single model refute a proof. Completeness ("consistent implies satisfiable") is what lets a failure to prove be witnessed by a model. Without completeness, building models would establish nothing about provability.
+
+:::intuition
+Think of the axioms as the rules of a board game and $\varphi$ as a question about how a game can end. Independence means the rulebook permits both endings. Nobody is cheating in either play-through; the rulebook is simply silent, and no amount of re-reading it will produce an answer. To decide the question you must adopt a new rule — and then the interesting question becomes which new rule deserves to be adopted.
+:::
+
+:::example[Independence outside set theory]
+Show that the sentence "for all $x, y$, $x \cdot y = y \cdot x$" is independent of the axioms of group theory.
+:::
+
+:::solution
+1. The abelian group $\mathbb{Z}/2\mathbb{Z}$ is a model of the group axioms in which commutativity holds.
+2. The symmetric group $S_3$ is a model of the group axioms in which it fails, since $(12)(13) \neq (13)(12)$.
+3. Two models of the axioms disagree about the sentence, so by the theorem *Independence is a statement about models* the sentence is independent of group theory.
+4. Note how ordinary this is. Independence is only startling for set theory because we expected ZFC to be a description of one fixed universe rather than a list of constraints admitting many.
 :::
 
 :::remark
-The argument used only (i) transitivity/absoluteness of $\text{Def}$ and (ii) $\text{Ord} \subseteq M$ — never AC. So $L \subseteq M$ even when $M \models \neg\text{AC}$, which is exactly why $L$ is the *smallest* inner model of ZF and why $L$ itself always satisfies AC regardless of the surrounding universe.
+The group-theoretic example also shows what independence does **not** mean. It does not mean the question is meaningless, nor that it has no answer in any particular group. Every specific group either is or is not abelian. Likewise, if one believes in a single intended universe of sets, CH has a definite truth value there; independence says only that ZFC does not pin it down.
 :::
 
-## The Constructible Universe L as the Prototypical Inner Model
+## Gödel and Cohen: the two halves of the answer
 
-<!-- section: examples-of-inner-models -->
+<!-- section: godel-and-cohen -->
 
-L is built by iterating the definable power set operation along the ordinals. It always satisfies ZFC + GCH + V = L (inside itself).
+The independence of CH was proved in two installments, twenty-five years apart, by methods with nothing in common except the goal.
 
-Other canonical examples:
-- L[U] for a normal measure U on a measurable cardinal (models ZFC + "there is a measurable").
-- HOD, the class of hereditarily ordinal-definable sets (always models ZFC, even if V ⊨ ZF + ¬AC).
-- Core models K (Jensen, Dodd-Jensen, Mitchell-Steel, etc.) that attempt to capture as much of V as possible while retaining fine structure and a definable well-order.
+:::theorem[Gödel, 1938: the consistency of CH]{#godel-theorem}
+If ZF is consistent, then so is $\mathrm{ZFC} + \mathrm{GCH}$. Formally, the implication
 
-:::intuition
-L is the "minimal" inner model: it contains only what you are forced to add by explicit definitions from the ordinals.
+$$\mathrm{Con}(\mathrm{ZF}) \implies \mathrm{Con}(\mathrm{ZFC} + \mathrm{GCH})$$
 
-HOD is the "definable from ordinals" part of V; it is always as nice as L (has AC and GCH in many cases) even when V is not.
-
-Core models are "the L of V" relative to the large cardinals that exist in V.
+is a theorem of ZF — indeed of a very weak fragment of arithmetic.
 :::
 
-:::example
-Even if V ⊨ ZF + "there is a Dedekind-finite infinite set" (hence ¬AC), the class HOD computed in V still satisfies ZFC + GCH. This shows that the failure of AC, if it occurs, must be witnessed by sets that are not hereditarily ordinal-definable.
+:::remark[Outline, not a proof — what it assumes and where the details live]
+The full argument cannot fit in a chapter, and the honest thing is to say so and name its moving parts. It goes: define by transfinite recursion the class $L$ of constructible sets; prove in ZF that $L$ satisfies every ZF axiom (this is a check of eight axioms, each a separate closure argument); prove that $L$ carries a definable well-ordering, which gives AC inside $L$; prove the condensation lemma, that an elementary submodel of $L_\alpha$ collapses to some $L_\beta$; deduce from condensation that every constructible subset of $\omega$ appears by stage $\omega_1$, which gives CH in $L$, and the same argument one level up gives GCH. What is assumed is only $\mathrm{Con}(\mathrm{ZF})$; what is produced is a model, namely $L$ as computed inside any model of ZF. The details occupy roughly a chapter of Kunen's *Set Theory* or Jech's *Set Theory*, chapter 13. Sections below prove the parts that are genuinely short — transitivity of $L$, the increasing hierarchy, the definable well-ordering — and label the rest as quoted.
 :::
 
-## Uses in Relative Consistency
-
-<!-- section: uses-in-consistency -->
-
-Inner models are the standard vehicle for relative consistency proofs of the form:
-
-"Con(T + φ) ⇒ Con(T + ψ)"
-
-where T is usually ZFC or ZF.
-
-One constructs (inside a model of T + φ) an inner model of T + ψ.
-
-:::theorem[Gödel: the constructible universe]{#godel-consistency}
-If M ⊨ ZF then L^M ⊨ ZFC + GCH. Hence
-
-$$\mathrm{Con}(\mathrm{ZF}) \;\Longrightarrow\; \mathrm{Con}(\mathrm{ZFC} + \mathrm{GCH}).$$
+:::theorem[Cohen, 1963: the consistency of the negation of CH]{#cohen-theorem}
+If ZFC is consistent, then so is $\mathrm{ZFC} + \neg\mathrm{CH}$. More precisely, for any cardinal $\kappa$ of the ground model with $\mathrm{cf}(\kappa) > \omega$ there is a forcing extension in which $2^{\aleph_0} = \kappa$.
 :::
 
-Another: if there is a measurable cardinal then there is an inner model L[U] with a measurable cardinal, and in L[U] there are many inaccessibles below it. Hence the existence of a measurable implies Con(ZFC + "there is a proper class of inaccessibles").
-
-:::intuition
-To show that a strong assumption φ does not lead to contradiction with a weaker theory, you build a "safe sub-universe" inside a model of φ that satisfies the weaker theory plus the desired conclusion ψ.
-
-The safer and more canonical the sub-universe, the stronger the consistency result.
+:::remark[Outline, not a proof — what it assumes and where the details live]
+Take a countable transitive model $M$ of (enough of) ZFC; force with the poset of finite partial functions from $\kappa \times \omega$ to $2$; the generic filter codes $\kappa$ distinct reals; the poset has the countable chain condition, so cardinals are preserved and $\kappa$ is still a cardinal in the extension; a counting argument on *nice names* bounds $2^{\aleph_0}$ from above by $\kappa$. The assumptions are $\mathrm{Con}(\mathrm{ZFC})$ and the forcing theorem, stated below and itself quoted. Cohen's original papers are the 1963 and 1964 *PNAS* notes; the modern treatment is Kunen, chapters IV–VII.
 :::
 
-:::example
-Let us see how a measurable cardinal yields, via an inner model, the consistency of a proper class of inaccessibles.
-:::
+Putting the two together is immediate, and the combination is what the word *independence* refers to in practice.
 
-:::solution
-Step 1 (the ultrapower embedding). Let $\kappa$ be measurable in $V$ with a normal ultrafilter $U$. Form the ultrapower $j : V \to M \cong \text{Ult}(V, U)$. Standard facts: $j$ is elementary, $\text{crit}(j) = \kappa$ (so $j(\alpha) = \alpha$ for $\alpha < \kappa$ but $j(\kappa) > \kappa$), and $M$ is transitive.
-Step 2 (reflect inaccessibility). $\kappa$ is inaccessible in $V$; since $V_{\kappa+1} \subseteq M$ and inaccessibility of $\kappa$ is a fact about $V_{\kappa+1}$, $M$ also sees $\kappa$ as inaccessible. But $\kappa < j(\kappa)$, so $M$ has an inaccessible ($\kappa$) strictly below $j(\kappa)$. By elementarity of $j$ this reflects down: in $V$, the set $\{\alpha < \kappa : \alpha \text{ is inaccessible}\}$ is stationary in $\kappa$ (otherwise a club below $\kappa$ avoiding inaccessibles would, under $j$, contradict $\kappa$ being inaccessible below $j(\kappa)$ in $M$).
-Step 3 (pass to the canonical inner model). Restricting the construction to the canonical model $L[U]$, we get $L[U] \models$ "$\kappa$ is measurable", and by the same reflection $L[U] \models$ "there are unboundedly many inaccessibles below $\kappa$". Hence the set model $(V_\kappa)^{L[U]} \models \text{ZFC} +$ "there is a proper class of inaccessibles".
-Step 4 (consistency transfer). $(V_\kappa)^{L[U]}$ is a set model of ZFC + "proper class of inaccessibles" constructed inside a model of ZFC + measurable. Hence $\text{Con}(\text{ZFC} + \text{measurable}) \Rightarrow \text{Con}(\text{ZFC} + \text{proper class of inaccessibles})$.
-Sanity check: the consistency strengths are strictly increasing — a measurable is far stronger than "many inaccessibles" — so the implication is one-directional, as expected for a genuine consistency-strength jump.
-:::
-
-## Core Models and Covering Lemmas
-
-<!-- section: core-models-and-covering -->
-
-When there are no inner models with very large cardinals, one can often prove that V is "close" to a canonical core model K (L, L[U], K^c, etc.).
-
-:::theorem[Jensen's covering lemma]{#covering-lemma}
-For L: if 0^# does not exist, then for every uncountable set X of ordinals there is a constructible Y ⊇ X with |Y| = |X|.
-:::
-
-Modern generalizations (Mitchell-Steel, Schimmerling, etc.) give covering lemmas for core models below Woodin cardinals, with consequences such as the singular cardinals hypothesis (SCH), square principles, etc.
-
-Failure of covering implies the existence of an inner model with a Woodin cardinal (or stronger).
-
-:::intuition
-If the universe is not too "fat" (no inner models with Woodins), then it cannot deviate too much from the constructible or core-model universe; every large set of ordinals is covered by a "nice" set from the core model of the same size.
-
-This lets one transfer combinatorial principles from L (or K) up to V.
-:::
-
-:::example
-If there is no inner model with a Woodin cardinal, then the singular cardinals hypothesis holds: if κ is singular strong limit then 2^κ = κ^+. This follows from the covering lemma plus the fine structure of the core model.
-:::
-
-## HOD and Other Definability-Based Inner Models
-
-<!-- section: hod-and-definability -->
-
-:::theorem[HOD is an inner model of ZFC]{#hod-zfc}
-HOD, the class of hereditarily ordinal-definable sets, is always an inner model of ZFC — even when V itself fails to satisfy AC.
-:::
-
-HOD is used to:
-- Show that failures of choice, if they occur, must involve non-ordinal-definable sets.
-- Study the "definable" part of the universe even when large cardinals are present (HOD may or may not contain the large cardinals).
-- In the context of forcing axioms or determinacy, one studies HOD of L(ℝ) or of other models; often HOD of L(ℝ) under AD is a model of ZFC + "there is a Woodin cardinal."
-
-Other definability notions (HOD of L(ℝ), generic HOD, etc.) are active areas of research connecting determinacy, large cardinals, and forcing.
-
-:::intuition
-HOD is "what you can define from ordinals." Even in a wild universe, the definable-from-ordinals part is always tame (satisfies choice).
-
-Under determinacy assumptions, the HOD of L(ℝ) turns out to be a very interesting inner model that itself contains large cardinals.
-:::
-
-:::example
-Under AD^{L(ℝ)}, the model HOD^{L(ℝ)} satisfies ZFC + "there is a Woodin cardinal" (in fact a proper class of them, under stronger determinacy). This is a theorem of Woodin; it shows that determinacy produces inner models with large cardinals.
-:::
-
-## Common Mistakes
-
-- **Thinking every inner model is L**: L is the smallest; there are many others (L[U], HOD, core models, etc.) that can be larger and can satisfy stronger axioms.
-- **Confusing inner models with forcing extensions**: Inner models are *subclasses* (usually proper) of V; forcing extensions are usually *larger* than the ground model.
-- **Assuming that if M is an inner model then V ⊨ 'M ⊨ ZFC' is the same as M ⊨ ZFC**: Because M is transitive the satisfaction is absolute for most formulas, but one must be careful with class quantification and with parameters.
-- **Forgetting that HOD always models ZFC**: This is true even when V does not; it is one of the most robust ways to recover choice inside ZF.
-- **Believing that core models always exist**: Core models exist only below certain large cardinal thresholds; above Woodin cardinals (or supercompacts, depending on the technology) the core model theory is still incomplete. The non-existence of a core model is itself a strong statement (implies inner models with Woodins or stronger).
-
-Gödel's constructible universe L is the smallest inner model of ZFC. It is built in a definable, "minimal" way from the ordinals by iteratively taking only the sets that are first-order definable over previous levels.
-
-Inside L one can prove the axiom of choice and the generalized continuum hypothesis. Therefore the consistency of ZF implies the consistency of ZFC + GCH.
-
-L is the prototype of an "L-like" inner model and remains central to modern set theory even though it cannot accommodate very large cardinals.
-
-## Definition of L
-
-<!-- section: definition-l -->
-
-:::definition[The constructible hierarchy]{#l-definition}
-Define the constructible levels by transfinite recursion on the ordinals:
-- L₀ = ∅
-- L_{α+1} = Def(L_α), the collection of all subsets of L_α that are definable over the structure (L_α, ∈) by a first-order formula with parameters from L_α.
-- For limit λ, L_λ = ⋃_{α<λ} L_α.
-
-Then L = ⋃_{α ∈ Ord} L_α, and a set is *constructible* if it belongs to L.
-:::
-
-:::intuition
-Start with nothing.
-
-At each successor stage, add only those new sets that you can explicitly define using a formula and parameters you already have.
-
-At limit stages, just collect everything built so far.
-
-L is the "minimal" universe you get by always adding only what you are forced to add by definitions.
-:::
-
-:::example
-Let us trace the first few levels of $L$ concretely.
-:::
-
-:::solution
-Step 1 ($L_n$ for finite $n$). $L_0 = \emptyset$; $L_1 = \text{Def}(\emptyset) = \{\emptyset\}$ (the only definable subset of $\emptyset$ is $\emptyset$ itself); $L_2 = \text{Def}(L_1) = \{\emptyset, \{\emptyset\}\}$; and in general the finite levels build up the hereditarily finite sets.
-Step 2 ($L_\omega$). Taking the union, $L_\omega = \bigcup_{n<\omega} L_n = \text{HF}$, the hereditarily finite sets, which equals $V_\omega$ exactly (at finite levels "definable power set" and "full power set" coincide, since every subset of a finite set is definable by listing its elements). So $|L_\omega| = \aleph_0$.
-Step 3 ($L_{\omega+1}$, the first infinite subsets). $L_{\omega+1} = \text{Def}(L_\omega)$ adds exactly the subsets of $L_\omega$ definable over $(L_\omega, \in)$ with parameters. Restricted to subsets of $\omega$, these are precisely the sets definable in true arithmetic — this includes but is not limited to the arithmetical sets. There are only countably many defining formulas and countably many parameters, so $L_{\omega+1}$ is still countable.
-Step 4 (climbing to the reals). $L_{\omega+2}$ adds subsets definable over $L_{\omega+1}$, and so on; each countable level yields countably many new reals. By Step 1 of the GCH computation (condensation), *every* constructible real appears before stage $\omega_1$, so $\mathcal{P}(\omega) \cap L \subseteq L_{\omega_1}$.
-Sanity check: $|L_\beta| = |\beta|$ for infinite $\beta$, so $|L_{\omega+1}| = \aleph_0$ (countable), consistent with "only countably many arithmetic-style reals so far," while $|L_{\omega_1}| = \aleph_1$ accommodates all $\aleph_1$ constructible reals.
-:::
-
-## Why L Is an Inner Model
-
-<!-- section: why-constructible -->
-
-L is transitive (by construction), contains all ordinals, and satisfies all the axioms of ZF. Moreover, one can prove *inside L* that every set is constructible (the statement "V = L").
-
-:::theorem[V = L implies AC and GCH]{#v-equals-l}
-From V = L one derives both AC — there is a definable global well-order — and GCH, because the number of definable subsets at each level is controlled by the size of the previous level.
-:::
-
-:::intuition
-L is "made of sets" in exactly the same way the true universe is, so it obeys the same rules (the ZF axioms).
-
-Inside L, the only sets that exist are the ones that were explicitly defined along the way; this minimality lets one count them carefully enough to prove GCH and to define a well-order.
-:::
-
-:::example
-Let us build the definable well-order $<_L$ explicitly and extract a choice function.
-:::
-
-:::solution
-Step 1 (order the levels). Every constructible set $x$ has a least stage $\text{rk}_L(x) = $ the least $\alpha$ with $x \in L_{\alpha+1}$. Compare two sets first by this rank: if $\text{rk}_L(x) < \text{rk}_L(y)$ then $x <_L y$.
-Step 2 (break ties within a level). If $\text{rk}_L(x) = \text{rk}_L(y) = \alpha$, then both are definable over $(L_\alpha, \in)$. Fix once and for all a well-order of the (countably many) first-order formulas by Gödel number, and — recursively — assume $<_L$ already well-orders $L_\alpha$. Order $x, y$ by (i) the least Gödel number of a formula defining them, then (ii) the finite tuple of parameters from $L_\alpha$, compared lexicographically under the already-built $<_L$ on $L_\alpha$.
-Step 3 (it is a definable well-order). This recursion defines $<_L$ by a single formula (no parameters), and it is a well-order: any nonempty class has a member of least $L$-rank, among those the one with least formula code, among those the $<_L$-least parameter tuple.
-Step 4 (choice function). Given any nonempty constructible set $x$, let $f(x) = $ the $<_L$-least element of $x$. Then $f$ is a definable choice function on all of $L$, so $L \models \text{AC}$ (indeed global choice).
-Sanity check: no arbitrary choices were ever made — every "pick" was the $<_L$-least option — so the well-order is genuinely definable without parameters. This is exactly why AC needs no extra assumption in $L$: the well-order is *forced* by the constructive definition, unlike in $V$ where AC must be assumed.
-:::
-
-## Proof of GCH in L
-
-<!-- section: gch-in-l -->
-
-:::theorem[GCH holds in L]{#gch-in-l}
-If κ is infinite and constructible, then the number of constructible subsets of κ is at most κ⁺ (the next cardinal after κ in L). Thus in L we have 2^κ = κ⁺ for every infinite cardinal κ — that is, L ⊨ GCH.
+:::corollary[CH is independent of ZFC]{#ch-independent}
+If ZFC is consistent, then CH is independent of ZFC.
 :::
 
 :::proof
-Any constructible subset of L_α is definable over some L_β (β ≥ α) with parameters. By taking Skolem hulls or using condensation lemmas, one shows that the "witness" β need not be much larger than α; hence there are only |L_{α⁺}| many such subsets.
+Assume $\mathrm{Con}(\mathrm{ZFC})$. By the theorem *Gödel, 1938: the consistency of CH*, the theory $\mathrm{ZFC} + \mathrm{CH}$ is consistent, hence has a model by completeness. By the theorem *Cohen, 1963: the consistency of the negation of CH*, the theory $\mathrm{ZFC} + \neg\mathrm{CH}$ is consistent, hence also has a model. Two models of ZFC disagree about CH, so by the theorem *Independence is a statement about models*, CH is independent of ZFC.
 :::
 
 :::intuition
-When you only add definable sets, you cannot add "too many" at each stage; the number of possible definitions is limited by the size of the level you are working over.
-
-This keeps the power set from jumping over the next cardinal, yielding GCH.
+Gödel and Cohen move in opposite directions from the same starting point. Gödel shrinks the universe until the only subsets of $\omega$ left are the ones a formula can describe, and there are exactly $\aleph_1$ of those; CH becomes true by starvation. Cohen grows the universe by pouring in $\aleph_2$ new reals that no formula of the old universe describes; CH becomes false by flooding. Neither move breaks an axiom, which is the entire content of both theorems.
 :::
 
-:::example
-We compute $2^{\aleph_0}$ in $L$ (working inside $L$, so "every set is constructible") and get exactly $\aleph_1$.
+:::remark
+Cohen received the Fields Medal in 1966 for forcing — still the only one awarded for work in mathematical logic. The method turned out to be far more general than the problem that prompted it: within a decade it had settled Suslin's hypothesis, the Whitehead problem, the Kaplansky conjecture on Banach algebras, and Borel's conjecture, and today a set theorist meeting a new combinatorial question about $\omega_1$ expects independence as the default outcome.
+:::
+
+## The formal framework: theories, models and consistency
+
+<!-- section: formal-framework -->
+
+Before any of this can be made precise we need to be careful about a distinction that independence arguments live or die by: the difference between working *in* a theory and reasoning *about* it.
+
+:::definition[Consistency and its arithmetisation]{#con-def}
+A theory $T$ is **consistent** if there is no sentence $\varphi$ with $T \vdash \varphi$ and $T \vdash \neg\varphi$. When $T$ is recursively axiomatised, the relation "$d$ is a $T$-proof of $\varphi$" is decidable, so it can be expressed by a formula of arithmetic, and
+
+$$\mathrm{Con}(T) \; :\equiv \; \neg \exists d \, \big( \mathrm{Prf}_T(d, \ulcorner \bot \urcorner) \big)$$
+
+is a single arithmetical sentence. Because it is arithmetical, $\mathrm{Con}(T)$ is the kind of thing a theory can prove or fail to prove about itself.
+:::
+
+That last sentence is the hinge. Gödel numbering turns a claim about proofs into a claim about natural numbers, and a theory strong enough to talk about natural numbers is thereby strong enough to talk about itself. The consequence is the central limitation of the subject.
+
+:::theorem[Gödel's second incompleteness theorem]{#second-incompleteness}
+Let $T$ be a consistent, recursively axiomatised theory interpreting a modest amount of arithmetic (Robinson's $Q$ suffices, and ZFC vastly exceeds it). Then
+
+$$T \nvdash \mathrm{Con}(T).$$
+:::
+
+:::remark[Outline, not a proof — what it assumes and where the details live]
+The argument constructs by the diagonal lemma a sentence $\gamma$ with $T \vdash \gamma \leftrightarrow \neg\mathrm{Prov}_T(\ulcorner \gamma \urcorner)$, so $\gamma$ says "I am not provable". The first incompleteness theorem shows $T \nvdash \gamma$ when $T$ is consistent. One then verifies that this *proof* can itself be carried out inside $T$, which requires the Hilbert–Bernays–Löb derivability conditions on $\mathrm{Prov}_T$, and obtains $T \vdash \mathrm{Con}(T) \to \gamma$. Since $T \nvdash \gamma$, it follows that $T \nvdash \mathrm{Con}(T)$. What is assumed is the derivability conditions, whose verification is a long but routine formalisation; the standard reference is Boolos, *The Logic of Provability*, or Hájek–Pudlák.
+:::
+
+The consequence we actually need is immediate, and it is what makes every theorem in this chapter conditional.
+
+:::corollary[ZFC cannot prove its own consistency]{#zfc-not-con}
+If ZFC is consistent, then $\mathrm{ZFC} \nvdash \mathrm{Con}(\mathrm{ZFC})$.
+:::
+
+:::proof
+ZFC is recursively axiomatised — its axioms are the finitely many individual axioms together with two decidable schemes — and it interprets arithmetic, since the finite von Neumann ordinals with their induced operations form a model of Peano arithmetic inside ZFC. So ZFC meets the hypotheses of the theorem *Gödel's second incompleteness theorem*, and if it is consistent then it does not prove $\mathrm{Con}(\mathrm{ZFC})$.
+:::
+
+:::corollary[No absolute consistency proof for a set theory]{#no-model-in-zfc}
+If ZFC is consistent, then ZFC does not prove that there exists a model of ZFC.
+:::
+
+:::proof
+Reason inside ZFC. Suppose ZFC proved the sentence "there exists a set $\mathcal{M}$ and a relation $E$ on it with $(\mathcal{M}, E) \models \mathrm{ZFC}$". The completeness theorem is provable in ZFC, and one of its consequences — soundness in the arithmetised form — gives that the existence of a model of a theory implies the consistency of that theory. Hence ZFC would prove $\mathrm{Con}(\mathrm{ZFC})$, contradicting the corollary *ZFC cannot prove its own consistency*.
+:::
+
+This is the reason the phrase "ZFC proves that CH is independent" is, read literally, false, and it is worth stating the correct version once, sharply, because almost every informal account of the subject gets it wrong.
+
+:::proposition[What an independence theorem actually asserts]{#independence-really}
+The sentence "CH is independent of ZFC" is not a theorem of ZFC. What is a theorem of ZFC is the implication
+
+$$\mathrm{Con}(\mathrm{ZFC}) \implies \text{"CH is independent of ZFC"}.$$
+
+Equivalently, the theory $\mathrm{ZFC} + \mathrm{Con}(\mathrm{ZFC})$ proves that CH is independent of ZFC.
+:::
+
+:::proof
+Independence of CH implies in particular that $\mathrm{ZFC} \nvdash \mathrm{CH} \wedge \neg\mathrm{CH}$, that is, it implies $\mathrm{Con}(\mathrm{ZFC})$. So if ZFC proved the independence of CH outright, ZFC would prove $\mathrm{Con}(\mathrm{ZFC})$, which the corollary *ZFC cannot prove its own consistency* forbids (assuming ZFC consistent). The positive half is the corollary *CH is independent of ZFC*, whose proof assumed exactly $\mathrm{Con}(\mathrm{ZFC})$ and used nothing else beyond ZFC.
+:::
+
+:::pitfall
+"Cohen proved CH is false" and "Gödel proved CH is true" are both wrong, and they are wrong in the same way: each takes a *relative consistency* result and reads it as a truth claim. Cohen produced a model where CH fails. Gödel produced a model where it holds. Neither model is distinguished as the real universe by anything either man proved.
+:::
+
+:::example[Reading a relative consistency statement]
+The literature contains the statement $\mathrm{Con}(\mathrm{ZFC} + \exists \text{ inaccessible}) \Rightarrow \mathrm{Con}(\mathrm{ZFC})$. Which direction does this go, and why is the converse not available?
 :::
 
 :::solution
-Step 1 (each real appears at a countable stage). Let $A \subseteq \omega$ be constructible, so $A \in L_\gamma$ for some ordinal $\gamma$. The condensation lemma says: if $A \in L_\gamma$ then there is a *countable* ordinal $\beta$ with $A \in L_\beta$. (Take a countable elementary submodel $X \prec L_\gamma$ with $A \cup \{A\} \subseteq X$; its transitive collapse is some $L_\beta$ with $\beta$ countable, and $A$ is fixed by the collapse since $A \subseteq \omega \subseteq X$.) Hence every real of $L$ lies in some $L_\beta$ with $\beta < \omega_1$.
-Step 2 (count the reals). So $\mathcal{P}(\omega) \cap L \subseteq \bigcup_{\beta < \omega_1} L_\beta = L_{\omega_1}$. Now $|L_\beta| = |\beta|$ for infinite $\beta$, so each $L_\beta$ with $\omega \leq \beta < \omega_1$ is countable, and $|L_{\omega_1}| = \aleph_1$. Therefore $|\mathcal{P}(\omega) \cap L| \leq \aleph_1$.
-Step 3 (lower bound). There are at least $\aleph_1$ reals (e.g. Cantor's theorem gives $2^{\aleph_0} > \aleph_0$, and in $L$ the reals can be well-ordered, so their cardinality is an uncountable cardinal, hence $\geq \aleph_1$).
-Step 4 (conclusion). Combining, $2^{\aleph_0} = |\mathcal{P}(\omega) \cap L| = \aleph_1$ in $L$, i.e. $CH$ holds. The same condensation argument at $\kappa$ instead of $\omega$ gives $2^\kappa = \kappa^+$ for all infinite $\kappa$ (full GCH).
-Sanity check: the argument is entirely internal to $L$ ($L \models "\aleph_1$ is the first uncountable cardinal"). It does *not* say the true $V$ has $CH$ — only $L$ does. In a Cohen extension the same $L$ still satisfies $CH$ while $V$ has $\neg CH$.
+1. The stated implication says: if the stronger theory has no contradiction, neither does the weaker. That direction is trivial in one sense — any model of the stronger theory is a model of ZFC — and it is provable in weak arithmetic by transforming a ZFC-contradiction into a contradiction of the stronger theory.
+2. The converse would say $\mathrm{Con}(\mathrm{ZFC}) \Rightarrow \mathrm{Con}(\mathrm{ZFC} + \exists\text{ inaccessible})$. This is **not** provable, because, as shown below in the corollary *ZFC cannot prove an inaccessible exists*, an inaccessible yields a model of ZFC and hence gives $\mathrm{Con}(\mathrm{ZFC})$; the converse implication would therefore let $\mathrm{ZFC} + \mathrm{Con}(\mathrm{ZFC})$ prove $\mathrm{Con}(\mathrm{ZFC} + \mathrm{Con}(\mathrm{ZFC}))$, violating the second incompleteness theorem applied to that theory.
+3. The asymmetry is exactly what the phrase *consistency strength* names. Final point: implications go downward in strength for free and upward never.
 :::
 
-## Limitations of L
+## A catalogue of independent statements
 
-<!-- section: limitations-of-l -->
+<!-- section: examples -->
 
-L cannot contain very large cardinals that are consistent with ZFC.
+CH is the famous case, but it is not an isolated pathology. Once forcing was available the list grew quickly, and it now covers questions from general topology, algebra, analysis and combinatorics that were posed with no suspicion that logic was involved.
 
-:::theorem[Measurables reach past L]{#measurable-past-l}
-If there is a measurable cardinal in V, then 0^# exists and no cardinal remains measurable in L.
+:::definition[The continuum and its cardinal]{#continuum-def}
+Write $\mathfrak{c} = 2^{\aleph_0} = |\mathbb{R}|$ for the **cardinality of the continuum**. The **continuum hypothesis** CH is the sentence $\mathfrak{c} = \aleph_1$; the **generalised continuum hypothesis** GCH is the sentence $2^{\aleph_\alpha} = \aleph_{\alpha+1}$ for every ordinal $\alpha$.
 :::
 
-More generally, L is "thin": it has a definable well-order, satisfies GCH, and lacks the generic objects or embeddings that large cardinals or forcing axioms produce in V.
+Here is a representative sample of statements independent of ZFC, chosen to show the range.
 
-Modern inner-model theory attempts to build L-like models that can accommodate Woodin cardinals, supercompacts, etc., while retaining a definable well-order and (a form of) GCH. The "Ultimate L" program of Woodin aims at a canonical inner model compatible with all large cardinals that would decide many independent statements (including CH) in a canonical way.
+1. **Suslin's hypothesis.** Every complete dense linear order without endpoints in which every family of disjoint intervals is countable is isomorphic to $\mathbb{R}$. It fails in $L$, where a Suslin tree can be constructed from $\diamondsuit$, and holds under Martin's axiom plus $\neg$CH.
+2. **The Whitehead problem.** Every abelian group $A$ with $\mathrm{Ext}^1(A,\mathbb{Z}) = 0$ is free. Shelah proved in 1974 that it holds under $V = L$ and fails under MA $+ \neg$CH — the first independence result to land squarely inside mainstream algebra.
+3. **The Borel conjecture.** Every strong measure zero set of reals is countable. Laver forced it in 1976; it fails under CH.
+4. **Kaplansky's conjecture.** Every algebra homomorphism from $C(X)$ into a Banach algebra is continuous. Solovay and Woodin showed the answer depends on the model.
+5. **$2^{\aleph_0} = \aleph_{17}$.** By the theorem *Cohen, 1963: the consistency of the negation of CH* this is consistent, as is $2^{\aleph_0} = \aleph_{\omega+1}$, but *not* $2^{\aleph_0} = \aleph_\omega$ — see the theorem *König's restriction on the continuum* below.
+
+:::example[Which values of the continuum are excluded]
+Among $\aleph_1$, $\aleph_2$, $\aleph_\omega$, $\aleph_{\omega_1}$, which can consistently equal $2^{\aleph_0}$?
+:::
+
+:::solution
+1. $\aleph_1$: yes, this is CH, consistent by Gödel.
+2. $\aleph_2$: yes, by Cohen forcing with $\kappa = \aleph_2$, which has uncountable cofinality.
+3. $\aleph_\omega$: **no**. Its cofinality is $\omega$, and the theorem *König's restriction on the continuum* proved below rules out $\mathrm{cf}(2^{\aleph_0}) = \omega$.
+4. $\aleph_{\omega_1}$: yes. Its cofinality is $\omega_1 > \omega$, so it is a permitted value.
+5. Final answer: all except $\aleph_\omega$.
+:::
+
+:::remark
+The pattern is worth noticing. Statements about *definable* or *small* objects — arithmetic, Borel sets, compact metric spaces — tend to be decided by ZFC. Statements that quantify over arbitrary subsets of $\mathbb{R}$, or over arbitrary structures of size $\aleph_1$, tend to be independent. Forcing is a technique for moving exactly those objects around while leaving the arithmetic of the ground model untouched.
+:::
+
+## Constructible sets: building a universe out of definitions
+
+<!-- section: constructible-sets -->
+
+Gödel's model is obtained by replacing the power-set operation with something far stingier. At each stage, instead of taking *all* subsets of what has been built, take only the subsets that a first-order formula can single out using parameters already present.
+
+:::definition[The definable power set]{#def-power}
+Let $X$ be a set. The **definable power set** of $X$ is
+
+$$\mathrm{Def}(X) = \{\, Y \subseteq X : Y = \{ z \in X : (X, \in) \models \varphi(z, a_1, \dots, a_n) \} \ \text{for some formula } \varphi \text{ and } a_1, \dots, a_n \in X \,\}.$$
+
+Only formulas with quantifiers ranging over $X$ itself are allowed, and only parameters drawn from $X$.
+:::
+
+:::definition[The constructible hierarchy]{#l-hierarchy}
+Define by transfinite recursion
+
+$$L_0 = \emptyset, \qquad L_{\alpha+1} = \mathrm{Def}(L_\alpha), \qquad L_\lambda = \bigcup_{\alpha < \lambda} L_\alpha \ \text{ for limit } \lambda,$$
+
+and set $L = \bigcup_{\alpha \in \mathrm{Ord}} L_\alpha$. Members of $L$ are the **constructible sets**, and $V = L$ abbreviates the sentence "every set is constructible".
+:::
 
 :::intuition
-L is the smallest possible universe; it is too "skinny" to contain the very large cardinals or the "fat" generic objects that forcing can add.
-
-If you believe in very large cardinals or in maximality principles, then L cannot be the whole true universe V.
+$V_{\alpha+1} = \mathcal{P}(V_\alpha)$ takes every subset, including the ones nobody can describe; $L_{\alpha+1} = \mathrm{Def}(L_\alpha)$ takes only the describable ones. The two hierarchies agree at the finite stages, because every subset of a finite set is definable by listing its members. They part company at stage $\omega + 1$: $V_{\omega+1}$ has $2^{\aleph_0}$ members, while $L_{\omega+1}$ has only $\aleph_0$, since there are only countably many formulas with parameters from the countable set $L_\omega$.
 :::
 
-:::example
-If κ is measurable in V with normal measure U, then in L the measure U ∩ L is not a measure on κ (because L is missing many subsets), and in fact 0^# exists, so there are non-constructible reals and L ≠ V.
+The first two facts about the hierarchy are the ones every later argument uses, and both are short.
+
+:::proposition[The hierarchy is increasing and each level is transitive]{#l-increasing}
+For all ordinals $\alpha \le \beta$ we have $L_\alpha \subseteq L_\beta$, and every $L_\alpha$ is a transitive set with $L_\alpha \subseteq L_{\alpha+1}$.
 :::
 
-## Role in Modern Set Theory
+:::proof
+We prove by induction on $\alpha$ that $L_\alpha$ is transitive and that $L_\alpha \subseteq L_{\alpha+1}$; the general monotonicity then follows by a second induction on $\beta$.
 
-<!-- section: role-modern-l -->
+*Base.* $L_0 = \emptyset$ is transitive vacuously.
 
-Even when L ≠ V, the study of L and its generalizations (L[U], L[ℰ], hod mice, etc.) is central:
-- They give lower bounds on consistency strength.
-- They decide many statements about "small" sets (projective determinacy, etc.) when large cardinals exist.
-- Condensation and covering lemmas for L-like models give powerful combinatorial information about V.
+*Successor.* Assume $L_\alpha$ is transitive. First, $L_\alpha \subseteq L_{\alpha+1}$: given $x \in L_\alpha$, transitivity gives $x \subseteq L_\alpha$, and $x = \{ z \in L_\alpha : z \in x \}$ is defined over $L_\alpha$ by the formula $z \in a$ with the parameter $a = x \in L_\alpha$. So $x \in \mathrm{Def}(L_\alpha) = L_{\alpha+1}$. Next, $L_{\alpha+1}$ is transitive: any $Y \in L_{\alpha+1}$ satisfies $Y \subseteq L_\alpha$ by definition of $\mathrm{Def}$, and $L_\alpha \subseteq L_{\alpha+1}$ as just shown, so $Y \subseteq L_{\alpha+1}$.
 
-Gödel's construction remains the template for all inner-model theory.
+*Limit.* If $\lambda$ is a limit and each $L_\alpha$ for $\alpha < \lambda$ is transitive, then $L_\lambda = \bigcup_{\alpha<\lambda} L_\alpha$ is a union of transitive sets, hence transitive; and $L_\lambda \subseteq L_{\lambda+1}$ by the successor argument applied to $L_\lambda$.
+
+For monotonicity, fix $\alpha$ and induct on $\beta \ge \alpha$: the case $\beta = \alpha$ is trivial, the successor step is $L_\beta \subseteq L_{\beta+1}$, and at a limit $\lambda > \alpha$ we have $L_\alpha \subseteq L_\lambda$ directly from the definition of the union.
+:::
+
+:::corollary[$L$ is a transitive class containing every ordinal]{#l-transitive}
+$L$ is transitive, and $\alpha \in L_{\alpha+1}$ for every ordinal $\alpha$; consequently $\mathrm{Ord} \subseteq L$.
+:::
+
+:::proof
+Transitivity: if $x \in L$ then $x \in L_\alpha$ for some $\alpha$, and $L_\alpha$ is transitive by the proposition *The hierarchy is increasing and each level is transitive*, so $x \subseteq L_\alpha \subseteq L$.
+
+For the ordinals, induct on $\alpha$. Suppose $\beta \in L_{\beta+1}$ for all $\beta < \alpha$. Since the hierarchy is increasing, $\beta \in L_\alpha$ for every $\beta < \alpha$, so $\alpha \subseteq L_\alpha$. Now being an ordinal — being transitive and linearly ordered by $\in$ — is expressible by a formula whose quantifiers can be restricted to any transitive set, and $L_\alpha$ is transitive, so
+
+$$\alpha = \{ z \in L_\alpha : z \text{ is an ordinal and } z \in \alpha \}$$
+
+exhibits $\alpha$ as a member of $\mathrm{Def}(L_\alpha) = L_{\alpha+1}$, using the parameter $\alpha$ once it is known that $\alpha \subseteq L_\alpha$; alternatively, and without parameters, $\alpha = \{z \in L_\alpha : z \text{ is an ordinal}\}$, because an easy induction shows the ordinals in $L_\alpha$ are exactly those below $\alpha$.
+:::
+
+:::example[The first few levels]
+Compute $L_0, L_1, L_2, L_3$ and their cardinalities.
+:::
+
+:::solution
+1. $L_0 = \emptyset$, so $|L_0| = 0$.
+2. $L_1 = \mathrm{Def}(\emptyset)$. The only subset of $\emptyset$ is $\emptyset$ itself, definable by $z \neq z$. So $L_1 = \{\emptyset\}$ and $|L_1| = 1$.
+3. $L_2 = \mathrm{Def}(\{\emptyset\})$. Both subsets $\emptyset$ and $\{\emptyset\}$ are definable over a one-element set, so $L_2 = \{\emptyset, \{\emptyset\}\}$ and $|L_2| = 2$.
+4. $L_3 = \mathrm{Def}(L_2)$ where $|L_2| = 2$; every one of the $4$ subsets of a two-element set is definable with parameters, so $|L_3| = 4$.
+5. In general $|L_{n+1}| = 2^{|L_n|}$ for finite $n$, because on a finite set every subset is definable: the pattern is $0, 1, 2, 4, 16, 65536, \dots$. Final answer: $L_n$ has cardinality $0, 1, 2, 4$ for $n = 0, 1, 2, 3$.
+:::
+
+:::proposition[Finite levels agree with the cumulative hierarchy]{#l-finite}
+For every $n < \omega$ we have $L_n = V_n$, and hence $L_\omega = V_\omega$ is the set of hereditarily finite sets.
+:::
+
+:::proof
+Induct on $n$. Both are empty at $n = 0$. Suppose $L_n = V_n$; this set is finite, since $|V_{n+1}| = 2^{|V_n|}$ starting from $|V_0| = 0$. Every subset $Y$ of a finite transitive set $X$ is definable over $X$: writing $Y = \{a_1, \dots, a_k\}$, the formula $z = a_1 \vee \cdots \vee z = a_k$ with parameters $a_1, \dots, a_k \in X$ defines it, and $Y = \emptyset$ is defined by $z \neq z$. Hence $\mathrm{Def}(X) = \mathcal{P}(X)$ for finite $X$, giving $L_{n+1} = \mathcal{P}(L_n) = \mathcal{P}(V_n) = V_{n+1}$. Taking unions at $\omega$ gives $L_\omega = V_\omega$.
+:::
+
+:::pitfall
+$L_{\omega+1} \neq V_{\omega+1}$, and the failure is total: $V_{\omega+1} = \mathcal{P}(\omega)$ has size $2^{\aleph_0}$, while $L_{\omega+1}$ is countable. The equality $\mathrm{Def} = \mathcal{P}$ is a purely finite phenomenon and evaporates at the first infinite stage.
+:::
+
+## Properties of $L$: absoluteness and the definable well-ordering
+
+<!-- section: properties -->
+
+Two features make $L$ useful. It is *canonical*: the construction, performed inside any model of ZF, yields the same thing again when performed inside its own output. And it is *orderly*: the construction hands you a well-ordering for free, so AC is not an extra assumption inside $L$ but a consequence.
+
+:::figure[The constructible universe as a narrow cone inside $V$. Both share the ordinal spine, but at each infinite level $L$ keeps only the subsets some formula defines.]{#l-in-v}
+{
+  "type": "plot",
+  "x": [-6, 6], "y": [-0.5, 6.6],
+  "yLabel": "rank",
+  "marks": [
+    { "kind": "region", "points": [[0, 0], [-5, 6.2], [5, 6.2]], "tone": "muted" },
+    { "kind": "region", "points": [[0, 0], [-0.9, 6.2], [0.9, 6.2]], "tone": "result" },
+    { "kind": "text", "at": [3.6, 4.0], "text": "V" },
+    { "kind": "text", "at": [0, 3.0], "text": "L" },
+    { "kind": "text", "at": [-3.5, 2.0], "text": "definable sets only", "leaderTo": [-0.2, 2.0] }
+  ]
+}
+:::
+
+:::definition[Absoluteness]{#absolute-def}
+Let $M \subseteq N$ be transitive classes. A formula $\varphi(x_1,\dots,x_n)$ is **absolute between $M$ and $N$** if for all $a_1,\dots,a_n \in M$,
+
+$$M \models \varphi(a_1,\dots,a_n) \iff N \models \varphi(a_1,\dots,a_n).$$
+
+A formula is $\Delta_0$ if all its quantifiers are bounded, of the form $\forall x \in y$ or $\exists x \in y$; every $\Delta_0$ formula is absolute between transitive classes.
+:::
+
+:::theorem[$V = L$ holds inside $L$]{#v-equals-l-absolute}
+The construction of the hierarchy is absolute: for every transitive class $M$ satisfying ZF and containing all ordinals, and every ordinal $\alpha$, the set $L_\alpha$ computed inside $M$ equals the real $L_\alpha$. Consequently $L^L = L$, and $L \models V = L$.
+:::
+
+:::proof
+The function $\alpha \mapsto L_\alpha$ is defined by transfinite recursion from the operation $X \mapsto \mathrm{Def}(X)$. Two things must be checked, and both are checks on complexity rather than on set theory.
+
+First, $\mathrm{Def}$ is absolute between transitive models of ZF. Satisfaction for a *set* structure, $(X,\in) \models \varphi[\bar a]$, is defined by recursion on the finite formula $\varphi$ coded as a hereditarily finite object; the recursion only ever quantifies over subsets of $X$ and over elements of $V_\omega$, and its defining formula can be written in $\Delta_0$ form relative to parameters. Hence any transitive model of ZF computes the satisfaction relation of $(X, \in)$ correctly, and therefore computes $\mathrm{Def}(X)$ correctly. Note carefully that this is *not* the same as absoluteness of $\mathcal{P}(X)$, which fails badly; $\mathrm{Def}(X)$ is a set of subsets each of which is described by a formula, and describing is absolute while collecting all subsets is not.
+
+Second, transfinite recursion is absolute when the underlying operation is and the model contains all ordinals. By induction on $\alpha$: if $M$ computes $L_\beta$ correctly for all $\beta < \alpha$, then at a successor it applies the absolute operation $\mathrm{Def}$ to a correct input, and at a limit it takes a union, which is absolute. Since $M$ has all ordinals, no stage is missed.
+
+Applying this with $M = L$ — which is transitive by the corollary *$L$ is a transitive class containing every ordinal*, contains all ordinals, and satisfies ZF — gives $(L_\alpha)^L = L_\alpha$ for all $\alpha$, hence $L^L = \bigcup_\alpha (L_\alpha)^L = L$. So every set of $L$ is constructible from the point of view of $L$, that is, $L \models V = L$.
+:::
+
+The payoff is that $V = L$ can be adopted as an axiom without cost: it holds in a model that ZF builds for itself. The next theorem says that adopting it also buys choice.
+
+:::theorem[$L$ satisfies the axiom of choice]{#l-satisfies-ac}
+There is a formula $\varphi(x,y)$, with no parameters, which defines in $L$ a well-ordering $<_L$ of the whole class $L$. Consequently $L \models \mathrm{AC}$, and indeed $L \models$ "there is a definable well-ordering of the universe".
+:::
+
+:::proof
+We construct $<_L$ by recursion on levels, well-ordering each $L_\alpha$ and arranging that each ordering extends the previous ones.
+
+Fix a recursive enumeration $\varphi_0, \varphi_1, \varphi_2, \dots$ of all first-order formulas in the language of set theory, in order of their Gödel numbers. Suppose $<_\alpha$ is a well-ordering of $L_\alpha$. Every element of $L_{\alpha+1}$ arises as
+
+$$Y = \{ z \in L_\alpha : (L_\alpha, \in) \models \varphi_i(z, a_1,\dots,a_n) \}$$
+
+for at least one pair consisting of an index $i$ and a finite tuple $\bar a$ from $L_\alpha$. Assign to $Y$ the $<_\alpha$-least such description, where descriptions are compared first by the index $i$, then — among equal indices — by the tuple $\bar a$ in the lexicographic order induced by $<_\alpha$ on tuples of a fixed finite length, shorter tuples preceding longer ones. This is a well-ordering of the set of descriptions, being a finite lexicographic product of well-orderings, so a least description exists.
+
+Now define $<_{\alpha+1}$ on $L_{\alpha+1}$ by: elements of $L_\alpha$ come first, ordered by $<_\alpha$; then the elements of $L_{\alpha+1} \setminus L_\alpha$, ordered by their least descriptions. Each piece is a well-ordering and the second is placed entirely after the first, so the sum is a well-ordering, and it extends $<_\alpha$ by construction.
+
+At a limit $\lambda$ set $<_\lambda = \bigcup_{\alpha<\lambda} <_\alpha$. This is a linear order since the $<_\alpha$ form a chain under extension. It is a well-ordering: a nonempty $S \subseteq L_\lambda$ meets some $L_\alpha$ with $\alpha<\lambda$, and the $<_\alpha$-least element of $S \cap L_\alpha$ is $<_\lambda$-least in $S$, because every element of $S$ outside $L_\alpha$ was placed after all of $L_\alpha$.
+
+Finally put $x <_L y$ if and only if $x$ appears before $y$ in $<_\alpha$ for the least $\alpha$ with $x, y \in L_\alpha$. The whole recursion is given by a single formula, so $<_L$ is definable without parameters, and by the theorem *$V = L$ holds inside $L$* it is computed the same way inside $L$.
+
+For AC: given a set $x \in L$ of nonempty sets, the function sending each $u \in x$ to its $<_L$-least element is definable from $x$ and $<_L$, and $L$ satisfies enough of ZF to form it as a set. It is a choice function on $x$. Hence $L \models \mathrm{AC}$.
+:::
 
 :::intuition
-L is the "core" or "skeleton" that is always present. Even if the true universe is much larger, the constructible sets inside it still behave nicely and can be used to prove theorems or to measure how much "extra stuff" exists outside L.
+The well-ordering comes from bookkeeping, not from magic. Every constructible set was built by some formula applied to some earlier sets, so tag each set with the cheapest recipe that produces it and sort by recipe. In $V$ this is impossible because most sets have no recipe at all; in $L$, having a recipe is the definition of membership.
 :::
 
-:::example
-Jensen's covering lemma says that if 0^# does not exist, then every uncountable set of ordinals in V is covered by a constructible set of the same size. This has many consequences for singular cardinals and stationary sets.
+:::proposition[Levels of $L$ have the size of their index]{#l-cardinality}
+For every infinite ordinal $\alpha$, $|L_\alpha| = |\alpha|$.
+:::
+
+:::proof
+By induction. At $\alpha = \omega$: $L_\omega = V_\omega$ by the proposition *Finite levels agree with the cumulative hierarchy*, which is countably infinite, and $|\omega| = \aleph_0$.
+
+Successor step. Suppose $|L_\alpha| = |\alpha|$ with $\alpha$ infinite. Each element of $L_{\alpha+1}$ is determined by a formula together with a finite tuple from $L_\alpha$. There are countably many formulas and $|L_\alpha|^{<\omega} = |\alpha|$ finite tuples, using the standard fact that $\kappa^{<\omega} = \kappa$ for infinite $\kappa$. So $|L_{\alpha+1}| \le \aleph_0 \cdot |\alpha| = |\alpha| = |\alpha+1|$. The reverse inequality holds because $L_\alpha \subseteq L_{\alpha+1}$.
+
+Limit step. For limit $\lambda$, $|L_\lambda| \le \sum_{\alpha<\lambda} |L_\alpha| = \sum_{\alpha<\lambda}|\alpha| \le |\lambda| \cdot |\lambda| = |\lambda|$, and again $\lambda \subseteq L_\lambda$ gives the reverse.
+:::
+
+:::example[Why $L$ is not obviously small]
+If $|L_{\omega_1}| = \aleph_1$, how can $L$ contain all the reals of any model in which $V = L$ holds?
+:::
+
+:::solution
+1. Under $V = L$ every real is constructible, and the condensation lemma shows each constructible subset of $\omega$ appears in some $L_\alpha$ with $\alpha < \omega_1$.
+2. Hence $\mathcal{P}(\omega) \cap L \subseteq L_{\omega_1}$, a set of size $\aleph_1$ by the proposition *Levels of $L$ have the size of their index*.
+3. So there are at most $\aleph_1$ reals in $L$, and at least $\aleph_1$ since $\aleph_1 \le 2^{\aleph_0}$ always. Therefore $L \models 2^{\aleph_0} = \aleph_1$, which is CH.
+4. Final answer: $L$ is small in cardinality but complete as a universe — it has *all* the reals it believes exist, because it does not believe in the others.
+:::
+
+## Relative consistency via inner models
+
+<!-- section: consistency-results -->
+
+The reason to build $L$ is the following transfer principle, which is the template for every inner-model consistency proof.
+
+:::theorem[The inner model method]{#inner-model-method}
+Suppose $M$ is a definable transitive class, containing all ordinals, and ZF proves "$M \models T$" for a theory $T$. Then
+
+$$\mathrm{Con}(\mathrm{ZF}) \implies \mathrm{Con}(T),$$
+
+and this implication is itself provable in a weak arithmetical theory.
+:::
+
+:::proof
+Argue contrapositively and syntactically, which is what keeps the argument finitary. Suppose $T$ is inconsistent, so there is a finite derivation of $\bot$ from finitely many axioms $\tau_1, \dots, \tau_k$ of $T$. By hypothesis ZF proves $\tau_i^M$ for each $i$, where $\varphi^M$ denotes the relativisation of $\varphi$ to $M$. Relativisation commutes with the rules of first-order logic: if $\psi$ follows from $\psi_1, \dots, \psi_m$ by a rule, then $\psi^M$ follows from $\psi_1^M, \dots, \psi_m^M$ by the same rule, provided $M$ is nonempty — which it is, since it contains the ordinals. Translating the derivation of $\bot$ term by term therefore yields a derivation of $\bot^M$, which is $\bot$, from $\tau_1^M, \dots, \tau_k^M$. Since ZF proves each of those, ZF proves $\bot$. Hence ZF is inconsistent. Contraposing gives the statement, and every step was a finite manipulation of finite derivations, so the whole argument formalises in primitive recursive arithmetic.
+:::
+
+:::corollary[Gödel's consistency results]{#godel-consistency-corollary}
+$\mathrm{Con}(\mathrm{ZF})$ implies $\mathrm{Con}(\mathrm{ZFC})$, and implies $\mathrm{Con}(\mathrm{ZF} + V = L)$.
+:::
+
+:::proof
+$L$ is a definable transitive class containing all ordinals, by the corollary *$L$ is a transitive class containing every ordinal*. ZF proves that $L$ satisfies every axiom of ZF — this is the eight-axiom verification quoted in the outline of the theorem *Gödel, 1938: the consistency of CH* — and ZF proves $L \models \mathrm{AC}$ by the theorem *$L$ satisfies the axiom of choice*, and $L \models V = L$ by the theorem *$V = L$ holds inside $L$*. Now apply the theorem *The inner model method* with $T = \mathrm{ZFC}$ and with $T = \mathrm{ZF} + V = L$.
+:::
+
+:::remark
+Notice what this buys and what it does not. It shows that adding AC to ZF cannot create a contradiction that was not already there, so a mathematician who uses choice is taking no new logical risk. It does not show AC is true, and it does not produce a model of ZF from nothing — it converts a hypothetical model of ZF into a model of ZFC.
+:::
+
+:::example[Transferring a consistency result]
+Assume it is known that ZF proves "$L \models \mathrm{GCH}$". Deduce that $\mathrm{ZFC} + \mathrm{GCH}$ is consistent relative to ZF, and explain why one may not conclude that GCH is true.
+:::
+
+:::solution
+1. $L$ is definable, transitive and contains all ordinals; ZF proves $L$ satisfies ZFC, and by assumption also GCH.
+2. The theorem *The inner model method* with $T = \mathrm{ZFC} + \mathrm{GCH}$ gives $\mathrm{Con}(\mathrm{ZF}) \Rightarrow \mathrm{Con}(\mathrm{ZFC} + \mathrm{GCH})$.
+3. Truth is a different matter: the argument produces a model where GCH holds, and the forcing results produce models where it fails. A sentence true in one model of ZFC and false in another is not settled by ZFC.
+4. Final answer: consistency transfers; truth does not.
+:::
+
+## What $L$ cannot do
+
+<!-- section: limitations -->
+
+If $L$ settled every question, set theory would be finished: adopt $V = L$ and compute. The reason nobody does is that $L$ is too thin to be plausible, and it is thin in a way that can be made precise.
+
+:::proposition[$V = L$ decides too much]{#v-l-decides}
+$\mathrm{ZFC} + V = L$ proves CH, GCH, the diamond principle $\diamondsuit$, the existence of a Suslin tree, the existence of a $\Delta^1_2$ well-ordering of the reals, and the failure of every large cardinal axiom from measurables upward.
+:::
+
+:::remark[Quoted, not proved here]
+Each item is a substantial theorem. CH and GCH come from condensation, as outlined for the theorem *Gödel, 1938: the consistency of CH*; $\diamondsuit$ is Jensen's refinement of that argument, and a Suslin tree is built from $\diamondsuit$ by a transfinite construction of length $\omega_1$; the $\Delta^1_2$ well-ordering is $<_L$ from the theorem *$L$ satisfies the axiom of choice* restricted to reals, with the complexity computed from the absoluteness of the construction; the failure of large cardinals is the theorem of Scott quoted immediately below. The point being made is structural: $V = L$ is not a modest extra axiom, it is a decision to work in the smallest universe compatible with the ordinals, and it settles essentially every question about which set theorists have an opinion — usually in the direction those opinions reject.
+:::
+
+:::theorem[Scott: a measurable cardinal implies $V \neq L$]{#scott-theorem}
+If there exists a measurable cardinal, then $V \neq L$.
+:::
+
+:::remark[Outline, not a proof — what it assumes and where the details live]
+From a measurable $\kappa$ one forms the ultrapower $\mathrm{Ult}(V, U)$ by a $\kappa$-complete nonprincipal ultrafilter $U$ on $\kappa$; completeness makes the ultrapower well-founded, so it collapses to a transitive class $M$ with a nontrivial elementary embedding $j : V \to M$ having critical point $\kappa$. If $V = L$ held, then $M = L$ as well by absoluteness of the construction, and one derives a contradiction by considering the least ordinal moved: $j(\kappa) > \kappa$ but elementarity forces $j$ to fix the $<_L$-structure below, and comparing the $\kappa$-th element of a definable sequence on both sides gives $\kappa \neq \kappa$. The assumptions are the existence of $U$ and Łoś's theorem for ultrapowers; the details are in Jech, chapter 17.
+:::
+
+:::intuition
+$L$ is built from below by definitions, and a measurable cardinal is a statement of reflection so strong that no definition-by-recursion from below can produce its measure. Scott's theorem is the first sign that the large cardinal hierarchy and the constructible hierarchy pull in genuinely opposite directions: you can have a sharp knife or a thin universe, not both.
+:::
+
+:::example[Why "just take $L$" is not a solution to CH]
+A student proposes settling CH by decree: adopt $V = L$ as a new axiom, since it is consistent and it proves CH. Give two reasons set theorists reject this.
+:::
+
+:::solution
+1. *It is arbitrary.* $V = L$ is consistent, but so is $V \neq L$, and so is $\neg$CH. Consistency alone never selects an axiom; otherwise one could equally decree $\neg$CH by adopting a forcing axiom.
+2. *It is restrictive.* By the theorem *Scott: a measurable cardinal implies $V \neq L$*, adopting $V = L$ refutes every large cardinal from a measurable upward, and hence discards the axioms which have the best claim to being natural extensions of ZFC and which settle definable questions about the reals in a coherent way.
+3. Final answer: the two objections are arbitrariness and restrictiveness, and the second is the one that actually moved the field toward large cardinals and forcing axioms instead.
+:::
+
+## Forcing posets: conditions as partial information
+
+<!-- section: forcing-posets -->
+
+Forcing starts from a very plain object: a partially ordered set whose elements are thought of as *finite pieces of information* about an object we intend to create. The order encodes refinement. Everything else is machinery for making "an object compatible with infinitely many pieces at once" into a legitimate set.
+
+:::definition[Forcing poset]{#poset-def}
+A **forcing poset** is a partially ordered set $(\mathbb{P}, \le)$ with a largest element $\mathbb{1}$. Elements of $\mathbb{P}$ are called **conditions**. We read $q \le p$ as "$q$ is **stronger** than $p$", meaning $q$ carries all the information in $p$ and possibly more.
+:::
+
+:::pitfall
+The order convention is upside down relative to intuition: *smaller* conditions are *stronger*, that is, more informative. Some authors (notably in the Israeli tradition) use the opposite convention. Always check which one a text uses before reading a single proof.
+:::
+
+:::definition[Compatibility and antichains]{#compat-def}
+Conditions $p, q \in \mathbb{P}$ are **compatible** if some $r \in \mathbb{P}$ satisfies $r \le p$ and $r \le q$; otherwise they are **incompatible**, written $p \perp q$. A set $A \subseteq \mathbb{P}$ is an **antichain** if its elements are pairwise incompatible. The poset has the **countable chain condition** (ccc) if every antichain in $\mathbb{P}$ is countable.
+:::
+
+:::definition[Dense sets]{#dense-def}
+A set $D \subseteq \mathbb{P}$ is **dense** if for every $p \in \mathbb{P}$ there is $q \in D$ with $q \le p$. It is **dense below $p$** if every $r \le p$ has an extension in $D$. It is **open** if $q \le p \in D$ implies $q \in D$.
+:::
+
+:::intuition
+A condition is a promise: "the object I am building will look like *this* so far." Compatibility means two promises can be kept together. A dense set is a demand that can always be met: no matter what you have promised, you can promise a little more and satisfy the demand. Forcing works because meeting *all* the demands at once produces an object no single promise described.
+:::
+
+:::example[Finite partial functions]
+Let $\mathbb{P}$ be the set of finite partial functions $p : \omega \rightharpoonup 2$ ordered by reverse inclusion, $q \le p$ iff $q \supseteq p$. Identify $\mathbb{1}$, decide when two conditions are compatible, and give an infinite antichain.
+:::
+
+:::solution
+1. The largest element is the empty function $\emptyset$, since every $p$ extends it; it promises nothing.
+2. $p$ and $q$ are compatible if and only if they agree on $\mathrm{dom}(p) \cap \mathrm{dom}(q)$: if they agree, $p \cup q$ is a function and is a common extension; if they disagree at some $n$, no function can extend both.
+3. An infinite antichain: for $n \ge 1$ let $a_n$ be the condition with domain $\{0, 1, \dots, n\}$ taking value $0$ at $0, \dots, n-1$ and value $1$ at $n$. Any two of these disagree at the smaller of their two top indices, so they are pairwise incompatible.
+4. Final answer: $\mathbb{1} = \emptyset$; compatibility is agreement on the common domain; $\{a_n : n \ge 1\}$ is an infinite antichain.
+:::
+
+:::proposition[Counting conditions with a bounded domain]{#counting-conditions}
+Let $\mathbb{P} = \mathrm{Fn}(\omega, 2)$ be the poset of the previous example. The number of conditions with domain contained in $\{0,1,\dots,n-1\}$ is
+
+$$\sum_{k=0}^{n} \binom{n}{k} 2^k = 3^n.$$
+:::
+
+:::proof
+A condition with domain inside an $n$-element set is determined by choosing its domain — a subset of size $k$, in $\binom{n}{k}$ ways — and then a value in $\{0,1\}$ at each of the $k$ points, in $2^k$ ways. Summing over $k$ and applying the binomial theorem to $(1+2)^n$ gives $3^n$. Equivalently, and more directly: each of the $n$ points is independently assigned one of three states — undefined, $0$, or $1$ — giving $3^n$ conditions.
+:::
+
+:::example[How many conditions extend a given one]
+Inside $\mathrm{Fn}(\omega,2)$, fix a condition $p$ with $\mathrm{dom}(p) = \{0, 2\}$. How many conditions $q \le p$ have $\mathrm{dom}(q) \subseteq \{0,1,2,3,4\}$?
+:::
+
+:::solution
+1. Such a $q$ must agree with $p$ on $\{0,2\}$ and must have those points in its domain, since $q \supseteq p$.
+2. The remaining points $1, 3, 4$ are each free to be undefined, $0$, or $1$.
+3. So the count is $3^3 = 27$. Final answer: $27$.
+:::
+
+## Generic filters
+
+<!-- section: generic-filters -->
+
+The object forcing adds is not a condition but a coherent, maximally demanding *set* of conditions.
+
+:::definition[Filter]{#filter-def}
+$F \subseteq \mathbb{P}$ is a **filter** if it is nonempty, upward closed ($p \in F$ and $p \le q$ imply $q \in F$), and directed downward ($p, q \in F$ implies some $r \in F$ has $r \le p$ and $r \le q$).
+:::
+
+:::definition[Generic filter]{#generic-def}
+Let $M$ be a model of set theory with $\mathbb{P} \in M$. A filter $G \subseteq \mathbb{P}$ is **$\mathbb{P}$-generic over $M$** if for every dense set $D \subseteq \mathbb{P}$ with $D \in M$,
+
+$$G \cap D \neq \emptyset.$$
+:::
+
+Two remarks on the definition before any theorem. First, genericity is *relative to $M$*: only dense sets that belong to $M$ must be met, and this restriction is exactly what makes generic filters possible to obtain. Second, the requirement is by definition, so the following is not a theorem but a restatement — and it is stated anyway because it is the move used dozens of times below.
+
+:::proposition[Genericity is used by exhibiting dense sets]{#genericity-use}
+If $G$ is $\mathbb{P}$-generic over $M$ and $D \in M$ is dense, then some $p \in G$ lies in $D$. Consequently, to prove that the object built from $G$ has a property $\Phi$, it suffices to find a set $D_\Phi \in M$ which is dense and all of whose conditions force $\Phi$ to hold.
+:::
+
+:::proof
+The first sentence is the definition of genericity applied to $D$. For the second, suppose $D_\Phi \in M$ is dense and every $p \in D_\Phi$ guarantees $\Phi$ of the object built from any filter containing $p$. By genericity there is $p \in G \cap D_\Phi$, and since $p \in G$ the object built from $G$ satisfies $\Phi$.
+:::
+
+The next proposition is the reason genericity is not vacuous and the reason the extension is genuinely new.
+
+:::theorem[A generic filter is not in the ground model]{#generic-not-in-m}
+Let $\mathbb{P} \in M$ be a poset which is **separative in the weak sense** that every $p \in \mathbb{P}$ has two incompatible extensions. If $G$ is $\mathbb{P}$-generic over $M$, then $G \notin M$.
+:::
+
+:::proof
+Suppose toward a contradiction that $G \in M$. Then the set
+
+$$D = \mathbb{P} \setminus G = \{ p \in \mathbb{P} : p \notin G \}$$
+
+is a member of $M$, since $M$ satisfies enough of ZF to form the difference of two of its sets. We claim $D$ is dense. Let $p \in \mathbb{P}$ be arbitrary. By hypothesis $p$ has two extensions $q_0 \perp q_1$. If both were in $G$, then, $G$ being downward directed, some $r \in G$ would extend both, making $q_0$ and $q_1$ compatible — contradiction. So at least one $q_i \notin G$, and that $q_i$ is an extension of $p$ lying in $D$. Hence $D$ is dense and belongs to $M$.
+
+Genericity now gives $G \cap D \neq \emptyset$. But $D$ was defined as the complement of $G$, so $G \cap D = \emptyset$. This contradiction shows $G \notin M$.
+:::
+
+:::intuition
+The proof is the whole trick of forcing in miniature. The ground model can *describe* the object it is missing — it knows the poset, it knows what genericity would mean — but any concrete candidate it produces can be diagonalised against by the dense set of conditions that refute it. The generic filter exists only from outside.
+:::
+
+Since no generic filter lives in $M$, one must ask whether any exists at all. For countable $M$ the answer is yes, and the proof is a direct construction.
+
+:::theorem[Rasiowa–Sikorski: generic filters exist over countable models]{#rasiowa-sikorski}
+Let $\mathbb{P}$ be a poset and let $\{D_n : n < \omega\}$ be a countable family of dense subsets of $\mathbb{P}$. Then for every $p \in \mathbb{P}$ there is a filter $G \subseteq \mathbb{P}$ with $p \in G$ and $G \cap D_n \neq \emptyset$ for all $n$. In particular, if $M$ is a countable transitive model of ZFC and $\mathbb{P} \in M$, then a $\mathbb{P}$-generic filter over $M$ exists.
+:::
+
+:::proof
+Build a decreasing chain of conditions. Put $p_0 = p$. Given $p_n$, use density of $D_n$ to choose $p_{n+1} \le p_n$ with $p_{n+1} \in D_n$. This is a recursion of length $\omega$ with a choice at each step, so it requires only countable choice, available in ZFC.
+
+Let $G = \{ q \in \mathbb{P} : q \ge p_n \text{ for some } n \}$, the upward closure of the chain. Then:
+
+*Nonempty and contains $p$*: $p = p_0 \ge p_0$.
+
+*Upward closed*: if $q \in G$, say $q \ge p_n$, and $q \le r$, then $r \ge p_n$, so $r \in G$.
+
+*Downward directed*: if $q \ge p_m$ and $q' \ge p_n$ with, say, $m \le n$, then $p_n \le p_m \le q$ and $p_n \le q'$, and $p_n \in G$; so $p_n$ is a common extension inside $G$.
+
+*Meets each $D_n$*: $p_{n+1} \in D_n$ and $p_{n+1} \in G$.
+
+For the final claim, let $M$ be countable and transitive. Then $M$ has only countably many elements, so it contains only countably many dense subsets of $\mathbb{P}$; enumerate them as $\{D_n : n<\omega\}$ — this enumeration lives outside $M$, which is precisely why $M$ cannot carry out the construction itself — and apply the first part.
+:::
+
+:::pitfall
+The enumeration of dense sets is *not* an element of $M$, and it must not be. If it were, $M$ could run the construction and produce $G$ itself, contradicting the theorem *A generic filter is not in the ground model*. Forcing arguments are always carried out in a metatheory that sees $M$ from outside.
+:::
+
+:::example[Building a generic filter by hand]
+In $\mathrm{Fn}(\omega,2)$, take $D_n = \{ p : n \in \mathrm{dom}(p)\}$ and run the construction of the theorem *Rasiowa–Sikorski: generic filters exist over countable models* starting from $\mathbb{1}$. What object does the resulting filter determine?
+:::
+
+:::solution
+1. Step $n$ extends the current finite condition so that $n$ enters its domain; after $\omega$ steps every natural number has been assigned a value.
+2. The union $\bigcup G$ is therefore a total function $g : \omega \to 2$, because the conditions in $G$ are pairwise compatible functions whose domains exhaust $\omega$.
+3. That function is a point of Cantor space, equivalently a subset of $\omega$, equivalently a real number in binary.
+4. Final answer: the filter determines a single new real, the **Cohen real** $g = \bigcup G$.
+:::
+
+## The forcing relation and the extension $M[G]$
+
+<!-- section: the-forcing-relation -->
+
+We now have an object $G$ outside $M$. The problem is to build a model containing both $M$ and $G$ and to know in advance, from inside $M$, which sentences will hold there. Both problems are solved by *names*.
+
+:::definition[$\mathbb{P}$-names and the extension]{#names-def}
+A **$\mathbb{P}$-name** is a set $\tau$ of pairs $(\sigma, p)$ where $\sigma$ is a $\mathbb{P}$-name and $p \in \mathbb{P}$; the definition is by recursion on rank. Given a filter $G$, the **evaluation** of $\tau$ is
+
+$$\tau_G = \{ \sigma_G : (\sigma, p) \in \tau \text{ for some } p \in G \},$$
+
+and the **generic extension** is $M[G] = \{ \tau_G : \tau \in M \text{ is a } \mathbb{P}\text{-name} \}$.
+:::
+
+:::intuition
+A name is a recipe with conditional clauses: "put $\sigma$ into me, provided $p$ turns out to be true." The ground model can write down every such recipe, because recipes are ordinary sets. It cannot evaluate them, because evaluation needs $G$. So $M$ owns the syntax and $G$ supplies the semantics.
+:::
+
+:::proposition[The extension contains what it should]{#extension-contains}
+$M \subseteq M[G]$ and $G \in M[G]$, and $M[G]$ has the same ordinals as $M$.
+:::
+
+:::proof
+For $M \subseteq M[G]$, define the **check name** $\check{x}$ by recursion: $\check{x} = \{(\check{y}, \mathbb{1}) : y \in x\}$. Then $\check{x} \in M$, and since $\mathbb{1} \in G$ for every filter, an induction on rank gives $(\check{x})_G = \{(\check y)_G : y \in x\} = x$. So every $x \in M$ is the evaluation of a name in $M$.
+
+For $G \in M[G]$, take $\Gamma = \{ (\check{p}, p) : p \in \mathbb{P} \}$, a name in $M$. Its evaluation is $\Gamma_G = \{ (\check p)_G : p \in G\} = \{p : p \in G\} = G$.
+
+For ordinals, $M \subseteq M[G]$ gives one inclusion. Conversely, an easy induction shows $\mathrm{rank}(\tau_G) \le \mathrm{rank}(\tau)$, so every element of $M[G]$ has rank below the height of $M$; since both classes are transitive and contain exactly the ordinals of that height, their ordinals agree.
+:::
+
+:::definition[The forcing relation]{#forcing-relation-def}
+For $p \in \mathbb{P}$, a formula $\varphi$ and names $\tau_1,\dots,\tau_n \in M$, write
+
+$$p \Vdash \varphi(\tau_1,\dots,\tau_n)$$
+
+to mean: for every filter $G$ which is $\mathbb{P}$-generic over $M$ and contains $p$, the extension satisfies $M[G] \models \varphi((\tau_1)_G, \dots, (\tau_n)_G)$.
+:::
+
+:::theorem[The forcing theorem]{#forcing-theorem}
+Let $M$ be a countable transitive model of ZFC and $\mathbb{P} \in M$.
+
+1. *(Definability.)* For each formula $\varphi$ the relation $p \Vdash \varphi(\bar\tau)$ is definable in $M$, by a formula with $p, \mathbb{P}, \le, \bar\tau$ as parameters.
+2. *(Truth.)* For every generic $G$, $M[G] \models \varphi(\bar\tau_G)$ if and only if some $p \in G$ has $p \Vdash \varphi(\bar\tau)$.
+3. *(Preservation.)* $M[G]$ is a countable transitive model of ZFC.
+:::
+
+:::remark[Outline, not a proof — what it assumes and where the details live]
+This is the technical core of the subject and cannot be proved in a chapter; what can be said is exactly what the proof does. Definability is established by defining a relation $p \Vdash^{*} \varphi$ *inside $M$*, by recursion on the structure of $\varphi$ and, for atomic formulas, by a simultaneous recursion on the rank of the names: $p \Vdash^* \sigma \in \tau$ is defined in terms of dense sets of conditions putting suitable pairs into $\tau$, negation is handled by "no extension of $p$ forces $\varphi$", and the existential quantifier by a density clause over names. One then proves by induction that $\Vdash^*$ and $\Vdash$ coincide, which is the truth lemma, using the genericity of $G$ at each induction step. Preservation of the axioms is a separate verification, one axiom at a time; extensionality and foundation are inherited from transitivity, pairing and union are name constructions, and replacement and power set require the definability clause to convert an unbounded search into a bounded one. What is assumed throughout is that $M$ is a set — countable and transitive — so that generic filters exist by the theorem *Rasiowa–Sikorski: generic filters exist over countable models*. The full development is Kunen, *Set Theory*, chapter IV, or Jech chapter 14.
+:::
+
+:::proposition[Forcing is monotone and decided by density]{#forcing-monotone}
+If $p \Vdash \varphi$ and $q \le p$ then $q \Vdash \varphi$. Moreover for every $p$ and $\varphi$ there is $q \le p$ with $q \Vdash \varphi$ or $q \Vdash \neg\varphi$; consequently the set of conditions deciding $\varphi$ is dense.
+:::
+
+:::proof
+Monotonicity: any generic $G$ containing $q$ contains $p$, since filters are upward closed and $q \le p$; so the defining condition for $p \Vdash \varphi$ applies to $G$ and gives $M[G] \models \varphi$.
+
+For the second claim, suppose no $q \le p$ forces $\neg\varphi$. Let $G$ be generic with $p \in G$. If $M[G] \models \varphi$, the truth part of the theorem *The forcing theorem* gives some $r \in G$ with $r \Vdash \varphi$, and since $G$ is directed there is $q \in G$ with $q \le p$ and $q \le r$; monotonicity gives $q \Vdash \varphi$, as required. If instead $M[G] \models \neg\varphi$, the same argument produces $q \le p$ forcing $\neg\varphi$, contrary to assumption. Density follows because $p$ was arbitrary.
+:::
+
+:::remark
+The last proposition is what makes forcing a *method* rather than a curiosity. To show that a sentence holds in the extension, one does not inspect the extension: one shows that the conditions forcing it are dense in the ground model, a statement about a partial order that $M$ can verify about itself.
+:::
+
+## Cohen forcing: adding a real
+
+<!-- section: cohen-forcing -->
+
+Everything above is machinery. Here is the machine doing its one indispensable job: manufacturing a set of natural numbers that the ground model does not contain.
+
+:::definition[The Cohen poset]{#cohen-poset-def}
+$\mathrm{Fn}(\omega,2)$ is the set of all finite partial functions $p$ from $\omega$ to $\{0,1\}$, ordered by $q \le p \iff q \supseteq p$, with $\mathbb{1} = \emptyset$. Given a filter $G$, write $g = \bigcup G$.
+:::
+
+:::figure[Conditions in $\mathrm{Fn}(\omega,2)$ form a binary tree: a node at depth $n$ is a condition with domain $\{0,\dots,n-1\}$, and a branch through every level is a generic real. The highlighted branch codes $101\dots$]{#cohen-tree}
+{
+  "type": "plot",
+  "x": [-4.7, 4.7], "y": [-0.75, 3.75],
+  "marks": [
+    { "kind": "path", "points": [[-2, 2], [0, 3], [2, 2]], "tone": "muted" },
+    { "kind": "path", "points": [[-3, 1], [-2, 2], [-1, 1]], "tone": "muted" },
+    { "kind": "path", "points": [[1, 1], [2, 2], [3, 1]], "tone": "muted" },
+    { "kind": "path", "points": [[-3.5, 0], [-3, 1], [-2.5, 0]], "tone": "muted" },
+    { "kind": "path", "points": [[-1.5, 0], [-1, 1], [-0.5, 0]], "tone": "muted" },
+    { "kind": "path", "points": [[0.5, 0], [1, 1], [1.5, 0]], "tone": "muted" },
+    { "kind": "path", "points": [[2.5, 0], [3, 1], [3.5, 0]], "tone": "muted" },
+    { "kind": "path", "points": [[0, 3], [2, 2], [1, 1], [1.5, 0]], "tone": "result" },
+    { "kind": "point", "at": [0, 3], "tone": "result" },
+    { "kind": "point", "at": [2, 2], "tone": "result" },
+    { "kind": "point", "at": [1, 1], "tone": "result" },
+    { "kind": "point", "at": [1.5, 0], "tone": "result" },
+    { "kind": "text", "at": [0, 3.45], "text": "empty condition", "leaderTo": [0, 3] },
+    { "kind": "text", "at": [3.4, 2.6], "text": "generic branch", "leaderTo": [2, 2] },
+    { "kind": "text", "at": [-3.5, -0.45], "text": "000" },
+    { "kind": "text", "at": [-2.5, -0.45], "text": "001" },
+    { "kind": "text", "at": [-1.5, -0.45], "text": "010" },
+    { "kind": "text", "at": [-0.5, -0.45], "text": "011" },
+    { "kind": "text", "at": [0.5, -0.45], "text": "100" },
+    { "kind": "text", "at": [1.5, -0.45], "text": "101" },
+    { "kind": "text", "at": [2.5, -0.45], "text": "110" },
+    { "kind": "text", "at": [3.5, -0.45], "text": "111" }
+  ]
+}
+:::
+
+The first thing to check is that $g$ is a function defined everywhere. That is exactly a density statement, and it is the concrete heart of the whole method.
+
+:::theorem[The domain-filling sets are dense]{#dn-dense}
+For each $n < \omega$ put
+
+$$D_n = \{ p \in \mathrm{Fn}(\omega,2) : n \in \mathrm{dom}(p) \}.$$
+
+Then each $D_n$ is dense in $\mathrm{Fn}(\omega,2)$, and each $D_n$ belongs to any model $M$ containing $\mathrm{Fn}(\omega,2)$.
+:::
+
+:::proof
+Let $p \in \mathrm{Fn}(\omega,2)$ be arbitrary and fix $n$. Two cases.
+
+If $n \in \mathrm{dom}(p)$, then $p$ itself lies in $D_n$ and $p \le p$, so $p$ has an extension in $D_n$.
+
+If $n \notin \mathrm{dom}(p)$, define $q = p \cup \{(n,0)\}$. Since $\mathrm{dom}(p)$ is finite, so is $\mathrm{dom}(q) = \mathrm{dom}(p) \cup \{n\}$, and $q$ is a function because the new point $n$ was not previously in the domain. Hence $q \in \mathrm{Fn}(\omega,2)$, and $q \supseteq p$ means $q \le p$. Also $n \in \mathrm{dom}(q)$, so $q \in D_n$.
+
+In both cases $p$ has an extension in $D_n$, which is density. Finally $D_n$ is definable from $\mathrm{Fn}(\omega,2)$ and $n$ by a formula with bounded quantifiers, so separation inside $M$ produces it as an element of $M$.
+:::
+
+:::corollary[The generic object is a total function]{#g-total}
+If $G$ is $\mathrm{Fn}(\omega,2)$-generic over $M$, then $g = \bigcup G$ is a function from $\omega$ to $\{0,1\}$.
+:::
+
+:::proof
+$g$ is a function: any two conditions in $G$ are compatible, being members of a downward directed filter, and compatible finite partial functions agree on their common domain, so the union of $G$ has no conflicting pairs. $g$ is total: fix $n$. The set $D_n$ is dense and lies in $M$ by the theorem *The domain-filling sets are dense*, so genericity gives $p \in G \cap D_n$, and then $n \in \mathrm{dom}(p) \subseteq \mathrm{dom}(g)$. Values lie in $\{0,1\}$ because every condition takes values there.
+:::
+
+Now the payoff. The generic real is new, and the proof is three lines of density — the single most important computation in the subject.
+
+:::theorem[The Cohen real is new]{#cohen-real-new}
+Let $G$ be $\mathrm{Fn}(\omega,2)$-generic over $M$ and $g = \bigcup G$. Then $g \neq f$ for every $f : \omega \to 2$ with $f \in M$. Hence $g \in M[G] \setminus M$.
+:::
+
+:::proof
+Fix $f : \omega \to 2$ with $f \in M$, and set
+
+$$E_f = \{ p \in \mathrm{Fn}(\omega,2) : p(n) \neq f(n) \ \text{for some } n \in \mathrm{dom}(p) \}.$$
+
+$E_f$ is an element of $M$, being definable from $f$ and the poset.
+
+$E_f$ is dense. Let $p$ be any condition. Since $\mathrm{dom}(p)$ is finite and $\omega$ is not, choose $n \notin \mathrm{dom}(p)$ and put $q = p \cup \{(n, 1 - f(n))\}$. Then $q$ is a condition, $q \le p$, and $q(n) = 1 - f(n) \neq f(n)$, so $q \in E_f$.
+
+By genericity pick $p \in G \cap E_f$, witnessed at some $n \in \mathrm{dom}(p)$. Since $p \subseteq g$ we get $g(n) = p(n) \neq f(n)$, so $g \neq f$.
+
+As $f \in M$ was arbitrary, $g$ is not a ground-model real. It does lie in $M[G]$, since $g = \bigcup \Gamma_G$ for the canonical name $\Gamma$ of the corollary *The extension contains what it should*, and $M[G]$ is a model of ZFC closed under unions.
+:::
+
+:::intuition
+Why can the ground model not defend itself? Because any $f \in M$ is a *single* target, and a finite condition has only finitely many commitments, so there is always an untouched coordinate where the generic can be made to disagree. The ground model has $2^{\aleph_0}$ reals and the generic dodges all of them simultaneously — but it does so one dense set at a time, and each dense set handles only one $f$. Genericity is what lets $\aleph_0$-many refutations be combined.
+:::
+
+:::example[A dense set forcing an infinite pattern]
+Show that the generic real $g$ takes the value $1$ infinitely often.
+:::
+
+:::solution
+1. For each $k$ let $F_k = \{ p : p(n) = 1 \text{ for some } n \ge k \text{ in } \mathrm{dom}(p)\}$, an element of $M$.
+2. $F_k$ is dense: given $p$, pick $n \ge k$ outside the finite set $\mathrm{dom}(p)$ and extend by $(n,1)$.
+3. Genericity gives some $p \in G \cap F_k$, so $g(n) = 1$ for some $n \ge k$.
+4. Since $k$ was arbitrary, $\{n : g(n) = 1\}$ is unbounded, hence infinite. Final answer: yes, infinitely often — and by symmetry the same holds for the value $0$.
+:::
+
+:::example[Counting the conditions of a given domain size]
+How many conditions in $\mathrm{Fn}(\omega,2)$ have domain of size exactly $3$ contained in $\{0,1,\dots,5\}$?
+:::
+
+:::solution
+1. Choose the domain: $\binom{6}{3} = 20$ ways.
+2. Choose values: $2^3 = 8$ ways.
+3. Total $20 \cdot 8 = 160$. Final answer: $160$.
+:::
+
+## The continuum hypothesis stated precisely
+
+<!-- section: ch-statement -->
+
+CH is a statement about two cardinals, and almost every confusion about it comes from misreading which two.
+
+:::proposition[Equivalent forms of CH]{#ch-equivalents}
+The following are equivalent over ZFC:
+
+1. Every infinite subset of $\mathbb{R}$ is either countable or of the same cardinality as $\mathbb{R}$.
+2. $2^{\aleph_0} = \aleph_1$.
+3. There is a well-ordering of $\mathbb{R}$ in which every proper initial segment is countable.
+:::
+
+:::proof
+$(1) \Rightarrow (2)$: By AC, $|\mathbb{R}| = \aleph_\alpha$ for some $\alpha \ge 1$, since $\mathbb{R}$ is uncountable by Cantor's theorem. If $\alpha \ge 2$ then $\aleph_1 < |\mathbb{R}|$, and a subset of $\mathbb{R}$ of size exactly $\aleph_1$ exists (take the image of an injection from $\omega_1$, available since $\aleph_1 \le |\mathbb{R}|$); that subset is uncountable and not of size $|\mathbb{R}|$, contradicting (1). So $\alpha = 1$.
+
+$(2) \Rightarrow (3)$: If $|\mathbb{R}| = \aleph_1$, transport the canonical well-ordering of $\omega_1$ along a bijection. Every proper initial segment of $\omega_1$ is a countable ordinal, hence countable.
+
+$(3) \Rightarrow (1)$: Let $\prec$ be such a well-ordering, of order type $\gamma$. Every proper initial segment being countable means $\gamma \le \omega_1$, and $\gamma$ is uncountable since $\mathbb{R}$ is, so $\gamma = \omega_1$ and $|\mathbb{R}| = \aleph_1$. Now let $A \subseteq \mathbb{R}$ be infinite. Under the bijection with $\omega_1$, either $A$ is bounded in $\omega_1$, hence contained in a countable initial segment and therefore countable, or it is unbounded, in which case it has size $\aleph_1 = |\mathbb{R}|$.
+:::
+
+:::pitfall
+CH is *not* the statement $|\mathbb{R}| > \aleph_0$ — that is Cantor's theorem, provable in ZFC. Nor is it the statement that $\aleph_1$ exists, which is also a theorem. CH asserts that two independently defined cardinals, the first uncountable aleph and the cardinality of the power set of $\omega$, happen to coincide.
+:::
+
+:::example[Locating CH among related statements]
+Classify each as a theorem of ZFC, independent of ZFC, or refutable in ZFC: (a) $\aleph_1 \le 2^{\aleph_0}$; (b) $2^{\aleph_0} = \aleph_1$; (c) $2^{\aleph_0} = \aleph_0$; (d) $2^{\aleph_1} = \aleph_2$.
+:::
+
+:::solution
+1. (a) A theorem. $\mathbb{R}$ is uncountable and by AC its cardinality is an aleph, so it is at least the least uncountable aleph.
+2. (b) Independent — this is CH.
+3. (c) Refutable: Cantor's diagonal argument proves $2^{\aleph_0} > \aleph_0$ outright.
+4. (d) Independent: it follows from GCH, and Easton-style forcing makes it fail.
+5. Final answer: theorem, independent, refutable, independent.
+:::
+
+## Gödel's half: CH cannot be refuted
+
+<!-- section: godel-consistency -->
+
+The inner-model half is now assembled from parts already proved plus one quoted lemma.
+
+:::theorem[Condensation]{#condensation}
+If $X \prec L_\alpha$ is an elementary submodel of $(L_\alpha, \in)$ for a limit ordinal $\alpha$, then the transitive collapse of $X$ is $L_\beta$ for some $\beta \le \alpha$, and $\beta = \mathrm{otp}(X \cap \mathrm{Ord})$.
+:::
+
+:::remark[Quoted, not proved here]
+The proof needs the fine structure of the definition of $L$: one shows the statement "$V = L$" is expressible by a $\Sigma_1$ formula whose relativisation to $L_\alpha$ is correct for limit $\alpha$, then applies the Mostowski collapse and $\Sigma_1$-absoluteness. It is the one genuinely technical ingredient in Gödel's proof, and it is where the choice of $\mathrm{Def}$ rather than $\mathcal{P}$ pays off. See Jech, Theorem 13.18.
+:::
+
+:::theorem[CH holds in $L$]{#ch-in-l}
+$\mathrm{ZF} \vdash L \models \mathrm{CH}$. Hence $\mathrm{Con}(\mathrm{ZF}) \Rightarrow \mathrm{Con}(\mathrm{ZFC} + \mathrm{CH})$.
+:::
+
+:::remark[Outline using the quoted condensation lemma]
+Work inside $L$, so that $V = L$. Let $A \subseteq \omega$. Choose a limit $\alpha$ large enough that $A \in L_\alpha$ and $L_\alpha$ satisfies enough of ZF, then take a countable $X \prec L_\alpha$ with $\omega \cup \{A\} \subseteq X$; such $X$ exists by the downward Löwenheim–Skolem theorem. By the theorem *Condensation* the collapse of $X$ is some $L_\beta$ with $\beta$ countable, and the collapse fixes $A$ because $A \subseteq \omega \subseteq X$ and $X$ contains each element of $\omega$. So $A \in L_\beta$ with $\beta < \omega_1$. Therefore
+
+$$\mathcal{P}(\omega) \cap L \subseteq L_{\omega_1},$$
+
+which has cardinality $\aleph_1$ by the proposition *Levels of $L$ have the size of their index*. Combined with $\aleph_1 \le 2^{\aleph_0}$ this gives $2^{\aleph_0} = \aleph_1$ in $L$. The relative consistency statement then follows from the theorem *The inner model method*. What is assumed: condensation, and Löwenheim–Skolem inside $L$.
+:::
+
+:::corollary[ZFC does not refute CH]{#zfc-not-refute-ch}
+If ZF is consistent, then $\mathrm{ZFC} \nvdash \neg\mathrm{CH}$.
+:::
+
+:::proof
+Suppose $\mathrm{ZFC} \vdash \neg\mathrm{CH}$. By the theorem *CH holds in $L$* the theory $\mathrm{ZFC} + \mathrm{CH}$ is consistent, so it has a model $\mathcal{M}$ by completeness. Then $\mathcal{M} \models \mathrm{ZFC}$, so $\mathcal{M} \models \neg\mathrm{CH}$ by soundness, while also $\mathcal{M} \models \mathrm{CH}$ — a contradiction. Hence no such proof exists.
+:::
+
+:::example[Why the argument gives GCH too]
+Sketch how the same method yields $2^{\aleph_\alpha} = \aleph_{\alpha+1}$ in $L$.
+:::
+
+:::solution
+1. Replace $\omega$ by $\omega_\alpha$ throughout: given $A \subseteq \omega_\alpha$ in $L$, take an elementary submodel $X \prec L_\gamma$ of size $\aleph_\alpha$ with $\omega_\alpha \cup \{A\} \subseteq X$.
+2. Condensation collapses $X$ to some $L_\beta$ with $|\beta| = \aleph_\alpha$, hence $\beta < \omega_{\alpha+1}$, and $A$ is unmoved because $\omega_\alpha \subseteq X$.
+3. So $\mathcal{P}(\omega_\alpha) \cap L \subseteq L_{\omega_{\alpha+1}}$, of size $\aleph_{\alpha+1}$.
+4. Final answer: $2^{\aleph_\alpha} \le \aleph_{\alpha+1}$ in $L$, and $\ge$ is a theorem of ZFC, so GCH holds in $L$.
+:::
+
+## Cohen's half: CH cannot be proved
+
+<!-- section: cohen-independence -->
+
+For the other half we force with many copies of the Cohen poset at once and then must verify that the cardinals we are counting with survive.
+
+:::definition[The poset for $\neg$CH]{#neg-ch-poset}
+For a cardinal $\kappa$ of $M$, let $\mathrm{Fn}(\kappa \times \omega, 2)$ be the finite partial functions $p$ from $\kappa \times \omega$ into $2$, ordered by reverse inclusion. For $\xi < \kappa$ put $g_\xi(n) = g(\xi, n)$, where $g = \bigcup G$.
+:::
+
+:::theorem[The columns are distinct reals]{#columns-distinct}
+Let $G$ be generic for $\mathrm{Fn}(\kappa\times\omega,2)$ over $M$. Then each $g_\xi$ is a function $\omega \to 2$, and $g_\xi \neq g_\eta$ whenever $\xi \neq \eta$. Hence $M[G] \models 2^{\aleph_0} \ge |\kappa|$.
+:::
+
+:::proof
+Totality of each $g_\xi$ is the corollary *The generic object is a total function* applied to the dense sets $D_{\xi,n} = \{p : (\xi,n) \in \mathrm{dom}(p)\}$, whose density is proved exactly as in the theorem *The domain-filling sets are dense*: a finite condition omits some $(\xi,n)$ only if it can be extended by assigning a value there.
+
+For distinctness, fix $\xi \neq \eta$ and let
+
+$$E_{\xi\eta} = \{ p : \text{for some } n, \ (\xi,n),(\eta,n) \in \mathrm{dom}(p) \text{ and } p(\xi,n) \neq p(\eta,n) \}.$$
+
+This set lies in $M$. It is dense: given $p$, its domain is finite, so choose $n$ with neither $(\xi,n)$ nor $(\eta,n)$ in $\mathrm{dom}(p)$ — possible since only finitely many $n$ are used — and extend $p$ by setting the first to $0$ and the second to $1$. The result is a condition below $p$ in $E_{\xi\eta}$. By genericity some $p \in G$ lies in $E_{\xi\eta}$, and since $p \subseteq g$ the functions $g_\xi$ and $g_\eta$ differ at that $n$.
+
+So $\xi \mapsto g_\xi$ is an injection of $\kappa$ into the reals of $M[G]$, giving $2^{\aleph_0} \ge |\kappa|$ there.
+:::
+
+The inequality is worthless unless $\kappa$ is still a cardinal in $M[G]$; otherwise $\aleph_2^M$ could collapse to $\aleph_1$ and we would have proved nothing. This is what the chain condition is for.
+
+:::theorem[ccc forcing preserves cardinals and cofinalities]{#ccc-preserves}
+If $\mathbb{P} \in M$ has the countable chain condition in $M$ and $G$ is generic, then for every ordinal $\gamma$, $\gamma$ is a cardinal in $M$ if and only if it is a cardinal in $M[G]$; likewise cofinalities are unchanged.
+:::
+
+:::remark[Outline, not a proof — what it assumes and where the details live]
+The engine is the following lemma, which is where ccc is used: if $f \in M[G]$ is a function from an ordinal $\gamma$ into $M$, then in $M$ there is a function $F$ with domain $\gamma$ such that $f(\alpha) \in F(\alpha)$ and $|F(\alpha)| \le \aleph_0$ for all $\alpha$. To see it, take a name $\dot f$ and, for each $\alpha$, consider a maximal antichain of conditions deciding the value $\dot f(\alpha)$; by ccc that antichain is countable, so it names at most countably many possible values, and $F(\alpha)$ is that countable set — which $M$ can compute by the definability part of the theorem *The forcing theorem*. Now if $\gamma$ were a cardinal in $M$ but not in $M[G]$, there would be a surjection $f : \delta \to \gamma$ in $M[G]$ with $\delta < \gamma$; applying the lemma covers $\gamma$ by $\delta$ countable sets inside $M$, so $|\gamma| \le |\delta| \cdot \aleph_0 < \gamma$ in $M$ whenever $\gamma$ is uncountable and regular, contradiction. The regular case handles the rest since cardinals are limits of regular ones. The assumptions are the forcing theorem and AC in $M$; details in Kunen, chapter VII.
+:::
+
+:::theorem[Cohen's theorem, with the count]{#cohen-full}
+Let $M \models \mathrm{ZFC} + \mathrm{GCH}$ be countable transitive and let $\kappa \in M$ be a cardinal of $M$ with $\mathrm{cf}(\kappa)^M > \omega$. Forcing with $\mathbb{P} = \mathrm{Fn}(\kappa\times\omega,2)$ gives $M[G] \models 2^{\aleph_0} = \kappa$.
+:::
+
+:::remark[Outline, assembling the proved parts with two quoted ones]
+The lower bound $2^{\aleph_0} \ge \kappa$ is the theorem *The columns are distinct reals*, fully proved above. That $\kappa$ is still a cardinal uses the theorem *ccc forcing preserves cardinals and cofinalities*, together with the fact — a $\Delta$-system argument on finite domains — that $\mathrm{Fn}(\kappa\times\omega,2)$ is ccc. The upper bound $2^{\aleph_0} \le \kappa$ is the nice-name count: every real of $M[G]$ has a *nice name* $\bigcup_{n} \{\check n\} \times A_n$ with each $A_n$ an antichain, hence countable by ccc; under GCH in $M$ there are at most $\kappa^{\aleph_0} = \kappa$ such names when $\mathrm{cf}(\kappa)>\omega$. Finally $\mathrm{cf}(\kappa) > \omega$ is needed so that $\kappa^{\aleph_0} = \kappa$; the theorem *König's restriction on the continuum* below shows the hypothesis cannot be dropped.
+:::
+
+:::corollary[ZFC does not prove CH]{#zfc-not-prove-ch}
+If ZFC is consistent, then $\mathrm{ZFC} \nvdash \mathrm{CH}$.
+:::
+
+:::proof
+By the theorem *Cohen's theorem, with the count* with $\kappa = \aleph_2^M$, the theory $\mathrm{ZFC} + 2^{\aleph_0} = \aleph_2$ is consistent, and that theory proves $\neg\mathrm{CH}$. If ZFC proved CH, then this consistent theory would prove both CH and $\neg$CH, so it would be inconsistent — contradiction.
+:::
+
+:::example[Reading off the aleph subscript]
+In a forcing extension satisfying $2^{\aleph_0} = \aleph_2$, what is the subscript $\beta$ with $\mathfrak{c} = \aleph_\beta$, and what is the value of $2^{\aleph_0}$ raised to the power $\aleph_0$ in that model?
+:::
+
+:::solution
+1. By hypothesis $\mathfrak{c} = \aleph_2$, so $\beta = 2$.
+2. For the second, $(2^{\aleph_0})^{\aleph_0} = 2^{\aleph_0 \cdot \aleph_0} = 2^{\aleph_0} = \aleph_2$, using cardinal exponentiation rules valid in ZFC.
+3. Final answer: $\beta = 2$, and the power is again $\aleph_2$.
+:::
+
+## What forcing can and cannot do to the continuum
+
+<!-- section: implications -->
+
+Forcing gives enormous freedom over the value of $2^{\aleph_0}$, but not total freedom. One ZFC theorem survives every extension and constrains the answer.
+
+:::theorem[König's restriction on the continuum]{#konig-continuum}
+In ZFC, $\mathrm{cf}(2^{\aleph_0}) > \aleph_0$. In particular $2^{\aleph_0} \neq \aleph_\omega$.
+:::
+
+:::proof
+Suppose toward a contradiction that $\mathrm{cf}(2^{\aleph_0}) = \aleph_0$, and write $\mathfrak{c} = 2^{\aleph_0} = \sup_n \kappa_n$ with $\kappa_n < \mathfrak{c}$ strictly increasing. Identify the reals with the set $F$ of all functions $\omega \to \mathfrak{c}$ restricted appropriately; more simply, partition a set $S$ of size $\mathfrak{c}$ as $S = \bigcup_n S_n$ with $|S_n| = \kappa_n$.
+
+Take $X$ of cardinality $\mathfrak{c}$, say $X = {}^{\omega}2$, and suppose for contradiction that $X = \bigcup_n X_n$ with $|X_n| = \kappa_n < \mathfrak{c}$. We produce an element of $X$ outside every $X_n$, contradicting the union. Since $|X_n| = \kappa_n < \mathfrak{c} = |{}^\omega 2|$ and there is a bijection of $\omega$ with $\omega \times \omega$, view each element of $X$ as a function $h : \omega \times \omega \to 2$ and let $h_n$ be its $n$-th row. For each $n$, the set of $n$-th rows of members of $X_n$ has size at most $\kappa_n < \mathfrak{c}$, so it is not all of ${}^{\omega}2$; choose $r_n \in {}^\omega 2$ not occurring as the $n$-th row of any member of $X_n$. Let $h$ be the function whose $n$-th row is $r_n$. Then $h \in X$, and $h \notin X_n$ for every $n$, because $h$ and any member of $X_n$ differ in row $n$. So $X \neq \bigcup_n X_n$, contradiction.
+
+Therefore $\mathfrak{c}$ is not the supremum of countably many smaller cardinals, that is, $\mathrm{cf}(\mathfrak{c}) > \aleph_0$. Since $\mathrm{cf}(\aleph_\omega) = \aleph_0$, the value $\aleph_\omega$ is excluded.
+:::
+
+:::remark
+The diagonal in that proof is Cantor's, performed once per row instead of once overall. That is the general shape of König's theorem, of which this is the special case $\sum_n \kappa_n < \prod_n \mathfrak{c}$.
+:::
+
+:::theorem[Easton: the continuum function on regulars is almost arbitrary]{#easton}
+Let $M \models \mathrm{ZFC}+\mathrm{GCH}$ and let $E$ be a function from regular cardinals of $M$ to cardinals of $M$ such that $E$ is non-decreasing and $\mathrm{cf}(E(\kappa)) > \kappa$ for all $\kappa$. Then there is a forcing extension preserving cardinals in which $2^{\kappa} = E(\kappa)$ for every regular $\kappa$.
+:::
+
+:::remark[Quoted, not proved here]
+Easton's construction is a class-length product of Cohen-style posets with support restricted by an "Easton support" condition, and the verification that cardinals are preserved splits the product into a small ccc-like part and a highly closed part at each stage. The two hypotheses on $E$ are exactly the ZFC constraints: monotonicity of the continuum function, and König's theorem in the form $\mathrm{cf}(2^\kappa)>\kappa$, which is the theorem *König's restriction on the continuum* generalised. See Jech, chapter 15. Singular cardinals behave completely differently — Silver's theorem and the whole of PCF theory live there — and Easton's freedom does not extend to them.
+:::
+
+:::example[Deciding which continuum functions are admissible]
+Is there a model of ZFC with $2^{\aleph_0} = \aleph_3$ and $2^{\aleph_1} = \aleph_2$?
+:::
+
+:::solution
+1. The continuum function is non-decreasing: $\aleph_0 < \aleph_1$ forces $2^{\aleph_0} \le 2^{\aleph_1}$.
+2. Here that would require $\aleph_3 \le \aleph_2$, which is false.
+3. Final answer: no such model exists — this is refutable in ZFC, before any forcing is attempted.
+:::
+
+## Large cardinals: axioms of infinity
+
+<!-- section: large-cardinals -->
+
+Forcing moves the continuum sideways; large cardinal axioms extend the universe upward. They assert that certain enormous cardinals exist, and each such assertion is strictly stronger than ZFC in a sense made precise below.
+
+:::definition[Large cardinal axiom]{#lca-def}
+A **large cardinal axiom** is a sentence asserting the existence of a cardinal $\kappa$ with a closure or reflection property so strong that $\mathrm{ZFC} + \text{the axiom}$ proves $\mathrm{Con}(\mathrm{ZFC})$. By the corollary *ZFC cannot prove its own consistency*, no such axiom is provable in ZFC.
+:::
+
+:::intuition
+Each axiom of infinity says the universe is closed under one more operation. The axiom of infinity itself says "$\omega$ exists", which is what lifts finite set theory to ZFC; an inaccessible says "a stage exists that is closed under everything ZFC can do"; a measurable says "a stage exists that can be reflected by an elementary embedding". Each is the previous demand raised one level of abstraction.
+:::
+
+## Inaccessible cardinals
+
+<!-- section: inaccessible-cardinals -->
+
+:::definition[Inaccessible cardinal]{#inaccessible-def}
+An uncountable cardinal $\kappa$ is **(strongly) inaccessible** if it is regular — $\mathrm{cf}(\kappa) = \kappa$ — and a strong limit: $2^\lambda < \kappa$ for every $\lambda < \kappa$.
+:::
+
+:::theorem[An inaccessible gives a model of ZFC]{#vkappa-models-zfc}
+If $\kappa$ is inaccessible, then $(V_\kappa, \in) \models \mathrm{ZFC}$.
+:::
+
+:::proof
+Extensionality, foundation and choice are inherited: $V_\kappa$ is transitive, so extensionality and foundation hold, and any well-ordering of a set $x \in V_\kappa$ has rank below $\kappa$, so it lies in $V_\kappa$.
+
+Pairing and union: if $x, y \in V_\kappa$ then $\mathrm{rank}(\{x,y\}) = \max(\mathrm{rank} x, \mathrm{rank} y) + 1 < \kappa$ since $\kappa$ is a limit ordinal; and $\mathrm{rank}(\bigcup x) \le \mathrm{rank}(x)$.
+
+Infinity: $\omega \in V_\kappa$ because $\kappa > \omega$.
+
+Power set: if $x \in V_\kappa$ with $\mathrm{rank}(x) = \alpha < \kappa$, then $|x| \le |V_\alpha| < \kappa$ — here the strong limit property is used, by induction on $\alpha$ showing $|V_\alpha| < \kappa$ for $\alpha<\kappa$ — so $|\mathcal{P}(x)| \le 2^{|x|} < \kappa$ and $\mathrm{rank}(\mathcal{P}(x)) = \alpha+1 < \kappa$. Hence $\mathcal{P}(x) \in V_\kappa$.
+
+Separation: a subset of $x \in V_\kappa$ has rank at most that of $x$, so it lies in $V_\kappa$.
+
+Replacement: let $f : x \to V_\kappa$ be definable over $V_\kappa$ with $x \in V_\kappa$. Then $|x| < \kappa$, and $\{\mathrm{rank}(f(u))+1 : u \in x\}$ is a set of fewer than $\kappa$ ordinals below $\kappa$. Regularity of $\kappa$ makes it bounded, say by $\beta < \kappa$, so the image lies in $V_\beta$ and hence is an element of $V_{\beta+1} \subseteq V_\kappa$.
+
+All axioms hold, so $V_\kappa \models \mathrm{ZFC}$.
+:::
+
+:::corollary[ZFC cannot prove an inaccessible exists]{#no-inaccessible}
+If ZFC is consistent, then $\mathrm{ZFC} \nvdash$ "there exists an inaccessible cardinal". Moreover $\mathrm{Con}(\mathrm{ZFC})$ does not imply $\mathrm{Con}(\mathrm{ZFC} + \exists\text{ inaccessible})$ provably in ZFC.
+:::
+
+:::proof
+By the theorem *An inaccessible gives a model of ZFC*, ZFC proves "if an inaccessible exists then there is a set model of ZFC", and hence proves "if an inaccessible exists then $\mathrm{Con}(\mathrm{ZFC})$", using the arithmetised soundness theorem as in the corollary *No absolute consistency proof for a set theory*. So a ZFC proof of the existence of an inaccessible would yield a ZFC proof of $\mathrm{Con}(\mathrm{ZFC})$, contradicting the corollary *ZFC cannot prove its own consistency*.
+
+For the second claim, suppose ZFC proved that implication. Then $\mathrm{ZFC} + \mathrm{Con}(\mathrm{ZFC})$ would prove $\mathrm{Con}(\mathrm{ZFC}+\exists\text{ inaccessible})$, which by the first paragraph implies $\mathrm{Con}(\mathrm{ZFC}+\mathrm{Con}(\mathrm{ZFC}))$ — a violation of the second incompleteness theorem applied to the consistent theory $\mathrm{ZFC}+\mathrm{Con}(\mathrm{ZFC})$.
+:::
+
+:::example[Inaccessibility is not just largeness]
+Is $\aleph_\omega$ inaccessible? Is $\beth_{\omega}$?
+:::
+
+:::solution
+1. $\aleph_\omega$ is a limit cardinal but $\mathrm{cf}(\aleph_\omega) = \omega < \aleph_\omega$, so it is singular, hence not inaccessible.
+2. $\beth_\omega = \sup_n \beth_n$ is a strong limit, since $2^{\beth_n} = \beth_{n+1} < \beth_\omega$, but again its cofinality is $\omega$.
+3. Final answer: neither — both fail regularity. Inaccessibility needs regularity *and* strong limit, and no cardinal ZFC can name from below has both.
+:::
+
+## Measurable cardinals
+
+<!-- section: measurable-cardinals -->
+
+:::definition[Measurable cardinal]{#measurable-def}
+An uncountable cardinal $\kappa$ is **measurable** if there is a $\kappa$-complete nonprincipal ultrafilter $U$ on $\kappa$: a family $U \subseteq \mathcal{P}(\kappa)$ closed under supersets and under intersections of fewer than $\kappa$ of its members, containing exactly one of $A$ and $\kappa\setminus A$ for each $A$, and containing no singleton.
+:::
+
+:::theorem[Measurable implies inaccessible]{#measurable-inaccessible}
+Every measurable cardinal is inaccessible.
+:::
+
+:::proof
+Let $U$ be a $\kappa$-complete nonprincipal ultrafilter on $\kappa$.
+
+*Regularity.* Suppose $\kappa = \bigcup_{i<\lambda} A_i$ with $\lambda < \kappa$ and each $|A_i| < \kappa$. Nonprincipality plus $\kappa$-completeness gives that every set of size less than $\kappa$ is *not* in $U$: a singleton is not in $U$, so its complement is, and intersecting fewer than $\kappa$ such complements — legitimate by completeness — shows the complement of any small set is in $U$. So each $A_i \notin U$, that is $\kappa \setminus A_i \in U$. By $\kappa$-completeness the intersection $\bigcap_{i<\lambda}(\kappa\setminus A_i)$ is in $U$, but that intersection is $\kappa \setminus \bigcup_i A_i = \emptyset$, and $\emptyset \notin U$ since $U$ is a proper filter. Contradiction, so $\kappa$ is regular.
+
+*Strong limit.* Suppose $\lambda < \kappa \le 2^\lambda$. Fix an injection $\xi \mapsto f_\xi$ from $\kappa$ into ${}^{\lambda}2$. For each $i < \lambda$ exactly one of $\{\xi : f_\xi(i) = 0\}$, $\{\xi : f_\xi(i)=1\}$ lies in $U$; call the chosen value $e(i)$ and the chosen set $B_i \in U$. By $\kappa$-completeness $B = \bigcap_{i<\lambda} B_i \in U$, so $B$ is nonempty and in fact has size $\kappa$ by the previous paragraph. But every $\xi \in B$ satisfies $f_\xi(i) = e(i)$ for all $i<\lambda$, so $f_\xi = e$ — and $\xi \mapsto f_\xi$ was injective, forcing $|B| \le 1$. Contradiction. Hence $2^\lambda < \kappa$ for all $\lambda<\kappa$.
+
+Being uncountable, regular and a strong limit, $\kappa$ is inaccessible.
+:::
+
+:::corollary[Measurables are far above the first inaccessible]{#measurable-above}
+If $\kappa$ is measurable then $\kappa$ is the $\kappa$-th inaccessible cardinal, and $\mathrm{ZFC} + \exists \text{ measurable}$ proves $\mathrm{Con}(\mathrm{ZFC} + \exists\text{ inaccessible})$.
+:::
+
+:::proof
+For the consistency claim: if $\kappa$ is measurable it is inaccessible, so by the theorem *An inaccessible gives a model of ZFC* the set $V_\kappa$ models ZFC; a standard reflection argument using $\kappa$-completeness shows the set of inaccessibles below $\kappa$ is in $U$, hence unbounded, so $V_\kappa$ also believes inaccessibles exist. That provides a model of $\mathrm{ZFC}+\exists\text{ inaccessible}$, and soundness converts a model into a consistency statement. The claim that $\kappa$ is the $\kappa$-th inaccessible follows from that same unboundedness together with regularity.
+:::
+
+## The hierarchy of large cardinals
+
+<!-- section: hierarchy -->
+
+:::figure[The large cardinal hierarchy, ordered by consistency strength. Each rung proves the consistency of every rung below it, and none can prove its own.]{#lc-ladder}
+{
+  "type": "plot",
+  "x": [-0.5, 5.5], "y": [-0.6, 7.6],
+  "marks": [
+    { "kind": "path", "points": [[0.6, 0], [0.6, 7]], "tone": "muted" },
+    { "kind": "path", "points": [[0, 0], [1.2, 0]], "tone": "muted" },
+    { "kind": "path", "points": [[0, 1], [1.2, 1]], "tone": "accent" },
+    { "kind": "path", "points": [[0, 2], [1.2, 2]], "tone": "accent" },
+    { "kind": "path", "points": [[0, 3], [1.2, 3]], "tone": "accent" },
+    { "kind": "path", "points": [[0, 4], [1.2, 4]], "tone": "result" },
+    { "kind": "path", "points": [[0, 5], [1.2, 5]], "tone": "result" },
+    { "kind": "path", "points": [[0, 6], [1.2, 6]], "tone": "result" },
+    { "kind": "path", "points": [[0, 7], [1.2, 7]], "tone": "result" },
+    { "kind": "text", "at": [2.0, 0], "text": "ZFC" },
+    { "kind": "text", "at": [2.0, 1], "text": "inaccessible" },
+    { "kind": "text", "at": [2.0, 2], "text": "Mahlo" },
+    { "kind": "text", "at": [2.0, 3], "text": "weakly compact" },
+    { "kind": "text", "at": [2.0, 4], "text": "measurable" },
+    { "kind": "text", "at": [2.0, 5], "text": "strong" },
+    { "kind": "text", "at": [2.0, 6], "text": "Woodin" },
+    { "kind": "text", "at": [2.0, 7], "text": "supercompact" }
+  ]
+}
+:::
+
+:::proposition[The ladder is strictly increasing]{#ladder-strict}
+If $A$ and $B$ are large cardinal axioms with $\mathrm{ZFC}+B \vdash \mathrm{Con}(\mathrm{ZFC}+A)$, then $\mathrm{ZFC}+A \nvdash \mathrm{Con}(\mathrm{ZFC}+B)$, assuming $\mathrm{ZFC}+B$ is consistent.
+:::
+
+:::proof
+Suppose $\mathrm{ZFC}+A \vdash \mathrm{Con}(\mathrm{ZFC}+B)$. Combined with the hypothesis, $\mathrm{ZFC}+B$ proves $\mathrm{Con}(\mathrm{ZFC}+A)$, and a consistency statement carries with it the provable implications of the theory it is about; formalising, $\mathrm{ZFC}+B \vdash \mathrm{Con}(\mathrm{ZFC}+A)$ and $\mathrm{ZFC}+A \vdash \mathrm{Con}(\mathrm{ZFC}+B)$ together give $\mathrm{ZFC}+B \vdash \mathrm{Con}(\mathrm{ZFC}+B)$ by formalised soundness. That contradicts the theorem *Gödel's second incompleteness theorem* applied to the consistent theory $\mathrm{ZFC}+B$.
+:::
+
+:::remark
+Empirically the hierarchy is *linearly* ordered by consistency strength, and no one knows why. Axioms invented for unrelated reasons — from combinatorics, from infinitary logic, from the theory of elementary embeddings — always turn out to be comparable. There is no theorem saying this must happen; it is the most striking unexplained regularity in the subject.
+:::
+
+## Incompleteness as the source of all of this
+
+<!-- section: incompleteness -->
+
+:::theorem[Gödel's first incompleteness theorem]{#first-incompleteness}
+Every consistent, recursively axiomatised theory $T$ interpreting arithmetic is incomplete: there is a sentence $\gamma$ with $T \nvdash \gamma$ and $T \nvdash \neg\gamma$.
+:::
+
+:::remark[Outline, not a proof — what it assumes and where the details live]
+The diagonal lemma supplies $\gamma$ with $T \vdash \gamma \leftrightarrow \neg\mathrm{Prov}_T(\ulcorner\gamma\urcorner)$. If $T \vdash \gamma$ then $T$ proves both $\gamma$ and its own unprovability of $\gamma$, contradicting consistency via provable $\Sigma_1$-completeness. If $T \vdash \neg\gamma$ then $T$ proves $\mathrm{Prov}_T(\ulcorner\gamma\urcorner)$, from which $\omega$-consistency (Rosser's refinement weakens this to plain consistency) gives a contradiction. What is assumed is the representability of recursive relations in $T$; see any text on incompleteness.
+:::
+
+:::corollary[Independence is unavoidable]{#independence-unavoidable}
+No consistent recursively axiomatised extension of ZFC decides every sentence. In particular, adding CH, or $\neg$CH, or any large cardinal axiom, leaves infinitely many sentences independent.
+:::
+
+:::proof
+Any such extension $T$ is still recursively axiomatised, still interprets arithmetic and, by assumption, is consistent. The theorem *Gödel's first incompleteness theorem* then supplies a sentence independent of $T$. Iterating — pass to $T + \gamma$, which is again consistent and recursively axiomatised — produces infinitely many.
+:::
+
+:::intuition
+CH's independence is often told as a story about set theory being strange. The corollary says the opposite: incompleteness is the default for any theory that can talk about arithmetic, and the surprise is not that some sentence is independent but that the independent sentence turned out to be one mathematicians already cared about.
+:::
+
+## Consistency strength as an ordering
+
+<!-- section: consistency-strength -->
+
+:::definition[The consistency-strength preorder]{#con-strength-def}
+For theories $S, T$ extending a fixed weak base, write $S \le_{\mathrm{Con}} T$ if the base theory proves $\mathrm{Con}(T) \to \mathrm{Con}(S)$. Write $S \equiv_{\mathrm{Con}} T$ if both directions hold, and $S <_{\mathrm{Con}} T$ if $S \le_{\mathrm{Con}} T$ but not conversely.
+:::
+
+:::proposition[$\le_{\mathrm{Con}}$ is a preorder and extensions climb it]{#con-preorder}
+$\le_{\mathrm{Con}}$ is reflexive and transitive, and if $S \subseteq T$ then $S \le_{\mathrm{Con}} T$.
+:::
+
+:::proof
+Reflexivity is the tautology $\mathrm{Con}(S)\to\mathrm{Con}(S)$. Transitivity chains two implications. For the last claim, a proof of a contradiction from $S$ is already a proof from $T$ when $S \subseteq T$, so $\mathrm{Con}(T) \to \mathrm{Con}(S)$ is verified by a primitive recursive transformation of derivations.
+:::
+
+:::proposition[Forcing does not change consistency strength]{#forcing-equiconsistent}
+$\mathrm{ZFC} \equiv_{\mathrm{Con}} \mathrm{ZFC}+\mathrm{CH} \equiv_{\mathrm{Con}} \mathrm{ZFC}+\neg\mathrm{CH}$.
+:::
+
+:::proof
+Each theory extends ZFC, so $\mathrm{ZFC}\le_{\mathrm{Con}}$ each by the proposition *$\le_{\mathrm{Con}}$ is a preorder and extensions climb it*. The other direction is the theorem *CH holds in $L$* for the first and the theorem *Cohen's theorem, with the count* for the second: each converts a model of ZFC into a model of the stronger theory, and that conversion is the content of $\mathrm{Con}(\mathrm{ZFC}) \to \mathrm{Con}(\mathrm{ZFC}+\cdots)$.
+:::
+
+:::example[Placing statements on the ladder]
+Order by consistency strength: ZFC, $\mathrm{ZFC}+\neg\mathrm{CH}$, $\mathrm{ZFC}+\exists$ inaccessible, $\mathrm{ZFC}+\exists$ measurable.
+:::
+
+:::solution
+1. The first two are equiconsistent by the proposition *Forcing does not change consistency strength*.
+2. An inaccessible gives a model of ZFC, so $\mathrm{ZFC} <_{\mathrm{Con}} \mathrm{ZFC}+\exists$ inaccessible by the corollary *ZFC cannot prove an inaccessible exists*.
+3. A measurable gives a model of "ZFC + an inaccessible exists" by the corollary *Measurables are far above the first inaccessible*, so it is strictly stronger again.
+4. Final answer: $\mathrm{ZFC} \equiv \mathrm{ZFC}+\neg\mathrm{CH} < \mathrm{ZFC}+\exists\text{ inacc} < \mathrm{ZFC}+\exists\text{ meas}$, with exactly two strict jumps.
+:::
+
+## What independence means for mathematical truth
+
+<!-- section: philosophical-questions -->
+
+Two positions dominate, and they differ about whether "the universe of sets" names one thing.
+
+The **universe view** holds that there is a single intended $V$, that CH has a truth value in it, and that ZFC is simply an incomplete description. On this reading, independence is a challenge to find the missing axioms. Gödel held it explicitly, expected CH to be false, and hoped large cardinals would decide it — a hope frustrated by Levy and Solovay, who showed that small forcing preserves large cardinals and hence that no large cardinal axiom of the usual kind decides CH.
+
+The **multiverse view**, developed by Hamkins among others, holds that there are many equally legitimate universes of sets, related by forcing and inner-model constructions, and that CH is simply a parameter that varies across them, much as commutativity varies across groups. On this reading, the search for the missing axiom is a category error, and the right object of study is the network of models itself.
+
+:::remark
+A third, more technical position runs through Woodin's programme: CH may be decided not by intuition but by *structural* criteria — maximality of the theory of $H(\omega_2)$, or the existence of a canonical inner model for supercompact cardinals. Woodin has argued at different times both for $\neg\mathrm{CH}$ and, later, under the Ultimate-$L$ programme, for CH. The conclusion has not stabilised, which is itself informative.
+:::
+
+:::example[What a new axiom must do]
+Why is "adopt CH because it is simpler" not accepted as a resolution?
+:::
+
+:::solution
+1. Simplicity does not survive scrutiny: $\neg$CH follows from forcing axioms such as MA $+ \neg$CH and PFA, which are themselves simple to state and have wide structural consequences.
+2. An axiom is accepted when it is *fruitful and coherent*: it should decide many open questions in a uniform way, cohere with the large cardinal hierarchy, and be justified by reflection or maximality principles rather than convenience.
+3. Final answer: candidate axioms are judged by consequences and coherence, and on that test CH and $\neg$CH both have serious support.
+:::
+
+## Where the subject is now
+
+<!-- section: current-research -->
+
+Three programmes dominate contemporary work, and each is a direct descendant of the material above.
+
+The **inner model programme** seeks canonical models, like $L$ but large enough to contain supercompact cardinals. The current target is **Ultimate-$L$**: Woodin's conjecture that there is an inner model which satisfies GCH, admits a $\Sigma_2$-definable well-ordering, and is compatible with every large cardinal. Two conjectures gate it — the **HOD conjecture** and the $\Omega$-conjecture — and either could fail.
+
+**Forcing axioms** push in the opposite direction. MA, PFA and Martin's maximum assert that generic filters already exist in $V$ for suitable posets, making the universe as *rich* as possible rather than as thin. PFA implies $2^{\aleph_0} = \aleph_2$ and settles a long list of combinatorial questions; its consistency strength is around a supercompact cardinal, and pinning it down exactly remains open.
+
+**Descriptive set theory under determinacy** shows what large cardinals buy at the level of definable sets: from infinitely many Woodin cardinals one proves that all projective sets are Lebesgue measurable, have the Baire property and the perfect set property. Here independence *stops* — the projective statements are decided, uniformly and in the direction analysts always wanted — which is the strongest existing argument that large cardinal axioms are tracking something real.
+
+:::remark
+The techniques have also travelled. Cardinal invariants of the continuum, the structure of $\mathcal{P}(\omega)/\mathrm{fin}$, applications to $C^*$-algebras and to Banach space geometry, and Shelah's PCF theory for singular cardinals — where, remarkably, ZFC proves much more than forcing intuition suggests, such as $2^{\aleph_\omega} < \aleph_{\omega_4}$ when $\aleph_\omega$ is a strong limit — all descend from the two constructions in this chapter.
 :::
 
 ## Common Mistakes
 
-- **Thinking L is the whole universe V**: L may be a proper subclass; 0^# or a measurable cardinal witnesses that V is larger than L.
-- **Confusing L with the cumulative hierarchy V_α**: V_α uses the *full* power set at each stage; L uses only the *definable* power set.
-- **Believing GCH holds in V because it holds in L**: L ⊨ GCH always (if it exists), but V may satisfy 2^ℵ₀ = anything consistent.
-- **Assuming L contains all large cardinals**: Large cardinals "destroy" L in the sense that their existence implies L is properly smaller than V and that they are not large in L.
-- **Forgetting that L is always a model of ZFC + GCH**: Even if you start from a model of ZF + ¬AC, the L computed inside it will still satisfy full ZFC + GCH.
+- **Saying Cohen proved CH is false.** He proved $\mathrm{Con}(\mathrm{ZFC}) \Rightarrow \mathrm{Con}(\mathrm{ZFC}+\neg\mathrm{CH})$. Truth is not on the table; see the proposition *What an independence theorem actually asserts*.
+- **Dropping the consistency hypothesis.** "ZFC proves CH is independent" is false as stated. What is a theorem is the implication from $\mathrm{Con}(\mathrm{ZFC})$, by the corollary *ZFC cannot prove its own consistency*.
+- **Getting the poset order backwards.** $q \le p$ means $q$ is *stronger* and carries *more* information. Reading it as "weaker" inverts every density argument.
+- **Forgetting that genericity is relative.** $G$ must meet every dense set *that lies in $M$*, not every dense set. Requiring all of them makes generic filters impossible for nontrivial posets.
+- **Expecting the generic filter to be in the ground model.** By the theorem *A generic filter is not in the ground model* it never is, for any poset splitting below every condition — and if it were, the extension would add nothing.
+- **Confusing $\mathrm{Def}(X)$ with $\mathcal{P}(X)$.** They agree for finite $X$ only. At $\omega$ the definable power set is countable while the real one has size $2^{\aleph_0}$.
+- **Assuming cardinals survive forcing automatically.** They do not. Collapse forcing makes $\aleph_1$ countable. Preservation is a theorem with a hypothesis — ccc, or closure — as in the theorem *ccc forcing preserves cardinals and cofinalities*.
+- **Claiming $2^{\aleph_0}$ can be any cardinal.** Not $\aleph_\omega$: the theorem *König's restriction on the continuum* forbids countable cofinality, and monotonicity forbids much else.
+- **Treating $V = L$ as a harmless simplifying assumption.** It kills every large cardinal from a measurable up, by the theorem *Scott: a measurable cardinal implies $V \neq L$*.
+- **Confusing independence with undecidability.** Independence is about one sentence and one theory; undecidability in the recursion-theoretic sense is about an algorithm for a class of problems. The two words have separate meanings and separate theorems.
