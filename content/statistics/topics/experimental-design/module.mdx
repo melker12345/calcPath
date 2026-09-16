@@ -1,0 +1,469 @@
+---
+title: "Design of Experiments"
+---
+
+# Design of Experiments
+
+The last two chapters analysed data. This one asks where the data came from, and it is the chapter that licenses the conclusions the others compute. A regression coefficient is an association; an ANOVA finds that group means differ. Neither says that changing the treatment would change the outcome, and no amount of arithmetic applied afterwards can supply that. What supplies it is how the data were generated.
+
+The central problem is stated in one sentence: to know the effect of a treatment on a unit, you would need to observe that unit both treated and untreated, and you never can. Every method here is a way of manufacturing a substitute for the observation you cannot make. Randomisation does it by making the treated and untreated groups exchangeable in expectation, so that the untreated group is a valid stand-in for what the treated group would have done. That is the argument of the first section, and it is proved rather than asserted.
+
+The remaining sections are about doing it efficiently. Blocking removes a known source of variation before randomising within it, and the variance reduction is exactly computable — it is the paired $t$-test of the testing chapter, generalised. Factorial designs vary several factors at once, which sounds reckless and is in fact strictly better than varying one at a time: the same runs estimate every main effect *and* the interactions, at no cost in precision. And replication determines whether the experiment can detect the effect it was built to find, which is the power calculation of the testing chapter read as a design constraint.
+
+The last section is about what to do when experimentation is impossible. Observational data can sometimes support causal claims, but only under assumptions that are not testable from the data, and Simpson's paradox is there to show how badly the naive approach fails.
+
+Notation follows the ANOVA chapter. Facts about the $F$-test, two-way decomposition and interaction are from *Analysis of Variance*, and the power calculation from *Statistical Inference: Hypothesis Testing*.
+
+## Randomisation, and why it works
+
+<!-- section: randomization -->
+
+The problem has to be set up carefully, because the intuitive statement — "compare treated and untreated units" — is exactly what does not work.
+
+:::definition[Potential outcomes and the treatment effect]{#potential-outcomes}
+For each unit $i$, let $Y_i(1)$ be the outcome that would occur if it received the treatment and $Y_i(0)$ the outcome if it did not. The **individual treatment effect** is $\tau_i = Y_i(1)-Y_i(0)$, and the **average treatment effect** is
+
+$$\tau = E\big[Y_i(1)-Y_i(0)\big].$$
+
+With $T_i \in\{0,1\}$ the treatment actually assigned, the observed outcome is $Y_i = T_iY_i(1) + (1-T_i)Y_i(0)$.
+:::
+
+:::remark[The fundamental problem of causal inference]
+Exactly one of $Y_i(1)$ and $Y_i(0)$ is ever observed for a given unit; the other is counterfactual. So $\tau_i$ is not estimable for any individual, no matter how much data is collected on that individual.
+
+The average $\tau$ is a different matter, and that is the opening the rest of this section exploits. It is a statement about a population, and a population contains units of both kinds.
+:::
+
+The naive estimator compares the observed means of the two groups. Whether it works depends entirely on how $T_i$ was decided.
+
+:::theorem[Randomisation identifies the average treatment effect]{#randomization-unbiased}
+Suppose $T_i$ is assigned independently of the potential outcomes — formally $T_i \perp (Y_i(0), Y_i(1))$, which randomisation guarantees by construction. Then the difference in group means is unbiased for $\tau$:
+
+$$E\big[\bar Y_{T} - \bar Y_{C}\big] = \tau .$$
+:::
+
+:::proof
+Consider the treated group. By independence, conditioning on $T_i=1$ does not change the distribution of the potential outcomes:
+
+$$E\big[Y_i \mid T_i = 1\big] = E\big[Y_i(1)\mid T_i=1\big] = E\big[Y_i(1)\big],$$
+
+the first equality because $Y_i = Y_i(1)$ when $T_i=1$, and the second by independence. Identically, $E[Y_i\mid T_i=0] = E[Y_i(0)]$.
+
+The group means are averages of such observations, so
+
+$$E\big[\bar Y_T - \bar Y_C\big] = E\big[Y_i(1)\big] - E\big[Y_i(0)\big] = E\big[Y_i(1)-Y_i(0)\big] = \tau . \qquad \blacksquare$$
+:::
+
+Everything turns on the independence assumption, and it is worth seeing exactly where it was used: in replacing $E[Y_i(1)\mid T_i=1]$ by $E[Y_i(1)]$. That step says *the units who happened to be treated are not systematically those who would have done better anyway*. Randomisation makes it true by construction, because a coin flip cannot know anything about a unit. Nothing else makes it true automatically.
+
+:::intuition
+Randomisation is not about being fair, and it is not about producing groups that are identical — with small samples they will differ visibly on any characteristic you care to check. Its job is narrower and stronger: it guarantees that any difference between the groups is *accidental*, so that the differences are governed by known probability and are exactly what a standard error measures.
+
+That is why it handles confounders you never thought of. Matching on age, sex and income protects against those three; randomisation protects against every variable simultaneously, including ones nobody has named, because the assignment mechanism was independent of all of them at once.
+:::
+
+:::definition[Control, blinding, and placebo]{#control-blinding}
+A **control group** receives no treatment or a standard one, supplying the comparison. A **placebo** is an inert treatment indistinguishable from the real one, so the control experiences the same procedure. A study is **single-blind** if the subjects do not know their assignment, and **double-blind** if those measuring the outcome do not either.
+:::
+
+Blinding addresses a different failure from randomisation. Randomisation makes the groups comparable *before* treatment; blinding keeps them comparable *afterwards*, by ensuring that knowledge of the assignment does not itself change behaviour, reporting, or measurement. An unblinded trial can be perfectly randomised and still biased, because a clinician who knows the assignment may assess outcomes differently.
+
+:::pitfall
+Randomisation licenses a causal claim about the population actually randomised, and nothing wider. A drug trial randomised among healthy adults aged 18 to 40 establishes an effect in healthy adults aged 18 to 40; extending it to the elderly is extrapolation of the same kind the regression chapter warned about, and the randomisation does not travel with it.
+
+The distinction is between **internal validity** — the comparison inside the study is sound — and **external validity** — the result generalises. Randomisation buys the first outright and the second not at all.
+:::
+
+:::example[Why a well-intentioned non-random assignment fails]
+A hospital offers a new surgical procedure and lets surgeons choose which patients receive it. Surgeons naturally select healthier patients as better candidates. The new procedure shows a $92\%$ success rate against $78\%$ for the standard one. What has been established?
+:::
+
+:::solution
+1. Write the comparison in potential-outcome terms. The estimator is $E[Y\mid T=1] - E[Y\mid T=0] = E[Y(1)\mid T=1] - E[Y(0)\mid T=0]$.
+2. For this to equal $\tau$ we would need $E[Y(1)\mid T=1] = E[Y(1)]$ and likewise for the control. Both fail: the treated patients are healthier, so they would have had better outcomes *under either treatment*.
+3. Decompose the observed gap by adding and subtracting $E[Y(0)\mid T=1]$:
+
+$$\underbrace{E[Y(1)\mid T{=}1] - E[Y(0)\mid T{=}1]}_{\text{effect on the treated}} \;+\; \underbrace{E[Y(0)\mid T{=}1] - E[Y(0)\mid T{=}0]}_{\text{selection bias}} .$$
+
+4. The second term is the difference in baseline health between the groups, and it is positive here by construction. The observed $14$-point gap is the true effect *plus* that bias, and nothing in the data separates them.
+5. Sanity check on the direction: the bias inflates the apparent benefit, so the procedure could be genuinely worthless — or actively harmful — and still show a $14$-point advantage if the selection is strong enough.
+6. Note that adjusting for measured health does not fix this. It removes the part of the selection captured by the variables recorded, leaving whatever the surgeons perceived and the records did not.
+:::
+
+:::example[Randomising, and reading a balance table]
+Sixty patients are to be randomised between two treatments. Describe a valid procedure, and say what to do if the resulting groups differ noticeably in mean age.
+:::
+
+:::solution
+1. **Simple randomisation**: for each patient independently, assign treatment with probability $1/2$ — a coin flip, or a random number below $0.5$. This satisfies the independence hypothesis of the theorem *Randomisation identifies the average treatment effect* exactly.
+2. Its drawback is that group sizes vary: with $n=60$ the split has standard deviation $\sqrt{60\times 0.25}=3.87$, so a $34/26$ split is unremarkable and costs a little precision.
+3. **Block randomisation** fixes that: within each successive block of, say, $4$ patients, randomly permute two of each treatment. The groups stay nearly balanced throughout, and the assignment is still independent of the potential outcomes.
+4. **On a chance imbalance in age**: this is expected, not a failure. With many baseline variables measured, some will differ at any conventional threshold purely by chance — testing $20$ of them at $5\%$ gives about a $64\%$ chance of at least one "significant" imbalance, by the multiplicity arithmetic of the testing chapter.
+5. The correct response is *not* to re-randomise until the table looks balanced, which destroys the independence the whole argument rests on. If age is known to matter, it should have been a blocking variable; failing that, adjusting for it in the analysis is legitimate provided the decision is pre-specified.
+6. Sanity check on what randomisation promised: not balance, but that any imbalance is accidental and therefore already priced into the standard error. ✓
+:::
+
+## Blocking: removing variation before it becomes noise
+
+<!-- section: blocking -->
+
+Randomisation makes the comparison valid. It does not make it precise, and with variable units a randomised comparison can be valid and useless. Blocking is the standard remedy.
+
+:::definition[Randomised complete block design]{#rcbd}
+Partition the experimental units into **blocks** of similar units, then randomise the treatments independently *within* each block, so every block contains every treatment. Block membership is a known nuisance factor, not a factor of interest.
+:::
+
+:::theorem[Variance reduction from blocking]{#blocking-variance}
+Suppose two treatments are compared on $n$ pairs of units, where units within a pair have outcomes correlated at $\rho > 0$, each with variance $\sigma^2$. The completely randomised comparison has
+
+$$\operatorname{Var}(\bar Y_T - \bar Y_C) = \frac{2\sigma^2}{n},$$
+
+while the blocked (paired) comparison has
+
+$$\operatorname{Var}(\bar D) = \frac{2\sigma^2(1-\rho)}{n} .$$
+
+Blocking therefore multiplies the variance by $(1-\rho)$.
+:::
+
+:::proof
+In the unblocked design the two group means are computed from independent units, so their variances add: $\operatorname{Var}(\bar Y_T - \bar Y_C) = \sigma^2/n + \sigma^2/n = 2\sigma^2/n$.
+
+In the blocked design the comparison is made within pairs. For a single pair, $D_i = Y_{iT}-Y_{iC}$ and
+
+$$\operatorname{Var}(D_i) = \operatorname{Var}(Y_{iT}) + \operatorname{Var}(Y_{iC}) - 2\operatorname{Cov}(Y_{iT},Y_{iC}) = \sigma^2+\sigma^2-2\rho\sigma^2 = 2\sigma^2(1-\rho).$$
+
+The $n$ pairs are independent, so $\operatorname{Var}(\bar D) = 2\sigma^2(1-\rho)/n$. Dividing the two expressions gives the factor $(1-\rho)$. $\blacksquare$
+:::
+
+The theorem prices the design decision exactly. Pairing units correlated at $\rho = 0.8$ cuts the variance to a fifth, which is equivalent to quintupling the sample size — and it costs one degree of freedom per block rather than five times the budget. This is the paired $t$-test of the testing chapter seen from the design side: the same arithmetic that made pairing more powerful there is a reason to *build* pairing into the experiment here.
+
+:::pitfall
+Blocking is only worth doing on a variable genuinely related to the outcome. Blocking on an irrelevant variable gives $\rho \approx 0$, so the variance is unchanged, and the degrees of freedom spent on block effects are lost for nothing — the analysis becomes slightly *less* powerful.
+
+And once you have blocked, you must analyse as blocked. Running an unpaired test on paired data throws the entire gain away and, as the testing chapter showed, is invalid besides.
+:::
+
+:::example[Sizing a blocked experiment]
+Two fertilisers are compared across $12$ fields. Fields vary greatly in fertility, and adjacent half-fields correlate at $\rho = 0.75$. Compare splitting each field in two (blocked) against assigning whole fields at random (unblocked).
+:::
+
+:::solution
+1. **Unblocked**, $6$ fields per treatment: $\operatorname{Var} = 2\sigma^2/6 = 0.3333\sigma^2$.
+2. **Blocked**, splitting all $12$ fields so each contributes a pair: $\operatorname{Var} = 2\sigma^2(1-0.75)/12 = 0.5\sigma^2/12 = 0.04167\sigma^2$.
+3. The ratio is $0.04167/0.3333 = 0.125$, an eight-fold reduction in variance — a factor of $2$ from doubling the number of comparisons and a factor of $4$ from the correlation.
+4. Equivalently, the unblocked design would need $48$ fields to match the blocked design's precision with $12$.
+5. Sanity check on the mechanism: field fertility is a large source of variation that affects both halves of a field almost equally, so it cancels in the within-field difference. It never enters the standard error at all, which is what $(1-\rho)$ records.
+6. What blocking does *not* do: it does not make the comparison valid — the assignment within each field must still be randomised. Blocking improves precision; randomisation buys the causal claim.
+:::
+
+:::figure[Variance of a blocked comparison relative to an unblocked one, against the within-block correlation. The relationship is the straight line $1-\rho$ from the theorem *Variance reduction from blocking*: at $\rho=0$ blocking buys nothing, at $\rho=0.5$ it halves the variance, and at $\rho=0.9$ it cuts it to a tenth — equivalent to a tenfold increase in sample size. The dashed line marks parity; blocking can never do worse in variance, though it does cost degrees of freedom.]{#blocking-gain}
+{
+  "type": "plot",
+  "x": [-0.06, 1.16],
+  "y": [-0.1, 1.2],
+  "xTicks": 0.1,
+  "yTicks": 0.1,
+  "xLabel": "within-block correlation",
+  "yLabel": "variance ratio",
+  "marks": [
+    { "kind": "line", "through": [[-0.06, 1], [1.16, 1]], "tone": "muted", "dashed": true, "extend": false },
+    { "kind": "function", "fn": "1-x", "tone": "accent" },
+    { "kind": "point", "at": [0.5, 0.5], "tone": "result" },
+    { "kind": "point", "at": [0.9, 0.1], "tone": "result" },
+    { "kind": "text", "at": [0.86, 0.78], "text": "ratio = 1 - rho", "tone": "accent", "leaderTo": [0.62, 0.385] },
+    { "kind": "text", "at": [0.2, 0.28], "text": "rho = 0.9: tenfold gain", "tone": "result", "leaderTo": [0.885, 0.105] },
+    { "kind": "text", "at": [0.16, 1.12], "text": "no blocking", "tone": "muted", "leaderTo": [0.05, 1.005] }
+  ]
+}
+:::
+
+:::definition[Latin square design]{#latin-square}
+When **two** nuisance factors must be controlled, a **Latin square** arranges $k$ treatments in a $k\times k$ grid whose rows index one nuisance factor and columns the other, so that every treatment appears exactly once in each row and each column.
+:::
+
+:::example[Blocking on two nuisances at once]
+Four machine operators are to be compared on four machines across four days, with only $16$ runs available. Show how a Latin square allocates them, and count the degrees of freedom.
+:::
+
+:::solution
+1. Index rows by day and columns by machine, and place the four operators $A,B,C,D$ so each appears once per row and once per column:
+
+| | Machine 1 | Machine 2 | Machine 3 | Machine 4 |
+|---|---|---|---|---|
+| **Day 1** | A | B | C | D |
+| **Day 2** | B | C | D | A |
+| **Day 3** | C | D | A | B |
+| **Day 4** | D | A | B | C |
+
+2. Every operator works on every machine and on every day, so any systematic day effect or machine effect is balanced equally across operators and cannot be confounded with the operator comparison.
+3. Degrees of freedom from $16$ runs: $1$ for the mean, $3$ each for days, machines and operators, leaving $16-1-3-3-3 = 6$ for error.
+4. Compare the cost of a full factorial: $4\times 4\times 4 = 64$ runs would be needed to cross all three factors, four times the budget.
+5. Sanity check on the price paid: with only $6$ error degrees of freedom the test is not powerful, and the design **assumes no interactions** among days, machines and operators — there are no runs left to estimate them. A Latin square buys efficiency by assuming additivity, and that assumption is not checkable within the design.
+:::
+
+## Factorial designs
+
+<!-- section: factorial -->
+
+With several factors, the instinct is to study them one at a time, holding the others fixed — it feels careful and controlled. It is strictly worse, and the reason is worth understanding because it is counter-intuitive.
+
+:::definition[Factorial design]{#factorial-design}
+A **full factorial** design runs every combination of the levels of every factor. With $k$ factors each at $2$ levels this is a $2^k$ design, requiring $2^k$ distinct runs, replicated $n$ times each.
+:::
+
+:::theorem[Factorial designs estimate more from the same runs]{#factorial-efficiency}
+Consider two factors $A$ and $B$, each at two levels, with $N$ runs in total and error variance $\sigma^2$.
+
+A **one-factor-at-a-time** experiment splitting $N$ runs between a baseline and a change in $A$ estimates the effect of $A$ with variance $4\sigma^2/N$, and gives no information about $B$ or about interaction.
+
+A **$2^2$ factorial** with $N/4$ runs per cell estimates the effect of $A$ with the same variance $4\sigma^2/N$ — and simultaneously estimates the effect of $B$, and their interaction, to the same precision.
+:::
+
+:::proof
+**One factor at a time.** With $N/2$ runs at each of two conditions, the estimate is a difference of two means each based on $N/2$ observations, so
+
+$$\operatorname{Var} = \frac{\sigma^2}{N/2}+\frac{\sigma^2}{N/2} = \frac{4\sigma^2}{N}.$$
+
+**Factorial.** The main effect of $A$ is the mean of all runs at $A$ high minus the mean of all runs at $A$ low. Each of those averages over two cells, hence over $N/2$ runs, so
+
+$$\operatorname{Var} = \frac{\sigma^2}{N/2}+\frac{\sigma^2}{N/2} = \frac{4\sigma^2}{N},$$
+
+identical. The same computation applies to $B$, whose two averages also each cover $N/2$ runs — because every run contributes to the estimate of *both* main effects, once through its $A$ level and once through its $B$ level. The interaction contrast, $(\bar y_{11}+\bar y_{00}) - (\bar y_{10}+\bar y_{01})$ scaled appropriately, uses all $N$ runs likewise. $\blacksquare$
+:::
+
+:::intuition
+The phrase for this is **hidden replication**. In a factorial design every observation is used in the estimate of every main effect, because averaging over the other factor's levels does not discard those runs — it pools them.
+
+One-factor-at-a-time uses each run for one comparison only. That is the whole inefficiency, and it compounds: with $k$ factors, the factorial estimates all $k$ main effects at the precision that OFAT achieves for one, from the same total budget.
+
+There is a second and larger advantage. A one-factor-at-a-time experiment **cannot detect interaction at all** — it never observes the combination where both factors are changed, so it has no data bearing on whether the effects add. If the factors interact, its conclusions about each factor are valid only at the baseline level of the other, which is usually not stated and often not true where it matters.
+:::
+
+:::proposition[How many effects a two-level factorial estimates]{#factorial-effects}
+A $2^k$ factorial estimates $2^k - 1$ effects: $k$ main effects, $\binom{k}{2}$ two-factor interactions, $\binom{k}{3}$ three-factor interactions, and so on.
+:::
+
+:::proof
+The effects correspond to the non-empty subsets of the $k$ factors — a subset of size $1$ is a main effect, of size $2$ a two-factor interaction, and so on. The number of non-empty subsets of a $k$-element set is $2^k-1$.
+
+That this exhausts the available information is a dimension count: the design has $2^k$ distinct cells, so $2^k$ cell means, and they are reparametrised by an overall mean plus $2^k-1$ effects. $\blacksquare$
+:::
+
+:::example[Three factors in eight runs]
+A chemical yield is studied at two levels each of temperature, pressure and catalyst. Compare the $2^3$ factorial with a one-factor-at-a-time study, both using $32$ runs.
+:::
+
+:::solution
+1. **Factorial.** $2^3 = 8$ cells with $4$ runs each. By the theorem *Factorial designs estimate more from the same runs*, each main effect is a difference of two means over $16$ runs each, with variance $\sigma^2/16 + \sigma^2/16 = \sigma^2/8$.
+2. It estimates $2^3-1 = 7$ effects: $3$ main effects, $3$ two-factor interactions, and $1$ three-factor interaction.
+3. **One factor at a time.** With four conditions (baseline, plus one change each) and $8$ runs each, every main effect is a difference of two means over $8$ runs, with variance $\sigma^2/8+\sigma^2/8 = \sigma^2/4$ — **twice** the factorial's variance.
+4. So the factorial estimates each main effect with half the variance *and* returns four interaction effects that OFAT cannot estimate at all.
+5. Sanity check on the standard errors: $\sqrt{\sigma^2/8} = 0.354\sigma$ against $\sqrt{\sigma^2/4} = 0.5\sigma$, a ratio of $1/\sqrt2$. To match the factorial, OFAT would need twice the runs and would still learn nothing about interaction.
+6. The practical consequence: if temperature and catalyst interact — a higher temperature helps only with the new catalyst — the OFAT study, having tested temperature at the old catalyst, reports that temperature does not matter. The factorial finds it.
+:::
+
+:::example[Estimating effects from a 2-squared factorial]
+A $2^2$ experiment on yield gives cell means $\bar y_{00}=60$, $\bar y_{10}=72$, $\bar y_{01}=64$, $\bar y_{11}=88$, where the first index is the level of $A$ and the second of $B$, with $n=5$ per cell and $MSE=25$. Estimate the two main effects and the interaction, and test the interaction with $t_{0.025,16}=2.120$.
+:::
+
+:::solution
+1. **Main effect of $A$** — the average change in yield when $A$ goes from low to high, averaged over $B$:
+
+$$\frac{(72-60)+(88-64)}{2} = \frac{12+24}{2} = 18 .$$
+
+2. **Main effect of $B$**, averaging over $A$: $\dfrac{(64-60)+(88-72)}{2} = \dfrac{4+16}{2} = 10$.
+3. **Interaction** — half the difference between $A$'s effect at the two levels of $B$:
+
+$$\frac{24-12}{2} = 6 .$$
+
+Equivalently $\tfrac12\big[(\bar y_{11}-\bar y_{01})-(\bar y_{10}-\bar y_{00})\big]$, which is the same arithmetic.
+4. Each of these is a contrast in four cell means with coefficients $\pm\tfrac12$, so its variance is $\sum c_i^2 \cdot MSE/n = 4(0.25)(25)/5 = 5$, giving a standard error of $\sqrt5 = 2.236$.
+5. Interaction test: $t = 6/2.236 = 2.683 > 2.120$, so the interaction is significant. $A$'s effect is genuinely larger when $B$ is high.
+6. Sanity check on the reporting: because the interaction is significant, the main effect of $A$ — the single number $18$ — should not be quoted on its own. The honest statement is that $A$ raises yield by $12$ when $B$ is low and by $24$ when $B$ is high, which is exactly the pitfall from the ANOVA chapter applied to a designed experiment.
+:::
+
+:::figure[Runs used per effect, for a $2^3$ factorial and a one-factor-at-a-time study with the same $32$-run budget. The factorial estimates each of its three main effects from all $32$ runs (split $16$ against $16$) and returns four interaction effects besides; the one-factor-at-a-time study uses $16$ runs per main effect and returns no interactions. Every run in a factorial contributes to every effect, which is why the same budget buys more.]{#factorial-vs-ofat}
+{
+  "type": "plot",
+  "x": [-0.9, 8.6],
+  "y": [-3.5, 38],
+  "xTicks": 1,
+  "yTicks": 5,
+  "xLabel": "effect",
+  "yLabel": "runs contributing",
+  "marks": [
+    { "kind": "bars", "bars": [[0.1,0.9,32],[1.1,1.9,32],[2.1,2.9,32],[3.1,3.9,32],[4.1,4.9,32],[5.1,5.9,32],[6.1,6.9,32]], "tone": "accent" },
+    { "kind": "bars", "bars": [[0.25,0.75,16],[1.25,1.75,16],[2.25,2.75,16]], "tone": "result" },
+    { "kind": "text", "at": [4.4, 36.2], "text": "2^3 factorial: 7 effects", "tone": "accent", "leaderTo": [5.5, 32.3] },
+    { "kind": "text", "at": [0.6, 22.5], "text": "OFAT: 3 effects", "tone": "result", "leaderTo": [1.5, 16.3] },
+    { "kind": "text", "at": [5.5, -2.4], "text": "interactions (OFAT: none)", "tone": "muted", "leaderTo": [4.5, 1.2] }
+  ]
+}
+:::
+
+## Replication and the size of an experiment
+
+<!-- section: replication -->
+
+:::definition[Replication, repeated measurement, and pseudoreplication]{#replication-def}
+**Replication** means applying a treatment independently to several experimental units. **Repeated measurement** means measuring the same unit several times. **Pseudoreplication** is treating repeated measurements as if they were replicates.
+:::
+
+The distinction decides the sample size that enters every formula, and getting it wrong inflates the apparent precision dramatically. Ten plants in one growth chamber, measured individually, are ten measurements of *one* independently treated unit: the chamber is the experimental unit, because the treatment was applied to the chamber. The correct $n$ is the number of chambers.
+
+:::pitfall
+Pseudoreplication is the most common serious error in experimental analysis, and it is invisible in the output — the software cannot know which units were independently assigned. Taking $n$ to be the number of measurements rather than the number of independently treated units divides the standard error by roughly $\sqrt{m}$ for $m$ measurements per unit, so a study with $4$ chambers and $10$ plants each reports standard errors about $\sqrt{10} = 3.2$ times too small, and $p$-values correspondingly too extreme.
+
+The diagnostic question is always: *what was randomised?* Whatever unit the assignment was applied to is the experimental unit, and its count is $n$.
+:::
+
+:::example[Counting the experimental units]
+Four growth chambers are randomly assigned to two temperature settings, two chambers each. Each chamber holds $25$ plants, and every plant's height is recorded. A researcher analyses this as $n=50$ per group. What is the correct $n$, and how wrong is the reported standard error?
+:::
+
+:::solution
+1. The treatment was applied to **chambers**, not to plants: every plant in a chamber received the same setting, and no plant was independently assigned. So the experimental unit is the chamber and the correct $n$ is $2$ per group.
+2. Plants within a chamber share everything that chamber does — humidity, light, an accidental draught — so their outcomes are correlated, and correlated observations do not carry $25$ independent pieces of information.
+3. The reported standard error uses $n=50$ instead of $n=2$, so it is too small by a factor of about $\sqrt{50/2} = 5$.
+4. Consequently a $t$ statistic is about $5$ times too large, and a genuinely null result can be reported at $p<0.001$.
+5. **The correct analysis**: average the $25$ plants within each chamber to a single number, then compare the four chamber means — a two-sample test with $n=2$ per group and $2$ degrees of freedom. That is a very weak experiment, which is the honest conclusion: four chambers cannot support much.
+6. Sanity check on the design fix: the remedy is more *chambers*, not more plants per chamber. Doubling the plants to $50$ each barely improves precision, since the chamber effect does not average away; doubling the chambers halves the variance of the comparison.
+:::
+
+:::theorem[Replicates needed to detect an effect]{#design-sample-size}
+To detect a difference $\delta$ between two treatment means with power $1-\beta$ in a two-sided level-$\alpha$ test, with error standard deviation $\sigma$, the number of replicates **per treatment** is
+
+$$n \ \ge\ \frac{2(z_{\alpha/2}+z_\beta)^2\sigma^2}{\delta^2}.$$
+:::
+
+:::proof
+The standard error of the difference of two means with $n$ replicates each is $\sigma\sqrt{2/n}$. By the corollary *Sample size for a target power* applied to that standard error, the requirement is
+
+$$\frac{\delta}{\sigma\sqrt{2/n}} \ \ge\ z_{\alpha/2}+z_\beta .$$
+
+Rearranging, $\sqrt{n}\,\delta \ge (z_{\alpha/2}+z_\beta)\sigma\sqrt2$, and squaring gives the stated bound. $\blacksquare$
+:::
+
+:::example[Sizing a two-treatment experiment, with and without blocking]
+An effect of $\delta = 4$ units is worth detecting, with $\sigma = 10$, at $\alpha=0.05$ two-sided and $80\%$ power. Find the replicates required, then repeat assuming blocking with $\rho=0.6$ is available.
+:::
+
+:::solution
+1. $z_{0.025}+z_{0.20} = 1.96+0.8416 = 2.8016$, so $(z_{\alpha/2}+z_\beta)^2 = 7.849$.
+2. Unblocked: $n \ge 2(7.849)(100)/16 = 1569.8/16 = 98.1$, so $99$ replicates per treatment, $198$ units in total.
+3. Blocked: the effective error variance becomes $\sigma^2(1-\rho) = 100(0.4) = 40$, so $n \ge 2(7.849)(40)/16 = 39.2$, giving $40$ pairs — $80$ units in total.
+4. Blocking cuts the experiment from $198$ units to $80$, a reduction of $60\%$, which is exactly the factor $(1-\rho)=0.4$ applied to the variance.
+5. Sanity check on the effect size: $\delta/\sigma = 0.4$ is a small standardised effect, and small effects are expensive — halving it to $0.2$ would quadruple both numbers.
+6. Note what the calculation requires in advance: a value for $\sigma$ and a decision about what size of effect matters. Neither comes from the data being collected, which is why these numbers must be settled before the experiment, not after.
+:::
+
+## When you cannot randomise
+
+<!-- section: observational -->
+
+Experiments are often impossible — for ethical reasons, for practical ones, or because the exposure of interest cannot be assigned. The analysis then rests on assumptions rather than on design, and it is important to be precise about which.
+
+:::definition[Observational study and confounding]{#confounding}
+In an **observational study** the investigator observes treatment assignment rather than controlling it. A **confounder** is a variable associated with both the treatment and the outcome, and not on the causal pathway between them.
+:::
+
+:::theorem[Adjustment identifies the effect only under no unmeasured confounding]{#adjustment}
+Suppose treatment is independent of the potential outcomes *given* a set of measured covariates $X$ — the assumption of **no unmeasured confounding**:
+
+$$T \perp \big(Y(0),Y(1)\big) \,\big|\, X .$$
+
+Then the average treatment effect is identified by adjustment:
+
+$$\tau = E_X\Big[E\big[Y\mid T{=}1, X\big] - E\big[Y\mid T{=}0, X\big]\Big].$$
+:::
+
+:::proof
+Within a stratum of $X$, the conditional independence is exactly the hypothesis of the theorem *Randomisation identifies the average treatment effect*, so that theorem applies stratum by stratum:
+
+$$E\big[Y\mid T{=}1,X\big] - E\big[Y\mid T{=}0,X\big] = E\big[Y(1)-Y(0)\mid X\big].$$
+
+Averaging over the distribution of $X$ and using the tower property gives $E[Y(1)-Y(0)] = \tau$. $\blacksquare$
+:::
+
+The theorem is true and its hypothesis is untestable. Nothing in the data reveals whether an unmeasured confounder exists, because by definition it was not measured. This is the fundamental asymmetry: a randomised experiment earns its assumption by construction, while an observational study assumes it and cannot check it.
+
+:::example[Simpson's paradox]
+Two treatments for kidney stones give these success rates:
+
+| | Small stones | Large stones | Overall |
+|---|---|---|---|
+| Treatment A | $81/87 = 93\%$ | $192/263 = 73\%$ | $273/350 = 78\%$ |
+| Treatment B | $234/270 = 87\%$ | $55/80 = 69\%$ | $289/350 = 83\%$ |
+
+Treatment A is better for small stones and better for large stones, yet worse overall. Which treatment should a patient choose?
+:::
+
+:::solution
+1. The arithmetic is correct: $81+192 = 273$ out of $87+263 = 350$, and $234+55 = 289$ out of $270+80 = 350$. Both column pairs and the totals are accurate.
+2. The reversal comes from the allocation. Treatment A was given mostly to large stones ($263$ of $350$, or $75\%$), which have a worse prognosis under either treatment; treatment B was given mostly to small stones ($270$ of $350$, or $77\%$).
+3. So A's overall rate is dragged down by the difficulty of the cases it took, not by any deficiency of the treatment. Stone size is a **confounder**: it affects both the treatment assigned and the outcome.
+4. **Treatment A is the right choice.** Any patient has either a small stone or a large one, and A is better in both cases. The overall figures answer a question no patient faces — "what is the success rate of a treatment given to this particular mix of cases?" — and that mix is an artefact of how doctors assigned treatments.
+5. Sanity check by re-weighting: if both treatments had been given to the same case mix, say $50/50$, then A would achieve $0.5(0.93)+0.5(0.73) = 0.83$ and B $0.5(0.87)+0.5(0.69) = 0.78$. The reversal disappears and A is ahead by five points.
+6. The general lesson is uncomfortable: the aggregated table and the stratified table give opposite answers, and **only knowledge of the causal structure** decides which to believe. Here stone size influences treatment choice and outcome, so it must be conditioned on. Had the third variable instead been a *consequence* of treatment, conditioning on it would have been the error.
+:::
+
+:::figure[The kidney-stone data. Within each stone-size stratum treatment A (accent) beats treatment B (result), yet B wins on the pooled totals at the right. The reversal is produced by the case mix: A was given to $263$ of the $350$ large stones, the harder cases, while B took $270$ of the small ones. The aggregated bars answer a question about allocation, not about treatment.]{#simpsons-paradox}
+{
+  "type": "plot",
+  "x": [-0.5, 9.4],
+  "y": [0, 1.14],
+  "xTicks": 1,
+  "yTicks": 0.1,
+  "xLabel": "stratum",
+  "yLabel": "success rate",
+  "marks": [
+    { "kind": "bars", "bars": [[0.15,0.95,0.931],[3.15,3.95,0.730],[6.15,6.95,0.780]], "tone": "accent" },
+    { "kind": "bars", "bars": [[1.15,1.95,0.867],[4.15,4.95,0.688],[7.15,7.95,0.826]], "tone": "result" },
+    { "kind": "text", "at": [1.1, 1.08], "text": "small stones", "tone": "muted", "leaderTo": [1.0, 0.95] },
+    { "kind": "text", "at": [4.1, 0.86], "text": "large stones", "tone": "muted", "leaderTo": [4.0, 0.745] },
+    { "kind": "text", "at": [7.6, 0.98], "text": "pooled: B wins", "tone": "muted", "leaderTo": [7.5, 0.84] },
+    { "kind": "text", "at": [8.7, 0.63], "text": "A", "tone": "accent", "leaderTo": [6.9, 0.77] },
+    { "kind": "text", "at": [8.7, 0.44], "text": "B", "tone": "result", "leaderTo": [7.9, 0.815] }
+  ]
+}
+:::
+
+:::example[Adjusting by stratification]
+Using the kidney-stone table, compute the treatment effect adjusted for stone size by weighting each stratum by its share of all patients.
+:::
+
+:::solution
+1. Stratum sizes across both treatments: small stones $87+270 = 357$; large stones $263+80 = 343$; total $700$.
+2. Weights: $357/700 = 0.51$ for small, $343/700 = 0.49$ for large.
+3. Adjusted rate for A: $0.51(0.931) + 0.49(0.730) = 0.4748 + 0.3577 = 0.8325$.
+4. Adjusted rate for B: $0.51(0.867) + 0.49(0.688) = 0.4422 + 0.3371 = 0.7793$.
+5. The adjusted difference is $0.8325-0.7793 = 0.053$, so A is about $5.3$ percentage points better — the reversal is gone, and the direction now agrees with both strata.
+6. Sanity check against the unadjusted comparison, which had B ahead by $0.826-0.780 = 0.046$. Adjustment has moved the estimate by nearly $10$ percentage points and flipped its sign, which is the size of the confounding by stone size.
+7. The caveat from the theorem *Adjustment identifies the effect only under no unmeasured confounding* applies in full: this number is the causal effect **only if** stone size is the sole confounder. Nothing in the table can confirm that.
+:::
+
+:::remark[Designs that recover some of what randomisation gives]
+Several strategies exploit sources of near-random variation.
+
+A **natural experiment** uses an external event — a policy change, a lottery, a threshold — that assigned exposure in a way plausibly unrelated to the outcomes. A **regression discontinuity** compares units just above and just below a cut-off for eligibility, where assignment is nearly arbitrary. An **instrumental variable** is a factor influencing treatment but affecting the outcome only through it, which allows an effect to be recovered even with unmeasured confounding.
+
+Each replaces "no unmeasured confounding" with a different assumption, not with no assumption at all. They are better than naive adjustment because their assumptions are sometimes defensible from knowledge of how the world works, rather than from a hope that everything relevant was recorded.
+:::
+
+:::pitfall
+Adding more covariates to an adjustment is not uniformly safer. Conditioning on a variable that lies **on the causal pathway** from treatment to outcome removes part of the very effect being estimated. Conditioning on a **collider** — a variable caused by both the treatment and the outcome — creates an association where none existed.
+
+So the choice of what to adjust for is a causal question that must be answered before the data are analysed, using knowledge of the subject matter. It is not a statistical question, and "control for everything available" is not a safe default.
+:::
+
+## Common Mistakes
+
+- **Treating an association from observational data as an effect.** Without randomisation, the comparison contains a selection term that the data cannot separate from the effect.
+- **Believing randomisation makes the groups identical.** It makes any difference accidental, which is what standard errors are built to measure — a much more useful guarantee than similarity.
+- **Extending a randomised result beyond the population randomised.** Internal validity does not imply external validity.
+- **Blocking and then analysing as unblocked.** The entire precision gain is discarded, and the analysis is invalid besides.
+- **Blocking on a variable unrelated to the outcome.** With $\rho\approx 0$ there is no variance reduction and the block degrees of freedom are wasted.
+- **Studying one factor at a time.** A factorial gets every main effect at the same precision from the same budget, plus the interactions that OFAT cannot detect at all.
+- **Pseudoreplication.** The experimental unit is whatever the treatment was randomised to; repeated measurements of one unit are not replicates.
+- **Deciding the sample size after seeing the data.** The power calculation needs $\sigma$ and a meaningful effect size fixed in advance.
+- **Adjusting for everything measured.** Conditioning on a mediator removes part of the effect; conditioning on a collider manufactures an association.
