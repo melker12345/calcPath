@@ -4,371 +4,911 @@ title: Graph Theory
 
 # Graph Theory
 
-Graph theory studies networks: collections of objects (vertices) and the connections between them (edges). Graphs model social networks, road maps, the internet, molecules, dependency graphs in software, and scheduling problems. Many real-world problems reduce to questions about paths, connectivity, coloring, or traversability on graphs.
+Almost everything a computer scientist works with is a network of things joined to other things. A social platform stores who follows whom. A build system stores which source file must be compiled before which other. A router stores which machines it can reach in one hop. A course catalogue stores which module is a prerequisite for which. These look like four different problems, and they are not: strip away the words and each is a set of objects together with a set of pairs of objects, which is exactly what a **graph** is.
 
-This chapter introduces the basic vocabulary, then focuses on important families: trees (minimal connected graphs), bipartite graphs (2-colorable), and Eulerian graphs (traversable in one stroke). These concepts appear in algorithms courses (BFS, DFS, MST, matching) and discrete math proofs.
+The payoff of that abstraction is that a theorem proved about graphs is a theorem about all four systems at once. When we prove below that a graph can be traversed in one closed stroke exactly when every vertex has even degree, we have simultaneously decided a puzzle about the bridges of eighteenth-century Königsberg, a question about whether a plotter can draw a figure without lifting the pen, and a question about whether a street-sweeping route can avoid repeating a street. The theorem does not know or care which of these it is being applied to.
 
-## What is a Graph?
+This chapter builds the vocabulary from nothing and then proves the first real theorems of the subject. The single most important is the **handshake lemma**, which says the degrees of a graph sum to twice the number of edges; almost every counting argument here descends from it. After that we look at three families that carry most of the applications: **trees**, which are exactly the minimally connected graphs and which underlie file systems, parse trees and spanning-tree protocols; **bipartite** graphs, which are exactly the graphs with no odd cycle and which model every two-sided matching problem; and **Eulerian** graphs, where Euler's theorem gives a complete, checkable characterisation of a property that looks as though it should require searching.
+
+That last point deserves emphasis up front. Euler's theorem is remarkable not because closed traversals are intrinsically interesting but because it replaces a search over exponentially many routes with a scan over $n$ degree counts. The chapter ends by putting the neighbouring **Hamiltonian** question beside it — visit every *vertex* once rather than every *edge* — where no such characterisation is known and, as far as anyone can prove, none exists in any usable form.
+
+Throughout, $G = (V, E)$ denotes a finite graph, $n = |V|$ and $m = |E|$. Deeper material — colouring beyond two colours, planarity, matchings, Ramsey theory, network flow — belongs to the chapters *Graph Combinatorics* and *Combinatorial Optimization* in the Combinatorics subject, and is pointed at rather than developed here.
+
+## Graphs: the objects and their pictures
 
 <!-- section: graphs -->
 
-:::definition[Undirected graph]{#graph}
-An **undirected graph** $G = (V, E)$ consists of a set $V$ of vertices (nodes) and a set $E$ of edges, where each edge is an unordered pair of vertices (possibly the same vertex twice, which forms a loop).
+A graph is a set together with a set of pairs drawn from it. The definition is so light that the hard work is entirely in what one deduces from it, which is a good sign: a definition carrying many clauses usually hides a theorem that should have been proved.
+
+:::definition[Graph]{#graph}
+A **graph** is an ordered pair $G = (V, E)$ where $V$ is a finite non-empty set whose elements are called **vertices**, and $E$ is a set of unordered pairs $\{u, v\}$ of vertices, called **edges**. We write $uv$ for the edge $\{u, v\}$, and we set
+
+$$n = |V|, \qquad m = |E|.$$
 :::
 
-"Unordered" means the edge $\{u, v\}$ is the same as $\{v, u\}$ — there is no notion of a first or second endpoint.
+Because an edge is an *unordered* pair, $uv$ and $vu$ are the same edge: there is no first endpoint. If $uv \in E$ we say $u$ and $v$ are **adjacent** or **neighbours**, and that the edge $uv$ is **incident** with each of $u$ and $v$.
 
-:::definition[Simple graphs, multigraphs and digraphs]{#graph-kinds}
-- **Simple graph**: no loops and no multiple edges between same pair.
-- **Multigraph**: allows multiple edges or loops.
-- **Directed graph (digraph)**: edges are ordered pairs (arcs); direction matters.
+:::definition[Simple graph, multigraph, digraph]{#graph-kinds}
+A **loop** is an edge joining a vertex to itself; a **multi-edge** is a repeated edge between the same pair. A graph with neither is **simple**. A **multigraph** permits loops and multi-edges, so its edges form a multiset. A **directed graph** or **digraph** replaces unordered pairs by ordered pairs $(u, v)$, called **arcs**, so direction matters and $(u,v) \neq (v,u)$.
 :::
 
-We usually assume finite simple undirected graphs unless specified.
-
-Graphs can be represented by adjacency lists (efficient for sparse) or adjacency matrices (good for dense or fast queries).
+Unless stated otherwise, *graph* means *simple graph* in what follows. The one place we deliberately step outside that convention is Königsberg, which is genuinely a multigraph — two of its bridges join the same pair of land masses — and Euler's theorem is stated so that it covers that case.
 
 :::intuition
-Vertices are cities or people. Edges are roads or friendships. The graph is the whole map or social circle.
-
-Direction: one-way streets vs two-way streets.
+A digraph is a one-way street network, an undirected graph a two-way one. A multigraph is a road map that records two separate bridges over the same river as two separate roads, because a traveller can drive across either. Which model you pick is a modelling decision, not a mathematical one: choose the one whose edges are the things you actually want to count.
 :::
 
-### Worked Examples
+A graph is a combinatorial object and not a picture, but pictures are how anyone thinks about them. A **drawing** places the vertices as dots anywhere in the plane and each edge as any curve joining its two endpoints. Nothing in the definition constrains a drawing, so a single graph has infinitely many of them, some clear and some unreadable, and two drawings that look nothing alike may be drawings of the same graph.
 
-:::example
-Build the adjacency matrix of a small graph.
+:::definition[Isomorphism]{#isomorphism}
+Two graphs $G = (V, E)$ and $H = (W, F)$ are **isomorphic**, written $G \cong H$, if there is a bijection $\varphi : V \to W$ such that for all $u, v \in V$,
+
+$$uv \in E \iff \varphi(u)\varphi(v) \in F.$$
+
+Such a $\varphi$ is an **isomorphism**: it renames the vertices and preserves exactly which pairs are joined.
+:::
+
+Isomorphic graphs are the same graph wearing different labels, and every property in this chapter — degrees, connectedness, being a tree, being Eulerian — is preserved by isomorphism. That gives a practical test for showing two graphs are *not* isomorphic: find any such property they disagree on. Showing they *are* isomorphic needs an explicit bijection, and the general problem of deciding isomorphism has no known efficient algorithm, which is a recurring theme of this chapter.
+
+:::definition[Subgraph]{#subgraph}
+A graph $H = (W, F)$ is a **subgraph** of $G = (V, E)$ if $W \subseteq V$ and $F \subseteq E$, and every edge of $F$ has both endpoints in $W$. If $F$ contains *every* edge of $E$ with both endpoints in $W$, then $H$ is the subgraph **induced** by $W$, written $G[W]$.
+:::
+
+Two ways to store a graph dominate in practice, and the choice between them is the first algorithmic consequence of the definition.
+
+:::definition[Adjacency matrix and adjacency list]{#representations}
+Order the vertices $v_1, \dots, v_n$. The **adjacency matrix** of $G$ is the $n \times n$ matrix $A$ with
+
+$$A_{ij} = \begin{cases} 1 & \text{if } v_iv_j \in E, \\ 0 & \text{otherwise.}\end{cases}$$
+
+The **adjacency list** representation stores, for each vertex, the list of its neighbours.
+:::
+
+:::proposition[Shape of the adjacency matrix]{#adjacency-shape}
+The adjacency matrix of a simple graph is symmetric, has zero diagonal, and its entries sum to $2m$.
+:::
+
+:::proof
+Symmetry is the statement that $v_iv_j \in E$ if and only if $v_jv_i \in E$, which holds because an edge is an unordered pair. The diagonal entry $A_{ii}$ records whether $v_iv_i \in E$, that is, whether there is a loop at $v_i$; a simple graph has none, so $A_{ii} = 0$.
+
+For the sum, each edge $v_iv_j$ with $i \neq j$ contributes exactly the two entries $A_{ij} = A_{ji} = 1$, and every entry equal to $1$ arises from exactly one edge in this way. Hence the total is $2m$.
+:::
+
+The two representations trade space against query time. An adjacency matrix answers "is $uv$ an edge?" in constant time but always occupies $n^2$ bits, which is wasteful for the sparse graphs that occur in practice — a road network has vertices of bounded degree, so $m$ grows like $n$, not like $n^2$. An adjacency list occupies space proportional to $n + m$ and lets an algorithm sweep the neighbours of a vertex in time proportional to that vertex's degree, which is what breadth-first and depth-first search need. Almost every graph algorithm in a first course assumes lists.
+
+:::example[Reading a graph off a description]
+Let $V = \{1,2,3,4,5\}$ and let $E$ consist of all pairs $\{i,j\}$ with $i \neq j$ and $i + j$ even. List the edges, give the adjacency matrix, and say whether the graph is connected in the informal sense of "you can walk from any vertex to any other".
 :::
 
 :::solution
-Take $V = \{A, B, C, D\}$ and $E = \big\{\{A,B\}, \{B,C\}, \{C,A\}, \{A,D\}\big\}$. This graph has a triangle $A\text{–}B\text{–}C$ and one extra "pendant" edge hanging off $A$ to $D$. So $|V| = 4$ and $|E| = 4$.
+1. $i + j$ is even exactly when $i$ and $j$ have the same parity. The odd vertices are $1,3,5$ and the even ones are $2,4$.
+2. So the edges are all pairs inside $\{1,3,5\}$ — namely $13$, $15$, $35$ — and all pairs inside $\{2,4\}$ — namely $24$. That is $m = 4$ edges.
+3. Ordering the vertices $1,2,3,4,5$, the adjacency matrix is
 
-The adjacency matrix $M$ is a $4 \times 4$ table (rows and columns ordered $A, B, C, D$) where entry $M_{ij} = 1$ if there is an edge between vertex $i$ and vertex $j$, and $0$ otherwise. Go edge by edge:
+$$A = \begin{pmatrix} 0&0&1&0&1 \\ 0&0&0&1&0 \\ 1&0&0&0&1 \\ 0&1&0&0&0 \\ 1&0&1&0&0 \end{pmatrix}.$$
 
-$\{A,B\}$ sets $M_{AB} = M_{BA} = 1$.
-$\{B,C\}$ sets $M_{BC} = M_{CB} = 1$.
-$\{C,A\}$ sets $M_{CA} = M_{AC} = 1$.
-$\{A,D\}$ sets $M_{AD} = M_{DA} = 1$.
-
-Every other entry stays $0$ (and the diagonal is all $0$ because there are no loops):
-
-$$
-M = \begin{pmatrix} 0 & 1 & 1 & 1 \\ 1 & 0 & 1 & 0 \\ 1 & 1 & 0 & 0 \\ 1 & 0 & 0 & 0 \end{pmatrix}
-$$
-
-Sanity check: the matrix is symmetric ($M_{ij} = M_{ji}$), which it must be for an undirected graph. Also, the number of $1$s is $8 = 2|E| = 2 \cdot 4$, because each edge shows up twice (once above and once below the diagonal). Reading off row sums gives the degrees $3, 2, 2, 1$ for $A, B, C, D$ — matching the picture, since $A$ touches three edges and $D$ only one.
+4. There is no edge between an odd and an even vertex, so no walk can ever cross from $\{1,3,5\}$ to $\{2,4\}$. The graph is not connected: it falls into two pieces.
 :::
 
-## Vertices, Edges, and Degree
+:::proposition[How many graphs there are]{#counting-graphs}
+The number of distinct simple graphs on a fixed labelled vertex set of size $n$ is
+
+$$2^{\binom{n}{2}}.$$
+:::
+
+:::proof
+A simple graph on the set $V$ is determined by its edge set, which is an arbitrary subset of the set $P$ of all unordered pairs of distinct vertices. Distinct subsets give distinct graphs, and every subset gives a graph, so the graphs correspond bijectively to the subsets of $P$.
+
+There are $\binom{n}{2}$ such pairs, since a pair is a choice of $2$ elements from $n$ with order irrelevant, and a set of size $k$ has $2^k$ subsets. Hence the count is $2^{\binom{n}{2}}$.
+:::
+
+The growth here is worth pausing on: on $10$ labelled vertices there are $2^{45}$ graphs, about $3.5 \times 10^{13}$. Any approach to a graph problem that inspects all graphs of a given size is dead on arrival, which is why the subject proves theorems instead.
+
+:::example[Counting labelled graphs and subgraphs]
+How many simple graphs are there on the labelled vertex set $\{a,b,c,d\}$? Of these, how many contain the edge $ab$?
+:::
+
+:::solution
+1. There are $\binom{4}{2} = 6$ possible edges, so by the proposition *How many graphs there are* the total is $2^6 = 64$.
+2. Fixing $ab$ to be present leaves the remaining $5$ pairs free, giving $2^5 = 32$.
+3. As a check, exactly half of all graphs contain any fixed edge, by the symmetry that toggles that one edge; $64/2 = 32$.
+:::
+
+:::pitfall
+"Labelled" matters. The $64$ graphs on $\{a,b,c,d\}$ collapse to only $11$ once isomorphic graphs are identified, because many relabellings give the same picture. Counting graphs *up to isomorphism* is much harder and is taken up in *Graph Combinatorics*; every count in this chapter is a labelled count unless it explicitly says otherwise.
+:::
+
+## Degrees, the handshake lemma and edge counts
 
 <!-- section: vertices-edges -->
 
-:::definition[Degree of a vertex]{#degree}
-The **degree** of a vertex $v$, written $\deg(v)$, is the number of edge ends incident to $v$.
+The degree of a vertex is the single most useful local statistic a graph has, and the first theorem of graph theory says that the local degrees and the global edge count determine each other.
+
+:::definition[Degree]{#degree}
+The **degree** $\deg(v)$ of a vertex $v$ in a simple graph is the number of edges incident with $v$, equivalently the number of its neighbours. A vertex of degree $0$ is **isolated** and a vertex of degree $1$ is a **leaf**. We write
+
+$$\delta(G) = \min_{v \in V}\deg(v), \qquad \Delta(G) = \max_{v \in V}\deg(v)$$
+
+for the minimum and maximum degree. In a multigraph a loop at $v$ contributes $2$ to $\deg(v)$, since it meets $v$ at both ends.
 :::
 
-Count edge *ends*, not neighbours: a loop at $v$ contributes $2$ to $\deg(v)$ in an undirected graph, because both of its ends attach to $v$.
+:::theorem[Handshake lemma]{#handshake}
+For every graph $G = (V, E)$,
 
-:::theorem[Handshaking lemma]{#handshaking}
-(Euler.) In any graph,
-
-$$\sum_{v \in V} \deg(v) = 2|E|.$$
+$$\sum_{v \in V} \deg(v) = 2m.$$
 :::
 
 :::proof
-Imagine walking along every edge and putting a tally mark at each end. Each edge has exactly two ends, so you make $2|E|$ marks in total; but the marks at vertex $v$ add up to $\deg(v)$.
+Count the set $I$ of **incidences**, that is, the set of pairs $(v, e)$ where $v$ is a vertex, $e$ is an edge, and $v$ is an endpoint of $e$. We count $|I|$ in two ways.
+
+Group the incidences by their vertex. The pairs with first coordinate $v$ are exactly the edges incident with $v$, and there are $\deg(v)$ of these, by the definition of degree. Summing over $v$ gives
+
+$$|I| = \sum_{v \in V} \deg(v).$$
+
+Now group the incidences by their edge. Each edge $e = uv$ has exactly two endpoints, so it occurs in exactly two pairs, namely $(u, e)$ and $(v, e)$. Summing over $e$ gives $|I| = 2m$.
+
+The two counts are of the same set, so they are equal. (In a multigraph the second count still gives $2$ per edge, because a loop at $v$ contributes the two incidences of its two ends, which is precisely why a loop is defined to add $2$ to the degree.)
 :::
-
-:::corollary[Odd degrees come in pairs]{#odd-degree-corollary}
-The sum of degrees is always even, and therefore **the number of odd-degree vertices is even**.
-:::
-
-A vertex of degree $0$ is isolated. A vertex of degree $1$ is a leaf (pendant).
-
-:::definition[Complete graph]{#complete-graph}
-The **complete graph** $K_n$ has every pair of distinct vertices joined by an edge, so $|E|$ equals the number of ways to choose $2$ vertices out of $n$:
-
-$$|E| = \binom{n}{2} = \frac{n(n-1)}{2}.$$
-:::
-
-A graph is **regular** if all vertices have the same degree; it is **$k$-regular** if every degree equals $k$.
 
 :::intuition
-Degree is "how many direct friends or roads out of this city".
-
-Handshaking: every edge contributes to two degrees (or twice to one if loop), so total "handshakes" even.
+At a party, shake hands and count. Each person reports how many hands they shook; add the reports. Every handshake involves two people, so every handshake was reported exactly twice, and the total of the reports is twice the number of handshakes. That is the whole proof, and it is why the result is named as it is.
 :::
 
-### Worked Examples
+The technique in that proof — count one set two different ways and equate — is called **double counting**, and it is the workhorse of the subject. Notice that it never constructs anything: no graph is built, no case is checked, and the conclusion holds for all graphs simultaneously.
 
-:::example
-Count edges from degrees.
+:::corollary[The number of odd vertices is even]{#odd-vertices}
+In every graph, the number of vertices of odd degree is even.
+:::
+
+:::proof
+Split the sum in the theorem *Handshake lemma* according to the parity of the degree. Writing $V_{\text{odd}}$ and $V_{\text{even}}$ for the sets of vertices of odd and even degree,
+
+$$\sum_{v \in V_{\text{odd}}} \deg(v) \;+\; \sum_{v \in V_{\text{even}}} \deg(v) \;=\; 2m.$$
+
+The right-hand side is even, and the second sum on the left is a sum of even numbers and hence even. Therefore the first sum is even too.
+
+But that first sum is a sum of $|V_{\text{odd}}|$ odd numbers, and a sum of odd numbers is even exactly when there is an even number of them. Hence $|V_{\text{odd}}|$ is even.
+:::
+
+:::example[Does such a graph exist?]
+Is there a simple graph with degree sequence $3, 3, 3, 3, 3$? What about $4, 3, 3, 2, 2$?
 :::
 
 :::solution
-Suppose a graph has $6$ vertices, each of degree $3$. How many edges?
-
-sum the degrees: $\sum_v \deg(v) = 6 \times 3 = 18$.
-Step 2 — apply handshaking: $\sum_v \deg(v) = 2|E|$, so $2|E| = 18$.
-Step 3 — solve: $|E| = 9$.
-
-Is such a graph even possible? Yes — the count is only consistent when the degree sum is even (here $18$ is even, good), and a concrete witness exists: the utility graph $K_{3,3}$ is $3$-regular on $6$ vertices and indeed has $3 \times 3 = 9$ edges. Sanity check: $9$ matches our answer.
+1. For the first, the degrees sum to $15$, which is odd, contradicting the theorem *Handshake lemma* since $2m$ is even. Equivalently, there would be five vertices of odd degree, and five is odd, contradicting the corollary *The number of odd vertices is even*. No such graph exists.
+2. For the second, the degrees sum to $14$, so any such graph has $m = 7$ edges — the parity test is passed and gives no obstruction.
+3. Passing the test is not a construction, so we produce one. On vertices $a,b,c,d,e$ take the edges $ab, ac, ad, ae, bc, bd, ce$. Then $\deg(a) = 4$, $\deg(b) = 3$, $\deg(c) = 3$, $\deg(d) = 2$, $\deg(e) = 2$, and there are $7$ edges, as predicted.
 :::
 
-:::example
-The complete graph $K_4$.
+:::pitfall
+The handshake lemma is a *necessary* condition, never a sufficient one. An even degree sum does not guarantee a graph exists: the sequence $4, 1, 1, 1, 1$ sums to $8$, but a vertex of degree $4$ needs four distinct neighbours among four vertices of degree $1$, which forces every other degree to be exactly $1$ and uses up all four — that one happens to work. The sequence $4,4,1,1,1,1$ does not: each degree-$4$ vertex must be adjacent to the other, leaving each needing three of the four leaves, which is nine leaf-endpoints among four leaves. Deciding which sequences occur is the Erdős–Gallai problem, treated in *Graph Combinatorics*.
+:::
+
+:::definition[Complete graph, complement, regular graph]{#complete-graph}
+The **complete graph** $K_n$ has $n$ vertices with every pair joined. The **complement** $\overline{G}$ of a simple graph $G$ has the same vertices, with $uv$ an edge of $\overline{G}$ exactly when $u \neq v$ and $uv \notin E$. A graph is **$r$-regular** if every vertex has degree $r$.
+:::
+
+:::proposition[Maximum number of edges]{#max-edges}
+A simple graph on $n$ vertices has at most
+
+$$\binom{n}{2} = \frac{n(n-1)}{2}$$
+
+edges, with equality exactly for $K_n$.
+:::
+
+:::proof
+Every edge is an unordered pair of distinct vertices, and in a simple graph no such pair occurs twice. So $E$ is a subset of the set of all $\binom{n}{2}$ unordered pairs of distinct vertices, whence $m \le \binom{n}{2}$.
+
+Equality holds exactly when $E$ is the whole set of pairs, which is the definition of $K_n$.
+
+For the closed form, count ordered pairs of distinct vertices: there are $n$ choices of first and $n-1$ of second, giving $n(n-1)$, and each unordered pair is counted twice.
+:::
+
+:::corollary[Degrees in a complete graph]{#complete-degrees}
+Every vertex of $K_n$ has degree $n-1$, and $K_n$ has $\tfrac{n(n-1)}{2}$ edges.
+:::
+
+:::proof
+A vertex of $K_n$ is joined to every vertex other than itself, so it has $n-1$ neighbours. Summing over the $n$ vertices and applying the theorem *Handshake lemma*, $n(n-1) = 2m$, so $m = n(n-1)/2$, agreeing with the proposition *Maximum number of edges*.
+:::
+
+:::proposition[Edge count of a regular graph]{#regular-edges}
+An $r$-regular graph on $n$ vertices has $m = \tfrac{nr}{2}$ edges. Consequently $nr$ is even, so no $r$-regular graph exists when $n$ and $r$ are both odd.
+:::
+
+:::proof
+Every one of the $n$ vertices has degree $r$, so the degree sum is $nr$. By the theorem *Handshake lemma* this equals $2m$, giving $m = nr/2$.
+
+Since $m$ is an integer, $nr$ must be even. If $n$ and $r$ are both odd then $nr$ is odd, which is impossible; hence no such graph exists.
+:::
+
+:::example[A 3-regular graph on 7 vertices]
+Does a $3$-regular graph on $7$ vertices exist? On $8$?
 :::
 
 :::solution
-1. $K_4$ has $4$ vertices, each joined to the other $3$, so every degree is $3$. Edges: $\binom{4}{2} = \frac{4 \cdot 3}{2} = 6$. Cross-check with handshaking: degree sum $= 4 \times 3 = 12 = 2|E|$, giving $|E| = 6$ again. Both routes agree.
+1. For $n = 7$, $r = 3$: both are odd, so by the proposition *Edge count of a regular graph* no such graph exists.
+2. For $n = 8$, $r = 3$: $nr = 24$ is even, so the obstruction vanishes and $m$ would be $12$.
+3. And such a graph does exist — take the cube graph $Q_3$, whose vertices are the eight binary strings of length $3$ with an edge whenever two strings differ in exactly one position. Each string has three positions to flip, so every degree is $3$.
 :::
 
-## Walks, Paths, and Cycles
+:::figure[$K_5$: every pair of the five vertices is joined, so all ten edges are drawn and every vertex has degree $4$.]{#k5-figure}
+{
+  "type": "plot",
+  "x": [-1.6, 1.6], "y": [-1.6, 1.6],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "path", "points": [[0.0, 1.0], [-0.951, 0.309]] },
+    { "kind": "path", "points": [[0.0, 1.0], [-0.588, -0.809]] },
+    { "kind": "path", "points": [[0.0, 1.0], [0.588, -0.809]] },
+    { "kind": "path", "points": [[0.0, 1.0], [0.951, 0.309]] },
+    { "kind": "path", "points": [[-0.951, 0.309], [-0.588, -0.809]] },
+    { "kind": "path", "points": [[-0.951, 0.309], [0.588, -0.809]] },
+    { "kind": "path", "points": [[-0.951, 0.309], [0.951, 0.309]] },
+    { "kind": "path", "points": [[-0.588, -0.809], [0.588, -0.809]] },
+    { "kind": "path", "points": [[-0.588, -0.809], [0.951, 0.309]] },
+    { "kind": "path", "points": [[0.588, -0.809], [0.951, 0.309]] },
+    { "kind": "point", "at": [0.0, 1.0], "tone": "result" },
+    { "kind": "point", "at": [-0.951, 0.309], "tone": "result" },
+    { "kind": "point", "at": [-0.588, -0.809], "tone": "result" },
+    { "kind": "point", "at": [0.588, -0.809], "tone": "result" },
+    { "kind": "point", "at": [0.951, 0.309], "tone": "result" },
+    { "kind": "text", "at": [0.0, 1.32], "text": "a" },
+    { "kind": "text", "at": [-1.26, 0.41], "text": "b" },
+    { "kind": "text", "at": [-0.78, -1.07], "text": "c" },
+    { "kind": "text", "at": [0.78, -1.07], "text": "d" },
+    { "kind": "text", "at": [1.26, 0.41], "text": "e" }
+  ]
+}
+:::
+
+The picture makes a point the algebra does not. $K_5$ has only five vertices but ten edges, and every drawing of it in the plane has at least one crossing — it is the smallest non-planar graph together with $K_{3,3}$, a fact proved in *Graph Combinatorics*. Density of edges is what makes drawings unreadable, and it is why real network diagrams are almost always sparse.
+
+:::proposition[Two vertices of equal degree]{#equal-degrees}
+Every simple graph with at least two vertices has two distinct vertices of the same degree.
+:::
+
+:::proof
+Let $G$ have $n \ge 2$ vertices. Each degree lies in $\{0, 1, \dots, n-1\}$, a set of $n$ possible values, and there are $n$ vertices, so the pigeonhole principle does not immediately apply. We rule out one value.
+
+Suppose some vertex has degree $0$ and some vertex has degree $n - 1$. The second is adjacent to every other vertex, including the first, so the first has degree at least $1$ — a contradiction. Hence at most one of the values $0$ and $n-1$ is attained.
+
+So all $n$ degrees lie in a set of at most $n - 1$ values. By the pigeonhole principle two vertices share a value.
+:::
+
+:::example[Degrees in a complement]
+A simple graph $G$ on $9$ vertices has $12$ edges. How many edges does $\overline{G}$ have, and what is $\deg_{\overline{G}}(v)$ if $\deg_G(v) = 5$?
+:::
+
+:::solution
+1. Every pair of distinct vertices is an edge of exactly one of $G$ and $\overline{G}$, so the edge counts sum to $\binom{9}{2} = 36$ by the proposition *Maximum number of edges*.
+2. Hence $\overline{G}$ has $36 - 12 = 24$ edges.
+3. Similarly the neighbours of $v$ in $G$ and in $\overline{G}$ partition the other $8$ vertices, so $\deg_{\overline{G}}(v) = 8 - 5 = 3$.
+:::
+
+## Walks, paths, cycles and connectivity
 
 <!-- section: paths-cycles -->
 
-These four terms form a hierarchy of "how careful you are about not repeating things":
+Everything about routing, reachability and search is a statement about the ways one can travel along edges. The definitions below distinguish four levels of strictness, and confusing them is the commonest source of a wrong proof in a first course.
 
 :::definition[Walk, trail, path, cycle]{#walk-path-cycle}
-- A **walk** is a sequence $v_0, e_1, v_1, e_2, \dots, v_k$ alternating vertices and edges, where each $e_i$ joins $v_{i-1}$ and $v_i$. Anything may repeat — you can wander freely.
-- A **trail** is a walk with no repeated **edges** (vertices may still repeat).
-- A **path** is a walk with no repeated **vertices** (which automatically forbids repeated edges too).
-- A **cycle** is a closed path: it starts and ends at the same vertex, has length $\ge 3$ (in a simple graph), and repeats no vertex other than that shared start/end.
+A **walk** from $u$ to $v$ in $G$ is a finite sequence of vertices
+
+$$u = w_0, w_1, \dots, w_k = v$$
+
+in which $w_{i-1}w_i \in E$ for each $i$. Its **length** is $k$, the number of edge steps. A walk is
+
+- a **trail** if no edge is repeated,
+- a **path** if no *vertex* is repeated,
+- **closed** if $w_0 = w_k$ and $k \ge 1$.
+
+A **cycle** is a closed walk $w_0, w_1, \dots, w_k = w_0$ with $k \ge 3$ in which $w_0, \dots, w_{k-1}$ are distinct. A cycle of length $k$ is a **$k$-cycle**, written $C_k$; it is **odd** or **even** according to the parity of $k$.
 :::
 
-:::definition[Length and distance]{#distance}
-The **length** of a walk (or path/cycle) is its number of edges. The **distance** between two vertices is the length of a shortest path between them.
-:::
-
-:::definition[Connected graph]{#connected}
-A graph is **connected** if there is a path between every pair of vertices.
-:::
-
-:::definition[Hamiltonian path and cycle]{#hamiltonian}
-A **Hamiltonian path** visits every vertex exactly once (deciding whether one exists is NP-complete). A **Hamiltonian cycle** is a cycle through all vertices.
-:::
-
-Do not confuse this with Eulerian traversals later: Hamiltonian is about visiting every *vertex* once, Eulerian is about using every *edge* once.
+A path never repeats a vertex, and therefore never repeats an edge, so every path is a trail and every trail is a walk; the converses fail. In a simple graph, a closed walk of length $1$ would be a loop and of length $2$ would retrace a single edge, which is why cycles are required to have length at least $3$.
 
 :::intuition
-Walk: you can wander, revisit places and roads.
-
-Path: you never visit the same city twice.
-
-Cycle: a loop tour that returns home without revisiting any city in between.
+A walk is a route you actually took, wandering allowed. A trail never drives down the same street twice but may pass through a junction twice. A path never even revisits a junction. Eulerian questions, later, are about trails; Hamiltonian questions are about paths.
 :::
 
-### Worked Examples
+:::definition[Connectedness and components]{#connected}
+Vertices $u$ and $v$ are **connected** if there is a walk from $u$ to $v$. The graph $G$ is **connected** if every pair of its vertices is connected, and **disconnected** otherwise. A **connected component** of $G$ is a maximal connected subgraph: a set of vertices any two of which are connected, which cannot be enlarged.
+:::
 
-:::example
-Distances in a cycle.
+:::proposition[Components partition the vertices]{#components-partition}
+The relation "$u$ is connected to $v$" is an equivalence relation on $V$, so its classes partition $V$ into the connected components.
+:::
+
+:::proof
+*Reflexive*: the one-term sequence $u$ is a walk from $u$ to $u$ of length $0$.
+
+*Symmetric*: if $u = w_0, \dots, w_k = v$ is a walk, then reading it backwards, $v = w_k, \dots, w_0 = u$, is also a walk, because each required adjacency $w_iw_{i-1} \in E$ is the same unordered pair as $w_{i-1}w_i$.
+
+*Transitive*: given a walk from $u$ to $v$ and a walk from $v$ to $x$, concatenate them at $v$. Every consecutive pair in the concatenation is a consecutive pair of one of the two original walks, so every required adjacency holds, and the result is a walk from $u$ to $x$.
+
+An equivalence relation partitions its underlying set into classes, and the class of $u$ is precisely the set of vertices reachable from $u$, which is the vertex set of the component containing $u$.
+:::
+
+Symmetry is exactly where undirectedness is used; in a digraph the analogous relation is not symmetric, and the correct notion splits into *strong* and *weak* connectivity. Everything below assumes undirected graphs.
+
+:::lemma[Every walk contains a path]{#walk-contains-path}
+If there is a walk from $u$ to $v$ in $G$, then there is a path from $u$ to $v$ in $G$.
+:::
+
+:::proof
+Among all walks from $u$ to $v$ choose one of minimum length; this is possible because the set of lengths of such walks is a non-empty set of non-negative integers, which has a least element by well-ordering. Write it as $u = w_0, w_1, \dots, w_k = v$.
+
+We claim this walk is a path. Suppose not: then $w_i = w_j$ for some $i < j$. Delete the portion strictly between them, forming the shorter sequence
+
+$$w_0, \dots, w_i, w_{j+1}, \dots, w_k.$$
+
+This is still a walk: every consecutive pair other than $(w_i, w_{j+1})$ was consecutive before, and that one is a valid step because $w_i = w_j$ and $w_jw_{j+1} \in E$. Its length is $k - (j - i) < k$, contradicting minimality.
+
+Hence no vertex repeats, and the chosen walk is a path from $u$ to $v$.
+:::
+
+This little lemma is used constantly, and it is why the definition of connectedness can be stated with the weak notion — walks — while every proof is free to assume the strong one. It also means a shortest walk between two vertices is automatically a path, which is the correctness statement underlying breadth-first search.
+
+:::definition[Distance]{#distance}
+For connected $u, v$, the **distance** $d(u,v)$ is the length of a shortest path from $u$ to $v$; if no walk joins them, $d(u,v) = \infty$. The **diameter** of a connected graph is $\max_{u,v} d(u,v)$.
+:::
+
+:::example[Distances in a cycle with a chord]
+Let $G$ be the $6$-cycle $v_1v_2v_3v_4v_5v_6v_1$ together with the extra edge $v_1v_4$. Compute $d(v_1, v_4)$, $d(v_2, v_5)$ and the diameter.
 :::
 
 :::solution
-Label the vertices of the cycle graph $C_5$ (a pentagon) as $1\text{–}2\text{–}3\text{–}4\text{–}5\text{–}1$. To find the distance between two vertices, take the shorter of the two ways around the ring.
-
-Adjacent vertices, e.g. $1$ and $2$: one edge apart, so distance $1$.
-Vertices two apart, e.g. $1$ and $3$: going $1\text{–}2\text{–}3$ is $2$ edges; going the other way $1\text{–}5\text{–}4\text{–}3$ is $3$ edges. The shorter is $2$, so distance $2$.
-There is no pair further than $2$ apart: in $C_5$ the two directions around a $5$-cycle split any gap into $d$ and $5 - d$, and $\min(d, 5-d) \le 2$. So the largest distance (the diameter) is $2$.
+1. $v_1v_4$ is an edge, so $d(v_1,v_4) = 1$.
+2. From $v_2$ to $v_5$: the route $v_2, v_1, v_4, v_5$ has length $3$, and so does $v_2, v_3, v_4, v_5$. Could it be $2$? That needs a common neighbour of $v_2$ and $v_5$; the neighbours of $v_2$ are $v_1, v_3$ and those of $v_5$ are $v_4, v_6$, which are disjoint. So $d(v_2, v_5) = 3$.
+3. Every other pair is at distance at most $2$: the chord makes $v_1$ and $v_4$ adjacent to four vertices between them. Hence the diameter is $3$, attained by the pair $v_2, v_5$ (and by $v_3, v_6$).
 :::
 
-:::example
-Endpoints of a path graph.
+:::theorem[Powers of the adjacency matrix count walks]{#matrix-walks}
+Let $A$ be the adjacency matrix of $G$ with respect to the ordering $v_1, \dots, v_n$. For every integer $k \ge 0$, the entry $(A^k)_{ij}$ is the number of walks of length exactly $k$ from $v_i$ to $v_j$.
+:::
+
+:::proof
+Induct on $k$. For $k = 0$, $A^0$ is the identity, and the only walk of length $0$ from $v_i$ is the one-term walk at $v_i$ itself, so the count is $1$ when $i = j$ and $0$ otherwise.
+
+Assume the claim for $k$. A walk of length $k+1$ from $v_i$ to $v_j$ consists of a walk of length $k$ from $v_i$ to some vertex $v_\ell$, followed by a single step $v_\ell v_j$. The choices of the initial walk and of the last step are independent, and distinct choices give distinct walks, so the number of walks of length $k+1$ from $v_i$ to $v_j$ is
+
+$$\sum_{\ell=1}^{n} (\text{walks of length } k \text{ from } v_i \text{ to } v_\ell) \cdot A_{\ell j} = \sum_{\ell=1}^{n} (A^k)_{i\ell} A_{\ell j},$$
+
+using the inductive hypothesis. The right-hand side is the definition of the matrix product entry $(A^{k+1})_{ij}$.
+:::
+
+:::remark
+This is why $(A^3)_{ii}$ divided by $2$ counts the triangles through $v_i$: a closed walk of length $3$ from $v_i$ must be a triangle, and each triangle is traversed in two directions. It is also the cheapest available triangle-counting algorithm, at the cost of a matrix multiplication.
+:::
+
+:::proposition[A graph of minimum degree at least two contains a cycle]{#min-degree-cycle}
+If $\delta(G) \ge 2$ then $G$ contains a cycle.
+:::
+
+:::proof
+Since $G$ is finite it has a path of maximum length; let $P = w_0, w_1, \dots, w_k$ be one, and note $k \ge 1$ because $\delta(G) \ge 2 > 0$ forces some edge to exist.
+
+Consider the endpoint $w_0$. It has at least two neighbours. One of them is $w_1$; let $x$ be another, so $x \neq w_1$. If $x$ were not on $P$, then $x, w_0, w_1, \dots, w_k$ would be a longer path, contradicting maximality. Hence $x = w_i$ for some $i \ge 2$.
+
+Then $w_0, w_1, \dots, w_i, w_0$ is a closed walk whose vertices $w_0, \dots, w_i$ are distinct, being vertices of a path, and its length is $i + 1 \ge 3$. That is a cycle.
+:::
+
+:::theorem[An edge bound forcing connectedness]{#edges-force-connected}
+Let $G$ be a simple graph on $n \ge 2$ vertices with
+
+$$m > \frac{(n-1)(n-2)}{2}$$
+
+edges. Then $G$ is connected.
+:::
+
+:::proof
+We prove the contrapositive: a disconnected simple graph on $n$ vertices has at most $\tfrac{(n-1)(n-2)}{2}$ edges.
+
+Suppose $G$ is disconnected. Pick a component and let $H_1$ be the subgraph it induces, with $k$ vertices, and let $H_2$ be the subgraph induced by the remaining $n - k$ vertices; both are non-empty, so $1 \le k \le n-1$. No edge joins $H_1$ to $H_2$, since such an edge would connect vertices in different components. So every edge lies inside $H_1$ or inside $H_2$, and by the proposition *Maximum number of edges* applied to each,
+
+$$m \le \binom{k}{2} + \binom{n-k}{2}.$$
+
+It remains to maximise the right-hand side over $1 \le k \le n-1$. Write $f(k) = \binom{k}{2} + \binom{n-k}{2}$ and compare $k$ with $k+1$ for $k < n/2$:
+
+$$f(k) - f(k+1) = \left[\binom{k}{2} - \binom{k+1}{2}\right] + \left[\binom{n-k}{2} - \binom{n-k-1}{2}\right] = -k + (n-k-1) = n - 2k - 1,$$
+
+which is positive when $k < (n-1)/2$. So $f$ decreases as $k$ moves from $1$ towards the middle, and by the symmetry $f(k) = f(n-k)$ it increases again afterwards. Its maximum over the allowed range is therefore at the ends, $k = 1$ or $k = n-1$, where
+
+$$f(1) = \binom{1}{2} + \binom{n-1}{2} = \frac{(n-1)(n-2)}{2}.$$
+
+Hence $m \le \tfrac{(n-1)(n-2)}{2}$, as required.
+:::
+
+The bound is sharp, and the extremal example is exactly what the proof points at: take $K_{n-1}$ together with one isolated vertex. It has $\tfrac{(n-1)(n-2)}{2}$ edges and is disconnected, so the strict inequality in the hypothesis cannot be weakened.
+
+:::example[Applying the connectivity bound]
+A network has $12$ machines and $60$ links, no two machines linked twice. Must it be connected? What if it had $55$ links?
 :::
 
 :::solution
-1. Take the path graph on $5$ vertices in a line, $1\text{–}2\text{–}3\text{–}4\text{–}5$. There is only one path between the two endpoints $1$ and $5$: it uses edges $\{1,2\}, \{2,3\}, \{3,4\}, \{4,5\}$, which is $4$ edges. So the distance from $1$ to $5$ is $4$. Sanity check: a path graph on $n$ vertices has $n - 1$ edges, and here $n - 1 = 4$, exactly the endpoint-to-endpoint distance.
+1. Here $n = 12$, so the threshold is $\tfrac{11 \cdot 10}{2} = 55$.
+2. With $m = 60 > 55$, the theorem *An edge bound forcing connectedness* applies and the network must be connected.
+3. With $m = 55$ it need not be: $K_{11}$ plus one isolated machine has exactly $\binom{11}{2} = 55$ links and is disconnected. So $55$ links guarantee nothing, and the bound cannot be improved.
 :::
 
-## Trees and Forests
+:::proposition[Minimum degree forces connectedness]{#min-degree-connected}
+If $G$ is a simple graph on $n$ vertices with $\delta(G) \ge \tfrac{n-1}{2}$, then $G$ is connected.
+:::
+
+:::proof
+Let $u$ and $v$ be distinct vertices. If they are adjacent, they are connected. Otherwise let $N(u)$ and $N(v)$ be their neighbourhoods; neither contains $u$ or $v$, so both are subsets of the remaining $n - 2$ vertices.
+
+If $N(u)$ and $N(v)$ were disjoint, then
+
+$$|N(u)| + |N(v)| \le n - 2.$$
+
+But $|N(u)| + |N(v)| = \deg(u) + \deg(v) \ge 2 \cdot \tfrac{n-1}{2} = n - 1 > n-2$, a contradiction.
+
+So there is a common neighbour $w$, and $u, w, v$ is a walk. Every pair of vertices is connected, so $G$ is connected.
+:::
+
+:::pitfall
+A *walk* from $u$ to $v$ of length $k$ does not mean $d(u,v) = k$; it means $d(u,v) \le k$. Shortest-path claims need the lemma *Every walk contains a path* plus an argument that nothing shorter exists — usually by inspecting all common neighbours, as in the example *Distances in a cycle with a chord*.
+:::
+
+## Trees
 
 <!-- section: trees -->
 
-:::definition[Tree]{#tree}
-A **tree** is a connected graph with no cycles (acyclic).
+A tree is what is left of a connected graph when every redundancy has been removed. That informal description turns into several precise definitions which look quite different and are nonetheless equivalent, and proving their equivalence is the main business of this section.
+
+:::definition[Tree, forest, leaf]{#tree}
+A graph is **acyclic** if it contains no cycle. A **tree** is a connected acyclic graph; a **forest** is an acyclic graph, that is, a graph each of whose components is a tree. A **leaf** of a tree is a vertex of degree $1$.
 :::
 
-:::theorem[Equivalent characterizations of a tree]{#tree-characterizations}
-The following are all equivalent characterizations of a tree on $n = |V|$ vertices (any one of them implies the rest):
-
-- Connected and acyclic.
-- Connected with exactly $n - 1$ edges.
-- Acyclic with exactly $n - 1$ edges.
-- Any two vertices are joined by exactly one path.
-- Connected and every edge is a bridge (removing any edge disconnects it).
-- Acyclic, and adding any single new edge creates exactly one cycle.
+:::figure[A tree on seven vertices. It has six edges, its three leaves are marked, and between any two vertices there is exactly one path.]{#tree-figure}
+{
+  "type": "plot",
+  "x": [-0.6, 6.6], "y": [-0.6, 3.9],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "path", "points": [[3, 3], [1, 2]] },
+    { "kind": "path", "points": [[3, 3], [5, 2]] },
+    { "kind": "path", "points": [[1, 2], [0, 1]] },
+    { "kind": "path", "points": [[1, 2], [2, 1]] },
+    { "kind": "path", "points": [[5, 2], [5, 1]] },
+    { "kind": "path", "points": [[5, 1], [5, 0]] },
+    { "kind": "point", "at": [3, 3], "tone": "accent" },
+    { "kind": "point", "at": [1, 2], "tone": "accent" },
+    { "kind": "point", "at": [5, 2], "tone": "accent" },
+    { "kind": "point", "at": [5, 1], "tone": "accent" },
+    { "kind": "point", "at": [0, 1], "tone": "result" },
+    { "kind": "point", "at": [2, 1], "tone": "result" },
+    { "kind": "point", "at": [5, 0], "tone": "result" },
+    { "kind": "text", "at": [3, 3.55], "text": "root r" },
+    { "kind": "text", "at": [0.1, 0.4], "text": "leaf", "leaderTo": [0, 1] },
+    { "kind": "text", "at": [2.4, 0.4], "text": "leaf", "leaderTo": [2, 1] },
+    { "kind": "text", "at": [6.0, 0.15], "text": "leaf", "leaderTo": [5, 0] }
+  ]
+}
 :::
 
-(Note that "connected" and "$n-1$ edges" together already force acyclicity — you need *both* halves; a graph can have $n-1$ edges and still be disconnected with a cycle in it.)
+Calling one vertex the root is a convenience and not part of the definition: a tree has no distinguished vertex until you choose one, at which point every other vertex acquires a depth and a parent, and the familiar file-system picture appears.
 
-:::definition[Forest]{#forest}
-A **forest** is an acyclic graph, i.e. a disjoint union of trees.
-:::
+:::theorem[Characterisations of a tree]{#tree-characterisations}
+Let $G$ be a graph on $n \ge 1$ vertices. The following are equivalent.
 
-:::proposition[Edge count of a forest]{#forest-edges}
-For a forest with $c$ components,
-
-$$|E| = |V| - c.$$
+1. $G$ is connected and acyclic, that is, $G$ is a tree.
+2. Between any two vertices of $G$ there is exactly one path.
+3. $G$ is connected and has $n - 1$ edges.
+4. $G$ is acyclic and has $n - 1$ edges.
 :::
 
 :::proof
-Each of the $c$ tree components on $v_i$ vertices has $v_i - 1$ edges, and summing over components gives $\sum_i (v_i - 1) = |V| - c$.
+We prove $1 \Rightarrow 2 \Rightarrow 3 \Rightarrow 4 \Rightarrow 1$, which establishes all the equivalences by composing implications around the cycle.
+
+**$1 \Rightarrow 2$.** Let $u, v$ be vertices. Connectedness gives a walk from $u$ to $v$, and the lemma *Every walk contains a path* upgrades it to a path, so at least one path exists. Suppose $P$ and $Q$ were two different paths from $u$ to $v$. Since they differ, there is a first index $i$ at which they diverge; let $x$ be their last common vertex before diverging. After $x$ the two paths are distinct, and since both end at $v$ they must meet again; let $y$ be the first vertex after $x$ lying on both. The portion of $P$ from $x$ to $y$ and the portion of $Q$ from $x$ to $y$ share only their endpoints, and at least one of them has length at least $2$ since the two differ. Joining them gives a closed walk with no repeated vertex except at its ends and of length at least $3$ — a cycle, contradicting acyclicity. So the path is unique.
+
+**$2 \Rightarrow 3$.** Uniqueness implies existence, so $G$ is connected. We prove the edge count by induction on $n$. For $n = 1$ there are no edges, and $n - 1 = 0$. Suppose the claim holds for all graphs on fewer than $n$ vertices satisfying (2), and let $G$ satisfy it on $n \ge 2$ vertices. Take any edge $uv$ and delete it, obtaining $G'$. Then $G'$ has no $u$–$v$ path: such a path together with the edge $uv$ would give a second $u$–$v$ path in $G$, contradicting uniqueness. So $G'$ splits into exactly two components, $G_1$ containing $u$ and $G_2$ containing $v$ — exactly two, because every vertex of $G$ reaches $u$ or $v$ in $G'$ along its unique path to $u$ with the edge $uv$ removed. Each $G_i$ inherits property (2), since paths inside a component of $G'$ are paths of $G$. If $G_1$ and $G_2$ have $n_1$ and $n_2$ vertices, with $n_1 + n_2 = n$, the inductive hypothesis gives them $n_1 - 1$ and $n_2 - 1$ edges, so
+
+$$m = (n_1 - 1) + (n_2 - 1) + 1 = n - 1.$$
+
+**$3 \Rightarrow 4$.** Let $G$ be connected with $n-1$ edges; we must show it is acyclic. Suppose it contains a cycle $C$ and delete one edge $e$ of $C$. Deleting an edge of a cycle cannot disconnect the graph: any walk that used $e$ can instead go the other way around $C$. So $G - e$ is connected on $n$ vertices with $n - 2$ edges. Repeating, we may keep deleting edges of cycles while any cycle remains; the process stops, since the edge count strictly decreases, and leaves a connected acyclic graph — a tree — on $n$ vertices with fewer than $n-1$ edges. But $1 \Rightarrow 2 \Rightarrow 3$, already proved, says every tree on $n$ vertices has exactly $n-1$ edges. This contradiction shows no cycle existed.
+
+**$4 \Rightarrow 1$.** Let $G$ be acyclic with $n - 1$ edges, and let its components be $H_1, \dots, H_c$ with $n_i$ vertices each. Each $H_i$ is connected and acyclic, hence a tree, hence has $n_i - 1$ edges by the implications already proved. Summing,
+
+$$n - 1 = m = \sum_{i=1}^{c} (n_i - 1) = n - c,$$
+
+so $c = 1$ and $G$ is connected. Being also acyclic, it is a tree.
 :::
-
-A single tree is the special case $c = 1$, recovering $|E| = |V| - 1$.
-
-Trees are the minimal connected graphs: they have the fewest edges possible while staying connected, and they are exactly the graphs in which every pair of vertices has a *unique* connecting path.
-
-**Applications**: spanning trees in networks, Huffman coding trees, parse trees, decision trees, minimum spanning trees (Kruskal/Prim).
 
 :::intuition
-A tree is a family tree or a river system with no loops: from root you reach every leaf by one unique route; no way to go in a circle.
-
-If you have n people in a connected organization with n-1 "reports-to" links and no cycles, it is a tree (hierarchy).
+Read the theorem as a budget. To connect $n$ vertices you must spend at least $n-1$ edges, because each edge can reduce the number of components by at most one. Spend exactly $n-1$ and you have no slack: every edge is load-bearing, there is no alternative route anywhere, and any extra edge would create a cycle. A tree is connectivity bought at the minimum price.
 :::
 
-### Worked Examples
+:::corollary[Forests]{#forest-edges}
+A forest on $n$ vertices with $c$ components has exactly $n - c$ edges.
+:::
 
-:::example
-Edges in a tree, and what adding one edge does.
+:::proof
+Each component is connected and acyclic, hence a tree, so by the theorem *Characterisations of a tree* a component with $n_i$ vertices has $n_i - 1$ edges. Summing over the $c$ components gives $\sum (n_i - 1) = n - c$.
+:::
+
+:::proposition[Every tree has at least two leaves]{#two-leaves}
+Every tree with at least two vertices has at least two leaves.
+:::
+
+:::proof
+Let $T$ be such a tree. It has an edge, since it is connected with $n \ge 2$, so it has a path of positive length; among all paths choose one of maximum length, say $P = w_0, w_1, \dots, w_k$ with $k \ge 1$.
+
+We claim $w_0$ is a leaf. It has the neighbour $w_1$, so $\deg(w_0) \ge 1$. Suppose it had another neighbour $x \neq w_1$. If $x$ is not on $P$ then $x, w_0, \dots, w_k$ is a longer path, contradicting maximality. If $x = w_i$ for some $i \ge 2$, then $w_0, \dots, w_i, w_0$ is a cycle, contradicting acyclicity. So $\deg(w_0) = 1$.
+
+The same argument applied to the other end shows $\deg(w_k) = 1$, and $w_0 \neq w_k$ because $k \ge 1$ and $P$ is a path. Hence $T$ has at least two leaves.
+:::
+
+:::example[Degrees in a tree]
+A tree has $10$ vertices, of which one has degree $4$, one has degree $3$, and two have degree $2$. How many leaves does it have?
 :::
 
 :::solution
-1. A tree on $7$ vertices has $|E| = |V| - 1 = 7 - 1 = 6$ edges.
-2. Now add one more edge between two existing vertices $u$ and $v$. Before adding it, the tree already had a unique path $P$ from $u$ to $v$. The new edge $\{u, v\}$ together with $P$ forms a closed loop — exactly one new cycle. No other cycle can appear, because everywhere else the graph is still a tree. So a tree plus one edge always has exactly one cycle. Sanity check: the new graph has $7$ edges and $7$ vertices; a connected graph with $|E| = |V|$ has exactly $|E| - (|V| - 1) = 1$ independent cycle, consistent with what we found.
+1. By the theorem *Characterisations of a tree*, the tree has $10 - 1 = 9$ edges, so by the theorem *Handshake lemma* the degrees sum to $18$.
+2. The four listed vertices account for $4 + 3 + 2 + 2 = 11$, leaving $18 - 11 = 7$ to be shared among the remaining $10 - 4 = 6$ vertices.
+3. Every vertex of a tree with $n\ge 2$ has degree at least $1$, so six vertices with degree sum $7$ means five of degree $1$ and one of degree $2$.
+4. Hence there are $5$ leaves.
 :::
 
-:::example
-Cayley's formula.
+:::proposition[Edges of a tree are critical]{#tree-edge-critical}
+Let $T$ be a tree. Deleting any edge disconnects it, and adding any new edge between two existing vertices creates exactly one cycle.
+:::
+
+:::proof
+For deletion, let $e = uv$ be an edge and suppose $T - e$ were connected. Then it contains a $u$–$v$ path $P$, which avoids $e$, and $P$ together with $e$ forms a cycle in $T$, contradicting acyclicity. So $T - e$ is disconnected.
+
+For addition, let $u, v$ be non-adjacent vertices of $T$. By the theorem *Characterisations of a tree* there is exactly one $u$–$v$ path $P$ in $T$, and $P$ together with the new edge $uv$ is a cycle. Conversely any cycle in $T + uv$ must use the new edge, since $T$ itself is acyclic, and removing that edge from the cycle leaves a $u$–$v$ path in $T$ — which is $P$, by uniqueness. So the cycle is $P + uv$, and there is exactly one.
+:::
+
+:::definition[Spanning tree]{#spanning-tree}
+A **spanning tree** of a connected graph $G$ is a subgraph which is a tree and contains every vertex of $G$.
+:::
+
+:::theorem[Every connected graph has a spanning tree]{#spanning-tree-exists}
+Every connected graph $G$ contains a spanning tree.
+:::
+
+:::proof
+Among all connected spanning subgraphs of $G$ — subgraphs containing every vertex and connected — choose one, call it $H$, with as few edges as possible. At least one such subgraph exists, namely $G$ itself, and the number of edges is a non-negative integer, so a minimum is attained.
+
+We claim $H$ is acyclic. If $H$ contained a cycle $C$, delete an edge $e$ of $C$. Any walk in $H$ using $e$ can be rerouted the other way round $C$, so $H - e$ is still connected and still spans, and it has fewer edges than $H$ — contradicting minimality.
+
+So $H$ is a connected acyclic spanning subgraph, that is, a spanning tree of $G$.
+:::
+
+The proof is a specification for an algorithm rather than an efficient algorithm itself; in practice one grows a spanning tree outwards with breadth-first or depth-first search in time proportional to $n + m$. When the edges carry weights and one wants the cheapest spanning tree, the relevant algorithms are Kruskal's and Prim's, developed in *Combinatorial Optimization*.
+
+:::corollary[Edge count of a connected graph]{#connected-edge-count}
+Every connected graph on $n$ vertices has at least $n-1$ edges.
+:::
+
+:::proof
+By the theorem *Every connected graph has a spanning tree* it contains a spanning tree, which has $n$ vertices and therefore $n-1$ edges by the theorem *Characterisations of a tree*. Those edges are edges of $G$, so $m \ge n-1$.
+:::
+
+:::note
+How many trees are there on a labelled vertex set? Cayley's formula answers it: the number of trees on $n$ labelled vertices is $n^{n-2}$, so there are $16$ trees on $4$ vertices and $125$ on $5$. The result is proved by the Prüfer correspondence, a bijection with the sequences of length $n-2$ over an alphabet of size $n$; it is developed in *Graph Combinatorics*, and used here only as a fact to compute with.
+:::
+
+:::example[Counting trees and spanning trees]
+How many labelled trees are there on $6$ vertices? How many spanning trees does $C_6$, the cycle on $6$ vertices, have?
 :::
 
 :::solution
-Cayley's formula states that the number of distinct *labeled* trees on $n$ vertices is $n^{\,n-2}$. Equivalently, it counts the spanning trees of the complete graph $K_n$. For $n = 4$:
-
-$$
-n^{\,n-2} = 4^{\,4-2} = 4^{2} = 16.
-$$
-
-So there are $16$ labeled spanning trees on $K_4$. (This counts trees whose vertices carry distinct labels; the number of *unlabeled* tree shapes on $4$ vertices is only $2$ — the "path" and the "star".) Sanity check for a smaller case: $n = 3$ gives $3^{1} = 3$, and indeed the three labeled trees on $\{1,2,3\}$ are the three paths $1\text{–}2\text{–}3$, $1\text{–}3\text{–}2$, and $2\text{–}1\text{–}3$.
+1. By Cayley's formula the number of labelled trees on $6$ vertices is $6^{4} = 1296$.
+2. A spanning tree of $C_6$ has $6$ vertices, so $5$ edges, and $C_6$ has $6$ edges: a spanning subgraph with $5$ of them is obtained by deleting exactly one edge.
+3. Deleting any single edge of a cycle leaves a path, which is connected and acyclic, hence a tree. All $6$ choices work and they give distinct subgraphs, so $C_6$ has $6$ spanning trees.
 :::
 
-## Bipartite Graphs
+## Bipartite graphs and odd cycles
 
 <!-- section: bipartite -->
 
+Many graphs come with a natural two-sided structure: students and courses, jobs and machines, applicants and posts. Edges run only between the sides, never inside one. Such graphs are called bipartite, and the striking fact of this section is that this apparently structural property has a purely local characterisation in terms of cycle lengths — and one that an algorithm can check in linear time.
+
 :::definition[Bipartite graph]{#bipartite}
-A graph is **bipartite** if its vertices can be partitioned into two sets $L$ and $R$ such that every edge goes between $L$ and $R$ (no edges inside $L$ and none inside $R$). Each side is an *independent set*: a set of vertices with no edges among them.
+A graph $G = (V,E)$ is **bipartite** if its vertex set can be partitioned as $V = X \cup Y$ with $X \cap Y = \varnothing$ so that every edge has one endpoint in $X$ and one in $Y$. The pair $(X, Y)$ is a **bipartition** and $X, Y$ are the **parts**. The **complete bipartite graph** $K_{s,t}$ has parts of sizes $s$ and $t$ with every cross pair joined.
 :::
 
-:::theorem[Characterizations of bipartite graphs]{#bipartite-characterization}
-A graph is bipartite if and only if it is:
+Equivalently, $G$ is bipartite exactly when its vertices can be coloured with two colours so that no edge joins two vertices of the same colour: take $X$ to be the vertices of one colour. That reformulation is the one an algorithm implements, and it is the reason bipartiteness is also called **$2$-colourability**.
 
-- **2-colorable** — you can color each vertex red or blue so that no edge joins two same-colored vertices (put reds in $L$, blues in $R$);
-- **free of odd-length cycles** — it contains no cycle with an odd number of edges.
+:::proposition[Size of a complete bipartite graph]{#kmn-edges}
+$K_{s,t}$ has $s + t$ vertices and $st$ edges. Every vertex of the part of size $s$ has degree $t$, and every vertex of the other part has degree $s$.
 :::
 
 :::proof
-Walking along any path, the color must flip red/blue/red/blue at each step. To return to your starting vertex on a cycle you must take an even number of flips to land back on the original color — so every cycle in a bipartite graph has even length, and conversely no odd cycle can be 2-colored.
+An edge is determined by choosing one endpoint from the part of size $s$ and one from the part of size $t$, independently, so there are $st$ edges. A vertex in the first part is joined to every vertex of the second and to none of the first, so its degree is $t$; symmetrically for the other part.
+
+As a check, the degree sum is $st + ts = 2st$, which is twice the edge count, as the theorem *Handshake lemma* requires.
 :::
 
-The odd-cycle condition is the useful test in practice.
-
-:::definition[Complete bipartite graph]{#complete-bipartite}
-The complete bipartite graph $K_{m,n}$ has parts of size $m$ and $n$ with all possible cross edges present, giving $m \times n$ edges.
+:::figure[Left: a bipartite graph drawn with its two parts in columns, so every edge crosses between them. Right: the $5$-cycle, whose vertices cannot be two-coloured because its length is odd.]{#bipartite-figure}
+{
+  "type": "plot",
+  "x": [0, 9.6], "y": [0, 5],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "path", "points": [[1, 4], [3, 2.8]] },
+    { "kind": "path", "points": [[1, 4], [3, 1.6]] },
+    { "kind": "path", "points": [[1, 2.8], [3, 4]] },
+    { "kind": "path", "points": [[1, 2.8], [3, 1.6]] },
+    { "kind": "path", "points": [[1, 1.6], [3, 4]] },
+    { "kind": "point", "at": [1, 4], "tone": "accent" },
+    { "kind": "point", "at": [1, 2.8], "tone": "accent" },
+    { "kind": "point", "at": [1, 1.6], "tone": "accent" },
+    { "kind": "point", "at": [3, 4], "tone": "alt" },
+    { "kind": "point", "at": [3, 2.8], "tone": "alt" },
+    { "kind": "point", "at": [3, 1.6], "tone": "alt" },
+    { "kind": "text", "at": [1, 4.6], "text": "X" },
+    { "kind": "text", "at": [3, 4.6], "text": "Y" },
+    { "kind": "text", "at": [2, 0.7], "text": "2-colourable" },
+    { "kind": "path", "points": [[7.0, 4.1], [5.763, 3.202]] },
+    { "kind": "path", "points": [[5.763, 3.202], [6.236, 1.563]] },
+    { "kind": "path", "points": [[6.236, 1.563], [7.764, 1.563]] },
+    { "kind": "path", "points": [[7.764, 1.563], [8.237, 3.202]] },
+    { "kind": "path", "points": [[8.237, 3.202], [7.0, 4.1]] },
+    { "kind": "point", "at": [7.0, 4.1], "tone": "accent" },
+    { "kind": "point", "at": [5.763, 3.202], "tone": "alt" },
+    { "kind": "point", "at": [6.236, 1.563], "tone": "accent" },
+    { "kind": "point", "at": [7.764, 1.563], "tone": "alt" },
+    { "kind": "point", "at": [8.237, 3.202], "tone": "result" },
+    { "kind": "text", "at": [7.0, 4.6], "text": "C5" },
+    { "kind": "text", "at": [7.0, 0.7], "text": "not 2-colourable" }
+  ]
+}
 :::
 
-Bipartite graphs model matching problems (jobs to workers, Hall's marriage theorem), scheduling with two groups, and any "two kinds of things" relationship.
+Walk round the $5$-cycle alternating the two colours. After five steps you are back where you started but you have changed colour an odd number of times, so the start vertex would need both colours. The vertex drawn in a third tone is where the attempt breaks down. The next theorem says that this obstruction is the *only* one.
 
-:::intuition
-Bipartite: two teams, only play matches between teams, never inside a team. Like boys vs girls in a dance, or one side suppliers and other side consumers.
-
-Odd cycle would force a color conflict (triangle can't be 2-colored).
+:::theorem[Bipartite if and only if no odd cycle]{#bipartite-odd-cycle}
+A graph $G$ is bipartite if and only if it contains no cycle of odd length.
 :::
 
-### Worked Examples
+:::proof
+**($\Rightarrow$) A bipartite graph has no odd cycle.** Let $(X, Y)$ be a bipartition and let $w_0, w_1, \dots, w_k = w_0$ be a cycle. Every edge crosses between the parts, so consecutive vertices of the cycle lie in different parts: the sequence alternates $X, Y, X, Y, \dots$. Hence $w_i$ lies in the same part as $w_0$ exactly when $i$ is even. Taking $i = k$ and using $w_k = w_0$ forces $k$ to be even. So every cycle, in fact every closed walk, has even length.
 
-:::example
-Is $C_4$ bipartite?
+**($\Leftarrow$) A graph with no odd cycle is bipartite.** It suffices to prove this for a connected graph, since a graph is bipartite exactly when each of its components is: two-colour the components independently and take the unions of the colour classes.
+
+So assume $G$ is connected and has no odd cycle. Fix a vertex $r$ and colour every vertex by the parity of its distance from $r$:
+
+$$X = \{v : d(r,v) \text{ is even}\}, \qquad Y = \{v : d(r,v) \text{ is odd}\}.$$
+
+Every vertex receives exactly one colour, since $G$ is connected and so $d(r,v)$ is a finite integer. We must show no edge joins two vertices of the same class.
+
+Suppose $uv \in E$ with $d(r,u)$ and $d(r,v)$ of the same parity. Let $P$ be a shortest $r$–$u$ path and $Q$ a shortest $r$–$v$ path, of lengths $a$ and $b$ with $a \equiv b \pmod 2$. Let $x$ be the last vertex lying on both $P$ and $Q$; such a vertex exists because both start at $r$. Write $a'$ for the length of the portion of $P$ from $x$ to $u$, and $b'$ for the portion of $Q$ from $x$ to $v$.
+
+A shortest path's initial segments are themselves shortest paths, so the portions of $P$ and of $Q$ from $r$ to $x$ both have length $d(r,x)$; call it $c$. Then $a = c + a'$ and $b = c + b'$, so
+
+$$a' + b' = (a - c) + (b - c) = a + b - 2c,$$
+
+which is even because $a \equiv b \pmod 2$. Now assemble the closed walk consisting of the portion of $P$ from $x$ to $u$, then the edge $uv$, then the portion of $Q$ from $v$ back to $x$. Its length is $a' + b' + 1$, which is odd.
+
+Is it a cycle? The two portions meet only at $x$, by the choice of $x$ as the *last* common vertex, and each is a path. The vertices $u$ and $v$ are distinct since $uv$ is an edge of a simple graph. So the closed walk has no repeated vertex apart from its endpoint, and its length is odd and at least $3$ — it cannot be $1$, which would be a loop. That is an odd cycle, contradicting the hypothesis.
+
+Hence no edge joins two vertices of the same class, and $(X, Y)$ is a bipartition.
+:::
+
+The hard direction is not just an existence proof; it is an algorithm. Run breadth-first search from $r$, which computes $d(r,v)$ for every $v$ in time proportional to $n + m$, and colour each vertex by the parity of its layer. Then scan every edge once. If no edge joins two vertices of the same colour, the colouring is a valid bipartition; if some edge does, the proof run backwards produces an explicit odd cycle, which is a *certificate* that no bipartition exists. Either way the algorithm answers in linear time and hands back evidence. Very few graph properties are this well behaved.
+
+:::example[Testing bipartiteness by BFS]
+Let $G$ have vertices $1, \dots, 6$ and edges $12, 23, 34, 45, 56, 61, 14$. Is it bipartite?
 :::
 
 :::solution
-1. Label the square $1\text{–}2\text{–}3\text{–}4\text{–}1$ and try to 2-color it. Color $1$ red. Its neighbours $2$ and $4$ must be blue. The last vertex $3$ is adjacent to $2$ and $4$ (both blue), so color it red. Check the closing edge $\{4, 1\}$: blue–red, no conflict. A valid coloring exists, so $C_4$ **is** bipartite, with parts $L = \{1, 3\}$ and $R = \{2, 4\}$. This matches the rule: $C_4$ has length $4$, an even cycle.
+1. The first six edges form the cycle $1,2,3,4,5,6,1$, which is even, so it alone is no obstruction. The chord $14$ is the question.
+2. Run the distance colouring from $r = 1$: $d(1,1) = 0$, $d(1,2) = 1$, $d(1,6) = 1$, $d(1,4) = 1$ via the chord, $d(1,3) = 2$, $d(1,5) = 2$.
+3. Colour by parity: $X = \{1, 3, 5\}$ and $Y = \{2, 4, 6\}$. Check every edge: $12, 23, 34, 45, 56, 61$ all cross, and so does $14$.
+4. No edge lies inside a part, so $G$ is bipartite with bipartition $(\{1,3,5\}, \{2,4,6\})$. Equivalently, every cycle of $G$ — the $6$-cycle and the two $4$-cycles created by the chord — is even.
 :::
 
-:::example
-Is $C_5$ bipartite?
-:::
-
-:::solution
-1. Label the pentagon $1\text{–}2\text{–}3\text{–}4\text{–}5\text{–}1$ and try the same. Color $1$ red $\Rightarrow$ $2$ blue $\Rightarrow$ $3$ red $\Rightarrow$ $4$ blue $\Rightarrow$ $5$ red. Now check the closing edge $\{5, 1\}$: both are red — a conflict. No 2-coloring can work, so $C_5$ is **not** bipartite. This matches the rule: $C_5$ has length $5$, an odd cycle, and odd cycles are never bipartite.
-:::
-
-:::example
-Counting edges of a complete bipartite graph.
+:::example[Finding the odd cycle]
+The graph on $\{1,\dots,5\}$ with edges $12, 23, 34, 45, 51, 13$ is not bipartite. Exhibit an odd cycle.
 :::
 
 :::solution
-1. $K_{3,4}$ has parts of sizes $3$ and $4$. Every one of the $3$ vertices on the left connects to all $4$ on the right, giving $3 \times 4 = 12$ edges. Note $K_{3,3}$ (the "utility graph") is bipartite but famously non-planar — bipartite does not mean simple to draw without crossings.
+1. Colour from $r = 1$: $d(1,2) = 1$, $d(1,5) = 1$, $d(1,3) = 1$ via the chord, $d(1,4) = 2$.
+2. So $X = \{1,4\}$ and $Y = \{2,3,5\}$. The edge $23$ lies inside $Y$, so the colouring fails, and the theorem *Bipartite if and only if no odd cycle* says an odd cycle must be nearby.
+3. Following the proof: shortest paths $1,2$ and $1,3$ meet last at $x = 1$, so the closed walk is $1, 2, 3, 1$ — the triangle $123$, of length $3$.
+4. That odd cycle certifies that no bipartition exists.
 :::
 
-## Eulerian Paths and Circuits
+:::corollary[Trees are bipartite]{#trees-bipartite}
+Every tree, and more generally every forest, is bipartite.
+:::
+
+:::proof
+A tree is acyclic, so it contains no cycle at all, in particular no odd cycle. By the theorem *Bipartite if and only if no odd cycle* it is bipartite. The same argument applies to a forest.
+:::
+
+:::proposition[Edge bound for bipartite graphs]{#bipartite-edge-bound}
+A bipartite simple graph on $n$ vertices has at most $\lfloor n^2/4 \rfloor$ edges.
+:::
+
+:::proof
+Let $(X, Y)$ be a bipartition with $|X| = s$ and $|Y| = n - s$. Every edge joins a vertex of $X$ to a vertex of $Y$, and no such pair carries two edges, so
+
+$$m \le s(n-s).$$
+
+The function $s \mapsto s(n-s)$ is a downward parabola in $s$ with maximum at $s = n/2$. If $n$ is even this gives $n^2/4$; if $n$ is odd the nearest integers are $s = (n\pm1)/2$, giving $\tfrac{n-1}{2}\cdot\tfrac{n+1}{2} = \tfrac{n^2-1}{4}$. In both cases the value is $\lfloor n^2/4 \rfloor$.
+:::
+
+:::remark
+Compare this with the proposition *Maximum number of edges*: a general graph on $n$ vertices can have about $n^2/2$ edges, a bipartite one only about $n^2/4$. Forbidding odd cycles costs half the edges. Asking the same question for other forbidden subgraphs is the subject of extremal graph theory, and the triangle-free case of this bound is Mantel's theorem, proved in *Graph Combinatorics*.
+:::
+
+:::definition[Proper colouring and chromatic number]{#chromatic}
+A **proper colouring** of $G$ assigns a colour to each vertex so that adjacent vertices differ. The **chromatic number** $\chi(G)$ is the least number of colours in a proper colouring.
+:::
+
+:::proposition[Chromatic number two]{#chi-two}
+For a graph $G$ with at least one edge, $\chi(G) = 2$ if and only if $G$ is bipartite. Moreover $\chi(K_n) = n$ and $\chi(C_k) = 3$ for odd $k \ge 3$.
+:::
+
+:::proof
+A proper colouring with two colours is exactly a bipartition, with the colour classes as the parts, so $\chi(G) \le 2$ if and only if $G$ is bipartite. Since $G$ has an edge, one colour will not do, so $\chi(G) = 2$ precisely for bipartite $G$.
+
+In $K_n$ every two vertices are adjacent, so all $n$ colours must differ, and $n$ colours suffice; hence $\chi(K_n) = n$. An odd cycle is not bipartite by the theorem *Bipartite if and only if no odd cycle*, so it needs at least $3$ colours; and $3$ suffice — alternate two colours round the cycle and give the last vertex the third.
+:::
+
+:::example[Chromatic numbers of small graphs]
+Compute $\chi(C_8)$, $\chi(K_{3,4})$ and $\chi(K_4)$.
+:::
+
+:::solution
+1. $C_8$ is an even cycle, so it contains no odd cycle and is bipartite; having an edge, $\chi(C_8) = 2$.
+2. $K_{3,4}$ is bipartite by construction and has edges, so $\chi(K_{3,4}) = 2$ — the number of colours does not grow with the size of the parts.
+3. $\chi(K_4) = 4$, since all four vertices are mutually adjacent.
+:::
+
+## Eulerian circuits, Königsberg and the Hamiltonian contrast
 
 <!-- section: eulerian -->
 
-:::definition[Eulerian path and circuit]{#eulerian}
-An **Eulerian path** visits every edge exactly once (it may start and end at different vertices). An **Eulerian circuit** (or tour) is a closed Eulerian path — it starts and ends at the same vertex.
+In 1736 Euler was asked whether the citizens of Königsberg could walk through the town crossing each of its seven bridges exactly once and returning home. He answered no, and in explaining why he invented graph theory: the shapes and sizes of the land masses are irrelevant, only the pattern of connections matters. What he proved is stronger than the answer to the puzzle — it is a complete characterisation, valid for every graph.
+
+:::definition[Eulerian trail and circuit]{#eulerian}
+An **Eulerian trail** in a graph is a trail that uses every edge exactly once. An **Eulerian circuit** is a closed Eulerian trail. A graph possessing an Eulerian circuit is called **Eulerian**.
 :::
 
-:::theorem[Euler's traversability criterion]{#euler-criterion}
-For an **undirected, connected graph** (ignoring isolated vertices, which have no edges to traverse):
+Note that it is *edges* that must be used once; vertices may be revisited freely, which is what makes the problem tractable. Isolated vertices are a nuisance in the statement rather than in the substance, so we require connectedness of the part of the graph that carries edges.
 
-- An Eulerian **circuit** exists $\iff$ every vertex has even degree.
-- An Eulerian **path** exists $\iff$ exactly zero or exactly two vertices have odd degree. If there are two, they must be the start and the end.
+:::theorem[Euler's theorem]{#euler-theorem}
+Let $G$ be a connected multigraph with at least one edge. Then $G$ has an Eulerian circuit if and only if every vertex has even degree.
 :::
 
 :::proof
-The degree conditions come from a simple counting idea: every time your traversal passes *through* a vertex it enters on one edge and leaves on another, consuming edges in pairs. So a vertex you pass through needs an even number of edge-ends. The only vertices allowed to have odd degree are the endpoints of an open path (where you use one edge to leave the start, or arrive at the finish, unpaired).
+**($\Rightarrow$) Necessity.** Suppose $C$ is an Eulerian circuit, and fix a vertex $v$. Traverse $C$ and look at the moments it visits $v$. Each visit to $v$ that is not the start or the finish uses one edge to arrive and a different one to leave, consuming two edges at $v$; the start uses one edge to leave and the finish one edge to arrive, and since $C$ is closed these two also pair up into a single arrival-and-departure at the same vertex. So the edges at $v$ are partitioned into pairs, and $\deg(v)$ is even. No edge at $v$ is missed, because $C$ uses every edge, and none is counted twice, because $C$ is a trail.
+
+**($\Leftarrow$) Sufficiency.** Assume $G$ is connected with every degree even. We first show that any trail can be extended or closed.
+
+*Claim:* a trail starting at a vertex $u$ and currently at a vertex $w \neq u$ can always be extended. Indeed, the edges at $w$ used so far consist of one arrival for each visit and one departure for each departure; since $w$ is not the start, the visits and departures so far pair up except for the final arrival, so an odd number of edges at $w$ has been used. As $\deg(w)$ is even, an unused edge at $w$ remains, and the trail can step along it.
+
+Therefore a trail that cannot be extended must end where it started: every *maximal* trail is closed.
+
+Now argue by strong induction on the number of edges $m$. Start anywhere and walk without repeating edges until stuck; by the claim the resulting trail $C_1$ is a closed trail. Remove its edges from $G$, leaving a graph $H$. Every vertex of $H$ has even degree, because $C_1$ removed an even number of edges at each vertex — again by the pairing argument, applied to the closed trail $C_1$.
+
+If $H$ has no edges, $C_1$ used them all and is an Eulerian circuit. Otherwise consider a component $H'$ of $H$ containing an edge. Since $G$ is connected, $H'$ must share a vertex $z$ with $C_1$: otherwise no edge of $G$ would join $H'$ to the rest, contradicting connectedness of $G$. The component $H'$ is connected, has all degrees even and has fewer edges than $G$, so by the inductive hypothesis it has an Eulerian circuit $C'$, which we may start and end at $z$.
+
+**Splice**: traverse $C_1$ from its start until it first reaches $z$, then traverse the whole of $C'$, returning to $z$, then finish $C_1$. The result is a closed trail — no edge repeats, since $C_1$ and $C'$ are edge-disjoint — using every edge of $C_1$ and of $H'$. Repeat the splice for each component of $H$ carrying edges; each splice strictly increases the number of edges used, so the process terminates with a closed trail using every edge of $G$, which is an Eulerian circuit.
 :::
-
-Connectedness matters: the conditions above assume all edges lie in one connected piece. A graph whose edges split into separate components cannot be traversed in one stroke no matter what the degrees are.
-
-For directed graphs the analogous conditions are on in-degree and out-degree: a circuit needs $\text{in}(v) = \text{out}(v)$ at every vertex; a path allows two exceptions — one vertex with $\text{out} - \text{in} = 1$ (start) and one with $\text{in} - \text{out} = 1$ (end).
-
-The classic Königsberg bridges problem (4 land areas, 7 bridges, all odd degrees) is the historical origin of Euler's theorem on traversability — the first famous application of graph theory (Euler 1736).
 
 :::intuition
-Eulerian tour: can you draw the entire figure without lifting your pencil and without retracing any line? Only possible if 0 or 2 "odd intersections".
-
-Each time you enter and leave a vertex you use two edges (even usage); start/end use one extra if open path.
+Even degree is a conservation law. Every time the walk enters a room it must leave again, so the doors of each room get used in pairs — except the room you start and finish in, where the first departure pairs with the last arrival. If some room has an odd number of doors, one door is left over, and the walk must either start there, finish there, or leave that door unused.
 :::
 
-### Worked Examples
+:::corollary[Eulerian trails]{#euler-trail}
+A connected multigraph with at least one edge has an Eulerian trail that is not closed if and only if exactly two of its vertices have odd degree. Such a trail must start at one of them and end at the other.
+:::
 
-:::example
-Classify by degrees.
+:::proof
+($\Rightarrow$) Suppose $T$ is an Eulerian trail from $u$ to $v$ with $u \neq v$. At every vertex other than $u$ and $v$ the pairing argument of the theorem *Euler's theorem* applies unchanged, so those degrees are even. At $u$ the edges pair up except the initial departure, so $\deg(u)$ is odd, and likewise $\deg(v)$ is odd. So exactly two vertices have odd degree.
+
+($\Leftarrow$) Suppose exactly $u$ and $v$ have odd degree. Add a new edge $e = uv$ to $G$, obtaining a multigraph $G'$ — a new parallel edge if $uv$ was already present, which is why multigraphs are the right setting. In $G'$ the degrees of $u$ and $v$ have each risen by one and are now even, all other degrees are unchanged and even, and $G'$ is connected. By the theorem *Euler's theorem*, $G'$ has an Eulerian circuit. Rotate it so that it begins by traversing $e$ from $v$ to $u$, then delete that first step. What remains is a trail from $u$ to $v$ using every edge of $G$ exactly once: an Eulerian trail.
+
+Finally, the first part shows the endpoints of any non-closed Eulerian trail are vertices of odd degree, and here the only two such are $u$ and $v$.
+:::
+
+:::corollary[The bridges of Königsberg]{#konigsberg}
+The seven bridges of Königsberg cannot be walked exactly once each on a single route, closed or not.
+:::
+
+:::proof
+Model the four land masses as vertices and the seven bridges as edges, giving the connected multigraph of the figure below. Its degrees are $5, 3, 3, 3$: the island meets five bridges and each of the other three land masses meets three.
+
+All four vertices have odd degree. Since not every degree is even, the theorem *Euler's theorem* rules out a closed route. Since the number of odd vertices is four rather than two, the corollary *Eulerian trails* rules out an open route as well. No such walk exists.
+:::
+
+:::figure[Königsberg as a multigraph: four land masses, seven bridges, and every vertex of odd degree. The labels give the degrees, and four odd degrees is two too many for any Eulerian trail.]{#konigsberg-figure}
+{
+  "type": "plot",
+  "x": [0, 4.6], "y": [0, 3.8],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "path", "points": [[2.0, 3.2], [1.971, 3.01], [1.928, 2.829], [1.869, 2.656], [1.795, 2.492], [1.706, 2.336], [1.602, 2.189], [1.483, 2.051], [1.349, 1.921], [1.2, 1.8]] },
+    { "kind": "path", "points": [[2.0, 3.2], [1.851, 3.079], [1.717, 2.949], [1.598, 2.811], [1.494, 2.664], [1.405, 2.508], [1.331, 2.344], [1.272, 2.171], [1.229, 1.99], [1.2, 1.8]] },
+    { "kind": "path", "points": [[2.0, 0.4], [1.971, 0.59], [1.928, 0.771], [1.869, 0.944], [1.795, 1.108], [1.706, 1.264], [1.602, 1.411], [1.483, 1.549], [1.349, 1.679], [1.2, 1.8]] },
+    { "kind": "path", "points": [[2.0, 0.4], [1.851, 0.521], [1.717, 0.651], [1.598, 0.789], [1.494, 0.936], [1.405, 1.092], [1.331, 1.256], [1.272, 1.429], [1.229, 1.61], [1.2, 1.8]] },
+    { "kind": "path", "points": [[1.2, 1.8], [3.2, 1.8]] },
+    { "kind": "path", "points": [[2.0, 3.2], [3.2, 1.8]] },
+    { "kind": "path", "points": [[2.0, 0.4], [3.2, 1.8]] },
+    { "kind": "point", "at": [1.2, 1.8], "tone": "result" },
+    { "kind": "point", "at": [2.0, 3.2], "tone": "accent" },
+    { "kind": "point", "at": [2.0, 0.4], "tone": "accent" },
+    { "kind": "point", "at": [3.2, 1.8], "tone": "accent" },
+    { "kind": "text", "at": [2.0, 3.62], "text": "N: 3" },
+    { "kind": "text", "at": [2.0, 0.12], "text": "S: 3" },
+    { "kind": "text", "at": [0.52, 1.8], "text": "I: 5", "leaderTo": [1.2, 1.8] },
+    { "kind": "text", "at": [4.05, 1.8], "text": "E: 3", "leaderTo": [3.2, 1.8] }
+  ]
+}
+:::
+
+:::example[Which of these can be drawn in one stroke?]
+Decide whether each has an Eulerian circuit, an Eulerian trail, or neither: (a) $K_5$; (b) $K_4$; (c) $K_{2,3}$; (d) the graph on $\{a,b,c,d\}$ with edges $ab, bc, cd, da, ac$.
 :::
 
 :::solution
-1. Take a connected graph whose vertex degrees are $2, 2, 2, 2, 4$. Count the odd-degree vertices: there are $0$ (every degree is even). By the rule, a connected graph with all even degrees has an **Eulerian circuit**. Sanity check via handshaking: degree sum $= 2+2+2+2+4 = 12 = 2|E|$, so $|E| = 6$ — a whole number, so the degree sequence is consistent.
-2. Now take a connected graph with degrees $1, 1, 2, 2, 2$. Exactly $2$ vertices are odd (the two of degree $1$). So it has an **Eulerian path** — which must start at one degree-$1$ vertex and end at the other — but **no circuit**, since not all degrees are even. Sanity check: degree sum $= 1+1+2+2+2 = 8 = 2|E|$, giving $|E| = 4$; and this is exactly a path graph on $5$ vertices, whose single stroke from one end to the other clearly uses each of its $4$ edges once.
+1. (a) $K_5$ is connected and $4$-regular by the corollary *Degrees in a complete graph*, so every degree is even and it has an Eulerian circuit.
+2. (b) $K_4$ is $3$-regular: four vertices of odd degree, so neither a circuit nor a trail.
+3. (c) $K_{2,3}$ has two vertices of degree $3$ and three of degree $2$, by the proposition *Size of a complete bipartite graph*. Exactly two odd vertices, so by the corollary *Eulerian trails* it has an Eulerian trail from one degree-$3$ vertex to the other, but no circuit.
+4. (d) The degrees are $\deg(a) = 3$, $\deg(b) = 2$, $\deg(c) = 3$, $\deg(d) = 2$. Exactly two odd vertices, $a$ and $c$, so there is an Eulerian trail from $a$ to $c$ — for instance $a,b,c,d,a,c$ — and no circuit.
 :::
 
-:::example
-Königsberg bridges (why it is impossible).
+:::example[When is a complete graph Eulerian?]
+For which $n \ge 3$ does $K_n$ have an Eulerian circuit?
 :::
 
 :::solution
-1. Model the four land masses as vertices and the seven bridges as edges. The degrees are $3, 3, 3, 5$. Count the odd-degree vertices: **all four** are odd. An Eulerian path needs at most $2$ odd-degree vertices, and a circuit needs $0$. With $4$ odd vertices there is neither an Eulerian path nor an Eulerian circuit — so no walk crosses every bridge exactly once. Sanity check with handshaking: $3+3+3+5 = 14 = 2 \times 7$, confirming the $7$ bridges. This is precisely Euler's 1736 conclusion.
+1. $K_n$ is connected, and every vertex has degree $n-1$ by the corollary *Degrees in a complete graph*.
+2. By the theorem *Euler's theorem* an Eulerian circuit exists exactly when $n - 1$ is even, that is, when $n$ is odd.
+3. So $K_3, K_5, K_7, \dots$ are Eulerian, while $K_4, K_6, \dots$ are not — and $K_4$, having four odd vertices, has no Eulerian trail either.
+:::
+
+:::definition[Hamiltonian path and cycle]{#hamiltonian}
+A **Hamiltonian path** in $G$ is a path passing through every vertex exactly once; a **Hamiltonian cycle** is a cycle doing the same. A graph with a Hamiltonian cycle is **Hamiltonian**.
+:::
+
+The two problems look like mirror images — every edge once, versus every vertex once — and it is natural to expect a matching theorem. There is none.
+
+:::remark
+No characterisation of Hamiltonian graphs comparable to Euler's theorem is known, and there is strong evidence that none exists: deciding whether a graph has a Hamiltonian cycle is **NP-complete**, one of Karp's original twenty-one problems. Euler's condition is checkable in time proportional to $n + m$, while the best known Hamiltonicity algorithms take exponential time in the worst case. What does exist is a supply of *sufficient* conditions — Dirac's theorem, that $\delta(G) \ge n/2$ with $n \ge 3$ forces a Hamiltonian cycle, and Ore's refinement — proved in *Graph Combinatorics*. None of them is necessary, and none of them settles the general case.
+:::
+
+:::example[Eulerian is not Hamiltonian]
+Give a graph that is Eulerian but not Hamiltonian, and one that is Hamiltonian but not Eulerian.
+:::
+
+:::solution
+1. Take two triangles sharing a single vertex — the "bowtie" on five vertices. Every degree is $2$, $2$, $4$, $2$, $2$, all even, and the graph is connected, so by the theorem *Euler's theorem* it is Eulerian. But any cycle through all five vertices would have to pass through the shared vertex twice, so it is not Hamiltonian.
+2. Take $C_4$ with one chord, on vertices $a,b,c,d$ with edges $ab, bc, cd, da, ac$. The cycle $a,b,c,d,a$ visits every vertex once, so it is Hamiltonian; but $\deg(a) = \deg(c) = 3$ are odd, so it is not Eulerian.
+3. The two properties are therefore independent: neither implies the other.
+:::
+
+:::pitfall
+"Every vertex has even degree" is not by itself enough. Two disjoint triangles have all degrees equal to $2$, yet no trail can cross from one triangle to the other, so there is no Eulerian circuit. Connectedness is a genuine hypothesis of the theorem *Euler's theorem*, not decoration.
 :::
 
 ## Common Mistakes
 
-- Confusing "path" (no repeated vertices) with "walk" or "trail" (repeated vertices ok, or edges).
-- Thinking trees can have cycles — by definition they cannot.
-- Forgetting that in undirected graphs a loop contributes 2 to degree in handshaking.
-- Claiming a graph with an odd cycle is bipartite (impossible).
-- Misremembering Euler conditions: all even for circuit; exactly 0 or 2 odd for path. More than 2 odds kills even a path.
-- Assuming every connected graph has a Hamiltonian cycle (false; deciding is hard).
-- Confusing |E| = |V|-1 for trees with forests (forests subtract number of components).
-- Drawing K_5 and claiming it is planar (it is not; Kuratowski's theorem).
-- Forgetting that multiple edges or loops change some definitions (degree, Euler etc.).
+**Confusing walks, trails and paths.** A walk may repeat anything; a trail repeats no edge; a path repeats no vertex. Euler's theorem is about trails, Hamiltonicity about paths, and reachability about walks. Stating the wrong one turns a true theorem into a false one.
+
+**Forgetting that the handshake lemma runs only one way.** An even degree sum is necessary for a graph to exist with a given degree sequence, never sufficient. Always exhibit a graph, or find a second obstruction, before claiming a sequence is realisable.
+
+**Counting each edge once in a degree sum.** The sum of degrees is $2m$, not $m$. The factor of two is the whole content of the theorem *Handshake lemma*, and dropping it is the single most common arithmetic slip in this chapter.
+
+**Assuming a connected graph with $n-1$ edges might still have a cycle.** By the theorem *Characterisations of a tree* it cannot: connected plus $n-1$ edges forces acyclicity, exactly as acyclic plus $n-1$ edges forces connectedness. Any two of the three conditions imply the third.
+
+**Thinking every cycle must be even for bipartiteness, and checking only the short ones.** Bipartiteness fails if *any* odd cycle exists anywhere in the graph, however long. Checking triangles is not enough; run the distance-parity colouring of the theorem *Bipartite if and only if no odd cycle*, which sees all cycles at once.
+
+**Treating a failed two-colouring as an inconclusive result.** If BFS from any root produces an edge inside a colour class, the graph is definitely not bipartite, and the proof extracts an explicit odd cycle as proof. A failure is a certificate, not a maybe.
+
+**Dropping connectedness from Euler's theorem.** All degrees even guarantees an Eulerian circuit only for a connected graph. Two disjoint even-degree components have none.
+
+**Expecting an Euler-style test for Hamiltonicity.** There is no known degree condition that is both necessary and sufficient, and the problem is NP-complete. Dirac's condition is sufficient only: a graph can be Hamiltonian with minimum degree $2$, as every cycle $C_n$ shows.
+
+**Confusing $K_n$ with $K_{s,t}$.** $K_n$ has $\binom{n}{2}$ edges and is complete; $K_{s,t}$ has $st$ edges and is bipartite. $K_4$ has $6$ edges, $K_{2,2}$ has $4$ and is a $4$-cycle.
+
+**Reading a drawing as the graph.** Two drawings that look different can be the same graph, and crossings in a drawing are an artefact of the drawing, not a property of the graph. Every claim must be checkable from $V$ and $E$ alone.
