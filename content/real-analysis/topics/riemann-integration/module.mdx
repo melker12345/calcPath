@@ -4,581 +4,1009 @@ title: Riemann Integration
 
 # Riemann Integration
 
-Riemann sums, the fundamental theorem of calculus, improper integrals, and Riemann–Stieltjes integration.
+Differentiation, developed in *Differentiation*, asks a local question: how fast is $f$ changing at a point? Integration asks a global one: what is the total accumulated effect of $f$ across an interval? The two questions look unrelated, and historically they were pursued separately for two thousand years — areas by exhaustion, tangents by algebra. The Fundamental Theorem of Calculus, proved twice over in this chapter, says they are inverse to one another, and that discovery is what turned a collection of clever area computations into a subject.
 
-The Riemann integral is the rigorous definition of the area under a curve as the limit of Riemann sums (upper and lower sums over partitions) as the mesh of the partition tends to zero.
+This chapter builds the integral the way Riemann and Darboux did: trap the region under a graph between rectangles that fit underneath and rectangles that cover, and declare the area to exist when the two estimates can be squeezed together. That definition is deliberately unambitious, and the first half of the chapter is an inventory of exactly what it can and cannot do. It handles every continuous function, every monotone function, and every bounded function whose discontinuities are sparse in a sense made precise by *Lebesgue's criterion*. It fails, flatly, on the indicator function of the rationals — and understanding *why* it fails is worth more than any number of successful computations, because that failure is the entire motivation for the Lebesgue theory in the next chapter.
 
-It is the integral used in elementary calculus; later the Lebesgue integral extends it to a much larger class of functions while preserving good limit theorems.
+The second half extends the integral in two directions the basic definition forbids. **Improper integrals** relax the requirements that the interval be bounded and the integrand be bounded, by integrating over a shrinking or growing family of honest intervals and taking a limit; the price is that convergence becomes a question in its own right, with tests that mirror the series tests of *Sequences and Series* almost word for word. **Riemann–Stieltjes integrals** replace the width $\Delta x$ of a subinterval with the increment $\alpha(x_i) - \alpha(x_{i-1})$ of a monotone weight function. That single change makes sums and integrals the same object: choose $\alpha$ to be a staircase and $\int f\,d\alpha$ *is* a sum, choose $\alpha(x)=x$ and it is the Riemann integral, and the theory covers both at once. Probability is the standard beneficiary, since $E[g(X)] = \int g\,dF$ holds whether $X$ is discrete, continuous, or neither.
 
-## Upper and Lower Sums; Partitions
+Throughout, $f$ is real-valued and $[a,b]$ is a closed bounded interval with $a<b$. Compactness of $[a,b]$, the Heine–Borel theorem, and the uniform continuity of a continuous function on a compact set are taken from *Limits and Continuity* and *Metric Spaces*; the Mean Value Theorem comes from *Differentiation*; the completeness of $\mathbb{R}$, in the form that every bounded set has a supremum, comes from *The Real Number System* and is used on almost every page.
+
+## Partitions, Upper Sums and Lower Sums
 
 <!-- section: upper-lower-sums -->
 
-:::definition[Partition, upper and lower sums]{#darboux-sums}
-A partition $P$ of $[a,b]$ is a finite increasing sequence $a = x_0 < x_1 < \cdots < x_n = b$. On each subinterval $[x_{i-1}, x_i]$ let $m_i = \inf f$ and $M_i = \sup f$. The lower and upper sums of $f$ over $P$ are
+The construction starts by refusing to define area directly. Instead it defines two approximations, one guaranteed too small and one guaranteed too large, and lets the definition of the integral be the statement that the gap between them closes.
 
-$$L(f,P) = \sum_i m_i \,\Delta x_i, \qquad U(f,P) = \sum_i M_i \,\Delta x_i.$$
+:::definition[Partition, refinement, and mesh]{#partition}
+A **partition** $P$ of $[a,b]$ is a finite set of points
+
+$$a = x_0 < x_1 < \cdots < x_n = b,$$
+
+and we write $\Delta x_i = x_i - x_{i-1}$ for the length of the $i$-th subinterval. The **mesh** of $P$ is $\|P\| = \max_i \Delta x_i$. A partition $P^*$ is a **refinement** of $P$ if $P \subseteq P^*$, that is, if $P^*$ is obtained from $P$ by adding finitely many new division points.
 :::
 
-:::definition[Riemann integral]{#riemann-integral}
-$f$ is Riemann integrable on $[a,b]$ if the supremum of $L(f,P)$ over all partitions equals the infimum of $U(f,P)$; that common value is the integral $\int_a^b f$.
+:::definition[Darboux sums]{#darboux-sums}
+Let $f$ be bounded on $[a,b]$ and let $P$ be a partition. On the $i$-th subinterval put
+
+$$m_i = \inf_{[x_{i-1},x_i]} f, \qquad M_i = \sup_{[x_{i-1},x_i]} f .$$
+
+The **lower sum** and **upper sum** of $f$ over $P$ are
+
+$$L(f,P) = \sum_{i=1}^{n} m_i\,\Delta x_i, \qquad U(f,P) = \sum_{i=1}^{n} M_i\,\Delta x_i .$$
 :::
 
-Every lower sum is at most every upper sum, so the two numbers being compared are always in the right order; integrability is the assertion that no gap is left between them.
+Boundedness is not a convenience here, it is what makes the definition legal: an unbounded $f$ has $M_i = +\infty$ on some subinterval and $U(f,P)$ is not a real number. This is why the Riemann integral is defined only for bounded functions on bounded intervals, and why every unbounded case in the second half of the chapter has to be reached by a limit rather than by the definition.
+
+Since $m_i \le M_i$ on each piece, $L(f,P) \le U(f,P)$ for every single partition $P$. What is not obvious — and is the technical heart of the construction — is that *every* lower sum is below *every* upper sum, even when the two partitions have nothing to do with each other. The route to that fact runs through refinement.
+
+:::lemma[Refinement narrows the bracket]{#refinement}
+If $P^*$ is a refinement of $P$, then
+
+$$L(f,P) \le L(f,P^*) \le U(f,P^*) \le U(f,P).$$
+:::
+
+:::proof
+It suffices to treat the case where $P^*$ adds a single point $c$ to $P$, since a general refinement adds finitely many points one at a time and the inequalities compose.
+
+Say $c$ lies in the $k$-th subinterval, $x_{k-1} < c < x_k$. Every subinterval other than the $k$-th is untouched, so its contribution to both sums is unchanged. Write
+
+$$m' = \inf_{[x_{k-1},c]} f, \qquad m'' = \inf_{[c,x_k]} f, \qquad m_k = \inf_{[x_{k-1},x_k]} f .$$
+
+Both $[x_{k-1},c]$ and $[c,x_k]$ are subsets of $[x_{k-1},x_k]$, and the infimum over a subset is at least the infimum over the whole set — fewer values to go below. Hence $m' \ge m_k$ and $m'' \ge m_k$, and so
+
+$$m'(c - x_{k-1}) + m''(x_k - c) \ge m_k (c-x_{k-1}) + m_k(x_k - c) = m_k \Delta x_k .$$
+
+The left side is what $P^*$ contributes where $P$ contributed the right side, so $L(f,P^*) \ge L(f,P)$. The argument for upper sums is identical with the inequalities reversed, since a supremum over a subset is at most the supremum over the whole set. The middle inequality $L(f,P^*) \le U(f,P^*)$ holds for any partition. $\blacksquare$
+:::
+
+The lemma says something geometrically obvious once it is said: cutting a rectangle in two and letting each half rise to its own lowest height can only raise the total, never lower it. The refinement lemma is the workhorse of the whole section, and the next result is its first consequence.
+
+:::lemma[Every lower sum is below every upper sum]{#cross-comparison}
+For any two partitions $P$ and $Q$ of $[a,b]$, $L(f,P) \le U(f,Q)$.
+:::
+
+:::proof
+Let $P^* = P \cup Q$, the **common refinement**, which is a partition refining both. By Lemma *Refinement narrows the bracket* applied twice,
+
+$$L(f,P) \le L(f,P^*) \le U(f,P^*) \le U(f,Q). \qquad \blacksquare$$
+:::
+
+So the set of all lower sums lies entirely to the left of the set of all upper sums on the real line. Each set is therefore bounded — every upper sum is an upper bound for the lower sums — and by the completeness of $\mathbb{R}$ each has the supremum or infimum we need.
+
+:::definition[Upper and lower integrals; the Riemann integral]{#riemann-integral}
+For $f$ bounded on $[a,b]$ define the **lower** and **upper integrals**
+
+$$\underline{\int_a^b} f = \sup_P L(f,P), \qquad \overline{\int_a^b} f = \inf_P U(f,P),$$
+
+the supremum and infimum being over all partitions of $[a,b]$. Lemma *Every lower sum is below every upper sum* gives $\underline{\int_a^b} f \le \overline{\int_a^b} f$ always. The function $f$ is **Riemann integrable** on $[a,b]$, written $f \in \mathcal{R}[a,b]$, when the two agree, and their common value is the integral $\int_a^b f$ or $\int_a^b f(x)\,dx$.
+:::
 
 :::intuition
-For a given way of slicing the interval into thin strips, the lower sum is the total area of rectangles that fit under the graph (using the lowest height in each strip); the upper sum uses the tallest height in each strip.
+Two surveyors measure a field bounded by a curved river. One is paid to under-report and lays out rectangles that stay strictly on dry land; the other is paid to over-report and lays out rectangles that cover every last puddle. Each is free to choose his own grid, and refining a grid helps both — the cautious surveyor's estimate goes up, the generous one's goes down.
 
-If as you make the slices thinner and thinner (mesh →0) the lower and upper totals get squeezed together to the same number, that number is the Riemann integral.
+Integrability is the claim that the two men, pushed to their respective best, arrive at the *same* number. Non-integrability is the claim that a stubborn gap remains no matter how fine the grids get, in which case "the area" is not a well-posed quantity for that function at all.
 :::
 
-:::example
-Take $f(x) = x$ on $[0,1]$ with the uniform partition into $n$ equal parts, so $x_k = k/n$ and $\Delta x_i = 1/n$. Since $f$ is increasing, on $[x_{k-1}, x_k] = [(k-1)/n, k/n]$ the infimum is the left value $m_k = (k-1)/n$ and the supremum is the right value $M_k = k/n$.
+:::figure[Lower sums (left-endpoint heights, muted) and upper sums (right-endpoint heights) for $f(x)=x^2$ on $[0,1]$ with four equal subintervals. The gap between them is $U-L = \tfrac14$ here, and halving the mesh halves it.]{#darboux-picture}
+{
+  "type": "plot",
+  "x": [0, 1.08], "y": [0, 1.3],
+  "xTicks": 0.25, "yTicks": 0.25, "xLabel": "x", "yLabel": "y",
+  "marks": [
+    { "kind": "bars", "bars": [[0, 0.25, 0.0625], [0.25, 0.5, 0.25], [0.5, 0.75, 0.5625], [0.75, 1, 1]], "tone": "accent" },
+    { "kind": "bars", "bars": [[0, 0.25, 0], [0.25, 0.5, 0.0625], [0.5, 0.75, 0.25], [0.75, 1, 0.5625]], "muted": true },
+    { "kind": "function", "fn": "x^2", "tone": "result" },
+    { "kind": "text", "at": [0.12, 1.18], "text": "U(f,P)", "leaderTo": [0.62, 0.7] },
+    { "kind": "text", "at": [0.55, 1.18], "text": "L(f,P)", "leaderTo": [0.86, 0.45] },
+    { "kind": "text", "at": [0.9, 1.18], "text": "y = x^2", "leaderTo": [0.98, 0.96] }
+  ]
+}
+:::
+
+:::example[The integral of $f(x)=x$ from the definition]
+Using only Definition *Upper and lower integrals; the Riemann integral*, show that $\int_0^1 x\,dx = \tfrac12$.
 :::
 
 :::solution
-Lower sum:
-$$L(f,P) = \sum_{k=1}^{n} \frac{k-1}{n}\cdot\frac{1}{n} = \frac{1}{n^2}\sum_{k=1}^{n}(k-1) = \frac{1}{n^2}\cdot\frac{(n-1)n}{2} = \frac{n-1}{2n}.$$
-Upper sum:
-$$U(f,P) = \sum_{k=1}^{n} \frac{k}{n}\cdot\frac{1}{n} = \frac{1}{n^2}\cdot\frac{n(n+1)}{2} = \frac{n+1}{2n}.$$
+1. Take the uniform partition $P_n$ with $x_i = i/n$, so $\Delta x_i = 1/n$. Since $f(x)=x$ is increasing, the infimum on $[x_{i-1},x_i]$ is at the left endpoint and the supremum at the right: $m_i = (i-1)/n$ and $M_i = i/n$.
+2. Therefore
 
-Their difference is $U - L = \dfrac{n+1}{2n} - \dfrac{n-1}{2n} = \dfrac{2}{2n} = \dfrac{1}{n} \to 0$, so the squeeze forces a common value. Both sums approach $\tfrac{1}{2}$ as $n \to \infty$, so $\int_0^1 x\,dx = \tfrac{1}{2}$.
+$$L(f,P_n) = \sum_{i=1}^n \frac{i-1}{n}\cdot\frac1n = \frac{1}{n^2}\cdot\frac{(n-1)n}{2} = \frac{n-1}{2n}, \qquad U(f,P_n) = \frac{1}{n^2}\cdot\frac{n(n+1)}{2} = \frac{n+1}{2n}.$$
 
-Sanity check: this is exactly the area of the triangle with base $1$ and height $1$, namely $\tfrac12 \cdot 1 \cdot 1 = \tfrac12$. $\checkmark$
+3. Both sequences converge to $\tfrac12$, and $U(f,P_n) - L(f,P_n) = 1/n \to 0$.
+4. Consequently $\underline{\int} f \ge \sup_n L(f,P_n) = \tfrac12$ and $\overline{\int} f \le \inf_n U(f,P_n) = \tfrac12$. Combined with $\underline{\int} f \le \overline{\int} f$ this forces both to equal $\tfrac12$.
+5. Sanity check: the region is a triangle with legs $1$ and $1$, of area $\tfrac12$. The definition reproduces elementary geometry, which is the least it must do to deserve the name area.
 :::
 
-## Criterion for Riemann Integrability (Riemann's Criterion)
+:::example[Computing $\int_0^1 x^2\,dx$ by squeezing]
+Evaluate $\int_0^1 x^2\,dx$ from upper and lower sums on the uniform partition.
+:::
+
+:::solution
+1. With $x_i = i/n$ and $f(x)=x^2$ increasing, $m_i = ((i-1)/n)^2$ and $M_i = (i/n)^2$.
+2. Using $\sum_{i=1}^n i^2 = \frac{n(n+1)(2n+1)}{6}$,
+
+$$U(f,P_n) = \frac{1}{n^3}\sum_{i=1}^n i^2 = \frac{(n+1)(2n+1)}{6n^2} = \frac{2n^2+3n+1}{6n^2}.$$
+
+3. Likewise $L(f,P_n) = \frac{1}{n^3}\sum_{i=0}^{n-1} i^2 = \frac{(n-1)(2n-1)}{6n^2} = \frac{2n^2-3n+1}{6n^2}$.
+4. Both tend to $\tfrac{2}{6} = \tfrac13$, and the gap is $U - L = \frac{6n}{6n^2} = \frac1n \to 0$. Hence $\int_0^1 x^2\,dx = \tfrac13$.
+5. Sanity check against the figure: at $n=4$ the formula gives $U = \frac{2\cdot16+12+1}{96} = \frac{45}{96} = 0.46875$ and $L = \frac{32-12+1}{96} = \frac{21}{96} = 0.21875$, whose difference is exactly $\tfrac14$, as the caption claims, and $\tfrac13$ sits between them.
+:::
+
+
+## The Riemann Criterion and the Basic Integrability Theorems
 
 <!-- section: riemann-criterion -->
 
-:::theorem[Riemann's criterion]{#riemann-criterion}
+Verifying integrability from the definition means computing two suprema over the infinite family of all partitions — unpleasant. The following reformulation replaces that with a single existential statement, and every integrability proof in this chapter goes through it.
+
+:::theorem[Riemann's criterion for integrability]{#riemann-criterion-thm}
 A bounded function $f$ on $[a,b]$ is Riemann integrable if and only if for every $\varepsilon > 0$ there exists a partition $P$ with
 
-$$U(f,P) - L(f,P) < \varepsilon.$$
-:::
-
-Boundedness is required for the sup and inf on each subinterval to be finite. Equivalently, the upper integral $\inf_P U(f,P)$ and the lower integral $\sup_P L(f,P)$ agree.
-
-:::theorem[Continuous functions are integrable]
-Every continuous function on $[a,b]$ is Riemann integrable.
+$$U(f,P) - L(f,P) < \varepsilon .$$
 :::
 
 :::proof
-Since $[a,b]$ is compact, $f$ is uniformly continuous on it by Heine-Cantor. So on fine enough partitions the oscillation $M_i - m_i$ on each subinterval is uniformly small, which makes $U - L$ small, and Riemann's criterion applies.
+($\Leftarrow$) Suppose such a $P$ exists for each $\varepsilon$. Then
+
+$$0 \le \overline{\int_a^b} f - \underline{\int_a^b} f \le U(f,P) - L(f,P) < \varepsilon,$$
+
+using that the upper integral is an infimum over partitions (so at most $U(f,P)$) and the lower integral is a supremum (so at least $L(f,P)$). A non-negative number smaller than every $\varepsilon>0$ is zero, so the two integrals agree.
+
+($\Rightarrow$) Suppose $f$ is integrable with integral $I$, and let $\varepsilon>0$. By definition of the infimum there is a partition $P_1$ with $U(f,P_1) < I + \varepsilon/2$, and by definition of the supremum a partition $P_2$ with $L(f,P_2) > I - \varepsilon/2$. Let $P = P_1 \cup P_2$ be their common refinement. By Lemma *Refinement narrows the bracket*, $U(f,P) \le U(f,P_1)$ and $L(f,P) \ge L(f,P_2)$, so
+
+$$U(f,P) - L(f,P) < \left(I + \tfrac\varepsilon2\right) - \left(I - \tfrac\varepsilon2\right) = \varepsilon . \qquad \blacksquare$$
 :::
 
-Note which theorem did the work: uniform continuity, not mere continuity. A $\delta$ that depended on the point would not bound every subinterval at once.
+The quantity $U(f,P)-L(f,P) = \sum_i (M_i - m_i)\Delta x_i$ deserves a name, because reading it correctly is the whole skill. The factor $M_i - m_i$ is the **oscillation** of $f$ on the $i$-th subinterval, and the sum is a weighted total oscillation. To make it small there are two independent levers: make the oscillation small on every piece, or confine the large oscillations to pieces of tiny total length. Continuity pulls the first lever; the finitely-many-discontinuities theorem pulls the second; Lebesgue's criterion says that those two levers, used together, are the *only* way it can ever be done.
 
-:::intuition
-The difference $U - L$ measures the total "uncertainty" or "slack" in the area estimate coming from the variation of $f$ inside the slices — it is the combined area of the thin gap between the over-estimate and under-estimate rectangles.
-
-If you can make that slack arbitrarily small by choosing a fine enough partition, the area is pinned to a single number and is well-defined.
+:::theorem[Continuous functions are integrable]{#continuous-integrable}
+If $f$ is continuous on $[a,b]$, then $f \in \mathcal{R}[a,b]$.
 :::
 
-:::example
-Let $f$ jump once on $[0,1]$: $f(x) = 0$ for $x < \tfrac12$ and $f(x) = 1$ for $x \ge \tfrac12$. Fix $\varepsilon > 0$ and build a partition that isolates the jump inside one thin interval $[\tfrac12 - \tfrac{\delta}{2},\, \tfrac12 + \tfrac{\delta}{2}]$ of width $\delta$, with the two flat pieces $[0, \tfrac12 - \tfrac{\delta}{2}]$ and $[\tfrac12 + \tfrac{\delta}{2}, 1]$ each a single subinterval.
+:::proof
+The interval $[a,b]$ is closed and bounded, hence compact, so by the theorem *Heine–Cantor: continuity on a compact set is uniform* of *Limits and Continuity*, $f$ is uniformly continuous on $[a,b]$ — and bounded, so upper and lower sums are defined at all.
+
+Let $\varepsilon > 0$. Uniform continuity supplies a $\delta > 0$, valid at every point simultaneously, such that
+
+$$|s - t| < \delta \implies |f(s)-f(t)| < \frac{\varepsilon}{2(b-a)} .$$
+
+Choose any partition $P$ with mesh $\|P\| < \delta$; the uniform partition into $n > (b-a)/\delta$ pieces will do. On each subinterval $[x_{i-1},x_i]$, $f$ is continuous on a compact set, so by the extreme value theorem it attains its supremum at some $s_i$ and its infimum at some $t_i$ in that subinterval. Since $|s_i - t_i| \le \Delta x_i < \delta$,
+
+$$M_i - m_i = f(s_i) - f(t_i) < \frac{\varepsilon}{2(b-a)} .$$
+
+Summing with weights $\Delta x_i$, which total $b-a$,
+
+$$U(f,P) - L(f,P) = \sum_i (M_i - m_i)\Delta x_i \le \frac{\varepsilon}{2(b-a)}\sum_i \Delta x_i = \frac{\varepsilon}{2} < \varepsilon .$$
+
+Riemann's criterion applies. $\blacksquare$
 :::
 
-:::solution
-On the two flat subintervals $f$ is constant, so $M_i - m_i = 0$ there; they contribute $0$ to $U - L$.
-On the jump subinterval, $m_i = 0$ and $M_i = 1$, so its contribution is $(M_i - m_i)\,\Delta x_i = 1\cdot\delta = \delta$.
-
-Hence $U(f,P) - L(f,P) = \delta$. Choosing $\delta < \varepsilon$ (e.g. $\delta = \varepsilon/2$) gives $U - L < \varepsilon$, so Riemann's criterion is satisfied and $f$ is integrable.
-
-Sanity check: the area is one rectangle of height $1$ over $[\tfrac12, 1]$, so $\int_0^1 f = \tfrac12$, and indeed $L \le \tfrac12 \le U$ with $U - L = \delta \to 0$. $\checkmark$
+:::pitfall
+Read the proof again and notice which hypothesis actually did the work: **uniform** continuity, not continuity. Plain continuity gives a $\delta$ that may depend on the point, and a partition would then need its mesh below $\inf_x \delta(x)$, an infimum that can be zero. Compactness of $[a,b]$ is what upgrades one to the other, and it is the reason the basic theory insists on a *closed bounded* interval. On $(0,1]$ the continuous function $\sin(1/x)$ has no such uniform $\delta$, and $1/x$ is not even bounded — both are outside the reach of the definition, and both come back as improper integrals later.
 :::
 
-## Discontinuities and Integrability
+Continuity is sufficient but far from necessary, and the next theorem covers a class of functions that may be discontinuous at infinitely many points.
+
+:::theorem[Monotone functions are integrable]{#monotone-integrable}
+If $f$ is monotone on $[a,b]$, then $f \in \mathcal{R}[a,b]$.
+:::
+
+:::proof
+Assume $f$ is increasing; the decreasing case follows by applying the result to $-f$. A monotone function on $[a,b]$ is bounded, with $f(a) \le f(x) \le f(b)$.
+
+Take the uniform partition $P_n$ with $\Delta x_i = (b-a)/n$. Because $f$ increases, the infimum on $[x_{i-1},x_i]$ is $f(x_{i-1})$ and the supremum is $f(x_i)$. Hence
+
+$$U(f,P_n) - L(f,P_n) = \frac{b-a}{n}\sum_{i=1}^n \big(f(x_i) - f(x_{i-1})\big) = \frac{b-a}{n}\big(f(b)-f(a)\big),$$
+
+the sum telescoping. Given $\varepsilon>0$, choose $n > (b-a)(f(b)-f(a))/\varepsilon$ to make this less than $\varepsilon$, and apply Riemann's criterion. $\blacksquare$
+:::
+
+That proof is worth pausing on, because it never mentions continuity and never needs it. An increasing function may have a jump at every rational in $[a,b]$ — build one as $f(x) = \sum_{q_k \le x} 2^{-k}$ over an enumeration $q_k$ of the rationals — and the telescoping argument still applies verbatim. Monotonicity forces the *total* jump to be at most $f(b)-f(a)$, so the jumps cannot be both numerous and large, and the weighted oscillation collapses.
+
+:::theorem[Algebra of integrable functions]{#algebra-integrals}
+If $f, g \in \mathcal{R}[a,b]$ and $c \in \mathbb{R}$, then $f+g$, $cf$, $|f|$ and $fg$ are all in $\mathcal{R}[a,b]$, and
+
+$$\int_a^b (f+g) = \int_a^b f + \int_a^b g, \qquad \int_a^b cf = c\int_a^b f .$$
+
+Moreover $f \le g$ pointwise implies $\int_a^b f \le \int_a^b g$, and $\left|\int_a^b f\right| \le \int_a^b |f|$.
+:::
+
+:::proof
+For the sum, note that on any subinterval $\sup(f+g) \le \sup f + \sup g$ and $\inf(f+g)\ge \inf f + \inf g$, so the oscillation of $f+g$ is at most the sum of the oscillations. Given $\varepsilon$, pick $P_1$ with $U(f,P_1)-L(f,P_1)<\varepsilon/2$ and $P_2$ likewise for $g$, and let $P$ be their common refinement; by the refinement lemma both bounds persist, so $U(f+g,P)-L(f+g,P) < \varepsilon$, and $f+g$ is integrable by Riemann's criterion. The inequalities $L(f,P)+L(g,P) \le L(f+g,P) \le U(f+g,P) \le U(f,P)+U(g,P)$ then trap $\int(f+g)$ within $\varepsilon$ of $\int f + \int g$ for every $\varepsilon$, giving equality. Scaling by $c \ge 0$ multiplies both sums by $c$; for $c<0$ the roles of sup and inf swap, and the two sign changes cancel.
+
+For $|f|$, the key inequality is that the oscillation of $|f|$ on a set never exceeds that of $f$: for any $s,t$, $\big||f(s)|-|f(t)|\big| \le |f(s)-f(t)|$, and taking suprema over $s,t$ turns each side into the respective oscillation. Hence $U(|f|,P)-L(|f|,P) \le U(f,P)-L(f,P)$ and Riemann's criterion transfers. For the product, write $fg = \tfrac14[(f+g)^2 - (f-g)^2]$ and reduce to squares; the oscillation of $f^2$ is bounded by $2K$ times that of $f$ where $K=\sup|f|$, since $|f(s)^2-f(t)^2| = |f(s)+f(t)|\,|f(s)-f(t)| \le 2K|f(s)-f(t)|$.
+
+Monotonicity of the integral is immediate from $L(f,P)\le L(g,P)$ for every $P$. The final inequality follows by applying it to $-|f| \le f \le |f|$. $\blacksquare$
+:::
+
+:::theorem[Additivity over subintervals]{#additivity}
+Let $a < c < b$. Then $f \in \mathcal{R}[a,b]$ if and only if $f\in\mathcal{R}[a,c]$ and $f \in \mathcal{R}[c,b]$, and in that case
+
+$$\int_a^b f = \int_a^c f + \int_c^b f .$$
+:::
+
+:::proof
+Suppose $f$ is integrable on both pieces and let $\varepsilon>0$. Choose partitions $P'$ of $[a,c]$ and $P''$ of $[c,b]$ each with oscillation sum below $\varepsilon/2$. Their union $P = P'\cup P''$ is a partition of $[a,b]$ containing $c$, and because the subintervals of $P$ are exactly those of $P'$ together with those of $P''$,
+
+$$U(f,P) = U(f,P') + U(f,P''), \qquad L(f,P) = L(f,P') + L(f,P''),$$
+
+so $U(f,P)-L(f,P)<\varepsilon$ and $f$ is integrable on $[a,b]$. Letting $\varepsilon \to 0$ in the same identity gives the additivity of the values.
+
+Conversely, if $f\in\mathcal{R}[a,b]$, take $P$ with $U(f,P)-L(f,P)<\varepsilon$ and refine it by inserting $c$; by Lemma *Refinement narrows the bracket* the gap does not increase. Splitting the refined partition at $c$ gives partitions of $[a,c]$ and $[c,b]$ whose oscillation sums are each at most $\varepsilon$, since both are non-negative and add to less than $\varepsilon$. $\blacksquare$
+:::
+
+:::remark[Orientation]
+By convention $\int_b^a f = -\int_a^b f$ and $\int_a^a f = 0$. With that convention the additivity identity holds for any three points $a,b,c$ in any order, which is what makes the accumulation function of the next section behave well on both sides of its base point.
+:::
+
+
+## Discontinuities and the Lebesgue Criterion
 
 <!-- section: discontinuities-integrability -->
 
-:::theorem[Finitely many discontinuities]
-A bounded function on $[a,b]$ with finitely many discontinuities is Riemann integrable.
+Continuity and monotonicity are sufficient conditions, and neither is necessary. This section finds the exact condition, which turns out to be a statement about the *size* of the discontinuity set rather than about its cardinality.
+
+:::proposition[Finitely many discontinuities are harmless]{#finite-discontinuities}
+If $f$ is bounded on $[a,b]$ and continuous except at finitely many points, then $f \in \mathcal{R}[a,b]$.
 :::
 
 :::proof
-Isolate each of the finitely many bad points inside its own small interval, chosen so that their total length is $< \varepsilon/(2M)$, where $M = \sup|f|$. On those intervals the oscillation is at most $2M$, so their combined contribution to $U - L$ is $< \varepsilon$. On the remaining compact pieces $f$ is continuous, hence has small oscillation on a fine enough sub-partition.
+Let $K = \sup_{[a,b]} |f|$, so every oscillation is at most $2K$, and let $c_1,\dots,c_p$ be the discontinuities. Fix $\varepsilon>0$.
+
+Cover each $c_j$ by an open interval $I_j$ of length $\eta$, where $\eta$ is chosen so small that $p\eta \cdot 2K < \varepsilon/2$, that is $\eta < \varepsilon/(4Kp)$. Removing the $I_j$ from $[a,b]$ leaves finitely many closed intervals $J_1,\dots,J_r$ on which $f$ is continuous, hence uniformly continuous by compactness. As in the proof of the theorem *Continuous functions are integrable*, choose $\delta>0$ working simultaneously on all the $J_k$ so that $|f(s)-f(t)| < \varepsilon/(4(b-a))$ whenever $s,t$ lie in the same $J_k$ with $|s-t|<\delta$.
+
+Build a partition $P$ from the endpoints of the $I_j$ together with a subdivision of each $J_k$ of mesh below $\delta$. The subintervals of $P$ split into two families. Those inside some $I_j$ contribute at most $2K \cdot p\eta < \varepsilon/2$ in total. Those inside some $J_k$ contribute at most $\frac{\varepsilon}{4(b-a)}(b-a) = \varepsilon/4$. Hence $U(f,P)-L(f,P) < \varepsilon$, and Riemann's criterion applies. $\blacksquare$
 :::
 
-Infinitely many discontinuities are not automatically fatal, and the sharp statement says exactly which sets are harmless.
+The proof used the finiteness of the bad set in exactly one place: to cover it by finitely many intervals of arbitrarily small total length. Nothing else about "finite" mattered — which suggests replacing it by that property directly.
 
-:::theorem[Lebesgue's criterion]{#lebesgue-criterion}
-A bounded function on $[a,b]$ is Riemann integrable if and only if its set of discontinuities has measure zero.
+:::definition[Measure zero]{#measure-zero}
+A set $E \subseteq \mathbb{R}$ has **measure zero** if for every $\varepsilon>0$ there is a countable family of open intervals $\{I_k\}$ with
+
+$$E \subseteq \bigcup_k I_k \qquad \text{and} \qquad \sum_k |I_k| < \varepsilon,$$
+
+where $|I_k|$ denotes the length of $I_k$.
 :::
 
-The next two examples are the standard pair that the criterion separates.
+Every finite set has measure zero, and so does every countable set: enumerate it as $e_1, e_2, \dots$ and put an interval of length $\varepsilon 2^{-k-1}$ around $e_k$, for a total below $\varepsilon$. In particular $\mathbb{Q}$ has measure zero, which is the fact that makes Thomae's function integrable below. Uncountable sets of measure zero also exist — the Cantor set is the standard one, met in *Metric Spaces*.
 
-Thomae's function ($f(p/q) = 1/q$ for $p/q$ rational in lowest terms, $f = 0$ at irrationals) is Riemann integrable on $[0,1]$ with integral $0$, even though it is discontinuous at every rational (its discontinuities are infinite but not dense-with-oscillation the way Dirichlet's are).
-
-The Dirichlet function ($1$ on rationals, $0$ on irrationals) is not Riemann integrable ($U = 1$, $L = 0$ for every partition). The contrast with Thomae is the key lesson: infinitely many discontinuities are fine as long as the *sizes* of the jumps can be squeezed down; it is dense discontinuity of a fixed size that kills integrability.
-
-:::intuition
-A few jumps or spikes of zero width do not affect the area; you can hide their uncertainty in tiny slices.
-
-If discontinuities are dense (rationals), the upper sums stay high (using the 1's) and lower sums stay low (using the 0's) no matter how fine the partition; the area is ambiguous.
+:::theorem[Lebesgue's criterion for Riemann integrability]{#lebesgue-criterion}
+A bounded function $f$ on $[a,b]$ is Riemann integrable if and only if its set of points of discontinuity has measure zero. Briefly: $f$ is Riemann integrable exactly when $f$ is continuous almost everywhere.
 :::
 
-:::example[(Dirichlet, not integrable):]
-The characteristic function of the rationals in $[0,1]$ has, in every subinterval, $\inf = 0$ (there is always an irrational) and $\sup = 1$ (there is always a rational). So for any partition $M_i - m_i = 1$ on every piece, giving
-$$U - L = \sum_i 1\cdot \Delta x_i = \sum_i \Delta x_i = b - a = 1,$$
-which can never be made $< 1$. Riemann's criterion fails, so $f$ is not integrable.
+:::remark[Why this one is quoted rather than proved]
+This is the only result in the chapter stated without proof, and the omission is deliberate rather than lazy. A complete argument requires the oscillation function $\omega_f(x) = \lim_{\delta\to0}\big(\sup_{|s-x|<\delta} f - \inf_{|s-x|<\delta} f\big)$, the fact that $\{\omega_f \ge 1/n\}$ is compact, and a Heine–Borel extraction on each such set; it is proved in full in *Lebesgue Integration*, where measure-zero sets are the native language rather than an import. What matters here is how to *use* it, and the two examples below are the standard test cases it separates.
 :::
 
-:::example[(Thomae, integrable with integral $0$):]
-For Thomae's function on $[0,1]$, fix $\varepsilon > 0$ and pick $N$ with $1/(N+1) < \varepsilon/2$.
+Everything proved so far is a special case. A continuous function has empty discontinuity set. A monotone function has at most countably many discontinuities — each jump contains a distinct rational — so its discontinuity set has measure zero. A function with finitely many discontinuities is immediate. The criterion also settles at once which functions are hopeless.
+
+:::example[Dirichlet's function is not integrable]
+Let $D(x) = 1$ for $x\in\mathbb{Q}$ and $D(x)=0$ otherwise. Show directly that $D \notin \mathcal{R}[0,1]$, and reconcile this with Lebesgue's criterion.
 :::
 
 :::solution
-Step 1 (the tall values are few): the points where $f(x) \ge 1/N$ are exactly the rationals $p/q$ with denominator $q \le N$ in lowest terms. In $[0,1]$ there are only finitely many such points — call them $r_1,\dots,r_m$. Cover each $r_j$ by a tiny interval so their total length is $< \varepsilon/2$. Since $0 \le f \le 1$, these intervals contribute at most $1 \cdot (\varepsilon/2) = \varepsilon/2$ to $U - L$.
-Step 2 (everywhere else $f$ is small): on the rest of $[0,1]$ every point has $f(x) \le 1/(N+1) < \varepsilon/2$ (irrationals give $0$; the remaining rationals have $q > N$, i.e. $q \ge N+1$, so $f(x)=1/q \le 1/(N+1)$). Because the lower sum is always $0$ (each subinterval contains an irrational, so $m_i = 0$), these pieces contribute at most $(\varepsilon/2)\cdot(b-a) = \varepsilon/2$ to $U$, hence to $U - L$.
+1. Let $P$ be any partition. Every subinterval $[x_{i-1},x_i]$, having positive length, contains both a rational and an irrational, by the density theorems of *The Real Number System*.
+2. Hence $M_i = 1$ and $m_i = 0$ on every subinterval, for every partition, so
 
-Adding the two parts, $U - L < \varepsilon/2 + \varepsilon/2 = \varepsilon$. So $f$ is integrable. Since $L(f,P) = 0$ for every $P$ and $U$ can be made arbitrarily small, the integral is $0$.
+$$U(D,P) = \sum_i 1\cdot\Delta x_i = 1, \qquad L(D,P) = 0 .$$
 
-Sanity check: the value at each rational is a single point of zero width, so it is plausible that the area is $0$; the argument makes "the tall spikes are too sparse to accumulate area" precise. $\checkmark$
+3. Therefore $\overline{\int_0^1} D = 1$ and $\underline{\int_0^1} D = 0$. The gap is $1$ and no refinement touches it, so Riemann's criterion fails as badly as it possibly can.
+4. Reconciliation: $D$ is discontinuous at *every* point of $[0,1]$ — near any $x$ there are both rationals and irrationals, so the values $0$ and $1$ both occur in every neighbourhood. The discontinuity set is $[0,1]$ itself, which has measure $1$, not zero.
+5. Sanity check on the moral: the problem is not that the bad set is infinite, it is that the bad set is *fat*. The next example has an infinite discontinuity set too, and is integrable.
 :::
 
-## Common Mistakes
+:::example[Thomae's function is integrable, with integral zero]
+Define $T(x) = 1/q$ if $x = p/q$ in lowest terms with $q \ge 1$, and $T(x)=0$ if $x$ is irrational. Show $T \in \mathcal{R}[0,1]$ and $\int_0^1 T = 0$.
+:::
 
-- **Thinking every bounded function is Riemann integrable**: The Dirichlet function is the standard counter-example.
-- **Confusing Riemann with Lebesgue**: Lebesgue integrates the Dirichlet function (integral 0) because the rationals have measure zero.
-- **Forgetting that the partition must be chosen after ε (the definition is existential on partitions)**: You do not have to use equal-width partitions or regular grids; arbitrary partitions are allowed and often necessary.
-- **Believing that if f is integrable then f must be continuous a.e.**: True for Riemann (a theorem of Lebesgue), but the proof is nontrivial; there exist integrable functions discontinuous on a dense set (Thomae).
-- **Mixing upper/lower sums with Riemann sums using tags**: The definition via upper/lower Darboux sums is equivalent to the limit of Riemann sums over tagged partitions with mesh→0.
+:::solution
+1. Every subinterval contains irrationals, so $m_i = 0$ for every partition and $L(T,P)=0$ always; hence $\underline{\int_0^1}T = 0$ and the only issue is the upper integral.
+2. Fix $\varepsilon>0$ and choose $N$ with $1/N < \varepsilon/2$. The set $F = \{x : T(x) \ge 1/N\}$ consists of the rationals in $[0,1]$ with denominator at most $N$, and there are at most $\sum_{q\le N} (q+1) < (N+1)^2$ of them — a finite set.
+3. Cover $F$ by intervals of total length less than $\varepsilon/2$ (possible since $F$ is finite), and use their endpoints, plus a subdivision of what remains, to build a partition $P$.
+4. On subintervals meeting $F$, bound $M_i \le 1$, so their total contribution to $U(T,P)$ is at most $1\cdot \varepsilon/2$. On the remaining subintervals every value of $T$ is below $1/N < \varepsilon/2$, so they contribute at most $(\varepsilon/2)(1) = \varepsilon/2$.
+5. Hence $U(T,P) < \varepsilon$, and since $L(T,P)=0$ we get $U-L<\varepsilon$. Riemann's criterion gives integrability, and $0 \le \int_0^1 T \le U(T,P) < \varepsilon$ for every $\varepsilon$ forces $\int_0^1 T = 0$.
+6. Cross-check with Lebesgue's criterion: $T$ is continuous at every irrational and discontinuous at every rational — approaching a rational $p/q$ along irrationals gives limit $0 \ne 1/q$. The discontinuity set is $\mathbb{Q}\cap[0,1]$, countable, hence of measure zero. The criterion predicts integrability, as found.
+:::
 
-The fundamental theorem of calculus (FTC) establishes that differentiation and (Riemann) integration are inverse operations, in two complementary parts.
+:::figure[Thomae's function on $[0,1]$: the spike at $p/q$ has height $1/q$, so tall spikes are rare and the rest of the mass sits arbitrarily close to the axis. Dirichlet's function, by contrast, would put every spike at height $1$.]{#thomae}
+{
+  "type": "plot",
+  "x": [0, 1.02], "y": [0, 1.25],
+  "xTicks": 0.25, "yTicks": 0.25, "xLabel": "x", "yLabel": "T(x)",
+  "marks": [
+    { "kind": "point", "at": [0, 1] },
+    { "kind": "point", "at": [1, 1] },
+    { "kind": "point", "at": [0.5, 0.5] },
+    { "kind": "point", "at": [0.3333, 0.3333] },
+    { "kind": "point", "at": [0.6667, 0.3333] },
+    { "kind": "point", "at": [0.25, 0.25] },
+    { "kind": "point", "at": [0.75, 0.25] },
+    { "kind": "point", "at": [0.2, 0.2] },
+    { "kind": "point", "at": [0.4, 0.2] },
+    { "kind": "point", "at": [0.6, 0.2] },
+    { "kind": "point", "at": [0.8, 0.2] },
+    { "kind": "point", "at": [0.1667, 0.1667] },
+    { "kind": "point", "at": [0.8333, 0.1667] },
+    { "kind": "point", "at": [0.1429, 0.1429] },
+    { "kind": "point", "at": [0.2857, 0.1429] },
+    { "kind": "point", "at": [0.4286, 0.1429] },
+    { "kind": "point", "at": [0.5714, 0.1429] },
+    { "kind": "point", "at": [0.7143, 0.1429] },
+    { "kind": "point", "at": [0.8571, 0.1429] },
+    { "kind": "text", "at": [0.5, 1.15], "text": "height 1/q at p/q", "leaderTo": [0.5, 0.56] }
+  ]
+}
+:::
 
-It is the reason the indefinite integral (antiderivative) and definite integral are so closely linked, and why we can compute areas by finding antiderivatives.
+:::pitfall
+"Discontinuous at infinitely many points" is not a verdict. Thomae's function is discontinuous at a dense set and integrable; Dirichlet's is discontinuous everywhere and is not. What separates them is that Thomae's spikes shrink — only finitely many exceed any fixed height — while Dirichlet's never do. Measure zero is the precise version of "the bad set is too thin to hold any area".
+:::
 
-## FTC Part 1: The Integral as a Function of the Upper Limit
+## The Fundamental Theorem, Part One: Differentiating an Integral
 
 <!-- section: ftc-part-one -->
 
-:::theorem[Fundamental Theorem of Calculus, Part 1]{#ftc-1}
-Let $f$ be Riemann integrable on $[a,b]$ and define
+Everything so far treats $\int_a^b f$ as a number attached to a fixed interval. Letting the right endpoint move converts it into a function, and that function turns out to be smoother than the integrand it came from.
 
-$$F(x) = \int_a^x f(t)\,dt \qquad \text{for } x \in [a,b].$$
+:::definition[Accumulation function]{#accumulation}
+For $f \in \mathcal{R}[a,b]$, the **accumulation function** (or indefinite integral) of $f$ based at $a$ is
 
-Then $F$ is continuous on $[a,b]$ — in fact Lipschitz, since $|F(x) - F(y)| \le M|x-y|$ with $M = \sup|f|$. If in addition $f$ is continuous at $c \in [a,b]$, then $F$ is differentiable at $c$ and
+$$F(x) = \int_a^x f(t)\,dt, \qquad x\in[a,b],$$
 
-$$F'(c) = f(c).$$
+which is well defined by the theorem *Additivity over subintervals*, since $f$ is integrable on every $[a,x]$.
 :::
 
-In other words, "the derivative of the integral is the integrand" — but only at points where $f$ is continuous.
+:::theorem[Fundamental Theorem of Calculus, Part One]{#ftc-1}
+Let $f \in \mathcal{R}[a,b]$ and let $F(x) = \int_a^x f$. Then:
 
-:::intuition
-$F(x)$ is the accumulated signed area from a fixed left endpoint $a$ up to the variable right endpoint $x$. As $x$ moves a tiny bit to the right, the added sliver of area is approximately $f(x)$ times the tiny width, so the rate of change of $F$ is $f(x)$.
-
-If $f$ has a jump, $F$ is still continuous (the accumulated area doesn't jump) but has a corner there (its slope jumps from the left-hand height to the right-hand height).
+1. $F$ is Lipschitz on $[a,b]$, with $|F(x)-F(y)| \le K|x-y|$ where $K = \sup_{[a,b]}|f|$; in particular $F$ is continuous.
+2. If $f$ is continuous at a point $c \in [a,b]$, then $F$ is differentiable at $c$ and $F'(c) = f(c)$.
 :::
 
-:::example
-Let $f(x) = x$ on $[0,1]$, which is continuous everywhere. Then
-$$F(x) = \int_0^x t\,dt = \left[\frac{t^2}{2}\right]_0^x = \frac{x^2}{2}.$$
-Differentiating, $F'(x) = x = f(x)$, matching FTC Part 1.
+:::proof
+**(1)** Take $y < x$ in $[a,b]$. By additivity, $F(x)-F(y) = \int_y^x f$. The bound $-K \le f \le K$ and the monotonicity clause of the theorem *Algebra of integrable functions* give
+
+$$-K(x-y) \le \int_y^x f \le K(x-y),$$
+
+which is $|F(x)-F(y)| \le K|x-y|$. A Lipschitz function is uniformly continuous — take $\delta = \varepsilon/K$.
+
+**(2)** Let $\varepsilon>0$ and use continuity of $f$ at $c$ to choose $\delta>0$ with $|f(t)-f(c)|<\varepsilon$ whenever $|t-c|<\delta$ and $t\in[a,b]$. For $h$ with $0<|h|<\delta$ and $c+h\in[a,b]$, additivity gives $F(c+h)-F(c) = \int_c^{c+h} f$, and since $\int_c^{c+h} f(c)\,dt = f(c)h$ we may write the error as a single integral:
+
+$$\frac{F(c+h)-F(c)}{h} - f(c) = \frac{1}{h}\int_c^{c+h}\big(f(t)-f(c)\big)\,dt .$$
+
+Every $t$ between $c$ and $c+h$ satisfies $|t-c| \le |h| < \delta$, so the integrand is bounded in absolute value by $\varepsilon$. Applying $\left|\int\right| \le \int|\cdot|$ and then the crude bound,
+
+$$\left|\frac{F(c+h)-F(c)}{h} - f(c)\right| \le \frac{1}{|h|}\cdot \varepsilon |h| = \varepsilon .$$
+
+Since $\varepsilon$ was arbitrary, the difference quotient converges to $f(c)$, which is the assertion $F'(c)=f(c)$. $\blacksquare$
+:::
+
+Notice how little was assumed. Part 1 of the statement needs only integrability, and it already says something striking: integration is a smoothing operation. The integrand may be discontinuous at a dense set of points, and its accumulation function is still Lipschitz — a jump in $f$ becomes a mere corner in $F$, and a corner is a much milder defect than a jump.
+
+:::corollary[Every continuous function has an antiderivative]{#antiderivative-exists}
+If $f$ is continuous on $[a,b]$, then $F(x)=\int_a^x f$ satisfies $F'=f$ on all of $[a,b]$. In particular, every continuous function on a closed interval is the derivative of something.
+:::
+
+:::proof
+By the theorem *Continuous functions are integrable*, $f\in\mathcal{R}[a,b]$ so $F$ is defined; by clause (2) of the theorem *Fundamental Theorem of Calculus, Part One*, applied at each $c\in[a,b]$ — where $f$ is continuous by hypothesis — we get $F'(c)=f(c)$ everywhere. $\blacksquare$
+:::
+
+This corollary is the existence theorem that elementary calculus quietly assumes. "Find an antiderivative of $e^{-x^2}$" has no answer in elementary functions, but the corollary guarantees an antiderivative *exists*, and $\int_0^x e^{-t^2}dt$ is it — which is precisely how the error function is defined, rather than discovered.
+
+
+:::example[A corner, not a jump]
+Let $f(x) = 0$ for $x<1$ and $f(x)=1$ for $x \ge 1$, on $[0,2]$. Compute $F(x)=\int_0^x f$ and examine $F$ at $x=1$.
 :::
 
 :::solution
-Sanity check via the definition: the difference quotient is
-$$\frac{F(x+h) - F(x)}{h} = \frac{(x+h)^2/2 - x^2/2}{h} = \frac{xh + h^2/2}{h} = x + \frac{h}{2} \xrightarrow{h\to 0} x = f(x).\ \checkmark$$
+1. For $x \le 1$ the integrand is $0$ except possibly at the single point $x=1$, so $F(x)=0$.
+2. For $x>1$, additivity gives $F(x) = \int_0^1 f + \int_1^x 1\,dt = 0 + (x-1)$.
+3. So $F(x) = \max(x-1,0)$, which is continuous everywhere — as clause (1) of the theorem promises, with Lipschitz constant $K=1$.
+4. At $x=1$, $F$ has a corner: the left derivative is $0$ and the right derivative is $1$, so $F'(1)$ does not exist. This does not contradict clause (2), which assumes $f$ is continuous at the point, and $f$ jumps at $1$.
+5. Sanity check: at every other point $F'$ does exist and equals $f$ — $F'=0$ on $(0,1)$ and $F'=1$ on $(1,2)$ — so the conclusion fails at exactly the one point where the hypothesis does.
 :::
 
-## FTC Part 2: Evaluation of Definite Integrals via Antiderivatives
+## The Fundamental Theorem, Part Two: Evaluating by Antiderivatives
 
 <!-- section: ftc-part-two -->
 
-:::theorem[Fundamental Theorem of Calculus, Part 2]{#ftc-2}
-If $f$ is continuous on $[a,b]$ and $F$ is any antiderivative of $f$ — that is, $F' = f$ on $(a,b)$ and $F$ is continuous up to the ends — then
+Part One turns an integral into a function and differentiates it. Part Two goes the other way: given a function whose derivative is the integrand, it evaluates the integral without ever computing a limit of sums. This is the theorem that makes calculus usable.
 
-$$\int_a^b f = F(b) - F(a).$$
+:::theorem[Fundamental Theorem of Calculus, Part Two]{#ftc-2}
+Let $f \in \mathcal{R}[a,b]$ and suppose $F:[a,b]\to\mathbb{R}$ is continuous on $[a,b]$, differentiable on $(a,b)$, with $F'(x)=f(x)$ for all $x\in(a,b)$. Then
+
+$$\int_a^b f = F(b)-F(a).$$
 :::
 
-This is the familiar "take antiderivative, plug in limits" rule used in calculus.
+:::proof
+Let $\varepsilon>0$. By Riemann's criterion choose a partition $P: a=x_0<\cdots<x_n=b$ with $U(f,P)-L(f,P)<\varepsilon$.
 
-:::intuition
-The net signed area under f from a to b equals the total change in any antiderivative from a to b.
+On each subinterval $[x_{i-1},x_i]$ the function $F$ is continuous and differentiable on the interior, so the Mean Value Theorem of *Differentiation* supplies a point $t_i \in (x_{i-1},x_i)$ with
 
-It turns the hard problem of summing infinitely many infinitesimal areas into the (often) easier problem of finding one antiderivative.
+$$F(x_i)-F(x_{i-1}) = F'(t_i)\,\Delta x_i = f(t_i)\,\Delta x_i .$$
+
+Summing over $i$, the left side telescopes:
+
+$$F(b)-F(a) = \sum_{i=1}^n f(t_i)\,\Delta x_i .$$
+
+The right side is a Riemann sum for the partition $P$ with the particular tags $t_i$, and since $m_i \le f(t_i) \le M_i$ it is trapped between the Darboux sums:
+
+$$L(f,P) \le F(b)-F(a) \le U(f,P).$$
+
+The number $\int_a^b f$ satisfies the same two inequalities, by the definition of the upper and lower integrals. Two numbers lying in an interval of length less than $\varepsilon$ differ by less than $\varepsilon$, so $\big|\int_a^b f - (F(b)-F(a))\big| < \varepsilon$ for every $\varepsilon>0$, which forces equality. $\blacksquare$
 :::
 
-:::example[(easy):]
-$$\int_0^1 x\,dx = \left[\frac{x^2}{2}\right]_0^1 = \frac{1}{2} - 0 = \frac{1}{2}.$$
-The antiderivative $x^2/2$ changes by $\tfrac12$ over the interval, which is exactly the area. This agrees with the squeeze computation in the first section. $\checkmark$
+Two features of this proof are worth extracting. First, it does not assume $f$ is continuous — only integrable, plus the existence of an antiderivative. Those are independent hypotheses: there are integrable functions with no antiderivative (any function with a jump, by Darboux's theorem on derivatives), and there are derivatives that are not integrable. Second, the Mean Value Theorem is doing all the work, which is why the theorem belongs as much to differentiation as to integration.
+
+:::corollary[Integration by parts]{#ibp}
+If $u,v$ are continuously differentiable on $[a,b]$, then
+
+$$\int_a^b u v' = \big[uv\big]_a^b - \int_a^b u' v .$$
 :::
 
-:::example[(harder):]
-Compute $\displaystyle\int_1^2 \frac{1}{x}\,dx$. Here $f(x) = 1/x$ is continuous on $[1,2]$, and an antiderivative is $F(x) = \ln x$ (since $F'(x) = 1/x$). By Part 2,
-$$\int_1^2 \frac{1}{x}\,dx = \ln 2 - \ln 1 = \ln 2 - 0 = \ln 2 \approx 0.693.$$
-Sanity check: $1/x$ lies between $\tfrac12$ and $1$ on $[1,2]$, so the area is between $\tfrac12\cdot 1 = 0.5$ and $1\cdot 1 = 1$; indeed $0.5 < 0.693 < 1$. $\checkmark$
+:::proof
+The product $uv$ is differentiable with $(uv)' = u'v + uv'$, which is continuous, hence integrable. Apply the theorem *Fundamental Theorem of Calculus, Part Two* to the integrand $u'v+uv'$ with antiderivative $uv$:
+
+$$\int_a^b (u'v + uv') = u(b)v(b)-u(a)v(a).$$
+
+Split the left side using linearity from the theorem *Algebra of integrable functions* and rearrange. $\blacksquare$
 :::
 
-## Proof Ideas and the Role of Continuity
+:::corollary[Change of variables]{#substitution}
+Let $\varphi$ be continuously differentiable on $[a,b]$ and let $f$ be continuous on an interval containing $\varphi([a,b])$. Then
+
+$$\int_a^b f(\varphi(x))\varphi'(x)\,dx = \int_{\varphi(a)}^{\varphi(b)} f(u)\,du .$$
+:::
+
+:::proof
+Let $F(y)=\int_{\varphi(a)}^{y} f$, which satisfies $F'=f$ by Corollary *Every continuous function has an antiderivative*. The composite $G = F\circ\varphi$ is differentiable with $G'(x) = f(\varphi(x))\varphi'(x)$ by the chain rule, and $G'$ is continuous, hence integrable. Part Two applied to $G'$ gives
+
+$$\int_a^b f(\varphi(x))\varphi'(x)\,dx = G(b)-G(a) = F(\varphi(b)) - F(\varphi(a)) = \int_{\varphi(a)}^{\varphi(b)} f,$$
+
+since $F(\varphi(a))=0$. $\blacksquare$
+:::
+
+:::example[A routine evaluation, and what it rests on]
+Compute $\int_1^2 \frac{dx}{x}$ and $\int_0^{\pi/2}\sin x\,dx$.
+:::
+
+:::solution
+1. On $[1,2]$ the function $1/x$ is continuous, hence integrable, and $\ln x$ is an antiderivative there. Part Two gives $\int_1^2 dx/x = \ln 2 - \ln 1 = \ln 2 \approx 0.6931$.
+2. Sanity check by bounding: $1/x$ lies between $1/2$ and $1$ on $[1,2]$, so the integral lies between $0.5$ and $1$, and $0.693$ does.
+3. For the second, $\sin$ is continuous with antiderivative $-\cos$, so $\int_0^{\pi/2}\sin x\,dx = -\cos(\pi/2)+\cos 0 = 0+1 = 1$.
+4. Sanity check: the graph of $\sin$ on $[0,\pi/2]$ sits under the rectangle of height $1$ and width $\pi/2\approx1.571$, and above the chord triangle of area $\pi/4 \approx 0.785$; the value $1$ is in range.
+:::
+
+
+## What Continuity Buys, and What It Does Not
 
 <!-- section: proof-ideas-continuity -->
 
-The two parts are proved in order, the second from the first.
+Both parts of the Fundamental Theorem quantify over hypotheses that are easy to recite and easy to misapply. This section isolates what each one is really for, and exhibits the failures that occur without them.
 
-:::proof
-Part 1. Write the difference quotient as an integral average,
+:::theorem[Mean value theorem for integrals]{#mvt-integrals}
+If $f$ is continuous on $[a,b]$, there exists $\xi \in [a,b]$ with
 
-$$\frac{F(x+h)-F(x)}{h} = \frac{1}{h}\int_x^{x+h} f(t)\,dt,$$
-
-and use that when $f$ is continuous at $x$ this average is close to $f(x)$: bound $|f(t)-f(x)|$ by $\varepsilon$ on a small interval around $x$, and the average inherits the same bound.
+$$\int_a^b f = f(\xi)\,(b-a).$$
 :::
 
 :::proof
-Part 2. If $F' = f$ then the function $G(x) = \int_a^x f - F(x)$ has $G' = f - f = 0$, hence $G$ is constant, hence $G(b) = G(a)$, which rearranges to the desired equality.
+Let $m=\min f$ and $M=\max f$, attained by the extreme value theorem. From $m \le f \le M$ and monotonicity of the integral,
+
+$$m(b-a) \le \int_a^b f \le M(b-a),$$
+
+so the average value $A = \frac{1}{b-a}\int_a^b f$ lies in $[m,M]$. Since $f$ attains both $m$ and $M$, the intermediate value theorem of *Limits and Continuity* provides $\xi$ between those two points with $f(\xi)=A$, which is the claim. $\blacksquare$
 :::
 
-Continuity of $f$ guarantees both the existence of the integral $\int_a^x f$ and that Part 1 gives $F' = f$, so that every antiderivative works in Part 2.
+This gives a second route to Part One: the difference quotient of $F$ is exactly the average of $f$ over $[c,c+h]$, which the theorem writes as $f(\xi_h)$ for some $\xi_h$ between $c$ and $c+h$; as $h\to0$ we have $\xi_h\to c$, and continuity finishes it. The proof given earlier avoided the extreme value theorem so that it would work at a single point of continuity of an otherwise nasty function, which is the sharper statement.
 
-:::intuition
-The average value of f over a tiny interval around x is forced to be close to f(x) by continuity; that average is exactly the difference quotient for the accumulated-area function.
-
-Once you know the derivative of the integral recovers f, any other function with the same derivative differs by a constant, so the net changes match.
+:::proposition[Continuity cannot be dropped from the mean value theorem]{#mvt-needs-continuity}
+There is an integrable $f$ on $[0,2]$ for which no $\xi\in[0,2]$ satisfies $\int_0^2 f = f(\xi)\cdot 2$.
 :::
 
-:::example
-To prove Part 2: let $G(x) = \int_a^x f(t)\,dt - F(x)$. By Part 1, $G'(x) = f(x) - F'(x) = 0$ on $(a,b)$. Thus $G$ is constant on $[a,b]$ (by MVT or connectedness). Therefore $G(b) - G(a) = 0$, i.e. $\int_a^b f = F(b) - F(a)$.
+:::proof
+Take $f=0$ on $[0,1)$ and $f=1$ on $[1,2]$. It is integrable by Proposition *Finitely many discontinuities are harmless*, and $\int_0^2 f = 1$, so the required value would be $f(\xi) = \tfrac12$. But $f$ takes only the values $0$ and $1$, so no such $\xi$ exists. $\blacksquare$
 :::
 
-## Generalizations and Limitations (Improper, Lebesgue)
+:::proposition[A derivative that is not Riemann integrable]{#unbounded-derivative}
+There is a function $g$ differentiable at every point of $[0,1]$ whose derivative $g'$ is not Riemann integrable on $[0,1]$.
+:::
+
+:::proof
+Let $g(x) = x^2\sin(1/x^2)$ for $x\ne0$ and $g(0)=0$. At $0$ the difference quotient is $x\sin(1/x^2)$, which is bounded by $|x|$ and so tends to $0$; hence $g'(0)=0$ exists. For $x \ne 0$ the product and chain rules give
+
+$$g'(x) = 2x\sin\!\left(\frac{1}{x^2}\right) - \frac{2}{x}\cos\!\left(\frac{1}{x^2}\right).$$
+
+The second term is unbounded near $0$: along $x_k = (2\pi k)^{-1/2}$ the cosine equals $1$ and the factor $2/x_k = 2\sqrt{2\pi k} \to \infty$, while the first term stays bounded by $2|x|$. So $g'$ is unbounded on $[0,1]$, and an unbounded function has no upper sums in $\mathbb{R}$, hence is not Riemann integrable by Definition *Darboux sums*. $\blacksquare$
+:::
+
+So "$F' = f$ on $[a,b]$" does not by itself license $\int_a^b f = F(b)-F(a)$: the left-hand side may not exist. Part Two lists integrability of $f$ as a *separate* hypothesis for exactly this reason, and the omission of that hypothesis is the most common misquotation of the theorem.
+
+
+## Limits, Uniform Convergence, and the Limits of the Theory
 
 <!-- section: generalizations-limitations -->
 
-FTC Part 1 requires $f$ integrable (and continuity of $f$ at a point to get differentiability there); the strong form of Part 2 usually requires $f$ continuous on $[a,b]$. For improper integrals one takes limits of proper integrals.
+The Riemann integral has one structural weakness, and it is the reason a replacement was eventually built: it interacts badly with limits. The following theorem states the strongest interchange the theory supports, and the example after it shows how little room is left.
 
-In Lebesgue theory the FTC holds under weaker assumptions (absolute integrability, almost-everywhere differentiability of the indefinite integral, etc.), and the fundamental theorem of calculus for Lebesgue integrals recovers f almost everywhere.
+:::theorem[Uniform convergence permits interchange]{#uniform-interchange}
+Let $f_n \in \mathcal{R}[a,b]$ and suppose $f_n \to f$ uniformly on $[a,b]$. Then $f\in\mathcal{R}[a,b]$ and
 
-:::intuition
-If f has a bad discontinuity the indefinite integral may still be differentiable almost everywhere and recover f a.e. (Lebesgue).
-
-Improper integrals at endpoints or with singularities are handled by limits; the "FTC" then says the improper integral equals the limiting difference of the antiderivative (when the limit exists).
+$$\int_a^b f = \lim_{n\to\infty}\int_a^b f_n .$$
 :::
 
-:::example
-The improper integral $\int_1^\infty \dfrac{1}{x^2}\,dx$ is handled by applying FTC Part 2 on $[1,b]$ and then taking a limit. An antiderivative of $1/x^2$ is $-1/x$, so
-$$\int_1^b \frac{1}{x^2}\,dx = \left[-\frac{1}{x}\right]_1^b = -\frac{1}{b} - \left(-\frac{1}{1}\right) = 1 - \frac{1}{b}.$$
-Now let $b \to \infty$:
-$$\int_1^\infty \frac{1}{x^2}\,dx = \lim_{b\to\infty}\left(1 - \frac{1}{b}\right) = 1.$$
-This equals "the antiderivative evaluated in the limit at $\infty$ minus at $1$", i.e. $0 - (-1) = 1$, valid because $-1/x$ has a finite limit as $x\to\infty$.
+:::proof
+Write $\varepsilon_n = \sup_{[a,b]}|f_n - f|$, which tends to $0$ by uniform convergence. Then $f_n - \varepsilon_n \le f \le f_n + \varepsilon_n$ pointwise, so for any partition $P$,
+
+$$L(f_n,P) - \varepsilon_n(b-a) \le L(f,P) \le U(f,P) \le U(f_n,P) + \varepsilon_n(b-a).$$
+
+Given $\varepsilon > 0$, pick $n$ with $\varepsilon_n(b-a) < \varepsilon/4$ and then a partition $P$ with $U(f_n,P)-L(f_n,P)<\varepsilon/2$. Combining the displayed inequalities, $U(f,P)-L(f,P) < \varepsilon/2 + 2\cdot\varepsilon/4 = \varepsilon$, so $f$ is integrable by Riemann's criterion.
+
+For the values, monotonicity of the integral applied to $|f-f_n| \le \varepsilon_n$ gives
+
+$$\left|\int_a^b f - \int_a^b f_n\right| = \left|\int_a^b (f-f_n)\right| \le \int_a^b |f-f_n| \le \varepsilon_n (b-a) \to 0 . \qquad \blacksquare$$
+:::
+
+:::example[Pointwise convergence is not enough]
+Enumerate $\mathbb{Q}\cap[0,1]$ as $q_1,q_2,\dots$ and let $f_n$ be the indicator of $\{q_1,\dots,q_n\}$. Show that each $f_n$ is integrable with integral $0$, that $f_n \to D$ pointwise where $D$ is Dirichlet's function, and that the conclusion of the interchange theorem fails.
 :::
 
 :::solution
-1. Sanity check: the region is unbounded to the right, but the tails shrink fast enough ($1/x^2$ decays faster than $1/x$) that the total area is finite. $\checkmark$
+1. Each $f_n$ is zero except at $n$ points, so it is integrable by Proposition *Finitely many discontinuities are harmless*, and $\int_0^1 f_n = 0$ — cover the $n$ points by intervals of total length $\eta$ to make $U(f_n,P) \le \eta$ arbitrarily small.
+2. Fix $x$. If $x$ is irrational then $f_n(x)=0$ for all $n$. If $x$ is rational then $x=q_N$ for some $N$, and $f_n(x)=1$ for all $n\ge N$. So $f_n \to D$ pointwise.
+3. The limit $D$ is not integrable at all, by the example *Dirichlet's function is not integrable*, so $\int_0^1 \lim f_n$ does not exist, while $\lim \int_0^1 f_n = 0$ exists.
+4. The convergence is not uniform: $\sup|f_n - D| = 1$ for every $n$, since there is always a rational not yet enumerated.
+5. Sanity check on the diagnosis: the hypotheses of the interchange theorem are not violated by accident here — uniform convergence is exactly the condition that would have forced the limit to remain integrable, and it is precisely what fails.
 :::
 
-## Common Mistakes
+:::remark[What Lebesgue fixes]
+In the Lebesgue theory, developed in *Lebesgue Integration*, the sequence above is handled by the dominated convergence theorem: $|f_n|\le 1$, the limit exists pointwise, and therefore $\int D = \lim\int f_n = 0$ — the Lebesgue integral of $D$ exists and equals zero. The gain is not that Lebesgue integrates more functions for its own sake; it is that the class of integrable functions is *closed* under the limit operations analysis actually performs. Riemann integrability, requiring almost-everywhere continuity, is not preserved by pointwise limits, and that is the defect.
+:::
 
-- **Applying Part 2 when f is not continuous (only integrable)**: The antiderivative may fail to exist in the classical sense or the formula may need interpretation.
-- **Forgetting the constant of integration when finding antiderivatives**: The evaluation F(b)−F(a) automatically cancels the constant.
-- **Confusing the two parts**: Part 1 says differentiation undoes integration (under continuity); Part 2 says integration undoes differentiation (for any antiderivative).
-- **Using FTC on functions that are not integrable**: e.g. 1/√x on (0,1] is improperly integrable but the proper integral on [ε,1] is fine; the theorem applies after taking limits.
-- **Thinking every derivative is integrable**: There exist functions differentiable everywhere whose derivative is not Riemann (or even Lebesgue) integrable on [a,b]. The FTC still holds in a weaker sense for the Lebesgue integral when f' exists a.e. and is integrable.
+The other two limitations are the ones the rest of this chapter repairs. The definition requires a bounded interval, and it requires a bounded integrand; both are relaxed by integrating over honest intervals and taking a limit, which is the subject of the improper integral.
 
-An improper integral is a definite integral in which either the interval of integration is unbounded or the integrand has a discontinuity (singularity) inside the interval. It is defined as a limit of proper (ordinary Riemann) integrals.
-
-Improper integrals appear throughout analysis, physics, and probability (e.g., the Gaussian integral, Laplace transforms, expected values of continuous random variables with unbounded support).
-
-## Unbounded Intervals (Limits at Infinity)
+## Improper Integrals over Unbounded Intervals
 
 <!-- section: unbounded-intervals -->
 
-:::definition[Improper integral over an unbounded interval]{#improper-infinite}
-$$\int_a^{\infty} f(x)\,dx = \lim_{b \to \infty} \int_a^b f(x)\,dx,$$
+The Riemann integral is defined on $[a,b]$ and nowhere else. To give meaning to $\int_1^\infty f$ we do not extend the definition; we integrate over $[1,b]$, where the definition already applies, and take a limit.
 
-provided the limit exists and is finite.
+:::definition[Improper integral over an unbounded interval]{#improper-infinite}
+Suppose $f\in\mathcal{R}[a,b]$ for every $b>a$. The improper integral is
+
+$$\int_a^{\infty} f = \lim_{b\to\infty}\int_a^b f,$$
+
+and it **converges** when this limit exists in $\mathbb{R}$ and **diverges** otherwise. Symmetrically for $\int_{-\infty}^b$. The doubly infinite integral is defined by splitting at any $c$,
+
+$$\int_{-\infty}^{\infty} f = \int_{-\infty}^{c} f + \int_{c}^{\infty} f,$$
+
+and converges only when **both** pieces converge separately.
 :::
 
-Similarly for $\int_{-\infty}^b f$ and the two-sided $\int_{-\infty}^\infty f$, which is defined as $\int_{-\infty}^c f + \int_c^\infty f$ and requires *both* one-sided improper integrals to converge separately (the choice of split point $c$ does not matter). The Cauchy principal value may exist even when this ordinary two-sided improper integral does not.
+The insistence on separate convergence is not pedantry. If both halves were allowed to be computed by one joint limit, the value would depend on how the two ends are taken to infinity relative to one another — $\int_{-R}^{R} x\,dx = 0$ for every $R$, while $\int_{-R}^{2R} x\,dx = \tfrac32 R^2 \to \infty$. Demanding separate convergence makes the answer independent of the route, and the principal value later is exactly the weaker notion that fixes one route.
+
+:::theorem[The $p$-test at infinity]{#p-test-infinity}
+For $a>0$, the integral $\displaystyle\int_a^\infty \frac{dx}{x^p}$ converges if and only if $p>1$, and then
+
+$$\int_a^\infty \frac{dx}{x^p} = \frac{a^{1-p}}{p-1}.$$
+:::
+
+:::proof
+For $p\ne1$ the function $x^{1-p}/(1-p)$ is an antiderivative of $x^{-p}$ on $[a,b]$, and $x^{-p}$ is continuous there, so the theorem *Fundamental Theorem of Calculus, Part Two* gives
+
+$$\int_a^b \frac{dx}{x^p} = \frac{b^{1-p}-a^{1-p}}{1-p}.$$
+
+If $p>1$ then $1-p<0$ and $b^{1-p}\to 0$, so the limit is $\dfrac{-a^{1-p}}{1-p} = \dfrac{a^{1-p}}{p-1}$, finite. If $p<1$ then $1-p>0$ and $b^{1-p}\to\infty$, so the integral diverges. For $p=1$, $\int_a^b dx/x = \ln b - \ln a \to \infty$. $\blacksquare$
+:::
 
 :::intuition
-You compute the integral out to a large but finite B, then let B run off to infinity and see whether the accumulated area settles to a definite finite number.
-
-If the tails keep adding a fixed positive amount no matter how far you go, the integral diverges to infinity.
+The exponent $p=1$ is the exact boundary, and $1/x$ sits on the wrong side of it. The graph of $1/x$ encloses infinite area over $[1,\infty)$ even though its height tends to zero — decay is necessary for convergence but nowhere near sufficient. The rule of thumb that survives: to converge at infinity, a positive integrand must decay *strictly faster* than $1/x$, and to converge at a singularity it must blow up *strictly slower* than $1/x$. The same $1/x$ borderline governs both ends, which is why the two $p$-tests have their inequalities pointing in opposite directions.
 :::
 
-:::example[(the $p$-test at infinity):]
-Determine when $\int_1^\infty \dfrac{dx}{x^p}$ converges.
+:::figure[Both curves decay to zero, but only the area under $1/x^2$ (shaded) is finite. The tail of $1/x$ beyond any point still carries infinite area.]{#p-test-picture}
+{
+  "type": "plot",
+  "x": [0, 6.2], "y": [0, 1.2],
+  "xTicks": 1, "yTicks": 0.25, "xLabel": "x", "yLabel": "y",
+  "marks": [
+    { "kind": "area", "fn": "1/x^2", "from": 1, "to": 6 },
+    { "kind": "function", "fn": "1/x", "tone": "accent" },
+    { "kind": "function", "fn": "1/x^2", "tone": "result", "dashed": true },
+    { "kind": "text", "at": [3.6, 1.0], "text": "y = 1/x  (diverges)", "leaderTo": [2.1, 0.476] },
+    { "kind": "text", "at": [3.6, 0.62], "text": "y = 1/x^2  (converges)", "leaderTo": [2.1, 0.227] },
+    { "kind": "text", "at": [0.5, 0.35], "text": "area 1", "leaderTo": [2.6, 0.07] }
+  ]
+}
+:::
+
+:::example[Two tails, one convergent]
+Decide whether $\int_1^\infty \frac{dx}{x^{3/2}}$ and $\int_2^\infty \frac{dx}{x\ln x}$ converge, and evaluate the first.
 :::
 
 :::solution
-Case $p \ne 1$: an antiderivative is $\dfrac{x^{1-p}}{1-p}$, so
-$$\int_1^b \frac{dx}{x^p} = \left[\frac{x^{1-p}}{1-p}\right]_1^b = \frac{b^{1-p} - 1}{1-p}.$$
-As $b \to \infty$, the term $b^{1-p} \to 0$ exactly when the exponent $1 - p < 0$, i.e. $p > 1$; then the limit is $\dfrac{0 - 1}{1-p} = \dfrac{1}{p-1}$ (finite). If $p < 1$ then $b^{1-p} \to \infty$, so the integral diverges.
+1. The first has $p = 3/2 > 1$, so by the theorem *The $p$-test at infinity* it converges, with value $\frac{1^{1-3/2}}{3/2-1} = \frac{1}{1/2} = 2$.
+2. For the second, substitute $u=\ln x$, $du = dx/x$, using Corollary *Change of variables* on $[2,b]$:
 
-Case $p = 1$: $\int_1^b \dfrac{dx}{x} = \ln b \to \infty$, so it diverges.
+$$\int_2^b \frac{dx}{x\ln x} = \int_{\ln 2}^{\ln b}\frac{du}{u} = \ln(\ln b) - \ln(\ln 2).$$
 
-Conclusion: $\int_1^\infty x^{-p}\,dx$ converges if and only if $p > 1$, with value $\dfrac{1}{p-1}$.
-
-Sanity check: at $p = 2$ this gives $\dfrac{1}{2-1} = 1$, matching the $\int_1^\infty x^{-2}\,dx = 1$ computed earlier. $\checkmark$
+3. As $b\to\infty$, $\ln(\ln b)\to\infty$, so the second integral diverges.
+4. Sanity check: $1/(x\ln x)$ decays faster than $1/x$ but not by a power, and the $p$-test boundary is sharp enough that no such logarithmic gain is sufficient. This mirrors the divergence of $\sum 1/(n\log n)$ in *Sequences and Series*, as the integral test would predict.
 :::
 
-## Integrable Singularities (Limits at Finite Points)
+
+## Singularities at a Finite Point
 
 <!-- section: singularities-finite -->
 
-:::definition[Improper integral at a singularity]
-If $f$ has a singularity at an interior point $c \in (a,b)$, the improper integral is
+The second failure of the basic definition is an unbounded integrand. The repair is the same: integrate over intervals that avoid the bad point, and let them close in on it.
 
-$$\lim_{\varepsilon\to 0^+} \int_a^{c-\varepsilon} f \; + \; \lim_{\eta\to 0^+}\int_{c+\eta}^b f,$$
+:::definition[Improper integral at a singularity]{#improper-singular}
+If $f\in\mathcal{R}[a+\varepsilon,b]$ for every small $\varepsilon>0$ but $f$ is unbounded near $a$, set
 
-and the two one-sided limits are required to exist *separately*. If the singularity is at an endpoint, only one such limit is taken.
+$$\int_a^b f = \lim_{\varepsilon\to0^+}\int_{a+\varepsilon}^{b} f .$$
+
+If the singularity is at an interior point $c$, the integral is
+
+$$\lim_{\varepsilon\to0^+}\int_a^{c-\varepsilon} f \;+\; \lim_{\eta\to0^+}\int_{c+\eta}^{b} f,$$
+
+with the two limits required to exist **separately** and independently of one another.
 :::
 
-The insistence on two separate limits is what distinguishes this from the principal value below; taking $\varepsilon = \eta$ and one joint limit is a strictly weaker demand.
-
-Common singularities are $1/\sqrt{x}$ or $1/x^\alpha$ near $0$.
-
-:::proposition[The p-test at 0]
-$\int_0^1 x^{-\alpha}\,dx$ converges if and only if $\alpha < 1$ — that is, if the blow-up is mild enough. This mirrors the test at $\infty$, with the inequality flipped.
+:::theorem[The $p$-test at a singularity]{#p-test-zero}
+The integral $\displaystyle\int_0^1 \frac{dx}{x^{\alpha}}$ converges if and only if $\alpha<1$, and then its value is $\dfrac{1}{1-\alpha}$.
 :::
 
-:::intuition
-The graph may shoot up to infinity or oscillate wildly at c, but if the "spike" is narrow enough and not too tall the area under it may still be finite.
+:::proof
+For $\alpha \ne 1$ and $\varepsilon\in(0,1)$, the integrand is continuous on $[\varepsilon,1]$ with antiderivative $x^{1-\alpha}/(1-\alpha)$, so
 
-You cut out a small symmetric (or one-sided) neighborhood around the bad point, integrate on the good parts, then let the neighborhood shrink to zero and see if the missing piece's area contribution tends to a limit.
+$$\int_\varepsilon^1 x^{-\alpha}\,dx = \frac{1-\varepsilon^{1-\alpha}}{1-\alpha}.$$
+
+If $\alpha<1$ the exponent $1-\alpha$ is positive, so $\varepsilon^{1-\alpha}\to0$ and the limit is $1/(1-\alpha)$. If $\alpha>1$ the exponent is negative and $\varepsilon^{1-\alpha}\to\infty$, so the integral diverges. For $\alpha=1$, $\int_\varepsilon^1 dx/x = -\ln\varepsilon\to\infty$. $\blacksquare$
 :::
 
-:::example
-Evaluate $\int_0^1 \dfrac{dx}{\sqrt{x}}$. The integrand blows up at the endpoint $0$, so this is improper there. Here $\alpha = \tfrac12 < 1$, so we expect convergence.
+Comparing the two $p$-tests, the borderline is $1/x$ at both ends and the admissible side flips: near a singularity mild blow-up ($\alpha<1$) is survivable, at infinity only fast decay ($p>1$) is. A single power law can therefore never be integrable on all of $(0,\infty)$ — $\int_0^\infty x^{-p}dx$ diverges for every $p$, at one end or the other.
+
+:::example[A convergent and a divergent singularity]
+Evaluate $\int_0^1 \frac{dx}{\sqrt x}$, and decide the fate of $\int_0^2 \frac{dx}{(x-1)^2}$.
 :::
 
 :::solution
-An antiderivative of $x^{-1/2}$ is $2\sqrt{x}$ (since $\frac{d}{dx}\,2x^{1/2} = x^{-1/2}$). Integrate from $\varepsilon$ to $1$ and let $\varepsilon \to 0^+$:
-$$\int_\varepsilon^1 \frac{dx}{\sqrt{x}} = \left[2\sqrt{x}\right]_\varepsilon^1 = 2\sqrt{1} - 2\sqrt{\varepsilon} = 2 - 2\sqrt{\varepsilon} \xrightarrow{\varepsilon\to 0^+} 2.$$
-Hence the improper integral converges to $2$.
-
-Sanity check: even though the graph shoots to $+\infty$ at $0$, the spike is narrow enough ($\alpha < 1$) that the area is finite. Contrast $\int_0^1 dx/x$ ($\alpha = 1$), which gives $\ln 1 - \ln\varepsilon = -\ln\varepsilon \to \infty$: divergent. $\checkmark$
+1. The first has $\alpha = 1/2 < 1$, so by the theorem *The $p$-test at a singularity* it converges to $\frac{1}{1-1/2} = 2$. Directly: $\int_\varepsilon^1 x^{-1/2}dx = 2-2\sqrt\varepsilon \to 2$.
+2. The second has an interior singularity at $c=1$ with $\alpha=2$. Take the right-hand piece: $\int_{1+\eta}^2 (x-1)^{-2}dx = \left[-\frac{1}{x-1}\right]_{1+\eta}^2 = -1 + \frac1\eta \to \infty$.
+3. Since one of the two required one-sided limits fails to exist, the integral diverges. It is irrelevant that the integrand is symmetric about $x=1$ and that the two halves might be thought to "cancel"; both are $+\infty$ here, so nothing cancels even in a principal-value sense.
+4. Sanity check on a common blunder: applying Part Two blindly would give $\left[-\frac{1}{x-1}\right]_0^2 = -1-1 = -2$, negative for a positive integrand. The antiderivative is discontinuous at the interior singularity, so Part Two, which requires continuity of $F$ on the whole closed interval, simply does not apply.
 :::
 
-## Convergence Tests (Comparison, Limit Comparison, Absolute vs Conditional)
+
+## Convergence Tests for Improper Integrals
 
 <!-- section: convergence-tests-improper -->
 
-For positive integrands the usual comparison and limit comparison tests apply (compare with a known p-integral or exponential).
+Most improper integrals cannot be evaluated in closed form, and the practical question is only whether they converge. For positive integrands the situation is as simple as for positive series.
 
-:::theorem[Absolute convergence]
-If $\int |f| < \infty$ then the improper integral of $f$ converges, and
-
-$$\int f = \int f^+ - \int f^-,$$
-
-the difference of the integrals of the positive and negative parts, both of which are finite since $f^\pm \le |f|$.
+:::lemma[Monotone criterion for positive integrands]{#monotone-criterion}
+If $f \ge 0$ and $f\in\mathcal{R}[a,b]$ for every $b$, then $\int_a^\infty f$ converges if and only if the function $b \mapsto \int_a^b f$ is bounded above.
 :::
 
-Conditional convergence for improper integrals is more subtle (oscillatory tails); Dirichlet test for integrals, etc.
-
-:::intuition
-If |f| has finite area, then the signed f cannot accumulate infinite positive or negative area; cancellations are controlled.
-
-For oscillating tails that decay slowly, absolute area may be infinite while signed cancellations still produce a finite net area (like alternating series).
+:::proof
+Write $\Phi(b)=\int_a^b f$. For $b_2>b_1$, additivity gives $\Phi(b_2)-\Phi(b_1)=\int_{b_1}^{b_2} f \ge 0$ since $f\ge0$, so $\Phi$ is increasing. An increasing function bounded above has a finite limit at $\infty$, equal to $\sup_b \Phi(b)$, by the monotone convergence theorem for functions from *Limits and Continuity*; an increasing unbounded function tends to $+\infty$. $\blacksquare$
 :::
 
-:::example[(conditional convergence):]
-Show $\int_1^\infty \dfrac{\sin x}{x}\,dx$ converges but $\int_1^\infty \left|\dfrac{\sin x}{x}\right|\,dx$ diverges.
+:::theorem[Comparison test]{#comparison-test}
+Suppose $0 \le f(x) \le g(x)$ for all $x \ge a$, and both are integrable on every $[a,b]$. If $\int_a^\infty g$ converges then so does $\int_a^\infty f$; equivalently, if $\int_a^\infty f$ diverges then so does $\int_a^\infty g$.
+:::
+
+:::proof
+By monotonicity of the integral, $\int_a^b f \le \int_a^b g \le \int_a^\infty g$ for every $b$, the last step because the partial integrals of $g$ increase to their limit. So $b\mapsto\int_a^b f$ is bounded above, and Lemma *Monotone criterion for positive integrands* gives convergence. The contrapositive is the divergence half. $\blacksquare$
+:::
+
+:::theorem[Limit comparison test]{#limit-comparison}
+Let $f,g>0$ on $[a,\infty)$ with
+
+$$\lim_{x\to\infty}\frac{f(x)}{g(x)} = L .$$
+
+If $0<L<\infty$, then $\int_a^\infty f$ and $\int_a^\infty g$ either both converge or both diverge. If $L=0$ and $\int g$ converges, so does $\int f$; if $L=\infty$ and $\int g$ diverges, so does $\int f$.
+:::
+
+:::proof
+Assume $0<L<\infty$. Taking $\varepsilon = L/2$ in the definition of the limit gives $X\ge a$ such that for $x \ge X$,
+
+$$\frac{L}{2} < \frac{f(x)}{g(x)} < \frac{3L}{2}, \qquad\text{i.e.}\qquad \frac{L}{2}g(x) < f(x) < \frac{3L}{2}g(x).$$
+
+If $\int_a^\infty g$ converges then so does $\int_X^\infty \frac{3L}{2}g$, and the right inequality with the theorem *Comparison test* makes $\int_X^\infty f$ converge; adding the proper integral $\int_a^X f$ back gives convergence of $\int_a^\infty f$. If $\int_a^\infty g$ diverges, the left inequality and the divergence half of comparison make $\int_a^\infty f$ diverge. The cases $L=0$ and $L=\infty$ use only the one inequality that survives: $f < \varepsilon g$ eventually, respectively $f > Mg$ eventually. $\blacksquare$
+:::
+
+:::theorem[Absolute convergence implies convergence]{#absolute-convergence}
+If $\int_a^\infty |f|$ converges, then $\int_a^\infty f$ converges, and $\left|\int_a^\infty f\right| \le \int_a^\infty |f|$.
+:::
+
+:::proof
+Decompose $f = f^+ - f^-$ where $f^+ = \max(f,0)$ and $f^- = \max(-f,0)$. Both are non-negative and satisfy $f^\pm \le |f|$, and both are integrable on each $[a,b]$ because $f^+ = \tfrac12(|f|+f)$ and $f^-=\tfrac12(|f|-f)$ are combinations of integrable functions by the theorem *Algebra of integrable functions*.
+
+By the theorem *Comparison test*, $\int_a^\infty f^+$ and $\int_a^\infty f^-$ both converge. Then for each $b$, $\int_a^b f = \int_a^b f^+ - \int_a^b f^-$, and letting $b\to\infty$ the right side converges to the difference of the two limits, so the left side converges too. The final inequality follows from $\left|\int_a^b f\right| \le \int_a^b|f|$, proved in the theorem *Algebra of integrable functions*, by letting $b\to\infty$. $\blacksquare$
+:::
+
+:::definition[Conditional convergence]{#conditional}
+An improper integral $\int_a^\infty f$ **converges conditionally** if it converges but $\int_a^\infty |f|$ diverges.
+:::
+
+:::example[Deciding three integrals by comparison]
+Determine convergence of (a) $\int_1^\infty \frac{dx}{x^2+3x}$, (b) $\int_1^\infty \frac{x+1}{x^2+5}\,dx$, (c) $\int_1^\infty e^{-x^2}dx$.
 :::
 
 :::solution
-Convergence of the signed integral (integration by parts). With $u = 1/x$, $dv = \sin x\,dx$, so $v = -\cos x$:
-$$\int_1^b \frac{\sin x}{x}\,dx = \left[-\frac{\cos x}{x}\right]_1^b - \int_1^b \frac{\cos x}{x^2}\,dx = \cos 1 - \frac{\cos b}{b} - \int_1^b \frac{\cos x}{x^2}\,dx.$$
-As $b \to \infty$: the boundary term $\dfrac{\cos b}{b} \to 0$ (bounded numerator over $b\to\infty$), and the remaining integral converges absolutely because $\left|\dfrac{\cos x}{x^2}\right| \le \dfrac{1}{x^2}$ and $\int_1^\infty x^{-2}\,dx = 1 < \infty$. So the limit exists and the integral converges.
-
-Divergence of the absolute integral. On each interval $[k\pi, (k+1)\pi]$ we have $x \le (k+1)\pi$, so
-$$\int_{k\pi}^{(k+1)\pi} \frac{|\sin x|}{x}\,dx \ge \frac{1}{(k+1)\pi}\int_{k\pi}^{(k+1)\pi} |\sin x|\,dx = \frac{1}{(k+1)\pi}\cdot 2 = \frac{2}{(k+1)\pi},$$
-using $\int_{k\pi}^{(k+1)\pi}|\sin x|\,dx = 2$ over one hump. Summing over $k$ gives a constant times the harmonic series $\sum \frac{1}{k+1}$, which diverges. Hence $\int_1^\infty |\sin x / x|\,dx = \infty$.
-
-Sanity check: this is the integral analogue of the alternating harmonic series ($\sum (-1)^n/n$ converges) versus the harmonic series ($\sum 1/n$ diverges) — cancellation saves the signed sum, absolute values do not converge. $\checkmark$
+1. **(a)** For $x\ge1$, $\frac{1}{x^2+3x} \le \frac{1}{x^2}$, and $\int_1^\infty x^{-2}dx = 1$ converges by the $p$-test. Comparison gives convergence.
+2. **(b)** Compare with $g(x)=1/x$. The ratio is $\frac{(x+1)/(x^2+5)}{1/x} = \frac{x^2+x}{x^2+5}\to 1$, a finite positive limit, and $\int_1^\infty dx/x$ diverges. By the theorem *Limit comparison test*, the integral diverges.
+3. **(c)** For $x\ge1$ we have $x^2 \ge x$, so $e^{-x^2}\le e^{-x}$, and $\int_1^\infty e^{-x}dx = e^{-1}$ converges. Comparison gives convergence.
+4. Sanity check on (b): the integrand is asymptotically $1/x$, and no amount of decay short of a genuine power improvement rescues the borderline. Reading off the leading behaviour and comparing is faster and safer than hunting for an antiderivative.
 :::
 
-## Principal Value and Other Regularizations
+:::example[Conditional convergence of the sine integral]
+Show that $\int_1^\infty \frac{\sin x}{x}\,dx$ converges but not absolutely.
+:::
+
+:::solution
+1. **Convergence.** Integrate by parts on $[1,b]$ with $u = 1/x$ and $v' = \sin x$, so $v = -\cos x$:
+
+$$\int_1^b \frac{\sin x}{x}\,dx = \cos 1 - \frac{\cos b}{b} - \int_1^b \frac{\cos x}{x^2}\,dx .$$
+
+2. The boundary term satisfies $|\cos b / b| \le 1/b \to 0$. The remaining integral converges absolutely, since $|\cos x/x^2| \le 1/x^2$ and $\int_1^\infty x^{-2}dx$ converges; apply the theorems *Comparison test* and *Absolute convergence implies convergence*.
+3. So the limit as $b\to\infty$ exists, and the integral converges.
+4. **Not absolutely.** On $[k\pi,(k+1)\pi]$ we have $x \le (k+1)\pi$, so
+
+$$\int_{k\pi}^{(k+1)\pi}\frac{|\sin x|}{x}\,dx \ge \frac{1}{(k+1)\pi}\int_{k\pi}^{(k+1)\pi}|\sin x|\,dx = \frac{2}{(k+1)\pi},$$
+
+using that each hump of $|\sin|$ has area exactly $2$.
+5. Summing over $k=1,2,\dots,n$ gives a constant multiple of a partial sum of the harmonic series, which is unbounded by *Sequences and Series*. So $\int_1^\infty|\sin x/x|\,dx = \infty$ and the convergence is conditional.
+6. Sanity check: this is the integral twin of the alternating harmonic series — signed cancellation across humps saves the integral, absolute values destroy it. The actual value is $\int_0^\infty \frac{\sin x}{x}dx = \pi/2$, though no elementary antiderivative exists.
+:::
+
+## Principal Values
 
 <!-- section: principal-value -->
 
-:::definition[Cauchy principal value]{#principal-value}
-The Cauchy principal value of $\int_{-\infty}^{\infty} f$ uses symmetric limits,
+Some divergences are symmetric: the integral blows up to $+\infty$ on one side of a singularity and to $-\infty$ on the other, at the same rate. Insisting on separate limits discards that structure. The principal value keeps it by fixing one symmetric route.
 
-$$\operatorname{PV}\!\int_{-\infty}^{\infty} f = \lim_{R\to\infty} \int_{-R}^{R} f,$$
+:::definition[Cauchy principal value]{#pv}
+For a singularity at an interior point $c\in(a,b)$,
 
-and for a singularity at $c$ inside a finite interval,
+$$\operatorname{PV}\!\int_a^b f = \lim_{\varepsilon\to0^+}\left(\int_a^{c-\varepsilon} f + \int_{c+\varepsilon}^{b} f\right),$$
 
-$$\operatorname{PV}\!\int_a^b = \lim_{\varepsilon \to 0^+}\!\left(\int_a^{c-\varepsilon} + \int_{c+\varepsilon}^b\right).$$
+with the **same** $\varepsilon$ on both sides. Over the whole line,
+
+$$\operatorname{PV}\!\int_{-\infty}^{\infty} f = \lim_{R\to\infty}\int_{-R}^{R} f .$$
 :::
 
-The PV may exist when the ordinary improper integral does not (e.g. $\int_{-1}^1 dx/x$ has $\operatorname{PV} = 0$ but the ordinary improper integral diverges, because its two one-sided pieces are $-\infty$ and $+\infty$).
-
-:::intuition
-By approaching the bad point or infinity symmetrically from both sides, positive and negative infinities (or oscillations) may cancel in a principal-value sense even if one-sided they do not settle.
-
-PV is a useful regularization in physics and Fourier analysis, but it is not the same as the Lebesgue or ordinary improper integral.
+:::proposition[The principal value extends the improper integral]{#pv-extends}
+If $\int_a^b f$ converges as an improper integral, then $\operatorname{PV}\!\int_a^b f$ exists and has the same value. The converse fails.
 :::
 
-:::example
-Compute $\operatorname{PV}\!\int_{-1}^1 \dfrac{dx}{x}$. The singularity is at the interior point $c = 0$, so the principal value uses one symmetric cutoff $\varepsilon$ on both sides:
-$$\operatorname{PV}\!\int_{-1}^1 \frac{dx}{x} = \lim_{\varepsilon\to 0^+}\left(\int_{-1}^{-\varepsilon}\frac{dx}{x} + \int_{\varepsilon}^{1}\frac{dx}{x}\right).$$
-An antiderivative is $\ln|x|$. Evaluate each piece:
-$$\int_{-1}^{-\varepsilon}\frac{dx}{x} = \big[\ln|x|\big]_{-1}^{-\varepsilon} = \ln\varepsilon - \ln 1 = \ln\varepsilon,$$
-$$\int_{\varepsilon}^{1}\frac{dx}{x} = \big[\ln|x|\big]_{\varepsilon}^{1} = \ln 1 - \ln\varepsilon = -\ln\varepsilon.$$
-Their sum is $\ln\varepsilon + (-\ln\varepsilon) = 0$ for every $\varepsilon > 0$, so the limit is $\operatorname{PV} = 0$.
+:::proof
+If the two one-sided limits exist separately with values $A$ and $B$, then along the particular sequence $\varepsilon=\eta$ each term converges, so the sum converges to $A+B$, which is the improper value. A limit that exists in general certainly exists along a restricted route.
+
+For the failure of the converse, $f(x)=1/x$ on $[-1,1]$ is the standard witness, computed in the example below: its principal value is $0$ while the improper integral diverges. $\blacksquare$
+:::
+
+:::example[$\operatorname{PV}\int_{-1}^1 dx/x$]
+Compute the principal value of $\int_{-1}^1 \frac{dx}{x}$ and show the ordinary improper integral does not exist.
 :::
 
 :::solution
-1. Contrast with the ordinary improper integral, which would require the two one-sided limits to exist separately: $\int_{\varepsilon}^1 dx/x = -\ln\varepsilon \to +\infty$ and $\int_{-1}^{-\varepsilon} dx/x = \ln\varepsilon \to -\infty$. Neither converges, so the ordinary improper integral diverges even though the symmetric PV is $0$.
-2. Sanity check: $1/x$ is odd, so the symmetric procedure cancels the two infinite halves against each other — that is exactly what the PV exploits, and why it can be finite when the plain improper integral is not. $\checkmark$
+1. With the symmetric cutoff, $\int_{-1}^{-\varepsilon}\frac{dx}{x} = \big[\ln|x|\big]_{-1}^{-\varepsilon} = \ln\varepsilon$, and $\int_{\varepsilon}^{1}\frac{dx}{x} = -\ln\varepsilon$.
+2. Their sum is exactly $0$ for every $\varepsilon>0$, so $\operatorname{PV}\!\int_{-1}^1 dx/x = 0$.
+3. For the improper integral the two limits must exist separately: $-\ln\varepsilon \to +\infty$ and $\ln\varepsilon\to-\infty$. Neither is finite, so the improper integral diverges.
+4. That the two infinities are of the same size is precisely what the principal value exploits and what the improper definition refuses to rely on.
+5. Sanity check by breaking the symmetry: with cutoffs $\varepsilon$ on the left and $2\varepsilon$ on the right, the sum is $\ln\varepsilon - \ln(2\varepsilon) = -\ln 2$, a different answer. The value depends on the route, which is exactly why the ordinary definition declares divergence.
 :::
 
-## Common Mistakes
+:::pitfall
+A principal value is a *regularisation*, not an integral. It is not additive over subintervals in general, it does not obey the comparison tests, and substituting inside one can change its value. Report it as $\operatorname{PV}$, never as $\int$, and never conclude from $\operatorname{PV}\!\int f = 0$ that $f$ is integrable in any sense. The odd function $f(x)=x$ has $\operatorname{PV}\!\int_{-\infty}^\infty f = 0$ and is as far from integrable on $\mathbb{R}$ as a function can be.
+:::
 
-- **Assuming that if the antiderivative has a limit at infinity then the integral converges**: True only if the integrand is the derivative of that antiderivative and the fundamental theorem applies in the limit; counter-examples exist when f is not integrable but F has limits.
-- **Confusing absolute and conditional convergence for improper integrals**: Absolute is safer for term-by-term operations; conditional requires more care (like alternating series).
-- **Forgetting that existence of lim_{b→∞} F(b) − F(a) requires that F'(x) = f(x) and f integrable on every finite piece**: If f has non-integrable singularities the antiderivative may not be defined in the classical sense.
-- **Thinking every improper integral that 'looks convergent' by comparison is Lebesgue integrable**: On the real line Riemann and Lebesgue improper integrals coincide for positive functions; differences appear for signed functions with conditional convergence.
-- **Using the same variable for the limit and the dummy integration variable**: Always write $\lim_{b \to \infty} \int_a^b f(x)\,dx$ with distinct variables.
-
-The Riemann–Stieltjes integral generalizes the ordinary Riemann integral by replacing the "dx" (length element) with dα where α is a monotone integrator function.
-
-When α(x) = x one recovers the Riemann integral. When α is a step function the integral reduces to a finite or infinite sum. It provides a unified language for both integrals and sums and is the natural setting for integration by parts in Stieltjes form.
-
-## Definition via Riemann–Stieltjes Sums
+## Riemann–Stieltjes Sums
 
 <!-- section: definition-stieltjes-sums -->
 
-:::definition[Riemann-Stieltjes integral]{#stieltjes}
-Given a partition $P$ of $[a,b]$ and tags $t_i$ in each subinterval, the Riemann–Stieltjes sum is
+The last generalisation changes not the domain but the measuring stick. Instead of weighting the value $f(t_i)$ by the length $\Delta x_i$ of the subinterval, weight it by the increment of a fixed **integrator** $\alpha$ across that subinterval.
 
-$$\sum_i f(t_i)\,\bigl(\alpha(x_i) - \alpha(x_{i-1})\bigr).$$
+:::definition[Riemann–Stieltjes integral]{#stieltjes}
+Let $\alpha$ be increasing on $[a,b]$ and write $\Delta\alpha_i = \alpha(x_i)-\alpha(x_{i-1}) \ge 0$. For a partition $P$ put
 
-Then $f$ is Riemann–Stieltjes integrable with respect to $\alpha$, written $\int f\,d\alpha$, if there is a number $I$ such that for every $\varepsilon > 0$ there is a partition $P_\varepsilon$ for which every refinement and every choice of tags gives a sum within $\varepsilon$ of $I$.
+$$L(f,P,\alpha) = \sum_i m_i\,\Delta\alpha_i, \qquad U(f,P,\alpha) = \sum_i M_i\,\Delta\alpha_i,$$
+
+with $m_i, M_i$ as in Definition *Darboux sums*. Then $f$ is **Riemann–Stieltjes integrable with respect to $\alpha$**, written $f\in\mathcal{R}(\alpha)$, when $\sup_P L(f,P,\alpha) = \inf_P U(f,P,\alpha)$, and the common value is $\int_a^b f\,d\alpha$.
 :::
 
-:::theorem[A sufficient condition for existence]
-If $f$ is continuous on $[a,b]$ and $\alpha$ is monotone (or of bounded variation), then $\int_a^b f\,d\alpha$ exists.
+Every structural fact of the first two sections survives verbatim, because every proof used only that the weights $\Delta x_i$ are non-negative and add up across a refinement — which $\Delta\alpha_i$ also does, by monotonicity of $\alpha$. In particular refinement still narrows the bracket, every lower sum still lies below every upper sum, and Riemann's criterion still characterises integrability in the form $U(f,P,\alpha)-L(f,P,\alpha)<\varepsilon$. We use these without restating them.
+
+:::theorem[Continuous integrand against monotone integrator]{#stieltjes-exists}
+If $f$ is continuous on $[a,b]$ and $\alpha$ is increasing, then $f \in \mathcal{R}(\alpha)$ on $[a,b]$.
 :::
 
-When $\alpha$ has a jump of size $s$ at an interior point $c$ and $f$ is continuous there, the integral picks up a contribution $f(c)\cdot s$ (like a delta / point-mass contribution).
+:::proof
+If $\alpha(b)=\alpha(a)$ then $\alpha$ is constant, all weights vanish and the integral is $0$; so assume $A = \alpha(b)-\alpha(a) > 0$.
+
+Let $\varepsilon>0$. By Heine–Cantor, $f$ is uniformly continuous on the compact interval $[a,b]$, so there is $\delta>0$ with $|f(s)-f(t)| < \varepsilon/A$ whenever $|s-t|<\delta$. Take any partition $P$ of mesh below $\delta$. As in the proof of the theorem *Continuous functions are integrable*, $f$ attains its extrema on each subinterval at points within $\delta$ of each other, so $M_i - m_i < \varepsilon/A$ for every $i$. Then
+
+$$U(f,P,\alpha)-L(f,P,\alpha) = \sum_i (M_i-m_i)\Delta\alpha_i < \frac{\varepsilon}{A}\sum_i \Delta\alpha_i = \frac{\varepsilon}{A}\cdot A = \varepsilon,$$
+
+the sum of the increments telescoping to $\alpha(b)-\alpha(a)$. Riemann's criterion applies. $\blacksquare$
+:::
+
+:::proposition[A jump in the integrator samples the integrand]{#jump-sampling}
+Let $c\in(a,b)$ and let $\alpha$ be the unit step at $c$: $\alpha(x)=0$ for $x<c$ and $\alpha(x)=1$ for $x \ge c$. If $f$ is continuous at $c$, then
+
+$$\int_a^b f\,d\alpha = f(c).$$
+:::
+
+:::proof
+For any partition $P$, the increment $\Delta\alpha_i$ is zero on every subinterval except the one, say the $k$-th, whose half-open span $(x_{k-1},x_k]$ contains $c$; there $\Delta\alpha_k = 1$. Hence
+
+$$L(f,P,\alpha) = m_k, \qquad U(f,P,\alpha) = M_k,$$
+
+the infimum and supremum of $f$ over that single subinterval. Given $\varepsilon>0$, continuity of $f$ at $c$ supplies $\delta>0$ with $|f(t)-f(c)|<\varepsilon/2$ for $|t-c|<\delta$; choosing $P$ of mesh below $\delta$ puts the whole $k$-th subinterval within $\delta$ of $c$, so $M_k - m_k \le \varepsilon$ and both lie within $\varepsilon$ of $f(c)$. Thus the upper and lower integrals agree and equal $f(c)$. $\blacksquare$
+:::
 
 :::intuition
-Instead of adding f times width of slice, you add f times the change in the "weight function" α over the slice.
-
-If α is a staircase (jumps at certain points), the integral becomes a weighted sum of the f values at the jump locations, with weights the jump sizes.
+Think of $\alpha$ as a cumulative mass distribution along the interval: $\alpha(x)$ is the total mass to the left of $x$, and $\Delta\alpha_i$ is the mass sitting in the $i$-th slice. The Stieltjes integral is then "value times mass", summed. Spread the mass uniformly and you recover ordinary area. Concentrate it all at one point and the integral reads off the value there. This one picture explains both the Riemann integral and the expectation of a discrete random variable, and the fact that it explains them simultaneously is the whole reason the Stieltjes integral exists.
 :::
 
-:::example
-Let $\alpha(x) = 0$ for $x < 0$ and $\alpha(x) = 1$ for $x \ge 0$ (a Heaviside step with a single jump of size $1$ at $0$), and let $f$ be continuous. Compute $\int_{-1}^1 f\,d\alpha$.
+:::example[A staircase integrator turns an integral into a sum]
+Let $\alpha$ have jumps of sizes $c_1,\dots,c_m$ at points $s_1<\cdots<s_m$ in $(a,b)$ and be constant in between. For $f$ continuous, compute $\int_a^b f\,d\alpha$, and evaluate it for $f(x)=x^2$ with jumps of $0.5$ at $x=1$ and $1.5$ at $x=3$ on $[0,4]$.
 :::
 
 :::solution
-Take any partition of $[-1,1]$ and any tags $t_i$. The increment $\alpha(x_i) - \alpha(x_{i-1})$ is $0$ on every subinterval *except* the one containing $0$, where it equals $1 - 0 = 1$. So the entire Riemann–Stieltjes sum collapses to a single term:
-$$\sum_i f(t_i)\big(\alpha(x_i) - \alpha(x_{i-1})\big) = f(t^\ast)\cdot 1,$$
-where $t^\ast$ is the tag in the subinterval straddling $0$. As the mesh $\to 0$ that subinterval shrinks to $\{0\}$, forcing $t^\ast \to 0$, and by continuity $f(t^\ast) \to f(0)$. Hence
-$$\int_{-1}^1 f\,d\alpha = f(0).$$
-This is the "integral against a Dirac delta" in elementary language: a jump of size $1$ in the integrator samples $f$ at the jump location.
-
-Sanity check: if instead $f \equiv 5$ (constant), the sum is $5\cdot 1 = 5 = f(0)$, as expected. $\checkmark$
+1. Write $\alpha = \sum_{j=1}^m c_j\,H_{s_j}$ where $H_{s}$ is the unit step at $s$. The Darboux–Stieltjes sums are additive in the integrator, since each $\Delta\alpha_i$ splits as a sum.
+2. By Proposition *A jump in the integrator samples the integrand* applied to each piece, $\int_a^b f\,d\alpha = \sum_{j=1}^m c_j f(s_j)$.
+3. For the stated data, $\int_0^4 x^2\,d\alpha = 0.5\cdot 1^2 + 1.5\cdot 3^2 = 0.5 + 13.5 = 14$.
+4. Sanity check: the integrator rises by a total of $2$, and $f$ ranges over $[1,9]$ at the two atoms, so the answer must lie between $2\cdot1=2$ and $2\cdot9=18$. It does, and it leans high because the larger jump sits where $f$ is large.
 :::
 
 ## Integration by Parts for Stieltjes Integrals
 
 <!-- section: integration-by-parts-stieltjes -->
 
-:::theorem[Stieltjes integration by parts]
-If $\int_a^b f\,d\alpha$ exists then $\int_a^b \alpha\,df$ also exists, and
+The Stieltjes integral has one symmetry the Riemann integral cannot express, because the Riemann integral's integrator is fixed. Integrand and integrator can trade places, at the cost of a boundary term.
+
+:::theorem[Stieltjes integration by parts]{#stieltjes-parts}
+If $f \in \mathcal{R}(\alpha)$ on $[a,b]$, then $\alpha \in \mathcal{R}(f)$ on $[a,b]$ and
 
 $$\int_a^b f\,d\alpha + \int_a^b \alpha\,df = f(b)\alpha(b) - f(a)\alpha(a).$$
-
-A natural sufficient setting is that $f$ and $\alpha$ have no common discontinuities.
 :::
 
-Note the symmetry — the roles of integrand and integrator simply swap.
+:::proof
+Let $S$ be any Riemann–Stieltjes sum for $\int \alpha\,df$: choose a partition $a=x_0<\cdots<x_n=b$ and tags $t_i \in [x_{i-1},x_i]$, and set
 
-This is the Stieltjes version of the familiar ∫ u dv = u v − ∫ v du .
+$$S = \sum_{i=1}^n \alpha(t_i)\big(f(x_i)-f(x_{i-1})\big).$$
 
-It is extremely useful for converting between sums and integrals or for moving derivatives from one factor to another.
+Apply Abel summation, that is, add and subtract the telescoping product. Writing out the two halves of $S$,
 
-:::intuition
-The product f α "telescopes" its changes; the total change f(b)α(b) − f(a)α(a) equals the sum of "f changes α" plus "α changes f".
+$$S = \sum_{i=1}^n \alpha(t_i)f(x_i) - \sum_{i=1}^n \alpha(t_i)f(x_{i-1}),$$
 
-This is the discrete product rule summed up, or the continuous product rule integrated.
+and using the telescoping identity $f(b)\alpha(b)-f(a)\alpha(a) = \sum_{i=1}^{n}\big[f(x_i)\alpha(t_{i+1}) - f(x_{i-1})\alpha(t_i)\big]$ with the conventions $t_0 = a$, $t_{n+1}=b$, subtraction gives
+
+$$f(b)\alpha(b)-f(a)\alpha(a) - S = \sum_{i=0}^{n} f(x_i)\big(\alpha(t_{i+1}) - \alpha(t_i)\big),$$
+
+with $x_n=b$ and the index conventions above. The right-hand side is itself a Riemann–Stieltjes sum for $\int_a^b f\,d\alpha$, over the partition $\{a, t_1,\dots,t_n, b\}$ with tags $x_i$ — note $t_i \le x_i \le t_{i+1}$, so each $x_i$ genuinely tags its subinterval.
+
+Now let the mesh of the original partition tend to $0$. The associated partition $\{a,t_1,\dots,t_n,b\}$ has mesh at most twice as large, so it tends to $0$ as well, and since $f\in\mathcal{R}(\alpha)$ the right-hand side converges to $\int_a^b f\,d\alpha$. Therefore $S$ converges to $f(b)\alpha(b)-f(a)\alpha(a) - \int_a^b f\,d\alpha$, for every choice of tags — which is exactly the statement that $\alpha\in\mathcal{R}(f)$ with that value. $\blacksquare$
 :::
 
-:::example[(counting via a step integrator):]
-Take $\alpha(x) = \lfloor x \rfloor$ on $[0,n]$ (with $n$ a positive integer) and $f(x) = x$. The integrator $\lfloor x\rfloor$ has a jump of size $1$ at each integer $k = 1, 2, \dots, n$ inside $(0,n]$, and $f$ is continuous, so the Stieltjes integral is the sum of $f$ at the jumps weighted by the jump sizes:
-$$\int_0^n x\,d\lfloor x\rfloor = \sum_{k=1}^{n} f(k)\cdot 1 = \sum_{k=1}^{n} k = \frac{n(n+1)}{2}.$$
+The identity contains ordinary integration by parts as the case where both functions are continuously differentiable and $d\alpha = \alpha'\,dx$, and it contains Abel summation as the case where both are step functions. Those two facts are the same theorem, which is the point.
+
+:::example[Summing $1+2+\cdots+n$ by integrating]
+Take $\alpha(x)=\lfloor x\rfloor$ and $f(x)=x$ on $[0,n]$. Compute $\int_0^n x\,d\lfloor x\rfloor$ two ways.
 :::
 
 :::solution
-Now verify with integration by parts. Here $\int_a^b \alpha\,df = \int_0^n \lfloor x\rfloor\,dx$ (since $df = dx$). On $[k, k+1)$ we have $\lfloor x\rfloor = k$, so
-$$\int_0^n \lfloor x\rfloor\,dx = \sum_{k=0}^{n-1} k\cdot 1 = \frac{(n-1)n}{2}.$$
-The boundary term is $f(n)\alpha(n) - f(0)\alpha(0) = n\cdot n - 0\cdot 0 = n^2$. The Stieltjes integration-by-parts identity then predicts
-$$\int_0^n x\,d\lfloor x\rfloor = \big[f(n)\alpha(n) - f(0)\alpha(0)\big] - \int_0^n \lfloor x\rfloor\,dx = n^2 - \frac{(n-1)n}{2} = \frac{2n^2 - n^2 + n}{2} = \frac{n^2 + n}{2} = \frac{n(n+1)}{2}.$$
+1. **Directly.** The floor function jumps by $1$ at each of $x=1,2,\dots,n$, and $f$ is continuous, so by the example *A staircase integrator turns an integral into a sum*,
 
-Sanity check: both routes give $\tfrac{n(n+1)}{2}$, the familiar formula for $1 + 2 + \cdots + n$. This is summation by parts in disguise: replacing an integrator by a step function turns the Stieltjes formula into the discrete Abel summation identity. $\checkmark$
+$$\int_0^n x\,d\lfloor x\rfloor = \sum_{k=1}^n k = \frac{n(n+1)}{2}.$$
+
+2. **By parts.** Here $df = dx$, so $\int_0^n \alpha\,df = \int_0^n \lfloor x\rfloor\,dx = \sum_{k=0}^{n-1} k\cdot 1 = \frac{(n-1)n}{2}$, since $\lfloor x\rfloor = k$ on $[k,k+1)$.
+3. The boundary term is $f(n)\alpha(n)-f(0)\alpha(0) = n\cdot n - 0 = n^2$, so the theorem *Stieltjes integration by parts* predicts
+
+$$\int_0^n x\,d\lfloor x\rfloor = n^2 - \frac{n^2-n}{2} = \frac{n^2+n}{2} = \frac{n(n+1)}{2}.$$
+
+4. The two agree. At $n=5$ both give $15$.
+5. Sanity check on what happened: the sum $\sum k$ was traded for the integral of a staircase, which is a sum of the *other* diagonal of the same array. That exchange is Abel summation, and here it is literally the integration-by-parts formula.
 :::
 
-## Relation to Riemann and Lebesgue; When the Integral Exists
+## When the Stieltjes Integral Exists, and What It Reduces To
 
 <!-- section: relation-riemann-lebesgue-existence -->
 
-If α(x)=x the definition reduces exactly to the Riemann integral.
+Two special integrators recover familiar objects, and one shared discontinuity destroys everything.
 
-:::proposition[Absolutely continuous integrator]
-If $\alpha$ is absolutely continuous — that is, $\alpha(x) = \int_a^x g(t)\,dt$ with $g$ integrable, so $\alpha' = g$ almost everywhere — then
+:::proposition[Smooth integrators give a density]{#density}
+If $\alpha$ is continuously differentiable and increasing on $[a,b]$ and $f$ is continuous, then
 
-$$\int_a^b f\,d\alpha = \int_a^b f(x)\,g(x)\,dx,$$
+$$\int_a^b f\,d\alpha = \int_a^b f(x)\alpha'(x)\,dx .$$
 
-an ordinary integral with weight $g$.
+In particular $\alpha(x)=x$ returns the Riemann integral.
 :::
 
-:::theorem[No shared discontinuities]
-The integral $\int f\,d\alpha$ exists whenever $f$ and $\alpha$ have no common point of discontinuity — at each point, at least one of them is continuous.
+:::proof
+Both integrals exist: the left by the theorem *Continuous integrand against monotone integrator*, the right because $f\alpha'$ is continuous. Fix a partition $P$. By the Mean Value Theorem applied to $\alpha$ on $[x_{i-1},x_i]$ there is $\xi_i$ in the interior with $\Delta\alpha_i = \alpha'(\xi_i)\Delta x_i$. Hence the Stieltjes sum with tags $\xi_i$ equals
+
+$$\sum_i f(\xi_i)\Delta\alpha_i = \sum_i f(\xi_i)\alpha'(\xi_i)\,\Delta x_i,$$
+
+an ordinary Riemann sum for $\int_a^b f\alpha'$ over the same partition. Since $f\alpha'$ is continuous, hence uniformly continuous, both sides converge to their respective integrals as $\|P\|\to0$, so the integrals agree. Taking $\alpha(x)=x$ gives $\alpha'=1$ and $\Delta\alpha_i=\Delta x_i$, so the definitions coincide term by term. $\blacksquare$
 :::
 
-:::intuition
-Stieltjes with respect to x is ordinary area.
-
-Stieltjes with respect to a smooth increasing α is ordinary integral with weight α'.
-
-If f jumps exactly where α jumps the "product of jumps" creates an ambiguous contribution that prevents the integral from existing in the Riemann–Stieltjes sense.
+:::proposition[A shared discontinuity destroys the integral]{#shared-discontinuity}
+Let $c\in(a,b)$ and let both $f$ and $\alpha$ be the unit step at $c$, that is $0$ for $x<c$ and $1$ for $x \ge c$. Then $f \notin \mathcal{R}(\alpha)$ on $[a,b]$.
 :::
 
-:::example[(absolutely continuous integrator):]
-Let $\alpha(x) = x^2$ on $[0,1]$, which is absolutely continuous with $\alpha'(x) = g(x) = 2x$. Take $f(x) = x$. Then
-$$\int_0^1 x\,d(x^2) = \int_0^1 x\cdot 2x\,dx = \int_0^1 2x^2\,dx = \left[\frac{2x^3}{3}\right]_0^1 = \frac{2}{3}.$$
-Sanity check via integration by parts: the boundary term is $f(1)\alpha(1) - f(0)\alpha(0) = 1\cdot 1 - 0 = 1$, and $\int_0^1 \alpha\,df = \int_0^1 x^2\,dx = \tfrac13$, so $\int_0^1 x\,d(x^2) = 1 - \tfrac13 = \tfrac23$. $\checkmark$
+:::proof
+As in Proposition *A jump in the integrator samples the integrand*, only the subinterval $[x_{k-1},x_k]$ with $c \in (x_{k-1},x_k]$ carries weight, and there $\Delta\alpha_k=1$. But now $f$ itself jumps at $c$, so on that subinterval $m_k = 0$ (take a point left of $c$, which exists since $x_{k-1}<c$) and $M_k = 1$ (the value at $c$ itself). Hence
+
+$$L(f,P,\alpha) = 0, \qquad U(f,P,\alpha) = 1$$
+
+for **every** partition $P$, no matter how fine — refining never separates $c$ from the points just left of it. The lower and upper integrals are $0$ and $1$, so the integral does not exist. $\blacksquare$
 :::
 
-:::example[(singular integrator, no density):]
-Let $\alpha$ be the Cantor function: continuous, constant on each interval removed in building the Cantor set $C$, and increasing from $0$ to $1$ while all its increase happens on $C$ (which has measure zero). Because $\alpha' = 0$ almost everywhere, one cannot write $\int f\,d\alpha = \int f\,\alpha'\,dx = \int f\cdot 0\,dx = 0$ — that would be wrong. Instead $\int f\,d\alpha$ is a genuine "singular integral" that assigns all its weight to the measure-zero set $C$ and sees only the values of $f$ on $C$; it is not given by any ordinary density function. This is the cautionary case behind the common mistake "$d\alpha = \alpha'\,dx$".
+The general theorem behind that example is the standard sufficient condition: $\int_a^b f\,d\alpha$ exists whenever $f$ and $\alpha$ have no common point of discontinuity and $\alpha$ is of bounded variation. Both of the existence results proved above are instances — a continuous $f$ shares no discontinuity with anything.
+
+:::pitfall
+Do not write $d\alpha = \alpha'\,dx$ unless $\alpha$ is absolutely continuous. The Cantor function $\alpha$ is continuous and increasing from $0$ to $1$ on $[0,1]$ with $\alpha'=0$ almost everywhere, so the substitution would give $\int_0^1 1\,d\alpha = \int_0^1 0\,dx = 0$, whereas the true value is $\alpha(1)-\alpha(0)=1$. All of the integrator's increase happens on a set of measure zero, and no density function can represent it. Proposition *Smooth integrators give a density* asks for $\alpha \in C^1$ precisely to exclude this.
 :::
 
-## Applications: Probability (CDFs), Summation by Parts, Spectral Theory
-
-<!-- section: applications-probability-sums -->
-
-- In probability, if F is the cumulative distribution function of a random variable, then E[g(X)] = ∫ g dF (Stieltjes integral). This unifies discrete (sum p_k g(x_k)), continuous (∫ g f dx), and singular distributions.
-- Summation by parts is the discrete Stieltjes integration by parts.
-- In spectral theory and functional analysis the spectral theorem is often stated with Stieltjes integrals against projection-valued measures.
-
-:::intuition
-The expectation of a function of a random variable is "integrate g against the probability mass" — when the distribution has atoms (jumps in the CDF) you get ordinary sums; when it has a density you get the familiar integral.
-
-This language lets probabilists and analysts treat discrete and continuous cases with the same formulas.
-:::
-
-:::example
-For a discrete random variable $X$ taking values $1, 2, 3$ with probabilities $\tfrac12, \tfrac13, \tfrac16$, the CDF $F$ is a step function with jumps of those sizes at $1, 2, 3$. Taking $g(x) = x$, the Stieltjes integral against $F$ picks up $g$ at each jump weighted by the jump size:
-$$E[X] = \int x\,dF(x) = 1\cdot\frac12 + 2\cdot\frac13 + 3\cdot\frac16.$$
-Compute over a common denominator of $6$:
-$$1\cdot\frac12 = \frac{3}{6},\qquad 2\cdot\frac13 = \frac{4}{6},\qquad 3\cdot\frac16 = \frac{3}{6},$$
-$$E[X] = \frac{3}{6} + \frac{4}{6} + \frac{3}{6} = \frac{10}{6} = \frac{5}{3}.$$
+:::example[Same integrand, three integrators]
+Compute $\int_0^2 x\,d\alpha$ for (a) $\alpha(x)=x$, (b) $\alpha(x)=x^2$, (c) $\alpha = $ the unit step at $1$.
 :::
 
 :::solution
-1. Sanity check: the probabilities sum to $\tfrac12 + \tfrac13 + \tfrac16 = \tfrac{3+2+1}{6} = 1$ (a valid distribution), and the mean $\tfrac53 \approx 1.67$ lies between the smallest and largest values $1$ and $3$, as any expectation must. $\checkmark$
+1. **(a)** $\alpha'=1$, so by Proposition *Smooth integrators give a density* this is $\int_0^2 x\,dx = 2$.
+2. **(b)** $\alpha'=2x$, so the integral is $\int_0^2 x\cdot 2x\,dx = \left[\tfrac23 x^3\right]_0^2 = \tfrac{16}{3} \approx 5.333$.
+3. **(c)** By Proposition *A jump in the integrator samples the integrand*, the value is $f(1)=1$.
+4. Sanity check: in (b) the integrator puts more weight to the right, where $f$ is larger, so the answer should exceed the uniform case $2$ — and $16/3 > 2$. In (c) all the weight is a single unit at $x=1$, giving exactly $f(1)$.
 :::
+
+## Applications: Expectations, Sums, and Mixed Distributions
+
+<!-- section: applications-probability-sums -->
+
+The payoff for building the Stieltjes integral is a single formula covering cases that otherwise require separate theories.
+
+:::theorem[Expectation as a Stieltjes integral]{#expectation}
+Let $X$ be a random variable with cumulative distribution function $F(x)=P(X\le x)$, which is increasing, and let $g$ be continuous. Then, whenever the integral exists,
+
+$$E[g(X)] = \int_{-\infty}^{\infty} g(x)\,dF(x).$$
+
+If $F$ is a step function with jumps $p_k$ at $x_k$, this is $\sum_k g(x_k)p_k$; if $F(x)=\int_{-\infty}^x \varphi$ with $\varphi$ continuous, it is $\int g(x)\varphi(x)\,dx$.
+:::
+
+:::proof
+We verify the two reductions, which is what makes the formula usable. In the discrete case $F = \sum_k p_k H_{x_k}$ is a staircase with jump $p_k$ at $x_k$, so by Proposition *A jump in the integrator samples the integrand*, applied to each atom and summed, $\int g\,dF = \sum_k g(x_k)p_k$, which is the definition of $E[g(X)]$ for a discrete variable. In the absolutely continuous case $F' = \varphi$ is continuous, so Proposition *Smooth integrators give a density* gives $\int g\,dF = \int g\varphi$, which is the definition of $E[g(X)]$ for a density $\varphi$. Since the two elementary definitions are recovered, the Stieltjes formula is a common extension of both, and it remains meaningful for an $F$ that is neither — a mixed distribution — where neither elementary formula applies. $\blacksquare$
+:::
+
+:::example[A mixed distribution]
+A machine fails immediately with probability $\tfrac14$; otherwise its lifetime is uniform on $[0,2]$. So $F(x) = \tfrac14 + \tfrac34\cdot\tfrac{x}{2}$ for $x\in[0,2]$, with a jump of $\tfrac14$ at $0$. Compute $E[X]$.
+:::
+
+:::solution
+1. Decompose $F$ into its jump part ($\tfrac14$ at $x=0$) and its absolutely continuous part, whose derivative on $(0,2)$ is $\tfrac{3}{8}$.
+2. By the theorem *Expectation as a Stieltjes integral*, with $g(x)=x$,
+
+$$E[X] = \underbrace{\tfrac14\cdot 0}_{\text{atom}} + \int_0^2 x\cdot\tfrac38\,dx = 0 + \tfrac38\cdot\left[\tfrac{x^2}{2}\right]_0^2 = \tfrac38\cdot 2 = \tfrac34 .$$
+
+3. Sanity check by conditioning: with probability $\tfrac14$ the lifetime is $0$; with probability $\tfrac34$ it averages $1$. So $E[X] = \tfrac14\cdot0 + \tfrac34\cdot1 = \tfrac34$, agreeing.
+4. Note that neither elementary formula would have worked alone: there is no density at $0$ and no atom on $(0,2]$. The Stieltjes integral handles both halves with one symbol.
+:::
+
 
 ## Common Mistakes
 
-- **Assuming ∫ f dα always exists when f and α are both of bounded variation**: They must not share discontinuities.
-- **Confusing dα with α' dx when α is not absolutely continuous**: The Cantor function has α'=0 almost everywhere yet increases; the Stieltjes integral is not the ordinary integral against 0.
-- **Forgetting that the integrator α is usually taken monotone increasing**: The definition can be extended to α of bounded variation by splitting into positive and negative variations, but the basic theory is for monotone α.
-- **Thinking the Riemann–Stieltjes integral is the same as the Lebesgue–Stieltjes integral**: They coincide when the integral exists in the Riemann–Stieltjes sense, but Lebesgue–Stieltjes is more general (completes with respect to the measure induced by α).
-- **Writing ∫ f(x) dα(x) with the same variable on both**: The notation is conventional but the dummy variable in the differential is not the same as a free variable.
+- **Assuming every bounded function is integrable.** Dirichlet's function is bounded by $1$ and has $\underline{\int}=0$, $\overline{\int}=1$. Boundedness is necessary, never sufficient.
+- **Counting discontinuities instead of measuring them.** Thomae's function is discontinuous at every rational and integrable; Dirichlet's is discontinuous everywhere and is not. *Lebesgue's criterion* is about measure zero, not cardinality.
+- **Quoting Part Two without the integrability hypothesis.** "$F'=f$ implies $\int_a^b f = F(b)-F(a)$" is false: $g(x)=x^2\sin(1/x^2)$ is differentiable everywhere with an unbounded, non-integrable derivative.
+- **Applying Part Two across a singularity.** $\left[-1/x\right]_{-1}^{1} = -2$ is not $\int_{-1}^1 dx/x^2$; the antiderivative is discontinuous at $0$, so the hypothesis of continuity on the closed interval fails and the "answer" is negative for a positive integrand.
+- **Using one joint limit for a two-sided improper integral.** The definition requires the two one-sided limits to exist separately. Taking them together is the principal value, a strictly weaker and route-dependent notion.
+- **Concluding convergence from $f(x)\to0$.** $\int_1^\infty dx/x$ diverges. Decay must beat $1/x$ at infinity, and blow-up must be slower than $1/x$ at a singularity.
+- **Interchanging a limit and an integral without uniform convergence.** Pointwise convergence does not even preserve integrability, as the indicator functions converging to Dirichlet's function show.
+- **Writing $d\alpha = \alpha'\,dx$ for any increasing $\alpha$.** The Cantor function has $\alpha'=0$ almost everywhere and total increase $1$; the substitution requires absolute continuity, and $C^1$ is the safe case proved here.
+- **Expecting $\int f\,d\alpha$ to exist whenever both functions are well behaved separately.** If $f$ and $\alpha$ jump at the same point from the same side, the upper and lower sums differ by the product of the jumps for every partition.
+- **Forgetting that a partition may be chosen after $\varepsilon$.** Riemann's criterion is existential in $P$: uniform partitions are never required, and isolating bad points inside thin subintervals is usually the whole trick.
