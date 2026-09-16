@@ -1,247 +1,479 @@
 ---
-title: Bayesian Inference
+title: "Bayesian Inference"
 ---
 
 # Bayesian Inference
 
-Bayesian inference treats unknown parameters as random variables and updates beliefs using Bayes' theorem as new data arrives. It provides a coherent way to combine prior knowledge with observed data.
+Every chapter so far has treated the parameter as a fixed unknown constant and the data as random. That is not a mathematical necessity; it is a choice, and it is the choice that makes a confidence interval mean what it means — a statement about the long-run behaviour of a procedure, rather than about the parameter, because a fixed constant has no probability distribution to describe.
 
-The output is a full posterior distribution over possible parameter values rather than a single point estimate. This naturally gives uncertainty quantification and allows direct probability statements about parameters (e.g., 'the probability that the treatment effect is positive is 0.94').
+This chapter makes the other choice. Treat the parameter as a random variable with a distribution expressing what is known about it, and the whole apparatus rearranges. Bayes' theorem combines that prior distribution with the data to produce a **posterior** distribution, and every question is then answered by reading it off: a point estimate is a summary of the posterior, an interval is a region containing $95\%$ of it, and — the thing the frequentist framework cannot deliver — the probability that the parameter lies in that interval really is $0.95$.
 
-While computationally more demanding than classical methods, modern tools (MCMC, variational inference, Stan, PyMC) have made Bayesian modeling practical for a wide range of problems in science, medicine, and business.
+Nothing here contradicts the earlier chapters. Both frameworks are internally consistent and answer different questions, and with a large sample and a prior that is not perverse they give nearly identical numbers, which the third section demonstrates. The genuine differences appear where the data are few, where information exists beyond the current sample, and where the question being asked is really about the parameter rather than about a procedure.
 
-## Bayes' Theorem Revisited
+The cost is the prior, and it is a real cost. It must come from somewhere, two analysts may choose differently, and with small samples the choice shows in the answer. The second section is about making that choice defensibly and reporting its influence rather than hiding it. The last section covers the computation that made all of this practical: for most models the posterior has no closed form, and it was the arrival of simulation methods rather than any new mathematics that moved Bayesian inference from a philosophical position into a working toolkit.
+
+Notation: $\theta$ is the parameter, $\pi(\theta)$ the prior, $L(\theta) = f(\mathbf{x}\mid\theta)$ the likelihood as in *Statistical Inference: Estimation*, and $\pi(\theta\mid\mathbf{x})$ the posterior.
+
+## From Bayes' theorem to a posterior distribution
 
 <!-- section: bayes -->
 
-:::theorem[Bayes' theorem]{#bayes-update}
-For a hypothesis $H$ and data $D$ with $P(D) > 0$,
+:::definition[Prior, likelihood, posterior]{#posterior}
+Given a prior density $\pi(\theta)$ and data $\mathbf{x}$ with likelihood $f(\mathbf{x}\mid\theta)$, the **posterior** density is
 
-$$P(H|D) = \frac{P(D|H)\, P(H)}{P(D)}.$$
+$$\pi(\theta\mid\mathbf{x}) = \frac{f(\mathbf{x}\mid\theta)\,\pi(\theta)}{f(\mathbf{x})}, \qquad f(\mathbf{x}) = \int f(\mathbf{x}\mid\theta)\pi(\theta)\,d\theta,$$
+
+the denominator being the **marginal likelihood**, a constant in $\theta$.
 :::
 
-:::notation
-- $P(H)$ is the prior probability — what we believed before seeing the data.
-- $P(D|H)$ is the likelihood — how probable the observed data is under hypothesis $H$.
-- $P(H|D)$ is the posterior probability — our updated belief after seeing the data.
-- $P(D)$ is the marginal likelihood (evidence), which acts as a normalizing constant.
-:::
+Because the denominator does not involve $\theta$, it serves only to make the posterior integrate to one. That licenses the notation used throughout this chapter:
 
-The denominator $P(D)$ is not a separate mystery quantity.
+$$\pi(\theta\mid\mathbf{x}) \ \propto\ f(\mathbf{x}\mid\theta)\,\pi(\theta), \qquad \text{posterior} \ \propto\ \text{likelihood}\times\text{prior},$$
 
-:::proposition[The evidence is a sum over hypotheses]
-When the hypotheses $H_1, \dots, H_k$ are mutually exclusive and exhaustive, the law of total probability gives
-
-$$P(D) = \sum_i P(D|H_i)\,P(H_i).$$
-:::
-
-So $P(D)$ is just the sum of the numerator over every hypothesis — exactly what is needed to make the posteriors sum to $1$. This is why we often write posterior $\propto$ likelihood $\times$ prior and only normalize at the end.
+and in practice one recognises the shape of the right-hand side and supplies the constant afterwards.
 
 :::intuition
-You have two coins: one fair, one double-headed. You pick one at random and flip it — heads. Bayes' theorem tells you the probability you picked the double-headed coin. Your prior was 50/50. The likelihood of heads is 1 for the double-headed coin and 0.5 for the fair coin. After seeing heads, your posterior belief shifts toward the double-headed coin.
+The formula is a rule for updating. The prior says what was believed before; the likelihood says how well each value of $\theta$ explains what was observed; the product reweights the prior in favour of the values that explain the data well.
+
+A value of $\theta$ ends up with high posterior probability only if it was plausible beforehand *and* predicts the data. Either factor can veto: data that a parameter value cannot produce drive its posterior to zero however plausible it seemed, and a parameter value the prior excluded stays excluded however well it would have fitted. That second point is why a prior that assigns zero probability to a region is a strong and often unwise commitment — no amount of data can ever recover from it.
 :::
 
-:::example[two coins]
-Setup: prior $P(\text{DH}) = P(\text{fair}) = 0.5$. Likelihoods for the observed heads: $P(H|\text{DH}) = 1$, $P(H|\text{fair}) = 0.5$.
+:::remark[What the two frameworks actually disagree about]
+The disagreement is not about Bayes' theorem, which is a theorem, and not about whether it applies to events — both frameworks use it freely for observable events. It is about whether a **parameter** may be given a probability distribution.
+
+The frequentist position is that $\theta$ is a fixed unknown constant, so $P(\theta\in A)$ is either $0$ or $1$ and probability statements about it are meaningless; probability describes the sampling procedure instead. The Bayesian position is that probability describes uncertainty of any kind, including uncertainty about a constant, so a distribution over $\theta$ is a legitimate description of what is known.
+
+Each gives a coherent system. The practical consequence is what a $95\%$ interval means: a *confidence* interval is $95\%$ of the time correct across repeated samples, while a *credible* interval contains $95\%$ of the posterior probability. The second is what most readers assume the first says, which is the most common misreading in applied statistics and is the subject of a pitfall in the testing chapter.
+:::
+
+:::example[Updating on a single observation]
+A disease affects $1\%$ of a population. A test has sensitivity $0.99$ and specificity $0.95$. A randomly chosen person tests positive. Compute the posterior probability of disease.
 :::
 
 :::solution
-1. evidence (denominator): $P(H) = P(H|\text{DH})P(\text{DH}) + P(H|\text{fair})P(\text{fair}) = 1(0.5) + 0.5(0.5) = 0.75$.
-2. posterior: $P(\text{DH}|H) = \dfrac{P(H|\text{DH})P(\text{DH})}{P(H)} = \dfrac{1 \times 0.5}{0.75} = \dfrac{2}{3} \approx 0.667$.
-3. Sanity check: the other posterior is $P(\text{fair}|H) = \dfrac{0.5 \times 0.5}{0.75} = \dfrac{1}{3}$, and $\tfrac{2}{3} + \tfrac{1}{3} = 1$ ✓. Seeing heads moved our belief in the double-headed coin from $0.5$ up to $0.667$, as expected.
+1. Prior: $P(D) = 0.01$, so $P(D^c) = 0.99$.
+2. Likelihoods: $P(+\mid D) = 0.99$ and $P(+\mid D^c) = 1-0.95 = 0.05$.
+3. Marginal probability of a positive test:
+
+$$P(+) = 0.99(0.01) + 0.05(0.99) = 0.0099 + 0.0495 = 0.0594 .$$
+
+4. Posterior: $P(D\mid +) = 0.0099/0.0594 = 0.1667$.
+5. So a positive result raises the probability from $1\%$ to about $17\%$ — a seventeen-fold update, and still well short of a diagnosis.
+6. Sanity check on why: the disease is rare, so the $0.99$ of healthy people generate $0.0495$ false positives, five times the $0.0099$ true positives. This is the same base-rate arithmetic as the post-test probability calculation in *Statistical Inference: Hypothesis Testing*, with $\alpha$ playing the role of $1-$specificity and power the role of sensitivity.
 :::
 
-:::example[a rare-disease test]
-Setup: a disease has prevalence $P(D) = 0.01$. A test has sensitivity $P(+|D) = 0.99$ and false-positive rate $P(+|\text{no }D) = 0.05$. You test positive — what is $P(D|+)$?
+:::example[Two tests in sequence]
+The same person from the previous example takes a second, independent test of the same accuracy, and it is also positive. Compute the updated probability.
 :::
 
 :::solution
-1. evidence: $P(+) = P(+|D)P(D) + P(+|\text{no }D)P(\text{no }D) = 0.99(0.01) + 0.05(0.99) = 0.0099 + 0.0495 = 0.0594$.
-2. posterior: $P(D|+) = \dfrac{P(+|D)P(D)}{P(+)} = \dfrac{0.0099}{0.0594} \approx 0.167$.
-3. Sanity check: despite a positive result on a $99\%$-sensitive test, there is only a $\approx 17\%$ chance of having the disease. The rare prior ($1\%$) dominates because false positives among the many healthy people outnumber true positives. This is the classic base-rate lesson — the prior cannot be ignored.
+1. Yesterday's posterior becomes today's prior: $P(D) = 0.1667$, so $P(D^c) = 0.8333$.
+2. Marginal probability of the second positive:
+
+$$P(+_2) = 0.99(0.1667) + 0.05(0.8333) = 0.1650 + 0.0417 = 0.2067 .$$
+
+3. Posterior: $P(D\mid +_1,+_2) = 0.1650/0.2067 = 0.7983$.
+4. Two positives take the probability from $1\%$ to about $80\%$ — the update compounds, and it compounds multiplicatively on the odds scale.
+5. Sanity check via odds, which is faster: the prior odds are $1:99$, and each positive test multiplies them by the likelihood ratio $0.99/0.05 = 19.8$. After two tests the odds are $(1/99)(19.8)^2 = 392.04/99 = 3.9600$, giving a probability of $3.96/4.96 = 0.7984$ ✓.
+6. The likelihood-ratio form shows why sequential updating is coherent: the final answer does not depend on the order the tests were processed, or on whether they were processed one at a time or together.
 :::
 
-## Prior, Likelihood, Posterior
+## Choosing a prior
 
 <!-- section: prior -->
 
-The prior encodes knowledge or beliefs before seeing the data. It can be informative (based on previous studies) or non-informative (trying to let the data speak for itself).
+The prior is the part that has no counterpart in earlier chapters, and it is where most of the objection to the approach is directed. Three considerations make the choice tractable: mathematical convenience, honest ignorance, and reporting the influence.
 
-:::definition[Proper and improper priors]
-A prior is *proper* if it integrates to $1$, making it a genuine probability distribution, and *improper* if it does not — for example a "flat" prior $p(\theta) \propto 1$ over an unbounded range.
+:::definition[Conjugate prior]{#conjugate}
+A family of priors is **conjugate** to a likelihood if the posterior belongs to the same family. The updating is then a rule for changing the family's parameters.
 :::
 
-Improper priors are sometimes used to represent ignorance, but they are only safe if the resulting posterior is itself proper — you must check this.
+:::theorem[Beta is conjugate to the binomial]{#beta-binomial}
+If $\theta\sim\text{Beta}(a,b)$ and, given $\theta$, $X\sim\text{Binomial}(n,\theta)$ is observed with $x$ successes, then
 
-:::definition[Conjugate prior]{#conjugate-prior}
-A prior is conjugate to a likelihood when the resulting posterior lies in the same family as the prior, so that updating only changes the parameters instead of requiring an integral.
+$$\theta\mid x \ \sim\ \text{Beta}(a+x,\ b+n-x).$$
 :::
 
-:::proposition[Beta-binomial conjugacy]
-With a $\text{Beta}(\alpha, \beta)$ prior and $s$ successes in $n$ binomial trials, the posterior is
+:::proof
+The Beta$(a,b)$ density is proportional to $\theta^{a-1}(1-\theta)^{b-1}$, and the binomial likelihood is proportional to $\theta^{x}(1-\theta)^{n-x}$ as a function of $\theta$. Multiplying,
 
-$$\text{Beta}(\alpha + s,\; \beta + n - s).$$
+$$\pi(\theta\mid x) \ \propto\ \theta^{x}(1-\theta)^{n-x}\cdot\theta^{a-1}(1-\theta)^{b-1} = \theta^{(a+x)-1}(1-\theta)^{(b+n-x)-1},$$
+
+which is the kernel of a Beta$(a+x, b+n-x)$ density. Since a density is determined by its kernel, that is the posterior. $\blacksquare$
 :::
 
-You simply add the observed successes to $\alpha$ and the failures to $\beta$, which makes $\alpha$ and $\beta$ interpretable as "prior pseudo-counts" of successes and failures.
+The updating rule is as simple as it could be: **add the successes to $a$ and the failures to $b$**. That gives the prior parameters an interpretation — $a$ and $b$ act like $a$ previously-seen successes and $b$ previously-seen failures, so $a+b$ measures how much the prior is worth in units of data. A Beta$(2,2)$ prior carries the weight of four observations; a Beta$(50,50)$ prior carries a hundred and will not be moved by a small experiment.
 
-The choice of prior matters when data is scarce; with lots of data the posterior is dominated by the likelihood. This is because the prior contributes a fixed number of pseudo-counts while the data contributes $n$ real counts — as $n$ grows, the data swamps the prior.
+:::theorem[The posterior mean is a weighted average]{#posterior-mean-weighted}
+Under the hypotheses above, with prior mean $\mu_0 = a/(a+b)$ and sample proportion $\hat p = x/n$,
 
-Sensitivity analysis (trying different reasonable priors) is good practice in serious Bayesian work.
-
-:::intuition
-The prior is your starting bet before the game; the likelihood is what the game just showed you; the posterior is your updated bet. A conjugate prior is like keeping score with the same scoreboard the whole time: a Beta prior says "I've imagined $\alpha$ heads and $\beta$ tails already," and each real flip just adds a tally mark to the same scoreboard.
+$$E(\theta\mid x) = \frac{a+x}{a+b+n} = w\,\hat p + (1-w)\,\mu_0, \qquad w = \frac{n}{n+a+b} .$$
 :::
 
-:::example[updating a Beta prior]
-Setup: you suspect a coin is roughly fair, so you use a mildly informative $\text{Beta}(2, 2)$ prior (equivalent to having "seen" 1 head and 1 tail already; its mean is $2/(2+2) = 0.5$). You then flip $n = 5$ times and get $s = 4$ heads.
+:::proof
+The mean of a Beta$(\alpha,\beta)$ is $\alpha/(\alpha+\beta)$, so the posterior mean is $(a+x)/(a+b+n)$. Split the numerator, writing $x = n\hat p$ and $a = (a+b)\mu_0$:
+
+$$\frac{a+x}{a+b+n} = \frac{(a+b)\mu_0 + n\hat p}{n+a+b} = \frac{n}{n+a+b}\,\hat p + \frac{a+b}{n+a+b}\,\mu_0,$$
+
+and the two coefficients are $w$ and $1-w$, which sum to $1$. $\blacksquare$
+:::
+
+That theorem is the clearest statement of what the prior does and when it stops mattering. The posterior mean is a compromise between the prior mean and the data's own estimate, with the weight $w = n/(n+a+b)$ determined by how much data there is relative to the prior's strength. As $n\to\infty$, $w\to 1$ and the prior washes out entirely; for $n$ small relative to $a+b$ the prior dominates. Nothing about this is hidden — the weight is computable before any data arrive.
+
+:::definition[Uninformative and Jeffreys priors]{#uninformative}
+A prior is **uninformative** if it is intended to let the data speak. The flat prior on $[0,1]$ is Beta$(1,1)$. The **Jeffreys prior** is $\pi(\theta)\propto\sqrt{I(\theta)}$ with $I$ the Fisher information of the estimation chapter; for a binomial it is Beta$(\tfrac12,\tfrac12)$.
+:::
+
+:::remark[Why "flat" is not the same as "uninformative"]
+A uniform prior looks neutral and is not, because flatness is not preserved under reparametrisation. A prior flat in $\theta$ is *not* flat in $\log\theta$ or in the odds $\theta/(1-\theta)$ — the Jacobian of the transformation reshapes it — so "know nothing" expressed on one scale becomes a definite opinion on another.
+
+The Jeffreys prior is constructed to be invariant under reparametrisation precisely to avoid that, which is its main justification. It also frequently improper, meaning it does not integrate to a finite value; that is tolerable when the resulting posterior is proper, but it must be checked rather than assumed.
+
+The honest practice is not to hunt for a prior with no influence but to state the prior, report how much it moved the answer, and show the result under a reasonable alternative. That is a **sensitivity analysis**, and it converts the prior from a hidden assumption into a reported one.
+:::
+
+:::example[The same data under three priors]
+Seven successes in $10$ trials. Compute the posterior mean under a Beta$(1,1)$ flat prior, a Beta$(2,2)$ weakly informative prior, and a Beta$(50,50)$ strong prior centred at $\tfrac12$.
 :::
 
 :::solution
-1. update the parameters: posterior $= \text{Beta}(\alpha + s,\ \beta + n - s) = \text{Beta}(2 + 4,\ 2 + 1) = \text{Beta}(6, 3)$.
-2. posterior mean: $\dfrac{6}{6 + 3} = \dfrac{6}{9} \approx 0.667$.
-3. Sanity check: the raw data proportion is $4/5 = 0.8$, and the prior mean is $0.5$. The posterior mean $0.667$ sits between them — pulled away from the data toward the prior because the prior's 2 pseudo-heads and 2 pseudo-tails still carry weight against only 5 real flips. With more data, the posterior mean would move closer to $0.8$ ✓.
+1. **Beta$(1,1)$:** posterior is Beta$(8,4)$, mean $8/12 = 0.6667$. Prior weight $a+b=2$, so $w = 10/12 = 0.833$.
+2. **Beta$(2,2)$:** posterior is Beta$(9,5)$, mean $9/14 = 0.6429$. Here $w = 10/14 = 0.714$.
+3. **Beta$(50,50)$:** posterior is Beta$(57,53)$, mean $57/110 = 0.5182$. Now $w = 10/110 = 0.0909$ — the data barely register.
+4. Check the second against the weighted-average form: $0.714(0.7) + 0.286(0.5) = 0.5+0.1429 = 0.6429$ ✓.
+5. Sanity check on the ordering: all three lie between the prior mean $0.5$ and the MLE $0.7$, closer to $0.7$ when the prior is weak and closer to $0.5$ when it is strong — exactly as the weight $w$ dictates. ✓
+6. The lesson for reporting: with $n=10$ the answer ranges from $0.52$ to $0.67$ depending on the prior, so the prior must be stated. With $n=1000$ successes in proportion, all three would agree to two decimals.
 :::
 
-## Bayesian Estimation and Credible Intervals
+:::figure[Posteriors from the same data ($7$ successes in $10$) under three priors of increasing strength. The flat Beta$(1,1)$ and weak Beta$(2,2)$ priors leave the posterior wide and centred near the sample proportion $0.7$; the strong Beta$(50,50)$ prior, worth a hundred prior observations, pulls the posterior back almost to $0.5$ and makes it far narrower. The dashed line marks the maximum likelihood value. Prior strength is measurable in units of data, and here ten observations cannot outweigh a hundred. (The third curve is drawn as its normal approximation, indistinguishable at this scale.)]{#prior-strength}
+{
+  "type": "plot",
+  "x": [0.18, 1.14],
+  "y": [-0.7, 10.2],
+  "xTicks": 0.1,
+  "yTicks": 1,
+  "xLabel": "theta",
+  "yLabel": "posterior density",
+  "marks": [
+    { "kind": "line", "through": [[0.7, -0.7], [0.7, 10.2]], "tone": "muted", "dashed": true, "extend": false },
+    { "kind": "function", "fn": "1320*x^7*(1-x)^3", "tone": "accent" },
+    { "kind": "function", "fn": "6435*x^8*(1-x)^4", "tone": "alt", "dashed": true },
+    { "kind": "function", "fn": "8.4118*exp(-((x-0.5182)^2)/(2*0.047427^2))", "tone": "result" },
+    { "kind": "text", "at": [1.0, 3.3], "text": "flat prior", "tone": "accent", "leaderTo": [0.82, 2.25] },
+    { "kind": "text", "at": [0.99, 6.8], "text": "weak prior", "tone": "alt", "leaderTo": [0.8, 2.9] },
+    { "kind": "text", "at": [0.3, 9.4], "text": "strong prior", "tone": "result", "leaderTo": [0.48, 8.1] },
+    { "kind": "text", "at": [0.86, -0.42], "text": "MLE 0.7", "tone": "muted", "leaderTo": [0.705, 0.1] }
+  ]
+}
+:::
+
+:::figure[Prior, likelihood and posterior for $7$ successes in $10$ trials under a Beta$(2,2)$ prior. The posterior is the pointwise product of the other two, renormalised: it sits between them, closer to the likelihood because $n=10$ outweighs the prior's effective four observations. Its peak is pulled back from the maximum likelihood value of $0.7$ toward the prior mean of $0.5$, and it is narrower than either input — combining two sources of information sharpens the result.]{#prior-likelihood-posterior}
+{
+  "type": "plot",
+  "x": [-0.03, 1.22],
+  "y": [-0.3, 3.9],
+  "xTicks": 0.1,
+  "yTicks": 0.5,
+  "xLabel": "theta",
+  "yLabel": "density",
+  "marks": [
+    { "kind": "function", "fn": "6*x*(1-x)", "tone": "accent" },
+    { "kind": "function", "fn": "2.9282*x^7*(1-x)^3/0.0022235", "tone": "alt", "dashed": true },
+    { "kind": "function", "fn": "x^8*(1-x)^4/0.000305", "tone": "result" },
+    { "kind": "text", "at": [0.14, 2.35], "text": "prior Beta(2,2)", "tone": "accent", "leaderTo": [0.33, 1.33] },
+    { "kind": "text", "at": [1.03, 2.6], "text": "likelihood", "tone": "alt", "leaderTo": [0.82, 1.9] },
+    { "kind": "text", "at": [0.42, 3.62], "text": "posterior Beta(9,5)", "tone": "result", "leaderTo": [0.63, 2.9] }
+  ]
+}
+:::
+
+:::theorem[Normal-normal conjugacy]{#normal-normal}
+Let $\theta\sim N(\mu_0,\tau^2)$ and let $\bar x$ be the mean of $n$ observations from $N(\theta,\sigma^2)$ with $\sigma^2$ known. Then the posterior is normal with **precision** (reciprocal variance) equal to the sum of the prior and data precisions,
+
+$$\frac{1}{\tau_n^2} = \frac{1}{\tau^2} + \frac{n}{\sigma^2}, \qquad \mu_n = \tau_n^2\left(\frac{\mu_0}{\tau^2} + \frac{n\bar x}{\sigma^2}\right),$$
+
+so the posterior mean is the precision-weighted average of the prior mean and the sample mean.
+:::
+
+:::proof
+Drop all factors free of $\theta$. The likelihood contributes $\exp\{-n(\bar x-\theta)^2/(2\sigma^2)\}$ — the other part of the sum of squares does not involve $\theta$ — and the prior contributes $\exp\{-(\theta-\mu_0)^2/(2\tau^2)\}$. So
+
+$$\pi(\theta\mid\mathbf{x}) \propto \exp\left\{-\frac12\left[\frac{n(\theta-\bar x)^2}{\sigma^2} + \frac{(\theta-\mu_0)^2}{\tau^2}\right]\right\}.$$
+
+Expand the bracket and collect powers of $\theta$:
+
+$$\theta^2\left(\frac{n}{\sigma^2}+\frac{1}{\tau^2}\right) - 2\theta\left(\frac{n\bar x}{\sigma^2}+\frac{\mu_0}{\tau^2}\right) + \text{const}.$$
+
+A quadratic $A\theta^2 - 2B\theta$ inside $\exp\{-\tfrac12(\cdot)\}$ is the kernel of a normal with variance $1/A$ and mean $B/A$ — complete the square to see it. Reading off $A$ and $B$ gives the stated precision and mean. $\blacksquare$
+:::
+
+:::intuition
+Precision is the natural currency here, and the rule is as simple as addition: **precisions add**. The prior contributes $1/\tau^2$ and $n$ observations contribute $n/\sigma^2$, and the posterior has their sum, so the posterior is always more precise than either input — information accumulates and never decreases.
+
+The mean is then the average of the two estimates weighted by how precise each is, which is what anyone would do by hand when combining two measurements of different quality. A vague prior has $\tau^2$ large, contributes almost no precision, and barely shifts the answer; a sharp prior contributes a lot and pulls hard.
+:::
+
+## Point estimates and credible intervals
 
 <!-- section: estimation -->
 
-Instead of a single point estimate, Bayesian inference gives the entire posterior distribution. Common summaries are the posterior mean, median, or mode (MAP).
+The posterior is the complete answer. Everything else in this section is a summary of it, chosen to fit what a reader can absorb.
 
-:::definition[Credible interval]{#credible-interval}
-A $95\%$ credible interval is an interval that contains $95\%$ of the posterior probability mass.
+:::definition[Posterior summaries and credible interval]{#credible-interval}
+The **posterior mean**, **median** and **mode** (the last also called the maximum a posteriori or MAP estimate) summarise the posterior's location. A $100(1-\alpha)\%$ **credible interval** is any region $C$ with
+
+$$P(\theta\in C\mid\mathbf{x}) = 1-\alpha,$$
+
+commonly taken as the equal-tailed interval between the $\alpha/2$ and $1-\alpha/2$ posterior quantiles, or as the **highest posterior density** region, which is the shortest such interval.
 :::
 
-:::remark
-Given the model and the data, you may say "there is $95\%$ probability that the true parameter lies in this interval". That is exactly what a frequentist confidence interval does *not* license: its $95\%$ describes the long-run coverage of the *procedure*, not the single interval you computed.
+:::pitfall
+This is where the two frameworks differ most visibly, and the difference is worth stating in both directions.
+
+A **credible** interval supports the statement most people want: given the data and the prior, there is a $95\%$ probability that $\theta$ lies in it. A **confidence** interval does not; as the estimation chapter set out, once computed it either contains $\theta$ or does not, and the $95\%$ describes the procedure across repeated samples.
+
+The numbers are often nearly identical — with a flat prior and a normal model they can coincide exactly — which is why the misinterpretation so rarely causes visible damage. It is still a misinterpretation, and the honest options are to compute a credible interval and make the probability statement, or compute a confidence interval and make the procedural one.
 :::
 
-There is more than one way to pick a $95\%$ interval from the same posterior.
-
-:::definition[Equal-tailed and highest posterior density intervals]
-The *equal-tailed* interval chops off $2.5\%$ of probability from each tail, using the posterior quantiles. The *highest posterior density* (HPD) interval is the shortest interval containing $95\%$ probability; every point inside it has higher posterior density than every point outside.
+:::proposition[The posterior mode is the MLE under a flat prior]{#map-mle}
+If the prior is constant over the parameter space, the posterior is proportional to the likelihood, so the MAP estimate equals the maximum likelihood estimate.
 :::
 
-For a symmetric posterior the two coincide, but for a skewed posterior the HPD interval is shorter and shifted toward the mode.
-
-:::intuition
-A point estimate is like saying "the treasure is at step 40." A credible interval is saying "I'm 95% sure the treasure is between steps 30 and 55" — and unlike the frequentist version, that 95% really is your probability that *this* range holds the treasure. The HPD interval is the smallest such range you can draw around the spots where the treasure is most likely to be buried.
+:::proof
+With $\pi(\theta) = c$, the posterior is $\pi(\theta\mid\mathbf{x}) \propto c\,f(\mathbf{x}\mid\theta) \propto f(\mathbf{x}\mid\theta)$. Two functions proportional by a positive constant are maximised at the same point. $\blacksquare$
 :::
 
-:::example[Bayesian coin flip]
-You flip a coin 10 times and get 8 heads. You want to estimate the probability $p$ of heads.
+That proposition explains why the two frameworks so often agree numerically. Maximum likelihood, the workhorse of the estimation chapter, is Bayesian estimation with a flat prior and the mode as the summary — so the disagreement is about interpretation far more often than about arithmetic.
+
+:::remark[Large samples: the prior stops mattering]
+The **Bernstein-von Mises theorem**, which we quote, says that under regularity conditions the posterior converges to a normal distribution centred at the maximum likelihood estimate with variance equal to the inverse Fisher information — *whatever* the prior, provided it assigns positive density near the true value.
+
+So for large $n$ the credible interval and the confidence interval converge to the same numbers, and the frequentist properties of a Bayesian procedure become good automatically. The practical reading: with abundant data the choice of framework is a matter of interpretation and convenience; with scarce data it changes the answer, and the prior must be defended.
+
+The proviso matters. A prior assigning zero density to the true value blocks the convergence entirely, which is the formal version of the earlier warning against excluding regions.
+:::
+
+:::example[A credible interval, and the confidence interval beside it]
+With the Beta$(2,2)$ prior and $7$ successes in $10$, the posterior is Beta$(9,5)$ with quantiles $q_{0.025}=0.3942$ and $q_{0.975}=0.8567$. Compare with the Wilson confidence interval from the estimation chapter.
 :::
 
 :::solution
-1. choose a prior: use a $\text{Beta}(1,1)$ prior (uniform on $[0,1]$), meaning "any value of $p$ is equally plausible a priori."
-2. update: with $s = 8$ successes and $n - s = 2$ failures, the posterior is $\text{Beta}(1 + 8,\ 1 + 2) = \text{Beta}(9, 3)$.
-3. summarize: posterior mean $= \dfrac{9}{9 + 3} = \dfrac{9}{12} = 0.75$. The posterior mode (MAP) is $\dfrac{\alpha - 1}{\alpha + \beta - 2} = \dfrac{8}{10} = 0.8$, matching the raw data proportion because the uniform prior adds no pseudo-counts.
-4. 95% equal-tailed credible interval: the 2.5% and 97.5% quantiles of $\text{Beta}(9,3)$ are approximately $(0.48,\ 0.94)$.
-5. a direct probability statement: $P(p > 0.5)$ is the integral of the $\text{Beta}(9,3)$ density from $0.5$ to $1$, which is $\approx 0.97$.
-6. Sanity check: the mean $0.75$ lies comfortably inside the interval $(0.48, 0.94)$, and since almost all the interval sits above $0.5$ it is consistent with $P(p > 0.5) \approx 0.97$ ✓.
+1. **Credible interval:** $(0.3942,\ 0.8567)$, and the statement licensed is direct — given the prior and data, $P(0.394 < \theta < 0.857\mid\mathbf{x}) = 0.95$.
+2. **Posterior mean** $9/14 = 0.6429$; **posterior mode** $(9-1)/(9+5-2) = 8/12 = 0.6667$, using the Beta mode formula $(\alpha-1)/(\alpha+\beta-2)$.
+3. The three summaries order themselves as mean $0.6429$ < mode $0.6667$ < MLE $0.70$. That ordering is the general pattern: the mode tracks the likelihood most closely of the posterior summaries, while the mean is pulled furthest toward the prior, because it averages over the whole posterior including its left tail.
+4. **Wilson interval** for $\hat p = 0.7$, $n=10$, $z=1.96$: centre $(0.7+0.192)/1.392 = 0.6408$ and half-width $(1.96/1.392)\sqrt{0.021+0.0096} = 1.408\times 0.1750 = 0.2464$, giving $(0.394,\ 0.887)$.
+5. Sanity check on the agreement: the two intervals nearly coincide at the lower end and differ by $0.03$ at the upper. With $n=10$ and a weak prior they are describing the same uncertainty by different routes.
+6. What differs is what may be said. The credible interval carries a probability statement about $\theta$; the Wilson interval carries a statement about the procedure's coverage across repeated samples.
 :::
 
-:::example[Normal–Normal shrinkage]
-Setup: you want to estimate a student's true ability $\mu$. Prior belief: $\mu \sim \text{Normal}(\mu_0 = 100,\ \sigma_0 = 15)$ (the population IQ distribution). You observe $n = 4$ independent test scores with sample mean $\bar{x} = 112$, and the measurement noise has known SD $\sigma = 10$.
+:::example[Combining a prior with data on the normal scale]
+A quantity has prior $N(100, 25)$. Sixteen measurements with known $\sigma^2=100$ give $\bar x = 110$. Find the posterior and a $95\%$ credible interval.
 :::
 
 :::solution
-1. work in *precisions* (precision $=$ 1/variance), because Normal–Normal updating is a precision-weighted average. Prior precision $= \dfrac{1}{\sigma_0^2} = \dfrac{1}{225} \approx 0.00444$. Data precision $= \dfrac{n}{\sigma^2} = \dfrac{4}{100} = 0.04$.
-2. posterior precision is the sum: $0.00444 + 0.04 = 0.04444$, so posterior variance $= \dfrac{1}{0.04444} = 22.5$ and posterior SD $= \sqrt{22.5} \approx 4.74$.
-3. posterior mean is the precision-weighted average of prior mean and data mean: $\mu_{\text{post}} = \dfrac{0.00444(100) + 0.04(112)}{0.04444} = \dfrac{0.444 + 4.48}{0.04444} \approx 110.8$.
-4. Sanity check: the posterior mean $110.8$ lies between the prior mean $100$ and the data mean $112$, but much closer to the data because the data precision ($0.04$) is about $9\times$ the prior precision ($0.00444$). This "shrinkage toward the prior" is the whole mechanism: had the data been weaker (fewer scores or noisier tests), the estimate would sit closer to $100$ ✓.
+1. **Precisions.** Prior: $1/\tau^2 = 1/25 = 0.04$. Data: $n/\sigma^2 = 16/100 = 0.16$.
+2. **Posterior precision:** $0.04+0.16 = 0.20$, so the posterior variance is $1/0.20 = 5$ and the standard deviation is $\sqrt5 = 2.2361$.
+3. **Posterior mean:**
+
+$$\mu_n = 5\left(\frac{100}{25} + \frac{16(110)}{100}\right) = 5\big(4 + 17.6\big) = 5(21.6) = 108 .$$
+
+4. **Credible interval:** $108 \pm 1.96(2.2361) = 108\pm 4.3828 = (103.62,\ 112.38)$.
+5. Sanity check on the compromise: the posterior mean $108$ lies between the prior mean $100$ and the sample mean $110$, and much closer to the sample mean because the data carry four times the precision ($0.16$ against $0.04$) — the weights are $0.8$ and $0.2$, and $0.8(110)+0.2(100) = 108$ ✓.
+6. Note the posterior standard deviation $2.24$ is smaller than the data's own standard error $\sigma/\sqrt n = 2.5$ and smaller than the prior's $5$. Combining information sharpens, as precision addition requires.
 :::
 
-## Bayesian Hypothesis Testing and Model Comparison
+### Predicting the next observation
+
+A posterior describes the parameter. Often the question is instead about the next data point, and the two are not the same — predicting an observation must account for both uncertainty about $\theta$ and the noise in the observation itself, exactly as the prediction interval of the regression chapter did.
+
+:::definition[Posterior predictive distribution]{#posterior-predictive}
+The **posterior predictive** distribution of a future observation $\tilde x$ is
+
+$$p(\tilde x\mid \mathbf{x}) = \int f(\tilde x\mid\theta)\,\pi(\theta\mid\mathbf{x})\,d\theta,$$
+
+averaging the sampling distribution over the posterior rather than fixing $\theta$ at an estimate.
+:::
+
+:::theorem[Predicting the next Bernoulli trial]{#predictive-bernoulli}
+Under the Beta-binomial model, the probability that the next trial is a success equals the posterior mean:
+
+$$P(\tilde X = 1\mid \mathbf{x}) = E(\theta\mid\mathbf{x}) = \frac{a+x}{a+b+n}.$$
+:::
+
+:::proof
+Apply the definition with $f(\tilde x = 1\mid\theta)=\theta$:
+
+$$P(\tilde X=1\mid\mathbf{x}) = \int_0^1 \theta\,\pi(\theta\mid\mathbf{x})\,d\theta,$$
+
+which is by definition the posterior mean of $\theta$. The value follows from the theorem *The posterior mean is a weighted average*. $\blacksquare$
+:::
+
+:::pitfall
+Plugging a point estimate into the sampling distribution — using $f(\tilde x\mid\hat\theta)$ instead of the integral — understates the uncertainty, because it treats $\hat\theta$ as known when it is not. The error is the same one as confusing a confidence interval for a mean with a prediction interval for an observation, and it is largest exactly when the posterior is wide, which is when the data are few.
+
+For the Bernoulli the two happen to agree on the *probability* of a success, as the theorem shows, but they diverge immediately for anything involving more than one future trial: the posterior predictive for the number of successes in the next $m$ trials is beta-binomial and **over-dispersed** relative to the binomial that a plug-in estimate would give.
+:::
+
+:::example[Plug-in against posterior predictive]
+With the Beta$(9,5)$ posterior from $7$ successes in $10$, find the probability that the next trial succeeds, and the variance of the number of successes in the next $m=5$ trials under both the plug-in and the predictive approach.
+:::
+
+:::solution
+1. **Next trial.** By the theorem, $P(\tilde X=1\mid\mathbf{x}) = 9/14 = 0.6429$.
+2. **Plug-in for $m=5$.** Fixing $\theta = 0.6429$ gives Binomial$(5, 0.6429)$ with variance $5(0.6429)(0.3571) = 1.1480$.
+3. **Posterior predictive for $m=5$.** The count is beta-binomial, whose variance is
+
+$$m\,\bar\theta(1-\bar\theta)\cdot\frac{a+b+n+m}{a+b+n+1} = 1.1480\times\frac{14+5}{15} = 1.1480\times 1.2667 = 1.4542 .$$
+
+4. The predictive variance is $27\%$ larger, because it carries the uncertainty about $\theta$ in addition to the trial-to-trial noise.
+5. Sanity check on the limit: as the posterior sharpens — larger $a+b+n$ — the inflation factor $(a+b+n+m)/(a+b+n+1)$ tends to $1$ and the two agree. With $a+b+n = 1000$ instead of $14$ the factor would be $1.004$.
+6. This is the same structure as the regression chapter's prediction interval, whose extra term likewise never vanished: knowing $\theta$ perfectly would still leave the coin's own randomness.
+:::
+
+## Bayesian model comparison
 
 <!-- section: testing -->
 
+Hypothesis testing has a Bayesian counterpart, and the shape of it is different enough to be worth contrasting carefully with the testing chapter.
+
 :::definition[Bayes factor]{#bayes-factor}
-The Bayes factor comparing two models is the ratio of their marginal likelihoods,
+For two models $M_0$ and $M_1$, the **Bayes factor** is the ratio of marginal likelihoods
 
-$$BF_{12} = \frac{P(\text{data} \mid M_1)}{P(\text{data} \mid M_2)}, \qquad P(\text{data} \mid M_i) = \int P(\text{data} \mid \theta, M_i)\,P(\theta \mid M_i)\,d\theta.$$
+$$\text{BF}_{10} = \frac{P(\mathbf{x}\mid M_1)}{P(\mathbf{x}\mid M_0)},$$
+
+and it converts prior odds into posterior odds:
+
+$$\underbrace{\frac{P(M_1\mid\mathbf{x})}{P(M_0\mid\mathbf{x})}}_{\text{posterior odds}} = \text{BF}_{10}\times\underbrace{\frac{P(M_1)}{P(M_0)}}_{\text{prior odds}} .$$
 :::
 
-Note that each $P(\text{data} \mid M_i)$ is the *marginal* likelihood — the likelihood integrated over that model's prior — not the maximized likelihood. Because it averages rather than maximizes, the marginal likelihood automatically penalizes models that are more flexible than the data warrant (an automatic Occam's razor). A consequence is that Bayes factors require *proper* priors on the parameters being tested; an arbitrary improper prior leaves $BF$ undefined up to a constant.
+:::proof
+Apply Bayes' theorem to each model and divide, the common marginal $P(\mathbf{x})$ cancelling:
 
-:::proposition[Odds form of Bayes' theorem]
-The Bayes factor connects prior odds to posterior odds:
-
-$$\underbrace{\frac{P(M_1 \mid \text{data})}{P(M_2 \mid \text{data})}}_{\text{posterior odds}} = \underbrace{\frac{P(\text{data} \mid M_1)}{P(\text{data} \mid M_2)}}_{BF_{12}} \times \underbrace{\frac{P(M_1)}{P(M_2)}}_{\text{prior odds}}.$$
+$$\frac{P(M_1\mid\mathbf{x})}{P(M_0\mid\mathbf{x})} = \frac{P(\mathbf{x}\mid M_1)P(M_1)/P(\mathbf{x})}{P(\mathbf{x}\mid M_0)P(M_0)/P(\mathbf{x})} = \frac{P(\mathbf{x}\mid M_1)}{P(\mathbf{x}\mid M_0)}\cdot\frac{P(M_1)}{P(M_0)}. \qquad \blacksquare$$
 :::
 
-So $BF_{12} > 1$ means the data shift the odds toward $M_1$.
+The Bayes factor is the factor by which the data multiply the odds, and it has three properties that a $p$-value does not.
 
-:::note
-A common reading (Jeffreys' scale) is that $BF > 3$ is "substantial," $> 10$ is "strong," and $> 100$ is "decisive" evidence, with the reciprocals favouring $M_2$.
+It can **support the null**: $\text{BF}_{10} = 0.1$ is ten-to-one evidence *for* $M_0$, whereas a large $p$-value is merely a failure to reject. It is **symmetric** between the two models, neither being privileged. And it **automatically penalises complexity**, because the marginal likelihood integrates over the parameter space — a model with more parameters spreads its prior predictive mass more thinly, so it must fit substantially better to compensate. That is an Occam's razor that falls out of the arithmetic rather than being added as a penalty term the way AIC adds one.
+
+:::remark[Lindley's paradox]
+For a fixed $p$-value, the Bayes factor can favour the null more and more strongly as $n$ grows. A result significant at exactly $p = 0.05$ with $n = 10^6$ typically has a Bayes factor *supporting* $M_0$.
+
+The two are answering different questions rather than contradicting each other. The $p$-value asks how surprising the data are if $M_0$ holds, and with a huge sample a trivial departure is surprising. The Bayes factor asks which model predicted the data better, and a tiny effect is predicted well by the null and poorly by an alternative that spread its prior over a wide range of possible effect sizes.
+
+The practical reading: with very large samples, statistical significance and evidential support come apart, and quoting the first without an effect size is uninformative — which the testing chapter said from the frequentist side too.
 :::
 
-Unlike p-values, Bayes factors can provide evidence *for* the null hypothesis as well as against it — a p-value can only fail to reject.
-
-Bayesian model averaging accounts for model uncertainty by weighting predictions by the posterior probability of each model.
-
-Posterior probabilities of hypotheses can be computed directly when using proper priors.
-
-:::intuition
-Two weather apps each predicted today. The Bayes factor asks: "How much more probable was what actually happened under app 1's forecast than under app 2's?" If today's weather was 3 times as likely under app 1, that's a Bayes factor of 3 in app 1's favor — and you multiply that by how much you trusted each app beforehand to get how much you trust them now.
-:::
-
-:::example[comparing two models with a Bayes factor]
-Setup: you test whether a coin is fair. $M_1$: "biased, $p = 0.8$." $M_2$: "fair, $p = 0.5$." You observe $8$ heads in $10$ flips. Assume equal prior odds, $P(M_1) = P(M_2) = 0.5$.
+:::example[A Bayes factor by hand]
+A coin is tested for fairness: $M_0$ says $\theta = 0.5$ exactly, and $M_1$ places a uniform prior on $\theta\in[0,1]$. In $10$ tosses, $7$ heads are observed. Compute $\text{BF}_{10}$.
 :::
 
 :::solution
-1. likelihood under $M_1$: $P(\text{data} \mid M_1) = \binom{10}{8}(0.8)^8(0.2)^2 = 45 \times 0.16777 \times 0.04 \approx 0.3020$.
-2. likelihood under $M_2$: $P(\text{data} \mid M_2) = \binom{10}{8}(0.5)^8(0.5)^2 = 45 \times (0.5)^{10} = 45 \times 0.0009766 \approx 0.0439$.
-3. Bayes factor: $BF_{12} = \dfrac{0.3020}{0.0439} \approx 6.9$.
-4. posterior odds: with equal prior odds, posterior odds $= BF_{12} \times 1 \approx 6.9$, so $P(M_1 \mid \text{data}) = \dfrac{6.9}{6.9 + 1} \approx 0.87$.
-5. Sanity check: $BF \approx 6.9$ falls in the "substantial-to-strong" range, and $8/10$ heads is indeed closer to $0.8$ than to $0.5$, so favoring $M_1$ is the expected direction ✓.
+1. **Under $M_0$:** the probability of the observed count is the binomial mass at $\theta=0.5$,
+
+$$P(\mathbf{x}\mid M_0) = \binom{10}{7}(0.5)^{10} = 120/1024 = 0.11719 .$$
+
+2. **Under $M_1$:** integrate over the uniform prior, using the Beta integral $\int_0^1\theta^{7}(1-\theta)^{3}d\theta = B(8,4) = \frac{7!\,3!}{11!}$:
+
+$$P(\mathbf{x}\mid M_1) = \binom{10}{7}\int_0^1 \theta^7(1-\theta)^3d\theta = 120\times\frac{5040\times 6}{39916800} = 120\times 0.00075758 = 0.09091 .$$
+
+3. **Bayes factor:** $\text{BF}_{10} = 0.09091/0.11719 = 0.7758$.
+4. So the data mildly favour the *null* — the fair-coin model — by about $1.29$ to $1$, despite $7$ heads out of $10$ looking suggestive.
+5. Sanity check against the frequentist test: the two-sided binomial $p$-value for $7$ or more extreme is $0.344$, also far from significant. Both approaches say the same thing here, but only the Bayes factor states it as positive (if weak) support for fairness.
+6. Note where $M_1$'s penalty came from: it spread its prior over all of $[0,1]$, so it had to hedge across values like $0.1$ and $0.9$ that the data flatly contradict. A narrower alternative concentrated near $0.7$ would have produced a Bayes factor favouring $M_1$.
 :::
 
-## Computational Methods
+:::example[Interpreting a Bayes factor against prior odds]
+Two models have prior odds of $1:4$ against $M_1$ (the analyst thinks it is four times less likely at the outset). The data give $\text{BF}_{10} = 12$. Compute the posterior odds and posterior probability of $M_1$.
+:::
+
+:::solution
+1. Prior odds: $P(M_1)/P(M_0) = 1/4 = 0.25$.
+2. Posterior odds $= \text{BF}_{10}\times\text{prior odds} = 12\times 0.25 = 3$.
+3. Converting odds to a probability: $P(M_1\mid\mathbf{x}) = 3/(1+3) = 0.75$.
+4. So the data have moved $M_1$ from a prior probability of $0.2$ to a posterior probability of $0.75$.
+5. Sanity check on the arithmetic of the prior: odds of $1:4$ correspond to $P(M_1)=1/5=0.2$ ✓, and multiplying odds by $12$ takes $0.25$ to $3$, which is a probability of $0.75$ ✓.
+6. The point of separating the two factors: the Bayes factor is what the *data* contribute and is the same for every reader; the prior odds differ between readers, and each can combine them with their own. Reporting the Bayes factor alone is therefore the more useful thing to publish.
+:::
+
+## Computation
 
 <!-- section: computation -->
 
-For all but the simplest models, the posterior cannot be computed in closed form. The obstacle is almost always the normalizing constant
+Conjugate models give closed-form posteriors, and almost nothing else does. For a model with several parameters the normalising constant $\int f(\mathbf{x}\mid\theta)\pi(\theta)d\theta$ is a high-dimensional integral with no analytic solution, and numerical quadrature fails past a few dimensions.
 
-$$P(D) = \int P(D|\theta)P(\theta)\,d\theta,$$
+The resolution is to stop trying to compute the posterior and instead to **sample** from it. A large sample from the posterior answers every question one could ask of it: the mean is estimated by the sample mean, a credible interval by sample quantiles, and any function of $\theta$ by applying it to each draw.
 
-a high-dimensional integral with no analytic solution. We use numerical methods instead.
-
-:::definition[Markov chain Monte Carlo]
-MCMC methods — Metropolis-Hastings, Gibbs sampling, Hamiltonian Monte Carlo — generate samples from the posterior rather than computing it in closed form.
+:::definition[Markov chain Monte Carlo]{#mcmc}
+**MCMC** constructs a Markov chain whose stationary distribution is the posterior. Running it long enough produces draws distributed according to the posterior, from which any summary can be estimated.
 :::
 
-:::remark
-MCMC needs only the *unnormalized* posterior $P(D|\theta)P(\theta)$: because the algorithms work with *ratios* of the target density at two points, the intractable constant $P(D)$ cancels.
+:::theorem[Metropolis-Hastings has the posterior as stationary distribution]{#metropolis}
+Given a current value $\theta$, propose $\theta'$ from a symmetric proposal density and accept with probability
+
+$$\alpha = \min\left\{1,\ \frac{\pi(\theta'\mid\mathbf{x})}{\pi(\theta\mid\mathbf{x})}\right\},$$
+
+otherwise stay at $\theta$. The resulting chain has $\pi(\cdot\mid\mathbf{x})$ as its stationary distribution.
 :::
 
-Once you have samples, any posterior summary — the mean, a credible interval, $P(\theta > 0)$ — is just a summary of the samples.
+:::proof
+We verify detailed balance, which by the reversibility discussion of *Markov Chains* is sufficient for stationarity. For $\theta\ne\theta'$ the transition density is $q(\theta'\mid\theta)\alpha(\theta,\theta')$ with $q$ symmetric. Suppose without loss of generality that $\pi(\theta'\mid\mathbf{x}) \le \pi(\theta\mid\mathbf{x})$, so $\alpha(\theta,\theta') = \pi(\theta'\mid\mathbf{x})/\pi(\theta\mid\mathbf{x})$ and $\alpha(\theta',\theta)=1$. Then
 
-Modern probabilistic programming languages (Stan, PyMC, Turing.jl) let you specify models in a high-level language and automatically run efficient sampling.
+$$\pi(\theta\mid\mathbf{x})\,q(\theta'\mid\theta)\,\alpha(\theta,\theta') = \pi(\theta\mid\mathbf{x})\,q(\theta'\mid\theta)\frac{\pi(\theta'\mid\mathbf{x})}{\pi(\theta\mid\mathbf{x})} = q(\theta'\mid\theta)\,\pi(\theta'\mid\mathbf{x}),$$
 
-Variational inference approximates the posterior with a simpler distribution that is easier to optimize — useful for very large datasets. It trades exactness for speed: MCMC is asymptotically exact but can be slow, while variational inference is fast but only approximate.
-
-:::intuition
-The posterior is a mountain range whose exact height you cannot compute because you never know the total "amount of mountain" (the normalizing constant). MCMC is a hiker who wanders the range, preferring to step uphill but occasionally stepping down, and simply records where they stand. Spend long enough and the hiker's footprints pile up in proportion to the height of the terrain — so counting footprints reconstructs the shape without ever measuring the whole mountain.
+while the reverse flow is $\pi(\theta'\mid\mathbf{x})q(\theta\mid\theta')\cdot 1$, equal to the above by symmetry of $q$. Detailed balance holds, so $\pi(\cdot\mid\mathbf{x})$ is stationary. $\blacksquare$
 :::
 
-:::example[one Metropolis step]
-Setup: the current sample is $\theta_{\text{old}}$ where the unnormalized posterior is $\tilde{P}(\theta_{\text{old}}) = 0.20$. You propose a new point $\theta_{\text{new}}$ (using a symmetric proposal) where $\tilde{P}(\theta_{\text{new}}) = 0.30$.
+The decisive feature is visible in the acceptance ratio: the posterior appears only as a **ratio**, so the intractable normalising constant cancels. The algorithm needs only the unnormalised product likelihood $\times$ prior, which is always computable. That single observation is what made Bayesian inference practical for models of any complexity.
+
+:::remark[Gibbs sampling, and checking the chain]
+**Gibbs sampling** is the special case in which each parameter is updated in turn by drawing from its full conditional distribution given the others. When those conditionals are standard distributions — which conjugacy within each block often arranges — every proposal is accepted and no tuning is needed.
+
+Because the draws form a Markov chain, they are **not independent**, and two practical consequences follow. The chain must be run past its **burn-in**, the initial stretch still influenced by the starting value, which is discarded. And the effective number of independent draws is smaller than the number of iterations, by a factor depending on the autocorrelation — so a chain of $10{,}000$ highly correlated draws may carry the information of only a few hundred.
+
+Convergence is assessed by running several chains from dispersed starting points and checking that they mix into the same region, formalised by the Gelman-Rubin statistic $\hat R$, which compares between-chain and within-chain variance and should be near $1$.
+:::
+
+:::example[Monte Carlo error in a posterior summary]
+An MCMC run produces $10{,}000$ draws from a posterior with standard deviation $2.24$, but the autocorrelation makes the effective sample size only $400$. Compute the Monte Carlo standard error of the posterior mean estimate, and compare with the naive figure.
 :::
 
 :::solution
-1. acceptance ratio: $r = \dfrac{\tilde{P}(\theta_{\text{new}})}{\tilde{P}(\theta_{\text{old}})} = \dfrac{0.30}{0.20} = 1.5$. Note the normalizing constant cancels because it appears in both numerator and denominator.
-2. acceptance probability: $\alpha = \min(1, r) = \min(1, 1.5) = 1$. The proposal moves uphill, so it is always accepted; the chain moves to $\theta_{\text{new}}$.
-3. the reverse move: had we instead been at $\theta_{\text{new}}$ and proposed $\theta_{\text{old}}$, then $r = 0.20/0.30 \approx 0.667$, so $\alpha \approx 0.667$ — a downhill move is accepted only about two times in three. Draw a uniform $u \sim U(0,1)$; accept if $u < 0.667$.
-4. Sanity check: uphill moves are certain, downhill moves are only sometimes taken, and the acceptance never exceeds $1$. Over many steps the chain lingers where $\tilde{P}$ is large, so the sample histogram reproduces the posterior shape — exactly the "footprints pile up by height" idea above ✓.
+1. **Correct.** The standard error uses the effective sample size: $2.24/\sqrt{400} = 2.24/20 = 0.112$.
+2. **Naive**, using all $10{,}000$ draws as if independent: $2.24/\sqrt{10000} = 2.24/100 = 0.0224$.
+3. The naive figure understates the Monte Carlo error by a factor of $\sqrt{10000/400} = \sqrt{25} = 5$.
+4. Sanity check on whether this matters: the posterior standard deviation is $2.24$, so even the correct Monte Carlo error of $0.112$ is only $5\%$ of it — the simulation is adding little uncertainty on top of what the data leave. That is the right comparison to make, and it is the one that decides whether to run the chain longer.
+5. Note the two error sources are different in kind. The posterior standard deviation reflects genuine uncertainty about $\theta$ and does not shrink with more iterations; the Monte Carlo error reflects imperfect simulation and does.
+:::
+
+:::figure[Two MCMC chains from dispersed starting points. Both wander for an initial stretch — the burn-in, shaded by the dashed cut-off — before settling into the same region, which is the visual form of the convergence check that the Gelman-Rubin statistic formalises. Draws before the cut-off are discarded; draws after it are correlated neighbours, which is why the effective sample size is well below the number of iterations.]{#mcmc-trace}
+{
+  "type": "plot",
+  "x": [-8, 210],
+  "y": [95, 122],
+  "xTicks": 25,
+  "yTicks": 5,
+  "xLabel": "iteration",
+  "yLabel": "theta",
+  "marks": [
+    { "kind": "line", "through": [[50, 95], [50, 122]], "tone": "muted", "dashed": true, "extend": false },
+    { "kind": "path", "points": [[0,120],[10,117],[20,114],[30,111],[40,109.5],[50,108.6],[60,107.4],[70,109.1],[80,108.2],[90,106.9],[100,108.8],[110,109.6],[120,107.5],[130,108.4],[140,109.9],[150,107.1],[160,108.9],[170,107.8],[180,109.3],[190,108.1],[200,108.7]], "tone": "accent" },
+    { "kind": "path", "points": [[0,97],[10,100.5],[20,103.4],[30,105.8],[40,107.2],[50,107.9],[60,109.2],[70,107.6],[80,108.8],[90,109.4],[100,107.2],[110,108.3],[120,109.7],[130,107.9],[140,106.8],[150,108.6],[160,109.1],[170,108],[180,107.3],[190,108.9],[200,108.4]], "tone": "result" },
+    { "kind": "text", "at": [88, 119.5], "text": "chain 1", "tone": "accent", "leaderTo": [22, 113.6] },
+    { "kind": "text", "at": [95, 99.5], "text": "chain 2", "tone": "result", "leaderTo": [24, 104] },
+    { "kind": "text", "at": [22, 96.8], "text": "burn-in ends", "tone": "muted", "leaderTo": [49, 99.5] }
+  ]
+}
 :::
 
 ## Common Mistakes
 
-- Treating the prior as 'just a regularizer' without thinking about what information it actually encodes.
-- Using an improper prior without checking that the posterior is proper.
-- Interpreting a 95% credible interval as a frequentist confidence interval (or vice versa).
-- Ignoring sensitivity to prior choice when sample size is small.
-- Thinking Bayesian methods are always 'better' — they require more computational effort and careful prior specification.
+- **Reading a confidence interval as a credible interval.** Only the second licenses "there is a $95\%$ probability that $\theta$ is in here"; the first is a statement about the procedure.
+- **Believing a flat prior is uninformative.** Flatness is not preserved under reparametrisation, so a prior flat in $\theta$ is opinionated about $\log\theta$.
+- **Assigning zero prior probability to a region.** No amount of data can revive it, and the Bernstein–von Mises convergence fails.
+- **Not reporting the prior, or its influence.** With small $n$ the prior moves the answer materially; report a sensitivity analysis rather than a single number.
+- **Treating a large $p$-value as evidence for the null.** A Bayes factor can support the null; a $p$-value can only fail to reject.
+- **Expecting significance and evidence to agree at large $n$.** Lindley's paradox: a result at exactly $p=0.05$ with a huge sample often favours the null on a Bayes factor.
+- **Using all MCMC draws as if independent.** The effective sample size is smaller, often by an order of magnitude, and the Monte Carlo error scales accordingly.
+- **Failing to discard burn-in or to check convergence.** Run several chains from dispersed starts and check $\hat R$ is near $1$.
+- **Assuming a Bayesian answer differs from a frequentist one.** With a flat prior the MAP estimate *is* the MLE, and for large $n$ the intervals converge. The differences are largest exactly where the data are weakest.
