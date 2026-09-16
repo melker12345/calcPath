@@ -4,349 +4,1541 @@ title: Sets and Functions
 
 # Sets and Functions
 
-Sets are the most fundamental objects in mathematics. Almost everything — numbers, functions, graphs, spaces — can be defined in terms of sets. Functions describe how elements of one set are mapped to elements of another; they are the primary tool for relating different collections of objects.
+Mathematics needs a single language in which every other object can be described, and since the end of the nineteenth century that language has been sets. A number, a list, a graph, a program's state space, a relation, a function — each of them can be presented as a set, or as a set equipped with a little extra structure. That is not a philosophical flourish; it is a practical economy. Prove something about sets once and it holds everywhere, because everything else is built on top.
 
-In computer science, sets model collections without duplicates (e.g., hash sets), while functions model mappings, transformations, and algorithms. Understanding when a function is invertible (bijective) is crucial for encryption, data compression, and database keys.
+Two ideas carry this chapter. The first is that a set is determined by its members and by nothing else — not by how it was described, not by the order in which you list them, not by how many times you mention an element. The second is that a **function** is the right notion of "comparison" between sets, and that three properties of functions — injectivity, surjectivity, and their conjunction, bijectivity — turn into three ways of comparing sizes: at most as big, at least as big, exactly as big. Once sizes are compared by functions rather than by counting, the comparison keeps working for infinite sets, and the last theorem in this chapter is the startling thing that happens when it does.
 
-This chapter covers the language of sets, the algebra of set operations, the precise definition of functions, and the important special classes: injections, surjections, and bijections. We finish with power sets, which are central to counting and computability.
+The technique to master here is not a formula but a habit: **to prove two sets equal, prove each is a subset of the other.** We prove that this is legitimate at the start of the chapter and then use it constantly — for the distributive laws, for De Morgan's laws, for every identity of set algebra. Take an arbitrary element of the left side, walk it across to the right side, then walk an arbitrary element back. The argument is always the same shape, and a reader who has internalised that shape has learned most of what set algebra has to teach.
 
-## Sets: Definitions and Notation
+We also count. Counting subsets, functions, injections, surjections and bijections is where discrete mathematics starts to earn its keep, and inclusion–exclusion — the correction term $-|A \cap B|$ that stops double counting — is the first genuinely useful counting theorem most people meet. The chapter ends with **Cantor's theorem**: for every set $A$, no function $A \to \mathcal{P}(A)$ can be onto. Its proof is four lines long, uses nothing but the material of this chapter, and shows that there is no largest set and no single "infinity".
+
+A word on scope. Sets are also the subject of a foundational theory with axioms, ordinals, cardinal arithmetic and independence results; that belongs to the separate subject *Set Theory* and is not developed here. In this chapter a set is a collection of things, and the only care we take with "collection" is to note, in one remark, where naive use of the word goes wrong.
+
+## Sets, membership, and the double-inclusion method
 
 <!-- section: basic-sets -->
 
-:::definition[Set]{#set}
-A **set** is an unordered collection of distinct objects (elements). We write $a \in S$ to mean "a is an element of S" and $a \notin S$ otherwise. Sets are usually denoted by capital letters and listed inside curly braces: $S = \{1, 3, 5\}$.
+A set is specified by saying what belongs to it. Everything else in this section follows from taking that sentence literally.
+
+:::definition[Set and membership]{#set}
+A **set** is a collection of distinct objects, called its **elements** or **members**. We write $a \in S$ for "$a$ is an element of $S$" and $a \notin S$ for its negation. A finite set may be given by **roster notation**, listing its elements between braces, as in $S = \{2, 3, 5, 7\}$.
 :::
 
-Order does not matter and duplicates are ignored: $\{1,2,2\} = \{2,1\}$.
+Because a set is fixed by its membership, the roster carries no information beyond which objects appear in it. Order is not part of the data, and repetition adds nothing:
+
+$$\{1, 2, 2, 3\} = \{3, 1, 2\}.$$
+
+Both sides have exactly the elements $1$, $2$ and $3$, so they are the same set. If you need order, use a *sequence* or a *tuple*; if you need repetition, use a *multiset*. A set is the structure that has thrown both away, and that is precisely what makes it the simplest one.
+
+:::definition[Set-builder notation]{#set-builder}
+For a property $P$, we write
+
+$$\{x \in U : P(x)\}$$
+
+for the set of those elements of an already-given set $U$ that satisfy $P$. Read the colon as "such that". For example $\{n \in \mathbb{Z} : n = 2k \text{ for some } k \in \mathbb{Z}\}$ is the set of even integers.
+:::
+
+:::notation
+Throughout, $\mathbb{N} = \{0, 1, 2, \dots\}$, $\mathbb{Z}$ is the integers, $\mathbb{Q}$ the rationals and $\mathbb{R}$ the reals. For a positive integer $n$ we write
+
+$$[n] = \{1, 2, \dots, n\},$$
+
+the standard $n$-element set. Almost every counting argument below is phrased with $[n]$ in the background.
+:::
+
+:::remark
+Set-builder notation as written above carves a subset out of a set $U$ that is already in hand, and that restriction is not decoration. Allowing $\{x : P(x)\}$ for an arbitrary property, with no ambient set, produces Russell's paradox: let $R = \{x : x \notin x\}$ and ask whether $R \in R$; either answer contradicts the other. Repairing this is the business of *Set Theory* and its axioms. For this chapter, the discipline of always drawing elements from a stated set is enough to keep us out of trouble.
+:::
 
 :::definition[Empty set]{#empty-set}
-The **empty set** $\emptyset = \{\}$ contains no elements. It is a subset of every set.
+The **empty set**, written $\varnothing$, is the set with no elements: $x \notin \varnothing$ for every $x$.
 :::
 
-:::definition[Subset]{#subset}
-A set $A$ is a **subset** of $B$, written $A \subseteq B$, if every element of $A$ is also in $B$. We write $A \subset B$ for proper (strict) subset when $A \neq B$.
+:::definition[Subset and proper subset]{#subset}
+A set $A$ is a **subset** of a set $B$, written $A \subseteq B$, if every element of $A$ is an element of $B$; that is, if the implication
+
+$$x \in A \implies x \in B$$
+
+holds for all $x$. If $A \subseteq B$ and $A \neq B$, then $A$ is a **proper subset**, written $A \subsetneq B$.
 :::
 
-The **universal set** $U$ is the set of all objects under consideration in a given context.
+:::pitfall
+$\in$ and $\subseteq$ are different relations between different kinds of thing. For $A = \{1, 2\}$ we have $1 \in A$ and $\{1\} \subseteq A$, but $1 \subseteq A$ is a type error and $\{1\} \in A$ is false. An element of $A$ is a *member*; a subset of $A$ is a *set of members*. The distinction matters most in the section on power sets, where the elements of $\mathcal{P}(A)$ are exactly the subsets of $A$.
+:::
 
-:::definition[Set equality]{#set-equality}
-Two sets are **equal** if they contain exactly the same elements:
+Set equality is now definable, and the definition is the engine of the whole chapter.
 
-$$A = B \iff A \subseteq B \text{ and } B \subseteq A.$$
+:::definition[Equality of sets]{#set-equality}
+Two sets are **equal**, $A = B$, if they have exactly the same elements: for every $x$, $x \in A$ if and only if $x \in B$. This principle is called **extensionality**.
+:::
+
+:::proposition[Set equality by double inclusion]{#double-inclusion}
+For all sets $A$ and $B$,
+
+$$A = B \quad\text{if and only if}\quad A \subseteq B \text{ and } B \subseteq A.$$
+:::
+
+:::proof
+Suppose $A = B$. Let $x \in A$. By extensionality $x \in A$ if and only if $x \in B$, so $x \in B$. As $x$ was arbitrary, $A \subseteq B$; the same argument with the roles exchanged gives $B \subseteq A$.
+
+Conversely suppose $A \subseteq B$ and $B \subseteq A$, and let $x$ be arbitrary. If $x \in A$ then $x \in B$, because $A \subseteq B$. If $x \in B$ then $x \in A$, because $B \subseteq A$. So $x \in A$ if and only if $x \in B$, and extensionality gives $A = B$.
+:::
+
+This innocuous-looking proposition is a *method*, and it is the method this chapter uses more than any other. To prove an identity between two set expressions:
+
+1. Take an arbitrary $x$ in the left-hand set. Unfold the definitions until you have a logical statement about $x$.
+2. Reason with that statement — using the ordinary rules for "and", "or" and "not" — until you reach the statement defining the right-hand set. Conclude $x$ lies in the right-hand set, hence $\mathrm{LHS} \subseteq \mathrm{RHS}$.
+3. Repeat starting from an arbitrary $x$ in the right-hand set.
+
+Step 3 is not optional in general, though it is often unnecessary in practice: when every step in part 2 is an *if and only if* rather than a one-way implication, the same chain read backwards is the reverse inclusion, and it is honest to say so instead of writing it out. We will do exactly that once the reader has seen the long form several times.
+
+:::proposition[The empty set is a subset of every set]{#empty-subset}
+For every set $A$, $\varnothing \subseteq A$.
+:::
+
+:::proof
+We must show that $x \in \varnothing \implies x \in A$ holds for every $x$. Fix an $x$. By the definition of $\varnothing$ the hypothesis $x \in \varnothing$ is false, and an implication with a false hypothesis is true. Hence the implication holds for every $x$, which is the definition of $\varnothing \subseteq A$.
 :::
 
 :::intuition
-A set is a club with no duplicate members and no ordering of members. "Alice and Bob are in the club" is the same as "Bob and Alice are in the club".
-
-The empty set is the club with zero members. It is still a perfectly valid club, and it is a "sub-club" of every other club.
+The argument feels like a trick the first time, so it is worth naming the reason it is not. To *refute* $\varnothing \subseteq A$ you would have to exhibit an element of $\varnothing$ that is missing from $A$. There are no elements of $\varnothing$ at all, so no such counterexample can be produced, and a claim with no possible counterexample is true. A statement true this way is called **vacuously true**. Nothing has been smuggled in: "all my unicorns are purple" is true for the same reason, and would become informative only if I owned a unicorn.
 :::
 
-### Worked Examples
+:::proposition[Uniqueness of the empty set]{#empty-unique}
+There is exactly one set with no elements.
+:::
 
-:::example[Subset checks]
-Is $\{1,3\} \subseteq \{1,2,3,4\}$? Yes, both elements appear.
+:::proof
+Suppose $E$ and $E'$ both have no elements. By the proposition *The empty set is a subset of every set*, applied with $E$ in the role of the empty set, $E \subseteq E'$; applied with $E'$ in that role, $E' \subseteq E$. By *Set equality by double inclusion*, $E = E'$.
+:::
+
+:::proposition[Inclusion is reflexive and transitive]{#inclusion-order}
+For all sets $A$, $B$, $C$: $A \subseteq A$; and if $A \subseteq B$ and $B \subseteq C$ then $A \subseteq C$.
+:::
+
+:::proof
+Reflexivity is the implication $x \in A \implies x \in A$, which holds for every $x$.
+
+For transitivity, let $x \in A$. Since $A \subseteq B$ we get $x \in B$, and since $B \subseteq C$ we get $x \in C$. As $x$ was arbitrary, $A \subseteq C$.
+:::
+
+Together with antisymmetry — which is exactly *Set equality by double inclusion* — this says $\subseteq$ is a **partial order**, a notion taken up in the chapter on relations. It is only *partial*: two sets may be incomparable, as $\{1,2\}$ and $\{2,3\}$ are, neither containing the other.
+
+:::example[Deciding inclusions]
+Let $A = \{1, 2\}$, $B = \{1, 2, 3\}$ and $C = \{\{1\}, 1, 2\}$. Decide each of $A \subseteq B$, $A \in C$, $\{1\} \in C$, $\{1\} \subseteq C$, $\varnothing \subseteq C$, $\varnothing \in C$.
 :::
 
 :::solution
-1. Is $\{1,5\} \subseteq \{1,2,3,4\}$? No, 5 is missing.
-2. $\emptyset \subseteq \{1,2\}$? Yes, vacuously — there are no elements in the empty set that fail to be in the bigger set.
-3. $\{1,2\} \subseteq \{1,2\}$? Yes (every set is a subset of itself).
+1. $A \subseteq B$: true — both $1$ and $2$ lie in $B$.
+2. $A \in C$: false. The elements of $C$ are $\{1\}$, $1$ and $2$; the set $\{1,2\}$ is not among them.
+3. $\{1\} \in C$: true. The set $\{1\}$ is listed as an element of $C$.
+4. $\{1\} \subseteq C$: true, but for a different reason — its only element $1$ belongs to $C$. Note that items 3 and 4 are both true here by coincidence of this example, not in general.
+5. $\varnothing \subseteq C$: true, by *The empty set is a subset of every set*.
+6. $\varnothing \in C$: false. No element of $C$ is the empty set.
 :::
 
-## Set Operations
+:::example[A first double-inclusion proof]
+Let $A = \{n \in \mathbb{Z} : n = 6k \text{ for some } k \in \mathbb{Z}\}$ and $B = \{n \in \mathbb{Z} : n \text{ is even and } 3 \mid n\}$. Prove $A = B$.
+:::
+
+:::solution
+1. ($A \subseteq B$.) Let $n \in A$, so $n = 6k$ for some integer $k$. Then $n = 2(3k)$ is even and $n = 3(2k)$ is a multiple of $3$, so $n \in B$.
+2. ($B \subseteq A$.) Let $n \in B$. Being even, $n = 2m$ for some integer $m$. Since $3 \mid n$ and $3 \nmid 2$, and $3$ is prime, $3 \mid m$ — this is Euclid's lemma from number theory. Write $m = 3j$; then $n = 6j$, so $n \in A$.
+3. Both inclusions hold, so by *Set equality by double inclusion*, $A = B$.
+:::
+
+:::pitfall
+The second inclusion above needed a real idea, while the first was routine. That asymmetry is typical, and it is the reason you must actually write both halves rather than assert "similarly". "Even and divisible by $3$" implying "divisible by $6$" is *false* for the analogous claim with $4$ and $6$: $12$ is a multiple of $4$ and of $6$, but $\{n : 4 \mid n \text{ and } 6 \mid n\}$ is the multiples of $12$, not of $24$.
+:::
+
+## Operations on sets and the algebra they obey
 
 <!-- section: operations -->
 
+Set operations are defined by the logical connectives: union is "or", intersection is "and", complement is "not". Every identity in this section is therefore a fact of propositional logic in disguise, and element chasing is the translation.
+
 :::definition[Union, intersection, difference, complement]{#set-operations}
-The basic operations on sets are:
+Let $A$ and $B$ be subsets of a **universal set** $U$ fixed by context. Then
 
-- **Union**: $A \cup B = \{x \mid x \in A \text{ or } x \in B \text{ (or both)}\}$
-- **Intersection**: $A \cap B = \{x \mid x \in A \text{ and } x \in B\}$
-- **Set difference**: $A \setminus B = \{x \mid x \in A \text{ and } x \notin B\}$
-- **Complement** (relative to universal set $U$): $A^c = U \setminus A = \{x \in U \mid x \notin A\}$
+$$A \cup B = \{x \in U : x \in A \text{ or } x \in B\}, \qquad A \cap B = \{x \in U : x \in A \text{ and } x \in B\},$$
+
+$$A \setminus B = \{x \in U : x \in A \text{ and } x \notin B\}, \qquad A^c = U \setminus A.$$
+
+The "or" in the union is **inclusive**: $x$ may lie in both. Sets with $A \cap B = \varnothing$ are called **disjoint**.
 :::
 
-**Venn diagrams** are visual representations using overlapping circles. They make the distributive laws and De Morgan's laws for sets intuitive.
+:::definition[Symmetric difference]{#symmetric-difference}
+The **symmetric difference** of $A$ and $B$ is
 
-:::theorem[De Morgan's laws for sets]{#de-morgan-sets}
-For any sets $A$ and $B$ inside a universal set $U$,
+$$A \triangle B = (A \setminus B) \cup (B \setminus A),$$
 
-$$(A \cup B)^c = A^c \cap B^c \qquad\text{and}\qquad (A \cap B)^c = A^c \cup B^c.$$
+the elements lying in exactly one of the two sets.
 :::
 
-:::proposition[Key identities of set algebra]{#set-identities}
-All of the following are provable from the definitions:
+:::definition[Cartesian product]{#cartesian-product}
+The **Cartesian product** of $A$ and $B$ is the set of ordered pairs
 
-- $A \cup A = A$, $A \cap A = A$ (idempotent)
-- $A \cup \emptyset = A$, $A \cap U = A$
-- $A \cup B = B \cup A$ (commutative), likewise for $\cap$
-- Distributivity: $A \cap (B \cup C) = (A \cap B) \cup (A \cap C)$
-- $|A \cup B| = |A| + |B| - |A \cap B|$ (inclusion-exclusion for two sets)
+$$A \times B = \{(a, b) : a \in A,\ b \in B\},$$
+
+where $(a,b) = (a',b')$ means $a = a'$ and $b = b'$. Write $A^2$ for $A \times A$, and more generally $A^n$ for the set of $n$-tuples from $A$.
+:::
+
+Unlike union and intersection, the Cartesian product is neither commutative nor associative in the strict sense: $(1,2) \neq (2,1)$, so $A \times B \neq B \times A$ unless $A = B$ or one of them is empty. The product is where *order* re-enters a theory built on unordered collections, and it is what makes relations and functions expressible in the language of sets at all.
+
+:::figure[The three-circle Venn diagram. Three sets cut the universe into eight regions, one for each of the eight answers to "in $A$? in $B$? in $C$?" — and the eighth is the region outside all three.]{#venn-three}
+{
+  "type": "plot",
+  "x": [
+    -4.3,
+    4.3
+  ],
+  "y": [
+    -3.3,
+    3.1
+  ],
+  "equalAspect": true,
+  "axes": false,
+  "marks": [
+    {
+      "kind": "path",
+      "points": [
+        [
+          0.9,
+          0.55
+        ],
+        [
+          0.873,
+          0.863
+        ],
+        [
+          0.791,
+          1.166
+        ],
+        [
+          0.659,
+          1.45
+        ],
+        [
+          0.479,
+          1.707
+        ],
+        [
+          0.257,
+          1.929
+        ],
+        [
+          0.0,
+          2.109
+        ],
+        [
+          -0.284,
+          2.241
+        ],
+        [
+          -0.587,
+          2.323
+        ],
+        [
+          -0.9,
+          2.35
+        ],
+        [
+          -1.213,
+          2.323
+        ],
+        [
+          -1.516,
+          2.241
+        ],
+        [
+          -1.8,
+          2.109
+        ],
+        [
+          -2.057,
+          1.929
+        ],
+        [
+          -2.279,
+          1.707
+        ],
+        [
+          -2.459,
+          1.45
+        ],
+        [
+          -2.591,
+          1.166
+        ],
+        [
+          -2.673,
+          0.863
+        ],
+        [
+          -2.7,
+          0.55
+        ],
+        [
+          -2.673,
+          0.237
+        ],
+        [
+          -2.591,
+          -0.066
+        ],
+        [
+          -2.459,
+          -0.35
+        ],
+        [
+          -2.279,
+          -0.607
+        ],
+        [
+          -2.057,
+          -0.829
+        ],
+        [
+          -1.8,
+          -1.009
+        ],
+        [
+          -1.516,
+          -1.141
+        ],
+        [
+          -1.213,
+          -1.223
+        ],
+        [
+          -0.9,
+          -1.25
+        ],
+        [
+          -0.587,
+          -1.223
+        ],
+        [
+          -0.284,
+          -1.141
+        ],
+        [
+          -0.0,
+          -1.009
+        ],
+        [
+          0.257,
+          -0.829
+        ],
+        [
+          0.479,
+          -0.607
+        ],
+        [
+          0.659,
+          -0.35
+        ],
+        [
+          0.791,
+          -0.066
+        ],
+        [
+          0.873,
+          0.237
+        ],
+        [
+          0.9,
+          0.55
+        ]
+      ]
+    },
+    {
+      "kind": "path",
+      "points": [
+        [
+          2.7,
+          0.55
+        ],
+        [
+          2.673,
+          0.863
+        ],
+        [
+          2.591,
+          1.166
+        ],
+        [
+          2.459,
+          1.45
+        ],
+        [
+          2.279,
+          1.707
+        ],
+        [
+          2.057,
+          1.929
+        ],
+        [
+          1.8,
+          2.109
+        ],
+        [
+          1.516,
+          2.241
+        ],
+        [
+          1.213,
+          2.323
+        ],
+        [
+          0.9,
+          2.35
+        ],
+        [
+          0.587,
+          2.323
+        ],
+        [
+          0.284,
+          2.241
+        ],
+        [
+          0.0,
+          2.109
+        ],
+        [
+          -0.257,
+          1.929
+        ],
+        [
+          -0.479,
+          1.707
+        ],
+        [
+          -0.659,
+          1.45
+        ],
+        [
+          -0.791,
+          1.166
+        ],
+        [
+          -0.873,
+          0.863
+        ],
+        [
+          -0.9,
+          0.55
+        ],
+        [
+          -0.873,
+          0.237
+        ],
+        [
+          -0.791,
+          -0.066
+        ],
+        [
+          -0.659,
+          -0.35
+        ],
+        [
+          -0.479,
+          -0.607
+        ],
+        [
+          -0.257,
+          -0.829
+        ],
+        [
+          -0.0,
+          -1.009
+        ],
+        [
+          0.284,
+          -1.141
+        ],
+        [
+          0.587,
+          -1.223
+        ],
+        [
+          0.9,
+          -1.25
+        ],
+        [
+          1.213,
+          -1.223
+        ],
+        [
+          1.516,
+          -1.141
+        ],
+        [
+          1.8,
+          -1.009
+        ],
+        [
+          2.057,
+          -0.829
+        ],
+        [
+          2.279,
+          -0.607
+        ],
+        [
+          2.459,
+          -0.35
+        ],
+        [
+          2.591,
+          -0.066
+        ],
+        [
+          2.673,
+          0.237
+        ],
+        [
+          2.7,
+          0.55
+        ]
+      ]
+    },
+    {
+      "kind": "path",
+      "points": [
+        [
+          1.8,
+          -1.0
+        ],
+        [
+          1.773,
+          -0.687
+        ],
+        [
+          1.691,
+          -0.384
+        ],
+        [
+          1.559,
+          -0.1
+        ],
+        [
+          1.379,
+          0.157
+        ],
+        [
+          1.157,
+          0.379
+        ],
+        [
+          0.9,
+          0.559
+        ],
+        [
+          0.616,
+          0.691
+        ],
+        [
+          0.313,
+          0.773
+        ],
+        [
+          0.0,
+          0.8
+        ],
+        [
+          -0.313,
+          0.773
+        ],
+        [
+          -0.616,
+          0.691
+        ],
+        [
+          -0.9,
+          0.559
+        ],
+        [
+          -1.157,
+          0.379
+        ],
+        [
+          -1.379,
+          0.157
+        ],
+        [
+          -1.559,
+          -0.1
+        ],
+        [
+          -1.691,
+          -0.384
+        ],
+        [
+          -1.773,
+          -0.687
+        ],
+        [
+          -1.8,
+          -1.0
+        ],
+        [
+          -1.773,
+          -1.313
+        ],
+        [
+          -1.691,
+          -1.616
+        ],
+        [
+          -1.559,
+          -1.9
+        ],
+        [
+          -1.379,
+          -2.157
+        ],
+        [
+          -1.157,
+          -2.379
+        ],
+        [
+          -0.9,
+          -2.559
+        ],
+        [
+          -0.616,
+          -2.691
+        ],
+        [
+          -0.313,
+          -2.773
+        ],
+        [
+          -0.0,
+          -2.8
+        ],
+        [
+          0.313,
+          -2.773
+        ],
+        [
+          0.616,
+          -2.691
+        ],
+        [
+          0.9,
+          -2.559
+        ],
+        [
+          1.157,
+          -2.379
+        ],
+        [
+          1.379,
+          -2.157
+        ],
+        [
+          1.559,
+          -1.9
+        ],
+        [
+          1.691,
+          -1.616
+        ],
+        [
+          1.773,
+          -1.313
+        ],
+        [
+          1.8,
+          -1.0
+        ]
+      ],
+      "tone": "result"
+    },
+    {
+      "kind": "text",
+      "at": [
+        -1.7,
+        1.05
+      ],
+      "text": "A only"
+    },
+    {
+      "kind": "text",
+      "at": [
+        1.7,
+        1.05
+      ],
+      "text": "B only"
+    },
+    {
+      "kind": "text",
+      "at": [
+        0.0,
+        -1.95
+      ],
+      "text": "C only"
+    },
+    {
+      "kind": "text",
+      "at": [
+        0.0,
+        1.4
+      ],
+      "text": "A n B"
+    },
+    {
+      "kind": "text",
+      "at": [
+        -1.15,
+        -0.65
+      ],
+      "text": "A n C"
+    },
+    {
+      "kind": "text",
+      "at": [
+        1.15,
+        -0.65
+      ],
+      "text": "B n C"
+    },
+    {
+      "kind": "text",
+      "at": [
+        0.0,
+        0.05
+      ],
+      "text": "all 3"
+    },
+    {
+      "kind": "text",
+      "at": [
+        2.95,
+        2.6
+      ],
+      "text": "outside"
+    },
+    {
+      "kind": "text",
+      "at": [
+        -3.6,
+        1.9
+      ],
+      "text": "A"
+    },
+    {
+      "kind": "text",
+      "at": [
+        3.6,
+        1.9
+      ],
+      "text": "B"
+    },
+    {
+      "kind": "text",
+      "at": [
+        0.0,
+        -3.05
+      ],
+      "text": "C"
+    }
+  ]
+}
+:::
+
+The picture is a proof aid, not a proof. It is reliable for two or three sets — three circles in general position really do produce all eight combinations — and unreliable beyond that, since four circles cannot cut the plane into the sixteen regions four sets require. Element chasing has no such limit, which is why the arguments below are written in symbols even where a diagram would convince you.
+
+:::theorem[Distributive laws]{#distributive-laws}
+For all sets $A$, $B$, $C$,
+
+$$A \cap (B \cup C) = (A \cap B) \cup (A \cap C), \qquad A \cup (B \cap C) = (A \cup B) \cap (A \cup C).$$
+:::
+
+:::proof
+We prove the first law by double inclusion.
+
+($\subseteq$.) Let $x \in A \cap (B \cup C)$. Then $x \in A$, and $x \in B \cup C$, so $x \in B$ or $x \in C$. In the first case $x \in A$ and $x \in B$, so $x \in A \cap B$. In the second case $x \in A$ and $x \in C$, so $x \in A \cap C$. Either way $x \in (A \cap B) \cup (A \cap C)$.
+
+($\supseteq$.) Let $x \in (A \cap B) \cup (A \cap C)$. Then $x \in A \cap B$ or $x \in A \cap C$. In the first case $x \in A$ and $x \in B$; in the second $x \in A$ and $x \in C$. In both cases $x \in A$, and in both cases $x$ lies in $B$ or in $C$, hence in $B \cup C$. Therefore $x \in A \cap (B \cup C)$.
+
+Both inclusions hold, so the sets are equal by *Set equality by double inclusion*.
+
+The second law is the same argument with "and" and "or" exchanged throughout: $x \in A \cup (B \cap C)$ says $x \in A$, or else $x$ lies in both $B$ and $C$; and $x \in (A \cup B) \cap (A \cup C)$ says $x$ lies in $A$ or $B$, and in $A$ or $C$. If $x \in A$ both hold. If $x \notin A$, the first says $x \in B$ and $x \in C$, and the second says exactly the same, so the two statements agree in every case.
 :::
 
 :::intuition
-Union is "everyone from either club" (merge the membership lists, remove duplicates).
-
-Intersection is "people who belong to both clubs".
-
-Difference is "members of A who are not in B".
-
-Complement is "everyone in the universe who is not in A".
+The two laws are the set-theoretic reading of the two distributive laws of logic. Arithmetic has only one such law — multiplication distributes over addition, but addition does not distribute over multiplication — so the symmetry here is genuinely new. Do not import the arithmetic instinct that one operation is "stronger"; with $\cap$ and $\cup$ neither is.
 :::
 
-### Worked Examples
+:::theorem[De Morgan's laws for sets]{#de-morgan}
+For all subsets $A$, $B$ of a universal set $U$,
 
-:::example[Computing with small sets]
-Let $A = \{1,2,3,4\}$, $B = \{3,4,5,6\}$, $U = \{1,2,3,4,5,6,7\}$.
+$$(A \cup B)^c = A^c \cap B^c, \qquad (A \cap B)^c = A^c \cup B^c.$$
+:::
+
+:::proof
+Take the first. For $x \in U$, the following statements are equivalent, each line following from the previous by the definition named beside it:
+
+$x \in (A \cup B)^c$; $\ $ $x \notin A \cup B$ (definition of complement); $\ $ it is not the case that ($x \in A$ or $x \in B$) (definition of union); $\ $ $x \notin A$ and $x \notin B$ (De Morgan's law of logic); $\ $ $x \in A^c$ and $x \in B^c$; $\ $ $x \in A^c \cap B^c$.
+
+Every step is an equivalence, so reading the chain downwards gives $(A \cup B)^c \subseteq A^c \cap B^c$ and reading it upwards gives the reverse inclusion. By *Set equality by double inclusion* the two sets are equal.
+
+For the second law, apply the first to the sets $A^c$ and $B^c$: it gives $(A^c \cup B^c)^c = A^{cc} \cap B^{cc} = A \cap B$, using $A^{cc} = A$. Taking complements of both sides yields $A^c \cup B^c = (A \cap B)^c$.
+:::
+
+:::remark
+The pattern to remember is: *a complement turns a union into an intersection and an intersection into a union.* It reappears verbatim for logical connectives ($\lnot(p \lor q) \equiv \lnot p \land \lnot q$), for quantifiers ($\lnot \forall x\, P \equiv \exists x\, \lnot P$), and in Boolean circuit design, where it is the rule that lets any circuit be rebuilt from NAND gates alone.
+:::
+
+:::proposition[Difference as intersection with a complement]{#difference-complement}
+For all subsets $A$, $B$ of $U$: $A \setminus B = A \cap B^c$.
+:::
+
+:::proof
+For $x \in U$, $x \in A \setminus B$ means $x \in A$ and $x \notin B$, which is exactly $x \in A$ and $x \in B^c$, which is $x \in A \cap B^c$. Each step is an equivalence, so both inclusions hold at once.
+:::
+
+That proposition is a labour-saving device: it removes $\setminus$ from any expression, leaving only $\cup$, $\cap$ and $^c$, on which the distributive and De Morgan laws can be used directly. The next example shows the technique.
+
+:::example[Simplifying a set expression]
+Simplify $(A \setminus B) \cup (A \cap B)$.
 :::
 
 :::solution
-$A \cup B = \{1,2,3,4,5,6\}$ — everything in either set, listed once.
-$A \cap B = \{3,4\}$ — the elements common to both.
-$A \setminus B = \{1,2\}$ — in $A$, removing anything that is also in $B$.
-$B \setminus A = \{5,6\}$ — note this differs from $A \setminus B$; set difference is not symmetric.
-$A^c = U \setminus A = \{5,6,7\}$ — everything in the universe $U$ outside $A$.
-$|A \cup B| = |A| + |B| - |A \cap B| = 4 + 4 - 2 = 6$. We subtract $|A\cap B|$ because the shared elements $3,4$ were counted once in $|A|$ and again in $|B|$; without the correction we would double-count them.
-
-**Sanity check.** The direct listing $A \cup B = \{1,2,3,4,5,6\}$ has $6$ elements, matching the inclusion–exclusion count of $6$. ✓
+1. By *Difference as intersection with a complement*, $(A \setminus B) \cup (A \cap B) = (A \cap B^c) \cup (A \cap B)$.
+2. By the *Distributive laws* read right to left, this is $A \cap (B^c \cup B)$.
+3. $B^c \cup B = U$, since every $x \in U$ either lies in $B$ or does not.
+4. $A \cap U = A$, because $A \subseteq U$. Final answer: $A$.
 :::
 
-:::example[Proving a set identity]
-We prove distributivity of union over intersection:
-$$(A \cup B) \cap (A \cup C) = A \cup (B \cap C).$$
-The standard way to prove two sets are equal is to show each is a subset of the other (the definition of equality above). Here we show both inclusions at once by proving that an arbitrary $x$ is in the left side **if and only if** it is in the right side.
+:::example[Proving an identity by element chasing]
+Prove $A \setminus (B \cup C) = (A \setminus B) \cap (A \setminus C)$.
 :::
 
 :::solution
-Take any $x$. By the definitions of $\cup$ and $\cap$:
-$$x \in (A \cup B) \cap (A \cup C) \iff (x \in A \text{ or } x \in B) \text{ and } (x \in A \text{ or } x \in C).$$
-
-Now split into two cases on whether $x \in A$:
-
-**Case $x \in A$.** Then both "or" clauses on the left are satisfied, so $x$ is in the left side. On the right, $x \in A$ makes $x \in A \cup (B \cap C)$. Both sides hold.
-**Case $x \notin A$.** Then the first clause forces $x \in B$ and the second forces $x \in C$, so $x \in B \cap C$, which puts $x \in A \cup (B \cap C)$. Conversely, if $x \notin A$ but $x \in A \cup (B \cap C)$, then $x \in B \cap C$, so $x \in B$ and $x \in C$, giving $(x \in A \text{ or } x \in B)$ and $(x \in A \text{ or } x \in C)$, i.e. $x$ is in the left side.
-
-In every case $x$ is in the left side exactly when it is in the right side, so the two sets are equal.
-
-**Sanity check.** Try $A=\{1\}$, $B=\{2\}$, $C=\{3\}$. Left: $(A\cup B)\cap(A\cup C) = \{1,2\}\cap\{1,3\} = \{1\}$. Right: $A\cup(B\cap C) = \{1\}\cup\emptyset = \{1\}$. They match.
+1. Let $x \in A \setminus (B \cup C)$. Then $x \in A$ and $x \notin B \cup C$.
+2. By *De Morgan's laws for sets* (or directly), $x \notin B \cup C$ means $x \notin B$ and $x \notin C$.
+3. So $x \in A$ and $x \notin B$, giving $x \in A \setminus B$; and $x \in A$ and $x \notin C$, giving $x \in A \setminus C$. Hence $x$ lies in the intersection.
+4. Conversely, if $x \in (A \setminus B) \cap (A \setminus C)$ then $x \in A$, $x \notin B$ and $x \notin C$, so $x \in A$ and $x \notin B \cup C$, that is $x \in A \setminus (B \cup C)$.
+5. Both inclusions hold, so the sets are equal.
 :::
 
-## Functions: Definition and Properties
+:::proposition[Three readings of inclusion]{#inclusion-readings}
+For all sets $A$ and $B$ the following are equivalent:
+
+1. $A \subseteq B$;
+2. $A \cup B = B$;
+3. $A \cap B = A$.
+:::
+
+:::proof
+(1 $\Rightarrow$ 2.) Certainly $B \subseteq A \cup B$. For the other inclusion, let $x \in A \cup B$; then $x \in A$, in which case $x \in B$ by hypothesis, or $x \in B$ already. So $A \cup B \subseteq B$, and the two are equal.
+
+(2 $\Rightarrow$ 3.) Assume $A \cup B = B$. Then $A \cap B = A \cap (A \cup B)$, and every $x \in A$ lies in $A \cup B$, so $A \cap (A \cup B) = A$.
+
+(3 $\Rightarrow$ 1.) Assume $A \cap B = A$ and let $x \in A$. Then $x \in A \cap B$, so in particular $x \in B$. Hence $A \subseteq B$.
+
+The three implications close a cycle, so the three statements are equivalent.
+:::
+
+Now to counting. If $A$ is finite we write $|A|$ for the number of its elements, its **cardinality**. The union of two sets is the first place where naive counting goes wrong, and the fix is the most reused idea in combinatorics.
+
+:::theorem[Inclusion–exclusion for two sets]{#inclusion-exclusion-2}
+For finite sets $A$ and $B$,
+
+$$|A \cup B| = |A| + |B| - |A \cap B|.$$
+:::
+
+:::proof
+Split $A \cup B$ into the three pairwise disjoint pieces $A \setminus B$, $A \cap B$ and $B \setminus A$; every element of $A \cup B$ lies in exactly one of them, according to whether it lies in $A$ only, in both, or in $B$ only. Counting a disjoint union adds the counts, so
+
+$$|A \cup B| = |A \setminus B| + |A \cap B| + |B \setminus A|.$$
+
+Similarly $A$ is the disjoint union of $A \setminus B$ and $A \cap B$, so $|A \setminus B| = |A| - |A \cap B|$, and likewise $|B \setminus A| = |B| - |A \cap B|$. Substituting,
+
+$$|A \cup B| = \bigl(|A| - |A \cap B|\bigr) + |A \cap B| + \bigl(|B| - |A \cap B|\bigr) = |A| + |B| - |A \cap B|.$$
+:::
+
+:::intuition
+Adding $|A|$ and $|B|$ counts everything in the overlap twice, once from each set. Subtracting $|A \cap B|$ removes exactly one of those two counts, leaving every element counted once. The whole of inclusion–exclusion, at every size, is this bookkeeping carried out systematically.
+:::
+
+:::theorem[Inclusion–exclusion for three sets]{#inclusion-exclusion-3}
+For finite sets $A$, $B$, $C$,
+
+$$|A \cup B \cup C| = |A| + |B| + |C| - |A \cap B| - |A \cap C| - |B \cap C| + |A \cap B \cap C|.$$
+:::
+
+:::proof
+Apply *Inclusion–exclusion for two sets* to the pair $A \cup B$ and $C$:
+
+$$|A \cup B \cup C| = |A \cup B| + |C| - |(A \cup B) \cap C|.$$
+
+Expand $|A \cup B| = |A| + |B| - |A \cap B|$ by the same theorem. For the last term, the *Distributive laws* give $(A \cup B) \cap C = (A \cap C) \cup (B \cap C)$, and a third application of the two-set formula gives
+
+$$|(A \cap C) \cup (B \cap C)| = |A \cap C| + |B \cap C| - |(A \cap C) \cap (B \cap C)|.$$
+
+Finally $(A \cap C) \cap (B \cap C) = A \cap B \cap C$, since intersection is idempotent and commutative. Substituting the three expansions and collecting signs gives the stated formula.
+:::
+
+:::intuition
+Count each element by which of $A$, $B$, $C$ it belongs to. An element in exactly one set is counted once, by one positive term, and by nothing else. An element in exactly two, say $A$ and $B$, is counted $+1+1-1 = 1$ time. An element in all three is counted $+3-3+1 = 1$ time. Every element is counted exactly once, which is what the theorem asserts.
+:::
+
+:::example[A survey count]
+Of $120$ students, $65$ study Python, $52$ study C, $43$ study Haskell; $28$ study both Python and C, $21$ Python and Haskell, $18$ C and Haskell, and $10$ study all three. How many study at least one of the languages, and how many study none?
+:::
+
+:::solution
+1. By *Inclusion–exclusion for three sets*, the number studying at least one is $65 + 52 + 43 - 28 - 21 - 18 + 10$.
+2. The positive terms give $160$; the pairwise terms subtract $67$; adding back $10$ gives $160 - 67 + 10 = 103$.
+3. Those studying none are the complement inside the $120$ students: $120 - 103 = 17$. Final answer: $103$ study at least one, $17$ study none.
+:::
+
+:::example[Recovering an unknown intersection]
+Two finite sets satisfy $|A| = 31$, $|B| = 24$ and $|A \cup B| = 40$. Find $|A \cap B|$ and $|A \triangle B|$.
+:::
+
+:::solution
+1. Rearranging *Inclusion–exclusion for two sets*, $|A \cap B| = |A| + |B| - |A \cup B| = 31 + 24 - 40 = 15$.
+2. The symmetric difference is everything in the union but not the intersection, so $|A \triangle B| = |A \cup B| - |A \cap B| = 40 - 15 = 25$. Final answer: $15$ and $25$.
+:::
+
+:::proposition[Cardinality of a Cartesian product]{#product-count}
+For finite sets $A$ and $B$, $|A \times B| = |A|\,|B|$.
+:::
+
+:::proof
+Write $A = \{a_1, \dots, a_m\}$ with $m = |A|$. Every pair in $A \times B$ has exactly one first coordinate, so $A \times B$ is the disjoint union of the $m$ sets $S_i = \{(a_i, b) : b \in B\}$. For each $i$ the assignment $b \mapsto (a_i, b)$ matches the elements of $B$ with those of $S_i$ one for one, so $|S_i| = |B|$. Summing over the disjoint pieces, $|A \times B| = m|B| = |A||B|$.
+:::
+
+:::corollary[Tuples from one set]{#tuple-count}
+For a finite set $A$ and $n \ge 1$, $|A^n| = |A|^n$.
+:::
+
+:::proof
+Induct on $n$. For $n = 1$ the claim is $|A| = |A|$. If $|A^n| = |A|^n$, then identifying $A^{n+1}$ with $A^n \times A$ and applying *Cardinality of a Cartesian product* gives $|A^{n+1}| = |A|^n \cdot |A| = |A|^{n+1}$.
+:::
+
+:::example[Counting strings]
+How many binary strings of length $8$ are there, and how many of them start with $1$ and end with $0$?
+:::
+
+:::solution
+1. A binary string of length $8$ is an element of $\{0,1\}^8$, so by *Tuples from one set* there are $2^8 = 256$.
+2. Fixing the first and last symbols leaves the six middle positions free, giving $2^6 = 64$. Final answer: $256$ and $64$.
+:::
+
+## Functions: the definition that removes the ambiguity
 
 <!-- section: functions -->
 
+Informally a function is a rule. That description is too loose to prove anything with — two different rules can compute the same function, and some "rules" fail to define a function at all — so the working definition names the data instead: a domain, a codomain, and an assignment that is *total* and *single-valued*.
+
 :::definition[Function]{#function}
-A **function** $f: A \to B$ (from domain A to codomain B) is a rule that assigns to every element $x \in A$ exactly one element $f(x) \in B$. Functions must therefore be **total** (defined for every element of the domain) and **single-valued**.
+A **function** $f$ from a set $A$ to a set $B$, written $f : A \to B$, assigns to each element $a \in A$ exactly one element $f(a) \in B$. The set $A$ is the **domain**, $B$ the **codomain**, and $f(a)$ the **value** or **image** of $a$.
+
+Formally, $f$ is a subset $\Gamma_f \subseteq A \times B$ — its **graph** — such that for every $a \in A$ there is exactly one $b \in B$ with $(a,b) \in \Gamma_f$.
 :::
+
+The two conditions packed into "exactly one" are worth separating. *At least one* makes $f$ **total**: no element of the domain may be left without a value, so $f(x) = 1/x$ is not a function $\mathbb{R} \to \mathbb{R}$, though it is one on $\mathbb{R} \setminus \{0\}$. *At most one* makes $f$ **well defined**: no element may receive two values, so the "rule" $\pm\sqrt{x}$ does not define a function $[0,\infty) \to \mathbb{R}$.
 
 :::definition[Image and preimage]{#image-preimage}
-- The **image** (range) of f is $\{f(x) \mid x \in A\} \subseteq B$.
-- The **preimage** of a set $C \subseteq B$ is $f^{-1}(C) = \{x \in A \mid f(x) \in C\}$.
+For $f : A \to B$, $S \subseteq A$ and $T \subseteq B$, define
+
+$$f(S) = \{f(a) : a \in S\} \subseteq B, \qquad f^{-1}(T) = \{a \in A : f(a) \in T\} \subseteq A.$$
+
+The set $f(A)$ is the **image** (or range) of $f$. The notation $f^{-1}(T)$ is the **preimage** of $T$ and is defined for every $f$, whether or not $f$ has an inverse function.
 :::
 
-In set theory a function is formally a set of ordered pairs $(x,y)$ with no two pairs sharing the same first component but different seconds.
+:::pitfall
+Codomain and image are different sets, and a function carries its codomain as part of its data. The squaring maps $\mathbb{R} \to \mathbb{R}$ and $\mathbb{R} \to [0,\infty)$ have the same rule and the same graph read as a set of pairs, but the second is surjective and the first is not. Any statement about surjectivity is a statement about the chosen codomain.
+:::
+
+:::definition[Equality of functions]{#function-equality}
+Two functions $f, g : A \to B$ are **equal** if $f(a) = g(a)$ for every $a \in A$. Functions with different domains or different codomains are never equal.
+:::
+
+:::definition[Composition and identity]{#composition}
+For $f : A \to B$ and $g : B \to C$, the **composite** $g \circ f : A \to C$ is defined by $(g \circ f)(a) = g(f(a))$. The **identity function** $\mathrm{id}_A : A \to A$ is given by $\mathrm{id}_A(a) = a$.
+:::
+
+:::proposition[Composition is associative, with identities]{#composition-associative}
+For $f : A \to B$, $g : B \to C$ and $h : C \to D$,
+
+$$h \circ (g \circ f) = (h \circ g) \circ f, \qquad f \circ \mathrm{id}_A = f = \mathrm{id}_B \circ f.$$
+:::
+
+:::proof
+All four composites in the first identity are functions $A \to D$, so by *Equality of functions* it suffices to check them at an arbitrary $a \in A$:
+
+$$\bigl(h \circ (g \circ f)\bigr)(a) = h\bigl((g\circ f)(a)\bigr) = h\bigl(g(f(a))\bigr) = (h \circ g)(f(a)) = \bigl((h \circ g) \circ f\bigr)(a).$$
+
+For the second, $(f \circ \mathrm{id}_A)(a) = f(\mathrm{id}_A(a)) = f(a)$ and $(\mathrm{id}_B \circ f)(a) = \mathrm{id}_B(f(a)) = f(a)$.
+:::
+
+Associativity is what licenses writing $h \circ g \circ f$ with no brackets, and it is used silently in every inverse argument later. Note that composition is emphatically *not* commutative: with $f(x) = x + 1$ and $g(x) = x^2$ on $\mathbb{R}$, $(g\circ f)(x) = (x+1)^2$ while $(f \circ g)(x) = x^2 + 1$.
+
+:::theorem[Counting functions]{#count-functions}
+Let $A$ and $B$ be finite with $|A| = n$ and $|B| = m$. The number of functions $A \to B$ is $m^n$.
+:::
+
+:::proof
+List the domain as $A = \{a_1, \dots, a_n\}$. A function $f : A \to B$ is determined by the tuple of its values $(f(a_1), \dots, f(a_n)) \in B^n$, since knowing every value is knowing $f$ by *Equality of functions*. Conversely every tuple $(b_1, \dots, b_n) \in B^n$ arises from exactly one function, namely the one sending $a_i \mapsto b_i$ — this assignment is total and single valued because each $a_i$ appears once in the list. So the functions $A \to B$ correspond one for one with the elements of $B^n$, and by *Tuples from one set* there are $m^n$ of them.
+:::
 
 :::intuition
-A function is a perfect "machine" or "vending rule": drop in any input from the domain and it always spits out exactly one output in the codomain. No input left out, no input giving two different answers.
-
-Think of $f(x) = x^2$ from reals to reals: every real goes in, a nonnegative real comes out.
+Choosing a function is filling in a table with one row per element of the domain. Each row is filled independently, from $m$ options, and there are $n$ rows: $m \cdot m \cdots m = m^n$. The notation $B^A$ for the set of functions $A \to B$ is chosen so that this count reads $|B^A| = |B|^{|A|}$.
 :::
 
-### Worked Examples
-
-:::example[Checking whether a relation is a function]
-Relation on $\{1,2,3\}$: pairs $(1,4), (2,4), (3,5)$. This **is** a function from $\{1,2,3\}$ to $\{4,5\}$ — each input appears as the first component of exactly one pair, so each input has exactly one output. (Two inputs sharing an output, here $1$ and $2$ both giving $4$, is allowed; that only costs injectivity, not being a function.)
+:::example[Counting assignments]
+How many ways can $5$ distinct jobs be assigned to $3$ machines, if every job goes to exactly one machine and machines may sit idle?
 :::
 
 :::solution
-1. Pairs $(1,4), (1,5), (2,3)$: **not** a function — input $1$ maps to two values, violating single-valuedness.
-2. Pairs $(1,4), (2,5)$: **not** a function from $\{1,2,3\}$ because $3$ has no output, violating totality.
+1. An assignment is a function from the $5$-element set of jobs to the $3$-element set of machines.
+2. By *Counting functions* there are $3^5 = 243$ of them. Final answer: $243$.
 :::
 
-:::example[Image and preimage]
-Let $f: \{1,2,3,4\} \to \{a,b,c\}$ be given by $f(1)=a,\ f(2)=b,\ f(3)=a,\ f(4)=b$.
+:::proposition[Images and unions, preimages and everything]{#image-preimage-laws}
+Let $f : A \to B$, let $S_1, S_2 \subseteq A$ and $T_1, T_2 \subseteq B$. Then
+
+$$f(S_1 \cup S_2) = f(S_1) \cup f(S_2), \qquad f(S_1 \cap S_2) \subseteq f(S_1) \cap f(S_2),$$
+
+$$f^{-1}(T_1 \cup T_2) = f^{-1}(T_1) \cup f^{-1}(T_2), \qquad f^{-1}(T_1 \cap T_2) = f^{-1}(T_1) \cap f^{-1}(T_2).$$
+
+The inclusion for images can be strict.
+:::
+
+:::proof
+For the first identity: $b \in f(S_1 \cup S_2)$ means $b = f(a)$ for some $a \in S_1 \cup S_2$, that is for some $a \in S_1$ or some $a \in S_2$, which says $b \in f(S_1)$ or $b \in f(S_2)$. Every step is an equivalence, so the sets are equal.
+
+For the inclusion: if $b \in f(S_1 \cap S_2)$ then $b = f(a)$ with $a$ in both $S_1$ and $S_2$, so $b \in f(S_1)$ and $b \in f(S_2)$. The reverse fails because the element of $S_1$ witnessing $b \in f(S_1)$ need not be the element of $S_2$ witnessing $b \in f(S_2)$. Concretely, take $f : \{1,2\} \to \{0\}$ with $S_1 = \{1\}$ and $S_2 = \{2\}$: then $S_1 \cap S_2 = \varnothing$, so the left side is $\varnothing$, while both images are $\{0\}$ and the right side is $\{0\}$.
+
+For the preimages: $a \in f^{-1}(T_1 \cup T_2)$ means $f(a) \in T_1 \cup T_2$, that is $f(a) \in T_1$ or $f(a) \in T_2$, that is $a \in f^{-1}(T_1)$ or $a \in f^{-1}(T_2)$. Replacing "or" by "and" throughout proves the intersection case, and the argument works because $f(a)$ is a *single* element, so asking which sets it lies in commutes with the connectives.
+:::
+
+:::remark
+This is the reason preimages are the better-behaved notion. Preimage respects unions, intersections and complements; image respects only unions. A great deal of later mathematics — continuity in topology, measurability in probability — is defined using $f^{-1}$ rather than $f$ for exactly this reason.
+:::
+
+:::example[Images and preimages of a concrete map]
+Let $f : \mathbb{Z} \to \mathbb{Z}$ be $f(n) = n^2$. Compute $f(\{-2,-1,0,1,2\})$, $f^{-1}(\{4\})$, $f^{-1}(\{2\})$ and $f^{-1}(\{0,1,4,9\})$.
 :::
 
 :::solution
-**Image (range).** Collect every output: $f$ produces $a$ (from $1,3$) and $b$ (from $2,4$), but never $c$. So the image is $\{a,b\}$, a *proper* subset of the codomain $\{a,b,c\}$ — the codomain is what we declared, the image is what actually gets hit.
-**Preimage of a subset.** $f^{-1}(\{a\})$ is every input that lands on $a$: that is $\{1,3\}$. Note $f^{-1}$ here acts on *sets* and returns a set — it does not require $f$ to be invertible.
-$f^{-1}(\{c\}) = \emptyset$, since nothing maps to $c$. A preimage can be empty.
-$f^{-1}(\{a,b\}) = \{1,2,3,4\}$, the whole domain, because every input lands in $\{a,b\}$.
-
-**Sanity check.** The preimages of the individual outputs, $\{1,3\}$ and $\{2,4\}$, are disjoint and together cover the whole domain — as they must, since every input has exactly one output.
+1. $f(\{-2,-1,0,1,2\}) = \{4, 1, 0, 1, 4\} = \{0,1,4\}$, a set of size $3$ — images can shrink.
+2. $f^{-1}(\{4\}) = \{-2, 2\}$, since those are the integers squaring to $4$.
+3. $f^{-1}(\{2\}) = \varnothing$: no integer squares to $2$. A preimage may be empty; that is not an error.
+4. $f^{-1}(\{0,1,4,9\}) = \{0, \pm 1, \pm 2, \pm 3\}$, which has $7$ elements.
 :::
 
-## Injective and Surjective Functions
+## Injections and surjections
 
 <!-- section: injective-surjective -->
 
-:::definition[Injective and surjective]{#injective-surjective}
-- **Injective** (one-to-one): $f(x_1) = f(x_2)$ implies $x_1 = x_2$. Different inputs give different outputs. No two arrows point to the same target.
-- **Surjective** (onto): Every element of the codomain is the image of at least one element in the domain. The function "covers" the entire codomain.
+Two questions can be asked of a function $f : A \to B$, and they are independent of each other. Does $f$ ever collide, sending two inputs to one output? Does $f$ reach everything in $B$? The answers name the two classes that organise the rest of the chapter.
+
+:::definition[Injective, surjective, bijective]{#inj-surj-def}
+A function $f : A \to B$ is
+
+- **injective** (one-to-one) if $f(a_1) = f(a_2)$ implies $a_1 = a_2$, for all $a_1, a_2 \in A$;
+- **surjective** (onto) if for every $b \in B$ there exists $a \in A$ with $f(a) = b$, that is $f(A) = B$;
+- **bijective** if it is both.
 :::
 
-:::proposition[Injections, surjections and size]{#injection-size}
-For finite sets, an injection from A to B implies $|A| \leq |B|$; a surjection implies $|A| \geq |B|$.
+The contrapositive of injectivity is often the more usable form: $a_1 \neq a_2 \implies f(a_1) \neq f(a_2)$, "distinct inputs give distinct outputs". In practice one proves injectivity by assuming $f(a_1) = f(a_2)$ and deducing $a_1 = a_2$ algebraically; one proves surjectivity by taking an arbitrary $b \in B$ and *constructing* an $a$ that maps to it.
+
+:::figure[Three functions from a four-element to a three-element set and back. Left: injective, no two arrows land together, so the target must be at least as large. Middle: surjective, every target is hit. Right: bijective, a perfect pairing.]{#arrow-diagrams}
+{
+  "type": "plot",
+  "x": [-0.4, 11.6], "y": [-1.2, 5.6],
+  "equalAspect": true,
+  "axes": false,
+  "marks": [
+    { "kind": "text", "at": [1.0, 5.15], "text": "injective" },
+    { "kind": "point", "at": [0.2, 4.0] }, { "kind": "point", "at": [0.2, 3.0] }, { "kind": "point", "at": [0.2, 2.0] },
+    { "kind": "point", "at": [1.8, 4.3] }, { "kind": "point", "at": [1.8, 3.4] }, { "kind": "point", "at": [1.8, 2.5] }, { "kind": "point", "at": [1.8, 1.6] },
+    { "kind": "arrow", "from": [0.35, 4.0], "to": [1.65, 4.3] },
+    { "kind": "arrow", "from": [0.35, 3.0], "to": [1.65, 3.4] },
+    { "kind": "arrow", "from": [0.35, 2.0], "to": [1.65, 2.5] },
+    { "kind": "text", "at": [2.35, 1.6], "text": "missed" },
+    { "kind": "text", "at": [5.0, 5.15], "text": "surjective" },
+    { "kind": "point", "at": [4.2, 4.3] }, { "kind": "point", "at": [4.2, 3.4] }, { "kind": "point", "at": [4.2, 2.5] }, { "kind": "point", "at": [4.2, 1.6] },
+    { "kind": "point", "at": [5.8, 4.0] }, { "kind": "point", "at": [5.8, 3.0] }, { "kind": "point", "at": [5.8, 2.0] },
+    { "kind": "arrow", "from": [4.35, 4.3], "to": [5.65, 4.0] },
+    { "kind": "arrow", "from": [4.35, 3.4], "to": [5.65, 4.0] },
+    { "kind": "arrow", "from": [4.35, 2.5], "to": [5.65, 3.0] },
+    { "kind": "arrow", "from": [4.35, 1.6], "to": [5.65, 2.0] },
+    { "kind": "text", "at": [4.95, 0.65], "text": "two inputs collide" },
+    { "kind": "text", "at": [9.4, 5.15], "text": "bijective" },
+    { "kind": "point", "at": [8.6, 4.0] }, { "kind": "point", "at": [8.6, 3.0] }, { "kind": "point", "at": [8.6, 2.0] },
+    { "kind": "point", "at": [10.2, 4.0] }, { "kind": "point", "at": [10.2, 3.0] }, { "kind": "point", "at": [10.2, 2.0] },
+    { "kind": "arrow", "from": [8.75, 4.0], "to": [10.05, 4.0], "tone": "result" },
+    { "kind": "arrow", "from": [8.75, 3.0], "to": [10.05, 3.0], "tone": "result" },
+    { "kind": "arrow", "from": [8.75, 2.0], "to": [10.05, 2.0], "tone": "result" },
+    { "kind": "text", "at": [9.4, 0.65], "text": "every target hit once" }
+  ]
+}
 :::
 
-:::recipe[Testing injectivity and surjectivity]{#injectivity-test}
-To test injectivity: assume $f(x_1)=f(x_2)$ and prove $x_1=x_2$ (often by algebra or contradiction).
+:::example[Deciding the two properties]
+For each function decide injectivity and surjectivity: (a) $f : \mathbb{Z} \to \mathbb{Z}$, $f(n) = 2n$; (b) $g : \mathbb{Z} \to \mathbb{Z}$, $g(n) = n + 7$; (c) $h : \mathbb{R} \to \mathbb{R}$, $h(x) = x^2$; (d) $k : \mathbb{Z} \to \mathbb{N}$, $k(n) = |n|$.
+:::
 
-To test surjectivity: for arbitrary $y \in B$, solve $f(x)=y$ and show a solution $x$ exists in A.
+:::solution
+1. (a) Injective: $2n_1 = 2n_2$ gives $n_1 = n_2$. Not surjective: no integer maps to $1$, since $2n = 1$ has no integer solution.
+2. (b) Injective, as $n_1 + 7 = n_2 + 7$ forces $n_1 = n_2$; and surjective, since $m = g(m - 7)$ for every $m \in \mathbb{Z}$. So $g$ is bijective.
+3. (c) Not injective, since $h(-1) = h(1) = 1$. Not surjective, since $x^2 \ge 0$ never equals $-1$.
+4. (d) Not injective ($k(-3) = k(3)$), but surjective, since every $m \in \mathbb{N}$ satisfies $m = k(m)$.
+:::
+
+The next two theorems recast the definitions in terms of inverses, and they are the reason these particular properties matter: injectivity means the function can be undone from the left, surjectivity means it can be undone from the right.
+
+:::definition[Left and right inverses]{#one-sided-inverses}
+Let $f : A \to B$. A function $g : B \to A$ is a **left inverse** of $f$ if $g \circ f = \mathrm{id}_A$, and a **right inverse** if $f \circ g = \mathrm{id}_B$.
+:::
+
+:::theorem[Injective iff a left inverse exists]{#injective-left-inverse}
+Let $f : A \to B$ with $A \neq \varnothing$. Then $f$ is injective if and only if there is a function $g : B \to A$ with $g \circ f = \mathrm{id}_A$.
+:::
+
+:::proof
+($\Leftarrow$) Suppose such a $g$ exists and $f(a_1) = f(a_2)$. Applying $g$ to both sides, $g(f(a_1)) = g(f(a_2))$, that is $a_1 = a_2$ since $g \circ f = \mathrm{id}_A$. So $f$ is injective.
+
+($\Rightarrow$) Suppose $f$ is injective. Since $A$ is nonempty, fix some $a_0 \in A$. Define $g : B \to A$ by
+
+$$g(b) = \begin{cases} \text{the unique } a \in A \text{ with } f(a) = b, & b \in f(A),\\ a_0, & b \notin f(A).\end{cases}$$
+
+The first clause is legitimate precisely because $f$ is injective: for $b \in f(A)$ at least one such $a$ exists by definition of the image, and at most one exists by injectivity, so the value is well defined. The second clause makes $g$ total. For any $a \in A$ we have $f(a) \in f(A)$, and the unique preimage of $f(a)$ is $a$ itself, so $g(f(a)) = a$. Hence $g \circ f = \mathrm{id}_A$.
+:::
+
+:::remark
+The hypothesis $A \neq \varnothing$ is needed only to have somewhere to send the unreached elements of $B$. The empty function $\varnothing \to B$ is injective but admits no left inverse when $B \neq \varnothing$, since there is no function $B \to \varnothing$ at all.
+:::
+
+:::theorem[Surjective iff a right inverse exists]{#surjective-right-inverse}
+Let $f : A \to B$. Then $f$ is surjective if and only if there is a function $g : B \to A$ with $f \circ g = \mathrm{id}_B$.
+:::
+
+:::proof
+($\Leftarrow$) Suppose $f \circ g = \mathrm{id}_B$ and let $b \in B$. Then $f(g(b)) = b$, so $b$ is in the image of $f$. As $b$ was arbitrary, $f$ is surjective.
+
+($\Rightarrow$) Suppose $f$ is surjective. For each $b \in B$ the set $f^{-1}(\{b\})$ is nonempty. Choose one element from each of these sets and call it $g(b)$; this defines a function $g : B \to A$, and $f(g(b)) = b$ holds for every $b$ by construction, so $f \circ g = \mathrm{id}_B$.
+:::
+
+:::remark
+The phrase "choose one element from each" in the last proof is the **axiom of choice** when $B$ is infinite: making infinitely many independent choices at once is not something the other axioms provide. For finite $B$ no axiom is needed — repeated use of "the set is nonempty, so pick an element" suffices. We use choice silently from here on, as every introductory treatment does; what it costs and what it buys is the business of *Set Theory*.
+:::
+
+:::example[Building the two one-sided inverses]
+Let $f : \mathbb{Z} \to \mathbb{Z}$ be $f(n) = 2n$ and let $q : \mathbb{Z} \to \mathbb{Z}$ be $q(n) = \lfloor n/2 \rfloor$. Verify that $q$ is a left inverse of $f$, and show $f$ has no right inverse.
+:::
+
+:::solution
+1. $q(f(n)) = \lfloor 2n/2 \rfloor = n$ for every integer $n$, so $q \circ f = \mathrm{id}_{\mathbb{Z}}$ and $q$ is a left inverse — consistent with $f$ being injective.
+2. If $g$ were a right inverse then $f(g(1)) = 1$, that is $2g(1) = 1$, which has no integer solution. So no right inverse exists, consistent with $f$ not being surjective by *Surjective iff a right inverse exists*.
+3. Note $f(q(1)) = f(0) = 0 \neq 1$: a left inverse need not be a right inverse.
+:::
+
+:::theorem[Composition preserves both properties]{#composition-preserves}
+Let $f : A \to B$ and $g : B \to C$.
+
+1. If $f$ and $g$ are injective, so is $g \circ f$.
+2. If $f$ and $g$ are surjective, so is $g \circ f$.
+:::
+
+:::proof
+(1) Suppose $(g\circ f)(a_1) = (g \circ f)(a_2)$, that is $g(f(a_1)) = g(f(a_2))$. Injectivity of $g$ gives $f(a_1) = f(a_2)$, and injectivity of $f$ gives $a_1 = a_2$.
+
+(2) Let $c \in C$. Since $g$ is surjective there is $b \in B$ with $g(b) = c$; since $f$ is surjective there is $a \in A$ with $f(a) = b$. Then $(g \circ f)(a) = g(f(a)) = g(b) = c$, so $c$ lies in the image of $g \circ f$.
+:::
+
+:::theorem[Partial converses for a composite]{#partial-converses}
+Let $f : A \to B$ and $g : B \to C$.
+
+1. If $g \circ f$ is injective, then $f$ is injective.
+2. If $g \circ f$ is surjective, then $g$ is surjective.
+
+Neither conclusion can be strengthened: $g \circ f$ injective does not force $g$ injective, and $g\circ f$ surjective does not force $f$ surjective.
+:::
+
+:::proof
+(1) Suppose $f(a_1) = f(a_2)$. Applying $g$ gives $g(f(a_1)) = g(f(a_2))$, that is $(g\circ f)(a_1) = (g \circ f)(a_2)$; since $g \circ f$ is injective, $a_1 = a_2$.
+
+(2) Let $c \in C$. Since $g \circ f$ is surjective there is $a \in A$ with $g(f(a)) = c$. Then $b = f(a)$ is an element of $B$ with $g(b) = c$, so $g$ is surjective.
+
+For the counterexamples, take $A = \{1\}$, $B = \{1,2\}$, $C = \{1\}$ with $f(1) = 1$ and $g(1) = g(2) = 1$. Then $g \circ f$ is the identity on $A$, hence both injective and surjective, while $g$ is not injective (it collapses $1$ and $2$) and $f$ is not surjective (it misses $2$).
 :::
 
 :::intuition
-Injective: like a unique ID — no two people share the same fingerprint produced by the function.
-
-Surjective: like every seat in the theater is occupied by at least one audience member mapped by "who sits where".
+Read the arrows. In $A \xrightarrow{f} B \xrightarrow{g} C$, information can only be destroyed as you move right, so if nothing was lost overall then nothing was lost in the *first* step — that is (1). Dually, everything in $C$ must be reached by the *last* step, so if the composite reaches all of $C$ then so does $g$ — that is (2). The two halves that fail are the ones about the far end of the chain, where the other map can hide the defect.
 :::
 
-### Worked Examples
-
-:::example[Linear function example]
-Consider $f: \mathbb{R} \to \mathbb{R}$, $f(x) = 3x + 1$. (Injectivity and surjectivity always depend on the declared domain and codomain — here both are all of $\mathbb{R}$.)
+:::example[Using the partial converses]
+Let $f : \mathbb{N} \to \mathbb{Z}$ be $f(n) = n$ and $g : \mathbb{Z} \to \mathbb{Z}$ be $g(n) = n^2$. Is $g \circ f$ injective? Is $g$ injective? What does *Partial converses for a composite* let you conclude?
 :::
 
 :::solution
-**Injective.** Suppose $f(x_1) = f(x_2)$, i.e. $3x_1 + 1 = 3x_2 + 1$. Subtract $1$: $3x_1 = 3x_2$. Divide by $3$: $x_1 = x_2$. So equal outputs force equal inputs — injective.
-**Surjective.** Take an arbitrary target $y \in \mathbb{R}$ and solve $3x + 1 = y$: this gives $x = \tfrac{y-1}{3}$, which is a real number for every real $y$, and it lies in the domain $\mathbb{R}$. Check: $f\!\left(\tfrac{y-1}{3}\right) = 3\cdot\tfrac{y-1}{3} + 1 = (y-1)+1 = y$. So every $y$ is hit — surjective.
-Being both, $f$ is bijective, with inverse $f^{-1}(y) = \tfrac{y-1}{3}$.
+1. $(g \circ f)(n) = n^2$ on $\mathbb{N}$, and $n_1^2 = n_2^2$ with $n_1, n_2 \ge 0$ forces $n_1 = n_2$, so $g \circ f$ is injective.
+2. $g$ itself is not injective on $\mathbb{Z}$, since $g(-1) = g(1)$.
+3. The theorem concludes only that $f$ is injective, which it is. This is exactly the case showing the missing half — an injective composite with a non-injective outer map — is genuinely possible.
 :::
 
-:::example[Non-injective, non-surjective example]
-$f: \mathbb{Z} \to \mathbb{Z}$, $f(n) = n^2$. (The domain is the integers, including negatives — this is what breaks injectivity.)
+:::theorem[Counting injections]{#count-injections}
+Let $|A| = n$ and $|B| = m$. The number of injections $A \to B$ is the falling factorial
+
+$$m^{\underline{n}} = m(m-1)(m-2)\cdots(m-n+1) = \frac{m!}{(m-n)!}$$
+
+when $n \le m$, and $0$ when $n > m$.
+:::
+
+:::proof
+List $A = \{a_1, \dots, a_n\}$ and build an injection by choosing values in order. The value $f(a_1)$ may be any of the $m$ elements of $B$. Given the first $i$ values, all distinct, the value $f(a_{i+1})$ must avoid them and may be anything else, so there are $m - i$ choices. Each sequence of choices yields a distinct injection and every injection arises from exactly one such sequence, namely the sequence of its own values. Multiplying the independent counts gives $m(m-1)\cdots(m-n+1)$.
+
+If $n > m$ the process stalls: after $m$ steps every element of $B$ has been used and the factor $m - m = 0$ appears, so the product is $0$. That no injection exists in this case is the content of the next theorem.
+:::
+
+:::theorem[Pigeonhole principle, in function form]{#pigeonhole}
+Let $A$ and $B$ be finite with $|A| > |B|$. Then no function $f : A \to B$ is injective; equivalently, some $b \in B$ has $|f^{-1}(\{b\})| \ge 2$.
+:::
+
+:::proof
+Let $|B| = m$ and let $f : A \to B$ be any function. The sets $f^{-1}(\{b\})$ for $b \in B$ are pairwise disjoint — an element $a$ lies in the one indexed by $b = f(a)$ and no other — and their union is $A$, because $f$ is total. Hence
+
+$$|A| = \sum_{b \in B} |f^{-1}(\{b\})|.$$
+
+If every term were at most $1$ the sum would be at most $m = |B| < |A|$, a contradiction. So some term is at least $2$, meaning two distinct elements of $A$ share an image, and $f$ is not injective.
+:::
+
+:::intuition
+Put $|A|$ pigeons into $|B|$ holes with more pigeons than holes and some hole holds two. The argument above is just that statement with the holes named $f^{-1}(\{b\})$. Its power comes from choosing the function well: to show that among any $13$ people two share a birth month, take $f$ from people to months.
+:::
+
+:::example[A pigeonhole argument]
+Show that any set of $6$ distinct integers chosen from $\{1, 2, \dots, 10\}$ contains two whose difference is $5$, or explain why it can fail.
 :::
 
 :::solution
-**Injective?** No. A single counterexample suffices: $f(2) = 4 = f(-2)$, yet $2 \neq -2$. Distinct inputs share an output.
-**Surjective?** No. The output $y = 2$ has no integer $n$ with $n^2 = 2$ (indeed $n^2$ is never negative and never a non-square), so $2$ is in the codomain but never hit.
-
-Note how the domain matters: restrict to $f: \mathbb{N} \to \mathbb{N}$ with $f(n)=n^2$ and it *becomes* injective (no two distinct naturals have the same square), though it is still not surjective (e.g. $2$ is still missed).
+1. Pair the numbers by remainder-style blocks: $\{1,6\}, \{2,7\}, \{3,8\}, \{4,9\}, \{5,10\}$ — five pairs, each with difference $5$.
+2. Define $f$ from the chosen $6$ integers to these $5$ pairs by sending each integer to the pair containing it. This is a function from a $6$-element set to a $5$-element set.
+3. By the *Pigeonhole principle, in function form*, $f$ is not injective, so two chosen integers lie in the same pair. Those two differ by exactly $5$.
 :::
 
-## Bijective Functions and Inverses
+## Bijections and the comparison of sizes
 
 <!-- section: bijections -->
 
-:::definition[Bijection]{#bijection}
-A function is **bijective** if it is both injective and surjective. Equivalently, it has a two-sided inverse function $f^{-1}: B \to A$ such that $f(f^{-1}(y)) = y$ for all y and $f^{-1}(f(x)) = x$ for all x.
+A bijection pairs the elements of two sets with nothing left over on either side. That is what "same size" ought to mean, and taking it as the *definition* of same size is what lets the notion survive the passage to infinite sets.
+
+:::theorem[Bijective iff a two-sided inverse exists]{#bijective-inverse}
+Let $f : A \to B$. Then $f$ is bijective if and only if there is a function $f^{-1} : B \to A$ with
+
+$$f^{-1} \circ f = \mathrm{id}_A \quad\text{and}\quad f \circ f^{-1} = \mathrm{id}_B.$$
+
+Moreover such a function is unique.
 :::
 
-:::proposition[Injection and surjection coincide on equal finite sets]{#finite-bijection}
-For finite sets of the same size, any injection is automatically a surjection (and vice versa) — the pigeonhole principle forces it.
+:::proof
+($\Leftarrow$) If such a function exists it is in particular a left inverse and a right inverse, so $f$ is injective by *Injective iff a left inverse exists* and surjective by *Surjective iff a right inverse exists*.
+
+($\Rightarrow$) Suppose $f$ is bijective. For each $b \in B$, surjectivity provides an $a \in A$ with $f(a) = b$ and injectivity makes it unique; define $f^{-1}(b)$ to be that $a$. This is a total, single-valued assignment, hence a function $B \to A$. By construction $f(f^{-1}(b)) = b$ for all $b$, and for $a \in A$ the unique preimage of $f(a)$ is $a$, so $f^{-1}(f(a)) = a$.
+
+For uniqueness, suppose $g$ and $h$ both satisfy the two identities. Then, using associativity from *Composition is associative, with identities*,
+
+$$g = g \circ \mathrm{id}_B = g \circ (f \circ h) = (g \circ f) \circ h = \mathrm{id}_A \circ h = h.$$
 :::
 
-:::definition[Same cardinality]{#cardinality}
-Two sets have exactly the same "size" (**cardinality**) when there is a bijection between them. Bijections establish this even for infinite sets.
+:::definition[Inverse function]{#inverse-function}
+For a bijection $f : A \to B$, the unique function $f^{-1} : B \to A$ of the preceding theorem is the **inverse** of $f$.
+:::
+
+:::pitfall
+The symbol $f^{-1}$ is overloaded. Applied to a *set* it means the preimage and always makes sense; applied to an *element* it means the inverse function and makes sense only when $f$ is bijective. Context disambiguates, but write $f^{-1}(\{b\})$ rather than $f^{-1}(b)$ whenever $f$ is not known to be a bijection.
+:::
+
+:::theorem[The inverse of a bijection is a bijection]{#inverse-bijective}
+If $f : A \to B$ is a bijection then $f^{-1} : B \to A$ is a bijection, and $(f^{-1})^{-1} = f$.
+:::
+
+:::proof
+The two identities characterising $f^{-1}$ read, from the point of view of $f^{-1}$, as: $f$ is a left inverse of $f^{-1}$ (since $f \circ f^{-1} = \mathrm{id}_B$) and a right inverse of $f^{-1}$ (since $f^{-1} \circ f = \mathrm{id}_A$). So $f^{-1}$ has a two-sided inverse, namely $f$, and by *Bijective iff a two-sided inverse exists* it is a bijection with inverse $f$.
+:::
+
+:::proposition[Composites of bijections]{#composite-bijection}
+If $f : A \to B$ and $g : B \to C$ are bijections, then $g \circ f$ is a bijection and
+
+$$(g \circ f)^{-1} = f^{-1} \circ g^{-1}.$$
+:::
+
+:::proof
+That $g \circ f$ is bijective follows from *Composition preserves both properties* applied twice. For the formula, compute both composites using associativity:
+
+$$(f^{-1}\circ g^{-1}) \circ (g \circ f) = f^{-1} \circ (g^{-1} \circ g) \circ f = f^{-1} \circ \mathrm{id}_B \circ f = f^{-1}\circ f = \mathrm{id}_A,$$
+
+and symmetrically $(g\circ f)\circ(f^{-1}\circ g^{-1}) = \mathrm{id}_C$. By the uniqueness clause of *Bijective iff a two-sided inverse exists*, $f^{-1}\circ g^{-1}$ is the inverse of $g \circ f$.
 :::
 
 :::intuition
-Bijective is a perfect matching: every input has a unique output and every output is used exactly once. Like a perfect pairing of dance partners with no one left out and no one dancing with two people.
-
-The inverse simply swaps the direction of every arrow.
+Undoing "socks then shoes" is "shoes off then socks off": the order reverses. That is the whole content of $(g\circ f)^{-1} = f^{-1}\circ g^{-1}$, and the same reversal appears for matrix inverses and for group inverses, because it depends only on associativity and identities.
 :::
 
-### Worked Examples
+:::theorem[Counting bijections]{#count-bijections}
+If $|A| = |B| = n$, the number of bijections $A \to B$ is $n!$.
+:::
 
-:::example[Showing a function is bijective]
-Let $f: \mathbb{R}^+ \to \mathbb{R}^+$, $f(x) = 1/x$, on the positive reals. (We exclude $0$ deliberately: $1/x$ is undefined at $0$, so the domain must avoid it — a place where stating the domain matters.)
+:::proof
+A bijection between two $n$-element sets is in particular an injection, and by *Counting injections* with $m = n$ there are $n(n-1)\cdots 1 = n!$ injections $A \to B$. Conversely every injection here is already a bijection: its image is a subset of $B$ with $n$ distinct elements, and a subset of an $n$-element set having $n$ elements is the whole set. So bijections and injections coincide in this case, and there are $n!$ of them.
+:::
+
+:::definition[Equinumerosity]{#equinumerous}
+Sets $A$ and $B$ are **equinumerous**, written $|A| = |B|$, if some bijection $A \to B$ exists. A set is **finite** if it is equinumerous with $[n]$ for some $n \in \mathbb{N}$, **countably infinite** if it is equinumerous with $\mathbb{N}$, and **uncountable** otherwise.
+:::
+
+:::proposition[Equinumerosity behaves like an equality]{#equinumerous-equivalence}
+For all sets $A$, $B$, $C$: $|A| = |A|$; if $|A| = |B|$ then $|B| = |A|$; and if $|A| = |B|$ and $|B| = |C|$ then $|A| = |C|$.
+:::
+
+:::proof
+For the first, $\mathrm{id}_A$ is a bijection $A \to A$, since it is its own two-sided inverse. For the second, a bijection $f : A \to B$ yields the bijection $f^{-1} : B \to A$ by *The inverse of a bijection is a bijection*. For the third, bijections $f : A\to B$ and $g : B \to C$ compose to the bijection $g \circ f : A \to C$ by *Composites of bijections*.
+:::
+
+:::example[An infinite set equinumerous with a proper subset]
+Exhibit a bijection from $\mathbb{N}$ to the set $E$ of even natural numbers, and say what it shows.
 :::
 
 :::solution
-**Injective.** Suppose $f(x_1) = f(x_2)$, i.e. $\tfrac{1}{x_1} = \tfrac{1}{x_2}$. Cross-multiplying (valid since $x_1, x_2 > 0$ are nonzero) gives $x_2 = x_1$. Injective.
-**Surjective.** Take any $y > 0$ and set $x = \tfrac{1}{y}$, which is positive, so it lies in the domain. Then $f(x) = \tfrac{1}{1/y} = y$. Every target is hit — surjective.
-Being both, $f$ is bijective. Its inverse is itself: $f(f(x)) = \tfrac{1}{1/x} = x$, so $f^{-1} = f$.
+1. Define $f : \mathbb{N} \to E$ by $f(n) = 2n$.
+2. Injective: $2n_1 = 2n_2$ gives $n_1 = n_2$. Surjective: any even $m \in E$ is $2(m/2)$ with $m/2 \in \mathbb{N}$.
+3. So $|\mathbb{N}| = |E|$, even though $E \subsetneq \mathbb{N}$. For infinite sets a proper subset may have the same size — a phenomenon impossible for finite sets, where *Pigeonhole principle, in function form* forbids it. This is Hilbert's hotel, and it is a theorem, not a paradox.
 :::
 
-:::example[Finite set counting]
-Any two finite sets of the same size can be put in bijection. Concretely, count the bijections from $\{1,2,3\}$ to $\{a,b,c\}$.
+:::theorem[Counting surjections]{#count-surjections}
+The number of surjections from an $n$-element set onto an $m$-element set is
+
+$$S(n,m) = \sum_{k=0}^{m} (-1)^k \binom{m}{k} (m-k)^n.$$
+:::
+
+:::proof
+Let $B = \{b_1, \dots, b_m\}$ and for each $i$ let $M_i$ be the set of functions $A \to B$ that **miss** $b_i$. A function fails to be surjective exactly when it lies in $M_1 \cup \cdots \cup M_m$, so the surjections number $m^n - |M_1 \cup \cdots \cup M_m|$ by *Counting functions*.
+
+For a set $I$ of $k$ indices, the functions missing every $b_i$ with $i \in I$ are precisely the functions from $A$ into the remaining $m - k$ elements, of which there are $(m-k)^n$; and there are $\binom{m}{k}$ such index sets. The inclusion–exclusion principle — the pattern proved above for two and three sets, extended to $m$ sets by the same alternating bookkeeping — therefore gives
+
+$$|M_1 \cup \cdots \cup M_m| = \sum_{k=1}^{m}(-1)^{k+1}\binom{m}{k}(m-k)^n.$$
+
+Subtracting from $m^n$ and absorbing $m^n$ as the $k = 0$ term of the alternating sum yields the stated formula.
+:::
+
+:::example[Surjections onto a three-element set]
+How many functions from a $4$-element set onto a $3$-element set are there?
 :::
 
 :::solution
-Building a bijection means deciding where each input goes, with **no output reused** (injectivity) so that all three outputs get used (surjectivity, forced here since the sets are the same size):
-
-$1$ can map to any of the $3$ outputs.
-$2$ must avoid whatever $1$ took, leaving $2$ choices.
-$3$ must take the last remaining output, $1$ choice.
-
-So there are $3 \times 2 \times 1 = 3! = 6$ bijections. In general there are $n!$ bijections between two $n$-element sets — exactly the number of permutations of $n$ objects. For $n=5$ this is $5! = 120$.
-
-**Sanity check.** Listing the images of $(1,2,3)$: $(a,b,c),(a,c,b),(b,a,c),(b,c,a),(c,a,b),(c,b,a)$ — six of them, no repeats and no reused letters within a row.
+1. By *Counting surjections* with $n = 4$, $m = 3$: $\binom30 3^4 - \binom31 2^4 + \binom32 1^4 - \binom33 0^4$.
+2. That is $81 - 3\cdot 16 + 3 \cdot 1 - 0 = 81 - 48 + 3 = 36$.
+3. Check against the structure: a surjection $[4] \to [3]$ collapses exactly one pair of inputs, and there are $\binom42 = 6$ pairs and $3! = 6$ ways to assign the resulting three blocks to the three targets, giving $6 \cdot 6 = 36$. Final answer: $36$.
 :::
 
-## Power Sets and Cardinality
+## Power sets, and a set that outruns every function into it
 
 <!-- section: power-sets -->
 
+The power set is the first construction that takes a set to a strictly bigger one, and the argument that it does so is the deepest thing in this chapter.
+
 :::definition[Power set]{#power-set}
-The **power set** of S, written $\mathcal{P}(S)$ or 2^S, is the set of all subsets of S. This includes $\emptyset$ and S itself.
+The **power set** of a set $A$ is the set of all subsets of $A$:
+
+$$\mathcal{P}(A) = \{S : S \subseteq A\}.$$
 :::
 
-:::theorem[Size of a power set]{#power-set-size}
-If S is finite with n elements, then
+The elements of $\mathcal{P}(A)$ are sets. For $A = \{1,2\}$,
 
-$$|\mathcal{P}(S)| = 2^n.$$
+$$\mathcal{P}(A) = \bigl\{\varnothing,\ \{1\},\ \{2\},\ \{1,2\}\bigr\},$$
+
+a four-element set, and note that $\varnothing \in \mathcal{P}(A)$ and $A \in \mathcal{P}(A)$ always, by *The empty set is a subset of every set* and reflexivity of inclusion. In particular $\mathcal{P}(\varnothing) = \{\varnothing\}$ has one element, not none: the empty set has exactly one subset, itself.
+
+:::theorem[The size of a power set]{#power-set-size}
+If $|A| = n$ is finite, then $|\mathcal{P}(A)| = 2^n$.
 :::
 
-Power sets grow extremely fast: a 10-element set has 1024 subsets; 20 elements → over a million.
+:::proof
+Write $A = \{a_1, \dots, a_n\}$ and define $\chi : \mathcal{P}(A) \to \{0,1\}^n$ by sending a subset $S$ to its **indicator string**
 
-For infinite sets, Cantor's theorem gives the comparison.
+$$\chi(S) = (s_1, \dots, s_n), \qquad s_i = \begin{cases}1, & a_i \in S,\\ 0, & a_i \notin S.\end{cases}$$
 
-:::theorem[Cantor's theorem]{#cantors-theorem}
-For every set $S$,
+This is a function: each subset determines each bit unambiguously.
 
-$$|\mathcal{P}(S)| > |S|$$
+$\chi$ is injective. If $\chi(S) = \chi(T)$ then for every $i$ we have $a_i \in S$ if and only if $s_i = 1$ if and only if $a_i \in T$. Since every element of $A$ is some $a_i$, the sets $S$ and $T$ have the same elements, so $S = T$ by extensionality.
 
-always — no set is in bijection with its power set.
+$\chi$ is surjective. Given a string $(s_1, \dots, s_n) \in \{0,1\}^n$, put $S = \{a_i : s_i = 1\}$. Then $S \subseteq A$ and $\chi(S)$ is the given string.
+
+So $\chi$ is a bijection, and by *Tuples from one set* the codomain has $2^n$ elements. Hence $|\mathcal{P}(A)| = 2^n$.
 :::
-
-This is the basis of the idea that there are "different sizes" of infinity.
 
 :::intuition
-The power set is "the club of all possible sub-clubs you can form from the original club members", including the empty club and the full club.
-
-Each element can be "in or out" of a subset independently — hence 2 choices per element, 2^n total subsets.
+Building a subset is walking down the list of elements answering one yes/no question each: *in or out?* The record of your answers is a binary string of length $n$, every string is a possible record, and different records give different subsets. So subsets and strings are the same objects wearing different clothes — which is why a set data type is often implemented as a bit vector.
 :::
 
-### Worked Examples
+:::corollary[Subsets by size]{#subsets-by-size}
+For $|A| = n$ and $0 \le k \le n$, the number of subsets of $A$ with exactly $k$ elements is $\binom{n}{k}$, and consequently
 
-:::example[List the power set]
-Let $S = \{a,b\}$. To list every subset, decide for each element whether it is "in" or "out":
+$$\sum_{k=0}^{n} \binom{n}{k} = 2^n.$$
 :::
 
-:::solution
-out, out $\to \emptyset$
-in, out $\to \{a\}$
-out, in $\to \{b\}$
-in, in $\to \{a,b\}$
-
-So $\mathcal{P}(S) = \{ \emptyset, \{a\}, \{b\}, \{a,b\} \}$, exactly $4 = 2^2$ elements — one per row of the in/out table.
+:::proof
+Under the bijection $\chi$ of *The size of a power set*, a subset of size $k$ corresponds to a binary string with exactly $k$ ones, and the number of such strings is the number of ways to choose which $k$ of the $n$ positions carry a one, namely $\binom nk$. Every subset has exactly one size, so classifying $\mathcal P(A)$ by size partitions it into the $n+1$ disjoint pieces counted by $\binom n0, \dots, \binom nn$, whose total is $|\mathcal{P}(A)| = 2^n$.
 :::
 
-:::example[Why the count is $2^n$, and applying it]
-The listing above is the whole idea in miniature: a subset is chosen by making one independent yes/no ("in or out") decision per element. With $n$ elements that is $n$ independent binary choices, and by the multiplication principle the number of subsets is
-$$\underbrace{2 \times 2 \times \cdots \times 2}_{n \text{ factors}} = 2^n.$$
+:::example[Power sets of small sets]
+Compute $|\mathcal{P}(A)|$ and $|\mathcal{P}(\mathcal{P}(A))|$ for $|A| = 3$, and list $\mathcal{P}(\{a,b\})$.
 :::
 
 :::solution
-Apply it directly:
+1. $|\mathcal{P}(A)| = 2^3 = 8$ by *The size of a power set*.
+2. Applying the theorem again to the $8$-element set $\mathcal{P}(A)$: $|\mathcal{P}(\mathcal{P}(A))| = 2^8 = 256$.
+3. $\mathcal{P}(\{a,b\}) = \{\varnothing, \{a\}, \{b\}, \{a,b\}\}$, four elements, as $2^2 = 4$ predicts. Final answer: $8$ and $256$.
+:::
 
-$n=0$ (the empty set $S = \emptyset$): $2^0 = 1$ subset — just $\emptyset$ itself. So $\mathcal{P}(\emptyset) = \{\emptyset\}$, a set with **one** element. (This is exactly why $\emptyset \neq \{\emptyset\}$.)
-$n=1$: $2^1 = 2$ subsets.
-$n=2$: $2^2 = 4$, matching the list above.
-$n=3$: $2^3 = 8$. Grouped by size: $1$ empty set, $3$ singletons, $3$ two-element subsets, $1$ full set, and $1+3+3+1 = 8$. ✓
+:::example[Counting subsets with a constraint]
+How many subsets of $\{1,2,\dots,10\}$ contain the element $3$ but not the element $7$?
+:::
 
-**Sanity check.** The size-by-size counts $1,3,3,1$ are the row of Pascal's triangle for $n=3$ (the binomial coefficients $\binom{3}{k}$), and they sum to $2^3 = 8$ — a good consistency check whenever you enumerate a power set by hand.
+:::solution
+1. Membership of $3$ is forced to "in" and membership of $7$ is forced to "out", so two of the ten yes/no decisions are made for us.
+2. The remaining $8$ elements are unconstrained, giving $2^8 = 256$ subsets by the indicator-string argument of *The size of a power set*. Final answer: $256$.
+:::
+
+Everything so far has been finite bookkeeping. The final theorem is not, and it is the reason this chapter ends here rather than with a summary of counting formulas. Cantor's question is: can a set be listed by its own elements? Can we index every subset of $A$ by an element of $A$?
+
+:::figure[Cantor's diagonal for $A = \{a_1, \dots, a_5\}$. Row $i$ records the membership string of $f(a_i)$; the marked diagonal entries are $[\,a_i \in f(a_i)\,]$. The diagonal set $D$ flips every diagonal entry, so its row differs from row $i$ in column $i$ for every $i$ — and therefore equals no row at all.]{#cantor-diagonal}
+{
+  "type": "plot",
+  "x": [-1.35, 6.4], "y": [-2.1, 7.0],
+  "equalAspect": true,
+  "axes": false,
+  "marks": [
+    { "kind": "text", "at": [-0.75, 5.6], "text": "f(a1)" },
+    { "kind": "text", "at": [-0.75, 4.6], "text": "f(a2)" },
+    { "kind": "text", "at": [-0.75, 3.6], "text": "f(a3)" },
+    { "kind": "text", "at": [-0.75, 2.6], "text": "f(a4)" },
+    { "kind": "text", "at": [-0.75, 1.6], "text": "f(a5)" },
+    { "kind": "text", "at": [-0.75, -0.4], "text": "D" },
+    { "kind": "text", "at": [0.8, 6.2], "text": "a1" },
+    { "kind": "text", "at": [1.8, 6.2], "text": "a2" },
+    { "kind": "text", "at": [2.8, 6.2], "text": "a3" },
+    { "kind": "text", "at": [3.8, 6.2], "text": "a4" },
+    { "kind": "text", "at": [4.8, 6.2], "text": "a5" },
+    { "kind": "text", "at": [0.8, 5.6], "text": "1", "tone": "result" },
+    { "kind": "text", "at": [1.8, 5.6], "text": "0" },
+    { "kind": "text", "at": [2.8, 5.6], "text": "1" },
+    { "kind": "text", "at": [3.8, 5.6], "text": "1" },
+    { "kind": "text", "at": [4.8, 5.6], "text": "0" },
+    { "kind": "text", "at": [0.8, 4.6], "text": "1" },
+    { "kind": "text", "at": [1.8, 4.6], "text": "1", "tone": "result" },
+    { "kind": "text", "at": [2.8, 4.6], "text": "0" },
+    { "kind": "text", "at": [3.8, 4.6], "text": "0" },
+    { "kind": "text", "at": [4.8, 4.6], "text": "1" },
+    { "kind": "text", "at": [0.8, 3.6], "text": "0" },
+    { "kind": "text", "at": [1.8, 3.6], "text": "1" },
+    { "kind": "text", "at": [2.8, 3.6], "text": "0", "tone": "result" },
+    { "kind": "text", "at": [3.8, 3.6], "text": "1" },
+    { "kind": "text", "at": [4.8, 3.6], "text": "1" },
+    { "kind": "text", "at": [0.8, 2.6], "text": "1" },
+    { "kind": "text", "at": [1.8, 2.6], "text": "0" },
+    { "kind": "text", "at": [2.8, 2.6], "text": "1" },
+    { "kind": "text", "at": [3.8, 2.6], "text": "0", "tone": "result" },
+    { "kind": "text", "at": [4.8, 2.6], "text": "0" },
+    { "kind": "text", "at": [0.8, 1.6], "text": "0" },
+    { "kind": "text", "at": [1.8, 1.6], "text": "0" },
+    { "kind": "text", "at": [2.8, 1.6], "text": "1" },
+    { "kind": "text", "at": [3.8, 1.6], "text": "1" },
+    { "kind": "text", "at": [4.8, 1.6], "text": "1", "tone": "result" },
+    { "kind": "text", "at": [0.8, -0.4], "text": "0", "tone": "alt" },
+    { "kind": "text", "at": [1.8, -0.4], "text": "0", "tone": "alt" },
+    { "kind": "text", "at": [2.8, -0.4], "text": "1", "tone": "alt" },
+    { "kind": "text", "at": [3.8, -0.4], "text": "1", "tone": "alt" },
+    { "kind": "text", "at": [4.8, -0.4], "text": "0", "tone": "alt" },
+    { "kind": "text", "at": [2.8, -1.5], "text": "D flips the marked diagonal" }
+  ]
+}
+:::
+
+:::theorem[Cantor's theorem]{#cantor}
+For every set $A$, there is no surjection $f : A \to \mathcal{P}(A)$. Consequently $|A| \neq |\mathcal{P}(A)|$.
+:::
+
+:::proof
+Let $f : A \to \mathcal{P}(A)$ be any function. Define the **diagonal set**
+
+$$D = \{a \in A : a \notin f(a)\}.$$
+
+This is a legitimate subset of $A$: it is carved out of $A$ by the property "$a \notin f(a)$", which is a well-formed statement about $a$, since $f(a)$ is a subset of $A$ and membership in it is a yes-or-no question. So $D \in \mathcal{P}(A)$.
+
+We claim $D$ is not in the image of $f$. Suppose, for contradiction, that $D = f(a_0)$ for some $a_0 \in A$, and ask whether $a_0 \in D$.
+
+- If $a_0 \in D$, then by the defining property of $D$ we have $a_0 \notin f(a_0) = D$, a contradiction.
+- If $a_0 \notin D$, then $a_0$ fails the defining property, so $a_0 \in f(a_0) = D$, again a contradiction.
+
+Both cases are impossible, yet one of them must hold, so no such $a_0$ exists. Hence $D \in \mathcal{P}(A)$ is missed by $f$, and $f$ is not surjective.
+
+Since $f$ was arbitrary, no surjection $A \to \mathcal{P}(A)$ exists. A bijection is in particular a surjection, so no bijection exists either, and $|A| \neq |\mathcal{P}(A)|$.
+:::
+
+:::intuition
+Read $f$ as a table with one row per element of $A$, row $a$ holding the membership string of the subset $f(a)$, as in the figure. The set $D$ is built by walking down the main diagonal and writing the opposite of what you find. The resulting string cannot be row $1$, because it differs there in column $1$; it cannot be row $2$, because it differs in column $2$; and so on for every row. The table lists some subsets and $D$ is not among them, no matter how the table was filled in.
+:::
+
+:::remark
+Note what the proof does *not* need: $A$ may be finite, countable or anything else, and no counting is performed. For finite $A$ the conclusion is the familiar $n < 2^n$; for $A = \mathbb{N}$ it says $\mathcal{P}(\mathbb{N})$ is uncountable, which is the standard proof that the reals cannot be listed. Iterating gives $\mathbb{N}, \mathcal{P}(\mathbb{N}), \mathcal{P}(\mathcal{P}(\mathbb{N})), \dots$, an unending ladder of strictly increasing infinities, so there is no largest set and no single "infinity". Where exactly the reals sit on that ladder is the continuum hypothesis, and the answer — that the usual axioms settle neither yes nor no — belongs to *Set Theory*.
+:::
+
+:::remark
+The map $a \mapsto \{a\}$ is an injection $A \to \mathcal{P}(A)$, so $\mathcal{P}(A)$ is at least as large as $A$; *Cantor's theorem* says it is never exactly as large. The two together are what justify calling the power set strictly bigger.
+:::
+
+:::example[The diagonal set for a small map]
+Let $A = \{1,2,3\}$ and let $f(1) = \{1,2\}$, $f(2) = \varnothing$, $f(3) = \{1,3\}$. Compute $D$ and verify it is missed by $f$.
+:::
+
+:::solution
+1. Test each element: $1 \in f(1) = \{1,2\}$, so $1 \notin D$. $2 \notin f(2) = \varnothing$, so $2 \in D$. $3 \in f(3) = \{1,3\}$, so $3 \notin D$.
+2. Hence $D = \{2\}$.
+3. The image of $f$ is $\{\{1,2\}, \varnothing, \{1,3\}\}$, and $\{2\}$ is not among its three members, exactly as *Cantor's theorem* predicts. Indeed $f$ misses $2^3 - 3 = 5$ subsets in all; the theorem's contribution is to name one that is missed for *every* $f$ at once.
+:::
+
+:::summary
+The chapter's spine: extensionality gives *Set equality by double inclusion*, which is the proof technique for every identity of set algebra — the *Distributive laws*, *De Morgan's laws for sets*, and the rest. Counting starts with *Inclusion–exclusion for two sets* and its three-set version, and with $|A \times B| = |A||B|$, from which *Counting functions* gives $m^n$, *Counting injections* gives the falling factorial, *Counting bijections* gives $n!$ and *Counting surjections* gives an alternating sum. Injectivity and surjectivity are characterised by one-sided inverses and bijectivity by a two-sided one; composition preserves both properties, and the partial converses hold only at the near and far ends of the chain. Finally $|\mathcal{P}(A)| = 2^{|A|}$ by the indicator-string bijection, and *Cantor's theorem* shows that no function from $A$ can reach every subset of $A$.
 :::
 
 ## Common Mistakes
 
-- Confusing $\subseteq$ (subset, allows equal) with $\subset$ (sometimes used for proper).
-- Thinking $\emptyset$ is the same as $\{\emptyset\}$ — the latter has one element.
-- Forgetting that union and intersection are commutative but difference is not: $A \setminus B \neq B \setminus A$ in general.
-- Believing every function has an inverse — only bijections do.
-- Confusing codomain with range (image). The codomain is declared; the image may be smaller.
-- Assuming a function from a larger finite set to a smaller one can be injective (pigeonhole forbids it).
-- Writing $f(x) \in A \to B$ instead of $f: A \to B$.
-- Forgetting the empty set when counting subsets.
+<!-- section: common-mistakes -->
+
+1. **Confusing $\in$ with $\subseteq$.** For $A = \{1,2\}$: $1 \in A$ and $\{1\} \subseteq A$ are true; $1 \subseteq A$ and $\{1\} \in A$ are not. The confusion is fatal in $\mathcal{P}(A)$, whose *elements* are sets.
+
+2. **Believing $\varnothing = \{\varnothing\}$.** The first has no elements; the second has one. Hence $|\mathcal{P}(\varnothing)| = 1$, not $0$.
+
+3. **Proving only one inclusion.** "$\subseteq$" is half of an equality. If your steps are genuine equivalences, say so and cite that the chain reads both ways; otherwise write the second half out, because it may need a different idea — as in the $6 \mid n$ example.
+
+4. **Distrusting a vacuous argument.** $\varnothing \subseteq A$ is true because no element of $\varnothing$ can witness a failure. This is not a loophole; it is what "for all" means over an empty range.
+
+5. **Adding cardinalities of overlapping sets.** $|A \cup B| = |A| + |B|$ needs $A \cap B = \varnothing$. Otherwise subtract the overlap, and for three sets remember to add $|A\cap B\cap C|$ back.
+
+6. **Confusing codomain with image.** $f(x) = x^2$ as a map $\mathbb{R}\to\mathbb{R}$ is not surjective; the same rule as a map $\mathbb{R}\to[0,\infty)$ is. Surjectivity is never a property of the rule alone.
+
+7. **Checking injectivity with one example.** Showing $f(1)\neq f(2)$ proves nothing. Assume $f(a_1) = f(a_2)$ and derive $a_1 = a_2$ for arbitrary $a_1, a_2$; a single collision, on the other hand, does disprove it.
+
+8. **Assuming a left inverse is a right inverse.** $\lfloor n/2\rfloor$ undoes doubling from the left but not from the right. Only a bijection has a two-sided inverse.
+
+9. **Over-reading the partial converses.** $g\circ f$ injective gives only that $f$ is injective, and $g\circ f$ surjective only that $g$ is. The other halves are false, with a two-line counterexample.
+
+10. **Counting functions as $n^m$ instead of $m^n$.** With $|A| = n$ and $|B| = m$, the count of $f : A\to B$ is $|B|^{|A|} = m^n$: one independent choice per element of the *domain*.
+
+11. **Writing $f^{-1}$ for a non-invertible $f$ and then treating it as a function.** $f^{-1}(T)$ is always a preimage set; $f^{-1}(b)$ as an element requires bijectivity.
+
+12. **Claiming Cantor's proof needs infinity.** It needs nothing but the definition of $D$, and it applies verbatim to a three-element set. Infinity is where the conclusion becomes surprising, not where the proof lives.
