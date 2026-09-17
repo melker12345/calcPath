@@ -4,293 +4,677 @@ title: The Probabilistic Method
 
 # The Probabilistic Method
 
-Proving a structure exists by showing a random one works, sharpened by deletion and by the Lovász Local Lemma.
+Proving a structure exists by showing a random one works, sharpened by the moment methods, by deletion, and by the Lovász Local Lemma.
 
 ## The Basic Idea
 
 <!-- section: basic-idea -->
 
-Suppose we have a probability space whose outcomes are the candidate objects (graphs, colorings, subsets, etc.).
+A combinatorial existence proof normally builds the object: here is the colouring, here is the graph, check that it works. The probabilistic method builds nothing. It puts a probability distribution on a set of candidate objects and shows that the probability of landing on a good one is not zero. Something that happens with positive probability happens; therefore a good object is in the set. The method is due to Erdős, who used it in 1947 to bound the Ramsey numbers from below, and it is now one of the standard tools of combinatorics.
 
-:::proposition[The probabilistic method]{#probabilistic-method}
-Let $A$ be the "bad" event that the random object fails to have the desired property. If $\Pr[A] < 1$, then $\Pr[\overline{A}] > 0$, hence there exists at least one outcome that is good.
+:::definition[Probability space of candidates]{#candidate-space}
+Let $\Omega$ be a finite set of objects — all $2$-colourings of the edges of $K_n$, all tournaments on $n$ vertices, all subsets of $[n]$ — equipped with a probability measure $\Pr$. A property $P$ is a subset $P \subseteq \Omega$. An element of $P$ is called **good**, and the complementary event $A = \Omega \setminus P$ is the **bad event**.
+:::
+
+:::proposition[The existence principle]{#existence-principle}
+If $\Pr[A] < 1$ then $P \ne \emptyset$: an object with the property exists.
 :::
 
 :::proof
-The logic is simply that an event of probability $0$ never happens, so an event whose complement has probability below $1$ must sometimes happen.
+$\Pr[P] = 1 - \Pr[A] > 0$. An event of probability $0$ is empty, so an event of positive probability contains at least one outcome, and every outcome in $P$ is a good object.
 :::
 
-Often one computes or bounds $\Pr[A]$ via the union bound (when $A$ is a union of many small bad sub-events), via expectation (Markov's inequality), or via more sophisticated concentration inequalities.
+The proposition is trivial, and that is the point: all the work in a probabilistic argument is in choosing the distribution and estimating $\Pr[A]$. Nothing else is ever proved.
+
+:::remark[The counting form]{#counting-form}
+When $\Pr$ is uniform on a finite $\Omega$, the principle reads: if fewer than $|\Omega|$ objects are bad, a good one exists. Every probabilistic proof over a uniform space can be rewritten as a counting proof, and the early literature did exactly that. The probabilistic language is kept because it gives access to expectation, variance and independence — machinery a counting argument has to reinvent by hand each time.
+:::
+
+The bad event is almost never estimated directly. It is written as a union of many small bad events — "this $k$-set is monochromatic", "this clause is violated", "these two vertices collide" — and bounded by the union bound.
+
+:::lemma[Union bound]{#union-bound}
+For any events $A_1, \dots, A_m$,
+$$\Pr\left[\bigcup_{i=1}^m A_i\right] \le \sum_{i=1}^m \Pr[A_i].$$
+In particular, if $\sum_i \Pr[A_i] < 1$ then with positive probability none of the $A_i$ occurs.
+:::
+
+:::proof
+Induction on $m$. For $m = 1$ there is nothing to prove. For the step, $\Pr[B \cup A] = \Pr[B] + \Pr[A] - \Pr[B \cap A] \le \Pr[B] + \Pr[A]$ since $\Pr[B \cap A] \ge 0$; apply this with $B = A_1 \cup \cdots \cup A_{m-1}$ and use the inductive hypothesis on $B$.
+:::
+
+No independence is needed, which is what makes the union bound so usable — and what makes it weak. It is tight only when the bad events are nearly disjoint, and it is hopeless as soon as $\sum_i \Pr[A_i]$ exceeds $1$, however the events are arranged. Repairing that weakness is the business of the rest of the chapter: the deletion method tolerates a few bad events and removes them afterwards, and the Local Lemma exploits the fact that bad events are usually only locally entangled.
+
+The first application is still the best advertisement for the method.
+
+:::theorem[Erdős' lower bound for Ramsey numbers]{#erdos-ramsey}
+If $\binom{n}{k}\,2^{1 - \binom{k}{2}} < 1$ then there is a red/blue colouring of the edges of $K_n$ with no monochromatic $K_k$; that is, $R(k,k) > n$. Consequently
+$$R(k,k) > 2^{k/2} \qquad \text{for every } k \ge 3.$$
+:::
+
+:::proof
+Colour each of the $\binom{n}{2}$ edges of $K_n$ red or blue independently, each with probability $\tfrac12$; all $2^{\binom n2}$ colourings are then equally likely. For a $k$-set $S$ of vertices let $A_S$ be the event that the $\binom k2$ edges inside $S$ all receive the same colour. Those edges are coloured independently, so
+$$\Pr[A_S] = 2 \cdot \left(\tfrac12\right)^{\binom k2} = 2^{\,1 - \binom k2},$$
+the factor $2$ being the choice of the common colour. By the union bound over the $\binom nk$ sets $S$,
+$$\Pr\Big[\bigcup_S A_S\Big] \le \binom nk\, 2^{\,1-\binom k2} < 1,$$
+so by the existence principle some colouring avoids every $A_S$, and that colouring has no monochromatic $K_k$.
+
+For the numerical consequence take $n = \lfloor 2^{k/2}\rfloor$. Using $\binom nk \le n^k/k!$ and $n^k \le 2^{k^2/2}$,
+$$\binom nk 2^{\,1-\binom k2} \le \frac{2^{k^2/2}}{k!}\,2^{\,1 - \frac{k^2}{2} + \frac k2} = \frac{2^{\,1 + k/2}}{k!} =: c_k .$$
+Now $c_3 = 2^{2.5}/6 = 5.657/6 < 1$, and $c_{k+1}/c_k = \sqrt2/(k+1) < 1$ for $k \ge 3$, so $c_k < 1$ for every $k \ge 3$. The hypothesis therefore holds and $R(k,k) > \lfloor 2^{k/2}\rfloor$. Since $R(k,k)$ is an integer strictly larger than $\lfloor 2^{k/2}\rfloor$, it is at least $\lfloor 2^{k/2}\rfloor + 1 > 2^{k/2}$.
+:::
 
 :::intuition
-Instead of building the object step by step, you throw dice (or flip coins for each possible edge/color/choice) and argue "the chance that something went wrong is less than 100 %, so sometimes nothing goes wrong."
-
-The argument may not tell you how to find the lucky outcome.
+The bound says something surprising: a *random* colouring of a large complete graph is already about as good as any colouring anyone has ever constructed. No explicit colouring of $K_n$ avoiding monochromatic $K_k$ is known for $n$ anywhere near $2^{k/2}$, yet the counting argument above shows that almost every colouring works. The method finds objects nobody knows how to describe.
 :::
 
-:::example
-*Ramsey lower bound: there is a red/blue edge-coloring of $K_n$ with no monochromatic $K_k$ whenever $\binom{n}{k}\,2^{1-\binom{k}{2}} < 1$.*
+:::pitfall
+The argument proves existence and nothing more. It does not say how to find a good colouring, and it does not say a good colouring is easy to recognise — checking that a given colouring of $K_n$ has no monochromatic $K_k$ takes $\binom nk$ inspections. "Positive probability" is also not "high probability": near the threshold the failure probability is close to $1$, and the argument is still valid.
+:::
+
+A second classical use of the same two lemmas concerns tournaments. A **tournament** is a complete graph in which every edge has been given a direction; write $u \to v$ for "$u$ beats $v$". It has **property $S_k$** if for every set of $k$ players some player beats all of them — so no group of $k$ players is collectively unbeatable.
+
+:::theorem[Tournaments with property $S_k$]{#tournament-sk}
+If $\binom nk\left(1 - 2^{-k}\right)^{\,n-k} < 1$ then there is a tournament on $n$ vertices with property $S_k$.
+:::
+
+:::proof
+Orient each of the $\binom n2$ edges independently, each direction with probability $\tfrac12$. Fix a $k$-set $K$ and let $A_K$ be the bad event that no vertex beats all of $K$. For a vertex $v \notin K$, the $k$ edges from $v$ to $K$ are oriented independently, so $v$ beats all of $K$ with probability $2^{-k}$. The corresponding events for distinct $v \notin K$ involve disjoint sets of edges and are therefore independent, so
+$$\Pr[A_K] = \left(1 - 2^{-k}\right)^{\,n-k}.$$
+The union bound over all $\binom nk$ sets $K$ gives $\Pr[\bigcup_K A_K] < 1$ under the hypothesis, and a tournament avoiding every $A_K$ has property $S_k$.
+:::
+
+:::example[Making the tournament bound explicit]
+For $k = 2$, find the smallest $n$ for which the hypothesis of *Tournaments with property $S_k$* is satisfied.
 :::
 
 :::solution
-Color each of the $\binom{n}{2}$ edges of $K_n$ red or blue independently, each with probability $\tfrac12$.
+With $k = 2$ the quantity to be made smaller than $1$ is
+$$f(n) = \binom n2\left(1 - \tfrac14\right)^{\,n-2} = \binom n2 \left(\tfrac34\right)^{n-2}.$$
+Evaluate it. At $n = 7$, $f(7) = 21 \cdot (3/4)^5 = 21 \cdot 0.23730 \approx 4.98$. At $n = 14$, $f(14) = 91 \cdot (3/4)^{12} = 91 \cdot 0.031676 \approx 2.88$. At $n = 20$, $f(20) = 190\cdot(3/4)^{18} = 190 \cdot 0.0056339 \approx 1.070$. At $n = 21$, $f(21) = 210 \cdot (3/4)^{19} = 210\cdot 0.0042254 \approx 0.887$.
 
-probability a fixed $k$-set is bad. A fixed set of $k$ vertices spans $\binom{k}{2}$ edges. It is *monochromatic* iff all those edges get the same color: two ways to pick the color out of $2^{\binom{k}{2}}$ equally likely patterns, so
-$$\Pr[\text{fixed } k\text{-set mono}] = \frac{2}{2^{\binom{k}{2}}} = 2^{\,1-\binom{k}{2}}.$$
+Since $f(20) > 1 > f(21)$ and $f$ is decreasing from $n = 7$ onwards — the ratio $f(n+1)/f(n) = \tfrac34 \cdot \tfrac{n+1}{n-1}$ is below $1$ exactly when $n > 7$ — the smallest $n$ that the theorem certifies is $n = 21$. Final answer: $n = 21$.
 
-union bound over all $k$-sets. Let $A$ be the bad event "some $k$-set is monochromatic." There are $\binom{n}{k}$ such sets, so
-$$\Pr[A] \le \binom{n}{k}\,2^{\,1-\binom{k}{2}}.$$
-
-force $\Pr[A] < 1$. If $\binom{n}{k}\,2^{1-\binom{k}{2}} < 1$, then $\Pr[A] < 1$, so $\Pr[\overline A] > 0$ and a good coloring exists.
-
-a concrete instance. Take $k = 3$, so $\binom{k}{2}=3$ and $2^{1-3} = \tfrac14$. For $n = 5$ we get $\binom{5}{3}\cdot\tfrac14 = 10\cdot\tfrac14 = 2.5$, which is $\ge 1$ — the bound is too weak here (indeed $R(3,3)=6$, so $K_5$ *can* be colored without a mono triangle, but this crude count does not prove it). The estimate first drops below $1$ for larger $k$; e.g. it yields the classical bound $R(k,k) > 2^{k/2}$.
-
-Sanity check: probabilities are consistent — for $k=3$ a fixed triangle is mono with probability $2/2^3 = 1/4$, matching the "all three edges agree" count. $\checkmark$
+Sanity check: the exponential factor $(3/4)^n$ eventually beats the polynomial $\binom n2$, so $f(n) \to 0$ and the method must succeed for all large $n$, as it does. $\checkmark$
 :::
 
-## The Deletion / Alteration Method
+:::remark[Crude numbers, sharp asymptotics]{#sk-small-cases}
+The smallest tournament with property $S_2$ in fact has $7$ vertices — the quadratic-residue tournament on $\mathbb{Z}/7\mathbb{Z}$, in which $u \to v$ when $v - u$ is a nonzero square — so the certificate $n = 21$ is far from tight. This is typical: the method is asymptotically strong and numerically crude. Its value here is that $\binom nk(1-2^{-k})^{n-k} < 1$ already holds for $n$ of order $k^2 2^k$, so property $S_k$ is achievable with exponentially many rather than astronomically many players, a statement no explicit construction gave at the time.
+:::
+
+
+## First and Second Moments
+
+<!-- section: moments -->
+
+The union bound is a statement about probabilities. The moment methods are statements about a *random variable* counting the bad things, and they are strictly more flexible: expectation ignores dependence entirely, and variance quantifies how far a count can stray from its mean. Almost every argument in the rest of the chapter is one of the two below.
+
+:::theorem[Linearity of expectation]{#linearity}
+For random variables $X_1,\dots,X_m$ on a common probability space and constants $c_1,\dots,c_m$,
+$$\mathbb{E}\left[\sum_{i=1}^m c_i X_i\right] = \sum_{i=1}^m c_i\,\mathbb{E}[X_i],$$
+whatever the dependence between the $X_i$.
+:::
+
+:::proof
+On a finite space, $\mathbb{E}[Y] = \sum_{\omega} \Pr[\omega] Y(\omega)$. Hence
+$$\mathbb{E}\Big[\sum_i c_i X_i\Big] = \sum_\omega \Pr[\omega]\sum_i c_i X_i(\omega) = \sum_i c_i \sum_\omega \Pr[\omega] X_i(\omega) = \sum_i c_i \mathbb{E}[X_i],$$
+the middle step being a finite interchange of summation.
+:::
+
+:::proposition[The averaging principle]{#averaging}
+If $X$ is a random variable with expectation $\mu$, then there is an outcome with $X \ge \mu$ and an outcome with $X \le \mu$.
+:::
+
+:::proof
+If $X < \mu$ at every outcome then $\mathbb{E}[X] < \mu$, a contradiction; symmetrically for the other direction.
+:::
+
+:::intuition
+Linearity is the reason the probabilistic method is so cheap. To count the expected number of monochromatic triangles, or of edges inside a random vertex set, compute the probability for *one* of them and multiply by how many there are — even though those events overlap violently. No independence is used and no inclusion–exclusion correction is needed. The averaging principle then converts the number into an object: something at least as good as average exists.
+:::
+
+A first illustration puts a random *dilation* rather than a random object at the centre of the argument. A set of integers is **sum-free** if it contains no solution of $a + b = c$ with $a,b,c$ in the set, where $a = b$ is allowed.
+
+:::theorem[Large sum-free subsets]{#sum-free}
+Every set $B$ of $n$ nonzero integers contains a sum-free subset of size greater than $n/3$.
+:::
+
+:::proof
+Choose a prime $p = 3k + 2$ larger than $2\max_{b\in B}|b|$; there are infinitely many primes in this residue class, and any sufficiently large one will do. Inside $\mathbb{Z}/p\mathbb{Z}$ the middle block
+$$C = \{k+1,\, k+2,\, \dots,\, 2k+1\}$$
+is sum-free: a sum of two elements of $C$ lies between $2k+2$ and $4k+2 = p+k$, hence modulo $p$ in $\{2k+2,\dots,p-1\}\cup\{0,\dots,k\}$, which is disjoint from $C$. Also $|C| = k+1$ and $p-1 = 3k+1$, so
+$$\frac{|C|}{p-1} = \frac{k+1}{3k+1} > \frac13 .$$
+Pick $x$ uniformly at random from $\{1,2,\dots,p-1\}$. For fixed $b \in B$ the map $x \mapsto xb \bmod p$ is a bijection of $\{1,\dots,p-1\}$ onto itself, because $b \not\equiv 0$ and $p$ is prime; hence $xb \bmod p$ is uniform on the nonzero residues and
+$$\Pr[\,xb \bmod p \in C\,] = \frac{|C|}{p-1} > \frac13 .$$
+Let $X$ be the number of $b \in B$ with $xb \bmod p \in C$. By linearity of expectation $\mathbb{E}[X] > n/3$, so by the averaging principle some $x$ gives $|B'| > n/3$, where $B' = \{b \in B: xb \bmod p \in C\}$.
+
+Finally $B'$ is sum-free: if $b_1 + b_2 = b_3$ with all three in $B'$, then multiplying by $x$ and reducing mod $p$ produces three elements of $C$ with the first two summing to the third, contradicting the sum-freeness of $C$.
+:::
+
+:::pitfall
+The theorem is about the *integers*, but the proof works in $\mathbb{Z}/p\mathbb{Z}$; the condition $p > 2\max|b|$ is what stops a relation $b_1 + b_2 = b_3$ from being created or destroyed by the reduction. Drop it and the proof collapses. Whenever a probabilistic argument moves a problem into a modular world, check that the transport is faithful in both directions.
+:::
+
+Turning a count into a bound on a probability is Markov's inequality, and the combination is called the first moment method.
+
+:::theorem[Markov's inequality and the first moment method]{#markov}
+Let $X \ge 0$ be a random variable and $t > 0$. Then
+$$\Pr[X \ge t] \le \frac{\mathbb{E}[X]}{t}.$$
+In particular, if $X$ is integer-valued and $\mathbb{E}[X] < 1$, then $\Pr[X = 0] > 0$: some outcome has no bad objects at all.
+:::
+
+:::proof
+$\mathbb{E}[X] \ge \mathbb{E}[X \cdot \mathbf 1_{X \ge t}] \ge t\,\Pr[X \ge t]$, the first inequality because $X \ge 0$ and the second because $X \ge t$ on the event in question. Divide by $t$. For the second statement take $t = 1$: $\Pr[X \ge 1] \le \mathbb{E}[X] < 1$, and for a non-negative integer variable $X \ge 1$ is the complement of $X = 0$.
+:::
+
+:::remark[Why this subsumes the union bound]{#markov-subsumes}
+With $X = \sum_i \mathbf 1_{A_i}$, linearity gives $\mathbb{E}[X] = \sum_i \Pr[A_i]$ and Markov at $t = 1$ returns exactly the union bound. The gain is that $X$ carries more information than the single event $\bigcup_i A_i$: the same computation at $t = 2\mathbb{E}[X]$ says the bad count rarely exceeds twice its mean, which is what the deletion method will use.
+:::
+
+Linearity plus one planarity fact yields a theorem of a different flavour — a lower bound on how badly a dense graph must cross itself when drawn. Write $\mathrm{cr}(G)$ for the least number of edge crossings over all drawings of $G$ in the plane.
+
+:::lemma[Euler bound for crossings]{#euler-crossing}
+Every graph with $n \ge 3$ vertices and $e$ edges satisfies $\mathrm{cr}(G) \ge e - 3n$.
+:::
+
+:::proof
+Take a drawing with $\mathrm{cr}(G)$ crossings and delete one edge from each crossing pair. What remains is a plane drawing of a graph with at least $e - \mathrm{cr}(G)$ edges on $n$ vertices, and a simple planar graph with $n \ge 3$ vertices has at most $3n - 6 < 3n$ edges by Euler's formula. Hence $e - \mathrm{cr}(G) < 3n$.
+:::
+
+:::theorem[Crossing number lemma]{#crossing-lemma}
+If $e \ge 4n$ then
+$$\mathrm{cr}(G) \ge \frac{e^3}{64\,n^2}.$$
+:::
+
+:::proof
+Fix a drawing of $G$ with $\mathrm{cr}(G)$ crossings and a number $p \in (0,1]$, and let $H$ be the subgraph induced by a random vertex set that keeps each vertex independently with probability $p$. Write $n_H$ and $e_H$ for its numbers of vertices and edges, and $X_H$ for the number of crossings the fixed drawing induces on $H$. A vertex survives with probability $p$, an edge with probability $p^2$, and a crossing — which involves four distinct vertices — with probability $p^4$, so by linearity of expectation
+$$\mathbb{E}[n_H] = pn, \qquad \mathbb{E}[e_H] = p^2 e, \qquad \mathbb{E}[X_H] = p^4\,\mathrm{cr}(G).$$
+The induced drawing witnesses $\mathrm{cr}(H) \le X_H$, and the *Euler bound for crossings* gives $\mathrm{cr}(H) \ge e_H - 3n_H$, so $X_H \ge e_H - 3n_H$ holds at every outcome. Taking expectations,
+$$p^4\,\mathrm{cr}(G) \ge p^2 e - 3pn, \qquad\text{that is}\qquad \mathrm{cr}(G) \ge \frac{e}{p^2} - \frac{3n}{p^3}.$$
+Choose $p = 4n/e$, which lies in $(0,1]$ precisely because $e \ge 4n$. Then $e/p^2 = e^3/(16n^2)$ and $3n/p^3 = 3e^3/(64n^2)$, so
+$$\mathrm{cr}(G) \ge \frac{4e^3 - 3e^3}{64n^2} = \frac{e^3}{64n^2}.$$
+:::
+
+:::remark[The shape of the bound]{#crossing-shape}
+The growth rate $e^3/n^2$ is best possible, and the proof is the standard example of *probabilistic amplification*: a weak linear bound, applied to a randomly sampled piece and averaged, becomes a strong cubic one. The constant $64$ is an artefact of the sampling probability and has since been improved to roughly $29$.
+:::
+
+The first moment shows a count is typically small. To show a count is typically *large* — in particular nonzero — the mean alone is not enough, since a variable can have an enormous mean and still vanish almost always. Variance closes the gap.
+
+:::theorem[Chebyshev's inequality]{#chebyshev}
+For a random variable $X$ with mean $\mu$ and finite variance, and any $\lambda > 0$,
+$$\Pr\big[\,|X - \mu| \ge \lambda\,\big] \le \frac{\operatorname{Var}[X]}{\lambda^2}.$$
+:::
+
+:::proof
+Apply Markov's inequality to the non-negative variable $Y = (X-\mu)^2$ at $t = \lambda^2$: $\Pr[Y \ge \lambda^2] \le \mathbb{E}[Y]/\lambda^2 = \operatorname{Var}[X]/\lambda^2$, and the event $Y \ge \lambda^2$ is exactly $|X - \mu| \ge \lambda$.
+:::
+
+:::corollary[The second moment method]{#second-moment}
+If $X \ge 0$ satisfies $\mathbb{E}[X] > 0$ and $\operatorname{Var}[X] = o\big(\mathbb{E}[X]^2\big)$ along a sequence of probability spaces, then $\Pr[X = 0] \to 0$.
+:::
+
+:::proof
+Take $\lambda = \mu = \mathbb{E}[X]$ in Chebyshev's inequality. The event $X = 0$ implies $|X - \mu| \ge \mu$, so
+$$\Pr[X = 0] \le \frac{\operatorname{Var}[X]}{\mu^2} \longrightarrow 0 .$$
+:::
+
+:::pitfall
+A large mean is no evidence of existence on its own. If $X$ is $2^n$ with probability $2^{-n}$ and $0$ otherwise, then $\mathbb{E}[X] = 1$ while $X = 0$ almost surely. This is exactly the situation in a random graph just below a threshold: the expected number of copies of a fixed subgraph can tend to infinity while the graph contains none with probability tending to $1$, because a few outcomes carry an enormous count. Only a variance bound rules that out.
+:::
+
+:::example[The threshold for a triangle in a random graph]
+In $G(n,p)$ — the graph on $[n]$ in which each of the $\binom n2$ possible edges appears independently with probability $p$ — let $X$ be the number of triangles. Show that if $p = \omega/n$ with $\omega = \omega(n) \to \infty$, then $G(n,p)$ contains a triangle with probability tending to $1$.
+:::
+
+:::solution
+Write $X = \sum_S \mathbf 1_{A_S}$, summed over the $\binom n3$ triples $S$, where $A_S$ is the event that all three edges inside $S$ are present.
+
+The mean, by linearity. Each $\Pr[A_S] = p^3$, so
+$$\mathbb{E}[X] = \binom n3 p^3 \sim \frac{n^3p^3}{6} = \frac{\omega^3}{6} \to \infty .$$
+
+The variance. Expand $\operatorname{Var}[X] = \sum_{S,T}\big(\Pr[A_S \cap A_T] - \Pr[A_S]\Pr[A_T]\big)$ over ordered pairs. A pair sharing at most one vertex contributes $0$, since then $A_S$ and $A_T$ involve disjoint edge sets and are independent. The $\binom n3$ diagonal pairs contribute at most $p^3$ each, and the at most $n^4$ ordered pairs sharing exactly two vertices contribute at most $\Pr[A_S \cap A_T] = p^5$ each, the two triangles using five distinct edges. Hence
+$$\operatorname{Var}[X] \le \binom n3 p^3 + n^4p^5 .$$
+
+The ratio. With $\mu \sim n^3p^3/6$,
+$$\frac{\operatorname{Var}[X]}{\mu^2} = O\!\left(\frac{n^3p^3}{n^6p^6}\right) + O\!\left(\frac{n^4p^5}{n^6p^6}\right) = O\!\left(\frac{1}{n^3p^3}\right) + O\!\left(\frac{1}{n^2p}\right) = O\!\left(\frac{1}{\omega^3}\right) + O\!\left(\frac{1}{n\omega}\right),$$
+using $n^3p^3 = \omega^3$ and $n^2p = n\omega$. Both terms tend to $0$, so *The second moment method* gives $\Pr[X = 0] \to 0$. Final answer: a triangle is present with probability tending to $1$.
+
+Sanity check: at $p = c/n$ with $c$ constant the same computation gives $\mathbb{E}[X] \to c^3/6$, a constant, and $X$ is then asymptotically Poisson with $\Pr[X = 0] \to e^{-c^3/6} \ne 0$. The divergence $\omega \to \infty$ is exactly what the conclusion needs. $\checkmark$
+:::
+
+## The Deletion Method
 
 <!-- section: deletion-method -->
 
-When the crude union bound $\Pr\!\big[\bigcup_i \text{bad}_i\big] \le \sum_i \Pr[\text{bad}_i]$ exceeds $1$, the basic method fails outright — but one can still succeed by "cleaning up."
+When $\sum_i \Pr[A_i]$ exceeds $1$ the union bound says nothing, and simply choosing a smaller random object often gives away too much. The deletion method — also called the alteration method — takes the third road: accept an outcome with a few bad substructures, then destroy them by hand and show that what survives is still large enough to be interesting.
 
-:::recipe[Deletion and alteration]{#deletion-method}
-1. Compute the expected number $X$ of bad substructures. By linearity of expectation this is just $\sum_i \Pr[\text{bad}_i]$, with no independence needed.
-2. Because a random variable is $\le$ its mean with positive probability, there exists an outcome with at most $\mathbb{E}[X]$ bad things.
-3. Fix that outcome and, for each bad thing, delete or alter a small number of elements that "witness" it.
-4. Conclude: the size (or quality) of the cleaned object is still large enough to be positive, proving existence.
+:::recipe[Deletion]{#deletion-recipe}
+1. Sample a random object and let $X$ count the bad substructures in it.
+2. Compute $\mathbb{E}[X]$ by linearity of expectation; no independence is required.
+3. By the averaging principle, fix an outcome with at most $\mathbb{E}[X]$ bad substructures — or, using Markov's inequality, one that is simultaneously good in a second respect.
+4. Delete one element per bad substructure, destroying all of them.
+5. Bound the damage: the object that survives is smaller by at most $X$, and must still have the property being claimed.
 :::
 
 :::intuition
-"On average there are only 100 bad apples. In the realization with ≤100 bad apples, throw those 100 away; you still have a huge pile of good apples left."
-
-Linearity of expectation makes the calculation painless even when events are dependent.
+The union bound insists that nothing goes wrong. Deletion only insists that not *too much* goes wrong, and then repairs the damage. The exchange rate is what decides whether it works: one deletion must cost only a bounded amount of the quantity being maximised, and the expected number of deletions must be small compared with the size of the object. When the expected number of bad things is, say, half the number of vertices, one can still throw a vertex at each of them and keep half the graph.
 :::
 
-:::example
-*A clean deletion computation: an independent set of size $\ge n^2/(4m)$ in any graph with $n$ vertices and $m \ge n/2$ edges.*
+The simplest instance trades vertices for edges and gives a bound on the independence number $\alpha(G)$, the size of the largest set of pairwise non-adjacent vertices.
+
+:::theorem[Independent sets in a sparse graph]{#independence-bound}
+Let $G$ have $n$ vertices and $m \ge n/2$ edges. Then
+$$\alpha(G) \ \ge\ \frac{n^2}{4m}.$$
+:::
+
+:::proof
+Fix $p \in [0,1]$ and let $S$ keep each vertex of $G$ independently with probability $p$. Let $X = |S|$ and let $Y$ be the number of edges with both endpoints in $S$. A vertex survives with probability $p$ and an edge with probability $p^2$, so by linearity of expectation $\mathbb{E}[X] = np$ and $\mathbb{E}[Y] = mp^2$.
+
+Delete one endpoint of each of the $Y$ surviving edges. What remains is an independent set of size at least $X - Y$, so
+$$\alpha(G) \ \ge\ \mathbb{E}[X - Y] = np - mp^2$$
+by the averaging principle applied to $X - Y$. The right-hand side is a downward parabola in $p$, maximised at $p = n/(2m)$, which lies in $[0,1]$ exactly because $m \ge n/2$. Substituting,
+$$np - mp^2 = \frac{n^2}{2m} - \frac{n^2}{4m} = \frac{n^2}{4m}. $$
+:::
+
+:::remark[Reading the bound]{#independence-bound-reading}
+For a $d$-regular graph, $m = nd/2$ and the theorem gives $\alpha(G) \ge n/(2d)$. That is the right order: a greedy colouring uses at most $d+1$ colours, so the largest colour class — an independent set — has size at least $n/(d+1)$. The probabilistic proof loses only a factor of $2$ and needs no regularity at all.
+:::
+
+Applied to the Ramsey colouring, deletion improves Erdős' bound by a factor of order $k$, at the cost of nothing but bookkeeping.
+
+:::theorem[Ramsey lower bound by deletion]{#ramsey-deletion}
+For every $n$ and $k$,
+$$R(k,k) \ >\ n - \binom nk 2^{\,1-\binom k2}.$$
+Consequently $R(k,k) \ge \big(1 + o(1)\big)\,\dfrac{k}{e}\,2^{k/2}$.
+:::
+
+:::proof
+Colour the edges of $K_n$ red or blue independently and uniformly, and let $X$ be the number of monochromatic $k$-sets. As computed in the proof of *Erdős' lower bound for Ramsey numbers*, each $k$-set is monochromatic with probability $2^{1-\binom k2}$, so linearity gives $\mathbb{E}[X] = \binom nk 2^{1-\binom k2}$. Fix a colouring with $X \le \mathbb{E}[X]$ and delete one vertex from each monochromatic $k$-set. No monochromatic $k$-set survives, since each has lost a vertex, and at least $n - \mathbb{E}[X]$ vertices remain. Restricting the colouring to those vertices gives a colouring of a complete graph on $n - \mathbb{E}[X]$ vertices with no monochromatic $K_k$, which proves the displayed inequality.
+
+For the asymptotic statement take $n = \lceil (k/e)2^{k/2}\rceil$. Using $\binom nk \le n^k/k!$ and $k! > (k/e)^k$,
+$$\mathbb{E}[X] \le \frac{n^k}{k!}\,2^{\,1-\binom k2} < \left(\frac{n e}{k}\right)^{k} 2^{\,1 - \frac{k^2}2 + \frac k2}.$$
+Since $n \le (k/e)2^{k/2} + 1$, the first factor satisfies
+$$\left(\frac{ne}{k}\right)^{k} \le \left(2^{k/2}\left(1 + \frac{e}{k\,2^{k/2}}\right)\right)^{k} = 2^{k^2/2}\left(1 + \frac{e}{k\,2^{k/2}}\right)^{k} = 2^{k^2/2}\,\big(1 + o(1)\big),$$
+because $k \cdot e/(k2^{k/2}) \to 0$ and $(1+\varepsilon_k)^k \to 1$ whenever $k\varepsilon_k \to 0$. Multiplying by the remaining factor $2^{1+k/2-k^2/2}$ leaves $\mathbb{E}[X] \le 2^{1+k/2}(1+o(1))$. Compared with $n \ge (k/e)2^{k/2}$ this is a fraction $2e/k \cdot (1+o(1)) = o(1)$ of $n$, so $n - \mathbb{E}[X] = (1-o(1))n$ and the bound follows.
+:::
+
+:::pitfall
+Deletion is only free when the deleted elements are cheap. Here one vertex kills a whole monochromatic $k$-set, so $X$ deletions suffice; if instead each bad substructure had required removing half the graph, the same expectation would have proved nothing. Before reaching for the method, ask what one deletion costs and compare it with $\mathbb{E}[X]$.
+:::
+
+The deepest classical application settles a question that looks purely local against a question that is purely global. A graph of large **girth** — the length of its shortest cycle — has no short cycles at all, so every small neighbourhood in it is a tree and can be $2$-coloured. One might expect such a locally tree-like graph to be colourable with few colours. Erdős showed the opposite.
+
+:::theorem[Graphs of high girth and high chromatic number]{#girth-chromatic}
+For every pair of integers $g, t \ge 3$ there is a graph $G$ with girth greater than $g$ and chromatic number greater than $t$.
+:::
+
+:::proof
+Fix $\theta$ with $0 < \theta < 1/g$ and take $G \sim G(n,p)$ with $p = n^{\theta - 1}$, where $n$ is large.
+
+*Few short cycles.* Let $X$ be the number of cycles of length at most $g$. A cycle of length $i$ is determined by an ordered choice of $i$ distinct vertices up to $2i$ rotations and reflections, and it appears with probability $p^i$, so
+$$\mathbb{E}[X] = \sum_{i=3}^{g} \frac{n(n-1)\cdots(n-i+1)}{2i}\,p^{\,i} \ \le\ \sum_{i=3}^{g} \frac{(np)^i}{2i} \ \le\ \frac{g\,(np)^g}{6} = \frac{g}{6}\, n^{\theta g},$$
+where the last inequality uses $np = n^{\theta} \ge 1$, so the largest term dominates. Since $\theta g < 1$ this is $o(n)$, and Markov's inequality gives
+$$\Pr\left[X \ge \tfrac n2\right] \le \frac{2\,\mathbb{E}[X]}{n} = o(1).$$
+
+*No large independent set.* Put $a = \lceil (3/p)\ln n\rceil$. A fixed set of $a$ vertices is independent with probability $(1-p)^{\binom a2}$, so by the union bound and $1 - p \le e^{-p}$,
+$$\Pr[\alpha(G) \ge a] \le \binom na (1-p)^{\binom a2} \le \left(n\,e^{-p(a-1)/2}\right)^{a} \le \left(n\cdot n^{-3/2}e^{p/2}\right)^a = o(1),$$
+because $e^{-p(a-1)/2} \le e^{p/2}n^{-3/2}$ by the choice of $a$, and $n^{-1/2}e^{p/2} \to 0$.
+
+*Combine and delete.* For large $n$ both failure probabilities are below $1/2$, so some graph $G$ has fewer than $n/2$ short cycles and $\alpha(G) < a$. Delete one vertex from each cycle of length at most $g$. The resulting graph $G^{*}$ has more than $n/2$ vertices, girth greater than $g$, and $\alpha(G^{*}) \le \alpha(G) < a$ — deleting vertices cannot create a larger independent set. Since every colour class of a proper colouring is independent,
+$$\chi(G^{*}) \ \ge\ \frac{|V(G^{*})|}{\alpha(G^{*})} \ >\ \frac{n/2}{(3/p)\ln n + 1} \ =\ \Theta\!\left(\frac{n^{\theta}}{\ln n}\right),$$
+which tends to infinity with $n$. Choosing $n$ large enough makes this exceed $t$.
+:::
+
+:::intuition
+The proof works because the two demands pull on different scales. Short cycles are *local*: at $p = n^{\theta-1}$ the expected number of them is a vanishing fraction of $n$, so they can be removed one vertex at a time. Large independent sets are *global*: a random graph of that density has none, because an independent set of size $a$ asks $\binom a2$ separate coin flips all to come up the same way. Nothing links the two, which is precisely why the sparse, locally tree-like graph can still refuse to be coloured with few colours — the obstruction to colouring is spread over the whole graph rather than sitting in any small piece of it.
+:::
+
+:::example[Sizing the construction]
+Take $g = 6$ and $\theta = 1/12$ in the proof above. Estimate the exponent of $n$ in the bound on $\mathbb{E}[X]$, and state the growth rate of the chromatic number obtained.
 :::
 
 :::solution
-random sample. Pick $p \in [0,1]$ (chosen later). Keep each vertex independently with probability $p$; let $S$ be the kept set. Let $X = |S|$ and let $Y$ be the number of edges of the graph with *both* endpoints in $S$.
+The bound on the expected number of short cycles is $\tfrac g6 n^{\theta g}$ with $g = 6$ and $\theta g = 6/12 = 1/2$, that is $n^{1/2}$. Since $1/2 < 1$ this is indeed $o(n)$, as the proof requires.
 
-expectations by linearity.
-$$\mathbb{E}[X] = np, \qquad \mathbb{E}[Y] = m\,p^2,$$
-since each vertex survives with probability $p$ and each edge survives (both endpoints kept) with probability $p^2$.
+The chromatic number obtained is $\Theta(n^{\theta}/\ln n) = \Theta(n^{1/12}/\ln n)$. Final answer: the expected number of short cycles is $O(n^{1/2})$ and $\chi(G^{*}) = \Theta(n^{1/12}/\ln n)$.
 
-delete one endpoint per surviving edge. Removing one vertex from each of the $Y$ bad edges kills all of them and leaves an independent set of size $\ge X - Y$. By linearity,
-$$\mathbb{E}[X - Y] = np - mp^2.$$
-So some outcome yields an independent set of size at least $np - mp^2$.
-
-optimize $p$. Maximize $g(p) = np - mp^2$; setting $g'(p) = n - 2mp = 0$ gives $p = \tfrac{n}{2m}$, which lies in $[0,1]$ because $m \ge n/2$. Then
-$$g\!\left(\tfrac{n}{2m}\right) = n\cdot\tfrac{n}{2m} - m\cdot\tfrac{n^2}{4m^2} = \tfrac{n^2}{2m} - \tfrac{n^2}{4m} = \frac{n^2}{4m}.$$
-
-Hence the graph has an independent set of size $\ge n^2/(4m)$, i.e. $\alpha(G) \ge n^2/(4m)$.
-
-Sanity check: for a $d$-regular graph $m = nd/2$, giving $\alpha \ge n/(2d)$ — the right order of magnitude (a proper coloring uses $\le d+1$ colors, and the largest color class has size $\ge n/(d+1)$). $\checkmark$
-
-Erdős's celebrated girth/chromatic-number theorem uses the same recipe: in $G(n,p)$ the expected number of short cycles is $o(n)$; delete one vertex per short cycle to make the girth large, while a separate estimate keeps the independence number $\alpha$ small, forcing $\chi \ge n/\alpha$ to be large.
+Sanity check: $\theta = 1/12$ satisfies $\theta < 1/g = 1/6$, so the hypothesis holds with room to spare; pushing $\theta$ up towards $1/6$ would give a faster-growing chromatic number but leave less slack in the $o(n)$ estimate. $\checkmark$
 :::
 
-## Preview of the Lovász Local Lemma
+## Why a Local Lemma Is Needed
 
 <!-- section: lovasz-lemma-preview -->
 
-When bad events are plentiful but each depends on only a few others and has tiny probability, the Local Lemma shows that the probability that *none* occur is still positive — even when the total expected number of bad events is huge (so the union bound is hopeless).
+Everything so far has bounded the probability that *some* bad event occurs by adding up the individual probabilities. That sum is a global quantity: it grows with the number of bad events and takes no account of how they are arranged. Yet the arrangement is obviously relevant, and this section is about the gap between the two extreme ways of exploiting it. The Local Lemma, stated and proved in the two sections that follow, lives in that gap.
 
-:::definition[Dependency graph]{#dependency-graph}
-Here "depends on only a few others" means each bad event is *mutually independent* of all but at most $D$ of the rest; those $\le D$ exceptions are its neighbors in the dependency graph.
+Start with the extreme case in which the arrangement is as favourable as it could possibly be.
+
+:::proposition[Independent bad events are never a problem]{#independent-case}
+If $A_1,\dots,A_m$ are mutually independent and $\Pr[A_i] < 1$ for every $i$, then
+$$\Pr\left[\bigcap_{i=1}^m \overline{A_i}\right] = \prod_{i=1}^m\big(1 - \Pr[A_i]\big) > 0 .$$
 :::
 
-This local sparsity is exactly what the union bound ignores.
-
-:::theorem[Symmetric local lemma]{#symmetric-lll}
-If each bad event has $\Pr \le p$, depends on at most $D$ others, and $e\,p\,(D+1) \le 1$, then
-
-$$\Pr[\text{no bad events}] > 0.$$
+:::proof
+Mutual independence of the $A_i$ passes to their complements, so the probability of the intersection is the product of the probabilities. Each factor is strictly positive by hypothesis, and a finite product of positive numbers is positive.
 :::
 
-This is the workhorse for many modern probabilistic existence proofs (colorings of hypergraphs, list coloring, etc.).
+Read that carefully, because it is the whole motivation. The number of events does not appear. A million bad events, each of probability $0.99$, still leave a positive — astronomically small, but positive — probability that none of them occurs, and positive is all an existence proof needs. Under independence the union bound is not merely weak, it is irrelevant.
 
 :::intuition
-"Each potential disaster is very unlikely, and only 'talks to' a few other potential disasters. Then even if there are millions of them, the chance that at least one happens can still be made <1 by the local lemma calculation."
-
-It is a sophisticated form of the union bound that takes limited dependence into account.
+The union bound and the independent case answer different questions. The union bound asks: how much probability mass could the bad events cover between them? If they are disjoint, the mass adds up, and once the total passes $1$ the question is closed. Independence instead makes the events *interlock* rather than pile up: avoiding $A_1$ tells you nothing about $A_2$, so the chances of avoiding everything multiply, and a product of positive numbers can never reach zero in finitely many steps. The union bound counts; independence multiplies.
 :::
 
-:::example
-*When does a $k$-uniform hypergraph admit a proper 2-coloring (no monochromatic edge)?*
+So why not simply use the proposition? Because its hypothesis essentially never holds. In a real application the bad events are built from a shared pool of random choices, and any two events reading the same choice are dependent.
+
+:::example[A satisfiability problem the union bound cannot reach]
+A $k$-CNF formula is a conjunction of clauses, each a disjunction of exactly $k$ literals over distinct variables. Set every variable to true or false independently and uniformly, and let $A_j$ be the event that clause $j$ is violated. Compare what the union bound can prove with what the structure of the formula suggests.
 :::
 
 :::solution
-Color each vertex red or blue independently with probability $\tfrac12$.
+A clause is violated only when all $k$ of its literals are false, and since its variables are distinct and set independently,
+$$\Pr[A_j] = 2^{-k} .$$
+The union bound gives a satisfying assignment whenever $m\,2^{-k} < 1$, that is whenever the number of clauses satisfies $m < 2^k$. Final answer: the union bound handles $m < 2^k$ clauses and nothing more.
 
-probability one edge is bad. A single edge has $k$ vertices; it is monochromatic iff all $k$ agree, which happens with probability $2\cdot(\tfrac12)^k = 2^{1-k}$. So $p = 2^{1-k}$.
+That threshold is unsatisfying. Take $k = 20$ and a formula with $m = 10^{9}$ clauses in which the variables are spread out so widely that each clause shares a variable with only three others. Then $m 2^{-k} \approx 954$, hopelessly larger than $1$, so the union bound proves nothing — even though every individual clause is nearly always satisfied and the interactions between clauses are almost nonexistent. Only clauses sharing a variable can conspire; the other $10^{9}$ clauses are mutually independent of any given one and, by *Independent bad events are never a problem*, would cause no difficulty at all on their own.
 
-dependency degree. Two edges' bad events are independent unless the edges share a vertex. If every vertex lies in at most $\Delta$ edges, one edge meets at most $k(\Delta-1) < k\Delta$ others, so $D \le k\Delta$.
-
-apply the symmetric LLL. The condition $e\,p\,(D+1) \le 1$ becomes
-$$e\cdot 2^{1-k}\cdot (k\Delta + 1) \le 1,$$
-which holds once $\Delta \lesssim \dfrac{2^{k-1}}{e\,k}$. Under this bound a proper 2-coloring exists — this is a classical existence proof for **property B**.
-
-a number. For $k=3$ (so $p = 2^{-2} = \tfrac14$) and $D = 2$, we get $e\cdot\tfrac14\cdot 3 \approx 2.04 > 1$: the symmetric bound just fails. For $D = 1$, $e\cdot\tfrac14\cdot 2 \approx 1.36 > 1$ — still fails at $p=\tfrac14$. The takeaway: at $p=\tfrac14$ the crude symmetric LLL is tight and one needs larger $k$ (smaller $p$) or the asymmetric version for interesting cases. $\checkmark$
+Sanity check: the union bound's verdict depends only on $m$ and $k$, so it returns the same answer for this formula as for one in which all $10^9$ clauses share the same $20$ variables — a formula that genuinely can be unsatisfiable. A bound that cannot tell those two apart must be discarding the very thing that distinguishes them. $\checkmark$
 :::
 
-## The Lemma (Symmetric Version)
+The example isolates what a better tool must do: measure dependence *locally*. The vocabulary for that is a graph on the events.
+
+:::definition[Mutual independence and the dependency graph]{#dependency-graph}
+An event $A$ is **mutually independent** of a family $\mathcal{B}$ of events if for every subfamily $B_1,\dots,B_r \in \mathcal B$ and every choice of each $B_i$ or its complement, the probability of the intersection with $A$ factors as $\Pr[A]$ times the probability of that intersection.
+
+A graph $D$ on the vertex set $\{1,\dots,m\}$ is a **dependency graph** for the events $A_1,\dots,A_m$ if each $A_i$ is mutually independent of the family $\{A_j : j \ne i,\ ij \notin E(D)\}$. The **dependency degree** is the maximum degree of $D$.
+:::
+
+:::remark[How a dependency graph is found in practice]{#canonical-dependency}
+One almost never verifies the definition directly. Instead the probability space is built from independent random variables — one per edge, per vertex, per variable — and each bad event $A_i$ is determined by a set $S_i$ of them. Joining $i$ and $j$ whenever $S_i \cap S_j \ne \emptyset$ then gives a dependency graph, because an event depending on one block of independent variables is mutually independent of any family of events depending only on a disjoint block. In the $k$-CNF example $S_j$ is the set of variables of clause $j$, and the dependency degree is the largest number of other clauses any one clause meets.
+:::
+
+:::pitfall
+Mutual independence is much stronger than pairwise independence, and the Local Lemma needs the strong form. Let $U, V$ be independent fair coin flips and let $W = U \oplus V$. Any two of $U, V, W$ are independent, yet the three together are not: knowing two of them determines the third. A "dependency graph" drawn from pairwise correlations alone would show no edges here and would be wrong. The definition quantifies over *all* subfamilies for exactly this reason.
+:::
+
+With that vocabulary the situation can be stated precisely. The union bound needs $\sum_i \Pr[A_i] < 1$ and ignores the dependency graph entirely; *Independent bad events are never a problem* needs the dependency graph to have no edges at all and then ignores the probabilities. Neither hypothesis is satisfied by the $k$-CNF example above, in which there are far too many clauses for the first and a nonempty — though very sparse — dependency graph for the second.
+
+What Lovász and Erdős found in 1975 is that a sparse dependency graph is almost as good as an empty one. If every bad event is unlikely and every bad event has few neighbours, then the number of events may be arbitrary and the conclusion of the independent case survives: with positive probability none of them occurs. The trade-off is a single inequality relating the probability $p$ and the dependency degree $d$, and the surprise is that the number $m$ of events is absent from it. The next section states that inequality and the general form behind it; the one after proves them.
+
+:::intuition
+Think of the events as a contagion. The union bound treats the whole population as one room: once enough people are infectious, someone is certainly infected. The Local Lemma treats them as a sparse network: each person is unlikely to be infected and can only infect a few neighbours, so the infection cannot build up, however large the population. The proof will make this precise by controlling the probability of one more bad event *conditioned* on all its neighbours having been avoided — the exact quantity a contagion argument needs.
+:::
+
+## The Local Lemma
 
 <!-- section: the-lemma -->
 
-:::theorem[Lovász Local Lemma]{#lll}
-Let $A_1, \ldots, A_m$ be events in a probability space. Suppose:
+The Local Lemma comes in two forms. The general form is the one that gets proved; the symmetric form is the one that gets used, and it follows from the general one by a single choice of parameters.
 
-- $\Pr[A_i] \leq p$ for each $i$,
-- each $A_i$ is mutually independent of all the $A_j$ except for at most $D$ of them (its "neighbors" in the dependency graph).
-
-If $e\,p\,(D + 1) \le 1$ (where $e = 2.718\ldots$ is Euler's number), then
-
-$$\Pr[\, A_1^c \cap \cdots \cap A_m^c \,] > 0.$$
+:::theorem[Lovász Local Lemma, general form]{#general-lll}
+Let $A_1,\dots,A_m$ be events with dependency graph $D$, and write $N(i)$ for the set of neighbours of $i$ in $D$. Suppose there are real numbers $x_1,\dots,x_m \in [0,1)$ such that
+$$\Pr[A_i] \ \le\ x_i \prod_{j \in N(i)} (1 - x_j) \qquad \text{for every } i .$$
+Then
+$$\Pr\left[\bigcap_{i=1}^m \overline{A_i}\right] \ \ge\ \prod_{i=1}^m (1 - x_i) \ >\ 0 .$$
 :::
 
-That is, there is a positive probability that none of the bad events happen. Note the events need not be identically distributed or even few in number — $m$ can be enormous; only the *per-event* probability $p$ and the *local* degree $D$ enter the condition.
-
-:::intuition
-Each potential disaster is rare (p small) and only "knows about" a few other disasters (D small).
-
-Then even if there are tons of potential disasters, the chance that they all get avoided is still positive.
+:::theorem[Lovász Local Lemma, symmetric form]{#symmetric-lll}
+Let $A_1,\dots,A_m$ be events such that $\Pr[A_i] \le p$ for every $i$ and each $A_i$ is mutually independent of all but at most $d$ of the others. If
+$$e\,p\,(d+1) \ \le\ 1,$$
+where $e = 2.71828\ldots$, then $\Pr\big[\bigcap_i \overline{A_i}\big] > 0$: with positive probability none of the bad events occurs.
 :::
 
-:::example
-*Reading off the largest $D$ the symmetric LLL can tolerate for a given $p$.*
+Three features of the symmetric statement deserve to be said out loud, because each is what makes an application possible.
+
+First, **the number of events is absent**. The hypothesis constrains $p$ and $d$ only; $m$ may be $10^{9}$ or $10^{9^9}$. This is the inheritance from *Independent bad events are never a problem*, and it is exactly what the union bound could not offer.
+
+Second, **the conclusion is only positivity**. The general form gives the explicit lower bound $\prod_i(1 - x_i)$, which in the symmetric case is $(1 - 1/(d+1))^m$ — a quantity that decays exponentially in $m$. The Local Lemma therefore proves existence and never "with high probability"; a random sample is overwhelmingly unlikely to be good, and finding a good one is a separate problem taken up in the applications.
+
+Third, **the constant $e$ is not decorative**. It enters when the general form is specialised, and the bound $epd \le 1$ is known to be close to optimal: there are families of events with $p\,d \approx 1/e$ and no good outcome, so the lemma cannot be improved beyond a constant factor.
+
+:::figure[How much dependence the symmetric lemma tolerates. The curve is $d = 1/(ep) - 1$; a family of bad events is certified whenever its point $(p,d)$ lies on or below it. The tolerated degree grows without bound as the individual events become less likely, which is why the lemma is so effective for $k$-uniform structures, where $p$ falls off like $2^{-k}$.]{#lll-tolerance}
+{
+  "type": "plot",
+  "x": [0.03, 0.30], "y": [0, 12],
+  "xTicks": 0.03, "yTicks": 2, "xLabel": "p", "yLabel": "largest tolerated d",
+  "marks": [
+    { "kind": "function", "fn": "1/(2.718281828*x) - 1", "tone": "result" },
+    { "kind": "point", "at": [0.125, 1.943], "tone": "accent" },
+    { "kind": "text", "at": [0.19, 6.5], "text": "d = 1/(ep) - 1", "tone": "result" },
+    { "kind": "text", "at": [0.20, 3.2], "text": "p = 1/8 allows d = 1", "tone": "accent", "leaderTo": [0.125, 1.943] }
+  ]
+}
+:::
+
+The general form looks harder to use, since it asks for a whole vector $x_1,\dots,x_m$, but that freedom is the point: when the bad events come in several kinds with wildly different probabilities and degrees, one sets $x_i$ separately for each kind. The symmetric form corresponds to the single flat choice $x_i = 1/(d+1)$.
+
+:::example[The largest degree the symmetric lemma can tolerate]
+Given a per-event probability $p = \tfrac18$, what is the largest integer dependency degree $d$ for which the symmetric Local Lemma applies?
 :::
 
 :::solution
-Fix the per-event probability $p$. Solving $e\,p\,(D+1)\le 1$ for the dependency degree gives the clean rule
-$$D \le \frac{1}{e\,p} - 1.$$
+Solve the hypothesis for $d$. From $e\,p\,(d+1) \le 1$,
+$$d \ \le\ \frac{1}{e\,p} - 1 .$$
+With $p = \tfrac18$ this is $\dfrac{8}{e} - 1 \approx 2.9430 - 1 = 1.9430$, so the largest integer is $d = 1$.
 
-take $p = \tfrac18$. Then $\dfrac{1}{e\,p} = \dfrac{8}{e} \approx 2.943$, so $D \le 2.943 - 1 = 1.943$. The largest integer that works is $D = 1$.
+Verify $d = 1$: $e \cdot \tfrac18 \cdot 2 = e/4 \approx 0.6796 \le 1$. $\checkmark$
 
-verify $D = 1$. $e\cdot\tfrac18\cdot(1+1) = \dfrac{2e}{8} = \dfrac{e}{4} \approx 0.680 \le 1$. $\checkmark$
+Verify $d = 2$ fails: $e\cdot\tfrac18\cdot 3 = 3e/8 \approx 1.0194 > 1$, just above the threshold. Final answer: $d = 1$.
 
-verify $D = 2$ fails. $e\cdot\tfrac18\cdot(2+1) = \dfrac{3e}{8} \approx 1.019 > 1$, so the symmetric condition is (just barely) violated — a good candidate for the asymmetric or lopsided LLL.
-
-Interpretation: with $p = \tfrac18$ (e.g. a $4$-uniform hypergraph, where a mono edge has probability $2^{1-4} = \tfrac18$), the crude symmetric LLL certifies a proper $2$-coloring only when each edge overlaps at most one other edge.
+Sanity check: $p = \tfrac18$ is the probability that a $4$-uniform hyperedge is monochromatic under a random $2$-colouring, since $2^{1-4} = \tfrac18$. So for $4$-uniform hypergraphs the symmetric lemma certifies a proper $2$-colouring only when each edge meets at most one other — a very weak conclusion, and a signal that $k = 4$ is simply too small for this tool. $\checkmark$
 :::
 
-## Proof Sketch
+:::pitfall
+The case $d = 0$ needs a moment's care. The general form requires $x_i \in [0,1)$, and the symmetric choice $x_i = 1/(d+1)$ equals $1$ when $d = 0$, which is not allowed. Nothing is lost: $d = 0$ means the events are mutually independent, and *Independent bad events are never a problem* already handles them, needing only $p < 1$ rather than $p \le 1/e$. In every application below $d \ge 1$.
+:::
+
+:::pitfall
+The hypothesis is about the dependency *degree*, not the number of events an outcome can break. A single shared variable is enough to make two events neighbours, however slight the resulting correlation — the definition of mutual independence quantifies over all conditionings, so "almost independent" does not qualify. Conversely, adding extra edges to a dependency graph is always legitimate; a graph with too many edges is still a dependency graph, and only makes $d$, and so the hypothesis, worse.
+:::
+
+:::remark[The lopsided and constructive refinements]{#lll-variants}
+Two strengthenings are worth knowing by name. The *lopsided* Local Lemma replaces mutual independence by the one-sided condition $\Pr[A_i \mid \bigcap_{j \in S}\overline{A_j}] \le \Pr[A_i]$ for sets $S$ avoiding $N(i)$; the proof below goes through with almost no change and the weaker hypothesis is what permutation arguments need. The *constructive* Local Lemma of Moser and Tardos supplies an algorithm, and is described in the applications section.
+:::
+
+:::intuition
+Applying the lemma is a two-column calculation and nothing more. In the left column put the probability of a single bad event, computed as if it were alone in the world. In the right column put the number of other bad events that share a random choice with it. Then multiply: $e p (d+1) \le 1$. Almost all of the skill lies in choosing the bad events so that both columns stay small — splitting a bad event into finer ones lowers $p$ but usually raises $d$, and the art is in balancing them.
+:::
+
+## Proof of the Local Lemma
 
 <!-- section: proof-sketch -->
 
-The proof is by showing a stronger statement on conditional probabilities.
+The proof is short, entirely elementary, and worth following line by line: it is the only place in the chapter where conditioning does real work. The whole difficulty is that the quantity one wants to control, $\Pr\big[\bigcap_i \overline{A_i}\big]$, cannot be estimated directly. What can be estimated is a *conditional* version of it, and that stronger statement is what carries the induction.
+
+:::lemma[Conditional bound]{#lll-conditional}
+Under the hypotheses of the *Lovász Local Lemma, general form*, for every index $i$ and every set $S \subseteq \{1,\dots,m\}$ with $i \notin S$ for which $\Pr\big[\bigcap_{j\in S}\overline{A_j}\big] > 0$,
+$$\Pr\Big[A_i \ \Big|\ \bigcap_{j \in S}\overline{A_j}\Big] \ \le\ x_i .$$
+:::
 
 :::proof
-One proves (by induction on the number of events or by careful use of the chain rule) that for any event $A_i$ and any set of events not including its neighbors,
+Induction on $|S|$.
 
-$$\Pr[A_i \mid \text{none of those occurred}] \leq x_i,$$
+*Base case $|S| = 0$.* The conditioning is vacuous, and the hypothesis gives
+$$\Pr[A_i] \le x_i\prod_{j\in N(i)}(1-x_j) \le x_i,$$
+since every factor lies in $(0,1]$.
 
-where the $x_i$ are numbers in $(0,1)$ satisfying the general LLL inequalities $\Pr[A_i] \leq x_i \prod_{\text{neighbors } j} (1 - x_j)$. The symmetric case takes $x_i = 1/(D+1)$ for all $i$ and uses the inequality $(1 - 1/(D+1))^D \geq 1/e$ to obtain the numerical condition. The product $\prod_i (1 - x_i)$ then lower-bounds the probability that all are avoided.
+*Inductive step.* Let $|S| = s \ge 1$ and assume the claim for all smaller conditioning sets. Split $S$ into the part that touches $i$ in the dependency graph and the part that does not:
+$$S_1 = S \cap N(i), \qquad S_2 = S \setminus N(i).$$
+Write $F_2 = \bigcap_{j \in S_2}\overline{A_j}$ and $F_1 = \bigcap_{j\in S_1}\overline{A_j}$, so that the conditioning event is $F_1 \cap F_2$.
+
+If $S_1 = \emptyset$ then $A_i$ is mutually independent of $\{A_j : j \in S_2\}$, hence of the event $F_2$, and
+$$\Pr[A_i \mid F_2] = \Pr[A_i] \le x_i$$
+as in the base case. So assume $S_1 \ne \emptyset$. By the definition of conditional probability, applied twice,
+$$\Pr[A_i \mid F_1 \cap F_2] \ =\ \frac{\Pr[A_i \cap F_1 \mid F_2]}{\Pr[F_1 \mid F_2]} .$$
+
+*The numerator.* Since $A_i \cap F_1 \subseteq A_i$ and $A_i$ is mutually independent of the events indexed by $S_2$,
+$$\Pr[A_i \cap F_1 \mid F_2] \ \le\ \Pr[A_i \mid F_2] \ =\ \Pr[A_i] \ \le\ x_i \prod_{j \in N(i)}(1 - x_j).$$
+
+*The denominator.* Write $S_1 = \{j_1,\dots,j_r\}$ with $r \ge 1$ and expand by the chain rule:
+$$\Pr[F_1 \mid F_2] \ =\ \prod_{\ell=1}^{r} \Pr\Big[\overline{A_{j_\ell}} \ \Big|\ \overline{A_{j_1}} \cap \cdots \cap \overline{A_{j_{\ell-1}}} \cap F_2\Big].$$
+Each conditioning event here is an intersection of complements indexed by a set of size $(\ell - 1) + |S_2| \le r - 1 + s - r = s - 1 < |S|$, so the inductive hypothesis applies to each factor and gives
+$$\Pr\Big[\overline{A_{j_\ell}} \ \Big|\ \cdots\Big] \ =\ 1 - \Pr\Big[A_{j_\ell} \ \Big|\ \cdots\Big] \ \ge\ 1 - x_{j_\ell} .$$
+Hence
+$$\Pr[F_1 \mid F_2] \ \ge\ \prod_{\ell=1}^{r}\big(1 - x_{j_\ell}\big) \ \ge\ \prod_{j \in N(i)}(1 - x_j),$$
+the last step because $S_1 \subseteq N(i)$ and every omitted factor $1 - x_j$ lies in $(0,1]$. In particular the denominator is strictly positive, so the division above was legitimate and the induction is never conditioning on a null event.
+
+*Conclusion.* Dividing the two bounds, the products over $N(i)$ cancel:
+$$\Pr[A_i \mid F_1 \cap F_2] \ \le\ \frac{x_i \prod_{j\in N(i)}(1-x_j)}{\prod_{j \in N(i)}(1-x_j)} \ =\ x_i .$$
 :::
 
 :::intuition
-You bound the chance that one more disaster happens, given that all the disasters it could possibly influence have already been prevented.
-
-The limited dependence lets the bound factor nicely; the hypothesis makes that conditional chance <1 in a way that multiplies to something positive overall.
+The induction has to be set up in the conditional form because the naive statement — "the probability that no bad event occurs is positive" — gives nothing to induct on. Conditioning on having avoided some of the bad events is *bad news* for the remaining ones: it biases the random choices in directions that make a neighbour more likely. The lemma says the bias is bounded, and the mechanism is visible in the two estimates above. The neighbours $S_1$ can hurt, and their damage is exactly the factor $\prod_{j \in N(i)}(1-x_j)$ in the denominator; the non-neighbours $S_2$ cannot hurt at all, since $A_i$ is mutually independent of them. The hypothesis of the lemma is precisely the statement that $\Pr[A_i]$ was small enough to absorb the worst that the neighbours can do.
 :::
 
-:::example
-*Deriving the symmetric condition $e\,p\,(D+1)\le 1$ from the general inequality $\Pr[A_i] \le x_i \prod_{\text{neighbors }j}(1-x_j)$.*
+With the conditional bound in hand the theorem is two lines.
+
+:::proof
+*Proof of the Lovász Local Lemma, general form.* Apply the chain rule to the whole intersection:
+$$\Pr\left[\bigcap_{i=1}^m \overline{A_i}\right] = \prod_{i=1}^{m} \Pr\Big[\overline{A_i} \ \Big|\ \overline{A_1}\cap\cdots\cap\overline{A_{i-1}}\Big] \ \ge\ \prod_{i=1}^m (1 - x_i),$$
+where each factor is bounded below using the *Conditional bound* with $S = \{1,\dots,i-1\}$. Every $x_i$ lies in $[0,1)$, so the product is strictly positive.
+:::
+
+The symmetric form is now a matter of choosing the $x_i$ and estimating one power.
+
+:::proof
+*Proof of the Lovász Local Lemma, symmetric form.* If $d = 0$ the events are mutually independent and $p \le 1/e < 1$, so *Independent bad events are never a problem* applies directly. Assume $d \ge 1$ and put
+$$x_i = x = \frac{1}{d+1} \in (0,1) \qquad \text{for every } i.$$
+Each $A_i$ has at most $d$ neighbours and each factor $1 - x$ lies in $(0,1)$, so the product over $N(i)$ is smallest when there are exactly $d$ neighbours:
+$$x_i \prod_{j \in N(i)}(1 - x_j) \ \ge\ x\,(1-x)^{d} \ =\ \frac{1}{d+1}\left(1 - \frac{1}{d+1}\right)^{d}.$$
+The sequence $\big(1 - \tfrac{1}{d+1}\big)^{d}$ decreases to $1/e$ and stays above it for every finite $d \ge 1$ — equivalently $\big(1+\tfrac1d\big)^{d} < e$ — so
+$$x(1-x)^d \ >\ \frac{1}{e\,(d+1)} \ \ge\ p \ \ge\ \Pr[A_i],$$
+the middle inequality being the hypothesis $e\,p\,(d+1)\le 1$. The condition of the general form therefore holds with this choice of $x_i$, and the conclusion follows.
+:::
+
+:::example[Checking the $1/e$ estimate]
+Verify the inequality $x(1-x)^d > \dfrac{1}{e(d+1)}$ used above in the case $d = 1$, and compare the two sides.
 :::
 
 :::solution
-a uniform choice of $x_i$. Set every $x_i = x = \dfrac{1}{D+1}$. Each event has at most $D$ neighbors, and every factor $1 - x_j = 1 - x < 1$, so the product over neighbors is *smallest* (hardest to satisfy) when there are exactly $D$ of them:
-$$x_i \prod_{\text{neighbors }j}(1-x_j) \;\ge\; x\,(1-x)^{D}.$$
-Thus it suffices to have $p \le x(1-x)^D$.
+Take $d = 1$, so $x = \tfrac{1}{d+1} = \tfrac12$.
 
-plug in $x = \tfrac{1}{D+1}$.
-$$x(1-x)^D = \frac{1}{D+1}\left(1 - \frac{1}{D+1}\right)^{D} = \frac{1}{D+1}\left(\frac{D}{D+1}\right)^{D}.$$
+The left side: $x(1-x)^d = \tfrac12 \cdot \tfrac12 = \tfrac14 = 0.25$.
 
-bound the power by $1/e$. The sequence $\left(\dfrac{D}{D+1}\right)^{D} = \left(1 - \dfrac{1}{D+1}\right)^{D}$ decreases to $1/e$ from above, so $\left(\dfrac{D}{D+1}\right)^{D} > \dfrac{1}{e}$ for every finite $D$. Therefore
-$$x(1-x)^D > \frac{1}{e(D+1)}.$$
+The right side: $\dfrac{1}{e(d+1)} = \dfrac{1}{2e} \approx 0.18394$.
 
-assemble. If $e\,p\,(D+1) \le 1$, i.e. $p \le \dfrac{1}{e(D+1)}$, then $p < x(1-x)^D$, the general inequality holds, and the LLL applies.
+Indeed $0.25 > 0.18394$, so the estimate holds with room to spare. Final answer: the left side is $1/4$, the right side is $1/(2e) \approx 0.184$.
 
-Sanity check ($D=1$): $x = \tfrac12$, $x(1-x)^1 = \tfrac14 = 0.25$, while $\tfrac{1}{e(D+1)} = \tfrac{1}{2e} \approx 0.184$. Indeed $0.25 > 0.184$, so the $1/e$ bound is a genuine (safe) underestimate. $\checkmark$
+Sanity check: the gap is the factor $\big(1-\tfrac1{d+1}\big)^d e = (1/2)\cdot e \approx 1.359$, which is exactly the amount by which $\big(1-\tfrac{1}{d+1}\big)^d$ exceeds $1/e$ at $d=1$. As $d$ grows this factor decreases towards $1$, so the symmetric form becomes tight in the limit — which is why the constant $e$, and not something smaller, appears in the statement. $\checkmark$
 :::
 
-## Applications
+:::pitfall
+The induction is on the size of the conditioning set $S$, not on the number of events $m$ or on anything resembling the structure of the dependency graph. That is what lets the same proof cover dependency graphs with cycles: nothing in the argument requires $D$ to be a tree or even connected. Attempting an induction "on the events one at a time" instead fails, because removing an event from consideration does not restore independence to the rest.
+:::
+
+## Applications of the Local Lemma
 
 <!-- section: applications -->
 
-The LLL is used for:
+Every application below follows the same script: name the random choices, name the bad events, compute $p$, bound $d$, and check $e\,p\,(d+1) \le 1$. What differs is only how the bad events are chosen.
 
-- Hypergraph 2-colorability (property B) when maximum degree is not too large relative to uniformity.
-- List coloring and choice-number bounds $\chi_\ell(G) = O(\Delta)$.
-- Non-repetitive colorings, acyclic colorings, frugal colorings.
-- Latin squares, edge colorings, Ramsey numbers for sparse graphs, etc.
-- Many results in positional games, random structures, and theoretical CS.
+The cleanest case is satisfiability, where the bad events are given by the problem itself.
 
-The algorithmic LLL turns many of these existence proofs into efficient randomized algorithms.
+:::theorem[Satisfiability of sparse $k$-CNF formulas]{#k-sat}
+Let $F$ be a $k$-CNF formula in which every clause shares a variable with at most $d$ other clauses. If
+$$d \ \le\ \frac{2^{k}}{e} - 1,$$
+then $F$ is satisfiable.
+:::
 
-:::recipe[Moser–Tardos resampling]{#moser-tardos}
-While there is a currently bad event, resample all the random variables that affect it. Under the LLL condition the expected number of resamples is linear.
+:::proof
+Assign each variable true or false independently and uniformly, and let $A_j$ be the event that clause $j$ is violated. As computed in *A satisfiability problem the union bound cannot reach*, $\Pr[A_j] = 2^{-k} =: p$, since the $k$ literals of a clause use distinct variables. Each $A_j$ is determined by the variables of clause $j$, so by the canonical construction of a dependency graph it is mutually independent of all events whose clauses avoid those variables; the dependency degree is therefore at most $d$. The hypothesis rearranges to $e\,2^{-k}(d+1)\le 1$, so the *Lovász Local Lemma, symmetric form* gives positive probability that no clause is violated. Any outcome in that event is a satisfying assignment.
+:::
+
+:::remark[How strong is this?]{#k-sat-strength}
+For $k = 20$ the theorem tolerates $d$ up to $2^{20}/e - 1 \approx 385{,}000$, with no constraint whatsoever on the number of clauses. The union bound, by contrast, capped the formula at $2^{20} \approx 10^6$ clauses in total. The correct asymptotic threshold for this problem is $d = \Theta(2^k/k)$, so the Local Lemma is off by only a factor of order $k$ — and the matching upper bound construction shows no argument of this form can do much better.
+:::
+
+The same three lines colour a hypergraph. A $k$-uniform hypergraph has **property B** if its vertices can be $2$-coloured with no edge monochromatic.
+
+:::theorem[Property B for sparse hypergraphs]{#property-b}
+Let $H$ be a $k$-uniform hypergraph in which every edge meets at most $d$ other edges. If
+$$e\,(d+1)\,2^{\,1-k} \ \le\ 1, \qquad\text{that is}\qquad d \ \le\ \frac{2^{k-1}}{e} - 1,$$
+then $H$ has property B. In particular, if every vertex lies in at most $\Delta$ edges, then $H$ has property B whenever $e\,k\,\Delta\,2^{1-k} \le 1$.
+:::
+
+:::proof
+Colour each vertex red or blue independently and uniformly. For an edge $f$ let $A_f$ be the event that all $k$ of its vertices receive the same colour; then $\Pr[A_f] = 2\cdot 2^{-k} = 2^{1-k} =: p$. The event $A_f$ depends only on the colours of the vertices of $f$, so it is mutually independent of all $A_{f'}$ with $f' \cap f = \emptyset$, and the dependency degree is at most $d$. The hypothesis is exactly $e\,p\,(d+1)\le 1$, so the symmetric lemma applies and a proper $2$-colouring exists.
+
+For the second statement, each of the $k$ vertices of $f$ lies in at most $\Delta - 1$ further edges, so $f$ meets at most $k(\Delta-1)$ others and $d + 1 \le k(\Delta - 1) + 1 \le k\Delta$. Substituting into the first condition gives the stated form.
 :::
 
 :::intuition
-"Keep rerolling the dice that affect the currently broken constraints. Because the bad events are locally rare and locally dependent, you won't have to reroll forever; you'll quickly reach a global good configuration."
+Notice what the two theorems have in common: the individual bad event is exponentially unlikely in $k$, while the dependency degree grows only polynomially in the local structure. That mismatch — exponentially small $p$ against a merely large $d$ — is the situation the Local Lemma was built for, and it is why $k$-uniform problems are its natural home. Whenever the parameter that controls $p$ is in the exponent and the one that controls $d$ is not, the lemma will succeed for all large $k$.
 :::
 
-:::example
-*List coloring: lists of size $\ell \ge 2e\Delta$ always suffice, via LLL.* Here $\Delta$ is the maximum degree and each vertex $v$ has its own list $L_v$ of allowed colors with $|L_v| = \ell$.
+The lemma also improves the Ramsey bound again, by a further factor of $\sqrt 2$ over the deletion argument.
+
+:::theorem[Ramsey lower bound by the Local Lemma]{#ramsey-lll}
+$$R(k,k) \ \ge\ \big(1+o(1)\big)\,\frac{\sqrt2}{e}\,k\,2^{k/2}.$$
+:::
+
+:::proof
+Fix $c < \sqrt2/e$ and set $n = \lfloor c\,k\,2^{k/2}\rfloor$. Colour the edges of $K_n$ independently and uniformly, and for each $k$-set $S$ let $A_S$ be the event that $S$ is monochromatic, so $p = \Pr[A_S] = 2^{1-\binom k2}$.
+
+*The dependency degree.* $A_S$ is determined by the edges inside $S$, so it is mutually independent of all $A_T$ with $|S \cap T| \le 1$, those $T$ sharing no edge with $S$. The number of $k$-sets $T \ne S$ with $|S\cap T|\ge 2$ is at most $\binom k2\binom{n}{k-2}$, so
+$$d + 1 \ \le\ \binom k2 \binom{n}{k-2} + 1 \ \le\ k^2\binom{n}{k-2}$$
+for $k \ge 2$.
+
+*The check.* Using $\binom{n}{k-2}\le n^{k-2}/(k-2)! \le \big(ne/(k-2)\big)^{k-2}$ and $ne/(k-2) = c\,e\,2^{k/2}\cdot\frac{k}{k-2}$,
+$$e\,p\,(d+1) \ \le\ e\,k^2\,2^{\,1-\frac{k(k-1)}2}\left(c\,e\,2^{k/2}\right)^{k-2}\left(\frac{k}{k-2}\right)^{k-2}.$$
+The last factor tends to $e^2$ and is in particular bounded. Collecting the powers of $2$, the exponent is
+$$1 - \frac{k^2 - k}{2} + \frac{k(k-2)}{2} = 1 - \frac k2,$$
+so the whole expression is $O\big(k^2\big)\,(c\,e)^{k-2}\,2^{-k/2} = O\big(k^2\big)\left(\frac{c\,e}{\sqrt 2}\right)^{k}$. Since $ce/\sqrt2 < 1$ this tends to $0$ geometrically and is below $1$ for all large $k$.
+
+*Conclusion.* The symmetric lemma gives, for all large $k$, a colouring of $K_n$ with no monochromatic $K_k$, so $R(k,k) > n = \lfloor ck2^{k/2}\rfloor$. Letting $c$ increase to $\sqrt2/e$ gives the stated asymptotic bound.
+:::
+
+:::remark[Three bounds, one colouring]{#three-ramsey-bounds}
+The same random colouring has now been analysed three times, and each refinement bought a factor. The union bound gave $2^{k/2}$; deletion gave $(k/e)2^{k/2}$, a factor of order $k$ better because the few monochromatic sets could be removed; and the Local Lemma gave $(\sqrt2/e)k2^{k/2}$, a further factor of $\sqrt2$, because two $k$-sets sharing at most one vertex do not interact at all. All three are still within a factor $k$ of one another, and the constant $\sqrt2/e$ has not been improved since 1975 — the true order of $R(k,k)^{1/k}$ remains one of the outstanding problems of combinatorics.
+:::
+
+:::example[List colouring with lists of size $O(\Delta)$]
+A graph $G$ has maximum degree $\Delta$, and every vertex $v$ carries a list $L_v$ of $\ell$ allowed colours. Show that a proper colouring respecting the lists exists whenever $\ell \ge e(2\Delta+1)$.
 :::
 
 :::solution
-the random experiment. Color each vertex independently with a uniformly random color from its own list.
+The random choices. Colour each vertex independently with a uniformly random colour from its own list.
 
-bad events and their probability. For each edge $uv$ let $A_{uv}$ be the bad event "$u$ and $v$ receive the same color." Conditioning on $u$'s color, at most one color in $L_v$ collides, so
-$$\Pr[A_{uv}] \le \frac{1}{\ell} =: p.$$
+The bad events and $p$. For each edge $uv$ let $A_{uv}$ be the event that $u$ and $v$ receive the same colour. Condition on the colour of $u$: at most one colour of $L_v$ matches it, and $v$ picks uniformly from $\ell$ colours, so
+$$\Pr[A_{uv}] \ \le\ \frac1\ell \ =:\ p.$$
 
-dependency degree. $A_{uv}$ shares a variable only with edges touching $u$ or $v$. Each of $u,v$ has at most $\Delta$ incident edges, so $A_{uv}$ has at most $2\Delta - 2 < 2\Delta$ neighbors: $D \le 2\Delta$.
+The dependency degree. $A_{uv}$ is determined by the choices at $u$ and $v$, so it is mutually independent of all events on edges disjoint from $\{u,v\}$. Each of $u$ and $v$ meets at most $\Delta - 1$ further edges, so $d \le 2(\Delta-1) < 2\Delta$ and $d + 1 \le 2\Delta + 1$.
 
-check the LLL condition.
-$$e\,p\,(D+1) \le e\cdot\frac1\ell\cdot(2\Delta+1) \le \frac{e\,(2\Delta+1)}{\ell}.$$
-This is $\le 1$ as soon as $\ell \ge e(2\Delta+1)$, in particular for $\ell \ge 2e\Delta + e$. Rounding, lists of size $\ell = \lceil 2e\Delta\rceil + 1$ suffice, giving $\chi_\ell(G) = O(\Delta)$.
+The check. $e\,p\,(d+1) \le e(2\Delta+1)/\ell \le 1$ exactly when $\ell \ge e(2\Delta+1)$. The symmetric lemma then gives positive probability that no edge is monochromatic, that is, a proper list colouring. Final answer: lists of size $\lceil e(2\Delta+1)\rceil$ suffice, so the choice number satisfies $\chi_\ell(G) = O(\Delta)$.
 
-make it algorithmic (Moser–Tardos). Sample as above; while some edge is monochromatic, resample the colors of its two endpoints. Under the LLL condition the expected number of resamples is $O(m)$ (linear in the number of edges), so a proper list coloring is found in expected polynomial time.
+Sanity check: for a single edge, $\Delta = 1$ and the formula asks for $\ell \ge 3e \approx 8.16$, whereas lists of size $2$ obviously suffice. The bound is loose by a constant factor on small graphs, as expected — its content is the linear dependence on $\Delta$. $\checkmark$
+:::
 
-Sanity check: for a single edge ($\Delta = 1$) the formula asks for $\ell \ge e(2\cdot1+1) = 3e \approx 8.15$; of course lists of size $2$ already suffice here, confirming the LLL bound is loose by constants but has the right $O(\Delta)$ shape. $\checkmark$
+Every result in this section is an existence statement, and a random sample is essentially never good: the lemma's own lower bound $\prod_i (1-x_i)$ decays exponentially in the number of bad events. For thirty years that gap between existence and construction was genuine. It was closed in 2009.
+
+:::recipe[Moser–Tardos resampling]{#moser-tardos}
+Suppose each bad event $A_i$ is determined by a subset $S_i$ of independent random variables.
+
+1. Sample every variable.
+2. While some bad event $A_i$ currently holds, pick one such $i$ and resample every variable in $S_i$, leaving all other variables untouched.
+3. Stop when no bad event holds, and output the current assignment.
+
+Under the hypothesis of the general Local Lemma the algorithm terminates with probability $1$, and the expected number of resamplings of $A_i$ is at most $x_i/(1-x_i)$ — a total of $O(m)$ steps in the symmetric case with $x_i = 1/(d+1)$.
+:::
+
+:::intuition
+The striking feature of the algorithm is that it is the obvious one: repair whatever is currently broken, and pay no attention to what that might break elsewhere. The analysis, which is beyond our scope here, works by charging every resampling to a *witness tree* recording its causal history, and showing that a tree of size $t$ occurs with probability at most $\prod(\text{the }x_i\text{ along it})$, so that large trees are too rare to appear. Everything the Local Lemma assumes about local sparsity is what keeps those trees from proliferating.
+:::
+
+:::pitfall
+The resampling algorithm needs the probability space to be presented as independent variables with each bad event determined by a block of them. The abstract Local Lemma assumes only mutual independence, which is weaker, and there are spaces satisfying the abstract hypothesis where no such variable presentation exists. Applications stated in the abstract form therefore do not automatically become algorithmic.
 :::
 
 ## Common Mistakes
 
-- **Thinking the method always gives a constructive / efficient algorithm**: It gives existence; derandomization (conditional expectations, pessimistic estimators, or algorithmic LLL) is a separate hard step.
-- **Using only the union bound when dependence is limited**: The LLL or Lovász Local Lemma or Janson inequalities often rescue the argument.
-- **Forgetting to verify that the probability space is well-defined**: The random experiment must be clearly described.
-- **Confusing 'positive probability' with 'probability close to 1'**: For existence >0 is enough; concentration gives "with high probability" which is stronger and useful for algorithmic sampling.
-- **Applying deletion without checking the cost per deletion**: If deleting one bad thing costs too many good elements the expectation may go negative.
-
-The Lovász Local Lemma (LLL) is a fundamental tool that strengthens the probabilistic method to situations with many bad events that are only locally dependent. It shows that if each bad event is sufficiently unlikely and depends on only a limited number of other bad events, then there is a positive probability that none of them occur.
-
-- **Using the symmetric LLL when probabilities or degrees vary wildly**: The general (asymmetric) version with per-event $x_i$ often saves the day.
-- **Forgetting the +1 or the e in the bound**: The precise constant matters for borderline cases; sometimes a slightly better analysis (or the lopsided LLL) works when the basic bound is 1.01 >1.
-- **Confusing dependence with correlation**: The LLL requires *mutual independence* from the non-neighbors (in the probability space), not merely uncorrelated.
-- **Thinking the LLL gives probability close to 1**: It only gives >0; for high-probability results one needs concentration or the algorithmic version with many independent trials.
-- **Applying it without defining the probability space and the exact dependency graph**: The lemma is only as good as the modeling of "bad events" and their dependencies.
-
-The Combinatorial Nullstellensatz, introduced by Noga Alon in 1999, is a powerful algebraic tool that guarantees the existence of points in a grid where a multivariate polynomial does not vanish, provided a certain "leading" monomial has nonzero coefficient and the grid is large enough in each coordinate relative to the degrees.
-
-It has become a central instrument in the polynomial method in combinatorics.
-
-- **Forgetting the exact degree condition $\deg f = \sum d_i$**: The monomial must be a "top-degree" term; lower terms do not help for the argument.
-- **Misidentifying which monomial's coefficient must be nonzero**: It has to be the specific $\prod x_i^{d_i}$ with the $d_i$ matching the $|S_i|-1$ bounds you want.
-- **Applying over rings that are not fields**: The statement requires a field (for the polynomial ring to behave well with respect to roots).
-- **Thinking the theorem constructs the point**: It is existential; finding the point may still be hard (though sometimes the proof is constructive or the point is obvious once existence is known).
-- **Confusing with the ordinary Hilbert Nullstellensatz**: CN is a quantitative, combinatorial, "non-vanishing" version tailored to finite grids rather than algebraic varieties.
-
-Additive combinatorics studies the additive structure (and sometimes multiplicative) of subsets of abelian groups, primarily the integers, cyclic groups Z/pZ, and finite fields. Its central questions concern the size of sumsets, the presence of arithmetic progressions and other configurations, and the structure of sets with "small doubling."
-
-It sits at the crossroads of combinatorics, number theory, harmonic analysis, and ergodic theory.
-
-- **Assuming |A+B| is always ≈ |A| |B|**: In groups with torsion or for structured sets it can be much smaller.
-- **Confusing sumset size with density**: In infinite groups one works with upper density or asymptotic density.
-- **Thinking Cauchy-Davenport holds in every group**: It fails dramatically in Z (no wrap) or in groups with 2-torsion.
-- **Forgetting that structure theorems are qualitative**: Freiman gives existence of a model; effective versions and quantitative bounds are much harder (current research).
-- **Mixing additive combinatorics with extremal graph theory**: While there are connections (e.g. via Cayley graphs or Balog-Wooley), the core questions are about sums inside the group, not edge counts.
+- **Expecting a construction.** The method proves an object exists. Turning that into an algorithm is separate work — the method of conditional expectations and pessimistic estimators for union-bound arguments, Moser–Tardos resampling for the Local Lemma.
+- **Confusing "positive probability" with "high probability".** Existence needs only $\Pr > 0$, and the Local Lemma typically delivers a probability exponentially close to $0$. A statement about a *typical* random object needs a concentration argument instead.
+- **Treating a large expectation as evidence of existence.** $\mathbb{E}[X] \to \infty$ is consistent with $\Pr[X = 0] \to 1$. Only a variance bound, via *The second moment method*, rules that out.
+- **Deleting without costing the deletion.** Deletion works only when one removed element destroys a whole bad substructure and the expected number of removals is small compared with the size of the object.
+- **Mistaking pairwise independence for mutual independence.** The Local Lemma needs mutual independence from the non-neighbours; three pairwise independent events need not be mutually independent, and a dependency graph drawn from correlations alone can be wrong.
+- **Forgetting the $+1$ or the $e$.** The condition is $e\,p\,(d+1)\le1$, not $e\,p\,d \le 1$ or $p\,d\le1$. Borderline cases are common, and at $d = 0$ the symmetric form must be replaced by the independent case.
+- **Using the symmetric form when the events are of different kinds.** If the bad events split into families with very different probabilities and degrees, the general form with a separate $x_i$ per family is usually the only one that works.
+- **Leaving the probability space undescribed.** The random experiment, the bad events, and the reason two events are neighbours all have to be written down. Most incorrect applications of the method are incorrect at exactly that step.
