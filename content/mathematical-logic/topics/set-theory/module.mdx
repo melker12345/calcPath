@@ -1,251 +1,608 @@
 ---
-title: Set Theory
+title: Set Theory as a First-Order Theory
 ---
 
-# Set Theory
+# Set Theory as a First-Order Theory
 
-Set theory is the foundation on which almost all of modern mathematics is built. Every mathematical object — numbers, functions, spaces, groups — can be encoded as a set. Zermelo-Fraenkel set theory with the Axiom of Choice (ZFC) is the standard axiomatic system.
+Every other chapter of this subject studies a logical apparatus — connectives, quantifiers, deduction, structures, computation — and tests it on small examples. This chapter turns that apparatus on the largest object it has: the axiom system that the rest of mathematics is written in.
 
-The axioms carefully restrict how sets may be formed so that paradoxes (Russell's paradox) are avoided while still allowing all the constructions mathematicians need.
+The move is easy to describe and hard to absorb. ZFC is a list of *sentences* in a first-order language with one binary relation symbol, $\in$. That is all it is. It is not a description of a universe of sets, any more than the group axioms are a description of a particular group; it is a constraint, and the things satisfying the constraint are its models. Once that reading is taken seriously, the questions of this chapter become ordinary model theory: which sentences follow from the list, what the models look like, when two models agree about a formula, and what a theory of this strength can prove about theories of this strength.
 
-## The Zermelo-Fraenkel Axioms (ZFC)
+The payoff is that several facts that look mystical from inside mathematics become routine. A countable model of set theory contains a set it believes is uncountable, and no contradiction follows. The continuum hypothesis has no truth value determined by ZFC, for the same reason commutativity has none determined by the group axioms. ZFC needs infinitely many axioms and cannot be trimmed to finitely many. Each of these is a statement about a theory and its models, provable with the tools of the chapters *Model Theory*, *Formal Systems* and *Incompleteness*.
+
+:::note[Scope, and where the set theory itself lives]
+The mathematics *of* sets — the axioms one at a time and what each builds, ordinal and cardinal arithmetic, the alephs, Zorn's lemma and the other equivalents of choice, the construction of $L$, forcing posets and generic filters — is the subject **Set Theory**, whose chapters *Naive Set Theory*, *ZFC Axioms*, *Ordinals & Cardinals*, *The Axiom of Choice*, *Independence & Forcing* and *Advanced Set Theory* treat it at length. This chapter assumes those results and studies ZFC *as a theory*: schemas, relativisation, absoluteness, reflection, models, and independence as a model-theoretic phenomenon. Where a set-theoretic fact is needed it is stated and attributed, not re-derived.
+:::
+
+Throughout, $\mathcal{L}_\in$ is the language of set theory, $V$ denotes the universe of all sets, $\mathrm{Ord}$ the class of ordinals, $V_\alpha$ the levels of the cumulative hierarchy, and $\operatorname{Con}(T)$ the arithmetical sentence asserting that the theory $T$ proves no contradiction. Lower-case Greek $\varphi, \psi, \chi$ always denote formulas; upper-case $M, N$ denote models or classes.
+
+## ZFC as a List of Sentences
 
 <!-- section: zfc -->
 
-Zermelo-Fraenkel set theory with the Axiom of Choice (ZFC) provides the standard foundation for virtually all of mathematics. The axioms were designed to permit every construction working mathematicians actually need—while blocking the paradoxes (such as Russell's "set of all sets that do not contain themselves") that destroyed naive set theory at the beginning of the twentieth century.
+A first-order theory is a set of sentences in a fixed language, and everything a logician asks about ZFC is asked about that set of sentences. So the first job is to see the axioms written as formulas rather than described in English — because two of them are not formulas at all.
 
-The core philosophy is conservative construction: sets are completely determined by their elements, and the only legitimate ways to build new sets from old ones are explicitly listed operations that stay "local" and avoid self-reference. Infinity is postulated so that the natural numbers exist inside the universe. The Axiom of Choice, listed apart because it is independent of the remaining axioms, asserts that arbitrary collections of nonempty sets admit choice functions; its consequences range from "every vector space has a basis" to the well-ordering theorem.
+:::definition[The theory ZFC]{#zfc-theory}
+$\mathcal{L}_\in$ is the first-order language whose only non-logical symbol is the binary relation symbol $\in$; its atomic formulas are $x \in y$ and $x = y$. **ZFC** is the $\mathcal{L}_\in$-theory consisting of the sentences
 
-In this section you will learn each axiom, the motivation behind it, why the Axiom of Choice is special, and how the whole system enables the transfinite and cardinal arithmetic that appear later.
+$$\text{Extensionality},\ \text{Pairing},\ \text{Union},\ \text{Power Set},\ \text{Infinity},\ \text{Foundation},\ \text{Choice},$$
 
-:::definition[The axioms of ZFC]{#zfc-axioms}
-In most versions the axioms are:
+together with every instance of the **Separation** and **Replacement** schemas. **ZF** is ZFC without Choice, and $\mathrm{ZFC}^-$ is ZFC without Power Set.
+:::
 
-- Extensionality: sets with the same elements are equal.
-- Empty Set: there is a set with no elements.
-- Pairing, Union, Power Set: basic ways to build new sets from old.
-- Infinity: there is an infinite set (containing the empty set and closed under successor).
-- Separation (Aussonderung): from any set you may form the subset of elements satisfying a property (avoids Russell).
-- Replacement: the image of a set under a definable function is a set.
-- Foundation (Regularity): every non-empty set has an $\in$-minimal element (no infinite descending membership chains).
+Written out, Extensionality and Foundation are single sentences of a few symbols each:
+
+$$\forall x\, \forall y\, \bigl(\forall z\,(z \in x \leftrightarrow z \in y) \to x = y\bigr),$$
+
+$$\forall x\, \bigl(\exists y\,(y \in x) \to \exists y\,(y \in x \wedge \neg\exists z\,(z \in y \wedge z \in x))\bigr).$$
+
+There is no symbol for $\emptyset$, $\cup$, $\mathcal{P}$ or $\omega$ anywhere in the language. Each of those is an abbreviation licensed by an existence axiom together with a uniqueness theorem proved from Extensionality, exactly as the chapter *ZFC Axioms* sets out. For a logician the point of the austerity is that the syntax stays finite and checkable: one can ask whether a string is a formula, whether a finite list of formulas is a proof, and — crucially for Gödel's theorems — whether a string is an axiom.
+
+:::definition[Axiom schema]{#schema}
+An **axiom schema** is a template containing a syntactic parameter, together with the rule that every result of substituting an $\mathcal{L}_\in$-formula for that parameter is an axiom. **Separation** is the schema whose instance for a formula $\varphi(x, \bar{p})$, in which $y$ is not free, is
+
+$$\forall \bar{p}\, \forall a\, \exists y\, \forall x\,\bigl(x \in y \leftrightarrow (x \in a \wedge \varphi(x,\bar{p}))\bigr),$$
+
+and **Replacement** is the schema whose instance for $\varphi(x,y,\bar{p})$ is
+
+$$\forall \bar{p}\, \forall a\,\Bigl(\forall x \in a\, \exists! y\, \varphi(x,y,\bar{p}) \to \exists b\, \forall x \in a\, \exists y \in b\; \varphi(x,y,\bar{p})\Bigr).$$
+:::
+
+The parameters $\bar{p}$ are not decoration. Without them one could not separate $\{x \in a : x \in p\}$ for an arbitrary set $p$, and the resulting theory would be far weaker than intended.
+
+:::intuition
+A schema is a machine that emits axioms, not an axiom. The English sentence "for every property, the sub-collection of $a$ with that property is a set" quantifies over properties, and first-order logic has no variables ranging over formulas — its quantifiers range over the objects of the structure, which here are sets. So the quantification is pushed out of the object language into the metalanguage: instead of one sentence about all formulas, we take infinitely many sentences, one per formula, and the infinitude is managed by a rule anyone can check mechanically.
+:::
+
+:::pitfall
+"Infinitely many axioms" does not mean "not a legitimate theory". What Gödel's theorems and every proof-theoretic argument require is that the axiom set be **effectively axiomatised** — that some algorithm decides whether a given sentence is an axiom. Separation and Replacement pass that test, since recognising an instance is a parsing problem. A theory axiomatised by *all true arithmetic sentences* is the kind that fails it.
+:::
+
+Because the two schemas overlap, the list above is redundant, and seeing exactly how is a useful exercise in reading an instance.
+
+:::theorem[Separation is derivable from Replacement]{#separation-from-replacement}
+Over the remaining axioms of ZF, every instance of Separation follows from an instance of Replacement.
+:::
+
+:::proof
+Fix $\varphi(x,\bar{p})$ and a set $a$, and let
+
+$$\psi(x,y,\bar p) \ \equiv\ \bigl(\varphi(x,\bar p) \wedge y = \{x\}\bigr) \vee \bigl(\neg\varphi(x,\bar p) \wedge y = \emptyset\bigr),$$
+
+where $y = \{x\}$ and $y = \emptyset$ abbreviate their $\Delta_0$ definitions, so that $\psi$ is a genuine $\mathcal{L}_\in$-formula. It is functional on $a$: for each $x \in a$ exactly one $y$ answers to it, namely the singleton $\{x\}$ when $\varphi(x,\bar p)$ holds and $\emptyset$ when it fails, and Pairing guarantees the singleton exists. The instance of Replacement for $\psi$ therefore yields a set
+
+$$b = \bigl\{\,\{x\} : x \in a,\ \varphi(x,\bar p)\,\bigr\} \cup \{\emptyset\}$$
+
+— the second term present only if some $x \in a$ fails $\varphi$. Applying Union to $b$ gives
+
+$$\bigcup b = \{x \in a : \varphi(x,\bar p)\},$$
+
+since each singleton contributes its one element and $\emptyset$ contributes nothing. That is the conclusion of the Separation instance for $\varphi$, and the argument used only Pairing, Union and one instance of Replacement.
+:::
+
+Separation is nevertheless listed, for two reasons a logician cares about. First, the subtheory of ZF with Replacement deleted and Separation retained — **Zermelo set theory**, written Z — is a genuinely different and strictly weaker theory, and one wants a name for it; the last section of this chapter exhibits a model of it. Second, keeping Separation separate lets one calibrate which instances an argument actually needs, which is what makes fine-grained results such as "this theorem uses only $\Delta_0$-Separation" statable.
+
+:::example[Reading a single instance]
+Write the instance of Replacement that proves $\{ \mathcal{P}(x) : x \in a \}$ is a set, and say which instance of Separation the same formula gives.
+:::
+
+:::solution
+1. Let $\varphi(x,y)$ be $\forall z\,(z \in y \leftrightarrow \forall w\,(w \in z \to w \in x))$, which says "$y$ is the set of all subsets of $x$".
+2. Power Set gives existence of such a $y$ for each $x$, and Extensionality gives uniqueness, so $\forall x \in a\,\exists! y\,\varphi(x,y)$. That is the hypothesis of the Replacement instance for this $\varphi$, and its conclusion hands us the set $\{\mathcal{P}(x) : x \in a\}$.
+3. The Separation instance for the formula $\exists u \in a\,\varphi(u,x)$ carves the same collection out of any set already known to contain it.
+4. A different $\varphi$ gives a *different axiom*. There is no single sentence of $\mathcal{L}_\in$ from which both instances follow uniformly; the uniformity lives only in the template.
+:::
+
+The schemas are not a presentational convenience that a cleverer axiomatisation could remove. That is a theorem, and one of the cleanest illustrations in mathematics of the second incompleteness theorem doing real work.
+
+:::theorem[ZFC is not finitely axiomatisable]{#not-finitely-axiomatisable}
+If ZFC is consistent, then there is no finite set $T$ of $\mathcal{L}_\in$-sentences with exactly the same consequences as ZFC.
+:::
+
+:::proof[Sketch]
+Suppose $T$ were such a finite set, and let $\tau$ be the conjunction of its members, so that ZFC $\vdash \tau$ and $\tau \vdash \sigma$ for every axiom $\sigma$ of ZFC. The Reflection Principle, proved in the section *Reflecting the Universe in a Set*, says that for each finite list of formulas ZFC proves some level $V_\alpha$ agrees with $V$ about all of them; applied to the conjuncts of $\tau$ it yields ZFC $\vdash \exists\alpha\,(V_\alpha \models \tau)$. But $V_\alpha$ is a *set*, so this says ZFC proves that $\tau$ has a model, and the soundness theorem — formalisable in ZFC for set-sized structures — gives ZFC $\vdash \operatorname{Con}(\tau)$. Since $\tau$ axiomatises ZFC, ZFC proves $\operatorname{Con}(\tau) \to \operatorname{Con}(\mathrm{ZFC})$, so ZFC $\vdash \operatorname{Con}(\mathrm{ZFC})$, contradicting Gödel's second incompleteness theorem from the chapter *Incompleteness*. The argument rests on two imported results: reflection, proved below, and Gödel's second theorem, whose proof is not reproduced here.
+:::
+
+:::remark[NBG, and what is really going on]
+Von Neumann–Bernays–Gödel class theory **is** finitely axiomatisable, and it proves exactly the same $\mathcal{L}_\in$-sentences as ZFC — it is a conservative extension. There is no paradox: NBG has variables for classes, so the single sentence "for every class $F$ that is a function and every set $a$, the image $F[a]$ is a set" does the work of the whole Replacement schema. The reflection argument fails for NBG because the reflecting object would have to satisfy the class quantifiers too. The lesson is that finite axiomatisability is a property of a *presentation in a language*, not of a body of mathematics.
+:::
+
+:::summary
+ZFC is an effectively axiomatised, infinite set of $\mathcal{L}_\in$-sentences. Separation and Replacement are schemas because first-order quantifiers range over sets and not over formulas; Replacement subsumes Separation instance by instance; and the infinitude is unavoidable, since a finite axiomatisation would let ZFC prove its own consistency.
+:::
+
+## Models of ZFC and the Skolem Paradox
+
+<!-- section: models-of-zfc -->
+
+A model of ZFC is nothing more exotic than a structure for a language with one binary relation, in the sense of the chapter *Model Theory*: a non-empty domain $M$ together with a binary relation $E \subseteq M \times M$ interpreting $\in$, such that every axiom comes out true under the usual satisfaction clauses. The elements of $M$ need not be sets in any prior sense, and $E$ need not be real membership.
+
+:::definition[Model, standard model, transitive model]{#model-defs}
+An $\mathcal{L}_\in$-structure is a pair $(M, E)$ with $E$ a binary relation on the non-empty set $M$. It is **standard** (or **well-founded**) if $E$ is genuine membership restricted to $M$ and is well-founded, and **transitive** if in addition $M$ is a transitive set: $x \in y \in M$ implies $x \in M$. For transitive $M$ we write $M \models \varphi$ with $E = {\in}$ understood.
+:::
+
+Transitivity is the condition that makes a model *honest about its elements*: what $M$ believes are the members of one of its sets really are its members, all of them. Nearly every theorem in the rest of this chapter has "transitive" in its hypothesis for that reason, and the section *Relativisation and Absoluteness* says exactly which beliefs it protects.
+
+The first thing to settle is whether there are any models at all, and here the metatheory is delicate.
+
+:::theorem[ZFC cannot produce a model of itself]{#no-provable-model}
+If ZFC is consistent, then ZFC does not prove the sentence "there exist a set $M$ and a relation $E$ on $M$ with $(M,E) \models \mathrm{ZFC}$".
+:::
+
+:::proof
+Working in ZFC, satisfaction for a *set*-sized structure is definable: there is an $\mathcal{L}_\in$-formula $\mathrm{Sat}(M,E,\ulcorner\varphi\urcorner)$ expressing the Tarski clauses by recursion on the coded formula, and ZFC proves the soundness theorem for it. So if ZFC proved that some $(M,E)$ satisfies every ZFC axiom, ZFC would prove that no contradiction is derivable from those axioms — that is, ZFC $\vdash \operatorname{Con}(\mathrm{ZFC})$. Gödel's second incompleteness theorem says a consistent, effectively axiomatised theory interpreting arithmetic does not prove its own consistency, and ZFC interprets arithmetic via the von Neumann naturals. Hence no such proof exists.
+:::
+
+:::pitfall
+This is *not* the claim that ZFC has no models. If ZFC is consistent then by the completeness theorem it has one; what the theorem says is that the existence of one cannot be established inside ZFC. Every result below of the form "if there is a transitive model of ZFC then …" carries that hypothesis explicitly, and it is a genuine extra assumption — strictly stronger than $\operatorname{Con}(\mathrm{ZFC})$, since a transitive model would make $\operatorname{Con}(\mathrm{ZFC})$ true rather than merely consistent.
+:::
+
+Granting a model, model theory immediately produces a small one, and the result is the single most disorienting fact in the subject.
+
+:::theorem[Downward Löwenheim–Skolem for ZFC]{#ls-for-zfc}
+If ZFC has a model, it has a countable model. If ZFC has a transitive model, it has a countable transitive model.
+:::
+
+:::proof
+$\mathcal{L}_\in$ is countable, so the downward Löwenheim–Skolem theorem of the chapter *Model Theory* produces a countable elementary substructure $(N, E) \preceq (M, \in)$ of any given model $M$. For the second claim, take $M$ transitive and $N \preceq M$ countable. Since $N$ is an elementary substructure of a structure whose relation is genuine membership, $E$ is membership restricted to $N$ and is therefore well-founded, and $N$ satisfies Extensionality because $M$ does and Extensionality is a sentence. The Mostowski collapse below replaces $(N,\in)$ by an isomorphic transitive set, which is countable because the collapse is a bijection, and which satisfies ZFC because it is isomorphic to a model of ZFC.
+:::
+
+:::theorem[Mostowski collapse]{#mostowski}
+Let $(N,E)$ be a well-founded structure satisfying Extensionality, with $E$ set-like. Then there are a unique transitive set $\bar{N}$ and a unique isomorphism $\pi : (N,E) \to (\bar{N},\in)$, given by the recursion
+
+$$\pi(x) = \{\,\pi(y) : y \mathbin{E} x\,\}.$$
+:::
+
+:::proof[Sketch]
+Well-foundedness makes the displayed recursion legitimate, by the transfinite recursion theorem of the final section applied to the well-founded relation $E$. Put $\bar{N} = \pi[N]$. It is transitive, because every member of $\pi(x)$ is some $\pi(y)$ and hence lies in the range. Surjectivity is immediate. Injectivity follows from Extensionality in $N$ by $E$-induction: if $\pi(x) = \pi(x')$ then $x$ and $x'$ have the same $E$-members by the induction hypothesis, so $x = x'$. That $\pi$ is a homomorphism both ways is read off the recursion. Uniqueness follows because any two such isomorphisms agree by induction on $E$. The routine part is the verification of the recursion's hypotheses; the substantive ones are exactly well-foundedness and extensionality, and the theorem fails without either.
+:::
+
+:::example[Skolem's paradox]
+Let $M$ be a countable transitive model of ZFC. Inside $M$, Cantor's theorem holds, so $M \models$ "$\mathcal{P}(\omega)$ is uncountable". Yet $M$ is countable, so the set $(\mathcal{P}(\omega))^M$ is countable in $V$. Resolve the apparent contradiction.
+:::
+
+:::solution
+1. Unwind what "uncountable" abbreviates. The sentence $M$ satisfies is: *there is no function $f$ with domain $\omega$ whose range is all of $\mathcal{P}(\omega)$* — and the quantifier "there is no function" ranges over $M$ only.
+2. In $V$ such a function does exist, because $(\mathcal{P}(\omega))^M \subseteq M$ is a countable set. But that function is not an element of $M$.
+3. So $M$ is right about every set it can see and wrong about nothing: "$M \models$ $(\mathcal{P}(\omega))^M$ is uncountable" and "$(\mathcal{P}(\omega))^M$ is countable" are claims about *different quantifier ranges*, and they are jointly consistent.
+4. The moral is that "uncountable" is not absolute between transitive models: a model can lack the very bijection that would reveal a set's true size. The section *Relativisation and Absoluteness* turns this observation into a syntactic criterion, and the section on cardinals shows it is exactly the mechanism by which forcing changes cardinalities.
 :::
 
 :::intuition
-Extensionality says a set is completely determined by its members — a set is just a "bag of stuff", nothing more.
-
-Separation is the "safe subset" rule: you can carve out the red marbles from a bag, but you cannot form "the set of all sets that do not contain themselves".
-
-Foundation prevents weird loops like a set containing itself.
+A model of set theory is like a library that believes it holds every book. It is right that no catalogue *on its own shelves* lists its holdings in a single countable sequence — and it cannot see the catalogue in the city library across the street, which does exactly that. Nothing inside is false; the library simply has no access to the external enumeration.
 :::
 
-:::example[Separation blocks Russell's paradox.]
-Naive set theory allowed *unrestricted comprehension*: for any property $\phi$, the collection $\{x \mid \phi(x)\}$ is a set. Separation weakens this to *restricted* comprehension — you may only carve a subset **out of a set you already have**: $\{x \in A \mid \phi(x)\}$.
+:::figure[A countable elementary submodel $N$ of a level $V_\kappa$ collapses to a countable transitive set. Height on the page is rank: the collapse preserves $\in$ and squeezes the ordinals downward, so the tall thin $N$ becomes a short model.]{#collapse-figure}
+{
+  "type": "plot",
+  "x": [-6.8, 5.0], "y": [-0.4, 5.6],
+  "xTicks": 0, "yTicks": 1, "yLabel": "rank",
+  "marks": [
+    { "kind": "region", "points": [[-4.0, 0], [-0.4, 0], [-0.4, 4.6], [-4.0, 4.6]], "tone": "muted" },
+    { "kind": "path", "points": [[-3.0, 0.15], [-2.4, 1.2], [-2.9, 2.3], [-2.2, 3.4], [-2.8, 4.4]], "tone": "accent" },
+    { "kind": "region", "points": [[1.6, 0], [2.8, 0], [2.8, 1.5], [1.6, 1.5]], "tone": "result" },
+    { "kind": "arrow", "from": [-1.6, 2.6], "to": [1.4, 1.4], "tone": "muted" },
+    { "kind": "text", "at": [-2.2, 5.2], "text": "V at level kappa" },
+    { "kind": "text", "at": [-6.0, 2.4], "text": "N countable", "leaderTo": [-2.9, 2.3] },
+    { "kind": "text", "at": [3.6, 2.4], "text": "collapse", "leaderTo": [2.6, 1.4] },
+    { "kind": "text", "at": [0.2, 2.5], "text": "pi" }
+  ]
+}
+:::
+
+:::summary
+Models of ZFC are structures for a one-relation language; transitive ones are those that do not misreport membership. ZFC cannot prove it has a model, but if it has one it has a countable transitive one, and such a model necessarily misjudges cardinality from the outside — the Skolem paradox, which is a failure of absoluteness and not a contradiction.
+:::
+
+## Relativisation and Absoluteness
+
+<!-- section: absoluteness -->
+
+Skolem's paradox showed that a model's verdict on a formula can differ from the truth in $V$. Absoluteness theory is the syntax that predicts when this can happen. The device is relativisation: restricting every quantifier of a formula to a class.
+
+:::definition[Relativisation]{#relativisation}
+Let $M$ be a class or set. The **relativisation** $\varphi^M$ of an $\mathcal{L}_\in$-formula $\varphi$ is defined by recursion:
+
+$$(x \in y)^M \equiv x \in y, \qquad (x = y)^M \equiv x = y,$$
+
+$$(\neg\psi)^M \equiv \neg(\psi^M), \qquad (\psi \wedge \chi)^M \equiv \psi^M \wedge \chi^M,$$
+
+$$(\exists x\,\psi)^M \equiv \exists x\,(x \in M \wedge \psi^M), \qquad (\forall x\,\psi)^M \equiv \forall x\,(x \in M \to \psi^M).$$
+
+For a set $M$ and parameters in $M$, $\varphi^M$ holds if and only if $M \models \varphi$.
+:::
+
+Relativisation is what lets a theory talk about a model of itself without a satisfaction predicate. For a *proper class* $M$ there is no set-sized structure to apply Tarski's definition to, and indeed "$M \models \mathrm{ZFC}$" is not a single sentence; but $\varphi^M$ is a perfectly good formula for each fixed $\varphi$, so the assertion that $M$ satisfies ZFC becomes a schema of statements, one per axiom. That distinction is the whole reason the section on choice can speak of the inner model $L$ without contradicting the theorem *ZFC cannot produce a model of itself*.
+
+:::definition[Absoluteness]{#absoluteness-def}
+Let $M \subseteq N$ be classes and $\varphi(\bar{x})$ a formula. Then $\varphi$ is **upward absolute** if $\varphi^M(\bar{a}) \to \varphi^N(\bar{a})$ for all $\bar{a} \in M$, **downward absolute** if the converse implication holds, and **absolute between $M$ and $N$** if both do. "Absolute for $M$" with no second class named means absolute between $M$ and $V$.
+:::
+
+The syntactic criterion turns on how the quantifiers are bounded.
+
+:::definition[Bounded quantifiers and the class $\Delta_0$]{#delta-zero}
+$\exists x \in y\,\psi$ abbreviates $\exists x\,(x \in y \wedge \psi)$ and $\forall x \in y\,\psi$ abbreviates $\forall x\,(x \in y \to \psi)$; these are **bounded** quantifiers. A formula is **$\Delta_0$** if it is built from atomic formulas using connectives and bounded quantifiers only. A formula is $\Sigma_1$ if it has the form $\exists y\,\psi$ with $\psi \in \Delta_0$, and $\Pi_1$ if it has the form $\forall y\,\psi$ with $\psi \in \Delta_0$.
+:::
+
+:::theorem[$\Delta_0$ formulas are absolute for transitive classes]{#delta-zero-absolute}
+Let $M$ be a transitive class and $\varphi(\bar{x})$ a $\Delta_0$ formula. Then for all $\bar{a} \in M$,
+
+$$\varphi^M(\bar{a}) \leftrightarrow \varphi(\bar{a}).$$
+:::
+
+:::proof
+Induction on the structure of $\varphi$. Atomic formulas are unchanged by relativisation, so the base case is immediate, and the connective cases follow at once from the induction hypothesis, since relativisation commutes with $\neg$ and $\wedge$. The only case with content is the bounded quantifier. Suppose $\varphi$ is $\exists x \in a\,\psi$ with $\psi$ a $\Delta_0$ formula and $a \in M$ among the parameters. Then
+
+$$\varphi^M \equiv \exists x\,(x \in M \wedge x \in a \wedge \psi^M).$$
+
+If $\varphi^M$ holds, a witness $x$ satisfies $x \in a$ and, by the induction hypothesis, $\psi(x)$; so $\varphi$ holds. Conversely if $\varphi$ holds, take a witness $x \in a$. Transitivity of $M$ together with $a \in M$ gives $x \in M$, and the induction hypothesis gives $\psi^M(x)$; so $\varphi^M$ holds. The bounded universal quantifier is the dual argument. Transitivity was used exactly once, and it is indispensable: it is what guarantees that the external witness is also available internally.
+:::
+
+:::corollary[One unbounded quantifier: up and down]{#sigma-pi-absolute}
+Let $M \subseteq N$ be transitive classes. Every $\Sigma_1$ formula is upward absolute from $M$ to $N$, and every $\Pi_1$ formula is downward absolute from $N$ to $M$.
+:::
+
+:::proof
+Let $\varphi \equiv \exists y\,\psi$ with $\psi$ a $\Delta_0$ formula, and suppose $\varphi^M(\bar a)$ holds. Then some $y \in M \subseteq N$ has $\psi^M(y,\bar a)$, hence $\psi(y,\bar a)$ by the theorem *$\Delta_0$ formulas are absolute for transitive classes* applied to $M$, hence $\psi^N(y,\bar a)$ by the same theorem applied to $N$. So $\varphi^N(\bar a)$. The $\Pi_1$ statement is this applied to the negation: $\neg\varphi$ is (equivalent to) $\Sigma_1$, and contraposing upward absoluteness for it gives downward absoluteness for $\varphi$.
+:::
+
+:::intuition
+A bounded quantifier searches inside a set the model already possesses, and a transitive model possesses all of that set's members — so the search inside and the search outside comb through exactly the same objects. An unbounded quantifier searches the whole universe, where the model's shelves may be missing something. Hence the asymmetry: existential claims survive going up (a witness you have, a bigger world also has), and universal claims survive coming down (if nothing anywhere is a counterexample, nothing here is).
+:::
+
+:::example[A stock of absolute notions]
+Show that "$x$ is empty", "$x \subseteq y$", "$x$ is transitive" and "$z = x \cup y$" are $\Delta_0$, hence absolute for transitive classes.
 :::
 
 :::solution
-Take the property $\phi(x) : x \notin x$ and suppose, for contradiction, that a *universal* set $V$ (a set of all sets) exists. Separation then hands us
-$$R = \{ x \in V \mid x \notin x \}.$$
-Since $R$ is itself a set and $R \in V$, we may ask whether $R \in R$.
-
-Test both cases.
-If $R \in R$, then $R$ satisfies the defining property, so $R \notin R$.
-If $R \notin R$, then $R$ satisfies the defining property, so $R \in R$.
-
-Either way we get $R \in R \iff R \notin R$, a contradiction.
-
-Separation itself is never at fault — it only produces a subset of a *given* set. The single false assumption was that a universal set $V$ exists. So the real conclusion is: **there is no set of all sets.** (Equivalently, $\{x \mid x \notin x\}$ is a proper class, not a set.)
-
-Sanity check: with no universal $V$ to separate from, the paradoxical $R$ can never be formed, which is exactly why ZFC is consistent where naive comprehension was not.
+1. "$x$ is empty" is $\forall w \in x\,(w \neq w)$ — bounded.
+2. "$x \subseteq y$" is $\forall w \in x\,(w \in y)$ — bounded.
+3. "$x$ is transitive" is $\forall w \in x\,\forall u \in w\,(u \in x)$ — bounded.
+4. "$z = x \cup y$" is $\forall w \in z\,(w \in x \vee w \in y) \wedge \forall w \in x\,(w \in z) \wedge \forall w \in y\,(w \in z)$ — bounded.
+5. Each is therefore absolute for every transitive class, with no hypothesis on which axioms the class satisfies. The same argument covers "$x$ is an ordered pair", "$r$ is a relation", "$f$ is a function", "$f$ is injective", "$z = x \cap y$" and "$z = \bigcup x$", which is why elementary set-theoretic bookkeeping never causes trouble between models.
 :::
 
-:::example[which axiom builds $\mathcal{P}(\mathbb{N})$?]
-Suppose we already have $\omega = \{0,1,2,\dots\}$ (from the Axiom of Infinity). We want to justify that $\mathcal{P}(\omega)$ — the set of *all* subsets of $\omega$, i.e. the reals in disguise — is legitimately a set.
+:::example[Power set is not absolute]
+Show that "$z = \mathcal{P}(x)$" is $\Pi_1$ but not absolute, and exhibit a transitive model that gets it wrong.
 :::
 
 :::solution
-1. Extensionality, Pairing, and Union only build sets whose members are already visible; none of them can gather *every* subset at once. Replacement produces the image of a set under a definable function, but there is no single function whose image is "all subsets."
-2. The **Power Set** axiom is precisely the tool: it asserts that for any set $A$ there is a set $\mathcal{P}(A)$ whose members are exactly the subsets of $A$. Applying it to $A = \omega$ gives $\mathcal{P}(\omega)$ directly.
-3. Sanity check: this matches question `set-zfc-3` — Power Set (not Infinity or Replacement) is what makes the power set of $\mathbb{N}$ exist.
+1. The formula is $\forall w\,(w \in z \leftrightarrow w \subseteq x)$. The inner "$w \subseteq x$" is $\Delta_0$; the outer $\forall w$ is unbounded, so the formula is $\Pi_1$ and by the corollary *One unbounded quantifier: up and down* it is downward absolute.
+2. It is not upward absolute, and so not absolute. Let $M$ be a countable transitive model of ZFC and put $z = (\mathcal{P}(\omega))^M$. Then $M \models$ "$z = \mathcal{P}(\omega)$", because $M$ contains every subset of $\omega$ that it can see.
+3. In $V$, however, $z$ is a countable set while $\mathcal{P}(\omega)$ is uncountable, so $z \neq \mathcal{P}(\omega)$ holds in $V$.
+4. The missing objects are precisely the subsets of $\omega$ lying outside $M$. This is Skolem's paradox again, now diagnosed by counting unbounded quantifiers rather than by inspecting the model.
 :::
 
-## Axiom of Choice and Its Equivalents
+:::pitfall
+Absoluteness always carries two hypotheses that are easy to drop: the classes must be **transitive**, and the smaller one must contain the parameters. For non-transitive models even $\Delta_0$ formulas fail — take $M = \{\{0\}\}$, in which the element $\{0\}$ satisfies "$x$ is empty", because $M$ contains no member of $\{0\}$ to witness otherwise.
+:::
+
+:::remark[The Lévy hierarchy]
+Continuing past $\Sigma_1$ and $\Pi_1$ by counting alternations of unbounded quantifiers gives the **Lévy hierarchy** $\Sigma_n, \Pi_n, \Delta_n$, the set-theoretic analogue of the arithmetical hierarchy from the chapter *Computability*. A formula provably equivalent to both a $\Sigma_1$ and a $\Pi_1$ formula is called $\Delta_1$ and is absolute for transitive models of a modest fragment of ZF. Most of the notions used in ordinary mathematics turn out to be $\Delta_1$; the exceptions — power set, cardinality, "constructible", "measurable" — are exactly the ones independence proofs manipulate.
+:::
+
+:::summary
+Relativisation $\varphi^M$ restricts quantifiers to $M$; for a set $M$ it agrees with $M \models \varphi$, and for proper classes it is the only available formulation, one sentence at a time. $\Delta_0$ formulas are absolute for transitive classes, $\Sigma_1$ formulas go up, $\Pi_1$ formulas come down. Notions defined by unbounded quantification over subsets are the ones models disagree about.
+:::
+
+## Reflecting the Universe in a Set
+
+<!-- section: reflection -->
+
+The universe $V$ is not a set, so the sentence "$V \models \varphi$" cannot even be formed. What can be formed, for each fixed $\varphi$, is $\varphi^V$, which is just $\varphi$ itself; one may then ask whether some *set* agrees with $V$ about $\varphi$. The Reflection Principle answers yes, for any finite list of formulas at once, and it is a theorem schema of ZF.
+
+:::definition[Reflection for a list of formulas]{#reflects}
+Let $\varphi_1,\dots,\varphi_n$ be formulas and $M$ a set. Say $M$ **reflects** $\varphi_1,\dots,\varphi_n$ if for each $i$ and all parameters $\bar{a} \in M$,
+
+$$\varphi_i^M(\bar{a}) \leftrightarrow \varphi_i(\bar{a}).$$
+:::
+
+:::theorem[Lévy–Montague Reflection Principle]{#reflection}
+For each finite list $\varphi_1,\dots,\varphi_n$ of $\mathcal{L}_\in$-formulas, ZF proves: for every ordinal $\beta$ there is a limit ordinal $\alpha > \beta$ such that $V_\alpha$ reflects $\varphi_1,\dots,\varphi_n$.
+:::
+
+:::proof
+Close the list under subformulas, so we may assume every subformula of each $\varphi_i$ is on the list, and rewrite $\forall$ as $\neg\exists\neg$ so that $\exists$ is the only quantifier. For each $\varphi_i$ of the form $\exists y\,\psi(y,\bar{x})$ define
+
+$$F_i(\bar{a}) = \text{the least } \gamma \text{ with } \exists y \in V_\gamma\,\psi(y,\bar{a}), \text{ and } F_i(\bar a) = 0 \text{ if no such } y \text{ exists}.$$
+
+This is a legitimate class function, because every set has a rank and the ordinals are well-ordered. Now set
+
+$$G(\xi) = \sup\{\,F_i(\bar{a}) : i \le n,\ \bar{a} \in V_\xi\,\} + 1.$$
+
+The collection being supped is the image of the set $V_\xi^{\,<\omega}$ under finitely many definable functions, so Replacement makes it a set of ordinals and the supremum exists. Starting from $\alpha_0 = \beta + 1$, put $\alpha_{k+1} = \max(G(\alpha_k), \alpha_k + 1)$ and $\alpha = \sup_k \alpha_k$, a limit ordinal greater than $\beta$.
+
+We show $V_\alpha$ reflects the list, by induction on the structure of the formulas. Atomic formulas and connectives are immediate. Let $\varphi_i \equiv \exists y\,\psi$ and $\bar{a} \in V_\alpha$. If $\varphi_i^{V_\alpha}(\bar a)$ holds, a witness in $V_\alpha$ satisfies $\psi^{V_\alpha}$, hence $\psi$ by the induction hypothesis, so $\varphi_i(\bar a)$. Conversely suppose $\varphi_i(\bar a)$. Since $\alpha$ is a limit and $V_\alpha = \bigcup_k V_{\alpha_k}$, we have $\bar{a} \in V_{\alpha_k}$ for some $k$; by construction $F_i(\bar a) < G(\alpha_k) \le \alpha_{k+1} \le \alpha$, so a witness $y$ lies in $V_\alpha$. The induction hypothesis converts $\psi(y,\bar a)$ into $\psi^{V_\alpha}(y,\bar a)$, giving $\varphi_i^{V_\alpha}(\bar a)$.
+:::
+
+The construction repays a second look, because the pattern recurs throughout set theory. Each $F_i$ is a **Skolem function** in disguise: it records how far up the hierarchy one must climb to find a witness. Closing an ordinal under finitely many such functions and iterating $\omega$ times produces a **closure point**, and the closure points form a closed unbounded class. Reflection is the statement that closure points reflect — which is also why the $\alpha$ produced is a limit, and why the theorem gives *arbitrarily large* such $\alpha$ rather than one.
+
+:::pitfall
+Reflection is a *schema*: one theorem per finite list. It does **not** say that some $V_\alpha$ reflects all of ZFC — that would assert the existence of a set model of ZFC, contradicting the theorem *ZFC cannot produce a model of itself*. The quantifier "for each finite list" lives in the metatheory, outside the object language, and moving it inside is the commonest error in this area.
+:::
+
+:::corollary[Every finite fragment has a transitive set model]{#finite-fragment-model}
+For each finite $T \subseteq \mathrm{ZFC}$, ZFC proves that there are arbitrarily large $\alpha$ with $V_\alpha \models T$.
+:::
+
+:::proof
+Apply the Reflection Principle to the sentences of $T$ together with all their subformulas, obtaining arbitrarily large limit $\alpha$ with $V_\alpha$ reflecting them. Each $\tau \in T$ is an axiom of ZFC, hence true in $V$, hence — being reflected — true in $V_\alpha$. Transitivity of $V_\alpha$ is automatic, and $V_\alpha$ is a set, so $(V_\alpha,\in)$ is a transitive set model of $T$.
+:::
+
+This corollary is the workhorse of independence proofs. A forcing argument needs a ground model that is a set, so that one can form its extension; producing an outright model of ZFC is impossible, but every actual argument uses only finitely many axioms, and for those the corollary supplies a model. Combined with the theorem *Downward Löwenheim–Skolem for ZFC* and the Mostowski collapse, one obtains *countable transitive* models of any finite fragment — the standing hypothesis of the chapter *Independence & Forcing*.
+
+:::example[Reflecting a single formula]
+Let $\varphi$ be $\forall x\,\exists y\,(x \in y)$, which holds in $V$. Trace the $\alpha$ the proof of reflection produces from $\beta = 0$, and check the reflection directly.
+:::
+
+:::solution
+1. The only unbounded existential is $\exists y\,(x \in y)$, so there is one Skolem function: $F(a)$ is the least $\gamma$ with some $y \in V_\gamma$ containing $a$. Taking $y = \{a\}$, whose rank is $\operatorname{rank}(a)+1$, gives $F(a) = \operatorname{rank}(a) + 2$.
+2. Hence $G(\xi) = \sup\{\operatorname{rank}(a)+2 : a \in V_\xi\} + 1 = \xi + 2$ for $\xi > 0$, and iterating from $\alpha_0 = 1$ gives $\alpha_k = 2k+1$, so $\alpha = \sup_k \alpha_k = \omega$.
+3. Check directly: for $x \in V_\omega$ we have $\{x\} \in V_\omega$, since $V_\omega$ is closed under pairing. So $\varphi^{V_\omega}$ holds, matching $\varphi$.
+4. Note the failure at a successor stage: $V_5$ does not reflect $\varphi$, because $x = V_4 \in V_5$ has no $y \in V_5$ containing it. The limit condition in the theorem is doing real work.
+:::
+
+:::example[Reflection does not transfer to a single sentence]
+A student writes: "By reflection, ZFC proves $\exists \alpha\,(V_\alpha \models \mathrm{ZFC})$, so ZFC proves its own consistency." Diagnose precisely where this breaks, and say what ZFC *does* prove.
+:::
+
+:::solution
+1. The sentence $V_\alpha \models \mathrm{ZFC}$ is expressible in ZFC, since satisfaction for set-sized structures is definable and ZFC is a definable set of codes. So the claimed conclusion is at least meaningful — the failure is not one of syntax.
+2. But reflection never proves it. For each finite list, ZFC proves the corresponding instance; there is no instance whose list is all of ZFC, because the lists are finite.
+3. What ZFC does prove, for each finite $T \subseteq \mathrm{ZFC}$, is $\exists\alpha\,(V_\alpha \models T)$, hence $\operatorname{Con}(T)$. So ZFC proves the consistency of each of its finite fragments — infinitely many theorems, one per fragment.
+4. Gödel's second theorem is therefore not contradicted, and in fact this is a proof that ZFC is not finitely axiomatisable: a finite axiomatisation would let step 3 be applied to the whole theory at once.
+:::
+
+:::remark[Reflection as an axiom, and its strengthenings]
+Some presentations take reflection as a primitive schema and derive Infinity and Replacement from it over the remaining axioms — the Lévy reflection schema. Strengthening it by demanding that the reflecting $V_\alpha$ be elementary in $V$ for *all* formulas at once is inconsistent, by the pitfall above; demanding second-order reflection instead yields large-cardinal axioms, which the chapter *Advanced Set Theory* treats.
+:::
+
+:::summary
+For every finite list of formulas, ZF proves some level $V_\alpha$ agrees with $V$ about all of them. This yields transitive set models of every finite fragment of ZFC, underwrites the non-finite-axiomatisability theorem, and must always be read as a schema — never as a single statement quantifying over all formulas.
+:::
+
+## Choice as a Sentence, and Relative Consistency
 
 <!-- section: choice -->
 
-:::definition[Axiom of Choice]{#axiom-of-choice}
-For any collection $\{A_i\}_{i \in I}$ of non-empty sets, there is a *choice function* $f$ with domain $I$ such that
+For a logician the Axiom of Choice is interesting not for what it builds but for its *status*: a sentence that can be added to ZF, whose negation can equally be added, and neither of which ZF refutes. The equivalents — Zorn's lemma, the well-ordering theorem, every vector space has a basis, Tychonoff's theorem — are the business of the chapter *The Axiom of Choice* in the subject Set Theory. Here AC is an object of metamathematics.
 
-$$f(i) \in A_i \quad \text{for every } i \in I.$$
+:::definition[AC as an $\mathcal{L}_\in$-sentence]{#ac-sentence}
+The Axiom of Choice is the sentence
+
+$$\forall a\,\Bigl(\forall x \in a\,\exists u\,(u \in x) \to \exists f\,\bigl(\operatorname{Fn}(f) \wedge \operatorname{dom}(f) = a \wedge \forall x \in a\,(f(x) \in x)\bigr)\Bigr),$$
+
+where $\operatorname{Fn}(f)$, $\operatorname{dom}(f) = a$ and $f(x) \in x$ abbreviate their $\Delta_0$ definitions in terms of Kuratowski pairs. The quantifier $\exists f$ is unbounded, so AC as written is $\Pi_2$ in the Lévy hierarchy, and there is no reason to expect it to be absolute.
 :::
 
-In words: you can simultaneously pick one element out of each set, even when the collection is infinite and no explicit rule tells you which element to take.
-
-The subtlety is entirely about the *simultaneous, uniform* selection over an infinite index set. If $I$ is finite, or if each $A_i$ comes with a built-in way to point at a distinguished element (e.g. each $A_i \subseteq \mathbb{N}$, so "take the least element" works), then no axiom is needed. AC is exactly the extra strength required when the sets are arbitrary and infinitely many.
-
-:::theorem[Equivalents of the Axiom of Choice]
-Over ZF, each of the following is equivalent to AC:
-
-- Every vector space admits some basis.
-- Zorn's lemma (for partial orders).
-- The well-ordering theorem.
-- Tychonoff's theorem for product topologies.
-- Certain statements about the reals, etc.
+:::proposition[Finite choice is a schema of theorems of ZF]{#finite-choice}
+For each numeral $n$, ZF proves: every family of exactly $n$ non-empty sets has a choice function.
 :::
 
-:::theorem[Independence of AC]
-AC is independent of the other ZF axioms (Gödel 1938 consistency, Cohen 1963 independence).
+:::proof
+Induct in the metatheory on $n$. For $n = 0$ the empty function works. Suppose the claim proved for $n$ and let $a = \{x_1,\dots,x_{n+1}\}$ have non-empty members. The hypothesis $\exists u\,(u \in x_{n+1})$ is a single existential statement of the theory, so a proof may introduce a witness $u$ by existential instantiation — one witness, mentioned once, with no choice principle involved. The induction hypothesis gives a choice function $f$ for $\{x_1,\dots,x_n\}$, and $f \cup \{(x_{n+1},u)\}$ is a set by Pairing and Union and is a choice function for $a$.
+:::
+
+:::pitfall
+That proposition is infinitely many theorems, one per numeral, proved by an induction in the *metatheory*. It is not the same statement as the single sentence "every finite family of non-empty sets has a choice function" — though that sentence is also a theorem of ZF, proved by induction *inside* the theory on the cardinality of the family. The distinction between a schema established in the metatheory and one sentence established internally runs through this whole chapter, and in the theorem *ZFC is not finitely axiomatisable* it is precisely what separates a theorem from a contradiction.
+:::
+
+Everything provable about AC's status is *relative*. No argument establishes that ZFC is consistent, since that would entail $\operatorname{Con}(\mathrm{ZF})$, which is unprovable in ZF.
+
+:::definition[Inner model]{#inner-model}
+An **inner model** of ZF is a transitive class $M$ containing every ordinal such that $\varphi^M$ holds for every axiom $\varphi$ of ZF. As with relativisation generally, "$M$ is an inner model of ZF" abbreviates a schema of statements, one per axiom, and not a single sentence.
+:::
+
+:::theorem[The inner-model method]{#inner-model-method}
+Let $S$ and $T$ be theories in the same language and suppose there is a formula defining a class $M$ such that $S$ proves $M$ is non-empty and, for each axiom $\tau$ of $T$, $S \vdash \tau^M$. Then $\operatorname{Con}(S) \to \operatorname{Con}(T)$, and this implication is provable in a weak arithmetic.
+:::
+
+:::proof
+Suppose $T$ were inconsistent, so there is a derivation of a contradiction from finitely many axioms $\tau_1,\dots,\tau_k$ of $T$. Relativisation commutes with the rules of a first-order proof system: if $\sigma$ follows from $\sigma_1,\dots,\sigma_m$ by a rule, then $\sigma^M$ follows from $\sigma_1^M,\dots,\sigma_m^M$ — for the quantifier rules this uses that $M$ is non-empty, and for the propositional rules it is immediate, since relativisation commutes with the connectives. Relativising the derivation step by step therefore converts it into a derivation of a contradiction from $\tau_1^M,\dots,\tau_k^M$, each of which $S$ proves. So $S$ is inconsistent. The whole transformation is a primitive recursive operation on proof codes, which is why the implication holds provably in arithmetic and not merely in the metatheory.
+:::
+
+:::theorem[Gödel 1938, Cohen 1963]{#ac-independence}
+If ZF is consistent, then so are $\mathrm{ZF} + \mathrm{AC}$ and $\mathrm{ZF} + \neg\mathrm{AC}$; hence AC is independent of ZF. If ZFC is consistent, then so are $\mathrm{ZFC} + \mathrm{CH}$ and $\mathrm{ZFC} + \neg\mathrm{CH}$; hence CH is independent of ZFC.
+:::
+
+:::proof[Sketch]
+For the consistency of AC, Gödel defines the constructible hierarchy $L = \bigcup_{\alpha} L_\alpha$, where $L_{\alpha+1}$ is the set of subsets of $L_\alpha$ definable over the structure $(L_\alpha,\in)$ with parameters. One verifies that $L$ is an inner model of ZF and that ZF proves $\mathrm{AC}^L$ — the well-ordering comes from the definability hierarchy itself, which orders each level canonically by the formulas and parameters defining its members. The inner-model method then yields $\operatorname{Con}(\mathrm{ZF}) \to \operatorname{Con}(\mathrm{ZFC})$; the same model gives $\operatorname{Con}(\mathrm{ZFC}+\mathrm{CH})$, since CH holds in $L$. For the negations, Cohen's forcing starts from a countable transitive model of a sufficient finite fragment — supplied by the corollary *Every finite fragment has a transitive set model* — and adjoins generic sets, taking a symmetric submodel in the case of $\neg\mathrm{AC}$. Both constructions are carried out in the chapter *Independence & Forcing*; what is imported here is their shape, and the inner-model method above is the piece that converts a construction into a consistency statement.
 :::
 
 :::intuition
-Imagine infinitely many pairs of shoes. AC lets you pick the left shoe from each pair simultaneously, even though there is no "rule" that works for all pairs at once without a global well-ordering.
-
-For finite collections you don't need AC; the trouble starts with infinitely many arbitrary sets.
+Consistency proofs of this kind never certify a theory. They trade: they show that if the trusted theory is safe, so is the doubted one. An inner model is a way of reinterpreting the doubted theory's vocabulary inside the trusted one, so that any proof of a contradiction would translate back into a contradiction we had already agreed was impossible.
 :::
 
-:::example[every vector space has a basis (via Zorn's lemma).]
-Recall Zorn's lemma: if every *chain* (totally ordered subset) in a non-empty partially ordered set $P$ has an upper bound in $P$, then $P$ has a maximal element. Fix a vector space $V$ over a field $\mathbb{F}$.
+:::example[Why "AC is independent" is not "AC is false"]
+A student argues: "Cohen produced a model of ZF in which choice fails, so choice is false." Locate the error.
 :::
 
 :::solution
-1. Step 1 (set up the poset). Let $P$ be the collection of all *linearly independent* subsets of $V$, ordered by inclusion $\subseteq$. It is non-empty because $\emptyset \in P$ (the empty set is vacuously independent).
-2. Step 2 (verify the chain condition). Let $\mathcal{C}$ be a chain in $P$ and put $U = \bigcup_{S \in \mathcal{C}} S$. Claim: $U$ is linearly independent, so $U \in P$ and is an upper bound for $\mathcal{C}$. Indeed, any linear dependence uses only *finitely many* vectors $v_1,\dots,v_n \in U$. Each $v_k$ lies in some $S_k \in \mathcal{C}$; since $\mathcal{C}$ is totally ordered, one of these $S_k$ contains all the others, hence contains $v_1,\dots,v_n$. But that $S_k$ is independent, so the only dependence is trivial. Thus $U$ is independent.
-3. Step 3 (apply Zorn). Every chain has an upper bound, so Zorn's lemma yields a maximal linearly independent set $B$.
-4. Step 4 (maximal independent $\Rightarrow$ spanning). Suppose $B$ did *not* span $V$; pick $w \in V \setminus \operatorname{span}(B)$. Then $B \cup \{w\}$ is still independent (any dependence involving $w$ would express $w$ in terms of $B$, contradicting $w \notin \operatorname{span}(B)$). This strictly enlarges $B$, contradicting maximality. Hence $B$ spans $V$.
-5. Conclusion: $B$ is linearly independent and spanning, i.e. a basis. Sanity check: the only place AC/Zorn entered was Step 3 — for a *finite-dimensional* space you can build a basis by hand without it, which is why the difficulty is genuinely about infinite dimension.
+1. Independence is a property of a pair — a theory and a sentence — not of a sentence alone. AC is independent of ZF in exactly the sense that commutativity is independent of the group axioms.
+2. A model of $\mathrm{ZF} + \neg\mathrm{AC}$ shows only that the axioms of ZF do not *force* AC. A model of $\mathrm{ZF} + \mathrm{AC}$, namely $L$, exists equally, and the two are on a level.
+3. Whether AC is "true" is then a question about which structure, if any, mathematical practice intends — a question outside the theory. Mathematicians adopt AC because its consequences are indispensable and, given $\operatorname{Con}(\mathrm{ZF})$, no contradiction can arise from doing so.
+4. Symmetrically, "ZFC $\nvdash$ CH" does not license asserting $\neg\mathrm{CH}$.
 :::
 
-## Ordinals, Cardinals, and Well-Ordering
+:::example[What a relative consistency statement costs]
+Explain why $\operatorname{Con}(\mathrm{ZF}) \to \operatorname{Con}(\mathrm{ZFC})$ is provable but $\operatorname{Con}(\mathrm{ZFC})$ is not, and why a transitive model of ZFC is a stronger assumption than $\operatorname{Con}(\mathrm{ZFC})$.
+:::
+
+:::solution
+1. The implication is proved by a syntactic transformation of proofs, as in the theorem *The inner-model method*; it never asserts that any proof-free situation obtains, so Gödel's second theorem does not apply to it.
+2. $\operatorname{Con}(\mathrm{ZFC})$ itself is an arithmetical sentence which, by Gödel's second theorem, ZFC does not prove if it is consistent.
+3. A transitive model of ZFC is stronger still. If one exists, then ZFC is not merely consistent: its arithmetical consequences are *true*, since a transitive model computes $\omega$ and the arithmetic on it correctly, by absoluteness of $\Delta_0$ notions. So "there is a transitive model" implies $\operatorname{Con}(\mathrm{ZFC})$, implies $\operatorname{Con}(\mathrm{ZFC} + \operatorname{Con}(\mathrm{ZFC}))$, and so on up.
+4. This is why careful statements say "assume there is a countable transitive model of a sufficiently large finite fragment of ZFC" — by the corollary *Every finite fragment has a transitive set model*, that assumption costs nothing.
+:::
+
+:::summary
+AC is a single $\Pi_2$ sentence of $\mathcal{L}_\in$, and ZF and ZFC are different theories. Relative consistency is established by the inner-model method, which relativises a hypothetical contradiction back into the base theory; $L$ gives $\operatorname{Con}(\mathrm{ZF}) \to \operatorname{Con}(\mathrm{ZFC})$ and forcing gives the other direction. Independence is a statement about provability, never a truth value.
+:::
+
+## Ordinals Are Absolute, Cardinals Are Not
 
 <!-- section: ordinals-cardinals -->
 
-:::definition[Ordinal]{#ordinal-definition}
-An **ordinal** is a transitive set well-ordered by $\in$.
+Ordinals and cardinals are developed in the chapter *Ordinals & Cardinals* of the subject Set Theory: an ordinal is a transitive set well-ordered by $\in$, a cardinal is an ordinal not in bijection with any smaller ordinal, and the alephs enumerate the infinite cardinals. What concerns us here is a single contrast with far-reaching consequences — the notion of ordinal is absolute for transitive models, and the notion of cardinal is not.
+
+:::theorem[Being an ordinal is absolute]{#ordinal-absolute}
+Over ZF, the formula "$x$ is an ordinal" is equivalent to a $\Delta_0$ formula, hence is absolute for transitive classes. Consequently, for a transitive class $M$ one has $\mathrm{Ord}^M = \mathrm{Ord} \cap M$, and this is either an ordinal or the whole class $\mathrm{Ord}$.
 :::
 
-Ordinals represent order types of well-ordered sets. $0 = \emptyset$, $1 = \{0\}$, $2 = \{0,1\}$, $\omega$ (the first infinite one) = {0,1,2,...}, and so on.
+:::proof
+With Foundation available, every set is well-founded, so "$\in$ well-orders $x$" reduces to "$\in$ linearly orders $x$". Hence "$x$ is an ordinal" is equivalent to
 
-:::theorem[Order type of a well-ordering]
-Every well-ordered set is order-isomorphic to a unique ordinal.
+$$\forall u \in x\,\forall v \in u\,(v \in x) \ \wedge\ \forall u \in x\,\forall v \in x\,(u \in v \vee u = v \vee v \in u),$$
+
+whose quantifiers are all bounded. By the theorem *$\Delta_0$ formulas are absolute for transitive classes*, $M$ and $V$ agree about it for every $x \in M$, which is the first claim. For the second: $\mathrm{Ord} \cap M$ is transitive, since the members of an ordinal are ordinals and $M$ is transitive, and it is linearly ordered by $\in$; a transitive set of ordinals is an ordinal, and a transitive proper class of ordinals is $\mathrm{Ord}$.
 :::
 
-:::definition[Cardinal]{#cardinal-definition}
-A **cardinal** is an ordinal not bijective with any smaller ordinal.
+:::definition[The height of a model]{#height}
+For a transitive set model $M$, the ordinal $\mathrm{Ord} \cap M$ is the **height** of $M$. An inner model is exactly a transitive class model of height $\mathrm{Ord}$.
 :::
 
-Finite cardinals = finite ordinals. Infinite: $\aleph_0 = |\mathbb{N}|$, $\aleph_1$, $2^{\aleph_0} = \mathfrak{c}$, etc.
+A countable transitive model therefore has countable height, and yet it satisfies "there are uncountably many ordinals". The mechanism is the failure of absoluteness one level up.
 
-:::theorem[Cantor's theorem]{#cantor-theorem}
-For any set $X$, the cardinality of its power set is strictly larger:
+:::theorem[Cardinality is downward absolute only]{#cardinal-downward}
+Let $M$ be a transitive class. Then:
 
-$$|X| < |\mathcal{P}(X)|.$$
+1. "$f$ is a bijection from $x$ onto $y$" is $\Delta_0$, hence absolute.
+2. "$\kappa$ is a cardinal" is $\Pi_1$, hence downward absolute: if $\kappa \in M$ is a cardinal in $V$, then $M \models$ "$\kappa$ is a cardinal".
+3. The converse fails: there are a transitive $M$ and a $\kappa \in M$ with $M \models$ "$\kappa$ is a cardinal" while $\kappa$ is countable in $V$.
 :::
 
-Hence there is no largest cardinal.
+:::proof
+(1) Being a set of ordered pairs, being single-valued, having domain $x$ and range $y$, and injectivity are all expressible with quantifiers bounded by $f$, $x$ and $y$, using the $\Delta_0$ definition of the Kuratowski pair.
+
+(2) "$\kappa$ is a cardinal" says $\kappa$ is an ordinal and there is no pair $(\beta,f)$ with $\beta \in \kappa$ and $f$ a bijection from $\beta$ onto $\kappa$. Pushing the negation inward puts it in the form $\forall w\,\psi$ with $\psi$ a $\Delta_0$ formula, using part (1) and the absoluteness of "is an ordinal"; so it is $\Pi_1$, and the corollary *One unbounded quantifier: up and down* makes it downward absolute. Concretely: a bijection witnessing failure inside $M$ is a genuine bijection in $V$ by part (1), so if $V$ has no such bijection, neither does $M$.
+
+(3) Let $M$ be a countable transitive model of ZFC and let $\kappa = (\omega_1)^M$, the least ordinal $M$ believes is uncountable. By the theorem *Being an ordinal is absolute*, $\kappa$ is a genuine ordinal, and $\kappa \subseteq M$ by transitivity, so $\kappa$ is countable in $V$ and is not a cardinal there. Inside $M$, no bijection from a smaller ordinal onto $\kappa$ exists, so $M \models$ "$\kappa$ is a cardinal".
+:::
 
 :::intuition
-Ordinals are "counting numbers" that also encode order: $\omega$ is the order type of the naturals; after all of them comes $\omega+1$.
-
-Cardinals answer "how many?" ignoring order. Two sets have same cardinal if there is a bijection between them.
-
-$\aleph_0$ is the smallest infinity; the continuum may or may not be $\aleph_1$ (continuum hypothesis).
+Cardinality asks for the *non-existence* of a bijection, and non-existence claims are exactly what a model can get wrong by being too small. Adding sets to a model can only destroy cardinals, never create them: a new bijection can collapse two cardinals into one, but no newly added set can un-do a bijection that was already present.
 :::
 
-:::example[order type depends on the ordering, cardinal does not.]
-1. The naturals $0 < 1 < 2 < \cdots$ in their usual order form a well-ordered set (every non-empty subset has a least element), and its order type is the ordinal $\omega$.
-2. The integers $\dots < -2 < -1 < 0 < 1 < 2 < \dots$ in their usual order are **not** well-ordered: the subset $\{\dots,-2,-1\}$ has no least element. So this ordering has *no* order type as an ordinal at all.
-3. Well-ordering is a property of the *ordering*, not of the underlying set. Re-list the same integers as
-4. $$0,\; -1,\; 1,\; -2,\; 2,\; -3,\; 3,\; \dots$$
-5. This new order *is* a well-order (it is a copy of $0,1,2,3,\dots$), so now $\mathbb{Z}$ has order type $\omega$.
-6. Sanity check on cardinality: none of this changed how *many* integers there are. The zig-zag list is itself a bijection $\omega \to \mathbb{Z}$, so $|\mathbb{Z}| = |\omega| = \aleph_0$. Order type changed from "undefined" to $\omega$; the cardinal stayed $\aleph_0$ throughout — exactly the ordinality-vs-cardinality distinction.
+:::corollary[Inner models preserve cardinals downward]{#inner-model-cardinals}
+If $M$ is an inner model of ZF and $\kappa$ is a cardinal in $V$, then $\kappa$ is a cardinal in $M$. Hence $(\omega_1)^M \le \omega_1$ for every inner model $M$. The converse fails in general.
 :::
 
-:::example[Cantor's theorem via diagonalization.]
-We prove $|X| < |\mathcal{P}(X)|$ for *every* set $X$ (finite or infinite).
+:::proof
+The first claim is part (2) of the theorem *Cardinality is downward absolute only*, since an inner model is in particular a transitive class. For the second, $(\omega_1)^M$ is the least ordinal $M$ regards as uncountable; $\omega_1$ is uncountable in $V$, hence uncountable in $M$ by the first claim, hence at least the least such ordinal of $M$. The converse fails because $M$ may simply lack a bijection that $V$ has: an ordinal $M$ believes to be a cardinal need not be one in $V$, exactly as in part (3) above.
+:::
+
+:::example[Counting inside and outside a countable model]
+Let $M$ be a countable transitive model of ZFC and $\kappa = (\omega_1)^M$. Compute the cardinality of $\kappa$ as evaluated in $V$, and decide whether $M \models$ "$\kappa$ is countable".
 :::
 
 :::solution
-Step 1 ($\le$, an injection exists). The map $x \mapsto \{x\}$ sends $X$ injectively into $\mathcal{P}(X)$, so $|X| \le |\mathcal{P}(X)|$.
-
-Step 2 (no surjection exists). Suppose toward contradiction that $f : X \to \mathcal{P}(X)$ is *onto*. Define the "diagonal" set
-$$D = \{\, x \in X \mid x \notin f(x) \,\} \in \mathcal{P}(X).$$
-Since $f$ is onto, $D = f(y)$ for some $y \in X$. Now ask whether $y \in D$:
-$$y \in D \iff y \notin f(y) \iff y \notin D,$$
-using the definition of $D$ and then $f(y) = D$. That is a contradiction, so no surjection $X \to \mathcal{P}(X)$ can exist.
-
-Combining: there is an injection but no surjection, so the inequality is strict, $|X| < |\mathcal{P}(X)|$.
-
-Sanity check: for $X = \{a,b\}$ we get $|X| = 2$ and $|\mathcal{P}(X)| = 4$ ($\emptyset,\{a\},\{b\},\{a,b\}$), and indeed $2 < 4$. Applying the theorem repeatedly ($X, \mathcal{P}(X), \mathcal{P}(\mathcal{P}(X)),\dots$) produces ever-larger cardinals, so **there is no largest cardinal**. This matches questions `set-ordinals-cardinals-2` and `-4`.
+1. $\kappa$ is an ordinal of $M$ and $M$ is transitive, so every element of $\kappa$ lies in $M$; since $M$ is countable, $\kappa$ is a countable set. It is infinite, since $\omega \in \kappa$. Hence $|\kappa| = \aleph_0$ as computed in $V$.
+2. $M \models$ "$\kappa$ is uncountable", because $\kappa$ was chosen as the least ordinal of $M$ admitting no bijection with $\omega$ *inside $M$*. So the answer to the second question is no.
+3. The two are compatible: the bijection $\omega \to \kappa$ exists in $V$ but not in $M$. The sentence "$\kappa$ is countable" is $\Sigma_1$, hence upward absolute — true in $V$, and there is no reason for it to be true in the smaller $M$.
 :::
 
-## Transfinite Induction and Recursion
+:::remark[Cardinal collapse and preservation]
+This is exactly the phenomenon forcing exploits. A forcing extension $M[G]$ may contain a surjection $\omega \to (\omega_1)^M$, in which case $(\omega_1)^M$ is no longer a cardinal in $M[G]$ — the cardinal has been *collapsed*. Showing that a given forcing does not collapse cardinals is a standard proof obligation, usually discharged by the countable chain condition; the chapter *Independence & Forcing* gives the argument. Cohen's model for $\neg\mathrm{CH}$ is designed so that the cardinals of $M$ survive while the continuum is pushed above $\aleph_1$.
+:::
+
+:::pitfall
+"$\kappa$ is a cardinal" and "$\kappa = \aleph_1$" behave differently. The first is downward absolute; the second is absolute in neither direction, because $\aleph_1$ is defined as the *least* uncountable cardinal, and a model missing bijections will name the wrong ordinal. Always relativise the notation — write $(\omega_1)^M$, never a bare $\omega_1$, when working inside a model.
+:::
+
+:::summary
+Being an ordinal is $\Delta_0$ and therefore absolute, so all transitive models agree about ordinals and each has a height. Being a cardinal is $\Pi_1$ and only downward absolute, so models overestimate cardinality; the gap between $(\omega_1)^M$ and $\omega_1$ is the engine of the Skolem paradox, of $L$'s slimness, and of cardinal collapse in forcing.
+:::
+
+## Induction and Recursion as Theorem Schemas
 
 <!-- section: transfinite -->
 
-:::theorem[Transfinite induction]{#transfinite-induction}
-To prove $\forall \alpha \, \phi(\alpha)$ for ordinals, it is enough to prove:
+Transfinite induction and transfinite recursion are usually presented as tools for building objects. Seen from logic they are results about the theory: the first is a theorem schema derived from Foundation, and the second is a theorem schema whose proof is the principal consumer of Replacement. Both are schemas for the same reason Separation is — they quantify over formulas.
 
-1. $\phi(0)$
-2. If $\phi(\beta)$ then $\phi(\beta+1)$
-3. If $\lambda$ limit and $\phi(\beta)$ for all $\beta < \lambda$, then $\phi(\lambda)$.
+:::theorem[$\in$-induction schema]{#in-induction}
+For each formula $\varphi(x,\bar p)$, ZF proves
+
+$$\forall x\,\bigl(\forall y \in x\,\varphi(y,\bar p) \to \varphi(x,\bar p)\bigr) \ \to\ \forall x\,\varphi(x,\bar p).$$
 :::
 
-This generalizes ordinary induction.
-
-:::definition[Transfinite recursion]{#transfinite-recursion}
-**Transfinite recursion** defines functions on ordinals by recursion along the well-ordering.
+:::proof
+Assume the hypothesis and suppose some $a$ has $\neg\varphi(a,\bar p)$. Let $t$ be the transitive closure of $\{a\}$, which exists by Replacement, Union and Infinity, and put $S = \{x \in t : \neg\varphi(x,\bar p)\}$, a set by Separation, with $a \in S$ so $S \neq \emptyset$. By Foundation there is an $\in$-minimal $x \in S$, that is, one with $x \cap S = \emptyset$. Every $y \in x$ lies in $t$, because $t$ is transitive and $x \in t$, and $y \notin S$ by minimality; so $\varphi(y,\bar p)$ holds for every $y \in x$. The hypothesis then gives $\varphi(x,\bar p)$, contradicting $x \in S$.
 :::
 
-Just as ordinary recursion defines $F(n+1)$ from $F(n)$, transfinite recursion has three matching clauses — a base value $F(0)$, a successor rule $F(\beta+1)$ from $F(\beta)$, and a **limit rule** that assembles $F(\lambda)$ from the whole "history" $\{F(\beta) : \beta < \lambda\}$ (typically as a union or supremum). The limit clause is what ordinary recursion never needs, because $\mathbb{N}$ has no limit stages.
+:::corollary[Transfinite induction on ordinals]{#transfinite-induction}
+For each formula $\varphi$, ZF proves: if $\varphi(0)$ holds, and $\varphi(\beta) \to \varphi(\beta+1)$ for every ordinal $\beta$, and $\varphi(\lambda)$ holds whenever $\lambda$ is a limit ordinal with $\varphi(\beta)$ for all $\beta < \lambda$, then $\varphi(\alpha)$ holds for every ordinal $\alpha$.
+:::
 
-:::theorem[Well-ordering theorem]{#well-ordering}
-Assuming AC, every set admits a well-ordering, hence can be put in bijection with an ordinal (its cardinal).
+:::proof
+Apply the $\in$-induction schema to the formula "$x$ is an ordinal $\to \varphi(x)$". For an ordinal $\alpha$, the hypothesis $\forall y \in \alpha\,\varphi(y)$ says exactly that $\varphi(\beta)$ holds for all $\beta < \alpha$, since the members of $\alpha$ are precisely the ordinals below it. The three clauses then cover the trichotomy "$\alpha = 0$, $\alpha$ a successor, $\alpha$ a limit", which is itself a theorem of ZF.
+:::
+
+:::pitfall
+The three-clause form is a convenience, not the content. What the $\in$-induction schema gives is the single clause "if $\varphi$ holds below $x$ then $\varphi$ holds at $x$"; the limit case is not an extra burden imposed by infinity but simply the case where "below" has no largest element. An argument that verifies a successor step and stops is not an incomplete induction — it is not an induction at all.
+:::
+
+:::theorem[Transfinite recursion schema]{#transfinite-recursion}
+Let $\gamma(x,y)$ be a formula with $\forall x\,\exists! y\,\gamma(x,y)$, defining a class function $G$. Then ZF proves there is a class function $F$ on $\mathrm{Ord}$, definable from $\gamma$, with
+
+$$F(\alpha) = G\bigl(F \restriction \alpha\bigr) \quad\text{for every ordinal } \alpha,$$
+
+and $F$ is unique with this property. Here "$F$ is a class function" again abbreviates a formula, so the theorem is one statement per $\gamma$.
+:::
+
+:::proof[Sketch]
+Call a set $h$ an **$\alpha$-approximation** if $h$ is a function with domain $\alpha$ and $h(\xi) = G(h \restriction \xi)$ for every $\xi < \alpha$. Any two approximations agree on the intersection of their domains, by the corollary *Transfinite induction on ordinals* applied to "$h(\xi) = h'(\xi)$", so an $\alpha$-approximation is unique if it exists. Existence for every $\alpha$ is proved by transfinite induction: at $0$ take the empty function; at a successor $\alpha+1$ extend the $\alpha$-approximation by the single value $G(h)$; at a limit $\lambda$ take the union of the approximations below $\lambda$, which is a function because they cohere. The essential step is that this union is a *set*: the assignment $\xi \mapsto$ (the unique $\xi$-approximation) is a definable functional relation on the set $\lambda$, so Replacement collects the approximations into a set and Union merges them. Finally define $F(\alpha)$ to be $h(\alpha)$ for any $(\alpha+1)$-approximation $h$; coherence makes this well defined, and uniqueness of $F$ is another transfinite induction. The part not written out is the routine verification that the extended function at a successor is again an approximation.
 :::
 
 :::intuition
-Ordinary induction stops at finite numbers. Transfinite induction lets you "keep going past infinity": after proving it for all finite stages, you still have to check the limit stage $\omega$ (and higher limits).
-
-It is the only way to prove statements about all ordinals or define functions that go on "forever".
+Replacement is what converts "for each $\xi$ there is a stage" into "the stages form a set". Without it one can still speak of each approximation individually, but never gather them, and a recursion that cannot gather its own history stalls at the first limit ordinal. That is the precise sense in which Replacement is the axiom of *length*: Power Set makes the universe wide, Replacement makes it tall.
 :::
 
-:::example[defining ordinal addition by transfinite recursion.]
-We define $\alpha + \gamma$ by recursion on the *second* argument $\gamma$, using all three clauses.
-:::
-
-:::solution
-Step 1 (base). $\alpha + 0 = \alpha$.
-
-Step 2 (successor). $\alpha + (\beta + 1) = (\alpha + \beta) + 1$ — take the successor of the previously defined value.
-
-Step 3 (limit). For a limit ordinal $\lambda$, $\alpha + \lambda = \sup\{\, \alpha + \beta \mid \beta < \lambda \,\}$ — glue together everything defined below $\lambda$.
-
-Now compute $1 + \omega$ and $\omega + 1$ to see that ordinal addition is **not commutative**.
-$1 + \omega$: since $\omega$ is a limit, use Step 3: $1 + \omega = \sup\{1 + n \mid n < \omega\} = \sup\{1,2,3,\dots\} = \omega$.
-$\omega + 1$: since $1 = 0 + 1$ is a successor, use Step 2: $\omega + 1 = (\omega + 0) + 1 = \omega + 1$, the successor of $\omega$, which is strictly greater than $\omega$.
-
-Conclusion: $1 + \omega = \omega \neq \omega + 1$. Sanity check: intuitively, prepending one item to an $\omega$-list ($\ast,0,1,2,\dots$) just relabels an $\omega$-list, while appending one item after all of $\omega$ ($0,1,2,\dots,\ast$) creates a brand-new last element — so the results genuinely differ.
-:::
-
-:::example[transfinite induction — every ordinal is $0$, a successor, or a limit.]
-We prove $\phi(\alpha)$: "$\alpha = 0$, or $\alpha = \beta + 1$ for some $\beta$, or $\alpha$ is a limit ordinal (nonzero with no immediate predecessor)." We run through the three induction clauses.
+:::example[Zermelo set theory cannot reach $V_{\omega+\omega}$]
+Zermelo set theory Z is ZFC with Replacement deleted and Separation retained. Show that $V_{\omega+\omega}$ is a model of Z, and deduce that Z does not prove the range of the recursion $F(0) = \omega$, $F(n+1) = \mathcal{P}(F(n))$ is a set.
 :::
 
 :::solution
-1. Step 1 (base). $\phi(0)$ holds: $\alpha = 0$ satisfies the first disjunct outright.
-2. Step 2 (successor). Assume $\phi(\beta)$; consider $\alpha = \beta + 1$. Then $\alpha$ is by construction a successor, so its second disjunct holds. (Note $\phi(\beta)$ was not even needed here — successors classify themselves.)
-3. Step 3 (limit). Let $\lambda$ be a limit-candidate: $\lambda \neq 0$ and, by the induction hypothesis, every $\beta < \lambda$ falls into one of the three types. If $\lambda$ had an immediate predecessor $\mu$ (so $\lambda = \mu + 1$) it would be a successor; since we are in the remaining case where no such $\mu$ exists, $\lambda$ is nonzero with no immediate predecessor — which is exactly the definition of a limit ordinal, so the third disjunct holds.
-4. The three cases are exhaustive, so $\phi(\alpha)$ holds for every ordinal $\alpha$. Sanity check: $\omega$ has predecessors $0,1,2,\dots$ but none of them is *immediate* (there is no largest natural number below $\omega$), so $\omega$ is correctly classified as a limit — and this is precisely the case that forgetting Step 3 would miss.
+1. $V_{\omega+\omega}$ is transitive, and it satisfies Extensionality and Foundation because those are $\Delta_0$-style conditions inherited by transitive sets, and Separation because a subset of an element of $V_{\omega+\omega}$ has no greater rank.
+2. It satisfies Pairing, Union and Power Set because $\operatorname{rank}(\{a,b\})$, $\operatorname{rank}(\bigcup a)$ and $\operatorname{rank}(\mathcal{P}(a))$ each exceed $\max(\operatorname{rank}(a),\operatorname{rank}(b))$ by at most $2$, and $\omega+\omega$ is a limit ordinal, so the results stay below it. Infinity holds since $\omega \in V_{\omega+1}$, and Choice holds relativised if it holds in $V$.
+3. Each $F(n)$ has rank $\omega + n$ and so lies in $V_{\omega+\omega}$. But $\{F(n) : n \in \omega\}$ has rank $\omega+\omega$ and is therefore *not* an element of $V_{\omega+\omega}$.
+4. So $V_{\omega+\omega} \models \mathrm{Z}$ while refuting that instance of Replacement. By soundness, Z does not prove the range of this recursion is a set — the theorem *Transfinite recursion schema* genuinely needs Replacement, and Z is strictly weaker than ZF.
+:::
+
+:::example[Why the recursion theorem must be a schema]
+Explain why transfinite recursion cannot be stated as a single sentence of $\mathcal{L}_\in$ covering all class functions $G$, and why the analogous statement for *set* functions is a single theorem.
+:::
+
+:::solution
+1. A class function $G$ is presented by a formula $\gamma$, and no set-sized object in $V$ codes "all definable class functions"; by Tarski's undefinability theorem there is not even a definable truth predicate for $\mathcal{L}_\in$ from which one could build such a coding.
+2. So "for every class function $G$ there is $F$ with $F(\alpha) = G(F \restriction \alpha)$" quantifies over formulas, which first-order syntax forbids — exactly the situation of Separation and Replacement.
+3. The remedy is the same: one theorem per $\gamma$, generated by a template that can be checked mechanically in the metatheory.
+4. For a *set* function $g$ the obstacle vanishes, because $g$ is an object a first-order quantifier can range over. "For every set $A$, every $a \in A$ and every $g : A^{<\omega} \to A$ there is a unique $f : \omega \to A$ with $f(0) = a$ and $f(n+1) = g(f \restriction (n+1))$" is a single theorem of ZF. This is why ordinary recursion on $\mathbb{N}$ raises none of these issues.
+:::
+
+:::remark[Where the ordinal arithmetic lives]
+The uses of these schemas — ordinal addition, multiplication and exponentiation, Cantor normal form, the hierarchies $V_\alpha$ and $L_\alpha$, the rank function — are developed in the chapters *Ordinals & Cardinals* and *ZFC Axioms* of the subject Set Theory. The logical content isolated here is that every one of them is a definition by a schema instance, and that each needs Replacement precisely at its limit stages.
+:::
+
+:::summary
+$\in$-induction follows from Foundation by way of the transitive closure, and transfinite induction on ordinals is its restriction to $\mathrm{Ord}$. Transfinite recursion is a theorem schema, one instance per defining formula, whose proof uses Replacement to gather the approximations at limit stages — a use that $V_{\omega+\omega} \models \mathrm{Z}$ shows to be unavoidable.
 :::
 
 ## Common Mistakes
 
-- **No universal set:** Believing that "the set of all sets" exists is wrong — it leads directly to Russell's paradox and is forbidden by the axioms.
+- **Treating a schema as a sentence.** "Separation says that for every property…" is metatheory. Inside $\mathcal{L}_\in$ there is one axiom per formula, and no sentence quantifying over formulas exists. The same error turns the Reflection Principle into a claim that some $V_\alpha$ models all of ZFC, which is false.
 
-- **Choice is independent:** Assuming the Axiom of Choice is "obviously true" or "obviously false" is mistaken. It is independent; both ZF+AC and ZF+¬AC are consistent (relative to ZF).
+- **Thinking ZFC proves it has a model.** If ZFC is consistent it has a model, by the completeness theorem applied in the metatheory — but ZFC cannot prove this, since it would then prove $\operatorname{Con}(\mathrm{ZFC})$. Every theorem about transitive models carries "if such a model exists" as a hypothesis.
 
-- **Cardinality versus ordinality:** Confusing cardinality with ordinality for infinite sets leads to errors. $|\mathbb{N}| = |\mathbb{Z}| = \aleph_0$ even though as ordered sets they look different.
+- **Reading the Skolem paradox as a contradiction.** A countable model satisfying "$\mathcal{P}(\omega)$ is uncountable" is consistent, because the bijection that would refute the model's belief lies outside it. Uncountability is not absolute.
 
-- **Many different infinities:** Thinking every infinite set has the same size is incorrect. Cantor's theorem and the diagonal argument show uncountably many different infinities.
+- **Forgetting transitivity in an absoluteness argument.** $\Delta_0$ absoluteness fails badly for non-transitive models; the proof uses transitivity exactly to import an external witness of a bounded quantifier.
 
-- **Transfinite induction includes limits:** Applying "induction" only to the successor step and forgetting the limit-ordinal case is a mistake in transfinite settings (e.g., proving something for all ordinals < $\omega_1$).
+- **Blaming Foundation for Russell's paradox.** It is Separation, replacing unrestricted comprehension, that blocks the paradoxical collection — Foundation rules out $x \in x$ and membership cycles, which is a different job, and ZF without Foundation is still free of Russell's contradiction.
 
-- **CH requires extra axioms:** Claiming CH is "true" or "false" in ordinary mathematics without specifying extra axioms is wrong; it is independent of ZFC.
+- **Confusing independence with falsity.** "ZF $\nvdash$ AC" and "ZFC $\nvdash$ CH" are statements about provability. Neither licenses asserting the negation, any more than the existence of a non-abelian group refutes commutativity for all groups.
+
+- **Asserting absolute consistency.** Gödel's construction of $L$ and Cohen's forcing both prove *relative* consistency: $\operatorname{Con}(\mathrm{ZF}) \to \operatorname{Con}(\mathrm{ZFC})$ and so on. Dropping the hypothesis produces a claim that is provably unprovable.
+
+- **Using $\omega_1$ unrelativised inside a model.** Write $(\omega_1)^M$. Cardinality is only downward absolute, so a model's $\aleph_1$ is generally a countable ordinal when viewed from outside.
+
+- **Stopping an induction at the successor step.** In the $\in$-induction schema there is only one step, "everything below implies here"; a limit ordinal is the case where "below" has no largest element, not an optional extra.
