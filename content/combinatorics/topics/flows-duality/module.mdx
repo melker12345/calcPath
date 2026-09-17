@@ -4,264 +4,731 @@ title: Flows and Linear Programming Duality
 
 # Flows and Linear Programming Duality
 
-Max-flow min-cut, the algorithms that realise it, and the linear programming duality that explains every min–max theorem here.
+Max-flow min-cut, the algorithms that realise it, and the linear programming duality that explains every min–max theorem in this subject.
+
+The previous chapter closed with a family of min–max theorems — Hall's condition, König's theorem, the matroid intersection formula — each proved by an argument tailored to its own setting. This chapter explains where they come from. The mechanism has two layers. The combinatorial layer is the max-flow min-cut theorem: a maximum flow is certified optimal by a cut of equal capacity, and the certificate is produced by the very algorithm that finds the flow. The analytic layer is linear programming duality: every linear program has a dual whose optimum equals its own, so every linear optimisation problem has a certificate of optimality. Max-flow min-cut is what duality says about one particular constraint matrix — and that matrix is totally unimodular, which is why the certificate comes out integral rather than fractional.
 
 ## Flow Networks and Feasible Flows
 
 <!-- section: flow-networks -->
 
+A flow network models a transport system: a directed graph whose arcs have throughput limits, with one point where material enters and one where it leaves. Everything in this chapter rests on two rules — no arc carries more than its capacity, and nothing accumulates at an intermediate vertex — so we state them precisely before doing anything with them.
+
 :::definition[Flow network]{#flow-network}
-A flow network G = (V,E) has distinguished source s and sink t, and a capacity function c : E → ℝ≥0.
+A **flow network** is a quadruple $N = (G,s,t,c)$ where $G = (V,E)$ is a finite directed graph, $s \in V$ is the **source**, $t \in V \setminus \{s\}$ is the **sink**, and $c : E \to \mathbb{R}_{\ge 0}$ is the **capacity** function. We write $c(u,v)$ for the capacity of the arc $(u,v)$, with the convention $c(u,v) = 0$ when $(u,v) \notin E$.
 :::
 
-:::definition[Feasible flow]{#feasible-flow}
-A flow f : E → ℝ satisfies:
+:::definition[Feasible flow and its value]{#feasible-flow}
+A **flow** on $N$ is a function $f : E \to \mathbb{R}$ satisfying
 
-- Capacity: 0 ≤ f(e) ≤ c(e) for every edge.
-- Conservation: for every v ≠ s,t, sum_{edges into v} f = sum_{edges out of v} f.
+- **capacity constraints:** $0 \le f(e) \le c(e)$ for every $e \in E$;
+- **conservation:** for every $v \in V \setminus \{s,t\}$,
+$$\sum_{u \,:\, (u,v) \in E} f(u,v) \;=\; \sum_{w \,:\, (v,w) \in E} f(v,w).$$
 
-The value |f| of the flow is the net flow out of s.
+The **value** of $f$ is the net amount leaving the source,
+$$|f| \;=\; \sum_{w\,:\,(s,w) \in E} f(s,w) \;-\; \sum_{u\,:\,(u,s) \in E} f(u,s).$$
+A flow is **maximum** if no flow on $N$ has larger value.
+:::
+
+:::notation
+For sets $X, Y \subseteq V$ write $f(X,Y) = \sum_{u \in X}\sum_{v \in Y} f(u,v)$ and $c(X,Y) = \sum_{u \in X}\sum_{v \in Y} c(u,v)$, again with missing arcs contributing $0$. Conservation then reads $f(V,\{v\}) = f(\{v\},V)$ for internal $v$, and $|f| = f(\{s\},V) - f(V,\{s\})$.
 :::
 
 :::intuition
-Think of pipes with limited throughput (capacity) carrying water from s to t.
-
-At every junction (non s/t) the amount flowing in must equal the amount flowing out.
+Read the network as a system of pipes and the flow as water. A capacity is the width of a pipe; conservation says junctions are not tanks — whatever arrives leaves at once. The value is what you would measure at the tap: the rate at which water leaves the source, which is also the rate at which it reaches the sink, because the interior stores nothing.
 :::
 
-:::example
-Consider a network with vertices $s, a, b, t$ and directed capacities
-$$s\to a:\ 3,\quad s\to b:\ 2,\quad a\to t:\ 2,\quad b\to t:\ 3,\quad a\to b:\ 2.$$
-Let us build **one feasible flow** and verify it obeys both rules. Try
-$$f(s\to a)=3,\ f(a\to t)=2,\ f(a\to b)=1,\ f(s\to b)=2,\ f(b\to t)=3.$$
+:::figure[A flow network on four vertices. The numbers are capacities; the dashed line marks the cut $S = \{s,a\}$, crossed forward by $s \to b$, $a \to b$ and $a \to t$.]{#flow-network-figure}
+{
+  "type": "plot",
+  "x": [-0.8, 5.2], "y": [-1.2, 3.2],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "point", "at": [0, 1] },
+    { "kind": "point", "at": [2, 2.2] },
+    { "kind": "point", "at": [2, -0.2] },
+    { "kind": "point", "at": [4, 1] },
+    { "kind": "arrow", "from": [0.2, 1.1], "to": [1.8, 2.1] },
+    { "kind": "arrow", "from": [0.2, 0.9], "to": [1.8, -0.1] },
+    { "kind": "arrow", "from": [2, 2.05], "to": [2, -0.05] },
+    { "kind": "arrow", "from": [2.2, 2.1], "to": [3.8, 1.1] },
+    { "kind": "arrow", "from": [2.2, -0.1], "to": [3.8, 0.9] },
+    { "kind": "line", "through": [[3.0, 3.0], [1.1, -1.0]], "dashed": true, "muted": true, "extend": false },
+    { "kind": "text", "at": [-0.45, 1.0], "text": "s" },
+    { "kind": "text", "at": [1.75, 2.6], "text": "a" },
+    { "kind": "text", "at": [1.75, -0.65], "text": "b" },
+    { "kind": "text", "at": [4.45, 1.0], "text": "t" },
+    { "kind": "text", "at": [0.6, 2.0], "text": "3" },
+    { "kind": "text", "at": [0.6, -0.05], "text": "2" },
+    { "kind": "text", "at": [2.35, 1.0], "text": "2" },
+    { "kind": "text", "at": [3.5, 2.0], "text": "2" },
+    { "kind": "text", "at": [3.5, -0.05], "text": "3" },
+    { "kind": "text", "at": [1.45, -1.05], "text": "S" },
+    { "kind": "text", "at": [3.5, 2.9], "text": "cut" }
+  ]
+}
+:::
+
+Conservation is a local condition, imposed one vertex at a time. Its power comes from the fact that summing it over a set of vertices turns it into a global statement about how much crosses the boundary of that set. That observation is the whole of the elementary theory, so we record it as a theorem and prove it carefully.
+
+:::definition[$s$-$t$ cut]{#st-cut}
+An **$s$-$t$ cut** of $N$ is a partition $V = S \cup T$, $S \cap T = \varnothing$, with $s \in S$ and $t \in T$. Its **capacity** is $c(S,T)$, the sum of the capacities of the arcs directed from $S$ to $T$. Arcs from $T$ back to $S$ contribute nothing.
+:::
+
+:::theorem[Flow across a cut]{#flow-across-cut}
+Let $f$ be a flow on $N$ and $(S,T)$ an $s$-$t$ cut. Then
+$$|f| \;=\; f(S,T) - f(T,S).$$
+:::
+
+:::proof
+Start from the value and add zero once for each internal vertex of $S$. For $v \in S \setminus \{s\}$, conservation says $f(\{v\},V) - f(V,\{v\}) = 0$, while by definition $|f| = f(\{s\},V) - f(V,\{s\})$. Summing over all $v \in S$,
+$$|f| \;=\; \sum_{v \in S}\big( f(\{v\},V) - f(V,\{v\}) \big) \;=\; f(S,V) - f(V,S).$$
+Now split the other argument along $V = S \cup T$: $f(S,V) = f(S,S) + f(S,T)$ and $f(V,S) = f(S,S) + f(T,S)$. The term $f(S,S)$, the flow on arcs internal to $S$, occurs in both and cancels, leaving $|f| = f(S,T) - f(T,S)$.
+:::
+
+Two consequences follow at once, and the second is half of the main theorem of the chapter.
+
+:::corollary[Value measured at the sink]{#value-at-sink}
+For every flow $f$ the net flow into $t$ equals $|f|$. Indeed $S = V \setminus \{t\}$ is an $s$-$t$ cut, and Theorem [Flow across a cut](#flow-across-cut) gives $|f| = f(V \setminus \{t\},\{t\}) - f(\{t\}, V\setminus\{t\})$.
+:::
+
+:::theorem[Weak duality for flows]{#flow-weak-duality}
+For every flow $f$ and every $s$-$t$ cut $(S,T)$,
+$$|f| \;\le\; c(S,T).$$
+Hence $\max_f |f| \le \min_{(S,T)} c(S,T)$, and if some flow and some cut have the same value, that flow is maximum and that cut is minimum.
+:::
+
+:::proof
+By Theorem [Flow across a cut](#flow-across-cut), $|f| = f(S,T) - f(T,S) \le f(S,T)$ because $f \ge 0$ on every arc. Each term of $f(S,T)$ is at most the matching capacity, so $f(S,T) \le c(S,T)$. For the last sentence: the inequality holds for every pair, so a pair achieving equality pins both sides — no flow can exceed that cut's capacity and no cut can fall below that flow's value.
+:::
+
+:::intuition
+Everything leaving $s$ must eventually cross the frontier between $S$ and $T$, since $t$ is on the far side. Forward arcs carry it across; backward arcs only return material to be carried across again. So the forward capacity of any frontier is a ceiling on the value, and the cheapest frontier is the most informative ceiling. The content of the next section is that this ceiling is always attained.
+:::
+
+:::pitfall
+The capacity of a cut counts **only** arcs from $S$ to $T$. Adding the arcs from $T$ to $S$ inflates every cut and destroys the min–max equality. The asymmetry is exactly right: a backward arc does not help material reach $t$, and in Theorem [Flow across a cut](#flow-across-cut) it enters the value with a minus sign.
+:::
+
+:::example[A flow and the cuts that bound it]
+In the network of the figure — arcs $s \to a$ of capacity $3$, $s \to b$ of capacity $2$, $a \to b$ of capacity $2$, $a \to t$ of capacity $2$, $b \to t$ of capacity $3$ — verify that
+$$f(s\to a) = 3,\quad f(s \to b) = 2,\quad f(a \to b) = 1,\quad f(a\to t) = 2,\quad f(b \to t) = 3$$
+is a flow, compute its value, and find the minimum cut capacity.
 :::
 
 :::solution
-**Capacity** ($0 \le f(e) \le c(e)$): $3\le3$, $2\le2$, $1\le2$, $2\le2$, $3\le3$ — all hold. ✓
-**Conservation** at internal vertices:
-At $a$: in $= f(s\to a) = 3$; out $= f(a\to t) + f(a\to b) = 2 + 1 = 3$. Balanced. ✓
-At $b$: in $= f(s\to b) + f(a\to b) = 2 + 1 = 3$; out $= f(b\to t) = 3$. Balanced. ✓
+*Feasibility.* Each value lies between $0$ and its capacity: $3 \le 3$, $2 \le 2$, $1 \le 2$, $2 \le 2$, $3 \le 3$. At $a$: in $= 3$, out $= 1 + 2 = 3$. At $b$: in $= 2 + 1 = 3$, out $= 3$. Both internal vertices conserve, so $f$ is a flow.
 
-The value is the net flow out of $s$: $|f| = f(s\to a) + f(s\to b) = 3 + 2 = 5$. (It matches the inflow to $t$: $f(a\to t)+f(b\to t) = 2+3 = 5$, as conservation forces.) We show in the next section that this flow is in fact *maximum*.
+*Value.* $|f| = 3 + 2 = 5$, and Corollary [Value measured at the sink](#value-at-sink) confirms it at the other end: $2 + 3 = 5$.
+
+*Cuts.* There are four, one for each subset of $\{a,b\}$ adjoined to $s$.
+
+| $S$ | forward arcs | capacity |
+|---|---|---|
+| $\{s\}$ | $s\to a,\ s\to b$ | $3+2 = 5$ |
+| $\{s,a\}$ | $s\to b,\ a\to b,\ a \to t$ | $2+2+2 = 6$ |
+| $\{s,b\}$ | $s \to a,\ b \to t$ | $3+3 = 6$ |
+| $\{s,a,b\}$ | $a\to t,\ b \to t$ | $2+3 = 5$ |
+
+The minimum is $5$. Since the flow also has value $5$, Theorem [Weak duality for flows](#flow-weak-duality) certifies both at once: $f$ is maximum and $\{s\}$, $\{s,a,b\}$ are minimum cuts. Note that the cut $\{s,a\}$ has capacity $6 > 5$: a cut chosen at random bounds the flow but need not be tight, which is why the theorem minimises over cuts.
 :::
 
+Before going further, it is worth knowing how flexible the model is, because several apparent restrictions are not restrictions at all.
+
+:::proposition[Standard reductions]{#flow-reductions}
+Each of the following reduces to the single-source, single-sink, arc-capacitated problem above without changing the optimum.
+
+1. **Several sources and sinks.** Add a super-source $s^\ast$ with an arc of infinite capacity to each source, and a super-sink $t^\ast$ with an arc of infinite capacity from each sink.
+2. **Vertex capacities.** Replace a vertex $v$ of capacity $\kappa$ by two vertices $v_{\mathrm{in}}, v_{\mathrm{out}}$ joined by an arc of capacity $\kappa$; arcs into $v$ enter $v_{\mathrm{in}}$, arcs out of $v$ leave $v_{\mathrm{out}}$.
+3. **Undirected edges.** Replace each undirected edge $uv$ of capacity $\kappa$ by the two arcs $(u,v)$ and $(v,u)$, each of capacity $\kappa$.
+4. **Lower bounds $\ell(e) \le f(e)$.** These are genuinely harder: feasibility is no longer automatic and needs a preliminary flow computation. We do not pursue them here.
+:::
+
+:::proof
+In (1), a flow in the enlarged network restricts to a flow of the same value in the original and conversely, since the added arcs are uncapacitated and no conservation constraint is imposed at $s^\ast$ or $t^\ast$. In (2), all traffic through $v$ is forced along the single arc $v_{\mathrm{in}} \to v_{\mathrm{out}}$, whose capacity is exactly the vertex bound. In (3), a flow using both antiparallel arcs may be decreased by $\min\{f(u,v), f(v,u)\}$ on both without changing its value or violating capacities, so we may assume at most one direction carries flow, which is an orientation of the undirected edge. Item (4) is a statement, not a claim proved here.
+:::
+
+:::remark
+Vertex capacities in (2) are what make the vertex form of Menger's theorem a flow statement; we use exactly this device later in the chapter. Conversely, reduction (3) is why an undirected min cut and a directed min cut can be discussed in the same breath.
+:::
 ## The Max-Flow Min-Cut Theorem
 
 <!-- section: maxflow-mincut -->
 
-:::definition[s-t cut]{#st-cut}
-An s-t cut is a partition of V into S ∋ s and T = V\S ∋ t; its capacity is the sum of c(e) over edges e from S to T.
+Weak duality gives $\max |f| \le \min c(S,T)$ for free. The reverse inequality is the theorem of Ford and Fulkerson, and it is proved constructively: given a flow that cannot be improved, we *exhibit* a cut of exactly its value. The tool that makes this possible is the residual graph, which records how much each arc could still absorb — and, crucially, how much of an earlier decision could still be undone.
+
+:::definition[Residual capacity and residual graph]{#residual-graph}
+Let $f$ be a flow on $N$. For an ordered pair $(u,v)$ of distinct vertices define the **residual capacity**
+$$c_f(u,v) \;=\; \big(c(u,v) - f(u,v)\big) \;+\; f(v,u),$$
+the unused capacity of the forward arc plus the flow currently on the reverse arc. The **residual graph** $G_f$ has vertex set $V$ and an arc $(u,v)$ whenever $c_f(u,v) > 0$.
+:::
+
+:::intuition
+A residual arc $u \to v$ means "one more unit can be made to move from $u$ to $v$", and there are two ways that can be true: the pipe $u \to v$ is not yet full, or the pipe $v \to u$ is carrying flow that we may cancel. Cancellation is not cheating. Flow is anonymous — reducing $f(v,u)$ by one unit and simultaneously adding a unit somewhere else re-routes the same material, and the result is still a flow. Without backward residual arcs a greedy algorithm can paint itself into a corner; with them it never can.
+:::
+
+:::definition[Augmenting path]{#augmenting-path}
+An **augmenting path** for $f$ is a directed $s$-$t$ path $P$ in the residual graph $G_f$. Its **bottleneck** is $\Delta(P) = \min_{(u,v) \in P} c_f(u,v) > 0$.
+:::
+
+:::lemma[Augmentation]{#augmentation-lemma}
+Let $f$ be a flow and $P$ an augmenting path with bottleneck $\Delta = \Delta(P)$. Define $f'$ by processing each arc $(u,v)$ of $P$: first cancel $\delta = \min\{\Delta, f(v,u)\}$ units of reverse flow, setting $f'(v,u) = f(v,u) - \delta$, then add the remaining $\Delta - \delta$ units forward, $f'(u,v) = f(u,v) + \Delta - \delta$; leave all other arcs unchanged. Then $f'$ is a flow with $|f'| = |f| + \Delta$.
+:::
+
+:::proof
+*Capacities.* On the reverse arc, $0 \le f(v,u) - \delta \le f(v,u) \le c(v,u)$. On the forward arc we must check $f(u,v) + \Delta - \delta \le c(u,v)$. If $\delta = \Delta$ there is nothing to add. Otherwise $\delta = f(v,u)$, and the definition of residual capacity gives $\Delta \le c_f(u,v) = c(u,v) - f(u,v) + f(v,u) = c(u,v) - f(u,v) + \delta$, which rearranges to exactly the required inequality.
+
+*Conservation.* Let $v$ be an internal vertex of $P$, entered by $(u,v)$ and left by $(v,w)$. The modification changes the net flow into $v$ by $+\Delta$ (whether the $\Delta$ units arrive as added forward flow on $(u,v)$ or as cancelled flow on $(v,u)$, the net inflow rises by $\Delta$) and the net flow out of $v$ by $+\Delta$ for the same reason. The two changes cancel, so conservation still holds. Vertices not on $P$ are untouched. (If $P$ repeats a vertex, delete the cycle between the repetitions first; a shortest residual $s$-$t$ path never repeats one.)
+
+*Value.* The first arc of $P$ leaves $s$, and the net flow out of $s$ increases by $\Delta$, so $|f'| = |f| + \Delta$.
 :::
 
 :::theorem[Max-flow min-cut]{#max-flow-min-cut}
-The maximum possible flow value equals the minimum capacity of an s-t cut.
+Let $N$ be a flow network and $f$ a flow on it. The following are equivalent:
+
+1. $f$ is a maximum flow;
+2. $G_f$ contains no augmenting path;
+3. there is an $s$-$t$ cut $(S,T)$ with $c(S,T) = |f|$.
+
+Consequently the maximum value of a flow equals the minimum capacity of an $s$-$t$ cut.
+:::
+
+:::proof
+**(1) $\Rightarrow$ (2).** If an augmenting path existed, Lemma [Augmentation](#augmentation-lemma) would produce a flow of value $|f| + \Delta > |f|$, contradicting maximality.
+
+**(2) $\Rightarrow$ (3).** Suppose no augmenting path exists. Let
+$$S = \{v \in V : \text{there is a directed } s\text{-}v \text{ path in } G_f\}, \qquad T = V \setminus S.$$
+Then $s \in S$, and $t \in T$ precisely because no $s$-$t$ path exists in $G_f$, so $(S,T)$ is an $s$-$t$ cut. Take $u \in S$, $v \in T$. Since $v$ is unreachable while $u$ is reachable, $(u,v)$ is not an arc of $G_f$, so $c_f(u,v) = 0$. As both summands in $c_f(u,v) = (c(u,v)-f(u,v)) + f(v,u)$ are nonnegative, both vanish:
+$$f(u,v) = c(u,v) \quad\text{and}\quad f(v,u) = 0 .$$
+Summing over all such pairs, $f(S,T) = c(S,T)$ and $f(T,S) = 0$, so Theorem [Flow across a cut](#flow-across-cut) gives $|f| = c(S,T) - 0 = c(S,T)$.
+
+**(3) $\Rightarrow$ (1).** Immediate from Theorem [Weak duality for flows](#flow-weak-duality): a flow whose value equals some cut's capacity cannot be beaten, since every flow is bounded by that capacity.
+
+For the final sentence, a maximum flow exists (see the remark below), so by (1) $\Rightarrow$ (3) some cut has capacity $\max_f |f|$; by weak duality no cut is cheaper.
+:::
+
+:::remark
+Existence of a maximum flow is not quite free when capacities are real. The set of flows is a compact subset of $\mathbb{R}^E$ — it is closed, being defined by finitely many non-strict linear equations and inequalities, and bounded, since $0 \le f(e) \le c(e)$ — and $f \mapsto |f|$ is continuous, so the maximum is attained. With integral capacities the argument is even simpler: the values are integers bounded by $c(\{s\},V)$. This is also a first instance of the Fundamental theorem of linear programming, proved in a later section.
 :::
 
 :::intuition
-You cannot push more flow across the network than the total "pipe capacity" crossing any cut that separates s from t.
-
-The theorem says there is always a bottleneck cut whose capacity exactly matches the max flow you can achieve.
+The proof of (2) $\Rightarrow$ (3) is the part worth remembering, because it is an algorithm as well as a proof. When you get stuck, look at which vertices you can still reach in the residual graph. Everything you can reach goes into $S$. Every arc leaving $S$ must be full — otherwise you could have gone further — and every arc entering $S$ must be empty — otherwise you could have gone backwards along it. A cut that is full forward and empty backward carries exactly the flow's value, so being stuck is the same as being optimal, with the cut as the receipt.
 :::
 
-:::example
-Take the same network as in the previous section:
-$$s\to a:\ 3,\quad s\to b:\ 2,\quad a\to t:\ 2,\quad b\to t:\ 3,\quad a\to b:\ 2.$$
-An $s$-$t$ cut $(S, T)$ has $s \in S$, $t \in T$, and capacity $=$ sum of capacities of edges that go **from $S$ to $T$** (backward edges $T\to S$ do *not* count). Enumerate all four cuts:
+The construction in (2) $\Rightarrow$ (3) has a consequence that no other proof of the theorem would give for free.
+
+:::corollary[Integrality of maximum flow]{#flow-integrality}
+If every capacity is an integer, then some maximum flow is integral: $f(e) \in \mathbb{Z}_{\ge 0}$ for all $e$. More generally, if all capacities are integer multiples of $\lambda > 0$, some maximum flow takes values in $\lambda\mathbb{Z}_{\ge0}$.
+:::
+
+:::proof
+Start with $f \equiv 0$, which is integral. If $f$ is integral then so is every residual capacity, hence the bottleneck $\Delta$ of any augmenting path is a positive integer and the augmented flow $f'$ of Lemma [Augmentation](#augmentation-lemma) is again integral, with $|f'| \ge |f| + 1$. Since values are bounded above by $c(\{s\},V) < \infty$, the process halts after at most $c(\{s\},V)$ augmentations, at an integral flow with no augmenting path — a maximum flow by Theorem [Max-flow min-cut](#max-flow-min-cut). Rescaling capacities by $1/\lambda$ gives the general statement.
+:::
+
+:::pitfall
+Integrality says *some* maximum flow is integral, not that every one is. A network with two parallel routes of equal capacity has fractional maximum flows as well; they simply split the load. Every application in this chapter needs only the existence of an integral optimum — which is exactly what an augmenting-path algorithm returns.
+:::
+
+:::recipe[Ford–Fulkerson method]{#ford-fulkerson}
+1. Set $f(e) = 0$ for every arc.
+2. Build the residual graph $G_f$ and search for a directed $s$-$t$ path $P$.
+3. If none exists, stop: $f$ is maximum, and the set $S$ of vertices reachable from $s$ in $G_f$ is a minimum cut.
+4. Otherwise compute $\Delta(P)$, augment along $P$ as in Lemma [Augmentation](#augmentation-lemma), and return to step 2.
+:::
+
+Step 2 says "search for a path" without saying how, and that vagueness is the method's one weakness. With integral capacities any search rule works, by Corollary [Integrality of maximum flow](#flow-integrality); the number of augmentations is at most the value of the maximum flow, so the running time is $O(|E| \cdot |f^\ast|)$ — *pseudo-polynomial*, since $|f^\ast|$ can be exponential in the number of bits used to write the capacities. With irrational capacities matters are worse.
+
+:::theorem[Ford–Fulkerson may fail to terminate]{#ff-nontermination}
+There is a flow network with irrational capacities and a choice of augmenting paths for which the Ford–Fulkerson method runs forever, and the flow values converge to a limit strictly smaller than the maximum flow value.
+:::
+
+:::proof
+Sketch, following Ford and Fulkerson's own example; we describe the construction and the invariant rather than verifying every augmentation. Let $\varphi = (\sqrt5 - 1)/2$, so that $\varphi^{n+2} = \varphi^n - \varphi^{n+1}$. Build a network containing four special arcs of capacities $1, \varphi, \varphi^2$ and a large capacity elsewhere, arranged so that a particular cyclic choice of augmenting paths leaves, after each round of three augmentations, residual capacities on the special arcs equal to $\varphi^{n+1}, \varphi^{n+2}, 0$ in some order — the same pattern as at the start of the round, with $n$ increased. The $n$-th round therefore adds $\varphi^n(1+\varphi)$ or so to the value, and the total added over all rounds is a convergent geometric series summing to a value bounded by $1 + 2\sum_{n\ge1}\varphi^n$, whereas the true maximum uses the large arcs and is far greater. The point the example makes is structural: nothing in the method forces progress, because a bottleneck can shrink geometrically. The repair is to fix the search rule, which is the subject of the next theorem.
+:::
+
+:::theorem[Edmonds–Karp]{#edmonds-karp}
+If step 2 of Ford–Fulkerson always chooses an augmenting path with the fewest arcs — that is, if the residual search is breadth-first — then the algorithm terminates after at most $|V||E|/2$ augmentations, whatever the capacities. Its total running time is $O(|V||E|^2)$.
+:::
+
+:::proof
+Sketch; the two invariants are proved in full in Schrijver or Cormen et al., and we name what the argument rests on.
+
+*Distances never decrease.* Let $d_f(v)$ be the number of arcs on a shortest $s$-$v$ path in $G_f$. One shows that after a breadth-first augmentation $d_{f'}(v) \ge d_f(v)$ for every $v$. The reason is that augmenting along a shortest path only creates residual arcs that point *backwards* along that path, and a backward arc cannot shorten a shortest-path distance.
+
+*Each arc is a bottleneck rarely.* Call $(u,v)$ *critical* for an augmentation if it is the bottleneck, so that it disappears from the residual graph. At that moment $d_f(v) = d_f(u) + 1$, because $(u,v)$ lies on a shortest path. For $(u,v)$ to become critical again it must first reappear, which happens only when some later augmenting path uses $(v,u)$; at that later moment $d_{f''}(u) = d_{f''}(v) + 1 \ge d_f(v) + 1 = d_f(u) + 2$ by monotonicity. So between two critical events for the same arc, $d(u)$ grows by at least $2$. Distances are bounded by $|V|$, so each arc is critical at most $|V|/2$ times; with $|E|$ arcs, and at least one critical arc per augmentation, there are at most $|V||E|/2$ augmentations. Each breadth-first search costs $O(|E|)$, giving $O(|V||E|^2)$.
+:::
+
+:::remark
+The bound involves no capacity at all, so Edmonds–Karp is a genuinely polynomial algorithm and settles the irrational case as well: it terminates on any network. Faster algorithms exist — Dinic's blocking-flow method runs in $O(|V|^2|E|)$ and in $O(|E|\sqrt{|E|})$ on unit-capacity networks, and push–relabel methods do better still — but every one of them relies on the same residual-graph optimality criterion proved above.
+:::
+
+:::example[Running the method, and reading off the cut]
+Run Ford–Fulkerson on the network of the previous section: $s \to a$ (capacity $3$), $s\to b$ ($2$), $a \to b$ ($2$), $a \to t$ ($2$), $b \to t$ ($3$). Show the augmentations and the certifying cut.
 :::
 
 :::solution
-| $S$ | edges from $S$ to $T$ | capacity |
-|---|---|---|
-| $\{s\}$ | $s\to a,\ s\to b$ | $3+2 = 5$ |
-| $\{s,a\}$ | $a\to t,\ a\to b,\ s\to b$ | $2+2+2 = 6$ |
-| $\{s,b\}$ | $s\to a,\ b\to t$ | $3+3 = 6$ |
-| $\{s,a,b\}$ | $a\to t,\ b\to t$ | $2+3 = 5$ |
+*Augmentation 1.* Residual path $s \to a \to t$, bottleneck $\min\{3,2\} = 2$. Now $f(s\to a) = 2$, $f(a \to t) = 2$; value $2$.
 
-The **minimum** cut capacity is $5$, attained by both $S=\{s\}$ and $S=\{s,a,b\}$.
+*Augmentation 2.* The arc $a \to t$ is saturated, so try $s \to b \to t$, bottleneck $\min\{2,3\} = 2$. Now $f(s \to b) = 2$, $f(b\to t) = 2$; value $4$.
 
-**Sanity check (max-flow $=$ min-cut).** The flow of value $5$ we built in the previous section meets this bottleneck exactly: $5 = 5$. By the max-flow min-cut theorem this equality certifies that our flow is maximum *and* that these cuts are minimum — no separate optimality proof is needed. Note also that the cut $\{s,a\}$ has capacity $6 > 5$: not every cut is tight, only the minimum one, which is why you must minimize over cuts rather than picking any convenient one.
+*Augmentation 3.* Both $s\to b$ and $a \to t$ are full. Residual arcs out of $s$: only $s \to a$, with $c_f = 1$. From $a$: $a \to b$ with $c_f = 2$ (and $a \to s$, useless). From $b$: $b \to t$ with $c_f = 1$. So $s \to a \to b \to t$ is augmenting with bottleneck $\min\{1,2,1\} = 1$; value $5$, and $f$ is now the flow of the previous section.
+
+*Termination.* Residual arcs out of $s$: $c_f(s,a) = 3 - 3 = 0$ and $c_f(s,b) = 2-2 = 0$. So $S = \{s\}$ and the algorithm stops. The certifying cut is $c(\{s\},\{a,b,t\}) = 3 + 2 = 5 = |f|$ ✓. Had we instead reached the flow by a different route, the reachable set might have been $\{s,a,b\}$ — the other minimum cut — but the value would be the same.
 :::
 
-## Algorithms and Applications
+:::example[Why the backward arc is indispensable]
+In the same network, suppose the first augmentation is the greedy path $s \to a \to b \to t$ with bottleneck $2$. Show that ignoring backward residual arcs leaves the algorithm stuck below the optimum, and that the residual graph rescues it.
+:::
+
+:::solution
+After that augmentation $f(s\to a) = f(a \to b) = f(b \to t) = 2$, value $2$. Forward-only capacity remains on $s \to a$ ($1$ unit), $s \to b$ ($2$ units), $a\to t$ ($2$ units) and $b \to t$ ($1$ unit). Using only unsaturated forward arcs, from $s$ we can reach $a$ and $b$; from $a$ we can reach $t$ via $a \to t$. That gives $s \to a \to t$ with bottleneck $\min\{1, 2\} = 1$, value $3$, after which $s\to a$ is full and only $s \to b \to t$ remains, with bottleneck $\min\{2,1\} = 1$, value $4$. Now every forward route is blocked, yet the maximum is $5$.
+
+The residual graph supplies the missing move. With $f(a \to b) = 2$ there is a residual arc $b \to a$ of capacity $2$, so the path $s \to b \dashrightarrow a \to t$ is augmenting: it pushes a unit on $s \to b$, cancels a unit of $a \to b$, and pushes a unit on $a \to t$. The value rises to $5$. The cancellation re-routed material that had been sent the long way round — precisely the flexibility Lemma [Augmentation](#augmentation-lemma) was built to justify.
+:::
+## Applications of Max-Flow Min-Cut
 
 <!-- section: applications -->
 
-:::recipe[Ford-Fulkerson / Edmonds-Karp]{#ford-fulkerson}
-Repeatedly augment along a path in the residual graph (forward residual capacity or backward flow) until there is no s-t path in the residual.
+A max-flow algorithm is a general-purpose solver, and the skill worth acquiring is the modelling one: recognising a problem as a flow problem and choosing capacities so that integral flows are exactly the combinatorial objects you want. Three reductions below are classical, and a fourth — Menger's theorem — shows the min-cut half of the theorem doing the real work. Throughout we use Corollary [Integrality of maximum flow](#flow-integrality) without further comment: capacities will be integers, so an optimal flow may be assumed integral.
+
+### Bipartite matching
+
+:::theorem[Matchings are integral flows]{#matching-as-flow}
+Let $G$ be a bipartite graph with parts $L$ and $R$. Build the network $N(G)$: vertices $\{s\} \cup L \cup R \cup \{t\}$; an arc $s \to u$ of capacity $1$ for each $u \in L$; an arc $u \to v$ of capacity $1$ for each edge $uv \in E(G)$ with $u \in L$; an arc $v \to t$ of capacity $1$ for each $v \in R$. Then the maximum value of a flow in $N(G)$ equals the maximum size of a matching in $G$.
 :::
 
-:::theorem[Integrality of max flow]{#flow-integrality}
-With integer capacities the max flow is integer and the method terminates.
-:::
+:::proof
+Given a matching $M$, send one unit along $s \to u \to v \to t$ for each edge $uv \in M$. No two edges of $M$ share a vertex, so no arc carries more than one unit, and conservation holds at every $u$ and $v$ used. The value is $|M|$.
 
-Applications: bipartite matching, assignment problem, transportation, circulation with demands, image segmentation (min-cut), project selection, etc.
+Conversely, let $f$ be an integral maximum flow. Every capacity is $1$, so $f(e) \in \{0,1\}$ for every arc, and $M = \{uv : f(u,v) = 1,\ u \in L,\ v \in R\}$ is a set of edges. If two edges of $M$ shared a vertex $u \in L$ then $u$ would have outflow $2$, hence inflow $2$, exceeding the capacity $1$ of $s \to u$; if they shared $v \in R$ then $v$ would have inflow $2$, hence outflow $2$, exceeding the capacity of $v \to t$. So $M$ is a matching, and $|M| = |f|$ by Corollary [Value measured at the sink](#value-at-sink). The two constructions are mutually inverse on values, so the maxima agree.
+:::
 
 :::intuition
-Residual graph lets you "undo" previous flow decisions to reroute.
-
-Many real-world "shipping with capacities" or "matching with constraints" reduce to a max-flow computation.
+The capacity-$1$ arcs at the two ends are the entire model. "$u$ is matched at most once" is the statement that at most one unit can leave $s$ for $u$; "$v$ is matched at most once" is the statement that at most one unit can leave $v$ for $t$. The middle arcs merely record which pairings are permitted. Everything specific to matching has been pushed into three numbers.
 :::
 
-:::example
-Let us turn a bipartite matching problem into a flow computation. Take $L=\{A,B\}$, $R=\{1,2\}$ with edges $A\text{-}1$, $A\text{-}2$, $B\text{-}1$. Build the flow network:
+:::example[A matching computed as a flow]
+Let $L = \{A,B\}$, $R = \{1,2\}$ with edges $A1$, $A2$, $B1$. Find a maximum matching by running augmenting paths on $N(G)$.
 :::
 
 :::solution
-add a source $s$ with $s\to A$ and $s\to B$, each capacity $1$;
-direct each original edge left-to-right with capacity $1$: $A\to1$, $A\to2$, $B\to1$;
-add a sink $t$ with $1\to t$ and $2\to t$, each capacity $1$.
+Augment along $s \to A \to 1 \to t$: value $1$, corresponding to the matching $\{A1\}$. Now $1 \to t$ is saturated, so the greedy continuation $s \to B \to 1 \to t$ is blocked. But $A \to 1$ carries flow, so $1 \to A$ is a residual arc, and
+$$s \to B \to 1 \dashrightarrow A \to 2 \to t$$
+is augmenting with bottleneck $1$: value $2$. The new flow has $f(B,1) = f(A,2) = 1$ and $f(A,1) = 0$, i.e. the matching $\{B1, A2\}$, of size $2 = |L|$, hence maximum.
 
-**Why unit capacities model matching:** the cap-$1$ edge $s\to A$ forces at most one unit through $A$, so $A$ is matched to at most one right vertex; the cap-$1$ edge $1\to t$ forces $1$ to receive at most one unit, so it is matched at most once. An integral flow is therefore exactly a matching.
-
-Run augmenting paths: push $1$ unit along $s\to A\to 1\to t$ (flow $1$). Now try $s\to B\to 1\to t$, but $1\to t$ is saturated; instead augment along $s\to B\to 1$, then *backward* along the used $A\to1$ (cancelling it via the residual edge), then $A\to 2\to t$: the path $s\to B\to 1 \dashrightarrow A\to 2\to t$ adds a second unit. Max flow $=2$.
-
-**Sanity check:** the integral flow of value $2$ saturates both $s\to A$ and $s\to B$, corresponding to the matching $\{B\text{-}1,\ A\text{-}2\}$ of size $2$. Since $|L|=2$ this saturates $L$ and is clearly maximum. ✓ The backward (residual) step is precisely the augmenting-path re-routing from the Definitions section, now seen through the flow lens.
+The residual step is precisely an *alternating path* in the matching sense: unmatched $B$, unmatched-to-matched edge $B1$, matched edge $A1$ traversed backwards, then the unmatched edge $A2$ to the unmatched vertex $2$. Augmenting-path matching algorithms and augmenting-path flow algorithms are the same algorithm.
 :::
 
+:::corollary[König's theorem from min cut]{#konig-from-mincut}
+In a bipartite graph $G$, the maximum size of a matching equals the minimum size of a vertex cover.
+:::
+
+:::proof
+A vertex cover always has size at least that of a matching, since it must contain an endpoint of each of the matching's disjoint edges. For the converse, take a minimum cut $(S,T)$ in $N(G)$; we may assume its capacity is finite, so it uses no middle arc if those are given capacity $\infty$ — replace each middle arc's capacity $1$ by $\infty$, which changes neither the maximum flow (still bounded by the end arcs) nor the matching correspondence. Let
+$$C = (L \cap T) \cup (R \cap S).$$
+Its size is the number of arcs $s\to u$ and $v \to t$ crossing the cut, namely $c(S,T)$. If some edge $uv$ with $u \in L \cap S$, $v \in R \cap T$ were uncovered, the arc $u \to v$ would cross the cut with capacity $\infty$ — impossible. So $C$ is a vertex cover of size $c(S,T) = $ max flow $=$ max matching, by Theorem [Max-flow min-cut](#max-flow-min-cut) and Theorem [Matchings are integral flows](#matching-as-flow).
+:::
+
+:::remark
+This is the pattern the chapter is about. König's theorem was proved in the previous chapter by an alternating-path argument; here it is a two-line consequence of a general theorem about networks. Hall's condition follows the same way, by testing when the minimum cut has capacity $|L|$.
+:::
+
+### Disjoint paths and Menger's theorem
+
+:::definition[Arc- and vertex-disjoint paths]{#disjoint-paths}
+Two directed $s$-$t$ paths are **arc-disjoint** if they share no arc, and **internally vertex-disjoint** if they share no vertex other than $s$ and $t$. An **$s$-$t$ arc cut** is a set $F \subseteq E$ meeting every directed $s$-$t$ path; an **$s$-$t$ vertex cut** (for non-adjacent $s,t$) is a set $X \subseteq V \setminus \{s,t\}$ meeting every directed $s$-$t$ path.
+:::
+
+:::theorem[Menger, arc version]{#menger-arc}
+For any digraph $G$ and distinct $s,t$, the maximum number of pairwise arc-disjoint directed $s$-$t$ paths equals the minimum size of an $s$-$t$ arc cut.
+:::
+
+:::proof
+Give every arc capacity $1$ and let $f$ be an integral maximum flow, of value $k$.
+
+*From flow to paths.* Since $f(e) \in \{0,1\}$, the arcs carrying flow form a subgraph $H$ in which every internal vertex has equal in- and out-degree and $s$ has excess out-degree $k$. Repeatedly extract a directed $s$-$t$ path from $H$ and delete its arcs: after each deletion the degree condition is preserved with excess $k-1$, so this yields $k$ paths, pairwise arc-disjoint because each arc was used once and deleted. (Cycles may remain at the end; discard them.) So there are at least $k$ arc-disjoint paths.
+
+*From cut to bound.* Any $s$-$t$ arc cut $F$ bounds the number of arc-disjoint paths by $|F|$, as each path uses at least one arc of $F$ and no two share an arc.
+
+*Equality.* Let $(S,T)$ be a minimum cut, of capacity $k$ by Theorem [Max-flow min-cut](#max-flow-min-cut). The set $F$ of arcs from $S$ to $T$ has $|F| = k$ and is an $s$-$t$ arc cut: any $s$-$t$ path starts in $S$ and ends in $T$, so it must use an arc from $S$ to $T$ at its first crossing. Thus max paths $\ge k = |F| \ge$ max paths, and all are equal.
+:::
+
+:::theorem[Menger, vertex version]{#menger-vertex}
+Let $G$ be a digraph and $s,t$ distinct vertices with $(s,t) \notin E$. The maximum number of internally vertex-disjoint directed $s$-$t$ paths equals the minimum size of an $s$-$t$ vertex cut.
+:::
+
+:::proof
+Apply the vertex-splitting reduction of Proposition [Standard reductions](#flow-reductions): replace each $v \notin \{s,t\}$ by $v_{\mathrm{in}} \to v_{\mathrm{out}}$ of capacity $1$, and give every original arc capacity $\infty$. A set of internally vertex-disjoint $s$-$t$ paths becomes a set of arc-disjoint paths in the split network, and conversely, because passing through $v$ requires the unique unit-capacity arc $v_{\mathrm{in}} \to v_{\mathrm{out}}$. A finite cut cannot contain an arc of infinite capacity, so a minimum cut consists of split arcs only, and the corresponding vertices $X$ form an $s$-$t$ vertex cut of the same size; since $(s,t) \notin E$, every $s$-$t$ path has an internal vertex and $X$ is well defined. Theorem [Menger, arc version](#menger-arc) applied to the split network now gives the equality.
+:::
+
+:::intuition
+Menger's theorem is max-flow min-cut with all capacities set to $1$, and the two directions of the min–max say the two things one wants: you can route $k$ disjoint paths, and there is a set of $k$ arcs (or vertices) whose removal disconnects $s$ from $t$. The second is the certificate: it convinces a sceptic that no $k+1$ disjoint paths exist, without examining them.
+:::
+
+### Project selection
+
+:::example[Project selection]
+Each project $i$ in a set $P$ yields a profit $p_i > 0$ but requires a set of machines; each machine $j \in M$ costs $q_j > 0$ and, once bought, serves any number of projects. Choose a set of projects maximising total profit minus total cost of the machines they need.
+:::
+
+:::solution
+Build a network on $\{s\} \cup P \cup M \cup \{t\}$ with arcs $s \to i$ of capacity $p_i$, arcs $i \to j$ of capacity $\infty$ whenever project $i$ needs machine $j$, and arcs $j \to t$ of capacity $q_j$. Let $(S,T)$ be a finite-capacity cut and set $A = P \cap S$ (the selected projects). Finiteness forbids any $\infty$ arc from crossing, so every machine needed by a project of $A$ lies in $S$ too. The cut's capacity is
+$$c(S,T) = \sum_{i \notin A} p_i + \sum_{j \in M \cap S} q_j \;\ge\; \sum_{i \in P} p_i - \Big( \sum_{i \in A} p_i - \sum_{j \text{ needed by } A} q_j \Big),$$
+with equality when $M \cap S$ is exactly the set of machines needed by $A$. Writing $\Pi = \sum_i p_i$ for the total available profit, minimising the cut capacity is therefore the same as maximising the net profit of $A$, and
+$$\max_A \text{ net profit} \;=\; \Pi - \min_{(S,T)} c(S,T) \;=\; \Pi - \max_f |f| .$$
+One max-flow computation solves the problem, and the optimal selection is read off as $P \cap S$ for the minimum cut $S$ produced by the algorithm. This is the *maximum closure* problem, and the same template — put profits on source arcs, costs on sink arcs, and prerequisites on infinite arcs — solves image segmentation, where "projects" are pixels and "costs" are the penalties for separating neighbours.
+:::
+
+:::pitfall
+Infinite capacities are the modelling device that forces a logical implication ("if project $i$ is chosen then machine $j$ must be bought"). If you give those arcs a large finite capacity instead, a cut may buy its way through them, and the optimum silently becomes wrong for inputs whose profits exceed your "large" number. Use $\infty$, or a value provably larger than the sum of all finite capacities.
+:::
 ## The Linear Programming Problem
 
 <!-- section: lp-problem -->
 
-:::definition[Linear program]{#linear-program}
-In inequality form: maximize c^T x subject to A x ≤ b, x ≥ 0. (Equality form is obtained by adding slack variables.)
+Every optimisation problem met so far — maximum flow, maximum matching, maximum weight of an independent set in a matroid — asks for the largest value of a linear function on a set defined by linear inequalities. Linear programming is that question asked in general, and its theory is the reason those problems have min–max answers.
+
+:::definition[Linear program in standard form]{#linear-program}
+Given $A \in \mathbb{R}^{m \times n}$, $b \in \mathbb{R}^m$, $c \in \mathbb{R}^n$, the **linear program in standard (inequality) form** is
+$$\max\ c^{\mathsf T} x \quad \text{subject to} \quad Ax \le b,\ x \ge 0,$$
+the inequalities read coordinatewise. A vector $x$ satisfying the constraints is **feasible**; the set of feasible vectors is the **feasible region** $P = \{x \in \mathbb{R}^n : Ax \le b,\ x \ge 0\}$. The program is **infeasible** if $P = \varnothing$ and **unbounded** if $c^{\mathsf T}x$ takes arbitrarily large values on $P$. Otherwise it has a finite **optimal value** $\sup_{x \in P} c^{\mathsf T} x$.
 :::
 
-The feasible region is a convex polyhedron.
+:::proposition[Every linear program can be put in standard form]{#lp-standard-form}
+Any problem of maximising or minimising a linear function subject to finitely many linear equations and inequalities in real variables can be rewritten in the form above, with the same optimal value.
+:::
+
+:::proof
+Minimising $c^{\mathsf T}x$ is maximising $(-c)^{\mathsf T}x$. An inequality $a^{\mathsf T}x \ge \beta$ becomes $(-a)^{\mathsf T}x \le -\beta$. An equation $a^{\mathsf T}x = \beta$ becomes the pair $a^{\mathsf T}x \le \beta$, $-a^{\mathsf T} x \le -\beta$. A variable $x_j$ not required to be nonnegative is replaced everywhere by $x_j^{+} - x_j^{-}$ with $x_j^{\pm} \ge 0$; every real number is such a difference, so the feasible values of the objective are unchanged.
+:::
+
+:::remark
+The *equality* form $\max\{c^{\mathsf T}x : Ax = b,\ x \ge 0\}$ is equally standard and is what the simplex method actually manipulates. One passes from inequality to equality form by adding a **slack variable** per row: $Ax \le b$ becomes $Ax + z = b$, $z \ge 0$. Slack variables are not bookkeeping noise — the value of $z_i$ at an optimum measures how much of resource $i$ is left unused, and complementary slackness will read exactly that number.
+:::
+
+:::definition[Polyhedron, vertex, basic feasible solution]{#polyhedron-vertex}
+A **polyhedron** is a set of the form $\{x : Ax \le b\}$ for some matrix $A$ and vector $b$; a bounded polyhedron is a **polytope**. A point $x \in P$ is a **vertex** (or **extreme point**) of $P$ if it is not the midpoint of two distinct points of $P$: whenever $x = \tfrac12(y+z)$ with $y,z \in P$, we have $y = z = x$. Writing the system as $\tilde A x \le \tilde b$ with the sign constraints included, $x$ is a **basic feasible solution** if $x$ is feasible and the rows of $\tilde A$ that are *tight* at $x$ (satisfied with equality) have rank $n$.
+:::
+
+:::theorem[Vertices are basic feasible solutions]{#vertex-bfs}
+For a feasible point $x$ of $P = \{x : \tilde Ax \le \tilde b\}$, the following are equivalent: $x$ is a vertex; $x$ is a basic feasible solution; $x$ is the unique solution of the subsystem of rows tight at $x$.
+:::
+
+:::proof
+Let $R$ be the set of rows tight at $x$ and $A_R$ the submatrix they form.
+
+If $\operatorname{rank} A_R < n$, choose $d \ne 0$ with $A_R d = 0$. For rows $i \notin R$ the inequality is strict at $x$, so for small $\varepsilon > 0$ both $x \pm \varepsilon d$ still satisfy them, while the rows of $R$ are satisfied with equality at both. Hence $x \pm \varepsilon d \in P$ and $x$ is their midpoint with $x + \varepsilon d \ne x - \varepsilon d$: $x$ is not a vertex.
+
+Conversely, if $\operatorname{rank} A_R = n$ and $x = \tfrac12(y+z)$ with $y,z \in P$, then for each tight row $a_i$ we have $a_i^{\mathsf T}y \le \beta_i$, $a_i^{\mathsf T}z \le \beta_i$ and $\tfrac12(a_i^{\mathsf T}y + a_i^{\mathsf T}z) = \beta_i$, which forces $a_i^{\mathsf T}y = a_i^{\mathsf T}z = \beta_i$. So $y$ and $z$ both solve $A_R w = \beta_R$, a system of rank $n$ with solution set a single point; thus $y = z = x$ and $x$ is a vertex. The same rank condition is what makes $x$ the unique solution of the tight subsystem.
+:::
 
 :::theorem[Fundamental theorem of linear programming]{#fundamental-lp}
-If the feasible region is nonempty and the objective is bounded above on it, then the optimum is attained, and — provided the polyhedron has at least one vertex (which holds here because $x\ge0$ prevents lines) — it is attained at a vertex (a *basic feasible solution*, where enough constraints are tight to pin down the point uniquely).
+Consider $\max\{c^{\mathsf T}x : Ax \le b,\ x \ge 0\}$ with $P \ne \varnothing$. Exactly one of the following holds: the program is unbounded, or the optimal value is finite and attained at a vertex of $P$.
 :::
 
-This is why algorithms need only search the finitely many vertices, not the whole region.
+:::proof
+The constraint $x \ge 0$ guarantees $P$ contains no line, and a nonempty polyhedron containing no line has at least one vertex: take a feasible $x$ with as many tight rows as possible; if their rank were less than $n$, moving along a direction $d$ in the kernel as in the previous proof would, since $P$ has no line, eventually make a new row tight, contradicting maximality.
+
+Suppose now the value $\gamma = \sup_{x\in P} c^{\mathsf T}x$ is finite; we first check it is attained. Fix a feasible $x_0$ and choose $K$ so large that the box $Q = \{x : 0 \le x_j \le K\}$ contains $x_0$ and some feasible point of objective value at least $\gamma - 1$. For $K' \ge K$ the set $P \cap \{x : x_j \le K'\}$ is closed and bounded, so $c^{\mathsf T}x$ attains a maximum $\gamma_{K'}$ on it; the function $K' \mapsto \gamma_{K'}$ is nondecreasing and bounded by $\gamma$, and $\sup_{K'} \gamma_{K'} = \gamma$ by definition of the supremum. If no maximiser existed in $P$ itself, every $\gamma_{K'}$ would be strictly below $\gamma$ and the maximisers would escape to infinity along a ray of $P$ on which $c^{\mathsf T}x$ is strictly increasing — but then $\gamma$ would be infinite. So the supremum is attained, and the set of optima is the nonempty polyhedron $P \cap \{x : c^{\mathsf T}x = \gamma\}$.
+
+Among the optima choose $x^\ast$ with the maximum number of tight rows. If $\operatorname{rank}A_R < n$ at $x^\ast$, pick $d \ne 0$ in the kernel of $A_R$. Then $c^{\mathsf T}d = 0$, for otherwise moving in the direction of increase would improve the optimum. Moving along $\pm d$ keeps the objective and feasibility until a new row becomes tight, which must happen in at least one of the two directions since $P$ contains no line. That yields an optimal point with more tight rows — a contradiction. So $\operatorname{rank}A_R = n$ and $x^\ast$ is a vertex by Theorem [Vertices are basic feasible solutions](#vertex-bfs).
+
+It remains to know that the supremum is attained at all. If it is finite, intersect $P$ with a box $\{x : x_j \le K\}$ for $K$ large enough that the box contains a feasible point of objective value within $1$ of the supremum. The intersection is a polytope — closed and bounded — so the continuous function $c^{\mathsf T}x$ attains its maximum on it, and enlarging $K$ cannot increase that maximum beyond the finite supremum. A standard compactness argument then identifies the two.
+:::
 
 :::intuition
-You have a linear "profit" function c·x and a bunch of linear resource limits A x ≤ b.
-
-The best point is always at a "corner" of the feasible region.
+The objective $c^{\mathsf T}x$ is constant on each hyperplane perpendicular to $c$, and increasing $c^{\mathsf T}x$ slides that hyperplane in the direction $c$. Push it as far as it will go: the last contact with the feasible region is either a single corner, or a whole face — in which case its corners are optimal too. Either way an optimum can be found among the corners, and there are finitely many of them, at most $\binom{m+n}{n}$. Linear programming is therefore a finite search, which is what makes it tractable at all.
 :::
 
-:::example
-Solve $\max\ 3x + 4y$ subject to $x + y \le 5$, $x \ge 0$, $y \ge 0$.
+:::figure[The feasible region of Example [A two-variable program](#lp-example) with two objective contours. The optimum is the last corner the sliding line $3x + 4y = \gamma$ touches.]{#lp-region-figure}
+{
+  "type": "plot",
+  "x": [-0.6, 6.5], "y": [-0.6, 6.5],
+  "equalAspect": true,
+  "xTicks": 1, "yTicks": 1, "xLabel": "x", "yLabel": "y",
+  "marks": [
+    { "kind": "region", "points": [[0,0],[5,0],[0,5]] },
+    { "kind": "line", "through": [[0,1.5],[2,0]], "dashed": true, "muted": true, "extend": false },
+    { "kind": "line", "through": [[0,5],[6.6667,0]], "dashed": true, "tone": "result", "extend": false },
+    { "kind": "point", "at": [0,5], "tone": "result" },
+    { "kind": "point", "at": [5,0] },
+    { "kind": "point", "at": [0,0] },
+    { "kind": "text", "at": [1.45, 1.35], "text": "feasible" },
+    { "kind": "text", "at": [1.15, 5.6], "text": "optimum (0,5)", "leaderTo": [0, 5] },
+    { "kind": "text", "at": [4.1, 2.6], "text": "3x+4y=20" },
+    { "kind": "text", "at": [2.5, 0.55], "text": "3x+4y=6" }
+  ]
+}
+:::
+
+:::example[A two-variable program]{#lp-example}
+Solve $\max\ 3x + 4y$ subject to $x + y \le 5$, $x \ge 0$, $y \ge 0$, and identify the vertex structure.
 :::
 
 :::solution
-The feasible region is the triangle bounded by the three lines $x+y=5$, $x=0$, $y=0$. Its vertices are the pairwise intersections of those boundary lines:
+The feasible region is the triangle with boundary lines $x + y = 5$, $x = 0$, $y = 0$. With $n = 2$, a vertex is a point where two of the three lines meet and which is feasible:
+$$x = 0,\ y = 0 \Rightarrow (0,0);\qquad y = 0,\ x+y = 5 \Rightarrow (5,0);\qquad x = 0,\ x+y=5 \Rightarrow (0,5).$$
+Their objective values are $0$, $15$ and $20$. By Theorem [Fundamental theorem of linear programming](#fundamental-lp) the optimum is among them, so it is $20$, attained at $(0,5)$.
 
-$x=0,\ y=0 \Rightarrow (0,0)$, objective $3(0)+4(0) = 0$.
-$y=0,\ x+y=5 \Rightarrow (5,0)$, objective $3(5)+4(0) = 15$.
-$x=0,\ x+y=5 \Rightarrow (0,5)$, objective $3(0)+4(5) = 20$.
-
-By the fundamental theorem the optimum sits at a vertex, so we just compare the three values: the maximum is $\boxed{20}$ at $(0,5)$.
-
-**Sanity check:** the objective gradient is $(3,4)$, which points "up and to the left"; since $y$ has the larger coefficient we expect to prefer $y$ over $x$, and indeed the all-$y$ corner $(0,5)$ wins. ✓
+*Sanity check.* The objective gradient is $(3,4)$; since the binding constraint charges $x$ and $y$ equally, the variable with the larger coefficient is the one to buy, and indeed the all-$y$ corner wins. Had the objective been $4x + 4y$, the entire edge from $(5,0)$ to $(0,5)$ would be optimal — an example of the "whole face" case, with two optimal vertices.
 :::
 
+:::pitfall
+"The optimum is at a vertex" needs the hypothesis that the region has a vertex. The program $\max\{x_1 : x_1 - x_2 \le 0\}$ over all of $\mathbb{R}^2$ has a feasible region containing lines, hence no vertex at all — here it is also unbounded, but a bounded objective over a line-containing region (say $\max\{0\}$) shows the two issues are separate. The constraint $x \ge 0$ in standard form is what rules this out, which is why standard form is stated with it.
+:::
+
+:::remark
+The simplex method exploits Theorem [Fundamental theorem of linear programming](#fundamental-lp) directly: it walks from vertex to adjacent vertex, each step not decreasing the objective, and stops when no neighbour is better — a condition that, by duality, certifies global optimality. It is fast in practice but exponential on contrived inputs (the Klee–Minty cubes). That linear programming is solvable in polynomial time was settled instead by the ellipsoid method (Khachiyan, 1979) and then made practical by interior-point methods (Karmarkar, 1984). None of this is needed below: duality is a theorem about the problem, not about any algorithm.
+:::
 ## Duality
 
 <!-- section: duality -->
 
-Every primal LP has a dual LP. For the standard max c x s.t. A x ≤ b, x≥0 the dual is min b y s.t. A^T y ≥ c, y ≥0.
+Suppose someone hands you a feasible $x$ with $c^{\mathsf T}x = 20$ and claims it is optimal. How could they convince you without making you search the whole polyhedron? The only way to certify an upper bound on $c^{\mathsf T}x$ using the constraints is to combine them: multiply the $i$-th constraint $a_i^{\mathsf T}x \le b_i$ by some $y_i \ge 0$ and add. The multipliers are useful precisely when the combination dominates the objective, and then $b^{\mathsf T}y$ is an upper bound. Searching for the best such bound is itself a linear program — the dual.
 
-:::theorem[Weak duality]{#weak-duality}
-Any primal-feasible $x$ and dual-feasible $y$ satisfy
+:::definition[The dual linear program]{#dual-lp}
+The **dual** of the primal program
+$$\text{(P)} \quad \max\ c^{\mathsf T}x \quad \text{s.t.} \quad Ax \le b,\ x \ge 0$$
+is
+$$\text{(D)} \quad \min\ b^{\mathsf T}y \quad \text{s.t.} \quad A^{\mathsf T}y \ge c,\ y \ge 0 .$$
+The dual has one variable $y_i$ per primal constraint and one constraint per primal variable.
+:::
 
-$$c^T x \le b^T y.$$
+:::notation
+Dual variables are often called **prices** or **potentials**: $y_i$ is the value, in objective units, of one extra unit of resource $i$. The dual constraint for column $j$, $\sum_i a_{ij} y_i \ge c_j$, then reads "the resources consumed by one unit of activity $j$ are worth at least what that activity earns" — a no-arbitrage condition.
+:::
+
+:::proposition[The dual of the dual is the primal]{#dual-of-dual}
+Rewriting (D) in standard form and taking its dual returns (P).
 :::
 
 :::proof
-$c^T x \le (A^Ty)^T x = y^T(Ax) \le y^T b$, using $A^Ty\ge c$ with $x\ge0$ for the first inequality and $Ax\le b$ with $y\ge0$ for the second.
+In standard form (D) is $\max\ (-b)^{\mathsf T}y$ subject to $(-A^{\mathsf T})y \le -c$, $y \ge 0$. Its dual, by Definition [The dual linear program](#dual-lp), is $\min\ (-c)^{\mathsf T}x$ subject to $(-A^{\mathsf T})^{\mathsf T} x \ge -b$, $x \ge 0$; that is, $\max\ c^{\mathsf T}x$ subject to $Ax \le b$, $x \ge 0$, which is (P).
 :::
 
-So every dual-feasible point hands you an upper bound on the primal, and vice versa.
+:::theorem[Weak duality]{#weak-duality}
+If $x$ is feasible for (P) and $y$ is feasible for (D), then
+$$c^{\mathsf T}x \;\le\; y^{\mathsf T}Ax \;\le\; b^{\mathsf T}y .$$
+In particular the optimal value of (P) is at most the optimal value of (D); if (P) is unbounded then (D) is infeasible, and if (D) is unbounded then (P) is infeasible.
+:::
+
+:::proof
+Since $A^{\mathsf T}y \ge c$ and $x \ge 0$, taking the inner product with $x$ preserves the inequality: $c^{\mathsf T}x \le (A^{\mathsf T}y)^{\mathsf T}x = y^{\mathsf T}Ax$. Since $Ax \le b$ and $y \ge 0$, likewise $y^{\mathsf T}(Ax) \le y^{\mathsf T}b = b^{\mathsf T}y$. Chaining the two gives the display. If (P) were unbounded, any dual-feasible $y$ would give a finite upper bound $b^{\mathsf T}y$ on unbounded values — impossible, so no such $y$ exists. The other implication is symmetric by Proposition [The dual of the dual is the primal](#dual-of-dual).
+:::
+
+:::corollary[Optimality certificate]{#lp-certificate}
+If $x$ is feasible for (P), $y$ is feasible for (D) and $c^{\mathsf T}x = b^{\mathsf T}y$, then $x$ is optimal for (P) and $y$ is optimal for (D).
+:::
+
+:::proof
+For any primal-feasible $x'$, weak duality gives $c^{\mathsf T}x' \le b^{\mathsf T}y = c^{\mathsf T}x$; the dual statement is symmetric.
+:::
+
+Weak duality is the easy half and is already useful: it turns "this is optimal" into a claim a sceptic can check in one multiplication. The hard half says the certificate always exists.
 
 :::theorem[Strong duality]{#strong-duality}
-If **both** problems are feasible and bounded, then their optimal values are equal and optimal solutions exist for both.
+If (P) and (D) are both feasible, then both have optimal solutions and their optimal values are equal:
+$$\max\{c^{\mathsf T}x : Ax \le b,\ x \ge 0\} \;=\; \min\{b^{\mathsf T}y : A^{\mathsf T}y \ge c,\ y \ge 0\}.$$
+Moreover, for any primal–dual pair exactly one of these holds: both are feasible and the values are equal and finite; one is infeasible and the other unbounded; or both are infeasible.
 :::
 
-The hypothesis matters: if one side is infeasible the other may be unbounded (then no finite common value exists), so "both feasible and bounded" is the condition that closes the gap.
+:::proof
+Sketch. The proof is not long but it rests on a separation theorem we do not prove here; we name the ingredient and show how it delivers the result.
 
-:::intuition
-The dual provides a "pricing" or "certificate" problem whose value upper-bounds the primal.
+*Ingredient (Farkas' lemma).* For $M \in \mathbb{R}^{p\times q}$ and $d \in \mathbb{R}^p$, exactly one of the following has a solution: (i) $Mz = d$ with $z \ge 0$; (ii) $u^{\mathsf T}M \ge 0$ with $u^{\mathsf T}d < 0$. The forward direction is immediate — both cannot hold, since $0 \le (u^{\mathsf T}M)z = u^{\mathsf T}d < 0$ — and the converse follows from the fact that the cone $\{Mz : z \ge 0\}$ is closed and convex, so a point outside it can be separated from it by a hyperplane, whose normal is the required $u$.
 
-At optimality the best primal profit exactly equals the best dual "cost".
+*From Farkas to strong duality.* Both programs are feasible, so by weak duality both values are finite; call them $\gamma_P \le \gamma_D$. Consider the system in the unknowns $(x,y) \ge 0$:
+$$Ax \le b, \qquad A^{\mathsf T} y \ge c, \qquad c^{\mathsf T}x \ge b^{\mathsf T}y .$$
+A solution of it is a primal–dual pair with $c^{\mathsf T}x \ge b^{\mathsf T}y$, which with weak duality forces equality and optimality of both, by Corollary [Optimality certificate](#lp-certificate). Introducing slack variables turns the system into the form $Mz = d$, $z \ge 0$ of Farkas' lemma. If it had no solution, alternative (ii) would produce a vector $u = (v, w, \lambda) \ge 0$ — the sign conditions come from the inequality rows — with $\lambda \ge 0$ and $v^{\mathsf T}b - w^{\mathsf T}c < 0$ together with $A^{\mathsf T}v \ge \lambda c$ and $Aw \le \lambda b$. If $\lambda > 0$, scaling by $1/\lambda$ makes $w/\lambda$ primal feasible and $v/\lambda$ dual feasible with $b^{\mathsf T}v/\lambda < c^{\mathsf T}w/\lambda$, contradicting weak duality. If $\lambda = 0$, then $v$ and $w$ are directions of unboundedness, and adding a multiple of them to the assumed feasible $x_0$ and $y_0$ contradicts the finiteness of $\gamma_P$ and $\gamma_D$. So the system is solvable and the values coincide.
+
+*The trichotomy.* Weak duality already rules out "both unbounded" and forbids a finite gap in the feasible–feasible case, which the above closes. That both can be infeasible is shown by an example, given below.
 :::
 
-:::example
-**Primal:** $\max\ x_1 + x_2$ subject to $x_1 + 2x_2 \le 4$, $x_1, x_2 \ge 0$.
+:::example[Both programs infeasible]
+Take $n = m = 1$ with $A = (0)$, $b = -1$, $c = 1$. Show that neither (P) nor (D) has a feasible point, so that the third case of the trichotomy really occurs.
 :::
 
 :::solution
-There is one constraint ($m=1$), so the dual has one variable $y \ge 0$. Reading off $b = 4$ and the columns of $A = (1\ \ 2)$ against $c = (1, 1)$:
-
-**Dual:** $\min\ 4y$ subject to $y \ge 1$ (from the $x_1$ column), $2y \ge 1$ (from the $x_2$ column), $y \ge 0$.
-
-Solve each side:
-
-*Primal.* Vertices of the feasible region are $(0,0)$ [value $0$], $(4,0)$ [value $4$], $(0,2)$ [value $2$]. Maximum $= 4$ at $(4,0)$.
-*Dual.* The binding constraint is $y \ge 1$ (it implies $2y \ge 2 \ge 1$), so the smallest feasible $y$ is $y = 1$, giving objective $4(1) = 4$.
-
-Both optima equal $4$, exactly as strong duality predicts.
-
-**Sanity check (complementary slackness).** At the primal optimum $(4,0)$: the constraint $x_1 + 2x_2 = 4 \le 4$ is *tight*, which is consistent with the dual variable $y = 1 > 0$. And $x_1 = 4 > 0$ pairs with the dual constraint $y \ge 1$ being *tight* ($y = 1$); $x_2 = 0$ is allowed to leave its dual constraint $2y \ge 1$ slack ($2 > 1$). All slackness conditions hold, certifying both solutions optimal. ✓
+(P) is $\max\ x$ subject to $0 \cdot x \le -1$, $x \ge 0$. The constraint reads $0 \le -1$, which no $x$ satisfies, so (P) is infeasible. (D) is $\min\ -y$ subject to $0 \cdot y \ge 1$, $y \ge 0$, whose constraint reads $0 \ge 1$: also infeasible. Hence "both infeasible" is a genuine case, and Theorem [Strong duality](#strong-duality) must assume feasibility of both sides rather than deducing it.
 :::
 
-## Combinatorial Applications
+:::intuition
+Think of the primal as a producer choosing an activity mix and the dual as an accountant pricing the resources. Weak duality says no production plan can earn more than the value of the resources it consumes. Strong duality says the accountant can always set prices making the two exactly equal: at the right prices there is no profit left on the table and no resource is mispriced. Every min–max theorem in combinatorics is an instance of this statement about some particular matrix $A$.
+:::
+
+:::theorem[Complementary slackness]{#complementary-slackness}
+Let $x$ be feasible for (P) and $y$ feasible for (D). Then $x$ and $y$ are both optimal if and only if
+$$y_i \big(b_i - (Ax)_i\big) = 0 \ \text{ for all } i, \qquad x_j\big((A^{\mathsf T}y)_j - c_j\big) = 0 \ \text{ for all } j .$$
+That is, a positive dual variable forces its primal constraint to be tight, and a positive primal variable forces its dual constraint to be tight.
+:::
+
+:::proof
+Define the two nonnegative quantities
+$$\alpha = y^{\mathsf T}(b - Ax) = \sum_i y_i(b_i - (Ax)_i), \qquad \beta = x^{\mathsf T}(A^{\mathsf T}y - c) = \sum_j x_j\big((A^{\mathsf T}y)_j - c_j\big).$$
+Each is a sum of products of nonnegative numbers, so $\alpha, \beta \ge 0$, and each vanishes exactly when every one of its terms does. Expanding,
+$$\alpha + \beta = b^{\mathsf T}y - y^{\mathsf T}Ax + x^{\mathsf T}A^{\mathsf T}y - c^{\mathsf T}x = b^{\mathsf T}y - c^{\mathsf T}x,$$
+since $y^{\mathsf T}Ax = x^{\mathsf T}A^{\mathsf T}y$ (both are the same scalar). Hence the duality gap $b^{\mathsf T}y - c^{\mathsf T}x$ equals $\alpha + \beta$.
+
+($\Leftarrow$) If all the complementary slackness products vanish then $\alpha = \beta = 0$, so $c^{\mathsf T}x = b^{\mathsf T}y$ and both are optimal by Corollary [Optimality certificate](#lp-certificate).
+
+($\Rightarrow$) If both are optimal then the values are equal by Theorem [Strong duality](#strong-duality), so $\alpha + \beta = 0$; as both are nonnegative sums of nonnegative terms, every term vanishes.
+:::
+
+:::intuition
+Complementary slackness is the economics of the situation and the combinatorics of it at the same time. A resource with slack left over is free — its price is $0$. An activity run at a positive level must break even exactly — it cannot be strictly profitable at equilibrium prices, or you would run more of it. In combinatorial terms: an edge in the optimal matching must have both endpoints "paid for" by the cover, and a vertex not in the optimal cover has nothing to pay for.
+:::
+
+:::example[A primal–dual pair solved both ways]
+Solve $\max\ x_1 + x_2$ subject to $x_1 + 2x_2 \le 4$, $x_1, x_2 \ge 0$, together with its dual, and verify complementary slackness.
+:::
+
+:::solution
+Here $A = \begin{pmatrix} 1 & 2\end{pmatrix}$, $b = (4)$, $c = (1,1)^{\mathsf T}$. There is one constraint, hence one dual variable $y \ge 0$, and two primal variables, hence two dual constraints — one per column of $A$:
+$$\text{(D)}\quad \min\ 4y \quad\text{s.t.}\quad y \ge 1,\ 2y \ge 1,\ y \ge 0 .$$
+
+*Primal.* The vertices are $(0,0)$, $(4,0)$ and $(0,2)$, with values $0$, $4$, $2$. The maximum is $4$ at $(4,0)$.
+
+*Dual.* The binding constraint is $y \ge 1$, since it implies $2y \ge 2 \ge 1$. The minimum is $y = 1$ with value $4$.
+
+Both optima equal $4$, as Theorem [Strong duality](#strong-duality) requires.
+
+*Complementary slackness.* At $x = (4,0)$, $y = 1$: the primal constraint is tight ($4 = 4$), consistent with $y = 1 > 0$; $x_1 = 4 > 0$ forces its dual constraint $y \ge 1$ to be tight, and it is; $x_2 = 0$ permits its dual constraint $2y \ge 1$ to be slack, and $2 > 1$. All four conditions hold ✓ — and note they would have *found* the solution: guessing that $x_1 > 0$ and the constraint is tight gives $y = 1$ and $x_1 = 4$ directly.
+:::
+
+:::pitfall
+The dual of a *maximisation with $\le$ constraints and nonnegative variables* is a *minimisation with $\ge$ constraints and nonnegative variables*. Change any of those features and the dual changes shape: an equality primal constraint gives a dual variable of unrestricted sign, and an unrestricted primal variable gives an equality dual constraint. The rule of thumb is that constraint tightness and variable sign restrictions swap roles, which is exactly what complementary slackness pairs up. Convert to standard form first if you are unsure; Proposition [Every linear program can be put in standard form](#lp-standard-form) shows nothing is lost.
+:::
+
+:::summary
+The chain to remember is: weak duality is one line of algebra and gives certificates; strong duality says certificates always exist and rests on Farkas' lemma; complementary slackness says which certificate goes with which solution, and is the form in which duality is actually applied to combinatorics.
+:::
+## Combinatorial Applications of Duality
 
 <!-- section: combinatorial-apps -->
 
-- Bipartite matching / assignment as LP with totally unimodular (TU) constraint matrix → integral optima.
-- Network flows and min-cost flows.
-- Shortest paths, min spanning trees (via LP or duals).
-- Many packing and covering problems admit LP relaxations whose integrality gap is 1 or can be rounded.
+A combinatorial maximum — largest matching, largest set of disjoint paths, largest flow — is an *integer* program: the variables are forced to be $0$ or $1$. Integer programming is hard in general, and its dual theory is nothing like as clean, because dropping the integrality requirement usually changes the answer. The **LP relaxation** of an integer program is the same program with $x \in \{0,1\}$ weakened to $0 \le x \le 1$. Two questions decide whether relaxing is harmless:
+
+- does the relaxation have the same optimal value (is the *integrality gap* equal to $1$)?
+- if so, what does its dual say?
+
+For the problems in this chapter both answers are as good as they could be, and the reason is a property of the constraint matrix.
 
 :::definition[Totally unimodular matrix]{#totally-unimodular}
-A matrix is totally unimodular (TU) if every square submatrix has determinant $0$, $+1$, or $-1$.
+A matrix $M$ with entries in $\{0,\pm1\}$ is **totally unimodular** (TU) if every square submatrix has determinant $0$, $+1$ or $-1$. (Taking $1 \times 1$ submatrices shows the entry condition is forced.)
 :::
 
-:::theorem[Total unimodularity gives integral vertices]{#tu-integrality}
-When the constraint matrix is TU and the right-hand side $b$ is integral (network matrices, interval matrices, bipartite incidence matrices, etc.), every vertex of the polyhedron has integer coordinates.
+:::theorem[Hoffman–Kruskal]{#hoffman-kruskal}
+Let $M$ be an integral matrix. Then $M$ is totally unimodular if and only if for every integral vector $b$, every vertex of the polyhedron $P_b = \{x : Mx \le b,\ x \ge 0\}$ is integral.
 :::
 
-So the LP optimum is automatically an integer solution and LP solves the integer program exactly, with no rounding.
+:::proof
+Sketch of the direction we use ($\Rightarrow$), which is the one with a short argument; the converse is proved by exhibiting, for a non-TU matrix, an integral $b$ with a fractional vertex, and we do not do that here.
+
+Let $x$ be a vertex of $P_b$. By Theorem [Vertices are basic feasible solutions](#vertex-bfs), $x$ is the unique solution of the subsystem of tight rows, which has rank $n$; choose $n$ independent tight rows, forming a nonsingular $n \times n$ matrix $B$ whose rows come from $M$ and from the identity (the rows $-x_j \le 0$). A matrix built from rows of a TU matrix together with rows of the identity is again TU, and $\det B = \pm1$. Cramer's rule gives $x_j = \det(B_j)/\det(B)$, where $B_j$ is $B$ with column $j$ replaced by the corresponding integral right-hand side. Both determinants are integers and the denominator is $\pm 1$, so $x_j \in \mathbb{Z}$.
+:::
 
 :::intuition
-You write the combinatorial problem as "maximize profit subject to linear packing constraints"; if the matrix is nice the best fractional solution is already integral.
-
-Duality often recovers the classical min-max theorems (König, max-flow min-cut, etc.).
+Total unimodularity is the precise sense in which a system of constraints is "combinatorial". It says the geometry of the polyhedron has no fractional corners to fall into, so a linear programming solver, which finds corners, cannot return half an edge or a third of a path. It is a property of the *matrix* alone: once it holds, it holds for every objective and every integral right-hand side, so a single check licenses an unlimited supply of integrality theorems.
 :::
 
-:::example
-Consider the $2\times2$ **assignment problem**: assign workers $\{1,2\}$ to jobs $\{1,2\}$ to maximize total value, with values
-$$w_{11}=5,\ w_{12}=3,\ w_{21}=2,\ w_{22}=4.$$
-Introduce $x_{ij}\in[0,1]$ (allowed to be fractional in the LP relaxation) and write
-$$\max\ 5x_{11}+3x_{12}+2x_{21}+4x_{22}$$
-subject to each worker used once ($x_{11}+x_{12}=1$, $x_{21}+x_{22}=1$), each job filled once ($x_{11}+x_{21}=1$, $x_{12}+x_{22}=1$), and $x_{ij}\ge0$.
+:::theorem[Incidence matrices of digraphs are TU]{#network-matrix-tu}
+Let $G = (V,E)$ be a digraph and $M \in \{0,\pm1\}^{V \times E}$ its incidence matrix: $M_{v,e} = +1$ if $e$ enters $v$, $-1$ if $e$ leaves $v$, and $0$ otherwise (with $M_{v,e} = 0$ for a loop). Then $M$ is totally unimodular.
+:::
+
+:::proof
+Induction on the size $k$ of a square submatrix $B$. For $k = 1$ the entries are $0, \pm1$. Let $k > 1$ and note that every column of $M$, hence of $B$, has at most one $+1$ and at most one $-1$ and no other nonzero entries. Three cases:
+
+1. Some column of $B$ is zero. Then $\det B = 0$.
+2. Some column of $B$ has exactly one nonzero entry, $\pm1$. Expanding the determinant along that column gives $\det B = \pm \det B'$ for a $(k-1)\times(k-1)$ submatrix $B'$ of $M$, and the induction hypothesis applies.
+3. Every column of $B$ has both a $+1$ and a $-1$. Then every column sums to $0$, so the sum of all rows of $B$ is the zero vector: the rows are linearly dependent and $\det B = 0$.
+
+In every case $\det B \in \{0,\pm1\}$.
+:::
+
+:::corollary[Bipartite incidence matrices are TU]{#bipartite-tu}
+Let $G$ be a bipartite graph with parts $L, R$ and let $N \in \{0,1\}^{V \times E}$ be its (undirected) vertex–edge incidence matrix. Then $N$ is totally unimodular.
+:::
+
+:::proof
+Orient every edge from $L$ to $R$ and let $M$ be the incidence matrix of the resulting digraph, which is TU by Theorem [Incidence matrices of digraphs are TU](#network-matrix-tu). Each edge leaves a vertex of $L$ and enters one of $R$, so $M$ has $-1$ in the $L$ rows and $+1$ in the $R$ rows exactly where $N$ has $1$. Multiplying every row indexed by $L$ by $-1$ turns $M$ into $N$, and negating a row multiplies each determinant containing it by $-1$, preserving the set $\{0,\pm1\}$. Hence $N$ is TU.
+:::
+
+:::pitfall
+Bipartiteness is essential. For the triangle $K_3$ the incidence matrix is the $3 \times 3$ matrix with two $1$s per column, whose determinant is $2$ — not TU. The consequence is visible: the fractional matching $x_e = \tfrac12$ on every edge of a triangle has value $\tfrac32$, while the largest matching has size $1$, an integrality gap. This is why the LP theory of matchings is clean for bipartite graphs and needs extra inequalities (the odd-set constraints) in general.
+:::
+
+:::corollary[Integral matchings and covers]{#matching-lp-integral}
+For a bipartite graph $G$, the LP relaxations
+$$\max\Big\{\textstyle\sum_e x_e : \sum_{e \ni v} x_e \le 1\ \forall v,\ x \ge 0\Big\}, \qquad \min\Big\{\textstyle\sum_v y_v : y_u + y_v \ge 1\ \forall uv \in E,\ y \ge 0\Big\}$$
+have integral optimal solutions, namely a maximum matching and a minimum vertex cover, and their common optimal value is König's number.
+:::
+
+:::proof
+The first program's constraint matrix is the transpose-free bipartite incidence matrix $N$ of Corollary [Bipartite incidence matrices are TU](#bipartite-tu), and the second is its dual in the sense of Definition [The dual linear program](#dual-lp), with constraint matrix $N^{\mathsf T}$ — TU, since a matrix is TU exactly when its transpose is. By Theorem [Hoffman–Kruskal](#hoffman-kruskal) both polyhedra have integral vertices, and by Theorem [Fundamental theorem of linear programming](#fundamental-lp) the optima are attained at vertices. An integral vertex of the first is a $0/1$ vector with at most one chosen edge per vertex, i.e. a matching; of the second, a $0/1$ vector hitting every edge, i.e. a vertex cover. Strong duality equates the values, which is König's theorem again — now as a statement about one matrix rather than about alternating paths.
+:::
+
+We can now do the same for flows, which is the point of putting the two halves of this chapter together.
+
+:::theorem[Max-flow min-cut as LP duality]{#mfmc-as-lp}
+Add to $N$ an arc $r = (t,s)$ of infinite capacity and write the maximum flow problem as the circulation program
+$$\text{(P)}\quad \max\ f_r \quad \text{s.t.}\quad \sum_{e \text{ into } v} f_e - \sum_{e \text{ out of } v} f_e = 0\ \ (v \in V), \quad 0 \le f_e \le c_e\ (e \in E),\ f_r \ge 0 .$$
+Its dual is
+$$\text{(D)}\quad \min\ \sum_{e \in E} c_e z_e \quad\text{s.t.}\quad z_{uv} \ge p_v - p_u\ \big((u,v) \in E\big),\quad z \ge 0,\quad p_t - p_s \ge 1,$$
+with $p$ unrestricted in sign. The optimum of (D) equals the minimum capacity of an $s$-$t$ cut, and hence, by strong duality, so does the maximum flow.
+:::
+
+:::proof
+*The dual.* Assign a free variable $q_v$ to the conservation equation at $v$ and $z_e \ge 0$ to the upper bound $f_e \le c_e$. The column of $f_e$ for $e = (u,v)$ has $+1$ in row $v$ and $-1$ in row $u$, so the dual constraint for that column reads $z_e + q_v - q_u \ge 0$; the column of $f_r$ has objective coefficient $1$ and no capacity row, giving $q_s - q_t \ge 1$. Substituting $p_v = q_s - q_v$ (so $p_s = 0$ and $p_t \ge 1$) turns $z_e \ge q_u - q_v$ into $z_e \ge p_v - p_u$ and leaves the objective $\sum_e c_e z_e$ unchanged.
+
+*Every cut gives a dual solution.* Given an $s$-$t$ cut $(S,T)$, set $p_v = 0$ for $v \in S$ and $p_v = 1$ for $v \in T$, and $z_e = 1$ exactly for the arcs from $S$ to $T$, $z_e = 0$ otherwise. Then $p_t - p_s = 1$ and $z_e \ge p_v - p_u$ holds arc by arc: the difference is $1$ only for an arc from $S$ to $T$, where $z_e = 1$. The objective value is $c(S,T)$. So $\mathrm{opt}(\mathrm{D}) \le \min_{(S,T)} c(S,T)$.
+
+*Every dual solution gives a cut at least as cheap.* Let $(p,z)$ be dual feasible. Replacing $p_v$ by $\min\{1,\max\{0,p_v\}\}$ keeps $p_s = 0$, $p_t = 1$ and can only shrink each difference $p_v - p_u$, so feasibility is preserved; assume $p \in [0,1]^V$. Pick $\theta$ uniformly at random in $[0,1)$ and set $S_\theta = \{v : p_v \le \theta\}$, $T_\theta = V \setminus S_\theta$. Then $s \in S_\theta$ always and $t \in T_\theta$ always, so $(S_\theta, T_\theta)$ is an $s$-$t$ cut. An arc $(u,v)$ crosses forward exactly when $p_u \le \theta < p_v$, an event of probability $\max\{0, p_v - p_u\} \le z_{uv}$. Therefore
+$$\mathbb{E}\big[c(S_\theta,T_\theta)\big] = \sum_{(u,v) \in E} c_{uv}\,\Pr[p_u \le \theta < p_v] \;\le\; \sum_{e} c_e z_e .$$
+A random variable is somewhere at most its mean, so some $\theta$ yields a cut of capacity at most the dual objective; hence $\min_{(S,T)} c(S,T) \le \mathrm{opt}(\mathrm{D})$.
+
+Combining, $\mathrm{opt}(\mathrm{D})$ is exactly the minimum cut capacity. Both programs are feasible — $f \equiv 0$ for (P), and the cut $S = \{s\}$ for (D) — so Theorem [Strong duality](#strong-duality) gives $\max f_r = \mathrm{opt}(\mathrm{D}) = \min_{(S,T)} c(S,T)$. Finally $f_r = |f|$ for the flow obtained by deleting the arc $r$, since conservation at $s$ in the circulation says exactly that $r$ carries the net outflow of $s$.
+:::
+
+:::remark
+Only finitely many $\theta$ give distinct sets $S_\theta$, so the "random" $\theta$ is a device for organising a finite case check; the argument is entirely constructive. Alternatively one can quote Theorem [Hoffman–Kruskal](#hoffman-kruskal): the constraint matrix of (P) is the incidence matrix of a digraph, TU by Theorem [Incidence matrices of digraphs are TU](#network-matrix-tu), so with integral capacities the primal optimum is integral — which re-proves Corollary [Integrality of maximum flow](#flow-integrality) without any reference to augmenting paths.
+:::
+
+:::intuition
+Read the dual variables as a *potential* $p_v$ — a height assigned to each vertex, with $s$ at height $0$ and $t$ at height at least $1$ — and $z_e$ as the *length* you must pay to climb the arc $e$. Dual feasibility says the lengths are enough to climb from any vertex to any neighbour, so every $s$-$t$ path has total length at least $1$. Minimising $\sum c_e z_e$ is therefore buying the cheapest way to make every $s$-$t$ path long. The rounding step says the cheapest such purchase can always be made by choosing a single height threshold — that is, by choosing a cut.
+:::
+
+:::example[Reading the dual solution off the algorithm]
+For the network $s \to a\ (3)$, $s \to b\ (2)$, $a\to b\ (2)$, $a \to t\ (2)$, $b \to t\ (3)$ of the earlier sections, write down an optimal dual solution and verify complementary slackness against the maximum flow.
 :::
 
 :::solution
-The constraint matrix is the bipartite incidence matrix, which is TU, so — even though we *permitted* fractional $x$ — every vertex of this polytope is a $0/1$ permutation matrix. There are only two:
+The algorithm terminated with $S = \{s\}$, so take $p_s = 0$ and $p_a = p_b = p_t = 1$, and $z_e = 1$ on the two arcs leaving $S$, namely $s\to a$ and $s \to b$, and $z_e = 0$ elsewhere. Dual objective: $3 \cdot 1 + 2 \cdot 1 = 5 = |f|$ ✓.
 
-$x_{11}=x_{22}=1$ (worker $1\to$job $1$, worker $2\to$job $2$): value $5+4 = 9$.
-$x_{12}=x_{21}=1$ (worker $1\to$job $2$, worker $2\to$job $1$): value $3+2 = 5$.
+*Complementary slackness*, in the form of Theorem [Complementary slackness](#complementary-slackness): a positive dual variable $z_e > 0$ forces its primal constraint $f_e \le c_e$ to be tight. Here $z > 0$ on $s\to a$ and $s \to b$, and indeed $f(s\to a) = 3 = c$ and $f(s\to b) = 2 = c$ — the arcs across a minimum cut are saturated. Conversely a primal variable at a value strictly between its bounds, such as $f(a \to b) = 1 \in (0,2)$, forces its dual constraint to be tight: $z_{ab} = 0 = p_b - p_a$ ✓. These are the same two conditions the proof of Theorem [Max-flow min-cut](#max-flow-min-cut) established by hand — arcs out of $S$ full, arcs into $S$ empty — now derived from a general principle.
+:::
 
-The LP optimum is $\max(9,5) = 9$, attained at the integral point $x_{11}=x_{22}=1$.
+:::summary
+The min–max theorems of this subject are one theorem seen from different angles.
 
-**Sanity check:** the relaxation never beat the best integer assignment — TU guarantees the fractional optimum coincides with the combinatorial one, so there was no "integrality gap" to round away. ✓
+| combinatorial max | combinatorial min | mechanism |
+|---|---|---|
+| maximum flow | minimum $s$-$t$ cut | residual reachability; LP duality with a TU matrix |
+| maximum matching (bipartite) | minimum vertex cover | max-flow min-cut, or duality with the incidence matrix |
+| most arc-disjoint $s$-$t$ paths | fewest arcs separating $s$ from $t$ | unit capacities in max-flow min-cut |
+| most internally disjoint paths | fewest vertices separating $s$ from $t$ | vertex splitting, then the arc version |
+| maximum-weight common independent set | matroid intersection minimum | a different mechanism — see the previous chapter |
+
+The first four are instances of one linear program; the last is a reminder that not every min–max theorem in combinatorics is an LP duality in disguise, though a surprising number are.
 :::
 
 ## Common Mistakes
 
-- **Allowing negative flows or violating conservation**: Feasibility requires both.
-- **Confusing the residual graph with the original**: Backward edges have capacity equal to current flow (can cancel).
-- **Thinking max flow is always the sum of capacities out of s**: That is only an upper bound; other cuts may be tighter.
-- **Forgetting that the min cut found from residual reachability is a proof of optimality**: After running any max-flow alg, the reachable set from s in residual gives a cut of capacity equal to the flow value.
-- **Assuming all flows are integral**: With fractional capacities you may need fractional flows; the integral flow theorem holds when all capacities are integers.
-
-Linear programming (LP) is the problem of optimizing a linear objective over a polyhedron defined by linear inequalities. It is both a fundamental algorithmic tool and the source of powerful min-max theorems and duality in combinatorics.
-
-Many combinatorial optimization problems admit natural LP formulations that are integral, so that LP solvers (or combinatorial algorithms derived from them) solve the discrete problem exactly.
-- **Thinking every LP has an integral optimum**: Only when the polyhedron has integer vertices (TU or other conditions).
-- **Forgetting strong duality requires feasibility of both sides**: If one is infeasible the other may be unbounded.
-- **Confusing simplex (vertex walking) with interior-point methods**: Both solve LP; simplex has combinatorial flavor.
-- **Assuming all combinatorial problems have small integrality gap**: Some have large gaps; approximation algorithms study the gap.
-- **Neglecting degeneracy and multiple optima**: A vertex may have several bases; complementary slackness helps certify optimality.
+- **Counting backward arcs in a cut's capacity.** Only arcs from $S$ to $T$ count; arcs from $T$ to $S$ are ignored, and Theorem [Flow across a cut](#flow-across-cut) is why.
+- **Treating the residual graph as the original graph.** A residual arc $u \to v$ may exist because $(v,u)$ carries flow that can be cancelled. Dropping those backward arcs makes the algorithm greedy and wrong.
+- **Assuming max flow equals the total capacity out of $s$.** That is one cut among many, hence only an upper bound; the minimum cut may lie deeper in the network.
+- **Forgetting that the reachable set is the certificate.** After any max-flow computation, the vertices reachable from $s$ in the residual graph form a minimum cut — the proof of optimality comes free with the answer.
+- **Expecting every maximum flow to be integral.** Corollary [Integrality of maximum flow](#flow-integrality) says one of them is, when capacities are integers; fractional maximum flows can coexist with it.
+- **Running Ford–Fulkerson with irrational capacities and no path rule.** Termination needs a rule such as breadth-first search (Edmonds–Karp); the plain method can converge to a value below the optimum.
+- **Applying strong duality without checking feasibility of both sides.** Both programs can be infeasible at once, and then there is no common value to speak of.
+- **Deriving the dual from a program not in standard form.** Equality constraints give free dual variables and free variables give dual equalities; convert first, or apply the conversion rules deliberately.
+- **Expecting every LP relaxation to be integral.** It is integral when the constraint matrix is totally unimodular (or the polyhedron is otherwise known to have integral vertices) — and the triangle's fractional matching of value $3/2$ shows what happens when it is not.
