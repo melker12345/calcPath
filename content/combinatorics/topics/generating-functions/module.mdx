@@ -6,397 +6,1873 @@ title: Generating Functions & Recurrences
 
 Ordinary and exponential generating functions, and recurrence relations for encoding and solving counting problems.
 
-A generating function packages an entire infinite sequence into a single formal power series. By manipulating the series algebraically we can often extract the nth coefficient — i.e., solve the original counting problem — without listing terms.
+A counting problem produces not one number but a whole sequence: the number of ways to do the thing for $n = 0$, for $n = 1$, for $n = 2$, and so on. A generating function is the decision to stop treating that sequence as an infinite list of separate answers and to treat it instead as a single algebraic object — a formal power series whose coefficients are the answers. The gain is immediate and enormous. Operations that are awkward on sequences (convolution, shifting, summing a family of infinitely many sequences) become addition, multiplication and substitution, which we already know how to do. In Herbert Wilf's phrase, a generating function is a clothesline on which we hang up a sequence of numbers for display.
 
-Ordinary generating functions (OGFs) are the workhorse for unlabeled or unordered structures; they turn addition of sizes into multiplication of series.
+This chapter develops that idea properly. We begin where the subject actually begins — with formal power series as *formal* objects, where convergence is not merely unimportant but is the wrong question — and then build the algebra: the product rule and its combinatorial content, coefficient extraction, the generalised binomial theorem with negative and fractional exponents, partial fractions, and the exponential generating functions that handle labelled structures. Along the way the classical results appear as consequences rather than as folklore: Binet's formula for the Fibonacci numbers, Euler's product for the partition function, the exponential formula, and the closed form for the Catalan numbers extracted from a quadratic functional equation.
 
-## Ordinary Generating Functions
+The rule we follow throughout is that manipulations get proved. It is easy to write down $\frac{1}{1-x} = 1 + x + x^2 + \cdots$ and move on; it is the business of a first serious course to say exactly what that equation means when $x$ is not a number.
+
+## Formal Power Series and Ordinary Generating Functions
 
 <!-- section: ordinary-generating -->
 
-:::definition[Ordinary generating function]{#ogf-definition}
-For a sequence $a_0, a_1, a_2, \ldots$ the ordinary generating function is
+Before any counting, we need the objects we will be computing with. The temptation is to think of $1 + x + x^2 + \cdots$ as a function of a real variable $x$, defined where the series converges. That reading is available, and much later it becomes useful, but as a foundation it is a mistake: it makes every algebraic step conditional on an analytic question that has nothing to do with the combinatorics.
 
-$$A(x) = \sum_{n=0}^\infty a_n x^n = a_0 + a_1 x + a_2 x^2 + \cdots$$
+:::definition[Formal power series]{#formal-power-series}
+Let $K$ be a field (for us almost always $\mathbb{Q}$, $\mathbb{R}$ or $\mathbb{C}$). A **formal power series** over $K$ is an infinite sequence
+
+$$A = (a_0, a_1, a_2, \ldots), \qquad a_n \in K,$$
+
+written suggestively as $A(x) = \sum_{n \ge 0} a_n x^n$. The set of all such series is written $K[[x]]$. Two series are equal exactly when their coefficient sequences are equal, term by term. We write $[x^n]\,A(x) = a_n$ for the coefficient-extraction operator.
 :::
 
-The exponent marks the parameter we care about (usually size $n$); the coefficient $a_n$ is the answer to the counting question for that $n$.
+The symbol $x$ is a placeholder — a bookkeeping device that records *which* coefficient is which. Nothing is ever substituted into it, so nothing needs to converge. Addition and multiplication are defined directly on coefficients.
 
-:::intuition
-Imagine a vending machine that for each possible "size" $n$ drops out $a_n$ different candy combinations. The generating function is the "master list" written as a polynomial you can add and multiply.
+:::definition[The ring operations]{#fps-ring-ops}
+For $A = \sum a_n x^n$ and $B = \sum b_n x^n$ in $K[[x]]$,
 
-The beauty is that algebraic operations on the master list correspond to combining choices.
+$$[x^n]\big(A + B\big) = a_n + b_n, \qquad [x^n]\big(A\cdot B\big) = \sum_{k=0}^{n} a_k\, b_{n-k}.$$
+
+The second is the **Cauchy product**, or **convolution**, of the two coefficient sequences.
 :::
 
-:::example
-How many ways are there to make $n$ cents using only 1-cent coins? For every $n \ge 0$ there is exactly one way (use $n$ pennies), so $a_n = 1$ for all $n$.
-:::
+Observe that the product is well defined with no limiting process at all: the coefficient of $x^n$ is a *finite* sum of $n+1$ terms. This is the whole reason formal power series work. Each coefficient of the answer is determined by finitely much of the input.
 
-:::solution
-Write the sequence into a series. The coefficient of $x^n$ must be $a_n = 1$:
-
-$$A(x) = \sum_{n=0}^\infty 1 \cdot x^n = 1 + x + x^2 + x^3 + \cdots$$
-
-Recognize the closed form. This is the geometric series, which as a formal power series equals
-
-$$A(x) = \frac{1}{1 - x}.$$
-
-Sanity check: multiply back out. $(1-x)(1 + x + x^2 + \cdots) = 1$, since every term $x^k$ for $k \ge 1$ cancels against $-x \cdot x^{k-1}$. So $\frac{1}{1-x}$ really does have all coefficients equal to $1$. ✓
-:::
-
-## Operations and Their Combinatorial Meaning
-
-<!-- section: operations-on-gfs -->
-
-:::proposition[Dictionary of operations]{#ogf-dictionary}
-- Sum $A(x) + B(x)$: disjoint union of two classes (an object is *either* an $A$-object *or* a $B$-object).
-- Product $A(x)B(x)$: ordered pairs (or sequences of two independent structures) whose sizes add.
-- $\frac{1}{1 - A(x)}$: any number (including zero) of copies of structures from $A$, sizes adding (sequences/compositions).
-:::
-
-In the product, the coefficient of $x^n$ is the **convolution**
-
-$$\sum_{k=0}^n a_k\, b_{n-k}.$$
-
-The third rule requires $a_0 = 0$ (an atom of size zero would let you insert infinitely many, and the geometric expansion would diverge as a formal series). These turn recursive or compositional counting into algebra.
-
-:::intuition
-Multiplying two GFs is like "first choose a red item of size $k$ (there are $a_k$ ways) and independently a blue item of size $n-k$ (there are $b_{n-k}$ ways)." To land on total size $n$ you sum over every way to split $n = k + (n-k)$, which is exactly the convolution.
-
-The geometric series $\frac{1}{1-x} = \sum_n x^n$ corresponds to "any number of 1-cent coins."
-:::
-
-:::example
-Count the ways to hold a total of $n$ fruits when you have an unlimited supply of identical apples and identical oranges.
-:::
-
-:::solution
-GF for one fruit type. You can hold $0, 1, 2, \ldots$ apples, one way each, so the apple GF is $1 + x + x^2 + \cdots = \frac{1}{1-x}$; likewise for oranges.
-
-Combine independent choices with a product. Choosing apples *and* oranges are independent and their sizes add, so
-
-$$\left(\frac{1}{1-x}\right)\!\left(\frac{1}{1-x}\right) = \frac{1}{(1-x)^2}.$$
-
-Extract the coefficient. Differentiating $\frac{1}{1-x} = \sum_n x^n$ term by term gives $\frac{1}{(1-x)^2} = \sum_{n \ge 0} (n+1)\, x^n$. So the coefficient of $x^n$ is $n+1$.
-
-Sanity check: to hold $n$ fruits you pick $k$ apples with $k \in \{0, 1, \ldots, n\}$ and take the remaining $n-k$ as oranges — that is $n+1$ choices, matching the coefficient. ✓
-:::
-
-## Solving Classic Counting Problems
-
-<!-- section: solving-counting-problems -->
-
-Many classic problems become routine once the GF is written:
-
-- Integer partitions → a product over part sizes $\prod_{k \ge 1} \frac{1}{1-x^k}$ (each factor supplies "any number of parts of size $k$").
-- Compositions (ordered) with part sizes in $\{1, 2, \ldots, m\}$ → $\frac{1}{1 - (x + x^2 + \cdots + x^m)}$.
-- Tilings, paths, matchings → often lead to linear recurrences whose characteristic equation appears in the denominator.
-
-After writing the GF one can expand, use partial fractions, or extract $[x^n]$ (the coefficient of $x^n$) via a recurrence or other tools.
-
-:::intuition
-"How many ways to pay exactly $n$ cents with standard US coins?" Write the product of geometric series for each denomination; the coefficient of $x^n$ is the answer. Each factor $\frac{1}{1-x^{d}}$ says "use any number of coins of value $d$," and multiplying enforces that the values add up to $n$.
-
-The algebra does the heavy casework for you.
-:::
-
-:::example
-Count the ways to tile a $2 \times n$ board with $1 \times 2$ dominoes (each covers two squares).
-:::
-
-:::solution
-Set up a recurrence by looking at the last column. Consider the leftmost column. Either it is covered by one **vertical** domino, leaving a $2 \times (n-1)$ board ($f_{n-1}$ tilings), or the column is covered by the left halves of two **horizontal** dominoes, which forces the next column too and leaves a $2 \times (n-2)$ board ($f_{n-2}$ tilings). These cases are disjoint and exhaustive, so
-
-$$f_n = f_{n-1} + f_{n-2}.$$
-
-Base cases. The empty board has one (empty) tiling, $f_0 = 1$; a $2 \times 1$ board admits only a single vertical domino, $f_1 = 1$. This is the Fibonacci recurrence.
-
-Encode as a GF. Multiplying the recurrence by $x^n$ and summing (as done in detail in the "Solving Techniques" section) gives
-
-$$F(x) = \frac{1}{1 - x - x^2},$$
-
-whose coefficients are exactly the $f_n$.
-
-Sanity check: expanding the recurrence gives $f_0, f_1, f_2, f_3, f_4 = 1, 1, 2, 3, 5$. A $2 \times 2$ board indeed has $2$ tilings (two verticals, or two horizontals), matching $f_2 = 2$. ✓
-:::
-
-## Common Mistakes
-
-- **Confusing ordinary with exponential generating functions**: OGFs for unlabeled/unordered; EGFs (with /n!) for labeled or ordered structures like permutations.
-- **Treating the series as convergent real functions too early**: In combinatorics we usually work formally; analytic questions come later.
-- **Forgetting the constant term**: The empty structure almost always contributes the $1$ (the $x^0$ term).
-- **Misidentifying what the exponent represents**: Make sure $x$ marks exactly the parameter you want to count (size, weight, etc.).
-- **Writing the wrong factor for "unlimited supply"**: Unlimited identical items of one type → $\frac{1}{1-x^k}$, not $(1+x^k)$. The factor $(1+x^k)$ means "use that item at most once."
-
-Exponential generating functions (EGFs) are the natural tool when the objects being counted are *labeled* — distinct people, numbered positions, or distinguishable atoms.
-
-The division by n! in the definition cancels the n! ways to label an n-element structure, yielding clean algebraic expressions for sets, sequences, and cycles of labeled components.
-
-## Definition of EGFs
-
-<!-- section: definition-egf -->
-
-:::definition[Exponential generating function]{#egf-definition}
-The exponential generating function for the sequence $a_n$ (number of structures on an $n$-element labeled set) is
-
-$$A(x) = \sum_{n \ge 0} \frac{a_n}{n!} x^n.$$
-:::
-
-:::notation
-Here $[x^n]\,A(x)$ denotes the coefficient of $x^n$ in $A(x)$; to recover the count multiply it back by $n!$:
-
-$$a_n = n!\, [x^n]\, A(x).$$
-:::
-
-:::intuition
-Because the $n$ labels can be permuted in $n!$ ways, we "pre-divide" by $n!$ so that the messy factorials cancel when we multiply EGFs, leaving clean expressions like $e^x$. Think of it as measuring counts "per labeling."
-
-For permutations of $[n]$ there are $n!$ of them; their EGF simplifies to $\sum_n x^n = \frac{1}{1-x}$ — beautiful.
-:::
-
-:::example
-Find the EGF for the number of permutations of an $n$-element labeled set, then recover $a_n$.
-:::
-
-:::solution
-Count the structures. A permutation of $[n]$ is any ordering of the $n$ elements, so $a_n = n!$.
-
-Form the EGF by dividing each term by $n!$:
-
-$$A(x) = \sum_{n \ge 0} \frac{a_n}{n!}\, x^n = \sum_{n \ge 0} \frac{n!}{n!}\, x^n = \sum_{n \ge 0} x^n = \frac{1}{1 - x}.$$
-
-Recover the count. The coefficient of $x^n$ in $\frac{1}{1-x}$ is $1$, so $a_n = n! \cdot [x^n]\,A(x) = n! \cdot 1 = n!$.
-
-Sanity check: for $n = 3$ we get $a_3 = 3! = 6$, and there are indeed $6$ orderings of $\{1,2,3\}$. ✓ Note the contrast with the OGF $\sum n!\, x^n$, which diverges for every $x \ne 0$ — the EGF's $n!$ in the denominator is what tames it.
-:::
-
-## Labeled Structures and Set Constructions
-
-<!-- section: labeled-structures -->
-
-Here $A(x)$ is the EGF of the component class, and each rule requires the components to have positive size, i.e. $a_0 = 0$, so the constructions are well defined.
-
-:::proposition[Dictionary for labeled structures]{#egf-dictionary}
-- A single labeled atom: $x$
-- A non-empty set of labeled atoms: $e^x - 1$ (the constant term $1$, meaning the empty set, is subtracted off)
-- A sequence of labeled structures (order matters): $\frac{1}{1 - A(x)}$
-- A **set** of labeled structures (order does not matter): $\exp\!\big(A(x)\big)$
+:::theorem[$K[[x]]$ is a commutative ring]{#fps-is-a-ring}
+With the operations of the definition of the ring operations, $K[[x]]$ is a commutative ring with additive identity $0 = (0,0,\ldots)$ and multiplicative identity $1 = (1,0,0,\ldots)$. Moreover it is an integral domain: if $A \ne 0$ and $B \ne 0$ then $AB \ne 0$.
 :::
 
 :::proof
-Take the "set" rule. A set of $k$ components has EGF $\frac{A(x)^k}{k!}$, the $k!$ dividing out the ordering of the $k$ interchangeable components. Summing over $k \ge 0$ gives
+Commutativity and associativity of addition are inherited coefficientwise from $K$. For the product, commutativity is the substitution $k \mapsto n-k$ in the convolution. For associativity, both $(AB)C$ and $A(BC)$ have
 
-$$\sum_k \frac{A(x)^k}{k!} = \exp(A(x)).$$
+$$[x^n] = \sum_{i+j+k=n} a_i b_j c_k,$$
+
+a finite sum over ordered triples, so they agree. Distributivity is likewise immediate coefficientwise.
+
+For the integral-domain claim, let $i$ be least with $a_i \ne 0$ and $j$ least with $b_j \ne 0$ — these exist because $A$ and $B$ are non-zero. Then
+
+$$[x^{i+j}]\,(AB) = \sum_{k=0}^{i+j} a_k b_{i+j-k} = a_i b_j,$$
+
+because every other term has either $k < i$ (so $a_k = 0$) or $k > i$, forcing $i+j-k < j$ (so $b_{i+j-k} = 0$). Since $K$ is a field and $a_i, b_j \ne 0$, we get $a_i b_j \ne 0$, so $AB \ne 0$.
 :::
 
-These are far cleaner than the corresponding ordinary generating functions for the same labeled counts.
+The index $i$ appearing in that proof is worth a name.
+
+:::definition[Order and valuation]{#order-of-a-series}
+The **order** $\operatorname{ord}(A)$ of a non-zero $A \in K[[x]]$ is the least $n$ with $a_n \ne 0$; we set $\operatorname{ord}(0) = \infty$. The proof above shows $\operatorname{ord}(AB) = \operatorname{ord}(A) + \operatorname{ord}(B)$.
+:::
+
+:::remark[Why convergence is not the point]
+The series $\sum_{n \ge 0} n!\,x^n$ converges for no real $x$ except $0$. As a formal power series it is a perfectly ordinary element of $\mathbb{Q}[[x]]$: it is the sequence $(1, 1, 2, 6, 24, \ldots)$, it can be added to and multiplied by anything, and it has a multiplicative inverse (the Units Theorem). Its coefficients answer a genuine counting question — how many permutations of an $n$-element set there are — and no analytic statement about it is needed to do that counting. Insisting on convergence would discard a legitimate and useful object for a reason external to the problem.
+
+Conversely, when a generating function *does* converge near $0$, that is a bonus: it opens the door to estimating $a_n$ by studying the singularities of the analytic function. That subject — singularity analysis, the analytic combinatorics of Flajolet and Sedgewick — is beyond this chapter, and we will flag the one or two places where we lean on it.
+:::
+
+Division needs an argument, and the argument is the reason the geometric series identity is *true* rather than merely suggestive.
+
+:::theorem[Units of $K[[x]]$]{#fps-units}
+A formal power series $A \in K[[x]]$ has a multiplicative inverse in $K[[x]]$ if and only if $a_0 \ne 0$. The inverse is unique.
+:::
+
+:::proof
+($\Rightarrow$) If $AB = 1$ then comparing constant terms gives $a_0 b_0 = 1$, so $a_0 \ne 0$.
+
+($\Leftarrow$) Suppose $a_0 \ne 0$. We must produce $b_0, b_1, b_2, \ldots$ with $\sum_{k=0}^n a_k b_{n-k} = [n = 0]$. For $n = 0$ this forces $b_0 = a_0^{-1}$, which exists because $K$ is a field. For $n \ge 1$ the condition reads
+
+$$a_0 b_n + \sum_{k=1}^{n} a_k\, b_{n-k} = 0, \qquad\text{that is}\qquad b_n = -\frac{1}{a_0}\sum_{k=1}^{n} a_k\, b_{n-k}.$$
+
+The right-hand side involves only $b_0, \ldots, b_{n-1}$, so this recursion determines $b_n$ uniquely from the previously determined coefficients. By induction every $b_n$ exists and is unique, and the resulting $B$ satisfies $AB = 1$.
+:::
+
+:::corollary[The geometric series]{#geometric-series}
+In $K[[x]]$,
+
+$$\frac{1}{1-x} = \sum_{n \ge 0} x^n, \qquad\text{and more generally}\qquad \frac{1}{1-cx} = \sum_{n \ge 0} c^n x^n$$
+
+for any $c \in K$.
+:::
+
+:::proof
+By the Units Theorem the series $1 - cx$ has a unique inverse, so it suffices to check that $\sum_{n\ge0} c^n x^n$ works. Its product with $1 - cx$ has
+
+$$[x^n] = c^n - c\cdot c^{n-1} = 0 \quad (n \ge 1), \qquad [x^0] = 1,$$
+
+so the product is $1$. Uniqueness of inverses finishes it.
+:::
 
 :::intuition
-"A set of cycles" *is* a permutation. A cycle on a labeled set has EGF $-\ln(1-x)$, so the set-of-cycles EGF is $\exp\big(-\ln(1-x)\big) = \frac{1}{1-x}$ — recovering the permutation count.
-
-"Set partitions": a partition is a *set* of non-empty *sets* (the blocks). A non-empty block has EGF $e^x - 1$, so a set of them has EGF $\exp(e^x - 1)$.
+The verification above is the entire content of "the geometric series". We are not summing infinitely many numbers; we are exhibiting the sequence $(1,1,1,\ldots)$ as the unique sequence whose convolution with $(1,-c,0,0,\ldots)$ is $(1,0,0,\ldots)$. Every coefficient check is a one-line finite cancellation. That is why the identity holds "for all $x$", including $x = 2$, where the numerical series diverges wildly: there is no $x$.
 :::
 
-:::example
-Find the Bell number $B_4$ (the number of ways to partition a $4$-element labeled set into non-empty blocks) from the EGF.
+:::pitfall[Do not evaluate a formal series at a number]
+Writing $\frac{1}{1-2} = 1 + 2 + 4 + 8 + \cdots = -1$ is not a clever formal-series fact; it is a category error. A formal power series is an element of $K[[x]]$, not a function. The one substitution that is always legitimate is $x = 0$, which reads off the constant term. Substituting another *series* is legitimate under a condition given in the Composition Theorem below.
+:::
+
+With the ring in place we can finally say what a generating function is.
+
+:::definition[Ordinary generating function]{#ogf-definition}
+The **ordinary generating function** (OGF) of a sequence $a_0, a_1, a_2, \ldots$ is the formal power series
+
+$$A(x) = \sum_{n \ge 0} a_n x^n = a_0 + a_1 x + a_2 x^2 + \cdots .$$
+
+If $\mathcal{C}$ is a set of combinatorial objects equipped with a size function $|\cdot| : \mathcal{C} \to \mathbb{Z}_{\ge 0}$ taking each value finitely often, the OGF of the class $\mathcal{C}$ is
+
+$$C(x) = \sum_{c \in \mathcal{C}} x^{|c|} = \sum_{n \ge 0} c_n x^n, \qquad c_n = \#\{c \in \mathcal{C} : |c| = n\}.$$
+:::
+
+The second formulation — sum $x^{|c|}$ over the objects themselves — is the one to keep in mind, because it makes the product rule obvious later. The exponent marks the parameter being counted, and the coefficient of $x^n$ is the answer to the counting question at size $n$.
+
+:::intuition
+Think of $A(x)$ as a filing cabinet with one drawer per size. Drawer $n$ contains the number $a_n$, and the symbol $x^n$ is the label on the drawer. Algebra on generating functions is a way of manipulating the whole cabinet at once: multiplying two cabinets combines their contents in every way whose sizes add up, which is exactly the "choose one of these *and* one of those" step that counting arguments are made of.
+:::
+
+:::example[The OGF of a finite class]
+Find the generating function that counts the subsets of an $n$-element set by their size.
 :::
 
 :::solution
-Build the EGF. A block is a non-empty set of atoms, EGF $e^x - 1$; a partition is a set of blocks, so $B(x) = \exp(e^x - 1)$.
+Let $\mathcal{C}$ be the class of subsets $S \subseteq \{1,\ldots,n\}$ with $|S|$ its cardinality. Then
 
-It is usually easier to use the Bell recurrence $B_{n+1} = \sum_{k=0}^{n} \binom{n}{k} B_k$ (add element $n+1$; choose the $k$ others sharing its block). Starting from $B_0 = 1$:
+$$C(x) = \sum_{S} x^{|S|} = \sum_{k=0}^{n} \binom{n}{k} x^k = (1+x)^n,$$
 
-$B_1 = \binom{0}{0}B_0 = 1$
-$B_2 = \binom{1}{0}B_0 + \binom{1}{1}B_1 = 1 + 1 = 2$
-$B_3 = \binom{2}{0}B_0 + \binom{2}{1}B_1 + \binom{2}{2}B_2 = 1 + 2 + 2 = 5$
-$B_4 = \binom{3}{0}B_0 + \binom{3}{1}B_1 + \binom{3}{2}B_2 + \binom{3}{3}B_3 = 1 + 3 + 6 + 5 = 15$
+the last step being the binomial theorem. Read backwards this is a proof of the binomial theorem by generating functions: a subset is built by deciding, independently for each of the $n$ elements, to exclude it (contributing $x^0 = 1$) or include it (contributing $x^1$), so the class is a product of $n$ two-element classes each with generating function $1 + x$.
 
-So $B_4 = 15$, meaning $4! \, [x^4]\, \exp(e^x - 1) = 15$.
-
-Sanity check: the partitions of $\{1,2,3,4\}$ split by block-size pattern as $1$ (all together) $+ 7$ (a $3{+}1$ split, $\binom{4}{1}=4$; a $2{+}2$ split, $3$) $+ 6$ ($2{+}1{+}1$, $\binom{4}{2}=6$) $+ 1$ (all singletons) $= 15$. ✓
+The generating function here is a polynomial — a formal power series that happens to have finitely many non-zero coefficients. Polynomials are exactly the elements of $K[[x]]$ of that shape, and nothing about the theory changes.
 :::
 
-## Relation to Ordinary Generating Functions
+Two more pieces of infrastructure are needed before the dictionary of operations: infinite sums and substitution. Both are legitimate in $K[[x]]$ under a finiteness condition.
 
-<!-- section: relation-to-ogf -->
+:::definition[Summable family]{#summable-family}
+A family $(A^{(i)})_{i \in I}$ of formal power series is **summable** if for every $n$ only finitely many $i \in I$ have $[x^n]A^{(i)} \ne 0$. Its sum is then defined coefficientwise:
 
-When structures are unlabeled, OGFs are preferred. When labels matter (or when we count permutations, functions, mappings), EGFs usually produce simpler closed forms and composition rules that mirror the combinatorial constructions directly.
+$$\left[x^n\right]\sum_{i \in I} A^{(i)} = \sum_{i \in I} \left[x^n\right] A^{(i)},$$
 
-Many species in combinatorial enumeration theory are defined via their EGFs.
-
-:::intuition
-If the people are distinguishable, EGFs "factor out" the labeling so the algebra sees only the grouping.
-
-Converting between OGF and EGF is possible via Borel or other transforms, but usually we choose the right one from the start: unlabeled → OGF, labeled → EGF.
+a finite sum for each $n$.
 :::
 
-:::example
-Count the derangements $d(n)$ — permutations of $[n]$ with no fixed point — using the EGF.
+:::theorem[Composition of formal power series]{#composition}
+Let $A = \sum_{k \ge 0} a_k x^k$ and let $B \in K[[x]]$ with $b_0 = 0$. Then the family $(a_k B^k)_{k \ge 0}$ is summable, so
+
+$$A(B(x)) := \sum_{k \ge 0} a_k\, B(x)^k$$
+
+is a well-defined element of $K[[x]]$. If $b_0 \ne 0$ and infinitely many $a_k$ are non-zero, the family is in general *not* summable and the composition is undefined.
+:::
+
+:::proof
+Since $b_0 = 0$ we have $\operatorname{ord}(B) \ge 1$, hence $\operatorname{ord}(B^k) \ge k$ by the order of a product. So for fixed $n$, every term with $k > n$ contributes $0$ to $[x^n]$, leaving at most $n+1$ contributing terms: the family is summable.
+
+For the failure case, take $B = 1$ (so $b_0 = 1$) and $A = \sum_k x^k$. Then $a_k B^k = 1$ for every $k$, and every one of them contributes to $[x^0]$; the constant term would be an infinite sum of $1$'s, which is not an element of $K$.
+:::
+
+This is the precise reason for a condition that will recur constantly: constructions like $\frac{1}{1 - A(x)}$ require $a_0 = 0$. It is not a convergence scruple imported from analysis; it is the difference between a defined and an undefined expression in $K[[x]]$.
+
+:::example[A first counting problem]
+In how many ways can $n$ cents be paid using only 1-cent coins? Write the OGF and identify it in closed form.
 :::
 
 :::solution
-Get the EGF. A permutation is a set of cycles; a derangement is a set of cycles of length $\ge 2$. Dropping fixed points (cycles of length $1$, which contribute $x$ to the cycle EGF) changes the cycle EGF from $-\ln(1-x)$ to $-\ln(1-x) - x$, so
+For each $n \ge 0$ there is exactly one such payment (use $n$ pennies), so $a_n = 1$ for all $n$ and
 
-$$D(x) = \exp\big(-\ln(1-x) - x\big) = \frac{e^{-x}}{1 - x}.$$
+$$A(x) = \sum_{n \ge 0} x^n = \frac{1}{1-x}$$
 
-Extract the coefficient. Since $e^{-x} = \sum_j \frac{(-1)^j}{j!}x^j$ and $\frac{1}{1-x} = \sum_i x^i$, their product's coefficient of $x^n$ is $\sum_{j=0}^n \frac{(-1)^j}{j!}$. Therefore
+by the geometric series identity. Equivalently, and more usefully for what follows: the class of payments is the class of finite multisets of pennies, one object of each size, and $\sum_{c} x^{|c|} = \sum_{n\ge0} x^n$.
 
-$$d(n) = n!\,[x^n]\,D(x) = n! \sum_{j=0}^{n} \frac{(-1)^j}{j!}.$$
+The closed form is not an answer in itself — the answer was $1$ and we knew it. Its value is that $\frac{1}{1-x}$ is a *factor* we can multiply by other factors, which is what makes the two-coin and ten-coin versions of the question tractable.
+:::
 
-Evaluate at $n = 4$:
+## The Algebra of Generating Functions
 
-$$d(4) = 4!\left(1 - 1 + \tfrac{1}{2} - \tfrac{1}{6} + \tfrac{1}{24}\right) = 24 \cdot \tfrac{9}{24} = 9.$$
+<!-- section: operations-on-gfs -->
 
-Sanity check: $\frac{4!}{e} = \frac{24}{2.718\ldots} \approx 8.83$, and $d(n)$ is the nearest integer to $n!/e$, which is $9$. ✓
+Everything in this chapter rests on a dictionary: a table translating operations on sequences into operations on their generating functions, and combinatorial constructions into algebra. This section states the dictionary and proves it.
+
+:::theorem[Dictionary of coefficient operations]{#ogf-dictionary}
+Let $A(x) = \sum_{n\ge0} a_n x^n$ and $B(x) = \sum_{n \ge 0} b_n x^n$ and let $c \in K$, $m \in \mathbb{Z}_{\ge 0}$. Then:
+
+1. **Linear combination.** $\alpha A(x) + \beta B(x)$ is the OGF of $(\alpha a_n + \beta b_n)$.
+2. **Product.** $A(x)B(x)$ is the OGF of the convolution $\left(\sum_{k=0}^{n} a_k b_{n-k}\right)_{n\ge0}$.
+3. **Right shift.** $x^m A(x)$ is the OGF of the sequence that is $0$ for $n < m$ and $a_{n-m}$ for $n \ge m$.
+4. **Left shift.** $\dfrac{A(x) - a_0 - a_1x - \cdots - a_{m-1}x^{m-1}}{x^m}$ is the OGF of $(a_{n+m})_{n \ge 0}$.
+5. **Rescaling.** $A(cx)$ is the OGF of $(c^n a_n)$, and $A(x^m)$ is the OGF of the sequence with $a_k$ in position $mk$ and $0$ elsewhere.
+6. **Multiplication by $n$.** $x A'(x)$ is the OGF of $(n a_n)$, where $A'(x) := \sum_{n \ge 1} n a_n x^{n-1}$ is the formal derivative.
+7. **Partial sums.** $\dfrac{A(x)}{1-x}$ is the OGF of $\left(\sum_{k=0}^{n} a_k\right)_{n \ge 0}$.
+:::
+
+:::proof
+(1) and (2) are the definition of the ring operations restated. (3) is immediate: $x^m \sum a_n x^n = \sum a_n x^{n+m}$, and reindexing $n' = n+m$ gives coefficient $a_{n'-m}$ in position $n'$.
+
+(4) The numerator has order at least $m$, so it equals $\sum_{n \ge m} a_n x^n$; dividing by $x^m$ — which is exact, no inverse required — gives $\sum_{n \ge m} a_n x^{n-m} = \sum_{k \ge 0} a_{k+m} x^k$.
+
+(5) $A(cx) = \sum a_n c^n x^n$ by the Composition Theorem applied to $B = cx$, which has $b_0 = 0$; similarly for $x^m$.
+
+(6) $xA'(x) = x\sum_{n\ge1} n a_n x^{n-1} = \sum_{n \ge 1} n a_n x^n$, and the missing $n=0$ term is $0 \cdot a_0 = 0$.
+
+(7) By (2), $[x^n]\frac{A(x)}{1-x} = \sum_{k=0}^n a_k \cdot 1 = \sum_{k=0}^n a_k$, using the geometric series identity to write $\frac{1}{1-x} = \sum x^n$.
+:::
+
+:::notation[The formal derivative]
+$A'(x) = \sum_{n \ge 1} n a_n x^{n-1}$ is defined by that formula, not by a limit. It satisfies the usual rules — $(AB)' = A'B + AB'$ and $(A(B))' = A'(B)\cdot B'$ when the composition is defined — each provable by comparing coefficients, and we use them freely. In characteristic $0$, $A' = 0$ if and only if $A$ is a constant.
+:::
+
+The product rule deserves its own statement, because it is the rule that turns combinatorics into algebra.
+
+:::theorem[Product rule for combinatorial classes]{#product-rule}
+Let $\mathcal{A}$ and $\mathcal{B}$ be classes with OGFs $A(x)$ and $B(x)$, and let $\mathcal{C} = \mathcal{A}\times\mathcal{B}$ be the class of ordered pairs $(a,b)$ with size $|(a,b)| = |a| + |b|$. Then
+
+$$C(x) = A(x)\,B(x).$$
+
+Consequently, if a class $\mathcal{C}$ admits an **unambiguous decomposition** — a bijection between its objects and pairs from $\mathcal{A}\times\mathcal{B}$ that adds sizes — then $C(x) = A(x)B(x)$.
+:::
+
+:::proof
+Using the object-sum form of the definition of an OGF,
+
+$$A(x)B(x) = \left(\sum_{a \in \mathcal{A}} x^{|a|}\right)\left(\sum_{b \in \mathcal{B}} x^{|b|}\right) = \sum_{(a,b) \in \mathcal{A}\times\mathcal{B}} x^{|a|+|b|} = \sum_{c \in \mathcal{C}} x^{|c|},$$
+
+where the middle equality is legitimate because for each $n$ only finitely many pairs have $|a|+|b| = n$ (each class has finitely many objects of each size, and there are finitely many splits $n = i + j$). Comparing coefficients of $x^n$ gives precisely $c_n = \sum_{k} a_k b_{n-k}$.
+:::
+
+:::intuition
+The convolution $\sum_k a_k b_{n-k}$ *is* the sentence "to build an object of size $n$, choose how much of the size goes to the first component — say $k$ — then choose one of the $a_k$ first components and, independently, one of the $b_{n-k}$ second components; sum over $k$ because the choices of $k$ are disjoint." Multiplication of series is the mechanised version of that sentence. Every time you would have written a case analysis with a sum over a split point, you can instead write a product.
+
+The word "unambiguous" is load-bearing. Each object of $\mathcal{C}$ must arise from exactly one pair. If some object can be split in two different ways, the product over-counts.
+:::
+
+:::theorem[Sequence construction]{#sequence-construction}
+Let $\mathcal{A}$ be a class with $a_0 = 0$ (no objects of size $0$) and OGF $A(x)$. Let $\operatorname{SEQ}(\mathcal{A})$ be the class of finite sequences $(\alpha_1, \ldots, \alpha_k)$, $k \ge 0$, of objects from $\mathcal{A}$, with size the sum of the component sizes. Then
+
+$$\text{OGF of } \operatorname{SEQ}(\mathcal{A}) \;=\; \sum_{k \ge 0} A(x)^k \;=\; \frac{1}{1 - A(x)}.$$
+:::
+
+:::proof
+Sequences of length exactly $k$ form the class $\mathcal{A}^k$, whose OGF is $A(x)^k$ by $k-1$ applications of the Product Rule. The classes of different lengths are disjoint, and since $a_0 = 0$ we have $\operatorname{ord}(A^k) \ge k$, so the family $(A^k)_{k \ge 0}$ is summable (summability) and the class union has OGF $\sum_{k\ge0} A(x)^k$.
+
+It remains to see that this sum is the inverse of $1 - A(x)$. Write $S = \sum_{k \ge 0} A^k$. Then
+
+$$(1 - A)\,S = \sum_{k \ge 0} A^k - \sum_{k \ge 0} A^{k+1} = A^0 = 1,$$
+
+where the rearrangement is valid coefficientwise because each coefficient involves only finitely many terms. Since $1 - A$ has constant term $1 \ne 0$ it is a unit (the Units Theorem) with unique inverse, so $S = \frac{1}{1-A}$.
+:::
+
+:::pitfall[The $a_0 = 0$ condition is not optional]
+If $\mathcal{A}$ contained an object of size $0$, a "sequence" could contain arbitrarily many copies of it without growing, so there would be infinitely many sequences of size $0$ and no generating function at all — the class is not admissible. On the algebraic side the family $(A^k)$ fails to be summable and $\sum_k A^k$ is undefined, exactly as in the Composition Theorem. The symptom is an infinite constant term; the cause is a combinatorial construction that produces infinitely many objects of one size.
+:::
+
+For coefficient extraction, one identity does most of the work. It is the binomial theorem, generalised so that the exponent need not be a non-negative integer.
+
+:::definition[Generalised binomial coefficient]{#generalised-binomial-coefficient}
+For $\alpha \in K$ (or $\alpha \in \mathbb{C}$) and $n \in \mathbb{Z}_{\ge 0}$,
+
+$$\binom{\alpha}{n} = \frac{\alpha(\alpha-1)\cdots(\alpha-n+1)}{n!},$$
+
+with $\binom{\alpha}{0} = 1$. When $\alpha$ is a non-negative integer this is the usual binomial coefficient and vanishes for $n > \alpha$; otherwise it is non-zero for every $n$.
+:::
+
+:::definition[The series $(1+x)^\alpha$]{#binomial-series-definition}
+For $\alpha \in K$ we *define*
+
+$$(1+x)^{\alpha} := \sum_{n \ge 0} \binom{\alpha}{n} x^n \in K[[x]].$$
+:::
+
+That is a definition, so nothing is yet proved; what has to be proved is that the notation is honest — that this series behaves like a power.
+
+:::theorem[Generalised binomial theorem]{#generalised-binomial-theorem}
+For all $\alpha, \beta \in K$ (char $K = 0$):
+
+$$(1+x)^{\alpha}(1+x)^{\beta} = (1+x)^{\alpha+\beta}, \qquad (1+x)^{0} = 1, \qquad (1+x)^1 = 1 + x,$$
+
+and $\frac{d}{dx}(1+x)^\alpha = \alpha (1+x)^{\alpha-1}$. In particular $(1+x)^{-1}$ is the inverse of $1+x$, and for $m$ a positive integer the definition of $(1+x)^{\alpha}$ agrees with the ordinary $m$-fold product.
+:::
+
+:::proof
+The product identity is equivalent, on comparing coefficients of $x^n$, to the **Vandermonde convolution**
+
+$$\sum_{k=0}^{n} \binom{\alpha}{k}\binom{\beta}{n-k} = \binom{\alpha+\beta}{n}.$$
+
+Both sides are polynomials in $\alpha$ and $\beta$ of degree at most $n$ in each. For non-negative integers $\alpha, \beta$ the identity is the standard combinatorial Vandermonde identity: choosing $n$ elements from a set of $\alpha + \beta$ elements split into blocks of sizes $\alpha$ and $\beta$ amounts to choosing $k$ from the first and $n-k$ from the second. A polynomial in two variables that vanishes at all pairs of non-negative integers is identically zero (fix $\beta$ integral and note a one-variable polynomial with infinitely many roots is zero; then repeat in $\beta$). Hence the identity holds for all $\alpha,\beta \in K$.
+
+The cases $\alpha = 0, 1$ are immediate from the definition of $\binom{\alpha}{n}$. The derivative claim follows from $n\binom{\alpha}{n} = \alpha\binom{\alpha-1}{n-1}$, which is a direct computation from the definition. Finally, $(1+x)^m$ for a positive integer $m$ is a product of $m$ copies of $(1+x)^1 = 1+x$ by the first identity and induction.
+:::
+
+:::corollary[Negative exponents]{#negative-binomial}
+For an integer $k \ge 1$,
+
+$$\frac{1}{(1-x)^{k}} = \sum_{n \ge 0} \binom{n+k-1}{k-1} x^n = \sum_{n\ge0}\binom{n+k-1}{n}x^n .$$
+:::
+
+:::proof
+By the Generalised Binomial Theorem, $(1+y)^{-k} = \sum_n \binom{-k}{n} y^n$ is the inverse of $(1+y)^k$. Substituting $y = -x$ (valid by the Composition Theorem) gives $\frac{1}{(1-x)^k} = \sum_n \binom{-k}{n}(-1)^n x^n$. Now compute
+
+$$\binom{-k}{n}(-1)^n = (-1)^n\frac{(-k)(-k-1)\cdots(-k-n+1)}{n!} = \frac{k(k+1)\cdots(k+n-1)}{n!} = \binom{n+k-1}{n},$$
+
+since the $n$ factors each contribute one sign. The two binomial forms agree by symmetry.
+:::
+
+:::intuition
+the negative-exponent corollary has a purely combinatorial reading, and it is worth seeing both. $\frac{1}{(1-x)^k}$ is the product of $k$ copies of $\frac{1}{1-x}$, so by the Product Rule its $n$-th coefficient counts the ways to write $n = n_1 + \cdots + n_k$ with each $n_i \ge 0$ — the number of ways to distribute $n$ identical balls into $k$ labelled boxes. Stars and bars says that number is $\binom{n+k-1}{k-1}$. So the algebra and the combinatorics prove the same identity from opposite ends.
+:::
+
+:::example[Two unlimited supplies]
+An unlimited supply of identical apples and an unlimited supply of identical oranges are available. In how many ways can one hold a total of $n$ fruit?
+:::
+
+:::solution
+Holdings of apples form a class with one object of each size, OGF $\frac{1}{1-x}$; likewise for oranges. A holding is an ordered pair (apple part, orange part) with sizes adding, so by the Product Rule the OGF is
+
+$$\left(\frac{1}{1-x}\right)\left(\frac{1}{1-x}\right) = \frac{1}{(1-x)^2}.$$
+
+By the negative-exponent corollary with $k=2$, the coefficient of $x^n$ is $\binom{n+1}{1} = n+1$.
+
+Check directly: choose $k \in \{0,1,\ldots,n\}$ apples and take the remaining $n-k$ as oranges — $n+1$ choices, as computed.
+:::
+
+:::example[Coefficients of a rational function]
+Find $[x^n]\,\dfrac{1+x}{(1-x)^3}$.
+:::
+
+:::solution
+Split the numerator and use linearity together with the right-shift rule (the Dictionary of Coefficient Operations, parts 1 and 3):
+
+$$[x^n]\frac{1+x}{(1-x)^3} = [x^n]\frac{1}{(1-x)^3} + [x^{n-1}]\frac{1}{(1-x)^3}.$$
+
+By the negative-exponent corollary with $k=3$ these are $\binom{n+2}{2}$ and $\binom{n+1}{2}$, so
+
+$$[x^n]\frac{1+x}{(1-x)^3} = \frac{(n+2)(n+1)}{2} + \frac{(n+1)n}{2} = (n+1)^2 .$$
+
+For $n = 0,1,2$ this predicts $1, 4, 9$; expanding $\frac{1}{(1-x)^3} = 1 + 3x + 6x^2 + \cdots$ and multiplying by $1+x$ gives $1 + 4x + 9x^2 + \cdots$, as claimed. (The answer is the sum of the first $n+1$ odd numbers — a pleasant check, since $\frac{1+x}{(1-x)^3} = \frac{1}{1-x}\cdot\frac{1+x}{(1-x)^2}$ and $\frac{1+x}{(1-x)^2}$ is the OGF of the odd numbers.)
+:::
+
+## Solving Counting Problems with Generating Functions
+
+<!-- section: solving-counting-problems -->
+
+We now put the dictionary to work. The pattern is always the same: describe the objects by an unambiguous construction, translate the construction into an equation between generating functions, and then extract coefficients by whatever algebraic means are available.
+
+:::recipe[The generating-function method]{#gf-method}
+1. **Specify.** Describe the class by a decomposition built out of disjoint unions, products and sequences, in a way that produces each object exactly once.
+2. **Translate.** Apply Theorems the Product Rule and the Sequence Construction theorem to get a formula or an equation for the OGF.
+3. **Solve.** If the translation gave an equation (rather than a formula), solve it algebraically for the unknown series.
+4. **Extract.** Recover $[x^n]$ by partial fractions, the generalised binomial theorem, or a convolution.
+5. **Check.** Expand the first few coefficients by hand and compare against a direct count.
+:::
+
+:::example[Compositions of an integer]
+A **composition** of $n$ is an ordered tuple of positive integers summing to $n$; for instance $3 = 3 = 2+1 = 1+2 = 1+1+1$ gives four compositions. Find the number of compositions of $n$.
+:::
+
+:::solution
+**Specify.** A composition is a sequence of parts, each part a positive integer. The class of parts has exactly one object of each size $k \ge 1$, so its OGF is $P(x) = \sum_{k \ge 1}x^k = \frac{x}{1-x}$, with $p_0 = 0$ as required.
+
+**Translate.** By the Sequence Construction theorem,
+
+$$C(x) = \frac{1}{1 - \frac{x}{1-x}} = \frac{1-x}{1-2x}.$$
+
+**Extract.** Write $\frac{1-x}{1-2x} = \frac{1}{1-2x} - \frac{x}{1-2x}$. By the geometric series identity and the shift rule, the coefficient of $x^n$ is $2^n - 2^{n-1} = 2^{n-1}$ for $n \ge 1$, and $c_0 = 1$.
+
+**Check.** $c_3 = 2^2 = 4$, matching the four compositions listed. The answer also has a one-line bijective proof (insert or omit a divider in each of the $n-1$ gaps between $n$ units), which is a reminder that generating functions are one tool among several — but the method above needed no cleverness at all.
+:::
+
+:::example[Compositions with restricted parts]
+How many compositions of $n$ use only parts equal to $1$ or $2$?
+:::
+
+:::solution
+The part class is now $\{1, 2\}$ with OGF $x + x^2$, so the composition class has OGF
+
+$$C(x) = \frac{1}{1 - x - x^2}.$$
+
+Its coefficients satisfy $c_n = c_{n-1} + c_{n-2}$ — we prove this properly in the Rationality Theorem — with $c_0 = c_1 = 1$: the Fibonacci numbers. So the number of such compositions of $n$ is $F_{n+1}$ in the indexing $F_0 = 0, F_1 = 1$.
+
+For $n = 4$: $1{+}1{+}1{+}1$, $1{+}1{+}2$, $1{+}2{+}1$, $2{+}1{+}1$, $2{+}2$, which is $5 = c_4$.
+:::
+
+:::example[Making change]
+In how many ways can $n$ cents be paid using pennies, nickels and dimes ($1$, $5$ and $10$ cents), the coins of each denomination being identical? Evaluate at $n = 20$.
+:::
+
+:::solution
+**Specify.** A payment is determined by the number of pennies, the number of nickels and the number of dimes — an ordered triple of independent choices whose values add to $n$. The class of penny-piles has one object of each size $0, 1, 2, \ldots$, OGF $\frac{1}{1-x}$; nickel-piles have one object of each size $0, 5, 10, \ldots$, OGF $\frac{1}{1-x^5}$; dime-piles, $\frac{1}{1-x^{10}}$.
+
+**Translate.**
+
+$$D(x) = \frac{1}{(1-x)(1-x^5)(1-x^{10})}.$$
+
+**Extract.** Rather than partial-fraction a degree-$16$ denominator, note that the pennies simply absorb whatever the other coins leave, so the count is the number of pairs (nickels, dimes) with total at most $n$. For $n = 20$: with $0$ dimes we may use $0,\ldots,4$ nickels ($5$ ways); with $1$ dime, $0,\ldots,2$ nickels ($3$ ways); with $2$ dimes, $0$ nickels ($1$ way). Total $9$.
+
+**Check.** The same reasoning at $n = 10$ gives $3 + 1 = 4$ payments: ten pennies, one nickel and five pennies, two nickels, one dime. Correct.
+:::
+
+:::remark[The generating function as a data structure]
+The last example makes a point about what a generating function is *for*. It gave us no slick closed form — denumerants genuinely do not have one for general denominations — but it gave us an object we can compute with mechanically: multiply the three series out to order $n$ and read off the coefficient, an $O(n)$ operation per factor. When a problem has no closed form, "the coefficient of $x^n$ in this explicit rational function" is still a complete and usable answer, and it is the form in which computer algebra systems prefer to receive it.
+:::
+
+Partitions are the classical proving ground, and Euler's product is the classical result.
+
+:::definition[Integer partition]{#partition-definition}
+A **partition** of $n$ is a multiset of positive integers summing to $n$; equivalently a weakly decreasing tuple $\lambda_1 \ge \lambda_2 \ge \cdots \ge \lambda_r > 0$ with $\sum \lambda_i = n$. The number of partitions of $n$ is $p(n)$, with $p(0) = 1$ (the empty partition).
+:::
+
+Order does not matter for a partition, which is exactly what distinguishes it from a composition — and it is why the sequence construction is the wrong tool and a product over part sizes is the right one.
+
+:::theorem[Euler's product formula]{#euler-product}
+As formal power series,
+
+$$\sum_{n \ge 0} p(n)\, x^n \;=\; \prod_{k \ge 1} \frac{1}{1-x^k}.$$
+:::
+
+:::proof
+First, the infinite product is meaningful in $K[[x]]$: the partial products $P_m(x) = \prod_{k=1}^{m} \frac{1}{1-x^k}$ satisfy $P_{m+1} - P_m = P_m\left(\frac{1}{1-x^{m+1}} - 1\right)$, and $\frac{1}{1-x^{m+1}} - 1 = \frac{x^{m+1}}{1-x^{m+1}}$ has order $m+1$. So the coefficient of $x^n$ in $P_m$ is the same for all $m \ge n$, and we define $[x^n]\prod_{k\ge1}\frac{1}{1-x^k}$ to be that stable value.
+
+Now fix $m \ge n$ and expand the finite product. By the geometric series identity applied with $x^k$ in place of $x$,
+
+$$P_m(x) = \prod_{k=1}^{m}\left(\sum_{m_k \ge 0} x^{k m_k}\right) = \sum_{(m_1,\ldots,m_m)} x^{1m_1 + 2m_2 + \cdots + m m_m},$$
+
+the sum over all tuples of non-negative integers; the regrouping is the Product Rule applied $m-1$ times. A tuple $(m_1, \ldots, m_m)$ contributing to $x^n$ is exactly a choice of how many parts of each size $1, \ldots, m$ to use, with the sizes totalling $n$ — that is, exactly a partition of $n$ into parts of size at most $m$. Since $m \ge n$, no partition of $n$ has a part larger than $m$, so these are all the partitions of $n$. Hence $[x^n]P_m = p(n)$, and the stable value is $p(n)$.
+:::
+
+:::intuition
+Each factor $\frac{1}{1-x^k}$ is a little machine that decides, independently of the others, how many parts of size $k$ the partition will have: choosing the term $x^{k m_k}$ means "use $m_k$ parts of size $k$". Multiplying the machines forces their contributions to add to $n$. Compare the factor $(1 + x^k)$, which offers only "use a part of size $k$ or do not" — that one counts partitions into *distinct* parts.
+:::
+
+:::theorem[Euler: distinct parts and odd parts]{#euler-distinct-odd}
+For every $n$, the number of partitions of $n$ into pairwise distinct parts equals the number of partitions of $n$ into odd parts.
+:::
+
+:::proof
+By the reasoning of Euler's Product Formula, partitions into distinct parts have OGF $\prod_{k\ge1}(1+x^k)$ — each part size is used at most once — and partitions into odd parts have OGF $\prod_{j \ge 0}\frac{1}{1-x^{2j+1}}$. It suffices to show the two products are equal.
+
+Use $1 + x^k = \frac{1-x^{2k}}{1-x^k}$, valid in $K[[x]]$ since $1 - x^k$ is a unit. Then, taking the product over $k = 1, \ldots, m$,
+
+$$\prod_{k=1}^{m}(1+x^k) = \frac{\prod_{k=1}^{m}\left(1-x^{2k}\right)}{\prod_{k=1}^{m}\left(1-x^{k}\right)}.$$
+
+In the denominator split the factors into even $k = 2j$ and odd $k$. The even ones, $\prod_{j \le m/2}(1-x^{2j})$, cancel against the matching factors of the numerator, leaving
+
+$$\prod_{k=1}^{m}(1+x^k) = \frac{\prod_{m/2 < j \le m}(1-x^{2j})}{\prod_{k \le m,\ k \text{ odd}}(1-x^k)} .$$
+
+Every remaining numerator factor has the form $1 - x^{2j}$ with $2j > m$, so it differs from $1$ only in degrees exceeding $m$. Comparing coefficients of $x^n$ for any fixed $n$ and taking $m \ge n$, those factors are invisible, and we get
+
+$$[x^n]\prod_{k \ge 1}(1+x^k) = [x^n]\prod_{k \text{ odd}}\frac{1}{1-x^k}$$
+
+for every $n$, which is the claim.
+:::
+
+:::example[Computing $p(n)$ for small $n$]
+Compute $p(6)$ from Euler's product.
+:::
+
+:::solution
+We only need parts of size at most $6$, so work modulo $x^7$ and multiply in the factors one at a time. Write $P_k$ for the product of the first $k$ factors.
+
+$P_1 = \frac{1}{1-x} \equiv 1 + x + x^2 + x^3 + x^4 + x^5 + x^6$.
+
+Multiplying by $\frac{1}{1-x^2}$ means "add to each coefficient the coefficient two places earlier", so $P_2 \equiv 1 + x + 2x^2 + 2x^3 + 3x^4 + 3x^5 + 4x^6$.
+
+Similarly, multiplying by $\frac{1}{1-x^3}$ adds the coefficient three places earlier: $P_3 \equiv 1 + x + 2x^2 + 3x^3 + 4x^4 + 5x^5 + 7x^6$.
+
+By $\frac{1}{1-x^4}$: $P_4 \equiv 1 + x + 2x^2 + 3x^3 + 5x^4 + 6x^5 + 9x^6$. By $\frac{1}{1-x^5}$: $P_5 \equiv 1 + x + 2x^2 + 3x^3 + 5x^4 + 7x^5 + 10x^6$. By $\frac{1}{1-x^6}$: $P_6 \equiv 1 + x + 2x^2 + 3x^3 + 5x^4 + 7x^5 + 11x^6$.
+
+So $p(6) = 11$. Listing them confirms it: $6$; $5{+}1$; $4{+}2$; $4{+}1{+}1$; $3{+}3$; $3{+}2{+}1$; $3{+}1{+}1{+}1$; $2{+}2{+}2$; $2{+}2{+}1{+}1$; $2{+}1{+}1{+}1{+}1$; $1^6$.
+
+Note the "multiply by $\frac{1}{1-x^k}$" step is just the partial-sum rule of the Dictionary of Coefficient Operations(7) with $x^k$ in place of $x$, which is why it is an in-place update and not a full convolution. That observation is the standard $O(n^{3/2})$ algorithm for tabulating $p(n)$.
+:::
+
+:::proposition[Parts of bounded size versus boundedly many parts]{#conjugate-partitions}
+The number of partitions of $n$ into at most $m$ parts equals the number of partitions of $n$ into parts of size at most $m$; both have OGF $\prod_{k=1}^{m}\frac{1}{1-x^k}$.
+:::
+
+:::proof
+Represent a partition $\lambda_1 \ge \cdots \ge \lambda_r$ by its Young diagram: row $i$ consists of $\lambda_i$ cells. Reflecting the diagram in its main diagonal — replacing rows by columns — produces the diagram of another partition $\lambda^{*}$ of the same $n$, the **conjugate**, and conjugation is an involution, hence a bijection. The number of rows of $\lambda$ is the size of the first column, which is the largest part of $\lambda^{*}$; so $\lambda$ has at most $m$ parts if and only if $\lambda^{*}$ has all parts at most $m$. The generating function for the second family is the argument of Euler's Product Formula truncated at $k = m$.
+:::
+
+:::figure[Conjugation reflects a Young diagram in its main diagonal. The three rows of $\lambda$ become the largest part of $\lambda^{*}$, so "at most $m$ parts" and "every part at most $m$" are the same condition read twice.]{#conjugate-young-diagrams}
+{
+  "type": "plot",
+  "x": [
+    -1.2,
+    13.2
+  ],
+  "y": [
+    -1.0,
+    6.8
+  ],
+  "equalAspect": true,
+  "axes": false,
+  "marks": [
+    {
+      "kind": "region",
+      "points": [
+        [
+          0,
+          4
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          1,
+          5
+        ],
+        [
+          0,
+          5
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          1,
+          5
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          2,
+          5
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          3,
+          4
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          3,
+          5
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          4,
+          4
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          5,
+          5
+        ],
+        [
+          4,
+          5
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          0,
+          4
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          1,
+          4
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          2,
+          4
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          0,
+          3
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          8,
+          4
+        ],
+        [
+          9,
+          4
+        ],
+        [
+          9,
+          5
+        ],
+        [
+          8,
+          5
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          9,
+          4
+        ],
+        [
+          10,
+          4
+        ],
+        [
+          10,
+          5
+        ],
+        [
+          9,
+          5
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          10,
+          4
+        ],
+        [
+          11,
+          4
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          10,
+          5
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          8,
+          3
+        ],
+        [
+          9,
+          3
+        ],
+        [
+          9,
+          4
+        ],
+        [
+          8,
+          4
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          9,
+          3
+        ],
+        [
+          10,
+          3
+        ],
+        [
+          10,
+          4
+        ],
+        [
+          9,
+          4
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          8,
+          2
+        ],
+        [
+          9,
+          2
+        ],
+        [
+          9,
+          3
+        ],
+        [
+          8,
+          3
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          9,
+          2
+        ],
+        [
+          10,
+          2
+        ],
+        [
+          10,
+          3
+        ],
+        [
+          9,
+          3
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          8,
+          1
+        ],
+        [
+          9,
+          1
+        ],
+        [
+          9,
+          2
+        ],
+        [
+          8,
+          2
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          8,
+          0
+        ],
+        [
+          9,
+          0
+        ],
+        [
+          9,
+          1
+        ],
+        [
+          8,
+          1
+        ]
+      ]
+    },
+    {
+      "kind": "arrow",
+      "from": [
+        5.6,
+        2.5
+      ],
+      "to": [
+        7.4,
+        2.5
+      ],
+      "muted": true
+    },
+    {
+      "kind": "text",
+      "at": [
+        2.5,
+        5.8
+      ],
+      "text": "λ = (5, 3, 1)"
+    },
+    {
+      "kind": "text",
+      "at": [
+        9.5,
+        5.8
+      ],
+      "text": "λ* = (3, 2, 2, 1, 1)"
+    }
+  ]
+}
 :::
 
 ## Common Mistakes
 
-- **Forgetting the $n!$ multiplier when extracting counts from EGF**: $a_n = n!\, [x^n]\, A(x)$, not just the coefficient.
-- **Using EGF for unlabeled objects like integer partitions**: The /n! would be meaningless or wrong; use OGF instead.
-- **Confusing the constructions**: "set of" is $\exp(A)$, "sequence of" is $\frac{1}{1-A}$; swapping them is a common error.
-- **Treating EGFs as probability generating functions**: They are formal counting tools; the /n! is combinatorial, not probabilistic.
-- **Ignoring the empty structure**: The constant term is almost always 1 for the empty labeled set.
+- **Reading a formal series as a convergent function.** $\sum n!\,x^n$ is a legitimate formal power series and $\frac{1}{1-x} = \sum x^n$ holds with no reference to $|x| < 1$. Convergence becomes relevant only when you want asymptotics.
+- **Applying $\frac{1}{1-A}$ when $A$ has a non-zero constant term.** The construction is then undefined, not merely divergent (the Composition Theorem); combinatorially it means your class has infinitely many objects of some size.
+- **Forgetting the $x^0$ term.** The empty object contributes the constant $1$ to almost every generating function, and dropping it shifts every subsequent coefficient.
+- **Confusing "any number of" with "at most one".** Unlimited copies of an item of size $k$ give the factor $\frac{1}{1-x^k}$; a single optional copy gives $(1+x^k)$. Euler's distinct-equals-odd theorem is exactly the statement that the difference matters.
+- **Using a product when the decomposition is ambiguous.** the Product Rule requires each object to arise from exactly one pair. Over-counting here is the single most common source of a wrong generating function.
+- **Marking the wrong parameter.** The exponent of $x$ must be the statistic you are counting by. If a problem tracks two statistics, you need two variables, and a bivariate generating function.
 
-A recurrence relation defines a sequence by expressing later terms in terms of earlier ones. Many combinatorial counts — tiling numbers, tree counts, path counts, partition numbers — naturally satisfy simple recurrences that can be solved for closed forms or generating functions.
+Ordinary generating functions are the right bookkeeping for *unlabelled* objects — piles of identical coins, partitions, tilings — where the only thing an object contributes is its size. They are the wrong bookkeeping for objects built on a set of distinguishable atoms: people, numbered positions, vertices of a labelled graph. For those, the number of structures grows factorially, and a different weighting is needed.
 
-Solving recurrences is the bridge between recursive thinking and explicit formulas.
+## Exponential Generating Functions
+
+<!-- section: definition-egf -->
+
+:::definition[Labelled class]{#labelled-class}
+A **labelled class** $\mathcal{A}$ assigns, to each finite set $U$ of labels, a finite set $\mathcal{A}[U]$ of structures on $U$, in such a way that relabelling along a bijection $U \to V$ carries $\mathcal{A}[U]$ bijectively onto $\mathcal{A}[V]$. Consequently $\#\mathcal{A}[U]$ depends only on $|U|$, and we write $a_n = \#\mathcal{A}[\{1,\ldots,n\}]$.
+:::
+
+Permutations, set partitions, labelled graphs, functions from $[n]$ to $[n]$, and rooted labelled trees are all labelled classes in this sense.
+
+:::definition[Exponential generating function]{#egf-definition}
+The **exponential generating function** (EGF) of a sequence $(a_n)$ — equivalently, of a labelled class — is
+
+$$\widehat{A}(x) = \sum_{n \ge 0} \frac{a_n}{n!}\, x^n .$$
+
+To recover the count, multiply back: $a_n = n!\,[x^n]\,\widehat{A}(x)$.
+:::
+
+:::notation[Hats]
+Where both bookkeepings are in play we write $A(x)$ for an OGF and $\widehat{A}(x)$ for an EGF of the same sequence. Elsewhere in this chapter, and in most of the literature, the hat is dropped and the reader is expected to know from context which is meant; the two are *different series*, and confusing them is the classic error of the subject.
+:::
+
+Why divide by $n!$? Because of what happens when labelled structures are combined. If we place an $\mathcal{A}$-structure on part of a label set and a $\mathcal{B}$-structure on the rest, we must first *choose* which labels go where, and that choice contributes a binomial coefficient. The $n!$ in the denominator is engineered to absorb it.
+
+:::definition[Labelled product]{#labelled-product}
+For labelled classes $\mathcal{A}, \mathcal{B}$, the **labelled product** $\mathcal{A} \star \mathcal{B}$ has, on the label set $U$, all triples $(S, \alpha, \beta)$ where $S \subseteq U$, $\alpha \in \mathcal{A}[S]$ and $\beta \in \mathcal{B}[U \setminus S]$. In words: split the labels into two blocks, put an $\mathcal{A}$-structure on one and a $\mathcal{B}$-structure on the other.
+:::
+
+:::theorem[Product rule for EGFs]{#egf-product}
+If $\mathcal{C} = \mathcal{A} \star \mathcal{B}$ then
+
+$$\widehat{C}(x) = \widehat{A}(x)\,\widehat{B}(x), \qquad\text{equivalently}\qquad c_n = \sum_{k=0}^{n}\binom{n}{k} a_k\, b_{n-k}.$$
+
+The second form is the **binomial convolution**.
+:::
+
+:::proof
+Counting $\mathcal{C}[\,[n]\,]$ directly: choose the block $S$ of size $k$ in $\binom{n}{k}$ ways, then an $\mathcal{A}$-structure on it in $a_k$ ways (a number depending only on $k$, by the definition of a labelled class), then a $\mathcal{B}$-structure on the complementary $n-k$ labels in $b_{n-k}$ ways. Summing over $k$ gives $c_n = \sum_k \binom{n}{k} a_k b_{n-k}$, and the choices are distinct for distinct $(S,\alpha,\beta)$, so nothing is double counted.
+
+Now translate. The coefficient of $x^n$ in $\widehat{A}\widehat{B}$ is, by the Cauchy product,
+
+$$\sum_{k=0}^{n} \frac{a_k}{k!}\cdot\frac{b_{n-k}}{(n-k)!} = \frac{1}{n!}\sum_{k=0}^{n} \frac{n!}{k!\,(n-k)!}\,a_k b_{n-k} = \frac{1}{n!}\sum_{k=0}^{n}\binom{n}{k}a_k b_{n-k} = \frac{c_n}{n!},$$
+
+which is exactly $[x^n]\widehat{C}(x)$.
+:::
+
+:::intuition
+The $\frac{1}{n!}$ is a normalisation that makes the factorials cancel at exactly the right moment. Multiplying OGFs performs the plain convolution $\sum a_k b_{n-k}$, which answers "split the *size*"; multiplying EGFs performs the binomial convolution $\sum \binom{n}{k}a_k b_{n-k}$, which answers "split the *labels*". Both are "do one thing and then another", but for labelled objects the splitting is a choice of subset, not merely a choice of number, and the binomial coefficient is the price of that choice.
+:::
+
+:::proposition[Dictionary for EGFs]{#egf-dictionary}
+Let $\widehat{A}(x) = \sum_{n\ge0} a_n \frac{x^n}{n!}$. Then:
+
+1. $\widehat{A}'(x)$ is the EGF of the shifted sequence $(a_{n+1})_{n \ge 0}$.
+2. $x\widehat{A}(x)$ is the EGF of $(n\,a_{n-1})_{n\ge0}$ (with the $n=0$ term $0$).
+3. $\int_0^x \widehat{A} := \sum_{n \ge 0} a_n\frac{x^{n+1}}{(n+1)!}$ is the EGF of $(a_{n-1})_{n \ge 1}$, extended by $0$ at $n = 0$.
+4. $e^x$ is the EGF of the constant sequence $1,1,1,\ldots$, and $\frac{1}{1-x}$ is the EGF of $n!$.
+:::
+
+:::proof
+(1) $\widehat{A}'(x) = \sum_{n \ge 1} n a_n \frac{x^{n-1}}{n!} = \sum_{n\ge1} a_n \frac{x^{n-1}}{(n-1)!} = \sum_{m \ge 0} a_{m+1}\frac{x^m}{m!}$.
+
+(2) $x \cdot a_{n-1}\frac{x^{n-1}}{(n-1)!} = a_{n-1}\frac{x^n}{(n-1)!} = n\,a_{n-1}\frac{x^n}{n!}$.
+
+(3) is (1) read backwards. (4) $e^x := \sum_n \frac{x^n}{n!}$, so $n![x^n]e^x = 1$; and $\frac{1}{1-x} = \sum_n x^n$, so $n![x^n]\frac{1}{1-x} = n!$.
+:::
+
+:::remark[$e^x$ as a formal object]
+We *define* $e^x$, $\ln\frac{1}{1-x}$, $\sin x$ and so on by their coefficient sequences, exactly as with $(1+x)^\alpha$. The identities we need — $e^{A+B} = e^A e^B$ for $A, B$ of positive order, $\ln\frac{1}{1-x}$ as the inverse function of $e^x - 1$ under composition, $\frac{d}{dx}e^x = e^x$ — are then formal identities, provable by coefficient comparison or by the formal chain rule. None of this appeals to analysis; we are working inside $\mathbb{Q}[[x]]$ throughout.
+:::
+
+:::example[Permutations]
+Find the EGF for the number of permutations (linear orderings) of an $n$-element labelled set, and recover $a_n$.
+:::
+
+:::solution
+There are $a_n = n!$ orderings of $[n]$. Hence
+
+$$\widehat{A}(x) = \sum_{n \ge 0}\frac{n!}{n!}x^n = \sum_{n\ge0}x^n = \frac{1}{1-x}.$$
+
+Recovering: $a_n = n!\,[x^n]\frac{1}{1-x} = n!\cdot 1 = n!$, as it should be.
+
+Contrast the OGF of the same sequence, $\sum_n n!\,x^n$, which has no closed form of any standard kind (its formal inverse is computable but unilluminating). This is the first evidence of the general principle: for labelled objects, the EGF is the series with the simple closed form.
+:::
+
+:::example[Words over an alphabet]
+Let $a_n$ be the number of ways to colour $n$ labelled objects with $r$ available colours. Find the EGF.
+:::
+
+:::solution
+Colouring the objects means choosing, independently for each of the $n$ labels, one of $r$ colours: $a_n = r^n$. So
+
+$$\widehat{A}(x) = \sum_{n\ge0}\frac{r^n x^n}{n!} = e^{rx} = \left(e^x\right)^r .$$
+
+The factorisation $(e^x)^r$ is itself the statement being proved: a colouring is a labelled product of $r$ blocks (the colour classes), each of which is an arbitrary set of labels carrying no further structure, and "an arbitrary set of labels" has EGF $\sum_n \frac{x^n}{n!} = e^x$ since there is exactly one such structure on each label set. The EGF product rule then multiplies the $r$ factors.
+:::
+
+:::pitfall[The coefficient is not the count]
+$[x^n]\widehat{A}(x)$ is $\frac{a_n}{n!}$, not $a_n$. Forgetting the multiplier is the single most common slip with EGFs, and it is silent: $\frac{a_n}{n!}$ is usually a plausible-looking rational number. Whenever you finish an EGF computation, the last line should be "multiply by $n!$".
+:::
+
+## Labelled Structures and the Exponential Formula
+
+<!-- section: labeled-structures -->
+
+The payoff of the $\frac{1}{n!}$ normalisation is a dictionary of constructions as clean as the ordinary one, and one theorem — the exponential formula — that has no ordinary analogue of comparable simplicity.
+
+:::theorem[Constructions on labelled classes]{#egf-constructions}
+Let $\mathcal{A}$ be a labelled class with $a_0 = 0$ (no structure on the empty label set) and EGF $\widehat{A}(x)$. Then:
+
+1. **Sequence.** The class of sequences $(\alpha_1,\ldots,\alpha_k)$, $k \ge 0$, of $\mathcal{A}$-structures on the blocks of an ordered set partition of the labels has EGF $\dfrac{1}{1-\widehat{A}(x)}$.
+2. **Set.** The class whose structures are *sets* of $\mathcal{A}$-structures on the blocks of an (unordered) set partition of the labels has EGF $\exp\!\big(\widehat{A}(x)\big)$.
+3. **Cycle.** The class of cyclic arrangements of $\mathcal{A}$-structures has EGF $\ln\dfrac{1}{1-\widehat{A}(x)}$.
+:::
+
+:::proof
+(1) Sequences of exactly $k$ components form the $k$-fold labelled product $\mathcal{A}^{\star k}$, with EGF $\widehat{A}^k$ by the EGF product rule and induction. Since $a_0 = 0$ we have $\operatorname{ord}(\widehat{A}) \ge 1$, so $(\widehat{A}^k)_{k\ge0}$ is summable and, exactly as in the ordinary Sequence Construction theorem, $\sum_{k\ge0}\widehat{A}^k = \frac{1}{1-\widehat{A}}$.
+
+(2) A set of $k$ components is an ordered $k$-tuple of components with the ordering forgotten. The $k$ components occupy disjoint, non-empty blocks of labels, so they are pairwise distinct as (block, structure) pairs, and each set of $k$ components arises from exactly $k!$ of the ordered tuples. Hence the EGF for sets of exactly $k$ components is $\frac{\widehat{A}^k}{k!}$ — division by the integer $k!$ is legitimate since we work over $\mathbb{Q}$ — and summing over $k \ge 0$ gives $\sum_{k\ge0}\frac{\widehat{A}^k}{k!} = \exp(\widehat{A})$, the family again being summable.
+
+(3) A cyclic arrangement of $k$ components is an ordered $k$-tuple up to cyclic rotation, and the $k$ rotations of a tuple of $k$ *distinct* components are distinct, so the EGF for $k$-cycles of components is $\frac{\widehat{A}^k}{k}$ for $k \ge 1$. Summing, $\sum_{k \ge 1}\frac{\widehat{A}^k}{k} = \ln\frac{1}{1-\widehat{A}}$, by the definition of the logarithm series.
+:::
+
+:::corollary[Cycles of atoms]{#cycle-egf}
+The number of ways to arrange $n$ labelled elements ($n \ge 1$) in a single cycle is $(n-1)!$, and the EGF of cyclic arrangements is $\ln\frac{1}{1-x}$.
+:::
+
+:::proof
+Take $\mathcal{A}$ to be the class of single atoms, $\widehat{A}(x) = x$; part (3) of the constructions theorem gives $\ln\frac{1}{1-x} = \sum_{k \ge 1}\frac{x^k}{k}$. The count is therefore $n!\,[x^n]\ln\frac{1}{1-x} = \frac{n!}{n} = (n-1)!$, in agreement with the direct argument that a cycle on $n$ elements is one of the $n!$ linear orders, with each cycle arising from exactly $n$ of them.
+:::
+
+:::theorem[The exponential formula]{#exponential-formula}
+Let $\mathcal{C}$ be a labelled class of "connected" structures with $c_0 = 0$ and EGF $\widehat{C}(x)$, and let $\mathcal{A}$ be the class whose structures on $U$ are the ways of partitioning $U$ into non-empty blocks and placing a $\mathcal{C}$-structure on each block. Then
+
+$$\widehat{A}(x) = \exp\!\big(\widehat{C}(x)\big).$$
+
+Equivalently, in coefficients,
+
+$$a_n = \sum_{k \ge 0}\ \frac{1}{k!}\sum_{\substack{n_1 + \cdots + n_k = n \\ n_i \ge 1}} \binom{n}{n_1,\ldots,n_k} c_{n_1}\cdots c_{n_k}.$$
+:::
+
+:::proof
+This is part (2) of the constructions theorem applied to $\mathcal{A} = \operatorname{SET}(\mathcal{C})$; the coefficient form is obtained by expanding $\exp(\widehat{C}) = \sum_k \frac{\widehat{C}^k}{k!}$ and reading off $n!\,[x^n]$ of the $k$-th term, the multinomial coefficient being the number of ways to distribute the $n$ labels into the ordered blocks of sizes $n_1,\ldots,n_k$.
+:::
+
+:::intuition
+The exponential formula says: *if you know how to count the connected pieces, exponentiating counts everything*. Graphs are the archetype — every graph is a set of connected graphs on the blocks of a partition of its vertices — and the same sentence covers permutations (a permutation is a set of cycles), set partitions (a partition is a set of blocks), and forests (a forest is a set of trees). Nothing in the proof knows what "connected" means; it only needs that every structure decomposes uniquely into pieces sitting on the blocks of a partition.
+
+Read in the other direction, the formula is equally useful: $\widehat{C} = \ln \widehat{A}$ *defines* the connected count from the total count, which is how one counts connected labelled graphs.
+:::
+
+:::example[Permutations as sets of cycles]
+Derive the EGF of permutations from the exponential formula, and confirm it against the direct count.
+:::
+
+:::solution
+Every permutation of a finite set decomposes uniquely into cycles, and the cycles sit on the blocks of a partition of the label set — so permutations are $\operatorname{SET}(\text{cycles})$. By the cycles corollary the cycle EGF is $\ln\frac{1}{1-x}$, so
+
+$$\widehat{P}(x) = \exp\!\left(\ln\frac{1}{1-x}\right) = \frac{1}{1-x},$$
+
+whose $n$-th count is $n!\,[x^n]\frac{1}{1-x} = n!$. Correct, and derived rather than assumed.
+:::
+
+:::example[Set partitions and the Bell numbers]
+Find the EGF of the Bell numbers $B_n$ (the number of partitions of an $n$-set into non-empty blocks), and use it to prove the recurrence $B_{n+1} = \sum_{k=0}^{n}\binom{n}{k}B_k$.
+:::
+
+:::solution
+A block is a non-empty set of labels with no further structure, one structure per non-empty label set, so the block EGF is $e^x - 1$ (the $-1$ removing the empty block). A partition is a set of blocks, so by the exponential formula
+
+$$\widehat{B}(x) = \exp\!\left(e^x - 1\right).$$
+
+Differentiate, using the formal chain rule: $\widehat{B}'(x) = e^x\exp(e^x-1) = e^x\,\widehat{B}(x)$. By part (1) of the EGF dictionary, $\widehat{B}'$ is the EGF of $(B_{n+1})$, and by the EGF product rule the right-hand side is the binomial convolution of the sequence $1,1,1,\ldots$ (EGF $e^x$) with $(B_k)$. Comparing coefficients of $\frac{x^n}{n!}$:
+
+$$B_{n+1} = \sum_{k=0}^{n}\binom{n}{k}\cdot 1 \cdot B_k .$$
+
+From $B_0 = 1$ this gives $B_1 = 1$, $B_2 = 2$, $B_3 = 5$, $B_4 = 15$, $B_5 = 52$.
+
+The combinatorial reading of the recurrence is also worth having: in a partition of $[n+1]$, look at the block containing $n+1$; it contains $n - k$ of the other elements for some $k$, chosen in $\binom{n}{n-k} = \binom{n}{k}$ ways, and the remaining $k$ elements are partitioned in $B_k$ ways.
+:::
+
+:::example[Stirling numbers of the second kind]
+Let $S(n,k)$ be the number of partitions of $[n]$ into exactly $k$ non-empty blocks. Find $\sum_n S(n,k)\frac{x^n}{n!}$ and deduce the explicit formula.
+:::
+
+:::solution
+Partitions into exactly $k$ blocks are sets of exactly $k$ blocks, so by the proof of the constructions theorem the EGF is
+
+$$\sum_{n \ge 0} S(n,k)\frac{x^n}{n!} = \frac{\left(e^x - 1\right)^k}{k!}.$$
+
+Expand the $k$-th power with the ordinary binomial theorem:
+
+$$\frac{(e^x-1)^k}{k!} = \frac{1}{k!}\sum_{j=0}^{k}\binom{k}{j}(-1)^{k-j}e^{jx},$$
+
+and $n!\,[x^n]e^{jx} = j^n$. Therefore
+
+$$S(n,k) = \frac{1}{k!}\sum_{j=0}^{k}(-1)^{k-j}\binom{k}{j}j^n,$$
+
+which is the inclusion–exclusion formula for surjections divided by $k!$ — as it must be, since a partition into $k$ labelled blocks is a surjection $[n] \to [k]$ and forgetting the block labels divides by $k!$.
+
+Check: $S(4,2) = \frac{1}{2}\left(\binom{2}{1}(-1)^1 1^4 + \binom{2}{2}2^4\right) = \frac{1}{2}(-2 + 16) = 7$, and indeed $B_4 = S(4,1)+S(4,2)+S(4,3)+S(4,4) = 1 + 7 + 6 + 1 = 15$.
+:::
+
+:::example[Involutions]
+An **involution** of $[n]$ is a permutation $\sigma$ with $\sigma^2 = \mathrm{id}$. Find the EGF of the number $I_n$ of involutions and the recurrence it satisfies.
+:::
+
+:::solution
+A permutation is an involution exactly when all its cycles have length $1$ or $2$. The class of such cycles has EGF $x + \frac{x^2}{2}$ (one fixed point per singleton; one transposition per pair, and $\frac{2!}{2} = 1$ agrees with $2!\,[x^2]\frac{x^2}{2} = 1$). By the exponential formula,
+
+$$\widehat{I}(x) = \exp\!\left(x + \frac{x^2}{2}\right).$$
+
+Differentiating, $\widehat{I}'(x) = (1+x)\widehat{I}(x)$. The left side is the EGF of $(I_{n+1})$; the right side is the EGF of $I_n + n I_{n-1}$ by parts (1) and (2) of the EGF dictionary. Hence
+
+$$I_{n+1} = I_n + n\,I_{n-1},$$
+
+with $I_0 = I_1 = 1$, giving $1, 1, 2, 4, 10, 26, 76, \ldots$. The combinatorial reading: either $n+1$ is fixed, or it is paired with one of the $n$ other elements.
+:::
+
+## Choosing Between OGFs and EGFs
+
+<!-- section: relation-to-ogf -->
+
+The two bookkeepings are two ways of storing the same sequence, so neither carries more information than the other. The difference is entirely in which constructions become clean algebra.
+
+:::proposition[The two bookkeepings compared]{#ogf-vs-egf}
+Let $\mathcal{A}, \mathcal{B}$ be classes and $\mathcal{C}$ a class built from them. Then:
+
+| construction | OGF | EGF |
+|---|---|---|
+| disjoint union | $A + B$ | $\widehat{A}+\widehat{B}$ |
+| product (split the size / split the labels) | $A\,B$ | $\widehat{A}\,\widehat{B}$ |
+| sequence of components | $\frac{1}{1-A}$ | $\frac{1}{1-\widehat{A}}$ |
+| set / multiset of components | $\exp\!\left(\sum_{k\ge1}\frac{A(x^k)}{k}\right)$ | $\exp(\widehat{A})$ |
+| cycle of components | $\sum_{k\ge1}\frac{\varphi(k)}{k}\ln\frac{1}{1-A(x^k)}$ | $\ln\frac{1}{1-\widehat{A}}$ |
+
+In both columns the sequence, set and cycle rows require the component class to have no object of size $0$.
+:::
+
+:::proof
+The union, product and sequence rows are the Product Rule, the Sequence Construction theorem and their EGF counterparts. The set row in the EGF column is part (2) of the constructions theorem. We prove the multiset row in the OGF column, which is the one genuinely new statement; the unlabelled cycle row (Pólya's cycle-index computation, using Euler's totient $\varphi$) is proved the same way and we state it without carrying out the details.
+
+A multiset of $\mathcal{A}$-objects records, for each object $\alpha \in \mathcal{A}$, a multiplicity $m_\alpha \ge 0$, with only finitely many non-zero. The size is $\sum_\alpha m_\alpha |\alpha|$, so, by the same expansion used for Euler's Product Formula,
+
+$$M(x) = \prod_{\alpha \in \mathcal{A}} \frac{1}{1 - x^{|\alpha|}} = \prod_{n \ge 1}\left(\frac{1}{1-x^{n}}\right)^{a_n},$$
+
+the product being well defined because $a_0 = 0$ makes every factor of order at least $1$. Now take formal logarithms — legitimate since each factor has constant term $1$ — and use $\ln\frac{1}{1-y} = \sum_{k\ge1}\frac{y^k}{k}$:
+
+$$\ln M(x) = \sum_{n\ge1} a_n \sum_{k \ge 1}\frac{x^{nk}}{k} = \sum_{k\ge1}\frac{1}{k}\sum_{n\ge1}a_n (x^k)^n = \sum_{k \ge 1}\frac{A(x^k)}{k},$$
+
+the interchange being valid coefficientwise (for a fixed power of $x$, only finitely many pairs $(n,k)$ contribute). Exponentiating gives the stated formula.
+:::
+
+:::intuition
+Look at the two "set" rows. In the labelled world, $\exp(\widehat{A})$ — one clean exponential. In the unlabelled world, $\exp\left(A(x) + \frac{A(x^2)}{2} + \frac{A(x^3)}{3}+\cdots\right)$, the extra terms compensating for repeated components, which in the labelled world can never occur because distinct components carry distinct labels. That asymmetry is the whole reason for having two theories. **Labels break symmetry, and broken symmetry is what makes the algebra simple.**
+
+The practical rule: if the objects are built on distinguishable atoms and the construction involves distributing those atoms, use an EGF. If the objects are anonymous and the construction involves distributing *size*, use an OGF.
+:::
+
+:::proposition[When labelling is free]{#free-labelling}
+Suppose every object of size $n$ in a labelled class $\mathcal{A}$ has trivial symmetry — that is, no non-identity relabelling of $[n]$ fixes it. Then the number $\tilde{a}_n$ of unlabelled objects (relabelling classes) of size $n$ satisfies $a_n = n!\,\tilde{a}_n$, so $\widehat{A}(x)$ is the OGF of $(\tilde a_n)$.
+:::
+
+:::proof
+Relabelling acts on $\mathcal{A}[[n]]$; two structures are the same unlabelled object exactly when they lie in the same orbit. By the orbit–stabiliser theorem every orbit has size $n!/|\text{stabiliser}| = n!$ under the triviality hypothesis, so the $a_n$ structures fall into $a_n/n!$ orbits.
+:::
+
+:::example[Derangements]
+A **derangement** is a permutation with no fixed point. Find the EGF of the number $d_n$ of derangements of $[n]$ and the closed form, then evaluate $d_4$.
+:::
+
+:::solution
+A derangement is a permutation all of whose cycles have length at least $2$. Deleting the length-$1$ term $x$ from the cycle EGF $\ln\frac{1}{1-x} = \sum_{k\ge1}\frac{x^k}{k}$ leaves $\ln\frac{1}{1-x} - x$, so by the exponential formula
+
+$$\widehat{D}(x) = \exp\!\left(\ln\frac{1}{1-x} - x\right) = \frac{e^{-x}}{1-x}.$$
+
+Extract the coefficient by the Cauchy product, using $e^{-x} = \sum_j \frac{(-1)^j}{j!}x^j$ and $\frac{1}{1-x} = \sum_i x^i$:
+
+$$[x^n]\,\widehat{D}(x) = \sum_{j=0}^{n}\frac{(-1)^j}{j!}, \qquad\text{so}\qquad d_n = n!\sum_{j=0}^{n}\frac{(-1)^j}{j!}.$$
+
+At $n = 4$: $d_4 = 24\left(1 - 1 + \tfrac12 - \tfrac16 + \tfrac1{24}\right) = 24\cdot\tfrac{9}{24} = 9$.
+
+The closed form is exactly what inclusion–exclusion over the set of fixed points gives, and the factor $e^{-x}$ is where the alternating signs came from: multiplying by $e^{-x}$ is the generating-function form of inclusion–exclusion on labelled structures.
+:::
+
+:::remark[Sums with no closed form, and the transform between the two]
+The OGF of the derangement numbers is $\sum_n d_n x^n$, and since $d_n \sim n!/e$ it converges nowhere but $0$ and has no elementary closed form. That is the general situation: for labelled classes the OGF is usually intractable and the EGF is usually clean, while for partitions and other unlabelled classes it is the reverse.
+
+There is a transform between them — the Borel transform, in one direction the coefficientwise division by $n!$, in the other the Laplace-type integral $A(x) = \int_0^\infty e^{-t}\,\widehat{A}(xt)\,dt$ — but the integral form is an analytic statement requiring convergence hypotheses we have deliberately avoided, and it is out of scope here. In practice one never converts; one chooses the right bookkeeping at the start.
+:::
+
+## Common Mistakes
+
+- **Reporting $[x^n]\widehat{A}(x)$ as the answer.** For an EGF the count is $n!\,[x^n]\widehat{A}(x)$.
+- **Using an EGF for unlabelled objects.** Partitions of an integer, tilings and coin problems have no labels to distribute; the $\frac{1}{n!}$ then normalises by a symmetry that is not there, and the constructions theorem does not apply.
+- **Swapping "set of" and "sequence of".** $\operatorname{SET}$ is $\exp(\widehat{A})$; $\operatorname{SEQ}$ is $\frac{1}{1-\widehat{A}}$. They differ by exactly the $k!$ orderings of the components.
+- **Using $\exp(\widehat{A})$ when components may be empty.** All three labelled constructions require $a_0 = 0$, for the same summability reason as in the ordinary case.
+- **Forgetting that $e^x$ here is a formal series.** $e^x$, $\ln\frac{1}{1-x}$ and $(1+x)^\alpha$ are defined by their coefficients; their identities are proved formally, and no value is ever substituted for $x$.
+- **Mistaking an EGF for a probability generating function.** A PGF is $\sum p_n x^n$ with $\sum p_n = 1$ and is evaluated at real $x$; the $\frac{1}{n!}$ of an EGF is a labelling correction, not a probability.
+
+A recurrence defines a sequence by expressing each term in terms of earlier ones. Recurrences are how counting problems usually *present* themselves — condition on the last step, on the first return, on the block containing the largest element — and generating functions are how they get solved. The two halves of this chapter meet here.
 
 ## Linear Recurrences with Constant Coefficients
 
 <!-- section: linear-recurrences -->
 
-:::definition[Linear homogeneous recurrence with constant coefficients]{#linear-recurrence}
-A recurrence is linear homogeneous constant-coefficient of order $d$ if
+:::definition[Linear recurrence with constant coefficients]{#linear-recurrence}
+A sequence $(a_n)_{n \ge 0}$ satisfies a **linear homogeneous recurrence with constant coefficients** of order $d$ if there are constants $c_1,\ldots,c_d$ with $c_d \ne 0$ such that
 
-$$a_n = c_1 a_{n-1} + \cdots + c_d a_{n-d}$$
+$$a_n = c_1 a_{n-1} + c_2 a_{n-2} + \cdots + c_d a_{n-d} \qquad \text{for all } n \ge d.$$
 
-with $c_d \ne 0$ (so the order is genuinely $d$). "Linear" means each term appears to the first power with no products of terms; "homogeneous" means there is no extra additive term.
+"Linear" means each $a_{n-i}$ occurs to the first power with no products between terms; "homogeneous" means there is no extra additive term. The values $a_0, \ldots, a_{d-1}$ are the **initial conditions**, and together with the recurrence they determine the sequence uniquely.
 :::
 
-Guessing $a_n = r^n$ and dividing through by $r^{n-d}$ turns the recurrence into a single polynomial equation.
+The single fact from which everything else follows is that such sequences are exactly the ones with a rational generating function.
 
-:::theorem[Characteristic equation]{#characteristic-equation}
-The roots of the characteristic equation
+:::theorem[Rationality]{#rationality}
+Let $Q(x) = 1 - c_1 x - c_2 x^2 - \cdots - c_d x^d$ and let $A(x)$ be the OGF of $(a_n)$. Then $(a_n)$ satisfies the recurrence $a_n = \sum_{i=1}^{d} c_i a_{n-i}$ for all $n \ge d$ **if and only if**
 
-$$r^d - c_1 r^{d-1} - \cdots - c_d = 0$$
+$$A(x) = \frac{P(x)}{Q(x)}$$
 
-determine the form of the solution: a linear combination of $r_i^n$ over the distinct roots (or, for a root $r$ of multiplicity $m$, the terms $r^n, n r^n, \ldots, n^{m-1} r^n$).
+for some polynomial $P$ with $\deg P < d$. In that case $P(x) = A(x)Q(x)$ is determined by the initial conditions, namely
+
+$$P(x) = \sum_{n=0}^{d-1}\left(a_n - \sum_{i=1}^{n} c_i a_{n-i}\right)x^n .$$
 :::
 
-Initial conditions $a_0, \ldots, a_{d-1}$ fix the $d$ free constants.
+:::proof
+Compute the product $A(x)Q(x)$ coefficientwise. With the convention $a_m = 0$ for $m < 0$,
+
+$$[x^n]\,A(x)Q(x) = a_n - \sum_{i=1}^{d} c_i a_{n-i}.$$
+
+For $n \ge d$ this expression is precisely "left-hand side minus right-hand side" of the recurrence at index $n$. Hence the recurrence holds for all $n \ge d$ if and only if every coefficient of $A\,Q$ in degree $\ge d$ vanishes, i.e. if and only if $AQ$ is a polynomial of degree $< d$. Since $Q(0) = 1 \ne 0$, $Q$ is a unit (the Units Theorem), so $AQ = P$ may be rewritten as $A = P/Q$. The displayed formula for $P$ is the same coefficient computation for $n < d$, where the terms with negative index drop out.
+:::
 
 :::intuition
-The Fibonacci rule "each term is sum of previous two" is a linear recurrence. Its solutions are mixtures of the golden-ratio powers.
-
-Once you have the closed form you can compute the 1000th term without iterating 1000 steps.
+The theorem is a genuine equivalence, and both directions get used. Left to right: if you have a recurrence, you instantly have a closed-form rational generating function — no work, just read off $Q$ from the coefficients and $P$ from the initial conditions. Right to left: if a generating function turns out to be rational, its coefficients *must* satisfy a linear recurrence, and the denominator tells you which one. That is often the quickest way to prove a recurrence you would otherwise have to fight for combinatorially.
 :::
 
-:::example
-Solve $a_n = 2 a_{n-1} + a_{n-2}$ with $a_0 = 0$, $a_1 = 1$ (the Pell numbers).
+Extracting coefficients from $P/Q$ is then a matter of partial fractions, which is where the roots enter.
+
+:::theorem[Partial fractions and the closed form]{#partial-fractions}
+Let $A = P/Q$ with $\deg P < d = \deg Q$ and $Q(0) = 1$. Factor $Q$ over $\mathbb{C}$ as
+
+$$Q(x) = \prod_{i=1}^{s}\left(1 - r_i x\right)^{m_i}, \qquad r_i \text{ distinct and non-zero}, \quad \sum_i m_i = d.$$
+
+Then there are constants $\alpha_{i,j}$ with
+
+$$A(x) = \sum_{i=1}^{s}\sum_{j=1}^{m_i} \frac{\alpha_{i,j}}{(1-r_i x)^{j}},$$
+
+and consequently
+
+$$a_n = \sum_{i=1}^{s} p_i(n)\, r_i^{\,n}$$
+
+where $p_i$ is a polynomial of degree at most $m_i - 1$. Conversely every sequence of that shape satisfies the recurrence with denominator $Q$.
+:::
+
+:::proof
+The partial fraction decomposition of a rational function whose denominator factors as above is standard algebra over a field: the $\frac{1}{(1-r_ix)^j}$ for $1 \le j \le m_i$, $1 \le i \le s$, are $d$ elements spanning the $d$-dimensional space of rational functions with denominator dividing $Q$ and numerator of degree $< d$, and they are linearly independent, so they form a basis.
+
+For the coefficients, the negative-exponent corollary applied with $r_i x$ in place of $x$ gives
+
+$$\frac{1}{(1-r_i x)^{j}} = \sum_{n \ge 0}\binom{n+j-1}{j-1} r_i^{\,n} x^n .$$
+
+Now $\binom{n+j-1}{j-1} = \frac{(n+1)(n+2)\cdots(n+j-1)}{(j-1)!}$ is a polynomial in $n$ of degree exactly $j-1$. Summing over $j \le m_i$ produces a polynomial $p_i(n)$ of degree at most $m_i-1$ multiplying $r_i^n$, as claimed. The converse follows because each such term has rational generating function with denominator $(1-r_ix)^{m_i}$, and the Rationality Theorem applies to the sum.
+:::
+
+:::remark[The characteristic equation]{#characteristic-equation}
+The **characteristic polynomial** of the recurrence is
+
+$$\chi(t) = t^d - c_1 t^{d-1} - \cdots - c_d,$$
+
+and it is the reverse of $Q$: $\chi(t) = t^d\,Q(1/t)$. Hence $Q(x) = \prod_i (1-r_ix)^{m_i}$ if and only if $\chi(t) = \prod_i (t - r_i)^{m_i}$ — the roots of the characteristic equation are exactly the reciprocals of the roots of $Q$, and they are the $r_i$ appearing in the closed form. This recovers the familiar recipe: solve $\chi(t) = 0$; for a simple root $r$ take a term $\alpha r^n$; for a root of multiplicity $m$ take $\left(\alpha_0 + \alpha_1 n + \cdots + \alpha_{m-1}n^{m-1}\right)r^n$; fix the constants from the initial conditions. The generating-function proof explains *why* the polynomial factors appear for repeated roots — they come from $\binom{n+j-1}{j-1}$ — where the guess-and-verify derivation can only assert them.
+:::
+
+:::example[Fibonacci in closed form]
+Let $F_0 = 0$, $F_1 = 1$ and $F_n = F_{n-1} + F_{n-2}$. Find the generating function and prove Binet's formula.
 :::
 
 :::solution
-Characteristic equation. Substitute $a_n = r^n$: $r^n = 2r^{n-1} + r^{n-2}$; divide by $r^{n-2}$ to get $r^2 - 2r - 1 = 0$.
+**Generating function.** Here $d = 2$, $c_1 = c_2 = 1$, so $Q(x) = 1 - x - x^2$. By the Rationality Theorem, $P(x) = F_0 + (F_1 - F_0)x = x$, so
 
-Roots. By the quadratic formula $r = \frac{2 \pm \sqrt{4 + 4}}{2} = 1 \pm \sqrt{2}$. Two distinct roots, so the general solution is
+$$F(x) = \frac{x}{1-x-x^2}.$$
 
-$$a_n = A(1+\sqrt2)^n + B(1-\sqrt2)^n.$$
+**Factor the denominator.** If $1-x-x^2 = (1-\varphi x)(1-\psi x)$ then expanding gives $\varphi + \psi = 1$ and $\varphi\psi = -1$, so $\varphi, \psi$ are the roots of $t^2 - t - 1 = 0$:
 
-Fit the initial conditions. From $a_0 = 0$: $A + B = 0$, so $B = -A$. From $a_1 = 1$: $A(1+\sqrt2) + B(1-\sqrt2) = 1$. Substituting $B = -A$ gives $A\big[(1+\sqrt2) - (1-\sqrt2)\big] = A \cdot 2\sqrt2 = 1$, so $A = \frac{1}{2\sqrt2}$ and $B = -\frac{1}{2\sqrt2}$. Hence
+$$\varphi = \frac{1+\sqrt5}{2}, \qquad \psi = \frac{1-\sqrt5}{2}, \qquad \varphi - \psi = \sqrt5 .$$
+
+(As predicted by the characteristic-equation remark, $t^2 - t - 1$ is the reverse of $1 - x - x^2$.)
+
+**Partial fractions.** Since
+
+$$\frac{1}{1-\varphi x} - \frac{1}{1-\psi x} = \frac{(1-\psi x)-(1-\varphi x)}{(1-\varphi x)(1-\psi x)} = \frac{(\varphi-\psi)x}{1-x-x^2},$$
+
+we get
+
+$$F(x) = \frac{1}{\sqrt5}\left(\frac{1}{1-\varphi x} - \frac{1}{1-\psi x}\right).$$
+
+**Extract.** By the geometric series identity, $[x^n]\frac{1}{1-\varphi x} = \varphi^n$, so
+
+$$F_n = \frac{\varphi^{\,n} - \psi^{\,n}}{\sqrt5}.$$
+
+**Check.** $F_2 = \frac{\varphi^2-\psi^2}{\sqrt5} = \frac{(\varphi+\psi)(\varphi-\psi)}{\sqrt5} = \frac{1\cdot\sqrt5}{\sqrt5} = 1$, and $F_5 = \frac{11.0902\ldots - (-0.0902\ldots)}{2.2360\ldots} = 5$. Both correct.
+
+Note what the formula says: $|\psi| = 0.618\ldots < 1$, so $\psi^n \to 0$ and $F_n$ is the nearest integer to $\varphi^n/\sqrt5$ — an exact statement about growth extracted from the position of the *smallest* root of the denominator, which is the first hint of how singularities govern asymptotics.
+:::
+
+:::figure[Successive ratios $F_{n+1}/F_n$ alternate around $\varphi$ and close in on it, because the closed form carries a second term in $\psi^{n}$ with $|\psi| < 1$.]{#fibonacci-ratio}
+{
+  "type": "plot",
+  "x": [
+    0.6,
+    11.2
+  ],
+  "y": [
+    0.8,
+    2.3
+  ],
+  "xTicks": 1,
+  "yTicks": 0.2,
+  "axes": false,
+  "xLabel": "n",
+  "marks": [
+    {
+      "kind": "line",
+      "through": [
+        [
+          1,
+          1.618033988749895
+        ],
+        [
+          10,
+          1.618033988749895
+        ]
+      ],
+      "extend": true,
+      "dashed": true,
+      "tone": "result"
+    },
+    {
+      "kind": "path",
+      "points": [
+        [
+          1,
+          1.0
+        ],
+        [
+          2,
+          2.0
+        ],
+        [
+          3,
+          1.5
+        ],
+        [
+          4,
+          1.6666666666666667
+        ],
+        [
+          5,
+          1.6
+        ],
+        [
+          6,
+          1.625
+        ],
+        [
+          7,
+          1.6153846153846154
+        ],
+        [
+          8,
+          1.619047619047619
+        ],
+        [
+          9,
+          1.6176470588235294
+        ],
+        [
+          10,
+          1.6181818181818182
+        ]
+      ],
+      "tone": "accent"
+    },
+    {
+      "kind": "text",
+      "at": [
+        10.4,
+        1.86
+      ],
+      "text": "φ ≈ 1.618",
+      "leaderTo": [
+        10.0,
+        1.618033988749895
+      ],
+      "tone": "result"
+    },
+    {
+      "kind": "text",
+      "at": [
+        4.2,
+        1.12
+      ],
+      "text": "Fₙ₊₁ / Fₙ",
+      "leaderTo": [
+        3,
+        1.5
+      ]
+    }
+  ]
+}
+:::
+
+:::example[A repeated root]
+Solve $a_n = 4a_{n-1} - 4a_{n-2}$ with $a_0 = 1$, $a_1 = 3$.
+:::
+
+:::solution
+$Q(x) = 1 - 4x + 4x^2 = (1-2x)^2$, a double root $r = 2$. By the Rationality Theorem, $P(x) = a_0 + (a_1 - 4a_0)x = 1 - x$, so
+
+$$A(x) = \frac{1-x}{(1-2x)^2}.$$
+
+Write $1 - x = \alpha(1-2x) + \beta$. Matching the $x$ terms gives $-2\alpha = -1$, so $\alpha = \tfrac12$; matching constants gives $\alpha + \beta = 1$, so $\beta = \tfrac12$. Hence
+
+$$A(x) = \frac{1/2}{1-2x} + \frac{1/2}{(1-2x)^2},$$
+
+and by the negative-exponent corollary,
+
+$$a_n = \tfrac12\cdot 2^n + \tfrac12 (n+1)2^n = (n+2)\,2^{\,n-1}.$$
+
+**Check.** $a_0 = 2\cdot\frac12 = 1$; $a_1 = 3\cdot 1 = 3$; $a_2 = 4\cdot2 = 8$, and the recurrence gives $4\cdot3 - 4\cdot1 = 8$. The linear factor $n$ in the answer is exactly the $\binom{n+1}{1}$ from the squared denominator.
+:::
+
+:::example[Pell numbers]
+Solve $a_n = 2a_{n-1} + a_{n-2}$ with $a_0 = 0$, $a_1 = 1$.
+:::
+
+:::solution
+$Q(x) = 1 - 2x - x^2$ and $P(x) = a_0 + (a_1 - 2a_0)x = x$, so $A(x) = \frac{x}{1-2x-x^2}$. The characteristic polynomial $t^2 - 2t - 1$ has roots $r_{\pm} = 1 \pm \sqrt2$, with $r_+ - r_- = 2\sqrt2$, so the same partial-fraction computation as for Fibonacci gives
 
 $$a_n = \frac{(1+\sqrt2)^n - (1-\sqrt2)^n}{2\sqrt2}.$$
 
-Sanity check: $a_2 = \frac{(1+\sqrt2)^2 - (1-\sqrt2)^2}{2\sqrt2} = \frac{(3+2\sqrt2) - (3-2\sqrt2)}{2\sqrt2} = \frac{4\sqrt2}{2\sqrt2} = 2$, and directly $a_2 = 2a_1 + a_0 = 2$. ✓
+**Check.** $a_2 = \frac{(3+2\sqrt2)-(3-2\sqrt2)}{2\sqrt2} = \frac{4\sqrt2}{2\sqrt2} = 2$, matching $2a_1 + a_0 = 2$. Also $a_3 = 2\cdot2 + 1 = 5$.
 :::
 
-## Combinatorial Recurrences
+:::theorem[Inhomogeneous recurrences]{#inhomogeneous}
+Suppose $a_n = \sum_{i=1}^{d}c_i a_{n-i} + g_n$ for $n \ge d$, where $(g_n)$ has OGF $G(x)$. Then, with $Q$ and $P$ as in the Rationality Theorem,
+
+$$A(x) = \frac{P(x) + G^{\ge d}(x)}{Q(x)},$$
+
+where $G^{\ge d}(x) = \sum_{n \ge d} g_n x^n$. In particular, if $G$ is rational then so is $A$, and the closed form is again a sum of terms $p(n)r^n$ — now including the roots contributed by the denominator of $G$.
+:::
+
+:::proof
+The computation in the Rationality Theorem proof now gives $[x^n](AQ) = g_n$ for $n \ge d$ and the same initial data below $d$, so $AQ = P + G^{\ge d}$; divide by the unit $Q$.
+:::
+
+:::example[Doubling with an increment]
+Solve $a_n = 2a_{n-1} + 1$ for $n \ge 1$, with $a_0 = 0$. (This is the Tower of Hanoi recurrence.)
+:::
+
+:::solution
+Here $d = 1$, $Q(x) = 1-2x$, $P(x) = a_0 = 0$, and $g_n = 1$ for $n \ge 1$, so $G^{\ge1}(x) = \frac{x}{1-x}$. By the inhomogeneous theorem,
+
+$$A(x) = \frac{x}{(1-x)(1-2x)}.$$
+
+Partial fractions: write $\frac{x}{(1-x)(1-2x)} = \frac{\alpha}{1-x} + \frac{\beta}{1-2x}$, i.e. $x = \alpha(1-2x) + \beta(1-x)$. Setting $x = 1$ gives $1 = -\alpha$, so $\alpha = -1$; setting $x = \tfrac12$ gives $\tfrac12 = \tfrac12\beta$, so $\beta = 1$. Hence
+
+$$a_n = 2^n - 1 .$$
+
+**Check.** $a_0 = 0$, $a_1 = 1$, $a_2 = 3$, $a_3 = 7$; and $2\cdot 3 + 1 = 7$. The extra root $r = 1$ in the closed form came entirely from the denominator of the forcing term's generating function, exactly as the theorem predicts.
+:::
+
+## Combinatorial Recurrences and Functional Equations
 
 <!-- section: combinatorial-recurrences -->
 
-Many counting problems yield a recurrence when you condition on the "last piece" or a "root structure": remove one distinguished part, and what remains is a smaller instance of the same problem.
+Not every recurrence that arises from counting is linear with constant coefficients. Two other shapes are common: **convolution** recurrences, in which the terms multiply two earlier values, and recurrences with **polynomial coefficients**. Generating functions handle both — the first by producing an algebraic equation, the second by producing a differential equation.
 
-Classic examples: the number of binary trees, polygon triangulations, Dyck paths, tilings, and matchings all obey Catalan- or Fibonacci-style recurrences obtained by case analysis on a distinguished element.
+:::definition[Catalan numbers]{#catalan-definition}
+$C_n$ is the number of balanced strings of $n$ pairs of parentheses (equivalently: binary trees with $n$ internal nodes; triangulations of a convex $(n+2)$-gon; lattice paths from $(0,0)$ to $(n,n)$ by unit right and up steps that never rise above the diagonal). By convention $C_0 = 1$, the empty string.
+:::
 
-:::proposition[Catalan recurrence]{#catalan-recurrence}
-The number $C_n$ of balanced parentheses strings of length $2n$ satisfies
+:::proposition[The Catalan recurrence]{#catalan-recurrence}
+For $n \ge 1$,
 
 $$C_n = \sum_{k=0}^{n-1} C_k\, C_{n-1-k}.$$
 :::
 
 :::proof
-A balanced parentheses string of length $2n$ decomposes uniquely as $(\,w\,)\,u$, where $w$ is balanced of length $2k$ and $u$ is balanced of length $2(n-1-k)$. Summing over $k$ gives the Catalan recurrence.
+Let $w$ be a non-empty balanced string. Its first character is an opening parenthesis; let its matching closing parenthesis be at position $2k+2$. Then $w$ factors uniquely as $w = (\,u\,)\,v$ where $u$ is the (balanced) substring strictly inside the matching pair, with $k$ pairs, and $v$ is the balanced remainder, with $n-1-k$ pairs. The factorisation is unique because the matching partner of the first character is determined by $w$; conversely, every choice of $k$, $u$ and $v$ produces a distinct balanced string with $n$ pairs. Summing over $k$ from $0$ to $n-1$ gives the identity.
+:::
+
+:::figure[The first-return decomposition of a Dyck path. The opening step and the step on which the path first returns to the axis are highlighted; between them lies a Dyck path $u$, and after them a Dyck path $v$, with $|u| + |v| = n - 1$.]{#first-return-decomposition}
+{
+  "type": "plot",
+  "x": [
+    -0.6,
+    10.8
+  ],
+  "y": [
+    -1.3,
+    3.4
+  ],
+  "xTicks": 1,
+  "yTicks": 1,
+  "equalAspect": true,
+  "axes": false,
+  "marks": [
+    {
+      "kind": "path",
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          2
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          0
+        ]
+      ],
+      "tone": "result"
+    },
+    {
+      "kind": "path",
+      "points": [
+        [
+          4,
+          0
+        ],
+        [
+          5,
+          1
+        ],
+        [
+          6,
+          0
+        ],
+        [
+          7,
+          1
+        ],
+        [
+          8,
+          2
+        ],
+        [
+          9,
+          1
+        ],
+        [
+          10,
+          0
+        ]
+      ],
+      "tone": "accent"
+    },
+    {
+      "kind": "point",
+      "at": [
+        0,
+        0
+      ],
+      "tone": "result"
+    },
+    {
+      "kind": "point",
+      "at": [
+        4,
+        0
+      ],
+      "tone": "result"
+    },
+    {
+      "kind": "text",
+      "at": [
+        1.8,
+        2.9
+      ],
+      "text": "u",
+      "leaderTo": [
+        2,
+        2
+      ]
+    },
+    {
+      "kind": "text",
+      "at": [
+        6.0,
+        2.9
+      ],
+      "text": "v",
+      "leaderTo": [
+        8,
+        2
+      ]
+    },
+    {
+      "kind": "text",
+      "at": [
+        4.0,
+        -0.9
+      ],
+      "text": "first return",
+      "leaderTo": [
+        4,
+        0
+      ],
+      "muted": true
+    }
+  ]
+}
+:::
+
+:::theorem[The Catalan generating function]{#catalan-gf}
+$C(x) = \sum_{n\ge0}C_n x^n$ satisfies the functional equation $C(x) = 1 + x\,C(x)^2$, and
+
+$$C(x) = \frac{1 - \sqrt{1-4x}}{2x}, \qquad C_n = \frac{1}{n+1}\binom{2n}{n}.$$
+
+Here $\sqrt{1-4x} := (1+y)^{1/2}\big|_{y=-4x}$ in the sense of the generalised binomial theorem.
+:::
+
+:::proof
+**The functional equation.** By the Product Rule, $[x^{n-1}]C(x)^2 = \sum_{k=0}^{n-1}C_kC_{n-1-k}$, which by the Catalan recurrence is $C_n$ for $n \ge 1$. So $x\,C(x)^2$ and $C(x)$ agree in every degree $n \ge 1$, and they differ in degree $0$ by $C_0 = 1$. Hence $C = 1 + xC^2$.
+
+**Solving.** Write $S = (1-4x)^{1/2}$. By the generalised binomial theorem with $\alpha = \beta = \tfrac12$ we have $S^2 = (1-4x)^1 = 1-4x$; the substitution $y = -4x$ is legitimate since $y$ has zero constant term. Regard $C = 1 + xC^2$ as a quadratic: $xC^2 - C + 1 = 0$, so
+
+$$\left(2xC - 1\right)^2 = 1 - 4x = S^2 ,$$
+
+as one checks by expanding: $(2xC-1)^2 = 4x^2C^2 - 4xC + 1 = 4x(xC^2 - C) + 1 = 4x(-1)+1$. Since $K[[x]]$ is an integral domain, $(2xC-1-S)(2xC-1+S) = 0$ forces $2xC - 1 = \pm S$. Comparing constant terms: $2xC-1$ has constant term $-1$, while $S$ has constant term $+1$. So the sign must be $-$, giving $2xC = 1 - S$ and
+
+$$C(x) = \frac{1-\sqrt{1-4x}}{2x},$$
+
+a legitimate power series because $1 - S$ has zero constant term and is therefore divisible by $x$ in $K[[x]]$.
+
+**Coefficients.** By the definition of $(1+x)^{\alpha}$,
+
+$$S = \sum_{n\ge0}\binom{1/2}{n}(-4)^n x^n .$$
+
+For $n \ge 1$ compute the coefficient. The numerator of $\binom{1/2}{n}$ is a product of $n$ halves,
+
+$$\frac12\left(\frac12-1\right)\cdots\left(\frac12-n+1\right) = \frac{1\cdot(-1)\cdot(-3)\cdots(3-2n)}{2^n} = \frac{(-1)^{n-1}\,1\cdot3\cdot5\cdots(2n-3)}{2^n},$$
+
+so, using $(-4)^n = (-1)^n 4^n$ and $(-1)^n(-1)^{n-1} = -1$,
+
+$$\binom{1/2}{n}(-4)^n = -\frac{4^n}{2^n\,n!}\;1\cdot3\cdot5\cdots(2n-3) = -\frac{2^n}{n!}\;1\cdot3\cdots(2n-3).$$
+
+Complete the odd product to a factorial using $1\cdot3\cdots(2n-3) = \dfrac{(2n-2)!}{2^{\,n-1}(n-1)!}$:
+
+$$\binom{1/2}{n}(-4)^n = -\frac{2^n}{n!}\cdot\frac{(2n-2)!}{2^{\,n-1}(n-1)!} = -\frac{2\,(2n-2)!}{n!\,(n-1)!} = -\frac{2}{n}\binom{2n-2}{n-1}.$$
+
+(Sanity check at small $n$: $n=1$ gives $-2\binom{0}{0} = -2$, and directly $\binom{1/2}{1}(-4) = -2$; $n=2$ gives $-\binom{2}{1} = -2$, and directly $-\tfrac18\cdot16 = -2$; $n=3$ gives $-\tfrac23\binom42 = -4$, and directly $\tfrac1{16}\cdot(-64) = -4$.)
+
+Hence $S = 1 - \sum_{n\ge1}\frac{2}{n}\binom{2n-2}{n-1}x^n$, and
+
+$$C(x) = \frac{1-S}{2x} = \frac{1}{2x}\sum_{n\ge1}\frac{2}{n}\binom{2n-2}{n-1}x^n = \sum_{n \ge 1}\frac{1}{n}\binom{2n-2}{n-1}x^{n-1} = \sum_{m\ge0}\frac{1}{m+1}\binom{2m}{m}x^m .$$
+
+So $C_m = \frac{1}{m+1}\binom{2m}{m}$, which for $m = 0,1,2,3,4,5$ gives $1, 1, 2, 5, 14, 42$ — matching the recurrence.
+:::
+
+:::pitfall[Choosing the wrong branch]
+The quadratic formula offers two roots, and only one of them is a formal power series. The test is always the constant term: $C(0) = C_0$ must be finite and correct, whereas $\frac{1+\sqrt{1-4x}}{2x}$ has a numerator with constant term $2$, so it is not divisible by $x$ and is not an element of $K[[x]]$ at all. Never choose the branch by plugging in a small number and seeing which "looks right" — check the order of the numerator.
 :::
 
 :::intuition
-The case split directly writes the recurrence (or the corresponding GF equation).
+Look at what the functional equation $C = 1 + xC^2$ *says*: a balanced string is either empty, or it is a pair of parentheses (the $x$, contributing size $1$) wrapping one balanced string, followed by another balanced string. The equation is the decomposition, transcribed. Deriving the recurrence first and then the equation, as we did, is the careful route; with practice one writes the functional equation directly from the decomposition and never mentions the recurrence at all.
 :::
 
-:::example
-Let $a_n$ be the number of ways to climb $n$ stairs taking $1$ or $2$ steps at a time.
+:::example[Motzkin numbers]
+$M_n$ counts lattice paths from $(0,0)$ to $(n,0)$ using steps $U = (1,1)$, $D = (1,-1)$ and $L = (1,0)$ that never go below the horizontal axis. Find the functional equation for $M(x)$.
 :::
 
 :::solution
-Condition on the last move. The final move is either a single step (preceded by a climb of $n-1$ stairs, $a_{n-1}$ ways) or a double step (preceded by a climb of $n-2$ stairs, $a_{n-2}$ ways). These are disjoint, so
+Decompose a non-empty path by its first step. If it is $L$, the rest is an arbitrary Motzkin path of length $n-1$, contributing $xM(x)$. If it is $U$, the path must return to the axis for the first time by some $D$ step; between them lies a Motzkin path (shifted up by one), and after the $D$ lies another Motzkin path. That contributes $x^2M(x)^2$, the $x^2$ accounting for the $U$ and the $D$. The decomposition is unambiguous, so
 
-$$a_n = a_{n-1} + a_{n-2}.$$
+$$M(x) = 1 + x\,M(x) + x^2 M(x)^2 .$$
 
-Base cases. There is one way to climb $0$ stairs (do nothing), $a_0 = 1$, and one way to climb $1$ stair, $a_1 = 1$. This is Fibonacci.
+Solving as before (and taking the branch with the correct constant term) gives
 
-Iterate: $a_2 = 2$, $a_3 = 3$, $a_4 = 5$, $a_5 = 8$.
+$$M(x) = \frac{1 - x - \sqrt{1-2x-3x^2}}{2x^2},$$
 
-Sanity check: the ways to climb $3$ stairs are $1{+}1{+}1$, $1{+}2$, $2{+}1$ — exactly $3 = a_3$. ✓
+whose coefficients begin $1, 1, 2, 4, 9, 21, 51$. Equating coefficients in the functional equation instead gives the recurrence $M_n = M_{n-1} + \sum_{k=0}^{n-2}M_k M_{n-2-k}$, which is the fastest way to tabulate them.
 :::
 
-## Solving Techniques and Generating Functions
+:::theorem[Recurrences with polynomial coefficients]{#polynomial-coefficients}
+If a sequence satisfies a recurrence whose coefficients are polynomials in $n$, its generating function satisfies a linear differential equation with polynomial coefficients, obtained by translating $n\,a_n \mapsto x A'(x)$ and $a_{n-1}\mapsto$ a shift. Sequences of this kind are called **holonomic** (or $P$-recursive), and the differential equation is often solvable in closed form even when the recurrence is not.
+:::
+
+:::proof
+Each occurrence of $a_{n-i}$ contributes $x^i A(x)$ up to finitely many initial terms (the shift rule), and each factor of $n$ multiplying a coefficient contributes the operator $x\frac{d}{dx}$ (part 6 of the Dictionary of Coefficient Operations). Since the recurrence is a finite linear combination of such terms with polynomial coefficients, the result is a finite linear combination of $A$, $A'$, $A''$, … with polynomial coefficients equated to a polynomial. That the operator translation is valid is exactly the two dictionary entries; no convergence is involved because the formal derivative is defined coefficientwise.
+:::
+
+:::example[Involutions again, from the recurrence]
+Solve $I_{n+1} = I_n + n I_{n-1}$, $I_0 = I_1 = 1$, using an exponential generating function.
+:::
+
+:::solution
+Let $\widehat{I}(x) = \sum_n I_n \frac{x^n}{n!}$. Setting $I_{-1} := 0$ makes the recurrence valid for every $n \ge 0$, since at $n = 0$ it reads $I_1 = I_0 + 0$. Multiply by $\frac{x^n}{n!}$ and sum over $n \ge 0$: by part (1) of the EGF dictionary the left side is the EGF of $(I_{n+1})$, namely $\widehat{I}'$; the first term on the right is $\widehat{I}$; and by part (2) the term $n I_{n-1}$ has EGF $x\widehat{I}$. So
+
+$$\widehat{I}'(x) = (1+x)\,\widehat{I}(x).$$
+
+This is a first-order linear differential equation in $\mathbb{Q}[[x]]$. Writing $\widehat{I} = \exp(H)$ with $H(0) = 0$ — legitimate since $\widehat{I}$ has constant term $I_0 = 1$ — the formal chain rule turns it into $H' = 1+x$, so $H = x + \frac{x^2}{2}$ and
+
+$$\widehat{I}(x) = \exp\!\left(x + \frac{x^2}{2}\right),$$
+
+confirming the exponential-formula derivation from the labelled-structures section by a completely different route. Expanding to order $4$: $\exp(x + \frac{x^2}{2}) = 1 + x + x^2 + \frac{2x^3}{3} + \frac{5x^4}{12}+\cdots$, and multiplying by $n!$ gives $I_0,\ldots,I_4 = 1,1,2,4,10$, as before.
+:::
+
+:::remark[When the answer is not a closed form]
+It would be misleading to suggest every combinatorial recurrence yields a formula. The partition numbers $p(n)$ satisfy no linear recurrence with constant coefficients (their generating function is not rational — it has infinitely many singularities on the unit circle), and their exact asymptotic $p(n) \sim \frac{1}{4n\sqrt3}\exp\!\left(\pi\sqrt{2n/3}\right)$ is the Hardy–Ramanujan theorem, proved by the circle method and far beyond this chapter. What a generating function reliably buys is a *finite description* of the whole sequence, plus the machinery to compute any term. A closed form is a bonus that appears when the series turns out to be rational or algebraic.
+:::
+
+## Method: Solving Recurrences by Generating Function
 
 <!-- section: solving-techniques -->
 
-Besides the characteristic-root method, one can use generating functions.
+This section gathers the methods into procedures, and adds two techniques that do not follow from the dictionary alone.
 
-:::recipe[Solving a recurrence with a generating function]
-1. Multiply the recurrence by $x^n$ and sum over the valid range of $n$.
-2. Rewrite each sum in terms of the unknown GF and solve the resulting algebraic equation for it.
-3. Expand or partial-fraction the answer to read off coefficients.
+:::recipe[Solving a recurrence with an ordinary generating function]{#ogf-recipe}
+1. Decide the range of $n$ for which the recurrence is valid, and set $a_m = 0$ for $m < 0$ if that makes it valid further down.
+2. Multiply the recurrence by $x^n$ and sum over that range.
+3. Rewrite each sum in terms of $A(x)$ using the shift rules, being careful about the finitely many initial terms that the shift adds or removes.
+4. Solve the resulting equation for $A(x)$ — linear if the recurrence was linear, quadratic if it was a convolution.
+5. Extract coefficients: partial fractions for rational $A$, the generalised binomial theorem for algebraic $A$, a convolution if $A$ is a product of two known series.
+6. Verify the first three or four coefficients against a direct count.
 :::
 
-For non-linear or combinatorial recurrences the GF often yields algebraic or functional equations whose solution gives the count via coefficient extraction (or Lagrange inversion for tree-like cases).
-
-:::intuition
-The recurrence becomes an equation for the unknown GF; algebra solves for the GF; then you read off coefficients.
-
-For Catalan numbers the GF $C(x)$ satisfies $C = 1 + x C^2$, solved by the quadratic formula; then the binomial series gives the closed form $C_n = \frac{1}{n+1}\binom{2n}{n}$.
+:::recipe[Solving a recurrence with an exponential generating function]{#egf-recipe}
+Use this when the recurrence contains binomial coefficients $\binom{n}{k}$ in a convolution, or polynomial factors in $n$.
+1. Multiply by $\frac{x^n}{n!}$ and sum.
+2. Translate: $a_{n+1} \mapsto \widehat{A}'$, $n\,a_{n-1}\mapsto x\widehat{A}$, $\sum_k\binom{n}{k}a_kb_{n-k}\mapsto \widehat{A}\widehat{B}$.
+3. Solve the resulting differential equation; first-order linear equations are solved by the formal substitution $\widehat{A} = \exp(H)$ when $\widehat A(0)=1$.
+4. Recover $a_n = n!\,[x^n]\widehat{A}(x)$.
 :::
 
-:::example
-Derive the GF for the recurrence $a_n = a_{n-1} + a_{n-2}$ (valid for $n \ge 2$) with $a_0 = 1$, $a_1 = 1$.
+:::example[A recurrence needing care with initial terms]
+Let $a_0 = 1$, $a_1 = 1$ and $a_n = a_{n-1} + a_{n-2}$ for $n \ge 2$. Derive $A(x)$ from scratch.
 :::
 
 :::solution
-Set up sums. Let $A(x) = \sum_{n \ge 0} a_n x^n$. Multiply the recurrence by $x^n$ and sum over $n \ge 2$:
+Multiply by $x^n$ and sum over $n \ge 2$:
 
-$$\sum_{n \ge 2} a_n x^n = \sum_{n \ge 2} a_{n-1} x^n + \sum_{n \ge 2} a_{n-2} x^n.$$
+$$\sum_{n\ge2}a_nx^n = \sum_{n\ge2}a_{n-1}x^n + \sum_{n\ge2}a_{n-2}x^n .$$
 
-Rewrite each sum in terms of $A(x)$. The left side is $A(x) - a_0 - a_1 x = A(x) - 1 - x$. Re-indexing the right-hand sums:
+The left side is $A(x) - a_0 - a_1x = A(x) - 1 - x$. Reindexing the right-hand sums with $m = n-1$ and $m = n-2$,
 
-$$\sum_{n \ge 2} a_{n-1} x^n = x\sum_{m \ge 1} a_m x^m = x\big(A(x) - a_0\big) = x\big(A(x) - 1\big),$$
-$$\sum_{n \ge 2} a_{n-2} x^n = x^2 \sum_{m \ge 0} a_m x^m = x^2 A(x).$$
+$$\sum_{n\ge2}a_{n-1}x^n = x\sum_{m\ge1}a_mx^m = x\big(A(x)-1\big), \qquad \sum_{n\ge2}a_{n-2}x^n = x^2A(x).$$
 
-Solve for $A(x)$. Combining,
+Hence $A - 1 - x = xA - x + x^2A$; the $-x$ terms cancel and
 
-$$A(x) - 1 - x = x A(x) - x + x^2 A(x).$$
+$$A(x)\left(1-x-x^2\right) = 1, \qquad A(x) = \frac{1}{1-x-x^2}.$$
 
-The $-x$ terms cancel, leaving $A(x) - 1 = (x + x^2)A(x)$, so $A(x)\big(1 - x - x^2\big) = 1$ and
+Compare with the Rationality Theorem, which gives the same answer in one line: $Q = 1-x-x^2$ and $P = a_0 + (a_1-a_0)x = 1$. The point of doing it by hand once is step 3 — the term $x(A-1)$, not $xA$ — which is where sign and off-by-one errors live.
 
-$$A(x) = \frac{1}{1 - x - x^2}.$$
+Since $\frac{1}{1-x-x^2} = \frac{1}{x}\cdot\frac{x}{1-x-x^2}$, the Fibonacci computation gives $a_n = F_{n+1} = \frac{\varphi^{n+1}-\psi^{n+1}}{\sqrt5}$.
+:::
 
-Sanity check: expand as a geometric-type series. Since $\frac{1}{1-(x+x^2)} = \sum_k (x+x^2)^k$, the low-order terms give $1 + x + 2x^2 + 3x^3 + \cdots$, whose coefficients $1, 1, 2, 3, \ldots$ are the Fibonacci numbers, as expected. ✓
+:::theorem[Lagrange inversion]{#lagrange-inversion}
+Let $\phi \in K[[t]]$ with $\phi(0) \ne 0$. Then there is a unique $F \in K[[x]]$ with $F(0)=0$ satisfying $F = x\,\phi(F)$, and for $n \ge 1$
+
+$$[x^n]\,F(x) = \frac{1}{n}\,[t^{\,n-1}]\,\phi(t)^n, \qquad\text{more generally}\qquad [x^n]\,H(F(x)) = \frac{1}{n}[t^{\,n-1}]\left(H'(t)\,\phi(t)^n\right)$$
+
+for any $H \in K[[t]]$.
+:::
+
+:::proof
+We do not prove this here. The standard proof runs through the formal residue $\operatorname{res}(A) = [t^{-1}]A$ on formal Laurent series, together with the two facts that $\operatorname{res}(A') = 0$ for every formal Laurent series $A$ and that residues transform correctly under a change of variable of positive order; it is a page of careful bookkeeping and is carried out in Stanley's *Enumerative Combinatorics* and in Wilf's *generatingfunctionology*. We use the statement as a black box. Existence and uniqueness of $F$, by contrast, is the same coefficient-by-coefficient recursion as in the Units Theorem.
+:::
+
+:::example[Cayley's formula for labelled rooted trees]
+Let $T_n$ be the number of rooted trees on the labelled vertex set $[n]$. Use Lagrange inversion to show $T_n = n^{\,n-1}$.
+:::
+
+:::solution
+**Specify.** A rooted labelled tree is a root vertex together with a *set* of rooted labelled subtrees hanging from it, the subtrees sitting on the blocks of a partition of the remaining labels. By the exponential formula and the labelled product rule, the EGF $\widehat{T}$ satisfies
+
+$$\widehat{T}(x) = x\,\exp\!\left(\widehat{T}(x)\right),$$
+
+the factor $x$ being the root atom.
+
+**Invert.** This is $F = x\phi(F)$ with $\phi(t) = e^t$, which has $\phi(0) = 1 \ne 0$. Lagrange inversion gives, for $n \ge 1$,
+
+$$[x^n]\widehat{T}(x) = \frac{1}{n}[t^{\,n-1}]\,e^{nt} = \frac{1}{n}\cdot\frac{n^{\,n-1}}{(n-1)!}.$$
+
+**Recover the count.**
+
+$$T_n = n!\,[x^n]\widehat{T}(x) = \frac{n!}{n}\cdot\frac{n^{\,n-1}}{(n-1)!} = n^{\,n-1}.$$
+
+**Check.** $T_1 = 1$, $T_2 = 2$ (either vertex may be the root), $T_3 = 9$: three choices of root times three unrooted trees on $3$ labelled vertices... more carefully, there are $3$ unrooted labelled trees on $[3]$ (the three paths) and $3$ choices of root, giving $9$. Dividing $T_n$ by $n$ gives Cayley's formula $n^{\,n-2}$ for unrooted labelled trees.
+:::
+
+The last technique goes the other way round: it uses generating functions to evaluate a sum, by summing over the *free* index rather than the bound one. Wilf calls it the *snake oil* method.
+
+:::lemma[A shifted binomial series]{#shifted-binomial}
+For each fixed $k \ge 0$,
+
+$$\sum_{m \ge 0}\binom{m}{k}x^m = \frac{x^k}{(1-x)^{k+1}}.$$
+:::
+
+:::proof
+Substituting $j = m-k$ (the terms with $m < k$ vanish) turns the sum into $\sum_{j\ge0}\binom{j+k}{k}x^{j+k} = x^k\sum_{j\ge0}\binom{j+k}{k}x^j$, and by the negative-exponent corollary with $k+1$ in place of $k$ the remaining sum is $\frac{1}{(1-x)^{k+1}}$.
+:::
+
+:::example[The snake oil method]
+Prove that $\displaystyle\sum_{k \ge 0}\binom{n-k}{k} = F_{n+1}$, the Fibonacci numbers with $F_0 = 0$, $F_1 = 1$.
+:::
+
+:::solution
+Call the sum $s_n$ and form its generating function, then exchange the order of summation — legitimate because for each power of $x$ only finitely many terms contribute:
+
+$$S(x) = \sum_{n\ge0}s_nx^n = \sum_{n \ge 0}x^n\sum_{k\ge0}\binom{n-k}{k} = \sum_{k \ge 0}\sum_{n\ge0}\binom{n-k}{k}x^n .$$
+
+In the inner sum substitute $n = m + k$:
+
+$$S(x) = \sum_{k\ge0}x^k\sum_{m\ge0}\binom{m}{k}x^{m} = \sum_{k \ge 0}x^k\cdot\frac{x^k}{(1-x)^{k+1}}$$
+
+by the shifted binomial lemma. Now sum the geometric series in $k$, whose ratio $\frac{x^2}{1-x}$ has zero constant term so the sum is defined:
+
+$$S(x) = \frac{1}{1-x}\sum_{k\ge0}\left(\frac{x^2}{1-x}\right)^k = \frac{1}{1-x}\cdot\frac{1}{1-\frac{x^2}{1-x}} = \frac{1}{1-x-x^2}.$$
+
+That is the generating function of $(F_{n+1})_{n\ge0}$, as computed earlier. Comparing coefficients gives $s_n = F_{n+1}$.
+
+**Check.** $n = 4$: $\binom40+\binom31+\binom22 = 1+3+1 = 5 = F_5$. The identity is the statement that the shallow diagonals of Pascal's triangle sum to Fibonacci numbers, and the proof above never had to see that picture.
+:::
+
+:::summary[The whole method in one page]
+- A generating function is an element of $K[[x]]$; equality means equality of coefficients, and no substitution of numbers occurs.
+- $A$ is invertible iff $a_0 \ne 0$; $\frac{1}{1-A}$ and $A(B)$ require order at least $1$ for the inner series.
+- Disjoint union is $+$, product is $\times$, sequence is $\frac{1}{1-A}$ — for OGFs with sizes adding, for EGFs with labels distributed.
+- Sets and cycles of labelled components are $\exp(\widehat A)$ and $\ln\frac1{1-\widehat A}$; the first is the exponential formula and is the workhorse of labelled enumeration.
+- A sequence satisfies a linear constant-coefficient recurrence iff its OGF is rational; partial fractions then gives $a_n = \sum p_i(n)r_i^n$.
+- A convolution recurrence gives an algebraic equation (Catalan, Motzkin); a polynomial-coefficient recurrence gives a differential equation (involutions, Bell).
+- Coefficients come out by the generalised binomial theorem, by partial fractions, by convolution, or by Lagrange inversion for equations of the form $F = x\phi(F)$.
+- Always verify the first few coefficients by hand.
 :::
 
 ## Common Mistakes
 
-- **Forgetting initial conditions**: The recurrence describes many sequences; without $a_0, \ldots, a_{d-1}$ you cannot determine a unique sequence.
-- **Assuming all recurrences are linear constant coeff**: Many natural ones (e.g. involving min or max, or convolutions) are not; they may still have GFs.
-- **Wrong characteristic equation**: Sign errors when moving terms: $a_n - c_1 a_{n-1} - \cdots = 0$.
-- **Ignoring multiplicity of roots**: Repeated roots require the extra n, n^2, … polynomial factors.
-- **Computing only the recurrence without verifying small values**: Always compute the first few terms by hand to check the recurrence setup.
+- **Mishandling the initial terms when shifting.** $\sum_{n\ge2}a_{n-1}x^n$ is $x(A(x)-a_0)$, not $xA(x)$. Almost every wrong generating function for a recurrence is wrong here.
+- **Omitting the initial conditions.** A recurrence of order $d$ describes a $d$-parameter family of sequences; the numerator $P(x)$ is where the initial conditions live, and without them there is no single answer.
+- **Ignoring root multiplicity.** A root of multiplicity $m$ contributes $p(n)r^n$ with $\deg p \le m-1$, not just $\alpha r^n$; the polynomial factor comes from $\binom{n+j-1}{j-1}$ in the expansion of $\frac{1}{(1-rx)^j}$.
+- **Sign errors in the characteristic polynomial.** Bring everything to one side first: $a_n - c_1a_{n-1}-\cdots-c_da_{n-d} = 0$ gives $\chi(t) = t^d - c_1t^{d-1}-\cdots-c_d$, the reverse of the denominator $Q(x)$.
+- **Taking the wrong root of a quadratic functional equation.** Only one branch is a formal power series; decide by comparing constant terms, never by evaluating at a number.
+- **Assuming every recurrence is linear with constant coefficients.** Convolution recurrences and polynomial-coefficient recurrences are common and have their own machinery; a rational generating function is not the only good outcome.
+- **Skipping the check.** Expanding the first four coefficients of the final answer and comparing against a hand count catches essentially every algebra slip, and costs a minute.
