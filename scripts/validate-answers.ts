@@ -324,6 +324,48 @@ const numericValue = (value: string): number | null => {
   }
 };
 
+/**
+ * A `numeric` question is answered through MathInput, so its stored answer has
+ * to be something a learner can actually type there: a number, an expression, a
+ * formula. An answer that is really a sentence ("k-means clustering.", "The
+ * covering lemma.") cannot be entered or graded reliably — the question is
+ * conceptual identification and belongs in `mcq`, which content/questions.md
+ * already names as the right home for it. Nothing else in the gate catches
+ * this, because such an answer trivially grades itself correct.
+ */
+function proseAnswerSweep(items: Loaded[]) {
+  const failures: string[] = [];
+  let checked = 0;
+  for (const { q, source } of items) {
+    if (q.type !== "numeric") continue;
+    checked += 1;
+    const answer = String(q.answer ?? "").trim();
+    if (!answer) continue;
+    // Strip the parts a typed answer may legitimately contain, then see whether
+    // what is left reads as English rather than mathematics.
+    const stripped = answer
+      .replace(/\$[^$]*\$/g, " ")
+      .replace(/\\[a-zA-Z]+/g, " ")
+      // Subscripts and superscripts bind the name to its index (log_3, x_max),
+      // which would otherwise hide the function name from the word filter.
+      .replace(/[_^]/g, " ")
+      .replace(
+        /\b(sin|cos|tan|sec|csc|cot|arcsin|arccos|arctan|sinh|cosh|tanh|log|ln|exp|sqrt|pi|inf|infinity|undefined|mod|min|max|lim|det|dim|gcd|lcm|deg|rad|true|false|none|and|or|if|iff|for|all|where|then|otherwise)\b/gi,
+        " "
+      );
+    const words = stripped.match(/[a-zA-Z]{3,}/g) ?? [];
+    const parses = numericValue(answer) !== null;
+    if (!parses && words.length >= 2) {
+      failures.push(
+        `  ${q.id ?? "(no id)"} (${source}): numeric answer reads as prose — ${JSON.stringify(
+          answer.length > 70 ? `${answer.slice(0, 70)}…` : answer
+        )}`
+      );
+    }
+  }
+  return { checked, failures };
+}
+
 async function crossQuestionSweep(items: Loaded[]) {
   const byTopic = new Map<string, Loaded[]>();
   for (const item of items) {
@@ -424,6 +466,22 @@ async function main() {
     cross.failures.slice(0, 40).forEach((l) => console.log(l));
     if (cross.failures.length > 40) console.log(`  ... and ${cross.failures.length - 40} more`);
     console.log(`\n${cross.failures.length} colliding pair(s).\n`);
+  }
+
+  console.log("== Prose-answer sweep (a numeric answer must be typable in MathInput) ==");
+  const prose = proseAnswerSweep(items);
+  console.log(`Checked ${prose.checked} numeric answers.`);
+  if (prose.failures.length === 0) {
+    console.log("Every numeric answer reads as mathematics.\n");
+  } else {
+    prose.failures.slice(0, 40).forEach((l) => console.log(l));
+    if (prose.failures.length > 40) console.log(`  ... and ${prose.failures.length - 40} more`);
+    // Reported, not fatal, until the known backlog below is cleared — otherwise
+    // every unrelated content change fails on pre-existing questions. Flip the
+    // `+ prose.failures.length` back into `failed` once it reads zero.
+    console.log(
+      `\nWARNING: ${prose.failures.length} numeric question(s) should be mcq (see content/questions.md). Not failing the run yet.\n`
+    );
   }
 
   const failed =

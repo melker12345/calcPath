@@ -72,6 +72,7 @@ async function main() {
 
   const files = (await walk(path.join(ROOT, "content"))).sort();
   const problems: string[] = [];
+  const addedSlugs: string[] = [];
   const bySubject = new Map<string, { modules: number; sections: number; kinds: Record<string, number>; withoutStatement: string[] }>();
 
   for (const file of files) {
@@ -108,10 +109,35 @@ async function main() {
           `  ${rel}: prose shrank ${wordsBefore} -> ${wordsNow} words (${Math.round((1 - wordsNow / wordsBefore) * 100)}% lost)`
         );
       }
-      const slugsBefore = extractMdxSectionSlugs(before).join(",");
-      const slugsNow = extractMdxSectionSlugs(now).join(",");
-      if (slugsBefore !== slugsNow) {
-        problems.push(`  ${rel}: section slugs changed\n      was: ${slugsBefore}\n      now: ${slugsNow}`);
+      // Slugs are the join key between a chapter and its question bank, but the
+      // three ways the list can change are not equally bad. Removing one strands
+      // its questions and breaks ?section= deep links; reordering shuffles the
+      // reader's path through the chapter. Adding one breaks nothing — progress
+      // is tracked per question id (see src/lib/progress.ts), so a new section
+      // starts empty and touches no stored record. A rebuild that deepens a
+      // chapter usually needs new sections, so only the first two fail here.
+      const slugsBefore = extractMdxSectionSlugs(before);
+      const slugsNow = extractMdxSectionSlugs(now);
+      const nowSet = new Set(slugsNow);
+      const removed = slugsBefore.filter((s) => !nowSet.has(s));
+      if (removed.length > 0) {
+        problems.push(
+          `  ${rel}: section slug(s) removed: ${removed.join(", ")}\n` +
+            `      questions pointing at them are stranded and ?section= links break`
+        );
+      }
+      // Order of the surviving slugs must be preserved: kept ones, in sequence.
+      const keptBefore = slugsBefore.filter((s) => nowSet.has(s));
+      const beforeSet = new Set(slugsBefore);
+      const keptNow = slugsNow.filter((s) => beforeSet.has(s));
+      if (keptBefore.join(",") !== keptNow.join(",")) {
+        problems.push(
+          `  ${rel}: existing section slugs reordered\n      was: ${keptBefore.join(",")}\n      now: ${keptNow.join(",")}`
+        );
+      }
+      const added = slugsNow.filter((s) => !beforeSet.has(s));
+      if (added.length > 0) {
+        addedSlugs.push(`  ${rel}: +${added.length} new section(s): ${added.join(", ")}`);
       }
     }
 
@@ -149,12 +175,19 @@ async function main() {
     thin.forEach((f) => console.log(`  ${f}`));
   }
 
+  // Added sections are allowed, but never silent: a rebuild that invents fifteen
+  // of them should be visible in review even though it is not a failure.
+  if (addedSlugs.length) {
+    console.log(`\n${addedSlugs.length} module(s) gained sections against ${base} (allowed):`);
+    addedSlugs.forEach((a) => console.log(a));
+  }
+
   if (problems.length) {
     console.log(`\n${problems.length} problem(s) against ${base}:`);
     problems.forEach((p) => console.log(p));
     process.exitCode = 1;
   } else {
-    console.log(`\nNo content lost against ${base}; every section slug intact.`);
+    console.log(`\nNo content lost against ${base}; no section slug removed or reordered.`);
   }
 }
 

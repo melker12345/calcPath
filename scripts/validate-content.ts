@@ -232,6 +232,20 @@ const allProblemIds = new Map<string, string>();
       // so it is guaranteed identical to what deriveModuleStructureFromBundle and adapters produce.
       const msecs = extractMdxSectionSlugs(mdx);
       const qsecs = [...new Set(questions.map((q) => q.section).filter(Boolean))];
+
+      // The other direction: a section with no questions is a dead end for the
+      // learner — it renders, but ?section= practice and per-section mastery
+      // have nothing to draw on. Chapters may gain sections freely (see
+      // audit-book-style.ts), so this is the check that keeps that safe.
+      if (questions.length > 0) {
+        const empty = msecs.filter((s) => !qsecs.includes(s));
+        if (empty.length) {
+          warnings.push(
+            `${slug}/topics/${tid}: ${empty.length} section(s) have no questions: ${empty.join(", ")}`
+          );
+        }
+      }
+
       for (const qs of qsecs) {
         if (!msecs.includes(qs)) {
           errors.push(`${slug}/topics/${tid}/questions.json: section "${qs}" has no matching mdx section (add <!-- section: ${qs} --> after the relevant ## or use {#${qs}})`);
