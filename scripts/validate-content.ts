@@ -12,6 +12,7 @@
  * Exits 1 on any errors. Warnings for nice-to-haves (ELI5 / **Worked Example:** presence — recommended but parser is resilient + supports `minimal: true` frontmatter to opt out per-topic).
  */
 import fs from "fs/promises";
+import fssync from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -370,6 +371,50 @@ const allProblemIds = new Map<string, string>();
         if (!hasMarker(mdx, /\*\*Worked Example/i) && !hasMarker(mdx, /^:::example\b/m)) {
           warnings.push(`${slug}/topics/${tid}/module.mdx: no **Worked Example:** or :::example found (parser will auto-detect examples)`);
         }
+      }
+    }
+  }
+
+  // Legacy redirects are consulted BEFORE the chapter itself (see the module
+  // route), so a redirect keyed by a live chapter id sends that chapter's own
+  // URL to one of its sections — and since the target differs only by fragment,
+  // the browser asks for the same path again and the page becomes unreachable
+  // behind an infinite 308 loop. A redirect whose target section no longer
+  // exists is milder: the chapter renders, but the deep link points at nothing.
+  for (const slug of subjectSlugs) {
+    const redirectPath = path.join(CONTENT_DIR, slug, "legacy-topic-redirects.json");
+    if (!fssync.existsSync(redirectPath)) continue;
+    let redirects: Record<string, { chapterId: string; section: string; subject?: string }>;
+    try {
+      redirects = JSON.parse(fssync.readFileSync(redirectPath, "utf8"));
+    } catch (e) {
+      errors.push(`${slug}/legacy-topic-redirects.json: not valid JSON (${String(e)})`);
+      continue;
+    }
+    const liveTopics = new Set(
+      fssync.existsSync(path.join(CONTENT_DIR, slug, "topics"))
+        ? fssync.readdirSync(path.join(CONTENT_DIR, slug, "topics"))
+        : []
+    );
+    for (const [oldId, target] of Object.entries(redirects)) {
+      if (liveTopics.has(oldId)) {
+        errors.push(
+          `${slug}/legacy-topic-redirects.json: "${oldId}" is also a live chapter — its page redirects to itself forever; remove the entry`
+        );
+      }
+      const targetDir = path.join(CONTENT_DIR, target.subject ?? slug, "topics", target.chapterId);
+      const targetMdx = path.join(targetDir, "module.mdx");
+      if (!fssync.existsSync(targetMdx)) {
+        errors.push(
+          `${slug}/legacy-topic-redirects.json: "${oldId}" points at chapter "${target.chapterId}", which does not exist`
+        );
+        continue;
+      }
+      const targetSlugs = extractMdxSectionSlugs(fssync.readFileSync(targetMdx, "utf8"));
+      if (!targetSlugs.includes(target.section)) {
+        warnings.push(
+          `${slug}/legacy-topic-redirects.json: "${oldId}" points at section "${target.section}" of ${target.chapterId}, which no longer exists`
+        );
       }
     }
   }
