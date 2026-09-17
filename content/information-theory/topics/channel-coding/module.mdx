@@ -6,769 +6,1854 @@ title: Channel Coding & Error Correction
 
 Channel capacity, noisy-channel coding, and error-correcting codes from Hamming to polar and turbo codes.
 
-Channel capacity is the fundamental limit, discovered by Shannon, on how fast information can be transmitted reliably over a noisy communication channel. It is the highest rate (in bits per channel use or bits per second) at which one can send messages with the probability of error made arbitrarily small by using sufficiently long codes.
+A communication channel is a device that accepts a symbol and returns a symbol that is, in general, not the one it was given. Before 1948 this was understood as a hard trade: to make errors rarer you repeated yourself, and repeating yourself slowed you down, so reliability and speed were believed to be exchangeable without limit in either direction. Shannon's second theorem destroyed that picture. It says that every noisy channel carries a single number $C$, its capacity, with the property that *any* rate below $C$ can be achieved with error probability as small as one likes, while no rate above $C$ can be achieved reliably at all. Noise does not degrade reliability; it caps rate.
 
-The noisy-channel coding theorem asserts that rates below capacity are achievable and rates above capacity are not.
+This chapter builds that statement carefully and then spends the rest of its length on the question Shannon left open. His proof shows that good codes are abundant — a randomly drawn code is almost surely good — but it exhibits none, and a code with no structure cannot be decoded in less than exponential time. The sixty years of coding theory that followed are the search for codes that are simultaneously good and decodable, from Hamming's single-error-correcting codes of 1950 through convolutional, turbo, LDPC and polar codes.
 
-## Definition via Mutual Information
+Throughout, $\log$ means $\log_2$ and information is measured in bits unless stated otherwise. We assume the material of the chapter on information measures: entropy $H(X)$, conditional entropy $H(X \mid Y)$, mutual information $I(X;Y) = H(X) - H(X\mid Y)$, the chain rule, the data-processing inequality, and the asymptotic equipartition property.
+
+## Discrete Memoryless Channels and Capacity
 
 <!-- section: definition -->
 
+Everything begins with a precise model of what a channel is. The model is deliberately austere: one input symbol in, one output symbol out, the statistics fixed and the same on every use, with no memory linking one use to the next.
+
+:::definition[Discrete memoryless channel]{#dmc}
+A **discrete memoryless channel** (DMC) is a triple consisting of a finite input alphabet $\mathcal X$, a finite output alphabet $\mathcal Y$, and a stochastic matrix $p(y\mid x)$, the probability of observing $y$ when $x$ is sent. The channel is used $n$ times *without feedback* when
+
+$$p(y^n \mid x^n) = \prod_{i=1}^{n} p(y_i \mid x_i).$$
+
+The product form is the memorylessness: given the current input, the current output is independent of all earlier inputs and outputs.
+:::
+
 :::definition[Channel capacity]{#channel-capacity}
-For a discrete memoryless channel with transition probabilities $p(y|x)$, the capacity is
+The **(information) capacity** of a DMC is
 
 $$C = \max_{p(x)} I(X;Y),$$
 
-where the maximum is over all possible input distributions $p(x)$ and $I(X;Y)$ is the mutual information between input and output.
+the maximum taken over all probability distributions on the input alphabet, where $(X,Y)$ has joint law $p(x)p(y\mid x)$. A distribution attaining the maximum is a **capacity-achieving input distribution**.
 :::
 
-The maximizing distribution $p^*(x)$ is called the capacity-achieving input distribution. Note what the definition does: it hands the channel to you fixed, and lets you choose only how to drive it.
+Read the definition slowly, because each half of it does work. The channel $p(y\mid x)$ is given and cannot be altered — it is the physics. The input distribution $p(x)$ is ours to choose — it is the engineering. Capacity is the best correlation, measured in bits, that the engineering can manufacture against the physics.
 
 :::intuition
-Capacity answers: "What is the fastest speed (in bits per transmission) I can talk over this noisy link so that the listener can still understand me perfectly if I use a good enough code?"
-
-It is the largest mutual information you can create between what you send and what arrives.
+Mutual information $I(X;Y)$ measures how much the output tells you about the input. If the channel is useless, nothing you do with $p(x)$ makes $Y$ informative about $X$, and $C=0$. If the channel is clean, driving it with a uniform input makes $Y$ a perfect copy of $X$ and $C$ is as large as the alphabet allows. Capacity is what you get when you drive the channel in the way it likes best.
 :::
 
-:::example
-Consider the noiseless channel that simply copies the input, $Y = X$.
+The maximum in the definition is genuinely attained, which is worth recording once so that we may write $\max$ rather than $\sup$ everywhere afterwards.
+
+:::proposition[The maximum exists, and elementary bounds]{#capacity-exists}
+For any DMC, $I(X;Y)$ is a continuous, concave function of the input distribution $p(x)$ on the probability simplex, which is compact and convex. Consequently the maximum defining $C$ is attained, and
+
+$$0 \le C \le \min\{\log|\mathcal X|,\ \log|\mathcal Y|\}.$$
+:::
+
+:::proof
+Write $I(X;Y) = \sum_{x,y} p(x)p(y\mid x)\log\frac{p(y\mid x)}{\sum_{x'}p(x')p(y\mid x')}$. With $p(y\mid x)$ fixed this is a finite sum of continuous functions of $p(x)$ (continuous at the boundary because $t\log t \to 0$ as $t \to 0^{+}$), so $I$ is continuous on a compact set and attains its maximum.
+
+Concavity: $I(X;Y) = H(Y) - H(Y\mid X)$. The second term $H(Y\mid X) = \sum_x p(x) H(Y \mid X = x)$ is *linear* in $p(x)$, since each $H(Y\mid X=x)$ depends only on the fixed row $p(\cdot\mid x)$. The first term is $H$ evaluated at the output distribution $p(y) = \sum_x p(x)p(y\mid x)$, which is a linear image of $p(x)$; since $H$ is concave and a concave function composed with a linear map is concave, $H(Y)$ is concave in $p(x)$. A concave function minus a linear one is concave.
+
+Bounds: $I \ge 0$ always, so $C \ge 0$. Also $I(X;Y) = H(X) - H(X\mid Y) \le H(X) \le \log|\mathcal X|$, and symmetrically $I(X;Y) \le H(Y) \le \log |\mathcal Y|$.
+:::
+
+Concavity matters in practice as well as in principle: it makes the capacity problem a convex optimisation, so local search cannot get stuck in a false optimum. The Blahut–Arimoto algorithm exploits exactly this, alternating between the input distribution and the induced reverse channel and converging to $C$ for any DMC; we record its existence and do not prove convergence here.
+
+:::example[The noiseless channel]
+Compute the capacity of the channel with $\mathcal Y = \mathcal X$ and $Y = X$ with probability $1$.
 :::
 
 :::solution
-since $Y$ determines $X$ exactly, $H(X \mid Y) = 0$, so $I(X;Y) = H(X) - H(X\mid Y) = H(X)$.
-Step 2: maximize over input distributions. Entropy $H(X)$ over an alphabet $\mathcal X$ is largest when $X$ is uniform, giving $H(X) = \log|\mathcal X|$.
-Step 3: therefore $C = \max_{p(x)} I(X;Y) = \log|\mathcal X|$ bits per use — you can send one symbol per transmission perfectly.
-Concrete case: for a binary noiseless channel ($|\mathcal X| = 2$), $C = \log_2 2 = 1$ bit per use. Sanity check: one perfect bit per transmission is exactly what you'd expect from a wire that never lies.
+Since $Y$ determines $X$, $H(X\mid Y) = 0$ and $I(X;Y) = H(X)$. Maximising, $H(X) \le \log|\mathcal X|$ with equality for the uniform input, so
+
+$$C = \log |\mathcal X|.$$
+
+For $|\mathcal X| = 2$ this is $1$ bit per channel use: one perfect bit per transmission from a wire that never lies. The upper bound of the proposition above is met with equality, as it must be for a channel that wastes nothing.
 :::
 
-## The Binary Symmetric Channel (BSC)
+A large class of channels has its capacity computable in closed form by a symmetry argument, and the argument is worth isolating because the BSC, the noiseless channel, the noisy typewriter and the $q$-ary symmetric channel are all instances of it.
+
+:::definition[Symmetric and weakly symmetric channels]{#symmetric-channel}
+A DMC is **symmetric** if the rows of its transition matrix are permutations of one another and the columns are permutations of one another. It is **weakly symmetric** if the rows are permutations of one another and every column has the same sum.
+:::
+
+:::theorem[Capacity of a weakly symmetric channel]{#symmetric-capacity}
+For a weakly symmetric channel whose every row is a permutation of the vector $\mathbf r$,
+
+$$C = \log|\mathcal Y| - H(\mathbf r),$$
+
+and the uniform input distribution is capacity-achieving.
+:::
+
+:::proof
+For any input distribution, $H(Y\mid X) = \sum_x p(x)H(Y\mid X=x) = H(\mathbf r)$, because every row has the same entropy. Hence
+
+$$I(X;Y) = H(Y) - H(\mathbf r) \le \log|\mathcal Y| - H(\mathbf r),$$
+
+which bounds $C$ from above. For the lower bound take $X$ uniform. Then $p(y) = \frac{1}{|\mathcal X|}\sum_x p(y\mid x)$, and since every column of the matrix has the same sum $s$, we get $p(y) = s/|\mathcal X|$ for every $y$ — a constant, hence the uniform distribution on $\mathcal Y$. So $H(Y) = \log|\mathcal Y|$ and the upper bound is attained.
+:::
+
+:::example[The binary erasure channel]
+The **binary erasure channel** (BEC) has $\mathcal X = \{0,1\}$ and $\mathcal Y = \{0,1,e\}$; the input passes through unchanged with probability $1-\varepsilon$ and is replaced by the erasure symbol $e$ with probability $\varepsilon$. Compute its capacity.
+:::
+
+:::solution
+The BEC is *not* weakly symmetric (the erasure column has sum $2\varepsilon$ while the others have sum $1-\varepsilon$), so compute directly. Let $E$ be the indicator that an erasure occurred; $E$ is a function of $Y$ and is independent of $X$. Then
+
+$$H(X \mid Y) = H(X\mid Y, E) = \varepsilon\,H(X) + (1-\varepsilon)\cdot 0 = \varepsilon H(X),$$
+
+because given $E=1$ the output says nothing about $X$, and given $E=0$ it says everything. Therefore
+
+$$I(X;Y) = H(X) - \varepsilon H(X) = (1-\varepsilon)H(X) \le 1-\varepsilon,$$
+
+with equality for the uniform input. So the capacity of the erasure channel is $1-\varepsilon$ bits per use.
+:::
+
+The answer is the one an accountant would guess: a fraction $1-\varepsilon$ of the transmissions arrive, each carrying one bit, and the receiver knows exactly which ones were lost. That last clause is the whole difference between an erasure and an error, and it is why the BEC is the channel on which almost every modern code is analysed first.
+
+:::example[The noisy typewriter]
+A keyboard with $26$ keys prints the letter typed or the next letter cyclically, each with probability $1/2$. Find the capacity, and a code that attains it.
+:::
+
+:::solution
+Every row of the transition matrix is a permutation of $(\tfrac12,\tfrac12,0,\dots,0)$ and every column likewise, so the channel is symmetric and the weakly-symmetric formula applies with $H(\mathbf r) = 1$:
+
+$$C = \log 26 - 1 = \log 13 \approx 3.70 \text{ bits per use}.$$
+
+The value $\log 13$ hints at the code. Use only the $13$ letters $\mathrm{A}, \mathrm{C}, \mathrm{E},\dots$, every other one; then no two permitted inputs can produce the same output, decoding is exact with *zero* error, and the rate is $\log 13$. Here a capacity-achieving code is visible by inspection and needs no block length at all — a luxury no interesting channel provides.
+:::
+
+:::pitfall
+Capacity is a property of the channel alone, not of a code or a modulation scheme. "The capacity of my system is 10 Mbit/s because that is what it transmits" confuses the *rate in use* with the *supremum of achievable rates*. Equally, $C$ is measured per channel use; converting to bits per second requires knowing how many uses per second the physical channel supports.
+:::
+
+## The Binary Symmetric Channel
 
 <!-- section: binary-symmetric -->
 
+The binary symmetric channel is the fruit fly of coding theory: simple enough to analyse completely, rich enough that nearly every phenomenon in the subject appears in it first.
+
 :::definition[Binary symmetric channel]{#bsc}
-The BSC flips each transmitted bit independently with probability $p$, the crossover probability.
+The **binary symmetric channel** $\mathrm{BSC}(p)$ has $\mathcal X = \mathcal Y = \{0,1\}$ and flips each transmitted bit independently with **crossover probability** $p$:
+
+$$p(1\mid 0) = p(0\mid 1) = p, \qquad p(0\mid 0) = p(1\mid 1) = 1-p.$$
+:::
+
+:::notation
+The **binary entropy function** is $h_2(p) = -p\log p - (1-p)\log(1-p)$ for $p \in (0,1)$, with $h_2(0) = h_2(1) = 0$. It is concave, symmetric about $p = 1/2$, and $h_2(1/2) = 1$.
 :::
 
 :::theorem[Capacity of the BSC]{#bsc-capacity}
-The capacity of the binary symmetric channel with crossover probability $p$ is
+The capacity of $\mathrm{BSC}(p)$ is
 
-$$C = 1 - h_2(p),$$
+$$C = 1 - h_2(p) \text{ bits per channel use},$$
 
-where $h_2(p) = -p \log_2 p - (1-p)\log_2(1-p)$ is the binary entropy function. The optimal input is the uniform (fair coin) distribution.
+attained by the uniform input distribution.
 :::
 
-The formula reads as a subtraction of what the noise costs you: one bit per use is what a clean binary channel delivers, and $h_2(p)$ is the uncertainty the flip leaves behind.
+:::proof
+Let $Z \sim \mathrm{Bernoulli}(p)$ be the noise, independent of $X$, so that $Y = X \oplus Z$. Given $X = x$, $Y$ is $x \oplus Z$, so $H(Y \mid X = x) = H(Z) = h_2(p)$ for either value of $x$; hence $H(Y\mid X) = h_2(p)$ regardless of the input distribution, and
 
-:::intuition
-Even if the channel flips 10% of the bits, you can still send information at a positive rate (about 0.53 bits per transmission) by using error-correcting codes.
+$$I(X;Y) = H(Y) - h_2(p) \le 1 - h_2(p),$$
 
-When p=0.5 the channel is useless (pure noise) and C=0.
+since $Y$ is binary. Equality requires $H(Y) = 1$, that is $Y$ uniform, and taking $X$ uniform gives $\Pr[Y=1] = \tfrac12(1-p) + \tfrac12 p = \tfrac12$. So the bound is attained and $C = 1-h_2(p)$. (This is also the weakly symmetric formula $\log 2 - h_2(p)$.)
 :::
 
-:::example
-Take crossover probability $p = 0.11$.
+:::figure[Capacity of $\mathrm{BSC}(p)$. The curve $C = 1-h_2(p)$ falls from $1$ bit at $p=0$ to $0$ at $p=1/2$ and rises symmetrically again: only a channel that flips half its bits is useless. The marked point is the worked example, $p=0.11$ with $C\approx0.50$.]{#bsc-capacity-curve}
+{
+  "type": "plot",
+  "x": [0, 1],
+  "y": [0, 1.15],
+  "xTicks": 0.25,
+  "yTicks": 0.25,
+  "xLabel": "p",
+  "yLabel": "C",
+  "marks": [
+    { "kind": "function", "fn": "1 + (x*ln(x) + (1-x)*ln(1-x))/ln(2)", "tone": "accent" },
+    { "kind": "point", "at": [0.11, 0.5], "tone": "result" },
+    { "kind": "text", "at": [0.3, 0.72], "text": "C = 1 - h2(p)", "leaderTo": [0.05, 0.71] },
+    { "kind": "text", "at": [0.36, 0.28], "text": "p = 0.11", "leaderTo": [0.12, 0.49], "tone": "result" },
+    { "kind": "text", "at": [0.5, 0.1], "text": "useless channel" }
+  ]
+}
+:::
+
+The formula is a subtraction: one bit is what a clean binary channel delivers, and $h_2(p)$ is the number of bits per use that the noise consumes. Two features deserve comment. First, $C = 0$ exactly when $p = 1/2$; the output is then independent of the input and no coding can help. Second, $C$ is symmetric under $p \leftrightarrow 1-p$: a channel that flips almost every bit is as good as one that flips almost none, because the receiver can invert everything it receives. Only $p = 1/2$ is fatal.
+
+:::example[Numerical capacity of a noisy link]
+A link flips $11\%$ of its bits. How fast can it carry information reliably?
 :::
 
 :::solution
-Step 1 (binary entropy): $h_2(0.11) = -0.11\log_2 0.11 - 0.89\log_2 0.89$. Compute each term: $-0.11\log_2 0.11 = -0.11(-3.18) \approx 0.35$ and $-0.89\log_2 0.89 = -0.89(-0.168) \approx 0.15$.
-Step 2 (add): $h_2(0.11) \approx 0.35 + 0.15 = 0.50$ bits.
-Step 3 (capacity): $C = 1 - h_2(0.11) \approx 1 - 0.50 = 0.50$ bits per use.
-Interpretation and sanity check: even though $11\%$ of bits are flipped, a good code lets you transmit at $0.5$ bits per channel use with error probability as small as you like. As a check on the extremes, $p=0$ gives $h_2(0)=0$ and $C=1$ (perfect channel), while $p=0.5$ gives $h_2(0.5)=1$ and $C=0$ (useless channel) — and $0.11$ sits sensibly between them.
+Compute $h_2(0.11) = -0.11\log_2 0.11 - 0.89 \log_2 0.89$. Now $\log_2 0.11 = -3.184$ and $\log_2 0.89 = -0.1681$, so
+
+$$h_2(0.11) = 0.11(3.184) + 0.89(0.1681) = 0.3502 + 0.1496 = 0.4999.$$
+
+Hence $C = 1 - 0.4999 \approx 0.500$ bits per channel use. About half of every transmitted bit survives as information, so $1000$ message bits need at least about $2000$ channel uses. The extremes check out: $p=0$ gives $C=1$, $p=1/2$ gives $C=0$, and $0.11$ sits sensibly between.
+:::
+
+:::example[When repetition is not enough]
+The rate-$1/3$ repetition code sends each bit three times over $\mathrm{BSC}(0.11)$ and takes a majority vote. Compare its rate with capacity, and its error probability with what capacity permits.
+:::
+
+:::solution
+Its rate is $1/3 \approx 0.333 < 0.500 = C$, so the coding theorem promises that *some* code of this rate has vanishing error probability. The repetition code is not that code: majority decoding fails when two or three copies flip, so
+
+$$P_e = 3p^2(1-p) + p^3 = 3(0.0121)(0.89) + 0.00133 = 0.0323 + 0.0013 \approx 0.0336.$$
+
+Repeating five times drops this to about $0.0076$, but the rate falls to $0.2$. Repetition trades rate for reliability at a ruinous exchange: to drive $P_e \to 0$ it must drive $R \to 0$. Shannon's theorem asserts that a cleverer code holds $R$ at $0.49$ while $P_e \to 0$, and that is exactly the claim that made the theorem shocking.
+:::
+
+:::remark
+The previous example is the honest motivation for this whole chapter. Every code before 1948 had the repetition code's defect in milder form — reliability bought with rate — and the coding theorem says the defect is unnecessary.
 :::
 
 ## Gaussian Channels and the Shannon Limit
 
 <!-- section: gaussian -->
 
+Real channels are usually continuous: a waveform is sent, thermal noise is added, a waveform arrives. The continuous theory runs parallel to the discrete one, with entropy replaced by differential entropy $h(X) = -\int f(x)\log f(x)\,dx$, and one extra ingredient — a constraint on the input, since without one the capacity of a continuous channel is infinite.
+
+:::definition[Discrete-time AWGN channel]{#awgn}
+The **additive white Gaussian noise channel** has $Y_i = X_i + Z_i$ with $Z_i \sim \mathcal N(0, N)$ independent and identically distributed and independent of the input. Codewords must satisfy the average power constraint
+
+$$\frac1n \sum_{i=1}^n x_i^2 \le P.$$
+
+The ratio $\mathrm{SNR} = P/N$ is the signal-to-noise ratio.
+:::
+
+:::lemma[The Gaussian maximises differential entropy under a variance constraint]{#max-entropy-gaussian}
+If $\mathbb E[X^2] \le \sigma^2$ then $h(X) \le \tfrac12\log(2\pi e \sigma^2)$, with equality if and only if $X \sim \mathcal N(0,\sigma^2)$.
+:::
+
+:::proof
+Let $\varphi$ be the $\mathcal N(0,\sigma^2)$ density and $f$ any density with $\mathbb E_f[X^2]\le\sigma^2$. Relative entropy is non-negative:
+
+$$0 \le D(f\,\|\,\varphi) = \int f \log \frac{f}{\varphi} = -h(f) - \int f\log\varphi.$$
+
+Since $\log \varphi(x) = -\tfrac12\log(2\pi\sigma^2) - \frac{x^2}{2\sigma^2}\log e$, the integral $\int f\log\varphi$ depends on $f$ only through $\mathbb E_f[X^2] \le \sigma^2$, giving $-\int f \log\varphi \le \tfrac12\log(2\pi e\sigma^2)$. Rearranging yields $h(f)\le \tfrac12\log(2\pi e\sigma^2)$, with equality exactly when $D(f\,\|\,\varphi) = 0$, that is $f = \varphi$.
+:::
+
 :::theorem[Capacity of the AWGN channel]{#awgn-capacity}
-For the additive white Gaussian noise (AWGN) channel with average power constraint $P$ and noise variance $N$, so that $\text{SNR} = P/N$, the capacity in the appropriate normalization is
+The capacity of the discrete-time AWGN channel with power constraint $P$ and noise variance $N$ is
 
-$$C = \frac{1}{2} \log_2 (1 + \text{SNR}).$$
+$$C = \frac12 \log\left(1 + \frac{P}{N}\right) \text{ bits per channel use},$$
+
+achieved by $X \sim \mathcal N(0,P)$.
 :::
 
-This is the famous formula that shows capacity grows only logarithmically with signal power.
+:::proof
+Because the noise is additive and independent of the input, $h(Y\mid X) = h(Z) = \tfrac12\log(2\pi e N)$. Under the power constraint $\mathbb E[Y^2] = \mathbb E[X^2] + N \le P + N$, so the maximum-entropy lemma gives $h(Y) \le \tfrac12\log(2\pi e (P+N))$. Hence
 
-:::intuition
-Doubling power gives you less than 0.5 extra bits per transmission. To gain a full extra bit you need to roughly quadruple the power (6 dB).
+$$I(X;Y) = h(Y) - h(Z) \le \tfrac12 \log\frac{2\pi e(P+N)}{2\pi e N} = \tfrac12\log\left(1+\frac PN\right).$$
 
-This is why engineers care so much about bandwidth and clever coding rather than just "turning up the volume."
+Choosing $X\sim\mathcal N(0,P)$ makes $Y\sim\mathcal N(0,P+N)$ and turns both inequalities into equalities, so the information capacity is as claimed. That this quantity is also the *operational* capacity needs the coding theorem for continuous alphabets under a cost constraint, which we do not prove here; the argument is the random-coding proof of the next section with typicality replaced by its power-constrained variant.
 :::
 
-:::example
-Take $\text{SNR} = 7$ (which is $10\log_{10}7 \approx 8.5$ dB).
+:::corollary[Bandlimited capacity, the Shannon–Hartley formula]{#bandlimited-capacity}
+A channel of bandwidth $B$ hertz with received signal power $P$ and noise power spectral density $N_0/2$ supports $2B$ uses per second, and its capacity in bits per second is
+
+$$C = B\log\left(1 + \frac{P}{N_0 B}\right).$$
+:::
+
+This is the formula behind the practitioner's rules of thumb. Capacity grows only *logarithmically* in power but *linearly* in bandwidth — which is why spectrum is expensive and why turning up the transmit power is a poor way to buy rate.
+
+:::example[The cost of an extra bit]
+At $\mathrm{SNR} = 7$ (about $8.45$ dB), compute $C$, and compute how much extra power buys one more bit per use.
 :::
 
 :::solution
-form $1 + \text{SNR} = 8$.
-Step 2: $\log_2 8 = 3$ (since $2^3 = 8$).
-Step 3: $C = \tfrac{1}{2}\cdot 3 = 1.5$ bits per transmission. This is the ultimate speed limit for that power and noise level; no coding scheme can exceed it.
-Sanity check on the logarithmic law: double the power to $\text{SNR} = 14$. Then $C = \tfrac12\log_2 15 \approx \tfrac12(3.907) \approx 1.95$ bits — only $\approx 0.45$ extra bits for twice the power, confirming that gains shrink as power grows. To buy a full extra bit you would need $1 + \text{SNR}$ to quadruple, i.e. roughly $\text{SNR} \approx 4\times 8 - 1 = 31$ ($+6$ dB).
+$C = \tfrac12\log_2(1+7) = \tfrac12\log_2 8 = 1.5$ bits per use. Doubling the power to $\mathrm{SNR}=14$ gives $\tfrac12\log_2 15 = 1.954$ bits — only $0.45$ extra bits for twice the power. For a full extra bit we need $\tfrac12\log_2(1+\mathrm{SNR}') = 2.5$, so $1+\mathrm{SNR}' = 2^5 = 32$ and $\mathrm{SNR}' = 31$: a factor of $32/8 = 4$ in power, which is $6$ dB. At high SNR each extra bit per use costs $6$ dB.
+:::
+
+:::theorem[The Shannon limit on energy per bit]{#shannon-limit}
+Let $E_b$ be the energy per information bit, so that for spectral efficiency $R$ bits per real channel use, $\mathrm{SNR} = 2RE_b/N_0$. Reliable communication requires
+
+$$\frac{E_b}{N_0} \ge \frac{2^{2R}-1}{2R},$$
+
+and therefore, letting $R \to 0$,
+
+$$\frac{E_b}{N_0} \ge \ln 2 = 0.693 = -1.59 \text{ dB}.$$
+:::
+
+:::proof
+Reliability requires $R \le \tfrac12\log(1+2RE_b/N_0)$ by the AWGN capacity theorem. Exponentiating, $2^{2R} \le 1 + 2RE_b/N_0$, which rearranges to the displayed bound. The right-hand side is increasing in $R$, so its infimum is the limit as $R\to0$, where the expansion $2^{x} = 1 + x\ln 2 + O(x^2)$ gives $(2^{2R}-1)/(2R) \to \ln 2$.
+:::
+
+:::intuition
+No matter how much bandwidth you are given and how slowly you are willing to talk, each reliably delivered bit costs at least $0.693 N_0$ joules. That floor is independent of code, modulation and cleverness, and $-1.59$ dB is the number against which every deep-space link is measured.
+:::
+
+:::remark[Parallel channels and water-filling]
+For $k$ parallel independent Gaussian channels with noise variances $N_1,\dots,N_k$ and total power $P$, capacity is $\sum_i \tfrac12\log(1+P_i/N_i)$ maximised subject to $\sum_i P_i = P$. A Lagrange-multiplier calculation gives the **water-filling** solution $P_i = \max\{\nu - N_i,\,0\}$, with $\nu$ chosen so the powers sum to $P$: pour power into the quietest sub-channels until the combined level is flat, and give nothing at all to sub-channels noisier than $\nu$. This is why OFDM systems measure the channel and allocate bits per subcarrier instead of spreading power evenly.
 :::
 
 ## Common Mistakes
 
-- **Confusing capacity with the raw bit rate or symbol rate**: Capacity is the *reliable information* rate after optimal coding; you may send symbols faster but with higher error, or use bandwidth expansion.
-- **Thinking capacity is achieved by sending at the highest power all the time**: The optimal input distribution is often not the "full power" or uniform; water-filling is needed for parallel or frequency-selective channels.
-- **Forgetting that capacity is an asymptotic quantity**: It is achievable only in the limit of long block lengths; for short packets there is a penalty (finite-blocklength information theory).
-- **Believing that any code operating below C works**: The theorem says there *exist* codes that achieve low error; finding them (or good approximations) is the job of coding theory.
-- **Mixing capacity with rate-distortion**: Capacity is about reliable transmission (channel coding); rate-distortion is about lossy compression (source coding).
-- **Assuming the capacity formula for Gaussian is the same in continuous time without bandwidth**: The classic C = B log2(1+SNR) formula includes bandwidth B; the discrete-time version above normalizes to one use per "dimension."
+- **Confusing capacity with the raw symbol rate**: capacity is the supremum of *reliable* information rates after optimal coding. You may push symbols faster, but not information.
+- **Assuming the best input is always uniform**: uniform is optimal for weakly symmetric channels. For the Z-channel, or for parallel Gaussian channels, it is not; water-filling and Blahut–Arimoto exist because the general answer is not uniform.
+- **Forgetting that capacity is asymptotic**: it is approached as the block length grows. At short block lengths there is a real penalty, quantified by finite-blocklength theory.
+- **Reading achievability as a construction**: the theorem says good codes *exist*. Finding ones that can also be decoded quickly took fifty years.
+- **Mixing capacity with rate–distortion**: capacity is a *maximum* of $I(X;Y)$ over inputs (channel coding); the rate–distortion function is a *minimum* of $I$ over test channels (lossy source coding). Maximum versus minimum is the tell.
+- **Applying $C=B\log(1+\mathrm{SNR})$ to a discrete-time model**: the bandwidth form already counts uses per second; the discrete-time form is per use, and carries the factor $\tfrac12$ that two uses per hertz per second supplies.
 
-The noisy-channel coding theorem (or channel coding theorem) is Shannon's second great result. It proves that, as long as the transmission rate is kept below the channel capacity C, it is possible to communicate with arbitrarily high reliability (error probability → 0) by using sufficiently sophisticated codes and long block lengths.
+The definition of capacity as $\max_{p(x)} I(X;Y)$ is an *information* quantity: it is computed from the transition matrix and has, on the face of it, nothing to do with codes, messages or errors. The noisy-channel coding theorem is the assertion that this information quantity coincides with an entirely different, *operational* quantity — the supremum of rates at which messages can be pushed through the channel with vanishing error probability. That two such different definitions give the same number is the substance of the theorem and the reason it is one of the central results of the twentieth century.
 
-This was a revolutionary insight: noise does not impose a hard limit on reliability, only on *rate*.
-
-## Statement of the Theorem
+## The Coding Theorem: Statement and Consequences
 
 <!-- section: statement -->
 
-:::theorem[Noisy-channel coding theorem]{#channel-coding-theorem}
-Let a discrete memoryless channel have capacity $C$.
+We first make the operational side precise. A code is a pair of maps: one that turns a message into a block of channel inputs, and one that turns the received block back into a message.
 
-- **Achievability (direct part)**: for every rate $R < C$ there exists a sequence of codes with rate $R$ such that the maximum (or average) probability of decoding error $P_e \to 0$ as the block length $n \to \infty$.
-- **Converse (impossibility)**: for any rate $R > C$, every sequence of codes with rate $R$ has $P_e$ bounded away from zero (in fact $P_e \to 1$ for the strong converse on many channels).
+:::definition[Block code, rate, error probability]{#block-code}
+An $(M,n)$ **code** for a DMC consists of a message set $\{1,\dots,M\}$, an encoder $x^n : \{1,\dots,M\} \to \mathcal X^n$, and a decoder $g : \mathcal Y^n \to \{1,\dots,M\}$. Its **rate** is
+
+$$R = \frac{\log M}{n} \text{ bits per channel use}.$$
+
+The conditional error probability given message $w$ is $\lambda_w = \Pr[g(Y^n) \neq w \mid X^n = x^n(w)]$. The **maximal** error probability is $\lambda^{(n)} = \max_w \lambda_w$ and the **average** error probability is $P_e^{(n)} = \frac1M\sum_{w} \lambda_w$, the latter being the error probability when the message is uniform.
 :::
 
-The theorem is an existence result on one side and an impossibility result on the other, and the two meet exactly at $C$. Everything in the rest of this chapter is an attempt to make the first half constructive.
+:::definition[Achievable rate and operational capacity]{#achievable-rate}
+A rate $R$ is **achievable** if there is a sequence of $(\lceil 2^{nR}\rceil, n)$ codes with $\lambda^{(n)} \to 0$ as $n\to\infty$. The **operational capacity** of the channel is the supremum of achievable rates.
+:::
+
+:::theorem[Noisy-channel coding theorem]{#channel-coding-theorem}
+For a discrete memoryless channel, the operational capacity equals the information capacity $C = \max_{p(x)}I(X;Y)$. Explicitly:
+
+- **Achievability.** For every $R < C$ there exists a sequence of $(\lceil 2^{nR}\rceil,n)$ codes with maximal error probability $\lambda^{(n)} \to 0$.
+- **Converse.** Every sequence of $(\lceil 2^{nR}\rceil,n)$ codes with $\lambda^{(n)}\to0$ must have $R \le C$.
+:::
 
 :::intuition
-If you speak slowly enough (rate < C), you can make yourself understood perfectly over a noisy phone line by using a good "code" (repeating in clever ways, using error-correcting language).
-
-If you try to speak faster than C, no amount of cleverness can prevent misunderstandings from happening a positive fraction of the time.
+Speak slower than $C$ and, with a clever enough code, you can be understood perfectly over an arbitrarily bad line. Speak faster than $C$ and no cleverness prevents a fixed fraction of misunderstandings. The line's noise sets a speed limit, not a reliability limit.
 :::
 
-:::example
-A BSC with C = 0.5 bits per use. You can send 1000 information bits reliably by using a code of length roughly 2200 or more (rate ≈0.45 < 0.5). With a good modern code the block error probability can be made 10^{-6} or lower. At rate 0.6 > C the same 1000 bits would require only ~1667 transmissions, but then Pe cannot be made small no matter what code you choose.
+The converse as stated is the **weak converse**: it says that if the error probability tends to zero then $R\le C$. A stronger statement is true for every DMC.
+
+:::theorem[Strong converse, Wolfowitz]{#strong-converse}
+For any DMC and any $R > C$, every sequence of $(\lceil 2^{nR}\rceil,n)$ codes has $P_e^{(n)} \to 1$ as $n \to \infty$; indeed $1 - P_e^{(n)}$ decays exponentially in $n$.
 :::
 
-## Achievability Sketch (Random Coding)
+:::remark[Why the distinction matters]
+The weak converse leaves open a possibility that sounds harmless but is not: that above capacity one might still communicate with error probability stuck at, say, $0.01$ — poor, but useful. The strong converse rules this out. Above $C$ the channel is not merely unreliable but asymptotically useless, with the decoder eventually right only as often as random guessing. The two converses therefore describe quite different pictures of what happens beyond capacity, and $C$ is a threshold in the sharp sense only because the strong converse holds. We do not prove the strong converse here; the standard proof bounds the number of codewords whose decoding regions can each capture non-vanishing probability, using the fact that a typical decoding region has probability about $2^{-n(C-\delta)}$ under the wrong codeword's law.
+:::
+
+Two corollaries of the theorem are used constantly, often without being stated. The first concerns what happens when a source is to be sent over a channel, rather than an abstract message set.
+
+:::theorem[Joint source–channel separation]{#separation-theorem}
+Let a discrete stationary ergodic source with entropy rate $H$ produce one symbol per channel use, and let the channel be a DMC of capacity $C$. Then the source can be transmitted with vanishing probability of reconstruction error if $H < C$; and if $H > C$, the probability of error is bounded away from zero for every scheme. Moreover, when $H < C$ a **separate** design — compress to $H$ bits with a source code, then protect those bits with a channel code — is asymptotically optimal.
+:::
+
+:::proof
+Sufficiency. If $H < C$, choose $R$ with $H < R < C$. By the source coding theorem the source can be represented with $nR$ bits with error probability $\to 0$; by the achievability half of the coding theorem those $nR$ bits cross the channel with error probability $\to 0$. A union bound on the two error events gives a vanishing total.
+
+Necessity. Let $V^n$ be the source block and $\hat V^n$ the reconstruction. Fano's inequality (proved in the next section) applied to the source alphabet gives $H(V^n\mid \hat V^n) \le 1 + P_e^{(n)} n\log|\mathcal V|$. Hence
+
+$$nH \le H(V^n) = I(V^n;\hat V^n) + H(V^n\mid\hat V^n) \le I(X^n;Y^n) + 1 + P_e^{(n)}n\log|\mathcal V| \le nC + 1 + P_e^{(n)}n\log|\mathcal V|,$$
+
+using the data-processing inequality along the chain $V^n \to X^n \to Y^n \to \hat V^n$ and the memoryless bound proved in the next section. Dividing by $n$ and letting $n\to\infty$ shows $P_e^{(n)} \not\to 0$ when $H > C$.
+:::
+
+:::remark[What separation does not say]
+Separation is a statement about asymptotics in a point-to-point setting with a stationary source. It fails, or becomes merely suboptimal, in three practically important regimes: at short block lengths, where joint designs beat separate ones; over networks (broadcast, multiple access), where joint source–channel coding can strictly outperform separation; and under delay constraints. The theorem is why a modem and a compressor can be designed by different teams, and the exceptions are why video-over-wireless engineers still argue about it.
+:::
+
+:::example[Can this source cross this channel?]
+A source emits i.i.d. symbols from a four-letter alphabet with probabilities $(\tfrac12,\tfrac14,\tfrac18,\tfrac18)$, one symbol per use of a $\mathrm{BSC}(0.11)$. Is reliable transmission possible?
+:::
+
+:::solution
+The entropy rate is
+
+$$H = \tfrac12(1) + \tfrac14(2) + \tfrac18(3) + \tfrac18(3) = 0.5+0.5+0.375+0.375 = 1.75 \text{ bits per symbol}.$$
+
+The channel has $C = 1-h_2(0.11) \approx 0.500$ bits per use. Since $H = 1.75 > 0.500 = C$, the separation theorem says reliable transmission is impossible at one source symbol per channel use. It becomes possible if we slow down: sending one source symbol per $k$ channel uses needs $H < kC$, so $k \ge 4$ suffices ($4 \times 0.5 = 2 > 1.75$).
+:::
+
+## Achievability: Random Coding and Joint Typicality
 
 <!-- section: achievability -->
 
-Shannon's proof of achievability is famous for not building a code at all: it builds a *random* one and shows the average code is good, so at least one good code must exist.
+Shannon's proof of achievability is the most famous non-constructive argument in engineering. It does not build a code. It puts a probability distribution on the set of all codes, computes the *average* error probability over that distribution, shows the average is small, and concludes that at least one code in the ensemble is at least as good as the average. The reason this is easier than construction is that a random codebook has no structure to reason about, and having no structure is precisely what makes the calculation possible.
+
+The machinery is a two-dimensional version of the asymptotic equipartition property.
+
+:::definition[Jointly typical set]{#jointly-typical}
+For a joint distribution $p(x,y)$ and $\epsilon>0$, the **jointly typical set** $A_\epsilon^{(n)}$ is the set of pairs $(x^n,y^n)$ with
+
+$$\left|-\tfrac1n\log p(x^n) - H(X)\right| < \epsilon, \quad \left|-\tfrac1n\log p(y^n) - H(Y)\right| < \epsilon, \quad \left|-\tfrac1n\log p(x^n,y^n) - H(X,Y)\right| < \epsilon,$$
+
+where $p(x^n,y^n) = \prod_i p(x_i,y_i)$.
+:::
+
+:::theorem[Joint AEP]{#joint-aep}
+Let $(X^n,Y^n)$ be i.i.d. according to $p(x,y)$. Then
+
+1. $\Pr[(X^n,Y^n) \in A_\epsilon^{(n)}] \to 1$ as $n\to\infty$;
+2. $|A_\epsilon^{(n)}| \le 2^{n(H(X,Y)+\epsilon)}$;
+3. if $(\tilde X^n, \tilde Y^n) \sim p(x^n)p(y^n)$ — the same marginals, but *independent* — then
+
+$$\Pr\!\left[(\tilde X^n,\tilde Y^n)\in A_\epsilon^{(n)}\right] \le 2^{-n(I(X;Y)-3\epsilon)}.$$
+:::
 
 :::proof
-Generate a random codebook of $M = 2^{nR}$ codewords, each symbol drawn i.i.d. from the capacity-achieving input distribution. To send message $m$, transmit the $m$-th codeword. The decoder, upon receiving $y^n$, looks for the unique codeword that is jointly typical with $y^n$ (or within a certain distance).
+(1) Each of the three conditions is a statement that a sample mean of i.i.d. terms — $-\log p(X_i)$, $-\log p(Y_i)$, $-\log p(X_i,Y_i)$ — is within $\epsilon$ of its expectation, which are $H(X)$, $H(Y)$, $H(X,Y)$. By the weak law of large numbers each fails with probability $\to 0$, and a union bound over the three handles the conjunction.
 
-There are two error events. The true codeword may fail to be typical with $y^n$, which vanishes by the AEP; or some wrong codeword may be jointly typical, which a union bound over the $M-1$ wrong codewords controls, each contributing probability about $2^{-nI}$. Since $M 2^{-nI} \to 0$ when $R < I \le C$, the total error probability vanishes.
+(2) Since $1 \ge \sum_{A_\epsilon^{(n)}} p(x^n,y^n) \ge |A_\epsilon^{(n)}| \, 2^{-n(H(X,Y)+\epsilon)}$, rearranging gives the bound.
+
+(3) Summing the product of marginals over the jointly typical set and using the typicality bounds $p(x^n)\le 2^{-n(H(X)-\epsilon)}$ and $p(y^n)\le2^{-n(H(Y)-\epsilon)}$ valid on $A_\epsilon^{(n)}$,
+
+$$\Pr[(\tilde X^n,\tilde Y^n)\in A_\epsilon^{(n)}] = \sum_{A_\epsilon^{(n)}} p(x^n)p(y^n) \le 2^{n(H(X,Y)+\epsilon)} 2^{-n(H(X)-\epsilon)}2^{-n(H(Y)-\epsilon)} = 2^{-n(I(X;Y)-3\epsilon)},$$
+
+because $H(X)+H(Y)-H(X,Y) = I(X;Y)$.
 :::
 
-:::intuition
-Throw a huge number of random "sentences" into a codebook.
+Part (3) is the engine of the whole proof. It says that an unrelated codeword looks jointly typical with the received block only with probability about $2^{-nI}$; so we may afford about $2^{nI}$ codewords before one of them is confused with the truth by accident.
 
-Send the sentence corresponding to your message.
-
-At the receiver, look for the sentence that "matches" the noisy received signal according to the joint statistics.
-
-Because random sentences are unlikely to look like the received one by accident, the correct one stands out, provided you didn't pack too many sentences (R < C).
+:::theorem[Achievability half of the coding theorem]{#achievability}
+For every $R < C$ there exists a sequence of $(\lceil2^{nR}\rceil,n)$ codes with maximal error probability $\lambda^{(n)}\to0$.
 :::
 
-:::example
-Specialize the random-coding argument to a BSC with crossover $p$, where typicality decoding becomes "find the codeword within Hamming distance $\approx pn$ of the received vector $\mathbf y$."
+:::proof
+Fix an input distribution $p(x)$ achieving $C$ and a rate $R < C$; choose $\epsilon>0$ with $R < I(X;Y) - 3\epsilon$.
+
+*Random codebook.* Generate $M = \lceil 2^{nR}\rceil$ codewords, each of the $nM$ symbols drawn independently according to $p(x)$. Reveal the codebook to both encoder and decoder. To send $w$, transmit $x^n(w)$.
+
+*Typicality decoding.* On receiving $y^n$, the decoder declares $\hat w$ if $\hat w$ is the *unique* index with $(x^n(\hat w), y^n) \in A_\epsilon^{(n)}$; if there is no such index or more than one, it declares an error.
+
+*Average error over codebooks.* By the symmetry of the random construction, the average of $P_e^{(n)}$ over codebooks does not depend on which message was sent, so assume $W=1$ was sent. An error requires at least one of
+
+$$E_1 = \{(X^n(1),Y^n)\notin A_\epsilon^{(n)}\}, \qquad E_j = \{(X^n(j),Y^n)\in A_\epsilon^{(n)}\} \ \ (j = 2,\dots,M).$$
+
+$\Pr[E_1]\to 0$ by part (1) of the joint AEP. For $j \neq 1$, $X^n(j)$ was generated independently of $X^n(1)$ and hence of $Y^n$, so the pair $(X^n(j),Y^n)$ has the product-of-marginals law and part (3) applies: $\Pr[E_j]\le 2^{-n(I(X;Y)-3\epsilon)}$. By the union bound,
+
+$$\overline{P_e^{(n)}} \le \Pr[E_1] + (M-1)2^{-n(I-3\epsilon)} \le \Pr[E_1] + 2^{nR}2^{-n(I-3\epsilon)} = \Pr[E_1] + 2^{-n(I-3\epsilon-R)}.$$
+
+Because $R < I - 3\epsilon$ the exponent is negative and both terms vanish; choose $n$ large enough that $\overline{P_e^{(n)}} < \epsilon/2$.
+
+*From average to a single code.* Since the average over the ensemble is below $\epsilon/2$, some particular codebook $\mathcal C^*$ has $P_e^{(n)}(\mathcal C^*) < \epsilon/2$.
+
+*From average error to maximal error (expurgation).* $P_e^{(n)} < \epsilon/2$ means the *mean* of $\lambda_1,\dots,\lambda_M$ is below $\epsilon/2$. By Markov's inequality at most half the codewords can have $\lambda_w \ge \epsilon$. Delete them. The surviving code has $M/2$ codewords, all with $\lambda_w<\epsilon$, and rate $\frac{\log(M/2)}{n} = R - \frac1n$, which tends to $R$. Hence rates arbitrarily close to $C$ are achievable with vanishing *maximal* error.
+:::
+
+:::remark[What the proof does and does not give]
+It gives existence, an exponentially small error probability, and the correct threshold. It gives no code one could build: storing a random codebook of rate $1/2$ and length $1000$ needs $2^{500}$ codewords, and typicality decoding compares the received block against every one of them. The gap between this proof and a usable code is the subject of the rest of the chapter.
+:::
+
+:::example[Random coding specialised to the BSC]
+Carry out the achievability argument concretely on $\mathrm{BSC}(p)$, where joint typicality decoding becomes "find the unique codeword within Hamming distance about $pn$ of $\mathbf y$".
 :::
 
 :::solution
-Step 1 (size of the noise ball): a received word typically lands about $pn$ flips from the sent codeword, and the number of length-$n$ words within that radius is $\approx 2^{n h_2(p)}$ (the volume of a Hamming ball).
-Step 2 (chance a random wrong codeword lands in that ball): each of the $M-1 = 2^{nR}-1$ other codewords is uniform over $2^n$ words, so the probability one particular wrong codeword falls in the ball is $\approx 2^{n h_2(p)}/2^n = 2^{-n(1-h_2(p))}$.
-Step 3 (union bound over all wrong codewords): total error probability $\lesssim 2^{nR}\cdot 2^{-n(1-h_2(p))} = 2^{-n(1 - h_2(p) - R)} = 2^{-n(C - R)}$, using $C = 1 - h_2(p)$.
-Step 4 (conclude): whenever $R < C$ the exponent $C - R$ is positive, so this bound $\to 0$ exponentially in $n$. Sanity check: at $R = C$ the exponent vanishes and the argument no longer guarantees reliability — exactly the boundary the theorem predicts.
+Take the codewords uniform on $\{0,1\}^n$ (the capacity-achieving input is uniform). The received word lies, with high probability, at distance close to $pn$ from the transmitted codeword, so decode to any codeword in the Hamming ball $B(\mathbf y, pn)$.
+
+The number of words in a ball of radius $pn$ is $\sum_{i\le pn}\binom ni \doteq 2^{nh_2(p)}$ (see the ball-volume lemma later in this chapter). A wrong codeword is uniform on $\{0,1\}^n$, so it lands in that ball with probability
+
+$$\frac{2^{nh_2(p)}}{2^n} = 2^{-n(1-h_2(p))} = 2^{-nC}.$$
+
+Union bounding over the $M-1 < 2^{nR}$ wrong codewords gives total error probability at most $2^{-n(C-R)}$ plus the vanishing probability that the noise itself is atypical. For $R<C$ this decays exponentially, at rate $C-R$; at $R=C$ the exponent vanishes, which is exactly where the argument — and the theorem — stops.
 :::
 
-## The Converse
+:::intuition
+Picture $2^n$ possible received words as a space, and around each codeword a ball of $2^{nh_2(p)}$ words the noise could plausibly produce. Reliable decoding needs the balls to be essentially disjoint, so the number of codewords is at most $2^n / 2^{nh_2(p)} = 2^{n(1-h_2(p))}$. Capacity is a sphere-packing count.
+:::
+
+## The Converse and Fano's Inequality
 
 <!-- section: converse -->
 
-The converse is an accounting argument: the channel is a pipe of a fixed width, and a rate above $C$ asks it to carry more than it holds.
+The converse is an accounting argument. The channel is a pipe of fixed width; a rate above $C$ asks it to carry more than it holds. Making this precise needs two lemmas: one bounding how much a DMC can convey in $n$ uses, and one converting "the decoder is usually right" into "the message has little residual uncertainty".
+
+:::lemma[$n$ uses of a DMC convey at most $nC$]{#n-uses}
+For any code used on a DMC without feedback, $I(X^n;Y^n) \le nC$.
+:::
 
 :::proof
-Suppose a code of rate $R > C$ exists with small $P_e$. Then the mutual information satisfies $I(X^n; Y^n) \ge nR - o(n)$, because the message is essentially recovered from $Y^n$. But by the chain rule, the data processing inequality and the memoryless property,
+Since the channel is memoryless, $H(Y^n\mid X^n) = \sum_i H(Y_i\mid X_i)$. Then
 
-$$I(X^n;Y^n) \le nC,$$
+$$I(X^n;Y^n) = H(Y^n) - H(Y^n\mid X^n) \le \sum_{i=1}^n H(Y_i) - \sum_{i=1}^n H(Y_i\mid X_i) = \sum_{i=1}^n I(X_i;Y_i) \le nC,$$
 
-which is a contradiction for large $n$ when $R > C$.
+where the first inequality is subadditivity of entropy ($H(Y^n)\le\sum_i H(Y_i)$) and the last step is the definition of $C$ as a maximum over input distributions, applied to each marginal.
 :::
 
-Fano's inequality is what makes "essentially recovered" quantitative: $H(\text{message} \mid \widehat{\text{message}}) \le 1 + P_e\, nR$, which forces the mutual information to be large only when $P_e$ is small.
+:::lemma[Fano's inequality]{#fano}
+Let $W$ take values in a finite set $\mathcal W$ and let $\hat W = g(Y)$ be an estimate with error probability $P_e = \Pr[\hat W \neq W]$. Then
+
+$$H(W \mid \hat W) \le h_2(P_e) + P_e \log(|\mathcal W|-1) \le 1 + P_e\log|\mathcal W|.$$
+:::
+
+:::proof
+Let $E = \mathbb 1\{\hat W \neq W\}$. Expand $H(E,W\mid \hat W)$ two ways. Since $E$ is a function of $(W,\hat W)$,
+
+$$H(E,W\mid\hat W) = H(W\mid \hat W) + H(E \mid W,\hat W) = H(W\mid\hat W).$$
+
+Expanding in the other order,
+
+$$H(E,W\mid \hat W) = H(E\mid \hat W) + H(W\mid E,\hat W) \le h_2(P_e) + H(W \mid E, \hat W),$$
+
+using $H(E\mid\hat W)\le H(E) = h_2(P_e)$. For the last term, condition on the two values of $E$: given $E=0$ we have $W=\hat W$ and the conditional entropy is $0$; given $E=1$, $W$ lies in a set of at most $|\mathcal W|-1$ values, so its conditional entropy is at most $\log(|\mathcal W|-1)$. Weighting by $\Pr[E=0]=1-P_e$ and $\Pr[E=1] = P_e$ gives $H(W\mid E,\hat W) \le P_e\log(|\mathcal W|-1)$. Combining the two expansions yields the claim; the cruder form follows from $h_2 \le 1$ and $\log(|\mathcal W|-1)\le\log|\mathcal W|$.
+:::
 
 :::intuition
-If the receiver can recover the message with high probability, then the channel must have carried almost all the bits of the message (nR bits of information).
-
-But the channel can carry at most nC bits of information in n uses, by definition of C.
-
-Hence you cannot have both high rate and high reliability.
+Fano's inequality is the quantitative form of "if you can usually guess it, it cannot have been very uncertain". If the decoder is right with probability $1-P_e$, then at most $h_2(P_e)$ bits are needed to say *whether* it erred and at most $\log|\mathcal W|$ further bits to say *what* the truth was in the rare case that it did.
 :::
 
-:::example
-Make the converse bound quantitative for a BSC with $C = 0.5$ bits per use, and suppose we try to communicate at rate $R = 0.6 > C$.
+:::theorem[Converse half of the coding theorem]{#converse}
+Any sequence of $(\lceil2^{nR}\rceil,n)$ codes for a DMC with $P_e^{(n)}\to0$ satisfies $R\le C$. Equivalently, for a code of rate $R$ used on a channel of capacity $C$,
+
+$$P_e^{(n)} \ge 1 - \frac{C}{R} - \frac{1}{nR}.$$
+:::
+
+:::proof
+Take $W$ uniform on $\{1,\dots,M\}$ with $M = \lceil 2^{nR}\rceil$, so $H(W) = \log M = nR$. The message determines the input, and the decoder's output is a function of $Y^n$, so $W \to X^n \to Y^n \to \hat W$ is a Markov chain. Then
+
+$$nR = H(W) = H(W\mid \hat W) + I(W;\hat W) \le \big(1 + P_e^{(n)}nR\big) + I(X^n;Y^n) \le 1 + P_e^{(n)}nR + nC,$$
+
+using Fano's inequality for the first term, the data-processing inequality $I(W;\hat W)\le I(X^n;Y^n)$ for the second, and the memoryless bound lemma for the third. Dividing by $nR$ and rearranging gives the displayed bound on $P_e^{(n)}$. If $P_e^{(n)}\to0$, letting $n\to\infty$ in $R \le C + \frac1n + P_e^{(n)}R$ gives $R\le C$.
+:::
+
+:::example[The error floor above capacity]
+A BSC has $C = 0.5$ bits per use and we insist on transmitting at $R = 0.6$. How small can the error probability be made?
 :::
 
 :::solution
-Step 1 (Fano, per use): Fano's inequality gives $H(W \mid \hat W) \le 1 + P_e\, nR$, where $W$ is the length-$nR$ message. Combined with $I(W;\hat W) = nR - H(W\mid \hat W)$ and the pipe bound $I(W;\hat W) \le I(X^n;Y^n) \le nC$, we get $nR \le nC + 1 + P_e\, nR$.
-Step 2 (divide by $n$): $R \le C + \tfrac1n + P_e R$, so $P_e \ge 1 - \dfrac{C}{R} - \dfrac{1}{nR}$.
-Step 3 (plug in $C=0.5$, $R=0.6$): $P_e \ge 1 - \dfrac{0.5}{0.6} - \dfrac{1}{0.6\,n} = 0.1\overline{6} - \dfrac{1.6\overline{6}}{n}$.
-Step 4 (take $n\to\infty$): the vanishing $1/n$ term drops out and $P_e \ge 1 - C/R \approx 0.167 > 0$, a strictly positive floor no matter how long the code. The "information pipe" ($nC$ bits) is simply not wide enough to carry the $nR$ message bits reliably.
+By the converse bound, $P_e^{(n)} \ge 1 - \frac{0.5}{0.6} - \frac{1}{0.6n} = 0.1667 - \frac{1.667}{n}$. As $n\to\infty$ the correction vanishes and
+
+$$P_e \ge 1 - C/R \approx 0.167.$$
+
+No code of any length, complexity or cleverness can push the error below about one block in six. (The strong converse says more: the true behaviour is $P_e\to1$, so the weak converse's floor of $0.167$ is far from tight — it is merely what the simple argument delivers.)
+:::
+
+:::pitfall
+The weak converse's bound $P_e \ge 1 - C/R$ is often misquoted as "the best achievable error probability above capacity". It is only a *lower* bound, and a loose one; the strong converse shows the truth is $P_e \to 1$. Lower bounds on error are not predictions of performance.
+:::
+
+:::summary
+Capacity is simultaneously an information quantity, $\max_{p(x)}I(X;Y)$, and an operational one, the largest rate with vanishing error. Achievability comes from random coding plus joint typicality plus expurgation; the converse comes from Fano's inequality plus the memoryless bound $I(X^n;Y^n)\le nC$. Separation lets source and channel coding be designed independently when $H<C$.
 :::
 
 ## Common Mistakes
 
-- **Thinking the theorem says you can send at rate C with zero error**: At exactly C the behavior is more subtle (strong converse says Pe→1 for most channels); the theorem guarantees rates *strictly below* C.
-- **Confusing the theorem with the existence of practical codes**: The original proof is non-constructive (random coding). Building codes that approach C with reasonable complexity took 50 years (turbo/LDPC/polar codes).
-- **Believing capacity is a hard speed limit like the speed of light for every transmission**: For short messages the effective reliable rate is lower; finite-blocklength theory quantifies the back-off.
-- **Mixing up source coding and channel coding limits**: Source coding removes redundancy; channel coding adds the right kind of redundancy. The separation theorem says you can do them separately and still achieve the combined limit H/C.
-- **Assuming the theorem applies only to BSC or Gaussian channels**: It holds for any discrete memoryless channel (and many others with memory or continuous alphabets under technical conditions).
-- **Forgetting that capacity is per channel use**: When the physical channel has a bandwidth, you multiply by the number of uses per second to get bits per second.
+- **Reading the theorem as "zero error at rate $C$"**: the guarantee is for rates *strictly below* $C$, with error tending to zero as $n$ grows, never exactly zero at finite length (except in degenerate cases like the noisy typewriter).
+- **Confusing average with maximal error probability**: the random-coding argument controls the *average*; expurgation is the extra step that converts it to a maximal-error guarantee at the cost of one bit of rate.
+- **Forgetting that $A_\epsilon^{(n)}$ requires all three conditions**: marginal typicality of $x^n$ and of $y^n$ does not imply joint typicality, and it is the joint condition that produces the $2^{-nI}$ bound.
+- **Applying Fano's inequality with the wrong alphabet**: the $\log|\mathcal W|$ term is the log of the *message* set size, which is $nR$ for a rate-$R$ code — using $\log 2$ instead loses the whole argument.
+- **Believing achievability gives a decoder**: typicality decoding compares against every codeword and is exponential in $n$. Practical decoding needs structure, which random codes deliberately lack.
+- **Assuming separation always holds**: it is a point-to-point, asymptotic, stationary-source theorem. Networks, delay constraints and short blocks all break it.
 
-In any real communication or storage system, noise, interference, or hardware faults can flip bits. Error detection tells the receiver "something is wrong"; error correction goes further and recovers the original message. The theory of error-correcting codes quantifies how much redundancy is needed to achieve a target reliability.
+Shannon's theorem promises codes; it does not deliver them. The rest of this chapter is about the codes themselves, and it starts where coding theory started, with a geometric question: how do you place $M$ points in the cube $\{0,1\}^n$ so that noise moving a point a little cannot make it look like a different point?
 
-Claude Shannon's noisy-channel coding theorem guarantees that reliable communication is possible below channel capacity, but practical codes must approach that limit with reasonable complexity.
-
-## Errors in Communication
+## Distance, Errors and Decoding
 
 <!-- section: errors-in-communication -->
 
-A binary symmetric channel (BSC) with crossover probability $p$ flips each transmitted bit independently with probability $p$. To reason about what that does to a codeword we need a way to measure how far apart two bit strings are.
+The binary symmetric channel flips bits, so the natural measure of how much damage the channel has done is the number of positions that changed.
 
-:::definition[Hamming distance]{#hamming-distance}
-The Hamming distance between two vectors $\mathbf{x}$ and $\mathbf{y}$ is the number of positions in which they differ:
+:::definition[Hamming weight and distance]{#hamming-distance}
+For $\mathbf x, \mathbf y \in \mathbb F_2^n$, the **Hamming weight** $w(\mathbf x)$ is the number of nonzero coordinates, and the **Hamming distance** is
 
-$$d(\mathbf{x}, \mathbf{y}) = |\{ i : x_i \neq y_i \}| = w(\mathbf{x} - \mathbf{y}),$$
-
-where $w$ is the Hamming weight, the number of 1s.
+$$d(\mathbf x,\mathbf y) = |\{i : x_i \neq y_i\}| = w(\mathbf x - \mathbf y).$$
 :::
 
-:::definition[Code and minimum distance]{#minimum-distance}
-A code $\mathcal{C}$ is a subset of $\{0,1\}^n$. Its minimum distance is
-
-$$d = \min_{\mathbf{c} \neq \mathbf{c}'} d(\mathbf{c},\mathbf{c}').$$
+:::proposition[Hamming distance is a metric]{#hamming-metric}
+$d$ is a metric on $\mathbb F_2^n$: it is non-negative, vanishes only when $\mathbf x = \mathbf y$, is symmetric, and satisfies the triangle inequality $d(\mathbf x,\mathbf z) \le d(\mathbf x,\mathbf y) + d(\mathbf y,\mathbf z)$.
 :::
 
-:::proposition[Error capability from minimum distance]{#error-capability}
-A code of minimum distance $d$ can detect up to $d-1$ errors and correct up to
+:::proof
+Only the triangle inequality needs an argument. If $x_i \neq z_i$ then $y_i$ cannot equal both $x_i$ and $z_i$, so position $i$ is counted in $d(\mathbf x,\mathbf y)$ or in $d(\mathbf y,\mathbf z)$ (possibly both). Hence every position counted on the left is counted at least once on the right.
+:::
 
-$$t = \left\lfloor \frac{d-1}{2} \right\rfloor$$
+Metric structure is what licenses the geometric language — balls, packing, covering — used for the rest of the chapter.
 
-errors.
+:::definition[Code, rate, minimum distance]{#minimum-distance}
+A **code** of length $n$ is a subset $\mathcal C \subseteq \mathbb F_2^n$ with $|\mathcal C| = M \ge 2$ codewords; its **rate** is $R = \frac{\log M}{n}$. Its **minimum distance** is
+
+$$d = \min_{\mathbf c \neq \mathbf c' \in \mathcal C} d(\mathbf c, \mathbf c').$$
+
+A code of length $n$, size $2^k$ and minimum distance $d$ is called an $(n,k,d)$ code.
+:::
+
+:::definition[Nearest-neighbour decoding]{#nearest-neighbour}
+The **nearest-neighbour** (minimum-distance) decoder maps a received word $\mathbf r$ to a codeword $\mathbf c$ minimising $d(\mathbf r,\mathbf c)$, breaking ties arbitrarily.
+:::
+
+:::proposition[Nearest-neighbour decoding is maximum likelihood on the BSC]{#nn-is-ml}
+On $\mathrm{BSC}(p)$ with $p < 1/2$, the nearest-neighbour decoder is a maximum-likelihood decoder.
+:::
+
+:::proof
+If $\mathbf c$ is sent and $\mathbf r$ received at distance $t = d(\mathbf r,\mathbf c)$, then
+
+$$\Pr[\mathbf r \mid \mathbf c] = p^{t}(1-p)^{n-t} = (1-p)^n\left(\frac{p}{1-p}\right)^{t}.$$
+
+Since $p<1/2$ we have $p/(1-p) < 1$, so the likelihood is strictly decreasing in $t$. Maximising the likelihood is therefore minimising $t$.
+:::
+
+:::theorem[Detection and correction capability]{#error-capability}
+Let $\mathcal C$ have minimum distance $d$. Then
+
+1. $\mathcal C$ detects every error pattern of weight at most $d-1$;
+2. $\mathcal C$ corrects every error pattern of weight at most $t = \left\lfloor \frac{d-1}{2}\right\rfloor$ under nearest-neighbour decoding;
+3. both bounds are tight: some pattern of weight $d$ is undetectable and some pattern of weight $t+1$ is miscorrected.
+:::
+
+:::proof
+(1) If $\mathbf c$ is sent and an error of weight $1 \le w \le d-1$ occurs, the received word $\mathbf r$ is at distance $w < d$ from $\mathbf c$, so it cannot be another codeword (any two codewords are at distance $\ge d$). Hence $\mathbf r \notin \mathcal C$ and the error is visible.
+
+(2) Suppose $\mathbf c$ is sent and $d(\mathbf r,\mathbf c) \le t$. For any other codeword $\mathbf c'$, the triangle inequality gives
+
+$$d(\mathbf r, \mathbf c') \ge d(\mathbf c,\mathbf c') - d(\mathbf c,\mathbf r) \ge d - t \ge d - \frac{d-1}{2} = \frac{d+1}{2} > t,$$
+
+so $\mathbf c$ is the strictly closest codeword and the decoder returns it.
+
+(3) Take $\mathbf c,\mathbf c'$ at distance exactly $d$. The error pattern $\mathbf e = \mathbf c' - \mathbf c$ has weight $d$ and carries $\mathbf c$ to the codeword $\mathbf c'$, which no detector can flag. For the second claim, change $t+1$ of the $d$ positions in which $\mathbf c$ and $\mathbf c'$ differ, moving from $\mathbf c$ to a word at distance $t+1$ from $\mathbf c$ and $d - t - 1 \le t+1$ from $\mathbf c'$, so the decoder may prefer $\mathbf c'$.
 :::
 
 :::intuition
-Think of sending a message over a phone line that sometimes crackles. Each crackle flips a bit. Distance measures how different two possible messages look after noise.
-
-If codewords are far apart in Hamming distance, noise has to flip many bits before one valid codeword becomes another.
+Put a ball of radius $t$ around every codeword. Correction works exactly when the balls do not overlap, and the packing condition $2t + 1 \le d$ is the arithmetic of "no word is in two balls". Detection only needs the received word to fall outside *every* codeword other than the true one, which is a weaker demand — hence $d-1$ rather than $(d-1)/2$.
 :::
 
-:::example
-The repetition code of length 3: codewords 000 and 111. Minimum distance $d=3$. It corrects $t=1$ error. If 001 arrives we decode to 000 (one flip); 011 decodes to 111 (two flips would be miscorrected, but $t=1$).
+:::example[The triple repetition code]
+Compute the parameters of $\mathcal C = \{000, 111\}$ and decode the received word $011$.
+:::
+
+:::solution
+Here $n=3$, $M=2$ so $k=1$, and $d = d(000,111) = 3$; it is a $(3,1,3)$ code of rate $1/3$. It detects up to $d-1 = 2$ errors and corrects $t = \lfloor 2/2\rfloor = 1$.
+
+For $\mathbf r = 011$: $d(\mathbf r,000) = 2$ and $d(\mathbf r,111)=1$, so nearest-neighbour decoding returns $111$ — the majority vote. If $000$ was actually sent, this is a miscorrection caused by a weight-$2$ error, exactly the tightness claimed in part (3) of the capability theorem.
+:::
+
+:::pitfall
+Minimum distance governs *guaranteed* capability, not typical behaviour. A code with $d=3$ corrects every single error and may well correct most double errors too; conversely, quoting an average distance says nothing, because one unusually close pair of codewords is enough to ruin the guarantee.
 :::
 
 ## Error Detection
 
 <!-- section: error-detection -->
 
-Simple detection uses parity bits. An even-parity bit makes the total number of 1s even in the codeword. A single flip changes parity and is detected; two flips preserve parity and go undetected.
-
-Cyclic redundancy checks (CRC) use polynomial division over GF(2) and catch burst errors of length up to the degree with high probability. They are ubiquitous in Ethernet, ZIP files, and hard drives.
+Detection is cheaper than correction and is often all a system needs, because a retransmission mechanism can supply the correction (see the final sections of this chapter on ARQ).
 
 :::definition[Detection capability]{#detection-capability}
-A code detects $e$ errors if no error pattern of weight $\le e$ takes a codeword to another codeword.
+A code **detects** an error pattern $\mathbf e \neq \mathbf 0$ if $\mathbf c + \mathbf e \notin \mathcal C$ for every codeword $\mathbf c$. For a linear code this depends only on $\mathbf e$: the undetectable patterns are precisely the nonzero codewords.
 :::
 
-:::intuition
-Even parity is like adding a "check digit" so the sum mod 2 is zero. Any odd number of flips breaks the sum and screams "error!"
+:::proposition[Undetected error probability of a linear code]{#undetected-error}
+Let $\mathcal C$ be a linear code with weight enumerator $A_w = |\{\mathbf c \in \mathcal C : w(\mathbf c) = w\}|$, used on $\mathrm{BSC}(p)$. The probability that an error occurs and goes undetected is
 
-CRC is a fancier checksum using modular arithmetic in the polynomial ring; it is excellent at catching the kinds of errors that actually occur on wires and disks.
+$$P_{\mathrm{ud}} = \sum_{w = d}^{n} A_w\, p^w (1-p)^{n-w}.$$
 :::
 
-:::example
-Send the data word $1011$ with an even parity bit.
+:::proof
+By linearity an error is undetected exactly when the error pattern is a nonzero codeword, and on the BSC a fixed pattern of weight $w$ occurs with probability $p^w(1-p)^{n-w}$. Summing over the nonzero codewords and grouping by weight gives the formula; the sum starts at $w=d$ because there are no nonzero codewords of smaller weight.
+:::
+
+The simplest detector adds a single parity bit.
+
+:::definition[Single parity-check code]{#parity-code}
+The $(n, n-1)$ **single parity-check code** consists of all $\mathbf c \in \mathbb F_2^n$ with $\sum_i c_i = 0$; equivalently, a data word of length $n-1$ is extended by the bit making the total number of ones even.
+:::
+
+:::proposition[What one parity bit buys]{#parity-capability}
+The single parity-check code has minimum distance $2$. It detects every error pattern of odd weight and no error pattern of even weight.
+:::
+
+:::proof
+The parity of the received word equals the parity of the error pattern, since the codeword's parity is zero. So the check fails exactly when $w(\mathbf e)$ is odd. Two coordinates can be flipped to move between codewords, and one cannot, so $d = 2$; by the capability theorem it detects $d-1 = 1$ error, and in fact all odd-weight patterns.
+:::
+
+:::example[Parity in action, and its blind spot]
+Send the data word $1011$ with an even parity bit. Show a detected error and an undetected one.
 :::
 
 :::solution
-Step 1 (choose the parity bit): count the 1s in $1011$: there are $3$, which is odd. To make the total even, the parity bit must be $1$. The transmitted codeword is $10111$ (five bits, with $4$ ones — even, as required).
-Step 2 (a single flip occurs): suppose the third bit flips in transit, so the receiver sees $10011$. Count its 1s: $1+0+0+1+1 = 3$, which is odd.
-Step 3 (run the check): the receiver expects an even count but sees odd, so the parity check fails and an error is flagged. Sanity check: a single flip always changes the count of 1s by exactly $\pm 1$, so it always flips the parity — detected, as claimed.
-Step 4 (the blind spot): if instead bits $3$ and $4$ both flipped, the receiver would see $10001$, which has $2$ ones (even), so the check passes and the double error slips through undetected. This is why a single parity bit detects only an *odd* number of flips.
+The data word has three ones, an odd number, so the parity bit is $1$ and the codeword is $10111$ (four ones, even).
+
+*Detected.* Suppose the third bit flips: the receiver sees $10011$, which has three ones. Odd parity where even was expected, so an error is flagged. Every single flip changes the count of ones by exactly one and so always flips the parity.
+
+*Undetected.* Suppose bits three and four both flip: the receiver sees $10001$, which has two ones — even. The check passes and the double error is delivered silently. This is the price of $d=2$.
 :::
 
-## Error Correction
+:::definition[Cyclic redundancy check]{#crc}
+Identify a bit string $(a_{n-1},\dots,a_0)$ with the polynomial $a(x) = \sum_i a_i x^i$ over $\mathbb F_2$. Fix a **generator polynomial** $g(x)$ of degree $r$ with $g(0)=1$. The CRC encoder maps a message polynomial $m(x)$ of degree $< n-r$ to
+
+$$c(x) = x^{r} m(x) - \big(x^{r}m(x) \bmod g(x)\big),$$
+
+which is divisible by $g(x)$. The receiver recomputes the remainder and flags an error if it is nonzero.
+:::
+
+:::theorem[Burst-error detection by a CRC]{#crc-burst}
+A CRC with generator of degree $r$ detects every error burst of length at most $r$, where a burst of length $\ell$ is an error polynomial of the form $e(x) = x^{j}b(x)$ with $\deg b < \ell$ and $b(0)=1$.
+:::
+
+:::proof
+An error is undetected precisely when $g(x)$ divides $e(x) = x^j b(x)$. Since $g(0) = 1$, $x$ is not a factor of $g$, and as $\mathbb F_2[x]$ is a unique factorisation domain $g(x) \mid x^j b(x)$ forces $g(x) \mid b(x)$. But $\deg b \le r - 1 < r = \deg g$ and $b \neq 0$, so this is impossible. Hence every such burst is detected.
+:::
+
+:::corollary[Odd-weight detection]{#crc-odd}
+If $(x+1) \mid g(x)$, the CRC detects every error pattern of odd weight.
+:::
+
+:::proof
+An error polynomial $e(x)$ has odd weight if and only if $e(1) = 1$ in $\mathbb F_2$. If $(x+1)\mid g \mid e$, then $e(1) = 0$, a contradiction. Practical generators such as CRC-32 are chosen with the factor $x+1$ for exactly this reason.
+:::
+
+:::intuition
+A CRC is a checksum computed by long division instead of addition, and the divisor is chosen so that the error patterns real hardware produces — short bursts on a wire, on a disk track, in a packet — cannot be multiples of it. Its strength is not a distance guarantee but a deliberately awkward algebraic structure.
+:::
+
+:::example[Computing a CRC remainder]
+With $g(x) = x^3 + x + 1$ (bit pattern $1011$) and message $m = 1101$, compute the transmitted codeword.
+:::
+
+:::solution
+Here $r = 3$, so form $x^3 m(x)$, that is the bit string $1101000$, and divide by $1011$ over $\mathbb F_2$ (XOR long division):
+
+$1101000 \oplus 1011000 = 0110000$; bring down: $110000 \oplus 101100 = 011100$; then $11100 \oplus 10110 = 01010$; then $1010 \oplus 1011 = 0001$.
+
+The remainder is $001$, so the codeword is $1101\,001$. The receiver dividing $1101001$ by $1011$ gets remainder $0$ and accepts. Any burst of length $\le 3$ in transit leaves a nonzero remainder, by the burst theorem.
+:::
+
+## Linear Codes, Syndromes and the Fundamental Bounds
 
 <!-- section: error-correction -->
 
-Correction requires spheres of radius $t$ around codewords to be disjoint. For perfect codes they also cover the whole space.
+Searching a general code of size $2^k$ for the nearest codeword costs $2^k$ comparisons, which is hopeless. Linearity is the structure that makes both encoding and decoding cheap, and essentially every code in use is linear.
 
 :::definition[Linear code, generator and parity-check matrices]{#linear-code}
-A linear code is a subspace of $\{0,1\}^n$. Encoding is the map $\mathbf{m} \mapsto \mathbf{m}G$ for a generator matrix $G$, and the codewords are exactly the vectors annihilated by a parity-check matrix $H$:
+An $[n,k]$ **linear code** is a $k$-dimensional subspace $\mathcal C \subseteq \mathbb F_2^n$. A **generator matrix** is a $k\times n$ matrix $G$ whose rows are a basis, so that $\mathcal C = \{\mathbf m G : \mathbf m \in \mathbb F_2^k\}$. A **parity-check matrix** is an $(n-k)\times n$ matrix $H$ of rank $n-k$ with
 
-$$\mathbf{c}H^T = \mathbf{0}.$$
+$$\mathcal C = \{\mathbf c : H\mathbf c^{\mathsf T} = \mathbf 0\}, \qquad \text{equivalently } GH^{\mathsf T} = 0.$$
+
+$G$ is **systematic** if $G = [I_k \mid A]$, in which case $H = [A^{\mathsf T}\mid I_{n-k}]$ and the first $k$ coordinates of a codeword are the message itself.
 :::
 
-:::proposition[The syndrome depends only on the error]{#syndrome}
-If $\mathbf r = \mathbf c + \mathbf e$ is received, the syndrome satisfies
-
-$$\mathbf{s} = \mathbf{r}H^T = \mathbf{e}H^T,$$
-
-so it carries no information about which codeword was sent, only about the error pattern.
+:::proposition[Minimum distance equals minimum weight]{#distance-is-weight}
+For a linear code, $d = \min\{w(\mathbf c) : \mathbf c \in \mathcal C,\ \mathbf c \neq \mathbf 0\}$.
 :::
 
-:::intuition
-Correction is "nearest-neighbor" decoding in Hamming space: pick the codeword that differs in fewest positions from what you received.
-
-Linear structure lets you use linear algebra over GF(2) instead of searching all codewords.
+:::proof
+$d(\mathbf c,\mathbf c') = w(\mathbf c - \mathbf c')$ and $\mathbf c - \mathbf c'$ ranges over all nonzero codewords as the pair ranges over distinct codewords, by closure under subtraction.
 :::
 
-:::example
-Repetition code $(3,1)$ again, decoded by syndrome. The generator is $G = [1~1~1]$ (the single message bit $m$ maps to $mmm$), and a parity-check matrix is $H = \begin{bmatrix}1 & 1 & 0 \\ 1 & 0 & 1\end{bmatrix}$, encoding the two constraints $c_1 + c_2 = 0$ and $c_1 + c_3 = 0$ (which force $c_1=c_2=c_3$, i.e. exactly the codewords $000$ and $111$).
+This halves the work of computing $d$ — one scans $2^k$ codewords rather than $2^{2k}$ pairs — and there is a better criterion still, read off the parity-check matrix.
+
+:::theorem[Distance from the parity-check matrix]{#distance-from-H}
+A linear code with parity-check matrix $H$ has minimum distance $d$ if and only if every set of $d-1$ columns of $H$ is linearly independent and some set of $d$ columns is dependent.
+:::
+
+:::proof
+A word $\mathbf c$ of weight $w$ with support $S$ satisfies $H\mathbf c^{\mathsf T} = \mathbf 0$ exactly when the columns indexed by $S$ sum to zero, i.e. are linearly dependent (over $\mathbb F_2$, a dependency is a subset summing to zero). So a nonzero codeword of weight $w$ exists precisely when some $w$ columns are dependent. Taking the least such $w$ and applying the previous proposition gives the statement.
+:::
+
+:::definition[Syndrome]{#syndrome-def}
+The **syndrome** of a received word $\mathbf r$ is $\mathbf s = H \mathbf r^{\mathsf T} \in \mathbb F_2^{n-k}$.
+:::
+
+:::proposition[The syndrome sees only the error]{#syndrome}
+If $\mathbf r = \mathbf c + \mathbf e$ with $\mathbf c \in \mathcal C$, then $\mathbf s = H\mathbf r^{\mathsf T} = H\mathbf e^{\mathsf T}$. Two words have the same syndrome if and only if they lie in the same coset of $\mathcal C$.
+:::
+
+:::proof
+$H\mathbf r^{\mathsf T} = H\mathbf c^{\mathsf T} + H\mathbf e^{\mathsf T} = \mathbf 0 + H \mathbf e^{\mathsf T}$. And $H\mathbf r^{\mathsf T} = H\mathbf r'^{\mathsf T}$ iff $H(\mathbf r - \mathbf r')^{\mathsf T} = \mathbf 0$ iff $\mathbf r - \mathbf r' \in \mathcal C$ iff $\mathbf r, \mathbf r'$ are in the same coset.
+:::
+
+:::recipe[Standard-array (coset-leader) decoding]{#standard-array}
+1. List the $2^{n-k}$ cosets of $\mathcal C$ in $\mathbb F_2^n$.
+2. In each coset pick a minimum-weight element, the **coset leader** $\mathbf e_{\mathbf s}$; store it against the coset's syndrome $\mathbf s$.
+3. To decode $\mathbf r$: compute $\mathbf s = H\mathbf r^{\mathsf T}$, look up $\mathbf e_{\mathbf s}$, and output $\hat{\mathbf c} = \mathbf r - \mathbf e_{\mathbf s}$.
+:::
+
+:::proposition[Coset-leader decoding is nearest-neighbour decoding]{#syndrome-is-nn}
+The output of standard-array decoding is a codeword at minimum distance from $\mathbf r$.
+:::
+
+:::proof
+Candidates for the error are exactly the members of the coset $\mathbf r + \mathcal C$, since $\hat{\mathbf c} = \mathbf r - \mathbf e$ must be a codeword. Choosing $\mathbf e$ of least weight in that coset therefore minimises $d(\mathbf r,\hat{\mathbf c}) = w(\mathbf e)$.
+:::
+
+The table has $2^{n-k}$ entries rather than $2^k$ codewords, so syndrome decoding is cheap precisely when the code has few parity checks — and this is the structure that Hamming codes exploit to the limit.
+
+:::example[Syndrome decoding the repetition code]
+Decode $\mathbf r = 101$ in the $(3,1,3)$ repetition code, whose parity-check matrix is $H = \begin{bmatrix}1&1&0\\1&0&1\end{bmatrix}$.
 :::
 
 :::solution
-Step 1 (receive): suppose $\mathbf r = 101$ arrives.
-Step 2 (compute the syndrome $\mathbf s = \mathbf r H^T$ over GF(2)): first component $= r_1 + r_2 = 1 + 0 = 1$; second component $= r_1 + r_3 = 1 + 1 = 0$. So $\mathbf s = (1,0)$.
-Step 3 (locate the error): $\mathbf s$ equals a column of $H$ — reading columns left to right they are $(1,1)^T$, $(1,0)^T$, $(0,1)^T$, so $(1,0)^T$ is column $2$. The minimum-weight error consistent with this syndrome is $\mathbf e = 010$ (a single flip in position 2). Verify: $\mathbf e H^T = (e_1+e_2,\,e_1+e_3) = (1,0)$ ✓.
-Step 4 (correct): $\hat{\mathbf c} = \mathbf r - \mathbf e = 101 - 010 = 111$, a valid codeword. Sanity check: this agrees with plain majority vote on $101$ (two 1s, one 0 → decode $111$). Both methods give the same answer because syndrome decoding *is* nearest-neighbor decoding, done with linear algebra.
+The two rows encode $c_1 + c_2 = 0$ and $c_1 + c_3 = 0$, which force $c_1=c_2=c_3$, so the null space is indeed $\{000,111\}$.
+
+Compute $\mathbf s = H\mathbf r^{\mathsf T} = (r_1+r_2,\ r_1+r_3) = (1+0,\ 1+1) = (1,0)$. The columns of $H$ are $(1,1)^{\mathsf T}, (1,0)^{\mathsf T}, (0,1)^{\mathsf T}$, and $\mathbf s$ matches column $2$, so the minimum-weight error with this syndrome is $\mathbf e = 010$. Then $\hat{\mathbf c} = 101 - 010 = 111$, agreeing with the majority vote as the previous proposition guarantees.
+:::
+
+How good can a code be? Three bounds frame the answer: two say that distance is expensive, one says that a decent distance is always available.
+
+:::lemma[Volume of a Hamming ball]{#ball-volume}
+The ball $B(\mathbf x,t) = \{\mathbf y : d(\mathbf x,\mathbf y)\le t\}$ has $V(n,t) = \sum_{i=0}^{t}\binom ni$ elements, and for $0 \le \lambda \le 1/2$,
+
+$$\frac{1}{n+1}2^{n h_2(\lambda)} \le V(n,\lfloor \lambda n\rfloor) \le 2^{n h_2(\lambda)}.$$
+:::
+
+:::proof
+The count is immediate: choose which $i \le t$ positions differ. For the upper bound, with $\lambda \le 1/2$,
+
+$$1 = (\lambda + (1-\lambda))^n \ge \sum_{i\le \lambda n}\binom ni \lambda^{i}(1-\lambda)^{n-i} \ge \sum_{i \le \lambda n}\binom ni \lambda^{\lambda n}(1-\lambda)^{n-\lambda n} = V(n,\lfloor\lambda n\rfloor)2^{-nh_2(\lambda)},$$
+
+where the second inequality uses that $\left(\frac{\lambda}{1-\lambda}\right)^{i}$ is decreasing in $i$ for $\lambda\le 1/2$. The lower bound follows because $\binom{n}{\lfloor \lambda n\rfloor}$ is the largest of the $n+1$ binomial coefficients and $\binom{n}{\lfloor\lambda n\rfloor}\ge \frac{1}{n+1}2^{nh_2(\lambda)}$ by Stirling.
+:::
+
+:::theorem[Hamming (sphere-packing) bound]{#hamming-bound}
+Any binary code of length $n$, size $M$ and minimum distance $d = 2t+1$ satisfies
+
+$$M \cdot \sum_{i=0}^{t}\binom ni \le 2^{n}.$$
+
+A code attaining the bound with equality is called **perfect**.
+:::
+
+:::proof
+By the capability theorem the balls of radius $t$ about distinct codewords are pairwise disjoint (a word in two such balls would be within $t$ of two codewords at distance $\ge 2t+1$, contradicting the triangle inequality). Each ball contains $V(n,t)$ words and they all sit inside $\mathbb F_2^n$, so $M\,V(n,t)\le 2^n$.
+:::
+
+:::theorem[Singleton bound]{#singleton-bound}
+Any code of length $n$, size $M = 2^k$ and minimum distance $d$ satisfies $d \le n-k+1$.
+:::
+
+:::proof
+Delete the last $d-1$ coordinates of every codeword. Two distinct codewords differ in at least $d$ positions, so they still differ somewhere among the remaining $n-d+1$ coordinates; the projection is therefore injective. Hence $2^k \le 2^{n-d+1}$, i.e. $k \le n-d+1$.
+:::
+
+:::theorem[Gilbert–Varshamov bound]{#gv-bound}
+For any $n$ and $d$ there exists a binary code of length $n$ and minimum distance at least $d$ with
+
+$$M \ge \frac{2^{n}}{V(n,d-1)} = \frac{2^n}{\sum_{i=0}^{d-1}\binom ni}.$$
+:::
+
+:::proof
+Greedy construction. Start with an empty code and repeatedly add any word of $\mathbb F_2^n$ at distance $\ge d$ from every word already chosen, stopping when no such word exists. At that point the balls of radius $d-1$ about the chosen words cover $\mathbb F_2^n$ — otherwise an uncovered word could be added — so $M\,V(n,d-1) \ge 2^n$.
+:::
+
+:::corollary[Asymptotic form]{#gv-asymptotic}
+For relative distance $\delta = d/n$ fixed with $\delta<1/2$, there exist codes of rate $R \ge 1 - h_2(\delta) - o(1)$, while the Hamming bound forces $R \le 1 - h_2(\delta/2) + o(1)$.
+:::
+
+:::proof
+Insert the ball-volume estimates of the volume lemma into the two previous theorems and take logarithms divided by $n$.
+:::
+
+:::intuition
+The three bounds are a packing problem in disguise. Singleton is a coordinate-counting argument and is usually loose in the binary case; Hamming says the balls must fit; Gilbert–Varshamov says that if you place points greedily you cannot get stuck too early, because a stuck configuration must cover the whole space. The gap between the Gilbert–Varshamov curve and the Hamming curve has resisted closure for binary codes since 1952 — the best possible rate–distance trade-off is still unknown.
+:::
+
+:::example[Can a $(15,11)$ single-error-correcting code exist?]
+Check the Hamming bound for $n=15$, $k=11$, $t=1$.
+:::
+
+:::solution
+$M = 2^{11} = 2048$ and $V(15,1) = 1 + 15 = 16$, so $M\,V = 2048 \times 16 = 32768 = 2^{15}$. The bound holds with equality, so such a code — if it exists — is perfect. It does exist: it is the Hamming code with $m=4$, built in the next section.
+:::
+
+:::pitfall
+Perfect codes are rare, not ideal. The complete list of binary perfect codes is: the trivial codes ($\mathcal C = \mathbb F_2^n$, and the repetition codes of odd length), the Hamming codes, and the $(23,12,7)$ Golay code. "Perfect" means the packing has no wasted space, not that the code is a good choice — long Hamming codes are perfect and have relative distance tending to $0$.
 :::
 
 ## Common Mistakes
 
-- **Thinking detection is the same as correction**: A parity bit detects odd errors but gives no location information for correction.
-- **Ignoring the rate penalty**: Adding redundancy for reliability reduces the information rate; the Hamming bound shows you cannot correct too many errors without making rate tiny.
-- **Assuming all error patterns are equally likely**: Real channels have bursts and correlations; codes good on BSC may fail on bursty media without interleaving.
-- **Forgetting that two errors can look like a single error in the wrong direction**: In a code with $d=3$, a weight-2 error can move you to distance 1 from a wrong codeword.
-- **Confusing minimum distance with average distance**: Only the smallest distance between any pair governs guaranteed capability.
-- **Believing longer codes are always better**: While longer codes can approach capacity, decoding complexity and latency also grow; practical systems balance block length carefully.
+- **Treating detection and correction as the same capability**: a parity bit says *that* something is wrong, never *where*. Correction needs enough distance to identify the error pattern, which costs roughly twice as much.
+- **Forgetting linearity when computing $d$**: for a linear code the minimum distance is the minimum nonzero *weight*, and the column condition on $H$ gives it faster still.
+- **Assuming errors are independent**: real media produce bursts. A code designed for the BSC needs interleaving before it faces a bursty channel, which is why CRCs and interleavers appear together in standards.
+- **Misreading the Singleton bound as achievable over $\mathbb F_2$**: binary MDS codes attaining $d = n-k+1$ are only the trivial ones; Reed–Solomon codes attain it over larger alphabets.
+- **Thinking a bigger $t$ is always better**: raising $t$ costs rate, and by the Hamming bound the cost is roughly $h_2(t/n)$ per symbol. Systems balance $t$ against rate, latency and the actual error statistics.
+- **Confusing the coset leader with the true error**: syndrome decoding returns the *most likely* error consistent with the syndrome. When the true error is heavier than the leader, the decoder confidently outputs the wrong codeword.
 
-The Hamming codes, invented by Richard Hamming in 1950, are the first nontrivial family of error-correcting codes. They are perfect single-error-correcting linear codes whose elegant parity-check matrix structure makes encoding and decoding extremely simple (syndrome = error position).
+Richard Hamming, frustrated in 1947 by a relay computer that halted every weekend on a detected but uncorrected error, asked why a machine clever enough to know it was wrong could not work out what the right answer was. The family of codes he published in 1950 is the answer, and it is optimal in the exact sense of the sphere-packing bound.
 
-They remain the canonical example in coding theory textbooks and are still used in some memory systems (SECDED variants).
-
-## Definition and Parameters
+## Hamming Codes: Construction and Parameters
 
 <!-- section: definition-hamming -->
 
+The design idea is to make the syndrome do double duty: not merely announce that an error occurred, but spell out its position in binary.
+
 :::definition[Binary Hamming code]{#hamming-code}
-The binary Hamming code of length $2^m - 1$ has dimension $2^m - 1 - m$ and minimum distance $3$. Its parity-check matrix $H$ consists of all nonzero distinct columns of length $m$.
+For $m \ge 2$, the **Hamming code** $\mathcal H_m$ is the linear code of length $n = 2^m-1$ whose parity-check matrix $H$ is the $m \times (2^m-1)$ matrix whose columns are all the distinct nonzero vectors of $\mathbb F_2^m$. When the columns are ordered so that column $i$ is the binary representation of $i$, the code is in **position-ordered** form.
 :::
 
-It is a perfect code: the spheres of radius $1$ around codewords pack the entire space, with nothing left over.
+:::theorem[Parameters of the Hamming code]{#hamming-parameters}
+$\mathcal H_m$ is an $[n,k,d]$ code with
+
+$$n = 2^m-1, \qquad k = 2^m-1-m, \qquad d = 3,$$
+
+so it corrects one error, and its rate is $R = 1 - \frac{m}{2^m-1} \to 1$ as $m\to\infty$.
+:::
+
+:::proof
+$H$ has $m$ rows and contains all $m$ weight-one columns, so its rank is $m$ and the null space has dimension $n - m = 2^m - 1 - m$; that is $k$.
+
+For the distance, use the column criterion. No single column is zero (all columns are nonzero), so $d \ge 2$. No two columns are equal, so no two are dependent and $d\ge3$. Finally, any three distinct nonzero columns $\mathbf a, \mathbf b$ and $\mathbf a + \mathbf b$ — and $\mathbf a + \mathbf b$ is nonzero and distinct from both, so it is a column — sum to zero, exhibiting a dependent triple. Hence $d = 3$ exactly.
+:::
+
+:::theorem[Hamming codes are perfect]{#hamming-perfect}
+$\mathcal H_m$ attains the Hamming bound with equality: the balls of radius $1$ about its codewords partition $\mathbb F_2^{n}$.
+:::
+
+:::proof
+$|\mathcal C|\,V(n,1) = 2^{n-m}(1+n) = 2^{n-m}\,2^{m} = 2^{n}$, since $1+n = 2^m$. Equality in the sphere-packing bound means the disjoint balls exhaust the space.
+:::
 
 :::intuition
-You add m parity bits so that the positions of possible single errors are uniquely identified by the m-bit syndrome.
-
-For m=3 you protect 4 data bits with 3 parity bits (total 7); the code can fix any one flip.
+With $m$ parity bits there are $2^m - 1$ nonzero syndromes, and there are exactly $2^m-1$ possible single-error positions in a word of that length. Hamming's construction matches the two sets up perfectly, leaving no syndrome unused and no error position unaddressed. That exact fit is what "perfect" means here.
 :::
 
-:::example
-The $(7,4)$ code, with $m = 3$ parity bits and $2^3 - 1 = 7$ total positions.
+:::example[The $(7,4)$ Hamming code]
+Write down the parameters and a parity-check matrix for $m=3$, and verify perfection.
 :::
 
 :::solution
-Step 1 (parameters): dimension $= 2^m - 1 - m = 7 - 3 = 4$ data bits; rate $= 4/7 \approx 0.571$; minimum distance $d = 3$, so $t = \lfloor (3-1)/2\rfloor = 1$ correctable error.
-Step 2 (build $H$): the columns of $H$ are *all* nonzero binary vectors of length $3$, i.e. the numbers $1$ through $7$ in binary. Writing the $i$-th column as the binary form of $i$: $001, 010, 011, 100, 101, 110, 111$. There are exactly $7$ of them, matching the code length.
-Step 3 (why this works): because every column is distinct and nonzero, a single error in position $i$ produces syndrome equal to column $i$ = the binary address of $i$ — which is what makes decoding a one-step lookup.
-Sanity check on "perfect": each of the $2^4 = 16$ codewords owns a radius-1 sphere of $1 + 7 = 8$ words; $16 \times 8 = 128 = 2^7$ fills the whole space exactly, with no leftover — the hallmark of a perfect code.
+Parameters: $n = 2^3-1 = 7$, $k = 7-3 = 4$, $d=3$, $t=1$, rate $4/7 \approx 0.571$.
+
+Position-ordered parity-check matrix, with column $i$ the binary form of $i$ (most significant bit on top):
+
+$$H = \begin{bmatrix} 0&0&0&1&1&1&1\\ 0&1&1&0&0&1&1\\ 1&0&1&0&1&0&1 \end{bmatrix}.$$
+
+Perfection: there are $2^4 = 16$ codewords, each owning a ball of $1 + 7 = 8$ words, and $16 \times 8 = 128 = 2^7$ fills the space exactly.
 :::
 
-## Syndrome Decoding
+:::remark[The dual: the simplex code]
+The dual code $\mathcal H_m^{\perp}$, generated by the rows of $H$, is the $[2^m-1,\ m,\ 2^{m-1}]$ **simplex code**: every nonzero codeword has the same weight $2^{m-1}$, and all pairs of codewords are equidistant — hence the name. Its punctured extension is the first-order Reed–Muller code used by Mariner 9 to return pictures of Mars. Hamming codes have very high rate and small distance; their duals have very low rate and enormous distance. They are the two extremes of the same construction.
+:::
+
+:::pitfall
+The rate of $\mathcal H_m$ tends to $1$, which sounds excellent until one notices that the relative distance $d/n = 3/(2^m-1)$ tends to $0$. On a BSC with fixed $p$, a long Hamming code fails almost surely, because the expected number of errors $pn$ greatly exceeds $t=1$. Hamming codes are good for *very* clean channels, not for noisy ones.
+:::
+
+## Syndrome Decoding of a Hamming Code
 
 <!-- section: syndrome-decoding -->
 
-:::recipe[Syndrome decoding of a Hamming code]{#syndrome-decoding}
-1. Compute the syndrome $\mathbf s = H\mathbf r \pmod 2$ of the received vector $\mathbf r$.
-2. If $\mathbf s = \mathbf 0$, assume no error.
-3. If $\mathbf s \neq \mathbf 0$, read $\mathbf s$ as an integer $i$ in binary and flip bit $i$.
+For a general linear code, syndrome decoding needs a stored table of $2^{n-k}$ coset leaders. For Hamming codes the table is unnecessary: the syndrome *is* the address.
+
+:::theorem[Syndrome equals error position]{#syndrome-address}
+Let $\mathcal H_m$ be in position-ordered form and let $\mathbf r = \mathbf c + \mathbf e$ with $w(\mathbf e)\le 1$. If $\mathbf e = \mathbf 0$ then $\mathbf s = H\mathbf r^{\mathsf T} = \mathbf 0$; if $\mathbf e$ is the unit vector in position $i$, then $\mathbf s$ is the binary representation of $i$.
 :::
 
-This corrects any single error. If two errors occurred, it will "correct" a third bit, producing a wrong codeword (but the overall parity in the extended code can detect this).
-
-:::intuition
-The parity checks are designed so that each possible single flip produces a unique pattern of which checks fail.
-
-That pattern is the binary address of the flipped bit.
+:::proof
+$\mathbf s = H\mathbf e^{\mathsf T}$ by the syndrome proposition, and $H$ times a unit vector in position $i$ is the $i$-th column of $H$, which in position-ordered form is the binary representation of $i$. The zero-error case is immediate since codewords are in the null space.
 :::
 
-:::example
-Use the $(7,4)$ code with columns of $H$ numbered so column $i$ is the binary form of $i$ (as built above). Send the all-zero codeword $\mathbf c = 0000000$ (valid since $\mathbf 0 H^T = \mathbf 0$), and suppose position $5$ is flipped in transit, so $\mathbf r = 0000100$.
+:::recipe[Decoding a Hamming code]{#syndrome-decoding}
+1. Compute $\mathbf s = H\mathbf r^{\mathsf T}$ over $\mathbb F_2$.
+2. If $\mathbf s = \mathbf 0$, output $\mathbf r$ unchanged.
+3. Otherwise read $\mathbf s$ as an integer $i \in \{1,\dots,2^m-1\}$ and flip bit $i$ of $\mathbf r$.
+:::
+
+The whole decoder is $m$ parity computations and one bit flip, which is why Hamming codes survive in memory controllers where the decoding latency budget is a few gate delays.
+
+:::proposition[Behaviour under two errors]{#hamming-two-errors}
+If $w(\mathbf e) = 2$, the decoder of the recipe above always produces a codeword different from the one sent; it never reports failure.
+:::
+
+:::proof
+Since $d = 3$ and the code is perfect, every word of $\mathbb F_2^n$ lies in exactly one radius-$1$ ball. A word at distance $2$ from the sent codeword $\mathbf c$ lies in the ball of some other codeword $\mathbf c'$ with $d(\mathbf c,\mathbf c') = 3$, so the decoder "corrects" to $\mathbf c' \neq \mathbf c$. There is no syndrome left over to signal failure — perfection has no spare room for a "detect only" region.
+:::
+
+:::example[Decoding a single error]
+In the position-ordered $(7,4)$ code, the all-zero codeword is sent and position $5$ is flipped, so $\mathbf r = 0000100$. Decode it.
 :::
 
 :::solution
-Step 1 (compute the syndrome): $\mathbf s = H\mathbf r^T$ picks out the columns where $\mathbf r$ has a $1$ and XORs them. Only position $5$ is set, so $\mathbf s = $ column $5 = 101_2$.
-Step 2 (read the address): interpret $\mathbf s = 101_2 = 5$ as an integer — the error is in position $5$.
-Step 3 (correct): flip bit $5$ of $\mathbf r$: $0000100 \to 0000000 = \mathbf c$. Sanity check: recomputing the syndrome of the corrected word gives $\mathbf 0$, confirming a valid codeword and that we undid exactly the one error.
+$\mathbf s = H\mathbf r^{\mathsf T}$ selects the columns where $\mathbf r$ has a one and adds them; only position $5$ is set, so $\mathbf s$ is column $5$, which is $101_2$. Reading $101_2 = 5$, flip bit $5$ of $\mathbf r$ to recover $0000000$. Recomputing the syndrome gives $\mathbf 0$, confirming a valid codeword.
 :::
 
-## Extended Hamming and SECDED
+:::example[Decoding a double error, and being misled]
+The same code, the same all-zero codeword, but positions $3$ and $5$ flip: $\mathbf r = 0010100$.
+:::
+
+:::solution
+The syndrome is the sum of columns $3$ and $5$: $011_2 \oplus 101_2 = 110_2 = 6$. The decoder flips bit $6$, producing the word $0010110$ — a codeword, but not the one sent, and at distance $3$ from it. The decoder reports success. This silent miscorrection is exactly what the previous proposition predicted, and it is what the extended code in the next section is designed to prevent.
+:::
+
+:::intuition
+Each parity check of the position-ordered Hamming code covers the positions whose binary address has a one in a given bit. A single flip breaks precisely those checks whose bit is set in its address, so the pattern of failed checks spells the address in binary. It is a binary search executed in parallel.
+:::
+
+## Extended Hamming Codes and SECDED
 
 <!-- section: extended -->
 
+The defect of a perfect code is that it has nowhere to put an "I do not know". One extra bit creates that room.
+
 :::definition[Extended Hamming code]{#extended-hamming}
-Adding one extra overall parity bit to a binary Hamming code produces the extended Hamming code, of length $2^m$ and minimum distance $4$.
+The **extended Hamming code** $\widehat{\mathcal H}_m$ is obtained from $\mathcal H_m$ by appending an overall parity bit $c_0 = \sum_{i\ge1} c_i$. Its parity-check matrix is
+
+$$\widehat H = \begin{bmatrix} 1 & 1 & \cdots & 1 \\ 0 & & H & \end{bmatrix},$$
+
+with the all-ones row checking overall parity.
 :::
 
-The extra distance buys exactly one more capability: the code can correct single errors and detect double errors (SECDED — single error correction, double error detection). This is widely used in computer RAM (ECC memory).
+:::theorem[Parameters of the extended code]{#extended-parameters}
+$\widehat{\mathcal H}_m$ is a $[2^m,\ 2^m-1-m,\ 4]$ code: the length grows by one, the dimension is unchanged, and the minimum distance rises from $3$ to $4$.
+:::
+
+:::proof
+Every codeword of $\widehat{\mathcal H}_m$ has even weight by construction. A word of $\mathcal H_m$ of weight $3$ therefore extends to a word of weight $4$, and no nonzero extended codeword can have weight $1$ or $2$: weight $1$ would violate even parity together with $d(\mathcal H_m)=3$, and weight $2$ would project to a word of weight $\le 2$ in $\mathcal H_m$, of which there are none nonzero. Hence $d = 4$, attained. The dimension is unchanged because the appended bit is a function of the others.
+:::
+
+:::corollary[SECDED]{#secded}
+$\widehat{\mathcal H}_m$ corrects any single error and simultaneously detects any double error: single error correction, double error detection.
+:::
+
+:::proof
+Write $\mathbf s = (s_0, \mathbf s')$ for the overall-parity bit and the Hamming syndrome. If $\mathbf e = \mathbf 0$, then $s_0=0$ and $\mathbf s' = \mathbf 0$. A single error has odd weight, so $s_0 = 1$, and $\mathbf s'$ addresses it (or is zero if the flipped bit was the overall parity bit itself). A double error has even weight, so $s_0 = 0$, while $\mathbf s' \neq \mathbf 0$ because $d(\mathcal H_m)=3$ means no weight-2 pattern is a codeword. So the three cases are distinguished by the pair $(s_0, \mathbf s')$:
+
+$$(0,\mathbf 0) \Rightarrow \text{no error}, \quad (1, \mathbf s')\Rightarrow \text{correct position } \mathbf s', \quad (0,\mathbf s'\neq\mathbf 0)\Rightarrow \text{uncorrectable, flag it}.$$
+:::
 
 :::intuition
-The extra parity bit tells you whether the total number of errors was even or odd.
-
-If the syndrome says "correct position 3" but the overall parity says "even number of errors," you know it was actually two errors and you should not trust the correction.
+The overall parity bit answers one question the Hamming syndrome cannot: was the number of errors odd or even? If the syndrome points somewhere but the parity says "even number of flips", the pointer is lying and the controller should raise an alarm instead of corrupting data silently.
 :::
 
-:::example
-In (8,4) extended code, a double error produces nonzero syndrome but the overall parity check fails to match the expected for a single error; the memory controller can flag an uncorrectable error instead of silently corrupting data.
+:::example[ECC memory]
+A $(72,64)$ SECDED code is the standard for server DRAM: $64$ data bits and $8$ check bits. Explain the parameters and what the controller does in each syndrome case.
+:::
+
+:::solution
+Take $m=7$: $\mathcal H_7$ is $[127,120,3]$, and its extension is $[128,120,4]$. Shortening by deleting $56$ information coordinates (fixing them to zero and removing them) leaves a $[72,64,4]$ code, which is what memory modules implement; shortening never decreases the minimum distance, since the shortened code is a subset of the original restricted to a coordinate subset.
+
+On a read: syndrome zero means deliver the data; odd overall parity with a nonzero pointer means flip the indicated bit, deliver the data, and log a correctable error; even overall parity with a nonzero pointer means two or more bits are wrong, and the controller raises an uncorrectable-error machine check rather than delivering wrong data. The last case is the whole reason for the extra bit.
+:::
+
+:::pitfall
+SECDED does not *correct* two errors; the extra distance buys detection only. And with three or more errors even the detection guarantee fails — a weight-$4$ pattern can be a codeword, delivering corrupted data with a clean syndrome. Chipkill and similar schemes exist because DRAM failures are not independent single bits.
 :::
 
 ## Common Mistakes
 
-- **Thinking Hamming codes can correct two errors**: The basic code has d=3 and corrects only t=1; the extended version detects doubles but still corrects only singles.
-- **Forgetting that Hamming is a perfect code**: Every possible received word is within distance 1 of exactly one codeword; there are no "detect only" regions in the basic code.
-- **Using the wrong positions for parity bits**: The standard construction numbers parity bits at powers of 2 so that the syndrome directly gives the error location in binary.
-- **Confusing Hamming distance with code rate**: The rate is (n-m)/n = 1 - m/n; for long Hamming codes the rate approaches 1, but the relative distance goes to 0.
-- **Assuming modern systems still use plain Hamming for high reliability**: Today's systems use LDPC, turbo, or polar codes that operate much closer to capacity; Hamming is used where simplicity and low latency for small blocks matter (e.g., memory).
-- **Forgetting the all-zero codeword when counting**: Because it is linear, the weight distribution determines the distance; the minimum weight is 3.
+- **Expecting a Hamming code to correct two errors**: it has $d=3$, so $t=1$. Worse, being perfect, it miscorrects double errors *silently* rather than reporting failure.
+- **Forgetting the position ordering**: the syndrome-is-the-address property holds only when the columns of $H$ are the binary representations in order. Any column permutation gives an equivalent code, but then a lookup table is needed.
+- **Confusing rate with reliability**: the rate of $\mathcal H_m$ tends to $1$ while its relative distance tends to $0$. Long Hamming codes are fast and fragile.
+- **Believing perfect codes are plentiful**: over $\mathbb F_2$ the only ones are the trivial codes, the odd-length repetition codes, the Hamming codes and the $(23,12,7)$ Golay code.
+- **Mixing up extension and shortening**: extending appends a parity coordinate and raises $d$ from $3$ to $4$; shortening deletes information coordinates, lowering $n$ and $k$ together while leaving $d$ at least as large.
+- **Assuming modern systems rely on Hamming codes for the hard cases**: they are used where blocks are tiny and latency is measured in gate delays. Anything trying to approach capacity uses LDPC, turbo or polar codes.
 
-Low-density parity-check (LDPC) codes are linear codes defined by a sparse parity-check matrix $H$ in which most entries are zero. Their rediscovery in the 1990s by MacKay and others revealed that simple iterative message-passing decoding on the associated Tanner graph can achieve performance extremely close to the Shannon limit for long block lengths.
+Hamming's codes are optimal packings but hopeless at capacity: their distance does not grow with the block length. Shannon's argument says that long random codes are excellent — the problem is decoding them. Robert Gallager's 1963 thesis found the resolution: choose the parity-check matrix at random but *sparse*, so that the code is still essentially random, yet the constraints are local enough to be resolved by a message-passing algorithm. The idea was forgotten for thirty years, rediscovered by MacKay and Neal in the mid-1990s, and is now in Wi-Fi, DVB-S2, 5G data channels and every hard-disk controller.
 
-LDPC codes are now used in virtually every modern wireless and storage standard that demands high reliability at high rates (Wi-Fi 802.11, DVB-S2, 5G NR, hard-disk controllers).
-
-## Definition and Sparsity
+## LDPC Codes: Sparsity and Ensembles
 
 <!-- section: definition-sparsity -->
 
 :::definition[LDPC code]{#ldpc-code}
-An $(n, k)$ LDPC code is a linear subspace whose $m = n-k$ parity-check equations are represented by an $m \times n$ matrix $H$ with only a small constant number of 1s per row and per column — the low density. The code is the nullspace,
+An **LDPC code** is a binary linear code specified by a parity-check matrix $H$ of size $m\times n$ that is **sparse**: the number of ones per row and per column is bounded by a constant independent of $n$. The code is the null space,
 
-$$\mathbf{c} H^T = \mathbf{0} \quad \text{over } \mathrm{GF}(2).$$
+$$\mathcal C = \{\mathbf c \in \mathbb F_2^n : H \mathbf c^{\mathsf T} = \mathbf 0\}.$$
+
+It is **$(d_v,d_c)$-regular** if every column has exactly $d_v$ ones and every row exactly $d_c$.
 :::
 
-Gallager's original construction used regular degree distributions; modern irregular LDPC codes optimize the variable and check node degrees for better thresholds.
+:::proposition[Design rate of a regular ensemble]{#ldpc-design-rate}
+A $(d_v,d_c)$-regular parity-check matrix satisfies $n d_v = m d_c$, and the code it defines has rate
+
+$$R = 1 - \frac mn \ge 1 - \frac{d_v}{d_c},$$
+
+with equality if and only if $H$ has full row rank.
+:::
+
+:::proof
+Count the ones of $H$ twice: by columns, $n d_v$; by rows, $m d_c$. Hence $m/n = d_v/d_c$. The dimension of the null space is $n - \mathrm{rank}(H) \ge n - m$, giving $R \ge 1 - m/n$, with equality exactly when the rows are independent.
+:::
+
+The inequality is not pedantry: a random sparse $H$ usually has a few dependent rows, so the true rate slightly exceeds the design rate. Standards fix this by using structured (quasi-cyclic) matrices whose rank is known.
+
+:::definition[Degree distributions]{#degree-distributions}
+An **irregular** LDPC ensemble is described from the edge perspective by
+
+$$\lambda(x) = \sum_{i\ge2}\lambda_i x^{i-1}, \qquad \rho(x) = \sum_{j\ge2}\rho_j x^{j-1},$$
+
+where $\lambda_i$ (resp. $\rho_j$) is the fraction of *edges* incident to a variable node of degree $i$ (resp. a check node of degree $j$). The design rate is $R = 1 - \frac{\int_0^1\rho}{\int_0^1\lambda}$.
+:::
 
 :::intuition
-Imagine a huge crossword puzzle where each "clue" (parity check) involves only a few letters (bits). Because the clues are local and sparsely connected, you can solve most of the puzzle by iteratively satisfying local constraints.
-
-Low density means each bit participates in only a few checks, keeping the graph tree-like locally and making decoding tractable.
+Think of a huge crossword in which every clue involves only a handful of letters and every letter appears in only a handful of clues. No clue determines its letters by itself, but because the clues overlap sparsely, information propagates: solving a few letters unlocks neighbouring clues, and the puzzle unzips. Density is the enemy — a check involving half the bits tells you almost nothing about any one of them.
 :::
 
-:::example
-A tiny regular $(3,6)$ LDPC: $n=12$, each column of $H$ has weight $3$ (variable degree), each row weight $6$ (check degree).
+:::theorem[Good LDPC ensembles have linearly growing distance]{#ldpc-distance}
+For a $(d_v,d_c)$-regular ensemble with $d_v \ge 3$, there is a constant $\delta(d_v,d_c) > 0$ such that a randomly chosen code from the ensemble has minimum distance at least $\delta n$ with probability tending to $1$ as $n \to\infty$.
+:::
+
+:::proof
+*Sketch.* A first-moment (union) bound. For each weight $w = \gamma n$ one computes the expected number of codewords of weight $w$ in the ensemble, which is the number of ways of choosing the support, $\binom{n}{w}$, times the probability that the $w d_v$ edges leaving the support pair up so that every check sees an even number of them. For $d_v\ge3$ that probability decays fast enough that the expectation is exponentially small for all $\gamma$ below some $\delta$, and Markov's inequality then says almost no code in the ensemble has such a codeword. The case $d_v = 2$ genuinely fails: the code is then a cycle code, with minimum distance $O(\log n)$. The full computation is in Gallager's thesis; we use only the conclusion.
+:::
+
+:::example[A small regular ensemble]
+Describe the $(3,6)$-regular LDPC matrix for $n=12$ and check its consistency.
 :::
 
 :::solution
-Step 1 (dimensions): a $(d_v, d_c) = (3,6)$ regular code has design rate $1 - d_v/d_c = 1 - 3/6 = 1/2$, so $k = 6$ and the number of parity checks is $m = n - k = 6$. Thus $H$ is $6 \times 12$.
-Step 2 (count the ones two ways, as a consistency check): counting by columns gives $12 \times 3 = 36$ ones; counting by rows gives $6 \times 6 = 36$ ones. The two agree ✓ — this equality $n\,d_v = m\,d_c$ is exactly the constraint that makes a regular degree pair feasible.
-Step 3 (what it means): every codeword $\mathbf c$ satisfies all $6$ parity equations, i.e. $\mathbf c H^T = \mathbf 0$ over GF(2), and "low density" here means only $36$ of the $72$ matrix entries are nonzero.
+Design rate $1 - 3/6 = 1/2$, so $m = n(1-R) = 6$ and $H$ is $6\times 12$. Counting ones by columns gives $12\times3 = 36$; by rows, $6\times6 = 36$ — consistent, as the proposition requires. So $36$ of the $72$ entries are ones; at $n=12$ this is hardly "low density", and it illustrates that sparsity is an asymptotic notion: at $n = 64800$ (DVB-S2) the same degrees leave the matrix $99.99\%$ zeros.
 :::
 
-## Tanner Graphs and Message Passing
+:::pitfall
+Sparsity of $H$ does not mean the code is weak or the generator matrix is sparse. $G$ for an LDPC code is typically dense, which is why encoding is done by back-substitution on an approximately lower-triangular $H$, or by using a quasi-cyclic structure, rather than by multiplying by $G$.
+:::
+
+## Tanner Graphs and Belief Propagation
 
 <!-- section: tanner-graphs -->
 
 :::definition[Tanner graph]{#tanner-graph}
-The Tanner graph of an LDPC code is a bipartite graph with variable nodes (one per code bit) on one side and check nodes (one per row of $H$) on the other; an edge joins variable $i$ to check $j$ exactly when $H_{j,i}=1$.
+The **Tanner graph** of a code with parity-check matrix $H$ is the bipartite graph with $n$ **variable nodes** (one per coordinate), $m$ **check nodes** (one per row), and an edge between variable $i$ and check $j$ exactly when $H_{ji} = 1$. The **girth** is the length of its shortest cycle.
 :::
 
-Belief-propagation (sum-product) decoding passes log-likelihood ratios (LLRs) along edges. Each variable node collects messages from its neighboring checks, updates its belief, and sends new messages back. After a few iterations the beliefs converge to the most likely codeword or a near-codeword.
+Decoding is inference on this graph: given the channel observations, compute (or approximate) the posterior probability of each bit, subject to all parity constraints.
 
-For cycle-free graphs the algorithm is exact maximum-likelihood; short cycles degrade performance slightly but are managed by good constructions (progressive edge growth, protographs).
+:::definition[Log-likelihood ratio]{#llr}
+The **LLR** of a bit $b$ given an observation $y$ is
 
-:::intuition
-Variable nodes are the "bits" that gossip with the "checks" they belong to. Each check tells every bit "given what my other bits say, you should probably be 0 (or 1)".
+$$L(b) = \log\frac{\Pr[b = 0\mid y]}{\Pr[b=1\mid y]}.$$
 
-After a few rounds of polite conversation the bits settle on values that satisfy almost all checks.
+A positive LLR favours $0$; the magnitude is the strength of the belief. On $\mathrm{BSC}(p)$ a received $0$ carries $L = \log\frac{1-p}{p}$; on a BI-AWGN channel with $\pm1$ signalling, $L = 2y/\sigma^2$.
 :::
 
-:::example
-Variable node $v_1$ is connected to checks $c_2$ and $c_4$, with channel LLR $L_{\text{ch}} = +2.0$ and incoming check messages $L_2 = +1.5$ (from $c_2$) and $L_4 = -0.8$ (from $c_4$). Recall the LLR sign convention: positive means "probably $0$".
+:::theorem[Sum-product update rules]{#bp-rules}
+In belief propagation on a Tanner graph, with $L_{\mathrm{ch}}(i)$ the channel LLR of bit $i$, the extrinsic messages are
+
+$$L_{i\to j} = L_{\mathrm{ch}}(i) + \sum_{j'\in N(i)\setminus\{j\}} L_{j'\to i}, \qquad \tanh\frac{L_{j\to i}}{2} = \prod_{i'\in N(j)\setminus\{i\}} \tanh \frac{L_{i'\to j}}{2}.$$
+
+The final belief at variable $i$ is $L_i = L_{\mathrm{ch}}(i) + \sum_{j\in N(i)} L_{j\to i}$.
+:::
+
+:::proof
+*Variable rule.* Conditioned on the bit value, the incoming pieces of evidence are independent (in a cycle-free graph they come from disjoint subtrees), so their likelihood ratios multiply and their log-likelihood ratios add. Excluding $L_{j\to i}$ from the message sent back to $j$ is what makes the message *extrinsic*: it carries only evidence $j$ has not already supplied.
+
+*Check rule.* Let $b_1,\dots,b_k$ be independent bits with $\Pr[b_t = 1] = q_t$, and let $L_t = \log\frac{1-q_t}{q_t}$. A standard identity gives $\tanh(L_t/2) = 1-2q_t$. For the parity $b_1\oplus\cdots\oplus b_k$, the probability of an even sum satisfies
+
+$$\Pr[\oplus_t b_t = 0] = \frac12\left(1 + \prod_{t=1}^k (1-2q_t)\right),$$
+
+which is proved by expanding the product of the generating factors $(1-2q_t)$, or by induction on $k$ using $\Pr[\text{even}] = \Pr[\text{even}']\,(1-q_k) + \Pr[\text{odd}']q_k$. Writing the left-hand side as $\frac12(1 + \tanh(L/2))$ where $L$ is the LLR of the parity bit and substituting $1-2q_t = \tanh(L_t/2)$ gives exactly the stated product rule.
+:::
+
+:::corollary[Exactness on trees]{#bp-exact-on-trees}
+If the Tanner graph is a tree, belief propagation converges after a number of iterations equal to the tree's diameter, and its output is the exact bitwise a posteriori probability. On a graph with cycles it is an approximation whose fixed points need not be the true posterior.
+:::
+
+:::proof
+On a tree, removing a node's edge to a neighbour splits the graph into disjoint components, so the messages entering along different edges are functions of disjoint sets of observations and are conditionally independent given the bit. The update rules are then exact applications of Bayes' rule, and a single sweep from the leaves inward and back out computes every marginal exactly. Cycles destroy the independence, and the same evidence can circulate and be counted twice.
+:::
+
+:::remark[Why cycles are tolerable]
+For a random sparse graph, the neighbourhood of a given node within radius $\ell$ is a tree with probability $1-O(1/n)$. So for a fixed number of iterations the algorithm is *asymptotically* running on a tree, which is exactly what makes the density-evolution analysis of the next section rigorous. Short cycles hurt at finite length, and constructions such as progressive edge growth and protographs exist to push the girth up.
+:::
+
+:::example[One variable-node update]
+Variable $v_1$ has channel LLR $L_{\mathrm{ch}} = +2.0$ and is connected to checks $c_2, c_4$, which send $L_{2\to1} = +1.5$ and $L_{4\to1} = -0.8$. Compute the belief and both outgoing messages.
 :::
 
 :::solution
-Step 1 (variable-node rule = add): a variable node combines independent evidence by summing LLRs. Its total belief is $L_{\text{total}} = L_{\text{ch}} + L_2 + L_4 = 2.0 + 1.5 - 0.8 = +2.7$. Since this is positive, $v_1$ currently leans toward bit $= 0$.
-Step 2 (extrinsic message back to a check — exclude that check's own message): the message $v_1$ sends *to* $c_2$ must omit $L_2$ to avoid feeding $c_2$'s own opinion back to it: $L_{v_1 \to c_2} = L_{\text{ch}} + L_4 = 2.0 - 0.8 = +1.2$. Likewise $L_{v_1 \to c_4} = L_{\text{ch}} + L_2 = 2.0 + 1.5 = +3.5$.
-Step 3 (check-node rule = tanh): a check node $c$ enforces an even-parity constraint, so its outgoing message uses the "tanh rule" $\tanh\!\big(\tfrac{L_{\text{out}}}{2}\big) = \prod_{j} \tanh\!\big(\tfrac{L_j}{2}\big)$ over the *other* incoming messages $L_j$. Its magnitude is dominated by the *least confident* neighbor (a product of $\tanh$'s shrinks toward $0$), which is why min-sum approximates it by the minimum-magnitude input. Sanity check: the sign of a check's output is the product of the signs of the other inputs — exactly the parity logic "the remaining bits together predict what this bit must be."
+Belief: $L_1 = 2.0 + 1.5 - 0.8 = +2.7$, so $v_1$ currently favours $0$.
+
+Message to $c_2$ (excluding $c_2$'s own message): $L_{1\to2} = 2.0 + (-0.8) = +1.2$.
+
+Message to $c_4$: $L_{1\to4} = 2.0 + 1.5 = +3.5$.
+
+Each outgoing message omits the recipient's contribution. Including it would return the check's own opinion to it and let a single observation be counted repeatedly around the graph.
 :::
 
-## Performance and Decoding
+:::example[One check-node update, exactly and by min-sum]
+Check $c$ has three other neighbours sending $L = +1.2,\ -0.8,\ +3.5$. Compute its outgoing message exactly and by the min-sum approximation.
+:::
+
+:::solution
+Exact: $\tanh(0.6) = 0.5370$, $\tanh(-0.4) = -0.3799$, $\tanh(1.75) = 0.9414$. The product is $0.5370 \times (-0.3799)\times 0.9414 = -0.1921$. Then $L_{c\to} = 2\,\mathrm{artanh}(-0.1921) = -0.3886$.
+
+Min-sum: the sign is the product of signs, $(+)(-)(+) = -$; the magnitude is approximated by the smallest incoming magnitude, $0.8$. So min-sum gives $-0.8$, the right sign and an optimistic magnitude — which is why implementations scale it by a factor around $0.75$.
+
+Note how the exact magnitude $0.39$ is *smaller* than every incoming magnitude: a parity check is only as confident as its least confident member, because one uncertain bit makes the parity of the rest uncertain.
+:::
+
+## Density Evolution, Thresholds and Error Floors
 
 <!-- section: performance-decoding -->
 
-Under density evolution, the decoding threshold of a well-designed LDPC ensemble can be within 0.1 dB of the Shannon limit for the binary-input AWGN channel at rates 1/2 and higher. Finite-length performance is governed by the girth (shortest cycle) and the minimum distance (which grows linearly with n for good ensembles).
+The remarkable feature of LDPC codes is that their asymptotic performance can be computed exactly. Because the local neighbourhood of a node is a tree with high probability, the fraction of erroneous messages evolves according to a deterministic one-dimensional recursion.
 
-Decoding is parallelizable and has linear complexity in block length per iteration; usually 10-50 iterations suffice. Hardware implementations use layered scheduling and min-sum approximations to reduce multipliers.
-
-:::intuition
-For long enough blocks, LDPC can get you almost as close to the theoretical best error rate as any code possibly could.
-
-The decoder is "dumb but fast": thousands of tiny local processors just exchange simple numbers until the whole block agrees.
+:::definition[Decoding threshold]{#threshold}
+For an ensemble and a family of channels ordered by a noise parameter $\varepsilon$, the **threshold** $\varepsilon^{*}$ is the supremum of noise levels for which the expected fraction of incorrect messages tends to $0$ as the number of iterations and the block length grow.
 :::
 
-:::example
-A rate-1/2 LDPC code of length 64800 (DVB-S2) at Eb/N0 = 1.0 dB achieves BER below 10^{-5} after 50 iterations, while the Shannon limit for rate 1/2 on BI-AWGN is approximately 0.18 dB — within 0.8 dB and improvable with better degree distributions.
+:::theorem[Density evolution on the BEC]{#bec-density-evolution}
+Consider an irregular ensemble with edge degree distributions $\lambda,\rho$ used on $\mathrm{BEC}(\varepsilon)$ with the peeling (message-passing) decoder. Let $x_\ell$ be the probability that a variable-to-check message is an erasure after $\ell$ iterations. Then $x_0 = \varepsilon$ and
+
+$$x_{\ell+1} = \varepsilon\,\lambda\big(1 - \rho(1-x_\ell)\big).$$
+
+The decoder succeeds asymptotically if and only if $\varepsilon\,\lambda(1-\rho(1-x)) < x$ for all $x \in (0,\varepsilon]$, and the threshold is the largest $\varepsilon$ for which this holds.
+:::
+
+:::proof
+Work in the tree-like local neighbourhood, where all incoming messages are independent.
+
+*Check to variable.* A check-to-variable message is known (not an erasure) precisely when every *other* message into that check is known. For a check of degree $j$ this has probability $(1-x_\ell)^{j-1}$, and averaging over the edge-perspective distribution gives $\rho(1-x_\ell)$. So a check-to-variable message is an erasure with probability $1-\rho(1-x_\ell)$.
+
+*Variable to check.* A variable-to-check message is an erasure precisely when the channel erased the bit *and* every other incoming check message is an erasure. For a variable of degree $i$ that probability is $\varepsilon\big(1-\rho(1-x_\ell)\big)^{i-1}$; averaging over $\lambda$ gives the recursion.
+
+The recursion is monotone increasing in $x$ and $x_{\ell}$ is non-increasing in $\ell$ when it starts at $\varepsilon$, so it converges to the largest fixed point below $\varepsilon$. Convergence to $0$ therefore holds exactly when no fixed point exists in $(0,\varepsilon]$, which is the stated strict-inequality condition.
+:::
+
+:::example[Threshold of the $(3,6)$ ensemble on the BEC]
+Compute the recursion for the regular $(3,6)$ code and estimate its threshold; compare with capacity.
+:::
+
+:::solution
+Regular degrees mean $\lambda(x) = x^{2}$ and $\rho(x) = x^{5}$, so
+
+$$x_{\ell+1} = \varepsilon\left(1-(1-x_\ell)^5\right)^{2}.$$
+
+At $\varepsilon = 0.5$ the map has a fixed point near $x \approx 0.45$ (since $0.5(1-0.55^5)^2 = 0.451$), so the decoder stalls there and never clears the block. At $\varepsilon = 0.4$ iterating from $x_0 = 0.4$ gives $0.4(1-0.6^5)^2 = 0.4(0.9222)^2 = 0.340$, then $0.4(1-0.66^5)^2 = 0.4(0.8748)^2 = 0.306$, then $0.282$, $0.262,\dots$, decreasing steadily to $0$. The true threshold is $\varepsilon^{*} \approx 0.4294$, against the capacity limit $\varepsilon = 1 - R = 0.5$. Irregular ensembles close most of that gap; optimised degree distributions reach $\varepsilon^{*} > 0.499$.
+:::
+
+:::figure[Density evolution for the $(3,6)$-regular ensemble on $\mathrm{BEC}(0.4)$. The erasure fraction iterates under $x\mapsto 0.4(1-(1-x)^5)^2$; because the curve stays strictly below the diagonal on $(0, 0.4]$, the iteration slides down to $0$ and the block decodes. At $\varepsilon = 0.5$ the same curve crosses the diagonal near $x=0.45$ and the decoder stalls there.]{#density-evolution}
+{
+  "type": "plot",
+  "x": [0, 0.55],
+  "y": [0, 0.55],
+  "xTicks": 0.1,
+  "yTicks": 0.1,
+  "xLabel": "x",
+  "yLabel": "next x",
+  "marks": [
+    { "kind": "function", "fn": "0.4*(1-(1-x)^5)^2", "tone": "accent" },
+    { "kind": "function", "fn": "0.5*(1-(1-x)^5)^2", "tone": "alt", "dashed": true },
+    { "kind": "line", "through": [[0, 0], [0.55, 0.55]], "tone": "muted", "dashed": true },
+    { "kind": "point", "at": [0.451, 0.451], "tone": "alt" },
+    { "kind": "text", "at": [0.42, 0.13], "text": "eps = 0.4: decodes", "leaderTo": [0.3, 0.253] },
+    { "kind": "text", "at": [0.17, 0.5], "text": "eps = 0.5: stalls", "leaderTo": [0.451, 0.451] },
+    { "kind": "text", "at": [0.06, 0.2], "text": "y = x", "leaderTo": [0.14, 0.14] }
+  ]
+}
+:::
+
+:::theorem[Stability condition]{#stability-condition}
+A necessary condition for the threshold of an ensemble on $\mathrm{BEC}(\varepsilon)$ to be at least $\varepsilon$ is
+
+$$\varepsilon\,\lambda'(0)\rho'(1) \le 1, \qquad \text{that is} \quad \varepsilon\,\lambda_2 (d_c-1)\le 1 \text{ in the check-regular case}.$$
+:::
+
+:::proof
+Linearise the density-evolution recursion at $x=0$. Writing $f(x) = \varepsilon\lambda(1-\rho(1-x))$, the chain rule gives $f'(0) = \varepsilon \lambda'(0)\rho'(1)$. If $f'(0) > 1$ then $f(x) > x$ for small positive $x$, so a fixed point exists arbitrarily close to $0$ and the erasure fraction cannot be driven to zero.
+:::
+
+The stability condition explains why good irregular ensembles keep the fraction of degree-2 variable nodes small but nonzero: degree-2 nodes speed up the waterfall but, in excess, stall the endgame.
+
+:::remark[Error floors and trapping sets]
+Density evolution describes the *waterfall*: the steep fall of error rate just below threshold. At high SNR a different mechanism dominates. Small subgraphs — near-codewords, absorbing sets, trapping sets — can hold the decoder in a stable wrong configuration even though the code's true minimum distance is large. The resulting **error floor** is a plateau in the error-rate curve, and it is a finite-length, decoder-specific phenomenon that density evolution cannot see. Standards mitigate it with girth-optimised constructions and an outer CRC or BCH code.
+:::
+
+:::intuition
+Think of the BEC decoder as unzipping: find a check with exactly one unknown bit, solve it, repeat. Density evolution tracks the fraction of bits still unknown. Below threshold the unzipping never runs out of solvable checks and the whole block resolves; above threshold it jams on a stuck subgraph — a set of bits whose checks each contain at least two of them — and stops.
+:::
+
+:::example[Complexity of message passing]
+Show that one iteration costs $O(n)$ operations for a fixed degree distribution, and comment on latency.
+:::
+
+:::solution
+The number of edges is $E = n \bar d_v$, with $\bar d_v$ the average variable degree, a constant. Each iteration performs $O(1)$ work per edge in both directions, so the cost is $\Theta(E) = \Theta(n)$, and with $I$ iterations the total is $\Theta(In)$ — linear in the block length, unlike the $2^{k}$ of exhaustive maximum-likelihood decoding. The work is also fully parallel across edges, which is why LDPC decoders map so well onto hardware; the latency cost is the $I \approx 10$ to $50$ sequential iterations, mitigated in practice by layered scheduling that propagates information within an iteration.
 :::
 
 ## Common Mistakes
 
-- **Confusing LDPC with Turbo codes**: Both are iteratively decoded capacity-approaching codes, but LDPC use sparse graphs and message passing while Turbo codes concatenate two convolutional codes with an interleaver.
-- **Assuming all sparse matrices give good codes**: Random sparse H can have short cycles or poor degree distributions; structured constructions (quasi-cyclic, protograph) are used in standards.
-- **Expecting small-block excellent performance**: LDPC shine at large n; for short packets polar or algebraic codes are often preferred.
-- **Forgetting that the all-zero codeword is assumed w.l.o.g. for linear codes when simulating**: Because of linearity, error probability is independent of the transmitted codeword.
-- **Overlooking the error floor**: At very high SNR, performance is limited by low-weight codewords or trapping sets rather than the waterfall region.
-- **Thinking decoding always finds a codeword**: The algorithm may output a non-codeword or declare failure; post-processing or outer CRC is common.
+- **Confusing LDPC with turbo codes**: both are iteratively decoded and capacity-approaching, but LDPC codes are defined by a sparse parity-check matrix and decoded on its Tanner graph, whereas turbo codes concatenate convolutional codes through an interleaver.
+- **Assuming any sparse $H$ gives a good code**: degree-2-heavy ensembles violate the stability condition, short cycles wreck finite-length performance, and $d_v = 2$ ensembles have logarithmic minimum distance.
+- **Treating belief propagation as maximum likelihood**: it is exact only on trees. On a loopy graph it may converge to a non-codeword, oscillate, or stop at a trapping set.
+- **Reading a threshold as a finite-length guarantee**: thresholds are asymptotic. A length-1000 code performs visibly worse than its ensemble threshold predicts.
+- **Forgetting that the all-zero codeword suffices for simulation**: for a linear code on a symmetric channel the error probability does not depend on the transmitted codeword, so simulations transmit $\mathbf 0$ — but only after checking that the decoder itself is symmetric.
+- **Ignoring the error floor**: the waterfall is not the whole curve. Systems that need error rates below $10^{-12}$ care more about trapping sets than about the threshold.
 
-Polar codes, invented by Erdal Arıkan in 2009, are the first family of codes that provably achieve the symmetric capacity of any binary-input discrete memoryless channel with encoding and decoding complexity O(n log n). They do so by an explicit, deterministic construction based on the beautiful phenomenon of channel polarization.
-
-In 5G New Radio, polar codes were selected for the control channel (PDCCH) and for the broadcast channel, marking the first widespread commercial deployment of a capacity-achieving code family.
+LDPC and turbo codes approach capacity but do not provably attain it, and their analysis is asymptotic and ensemble-averaged. In 2009 Erdal Arıkan produced the first explicit construction with a proof: a deterministic family of codes, with encoding and decoding in $O(n\log n)$, that achieves the symmetric capacity of *any* binary-input memoryless channel. The mechanism is a phenomenon he named channel polarization.
 
 ## Channel Polarization
 
 <!-- section: channel-polarization -->
 
-Arikan's insight starts with a simple $2\times 2$ kernel: two copies of a channel $W$ are combined into a worse channel $W^-$ and a better channel $W^+$. Recursively applying this transformation to $n = 2^m$ independent copies of $W$ creates $n$ synthetic bit-channels.
+:::definition[Symmetric capacity and Bhattacharyya parameter]{#w-parameters}
+For a binary-input channel $W: \{0,1\}\to\mathcal Y$, the **symmetric capacity** $I(W)$ is the mutual information with a uniform input, and the **Bhattacharyya parameter** is
 
-:::theorem[Channel polarization]{#channel-polarization}
-The capacities of the $n = 2^m$ synthetic bit-channels polarize: a fraction $I(W)$ of them become almost noiseless (capacity $\to 1$) while the rest become almost useless (capacity $\to 0$). As $m \to \infty$ the polarization is sharp, and the fraction of good channels approaches exactly the symmetric capacity $I(W)$.
+$$Z(W) = \sum_{y\in\mathcal Y}\sqrt{W(y\mid 0)W(y\mid 1)} \in [0,1].$$
+
+$Z(W)$ is an upper bound on the error probability of a maximum-likelihood decision between the two inputs on one use of $W$; $I(W)\approx1$ and $Z(W)\approx0$ mean a clean channel, $I(W)\approx0$ and $Z(W)\approx1$ a useless one.
 :::
 
-That last clause is what makes polar codes capacity-achieving: the good channels are not merely plentiful, there are exactly as many of them as the capacity allows.
+:::definition[The basic polar transform]{#basic-transform}
+Given two independent copies of $W$ and inputs $(u_1,u_2)$, set $x_1 = u_1\oplus u_2$, $x_2 = u_2$, and transmit $x_1,x_2$. This defines two **synthetic channels**
+
+$$W^-(y_1,y_2 \mid u_1) \quad\text{and}\quad W^{+}(y_1,y_2,u_1\mid u_2),$$
+
+where $W^-$ decodes $u_1$ from the two outputs alone, and $W^{+}$ decodes $u_2$ from the two outputs *and* a known $u_1$.
+:::
+
+:::theorem[Conservation and polarization of one step]{#one-step-polarization}
+For any binary-input channel $W$,
+
+$$I(W^-) + I(W^{+}) = 2I(W), \qquad I(W^-) \le I(W) \le I(W^{+}),$$
+
+with equality in the second display if and only if $I(W) \in\{0,1\}$.
+:::
+
+:::proof
+The map $(u_1,u_2)\mapsto(x_1,x_2) = (u_1\oplus u_2, u_2)$ is a bijection on $\mathbb F_2^2$, so with $(U_1,U_2)$ uniform and independent, $(X_1,X_2)$ is also uniform and independent, and $I(U_1,U_2;Y_1,Y_2) = I(X_1,X_2;Y_1,Y_2) = 2I(W)$ because the two uses are independent. The chain rule splits the left side:
+
+$$I(U_1,U_2;Y_1,Y_2) = I(U_1;Y_1,Y_2) + I(U_2;Y_1,Y_2\mid U_1) = I(W^-) + I(W^{+}),$$
+
+the two terms being exactly the symmetric capacities of the synthetic channels, since $U_1, U_2$ are uniform. That proves conservation.
+
+For the ordering, note $I(W^{+}) = I(U_2; Y_1,Y_2\mid U_1) \ge I(U_2;Y_2) = I(W)$: giving the decoder $U_1$ and the extra output $Y_1$ cannot hurt, and conditioning on the independent $U_1$ does not reduce the information here because $U_2$ is independent of $U_1$. Conservation then forces $I(W^-) = 2I(W)-I(W^{+}) \le I(W)$. Equality throughout requires $I(W^-)=I(W^+)$, which happens only in the extreme cases $I(W)\in\{0,1\}$.
+:::
 
 :::intuition
-Imagine taking many identical noisy phone lines and cleverly wiring them together in stages. Some of the resulting 'virtual lines' become crystal clear while others become pure noise.
-
-The fraction that become clear equals the fraction of information the original noisy line could have carried reliably.
+The transform takes two identical mediocre channels and makes one worse and one better, keeping the total constant. $u_1$ must be read through the interference of $u_2$, so its channel degrades; $u_2$, once $u_1$ is known, enjoys both observations, so its channel improves. Capacity is neither created nor destroyed — it is redistributed.
 :::
 
-:::example
-For the binary erasure channel with erasure probability 0.5, I(W)=0.5. After one step of polarization the good synthetic channel W⁺ has erasure prob 0.25 (better) and W⁻ has 0.75 (worse). After many recursions roughly half the final bit-channels have erasure probability near 0.
+:::proposition[Erasure channels stay erasure channels]{#bec-polarization}
+If $W = \mathrm{BEC}(\varepsilon)$, then $W^{-} = \mathrm{BEC}(2\varepsilon-\varepsilon^2)$ and $W^{+} = \mathrm{BEC}(\varepsilon^2)$.
+:::
+
+:::proof
+For $W^-$: $u_1 = x_1 \oplus x_2$ can be recovered iff *both* $x_1$ and $x_2$ arrive, so it is erased with probability $1-(1-\varepsilon)^2 = 2\varepsilon - \varepsilon^2$. For $W^{+}$: knowing $u_1$, the value $u_2$ can be recovered from $x_2$ alone or from $x_1 = u_1\oplus u_2$ alone, so it is erased only if *both* are erased, which has probability $\varepsilon^2$. Both synthetic channels are still erasure channels because the outputs are either fully informative or entirely uninformative. Note $(2\varepsilon-\varepsilon^2) + \varepsilon^2 = 2\varepsilon$, i.e. $I(W^-)+I(W^+) = 2(1-\varepsilon)$, in accordance with conservation.
+:::
+
+:::definition[Recursive construction]{#polar-recursion}
+Apply the transform recursively. For $n = 2^m$, the $n$ synthetic channels $W_n^{(i)}$, $i=1,\dots,n$, are obtained by $m$ levels of the basic transform; in the notation above, $W_{2n}^{(2i-1)} = (W_n^{(i)})^{-}$ and $W_{2n}^{(2i)} = (W_n^{(i)})^{+}$.
+:::
+
+:::theorem[Channel polarization, Arıkan 2009]{#channel-polarization}
+For any binary-input memoryless channel $W$ and any $\delta\in(0,1)$, as $n = 2^m \to\infty$,
+
+$$\frac{\left|\{i : I(W_n^{(i)}) > 1-\delta\}\right|}{n} \longrightarrow I(W), \qquad \frac{\left|\{i: I(W_n^{(i)}) < \delta\}\right|}{n}\longrightarrow 1 - I(W).$$
+
+The fraction of synthetic channels that are neither almost perfect nor almost useless tends to zero.
+:::
+
+:::proof
+*Sketch.* Let $B_1,B_2,\dots$ be i.i.d. fair bits choosing the $-$ or $+$ branch at each level, and let $I_m = I(W_m)$ be the symmetric capacity of the synthetic channel reached after $m$ steps. Conservation, $I(W^-)+I(W^{+}) = 2I(W)$, says precisely that
+
+$$\mathbb E[I_{m+1}\mid I_1,\dots,I_m] = \tfrac12 I(W^-) + \tfrac12 I(W^{+}) = I_m,$$
+
+so $\{I_m\}$ is a bounded martingale and converges almost surely to some $I_\infty$, with $\mathbb E[I_\infty] = I(W)$. The remaining step shows $I_\infty \in \{0,1\}$ almost surely: martingale convergence forces $|I_{m+1}-I_m|\to0$, while a separate estimate shows that one step moves the capacity by a definite amount unless the channel is already nearly extremal. Since $I_\infty$ takes only the values $0$ and $1$ and has mean $I(W)$, it equals $1$ with probability exactly $I(W)$, which is the statement. The quantitative step — that a non-extremal channel polarises at a definite rate — is the technical core of Arıkan's paper and we do not reproduce it.
+:::
+
+:::example[Polarization on the BEC, by hand]
+Start with $\mathrm{BEC}(0.5)$ and run two levels of the recursion, listing the four erasure probabilities.
+:::
+
+:::solution
+Level 1: $\varepsilon^- = 2(0.5)-0.25 = 0.75$ and $\varepsilon^{+} = 0.25$.
+
+Level 2, applying the same rules to each:
+
+- from $0.75$: $2(0.75)-0.5625 = 0.9375$ and $0.5625$;
+- from $0.25$: $2(0.25) - 0.0625 = 0.4375$ and $0.0625$.
+
+So the four synthetic channels have erasure probabilities $0.9375,\ 0.5625,\ 0.4375,\ 0.0625$ — already spreading toward the extremes. Their average is $(0.9375+0.5625+0.4375+0.0625)/4 = 0.5$, confirming conservation. After $m=10$ levels the great majority of the $1024$ channels sit within $10^{-3}$ of $0$ or $1$.
+:::
+
+:::figure[Three levels of polarization starting from $\mathrm{BEC}(0.5)$: the erasure probabilities of the eight synthetic channels, sorted by index. Four are heading toward $1$ (useless) and four toward $0$ (perfect), and their average stays at $0.5$ — capacity is redistributed, never created. A polar code of rate $1/2$ puts data on indices $4,6,7,8$ and freezes the rest.]{#polarization-bars}
+{
+  "type": "plot",
+  "x": [0, 9],
+  "y": [0, 1.25],
+  "xTicks": 1,
+  "yTicks": 0.25,
+  "xLabel": "synthetic channel index",
+  "yLabel": "erasure probability",
+  "marks": [
+    { "kind": "bars", "bars": [[0.6, 1.4, 0.99609], [1.6, 2.4, 0.87891], [2.6, 3.4, 0.80859], [4.6, 5.4, 0.68359]], "tone": "accent" },
+    { "kind": "bars", "bars": [[3.6, 4.4, 0.31641], [5.6, 6.4, 0.19141], [6.6, 7.4, 0.12109], [7.6, 8.4, 0.00391]], "tone": "result" },
+    { "kind": "text", "at": [2.2, 1.15], "text": "frozen", "leaderTo": [1.0, 1.0] },
+    { "kind": "text", "at": [6.6, 0.95], "text": "information set", "leaderTo": [8.0, 0.1] }
+  ]
+}
 :::
 
 ## Construction and Encoding
 
 <!-- section: construction-encoding -->
 
-:::definition[Polar transform]{#polar-transform}
-The polar transform is the Kronecker power
+Polarization hands us $n$ synthetic channels, some nearly perfect and some nearly useless. The code writes data on the good ones and fixes the bad ones to values the decoder already knows.
 
-$$G_n = F^{\otimes m}, \qquad F = \begin{bmatrix} 1 & 0 \\ 1 & 1\end{bmatrix}.$$
+:::definition[Polar transform matrix]{#polar-transform}
+With $F = \begin{bmatrix}1&0\\1&1\end{bmatrix}$, the polar transform of length $n=2^m$ is the Kronecker power $G_n = F^{\otimes m}$ (composed with a bit-reversal permutation in Arıkan's original presentation). Encoding is
 
-To encode, place the $k$ information bits in the $k$ most reliable synthetic channels (the information set $A$); the remaining $n-k$ positions (the frozen set) are set to $0$, or to other known values. Encoding is then
-
-$$\mathbf{x} = \mathbf{u} G_n,$$
-
-where $u_A$ are the information bits and $u_{A^c}=0$.
+$$\mathbf x = \mathbf u\,G_n.$$
 :::
 
-Because $G_n$ is essentially the fast Hadamard transform, encoding costs only $n \log n$ XORs.
-
-:::intuition
-You get a big 'mixing' matrix built by repeatedly applying a tiny 2-bit mixer. The mixing sorts the bits into 'good' and 'bad' positions according to how much the channel likes them.
-
-Frozen bits are the positions you deliberately set to known values so the decoder has side information to help it guess the real data bits.
+:::definition[Polar code]{#polar-code}
+Fix a rate $k/n$. Choose the **information set** $A \subseteq \{1,\dots,n\}$ with $|A| = k$ to consist of the indices of the $k$ synthetic channels with the smallest Bhattacharyya parameters $Z(W_n^{(i)})$. The **frozen set** is $A^{c}$, and $u_{A^c}$ is fixed to a value known to both ends (usually $\mathbf 0$). The codeword is $\mathbf x = \mathbf u G_n$ with $u_A$ carrying the message.
 :::
 
-:::example
-For n=8, m=3, a rate-1/2 code might freeze positions {1,2,3,5} (the worst synthetic channels) and put info bits in {4,6,7,8}. The generator rows corresponding to the info set are selected; the code is linear.
+:::theorem[Encoding complexity]{#polar-encoding-complexity}
+$\mathbf u \mapsto \mathbf u G_n$ can be computed with $\frac n2\log n$ binary additions, i.e. in $O(n\log n)$ time and $O(n)$ space.
+:::
+
+:::proof
+Write $T(n)$ for the cost. The Kronecker structure $G_{2n} = \begin{bmatrix}G_n & 0\\ G_n & G_n\end{bmatrix}$ (up to the standard index permutation) means the length-$2n$ transform consists of $n$ XORs combining the two halves followed by two independent length-$n$ transforms, so $T(2n) = 2T(n) + n$ with $T(1) = 0$. By induction $T(n) = \frac n2\log n$: indeed if $T(n) = \frac n2 \log n$ then $T(2n) = n\log n + n = \frac{2n}{2}\log(2n)$. This is the butterfly structure of the fast Hadamard transform.
+:::
+
+:::proposition[Polar codes are linear, and their rate]{#polar-linear}
+A polar code is the linear code generated by the rows of $G_n$ indexed by $A$, so it is an $[n,k]$ linear code of rate $k/n$ when the frozen values are zero.
+:::
+
+:::proof
+With $u_{A^c} = \mathbf 0$, $\mathbf x = \mathbf u G_n = \sum_{i\in A}u_i (G_n)_{i,\cdot}$, a linear span of $|A| = k$ rows. The rows of $G_n$ are linearly independent because $G_n = F^{\otimes m}$ and $F$ is invertible over $\mathbb F_2$ (indeed $F^2 = I$), so $G_n$ is invertible and its $k$ selected rows are independent.
+:::
+
+:::remark[Choosing the frozen set]
+For the BEC the parameters $Z(W_n^{(i)})$ follow the exact recursion of the erasure proposition, so the information set is computable in $O(n)$ arithmetic. For general channels one uses density evolution on quantised distributions, the Gaussian approximation, or — as in 5G — a single fixed *reliability sequence* tabulated once and nested across lengths. Note that the good set depends on the channel quality, so a polar code designed for one SNR is slightly mismatched at another.
+:::
+
+:::example[A length-8 polar code]
+Take $\mathrm{BEC}(0.5)$, $n=8$, $k=4$. Determine the information set.
+:::
+
+:::solution
+Apply the erasure recursion three times. From $0.5$: level 1 gives $(0.75, 0.25)$; level 2 gives $(0.9375, 0.5625, 0.4375, 0.0625)$; level 3 gives
+
+$$(0.99609,\ 0.87891,\ 0.80859,\ 0.31641,\ 0.68359,\ 0.19141,\ 0.12109,\ 0.00391).$$
+
+The four smallest erasure probabilities are at indices $8, 7, 6, 4$, so $A = \{4,6,7,8\}$ and the frozen set is $\{1,2,3,5\}$. The average of the eight numbers is $0.5$, as conservation demands. Note that the good indices are the ones with many $+$ branches in their binary expansion — the pattern that the 5G reliability sequence tabulates once and for all.
+:::
+
+:::pitfall
+Frozen bits are not wasted parity; they are positions whose *value is known in advance* to the decoder. That knowledge is what the successive-cancellation decoder leans on. Setting them to random-but-known values works equally well on a symmetric channel; setting them to values the decoder does not know destroys the code.
 :::
 
 ## Successive Cancellation Decoding
 
 <!-- section: sc-decoding -->
 
-Successive cancellation (SC) decodes bit by bit in a fixed order, using previously decided bits as side information for later decisions. At each information bit it computes the likelihood ratio (or LLR) of that synthetic channel given the channel output and prior decisions, then decides 0 or 1 (or uses CRC-aided list decoding).
+The decoder mirrors the encoder's recursion, deciding $u_1,u_2,\dots,u_n$ in order and using each decision as known side information for the next.
 
-The recursion follows the same butterfly structure as the encoder, allowing an efficient implementation with O(n log n) complexity using a scheduling graph.
-
-SC list decoding (SCL) keeps L best paths and is used in practice with a small CRC to select the correct path; it dramatically improves finite-length performance.
-
-:::intuition
-The decoder walks through the bits in a special order, 'freezing' its guesses for the known frozen bits and using them as crutches to decide the unknown data bits one by one.
-
-Because of the polarization, when it reaches a good bit position the decision is almost obvious given everything seen so far.
+:::recipe[Successive cancellation decoding]{#sc-decoder}
+For $i = 1,\dots,n$:
+1. If $i \in A^{c}$, set $\hat u_i$ to the known frozen value.
+2. Otherwise compute the LLR $L_n^{(i)}(y^n, \hat u^{i-1})$ of the $i$-th synthetic channel, using the recursive butterfly, and set $\hat u_i = 0$ if $L_n^{(i)} > 0$ and $1$ otherwise.
 :::
 
-:::example
-Take the $n=2$ polar transform ($\mathbf x = (u_1 \oplus u_2,\; u_2)$) over a BEC, and watch SC decode the two bits in order. Let $L_1, L_2$ be the channel LLRs for the two received symbols.
+:::proposition[LLR recursions]{#sc-recursions}
+Writing $L^{-}$ and $L^{+}$ for the LLRs of the two synthetic channels built from LLRs $L_1$ and $L_2$, and $\hat u_1$ for the earlier decision,
+
+$$L^{-} = 2\,\mathrm{artanh}\!\left(\tanh\frac{L_1}{2}\tanh\frac{L_2}{2}\right), \qquad L^{+} = L_2 + (-1)^{\hat u_1}L_1.$$
+:::
+
+:::proof
+For $L^{-}$: $u_1 = x_1\oplus x_2$ is a parity of two independently observed bits, so the check-node (box-plus) rule proved in the LDPC section applies verbatim. For $L^{+}$: given $u_1$, the observation $y_1$ is a noisy version of $x_1 = u_1\oplus u_2$, so it is evidence about $u_2$ with the sign of its LLR flipped when $u_1 = 1$, while $y_2$ is direct evidence about $x_2 = u_2$. Independent evidence adds in the LLR domain, giving the stated sum.
+:::
+
+:::theorem[Decoding complexity]{#sc-complexity}
+Successive cancellation decoding of a length-$n$ polar code costs $O(n\log n)$ operations.
+:::
+
+:::proof
+Let $D(n)$ be the cost of decoding all $n$ bits. The recursion computes, from the $n$ channel LLRs, two length-$n/2$ decoding problems — one for the odd-indexed ("minus") branch, one for the even ("plus") branch — each preceded by $n/2$ combining operations, and the plus branch reuses the already decided bits. So $D(n) = 2D(n/2) + O(n)$, with $D(1) = O(1)$, and the master theorem gives $D(n) = O(n\log n)$.
+:::
+
+:::theorem[Block error bound]{#polar-error-bound}
+Under successive cancellation with genie-free decoding, the block error probability of a polar code with information set $A$ satisfies
+
+$$P_e \le \sum_{i\in A} Z\big(W_n^{(i)}\big).$$
+:::
+
+:::proof
+*Sketch.* Consider the first index at which the decoder errs. Conditioned on all previous decisions being correct, the decision on $u_i$ is a maximum-likelihood binary decision on the synthetic channel $W_n^{(i)}$, whose error probability is at most $Z(W_n^{(i)})$ — the standard Bhattacharyya bound on the error of a binary hypothesis test. Union bounding over $i\in A$ gives the claim. Arıkan's rate-of-polarization theorem then shows that for any $R<I(W)$ one can choose $A$ with $\sum_{i\in A}Z(W_n^{(i)}) = O(2^{-\sqrt n})$, which is what makes polar codes capacity-achieving.
+:::
+
+:::example[Decoding a length-2 polar code]
+Let $n=2$ with $u_1$ frozen to $0$, so the code is $\{(0,0),(1,1)\}$. The channel LLRs are $L_1 = +0.4$ and $L_2 = +3.0$. Decode.
 :::
 
 :::solution
-Step 1 (decode $u_1$ first, via the $W^-$ recursion): $u_1$ influences both outputs, so its LLR combines *both* channel LLRs with the check-node ("box-plus") rule: $L_{u_1} = 2\,\text{artanh}\!\big(\tanh\tfrac{L_1}{2}\tanh\tfrac{L_2}{2}\big)$. This is the *worse* synthetic channel, so $|L_{u_1}|$ is small — if $u_1$ is a frozen bit we simply use its known value and skip the decision.
-Step 2 (decode $u_2$ next, via the $W^+$ recursion, using $\hat u_1$): now the already-decided $\hat u_1$ is side information. The LLR adds the two channel LLRs, with the sign of $L_1$ flipped when $\hat u_1 = 1$: $L_{u_2} = L_2 + (-1)^{\hat u_1} L_1$. This is the *better* synthetic channel, so $|L_{u_2}|$ is large and the decision is reliable.
-Step 3 (decide): for an information bit, set $\hat u_i = 0$ if $L_{u_i} > 0$ and $\hat u_i = 1$ otherwise. Sanity check: Step 2 literally *reuses* the guess from Step 1 — this dependence on earlier decisions is exactly what "successive cancellation" names, and it is also why an early error can propagate, motivating list decoding.
+$u_1$ is frozen, so $\hat u_1 = 0$ without computation — which is fortunate, since its synthetic channel is the bad one: $L^{-} = 2\,\mathrm{artanh}(\tanh(0.2)\tanh(1.5)) = 2\,\mathrm{artanh}(0.1974\times0.9051) = 2\,\mathrm{artanh}(0.1787) = 0.361$, a weak belief.
+
+Then $L^{+} = L_2 + (-1)^{0}L_1 = 3.0+0.4 = 3.4$, a strong belief, so $\hat u_2 = 0$. The decoded codeword is $(0,0)$.
+
+Observe the polarization concretely: the two channel LLRs of magnitude $0.4$ and $3.0$ became a synthetic pair of magnitudes $0.36$ and $3.4$ — one worse than either, one better than both.
+:::
+
+:::remark[SC list decoding]
+Plain SC is greedy: one early wrong decision is never revisited, and at short lengths it falls well short of maximum likelihood. **SC list** decoding keeps the $L$ most likely partial paths (typically $L = 8$ or $32$), doubling the list at each information bit and pruning; its complexity is $O(Ln\log n)$. Concatenating a CRC over the information bits and selecting the surviving path that passes the CRC gives CRC-aided SCL, which at short lengths is close to the finite-length bounds and is what 5G actually deploys. The CRC here is not an error detector bolted on afterwards; it is part of the code.
+:::
+
+:::intuition
+Successive cancellation is a relay race in a fixed order. Each runner may consult everything the earlier runners decided, and the positions have been chosen so that by the time a runner has to make a real decision, the accumulated information makes it nearly obvious. The weakness is that nobody checks the earlier runners' work — hence list decoding, which keeps several teams running and lets the CRC pick the winner at the end.
 :::
 
 ## Performance in Standards
 
 <!-- section: performance-standards -->
 
-For short to moderate block lengths (hundreds to a few thousand bits) that are typical of control signaling, polar codes with CRC-aided SCL decoding outperform both LDPC and turbo codes in the 5G operating region. They have deterministic construction, no need for large interleavers, and admit efficient hardware implementations (especially with list size 8 or 32).
+:::remark[Where polar codes stand]
+The honest summary is three claims, one asymptotic and two practical.
 
-The main practical limitation is that plain SC is suboptimal for short n; list decoding + CRC is essential. Rate matching (puncturing, shortening, repetition) is used to support arbitrary code lengths and rates.
+*Asymptotically*, polar codes are the first explicit, low-complexity family proved to achieve the symmetric capacity of any binary-input memoryless channel. That is a theorem, and it is what makes them a landmark.
 
-:::intuition
-For the small packets used to tell a phone 'here is your schedule', polar codes give better reliability than the older turbo or LDPC designs that were tuned for big data blocks.
+*At finite length*, plain SC decoding is mediocre; polar codes became competitive only with CRC-aided list decoding, whose complexity is $L$ times larger. With $L=8$ and a CRC of $11$ to $24$ bits, at block lengths of a few hundred bits they match or beat LDPC and turbo codes and come within a few tenths of a dB of the finite-blocklength (normal-approximation) bound.
 
-5G chose them precisely because control messages are short and must be decoded extremely reliably with low latency.
+*At long lengths and high rates*, LDPC codes generally win on throughput per unit of silicon, because belief propagation is fully parallel while SC list decoding is inherently sequential across bits.
 :::
 
-:::example
-In 5G, downlink control information (DCI) uses polar codes with n up to 512 or 1024 bits, list size 8, and an 24-bit CRC; this achieves the required BLER < 10^{-3} or 10^{-5} at the cell edge with modest Eb/N0.
+:::example[Polar codes in 5G New Radio]
+Summarise the deployment choices in 5G and why they follow from the theory.
+:::
+
+:::solution
+5G NR uses polar codes for the control channels — downlink control information (PDCCH), uplink control (PUCCH), and the broadcast channel — and LDPC codes for the data channel. The control payloads are short (tens to a few hundred bits) and must meet block error rates of $10^{-2}$ to $10^{-5}$ with very low latency, exactly the regime where CRC-aided SCL is strongest and where LDPC thresholds do not apply. Distributed CRC bits let the decoder prune list paths early, and a fixed nested reliability sequence avoids per-SNR construction. Rate matching by puncturing, shortening or repetition supports arbitrary lengths, since the natural lengths are only powers of two. The data channel, by contrast, carries long blocks at high throughput, which is where LDPC parallelism wins — so 5G runs both families, each where the theory says it belongs.
+:::
+
+:::pitfall
+"Capacity-achieving" is an asymptotic statement about a sequence of codes, not a claim about any particular block length. A length-$512$ polar code is not at capacity, and plain SC decoding of it is not even close; the gap is closed by list size, CRC and rate matching, all of which are finite-length engineering outside the theorem.
 :::
 
 ## Common Mistakes
 
-- **Believing polar codes are 'capacity-achieving for any finite n'**: The proof is asymptotic; for finite n a gap remains and list decoding is needed to close it.
-- **Confusing the polar transform with the FFT**: While the matrix is Kronecker like the FFT, the decoding algorithm and frozen-bit selection are specific to the channel polarization phenomenon.
-- **Thinking frozen bits carry no information**: They are known to both encoder and decoder and provide the 'anchor' values that let SC work.
-- **Assuming SC decoding is maximum-likelihood**: Plain SC is a greedy approximation; SCL with list size >1 is much closer to ML.
-- **Overlooking rate matching complexity**: Supporting many code lengths in 5G required careful puncturing/shortening designs that interact with the information set.
-- **Expecting polar codes to dominate at all lengths and rates**: At very long blocks and high rates LDPC often have implementation advantages (fully parallelizable without list).
+- **Reading the polarization theorem as a finite-length guarantee**: it says the *fraction* of extremal channels converges. At any finite $n$ many synthetic channels are still mediocre, and they are the ones that cause errors.
+- **Confusing the polar transform with the FFT**: $G_n$ has the butterfly structure of a fast Hadamard transform, but the code lies in the choice of frozen set, which is channel-dependent and has no analogue in signal processing.
+- **Thinking frozen bits carry information**: they carry *known* values. Their role is to make the good synthetic channels usable, not to add parity.
+- **Assuming SC is maximum likelihood**: it is greedy and cannot revisit a decision. SCL with $L>1$ plus a CRC is what approaches ML.
+- **Designing the information set at the wrong SNR**: the ordering of synthetic channels depends on the channel. A set chosen for a clean channel is wrong for a noisy one, which is why standards fix a single nested reliability sequence as a compromise.
+- **Expecting polar codes to dominate everywhere**: at long blocks and high rates LDPC codes usually win on implementation; 5G deploys both for exactly that reason.
 
-Turbo codes, introduced by Berrou, Glavieux, and Thitimajshima in 1993, were the first practical codes to demonstrate bit-error rates within a few tenths of a dB of the Shannon limit at moderate block lengths and rates around 1/2. Their key innovation was the combination of two simple convolutional codes linked by a pseudo-random interleaver together with an iterative "turbo" decoding algorithm that exchanges soft information between the two constituent decoders.
+In 1993 Berrou, Glavieux and Thitimajshima reported bit error rates within half a decibel of the Shannon limit at rate $1/2$ — a claim so far beyond the state of the art that the audience largely disbelieved it until the simulations were reproduced. Their construction combined two ingredients that had been available for thirty years: convolutional codes, and the idea of exchanging soft information between decoders. We treat convolutional codes first, because turbo codes are built out of them and because the Viterbi algorithm is the cleanest example of decoding by dynamic programming.
 
-The name "turbo" evokes the iterative feedback, analogous to a turbocharger.
-
-## Construction: Parallel Concatenation
+## Convolutional Codes and Turbo Concatenation
 
 <!-- section: construction -->
 
-:::definition[Turbo encoder (parallel concatenation)]{#turbo-encoder}
-A classical turbo encoder consists of two recursive systematic convolutional (RSC) encoders. The information bits $\mathbf{u}$ are fed directly to the first encoder and, after passing through an interleaver $\Pi$, to the second encoder. Only the systematic bits and the two parity streams are transmitted; puncturing may be used to achieve higher rates.
+:::definition[Convolutional encoder]{#convolutional-code}
+A rate-$1/r$ binary **convolutional encoder** with **constraint length** $K$ maps an input stream $u_1,u_2,\dots$ to $r$ output streams by
+
+$$v^{(j)}_t = \sum_{i=0}^{K-1} g^{(j)}_i\, u_{t-i} \pmod 2, \qquad j = 1,\dots,r,$$
+
+a convolution of the input with fixed generator sequences $g^{(j)}$. The encoder is a finite-state machine whose state is the contents of its $K-1$ memory cells, so it has $2^{K-1}$ states.
 :::
 
-The interleaver scrambles the order so that error patterns that are bad for one encoder become good for the other; this creates a code with large effective free distance.
+:::definition[Trellis and free distance]{#trellis}
+The **trellis** of a convolutional encoder is the graph whose nodes are (time, state) pairs and whose edges are the state transitions, labelled by the output symbols they emit. The **free distance** $d_{\mathrm{free}}$ is the minimum Hamming weight of any nonzero codeword, equivalently the minimum weight of any path that leaves the zero state and later returns to it.
+:::
+
+:::example[The rate-$1/2$, $K=3$ encoder]
+Describe the encoder with generators $g^{(1)} = (1,1,1)$ and $g^{(2)} = (1,0,1)$, written in octal as $(7,5)$, and find its free distance.
+:::
+
+:::solution
+The state is $(u_{t-1},u_{t-2})$, so there are $4$ states. On input $u_t$ the encoder emits $v^{(1)} = u_t\oplus u_{t-1}\oplus u_{t-2}$ and $v^{(2)} = u_t \oplus u_{t-2}$.
+
+For the free distance, drive the encoder with the input $1,0,0$ from the zero state: the outputs are $11$, then $10$, then $11$, after which the encoder is back in state $00$ and emits zeros. The total weight is $2+1+2 = 5$. No shorter or lighter excursion exists (a single-step excursion cannot return to zero, and the other short excursions have weight $\ge 6$), so $d_{\mathrm{free}} = 5$. This encoder can therefore correct up to $\lfloor(5-1)/2\rfloor = 2$ errors within a constraint span, and it is the classic $(7,5)$ code used in countless textbooks and in the CCSDS convolutional standard's ancestor.
+:::
+
+:::theorem[Viterbi decoding is maximum likelihood, in linear time]{#viterbi}
+For a convolutional code of $2^{K-1}$ states used over a memoryless channel for $T$ steps, the Viterbi algorithm returns a maximum-likelihood codeword using $O(T\,2^{K-1})$ operations and $O(2^{K-1})$ surviving paths.
+:::
+
+:::proof
+Maximum-likelihood decoding maximises $\sum_{t} \log p(y_t \mid v_t)$ over paths through the trellis, an additive path metric. The key observation is the *principle of optimality*: if a maximum-metric path passes through state $s$ at time $t$, its initial segment must be a maximum-metric path among all paths ending at $(t,s)$ — otherwise replacing that segment would improve the total. So it suffices to keep, for each of the $2^{K-1}$ states at each time, one survivor with its metric. Extending all survivors by one step costs $O(2^{K-1})$ per time step (two incoming edges per state, a constant), for $O(T2^{K-1})$ overall, and a traceback at the end recovers the path. Since every path is represented by a survivor at some stage, the maximum over final states is the global maximum.
+:::
 
 :::intuition
-Think of two simple error-correcting "machines" looking at the same data but in different shuffled orders. Each machine adds its own parity checks.
-
-The shuffle (interleaver) ensures that a burst of errors that fools one machine looks random to the other.
+Exhaustive maximum-likelihood decoding would examine $2^{T}$ input sequences. Viterbi exploits the fact that the encoder's memory is only $K-1$ bits: two input histories that end in the same state are interchangeable from then on, so only the better one needs to be remembered. The cost is exponential in the memory, not in the message length.
 :::
 
-:::example
-Rate-1/3 turbo: for k=1000 info bits, after two RSC encoders (each producing one parity) and systematic, before puncturing we have 1000 + 2*1000 = 3000 bits. The interleaver is usually a quadratic or S-random permutation of length 1000.
+:::definition[Recursive systematic convolutional encoder]{#rsc}
+An **RSC** encoder is obtained from a feedforward encoder by feeding back one output into the input and transmitting the information bit itself. Its transfer function is rational, $\big(1, \frac{g^{(2)}(D)}{g^{(1)}(D)}\big)$, so a single input $1$ produces an output of infinite (or very long) weight, whereas a feedforward encoder responds to it with a burst of weight at most $K r$.
 :::
 
-## Iterative Decoding
+That last clause is why turbo codes use RSC components rather than ordinary ones, as the next theorem makes precise.
+
+:::definition[Turbo encoder, parallel concatenation]{#turbo-encoder}
+A **turbo encoder** feeds the information block $\mathbf u$ of length $k$ to one RSC encoder, and the permuted block $\Pi(\mathbf u)$ to a second RSC encoder. Transmitted are the systematic bits $\mathbf u$ and the two parity streams $\mathbf p^{(1)}, \mathbf p^{(2)}$, giving rate $1/3$ before puncturing; puncturing the parity streams alternately gives rate $1/2$.
+:::
+
+:::theorem[Interleaver gain]{#interleaver-gain}
+For a parallel concatenation of two RSC encoders with a uniform random interleaver of length $k$, the contribution to the bit error probability from input sequences of weight $w$ scales as $k^{1-w}$. Hence weight-$1$ inputs contribute $O(1)$ and every heavier input contributes a vanishing amount, so the dominant error events come from the lowest input weight that produces a finite-weight codeword in *both* encoders.
+:::
+
+:::proof
+*Sketch.* Under the uniform interleaver model — averaging over all $k!$ permutations — the probability that a weight-$w$ input producing a particular low-weight parity pattern in encoder 1 also produces a low-weight pattern in encoder 2 is governed by the number of ways of placing $w$ ones, $\binom kw \approx k^w/w!$, against the number of "bad" placements, which grows like $k^{\lfloor w/2 \rfloor}\cdots$; carrying the count through gives the exponent $1-w$ for the multiplicity per information bit. For an RSC encoder a weight-$1$ input produces an infinite-weight (in practice, very heavy) parity sequence, so $w=1$ contributes nothing; $w=2$ is the first relevant weight and it already carries the factor $k^{-1}$. The full derivation is Benedetto and Montorsi's uniform-interleaver analysis, which we cite rather than reproduce.
+:::
+
+:::remark[Why RSC, in one sentence]
+With feedforward components a weight-$1$ input gives low-weight parity in both encoders no matter how they are interleaved, so there is no interleaver gain at all; recursion is what forces the low-weight error events to require at least two well-placed ones, and the interleaver then makes that coincidence rare.
+:::
+
+:::example[Rate and block structure]
+A rate-$1/3$ turbo code carries $k = 1000$ information bits. How many bits are transmitted, and what changes at rate $1/2$?
+:::
+
+:::solution
+Systematic $1000$ plus two parity streams of $1000$ each gives $3000$ transmitted bits, a rate of $1/3$ (ignoring the few tail bits used to return each encoder to the zero state). To reach rate $1/2$, puncture the parity: keep $p^{(1)}_t$ for odd $t$ and $p^{(2)}_t$ for even $t$, transmitting $1000$ systematic plus $1000$ parity bits in total. Puncturing raises the rate and lowers the effective free distance, which is the usual trade.
+:::
+
+:::pitfall
+The interleaver is not a scrambler for security or for burst protection, and a "nice" interleaver such as a block (row-column) permutation is a poor choice: it maps some low-weight patterns to other low-weight patterns. S-random and quadratic permutation polynomial interleavers are used precisely because they guarantee that nearby positions are separated.
+:::
+
+## Iterative Decoding and Extrinsic Information
 
 <!-- section: iterative-decoding -->
 
-Decoding uses two soft-input soft-output (SISO) decoders, typically the BCJR (Bahl-Cocke-Jelinek-Raviv) algorithm that computes a posteriori probabilities for each bit given the channel observations and the trellis of the convolutional code.
+Neither constituent decoder can decode the turbo code on its own — each sees only its own parity. The turbo principle is to let them take turns, each passing the other only what the other does not already know.
 
-Decoder 1 produces extrinsic LLRs for the information bits; these are interleaved and fed as a priori information to Decoder 2. Decoder 2 produces its own extrinsic information which is de-interleaved and fed back to Decoder 1. The loop repeats for several iterations (typically 6-12). At the end the final a posteriori LLRs decide the bits.
+:::definition[Soft-input soft-output decoding, BCJR]{#bcjr}
+The **BCJR algorithm** computes, for each information bit of a trellis code, the exact a posteriori LLR
 
-Because each decoder sees a slightly different view thanks to the interleaver, the information improves with each pass until convergence.
+$$L(u_t) = \log\frac{\Pr[u_t = 0\mid \mathbf y]}{\Pr[u_t=1\mid\mathbf y]},$$
+
+by a forward recursion $\alpha_t(s)$ over states, a backward recursion $\beta_t(s)$, and branch metrics $\gamma_t(s',s)$, combining them as $\Pr[u_t = b \mid\mathbf y] \propto \sum_{(s',s):u=b}\alpha_{t-1}(s')\gamma_t(s',s)\beta_t(s)$. Its cost is $O(T2^{K-1})$, the same order as Viterbi, with a larger constant.
+:::
+
+:::definition[Extrinsic information]{#extrinsic}
+Write the output LLR of a decoder as
+
+$$L_{\mathrm{post}}(u_t) = L_{\mathrm{ch}}(u_t) + L_{\mathrm{a}}(u_t) + L_{\mathrm{e}}(u_t),$$
+
+the channel LLR of the systematic bit, the a priori LLR supplied by the other decoder, and the remainder $L_{\mathrm{e}}$, which is the **extrinsic** information: what this decoder learned about $u_t$ from its *parity* and from the other bits, excluding what it was told.
+:::
+
+:::recipe[Turbo iteration]{#turbo-iteration}
+1. Decoder 1 runs BCJR on the first trellis with a priori LLRs $L_{\mathrm a}^{(1)}$ (zero on the first pass) and outputs extrinsic $L_{\mathrm e}^{(1)}$.
+2. Interleave: $L_{\mathrm a}^{(2)} = \Pi\big(L_{\mathrm e}^{(1)}\big)$.
+3. Decoder 2 runs BCJR on the second trellis and outputs $L_{\mathrm e}^{(2)}$.
+4. De-interleave: $L_{\mathrm a}^{(1)} = \Pi^{-1}\big(L_{\mathrm e}^{(2)}\big)$; return to step 1.
+5. After the last iteration, decide $\hat u_t$ from the sign of the total a posteriori LLR.
+:::
+
+:::proposition[Why only extrinsic information may be passed]{#extrinsic-necessity}
+If a decoder passes its full a posteriori LLR instead of the extrinsic part, the same evidence is returned to its source and counted twice; the iteration then develops a positive feedback loop whose beliefs grow without bound and which converges to a confident answer independent of whether that answer is right.
+:::
+
+:::proof
+The LLR update rule is exact only for *independent* pieces of evidence, which is what allows likelihood ratios to multiply. If decoder 2 receives $L_{\mathrm{post}}^{(1)} = L_{\mathrm{ch}} + L_{\mathrm a}^{(1)} + L_{\mathrm e}^{(1)}$, the term $L_{\mathrm a}^{(1)}$ is precisely the information decoder 2 supplied on the previous half-iteration, and the channel term is already in decoder 2's own input. Adding them again multiplies the same likelihood ratio twice, which is the error of treating dependent evidence as independent; iterating the doubling makes $|L|$ grow geometrically, and the sign is fixed early by whichever hypothesis happened to lead.
+:::
 
 :::intuition
-Each decoder says "based on my parity checks and what the other decoder thinks, these bits are probably 0 or 1, and here's how sure I am (the soft LLR)."
-
-The interleaver makes the two opinions almost independent, so combining them is like getting a second (and third, etc.) expert opinion.
+Two experts examine the same patient from different angles. Progress is made only when each reports what *their own* examination added, rather than repeating back what the other told them — otherwise the pair talk themselves into certainty by hearing their own opinions returned as confirmation.
 :::
 
-:::example
-Suppose after first half-iteration the extrinsic LLR for bit u_5 from decoder 1 is +2.3. After interleaving it becomes a priori for decoder 2 at position 42. Decoder 2, using its own observations and this prior, outputs extrinsic -0.7 for the corresponding bit. After de-interleaving this feedback helps decoder 1 refine its estimate in the next round.
+:::example[One half-iteration in numbers]
+On rate-$1/2$ turbo decoding, the systematic bit $u_5$ has channel LLR $+0.3$ and decoder 1 has a priori $L_{\mathrm a}^{(1)}(u_5) = 0$ on the first pass. Its BCJR output is $L_{\mathrm{post}}^{(1)}(u_5) = +2.6$. What is passed to decoder 2, and to which position?
 :::
 
-## Performance and Applications
+:::solution
+The extrinsic part is $L_{\mathrm e}^{(1)} = L_{\mathrm{post}}^{(1)} - L_{\mathrm{ch}} - L_{\mathrm a}^{(1)} = 2.6 - 0.3 - 0 = +2.3$. That value — not $2.6$ — is interleaved and delivered to decoder 2 as a priori information at position $\Pi(5)$, say position $42$.
+
+If decoder 2 then returns extrinsic $-0.7$ for that bit, decoder 1's next pass runs with $L_{\mathrm a}^{(1)}(u_5) = -0.7$, and its total belief becomes $0.3 - 0.7 + L_{\mathrm e}^{(1),\text{new}}$. The disagreement is exactly the useful signal: two nearly independent views of the same bit that differ are what drives the iteration.
+:::
+
+:::remark[EXIT charts]
+Convergence is analysed with **extrinsic information transfer** charts: plot each constituent decoder's output mutual information against its input mutual information, and superimpose the second decoder's curve with axes swapped. The iteration is the staircase between the two curves, and it reaches the top-right corner — perfect information, hence successful decoding — if and only if a tunnel remains open between them. The SNR at which the tunnel closes is the iterative decoding threshold, the turbo analogue of the LDPC threshold computed by density evolution.
+:::
+
+## Performance, Error Floors and Applications
 
 <!-- section: performance-applications -->
 
-On the AWGN channel, rate-1/2 turbo codes with long interleavers (e.g., 65536 bits) achieve BER = 10^{-5} at Eb/N0 ≈ 0.7 dB, while the Shannon limit is 0.0 dB for rate 1/2 — a gap of only 0.7 dB. The "turbo cliff" is a sharp waterfall in the BER curve once the SNR exceeds the iterative threshold.
-
-Turbo codes were adopted in 3G UMTS, 4G LTE (as the basis for the turbo decoder in control channels), and the CCSDS deep-space standard. They are gradually being supplemented or replaced by LDPC in 5G because LDPC offers better parallelism and slightly better performance at very high rates, but the iterative principle remains foundational.
-
-:::intuition
-For long enough "blocks" of data the turbo decoder can squeeze almost every last bit of reliability that physics allows out of a noisy channel.
-
-The magic is that two weak codes plus clever shuffling plus talking back and forth become one very strong code.
+:::remark[The two regions of a turbo code's error curve]
+A turbo code's bit error rate against SNR has two distinct regions. The **waterfall** is a near-vertical drop starting just above the iterative threshold, and it is what made the codes famous. The **error floor** is the shallow region at higher SNR, where the curve flattens; it is governed by the few low-weight codewords that the interleaver failed to break up, and by the maximum-likelihood distance spectrum rather than by the iterative decoder.
 :::
 
-:::example
-A rate-1/2 turbo code with 8-state RSC components and interleaver length 10000 reaches within 1 dB of capacity at BER 10^{-4}; increasing the interleaver to 10^5 bits typically closes another 0.2-0.3 dB because the effective randomness improves and low-weight codewords become rarer.
+:::example[Reading the gap to capacity honestly]
+A rate-$1/2$ turbo code with interleaver length $65536$ reaches a bit error rate of $10^{-5}$ at $E_b/N_0 \approx 0.7$ dB on the AWGN channel. How far from the limit is that?
+:::
+
+:::solution
+The relevant limit is the *binary-input* AWGN capacity at rate $1/2$, which requires $E_b/N_0 \ge 0.187$ dB; the unconstrained-input Shannon limit for rate $1/2$ is $0$ dB, and using it would flatter the code. So the gap is about $0.7 - 0.19 = 0.5$ dB, the number Berrou and co-authors reported, and it is measured at a specific error rate and block length. Shrinking the interleaver to $10^3$ costs several tenths of a dB and raises the error floor; enlarging it to $10^5$ buys perhaps $0.2$ dB more and lowers the floor, since interleaver gain scales the floor by $k^{-1}$ for the dominant weight-$2$ events.
+:::
+
+:::pitfall
+Quoting "within $0.5$ dB of Shannon" without saying *which* limit, at *which* error rate, with *which* block length and *how many* iterations is the most common overstatement in coding papers. The binary-input limit is the right comparison for a binary code, and it sits about $0.19$ dB above the unconstrained one at rate $1/2$.
+:::
+
+:::remark[Where each family is deployed]
+Turbo codes were adopted in 3G UMTS and in 4G LTE data channels, and in the CCSDS deep-space standard where the interleaver may be very long and latency is irrelevant. 5G moved the data channel to LDPC codes and the control channels to polar codes, for reasons that are about implementation rather than about distance: belief propagation parallelises across edges, whereas BCJR is sequential along a trellis and has to be run twice per iteration. The turbo *principle* — exchanging extrinsic information between soft-in soft-out blocks — survives everywhere, including in turbo equalisation and in joint detection-and-decoding receivers.
+:::
+
+:::intuition
+Two weak codes, plus a shuffle, plus a conversation, equal one very strong code. Neither constituent code has a large free distance; what the interleaver does is make it overwhelmingly unlikely that an error pattern is simultaneously plausible to both decoders.
 :::
 
 ## Common Mistakes
 
-- **Thinking turbo codes are 'concatenated' in the serial sense only**: The classic Berrou construction is parallel concatenation; serial concatenation is a related but different architecture.
-- **Expecting good performance with short interleavers**: The interleaver gain (reduction of error floor) requires large size; short turbo codes suffer from a visible error floor.
-- **Confusing extrinsic and a posteriori information**: The decoder must pass only the new (extrinsic) information, not the total a posteriori, otherwise positive feedback loops destroy the iteration.
-- **Assuming the BCJR decoder is maximum-likelihood for the whole code**: Each constituent is ML for its own trellis, but the overall turbo code is decoded approximately via iteration.
-- **Forgetting puncturing effects on rate and distance**: Many practical turbos puncture the parity bits to raise rate above 1/3; this reduces the effective distance.
-- **Believing turbo codes have no error floor**: At extremely high SNR a floor appears due to low-weight input sequences that produce low-weight codewords in both encoders; outer CRC or other techniques mitigate it.
+- **Calling every concatenation "turbo"**: the classical construction is *parallel* concatenation of two RSC encoders. Serial concatenation is a different (and sometimes better) architecture with its own analysis.
+- **Using feedforward components**: without recursion there is no interleaver gain, and the error floor does not fall with block length.
+- **Passing a posteriori instead of extrinsic information**: this double-counts evidence and produces a confidently wrong decoder.
+- **Expecting a short turbo code to perform well**: interleaver gain is a $k^{-1}$ effect. Short blocks have visible floors, which is why 5G control channels use polar codes instead.
+- **Treating the BCJR as maximum likelihood for the whole code**: it is exact for one constituent trellis; the concatenation is decoded only approximately, by iteration.
+- **Comparing against the wrong Shannon limit**: for binary signalling the relevant number at rate $1/2$ is $0.187$ dB in $E_b/N_0$, not $0$ dB.
 
-When the receiver can send information back to the transmitter, the system becomes a two-way communication link. Feedback does not increase the capacity of a memoryless point-to-point channel (Shannon 1956), yet it dramatically simplifies coding, reduces delay, and improves the error exponent. Practical systems rely heavily on feedback in the form of acknowledgments and retransmissions.
+When the receiver can talk back, the system stops being a one-way pipe. The surprise is how little this changes the fundamental limit and how much it changes everything else: feedback leaves the capacity of a memoryless point-to-point channel exactly where it was, while transforming the complexity, the delay and the error exponent.
 
-In network settings and for channels with memory, feedback can strictly increase capacity.
-
-## Feedback Does Not Increase Capacity (Point-to-Point)
+## Feedback Does Not Increase Capacity
 
 <!-- section: capacity-feedback -->
 
-:::theorem[Feedback does not increase capacity]{#feedback-capacity}
-For a discrete memoryless channel with capacity $C$, even with perfect instantaneous feedback of every received symbol, the maximum reliable rate remains $C$.
+:::definition[Code with feedback]{#feedback-code}
+An $(M,n)$ **feedback code** allows the $i$-th transmitted symbol to depend on the message and on everything received so far:
+
+$$X_i = f_i(W, Y^{i-1}), \qquad i = 1,\dots,n,$$
+
+with the decoder $\hat W = g(Y^n)$ as before. The **feedback capacity** $C_{\mathrm{FB}}$ is the supremum of achievable rates over such codes.
+:::
+
+:::theorem[Feedback does not increase the capacity of a DMC]{#feedback-capacity}
+For any discrete memoryless channel, $C_{\mathrm{FB}} = C = \max_{p(x)}I(X;Y)$.
 :::
 
 :::proof
-The converse follows from the same mutual-information bounds used without feedback: feedback cannot create new information about the message that was not already in the channel outputs.
+$C_{\mathrm{FB}}\ge C$ is immediate: a feedback code may ignore the feedback. For the converse, take $W$ uniform on $M = \lceil2^{nR}\rceil$ messages, so $H(W) = nR$. We show $I(W;Y^n)\le nC$ even with feedback. Since $X_i$ is a function of $(W,Y^{i-1})$,
+
+$$H(Y_i \mid Y^{i-1}, W) = H(Y_i\mid Y^{i-1},W,X_i) = H(Y_i\mid X_i),$$
+
+the first equality because $X_i$ is determined by the conditioning variables, and the second because the channel is memoryless: given $X_i$, the output $Y_i$ is independent of everything earlier and of $W$. Hence
+
+$$I(W;Y^n) = H(Y^n) - H(Y^n\mid W) = \sum_{i=1}^n \Big[H(Y_i \mid Y^{i-1}) - H(Y_i\mid X_i)\Big] \le \sum_{i=1}^n\Big[H(Y_i) - H(Y_i\mid X_i)\Big] = \sum_i I(X_i;Y_i)\le nC,$$
+
+using the chain rule, then that conditioning reduces entropy, then the definition of $C$. Fano's inequality now gives, exactly as in the converse without feedback,
+
+$$nR = H(W) = H(W\mid\hat W) + I(W;\hat W) \le 1 + P_e^{(n)}nR + nC,$$
+
+so $P_e^{(n)}\to0$ forces $R\le C$.
 :::
 
-What feedback does provide is the ability to adapt the next transmission based on what has already been received, enabling variable-length and rateless strategies.
+:::remark[What the proof really used]
+Only two things: that $X_i$ is a *deterministic function* of the past, and that the channel is memoryless. Both fail in general. For channels with memory, feedback lets the transmitter track the channel state and can strictly increase capacity (the Schalkwijk–Kailath scheme for the coloured-noise Gaussian channel is the classical example). In networks — multiple-access, broadcast, relay — feedback increases capacity even when each link is memoryless, because it also carries coordination between transmitters.
+:::
 
 :::intuition
-The 'pipe' from sender to receiver still has the same average 'width' C bits per use; feedback is like a return pipe that tells the sender how much arrived, but does not widen the forward pipe.
-
-You cannot magically send more than C bits per forward use on average, no matter how clever the back-talk.
+The return path tells the sender what arrived; it does not widen the forward pipe. Each forward use still carries at most $C$ bits of information about the message, and no amount of back-talk changes what a single use of the channel can convey.
 :::
 
-:::example
-Binary symmetric channel with crossover 0.1 has C ≈ 0.53 bits. With feedback you can still not exceed 0.53 bits per channel use in the limit of many uses; any scheme claiming higher rate will have error probability bounded away from zero.
+:::remark[What feedback does buy]
+Feedback leaves $C$ unchanged but improves three other things, each a separate theorem we state without proof.
+
+*Error exponent.* For variable-length coding with noiseless feedback, Burnashev (1976) showed that the optimal error exponent in the expected block length is $E(R) = C_1\left(1 - \frac RC\right)$, where $C_1 = \max_{x,x'} D\big(p(\cdot\mid x)\,\|\,p(\cdot\mid x')\big)$. This is strictly larger than the best fixed-length exponent, and it is linear in $R$ rather than merely positive below capacity.
+
+*Complexity.* Capacity-achieving feedback schemes can be far simpler than block codes; the erasure scheme of the final section of this chapter is a one-line protocol that attains capacity exactly.
+
+*Delay.* The expected number of channel uses to reach a target error probability is smaller with feedback, because the transmission can stop as soon as the receiver is sure.
 :::
 
-## Automatic Repeat Request (ARQ)
+:::example[Feedback on a noisy link]
+$\mathrm{BSC}(0.1)$ has $C = 1-h_2(0.1) = 1 - 0.469 = 0.531$ bits per use. What does feedback change?
+:::
+
+:::solution
+Nothing about the number: with perfect, instantaneous, noiseless feedback the supremum of reliable rates is still $0.531$ bits per use. What changes is how one gets there. Without feedback one needs a long block code and a decoder; with feedback a simple scheme that retransmits on demand can reach the same rate with far less machinery, and can reach a given error probability with fewer expected channel uses.
+:::
+
+:::pitfall
+"Feedback does not help" is the wrong summary. The precise statement is "feedback does not increase the capacity of a memoryless point-to-point channel". It does increase capacity for channels with memory and in networks, and it improves exponents, latency and complexity even where capacity is unchanged.
+:::
+
+## Automatic Repeat Request
 
 <!-- section: arq -->
 
-:::definition[Automatic repeat request]{#arq}
-The simplest use of feedback is ARQ: the receiver sends an ACK if the packet passes error detection (CRC), and a NACK otherwise. On a NACK the transmitter retransmits, possibly with incremental redundancy.
+:::definition[ARQ]{#arq}
+Under **automatic repeat request** the transmitter sends a packet protected by an error-detecting code; the receiver returns an acknowledgement (ACK) if the check passes and a negative acknowledgement (NACK) otherwise, and the transmitter repeats the packet until it is acknowledged.
 :::
 
-Pure ARQ is a repetition code with a random number of repetitions, and its throughput is
+:::theorem[Throughput of ideal stop-and-wait ARQ]{#arq-throughput}
+Suppose each transmission of a packet of $n$ channel uses carrying $k$ information bits fails independently with probability $q$, and that error detection is perfect and feedback is noiseless and free. Then the number of transmissions $N$ is geometric with mean $\mathbb E[N] = \frac{1}{1-q}$, and the throughput is
 
-$$R\,(1 - P_{\text{err}}),$$
+$$\eta = \frac{k}{n\,\mathbb E[N]} = \frac kn (1-q) \text{ bits per channel use},$$
 
-where $R$ is the rate of the packet. It achieves arbitrarily low error probability but throughput vanishes as target error → 0 unless combined with forward error correction.
+with error probability zero (the protocol does not stop until it succeeds).
+:::
+
+:::proof
+Independence across attempts makes $N$ geometric on $\{1,2,\dots\}$ with success probability $1-q$, so $\mathbb E[N] = 1/(1-q)$. Each attempt costs $n$ channel uses and delivers $k$ bits only on the successful attempt, so the long-run ratio of delivered bits to channel uses is $k/(n\mathbb E[N])$ by the renewal–reward theorem.
+:::
+
+:::example[Throughput of a packet protocol]
+A $1000$-bit payload is protected by a $32$-bit CRC and sent in $1147$ channel uses (rate $0.9$ with the CRC included), with packet error probability $q = 0.01$. Compute the throughput.
+:::
+
+:::solution
+$\mathbb E[N] = 1/0.99 = 1.0101$ transmissions. Throughput is
+
+$$\eta = \frac{1000}{1147 \times 1.0101} = \frac{1000}{1158.6} = 0.863 \text{ information bits per channel use}.$$
+
+Equivalently, the rate $1000/1147 = 0.872$ multiplied by $(1-q) = 0.99$. The retransmission overhead is only $1\%$ here; at $q = 0.5$ the same formula gives half the throughput, and a protocol would instead lower the code rate.
+:::
+
+:::proposition[Why "perfect detection" is not free]{#arq-not-optimal}
+On $\mathrm{BSC}(p)$, suppose uncoded packets of $n$ bits are used and a genie tells the receiver whether the packet is correct. The throughput is $\eta = (1-p)^n$, which is maximised at $n=1$, where
+
+$$\eta = 1-p \;>\; 1-h_2(p) = C \qquad (0<p<1/2).$$
+
+This apparent violation of the coding theorem is the genie's doing: one error-free bit of side information per packet converts the BSC into an erasure channel, whose capacity is exactly $1-p$. Real error detection must be bought with redundancy, and an $r$-bit CRC costs a factor $(n-r)/n$ in rate while detecting only those patterns that are not nonzero codewords.
+:::
+
+:::proof
+An uncoded packet survives only if all $n$ bits survive, so $1-q = (1-p)^n$ and, with $k=n$ information bits per packet, the throughput formula gives $\eta = (1-p)^n$, which decreases in $n$ and equals $1-p$ at $n=1$. For the strict inequality, $1-p > 1-h_2(p)$ is equivalent to $h_2(p) > p$, which holds on $(0,1/2)$: at $p=1/2$ both sides are $1/2$ and $h_2$ is strictly concave with $h_2(0)=0$, so $h_2$ lies strictly above the chord $y=p$ on the open interval.
+
+For the interpretation: the genie's announcement is exactly the indicator of whether the transmitted bit was flipped, so the receiver learns either the bit's true value or that it has no information — an erasure channel with erasure probability $p$, of capacity $1-p$. Nothing is free; the extra capacity came in over the genie's noiseless side channel.
+:::
+
+:::remark[Hybrid ARQ]
+Real systems combine the two mechanisms. **Type-I HARQ** sends a forward-error-correcting code plus a CRC and retransmits the whole block on failure. **Type-II HARQ with incremental redundancy** sends a high-rate codeword first and, on a NACK, sends *additional parity* rather than a repeat, so the receiver accumulates a lower-rate codeword across attempts. Incremental redundancy is a practical approximation to the variable-length feedback coding of the next section, and it is how LTE and 5G actually operate.
+:::
 
 :::intuition
-'Did you get it?' 'No, send again.' Simple, reliable, but wasteful if the channel is bad — you may retransmit the whole packet many times.
-
-A CRC is the cheap 'error detected' flag that triggers the repeat.
-:::
-
-:::example
-A 1000-bit packet protected by 32-bit CRC sent at rate 0.9 over a channel with packet error prob 0.01. Expected number of transmissions ≈ 1.01, throughput ≈ 0.9 / 1.01 ≈ 0.89 bits per channel use (ignoring ACK overhead).
+Pure ARQ is a repetition code with a random, channel-chosen number of repetitions. That is better than a fixed repetition code — you repeat only when you must — but it still throws away the failed attempt entirely. Incremental redundancy keeps it and adds to it, which is why it comes much closer to capacity.
 :::
 
 ## Variable-Length Coding with Feedback
 
 <!-- section: variable-length -->
 
-With feedback one can achieve the capacity with far simpler codes using variable-length transmission. The transmitter keeps sending parity bits until the receiver's posterior on the message is sufficiently peaked (posterior matching, or simple erasure decoding on BEC).
+The right way to use feedback is to let the *length* of the transmission depend on the channel's behaviour: keep sending until the receiver knows the message, and stop.
 
-For the binary erasure channel, the capacity-achieving scheme with feedback is trivial: keep sending each bit until the receiver says it got it (ACK). The expected number of transmissions per bit is
-
-$$\frac{1}{1-p},$$
-
-so the rate is exactly the capacity.
-
-For general DMCs, more sophisticated posterior-matching schemes exist that also achieve capacity with variable length and zero error probability (in the limit).
-
-:::intuition
-Instead of deciding in advance how many times to repeat, keep sending 'more hints' until the receiver says 'I understand the message now.'
-
-The average number of hints needed is exactly what the capacity predicts; you never waste bits on packets that were already clear.
+:::definition[Variable-length feedback code]{#vlf-code}
+A **variable-length feedback code** with expected length $\bar n$ consists of encoders $X_i = f_i(W,Y^{i-1})$, a stopping time $\tau$ measurable with respect to the receiver's observations (and therefore known to both ends through the feedback), and a decoder $\hat W = g(Y^{\tau})$. Its rate is $R = \frac{\log M}{\mathbb E[\tau]}$.
 :::
 
-:::example
-On a BEC with erasure probability p=0.4, capacity 0.6. Sending uncoded bits with per-bit ACK-until-received: each info bit takes on average 1/0.6 ≈ 1.67 transmissions. Rate = 1 / 1.67 = 0.6, exactly capacity, with zero decoding error (the receiver never stops until it has the bit).
+:::theorem[Capacity with zero error on the erasure channel]{#bec-feedback-scheme}
+On $\mathrm{BEC}(\varepsilon)$ with noiseless feedback, the scheme "retransmit each information bit until it is not erased" has zero error probability and rate exactly $C = 1-\varepsilon$.
+:::
+
+:::proof
+The number of transmissions needed for one bit is geometric with success probability $1-\varepsilon$, so its expectation is $\frac{1}{1-\varepsilon}$. Over a long run, $k$ bits cost $\frac{k}{1-\varepsilon}(1+o(1))$ channel uses almost surely, by the law of large numbers, giving rate $1-\varepsilon$. The receiver never decides on an erased bit, so no error is ever made.
+:::
+
+:::example[Erasure channel with feedback, in numbers]
+Take $\varepsilon = 0.4$. Compare the feedback scheme with what a block code must do.
+:::
+
+:::solution
+Capacity is $1-0.4 = 0.6$ bits per use. The feedback scheme spends $1/0.6 = 1.667$ transmissions per information bit on average, so its rate is $0.6$ — exactly capacity — and it never errs. A block code without feedback achieving rate $0.6$ needs a long block length, an encoder, a decoder, and still has a nonzero (if small) error probability. The entire apparatus of the coding theorem is replaced here by a single "did you get it?".
+:::
+
+:::remark[Posterior matching and the general case]
+For a general DMC there is an analogous scheme: the transmitter maintains the receiver's posterior distribution over messages (which it can compute, since it sees everything the receiver sees) and transmits, at each step, the input symbol that best splits the remaining uncertainty — formally, it transmits a function of the posterior chosen so that the input has the capacity-achieving distribution. This is the **posterior matching** scheme of Shayevitz and Feder, which generalises Horstein's 1963 scheme for the BSC and the Schalkwijk–Kailath scheme for the Gaussian channel. It achieves capacity with variable length, and its analysis is beyond our scope.
+:::
+
+:::theorem[Why variable length beats fixed length at short lengths]{#vlf-advantage}
+For variable-length feedback codes with expected length $\bar n$, reliable communication at rate $R$ is possible with
+
+$$\log M \approx \bar n C - O(\log \bar n),$$
+
+whereas fixed-length codes without feedback obey $\log M \approx nC - \sqrt{nV}\,Q^{-1}(\epsilon)$, where $V$ is the channel dispersion. The $\sqrt n$ backoff term disappears.
+:::
+
+:::proof
+We state this result (Polyanskiy, Poor and Verdú, 2011) without proof; the achievability uses a stopping rule based on the information density crossing a threshold, and the converse uses a martingale argument. The practical consequence is what matters here: at block lengths of a few hundred, the finite-length penalty for a fixed-length code is a substantial fraction of a decibel, and feedback with a variable stopping time removes most of it. This is the theoretical reason that HARQ, and not a stronger fixed-rate code, is how modern systems hit their latency and reliability targets.
+:::
+
+:::intuition
+A fixed-length code must be long enough for the *worst* noise realisation it is willing to tolerate. A variable-length scheme stops as soon as *this* realisation has been resolved, so it pays the average cost instead of the worst case. Averages are cheaper than worst cases, and that difference is the whole benefit.
+:::
+
+:::summary
+Feedback does not change $C$ for a memoryless point-to-point channel, and the proof is Fano plus the observation that $H(Y_i\mid Y^{i-1},W) = H(Y_i\mid X_i)$. What feedback changes is everything else: ARQ turns detection into reliability at a throughput cost of $(1-q)$; incremental redundancy recovers most of what plain ARQ discards; and variable-length schemes remove the $\sqrt n$ finite-length penalty and can achieve capacity with zero error on the erasure channel.
 :::
 
 ## Common Mistakes
 
-- **Claiming feedback increases point-to-point DMC capacity**: It does not; the mutual information upper bound is unchanged.
-- **Confusing ARQ throughput with capacity**: Pure ARQ throughput goes to zero with target reliability for fixed packet size; only variable-length or FEC+ARQ (HARQ) can approach capacity.
-- **Ignoring feedback channel errors or delay**: Real feedback is itself noisy and delayed; protocols must be robust to lost ACKs (timers) and the analysis changes.
-- **Thinking variable-length codes are always impractical**: Modern systems already use HARQ with incremental redundancy, which is a practical approximation to variable-length coding.
-- **Forgetting that feedback helps error exponents and delay dramatically**: Even when capacity is unchanged, the number of channel uses needed to reach a given small error probability can be much smaller with feedback.
-- **Assuming feedback always helps in networks**: While it often does (e.g., multiple-access with feedback), there are cases where it does not or where the benefit is only in the second-order terms.
+- **Claiming feedback raises the capacity of a DMC**: it does not. The claim is true for channels with memory and for networks, and the distinction is exactly where the proof's hypotheses are used.
+- **Treating error detection as free**: the clean ARQ throughput formula assumes a perfect detector. Perfect detection is itself side information, and paying for it honestly with a CRC costs rate; only FEC combined with retransmission approaches capacity.
+- **Ignoring feedback delay and feedback errors**: real ACKs are late and sometimes lost. Protocols need timers, sequence numbers and robustness to a lost ACK, and the clean analysis above assumes none of that.
+- **Assuming variable-length coding is impractical**: incremental-redundancy HARQ is variable-length coding, deployed at planetary scale.
+- **Forgetting the gain in exponent and delay**: even where capacity is unchanged, feedback reduces the number of channel uses needed to reach a target error probability, sometimes dramatically.
+- **Transmitting the full posterior rather than an extrinsic or innovation-like quantity**: as in turbo decoding, resending what the other side already knows wastes the channel — the good feedback schemes transmit only what is new.
