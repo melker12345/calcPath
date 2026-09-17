@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useProgress } from "@/components/progress-provider";
 import { getChapterCompletion } from "@/lib/progress";
 import { SubjectBreadcrumbs } from "@/components/subject-breadcrumbs";
+import { MathText } from "@/components/math-text";
 
 type CourseTopic = {
   id: string;
@@ -190,7 +191,7 @@ export function CourseContentsPage({
                                   <span className="mt-0.5 shrink-0 font-mono text-xs tabular-nums theme-text-muted">
                                     {index + 1}.{sIdx + 1}
                                   </span>
-                                  <span>{section.title}</span>
+                                  <span><MathText text={section.title} /></span>
                                 </Link>
                               </li>
                             );

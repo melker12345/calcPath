@@ -335,7 +335,7 @@ export function SubjectModulePage({
             >
               <h2 className="book-section-heading mb-4 text-2xl font-semibold theme-text">
                 <span className="book-section-number">{sectionNumber}</span>
-                <span>{section.title}</span>
+                <span><MathText text={section.title} /></span>
               </h2>
 
               <MdxContent

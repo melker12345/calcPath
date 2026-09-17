@@ -1,3 +1,7 @@
+"use client";
+
+import { MathText } from "@/components/math-text";
+
 /**
  * Table of contents for a module page.
  *
@@ -22,7 +26,7 @@ export function ModuleSectionNav({
               {item.number ?? ""}
             </span>
             <a href={`#${item.id}`} className="text-blue-800 hover:underline dark:text-[var(--accent)]">
-              {item.label}
+              <MathText text={item.label} />
             </a>
           </li>
         ))}
