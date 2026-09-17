@@ -6,478 +6,1160 @@ title: Partitions, Young Tableaux and RSK
 
 Integer partitions drawn as diagrams, the hook-length formula that counts their standard fillings, and the RSK correspondence.
 
-## What Enumerative Combinatorics Studies
+## Integer Partitions and Ferrers Diagrams
 
 <!-- section: what-is-enumerative -->
 
-Typical objects: subsets, permutations, partitions, trees, graphs with given properties, lattice paths, tableaux, matchings, tilings, words avoiding patterns, etc.
+A partition is the answer to the most basic additive question one can ask about a positive integer: in how many ways can it be written as a sum, if the order of the summands is not allowed to matter? The whole of this chapter grows out of that question, because the moment a partition is drawn rather than written it becomes a *shape* — and shapes can be filled, transposed, measured, and put in bijection with other things.
 
-The output is usually a formula, a generating function, or an algorithm that computes the count.
-
-:::intuition
-"How many ways are there to parenthesize a product of n+1 factors?" (Catalan)
-
-"How many ways can n distinct people sit at a round table?" ((n-1)!)
-
-The subject turns these questions into precise, often beautiful, answers.
+:::definition[Partition of an integer]{#partition-def}
+A **partition** of a positive integer $n$ is a weakly decreasing sequence of positive integers
+$$\lambda = (\lambda_1, \lambda_2, \dots, \lambda_k), \qquad \lambda_1 \ge \lambda_2 \ge \cdots \ge \lambda_k \ge 1, \qquad \sum_{i=1}^{k}\lambda_i = n .$$
+The $\lambda_i$ are its **parts**, $k = \ell(\lambda)$ is its **length**, and $|\lambda| = n$ its **size**. We write $\lambda \vdash n$. The number of partitions of $n$ is the **partition function** $p(n)$, with the convention $p(0) = 1$ for the empty partition.
 :::
 
-:::example
-Count the subsets of an $n$-element set. Two clean ways to count give the same answer, which is the heart of enumerative combinatorics.
+The first values are
+$$p(1) = 1,\quad p(2) = 2,\quad p(3) = 3,\quad p(4) = 5,\quad p(5) = 7,\quad p(6) = 11,\quad p(7) = 15,\quad p(8) = 22 .$$
+They grow, but not quickly at first, and no elementary closed formula for $p(n)$ exists — which is exactly why the generating function of the next section is worth having.
+
+:::notation[Multiplicity notation]
+A partition with repeated parts is often written with exponents: $(4,2,2,1,1,1) = (4\,2^2\,1^3)$. The exponent is a multiplicity, never a power. The **staircase** $(k, k-1, \dots, 1)$ is written $\delta_k$, and the all-ones partition of $n$ as $1^n$.
+:::
+
+:::pitfall
+A partition is not a composition. The ordered sums $3+1$ and $1+3$ are different compositions of $4$; as partitions they are the same object $(3,1)$, which is why the parts are always written in decreasing order. There are $2^{n-1}$ compositions of $n$ but only $p(n)$ partitions — $8$ against $5$ already at $n = 4$.
+:::
+
+:::example[Listing the partitions of 6]
+List all partitions of $6$ and confirm $p(6) = 11$.
 :::
 
 :::solution
-Step 1 (direct). Build a subset by deciding, for each of the $n$ elements independently, "in" or "out." That is $2$ choices per element, so $2 \times 2 \times \cdots \times 2 = 2^n$ subsets.
+Organise the list by the largest part, which is the only systematic way to be sure nothing is missed or repeated.
 
-Step 2 (by size). A subset of size $k$ is a choice of $k$ elements from $n$, counted by the binomial coefficient $\binom{n}{k}$. Summing over all possible sizes,
-$$\sum_{k=0}^{n} \binom{n}{k} = 2^n.$$
+Largest part $6$: $(6)$.
+Largest part $5$: $(5,1)$.
+Largest part $4$: $(4,2)$, $(4,1,1)$.
+Largest part $3$: $(3,3)$, $(3,2,1)$, $(3,1,1,1)$.
+Largest part $2$: $(2,2,2)$, $(2,2,1,1)$, $(2,1^4)$.
+Largest part $1$: $(1^6)$.
 
-Step 3 (sanity check). For $n = 3$ the direct count gives $2^3 = 8$, and the size-by-size count gives $\binom{3}{0} + \binom{3}{1} + \binom{3}{2} + \binom{3}{3} = 1 + 3 + 3 + 1 = 8$. They agree.
+That is $1 + 1 + 2 + 3 + 3 + 1 = 11$ partitions, so $p(6) = 11$.
 
-The identity $\sum_k \binom{n}{k} = 2^n$ is exactly the kind of result the subject produces: one set of objects (subsets), counted two ways, forces an algebraic identity.
-
-If instead repetitions are allowed and we choose a multiset of size $k$ from $n$ types, the count is the "stars and bars" formula $\binom{n + k - 1}{k}$.
+Notice what the classification by largest part really did: the partitions of $n$ whose largest part is exactly $m$ are in bijection with the partitions of $n - m$ all of whose parts are at most $m$, by deleting that largest part. That observation is the seed of every recursive computation of $p(n)$.
 :::
 
-## The Role of Generating Functions
+The drawing is what turns this from arithmetic into geometry.
+
+:::definition[Ferrers diagram]{#ferrers}
+The **Ferrers diagram** (or **Young diagram**) of $\lambda = (\lambda_1,\dots,\lambda_k)$ is the array of $n$ unit cells with $\lambda_i$ left-justified cells in row $i$, rows numbered from the top downwards. The cell in row $i$ and column $j$ is written $(i,j)$, and $(i,j) \in \lambda$ means $1 \le i \le k$ and $1 \le j \le \lambda_i$. This is the **English convention**, used throughout.
+:::
+
+:::figure[The diagram of $\lambda = (5,3,3,1)$. Reflecting the cells in the dashed diagonal turns row lengths into column lengths and produces the conjugate $\lambda' = (4,3,3,1,1)$.]{#ferrers-conjugate}
+{
+  "type": "plot",
+  "x": [-1.2, 5.6], "y": [-5.4, 0.8],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "region", "points": [[0,0],[5,0],[5,-1],[0,-1]] },
+    { "kind": "region", "points": [[0,-1],[3,-1],[3,-2],[0,-2]] },
+    { "kind": "region", "points": [[0,-2],[3,-2],[3,-3],[0,-3]] },
+    { "kind": "region", "points": [[0,-3],[1,-3],[1,-4],[0,-4]] },
+    { "kind": "path", "points": [[1,0],[1,-4]], "tone": "muted" },
+    { "kind": "path", "points": [[2,0],[2,-3]], "tone": "muted" },
+    { "kind": "path", "points": [[3,0],[3,-3]], "tone": "muted" },
+    { "kind": "path", "points": [[4,0],[4,-1]], "tone": "muted" },
+    { "kind": "path", "points": [[0,0],[5,-5]], "tone": "result", "dashed": true },
+    { "kind": "text", "at": [3.2, -4.6], "text": "reflect in the diagonal" },
+    { "kind": "text", "at": [-0.6, -0.5], "text": "5" },
+    { "kind": "text", "at": [-0.6, -1.5], "text": "3" },
+    { "kind": "text", "at": [-0.6, -2.5], "text": "3" },
+    { "kind": "text", "at": [-0.6, -3.5], "text": "1" }
+  ]
+}
+:::
+
+:::definition[Conjugate partition]{#conjugate-def}
+The **conjugate** (or transpose) $\lambda'$ of $\lambda$ is the sequence whose $j$-th term is the number of cells in column $j$ of the diagram of $\lambda$:
+$$\lambda'_j = \#\{\, i : \lambda_i \ge j \,\}, \qquad 1 \le j \le \lambda_1 .$$
+Equivalently, the diagram of $\lambda'$ is the reflection of the diagram of $\lambda$ in the main diagonal.
+:::
+
+:::proposition[Conjugation is a size-preserving involution]{#conjugation-involution}
+For every partition $\lambda$, the sequence $\lambda'$ is a partition, and
+$$|\lambda'| = |\lambda|, \qquad \ell(\lambda') = \lambda_1, \qquad \lambda'_1 = \ell(\lambda), \qquad (\lambda')' = \lambda .$$
+Moreover $(i,j) \in \lambda$ if and only if $(j,i) \in \lambda'$.
+:::
+
+:::proof
+The sets $\{i : \lambda_i \ge j\}$ shrink as $j$ grows, so $\lambda'_1 \ge \lambda'_2 \ge \cdots$, and each $\lambda'_j$ is a positive integer for $j \le \lambda_1$; hence $\lambda'$ is a partition with $\ell(\lambda') = \lambda_1$. Counting the cells of the diagram by columns rather than by rows gives $\sum_j \lambda'_j = n = \sum_i \lambda_i$. Taking $j = 1$ in the definition gives $\lambda'_1 = \#\{i : \lambda_i \ge 1\} = \ell(\lambda)$.
+
+For the cell criterion: $(i,j) \in \lambda$ means $\lambda_i \ge j$, while $(j,i) \in \lambda'$ means $\lambda'_j \ge i$, that is, at least $i$ of the rows have length $\ge j$. Because the $\lambda_r$ are weakly decreasing, the rows of length $\ge j$ are exactly the first few, so "at least $i$ rows have length $\ge j$" says precisely $\lambda_i \ge j$. The two conditions agree.
+
+Finally, applying the criterion twice gives $(i,j) \in (\lambda')' \iff (j,i) \in \lambda' \iff (i,j) \in \lambda$, so $(\lambda')' = \lambda$.
+:::
+
+That cell criterion converts statements about rows into statements about columns at no cost, and it already yields the first identity of the subject.
+
+:::corollary[Rows against parts]{#rows-vs-parts}
+For all $n$ and $k$, the number of partitions of $n$ with at most $k$ parts equals the number of partitions of $n$ whose every part is at most $k$.
+:::
+
+:::proof
+If $\ell(\lambda) \le k$ then $(\lambda')_1 = \ell(\lambda) \le k$, so conjugation maps the first family into the second; if $\mu_1 \le k$ then $\ell(\mu') = \mu_1 \le k$, so it maps the second into the first. The two maps are mutually inverse because conjugation is an involution, and a bijection between finite sets forces equal cardinality.
+:::
+
+A diagram carries one further measurement, which will be put to work twice below.
+
+:::definition[Durfee square]{#durfee}
+The **Durfee square** of $\lambda$ is the largest square block of cells $\{(i,j) : i,j \le d\}$ contained in the diagram; its side is $d(\lambda) = \max\{\, i : \lambda_i \ge i \,\}$.
+:::
+
+:::intuition
+Push the largest possible square into the top-left corner of the diagram until it just fits. What is left over is a partition sitting to the right of the square, which has at most $d$ rows, and a partition sitting below it, whose parts are all at most $d$. Every partition therefore decomposes as "a $d \times d$ square plus two smaller partitions of restricted shape" — and that decomposition becomes an identity in the next section.
+:::
+
+:::example[Conjugating, and a self-conjugate shape]
+Find the conjugate of $\lambda = (5,3,3,1) \vdash 12$ and the side of its Durfee square. Then decide whether $\mu = (4,3,2,1)$ is self-conjugate.
+:::
+
+:::solution
+For $\lambda$, read the column heights off Figure *The diagram of $\lambda = (5,3,3,1)$*: column $1$ meets all four rows, columns $2$ and $3$ meet rows $1,2,3$, and columns $4,5$ meet row $1$ alone. Hence
+$$\lambda' = (4,3,3,1,1).$$
+Two checks: $4+3+3+1+1 = 12 = |\lambda|$, and $\ell(\lambda') = 5 = \lambda_1$, both as Proposition *Conjugation is a size-preserving involution* demands. The Durfee square has side $d = \max\{i : \lambda_i \ge i\} = 3$, because $\lambda_3 = 3 \ge 3$ while $\lambda_4 = 1 < 4$.
+
+For $\mu = (4,3,2,1)$: column $1$ meets $4$ rows, column $2$ meets rows $1,2,3$, column $3$ meets rows $1,2$, and column $4$ meets row $1$, so $\mu' = (4,3,2,1) = \mu$. The staircase $\delta_4$ is self-conjugate — as every staircase is, its diagram being symmetric about the diagonal by construction.
+:::
+
+## Euler's Generating Function for Partitions
 
 <!-- section: generating-functions-role -->
 
-Ordinary and exponential generating functions turn combinatorial constructions into algebraic operations.
-
-The exponential formula, the symbolic method (Flajolet & Sedgewick), and species theory provide a dictionary: 'sequence', 'set', 'cycle' constructions have direct GF translations.
+Listing partitions by hand stops being possible around $n = 15$. The systematic replacement is to hang the whole sequence $p(0), p(1), p(2), \dots$ on a single algebraic object and let multiplication of series do the combinatorics.
 
 :::definition[Ordinary generating function]{#ogf}
-The ordinary generating function (OGF) of a sequence $a_0, a_1, a_2, \dots$ is the formal power series
-
-$$A(x) = \sum_{n \ge 0} a_n x^n;$$
-
-the count $a_n$ is recovered as the coefficient $[x^n] A(x)$.
+The **ordinary generating function** of a sequence $a_0, a_1, a_2, \dots$ is the formal power series
+$$A(x) = \sum_{n \ge 0} a_n x^n ,$$
+and $a_n$ is recovered as the coefficient $[x^n]A(x)$. "Formal" means that $x$ is a bookkeeping symbol: series are added and multiplied coefficientwise, and no question of convergence arises. An infinite product $\prod_{k\ge1} F_k(x)$ is well defined as a formal series provided each coefficient is determined by finitely many factors, which holds whenever $F_k(x) = 1 + O(x^k)$.
 :::
 
-We treat $x$ as a bookkeeping symbol — convergence is not required, since the series is manipulated formally.
-
-:::definition[Exponential generating function]{#egf}
-The exponential generating function (EGF) of a sequence $a_0, a_1, a_2, \dots$ is
-
-$$\sum_n a_n \frac{x^n}{n!}.$$
+:::theorem[Euler's product for the partition function]{#euler-product}
+As formal power series,
+$$\sum_{n \ge 0} p(n)\, x^n \;=\; \prod_{k \ge 1} \frac{1}{1 - x^k} .$$
+More generally, if $S$ is a set of allowed part sizes, the partitions with all parts in $S$ are counted by $\prod_{k \in S} (1-x^k)^{-1}$.
 :::
 
-Use an OGF for unlabeled objects; use an EGF for labeled objects, where relabeling matters.
+:::proof
+Fix $N$ and work modulo $x^{N+1}$; since a partition of $n \le N$ has no part exceeding $N$, only the factors with $k \le N$ matter, and the product is a finite one. Expand each factor as a geometric series,
+$$\frac{1}{1-x^k} = \sum_{m_k \ge 0} x^{k m_k},$$
+where the exponent $k m_k$ records the total contributed by using the part $k$ exactly $m_k$ times. Multiplying the $N$ factors together, a term of the expanded product is obtained by choosing one summand from each factor, that is, by choosing multiplicities $m_1, m_2, \dots, m_N \ge 0$, and it contributes $x^{m_1 + 2m_2 + \cdots + N m_N}$.
+
+Choices of multiplicities are exactly partitions with parts $\le N$: given $(m_1,\dots,m_N)$, list the part $k$ with multiplicity $m_k$ in decreasing order; given a partition, read off its multiplicities. Under this bijection the exponent $\sum_k k\,m_k$ is the size of the partition. Hence $[x^n]$ of the product counts partitions of $n$ with parts $\le N$, which for $n \le N$ is all of them, namely $p(n)$. Since $N$ was arbitrary, the identity holds coefficientwise. Restricting the set of factors to $k \in S$ restricts the allowed parts to $S$, proving the general statement.
+:::
 
 :::intuition
-A generating function is a single "clothesline" that hangs the whole counting sequence on one string: the coefficient of $x^n$ is the $n$th count.
-
-Building objects out of smaller pieces becomes multiplying their clotheslines together, so a counting construction turns into ordinary algebra. You read off answers by extracting coefficients.
+Each factor is a shop selling copies of one part size, and $x$ tracks the price. The factor $1/(1-x^3)$ offers "no $3$s, one $3$, two $3$s, …" at prices $x^0, x^3, x^6, \dots$; multiplying all the shops together enumerates every shopping basket, and grouping baskets by total price is exactly grouping partitions by size. Every restriction on partitions that can be phrased shop by shop — only odd parts, no repeated parts, at most four parts of each size — is a restriction on the factors, and the algebra follows automatically.
 :::
 
-:::example
-Compute the number of ways to make change for $n$ cents using only $1$-cent and $2$-cent coins (order does not matter), via generating functions.
+:::corollary[Generating functions for restricted partitions]{#restricted-gf}
+Let $p_{\mathrm{odd}}(n)$ count the partitions of $n$ into odd parts and $q(n)$ those into distinct parts. Then
+$$\sum_n p_{\mathrm{odd}}(n)x^n = \prod_{k \ge 1}\frac{1}{1-x^{2k-1}}, \qquad \sum_n q(n)x^n = \prod_{k\ge1}\bigl(1 + x^k\bigr).$$
+:::
+
+:::proof
+The first is Theorem *Euler's product for the partition function* with $S$ the odd numbers. For the second, a partition into distinct parts uses each $k$ either zero or one time, so the shop for part $k$ offers exactly the two options $1$ and $x^k$; multiplying gives $\prod_k (1+x^k)$, and the coefficient extraction is as before.
+:::
+
+:::theorem[Euler's odd–distinct identity]{#odd-distinct}
+For every $n \ge 0$, $p_{\mathrm{odd}}(n) = q(n)$: the partitions of $n$ into odd parts are equinumerous with the partitions of $n$ into distinct parts.
+:::
+
+:::proof
+Multiply each factor $1+x^k$ by $(1-x^k)/(1-x^k)$ and use $(1-x^k)(1+x^k) = 1-x^{2k}$:
+$$\prod_{k\ge1}(1+x^k) = \prod_{k \ge 1}\frac{1-x^{2k}}{1-x^k} .$$
+In the resulting quotient every factor $1-x^{m}$ with $m$ even appears once in the numerator and once in the denominator and cancels, leaving only the odd denominators:
+$$\prod_{k \ge 1}\frac{1-x^{2k}}{1-x^{k}} = \prod_{k\ \text{odd}} \frac{1}{1-x^{k}} .$$
+By Corollary *Generating functions for restricted partitions* the left end counts distinct-part partitions and the right end counts odd-part partitions, so their coefficients agree term by term.
+:::
+
+The cancellation is decisive but silent: it does not say which distinct-part partition corresponds to which odd-part one. Section *Bijective Proofs for Partition Identities* supplies the missing correspondence, and that is the whole difference between an algebraic proof and a combinatorial one.
+
+:::example[Checking the identity at $n = 8$]
+Verify $p_{\mathrm{odd}}(8) = q(8)$ by listing both families.
 :::
 
 :::solution
-Step 1 (build the recipe). Choosing how many $1$-cent coins to use contributes $1 + x + x^2 + \cdots = \frac{1}{1-x}$ (the exponent tracks total value). Choosing how many $2$-cent coins contributes $1 + x^2 + x^4 + \cdots = \frac{1}{1-x^2}$.
-
-Step 2 (multiply, because the two choices are independent):
-$$A(x) = \frac{1}{1-x}\cdot\frac{1}{1-x^2}.$$
-
-Step 3 (extract a coefficient). The number of ways for value $n$ is $[x^n]A(x) = \lfloor n/2\rfloor + 1$. For $n=4$: $\lfloor 4/2\rfloor + 1 = 3$.
-
-Step 4 (sanity check by hand). The ways to write $4$ using $1$s and $2$s: $2{+}2$, $2{+}1{+}1$, $1{+}1{+}1{+}1$ — exactly $3$. The formula matches.
-
-For integer partitions the same idea gives the classic product $\prod_{k \ge 1} \frac{1}{1 - x^k}$, where the $k$th factor $\frac{1}{1-x^k}$ chooses how many parts equal to $k$ to use; the product directly encodes the additive structure.
+Partitions of $8$ into distinct parts:
+$$(8),\ (7,1),\ (6,2),\ (5,3),\ (5,2,1),\ (4,3,1) \qquad \Rightarrow \qquad q(8) = 6 .$$
+Partitions of $8$ into odd parts:
+$$(7,1),\ (5,3),\ (5,1,1,1),\ (3,3,1,1),\ (3,1^5),\ (1^8) \qquad \Rightarrow \qquad p_{\mathrm{odd}}(8) = 6 .$$
+Both counts are $6$. Note that $(6,2)$ has no odd parts at all and $(1^8)$ has no distinct ones, so the two lists overlap only in $(7,1)$ and $(5,3)$: the identity is a coincidence of counts, not of objects.
 :::
 
-## Bijective Proofs and Other Techniques
+The Durfee square turns into an identity in the same style.
+
+:::proposition[Durfee square decomposition]{#durfee-identity}
+$$\sum_{n \ge 0} p(n) x^n \;=\; \sum_{d \ge 0} \frac{x^{d^2}}{\bigl[(1-x)(1-x^2)\cdots(1-x^d)\bigr]^2}.$$
+:::
+
+:::proof
+Classify partitions by the side $d$ of their Durfee square. A partition with Durfee square of side $d$ is determined by three pieces of data: the square itself, contributing $d^2$ cells; the part of the diagram strictly to the right of the square, which is a partition with at most $d$ rows; and the part strictly below it, which is a partition with all parts at most $d$. Conversely any such triple assembles into a partition with Durfee side exactly $d$, since the square fits and the next diagonal cell does not.
+
+By Theorem *Euler's product for the partition function*, partitions with all parts at most $d$ are counted by $\prod_{k=1}^{d}(1-x^k)^{-1}$; by Corollary *Rows against parts*, partitions with at most $d$ rows are counted by the same series. The three independent choices multiply, giving $x^{d^2}\prod_{k=1}^d (1-x^k)^{-2}$ for each $d$, and summing over $d$ counts every partition exactly once.
+:::
+
+One deeper product identity will be needed, and it is the one that makes $p(n)$ computable in practice.
+
+:::theorem[Euler's pentagonal number theorem]{#pentagonal}
+$$\prod_{k \ge 1}(1 - x^k) \;=\; \sum_{j \in \mathbb{Z}} (-1)^{j} x^{j(3j-1)/2} \;=\; 1 - x - x^2 + x^5 + x^7 - x^{12} - x^{15} + \cdots .$$
+The exponents $g_j = j(3j-1)/2$ for $j = 1, -1, 2, -2, \dots$ are the generalised pentagonal numbers $1, 2, 5, 7, 12, 15, \dots$.
+:::
+
+The proof is a bijection and is given in the next section, as Franklin's involution. What it buys is immediate.
+
+:::corollary[Euler's recurrence for $p(n)$]{#p-recurrence}
+For $n \ge 1$,
+$$p(n) = \sum_{j \ge 1} (-1)^{j-1}\Bigl[\, p\bigl(n - \tfrac{j(3j-1)}{2}\bigr) + p\bigl(n - \tfrac{j(3j+1)}{2}\bigr) \Bigr],$$
+where $p(m) = 0$ for $m < 0$. The sum has only $O(\sqrt n)$ nonzero terms.
+:::
+
+:::proof
+By Theorem *Euler's product for the partition function*, $\bigl(\sum_n p(n)x^n\bigr)\prod_{k\ge1}(1-x^k) = 1$. Substitute the pentagonal expansion for the product and extract the coefficient of $x^n$ for $n \ge 1$: the left side gives $p(n) - p(n-1) - p(n-2) + p(n-5) + p(n-7) - \cdots$ and the right side gives $0$. Rearranging is the stated recurrence. Only exponents $g_j \le n$ contribute, and $g_j \approx 3j^2/2$, so at most $O(\sqrt n)$ terms survive.
+:::
+
+:::example[Computing $p(10)$ from the recurrence]
+Given $p(0),\dots,p(9) = 1,1,2,3,5,7,11,15,22,30$, compute $p(10)$.
+:::
+
+:::solution
+The generalised pentagonal numbers not exceeding $10$ are $1, 2, 5, 7$, with signs $+,+,-,-$ in the recurrence. Hence
+$$p(10) = p(9) + p(8) - p(5) - p(3) = 30 + 22 - 7 - 3 = 42 .$$
+For comparison, computing $p(10)$ by listing means writing out $42$ partitions without error, while the recurrence needs four additions. At $n = 100$ the recurrence still uses only a dozen terms, and it is how $p(100) = 190{,}569{,}292$ is obtained by hand.
+:::
+
+## Bijective Proofs for Partition Identities
 
 <!-- section: bijective-and-other -->
 
-:::definition[Bijective proof]
-A bijective proof establishes an identity $a_n = b_n$ by constructing an explicit one-to-one correspondence between the two families of objects.
+An identity proved by cancelling series is true but mute. A bijective proof answers the same question with a construction: it names a map, checks that it is invertible, and thereby explains the equality object by object. The maps in this section are also the first place where the geometry of a diagram does real work, and the last of them is the missing proof of the pentagonal number theorem.
+
+:::definition[Bijective proof]{#bijective-proof}
+A **bijective proof** of $|A_n| = |B_n|$ is an explicit map $\varphi : A_n \to B_n$ together with a verification that $\varphi$ is well defined and has an explicit inverse. An **involution** is a map $\varphi$ with $\varphi \circ \varphi = \mathrm{id}$; a sign-reversing involution proves an identity with alternating signs by cancelling the objects it pairs up and leaving only its fixed points.
 :::
 
-Other tools: inclusion-exclusion for overcount correction, the reflection principle for ballot/Catalan-type problems, the cycle lemma, LGV lemma for determinants counting non-intersecting paths, transfer matrices for linear recurrences on paths/tilings, and algebraic combinatorics (symmetric functions, representation theory) for more advanced counts.
-
-:::intuition
-Instead of computing two ugly sums and showing they equal, you say "here is a perfect matching between the red objects and the blue objects; therefore same number."
-
-The best proofs explain *why* the numbers are equal at a structural level.
+:::theorem[Glaisher's bijection: odd parts to distinct parts]{#glaisher}
+The map that replaces $2^a \cdot m$ copies of an odd part $m$ according to the binary expansion of their multiplicity is a bijection from partitions of $n$ into odd parts onto partitions of $n$ into distinct parts. Consequently $p_{\mathrm{odd}}(n) = q(n)$.
 :::
 
-:::example
-Prove the identity $\sum_{k=0}^{n} k\binom{n}{k} = n\,2^{n-1}$ by counting one set of objects two ways. The objects: a committee (any subset) together with a designated chair chosen from the committee.
+:::proof
+Every positive integer factors uniquely as $2^{a} m$ with $m$ odd, so a partition $\mu$ into distinct parts is the same data as, for each odd $m$, a set $A_m$ of distinct exponents $a$ with the parts $2^a m$ for $a \in A_m$ belonging to $\mu$.
+
+Define $\varphi$ on a partition $\lambda$ into odd parts as follows. For each odd $m$, let $c_m$ be its multiplicity in $\lambda$ and write $c_m = \sum_{a \in A_m} 2^{a}$ in binary, so $A_m$ is a uniquely determined finite set of distinct exponents. Output the partition $\varphi(\lambda)$ containing the parts $2^{a}m$ for every odd $m$ and every $a \in A_m$. These parts are distinct: parts coming from different $m$ have different odd factors, and parts from the same $m$ have different exponents. Sizes agree because
+$$\sum_{m\ \text{odd}}\ \sum_{a \in A_m} 2^a m = \sum_{m\ \text{odd}} m \sum_{a\in A_m} 2^a = \sum_{m\ \text{odd}} m\,c_m = |\lambda| .$$
+
+The inverse takes a partition $\mu$ into distinct parts, groups its parts by odd factor $m$, sets $c_m = \sum_{a \in A_m}2^a$, and returns $m$ with multiplicity $c_m$. Uniqueness of binary expansion makes the two constructions mutually inverse, and uniqueness of the factorisation $2^am$ makes the grouping well defined.
+:::
+
+:::example[Glaisher's map in action]
+Compute the image of $\lambda = (5,5,5,3,1,1) \vdash 20$, and the preimage of $\mu = (8,7,4,1)\vdash 20$.
 :::
 
 :::solution
-1. Step 1 (count by committee first — the right-hand side of the sum). Pick the committee of size $k$ in $\binom{n}{k}$ ways, then pick its chair in $k$ ways. Summing over all sizes $k$ gives $\sum_{k=0}^{n} k\binom{n}{k}$.
-2. Step 2 (count by chair first — the closed form). Pick the chair among the $n$ people ($n$ ways). Each of the other $n-1$ people is independently in or out of the committee ($2^{n-1}$ ways). Total $n\,2^{n-1}$.
-3. Step 3 (same objects, so equal). Both procedures count exactly the (committee, chair) pairs, hence $\sum_{k} k\binom{n}{k} = n\,2^{n-1}$.
-4. Step 4 (sanity check, $n = 3$). Left side: $0\cdot 1 + 1\cdot 3 + 2\cdot 3 + 3\cdot 1 = 0 + 3 + 6 + 3 = 12$. Right side: $3 \cdot 2^{2} = 12$. Agreed.
-5. Term by term this is the algebraic identity $k\binom{n}{k} = n\binom{n-1}{k-1}$ ("chair-then-rest"), which is itself a two-way count of the same pairs restricted to committee size $k$.
+In $\lambda$ the multiplicities are $c_5 = 3$, $c_3 = 1$, $c_1 = 2$. Expand each in binary: $3 = 2^0 + 2^1$, $1 = 2^0$, $2 = 2^1$. The output parts are therefore $5\cdot1 = 5$, $5 \cdot 2 = 10$, $3 \cdot 1 = 3$, $1\cdot 2 = 2$, giving
+$$\varphi(\lambda) = (10,5,3,2), \qquad 10+5+3+2 = 20 .$$
+
+Backwards from $\mu = (8,7,4,1)$: factor each part as $2^a m$, obtaining $8 = 2^3\cdot1$, $4 = 2^2\cdot 1$, $1 = 2^0 \cdot 1$ and $7 = 2^0\cdot 7$. Group by odd factor: $m = 1$ has exponent set $\{0,2,3\}$, so $c_1 = 1 + 4 + 8 = 13$; $m = 7$ has $\{0\}$, so $c_7 = 1$. The preimage is $(7, 1^{13})$, of size $7 + 13 = 20$.
 :::
 
-## Young Diagrams
+The next bijection is pure diagram geometry, and it is the reason hooks will feel familiar when they arrive.
+
+:::theorem[Self-conjugate partitions and distinct odd parts]{#self-conjugate}
+The number of self-conjugate partitions of $n$ equals the number of partitions of $n$ into distinct odd parts.
+:::
+
+:::proof
+Let $\lambda = \lambda'$ and let $d$ be the side of its Durfee square. For $i = 1, \dots, d$ define the $i$-th **diagonal hook** of the diagram to consist of the cell $(i,i)$, the cells to its right in row $i$, and the cells below it in column $i$. These $d$ hooks are disjoint and cover the diagram: every cell $(a,b)$ of $\lambda$ with $a \le b$ lies in the hook indexed by $a$, and every cell with $a > b$ lies in the one indexed by $b$, and $\min(a,b) \le d$ because $(a,b) \in \lambda$ forces the square of side $\min(a,b)$ to fit.
+
+The $i$-th hook has $(\lambda_i - i) + (\lambda'_i - i) + 1$ cells, which for a self-conjugate $\lambda$ equals $2(\lambda_i - i) + 1$: an odd number. The hook sizes strictly decrease in $i$, since $\lambda_{i+1} - (i+1) < \lambda_i - i$ whenever $\lambda_{i+1}\le \lambda_i$. So the hook sizes form a partition of $n$ into distinct odd parts.
+
+Conversely, given distinct odd parts $h_1 > h_2 > \cdots > h_d$ summing to $n$, build a diagram by nesting symmetric hooks with $h_i$ cells: the $i$-th hook contributes $(h_i-1)/2$ cells to the right of $(i,i)$ and the same number below it. The result is symmetric about the diagonal, hence self-conjugate, and the two constructions undo one another.
+:::
+
+:::example[Both sides at $n = 16$]
+Exhibit the correspondence of Theorem *Self-conjugate partitions and distinct odd parts* for $n = 16$ on the partition into distinct odd parts $9 + 7$.
+:::
+
+:::solution
+Two hooks, of sizes $9$ and $7$. The outer hook puts $(9-1)/2 = 4$ cells right of $(1,1)$ and $4$ below it, so row $1$ has length $5$ and column $1$ has height $5$. The inner hook puts $(7-1)/2 = 3$ cells right of $(2,2)$ and $3$ below it, so row $2$ has length $2 + 3 = 5$ and column $2$ has height $5$.
+
+The resulting shape is $\lambda = (5,5,2,2,2)$: rows $1$ and $2$ have length $5$, and rows $3,4,5$ have length $2$ coming from the first-column and second-column cells of the two hooks. Its conjugate reads column heights $5,5,2,2,2$ — the same partition, so $\lambda$ is self-conjugate, and $|\lambda| = 5+5+2+2+2 = 16$ as required.
+:::
+
+Finally, the involution that proves the pentagonal number theorem.
+
+:::proof
+**Franklin's involution, proving Theorem *Euler's pentagonal number theorem*.** Expanding $\prod_{k\ge1}(1-x^k)$ and collecting terms shows that
+$$[x^n]\prod_{k \ge 1}(1-x^k) = q_{\mathrm{even}}(n) - q_{\mathrm{odd}}(n),$$
+where $q_{\mathrm{even}}(n)$ and $q_{\mathrm{odd}}(n)$ count partitions of $n$ into distinct parts with an even, respectively odd, number of parts: choosing the term $-x^k$ from a factor means using the part $k$ once, and each chosen part contributes one minus sign.
+
+Let $\mu$ be a partition of $n$ into distinct parts. Define the **slope** $s(\mu) = \max\{\, t : \mu_{i} = \mu_1 - i + 1 \ \text{for all } i \le t \,\}$, the length of the initial run of consecutive parts, and let $b(\mu) = \mu_{\ell}$ be the smallest part. Franklin's map is:
+
+- if $b(\mu) \le s(\mu)$, remove the smallest part and add one cell to each of the $b(\mu)$ longest rows;
+- if $b(\mu) > s(\mu)$, remove one cell from each of the $s(\mu)$ longest rows and adjoin them as a new smallest part of size $s(\mu)$.
+
+Each operation changes the number of parts by exactly one, so it reverses the parity, and it preserves $n$ and distinctness of the parts. The two operations are inverse to each other wherever both are defined, so the map is a sign-reversing involution and all the partitions it moves cancel in $q_{\mathrm{even}}(n) - q_{\mathrm{odd}}(n)$.
+
+It fails to be defined exactly when the initial run of consecutive parts reaches down to the smallest part and the two operations collide: writing $j = s(\mu) = \ell(\mu)$, this happens when $\mu = (2j-1, 2j-2, \dots, j)$, of size $j(3j-1)/2$, or when $\mu = (2j, 2j-1, \dots, j+1)$, of size $j(3j+1)/2$. Each such $n$ has exactly one fixed point, with $j$ parts, contributing $(-1)^j$. All other terms cancel, which is the claimed expansion.
+:::
+
+:::pitfall
+Franklin's map is an involution on partitions into **distinct** parts only. Applied to a partition with a repeated part, "add one cell to each of the $b$ longest rows" can create a repetition or destroy one, and the parity bookkeeping collapses. Check distinctness before applying it.
+:::
+
+:::intuition
+The three constructions of this section illustrate the three things a bijection can do that algebra cannot: Glaisher's map *explains* an identity by naming the correspondence, the diagonal-hook map *reveals* structure that was invisible in the generating function (a self-conjugate diagram is a nest of odd hooks), and Franklin's involution *computes* by cancelling almost everything and exhibiting the handful of survivors. The last pattern — cancel in pairs, count the fixed points — recurs throughout combinatorics and is worth recognising on sight.
+:::
+
+## Fillings: Semistandard Tableaux and Schur Polynomials
 
 <!-- section: young-diagrams -->
 
-:::definition[Partition and Young diagram]{#young-diagram}
-A partition λ ⊢ n is written in decreasing order λ_1 ≥ λ_2 ≥ … ≥ λ_ℓ > 0 with sum n. The Young diagram consists of λ_i left-justified boxes in the ith row.
+A diagram is a shape; the subject begins in earnest when the cells are filled with numbers. Two filling rules matter, differing only in how strict they are, and they generate two different universes: semistandard fillings produce symmetric polynomials and representations of the general linear group, standard fillings produce the symmetric group and the hook-length formula. This section covers the first, which is the more general, and the next specialises it.
+
+:::definition[Semistandard Young tableau]{#ssyt}
+A **semistandard Young tableau** (SSYT) of shape $\lambda$ is a filling $T$ of the cells of $\lambda$ with positive integers such that entries **weakly increase** left to right along each row and **strictly increase** downwards along each column. Its **weight** (or content) is the sequence $\mu = (\mu_1,\mu_2,\dots)$ where $\mu_a$ is the number of cells containing $a$; we write $x^T = x_1^{\mu_1}x_2^{\mu_2}\cdots$. The set of SSYT of shape $\lambda$ with entries in $\{1,\dots,N\}$ is written $\mathrm{SSYT}(\lambda, N)$.
 :::
 
-:::definition[Conjugate partition]
-Conjugate partition λ' is obtained by reading column lengths (transposing the diagram).
+:::pitfall
+The asymmetry between rows and columns is not a convention that can be flipped at will: rows are weak, columns are strict. Strictness down columns is what forces the entries in column $j$ to be at least $1, 2, 3, \dots$ from the top, so an SSYT with entries in $\{1,\dots,N\}$ exists only when $\ell(\lambda) \le N$. Making both directions strict gives a different object, and making both weak gives a plane partition.
 :::
 
-:::intuition
-The diagram is a "Ferrers diagram" of dots or boxes visualizing how the integer n is split into parts.
-
-(4,2,1) looks like four boxes, then two, then one, like a staircase missing some steps.
+:::definition[Schur polynomial and Kostka numbers]{#schur}
+For a partition $\lambda$ with $\ell(\lambda) \le N$, the **Schur polynomial** in $N$ variables is
+$$s_\lambda(x_1,\dots,x_N) = \sum_{T \in \mathrm{SSYT}(\lambda,N)} x^T .$$
+The coefficient $K_{\lambda\mu} = \#\{T \in \mathrm{SSYT}(\lambda) : T \text{ has weight } \mu\}$ is the **Kostka number**, so that $s_\lambda = \sum_\mu K_{\lambda\mu}\, x^\mu$ with the sum over all weights.
 :::
 
-:::example
-Find the conjugate of the partition $\lambda = (5,3,3,1) \vdash 12$.
+:::example[The smallest Schur polynomials]
+Compute $s_{(2)}$, $s_{(1,1)}$ and $s_{(2,1)}$ in two variables.
 :::
 
 :::solution
-Step 1 (draw it). The diagram has rows of lengths $5, 3, 3, 1$ (top to bottom), left-justified.
+Shape $(2)$ is a single row of two cells, so the filling $(a,b)$ needs only $a \le b$: the tableaux are $1\,1$, $1\,2$, $2\,2$, giving
+$$s_{(2)}(x_1,x_2) = x_1^2 + x_1x_2 + x_2^2 .$$
+Shape $(1,1)$ is a single column of two cells, so the filling needs $a < b$: only $\begin{smallmatrix}1\\2\end{smallmatrix}$, giving $s_{(1,1)}(x_1,x_2) = x_1x_2$.
 
-Step 2 (read column heights). The conjugate $\lambda'$ has $\lambda'_j$ equal to the number of boxes in column $j$, i.e. the number of rows $i$ with $\lambda_i \ge j$.
-Column 1: rows with length $\ge 1$ are all four rows $\to 4$.
-Column 2: rows with length $\ge 2$ are rows $1,2,3 \to 3$.
-Column 3: rows with length $\ge 3$ are rows $1,2,3 \to 3$.
-Column 4: rows with length $\ge 4$ is row $1 \to 1$.
-Column 5: rows with length $\ge 5$ is row $1 \to 1$.
-
-So $\lambda' = (4,3,3,1,1)$.
-
-Step 3 (sanity checks). Transposing preserves the box count: $4+3+3+1+1 = 12 = |\lambda|$. And conjugation is an involution — transposing $(4,3,3,1,1)$ returns $(5,3,3,1)$.
+Shape $(2,1)$: write the filling as row $1 = (a,b)$ with $a \le b$ and row $2 = (c)$ with $c > a$. With entries in $\{1,2\}$ the only possibilities are $a=1,b=1,c=2$ and $a=1,b=2,c=2$, so
+$$s_{(2,1)}(x_1,x_2) = x_1^2x_2 + x_1x_2^2 .$$
+The two Kostka numbers visible here are $K_{(2,1),(2,1)} = 1$ and $K_{(2,1),(1,2)} = 1$. Adding a third variable produces one further tableau of weight $(1,1,1)$ for each of the two standard fillings of $(2,1)$, so $K_{(2,1),(1,1,1)} = 2$ — a Kostka number larger than one, and the first sign that these coefficients carry information.
 :::
+
+Two structural facts about Kostka numbers explain why they are the natural coefficients.
+
+:::proposition[Triangularity of the Kostka numbers]{#kostka-triangular}
+$K_{\lambda\lambda} = 1$, and $K_{\lambda\mu} = 0$ unless $\mu$ is **dominated** by $\lambda$, meaning $\mu_1 + \cdots + \mu_r \le \lambda_1 + \cdots + \lambda_r$ for every $r$.
+:::
+
+:::proof
+Strictness down columns forces every entry in row $i$ to be at least $i$. Hence all the entries equal to $1, 2, \dots, r$ lie in the first $r$ rows, so their number $\mu_1 + \cdots + \mu_r$ is at most the number of cells there, $\lambda_1 + \cdots + \lambda_r$. That is the dominance condition.
+
+If $\mu = \lambda$, equality holds for every $r$, so rows $1,\dots,r$ must be filled entirely with entries $\le r$ for each $r$; taking $r = 1,2,\dots$ in turn forces row $i$ to consist of $\lambda_i$ copies of $i$. That filling is semistandard, so exactly one tableau has weight $\lambda$.
+:::
+
+:::theorem[Schur polynomials are symmetric]{#schur-symmetric}
+$s_\lambda(x_1,\dots,x_N)$ is a symmetric polynomial: $K_{\lambda\mu}$ depends only on the multiset of entries of $\mu$, not on their order.
+:::
+
+:::proof
+It is enough to show $K_{\lambda\mu} = K_{\lambda\sigma\mu}$ when $\sigma$ swaps two adjacent positions $a$ and $a+1$, since adjacent transpositions generate all rearrangements. The **Bender–Knuth involution** provides the bijection.
+
+Fix a tableau $T$ and consider only its cells containing $a$ or $a+1$. Call a cell **frozen** if it contains $a$ with an $a+1$ directly below it, or contains $a+1$ with an $a$ directly above it; the frozen cells come in such vertical pairs and contribute equally to both weights, so they will be left untouched. In each row, the unfrozen $a$'s form a contiguous block immediately followed by the unfrozen $(a+1)$'s: indeed the $a$'s in a row are consecutive and precede the $(a+1)$'s, which are also consecutive, and any $a$ lying strictly left of an unfrozen $a+1$ in the same row is itself unfrozen only if nothing sits below it. Say the row has $p$ unfrozen $a$'s followed by $q$ unfrozen $(a+1)$'s, and replace them by $q$ copies of $a$ followed by $p$ copies of $a+1$.
+
+Rows are still weakly increasing by construction. Columns are still strictly increasing because the only cells that changed value contain $a$ or $a+1$ and are unfrozen, so the cell above holds something $< a$ and the cell below something $> a+1$; swapping $a$ for $a+1$ inside that gap cannot break the inequalities. Performing the same operation again returns the original tableau, so the map is an involution, and by construction it exchanges the multiplicities of $a$ and $a+1$.
+:::
+
+:::intuition
+The Bender–Knuth involution is a "free electrons" argument. The $a$'s and $(a+1)$'s that sit directly above one another are locked together by the column condition and cannot move; everything else is free, and in each row the free entries form a stretch of $a$'s followed by a stretch of $(a+1)$'s that can be re-cut anywhere. Re-cutting so that the lengths swap is what turns weight $(\dots,p,q,\dots)$ into weight $(\dots,q,p,\dots)$ without disturbing the shape.
+:::
+
+:::definition[Skew shape]{#skew}
+If $\mu \subseteq \lambda$, meaning $\mu_i \le \lambda_i$ for all $i$, the **skew diagram** $\lambda/\mu$ consists of the cells of $\lambda$ not in $\mu$. Semistandard and standard fillings of a skew diagram are defined by the same row and column conditions, and $f^{\lambda/\mu}$ denotes the number of standard ones.
+:::
+
+Skew shapes are not an afterthought: they are what appears when a tableau is cut apart, and the algorithms of Section *Algorithms that Use the Hook-Length Formula* move cells across skew shapes rather than ordinary ones.
 
 ## Standard Young Tableaux
 
 <!-- section: standard-tableaux -->
 
+Making both the row and the column condition strict, and insisting that every number from $1$ to $n$ appears exactly once, singles out the tableaux this chapter is really about.
+
 :::definition[Standard Young tableau]{#syt}
-An SYT of shape $\lambda \vdash n$ is a filling of the boxes of the diagram with the numbers $1, 2, \dots, n$, each used exactly once, such that entries strictly increase left-to-right along every row and top-to-bottom down every column.
+A **standard Young tableau** (SYT) of shape $\lambda \vdash n$ is a filling of the cells with $1, 2, \dots, n$, each used once, strictly increasing along every row from left to right and down every column. The number of SYT of shape $\lambda$ is written $f^\lambda$.
 :::
 
-:::theorem[Tableaux count a dimension]
-The number $f^\lambda$ of SYT of shape $\lambda$ is the dimension of the irreducible representation of $S_n$ corresponding to $\lambda$ (the Specht module).
+An SYT is the same data as a way of growing the shape one cell at a time, and this reading is the source of nearly every argument about $f^\lambda$.
+
+:::proposition[Tableaux as growth sequences]{#growth-sequences}
+SYT of shape $\lambda \vdash n$ correspond bijectively to chains of partitions
+$$\varnothing = \lambda^{(0)} \subset \lambda^{(1)} \subset \cdots \subset \lambda^{(n)} = \lambda$$
+in which each $\lambda^{(m)}$ has exactly $m$ cells.
 :::
 
-This is why counting tableaux is more than a curiosity: the same integer measures a shape's tableaux and its representation's size.
+:::proof
+Given an SYT $T$, let $\lambda^{(m)}$ be the set of cells containing entries $\le m$. This is a partition diagram: if a cell is in it, so is every cell above and to its left, because those carry smaller entries. Successive terms differ by the single cell containing $m$, so the chain is as described.
 
-:::intuition
-You place the numbers 1 through n into the boxes so that everything gets bigger as you go right or down — like a Young diagram version of a sorted matrix.
-
-Different shapes correspond to different "types" of permutations or representations.
+Conversely, a chain determines the filling: write $m$ in the unique cell of $\lambda^{(m)} \setminus \lambda^{(m-1)}$. Rows and columns increase strictly because a cell is added only after its left and upper neighbours are present. The two constructions are inverse.
 :::
 
-:::example
-List every SYT of shape $(2,1)$ (two boxes on top, one below the left box), $n = 3$.
+:::definition[Corner]{#corner}
+A **corner** (or outer corner) of $\lambda$ is a cell $(i, \lambda_i)$ whose removal leaves a partition diagram, equivalently a cell with no cell to its right and none below it. These are the cells at the ends of the rows whose length strictly exceeds the next row's.
+:::
+
+:::theorem[Branching rule]{#branching}
+For every $\lambda \vdash n$ with $n \ge 1$,
+$$f^{\lambda} = \sum_{c\ \text{a corner of}\ \lambda} f^{\lambda - c},$$
+where $\lambda - c$ is the partition obtained by deleting $c$. With $f^{\varnothing} = 1$ this determines every $f^\lambda$.
+:::
+
+:::proof
+In an SYT of shape $\lambda$, the entry $n$ is the largest, so its cell has nothing to its right and nothing below: it is a corner $c$. Deleting it leaves a standard filling of $\lambda - c$ with $1,\dots,n-1$, and conversely any SYT of $\lambda-c$ becomes one of $\lambda$ by writing $n$ in $c$. For each corner this is a bijection, and the corners give disjoint cases, so the counts add.
+:::
+
+:::example[Computing $f^\lambda$ for all $\lambda \vdash 5$ by branching]
+Use the branching rule to compute $f^\lambda$ for every partition of $5$.
 :::
 
 :::solution
-Step 1 (fix what is forced). The entry $1$, being smallest, must sit in the top-left corner: any other position would have a smaller entry to its left or above, breaking strict increase.
+Work upward from small $n$. For $n \le 2$: $f^{(1)} = 1$, $f^{(2)} = f^{(1,1)} = 1$.
 
-Step 2 (place the rest). The remaining $2$ and $3$ go into the top-right box and the bottom-left box. Either order keeps both a row and a column strictly increasing, so both are valid:
-$$\begin{array}{ll}\boxed{1}\ \boxed{2}\\ \boxed{3}\end{array} \qquad \begin{array}{ll}\boxed{1}\ \boxed{3}\\ \boxed{2}\end{array}$$
+For $n = 3$: $(3)$ and $(1^3)$ have a single corner and give $1$ each; $(2,1)$ has two corners, and removing $(1,2)$ leaves $(1,1)$ while removing $(2,1)$ leaves $(2)$, so $f^{(2,1)} = f^{(1,1)} + f^{(2)} = 2$.
 
-Step 3 (sanity check). Any other placement puts $2$ or $3$ ahead of $1$, or breaks the column, so exactly $\mathbf{2}$ SYT. This matches the hook-length formula $f^{(2,1)} = 3!/(3\cdot 1\cdot 1) = 2$ computed later.
+For $n = 4$: $f^{(4)} = f^{(3)} = 1$; $f^{(3,1)} = f^{(3)} + f^{(2,1)} = 1 + 2 = 3$; $f^{(2,2)} = f^{(2,1)} = 2$; $f^{(2,1,1)} = f^{(1,1,1)} + f^{(2,1)} = 1 + 2 = 3$; $f^{(1^4)} = 1$.
+
+For $n = 5$:
+$$f^{(5)} = 1, \quad f^{(4,1)} = f^{(4)} + f^{(3,1)} = 1 + 3 = 4, \quad f^{(3,2)} = f^{(3,1)} + f^{(2,2)} = 3 + 2 = 5,$$
+$$f^{(3,1,1)} = f^{(3,1)}+f^{(2,1,1)} = 3 + 3 = 6, \quad f^{(2,2,1)} = f^{(2,2)} + f^{(2,1,1)} = 2 + 3 = 5,$$
+$$f^{(2,1,1,1)} = f^{(1^4)} + f^{(2,1,1)} = 1 + 3 = 4, \quad f^{(1^5)} = 1 .$$
+Sanity check with the identity proved in Section *Symmetry, Involutions and the Sum of Squares*: $1 + 16 + 25 + 36 + 25 + 16 + 1 = 120 = 5!$.
 :::
 
-## Hook Lengths
+The values are visibly symmetric under conjugation, and that is a theorem.
+
+:::proposition[Conjugation preserves the count]{#conjugate-count}
+$f^{\lambda'} = f^{\lambda}$ for every partition $\lambda$.
+:::
+
+:::proof
+Transposing a filling — sending the entry in cell $(i,j)$ to cell $(j,i)$ — exchanges rows with columns. Since both conditions on an SYT are "strictly increasing", the transpose of an SYT of shape $\lambda$ is an SYT of shape $\lambda'$, and transposing twice is the identity.
+:::
+
+One family of shapes can be counted outright, by an argument that will be reproved in one line by the hook-length formula.
+
+:::theorem[Two-row rectangles are counted by Catalan numbers]{#catalan-syt}
+For $n \ge 1$,
+$$f^{(n,n)} = C_n = \frac{1}{n+1}\binom{2n}{n}.$$
+:::
+
+:::proof
+By Proposition *Tableaux as growth sequences*, an SYT of shape $(n,n)$ is a way of adding $2n$ cells one at a time, each addition going into row $1$ or row $2$, subject to row $2$ never being longer than row $1$. Record the additions as a word of $2n$ steps, $+1$ for row $1$ and $-1$ for row $2$. The constraint says every prefix has a nonnegative sum, and the final sum is $0$: these are the Dyck paths of length $2n$, and the correspondence is a bijection.
+
+Count them by reflection. Of the $\binom{2n}{n}$ words with $n$ steps of each kind, call a word **bad** if some prefix sums to $-1$. For a bad word, take the first time the partial sum hits $-1$ and flip every step after that point. The result has $n-1$ steps $+1$ and $n+1$ steps $-1$, so it is one of $\binom{2n}{n+1}$ words; the map is reversible, because in any word with sum $-2$ some prefix sums to $-1$, and flipping after the first such position returns the original. Hence the bad words number $\binom{2n}{n+1}$ and
+$$f^{(n,n)} = \binom{2n}{n} - \binom{2n}{n+1} = \binom{2n}{n}\left(1 - \frac{n}{n+1}\right) = \frac{1}{n+1}\binom{2n}{n}. $$
+:::
+
+:::theorem[Tableaux measure a dimension]{#specht}
+For each $\lambda \vdash n$ there is an irreducible representation $S^\lambda$ of the symmetric group $S_n$, the **Specht module**, and $\dim S^\lambda = f^\lambda$. Every irreducible representation of $S_n$ over $\mathbb{Q}$ arises exactly once this way.
+:::
+
+:::proof
+Sketch, and the one result of this chapter quoted rather than proved: the construction rests on representation theory not developed here. One builds $S^\lambda$ inside the group algebra $\mathbb{Q}[S_n]$ as the span of **polytabloids** $e_T$, one for each filling $T$ of $\lambda$, and shows that the polytabloids indexed by *standard* fillings form a basis — that is the content of the standard basis theorem, proved by a straightening algorithm that rewrites any $e_T$ in terms of standard ones. Counting that basis gives $\dim S^\lambda = f^\lambda$. Irreducibility and completeness follow from the submodule theorem together with the count of conjugacy classes of $S_n$, which equals $p(n)$.
+:::
+
+This is the reason to want a formula rather than a recursion for $f^\lambda$: the same integer that counts fillings of a shape measures the size of a representation, and both the branching rule and the identity $\sum_\lambda (f^\lambda)^2 = n!$ have exact representation-theoretic counterparts.
+
+:::pitfall
+The branching rule removes **corners**, not arbitrary cells, and every corner must be used. Forgetting that $(3,1)$ has two corners and writing $f^{(3,1)} = f^{(3)}$ is the standard slip; the count then fails the check $\sum_{\lambda \vdash n}(f^\lambda)^2 = n!$.
+:::
+
+## Hooks, Arms and Legs
 
 <!-- section: hook-definition -->
 
+The recursion of the previous section computes $f^\lambda$ but explains nothing, and its running time grows with the number of partitions below $\lambda$. A single product formula replaces it, and the quantity that formula is built from is local: one number attached to each cell.
+
 :::definition[Hook, arm and leg]{#hook-arm-leg}
-For a cell in row i, column j of the diagram of λ, the hook consists of the cell, the arm (cells to the right in row i), and the leg (cells below in column j). Its length is
-
-$$h(i,j) = \lambda_i - j + \lambda'_j - i + 1 = \text{arm} + \text{leg} + 1.$$
+For a cell $u = (i,j) \in \lambda$, the **arm** is the set of cells strictly to the right of $u$ in row $i$, of size $a(u) = \lambda_i - j$; the **leg** is the set of cells strictly below $u$ in column $j$, of size $\ell(u) = \lambda'_j - i$. The **hook** $H(u)$ is $\{u\}$ together with its arm and its leg, and the **hook length** is
+$$h(u) = h(i,j) = a(u) + \ell(u) + 1 = \lambda_i - j + \lambda'_j - i + 1 .$$
 :::
 
-:::intuition
-Imagine a hook-shaped polyomino sitting at the cell and reaching right and down to the edge of the diagram.
-
-The length is how many cells that hook covers, including the corner cell.
+:::figure[The hook of the cell $(2,2)$ in $\lambda = (5,4,4,2)$: the cell itself, an arm of $2$ cells and a leg of $2$ cells, so $h(2,2) = 5$.]{#hook-figure}
+{
+  "type": "plot",
+  "x": [-0.6, 5.6], "y": [-4.6, 0.6],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "region", "points": [[0,0],[5,0],[5,-1],[0,-1]], "tone": "muted" },
+    { "kind": "region", "points": [[0,-1],[4,-1],[4,-2],[0,-2]], "tone": "muted" },
+    { "kind": "region", "points": [[0,-2],[4,-2],[4,-3],[0,-3]], "tone": "muted" },
+    { "kind": "region", "points": [[0,-3],[2,-3],[2,-4],[0,-4]], "tone": "muted" },
+    { "kind": "region", "points": [[1,-1],[4,-1],[4,-2],[1,-2]], "tone": "result" },
+    { "kind": "region", "points": [[1,-2],[2,-2],[2,-4],[1,-4]], "tone": "result" },
+    { "kind": "text", "at": [1.5, -1.5], "text": "u" },
+    { "kind": "text", "at": [3.0, -1.5], "text": "arm" },
+    { "kind": "text", "at": [1.5, -3.5], "text": "leg" }
+  ]
+}
 :::
 
-:::example
-Compute all hook lengths of shape $(4,2)$. Here $\lambda = (4,2)$, so the conjugate (column heights) is $\lambda' = (2,2,1,1)$. Use $h(i,j) = (\lambda_i - j) + (\lambda'_j - i) + 1$, i.e. arm $+$ leg $+ 1$.
+:::example[All hook lengths of a shape]
+Compute $h(i,j)$ for every cell of $\lambda = (4,2)$.
 :::
 
 :::solution
-Row 1 (length 4):
-$(1,1)$: arm $= 4-1 = 3$, leg $= \lambda'_1 - 1 = 2-1 = 1 \Rightarrow 3+1+1 = 5$.
-$(1,2)$: arm $= 4-2 = 2$, leg $= 2-1 = 1 \Rightarrow 2+1+1 = 4$.
-$(1,3)$: arm $= 4-3 = 1$, leg $= \lambda'_3 - 1 = 1-1 = 0 \Rightarrow 1+0+1 = 2$.
-$(1,4)$: arm $= 0$, leg $= 1-1 = 0 \Rightarrow 0+0+1 = 1$.
+Here $\lambda = (4,2)$ and $\lambda' = (2,2,1,1)$. Apply $h(i,j) = (\lambda_i - j) + (\lambda'_j - i) + 1$.
 
-Row 2 (length 2):
-$(2,1)$: arm $= 2-1 = 1$, leg $= 2-2 = 0 \Rightarrow 1+0+1 = 2$.
-$(2,2)$: arm $= 2-2 = 0$, leg $= 2-2 = 0 \Rightarrow 0+0+1 = 1$.
+Row $1$: $h(1,1) = 3 + 1 + 1 = 5$, $h(1,2) = 2+1+1 = 4$, $h(1,3) = 1 + 0 + 1 = 2$, $h(1,4) = 0+0+1 = 1$.
+Row $2$: $h(2,1) = 1 + 0 + 1 = 2$, $h(2,2) = 0+0+1 = 1$.
 
-On the diagram the hooks read $\begin{smallmatrix}5 & 4 & 2 & 1\\ 2 & 1\end{smallmatrix}$.
-
-Sanity check: every corner cell (no cell to its right or below) must have hook $1$ — cells $(1,4)$ and $(2,2)$ do. And the counting of "right $+$ below" agrees with the arm-plus-leg formula in every case.
+Written on the diagram the hooks read
+$$\begin{smallmatrix} 5 & 4 & 2 & 1 \\ 2 & 1 \end{smallmatrix}.$$
+Check by counting cells directly rather than by formula: the hook of $(1,1)$ is that cell, the three cells to its right, and the one below — five cells. Every corner cell has hook $1$, and $(1,4)$ and $(2,2)$ do.
 :::
 
-## The Formula
+:::proposition[Basic properties of hook lengths]{#hook-basics}
+For any partition $\lambda$:
+1. $h(i,j)$ strictly decreases as $j$ increases along a row, and strictly decreases as $i$ increases down a column;
+2. $h(u) = 1$ exactly when $u$ is a corner;
+3. $h_{\lambda'}(j,i) = h_\lambda(i,j)$, so $\lambda$ and $\lambda'$ have the same multiset of hook lengths;
+4. the hook lengths in the first column are $h(i,1) = \lambda_i + k - i$, where $k = \ell(\lambda)$, and these $k$ numbers are distinct.
+:::
+
+:::proof
+(1) Increasing $j$ by one decreases $\lambda_i - j$ by one and cannot increase $\lambda'_j - i$, since $\lambda'$ is weakly decreasing; so $h$ drops by at least one. The column statement is the same argument with the roles exchanged.
+
+(2) $h(u) = 1$ forces $a(u) = \ell(u) = 0$, which is exactly the definition of a corner.
+
+(3) The definition of $h$ is symmetric under exchanging $(\lambda, i, j)$ with $(\lambda', j, i)$, because $(\lambda')' = \lambda$ by Proposition *Conjugation is a size-preserving involution*. Cells correspond under $(i,j) \leftrightarrow (j,i)$, so the multisets coincide.
+
+(4) $h(i,1) = (\lambda_i - 1) + (\lambda'_1 - i) + 1 = \lambda_i + k - i$ using $\lambda'_1 = k$. If $i < i'$ then $\lambda_i \ge \lambda_{i'}$ and $k - i > k - i'$, so $h(i,1) > h(i',1)$.
+:::
+
+:::notation[Beta numbers]
+Write $\ell_i = h(i,1) = \lambda_i + k - i$ for $1 \le i \le k$. These are the **beta numbers** (or first-column hook lengths) of $\lambda$: a strictly decreasing sequence of nonnegative integers ending at $\ell_k = \lambda_k \ge 1$, which determines $\lambda$ completely, since $\lambda_i = \ell_i - k + i$.
+:::
+
+The following lemma says the entire multiset of hook lengths is determined by the beta numbers, row by row. It is the bridge between the hook-length formula and its determinantal form, and it is what makes hook products computable in closed form for families like rectangles and staircases.
+
+:::lemma[Row hooks as a complement]{#row-hook-lemma}
+Fix $\lambda$ with $k$ parts and beta numbers $\ell_1 > \cdots > \ell_k$. For each row $i$,
+$$\{\, h(i,j) : 1 \le j \le \lambda_i \,\} = \{1, 2, \dots, \ell_i\} \setminus \{\, \ell_i - \ell_j : i < j \le k \,\},$$
+and all these sets are sets of distinct integers.
+:::
+
+:::proof
+Define $g(t) = t + \#\{\, r \le k : \lambda_r \le t \,\}$ for integers $t \ge 0$.
+
+*Step 1: $h(i, t+1) = \ell_i - g(t)$ for $0 \le t \le \lambda_i - 1$.* Since $\#\{r : \lambda_r \le t\} = k - \#\{r : \lambda_r \ge t+1\} = k - \lambda'_{t+1}$,
+$$\ell_i - g(t) = \lambda_i + k - i - t - k + \lambda'_{t+1} = \lambda_i - (t+1) + \lambda'_{t+1} - i + 1 = h(i,t+1).$$
+
+*Step 2: the nonnegative integers split as $\{g(t) : t \ge 0\} \sqcup \{\ell_1,\dots,\ell_k\}$.* We have $g(0) = 0$, and for $t \ge 1$, $g(t) - g(t-1) = 1 + m_t$ where $m_t = \#\{r : \lambda_r = t\}$; so $g$ is strictly increasing, unbounded, and the integers it skips are exactly the $m_t$ values $g(t-1)+1, \dots, g(t-1)+m_t$ for each $t \ge 1$. Let $R_t = \#\{r : \lambda_r \ge t\}$, so that $g(t-1) = (t-1) + (k - R_t)$. The rows with $\lambda_r = t$ are $r = R_t - m_t + 1, \dots, R_t$, and for these $\ell_r = t + k - r$ runs through
+$$t + k - R_t,\ \dots,\ t+k-R_t+m_t-1 \;=\; g(t-1)+1,\ \dots,\ g(t-1)+m_t,$$
+precisely the skipped values. Every $\ell_r$ arises this way with $t = \lambda_r \ge 1$, so the skipped set is exactly $\{\ell_1,\dots,\ell_k\}$.
+
+*Step 3: assemble.* Since all rows $r \ge i$ satisfy $\lambda_r \le \lambda_i$, we get $g(\lambda_i) \ge \lambda_i + (k-i+1) = \ell_i + 1$, so by monotonicity the values of $g$ lying in $\{0,1,\dots,\ell_i - 1\}$ are exactly $g(0), \dots, g(\lambda_i - 1)$. Step 2 then gives the disjoint decomposition
+$$\{0,1,\dots,\ell_i-1\} = \{g(t) : 0 \le t \le \lambda_i - 1\} \;\sqcup\; \{\ell_j : j > i\},$$
+using $\ell_j < \ell_i$ exactly for $j > i$. Subtracting every element from $\ell_i$ and applying Step 1 turns this into
+$$\{1,2,\dots,\ell_i\} = \{h(i,j) : 1 \le j \le \lambda_i\} \sqcup \{\ell_i - \ell_j : j > i\},$$
+which is the claim.
+:::
+
+:::example[Reading the lemma off a shape]
+Verify Lemma *Row hooks as a complement* for $\lambda = (4,2)$.
+:::
+
+:::solution
+Here $k = 2$, so $\ell_1 = \lambda_1 + 2 - 1 = 5$ and $\ell_2 = \lambda_2 + 2 - 2 = 2$.
+
+Row $1$: the lemma predicts $\{1,\dots,5\} \setminus \{\ell_1 - \ell_2\} = \{1,2,3,4,5\}\setminus\{3\} = \{1,2,4,5\}$. The computed row-$1$ hooks were $5,4,2,1$. They agree.
+
+Row $2$: the predicted set is $\{1,\dots,\ell_2\} = \{1,2\}$, with nothing removed since no $j > 2$ exists. The computed hooks were $2,1$. They agree.
+
+Consequently the product of all hook lengths can be written without listing cells:
+$$\prod_{u \in \lambda} h(u) = \prod_{i=1}^{k} \frac{\ell_i!}{\prod_{j>i}(\ell_i - \ell_j)} = \frac{5!\cdot 2!}{5-2} = \frac{120 \cdot 2}{3} = 80,$$
+matching the direct product $5\cdot4\cdot2\cdot1\cdot2\cdot1 = 80$.
+:::
+
+:::intuition
+Think of the beta numbers as the positions of $k$ beads on a half-infinite abacus wire whose positions are labelled $0,1,2,\dots$ — bead $i$ sits at $\ell_i$. Lemma *Row hooks as a complement* says the hook lengths in row $i$ are the distances from bead $i$ to the *empty* positions below it. Moving one bead left by $h$ places is exactly removing a hook of length $h$ from the diagram, which is why this picture governs every argument about hooks, including the rim-hook algorithms of the representation theory of $S_n$.
+:::
+
+## The Hook-Length Formula
 
 <!-- section: the-formula -->
 
-:::theorem[Hook-length formula, cell form]
-If λ ⊢ n, then the number f^λ of standard Young tableaux of shape λ is
+Everything so far has been preparation for one statement. It is the central result of the chapter, and it is the rare formula that is simultaneously simple to state, immediate to apply and hard to prove.
 
-$$f^\lambda = \frac{n!}{\prod_{(i,j) \in \lambda} h(i,j)},$$
-
-the product running over all cells of the diagram.
+:::theorem[Hook-length formula]{#hook-length-formula}
+For every partition $\lambda \vdash n$, the number of standard Young tableaux of shape $\lambda$ is
+$$f^{\lambda} \;=\; \frac{n!}{\displaystyle\prod_{u \in \lambda} h(u)},$$
+the product running over all $n$ cells of the diagram, with $h(u)$ the hook length of Definition *Hook, arm and leg*.
 :::
 
-:::intuition
-Take n!, which would be the number of ways to fill the boxes with 1..n in any order.
+The proof is the subject of Section *A Probabilistic Proof of the Hook-Length Formula*, where it is carried out in full by the hook-walk argument of Greene, Nijenhuis and Wilf; the present section establishes what the formula says, what follows from it, and how to use it without error.
 
-Divide by the product of hook lengths; each hook "accounts for" the overcounting or the constraints along that L-shape.
-
-The result is exactly the number of the increasing fillings.
-:::
-
-:::example
-A rectangular case and then a non-rectangular one.
+:::example[Two shapes, computed]
+Compute $f^{(3,2)}$ and $f^{(4,2)}$ from the formula, and check the first against the branching computation.
 :::
 
 :::solution
-Shape $(2,2)$, $n = 4$. Hooks are $3, 2, 2, 1$, product $12$, so $f^{(2,2)} = 4!/12 = 24/12 = 2$. Indeed there are exactly two SYT.
+For $\lambda = (3,2)$ we have $\lambda' = (2,2,1)$, and the hook lengths are
+$$\begin{smallmatrix} 4 & 3 & 1 \\ 2 & 1\end{smallmatrix}, \qquad \prod_u h(u) = 4\cdot3\cdot1\cdot2\cdot1 = 24,$$
+so $f^{(3,2)} = 5!/24 = 120/24 = 5$. The branching computation in Example *Computing $f^\lambda$ for all $\lambda \vdash 5$ by branching* gave $f^{(3,2)} = f^{(3,1)} + f^{(2,2)} = 3 + 2 = 5$. They agree.
 
-Shape $(4,2)$, $n = 6$. Using the hooks computed in the previous section, $\begin{smallmatrix}5 & 4 & 2 & 1\\ 2 & 1\end{smallmatrix}$, the product is
-$$5\cdot 4\cdot 2\cdot 1\cdot 2\cdot 1 = 80,$$
-so
-$$f^{(4,2)} = \frac{6!}{80} = \frac{720}{80} = 9.$$
-
-Sanity check: $9$ is a positive integer, as any count of tableaux must be — the factorial-over-hook-product expression is guaranteed to come out whole, even though that is not obvious from the fraction $720/80$.
+For $\lambda = (4,2)$ the hooks were computed in Example *All hook lengths of a shape* as $\begin{smallmatrix}5&4&2&1\\2&1\end{smallmatrix}$, with product $5\cdot4\cdot2\cdot1\cdot2\cdot1 = 80$, so
+$$f^{(4,2)} = \frac{6!}{80} = \frac{720}{80} = 9 .$$
 :::
 
-## The Hook-Length Formula and Algorithms
+:::intuition
+Read the formula as $n!$ corrected by a local penalty. There are $n!$ ways to write $1,\dots,n$ into the cells with no constraint at all; a uniformly random such filling is standard with probability $1/\prod_u h(u)$. The factor $1/h(u)$ is exactly the chance that, among the $h(u)$ entries lying in the hook of $u$, the smallest is the one at $u$ itself — a necessary condition for standardness at that cell. The theorem is the assertion that these $n$ events, which are visibly not independent, nevertheless multiply as if they were.
+:::
+
+:::pitfall
+Three errors account for nearly every wrong answer. First, the hook includes the cell itself: $h = \text{arm} + \text{leg} + 1$, never $\text{arm} + \text{leg}$. Second, the legs are read from the diagram of $\lambda$, not of $\lambda'$ — although by Proposition *Basic properties of hook lengths* the two give the same multiset overall, mixing them cell by cell does not. Third, the formula needs the product over **every** cell; omitting the corner cells, whose hooks are $1$, is harmless, but omitting anything else is not.
+:::
+
+:::example[A larger shape]
+Compute $f^{(4,3,1,1)}$.
+:::
+
+:::solution
+Here $n = 9$ and $\lambda' = (4,2,2,1)$. Cell by cell:
+
+Row $1$: $h(1,1) = 3 + 3 + 1 = 7$, $h(1,2) = 2+1+1 = 4$, $h(1,3) = 1+1+1 = 3$, $h(1,4) = 0+0+1 = 1$.
+Row $2$: $h(2,1) = 2+2+1 = 5$, $h(2,2) = 1+0+1 = 2$, $h(2,3) = 0+0+1 = 1$.
+Row $3$: $h(3,1) = 0+1+1 = 2$. Row $4$: $h(4,1) = 0+0+1 = 1$.
+
+The product is $7\cdot4\cdot3\cdot1\cdot5\cdot2\cdot1\cdot2\cdot1 = 1680$, so
+$$f^{(4,3,1,1)} = \frac{9!}{1680} = \frac{362880}{1680} = 216 .$$
+A useful independent check: $\lambda' = (4,2,2,1)$ must give the same answer by Proposition *Conjugation preserves the count*, and its hooks are the transposed array, hence the same multiset and the same product.
+:::
+
+Lemma *Row hooks as a complement* converts the formula into a determinantal one, which is what one uses when the shape is given by a pattern rather than a picture.
+
+:::corollary[Frobenius determinant form]{#frobenius-form}
+With $k = \ell(\lambda)$ and beta numbers $\ell_i = \lambda_i + k - i$,
+$$f^{\lambda} = n!\,\frac{\displaystyle\prod_{1 \le i < j \le k}(\ell_i - \ell_j)}{\displaystyle\prod_{i=1}^{k} \ell_i!} .$$
+:::
+
+:::proof
+By Lemma *Row hooks as a complement*, the hook lengths in row $i$ are the elements of $\{1,\dots,\ell_i\}$ other than the $k-i$ numbers $\ell_i - \ell_j$ with $j > i$, all of which do lie in that range. Hence the product of the row-$i$ hooks is
+$$\prod_{j=1}^{\lambda_i} h(i,j) = \frac{\ell_i!}{\prod_{j > i}(\ell_i - \ell_j)} .$$
+Multiplying over $i$ gives $\prod_{u} h(u) = \prod_i \ell_i! \big/ \prod_{i<j}(\ell_i-\ell_j)$, and substituting into Theorem *Hook-length formula* gives the statement.
+:::
+
+:::corollary[Rectangles, two-row shapes and staircases]{#hook-corollaries}
+1. For the $a \times b$ rectangle $\lambda = (b^a)$, $\displaystyle f^{(b^a)} = (ab)! \prod_{i=0}^{a-1}\frac{i!}{(b+i)!}$.
+2. $f^{(n,n)} = C_n$, the $n$-th Catalan number.
+3. For the staircase $\delta_k = (k,k-1,\dots,1)$ with $n = \binom{k+1}{2}$, $\displaystyle f^{\delta_k} = \frac{n!}{\prod_{i=1}^{k}(2i-1)^{\,k-i+1}}$.
+:::
+
+:::proof
+(1) The beta numbers are $\ell_i = b + a - i$ for $i = 1,\dots,a$, that is the integers $b, b+1, \dots, b+a-1$ in decreasing order. Then $\prod_i \ell_i! = \prod_{i=0}^{a-1}(b+i)!$, while $\prod_{i<j}(\ell_i - \ell_j) = \prod_{i<j}(j-i) = \prod_{d=1}^{a-1}d^{\,a-d} = \prod_{i=0}^{a-1} i!$. Corollary *Frobenius determinant form* gives the claim.
+
+(2) Take $a = 2$, $b = n$ in (1): $f^{(n,n)} = (2n)!\,\frac{0!\,1!}{n!\,(n+1)!} = \frac{1}{n+1}\binom{2n}{n} = C_n$, reproving Theorem *Two-row rectangles are counted by Catalan numbers* in one line.
+
+(3) In $\delta_k$ we have $\lambda_i = k-i+1$ and $\lambda'_j = k-j+1$, so for a cell $(i,j)$ with $j \le k-i+1$,
+$$h(i,j) = (k-i+1-j) + (k-j+1-i) + 1 = 2(k-i-j+1)+1 ,$$
+which is odd. As $j$ runs from $1$ to $k-i+1$, the quantity $k-i-j+1$ runs from $k-i$ down to $0$, so row $i$ contributes the odd numbers $1, 3, \dots, 2(k-i)+1$, each once. The odd number $2s+1$ therefore occurs once for each row $i$ with $k - i \ge s$, that is $k-s$ times. Writing $s = i-1$ gives $\prod_u h(u) = \prod_{i=1}^{k}(2i-1)^{k-i+1}$.
+:::
+
+:::example[The staircase $\delta_4$]
+How many SYT does the staircase $\delta_4 = (4,3,2,1)$ have?
+:::
+
+:::solution
+Here $n = 10$. By part (3) of Corollary *Rectangles, two-row shapes and staircases*,
+$$\prod_u h(u) = 1^{4}\cdot 3^{3}\cdot 5^{2}\cdot 7^{1} = 27 \cdot 25 \cdot 7 = 4725,$$
+so $f^{\delta_4} = 10!/4725 = 3628800/4725 = 768$.
+
+Check the pattern at the previous staircase: $\delta_3 = (3,2,1)$ has $n = 6$ and $\prod h = 1^3 3^2 5^1 = 45$, giving $f^{\delta_3} = 720/45 = 16$, and $\delta_2 = (2,1)$ gives $6/(1^2\cdot3) = 2$, which is the count found by hand in Section *Standard Young Tableaux*.
+:::
+
+:::remark[Integrality]
+Nothing in the expression $n!/\prod h(u)$ makes it obvious that the value is an integer: for $\delta_4$ it asserts that $4725$ divides $10!$. The formula proves the divisibility, since the left side counts a set of tableaux, and this is the standard way such divisibilities are established. Attempts to see the integrality directly from the arithmetic of the hook multiset are what led to several of the alternative proofs listed in Section *A Probabilistic Proof of the Hook-Length Formula*.
+:::
+
+## Algorithms that Use the Hook-Length Formula
 
 <!-- section: hook-and-other -->
 
-:::definition[Hook length]
-The hook length h(u) of a cell u is 1 + (cells strictly to the right) + (cells strictly below).
+A closed formula is worth more than its statement: it changes what can be computed. This section collects the algorithms the hook-length formula makes possible or makes fast — evaluating $f^\lambda$, sampling a tableau uniformly at random, counting semistandard fillings, refining the count by a statistic, and moving cells between skew shapes — and each is stated as a procedure that can be executed by hand on a small shape.
+
+:::recipe[Evaluating $f^\lambda$]
+Given $\lambda \vdash n$ with $k$ parts:
+1. compute the conjugate $\lambda'$ once, in $O(n)$ steps;
+2. for each cell $(i,j)$ set $h(i,j) = \lambda_i - j + \lambda'_j - i + 1$;
+3. return $n!$ divided by the product of the $n$ hook lengths.
 :::
 
-:::theorem[Hook-length formula]{#hook-length-formula}
-The number of standard Young tableaux of shape $\lambda \vdash n$ is
+The cost is $O(n)$ arithmetic operations. The branching rule of Theorem *Branching rule* computes the same number by dynamic programming over all partitions below $\lambda$, of which there can be exponentially many in $n$; the hook formula therefore replaces an exponential recursion by a linear scan. When the shape is a rectangle or a staircase, Corollary *Rectangles, two-row shapes and staircases* removes even that.
 
-$$f^\lambda = \frac{n!}{\prod_{u \in \lambda} h(u)}.$$
+The formula also makes exact *uniform sampling* possible, through the process that proves it.
+
+:::recipe[The hook walk: sampling an SYT uniformly]{#hook-walk-recipe}
+To generate a standard Young tableau of shape $\lambda \vdash n$ with each of the $f^\lambda$ tableaux equally likely:
+1. pick a cell $u$ uniformly at random among the $n$ cells of $\lambda$;
+2. while $h(u) > 1$, replace $u$ by a cell chosen uniformly at random from $H(u)\setminus\{u\}$, the arm and leg of $u$ together;
+3. the walk halts at a corner $c$ — since $h(u) = 1$ exactly at corners by Proposition *Basic properties of hook lengths* — and each step strictly decreases the hook length, so it halts after at most $\lambda_1 + \ell(\lambda)$ moves;
+4. write $n$ in the cell $c$, delete $c$ from the diagram, and repeat the whole procedure on $\lambda - c$ with $n-1$ in place of $n$, stopping when the diagram is empty.
 :::
 
-There is a beautiful probabilistic "hook-walk" algorithm that samples an SYT uniformly by a sequence of random hook moves; its analysis proves the formula.
-
-:::intuition
-The denominator "penalizes" each cell by the size of its hook (the L-shape of cells that "see" it).
-
-The formula magically gives an integer even though it is written as a huge factorial divided by many integers.
+:::theorem[The hook walk is uniform]{#hook-walk-uniform}
+The procedure of Recipe *The hook walk: sampling an SYT uniformly* outputs each standard Young tableau of shape $\lambda$ with probability exactly $1/f^\lambda$. Equivalently, a single walk ends at the corner $c$ with probability $f^{\lambda - c}/f^{\lambda}$.
 :::
 
-:::example
-Count the SYT of shape $(2,2)$ ($n = 4$) with the hook-length formula.
+The proof is the content of the next section; here we use it. One run costs $O(\lambda_1 + \ell(\lambda))$ random choices, so a whole tableau is produced in $O(n(\lambda_1+\ell(\lambda)))$ steps with no rejection and no large-number arithmetic — which is why this, rather than any unranking scheme built from the formula itself, is the standard sampler.
+
+:::example[Corner probabilities for $(3,2)$]
+Compute the probability that a single hook walk on $\lambda = (3,2)$ stops at each of its two corners, and check that the two probabilities sum to $1$.
 :::
 
 :::solution
-Step 1 (hook length of each cell = 1 + cells strictly to the right + cells strictly below):
-$(1,1)$: $1 + 1 + 1 = 3$
-$(1,2)$: $1 + 0 + 1 = 2$
-$(2,1)$: $1 + 1 + 0 = 2$
-$(2,2)$: $1 + 0 + 0 = 1$
-
-Laid on the diagram the hooks read $\begin{smallmatrix}3 & 2\\ 2 & 1\end{smallmatrix}$.
-
-Step 2 (multiply): product of hooks $= 3\cdot 2\cdot 2\cdot 1 = 12$.
-
-Step 3 (apply the formula): $f^{(2,2)} = \dfrac{4!}{12} = \dfrac{24}{12} = 2$.
-
-Step 4 (sanity check by listing). The two SYT are $\begin{smallmatrix}1 & 2\\ 3 & 4\end{smallmatrix}$ and $\begin{smallmatrix}1 & 3\\ 2 & 4\end{smallmatrix}$. The filling $\begin{smallmatrix}1 & 4\\ 2 & 3\end{smallmatrix}$ fails (the right column $4 > 3$ decreases), confirming exactly $2$.
-
-The jeu de taquin (sliding) and RSK algorithm (next topic) are algorithmic companions that manipulate tableaux.
+The corners are $c_1 = (1,3)$ and $c_2 = (2,2)$, with $\lambda - c_1 = (2,2)$ and $\lambda - c_2 = (3,1)$. Theorem *The hook walk is uniform* predicts
+$$\Pr[c_1] = \frac{f^{(2,2)}}{f^{(3,2)}} = \frac{2}{5}, \qquad \Pr[c_2] = \frac{f^{(3,1)}}{f^{(3,2)}} = \frac{3}{5},$$
+using the values $f^{(2,2)} = 2$, $f^{(3,1)} = 3$, $f^{(3,2)} = 5$. They sum to $1$, which is exactly the branching rule $f^{(3,2)} = f^{(2,2)} + f^{(3,1)}$ read as a statement about probabilities — and that reading is precisely how the next section turns the walk into a proof.
 :::
 
-## Proofs and Algorithms
+The same hook lengths count semistandard fillings once a second statistic is attached to each cell.
+
+:::definition[Content of a cell]{#content}
+The **content** of the cell $(i,j)$ is $c(i,j) = j - i$: zero on the main diagonal, positive above it, negative below.
+:::
+
+:::theorem[Hook-content formula]{#hook-content}
+For every $N \ge \ell(\lambda)$, the number of semistandard Young tableaux of shape $\lambda$ with entries in $\{1,\dots,N\}$ is
+$$\#\,\mathrm{SSYT}(\lambda,N) \;=\; s_\lambda(\underbrace{1,1,\dots,1}_{N}) \;=\; \prod_{u \in \lambda}\frac{N + c(u)}{h(u)} .$$
+:::
+
+:::proof
+Sketch. Setting every variable to $1$ in Definition *Schur polynomial and Kostka numbers* counts the tableaux, so the content is the evaluation $s_\lambda(1^N)$. That evaluation follows from the bialternant formula $s_\lambda(x_1,\dots,x_N) = \det(x_i^{\lambda_j + N - j})/\det(x_i^{N-j})$ by letting all $x_i \to 1$ through $x_i = q^{i-1}$ and taking $q \to 1$: both determinants are Vandermonde-like and evaluate to products, and the ratio simplifies to $\prod_u (N+c(u))/h(u)$ once Lemma *Row hooks as a complement* is used to rewrite $\prod_i (\lambda_i + N - i)!$ in terms of hooks. The two ingredients not proved in this chapter are the bialternant formula and the $q$-Vandermonde evaluation. Setting $N \to \infty$ is not legitimate here; the formula is exact for each finite $N$.
+:::
+
+:::example[Counting SSYT of shape $(2,1)$ with entries at most 3]
+Apply the hook-content formula, and check it against the Schur polynomial.
+:::
+
+:::solution
+The shape $(2,1)$ has hooks $\begin{smallmatrix}3&1\\1\end{smallmatrix}$ and contents $c(1,1) = 0$, $c(1,2) = 1$, $c(2,1) = -1$. With $N = 3$,
+$$\prod_u \frac{3 + c(u)}{h(u)} = \frac{3}{3}\cdot\frac{4}{1}\cdot\frac{2}{1} = 8 .$$
+So there are $8$ such tableaux. Directly: the weights available are the six rearrangements of $(2,1,0)$, each occurring once, plus the weight $(1,1,1)$ occurring $K_{(2,1),(1,1,1)} = 2$ times, giving $6 + 2 = 8$. With $N = 2$ the formula gives $\frac{2}{3}\cdot\frac31\cdot\frac11 = 2$, matching the two tableaux listed in Example *The smallest Schur polynomials*.
+:::
+
+Hooks also control a $q$-refinement of $f^\lambda$, which is how the formula meets generating functions again.
+
+:::definition[Descent set and major index]{#maj}
+Let $T$ be an SYT with $n$ cells. An index $i \in \{1,\dots,n-1\}$ is a **descent** of $T$ if $i+1$ lies in a strictly lower row than $i$. The **major index** is $\mathrm{maj}(T) = \sum_{i \in \mathrm{Des}(T)} i$.
+:::
+
+:::theorem[Stanley's $q$-hook-length formula]{#q-hook}
+With $[m]_q = 1 + q + \cdots + q^{m-1}$, $[n]_q! = [1]_q[2]_q\cdots[n]_q$ and $n(\lambda) = \sum_i (i-1)\lambda_i$,
+$$\sum_{T \in \mathrm{SYT}(\lambda)} q^{\mathrm{maj}(T)} \;=\; q^{n(\lambda)}\,\frac{[n]_q!}{\prod_{u\in\lambda}[h(u)]_q}.$$
+Setting $q = 1$ recovers Theorem *Hook-length formula*.
+:::
+
+:::proof
+Sketch, resting on symmetric function theory not developed here: one shows that the principal specialisation $s_\lambda(1,q,q^2,\dots)$ equals both $q^{n(\lambda)}\prod_u (1-q^{h(u)})^{-1}$ — the $q$-analogue of the hook-content formula — and the generating function $\sum_T q^{\mathrm{maj}(T)}/\prod_{i=1}^n(1-q^i)$ obtained by expanding $s_\lambda$ in terms of standard tableaux and descent statistics. Equating the two and clearing denominators gives the stated identity.
+:::
+
+:::example[The $q$-formula on $(2,1)$]
+Verify Theorem *Stanley's $q$-hook-length formula* for $\lambda = (2,1)$.
+:::
+
+:::solution
+The two tableaux are $T_1 = \begin{smallmatrix}1&2\\3\end{smallmatrix}$ and $T_2 = \begin{smallmatrix}1&3\\2\end{smallmatrix}$. In $T_1$ the entry $3$ lies below $2$, so $\mathrm{Des}(T_1) = \{2\}$ and $\mathrm{maj}(T_1) = 2$. In $T_2$ the entry $2$ lies below $1$, so $\mathrm{Des}(T_2) = \{1\}$ and $\mathrm{maj}(T_2) = 1$. The left side is $q + q^2$.
+
+On the right, $n(\lambda) = 0\cdot 2 + 1\cdot 1 = 1$, the hooks are $3,1,1$, and
+$$q^{1}\,\frac{[3]_q!}{[3]_q[1]_q[1]_q} = q\,\frac{[1]_q[2]_q[3]_q}{[3]_q} = q\,[2]_q = q(1+q) = q + q^2 .$$
+The two sides agree, and at $q = 1$ both give $2 = f^{(2,1)}$.
+:::
+
+Finally, the algorithm that moves cells around a tableau, which is what makes skew shapes computable at all.
+
+:::recipe[Jeu de taquin slide]{#jdt}
+Let $T$ be a standard filling of a skew shape $\lambda/\mu$. Choose an **inner corner**: a cell of $\mu$ having no cell of $\mu$ to its right or below. Then repeatedly slide into the empty cell the smaller of its right and lower neighbours in $T$ (the only one present, if just one is), leaving a new empty cell, until the hole reaches a position with no right or lower neighbour; delete it. The result is again a standard filling of a skew shape, with one fewer cell in $\mu$.
+:::
+
+Iterating slides until $\mu$ is exhausted produces the **rectification** of $T$, a standard tableau of ordinary shape. Its shape and content do not depend on the order in which the slides are performed — the fundamental theorem of jeu de taquin, due to Schützenberger — and rectification is the tool that reduces skew counting to ordinary counting. Applying the slides in the reverse direction, from the outside in, gives **evacuation**, the involution on $\mathrm{SYT}(\lambda)$ that will reappear in Section *Schensted's Theorem on Increasing and Decreasing Subsequences*.
+
+:::remark[How large can $f^\lambda$ be?]
+Since $\sum_{\lambda\vdash n}(f^\lambda)^2 = n!$, proved in Section *Symmetry, Involutions and the Sum of Squares*, no single $f^\lambda$ exceeds $\sqrt{n!}$, and some $\lambda$ has $f^\lambda \ge \sqrt{n!/p(n)}$. Since $p(n)$ grows sub-exponentially, the maximum is $\sqrt{n!}\,e^{-(1+o(1))c\sqrt n}$; the hook-length formula is what allows the optimal shape to be identified, by turning the maximisation of $f^\lambda$ into a continuous problem about the limiting profile of the diagram. That limit shape is the Vershik–Kerov–Logan–Shepp curve, and it is the same object that governs the asymptotics of longest increasing subsequences.
+:::
+
+## A Probabilistic Proof of the Hook-Length Formula
 
 <!-- section: proofs-and-algos -->
 
-- Original proof (Frame–Robinson–Thrall 1954) by induction or manipulation of factorials.
-- Probabilistic hook-walk proof (Greene–Nijenhuis–Wilf 1979): a random process that generates SYT with the exact probability given by the formula, thereby proving it.
-- Algebraic proofs via the hook-content formula for semi-standard tableaux or via representation theory (Weyl dimension formula in type A).
-- There are also bijective proofs and q-analogues (q-hook formula).
+The hook-length formula was found by Frame, Robinson and Thrall in 1954, and their proof was a manipulation of factorials that verifies the identity without explaining it. Twenty-five years later Greene, Nijenhuis and Wilf gave the argument reproduced here: they wrote down a random walk on the diagram, computed where it stops, and found the formula falling out of the computation. The proof is complete and elementary, and as a by-product it is an algorithm — the sampler of Recipe *The hook walk: sampling an SYT uniformly*.
 
-The hook walk also gives an efficient practical way to generate a random SYT of given shape uniformly.
+Throughout this section fix $\lambda \vdash n$ and write
+$$F(\lambda) = \frac{n!}{\prod_{u\in\lambda}h(u)}$$
+for the number the theorem predicts. The goal is $f^\lambda = F(\lambda)$.
 
-:::intuition
-The walk: pick a cell at random; while not at a corner, jump to a uniformly random cell in the current hook (including current). When you stop at a corner, remove it and repeat on the smaller diagram, recording the order of removal in reverse to get the filling.
-
-Analysis shows the probability for any particular standard filling is exactly the reciprocal of the hook product times 1/n! .
+:::proposition[Reduction to a probability statement]{#hlf-reduction}
+Theorem *Hook-length formula* holds for every partition of every $n$ provided that, for every $\lambda$,
+$$\sum_{c\ \text{a corner of}\ \lambda} \frac{F(\lambda - c)}{F(\lambda)} = 1 .$$
 :::
 
-:::example
-Check the hook-walk claim numerically on shape $(2,1)$.
+:::proof
+Induct on $n$. For $n = 1$ both $f^{(1)}$ and $F((1))$ equal $1$. Let $n \ge 2$ and assume $f^{\mu} = F(\mu)$ for all $\mu \vdash n-1$. By Theorem *Branching rule* and the inductive hypothesis, $f^{\lambda} = \sum_c f^{\lambda-c} = \sum_c F(\lambda - c)$, and the displayed identity says that this sum equals $F(\lambda)$.
+:::
+
+So everything reduces to an identity among hook products. The next lemma rewrites it in a form that a random process can match.
+
+:::lemma[The corner ratio, expanded]{#corner-ratio}
+Let $c = (x,y)$ be a corner of $\lambda \vdash n$. Then
+$$\frac{F(\lambda - c)}{F(\lambda)} = \frac{1}{n}\prod_{i<x}\frac{h(i,y)}{h(i,y)-1}\ \prod_{j<y}\frac{h(x,j)}{h(x,j)-1} = \frac1n \sum_{A,B} \ \prod_{i \in A}\frac{1}{h(i,y)-1}\prod_{j\in B}\frac{1}{h(x,j)-1},$$
+where the sum is over all pairs of subsets $A \subseteq \{1,\dots,x-1\}$ and $B \subseteq \{1,\dots,y-1\}$.
+:::
+
+:::proof
+Deleting the corner $c$ changes hook lengths only in row $x$ and column $y$. Indeed, for a cell $u = (i,j)$ the hook length counts the cells weakly right of $u$ in its row and strictly below it in its column, so $h(u)$ drops by exactly one if $c$ belongs to $H(u)$, that is if $i = x$ and $j \le y$, or $j = y$ and $i \le x$; otherwise it is unchanged. The cell $c$ itself disappears, and $h(c) = 1$. Hence
+$$\frac{F(\lambda-c)}{F(\lambda)} = \frac{(n-1)!}{n!}\cdot\frac{\prod_{u\in\lambda}h(u)}{\prod_{u \in \lambda - c}h'(u)} = \frac1n \prod_{i<x}\frac{h(i,y)}{h(i,y)-1}\prod_{j<y}\frac{h(x,j)}{h(x,j)-1},$$
+each affected hook contributing the ratio $h/(h-1)$; no denominator vanishes, because a cell strictly above or strictly left of $c$ has $c$ in its hook together with itself, so its hook length is at least $2$.
+
+For the second form, write $\frac{h}{h-1} = 1 + \frac{1}{h-1}$ and expand the product: choosing the term $1$ or the term $1/(h-1)$ from each factor is exactly choosing the subsets $A$ and $B$ of rows and columns whose factors contribute nontrivially.
+:::
+
+Now the process. Recall from Recipe *The hook walk: sampling an SYT uniformly* that a hook walk starts at a uniformly random cell and repeatedly jumps to a uniformly random cell of the current hook other than the current cell, stopping at a corner. Each jump moves strictly right within the row or strictly down within the column, so the walk visits an increasing sequence of rows and an increasing sequence of columns.
+
+:::lemma[Path probability of the hook walk]{#gnw-lemma}
+Let $c = (x,y)$ be a corner. Consider a hook walk started at a cell $(a,b)$, and let
+$$a = a_1 < a_2 < \cdots < a_s = x, \qquad b = b_1 < b_2 < \cdots < b_t = y$$
+be sets of rows and columns with $(a,b) \in \lambda$. The probability that the walk ends at $c$ having visited exactly the rows $a_1,\dots,a_s$ and exactly the columns $b_1,\dots,b_t$ equals
+$$\prod_{r=1}^{s-1}\frac{1}{h(a_r,y)-1}\ \prod_{r=1}^{t-1}\frac{1}{h(x,b_r)-1}.$$
+:::
+
+:::proof
+Induct on $s + t$. If $s = t = 1$ the walk starts at $(x,y)$, which is a corner, so it stops there immediately with probability $1$, and both products are empty.
+
+Suppose $s + t > 2$, and let the walk be at $(a_1,b_1)$, which is not a corner, so $h(a_1,b_1) > 1$ and the next cell is uniform among the $h(a_1,b_1)-1$ cells of its arm and leg. For the visited sets to be exactly as prescribed, the next cell must be either $(a_1,b_2)$ — possible only if $t \ge 2$ — or $(a_2,b_1)$ — possible only if $s \ge 2$. Conditioning on which, and applying the inductive hypothesis to the remainder of the walk,
+$$P = \frac{1}{h(a_1,b_1)-1}\Bigl[\,\mathbf{1}[s\ge2]\,P_{\text{row}} + \mathbf{1}[t\ge2]\,P_{\text{col}}\,\Bigr],$$
+where $P_{\text{row}}$ is the target product with the factor $1/(h(a_1,y)-1)$ omitted and $P_{\text{col}}$ is the target product with the factor $1/(h(x,b_1)-1)$ omitted. Writing $P^{*}$ for the full target product, this is
+$$P = \frac{P^{*}}{h(a_1,b_1)-1}\Bigl[\,\mathbf{1}[s\ge2]\bigl(h(a_1,y)-1\bigr) + \mathbf{1}[t\ge2]\bigl(h(x,b_1)-1\bigr)\Bigr].$$
+The indicator functions may be dropped: if $s = 1$ then $a_1 = x$ and $h(a_1,y) = h(x,y) = 1$, so the first bracketed term is zero anyway, and symmetrically for $t = 1$. It therefore suffices to prove
+$$\bigl(h(a,y) - 1\bigr) + \bigl(h(x,b)-1\bigr) = h(a,b) - 1 \qquad (a \le x,\ b \le y).$$
+Because $(x,y)$ is a corner, $\lambda_x = y$ and $\lambda'_y = x$. Hence
+$$h(a,y) = \lambda_a - y + \lambda'_y - a + 1 = \lambda_a - y + x - a + 1, \qquad h(x,b) = \lambda_x - b + \lambda'_b - x + 1 = y - b + \lambda'_b - x + 1,$$
+and adding gives $\lambda_a - b + \lambda'_b - a + 2 = h(a,b)+1$, which is the required identity.
+:::
+
+:::theorem[Hook-length formula, proved]{#hlf-proved}
+For every $\lambda \vdash n$, $f^{\lambda} = n!\big/\prod_{u\in\lambda}h(u)$, and a hook walk ends at the corner $c$ with probability $F(\lambda-c)/F(\lambda) = f^{\lambda-c}/f^\lambda$.
+:::
+
+:::proof
+Fix a corner $c = (x,y)$. Sum the probability of Lemma *Path probability of the hook walk* over all admissible pairs of visited sets, weighting each starting cell by its probability $1/n$. A pair of visited sets is exactly a pair of subsets $A \subseteq \{1,\dots,x-1\}$ of rows and $B \subseteq \{1,\dots,y-1\}$ of columns — those visited before the last one — the starting cell being $(\min(A \cup \{x\}), \min(B\cup\{y\}))$, which lies in $\lambda$ because it is weakly above and weakly left of $c$. Distinct pairs $(A,B)$ give distinct visited sets, and every walk ending at $c$ determines exactly one pair. Therefore
+$$\Pr[\text{walk ends at } c] = \frac1n\sum_{A,B}\prod_{i\in A}\frac{1}{h(i,y)-1}\prod_{j\in B}\frac{1}{h(x,j)-1} = \frac{F(\lambda-c)}{F(\lambda)}$$
+by Lemma *The corner ratio, expanded*. The walk always stops at some corner, so these probabilities sum to $1$ over the corners, and Proposition *Reduction to a probability statement* completes the induction. The final claim is the displayed equality together with $f = F$.
+:::
+
+Theorem *The hook walk is uniform* now follows: the first walk places $n$ in corner $c$ with probability $f^{\lambda-c}/f^{\lambda}$, and by induction the remainder of the procedure produces each SYT of shape $\lambda - c$ with probability $1/f^{\lambda-c}$, so each tableau of shape $\lambda$ appears with probability $\frac{f^{\lambda-c}}{f^\lambda}\cdot\frac{1}{f^{\lambda-c}} = \frac1{f^\lambda}$.
+
+:::example[The walk on $(2,2)$, by hand]
+Verify the corner probability of Theorem *Hook-length formula, proved* directly for $\lambda = (2,2)$.
 :::
 
 :::solution
-1. Step 1 (the claim). The Greene–Nijenhuis–Wilf analysis shows that the corner removed first is cell $(i,j)$ with probability $\prod h / n!$ times an appropriate factor; the net effect is that each complete SYT is produced with probability $\dfrac{\prod_{u} h(u)}{n!}$.
-2. Step 2 (plug in). Shape $(2,1)$ has hooks $3, 1, 1$ (product $3$) and $n = 3$, so the predicted probability of any single SYT is $\dfrac{3}{3!} = \dfrac{3}{6} = \dfrac12$.
-3. Step 3 (consistency with the count). There are $f^{(2,1)} = 2$ tableaux, each generated with probability $\tfrac12$, and $2 \times \tfrac12 = 1$: the probabilities sum to $1$, as they must. Equivalently, uniform generation ($1/f^\lambda = 1/2$) forces $f^\lambda = n!/\prod h$, which is the hook-length formula. This is the sense in which the sampling algorithm *proves* the formula.
+The shape has hooks $\begin{smallmatrix}3&2\\2&1\end{smallmatrix}$ and a single corner $c = (2,2)$, so the theorem predicts $\Pr[\text{ends at }(2,2)] = 1$ — automatic, since a walk must stop at a corner and there is only one.
+
+The content is then in the count: $F((2,2)) = 4!/(3\cdot2\cdot2\cdot1) = 2$ and $F((2,1)) = 3!/(3\cdot1\cdot1) = 2$, so Proposition *Reduction to a probability statement* asks for $F((2,1))/F((2,2)) = 1$, which holds. Following the walk explicitly from each of the four starting cells confirms the mechanism: from $(1,1)$, whose hook is the other three cells, the walk jumps to $(1,2)$, $(2,1)$ or $(2,2)$, and from each of $(1,2)$ and $(2,1)$ the only available move is to $(2,2)$. Every trajectory ends at $(2,2)$, as it must.
 :::
 
-## The Correspondence via Insertion
+:::remark[Other proofs]
+Four further proofs are standard, and each illuminates something different. The original Frame–Robinson–Thrall argument verifies the identity by induction on the number of rows using the determinant form of Corollary *Frobenius determinant form*. The Novelli–Pak–Stoyanovskii proof is bijective: it exhibits an explicit bijection between standard tableaux of shape $\lambda$ together with a "hook function", and arbitrary fillings, by a sorting algorithm on the diagram. A representation-theoretic proof identifies $f^\lambda$ with a dimension via Theorem *Tableaux measure a dimension* and evaluates it by the Weyl dimension formula in type $A$. Finally, the formula is the $q \to 1$ case of Theorem *Stanley's $q$-hook-length formula*, which can be proved independently from symmetric function identities.
+:::
+
+## The RSK Correspondence by Row Insertion
 
 <!-- section: the-correspondence -->
 
-Given a permutation π = π_1 … π_n , one builds two tableaux P (insertion) and Q (recording) of the same shape by the following process.
+The identity $\sum_{\lambda \vdash n}(f^\lambda)^2 = n!$ says that pairs of equally-shaped standard tableaux are as numerous as permutations. A counting proof of that would be respectable; a bijection is better, and the bijection is an algorithm simple enough to run by hand. It was found by Robinson in 1938 in a representation-theoretic disguise, rediscovered as an algorithm by Schensted in 1961, and extended to matrices by Knuth in 1970 — hence RSK.
 
-:::recipe[Schensted insertion]
-- Start with empty P and Q.
-- For i = 1 to n: insert the value π_i into the current P using Schensted row-insertion (bumping procedure): place it in the first row by displacing the smallest larger entry to the right; the displaced entry is bumped to the next row, and so on, possibly creating a new box at the end of some row.
-- Add the number i to Q in the position of the newly created box in P.
+:::recipe[Row insertion]{#row-insertion}
+To insert a value $x$ into a tableau $P$ with distinct entries, written $P \leftarrow x$:
+1. Set $r = 1$.
+2. In row $r$, if every entry is smaller than $x$, append $x$ at the end of the row and stop: a new cell has been created.
+3. Otherwise let $y$ be the **leftmost** entry of row $r$ that is greater than $x$. Replace $y$ by $x$ — we say $x$ **bumps** $y$ — set $x := y$, $r := r+1$, and return to step 2.
+:::
+
+The sequence of cells whose entries are replaced, together with the new cell at the end, is the **bumping path** of the insertion. Note that the path moves down one row at each step and never moves right, since the bumped value is larger than its replacement.
+
+:::lemma[Row insertion is well defined]{#insertion-lemma}
+If $P$ is a standard filling of a shape $\lambda$ (rows and columns strictly increasing) and $x$ is different from every entry, then $P \leftarrow x$ terminates and produces a standard filling of a shape obtained from $\lambda$ by adding one cell. Moreover, if $x$ bumps $y$ out of column $c$ of row $r$, then the cell entered in row $r+1$ lies in a column $\le c$.
+:::
+
+:::proof
+Each step moves down one row, and a row shorter than the previous one eventually fails to contain any entry greater than the incoming value — at the latest, the process reaches an empty row and starts a new one — so the algorithm terminates after at most $\ell(\lambda)+1$ steps.
+
+Rows stay increasing: replacing $y$ by the smaller $x$ at the leftmost position where an entry exceeds $x$ keeps the row sorted, because the entry to the left of $y$ is smaller than $x$ by the choice of $y$, and the entry to the right of $y$ is larger than $y > x$. Appending $x$ at the end is legitimate for the same reason.
+
+Columns stay increasing, and the path moves weakly left. Consider a value $x$ arriving in row $r \ge 2$, having been bumped out of column $c'$ of row $r-1$, where the smaller value $x'' < x$ now sits; say $x$ settles in column $c$ of row $r$.
+
+First, $c \le c'$. Before the insertion touched row $r$, column strictness gave $P(r,c') > P(r-1,c') = x$ whenever row $r$ reached column $c'$, so the leftmost entry of row $r$ exceeding $x$ lies at a column $\le c'$; and if row $r$ was shorter than $c'$ then $x$ is appended at a column $\le c'$ as well.
+
+Second, the column through $c$ stays strict. Below: the entry $z$ under cell $(r,c)$, if any, satisfied $z > P(r,c) > x$, and $P(r,c)$ has just been replaced by the smaller $x$, so $z > x$ still. Above: if $c < c'$ then $P(r-1,c) < P(r-1,c') = x$, and if $c = c'$ then cell $(r-1,c)$ now holds $x'' < x$. Either way the entry above $x$ is smaller than $x$.
+
+Exactly one new cell is created, at the end of the process, and it lies at the end of a row with the row above at least as long, so the resulting shape is again a partition diagram.
+:::
+
+:::recipe[The Robinson–Schensted algorithm]{#rs-algorithm}
+Given a permutation $\pi = \pi_1\pi_2\cdots\pi_n$ of $\{1,\dots,n\}$, start with empty tableaux $P$ and $Q$ and for $i = 1,\dots,n$:
+1. perform $P := (P \leftarrow \pi_i)$;
+2. write $i$ into $Q$ in the cell that was newly created in step 1.
+Output the pair $(P,Q)$: $P$ is the **insertion tableau**, $Q$ the **recording tableau**.
+:::
+
+:::example[Running the algorithm]
+Compute $(P,Q)$ for $\pi = 3\,5\,1\,4\,2$.
+:::
+
+:::solution
+Insert $3$: row $1$ is empty, so $3$ starts it; the new cell is $(1,1)$.
+$$P = \begin{smallmatrix}3\end{smallmatrix}, \qquad Q = \begin{smallmatrix}1\end{smallmatrix}.$$
+
+Insert $5$: $5$ exceeds $3$, so it is appended; the new cell is $(1,2)$.
+$$P = \begin{smallmatrix}3&5\end{smallmatrix}, \qquad Q = \begin{smallmatrix}1&2\end{smallmatrix}.$$
+
+Insert $1$: the leftmost entry greater than $1$ is $3$, so $1$ bumps $3$; $3$ enters the empty row $2$, creating the cell $(2,1)$.
+$$P = \begin{smallmatrix}1&5\\3\end{smallmatrix}, \qquad Q = \begin{smallmatrix}1&2\\3\end{smallmatrix}.$$
+
+Insert $4$: it bumps $5$ from row $1$; $5$ exceeds $3$ and is appended to row $2$, creating $(2,2)$.
+$$P = \begin{smallmatrix}1&4\\3&5\end{smallmatrix}, \qquad Q = \begin{smallmatrix}1&2\\3&4\end{smallmatrix}.$$
+
+Insert $2$: it bumps $4$ from row $1$; $4$ bumps $5$ from row $2$; $5$ enters the empty row $3$, creating $(3,1)$.
+$$P = \begin{smallmatrix}1&2\\3&4\\5\end{smallmatrix}, \qquad Q = \begin{smallmatrix}1&2\\3&4\\5\end{smallmatrix}.$$
+
+Both tableaux are standard of shape $(2,2,1) \vdash 5$, as the theorem below guarantees. That $P = Q$ here is not an accident: $\pi = 3\,5\,1\,4\,2$ is an involution, and Corollary *Involutions are single tableaux* explains it.
 :::
 
 :::theorem[Robinson–Schensted correspondence]{#rs-correspondence}
-At the end both P and Q are standard Young tableaux of identical shape λ ⊢ n, and every such pair arises from exactly one permutation.
+The map $\pi \mapsto (P(\pi), Q(\pi))$ of Recipe *The Robinson–Schensted algorithm* is a bijection
+$$S_n \;\longleftrightarrow\; \bigl\{(P,Q) : P, Q \in \mathrm{SYT}(\lambda) \text{ for some } \lambda \vdash n \bigr\}.$$
 :::
 
-:::intuition
-P "sorts" the permutation values according to a bumping rule that maintains the tableau property.
+:::proof
+*The map is well defined.* By Lemma *Row insertion is well defined*, $P$ is at every stage a standard filling of a partition shape, and each insertion adds exactly one cell. The cell added at step $i$ is recorded as the entry $i$ of $Q$, so $Q$ has the same shape as $P$ and is standard: the cells of $Q$ holding $1,\dots,m$ form the diagram of the shape after $m$ insertions, which is a partition diagram, so $Q$ increases along rows and down columns by Proposition *Tableaux as growth sequences*.
 
-Q records the "history" of when each new box was added.
+*The map is injective, with an explicit inverse.* We describe **reverse insertion**. Suppose $(P,Q)$ is a pair of standard tableaux of the same shape $\lambda \vdash n$. The cell $c$ of $Q$ containing $n$ is a corner. Reverse-bump from the corresponding cell of $P$: let $z$ be the entry of $P$ at $c$ and delete that cell; then, moving upward from row $r(c)-1$ to row $1$, replace $z$ by the **rightmost** entry of the current row that is smaller than $z$, taking the displaced entry as the new $z$. When row $1$ has been processed, the value $z$ emitted from it is output.
 
-The pair (P,Q) uniquely encodes the permutation.
+This undoes one forward insertion. In the forward direction, the value placed in row $r$ was the leftmost entry exceeding the incoming value; the entry it replaced is therefore, after the replacement, the rightmost entry of row $r-1$ smaller than the value pushed down — which is what reverse insertion selects. The bumping path is retraced cell by cell, the emitted value is the letter that was inserted, and the resulting tableau is the one before the insertion. So applying reverse insertion $n$ times, reading the corners off $Q$ in the order $n, n-1, \dots, 1$, reconstructs a sequence of letters $\pi_n, \pi_{n-1}, \dots, \pi_1$ and the empty tableau. Distinct pairs therefore yield distinct permutations and vice versa, so the map is a bijection.
 :::
 
-:::example
-Run RS on $\pi = 2\,3\,1$ step by step. The insertion rule: to insert a value into a row, if it is larger than every entry, append it; otherwise it replaces (bumps) the smallest entry strictly greater than it, and that bumped entry is inserted into the next row down.
+:::example[Undoing an insertion]
+From $P = \begin{smallmatrix}1&2\\3&4\\5\end{smallmatrix}$ and $Q = \begin{smallmatrix}1&2\\3&4\\5\end{smallmatrix}$, recover the last letter of $\pi$.
 :::
 
 :::solution
-insert $2$. Row 1 is empty, so $2$ starts a new box.
-$$P = \boxed{2}\qquad Q = \boxed{1}$$
+The entry $5$ of $Q$ sits at cell $(3,1)$, so reverse insertion starts from the entry $5$ of $P$ at that cell and deletes it. In row $2$, which is $3\,4$, the rightmost entry smaller than $5$ is $4$; it is displaced, and $5$ takes its place, giving row $2 = 3\,5$. In row $1$, which is $1\,2$, the rightmost entry smaller than $4$ is $2$; it is displaced, and $4$ takes its place, giving row $1 = 1\,4$.
 
-insert $3$. Row 1 is $2$; since $3 > 2$ it appends. A new box is created at position $(1,2)$, so we record the step number $2$ there in $Q$.
-$$P = \boxed{2}\ \boxed{3}\qquad Q = \boxed{1}\ \boxed{2}$$
-
-insert $1$. Row 1 is $2\,3$; the smallest entry strictly greater than $1$ is $2$, so $1$ bumps $2$: row 1 becomes $1\,3$. The bumped $2$ goes to row 2, which is empty, so it starts a new box at $(2,1)$. Record step number $3$ there in $Q$.
-$$P = \begin{smallmatrix}1 & 3\\ 2\end{smallmatrix}\qquad Q = \begin{smallmatrix}1 & 2\\ 3\end{smallmatrix}$$
-
-Result: $P$ and $Q$ are both SYT of the same shape $(2,1) \vdash 3$, as guaranteed.
-
-Sanity check (via Schensted's theorem, next section): $\pi = 2\,3\,1$ has longest increasing subsequence $2\,3$ of length $2$, matching $\lambda_1 = 2$ (first row of $P$); its longest decreasing subsequence $3\,1$ (or $2\,1$) has length $2$, matching the number of rows $\lambda'_1 = 2$. Both check out.
-
-The process is deterministic and fully reversible: reverse-bumping from $(P, Q)$ recovers $\pi$ uniquely, which is why RS is a bijection.
+The value emitted from row $1$ is $2$, which is indeed $\pi_5$, and the tableau left behind is $\begin{smallmatrix}1&4\\3&5\end{smallmatrix}$, exactly the $P$ recorded after four insertions in Example *Running the algorithm*.
 :::
 
-## Connection to Increasing Subsequences
+:::pitfall
+$P$ and $Q$ are not interchangeable: $P$ holds the **values** of the permutation, rearranged, while $Q$ holds the **times** at which cells were created. Reverse insertion reads its corner from $Q$ and bumps in $P$; using $P$ for both, or processing the corners in increasing rather than decreasing order, produces nonsense. The two tableaux do have the same shape at every stage, which is the only thing they share.
+:::
+
+:::remark[The general RSK]
+Replacing the permutation by a two-line array — a **biword** of pairs $\binom{u_i}{v_i}$ sorted lexicographically, equivalently a matrix of nonnegative integers — and weakening the insertion rule to bump the leftmost entry **strictly** greater than $x$, the same algorithm becomes a bijection between such matrices and pairs $(P,Q)$ of *semistandard* tableaux of a common shape, with the weight of $P$ recording the column sums and the weight of $Q$ the row sums. This is Knuth's extension, and it is the form in which RSK proves the Cauchy identity of Section *Symmetry, Involutions and the Sum of Squares*. A permutation is the special case of a permutation matrix, where both tableaux come out standard.
+:::
+
+## Schensted's Theorem on Increasing and Decreasing Subsequences
 
 <!-- section: increasing-subseq -->
 
-:::theorem[Schensted's theorem]{#schensted}
-The length of the longest increasing subsequence of π is equal to the length of the first row λ_1 of the shape (or of P). Dually, the length of the longest decreasing subsequence is the length of the first column λ'_1.
+The shape produced by RSK is not an arbitrary by-product: its first row and its first column measure two natural statistics of the permutation, and that is what turned RSK from a curiosity into a tool.
+
+:::definition[Increasing and decreasing subsequences]{#subsequences}
+A **subsequence** of $\pi = \pi_1\cdots\pi_n$ is a sequence $\pi_{i_1},\dots,\pi_{i_k}$ with $i_1 < \cdots < i_k$. It is **increasing** if $\pi_{i_1} < \cdots < \pi_{i_k}$ and **decreasing** if $\pi_{i_1} > \cdots > \pi_{i_k}$. Write $\mathrm{lis}(\pi)$ and $\mathrm{lds}(\pi)$ for the maximum lengths of each.
 :::
 
-This gives an O(n log n) algorithm for LIS via patience sorting (which is essentially the insertion process).
+The whole theorem rests on one invariant, which says that row $1$ of the insertion tableau is a table of best-possible endings.
+
+:::lemma[What the first row remembers]{#first-row-lemma}
+Let $P_m$ be the insertion tableau after the first $m$ letters of $\pi$ have been inserted. For every $k \ge 1$, the cell $(1,k)$ of $P_m$ is occupied if and only if $\pi_1\cdots\pi_m$ has an increasing subsequence of length $k$, and in that case its entry is the smallest possible last term of such a subsequence.
+:::
+
+:::proof
+Induct on $m$, the case $m = 0$ being vacuous. Write $r_1 < r_2 < \cdots < r_p$ for row $1$ of $P_m$ and assume the claim for $m$. Let $x = \pi_{m+1}$, and let $j$ be least with $r_j > x$, or $j = p+1$ if there is none; row insertion replaces $r_j$ by $x$ (or appends $x$ as $r_{p+1}$), and no other entry of row $1$ changes.
+
+First, the longest increasing subsequence of $\pi_1\cdots\pi_{m+1}$ *ending at* $x$ has length exactly $j$. It has length at least $j$, because by the inductive hypothesis there is an increasing subsequence of length $j-1$ ending at $r_{j-1} < x$, to which $x$ may be appended. It has length at most $j$, because a subsequence of length $j+1$ ending at $x$ would contain one of length $j$ ending at a value $< x$, contradicting the minimality of $r_j > x$.
+
+Now check each cell. For $k < j$: by the choice of $j$ we have $r_k < x$, and any new subsequence of length $k$ must end at $x$ to be new, which is worse; so the minimum is unchanged, as is the entry. For $k = j$: the new letter supplies a subsequence of length $j$ ending at $x$, and every old one ends at a value $\ge r_j > x$, so the new minimum is $x$ — the entry now stored there. For $k > j$: a new subsequence of length $k$ would have to end at $x$, impossible by the paragraph above, so nothing changes. Occupancy is handled by the same accounting, the cell $(1,p+1)$ becoming occupied exactly when $j = p+1$, that is when an increasing subsequence of length $p+1$ first appears.
+:::
+
+:::theorem[Schensted's theorem]{#schensted}
+Let $\pi \in S_n$ have RSK shape $\lambda$. Then
+$$\lambda_1 = \mathrm{lis}(\pi) \qquad\text{and}\qquad \lambda'_1 = \mathrm{lds}(\pi),$$
+that is, the length of the first row of $P$ is the longest increasing subsequence of $\pi$ and the number of rows is the longest decreasing subsequence.
+:::
+
+:::proof
+The first statement is immediate from Lemma *What the first row remembers* with $m = n$: the occupied cells of row $1$ are exactly the lengths $k$ for which an increasing subsequence of length $k$ exists, and those lengths form the interval $1,\dots,\mathrm{lis}(\pi)$, so $\lambda_1 = \mathrm{lis}(\pi)$.
+
+The second statement is proved here only as a **sketch**, since the tool it needs is developed in this chapter by statement rather than by proof. Let $\pi^{\mathrm{r}} = \pi_n\pi_{n-1}\cdots\pi_1$ be the reversed word. Decreasing subsequences of $\pi$ are precisely increasing subsequences of $\pi^{\mathrm{r}}$, read backwards, so $\mathrm{lds}(\pi) = \mathrm{lis}(\pi^{\mathrm{r}})$. By the first statement applied to $\pi^{\mathrm{r}}$, this equals the first-row length of the shape of $\pi^{\mathrm{r}}$. The sketch then rests on Theorem *Reversal conjugates the shape* below, which gives $\mathrm{shape}(\pi^{\mathrm{r}}) = \lambda'$, whence $\mathrm{lds}(\pi) = (\lambda')_1 = \lambda'_1$.
+:::
+
+:::theorem[Reversal conjugates the shape]{#reversal-duality}
+If $\pi$ has RSK shape $\lambda$, then $\pi^{\mathrm{r}}$ has shape $\lambda'$.
+:::
+
+:::proof
+Sketch, quoted rather than proved: the standard argument is Schützenberger's, and it rests on the theory of jeu de taquin introduced in Recipe *Jeu de taquin slide*. One shows that two words have the same insertion tableau precisely when they are connected by Knuth's elementary transpositions, that reversing a word turns Knuth equivalence for the alphabet into Knuth equivalence for the reversed alphabet, and that on tableaux this operation is transposition composed with evacuation. Since transposition sends shape $\lambda$ to $\lambda'$ and evacuation preserves the shape, the shape of $\pi^{\mathrm{r}}$ is $\lambda'$. A self-contained treatment is in Fulton's *Young Tableaux*, Chapter 3.
+:::
+
+:::theorem[Greene's theorem]{#greene}
+For every $k$, the largest total size of a union of $k$ increasing subsequences of $\pi$ is $\lambda_1 + \lambda_2 + \cdots + \lambda_k$, and the largest total size of a union of $k$ decreasing subsequences is $\lambda'_1 + \cdots + \lambda'_k$.
+:::
+
+:::proof
+Sketch: the case $k = 1$ is Theorem *Schensted's theorem*. The general case is proved by showing that both sides are invariant under Knuth's elementary transpositions and then evaluating them on a canonical word of each Knuth class — the reading word of a tableau — where the assertion is immediate, since the rows of the tableau are themselves $k$ increasing subsequences realising the bound. The ingredient not proved here is that Knuth equivalence preserves the insertion tableau.
+:::
+
+:::corollary[Erdős–Szekeres theorem]{#erdos-szekeres}
+Every sequence of $rs+1$ distinct real numbers contains an increasing subsequence of length $r+1$ or a decreasing subsequence of length $s+1$.
+:::
+
+:::proof
+Relabelling by rank turns the sequence into a permutation $\pi$ of $\{1,\dots,n\}$ with $n = rs+1$, which changes no comparisons. Let $\lambda$ be its RSK shape. If both conclusions fail then $\mathrm{lis}(\pi)\le r$ and $\mathrm{lds}(\pi)\le s$, so by Theorem *Schensted's theorem* $\lambda_1 \le r$ and $\lambda'_1 \le s$: the diagram fits inside an $s \times r$ box and therefore has at most $rs$ cells. But it has $n = rs+1$ cells, a contradiction.
+:::
 
 :::intuition
-The first row of P at the end "holds" the smallest possible tail of all increasing subsequences of each length; its length is the longest one you can build.
-
-The bumping records the "patience" piles in the solitaire game that models the LIS.
+Erdős–Szekeres via RSK is the argument in its sharpest form: a permutation of $n$ letters *is* a diagram of $n$ cells, and a diagram cannot be simultaneously short and narrow. The original pigeonhole proof assigns to each position the pair (longest increasing subsequence ending here, longest decreasing subsequence ending here) and notes that the pairs are distinct; the RSK proof replaces that bookkeeping by a shape, and then all of Greene's theorem is available rather than just the first row and column.
 :::
 
-:::example
-Take $\pi = 3\,1\,4\,2$ and verify Schensted's theorem directly.
+The insertion algorithm restricted to row $1$ is itself a well-known sorting procedure.
+
+:::recipe[Patience sorting]{#patience}
+Deal the letters $\pi_1,\dots,\pi_n$ one at a time into piles. Place each new letter on the leftmost pile whose top card is greater than it, or start a new pile to the right if there is none. At the end, the number of piles is $\mathrm{lis}(\pi)$.
+:::
+
+The pile tops are exactly row $1$ of the insertion tableau at each stage, so correctness of the recipe is Lemma *What the first row remembers*. Since the pile tops increase from left to right, the correct pile is found by binary search, giving an $O(n\log n)$ algorithm for the longest increasing subsequence — asymptotically optimal in the comparison model.
+
+:::example[Both statistics from one shape]
+For $\pi = 3\,5\,1\,4\,2$, read $\mathrm{lis}$ and $\mathrm{lds}$ off the RSK shape and confirm them by hand.
 :::
 
 :::solution
-Step 1 (find the LIS by hand). The increasing subsequences of maximal length are $1\,4$, $1\,2$, and $3\,4$, all of length $2$; no increasing subsequence of length $3$ exists. So $\operatorname{lis}(\pi) = 2$.
+Example *Running the algorithm* gave shape $\lambda = (2,2,1)$, so $\lambda_1 = 2$ and $\lambda'_1 = 3$; Theorem *Schensted's theorem* predicts $\mathrm{lis}(\pi) = 2$ and $\mathrm{lds}(\pi) = 3$.
 
-Step 2 (build $P$ by insertion):
-Insert $3$: $P = \boxed{3}$.
-Insert $1$: $1$ bumps $3$ to row 2 $\to P = \begin{smallmatrix}1\\ 3\end{smallmatrix}$.
-Insert $4$: $4 > 1$, appends to row 1 $\to P = \begin{smallmatrix}1 & 4\\ 3\end{smallmatrix}$.
-Insert $2$: $2$ bumps $4$ in row 1; $4$ appends after $3$ in row 2 $\to P = \begin{smallmatrix}1 & 2\\ 3 & 4\end{smallmatrix}$.
+By hand: $3\,5$ and $1\,4$ and $1\,2$ are increasing of length $2$, while no increasing triple exists — after $3\,5$ nothing larger follows, after $3\,4$ only $2$ remains, and $1\,4$ likewise. So $\mathrm{lis} = 2$. The subsequence $5\,4\,2$ (positions $2,4,5$) is decreasing of length $3$, and a decreasing quadruple would need $\mathrm{lds} = 4$ cells in the first column of a five-cell diagram whose first row has two cells, which is impossible. So $\mathrm{lds} = 3$.
 
-Step 3 (read off the shape). The shape is $(2,2)$, so $\lambda_1 = 2$. This equals $\operatorname{lis}(\pi) = 2$, confirming Schensted's theorem.
-
-Step 4 (the dual check). The number of rows is $\lambda'_1 = 2$, which should equal the longest *decreasing* subsequence. Indeed $3\,1$, $4\,2$, and $3\,2$ are decreasing of length $2$, and there is no decreasing triple, so $\operatorname{lds}(\pi) = 2$. Consistent.
-
-Because the shape fits in an $r \times s$ box exactly when $\operatorname{lis} \le r$ and $\operatorname{lds} \le s$, a permutation of length $n > rs$ cannot fit any such box, so it must have $\operatorname{lis} > r$ or $\operatorname{lds} > s$ — this is the Erdős–Szekeres theorem.
+Note the consistency check that Erdős–Szekeres supplies: with $r = s = 2$ we have $rs + 1 = 5 = n$, so some subsequence of length $3$ had to exist, and indeed the decreasing one does.
 :::
 
-## Further Properties and Generalizations
+:::remark[How long is the longest increasing subsequence?]
+For a uniformly random $\pi \in S_n$, Ulam asked for the typical value of $\mathrm{lis}(\pi)$. Via Theorem *Schensted's theorem* the question becomes: what is the typical first row of an RSK shape? Vershik and Kerov, and independently Logan and Shepp, showed that the shape has a limiting profile after scaling by $\sqrt n$ and deduced $\mathbb{E}[\mathrm{lis}(\pi)] \sim 2\sqrt n$; Baik, Deift and Johansson later identified the fluctuations, of order $n^{1/6}$, with the Tracy–Widom distribution. These results are quoted here, not proved, but the reduction to a question about shapes is exactly the content of this section.
+:::
+
+## Symmetry, Involutions and the Sum of Squares
 
 <!-- section: properties -->
 
-:::corollary[Sum of squares of tableau counts]
-The number of permutations with given RS shape $\lambda$ is $(f^\lambda)^2$, and hence
+RSK has one more property that no amount of staring at the insertion rule makes obvious, and it is the property that yields the chapter's closing identities.
 
-$$\sum_{\lambda \vdash n} (f^\lambda)^2 = n!,$$
-
-a representation-theoretic identity proved combinatorially.
+:::theorem[Symmetry of RSK]{#rsk-symmetry}
+If $\pi \in S_n$ has $\mathrm{RSK}(\pi) = (P,Q)$, then $\mathrm{RSK}(\pi^{-1}) = (Q,P)$.
 :::
 
-- The correspondence restricts to a bijection between involutions and SYT (when P=Q).
-- RSK generalization to matrices / biwords gives the combinatorial proof of the Cauchy identity for Schur functions s_λ(x) s_λ(y) = product 1/(1-x_i y_j).
-
-The inverse is obtained by reverse bumping (deletion) from the recording tableau.
-
-:::intuition
-When the permutation is an involution the insertion and recording tableaux coincide.
-
-The square (f^λ)^2 counts the "fiber" over each shape — the permutations that "grow" that shape.
+:::proof
+Sketch, naming its two ingredients. Pass to Knuth's general RSK of Remark *The general RSK*, under which a permutation corresponds to its permutation matrix $M_\pi$, with $(P,Q)$ read off from $M_\pi$. The first ingredient is that the algorithm can be recast so that it depends only on the matrix and not on the order in which its entries are processed: Fomin's **growth diagram** construction labels the vertices of the grid underlying $M_\pi$ with partitions, using a local rule that determines the label of a square's north-east corner from the other three corners and the entry inside, and reading the labels along the top edge gives $Q$ while reading them along the right edge gives $P$. The second ingredient is that the local rule is symmetric in the two coordinate directions. Transposing the matrix therefore transposes the whole growth diagram, exchanging the top edge with the right edge — and $M_{\pi^{-1}} = M_\pi^{\mathsf T}$. Hence inverting the permutation exchanges $P$ with $Q$.
 :::
 
-:::example
-Verify the identity $\sum_{\lambda \vdash n} (f^\lambda)^2 = n!$ for $n = 3$ using RS.
+:::corollary[Involutions are single tableaux]{#involutions}
+RSK restricts to a bijection between the involutions of $S_n$ (permutations with $\pi^2 = \mathrm{id}$) and the standard Young tableaux with $n$ cells. Consequently the number $I(n)$ of involutions in $S_n$ is
+$$I(n) = \sum_{\lambda \vdash n} f^{\lambda}.$$
+:::
+
+:::proof
+By Theorem *Symmetry of RSK*, $\pi = \pi^{-1}$ if and only if $(P,Q) = (Q,P)$, that is $P = Q$. So the involutions correspond to the pairs with equal components, which are determined by the single tableau $P$, and every $P \in \mathrm{SYT}(\lambda)$ arises from exactly one involution. Summing over shapes counts them.
+:::
+
+:::example[Involutions of $S_4$]
+Compute $I(4)$ from Corollary *Involutions are single tableaux* and check it directly.
 :::
 
 :::solution
-Step 1 (why it holds). RS is a bijection between the $n!$ permutations and pairs $(P,Q)$ of SYT of a common shape $\lambda$. For a fixed shape there are $f^\lambda$ choices for $P$ and independently $f^\lambda$ for $Q$, giving $(f^\lambda)^2$ pairs; summing over shapes counts all permutations.
+From Example *Computing $f^\lambda$ for all $\lambda \vdash 5$ by branching*, the values at $n = 4$ are
+$$f^{(4)} = 1,\quad f^{(3,1)} = 3, \quad f^{(2,2)} = 2, \quad f^{(2,1,1)} = 3, \quad f^{(1^4)} = 1,$$
+so $I(4) = 1+3+2+3+1 = 10$.
 
-Step 2 (compute each $f^\lambda$ for $n = 3$). The partitions of $3$ are $(3)$, $(2,1)$, $(1,1,1)$:
-$f^{(3)} = 1$ (only the increasing row $1\,2\,3$),
-$f^{(2,1)} = 2$ (shown earlier),
-$f^{(1^3)} = 1$ (only the increasing column).
+Directly: an involution is a product of disjoint transpositions. There is $1$ identity, $\binom42 = 6$ single transpositions, and $3$ products of two disjoint transpositions, totalling $10$. The recurrence $I(n) = I(n-1) + (n-1)I(n-2)$ — the letter $n$ is either fixed or paired with one of $n-1$ others — gives the same: $I(4) = I(3) + 3I(2) = 4 + 3\cdot 2 = 10$.
+:::
 
-Step 3 (sum the squares): $1^2 + 2^2 + 1^2 = 1 + 4 + 1 = 6 = 3!$. The identity holds.
+:::theorem[Fixed points and odd columns]{#fixed-points}
+If $\pi$ is an involution with RSK tableau $P$ of shape $\lambda$, the number of fixed points of $\pi$ equals the number of columns of $\lambda$ of odd length.
+:::
 
-Two edge cases worth noting: the increasing permutation is the *unique* permutation of shape $(n)$ (so $(f^{(n)})^2 = 1$), and the decreasing permutation is the unique one of shape $(1^n)$ (so $(f^{(1^n)})^2 = 1$).
+:::proof
+Sketch, due to Schützenberger; the proof is an induction on $n$ tracking how the insertion of a fixed point changes the shape, and it rests on the same growth-diagram symmetry as Theorem *Symmetry of RSK*. The statement can be checked on any small case: the identity of $S_n$ has shape $(n)$, all $n$ of whose columns have length $1$, and it has $n$ fixed points; a single transposition contributes a column of length $2$ and destroys two fixed points.
+:::
 
-Restricting RS to involutions ($\pi = \pi^{-1}$, equivalently $P = Q$) gives $\sum_{\lambda \vdash n} f^\lambda$ = the number of involutions in $S_n$; for $n = 3$ that is $1 + 2 + 1 = 4$ involutions.
+:::example[Reading the fixed points off a shape]
+Check Theorem *Fixed points and odd columns* on $\pi = 3\,5\,1\,4\,2$.
+:::
+
+:::solution
+This $\pi$ is the involution $(1\,3)(2\,5)$ with the single fixed point $4$. Its shape, computed in Example *Running the algorithm*, is $\lambda = (2,2,1)$, whose columns have lengths $\lambda'_1 = 3$ and $\lambda'_2 = 2$. Exactly one column has odd length, matching the one fixed point.
+:::
+
+Now the identity that the whole chapter has been assembling.
+
+:::theorem[Sum of squares]{#sum-of-squares}
+For every $n \ge 0$,
+$$\sum_{\lambda \vdash n} \bigl(f^{\lambda}\bigr)^{2} = n! .$$
+:::
+
+:::proof
+Theorem *Robinson–Schensted correspondence* is a bijection between $S_n$, of size $n!$, and the set of pairs $(P,Q)$ of standard tableaux of a common shape. Partition the target set by that common shape $\lambda$. For fixed $\lambda$ the two components are chosen independently from $\mathrm{SYT}(\lambda)$, so the block has $f^\lambda \cdot f^\lambda = (f^\lambda)^2$ elements. Summing the block sizes over $\lambda \vdash n$ counts the target set once, and the bijection equates it with $n!$.
+:::
+
+:::example[The identity at $n = 4$ and $n = 5$]
+Verify Theorem *Sum of squares* for $n = 4$ and $n = 5$.
+:::
+
+:::solution
+For $n = 4$, using the values above: $1^2 + 3^2 + 2^2 + 3^2 + 1^2 = 1 + 9 + 4 + 9 + 1 = 24 = 4!$.
+
+For $n = 5$, the values are $1, 4, 5, 6, 5, 4, 1$ for the shapes $(5), (4,1), (3,2), (3,1,1), (2,2,1), (2,1,1,1), (1^5)$, and
+$$1 + 16 + 25 + 36 + 25 + 16 + 1 = 120 = 5! .$$
+It is worth noticing how tightly this constrains the numbers: the seven values of $f^\lambda$ at $n=5$ are forced by the branching rule, and the identity is a global check that no branch was miscounted.
+:::
+
+:::corollary[A shape with many tableaux]{#max-f}
+For every $n$ there is a partition $\lambda \vdash n$ with $f^{\lambda} \ge \sqrt{n!/p(n)}$, and no partition has $f^\lambda > \sqrt{n!}$.
+:::
+
+:::proof
+The sum of the $p(n)$ nonnegative numbers $(f^\lambda)^2$ is $n!$ by Theorem *Sum of squares*, so the largest of them is at least the average $n!/p(n)$ and at most the total $n!$. Take square roots.
+:::
+
+:::remark[RSK and the Cauchy identity]
+The general RSK of Remark *The general RSK* upgrades Theorem *Sum of squares* to an identity of symmetric functions. Matrices of nonnegative integers with rows indexed by one alphabet and columns by another are counted, with the weight $\prod_{i,j}(x_iy_j)^{m_{ij}}$, by $\prod_{i,j}(1-x_iy_j)^{-1}$; RSK matches them with pairs of semistandard tableaux of a common shape, whose weights multiply to $s_\lambda(x)s_\lambda(y)$. Hence
+$$\sum_{\lambda} s_\lambda(x)\,s_\lambda(y) \;=\; \prod_{i,j}\frac{1}{1-x_iy_j},$$
+the **Cauchy identity**. Extracting the coefficient of $x_1x_2\cdots x_n\,y_1y_2\cdots y_n$ and using $K_{\lambda,(1^n)} = f^\lambda$ recovers $\sum_\lambda (f^\lambda)^2 = n!$, so the sum of squares is the "standard" shadow of a symmetric-function identity — which is exactly the sense in which RSK explains, rather than merely verifies, the representation theory of $S_n$.
 :::
 
 ## Common Mistakes
 
-- **Thinking enumeration is 'just listing'**: For large n the point is closed forms or efficient computation, not enumeration by hand.
-- **Confusing OGF and EGF**: Choose the right one for the symmetry (labeled vs unlabeled).
-- **Giving only a recurrence or GF without extracting the formula**: Sometimes the GF or recurrence *is* the answer; often one wants the explicit [x^n].
-- **Overlooking that bijections are the gold standard**: They give understanding; algebraic proofs may be shorter but less explanatory.
-- **Ignoring asymptotics**: Many enumerative results are accompanied by asymptotic analysis (singularity analysis, saddle point) giving the growth rate of the counts.
-
-A Young tableau is a filling of a Young diagram (the shape given by an integer partition) with numbers satisfying increasing conditions in rows and columns. Standard Young tableaux (SYT) use each number from 1 to n exactly once and are strictly increasing in rows and columns.
-
-They are central objects in the representation theory of the symmetric group and in many areas of algebraic and enumerative combinatorics.
-- **Confusing standard with semi-standard**: Semi-standard allow repeats (weakly increasing) and use numbers up to k; they count Kostka numbers and Schur functions.
-- **Wrong hook definition**: The hook includes the cell itself; arm + leg + 1.
-- **Forgetting that f^λ is always an integer**: The formula proves it, but it is not obvious a priori.
-- **Thinking only rectangular shapes matter**: Hooks work for arbitrary shapes; the most famous are for hooks, staircases, rectangles.
-- **Mixing row and column reading**: Partitions are usually drawn with longest row on top; columns give the conjugate.
-
-The hook-length formula is a strikingly simple and explicit product formula for the number of standard Young tableaux of a given shape. It is one of the most elegant results in enumerative combinatorics and has numerous proofs (combinatorial, probabilistic, algebraic, bijective).
-- **Forgetting the +1 for the cell itself**: Hook length is never just arm+leg.
-- **Computing hooks on the conjugate instead of the shape**: Use the given diagram.
-- **Thinking the formula only works for partitions with at most 2 rows**: It is completely general.
-- **Confusing with the content hook formula**: The hook-content formula counts semi-standard tableaux: product over cells of (content + k choices) / hook.
-- **Expecting the product to obviously divide n!**: The integrality is a non-trivial consequence proved by the existence of the SYT or by the proof techniques.
-
-The Robinson–Schensted (RS) correspondence is a beautiful bijection between permutations of [n] and pairs of standard Young tableaux of the same shape. It provides a combinatorial explanation for many phenomena in the representation theory of the symmetric group and gives a powerful tool for studying the longest increasing and decreasing subsequences of a permutation.
-- **Confusing P and Q**: P receives the values of the permutation; Q receives the time steps 1..n.
-- **Thinking the shape is always a rectangle**: Most permutations produce irregular shapes.
-- **Forgetting that the correspondence is for all permutations, not just involutions**: Involutions are the special case P=Q.
-- **Misstating the LIS theorem**: It is the *first row*, not the number of rows (which gives LDS).
-- **Believing RSK is only for counting**: It is a fundamental tool that proves deep identities in symmetric function theory via bijective proofs.
+- **Confusing a partition with a composition.** Order never matters for a partition; $(3,1)$ and $(1,3)$ are the same object, and part counts are written in decreasing order by convention.
+- **Reading conjugation off the wrong index.** $\lambda'_j$ is the number of *rows* of length at least $j$. Computing it as "the $j$-th part of $\lambda$ read backwards" gives nonsense on any non-rectangular shape.
+- **Applying Franklin's involution to repeated parts.** It is an involution on partitions into *distinct* parts only; outside that set the parity bookkeeping breaks.
+- **Making rows strict in a semistandard tableau.** Rows are weakly increasing, columns strictly. Swapping the two conditions changes the object and its count.
+- **Forgetting the $+1$ in the hook length.** $h = \text{arm} + \text{leg} + 1$; the cell belongs to its own hook. A missing $+1$ makes every corner hook $0$ and the formula undefined.
+- **Computing hooks on the conjugate.** Proposition *Basic properties of hook lengths* says $\lambda$ and $\lambda'$ have the same hook *multiset*, so the product — and hence $f^\lambda$ — is unchanged; but a cell-by-cell mixture of the two diagrams is neither.
+- **Expecting $\prod h(u)$ to divide $n!$ for an obvious reason.** The integrality of $n!/\prod h(u)$ is a theorem, proved by the counting interpretation, not an arithmetic accident visible in the hook multiset.
+- **Using the branching rule on non-corner cells.** Only cells with nothing to the right and nothing below may be removed, and every such cell must be counted.
+- **Swapping $P$ and $Q$ in RSK.** $P$ carries the values, $Q$ carries the insertion times; reverse insertion reads its corner from $Q$ and bumps in $P$, in decreasing order of the entries of $Q$.
+- **Misstating Schensted's theorem.** The longest *increasing* subsequence is the first **row** length $\lambda_1$; the longest *decreasing* one is the number of rows $\lambda'_1$. Interchanging them fails on the very first asymmetric example.
+- **Believing $f^{\lambda}$ counts semistandard tableaux.** It counts standard ones. The semistandard count with entries bounded by $N$ is the hook-*content* formula, which involves $N + c(u)$ in the numerator and reduces to nothing familiar when $N$ is dropped.
