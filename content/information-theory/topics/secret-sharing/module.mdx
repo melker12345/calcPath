@@ -6,294 +6,721 @@ title: Secret Sharing and Secure Computation
 
 Splitting a secret so that any t shares reveal it and any t−1 reveal nothing, and computing on data nobody is allowed to see.
 
+This chapter is read in one direction. The first half builds a single object — a *linear* threshold sharing of a field element, with a proof that unqualified sets learn exactly nothing — and the second half spends it: the BGW protocol for secure multiparty computation is Shamir's scheme plus two operations on shares, and the famous threshold $t < n/2$ is nothing more than the arithmetic of polynomial degrees. Read the second half asking, at every step, *which property of the sharing is being used here*.
+
 ## Threshold Secret Sharing
 
 <!-- section: threshold-ss -->
 
-:::definition[(k,n)-threshold secret sharing]{#threshold-scheme}
-In a $(k,n)$-threshold scheme a dealer splits a secret $s$ into $n$ shares $s_1,\dots,s_n$ such that
+A secret sharing scheme splits a secret into pieces so that *authorised* coalitions can put it back together and *unauthorised* ones learn nothing at all. Everything hinges on making "nothing at all" a theorem rather than a hope, so we set the definitions up information-theoretically from the start.
 
-- any set of $k$ or more shares determines $s$ uniquely, and
-- any set of $k-1$ or fewer shares reveals no information about $s$: the distribution of those shares is independent of $s$.
+:::definition[Access structure]{#access-structure}
+Let $P = \{P_1,\dots,P_n\}$ be the participants. An **access structure** is a family $\Gamma \subseteq 2^{P}$ of subsets, called **authorised** (or *qualified*), which is **monotone**:
 
-The scheme is **perfect** when the second condition is information-theoretic, that is
+$$A \in \Gamma \ \text{ and } \ A \subseteq B \ \implies\ B \in \Gamma.$$
 
-$$I\bigl(s;\ \text{any } k-1 \text{ shares}\bigr) = 0.$$
+Subsets not in $\Gamma$ are **unauthorised**. The $(k,n)$-**threshold structure** is $\Gamma_{k,n} = \{A \subseteq P : |A| \ge k\}$.
 :::
 
-Perfection is expensive in one specific way: each share must be at least as large as the secret itself, in bits. That is an information-theoretic lower bound, proved in the properties section below.
+Monotonicity is not a technical convenience; it is forced. If $A$ can reconstruct the secret then so can any superset of $A$ — the extra participants can simply stay silent. A non-monotone rule ("these three may reconstruct, but not if the fourth is in the room") cannot be enforced by handing out data, because data cannot be taken back.
+
+:::definition[Perfect secret sharing scheme]{#perfect-scheme}
+A dealer holds a secret $s$ drawn from a distribution on a set $\mathcal{S}$ and, using private randomness $R$, computes shares $S_1,\dots,S_n$, giving $S_i$ to $P_i$. Write $S_A = (S_i)_{i \in A}$. The scheme **realises** $\Gamma$ **perfectly** if
+
+- **(Correctness)** for every $A \in \Gamma$ there is a reconstruction function $\mathrm{Rec}_A$ with $\mathrm{Rec}_A(S_A) = s$ with probability $1$; equivalently $H(s \mid S_A) = 0$;
+- **(Perfect privacy)** for every $A \notin \Gamma$,
+
+$$I(s\,;\,S_A) = 0, \qquad\text{equivalently}\qquad H(s \mid S_A) = H(s).$$
+:::
+
+The mutual-information form is the one to remember, but in constructions it is easier to verify the following equivalent statement, which says the shares an unauthorised coalition sees are *statistically unrelated* to what was shared.
+
+:::proposition[Three faces of perfect privacy]{#privacy-equivalent}
+For an unauthorised set $A$ the following are equivalent.
+
+1. $I(s; S_A) = 0$.
+2. $s$ and $S_A$ are independent random variables.
+3. For all secrets $s_1, s_2 \in \mathcal{S}$ and all share vectors $y$, $\Pr[S_A = y \mid s = s_1] = \Pr[S_A = y \mid s = s_2]$.
+:::
+
+:::proof
+(1) $\Leftrightarrow$ (2) is the standard fact that mutual information vanishes exactly for independent variables: $I(s;S_A) = \sum \Pr[s,y]\log\frac{\Pr[s,y]}{\Pr[s]\Pr[y]}$ is a relative entropy between the joint law and the product of the marginals, and a relative entropy is zero if and only if its two arguments coincide.
+
+(2) $\Rightarrow$ (3): independence makes $\Pr[S_A = y \mid s = s_j] = \Pr[S_A = y]$, the same number for both $j$. (3) $\Rightarrow$ (2): if the conditional law of $S_A$ is a fixed distribution $Q$ for every secret, then $\Pr[S_A=y] = \sum_{s'}\Pr[s']Q(y) = Q(y)$, so $\Pr[s=s', S_A=y] = \Pr[s']Q(y) = \Pr[s']\Pr[S_A=y]$.
+:::
+
+Condition (3) is the working criterion: *the adversary's view has a distribution that does not mention the secret.* It is also, in miniature, the simulation paradigm of the second half of this chapter — a view you can sample without knowing the secret is a view that does not contain the secret.
 
 :::intuition
-Imagine a combination to a safe. You want any 3 out of 5 bank managers to be able to open it together, but any 2 should learn nothing that helps them guess the combination.
-
-The dealer gives each manager a 'piece' of the combination. Only when 3 pieces are brought together do they fit into the full combination; any 2 pieces look like random garbage unrelated to the real combination.
+Think of a safe whose combination should open only when three of five managers agree. Each manager is handed a slip of paper. Any three slips together name the combination exactly; any two slips are, as far as their holders can tell, two uniformly random strings that would have looked exactly the same no matter what the combination was. That last clause — *would have looked exactly the same* — is perfect privacy. It is stronger than "hard to invert"; there is nothing to invert.
 :::
 
-:::example
-The simplest XOR construction is a $(2,2)$ scheme (both shares needed, one learns nothing); we build it first, then note why extending to a *perfect* $(2,3)$ needs a bit more care.
+The simplest non-trivial scheme realises the $(n,n)$ structure, where every participant is needed.
+
+:::theorem[XOR sharing realises $(n,n)$ perfectly]{#xor-scheme}
+Let the secret be $s \in \{0,1\}^{\ell}$. Draw $r_1,\dots,r_{n-1}$ independently and uniformly from $\{0,1\}^{\ell}$ and set
+
+$$S_i = r_i \ (1 \le i \le n-1), \qquad S_n = s \oplus r_1 \oplus \cdots \oplus r_{n-1}.$$
+
+Then $S_1 \oplus \cdots \oplus S_n = s$, and any $n-1$ of the shares are uniformly distributed on $(\{0,1\}^{\ell})^{n-1}$ independently of $s$.
+:::
+
+:::proof
+Correctness is immediate: XOR-ing all $n$ shares cancels every $r_i$ twice and leaves $s$.
+
+For privacy fix an unauthorised set, i.e. any $A$ with $|A| = n-1$; let $j$ be the missing index. If $j = n$, then $S_A = (r_1,\dots,r_{n-1})$ is uniform and does not involve $s$, so criterion (3) of *Three faces of perfect privacy* holds trivially. If $j < n$, then $S_A$ consists of the $n-2$ pads $\{r_i\}_{i \neq j, i<n}$ together with $S_n = s \oplus r_j \oplus \bigoplus_{i\neq j, i<n} r_i$. Condition on the pads that appear: the remaining randomness is $r_j$, uniform and independent, and the map $r_j \mapsto s \oplus r_j \oplus c$ is a bijection of $\{0,1\}^{\ell}$ for every fixed $s$ and $c$. Hence $S_n$ is uniform on $\{0,1\}^{\ell}$ and independent of the other components, *for every value of $s$*. The conditional law of $S_A$ is therefore the uniform law regardless of $s$, which is criterion (3).
+:::
+
+:::example[A $(2,2)$ sharing by hand]
+Share the $3$-bit secret $s = 101$ between two people, and check both properties.
 :::
 
 :::solution
-**Perfect $(2,2)$ scheme.** For a 128-bit secret $s$, the dealer picks a uniform random 128-bit $r$ and sets share1 $=r$, share2 $=s\oplus r$.
-**Privacy:** each single share is uniform and independent of $s$ — share1 $=r$ is uniform by construction, and share2 $=s\oplus r$ is uniform because XOR-ing a fixed value with a uniform independent pad yields a uniform result. So one share gives zero information.
-**Reconstruction:** share1 $\oplus$ share2 $=r\oplus(s\oplus r)=s$, since $r\oplus r=0$.
-**Concrete 3-bit run.** $s=101$, dealer draws $r=011$. Then share1 $=011$, share2 $=101\oplus011=110$. Reconstruct: $011\oplus110=101=s$ ✓. Neither $011$ nor $110$ alone reveals anything: for each candidate secret there is exactly one pad making that share appear, so all secrets stay equally likely. **Sanity check:** recovers $101$, and each share is uniform ✓.
-**Extending to $(2,3)$.** A common toy version writes share1 $=r$, share2 $=s\oplus r$, share3 $=s$; this is *not* perfect, because share3 alone equals $s$. A genuinely perfect $(2,3)$ threshold scheme is obtained from Shamir's polynomial scheme (next section) with $k=2$, where every single share is uniform and any two reconstruct.
+The dealer draws $r = 011$ uniformly and sets $S_1 = 011$, $S_2 = 101 \oplus 011 = 110$.
+
+Reconstruction: $011 \oplus 110 = 101 = s$. ✓
+
+Privacy: suppose you hold only $S_2 = 110$. For *each* of the eight candidate secrets $s'$ there is exactly one pad $r' = s' \oplus 110$ producing what you see, and each pad had probability $1/8$. So $\Pr[S_2 = 110 \mid s = s'] = 1/8$ for all $s'$ — the same number eight times — and by criterion (3) your posterior on $s$ equals your prior. ✓ □
 :::
+
+:::pitfall
+A frequently offered "$(2,3)$ scheme" sets $S_1 = r$, $S_2 = s \oplus r$, $S_3 = s$. Any two shares do reconstruct, so correctness holds — but $\{P_3\}$ is unauthorised and already knows everything, so privacy fails completely. Correctness is easy; a scheme is only as good as the proof of its privacy clause.
+:::
+
+Threshold structures are not the only ones we can realise. The following construction settles the general question, at a price we will quantify in the section *Share Size, Verifiability, and Extensions*.
+
+:::theorem[Every monotone access structure is realisable]{#ito-nishizeki-saito}
+Let $\Gamma$ be any monotone access structure on $n$ participants with minimal authorised sets $B_1,\dots,B_m$. Then $\Gamma$ is realised perfectly by the **replication scheme**: independently produce, for each $j$, an $(|B_j|,|B_j|)$ XOR sharing of $s$ and hand its pieces to the members of $B_j$. Participant $P_i$'s share is the list of all pieces it received.
+:::
+
+:::proof
+*Correctness.* If $A \in \Gamma$ then $A \supseteq B_j$ for some $j$, so the members of $A$ jointly hold every piece of the $j$-th XOR sharing and can XOR them to get $s$.
+
+*Privacy.* Let $A \notin \Gamma$. For each $j$ we have $B_j \not\subseteq A$, so $A$ misses at least one piece of the $j$-th sharing; by *XOR sharing realises $(n,n)$ perfectly* the pieces of that sharing held by $A$ are uniform and independent of $s$. The $m$ sharings use independent randomness, so the whole of $S_A$ is a uniform string of the appropriate length whose distribution does not depend on $s$. Criterion (3) applies.
+:::
+
+Applying this to $\Gamma_{2,3}$ gives shares consisting of two pieces each, and applying it to $\Gamma_{k,n}$ in general gives shares of size $\binom{n-1}{k-1}$ secrets — exponential in $n$. That is intolerable, and it is the reason the next section exists: replacing combinatorics by algebra collapses the share down to a *single* field element.
 
 ## Shamir's Polynomial Scheme
 
 <!-- section: shamir -->
 
-The idea: hide the secret as the y-intercept of a random curve, and hand each participant one point on it. Recovering a degree-$(k-1)$ curve needs $k$ points, so $k$ participants can find the intercept and fewer cannot — this is exactly the threshold property, achieved with pure linear algebra.
+Shamir's idea (1979) is to hide the secret as the value at $0$ of a random low-degree polynomial and to hand each participant one other point of it. Recovering a polynomial of degree at most $k-1$ takes $k$ points and no fewer, so the threshold property is inherited from a theorem of linear algebra rather than engineered by hand.
 
-Shamir's (k,n) scheme works over a finite field F_q with q > n and secret s ∈ F_q. We need a *field* so that interpolation (which divides by coordinate differences) is well-defined, and $q>n$ so there are enough distinct nonzero evaluation points $1,\dots,n$ to give every participant one.
+Work in a finite field $\mathbb{F}_q$ with $q > n$. A field is essential: interpolation divides by differences of evaluation points, so those differences must be invertible, which fails in a ring like $\mathbb{Z}_{6}$. The condition $q > n$ guarantees $n$ distinct *nonzero* evaluation points $x_1,\dots,x_n$ — nonzero because $x=0$ is reserved for the secret itself.
 
-:::recipe[Shamir's dealing procedure]{#shamir-scheme}
-1. Choose a random polynomial $p(x)$ of degree at most $k-1$ with $p(0) = s$ as its constant term; the other $k-1$ coefficients are drawn uniformly at random.
-2. Hand participant $i$ the point $(i, p(i))$, for $i = 1, \dots, n$ — distinct nonzero field elements.
-:::
+:::theorem[Lagrange interpolation]{#lagrange}
+Let $x_1,\dots,x_k$ be distinct elements of a field $\mathbb{F}$ and let $y_1,\dots,y_k \in \mathbb{F}$ be arbitrary. Then there is exactly one polynomial $p$ of degree at most $k-1$ with $p(x_i) = y_i$ for all $i$, namely
 
-:::theorem[Threshold property of Shamir's scheme]{#shamir-threshold}
-Any $k$ shares determine $s$, and any $k-1$ shares leave it completely undetermined.
+$$p(x) = \sum_{i=1}^{k} y_i\,\ell_i(x), \qquad \ell_i(x) = \prod_{j \neq i} \frac{x - x_j}{x_i - x_j}.$$
 :::
 
 :::proof
-Any $k$ points determine a unique degree-$(k-1)$ polynomial, by Lagrange interpolation, and hence determine $p(0)=s$. Any $k-1$ points, on the other hand, are consistent with exactly $q$ degree-$(k-1)$ polynomials — one for each value of the missing coefficient, which sets $p(0)$ to any field element you please — so every candidate secret remains equally possible.
+*Existence.* Each $\ell_i$ has degree $k-1$, and $\ell_i(x_j) = \delta_{ij}$: the numerator vanishes at every $x_j$ with $j \neq i$, and at $x = x_i$ numerator and denominator agree. Hence $p(x_j) = \sum_i y_i \delta_{ij} = y_j$. The denominators are nonzero because the $x_j$ are distinct, which is where the field structure is used.
+
+*Uniqueness.* If $p$ and $\tilde p$ both work, $d = p - \tilde p$ has degree at most $k-1$ and $k$ distinct roots. A nonzero polynomial of degree $\le k-1$ over a field has at most $k-1$ roots (factor out $(x-x_1)$ repeatedly), so $d \equiv 0$.
 :::
 
-:::intuition
-The secret is the y-intercept of a random polynomial of degree k-1. Each share is one point on that hidden curve.
+Evaluating at $x=0$ gives the form we will use over and over: the secret is a *fixed linear combination* of any $k$ shares,
 
-k points uniquely determine the whole curve (and therefore where it crosses the y-axis). k-1 points can be extended to a curve that crosses the y-axis at any value you like, so they give no clue.
+$$p(0) = \sum_{i=1}^{k} \lambda_i\,y_i, \qquad \lambda_i = \ell_i(0) = \prod_{j\neq i}\frac{-x_j}{x_i - x_j},$$
+
+with coefficients $\lambda_i$ that depend only on *which* $k$ evaluation points were used — not on the secret, not on the randomness, not on the values. These **recombination coefficients** are public. Remember them; the whole of BGW is built on the fact that reconstruction is linear.
+
+:::recipe[Shamir's dealing procedure]{#shamir-scheme}
+1. Fix $\mathbb{F}_q$ with $q > n$ and public distinct nonzero points $x_1,\dots,x_n$ (usually $x_i = i$).
+2. Draw $a_1,\dots,a_{k-1}$ independently and uniformly from $\mathbb{F}_q$ and set
+
+$$p(x) = s + a_1x + a_2x^2 + \cdots + a_{k-1}x^{k-1}.$$
+
+3. Give participant $P_i$ the share $S_i = p(x_i)$.
 :::
 
-:::example
-$(k=3, n=5)$, field $F_{17}$, secret $s=7$. Dealer picks random $a_1=3$, $a_2=12$; $p(x) = 7 + 3x + 12 x^2 \mod 17$.
+:::theorem[Shamir's scheme realises $\Gamma_{k,n}$ perfectly]{#shamir-threshold}
+For every $k \le n < q$ the scheme above is a perfect $(k,n)$-threshold scheme over $\mathbb{F}_q$: any $k$ shares reconstruct $s$, and for any set $A$ with $|A| = k-1$ the vector $S_A$ is uniformly distributed on $\mathbb{F}_q^{\,k-1}$ **independently of $s$**.
+:::
+
+:::proof
+*Correctness.* A set of $k$ participants holds $k$ pairs $(x_i, p(x_i))$ with distinct $x_i$, and $\deg p \le k-1$, so by *Lagrange interpolation* those pairs determine $p$ uniquely; then $s = p(0) = \sum_i \lambda_i p(x_i)$.
+
+*Privacy.* Fix $A = \{i_1,\dots,i_{k-1}\}$ and fix a target vector $y = (y_1,\dots,y_{k-1}) \in \mathbb{F}_q^{\,k-1}$. Fix any candidate secret $s' \in \mathbb{F}_q$. We count the polynomials the dealer could have drawn that are consistent with both.
+
+The dealer's polynomial ranges over
+$$\mathcal{P}_{s'} = \{p : \deg p \le k-1,\ p(0) = s'\},$$
+uniformly, because $a_1,\dots,a_{k-1}$ are uniform and independent; note $|\mathcal{P}_{s'}| = q^{\,k-1}$ for every $s'$.
+
+Now the $k-1$ constraints $p(x_{i_j}) = y_j$ together with the constraint $p(0) = s'$ are $k$ interpolation conditions at $k$ *distinct* points — distinct because each $x_{i_j} \neq 0$ and the $x_i$ are distinct. By the uniqueness half of *Lagrange interpolation* there is **exactly one** polynomial of degree at most $k-1$ satisfying all $k$ of them. Hence
+
+$$\Pr\bigl[S_A = y \ \big|\ s = s'\bigr] = \frac{\#\{p \in \mathcal{P}_{s'} : p(x_{i_j}) = y_j\ \forall j\}}{|\mathcal{P}_{s'}|} = \frac{1}{q^{\,k-1}}.$$
+
+The right-hand side does not mention $s'$. So the conditional law of $S_A$ is uniform on $\mathbb{F}_q^{\,k-1}$ for every secret, and criterion (3) of *Three faces of perfect privacy* gives $I(s;S_A) = 0$.
+:::
+
+Read the proof again with an eye on where the hypotheses were spent. Uniqueness of interpolation gave privacy; existence gave correctness. The same theorem does both jobs, from opposite ends. And the count $1/q^{k-1}$ shows more than independence: the adversary's view is *uniform*, so a simulator can produce it by drawing $k-1$ random field elements — the cleanest possible form of the simulation paradigm.
+
+:::figure[One share, at $x=1$, is consistent with a straight line through any $y$-intercept at all. In a $(2,n)$ Shamir scheme each of the drawn lines is equally likely, so the single point $(1,5)$ leaves the secret $p(0)$ exactly as uncertain as before.]{#shamir-one-share}
+{
+  "type": "plot",
+  "x": [-0.4, 3.2],
+  "y": [-1.5, 10.5],
+  "xTicks": 1,
+  "yTicks": 2,
+  "xLabel": "x",
+  "yLabel": "p(x)",
+  "marks": [
+    { "kind": "line", "through": [[1, 5], [0, 1]], "tone": "muted", "dashed": true },
+    { "kind": "line", "through": [[1, 5], [0, 4]], "tone": "muted", "dashed": true },
+    { "kind": "line", "through": [[1, 5], [0, 8]], "tone": "muted", "dashed": true },
+    { "kind": "point", "at": [1, 5], "tone": "accent" },
+    { "kind": "point", "at": [0, 1], "tone": "result" },
+    { "kind": "point", "at": [0, 4], "tone": "result" },
+    { "kind": "point", "at": [0, 8], "tone": "result" },
+    { "kind": "text", "at": [1.7, 6.2], "text": "the one share", "leaderTo": [1, 5] },
+    { "kind": "text", "at": [1.2, -0.9], "text": "candidate secrets p(0)", "leaderTo": [0, 1] }
+  ]
+}
+:::
+
+:::example[A $(3,5)$ sharing over $\mathbb{F}_{17}$]
+Share $s = 7$ with $k=3$, $n=5$, using $p(x) = 7 + 3x + 12x^2$ over $\mathbb{F}_{17}$, and reconstruct from participants $1, 2, 3$.
 :::
 
 :::solution
-1. Shares: $p(1)=7+3+12=22 \mod 17=5$.
-2. $p(2)=7+6+48 \mod 17=7+6+14=27 \mod 17=10$.
-3. $p(3)=7+9+108 \mod 17=7+9+6=22 \mod 17=5$ (calc: $12*9=108$, $108/17=6*17=102$, $108-102=6$).
-4. Shares handed out: $(1,5),(2,10),(3,5)$ (and $p(4),p(5)$ for the other two participants).
-5. **Reconstruct from any 3 points.** Take $(1,5),(2,10),(3,5)$ and recover $p(0)$ by Lagrange interpolation at $x=0$. The Lagrange weights at $x=0$ are $\ell_i(0)=\prod_{j\neq i}\frac{0-x_j}{x_i-x_j}$:
-6. $\ell_1(0)=\frac{(0-2)(0-3)}{(1-2)(1-3)}=\frac{6}{2}=3$.
-7. $\ell_2(0)=\frac{(0-1)(0-3)}{(2-1)(2-3)}=\frac{3}{-1}=-3\equiv 14 \pmod{17}$.
-8. $\ell_3(0)=\frac{(0-1)(0-2)}{(3-1)(3-2)}=\frac{2}{2}=1$.
-9. Then $s=p(0)=\sum_i y_i\,\ell_i(0)=5\cdot 3+10\cdot 14+5\cdot 1=15+140+5=160 \bmod 17$. Since $160=9\cdot17+7=153+7$, we get $s=7$. **Sanity check:** recovers the original secret $7$ ✓.
-10. Any $k-1=2$ points, say $(1,5),(2,10)$, are consistent with a quadratic passing through *any* chosen $p(0)=s'$: the third free coefficient can always be solved for, so the two points leak nothing about $s$.
+Shares, all arithmetic mod $17$:
+
+$p(1) = 7+3+12 = 22 = 5$, $p(2) = 7+6+48 = 61 = 61-51 = 10$, $p(3) = 7+9+108 = 124 = 124-119 = 5$, $p(4) = 7+12+192 = 211 = 211-204 = 7$, $p(5) = 7+15+300 = 322 = 322-322 = 0$.
+
+So the shares are $(1,5), (2,10), (3,5), (4,7), (5,0)$.
+
+Recombination from $\{1,2,3\}$: the coefficients are
+$$\lambda_1 = \tfrac{(0-2)(0-3)}{(1-2)(1-3)} = \tfrac{6}{2} = 3,\quad \lambda_2 = \tfrac{(0-1)(0-3)}{(2-1)(2-3)} = \tfrac{3}{-1} = -3 \equiv 14,\quad \lambda_3 = \tfrac{(0-1)(0-2)}{(3-1)(3-2)} = \tfrac{2}{2} = 1.$$
+
+Then $s = 3\cdot 5 + 14 \cdot 10 + 1 \cdot 5 = 15 + 140 + 5 = 160 = 9\cdot 17 + 7 \equiv 7$. ✓
+
+**Sanity check with a disjoint triple $\{2,4,5\}$.** Here $\lambda_2 = \frac{(-4)(-5)}{(-2)(-3)} = \frac{20}{6} \equiv \frac{3}{6}$, and $6^{-1} = 3$ because $6\cdot 3 = 18 \equiv 1$, so $\lambda_2 = 9$. Next $\lambda_4 = \frac{(-2)(-5)}{(2)(-1)} = \frac{10}{-2} = -5 \equiv 12$, and $\lambda_5 = \frac{(-2)(-4)}{(3)(1)} = \frac{8}{3} = 8\cdot 6 = 48 \equiv 14$. These sum to $9+12+14 = 35 \equiv 1$, as recombination coefficients must, since applied to the constant polynomial $1$ they must return $1$.
+
+Reconstructing: $9\cdot 10 + 12\cdot 7 + 14\cdot 16 = 90 + 84 + 224 = 398 = 23\cdot 17 + 7 \equiv 7$ ✓ — the same secret from a completely different triple, as *Shamir's scheme realises $\Gamma_{k,n}$ perfectly* guarantees they must. □
 :::
 
-## Properties, Extensions, and Impossibility Results
+:::pitfall
+The evaluation points $x_i$ are **public** labels; the shares are the values $p(x_i)$. Publishing which participant holds which index costs nothing, but publishing a value destroys one degree of protection. Likewise, never reuse the same polynomial to share a second secret, and never give two participants the same $x_i$ — two equal indices are one share, not two.
+:::
+
+The last property of the scheme is the one the MPC half consumes, and it is worth isolating.
+
+:::lemma[Shamir sharing is linear]{#shamir-linear}
+Suppose $p$ and $\tilde p$ are degree-$\le d$ polynomials sharing $a$ and $b$ at the same evaluation points, and let $c \in \mathbb{F}_q$. Then $p + \tilde p$ is a degree-$\le d$ sharing of $a+b$ and $c\,p$ is a degree-$\le d$ sharing of $ca$, and each participant computes its new share **locally**, as $S_i + \tilde S_i$ and $c\,S_i$.
+:::
+
+:::proof
+Sums and scalar multiples of polynomials of degree at most $d$ have degree at most $d$, and evaluation is linear: $(p+\tilde p)(x_i) = p(x_i) + \tilde p(x_i)$ and $(cp)(x_i) = c\,p(x_i)$. The constant terms behave the same way: $(p+\tilde p)(0) = a + b$, $(cp)(0) = ca$.
+:::
+
+## Share Size, Verifiability, and Extensions
 
 <!-- section: properties-extensions -->
 
-:::theorem[Share size lower bound]{#share-size-bound}
-In a perfect $(k,n)$ scheme over a secret of entropy $H(s)$, each share has entropy at least that much:
+Perfection has a price, and it is paid in share length. The bound below is information-theoretic — no cleverness escapes it — and it explains why every deployed information-theoretic scheme stores as many bits per participant as the secret itself.
 
-$$H(\text{share}) \ge H(s).$$
+:::theorem[Share size lower bound]{#share-size-bound}
+In any perfect scheme for an access structure $\Gamma$, let $A \notin \Gamma$ and $P_j \notin A$ be such that $A \cup \{P_j\} \in \Gamma$. Then
+
+$$H(S_j) \ \ge\ H(S_j \mid S_A) \ \ge\ H(s).$$
+
+In particular, in a perfect $(k,n)$-threshold scheme every share has entropy at least $H(s)$: shares are never shorter than the secret.
 :::
 
-The reason is that otherwise the $k-1$ shares plus the missing one could not uniquely determine a high-entropy secret while the $k-1$ alone give zero information.
+:::proof
+Perfect privacy at $A$ gives $H(s \mid S_A) = H(s)$; correctness at $A \cup \{P_j\}$ gives $H(s \mid S_A, S_j) = 0$. Subtract:
 
-Linear secret sharing schemes (shares are linear functions of the secret and randomness) are equivalent to monotone span programs and have efficient realizations for many access structures.
+$$I(s\,;\,S_j \mid S_A) = H(s \mid S_A) - H(s \mid S_A, S_j) = H(s) - 0 = H(s).$$
 
-General access structures (not just thresholds) can be realized by realizing the minimal authorized sets and using monotone formulas or by the Benaloh-Leichter construction.
+Conditional mutual information never exceeds the conditional entropy of either argument, so $H(S_j \mid S_A) \ge I(s;S_j \mid S_A) = H(s)$. Finally conditioning cannot increase entropy, so $H(S_j) \ge H(S_j\mid S_A)$.
 
-Verifiable secret sharing (VSS) adds the ability for participants to check that their shares are consistent with some secret (protects against a cheating dealer). Proactive secret sharing periodically refreshes shares so that an adversary who compromises shares over time still cannot collect k at any epoch.
+For $\Gamma_{k,n}$, every participant $P_j$ lies outside some set $A$ of size $k-1$ whose union with $P_j$ has size $k$ and is therefore qualified, so the bound applies to every share.
+:::
 
-Multi-secret and ramp schemes trade off reconstruction threshold vs privacy for multiple secrets or partial leakage.
+:::corollary[Shamir is size-optimal]{#shamir-optimal}
+For a uniform secret in $\mathbb{F}_q$, Shamir's scheme meets the bound with equality: $H(S_i) = H(s) = \log_2 q$ bits.
+:::
+
+:::proof
+By the privacy half of *Shamir's scheme realises $\Gamma_{k,n}$ perfectly* with $k-1 \ge 1$, each single share is uniform on $\mathbb{F}_q$ (take $A = \{i\}$ inside any unqualified set), so $H(S_i) = \log_2 q$, which is $H(s)$.
+:::
 
 :::intuition
-You cannot make shares smaller than the secret in the perfect information-theoretic setting; information has to 'flow' to the qualified sets.
-
-For general who-can-reconstruct rules (e.g., 'any two managers plus the CEO, or any four managers') there are systematic ways to build the sharing from the simple threshold building blocks or from linear algebra over vector spaces.
+Why can a share not be shorter than the secret? Stand in the shoes of a coalition one member short. They know nothing — every secret is still equally likely. The moment the last member arrives, they know everything. So that one arriving share had to carry the entire remaining uncertainty by itself, and a message cannot carry more information than its own length.
 :::
 
-:::example
-The lower bound proof: fix an unauthorized set $A$ of size $k-1$. By perfect privacy their joint shares are independent of $s$, so $H(s \mid \text{shares}_A)=H(s)$.
+:::remark
+The bound is about *perfect* schemes. Two escapes exist. **Ramp schemes** weaken privacy: an $(\ell, k, n)$ ramp scheme reconstructs from $k$ shares, leaks nothing below $\ell$, and leaks partially in between, which lets shares be a factor $k - \ell$ smaller than the secret. **Computational** schemes encrypt the secret under a random key, share the key with Shamir, and distribute pieces of the ciphertext (Krawczyk); shares shrink to roughly $|s|/k$, at the cost of resting on an assumption. Neither contradicts the theorem; each gives up one of its hypotheses.
+:::
+
+A second cost is structural: the replication scheme of *Every monotone access structure is realisable* gives shares exponential in $n$ for threshold structures, while Shamir gives one field element. The general framework explaining why is linear algebra.
+
+:::definition[Linear secret sharing scheme (LSSS)]{#lsss}
+A scheme is **linear** over $\mathbb{F}_q$ if there is a matrix $M \in \mathbb{F}_q^{d \times e}$ and an assignment of the $d$ rows to participants such that, with $\rho = (s, r_2,\dots,r_e)$ for uniform $r_i$, the share of $P_i$ is the set of coordinates of $M\rho$ belonging to $P_i$'s rows. A set $A$ is qualified exactly when the target vector $(1,0,\dots,0)$ lies in the row span of $M$ restricted to $A$'s rows.
+:::
+
+Shamir is linear with $M$ the Vandermonde matrix of rows $(1, x_i, x_i^2, \dots, x_i^{k-1})$, and the recombination coefficients $\lambda_i$ are exactly the coefficients expressing $(1,0,\dots,0)$ in that span. Linear schemes are equivalent to *monotone span programs*; whether every monotone structure has a polynomial-size linear scheme is open, and the best known general upper bound is sub-exponential rather than polynomial.
+
+So far the dealer has been honest. Remove that assumption and correctness collapses: a corrupt dealer can hand out points that lie on no single low-degree polynomial, so that different qualified sets reconstruct different "secrets". Verifiable secret sharing fixes this.
+
+:::definition[Verifiable secret sharing (VSS)]{#vss}
+A VSS scheme adds to the dealing phase a public verification procedure such that
+
+- **(Binding/commitment)** after dealing, there is a well-defined value $s^{*}$ such that every qualified set of honest participants reconstructs $s^{*}$ — even if the dealer is corrupt;
+- **(Validity)** if the dealer is honest, $s^{*} = s$;
+- **(Privacy)** if the dealer is honest, unqualified sets still learn nothing about $s$.
+:::
+
+:::recipe[Feldman VSS]{#feldman}
+Work in a group $G = \langle g\rangle$ of prime order $q$ in which discrete logarithms are hard.
+
+1. The dealer chooses $p(x) = s + a_1x + \cdots + a_{k-1}x^{k-1}$ over $\mathbb{F}_q$ and sends $S_i = p(x_i)$ privately to $P_i$.
+2. The dealer **broadcasts** the commitments $C_0 = g^{s}$, $C_1 = g^{a_1}$, …, $C_{k-1} = g^{a_{k-1}}$.
+3. $P_i$ accepts its share if and only if
+
+$$g^{S_i} \ =\ \prod_{j=0}^{k-1} C_j^{\,x_i^{\,j}}.$$
+
+4. If a participant's check fails it complains publicly; the dealer must reveal that share, and a dealer who cannot is disqualified.
+:::
+
+:::proposition[The Feldman check is exactly consistency with a degree-$(k-1)$ polynomial]{#feldman-check}
+Given broadcast $C_0,\dots,C_{k-1}$, a value $S_i$ passes the check at $x_i$ if and only if $S_i = p(x_i)$ for the unique polynomial $p$ whose coefficients are the discrete logarithms of the $C_j$.
+:::
+
+:::proof
+Write $C_j = g^{c_j}$ (possible since $g$ generates $G$) and $p(x) = \sum_j c_j x^j$. Then
+
+$$\prod_{j=0}^{k-1} C_j^{\,x_i^{\,j}} = \prod_{j=0}^{k-1} g^{\,c_j x_i^{\,j}} = g^{\sum_j c_j x_i^{\,j}} = g^{\,p(x_i)}.$$
+
+Since $g$ has prime order $q$, the map $u \mapsto g^{u}$ is injective on $\mathbb{F}_q$, so $g^{S_i} = g^{p(x_i)}$ holds if and only if $S_i = p(x_i)$.
+:::
+
+Binding here is *unconditional*: the commitments determine $p$ as an element of $\mathbb{F}_q[x]$ of degree $< k$ whatever the dealer does, so all accepted shares lie on one polynomial and every qualified set reconstructs its constant term. Privacy, however, is only *computational* — $C_0 = g^{s}$ leaks $s$ to anyone who can take discrete logarithms, and even without that it identifies $s$ uniquely. Pedersen's commitment trades the two around.
+
+:::definition[Pedersen commitment]{#pedersen}
+With two generators $g,h$ of $G$ whose relative discrete logarithm $\log_g h$ is unknown to the committer, the commitment to $m$ with randomness $\rho$ is
+
+$$\mathrm{Com}(m;\rho) = g^{m}h^{\rho}.$$
+:::
+
+:::theorem[Pedersen is perfectly hiding and computationally binding]{#pedersen-security}
+For fixed $m$, $\mathrm{Com}(m;\rho)$ with uniform $\rho$ is uniformly distributed on $G$, so a commitment reveals nothing whatsoever about $m$. Moreover, anyone who opens one commitment in two ways can compute $\log_g h$.
+:::
+
+:::proof
+*Hiding.* $h$ generates $G$ (any non-identity element of a group of prime order does), so $\rho \mapsto h^{\rho}$ is a bijection $\mathbb{F}_q \to G$; multiplying by the fixed element $g^{m}$ is again a bijection. Hence the commitment is uniform on $G$ for **every** $m$, which is criterion (3) of *Three faces of perfect privacy* once more.
+
+*Binding.* Suppose $g^{m}h^{\rho} = g^{m'}h^{\rho'}$ with $m \neq m'$. Then $g^{\,m-m'} = h^{\,\rho'-\rho}$. Here $\rho' \neq \rho$, since otherwise $g^{m-m'}=1$ would force $m=m'$ in a group of prime order. Therefore $\log_g h = (m-m')(\rho'-\rho)^{-1} \bmod q$, computable from the two openings.
+:::
+
+Pedersen VSS runs Feldman with $\mathrm{Com}(a_j;\rho_j)$ in place of $g^{a_j}$, the dealer additionally sharing the randomness polynomial; the verification identity is the same computation carried out in two exponents at once. The resulting scheme is *perfectly private* and binding only under the discrete-logarithm assumption — the mirror image of Feldman. Which you want depends on whether the secret must stay hidden forever (Pedersen) or the sharing must stay correct against an unbounded dealer (Feldman).
+
+:::example[Running the Feldman check with small numbers]
+Let $G$ be the subgroup of order $11$ inside $\mathbb{Z}_{23}^{*}$, generated by $g = 2$, so that exponents are read modulo $11$. The dealer uses $k=2$ and $p(x) = 4 + 3x$ over $\mathbb{F}_{11}$. Verify participant $x=2$'s share.
 :::
 
 :::solution
-1. For a qualified set $B=A\cup\{p\}$, the shares of $B$ determine $s$, i.e. $H(s\mid\text{shares}_A,\text{share}_p)=0$.
-2. Subtracting, the one extra share must remove all remaining uncertainty: $I(s;\text{share}_p\mid\text{shares}_A)=H(s)-0=H(s)$. Since conditional mutual information is at most the entropy of either argument, $H(\text{share}_p)\ge H(\text{share}_p\mid\text{shares}_A)\ge I(s;\text{share}_p\mid\text{shares}_A)=H(s)$.
-3. **Sanity check with the XOR $(2,2)$ scheme:** a 128-bit secret has $H(s)=128$ bits, and each share is a uniform 128-bit string with $H(\text{share})=128$ bits — the bound $H(\text{share})\ge H(s)$ holds with equality, so XOR sharing is size-optimal.
+**Commitments.** $C_0 = g^{s} = 2^{4} = 16$ and $C_1 = g^{a_1} = 2^{3} = 8$, both broadcast; all group arithmetic is mod $23$.
+
+**Share.** $p(2) = 4 + 3\cdot 2 = 10$, sent privately to participant $2$.
+
+**Check.** The left side is $g^{S_2} = 2^{10} = 1024 = 44\cdot 23 + 12 \equiv 12$. The right side is
+$$C_0^{\,2^{0}} C_1^{\,2^{1}} = 16 \cdot 8^{2} = 16\cdot 64 \equiv 16 \cdot 18 = 288 = 12\cdot 23 + 12 \equiv 12.$$
+The two agree, so the share is accepted. ✓
+
+**A corrupt dealer.** Suppose the dealer had sent $S_2 = 9$ instead. Then $g^{9} = 2^{9} = 512 = 22\cdot 23 + 6 \equiv 6 \neq 12$, and participant $2$ complains. **Sanity check:** the check passed exactly at the value predicted by *The Feldman check is exactly consistency with a degree-$(k-1)$ polynomial*, and $g = 2$ has order $11$ because $2^{11} = 2048 = 89\cdot 23 + 1 \equiv 1$, so exponent arithmetic mod $11$ is legitimate. □
 :::
 
-## The Secure MPC Problem
+:::example[Refreshing shares without changing the secret]
+Shares leak over time: an adversary who breaks into one machine per month eventually collects $k$ of them. Show how the participants can replace all shares by fresh ones, without ever reconstructing $s$ and without a dealer.
+:::
+
+:::solution
+Each participant $P_i$ picks a random polynomial $z_i$ of degree $\le k-1$ with **zero constant term**, $z_i(0) = 0$, and sends $z_i(x_j)$ privately to each $P_j$.
+
+Every participant updates its share to
+$$S_j' = S_j + \sum_{i=1}^{n} z_i(x_j),$$
+which by *Shamir sharing is linear* is the share of $P_j$ under the polynomial $p' = p + \sum_i z_i$. This $p'$ still has degree $\le k-1$ and $p'(0) = p(0) + 0 = s$, so the secret is unchanged and any $k$ new shares still recover it.
+
+Why it helps: old and new shares are related by a sharing of $0$ that is uniform among degree-$\le k-1$ polynomials vanishing at $0$ (as long as at least one $z_i$ came from an honest participant), so $k-1$ *old* shares combined with $k-1$ *new* shares still leave $s$ uniform. The adversary must now collect $k$ shares **within a single epoch**. **Sanity check:** setting all $z_i \equiv 0$ returns the original sharing, and evaluating $p'$ at $0$ never involves the $z_i$ at all. □
+:::
+
+## The Secure Multiparty Computation Problem
 
 <!-- section: mpc-problem -->
 
+Secret sharing hides data at rest. Secure multiparty computation (MPC) hides it *while it is being used*: $n$ parties, each holding a private input, want the value of a joint function and nothing else.
+
 :::definition[Secure multiparty computation]{#mpc}
-Parties $P_1, \dots, P_n$ hold private inputs $x_1, \dots, x_n$ and wish to compute
+Parties $P_1,\dots,P_n$ hold private inputs $x_1,\dots,x_n$ and wish to compute
 
 $$y = f(x_1,\dots,x_n)$$
 
-such that **correctness** holds — all honest parties obtain the correct $y$ — and **privacy** holds: nothing is revealed about the $x_i$ beyond what $y$ itself reveals.
+by exchanging messages, so that
+
+- **(Correctness)** every honest party outputs the correct $y$, and
+- **(Privacy)** the parties learn nothing about the inputs beyond what $y$ and their own inputs already imply.
 :::
 
-:::definition[Simulation-based security]{#simulation-paradigm}
-Security is defined via the simulation paradigm: for any adversary controlling a subset of parties, there exists a simulator that, given only the inputs of the corrupted parties and the output $y$, can produce a view indistinguishable from the real protocol execution.
+The second clause is useless until "learn nothing beyond" is made mathematical, and the naive attempts fail. "The adversary cannot compute any $x_j$" is too weak — leaking half of $x_j$'s bits satisfies it. "The transcript is independent of the inputs" is too strong — the transcript determines $y$, which depends on the inputs. The resolution, due to Goldwasser, Micali and Rackoff and refined by Goldreich, Micali and Wigderson, is comparative: measure the real protocol against an idealisation that is private by construction.
+
+:::definition[The ideal functionality]{#ideal-world}
+In the **ideal world** an incorruptible trusted party $\mathcal{F}$ receives $x_1,\dots,x_n$ over private channels, computes $y = f(x_1,\dots,x_n)$, returns $y$ to everyone, and forgets. An adversary corrupting a set $C$ of parties in the ideal world sees exactly $\{x_i\}_{i \in C}$ and $y$ — by construction, nothing else exists to see.
 :::
 
-The function f can be any efficiently computable function (arithmetic circuit, Boolean circuit, RAM program, etc.).
+:::definition[View and simulation-based security (semi-honest)]{#simulation-paradigm}
+The **view** of party $P_i$ in a real execution is
+
+$$\mathrm{view}_i = \bigl(x_i,\ r_i,\ m_{i,1}, m_{i,2}, \dots\bigr),$$
+
+its input, its random tape and every message it received. A protocol $\pi$ computes $f$ with **perfect security against semi-honest adversaries corrupting at most $t$ parties** if it is correct and, for every $C$ with $|C| \le t$, there is a probabilistic polynomial-time **simulator** $\mathcal{S}$ such that for all inputs
+
+$$\mathcal{S}\bigl(C, \{x_i\}_{i\in C},\, y\bigr) \ \equiv\ \bigl\{\mathrm{view}_i\bigr\}_{i \in C},$$
+
+the two distributions being identical. Replacing $\equiv$ by "statistically close" gives **statistical** security, and by "computationally indistinguishable" gives **computational** security.
+:::
+
+The definition is exactly the right one because it is an *if-then* about information: anything the coalition could deduce from its real view, it could equally deduce from a transcript it manufactured itself out of its own inputs and the output. Since the manufactured transcript plainly contains no extra information about the honest inputs, neither does the real one. Notice the family resemblance to the privacy proof of Shamir's scheme, where the adversary's view was uniform and so could be sampled without the secret: that proof *was* a simulator.
 
 :::intuition
-Several hospitals want to compute the average salary of their doctors or the statistics of a rare disease across all their patient records, without any hospital seeing another hospital's raw data.
-
-The protocol lets them obtain only the final statistic; the individual records stay private.
+Imagine the ideal world as a sealed room with a perfectly trustworthy clerk. You slide your number under the door, the clerk announces the answer, and the papers are burnt. A real protocol has no clerk; it is a conversation. The definition asks for a forger: someone who, knowing only what the clerk would have told you, can write a fake transcript of that conversation which you could not distinguish from the real one. If such a forger exists, the conversation told you nothing the clerk did not.
 :::
 
-:::example
-Yao's "millionaires' problem": two parties want to know who is richer without revealing their wealth. Define $f(x,y)=1$ if $x>y$ else $0$.
+:::pitfall
+Privacy is "beyond what $y$ reveals", and $y$ can reveal a great deal. If $f$ is the average of three salaries and two parties collude, they subtract their own inputs and recover the third exactly. That is not a protocol failure — the ideal functionality leaks it too. Choosing $f$ so that its output is safe to publish is a separate problem, addressed by differential privacy rather than by MPC.
+:::
+
+:::example[The millionaires' problem]
+Alice has $x = 7$ (millions) and Bob has $y = 5$. They compute $f(x,y) = 1$ if $x > y$ and $0$ otherwise. What exactly does the security definition promise Alice?
 :::
 
 :::solution
-**Concrete inputs.** Alice has $x=\$7\text{M}$, Bob has $y=\$5\text{M}$ (each private).
-**Ideal functionality.** Imagine a trusted third party who takes $x$ and $y$, computes $f(x,y)$, and announces only the bit. Here $7>5$, so it announces $1$.
-**What MPC guarantees.** A real MPC protocol (no trusted party) must reveal exactly what the ideal functionality would: both learn the bit $1$, and *nothing more*. In particular Bob does not learn that Alice has $7$M, nor even a range like "$>5$M" — only "Alice is richer."
-**What the output does imply.** Privacy is only "beyond what $y$ reveals." From output $1$, Bob deduces $x>5$; that is unavoidable because it is implied by the function's own answer. **Sanity check:** the simulator for Bob, given Bob's input $y=5$ and the output $1$, can reproduce Bob's entire view — confirming no extra leakage. If instead $x=4$, the output would be $0$ and Alice would learn $y>4$; again only what the answer itself entails.
+The output is $1$. In the ideal world, Bob's entire experience consists of his input $5$ and the bit $1$. The definition requires a simulator that, given only $(5, 1)$, produces a transcript distributed identically to what Bob really sees.
+
+Consequently Bob learns $x > 5$ — this is implied by the bit itself and is unavoidable — but he does not learn $x = 7$, nor any bound better than $x > 5$: if he could, he could apply that same inference to the simulated transcript, which was generated without $x$ at all and therefore cannot distinguish $x = 7$ from $x = 6$ or $x = 10^{9}$.
+
+Symmetrically, Alice learns only $y < 7$. **Sanity check:** run the function with $x = 4$ instead; the output becomes $0$, Bob learns $x \le 5$, and again nothing more. The leakage is a property of $f$, not of the protocol. □
 :::
+
+Not every function admits a perfectly secure protocol, and the obstruction appears already with two parties.
+
+:::theorem[Two-party AND has no perfectly secure protocol]{#two-party-impossibility}
+There is no protocol between two parties, secure against a single semi-honest corruption with unbounded computing power, that computes $f(x,y) = x \wedge y$ for input bits $x,y$.
+:::
+
+:::proof
+This is a sketch; it rests on a combinatorial analysis of protocol transcripts due to Chor and Kushilevitz. Consider the matrix of $f$ over the four input pairs. Perfect security forces the set of transcripts occurring on inputs $(x,y)$ to depend only on $y$ from Alice's side and only on $x$ from Bob's, which makes the transcript distribution a product structure; one shows that the set of input pairs producing a fixed transcript must be a combinatorial rectangle on which $f$ is constant, and that these rectangles can be merged, forcing $f$ to be decomposable into functions of $x$ alone and $y$ alone. The AND matrix $\begin{pmatrix}0&0\\0&1\end{pmatrix}$ admits no such decomposition. Hence the two-party case must rest on computational assumptions — which is exactly what Yao's protocol supplies, via oblivious transfer.
+:::
+
+So the subject splits along a single fault line. With an honest majority, information-theoretic security is achievable for every function, and the tool is secret sharing (the section *Information-Theoretic MPC with Secret Sharing (BGW)*). Without one — in particular for two parties — cryptographic assumptions are necessary, and the tool is garbled circuits.
 
 ## Yao's Garbled Circuits for Two Parties
 
 <!-- section: yao-garbled -->
 
-Yao's protocol (1986) solves the two-party case (semi-honest model) using garbled circuits.
+Yao's construction (1986) computes any function of two inputs, in the semi-honest model, with a *constant* number of rounds — the garbler sends one big message, the evaluator computes in silence. The function is presented as a Boolean circuit, and each wire is replaced by a pair of random keys.
 
-:::recipe[Yao's garbled circuit protocol]{#yao-garbled}
-1. The **garbler** takes a Boolean circuit for $f$ and replaces every wire with two random keys, one for $0$ and one for $1$.
-2. For each gate it creates a *garbled table* of four ciphertexts that encrypt the correct output key under the two input keys, in random order.
-3. The **evaluator** obtains the keys corresponding to its own input bits via oblivious transfer (OT).
-4. The evaluator walks the circuit gate by gate, decrypting exactly one entry per gate with the keys it holds, and finally obtains the output keys and, with the mapping, the output bits.
+The protocol needs one cryptographic primitive besides encryption.
+
+:::definition[1-out-of-2 oblivious transfer]{#ot}
+$\mathrm{OT}$ is the two-party functionality in which the sender inputs a pair $(m_0,m_1)$, the receiver inputs a bit $b$, and the receiver learns $m_b$ while
+
+- the sender learns nothing about $b$, and
+- the receiver learns nothing about $m_{1-b}$.
 :::
 
-The garbler sends the garbled tables plus the keys for its own input; the evaluator learns nothing about the garbler's input except through the output.
+OT is precisely what is needed for the evaluator to obtain the key for its own input bit: the garbler must not learn which bit was requested, and the evaluator must not obtain both keys of a wire (holding both would let it evaluate the circuit on inputs it never had). By *Two-party AND has no perfectly secure protocol*, OT cannot be built unconditionally; it is constructed from trapdoor permutations or Diffie–Hellman.
+
+:::definition[Garbling scheme]{#garbling-scheme}
+A garbling scheme for circuits is a triple of algorithms
+
+- $\mathrm{Gb}(C) \to (\tilde C,\ \{K_w^{0},K_w^{1}\}_{w},\ \mathrm{dec})$, producing a garbled circuit, a pair of keys per wire, and an output decoding map;
+- $\mathrm{Ev}(\tilde C, \{K_w^{b_w}\}_{w \in \text{inputs}}) \to \{K_w^{\,\cdot}\}_{w\in\text{outputs}}$;
+- $\mathrm{De}(\mathrm{dec},\cdot)$, turning output keys into bits,
+
+satisfying **correctness** — $\mathrm{De}(\mathrm{dec},\mathrm{Ev}(\tilde C, \text{keys for } x)) = C(x)$ — and **privacy**: there is a simulator that, given only $C$ and the output $C(x)$, produces $(\tilde C, \text{input keys}, \mathrm{dec})$ computationally indistinguishable from a real garbling.
+:::
+
+:::recipe[Yao's protocol]{#yao-garbled}
+1. **Garble.** For each wire $w$ the garbler draws independent random keys $K_w^{0},K_w^{1}$. For each gate $g$ with input wires $a,b$ and output wire $c$ it builds the four ciphertexts
+$$\mathrm{Enc}_{K_a^{\alpha},\,K_b^{\beta}}\bigl(K_c^{\,g(\alpha,\beta)}\bigr), \qquad \alpha,\beta\in\{0,1\},$$
+and permutes them randomly.
+2. **Send.** The garbler sends all garbled tables, the keys $K_w^{\,x_w}$ for its own input wires, and the output decoding map (key $\mapsto$ bit) for the output wires only.
+3. **Transfer.** For each of the evaluator's input wires the parties run one OT: sender input $(K_w^{0},K_w^{1})$, receiver input its bit.
+4. **Evaluate.** Holding one key per input wire, the evaluator processes gates in topological order, decrypting the one row of each table that its two keys open, obtaining one key per internal wire.
+5. **Decode.** The evaluator maps the output keys to bits and sends the result to the garbler.
+:::
 
 :::intuition
-The garbler creates an encrypted 'maze' that computes the function. Each wire is a pair of secret keys; each gate is a lookup table that, given the right two input keys, lets you decrypt exactly the right output key.
-
-The evaluator walks the maze using keys for his inputs (obtained without the garbler learning which ones) and at the end holds only the output keys, which map to the answer.
+Picture an encrypted maze. Every wire is a pair of keys and every gate is a padlocked box with four compartments, only one of which your two keys will open. You walk the maze holding exactly one key per wire, opening one compartment per gate, never learning whether the key in your hand means $0$ or $1$ — the two look alike. Only at the exit does the garbler hand you a legend for the final wires, and only then does anything become readable.
 :::
 
-:::example
-**Setup.** Garble one AND gate with input wires $A,B$ and output wire $C$. The garbler picks six random 128-bit keys: $K_A^0,K_A^1$ for wire $A$; $K_B^0,K_B^1$ for wire $B$; $K_C^0,K_C^1$ for wire $C$. The map key $\to$ bit is secret.
+:::theorem[Security of Yao's protocol]{#yao-security}
+If the encryption scheme is semantically secure (and has the mild property that a wrong-key decryption is detectably invalid) and the OT is secure, then Yao's protocol computes $f$ with computational security against a semi-honest adversary corrupting either party.
+:::
+
+:::proof
+A sketch; it rests on the semantic security of the underlying encryption and on the security of OT, neither proved here.
+
+*Corrupt evaluator.* By induction over the circuit in topological order, the evaluator holds exactly one key per wire and cannot tell which bit it represents, because the two keys of a wire are identically distributed random strings and the decoding map is released only for output wires. The simulator, given the output bits, garbles a **fake** circuit in which all four rows of every table encrypt the *same* output key, and rigs the output decoding map so that the resulting keys decode to the true output. A distinguisher between real and fake garbling yields a distinguisher against the encryption of the three rows the evaluator never opens, one hybrid gate at a time. The evaluator's OT messages are simulated by OT's receiver-privacy.
+
+*Corrupt garbler.* The garbler receives no messages except the OT responses and the final output, so its view is simulated from its own input and $y$ using OT's sender-privacy.
+:::
+
+:::example[Garbling a single AND gate]
+Write out the garbled table for one AND gate with input wires $A,B$ and output wire $C$, and evaluate it on $a=0$, $b=1$.
 :::
 
 :::solution
-1. **Truth table of AND:** output is $1$ only when both inputs are $1$, i.e. $0\wedge0=0$, $0\wedge1=0$, $1\wedge0=0$, $1\wedge1=1$.
-2. **Garbled table.** For each input combination, encrypt the *correct* output key under the two input keys. Writing $\mathrm{Enc}_{K,K'}(m)$ for double encryption under both keys:
-3. $\mathrm{Enc}_{K_A^0,K_B^0}(K_C^0)$
-4. $\mathrm{Enc}_{K_A^0,K_B^1}(K_C^0)$
-5. $\mathrm{Enc}_{K_A^1,K_B^0}(K_C^0)$
-6. $\mathrm{Enc}_{K_A^1,K_B^1}(K_C^1)$
-7. The garbler randomly permutes these four rows (so row position leaks no bit) and sends them to the evaluator.
-8. **Evaluation.** Say the evaluator holds $K_A^0$ (its own bit is $0$) and $K_B^1$ (obtained by OT, garbler doesn't know which). It tries to decrypt each row; the double-encryption authenticates so that only the row keyed by *exactly this pair* decrypts successfully — that is the second row, yielding $K_C^0$.
-9. **What is learned.** The evaluator now holds $K_C^0$ but not $K_C^1$, so it cannot tell that $0$ corresponds to output-bit $0$ unless the garbler also reveals the output map — hence intermediate wires stay hidden and only the final output map is disclosed. **Sanity check:** the true gate value is $0\wedge1=0$, matching $K_C^0$ ✓. The evaluator never sees $K_A^1$ or $K_B^0$, so it learns nothing about the garbler's input beyond the gate output.
+The garbler draws six random $128$-bit keys $K_A^{0},K_A^{1},K_B^{0},K_B^{1},K_C^{0},K_C^{1}$ and forms, from the truth table of AND,
+
+$$\mathrm{Enc}_{K_A^{0},K_B^{0}}(K_C^{0}),\quad \mathrm{Enc}_{K_A^{0},K_B^{1}}(K_C^{0}),\quad \mathrm{Enc}_{K_A^{1},K_B^{0}}(K_C^{0}),\quad \mathrm{Enc}_{K_A^{1},K_B^{1}}(K_C^{1}),$$
+
+then shuffles the four rows so that position carries no information.
+
+Evaluation with $K_A^{0}$ (the evaluator's own wire, via OT) and $K_B^{1}$ (sent by the garbler, whose bit is $1$): trying all four rows, exactly the second decrypts validly, yielding $K_C^{0}$.
+
+What has been learned: the evaluator holds $K_C^{0}$, a random string, and never sees $K_C^{1}$, so on an internal wire it cannot tell the value is $0$. **Sanity check:** $0 \wedge 1 = 0$ and the recovered key is $K_C^{0}$ ✓; also, had the evaluator been given both $K_B^{0}$ and $K_B^{1}$ it could have opened two rows and learned the garbler's input — which is exactly why step 3 uses OT and why the garbler sends only one key per input wire of its own. □
+:::
+
+:::remark
+Costs and the standard optimisations. A naive garbling sends $4$ ciphertexts per gate. **Point-and-permute** appends a random *select bit* to each key and uses the two select bits to index the row directly, removing the trial decryptions. **Garbled row reduction** fixes one ciphertext to zero and sends $3$. **Free-XOR** chooses $K_w^{1} = K_w^{0}\oplus \Delta$ for a single global $\Delta$, after which an XOR gate needs no table and no communication at all — so only AND gates cost anything, and **half-gates** bring those to $2$ ciphertexts. An AES-128 circuit has about $6{,}800$ AND gates, so a garbled AES is a few hundred kilobytes, sent in one round.
+:::
+
+:::pitfall
+A garbled circuit is **single-use**. Evaluating the same $\tilde C$ on two different inputs would give the evaluator two keys on some wire, which breaks the induction in the security proof and typically reveals the garbler's input. Each execution requires fresh garbling — and fresh OTs.
 :::
 
 ## Information-Theoretic MPC with Secret Sharing (BGW)
 
 <!-- section: bgw-ss -->
 
-:::theorem[BGW theorem]{#bgw}
-For $n$ parties with an honest majority, meaning $t < n/2$ corruptions, the BGW protocol (Ben-Or, Goldwasser, Wigderson 1988) achieves information-theoretic security using Shamir secret sharing.
+Now the two halves meet. BGW (Ben-Or, Goldwasser, Wigderson 1988) evaluates an arithmetic circuit over $\mathbb{F}_q$ gate by gate while every intermediate value stays Shamir-shared, and it needs no computational assumption whatsoever.
+
+:::notation
+The secret-sharing half wrote $(k,n)$ with reconstruction threshold $k$ and polynomial degree $k-1$. MPC counts corruptions instead. Throughout this section $t$ is the number of corrupted parties, sharings use polynomials of degree at most $t$, and reconstruction therefore needs $t+1$ shares. In the earlier notation: $k = t+1$.
 :::
 
-Each input is shared using a (t+1, n) Shamir scheme. Addition of shared values is local (just add shares). Multiplication of two shared values requires an interactive degree-reduction step (each party locally multiplies its shares, re-shares the product, then the parties jointly compute a linear combination that reduces the degree back to t).
+The choice of degree is forced from both sides. Degree $t$ is high enough that any $t$ colluding parties see $t$ points of a degree-$t$ polynomial and, by *Shamir's scheme realises $\Gamma_{k,n}$ perfectly*, learn nothing. It must not be higher, because reconstruction must still succeed from the $n - t$ honest parties.
 
-With these two primitives any arithmetic circuit can be evaluated securely. For dishonest majority (t ≥ n/2) information-theoretic security is impossible for general functions without honest majority; computational assumptions or additional setup (e.g., OT) are required.
+:::recipe[The BGW protocol, semi-honest version]{#bgw-protocol}
+1. **Input sharing.** Each party Shamir-shares its input with a random polynomial of degree $\le t$ and sends one share to each party.
+2. **Addition gate.** Each party adds its two shares locally. No communication.
+3. **Multiply-by-constant gate.** Each party scales its share locally. No communication.
+4. **Multiplication gate.** Each party multiplies its two shares locally, then the parties run the degree-reduction subprotocol below.
+5. **Output.** The parties broadcast their shares of the output wire and interpolate.
+:::
+
+Steps 2 and 3 are correct and private immediately by *Shamir sharing is linear*: sums and scalar multiples of degree-$\le t$ sharings are degree-$\le t$ sharings of the corresponding values, and a party that computes only on the shares it already holds sends nothing and hence leaks nothing.
+
+Multiplication is where the work is. Let $f$ and $g$ be the degree-$\le t$ polynomials sharing $a$ and $b$. Party $i$ can form $h(x_i) = f(x_i)g(x_i)$ locally, and the polynomial $h = fg$ does satisfy $h(0) = ab$. But $h$ is wrong as a sharing in two independent ways:
+
+1. **Its degree is $2t$**, so $t+1$ shares no longer determine it; reconstruction would need $2t+1$ shares, and after a second multiplication the degree would be $4t$.
+2. **It is not uniformly random** among polynomials with the right constant term: $h$ is a *product*, hence reducible, and its coefficients are correlated. A coalition holding $t$ points of $h$ can extract information that $t$ points of a random polynomial would not reveal.
 
 :::intuition
-Everyone splits their private number into 'shares' that look random individually and gives one share to each other person.
-
-Adding two shared numbers is easy: everyone just adds the shares they hold.
-
-Multiplying is harder; it produces higher-degree shares that must be 'cleaned up' by an interactive protocol that uses fresh randomness so that the final shares still hide the product.
+The whole protocol is degree bookkeeping. A sharing is a polynomial and its degree is a budget: degree $t$ hides from $t$ people and needs $t+1$ to open. Addition spends nothing — adding two lines gives a line. Multiplication spends double, turning two lines into a parabola, and the budget must be paid back before the next gate. Degree reduction is the repayment, and it can only be afforded when there are at least $2t+1$ people in the room.
 :::
 
-:::example
-Compute the sum of three private salaries $s_1+s_2+s_3$ with $t=1$ (any one party may be corrupt), so we use degree-1 (2-out-of-3) sharings over $F_{17}$. Parties evaluate at $x=1,2,3$.
+:::figure[Two degree-$1$ sharings and their product. The straight lines $f$ and $g$ are each determined by $2$ points; their product $h=fg$ is a parabola needing $3$. The intercepts satisfy $h(0)=f(0)g(0)$ — the value is right — but the degree has doubled, which is what the degree-reduction step must undo.]{#degree-doubling}
+{
+  "type": "plot",
+  "x": [-0.2, 3.2],
+  "y": [-0.5, 5.2],
+  "xTicks": 1,
+  "yTicks": 1,
+  "xLabel": "x",
+  "yLabel": "value",
+  "marks": [
+    { "kind": "function", "fn": "1 + 0.5*x", "tone": "accent" },
+    { "kind": "function", "fn": "2 - 0.4*x", "tone": "alt", "dashed": true },
+    { "kind": "function", "fn": "(1 + 0.5*x)*(2 - 0.4*x)", "tone": "result" },
+    { "kind": "point", "at": [0, 1], "tone": "accent" },
+    { "kind": "point", "at": [0, 2], "tone": "alt" },
+    { "kind": "point", "at": [0, 2], "tone": "result" },
+    { "kind": "text", "at": [2.6, 1.3], "text": "f, degree 1", "leaderTo": [2.2, 2.1] },
+    { "kind": "text", "at": [2.5, 0.2], "text": "g, degree 1", "leaderTo": [2.6, 0.96] },
+    { "kind": "text", "at": [1.0, 4.6], "text": "h = fg, degree 2", "leaderTo": [1.4, 2.4] }
+  ]
+}
+:::
+
+The fix uses the one structural fact established in the first half: *reconstruction is a fixed linear map*. Spell it out.
+
+:::lemma[Reconstruction of a degree-$2t$ sharing is linear]{#deg2t-linear}
+Suppose $n \ge 2t+1$ and let $h$ have degree at most $2t$. With $\lambda_1,\dots,\lambda_{2t+1}$ the recombination coefficients of *Lagrange interpolation* at $x=0$ for the points $x_1,\dots,x_{2t+1}$,
+
+$$h(0) = \sum_{i=1}^{2t+1} \lambda_i\, h(x_i),$$
+
+and the $\lambda_i$ are public constants, independent of $h$.
+:::
+
+:::proof
+$h$ has degree at most $2t$ and $2t+1$ points determine such a polynomial uniquely, so $h(x) = \sum_i h(x_i)\ell_i(x)$ by *Lagrange interpolation*. Evaluate at $x = 0$ and put $\lambda_i = \ell_i(0)$, which depend only on the evaluation points.
+:::
+
+:::recipe[Degree reduction (GRR re-sharing)]{#degree-reduction}
+Each party $i \le 2t+1$ holds $h_i = f(x_i)g(x_i)$, a share of $ab$ under a degree-$2t$ polynomial.
+
+1. **Re-share.** Party $i$ picks a fresh random polynomial $H_i$ of degree $\le t$ with $H_i(0) = h_i$ and sends $H_i(x_j)$ to every party $j$.
+2. **Recombine locally.** Party $j$ computes
+$$c_j \ =\ \sum_{i=1}^{2t+1} \lambda_i\,H_i(x_j).$$
+:::
+
+:::theorem[Degree reduction is correct and private]{#degree-reduction-thm}
+Let $C(x) = \sum_{i=1}^{2t+1}\lambda_i H_i(x)$. Then $\deg C \le t$ and $C(0) = ab$, so $(c_1,\dots,c_n)$ is a degree-$\le t$ Shamir sharing of $ab$. Moreover, if at most $t$ parties are corrupted, their shares $\{c_j\}$ are distributed exactly as $t$ shares of a *uniformly random* degree-$\le t$ sharing of $ab$, so they reveal nothing about $a$, $b$ or $ab$.
+:::
+
+:::proof
+*Degree.* Each $H_i$ has degree at most $t$ and $C$ is a fixed linear combination of them, so $\deg C \le t$ by *Shamir sharing is linear*.
+
+*Value.* $C(0) = \sum_i \lambda_i H_i(0) = \sum_i \lambda_i h_i = \sum_i \lambda_i h(x_i) = h(0) = ab$, the middle equality being *Reconstruction of a degree-$2t$ sharing is linear* and the last $h = fg$ with $f(0)=a$, $g(0)=b$.
+
+*Privacy.* At least one index $i^{*} \le 2t+1$ belongs to an honest party, because there are at most $t < 2t+1$ corrupted ones. Its polynomial $H_{i^{*}}$ is uniform among degree-$\le t$ polynomials with the prescribed constant term, independent of everything else, and $\lambda_{i^{*}} \neq 0$ (a Lagrange coefficient is a product of nonzero field elements). Write $C = \lambda_{i^{*}}H_{i^{*}} + D$ with $D$ the rest. Conditioned on all the adversary's other information, the non-constant coefficients of $\lambda_{i^{*}}H_{i^{*}}$ are uniform and independent, hence so are those of $C$. Thus $C$ is a uniform degree-$\le t$ sharing of $ab$, and by the privacy half of *Shamir's scheme realises $\Gamma_{k,n}$ perfectly* its $t$ shares held by corrupted parties are uniform and independent of $ab$. The messages $H_i(x_j)$ received from honest $i$ are, by the same theorem, uniform field elements.
+:::
+
+Everything in that proof needed $2t+1$ distinct honest-or-not evaluation points to exist, i.e. $n \ge 2t+1$. This is the whole content of the famous threshold.
+
+:::corollary[Honest majority: $t < n/2$]{#honest-majority}
+BGW evaluates any arithmetic circuit over $\mathbb{F}_q$ with perfect security against a semi-honest adversary corrupting $t$ parties, provided $n \ge 2t+1$, i.e. $t < n/2$.
+:::
+
+:::proof
+Input sharing, addition and scalar multiplication are perfectly private and correct by *Shamir's scheme realises $\Gamma_{k,n}$ perfectly* and *Shamir sharing is linear*; multiplication is by *Degree reduction is correct and private*, which requires $2t+1 \le n$. Every wire of the circuit therefore carries a uniform degree-$\le t$ sharing of its true value, and the adversary's view at every step consists of uniform field elements, which a simulator can sample without any input. Composing gate by gate, the whole view is simulatable from the corrupted inputs and the output.
+:::
+
+:::example[Multiplying two shared values over $\mathbb{F}_{17}$]
+Take $n=3$, $t=1$, $x_i = i$. Let $a = 4$ be shared by $f(x) = 4+5x$ and $b = 9$ by $g(x) = 9+2x$. Carry out one multiplication gate in full.
 :::
 
 :::solution
-**Inputs and polynomials.** Say $s_1=4,\ s_2=9,\ s_3=2$ (secrets, kept private). Each party picks its own random linear polynomial with the secret as constant term:
-$P_1(x)=4+5x$ (party 1 chose slope $5$).
-$P_2(x)=9+2x$.
-$P_3(x)=2+11x$.
-**Distribute shares.** Party $j$ receives $P_i(j)$ from each dealer $i$. Compute mod $17$:
-Party 1 ($x=1$): $P_1(1)=9,\ P_2(1)=11,\ P_3(1)=13$.
-Party 2 ($x=2$): $P_1(2)=14,\ P_2(2)=13,\ P_3(2)=24\equiv7$.
-Party 3 ($x=3$): $P_1(3)=19\equiv2,\ P_2(3)=15,\ P_3(3)=35\equiv1$.
-**Local addition.** Each party adds the three shares it holds (no communication):
-Party 1: $9+11+13=33\equiv16 \pmod{17}$.
-Party 2: $14+13+7=34\equiv0 \pmod{17}$.
-Party 3: $2+15+1=18\equiv1 \pmod{17}$.
-   These are shares of $Q(x)=P_1(x)+P_2(x)+P_3(x)=15+18x\equiv 15+x \pmod{17}$, whose constant term is $Q(0)=4+9+2=15$, the true sum.
-**Reconstruct from any two.** Interpolate the summed shares $(1,16)$ and $(2,0)$ at $x=0$: weights $\ell_1(0)=\frac{0-2}{1-2}=2$, $\ell_2(0)=\frac{0-1}{2-1}=-1\equiv16$. Then $Q(0)=16\cdot2+0\cdot16=32\equiv15 \pmod{17}$. **Sanity check:** $s_1+s_2+s_3=4+9+2=15$ ✓.
-**Privacy.** A single party sees three field elements (its own summed share $16$, say) that are independent of the true sum, because one point on a degree-1 polynomial is uniform; only $t+1=2$ shares reveal the sum. Addition needed zero interaction; multiplication would raise the degree to $2t=2$ and require the interactive degree-reduction step.
+**Shares held.** $f(1)=9$, $f(2)=14$, $f(3)=19\equiv 2$; $g(1)=11$, $g(2)=13$, $g(3)=15$.
+
+**Local products.** $h_1 = 9\cdot 11 = 99 \equiv 14$, $h_2 = 14\cdot 13 = 182 \equiv 12$, $h_3 = 2\cdot 15 = 30 \equiv 13$. These lie on $h = fg = 36 + 53x + 10x^{2} \equiv 2 + 2x + 10x^{2}$, a degree-$2$ polynomial with $h(0) = 2 \equiv 36 = 4\cdot 9$ ✓.
+
+**Recombination coefficients** for points $1,2,3$ (computed in the Shamir section): $\lambda_1 = 3$, $\lambda_2 = 14$, $\lambda_3 = 1$. Check: $3\cdot 14 + 14\cdot 12 + 1\cdot 13 = 42+168+13 = 223 = 13\cdot 17 + 2 \equiv 2$ ✓ — the degree-$2$ sharing does reconstruct $ab$, but it took all three shares.
+
+**Re-sharing.** Each party picks a random degree-$1$ polynomial with its $h_i$ as constant term:
+$H_1(x) = 14 + 3x$, $H_2(x) = 12 + 7x$, $H_3(x) = 13 + x$, and sends the evaluations
+$$H_1: (0,\,3,\,6), \qquad H_2: (2,\,9,\,16), \qquad H_3: (14,\,15,\,16)$$
+at $x=1,2,3$ respectively (all mod $17$; e.g. $H_1(1)=17\equiv 0$, $H_2(3)=33\equiv 16$).
+
+**Local recombination.** $c_j = 3H_1(j) + 14H_2(j) + H_3(j)$:
+
+$c_1 = 3\cdot 0 + 14\cdot 2 + 14 = 42 \equiv 8$,
+$c_2 = 3\cdot 3 + 14\cdot 9 + 15 = 9+126+15 = 150 \equiv 14$,
+$c_3 = 3\cdot 6 + 14\cdot 16 + 16 = 18+224+16 = 258 \equiv 3$.
+
+**Verification.** Interpolate $c_1=8$, $c_2=14$ at $0$: coefficients $\ell_1(0)=\frac{-2}{-1}=2$ and $\ell_2(0)=\frac{-1}{1}=-1\equiv 16$, giving $2\cdot 8 + 16\cdot 14 = 16+224 = 240 = 14\cdot 17 + 2 \equiv 2 = ab$ ✓. **Sanity check:** the new sharing is degree $1$, since $C(x) = 2 + 6x$ fits all three: $C(1)=8$, $C(2)=14$, $C(3)=20\equiv 3$ ✓ — so any **two** parties now suffice, and a further multiplication can be performed. □
 :::
+
+Against a *malicious* adversary the threshold tightens, for a reason that is pure coding theory.
+
+:::proposition[Malicious BGW needs $t < n/3$ without broadcast]{#third-threshold}
+The shares $(p(x_1),\dots,p(x_n))$ of a degree-$\le t$ polynomial form a Reed–Solomon code of length $n$ and dimension $t+1$, whose minimum distance is $n-t$. Correcting $t$ arbitrary corruptions requires $n - t \ge 2t+1$, i.e. $n \ge 3t+1$.
+:::
+
+:::proof
+Two distinct degree-$\le t$ polynomials agree in at most $t$ places (their difference is a nonzero polynomial of degree $\le t$), so two distinct codewords differ in at least $n - t$ positions; and the bound is met by a polynomial with $t$ roots among the $x_i$. A code corrects $e$ errors exactly when its minimum distance exceeds $2e$, since otherwise two codewords have a common word within distance $e$ and decoding is ambiguous. With $e = t$ this reads $n - t \ge 2t+1$.
+:::
+
+So with $n \ge 3t+1$ the honest parties can *decode through* the lies: a set of shares from which $t$ are arbitrarily wrong still determines the right polynomial, by Berlekamp–Welch. This is what makes the malicious version of BGW work with perfect security and guaranteed output delivery. If a broadcast channel is assumed instead, verifiable secret sharing plus zero-knowledge checks push the bound back to $t < n/2$ at the cost of a negligible error probability (Rabin–Ben-Or); it is the *combination* of no broadcast and no error that costs the factor three.
 
 ## Security Models and Feasibility
 
 <!-- section: security-models -->
 
-- Semi-honest (honest-but-curious): parties follow the protocol but try to learn extra information from the messages they receive. Easier to achieve; many protocols are first designed in this model and then compiled to malicious security.
-- Malicious (Byzantine): corrupted parties can deviate arbitrarily (send wrong messages, abort, etc.). Requires zero-knowledge proofs, commitments, or verifiable secret sharing to force correct behavior.
-- Honest majority vs. dishonest majority: with t < n/2 information-theoretic security is possible for any function (BGW). With t ≥ n/2 computational assumptions are necessary for most functions (Yao + OT for 2 parties; GMW for many parties).
-- With preprocessing (Beaver triples, OT extension, etc.) online phases can be extremely fast (information-theoretic or symmetric-crypto only).
+The results above hold in specific adversary models, and comparing protocols means fixing the model first. Four axes matter.
 
-Universally composable (UC) security gives security even when the MPC protocol is used as a subroutine inside larger protocols.
-
-:::intuition
-Semi-honest is like 'the other people follow the rules but are nosy and will try to infer your salary from the messages they legitimately receive.'
-
-Malicious is 'the other people may lie, send garbage, or collude to try to learn or corrupt the result.'
-
-With an honest majority you can use pure information-theoretic tricks (secret sharing + interaction). Without it you need cryptography (one-way functions, oblivious transfer) to create 'virtual honest majority' or to detect cheating.
+:::definition[Adversary models]{#adversary-models}
+- **Behaviour.** A **semi-honest** (honest-but-curious, passive) adversary follows the protocol exactly and tries to infer extra information from its view. A **malicious** (Byzantine, active) adversary deviates arbitrarily: wrong messages, wrong inputs, early aborts.
+- **Corruption schedule.** A **static** adversary fixes the corrupted set before the protocol starts; an **adaptive** one may corrupt further parties during the execution, based on what it has seen.
+- **Power.** **Computationally bounded** (polynomial-time) or **unbounded**. Unbounded adversaries force information-theoretic protocols.
+- **Threshold.** The maximum number $t$ of simultaneously corrupted parties, or more generally an *adversary structure* of tolerable corruption sets.
 :::
 
-:::example[(GMW compiler):]
-Turn a semi-honest protocol into a maliciously-secure one.
+For malicious adversaries the semi-honest definition needs amendment, because a corrupt party may simply lie about its input, and no definition can prevent that — the ideal functionality accepts whatever input it is given. Security therefore compares the two worlds as *whole executions*.
+
+:::definition[Real/ideal security against malicious adversaries]{#real-ideal}
+Let $\mathrm{REAL}_{\pi,\mathcal{A}}(\vec{x})$ be the joint distribution of the adversary's output and the honest parties' outputs in an execution of $\pi$, and let $\mathrm{IDEAL}_{f,\mathcal{S}}(\vec{x})$ be the same for a simulator $\mathcal{S}$ interacting with the ideal functionality (which $\mathcal{S}$ may feed substituted inputs for the corrupted parties). The protocol $\pi$ **securely computes** $f$ if for every efficient adversary $\mathcal{A}$ there is a simulator $\mathcal{S}$ with
+
+$$\mathrm{IDEAL}_{f,\mathcal{S}}(\vec{x}) \ \approx\ \mathrm{REAL}_{\pi,\mathcal{A}}(\vec{x}) \qquad \text{for all } \vec{x},$$
+
+where $\approx$ is equality, statistical closeness, or computational indistinguishability according to the model.
+:::
+
+Three properties are bundled into that single line, and it is worth naming them. *Privacy*: the simulator works from the ideal view only. *Correctness*: the honest parties' outputs in the ideal world are by definition $f$ of the substituted inputs, so the real protocol cannot make them output anything else. *Input independence*: the simulator must choose the substituted inputs before seeing the output, which rules out a corrupt party making its input depend on an honest one.
+
+:::remark
+**Security with abort.** With a dishonest majority one weakens the ideal world: the adversary receives $y$ first and may then tell the functionality whether to deliver $y$ to the honest parties or the symbol $\bot$. This is not a blemish to be polished away — the next theorem says it is unavoidable.
+:::
+
+:::intuition
+Why is fairness the first casualty of a dishonest majority? Whoever speaks last in a protocol sees the answer a moment before everyone else, and nothing but an honest majority can force them to pass it on. With a majority of honest parties the others can finish the computation without the deserter; without one, the deserter holds the only remaining copy. That single asymmetry is what Cleve's theorem turns into a quantitative bound.
+:::
+
+:::theorem[Cleve: fair coin-tossing is impossible with a dishonest majority]{#cleve}
+There is no two-party protocol for tossing an unbiased coin that is secure against a malicious party who may abort: for every $r$-round protocol some party has a strategy biasing the honest party's output by $\Omega(1/r)$.
+:::
+
+:::proof
+A sketch of Cleve's argument. Let $b_i$ be the value the honest party would output if the other aborted after round $i$; $b_0$ is a fixed default and $b_r$ is the true output, so the expectations run from a constant to $1/2$. Along the sequence $\mathbb{E}[b_0],\dots,\mathbb{E}[b_r]$ some consecutive pair differs by at least $1/(2r)$ in absolute value, and the party who moves at that round can, by choosing between aborting and continuing, force the output towards whichever side it prefers. Hence perfect fairness is unattainable, and with it guaranteed output delivery.
+:::
+
+:::corollary[The feasibility map]{#feasibility-map}
+- $n = 2$, semi-honest or malicious, dishonest majority: possible **with computational assumptions** (Yao + OT; GMW), **with abort**. Not possible information-theoretically, by *Two-party AND has no perfectly secure protocol*.
+- $t < n/2$, semi-honest, unbounded adversary: **perfect** security for every function, by *Honest majority: $t < n/2$*.
+- $t < n/3$, malicious, unbounded, no broadcast: **perfect** security with guaranteed output delivery (BGW), by *Malicious BGW needs $t < n/3$ without broadcast*.
+- $t < n/2$, malicious, unbounded, with broadcast: **statistical** security with guaranteed output delivery (Rabin–Ben-Or), using VSS.
+- $t \ge n/2$, malicious: computational assumptions and security with abort (GMW, SPDZ); fairness impossible by *Cleve: fair coin-tossing is impossible with a dishonest majority*.
+:::
+
+The route from the weakest model to the strongest is a compiler rather than a new protocol.
+
+:::example[The GMW compiler]
+How does one turn a protocol secure against semi-honest adversaries into one secure against malicious adversaries?
 :::
 
 :::solution
-**Commit to inputs.** Every party first commits to its private input $x_i$ and to the randomness $r_i$ it will use, so it cannot later change them.
-**Each message is a deterministic function.** In a fixed protocol, the next message a party should send is $m=\text{NextMsg}(x_i,r_i,\text{transcript})$ — a public function of the committed values and the messages seen so far.
-**Prove correctness with zero-knowledge.** Alongside each message $m$, the party sends a zero-knowledge proof that "$m$ is the correct output of $\text{NextMsg}$ for the values I committed to, given this transcript" — without revealing $x_i$ or $r_i$.
-**Effect.** A malicious party can no longer send a crafted wrong message: any deviation fails the proof and is caught, while honest behavior leaks nothing new (the proof is zero-knowledge). **Sanity check:** correctness is now enforced (matching the semi-honest guarantee) and privacy is preserved, so the compiled protocol is secure against Byzantine adversaries — at the cost of the extra ZK proofs, which is exactly the "cost of malicious security" noted in Common Mistakes.
+**Commit.** Each party commits to its input $x_i$ and to its random tape $r_i$ at the outset, so neither can be changed later. The random tape is generated jointly (a coin-tossing-into-the-well subprotocol) so that a corrupt party cannot choose biased randomness.
+
+**Observe that messages are deterministic.** In any fixed protocol the next message is a public function $m = \mathrm{NextMsg}(x_i, r_i, \text{transcript so far})$ of committed data and public data.
+
+**Prove each message.** Along with $m$, the party sends a zero-knowledge proof of the statement "there exist $x_i,r_i$ opening my commitments for which $m = \mathrm{NextMsg}(x_i,r_i,\text{transcript})$". The proof reveals nothing beyond the truth of that statement.
+
+**Effect.** Any deviation produces a false statement and is rejected, so a malicious party is restricted to semi-honest behaviour with a possibly substituted input — precisely what the ideal world already permits. **Sanity check:** privacy is preserved because zero-knowledge proofs are simulatable, and the compiled protocol's simulator runs the semi-honest simulator plus the ZK simulators. The cost is the price of malicious security: a zero-knowledge proof per message, which is why practical protocols instead use cut-and-choose or information-theoretic MACs (SPDZ). □
+:::
+
+:::remark
+**Preprocessing.** Modern protocols split into a slow, input-independent offline phase and a fast online one. Beaver triples are the canonical example: shared random $(\langle u\rangle,\langle v\rangle,\langle w\rangle)$ with $w = uv$, prepared in advance. To multiply shared $a$ and $b$ online, the parties open $d = a - u$ and $e = b - v$ — safe, because $u,v$ are uniform and independent one-time pads — and compute
+
+$$\langle ab\rangle = \langle w\rangle + d\langle v\rangle + e\langle u\rangle + de,$$
+
+using only the linear operations of *Shamir sharing is linear*. The online phase is then two openings per multiplication, with no cryptography at all.
+:::
+
+:::remark
+**Composition.** A protocol proved secure standalone need not stay secure when many copies run concurrently inside a larger system. The **universal composability** framework quantifies over an *environment* that interacts with the protocol and the adversary throughout, and its composition theorem states that a UC-secure subprotocol may be substituted for its ideal functionality anywhere without loss. UC security is strictly stronger and, for most functionalities, unachievable without setup assumptions such as a common reference string.
+:::
+
+:::pitfall
+Two thresholds are easy to confuse. The **secret-sharing** threshold $k$ says how many shares reconstruct; the **corruption** threshold $t$ says how many parties the adversary controls. BGW ties them by $k = t+1$, so a statement like "$3$-out-of-$5$ sharing tolerates $3$ corruptions" is doubly wrong: it tolerates $2$, and $2 < 5/2$ is exactly why the protocol works.
 :::
 
 ## Common Mistakes
 
-- **Thinking that in Shamir's scheme the polynomial is evaluated at the participant identities only**: The x-coordinates are public identifiers; the y-values (or the pair) are the actual shares that must be kept secret.
-- **Believing that k-1 shares give 'some' partial information about s**: In a perfect scheme they give zero information; the posterior on s is identical to the prior (uniform).
-- **Using a small field for a large secret**: Shamir is usually applied to field elements; for a long secret one either uses a large field or shares the secret bit-by-bit / block-by-block with independent polynomials.
-- **Forgetting that the dealer must be trusted to choose the polynomial correctly**: If the dealer is malicious he can give inconsistent shares. Verifiable secret sharing solves this.
-- **Assuming computational secret sharing (e.g., using one-way functions) is the same as information-theoretic**: Computational schemes can have shorter shares but rely on hardness assumptions and may be broken by future algorithms or quantum computers.
-- **Confusing secret sharing with threshold cryptography or multiparty computation**: Secret sharing is the distribution step; threshold crypto uses shares of a key to perform operations without reconstructing the key in the clear; MPC is the broader interactive protocol setting.
-
-Secure multiparty computation (MPC, or SMPC) lets a set of parties, each holding a private input, compute a joint function of all inputs while revealing only the output (and whatever is implied by it). No party learns anything else about the other parties' inputs.
-
-MPC is the broadest primitive in cryptography that generalizes secret sharing, zero-knowledge, and private set intersection. It can realize any 'mental poker' or 'millionaires' problem in a provably secure way.
-
-- **Thinking MPC always requires a trusted third party**: The whole point is to remove the trusted party; the protocol itself emulates the ideal functionality.
-- **Assuming that 'the output reveals nothing'**: By definition the output y is revealed; privacy only protects the inputs beyond what is implied by y (e.g., if f is the sum, the sum itself is learned but not the individual addends).
-- **Believing information-theoretic security is always possible**: It requires an honest majority (or a private channel + honest majority). Dishonest majority needs computational assumptions.
-- **Confusing 2-party Yao with multi-party secret-sharing MPC**: Yao is usually computational (via OT) and for two parties; BGW-style is information-theoretic for honest majority and uses Shamir sharing + interaction for multiplication.
-- **Forgetting the cost of malicious security**: Semi-honest protocols can be very cheap (linear in circuit size); malicious security often adds heavy zero-knowledge or cut-and-choose overhead, although recent protocols (e.g., SPDZ, authenticated triples) have made malicious security practical.
-- **Assuming MPC is only for 'millionaires' or toy functions**: Modern MPC frameworks (MP-SPDZ, SCALE-MAMBA, EMP-toolkit, etc.) routinely evaluate AES, neural-network inference, and complex database queries among dozens of parties.
-
-Differential privacy (DP) is a rigorous, quantifiable definition of privacy for data analysis and machine learning. It asks that a randomized algorithm behave almost identically on any two datasets differing in at most one record, so that no output can betray whether a particular individual took part; the formal statement is given in the next section.
-
-The parameter ε (the privacy budget) controls the strength of the guarantee: smaller ε gives stronger privacy. The definition makes no assumptions about the adversary's background knowledge or computational power.
-
-DP has become the gold standard for private data release at companies (Apple, Google, Microsoft, Uber) and in the U.S. Census Bureau's 2020 release.
-
-- **Confusing differential privacy with k-anonymity or other syntactic notions**: k-anonymity can be broken by background knowledge or homogeneity attacks; DP gives a worst-case multiplicative guarantee independent of the adversary's knowledge.
-- **Thinking that 'adding noise' is automatically DP**: The noise distribution and its scale must be calibrated exactly to the sensitivity and the desired ε (or (ε,δ)); arbitrary noise may give no guarantee.
-- **Forgetting that post-processing does not cost privacy but composition does**: You can analyze the released DP object as much as you want for free; each new release that depends on the original data costs more budget.
-- **Using a fixed ε across all datasets and applications**: ε is a policy choice that should depend on the sensitivity of the data, the number of expected queries, and the risk tolerance;  ε=1 is not 'always safe.'
-- **Believing local DP (each user perturbs before sending) is the same as central DP**: Local DP requires much more noise (roughly √n worse) because each report must be private by itself; central DP (a trusted curator adds noise to the aggregate) is far more accurate.
-- **Ignoring that DP protects participation, not the value of an attribute**: If everyone in a group has the same sensitive attribute, learning that the group statistic is high may still reveal the attribute for a member even if participation is hidden.
+- **Reading the evaluation points as the secret data.** In Shamir's scheme the $x_i$ are public identifiers; the secrets are the values $p(x_i)$. Publishing an index is harmless, publishing a value is not.
+- **Believing $k-1$ shares give "partial" information.** In a perfect scheme they give exactly zero: by *Shamir's scheme realises $\Gamma_{k,n}$ perfectly* the posterior on $s$ equals the prior, however much computing power you have.
+- **Working over $\mathbb{Z}_m$ for composite $m$.** Interpolation divides by $x_i - x_j$, which need not be invertible outside a field. $\mathbb{Z}_6$ is not a field, and the scheme built over it is not a threshold scheme.
+- **Sharing a long secret in a small field.** Shamir shares one field element. A long secret must be split into blocks shared with *independent* polynomials, or a larger field used; reusing one polynomial across blocks correlates them.
+- **Trusting the dealer.** A corrupt dealer can distribute inconsistent points so that different qualified sets reconstruct different values. That is what verifiable secret sharing exists to prevent, and Feldman's check is the cheapest fix.
+- **Equating computational and information-theoretic sharing.** Computational schemes achieve shares shorter than the secret, which *Share size lower bound* forbids in the perfect setting; they do so by assuming an adversary that cannot break an encryption.
+- **Assuming MPC needs a trusted party.** The trusted party is a *definitional device*: the ideal world exists to say what security means. The protocol's entire purpose is to emulate it with no such party present.
+- **Believing the output leaks nothing.** MPC protects inputs only beyond what $y$ implies. If $y$ is the sum, the sum becomes public — and $n-1$ colluding parties recover the last input by subtraction.
+- **Expecting information-theoretic security with a dishonest majority.** It is impossible already for the AND of two bits. Dishonest-majority MPC is necessarily computational and necessarily allows abort.
+- **Confusing Yao with BGW.** Yao is two-party, constant-round, computational, and rests on OT; BGW is $n$-party, round complexity proportional to circuit *depth*, information-theoretic, and rests on an honest majority.
+- **Forgetting the degree blow-up.** Multiplying shares locally is correct but doubles the degree and destroys uniformity. Without the re-sharing step the second multiplication of a circuit is unreconstructable.
+- **Underestimating the cost of malicious security.** Semi-honest protocols are typically linear in circuit size; malicious security adds zero-knowledge proofs, cut-and-choose, or authenticated triples — practical today, but never free.
