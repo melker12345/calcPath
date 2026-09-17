@@ -4,385 +4,1012 @@ title: Algorithmic Information Theory
 
 # Algorithmic Information Theory
 
-Kolmogorov complexity: the information in a single object, its relationship to entropy, and the results its uncomputability forces.
+Shannon's theory measures the information in a *source*: you must hand it a probability distribution before it will say anything. But the objects we actually hold — a file, a genome, the first million digits of $\pi$ — arrive one at a time, with no ensemble attached. Algorithmic information theory answers the question Shannon's theory cannot even ask: how much information is in *this* object?
 
-## Kolmogorov Complexity (recap / intro)
+The answer, due independently to Solomonoff (1964), Kolmogorov (1965) and Chaitin (1969), is disarmingly simple. The information in $x$ is the length of the shortest program that prints $x$. Everything in this chapter — the invariance theorem, the coincidence of the average of $K$ with Shannon's $H$, the uncomputability of $K$, Chaitin's incompleteness theorem, Martin-Löf randomness, $\Omega$, and Solomonoff's induction theorem — unfolds from that one definition.
+
+## Describing an Individual Object
 
 <!-- section: kolmogorov-intro -->
 
-:::definition[Kolmogorov complexity]{#kolmogorov-complexity}
-$K(x)$ is the minimal $|p|$ such that a fixed prefix-free universal Turing machine $U$ on input $p$ outputs $x$:
+A *description* of a string is anything from which the string can be mechanically recovered. To make that precise we fix the decoding machinery first and then ask how short a description can be.
+
+:::definition[Description method and its complexity]{#description-method}
+A **description method** is a partial computable function $\varphi : \{0,1\}^* \to \{0,1\}^*$. A string $p$ is a $\varphi$-description of $x$ when $\varphi(p) = x$. The **complexity of $x$ with respect to $\varphi$** is
+
+$$C_\varphi(x) = \min \{\, |p| : \varphi(p) = x \,\},$$
+
+with $C_\varphi(x) = \infty$ when $\varphi$ never outputs $x$.
+:::
+
+Read $\varphi$ as "the programming language": $p$ is source code, $\varphi(p)$ is what it prints. Nothing so far is canonical — a language with a one-byte instruction for "print the Bible" makes the Bible trivially simple. The content of the subject begins with the observation that this freedom is bounded.
+
+:::theorem[Invariance theorem]{#invariance-theorem}
+There is a description method $U$ — any *universal* one — such that for every description method $\varphi$ there is a constant $c_\varphi$, depending on $\varphi$ but not on $x$, with
+
+$$C_U(x) \le C_\varphi(x) + c_\varphi \quad \text{for every } x.$$
+
+Consequently, if $U$ and $V$ are both universal then $|C_U(x) - C_V(x)| \le c_{U,V}$ for all $x$.
+:::
+
+:::proof
+Enumerate the description methods as $\varphi_1, \varphi_2, \ldots$ — the standard effective enumeration of partial computable functions. Encode the index $i$ self-delimitingly as $\bar{\imath} = 1^{i}0$, and define
+
+$$U(\bar{\imath}\,p) = \varphi_i(p).$$
+
+$U$ is partial computable: it reads $1$s until the first $0$, recovers $i$, and simulates $\varphi_i$ on the remainder. The prefix $1^i0$ is uniquely readable, so $U$ is well defined.
+
+Now take any $\varphi = \varphi_i$ and any $x$ with $C_\varphi(x) = |p| < \infty$. Then $U(\bar{\imath}\,p) = x$, so $C_U(x) \le |\bar{\imath}\,p| = |p| + i + 1 = C_\varphi(x) + (i+1)$. Set $c_\varphi = i + 1$, which depends only on the index of $\varphi$.
+
+For the second claim, apply the first with $\varphi = V$ to get $C_U(x) \le C_V(x) + c_V$, and again with the roles exchanged to get $C_V(x) \le C_U(x) + c_U$. Take $c_{U,V} = \max(c_U, c_V)$.
+:::
+
+:::notation
+Fix one universal $U$ once and for all and write $C(x)$ for $C_U(x)$, the **plain Kolmogorov complexity** of $x$. Every statement in this chapter has the form "$\cdots + O(1)$" or "$\cdots + O(\log n)$", and the invariance theorem is exactly what makes such statements independent of that fixed choice.
+:::
+
+:::pitfall
+The constant is uniform in $x$, not small. For any fixed string $y$ — say a gigabyte of video — there is a universal machine on which $C(y) = 1$. So "$C(y) = 12$" is a statement about a machine, not about $y$. Only asymptotic statements about infinite families of strings, or comparisons where the same constant appears on both sides, carry machine-independent content.
+:::
+
+Two easy upper bounds fix the scale.
+
+:::proposition[The literal bound]{#literal-bound}
+There is a constant $c$ with $C(x) \le |x| + c$ for every $x$.
+:::
+
+:::proof
+Let $\varphi(p) = p$, the identity, which is computable. Then $C_\varphi(x) = |x|$, and the invariance theorem gives $C(x) \le |x| + c_\varphi$. The constant is the cost of saying "what follows is literal".
+:::
+
+So no string is harder to describe than to write out; the interesting strings are the ones that are much easier.
+
+### Why plain complexity is not the last word
+
+Plain complexity has a defect that shows up as soon as descriptions are combined. If $p$ describes $x$ and $q$ describes $y$, the concatenation $pq$ does not describe the pair $(x,y)$, because $U$ cannot tell where $p$ stops. Paying to mark the split is what produces the stray logarithms in the theory of $C$, and — as we will see in *Martin-Löf Randomness for Infinite Sequences* — it also breaks $C$ irreparably as a randomness test for infinite sequences.
+
+The repair is to require the descriptions themselves to be self-delimiting.
+
+:::definition[Prefix-free machine and prefix complexity]{#prefix-complexity}
+A set $S \subseteq \{0,1\}^*$ is **prefix-free** if no element of $S$ is a proper prefix of another. A machine $M$ is a **prefix machine** when its domain is prefix-free. Fixing a universal prefix machine $U$, the **prefix complexity** of $x$ is
 
 $$K(x) = \min \{\, |p| : U(p) = x \,\}.$$
 :::
 
-The definition looks as though it depends on the arbitrary choice of $U$, and it does — but only barely. Because of the invariance theorem, $K(x)$ defined with respect to any two universal machines differs by at most a constant, the size of a translator program.
+The invariance theorem holds verbatim for prefix machines — the proof above goes through once one notes that the index $\bar{\imath} = 1^i0$ is prefix-free and that the simulated domains are prefix-free — so $K$ too is well defined up to $O(1)$.
 
-$K(x)$ is uncomputable, by reduction to the halting problem. We can only approximate it from above by running all short programs in dovetail fashion and taking the shortest one that has output $x$ so far.
+The reason to pay for self-delimitation is that it buys a probability measure, through the following classical inequality.
 
-:::intuition
-K(x) is the ultimate compressed size of x: the smallest description that lets a computer reconstruct x exactly.
+:::theorem[Kraft inequality]{#kraft-inequality}
+If $S \subseteq \{0,1\}^*$ is prefix-free, then
 
-A random-looking string of length n usually has K(x) ≈ n; a string like 000...0 or the digits of π has much smaller K because there is a short program that generates it.
-:::
+$$\sum_{p \in S} 2^{-|p|} \le 1.$$
 
-:::example
-Compare two length-$1\,000\,000$ strings and estimate $K$ for each.
-:::
-
-:::solution
-**All zeros**, $x = 0^{1\,000\,000}$. A program that reproduces $x$ is essentially `print '0' repeated N times`, where $N = 1\,000\,000$. The fixed loop and print instruction cost $O(1)$ bits; the only part that grows is the number $N$, which needs $\lceil \log_2 N \rceil = \lceil \log_2 10^6 \rceil = 20$ bits to write down. So $K(x) \le 20 + O(1)$ — a few dozen bits, and the count barely grows even if we go to a billion zeros ($\log_2 10^9 \approx 30$ bits).
-**A typical random string** $r$ of the same length. There is no pattern to exploit, so the best a program can do is carry the bits verbatim: `print` followed by the literal $1\,000\,000$-bit string. That costs $1\,000\,000$ bits for the data plus $O(1)$ for the print instruction, giving $K(r) \approx 1\,000\,000 + O(1)$.
-**Sanity check.** The two answers differ by a factor of roughly $50\,000$ even though the strings have the *same length*. That is exactly the point of $K$: it measures pattern content, not length. Shannon entropy, which only sees the length and the symbol distribution, would not distinguish "structured" from "random" for a single fixed string the way $K$ does.
-:::
-
-## Algorithmic Probability and Solomonoff Induction
-
-<!-- section: solomonoff -->
-
-Intuition first: imagine feeding a universal machine $U$ a program produced by flipping a fair coin for each bit. A program of length $|p|$ arises with probability $2^{-|p|}$. The algorithmic probability of $x$ is then just the chance that this random program happens to output $x$ — short programs, being more likely to come up, dominate the sum. This is why the definition below weights each program by $2^{-|p|}$.
-
-:::definition[Algorithmic probability (Solomonoff prior)]{#solomonoff-prior}
-The algorithmic probability of a string $x$ is
-
-$$m(x) = \sum_{p\,:\,U(p)=x} 2^{-|p|},$$
-
-the total probability mass of all programs that output $x$.
-:::
-
-:::theorem[m is a universal semimeasure]{#universal-semimeasure}
-$m$ dominates every computable probability distribution, up to a constant factor.
-:::
-
-That domination is the whole point: whatever computable law actually generates your data, $m$ already assigns it a non-negligible share of the prior.
-
-Solomonoff induction uses $m$ to predict the next symbol: the predictive probability is m(x0)/m(x) for continuation 0, etc. It is the optimal predictor in the sense that its total expected squared error is bounded for any computable environment.
-
-:::intuition
-Instead of assuming a particular probability model, consider every possible program that could have generated the data you have seen, weighted by 2^{-length of program}. Simpler (shorter) programs that fit the data get higher prior weight.
-
-Future predictions are the weighted average over all consistent programs. This automatically embodies Occam's razor in a formal, prior-free way.
-:::
-
-:::example
-Predict the next coin toss after seeing $n$ heads in a row, using a tiny two-program toy model of the universal mixture. This is a caricature (the real mixture ranges over *all* programs), but it shows the mechanics.
-:::
-
-:::solution
-Suppose only two programs are in play. Program $A$ = "always output H" has some length $\ell_A$, so prior weight $w_A = 2^{-\ell_A}$. Program $B$ = "each toss is an independent fair coin" has length $\ell_B$, so prior weight $w_B = 2^{-\ell_B}$. Say $\ell_A = 4$ and $\ell_B = 6$, so $w_A = 2^{-4} = 1/16$ and $w_B = 2^{-6} = 1/64$.
-**Likelihoods of the data** $x = \mathrm{H}^n$. Program $A$ produces $n$ heads with certainty: $P(x \mid A) = 1$. Program $B$ produces any specific length-$n$ string with probability $2^{-n}$: $P(x \mid B) = 2^{-n}$.
-**Posterior weights** $\propto$ prior $\times$ likelihood. Unnormalized, $A$ has $w_A \cdot 1 = 1/16$ and $B$ has $w_B \cdot 2^{-n} = 2^{-n}/64$. As $n$ grows, $B$'s share shrinks like $2^{-n}$, so the posterior concentrates on $A$.
-**Predict the next toss.** $P(\text{next}=\mathrm{H}) = P(A\mid x)\cdot 1 + P(B\mid x)\cdot \tfrac12$. For $n=3$: unnormalized $A = 1/16 = 0.0625$, $B = 2^{-3}/64 = 1/512 \approx 0.00195$; normalizing, $P(A\mid x) = 0.0625/(0.0625+0.00195) \approx 0.970$. So $P(\text{next}=\mathrm{H}) \approx 0.970\cdot 1 + 0.030\cdot 0.5 \approx 0.985$.
-**Sanity check.** The prediction sits strictly between $1/2$ (what $B$ alone says) and $1$ (what $A$ alone says), and it climbs toward $1$ as $n$ increases — Occam's razor emerging automatically, since the shorter, better-fitting program $A$ dominates. Crucially, if a tail ever appears, $P(x \mid A) = 0$ and $A$ is eliminated outright, so the mixture never becomes overconfident in a falsifiable hypothesis.
-:::
-
-## Incompressibility, Martin-Löf Randomness, and Chaitin's Omega
-
-<!-- section: incompressibility-chaitin -->
-
-:::definition[c-incompressible string]{#c-incompressible}
-A finite string $x$ is $c$-incompressible if
-
-$$K(x) \ge |x| - c;$$
-
-such strings are the finite analogue of "random".
-:::
-
-For an *infinite* sequence, Martin-Löf randomness is the correct notion: it requires $K(x_1\dots x_n) \ge n - c$ for all $n$, using prefix complexity $K$; the equivalence with passing all effective statistical tests is Schnorr's theorem.
-
-Most strings are incompressible: the number of strings of length $n$ with $K(x) < n - c$ is less than $2^{n-c}$, so the compressible ones are exponentially rare.
-
-:::definition[Chaitin's Omega]{#chaitin-omega}
-$$\Omega = \sum_{p \text{ halts}} 2^{-|p|}$$
-
-is the halting probability of the universal prefix-free machine — the probability that a randomly generated program halts, hence a real number in $(0,1)$.
-:::
-
-It is a random real: its binary digits are algorithmically random, it is uncomputable, and its bits encode the answers to all halting problems.
-
-AIT implies that certifying incompressibility has a hard ceiling.
-
-:::theorem[Chaitin's incompleteness theorem]{#chaitin-incompleteness}
-For any consistent formal system able to reason about programs there is a constant $c$, roughly the system's own description length, such that the system cannot prove the true statement $K(x) > c$ for any concrete $x$ — even though such $x$ are abundant.
-:::
-
-:::intuition
-A random string has no pattern that a program shorter than itself can exploit; any description is basically as long as the string.
-
-Ω is a single real number that 'knows' whether every possible program halts. You can *approach* it from below — running programs and adding $2^{-|p|}$ each time one halts gives ever-better under-estimates — but you can never pin down its exact digits, because that would tell you which programs never halt. Knowing the first $n$ bits of Ω would let you settle halting for all programs up to length $n$.
-:::
-
-:::example
-Show that almost every string is incompressible, then plug in numbers.
-:::
-
-:::solution
-**Count the descriptions.** Programs shorter than $n-c$ have lengths $0, 1, \ldots, n-c-1$, so there are at most $2^0 + 2^1 + \cdots + 2^{n-c-1} = 2^{n-c}-1$ of them. Each program outputs at most one string, so fewer than $2^{n-c}$ strings can have $K(x) < n-c$.
-**Count the strings.** There are exactly $2^n$ binary strings of length $n$. The compressible ones number fewer than $2^{n-c}$, so the incompressible ones ($K(x) \ge n-c$) number more than $2^n - 2^{n-c}$.
-**Turn it into a fraction.** The incompressible fraction exceeds $\dfrac{2^n - 2^{n-c}}{2^n} = 1 - 2^{-c}$.
-**Sanity check with $c = 10$, $n = 1000$.** The incompressible fraction is at least $1 - 2^{-10} = 1 - 1/1024 \approx 0.99902$, i.e. over $99.9\%$ of all 1000-bit strings cannot be compressed even by 10 bits. Note the bound $1 - 2^{-c}$ does not depend on $n$ at all: no matter how long the strings, only a $2^{-c}$ sliver can be shortened by $c$ bits.
-:::
-
-## Definition
-
-<!-- section: definition -->
-
-Fix a universal programming language, or equivalently a universal Turing machine $U$. The Kolmogorov complexity of a string $s$ is
-
-$$K(s) = \min \{\, |p| : U(p) = s \,\},$$
-
-where the minimum is over all programs $p$ that cause $U$ to output $s$ and halt. If no such program exists — impossible for a universal $U$ — we set $K(s)=\infty$, but every finite $s$ has finite $K(s)$.
-
-:::theorem[Invariance theorem]{#invariance-theorem}
-The value $K(s)$ depends on the choice of $U$ only up to an additive constant independent of $s$.
-:::
-
-This is what makes $K$ a property of the string rather than of the programmer's taste in languages: two universal machines can disagree, but only by a fixed amount, so every asymptotic statement about $K$ survives the change.
-
-:::intuition
-K(s) is the size of the smallest "recipe" that a computer can follow to reproduce s exactly.
-
-For the string consisting of the text of Hamlet, K(Hamlet) is much smaller than the number of bits needed to write the text literally, because a short program can contain the rules of English plus "print the play Hamlet".
-:::
-
-:::example
-Estimate $K(s)$ for $s = $ the first $10\,000$ decimal digits of $\pi$, and see why it stays small.
-:::
-
-:::solution
-**Write a generating program.** A spigot algorithm (or a Machin-like arctangent series) computes the digits of $\pi$ from scratch. Encode: the fixed digit-extraction routine (a constant number of bits, call it $c_\pi$) plus the target count $N = 10\,000$.
-**Cost of the count.** Writing $N$ takes about $\log_2 10\,000 \approx 13.3$, i.e. $14$ bits.
-**Total.** $K(s) \le c_\pi + 14 + O(1)$ — a few hundred bytes at most, dominated by the fixed routine, *not* by the $10\,000$ digits themselves.
-**Sanity check by comparison.** Writing the digits literally would take about $10\,000 \times \log_2 10 \approx 33\,219$ bits. The program is smaller by a factor of hundreds, and — crucially — asking for the first *million* digits changes only the count from $14$ to $\approx 20$ bits, while the literal cost balloons to $\approx 3.3$ million bits. So $K(\pi\text{-digits})$ grows like $\log N$, confirming $\pi$ is highly compressible despite its digits passing every simple statistical test for randomness.
-:::
-
-## Relation to Shannon Entropy
-
-<!-- section: relation-to-entropy -->
-
-:::theorem[Algorithmic complexity matches self-information]{#k-vs-entropy}
-If a string $s$ is generated by a computable probability distribution $P$, then with high probability under $P$,
-
-$$K(s) = -\log_2 P(s) + O(1),$$
-
-where the $O(1)$ depends on $P$ — the size of a program that knows $P$ — but not on the particular realization $s$. Moreover the expected complexity recovers the Shannon entropy,
-
-$$\mathbb{E}[K(X)] \approx H(X),$$
-
-again up to an additive constant.
-:::
-
-:::intuition
-For data coming from a known probabilistic source, the algorithmic complexity of a typical realization is essentially the same as its self-information under that source.
-
-On average, "how hard is it to describe a random draw" equals the entropy of the draw.
-:::
-
-:::example
-For a long sequence of $n$ i.i.d. fair coin flips, each specific outcome $s$ has $P(s) = 2^{-n}$, so $-\log_2 P(s) = n$ for every $s$.
-:::
-
-:::solution
-1. With overwhelmingly high probability $K(s) = n + O(\log n)$: you need roughly $n$ bits to describe the literal string plus a few bits to say "this is a raw bit string of length $n$". This matches $-\log_2 P(s) = n$, as the theorem $K(s) = -\log_2 P(s) + O(1)$ predicts.
-2. The exception proves the rule. A string that happens to be $010101\ldots$ repeated has $K(s) \approx \log_2 n + O(1)$ (program: "print 01 repeated $n/2$ times") — far below $n$. This does *not* contradict step 2, because the theorem only holds "with high probability": the periodic string is one of the exponentially rare atypical outcomes. Its own self-information is still $-\log_2 P(s) = n$; the periodic string simply happens to be much more compressible than its probability suggests, which is exactly why such strings have vanishing probability.
-3. **Sanity check.** Averaging over all $s$, $E[K(X)] \approx \sum_s 2^{-n}\cdot(\text{its }K) \approx n = H(X)$ for the uniform distribution on $n$ bits, recovering the entropy. The rare low-$K$ strings pull the average down only negligibly because they are so few.
-:::
-
-## Incompressible Strings and Algorithmic Randomness
-
-<!-- section: incompressibility -->
-
-:::proposition[Counting bound on compressible strings]{#counting-compressible}
-There are at most $2^k - 1$ strings with $K(s) < k$. Consequently the vast majority of strings of length $n$ satisfy
-
-$$K(s) \ge n - O(1);$$
-
-they are incompressible.
+In particular $\sum_x 2^{-K(x)} \le 1$, since the shortest programs for distinct strings are distinct elements of the prefix-free domain of $U$.
 :::
 
 :::proof
-There are $2^0 + 2^1 + \dots + 2^{k-1} = 2^k - 1$ programs of length less than $k$, and each program outputs at most one string.
+Map each $p \in S$ to the half-open interval $I_p = [0.p,\; 0.p + 2^{-|p|}) \subseteq [0,1)$, where $0.p$ is the binary fraction with digits $p$. The interval $I_p$ consists of exactly those reals whose binary expansion begins with $p$, so its length is $2^{-|p|}$.
+
+If neither of $p, q$ is a prefix of the other, they first differ at some position $j \le \min(|p|,|q|)$, and no real can begin with both; hence $I_p \cap I_q = \varnothing$. Prefix-freeness therefore makes $\{I_p\}_{p \in S}$ a family of pairwise disjoint subintervals of $[0,1)$, and the sum of their lengths is at most the length of $[0,1)$, which is $1$.
 :::
 
-:::definition[Algorithmically random string]{#algorithmically-random}
-Incompressible strings are called algorithmically random, in the sense of Martin-Löf or Chaitin. They pass every effective statistical test for randomness.
+Kraft's inequality says that $2^{-K(\cdot)}$ is a sub-probability distribution over strings — the seed of the whole probabilistic side of the theory, taken up in *Algorithmic Probability and the Coding Theorem*.
+
+The price of self-delimitation is a logarithm in the literal bound.
+
+:::proposition[Literal bound for prefix complexity]{#prefix-literal-bound}
+$K(x) \le |x| + 2\log_2 |x| + O(1)$, and more generally $K(x) \le C(x) + 2\log_2 C(x) + O(1)$. In the other direction $C(x) \le K(x) + O(1)$.
+:::
+
+:::proof
+For a number $n$ written in binary as $b_1 \cdots b_k$ with $k = \lfloor \log_2 n\rfloor + 1$, the string $\bar n = b_1 b_1 b_2 b_2 \cdots b_k b_k\, 01$ is a self-delimiting encoding of $n$ of length $2k + 2 = 2\log_2 n + O(1)$: a decoder reads digit pairs until it meets the unequal pair $01$. Feed the prefix machine $\overline{|x|}\,x$; it recovers $|x|$, then reads exactly that many further bits, so its domain is prefix-free, and the invariance theorem for prefix machines gives the first bound. Replacing $x$ by a shortest plain program for $x$, of length $C(x)$, gives the second.
+
+For the last inequality, a universal prefix machine *is* a description method, so $C(x) \le C_U(x) + O(1) = K(x) + O(1)$ by the plain invariance theorem.
+:::
+
+:::figure[The two literal bounds. Prefix complexity pays $2\log_2 n$ extra bits to make its programs self-delimiting, so the shaded gap between $n$ and $n + 2\log_2 n$ is the entire price of self-delimitation — negligible beside $n$ itself, which is why the results of this chapter are insensitive to the choice between $C$ and $K$.]{#plain-vs-prefix}
+{
+  "type": "plot",
+  "x": [2, 64], "y": [0, 90],
+  "xTicks": 10, "yTicks": 10, "xLabel": "n", "yLabel": "bits",
+  "marks": [
+    { "kind": "function", "fn": "x", "tone": "accent" },
+    { "kind": "function", "fn": "x + 2*ln(x)/0.6931471805599453", "tone": "result", "dashed": true },
+    { "kind": "text", "at": [50, 22], "text": "n", "leaderTo": [46, 46] },
+    { "kind": "text", "at": [16, 78], "text": "n + 2 log n", "leaderTo": [40, 52] }
+  ]
+}
 :::
 
 :::intuition
-There are only a few short programs, so only a few strings can be produced by short programs.
-
-Most long strings have no hidden pattern or rule that would let you write a much shorter program to generate them; they are "random" in the deepest sense.
+$C(x)$ is the size of the smallest zip file of $x$ — counting the unzipper as free, since it is the same for everybody. A megabyte of zeros zips to almost nothing; a megabyte from a radioactive-decay source does not zip at all. Kolmogorov complexity is the idealisation of that experiment in which the compressor is allowed to be *any* program whatsoever, not just the tricks someone happened to ship.
 :::
 
-:::example
-Of the $2^{1000}$ binary strings of length 1000, fewer than $2^{990}$ have $K(s) < 990$.
+:::example[Two strings of the same length]
+Let $z = 0^{10^6}$ and let $r$ be a string of $10^6$ bits produced by fair coin flips. Bound $C(z)$ and estimate $C(r)$.
 :::
 
 :::solution
-1. Hence more than $99.9\%$ of all 1000-bit strings are incompressible by 10 or more bits.
-2. Any particular string you pick at random will almost surely be one of them.
+For $z$: the program "print $0$ exactly $N$ times", with $N = 10^6$ hard-coded, consists of a fixed loop plus the binary numeral for $N$. The numeral costs $\lceil \log_2 10^6 \rceil = 20$ bits, so $C(z) \le 20 + O(1)$. Going to $10^9$ zeros raises this only to $30 + O(1)$: $C(0^n)$ grows like $\log_2 n$.
+
+For $r$: the literal bound gives $C(r) \le 10^6 + O(1)$. In the other direction, *Most strings are incompressible* shows that fewer than $2^{10^6-20}$ strings of this length have complexity below $10^6 - 20$, so a coin-flipped $r$ lands in that set with probability under $2^{-20} < 10^{-6}$. With overwhelming probability $C(r) = 10^6 \pm O(1)$.
+
+The two lengths are equal and the two complexities differ by a factor of about $50\,000$. That is the point of $C$: it measures structure, not size.
 :::
 
-## Uncomputability and Incompleteness
+:::example[A string that looks random and is not]
+Let $s$ be the first $10^4$ binary digits of $\pi$. Bound $C(s)$.
+:::
+
+:::solution
+A spigot algorithm computes the digits of $\pi$ from scratch; let $c_\pi$ be the length of a program implementing it. The program "run the spigot, print the first $N$ binary digits", with $N = 10^4$ hard-coded, gives
+
+$$C(s) \le c_\pi + \lceil \log_2 10^4 \rceil + O(1) = c_\pi + 14 + O(1).$$
+
+Writing the digits literally costs $10^4$ bits. Asking instead for the first million digits changes the bound by six bits, from $14$ to $20$, while the literal cost rises to $10^6$. So $C(\pi_{1:N}) = O(\log N)$: the digits of $\pi$ pass every statistical test anyone has run on them and are nonetheless among the least complex strings of their length.
+:::
+
+:::remark
+That example is the standard warning against reading "algorithmically random" as "looks random". It also explains why $C$ is not a repackaging of statistical randomness testing: $C$ sees the generating program, while a statistical test sees only the sample.
+:::
+
+## Algorithmic Probability and the Coding Theorem
+
+<!-- section: solomonoff -->
+
+Kraft's inequality showed that $2^{-K(x)}$ behaves like a probability. This section turns that observation into a definition, proves the resulting distribution is universal among computable ones, and then proves the theorem that closes the circle: the universal distribution and the shortest program are, to within a constant, the same object.
+
+Imagine feeding the universal prefix machine $U$ a stream of fair coin flips. Because $U$'s domain is prefix-free, $U$ knows when to stop reading; the probability that it reads exactly the bits of a given program $p$ and halts is $2^{-|p|}$. The chance that this experiment prints $x$ is the sum over all programs that print $x$.
+
+:::definition[Algorithmic probability]{#algorithmic-probability}
+The **algorithmic probability**, or **universal a priori probability**, of a string $x$ is
+
+$$m(x) = \sum_{p \,:\, U(p) = x} 2^{-|p|},$$
+
+the sum being over the prefix-free domain of $U$. By Kraft, $\sum_x m(x) \le 1$.
+:::
+
+:::notation
+A function $\mu : \{0,1\}^* \to [0,1]$ with $\sum_x \mu(x) \le 1$ is a **discrete semimeasure**; the inequality is strict for $m$ because $U$ may fail to halt. A semimeasure is **lower semicomputable** when some algorithm, given $x$, emits a non-decreasing sequence of rationals converging to $\mu(x)$ — it may never certify the value, but it never over-claims. $m$ is lower semicomputable: dovetail all programs and add $2^{-|p|}$ each time one of them halts with output $x$.
+:::
+
+:::theorem[Universality of the algorithmic prior]{#universal-semimeasure}
+For every lower semicomputable semimeasure $\mu$ there is a constant $c_\mu > 0$, independent of $x$, with
+
+$$m(x) \ge c_\mu \cdot \mu(x) \quad \text{for all } x,$$
+
+and one may take $c_\mu = 2^{-K(\mu) - O(1)}$, where $K(\mu)$ is the prefix complexity of a program that lower-semicomputes $\mu$. In particular $m$ dominates every computable probability distribution.
+:::
+
+:::proof
+Let $M_\mu$ be a program of length $K(\mu)$ that enumerates rationals increasing to $\mu(x)$ for each $x$. Build a prefix machine $N$ which, having read $M_\mu$, runs the following coding scheme.
+
+Using the enumeration, construct a prefix-free code in which $x$ receives a codeword of length $\lceil \log_2 (1/\mu(x)) \rceil + 1$. Such a code exists and can be built effectively from below: this is the Shannon–Fano–Elias construction, which allocates to $x$ a dyadic subinterval of $[0,1)$ of length $2^{-\lceil \log_2(1/\mu(x))\rceil - 1}$ inside the interval of mass $\mu(x)$ that the enumeration is filling in. Disjointness of the allocated intervals follows from $\sum_x \mu(x) \le 1$, and prefix-freeness from disjointness as in *Kraft inequality*. Let $N$, on a codeword $w$, output the $x$ that $w$ encodes.
+
+Then $C_N(x) \le \log_2(1/\mu(x)) + 2$, and simulating $N$ on $U$ costs the description of $N$, which is $M_\mu$ plus a constant. Hence
+
+$$K(x) \le \log_2 \frac{1}{\mu(x)} + K(\mu) + O(1),$$
+
+and since $m(x) \ge 2^{-K(x)}$ — the shortest program is one term of the sum — we get $m(x) \ge 2^{-K(\mu) - O(1)}\,\mu(x)$.
+:::
+
+The inequality is why $m$ deserves the name *a priori*. Whatever computable law $\mu$ actually governs the data, $m$ has already given $\mu$ a fixed positive share of its mass; no amount of data can drive that share to zero, so a learner who starts from $m$ can never be dogmatically wrong about a computable world. The price is paid entirely in the constant $2^{-K(\mu)}$: complicated hypotheses start further behind, but never at zero. That is Occam's razor, derived rather than assumed.
+
+The proof extracted $K(x) \le \log_2(1/m(x)) + O(1)$ along the way. Levin's coding theorem says the converse holds too, and this is much less obvious: it says that the sum over *all* programs for $x$ is dominated, up to a constant factor, by its single largest term.
+
+:::theorem[Coding theorem]{#coding-theorem}
+$$K(x) = \log_2 \frac{1}{m(x)} + O(1).$$
+:::
+
+:::proof
+One direction is immediate: $m(x) \ge 2^{-K(x)}$, because the shortest program contributes $2^{-K(x)}$ to the sum, so $\log_2(1/m(x)) \le K(x)$.
+
+The other direction is the substantial one, and what follows is a sketch naming what it rests on. Apply *Universality of the algorithmic prior* with $\mu = m$ itself — legitimate because $m$ is a lower semicomputable semimeasure, which is why that theorem was stated for semimeasures rather than only for computable distributions. The construction inside its proof builds, from the enumeration of $m$ from below, a prefix-free code assigning $x$ a codeword of length $\lceil \log_2 (1/m(x))\rceil + 1$; running that decoder on $U$ costs a further constant, so
+
+$$K(x) \le \log_2 \frac{1}{m(x)} + O(1).$$
+
+The delicate point, which we do not carry out here, is that the code must be built on-line as the approximations to $m(x)$ increase, reallocating intervals as they grow. Li and Vitányi give that bookkeeping in full.
+:::
+
+:::intuition
+The coding theorem says that if a string has many different short descriptions, then it also has one very short one. The mass $m(x)$ could in principle be spread thinly over billions of mediocre programs; the theorem says it cannot be. Algorithmic probability and description length are two views of one quantity: $m(x) \approx 2^{-K(x)}$.
+:::
+
+:::example[Weighing two hypotheses]
+Two programs are in play. $A$ = "always print H" has length $\ell_A = 4$; $B$ = "print independent fair coin flips" has length $\ell_B = 6$. Using $2^{-\ell}$ as the prior, compute the posterior after observing $x = \mathrm{H}^n$ and the predicted probability that the next symbol is H, for $n = 3$ and $n = 10$.
+:::
+
+:::solution
+Priors: $w_A = 2^{-4} = 1/16$ and $w_B = 2^{-6} = 1/64$. Likelihoods: $P(x \mid A) = 1$ and $P(x \mid B) = 2^{-n}$.
+
+Unnormalised posteriors: $A$ gets $1/16$, $B$ gets $2^{-n}/64$. For $n = 3$ these are $0.0625$ and $1/512 \approx 0.00195$, so $P(A \mid x) \approx 0.970$ and
+
+$$P(\text{next} = \mathrm{H}) \approx 0.970 \cdot 1 + 0.030 \cdot \tfrac12 \approx 0.985.$$
+
+For $n = 10$: $B$ gets $2^{-10}/64 = 1/65\,536 \approx 1.53 \times 10^{-5}$ against $A$'s $0.0625$, so $P(A\mid x) \approx 0.99976$ and $P(\text{next} = \mathrm{H}) \approx 0.99988$.
+
+The prediction always lies strictly between $\tfrac12$ and $1$ and climbs toward $1$ at rate $2^{-n}$. Note what does the work: not the prior ratio $w_A/w_B = 4$, a fixed handicap, but the likelihood ratio $2^{n}$, which grows without bound. The prior only decides how much data is needed to overcome it — exactly the role $2^{-K(\mu)}$ plays in *Universality of the algorithmic prior*.
+:::
+
+:::pitfall
+$m$ is a semimeasure, not a measure: $\sum_x m(x) < 1$ strictly, because the missing mass belongs to programs that never halt. Normalising $m$ to sum to $1$ destroys lower semicomputability, since you would have to know the deficiency — which is $1 - \Omega$, and $\Omega$ is uncomputable. Working with semimeasures is not fastidiousness; it is forced.
+:::
+
+## Chaitin's $\Omega$ and the Limits of Proof
+
+<!-- section: incompressibility-chaitin -->
+
+The mass that goes missing from Kraft's inequality because programs fail to halt is itself a number, and it turns out to be one of the more remarkable constants in mathematics.
+
+:::definition[Chaitin's constant]{#chaitin-omega}
+For the fixed universal prefix machine $U$,
+
+$$\Omega = \sum_{p \,:\, U(p) \text{ halts}} 2^{-|p|},$$
+
+the sum over all $p$ on which $U$ halts. Equivalently, $\Omega$ is the probability that $U$ halts when fed fair coin flips.
+:::
+
+:::proposition[Omega is a real in the unit interval, approximable from below]{#omega-basic}
+$0 < \Omega < 1$, and there is an algorithm producing a non-decreasing computable sequence of rationals $\Omega_1 \le \Omega_2 \le \cdots$ with $\Omega_t \to \Omega$.
+:::
+
+:::proof
+The domain of $U$ is prefix-free, so Kraft gives $\Omega \le 1$, and $\Omega > 0$ because $U$ halts on at least one program. For strictness, some program runs forever — for instance one searching for a proof of a false statement — and its interval, of positive length, is then disjoint from every counted interval, so $\Omega \le 1 - 2^{-|p|} < 1$.
+
+For the approximation, let
+
+$$\Omega_t = \sum \{\, 2^{-|p|} : |p| \le t \text{ and } U(p) \text{ halts within } t \text{ steps} \,\}.$$
+
+Each $\Omega_t$ is a finite sum of dyadic rationals, computable by simulation; the sequence is non-decreasing because the qualifying set grows with $t$; and it converges to $\Omega$ because every halting $p$ enters at some finite stage.
+:::
+
+The approximation converges but gives no *rate*: at no stage do you know how much mass the still-running programs will eventually contribute. That is precisely the obstruction, and the next theorem turns it into a quantitative statement.
+
+:::theorem[The first n bits of Omega decide the halting problem]{#omega-halting}
+From the first $n$ bits of the binary expansion of $\Omega$ one can compute, for every program $p$ with $|p| \le n$, whether $U(p)$ halts.
+:::
+
+:::proof
+Write $\Omega_{1:n}$ for the number given by the first $n$ binary digits, so that $\Omega_{1:n} \le \Omega < \Omega_{1:n} + 2^{-n}$. Run the approximation of *Omega is a real in the unit interval, approximable from below* until $\Omega_t \ge \Omega_{1:n}$; this happens at some finite stage $t_0$, since $\Omega_t \to \Omega \ge \Omega_{1:n}$.
+
+Claim: every program of length at most $n$ that halts at all has already halted by stage $t_0$. Suppose some $p$ with $|p| \le n$ halts later. Then the total halting mass is at least the already-counted $\Omega_t \ge \Omega_{1:n}$ plus the not-yet-counted $2^{-|p|} \ge 2^{-n}$, giving $\Omega \ge \Omega_{1:n} + 2^{-n}$ and contradicting the displayed bound.
+
+So simulating every program of length $\le n$ for $t_0$ steps decides halting for all of them.
+:::
+
+:::corollary[Omega is uncomputable and incompressible]{#omega-random}
+$\Omega$ is not a computable real, and there is a constant $c$ with $K(\Omega_{1:n}) \ge n - c$ for every $n$.
+:::
+
+:::proof
+If $\Omega$ were computable, *The first n bits of Omega decide the halting problem* would make the halting problem decidable, contradicting Turing's theorem.
+
+For the second claim, from $\Omega_{1:n}$ we can compute the set of halting programs of length $\le n$, hence the finite set $S_n$ of their outputs; let $y_n$ be the first string not in $S_n$. Every string of complexity $\le n$ is in $S_n$, so $K(y_n) > n$. This exhibits a program that, given $\Omega_{1:n}$, prints a string of complexity exceeding $n$, so $n < K(y_n) \le K(\Omega_{1:n}) + O(1)$, where the constant is the length of that fixed program. Hence $K(\Omega_{1:n}) \ge n - c$.
+:::
+
+By the Levin–Schnorr theorem, proved in *Martin-Löf Randomness for Infinite Sequences*, that last inequality says exactly that the binary expansion of $\Omega$ is a Martin-Löf random sequence. So $\Omega$ is simultaneously random and meaningful: it encodes the halting problem, and it is lower semicomputable, which no "typical" real is.
+
+:::figure[Approximating $\Omega$ from below. Each halting program adds its $2^{-|p|}$ to the running total, so the staircase is non-decreasing and converges to $\Omega$ — but from the staircase alone you can never tell whether the next step is one stage away or a thousand, which is exactly the content of the halting problem.]{#omega-staircase}
+{
+  "type": "plot",
+  "x": [0, 12], "y": [0, 0.8],
+  "xTicks": 6, "yTicks": 8, "xLabel": "stage t", "yLabel": "mass counted",
+  "marks": [
+    { "kind": "path", "points": [[0,0],[1,0],[1,0.25],[2,0.25],[2,0.375],[4,0.375],[4,0.4375],[5,0.4375],[5,0.46875],[9,0.46875],[9,0.484375],[12,0.484375]], "tone": "accent" },
+    { "kind": "line", "through": [[0,0.5],[12,0.5]], "tone": "result", "dashed": true, "extend": false },
+    { "kind": "text", "at": [7.0, 0.66], "text": "the true value", "leaderTo": [9.5, 0.51] },
+    { "kind": "text", "at": [3.2, 0.17], "text": "lower bounds", "leaderTo": [2.4, 0.36] }
+  ]
+}
+:::
+
+$\Omega$ now supplies the sharpest available statement of the limits of formal reasoning. The classical Gödel sentence is a single artificial statement; Chaitin's theorem says instead that an entire infinite family of perfectly concrete true statements lies beyond any fixed system, and it names the family.
+
+:::theorem[Chaitin's incompleteness theorem]{#chaitin-incompleteness}
+Let $F$ be a consistent, effectively axiomatised formal system strong enough to express statements of the form "$K(x) > k$" and sound for them. Then there is a constant $c_F$, of the order of the length of a program enumerating $F$'s theorems, such that $F$ proves no statement "$K(x) > c_F$", for any string $x$ — even though all but finitely many strings satisfy $K(x) > c_F$.
+:::
+
+:::proof
+Consider the program $P_k$ which, with the number $k$ built in, enumerates all proofs of $F$ in order and halts, printing $x$, as soon as it finds a proof of a statement "$K(x) > k$" for some string $x$.
+
+Encode $k$ self-delimitingly, so that $|P_k| \le 2\log_2 k + d$, where the constant $d$ covers the proof enumerator for $F$ and the fixed control logic. If $P_k$ halts with output $x$, then $x$ has a description of length $|P_k|$, so
+
+$$K(x) \le 2\log_2 k + d.$$
+
+But $F$ proved "$K(x) > k$", and $F$ is sound for such statements, so $K(x) > k$. Combining,
+
+$$k < K(x) \le 2\log_2 k + d.$$
+
+Since $k$ eventually outgrows $2\log_2 k + d$, this is false for all large $k$. Fix $c_F$ to be any such $k$. For that $c_F$ the program $P_{c_F}$ can never halt, which says exactly that $F$ proves no statement "$K(x) > c_F$".
+
+For the final clause, *Most strings are incompressible* gives that at most $2^{c_F}-1$ strings have $K(x) \le c_F$.
+:::
+
+:::intuition
+A formal system cannot certify randomness far beyond its own description length. If it could, it would be pulling complexity out of thin air: the axioms plus a few bits of search would produce an object provably more complex than the axioms themselves. Chaitin's theorem is the information-theoretic form of "you cannot get more out than you put in".
+:::
+
+:::example[Where the constant sits for a real system]
+Roughly how large is $c_F$ for a system like ZFC, and what does the theorem forbid in practice?
+:::
+
+:::solution
+The constant is essentially the length of a program that enumerates the theorems of ZFC — the axiom schemas, a proof checker, and the search loop. Written compactly that is on the order of a few thousand bits, and the exact figure is machine-dependent by the invariance theorem.
+
+What is forbidden: ZFC cannot prove, of any *specific* string $x$, that $K(x) > 10^6$, even though almost every million-bit string satisfies it, and even though ZFC readily proves the *counting* statement "all but a $2^{-20}$ fraction of million-bit strings have $K > 10^6 - 20$". The existence claim is provable; no instance of it is. This is the cleanest known example of a theory proving $\exists x\,\Phi(x)$ while proving $\Phi(t)$ for no term $t$.
+:::
+
+:::pitfall
+"$\Omega$ is random" does not mean its digits are arbitrary or patternless in the informal sense. They are highly meaningful — they encode the halting problem — and $\Omega$ is lower semicomputable, so it is far from a typical real in any computational sense. Algorithmic randomness means "no program much shorter than $n$ outputs the first $n$ bits", nothing more and nothing less.
+:::
+## Conditional and Joint Complexity
+
+<!-- section: definition -->
+
+Everything so far measured the cost of describing $x$ from nothing. Shannon's theory becomes interesting only once it can condition — $H(X \mid Y)$, $I(X;Y)$ — and the algorithmic theory is the same. This section builds the relative version of $K$ and establishes the bounds that the chain rule of *Properties of Kolmogorov Complexity* will sharpen into equalities.
+
+:::notation
+Fix a computable pairing bijection $\langle \cdot,\cdot\rangle : \{0,1\}^* \times \{0,1\}^* \to \{0,1\}^*$, for instance $\langle x,y\rangle = \bar{x}y$ with $\bar{x}$ the self-delimiting encoding of *Literal bound for prefix complexity*. Natural numbers are identified with binary strings through the standard order $\varepsilon, 0, 1, 00, 01, \ldots$, so $K(n)$ is meaningful for a number $n$.
+:::
+
+:::definition[Conditional and joint complexity]{#conditional-complexity}
+The **conditional prefix complexity of $x$ given $y$** is
+
+$$K(x \mid y) = \min \{\, |p| : U(\langle y, p\rangle) = x \,\},$$
+
+the length of the shortest program that prints $x$ when $y$ is supplied free of charge on a separate input tape. The **joint complexity** of $x$ and $y$ is $K(x,y) = K(\langle x,y\rangle)$.
+:::
+
+The convention that $y$ is free is what makes $K(\cdot \mid y)$ a complexity in its own right: for each fixed $y$ the map $p \mapsto U(\langle y,p\rangle)$ is a prefix machine, so an invariance theorem holds for it, with a constant that does not depend on $y$.
+
+:::proposition[Elementary bounds]{#conditional-bounds}
+For all strings $x, y$, up to an additive constant independent of $x$ and $y$:
+
+$$K(x \mid y) \le K(x) + O(1), \qquad K(x) \le K(x,y) + O(1),$$
+$$K(x,y) \le K(x) + K(y \mid x) + O(1), \qquad K(x,y) \le K(x) + K(y) + O(1).$$
+:::
+
+:::proof
+For the first: ignore $y$ and run a shortest unconditional program for $x$; the constant is the cost of the instruction "discard the side information".
+
+For the second: from $\langle x,y\rangle$ the pairing is computably invertible, so a shortest program for the pair followed by "take the first component" prints $x$.
+
+For the third — this is where prefix-freeness earns its keep. Let $p$ be a shortest program for $x$ and $q$ a shortest program for $y$ given $x$. Feed the machine $pq$. Because the domain of $U$ is prefix-free, $U$ reading $pq$ consumes exactly $p$, halts with $x$, and control can then be handed to a second phase which reads exactly $q$ from the remaining bits and, with $x$ in hand, prints $y$. The composite machine has prefix-free domain and prints $\langle x,y\rangle$ from $|p| + |q|$ bits. With plain complexity this argument fails: $C$ cannot tell where $p$ ends, and one must pay an extra $O(\log)$ to mark the boundary.
+
+The fourth follows from the third with *Elementary bounds*' first inequality, $K(y\mid x) \le K(y) + O(1)$.
+:::
+
+:::intuition
+Subadditivity is the statement that describing two things together is never much worse than describing them separately, and is often much better: the shared structure is paid for once. The chain-rule inequality $K(x,y) \le K(x) + K(y\mid x)$ says the natural way to describe a pair is to describe the first, then describe the second *in the context of the first* — precisely the algorithmic mirror of $H(X,Y) = H(X) + H(Y\mid X)$.
+:::
+
+There is a subtlety here with no counterpart in Shannon's theory, and it is the commonest source of confusion in the subject: conditioning on the *length* of a string is not free.
+
+:::proposition[Complexity given the length]{#complexity-given-length}
+For every $x$ of length $n$,
+
+$$K(x) \le K(x \mid n) + K(n) + O(1),$$
+
+and the maximum of $K(x)$ over strings of length $n$ is $n + K(n) + O(1)$, while the maximum of $K(x \mid n)$ over the same strings is $n + O(1)$.
+:::
+
+:::proof
+The inequality is *Elementary bounds* applied to the pair $(n,x)$: describe $n$, then describe $x$ given $n$.
+
+For the second claim, the upper bound $K(x) \le n + K(n) + O(1)$ comes from that inequality together with $K(x\mid n) \le n + O(1)$: given $n$, the program "read the next $n$ bits and print them" needs no self-delimiting length field. The matching lower bound — that some $x$ of length $n$ attains it — follows by counting, as in *Most strings are incompressible*: there are $2^n$ strings and fewer than $2^{n + K(n)}$ programs of length below $n + K(n)$, but the counting must be carried out over the prefix-free domain, where the available programs of each length are limited by Kraft; Li and Vitányi carry out that refinement. We use only the upper bound below.
+:::
+
+So for a typical $n$-bit string $x$,
+
+$$K(x) = n + K(n) + O(1) = n + \log_2 n + 2\log_2\log_2 n + O(1),$$
+
+the extra term being the cost of announcing where the string ends. This is why statements about incompressibility come in two flavours, $K(x) \ge n - c$ and $K(x \mid n) \ge n - c$, and why the second is the technically convenient one.
+
+:::example[Conditional complexity in three easy cases]
+Evaluate, to within an additive constant: (a) $K(x \mid x)$; (b) $K(x,x)$; (c) $K(x \mid x^*)$, where $x^*$ is a shortest program for $x$.
+:::
+
+:::solution
+(a) $K(x \mid x) = O(1)$: the program "print the side information" has fixed length, independent of $x$.
+
+(b) $K(x,x) = K(x) + O(1)$. Upper bound: describe $x$ once and then apply the fixed computable map $z \mapsto \langle z,z\rangle$. Lower bound: $K(x) \le K(x,x) + O(1)$ by *Elementary bounds*. The chain rule then charges $K(x \mid x^*) = O(1)$ for the second copy, exactly as $H(X,X) = H(X)$ charges nothing.
+
+(c) $K(x \mid x^*) = O(1)$: run the program you were handed. Note that $K(x \mid x^*)$ can be genuinely smaller than $K(x \mid x)$ is large — the point is the converse direction, that $K(x^* \mid x)$ need *not* be $O(1)$, since finding a shortest program for a string you already possess is an uncomputable search.
+:::
+
+:::pitfall
+Conditioning on $x$ and conditioning on $x^*$ are different, and the difference is not a constant: $K(x^*\mid x)$ can be as large as $K(K(x)) \approx \log\log$ of the length. The chain rule of *Properties of Kolmogorov Complexity* is exact only in the $x^*$ form; in the $x$ form it carries an $O(\log)$ error term. Papers that state it with $x$ and claim $O(1)$ are wrong.
+:::
+
+:::example[A pair with shared structure]
+Let $x$ be an incompressible string of length $n$, and let $y = \bar{x}$ be its bitwise complement. Compute $K(x,y)$ and $K(y \mid x)$ to within $O(1)$.
+:::
+
+:::solution
+Complementation is a fixed computable involution, so $K(y \mid x) = O(1)$: "flip every bit of the side information". By the chain-rule inequality, $K(x,y) \le K(x) + O(1)$, and by *Elementary bounds*, $K(x) \le K(x,y) + O(1)$, so $K(x,y) = K(x) + O(1) = n + K(n) + O(1)$.
+
+Contrast the naive count: $x$ and $y$ are each incompressible, each about $n$ bits, and yet the pair costs $n$ rather than $2n$. Incompressibility of the parts says nothing about incompressibility of the pair, because "random" is not the same as "independent". Two independent incompressible strings, as computed in *Properties of Kolmogorov Complexity*, do cost $2n$.
+:::
+
+## The Average of K is the Entropy
+
+<!-- section: relation-to-entropy -->
+
+Kolmogorov complexity was built without any probability in sight, and Shannon entropy cannot even be evaluated without a distribution. The two are nevertheless the same quantity in the only sense in which they could be: average $K$ over a computable source and you recover $H$, up to a constant that pays for describing the source.
+
+Throughout this section $P$ is a computable probability distribution on $\{0,1\}^*$ with finite entropy $H(P) = -\sum_x P(x)\log_2 P(x)$, and $K(P)$ denotes the prefix complexity of a program computing $P$.
+
+:::theorem[Expected complexity equals entropy]{#k-vs-entropy}
+For every computable probability distribution $P$,
+
+$$H(P) \;\le\; \sum_x P(x)\,K(x) \;\le\; H(P) + K(P) + O(1),$$
+
+with an $O(1)$ that depends on neither $P$ nor $x$. In particular $\mathbb{E}[K(X)] = H(X) + O(1)$ for any fixed source, and the constant is negligible against $H$ for a long sequence.
+:::
+
+:::proof
+**Upper bound.** *Universality of the algorithmic prior*, applied to $\mu = P$, gave $K(x) \le \log_2(1/P(x)) + K(P) + O(1)$ for every $x$. Multiply by $P(x)$ and sum:
+
+$$\sum_x P(x) K(x) \le \sum_x P(x)\log_2\frac{1}{P(x)} + K(P) + O(1) = H(P) + K(P) + O(1).$$
+
+**Lower bound.** The shortest programs for distinct strings are distinct elements of the prefix-free domain of $U$, so by *Kraft inequality* the numbers $q(x) = 2^{-K(x)}$ satisfy $S = \sum_x q(x) \le 1$. Let $Q(x) = q(x)/S$, a genuine probability distribution. Since $K(x) = \log_2(1/q(x))$,
+
+$$\sum_x P(x)K(x) - H(P) = \sum_x P(x)\log_2\frac{P(x)}{q(x)} = \sum_x P(x)\log_2\frac{P(x)}{Q(x)} - \log_2 S = D(P\,\|\,Q) - \log_2 S.$$
+
+Both terms are non-negative: $D(P\,\|\,Q) \ge 0$ by Gibbs' inequality, and $-\log_2 S \ge 0$ because $S \le 1$. This is Shannon's noiseless coding lower bound, applied to the code whose length function is $K$.
+:::
+
+The two bounds say that $K$ is an optimal code length for *every* computable source at once, paying only the fixed overhead $K(P)$ of naming the source — no code designed for a single $P$ can do better on that $P$, and $K$ matches all of them simultaneously. That is the algorithmic form of universal compression.
+
+The averaged statement conceals a sharper pointwise one: not merely the mean of $K$ but $K$ itself tracks the self-information $-\log_2 P(x)$, on all but an exponentially small set.
+
+:::theorem[K equals self-information with high probability]{#pointwise-k-vs-logp}
+For every computable $P$ and every $k \ge 0$,
+
+$$P\Big\{\, x : K(x) < \log_2\tfrac{1}{P(x)} - k \,\Big\} \le 2^{-k},$$
+
+while $K(x) \le \log_2 \frac{1}{P(x)} + K(P) + O(1)$ holds for *every* $x$. Hence with probability at least $1 - 2^{-k}$,
+
+$$\log_2 \frac{1}{P(x)} - k \;\le\; K(x) \;\le\; \log_2 \frac{1}{P(x)} + K(P) + O(1).$$
+:::
+
+:::proof
+Let $A$ be the set in the display. For $x \in A$ the condition $K(x) < \log_2(1/P(x)) - k$ rearranges to $P(x) < 2^{-K(x)-k}$. Summing over $A$ and using *Kraft inequality*,
+
+$$P(A) = \sum_{x \in A} P(x) \;<\; 2^{-k}\sum_{x\in A} 2^{-K(x)} \;\le\; 2^{-k}.$$
+
+The upper bound is the inequality already proved in *Universality of the algorithmic prior*. Intersecting the two events gives the final display.
+:::
+
+:::intuition
+A source emits its typical strings with probability about $2^{-H}$ each, and there are about $2^{H}$ of them. Indexing that list costs $H$ bits, and no shorter description exists for most of the list because there is no room — $2^{H}$ objects need $H$-bit names. $K$ discovers this indexing on its own, without being told $P$; the only thing it has to be told, at cost $K(P)$, is which list to use.
+:::
+
+:::example[A biased source]
+A source emits $1000$ independent bits, each a $1$ with probability $0.2$. Estimate $\mathbb{E}[K(X^{1000})]$, and bound the probability that a particular emitted string has $K$ at least $20$ bits below its self-information.
+:::
+
+:::solution
+The binary entropy at $p=0.2$ is
+
+$$h(0.2) = -0.2\log_2 0.2 - 0.8\log_2 0.8 = 0.2(2.3219) + 0.8(0.3219) = 0.7219 \text{ bits.}$$
+
+For $n$ independent bits, $H(X^n) = n\,h(p) = 721.9$ bits, so *Expected complexity equals entropy* gives $\mathbb{E}[K(X^{1000})] = 722 + O(1)$ bits — a compression to $72\%$ of the literal $1000$ bits, and the $O(1)$ here is the few dozen bits needed to write down "independent bits with $p = 1/5$".
+
+For the tail, *K equals self-information with high probability* with $k = 20$ gives probability at most $2^{-20} \approx 9.5\times 10^{-7}$. Note what this does *not* say: it does not say the string is close to $722$ bits, only close to its own $-\log_2 P(x)$, which varies from string to string. Averaging that variation is what produces $H$.
+:::
+
+:::pitfall
+$K(x) \approx -\log_2 P(x)$ is a statement about $P$-random draws, not about strings you chose. Choose $x = 0^{1000}$ from the source above: its self-information is $-\log_2(0.8^{1000}) = 321.9$ bits, but $K(x) = O(\log n)$, roughly $20$ bits. No contradiction — $0^{1000}$ sits in the exceptional set, which has probability $0.8^{1000} \approx 10^{-97}$.
+:::
+
+:::remark
+The analogy is close but not perfect, and the imperfections are instructive. $H$ is always non-negative and $K$ is always positive; $H(X \mid Y) \le H(X)$ always, but $K(x\mid y) \le K(x) + O(1)$ only up to the constant — there are $x,y$ with $K(x \mid y) > K(x)$, since a misleading $y$ can be worse than no $y$ at all as long as the excess stays inside the constant. And $H$ is a function of the distribution while $K$ is a function of the outcome: no amount of averaging can recover the individual-object information that $K$ carries.
+:::
+
+## Most Strings Are Incompressible
+
+<!-- section: incompressibility -->
+
+That some strings are incompressible follows from an argument so short it can be stated in one line: there are more strings than short programs. What makes the observation powerful is that it can be run backwards, and that is the *incompressibility method* — a counting technique that proves theorems having nothing to do with computability.
+
+:::theorem[Most strings are incompressible]{#counting-compressible}
+For every $k$, the number of strings $x$ with $C(x) < k$ is at most $2^k - 1$. Consequently, for every $n$ and every $c \ge 0$, the number of strings of length $n$ with $C(x) < n - c$ is fewer than $2^{n-c}$, so the fraction of $n$-bit strings with
+
+$$C(x) \ge n - c$$
+
+exceeds $1 - 2^{-c}$, a bound that does not depend on $n$.
+:::
+
+:::proof
+A string with $C(x) < k$ has a program of length $0, 1, \ldots, k-1$, and there are $2^0 + 2^1 + \cdots + 2^{k-1} = 2^k - 1$ such strings of bits in total. Each program, being deterministic, outputs at most one string, so at most $2^k-1$ distinct strings receive one.
+
+Apply this with $k = n-c$: fewer than $2^{n-c}$ strings of any length, hence in particular of length $n$, have $C(x) < n-c$. There are exactly $2^n$ strings of length $n$, so the compressible fraction is below $2^{n-c}/2^n = 2^{-c}$.
+:::
+
+:::definition[Incompressible string]{#c-incompressible}
+A string $x$ is **$c$-incompressible** if $C(x) \ge |x| - c$, and **incompressible** if $c$ is taken to be $0$, so that $C(x) \ge |x|$. The same definitions are used with $K(\cdot)$ or $K(\cdot \mid n)$ in place of $C$; the three notions differ by $O(\log n)$ in the constant, which is immaterial for the applications below.
+:::
+
+:::corollary[Incompressible strings of every length exist]{#incompressible-exist}
+For every $n$ there is a string of length $n$ with $C(x) \ge n$.
+:::
+
+:::proof
+Take $c = 0$ in *Most strings are incompressible*: fewer than $2^n$ strings of length $n$ have $C(x) < n$, and there are $2^n$ of them, so at least one is left over.
+:::
+
+:::intuition
+Short descriptions are a scarce resource: there are only about $2^{n-c}$ of them below length $n-c$, and $2^n$ strings competing for them. The pigeonhole principle does the rest. Everything difficult in this chapter comes from the fact that we cannot *point to* the incompressible strings, only count them.
+:::
+
+:::recipe[The incompressibility method]{#incompressibility-method}
+To prove that some property $\Phi$ holds of almost all objects of size $n$:
+
+1. Fix a string $x$ of length $n$ with $C(x) \ge n - c$; such $x$ exist in abundance by *Most strings are incompressible*.
+2. Assume $\Phi$ fails for the object encoded by $x$.
+3. Use the failure of $\Phi$ as a *regularity*: build a description of $x$ that exploits it.
+4. If that description is shorter than $n - c$, the assumption contradicts incompressibility, so $\Phi$ holds.
+
+The method replaces an averaging argument over a probability space by a single, arbitrary, typical object — which is why proofs by incompressibility are usually shorter than the probabilistic proofs they replace.
+:::
+
+:::example[Chaitin's proof that there are infinitely many primes]
+Use incompressibility to show the set of primes is infinite.
+:::
+
+:::solution
+Suppose there were only finitely many primes, $p_1 < \cdots < p_k$. Every positive integer $n$ then factors as $n = p_1^{e_1}\cdots p_k^{e_k}$, and each exponent satisfies $e_i \le \log_2 n$, so $e_i$ fits in $\log_2\log_2 n + O(1)$ bits.
+
+This gives a description of $n$: the list of $k$ exponents, each self-delimited, for a total of
+
+$$C(n) \le k \cdot (2\log_2\log_2 n + O(1)) = O(\log\log n).$$
+
+But by *Most strings are incompressible* there are integers $n$ of every bit-length $\ell$ with $C(n) \ge \ell - 1 \approx \log_2 n$. For large $n$, $\log_2 n$ exceeds $O(\log\log n)$, a contradiction. Hence no finite list of primes suffices.
+
+The whole of the number theory used is the fundamental theorem of arithmetic; the counting is done by the complexity bound.
+:::
+
+:::theorem[Incompressible strings are statistically balanced]{#incompressible-balanced}
+Let $x$ have length $n$ and exactly $k$ ones, and suppose $C(x) \ge n - c$. Then
+
+$$\left|\frac{k}{n} - \frac12\right| \;\le\; \sqrt{\frac{(\ln 2)\,(c + 2\log_2 n + O(1))}{2n}},$$
+
+so the number of ones is $n/2 + O\big(\sqrt{n(c + \log n)}\big)$.
+:::
+
+:::proof
+Describe $x$ by giving $n$, then $k$, then the index of $x$ in the lexicographic list of the $\binom{n}{k}$ strings of length $n$ with $k$ ones. Encoding $n$ and $k$ self-delimitingly costs $2\log_2 n + O(1)$ bits each; the index costs $\lceil\log_2\binom{n}{k}\rceil$ bits. A fixed program reconstructs $x$ from these, so
+
+$$C(x) \le \log_2\binom{n}{k} + 2\log_2 n + O(1),$$
+
+absorbing the two length fields into the single $2\log_2 n + O(1)$ term with a larger constant. The standard entropy bound $\binom{n}{k} \le 2^{n h(k/n)}$, with $h$ the binary entropy, gives $C(x) \le n\,h(k/n) + 2\log_2 n + O(1)$.
+
+Combine with the hypothesis $C(x) \ge n-c$:
+
+$$n - c \le n\,h(k/n) + 2\log_2 n + O(1) \implies 1 - h(k/n) \le \frac{c + 2\log_2 n + O(1)}{n}.$$
+
+Finally, writing $k/n = \tfrac12 + \delta$, the inequality $h(\tfrac12+\delta) \le 1 - \frac{2\delta^2}{\ln 2}$ turns this into $\frac{2\delta^2}{\ln 2} \le \frac{c + 2\log_2 n + O(1)}{n}$, which is the claim.
+:::
+
+:::example[How balanced, concretely]
+Take $n = 10^6$ and $c = 100$. How far from $500\,000$ ones can a $c$-incompressible string be?
+:::
+
+:::solution
+Here $2\log_2 10^6 = 39.9$, so the numerator is $c + 2\log_2 n + O(1) \approx 140$. Then
+
+$$\delta \le \sqrt{\frac{0.6931 \times 140}{2 \times 10^6}} = \sqrt{4.85\times 10^{-5}} = 6.97 \times 10^{-3},$$
+
+so the count of ones lies in $500\,000 \pm 6\,970$ — a relative deviation under $1.4\%$. Compare the probabilistic statement: a fair-coin string of this length has its count within $\pm 5\,000$ of the mean with probability about $99.99\%$. The incompressibility bound is slightly weaker and completely deterministic: it holds of *every* string with $C(x) \ge n - 100$, with no probability space anywhere in the argument.
+:::
+
+:::pitfall
+"$x$ is incompressible" is always relative to a slack $c$, and the slack must be fixed before the argument, not chosen afterwards to make it work. A statement like "the string is incompressible, therefore it has no repeated block of length $\log n$" is only true for $c$ small compared with the saving the repetition would buy; spell out that comparison every time.
+:::
+
+:::remark
+Nothing in this section says which strings are incompressible; *Most strings are incompressible* is a pure counting argument and produces no example. By Chaitin's incompleteness theorem no formal system can supply one either, beyond its own complexity. The incompressibility method finesses this: it never needs a *named* incompressible string, only the fact that one exists.
+:::
+## The Uncomputability of K
 
 <!-- section: uncomputability -->
 
-:::theorem[Uncomputability of K]{#k-uncomputable}
-$K(s)$ is uncomputable: there is no algorithm that on input $s$ always halts and outputs the exact value $K(s)$.
+The definition of $K$ quantifies over all programs, and so it is no surprise that $K$ is not computable. What is worth proving carefully is the *shape* of the failure: $K$ can be approached from one side and not the other, no computable function is an unbounded lower bound for it, and consequently the compressible strings are recognisable while the incompressible ones are not.
+
+:::theorem[K is upper semicomputable]{#k-upper-semicomputable}
+There is a total computable function $(x,t) \mapsto K^t(x)$, non-increasing in $t$, with $\lim_{t\to\infty} K^t(x) = K(x)$ for every $x$.
 :::
 
-The limitation is not merely algorithmic. By Chaitin's incompleteness theorem, in any consistent axiomatic system powerful enough to reason about programs there is a fixed constant $c$, depending on the system, such that the system cannot prove $K(s) > c$ for any concrete string $s$.
+:::proof
+Define $K^t(x) = \min\{\,|p| : |p| \le t \text{ and } U(p) = x \text{ within } t \text{ steps}\,\}$, with the convention $K^t(x) = |x| + 2\log_2|x| + c$ — the literal bound of *Literal bound for prefix complexity* — when the set is empty. Each $K^t(x)$ is computable by simulating finitely many programs for finitely many steps, and the minimum is over a set that only grows with $t$, so the sequence is non-increasing.
+
+It converges to $K(x)$ because a shortest program $p^*$ for $x$ halts after some finite number $t^*$ of steps, so $K^t(x) = K(x)$ for all $t \ge \max(t^*, |p^*|)$, and it never drops below $K(x)$ since every candidate counted is a genuine program for $x$.
+:::
+
+What the proof does not supply is a *stopping rule*: at stage $t$ you hold an upper bound and no way to know whether it is the truth or whether some program still running will beat it in a billion steps. The next theorem shows that no cleverness repairs this.
+
+:::theorem[K is not computable]{#k-uncomputable}
+There is no algorithm that halts on every input $x$ and outputs $K(x)$.
+:::
+
+:::proof
+Suppose $\mathrm{Kcomp}$ is such an algorithm. For a number $m$, let $Q_m$ be the program which, with $m$ built in, enumerates the strings $\varepsilon, 0, 1, 00, 01, \ldots$ in lexicographic order, evaluates $\mathrm{Kcomp}$ on each, and prints the first string $x_m$ with $\mathrm{Kcomp}(x_m) \ge m$.
+
+Such an $x_m$ exists: by *Most strings are incompressible* only finitely many strings have complexity below $m$, so the search terminates, and $Q_m$ therefore halts.
+
+Encoding $m$ self-delimitingly, $|Q_m| \le 2\log_2 m + d$, where $d$ covers the enumerator and $\mathrm{Kcomp}$ and does not depend on $m$. Since $Q_m$ prints $x_m$,
+
+$$K(x_m) \le 2\log_2 m + d.$$
+
+But by construction $K(x_m) = \mathrm{Kcomp}(x_m) \ge m$, so $m \le 2\log_2 m + d$. Choosing $m$ larger than $2\log_2 m + d$ — possible, since $m$ outgrows $2\log_2 m$ — contradicts this. Hence $\mathrm{Kcomp}$ does not exist.
+:::
 
 :::intuition
-You cannot write a program that looks at an arbitrary file and tells you the size of the smallest program that produces that file (it would solve the halting problem).
-
-Formal mathematics has limits: it cannot certify that a particular long string is "truly random" (has high K) beyond a certain point that depends on the axioms.
+This is the Berry paradox — "the least integer not describable in fewer than twenty syllables", a phrase of fewer than twenty syllables — turned from a joke into a theorem. The paradox is defused in ordinary language because "describable" is vague; fix a machine and it becomes precise, and what breaks instead is the assumption that complexity is computable.
 :::
 
-:::example
-Suppose your favorite theorem prover could, for every $n$, output a string $s_n$ of length $n$ together with a proof that $K(s_n) > n - 100$.
+:::theorem[No computable unbounded lower bound]{#no-lower-bound}
+If $f$ is a computable function with $f(x) \le K(x)$ for all $x$, then $f$ is bounded above.
+:::
+
+:::proof
+Suppose $f$ is unbounded. Then for each $m$ the search for a string with $f(x) \ge m$ terminates, so the program $R_m$ that enumerates strings and prints the first $x$ with $f(x) \ge m$ halts, and $|R_m| \le 2\log_2 m + d$ for a constant $d$. Its output $x$ satisfies $m \le f(x) \le K(x) \le 2\log_2 m + d$, false for large $m$.
+:::
+
+:::corollary[Incompressibility cannot be certified]{#incompressibility-not-ce}
+The set $\{x : K(x) \ge |x|\}$ contains no infinite computably enumerable subset, while its complement $\{x : K(x) < |x|\}$ is computably enumerable.
+:::
+
+:::proof
+The complement is enumerable by dovetailing: run all programs of length below $|x|$ and list each $x$ as soon as one of them prints it.
+
+For the first claim, suppose $A$ were an infinite c.e. set of incompressible strings, enumerated as $a_1, a_2, \ldots$. Define $f(x) = \max\{|a_i| : i \le \text{(index at which } x \text{ appears)}\}$ — more simply, note that the program "print the first enumerated element of $A$ of length at least $m$" has length $2\log_2 m + d$ and outputs a string of complexity at least $m$, which is the same contradiction as above.
+:::
+
+So the situation is exactly one-sided: you can always discover that a string *is* compressible, by finding a short program, and you can never establish that it is not. Every practical compressor is a partial implementation of the enumerable half.
+
+:::example[Why dovetailing does not terminate]
+You run all programs of length $\le 50$ in parallel on a target $x$ of length $40$. After a year, the shortest program that has printed $x$ has length $38$. What may you conclude about $K(x)$?
 :::
 
 :::solution
-1. Then you could use that to solve halting for programs up to size $n-100$, contradicting the undecidability of the halting problem.
-2. Hence no such prover exists.
+Only that $K(x) \le 38$. The programs still running are the problem: one of length $12$ might halt tomorrow with output $x$, and there is no computable bound on how long to wait — that bound would decide the halting problem for length-$12$ programs, which by *The first n bits of Omega decide the halting problem* is equivalent to knowing the first $12$ bits of $\Omega$.
+
+Nor can you conclude $x$ is compressible in any useful sense: $38 < 40$, but the literal bound already gives $K(x) \le 40 + 2\log_2 40 + O(1)$, so a saving of two bits is within the additive constant and carries no machine-independent content.
+:::
+
+:::pitfall
+"Uncomputable" is not "unknowable in every instance". $K(0^n)$ is known to within $O(1)$ for every $n$, and $K$ of any string you can generate by a short program is bounded above tightly. What fails is uniformity: no single algorithm works for all inputs, and lower bounds are unavailable except through counting arguments that name no string.
 :::
 
 ## Properties of Kolmogorov Complexity
 
 <!-- section: kc-properties -->
 
-:::proposition[Chain rule for Kolmogorov complexity]{#k-chain-rule}
-Up to additive constants,
+The elementary inequalities of *Conditional and Joint Complexity* become equalities, and the theory acquires the full algebra of Shannon's information measures. The result at the centre is due to Kolmogorov and Levin, and it is the deepest fact in elementary algorithmic information theory.
+
+:::theorem[Symmetry of information (Kolmogorov–Levin)]{#k-chain-rule}
+Up to an additive constant,
 
 $$K(x,y) = K(x) + K(y \mid x^*) + O(1),$$
 
-where $x^*$ is a shortest program for $x$.
+where $x^*$ denotes a fixed shortest program for $x$. Consequently
+
+$$K(x) - K(x \mid y^*) = K(y) - K(y \mid x^*) + O(1):$$
+
+the information $y$ carries about $x$ equals the information $x$ carries about $y$.
 :::
 
-This is the algorithmic analogue of $H(X,Y) = H(X) + H(Y|X)$ — the same bookkeeping, with programs in place of distributions.
+:::proof
+The inequality $\le$ was proved in *Elementary bounds*, in the stronger form with $K(y\mid x)$; since $K(y \mid x^*) \le K(y\mid x) + O(1)$ fails in general but $x$ is computable from $x^*$, the version with $x^*$ follows by running $x^*$ to obtain $x$ first.
 
-:::proposition[Subadditivity and invariance under computation]{#k-subadditive}
-$K$ is 'almost' subadditive,
+The direction $\ge$ — that the pair cannot be described more cheaply than this two-stage scheme — is the substantial half, and we sketch it, naming what it rests on. Fix $x,y$ and put $k = K(x,y)$. Consider the c.e. set $A = \{(u,v) : K(u,v) \le k\}$, which has at most $2^k$ elements by *Most strings are incompressible*. Let $m$ be the number of $v$ with $(x,v) \in A$. Knowing $k$ and $m$, one can enumerate $A$ until $m$ pairs with first component $x$ appear, and then index $y$ among them with $\log_2 m$ bits, giving $K(y \mid x^*) \le \log_2 m + O(\log k)$. Separately, the set of $u$ having at least $m$ partners in $A$ has at most $2^k/m$ members, and $x$ belongs to it, so $K(x) \le k - \log_2 m + O(\log k)$. Adding the two gives $K(x) + K(y\mid x^*) \le k + O(\log k)$. Removing the logarithmic slack to reach $O(1)$ requires carrying $k$ and $m$ implicitly rather than explicitly, which is Levin's refinement; Li and Vitányi give it in full.
 
-$$K(x,y) \le K(x) + K(y) + O(1),$$
-
-and invariant under computable transformations: for any computable $f$,
-
-$$K(f(x)) \le K(x) + c_f.$$
+The symmetry statement follows by expanding $K(x,y)$ in both orders — $K(x,y) = K(y,x) + O(1)$, since the pairing is computably reversible — and cancelling.
 :::
 
-Plain Kolmogorov complexity (not prefix-free) and prefix complexity differ by at most a logarithmic term; most theorems hold for both.
+:::definition[Algorithmic mutual information]{#algorithmic-mutual-information}
+$$I_K(x : y) = K(x) + K(y) - K(x,y).$$
+
+By symmetry of information, $I_K(x:y) = K(y) - K(y \mid x^*) + O(1)$, the number of bits that knowing $x$ saves when describing $y$.
+:::
 
 :::intuition
-The shortest description of the pair (x,y) is basically 'shortest description of x' plus 'shortest description of y given that you already have the shortest description of x'.
-
-Any computable processing of x cannot increase its complexity by more than the size of the processing program.
+Read the chain rule as an accounting identity. To buy the pair you first buy $x$; the receipt $x^*$ you are left holding is then legal tender toward $y$. $I_K(x:y)$ is the discount. The Shannon identity $H(X,Y) = H(X)+H(Y\mid X)$ is the same accounting averaged over an ensemble — and indeed, for a computable joint source, $\mathbb{E}[I_K(x:y)] = I(X;Y) + O(1)$ by *Expected complexity equals entropy* applied three times.
 :::
 
-:::example
-Apply the properties to two contrasting strings and check the chain rule.
+:::proposition[Information is not increased by computation]{#k-invariance-computation}
+For every partial computable $f$ and every $x$ in its domain,
+
+$$K(f(x)) \le K(x) + K(f) + O(1),$$
+
+where $K(f)$ is the prefix complexity of a program for $f$. In particular, for a fixed $f$ the increase is $O(1)$, and for a computable bijection $K(f(x)) = K(x) + O(1)$.
+:::
+
+:::proof
+Concatenate a self-delimiting program for $f$ with a shortest program for $x$; the composite machine runs the second, applies the first, and prints $f(x)$. Prefix-freeness makes the concatenation unambiguous, as in *Elementary bounds*. For a bijection, apply the bound to $f$ and to $f^{-1}$.
+:::
+
+This is the algorithmic data-processing inequality, and it has a sharp moral: no amount of post-processing creates information. Running a pseudorandom generator on a $128$-bit seed produces a gigabyte of output whose $K$ is at most $128 + K(\text{generator}) + O(1)$ bits, no matter how random the output looks.
+
+:::pitfall
+Subadditivity holds only up to the constant, and the constant matters when you iterate. $K(x_1\cdots x_n) \le \sum_i K(x_i) + O(n)$, not $\sum_i K(x_i) + O(1)$: each concatenation pays again. Chains of inequalities in this subject must track how many times the constant is incurred, which is why results are stated with an explicit $O(\cdot)$ in the number of pieces.
+:::
+
+:::example[Independent versus dependent pairs]
+Let $x$ and $y$ be independently drawn incompressible strings of length $n$, and separately let $y' = x$. Compute $K(x,y)$, $K(x,y')$ and the corresponding $I_K$.
 :::
 
 :::solution
-**Invariance under computable maps.** Let $s$ = the first $n$ digits of $\pi$. Because a fixed program computes $\pi$'s digits from $n$ alone, $K(s) \le K(n) + c_\pi$, where $c_\pi$ is the size of that program. With $K(n) \le \log_2 n + O(1)$ this gives $K(s) \le \log_2 n + O(1)$ — small, confirming $\pi$'s digits are highly structured.
-**Incompressible contrast.** A typical random string $r$ of length $n$ has $K(r) = n + O(1)$; no computable transformation shrinks it, because $K(f(r)) \le K(r)+c_f$ bounds growth but there is nothing to gain when $r$ is already incompressible.
-**Chain rule on independent halves.** Take $x$ and $y$ to be two *independent* random strings, each of length $n$, so $K(x) \approx n$ and $K(y) \approx n$. Since $y$ shares no structure with $x$, knowing $x^*$ gives no help: $K(y \mid x^*) \approx K(y) \approx n$. The chain rule then gives $K(x,y) = K(x) + K(y\mid x^*) + O(1) \approx 2n$.
-**Sanity check against subadditivity.** Subadditivity says $K(x,y) \le K(x)+K(y)+O(1) \approx 2n$, consistent with step 3. Now contrast the *dependent* case $y = x$: then $K(x,x) = K(x) + K(x \mid x^*) + O(1) \approx n + O(1)$, far below $2n$, because once you have $x^*$, reproducing the second copy is free. The chain rule correctly charges nothing for redundant information — the algorithmic mirror of $H(X,X)=H(X)$.
+For the independent pair: $K(x) = K(y) = n + K(n) + O(1)$. Since $y$ shares no structure with $x$, $K(y \mid x^*) = K(y) + O(1)$, and the chain rule gives
+
+$$K(x,y) = K(x) + K(y) + O(1) \approx 2n,$$
+
+so $I_K(x:y) = O(1)$. (A genuine proof that $K(y\mid x^*) = K(y) + O(1)$ for *some* such pair is again a counting argument: fewer than $2^{n-c}$ strings $y$ have $K(y\mid x^*) < n - c$, for each fixed $x$.)
+
+For $y' = x$: $K(x,x) = K(x) + O(1) \approx n$ by *Conditional complexity in three easy cases*, so
+
+$$I_K(x:x) = K(x) + K(x) - K(x,x) = K(x) + O(1) \approx n.$$
+
+A string carries about $K(x)$ bits of information about itself and $O(1)$ bits about an independent string — the algorithmic mirror of $I(X;X) = H(X)$ and $I(X;Y)=0$.
 :::
 
-## Uncomputability and Incompressibility
+:::example[The discount from a computable relationship]
+Let $x$ be incompressible of length $n$ and let $y = x$ with every bit duplicated, so $|y| = 2n$. Compute $K(y)$ and $I_K(x:y)$.
+:::
+
+:::solution
+Duplication and its inverse are fixed computable bijections between strings of length $n$ and the doubled strings of length $2n$, so *Information is not increased by computation* gives $K(y) = K(x) + O(1) \approx n + K(n)$.
+
+Then $K(x,y) = K(x) + K(y\mid x^*) + O(1) = K(x) + O(1)$, since $y$ is computed from $x$ outright. Hence
+
+$$I_K(x:y) = K(x) + K(y) - K(x,y) = K(x) + O(1) \approx n.$$
+
+Note the contrast with the literal bound: $y$ is a $2n$-bit string with $K(y) \approx n$, so it is compressible by a factor of two — and *Incompressible strings are statistically balanced* is not violated, because $y$ is not incompressible; it is a string with an obvious regularity, which is exactly what the counting bound says almost no string has.
+:::
+
+:::remark
+Complexity is not monotone along prefixes: $K(x_{1:n})$ can exceed $K(x_{1:m})$ for $n < m$. Take $x$ to be $\Omega_{1:n}$ followed by enough zeros: the longer string is easier to describe than its own prefix, because the zeros make the length cheap to state. Any intuition that "more data means more information" must be qualified accordingly.
+:::
+
+## Martin-Löf Randomness for Infinite Sequences
 
 <!-- section: uncomputability-incompressibility -->
 
-$K(x)$ is upper semi-computable — we can approximate it from above by dovetailing all programs — but it is not computable.
+For a finite string, "random" can only be a matter of degree: a fixed string of length $n$ has a fixed $K$, and the choice of slack $c$ is a convention. For an infinite sequence the notion becomes sharp, and there is a genuine theorem to prove — that two definitions arrived at from completely different directions, one measure-theoretic and one descriptive, single out exactly the same sequences.
 
-:::proof
-If $K$ were computable we could solve the halting problem: run the candidate program for $|p|$ steps; if it has not halted, its output (if any) would have $K$ at most $|p| + O(1)$, contradicting a large enough lower bound.
+Martin-Löf's definition formalises "passes every statistical test that can actually be carried out".
+
+:::definition[Martin-Löf test and randomness]{#martin-lof-test}
+A **Martin-Löf test** is a uniformly computably enumerable sequence of sets $V_1 \supseteq V_2 \supseteq \cdots$ of finite strings, whose induced open sets $[V_k] \subseteq \{0,1\}^\infty$ — the sequences having some element of $V_k$ as a prefix — satisfy $\lambda([V_k]) \le 2^{-k}$, where $\lambda$ is the uniform (fair-coin) measure.
+
+An infinite sequence $\omega$ **passes** the test if $\omega \notin \bigcap_k [V_k]$. It is **Martin-Löf random** if it passes every such test.
 :::
 
-Recall that a string $x$ is $c$-incompressible when $K(x) \ge |x| - c$. By the counting argument, for any $c$ the fraction of $n$-bit strings that are $c$-incompressible tends to $1$ as $n \to \infty$.
+Each $[V_k]$ is the set of sequences rejected at significance level $2^{-k}$; enumerability is what makes the test effective, and the nesting lets the level be pushed arbitrarily low. A sequence that fails the test is rejected at every level — it is a genuine, effectively detectable non-randomness.
 
-:::theorem[Incompressibility is Martin-Löf randomness]{#ml-randomness}
-Martin-Löf randomness — passing all effective statistical tests — is equivalent, up to constants, to being incompressible.
+:::theorem[Universal test]{#universal-test}
+There is a Martin-Löf test $\{U_k\}$ such that a sequence is Martin-Löf random if and only if it passes $\{U_k\}$. Consequently the set of non-random sequences is a $\lambda$-null set, and almost every sequence is Martin-Löf random.
+:::
+
+:::proof
+Enumerate all candidate tests $\{V^{(i)}_k\}_i$ effectively — a candidate can be forced to satisfy the measure bound by truncating its enumeration whenever the accumulated measure would exceed $2^{-k}$, which preserves enumerability and only shrinks genuine tests. Set
+
+$$U_k = \bigcup_{i\ge 1} V^{(i)}_{k+i+1}.$$
+
+This is uniformly c.e. as a union of uniformly c.e. sets, and by subadditivity $\lambda([U_k]) \le \sum_{i\ge 1} 2^{-(k+i+1)} = 2^{-(k+1)} \le 2^{-k}$, so $\{U_k\}$ is a test. If $\omega$ fails some test $\{V^{(i)}_k\}$ then $\omega \in [V^{(i)}_k]$ for all $k$, hence $\omega \in [U_k]$ for all $k$, so it fails $\{U_k\}$.
+
+For the last claim, $\bigcap_k [U_k]$ has measure at most $\inf_k 2^{-k} = 0$.
+:::
+
+Now the descriptive side. The natural guess — call $\omega$ random when its prefixes are incompressible — is *false* with plain complexity, and the failure is total: it excludes every sequence whatsoever.
+
+:::theorem[Plain complexity oscillates (Martin-Löf)]{#complexity-oscillation}
+For every infinite binary sequence $\omega$ there are infinitely many $n$ with
+
+$$C(\omega_{1:n} \mid n) \le n - \log_2 n + O(1).$$
+
+Hence no sequence satisfies "$C(\omega_{1:n}\mid n) \ge n - c$ for all $n$", and plain complexity cannot define randomness for infinite sequences.
+:::
+
+:::proof
+Fix $k$ and let $n = 2^k + \nu$, where $\nu$ is the number whose $k$-bit binary representation is $\omega_1\omega_2\cdots\omega_k$. Then the binary representation of $n$ is $1\,\omega_1\cdots\omega_k$, so from $n$ alone a machine recovers $k = \lfloor\log_2 n\rfloor$ and the first $k$ bits of $\omega$.
+
+Therefore, given $n$, the string $\omega_{1:n}$ is determined by its last $n-k$ bits, and
+
+$$C(\omega_{1:n}\mid n) \le (n - k) + O(1) = n - \lfloor\log_2 n\rfloor + O(1).$$
+
+Each $k$ produces a distinct $n \ge 2^k$, so there are infinitely many such $n$.
+:::
+
+:::figure[Why prefix complexity is the right tool. Against the diagonal $n$, plain complexity of the prefixes of any sequence dips to $n - \log_2 n$ infinitely often (the sawtooth), so no sequence is plain-incompressible at every length; prefix complexity stays above $n - c$ for a Martin-Löf random sequence, which is what makes the Levin–Schnorr characterisation possible.]{#oscillation}
+{
+  "type": "plot",
+  "x": [8, 72], "y": [0, 80],
+  "xTicks": 8, "yTicks": 8, "xLabel": "n", "yLabel": "bits",
+  "marks": [
+    { "kind": "line", "through": [[0,0],[80,80]], "tone": "muted", "dashed": true },
+    { "kind": "path", "points": [[8,7],[15,14],[16,12],[23,19],[24,19.4],[31,26],[32,27],[39,34],[40,34.7],[47,42],[48,42.4],[55,50],[56,50.2],[63,58],[64,58],[71,66]], "tone": "accent" },
+    { "kind": "path", "points": [[8,7],[16,15],[24,23],[32,31],[40,39],[48,47],[56,55],[64,63],[71,70]], "tone": "result" },
+    { "kind": "text", "at": [20, 62], "text": "n", "leaderTo": [56, 57] },
+    { "kind": "text", "at": [46, 16], "text": "plain C: sawtooth", "leaderTo": [40, 34] },
+    { "kind": "text", "at": [12, 72], "text": "prefix K", "leaderTo": [34, 33] }
+  ]
+}
+:::
+
+Prefix complexity repairs exactly this, because its extra $\log$ makes the length field free, and the repair is precise.
+
+:::theorem[Levin–Schnorr theorem]{#ml-randomness}
+An infinite sequence $\omega$ is Martin-Löf random if and only if there is a constant $c$ with
+
+$$K(\omega_{1:n}) \ge n - c \quad \text{for every } n.$$
+:::
+
+:::proof
+($\Leftarrow$, contrapositive, in full.) Suppose $\omega$ is not random, so it fails the universal test: $\omega \in [U_k]$ for every $k$. Fix $k$. Since $\lambda([U_k]) \le 2^{-k}$, we may enumerate $U_k$ and assign to its $j$-th enumerated string $u$ a codeword of length $|u| - k + O(\log k)$: the strings of $U_k$ have total measure $\sum 2^{-|u|} \le 2^{-k}$, so by Kraft a prefix-free code with those lengths exists and can be built as the enumeration proceeds. A machine that reads $k$ self-delimitingly and then such a codeword prints $u$, giving
+
+$$K(u) \le |u| - k + O(\log k) \quad \text{for every } u \in U_k.$$
+
+Because $\omega \in [U_k]$, some prefix $\omega_{1:n}$ lies in $U_k$, so $K(\omega_{1:n}) \le n - k + O(\log k)$. As $k$ is arbitrary and $k$ outgrows $O(\log k)$, the deficiency $n - K(\omega_{1:n})$ is unbounded, so no constant $c$ works.
+
+($\Rightarrow$, sketch.) Conversely, if the deficiency is unbounded, the sets $V_k = \{u : K(u) \le |u| - k\}$ are uniformly c.e. because $K$ is upper semicomputable by *K is upper semicomputable*, and $\lambda([V_k]) \le \sum_{u \in V_k} 2^{-|u|} \le 2^{-k}\sum_u 2^{-K(u)} \le 2^{-k}$ by Kraft. So $\{V_k\}$ is a Martin-Löf test, and $\omega$ fails it. The only point suppressed is the nesting requirement, met by replacing $V_k$ with $\bigcap_{j\le k}$ of the earlier levels.
+:::
+
+:::corollary[Random sequences obey the law of large numbers]{#random-lln}
+If $\omega$ is Martin-Löf random then the frequency of ones in $\omega_{1:n}$ tends to $\tfrac12$.
+:::
+
+:::proof
+The sets $V_k = \{u : |\,\#_1(u)/|u| - \tfrac12\,| > \varepsilon_k\}$, with $\varepsilon_k$ chosen by Chernoff's bound so that $\lambda([V_k]) \le 2^{-k}$, form a Martin-Löf test; the bound is computable, so the sets are uniformly c.e. A sequence whose frequencies do not converge to $\tfrac12$ lies in every $[V_k]$ and so fails the test.
 :::
 
 :::intuition
-There is no algorithm that, given any x, prints the number K(x). If there were, you could detect non-halting programs by checking whether their 'would-be' output has too low a complexity.
-
-Most strings are incompressible; only a tiny fraction have short descriptions. 'Randomness' for a single string means 'no short program describes it'.
+Randomness is the absence of any effectively detectable regularity, and the Levin–Schnorr theorem says that "effectively detectable regularity" and "short description" are the same thing. A regularity you can test for is a regularity you can compress with; a compression you can exhibit is a test the sequence fails.
 :::
 
-:::example
-Prove $K$ is uncomputable via the "Berry paradox" construction (the cleanest self-contained argument).
+:::example[Sorting three sequences]
+Classify as Martin-Löf random or not: (a) $0101010101\ldots$; (b) the binary expansion of $\pi$; (c) the binary expansion of $\Omega$; (d) a random sequence with every odd-indexed bit replaced by $0$.
 :::
 
 :::solution
-**Assume for contradiction** that $K$ is computable — there is an always-halting algorithm $\text{Kcomp}(x)$ returning $K(x)$.
-**Build a short paradoxical program** $Q$. Given a target number $m$ (hard-coded into $Q$), $Q$ enumerates strings $x = 0, 1, 00, 01, \ldots$ in order, calls $\text{Kcomp}(x)$ on each, and outputs the *first* string $x_0$ it finds with $K(x_0) \ge m$. Such an $x_0$ always exists because, by the counting argument, most strings have complexity near their length, so complexities are unbounded.
-**Measure $Q$'s length.** $Q$ consists of a fixed enumerator plus $\text{Kcomp}$ (a constant $d$ bits) together with the number $m$ (about $\log_2 m$ bits). So $|Q| \le \log_2 m + d$. Since $Q$ outputs $x_0$, we have $K(x_0) \le |Q| \le \log_2 m + d$.
-**Derive the contradiction.** By construction $K(x_0) \ge m$. Combining, $m \le K(x_0) \le \log_2 m + d$. But $m > \log_2 m + d$ for all sufficiently large $m$ (the left side grows linearly, the right only logarithmically), so choosing such an $m$ makes $m \le \log_2 m + d$ false.
-**Sanity check.** The contradiction came *only* from assuming $\text{Kcomp}$ exists and always halts. Everything else (the enumerator, hard-coding $m$) is plainly implementable. Hence no such $\text{Kcomp}$ exists: $K$ is uncomputable. Note $K$ remains upper semi-computable — dovetailing all programs gives ever-better upper bounds on $K(x)$ — it is only the exact value that is out of reach.
+(a) Not random: $K(\omega_{1:n}) = O(\log n)$, so the deficiency $n - O(\log n)$ is unbounded. It also fails the frequency test only mildly — frequencies do converge to $\tfrac12$ — which shows why Levin–Schnorr is stronger than any single statistical test.
+
+(b) Not random, for the same reason: $K(\pi_{1:n}) = O(\log n)$ by *A string that looks random and is not*. Every computable sequence fails, since computability gives $K(\omega_{1:n}) \le K(n) + O(1)$.
+
+(c) Random, by *Omega is uncomputable and incompressible* together with the Levin–Schnorr theorem.
+
+(d) Not random: the sequence lies in the effectively closed set "odd positions are $0$", which has measure zero, and the corresponding test is trivially enumerable. Descriptively, $K(\omega_{1:n}) \le n/2 + O(\log n)$.
 :::
 
-## Applications: Induction, Learning, and Incompleteness
+:::pitfall
+Martin-Löf randomness is not the only notion, and the differences are real. Computable randomness (no computable betting strategy wins) and Schnorr randomness (the tests must have computable measure) are strictly weaker; $2$-randomness, defined relative to a halting oracle, is strictly stronger, and $\Omega$ is Martin-Löf random but not $2$-random. Claiming "random" without naming the class is meaningless at this level of precision.
+:::
+
+## Induction, Learning, and the Reach of the Theory
 
 <!-- section: applications-incompleteness -->
 
-Solomonoff induction (universal prior m(x) based on K) is a formal, parameter-free embodiment of Occam's razor for sequence prediction. Its predictions converge to the truth for any computable data-generating process.
+The coding theorem said that algorithmic probability and description length are one quantity. Solomonoff's programme takes that quantity as a *prior* and derives a theory of prediction from it — arguably the only formal account of induction that requires no assumptions about the world beyond computability.
+
+Prediction needs a measure over infinite sequences rather than over finite strings, so the machine model changes slightly: a *monotone* machine writes output as it reads input, never retracting, so that longer inputs extend rather than replace earlier output.
+
+:::definition[Universal monotone semimeasure]{#universal-monotone}
+For a universal monotone machine $U$, let
+
+$$M(x) = \sum_{p \,:\, U(p) \text{ outputs a string beginning with } x} 2^{-|p|},$$
+
+the sum being over minimal such $p$. $M$ is a semimeasure on sequences: $M(\varepsilon) \le 1$ and $M(x0) + M(x1) \le M(x)$. **Solomonoff's predictor** is the conditional
+
+$$M(a \mid x) = \frac{M(xa)}{M(x)}.$$
+:::
+
+$M$ dominates every computable measure exactly as $m$ did, by the argument of *Universality of the algorithmic prior*: $M(x) \ge 2^{-K(\mu)}\mu(x)$ for every computable measure $\mu$. That single inequality is the whole engine of the following theorem.
+
+:::theorem[Solomonoff's convergence theorem]{#solomonoff-convergence}
+Let $\mu$ be a computable measure on infinite binary sequences, and let the data be generated by $\mu$. Then
+
+$$\sum_{t=1}^{\infty} \mathbb{E}_\mu\Big[\big(M(1 \mid x_{<t}) - \mu(1 \mid x_{<t})\big)^2\Big] \;\le\; \tfrac{\ln 2}{2}\,K(\mu) + O(1).$$
+
+The sum being finite forces $M(1\mid x_{<t}) - \mu(1\mid x_{<t}) \to 0$ with $\mu$-probability one: Solomonoff's predictor learns any computable environment, and the total error it ever makes is bounded by the complexity of that environment.
+:::
+
+:::proof
+Let $D_n = \mathbb{E}_\mu\big[\ln\frac{\mu(x_{1:n})}{M(x_{1:n})}\big]$, the relative entropy in nats between the true and predicted distributions on the first $n$ symbols. By domination, $M(x_{1:n}) \ge 2^{-K(\mu)}\mu(x_{1:n})$ pointwise, so $\ln\frac{\mu}{M} \le K(\mu)\ln 2$ everywhere and hence
+
+$$D_n \le K(\mu)\ln 2 \quad \text{for every } n.$$
+
+The chain rule for relative entropy expands $D_n$ as the sum over $t \le n$ of the expected one-step relative entropies $\mathbb{E}_\mu[\,d_t\,]$, where $d_t$ is the relative entropy between the true and predicted conditional distributions at step $t$. Pinsker's inequality in the binary case gives $d_t \ge 2(M(1\mid x_{<t}) - \mu(1\mid x_{<t}))^2$ in nats. Summing over $t$ and using the uniform bound on $D_n$,
+
+$$2\sum_{t=1}^{n}\mathbb{E}_\mu\big[(M - \mu)^2\big] \le D_n \le K(\mu)\ln 2,$$
+
+which is the claim after dividing by $2$ and letting $n \to \infty$. (The $O(1)$ absorbs the constant in the domination inequality.)
+:::
+
+:::remark
+The claim must be stated honestly, because it is routinely overstated.
+
+- Convergence is $\mu$-almost sure and in mean square; it says nothing about the sequences of $\mu$-measure zero, and every specific sequence you might name could be one of them.
+- There is no computable bound on *when* the error becomes small. The bound $\tfrac{\ln 2}{2}K(\mu)$ limits the total error but not its distribution over time, and $K(\mu)$ is itself uncomputable.
+- $M$ is not computable — it is only lower semicomputable — so Solomonoff induction is not an algorithm. It is an upper bound on what any prediction method could achieve, and a standard against which computable methods are measured.
+- The environment must be computable. If the world contains a source of genuine algorithmic randomness that no program simulates, the theorem simply does not apply.
+:::
+
+The practical descendants of the theory replace the uncomputable $K$ by a computable stand-in, and the substitution is honest as long as one remembers that all such stand-ins are upper bounds.
 
 :::definition[Minimum description length]{#mdl}
-In machine learning, the minimum description length (MDL) and minimum message length (MML) principles select the model minimizing
+The **minimum description length** principle selects the model $M$ minimising
 
-$$K(\text{model}) + K(\text{data} \mid \text{model}).$$
+$$L(M) + L(D \mid M),$$
+
+the number of bits to describe the model plus the number of bits to describe the data given the model, where $L$ is a fixed computable code — a practical substitute for $K$. The **minimum message length** principle is the Bayesian variant, with $L(M) = -\log_2 P(M)$ for an explicit prior.
 :::
 
-They are practical approximations to $K$, and the two terms are exactly the fit-versus-complexity trade-off, priced in the same units.
+The two terms are the fit-versus-complexity trade-off priced in the same units, which is why MDL requires no separate regularisation parameter.
 
-Chaitin's incompleteness: any consistent formal system of 'complexity' c can prove statements of the form 'K(x) > n' only for n bounded by c + O(1). Thus mathematics cannot prove that particular long strings are random.
-
-Levin's universal search (Kt complexity with time-bounded K) gives an optimal (up to constants) algorithm for inverting any computable function or solving any NP search problem, given enough time.
-
-:::intuition
-When choosing among models that fit your data, prefer the one whose description (the model itself plus the data encoded using the model) is shortest. That is formal Occam.
-
-A fixed axiom system cannot certify the randomness of strings much longer than the axioms themselves; there will always be 'random' mathematical facts that the system cannot prove.
-:::
-
-:::example
-Use MDL to choose between a simple and a complex model, with numbers.
+:::example[MDL on a curve fit]
+Model $M_1$ costs $30$ bits to describe and leaves residuals costing $100$ bits; model $M_2$ costs $200$ bits and leaves residuals costing $10$ bits. Which does MDL choose, and by what margin does the loser fail?
 :::
 
 :::solution
-**Set up the two candidates.** We have data $D$ and two models. Model $M_1$ is a low-degree fit: cheap to describe, $K(M_1) = 30$ bits, but it leaves larger residuals that cost $K(D \mid M_1) = 100$ bits to encode. Model $M_2$ is a high-degree fit: expensive to describe, $K(M_2) = 200$ bits, but it hugs the data so the residuals cost only $K(D \mid M_2) = 10$ bits.
-**Compute total description lengths.** $L_1 = K(M_1) + K(D \mid M_1) = 30 + 100 = 130$ bits. $L_2 = K(M_2) + K(D \mid M_2) = 200 + 10 = 210$ bits.
-**Pick the minimum.** $L_1 = 130 < 210 = L_2$, so MDL selects the *simpler* model $M_1$ even though $M_2$ fits the data better.
-**Sanity check — the overfitting guard.** $M_2$ reduced residual cost by $100 - 10 = 90$ bits but paid $200 - 30 = 170$ extra bits to describe its added parameters. Since it spent more than it saved, its extra complexity was not "paid for" by the data — the hallmark of overfitting. MDL's single number, total code length, captures exactly this trade-off with no separate regularization knob.
+$L_1 = 30 + 100 = 130$ bits and $L_2 = 200 + 10 = 210$ bits, so MDL selects $M_1$ by $80$ bits.
+
+Read the margin as an accounting statement: $M_2$ bought a $90$-bit reduction in residual cost for a price of $170$ extra bits of model. It spent more than it saved, which is exactly what overfitting is — the extra parameters were not paid for by the data. Had $M_2$'s residuals come in at $10$ bits for a model description of only $100$ bits, the totals would have been $130$ against $110$ and MDL would have switched, correctly, to the more complex model.
+:::
+
+:::definition[Time-bounded complexity and Levin search]{#levin-kt}
+Levin's **$Kt$ complexity** is
+
+$$Kt(x) = \min_{p} \{\, |p| + \log_2 t(p) : U(p) = x \text{ in } t(p) \text{ steps} \,\}.$$
+
+**Levin search** runs every program $p$ for $2^{|p|-i}$ steps at stage $i$, dovetailing; it finds a program producing $x$ within a factor $2^{Kt(x)}$ of optimal time.
+:::
+
+:::theorem[Optimality of Levin search (stated)]{#levin-optimality}
+For any problem whose solutions can be verified in time $v$, Levin search finds a solution in time $O(2^{|p|}\,(t_p + v))$, where $p$ is any program that solves the problem and $t_p$ is its running time. The constant $2^{|p|}$ is multiplicative and independent of the input size.
+:::
+
+:::remark
+$Kt$ is computable — it is the time-bounded quantity, and boundedness is exactly what restores computability. The price is that $Kt$ is no longer machine-independent in the tidy way $K$ is: the $\log_2 t$ term shifts by a constant *factor* under simulation, not a constant summand. It is a working compromise, not a canonical measure.
+:::
+
+:::definition[Normalised information distance]{#nid}
+The **information distance** between $x$ and $y$ is $E(x,y) = \max\{K(x\mid y), K(y\mid x)\}$, and the **normalised information distance** is
+
+$$\mathrm{NID}(x,y) = \frac{\max\{K(x\mid y),\, K(y\mid x)\}}{\max\{K(x),\, K(y)\}} \in [0,1].$$
+
+Replacing $K$ by the output length of a real compressor $Z$ gives the computable **normalised compression distance**
+
+$$\mathrm{NCD}(x,y) = \frac{Z(xy) - \min\{Z(x), Z(y)\}}{\max\{Z(x), Z(y)\}}.$$
+:::
+
+:::example[NCD on two files]
+A compressor reports $Z(x) = 4\,000$ bytes, $Z(y) = 5\,000$ bytes and $Z(xy) = 5\,600$ bytes. Compute the NCD and interpret it.
+:::
+
+:::solution
+$$\mathrm{NCD}(x,y) = \frac{5\,600 - 4\,000}{5\,000} = \frac{1\,600}{5\,000} = 0.32.$$
+
+Interpretation: compressing $y$ after $x$ costs only $1\,600$ bytes instead of the $5\,000$ it costs alone, so about $68\%$ of $y$'s compressible content is already predictable from $x$. Values near $0$ mean near-identity, values near $1$ mean no shared structure. Had the files been unrelated, $Z(xy)$ would have been near $9\,000$ and the NCD near $1$.
+
+The sanity check that matters in practice: $\mathrm{NCD}(x,x)$ should come out near $0$, and it does only if $Z$ has a window long enough to see the repeat. A compressor with a $900$-byte window would report $Z(xx) \approx 8\,000$ and an NCD near $1$ for identical files — an artefact of $Z$, not of the mathematics.
+:::
+
+:::pitfall
+NCD is not an approximation of NID in any controlled sense. $K$ is uncomputable and $Z$ is an upper bound with no bound on the error, so NCD inherits none of NID's metric guarantees; the triangle inequality can fail outright. NCD works in practice because real compressors detect the redundancies real data has, which is an empirical claim about data, not a theorem.
 :::
 
 ## Common Mistakes
 
-- **Confusing Kolmogorov complexity K(x) with Shannon entropy H(X)**: K is for an individual string; H is an average over a distribution. For a string drawn from p, K(x) ≈ -log p(x) + O(1) with high probability (the asymptotic equipartition property in AIT).
-- **Thinking K(x) is computable**: It is not; if it were we could solve the halting problem.
-- **Believing that 'random-looking' strings are always incompressible**: Some strings that pass statistical tests can still have short descriptions (e.g., the binary digits of a computable irrational that looks random).
-- **Forgetting the additive constant when comparing K across different machines or languages**: K_{U}(x) and K_{V}(x) differ by at most the size of a program that translates between U and V.
-- **Assuming that because Ω is random its digits are 'patternless' in every sense**: While algorithmically random, the digits of Ω are highly structured (they encode halting information) and are not 'typical' under any computable measure in a strong sense.
-- **Using AIT directly for practical compression**: K is uncomputable; practical compressors are approximations that work well on the kinds of redundancy humans and computers actually produce.
-
-Kolmogorov complexity (also called algorithmic complexity or description complexity) provides an absolute, individual notion of the information content or "randomness" of a particular finite object — usually a string. It is the length of the shortest computer program that outputs exactly that object and halts.
-
-Unlike Shannon entropy, which is an average over a probability distribution, Kolmogorov complexity is defined for each string by itself. It forms the foundation of algorithmic information theory.
-- **Confusing Kolmogorov complexity with gzip or any practical compressor size**: Practical compressors give upper bounds on K; K is the ultimate (uncomputable) lower bound.
-- **Thinking every string has low K because 'you can always write a program that prints it literally'**: The literal program costs roughly |s| bits plus overhead; for random s this is essentially optimal.
-- **Believing K is computable in practice for interesting strings**: While we can compute upper bounds (by finding short programs) and sometimes good lower bounds via compression or proofs, the exact value is uncomputable.
-- **Forgetting the additive constant in the invariance theorem**: Different universal machines differ by at most a constant; statements about K(s) → ∞ or K(s) < |s| - 100 are robust, but exact numbers are machine-dependent.
-- **Identifying 'random-looking' with low Kolmogorov complexity**: Visually random strings can still be generated by short programs (e.g., the digits of π or the output of a good PRNG with a short seed). True incompressibility is much stronger.
-- **Applying K directly to infinite objects without care**: For infinite sequences one studies the limsup of K(prefix_n)/n or prefix-free variants; the plain K above is for finite strings.
-
-This advanced treatment of Kolmogorov complexity (K-complexity) focuses on its mathematical properties, fundamental limitations, and deep connections to induction, learning, and the foundations of mathematics. While a basic introduction appears earlier, here we examine why K is uncomputable, what that implies for science and AI, and how it formalizes Occam's razor and randomness for individual objects.
-- **Treating K(x) as a practical compression metric for arbitrary files**: While theoretically ideal, K is uncomputable; real compressors (gzip, etc.) are computable approximations tuned to specific redundancies.
-- **Forgetting the O(1) additive constants when making asymptotic claims**: Many equalities in AIT hold only up to constants; statements like 'K(x) = H(x) for typical x' are true with high probability but the deviation can be logarithmic or worse in some regimes.
-- **Believing that a string with high K must 'look random' to every statistical test**: There exist strings that are incompressible yet fail some non-effective tests; the equivalence is with Martin-Löf tests (effective ones).
-- **Confusing prefix-free K with plain (monotone) complexity**: The technical differences matter for the chain rule and for Ω; most high-level conclusions are the same.
-- **Assuming that because a string is generated by a short program it cannot be used as a cryptographic key**: If the program is secret and the output is long, the output can still have high 'computational' entropy even if K is small.
-- **Using AIT to 'prove' that science is impossible or that induction fails**: On the contrary, Solomonoff induction succeeds for all computable realities; the uncomputability is a limit on perfect prediction, not a refutation of the method.
+- **Confusing $K(x)$ with Shannon entropy $H(X)$.** $K$ is defined for an individual object, $H$ for a distribution. They meet only on average, through *Expected complexity equals entropy*: $H(P) \le \mathbb{E}[K(X)] \le H(P) + K(P) + O(1)$.
+- **Treating the invariance constant as small.** It is uniform in $x$, but for any single string it can swallow the entire statement. Only asymptotic claims are machine-independent.
+- **Reading "looks random" as "incompressible".** The digits of $\pi$, and the output of any pseudorandom generator with a short seed, pass every practical statistical test and have complexity $O(\log n)$.
+- **Reading "incompressible" as "meaningless".** $\Omega$ is Martin-Löf random and encodes the halting problem. Algorithmic randomness is a statement about description length, not about significance.
+- **Believing $K$ can be computed, or even lower-bounded, by a compressor.** Every compressor gives an upper bound. By *No computable unbounded lower bound*, no computable function is an unbounded lower bound for $K$, so no experiment certifies incompressibility.
+- **Confusing plain $C$ with prefix $K$.** They differ by $O(\log n)$, which is invisible in most statements and decisive in two: the exact chain rule, which holds only for $K$, and randomness for infinite sequences, where *Plain complexity oscillates* rules $C$ out entirely.
+- **Forgetting that the length is not free.** $K(x) = n + K(n) + O(1)$ for typical $x$ of length $n$, not $n + O(1)$; the $K(n)$ term is the difference between $K(x)$ and $K(x \mid n)$.
+- **Stating the chain rule with $x$ instead of $x^*$.** $K(x,y) = K(x) + K(y\mid x) + O(1)$ is false; the error term is $O(\log)$, and closing it requires conditioning on a shortest program, not on the string.
+- **Overstating Solomonoff induction.** It converges $\mu$-almost surely for computable $\mu$, with no computable rate, and the predictor itself is uncomputable. It is a benchmark, not a method.
+- **Using MDL or NCD as though they were $K$.** They are computable substitutes with uncontrolled error, and their guarantees are empirical.
