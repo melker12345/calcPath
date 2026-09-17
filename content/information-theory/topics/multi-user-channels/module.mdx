@@ -6,252 +6,634 @@ title: Multiple-Access and Broadcast Channels
 
 Many senders into one receiver, and one sender to many receivers: capacity regions rather than a single number.
 
-## The Multiple-Access Channel Model
+## The Multiple-Access Channel and Its Codes
 
 <!-- section: mac-model -->
 
-:::definition[Multiple-access channel]{#mac}
-Two (or more) encoders observe independent messages $W_1, W_2$ and produce channel inputs $X_1^n, X_2^n$ according to their codebooks. The channel is a conditional law $p(y \mid x_1, x_2, \dots)$. The single decoder, upon receiving $Y^n$, must recover both messages with high probability.
+Single-user information theory answers one question: how many bits per channel use can a sender push to a receiver? The answer is a number, the capacity $C$, and the whole theory organises itself around comparing a rate $R$ with that number. The moment two independent senders share one channel, the question changes shape. There is no longer one rate to report but a *pair* $(R_1, R_2)$, and the two rates trade against each other: the channel is a shared resource, and what one user takes the other cannot have. The object that replaces the number $C$ is a subset of the plane.
+
+:::definition[Discrete memoryless multiple-access channel]{#mac}
+A **two-user discrete memoryless multiple-access channel** (MAC) consists of two input alphabets $\mathcal{X}_1, \mathcal{X}_2$, an output alphabet $\mathcal{Y}$, and a transition law $p(y \mid x_1, x_2)$. Used $n$ times without feedback it acts as
+
+$$p(y^n \mid x_1^n, x_2^n) = \prod_{i=1}^{n} p(y_i \mid x_{1i}, x_{2i}).$$
 :::
 
-The classic example is the Gaussian MAC
+The memorylessness assumption is doing real work here: it says the channel does not remember, *and* that the two users' symbols interact only within a single time slot. Everything downstream — the single-letter form of the capacity region, the converse, the fact that a pentagon rather than some wilder shape appears — traces back to this product form.
 
-$$Y = X_1 + X_2 + Z, \qquad Z \sim N(0,N),$$
+:::definition[Code, error probability, achievability]{#mac-code}
+A $\bigl(2^{nR_1}, 2^{nR_2}, n\bigr)$ **code** for the MAC consists of
 
-with power constraints $\mathbb{E}[X_i^2] \le P_i$.
+- two message sets $\mathcal{W}_1 = \{1,\dots,2^{nR_1}\}$ and $\mathcal{W}_2 = \{1,\dots,2^{nR_2}\}$;
+- two encoders $f_1 : \mathcal{W}_1 \to \mathcal{X}_1^n$ and $f_2 : \mathcal{W}_2 \to \mathcal{X}_2^n$, each acting on its own message alone;
+- one decoder $g : \mathcal{Y}^n \to \mathcal{W}_1 \times \mathcal{W}_2$.
+
+With $(W_1, W_2)$ uniform and independent, the average error probability is
+
+$$P_e^{(n)} = \Pr\bigl\{ g(Y^n) \neq (W_1, W_2) \bigr\}.$$
+
+The pair $(R_1,R_2)$ is **achievable** if there is a sequence of $\bigl(2^{nR_1}, 2^{nR_2}, n\bigr)$ codes with $P_e^{(n)} \to 0$. The **capacity region** $\mathscr{C}$ is the closure of the set of achievable pairs.
+:::
+
+Two features of this definition are worth pausing on, because they are exactly what makes the problem multi-user rather than two single-user problems stacked together.
+
+First, **the encoders are separate**. Here $f_1$ sees $W_1$ and nothing else. If the encoders could confer they would form one super-encoder with input alphabet $\mathcal{X}_1 \times \mathcal{X}_2$, the channel would be an ordinary point-to-point channel, and the total rate would be the single number $\max_{p(x_1,x_2)} I(X_1,X_2;Y)$. The separation of encoders is what forces *independent* input distributions into the answer.
+
+Second, **the decoder is joint**. It is not required — and generally not able — to recover $W_1$ without also pinning down $W_2$. A decoder that tried to read $W_1$ while ignoring $W_2$ would be solving a harder problem, and would get a smaller region.
 
 :::intuition
-Two people shouting messages at the same time to one listener over a noisy room. The listener hears the sum of voices plus background noise and must disentangle who said what.
-
-The 'channel' is the acoustics that mix the voices; the listener's job is joint decoding.
+Two people speak at once to a single listener in a noisy room. Neither speaker hears the other, so neither can adapt what they say — that is the separate encoders. The listener hears one mixed waveform and must reconstruct both sentences — that is the joint decoder. If the listener could somehow be told what the second speaker said, the first speaker's words would be much easier to pick out; that "genie" version is what the bound $R_1 \le I(X_1; Y \mid X_2)$ measures.
 :::
 
-:::example
-Consider the *binary adder MAC* with integer sum: $X_1, X_2 \in \{0,1\}$ and $Y = X_1 + X_2$ (noiseless, so $Y \in \{0,1,2\}$).
+:::example[The binary adder MAC]
+Let $\mathcal{X}_1 = \mathcal{X}_2 = \{0,1\}$ and let the channel be noiseless with real addition, $Y = X_1 + X_2 \in \{0,1,2\}$. How much can the two users send together, and what does the decoder's difficulty look like?
 :::
 
 :::solution
-**Enumerate the outputs.** The map is deterministic: $(0,0)\to 0$, $(0,1)\to 1$, $(1,0)\to 1$, $(1,1)\to 2$.
-**Step 2 — Which inputs does $Y$ reveal?** If $Y=0$ the decoder knows $(X_1,X_2)=(0,0)$; if $Y=2$ it knows $(1,1)$. Only $Y=1$ is ambiguous — it could be $(0,1)$ or $(1,0)$.
-**Step 3 — Why joint decoding matters.** Neither user's bit is individually recoverable from $Y$ alone when $Y=1$, yet the *pair* is confusable only along one axis. Take $X_1, X_2$ i.i.d. uniform. Then $Y$ takes values $0,1,2$ with probabilities $\tfrac14, \tfrac12, \tfrac14$, so $H(Y) = -\tfrac14\log_2\tfrac14 - \tfrac12\log_2\tfrac12 - \tfrac14\log_2\tfrac14 = \tfrac12 + \tfrac12 + \tfrac12 = 1.5$ bits.
-**Step 4 — Sum-rate.** Because the channel is deterministic, $I(X_1,X_2;Y) = H(Y) - H(Y\mid X_1,X_2) = 1.5 - 0 = 1.5$ bits per use. So the two users *together* can push $1.5$ bits/use through this channel — strictly more than the $1$ bit a single binary input could carry, and strictly less than the $2$ bits they would get on clean separate links.
-**Sanity check:** $1 \le 1.5 \le 2$, matching the intuition that sharing the channel costs something (you cannot get the full $2$ bits) but joint use still beats giving the whole channel to one user.
+The map is deterministic: $(0,0)\mapsto 0$, $(0,1)\mapsto 1$, $(1,0)\mapsto 1$, $(1,1)\mapsto 2$. If $Y=0$ the decoder knows the pair is $(0,0)$; if $Y=2$ it knows $(1,1)$. Only the output $1$ is ambiguous, and it is ambiguous in exactly one direction: the decoder learns the *sum* but not the *split*.
+
+Take $X_1, X_2$ independent and uniform. Then $Y$ takes the values $0,1,2$ with probabilities $\tfrac14, \tfrac12, \tfrac14$, so
+
+$$H(Y) = \tfrac14\log_2 4 + \tfrac12 \log_2 2 + \tfrac14 \log_2 4 = \tfrac12 + \tfrac12 + \tfrac12 = 1.5 \text{ bits}.$$
+
+Because the channel is deterministic, $H(Y \mid X_1, X_2) = 0$ and therefore
+
+$$I(X_1,X_2;Y) = H(Y) - H(Y\mid X_1,X_2) = 1.5 \text{ bits per use}.$$
+
+Meanwhile $I(X_1;Y\mid X_2) = H(Y \mid X_2) - 0 = 1$ bit, since given $X_2$ the output determines $X_1$ and conversely. So the constraints are $R_1 \le 1$, $R_2 \le 1$, $R_1 + R_2 \le 1.5$.
+
+Both numbers are intelligible. The pair *together* moves $1.5$ bits per use — strictly more than the $1$ bit one binary user alone could carry, so sharing beats handing the channel to one user; and strictly less than the $2$ bits two private noiseless links would give, so sharing is not free. □
 :::
 
-## Capacity Region for the Two-User MAC
+:::pitfall
+Uniform independent inputs are not automatically the best choice, and $I(X_1,X_2;Y)$ is not automatically maximised where $I(X_1;Y\mid X_2)$ is. The capacity region is a union over *all* product distributions $p(x_1)p(x_2)$, and different corners of the region are typically attained at different input distributions. Computing one mutual information at one convenient distribution gives an achievable point, never the region.
+:::
+
+:::example[The Gaussian MAC]
+Let $Y = X_1 + X_2 + Z$ with $Z \sim \mathcal{N}(0,N)$ independent of the inputs, under average power constraints $\tfrac1n\sum_i x_{ji}^2 \le P_j$ for $j = 1,2$. Which three mutual informations does a Gaussian input choice produce?
+:::
+
+:::solution
+Take $X_1 \sim \mathcal{N}(0,P_1)$ and $X_2 \sim \mathcal{N}(0,P_2)$ independent. Conditioned on $X_2$, the channel $Y - X_2 = X_1 + Z$ is an ordinary Gaussian channel of signal power $P_1$ and noise power $N$, so
+
+$$I(X_1;Y \mid X_2) = \tfrac12 \log\Bigl(1 + \tfrac{P_1}{N}\Bigr), \qquad I(X_2;Y \mid X_1) = \tfrac12 \log\Bigl(1 + \tfrac{P_2}{N}\Bigr).$$
+
+Treating the pair as one input, $Y = (X_1 + X_2) + Z$ where $X_1+X_2$ has power $P_1+P_2$, so
+
+$$I(X_1,X_2;Y) = \tfrac12 \log\Bigl(1 + \tfrac{P_1+P_2}{N}\Bigr).$$
+
+That these are the *optimal* choices is the usual maximum-entropy argument: among all inputs of given power the Gaussian maximises differential entropy, and here $h(Y \mid X_2)$ and $h(Y)$ are the quantities being maximised while $h(Z)$ is fixed. □
+:::
+
+With $P_1 = P_2 = N = 1$ these read $R_1 \le \tfrac12$, $R_2 \le \tfrac12$, $R_1 + R_2 \le \tfrac12 \log_2 3 \approx 0.792$. The sum bound bites — $0.792 < 1$ — so the two users cannot both sit at their individual ceilings. The shape this carves out is the subject of the next section.
+
+## The Capacity Region of the Two-User MAC
 
 <!-- section: capacity-region -->
 
 :::theorem[Capacity region of the two-user MAC]{#mac-capacity-region}
-The capacity region of the two-user MAC is the convex closure of all rate pairs $(R_1,R_2)$ satisfying
+For a discrete memoryless MAC $p(y\mid x_1,x_2)$, let $\mathscr{R}(p_1,p_2)$ be the set of non-negative pairs $(R_1,R_2)$ with
 
-$$R_1 \le I(X_1; Y \mid X_2), \qquad R_2 \le I(X_2; Y \mid X_1), \qquad R_1 + R_2 \le I(X_1,X_2; Y)$$
+$$R_1 \le I(X_1;Y \mid X_2), \qquad R_2 \le I(X_2;Y\mid X_1), \qquad R_1 + R_2 \le I(X_1,X_2;Y),$$
 
-for some product distribution $p(x_1)p(x_2)$, i.e. independent codebooks.
+the mutual informations computed under $p_1(x_1)p_2(x_2)p(y\mid x_1,x_2)$. Then the capacity region is
+
+$$\mathscr{C} = \overline{\operatorname{conv}} \bigcup_{p_1, p_2} \mathscr{R}(p_1,p_2),$$
+
+the closed convex hull of the union over all product input distributions.
 :::
 
-Time-sharing convexifies the region.
+This is the Ahlswede–Liao theorem. Three separate claims are packed into it, and each needs its own argument: that each $\mathscr{R}(p_1,p_2)$ is achievable, that convexification costs nothing, and that nothing outside is achievable. We take them in that order, but first record the shape of a single $\mathscr{R}(p_1,p_2)$, since the whole geometry of the MAC lives there.
 
-For the Gaussian MAC the region is a pentagon whose corner points are achieved by treating one user as noise or by successive interference cancellation (SIC) ordering.
+:::proposition[The pentagon and its corners]{#mac-pentagon}
+Write $a = I(X_1;Y\mid X_2)$, $b = I(X_2;Y\mid X_1)$ and $s = I(X_1,X_2;Y)$ for a fixed product distribution. Then $a + b \ge s$, so $\mathscr{R}(p_1,p_2)$ is a pentagon with vertices
 
-:::intuition
-Each user has a 'private' rate limited by what the other user's signal looks like (as side information at the decoder).
+$$(0,0),\quad (a, 0),\quad (a,\, s-a),\quad (s-b,\, b),\quad (0,b),$$
 
-Together they cannot exceed the mutual information when both inputs are considered as a single super-input.
-
-The sum-rate bound is the total 'pipe' capacity when the two users cooperate in choosing their signals.
+whose only non-trivial face is the segment of the line $R_1 + R_2 = s$ joining the two **corner points** $(a,\,s-a)$ and $(s-b,\,b)$.
 :::
 
-:::example
-Gaussian MAC with equal powers $P_1 = P_2 = P = 1$ and noise variance $N = 1$. All logs are base 2, giving rates in bits per channel use.
+:::proof
+By the chain rule $s = I(X_1,X_2;Y) = I(X_2;Y) + I(X_1;Y\mid X_2)$, so $s - a = I(X_2;Y)$. Now compare $b$ with $s-a$:
+
+$$b - (s-a) = I(X_2;Y\mid X_1) - I(X_2;Y) = \bigl[H(X_2\mid X_1) - H(X_2 \mid Y, X_1)\bigr] - \bigl[H(X_2) - H(X_2\mid Y)\bigr].$$
+
+Independence of the inputs gives $H(X_2 \mid X_1) = H(X_2)$, so the expression collapses to
+
+$$b - (s-a) = H(X_2\mid Y) - H(X_2 \mid Y, X_1) = I(X_1; X_2 \mid Y) \ \ge\ 0.$$
+
+Hence $b \ge s-a$, i.e. $a + b \ge s$, and symmetrically $a \ge s - b$. Consequently each individual cap $R_1 \le a$, $R_2 \le b$ meets the sum line $R_1+R_2=s$ at an interior point of the positive quadrant, producing five vertices rather than the rectangle that $a+b \le s$ would have given.
 :::
 
-:::solution
-**Individual bounds (other user known).** With $X_2$ available at the decoder as side information it can be subtracted, so $R_1 \le I(X_1;Y\mid X_2) = \tfrac12\log(1 + P/N) = \tfrac12\log 2 = 0.5$. By symmetry $R_2 \le 0.5$ as well.
-**Step 2 — Sum bound.** $R_1 + R_2 \le I(X_1,X_2;Y) = \tfrac12\log(1 + (P_1+P_2)/N) = \tfrac12\log(1 + 2) = \tfrac12\log 3 \approx 0.792$.
-**Step 3 — The pentagon corners.** The two individual caps at $0.5$ and the sum cap at $0.792$ carve a pentagon; its dominant face runs between the two corner points. Consider the SIC corner where user 1 is decoded *first* while user 2 is treated as noise. Decoding user 1 against noise power $P + N$ gives $R_1 = \tfrac12\log\!\big(1 + \tfrac{P}{P+N}\big) = \tfrac12\log 1.5 \approx 0.292$ bits.
-**Step 3b — Second user after cancellation.** Subtract user 1; user 2 then sees noise power $N$ only, giving $R_2 = \tfrac12\log(1+P/N) = \tfrac12\log 2 = 0.5$ bits.
-**Step 4 — Verify the corner lies on the sum face.** $R_1 + R_2 = 0.292 + 0.5 = 0.792 = \tfrac12\log 3$. ✓ The corner sits exactly on the sum-rate boundary, and the symmetric corner $(0.5,\,0.292)$ is reached by reversing the decoding order.
-**Sanity check:** each user's rate stays below its individual cap ($0.292 < 0.5$ and $0.5 = 0.5$), and the two corners are connected by a line of slope $-1$ (constant sum $0.792$) that time-sharing traces out.
+The quantity $I(X_1;X_2\mid Y)$ appearing in that proof is the exact size of the sum-rate "loss": independent inputs become *dependent* once you condition on the output, because the output constrains them jointly. When the channel is such that $Y$ reveals nothing linking the two inputs, $I(X_1;X_2\mid Y) = 0$ and the pentagon degenerates to a rectangle — the users do not interfere at all.
+
+:::figure[The capacity pentagon of the Gaussian MAC with $P_1=P_2=N=1$. The individual caps are $\tfrac12$ each; the sum cap is $\tfrac12\log_2 3 \approx 0.792$. Corner $A$ decodes user 2 last, corner $B$ decodes user 1 last, and the dominant face between them is swept out by time sharing.]{#mac-pentagon-figure}
+{
+  "type": "plot",
+  "x": [0, 0.78],
+  "y": [0, 0.78],
+  "xTicks": 0.1,
+  "yTicks": 0.1,
+  "xLabel": "R1",
+  "yLabel": "R2",
+  "equalAspect": true,
+  "marks": [
+    { "kind": "region", "points": [[0, 0], [0, 0.5], [0.2925, 0.5], [0.5, 0.2925], [0.5, 0]], "tone": "muted" },
+    { "kind": "line", "through": [[0.2925, 0.5], [0.5, 0.2925]], "tone": "result", "extend": false },
+    { "kind": "point", "at": [0.2925, 0.5], "tone": "result" },
+    { "kind": "point", "at": [0.5, 0.2925], "tone": "result" },
+    { "kind": "text", "at": [0.12, 0.68], "text": "A = (0.293, 0.500)", "leaderTo": [0.2925, 0.5] },
+    { "kind": "text", "at": [0.60, 0.13], "text": "B = (0.500, 0.293)", "leaderTo": [0.5, 0.2925] },
+    { "kind": "text", "at": [0.16, 0.18], "text": "achievable" }
+  ]
+}
 :::
 
-## Coding Strategies: Joint Decoding and SIC
+### Achievability
+
+The achievability proof rests on one counting lemma, which we state rather than invoke by name.
+
+:::lemma[Joint typicality lemma for the MAC]{#joint-typicality-lemma}
+Fix a product distribution $p_1(x_1)p_2(x_2)$ and let $A_\epsilon^{(n)}$ be the jointly typical set for $(X_1,X_2,Y)$ under $p_1p_2p$. Let $(X_1^n, X_2^n, Y^n)$ be drawn from the true joint law. If $\tilde{X}_1^n \sim \prod_i p_1$ is drawn independently of $(X_2^n, Y^n)$, then
+
+$$\Pr\bigl\{ (\tilde{X}_1^n, X_2^n, Y^n) \in A_\epsilon^{(n)} \bigr\} \le 2^{-n\left(I(X_1;Y\mid X_2) - 3\epsilon\right)},$$
+
+and symmetrically with the roles of the two users exchanged. If $\tilde{X}_1^n$ and $\tilde{X}_2^n$ are both drawn independently of $Y^n$ and of each other, then
+
+$$\Pr\bigl\{ (\tilde{X}_1^n, \tilde{X}_2^n, Y^n) \in A_\epsilon^{(n)} \bigr\} \le 2^{-n\left(I(X_1,X_2;Y) - 4\epsilon\right)}.$$
+
+Moreover $\Pr\{(X_1^n,X_2^n,Y^n) \in A_\epsilon^{(n)}\} \to 1$.
+:::
+
+:::proof
+The bounds are the same counting argument run on different variables. For the first, condition on a typical pair $(x_2^n, y^n)$ and count the sequences $\tilde{x}_1^n$ jointly typical with it: there are at most $2^{n(H(X_1\mid X_2,Y)+\epsilon)}$ of them, each of probability at most $2^{-n(H(X_1)-\epsilon)}$ under $\prod_i p_1$. The product is
+
+$$2^{-n\left(H(X_1) - H(X_1\mid X_2,Y) - 2\epsilon\right)} = 2^{-n\left(I(X_1;Y,X_2)-2\epsilon\right)},$$
+
+and independence of $X_1$ and $X_2$ makes $I(X_1;Y,X_2) = I(X_1;X_2) + I(X_1;Y\mid X_2) = I(X_1;Y\mid X_2)$. Absorbing the probability that $(x_2^n,y^n)$ is itself atypical gives the stated $3\epsilon$ slack. The second bound is the same count with jointly typical *pairs* $(\tilde{x}_1^n, \tilde{x}_2^n)$ against $y^n$, of which there are at most $2^{n(H(X_1,X_2\mid Y)+\epsilon)}$, each of probability at most $2^{-n(H(X_1,X_2)-2\epsilon)}$. The final claim is the weak law of large numbers applied to the three empirical entropies.
+:::
+
+:::theorem[Achievability of the pentagon]{#mac-achievability}
+Every rate pair in the interior of $\mathscr{R}(p_1,p_2)$ is achievable.
+:::
+
+:::proof
+**Codebook.** Generate $2^{nR_1}$ codewords $x_1^n(w_1)$ i.i.d. from $\prod_i p_1$, and independently $2^{nR_2}$ codewords $x_2^n(w_2)$ i.i.d. from $\prod_i p_2$. Reveal both codebooks to both encoders and the decoder.
+
+**Encoding and decoding.** To send $(w_1,w_2)$ the encoders transmit $x_1^n(w_1)$ and $x_2^n(w_2)$. The decoder declares $(\hat w_1,\hat w_2)$ if it is the *unique* pair with $\bigl(x_1^n(\hat w_1), x_2^n(\hat w_2), y^n\bigr) \in A_\epsilon^{(n)}$; otherwise it declares an error.
+
+**Error analysis.** By the symmetry of the random code construction we may assume $(W_1,W_2)=(1,1)$ was sent. Decompose the error into $E_0$, the true triple is not jointly typical; $E_1$, some $w_1 \ne 1$ is jointly typical with the true $x_2^n(1)$ and $y^n$; $E_2$, the same with the users exchanged; and $E_{12}$, some pair with $w_1 \ne 1$ *and* $w_2\ne1$ is jointly typical with $y^n$. The union bound gives
+
+$$P_e^{(n)} \le \Pr(E_0) + \Pr(E_1) + \Pr(E_2) + \Pr(E_{12}).$$
+
+Now $\Pr(E_0)\to 0$ by the last clause of Lemma *Joint typicality lemma for the MAC*. For $E_1$, each wrong codeword $x_1^n(w_1)$ is independent of $(x_2^n(1), y^n)$, so the lemma's first bound applies:
+
+$$\Pr(E_1) \le 2^{nR_1} \, 2^{-n\left(I(X_1;Y\mid X_2) - 3\epsilon\right)} \to 0 \quad\text{whenever } R_1 < I(X_1;Y\mid X_2) - 3\epsilon,$$
+
+and symmetrically $\Pr(E_2)\to0$ when $R_2 < I(X_2;Y\mid X_1) - 3\epsilon$. For $E_{12}$ there are fewer than $2^{n(R_1+R_2)}$ candidate pairs, each independent of $y^n$, so
+
+$$\Pr(E_{12}) \le 2^{n(R_1+R_2)}\, 2^{-n\left(I(X_1,X_2;Y)-4\epsilon\right)} \to 0 \quad\text{whenever } R_1+R_2 < I(X_1,X_2;Y)-4\epsilon.$$
+
+The average error probability over the ensemble therefore vanishes, so at least one code in the ensemble has $P_e^{(n)}\to0$. Letting $\epsilon \downarrow 0$ gives the whole interior.
+:::
+
+Notice what error event $E_{12}$ is for. The constraints on $R_1$ and $R_2$ come from confusing one user while the other is known; the sum constraint comes from confusing both at once, an event with no single-user counterpart at all. That is the information-theoretic origin of the pentagon's slanted face.
+
+:::proposition[Time sharing convexifies]{#time-sharing}
+If $(R_1,R_2)$ and $(R_1',R_2')$ are achievable, so is $\lambda(R_1,R_2) + (1-\lambda)(R_1',R_2')$ for every $\lambda \in [0,1]$.
+:::
+
+:::proof
+Take rational $\lambda = k/m$ first. Given codes of block lengths $n$ and $n'$ achieving the two pairs with error probabilities $\epsilon_n$ and $\epsilon_{n'}$, build a code of block length $mnn'$ that runs the first code on the initial $knn'$ symbols and the second on the remaining $(m-k)nn'$. Both users switch at the same pre-agreed time, so no coordination beyond the shared codebooks is needed. Each user's message count is the product of the two stages' counts, so its rate per symbol is $\lambda R_j + (1-\lambda)R_j'$, and the union bound over the two stages gives error probability at most $\epsilon_n + \epsilon_{n'} \to 0$. Irrational $\lambda$ follows because the achievable set is closed.
+:::
+
+:::remark
+Time sharing can equivalently be folded into the single-letter description: $\mathscr{C}$ is also the union over $p(q)p(x_1\mid q)p(x_2\mid q)$ of the pentagons computed with every mutual information conditioned on $Q$. Because the union of pentagons is a *connected* compact subset of $\mathbb{R}^2$, the Fenchel–Bunt strengthening of Carathéodory's theorem says every point of its convex hull is a mixture of at most two points of the set, so a time-sharing alphabet with $|\mathcal{Q}| \le 2$ suffices.
+:::
+
+### The converse
+
+:::lemma[Fano's inequality]{#fano}
+Let $W$ be uniform on a set of size $M$ and let $\hat W$ be any estimate of $W$ computed from data, with $P_e = \Pr\{\hat W \ne W\}$. Then
+
+$$H(W \mid \hat W) \le 1 + P_e \log M.$$
+:::
+
+:::proof
+Let $E = \mathbb{1}\{\hat W \ne W\}$. Expanding $H(E,W\mid \hat W)$ in the two orders gives $H(W\mid \hat W) \le H(E) + H(W \mid \hat W, E)$, since $H(E \mid W,\hat W)=0$. Now $H(E)\le 1$ because $E$ is binary. For the second term, $H(W\mid \hat W, E=0)=0$ — knowing there was no error and knowing $\hat W$ determines $W$ — while $H(W \mid \hat W, E=1) \le \log(M-1) \le \log M$, so averaging gives at most $P_e \log M$.
+:::
+
+:::theorem[Converse for the MAC]{#mac-converse}
+If $(R_1,R_2)$ is achievable then it lies in $\mathscr{C}$.
+:::
+
+:::proof
+Take a sequence of codes with $P_e^{(n)}\to0$. Fano's inequality gives $H(W_1\mid Y^n) \le 1 + P_e^{(n)}nR_1 =: n\epsilon_{1n}$ with $\epsilon_{1n}\to0$, and similarly for $W_2$ and for the pair; write $\epsilon_n$ for the largest of the three.
+
+**First bound.** The messages are independent and $X_1^n$ is a function of $W_1$, so
+
+$$nR_1 = H(W_1) = H(W_1 \mid W_2) = I(W_1; Y^n \mid W_2) + H(W_1 \mid Y^n, W_2) \le I(X_1^n; Y^n \mid X_2^n) + n\epsilon_n,$$
+
+using the data processing inequality along $W_1 - X_1^n - Y^n$ given $W_2$ (hence given $X_2^n$) for the first term and Fano for the second. Expand the mutual information and use that $Y_i$ depends only on $(X_{1i},X_{2i})$:
+
+$$I(X_1^n;Y^n\mid X_2^n) = \sum_{i=1}^n \Bigl[H(Y_i \mid Y^{i-1}, X_2^n) - H(Y_i \mid Y^{i-1}, X_1^n, X_2^n)\Bigr] \le \sum_{i=1}^n \Bigl[H(Y_i \mid X_{2i}) - H(Y_i \mid X_{1i},X_{2i})\Bigr],$$
+
+since conditioning reduces entropy in the first term while memorylessness makes the second term exactly $H(Y_i\mid X_{1i},X_{2i})$. The right side is $\sum_i I(X_{1i};Y_i\mid X_{2i})$.
+
+**The other two bounds** follow identically: $nR_2 \le \sum_i I(X_{2i};Y_i\mid X_{1i}) + n\epsilon_n$, and
+
+$$n(R_1+R_2) = H(W_1,W_2) \le I(X_1^n,X_2^n;Y^n) + n\epsilon_n \le \sum_i I(X_{1i},X_{2i};Y_i) + n\epsilon_n.$$
+
+**Single-letterisation.** Let $Q$ be uniform on $\{1,\dots,n\}$, independent of everything, and set $X_1 = X_{1Q}$, $X_2 = X_{2Q}$, $Y = Y_Q$. Each of the three sums equals $n$ times the corresponding mutual information conditioned on $Q$, so $(R_1,R_2)$ lies within $\epsilon_n$ of the pentagon computed under $p(q)p(x_1\mid q)p(x_2\mid q)$ — and $X_{1i}$ and $X_{2i}$ are indeed conditionally independent given $Q=i$, because $W_1$ and $W_2$ are independent and each encoder sees only its own message. By the remark above that region lies in $\mathscr{C}$; letting $n\to\infty$ kills $\epsilon_n$, and closedness of $\mathscr{C}$ finishes the argument.
+:::
+
+## Coding Strategies: Joint Decoding, SIC and Rate Splitting
 
 <!-- section: coding-strategies -->
 
-With independent codebooks, the decoder can use joint typicality decoding: look for the unique pair (codeword1, codeword2) jointly typical with Y^n.
+The achievability proof used a single joint typicality decoder searching over all $2^{n(R_1+R_2)}$ message pairs. That is optimal and computationally hopeless. The practical question is which points of the region a *layered* decoder — one that handles users one at a time, with an ordinary single-user decoder at each stage — can reach. The answer is clean, and it explains why the pentagon has the corners it has.
 
 :::recipe[Successive interference cancellation]{#sic}
-1. Decode the stronger user first, treating the other user's signal as noise.
-2. Subtract that user's contribution from the received signal.
-3. Decode the weaker user on the resulting clean channel.
+1. Decode user 1 from $Y^n$ alone, treating $X_2^n$ as part of the noise. This is single-user decoding over the marginal channel $p(y \mid x_1) = \sum_{x_2} p_2(x_2)\,p(y\mid x_1,x_2)$.
+2. Reconstruct $x_1^n(\hat w_1)$ and remove its contribution from $y^n$; on the Gaussian MAC this is literal subtraction.
+3. Decode user 2 from the cleaned observation, which is now the channel $p(y\mid x_1,x_2)$ with $x_1^n$ known at the decoder.
 :::
 
-SIC achieves the corner points of the capacity region; rate-splitting or time-sharing fills the rest. For more than two users, more sophisticated strategies (compute-forward, etc.) are studied.
+:::theorem[SIC attains the corner points]{#sic-corner}
+Fix a product distribution $p_1p_2$ and write $s = I(X_1,X_2;Y)$, $b = I(X_2;Y\mid X_1)$. Successive interference cancellation with user 1 decoded first achieves every pair in the interior of the rectangle
 
-:::intuition
-Joint decoding: the listener considers all possible pairs of messages and picks the pair whose combined voices best match what was heard.
+$$R_1 < I(X_1;Y), \qquad R_2 < I(X_2;Y\mid X_1),$$
 
-SIC: 'First understand the loud person, write it down, subtract that voice from the recording, then understand the quiet person on the cleaned-up tape.'
+whose corner is exactly the corner point $(s-b,\,b)$ of the pentagon $\mathscr{R}(p_1,p_2)$. Reversing the decoding order attains the other corner $(a,\,s-a)$ with $a = I(X_1;Y\mid X_2)$.
 :::
 
-:::example
-Gaussian MAC with a strong and a weak user, $P_1 = 10$, $P_2 = 1$, noise $N = 1$; decode the strong user 1 first. Logs are base 2.
+:::proof
+Step 1 is point-to-point coding over the memoryless channel $p(y\mid x_1)$ with input distribution $p_1$; by the single-user channel coding theorem any $R_1 < I(X_1;Y)$ is achievable there with error probability tending to $0$. On the event that $\hat w_1 = w_1$, step 3 is point-to-point coding over the memoryless channel $p(y\mid x_1,x_2)$ with the sequence $x_1^n$ known at the decoder; its mutual information at input distribution $p_2$ is $I(X_2;Y\mid X_1)$, so any $R_2 < I(X_2;Y\mid X_1)$ is achievable. The union bound over the two stage-error events keeps the total vanishing.
+
+For the identification, the chain rule gives
+
+$$s = I(X_1,X_2;Y) = I(X_1;Y) + I(X_2;Y\mid X_1) = I(X_1;Y) + b,$$
+
+so $I(X_1;Y) = s-b$. The achieved corner is therefore $(s-b,\,b)$, which satisfies $R_1+R_2=s$ with equality and so lies on the dominant face, and which is a vertex because the constraint $R_2\le b$ is also met with equality.
+:::
+
+So the corner points cost nothing in decoder complexity: two single-user decoders in sequence get there. That is the entire practical appeal of SIC, and it is a genuinely surprising fact — a greedy, one-user-at-a-time procedure lands on the boundary of an optimally, jointly decoded region. The chain rule is the reason, and it is worth seeing that the algebra and the engineering are the same statement: "decode user 1 against interference, then user 2 cleanly" *is* $I(X_1;Y) + I(X_2;Y\mid X_1)$.
+
+:::pitfall
+SIC's guarantee is conditional on the first stage being correct. If $\hat w_1 \ne w_1$, the subtraction in step 2 injects a full-power wrong codeword instead of removing interference, and the second stage typically fails too. The asymptotic analysis absorbs this into a union bound that vanishes; at finite block length it appears as **error propagation**, which is why deployed receivers verify the first stage with a CRC before cancelling.
+:::
+
+:::example[SIC on a strong/weak Gaussian MAC]
+Let $P_1 = 10$, $P_2 = 1$, $N = 1$, and decode user 1 first. Find the rate pair and verify it lies on the sum-rate face.
 :::
 
 :::solution
-**Decode user 1 treating user 2 as noise.** User 1's signal competes against $X_2$ plus thermal noise, an effective noise power of $P_2 + N = 2$. So $R_1 = \tfrac12\log\!\big(1 + \tfrac{P_1}{P_2+N}\big) = \tfrac12\log\!\big(1 + \tfrac{10}{2}\big) = \tfrac12\log 6 \approx 1.292$.
-**Step 2 — Cancel and decode user 2.** Once $X_1^n$ is correctly decoded it is subtracted from $Y^n$, leaving user 2 alone against thermal noise only: $R_2 = \tfrac12\log\!\big(1 + \tfrac{P_2}{N}\big) = \tfrac12\log 2 = 0.5$.
-**Step 3 — Check against the sum bound.** $R_1 + R_2 = 1.292 + 0.5 = 1.792$, and $I(X_1,X_2;Y) = \tfrac12\log\!\big(1 + \tfrac{P_1+P_2}{N}\big) = \tfrac12\log(1+11) = \tfrac12\log 12 \approx 1.792$. ✓ The two match, confirming SIC lands exactly on the sum-rate corner.
-**Note on ordering:** decoding user 1 *first* is what forces user 1 to swallow user 2 as noise (hence the $P_2+N$ denominator), while the last-decoded user always enjoys the clean $\tfrac12\log(1+P_i/N)$ channel. This is why the corner reached depends on the order.
-**Sanity check:** neither individual rate exceeds its genie-aided cap $\tfrac12\log(1+P_i/N)$ — user 1's cap is $\tfrac12\log 11 \approx 1.729$, and $1.292 < 1.729$; user 2 is at its cap $0.5$ because it was decoded last. ✓
+In step 1, user 1 competes against $X_2$ plus thermal noise, an effective noise power of $P_2 + N = 2$:
+
+$$R_1 = \tfrac12 \log_2\Bigl(1 + \tfrac{10}{2}\Bigr) = \tfrac12\log_2 6 \approx 1.2925.$$
+
+In step 3, $X_1^n$ has been subtracted and user 2 faces thermal noise only:
+
+$$R_2 = \tfrac12\log_2\Bigl(1+\tfrac{1}{1}\Bigr) = \tfrac12 \log_2 2 = 0.5.$$
+
+The sum is $\tfrac12\log_2 6 + \tfrac12\log_2 2 = \tfrac12\log_2 12$, and the sum-rate bound is $\tfrac12\log_2\bigl(1+\tfrac{P_1+P_2}{N}\bigr) = \tfrac12\log_2 12 \approx 1.7925$. They agree exactly, as Theorem *SIC attains the corner points* guarantees — the identity $\log 6 + \log 2 = \log 12$ is the chain rule in disguise.
+
+Note the asymmetry: user 1 ends up strictly below its genie-aided cap $\tfrac12\log_2 11 \approx 1.7297$, while user 2, decoded last, sits exactly at its cap $0.5$. □
 :::
 
-## Broadcast Channel Model
+That asymmetry is general: **the user decoded last always achieves its single-user capacity**, and every earlier user pays for the interference of everyone decoded after it. Which corner you land on is therefore a scheduling decision, not a physical one — and it is the reason a fairness criterion, not information theory, picks the operating point in a real system.
+
+Orthogonal access is the other classical option. It sounds strictly worse, since no user reuses another's time or band, but with power control one such scheme lands exactly on the sum-rate face.
+
+:::proposition[TDMA with power control touches the sum-rate face]{#tdma-power-control}
+On the Gaussian MAC with powers $P_1,P_2$ and noise $N$, let user 1 transmit alone during a fraction $\alpha$ of the time at power $P_1/\alpha$, and user 2 during the remaining fraction at power $P_2/(1-\alpha)$, so both meet their average power constraints. Choosing $\alpha = P_1/(P_1+P_2)$ gives
+
+$$R_1 + R_2 = \tfrac12\log\Bigl(1 + \tfrac{P_1+P_2}{N}\Bigr),$$
+
+a point on the dominant face of the capacity region.
+:::
+
+:::proof
+During its own slot each user sees a clean single-user Gaussian channel, so
+
+$$R_1 = \tfrac{\alpha}{2}\log\Bigl(1 + \tfrac{P_1}{\alpha N}\Bigr), \qquad R_2 = \tfrac{1-\alpha}{2}\log\Bigl(1+\tfrac{P_2}{(1-\alpha)N}\Bigr).$$
+
+With $\alpha = P_1/(P_1+P_2)$ we get $P_1/\alpha = P_1+P_2$ and $P_2/(1-\alpha) = P_1+P_2$, so both logarithms equal $\log\bigl(1+\tfrac{P_1+P_2}{N}\bigr)$ and
+
+$$R_1 + R_2 = \Bigl(\tfrac{\alpha}{2} + \tfrac{1-\alpha}{2}\Bigr)\log\Bigl(1+\tfrac{P_1+P_2}{N}\Bigr) = \tfrac12\log\Bigl(1+\tfrac{P_1+P_2}{N}\Bigr).$$
+
+Since no achievable pair exceeds the sum bound, this point is on the boundary.
+:::
+
+:::remark
+The point just constructed is $\bigl(\alpha C_{\text{tot}},\,(1-\alpha)C_{\text{tot}}\bigr)$ with $C_{\text{tot}} = \tfrac12\log(1+(P_1+P_2)/N)$, and it sits strictly between the two SIC corners unless one power is zero. Every *other* choice of $\alpha$, and plain TDMA without power control, lands strictly inside the region. The lesson is not "orthogonal access is bad" but "orthogonal access is optimal at exactly one operating point, and you must power-control to find it".
+:::
+
+:::remark
+A third strategy, **rate splitting** (Rimoldi–Urbanke), reaches every point of the dominant face — not only the corners — using single-user decoders alone. User 1 splits its message into two independent layers transmitted simultaneously; the receiver runs three SIC stages, decoding layer $1a$, then user 2, then layer $1b$. Sliding the power split between the two layers slides the achieved point continuously along the face. We do not prove this here: the argument is Theorem *SIC attains the corner points* applied to the equivalent three-user MAC, whose corners project onto the whole face of the two-user pentagon.
+:::
+
+## The Broadcast Channel
 
 <!-- section: bc-model -->
 
-:::definition[Broadcast channel]{#bc}
-One encoder maps messages ($W_0$ common, $W_1$ private to receiver 1, $W_2$ to receiver 2, and so on) into a single channel input $X^n$. Receiver $i$ observes $Y_i^n \sim p(y_i \mid x)$, where the marginal channels may differ, and must recover its intended messages. The capacity region is the set of achievable rate tuples $(R_0, R_1, R_2, \dots)$.
-:::
+Reverse the arrows. One transmitter, several receivers, each seeing its own noisy version of one transmitted signal. The constraint has moved to the *encoder*: it must produce a single sequence $X^n$ that simultaneously serves receivers whose channels differ.
 
-The most important special case is the degraded broadcast channel in which the receivers can be ordered so that one is a stochastically degraded version of the other.
+:::definition[Discrete memoryless broadcast channel]{#bc}
+A **two-receiver broadcast channel** consists of an input alphabet $\mathcal{X}$, output alphabets $\mathcal{Y}_1,\mathcal{Y}_2$, and a transition law $p(y_1,y_2\mid x)$, used memorylessly. A $\bigl(2^{nR_0},2^{nR_1},2^{nR_2},n\bigr)$ **code** consists of one encoder $f:\mathcal{W}_0\times\mathcal{W}_1\times\mathcal{W}_2 \to \mathcal{X}^n$ and two decoders $g_i : \mathcal{Y}_i^n \to \mathcal{W}_0\times\mathcal{W}_i$. Here $W_0$ is a **common** message wanted by both receivers and $W_i$ is **private** to receiver $i$. The error probability is
+
+$$P_e^{(n)} = \Pr\bigl\{ g_1(Y_1^n)\ne(W_0,W_1) \ \text{ or } \ g_2(Y_2^n) \ne (W_0,W_2) \bigr\},$$
+
+and the capacity region is the closure of the achievable triples $(R_0,R_1,R_2)$.
+:::
 
 :::intuition
-One radio tower broadcasting a signal; some listeners have good antennas (strong channel), others have poor reception (weak channel). The tower must send content that the good listeners can decode extra private parts while the weak listeners at least get the basic common program.
-
-The physics of the channels to different listeners are different and usually nested (degraded).
+A single radio tower serving listeners with different antennas. It cannot send two different waveforms; it sends one, and each listener extracts what their channel lets them. A good scheme therefore does not chop the signal into disjoint pieces — it *layers* it, so a weak listener recovers a coarse description while a strong listener recovers the coarse description *and* a refinement hidden underneath it.
 :::
 
-:::example
-A scalar Gaussian broadcast channel: $Y_1 = X + Z_1$ and $Y_2 = X + Z_2$ with noise variances $N_1 = \mathrm{Var}(Z_1) = 1$ and $N_2 = \mathrm{Var}(Z_2) = 4$, so receiver 1 has the better channel. Total power constraint $\mathbb{E}[X^2] \le P = 10$. Logs are base 2.
+The first structural fact is that the joint law $p(y_1,y_2\mid x)$ carries more information than the problem needs.
+
+:::proposition[The capacity region depends only on the marginals]{#bc-marginals}
+The capacity region of a broadcast channel depends on $p(y_1,y_2\mid x)$ only through the two marginal conditionals $p(y_1\mid x)$ and $p(y_2\mid x)$.
+:::
+
+:::proof
+Fix a code. Receiver $i$'s error event $\{g_i(Y_i^n)\ne (W_0,W_i)\}$ is a function of the messages and of $Y_i^n$ alone, so its probability is determined by the joint law of $\bigl(W_0,W_1,W_2,Y_i^n\bigr)$. Since $X^n$ is a deterministic function of the messages, that joint law is determined by $p(y_i\mid x)$ alone. The overall error probability satisfies
+
+$$\max_i \Pr\{\text{receiver } i \text{ errs}\} \ \le\ P_e^{(n)} \ \le\ \sum_i \Pr\{\text{receiver } i \text{ errs}\},$$
+
+so $P_e^{(n)}\to0$ for one joint law exactly when it does for any other with the same two marginals. The achievable sets, and hence their closures, therefore coincide.
+:::
+
+That proposition is why "degraded" can be defined in two different ways without changing any answer.
+
+:::definition[Physically and stochastically degraded]{#degradedness}
+A broadcast channel is **physically degraded** if $X - Y_1 - Y_2$ is a Markov chain, that is $p(y_1,y_2\mid x) = p(y_1\mid x)\,p(y_2\mid y_1)$. It is **stochastically degraded** if there exists a channel $q(y_2\mid y_1)$ with
+
+$$p(y_2\mid x) = \sum_{y_1} p(y_1\mid x)\, q(y_2\mid y_1) \quad \text{for all } x, y_2,$$
+
+i.e. if its marginals match those of *some* physically degraded channel.
+:::
+
+:::corollary[The two notions have the same capacity region]{#degraded-equivalence}
+A stochastically degraded broadcast channel has the same capacity region as the physically degraded channel built from its marginals.
+:::
+
+:::proof
+The two channels have identical marginals by construction, and by Proposition *The capacity region depends only on the marginals* the region sees nothing else.
+:::
+
+So we may always *assume* the Markov chain $X - Y_1 - Y_2$ when proving a converse, even when the physical channel correlates the two noises. That freedom is used without comment in most treatments; Proposition *The capacity region depends only on the marginals* is what licenses it.
+
+:::example[When is a binary broadcast channel degraded?]
+Let $Y_1 = X \oplus Z_1$ and $Y_2 = X \oplus Z_2$ with $Z_i \sim \mathrm{Bern}(p_i)$ and $0 \le p_1 \le p_2 \le \tfrac12$. Show the channel is stochastically degraded and identify the degrading channel.
 :::
 
 :::solution
-**Single-user ceilings.** If the transmitter dedicated *all* power to one receiver, receiver 1 could get up to $\tfrac12\log(1 + P/N_1) = \tfrac12\log 11 \approx 1.730$ bits, and receiver 2 up to $\tfrac12\log(1 + P/N_2) = \tfrac12\log(1 + 2.5) = \tfrac12\log 3.5 \approx 0.904$ bits.
-**Step 2 — Read off the ordering.** Because $N_1 < N_2$, this channel is *degraded*: $Y_2$ is a noisier version of $Y_1$ (formally $Y_2 = Y_1 + Z'$ with $Z' \sim \mathcal N(0, N_2 - N_1)$ independent of $Y_1$). The strong receiver can always simulate whatever the weak one sees.
-**Step 3 — Consequence.** Receiver 1 supports strictly higher rates ($1.730 > 0.904$), so any layered scheme should hand the *coarse* layer to the weak receiver 2 and the *fine* enhancement to the strong receiver 1 — exactly the superposition split developed in the next sections.
-**Sanity check:** halving the noise from $N_2=4$ to $N_1=1$ roughly *doubles* the achievable rate ($0.904 \to 1.730$), consistent with the $\log(1+P/N)$ dependence on SNR. ✓
+We look for a $\mathrm{BSC}(\beta)$ whose cascade with $\mathrm{BSC}(p_1)$ is $\mathrm{BSC}(p_2)$. Cascading two binary symmetric channels gives crossover probability
+
+$$p_1 * \beta = p_1(1-\beta) + \beta(1-p_1) = p_1 + \beta - 2p_1\beta,$$
+
+so we need $p_1 + \beta - 2p_1\beta = p_2$, that is
+
+$$\beta = \frac{p_2-p_1}{1-2p_1}.$$
+
+Since $p_1 \le p_2 \le \tfrac12$, the numerator is non-negative and satisfies $p_2 - p_1 \le \tfrac12 - p_1 = \tfrac12(1-2p_1)$, so $\beta \in [0,\tfrac12]$ is a legitimate crossover probability. Hence $Y_2$ has the distribution of a further BSC applied to $Y_1$: the channel is stochastically degraded with receiver 1 the stronger. For instance $p_1 = 0.1$ and $p_2=0.2$ give $\beta = 0.1/0.8 = 0.125$. □
 :::
 
-## Degraded Broadcast Channel and Capacity Region
+:::example[Ordering a Gaussian broadcast channel]
+Let $Y_1 = X + Z_1$ and $Y_2 = X + Z_2$ with $Z_1\sim\mathcal{N}(0,1)$, $Z_2\sim\mathcal{N}(0,4)$, under $\mathbb{E}[X^2]\le P = 10$. Which receiver is stronger, and what are the single-user ceilings?
+:::
+
+:::solution
+Since $N_1 = 1 < 4 = N_2$, write $Z_2 \stackrel{d}{=} Z_1 + Z'$ with $Z'\sim\mathcal{N}(0,N_2-N_1) = \mathcal{N}(0,3)$ independent of $Z_1$. Then $Y_2 \stackrel{d}{=} Y_1 + Z'$, which exhibits the degrading channel explicitly: receiver 1 is the stronger. The ceilings are
+
+$$\tfrac12\log_2\Bigl(1+\tfrac{P}{N_1}\Bigr) = \tfrac12\log_2 11 \approx 1.7297, \qquad \tfrac12\log_2\Bigl(1+\tfrac{P}{N_2}\Bigr) = \tfrac12\log_2 3.5 \approx 0.9037.$$
+
+A scalar Gaussian broadcast channel is *always* degraded, because two noise variances are always comparable. That is exactly what fails in the vector (MIMO) case, where noise covariances need not be ordered — which is why the MIMO broadcast channel needed a different tool, dirty-paper coding, rather than the superposition scheme of this chapter. □
+:::
+
+:::remark
+The general broadcast channel, with no ordering assumption, is **open**: its capacity region has been unknown since Cover posed the problem in 1972. The best known inner bound is Marton's region and the best known outer bound is the Nair–El Gamal bound. Degraded, *less noisy* and *more capable* channels are the classes where a single-letter answer exists, and the degraded case is the one we solve next.
+:::
+
+## The Capacity Region of the Degraded Broadcast Channel
 
 <!-- section: degraded-bc -->
 
-:::definition[Degraded broadcast channel]{#degraded-bc}
-A BC is (stochastically) *degraded* when the receivers can be ordered so that the Markov chain $X - Y_1 - Y_2$ holds: receiver 2's output is a further-corrupted version of receiver 1's, so anything $Y_2$ reveals, $Y_1$ reveals at least as well.
-:::
-
-Under this ordering the capacity region, with a common message and two private messages, is known and achieved by superposition. The construction introduces an auxiliary random variable $U$ — the 'cloud center' carrying the weak user's message — satisfying the Markov chain $U - X - (Y_1, Y_2)$. It is a bookkeeping variable, not transmitted directly, and its alphabet may be taken bounded ($|\mathcal U| \le |\mathcal X| + 2$) without loss.
+Throughout this section receiver 1 is the stronger: $X - Y_1 - Y_2$ is a Markov chain. The answer involves an **auxiliary random variable** $U$, which is neither transmitted nor observed by anyone. It is a bookkeeping device that names the coarse layer.
 
 :::theorem[Capacity region of the degraded broadcast channel]{#degraded-bc-region}
-Taking $Y_2$ as the weaker receiver, the achievable rates are those satisfying
+For a degraded broadcast channel with $X-Y_1-Y_2$, the capacity region is the set of non-negative triples $(R_0,R_1,R_2)$ satisfying
 
-$$R_2 \le I(U; Y_2), \qquad R_1 \le I(X; Y_1 \mid U), \qquad R_0 + R_2 \le I(U; Y_2),$$
+$$R_1 \le I(X;Y_1 \mid U), \qquad R_0 + R_2 \le I(U;Y_2)$$
 
-maximized over the joint law $p(u)\,p(x\mid u)$, equivalently $p(u,x)$.
+for some joint law of the form $p(u)\,p(x\mid u)\,p(y_1,y_2\mid x)$, where $U$ may be restricted to alphabets with
+
+$$|\mathcal{U}| \le \min\bigl\{|\mathcal{X}|,\,|\mathcal{Y}_1|,\,|\mathcal{Y}_2|\bigr\} + 1.$$
+
+The region is convex, and no separate time-sharing variable is needed.
 :::
 
-The common message shares the weak user's budget: that is what the third inequality records.
+Three things in that statement deserve comment, because each is a place the result is routinely misquoted.
 
-:::intuition
-The weaker receiver can only 'see' the coarse cloud centers U; the stronger receiver can resolve the fine 'satellite' points X inside each cloud.
+**The common message shares the weak user's budget.** Only $R_0+R_2 \le I(U;Y_2)$ appears, not a separate $R_2 \le I(U;Y_2)$ beside it — the latter is implied by the former. A common message must be decoded by *both* receivers, so it is limited by the worse of them; and once it rides in the coarse layer it is indistinguishable from the weak user's own private bits. Setting $R_0=0$ recovers the familiar two-private-message region.
 
-This gives the weaker user its message 'for free' from the cloud index while the strong user gets both its private message and the weak user's as side information.
+**There is no explicit sum constraint.** One might expect $R_0+R_1+R_2 \le I(X;Y_1)$, since receiver 1 ends up decoding everything. It is implied: the chain rule gives $I(X;Y_1) = I(U;Y_1) + I(X;Y_1\mid U)$, and degradedness gives $I(U;Y_1)\ge I(U;Y_2)$ — proved as Proposition *The strong receiver can decode the cloud* in the next section — so $R_0+R_2 \le I(U;Y_2)\le I(U;Y_1)$, and adding $R_1 \le I(X;Y_1\mid U)$ delivers the sum bound for free.
+
+**The cardinality bound is what makes the region computable.** Without a bound on $|\mathcal{U}|$ the union runs over an unbounded family and the "single-letter" description would not be a description at all. The bound comes from a standard support-lemma (Carathéodory) argument on the set of conditional distributions $p(x\mid u)$.
+
+:::proposition[Convexity without time sharing]{#degraded-convexity}
+The region of Theorem *Capacity region of the degraded broadcast channel* is convex.
 :::
 
-:::example
-Continue the Gaussian BC with $N_1 = 1$ (strong receiver 1), $N_2 = 4$ (weak receiver 2), and total power $P = 10$. Split the power into $\alpha P$ for the weak/cloud layer and $(1-\alpha)P$ for the strong/satellite layer, choosing $\alpha = 0.5$. Logs are base 2.
+:::proof
+Let $(R_0,R_1,R_2)$ and $(R_0',R_1',R_2')$ be achieved by auxiliary pairs $(U,X)$ and $(U',X')$. Let $Q$ be a Bernoulli variable with $\Pr\{Q=1\}=\lambda$, independent of both, and set $\tilde U = (U_Q, Q)$ and $\tilde X = X_Q$. The chain $\tilde U - \tilde X - Y_1 - Y_2$ still holds. Since conditioning on $\tilde U$ includes conditioning on $Q$,
+
+$$I(\tilde X;Y_1\mid \tilde U) = \lambda\, I(X;Y_1\mid U) + (1-\lambda)\, I(X';Y_1\mid U') = \lambda R_1 + (1-\lambda)R_1'$$
+
+when both are at their bounds. For the weak user, $I(\tilde U;Y_2) = I(U_Q,Q;Y_2) \ge I(U_Q;Y_2\mid Q) = \lambda I(U;Y_2) + (1-\lambda)I(U';Y_2)$. Hence the convex combination of the two triples is achieved by the single auxiliary variable $\tilde U$: the time-sharing variable has been absorbed into $U$.
+:::
+
+:::proof
+**Sketch of the converse.** This is a sketch, and we name what it rests on rather than hiding the gap. Given a code with vanishing error probability, define for each time $i$
+
+$$U_i = \bigl(W_0,\,W_2,\,Y_2^{\,i-1}\bigr).$$
+
+One checks that $U_i - X_i - Y_{1i} - Y_{2i}$ is a Markov chain, a step that uses *physical* degradedness $X-Y_1-Y_2$ — legitimate by Corollary *The two notions have the same capacity region*. Lemma *Fano's inequality* applied at receiver 2 gives $n(R_0+R_2) \le I(W_0,W_2;Y_2^n) + n\epsilon_n$, and the chain rule together with the definition of $U_i$ turns the right-hand side into $\sum_i I(U_i;Y_{2i}) + n\epsilon_n$. At receiver 1, Fano gives $nR_1 \le I(W_1;Y_1^n\mid W_0,W_2) + n\epsilon_n$, and the step that discards the past outputs $Y_1^{i-1}$ in favour of $U_i$ is the one that again requires degradedness. A time-sharing variable is then absorbed exactly as in Proposition *Convexity without time sharing*, and the support lemma installs the cardinality bound. The two ingredients are Lemma *Fano's inequality* and the degradedness Markov chain; nothing else enters.
+:::
+
+For the Gaussian channel the region can be written down explicitly, and this is the form that matters in practice.
+
+:::theorem[Capacity region of the Gaussian broadcast channel]{#gaussian-bc-region}
+Let $Y_i = X + Z_i$ with $Z_i\sim\mathcal{N}(0,N_i)$, $N_1 < N_2$, and $\mathbb{E}[X^2]\le P$. The private-message capacity region is the set of pairs
+
+$$R_1 \le \tfrac12\log\Bigl(1 + \tfrac{(1-\alpha)P}{N_1}\Bigr), \qquad R_2 \le \tfrac12 \log\Bigl(1 + \tfrac{\alpha P}{(1-\alpha)P + N_2}\Bigr)$$
+
+for some $\alpha \in [0,1]$, where $\alpha P$ is the power devoted to the weak receiver's layer.
+:::
+
+:::proof
+**Achievability** is Theorem *Superposition coding achieves the degraded region* of the next section, specialised to a Gaussian auxiliary $U$ and $X = U+V$; it is proved there in full, and the two mutual informations are computed in Example *Gaussian superposition from the encoder's side*.
+
+**Sketch of the converse.** This half is a sketch, because it is the one place in the chapter needing a genuinely different tool: the **entropy power inequality**, stated immediately below. One shows that for any $U$ with $U-X-Y_1-Y_2$, if $I(U;Y_2)$ equals $\tfrac12\log\bigl(1+\tfrac{\alpha P}{(1-\alpha)P+N_2}\bigr)$ for some $\alpha \in [0,1]$, then necessarily
+
+$$h(Y_1\mid U) \ \ge\ \tfrac12\log\bigl(2\pi e\left((1-\alpha)P + N_1\right)\bigr),$$
+
+a *lower* bound on a conditional differential entropy. Ordinary concavity and maximum-entropy arguments give upper bounds on entropies, never lower ones; the entropy power inequality is what supplies this direction. Combining it with $h(Y_1\mid X) = \tfrac12\log(2\pi e N_1)$ bounds $I(X;Y_1\mid U)$ by the stated expression. This is Bergmans' converse.
+:::
+
+:::theorem[Entropy power inequality]{#epi}
+Let $X$ and $Z$ be independent $n$-dimensional random vectors with densities. Then
+
+$$2^{\frac{2}{n}h(X+Z)} \ \ge\ 2^{\frac{2}{n}h(X)} + 2^{\frac{2}{n}h(Z)},$$
+
+with equality if and only if $X$ and $Z$ are Gaussian with proportional covariance matrices.
+:::
+
+:::remark
+We state the entropy power inequality without proof: every known proof — Stam's, via de Bruijn's identity and Fisher information, or Lieb's, via Young's inequality with sharp constants — is a substantial piece of analysis well outside this chapter. It is recorded here because Theorem *Capacity region of the Gaussian broadcast channel* has no honest converse without it, and a result leaned on by name but never stated is precisely the gap this chapter is written to avoid.
+:::
+
+:::example[Splitting power on a Gaussian broadcast channel]
+Take $N_1 = 1$, $N_2 = 4$, $P = 10$ and $\alpha = \tfrac12$. Compute the rate pair, and compare it with what time sharing delivers at the same $R_1$.
 :::
 
 :::solution
-**Weak user's rate.** Receiver 2 decodes only the cloud, so the satellite power $(1-\alpha)P = 5$ acts as extra noise on top of $N_2 = 4$. Its cloud SNR is $\dfrac{\alpha P}{(1-\alpha)P + N_2} = \dfrac{5}{5 + 4} = \dfrac{5}{9}$, giving $R_2 \le \tfrac12\log\!\big(1 + \tfrac59\big) = \tfrac12\log\tfrac{14}{9} \approx 0.319$ bits.
-**Step 2 — Strong user's rate.** Receiver 1 first decodes the cloud (it can, since its channel is better than receiver 2's), *subtracts* it, and then reads the satellite over noise $N_1 = 1$ only: $R_1 \le \tfrac12\log\!\big(1 + \tfrac{(1-\alpha)P}{N_1}\big) = \tfrac12\log(1 + 5) = \tfrac12\log 6 \approx 1.292$ bits.
-**Step 3 — Compare to naive splitting.** Time-sharing / orthogonal splitting would force the two rates to trade along a straight line between the single-user points; superposition instead lets receiver 1 keep a large rate ($1.292$) while receiver 2 still gets $0.319$ — the whole power is "reused" because the strong user cancels the weak layer rather than avoiding it.
-**Step 4 — Sweep $\alpha$.** As $\alpha \to 1$, all power goes to the cloud: $R_2 \to \tfrac12\log(1 + 10/4) = \tfrac12\log 3.5 \approx 0.904$ (its single-user ceiling) while $R_1 \to 0$. As $\alpha \to 0$: $R_1 \to \tfrac12\log 11 \approx 1.730$, $R_2 \to 0$. The union over $\alpha \in [0,1]$ traces the boundary of the capacity region.
-**Sanity check:** the endpoints of the sweep reproduce exactly the single-user ceilings computed in the BC model example ($1.730$ and $0.904$). ✓
+The weak receiver decodes only the coarse layer, and sees the fine layer — power $(1-\alpha)P = 5$ — as extra noise:
+
+$$R_2 = \tfrac12\log_2\Bigl(1 + \tfrac{5}{5+4}\Bigr) = \tfrac12\log_2\tfrac{14}{9} \approx 0.3187.$$
+
+The strong receiver removes the coarse layer and reads the fine layer against thermal noise alone:
+
+$$R_1 = \tfrac12\log_2\Bigl(1+\tfrac{5}{1}\Bigr) = \tfrac12\log_2 6 \approx 1.2925.$$
+
+Now compare with time sharing between the two single-user ceilings $(1.7297,\,0)$ and $(0,\,0.9037)$. The chord joining them, evaluated at $R_1 = 1.2925$, gives
+
+$$R_2^{\text{TS}} = 0.9037\Bigl(1 - \tfrac{1.2925}{1.7297}\Bigr) \approx 0.2284.$$
+
+Superposition delivers $0.3187$ against time sharing's $0.2284$ at the same $R_1$ — about a $40\%$ improvement for the weak user at no cost to the strong one. The reason is that superposition uses the full power $P$ in *every* channel use, while time sharing idles one user's power whenever the other transmits. □
+:::
+
+:::figure[The Gaussian broadcast region for $P=10$, $N_1=1$, $N_2=4$. The superposition boundary bulges strictly outside the time-sharing chord joining the two single-user ceilings; the marked point is the $\alpha=\tfrac12$ split computed in the example.]{#gaussian-bc-figure}
+{
+  "type": "plot",
+  "x": [0, 2.3],
+  "y": [0, 1.25],
+  "xTicks": 0.5,
+  "yTicks": 0.25,
+  "xLabel": "R1 (strong receiver)",
+  "yLabel": "R2 (weak receiver)",
+  "marks": [
+    { "kind": "path", "points": [[1.73, 0], [1.661, 0.053], [1.585, 0.111], [1.5, 0.174], [1.404, 0.243], [1.292, 0.319], [1.161, 0.404], [1.0, 0.5], [0.792, 0.611], [0.5, 0.743], [0.0, 0.904]], "tone": "result" },
+    { "kind": "line", "through": [[1.73, 0], [0.0, 0.904]], "tone": "muted", "dashed": true, "extend": false },
+    { "kind": "point", "at": [1.292, 0.319], "tone": "result" },
+    { "kind": "text", "at": [1.35, 0.95], "text": "superposition", "leaderTo": [0.9, 0.55] },
+    { "kind": "text", "at": [0.30, 0.20], "text": "time sharing", "leaderTo": [0.85, 0.46] },
+    { "kind": "text", "at": [1.75, 0.45], "text": "alpha = 0.5", "leaderTo": [1.292, 0.319] }
+  ]
+}
 :::
 
 ## Superposition Coding
 
 <!-- section: superposition-coding -->
 
-:::recipe[Superposition coding]{#superposition-coding}
-1. Generate a coarse codebook for the weak user's message; its codewords are the cloud centers.
-2. For each cloud center, generate a fine codebook of satellites for the strong user's message. The transmitted $X$ is the satellite point.
-3. The weak receiver decodes only the cloud center, treating the satellites as noise.
-4. The strong receiver first decodes the cloud center, using its better channel, subtracts it, and then decodes its own satellite.
+Superposition coding is the construction that proves Theorem *Capacity region of the degraded broadcast channel* achievable. The picture is of **clouds and satellites**: the weak receiver's message selects a cloud, the strong receiver's message selects a satellite point inside that cloud, and the transmitted signal is the satellite.
+
+:::recipe[Superposition coding]{#superposition-coding-recipe}
+1. Fix $p(u)p(x\mid u)$. Generate $2^{n(R_0+R_2)}$ cloud centres $u^n(w_0,w_2)$ i.i.d. from $\prod_i p(u)$.
+2. For each cloud centre, generate $2^{nR_1}$ satellites $x^n(w_0,w_2,w_1)$ i.i.d. from $\prod_i p(x\mid u_i(w_0,w_2))$ — conditionally on that cloud centre.
+3. Transmit the satellite $x^n(w_0,w_2,w_1)$. Nothing else is sent; the coarse layer is present in every symbol.
+4. The weak receiver decodes the cloud index only, treating the satellite's displacement within the cloud as noise.
+5. The strong receiver decodes the cloud index first, then the satellite inside it.
 :::
 
-This is dual to SIC on the MAC and achieves every point in the capacity region of the degraded BC.
+:::proposition[The strong receiver can decode the cloud]{#strong-decodes-cloud}
+If $U - X - Y_1 - Y_2$ is a Markov chain, then $I(U;Y_1) \ge I(U;Y_2)$.
+:::
+
+:::proof
+The sub-chain $U - Y_1 - Y_2$ holds, so $I(U;Y_2\mid Y_1) = 0$. Expanding $I(U;Y_1,Y_2)$ in the two orders,
+
+$$I(U;Y_1) = I(U;Y_1) + I(U;Y_2\mid Y_1) = I(U;Y_1,Y_2) = I(U;Y_2) + I(U;Y_1\mid Y_2) \ \ge\ I(U;Y_2),$$
+
+since $I(U;Y_1\mid Y_2)\ge0$. This is the data processing inequality: passing $Y_1$ through the degrading channel that produces $Y_2$ cannot increase the information carried about $U$.
+:::
+
+This is the hinge of the whole construction. Step 5 asks the strong receiver to do something the weak receiver already does — decode the cloud — and Proposition *The strong receiver can decode the cloud* says that whatever rate the weak receiver can sustain, the strong one can sustain too. Degradedness is not a convenience here; remove it and step 5 is simply false, which is why the general broadcast channel resists this method.
+
+:::theorem[Superposition coding achieves the degraded region]{#superposition-achievability}
+For a degraded broadcast channel with $X-Y_1-Y_2$, every triple with $R_1 < I(X;Y_1\mid U)$ and $R_0 + R_2 < I(U;Y_2)$ is achievable.
+:::
+
+:::proof
+Use the codebook of Method *Superposition coding*, and suppose $(w_0,w_2,w_1)=(1,1,1)$ was sent.
+
+**Weak receiver.** It seeks the unique $\hat m = (\hat w_0,\hat w_2)$ with $\bigl(u^n(\hat m), y_2^n\bigr)$ jointly typical. The true cloud centre is jointly typical with $y_2^n$ with probability tending to $1$. A wrong cloud centre was generated independently of $y_2^n$, so by the counting argument of Lemma *Joint typicality lemma for the MAC* it is jointly typical with probability at most $2^{-n(I(U;Y_2)-2\epsilon)}$. With fewer than $2^{n(R_0+R_2)}$ wrong centres the union bound gives vanishing error whenever $R_0+R_2 < I(U;Y_2)-2\epsilon$.
+
+**Strong receiver, stage 1.** The identical argument with $Y_1$ in place of $Y_2$ succeeds whenever $R_0+R_2 < I(U;Y_1)-2\epsilon$. By Proposition *The strong receiver can decode the cloud*, $I(U;Y_1)\ge I(U;Y_2)$, so the condition already imposed by the weak receiver suffices: stage 1 adds no new constraint.
+
+**Strong receiver, stage 2.** Given the correct centre $u^n(1,1)$, the receiver seeks the unique $\hat w_1$ with $\bigl(u^n(1,1),\,x^n(1,1,\hat w_1),\,y_1^n\bigr)$ jointly typical. A wrong satellite in the *correct* cloud was generated i.i.d. from $\prod_i p(x\mid u_i)$ independently of $y_1^n$ given $u^n$, so it is jointly typical with probability at most $2^{-n(I(X;Y_1\mid U)-3\epsilon)}$. With fewer than $2^{nR_1}$ such satellites the union bound gives vanishing error whenever $R_1 < I(X;Y_1\mid U)-3\epsilon$.
+
+Summing the three vanishing terms bounds the average error probability over the random ensemble, so a particular code exists with $P_e^{(n)}\to0$. Letting $\epsilon\downarrow0$ gives every triple in the interior.
+:::
 
 :::intuition
-Imagine sending a 'base layer' that the poor receiver can just barely understand, plus 'enhancement layers' that only the good receiver can peel off on top of the base.
-
-The enhancement is hidden inside the 'noise' that the weak receiver already has to tolerate.
+Superposition coding is the exact dual of successive interference cancellation, and the duality is worth stating precisely. On the MAC, two *independent* codewords are added by the *channel* and peeled apart by the *decoder*. On the degraded BC, two *dependent* layers are added by the *encoder* and peeled apart by the *strong decoder*. In both settings the thing decoded last enjoys a clean channel while the thing decoded first must tolerate everything else as noise — which is why the same chain-rule quantity, $I(\text{first};Y) + I(\text{second};Y\mid\text{first})$, governs both.
 :::
 
-:::example
-Same Gaussian BC as above ($N_1 = 1$, $N_2 = 4$, $P = 10$), now viewed from the *encoder's* construction with $\alpha = 0.5$. Write $X = U + V$ where $U$ (the base/cloud) has power $\alpha P = 5$ and $V$ (the enhancement/satellite) has power $(1-\alpha)P = 5$, chosen independently.
+:::pitfall
+Superposition is not time sharing, and it is not "sending the two messages in different slots". At *every* channel use the transmitted symbol carries both layers. The weak receiver never gets a clean look at its own layer; it simply operates at a rate low enough that the fine layer's interference is tolerable. Confusing the two is the commonest error in this subject, and the numbers of Example *Splitting power on a Gaussian broadcast channel* show it is no semantic quibble: superposition gave the weak user $0.3187$ where time sharing gave $0.2284$.
+:::
+
+:::example[Gaussian superposition from the encoder's side]
+With $N_1 = 1$, $N_2 = 4$, $P = 10$ and $\alpha = \tfrac12$, write the explicit signal construction and verify each receiver's rate from the definitions.
 :::
 
 :::solution
-**Build the codebooks.** Draw $2^{nR_2}$ cloud centers $U^n$ i.i.d. $\mathcal N(0, \alpha P)$. Around each cloud center draw $2^{nR_1}$ satellites by adding an independent $V^n \sim \mathcal N(0, (1-\alpha)P)$. The transmitted symbol is $X = U + V$, with total power $\alpha P + (1-\alpha)P = 10 = P$. ✓ (power constraint met with equality).
-**Step 2 — Weak receiver decodes the base.** Receiver 2 sees $Y_2 = U + V + Z_2$. It treats $V + Z_2$ (variance $5 + 4 = 9$) as noise and decodes $U$, so it can support $R_2 = \tfrac12\log\!\big(1 + \tfrac{5}{9}\big) \approx 0.319$ bits — identical to the previous section.
-**Step 3 — Strong receiver peels the base, then reads the enhancement.** Receiver 1 sees $Y_1 = U + V + Z_1$ with $Z_1$ of variance $1$. Its channel is cleaner than receiver 2's, so it can decode $U$ *at least* as reliably, subtract $\hat U$, and be left with $V + Z_1$ (variance $5 + 1 = 6$ before cancellation, but the useful signal is $V$ over noise $N_1 = 1$). Its enhancement rate is $R_1 = \tfrac12\log\!\big(1 + \tfrac{5}{1}\big) = \tfrac12\log 6 \approx 1.292$ bits.
-**Step 4 — Why the strong user can always decode the base.** Degradedness guarantees receiver 1's SNR for the cloud, $\tfrac{\alpha P}{(1-\alpha)P + N_1} = \tfrac{5}{6}$, exceeds receiver 2's cloud SNR $\tfrac{5}{9}$. Since $\tfrac56 > \tfrac59$, whatever rate the weak user can decode, the strong user decodes too. This is the crucial condition that makes cancellation valid.
-**Sanity check:** the achieved pair $(R_1, R_2) = (1.292,\, 0.319)$ matches the degraded-BC computation exactly, confirming superposition and the region description agree. ✓
+Let $U \sim \mathcal{N}(0,\alpha P) = \mathcal{N}(0,5)$ and $V \sim \mathcal{N}(0,(1-\alpha)P) = \mathcal{N}(0,5)$ be independent, and set $X = U+V$. Then $\mathbb{E}[X^2] = 5+5 = 10 = P$, so the power constraint holds with equality. Concretely: draw $2^{nR_2}$ cloud centres i.i.d. $\mathcal{N}(0,5)$, and around each draw $2^{nR_1}$ satellites by adding independent $\mathcal{N}(0,5)$ vectors.
+
+*Weak receiver.* Write $Y_2 = U + (V+Z_2)$, where $V+Z_2$ has variance $5+4 = 9$ and is independent of $U$. Hence
+
+$$R_2 = I(U;Y_2) = \tfrac12\log_2\Bigl(1+\tfrac{5}{9}\Bigr) \approx 0.3187.$$
+
+*Strong receiver.* Here $Y_1 = U+V+Z_1$, and conditioning on $U$ removes it exactly, leaving the channel $V + Z_1$ with signal power $5$ and noise power $N_1 = 1$:
+
+$$R_1 = I(X;Y_1\mid U) = h(Y_1\mid U) - h(Y_1\mid X) = \tfrac12\log_2\bigl(2\pi e\cdot 6\bigr) - \tfrac12\log_2\bigl(2\pi e \cdot 1\bigr) = \tfrac12\log_2 6 \approx 1.2925.$$
+
+*The hinge, numerically.* Receiver 1's cloud SNR is $\tfrac{5}{5+1} = \tfrac56$ and receiver 2's is $\tfrac{5}{5+4} = \tfrac59$. Since $\tfrac56 > \tfrac59$, Proposition *The strong receiver can decode the cloud* is confirmed here concretely: stage 1 of the strong receiver is strictly easier than the weak receiver's only task. □
+:::
+
+:::example[Recovering the endpoints]
+Show that sweeping $\alpha$ across $[0,1]$ in the Gaussian construction recovers the two single-user ceilings, and that each rate is monotone in $\alpha$.
+:::
+
+:::solution
+At $\alpha=0$ all power goes to the fine layer: $R_1 = \tfrac12\log_2(1+P/N_1) = \tfrac12\log_2 11 \approx 1.7297$ and $R_2 = \tfrac12\log_2 1 = 0$. At $\alpha=1$ all power goes to the coarse layer: $R_1 = 0$ and $R_2 = \tfrac12\log_2(1+P/N_2) = \tfrac12\log_2 3.5 \approx 0.9037$. Both agree with the ceilings of Example *Ordering a Gaussian broadcast channel*.
+
+For monotonicity, the weak user's SNR is
+
+$$f(\alpha) = \frac{\alpha P}{(1-\alpha)P + N_2},$$
+
+whose numerator increases in $\alpha$ while its denominator decreases, so $f$ is strictly increasing on $[0,1]$ and therefore so is $R_2 = \tfrac12\log_2(1+f(\alpha))$. Meanwhile $R_1 = \tfrac12\log_2\bigl(1+(1-\alpha)P/N_1\bigr)$ is strictly decreasing. The two trade monotonically, so $\alpha$ is a genuine one-dimensional dial that traces the boundary once, from one ceiling to the other. □
+:::
+
+:::summary
+- The MAC capacity region is the closed convex hull of the pentagons $\mathscr{R}(p_1,p_2)$, one per product input distribution; achievability is joint typicality decoding, and the converse is Fano plus memorylessness plus a time-sharing variable.
+- SIC reaches the pentagon's corners with two single-user decoders, because $I(X_1,X_2;Y) = I(X_1;Y)+I(X_2;Y\mid X_1)$ is the chain rule. Rate splitting reaches the whole dominant face the same way; TDMA with power control touches it at exactly one point.
+- A broadcast channel's capacity region depends only on the marginals $p(y_i\mid x)$, so stochastic and physical degradedness are interchangeable.
+- The degraded BC region is $R_1 \le I(X;Y_1\mid U)$, $R_0+R_2 \le I(U;Y_2)$, achieved by superposition coding; the hinge is $I(U;Y_1)\ge I(U;Y_2)$, an instance of data processing.
+- Both Gaussian cases are explicit: a pentagon built from $\tfrac12\log(1+P_j/N)$ on the MAC, and a one-parameter power split $\alpha$ on the BC that strictly dominates time sharing except at the endpoints.
 :::
 
 ## Common Mistakes
 
-- **Thinking the MAC capacity region is always a rectangle**: Only when the users do not interfere (orthogonal channels) is it a rectangle; otherwise there is a sum-rate tradeoff.
-- **Using the same code as for a single-user channel without accounting for interference**: Treating the other user purely as noise is suboptimal except at the corner points.
-- **Confusing the MAC with the broadcast channel**: In MAC multiple senders → one receiver; in broadcast one sender → multiple receivers with possibly different channels.
-- **Assuming independent codebooks are always optimal**: For some MACs (deterministic) correlation can help, but for the standard memoryless MAC independent inputs suffice for the capacity region.
-- **Forgetting that the capacity region is for asymptotically long blocks**: For finite n there is a penalty and practical systems use HARQ, power control, and scheduling on top of the information-theoretic region.
-- **Believing SIC always requires the stronger user to be decoded first in every realization**: In information theory we consider average power and typical sets; practical SIC adapts ordering or uses joint decoding for robustness.
-
-A broadcast channel (BC) has a single transmitter sending one or more messages to several receivers. Each receiver observes its own (possibly different) noisy version of the transmitted signal. The goal is to characterize the set of rates at which the transmitter can send private messages to each receiver (and possibly a common message to all).
-
-The broadcast channel is the dual of the multiple-access channel and introduces superposition and binning ideas central to network information theory.
-
-- **Assuming the broadcast capacity region is always the intersection of the individual point-to-point capacities**: That would be too pessimistic; superposition lets the strong user get extra rate 'on top' without hurting the weak user as much as orthogonal allocation would.
-- **Confusing superposition with time-sharing**: Time-sharing is a simple inner bound; superposition strictly enlarges the region for non-degraded or even some degraded channels.
-- **Thinking the same codebook is sent to everyone**: The encoding uses auxiliary variables; the actual X carries a combination of messages in a structured way.
-- **Forgetting the common message**: Many treatments focus on private messages only; adding a common message R0 changes the bounds and is important for video multicast etc.
-- **Believing all broadcast channels have known capacity regions**: Only degraded (and a few other classes such as more capable, less noisy) BCs have single-letter capacity regions; the general BC capacity is still open.
-- **Ignoring that practical broadcast systems use layered video + unequal error protection rather than pure information-theoretic superposition**: The principle is the same, but implementation uses scalable codecs and different modulation/coding per layer.
-
-In traditional packet networks, intermediate routers only store and forward packets. Network coding allows (or requires) routers to compute linear combinations (or other functions) of the packets they receive and forward the combinations. For multicast traffic this can achieve higher throughput than routing alone; the classic gain is demonstrated by the butterfly network.
-
-Network coding sits at the intersection of information theory, graph theory, and algebra; random linear network coding makes it practical in large networks.
-
-- **Thinking network coding always doubles throughput**: The gain is topology-dependent; in some networks (trees) coding gives no gain over routing; the butterfly is the smallest example with gain 2.
-- **Confusing network coding with source or channel coding**: Network coding operates on packets at intermediate nodes; it is orthogonal and can be composed with end-to-end source/channel coding.
-- **Assuming the field size can be arbitrarily small**: For linear NC to achieve capacity, the field must be large enough relative to the number of sinks or edges; GF(2) sometimes works but not always.
-- **Forgetting header overhead for coefficients**: In random linear NC the coding vector (coefficients) must be sent with the packet or known by other means; this overhead vanishes asymptotically but matters for small generations.
-- **Believing coding is only for multicast**: While the big theorem is for multicast, network coding ideas (including index coding, functional compression, compute-forward) apply to many other traffic patterns and have practical uses in wireless (COPE, MORE) and distributed storage.
-- **Ignoring that practical deployments use generation-based or sliding-window NC rather than the block model of the theorems**: Real systems chunk data into generations to keep matrices small and decoding delay low.
-
-Common randomness refers to the problem of generating or extracting identical random bits that are shared among two or more parties, often when the parties observe correlated but noisy versions of some source or communicate over noisy channels. The extracted bits should be nearly uniform and independent of any eavesdropper's view (when privacy is required).
-
-This area sits at the intersection of information theory, cryptography, and communication complexity. It underlies secret-key agreement, privacy amplification, randomness extraction, and certain physical-layer security schemes.
-
-- **Equating common randomness with secret-key agreement**: Common randomness can be generated even when there is no secrecy requirement (just identical uniform bits); secrecy adds the privacy-amplification step and changes the achievable rates.
-- **Forgetting reconciliation**: Correlated observations X and Y are almost never identical; an error-correction / reconciliation phase (often using Slepian-Wolf or LDPC codes on the virtual correlation channel) is required before extraction.
-- **Thinking that sending the raw observations over the public channel always works**: It does give common randomness at rate H(X|Y), but it may leak everything to an eavesdropper; privacy amplification is still needed if secrecy is required.
-- **Confusing min-entropy with Shannon entropy in one-shot extraction**: Extractors are analyzed with min-entropy (worst-case); Shannon entropy gives only asymptotic typical-set statements.
-- **Assuming that common randomness always requires interaction**: In some models (e.g., channel reciprocity with no active adversary) the correlation itself may be sufficient with one-way or even zero communication after the initial observations.
-- **Overlooking that common randomness is a resource that can be consumed**: Once Alice and Bob use up their shared bits for a key or for coordination, they may need to distill more from a fresh batch of correlated observations.
-
-The Blahut–Arimoto (BA) algorithm is a practical iterative method for numerically computing the rate-distortion function R(D) for a given source and distortion measure, and a closely related algorithm computes the channel capacity C of a DMC. It was developed independently by Blahut and Arimoto in the early 1970s and remains the standard tool when no closed form is available.
-
-Because R(D) and C are defined by convex optimizations, alternating optimization between the variables yields a convergent procedure whose fixed point satisfies the necessary KKT conditions for optimality.
-
-- **Running the algorithm for a fixed D instead of using the s-parameter**: Direct fixed-D versions exist but the Lagrangian form is numerically more stable and naturally traces the whole curve.
-- **Forgetting to normalize the test-channel updates**: The proportionality must become a true conditional pmf for each x; missing normalization ruins the I calculation.
-- **Assuming convergence from any initialization to the global optimum without checking**: While convexity guarantees it for the exact BA, floating-point or approximate versions can need multiple random starts for large problems.
-- **Confusing the BA algorithm with actual code construction**: BA gives the information-theoretic limit R(D) or C; it does not directly produce the encoder/decoder codebooks (though it can guide quantizer design).
-- **Using it on continuous alphabets without discretization**: The algorithm is for finite alphabets; continuous problems require discretization, kernel methods, or parametric assumptions.
-- **Ignoring that s = dR/dD at the solution**: After convergence you can read the slope from the final s to verify consistency with the computed (R,D) point.
+- **Thinking the MAC capacity region is always a rectangle**: it is a rectangle only when $I(X_1;X_2\mid Y) = 0$, i.e. when the output never couples the two inputs. Otherwise Proposition *The pentagon and its corners* forces a strict sum-rate face.
+- **Treating the other user as noise everywhere**: that is optimal only for the user decoded *first* under SIC, and only at that one corner. Applying it to both users at once gives a strictly smaller set of pairs.
+- **Confusing the MAC with the broadcast channel**: MAC is many senders into one receiver, with separate encoders and a joint decoder; BC is one sender to many receivers, with a joint encoder and separate decoders. The constraint moves from the encoders to the decoders.
+- **Believing correlated codewords enlarge the MAC region**: for the memoryless MAC without feedback or common information, independent codebooks plus a time-sharing variable are optimal — that is the content of Theorem *Capacity region of the two-user MAC*. Correlation between the users' codewords helps only in the *different* problems of the MAC with feedback (the Cover–Leung region) or with a common message.
+- **Reading a capacity region as a finite-block-length guarantee**: every statement here is asymptotic in $n$. At finite length there is a dispersion penalty, and deployed systems layer HARQ, power control and scheduling on top.
+- **Expecting a single-letter answer for every broadcast channel**: only the degraded, less noisy and more capable classes are solved. The general two-receiver BC capacity region has been open since 1972.
+- **Adding a separate constraint $R_2 \le I(U;Y_2)$ beside $R_0+R_2 \le I(U;Y_2)$**: the first is implied by the second. Likewise the apparently missing sum constraint $R_0+R_1+R_2 \le I(X;Y_1)$ is implied, via $I(U;Y_1)\ge I(U;Y_2)$ and the chain rule.
+- **Forgetting the cardinality bound on $U$**: without $|\mathcal{U}| \le \min\{|\mathcal{X}|,|\mathcal{Y}_1|,|\mathcal{Y}_2|\}+1$ the "single-letter" region is a union over an unbounded family and cannot be evaluated.
+- **Assuming a MIMO broadcast channel is degraded**: two noise *covariances* need not be ordered, so the scalar argument of Example *Ordering a Gaussian broadcast channel* fails. The MIMO BC is solved, but by dirty-paper coding rather than superposition.
