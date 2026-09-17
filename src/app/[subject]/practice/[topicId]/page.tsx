@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getFileSystemContentBundle, loadSubjectIndex } from "@/lib/content/loader";
-import { getLegacyTopicRedirect } from "@/lib/content/legacy-topic-redirects";
+import {
+  getLegacySectionRedirect,
+  getLegacyTopicRedirect,
+} from "@/lib/content/legacy-topic-redirects";
 import { getPracticePath } from "@/lib/subject-urls";
 import { GenericPracticeExperience } from "@/components/generic-practice-experience";
 import { PracticeErrorBoundary } from "@/components/practice/PracticeErrorBoundary";
@@ -59,6 +62,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function DynamicPracticePage({ params, searchParams }: Props) {
   const { subject: subjectSlug, topicId } = await params;
   const { section: sectionFilter } = await searchParams;
+
+  // A deep link follows its own section wherever that section went, in
+  // preference to the chapter's single landing point — the old chapter's
+  // sections may now sit in several different chapters.
+  const movedSection = await getLegacySectionRedirect(subjectSlug, topicId, sectionFilter);
+  if (movedSection) {
+    const target = getPracticePath(subjectSlug, movedSection);
+    permanentRedirect(`${target}?section=${encodeURIComponent(sectionFilter!)}`);
+  }
 
   const legacy = await getLegacyTopicRedirect(subjectSlug, topicId);
   if (legacy) {
