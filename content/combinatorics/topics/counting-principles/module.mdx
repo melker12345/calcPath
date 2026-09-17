@@ -4,345 +4,1127 @@ title: Counting Principles
 
 # Counting Principles
 
-The pigeonhole principle, inclusion–exclusion, and bijective proofs for existence and exact counting.
+Combinatorics begins with a question that sounds too easy to need a theory: *how many?* The theory exists because the honest answer is almost never obtained by listing. A poker hand is one of $2{,}598{,}960$; a bridge deal is one of roughly $5.4 \times 10^{28}$. Nobody counts those by enumeration. They are counted by *principles* — a small number of rules that let a complicated set be broken into pieces whose sizes are already known, or matched against a set whose size is already known.
 
-The pigeonhole principle is deceptively simple yet extraordinarily powerful: it lets you prove that something *must* happen in any large enough structure, without constructing an example or checking all cases.
+This chapter assembles that toolkit and, more importantly, proves it. Four ideas do almost all the work:
 
-It is one of the first "non-constructive" proof techniques most students encounter.
+- **The sum and product rules**, which turn a decomposition of a set into an arithmetic identity.
+- **The bijection principle**, which says that a perfect matching between two collections is itself a proof that they are the same size — and which, on inspection, is what makes the sum and product rules true in the first place.
+- **The pigeonhole principle**, which proves that something *must* exist without producing it.
+- **Inclusion–exclusion**, which repairs the overcounting that happens when the pieces of a decomposition overlap.
 
-## The Basic Principle
+A fifth technique, **double counting** — evaluating the size of one set in two different ways and equating the answers — is not a separate axiom but a habit of mind built on the other four. It is responsible for a surprising fraction of the identities in combinatorics, and we make it explicit rather than leaving it as something the reader is expected to absorb by osmosis.
+
+Throughout, $[n]$ denotes the set $\{1, 2, \ldots, n\}$, with $[0] = \varnothing$, and $|A|$ denotes the number of elements of a finite set $A$. All sets are finite unless we say otherwise.
+
+## Sets, Bijections and the Two Basic Rules
 
 <!-- section: basic-principle -->
 
-:::theorem[Pigeonhole principle]{#pigeonhole}
-If you have more pigeons than pigeonholes, then at least one pigeonhole contains more than one pigeon. In mathematical language: if $n > m$, then when distributing $n$ items into $m$ containers, at least one container has at least two items.
+Before anything can be counted, "the number of elements" has to mean something. The definition used in combinatorics is deliberately concrete: a set has $n$ elements when it can be labelled $1$ through $n$ without repetition and without omission.
+
+:::definition[Cardinality of a finite set]{#cardinality}
+A set $A$ is *finite of cardinality $n$*, written $|A| = n$, if there is a bijection $f : [n] \to A$, where $[n] = \{1, 2, \ldots, n\}$ and $[0] = \varnothing$. Such an $f$ is a *listing* of $A$: it writes $A$ as $\{f(1), f(2), \ldots, f(n)\}$ with all entries distinct.
+:::
+
+:::note
+That the integer $n$ is *unique* — that no set admits both a listing of length $5$ and a listing of length $6$ — is the pigeonhole principle in disguise, and is proved as a corollary at the end of this section. Until then, read "$|A| = n$" as "some listing of length $n$ exists".
+:::
+
+Everything in this chapter is ultimately an argument about listings. The first and most fundamental rule says that a matching between two sets transfers a listing from one to the other.
+
+:::theorem[Bijection principle]{#bijection-principle}
+Let $A$ and $B$ be finite sets. If there exists a bijection $g : A \to B$, then $|A| = |B|$.
 :::
 
 :::proof
-Argue by contradiction. If *every* one of the $m$ containers held at most one item, the total number of items would be at most $m$. But we have $n > m$ items, a contradiction. So some container must hold at least two.
+Let $|A| = n$, so there is a bijection $f : [n] \to A$. The composite $g \circ f : [n] \to B$ is a bijection, because a composite of bijections is a bijection: if $g(f(i)) = g(f(j))$ then $f(i) = f(j)$ by injectivity of $g$, and $i = j$ by injectivity of $f$; and given $b \in B$, surjectivity of $g$ gives $a \in A$ with $g(a) = b$, and surjectivity of $f$ gives $i \in [n]$ with $f(i) = a$, so $g(f(i)) = b$. Hence $g \circ f$ is a listing of $B$ of length $n$, so $|B| = n = |A|$.
 :::
 
-Here $n$ and $m$ are positive integers and the containers must be a *fixed, finite* set — the argument works precisely because there are only finitely many holes to fill.
+At this stage that is bookkeeping. Its power appears later: to prove two complicated families have the same size one need not compute either size. The section *Bijections and counting in two ways* develops the idea properly.
 
-:::intuition
-13 socks into 12 drawers: even if you try to spread them out, at least one drawer ends up with two socks.
+The two workhorse rules come next. The sum rule handles a set split into non-overlapping pieces; the product rule handles objects built by successive choices.
 
-13 people, 12 months: at least two people share a birthday month. You don't need their names; pure counting forces the collision.
+:::theorem[Sum rule]{#sum-rule}
+Let $A_1, A_2, \ldots, A_k$ be pairwise disjoint finite sets, meaning $A_i \cap A_j = \varnothing$ whenever $i \ne j$. Then
+
+$$|A_1 \cup A_2 \cup \cdots \cup A_k| = |A_1| + |A_2| + \cdots + |A_k|.$$
 :::
 
-:::example
-In a group of 367 people, at least two share the same birthday (ignoring leap years, so 365 possible birthdays).
+:::proof
+It suffices to prove the case $k = 2$; the general case follows by induction on $k$, since $A_1 \cup \cdots \cup A_k = (A_1 \cup \cdots \cup A_{k-1}) \cup A_k$ and that union is disjoint.
+
+So let $A \cap B = \varnothing$ with $|A| = m$ and $|B| = n$, and choose listings $f : [m] \to A$ and $g : [n] \to B$. Define $h : [m+n] \to A \cup B$ by
+
+$$h(i) = \begin{cases} f(i) & 1 \le i \le m, \\ g(i - m) & m+1 \le i \le m+n. \end{cases}$$
+
+$h$ is surjective: every element of $A$ is some $f(i)$ and every element of $B$ is some $g(j) = h(m+j)$. It is injective: two indices in $[m]$ give distinct values because $f$ is injective; two indices above $m$ do likewise because $g$ is injective; and one index from each range gives one value in $A$ and one in $B$, which are distinct *because $A$ and $B$ are disjoint*. So $h$ is a listing of $A \cup B$ of length $m+n$.
+:::
+
+:::pitfall
+Disjointness is not decoration — it is the only place the hypothesis is used, and dropping it makes the conclusion false. With $A = \{1,2\}$ and $B = \{2,3\}$ the sum rule would claim $|A \cup B| = 4$, while $A \cup B = \{1,2,3\}$ has three elements. Repairing exactly this failure is what inclusion–exclusion is for.
+:::
+
+:::theorem[Product rule]{#product-rule}
+For finite sets $A$ and $B$, the Cartesian product $A \times B = \{(a,b) : a \in A,\ b \in B\}$ satisfies
+
+$$|A \times B| = |A| \cdot |B|,$$
+
+and more generally $|A_1 \times \cdots \times A_k| = |A_1| \cdots |A_k|$.
+:::
+
+:::proof
+Fix $n = |B|$. For each $a \in A$ the *slice* $\{a\} \times B$ is in bijection with $B$ via $(a,b) \mapsto b$, whose inverse is $b \mapsto (a,b)$; so $|\{a\} \times B| = n$ by the bijection principle. The slices are pairwise disjoint, since the pair $(a,b)$ determines $a$, and their union over $a \in A$ is all of $A \times B$. The sum rule therefore gives
+
+$$|A \times B| = \sum_{a \in A} |\{a\} \times B| = \underbrace{n + n + \cdots + n}_{|A| \text{ terms}} = |A| \cdot |B|.$$
+
+The general case follows by induction, using the bijection $A_1 \times \cdots \times A_k \to (A_1 \times \cdots \times A_{k-1}) \times A_k$ that regroups a $k$-tuple as a pair.
+:::
+
+The product rule is usually applied in a slightly stronger form, and it is worth being precise about why the stronger form is legitimate.
+
+:::proposition[Sequential choice rule]{#sequential-rule}
+Suppose each object of a set $S$ is built by a sequence of $k$ choices, where the number of options at step $i$ is a constant $n_i$ *independent of how the earlier choices were made*, and distinct choice sequences build distinct objects. Then $|S| = n_1 n_2 \cdots n_k$.
+:::
+
+:::proof
+Induct on $k$. For $k = 1$ the claim is the definition of $n_1$. For $k > 1$, group the objects of $S$ by their first choice. Distinct sequences give distinct objects, so no object arises from two different first choices and the groups are pairwise disjoint; their union is $S$. Each group consists of the objects extending one fixed first choice, built by $k-1$ further choices with $n_2, \ldots, n_k$ options, so by induction each group has $n_2 \cdots n_k$ elements. There are $n_1$ groups, so the sum rule gives $|S| = n_1 (n_2 \cdots n_k)$.
+:::
+
+:::pitfall
+"Independent of how the earlier choices were made" refers to the *number* of options, not to which options they are. When you seat $5$ people in $5$ chairs, the second person's available chairs depend entirely on where the first sat — but there are always exactly $4$ of them, so the rule applies and gives $5! = 120$. The rule genuinely fails when the count itself varies with the history, and then the product must be replaced by a sum over cases.
+:::
+
+:::example[Both rules in one problem]
+How many strings of length $4$ over the alphabet $\{a,b,c,d,e\}$ either consist entirely of vowels ($a$ and $e$) or have four distinct letters?
 :::
 
 :::solution
-1. Set it up as pigeons and holes. The people are the pigeons ($n = 367$) and the 365 calendar days are the holes ($m = 365$).
-2. Since $367 > 365$, i.e. $n > m$, the pigeonhole principle applies: at least one day (hole) is assigned to two or more people (pigeons).
-3. Sanity check via the worst case: the most "spread out" arrangement gives 365 people each a distinct birthday, using every day exactly once. That accounts for only 365 people; the 366th person has no unused day, so they must repeat a day. With 367 the collision is guaranteed with room to spare. Note that 366 already suffices — 367 is simply a comfortable margin. ✓
+Let $V$ be the set of all-vowel strings and $D$ the set of strings with four distinct letters.
+
+Each of the four positions of a string in $V$ is filled independently from the $2$ vowels, so the product rule gives $|V| = 2^4 = 16$.
+
+A string in $D$ is built by choosing its first letter ($5$ ways), then a different second letter ($4$ ways), then a third ($3$), then a fourth ($2$). The counts do not depend on which letters were used, so the sequential choice rule gives $|D| = 5 \cdot 4 \cdot 3 \cdot 2 = 120$.
+
+Are the two sets disjoint? An element of $V \cap D$ would be a string of four distinct letters all drawn from a two-letter alphabet, which the pigeonhole principle below forbids outright. So $V \cap D = \varnothing$, the sum rule applies, and the answer is $16 + 120 = 136$.
 :::
 
-## The Generalized Pigeonhole Principle
+:::intuition
+The two rules are "or" and "and". If an object is an $A$-thing **or** a $B$-thing, and never both, add. If an object is an $A$-thing **and** a $B$-thing chosen separately, multiply. Nearly every elementary counting error is a misdiagnosis of which of those two words fits — or an "or" whose cases secretly overlap.
+:::
+
+With the two rules in place we can state the principle that gives this chapter half its name. It says a set cannot be squeezed into a smaller one without a collision.
+
+:::theorem[Pigeonhole principle]{#pigeonhole}
+Let $A$ and $B$ be finite sets with $|A| > |B|$. Then no function $f : A \to B$ is injective: there exist distinct $a, a' \in A$ with $f(a) = f(a')$.
+
+Equivalently: if $n$ objects are placed into $m$ boxes and $n > m$, some box contains at least two objects.
+:::
+
+:::proof
+Suppose for contradiction that $f : A \to B$ is injective. For $b \in B$ write $A_b = f^{-1}(b) = \{a \in A : f(a) = b\}$. The sets $A_b$ are pairwise disjoint, since each $a$ has exactly one image, and their union is $A$; so the sum rule gives
+
+$$|A| = \sum_{b \in B} |A_b|.$$
+
+Injectivity says $|A_b| \le 1$ for every $b$, so the right-hand side is a sum of $|B|$ terms each at most $1$, hence at most $|B|$. Thus $|A| \le |B|$, contradicting $|A| > |B|$.
+:::
+
+Notice what the proof used: only the sum rule and the bound $|A_b| \le 1$. Everything in the next section comes from replacing that $1$ by a larger number.
+
+:::corollary[Cardinality is well defined]{#cardinality-well-defined}
+No finite set admits listings of two different lengths: if $f : [m] \to A$ and $g : [n] \to A$ are both bijections, then $m = n$.
+:::
+
+:::proof
+The composite $g^{-1} \circ f : [m] \to [n]$ is a bijection, hence injective, so the pigeonhole principle forbids $m > n$. Symmetrically $f^{-1} \circ g : [n] \to [m]$ is injective, so $n > m$ is forbidden too. Hence $m = n$.
+:::
+
+:::corollary[Injections, surjections and equal size]{#pigeonhole-corollaries}
+Let $A$ and $B$ be finite sets.
+
+1. If there is an injection $A \to B$ then $|A| \le |B|$.
+2. If there is a surjection $A \to B$ then $|A| \ge |B|$.
+3. If $|A| = |B|$, a function $f : A \to B$ is injective if and only if it is surjective.
+:::
+
+:::proof
+Part 1 is the contrapositive of the pigeonhole principle. For part 2, let $f : A \to B$ be surjective and pick for each $b \in B$ some $s(b) \in A$ with $f(s(b)) = b$. Then $s : B \to A$ is injective, because $s(b) = s(b')$ gives $b = f(s(b)) = f(s(b')) = b'$; now apply part 1.
+
+For part 3, decompose $A$ into the fibres $A_b = f^{-1}(b)$, so $|A| = \sum_{b \in B} |A_b|$, a sum of $|B|$ terms whose total is $|A| = |B|$. If $f$ is injective every term is at most $1$; a sum of $|B|$ terms each at most $1$ that equals $|B|$ must have every term equal to $1$, so every fibre is non-empty and $f$ is surjective. If $f$ is surjective every term is at least $1$, and the same accounting forces every term to equal $1$, so no fibre has two elements and $f$ is injective.
+:::
+
+:::remark
+Part 3 fails spectacularly for infinite sets: $n \mapsto n+1$ is an injection $\mathbb{N} \to \mathbb{N}$ that is not surjective. That failure is not a defect but a definition — Dedekind takes it as the definition of *infinite*. Every pigeonhole argument in this chapter therefore depends on finiteness, and the hypothesis is never harmless.
+:::
+
+:::intuition
+Thirteen socks, twelve drawers: however carefully you spread them out, some drawer ends up with two. You do not learn which drawer, and no cleverness in the spreading can help. The principle states what arithmetic forbids, not what strategy achieves.
+:::
+
+:::example[The birthday guarantee, and its threshold]
+Show that among any $367$ people two share a birthday (allowing $29$ February, so $366$ possible dates), and that $367$ is the smallest number for which this is guaranteed.
+:::
+
+:::solution
+Let $A$ be the set of people, $|A| = 367$, let $B$ be the set of $366$ dates, and let $f : A \to B$ send a person to their birthday. Since $|A| = 367 > 366 = |B|$, the pigeonhole principle says $f$ is not injective, so two distinct people share a date.
+
+For minimality, exhibit $366$ people with no repeat: give the $i$-th person the $i$-th date, which is possible precisely because $366$ dates exist. So $366$ people can avoid a collision and $367$ is exactly the threshold.
+
+This second half is worth naming, because every sharp pigeonhole bound needs it. The principle supplies a *sufficient* number; showing that number is also *necessary* requires constructing a collision-free configuration one size smaller.
+:::
+
+:::example[A counting argument disguised as a pigeonhole argument]
+Show that in any group of $n \ge 2$ people, two people have the same number of acquaintances within the group. (Acquaintance is mutual, and nobody is their own acquaintance.)
+:::
+
+:::solution
+Each person has an acquaintance count in $\{0, 1, \ldots, n-1\}$, which is $n$ possible values for $n$ people — not yet a contradiction, so the naive pigeonhole fails and the boxes must be chosen more carefully.
+
+The point is that the values $0$ and $n-1$ cannot both occur: if someone knows everyone else, then nobody knows nobody, and conversely. So the actual value set is contained either in $\{0, 1, \ldots, n-2\}$ or in $\{1, \ldots, n-1\}$, and in either case has at most $n-1$ elements. Now $n$ people map into at most $n-1$ boxes, and the pigeonhole principle forces two people into the same box.
+
+This is the pattern to internalise: the hard part of a pigeonhole proof is almost never the principle. It is designing the boxes so that the collision means what you want.
+:::
+
+## The Generalised Pigeonhole Principle
 
 <!-- section: generalized -->
 
-The basic principle only ever promises "at least two." Often we want more: what forces "at least three," or "at least $k$"? The same worst-case idea scales up.
+The basic principle promises only "at least two". Often more is needed: what forces "at least three", or "at least $k$"? The proof above answers this immediately, because it never used the number $1$ for any reason other than that injectivity supplied it.
 
-:::theorem[Generalized pigeonhole principle]{#generalized-pigeonhole}
-For positive integers $k$ and $m$, to guarantee that at least one of $m$ containers holds *at least $k$* items, you need
+:::theorem[Generalised pigeonhole principle]{#generalized-pigeonhole}
+Let $f : A \to B$ with $A$, $B$ finite and $|B| = m$. If $|A| > (k-1)m$ for a positive integer $k$, then some fibre has at least $k$ elements: there is $b \in B$ with $|f^{-1}(b)| \ge k$.
 
-$$(k-1)m + 1$$
-
-items.
+In box language: $(k-1)m + 1$ objects in $m$ boxes force some box to contain at least $k$ objects.
 :::
 
 :::proof
-To *avoid* any container reaching $k$ items, every container may hold at most $k-1$; that caps the total at $(k-1)m$ items. One more item breaks the cap.
+Suppose every fibre had at most $k-1$ elements. The fibres are disjoint with union $A$, so by the sum rule
+
+$$|A| = \sum_{b\in B} |f^{-1}(b)| \le \sum_{b \in B} (k-1) = (k-1)m,$$
+
+contradicting $|A| > (k-1)m$.
 :::
 
-:::corollary[Ceiling form]
-When distributing $n$ items into $m$ containers, at least one container holds at least
-
-$$\left\lceil n/m \right\rceil$$
-
-items, where $\lceil x \rceil$ is the ceiling — the smallest integer $\ge x$.
+:::proposition[The bound is sharp]{#generalized-sharp}
+For all positive integers $k$ and $m$ there is a distribution of $(k-1)m$ objects into $m$ boxes in which no box holds $k$ objects. Hence $(k-1)m + 1$ is the least number of objects that forces a box of size $k$.
 :::
 
-This is a lower bound on the *fullest* bin, not a statement about any particular bin.
+:::proof
+Put exactly $k-1$ objects in each of the $m$ boxes. The total is $(k-1)m$ and no box reaches $k$. Together with the theorem, this shows the threshold is exactly $(k-1)m+1$.
+:::
+
+The same fact is often more convenient in a form that takes the number of objects as given and reports the guaranteed load of the fullest box.
+
+:::corollary[Ceiling form]{#ceiling-form}
+If $n$ objects are placed into $m \ge 1$ boxes, some box contains at least $\lceil n/m \rceil$ objects, and some box contains at most $\lfloor n/m \rfloor$ objects. Here $\lceil x \rceil$ is the least integer $\ge x$ and $\lfloor x \rfloor$ the greatest integer $\le x$.
+:::
+
+:::proof
+For the first claim, suppose every box held at most $\lceil n/m \rceil - 1$ objects. Since $\lceil n/m \rceil - 1 < n/m$, the sum rule would give
+
+$$n \le m\left(\left\lceil \frac{n}{m} \right\rceil - 1\right) < m \cdot \frac{n}{m} = n,$$
+
+which is absurd. The second claim is the same argument with the inequalities reversed: if every box held at least $\lfloor n/m \rfloor + 1 > n/m$ objects, the total would exceed $m \cdot (n/m) = n$.
+:::
+
+:::remark
+The ceiling form is exactly the statement that the maximum of a list is at least its average, and the minimum at most its average — with the extra information that box loads are integers, which is where the ceiling and floor come from. Stated that way it generalises far beyond boxes: in any finite list of real numbers, some entry is at least the mean. That *averaging principle* is the form the argument usually takes in analysis and graph theory.
+:::
+
+:::pitfall
+The ceiling form is a statement about the *fullest* box, not about every box and not about a box you get to name. If $101$ letters are sorted into $10$ sacks, some sack holds at least $11$ letters — but nine sacks may be empty, and the sack you are interested in may be one of them.
+:::
 
 :::intuition
-To force 3 in one drawer with 12 drawers: put 2 in each first (24 socks), then the 25th sock forces a third somewhere.
-
-The average load is $n/m$; you can't have every bin strictly below the average, so the ceiling tells you the guaranteed maximum load of the busiest bin.
+To force three socks into one of twelve drawers, first imagine an adversary trying to prevent it. The best they can do is two per drawer, which uses $24$ socks. The $25$th sock has nowhere safe to go. Every generalised-pigeonhole bound is that adversary calculation: fill each box as far as the target allows, count, and add one.
 :::
 
-:::example
-Distribute 100 identical candies to 7 children. Guarantee that one child gets at least how many?
+:::figure[One hundred candies among seven children. No distribution can keep every bar below the dashed average $100/7 \approx 14.29$, so the tallest bar is always at least $\lceil 100/7\rceil = 15$.]{#candies-bars}
+{
+  "type": "plot",
+  "x": [0, 7], "y": [0, 18],
+  "xTicks": 1, "yTicks": 5, "xLabel": "child", "yLabel": "candies",
+  "marks": [
+    { "kind": "bars", "bars": [[0.1, 0.9, 15], [1.1, 1.9, 15], [2.1, 2.9, 14], [3.1, 3.9, 14], [4.1, 4.9, 14], [5.1, 5.9, 14], [6.1, 6.9, 14]] },
+    { "kind": "line", "through": [[0, 14.286], [7, 14.286]], "extend": false, "dashed": true, "tone": "result" },
+    { "kind": "text", "at": [3.2, 16.6], "text": "average 14.29", "leaderTo": [2.5, 14.286], "tone": "result" }
+  ]
+}
+:::
+
+:::example[Candies and children]
+One hundred identical candies are given to $7$ children. What is the largest number $N$ such that, in every possible distribution, some child receives at least $N$ candies?
 :::
 
 :::solution
-1. Here the candies are the pigeons ($n = 100$) and the children are the holes ($m = 7$).
-2. Use the ceiling form. Divide: $100 = 14 \times 7 + 2$, so $100/7 \approx 14.29$ and $\left\lceil 100/7 \right\rceil = 15$. The principle guarantees some child gets at least $15$ candies.
-3. Sanity check via the worst case: to keep every child low, give each the same amount. The most even split short of 15 is 14 candies each, using $14 \times 7 = 98$. That leaves $100 - 98 = 2$ candies still to hand out, and they can only go to children who already have 14, pushing at least one child to $\ge 15$. So 15 is genuinely forced. It is also the *best* such guarantee: the split $15, 15, 14, 14, 14, 14, 14$ (totalling 100) has no child above 15, so we could never promise 16. Hence 15 is exactly the largest value forced in *every* arrangement. ✓
+By the ceiling form with $n = 100$ and $m = 7$: since $100 = 14 \cdot 7 + 2$, we get $\lceil 100/7 \rceil = 15$, so in every distribution some child gets at least $15$.
+
+No larger claim is possible. The distribution $15, 15, 14, 14, 14, 14, 14$ totals $100$ and has no child above $15$, so "some child gets at least $16$" is false for that distribution. Hence $N = 15$ exactly.
+
+Both halves matter: the ceiling form gives the guarantee, and an explicit distribution shows the guarantee cannot be improved.
 :::
 
-## Applications and Existence Proofs
+:::example[Forcing a large monochromatic set]
+A bag contains balls in $4$ colours. How many balls must be drawn to guarantee $7$ of the same colour? What if the bag contains only $5$ red balls?
+:::
+
+:::solution
+Colours are the boxes, $m = 4$, and the target is $k = 7$. The generalised pigeonhole principle gives the threshold $(k-1)m + 1 = 6 \cdot 4 + 1 = 25$, and the sharpness proposition confirms $24$ is not enough: six of each colour is a $24$-ball draw with no colour reaching seven.
+
+If red is limited to $5$ balls, the adversary's best blocking configuration is no longer uniform: red can contribute at most $5$, while the other three colours contribute $6$ each. That gives $5 + 18 = 23$ balls with no colour reaching $7$, so $24$ draws now suffice and $23$ do not. The threshold is $24$.
+
+The moral is that the clean formula $(k-1)m+1$ is the answer to the *unconstrained* problem. When supplies are bounded, go back to the underlying argument — maximise the blocking configuration, then add one — rather than to the formula.
+:::
+
+:::example[A pigeonhole bound with a non-obvious box design]
+Show that any sequence of $n^2 + 1$ distinct real numbers contains a monotone subsequence of length $n+1$ — increasing or decreasing.
+:::
+
+:::solution
+This is the Erdős–Szekeres theorem, and it is proved in full in the next section. The point to see here is the shape of the argument: to each term $a_i$ attach the pair $(u_i, d_i)$, where $u_i$ is the length of the longest increasing subsequence *ending* at $a_i$ and $d_i$ the length of the longest decreasing one ending at $a_i$. If no monotone subsequence of length $n+1$ exists, each coordinate lies in $[n]$, so the pairs live in a set of $n^2$ boxes while there are $n^2+1$ terms.
+
+The generalised principle is not even needed — the basic one suffices once the boxes are right. Designing $(u_i, d_i)$ is the entire content of the proof; see the next section for why two terms in the same box are impossible.
+:::
+
+## Existence Proofs: Ramsey, Erdős–Szekeres and Dirichlet
 
 <!-- section: applications-proofs -->
 
-The principle shines in Ramsey theory, graph theory (e.g. in any 2-coloring of the edges of $K_6$ there is a monochromatic triangle), number theory (Dirichlet's approximation theorem is a continuous analogue), and computer science (hash collisions, birthday-paradox bounds).
+The pigeonhole principle is a *non-constructive* tool: it certifies that a collision exists without saying where. Three classical theorems show how much can be extracted from that, and all three are proved here in full.
 
-The recurring trick is to *design the pigeonholes*: the hard part of an existence proof is usually choosing what the holes should be (residue classes, colors, coordinate boxes) so that "two pigeons in one hole" is exactly the collision you want. Once the holes are chosen well, the collision is automatic.
+:::theorem[Divisibility by design of boxes]{#divisibility-pigeonhole}
+Let $n \ge 1$.
 
-It proves existence; it does not tell you *which* hole or *how to find* the collision — only that one exists.
-
-:::intuition
-In a big enough party you are guaranteed either a group of 3 mutual friends or 3 mutual strangers (Ramsey $R(3,3)=6$). The proof is a clever double application of pigeonhole on a person's friendships.
-
-It is "I don't know who, but someone must have..."
+1. Among any $n+1$ integers, two have a difference divisible by $n$.
+2. Among any $n+1$ integers chosen from $[2n]$, one divides another.
 :::
 
-:::example
-Prove that in any set of 5 integers, there are two whose difference is divisible by 4.
+:::proof
+For part 1, map each integer to its residue class modulo $n$. There are $n$ residues and $n+1$ integers, so by the pigeonhole principle two integers $a \ne b$ share a residue, and then $n \mid (a-b)$.
+
+For part 2, write each chosen integer uniquely as $x = 2^e q$ with $q$ odd — this is possible and unique because factoring out the largest power of $2$ leaves an odd number. Each odd part $q$ lies in $\{1, 3, 5, \ldots, 2n-1\}$, a set of exactly $n$ values, while we have $n+1$ integers. The pigeonhole principle gives two chosen integers $x = 2^{e}q$ and $y = 2^{f}q$ with the same odd part; since $x \neq y$ we have $e \ne f$, and whichever exponent is smaller yields a divisor of the other.
+:::
+
+:::remark
+Part 2 is sharp: the $n$ integers $n+1, n+2, \ldots, 2n$ lie in $[2n]$ and none divides another, because the ratio of any two of them is strictly between $1$ and $2$. So $n+1$ is genuinely needed.
+:::
+
+:::example[Consecutive terms summing to a multiple]
+Let $a_1, \ldots, a_n$ be any integers. Show that some block of consecutive terms $a_{i+1} + a_{i+2} + \cdots + a_j$ is divisible by $n$.
 :::
 
 :::solution
-1. Design the pigeonholes: for each integer, record its remainder when divided by 4. The possible remainders (residues mod 4) are $0, 1, 2, 3$ — exactly 4 holes. These are the pigeonholes; the 5 integers are the pigeons.
-2. Since $5 > 4$, the pigeonhole principle forces two of the integers, say $a$ and $b$, into the same hole — that is, $a \equiv b \pmod 4$.
-3. Two numbers with the same remainder differ by a multiple of 4: $a - b \equiv 0 \pmod 4$, so $4 \mid (a-b)$, which is what we wanted.
-4. Sanity check with a concrete instance: take $\{3, 7, 10, 12, 15\}$. Their residues mod 4 are $3, 3, 2, 0, 3$. The residue 3 repeats (e.g. $3$ and $7$), and indeed $7 - 3 = 4$ is divisible by 4. ✓
+Form the partial sums $s_0 = 0$ and $s_j = a_1 + \cdots + a_j$ for $j = 1, \ldots, n$. That is $n+1$ integers, so by part 1 of the theorem above two of them, say $s_i$ and $s_j$ with $i < j$, are congruent modulo $n$. Then
+
+$$a_{i+1} + \cdots + a_j = s_j - s_i \equiv 0 \pmod n.$$
+
+The block is non-empty because $i < j$. Note how the boxes were designed: the sums, not the terms. Applying the principle directly to $a_1, \ldots, a_n$ would have given nothing, since $n$ objects in $n$ boxes force no collision.
 :::
 
-## Common Mistakes
+:::theorem[Ramsey's theorem for triangles]{#ramsey-33}
+Colour each of the $15$ edges of the complete graph $K_6$ red or blue, arbitrarily. Then there is a monochromatic triangle: three vertices whose three connecting edges all have the same colour.
+:::
 
-- **Forgetting the "+1"**: m pigeons into m holes does *not* force a collision; you need m+1.
-- **Using the basic version when you need the generalized**: "at least 2" is basic; for "at least 3" or higher you must use (k-1)m+1.
-- **Thinking it gives you the exact distribution**: It only lower-bounds the largest bin; the others can be zero or anything.
-- **Applying it to continuous quantities without discretization**: The principle is discrete; for reals you need the Dirichlet box principle variant.
-- **Confusing guarantee with probability**: The principle is deterministic worst-case, not "likely".
-- **Claiming a stronger bound than the principle gives**: It may not be tight if additional structure exists.
+:::proof
+Fix a vertex $v$. It meets $5$ edges, each coloured red or blue, so by the generalised pigeonhole principle with $m = 2$ boxes and $k = 3$ — note $5 > (3-1)\cdot 2 = 4$ — at least three of them share a colour. Say $v$ is joined to $x$, $y$, $z$ all in red (the blue case is identical with the colours exchanged).
 
-When sets overlap, simply adding their sizes overcounts the elements that belong to multiple sets. Inclusion-exclusion corrects these overcounts with a precise alternating sum.
+Now consider the three edges $xy$, $yz$, $xz$. If any one of them is red, say $xy$, then $v$, $x$, $y$ form a red triangle. If none is red, then all three are blue and $x$, $y$, $z$ form a blue triangle. Either way a monochromatic triangle exists.
+:::
 
-It is the systematic generalization of the two-set union formula to any number of sets and is indispensable for exact counting with overlaps.
+:::proposition[Six is optimal]{#ramsey-optimal}
+There is a red/blue colouring of the edges of $K_5$ with no monochromatic triangle. Hence the Ramsey number $R(3,3)$ equals $6$.
+:::
 
-## The Two-Set Case
+:::proof
+Place the five vertices on a circle. Colour the five edges of the outer pentagon red and the five diagonals blue. The red edges form a $5$-cycle, and a cycle of length $5$ contains no triangle, since a triangle would require three mutually adjacent vertices and in a $5$-cycle no two edges sharing no vertex can be completed. Concretely, with vertices $0,1,2,3,4$ and red edges joining $i$ to $i \pm 1 \bmod 5$, a red triangle would need three vertices pairwise at circular distance $1$, which is impossible. The blue edges join $i$ to $i \pm 2 \bmod 5$, and these also form a $5$-cycle (in the order $0,2,4,1,3$), so the same argument applies. No monochromatic triangle exists.
+:::
+
+:::intuition
+In any party of six people, there are three who all know each other or three who are all mutual strangers. The proof is nothing but "look at one person: among their five relationships, three are of the same kind" — and then a single case check. The result is genuinely surprising, and the proof is four lines; that gap is what makes pigeonhole arguments memorable.
+:::
+
+:::theorem[Erdős–Szekeres]{#erdos-szekeres}
+Let $m, n \ge 1$. Every sequence of $mn + 1$ distinct real numbers contains an increasing subsequence of length $m+1$ or a decreasing subsequence of length $n+1$.
+:::
+
+:::proof
+Let the sequence be $a_1, \ldots, a_{mn+1}$. For each index $i$ let $u_i$ be the length of the longest increasing subsequence ending at $a_i$, and $d_i$ the length of the longest decreasing subsequence ending at $a_i$. Both are at least $1$, since the single term $a_i$ qualifies.
+
+Suppose, for contradiction, that there is no increasing subsequence of length $m+1$ and no decreasing one of length $n+1$. Then $u_i \in [m]$ and $d_i \in [n]$ for every $i$, so the map $i \mapsto (u_i, d_i)$ sends $mn+1$ indices into the set $[m] \times [n]$, which has $mn$ elements by the product rule. By the pigeonhole principle there are indices $i < j$ with $(u_i, d_i) = (u_j, d_j)$.
+
+Now compare $a_i$ and $a_j$; they are distinct. If $a_i < a_j$, append $a_j$ to a longest increasing subsequence ending at $a_i$ to get an increasing subsequence of length $u_i + 1$ ending at $a_j$, so $u_j \ge u_i + 1 > u_i$, contradicting $u_i = u_j$. If $a_i > a_j$, the same move with decreasing subsequences gives $d_j \ge d_i + 1$, again a contradiction.
+:::
+
+:::proposition[Erdős–Szekeres is sharp]{#erdos-szekeres-sharp}
+There is a sequence of $mn$ distinct reals with no increasing subsequence of length $m+1$ and no decreasing subsequence of length $n+1$.
+:::
+
+:::proof
+Take $n$ blocks, each an increasing run of $m$ numbers, with every number in a block larger than every number in the following block. For $m = 3$, $n = 2$ this is $4, 5, 6,\ 1, 2, 3$. An increasing subsequence must stay inside a single block, because moving to a later block strictly decreases the value, so it has length at most $m$. A decreasing subsequence uses at most one term from each block, since within a block the values increase, so it has length at most $n$.
+:::
+
+:::figure[The sharpness construction for $m = 3$, $n = 2$: two descending blocks of three increasing terms. Any increasing run is trapped inside one block (length at most $3$), any decreasing run takes at most one term per block (length at most $2$), and the sequence has $mn = 6$ terms — one short of the guarantee.]{#erdos-szekeres-sharp-fig}
+{
+  "type": "plot",
+  "x": [0, 7], "y": [0, 7],
+  "xTicks": 1, "yTicks": 1, "xLabel": "position", "yLabel": "value",
+  "marks": [
+    { "kind": "path", "points": [[1, 4], [2, 5], [3, 6], [4, 1], [5, 2], [6, 3]], "muted": true, "dashed": true },
+    { "kind": "point", "at": [1, 4] },
+    { "kind": "point", "at": [2, 5] },
+    { "kind": "point", "at": [3, 6] },
+    { "kind": "point", "at": [4, 1], "tone": "result" },
+    { "kind": "point", "at": [5, 2], "tone": "result" },
+    { "kind": "point", "at": [6, 3], "tone": "result" },
+    { "kind": "text", "at": [1.4, 6.4], "text": "first block", "leaderTo": [2, 5] },
+    { "kind": "text", "at": [4.6, 0.6], "text": "second block", "leaderTo": [5, 2], "tone": "result" }
+  ]
+}
+:::
+
+:::remark
+Erdős–Szekeres has a well-known geometric consequence, which is how the two authors came to it: among any $mn+1$ points in the plane with distinct $x$-coordinates, some $m+1$ or $n+1$ of them form a "staircase" — a set of points whose $y$-coordinates rise or fall consistently as the $x$-coordinates increase. Order the points by $x$-coordinate and apply the theorem to the sequence of $y$-coordinates.
+:::
+
+The last classical application moves from finite boxes to intervals, and is the reason the principle is called the *Schubfachprinzip* or *Dirichlet box principle* in much of the literature.
+
+:::theorem[Dirichlet's approximation theorem]{#dirichlet-approximation}
+Let $\alpha$ be a real number and $N$ a positive integer. Then there are integers $p$ and $q$ with $1 \le q \le N$ and
+
+$$\left| \alpha - \frac{p}{q} \right| < \frac{1}{qN} \le \frac{1}{q^2}.$$
+:::
+
+:::proof
+Write $\{x\} = x - \lfloor x \rfloor \in [0,1)$ for the fractional part. Consider the $N+1$ numbers $\{0 \cdot \alpha\}, \{1 \cdot \alpha\}, \ldots, \{N \alpha\}$, all lying in $[0,1)$. Partition $[0,1)$ into the $N$ half-open boxes
+
+$$\left[0, \tfrac1N\right),\ \left[\tfrac1N, \tfrac2N\right),\ \ldots,\ \left[\tfrac{N-1}{N}, 1\right),$$
+
+which are disjoint and cover $[0,1)$. With $N+1$ numbers and $N$ boxes, the pigeonhole principle gives indices $0 \le i < j \le N$ with $\{i\alpha\}$ and $\{j\alpha\}$ in the same box, hence
+
+$$\bigl| \{j\alpha\} - \{i\alpha\} \bigr| < \frac1N.$$
+
+Set $q = j - i$, so $1 \le q \le N$, and $p = \lfloor j\alpha \rfloor - \lfloor i\alpha \rfloor$. Then $\{j\alpha\} - \{i\alpha\} = q\alpha - p$, so $|q\alpha - p| < 1/N$, and dividing by $q$ gives $|\alpha - p/q| < 1/(qN)$. Finally $q \le N$ gives $1/(qN) \le 1/q^2$.
+:::
+
+:::remark
+The theorem is the gateway to continued fractions and to the theory of irrationality measures: it says every real number has infinitely many rational approximations of quality $1/q^2$ when $\alpha$ is irrational — take $N \to \infty$ and note that the resulting $p/q$ cannot stabilise, since $|\alpha - p/q| > 0$ for each fixed fraction while the bound tends to $0$. Hurwitz later sharpened $1/q^2$ to $1/(\sqrt5 q^2)$, and that constant cannot be improved, as the golden ratio shows. Those refinements are beyond this chapter; we state them to mark where the elementary argument stops.
+:::
+
+:::pitfall
+A pigeonhole proof tells you a collision exists and nothing else. It does not locate the collision, does not tell you how many there are, and gives no algorithm better than search. When a problem asks *which* pair collides, the principle is the wrong tool — or at best the first step.
+:::
+
+:::summary
+The pigeonhole principle in all its forms rests on one inequality: a sum of $m$ fibre sizes equals $|A|$, so they cannot all be small. The work in any application is choosing the map $f$ — residues, odd parts, partial sums, colour of an edge, the pair $(u_i, d_i)$, an interval of $[0,1)$. Choose the boxes well and the theorem does the rest.
+:::
+
+## Inclusion–Exclusion: Two Sets
 
 <!-- section: two-sets -->
 
+The sum rule requires disjointness. When the pieces overlap, adding their sizes counts the shared elements more than once, and the correction is the subject of the rest of this chapter's middle. We begin with two sets, where everything can be seen at once.
+
 :::theorem[Inclusion–exclusion for two sets]{#inclusion-exclusion-two}
-For any two finite sets $A$ and $B$,
+For any finite sets $A$ and $B$,
 
 $$|A \cup B| = |A| + |B| - |A \cap B|.$$
 :::
 
 :::proof
-The intersection term $|A \cap B|$ is subtracted because those elements were added twice in the first sum (once inside $|A|$ and once inside $|B|$); we want every element of the union counted exactly once, and after the subtraction that is what we have.
+Write $A \setminus B = \{a \in A : a \notin B\}$. The three sets $A \setminus B$, $B \setminus A$ and $A \cap B$ are pairwise disjoint and their union is $A \cup B$: every element of the union lies in $A$ only, in $B$ only, or in both, and these cases exclude one another. So the sum rule gives
+
+$$|A \cup B| = |A\setminus B| + |B \setminus A| + |A \cap B|. \qquad (\ast)$$
+
+Also $A$ is the disjoint union of $A \setminus B$ and $A \cap B$, so $|A \setminus B| = |A| - |A \cap B|$, and likewise $|B\setminus A| = |B| - |A\cap B|$. Substituting into $(\ast)$,
+
+$$|A\cup B| = \bigl(|A| - |A\cap B|\bigr) + \bigl(|B| - |A \cap B|\bigr) + |A \cap B| = |A| + |B| - |A \cap B|.$$
 :::
 
-Here $|A|$ denotes the *cardinality* of $A$ — the number of elements.
+Two corollaries are used constantly and deserve names of their own.
+
+:::corollary[Subtraction rule]{#subtraction-rule}
+If $B \subseteq A$ are finite sets, then $|A \setminus B| = |A| - |B|$. In particular, for a universe $U$ and $S \subseteq U$, the complement satisfies $|U \setminus S| = |U| - |S|$.
+:::
+
+:::proof
+$A$ is the disjoint union of $B$ and $A \setminus B$, so the sum rule gives $|A| = |B| + |A\setminus B|$; rearrange.
+:::
+
+:::corollary[Union bound]{#union-bound}
+For any finite sets, $|A \cup B| \le |A| + |B|$, with equality if and only if $A$ and $B$ are disjoint.
+:::
+
+:::proof
+Subtract: $|A| + |B| - |A \cup B| = |A \cap B| \ge 0$, and this is zero exactly when $A \cap B = \varnothing$.
+:::
+
+:::figure[The three disjoint regions the proof uses. Adding $|A|$ and $|B|$ counts the darker overlap twice, so subtracting $|A\cap B|$ once leaves every element counted exactly once.]{#two-set-venn}
+{
+  "type": "plot",
+  "x": [-2.2, 2.2], "y": [-1.7, 1.9],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "region", "points": [[0.65, 0.0], [0.62, 0.267], [0.531, 0.521], [0.388, 0.748], [0.198, 0.938], [-0.029, 1.081], [-0.283, 1.17], [-0.55, 1.2], [-0.817, 1.17], [-1.071, 1.081], [-1.298, 0.938], [-1.488, 0.748], [-1.631, 0.521], [-1.72, 0.267], [-1.75, 0.0], [-1.72, -0.267], [-1.631, -0.521], [-1.488, -0.748], [-1.298, -0.938], [-1.071, -1.081], [-0.817, -1.17], [-0.55, -1.2], [-0.283, -1.17], [-0.029, -1.081], [0.198, -0.938], [0.388, -0.748], [0.531, -0.521], [0.62, -0.267]] },
+    { "kind": "region", "points": [[1.75, 0.0], [1.72, 0.267], [1.631, 0.521], [1.488, 0.748], [1.298, 0.938], [1.071, 1.081], [0.817, 1.17], [0.55, 1.2], [0.283, 1.17], [0.029, 1.081], [-0.198, 0.938], [-0.388, 0.748], [-0.531, 0.521], [-0.62, 0.267], [-0.65, 0.0], [-0.62, -0.267], [-0.531, -0.521], [-0.388, -0.748], [-0.198, -0.938], [0.029, -1.081], [0.283, -1.17], [0.55, -1.2], [0.817, -1.17], [1.071, -1.081], [1.298, -0.938], [1.488, -0.748], [1.631, -0.521], [1.72, -0.267]] },
+    { "kind": "text", "at": [-1.75, 1.6], "text": "A" },
+    { "kind": "text", "at": [1.75, 1.6], "text": "B" },
+    { "kind": "text", "at": [-1.5, -1.5], "text": "A minus B", "leaderTo": [-1.2, -0.5] },
+    { "kind": "text", "at": [1.5, -1.5], "text": "B minus A", "leaderTo": [1.2, -0.5] },
+    { "kind": "text", "at": [0, 1.55], "text": "both", "leaderTo": [0, 0.9] }
+  ]
+}
+:::
 
 :::intuition
-People who like cats + people who like dogs counts the cat-and-dog lovers twice. Subtract them once and every lover is counted exactly once.
-
-If the sets are disjoint the intersection is empty and the formula collapses to plain addition.
+Count the cat lovers, count the dog lovers, and the people who love both have been counted twice — once in each list. Subtract them once and everybody is counted exactly once. The formula is nothing more than that sentence, and the proof above is that sentence made checkable by splitting the crowd into three groups that cannot overlap.
 :::
 
-:::example
-A class of 30 students: 18 play soccer, 12 play basketball, and 5 play both.
+:::example[Sports in a class]
+In a class of $30$ students, $18$ play soccer, $12$ play basketball and $5$ play both. How many play at least one sport? How many play neither?
 :::
 
 :::solution
-Let $S$ be the soccer players and $B$ the basketball players, so $|S| = 18$, $|B| = 12$, and $|S \cap B| = 5$.
+Let $S$ and $B$ be the two sets, so $|S| = 18$, $|B| = 12$, $|S \cap B| = 5$. By the two-set formula,
 
-Students playing *at least one* sport are the union:
-$$|S \cup B| = |S| + |B| - |S \cap B| = 18 + 12 - 5 = 25.$$
+$$|S \cup B| = 18 + 12 - 5 = 25.$$
 
-Students playing *neither* sport are everyone outside the union: $30 - 25 = 5$.
+The students playing neither sport form the complement of $S \cup B$ in the class, so by the subtraction rule there are $30 - 25 = 5$ of them.
 
-Sanity check by splitting into disjoint pieces: soccer-only is $18 - 5 = 13$, basketball-only is $12 - 5 = 7$, both is $5$, neither is $5$. These four groups are disjoint and cover everyone, and $13 + 7 + 5 + 5 = 30$. ✓
+Check against the disjoint decomposition of the proof: soccer only $18-5 = 13$, basketball only $12-5 = 7$, both $5$, neither $5$; and $13+7+5+5 = 30$.
 :::
 
-## Three or More Sets
+:::example[Recovering an intersection]
+Of $200$ surveyed households, $150$ subscribe to streaming service $X$, $90$ to service $Y$, and every household subscribes to at least one. How many subscribe to both?
+:::
+
+:::solution
+"Every household subscribes to at least one" says $|X \cup Y| = 200$. The two-set formula rearranges to
+
+$$|X \cap Y| = |X| + |Y| - |X \cup Y| = 150 + 90 - 200 = 40.$$
+
+The formula is an equation in four quantities; any three determine the fourth. That is how inclusion–exclusion is used at least as often as in the "find the union" direction.
+:::
+
+:::example[Counting the complement instead]
+How many integers in $[100]$ are divisible by neither $4$ nor $6$?
+:::
+
+:::solution
+Let $A$ be the multiples of $4$ in $[100]$ and $B$ the multiples of $6$. The number of multiples of $d$ in $[n]$ is $\lfloor n/d \rfloor$, because the multiples are $d, 2d, \ldots, \lfloor n/d\rfloor d$. So $|A| = \lfloor 100/4\rfloor = 25$ and $|B| = \lfloor 100/6 \rfloor = 16$.
+
+An integer divisible by both $4$ and $6$ is exactly one divisible by $\operatorname{lcm}(4,6) = 12$ — not by $24$, which is the trap here — so $|A \cap B| = \lfloor 100/12 \rfloor = 8$. Hence $|A \cup B| = 25 + 16 - 8 = 33$, and the count of integers divisible by neither is $100 - 33 = 67$.
+:::
+
+:::pitfall
+The intersection of "multiples of $a$" and "multiples of $b$" is the multiples of $\operatorname{lcm}(a,b)$, which equals $ab$ only when $a$ and $b$ are coprime. Using $ab$ for $4$ and $6$ would give $\lfloor 100/24\rfloor = 4$ and a final answer of $63$, which is wrong.
+:::
+
+## Inclusion–Exclusion in General
 
 <!-- section: three-or-more -->
 
-:::proposition[Inclusion–exclusion for three sets]
-For any three finite sets $A$, $B$, $C$,
+The two-set formula extends to any number of sets, with signs that alternate. We state the three-set case first because it is the one worth memorising, then prove the general theorem twice — once by induction, once by an argument that explains *why* the binomial coefficients cancel.
 
-$$|A \cup B \cup C| = |A| + |B| + |C| - |A \cap B| - |A \cap C| - |B \cap C| + |A \cap B \cap C|.$$
+:::proposition[Three sets]{#inclusion-exclusion-three}
+For finite sets $A$, $B$, $C$,
+
+$$|A \cup B \cup C| = |A| + |B| + |C| - |A\cap B| - |A \cap C| - |B \cap C| + |A \cap B \cap C|.$$
 :::
 
-The pattern is: add the singles, subtract the pairwise intersections, add back the triple.
+:::proof
+Apply the two-set formula to $(A \cup B) \cup C$:
+
+$$|A \cup B \cup C| = |A\cup B| + |C| - |(A\cup B)\cap C|.$$
+
+Expand $|A \cup B| = |A|+|B|-|A\cap B|$. For the last term, distributivity gives $(A \cup B)\cap C = (A\cap C)\cup(B\cap C)$, and the two-set formula applies again:
+
+$$|(A\cap C)\cup(B\cap C)| = |A\cap C| + |B\cap C| - |A\cap B\cap C|,$$
+
+using $(A\cap C)\cap(B\cap C) = A\cap B\cap C$. Substituting and collecting terms gives the stated identity.
+:::
 
 :::theorem[Inclusion–exclusion principle]{#inclusion-exclusion}
-For a finite family of finite sets, the size of the union is the alternating sum of the sizes of all the intersections: the term for the intersection of exactly $k$ of them receives sign $(-1)^{k+1}$ — plus for odd $k$, minus for even $k$.
+Let $A_1, \ldots, A_n$ be finite sets. For a non-empty index set $I \subseteq [n]$ write $A_I = \bigcap_{i \in I} A_i$. Then
+
+$$\left| \bigcup_{i=1}^{n} A_i \right| = \sum_{\varnothing \ne I \subseteq [n]} (-1)^{|I|+1} \left| A_I \right| = \sum_{k=1}^{n} (-1)^{k+1} \sum_{|I| = k} |A_I|.$$
+
+That is: add the sizes of the sets, subtract the sizes of all pairwise intersections, add back all triple intersections, and so on, with the $k$-fold intersections carrying sign $(-1)^{k+1}$.
+:::
+
+:::proof
+We count each element's contribution to both sides. Fix $x \in A_1 \cup \cdots \cup A_n$ and let $r \ge 1$ be the number of indices $i$ with $x \in A_i$; say $x$ lies in exactly the sets indexed by $R$, $|R| = r$.
+
+On the left, $x$ contributes $1$. On the right, $x$ is counted by the term for $I$ precisely when $x \in A_I$, that is when $I \subseteq R$. The number of $k$-element subsets $I \subseteq R$ is $\binom{r}{k}$, so the total contribution of $x$ to the right-hand side is
+
+$$\sum_{k=1}^{r} (-1)^{k+1} \binom{r}{k} = -\sum_{k=1}^{r} (-1)^{k}\binom{r}{k} = -\left[\sum_{k=0}^{r}(-1)^k \binom{r}{k} - 1\right] = 1 - (1-1)^r = 1,$$
+
+where the binomial theorem was applied to $(1 + (-1))^r = 0$, valid because $r \ge 1$.
+
+An element $x$ in none of the sets contributes $0$ to both sides, since it lies in no $A_I$. So every element contributes equally to the two sides, and the sums over all elements agree.
+:::
+
+:::remark
+The computation $\sum_{k}(-1)^k\binom{r}{k} = 0$ is the whole mechanism, and it has a purely combinatorial reading: a non-empty set has as many even-sized subsets as odd-sized ones. We prove that by an explicit bijection in the section *Classic bijections and double counting*, which makes the proof above bijective rather than algebraic.
+:::
+
+An alternative proof by induction is also worth seeing, because it is the version that generalises to measures and probabilities, where "count each element" is unavailable.
+
+:::proposition[Inclusion–exclusion by induction]{#ie-induction}
+The inclusion–exclusion principle follows from the two-set case by induction on $n$.
+:::
+
+:::proof
+The case $n = 1$ is trivial and $n = 2$ is the two-set theorem. Assume the formula for $n-1$ sets and write $U = A_1 \cup \cdots \cup A_{n-1}$. The two-set formula gives
+
+$$\left|\bigcup_{i=1}^n A_i\right| = |U| + |A_n| - |U \cap A_n|.$$
+
+Expand $|U|$ by the inductive hypothesis: it contributes $\sum (-1)^{|I|+1}|A_I|$ over non-empty $I \subseteq [n-1]$. For the last term, $U \cap A_n = \bigcup_{i=1}^{n-1}(A_i \cap A_n)$, so the inductive hypothesis applied to the sets $A_i \cap A_n$ gives
+
+$$|U \cap A_n| = \sum_{\varnothing \ne I \subseteq [n-1]} (-1)^{|I|+1}\left|A_I \cap A_n\right| = \sum_{\varnothing \ne I \subseteq [n-1]} (-1)^{|I|+1} |A_{I \cup \{n\}}|.$$
+
+Subtracting this term flips each sign, turning $(-1)^{|I|+1}$ into $(-1)^{|I|+2} = (-1)^{|I \cup \{n\}|+1}$, which is exactly the sign the general formula assigns to the index set $I \cup \{n\}$. Together with the isolated term $|A_n| = |A_{\{n\}}|$, every non-empty subset of $[n]$ appears exactly once with the correct sign.
+:::
+
+The complementary form is often more useful than the union form, because in applications one usually wants the objects avoiding *all* of a list of bad properties.
+
+:::corollary[Complementary form]{#ie-complement}
+Let $U$ be a finite universe and $A_1, \ldots, A_n \subseteq U$. Then the number of elements of $U$ lying in none of the $A_i$ is
+
+$$\left| U \setminus \bigcup_{i=1}^n A_i \right| = \sum_{I \subseteq [n]} (-1)^{|I|}\left|A_I\right|,$$
+
+with the convention $A_{\varnothing} = U$, so the $I = \varnothing$ term is $|U|$.
+:::
+
+:::proof
+By the subtraction rule the left side is $|U| - |\bigcup_i A_i|$. Substituting the inclusion–exclusion principle and noting $-(-1)^{|I|+1} = (-1)^{|I|}$ gives the sum over non-empty $I$; the term $I = \varnothing$ supplies $|U|$.
+:::
+
+Truncating the alternating sum does not merely approximate — it brackets the answer, which is frequently all one needs.
+
+:::theorem[Bonferroni inequalities]{#bonferroni}
+With the notation above, let $S_k = \sum_{|I| = k} |A_I|$ for $1 \le k \le n$. Then for every odd $t$,
+
+$$\left|\bigcup_{i=1}^n A_i\right| \le \sum_{k=1}^{t}(-1)^{k+1} S_k,$$
+
+and for every even $t$ the inequality is reversed. In particular $|\bigcup A_i| \le S_1$ and $|\bigcup A_i| \ge S_1 - S_2$.
+:::
+
+:::proof
+Repeat the element-counting proof, but stop the inner sum at $t$. An element in exactly $r \ge 1$ of the sets contributes $c_{t}(r) = \sum_{k=1}^{\min(t,r)}(-1)^{k+1}\binom{r}{k}$ to the truncated sum, and $1$ to the union. If $t \ge r$ the contribution is exactly $1$, as computed before. If $t < r$, use the identity $\sum_{k=0}^{t}(-1)^k \binom{r}{k} = (-1)^t \binom{r-1}{t}$, proved by induction on $t$ from Pascal's rule $\binom{r-1}{k}+\binom{r-1}{k-1} = \binom{r}{k}$. It gives
+
+$$c_t(r) = 1 - \sum_{k=0}^{t}(-1)^k\binom{r}{k} = 1 - (-1)^t \binom{r-1}{t},$$
+
+so $c_t(r) \ge 1$ when $t$ is odd and $c_t(r)\le 1$ when $t$ is even. Summing over all elements of the union gives the stated inequalities.
 :::
 
 :::intuition
-Triples were added three times then subtracted three times (once for each pair), netting zero — but they belong in the union, so we add them back at the end.
-
-The signs alternate $+ - + - \ldots$ exactly like the principle of inclusion and exclusion.
+The alternating sum overshoots and undershoots by turns, like the partial sums of an alternating series: after adding the singles you have overcounted, after subtracting the pairs you have undercounted, and each further term brings you closer. Bonferroni's inequalities say that this is not a heuristic but a theorem, which is why $S_1$ (the union bound) and $S_1 - S_2$ are legitimate bounds even when the later terms are hopeless to compute.
 :::
 
-:::example
-Suppose $|A| = 20$, $|B| = 15$, $|C| = 10$; the pairwise intersections are $|A \cap B| = 5$, $|A \cap C| = 4$, $|B \cap C| = 3$; and the triple intersection is $|A \cap B \cap C| = 2$.
+:::example[Three sets, from the formula and from the pieces]
+Suppose $|A| = 20$, $|B| = 15$, $|C| = 10$, $|A\cap B| = 5$, $|A \cap C| = 4$, $|B\cap C| = 3$ and $|A\cap B\cap C| = 2$. Find $|A\cup B\cup C|$, and verify by decomposing into disjoint regions.
 :::
 
 :::solution
-Apply the three-set formula term by term:
-$$|A \cup B \cup C| = \underbrace{20 + 15 + 10}_{\text{singles}} - \underbrace{(5 + 4 + 3)}_{\text{pairs}} + \underbrace{2}_{\text{triple}} = 45 - 12 + 2 = 35.$$
+By the three-set formula,
 
-Sanity check that the count is consistent: the region in *all three* sets has $2$ elements. The region in $A$ and $B$ but not $C$ has $|A \cap B| - |A \cap B \cap C| = 5 - 2 = 3$; similarly $A\cap C$-only has $4 - 2 = 2$ and $B \cap C$-only has $3 - 2 = 1$. The $A$-only region is $20 - 3 - 2 - 2 = 13$, $B$-only is $15 - 3 - 1 - 2 = 9$, and $C$-only is $10 - 2 - 1 - 2 = 5$. Summing every disjoint piece: $13 + 9 + 5 + 3 + 2 + 1 + 2 = 35$, matching the formula. ✓
+$$|A\cup B\cup C| = (20+15+10) - (5+4+3) + 2 = 45 - 12 + 2 = 35.$$
+
+To verify, compute the seven disjoint regions. The triple region has $2$ elements. The "$A$ and $B$ but not $C$" region has $|A\cap B| - |A\cap B\cap C| = 3$; similarly $A\cap C$ only has $2$ and $B\cap C$ only has $1$. Then $A$ only is $20 - 3 - 2 - 2 = 13$, $B$ only is $15 - 3 - 1 - 2 = 9$, and $C$ only is $10 - 2 - 1 - 2 = 5$. Total: $13+9+5+3+2+1+2 = 35$, as claimed.
 :::
 
-## Applications and Derivation Intuition
+:::pitfall
+The data in such a problem must be *consistent*: the seven region counts computed above must all be non-negative. If a problem states $|A \cap B| = 5$ and $|A\cap B\cap C| = 7$, no such sets exist, and the formula will happily return a meaningless number. Always sanity-check by reconstructing the disjoint regions.
+:::
+
+:::example[Four sets]
+At a conference, $60$ delegates attended at least one of four workshops $W_1, \ldots, W_4$. Each workshop had $20$ attendees, each of the six pairs shared $6$ attendees, each of the four triples shared $2$, and $1$ delegate attended all four. Are these numbers consistent?
+:::
+
+:::solution
+By the inclusion–exclusion principle with $n = 4$,
+
+$$\left|\bigcup W_i \right| = 4\cdot 20 - 6\cdot 6 + 4 \cdot 2 - 1 = 80 - 36 + 8 - 1 = 51.$$
+
+This contradicts the stated $60$, so the data are inconsistent: no such configuration exists. Note that the union bound $S_1 = 80 \ge 60$ and the Bonferroni bound $S_1 - S_2 = 44 \le 60$ were both satisfied, so neither inequality alone would have caught the error; only the full alternating sum does.
+:::
+
+## Applications of Inclusion–Exclusion
 
 <!-- section: applications -->
 
-Why does the alternating sum come out right? The principle is derived by tracking, for each element, how many times it is counted across all the terms.
+Three applications show the principle doing real work: sieving the integers, counting derangements, and counting surjections. Each follows the same template — choose a universe, choose the "bad" properties, and apply the complementary form.
+
+:::theorem[Sieve for multiples]{#sieve-multiples}
+Let $p_1, \ldots, p_n$ be pairwise coprime positive integers. The number of integers in $[N]$ divisible by none of them is
+
+$$\sum_{I \subseteq [n]} (-1)^{|I|} \left\lfloor \frac{N}{\prod_{i \in I} p_i} \right\rfloor,$$
+
+with the empty product equal to $1$.
+:::
 
 :::proof
-Consider an element that lies in *exactly* $r$ of the sets (with $r \ge 1$). It is counted $\binom{r}{1}$ times among the singles, subtracted $\binom{r}{2}$ times among the pairs, added $\binom{r}{3}$ times among the triples, and so on. Its net coefficient is
-
-$$\binom{r}{1} - \binom{r}{2} + \binom{r}{3} - \cdots = 1 - \left[ \sum_{j=0}^{r} (-1)^j \binom{r}{j} \right] = 1 - (1-1)^r = 1.$$
-
-So every element of the union is counted exactly once, and elements in no set ($r = 0$) are counted zero times — which is exactly what a correct count of the union requires.
+Take $U = [N]$ and let $A_i$ be the multiples of $p_i$ in $[N]$. An integer is divisible by every $p_i$ with $i \in I$ if and only if it is divisible by $\operatorname{lcm}_{i\in I} p_i$, which equals $\prod_{i \in I}p_i$ because the $p_i$ are pairwise coprime. The multiples of $d$ in $[N]$ are $d, 2d, \ldots, \lfloor N/d\rfloor d$, so $|A_I| = \lfloor N/\prod_{i\in I}p_i\rfloor$. Now apply the complementary form of inclusion–exclusion.
 :::
 
-Classic uses: counting integers divisible by certain numbers (the sieve), derangements, counting surjective functions, probability of unions, and graph edge covers.
+:::corollary[Euler's totient formula]{#euler-phi}
+If $n$ has distinct prime factors $p_1, \ldots, p_r$, then the number of integers in $[n]$ coprime to $n$ is
 
-:::intuition
-"How many numbers $\le 100$ are divisible by 2, 3 or 5?" You add the three floors, subtract the pairwise counts (using least common multiples), then add back the triple.
-
-It is the exact discrete version of "adding probabilities with overlaps corrected."
+$$\varphi(n) = n \prod_{i=1}^{r}\left(1 - \frac{1}{p_i}\right).$$
 :::
 
-:::example
-Count the integers from 1 to 100 divisible by 2, 3, or 5.
+:::proof
+Apply the sieve with $N = n$ and the primes $p_1, \ldots, p_r$, which are pairwise coprime. An integer in $[n]$ is coprime to $n$ exactly when it is divisible by none of the $p_i$. Since each $\prod_{i\in I}p_i$ divides $n$, the floors are exact: $\lfloor n/\prod_{i\in I}p_i\rfloor = n/\prod_{i \in I}p_i$. Hence
+
+$$\varphi(n) = \sum_{I\subseteq[r]}(-1)^{|I|}\frac{n}{\prod_{i\in I}p_i} = n\sum_{I\subseteq[r]}\prod_{i\in I}\left(\frac{-1}{p_i}\right) = n\prod_{i=1}^{r}\left(1 - \frac1{p_i}\right),$$
+
+the last step being the expansion of the product: multiplying out $\prod_i (1 + x_i)$ produces exactly one term $\prod_{i \in I} x_i$ for each subset $I$, and here $x_i = -1/p_i$.
+:::
+
+:::example[Sieving to one hundred]
+How many integers in $[100]$ are divisible by $2$, $3$ or $5$?
 :::
 
 :::solution
-Let $A$, $B$, $C$ be the multiples of 2, 3, 5 respectively. The count of multiples of $d$ up to 100 is $\lfloor 100/d \rfloor$, and the multiples of *both* $x$ and $y$ are exactly the multiples of $\operatorname{lcm}(x,y)$.
+With $A$, $B$, $C$ the multiples of $2$, $3$, $5$: $|A| = 50$, $|B| = 33$, $|C| = 20$; $|A\cap B| = \lfloor 100/6\rfloor = 16$, $|A\cap C| = \lfloor 100/10 \rfloor = 10$, $|B\cap C| = \lfloor 100/15\rfloor = 6$; and $|A\cap B\cap C| = \lfloor 100/30 \rfloor = 3$. So
 
-Singles: $|A| = \lfloor 100/2 \rfloor = 50$, $|B| = \lfloor 100/3 \rfloor = 33$, $|C| = \lfloor 100/5 \rfloor = 20$.
-Pairs: $|A \cap B| = \lfloor 100/6 \rfloor = 16$, $|A \cap C| = \lfloor 100/10 \rfloor = 10$, $|B \cap C| = \lfloor 100/15 \rfloor = 6$.
-Triple: $|A \cap B \cap C| = \lfloor 100/30 \rfloor = 3$.
+$$|A\cup B\cup C| = 103 - 32 + 3 = 74.$$
 
-Now apply inclusion–exclusion:
-$$50 + 33 + 20 - 16 - 10 - 6 + 3 = 103 - 32 + 3 = 74.$$
-
-Sanity check with the complement: numbers divisible by *none* of 2, 3, 5 should be $100 - 74 = 26$. In the first 30 integers, the count coprime to 30 is $30\cdot\tfrac12\cdot\tfrac23\cdot\tfrac45 = 8$ (namely $1,7,11,13,17,19,23,29$). Since $100 = 3\cdot30 + 10$, the three full blocks give $3 \times 8 = 24$, and the tail $91\text{–}100$ contributes $91$ and $97$ for $2$ more, totalling $26$. ✓
+Check by complement. The integers divisible by none of $2,3,5$ number $100 - 74 = 26$. Within each block of $30$ consecutive integers there are $30(1-\tfrac12)(1-\tfrac13)(1-\tfrac15) = 8$ such integers, by the totient formula applied to $30$. Three blocks cover $[90]$ and give $24$; the tail $91, \ldots, 100$ contributes $91$ and $97$, for $26$ in total.
 :::
 
-## Common Mistakes
+:::definition[Derangement]{#derangement}
+A *derangement* of $[n]$ is a permutation $\sigma$ of $[n]$ with no fixed point: $\sigma(i) \ne i$ for every $i$. The number of derangements of $[n]$ is written $D_n$.
+:::
 
-- **Getting the signs wrong**: + singles, − pairs, + triples, − quadruples… The pattern is (-1)^{k+1} for the k-fold intersections.
-- **Forgetting to add back the triple (or higher) intersections**: After subtracting pairs the triple people have been added 3× and subtracted 3×, so they disappear unless you add them.
-- **Using the formula when sets are already disjoint**: It still works (intersections zero) but you are doing unnecessary work.
-- **Miscounting the intersections themselves**: $|A \cap B \cap C|$ requires elements in *all three*, not just some pairs.
-- **Applying to infinite sets without care**: The principle is for finite cardinalities; infinite cases need different tools.
-- **Confusing union count with probability without dividing**: The count is useful, but probability requires dividing by the size of the universe.
+:::theorem[Derangement formula]{#derangement-formula}
+For $n \ge 0$,
 
-A bijective proof establishes that two sets have the same cardinality by exhibiting an explicit, size-preserving, one-to-one correspondence between them. It is often considered the most satisfying kind of proof in combinatorics because it explains *why* the counts are equal at the level of the objects themselves rather than through algebraic manipulation or analysis.
+$$D_n = n! \sum_{k=0}^{n}\frac{(-1)^k}{k!},$$
 
-## The Idea of a Bijective Proof
+and consequently $D_n$ is the nearest integer to $n!/e$ for $n \ge 1$.
+:::
+
+:::proof
+Let $U$ be the set of all $n!$ permutations of $[n]$, and for $i \in [n]$ let $A_i$ be the set of permutations fixing $i$. A derangement is a permutation in none of the $A_i$, so the complementary form applies.
+
+For $I \subseteq [n]$ with $|I| = k$, the set $A_I$ consists of the permutations fixing every element of $I$; such a permutation is an arbitrary permutation of the remaining $n-k$ points, so $|A_I| = (n-k)!$. There are $\binom{n}{k}$ index sets of size $k$, hence
+
+$$D_n = \sum_{k=0}^{n}(-1)^k \binom{n}{k}(n-k)! = \sum_{k=0}^{n}(-1)^k \frac{n!}{k!(n-k)!}(n-k)! = n!\sum_{k=0}^n \frac{(-1)^k}{k!}.$$
+
+For the final claim, $\sum_{k=0}^{n}(-1)^k/k!$ is the $n$-th partial sum of the alternating series for $e^{-1}$, whose terms decrease in absolute value, so the error is at most the first omitted term $1/(n+1)!$. Thus $|D_n - n!/e| \le n!/(n+1)! = 1/(n+1) < 1/2$ for $n \ge 2$, and the case $n=1$ ($D_1 = 0$, $1/e \approx 0.368$) is checked directly.
+:::
+
+:::example[The hat-check problem]
+Five guests leave their hats at a party and each collects a hat at random on leaving. In how many of the $120$ possible assignments does nobody get their own hat?
+:::
+
+:::solution
+This asks for $D_5$. By the formula,
+
+$$D_5 = 120\left(1 - 1 + \frac12 - \frac16 + \frac1{24} - \frac1{120}\right) = 120 - 120 + 60 - 20 + 5 - 1 = 44.$$
+
+So $44$ of the $120$ assignments are derangements, a proportion of $44/120 \approx 0.367$, strikingly close to $1/e \approx 0.3679$. The convergence is fast: already at $n = 5$ the proportion is right to three decimal places, which is the analytic content of the error bound in the proof.
+:::
+
+:::theorem[Counting surjections]{#surjections}
+The number of surjective functions from an $n$-set onto a $k$-set is
+
+$$\operatorname{Sur}(n,k) = \sum_{j=0}^{k}(-1)^j \binom{k}{j}(k-j)^n.$$
+:::
+
+:::proof
+Let $U$ be the set of all functions $[n] \to [k]$, so $|U| = k^n$ by the product rule ($n$ independent choices from $k$ values). For $i \in [k]$ let $A_i$ be the set of functions that *miss* $i$, that is, whose image avoids $i$. A function is surjective exactly when it lies in no $A_i$.
+
+For $I \subseteq [k]$ with $|I| = j$, the functions in $A_I$ are exactly the functions $[n] \to [k]\setminus I$, and there are $(k-j)^n$ of them. Since there are $\binom{k}{j}$ such $I$, the complementary form gives the stated sum.
+:::
+
+:::remark
+Dividing by $k!$ — which is legitimate because relabelling the $k$ target values permutes the surjections freely — gives the Stirling number of the second kind $S(n,k) = \operatorname{Sur}(n,k)/k!$, the number of ways to partition an $n$-set into $k$ non-empty unlabelled blocks. Set partitions are the subject of their own chapter; here we note only that inclusion–exclusion is where their formula comes from.
+:::
+
+:::example[Every prize awarded]
+In how many ways can $6$ distinct prizes be distributed to $3$ people so that nobody goes empty-handed?
+:::
+
+:::solution
+This is $\operatorname{Sur}(6,3)$:
+
+$$\operatorname{Sur}(6,3) = \binom30 3^6 - \binom31 2^6 + \binom32 1^6 - \binom33 0^6 = 729 - 192 + 3 - 0 = 540.$$
+
+Check the magnitude: $3^6 = 729$ distributions in total, and $540/729 \approx 0.74$, so about three quarters of distributions use all three people — plausible, since only distributions concentrated on one or two people are excluded.
+:::
+
+:::pitfall
+In the surjection count, the term $j = k$ contributes $0^n$, which is $0$ for $n \ge 1$ but $1$ for $n = 0$. The convention $0^0 = 1$ is the right one here, and it makes the formula give the correct value $\operatorname{Sur}(0,0) = 1$ (the empty function is onto the empty set) and $\operatorname{Sur}(0,k) = 0$ for $k \ge 1$.
+:::
+
+## Bijections and Counting in Two Ways
 
 <!-- section: idea-of-bijection -->
 
+We now return to the bijection principle and develop the two techniques it powers. The first is the *bijective proof*: to show $|A| = |B|$, exhibit a bijection. The second is *double counting*: to prove an identity, count one set in two ways.
+
 :::definition[Bijection]{#bijection}
-A bijection is a map $f : A \to B$ that is both one-to-one (injective: distinct inputs give distinct outputs) and onto (surjective: every element of $B$ is hit). Equivalently, it has a two-sided inverse.
+A map $f : A \to B$ is *injective* if $f(a) = f(a')$ implies $a = a'$, *surjective* if every $b \in B$ equals $f(a)$ for some $a$, and *bijective* if both. Equivalently, $f$ is bijective if and only if it has a two-sided inverse $g: B \to A$ with $g(f(a)) = a$ and $f(g(b)) = b$ for all $a, b$.
 :::
 
-:::theorem[Bijection principle]{#bijection-principle}
-If a bijection between two finite sets exists, they have the same number of elements.
+:::proposition[Inverses certify bijectivity]{#inverse-certifies}
+If $f : A \to B$ and $g : B\to A$ satisfy $g \circ f = \mathrm{id}_A$ and $f \circ g = \mathrm{id}_B$, then $f$ is a bijection.
 :::
 
-:::recipe[Bijective proof]
-To prove $|A_n| = |B_n|$ for each $n$, construct a map $f : A_n \to B_n$ that is invertible (or an involution on the disjoint union) and preserves the size parameter $n$.
+:::proof
+If $f(a) = f(a')$ then applying $g$ gives $a = g(f(a)) = g(f(a')) = a'$, so $f$ is injective. Given $b \in B$, the element $a = g(b)$ satisfies $f(a) = f(g(b)) = b$, so $f$ is surjective.
 :::
 
-The existence of such an $f$ immediately implies the cardinalities are equal; no further computation is needed. The burden is to describe the map *and* verify it really is a bijection (usually by exhibiting an explicit inverse).
+:::recipe[How to write a bijective proof]
+To prove $|A| = |B|$:
+
+1. **Describe the map.** Give an explicit rule taking each $a \in A$ to an object $f(a)$.
+2. **Check the target.** Verify $f(a) \in B$ — that the output really has the defining property of $B$. This step is skipped more often than any other, and it is where most flawed bijections fail.
+3. **Produce the inverse.** Describe $g : B \to A$ and check $g(f(a)) = a$ and $f(g(b)) = b$. By the proposition above this settles injectivity and surjectivity at once.
+4. **Conclude** by the bijection principle.
+
+An *involution* — a map $f : A \to A$ with $f(f(a)) = a$ — is its own inverse, so step 3 is free whenever the map can be arranged to be one.
+:::
 
 :::intuition
-Instead of calculating two big formulas and showing they simplify to the same thing, you say "here is a perfect pairing: every red thing corresponds to exactly one blue thing of the same size."
-
-The pairing itself is the proof.
+An algebraic proof of $|A| = |B|$ computes two numbers and observes they agree. A bijective proof never computes anything: it pairs each object of $A$ with an object of $B$ so that nothing is left over on either side. That is why bijective proofs feel explanatory — they answer "why are these equal?" with "because they are the same objects, differently described".
 :::
 
-:::example
-Prove the binomial symmetry $\binom{n}{k} = \binom{n}{n-k}$ for integers $0 \le k \le n$.
+:::example[Subsets and binary strings]
+Show that a set of size $n$ has exactly $2^n$ subsets.
 :::
 
 :::solution
-1. Interpret each side by what it counts. The left side counts the $k$-element subsets of $\{1, 2, \ldots, n\}$; the right side counts the $(n-k)$-element subsets.
-2. Define the map $f$ that sends a subset $S$ to its complement $f(S) = \{1,\ldots,n\} \setminus S$. If $|S| = k$ then $|f(S)| = n - k$, so $f$ sends $k$-subsets to $(n-k)$-subsets as required.
-3. Check it is a bijection by finding its inverse: applying $f$ again gives $f(f(S)) = \{1,\ldots,n\} \setminus (\{1,\ldots,n\} \setminus S) = S$. So $f$ is its own inverse (an *involution*), which makes it automatically both injective and surjective — hence a bijection.
-4. Therefore the two families are equinumerous: $\binom{n}{k} = \binom{n}{n-k}$.
-5. Sanity check with $n = 5, k = 2$: $\binom{5}{2} = 10$ and $\binom{5}{3} = 10$, and indeed each 2-subset (e.g. $\{1,2\}$) pairs with a unique 3-subset (its complement $\{3,4,5\}$). ✓
+Let $A$ be the collection of subsets of $[n]$ and $B$ the set of binary strings $(b_1, \ldots, b_n) \in \{0,1\}^n$.
+
+Define $f(S) = (b_1,\ldots,b_n)$ with $b_i = 1$ if $i \in S$ and $b_i = 0$ otherwise — the *indicator string* of $S$. Its output is certainly a binary string of length $n$.
+
+Define $g(b_1,\ldots,b_n) = \{i \in [n] : b_i = 1\}$, a subset of $[n]$. Then $g(f(S)) = \{i : i \in S\} = S$ and $f(g(b)) = b$, since the $i$-th entry of $f(g(b))$ is $1$ exactly when $i \in g(b)$, that is exactly when $b_i = 1$. So $f$ is a bijection.
+
+By the product rule $|B| = 2^n$, so by the bijection principle the number of subsets is $2^n$.
 :::
 
-## Classic Examples
+We now formalise the second technique. It is the sum rule applied twice to the same set, and although it is almost trivial to state, naming it changes how one reads identities.
+
+:::theorem[Double counting]{#double-counting}
+Let $S$ be a finite set and let $S = \bigsqcup_{i \in I} P_i$ and $S = \bigsqcup_{j \in J} Q_j$ be two decompositions of $S$ into pairwise disjoint parts. Then
+
+$$\sum_{i \in I}|P_i| = |S| = \sum_{j\in J}|Q_j|.$$
+:::
+
+:::proof
+Both equalities are the sum rule applied to the respective decomposition; the middle quantity is the same number in each case, since it is the size of the same set.
+:::
+
+:::corollary[Counting a table in two directions]{#table-double-counting}
+Let $R \subseteq X \times Y$ be any relation between finite sets, and for $x\in X$, $y \in Y$ write $r(x) = |\{y : (x,y)\in R\}|$ and $c(y) = |\{x : (x,y)\in R\}|$. Then
+
+$$\sum_{x\in X} r(x) = |R| = \sum_{y \in Y} c(y).$$
+:::
+
+:::proof
+The sets $R_x = \{(x,y)\in R\}$, one for each $x \in X$, are pairwise disjoint with union $R$, and $|R_x| = r(x)$ via the bijection $(x,y)\mapsto y$. The sets $R^y = \{(x,y)\in R\}$ for $y \in Y$ give a second such decomposition with $|R^y| = c(y)$. Apply the double counting theorem.
+:::
+
+:::intuition
+Write the relation as a grid of ticks: rows indexed by $X$, columns by $Y$, a tick in cell $(x,y)$ when $(x,y)\in R$. Count the ticks row by row and you get $\sum r(x)$; count them column by column and you get $\sum c(y)$. The ticks did not move, so the totals agree. Every double-counting proof is that picture with a well-chosen grid.
+:::
+
+:::theorem[Handshake lemma]{#handshake}
+In any finite graph $G = (V,E)$, the degrees sum to twice the number of edges:
+
+$$\sum_{v\in V}\deg(v) = 2|E|.$$
+
+Consequently the number of vertices of odd degree is even.
+:::
+
+:::proof
+Apply the table corollary to the incidence relation $R = \{(v,e) \in V\times E : v \text{ is an endpoint of } e\}$. Row sums: for fixed $v$, the number of incident edges is $\deg(v)$, so $\sum_v \deg(v) = |R|$. Column sums: each edge has exactly two endpoints, so $c(e) = 2$ for every $e$ and $|R| = 2|E|$.
+
+For the consequence, split the sum by parity: $\sum_{v}\deg(v) = \sum_{\deg v \text{ even}} \deg(v) + \sum_{\deg v \text{ odd}}\deg(v)$. The total is even and the first part is even, so the second is even; being a sum of odd numbers, it can be even only if it has an even number of terms.
+:::
+
+:::example[There is always a repeat handshake]
+At a party some pairs shake hands. Show that the number of people who shook hands an odd number of times is even.
+:::
+
+:::solution
+Model the party as a graph: people are vertices, handshakes are edges, and the number of handshakes a person made is their degree. The handshake lemma says the number of odd-degree vertices is even, which is exactly the claim.
+
+Note what was gained: the statement concerns the *parity* of a count over a structure that may be arbitrarily complicated, and the proof never examines the structure at all. It only counts incidences twice.
+:::
+
+:::theorem[Binomial identities by double counting]{#binomial-identities}
+For integers $0 \le k \le n$:
+
+1. $\displaystyle\sum_{k=0}^{n}\binom{n}{k} = 2^n$.
+2. $\displaystyle k\binom{n}{k} = n\binom{n-1}{k-1}$ for $k \ge 1$, and hence $\displaystyle\sum_{k=0}^{n}k\binom{n}{k} = n2^{n-1}$.
+3. (Vandermonde) $\displaystyle\binom{m+n}{r} = \sum_{k=0}^{r}\binom{m}{k}\binom{n}{r-k}$.
+:::
+
+:::proof
+1. Count the subsets of $[n]$ in two ways. All at once, there are $2^n$ of them. Alternatively, partition them by size: the subsets of size $k$ number $\binom{n}{k}$, and every subset has exactly one size, so the parts are disjoint and cover. Double counting gives the identity.
+
+2. Count pairs $(S, x)$ with $S \subseteq [n]$, $|S| = k$, and $x \in S$ — "a committee of $k$ with a designated chair". Choosing the committee first gives $\binom{n}{k}$ committees and then $k$ choices of chair, so the count is $k\binom nk$. Choosing the chair first gives $n$ choices, and then the other $k-1$ members are any $(k-1)$-subset of the remaining $n-1$ people, so the count is $n\binom{n-1}{k-1}$. For the consequence, sum $k\binom nk = n\binom{n-1}{k-1}$ over $k$ and use part 1 applied to $n-1$: $\sum_{k\ge1} n\binom{n-1}{k-1} = n \cdot 2^{n-1}$.
+
+3. Count the $r$-element subsets of a set of $m+n$ elements that has been split into a block $M$ of size $m$ and a block $N$ of size $n$. Directly there are $\binom{m+n}{r}$. Alternatively classify by $k = |S \cap M|$, which takes one value per subset, so the classes are disjoint and cover; a subset with $|S\cap M| = k$ is determined by choosing $k$ elements of $M$ and $r-k$ of $N$, which by the product rule can be done in $\binom mk \binom{n}{r-k}$ ways. Summing over $k$ gives the identity.
+:::
+
+:::remark
+Identity 2 is worth rereading as a slogan: *choose the special element first*. Whenever a formula has a stray factor of $k$ or $n$ in front of a binomial coefficient, there is usually a distinguished element being chosen, and pinning down what it is converts the algebra into a sentence.
+:::
+
+:::example[The hockey-stick identity]
+Prove that $\displaystyle\sum_{i=k}^{n}\binom{i}{k} = \binom{n+1}{k+1}$ for $0 \le k \le n$.
+:::
+
+:::solution
+Count the $(k+1)$-element subsets of $[n+1]$ in two ways.
+
+Directly there are $\binom{n+1}{k+1}$ of them.
+
+Alternatively, classify each subset $S$ by its largest element $m$. Since $|S| = k+1 \ge 1$, every subset has a well-defined largest element, and the classes are disjoint and cover. If the largest element is $m$, the remaining $k$ elements form an arbitrary $k$-subset of $[m-1]$, which can be chosen in $\binom{m-1}{k}$ ways. As $m$ ranges over $k+1, \ldots, n+1$, writing $i = m-1$ gives
+
+$$\binom{n+1}{k+1} = \sum_{m=k+1}^{n+1}\binom{m-1}{k} = \sum_{i=k}^{n}\binom{i}{k}.$$
+
+The "classify by the largest (or smallest) element" move is the workhorse of such proofs; once you have it, hockey-stick is not a formula to memorise but a sentence to recall.
+:::
+
+## Classic Bijections and Double Counting
 
 <!-- section: classic-examples -->
 
-- Complement for binomial symmetry.
-- Toggle a fixed element to prove even- and odd-sized subsets are equinumerous (for $n > 0$).
-- Many Catalan bijections: binary trees $\leftrightarrow$ Dyck paths $\leftrightarrow$ non-crossing partitions $\leftrightarrow$ triangulations $\leftrightarrow$ stack-sortable permutations, etc.
-- The LGV lemma for counting non-intersecting lattice paths via determinants (a sign-reversing involution on intersecting tuples).
-- The cycle lemma for Catalan numbers and for counting necklaces / Lyndon words.
+This section collects the bijections every combinatorialist knows, each stated as a theorem and proved by an explicit map with an explicit inverse.
 
-:::intuition
-The complement bijection is like turning a "guest list" into its "not-invited list": pick who's *in* or, equivalently, pick who's *out* — same choice, two descriptions.
-
-The reflection principle for the ballot theorem / Catalan numbers pairs each "bad" path with a path that ends in the wrong place by reflecting its prefix at the first touch of the barrier; each such pairing cancels a bad object, leaving only the good ones.
+:::theorem[Binomial symmetry]{#binomial-symmetry}
+For $0 \le k \le n$, $\displaystyle\binom nk = \binom{n}{n-k}$.
 :::
 
-:::example
-Prove that a set of size $n \ge 1$ has exactly as many even-sized subsets as odd-sized subsets.
+:::proof
+Let $A$ be the family of $k$-subsets of $[n]$ and $B$ the family of $(n-k)$-subsets. Define $f(S) = [n]\setminus S$. By the subtraction rule $|f(S)| = n - k$, so $f$ maps $A$ into $B$. The same rule read on $B$ gives a map back into $A$, and $[n]\setminus([n]\setminus S) = S$, so $f$ is an involution and hence a bijection. Apply the bijection principle.
+:::
+
+:::theorem[Even and odd subsets]{#even-odd-subsets}
+For $n \ge 1$, the set $[n]$ has exactly as many even-sized subsets as odd-sized ones, namely $2^{n-1}$ of each. Equivalently, $\sum_{k=0}^{n}(-1)^k\binom nk = 0$.
+:::
+
+:::proof
+Let $\mathcal E$ and $\mathcal O$ be the families of even- and odd-sized subsets. Define $g : \mathcal E \to \mathcal O$ by toggling the element $1$:
+
+$$g(S) = \begin{cases} S\cup\{1\} & 1\notin S,\\ S\setminus\{1\} & 1 \in S.\end{cases}$$
+
+Toggling changes the size by exactly $\pm1$, so it reverses parity and $g$ does map $\mathcal E$ into $\mathcal O$. The same formula defines a map $\mathcal O \to \mathcal E$, and toggling twice restores $S$, so $g$ is an involution and hence a bijection. Therefore $|\mathcal E| = |\mathcal O|$, and since $|\mathcal E| + |\mathcal O| = 2^n$ by the sum rule and the subset count, each is $2^{n-1}$.
+
+The alternating-sum form follows by grouping subsets by size: $\sum_k (-1)^k\binom nk = |\mathcal E| - |\mathcal O| = 0$.
+:::
+
+:::remark
+This is the combinatorial content of the cancellation used in the proof of the inclusion–exclusion principle, where $\sum_k(-1)^k\binom rk = 0$ for $r \ge 1$ was obtained from the binomial theorem. The toggle involution replaces that algebra with a pairing, which is exactly the trade a bijective proof offers.
+:::
+
+:::pitfall
+The hypothesis $n\ge 1$ is essential and is exactly what makes a toggling element available. For $n = 0$ there is one even-sized subset — the empty set — and no odd-sized one, so the conclusion is false. A bijective proof always breaks at the point where the map cannot be defined; finding that point is a good way to discover the hypothesis you forgot.
+:::
+
+:::theorem[Stars and bars]{#stars-and-bars}
+The number of solutions of $x_1 + x_2 + \cdots + x_k = n$ in non-negative integers is $\displaystyle\binom{n+k-1}{k-1}$.
+:::
+
+:::proof
+Let $A$ be the set of such solutions and $B$ the set of arrangements of $n$ stars and $k-1$ bars in a row of $n+k-1$ symbols.
+
+Given $(x_1,\ldots,x_k) \in A$, write $x_1$ stars, a bar, $x_2$ stars, a bar, and so on, ending with $x_k$ stars. This uses $\sum x_i = n$ stars and $k-1$ bars, so the output lies in $B$.
+
+Conversely, given an arrangement in $B$, let $x_i$ be the number of stars strictly between the $(i-1)$-st and $i$-th bars, where the $0$-th bar means the start of the row and the $k$-th means the end. Each $x_i$ is a non-negative integer and they sum to the number of stars, $n$, so the output lies in $A$. The two constructions undo one another: reading off gaps and then rewriting them reproduces the arrangement, and vice versa.
+
+So $|A| = |B|$. An arrangement in $B$ is determined by which $k-1$ of the $n+k-1$ positions hold bars, so $|B| = \binom{n+k-1}{k-1}$.
+:::
+
+:::example[Distributing identical objects]
+In how many ways can $10$ identical chocolates be divided among $4$ children, if a child may get none? And if every child must get at least one?
 :::
 
 :::solution
-Let $\mathcal{E}$ be the even-sized subsets of $\{1, 2, \ldots, n\}$ and $\mathcal{O}$ the odd-sized ones. We want a bijection $g : \mathcal{E} \to \mathcal{O}$.
+The first question is stars and bars with $n = 10$, $k = 4$: $\binom{10+4-1}{4-1} = \binom{13}{3} = 286$.
 
-Fix the element $1$ (any fixed element works; this is why we need $n \ge 1$). Define $g$ by *toggling* membership of $1$:
-$$g(S) = \begin{cases} S \cup \{1\} & \text{if } 1 \notin S, \\ S \setminus \{1\} & \text{if } 1 \in S. \end{cases}$$
-
-Toggling changes the size by exactly $\pm 1$, which flips parity, so $g$ sends an even-sized set to an odd-sized one and vice versa. Applying $g$ twice toggles element $1$ back, so $g(g(S)) = S$: it is an involution, hence a bijection between $\mathcal{E}$ and $\mathcal{O}$.
-
-Therefore $|\mathcal{E}| = |\mathcal{O}|$, and since $|\mathcal{E}| + |\mathcal{O}| = 2^n$, each equals $2^{n-1}$.
-
-Sanity check with $n = 3$ on $\{1,2,3\}$: even-sized subsets are $\varnothing, \{1,2\}, \{1,3\}, \{2,3\}$ (four of them); odd-sized are $\{1\}, \{2\}, \{3\}, \{1,2,3\}$ (four of them). Both counts equal $2^{3-1} = 4$, and $g$ pairs, e.g., $\varnothing \leftrightarrow \{1\}$ and $\{2,3\} \leftrightarrow \{1,2,3\}$. ✓ (The claim fails for $n = 0$: the empty set has one even subset, itself, and no odd subsets — hence the $n \ge 1$ hypothesis.)
+For the second, substitute $x_i = y_i + 1$ with $y_i \ge 0$. The equation becomes $y_1+\cdots+y_4 = 6$, and the substitution is a bijection between the positive solutions of the first equation and the non-negative solutions of the second (its inverse subtracts one from each coordinate). So the count is $\binom{6+4-1}{3} = \binom 93 = 84$.
 :::
 
-## Power and Limitations
+:::theorem[Conjugation of partitions]{#conjugate-partitions}
+For all $n, r \ge 1$, the number of partitions of $n$ into at most $r$ parts equals the number of partitions of $n$ into parts each of size at most $r$.
+:::
+
+:::proof
+Represent a partition $\lambda_1 \ge \lambda_2 \ge \cdots \ge \lambda_\ell \ge 1$ with $\sum \lambda_i = n$ by its *Young diagram*: left-justified rows of boxes, the $i$-th row having $\lambda_i$ boxes. Define the conjugate $\lambda'$ by reflecting the diagram in its main diagonal, so that $\lambda'_j$ is the number of rows with at least $j$ boxes — that is, the length of the $j$-th column.
+
+The reflected diagram is again a valid Young diagram: column lengths are weakly decreasing because the rows are weakly decreasing and left-justified. Reflection preserves the number of boxes, so $\lambda'$ is again a partition of $n$. Reflecting twice returns the original diagram, so conjugation is an involution, hence a bijection on the partitions of $n$.
+
+Finally, conjugation exchanges the two conditions: $\lambda$ has at most $r$ rows if and only if every column of $\lambda$ has length at most $r$, which is precisely the statement that every part of $\lambda'$ is at most $r$. So conjugation restricts to a bijection between the two families in the statement.
+:::
+
+:::example[Checking conjugation by hand]
+Verify the theorem for $n = 6$, $r = 2$.
+:::
+
+:::solution
+Partitions of $6$ with at most $2$ parts: $6$, $5+1$, $4+2$, $3+3$ — four of them.
+
+Partitions of $6$ with every part at most $2$: $2+2+2$, $2+2+1+1$, $2+1+1+1+1$, $1+1+1+1+1+1$ — also four.
+
+Conjugation matches them: $6 \leftrightarrow 1+1+1+1+1+1$, $\ 5+1 \leftrightarrow 2+1+1+1+1$, $\ 4+2\leftrightarrow 2+2+1+1$, $\ 3+3 \leftrightarrow 2+2+2$. Note that the bijection is between the two *families*, not a symmetry within one: only self-conjugate partitions are fixed.
+:::
+
+:::theorem[Ballot problem and Catalan numbers]{#reflection-principle}
+The number of lattice paths from $(0,0)$ to $(n,n)$ using unit steps right and up that never rise above the diagonal $y = x$ is the Catalan number
+
+$$C_n = \frac{1}{n+1}\binom{2n}{n} = \binom{2n}{n} - \binom{2n}{n-1}.$$
+:::
+
+:::proof
+A path from $(0,0)$ to $(n,n)$ consists of $2n$ steps, $n$ of them right, and is determined by which steps are right; so there are $\binom{2n}{n}$ paths in all.
+
+Call a path *bad* if it touches the line $y = x+1$ at some point; the good paths are exactly the ones we want to count. We biject the bad paths with the paths from $(-1,1)$ to $(n,n)$.
+
+Given a bad path, let $P$ be its first contact with the line $y = x+1$ and reflect the portion of the path *before* $P$ in that line. Reflection in $y = x+1$ sends $(a,b)$ to $(b-1, a+1)$ and exchanges right steps with up steps, so the reflected segment is again a lattice path; it now starts at the image of $(0,0)$, namely $(-1,1)$, and still ends at $P$. Leaving the rest of the path untouched gives a path from $(-1,1)$ to $(n,n)$.
+
+The map is invertible. A path from $(-1,1)$ to $(n,n)$ starts strictly above the line $y = x+1$, since at $x = -1$ the line has height $0 < 1$, and ends strictly below it, since at $x = n$ the line has height $n+1 > n$; a lattice path changing one coordinate by one at a time cannot get from one side to the other without landing on the line, so it meets the line. Reflecting its initial segment at the first contact returns a path from $(0,0)$ to $(n,n)$ that touches the line, hence a bad path, and the two reflections undo one another.
+
+A path from $(-1,1)$ to $(n,n)$ takes $n+1$ right steps and $n-1$ up steps, so there are $\binom{2n}{n-1}$ of them. Hence the good paths number
+
+$$\binom{2n}{n} - \binom{2n}{n-1} = \binom{2n}{n}\left(1 - \frac{n}{n+1}\right) = \frac{1}{n+1}\binom{2n}{n},$$
+
+using $\binom{2n}{n-1} = \binom{2n}{n}\cdot \frac{n}{n+1}$, which follows from the factorial expressions.
+:::
+
+:::figure[The reflection, drawn for $n = 3$. The bad path (solid) touches $y = x+1$ first at $P = (0,1)$; reflecting only the portion before $P$ moves its start from $(0,0)$ to $(-1,1)$ and leaves the rest alone, producing a path from $(-1,1)$ to $(3,3)$.]{#reflection-figure}
+{
+  "type": "plot",
+  "x": [-1.6, 3.6], "y": [-0.6, 3.6],
+  "xTicks": 1, "yTicks": 1, "equalAspect": true,
+  "marks": [
+    { "kind": "line", "through": [[0, 0], [3, 3]], "muted": true },
+    { "kind": "line", "through": [[-1, 0], [2, 3]], "muted": true, "dashed": true },
+    { "kind": "path", "points": [[0, 0], [0, 1], [1, 1], [1, 2], [2, 2], [3, 2], [3, 3]] },
+    { "kind": "path", "points": [[-1, 1], [0, 1]], "tone": "result" },
+    { "kind": "point", "at": [0, 1], "tone": "result" },
+    { "kind": "point", "at": [-1, 1], "tone": "result" },
+    { "kind": "text", "at": [-0.55, -0.35], "text": "P", "leaderTo": [0, 1], "tone": "result" },
+    { "kind": "text", "at": [2.4, 0.15], "text": "y = x" },
+    { "kind": "text", "at": [-0.9, 2.6], "text": "y = x + 1" }
+  ]
+}
+:::
+
+:::intuition
+The reflection principle is a sign-cancelling device in disguise. Bad paths are objects we want to discard; instead of discarding them one at a time, we match each with a path to a different endpoint, whose count we already know. Subtracting a known count is the same as cancelling, and the bijection is what licences it.
+:::
+
+:::example[Balanced bracket sequences]
+Show that the number of sequences of $n$ opening and $n$ closing brackets in which every prefix has at least as many openings as closings is $C_n$.
+:::
+
+:::solution
+Map a bracket sequence to a lattice path by reading left to right: an opening bracket is a right step, a closing bracket an up step. A sequence with $n$ of each becomes a path from $(0,0)$ to $(n,n)$, and the reverse reading recovers the sequence, so this is a bijection between bracket sequences and paths.
+
+The prefix condition says that after any number of symbols, the closings so far do not exceed the openings — that is, the path's height never exceeds its horizontal position, so the path stays weakly below $y = x$. By the previous theorem the count is $C_n$.
+
+This is the pattern for every Catalan bijection: find the map that turns a structural constraint into a geometric one, then count the geometry.
+:::
+
+:::theorem[Counting edges in two ways: Mantel's theorem]{#mantel}
+A graph on $n$ vertices with no triangle has at most $n^2/4$ edges.
+:::
+
+:::proof
+Let $G$ be triangle-free with vertex set $V$, $|V| = n$, and edge set $E$. For an edge $uv \in E$, the neighbourhoods of $u$ and $v$ are disjoint: a common neighbour $w$ would make $uvw$ a triangle. Hence $\deg(u) + \deg(v) \le n$ for every edge $uv$.
+
+Sum this over all edges and count the left side in the other direction. Each vertex $u$ appears in the sum once for each incident edge, that is $\deg(u)$ times, so
+
+$$\sum_{uv\in E}\bigl(\deg(u)+\deg(v)\bigr) = \sum_{u \in V}\deg(u)^2 \le n|E|.$$
+
+By the Cauchy–Schwarz inequality, or equivalently because the mean of squares is at least the square of the mean,
+
+$$\sum_{u\in V}\deg(u)^2 \ge \frac{\left(\sum_u \deg(u)\right)^2}{n} = \frac{(2|E|)^2}{n},$$
+
+using the handshake lemma. Combining, $4|E|^2/n \le n|E|$, so $|E| \le n^2/4$.
+:::
+
+:::remark
+The bound is attained by the complete bipartite graph with parts of sizes $\lceil n/2\rceil$ and $\lfloor n/2 \rfloor$, which has $\lfloor n^2/4\rfloor$ edges and no triangle, since any triangle would need two vertices in the same part and those are never adjacent. Mantel's theorem is the first case of Turán's theorem, and the proof above — count a quantity over edges, then over vertices — is the standard entry point into extremal graph theory.
+:::
+
+## The Reach and the Limits of These Principles
 
 <!-- section: power-and-limitations -->
 
-Bijective proofs often generalize beautifully, admit $q$-analogues, or lift to richer categories (species, categorification).
+Having seen the principles work, it is worth asking honestly what they do and do not deliver.
 
-Finding a "nice" bijection can be a deep open problem even when the equality is already known by other means (e.g. some Rogers–Ramanujan identities had no combinatorial bijective proof for a long time).
+**Bijections generalise for free.** A bijection between two families usually respects more structure than the statement mentions, and each extra invariant it preserves upgrades the theorem. Conjugation of partitions was stated as an equality of two counts, but the map itself preserves the number of boxes, sends the largest part to the number of parts, and fixes exactly the self-conjugate partitions — three further theorems from one map.
 
-They provide combinatorial understanding and can suggest algorithms or probabilistic interpretations.
-
-:::intuition
-A good bijection is like a Rosetta stone: it translates facts about one family into facts about the other.
-
-Sometimes the algebra is easier; sometimes the bijection is the only way to see the positivity or the reason.
+:::proposition[A refinement conjugation gives for free]{#conjugation-refinement}
+For every $n$, the number of partitions of $n$ with largest part exactly $m$ and at most $r$ parts equals the number with exactly $m$ parts and largest part at most $r$.
 :::
 
-:::example
-Here is a bijection whose *power* is that it proves an equality no formula makes obvious — and it generalizes for free. Claim: for every $n$, the number of partitions of $n$ with at most $r$ parts equals the number of partitions of $n$ with every part $\le r$.
+:::proof
+Conjugation is a bijection on partitions of $n$ which exchanges "largest part" with "number of parts": the largest part of $\lambda$ is the length of the first row, which becomes the length of the first column of $\lambda'$, that is the number of parts of $\lambda'$. Applying this to both statistics in the statement gives the claim, since a bijection restricts to a bijection between subfamilies defined by corresponding conditions.
+:::
+
+**Sign-reversing involutions extend the method to identities with minus signs.** A bijective proof of $|A| = |B|$ needs both sides to be counts of things. An identity such as $\sum_k(-1)^k a_k = c$ has no such reading — until one builds a single set of signed objects and pairs off objects of opposite sign.
+
+:::recipe[Proving an identity by a sign-reversing involution]
+To prove $\sum_{x\in S}\operatorname{sign}(x) = c$:
+
+1. Realise the alternating sum as a signed set $S$, each object carrying a sign $\pm1$.
+2. Construct an involution $\iota$ on $S$ that reverses sign, defined on all of $S$ except a set $F$ of fixed points.
+3. Objects paired by $\iota$ cancel, so the sum reduces to the signed count of $F$.
+4. Show $\operatorname{sign}$-summing over $F$ gives $c$ — ideally $F$ is small and all of one sign.
+:::
+
+:::example[An alternating identity by cancellation]
+Prove that for $n \ge 1$, $\displaystyle \sum_{k=0}^{n}(-1)^k \binom nk = 0$, by exhibiting a sign-reversing involution.
 :::
 
 :::solution
-1. The bijection is *conjugation*. Draw a partition as a Young diagram — left-justified rows of boxes, one row per part, longest on top. Conjugation reflects the diagram across its main diagonal, turning rows into columns.
-2. Reflecting sends a diagram with at most $r$ rows to one with at most $r$ columns (i.e. every part $\le r$), and it preserves the total number of boxes, so the sum $n$ is unchanged. Reflecting a second time returns the original diagram, so conjugation is an involution — hence a bijection between the two families.
-3. Sanity check with $n = 4$, $r = 2$. Partitions of 4 with at most 2 parts: $4,\ 3{+}1,\ 2{+}2$ — three of them. Partitions of 4 with every part $\le 2$: $2{+}2,\ 2{+}1{+}1,\ 1{+}1{+}1{+}1$ — also three. Conjugation pairs them: $4 \leftrightarrow 1{+}1{+}1{+}1$, $\ 3{+}1 \leftrightarrow 2{+}1{+}1$, $\ 2{+}2 \leftrightarrow 2{+}2$ (self-conjugate). ✓ The same argument works for *every* $n$ and $r$ at once — that generality is exactly the strength a bijective proof buys you.
+Let $S$ be the set of all subsets of $[n]$, with $\operatorname{sign}(T) = (-1)^{|T|}$. Grouping by size shows $\sum_{T\in S}\operatorname{sign}(T) = \sum_k (-1)^k\binom nk$, which is the sum in question.
+
+Let $\iota$ toggle the element $1$, as in the even/odd theorem. It is an involution on $S$, it changes $|T|$ by $\pm1$ and therefore reverses sign, and it has no fixed points, since $T$ and $T \triangle \{1\}$ always differ. So $S$ is partitioned into pairs of opposite sign, every pair contributes $0$, and the total is $0$.
+
+The hypothesis $n\ge1$ is what guarantees the element $1$ exists — the same place the argument must break, since for $n=0$ the sum is $1$.
+:::
+
+**Not everything has a nice bijection, and some equalities resist one for decades.** The Rogers–Ramanujan identities — that the partitions of $n$ into parts differing by at least $2$ are equinumerous with those into parts congruent to $1$ or $4$ modulo $5$ — were proved analytically by Rogers in 1894, but a genuinely bijective proof (Garsia–Milne, 1981) took almost ninety years and is famously intricate. We state the identity without proof: its proof is far beyond this chapter, and rests on $q$-series machinery rather than on anything developed here.
+
+:::remark
+A word on honesty about scope. Three results in this chapter are quoted rather than proved from scratch: the binomial theorem (used once, to evaluate $(1-1)^r$), the Cauchy–Schwarz inequality (used once, in Mantel's theorem), and the alternating-series error bound (used to place $D_n$ near $n!/e$). Each is standard and each is proved elsewhere in this corpus. Everything else above is proved where it is stated.
+:::
+
+**Pigeonhole proves existence and nothing more.** This is a genuine limitation, not a stylistic one. The pigeonhole argument for Dirichlet's theorem shows a good rational approximation exists but offers no way to find it; continued fractions, a different technique entirely, produce it. Ramsey's theorem for $K_6$ guarantees a monochromatic triangle in a $15$-edge colouring, and the proof even suggests where to look, but the corresponding guarantee for larger Ramsey numbers is spectacularly ineffective: $R(5,5)$ is known only to lie between $43$ and $46$, and Erdős's remark that humanity would do better to fight an alien demanding $R(6,6)$ than to compute it remains apt.
+
+**Inclusion–exclusion is exact but can be computationally hopeless.** The formula for $n$ sets has $2^n - 1$ terms, so it is a practical tool only when the intersections have a closed form (as in the sieve, the derangement count and the surjection count) or when a truncation suffices. That truncation is exactly what the Bonferroni inequalities licence, and it is why the union bound $|\bigcup A_i| \le \sum |A_i|$ — the crudest possible instance — is nevertheless one of the most used inequalities in probability and in the probabilistic method.
+
+:::pitfall
+Inclusion–exclusion is a statement about *finite* cardinalities. For infinite sets it has no meaning as stated, since the terms are not numbers; the correct generalisation is to finite measures, where $\mu(A\cup B) = \mu(A)+\mu(B)-\mu(A\cap B)$ holds, and the proof is the same disjoint decomposition with $\mu$ in place of $|\cdot|$. Probability, where $\mu$ is a probability measure, is the most common such setting.
+:::
+
+:::summary
+The chapter in one paragraph. The sum rule counts disjoint pieces; the product rule counts independent choices; both follow from the definition of cardinality as a listing. The bijection principle transports a count across a matching, and is the engine behind both rules. Pigeonhole is the sum rule read as an inequality: fibres cannot all be small, which yields existence theorems — Ramsey, Erdős–Szekeres, Dirichlet — whose conclusions are far stronger than their proofs are long. Inclusion–exclusion repairs the sum rule when the pieces overlap, and its complementary form counts objects avoiding a list of properties: the sieve, derangements, surjections. Double counting equates two decompositions of one set and yields identities — handshake, Vandermonde, hockey-stick, Mantel — with no algebra at all.
 :::
 
 ## Common Mistakes
 
-- **Claiming a bijection exists without describing it**: "There is a bijection" is not a proof; you must exhibit or at least rigorously define the map and its inverse.
-- **Forgetting to preserve the parameter**: The map must send size-n objects to size-n objects (or weight-preserving in weighted counts).
-- **Thinking algebraic proofs are inferior**: They are often faster and sufficient; bijections are prized for the insight they provide.
-- **Assuming every identity has a 'simple' bijective proof**: Some require very intricate involutions or sign-reversing involutions with fixed-point-free parts.
-- **Confusing bijection with injection or surjection only**: You need both directions (or an explicit inverse).
+- **Adding without checking disjointness.** The sum rule requires $A_i \cap A_j = \varnothing$. If the cases overlap, the answer is too big, and the fix is inclusion–exclusion, not a smaller estimate.
+- **Multiplying when the number of options depends on history.** The sequential choice rule needs the *count* at each step to be constant. When it varies, split into cases and add.
+- **Forgetting the "+1".** $m$ objects in $m$ boxes force no collision; $m+1$ do. Likewise the generalised threshold is $(k-1)m+1$, not $(k-1)m$.
+- **Quoting the generalised bound when supplies are limited.** $(k-1)m+1$ answers the unconstrained problem. If some box cannot hold $k-1$ objects, recompute the maximal blocking configuration and add one.
+- **Treating the ceiling form as a claim about every box.** It bounds the fullest box only; other boxes may be empty, and you do not get to choose which box is full.
+- **Claiming a pigeonhole argument locates the collision.** It proves existence. Which pair collides, and how to find it, are different questions needing different tools.
+- **Using $ab$ where $\operatorname{lcm}(a,b)$ is needed.** The multiples of $a$ and of $b$ intersect in the multiples of $\operatorname{lcm}(a,b)$; that is $ab$ only when $a$ and $b$ are coprime.
+- **Getting the inclusion–exclusion signs wrong.** The $k$-fold intersections carry $(-1)^{k+1}$ in the union form and $(-1)^k$ in the complementary form. Confusing the two flips the whole answer.
+- **Stopping after the pairwise terms.** Triples have been added three times and subtracted three times and would otherwise vanish; they must be added back.
+- **Accepting inconsistent intersection data.** If the seven (or $2^n - 1$) disjoint regions come out negative, no such sets exist and the formula's output is meaningless.
+- **Asserting a bijection without exhibiting it.** "There is an obvious correspondence" is not a proof. Give the map, check that its output has the required property, and give the inverse.
+- **Forgetting to check the target.** Half of all faulty bijective proofs define a perfectly good map whose outputs do not actually lie in the intended set.
+- **Confusing a bijection with an injection.** An injection proves $|A| \le |B|$ only. Both directions, or an explicit inverse, are needed for equality.
+- **Missing the degenerate case.** Toggling arguments need an element to toggle, so they fail at $n = 0$; largest-element arguments need the set to be non-empty. Check the smallest case.
