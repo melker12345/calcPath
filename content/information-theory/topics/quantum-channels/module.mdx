@@ -1,0 +1,593 @@
+---
+title: Quantum Channels, Holevo and Capacity
+---
+
+# Quantum Channels, Holevo and Capacity
+
+What a noisy quantum evolution is, how much classical information one can carry, what entanglement is worth as a resource, and the capacities that result.
+
+## CPTP Maps and Kraus Operators
+
+<!-- section: cptp-kraus -->
+
+A classical channel is a stochastic matrix: it takes distributions to distributions. A quantum channel must take density operators to density operators, and one more condition — invisible classically — has to be imposed by hand.
+
+:::definition[Quantum channel]{#quantum-channel}
+A **quantum channel** is a linear map $\Phi$ from operators on $\mathcal{H}_A$ to operators on $\mathcal{H}_B$ that is
+
+1. **trace-preserving**: $\operatorname{Tr}\Phi(M) = \operatorname{Tr}M$ for all $M$; and
+2. **completely positive**: $\Phi\otimes\mathrm{id}_R$ maps positive operators to positive operators, for a reference system $R$ of every finite dimension.
+
+Such a map is called **CPTP**. Trace preservation keeps probabilities normalised; complete positivity keeps them non-negative even when the input is half of an entangled pair.
+:::
+
+Positivity alone is not enough, and the standard example shows why the extra word is needed.
+
+:::proposition[Transposition is positive but not completely positive]{#transpose-not-cp}
+Let $T(M) = M^{\mathsf{T}}$ in a fixed basis. Then $T$ maps density operators to density operators, but $T\otimes\mathrm{id}$ applied to $|\Phi^{+}\rangle\langle\Phi^{+}|$ has an eigenvalue of $-\tfrac12$. Hence $T$ is not a quantum channel.
+:::
+
+:::proof
+$M^{\mathsf{T}}$ has the same eigenvalues as $M$ for Hermitian $M$ (indeed $M^{\mathsf T} = \overline{M}$), so $T$ preserves positivity and trace. Now write
+
+$$|\Phi^{+}\rangle\langle\Phi^{+}| = \tfrac12\bigl(|00\rangle\langle00| + |00\rangle\langle11| + |11\rangle\langle00| + |11\rangle\langle11|\bigr).$$
+
+Transposing the first factor sends $|0\rangle\langle1|\otimes|0\rangle\langle1|$ to $|1\rangle\langle0|\otimes|0\rangle\langle1|$, so the two cross terms become $\tfrac12|10\rangle\langle01|$ and $\tfrac12|01\rangle\langle10|$. In the basis $\{|01\rangle,|10\rangle\}$ the result is $\tfrac12\begin{pmatrix}0&1\\1&0\end{pmatrix}$, with eigenvalues $\pm\tfrac12$. The value $-\tfrac12$ is negative, so $T\otimes\mathrm{id}$ is not positive.
+:::
+
+Complete positivity has a completely explicit characterisation, and it is the form every calculation uses.
+
+:::theorem[Kraus representation]{#kraus}
+A linear map $\Phi$ is CPTP if and only if there are operators $K_1,\dots,K_n$ from $\mathcal{H}_A$ to $\mathcal{H}_B$ with
+
+$$\Phi(\rho) = \sum_{k} K_k\,\rho\,K_k^{\dagger}, \qquad \sum_k K_k^{\dagger}K_k = I_A .$$
+
+The $K_k$ are **Kraus operators**; they are not unique, and $n$ may be taken at most $d_Ad_B$.
+:::
+
+:::proof
+The easy direction in full. If $\Phi$ has such a form then for any positive $P$ on $\mathcal{H}_A\otimes\mathcal{H}_R$ and any vector $|v\rangle$,
+
+$$\langle v|\,(\Phi\otimes\mathrm{id})(P)\,|v\rangle = \sum_k \langle v|(K_k\otimes I)P(K_k^{\dagger}\otimes I)|v\rangle = \sum_k \langle w_k|P|w_k\rangle \ \ge\ 0,$$
+
+with $|w_k\rangle = (K_k^{\dagger}\otimes I)|v\rangle$, so $\Phi$ is completely positive; and $\operatorname{Tr}\Phi(\rho) = \operatorname{Tr}\bigl(\rho\sum_kK_k^{\dagger}K_k\bigr) = \operatorname{Tr}\rho$ gives trace preservation.
+
+The converse is a sketch, and it rests on one construction. Complete positivity applied to the unnormalised maximally entangled vector $|\Omega\rangle = \sum_i|i\rangle|i\rangle$ makes the **Choi operator** $J(\Phi) = (\Phi\otimes\mathrm{id})(|\Omega\rangle\langle\Omega|)$ positive semidefinite; writing its spectral decomposition $J(\Phi) = \sum_k|w_k\rangle\langle w_k|$ and reshaping each vector $|w_k\rangle$ into a matrix $K_k$ (the inverse of the map $K\mapsto (K\otimes I)|\Omega\rangle$) returns the required Kraus operators; trace preservation turns into $\sum_kK_k^{\dagger}K_k = I$. The rank of $J(\Phi)$ bounds $n$ by $d_Ad_B$. The reshaping step is the Choi–Jamiołkowski isomorphism, which this course states rather than develops.
+:::
+
+:::theorem[Stinespring dilation, quoted]{#stinespring}
+Every channel $\Phi$ can be realised as a unitary on a larger system followed by discarding: there is an environment $E$, a pure state $|0\rangle_E$ and a unitary $U$ with
+
+$$\Phi(\rho) = \operatorname{Tr}_E\Bigl[\,U\bigl(\rho\otimes|0\rangle\langle0|_E\bigr)U^{\dagger}\Bigr].$$
+
+The map $\rho\mapsto\operatorname{Tr}_B\bigl[U(\rho\otimes|0\rangle\langle0|)U^{\dagger}\bigr]$ onto the environment is the **complementary channel** $\Phi^{c}$.
+:::
+
+:::intuition
+Noise is entanglement with something you cannot see. Stinespring says every channel — decoherence, measurement, loss, thermalisation — is a unitary interaction with an environment followed by the partial trace of the last section. The complementary channel is what leaked out; the deepest capacity results are all statements of the form "what the receiver gets, minus what the environment got".
+:::
+
+:::example[Kraus operators of the depolarizing channel]
+Write $\Phi(\rho) = (1-p)\rho + p\,\tfrac{I}{2}$ in Kraus form and check the normalisation.
+:::
+
+:::solution
+First a Pauli identity: for any qubit operator, $\tfrac14(\rho + X\rho X + Y\rho Y + Z\rho Z) = \tfrac{I}{2}\operatorname{Tr}\rho$. It suffices to check it on the basis $\{I,X,Y,Z\}$ of Hermitian matrices, and it holds there because each Pauli commutes with itself and anticommutes with the other two, so the three conjugates of a Pauli $\sigma$ cancel it: $\sigma + \sigma - \sigma - \sigma = 0$, while $I$ maps to $4I/4$.
+
+Substituting for $I/2$,
+
+$$\Phi(\rho) = \Bigl(1-\tfrac{3p}{4}\Bigr)\rho + \tfrac{p}{4}\bigl(X\rho X + Y\rho Y + Z\rho Z\bigr),$$
+
+so the Kraus operators are $K_0 = \sqrt{1-\tfrac{3p}{4}}\,I$ and $K_{1,2,3} = \sqrt{p/4}\,X,\ \sqrt{p/4}\,Y,\ \sqrt{p/4}\,Z$. Since every Pauli squares to $I$,
+
+$$\sum_kK_k^{\dagger}K_k = \Bigl(1-\tfrac{3p}{4}\Bigr)I + 3\cdot\tfrac{p}{4}I = I. \qquad\square$$
+:::
+
+Three more channels recur throughout, and it is worth having their Kraus operators in one place.
+
+:::definition[Standard qubit channels]{#standard-channels}
+- **Dephasing**: $K_0 = \sqrt{1-p}\,I$, $K_1 = \sqrt{p}\,Z$. It kills the off-diagonal coherences at rate $2p$ and leaves the diagonal alone.
+- **Amplitude damping** (rate $\gamma$): $K_0 = \begin{pmatrix}1&0\\0&\sqrt{1-\gamma}\end{pmatrix}$, $K_1 = \begin{pmatrix}0&\sqrt{\gamma}\\0&0\end{pmatrix}$. It models decay $|1\rangle\to|0\rangle$.
+- **Erasure** (rate $\varepsilon$): $\Phi(\rho) = (1-\varepsilon)\rho + \varepsilon|e\rangle\langle e|$, where $|e\rangle$ is a flag orthogonal to the input space, so the receiver always knows whether the qubit arrived.
+:::
+
+:::definition[Entanglement-breaking channel]{#entanglement-breaking}
+A channel is **entanglement-breaking** if $(\Phi\otimes\mathrm{id})(\rho_{AR})$ is separable for every input. Equivalently, it is a *measure-and-prepare* channel: $\Phi(\rho) = \sum_m\operatorname{Tr}(E_m\rho)\,\sigma_m$ for some POVM $\{E_m\}$ and states $\sigma_m$.
+:::
+
+The last structural fact is the one that makes information theory possible at all: processing cannot create information.
+
+:::theorem[Monotonicity of relative entropy, quoted]{#monotonicity}
+For every channel $\Phi$ and all states $\rho,\sigma$,
+
+$$D\bigl(\Phi(\rho)\,\|\,\Phi(\sigma)\bigr)\ \le\ D(\rho\|\sigma).$$
+:::
+
+:::proof
+Sketch, with the gap named. For the partial trace this statement is exactly the strong subadditivity of the previous chapter, and by Stinespring every channel is a unitary followed by a partial trace, while relative entropy is invariant under unitaries. So monotonicity and strong subadditivity are equivalent, and both rest on Lieb's concavity theorem, which this course quotes rather than proves. (The two special cases used below — invariance under unitaries, and $D(\rho\otimes\tau\|\sigma\otimes\tau) = D(\rho\|\sigma)$ — are elementary from the definition.)
+:::
+
+:::corollary[Quantum data processing inequality]{#qdpi}
+If $\rho_{AB'} = (\mathrm{id}_A\otimes\Phi)(\rho_{AB})$ for a channel $\Phi$ acting on $B$ alone, then $I(A;B')\le I(A;B)$.
+:::
+
+:::proof
+By Theorem *Subadditivity* of the previous chapter, $I(A;B) = D(\rho_{AB}\|\rho_A\otimes\rho_B)$. Apply $\mathrm{id}_A\otimes\Phi$ to both arguments: the first becomes $\rho_{AB'}$ and the second becomes $\rho_A\otimes\Phi(\rho_B) = \rho_A\otimes\rho_{B'}$, since $\Phi$ does not touch $A$. Monotonicity gives $D(\rho_{AB'}\|\rho_A\otimes\rho_{B'})\le D(\rho_{AB}\|\rho_A\otimes\rho_B)$, which is the claim.
+:::
+
+:::pitfall
+A channel is not "a unitary plus classical noise". Every channel does have a Kraus form, but the Kraus operators need not be unitary (look at amplitude damping) and need not be square when the output space differs from the input. Conversely, a random unitary applied with classical probabilities *is* a channel — a special one, called unital, satisfying $\Phi(I) = I$.
+:::
+
+## Quantum Channels and the Holevo Bound
+
+<!-- section: quantum-channels-holevo -->
+
+Suppose Alice wants to send classical data down a quantum channel. She picks a symbol $x$ with probability $p_x$ and prepares a state $\rho_x$; Bob measures whatever comes out. How many bits per use can he read? The answer has a sharp upper bound, and it is one of the few quantum results whose proof is within reach once monotonicity is granted.
+
+:::definition[Ensemble, average state, accessible information]{#accessible-info}
+An **ensemble** is a family $\mathcal{E} = \{p_x,\rho_x\}$ with average state $\bar\rho = \sum_xp_x\rho_x$. If Bob applies a POVM $\{E_y\}$, the pair $(X,Y)$ has the joint distribution $\Pr(x,y) = p_x\operatorname{Tr}(E_y\rho_x)$, and the **accessible information** is
+
+$$I_{\mathrm{acc}}(\mathcal{E}) = \max_{\{E_y\}} I(X;Y),$$
+
+the ordinary Shannon mutual information maximised over all measurements.
+:::
+
+:::definition[Holevo quantity]{#holevo-quantity}
+The **Holevo quantity** of an ensemble is
+
+$$\chi(\mathcal{E}) = S\Bigl(\sum_xp_x\rho_x\Bigr) - \sum_xp_x\,S(\rho_x),$$
+
+the entropy of the average state minus the average entropy of its members.
+:::
+
+By Theorem *Mixing bounds* of the previous chapter, $0\le\chi\le H(p)$: the Holevo quantity vanishes exactly when all $\rho_x$ are equal, and reaches $H(p)$ exactly when they have pairwise orthogonal supports. The bridge to the proof is an identity.
+
+:::lemma[Holevo quantity as a mutual information]{#chi-is-mutual-info}
+Let $\rho_{XB} = \sum_xp_x\,|x\rangle\langle x|\otimes\rho_x$ be the **classical-quantum state** of the ensemble on an orthonormal family $\{|x\rangle\}$. Then $I(X;B) = \chi(\mathcal{E})$.
+:::
+
+:::proof
+The state is block diagonal, so as computed in the proof of Theorem *Mixing bounds*, $S(XB) = H(p) + \sum_xp_xS(\rho_x)$. Also $S(X) = H(p)$, because the register's reduced state is diagonal with entries $p_x$, and $S(B) = S(\bar\rho)$. Hence
+
+$$I(X;B) = S(X)+S(B)-S(XB) = H(p) + S(\bar\rho) - H(p) - \sum_xp_xS(\rho_x) = \chi(\mathcal{E}).$$
+:::
+
+:::theorem[Holevo bound]{#holevo-bound}
+For every ensemble $\mathcal{E} = \{p_x,\rho_x\}$ and every POVM Bob may apply to one copy,
+
+$$I(X;Y)\ \le\ \chi(\mathcal{E}),\qquad\text{hence}\qquad I_{\mathrm{acc}}(\mathcal{E})\le\chi(\mathcal{E}).$$
+:::
+
+:::proof
+A measurement is a channel. Precisely, the POVM $\{E_y\}$ defines the measure-and-prepare channel
+
+$$\mathcal{M}(\sigma) = \sum_y\operatorname{Tr}(E_y\sigma)\,|y\rangle\langle y|$$
+
+onto a classical register $Y$, which is CPTP: it has Kraus operators $|y\rangle\langle\phi|\sqrt{E_y}$ over an orthonormal basis $\{|\phi\rangle\}$, and $\sum_yE_y = I$ gives the normalisation. Applying it to the $B$ half of the classical-quantum state $\rho_{XB}$ produces
+
+$$(\mathrm{id}_X\otimes\mathcal{M})(\rho_{XB}) = \sum_{x,y}p_x\operatorname{Tr}(E_y\rho_x)\,|x\rangle\langle x|\otimes|y\rangle\langle y|,$$
+
+a state with both registers classical, whose quantum mutual information is the Shannon mutual information $I(X;Y)$ of the joint distribution in Definition *Ensemble, average state, accessible information*. Corollary *Quantum data processing inequality* now gives
+
+$$I(X;Y) \le I(X;B) = \chi(\mathcal{E})$$
+
+by Lemma *Holevo quantity as a mutual information*. Taking the maximum over POVMs gives the second form.
+:::
+
+Two consequences deserve to be said out loud. If the $\rho_x$ are pure and non-orthogonal, then $\sum_xp_xS(\rho_x) = 0$ and $\chi = S(\bar\rho) < H(p)$: *encoding $n$ classical bits into non-orthogonal states makes some of them unreadable in principle*. And since $S(\bar\rho)\le\log d$, a $d$-dimensional system carries at most $\log d$ classical bits — one bit per qubit, no matter how cleverly the states are chosen.
+
+:::corollary[One qubit carries one bit]{#one-bit-per-qubit}
+No ensemble of states on a $d$-dimensional system has $I_{\mathrm{acc}} > \log d$. In particular a single qubit, sent unassisted, conveys at most one classical bit.
+:::
+
+:::proof
+$I_{\mathrm{acc}}\le\chi\le S(\bar\rho)\le\log d$ by the Holevo bound, the non-negativity of $\sum_xp_xS(\rho_x)$, and Theorem *Basic properties*.
+:::
+
+:::example[Holevo capacity of the depolarizing channel]
+Alice sends $|0\rangle$ or $|1\rangle$ with probability $\tfrac12$ each through $\Phi(\rho) = (1-p)\rho+p\tfrac{I}{2}$. Compute $\chi$ of the output ensemble, and evaluate at $p = 0.2$.
+:::
+
+:::solution
+Each output is $\Phi(|0\rangle\langle0|) = (1-p)|0\rangle\langle0| + \tfrac{p}{2}I$, diagonal with entries $1-\tfrac{p}{2}$ and $\tfrac{p}{2}$, so each has entropy $h(p/2)$; the same holds for the $|1\rangle$ branch by symmetry. The average output is
+
+$$\tfrac12\Phi\bigl(|0\rangle\langle0|\bigr) + \tfrac12\Phi\bigl(|1\rangle\langle1|\bigr) = \Phi\bigl(\tfrac{I}{2}\bigr) = \tfrac{I}{2},$$
+
+of entropy $1$. Hence $\chi = 1 - h(p/2)$. At $p = 0.2$: $h(0.1) = -0.1\log_20.1 - 0.9\log_20.9 \approx 0.3322+0.1368 = 0.469$, so $\chi\approx 0.531$ bits per use.
+
+Sanity check: at $p=0$, $\chi = 1$ — a noiseless qubit carries one bit, the most Corollary *One qubit carries one bit* permits. At $p=1$ every input maps to $I/2$ and $\chi = 1-h(1/2) = 0$. □
+:::
+
+:::example[Where the Holevo bound is not tight]
+For the ensemble $\{\tfrac12,|0\rangle;\ \tfrac12,|+\rangle\}$, compare $\chi$ with the accessible information.
+:::
+
+:::solution
+Both states are pure, so $\chi = S(\bar\rho)$, computed in the previous chapter to be $h\bigl(\tfrac12(1+\tfrac{1}{\sqrt2})\bigr) = h(0.8536)\approx 0.601$ bits.
+
+For $I_{\mathrm{acc}}$, the optimal measurement is the two-outcome projective measurement symmetric about the two states. It errs with the Helstrom probability $p_{\mathrm{err}} = \tfrac12\bigl(1-\sqrt{1-c^2}\bigr)$ at $c = |\langle0|+\rangle| = 1/\sqrt2$, that is $p_{\mathrm{err}} = \tfrac12(1-\tfrac{1}{\sqrt2})\approx0.1464$. The induced channel from $X$ to $Y$ is a binary symmetric channel with that crossover probability and a uniform input, so
+
+$$I_{\mathrm{acc}} = 1 - h(0.1464)\approx 1-0.601 = 0.399 \text{ bits}.$$
+
+So $0.399 < 0.601 < 1$: the encoding loses $0.4$ of a bit to non-orthogonality before Bob starts, and his single-copy measurement loses $0.2$ more. The remaining gap is not a defect of his measurement — it closes only when he is allowed to measure many channel outputs jointly, which is what the coding theorem of the last section exploits. □
+:::
+
+:::figure[Two bounds for the ensemble $\{\tfrac12,|\psi\rangle;\tfrac12,|\phi\rangle\}$ of equally likely pure states, as functions of their overlap $c=|\langle\psi|\phi\rangle|$. The upper curve is the Holevo quantity $\chi = h((1+c)/2)$; the lower is the accessible information $1-h\bigl((1-\sqrt{1-c^2})/2\bigr)$ of the best single-copy measurement. Both equal $1$ bit at $c=0$, where the states are orthogonal, and both vanish at $c=1$. The gap between them is information that exists in the ensemble but no one-shot measurement can read.]{#holevo-gap}
+{
+  "type": "plot",
+  "x": [0, 1.15],
+  "y": [-0.2, 1.3],
+  "xTicks": 0.25,
+  "yTicks": 0.25,
+  "xLabel": "c",
+  "yLabel": "bits",
+  "marks": [
+    { "kind": "function", "fn": "-((1+x)/2)*log((1+x)/2)/log(2) - ((1-x)/2)*log((1-x)/2)/log(2)", "tone": "accent" },
+    { "kind": "function", "fn": "1 + ((1-sqrt(1-x^2))/2)*log((1-sqrt(1-x^2))/2)/log(2) + ((1+sqrt(1-x^2))/2)*log((1+sqrt(1-x^2))/2)/log(2)", "tone": "result", "dashed": true },
+    { "kind": "point", "at": [0.7071, 0.6009] },
+    { "kind": "point", "at": [0.7071, 0.3991] },
+    { "kind": "text", "at": [0.55, 1.15], "text": "Holevo chi", "leaderTo": [0.3, 0.9341] },
+    { "kind": "text", "at": [0.2, 0.15], "text": "accessible information", "leaderTo": [0.55, 0.4633] }
+  ]
+}
+:::
+
+:::pitfall
+The Holevo bound limits the information about the *label* $x$ extracted from one channel output. It is not a statement that the quantum state contains only $\chi$ bits: the state $\rho_x$ takes continuously many parameters to write down. What the bound says is that those parameters cannot be read out, which is why an infinite-precision amplitude is not an infinite-capacity encoding.
+:::
+
+## Entanglement as a Measurable Resource
+
+<!-- section: entanglement-measures -->
+
+Entanglement was defined in the previous chapter by what it is not — not separable. To treat it as a resource, like bits or channel uses, we need a number attached to a state, and a rule for what operations may not increase it.
+
+:::definition[LOCC]{#locc}
+**Local operations and classical communication** is the class of protocols in which each party applies channels and measurements to their own system and the parties exchange classical messages, in any number of rounds. LOCC is free in the sense of this section: it is what two distant laboratories can do without a quantum channel between them.
+:::
+
+:::definition[Entanglement monotone]{#monotone}
+A function $E$ on bipartite states is an **entanglement monotone** if $E$ does not increase on average under LOCC, and $E(\rho) = 0$ for every separable $\rho$. The unit is the **ebit**: one Bell pair, $E(|\Phi^{+}\rangle) = 1$.
+:::
+
+LOCC cannot create entanglement — an LOCC protocol applied to a product state produces a separable state, by construction, since every step acts locally conditioned on classical data. For *pure* states the resource theory then has a complete and remarkably simple answer.
+
+:::definition[Entropy of entanglement]{#entropy-of-entanglement}
+For a pure bipartite state $|\psi\rangle_{AB}$,
+
+$$E(\psi) = S(\rho_A) = S(\rho_B) = H(\lambda),$$
+
+the Shannon entropy of the Schmidt coefficients. The two marginals agree by Theorem *Schmidt decomposition*, so the definition is symmetric.
+:::
+
+:::theorem[Entropy of entanglement is the right measure for pure states]{#pure-state-measure}
+$E$ vanishes exactly on product states, is maximal ($\log d$) exactly on maximally entangled states, and is an entanglement monotone. Moreover it is *the* asymptotic rate: $n$ copies of $|\psi\rangle$ can be converted by LOCC into $nE(\psi) - o(n)$ Bell pairs and back, with fidelity tending to $1$.
+:::
+
+:::proof
+The first claim is Corollary *Product states are exactly the Schmidt-rank-one states* plus Theorem *Basic properties*: $H(\lambda) = 0$ iff the Schmidt rank is $1$, and $H(\lambda) = \log d$ iff the $\lambda_i$ are uniform. Monotonicity under LOCC and the asymptotic conversion statement (*entanglement concentration and dilution*) are quoted: the converse half follows from monotonicity, and the achievability half is a typical-subspace argument of exactly the shape of the classical asymptotic equipartition property, applied to the Schmidt spectrum — a construction this course does not carry out in the quantum setting.
+:::
+
+:::example[Entanglement of a non-maximal pure state]
+Compute the entropy of entanglement of $|\psi\rangle = \sqrt{\tfrac13}|00\rangle + \sqrt{\tfrac23}|11\rangle$, and say what a million copies are worth.
+:::
+
+:::solution
+The state is already in Schmidt form with $\lambda = (\tfrac13,\tfrac23)$, so
+
+$$E(\psi) = h\bigl(\tfrac13\bigr) = -\tfrac13\log_2\tfrac13 - \tfrac23\log_2\tfrac23 \approx 0.528 + 0.390 = 0.918 \text{ ebits}.$$
+
+By Theorem *Entropy of entanglement is the right measure for pure states*, a million copies can be distilled into about $918{,}000$ Bell pairs, and no LOCC protocol does better. A single copy, by contrast, cannot be turned into even one Bell pair with certainty — $E$ would have to increase. □
+:::
+
+For *mixed* states one number no longer suffices, because the operations that create the state and the operations that extract from it are no longer inverse to each other.
+
+:::definition[Entanglement of formation and distillable entanglement]{#ef-ed}
+For a mixed $\rho_{AB}$,
+
+$$E_F(\rho) = \min_{\{p_i,\psi_i\}}\ \sum_ip_i\,E(\psi_i), \qquad \rho = \sum_ip_i|\psi_i\rangle\langle\psi_i|,$$
+
+is the least average entanglement needed to build $\rho$, and $E_D(\rho)$ is the greatest rate at which Bell pairs can be distilled from many copies of $\rho$ by LOCC.
+:::
+
+:::theorem[Distillable entanglement never exceeds formation]{#ed-le-ef}
+$E_D(\rho)\le E_F(\rho)$ for every state, and equality holds for pure states. There exist entangled states with $E_D = 0 < E_F$ — **bound entanglement**.
+:::
+
+:::proof
+Sketch. If one could distil at a rate above $E_F$, then forming $n$ copies of $\rho$ from $nE_F$ ebits and distilling $nE_D > nE_F$ ebits back would be an LOCC protocol that increases entanglement on average, contradicting monotonicity of any monotone that is asymptotically continuous and normalised on Bell pairs; making that argument precise requires the asymptotic continuity of $E_F$, which we quote. For pure states both equal $E$ by Theorem *Entropy of entanglement is the right measure for pure states*. The existence of bound entangled states is the Horodecki family of entangled PPT states, quoted below.
+:::
+
+One usable test separates entangled states from separable ones in the smallest systems.
+
+:::theorem[Peres PPT criterion]{#ppt}
+If $\rho_{AB}$ is separable then its **partial transpose** $\rho^{\mathsf{T}_B} = (\mathrm{id}\otimes T)(\rho_{AB})$ is positive semidefinite. For $2\times2$ and $2\times3$ systems the converse holds as well (Horodecki), so there PPT is equivalent to separability; in larger systems there are entangled PPT states, and they are exactly the bound entangled ones.
+:::
+
+:::proof
+The forward direction in full: if $\rho = \sum_ip_i\,\sigma_i\otimes\tau_i$ then $\rho^{\mathsf{T}_B} = \sum_ip_i\,\sigma_i\otimes\tau_i^{\mathsf{T}}$, and each $\tau_i^{\mathsf{T}}$ is a density operator by the argument in Proposition *Transposition is positive but not completely positive*, so the sum is a mixture of positive operators and is positive. The converse in low dimension rests on a characterisation of positive maps on $2\times2$ and $2\times3$ matrix algebras, which is quoted.
+:::
+
+:::example[Detecting entanglement with PPT]
+Apply the criterion to $|\Phi^{+}\rangle$ and to the separable state $\tfrac12\bigl(|00\rangle\langle00| + |11\rangle\langle11|\bigr)$.
+:::
+
+:::solution
+The computation in Proposition *Transposition is positive but not completely positive* found an eigenvalue $-\tfrac12$ in the partial transpose of $|\Phi^{+}\rangle\langle\Phi^{+}|$, so the Bell state fails the test and is entangled, as expected. The second state is diagonal in the product basis, so its partial transpose is itself, manifestly positive — consistent with separability, and here conclusive because the converse holds in $2\times2$. □
+:::
+
+:::intuition
+Think of ebits as a currency. LOCC is the set of transactions you may perform for free, and an entanglement monotone is a price that cannot be inflated by free transactions. For pure states the currency is perfectly liquid: $E(\psi)$ ebits in, $E(\psi)$ ebits out, at an exchange rate fixed by an entropy. For mixed states the market has a spread — $E_D$ is the bid, $E_F$ the ask — and bound entangled states are assets you can buy but never sell.
+:::
+
+:::pitfall
+Entanglement is not correlation. Separable states can be maximally correlated: $\tfrac12(|00\rangle\langle00|+|11\rangle\langle11|)$ has $I(A;B) = 1$ bit and zero entanglement. What distinguishes entanglement is that the correlations persist in *every* basis at once, which is exactly what the negative conditional entropy of the previous chapter detects.
+:::
+
+## Superdense Coding
+
+<!-- section: superdense-coding -->
+
+Corollary *One qubit carries one bit* looks final: one qubit, one bit. It is final only for a qubit sent on its own. If Alice and Bob already share entanglement, one qubit carries two bits — and the proof is a single line of Pauli algebra.
+
+:::definition[Bell basis]{#bell-basis}
+The four states
+
+$$|\Phi^{\pm}\rangle = \tfrac{1}{\sqrt2}\bigl(|00\rangle\pm|11\rangle\bigr), \qquad |\Psi^{\pm}\rangle = \tfrac{1}{\sqrt2}\bigl(|01\rangle\pm|10\rangle\bigr)$$
+
+form an orthonormal basis of the two-qubit space, the **Bell basis**. Each is maximally entangled, with $E = 1$ ebit.
+:::
+
+:::lemma[The Paulis act transitively on the Bell basis]{#pauli-transitive}
+Acting on the *first* qubit only,
+
+$$(I\otimes I)|\Phi^{+}\rangle = |\Phi^{+}\rangle,\quad (Z\otimes I)|\Phi^{+}\rangle = |\Phi^{-}\rangle,\quad (X\otimes I)|\Phi^{+}\rangle = |\Psi^{+}\rangle,\quad (XZ\otimes I)|\Phi^{+}\rangle = -|\Psi^{-}\rangle.$$
+
+So one local Pauli turns $|\Phi^{+}\rangle$ into any Bell state, up to a global phase.
+:::
+
+:::proof
+$Z$ fixes $|0\rangle$ and flips the sign of $|1\rangle$, so $(Z\otimes I)\tfrac{1}{\sqrt2}(|00\rangle+|11\rangle) = \tfrac{1}{\sqrt2}(|00\rangle-|11\rangle) = |\Phi^{-}\rangle$. $X$ exchanges $|0\rangle$ and $|1\rangle$ on the first qubit, giving $\tfrac{1}{\sqrt2}(|10\rangle+|01\rangle) = |\Psi^{+}\rangle$. Composing, $XZ$ gives $\tfrac{1}{\sqrt2}(|10\rangle-|01\rangle) = -|\Psi^{-}\rangle$.
+:::
+
+:::theorem[Superdense coding]{#superdense}
+Let Alice and Bob share one Bell pair. By applying one of four local operations to her half and sending that single qubit to Bob, Alice transmits two classical bits with certainty. In resource notation,
+
+$$1\ \text{qubit} + 1\ \text{ebit}\ \ge\ 2\ \text{cbits}.$$
+:::
+
+:::proof
+Alice and Bob start in $|\Phi^{+}\rangle_{AB}$. To send the two-bit message $(a_1,a_2)$ Alice applies $X^{a_1}Z^{a_2}$ to her qubit $A$; by Lemma *The Paulis act transitively on the Bell basis* the joint state becomes one of the four Bell states, one per message, up to an unobservable global phase. She sends $A$ to Bob, who now holds both qubits in a known Bell state. The Bell states are orthonormal, so the projective measurement in the Bell basis identifies which one with probability $1$, and Bob reads off $(a_1,a_2)$.
+:::
+
+:::intuition
+The two qubits were *already* in a joint state carrying two bits' worth of distinguishable configurations — that is what a four-element orthonormal basis means. What was missing was access: with the halves apart, the four Bell states have identical local statistics and are indistinguishable by any LOCC protocol. Alice's Pauli chooses one of the four; shipping her qubit hands Bob the ability to look at the pair at once. The entanglement is not a second channel, it is the pre-arrangement that makes one channel use worth two bits.
+:::
+
+:::theorem[Two bits is optimal]{#superdense-optimal}
+With one use of a noiseless qubit channel and any amount of shared entanglement, Alice cannot send more than two classical bits.
+:::
+
+:::proof
+Sketch, naming what is quoted. Applying the Holevo bound to the ensemble Bob ends up holding on $A$ together with his own half $B$ gives $I_{\mathrm{acc}}\le\chi\le S(\rho_{AB})\le\log(d_Ad_B)$, which is unbounded — so the naive argument fails, and the correct statement needs more. The sharp result is the entanglement-assisted classical capacity theorem of Bennett, Shor, Smolin and Thapliyal: $C_E(\Phi) = \max_{\rho}I(A;B)$ over inputs to one use of the channel with a reference system, and for the noiseless qubit channel that maximum is $I(A;B) = S(A)+S(B)-S(AB) = 1+1-0 = 2$ at the Bell state. Its converse half uses the data processing inequality and the Araki–Lieb inequality, both proved here; its achievability half is a random-coding argument we quote. So two bits per qubit is exactly the ceiling, and superdense coding meets it.
+:::
+
+:::example[Accounting the resources]
+Alice wants to send Bob $100$ classical bits using superdense coding. What must be prepared and transmitted, and what does the protocol consume?
+:::
+
+:::solution
+Fifty Bell pairs must be shared in advance, which requires fifty qubits to have travelled at some earlier time — the entanglement must be distributed somehow, and that is not free. Alice then applies fifty Paulis and sends fifty qubits. Bob performs fifty Bell measurements and recovers $100$ bits.
+
+The ledger reads: $50$ qubits transmitted now, $50$ ebits consumed, $100$ cbits delivered. Total qubit traffic across the whole history is $100$, the same as sending the bits one per qubit; what superdense coding buys is the ability to have moved half of that traffic *earlier*, before the message existed. That matters whenever the quantum channel is available in advance but the message is urgent. □
+:::
+
+:::pitfall
+Superdense coding does not beat Holevo's bound, it changes the system it applies to. The bound limits the information extractable from the $d$-dimensional system Bob measures; here that system is *two* qubits ($\log d = 2$), not the one that travelled. And it sends no information faster than light: until Alice's qubit arrives, Bob's half is $I/2$ regardless of her message, which is the same calculation as in the next section.
+:::
+
+## Entanglement, Teleportation and No-Signalling
+
+<!-- section: entanglement-teleportation -->
+
+Superdense coding spends an ebit to double a quantum channel. Teleportation runs the trade in the other direction: it spends an ebit and two classical bits to transmit a qubit with no quantum channel at all.
+
+:::theorem[Quantum teleportation]{#teleportation}
+Let Alice hold an unknown qubit $|\psi\rangle = \alpha|0\rangle+\beta|1\rangle$ in register $1$ and share $|\Phi^{+}\rangle_{23}$ with Bob, who holds $3$. If Alice measures registers $1$ and $2$ in the Bell basis and sends Bob the two-bit outcome, then a Pauli correction applied by Bob leaves register $3$ in the state $|\psi\rangle$ exactly. In resource notation,
+
+$$1\ \text{ebit} + 2\ \text{cbits}\ \ge\ 1\ \text{qubit}.$$
+:::
+
+:::proof
+Expand the three-register state. Initially
+
+$$|\psi\rangle_1|\Phi^{+}\rangle_{23} = \tfrac{1}{\sqrt2}\bigl(\alpha|000\rangle + \alpha|011\rangle + \beta|100\rangle + \beta|111\rangle\bigr).$$
+
+Re-express registers $1,2$ in the Bell basis using the inversions
+
+$$|00\rangle = \tfrac{1}{\sqrt2}\bigl(|\Phi^{+}\rangle+|\Phi^{-}\rangle\bigr),\quad |11\rangle = \tfrac{1}{\sqrt2}\bigl(|\Phi^{+}\rangle-|\Phi^{-}\rangle\bigr),$$
+$$|01\rangle = \tfrac{1}{\sqrt2}\bigl(|\Psi^{+}\rangle+|\Psi^{-}\rangle\bigr),\quad |10\rangle = \tfrac{1}{\sqrt2}\bigl(|\Psi^{+}\rangle-|\Psi^{-}\rangle\bigr).$$
+
+Grouping the four terms above as $\alpha|00\rangle_{12}|0\rangle_3 + \alpha|01\rangle_{12}|1\rangle_3 + \beta|10\rangle_{12}|0\rangle_3 + \beta|11\rangle_{12}|1\rangle_3$ and substituting gives
+
+$$\tfrac12\Bigl[\,|\Phi^{+}\rangle\bigl(\alpha|0\rangle+\beta|1\rangle\bigr) + |\Phi^{-}\rangle\bigl(\alpha|0\rangle-\beta|1\rangle\bigr) + |\Psi^{+}\rangle\bigl(\beta|0\rangle+\alpha|1\rangle\bigr) + |\Psi^{-}\rangle\bigl(-\beta|0\rangle+\alpha|1\rangle\bigr)\Bigr].$$
+
+Each Bell outcome therefore leaves register $3$ in a Pauli image of $|\psi\rangle$:
+
+$$|\Phi^{+}\rangle\to I|\psi\rangle,\quad |\Phi^{-}\rangle\to Z|\psi\rangle,\quad |\Psi^{+}\rangle\to X|\psi\rangle,\quad |\Psi^{-}\rangle\to XZ|\psi\rangle .$$
+
+Each of the four coefficients is $\tfrac12$ times a unit vector, so each outcome has probability $\tfrac14$ for every $\alpha,\beta$. Bob applies the inverse Pauli — $I$, $Z$, $X$ or $ZX$, each Pauli being its own inverse — and holds exactly $|\psi\rangle$.
+:::
+
+:::intuition
+Two classical bits cannot describe $\alpha$ and $\beta$; those are continuous parameters, and no finite message pins them down. The trick is that the message does not describe the state. Alice's Bell measurement destroys her copy and randomises Bob's half into one of four known images of $|\psi\rangle$ — the two bits are just an index saying *which rotation to undo*. The state itself was never encoded anywhere; the entanglement carried it.
+:::
+
+The randomisation in that intuition is not a figure of speech, and it is what keeps the protocol consistent with relativity.
+
+:::theorem[No signalling]{#no-signalling}
+Before Bob receives the classical message, his reduced state is $I/2$ regardless of $|\psi\rangle$ and regardless of whether Alice measured at all. More generally, no operation performed by Alice on $A$ changes $\rho_B$.
+:::
+
+:::proof
+The general statement first: if Alice applies a channel $\Phi_A$, then $\rho_B' = \operatorname{Tr}_A\bigl[(\Phi_A\otimes\mathrm{id})\rho_{AB}\bigr]$, and by Theorem *The partial trace is the right marginal* with $M = I$, together with trace preservation of $\Phi_A$, this equals $\operatorname{Tr}_A\rho_{AB} = \rho_B$. A measurement whose outcome is not transmitted is such a channel.
+
+For teleportation specifically, average the four branches with their probabilities $\tfrac14$:
+
+$$\rho_3 = \tfrac14\Bigl(|\psi\rangle\langle\psi| + Z|\psi\rangle\langle\psi|Z + X|\psi\rangle\langle\psi|X + XZ|\psi\rangle\langle\psi|ZX\Bigr) = \tfrac{I}{2},$$
+
+by the Pauli identity established in Example *Kraus operators of the depolarizing channel*. Bob's state is maximally mixed until the two bits arrive; only then does the ensemble become readable.
+:::
+
+:::corollary[Teleportation respects no-cloning]{#teleport-no-cloning}
+At the end of the protocol only one system is in the state $|\psi\rangle$.
+:::
+
+:::proof
+Alice's Bell measurement is a projective measurement on registers $1,2$, so after it those registers are in a Bell state, which is maximally mixed on each half and independent of $\alpha,\beta$. The original is therefore destroyed by the same step that creates the image on register $3$; no run of the protocol ever has two copies. The two classical bits carry no information about $|\psi\rangle$ either — their distribution is uniform whatever $|\psi\rangle$ is, as the proof of Theorem *Quantum teleportation* shows.
+:::
+
+:::theorem[The resource costs are both necessary]{#teleport-optimal}
+Teleporting one qubit requires at least two classical bits and at least one ebit.
+:::
+
+:::proof
+For the classical cost, suppose one bit sufficed. Superdense coding converts one transmitted qubit plus one ebit into two cbits; composing it with a one-cbit teleportation protocol would let Alice send two cbits using one ebit and one cbit of communication, i.e. deliver one extra bit for free. Iterating gives unbounded classical communication from a fixed amount, contradicting Corollary *One qubit carries one bit* applied to the composite protocol. For the entanglement cost, classical communication alone is LOCC, and LOCC cannot create entanglement; if teleportation used less than one ebit, then teleporting half of a Bell pair would produce one ebit from less, contradicting Definition *Entanglement monotone*.
+:::
+
+:::example[Entanglement swapping]
+Alice shares a Bell pair with Charlie, and Charlie shares another with Bob. Charlie has never interacted with Alice's or Bob's qubits. Show that Charlie can leave Alice and Bob sharing a Bell pair.
+:::
+
+:::solution
+Charlie holds one half of each pair. Apply Theorem *Quantum teleportation* with the "unknown qubit" being Charlie's half of the Alice pair and the shared resource being the Charlie–Bob pair: Charlie Bell-measures his two qubits and sends the two bits to Bob, who applies the corresponding Pauli.
+
+The state teleported is half of an entangled pair, and teleportation acts as the identity channel on it, so the correlations with Alice's qubit survive intact: Alice and Bob now share $|\Phi^{+}\rangle$, though their qubits have never met. This is the basic step of a quantum repeater, and it is the reason entanglement can be distributed over distances no single photon survives. □
+:::
+
+:::pitfall
+Teleportation does not transmit anything faster than light, and it does not "beam matter". The qubit's state moves only when the two classical bits arrive, at or below the speed of light, and the protocol is useless without them — Theorem *No signalling* shows Bob's system is exactly $I/2$ until then. Nor does it copy: by Corollary *Teleportation respects no-cloning* the original is consumed.
+:::
+
+## Classical and Quantum Capacity
+
+<!-- section: capacities -->
+
+A channel has several capacities, because there are several things to send: classical bits, classical bits with entanglement help, qubits. All are asymptotic rates in the sense of Shannon, all are defined by the same recipe, and in the quantum case none of them has the clean single-letter form that classical capacity does.
+
+:::definition[Classical capacity]{#classical-capacity}
+$C(\Phi)$ is the supremum of rates $R$ such that for large $n$ there are encodings of $2^{nR}$ messages into states of $n$ channel inputs, and a joint measurement on the $n$ outputs, whose error probability tends to $0$.
+:::
+
+:::theorem[Holevo–Schumacher–Westmoreland]{#hsw}
+Define the one-shot Holevo capacity $\chi^{*}(\Phi) = \max_{\{p_x,\rho_x\}}\chi\bigl(\{p_x,\Phi(\rho_x)\}\bigr)$. Then
+
+$$C(\Phi) = \lim_{n\to\infty}\frac{1}{n}\,\chi^{*}\bigl(\Phi^{\otimes n}\bigr).$$
+:::
+
+:::proof
+Sketch, naming both halves. The converse, $C\le\lim\tfrac1n\chi^{*}(\Phi^{\otimes n})$, is the Holevo bound of the section *Quantum Channels and the Holevo Bound* applied to $n$ uses at once, plus Fano's inequality exactly as in the classical converse. The achievability, that every rate below $\chi^{*}$ is attainable, is a random-coding argument over product-state codewords using a *typical subspace* in place of the classical typical set and a "pretty good" square-root measurement in place of typicality decoding. The typical-subspace machinery is the quantum analogue of the asymptotic equipartition property; we quote it.
+:::
+
+:::note
+The regularisation in Theorem *Holevo–Schumacher–Westmoreland* is not an artefact. For a long time it was conjectured that $\chi^{*}$ is additive, which would give $C = \chi^{*}$. Hastings (2009) produced channels with $\chi^{*}(\Phi\otimes\Phi') > \chi^{*}(\Phi)+\chi^{*}(\Phi')$, so the limit is genuinely needed and $C$ is not computable by any known finite procedure in general. Additivity *does* hold for the channels met in this chapter — unital qubit channels, entanglement-breaking channels and the erasure channel among them — and for those $C = \chi^{*}$.
+:::
+
+:::example[Capacities of the depolarizing and erasure channels]
+Give $C$ for the qubit depolarizing channel with parameter $p$ and for the erasure channel with parameter $\varepsilon$.
+:::
+
+:::solution
+For depolarizing, the ensemble $\{\tfrac12,|0\rangle;\tfrac12,|1\rangle\}$ was computed in Example *Holevo capacity of the depolarizing channel* to give $\chi = 1-h(p/2)$, and no ensemble does better: the channel is unital and covariant under all Paulis, so the optimal average output is $I/2$, with $S = 1$, while every pure input has output entropy $h(p/2)$ exactly. Additivity holds for this channel, so $C = 1-h(p/2)$.
+
+For erasure, the receiver knows which uses were erased. Conditioned on that classical information a fraction $1-\varepsilon$ of uses are noiseless, so $C = 1-\varepsilon$ bits per use: at $\varepsilon = 0.2$, $C = 0.8$. □
+:::
+
+Entanglement changes the picture, and here — unusually — the answer is single-letter.
+
+:::theorem[Entanglement-assisted capacity, quoted]{#ce}
+With unlimited shared entanglement, the classical capacity is
+
+$$C_E(\Phi) = \max_{\rho_A}\,I(A;B)_{(\mathrm{id}\otimes\Phi)|\psi\rangle\langle\psi|},$$
+
+maximised over purifications $|\psi\rangle_{RA}$ of $\rho_A$, with no regularisation needed. For the noiseless qubit channel $C_E = 2$, which is Theorem *Two bits is optimal*; for the depolarizing channel $C_E > C$ whenever $p>0$.
+:::
+
+:::proof
+Quoted (Bennett, Shor, Smolin, Thapliyal). The converse half uses the quantum data processing inequality and the Araki–Lieb inequality, both proved in these two chapters; the achievability half is a random-coding argument built on superdense coding, which is Theorem *Superdense coding*. The absence of regularisation traces to the additivity of quantum mutual information under tensor products, which does hold.
+:::
+
+Sending *qubits* is a different and harder problem, because the object to be preserved is not a label but a superposition — and it must stay coherent with anything the input was entangled to.
+
+:::definition[Coherent information and quantum capacity]{#coherent-information}
+For a channel $\Phi$ with complementary channel $\Phi^{c}$ and input $\rho$, the **coherent information** is
+
+$$I_c(\rho,\Phi) = S\bigl(\Phi(\rho)\bigr) - S\bigl(\Phi^{c}(\rho)\bigr) = -S(A\mid B),$$
+
+the last expression evaluated on $(\mathrm{id}\otimes\Phi)$ applied to a purification of $\rho$. The **quantum capacity** $Q(\Phi)$ is the supremum of rates at which qubits can be sent with fidelity tending to $1$.
+:::
+
+:::theorem[LSD theorem, quoted]{#lsd}
+$$Q(\Phi) = \lim_{n\to\infty}\frac{1}{n}\max_{\rho}\,I_c\bigl(\rho,\Phi^{\otimes n}\bigr).$$
+:::
+
+:::proof
+Quoted (Lloyd, Shor, Devetak). The converse half follows from the quantum data processing inequality; the achievability half is a random stabiliser-coding argument with decoupling, well beyond this course. The regularisation is again essential: coherent information is *superadditive*, and there are channels with $\max_\rho I_c = 0$ for one use whose two-fold use has positive coherent information, so two channels each of zero quantum capacity can have positive capacity jointly.
+:::
+
+Coherent information is $-S(A\mid B)$, so a channel has positive quantum capacity only where the conditional entropy of the previous chapter goes negative. That is the operational meaning of the one classical inequality that fails: *negative conditional entropy is exactly the resource that lets qubits through*.
+
+:::theorem[Quantum capacity of the erasure channel]{#erasure-q}
+For the qubit erasure channel, $Q = 1-2\varepsilon$ for $\varepsilon<\tfrac12$ and $Q = 0$ for $\varepsilon\ge\tfrac12$.
+:::
+
+:::proof
+The vanishing half in full, from no-cloning. When $\varepsilon = \tfrac12$ the channel is symmetric between receiver and environment: each gets the qubit with probability $\tfrac12$ and the flag otherwise, so the environment's channel $\Phi^{c}$ is the same channel. If $Q>0$ there would be a code and decoder recovering arbitrary quantum states from the receiver's output with fidelity near $1$; applying the same decoder to the environment's output would recover them there as well, producing two copies of an unknown state and contradicting Theorem *No-cloning* of the previous chapter. For $\varepsilon>\tfrac12$ the environment's share is even larger, so the same argument applies. The value $1-2\varepsilon$ below the threshold is achievable and optimal: the erasure channel is degradable, which makes its coherent information additive, and $\max_\rho I_c = (1-\varepsilon)\cdot 1 - \varepsilon\cdot 1 = 1-2\varepsilon$ at the maximally mixed input — we quote degradability's additivity consequence.
+:::
+
+:::figure[Capacities of the qubit erasure channel against the erasure probability $\varepsilon$. The classical capacity falls linearly to zero at $\varepsilon=1$, while the quantum capacity falls twice as fast and is already zero at $\varepsilon=\tfrac12$ — the point where the environment receives as much as the receiver, so any quantum code would clone. Between $\tfrac12$ and $1$ the channel carries classical information perfectly well and no quantum information at all.]{#erasure-capacities}
+{
+  "type": "plot",
+  "x": [0, 1.15],
+  "y": [-0.2, 1.3],
+  "xTicks": 0.25,
+  "yTicks": 0.25,
+  "xLabel": "erasure probability",
+  "yLabel": "bits or qubits per use",
+  "marks": [
+    { "kind": "path", "points": [[0, 1], [1, 0]], "tone": "accent" },
+    { "kind": "path", "points": [[0, 1], [0.5, 0], [1, 0]], "tone": "result", "dashed": true },
+    { "kind": "point", "at": [0.5, 0] },
+    { "kind": "text", "at": [0.75, 0.75], "text": "C = 1 - e", "leaderTo": [0.55, 0.45] },
+    { "kind": "text", "at": [0.15, 0.2], "text": "Q = max(1-2e, 0)", "leaderTo": [0.35, 0.3] }
+  ]
+}
+:::
+
+:::theorem[Entanglement-breaking channels have zero quantum capacity]{#eb-zero-q}
+If $\Phi$ is entanglement-breaking then $Q(\Phi) = 0$, even though $C(\Phi)$ may be positive.
+:::
+
+:::proof
+By Definition *Entanglement-breaking channel*, $(\Phi\otimes\mathrm{id})(\rho_{AR})$ is separable for every input, and by Corollary *Consequences of strong subadditivity* a separable state has $S(A\mid B)\ge0$, so $I_c = -S(A\mid B)\le0$ for every input and every number of uses — the same argument applies to $\Phi^{\otimes n}$, which is again entanglement-breaking. Theorem *LSD theorem, quoted* then gives $Q = 0$. That $C$ can be positive is immediate: the measure-and-prepare channel that measures in the computational basis and re-prepares the result has $C = 1$.
+:::
+
+:::note
+Where this stops. Everything above is stated for finite-dimensional systems and asymptotically many independent uses. The finite-blocklength theory, continuous-variable channels, and the exact quantum capacity of the depolarizing channel — still unknown for any $p$ in a middle range — are all beyond this course, as are the achievability proofs, which need the typical-subspace and decoupling machinery. What the course does give you is the converse side: every capacity upper bound here follows from the Holevo bound, the data processing inequality and Araki–Lieb, all proved in these two chapters from Klein's inequality and one quoted concavity theorem.
+:::
+
+:::pitfall
+Do not read $C$ and $Q$ as two names for one number. They obey $Q\le C\le C_E$, all three can differ, and the inequalities can be strict in both places — the erasure channel at $\varepsilon = 0.6$ has $C = 0.4$ and $Q = 0$. And a positive $C$ says nothing about whether entanglement survives the channel.
+:::
+
+## Common Mistakes
+
+- **Requiring only positivity of a channel.** Transposition maps states to states and is still not physical; complete positivity is what keeps half of an entangled pair a valid state.
+- **Assuming the Kraus operators are unique or unitary.** They are neither. Two Kraus families related by an isometry describe the same channel, and amplitude damping has no unitary Kraus operator at all.
+- **Reading the Holevo quantity as the quantum capacity.** $\chi$ bounds *classical* information through a quantum channel. Qubits are governed by coherent information, and $Q$ is usually much smaller — zero for every entanglement-breaking channel.
+- **Expecting capacities to be additive.** $\chi^{*}$ is not (Hastings), and coherent information is not: two channels of zero quantum capacity can have positive capacity together. This is why the formulas carry a regularising limit.
+- **Thinking superdense coding beats the Holevo bound.** Bob measures two qubits, so the bound allows two bits. Nothing is violated, and the ebit had to be distributed beforehand.
+- **Believing teleportation transmits instantaneously.** Without the two classical bits Bob's system is exactly $I/2$; the state arrives no faster than the message.
+- **Confusing correlation with entanglement when accounting resources.** A classically correlated pair is free under LOCC and worth zero ebits; only entanglement is currency.
+- **Forgetting that the unknown state is consumed.** Teleportation, entanglement swapping and every quantum repeater destroy the original in the Bell measurement — they must, or they would clone.

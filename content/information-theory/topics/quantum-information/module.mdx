@@ -1,194 +1,603 @@
 ---
-title: Quantum Information
+title: Quantum States and Von Neumann Entropy
 ---
 
-# Quantum Information
+# Quantum States and Von Neumann Entropy
 
-Qubits and density matrices, von Neumann entropy, the Holevo bound, and what entanglement adds that no classical resource can.
+Qubits, density matrices and partial traces; what a measurement is; and the von Neumann entropy, whose properties agree with Shannon's in every respect but one.
 
-## Qubits and Quantum States
+## Qubits, Superposition and No-Cloning
 
 <!-- section: qubits-states -->
 
-A classical bit is $0$ or $1$. A qubit is not.
+Classical information theory starts from a random variable on a finite alphabet. Quantum information theory starts from a vector in a finite-dimensional complex Hilbert space, and almost every difference between the two theories can be traced to that one substitution.
+
+:::notation
+A vector is written $|\psi\rangle$ (a *ket*); its conjugate transpose is the row vector $\langle\psi|$ (a *bra*), so that $\langle\phi|\psi\rangle$ is the inner product — conjugate-linear in the first slot — and $|\psi\rangle\langle\phi|$ is an operator of rank one. Throughout this chapter every Hilbert space is finite-dimensional, so "operator" means "matrix" and every Hermitian operator has an orthonormal eigenbasis. Logarithms are base $2$ unless stated otherwise, and $I$ is the identity.
+:::
 
 :::definition[Qubit]{#qubit}
-A qubit is a unit vector in a $2$-dimensional complex Hilbert space,
+A **qubit** is a unit vector in a two-dimensional complex Hilbert space with a fixed orthonormal *computational basis* $\{|0\rangle, |1\rangle\}$:
 
-$$|\psi\rangle = \alpha|0\rangle + \beta|1\rangle, \qquad |\alpha|^2 + |\beta|^2 = 1.$$
+$$|\psi\rangle = \alpha|0\rangle + \beta|1\rangle, \qquad \alpha,\beta \in \mathbb{C}, \qquad |\alpha|^2 + |\beta|^2 = 1.$$
 
-Upon measurement in the computational basis the qubit collapses to $0$ with probability $|\alpha|^2$ or to $1$ with probability $|\beta|^2$.
+Two unit vectors differing by a **global phase**, $|\psi\rangle$ and $e^{i\gamma}|\psi\rangle$, describe the same physical state.
 :::
 
-:::definition[Density operator]{#density-operator}
-A general quantum state is a density operator $\rho$: positive semidefinite with trace $1$. Pure states have rank $1$, so that $\rho = |\psi\rangle\langle\psi|$; mixed states are probabilistic mixtures of pure states.
+The amplitudes $\alpha,\beta$ are not probabilities. They are complex numbers whose *squared moduli* are probabilities, and the phase they carry is what makes quantum information behave unlike a biased coin.
+
+:::definition[Born rule, computational basis]{#born-rule}
+Measuring $|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$ in the basis $\{|0\rangle,|1\rangle\}$ returns the outcome $0$ with probability $|\alpha|^2$ and $1$ with probability $|\beta|^2$, and leaves the system in the corresponding basis vector. The general form of this rule is the subject of the section *Measurement, POVMs and What Can Be Distinguished*.
 :::
 
-:::theorem[No-cloning theorem]{#no-cloning}
-There is no unitary operation that copies an unknown quantum state: you cannot make a perfect copy of an arbitrary qubit.
-:::
+Global phase is invisible because $|e^{i\gamma}\alpha|^2 = |\alpha|^2$ in every basis. *Relative* phase is not: the states
+
+$$|+\rangle = \tfrac{1}{\sqrt2}\bigl(|0\rangle + |1\rangle\bigr), \qquad |-\rangle = \tfrac{1}{\sqrt2}\bigl(|0\rangle - |1\rangle\bigr)$$
+
+give identical statistics in the computational basis — one bit of noise each — yet they are orthogonal, $\langle +|-\rangle = 0$, and so are told apart perfectly by a measurement in the basis $\{|+\rangle,|-\rangle\}$. A classical bit has no analogue of this: there is no pair of coins that look identical under one reading and are perfectly distinguishable under another.
 
 :::intuition
-A qubit can be 'both 0 and 1 at the same time' until you look; the amplitudes α, β are like probabilities but with phases that let interference happen.
-
-Measurement forces a definite answer and destroys the superposition. You cannot duplicate the qubit without already knowing what it is.
+Think of the two amplitudes as an arrow in a plane rather than a pair of odds. Rotating the arrow can leave both shadows — the measurement probabilities in the computational basis — unchanged while pointing somewhere completely different. Information is stored in the direction of the arrow; a choice of basis decides which shadow you get to see.
 :::
 
-:::example
-Take the "plus" state $|+\rangle = \tfrac{1}{\sqrt2}|0\rangle + \tfrac{1}{\sqrt2}|1\rangle$, so $\alpha = \beta = \tfrac{1}{\sqrt2}$.
+Discarding the invisible global phase leaves exactly two real parameters, and they have a standard geometric name.
+
+:::definition[Bloch representation of a pure qubit]{#bloch-pure}
+Every pure qubit state can be written, up to global phase, as
+
+$$|\psi\rangle = \cos\tfrac{\theta}{2}\,|0\rangle + e^{i\varphi}\sin\tfrac{\theta}{2}\,|1\rangle, \qquad \theta \in [0,\pi],\ \varphi \in [0,2\pi),$$
+
+so that pure states correspond to the points $(\sin\theta\cos\varphi, \sin\theta\sin\varphi, \cos\theta)$ on the unit sphere in $\mathbb{R}^3$ — the **Bloch sphere**.
+:::
+
+The poles are $|0\rangle$ and $|1\rangle$; the equator carries the equal-weight superpositions, with $|\pm\rangle$ at $\varphi = 0,\pi$. Orthogonal states sit at *antipodal* points, not at right angles: the Hilbert-space angle is doubled by the map. That factor of two is worth remembering, because it says that a qubit's two perfectly distinguishable states are as far apart as the geometry allows.
+
+:::notation
+The **Pauli matrices**
+
+$$X = \begin{pmatrix}0&1\\1&0\end{pmatrix}, \quad Y = \begin{pmatrix}0&-i\\i&0\end{pmatrix}, \quad Z = \begin{pmatrix}1&0\\0&-1\end{pmatrix}$$
+
+together with $I$ form a basis of the real vector space of $2\times2$ Hermitian matrices. Each is Hermitian and unitary, squares to $I$, is traceless, and anticommutes with the other two.
+:::
+
+:::example[Reading a state off the sphere]
+Where does $|\psi\rangle = \tfrac{1}{2}|0\rangle + \tfrac{\sqrt3}{2}i\,|1\rangle$ sit on the Bloch sphere, and what is the probability of the outcome $1$?
 :::
 
 :::solution
-check it is a valid qubit. Normalization requires $|\alpha|^2 + |\beta|^2 = 1$. Here $|\alpha|^2 = \left(\tfrac{1}{\sqrt2}\right)^2 = \tfrac12$ and likewise $|\beta|^2 = \tfrac12$, so the sum is $\tfrac12 + \tfrac12 = 1$. ✓
-Step 2 — measure in the computational basis. By the Born rule, $\Pr(0) = |\alpha|^2 = \tfrac12$ and $\Pr(1) = |\beta|^2 = \tfrac12$. Whichever outcome occurs, the state *collapses* to that basis vector ($|0\rangle$ or $|1\rangle$); the superposition is gone.
-Step 3 — why cloning fails. Suppose a single unitary $U$ copied every state: $U|\psi\rangle|0\rangle = |\psi\rangle|\psi\rangle$. Then $U|0\rangle|0\rangle = |0\rangle|0\rangle$ and $U|1\rangle|0\rangle = |1\rangle|1\rangle$. Feed in $|+\rangle = \tfrac{1}{\sqrt2}(|0\rangle + |1\rangle)$. Linearity forces $U|+\rangle|0\rangle = \tfrac{1}{\sqrt2}(|0\rangle|0\rangle + |1\rangle|1\rangle)$, which is an *entangled* Bell state — **not** the copy $|+\rangle|+\rangle = \tfrac12(|0\rangle|0\rangle + |0\rangle|1\rangle + |1\rangle|0\rangle + |1\rangle|1\rangle)$. The two differ, so no such $U$ can exist.
+Match the standard form: $\cos(\theta/2) = 1/2$ gives $\theta/2 = \pi/3$, so $\theta = 2\pi/3$. The phase of the second amplitude is $i = e^{i\pi/2}$, so $\varphi = \pi/2$. The Bloch vector is therefore
 
-Sanity check: the argument only needs one superposed input to break, which is exactly why *orthogonal* (known-in-advance) states *can* be copied — cloning is only impossible for *arbitrary unknown* states.
+$$\Bigl(\sin\tfrac{2\pi}{3}\cos\tfrac{\pi}{2},\ \sin\tfrac{2\pi}{3}\sin\tfrac{\pi}{2},\ \cos\tfrac{2\pi}{3}\Bigr) = \Bigl(0,\ \tfrac{\sqrt3}{2},\ -\tfrac12\Bigr),$$
+
+a point in the lower half of the sphere on the $y$-axis side. By the Born rule $\Pr(1) = |\sqrt3\,i/2|^2 = 3/4$. □
 :::
 
-## Von Neumann Entropy and Quantum Information Measures
+Now the first genuinely quantum limitation, and the one that reshapes every coding theorem in the two chapters that follow: quantum information cannot be duplicated.
+
+:::theorem[No-cloning]{#no-cloning}
+Let $\dim\mathcal{H}\ge 2$. There is no unitary $U$ on $\mathcal{H}\otimes\mathcal{H}$ and no fixed state $|b\rangle$ with
+
+$$U\bigl(|\psi\rangle \otimes |b\rangle\bigr) = |\psi\rangle\otimes|\psi\rangle \quad\text{for every unit vector } |\psi\rangle \in \mathcal{H}.$$
+:::
+
+:::proof
+Suppose such a $U$ existed and let $|\psi\rangle, |\phi\rangle$ be any two unit vectors. Unitaries preserve inner products, so pairing $U(|\psi\rangle|b\rangle)$ with $U(|\phi\rangle|b\rangle)$ gives
+
+$$\langle\psi|\phi\rangle\,\langle b|b\rangle = \bigl(\langle\psi|\phi\rangle\bigr)^2, \qquad\text{that is}\qquad z = z^2 \ \text{ with } z = \langle\psi|\phi\rangle.$$
+
+Hence $z \in \{0,1\}$: any two states in the domain are either orthogonal or equal. In dimension at least two we may take $|\psi\rangle = |0\rangle$ and $|\phi\rangle = |+\rangle$, for which $z = 1/\sqrt2$, a contradiction.
+:::
+
+The proof says exactly where the obstruction lies. A cloner for a *known* set of mutually orthogonal states is easy — measure, then re-prepare — and a cloner for one known state is trivial. What is impossible is a device that works on an unknown state drawn from a set containing two non-orthogonal members.
+
+:::corollary[No perfect deterministic discrimination]{#no-discrimination}
+Two states with $0 < |\langle\psi|\phi\rangle| < 1$ cannot be distinguished with certainty by any measurement.
+:::
+
+:::proof
+If some measurement identified them with certainty, a single run would produce the classical label, from which arbitrarily many copies could be prepared, contradicting Theorem *No-cloning*. A quantitative version, giving the optimal error probability, appears below as Theorem *Helstrom bound, two pure states*.
+:::
+
+:::pitfall
+No-cloning does not say that quantum information cannot be *moved*, *encoded* or *protected*. Teleportation moves an unknown qubit perfectly, and quantum error-correcting codes spread one qubit across five without copying it. What is forbidden is producing two independent systems each carrying the original state — which is exactly what a classical repeater does, and exactly why quantum repeaters are hard.
+:::
+
+## Density Matrices and Mixed States
+
+<!-- section: density-matrices -->
+
+A unit vector describes a system about which we have maximal information. That is rarely the situation: a source may emit $|\psi_1\rangle$ with probability $p_1$ and $|\psi_2\rangle$ with probability $p_2$, or the system we hold may be half of a larger one. Both cases are handled by one object.
+
+:::definition[Density operator]{#density-operator}
+A **density operator** on $\mathcal{H}$ is an operator $\rho$ that is
+
+1. Hermitian, $\rho = \rho^{\dagger}$;
+2. positive semidefinite, $\langle\phi|\rho|\phi\rangle \ge 0$ for all $|\phi\rangle$; and
+3. of unit trace, $\operatorname{Tr}\rho = 1$.
+
+It is **pure** if $\rho = |\psi\rangle\langle\psi|$ for some unit vector, and **mixed** otherwise. The density operators on a fixed $\mathcal{H}$ form a convex set whose extreme points are exactly the pure states.
+:::
+
+An ensemble $\{p_i, |\psi_i\rangle\}$ gives rise to the density operator $\rho = \sum_i p_i |\psi_i\rangle\langle\psi_i|$, and the Born rule extends to it by linearity: the probability of an outcome with projector $P$ is $\operatorname{Tr}(P\rho)$. Conditions 1–3 are precisely what is needed for that formula to return a probability distribution for every measurement.
+
+:::theorem[Purity criterion]{#purity}
+For a density operator $\rho$, $\operatorname{Tr}(\rho^2) \le 1$, with equality if and only if $\rho$ is pure.
+:::
+
+:::proof
+Diagonalise $\rho = \sum_i \lambda_i |i\rangle\langle i|$; positivity and unit trace make the spectrum a probability distribution, $\lambda_i\ge 0$ and $\sum_i\lambda_i=1$. Then $\operatorname{Tr}(\rho^2) = \sum_i \lambda_i^2 \le \sum_i \lambda_i = 1$, because $\lambda_i^2\le\lambda_i$ on $[0,1]$. Equality needs $\lambda_i^2 = \lambda_i$ for every $i$, so every eigenvalue is $0$ or $1$; with unit trace exactly one equals $1$ and $\rho = |i\rangle\langle i|$ is a rank-one projector.
+:::
+
+The number $\operatorname{Tr}(\rho^2)$ is the **purity**. On a $d$-dimensional system it runs from $1/d$, attained only by the **maximally mixed state** $I/d$, up to $1$ for pure states.
+
+:::theorem[Bloch ball]{#bloch-ball}
+Every qubit density matrix can be written uniquely as
+
+$$\rho = \tfrac12\bigl(I + r_x X + r_y Y + r_z Z\bigr) = \tfrac12\bigl(I + \vec{r}\cdot\vec{\sigma}\bigr), \qquad \vec{r}\in\mathbb{R}^3,$$
+
+and this is a density operator exactly when $\|\vec{r}\| \le 1$. Its eigenvalues are $\tfrac{1 \pm \|\vec r\|}{2}$, its purity is $\tfrac{1+\|\vec r\|^2}{2}$, and it is pure exactly when $\|\vec{r}\| = 1$.
+:::
+
+:::proof
+$\{I,X,Y,Z\}$ is a basis of the Hermitian $2\times 2$ matrices, orthogonal under $\langle A,B\rangle = \operatorname{Tr}(A^{\dagger}B)$ with each $\operatorname{Tr}(\sigma_\mu^2) = 2$, so $\rho = \tfrac12\sum_\mu c_\mu\sigma_\mu$ with $c_\mu = \operatorname{Tr}(\sigma_\mu\rho)$ real and unique. Unit trace forces $c_0 = 1$, since the Paulis are traceless. For the spectrum, the anticommutation relations give $(\vec r\cdot\vec\sigma)^2 = \|\vec r\|^2 I$, so $\vec r\cdot\vec\sigma$ has eigenvalues $\pm\|\vec r\|$ and $\rho$ has eigenvalues $(1\pm\|\vec r\|)/2$. These are non-negative exactly when $\|\vec r\|\le1$, and then
+
+$$\operatorname{Tr}(\rho^2) = \Bigl(\tfrac{1+\|\vec r\|}{2}\Bigr)^{2} + \Bigl(\tfrac{1-\|\vec r\|}{2}\Bigr)^{2} = \tfrac{1+\|\vec r\|^2}{2}.$$
+:::
+
+:::figure[A cross-section of the Bloch ball in the $r_x$–$r_z$ plane. Pure states lie on the boundary circle, mixed states strictly inside, and the maximally mixed state $I/2$ at the centre. $|0\rangle$ and $|1\rangle$ are antipodal because they are orthogonal, and $\rho = 0.75|0\rangle\langle0| + 0.25|1\rangle\langle1|$ lies on the segment joining them at Bloch radius $0.5$.]{#bloch-disc}
+{
+  "type": "plot",
+  "x": [-1.8, 1.8],
+  "y": [-1.5, 1.5],
+  "equalAspect": true,
+  "xTicks": 0.5,
+  "yTicks": 0.5,
+  "xLabel": "r_x",
+  "yLabel": "r_z",
+  "marks": [
+    { "kind": "polar", "r": "1", "from": 0, "to": 6.2832, "tone": "accent" },
+    { "kind": "point", "at": [0, 1] },
+    { "kind": "point", "at": [0, -1] },
+    { "kind": "point", "at": [1, 0] },
+    { "kind": "point", "at": [-1, 0] },
+    { "kind": "point", "at": [0, 0], "tone": "muted" },
+    { "kind": "point", "at": [0, 0.5], "tone": "result" },
+    { "kind": "text", "at": [0.75, 1.25], "text": "state 0", "leaderTo": [0, 1] },
+    { "kind": "text", "at": [0.75, -1.25], "text": "state 1", "leaderTo": [0, -1] },
+    { "kind": "text", "at": [1.35, 0.4], "text": "plus", "leaderTo": [1, 0] },
+    { "kind": "text", "at": [-1.35, 0.4], "text": "minus", "leaderTo": [-1, 0] },
+    { "kind": "text", "at": [-1.1, -0.6], "text": "I/2", "leaderTo": [0, 0] },
+    { "kind": "text", "at": [1.15, 0.95], "text": "purity 5/8", "leaderTo": [0, 0.5] }
+  ]
+}
+:::
+
+A mixed state is *not* a state in which the system "really is" one of the $|\psi_i\rangle$ while we merely fail to know which. The reason is that $\rho$ does not remember the ensemble that produced it.
+
+:::theorem[Ensembles with the same density matrix]{#ensemble-ambiguity}
+The ensembles $\bigl\{\tfrac12, |0\rangle;\ \tfrac12, |1\rangle\bigr\}$ and $\bigl\{\tfrac12, |+\rangle;\ \tfrac12, |-\rangle\bigr\}$ have the same density operator $I/2$, and are therefore indistinguishable by any measurement whatsoever.
+:::
+
+:::proof
+Directly, $\tfrac12|0\rangle\langle0| + \tfrac12|1\rangle\langle1| = \tfrac12 I$. Since $|\pm\rangle\langle\pm| = \tfrac12(I \pm X)$, the second ensemble gives $\tfrac12\cdot\tfrac12(I+X) + \tfrac12\cdot\tfrac12(I-X) = \tfrac12 I$ as well. Every measurement statistic has the form $\operatorname{Tr}(E\rho)$, so it depends on the ensemble only through $\rho$.
+:::
+
+:::intuition
+Two different factories — one flipping a fair coin between $|0\rangle$ and $|1\rangle$, the other between $|+\rangle$ and $|-\rangle$ — ship output that no experiment can tell apart. The density matrix is the complete inventory of what an experimenter can ever learn about a system. That is why every quantum information measure is a function of $\rho$ and never of the ensemble behind it.
+:::
+
+:::example[Purity of a partially mixed qubit]
+Compute the Bloch vector, eigenvalues and purity of $\rho = 0.75\,|0\rangle\langle0| + 0.25\,|1\rangle\langle1|$.
+:::
+
+:::solution
+In matrix form $\rho = \begin{pmatrix}0.75 & 0\\ 0& 0.25\end{pmatrix}$, already diagonal, so the eigenvalues are $0.75$ and $0.25$. Reading off the Bloch decomposition, $r_z = \operatorname{Tr}(Z\rho) = 0.75-0.25 = 0.5$ and $r_x = r_y = 0$, so $\vec r = (0,0,0.5)$ with $\|\vec r\| = 0.5$ — halfway out of the ball, exactly as Theorem *Bloch ball* predicts from the eigenvalues $(1\pm0.5)/2$. The purity is $0.75^2 + 0.25^2 = 0.625$, matching $(1+0.25)/2 = 0.625$. □
+:::
+
+:::pitfall
+A superposition is not a mixture. The pure state $|+\rangle$ and the mixture $\tfrac12|0\rangle\langle0| + \tfrac12|1\rangle\langle1|$ both give $50/50$ statistics in the computational basis, but $|+\rangle$ has purity $1$ and is *certain* in the $X$ basis, while the mixture has purity $\tfrac12$ and is $50/50$ in every basis. The off-diagonal entries of $\rho$ — the *coherences* — are what separate them.
+:::
+
+## Composite Systems and the Partial Trace
+
+<!-- section: composite-partial-trace -->
+
+Two classical variables are described by a joint distribution on the product alphabet; two quantum systems are described by a vector in the *tensor product* of their spaces. Dimension grows multiplicatively in both theories, but only in the quantum one does the joint state fail to be determined by the parts.
+
+:::definition[Composite system, product and separable states]{#composite}
+The state space of a system made of parts $A$ and $B$ is $\mathcal{H}_A \otimes \mathcal{H}_B$, of dimension $d_Ad_B$. A state is a **product state** if it factorises as $|\psi\rangle_A\otimes|\phi\rangle_B$ (or $\rho_A\otimes\rho_B$), **separable** if it is a mixture $\sum_i p_i\,\sigma^A_i\otimes\tau^B_i$ of product states, and **entangled** otherwise.
+:::
+
+:::definition[Partial trace]{#partial-trace}
+The **partial trace over $B$** is the linear map $\operatorname{Tr}_B$ from operators on $\mathcal{H}_A\otimes\mathcal{H}_B$ to operators on $\mathcal{H}_A$ determined by
+
+$$\operatorname{Tr}_B\bigl(M \otimes N\bigr) = M\,\operatorname{Tr}(N).$$
+
+In components, for any orthonormal basis $\{|j\rangle_B\}$,
+
+$$\rho_A = \operatorname{Tr}_B(\rho_{AB}) = \sum_j \bigl(I_A \otimes \langle j|_B\bigr)\,\rho_{AB}\,\bigl(I_A\otimes|j\rangle_B\bigr).$$
+
+$\rho_A$ is the **reduced state**, or **marginal**, of $A$.
+:::
+
+The partial trace earns its place by being the *only* map with the right operational meaning: it is the state reproducing all statistics of measurements performed on $A$ alone.
+
+:::theorem[The partial trace is the right marginal]{#partial-trace-justified}
+For every operator $M$ on $\mathcal{H}_A$,
+
+$$\operatorname{Tr}\bigl[(M\otimes I_B)\,\rho_{AB}\bigr] = \operatorname{Tr}\bigl[M\,\operatorname{Tr}_B(\rho_{AB})\bigr],$$
+
+and $\operatorname{Tr}_B$ is the unique linear map with this property.
+:::
+
+:::proof
+Both sides are linear in $\rho_{AB}$, so it is enough to check them on $\rho_{AB} = P\otimes Q$: the left side is $\operatorname{Tr}(MP)\operatorname{Tr}(Q)$ and the right side is $\operatorname{Tr}\bigl(MP\operatorname{Tr}(Q)\bigr)$, the same number. For uniqueness, suppose a linear $\Lambda$ had the property too. Then $\operatorname{Tr}\bigl[M\bigl(\Lambda(\rho)-\operatorname{Tr}_B\rho\bigr)\bigr] = 0$ for every $M$; letting $M$ run over a basis of operators on $\mathcal{H}_A$ forces $\Lambda(\rho) = \operatorname{Tr}_B(\rho)$, because the trace form $\langle M,N\rangle = \operatorname{Tr}(M^{\dagger}N)$ is non-degenerate.
+:::
+
+The classical analogue is summation, $p_A(a) = \sum_b p(a,b)$, and it behaves the same way — except in what it does to *uncertainty*. Classically the marginal of a point mass is a point mass. Quantum mechanically the marginal of a pure state need not be pure at all, and that single fact is entanglement.
+
+:::theorem[Schmidt decomposition]{#schmidt}
+Let $|\psi\rangle \in \mathcal{H}_A \otimes \mathcal{H}_B$ be a unit vector. Then there are orthonormal families $\{|a_i\rangle\}$ in $\mathcal{H}_A$ and $\{|b_i\rangle\}$ in $\mathcal{H}_B$ and reals $\lambda_i > 0$ with $\sum_i\lambda_i = 1$ such that
+
+$$|\psi\rangle = \sum_{i=1}^{k} \sqrt{\lambda_i}\,|a_i\rangle\otimes|b_i\rangle .$$
+
+The number $k \le \min(d_A,d_B)$ is the **Schmidt rank** and the $\lambda_i$ the **Schmidt coefficients**. Moreover $\rho_A = \sum_i\lambda_i|a_i\rangle\langle a_i|$ and $\rho_B = \sum_i \lambda_i |b_i\rangle\langle b_i|$: the two marginals share their non-zero spectrum.
+:::
+
+:::proof
+Write $|\psi\rangle = \sum_{m,n} C_{mn}|m\rangle|n\rangle$ in fixed bases, so $C$ is a $d_A\times d_B$ matrix with $\operatorname{Tr}(CC^{\dagger}) = 1$. The singular value decomposition gives $C = UDV$ with $U,V$ unitary and $D$ diagonal with entries $s_i\ge0$. Substituting and setting $|a_i\rangle = \sum_m U_{mi}|m\rangle$ and $|b_i\rangle = \sum_n V_{in}|n\rangle$ — orthonormal because $U$ and $V$ are unitary — gives $|\psi\rangle = \sum_i s_i|a_i\rangle|b_i\rangle$. Normalisation forces $\sum_i s_i^2 = 1$, so put $\lambda_i = s_i^2$. Finally
+
+$$\rho_A = \operatorname{Tr}_B|\psi\rangle\langle\psi| = \sum_{i,j}s_is_j\,|a_i\rangle\langle a_j|\,\langle b_j|b_i\rangle = \sum_i s_i^2\,|a_i\rangle\langle a_i|,$$
+
+and symmetrically for $\rho_B$.
+:::
+
+:::corollary[Product states are exactly the Schmidt-rank-one states]{#schmidt-rank-one}
+A pure $|\psi\rangle_{AB}$ is a product state if and only if its Schmidt rank is $1$, if and only if $\rho_A$ is pure.
+:::
+
+:::proof
+Schmidt rank $1$ means $|\psi\rangle = |a_1\rangle|b_1\rangle$, a product; conversely a product state has rank $1$. By Theorem *Schmidt decomposition* the spectrum of $\rho_A$ is $(\lambda_1,\dots,\lambda_k)$, which is a point mass exactly when $k = 1$, i.e. exactly when $\rho_A$ is pure.
+:::
+
+:::example[The Bell state and its marginals]
+Compute $\rho_A$ for $|\Phi^{+}\rangle = \tfrac{1}{\sqrt2}\bigl(|00\rangle + |11\rangle\bigr)$ and give its Schmidt rank.
+:::
+
+:::solution
+The state is already in Schmidt form with $|a_i\rangle = |b_i\rangle = |i\rangle$ and $\lambda_1 = \lambda_2 = \tfrac12$, so the Schmidt rank is $2$ and
+
+$$\rho_A = \tfrac12|0\rangle\langle0| + \tfrac12|1\rangle\langle1| = \tfrac{I}{2}.$$
+
+By hand it comes out the same: $\rho_{AB} = \tfrac12\bigl(|00\rangle\langle00| + |00\rangle\langle11| + |11\rangle\langle00| + |11\rangle\langle11|\bigr)$, and tracing out $B$ kills the two cross terms because $\langle0|1\rangle = 0$. The joint state is pure and maximally informative; each half is maximally *un*informative. □
+:::
+
+The converse of that example is a construction we shall use repeatedly.
+
+:::theorem[Purification]{#purification}
+For every density operator $\rho_A$ there is a space $\mathcal{H}_R$ of dimension $\operatorname{rank}\rho_A$ and a pure state $|\psi\rangle_{AR}$ with $\operatorname{Tr}_R|\psi\rangle\langle\psi| = \rho_A$. Any two purifications of $\rho_A$ differ by a unitary acting on $R$ alone.
+:::
+
+:::proof
+Diagonalise $\rho_A = \sum_i\lambda_i|a_i\rangle\langle a_i|$ over the non-zero eigenvalues, take $\mathcal{H}_R$ with an orthonormal basis $\{|r_i\rangle\}$ of the same size, and set $|\psi\rangle_{AR} = \sum_i\sqrt{\lambda_i}|a_i\rangle|r_i\rangle$. The computation in the proof of Theorem *Schmidt decomposition* gives $\operatorname{Tr}_R|\psi\rangle\langle\psi| = \rho_A$. For uniqueness, any purification is in Schmidt form with the same coefficients $\sqrt{\lambda_i}$ and the same $|a_i\rangle$ — these are fixed as the spectral data of $\rho_A$ — so two purifications differ only in the orthonormal family used on $R$, and a unitary carries one orthonormal family to another.
+:::
+
+:::intuition
+Every mixed state is a pure state with part of it hidden. Randomness in quantum theory can always be recast as entanglement with something you are not looking at: the environment, the other half of a pair, a machine that measured and will not tell you. Purification turns that slogan into a theorem, and it converts many statements about mixed states into statements about pure states on a larger space, where the Schmidt decomposition applies.
+:::
+
+:::pitfall
+The partial trace is irreversible, and must not be read as "the state of $A$ given whatever $B$ turned out to be". There is no conditional state until a measurement on $B$ actually happens — and no measurement on $B$ changes $\rho_A$ at all, which is exactly what forbids signalling with entanglement.
+:::
+
+## Measurement, POVMs and What Can Be Distinguished
+
+<!-- section: measurement -->
+
+Everything an experimenter learns arrives through a measurement, so the limits on measurement are the limits on quantum information. The general rule has two layers: what the outcome probabilities are, and what state is left behind.
+
+:::definition[Projective measurement]{#projective-measurement}
+A **projective measurement** is a family of orthogonal projectors $\{P_m\}$ with $P_mP_{m'} = \delta_{mm'}P_m$ and $\sum_m P_m = I$. Applied to $\rho$ it returns outcome $m$ with probability
+
+$$\Pr(m) = \operatorname{Tr}(P_m\rho),$$
+
+leaving the post-measurement state $P_m\rho P_m/\Pr(m)$. Equivalently one measures an **observable** $M = \sum_m m\,P_m$, a Hermitian operator whose eigenvalues are the outcomes.
+:::
+
+For $\rho = |\psi\rangle\langle\psi|$ and $P_m = |m\rangle\langle m|$ this is the Born rule of the first section, $\Pr(m) = |\langle m|\psi\rangle|^2$. But projective measurements are not the most general possibility: one may couple the system to an ancilla and measure *that*, and the resulting statistics need not come from any projective measurement on the system alone.
+
+:::definition[POVM]{#povm}
+A **positive operator-valued measure** is a family $\{E_m\}$ of positive semidefinite operators with $\sum_m E_m = I$. Outcome $m$ occurs with probability $\Pr(m) = \operatorname{Tr}(E_m\rho)$.
+:::
+
+Positivity makes the probabilities non-negative and completeness makes them sum to $1$, so a POVM is exactly what is needed for $\rho\mapsto(\Pr(m))_m$ to be a probability distribution for every $\rho$. Projective measurements are the special case $E_m = P_m$ with $E_m^2 = E_m$; in general a POVM element is not a projector, and the number of outcomes may exceed the dimension.
+
+:::note
+Naimark's dilation theorem says every POVM on $\mathcal{H}$ arises from a projective measurement on a larger space $\mathcal{H}\otimes\mathcal{H}_{\mathrm{anc}}$, so nothing is lost by taking POVMs as the primitive. We quote it: its proof is a spectral-theory argument outside this course, which assumes linear algebra but not operator theory. Note also that a POVM fixes the outcome *probabilities* but not the post-measurement state — several distinct physical processes share one POVM.
+:::
+
+:::example[A POVM that no projective measurement can imitate]
+Alice sends either $|0\rangle$ or $|+\rangle$, each with probability $\tfrac12$. Bob wants a measurement that *never lies*: it may output "don't know", but when it names a state it must be right. Show that
+
+$$E_0 = c\,|-\rangle\langle-|, \qquad E_{+} = c\,|1\rangle\langle1|, \qquad E_{?} = I - E_0 - E_{+}$$
+
+does this, find the largest admissible $c$, and say how often Bob gets an answer.
+:::
+
+:::solution
+Because $\langle-|+\rangle = 0$, the outcome $E_0$ has probability zero when the state is $|+\rangle$; so if Bob sees it, the state was $|0\rangle$ with certainty. Symmetrically $\langle1|0\rangle = 0$, so $E_+$ can occur only for $|+\rangle$. The scheme is error-free for every $c>0$, and $c$ is taken as large as $E_{?}\ge 0$ allows.
+
+Now $E_0 + E_+ = c\bigl(|-\rangle\langle-| + |1\rangle\langle1|\bigr)$, which in the computational basis is
+
+$$c\begin{pmatrix} 1/2 & -1/2\\ -1/2 & 3/2\end{pmatrix},$$
+
+a matrix of trace $2c$ and determinant $c^2(3/4 - 1/4) = c^2/2$, so its eigenvalues satisfy $\mu^2 - 2c\mu + c^2/2 = 0$ and are $\mu = c\bigl(1\pm\tfrac{1}{\sqrt2}\bigr)$. We need the larger one to be at most $1$, giving $c \le \bigl(1+1/\sqrt2\bigr)^{-1} = 2-\sqrt2\approx 0.5858$.
+
+At that value the conclusive probability for input $|0\rangle$ is $\operatorname{Tr}\bigl(E_0|0\rangle\langle0|\bigr) = c\,|\langle-|0\rangle|^2 = c/2 = 1-\tfrac{1}{\sqrt2}\approx 0.293$, and the same for $|+\rangle$ by symmetry. So Bob learns the state with certainty about $29.3\%$ of the time and learns nothing at all otherwise — the trade Corollary *No perfect deterministic discrimination* forces on him. □
+:::
+
+If Bob must guess every time instead, the optimal trade-off is a clean formula.
+
+:::theorem[Helstrom bound, two pure states]{#helstrom}
+Let $|\psi\rangle$ and $|\phi\rangle$ be equally likely, with overlap $c = |\langle\psi|\phi\rangle|$. The minimum probability of a wrong guess, over all POVMs, is
+
+$$p_{\mathrm{err}} = \tfrac12\bigl(1 - \sqrt{1-c^2}\bigr).$$
+:::
+
+:::proof
+Work in the span of the two states and set $\Delta = \tfrac12|\psi\rangle\langle\psi| - \tfrac12|\phi\rangle\langle\phi|$, a Hermitian traceless operator, so its two eigenvalues are $\pm\mu$. For a two-outcome POVM $\{E, I-E\}$ the success probability is
+
+$$\tfrac12\operatorname{Tr}\bigl(E|\psi\rangle\langle\psi|\bigr) + \tfrac12\operatorname{Tr}\bigl((I-E)|\phi\rangle\langle\phi|\bigr) = \tfrac12 + \operatorname{Tr}(E\Delta).$$
+
+Since $0\le E\le I$, the quantity $\operatorname{Tr}(E\Delta)$ is largest when $E$ is the projector onto the positive eigenspace of $\Delta$, which gives $\mu$; hence $p_{\mathrm{err}} = \tfrac12-\mu$. To find $\mu$, use $\operatorname{Tr}\Delta = 0$ and
+
+$$\operatorname{Tr}(\Delta^2) = \tfrac14\bigl(1 + 1 - 2c^2\bigr) = \tfrac{1-c^2}{2},$$
+
+so that $2\mu^2 = \tfrac{1-c^2}{2}$ and $\mu = \tfrac12\sqrt{1-c^2}$.
+:::
+
+Both endpoints are what intuition demands: orthogonal states ($c=0$) give $p_{\mathrm{err}} = 0$, identical states ($c=1$) give $p_{\mathrm{err}} = \tfrac12$, the coin flip. Everything in between is a genuine information-theoretic cost, and it is why the Holevo bound of the next chapter falls strictly below $\log d$ for non-orthogonal ensembles.
+
+:::pitfall
+"The state collapses" is a statement about the *projective* rule, and only for a measurement performed and recorded. If a measurement is made and the outcome discarded, the correct description is the average $\sum_m P_m\rho P_m$ — a *decohered* state, generally mixed, and not any one of the $P_m\rho P_m/\Pr(m)$.
+:::
+
+## Von Neumann Entropy
 
 <!-- section: von-neumann -->
 
-:::definition[Von Neumann entropy]{#von-neumann-entropy}
-The von Neumann entropy of a density operator $\rho$ is
+We can now define the quantity this chapter is named for. It is Shannon's entropy applied to the one distribution a quantum state canonically carries: its spectrum.
 
-$$S(\rho) = -\operatorname{Tr}(\rho \log_2 \rho).$$
+:::definition[Von Neumann entropy]{#von-neumann-entropy}
+The **von Neumann entropy** of a density operator $\rho$ is
+
+$$S(\rho) = -\operatorname{Tr}\bigl(\rho\log\rho\bigr),$$
+
+where $\log\rho$ is defined through the spectral decomposition. Equivalently, if $\rho$ has eigenvalues $\lambda_1,\dots,\lambda_d$ then
+
+$$S(\rho) = -\sum_i\lambda_i\log\lambda_i = H(\lambda),$$
+
+the Shannon entropy of the spectrum, with the convention $0\log 0 = 0$. Units are bits when the logarithm is base $2$.
 :::
 
-In practice you never take the logarithm of a matrix directly: diagonalize $\rho$ to get its eigenvalues $\lambda_1, \dots, \lambda_d$ (real, non-negative, summing to 1 because $\rho$ is positive semidefinite with trace 1), and then $S(\rho) = -\sum_i \lambda_i \log_2 \lambda_i$, using the convention $0\log_2 0 = 0$. In other words, **von Neumann entropy is just the Shannon entropy of the eigenvalue distribution**. So it generalizes Shannon entropy: for a state diagonal in some basis with eigenvalues $p_i$ it reduces to the classical $H(p)$. With the $\log_2$ convention the units are bits (or "qubits" of entropy); using the natural log gives nats.
+Never take a matrix logarithm literally: diagonalise, then evaluate $-\sum_i\lambda_i\log\lambda_i$. And because $S$ depends only on the spectrum it is invariant under every unitary, $S(U\rho U^{\dagger}) = S(\rho)$ — the counterpart of the fact that Shannon entropy does not care how the alphabet is labelled.
 
-Quantum mutual information, conditional entropy, and relative entropy (quantum KL) are defined analogously using S(·). Quantum conditional entropy S(A|B) can be negative — a signature of entanglement.
+:::theorem[Basic properties]{#vn-basic}
+For $\rho$ on a $d$-dimensional space:
+
+1. $S(\rho)\ge 0$, with equality if and only if $\rho$ is pure;
+2. $S(\rho)\le\log d$, with equality if and only if $\rho = I/d$;
+3. $S(U\rho U^{\dagger}) = S(\rho)$ for every unitary $U$;
+4. if $\rho$ is diagonal in some basis with entries $p_i$, then $S(\rho) = H(p)$.
+:::
+
+:::proof
+All four reduce to $S(\rho) = H(\lambda)$ and the corresponding classical facts. (1) $H\ge0$ with equality iff the distribution is a point mass, and by Theorem *Purity criterion* a point-mass spectrum means a pure state. (2) $H(\lambda)\le\log d$ with equality iff $\lambda$ is uniform, which says $\rho = I/d$. (3) Conjugating by a unitary changes the eigenvectors and not the eigenvalues. (4) Immediate: a diagonal matrix's entries are its eigenvalues.
+:::
+
+:::notation
+For a bipartite state $\rho_{AB}$ write $S(A) = S(\rho_A)$ and $S(AB) = S(\rho_{AB})$, and define
+
+$$S(A\mid B) = S(AB) - S(B), \qquad I(A;B) = S(A) + S(B) - S(AB),$$
+
+so that $I(A;B) = S(A) - S(A\mid B)$, exactly as in the classical chain rules. There is no underlying joint distribution these are computed from; the formulas *are* the definitions.
+:::
+
+:::example[Entropy from the Bloch radius]
+Give $S(\rho)$ for a qubit whose Bloch vector has length $r$, and evaluate it at $\rho = 0.75|0\rangle\langle0| + 0.25|1\rangle\langle1|$.
+:::
+
+:::solution
+By Theorem *Bloch ball* the eigenvalues are $(1\pm r)/2$, so
+
+$$S(\rho) = h\!\left(\tfrac{1+r}{2}\right), \qquad h(q) = -q\log q - (1-q)\log(1-q).$$
+
+For the given state $r = 0.5$, so $S = h(0.75) = -0.75\log_2 0.75 - 0.25\log_2 0.25 \approx 0.311 + 0.5 = 0.811$ bits. The function falls from $1$ bit at the centre of the ball to $0$ on its surface: entropy measures how far inside the Bloch ball a qubit sits. □
+:::
+
+:::figure[Von Neumann entropy of a qubit against the Bloch radius $r$. The maximally mixed state at $r=0$ carries one full bit; the entropy falls to zero at the surface, where the state is pure. The curve has infinite slope at $r=1$, which is why states close to the surface are still appreciably mixed — at $r = 0.5$ there is still $0.81$ of a bit.]{#qubit-entropy}
+{
+  "type": "plot",
+  "x": [0, 1.2],
+  "y": [-0.2, 1.3],
+  "xTicks": 0.25,
+  "yTicks": 0.25,
+  "xLabel": "r",
+  "yLabel": "S (bits)",
+  "marks": [
+    { "kind": "function", "fn": "-((1+x)/2)*log((1+x)/2)/log(2) - ((1-x)/2)*log((1-x)/2)/log(2)", "tone": "accent" },
+    { "kind": "point", "at": [0, 1] },
+    { "kind": "point", "at": [0.5, 0.8113] },
+    { "kind": "point", "at": [1, 0] },
+    { "kind": "text", "at": [0.55, 1.15], "text": "S = h((1+r)/2)", "leaderTo": [0.3, 0.9341] },
+    { "kind": "text", "at": [0.7, 0.35], "text": "pure states", "leaderTo": [1, 0] }
+  ]
+}
+:::
+
+Relative entropy transfers as well, and it is the engine behind almost every inequality in the next section.
 
 :::definition[Quantum relative entropy]{#quantum-relative-entropy}
-$$D(\rho \| \sigma) = \operatorname{Tr}\bigl(\rho \log \rho - \rho \log \sigma\bigr).$$
+For density operators $\rho,\sigma$,
+
+$$D(\rho\|\sigma) = \operatorname{Tr}\bigl(\rho\log\rho\bigr) - \operatorname{Tr}\bigl(\rho\log\sigma\bigr),$$
+
+taken to be $+\infty$ when the support of $\rho$ is not contained in the support of $\sigma$.
 :::
 
-It is the basis for many quantum information bounds and is monotonic under completely positive trace-preserving maps — the quantum data processing inequality.
+:::theorem[Klein's inequality]{#klein}
+$D(\rho\|\sigma)\ge 0$, with equality if and only if $\rho = \sigma$.
+:::
+
+:::proof
+Let $\rho = \sum_i\lambda_i|a_i\rangle\langle a_i|$ and $\sigma = \sum_j\mu_j|b_j\rangle\langle b_j|$ be spectral decompositions and put $P_{ij} = |\langle a_i|b_j\rangle|^2$, a doubly stochastic matrix because both families are orthonormal bases. Then $\operatorname{Tr}(\rho\log\sigma) = \sum_{i,j}\lambda_iP_{ij}\log\mu_j$, and applying Jensen's inequality to the concave $\log$ with the weights $P_{ij}$, which sum to $1$ over $j$,
+
+$$\operatorname{Tr}(\rho\log\sigma) \le \sum_i\lambda_i\log\Bigl(\sum_j P_{ij}\mu_j\Bigr) = \sum_i\lambda_i\log\nu_i,\qquad \nu_i := \sum_jP_{ij}\mu_j.$$
+
+Hence $D(\rho\|\sigma)\ge\sum_i\lambda_i\log(\lambda_i/\nu_i) = D(\lambda\|\nu)\ge0$ by the classical Gibbs inequality; note $\sum_i\nu_i = 1$ because $P$ is doubly stochastic. Equality in Jensen forces the $\mu_j$ to agree wherever $P_{ij}>0$, and equality in Gibbs forces $\lambda = \nu$; together these give $\rho = \sigma$.
+:::
+
+Two consequences get used constantly. Taking $\sigma = I/d$ gives $D(\rho\|I/d) = \log d - S(\rho)\ge 0$, recovering the maximum-entropy bound; and for any $\sigma$,
+
+$$S(\rho)\le-\operatorname{Tr}(\rho\log\sigma),$$
+
+the quantum form of "cross-entropy is at least entropy" — describing a state with the wrong model costs you bits.
 
 :::intuition
-Think of a spinning coin. If you *know* it's heads, there's no surprise ($S=0$, a pure state). If it's a genuine 50/50 coin, you're maximally in the dark ($S=1$, the maximally mixed qubit). Von Neumann entropy is just "how surprised are you about which face it is" — but computed on the state's *own* natural faces (its eigenvalues), not whatever basis you happen to look in.
-
-Negative conditional entropy is the weird part with no coin analogy: two entangled systems can be so tightly linked that the *pair* is perfectly known while each *half* looks random. Knowing $B$ then tells you *more* than everything about $A$ — as if learning your friend's card told you your own card plus a spare secret. Classically that "spare secret" (negative entropy) is impossible.
+Von Neumann entropy is Shannon entropy asked in the state's own preferred basis. Measure $\rho$ in its eigenbasis and you get a classical variable of entropy exactly $S(\rho)$; measure it in any other basis and the classical entropy is strictly larger, because the doubly stochastic smearing in the proof of Klein's inequality can only spread a distribution out. So $S(\rho)$ is the *minimum* classical randomness extractable from the state — read the other way, the irreducible uncertainty in it.
 :::
 
-:::example[(a single mixed qubit):]
-Take the maximally mixed qubit $\rho = \tfrac{I}{2} = \begin{pmatrix} 1/2 & 0 \\ 0 & 1/2 \end{pmatrix}$.
+## Properties of Von Neumann Entropy
+
+<!-- section: entropy-properties -->
+
+Almost every classical entropy inequality has an exact quantum counterpart. The exception is important enough to organise this whole section: classically $H(X_1,\dots,X_n)$ is never smaller than the entropy of any subcollection, and quantum mechanically that fails.
+
+:::theorem[Subadditivity]{#subadditivity}
+For any bipartite state, $S(AB)\le S(A)+S(B)$, with equality if and only if $\rho_{AB} = \rho_A\otimes\rho_B$.
 :::
 
-:::solution
-find the eigenvalues. This matrix is already diagonal, so $\lambda_1 = \lambda_2 = \tfrac12$.
-Step 2 — plug into the formula. $S(\rho) = -\left(\tfrac12\log_2\tfrac12 + \tfrac12\log_2\tfrac12\right) = -\left(\tfrac12\cdot(-1) + \tfrac12\cdot(-1)\right) = 1$ bit.
-Sanity check: a pure state $|0\rangle$ has eigenvalues $1, 0$, giving $S = -(1\log_2 1 + 0) = 0$ — no uncertainty, as expected. The mixed qubit sits at the maximum $S = 1$: one full bit of uncertainty, the most a single qubit can carry.
+:::proof
+Compute the relative entropy of $\rho_{AB}$ to the product of its own marginals. Since $\log(\rho_A\otimes\rho_B) = \log\rho_A\otimes I + I\otimes\log\rho_B$,
+
+$$D\bigl(\rho_{AB}\,\|\,\rho_A\otimes\rho_B\bigr) = -S(AB) - \operatorname{Tr}\bigl[\rho_{AB}(\log\rho_A\otimes I)\bigr] - \operatorname{Tr}\bigl[\rho_{AB}(I\otimes\log\rho_B)\bigr].$$
+
+By Theorem *The partial trace is the right marginal* the second trace is $\operatorname{Tr}(\rho_A\log\rho_A) = -S(A)$ and the third is $-S(B)$, so
+
+$$D\bigl(\rho_{AB}\,\|\,\rho_A\otimes\rho_B\bigr) = S(A)+S(B)-S(AB) = I(A;B).$$
+
+Klein's inequality gives $I(A;B)\ge0$, which is the claim, with equality exactly when $\rho_{AB} = \rho_A\otimes\rho_B$.
 :::
 
-:::example[(a Bell pair, showing negative conditional entropy):]
-Take the maximally entangled two-qubit state $|\Phi^+\rangle = \tfrac{1}{\sqrt2}(|00\rangle + |11\rangle)$.
+That identity — quantum mutual information *is* a relative entropy — is worth keeping. It gives $I(A;B)\ge0$ at once, and it is the form in which the Holevo bound will be proved in the next chapter.
+
+:::theorem[Araki–Lieb triangle inequality]{#araki-lieb}
+For any bipartite state, $S(AB)\ge\bigl|S(A)-S(B)\bigr|$.
 :::
 
-:::solution
-the joint state is *pure* ($\rho_{AB} = |\Phi^+\rangle\langle\Phi^+|$ has eigenvalues $1, 0, 0, 0$), so $S(AB) = 0$.
-Step 2 — trace out $B$ to get Alice's marginal. Because the two outcomes $|00\rangle$ and $|11\rangle$ are equally weighted, $\rho_A = \operatorname{Tr}_B(\rho_{AB}) = \tfrac12|0\rangle\langle0| + \tfrac12|1\rangle\langle1| = \tfrac{I}{2}$. By the previous example $S(A) = 1$, and by symmetry $S(B) = 1$.
-Step 3 — conditional entropy. $S(A|B) = S(AB) - S(B) = 0 - 1 = -1 < 0$.
+:::proof
+Purify: by Theorem *Purification* there is a system $R$ and a pure $|\psi\rangle_{ABR}$ whose marginal on $AB$ is $\rho_{AB}$. Because the global state is pure, Theorem *Schmidt decomposition* across the cut $AB\,|\,R$ gives $S(AB) = S(R)$, and across the cut $B\,|\,AR$ gives $S(B) = S(AR)$. Applying subadditivity to the pair $(A,R)$,
 
-Sanity check: the *whole* is perfectly known ($S(AB)=0$) yet each *part* is maximally uncertain ($S(A)=1$). That "the whole is more certain than its parts" is impossible classically ($H(A|B)\ge 0$ always) — the negative value is the fingerprint of entanglement.
+$$S(B) = S(AR)\le S(A)+S(R) = S(A)+S(AB),$$
+
+so $S(AB)\ge S(B)-S(A)$. Exchanging $A$ and $B$ gives $S(AB)\ge S(A)-S(B)$, and the two together give the absolute value.
 :::
 
-## Quantum Channels and the Holevo Bound
-
-<!-- section: quantum-channels-holevo -->
-
-:::definition[Quantum channel]{#quantum-channel}
-A quantum channel is a completely positive trace-preserving (CPTP) map $\Phi$ from density operators on one space to another. It can describe noisy evolution, measurement, or transmission.
+:::corollary[Conditional entropy is bounded below]{#cond-entropy-bound}
+$S(A\mid B)\ge -S(A)$, and in particular $S(A\mid B)\ge-\log d_A$.
 :::
 
-Suppose Alice encodes a classical symbol $x$, drawn with probability $p_x$, as a quantum state $\rho_x$ and sends it through the channel; the collection $\{p_x, \rho_x\}$ is called an **ensemble**.
-
-:::definition[Holevo quantity]{#holevo-quantity}
-The Holevo quantity of an ensemble at the output of a channel $\Phi$ is
-
-$$\chi = S\!\left(\sum_x p_x\, \Phi(\rho_x)\right) - \sum_x p_x\, S\!\left(\Phi(\rho_x)\right),$$
-
-the entropy of the *average* output minus the average entropy of the *individual* outputs.
+:::proof
+$S(A\mid B) = S(AB)-S(B)\ge -S(A)$ is Araki–Lieb rearranged, and $S(A)\le\log d_A$ by Theorem *Basic properties*.
 :::
 
-It is always non-negative, by concavity of $S$, and it equals zero exactly when all the outputs $\Phi(\rho_x)$ coincide.
+Here is the break with the classical theory. Classically $H(X\mid Y)\ge0$: knowing $Y$ cannot leave you with *negative* uncertainty about $X$, because $H(X,Y)\ge H(Y)$. The quantum statement is simply false.
 
-:::theorem[Holevo bound]{#holevo-bound}
-No measurement Bob performs on a single channel output can extract more than $\chi$ bits of information about $x$.
+:::theorem[Failure of monotonicity]{#non-monotonicity}
+There is a bipartite state with $S(AB) < S(A)$; equivalently $S(A\mid B)$ can be negative. For the Bell state $|\Phi^{+}\rangle$ one has $S(AB) = 0$, $S(A) = S(B) = 1$ and $S(A\mid B) = -1$ bit, the most negative value Corollary *Conditional entropy is bounded below* permits for a qubit.
 :::
 
-Maximizing $\chi$ over all input ensembles therefore gives the single-use classical capacity. Unlike classical channels, though, the capacity of quantum channels can be **super-additive**: two uses together can carry more than twice one use, so the true classical capacity is the *regularized* limit
-
-$$C = \lim_{n\to\infty}\tfrac1n \max_{\text{ensembles}} \chi(\Phi^{\otimes n}),$$
-
-which is often hard to compute. For well-behaved channels such as the depolarizing channel below, $\chi$ *is* additive and the single-use value is already the capacity.
+:::proof
+$|\Phi^+\rangle$ is pure, so $S(AB) = 0$. Its Schmidt coefficients are $\tfrac12,\tfrac12$, so $\rho_A = \rho_B = I/2$ and $S(A) = S(B) = 1$ by Theorem *Basic properties*. Hence $S(A\mid B) = 0-1 = -1$, while $-S(A) = -1$ shows the bound is attained.
+:::
 
 :::intuition
-Imagine mailing letters written in disappearing ink through a smudgy post office (the channel). The Holevo quantity is a hard ceiling on how many bits of your message survive the smudging — no matter how clever a magnifying glass (measurement) Bob uses at the other end, he cannot read more than $\chi$ bits per letter.
-
-The "smudge" costs you: $\chi = $ (uncertainty of the whole mailbag) $-$ (leftover uncertainty inside each smudged letter). If the noise smudges every letter into the *same* grey blob, the two terms cancel and $\chi = 0$ — nothing gets through.
-
-The surprise: with quantum letters, sending two *together* can sometimes beat sending them one at a time (super-additivity), so the true capacity needs you to consider many letters at once.
+Classically a joint state is a list of values, and the whole cannot be less uncertain than a part because the part is read off the whole. An entangled pair is not a list of values. The pair is in a perfectly definite state — "the two outcomes will agree" — while neither member has any definite state of its own. The negative bit in $S(A\mid B)$ is not a bookkeeping accident: in the quantum state-merging protocol it counts Bell pairs *returned* to the parties, one ebit per negative bit.
 :::
 
-:::example
-Consider the qubit depolarizing channel $\Phi(\rho) = (1-p)\,\rho + p\,\tfrac{I}{2}$, which leaves the state alone with probability $1-p$ and replaces it with the maximally mixed state with probability $p$. Let us compute its Holevo capacity $C = \max_{\{p_x, \rho_x\}} \chi$. We use the ensemble $\{\tfrac12, |0\rangle;\ \tfrac12, |1\rangle\}$ (this symmetric orthogonal pair is optimal for this channel).
+The deeper inequality, from which most of quantum Shannon theory is derived, cannot be proved with the tools this course develops.
+
+:::theorem[Strong subadditivity, quoted]{#ssa}
+For any tripartite state $\rho_{ABC}$,
+
+$$S(ABC) + S(B)\ \le\ S(AB) + S(BC),$$
+
+equivalently $S(A\mid BC)\le S(A\mid B)$ — discarding a system cannot decrease conditional entropy — equivalently again $I(A;BC)\ge I(A;B)$.
+:::
+
+:::proof
+This is a sketch, and the gap is named. Unlike subadditivity, the result does not follow from Klein's inequality: the natural argument would need $\operatorname{Tr}\exp$ to behave multiplicatively on non-commuting operators, and it does not. Lieb and Ruskai (1973) derive it from **Lieb's concavity theorem**, that $(A,B)\mapsto\operatorname{Tr}\bigl(K^{\dagger}A^{t}KB^{1-t}\bigr)$ is jointly concave in positive $A,B$ for $t\in[0,1]$ — a matrix-analysis result about non-commuting operators requiring operator-convexity theory this course does not develop. An alternative route derives it from the monotonicity of relative entropy under quantum channels, stated in the next chapter; each of the two statements implies the other, so quoting one is quoting both.
+:::
+
+:::corollary[Consequences of strong subadditivity]{#ssa-corollaries}
+Strong subadditivity yields: $I(A;B)\le I(A;BC)$; concavity of $S(A\mid B)$ as a function of $\rho_{AB}$; and $S(A\mid B)\ge0$ for every *separable* $\rho_{AB}$ — so a negative conditional entropy certifies entanglement.
+:::
+
+:::proof
+The first is a restatement. Granting the second, take a separable $\rho_{AB} = \sum_i p_i\,\sigma^A_i\otimes\tau^B_i$; concavity gives
+
+$$S(A\mid B)_{\rho}\ \ge\ \sum_i p_i\,S(A\mid B)_{\sigma_i\otimes\tau_i} = \sum_i p_i\,S(\sigma_i)\ \ge\ 0,$$
+
+using that a product state has $S(AB) = S(A)+S(B)$ and hence $S(A\mid B) = S(A)$. The concavity step is one of the standard equivalent forms of strong subadditivity and is quoted with it.
+:::
+
+Finally, mixing. Classically, averaging distributions increases entropy, by at most the entropy of the mixing variable; both halves survive the passage to quantum states.
+
+:::theorem[Mixing bounds]{#mixing}
+Let $\rho = \sum_i p_i\rho_i$ be a mixture of density operators. Then
+
+$$\sum_i p_iS(\rho_i)\ \le\ S(\rho)\ \le\ \sum_i p_iS(\rho_i) + H(p),$$
+
+and the right-hand inequality is an equality if and only if the $\rho_i$ have pairwise orthogonal supports.
+:::
+
+:::proof
+For the lower bound — concavity of $S$ — expand the average relative entropy to $\rho$:
+
+$$\sum_i p_i D(\rho_i\|\rho) = -\sum_i p_iS(\rho_i) - \operatorname{Tr}\Bigl(\bigl(\textstyle\sum_i p_i\rho_i\bigr)\log\rho\Bigr) = S(\rho) - \sum_i p_iS(\rho_i),$$
+
+and every $D(\rho_i\|\rho)\ge0$ by Klein's inequality. For the upper bound, adjoin a classical register: on an orthonormal family $\{|i\rangle\}$ put $\rho_{XA} = \sum_i p_i\,|i\rangle\langle i|\otimes\rho_i$. This is block diagonal, so its spectrum is the union of the spectra of the blocks $p_i\rho_i$, giving
+
+$$S(XA) = -\sum_i\sum_k p_i\lambda^{(i)}_k\log\bigl(p_i\lambda^{(i)}_k\bigr) = H(p) + \sum_i p_iS(\rho_i),$$
+
+where $\lambda^{(i)}$ is the spectrum of $\rho_i$. Also $S(X) = H(p)$ and $S(A) = S(\rho)$. The claim is exactly $S(A)\le S(XA)$, that is $S(X\mid A)\ge0$, which holds because $\rho_{XA}$ is separable — Corollary *Consequences of strong subadditivity*. Equality means $I(X;A) = H(p)$, i.e. $X$ is perfectly recoverable from $A$, which happens exactly when the $\rho_i$ occupy orthogonal subspaces and so are told apart by one projective measurement.
+:::
+
+:::example[The mixing gap is the Holevo quantity]
+Compute both bounds for the ensemble $\bigl\{\tfrac12,|0\rangle;\ \tfrac12,|+\rangle\bigr\}$ and interpret the gap $S(\rho)-\sum_i p_iS(\rho_i)$.
 :::
 
 :::solution
-output of each input. $\Phi(|0\rangle\langle0|) = (1-p)|0\rangle\langle0| + p\tfrac{I}{2}$, a diagonal matrix with eigenvalues $(1-p)+\tfrac{p}{2} = 1-\tfrac{p}{2}$ and $\tfrac{p}{2}$. So each individual output has entropy $S(\Phi(\rho_x)) = h_2\!\left(\tfrac{p}{2}\right)$, the binary entropy $h_2(q) = -q\log_2 q - (1-q)\log_2(1-q)$.
-Step 2 — average output. $\sum_x p_x \Phi(\rho_x) = \tfrac12\Phi(|0\rangle\langle0|) + \tfrac12\Phi(|1\rangle\langle1|) = \tfrac{I}{2}$, which has $S = 1$.
-Step 3 — assemble $\chi$. $\chi = S(\text{average}) - \sum_x p_x S(\text{individual}) = 1 - h_2\!\left(\tfrac{p}{2}\right)$.
-Step 4 — a concrete number. For $p = 0.2$: $\tfrac{p}{2} = 0.1$, and $h_2(0.1) = -0.1\log_2 0.1 - 0.9\log_2 0.9 \approx 0.1(3.322) + 0.9(0.152) \approx 0.469$. Hence $\chi \approx 1 - 0.469 = 0.531$ bits per channel use.
+Both members are pure, so $\sum_i p_iS(\rho_i) = 0$ and the lower bound is $0$, while $H(p) = 1$ bit gives the upper bound. The average state is
 
-Sanity check: at $p=0$ (noiseless) we get $\chi = 1 - h_2(0) = 1$ bit — a perfect qubit carries one classical bit. At $p=1$ (output is always $I/2$ regardless of input) we get $\chi = 1 - h_2(0.5) = 1 - 1 = 0$ — no information gets through, as it must. For the depolarizing channel this $\chi$ is additive, so no regularization is needed and $C = 1 - h_2(p/2)$ exactly.
+$$\rho = \tfrac12|0\rangle\langle0| + \tfrac12|+\rangle\langle+| = \tfrac12\begin{pmatrix}1&0\\0&0\end{pmatrix} + \tfrac14\begin{pmatrix}1&1\\1&1\end{pmatrix} = \begin{pmatrix}3/4 & 1/4\\ 1/4 & 1/4\end{pmatrix}.$$
+
+Its trace is $1$ and its determinant is $3/16-1/16 = 1/8$, so the eigenvalues solve $\lambda^2-\lambda+1/8 = 0$ and are $\lambda = \tfrac12\bigl(1\pm\tfrac{1}{\sqrt2}\bigr)\approx0.8536,\ 0.1464$. Hence $S(\rho) = h(0.8536)\approx0.601$ bits, strictly between the two bounds.
+
+The gap is $0.601$ bits, and it is exactly the Holevo quantity $\chi$ of this ensemble. By the theorem of the next chapter no measurement can extract more than $0.601$ bits about which state was sent — less than the $1$ bit that was encoded, because $|0\rangle$ and $|+\rangle$ are not orthogonal. □
 :::
 
-## Entanglement, Teleportation, and Quantum Capacity
-
-<!-- section: entanglement-teleportation -->
-
-Entanglement is a resource, and the cleanest demonstration of that is teleportation.
-
-:::theorem[Quantum teleportation]{#teleportation}
-Using a shared Bell pair and two classical bits, an unknown qubit can be transferred perfectly from Alice to Bob without sending the qubit itself through a quantum channel.
-:::
-
-:::definition[Quantum capacity]{#quantum-capacity}
-The quantum capacity $Q$ of a channel is the rate at which qubits, or entanglement, can be transmitted reliably.
-:::
-
-It is given by a regularized coherent information, and it is zero for some channels that still have positive classical capacity — entanglement-breaking channels, for instance.
-
-Quantum error-correcting codes, stabilizer codes, and surface codes protect quantum information from noise, analogous to classical ECC but with the added difficulty of the no-cloning theorem (you cannot simply copy for repetition).
-
-:::intuition
-Teleportation: Alice and Bob share an entangled pair beforehand. Alice measures her unknown qubit together with her half of the pair, sends two classical bits of the measurement outcome to Bob, and Bob's half of the pair 'becomes' the unknown qubit (up to a Pauli correction he applies from the two bits).
-
-No quantum information traveled in the two classical bits; the entanglement 'pre-delivered' the quantum channel.
-:::
-
-:::example[(teleporting one qubit, step by step):]
-Alice holds an unknown qubit $|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$ and shares the Bell pair $|\Phi^+\rangle_{AB} = \tfrac{1}{\sqrt2}(|00\rangle + |11\rangle)$ with Bob (Alice owns $A$, Bob owns $B$).
-:::
-
-:::solution
-write the three-qubit state. Before anything happens the joint state is
-  $$|\psi\rangle \otimes |\Phi^+\rangle = \tfrac{1}{\sqrt2}\big(\alpha|0\rangle + \beta|1\rangle\big)\otimes\big(|00\rangle + |11\rangle\big).$$
-Step 2 — re-express Alice's two qubits (the unknown qubit and $A$) in the Bell basis $|\Phi^\pm\rangle = \tfrac{1}{\sqrt2}(|00\rangle \pm |11\rangle)$, $|\Psi^\pm\rangle = \tfrac{1}{\sqrt2}(|01\rangle \pm |10\rangle)$. A standard algebraic regrouping gives
-  $$\tfrac12\Big[\,|\Phi^+\rangle(\alpha|0\rangle+\beta|1\rangle) + |\Phi^-\rangle(\alpha|0\rangle-\beta|1\rangle) + |\Psi^+\rangle(\beta|0\rangle+\alpha|1\rangle) + |\Psi^-\rangle(-\beta|0\rangle+\alpha|1\rangle)\Big].$$
-Step 3 — read off the correspondence. Each Bell outcome leaves Bob's qubit in a *Pauli-twisted* copy of $|\psi\rangle$: $|\Phi^+\rangle \to I|\psi\rangle$, $|\Phi^-\rangle \to Z|\psi\rangle$, $|\Psi^+\rangle \to X|\psi\rangle$, $|\Psi^-\rangle \to XZ|\psi\rangle$. Each of the four outcomes is equally likely with probability $\tfrac14$ (each Bell coefficient has squared magnitude $\left|\tfrac12\right|^2 = \tfrac14$, and $|\alpha|^2+|\beta|^2 = 1$).
-Step 4 — Bob corrects. Alice sends the 2-bit outcome; Bob applies the inverse Pauli ($I$, $Z$, $X$, or $ZX$ — each Pauli is its own inverse) and recovers exactly $\alpha|0\rangle + \beta|1\rangle$.
-
-Sanity check on resources and no-cloning: the protocol *consumes* one Bell pair and *two* classical bits, and it destroys Alice's original in the measurement — so only one copy of $|\psi\rangle$ ever exists at the end, respecting no-cloning. Note the classical bits alone carry no quantum information (they're just which of four Paulis to undo); without the pre-shared entanglement Bob could do nothing with them.
+:::pitfall
+Do not import $H(X\mid Y)\ge0$, $H(X)\le H(X,Y)$, or "a subsystem is less uncertain than the whole" into the quantum setting. The first two are false. The third, in the correct form $S(A\mid BC)\le S(A\mid B)$, is true but is strong subadditivity and is not cheap. When in doubt, test a claim on the Bell state: it is the counterexample to almost every false quantum entropy inequality.
 :::
 
 ## Common Mistakes
 
-- **Thinking a qubit is just a probabilistic classical bit**: The phases and interference matter; measurement in the wrong basis yields no information and collapses the state.
-- **Assuming von Neumann entropy is always non-negative like Shannon entropy**: Conditional von Neumann entropy can be negative, quantifying entanglement.
-- **Believing the Holevo quantity is the quantum capacity**: Holevo/χ gives the classical capacity of a quantum channel; the quantum capacity (sending qubits) is given by coherent information and is usually smaller.
-- **Forgetting that entanglement is a resource that can be consumed and distilled**: Teleportation, super-dense coding, and many protocols consume ebits (Bell pairs) and classical communication.
-- **Expecting all quantum channels to have additive capacities**: Many capacities require regularization over many uses; this is one of the hardest open problems in quantum information.
-- **Confusing 'sending classical information over quantum channel' with 'sending quantum information'**: The former can use measurements and classical post-processing; the latter must preserve superpositions and entanglement.
+- **Treating a qubit as a biased coin.** A coin has one parameter, a qubit has two, and the extra one — relative phase — is what makes $|+\rangle$ and $|-\rangle$ perfectly distinguishable despite identical computational-basis statistics.
+- **Confusing a superposition with a mixture.** $|+\rangle$ is pure, with purity $1$; $\tfrac12(|0\rangle\langle0|+|1\rangle\langle1|)$ is mixed, with purity $\tfrac12$. They agree in one basis and differ in every other.
+- **Thinking the ensemble can be recovered from $\rho$.** It cannot: $\{\tfrac12,|0\rangle;\tfrac12,|1\rangle\}$ and $\{\tfrac12,|+\rangle;\tfrac12,|-\rangle\}$ both give $I/2$, and no experiment separates them.
+- **Reading the partial trace as conditioning.** $\rho_A = \operatorname{Tr}_B\rho_{AB}$ is the unconditional marginal. There is no "state of $A$ given $B$" until $B$ is measured, and measuring $B$ never changes $\rho_A$.
+- **Assuming $S(A\mid B)\ge0$.** It is $-1$ bit for a Bell pair. Any argument that silently uses a classical conditioning inequality on quantum states is wrong.
+- **Using $S(AB)\ge S(A)$.** False, and the same Bell pair kills it. The correct lower bound is Araki–Lieb, $S(AB)\ge|S(A)-S(B)|$.
+- **Taking the logarithm of $\rho$ entrywise.** $\log\rho$ is defined through the spectral decomposition; for a non-diagonal $\rho$ the entrywise logarithm is not even the right kind of object.
+- **Expecting strong subadditivity to be a corollary of Klein's inequality.** It is not. It rests on Lieb's concavity theorem, and every proof of it that works proves something of that depth along the way.
