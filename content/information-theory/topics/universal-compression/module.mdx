@@ -10,6 +10,8 @@ Coding a whole message as one interval, learning the dictionary as you go, and w
 
 <!-- section: idea -->
 
+Huffman coding is optimal and still leaves up to one bit per symbol on the table, because a codeword is an integral number of bits. Arithmetic coding removes that restriction by refusing to give any symbol a codeword at all: the entire message is mapped to a single number, and only that number is transmitted. The cost is $-\log p(x^n) + 2$ bits for the whole message, so the rounding loss is amortised over the whole file rather than paid per symbol.
+
 Arrange the strings of length $n$ in lexicographic order and lay their probabilities end to end along $[0,1)$. Each string then owns a subinterval whose *length* is its probability and whose *position* identifies it. Naming a message means naming a point in its interval.
 
 :::definition[Cumulative distribution and the interval of a string]{#cdf-interval}
@@ -369,6 +371,8 @@ A file of $n = 10^{6}$ symbols is coded at $H = 2$ bits/symbol. Compare an EOF s
 
 <!-- section: dictionary -->
 
+Every coder so far has been handed a probability model. Real files arrive without one. A **universal** compressor must learn the structure while coding and still approach the entropy rate of whatever source produced the data. The Lempel–Ziv family does this with no probabilities at all: it compresses by noticing that text repeats itself.
+
 :::definition[LZ78 parsing]{#lz78-parsing}
 The **LZ78 parsing** of a string $x_1x_2\cdots x_n$ is the greedy decomposition into phrases in which each new phrase is the shortest prefix of the remaining input that has not appeared as an earlier phrase. Each phrase therefore equals some earlier phrase extended by one symbol, and is transmitted as the pair
 
@@ -567,6 +571,8 @@ A $256$-colour icon with large flat areas and a $256$-colour dithered photograph
 
 <!-- section: definition-universal -->
 
+Every code so far has needed a model: Huffman needs the probabilities, arithmetic coding needs a conditional distribution per symbol, and only Lempel–Ziv managed without. A **universal** code is one that works for a whole *class* of sources at once, paying a price that vanishes per symbol. This last part makes the notion precise, exhibits the standard constructions, and proves that the price cannot be driven to zero at finite length.
+
 :::definition[Redundancy of a code]{#code-redundancy}
 Let $\mathcal{P}$ be a class of sources and let $C_n$ be a code on $\mathcal{X}^n$ with lengths $\ell_n$. For $P\in\mathcal{P}$ the **pointwise redundancy** on $x^n$ is
 
@@ -763,16 +769,12 @@ or $0.03\%$ of the file.
 - **Forgetting to allocate probability to termination.** Without an EOF symbol or an explicit length the decoder cannot know when to stop and will happily decode arbitrarily many further symbols.
 - **Using floating point.** Encoder and decoder must perform bit-identical arithmetic; fixed-point integers with a controlled total frequency are mandatory.
 - **Assuming arithmetic coding is always the right choice.** It has higher per-symbol cost than a canonical Huffman decoder, and for nearly uniform alphabets the one-bit Huffman penalty is negligible. ANS (asymmetric numeral systems) now occupies much of this ground, achieving arithmetic-coding compression at table-driven speeds.
-
-Every coder so far has been handed a probability model. Real files arrive without one. A **universal** compressor must learn the structure while coding and still approach the entropy rate of whatever source produced the data. The Lempel–Ziv family does this with no probabilities at all: it compresses by noticing that text repeats itself.
 - **Confusing LZ77 with LZ78/LZW.** LZ77 points backwards into the raw text with (distance, length) pairs; LZ78/LZW points into a dictionary of previously created phrases. The distinction matters for memory, for seeking, and for patent history.
 - **Believing the dictionary is transmitted.** It is rebuilt by the decoder from the code stream. Sending it would defeat the purpose.
 - **Mishandling the exceptional code.** An implementation that assumes every received code is already in the dictionary fails on inputs as short as `ABABABA`.
 - **Expecting compression of random data.** The incompressibility theorem forbids it; LZ on random data expands by roughly $\log n$ bits per phrase.
 - **Forgetting the CLEAR mechanism.** With a bounded dictionary and no reset, a compressor that has finished learning one file's statistics carries them, uselessly, into the next region of a heterogeneous file.
 - **Quoting LZ's optimality without its hypotheses.** It is asymptotic, requires an unbounded dictionary, and holds for stationary ergodic sources. None of the three is exactly true of a real file on a real implementation.
-
-Shannon–Fano coding is the first systematic construction of an efficient prefix code, described by Shannon in 1948 and refined by Fano the same year. It is no longer the method of choice — Huffman is optimal and barely harder — but it is the cleanest illustration of top-down code design, it is what Huffman was assigned to improve upon, and its analysis is where the bound $L < H+1$ was first established.
 - **Thinking a universal code achieves the entropy exactly on every file.** It achieves $nh + o(n)$; on short files the $o(n)$ term dominates and compression can be negative.
 - **Confusing universal with optimal-for-the-unknown-source.** Rissanen's bound says a strictly positive minimax redundancy is unavoidable at every finite $n$.
 - **Assuming Lempel–Ziv is the best universal code.** It is universal over a far larger class than CTW, and correspondingly slower to converge: $O(n\log\log n/\log n)$ against $O(\log n)$ total redundancy on parametric classes.
