@@ -4,206 +4,753 @@ title: Formal Systems and Proofs
 
 # Formal Systems and Proofs
 
-A formal system gives a completely mechanical way to generate theorems from axioms using fixed rules of inference. The goal is to capture the notion of "provable" purely syntactically, without appeal to meaning, so that correctness of a proof can be checked by a machine (or a very careful human following rules blindly).
+A formal system replaces the informal notion of proof with a finite object that can be checked mechanically. Fix a language, fix a set of axioms, fix a handful of rules of inference, and "$\phi$ is provable" becomes a statement about finite strings of symbols — decidable to verify, even when it is undecidable to discover.
 
-Classical examples: Hilbert-style axiomatic systems, natural deduction (Gentzen), sequent calculus. All of them aim at the same theorems when they are sound and complete for the same semantics.
+Running alongside it is a second, entirely different relation. Semantic entailment asks whether $\phi$ is true in every structure satisfying the hypotheses, a condition quantifying over structures of every cardinality. The central fact of first-order logic is that these two relations, built from unrelated materials, coincide. Soundness gives one inclusion by an induction any careful reader can run; Gödel's completeness theorem gives the other, and its proof — the Henkin construction — builds a model out of syntax itself. From that one theorem, compactness and the Löwenheim–Skolem theorems fall out as corollaries, and the chapter ends where the method reaches its limit: validity is provable, but not decidable.
 
-## Formal Deduction and Inference Rules
+## Axioms, Rules, and Derivations
 
 <!-- section: deduction -->
 
-Formal systems turn the intuitive idea of "proof" into a purely mechanical, syntax-driven process that a computer (or a meticulous clerk) can verify without ever understanding what the symbols mean. This separation of syntax from semantics is what makes logic foundational for computer science, automated theorem proving, and the study of what can and cannot be proved.
+A formal system is specified by three pieces of data, and the whole point of the specification is that nothing else is permitted to enter a proof.
 
 :::definition[Formal system]{#formal-system}
-A **formal system** has three ingredients:
+A **formal system** $S$ consists of
 
-- A language (symbols, well-formed formulas).
-- A set of axioms (or axiom schemas), accepted without proof.
-- Rules of inference (e.g., modus ponens: from $\phi$ and $\phi\to\psi$ infer $\psi$).
+1. a **language**: a set of symbols together with a rule, decidable by inspection, saying which finite strings count as **well-formed formulas**;
+2. a set of **axioms**, a distinguished set of well-formed formulas, usually given as **axiom schemas** — patterns every instance of which is an axiom;
+3. a set of **rules of inference**, each a relation between a finite list of premises and a conclusion.
+
+$S$ is **effective** if the three conditions "is a formula", "is an axiom" and "follows from these premises by that rule" are all decidable.
 :::
 
-Different styles—Hilbert systems, natural deduction, sequent calculus—package these ingredients differently, yet they are inter-translatable when they are sound and complete for the same semantics.
+Effectiveness is not decoration. Everything in this chapter that deserves the word *formal* rests on it: a derivation can be checked by a clerk who does not know what the symbols mean, and — in the last section — the set of theorems can be enumerated by a machine.
 
-In this section you will learn the common skeleton, see a concrete example of a formal proof, understand the crucial distinction between syntactic provability and semantic truth (soundness and completeness), and why these notions matter for the later incompleteness results.
+:::definition[Derivation]{#derivation}
+Let $\Gamma$ be a set of formulas. A **derivation of $\phi$ from $\Gamma$** in $S$ is a finite sequence $\psi_1,\dots,\psi_n$ of formulas with $\psi_n = \phi$, in which each $\psi_k$ is
 
-:::definition[Proof]{#proof-definition}
-A **proof** of $\psi$ from assumptions $\Gamma$ is a finite sequence of formulas ending in $\psi$ where each line is an axiom, an assumption, or follows from earlier lines by a rule. We write $\Gamma \vdash \psi$ when such a proof exists.
+- an axiom of $S$, or
+- a member of $\Gamma$, or
+- the conclusion of a rule of $S$ whose premises all occur among $\psi_1,\dots,\psi_{k-1}$.
+
+We write $\Gamma \vdash_S \phi$, read "$\Gamma$ **derives** $\phi$", when such a sequence exists, and drop the subscript when $S$ is fixed. A formula with $\varnothing \vdash \phi$ is a **theorem** of $S$, written $\vdash \phi$.
 :::
 
-Natural deduction uses introduction and elimination rules for each connective and quantifier, producing tree-shaped or linear proofs that mirror intuitive reasoning.
+:::notation
+The turnstile $\vdash$ is a syntactic symbol belonging to the metatheory: $\Gamma \vdash \phi$ is a statement *about* the system, not a formula *of* it, and it is never written inside a formula. Its semantic counterpart $\models$, introduced in the next section, is a different relation with a different definition, and the two are kept apart throughout — conflating them makes the completeness theorem unstatable.
+:::
 
 :::intuition
-Think of it as a board game with strict legal moves. Axioms are starting positions you may place for free. Rules tell you exactly how to add the next piece. If you can legally reach a position that spells your target formula, you have a proof.
-
-No "intuition" or "it feels right" is allowed; every step must cite a rule and prior lines.
+A derivation is a board game with no hidden information. Axioms are positions you may place for free; rules say exactly which position may be added next. A referee who knows only the rulebook can confirm a win by scanning the record of play, and cannot be persuaded by a move that merely *feels* right.
 :::
 
-:::example
-Let us build a full Hilbert-style proof of $p \to p$ (the identity law) using only *modus ponens* and two standard axiom schemas of implicational logic:
+Hilbert systems take the extreme position: many axiom schemas, one rule. The following three schemas, with modus ponens, are complete for the $\{\to,\neg\}$-fragment of propositional logic, and they are the system we work in for the rest of the section. Here $\phi,\psi,\chi$ range over all formulas, so each line is a schema with infinitely many instances.
+
+:::definition[The Hilbert system $H$]{#hilbert-system}
+The axioms of $H$ are all instances of
+
+$$\textbf{A1:}\quad \phi \to (\psi \to \phi),$$
+
+$$\textbf{A2:}\quad \bigl(\phi \to (\psi \to \chi)\bigr) \to \bigl((\phi\to\psi) \to (\phi\to\chi)\bigr),$$
+
+$$\textbf{A3:}\quad (\neg\psi \to \neg\phi) \to (\phi \to \psi),$$
+
+and the sole rule is **modus ponens** (MP): from $\phi$ and $\phi\to\psi$ infer $\psi$.
+:::
+
+:::example[Deriving the identity law]
+Show that $\vdash_H p \to p$.
 :::
 
 :::solution
-**A1:** $\phi \to (\psi \to \phi)$
-**A2:** $(\phi \to (\psi \to \chi)) \to ((\phi \to \psi) \to (\phi \to \chi))$
+The obstacle is that $H$ has no way to "assume $p$": every line must be an axiom instance or an MP conclusion. The trick is to use A2 with $\psi$ taken to be $p\to p$, so that two applications of MP strip the implication down to the target.
 
-The trick is to pick the substitutions so that two applications of modus ponens collapse everything down to $p \to p$.
+1. $\bigl(p \to ((p \to p) \to p)\bigr) \to \bigl((p \to (p \to p)) \to (p \to p)\bigr)$ — A2 with $\phi=p$, $\psi=p\to p$, $\chi=p$.
+2. $p \to ((p \to p) \to p)$ — A1 with $\phi=p$, $\psi=p\to p$.
+3. $(p \to (p \to p)) \to (p \to p)$ — MP on 2 and 1.
+4. $p \to (p \to p)$ — A1 with $\phi=p$, $\psi=p$.
+5. $p \to p$ — MP on 4 and 3.
 
-$(p \to ((p \to p) \to p)) \to ((p \to (p \to p)) \to (p \to p))$
-   — instance of **A2** with $\phi = p$, $\psi = p \to p$, $\chi = p$.
-$p \to ((p \to p) \to p)$
-   — instance of **A1** with $\phi = p$, $\psi = p \to p$.
-$(p \to (p \to p)) \to (p \to p)$
-   — **MP** on lines 1 and 2: line 2 is exactly the antecedent of line 1, so we detach its consequent.
-$p \to (p \to p)$
-   — instance of **A1** with $\phi = p$, $\psi = p$.
-$p \to p$
-   — **MP** on lines 3 and 4: line 4 is the antecedent of line 3, so we detach $p \to p$.
-
-**Sanity check:** every line is either an axiom instance or follows by modus ponens from two earlier lines, and the last line is the target $p \to p$ — so this is a valid five-line proof. Notice we never once appealed to what $p$ *means*; the derivation is pure symbol-pushing.
-
-In natural deduction the same theorem takes a single, far more intuitive step: assume $p$, observe that $p$ is now derived, then *discharge* the assumption via implication-introduction ($\to$I) to conclude $p \to p$. The Hilbert proof is longer precisely because it trades the convenient "assume and discharge" move for raw axioms — a recurring theme when comparing proof styles.
+Five lines, no appeal anywhere to the meaning of $p$. □
 :::
 
-## Soundness
+Five lines for $p\to p$ is a fair warning about Hilbert systems: they are built to be easy to reason *about*, not to reason *in*. Their metatheory is short — one rule to check in the soundness induction — and that is exactly the trade we want when proving theorems about provability.
+
+Natural deduction, due to Gentzen, makes the opposite trade. It has no axioms at all; each connective carries an **introduction** rule saying how to prove a formula with that connective as its main symbol, and an **elimination** rule saying what may be extracted from one. For implication:
+
+$$\to\!\textbf{I:}\quad \frac{\Gamma,\phi \vdash \psi}{\Gamma \vdash \phi\to\psi} \qquad\qquad \to\!\textbf{E:}\quad \frac{\Gamma\vdash\phi\to\psi \quad \Gamma\vdash\phi}{\Gamma\vdash\psi}$$
+
+The rule $\to$I formalises the move every mathematician makes without comment: *suppose $\phi$; … ; therefore $\psi$; hence if $\phi$ then $\psi$*. The assumption $\phi$ is **discharged** — used inside the subproof, absent from the conclusion. In natural deduction $p\to p$ is one line: assume $p$, discharge it.
+
+Hilbert systems have no such rule. What they have instead is a theorem of the metatheory saying the rule is admissible: anything $\to$I would let you conclude, $H$ can already derive. That is the deduction theorem, and it is what makes $H$ usable at all.
+
+:::theorem[Deduction theorem]{#deduction-theorem}
+In the system $H$, for every set of formulas $\Gamma$ and all formulas $\phi,\psi$:
+
+$$\Gamma \cup \{\phi\} \vdash \psi \quad\Longleftrightarrow\quad \Gamma \vdash \phi\to\psi.$$
+:::
+
+:::proof
+($\Leftarrow$) Suppose $\Gamma \vdash \phi\to\psi$. Copy that derivation, append the line $\phi$ (a member of $\Gamma\cup\{\phi\}$), and append $\psi$ by MP. This direction needs nothing beyond the definition of a derivation.
+
+($\Rightarrow$) Suppose $\psi_1,\dots,\psi_n$ is a derivation of $\psi=\psi_n$ from $\Gamma\cup\{\phi\}$. We show by strong induction on $k$ that $\Gamma \vdash \phi\to\psi_k$ for every $k\le n$; the case $k=n$ is the claim.
+
+*Case 1: $\psi_k$ is an axiom of $H$, or $\psi_k\in\Gamma$.* Then $\Gamma\vdash\psi_k$ in one line. The A1 instance $\psi_k \to (\phi\to\psi_k)$ is an axiom, so MP gives $\Gamma\vdash\phi\to\psi_k$ in three lines.
+
+*Case 2: $\psi_k$ is $\phi$ itself.* Then $\phi\to\psi_k$ is $\phi\to\phi$, and the derivation in Example *Deriving the identity law* goes through with $\phi$ in place of $p$, using only axioms, so $\Gamma\vdash\phi\to\phi$ with no hypotheses at all. This is the case that forces A2 into the axiom list: from A1 alone no derivation of $\phi\to\phi$ exists, and the theorem would fail.
+
+*Case 3: $\psi_k$ follows by MP from earlier lines $\psi_i$ and $\psi_j = (\psi_i\to\psi_k)$, with $i,j<k$.* By the induction hypothesis,
+
+$$\Gamma \vdash \phi\to\psi_i \qquad\text{and}\qquad \Gamma \vdash \phi\to(\psi_i\to\psi_k).$$
+
+Take the A2 instance
+
+$$\bigl(\phi\to(\psi_i\to\psi_k)\bigr) \to \bigl((\phi\to\psi_i)\to(\phi\to\psi_k)\bigr).$$
+
+MP with the second induction hypothesis yields $\Gamma\vdash(\phi\to\psi_i)\to(\phi\to\psi_k)$, and MP with the first yields $\Gamma\vdash\phi\to\psi_k$.
+
+Every line of the original derivation falls under exactly one case, so the induction is complete.
+:::
+
+Read the proof again watching what it consumed. Case 1 used A1, Case 2 used A1 and A2, Case 3 used A2, and nothing anywhere used A3. The deduction theorem is a theorem about the *implicational* fragment: it holds in any Hilbert system containing A1 and A2 and closed under MP. That is worth remembering, because the same argument is reused verbatim for first-order systems.
+
+:::pitfall
+In first-order logic the deduction theorem needs a side condition. If generalisation (from $\phi$ infer $\forall x\,\phi$) is a rule of the system, then $\{\phi(x)\}\vdash\forall x\,\phi(x)$, yet $\vdash \phi(x)\to\forall x\,\phi(x)$ is false — read $\phi(x)$ as "$x=c$" in a structure with two elements. The repair is to forbid generalising on a variable occurring free in an undischarged hypothesis.
+:::
+
+:::example[Transitivity of implication, without a subproof]
+Derive $\{\phi\to\psi,\ \psi\to\chi\} \vdash_H \phi\to\chi$.
+:::
+
+:::solution
+By the deduction theorem it is enough to derive $\chi$ from $\{\phi\to\psi,\ \psi\to\chi,\ \phi\}$, which is immediate: $\phi$ with $\phi\to\psi$ gives $\psi$ by MP, and $\psi$ with $\psi\to\chi$ gives $\chi$ by MP. Three lines, then one appeal to the theorem.
+
+Unwinding the theorem's proof mechanically would turn those three lines into a derivation of about a dozen, every one an A1 or A2 instance. That is the standard experience, and the reason one proves the deduction theorem once rather than repeating the construction each time. □
+:::
+
+:::remark
+Three properties of $\vdash$ follow straight from Definition *Derivation* and are used without comment from here on. **Monotonicity**: if $\Gamma\vdash\phi$ and $\Gamma\subseteq\Delta$ then $\Delta\vdash\phi$, since the same sequence is still a derivation. **Finiteness**: if $\Gamma\vdash\phi$ then $\Gamma_0\vdash\phi$ for some finite $\Gamma_0\subseteq\Gamma$, since a derivation is a finite sequence and can cite only finitely many members of $\Gamma$. **Transitivity (cut)**: if $\Gamma\vdash\phi$ and $\Delta\cup\{\phi\}\vdash\psi$ then $\Gamma\cup\Delta\vdash\psi$, by concatenation. Finiteness is what will later deliver compactness, and it is a property of $\vdash$ alone — $\models$ has no comparable reason to enjoy it.
+:::
+
+## Truth in a Structure: Entailment Against Derivability
+
+<!-- section: entailment -->
+
+Nothing in the previous section mentioned truth. A derivation is a pattern of symbols, and $\Gamma\vdash\phi$ was settled by looking at finite strings. Semantics starts from the opposite end: it supplies the symbols with meanings and asks what is true.
+
+:::definition[Structure]{#structure}
+Let $L$ be a first-order language with relation symbols, function symbols and constant symbols. An **$L$-structure** $\mathcal{M}$ consists of a non-empty set $M$, the **domain**, together with
+
+- a relation $R^{\mathcal{M}}\subseteq M^n$ for each $n$-ary relation symbol $R$ of $L$,
+- a function $f^{\mathcal{M}}:M^n\to M$ for each $n$-ary function symbol $f$,
+- an element $c^{\mathcal{M}}\in M$ for each constant symbol $c$.
+:::
+
+A structure interprets the symbols; an **assignment** $s$, mapping variables into $M$, interprets the free variables. Together they determine, for every formula, whether it holds — and Tarski's definition makes "determine" precise by recursion on the construction of the formula.
+
+:::definition[Satisfaction]{#satisfaction}
+For an $L$-structure $\mathcal{M}$ and an assignment $s$, write $\mathcal{M}\models\phi[s]$ ("$\mathcal{M}$ **satisfies** $\phi$ under $s$") according to the clauses
+
+- $\mathcal{M}\models (t_1 = t_2)[s]$ iff $t_1$ and $t_2$ denote the same element of $M$ under $s$;
+- $\mathcal{M}\models R(t_1,\dots,t_n)[s]$ iff the denoted tuple lies in $R^{\mathcal{M}}$;
+- $\mathcal{M}\models \neg\phi[s]$ iff $\mathcal{M}\models\phi[s]$ fails;
+- $\mathcal{M}\models (\phi\to\psi)[s]$ iff $\mathcal{M}\models\phi[s]$ fails or $\mathcal{M}\models\psi[s]$ holds;
+- $\mathcal{M}\models \forall x\,\phi[s]$ iff $\mathcal{M}\models\phi[s(x\mapsto a)]$ for every $a\in M$.
+
+For a **sentence** — a formula with no free variables — the assignment is irrelevant, and we write $\mathcal{M}\models\phi$.
+:::
+
+:::definition[Entailment, validity, satisfiability]{#entailment-definition}
+Let $\Gamma$ be a set of sentences and $\phi$ a sentence.
+
+- $\mathcal{M}$ is a **model** of $\Gamma$, written $\mathcal{M}\models\Gamma$, if $\mathcal{M}\models\gamma$ for every $\gamma\in\Gamma$.
+- $\Gamma$ **entails** $\phi$, written $\Gamma\models\phi$, if every model of $\Gamma$ is a model of $\phi$.
+- $\phi$ is **valid**, written $\models\phi$, if every structure is a model of $\phi$.
+- $\Gamma$ is **satisfiable** if it has at least one model.
+:::
+
+:::notation
+The symbol $\models$ is now doing two jobs, and both are standard. With a structure on the left ($\mathcal{M}\models\phi$) it is satisfaction; with a set of sentences on the left ($\Gamma\models\phi$) it is entailment. The left argument disambiguates. What $\models$ never means is derivability: $\Gamma\models\phi$ mentions no axioms, no rules and no proofs, and $\Gamma\vdash\phi$ mentions no structures.
+:::
+
+The two relations differ in kind, not merely in definition, and it pays to say exactly how.
+
+| | $\Gamma\vdash\phi$ | $\Gamma\models\phi$ |
+|---|---|---|
+| decided by | a finite derivation | all structures interpreting $L$ |
+| witness | a finite object one can write down | none in general |
+| depends on | the chosen axioms and rules | nothing but the language |
+| verifying a positive case | mechanical | a proof in the metatheory |
+| verifying a negative case | no finite object certifies it directly | one countermodel suffices |
+
+:::intuition
+$\vdash$ is a claim about a *search space*: somewhere among the finite strings there sits a certificate. $\models$ is a claim about a *universe*: every structure whatsoever, of every size, makes $\phi$ true whenever it makes $\Gamma$ true. There is no a priori reason for these to have anything to do with each other, and for most consequence relations they do not. That first-order logic makes them agree is a theorem, not a definition.
+:::
+
+Refuting an entailment is the easy direction, and the technique is always the same: exhibit one structure.
+
+:::example[A non-entailment]
+Let $L$ have one binary relation $R$. Show that
+
+$$\forall x\,\exists y\,R(x,y) \;\not\models\; \exists y\,\forall x\,R(x,y).$$
+:::
+
+:::solution
+Take $M=\mathbb{Z}$ and $R^{\mathcal{M}} = \{(a,b) : b > a\}$. Every integer has some larger integer, so $\mathcal{M}\models\forall x\,\exists y\,R(x,y)$. But no integer $b$ exceeds every integer $a$, so $\mathcal{M}\models\exists y\,\forall x\,R(x,y)$ fails.
+
+One structure satisfying the hypothesis and falsifying the conclusion is exactly what "not every model of the hypothesis is a model of the conclusion" asks for. □
+:::
+
+:::pitfall
+A countermodel refutes an *entailment*, never a *derivation*. The two tasks are related only through the soundness and completeness theorems, and it is worth noticing which theorem you are leaning on: using a countermodel to conclude $\Gamma\nvdash\phi$ is an application of soundness, in contrapositive form.
+:::
+
+:::example[Entailment with an infinite hypothesis set]
+Let $L$ contain constants $c_0,c_1,c_2,\dots$ and let
+
+$$\Gamma = \{\, c_i \neq c_j \;:\; i<j \,\}.$$
+
+Show that $\Gamma \models \exists x\,\exists y\,(x\neq y)$, and that no *finite* subset of $\Gamma$ decides the size of a model beyond a fixed bound.
+:::
+
+:::solution
+Any model of $\Gamma$ interprets $c_0$ and $c_1$ as distinct elements, so it satisfies $\exists x\exists y\,(x\neq y)$; that is the entailment. For the second claim, a finite $\Gamma_0\subseteq\Gamma$ mentions only constants among $c_0,\dots,c_N$ for some $N$, and a structure with $N+1$ elements interpreting those constants injectively — and every remaining $c_k$ arbitrarily — is a model of $\Gamma_0$.
+
+So each finite fragment is satisfiable in a finite domain, while $\Gamma$ itself is not: any model of the whole of $\Gamma$ has infinitely many elements. Hold on to this example. It is the mechanism behind every application of compactness later in the chapter, and behind the fact that "the domain is finite" is not expressible by any single first-order sentence. □
+:::
+
+:::remark
+Two conditions on a set $\Gamma$ will run in parallel for the rest of the chapter, and the notation separates them the same way. $\Gamma$ is **satisfiable** if some structure models it — a semantic condition. $\Gamma$ is **consistent** if $\Gamma\nvdash\bot$ — a syntactic one, defined in the section on consistency below.
+:::
+
+That these two conditions coincide is the completeness theorem in its sharpest form, and the sections ahead earn each direction in turn: soundness gives satisfiable $\Rightarrow$ consistent, and the Henkin construction gives consistent $\Rightarrow$ satisfiable.
+
+## Soundness: Derivability Implies Entailment
 
 <!-- section: soundness -->
 
+Soundness is the promise that the machinery of the first section never manufactures a falsehood. It is the easy half of the correspondence, and the proof is a template worth learning in full, because *every* extension of a formal system is verified by re-running it on the new axioms and rules.
+
 :::theorem[Soundness]{#soundness}
-If $\Gamma \vdash \phi$ (there is a formal proof of $\phi$ from $\Gamma$), then $\Gamma \models \phi$ (every model of $\Gamma$ is a model of $\phi$):
+For every set of sentences $\Gamma$ and every sentence $\phi$,
 
 $$\Gamma \vdash \phi \quad\Longrightarrow\quad \Gamma \models \phi.$$
 :::
 
-:::proof
-By **induction on the length (or structure) of proofs**. The two things to check are: (i) the *base case* — every axiom is valid, i.e. true in every model; and (ii) the *inductive step* — every inference rule *preserves validity*, meaning that whenever its premises hold in a model, its conclusion holds in that same model. If both hold, then every line of a proof from $\Gamma$ is true in every model of $\Gamma$, so in particular the last line $\phi$ is — which is exactly $\Gamma \models \phi$.
+The proof needs exactly two inputs, and isolating them is the whole method.
+
+:::lemma[Axioms are valid]{#axioms-valid}
+Every instance of A1, A2 and A3 is valid: it is true under every structure and assignment.
 :::
 
-In plain words: you cannot prove false things from true premises using the rules. The syntactic consequence relation $\vdash$ is contained in the semantic one $\models$.
+:::proof
+Fix a structure and assignment; each of $\phi,\psi,\chi$ then has a definite truth value, and by the satisfaction clause for $\to$ it suffices to check the four (or eight) combinations.
+
+**A1**, $\phi\to(\psi\to\phi)$. If $\phi$ is false the implication is true by the clause. If $\phi$ is true, then $\psi\to\phi$ is true, since its consequent is; so the implication is true again.
+
+**A2**, $(\phi\to(\psi\to\chi))\to((\phi\to\psi)\to(\phi\to\chi))$. Suppose the whole formula were false. Then $\phi\to(\psi\to\chi)$ is true, $\phi\to\psi$ is true and $\phi\to\chi$ is false. The last makes $\phi$ true and $\chi$ false. From $\phi$ true and $\phi\to\psi$ true, $\psi$ is true. From $\phi$ true and $\phi\to(\psi\to\chi)$ true, $\psi\to\chi$ is true; with $\psi$ true this forces $\chi$ true, contradicting $\chi$ false.
+
+**A3**, $(\neg\psi\to\neg\phi)\to(\phi\to\psi)$. Suppose it were false: then $\neg\psi\to\neg\phi$ is true while $\phi$ is true and $\psi$ is false. From $\psi$ false, $\neg\psi$ is true, so $\neg\phi$ is true, so $\phi$ is false — contradicting $\phi$ true.
+:::
+
+:::lemma[Modus ponens preserves truth]{#mp-preserves}
+If $\mathcal{M}\models\phi[s]$ and $\mathcal{M}\models(\phi\to\psi)[s]$, then $\mathcal{M}\models\psi[s]$.
+:::
+
+:::proof
+By the satisfaction clause, $\mathcal{M}\models(\phi\to\psi)[s]$ means that $\mathcal{M}\models\phi[s]$ fails or $\mathcal{M}\models\psi[s]$ holds. The first disjunct is excluded by hypothesis, so the second holds.
+:::
+
+With the two lemmas in hand, the theorem is an induction on the *position of a line in the derivation* — the standard form of "induction on derivations" for a linear proof system.
+
+:::proof
+Let $\psi_1,\dots,\psi_n$ be a derivation of $\phi=\psi_n$ from $\Gamma$, and let $\mathcal{M}$ be any model of $\Gamma$. We prove by strong induction on $k$ that $\mathcal{M}\models\psi_k$ for every $k\le n$.
+
+Fix $k$ and assume $\mathcal{M}\models\psi_i$ for all $i<k$. By Definition *Derivation*, $\psi_k$ arises in one of three ways.
+
+- $\psi_k$ is an axiom. Then $\mathcal{M}\models\psi_k$ by Lemma *Axioms are valid*, which holds in every structure and so in particular in $\mathcal{M}$.
+- $\psi_k\in\Gamma$. Then $\mathcal{M}\models\psi_k$ because $\mathcal{M}$ is a model of $\Gamma$.
+- $\psi_k$ follows by MP from $\psi_i$ and $\psi_j=(\psi_i\to\psi_k)$ with $i,j<k$. The induction hypothesis gives $\mathcal{M}\models\psi_i$ and $\mathcal{M}\models\psi_i\to\psi_k$, and Lemma *Modus ponens preserves truth* gives $\mathcal{M}\models\psi_k$.
+
+Hence $\mathcal{M}\models\psi_n=\phi$. As $\mathcal{M}$ was an arbitrary model of $\Gamma$, every model of $\Gamma$ models $\phi$, i.e. $\Gamma\models\phi$.
+:::
+
+:::remark
+The induction is on the derivation, not on the formula. Structural induction on formulas is a different tool, used in the satisfaction lemmas above; induction on derivations is what lets a proof about $\vdash$ dispose of a proof of unbounded length by looking at one line at a time. In a tree-shaped system such as natural deduction the same argument runs as induction on the height of the derivation tree, one case per rule.
+:::
 
 :::intuition
-Soundness is the "safety guarantee": the proof machine never lies. If it outputs "yes, this follows", then in reality (in every possible world consistent with your starting facts) the conclusion really does hold.
-
-If a system were unsound you could "prove" $2+2=5$ from true arithmetic axioms — a disaster for reliability.
+Soundness is a safety guarantee, and the shape of the argument says why it holds: truth is an *invariant* of the derivation process. The axioms start inside the invariant, every rule keeps you inside it, and so every line you can ever reach is inside it. An unsound system is one with either a false axiom or a rule that can step out.
 :::
 
-:::example
-Let us carry out the inductive step for one rule — modus ponens — which is the heart of any soundness proof for a Hilbert system.
+The theorem is usually applied in its contrapositive form, where it becomes a tool for proving *un*provability — otherwise a hard thing to establish, since no finite object certifies the absence of a derivation.
+
+:::corollary[Consistency from satisfiability]{#satisfiable-implies-consistent}
+If $\Gamma$ has a model, then there is no sentence $\phi$ with both $\Gamma\vdash\phi$ and $\Gamma\vdash\neg\phi$. In the vocabulary of the next section: every satisfiable set is consistent.
+:::
+
+:::proof
+Suppose $\mathcal{M}\models\Gamma$ while $\Gamma\vdash\phi$ and $\Gamma\vdash\neg\phi$. Soundness applied twice gives $\Gamma\models\phi$ and $\Gamma\models\neg\phi$, so $\mathcal{M}\models\phi$ and $\mathcal{M}\models\neg\phi$. The satisfaction clause for $\neg$ makes the second say that $\mathcal{M}\models\phi$ fails — a contradiction.
+:::
+
+:::example[Unprovability by countermodel]
+Show that $\forall x\,\exists y\,R(x,y) \nvdash \exists y\,\forall x\,R(x,y)$ in any sound system.
 :::
 
 :::solution
-**Claim:** modus ponens preserves validity: if $\mathcal{M} \models \phi$ and $\mathcal{M} \models \phi \to \psi$, then $\mathcal{M} \models \psi$.
+Example *A non-entailment* produced the structure $(\mathbb{Z}, >)$, a model of the hypothesis in which the conclusion fails; so the entailment does not hold. If the derivation existed, soundness would force the entailment. Hence no derivation exists.
 
- Fix any model $\mathcal{M}$ in which both premises are true.
-**Step 2.** Recall the truth table for implication: $\phi \to \psi$ is false in exactly one case, namely when $\phi$ is true and $\psi$ is false. Equivalently, $\phi \to \psi$ is true iff ($\phi$ is false) or ($\psi$ is true).
-**Step 3.** In $\mathcal{M}$ we have $\phi$ true, so the "$\phi$ is false" branch is ruled out. Since $\phi \to \psi$ is nonetheless true (premise 2), the only remaining branch that can make it true is "$\psi$ is true."
-**Step 4.** Hence $\mathcal{M} \models \psi$, as required.
-
-**Sanity check:** try to break it. To make the conclusion $\psi$ false while both premises hold, we would need $\phi$ true (premise 1) and $\psi$ false — but that is precisely the single row where $\phi \to \psi$ is *false*, contradicting premise 2. No such model exists, so the rule can never lead from truths to a falsehood. That is exactly what "sound" means, line by line.
+Notice what has been proved and in which system: the argument rules out a derivation in *every* sound system at once, without examining a single axiom list. That leverage is the practical value of soundness. □
 :::
 
-## Completeness and Compactness
+:::pitfall
+Soundness is not consistency, and consistency does not give it back. Consistency says the theory proves no contradiction; soundness says it proves nothing false *in the intended structure*. In the language of arithmetic the theory $T=\{\forall x\,\forall y\,(x=y)\}$ is consistent — the one-element structure is a model — yet thoroughly unsound for $\mathbb{N}$, since it proves $0=1$. The implication runs one way only: a theory sound for some structure is consistent, by Corollary *Consistency from satisfiability*.
+:::
+
+## Consistency, Maximal Consistent Sets, and Lindenbaum's Lemma
+
+<!-- section: consistency -->
+
+Completeness will be proved by building a model out of syntax. The raw material for that construction is a set of sentences so rich that it decides every question — a maximal consistent set — and this section assembles it. Everything here is pure proof theory: no structure is mentioned until the next section.
+
+:::definition[Consistency]{#consistency}
+A set of sentences $\Gamma$ is **inconsistent** if there is a sentence $\phi$ with $\Gamma\vdash\phi$ and $\Gamma\vdash\neg\phi$, and **consistent** otherwise. We abbreviate "$\Gamma$ is inconsistent" by $\Gamma\vdash\bot$.
+:::
+
+:::lemma[Ex falso]{#ex-falso}
+If $\Gamma$ is inconsistent then $\Gamma\vdash\psi$ for every sentence $\psi$. Consequently an inconsistent set derives everything, and consistency is equivalent to the existence of even one underivable sentence.
+:::
+
+:::proof
+Suppose $\Gamma\vdash\phi$ and $\Gamma\vdash\neg\phi$, and let $\psi$ be arbitrary. Continue the derivations as follows. The A1 instance $\neg\phi\to(\neg\psi\to\neg\phi)$ is an axiom, so MP with $\neg\phi$ gives $\Gamma\vdash\neg\psi\to\neg\phi$. The A3 instance $(\neg\psi\to\neg\phi)\to(\phi\to\psi)$ is an axiom, so MP gives $\Gamma\vdash\phi\to\psi$. MP with $\phi$ gives $\Gamma\vdash\psi$.
+:::
+
+This is the first place A3 has earned its keep: negation is what turns one contradiction into total collapse, which is why "consistent" is such a strong condition on a set of sentences.
+
+:::lemma[Reductio]{#reductio}
+For every set $\Gamma$ and sentence $\phi$:
+
+1. $\Gamma\cup\{\neg\phi\}$ is inconsistent if and only if $\Gamma\vdash\phi$;
+2. $\Gamma\cup\{\phi\}$ is inconsistent if and only if $\Gamma\vdash\neg\phi$.
+:::
+
+:::proof
+Both "if" directions are immediate: if $\Gamma\vdash\phi$ then $\Gamma\cup\{\neg\phi\}$ derives both $\phi$ (by monotonicity) and $\neg\phi$ (in one line), and symmetrically for (2).
+
+For the "only if" directions, suppose $\Gamma\cup\{\chi\}$ is inconsistent, where $\chi$ is $\neg\phi$ in case (1) and $\phi$ in case (2). Then $\Gamma\cup\{\chi\}\vdash\psi$ and $\Gamma\cup\{\chi\}\vdash\neg\psi$ for some $\psi$, and the deduction theorem turns these into
+
+$$\Gamma\vdash \chi\to\psi \qquad\text{and}\qquad \Gamma\vdash \chi\to\neg\psi.$$
+
+Two schemas of $H$ finish the job, one for each case:
+
+$$(\neg\phi\to\psi)\to\bigl((\neg\phi\to\neg\psi)\to\phi\bigr), \qquad (\phi\to\psi)\to\bigl((\phi\to\neg\psi)\to\neg\phi\bigr).$$
+
+Both are derivable from A1–A3 by modus ponens — routine but lengthy exercises of exactly the kind the deduction theorem exists to shorten — and two applications of MP then give $\Gamma\vdash\phi$ in case (1) and $\Gamma\vdash\neg\phi$ in case (2).
+:::
+
+:::lemma[Consistency is a finite condition]{#consistency-finite}
+$\Gamma$ is consistent if and only if every finite subset of $\Gamma$ is consistent.
+:::
+
+:::proof
+If some finite $\Gamma_0\subseteq\Gamma$ is inconsistent, monotonicity makes $\Gamma$ inconsistent. Conversely, if $\Gamma\vdash\phi$ and $\Gamma\vdash\neg\phi$, then by finiteness of $\vdash$ (Remark following the deduction theorem) there are finite $\Gamma_1,\Gamma_2\subseteq\Gamma$ with $\Gamma_1\vdash\phi$ and $\Gamma_2\vdash\neg\phi$; the finite set $\Gamma_1\cup\Gamma_2\subseteq\Gamma$ is then inconsistent.
+:::
+
+That lemma is where compactness is really born. It is a statement about $\vdash$, proved from the fact that derivations are finite, and the completeness theorem is what will transport it to the semantic side.
+
+### Sets that decide everything
+
+:::definition[Maximal consistent set]{#maximal-consistent}
+A set of sentences $\Delta$ is **maximal consistent** if $\Delta$ is consistent and no proper superset of $\Delta$ is consistent: for every sentence $\phi\notin\Delta$, the set $\Delta\cup\{\phi\}$ is inconsistent.
+:::
+
+:::lemma[Properties of a maximal consistent set]{#mcs-properties}
+Let $\Delta$ be maximal consistent. Then for all sentences $\phi,\psi$:
+
+1. $\Delta$ is deductively closed: if $\Delta\vdash\phi$ then $\phi\in\Delta$.
+2. **Negation-completeness**: exactly one of $\phi\in\Delta$, $\neg\phi\in\Delta$ holds.
+3. $(\phi\to\psi)\in\Delta$ if and only if $\phi\notin\Delta$ or $\psi\in\Delta$.
+:::
+
+:::proof
+(1) Suppose $\Delta\vdash\phi$ but $\phi\notin\Delta$. By maximality $\Delta\cup\{\phi\}$ is inconsistent, so Lemma *Reductio* (2) gives $\Delta\vdash\neg\phi$; with $\Delta\vdash\phi$ this makes $\Delta$ inconsistent, a contradiction.
+
+(2) Not both, since that would make $\Delta$ inconsistent outright. At least one: if $\phi\notin\Delta$ then $\Delta\cup\{\phi\}$ is inconsistent by maximality, so $\Delta\vdash\neg\phi$ by Lemma *Reductio* (2), and $\neg\phi\in\Delta$ by part (1) above.
+
+(3) ($\Rightarrow$) If $(\phi\to\psi)\in\Delta$ and $\phi\in\Delta$, then $\Delta\vdash\psi$ by MP, so $\psi\in\Delta$ by (1). ($\Leftarrow$) If $\psi\in\Delta$, the A1 instance $\psi\to(\phi\to\psi)$ gives $\Delta\vdash\phi\to\psi$, hence $(\phi\to\psi)\in\Delta$. If instead $\phi\notin\Delta$ then $\neg\phi\in\Delta$ by (2), and the derivation inside Lemma *Ex falso* gives $\Delta\vdash\phi\to\psi$; apply (1).
+:::
+
+:::intuition
+A maximal consistent set is an *opinionated* theory: for every sentence in the language it has already taken a side, and it never contradicts itself. Clause (3) is the striking one — the membership table for $\to$ inside $\Delta$ is exactly the truth table for $\to$. That coincidence is not luck; it is the reason a maximal consistent set can be read as a model, which is precisely what the next section does.
+:::
+
+:::pitfall
+Maximal consistent is not the same as complete-and-recursively-axiomatised. Lindenbaum's lemma below hands you a maximal consistent extension of any consistent theory, so every consistent theory has a negation-complete extension — and Gödel's first incompleteness theorem is not thereby contradicted. What Gödel rules out is a negation-complete *effective* extension of arithmetic; the set produced below is in general not decidable, and the construction gives no way to recognise its members.
+:::
+
+:::theorem[Lindenbaum's lemma]{#lindenbaum}
+Every consistent set of sentences $\Gamma$ is contained in a maximal consistent set $\Delta$.
+:::
+
+:::proof
+Suppose first that the language is countable, so the sentences may be enumerated as $\phi_0,\phi_1,\phi_2,\dots$. Define an increasing chain of sets by
+
+$$\Delta_0 = \Gamma, \qquad \Delta_{n+1} = \begin{cases} \Delta_n\cup\{\phi_n\} & \text{if this set is consistent},\\ \Delta_n & \text{otherwise},\end{cases}$$
+
+and put $\Delta=\bigcup_{n\ge0}\Delta_n$.
+
+*Each $\Delta_n$ is consistent*, by induction: $\Delta_0=\Gamma$ is consistent by hypothesis, and the recursion adds $\phi_n$ only when consistency survives.
+
+*$\Delta$ is consistent.* Suppose not. By Lemma *Consistency is a finite condition* some finite $\Delta'\subseteq\Delta$ is inconsistent. Each member of $\Delta'$ entered at some stage, and $\Delta'$ is finite, so all of them lie in $\Delta_N$ for $N$ the largest such stage — the chain is increasing. Then $\Delta_N$ is inconsistent by monotonicity, contradicting the previous paragraph.
+
+*$\Delta$ is maximal.* Let $\phi\notin\Delta$ and let $n$ be its index in the enumeration, $\phi=\phi_n$. Since $\phi_n\notin\Delta\supseteq\Delta_{n+1}$, the recursion must have taken the second branch, i.e. $\Delta_n\cup\{\phi_n\}$ was inconsistent. As $\Delta_n\subseteq\Delta$, monotonicity makes $\Delta\cup\{\phi\}$ inconsistent too.
+
+For an arbitrary language, replace the enumeration by Zorn's lemma. Order by inclusion the set $P$ of consistent supersets of $\Gamma$; it is non-empty since $\Gamma\in P$. If $C\subseteq P$ is a chain, then $\bigcup C$ is consistent — any inconsistency would involve a finite subset, which by the chain property lies inside a single member of $C$ — so $\bigcup C\in P$ is an upper bound for $C$. Zorn's lemma supplies a maximal element $\Delta$ of $P$, and maximality in $P$ is exactly maximal consistency.
+:::
+
+:::remark
+The two arguments are the same argument. Both rest entirely on Lemma *Consistency is a finite condition*: consistency is a property of finite character, and a property of finite character is preserved under unions of chains. The countable case simply replaces the choice principle with an explicit enumeration, which is why it needs no appeal to the axiom of choice — worth noting, because the general Lindenbaum lemma, and hence completeness for uncountable languages, genuinely does use choice (the Boolean prime ideal theorem suffices).
+:::
+
+:::example[Maximal consistent sets need not be unique]
+Let $\Gamma=\varnothing$ in a propositional language with one atom $p$. Describe the maximal consistent sets extending $\Gamma$.
+:::
+
+:::solution
+By negation-completeness, a maximal consistent $\Delta$ contains exactly one of $p$, $\neg p$. Each choice extends to a maximal consistent set: take $\Delta^+$ to be all sentences true under the valuation $p\mapsto\text{true}$, and $\Delta^-$ all sentences true under $p\mapsto\text{false}$. Both are consistent (each is the set of sentences satisfied by an actual valuation, so Corollary *Consistency from satisfiability* applies) and each is negation-complete, hence maximal by property (2) read backwards.
+
+So there are exactly two, one per valuation of $p$. Lindenbaum's lemma promises *a* maximal extension, never a canonical one — and the ambiguity is not a defect: distinct maximal consistent sets are what distinct models look like from the syntactic side. □
+:::
+
+## Gödel's Completeness Theorem
 
 <!-- section: completeness -->
 
+Soundness said the proof system is safe. Completeness says it is not timid: everything that follows semantically is already derivable, so the finite certificates of the first section exhaust the infinitary relation of the second.
+
 :::theorem[Gödel's completeness theorem]{#completeness}
-For first-order logic, if $\Gamma \models \phi$ (semantic consequence), then $\Gamma \vdash \phi$ (there exists a formal proof):
+Let $\Gamma$ be a set of sentences and $\phi$ a sentence of a first-order language. Then
 
 $$\Gamma \models \phi \quad\Longrightarrow\quad \Gamma \vdash \phi.$$
+
+Combined with Theorem *Soundness*, the two relations coincide: $\Gamma\vdash\phi$ if and only if $\Gamma\models\phi$.
 :::
 
-Together with soundness we have the perfect match: syntactic provability = semantic entailment.
+Why is this surprising? $\Gamma\models\phi$ quantifies over every structure interpreting the language — domains of every cardinality, a collection far too large to inspect. The theorem says that this unbounded semantic fact is always witnessed by a finite string of symbols. Nothing in the definitions suggests it; the proof has to *produce* the derivation, or produce something equivalent to it.
 
-Why should completeness even be possible? Semantic entailment $\Gamma \models \phi$ quantifies over *all* models — potentially uncountably many, of every size. It is a genuine surprise that this infinite semantic fact can always be witnessed by a single *finite* proof. That is the content of the completeness theorem, and it is what makes formal proof a faithful stand-in for truth-in-all-models.
+The standard route, due to Henkin, produces neither directly. It proves a statement about consistency instead, and lets Lemma *Reductio* convert it.
 
-:::theorem[Compactness]{#compactness}
-If every finite subset of $\Gamma$ is satisfiable (has a model), then the whole (possibly infinite) $\Gamma$ is satisfiable.
+:::theorem[Model existence]{#model-existence}
+Every consistent set of sentences has a model.
 :::
 
 :::proof
-It follows from soundness and completeness. Suppose $\Gamma$ had *no* model. Then $\Gamma \models \bot$ (it entails a contradiction vacuously), so by completeness $\Gamma \vdash \bot$. But a proof is a *finite* sequence, so it can only cite finitely many members of $\Gamma$; call them $\Gamma_0 \subseteq \Gamma$. Then $\Gamma_0 \vdash \bot$, and by soundness $\Gamma_0$ has no model — contradicting the hypothesis that every finite subset is satisfiable. So $\Gamma$ must have a model after all.
+*(Completeness, granted model existence.)* Suppose $\Gamma\models\phi$ and, for contradiction, $\Gamma\nvdash\phi$. By Lemma *Reductio* (1), $\Gamma\cup\{\neg\phi\}$ is consistent, so by model existence it has a model $\mathcal{M}$. Then $\mathcal{M}\models\Gamma$, so $\Gamma\models\phi$ gives $\mathcal{M}\models\phi$; but $\mathcal{M}\models\neg\phi$ says $\mathcal{M}\models\phi$ fails. Contradiction, so $\Gamma\vdash\phi$.
+
+The work is therefore entirely in model existence, proved below.
 :::
 
-The single word doing the work is "finite": proofs cannot reach into infinitely much of the theory at once. Compactness is equivalent to completeness in many settings and has powerful consequences (e.g., existence of non-standard models of arithmetic).
+The idea of the construction is startling on first meeting: if the sentences cannot be interpreted by anything else, interpret them by *themselves*. The domain of the model will be built from the closed terms of the language, and a sentence will be declared true exactly when it belongs to a maximal consistent set. Two obstacles stand in the way, and the construction is designed around them.
+
+**Obstacle 1: existential sentences need witnesses.** A maximal consistent $\Delta$ may contain $\exists x\,\phi(x)$ while containing no closed term $t$ with $\phi(t)\in\Delta$. The term model would then have to make $\exists x\,\phi(x)$ true with nothing in its domain to satisfy $\phi$. The repair is to add constants that supply the missing witnesses.
+
+**Obstacle 2: equality.** The terms $t$ and $u$ are different strings, but $\Delta$ may contain $t=u$, which the model must respect. The repair is a quotient.
+
+:::definition[Henkin theory]{#henkin-theory}
+A set of sentences $\Delta$ in a language $L$ **has witnesses** (is a **Henkin theory**) if for every formula $\phi(x)$ with one free variable there is a closed term $c$ of $L$ such that
+
+$$\bigl(\exists x\,\phi(x) \to \phi(c)\bigr) \in \Delta.$$
+:::
+
+:::lemma[Witnesses can be added]{#henkin-extension}
+Let $\Gamma$ be a consistent set of $L$-sentences. Then there is a language $L^{*}\supseteq L$, obtained by adding new constant symbols, and a consistent set $\Gamma^{*}\supseteq\Gamma$ of $L^{*}$-sentences which has witnesses. If $L$ is countable, so is $L^{*}$.
+:::
+
+:::proof
+For each $L$-formula $\phi(x)$ with one free variable introduce a *fresh* constant $c_\phi$, and let $L_1 = L\cup\{c_\phi\}$. Put
+
+$$\Gamma_1 = \Gamma \cup \bigl\{\, \exists x\,\phi(x)\to\phi(c_\phi) \;:\; \phi(x) \text{ an } L\text{-formula with one free variable} \,\bigr\}.$$
+
+*$\Gamma_1$ is consistent.* By Lemma *Consistency is a finite condition* it is enough to check finite subsets, so suppose finitely many Henkin axioms were inconsistent with $\Gamma$; take one of them, for the formula $\phi$, added last. Reductio and the deduction theorem give $\Gamma'\vdash\neg(\exists x\,\phi(x)\to\phi(c_\phi))$ for the remaining set $\Gamma'$, whence $\Gamma'\vdash\exists x\,\phi(x)$ and $\Gamma'\vdash\neg\phi(c_\phi)$. But $c_\phi$ is fresh: it occurs nowhere in $\Gamma'$, so it behaves as a free variable, and generalising on it gives $\Gamma'\vdash\forall x\,\neg\phi(x)$ — contradicting $\Gamma'\vdash\exists x\,\phi(x)$. This freshness argument is the heart of the lemma; it is exactly the side condition on generalisation from the Pitfall in the first section, used here in the direction it was designed for.
+
+*Iterate.* The new constants create new formulas, which need witnesses of their own, so repeat: $L_{n+1}$ and $\Gamma_{n+1}$ are built from $L_n$ and $\Gamma_n$ the same way. Set $L^{*}=\bigcup_n L_n$ and $\Gamma^{*}=\bigcup_n\Gamma_n$. The union is consistent, again because an inconsistency would be finite and would therefore already live in some $\Gamma_n$. Every $L^{*}$-formula has all its constants in some $L_n$, so its witness axiom was added at stage $n+1$: $\Gamma^{*}$ has witnesses. Each stage adds countably many constants to a countable language, so $L^{*}$ is countable when $L$ is.
+:::
+
+:::lemma[Truth lemma]{#truth-lemma}
+Let $\Delta$ be a maximal consistent Henkin theory in a language $L^{*}$. Define a structure $\mathcal{M}_\Delta$ as follows. On the set of closed $L^{*}$-terms put $t\sim u$ iff $(t=u)\in\Delta$; take the domain to be the set of classes $[t]$; interpret each constant $c$ as $[c]$, each function symbol by $f^{\mathcal{M}}([t_1],\dots,[t_n]) = [f(t_1,\dots,t_n)]$, and each relation symbol by $([t_1],\dots,[t_n])\in R^{\mathcal{M}}$ iff $R(t_1,\dots,t_n)\in\Delta$. Then for every $L^{*}$-sentence $\sigma$,
+
+$$\mathcal{M}_\Delta \models \sigma \quad\Longleftrightarrow\quad \sigma\in\Delta.$$
+:::
+
+:::proof
+First, $\sim$ is an equivalence relation and the interpretations are well defined, because $\Delta$ is deductively closed and the equality axioms (reflexivity, symmetry, transitivity, congruence for $f$ and $R$) are derivable; deductive closure, Lemma *Properties of a maximal consistent set* (1), puts their instances in $\Delta$. The domain is non-empty since $L^{*}$ has constants.
+
+Now induct on the number of connectives and quantifiers in $\sigma$.
+
+*Atomic.* $\mathcal{M}_\Delta\models R(t_1,\dots,t_n)$ holds iff $R(t_1,\dots,t_n)\in\Delta$, by definition of $R^{\mathcal{M}}$; likewise for $t=u$ by definition of $\sim$.
+
+*Negation.* $\mathcal{M}_\Delta\models\neg\sigma$ iff $\mathcal{M}_\Delta\models\sigma$ fails iff (induction hypothesis) $\sigma\notin\Delta$ iff (negation-completeness, property (2)) $\neg\sigma\in\Delta$.
+
+*Implication.* $\mathcal{M}_\Delta\models\sigma\to\tau$ iff $\mathcal{M}_\Delta\models\sigma$ fails or $\mathcal{M}_\Delta\models\tau$, which by the induction hypothesis is "$\sigma\notin\Delta$ or $\tau\in\Delta$", which is $(\sigma\to\tau)\in\Delta$ by property (3).
+
+*Existential.* Write $\exists x\,\phi(x)$ for $\neg\forall x\,\neg\phi(x)$. Suppose $\exists x\,\phi(x)\in\Delta$. Because $\Delta$ has witnesses, $\exists x\,\phi(x)\to\phi(c)\in\Delta$ for some closed term $c$, so $\phi(c)\in\Delta$ by MP and deductive closure, so $\mathcal{M}_\Delta\models\phi(c)$ by the induction hypothesis — and $[c]$ is an element of the domain satisfying $\phi$. Conversely, if $\mathcal{M}_\Delta\models\exists x\,\phi(x)$ then some class $[t]$ satisfies $\phi$, so $\phi(t)\in\Delta$ by the induction hypothesis, and $\phi(t)\to\exists x\,\phi(x)$ is derivable, so $\exists x\,\phi(x)\in\Delta$.
+
+Every element of the domain is $[t]$ for a closed term $t$ — this is why the witnesses were needed, and it is the only point where a term model differs from an arbitrary structure. The universal case follows from the existential one and negation.
+:::
+
+The three lemmas now assemble with nothing left over.
+
+:::proof
+*(Model existence.)* Let $\Gamma$ be consistent. By Lemma *Witnesses can be added*, extend it to a consistent $\Gamma^{*}$ with witnesses in a language $L^{*}$. By Lindenbaum's lemma, extend $\Gamma^{*}$ to a maximal consistent set $\Delta\supseteq\Gamma^{*}$ of $L^{*}$-sentences; adding sentences preserves the witness property, so $\Delta$ is a maximal consistent Henkin theory. By the truth lemma, $\mathcal{M}_\Delta\models\sigma$ for every $\sigma\in\Delta$, in particular for every $\sigma\in\Gamma$. Finally, discard the interpretations of the constants of $L^{*}\setminus L$: the resulting $L$-structure still models $\Gamma$, since the truth of an $L$-sentence does not depend on symbols it never mentions.
+:::
+
+:::figure[The Henkin construction. The consistent set $\Gamma$ is enlarged twice — first by witness axioms in an expanded language, then by Lindenbaum's lemma to a maximal consistent $\Delta$ — and the truth lemma converts the final set into the term model $\mathcal{M}_\Delta$, whose elements are equivalence classes of closed terms. Each enlargement preserves consistency; only the last step leaves syntax.]{#henkin-tower}
+{
+  "type": "plot",
+  "x": [0, 12.4],
+  "y": [0, 6.2],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "region", "points": [[0.4, 0.4], [6.6, 0.4], [6.6, 5.8], [0.4, 5.8]], "tone": "muted" },
+    { "kind": "region", "points": [[1.1, 1.5], [5.9, 1.5], [5.9, 5.1], [1.1, 5.1]], "tone": "alt" },
+    { "kind": "region", "points": [[2.1, 2.3], [4.9, 2.3], [4.9, 4.3], [2.1, 4.3]], "tone": "accent" },
+    { "kind": "region", "points": [[8.6, 1.9], [12.0, 1.9], [12.0, 4.3], [8.6, 4.3]], "tone": "result" },
+    { "kind": "arrow", "from": [6.9, 3.1], "to": [8.3, 3.1], "tone": "result" },
+    { "kind": "text", "at": [3.5, 3.3], "text": "consistent set" },
+    { "kind": "text", "at": [3.5, 1.95], "text": "plus witness axioms" },
+    { "kind": "text", "at": [3.5, 0.85], "text": "maximal consistent" },
+    { "kind": "text", "at": [7.6, 3.8], "text": "truth lemma" },
+    { "kind": "text", "at": [10.3, 3.1], "text": "term model" }
+  ]
+}
+:::
 
 :::intuition
-Completeness: if something is *true in all models* of your premises, then there is a finite formal proof of it that the rule-following machine can find.
-
-Compactness: if no finite piece of your theory leads to contradiction, the whole infinite theory is still consistent. You never need infinitely many reasons at once to get a contradiction.
+The construction answers "where could a model possibly come from?" with: from the syntax, and from nothing else. The elements of the model are the names the language can write down; the facts of the model are the sentences the theory has decided to accept. Consistency is what makes this coherent, maximality is what makes every question have an answer, and the witnesses are what stop the language from asserting the existence of something it cannot name.
 :::
 
-:::example
-Let us use compactness to prove a clean, concrete fact:
+:::remark
+Three ingredients carried the proof, and none can be dropped. **Lindenbaum's lemma** supplies negation-completeness, without which the truth lemma has no case for $\neg$. **The Henkin extension** supplies witnesses, without which the existential case fails. **The quotient by $\sim$** makes equality a genuine identity rather than a relation. For a countable language the whole argument avoids the axiom of choice beyond an explicit enumeration; in general it uses the Boolean prime ideal theorem, strictly weaker than full choice.
+:::
+
+:::pitfall
+Completeness is about *derivability of consequences*, not about theories deciding every sentence. A theory $T$ is called negation-complete when $T\vdash\sigma$ or $T\vdash\neg\sigma$ for every $\sigma$; Gödel's *incompleteness* theorem says no effective consistent extension of arithmetic is negation-complete. The two theorems are both Gödel's and both true, because they are about different things: the completeness theorem concerns the *logic*, incompleteness concerns a particular *theory*.
+:::
+
+## Compactness and the Löwenheim–Skolem Theorems
+
+<!-- section: compactness -->
+
+The completeness theorem is not only a statement about proofs. Because it identifies a semantic relation with a syntactic one, every property of derivations transfers to semantics — and derivations have one property semantics had no right to expect. They are finite.
+
+:::theorem[Compactness]{#compactness}
+Let $\Gamma$ be a set of sentences. If every finite subset of $\Gamma$ is satisfiable, then $\Gamma$ is satisfiable. Equivalently: if $\Gamma\models\phi$, then $\Gamma_0\models\phi$ for some finite $\Gamma_0\subseteq\Gamma$.
+:::
+
+:::proof
+Suppose every finite subset of $\Gamma$ is satisfiable. By Corollary *Consistency from satisfiability*, every finite subset of $\Gamma$ is consistent, so $\Gamma$ is consistent by Lemma *Consistency is a finite condition*. By Theorem *Model existence*, $\Gamma$ has a model, i.e. $\Gamma$ is satisfiable.
+
+For the second form, suppose $\Gamma\models\phi$. By completeness $\Gamma\vdash\phi$; by finiteness of $\vdash$ some finite $\Gamma_0\subseteq\Gamma$ has $\Gamma_0\vdash\phi$; by soundness $\Gamma_0\models\phi$.
+:::
+
+:::intuition
+Trace the finiteness through the argument and you see where compactness comes from. A derivation is a finite sequence, so it can cite only finitely much of $\Gamma$; completeness says every semantic consequence has such a derivation; therefore every semantic consequence already follows from finitely much of $\Gamma$. The theorem is the finiteness of proofs, viewed through the mirror that completeness provides.
+:::
+
+:::pitfall
+Compactness earns its keep on *infinite* $\Gamma$; on a finite $\Gamma$ it says nothing, since $\Gamma$ is one of its own finite subsets. The characteristic application has exactly the shape of Example *Entailment with an infinite hypothesis set*: infinitely many sentences, each finite fragment satisfiable in a small structure, and a conclusion about the infinite whole that no single fragment could reach.
+:::
+
+:::example[Arbitrarily large finite models force an infinite one]
+Let $T$ be a theory with finite models of unbounded size. Show that $T$ has an infinite model.
 :::
 
 :::solution
-**Claim:** if a first-order theory $T$ has finite models of arbitrarily large size, then $T$ also has an *infinite* model.
+For $n\ge2$ let
 
-**Write down what "infinite" costs.** For each $n \ge 2$ introduce the sentence
-  $$\lambda_n : \exists x_1 \cdots \exists x_n \bigwedge_{i < j} x_i \neq x_j,$$
-  which says "there are at least $n$ distinct elements." Let $T' = T \cup \{\lambda_2, \lambda_3, \lambda_4, \dots\}$. A model of $T'$ satisfies *every* $\lambda_n$, so it has at least $n$ elements for all $n$ — i.e. it is infinite.
-**Step 2 — Check every finite subset of $T'$ is satisfiable.** Take any finite $\Delta \subseteq T'$. It mentions only finitely many of the $\lambda_n$; let $N$ be the largest index among them. By hypothesis $T$ has a finite model $\mathcal{M}$ with at least $N$ elements. That $\mathcal{M}$ satisfies $T$ and satisfies $\lambda_2, \dots, \lambda_N$ (having $\ge N$ elements), hence satisfies all of $\Delta$.
-**Step 3 — Apply compactness.** Every finite subset of $T'$ is satisfiable, so by the compactness theorem $T'$ itself has a model $\mathcal{N}$.
-**Step 4 — Read off the conclusion.** $\mathcal{N} \models T'$, so $\mathcal{N} \models T$ and $\mathcal{N} \models \lambda_n$ for every $n$. Being a model of every $\lambda_n$, $\mathcal{N}$ is infinite.
+$$\lambda_n \;:\; \exists x_1\cdots\exists x_n \bigwedge_{i<j} x_i \neq x_j,$$
 
-**Sanity check:** we never needed one single finite model that was already infinite — that would be absurd. Each finite subset was satisfied by a *different* finite model, and compactness is exactly the tool that stitches these finite witnesses into one infinite model. This is also why the theory of "all finite groups," say, cannot be axiomatized so as to exclude infinite models: any first-order theory with arbitrarily large finite models is stuck with an infinite one too.
+the sentence "there are at least $n$ distinct elements", and set $T' = T\cup\{\lambda_2,\lambda_3,\dots\}$.
+
+Take any finite $\Delta\subseteq T'$. It mentions finitely many of the $\lambda_n$; let $N$ be the largest index among them. By hypothesis $T$ has a finite model $\mathcal{M}$ with at least $N$ elements, and such an $\mathcal{M}$ satisfies $\lambda_2,\dots,\lambda_N$, hence all of $\Delta$. So every finite subset of $T'$ is satisfiable, and compactness gives a model $\mathcal{N}\models T'$. Since $\mathcal{N}\models\lambda_n$ for every $n$, the domain of $\mathcal{N}$ has at least $n$ elements for every $n$: it is infinite. And $\mathcal{N}\models T$.
+
+No single finite model was infinite, of course; each finite fragment was satisfied by a *different* one, and compactness is exactly the tool that stitches those separate witnesses into one structure. □
 :::
 
-## Decidability
+:::corollary[Finiteness is not first-order expressible]{#no-finiteness-axiom}
+There is no set of first-order sentences whose models are exactly the finite structures — and in particular no single sentence.
+:::
+
+:::proof
+Such a set $\Sigma$ would have finite models of unbounded size, since every finite structure is a model. By the example above it would then have an infinite model, contradicting the requirement that its models be exactly the finite ones.
+:::
+
+:::example[Non-standard models of arithmetic]
+Let $\mathrm{Th}(\mathbb{N})$ be the set of *all* first-order sentences true in the standard model of arithmetic. Produce a model of $\mathrm{Th}(\mathbb{N})$ containing an element larger than every numeral.
+:::
+
+:::solution
+Add a fresh constant $c$ and let
+
+$$\Gamma = \mathrm{Th}(\mathbb{N}) \cup \{\, c > \underline{n} \;:\; n\in\mathbb{N} \,\},$$
+
+where $\underline{n}$ is the numeral $1+\cdots+1$ with $n$ ones. A finite subset mentions $c>\underline{n}$ only for $n\le N$, and $\mathbb{N}$ itself models it once $c$ is interpreted as $N+1$; the sentences of $\mathrm{Th}(\mathbb{N})$ say nothing about $c$. So every finite subset is satisfiable, and compactness gives $\mathcal{M}\models\Gamma$.
+
+In $\mathcal{M}$ the element $c^{\mathcal{M}}$ exceeds every numeral, so it is not the interpretation of any numeral: $\mathcal{M}$ is a **non-standard** model. Yet $\mathcal{M}$ satisfies every first-order truth of arithmetic, since $\mathrm{Th}(\mathbb{N})\subseteq\Gamma$. First-order logic therefore cannot pin down $\mathbb{N}$ up to isomorphism — not even by taking *every* truth about it as an axiom. □
+:::
+
+The Henkin construction pays a second dividend, and it is a statement about *size*. Look again at the model built in the previous section: its domain consists of equivalence classes of closed terms of $L^{*}$, and $L^{*}$ is countable whenever $L$ is. The model the proof produces is therefore small, whatever the theory may have been trying to describe.
+
+:::theorem[Downward Löwenheim–Skolem]{#downward-ls}
+Let $L$ be a countable language. Every satisfiable set of $L$-sentences has a countable model. More generally, for a language of cardinality $\kappa$, every satisfiable set has a model of cardinality at most $\kappa + \aleph_0$.
+:::
+
+:::proof
+Let $\Gamma$ be satisfiable; by Corollary *Consistency from satisfiability* it is consistent. Run the proof of Theorem *Model existence*. Lemma *Witnesses can be added* keeps a countable language countable, since each of its countably many stages adds one constant per formula of a countable language. The domain of $\mathcal{M}_\Delta$ is a set of equivalence classes of closed terms of $L^{*}$, and there are only countably many such terms, so the domain is countable (and non-empty). The cardinality bound in the general case is the same count with $\kappa$ in place of $\aleph_0$.
+:::
+
+:::theorem[Upward Löwenheim–Skolem]{#upward-ls}
+If a set of sentences $\Gamma$ has an infinite model, then it has a model of every infinite cardinality $\kappa$ at least as large as the language.
+:::
+
+:::proof
+Add $\kappa$ fresh constants $\{c_\alpha : \alpha<\kappa\}$ and let
+
+$$\Gamma' = \Gamma \cup \{\, c_\alpha \neq c_\beta \;:\; \alpha<\beta<\kappa \,\}.$$
+
+Any finite subset mentions finitely many constants, and the given infinite model of $\Gamma$ interprets them as distinct elements, so every finite subset is satisfiable. Compactness gives a model of $\Gamma'$, which has at least $\kappa$ elements. Downward Löwenheim–Skolem applied to the language $L\cup\{c_\alpha\}$, of cardinality $\kappa$, then cuts it down to one of cardinality exactly $\kappa$.
+:::
+
+:::remark
+Together the two theorems say that first-order logic is blind to cardinality above the size of the language: a theory with an infinite model has models of *every* sufficiently large cardinality, so no first-order theory with an infinite model is categorical. This is why "the reals are the unique complete ordered field" is not a first-order statement — completeness quantifies over subsets, and second-order quantification is exactly what first-order logic gives up in exchange for the completeness theorem.
+:::
+
+:::pitfall
+**Skolem's paradox** is the usual stumbling block. First-order ZFC, if consistent, has a countable model by downward Löwenheim–Skolem, even though ZFC proves "there exists an uncountable set". There is no contradiction: uncountability of a set $A$ means *there is no bijection between $A$ and $\omega$*, and a countable model may simply contain no such bijection among its elements. Uncountability is relative to the model; what looks uncountable from inside can be countable from outside.
+:::
+
+## Decidability, Semi-Decidability, and the Limits of the Method
 
 <!-- section: decidability -->
 
-:::definition[Decidable theory]
-A theory (or logic) is **decidable** if there is an algorithm that, given any sentence, is guaranteed to **halt** and correctly answers whether it is a theorem (or valid).
+Completeness says a derivation exists whenever the entailment holds. It does not say anyone can find it, and this last section is about the gap between the two. The distinction that measures the gap is between deciding a set and merely enumerating it.
+
+:::definition[Decidable and semi-decidable]{#decidable}
+Let $A$ be a set of finite strings (formulas, say).
+
+- $A$ is **decidable** if some algorithm, on every input, halts and correctly reports whether the input is in $A$.
+- $A$ is **semi-decidable** (recursively enumerable) if some algorithm halts with "yes" on exactly the inputs in $A$, and on inputs outside $A$ either halts with "no" or runs forever.
 :::
 
-The emphasis on "halts on every input" is what separates decidability from mere provability: a proof-search that runs forever on non-theorems is not a decision procedure.
+The emphasis on "halts on every input" is the whole content of the definition. A procedure that recognises theorems by searching for a proof, and never terminates when there is none, is a perfectly good semi-decision procedure and not a decision procedure at all.
 
-Propositional logic is decidable (truth tables or resolution), because a formula has only finitely many relevant truth assignments to check.
-
-:::theorem[Church–Turing: undecidability of first-order logic]
-First-order logic is **undecidable**: no algorithm halts on every input and correctly decides validity for arbitrary FOL sentences.
+:::theorem[Post's theorem]{#post}
+$A$ is decidable if and only if both $A$ and its complement are semi-decidable.
 :::
 
-The escape hatch that props gave us — finitely many rows to check — disappears once quantifiers range over potentially infinite domains.
+:::proof
+($\Rightarrow$) A decision procedure for $A$ is in particular a semi-decision procedure for $A$, and negating its output gives one for the complement.
 
-Many important fragments and theories are decidable (e.g., Presburger arithmetic, theory of real closed fields).
+($\Leftarrow$) Let $P$ semi-decide $A$ and $Q$ semi-decide the complement. On input $x$, run $P$ and $Q$ in parallel — alternate one step of each. Every $x$ lies in $A$ or in its complement, so exactly one of them eventually halts with "yes"; report accordingly. The procedure halts on every input, so it decides $A$.
+:::
+
+:::theorem[Theoremhood is semi-decidable]{#theorems-re}
+Let $S$ be an effective formal system in a countable language. Then $\{\phi : \vdash_S \phi\}$ is semi-decidable.
+:::
+
+:::proof
+Because $S$ is effective, "is this finite sequence a derivation of $\phi$?" is decidable: check each line against the axiom test and the rule tests. The finite sequences of formulas over a countable language can be enumerated, so the following halts exactly on theorems: enumerate the sequences, checking each, and halt with "yes" at the first derivation of $\phi$. On a non-theorem the search never ends.
+:::
+
+:::corollary[Validity is semi-decidable]{#validity-re}
+The set of valid first-order sentences is semi-decidable.
+:::
+
+:::proof
+By completeness, $\phi$ is valid iff $\vdash\phi$ in an effective complete proof system for first-order logic, and Theorem *Theoremhood is semi-decidable* applies to that system.
+:::
+
+This is exactly as far as the method reaches. The next theorem says that the other half of Post's criterion fails, so the search cannot be turned into a decision procedure — by any means whatever, not merely by proof search.
+
+:::theorem[Church–Turing: undecidability of first-order validity]{#church-turing}
+The set of valid sentences of first-order logic, in a language with at least one binary relation symbol, is undecidable: no algorithm halts on every input and correctly reports validity.
+:::
+
+:::proof
+*(Sketch; the full argument is Chapter 35 of Enderton or the standard development in any computability text.)* The proof is a reduction from a known undecidable problem, the halting problem for Turing machines. Its three ingredients are:
+
+1. **Arithmetisation.** A Turing machine computation can be encoded in first-order logic: for each machine $M$ and input $w$ one writes down a *single sentence* $\sigma_{M,w}$, constructed effectively from $M$ and $w$, whose conjuncts describe the tape alphabet, the transition table and the initial configuration.
+2. **The reduction.** $\sigma_{M,w}$ is built so that $M$ halts on $w$ if and only if the sentence $\sigma_{M,w}\to\eta$ is valid, where $\eta$ asserts that a halting configuration is reached. Every model of $\sigma_{M,w}$ is forced to contain a copy of the computation, so validity of the implication tracks halting exactly.
+3. **Undecidability of halting**, which is proved independently by diagonalisation.
+
+Given a decision procedure for validity, feeding it $\sigma_{M,w}\to\eta$ would decide halting. No such procedure exists, so validity is undecidable. What the argument rests on is therefore: the Church–Turing thesis (that "algorithm" is captured by Turing machines), the effectiveness of the encoding in (1), and the undecidability of halting in (3).
+:::
+
+:::corollary[Refutability is not semi-decidable]{#nonvalidity-not-re}
+The set of *non-valid* first-order sentences is not semi-decidable.
+:::
+
+:::proof
+If it were, then validity — semi-decidable by Corollary *Validity is semi-decidable* — and its complement would both be semi-decidable, so validity would be decidable by Post's theorem, contradicting Church–Turing.
+:::
 
 :::intuition
-Decidable = a computer program can in principle answer "is this always true?" for any question you feed it, and it will finish with the right yes/no.
-
-FOL as a whole is undecidable: there will always be some formulas for which the program either loops forever or gives wrong answers on some inputs. Yet for any *particular* valid formula a proof exists and can be found by a (different) search procedure.
+The asymmetry is the thing to carry away. A valid sentence always announces itself eventually: keep enumerating derivations and one turns up. An invalid sentence need not announce itself at all, because the countermodel that refutes it may be infinite, and no finite search is guaranteed to find it. Provability is a search with a finite certificate; refutability, in general, is not.
 :::
 
-:::example
-Let us actually *run* the decision procedure for propositional validity on a small formula and confirm it terminates with the right answer.
+Decidability returns as soon as the quantifiers are tamed, and the contrast with the propositional case is instructive.
+
+:::theorem[Propositional validity is decidable]{#prop-decidable}
+There is an algorithm deciding whether a propositional formula is a tautology.
+:::
+
+:::proof
+A formula $\phi$ contains finitely many atoms, say $n$ of them, and its truth value under a valuation depends only on their values. Enumerate all $2^n$ valuations, evaluate $\phi$ under each by recursion on its structure, and answer "valid" iff every valuation makes it true. The enumeration is finite, so the procedure halts on every input.
+:::
+
+:::example[Running the decision procedure]
+Decide whether $\phi=(p\to q)\to(\neg q\to\neg p)$ is a tautology, and count the work.
 :::
 
 :::solution
-**Question:** is $\phi = (p \to q) \to (\neg q \to \neg p)$ valid (a tautology)?
+Two atoms, so $2^2=4$ valuations.
 
-The algorithm: $\phi$ has $2$ atoms, $p$ and $q$, so build the full truth table — $2^2 = 4$ rows — and check whether $\phi$ is true in every row.
+| $p$ | $q$ | $p\to q$ | $\neg q\to\neg p$ | $\phi$ |
+|:--:|:--:|:--:|:--:|:--:|
+| T | T | T | T | T |
+| T | F | F | F | T |
+| F | T | T | T | T |
+| F | F | T | T | T |
 
-| $p$ | $q$ | $p \to q$ | $\neg q$ | $\neg p$ | $\neg q \to \neg p$ | $\phi$ |
-|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| T | T | T | F | F | T | T |
-| T | F | F | T | F | F | T |
-| F | T | T | F | T | T | T |
-| F | F | T | T | T | T | T |
+Row 2 is the instructive one: both inner implications are false, so the outer implication is true because its antecedent fails. All four rows give T, so the procedure halts and reports "valid" — the law of contraposition, as expected.
 
- Row by row: when $p\to q$ is true and $\neg q \to \neg p$ is true, the outer implication is true; when the antecedent $p\to q$ is false (row 2), the outer implication is *automatically* true regardless. So every row yields $\phi = $ T.
-**Step 2.** The procedure has examined all $4$ rows and found no falsifying assignment, so it halts and outputs "valid."
+The work is $2^n$ rows and no more, which is what decidability requires: finite, guaranteed to terminate. It says nothing about efficiency, and indeed propositional satisfiability is NP-complete, so the practical tools (DPLL, CDCL) spend their effort avoiding the enumeration rather than improving on its bound. Slow but finite is still decidable; the first-order case is not slow, it is impossible. □
+:::
 
-**Sanity check:** this formula is the law of contraposition, which we expect to be a tautology — and the table confirms it, with row 2 being the instructive case where a *false* antecedent makes the whole implication vacuously true. The point for decidability: because the number of rows is always the finite quantity $2^{(\text{number of atoms})}$, this brute-force check is guaranteed to terminate on *any* propositional formula. (It can be exponentially slow — propositional SAT is NP-complete, so practical tools like DPLL/CDCL use heuristics — but slow-yet-finite is still decidable.) For full first-order logic there is no analogous finite table to fill in, which is the intuitive root of its undecidability.
+:::remark
+Many fragments and theories sit on the decidable side, and each buys its decidability by giving something up.
+
+- **Monadic first-order logic** (only unary relation symbols, no function symbols) is decidable — with no way to relate two elements, a formula with $n$ predicates cannot distinguish more than $2^n$ kinds of element, which bounds the models to check.
+- **Presburger arithmetic**, the theory of $(\mathbb{N},+,<,0,1)$, is decidable by quantifier elimination. Adding multiplication makes it undecidable, which is where Gödel's incompleteness theorems begin.
+- **Real closed fields**, the theory of $(\mathbb{R},+,\cdot,<,0,1)$, is decidable by Tarski's quantifier-elimination algorithm — and *is* a theory with multiplication, which shows that multiplication alone is not the culprit; the ability to define the integers inside the structure is.
+:::
+
+:::pitfall
+Undecidability does not mean "no proofs". Every valid sentence still has a finite derivation, and the search of Theorem *Theoremhood is semi-decidable* will find it. What fails is the ability to know *in advance* that the search will end. An automated theorem prover left running on a non-theorem is not malfunctioning; it is doing exactly what the theory predicts.
 :::
 
 ## Common Mistakes
 
-- **Provability versus mathematical truth:** Conflating "provable in this system" with "true in mathematics" is wrong. A system can be sound for its intended semantics yet incomplete for all mathematical truth (Gödel).
+- **Writing $\vdash$ where $\models$ belongs.** They are different relations with different definitions: $\vdash$ is settled by a finite derivation in a fixed system, $\models$ by every structure in the language. That they agree for first-order logic is the content of two theorems, not a matter of notation.
 
-- **Completeness is the deeper result:** Thinking soundness is the hard direction misses the point. Completeness is the deeper result (you can always find a proof when one "should" exist semantically).
+- **Using the deduction theorem without its side condition.** In a first-order system with generalisation, $\Gamma\cup\{\phi\}\vdash\psi$ gives $\Gamma\vdash\phi\to\psi$ only when no generalisation in the derivation was applied to a variable free in $\phi$. Ignoring this "proves" $\phi(x)\to\forall x\,\phi(x)$.
 
-- **Compactness applies to infinite theories:** Misapplying compactness only to finite theories is an error. Its power is precisely for infinite axiom sets (e.g., "there are infinitely many primes" expressed via infinitely many sentences "there is a prime > n" for each n).
+- **Confusing consistency with soundness.** Consistency is internal — no contradiction is derivable. Soundness is a relation to a semantics — nothing false is derivable. A consistent theory can prove falsehoods about its intended structure.
 
-- **Undecidability does not eliminate proofs:** Believing that because a logic is undecidable there are no proofs for anything is mistaken. On the contrary: every valid sentence still has a finite proof; we just cannot algorithmically decide in advance which sentences will have them.
+- **Confusing the completeness of a logic with the negation-completeness of a theory.** Gödel proved both a completeness and an incompleteness theorem, and they are compatible: the first says the *logic* derives every semantic consequence, the second that no effective consistent *theory* of arithmetic decides every sentence.
 
-- **Consistency versus soundness:** Confusing consistency (no proof of $\bot$) with soundness is common. A consistent but unsound system can still prove false statements about the world.
+- **Applying compactness to a finite theory.** A finite $\Gamma$ is a finite subset of itself, so the theorem is vacuous there. Its power is on infinite sets, where each finite fragment may have a different, smaller model.
+
+- **Expecting a canonical model from the Henkin construction.** It produces *some* model, built from the terms of an expanded language and depending on an arbitrary maximal consistent extension. Distinct extensions give non-isomorphic models, which is exactly why Löwenheim–Skolem can vary the cardinality at will.
+
+- **Reading undecidability as a bound on proofs.** Undecidable means no uniform halting decision procedure. Valid sentences retain their finite derivations; it is the *non*-valid ones that admit no finite certificate.
