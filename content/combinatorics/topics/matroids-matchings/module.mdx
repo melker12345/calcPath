@@ -6,251 +6,768 @@ title: Matroids and Matchings
 
 The structure that makes the greedy algorithm correct, and the matching theory of Hall and König that mirrors it.
 
-## Definition via Independent Sets (and Other Axioms)
+Two questions run through this chapter, and they are the same question asked twice. The first is: *when is it safe to be greedy?* Sort the objects by value, sweep through them once, take whatever you can. Kruskal's algorithm does exactly this and returns a genuinely optimal spanning tree; the same sweep applied to the edges of a graph in search of a maximum-weight matching returns garbage. Something about forests makes greed correct and something about matchings does not, and matroid theory is the precise answer: greed is correct on a set system **if and only if** that system is a matroid.
+
+The second question is what to do when greed fails. The answer for matchings is the *augmenting path* — a local certificate of improvability — and the theory built on it is a chain of theorems of a very recognisable shape: the maximum of one thing equals the minimum of another. Hall, König, Tutte–Berge and the matroid intersection formula all have this shape. The first half of the chapter builds the structure that makes a sweep optimal; the second builds the search that replaces the sweep when the structure is absent. Chapter *Flows and Duality* then explains why every min–max theorem here has the same proof underneath.
+
+## Independence: the Axioms and Their Equivalents
 
 <!-- section: definition-axioms -->
 
-:::definition[Matroid]{#matroid}
-A matroid M = (E, I) consists of a finite ground set E and a family I of subsets of E (the independent sets) satisfying:
+Two familiar notions of "independence" behave identically even though they live in different worlds. In a vector space, a set of vectors is independent when none is a linear combination of the others; every maximal independent subset of a fixed set spans that set, and all such subsets have the same size. In a graph, a set of edges is independent when it contains no cycle; every maximal forest inside a fixed edge set has the same number of edges, namely the number of vertices of the graph minus the number of connected components that edge set leaves behind. Neither fact mentions the other's vocabulary, yet both are consequences of one short list of axioms.
 
-1. ∅ ∈ I.
-2. If A ∈ I and B ⊂ A then B ∈ I (hereditary / downward closed).
-3. (Augmentation) If A, B ∈ I and |A| < |B|, then there exists e ∈ B \ A such that A ∪ {e} ∈ I.
+:::definition[Matroid]{#matroid}
+A **matroid** is a pair $M = (E, \mathcal{I})$ where $E$ is a finite set — the **ground set** — and $\mathcal{I}$ is a family of subsets of $E$, called the **independent sets**, satisfying:
+
+**(I1)** $\emptyset \in \mathcal{I}$.
+
+**(I2)** *(hereditary)* If $A \in \mathcal{I}$ and $B \subseteq A$, then $B \in \mathcal{I}$.
+
+**(I3)** *(augmentation, or the exchange axiom)* If $A, B \in \mathcal{I}$ and $|A| < |B|$, then there is an element $e \in B \setminus A$ with $A \cup \{e\} \in \mathcal{I}$.
+
+A subset of $E$ that is not independent is **dependent**.
 :::
 
-Equivalent axiomatizations exist using bases, circuits (minimal dependent sets), the rank function (submodular, monotone), and the closure operator.
+:::definition[Basis, circuit, rank, closure]{#matroid-vocabulary}
+Let $M = (E,\mathcal{I})$ be a matroid and $X \subseteq E$.
+
+- A **basis** of $M$ is a maximal independent set; a **basis of $X$** is a maximal independent subset of $X$. The family of bases is written $\mathcal{B}$.
+- A **circuit** is a minimal dependent set. A circuit of size one is a **loop**; two elements forming a circuit of size two are **parallel**.
+- The **rank** $r(X)$ is the size of a basis of $X$, and $r(M) = r(E)$.
+- $X$ **spans** $M$ if $r(X) = r(E)$, and the **closure** of $X$ is $\operatorname{cl}(X) = \{e \in E : r(X \cup \{e\}) = r(X)\}$.
+:::
+
+The rank is only well defined once we know that all bases of $X$ have the same size, which is the first thing to prove.
 
 :::intuition
-Think of "independent" as "no redundancy." A team where everyone brings a *different* skill is independent; the moment someone duplicates a skill already on the team, they are redundant (dependent).
+Read "independent" as "carrying no redundancy". A committee in which every member brings a skill nobody else has is independent; the moment a member's skill is already covered, the committee is dependent. Axioms (I1) and (I2) are bookkeeping — the empty committee is fine, and dropping members cannot create redundancy.
 
-The augmentation axiom is the magic: if your team is smaller than a rival team, you can always poach *someone* from the rival who adds a genuinely new skill to yours. That "you can always grow toward the bigger set" property is what makes greedy hiring work.
-
-The axioms are deliberately chosen so that every nice theorem about bases and rank from linear algebra keeps holding in this abstract world.
+Axiom (I3) is the whole content. It says that if your committee is smaller than a rival's, you can always poach *some* rival member who brings you something new. You are never stuck at a small committee for lack of a legal move — and that, as the greedy theorem will show, is exactly the property a one-pass algorithm needs.
 :::
 
-:::example
-Let us verify that the uniform matroid $U_{2,3}$ really is a matroid. Take ground set $E = \{1,2,3\}$ and declare $I$ to be *all* subsets of size at most $2$:
-$$I = \{\emptyset,\ \{1\},\{2\},\{3\},\ \{1,2\},\{1,3\},\{2,3\}\}.$$
+:::example[Verifying the uniform matroid]
+Fix integers $0 \le k \le n$, let $E$ be a set with $|E| = n$, and let $\mathcal{I} = \{A \subseteq E : |A| \le k\}$. Show that $U_{k,n} = (E, \mathcal{I})$ is a matroid, and identify its bases, rank function and circuits.
 :::
 
 :::solution
-Check each axiom:
+**(I1)** $|\emptyset| = 0 \le k$. **(I2)** A subset of a set of size at most $k$ has size at most $k$.
 
-**(1) $\emptyset \in I$.** Yes, $\emptyset$ has size $0 \le 2$. ✓
-**(2) Hereditary.** Any subset of a set of size $\le 2$ also has size $\le 2$, so it is in $I$. ✓
-**(3) Augmentation.** Suppose $A, B \in I$ with $|A| < |B|$. Then $|A| \le 1$ and $|B| \le 2$. Since $|B| > |A|$, the set $B$ contains an element $e \notin A$; adding it gives $|A \cup \{e\}| = |A| + 1 \le 2$, so $A \cup \{e\} \in I$. ✓
+**(I3)** Let $A, B \in \mathcal{I}$ with $|A| < |B|$. Then $|A| \le |B| - 1 \le k-1$, and since $|B| > |A|$ the set $B$ is not contained in $A$, so there is $e \in B \setminus A$. Now $|A \cup \{e\}| = |A| + 1 \le k$, so $A \cup \{e\} \in \mathcal{I}$.
 
-All three hold, so $U_{2,3}$ is a matroid.
-
-Now contrast this with a *non-example* to see why augmentation is the load-bearing axiom. Keep $E = \{1,2,3\}$ but take the hereditary family
-$$I'' = \{\emptyset,\ \{1\},\{2\},\{3\},\ \{1,2\}\}.$$
-Axioms (1) and (2) still hold (every subset of $\{1,2\}$ is listed). But augmentation fails: take $A = \{3\}$ and $B = \{1,2\}$, both in $I''$ with $|A| = 1 < 2 = |B|$. The elements of $B \setminus A$ are $1$ and $2$, giving candidates $\{3,1\}$ and $\{3,2\}$ — *neither* is in $I''$. So no element of $B$ can extend $A$, and axiom (3) is violated. Thus $I''$ is hereditary but **not** a matroid, and (as the Common Mistakes section notes) greedy can fail on such a family — which is exactly what axiom (3) rules out.
+The maximal independent sets are the $k$-element subsets, so $\mathcal{B} = \binom{E}{k}$ and $r(X) = \min(|X|, k)$. The minimal dependent sets are the $(k+1)$-element subsets, so those are the circuits — and when $k = n$ there are none, giving the **free matroid**, in which every subset is independent.
 :::
 
-## Important Examples
+:::pitfall
+Axioms (I1) and (I2) alone define a *hereditary family* (an abstract simplicial complex), and hereditary families are far more common than matroids. On $E = \{1,2,3\}$ take
+$$\mathcal{I}'' = \{\emptyset, \{1\},\{2\},\{3\},\{1,2\}\}.$$
+It is closed downwards, so (I1) and (I2) hold. But with $A = \{3\}$ and $B = \{1,2\}$ we have $|A| < |B|$, while neither $\{3,1\}$ nor $\{3,2\}$ lies in $\mathcal{I}''$: (I3) fails. The maximal sets $\{3\}$ and $\{1,2\}$ have different sizes, so "rank" is already meaningless here. Theorem *Greedy characterises matroids* turns this failure into an explicit weighting on which the greedy algorithm loses.
+:::
+
+:::theorem[All bases of a set have the same size]{#basis-equicardinality}
+Let $M = (E,\mathcal{I})$ be a matroid and $X \subseteq E$. Then any two maximal independent subsets of $X$ have the same cardinality. In particular $r(X)$ is well defined, and every basis of $M$ has $r(E)$ elements.
+:::
+
+:::proof
+Let $A$ and $B$ be maximal independent subsets of $X$ and suppose $|A| < |B|$. Both are independent, so (I3) supplies $e \in B \setminus A$ with $A \cup \{e\} \in \mathcal{I}$. But $e \in B \subseteq X$, so $A \cup \{e\}$ is an independent subset of $X$ strictly containing $A$, contradicting maximality of $A$. Hence $|A| \ge |B|$, and by symmetry $|A| = |B|$.
+:::
+
+The proof used nothing special about $X$, which is worth recording: for any $X \subseteq E$ the pair $M|X = (X, \{A \in \mathcal{I} : A \subseteq X\})$ satisfies (I1)–(I3) and is itself a matroid, the **restriction** of $M$ to $X$. Every statement about matroids is therefore automatically a statement about every restriction, and that is how the rank function inherits its properties.
+
+:::theorem[The rank function is monotone and submodular]{#rank-submodular}
+The rank function of a matroid satisfies, for all $X, Y \subseteq E$:
+
+**(R1)** $0 \le r(X) \le |X|$;
+
+**(R2)** *(monotone)* if $X \subseteq Y$ then $r(X) \le r(Y)$;
+
+**(R3)** *(submodular)* $r(X \cup Y) + r(X \cap Y) \le r(X) + r(Y)$.
+:::
+
+:::proof
+(R1) A basis of $X$ is an independent subset of $X$, so its size lies between $0$ and $|X|$.
+
+(R2) A basis $A$ of $X$ is an independent subset of $Y$, so it extends to a maximal one, of size $r(Y) \ge |A| = r(X)$.
+
+(R3) Choose a basis $B$ of $X \cap Y$ and extend it — repeatedly applying (I3) inside the restriction $M|(X\cup Y)$ — to a basis $B_\cup$ of $X \cup Y$. Put $B_X = B_\cup \cap X$ and $B_Y = B_\cup \cap Y$.
+
+First, $B_\cup \cap X \cap Y = B$. Indeed $B \subseteq B_\cup$ and $B \subseteq X\cap Y$ give one inclusion; conversely, if some $e \in B_\cup \cap X \cap Y$ lay outside $B$, then $B \cup \{e\} \subseteq B_\cup$ would be independent by (I2) and contained in $X \cap Y$, contradicting maximality of $B$ there.
+
+Second, $B_X \cup B_Y = B_\cup \cap (X \cup Y) = B_\cup$, while $B_X \cap B_Y = B_\cup \cap X \cap Y = B$. Since $B_X$ and $B_Y$ are independent subsets of $X$ and of $Y$ respectively, inclusion–exclusion on cardinalities gives
+$$r(X \cup Y) + r(X \cap Y) = |B_\cup| + |B| = |B_X \cup B_Y| + |B_X \cap B_Y| = |B_X| + |B_Y| \le r(X) + r(Y).$$
+:::
+
+Submodularity is the abstract form of the dimension identity $\dim(U+V) + \dim(U \cap V) = \dim U + \dim V$ from linear algebra — with an inequality in place of the equality, because a matroid need not come from a vector space. Together with the **unit-increase** property $r(X) \le r(X\cup\{e\}) \le r(X)+1$, which follows from (R2) and (R3) applied to $X$ and $\{e\}$, the axioms (R1)–(R3) characterise rank functions completely: any integer-valued $r$ on subsets of $E$ obeying them arises from exactly one matroid, namely the one whose independent sets are $\{X : r(X) = |X|\}$.
+
+Circuits give a third description, and the key fact about them is an elimination property.
+
+:::lemma[Circuits in a circuit union]{#circuit-rank}
+If $C_1 \ne C_2$ are circuits of $M$, then $r(C_1 \cup C_2) \le |C_1 \cup C_2| - 2$.
+:::
+
+:::proof
+A circuit $C$ is dependent while every proper subset of it is independent, so $r(C) = |C| - 1$. Since $C_1 \ne C_2$ are both minimal dependent sets, neither contains the other, so $C_1 \cap C_2$ is a proper subset of $C_1$ and is therefore independent: $r(C_1 \cap C_2) = |C_1 \cap C_2|$. Submodularity now gives
+$$r(C_1\cup C_2) \le r(C_1) + r(C_2) - r(C_1 \cap C_2) = |C_1| + |C_2| - 2 - |C_1\cap C_2| = |C_1 \cup C_2| - 2 .$$
+:::
+
+:::theorem[Circuit elimination]{#circuit-elimination}
+Let $C_1 \ne C_2$ be circuits of $M$ and let $e \in C_1 \cap C_2$. Then $(C_1 \cup C_2)\setminus\{e\}$ contains a circuit.
+:::
+
+:::proof
+Write $D = (C_1\cup C_2)\setminus \{e\}$, so that $|D| = |C_1\cup C_2| - 1$. By Lemma *Circuits in a circuit union* together with monotonicity,
+$$r(D) \le r(C_1 \cup C_2) \le |C_1\cup C_2| - 2 = |D| - 1 < |D|,$$
+so $D$ is dependent, and every dependent set contains a minimal dependent subset.
+:::
+
+:::corollary[The unique circuit of an extension]{#unique-circuit}
+If $A \in \mathcal{I}$ and $A \cup \{e\}$ is dependent, then $A\cup\{e\}$ contains exactly one circuit, and that circuit contains $e$.
+:::
+
+:::proof
+A dependent set contains a circuit $C$, and $C \not\subseteq A$ — otherwise $C$ would be independent by (I2) — so $e \in C$. If $C_1 \ne C_2$ were two circuits inside $A \cup \{e\}$, both would contain $e$ by the same argument, and Lemma *Circuits in a circuit union* would give $r(C_1 \cup C_2) \le |C_1\cup C_2| - 2$, so that $(C_1\cup C_2)\setminus\{e\}$ is dependent. But $(C_1\cup C_2)\setminus\{e\} \subseteq A$ is independent — a contradiction.
+:::
+
+This corollary is the engine of every algorithm below: adding one element to an independent set creates exactly one circuit, so a greedy sweep always knows precisely what went wrong and which single element it may drop to repair it.
+
+Finally the bases. That bases of a matroid can be exchanged one element at a time is easy; that this property *alone* rebuilds the matroid is the first genuine cryptomorphism, and it is worth proving in full, because it is the template for the rank and circuit versions.
+
+:::theorem[Basis axioms]{#basis-axioms}
+Let $E$ be finite and $\mathcal{B}$ a family of subsets of $E$. Then $\mathcal{B}$ is the family of bases of a matroid on $E$ if and only if
+
+**(B1)** $\mathcal{B} \ne \emptyset$, and
+
+**(B2)** *(basis exchange)* for all $B_1, B_2 \in \mathcal{B}$ and every $x \in B_1 \setminus B_2$ there exists $y \in B_2 \setminus B_1$ with $(B_1 \setminus \{x\}) \cup \{y\} \in \mathcal{B}$.
+
+In that case the matroid is unique, with $\mathcal{I} = \{A : A \subseteq B \text{ for some } B \in \mathcal{B}\}$.
+:::
+
+:::proof
+($\Rightarrow$) Let $\mathcal{B}$ be the basis family of a matroid $M$. It is non-empty because $\emptyset$ is independent and $E$ is finite, so a maximal independent set exists. For (B2), take $B_1, B_2 \in \mathcal{B}$ and $x \in B_1 \setminus B_2$. The set $B_1 \setminus \{x\}$ is independent of size $r(E) - 1 < |B_2|$, so (I3) gives $y \in B_2 \setminus (B_1\setminus\{x\})$ with $(B_1\setminus\{x\})\cup\{y\}$ independent. That set has $r(E)$ elements, hence is a basis; and $y \ne x$ because $x \notin B_2$, so $y \in B_2 \setminus B_1$.
+
+($\Leftarrow$) Suppose (B1) and (B2) hold, and set $\mathcal{I} = \{A : A \subseteq B$ for some $B \in \mathcal{B}\}$.
+
+*Step 1: all members of $\mathcal{B}$ have the same size.* If not, choose $B_1, B_2 \in \mathcal{B}$ with $|B_1| > |B_2|$ and, among all such pairs, one for which $|B_1 \setminus B_2|$ is as small as possible. Since $|B_1| > |B_2|$ we have $B_1 \setminus B_2 \ne \emptyset$; pick $x$ in it. By (B2) there is $y \in B_2\setminus B_1$ with $B_3 = (B_1\setminus\{x\})\cup\{y\} \in \mathcal{B}$. Then $|B_3| = |B_1| > |B_2|$, while $B_3 \setminus B_2 = (B_1\setminus B_2)\setminus\{x\}$ is strictly smaller than $B_1 \setminus B_2$, contradicting the choice. Write $r$ for the common size.
+
+*Step 2: (I1) and (I2).* $\mathcal{B}$ is non-empty, so $\emptyset \in \mathcal{I}$, and $\mathcal{I}$ is downward closed by construction.
+
+*Step 3: (I3).* Let $A, C \in \mathcal{I}$ with $|A| < |C|$, and suppose for contradiction that $A \cup \{e\} \notin \mathcal{I}$ for every $e \in C \setminus A$. Then no member of $\mathcal{B}$ containing $A$ can meet $C \setminus A$: if $e \in B \cap (C\setminus A)$ for some $B \supseteq A$ in $\mathcal{B}$, then $A\cup\{e\} \subseteq B$ would lie in $\mathcal{I}$. Consequently
+$$(B \setminus A) \cap C = \emptyset \quad \text{for every } B \in \mathcal{B} \text{ with } A \subseteq B.$$
+Call this observation the *blocking property*.
+
+Fix $B_C \in \mathcal{B}$ with $C \subseteq B_C$, and among all $B \in \mathcal{B}$ containing $A$ choose $B_A$ minimising $|B_A \setminus (B_C \cup A)|$. If that quantity were positive, pick $x \in B_A \setminus (B_C \cup A)$. Then $x \in B_A \setminus B_C$, so (B2) yields $y \in B_C \setminus B_A$ with $B' = (B_A \setminus \{x\})\cup\{y\} \in \mathcal{B}$. Since $x \notin A$ we still have $A \subseteq B'$, and since $y \in B_C$,
+$$B' \setminus (B_C \cup A) = \big(B_A \setminus (B_C\cup A)\big)\setminus \{x\},$$
+which is one element smaller — contradicting the choice of $B_A$. Hence $B_A \setminus A \subseteq B_C$.
+
+Now $C \subseteq B_C$ and $B_A \setminus A \subseteq B_C$, and these two sets are disjoint by the blocking property. Therefore
+$$r = |B_C| \ge |C| + |B_A \setminus A| = |C| + r - |A| > r,$$
+using $|C| > |A|$. This contradiction establishes (I3).
+
+Finally, the maximal members of $\mathcal{I}$ are exactly the members of $\mathcal{B}$ — they all have size $r$, and every member of $\mathcal{I}$ sits inside one — so $\mathcal{B}$ is the basis family of $(E,\mathcal{I})$, and $\mathcal{I}$ is forced by $\mathcal{B}$.
+:::
+
+:::remark
+The same pattern recovers a matroid from its circuits and from its rank function. **Circuit axioms:** $\emptyset \notin \mathcal{C}$; no member of $\mathcal{C}$ contains another; and circuit elimination as proved above. **Rank axioms:** (R1)–(R3), with integer values. **Closure axioms:** $X \subseteq \operatorname{cl}(X)$, monotonicity, idempotence $\operatorname{cl}(\operatorname{cl}(X)) = \operatorname{cl}(X)$, and the *Mac Lane–Steinitz exchange property* — if $y \in \operatorname{cl}(X\cup\{x\})\setminus\operatorname{cl}(X)$ then $x \in \operatorname{cl}(X\cup\{y\})$. Each of the four systems determines the other three; Oxley's *Matroid Theory*, Chapter 1, carries the remaining verifications, every one of which has the shape just displayed. These descriptions are called *cryptomorphic* rather than merely equivalent, because the translation between them is not a matching-up of axioms but a reconstruction of one structure from another.
+:::
+
+## Where Matroids Come From
 
 <!-- section: examples -->
 
-- **Vector matroid / linear matroid**: columns of a matrix; independent = linearly independent columns.
-- **Graphic matroid**: edges of a graph; independent = acyclic sets of edges (forests). Rank of a set of edges = v − c in the subgraph.
-- **Partition matroid / transversal**: given a partition of E into blocks with capacities, independent sets take at most the capacity from each block.
-- **Uniform matroid U_{k,n}**: all subsets of size ≤ k are independent.
-- **Fano matroid**, projective geometries, etc.
+A definition with one example is a definition with no examples. The four families below are the ones the rest of the chapter uses, and they are genuinely different: each contributes matroids the others cannot produce.
 
-Many theorems true for vector spaces or for graphs have matroid generalizations.
-
-:::intuition
-In a graph, a forest is "independent" because it has no cycles (the circuit axiom: a cycle is a minimal dependent set).
-
-In a vector space the circuits are the minimal linearly dependent sets (relations).
+:::definition[Linear matroid]{#linear-matroid}
+Let $F$ be a field and $A$ an $m \times n$ matrix over $F$. Take $E$ to be the set of column indices and let $\mathcal{I}$ consist of those $X \subseteq E$ whose columns are linearly independent over $F$. This is the **linear** (or **vector**) **matroid** $M[A]$. A matroid isomorphic to some $M[A]$ over $F$ is called **$F$-representable**.
 :::
 
-:::example
-Consider the cycle graph $C_4$ on vertices $\{1,2,3,4\}$ with edges $e_1=12$, $e_2=23$, $e_3=34$, $e_4=41$. Its graphic matroid has ground set $E = \{e_1,e_2,e_3,e_4\}$, and a set of edges is independent iff it is acyclic (a forest).
+That $M[A]$ is a matroid is the Steinitz exchange lemma of linear algebra: (I1) and (I2) are clear, and (I3) says that an independent set of $|A|$ vectors inside the span of a larger independent set can be enlarged using one of them. Its rank function is $r(X) = \dim \operatorname{span}(X)$, its circuits are the minimal linear dependences, and its closure is genuine linear span intersected with $E$.
+
+:::definition[Graphic matroid]{#graphic-matroid}
+Let $G = (V,E)$ be a finite graph, possibly with loops and multiple edges. Let $\mathcal{I}$ be the family of **acyclic** edge sets — the forests of $G$. The matroid $M(G) = (E,\mathcal{I})$ is the **cycle matroid** of $G$, and a matroid of this form is **graphic**.
+:::
+
+:::theorem[The cycle matroid is a matroid]{#cycle-matroid-theorem}
+For every finite graph $G = (V,E)$, the forests of $G$ form the independent sets of a matroid on $E$. Its rank function is
+$$r(X) = |V| - c(X),$$
+where $c(X)$ is the number of connected components of the spanning subgraph $(V, X)$. Its circuits are exactly the edge sets of the cycles of $G$.
+:::
+
+:::proof
+(I1) and (I2) are immediate: the empty edge set is acyclic, and deleting edges cannot create a cycle.
+
+For the rank formula, let $X \subseteq E$ and let $F \subseteq X$ be a maximal forest of $(V,X)$. Every component of $(V,X)$ has a spanning tree inside $F$ — if some component had two $F$-pieces, an $X$-edge joining them could be added to $F$ without closing a cycle, contradicting maximality — and a tree on $k$ vertices has $k-1$ edges. Summing over the $c(X)$ components gives $|F| = |V| - c(X)$, a value independent of which maximal forest was chosen.
+
+(I3) now follows. Let $A, B$ be forests with $|A| < |B|$. Reading the formula with $X = A$ and $X = B$, the spanning subgraph $(V,A)$ has $|V| - |A|$ components and $(V,B)$ has $|V|-|B| < |V|-|A|$ components. Since $B$ has strictly fewer components, some edge $e = uv \in B$ must join two distinct components of $(V,A)$: otherwise every edge of $B$ would lie inside a component of $(V,A)$, and each component of $(V,B)$ would be a union of components of $(V,A)$, forcing $c(B) \ge c(A)$. Adding such an $e$ to $A$ joins two components, so creates no cycle, and $e \notin A$. Hence $A \cup \{e\} \in \mathcal{I}$.
+
+Finally, a minimal dependent set is a minimal edge set containing a cycle, which is the cycle itself.
+:::
+
+:::intuition
+In $M(G)$, "independent" means "adds no redundant connection". A forest is a set of edges each of which genuinely merges two pieces of the graph; a cycle is the smallest set in which one edge is doing work another already did. Because $r(X) = |V| - c(X)$, rank measures *how much merging has been achieved*, and the whole theory of spanning trees becomes the theory of bases of one matroid.
+:::
+
+:::example[Bases and the circuit of a $4$-cycle]
+Let $C_4$ have vertices $1,2,3,4$ and edges $e_1 = 12$, $e_2 = 23$, $e_3 = 34$, $e_4 = 41$. Describe $M(C_4)$: its rank, its bases, and its circuits.
 :::
 
 :::solution
-**Rank of the whole set.** The graph is connected with $v = 4$ vertices and $c = 1$ component, so the rank formula gives $r(E) = v - c = 4 - 1 = 3$. A maximal forest (basis) therefore has $3$ edges.
-**Which 3-edge sets are bases?** Any $3$ of the $4$ edges omit exactly one edge and form a path on all $4$ vertices — a tree, hence acyclic and independent. All $\binom{4}{3} = 4$ triples are bases.
-**The unique circuit.** Taking all $4$ edges closes the cycle $1\text{-}2\text{-}3\text{-}4\text{-}1$. This is a minimal dependent set (removing any one edge makes it independent again), so $\{e_1,e_2,e_3,e_4\}$ is the single circuit of this matroid.
+The graph is connected with $|V| = 4$, so $r(E) = 4 - 1 = 3$ and every basis has three edges. Any three of the four edges omit one edge and form a path through all four vertices — a tree — so all $\binom{4}{3} = 4$ triples are bases. The full set $\{e_1,e_2,e_3,e_4\}$ is the cycle, and removing any single edge leaves a tree, so it is a minimal dependent set: the unique circuit.
 
-**Sanity check:** rank $3$, bases of size $3$, and adding the $4$th edge to any basis creates the circuit — consistent with "a basis is a maximal independent set." ✓
+Note that $M(C_4)$ is exactly $U_{3,4}$. The same matroid therefore arises from a graph and from the "at most three of four" rule, which is the point of the abstraction — and a warning that a matroid does not remember the graph it came from.
 :::
 
-## Optimization and Min-Max Theorems
+:::definition[Transversal matroid]{#transversal-matroid}
+Let $E$ be a finite set and $\mathcal{A} = (A_1, \dots, A_m)$ a family of subsets of $E$. A **partial transversal** of $\mathcal{A}$ is a set $X = \{x_1, \dots, x_k\} \subseteq E$ of distinct elements that can be matched to distinct indices $i_1 < \dots < i_k$ with $x_j \in A_{i_j}$ for every $j$. The **transversal matroid** $M[\mathcal{A}]$ has ground set $E$ and the partial transversals as independent sets.
+:::
+
+:::theorem[Edmonds–Fulkerson]{#edmonds-fulkerson}
+For every finite family $\mathcal{A}$ of subsets of $E$, the partial transversals of $\mathcal{A}$ are the independent sets of a matroid on $E$.
+:::
+
+:::proof[Sketch — rests on the augmenting-path machinery of the matching sections]
+Build the bipartite graph $H$ with parts $E$ and $\{1,\dots,m\}$, joining $x$ to $i$ whenever $x \in A_i$. A partial transversal is precisely the set of $E$-endpoints of a matching of $H$, so (I1) and (I2) are clear. For (I3), let $X$ and $Y$ be partial transversals with $|X| < |Y|$, realised by matchings $M_X$ and $M_Y$. The symmetric difference $M_X \triangle M_Y$ decomposes into paths and even cycles by Lemma *Symmetric difference of two matchings*, and since $|M_Y| > |M_X|$ one of those components is a path with more $M_Y$-edges than $M_X$-edges, hence an $M_X$-augmenting path. Switching along it produces a matching covering $X$ together with one further element of $Y \setminus X$. The full argument is Edmonds and Fulkerson's; it rests entirely on the augmenting-path machinery of section *Matchings, Alternating Paths and Berge's Theorem*, which is why the sketch is deferred rather than expanded here.
+:::
+
+The **partition matroid** is the special case in which the sets $A_i$ are pairwise disjoint and repeated with multiplicity: partition $E = E_1 \sqcup \dots \sqcup E_t$ and fix capacities $d_1,\dots,d_t$; then $\mathcal{I} = \{X : |X \cap E_i| \le d_i$ for all $i\}$ is a matroid of rank $\sum_i \min(|E_i|, d_i)$. Partition matroids are the plainest non-trivial matroids, and the intersection of two of them is precisely bipartite matching — a fact that section *Greedy, Intersection and the Limits of Sweeping* turns into König's theorem.
+
+:::pitfall
+Partition matroids and transversal matroids are not the same thing, and listing them together — as older summaries often do — hides a real containment. Every partition matroid is transversal: take the family in which block $E_i$ is repeated $d_i$ times. The converse fails as soon as the sets $A_i$ overlap. With $E = \{a,b,c\}$, $A_1 = \{a,b\}$ and $A_2 = \{b,c\}$, every pair is a partial transversal — $\{a,b\}$ via $a \in A_1, b\in A_2$; $\{b,c\}$ via $b \in A_1, c \in A_2$; $\{a,c\}$ via $a \in A_1, c\in A_2$ — while no three elements can be matched to two indices. So $M[\mathcal{A}] = U_{2,3}$. But $U_{2,3}$ is not a partition matroid: in a partition matroid, a block containing two elements and having capacity $1$ would make that pair dependent, so every block must have capacity at least its own size, which makes every subset independent and the rank $3$, not $2$.
+:::
+
+Not every matroid is linear, and not every linear matroid is linear over every field. The smallest obstruction is tiny.
+
+:::proposition[$U_{2,4}$ is not binary]{#u24-not-binary}
+The uniform matroid $U_{2,4}$ is not representable over the two-element field $\mathbb{F}_2$, although it is representable over every field with at least three elements.
+:::
+
+:::proof
+A representation of $U_{2,4}$ over $\mathbb{F}_2$ would be four vectors in some $\mathbb{F}_2^m$ spanning a space of dimension $r(E) = 2$, so after a change of basis they lie in $\mathbb{F}_2^2$. Every pair is independent in $U_{2,4}$, and pairwise independence forbids the zero vector and forbids two equal vectors, so the four would be four *distinct non-zero* elements of $\mathbb{F}_2^2$. But $\mathbb{F}_2^2$ has only $2^2 - 1 = 3$ non-zero vectors. Over a field $F$ with $|F| \ge 3$, the four columns
+$$\begin{pmatrix}1\\0\end{pmatrix},\ \begin{pmatrix}0\\1\end{pmatrix},\ \begin{pmatrix}1\\1\end{pmatrix},\ \begin{pmatrix}1\\ \lambda\end{pmatrix}, \qquad \lambda \notin \{0,1\},$$
+are pairwise independent and any three are dependent (they live in a plane), giving $U_{2,4}$.
+:::
+
+Symmetrically, the **Fano matroid** $F_7$ — the rank-$3$ matroid on the seven points of the Fano plane, with the seven lines as its three-element circuits — is representable over $F$ **only** when $\operatorname{char} F = 2$, and its relative $F_7^-$ only when $\operatorname{char} F \ne 2$. Putting the two together, no field represents both, so there is no field over which all matroids of rank $3$ are representable. Worse, the **Vámos matroid** $V_8$ is representable over no field at all, and almost all matroids on $n$ elements are non-representable as $n$ grows. Representability is a genuinely restrictive property, and this is the reason for developing the theory axiomatically instead of as a branch of linear algebra.
+
+:::definition[Dual matroid]{#dual-matroid}
+Let $M = (E,\mathcal{I})$ have basis family $\mathcal{B}$. The **dual** $M^*$ is the matroid on $E$ whose bases are the complements $\{E \setminus B : B \in \mathcal{B}\}$.
+:::
+
+:::proposition[The dual is a matroid, with rank $r^*$]{#dual-rank}
+$M^*$ is a matroid, $(M^*)^* = M$, and its rank function is
+$$r^*(X) = |X| - r(E) + r(E\setminus X).$$
+:::
+
+:::proof[Sketch — rests on Theorem *Basis axioms*]
+That the complements satisfy (B1) and (B2) is a direct check: complementing turns basis exchange for $\mathcal{B}$ into basis exchange for $\{E\setminus B\}$ with the roles of the exchanged elements swapped, so Theorem *Basis axioms* applies and $M^*$ is a matroid; involutivity is then immediate from complementing twice. The rank formula follows by choosing, for a given $X$, a basis of $E \setminus X$ and extending it to a basis $B$ of $M$: the dual-independent part of $X$ is exactly $X \setminus B$. The details are Oxley, §2.1, and rest on nothing beyond Theorem *Basis axioms*.
+:::
+
+Duality is what makes the theory close up on itself. The dual of a graphic matroid is graphic exactly when the graph is planar, and then $M(G)^* = M(G^*)$ for the planar dual $G^*$ — so the circuits of $M(G)^*$, called **cocircuits** of $M(G)$, are the minimal edge cuts of $G$. The statement "cycles and cuts are dual notions", which in graph theory needs planarity to be a theorem about graphs, is in matroid theory a definition that always applies.
+
+## Greedy, Intersection and the Limits of Sweeping
 
 <!-- section: optimization -->
 
-The greedy algorithm sorts the elements by weight descending, then scans through them adding each one iff the current set stays independent.
+Matroids were not invented to generalise linear algebra for its own sake; the reason they matter to algorithms is a single theorem, and that theorem is an *if and only if*. A weighting is a function $w : E \to \mathbb{R}_{\ge 0}$, extended to sets by $w(X) = \sum_{e \in X} w(e)$.
 
-:::theorem[Greedy characterizes matroids]{#greedy-matroid}
-Greedy finds a maximum-weight basis exactly when the set system is a matroid. In fact this is a *characterization*: a hereditary set system is a matroid if and only if greedy returns a maximum-weight basis for **every** weight function.
+:::recipe[The greedy algorithm]{#greedy-recipe}
+Input: a hereditary family $(E,\mathcal{I})$ given by an independence oracle, and weights $w : E \to \mathbb{R}_{\ge 0}$.
+
+1. Sort $E$ as $e_1, e_2, \dots, e_n$ with $w(e_1) \ge w(e_2) \ge \dots \ge w(e_n)$.
+2. Set $G \leftarrow \emptyset$.
+3. For $i = 1, \dots, n$: if $G \cup \{e_i\} \in \mathcal{I}$, replace $G$ by $G \cup \{e_i\}$.
+4. Return $G$.
+
+The cost is one sort plus $n$ oracle calls: $O(n\log n + n\,\theta)$, where $\theta$ is the cost of an independence test.
 :::
 
-:::theorem[Matroid intersection]{#matroid-intersection}
-There is a min-max formula for the largest set independent in *two* different matroids on the same ground set, and it is solved in polynomial time.
+Nothing in the recipe consults the future. Each decision is made once, on the strength of the weight order alone, and never revisited — which is why it is so fast, and why it has no business being correct.
+
+:::theorem[Greedy characterises matroids]{#greedy-matroid}
+Let $(E,\mathcal{I})$ be a hereditary family satisfying (I1) and (I2). Then the greedy algorithm returns a maximum-weight member of $\mathcal{I}$ **for every** weighting $w : E \to \mathbb{R}_{\ge 0}$ if and only if $(E,\mathcal{I})$ satisfies (I3) — that is, if and only if it is a matroid.
 :::
 
-These results generalize Kruskal's MST algorithm, bipartite matching, and many other classical optimization results.
+:::proof
+($\Rightarrow$, sufficiency of the matroid axioms.) Let $M$ be a matroid and $w$ a weighting. Let $G = \{g_1,\dots,g_k\}$ be the greedy output, indexed in the order the algorithm selected them, so $w(g_1) \ge \dots \ge w(g_k)$. Since greedy only stops adding when nothing more can be added, $G$ is a maximal independent set, so $k = r(E)$ by Theorem *All bases of a set have the same size*. Let $B = \{b_1,\dots,b_k\}$ be any independent set of the same size, indexed with $w(b_1)\ge \dots \ge w(b_k)$; it suffices to prove
+$$w(g_i) \ge w(b_i) \qquad \text{for every } i,$$
+since summing then gives $w(G) \ge w(B)$, and by (I2) any independent set is contained in one of size $k$.
+
+Suppose the claim fails, and let $i$ be least with $w(g_i) < w(b_i)$. Consider $A = \{g_1,\dots,g_{i-1}\}$ and $B_i = \{b_1,\dots,b_i\}$, both independent with $|A| = i-1 < i = |B_i|$. By (I3) there is $b \in B_i \setminus A$ with $A \cup \{b\} \in \mathcal{I}$. Now
+$$w(b) \ge w(b_i) > w(g_i),$$
+because $b$ is one of $b_1,\dots,b_i$ and those are sorted downwards. So $b$ is strictly heavier than $g_i$ and therefore appears strictly before $g_i$ in the sorted order. When the algorithm reached $b$, its current set was a subset of $A$ — every element chosen before $g_i$ is one of $g_1,\dots,g_{i-1}$ — and $A\cup\{b\}$ is independent, so by (I2) that current set plus $b$ was independent too. Greedy would have taken $b$. But $b \notin A$ and $b \ne g_i$, so it did not. Contradiction.
+
+($\Leftarrow$, necessity.) Suppose $(E,\mathcal{I})$ is hereditary but (I3) fails: there are $A, B \in \mathcal{I}$ with $|A| < |B|$ and $A \cup \{e\} \notin \mathcal{I}$ for every $e \in B \setminus A$. Discarding elements of $B$ if necessary — legitimate by (I2), and the failure persists because $B\setminus A$ only shrinks — assume $|B| = |A| + 1$. Write $k = |A|$ and define
+$$w(e) = \begin{cases} k+2, & e \in A,\\ k+1, & e \in B \setminus A,\\ 0, & \text{otherwise.}\end{cases}$$
+Greedy first examines the elements of $A$, which are strictly heaviest. Every prefix of $A$ is independent by (I2), so every element of $A$ is accepted and the current set is $A$. Next it examines $B\setminus A$; by hypothesis no such element can be added to $A$, so all are rejected. Everything remaining has weight $0$, so whatever greedy does afterwards, its output has weight exactly
+$$w(G) = k(k+2) = (k+1)^2 - 1 .$$
+On the other hand $B \in \mathcal{I}$, and writing $a = |A \cap B|$,
+$$w(B) = a(k+2) + (k+1-a)(k+1) = (k+1)^2 + a \ \ge\ (k+1)^2 \ >\ w(G).$$
+So greedy is beaten by $B$ on this weighting, and the "for every $w$" hypothesis fails.
+:::
 
 :::intuition
-Greedy works perfectly for matroids: always pick the next best item that doesn't create a "circuit".
-
-For two matroids (e.g. one graphic, one partition) the common independent sets (e.g. matchings that are also forests) have a clean min-max size.
+The forward direction says a matroid never punishes impatience: taking the heaviest legal element first can never lock you out of an optimum, because (I3) guarantees a legal replacement is always available later. The backward direction says the converse failure is not subtle — one weighting exposes it, and you can read that weighting straight off the place where augmentation broke. Pay a little more for the elements of the stuck set $A$ than for the elements of the bigger set $B$, and greed walks into the trap.
 :::
 
-:::example
-Kruskal's algorithm for the maximum-weight spanning tree *is* the matroid greedy algorithm on the graphic matroid. Let us run it explicitly. Take the triangle $K_3$ on vertices $\{a,b,c\}$ with edge weights
-$$w(ab) = 3,\quad w(bc) = 2,\quad w(ca) = 1.$$
-We want a **maximum**-weight basis (spanning tree), so we sort descending and add each edge iff it keeps the set acyclic:
+:::corollary[Kruskal's algorithm is optimal]{#kruskal}
+Sorting the edges of a connected graph by weight and adding each edge that does not close a cycle produces a spanning tree of maximum total weight; sorting upwards instead produces one of minimum total weight.
+:::
+
+:::proof
+The forests of $G$ form the matroid $M(G)$ by Theorem *The cycle matroid is a matroid*, and Kruskal's rule is exactly Recipe *The greedy algorithm* with the acyclicity oracle, so Theorem *Greedy characterises matroids* applies. For the minimum version, run greedy on $w'(e) = W - w(e)$ where $W = \max_e w(e)$; this is non-negative, and since every basis has the same size $|V|-1$, maximising $w'$ over bases is the same as minimising $w$ over bases.
+:::
+
+:::example[Greedy beaten by a non-matroid]
+Take $E = \{1,2,3\}$ and the hereditary family $\mathcal{I}'' = \{\emptyset,\{1\},\{2\},\{3\},\{1,2\}\}$ from the pitfall in section *Independence: the Axioms and Their Equivalents*. Produce a weighting on which greedy fails, and check it against the construction in the proof.
 :::
 
 :::solution
-**$ab$ (weight $3$).** Current set $\emptyset$; adding $ab$ stays a forest. Take it → $\{ab\}$.
-**$bc$ (weight $2$).** $\{ab, bc\}$ is a path $a\text{-}b\text{-}c$, still acyclic. Take it → $\{ab, bc\}$.
-**$ca$ (weight $1$).** Adding $ca$ would close the triangle $a\text{-}b\text{-}c\text{-}a$, a cycle — dependent. Skip it.
+Augmentation fails at $A = \{3\}$, $B = \{1,2\}$, so $k = |A| = 1$ and the recipe of the proof gives
+$$w(3) = k+2 = 3, \qquad w(1) = w(2) = k+1 = 2.$$
+Greedy sorts as $3, 1, 2$, takes $3$, then rejects $1$ (since $\{1,3\} \notin \mathcal{I}''$) and rejects $2$. Output $\{3\}$, weight $3$. But $\{1,2\} \in \mathcal{I}''$ has weight $4$.
 
-Result: the tree $\{ab, bc\}$ with total weight $3 + 2 = 5$.
-
-**Sanity check:** $K_3$ has $v=3$ vertices, so every spanning tree has $v-1 = 2$ edges; there are $3$ spanning trees with weights $3{+}2{=}5$, $3{+}1{=}4$, $2{+}1{=}3$, and greedy correctly picked the heaviest, $5$. ✓ (For a *minimum* spanning tree, sort ascending instead — the same argument shows greedy is optimal because forests form a matroid.)
+The proof predicts $w(G) = (k+1)^2 - 1 = 3$ and $w(B) = (k+1)^2 + |A \cap B| = 4 + 0 = 4$. Both match.
 :::
 
-## Definitions and Basic Facts
+Greed is therefore the exact algorithmic signature of one matroid. Two matroids at once is a different and much harder problem — but remarkably, still a tractable one.
+
+:::definition[Matroid intersection]{#matroid-intersection-def}
+Given matroids $M_1 = (E,\mathcal{I}_1)$ and $M_2 = (E,\mathcal{I}_2)$ on a common ground set, a **common independent set** is a set in $\mathcal{I}_1 \cap \mathcal{I}_2$. The matroid intersection problem asks for one of maximum size (or of maximum weight).
+:::
+
+:::theorem[Edmonds' matroid intersection theorem]{#matroid-intersection}
+For matroids $M_1, M_2$ on $E$ with rank functions $r_1, r_2$,
+$$\max_{I \in \mathcal{I}_1\cap\mathcal{I}_2} |I| \;=\; \min_{S \subseteq E}\ \big(r_1(S) + r_2(E\setminus S)\big).$$
+Moreover a maximum common independent set can be found in polynomial time, using $O(r^{1.5}|E|)$ independence-oracle calls.
+:::
+
+:::proof
+We prove the easy inequality $\le$ in full; the reverse inequality is Edmonds' theorem and is discussed after the proof.
+
+Let $I \in \mathcal{I}_1 \cap \mathcal{I}_2$ and let $S \subseteq E$ be arbitrary. Split $I$ along $S$:
+$$|I| = |I \cap S| + |I \setminus S|.$$
+Now $I \cap S$ is independent in $M_1$ and contained in $S$, so $|I\cap S| \le r_1(S)$. Likewise $I \setminus S$ is independent in $M_2$ and contained in $E\setminus S$, so $|I\setminus S| \le r_2(E\setminus S)$. Adding gives $|I| \le r_1(S) + r_2(E\setminus S)$, and taking the maximum on the left and the minimum on the right gives the inequality.
+:::
+
+:::proof[Sketch — Edmonds' exchange-digraph argument]
+For the reverse inequality, Edmonds' argument runs an augmenting-path search in an auxiliary *exchange digraph* on $E$ whose arcs record which element may replace which in $M_1$ and in $M_2$. When no augmenting path exists, the set $S$ of vertices reachable from the $M_1$-free elements is exactly a minimiser, and reading off $r_1(S) + r_2(E\setminus S) = |I|$ certifies optimality. The structure of the argument — augment, or else read a tight dual object off the unreachable set — is the same one used for König's theorem below and for max-flow min-cut; Schrijver's *Combinatorial Optimization*, §41, gives it in full.
+:::
+
+:::example[Bipartite matching is a matroid intersection]
+Let $G$ be bipartite with parts $L$ and $R$ and edge set $E$. Exhibit two matroids on $E$ whose common independent sets are exactly the matchings of $G$.
+:::
+
+:::solution
+Let $M_L$ be the partition matroid on $E$ in which the blocks are the stars $\{e : e \ni v\}$ for $v \in L$, each with capacity $1$; define $M_R$ the same way using the vertices of $R$. Because $G$ is bipartite, every edge lies in exactly one $L$-block and exactly one $R$-block, so the blocks really do partition $E$ in each case.
+
+A set $F \subseteq E$ is independent in $M_L$ iff no two of its edges share a left endpoint, and independent in $M_R$ iff no two share a right endpoint. So $F \in \mathcal{I}_L \cap \mathcal{I}_R$ iff no two edges of $F$ share any endpoint — that is, iff $F$ is a matching.
+
+Applying Theorem *Edmonds' matroid intersection theorem* here yields $\nu(G) = \min_S (r_L(S) + r_R(E\setminus S))$, and unwinding the two partition ranks into "number of left vertices used" plus "number of right vertices used" turns that formula into König's theorem. The general min–max thus already contains the bipartite one.
+:::
+
+:::pitfall
+Three matroids is one too many. Deciding whether three matroids on a common ground set have a common independent set of size $k$ is NP-hard — it contains the Hamiltonian path problem, which is the intersection of two partition matroids (in-degree and out-degree at most one) with one graphic matroid. Nor does greed survive intersection: greedy on two matroids can fail badly, because the element that is safest for $M_1$ may be the one that ruins $M_2$. The exact boundary is two.
+:::
+
+A last structural theorem of the same family deserves a statement, because it is the tool behind several packing and covering results.
+
+:::theorem[Nash-Williams matroid union]{#matroid-union}
+Let $M_1,\dots,M_k$ be matroids on $E$ with rank functions $r_1,\dots,r_k$. Then $\mathcal{I} = \{I_1 \cup \dots \cup I_k : I_j \in \mathcal{I}_j\}$ is the family of independent sets of a matroid on $E$, whose rank function is
+$$r(X) = \min_{Y \subseteq X}\Big(|X \setminus Y| + \sum_{j=1}^k r_j(Y)\Big).$$
+:::
+
+:::proof[Sketch — rests on matroid intersection]
+That $\mathcal{I}$ is hereditary is clear, and (I3) follows from a shifting argument on the $k$-tuple of pieces. The rank formula is proved by the same reachability construction as matroid intersection, applied to the direct sum $M_1 \oplus \dots \oplus M_k$ together with a partition matroid encoding "each ground element is used once". A full account is Schrijver, §42; the specialisation to $k$ copies of $M(G)$ gives Nash-Williams' theorem that $G$ has $k$ edge-disjoint spanning trees iff every partition of $V$ into $p$ parts is crossed by at least $k(p-1)$ edges.
+:::
+
+## Matchings, Alternating Paths and Berge's Theorem
 
 <!-- section: definition-matching -->
 
+Greed is now understood, and the second half of the chapter is about what replaces it. A matching is the standard example of a structure whose maximal objects have different sizes, so no rank function and no greedy sweep can exist. What takes their place is a *local certificate*: a single path whose presence proves the current solution improvable and whose absence proves it optimal.
+
 :::definition[Matching]{#matching}
-A matching M is a subset of edges with no two sharing a vertex. A vertex is matched (covered) if incident to an edge in M; otherwise free (exposed). A maximum matching has the largest possible number of edges.
+Let $G=(V,E)$ be a graph. A **matching** $M \subseteq E$ is a set of edges no two of which share an endpoint. A vertex incident with an edge of $M$ is **covered** (or matched); the others are **exposed** (or free). A matching is **maximal** if no edge can be added to it, **maximum** if no matching of $G$ has more edges, and **perfect** if it covers every vertex. The **matching number** $\nu(G)$ is the size of a maximum matching.
 :::
 
-:::definition[Augmenting path]{#augmenting-path}
-An augmenting path with respect to M is an alternating path (edges alternately in and out of M) that begins and ends at free vertices.
+:::pitfall
+*Maximal* and *maximum* are different words with different meanings, and interchanging them is the commonest error in this subject. In the path $a - b - c - d$ the single edge $\{bc\}$ is maximal — every other edge meets $b$ or $c$ — but the matching $\{ab, cd\}$ is twice as large. It is precisely because maximal matchings have different sizes that matchings are not the independent sets of a matroid, by Theorem *All bases of a set have the same size*.
 :::
 
-:::lemma[Berge's lemma]{#berge}
-A matching is maximum if and only if it admits no augmenting path.
+:::definition[Alternating and augmenting paths]{#augmenting-path}
+Let $M$ be a matching in $G$. A path is **$M$-alternating** if its edges are alternately outside and inside $M$. An $M$-alternating path is **$M$-augmenting** if both of its endpoints are exposed.
+:::
+
+An augmenting path has odd length, since its first and last edges are both outside $M$, and it therefore has one more non-matching edge than matching edge. Switching membership along the path — deleting its $M$-edges and inserting its non-$M$-edges — is called **augmenting along** it.
+
+:::figure[An $M$-augmenting path in a bipartite graph. The matching $M = \{b2,\ c3\}$ is drawn in orange; the path $a - 2 - b - 3 - c - 4$ alternates outside-$M$, inside-$M$, outside-$M$, inside-$M$, outside-$M$ and ends at the two exposed vertices $a$ and $4$. Switching membership along it deletes the two orange edges and inserts the three grey ones, so the matching grows from $2$ to $3$.]{#augmenting-figure}
+{
+  "type": "plot",
+  "x": [-1.4, 5.0],
+  "y": [-0.6, 4.6],
+  "marks": [
+    { "kind": "path", "points": [[0, 3], [3, 2]], "tone": "muted" },
+    { "kind": "path", "points": [[0, 2], [3, 2]], "tone": "result" },
+    { "kind": "path", "points": [[0, 2], [3, 1]], "tone": "muted" },
+    { "kind": "path", "points": [[0, 1], [3, 1]], "tone": "result" },
+    { "kind": "path", "points": [[0, 1], [3, 0]], "tone": "muted" },
+    { "kind": "point", "at": [0, 3] },
+    { "kind": "point", "at": [0, 2] },
+    { "kind": "point", "at": [0, 1] },
+    { "kind": "point", "at": [3, 2] },
+    { "kind": "point", "at": [3, 1] },
+    { "kind": "point", "at": [3, 0] },
+    { "kind": "text", "at": [-0.6, 3.0], "text": "a" },
+    { "kind": "text", "at": [-0.6, 2.0], "text": "b" },
+    { "kind": "text", "at": [-0.6, 1.0], "text": "c" },
+    { "kind": "text", "at": [3.6, 2.0], "text": "2" },
+    { "kind": "text", "at": [3.6, 1.0], "text": "3" },
+    { "kind": "text", "at": [3.6, 0.0], "text": "4" },
+    { "kind": "text", "at": [1.5, 4.15], "text": "exposed: a and 4" },
+    { "kind": "text", "at": [1.5, 3.5], "text": "orange edges = M", "tone": "result" }
+  ]
+}
+:::
+
+:::lemma[Symmetric difference of two matchings]{#symmetric-difference}
+Let $M$ and $N$ be matchings in $G$. Every connected component of the spanning subgraph $(V, M \triangle N)$ is one of: an isolated vertex, a path whose edges alternate between $M$ and $N$, or an even cycle whose edges alternate between $M$ and $N$.
+:::
+
+:::proof
+Every vertex $v$ is incident with at most one edge of $M$ and at most one of $N$, so its degree in $M \triangle N$ is at most $2$. A graph of maximum degree at most $2$ is a disjoint union of isolated vertices, paths and cycles.
+
+In any such component, two consecutive edges share a vertex, so they cannot both lie in $M$ (that would violate the matching condition) nor both in $N$. Hence edges alternate between $M \setminus N$ and $N \setminus M$ along every path and every cycle. A cycle that alternates must have even length, since its edges alternate between two classes around a closed walk.
+:::
+
+:::theorem[Berge]{#berge}
+A matching $M$ in a graph $G$ is maximum if and only if $G$ contains no $M$-augmenting path.
+:::
+
+:::proof
+($\Rightarrow$) Suppose $P$ is an $M$-augmenting path, with edges $f_1, m_1, f_2, m_2, \dots, m_{k}, f_{k+1}$ where the $m_j \in M$ and the $f_j \notin M$. Put
+$$M' = (M \setminus \{m_1,\dots,m_k\}) \cup \{f_1,\dots,f_{k+1}\}.$$
+$M'$ is a matching: inside $P$ the chosen edges are pairwise disjoint by construction, the two endpoints of $P$ were exposed by $M$ so no outside edge of $M$ meets them, and every internal vertex of $P$ had its $M$-edge removed and exactly one $f_j$ inserted. And $|M'| = |M| - k + (k+1) = |M| + 1$, so $M$ was not maximum.
+
+($\Leftarrow$) Suppose $M$ is not maximum and let $N$ be a matching with $|N| > |M|$. Consider $D = M \triangle N$. By Lemma *Symmetric difference of two matchings*, every component of $D$ is an alternating path or an alternating even cycle. An even cycle contributes equally many edges of $M$ and of $N$; a path contributes either equally many, or one more of one kind. Since $|N \setminus M| > |M \setminus N|$, at least one component contributes strictly more $N$-edges than $M$-edges, and it must be a path $P$ whose first and last edges both lie in $N$.
+
+Then $P$ is $M$-alternating. Its endpoints $u$ and $v$ are exposed by $M$: the $D$-edge of $P$ at $u$ lies in $N$, and if $u$ were covered by some $m \in M$ then either $m \in D$, contradicting that $u$ has degree $1$ in this component of $D$ — the path ends there — or $m \in M \cap N$, which is impossible because $u$ is already covered by the $N$-edge of $P$ and $N$ is a matching. So $P$ is $M$-augmenting.
 :::
 
 :::intuition
-A matching is a collection of "paired" edges that don't fight over people (vertices).
-
-An augmenting path is an alternating chain that lets you flip and get one more pair.
+Berge's theorem is what makes matchings computable. Optimality is normally a global statement — *no* matching anywhere is larger — and verifying it by inspection would mean checking exponentially many candidates. The theorem replaces it by a search: look for one alternating path between two exposed vertices. Find one and you improve; fail to find one and you are done. Every matching algorithm in the next section is a way of organising that search.
 :::
 
-:::example
-Take the path $P_5$ on vertices $a\text{-}b\text{-}c\text{-}d\text{-}e$ (four edges: $ab$, $bc$, $cd$, $de$). Start from the small matching $M = \{bc\}$, of size $1$. Vertices $b,c$ are matched; $a,d,e$ are free.
+:::example[Augmenting on a path graph]
+In the path $P_5$ with vertices $a,b,c,d,e$ and edges $ab, bc, cd, de$, start from $M = \{bc\}$ and find a maximum matching, certifying optimality.
 :::
 
 :::solution
-Look for an augmenting path — an alternating path (out-of-$M$, in-$M$, out-of-$M$, …) whose two endpoints are both free. Start at the free vertex $a$:
-$$a \xrightarrow{ab \notin M} b \xrightarrow{bc \in M} c \xrightarrow{cd \notin M} d.$$
-The endpoints $a$ and $d$ are both free, and the edges alternate out/in/out, so $a\text{-}b\text{-}c\text{-}d$ is augmenting. **Flip** membership along it: remove $bc$, add $ab$ and $cd$. The new matching is
-$$M' = \{ab,\ cd\},\qquad |M'| = 2,$$
-one larger than before, as promised. Now $a,b,c,d$ are matched and only $e$ is free. Any alternating path from $e$ is $e\text{-}d\text{-}c\text{-}b\text{-}a$, but $a$ is matched, so it does **not** end at a free vertex — no augmenting path exists.
-
-**Sanity check:** by Berge's lemma, no augmenting path means $M'$ is maximum. Indeed $P_5$ has $5$ vertices, so a matching has at most $\lfloor 5/2\rfloor = 2$ edges, and $|M'| = 2$ attains it. ✓
+The exposed vertices are $a$, $d$, $e$. Starting at $a$ and alternating, $a \xrightarrow{ab \notin M} b \xrightarrow{bc \in M} c \xrightarrow{cd \notin M} d$ ends at the exposed vertex $d$, so $a\,b\,c\,d$ is $M$-augmenting. Switching gives
+$$M' = \{ab, cd\}, \qquad |M'| = 2 .$$
+Now only $e$ is exposed. The unique alternating path from $e$ is $e\,d\,c\,b\,a$, and its far endpoint $a$ is covered by $ab \in M'$, so it is not augmenting; no other exposed vertex exists, so there is no $M'$-augmenting path at all. By Theorem *Berge*, $M'$ is maximum, and indeed $\nu(P_5) = \lfloor 5/2 \rfloor = 2$.
 :::
 
-## Hall's Theorem in Bipartite Graphs
+Matchings sit in a small web of parameters, and the relations between them are worth having, because the min–max theorems of the next section are statements about exactly these quantities.
+
+:::definition[Covers and independence]{#cover-parameters}
+A **vertex cover** is a set $S \subseteq V$ meeting every edge; $\tau(G)$ is the size of a smallest one. An **independent set of vertices** is a set with no edge inside it; $\alpha(G)$ is the size of a largest one. An **edge cover** (defined when $G$ has no isolated vertex) is a set of edges covering every vertex; $\rho(G)$ is the size of a smallest one.
+:::
+
+:::proposition[Weak duality]{#weak-duality-matching}
+For every graph $G$, $\nu(G) \le \tau(G)$.
+:::
+
+:::proof
+Let $M$ be a maximum matching and $S$ a minimum vertex cover. Every edge of $M$ must be met by $S$, and no vertex of $S$ can meet two edges of $M$ because those two edges would then share it. So the map sending each edge of $M$ to a covering vertex in $S$ is injective, giving $|M| \le |S|$.
+:::
+
+:::theorem[Gallai's identities]{#gallai}
+For every graph $G$ on $n$ vertices, $\alpha(G) + \tau(G) = n$. If moreover $G$ has no isolated vertex, $\nu(G) + \rho(G) = n$.
+:::
+
+:::proof
+For the first identity, $S$ is a vertex cover if and only if $V \setminus S$ is independent: an edge inside $V\setminus S$ is exactly an edge missed by $S$. So minimum covers and maximum independent sets are complements of one another, and their sizes add to $n$.
+
+For the second, take a maximum matching $M$, covering $2\nu$ vertices. For each of the $n - 2\nu$ exposed vertices pick one incident edge — possible since there are no isolated vertices — and add it. The result covers every vertex, so $\rho \le \nu + (n-2\nu) = n - \nu$.
+
+Conversely take a minimum edge cover $F$. Its components are stars: a component with a path of three edges would let us delete the middle edge and still cover everything, contradicting minimality. If $F$ has $c$ components covering $n$ vertices, then $|F| = n - c$ since each component is a tree. Picking one edge from each component gives a matching of size $c$, so $\nu \ge c = n - |F| = n - \rho$. Combining, $\nu + \rho = n$.
+:::
+
+## Hall's Theorem and the König Equivalence
 
 <!-- section: halls-theorem -->
 
-:::theorem[Hall's marriage theorem]{#hall}
-Let G be bipartite with parts L and R. There is a matching that saturates (covers) every vertex of L if and only if for every S ⊆ L we have |N(S)| ≥ |S|, where N(S) is the set of neighbors of S in R.
+In a bipartite graph the augmenting-path picture crystallises into a clean combinatorial criterion, and that criterion is the model for every min–max theorem in combinatorial optimization. Throughout this section $G$ is bipartite with parts $L$ and $R$, and for $S \subseteq L$ we write $N(S) = \{v \in R : uv \in E$ for some $u \in S\}$.
+
+:::definition[Hall's condition and a saturating matching]{#hall-condition}
+A matching **saturates** $L$ if every vertex of $L$ is covered by it. The family of neighbourhoods satisfies **Hall's condition** if
+$$|N(S)| \ge |S| \qquad \text{for every } S \subseteq L .$$
 :::
 
-This is a necessary and sufficient condition and a prototype min-max theorem.
+:::theorem[Hall's marriage theorem]{#hall}
+A bipartite graph $G$ with parts $L$ and $R$ has a matching saturating $L$ if and only if $|N(S)| \ge |S|$ for every $S \subseteq L$.
+:::
+
+:::proof
+($\Rightarrow$) Let $M$ saturate $L$ and let $S \subseteq L$. The $M$-partners of the vertices of $S$ are $|S|$ distinct vertices of $R$, each a neighbour of some vertex of $S$, so $|N(S)| \ge |S|$.
+
+($\Leftarrow$) Induct on $|L|$. If $|L| \le 1$ the condition $|N(L)| \ge |L|$ produces the required edge directly (or there is nothing to match). Let $|L| = k \ge 2$ and assume the theorem for all bipartite graphs with a smaller left part. Call a non-empty set $S \subsetneq L$ **tight** if $|N(S)| = |S|$.
+
+*Case 1: no proper non-empty subset of $L$ is tight,* so $|N(S)| \ge |S| + 1$ for every non-empty $S \subsetneq L$. Pick any $u \in L$ and any neighbour $v \in N(u)$ — one exists since $|N(\{u\})| \ge 1$ — and delete both. In $G' = G - u - v$ with left part $L' = L \setminus \{u\}$, every non-empty $S \subseteq L'$ has
+$$|N_{G'}(S)| \ge |N_G(S)| - 1 \ge (|S|+1) - 1 = |S|,$$
+where the first inequality holds because only $v$ was removed from $R$. Hall's condition holds in $G'$, so by induction $G'$ has a matching saturating $L'$; adding $uv$ saturates $L$.
+
+*Case 2: some non-empty $S_0 \subsetneq L$ is tight,* $|N(S_0)| = |S_0|$. Let $G_1$ be the bipartite graph induced on $S_0 \cup N(S_0)$. For $S \subseteq S_0$ we have $N_{G_1}(S) = N_G(S)$, so Hall's condition holds in $G_1$ and, since $|S_0| < |L|$, induction gives a matching $M_1$ saturating $S_0$; as $|N(S_0)| = |S_0|$, it saturates $N(S_0)$ as well.
+
+Let $G_2$ be induced on $(L \setminus S_0) \cup (R \setminus N(S_0))$. For $T \subseteq L\setminus S_0$,
+$$|N_{G_2}(T)| = |N_G(T \cup S_0)| - |N(S_0)| \ge |T \cup S_0| - |S_0| = |T|,$$
+using Hall's condition for $T \cup S_0$ and $N_G(T\cup S_0) = N_G(T) \cup N(S_0)$. So Hall's condition holds in $G_2$; since $S_0 \neq \emptyset$, the left part of $G_2$ is smaller than $L$ and induction yields a matching $M_2$ saturating $L \setminus S_0$. The two matchings use disjoint vertex sets, so $M_1 \cup M_2$ saturates $L$.
+:::
 
 :::intuition
-To marry off every boy (L) to a girl (R) such that each girl gets at most one, you need that any group of k boys collectively knows at least k girls.
-
-If some group of boys knows fewer girls than boys, obviously impossible.
+Hall's condition is obviously necessary — $k$ boys who between them know only $k-1$ girls cannot all be married — and the content of the theorem is that this is the *only* obstruction. The proof explains why by splitting on whether the graph is slack everywhere or tight somewhere. If there is slack, any single edge can be committed without regret, because removing one right-vertex cannot break a condition that had room to spare. If some set is tight, that set and its neighbourhood form a closed sub-problem which must be solved on its own terms, and the rest of the graph never needed those vertices anyway.
 :::
 
-:::example
-Let $L = \{A,B,C\}$ and $R = \{1,2,3\}$ with neighborhoods
-$$N(A) = \{1,2\},\quad N(B) = \{1\},\quad N(C) = \{1,2,3\}.$$
-To apply Hall we must check $|N(S)| \ge |S|$ for **every** $S \subseteq L$. The dangerous cases are the small, "cramped" ones — a set is only in danger if its members share few neighbors:
+:::corollary[The deficiency form]{#defect-hall}
+For a bipartite graph with parts $L$ and $R$,
+$$\nu(G) = |L| - \max_{S \subseteq L}\big(|S| - |N(S)|\big).$$
+The quantity $\operatorname{def}(G) = \max_{S\subseteq L}(|S|-|N(S)|)$ is the **deficiency**; it is at least $0$, taking $S = \emptyset$.
+:::
+
+:::proof
+Write $d = \operatorname{def}(G)$. For the upper bound $\nu \le |L| - d$: let $S$ attain the maximum and let $M$ be any matching. The edges of $M$ meeting $S$ end in $N(S)$ and are pairwise disjoint, so at most $|N(S)|$ vertices of $S$ are covered, leaving at least $|S| - |N(S)| = d$ vertices of $L$ exposed; hence $|M| \le |L| - d$.
+
+For the lower bound, form $G^+$ by adding $d$ new vertices to $R$, each joined to every vertex of $L$. For any $S \subseteq L$,
+$$|N_{G^+}(S)| = |N_G(S)| + d \ge |N_G(S)| + (|S| - |N_G(S)|) = |S|$$
+when $S \ne \emptyset$, and trivially for $S = \emptyset$. By Theorem *Hall's marriage theorem*, $G^+$ has a matching $M^+$ saturating $L$. Deleting the at most $d$ edges of $M^+$ that use a new vertex leaves a matching of $G$ of size at least $|L| - d$.
+:::
+
+:::corollary[Regular bipartite graphs have perfect matchings]{#regular-bipartite}
+Every $k$-regular bipartite graph with $k \ge 1$ has a perfect matching, and its edge set decomposes into $k$ perfect matchings.
+:::
+
+:::proof
+Counting edges incident with $L$ in two ways gives $k|L| = |E| = k|R|$, so $|L| = |R|$. For $S \subseteq L$, the $k|S|$ edges leaving $S$ all land in $N(S)$, which receives at most $k|N(S)|$ edges in total; hence $k|S| \le k|N(S)|$ and $|N(S)| \ge |S|$. Theorem *Hall's marriage theorem* gives a matching saturating $L$, which is perfect since $|L| = |R|$. Deleting it leaves a $(k-1)$-regular bipartite graph, and induction on $k$ finishes the decomposition.
+:::
+
+:::example[Marrying off a constrained set]
+Let $L = \{A,B,C\}$, $R = \{1,2,3\}$ with $N(A) = \{1,2\}$, $N(B) = \{1\}$, $N(C) = \{1,2,3\}$. Decide whether a saturating matching exists, and if so construct one.
 :::
 
 :::solution
-Singletons: $|N(A)|=2\ge1$, $|N(B)|=1\ge1$, $|N(C)|=3\ge1$. ✓
-Pairs: $N(\{A,B\})=\{1,2\}$ ($2\ge2$); $N(\{A,C\})=\{1,2,3\}$ ($3\ge2$); $N(\{B,C\})=\{1,2,3\}$ ($3\ge2$). ✓
-All three: $N(\{A,B,C\}) = \{1,2,3\}$ ($3 \ge 3$). ✓
+Check every subset. Singletons: $|N(A)| = 2$, $|N(B)| = 1$, $|N(C)| = 3$, all at least $1$. Pairs: $N(\{A,B\}) = \{1,2\}$ has size $2$; $N(\{A,C\}) = N(\{B,C\}) = \{1,2,3\}$ has size $3$. The whole set: $|N(L)| = 3 \ge 3$. Hall's condition holds, so a saturating matching exists.
 
-Every subset satisfies Hall's condition, so a matching saturating $L$ exists. To construct one, match the most constrained vertex first: $B$ can only take $1$, so set $B\text{-}1$; then $A$ takes $2$; then $C$ takes the remaining $3$. This gives the perfect matching
-$$M = \{B\text{-}1,\ A\text{-}2,\ C\text{-}3\}.$$
+To build one, follow the proof: $\{A,B\}$ is tight ($|N| = 2 = |S|$), so solve that sub-problem first. Inside it $B$ must take $1$ and $A$ must take $2$. The rest of the graph is $C$ against $\{3\}$, giving $C\,3$. So $M = \{B1, A2, C3\}$, a perfect matching.
 
-**Sanity check:** the three chosen right-vertices $1,2,3$ are distinct, and each edge respects the neighborhoods ($1\in N(B)$, $2\in N(A)$, $3\in N(C)$). ✓ Notice the failure mode Hall guards against: if instead $N(A)=N(C)=\{1\}$ too, then $S=\{A,B,C\}$ would have $|N(S)|=1<3$ and no such matching could exist.
+Had $N(A)$ been $\{1\}$ as well, then $S = \{A,B\}$ would have $|N(S)| = 1 < 2$: deficiency $1$, and by Corollary *The deficiency form*, $\nu = 3 - 1 = 2$.
 :::
 
-## Algorithms and Min-Max
+Hall's theorem is a statement about *when* a matching of a given size exists. König's theorem is the corresponding statement about *how big* a matching is, and the two are logically interchangeable.
+
+:::theorem[König]{#konig}
+In a bipartite graph $G$, $\nu(G) = \tau(G)$: the maximum size of a matching equals the minimum size of a vertex cover.
+:::
+
+:::proof
+The inequality $\nu \le \tau$ is Proposition *Weak duality*, and holds in every graph. For the reverse, let $d = \operatorname{def}(G)$ and let $S_0 \subseteq L$ attain it, so $|N(S_0)| = |S_0| - d$. Put
+$$T = (L \setminus S_0) \cup N(S_0).$$
+$T$ is a vertex cover: an edge $uv$ with $u \in L$, $v \in R$ is covered by $u$ if $u \notin S_0$, and by $v$ if $u \in S_0$, since then $v \in N(S_0)$. Its size is
+$$|T| = |L| - |S_0| + |N(S_0)| = |L| - |S_0| + |S_0| - d = |L| - d = \nu(G),$$
+the last equality by Corollary *The deficiency form*. So $\tau \le |T| = \nu$, and with weak duality, $\tau = \nu$.
+:::
+
+:::theorem[König implies Hall]{#konig-implies-hall}
+Assume König's theorem. Then a bipartite graph satisfying Hall's condition has a matching saturating $L$; that is, Hall's theorem follows.
+:::
+
+:::proof
+Let $G$ satisfy $|N(S)| \ge |S|$ for all $S \subseteq L$, and let $T$ be a minimum vertex cover, written $T = T_L \cup T_R$ with $T_L \subseteq L$ and $T_R \subseteq R$. Every edge leaving $L \setminus T_L$ must be covered on the right, so
+$$N(L \setminus T_L) \subseteq T_R .$$
+Hall's condition applied to $L \setminus T_L$ therefore gives $|T_R| \ge |N(L\setminus T_L)| \ge |L| - |T_L|$, whence
+$$\tau(G) = |T_L| + |T_R| \ge |L| .$$
+By König, $\nu(G) = \tau(G) \ge |L|$. A matching has at most $|L|$ edges since each uses a distinct left vertex, so $\nu(G) = |L|$ and the maximum matching saturates $L$.
+:::
+
+:::figure[The cover König's proof builds. The deficient set is $S_0 = \{A,B\}$ with $N(S_0)=\{1\}$, so the deficiency is $1$ and $\nu = 4-1 = 3$. The cover $T = (L\setminus S_0)\cup N(S_0) = \{C,D,1\}$ is drawn as violet vertices; every edge meets one of them, because an edge out of $S_0$ must land in $N(S_0)$ and every other edge starts outside $S_0$. Its size is $|L|-|S_0|+|N(S_0)| = 3$, matching the orange matching $\{A1, C2, D3\}$.]{#konig-figure}
+{
+  "type": "plot",
+  "x": [-1.4, 5.0],
+  "y": [-0.7, 4.3],
+  "marks": [
+    { "kind": "path", "points": [[0, 3], [3, 2.5]], "tone": "result" },
+    { "kind": "path", "points": [[0, 2], [3, 2.5]], "tone": "muted" },
+    { "kind": "path", "points": [[0, 1], [3, 1.5]], "tone": "result" },
+    { "kind": "path", "points": [[0, 0], [3, 0.5]], "tone": "result" },
+    { "kind": "point", "at": [0, 3] },
+    { "kind": "point", "at": [0, 2] },
+    { "kind": "point", "at": [0, 1], "tone": "alt" },
+    { "kind": "point", "at": [0, 0], "tone": "alt" },
+    { "kind": "point", "at": [3, 2.5], "tone": "alt" },
+    { "kind": "point", "at": [3, 1.5] },
+    { "kind": "point", "at": [3, 0.5] },
+    { "kind": "text", "at": [-0.6, 3.0], "text": "A" },
+    { "kind": "text", "at": [-0.6, 2.0], "text": "B" },
+    { "kind": "text", "at": [-0.6, 1.0], "text": "C", "tone": "alt" },
+    { "kind": "text", "at": [-0.6, 0.0], "text": "D", "tone": "alt" },
+    { "kind": "text", "at": [3.6, 2.5], "text": "1", "tone": "alt" },
+    { "kind": "text", "at": [3.6, 1.5], "text": "2" },
+    { "kind": "text", "at": [3.6, 0.5], "text": "3" },
+    { "kind": "text", "at": [1.5, 3.9], "text": "cover {C, D, 1}, size 3", "tone": "alt" }
+  ]
+}
+:::
+
+The two theorems are thus equivalent over the trivial facts, and each has a third equivalent in Dilworth's theorem on chain covers of a poset and a fourth in the integral max-flow min-cut theorem. Section *Algorithms, Blossoms and the Min–Max Pattern* collects the pattern; chapter *Flows and Duality* proves that the pattern is LP duality applied to a matrix that happens to be totally unimodular.
+
+:::pitfall
+König's theorem is *bipartite*. In the triangle $K_3$ we have $\nu = 1$ but $\tau = 2$, and in general $\tau$ can be as large as $2\nu$ — take any graph and note that the endpoints of a maximum matching always form a vertex cover. The correct non-bipartite replacement is not a patched-up König but the Tutte–Berge formula, which pays for odd components rather than for vertices.
+:::
+
+## Algorithms, Blossoms and the Min–Max Pattern
 
 <!-- section: algorithms -->
 
-In bipartite graphs: reduce to max flow (unit capacities from source to L, edges L-R capacity 1, R to sink). Ford-Fulkerson or Dinic gives max matching. Hopcroft-Karp is faster O(E√V).
+Berge's theorem turns "is this matching maximum?" into "does an augmenting path exist?", and everything algorithmic follows from making that search efficient. In the bipartite case the search is a breadth-first scan; in general graphs it needs one genuinely new idea.
 
-In general graphs: Edmonds' blossom algorithm contracts odd alternating cycles ("blossoms") and recurses; polynomial time.
+:::recipe[Augmenting-path algorithm for bipartite matching]{#bipartite-algorithm}
+Input: bipartite $G$ with parts $L, R$.
 
-:::theorem[König's theorem]{#konig}
-In a bipartite graph, the size of a maximum matching equals the size of a minimum vertex cover.
+1. Start with $M = \emptyset$.
+2. While some $u \in L$ is exposed: search for an $M$-augmenting path from $u$ by alternately following non-matching edges out of $L$ and matching edges out of $R$, marking visited vertices.
+3. If such a path reaches an exposed vertex of $R$, augment along it; if the search exhausts without reaching one, mark $u$ permanently unmatchable and continue.
+4. Return $M$.
+
+Each successful search adds one edge, so there are at most $\nu \le |V|/2$ augmentations, each costing $O(|E|)$: total $O(|V||E|)$.
 :::
 
-:::intuition
-Flow models "sending one unit of assignment along an edge without exceeding capacities."
+Correctness is exactly Berge's theorem: the loop exits only when no augmenting path starts at any exposed left vertex, and in a bipartite graph every augmenting path has one endpoint in each part, so that is the same as having no augmenting path at all. Step 3 is safe because a left vertex that cannot be augmented from now can never be augmented from later — a fact that needs the bipartite structure and is the reason the same shortcut is illegal for general graphs.
 
-Blossoms are the odd-cycle obstacles that require special shrinking in the non-bipartite case.
+:::theorem[Hopcroft–Karp]{#hopcroft-karp}
+A maximum matching in a bipartite graph can be computed in $O(|E|\sqrt{|V|})$ time.
 :::
 
-:::example
-Let us find a maximum matching in the bipartite graph $L=\{A,B,C\}$, $R=\{1,2,3\}$ with edges
-$$A\text{-}1,\ A\text{-}2,\ B\text{-}1,\ C\text{-}2,\ C\text{-}3,$$
-using the augmenting-path method (the combinatorial heart of the flow reduction).
+:::proof[Sketch — the phase construction is quoted]
+Instead of augmenting along one path at a time, each *phase* finds a maximal set of vertex-disjoint **shortest** augmenting paths and augments along all of them at once, in $O(|E|)$ time via one layered breadth-first search plus one depth-first sweep. Two facts drive the bound. First, the length of a shortest augmenting path strictly increases from phase to phase — a consequence of Lemma *Symmetric difference of two matchings* applied to the current matching and a maximum one. Second, if the current matching $M$ satisfies $|M| \ge \nu - k$, then $M \triangle M^*$ contains $k$ vertex-disjoint augmenting paths, so the shortest has length at most $|V|/k$. Running $\sqrt{|V|}$ phases therefore forces the shortest augmenting path past length $\sqrt{|V|}$, after which at most $\sqrt{|V|}$ augmentations remain. The counting argument is standard; the phase construction is the part that needs care and is given in Schrijver, §16.
+:::
+
+Weights change the problem qualitatively: greed is unavailable, since matchings do not form a matroid, and the right generalisation of a vertex cover becomes a *weighted* cover.
+
+:::definition[Feasible potential]{#feasible-potential}
+Let $G$ be bipartite with parts $L, R$, $|L| = |R| = n$, and edge weights $w : E \to \mathbb{R}$. A **feasible potential** is a function $y : L \cup R \to \mathbb{R}$ with
+$$y(u) + y(v) \ge w(uv) \qquad \text{for every edge } uv .$$
+An edge is **tight** if equality holds. The **equality subgraph** $G_y$ consists of the tight edges.
+:::
+
+:::theorem[Egerváry's min–max theorem for the assignment problem]{#egervary}
+Let $G = K_{n,n}$ with weights $w$. Then
+$$\max_{M \text{ perfect matching}} w(M) \;=\; \min_{y \text{ feasible}} \ \sum_{v \in L\cup R} y(v).$$
+:::
+
+:::proof
+For weak duality, let $M$ be a perfect matching and $y$ a feasible potential. Every vertex is covered exactly once by $M$, so
+$$w(M) = \sum_{uv \in M} w(uv) \le \sum_{uv \in M} \big(y(u) + y(v)\big) = \sum_{v \in L \cup R} y(v),$$
+so the maximum is at most the minimum.
+
+For equality, it suffices to exhibit a feasible $y$ and a perfect matching $M$ with every edge of $M$ tight, since then the inequality above is an equality throughout. Recipe *The Hungarian algorithm* constructs exactly such a pair and terminates, which supplies the missing direction.
+:::
+
+:::recipe[The Hungarian algorithm]{#hungarian}
+Input: $K_{n,n}$ with weights $w$.
+
+1. Initialise $y(u) = \max_{v} w(uv)$ for $u \in L$ and $y(v) = 0$ for $v \in R$. This is feasible.
+2. Find a maximum matching $M$ in the equality subgraph $G_y$ using Recipe *Augmenting-path algorithm for bipartite matching*.
+3. If $M$ is perfect, stop and return $M$: by Theorem *Egerváry's min–max theorem for the assignment problem* it is of maximum weight, certified by $y$.
+4. Otherwise let $u \in L$ be exposed in $M$, let $Z$ be the set of vertices reachable from $u$ by $M$-alternating paths in $G_y$, and set
+$$\delta = \min\{\, y(a) + y(b) - w(ab) \;:\; a \in Z \cap L,\ b \in R\setminus Z \,\} > 0 .$$
+Decrease $y$ by $\delta$ on $Z \cap L$ and increase it by $\delta$ on $Z \cap R$. The potential stays feasible, every matching edge stays tight, and at least one new tight edge leaves $Z$. Return to step 2.
+
+Each update either enlarges $Z$ or enables an augmentation, so there are $O(n^2)$ updates and the algorithm runs in $O(n^3)$.
+:::
+
+:::example[A $3 \times 3$ assignment]
+Three workers $A,B,C$ are to be assigned to three jobs $1,2,3$ with profits
+$$w = \begin{pmatrix} 7 & 5 & 3 \\ 6 & 8 & 4 \\ 4 & 3 & 9\end{pmatrix},$$
+rows indexed $A,B,C$ and columns $1,2,3$. Find a maximum-profit perfect matching and certify it.
 :::
 
 :::solution
-**Start empty.** $M = \emptyset$.
-**Grow from $A$:** edge $A\text{-}1$ reaches free $1$. Add it → $M=\{A\text{-}1\}$.
-**Grow from $B$:** edge $B\text{-}1$, but $1$ is taken. Try the alternating path $B \to 1 \to A \to 2$ (out $B1$, in $A1$, out $A2$), ending at free $2$. Augment: drop $A\text{-}1$, add $B\text{-}1$ and $A\text{-}2$ → $M=\{B\text{-}1,\ A\text{-}2\}$, size $2$.
-**Grow from $C$:** edge $C\text{-}3$ reaches free $3$. Add it → $M=\{B\text{-}1,\ A\text{-}2,\ C\text{-}3\}$, size $3$.
+Initialise $y(A) = 7$, $y(B) = 8$, $y(C) = 9$ and $y(1)=y(2)=y(3)=0$; the total is $24$. The tight edges are $A1$, $B2$, $C3$ — the row maxima — and those three edges already form a perfect matching $M = \{A1, B2, C3\}$ of weight
+$$7 + 8 + 9 = 24 .$$
+Since $w(M) = 24 = \sum_v y(v)$ and $y$ is feasible, weak duality in Theorem *Egerváry's min–max theorem for the assignment problem* is tight, so $M$ is optimal and $y$ is a minimum potential. No further iterations are needed.
 
-No free left vertex remains, so no augmenting path exists and $M$ is maximum with $|M| = 3$.
+**Sanity check.** The six perfect matchings have weights $7{+}8{+}9 = 24$, $7{+}4{+}3 = 14$, $5{+}6{+}9 = 20$, $5{+}4{+}4 = 13$, $3{+}6{+}3 = 12$, $3{+}8{+}4=15$. The maximum is $24$, as certified.
+:::
 
-**Sanity check via König.** The vertex set $\{1,2,3\}$ (all of $R$) is a vertex cover of size $3$ — every edge has a right endpoint. Since max matching $\le$ min vertex cover always, and here matching $=3=$ this cover, both are optimal: max matching $=$ min vertex cover $=3$, as König's theorem guarantees for bipartite graphs. ✓
+:::pitfall
+The initial potential is feasible only because it was built from row maxima; starting from $y \equiv 0$ is feasible only when all weights are non-positive. And the certificate is the whole point of the method: an assignment found by any heuristic is worth nothing until some feasible $y$ of equal total is produced alongside it. The Hungarian algorithm is best understood not as a search for a matching but as a search for the pair.
+:::
+
+In non-bipartite graphs the augmenting-path search breaks, and the reason is precise: an alternating walk can return to a vertex it has already used, along an odd cycle.
+
+:::definition[Blossom]{#blossom}
+Let $M$ be a matching. A **blossom** is an odd cycle $B$ of length $2k+1$ containing exactly $k$ edges of $M$, reached from an exposed vertex by an $M$-alternating path of even length (its **stem**). The unique vertex of $B$ not covered by $M \cap B$ is the **base**.
+:::
+
+:::theorem[Edmonds' blossom contraction lemma]{#blossom-lemma}
+Let $B$ be a blossom for $M$ with the stem already switched so that the base is exposed, and let $G/B$ be the graph with $B$ contracted to a single vertex, carrying the matching $M/B$. Then $G$ has an $M$-augmenting path if and only if $G/B$ has an $(M/B)$-augmenting path.
+:::
+
+:::proof[Sketch — Edmonds' case analysis is quoted]
+The easy direction lifts a path in $G/B$ to $G$: when the path enters the contracted vertex, re-enter the cycle at the entry point and walk around $B$ in whichever of the two directions makes the parity come out right — possible precisely because $B$ has odd length, so one way round is even and the other odd. The converse requires showing that an augmenting path in $G$ can be rerouted to meet $B$ in at most one contiguous stretch; the careful case analysis is Edmonds', and the resulting algorithm — contract a blossom whenever the search finds one, recurse, then lift — runs in $O(|V|^3)$, improvable to $O(|E|\sqrt{|V|})$. Schrijver, §24, has the full argument.
+:::
+
+:::intuition
+Why odd cycles and only odd cycles? An even alternating cycle is harmless: it contributes equally many matching and non-matching edges, so it can never be the component that creates an imbalance — which is exactly what Lemma *Symmetric difference of two matchings* says. An odd cycle carries one unmatched vertex that can sit at either of two places depending on the direction you traverse it, so a naive search that labels each vertex once as "reached by an even path" or "reached by an odd path" labels a blossom vertex inconsistently. Contracting the blossom removes the ambiguity by refusing to distinguish its vertices at all. Bipartite graphs have no odd cycles, which is the one-line reason the bipartite algorithm needs none of this.
+:::
+
+The structural counterpart of König for general graphs is Tutte's theorem. Write $o(H)$ for the number of connected components of $H$ with an odd number of vertices.
+
+:::theorem[Tutte's 1-factor theorem]{#tutte}
+A graph $G$ has a perfect matching if and only if
+$$o(G - S) \le |S| \qquad \text{for every } S \subseteq V .$$
+:::
+
+:::proof
+We prove necessity, and state that sufficiency holds. Suppose $M$ is a perfect matching and let $S \subseteq V$. Each odd component $K$ of $G - S$ has an odd number of vertices, so $M$ cannot match all of $K$ internally: at least one vertex of $K$ is matched by $M$ to a vertex outside $K$, and the only vertices outside $K$ adjacent to $K$ lie in $S$. Distinct odd components send their edges to distinct vertices of $S$, because $M$ is a matching. Hence $o(G-S) \le |S|$.
+
+Sufficiency is the substantial half. It is proved by taking a maximal counterexample and analysing the set $S$ of vertices adjacent to all others; the argument is Lovász's short proof, and it is an induction rather than a construction. It is stated here and not proved.
+:::
+
+:::theorem[Tutte–Berge formula]{#tutte-berge}
+For every graph $G$ on $n$ vertices,
+$$\nu(G) = \tfrac12\Big(n - \max_{S \subseteq V}\big(o(G-S) - |S|\big)\Big).$$
+:::
+
+:::proof
+The inequality $\le$, which is the direction one uses to certify optimality, follows exactly as in Tutte's theorem. Fix $S$ and a matching $M$. Every odd component of $G - S$ leaves at least one vertex exposed unless one of its vertices is matched into $S$, and at most $|S|$ components can be served that way, so at least $o(G-S) - |S|$ vertices are exposed. Hence $n - 2|M| \ge o(G-S)-|S|$ for every $S$, which rearranges to the stated bound.
+
+Equality is Berge's refinement of Tutte's theorem and follows from it by adding $\max_S(o(G-S)-|S|)$ universal vertices, exactly as Corollary *The deficiency form* was derived from Hall's theorem. That deduction is routine; Tutte's sufficiency, on which it rests, was stated without proof above.
+:::
+
+Stand back and the shape of the chapter is a single recurring theorem.
+
+| max (a packing) | = | min (a cover) | where |
+|---|---|---|---|
+| matching $\nu(G)$ | $=$ | vertex cover $\tau(G)$ | bipartite (König) |
+| matching $\nu(G)$ | $=$ | $\tfrac12(n - \max_S(o(G-S)-|S|))$ | any graph (Tutte–Berge) |
+| saturating matching exists | $\iff$ | no deficient set | bipartite (Hall) |
+| common independent set | $=$ | $\min_S (r_1(S)+r_2(E\setminus S))$ | two matroids (Edmonds) |
+| assignment weight | $=$ | $\min$ feasible potential | bipartite, weighted (Egerváry) |
+
+In every row the easy inequality is a counting argument of two lines, and in every row the hard inequality is proved the same way: run an augmenting search, and when it fails, read the optimal dual object off the set of vertices the search could reach. That is not a coincidence and it is not five separate theorems. Each of these max objects is the optimum of an integer program whose linear relaxation has integral vertices, and each min object is the optimum of the dual program; LP duality then supplies the equality, and total unimodularity supplies the integrality. Chapter *Flows and Duality* makes that statement precise, and the min–max theorems of this chapter become corollaries of one theorem about polyhedra.
+
+:::pitfall
+The pattern does *not* extend by wishful thinking. Maximum independent set has no matching min–max partner in general graphs — the corresponding LP has fractional vertices of value $n/2$ and the problem is NP-hard. What distinguishes the rows above is integrality of the relaxation, not the elegance of the statement. When you meet a new packing problem, the question to ask is whether its constraint matrix is totally unimodular, not whether the min–max "ought" to hold.
 :::
 
 ## Common Mistakes
 
-- **Thinking every hereditary family is a matroid**: The augmentation axiom is crucial; without it greedy can fail.
-- **Confusing circuits with bases**: Circuits are the minimal *dependent* sets; bases are the maximal *independent* sets.
-- **Assuming all matroids are representable over a field**: Many are not (e.g. the non-Pappus matroid); the abstract theory is richer.
-- **Forgetting that graphic matroids are a proper subclass**: Not every matroid comes from a graph.
-- **Overlooking the algorithmic power**: Matroid algorithms (greedy, intersection, union, etc.) give polynomial-time solutions for many problems that look hard when stated in the original language.
-
-A matching is a set of edges that share no vertices. Matchings are among the most fundamental objects in graph theory and combinatorial optimization; they model pairings, assignments, and resource allocation.
-
-The theory is especially rich in bipartite graphs, where min-max theorems and efficient algorithms abound.
-
-- **Allowing shared vertices in a 'matching'**: By definition no two edges in a matching share a vertex.
-- **Confusing matching with edge cover or vertex cover**: A vertex cover touches *all* edges; a matching is a *packing* of edges.
-- **Thinking Hall's condition is only sufficient**: It is necessary and sufficient.
-- **Forgetting that in non-bipartite graphs min vertex cover can be strictly larger than max matching** (e.g., a triangle: matching 1, vertex cover 2).
-- **Assuming perfect matchings always exist when |L|=|R|**: Hall's (or Tutte's) condition may fail.
-
-Network flows model the movement of a commodity through a network with capacities on the arcs. The maximum flow problem and its min-cut dual are among the most important and versatile tools in combinatorial optimization.
-
-- **Allowing negative flows or violating conservation**: Feasibility requires both.
-- **Confusing the residual graph with the original**: Backward edges have capacity equal to current flow (can cancel).
-- **Thinking max flow is always the sum of capacities out of s**: That is only an upper bound; other cuts may be tighter.
-- **Forgetting that the min cut found from residual reachability is a proof of optimality**: After running any max-flow alg, the reachable set from s in residual gives a cut of capacity equal to the flow value.
-- **Assuming all flows are integral**: With fractional capacities you may need fractional flows; the integral flow theorem holds when all capacities are integers.
-
-Linear programming (LP) is the problem of optimizing a linear objective over a polyhedron defined by linear inequalities. It is both a fundamental algorithmic tool and the source of powerful min-max theorems and duality in combinatorics.
-
-Many combinatorial optimization problems admit natural LP formulations that are integral, so that LP solvers (or combinatorial algorithms derived from them) solve the discrete problem exactly.
-
-- **Thinking every LP has an integral optimum**: Only when the polyhedron has integer vertices (TU or other conditions).
-- **Forgetting strong duality requires feasibility of both sides**: If one is infeasible the other may be unbounded.
-- **Confusing simplex (vertex walking) with interior-point methods**: Both solve LP; simplex has combinatorial flavor.
-- **Assuming all combinatorial problems have small integrality gap**: Some have large gaps; approximation algorithms study the gap.
-- **Neglecting degeneracy and multiple optima**: A vertex may have several bases; complementary slackness helps certify optimality.
+- **Treating every hereditary family as a matroid.** Downward closure is cheap; augmentation is not. $\mathcal{I}'' = \{\emptyset,\{1\},\{2\},\{3\},\{1,2\}\}$ is hereditary, has maximal sets of two different sizes, and defeats the greedy algorithm on the weighting $w(3)=3$, $w(1)=w(2)=2$.
+- **Confusing circuits with bases.** A circuit is a minimal *dependent* set; a basis is a maximal *independent* set. In $U_{2,4}$ the bases have two elements and the circuits have three.
+- **Assuming a matroid remembers where it came from.** $M(C_4) = U_{3,4}$, so the same matroid is both graphic and uniform. Nothing in the axioms recovers the graph, and most matroids are not graphic — or even representable over any field, as the Vámos matroid shows.
+- **Believing greed extends to two matroids.** Theorem *Greedy characterises matroids* is an exact characterisation: greed is optimal for all weights on *one* matroid and nowhere else. Matroid intersection is polynomial but needs augmenting paths in an exchange digraph, and three matroids is NP-hard.
+- **Running greedy without non-negative weights.** With negative weights, "maximum-weight basis" and "maximum-weight independent set" differ, since a basis may be forced to include loss-making elements. Decide which you want before you sort.
+- **Saying *maximal* when you mean *maximum*.** A maximal matching cannot be extended; a maximum matching is largest. In $P_4$ the maximal matching $\{bc\}$ has half the size of the maximum one.
+- **Looking for an augmenting *cycle*.** Only paths augment. By Lemma *Symmetric difference of two matchings*, an alternating cycle is even and contributes equally many edges of each matching, so switching along one changes nothing.
+- **Checking Hall's condition only on singletons or only on $L$ itself.** The condition quantifies over *all* subsets, and the violating set is typically of intermediate size. With $N(A) = N(B) = \{1\}$ and $N(C) = \{1,2,3\}$, every singleton and the whole of $L$ pass while $\{A,B\}$ fails.
+- **Using König in a non-bipartite graph.** $K_3$ has $\nu = 1$ and $\tau = 2$. The general statement is the Tutte–Berge formula; the general algorithm needs blossoms.
+- **Assuming $|L| = |R|$ forces a perfect matching.** Equal sides say nothing: $L = \{A,B\}$, $R = \{1,2\}$ with $N(A) = N(B) = \{1\}$ has $\nu = 1$. Hall's condition, not cardinality, is the criterion.
+- **Reporting an assignment without its potential.** An optimal assignment is only known to be optimal when a feasible potential of equal total accompanies it; that pair is what the Hungarian algorithm actually computes.
