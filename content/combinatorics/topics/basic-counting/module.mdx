@@ -6,532 +6,1292 @@ title: Basic Counting
 
 Permutations, combinations, and binomial coefficients — the core tools for counting discrete arrangements and selections.
 
-Combinatorics is the art and science of counting. It answers questions like "in how many ways can this happen?" when dealing with discrete choices, arrangements, and structures. Though it begins with simple ideas, its reach extends to probability, computer science, optimization, and pure mathematics.
+Enumerative combinatorics asks one question in a thousand disguises: *how many objects are there of a given kind?* The objects are finite — words, subsets, arrangements, distributions, lattice paths — and the answer is an integer, often an enormous one. What makes the subject a subject rather than a bag of tricks is that the integer is almost never obtained by listing. It is obtained by *structuring* the set: by exhibiting a bijection with something already counted, by splitting it into disjoint pieces, by building each object through a sequence of choices, or by counting a larger set in which every object appears the same number of times.
 
-Understanding combinatorics builds powerful intuition for size and possibility without needing to list every case explicitly.
+This chapter develops those four moves — bijection, addition, multiplication, division — and then rides them all the way to the binomial and multinomial coefficients. The hardest part of elementary counting is not the algebra; it is deciding *which model the problem is in*. One problem sentence can mean four different things depending on whether the objects are distinguishable and whether repetition is allowed, and each reading has a different answer. We therefore spend a full section on the classification of counting models (the twelvefold way) and mark the recurring confusions with pitfall notes in place.
 
-## What is Combinatorics?
+## Counting as a Bijection
 
 <!-- section: definition-scope -->
 
-:::definition[Combinatorics]{#combinatorics-definition}
-Combinatorics is the study of finite sets and the ways to count, select, arrange, or partition their elements.
+Counting a finite set means comparing it with a standard set. That comparison is the primitive notion from which everything else in this chapter is derived, so we start there rather than with formulas.
+
+:::notation[The standard finite sets]
+For a positive integer $n$ write $[n] = \{1, 2, \ldots, n\}$, and $[0] = \varnothing$. For a finite set $S$, $|S|$ denotes its **cardinality**: the unique $n$ for which a bijection $[n] \to S$ exists.
 :::
 
-It is distinct from continuous mathematics like calculus; everything here is countable and discrete.
+:::definition[Enumerative combinatorics]{#combinatorics-definition}
+Enumerative combinatorics is the study of the cardinalities of finite sets that are specified by a description rather than by a list — typically a family $S_0, S_1, S_2, \ldots$ indexed by a parameter, whose cardinality $|S_n|$ is sought as a formula, a recurrence, or an asymptotic in $n$.
+:::
 
-Key subfields include enumerative combinatorics (pure counting), algebraic combinatorics, combinatorial optimization, and probabilistic combinatorics.
+That "unique $n$" in the notation box deserves a word: it is a theorem, not a convention, that no bijection $[m] \to [n]$ exists when $m \neq n$ (the pigeonhole principle in its cleanest form). We take it as known. What we will use constantly is its companion, which turns every counting problem into a search for a bijection.
+
+:::theorem[Bijection principle]{#bijection-principle}
+Let $S$ and $T$ be finite sets. If there is a bijection $f \colon S \to T$, then $|S| = |T|$.
+:::
+
+:::proof
+Let $n = |T|$, so there is a bijection $g \colon [n] \to T$. Then $g^{-1} \circ f \colon S \to [n]$ is a composition of bijections, hence a bijection, and so is its inverse $f^{-1} \circ g \colon [n] \to S$. Therefore $|S| = n = |T|$.
+:::
+
+The principle is trivial to prove and is the most powerful tool in the chapter. Every identity established below — the formula for $\binom{n}{k}$, stars and bars, Pascal's rule, Vandermonde's identity — is ultimately an instance of it: two descriptions of the same collection of objects, matched up one for one.
 
 :::intuition
-Think of combinatorics as the math of "how many different pizzas can I make from these toppings?" or "how many different routes from A to B without repeating streets?"
+To count the seats in a full theatre you do not count seats; you count the people, because "sit in a seat" is a bijection. Combinatorics is the discipline of noticing which map is the bijection.
 
-It is the foundation for every "number of possibilities" question you meet in games, passwords, lotteries, and algorithm analysis.
+The trick is that the *easy* side is not always the side the problem hands you. A good bijection replaces "arrangements of letters with these constraints" by "binary strings", or "committees with a designated chair" by "chairs with a committee around them", and the new description is one you already know how to count.
 :::
 
-:::example
-A standard deck has 52 cards. How many ways to choose 5 cards for a poker hand (order does not matter)?
+There is one more counting move that is not a bijection but a controlled failure of one. It appears whenever a symmetry makes several distinct-looking constructions produce the same object.
+
+:::theorem[Division principle]{#division-principle}
+Let $f \colon S \to T$ be a surjection between finite sets such that every fibre has the same size $d \ge 1$, that is $|f^{-1}(t)| = d$ for every $t \in T$. Then
+
+$$|T| = \frac{|S|}{d}.$$
+:::
+
+:::proof
+The fibres $f^{-1}(t)$, for $t \in T$, are pairwise disjoint (a point of $S$ has exactly one image) and their union is $S$ (every point has an image). So $|S| = \sum_{t \in T} |f^{-1}(t)| = \sum_{t \in T} d = d\,|T|$. Divide by $d$.
+:::
+
+This is sometimes called the shepherd's principle: to count sheep, count legs and divide by four. It is exactly what licenses "divide by $k!$ because order does not matter" and "divide by $n$ because rotations of a circle give the same arrangement" — two steps often performed on faith. They are not faith; they are the division principle, and they are valid precisely when *every* object is over-counted the same number of times.
+
+:::pitfall
+The division principle fails silently when the fibres have different sizes. Counting the distinct arrangements of the letters of LEVEL as $5!/2!$ is wrong: $5!$ counts arrangements of five labelled letters, and the correct divisor must account for both the two L's and the two E's, giving $5!/(2!\,2!) = 30$. Likewise, counting bracelets by dividing $n!$ by $2n$ is wrong in general, because an arrangement fixed by a reflection is over-counted fewer than $2n$ times. When a symmetry can fix an object, naive division is invalid and one needs Burnside's lemma instead — a result beyond this chapter, resting on the orbit–stabiliser theorem from group theory.
+:::
+
+:::example[Two descriptions of the same set]
+Show that the number of subsets of $[n]$ equals the number of binary strings of length $n$, without computing either.
 :::
 
 :::solution
-This is the combination $\binom{52}{5}$. Using the formula we will derive later,
+Define $f$ from subsets of $[n]$ to strings in $\{0,1\}^n$ by sending $A \subseteq [n]$ to its **indicator string** $f(A) = (a_1, \ldots, a_n)$ with $a_i = 1$ if $i \in A$ and $a_i = 0$ otherwise.
 
-$$\binom{52}{5} = \frac{52 \times 51 \times 50 \times 49 \times 48}{5 \times 4 \times 3 \times 2 \times 1} = \frac{311875200}{120} = 2598960.$$
+$f$ is injective: if $f(A) = f(B)$ then for every $i$ we have $i \in A \iff a_i = 1 \iff i \in B$, so $A = B$. It is surjective: given a string $(a_1,\ldots,a_n)$, the set $A = \{i : a_i = 1\}$ has $f(A)$ equal to that string.
 
-Sanity check: the numerator $311875200$ is divisible by $120$ (as it must be, since it counts a whole number of hands), and the result is far smaller than the ordered count $52 \times 51 \times 50 \times 49 \times 48$ because order does not matter. The point: a single compact expression replaces listing over two and a half million hands.
+So $f$ is a bijection and the two counts agree by the bijection principle. We have not yet computed either one — that comes from the product rule in the next section, and gives $2^n$. The point is the shape of the argument: *define the map, check injective, check surjective, invoke the principle*. Every bijective proof in this chapter has that skeleton.
 :::
 
-## Basic Counting Rules
+:::example[Counting by over-counting]
+A round table has $6$ seats and $6$ distinct guests. Two seatings are the same if one is a rotation of the other. Count the seatings using the division principle explicitly.
+:::
+
+:::solution
+Let $S$ be the set of the $6! = 720$ ways to place the guests in six *labelled* chairs, let $T$ be the set of seatings-up-to-rotation, and let $f \colon S \to T$ send a labelled placement to its rotation class.
+
+Every class contains exactly $6$ labelled placements: rotating a placement by $0, 1, \ldots, 5$ positions gives six labelled placements, and they are distinct because a nontrivial rotation moves every guest to a different chair. So each fibre has size $d = 6$, and $f$ is onto by construction. Hence
+
+$$|T| = \frac{720}{6} = 120 = 5!.$$
+
+Sanity check: equivalently, fix one guest in a reference chair to remove the rotational freedom and arrange the other five, giving $5! = 120$. The two routes agree, as they must.
+:::
+
+## The Four Counting Rules
 
 <!-- section: counting-rules -->
 
-Almost every counting problem is built from two pillars: the product rule and the sum rule. The trigger words are **AND** (do this step and then that step → multiply) versus **OR** (it is either this case or that case → add).
+Every elementary count is assembled from a small number of rules. Two of them are structural (sum and product), one is the division principle already proved, and one repairs the sum rule when the cases overlap. The trigger words are **OR** (disjoint alternatives → add) versus **AND THEN** (successive choices → multiply).
 
-:::theorem[Multiplication principle]{#product-rule}
-For a sequence of choices made one after another, multiply the number of options at each step. If stage 1 has $a$ options and stage 2 has $b$ options no matter how stage 1 turned out, the total is
+:::theorem[Addition rule]{#sum-rule}
+Let $A_1, \ldots, A_m$ be pairwise disjoint finite sets, i.e. $A_i \cap A_j = \varnothing$ whenever $i \neq j$. Then
 
-$$a \times b.$$
+$$\left| A_1 \cup A_2 \cup \cdots \cup A_m \right| = |A_1| + |A_2| + \cdots + |A_m|.$$
 :::
 
-The italicised proviso is the whole content of the rule: *the number of options at each step must not depend on what you picked earlier*. (The counts must be independent; the *outcomes* need not be.)
-
-:::theorem[Addition principle]{#sum-rule}
-For alternatives that cannot both happen at once, add the sizes. If you can do task A in $x$ ways or task B in $y$ ways and no way of doing A is also a way of doing B (they are **disjoint**), the total is
-
-$$x + y.$$
+:::proof
+It suffices to do $m = 2$; the general case follows by induction on $m$, since $A_1 \cup \cdots \cup A_m = (A_1 \cup \cdots \cup A_{m-1}) \cup A_m$ and the first bracket is disjoint from $A_m$. For $m = 2$, let $g \colon [a] \to A_1$ and $h \colon [b] \to A_2$ be bijections, where $a = |A_1|$ and $b = |A_2|$. Define $F \colon [a+b] \to A_1 \cup A_2$ by $F(i) = g(i)$ for $i \le a$ and $F(i) = h(i - a)$ for $i > a$. Injectivity uses disjointness (an element of $A_1$ is never an element of $A_2$), surjectivity is clear, so $F$ is a bijection and $|A_1 \cup A_2| = a + b$.
 :::
 
-If the cases can overlap, the sum rule over-counts and you need inclusion–exclusion instead. Both principles extend naturally to more steps or cases via trees or casework.
+:::theorem[Product rule]{#product-rule}
+For finite sets $A_1, \ldots, A_m$,
+
+$$|A_1 \times A_2 \times \cdots \times A_m| = |A_1| \cdot |A_2| \cdots |A_m|.$$
+
+Equivalently, in process form: if an object is built by $m$ successive choices, and for every way of making the first $i-1$ choices there are exactly $n_i$ options for the $i$-th choice, then the number of objects is $n_1 n_2 \cdots n_m$.
+:::
+
+:::proof
+Again it suffices to treat $m = 2$ and induct. Write $A_1 = \{x_1, \ldots, x_a\}$. Then
+
+$$A_1 \times A_2 = \bigcup_{i=1}^{a} \left( \{x_i\} \times A_2 \right),$$
+
+and the $a$ sets in this union are pairwise disjoint (they differ in the first coordinate). Each has $|A_2| = b$ elements, since $y \mapsto (x_i, y)$ is a bijection $A_2 \to \{x_i\} \times A_2$. The addition rule gives $|A_1 \times A_2| = \underbrace{b + \cdots + b}_{a} = ab$.
+
+For the process form, the objects are no longer literal tuples from fixed sets — the options at step $i$ may depend on earlier choices. Induct on $m$: group the objects by their first choice. There are $n_1$ groups, pairwise disjoint, and each group is a set of objects built by $m-1$ successive choices with option counts $n_2, \ldots, n_m$, so each has $n_2 \cdots n_m$ elements by the inductive hypothesis. The addition rule finishes it.
+:::
+
+The process form is the version worth memorising, and its hypothesis is the whole content of the rule: *the number of options at each step must be the same no matter how the earlier steps went*. The options themselves may differ; only their count must be constant.
+
+:::pitfall
+"Independent choices" does **not** mean the later choice is unaffected by the earlier one. When dealing a second card from a deck, *which* cards remain depends entirely on the first card dealt — but *how many* remain is $51$ regardless, so the product rule applies and gives $52 \cdot 51$. Conversely, "choose a committee of $3$ from $10$ people, then choose a chair from outside the committee" has constant counts ($\binom{10}{3}$ then $7$) and is fine, whereas "choose a nonempty subset $A$ of $[4]$, then choose an element of $A$" is **not** a product: the second count is $|A|$, which varies from $1$ to $4$. That one needs casework or a double count, not multiplication.
+:::
 
 :::intuition
-Product: Choosing a shirt (5 colors) AND then pants (3 styles) gives 15 outfits because every shirt pairs with every pants.
+Product: a shirt (5 colours) AND THEN trousers (3 styles) gives $15$ outfits, because each of the 5 shirts opens a fresh menu of 3.
 
-Sum: Number of desserts = cakes (4 kinds) + pies (3 kinds) + ice cream (5 flavors) = 12, because you pick exactly one category.
+Sum: desserts $=$ cakes (4) $+$ pies (3) $+$ ice creams (5) $= 12$, because you take exactly one item and the three menus do not overlap.
+
+Division: $120$ rotationally distinct round-table seatings of 6 guests, because the $720$ labelled seatings fall into groups of 6.
 :::
 
-:::example
-License plates: 3 letters (A–Z) followed by 3 digits (0–9), repetition allowed.
+The addition rule needs disjointness. When the cases overlap, the repair is inclusion–exclusion; we state the two- and three-set versions here, which cover almost all elementary uses.
+
+:::theorem[Inclusion–exclusion for two and three sets]{#inclusion-exclusion}
+For finite sets $A, B, C$,
+
+$$|A \cup B| = |A| + |B| - |A \cap B|,$$
+
+$$|A \cup B \cup C| = |A| + |B| + |C| - |A \cap B| - |A \cap C| - |B \cap C| + |A \cap B \cap C|.$$
+:::
+
+:::proof
+Count the contribution of an arbitrary element $x \in A \cup B \cup C$ to each side; since both sides are sums of cardinalities, it suffices that every such $x$ contributes exactly $1$ to the right-hand side (it contributes $1$ to the left by definition).
+
+Say $x$ lies in exactly $j \ge 1$ of the three sets. It is counted $j$ times in the single terms, $\binom{j}{2}$ times in the pairwise intersections, and $\binom{j}{3}$ times in the triple intersection, so its total contribution is
+
+$$\binom{j}{1} - \binom{j}{2} + \binom{j}{3}.$$
+
+For $j = 1$ this is $1 - 0 + 0 = 1$; for $j = 2$ it is $2 - 1 + 0 = 1$; for $j = 3$ it is $3 - 3 + 1 = 1$. An element outside $A \cup B \cup C$ contributes $0$ to both sides. The two-set identity is the same computation with the $j=3$ column deleted.
+:::
+
+A fifth move is not a new rule but a habit: **complementary counting**. If the objects you want are hard to describe but their complement inside an easy universe is easy, count the universe and subtract. "At least one" is the standing signal for it.
+
+:::example[When to add, when to multiply]
+Licence plates consist of $3$ letters (A–Z) followed by $3$ digits (0–9). (a) How many are there if repetition is allowed? (b) How many if no letter may repeat? (c) How many contain at least one digit $7$?
 :::
 
 :::solution
-Read it as six sequential AND-choices, one per slot. Each of the three letter slots has $26$ options and each of the three digit slots has $10$ options, and these counts do not change based on earlier picks (repetition is allowed), so the product rule applies directly:
+**(a)** Six successive choices, with constant counts $26,26,26,10,10,10$ because repetition is allowed:
 
-$$26 \times 26 \times 26 \times 10 \times 10 \times 10 = 26^3 \times 10^3 = 17576 \times 1000 = 17576000.$$
+$$26^3 \cdot 10^3 = 17576 \cdot 1000 = 17\,576\,000.$$
 
-If letters cannot repeat, the counts *do* shrink as we go — the first letter has $26$ options, but the second has only $25$ (one letter is used up) and the third $24$:
+**(b)** The letter counts now shrink as letters are used up, but they shrink *predictably*: whatever the first letter was, exactly $25$ remain. So the process form applies with counts $26, 25, 24, 10, 10, 10$:
 
-$$26 \times 25 \times 24 \times 10^3 = 15600 \times 1000 = 15600000.$$
+$$26 \cdot 25 \cdot 24 \cdot 10^3 = 15600 \cdot 1000 = 15\,600\,000.$$
 
-Sanity check: forbidding repeats can only reduce the count, and indeed $15600000 < 17576000$.
+**(c)** "At least one 7" is a union of three overlapping events (digit 1 is a 7, digit 2 is, digit 3 is), so the addition rule does not apply directly. Complementary counting does: plates with *no* 7 have $9$ options in each digit slot, so
+
+$$17\,576\,000 - 26^3 \cdot 9^3 = 17\,576\,000 - 17576 \cdot 729 = 17\,576\,000 - 12\,812\,904 = 4\,763\,096.$$
+
+Sanity checks: (b) is smaller than (a), as forbidding repeats must reduce the count; and (c) is a fraction $1 - (9/10)^3 = 0.271$ of (a), matching $4\,763\,096 / 17\,576\,000$.
 :::
 
-## Applications and Scope
+:::example[Inclusion–exclusion in place]
+Of $100$ students, $52$ take French, $45$ take German, $38$ take Spanish, $20$ take French and German, $15$ take French and Spanish, $12$ take German and Spanish, and $5$ take all three. How many take none of the three?
+:::
+
+:::solution
+By the three-set inclusion–exclusion formula,
+
+$$|F \cup G \cup S| = 52 + 45 + 38 - 20 - 15 - 12 + 5 = 93.$$
+
+Complementary counting then gives $100 - 93 = 7$ students taking none.
+
+Sanity check by reconstructing the seven disjoint regions: all three, $5$; exactly F and G, $20 - 5 = 15$; exactly F and S, $15 - 5 = 10$; exactly G and S, $12 - 5 = 7$; only F, $52 - 15 - 10 - 5 = 22$; only G, $45 - 15 - 7 - 5 = 18$; only S, $38 - 10 - 7 - 5 = 16$. These sum to $5 + 15 + 10 + 7 + 22 + 18 + 16 = 93$, and all seven are non-negative, so the data are consistent.
+:::
+
+## Choosing the Right Model
 
 <!-- section: applications -->
 
-Combinatorics appears everywhere: counting configurations in statistical mechanics, analyzing the runtime of algorithms (how many comparisons does quicksort make in worst case?), designing error-correcting codes, scheduling exams without conflicts, and proving that certain objects must exist (via pigeonhole) without constructing them.
+Almost every mistake in elementary counting is a modelling mistake: the arithmetic is fine but the formula answers a different question. This section is the map. It is placed before the formulas are derived on purpose — you should know what you are aiming at while deriving it.
 
-It also feeds directly into probability: the probability of an event in a uniform sample space is the count of good outcomes divided by total outcomes.
+Two binary questions classify the four basic selection models. Given a pool of $n$ distinguishable objects from which $k$ are taken:
 
-:::intuition
-When you shuffle a playlist, combinatorics tells you there are 10! possible orders for 10 songs.
+1. **Does order matter?** Is the outcome a sequence or a set?
+2. **May an object be taken more than once?** With or without replacement?
 
-When Facebook suggests "people you may know", behind the scenes there is counting of common friends and paths in the friendship graph.
+:::summary[The four selection models]
+Taking $k$ objects from a pool of $n$ distinguishable objects:
+
+| | order matters | order does not matter |
+|---|---|---|
+| **repetition allowed** | $n^k$ | $\displaystyle\binom{n+k-1}{k}$ |
+| **repetition forbidden** | $\displaystyle P(n,k) = \frac{n!}{(n-k)!}$ | $\displaystyle\binom{n}{k} = \frac{n!}{k!\,(n-k)!}$ |
+
+Each entry is derived in a later section: $n^k$ and $P(n,k)$ in the permutation sections, $\binom{n}{k}$ and $\binom{n+k-1}{k}$ in the section on unordered selections.
 :::
 
-:::example
-In a class of 30 students, how many ways to pick a president, vice-president, and secretary (distinct people, order matters)?
+Note the asymmetry of the table: the two left entries differ by *shrinking factors*, and the two right entries are obtained from the left ones by dividing by $k!$ — but **only the bottom row division is exact**. This is the single most important structural fact in the table.
+
+:::pitfall
+The "divide by $k!$" step converts ordered selections into unordered ones **only when repetition is forbidden**. With repetition allowed, $n^k / k!$ is usually not even an integer, and it is never the right answer: the fibres of "forget the order" have different sizes, because a multiset with repeated entries has fewer distinct orderings than one with all entries different. For $n = k = 2$ the multisets are $\{a,a\}$, $\{a,b\}$, $\{b,b\}$ — three of them — whereas $n^k/k! = 4/2 = 2$. The division principle is not applicable, which is exactly why combinations with repetition need their own argument (stars and bars) rather than a division.
+:::
+
+:::pitfall
+A problem that sounds unordered may be ordered in disguise, and vice versa. The test is: *would swapping two chosen items give a different outcome?* "Choose 3 of 10 people to serve on a committee" — no, so $\binom{10}{3}$. "Choose 3 of 10 people to be president, treasurer and secretary" — yes, so $P(10,3)$. "Choose 3 of 10 flavours for a three-scoop cone where scoops may repeat and the stacking order is visible" — yes, and with repetition, so $10^3$. Same three numbers in the sentence, three different answers: $120$, $720$, $1000$.
+:::
+
+The selection models are a special case of a more general and more useful classification: **distributing balls into boxes**. Every counting problem in this chapter can be phrased this way, and the phrasing makes the modelling decisions explicit, because it forces you to say whether the balls are labelled and whether the boxes are labelled.
+
+:::definition[The distribution problem]{#distribution-problem}
+Let $n$ balls be placed into $k$ boxes. The count depends on three independent binary choices:
+
+- the balls are **distinguishable** (labelled $1, \ldots, n$) or **indistinguishable**;
+- the boxes are **distinguishable** or **indistinguishable**;
+- the map is unrestricted, **injective** (at most one ball per box), or **surjective** (no box empty).
+
+The resulting $2 \times 2 \times 3 = 12$ counts are the **twelvefold way**.
+:::
+
+Read as functions, this is the classification of maps $f \colon B \to X$ with $|B| = n$, $|X| = k$: "ball $b$ goes into box $f(b)$". Indistinguishable balls means counting maps up to permutation of the domain; indistinguishable boxes, up to permutation of the codomain.
+
+:::theorem[The twelvefold way]{#twelvefold-way}
+With $n$ balls and $k$ boxes, the number of distributions is:
+
+| balls | boxes | any | injective ($\le 1$ per box) | surjective (none empty) |
+|---|---|---|---|---|
+| dist. | dist. | $k^n$ | $\displaystyle\frac{k!}{(k-n)!}$ | $k!\,S(n,k)$ |
+| indist. | dist. | $\displaystyle\binom{n+k-1}{n}$ | $\displaystyle\binom{k}{n}$ | $\displaystyle\binom{n-1}{k-1}$ |
+| dist. | indist. | $\displaystyle\sum_{j=0}^{k} S(n,j)$ | $[\,n \le k\,]$ | $S(n,k)$ |
+| indist. | indist. | $\displaystyle\sum_{j=0}^{k} p_j(n)$ | $[\,n \le k\,]$ | $p_k(n)$ |
+
+Here $S(n,k)$ is the Stirling number of the second kind (the number of partitions of an $n$-set into exactly $k$ non-empty unlabelled blocks), $p_k(n)$ is the number of partitions of the integer $n$ into exactly $k$ positive parts, and $[\,P\,]$ is $1$ if $P$ holds and $0$ otherwise.
+:::
+
+:::proof
+The six entries in the first two rows are proved in this chapter. Row 1: $k^n$ is the count of sequences with repetition, and $k!/(k-n)!= P(k,n)$ the count without, both established in the permutation sections — a distribution of labelled balls into labelled boxes *is* the sequence $(f(1), \ldots, f(n))$ of box labels. Row 2: identical balls in labelled boxes are recorded only by the occupancy vector $(x_1, \ldots, x_k)$ with $x_i \ge 0$ and $\sum x_i = n$, counted by stars and bars as $\binom{n+k-1}{n}$; requiring $x_i \le 1$ means choosing which $n$ of the $k$ boxes are occupied, i.e. $\binom{k}{n}$; requiring $x_i \ge 1$ is stars and bars for positive solutions, $\binom{n-1}{k-1}$.
+
+Rows 3 and 4 are a different matter. $S(n,k)$ and $p_k(n)$ have no closed product formula; they are *defined* by the counts in the surjective column, and the "any" column follows by the addition rule, splitting on the number $j$ of non-empty boxes. The relation $k!\,S(n,k)$ in row 1 holds because a surjection onto $k$ labelled boxes is a partition into $k$ unlabelled blocks together with a bijection from the blocks to the labels, and there are $k!$ such bijections — the product rule. The injective entries are immediate: with indistinguishable balls and boxes, an injective placement is determined by nothing at all, so the count is $1$ when $n \le k$ and $0$ otherwise.
+
+$S(n,k)$ does satisfy a closed *alternating sum*, $S(n,k) = \frac{1}{k!}\sum_{j=0}^{k}(-1)^j \binom{k}{j}(k-j)^n$, which comes from inclusion–exclusion over the set of boxes left empty; and the partition numbers $p_k(n)$ have no closed form at all, only generating functions and the Hardy–Ramanujan asymptotic. Both are beyond this chapter and are quoted, not proved, here.
+:::
+
+:::intuition
+"Distinguishable" means the objects carry names you care about. Six labelled dice rolled at once are distinguishable (die 3 showing a 5 is different news from die 1 showing a 5); six identical marbles poured into cups are not.
+
+A quick way to decide: imagine two of the objects swapping places. If the result is a genuinely different outcome for the purpose of the problem, they are distinguishable. If nobody could tell, they are not — and you are in one of the bottom rows.
+:::
+
+:::example[One sentence, four models]
+Ten items are to be placed into four boxes. Count the distributions when (a) items and boxes are both labelled; (b) items are identical and boxes labelled; (c) items are identical, boxes labelled, and no box may be empty; (d) items are labelled, boxes labelled, and no box may be empty.
 :::
 
 :::solution
-Order matters here — being president is different from being secretary — and no person can hold two roles, so this is a permutation. There are $30$ choices for president, then $29$ remaining for vice-president, then $28$ for secretary:
+**(a)** Each of the $10$ labelled items independently picks one of $4$ labelled boxes: $4^{10} = 1\,048\,576$.
 
-$$P(30,3) = 30 \times 29 \times 28 = 24360.$$
+**(b)** Only the occupancy vector $(x_1,x_2,x_3,x_4)$ with $x_i \ge 0$ and $\sum x_i = 10$ matters. By stars and bars,
 
-If instead we form an unordered 3-person committee, the three chosen people are interchangeable, so every committee was counted $3! = 6$ times above. Divide it out:
+$$\binom{10 + 4 - 1}{10} = \binom{13}{10} = \binom{13}{3} = \frac{13 \cdot 12 \cdot 11}{6} = 286.$$
 
-$$\binom{30}{3} = \frac{P(30,3)}{3!} = \frac{24360}{6} = 4060.$$
+**(c)** Now $x_i \ge 1$. Substituting $y_i = x_i - 1 \ge 0$ with $\sum y_i = 6$ gives $\binom{6+3}{6} = \binom{9}{3} = 84$; equivalently $\binom{n-1}{k-1} = \binom{9}{3} = 84$.
 
-Sanity check: the committee count is exactly $6$ times smaller than the ordered count, as expected when we stop caring about the order of $3$ people.
+**(d)** This is $4!\,S(10,4)$, equal by inclusion–exclusion to
+
+$$\sum_{j=0}^{4} (-1)^j \binom{4}{j} (4-j)^{10} = 4^{10} - 4 \cdot 3^{10} + 6 \cdot 2^{10} - 4 \cdot 1^{10} = 1\,048\,576 - 236\,196 + 6144 - 4 = 818\,520.$$
+
+Sanity check on the ordering: (d) counts a subset of the objects counted in (a), and indeed $818\,520 < 1\,048\,576$; the ratio $0.781$ is plausible since with $10$ balls in only $4$ boxes an empty box is unlikely. And (c) counts a subset of (b): $84 < 286$. ✓
 :::
 
-## Common Mistakes
+Combinatorial counts are the engine of discrete probability: in a finite sample space where all outcomes are equally likely, $\mathbb{P}(E) = |E| / |\Omega|$, so *every* such probability question is two counting questions. They also govern algorithm analysis (how many comparisons does a sorting algorithm make?), coding theory (how many codewords of a given weight?), and statistical mechanics (how many microstates realise a macrostate?) — the last being literally row 2 and row 4 of the twelvefold way, known there as Maxwell–Boltzmann, Bose–Einstein and Fermi–Dirac statistics.
 
-- **Treating ordered and unordered selections the same**: Always ask "does the arrangement matter?" Permutations for lineups, combinations for committees.
-- **Forgetting that product rule requires independent stages**: If later choices depend on earlier, you need casework or recursion instead of simple multiply.
-- **Using sum rule when cases overlap**: Adding "red cars" + "fast cars" double-counts red fast cars; inclusion-exclusion fixes it.
-- **Assuming 0! = 0**: The empty product is 1, so 0! = 1 and $\binom{n}{0} = 1$.
-- **Ignoring symmetry in circular or identical objects**: For necklaces or repeated letters you must divide by rotations or factorials of repeats.
+:::example[Counting for a probability]
+Five cards are dealt from a standard $52$-card deck. What is the probability that the hand is a "full house" (three cards of one rank, two of another)?
+:::
 
-A permutation is an ordering or arrangement of objects. When order matters, the number of ways to arrange things grows very quickly — this is why n! appears throughout combinatorics, probability, and computer science.
+:::solution
+The sample space is the set of unordered $5$-card hands — order of dealing is irrelevant — so $|\Omega| = \binom{52}{5} = 2\,598\,960$.
 
-Mastering permutations lets you count sequences, schedules, rankings, and codes where the position of each item is significant.
+Build a full house by successive choices with constant counts: choose the rank appearing three times ($13$), choose its three suits ($\binom{4}{3} = 4$), choose the *different* rank appearing twice ($12$), choose its two suits ($\binom{4}{2} = 6$). By the product rule,
 
-## Definition and Factorial
+$$13 \cdot 4 \cdot 12 \cdot 6 = 3744, \qquad \mathbb{P} = \frac{3744}{2\,598\,960} \approx 0.00144.$$
+
+Sanity check: the equivalent route "choose the two ranks, then decide which is the triple" gives $\binom{13}{2} \cdot 2 = 78 \cdot 2 = 156 = 13 \cdot 12$ for the rank part, and the same $4 \cdot 6 = 24$ for the suits. ✓
+:::
+
+:::pitfall
+In the full-house count the rank part is $13 \cdot 12$ and must **not** be divided by $2!$. The two ranks play different roles — one is the triple, the other the pair — so swapping them gives a genuinely different hand, and the division principle does not apply. Divide by $k!$ only when the chosen objects are interchangeable in the finished object.
+:::
+
+## Factorials and Ordered Selections
 
 <!-- section: definition-factorial -->
 
-:::definition[Factorial]{#factorial-definition}
-For a non-negative integer $n$, the factorial $n!$ (read "$n$ factorial") is the product
+We now derive the left column of the selection table. Order matters throughout this section.
 
-$$n! = n \times (n-1) \times (n-2) \times \cdots \times 2 \times 1, \qquad 0! = 1.$$
+:::definition[Factorial]{#factorial-definition}
+For an integer $n \ge 0$, the factorial $n!$ is defined recursively by
+
+$$0! = 1, \qquad n! = n \cdot (n-1)! \ \text{ for } n \ge 1,$$
+
+so that $n! = n (n-1)(n-2) \cdots 2 \cdot 1$ for $n \ge 1$.
 :::
 
-:::proposition[Arrangements of distinct objects]
-There are exactly $n!$ ways to arrange $n$ **distinct** objects in a row.
+The value $0! = 1$ is not a quirk. It is the empty product, and it is forced by every formula in which it appears: the recursion $1! = 1 \cdot 0!$ requires it, and so does the statement "there is exactly one arrangement of no objects" (namely the empty arrangement).
+
+:::definition[Permutation]{#permutation-definition}
+A **permutation** of a finite set $S$ is a bijection $S \to S$, equivalently a linear arrangement of the elements of $S$ in a row. A **$k$-permutation** of $S$ (for $0 \le k \le |S|$) is an injective map $[k] \to S$, equivalently an ordered selection of $k$ distinct elements of $S$. Their number is written $P(n,k)$, where $n = |S|$.
+:::
+
+:::theorem[Arrangements of distinct objects]{#n-factorial-arrangements}
+There are exactly $n!$ permutations of a set of $n$ distinct objects.
 :::
 
 :::proof
-For $n$ distinct objects, there are $n$ choices for the first position, $n-1$ for the second (one object is now placed), and so on down to $1$ for the last. Multiplying these by the multiplication principle gives $n!$.
+Induction on $n$. For $n = 0$ there is one permutation of the empty set (the empty map), and $0! = 1$. Suppose the claim holds for $n-1$. An arrangement of $n$ objects is built by choosing the occupant of the first position ($n$ options, whatever else will follow) and then arranging the remaining $n-1$ objects in the remaining $n-1$ positions. The second stage has $(n-1)!$ outcomes by the inductive hypothesis, and this count does not depend on which object went first. The process form of the product rule gives $n \cdot (n-1)! = n!$.
 :::
 
-The objects must be distinct for this count; identical objects are handled later by the multiset rule.
-
-Often we only arrange $k$ of the $n$ objects.
-
-:::definition[Permutation of k objects]{#k-permutation}
-A $k$-permutation of $n$ distinct objects is an ordered selection of $k$ of them: order matters and no object is used twice. Their number is written $P(n,k)$.
-:::
-
-:::proposition[Falling factorial]
+:::theorem[Falling factorial]{#falling-factorial}
 For integers $0 \le k \le n$,
 
-$$P(n,k) = \frac{n!}{(n-k)!} = n \times (n-1) \times \cdots \times (n-k+1).$$
+$$P(n,k) = n(n-1)(n-2)\cdots(n-k+1) = \frac{n!}{(n-k)!}.$$
+
+The product on the left has exactly $k$ factors and is called the falling factorial, written $n^{\underline{k}}$.
 :::
 
 :::proof
-There are $n$ choices for the first slot, $n-1$ for the second, down to $n-k+1$ for the $k$-th slot — exactly $k$ factors. The division by $(n-k)!$ simply lops off the tail of the full factorial that we never used.
+Fill the $k$ positions in order. Position $1$ admits any of the $n$ objects; once $i-1$ positions are filled, exactly $i-1$ objects are used up, so position $i$ admits $n - (i-1)$ objects — a count independent of *which* objects were used. The product rule gives $\prod_{i=1}^{k} (n-i+1) = n(n-1)\cdots(n-k+1)$.
+
+For the closed form, multiply and divide by the missing tail:
+
+$$n(n-1)\cdots(n-k+1) \cdot \frac{(n-k)(n-k-1)\cdots 1}{(n-k)!} = \frac{n!}{(n-k)!}.$$
+
+Note the extreme cases: $P(n,0) = 1$ (the empty selection, consistent with an empty product) and $P(n,n) = n!/0! = n!$, recovering the previous theorem.
+:::
+
+:::corollary[Counting injections]{#counting-injections}
+The number of injective maps $[k] \to [n]$ is $P(n,k)$, which is $0$ when $k > n$.
+:::
+
+:::proof
+An injective map $[k] \to [n]$ is precisely an ordered selection of $k$ distinct elements of $[n]$: the list $(f(1), \ldots, f(k))$, whose entries are distinct exactly because $f$ is injective. This correspondence is a bijection between injections and $k$-permutations, so the counts agree by the bijection principle. When $k > n$ no injection exists (pigeonhole), and the falling factorial $n(n-1)\cdots(n-k+1)$ then contains the factor $n - n = 0$, so the formula remains correct.
 :::
 
 :::intuition
-Imagine lining up n people for a photo: the first spot has n choices, the second has one less, etc. The explosion of possibilities is n!.
+$n!$ grows with terrifying speed: $10! = 3\,628\,800$ already, and $52!$ exceeds $8 \times 10^{67}$ — which is why "a well-shuffled deck is almost certainly in an order no deck has ever been in before" is literally true.
 
-P(n,k) is like choosing a president, treasurer, and secretary from a club: order of roles matters.
+$P(n,k)$ is $n!$ with its tail cut off. Reading it as "$k$ factors counting down from $n$" is faster and safer in practice than computing two factorials and dividing.
 :::
 
-:::example
-How many 3-letter codes using distinct letters from A–F?
+The growth rate deserves a precise statement, since it is quoted constantly in algorithm analysis and in probability.
+
+:::theorem[Stirling's approximation]{#stirling-approximation}
+As $n \to \infty$,
+
+$$n! \sim \sqrt{2 \pi n} \left( \frac{n}{e} \right)^{n},$$
+
+meaning the ratio of the two sides tends to $1$. More precisely, $\sqrt{2\pi n}\,(n/e)^n < n! < \sqrt{2\pi n}\,(n/e)^n e^{1/(12n)}$ for all $n \ge 1$.
+:::
+
+:::remark
+The proof of Stirling's approximation is analytic, not combinatorial: it rests on comparing $\log n! = \sum_{j=1}^{n} \log j$ with $\int_1^n \log x \, dx$ to obtain the shape $n^n e^{-n}$, and then on Wallis's product (or a Laplace-method estimate of $\Gamma(n+1) = \int_0^\infty x^n e^{-x}\,dx$) to pin down the constant $\sqrt{2\pi}$. Neither step is within the scope of this chapter, so we quote the result and use it only for estimates.
+:::
+
+:::example[Ordered codes]
+How many $3$-letter codes can be formed from the letters A–F if (a) letters may not repeat, (b) letters may repeat, (c) letters may not repeat and the code must contain the letter A?
 :::
 
 :::solution
-We are ordering $k=3$ letters out of $n=6$, no repeats, so use $P(6,3)$. Peel off exactly $3$ factors starting from $6$:
+**(a)** An ordered selection of $3$ distinct letters from $6$:
 
-$$P(6,3) = \frac{6!}{(6-3)!} = \frac{6!}{3!} = 6 \times 5 \times 4 = 120.$$
+$$P(6,3) = 6 \cdot 5 \cdot 4 = 120.$$
 
-If instead we arrange all $6$ letters (a code of length $6$), that is a full permutation:
+**(b)** Each of the $3$ slots independently takes any of $6$ letters: $6^3 = 216$.
 
-$$6! = 6 \times 5 \times 4 \times 3 \times 2 \times 1 = 720.$$
+**(c)** Choose the position of A ($3$ ways), then fill the other two positions with distinct letters from the remaining five, in order: $P(5,2) = 5 \cdot 4 = 20$. By the product rule, $3 \cdot 20 = 60$.
 
-Sanity check: $P(6,3)$ should be $6!$ with its last three factors ($3!=6$) removed, and indeed $720 / 6 = 120$.
+Sanity check on (c) by complementary counting: codes with no A are $P(5,3) = 5 \cdot 4 \cdot 3 = 60$, so codes containing A number $120 - 60 = 60$. ✓ And (a) $<$ (b), as forbidding repetition must reduce the count.
 :::
 
-## Permutations with Repetition
+:::example[Arrangements with an adjacency constraint]
+In how many orders can $7$ distinct books be shelved if three particular volumes of one work must stand together, in any order among themselves?
+:::
+
+:::solution
+Glue the three volumes into a single block. There are then $5$ objects to arrange (the block plus the $4$ other books), giving $5! = 120$ arrangements, and within the block the three volumes may be permuted in $3! = 6$ ways. These two stages have constant counts, so the product rule applies:
+
+$$5! \cdot 3! = 120 \cdot 6 = 720.$$
+
+Sanity check: the answer must be smaller than the unrestricted $7! = 5040$, and the ratio $720/5040 = 1/7$ is exactly the probability that three specified books land consecutively — plausible, and independently verifiable as $5 \cdot 3! \cdot 4! / 7! = 5 \cdot 6 \cdot 24/5040 = 1/7$. ✓
+:::
+
+## Sequences with Repetition
 
 <!-- section: permutations-with-repetition -->
 
-:::proposition[Sequences with repetition]
-The number of strings of length $k$ formed from $n$ symbols, with repetition allowed, is
+Removing the injectivity requirement changes the model completely, and gives the simplest formula in the chapter.
+
+:::theorem[Sequences with repetition]{#sequences-with-repetition}
+The number of sequences of length $k$ whose entries come from an $n$-element set, repetitions allowed, is
 
 $$n^k.$$
+
+Equivalently, the number of functions $[k] \to [n]$ is $n^k$.
 :::
 
 :::proof
-When repetition is allowed, each of the $k$ positions independently has all $n$ choices available (nothing gets used up). This is simply the multiplication principle applied $k$ times with a constant number of options.
+A sequence is an element of the Cartesian product $A \times A \times \cdots \times A$ ($k$ factors) where $|A| = n$, so the product rule gives $n \cdot n \cdots n = n^k$. In process form: nothing is used up, so every one of the $k$ positions has the full $n$ options available regardless of the earlier positions.
+
+For the function statement, the map sending $f \colon [k] \to [n]$ to the sequence $(f(1), \ldots, f(k))$ is a bijection — a function on a finite ordered domain is exactly its list of values — so the counts agree.
 :::
 
-Contrast this with the no-repetition count $P(n,k) = n(n-1)\cdots(n-k+1)$, where each factor shrinks; the with-repetition count $n^k$ keeps every factor at $n$, so it is always at least as large.
+:::corollary[Number of subsets]{#power-set-count}
+A set with $n$ elements has exactly $2^n$ subsets.
+:::
+
+:::proof
+By the earlier example, subsets of $[n]$ correspond bijectively to binary strings of length $n$ via the indicator string. By the theorem with $n \to 2$ symbols and length $k \to n$, there are $2^n$ such strings.
+:::
+
+The contrast with the previous section is worth stating numerically, because it is the whole difference between "with replacement" and "without".
+
+:::remark
+Compare $n^k = n \cdot n \cdots n$ with $P(n,k) = n (n-1) \cdots (n-k+1)$: the same number of factors, but the second has each factor reduced. Hence $P(n,k) \le n^k$ always, with equality only when $k \le 1$. For $n = 365$ and $k = 23$ the ratio $P(365,23)/365^{23} \approx 0.4927$ is below one half — this is the birthday paradox, and it is nothing but the gap between these two rows of the table.
+:::
+
+:::pitfall
+The phrase "how many ways to choose $k$ from $n$ with repetition" is ambiguous in ordinary English and the two readings have very different answers. If the outcome is a *sequence* (a PIN, a dice roll recorded die by die, a word) the answer is $n^k$. If the outcome is a *multiset* (a handful of coins, an unordered scoop selection, the multiset of values shown by identical dice) the answer is $\binom{n+k-1}{k}$, derived later. Three dice thrown together give $6^3 = 216$ equally likely outcomes but only $\binom{8}{3} = 56$ distinguishable multisets — and those $56$ are *not* equally likely, which is why using the wrong model quietly ruins a probability calculation.
+:::
 
 :::intuition
-With repetition you can have passwords like "AAA" or "1212". Each slot doesn't care what was chosen before.
+With repetition each slot has amnesia: it does not know or care what the previous slots took, so the menu never shrinks. Passwords, PINs and dice rolls work this way.
 
-Without repetition it is like dealing cards: once a card is used it is gone.
+Without repetition the pool is a deck: every draw removes a card, so the menu shrinks by exactly one each time.
 :::
 
-:::example
-Number of 4-digit PINs (digits 0–9, repetition allowed, including 0000): each of the $4$ slots independently has $10$ options, so
+:::example[PINs and numbers]
+(a) How many $4$-digit PINs are there, $0000$ allowed? (b) How many $4$-digit *numbers* are there (no leading zero)? (c) How many $4$-digit PINs have all digits distinct? (d) How many have at least two equal digits?
 :::
 
 :::solution
-$$10^4 = 10000.$$
+**(a)** Four slots, $10$ options each: $10^4 = 10\,000$.
 
-If instead we want genuine 4-digit *numbers* (no leading zero), the first slot is restricted to $1$–$9$ (only $9$ options) while the remaining three still have $10$ each:
+**(b)** The leading slot is restricted to $1$–$9$; the other three are unrestricted: $9 \cdot 10^3 = 9000$. Check: these are the integers $1000$ through $9999$, and $9999 - 1000 + 1 = 9000$. ✓
 
-$$9 \times 10^3 = 9000.$$
+**(c)** No repetition, order matters: $P(10,4) = 10 \cdot 9 \cdot 8 \cdot 7 = 5040$.
 
-Sanity check: the numbers from $1000$ to $9999$ are exactly these, and $9999 - 1000 + 1 = 9000$. Matches.
+**(d)** Complementary counting against (a) and (c): $10\,000 - 5040 = 4960$.
+
+Note that (d) could not be done directly by a product rule — "at least two equal" is not a sequence of choices with constant counts — which is exactly the situation complementary counting exists for.
 :::
 
-## Circular Arrangements and Multisets
+:::example[Counting functions with a constraint]
+How many functions $f \colon [5] \to [3]$ satisfy $f(1) \neq f(2)$?
+:::
+
+:::solution
+Choose the values in order. $f(1)$ has $3$ options; $f(2)$ then has $2$ (anything but $f(1)$ — a count of $2$ whatever $f(1)$ was); and $f(3), f(4), f(5)$ have $3$ each. Constant counts at every stage, so
+
+$$3 \cdot 2 \cdot 3^3 = 6 \cdot 27 = 162.$$
+
+Sanity check: the total number of functions is $3^5 = 243$, and those with $f(1) = f(2)$ number $3 \cdot 3^3 = 81$ (pick the common value, then the last three freely). Indeed $243 - 81 = 162$. ✓
+:::
+
+## Circular Arrangements and Multiset Permutations
 
 <!-- section: circular-and-multiset -->
 
-:::definition[Circular arrangement]
-A circular arrangement of $n$ distinct objects places them around a circle, where a rotation of the whole circle is not considered a new arrangement: only *relative* order matters.
+Both topics in this section are applications of the division principle: we count something easy that over-counts, then divide by the size of the over-count. In both cases the hypothesis of the division principle — constant fibre size — has to be checked, and in one notorious case it fails.
+
+:::definition[Circular arrangement]{#circular-arrangement}
+A circular arrangement of $n$ distinct objects is an arrangement of them around a circle in which two arrangements are identified when one is a rotation of the other; only the cyclic order matters.
 :::
 
-:::proposition[Circular permutations]
-The number of distinct circular arrangements of $n$ distinct objects is
-
-$$(n-1)!.$$
-:::
-
-:::proof
-Every linear arrangement can be rotated into $n$ equivalent circular ones, so we may fix one object's seat as a reference point and freely arrange the other $n-1$ around it, which can be done in $(n-1)!$ ways.
-:::
-
-(This assumes rotations are identified but reflections are *not*; if the circle can also be flipped over — like a physical bracelet — divide by a further factor of $2$ for $n \ge 3$.)
-
-:::definition[Multiset permutation]
-A multiset permutation is an arrangement in a row of $n$ objects that come in $r$ types, the objects of a given type being identical to one another. Two arrangements count as the same when they look the same.
-:::
-
-:::proposition[Permutations of a multiset]
-If $k_i$ is how many times the $i$-th type appears, the number of distinct arrangements is
-
-$$\frac{n!}{k_1!\, k_2! \cdots k_r!}, \qquad k_1 + k_2 + \cdots + k_r = n.$$
+:::theorem[Circular permutations]{#circular-permutations}
+The number of circular arrangements of $n \ge 1$ distinct objects is $(n-1)!$.
 :::
 
 :::proof
-Make the objects temporarily distinguishable: there are $n!$ orderings. The plain $n!$ over-counts, because swapping two identical items produces the same visible arrangement — each visible arrangement arises from exactly $k_1!\, k_2! \cdots k_r!$ of the orderings. Divide by the factorial of the count of each repeated item.
+Let $S$ be the set of the $n!$ arrangements in $n$ labelled seats around the circle and $T$ the set of circular arrangements, with $f \colon S \to T$ the quotient map. $f$ is surjective. Each fibre is the set of the $n$ rotations of a given arrangement, and these $n$ labelled arrangements are pairwise distinct: a rotation by $j \not\equiv 0 \pmod n$ moves the object in seat $1$ to seat $1+j \neq 1$, so it changes the labelled arrangement. Hence every fibre has size exactly $n$, and the division principle gives $|T| = n!/n = (n-1)!$.
+:::
+
+:::pitfall
+If the circle may also be **flipped over** — a bracelet or necklace rather than a seating plan — then reflections are identified too, and the naive answer $n!/(2n)$ is wrong in general, because the division principle no longer applies: an arrangement that is symmetric under some reflection has a fibre of size $n$, not $2n$. For $n \ge 3$ with all beads distinct no arrangement is reflection-symmetric, so $n!/(2n) = (n-1)!/2$ is in fact correct there; but for $n \le 2$, or as soon as beads repeat, the fibres genuinely differ in size and the count requires Burnside's lemma. Always check whether a symmetry can fix an object before dividing by the size of the symmetry group.
+:::
+
+:::definition[Multiset and multiset permutation]{#multiset-definition}
+A **multiset** on a set of $r$ types is an assignment of a multiplicity $k_i \ge 0$ to each type $i$; its **size** is $n = k_1 + \cdots + k_r$. A **multiset permutation** (or **word**) is a linear arrangement of the $n$ objects of such a multiset, two arrangements being the same when they agree position by position as sequences of types.
+:::
+
+:::theorem[Permutations of a multiset]{#multiset-permutations}
+The number of distinct arrangements in a row of $n$ objects of $r$ types, with $k_i$ objects of type $i$ and $k_1 + \cdots + k_r = n$, is
+
+$$\binom{n}{k_1, k_2, \ldots, k_r} := \frac{n!}{k_1!\,k_2! \cdots k_r!}.$$
+:::
+
+:::proof
+*First proof (division principle).* Temporarily label the objects of each type $1, 2, \ldots, k_i$ so that all $n$ are distinct; there are $n!$ arrangements of these labelled objects. Let $f$ send a labelled arrangement to the word obtained by forgetting the labels. $f$ is surjective. Given a word $w$, a labelled arrangement mapping to it is obtained by distributing the labels of type $i$ among the $k_i$ positions where type $i$ occurs, independently for each type, in $k_1!\,k_2!\cdots k_r!$ ways. So every fibre has this same size and the division principle applies.
+
+*Second proof (successive choices).* Build the word by deciding which positions each type occupies. Choose the $k_1$ positions for type $1$ from the $n$ available, in $\binom{n}{k_1}$ ways; then the $k_2$ positions for type $2$ from the $n - k_1$ remaining, in $\binom{n-k_1}{k_2}$ ways; and so on. The counts at each stage depend only on the $k_i$, not on which positions were chosen, so the product rule gives
+
+$$\binom{n}{k_1}\binom{n-k_1}{k_2}\cdots\binom{n - k_1 - \cdots - k_{r-1}}{k_r} = \frac{n!}{k_1!(n-k_1)!}\cdot\frac{(n-k_1)!}{k_2!(n-k_1-k_2)!}\cdots = \frac{n!}{k_1!\cdots k_r!},$$
+
+the intermediate factorials cancelling telescopically.
+:::
+
+:::definition[Multinomial coefficient]{#multinomial-coefficient}
+The quantity $\binom{n}{k_1, \ldots, k_r} = \dfrac{n!}{k_1! \cdots k_r!}$, defined for non-negative integers $k_i$ summing to $n$, is the **multinomial coefficient**. For $r = 2$ it reduces to the binomial coefficient: $\binom{n}{k, n-k} = \binom{n}{k}$.
+:::
+
+:::corollary[Ordered set partitions]{#ordered-partitions}
+The number of ways to split a set of $n$ distinct objects into an ordered list of $r$ labelled groups of prescribed sizes $k_1, \ldots, k_r$ (with $\sum k_i = n$) is $\binom{n}{k_1, \ldots, k_r}$.
+:::
+
+:::proof
+The second proof above is exactly this count: choosing the positions of type $i$ is choosing which objects go into group $i$. Formally, the map sending a word to the tuple of sets $(\{$positions of type $1\}, \ldots)$ is a bijection between multiset permutations and ordered size-prescribed partitions of $[n]$.
 :::
 
 :::intuition
-People around a dinner table look the same after everyone shifts one seat; we don't count those as different.
+The multinomial coefficient answers "deal $n$ cards into hands of sizes $k_1, \ldots, k_r$", and the two proofs are the two natural ways to do the deal: shuffle then cut ($n!$ divided by the internal shuffles you cannot see), or deal hand by hand (a product of binomials).
 
-The word "MISSISSIPPI" has many identical letters, so we overcount by swapping the I's among themselves unless we divide by 4! for the I's (and similarly for S's and P's).
+Because the second proof is a product of ordinary binomials, you never need the multinomial *formula* to compute — but you do need to recognise the *situation*, which is: more than two categories.
 :::
 
-:::example
-Distinct circular arrangements of 4 people A, B, C, D:
+:::pitfall
+When the groups are **unlabelled** and of **equal size**, divide further. Splitting $6$ people into three labelled teams of $2$ gives $\binom{6}{2,2,2} = 90$; splitting them into three unlabelled pairs gives $90/3! = 15$, because each set of three pairs arises from $3!$ orderings of the teams. The extra division is legitimate here because all the group sizes are equal, so every set of pairs is over-counted exactly $3!$ times. If the group sizes were $3,2,1$, no further division is right at all — the sizes themselves tell the groups apart.
+:::
+
+:::example[MISSISSIPPI]
+How many distinct arrangements are there of the letters of MISSISSIPPI? How many of them have all four S's adjacent?
 :::
 
 :::solution
-$$(4-1)! = 3! = 6.$$
+The multiset is $1$ M, $4$ I, $4$ S, $2$ P, of size $11$. By the multiset permutation theorem,
 
-To see why we do not use $4! = 24$: seat A first as the fixed reference, then the remaining three seats can be filled in $3! = 6$ ways. The $24$ linear orderings collapse in groups of $4$ (the four rotations of each), and $24 / 4 = 6$. Both routes agree.
+$$\frac{11!}{1!\,4!\,4!\,2!} = \frac{39\,916\,800}{1 \cdot 24 \cdot 24 \cdot 2} = \frac{39\,916\,800}{1152} = 34\,650.$$
 
-Now a multiset example — the distinct *linear* permutations of the letters $\{A, A, B, C\}$. If all four were distinct there would be $4!=24$ orderings, but the two A's are identical and can be swapped without changing the word, so each real word is counted $2!=2$ times:
+For the second question, glue the four S's into a single block. The objects to arrange are the block, $1$ M, $4$ I, $2$ P — a multiset of size $8$ with multiplicities $1, 1, 4, 2$:
 
-$$\frac{4!}{2!} = \frac{24}{2} = 12.$$
+$$\frac{8!}{1!\,1!\,4!\,2!} = \frac{40\,320}{48} = 840.$$
 
-Sanity check by listing the positions of the pair of A's: choosing which $2$ of the $4$ slots hold the A's is $\binom{4}{2}=6$, and the remaining two slots take B and C in $2!=2$ orders, giving $6 \times 2 = 12$. Agrees.
+Sanity check: $840/34\,650 \approx 0.0242$ is the probability that a random arrangement has the S's together; a crude estimate — $8$ starting positions for the block out of $\binom{11}{4} = 330$ position-sets for the S's — gives $8/330 = 0.0242$ exactly. ✓
+:::
+
+:::example[Circular seating with a constraint]
+Six people, including Ana and Ben, sit at a round table; rotations are identified. In how many arrangements are Ana and Ben **not** adjacent?
+:::
+
+:::solution
+Total circular arrangements: $(6-1)! = 120$.
+
+Count the arrangements where they *are* adjacent and subtract. Glue Ana and Ben into a block; we then have $5$ objects in a circle, giving $(5-1)! = 24$ circular arrangements, and the block has $2! = 2$ internal orders, so $24 \cdot 2 = 48$ adjacent arrangements.
+
+$$120 - 48 = 72.$$
+
+Sanity check by a direct argument: fix Ana's seat (killing the rotations). Of the $5$ remaining seats, $2$ are adjacent to Ana and $3$ are not, so Ben has $3$ allowed seats, and the other four people fill the rest in $4! = 24$ ways: $3 \cdot 24 = 72$. ✓
 :::
 
 ## Common Mistakes
 
-- **Confusing $P(n,k)$ with $\binom{n}{k}$**: $P(n,k)$ keeps the order; $\binom{n}{k}$ does not. Multiply a combination by $k!$ to turn it into the corresponding permutations.
-- **Forgetting to divide by repeats in the multiset case**: "BOOK" is not $4!=24$; the identical O's require $4!/2! = 12$.
-- **Using $n!$ for circular without fixing one**: This over-counts by exactly $n$, the number of rotations; use $(n-1)!$.
-- **Thinking $0! = 0$**: It is $1$; this is crucial for the formula $P(n,0) = 1$ and empty arrangements.
-- **Ignoring that repetition changes the model entirely**: Always check the problem statement for "with replacement" or "repetition allowed".
+- **Multiplying when the option count varies.** The product rule needs the *number* of options at each stage to be constant, not the options themselves. "Pick a non-empty subset, then pick a member of it" is not $15 \cdot |A|$; it needs a sum over subset sizes (and equals $n 2^{n-1}$).
+- **Adding overlapping cases.** "Red cars OR fast cars" double-counts the fast red ones; inclusion–exclusion subtracts the overlap back out.
+- **Dividing by a symmetry that fixes something.** $n!/(2n)$ for bracelets and $n!/2!$ for LEVEL are both invalid divisions — the fibres are not all the same size. Check before dividing.
+- **Assuming $0! = 0$.** It is $1$, the empty product, and every formula here ($P(n,n)$, $\binom{n}{0}$, the recursion $n! = n\,(n-1)!$) breaks without it.
+- **Treating "with repetition" as a single model.** With repetition and order gives $n^k$; with repetition and no order gives $\binom{n+k-1}{k}$; the two differ wildly and no division converts one into the other.
 
-A combination is an unordered selection of objects. While permutations care about sequence, combinations care only about which items are chosen together — the set itself.
-
-Combinations are the gateway to binomial coefficients, Pascal's triangle, and countless applications in probability and algebra.
-
-## Unordered Selections
+## Unordered Selections and Stars and Bars
 
 <!-- section: unordered-selections -->
 
+We now derive the right-hand column of the selection table. Both entries count *sets* or *multisets* rather than sequences, and the two proofs are of very different characters: the first is a division, the second is a bijection.
+
 :::definition[Combination]{#combination-definition}
-A combination of $k$ items from $n$ is an unordered selection of $k$ distinct items: which items are chosen matters, the order they are chosen in does not, and no item may be taken twice. Equivalently, it is a $k$-element subset.
+A **$k$-combination** of an $n$-set $S$ is a $k$-element subset of $S$: which elements are taken matters, the order in which they are taken does not, and no element may be taken twice. The number of $k$-combinations of an $n$-set is written $\binom{n}{k}$, read "$n$ choose $k$".
 :::
 
-:::proposition[Combination formula]
-For an integer $k$ with $0 \le k \le n$, the number of combinations of $k$ items from $n$ is
+:::theorem[Combination formula]{#combination-formula}
+For integers $0 \le k \le n$,
 
-$$\binom{n}{k} = \frac{P(n,k)}{k!} = \frac{n!}{k!(n-k)!}.$$
+$$\binom{n}{k} = \frac{P(n,k)}{k!} = \frac{n!}{k!\,(n-k)!} = \frac{n(n-1)\cdots(n-k+1)}{k!}.$$
 :::
 
 :::proof
-First choose an ordered selection in $P(n,k)$ ways. Each unordered selection arises from exactly $k!$ of these — its own internal re-orderings, which all describe the same set — so divide by $k!$.
+Let $S$ be the set of $k$-permutations of $[n]$, so $|S| = P(n,k)$, and let $T$ be the set of $k$-subsets. Let $f \colon S \to T$ send an ordered selection to the set of its entries. $f$ is surjective: any $k$-subset can be listed in some order. Every fibre has size exactly $k!$: the ordered selections mapping to a given $k$-set $A$ are precisely the orderings of $A$, of which there are $k!$ by the arrangements theorem — and crucially this number is the same for every $A$, because the entries of a $k$-permutation are distinct. The division principle gives
+
+$$\binom{n}{k} = |T| = \frac{P(n,k)}{k!} = \frac{n!}{k!\,(n-k)!}.$$
+:::
+
+:::remark
+The third expression, $\frac{n(n-1)\cdots(n-k+1)}{k!}$, is the one to compute with: $\binom{50}{3} = \frac{50 \cdot 49 \cdot 48}{6} = 19\,600$ takes seconds, while $50!/(3!\,47!)$ invites a calculator overflow. It also makes visible that $\binom{n}{k}$ is a polynomial in $n$ of degree $k$, which is how the definition is extended to non-integer upper arguments later on.
 :::
 
 :::intuition
-Picking a team of 5 players from 12: the team is the same set no matter who you list first on the roster.
+A committee is a set; a lineup is a sequence. Going from lineups to committees loses exactly the information of the internal order, and there are $k!$ internal orders, so you divide by $k!$.
 
-Contrast: if you then assign the 5 players to 5 distinct positions on the field, multiply back by 5! to get the permutations.
+This also reads in reverse and is often more useful: to count ordered things, first count the unordered thing and then multiply back by $k!$. Many problems are far easier in that direction.
 :::
 
-:::example
-Number of ways to choose 2 fruits from $\{\text{apple}, \text{banana}, \text{cherry}\}$:
+Now the second entry: selections in which repetition is allowed but order is not. The outcome of such a selection is a multiset, so the object to be counted is a multiset of size $k$ on $n$ types.
+
+:::theorem[Combinations with repetition (stars and bars)]{#stars-and-bars}
+The number of multisets of size $k$ drawn from $n$ types equals the number of integer solutions of
+
+$$x_1 + x_2 + \cdots + x_n = k, \qquad x_i \ge 0,$$
+
+and both equal
+
+$$\left(\!\!\binom{n}{k}\!\!\right) = \binom{n + k - 1}{k} = \binom{n+k-1}{n-1}.$$
+:::
+
+:::proof
+The first equality is a bijection: a multiset is determined by, and determines, its multiplicity vector $(x_1, \ldots, x_n)$, where $x_i \ge 0$ counts the copies of type $i$ and $\sum x_i = k$ because the multiset has size $k$.
+
+For the second, encode a solution as a string of $k$ **stars** and $n-1$ **bars**: write $x_1$ stars, a bar, $x_2$ stars, a bar, …, a bar, then $x_n$ stars. For example with $n = 4$, $k = 6$, the solution $(2,0,3,1)$ becomes
+
+$$\star\star \mid \; \mid \star\star\star \mid \star .$$
+
+This map sends solutions to strings of length $k + (n-1)$ over $\{\star, \mid\}$ containing exactly $n-1$ bars. It is injective: the string determines every $x_i$, namely the number of stars between bar $i-1$ and bar $i$. It is surjective: given any such string, reading off the gaps between consecutive bars produces non-negative integers summing to $k$ (the total number of stars), and these map back to the string. So it is a bijection.
+
+Finally, a string of $k + n - 1$ symbols with exactly $n-1$ bars is determined by choosing which $n-1$ of the $k+n-1$ positions hold the bars — equivalently which $k$ hold the stars — so by the combination formula there are $\binom{n+k-1}{n-1} = \binom{n+k-1}{k}$ of them.
+:::
+
+:::figure[The stars-and-bars bijection for $n=4$ types and $k=6$ items: the string encodes the solution $(2,0,3,1)$ of $x_1+x_2+x_3+x_4=6$. The $n-1=3$ bars cut the row of $k=6$ stars into $n=4$ blocks, and $x_i$ is the number of stars in block $i$ — so an empty block is a variable equal to zero, which is why two adjacent bars are legal and why the count is over all $\binom{9}{3}$ placements of the bars among the nine positions.]{#stars-and-bars-figure}
+{
+  "type": "plot",
+  "x": [0.2, 10.2],
+  "y": [0.2, 4.2],
+  "equalAspect": false,
+  "marks": [
+    { "kind": "text", "at": [1, 3.5], "text": "★" },
+    { "kind": "text", "at": [2, 3.5], "text": "★" },
+    { "kind": "text", "at": [3, 3.5], "text": "|", "tone": "result" },
+    { "kind": "text", "at": [4, 3.5], "text": "|", "tone": "result" },
+    { "kind": "text", "at": [5, 3.5], "text": "★" },
+    { "kind": "text", "at": [6, 3.5], "text": "★" },
+    { "kind": "text", "at": [7, 3.5], "text": "★" },
+    { "kind": "text", "at": [8, 3.5], "text": "|", "tone": "result" },
+    { "kind": "text", "at": [9, 3.5], "text": "★" },
+    { "kind": "text", "at": [1.5, 2.5], "text": "x1 = 2", "leaderTo": [1.5, 3.2] },
+    { "kind": "text", "at": [3.5, 1.4], "text": "x2 = 0", "leaderTo": [3.5, 3.2] },
+    { "kind": "text", "at": [6, 2.5], "text": "x3 = 3", "leaderTo": [6, 3.2] },
+    { "kind": "text", "at": [9, 2.5], "text": "x4 = 1", "leaderTo": [9, 3.2] },
+    { "kind": "text", "at": [5, 0.7], "text": "9 positions, choose 3 for the bars" }
+  ]
+}
+:::
+
+:::corollary[Positive solutions]{#positive-solutions}
+The number of integer solutions of $x_1 + \cdots + x_n = k$ with every $x_i \ge 1$ is
+
+$$\binom{k-1}{n-1},$$
+
+which is $0$ when $k < n$.
+:::
+
+:::proof
+Substitute $y_i = x_i - 1$. Then $y_i \ge 0$ and $\sum y_i = k - n$, and the substitution is a bijection between the two solution sets (its inverse is $x_i = y_i + 1$). By the theorem, the number of such $y$ is $\binom{(k-n) + n - 1}{n-1} = \binom{k-1}{n-1}$. If $k < n$ the sum $k-n$ is negative and no solution exists; the binomial coefficient $\binom{k-1}{n-1}$ is then $0$ by the convention for $k-1 < n-1$. In bars-and-stars language: lay out the $k$ stars in a row and choose $n-1$ of the $k-1$ internal gaps to place bars in, at most one per gap so that no part is empty.
+:::
+
+:::pitfall
+Stars and bars counts **non-negative** solutions and requires the *types* (boxes, variables) to be distinguishable and the *items* (stars) to be indistinguishable. It is row 2 of the twelvefold way. If the items are distinguishable, the answer is $n^k$, not $\binom{n+k-1}{k}$; if the types are indistinguishable, the answer is a partition number with no closed form. Before applying the formula, say out loud which of the four boxes-and-balls cases you are in.
+:::
+
+:::example[Doughnuts]
+A shop sells $5$ varieties of doughnut. How many ways are there to buy a dozen, if varieties may repeat and the order in the box does not matter? How many if at least one of each variety is required?
 :::
 
 :::solution
-By hand, the unordered pairs are $\{\text{apple},\text{banana}\}$, $\{\text{apple},\text{cherry}\}$, $\{\text{banana},\text{cherry}\}$ — exactly $3$ ways.
+This is a multiset of size $k = 12$ on $n = 5$ types, so by stars and bars
 
-By formula:
+$$\binom{12 + 5 - 1}{12} = \binom{16}{4} = \frac{16 \cdot 15 \cdot 14 \cdot 13}{24} = 1820.$$
 
-$$\binom{3}{2} = \frac{3!}{2!\,(3-2)!} = \frac{6}{2 \times 1} = 3.$$
+With at least one of each, the positive-solution corollary gives
 
-Sanity check via the ordered route: $P(3,2) = 3 \times 2 = 6$ ordered pairs, and each unordered pair was listed $2! = 2$ times, so $6 / 2 = 3$. Matches the hand count.
+$$\binom{12-1}{5-1} = \binom{11}{4} = \frac{11 \cdot 10 \cdot 9 \cdot 8}{24} = 330.$$
+
+Sanity check on the second by the substitution directly: after setting aside one of each variety, $7$ free doughnuts remain, giving $\binom{7+4}{4} = \binom{11}{4} = 330$. ✓ And $330 < 1820$, as a constraint must reduce the count.
 :::
 
-## Binomial Coefficient Notation and Symmetry
+:::example[Bounded variables]
+How many integer solutions does $x_1 + x_2 + x_3 = 10$ have with $0 \le x_i \le 5$ for each $i$?
+:::
+
+:::solution
+Count the unrestricted non-negative solutions and remove the bad ones by inclusion–exclusion. Unrestricted:
+
+$$\binom{10 + 2}{2} = \binom{12}{2} = 66.$$
+
+Let $A_i$ be the set of solutions with $x_i \ge 6$. Substituting $x_i' = x_i - 6$ turns the condition into a free non-negative solution of a sum equal to $4$, so
+
+$$|A_i| = \binom{4+2}{2} = \binom{6}{2} = 15 \quad \text{for each } i.$$
+
+Two variables cannot both be at least $6$, since $12 > 10$, so all pairwise intersections are empty. By inclusion–exclusion,
+
+$$66 - 3 \cdot 15 + 0 = 66 - 45 = 21.$$
+
+Sanity check by direct enumeration over $x_1$: for $x_1 = 0,1,2,3,4,5$ the remaining pair must sum to $10,9,8,7,6,5$ within $[0,5]$ each, admitting $1,2,3,4,5,6$ solutions respectively. Total $1+2+3+4+5+6 = 21$. ✓
+:::
+
+:::example[Ordered versus unordered, side by side]
+From $8$ distinct flavours, count (a) three-scoop cones where order on the cone matters and flavours may repeat; (b) three-scoop cups where order does not matter and flavours may repeat; (c) three-scoop cups with all flavours distinct; (d) three-scoop cones with all flavours distinct.
+:::
+
+:::solution
+Each is one cell of the selection table with $n = 8$, $k = 3$.
+
+**(a)** Ordered, with repetition: $8^3 = 512$.
+**(b)** Unordered, with repetition: $\binom{8+3-1}{3} = \binom{10}{3} = 120$.
+**(c)** Unordered, without repetition: $\binom{8}{3} = 56$.
+**(d)** Ordered, without repetition: $P(8,3) = 8 \cdot 7 \cdot 6 = 336$.
+
+Sanity checks on the relations between them: $(d) = 3! \cdot (c)$, and indeed $6 \cdot 56 = 336$ ✓ — the division by $k!$ is exact without repetition. But $(a)/3! = 512/6 = 85.33$, which is not $(b) = 120$ and is not even an integer: with repetition the division is meaningless, as the pitfall in the modelling section warned. Note also the ordering $(c) < (a)$ and $(c) < (b) < (d) < (a)$, all as expected.
+:::
+
+## Notation, Conventions and Symmetry
 
 <!-- section: binomial-notation -->
 
-:::notation
-We write $\binom{n}{k}$ for the number above (read "$n$ choose $k$"). By convention it is $0$ when $k > n$ or $k < 0$ (you cannot choose more items than exist, or a negative number), and $\binom{n}{0} = 1$ (there is exactly one way to choose nothing — the empty set).
+The binomial coefficient is used far beyond the counting of subsets — as a polynomial coefficient, as a probability weight, as an entry of a triangle — and each use wants slightly different conventions. This section fixes them.
+
+:::notation[Binomial coefficient conventions]{#binomial-conventions}
+For integers $n \ge 0$ and any integer $k$,
+
+$$\binom{n}{k} = \begin{cases} \dfrac{n!}{k!\,(n-k)!}, & 0 \le k \le n, \\[4pt] 0, & k < 0 \text{ or } k > n. \end{cases}$$
+
+In particular $\binom{n}{0} = \binom{n}{n} = 1$ (one way to choose nothing, one way to choose everything) and $\binom{n}{1} = \binom{n}{n-1} = n$.
 :::
 
-:::proposition[Symmetry of the binomial coefficients]{#binomial-symmetry}
-For all integers $0 \le k \le n$,
+The convention $\binom{n}{k} = 0$ outside the range is not laziness; it makes identities true without side conditions. Pascal's rule, for instance, holds for *all* integers $k$ once the convention is in force, which is what allows the recursion to be iterated mechanically.
+
+:::definition[Generalised binomial coefficient]{#generalised-binomial}
+For an arbitrary real (or complex) number $\alpha$ and an integer $k \ge 0$,
+
+$$\binom{\alpha}{k} = \frac{\alpha(\alpha-1)\cdots(\alpha-k+1)}{k!} = \frac{\alpha^{\underline{k}}}{k!}, \qquad \binom{\alpha}{0} = 1,$$
+
+and $\binom{\alpha}{k} = 0$ for $k < 0$. For $\alpha = n$ a non-negative integer this agrees with the previous definition, since the falling factorial then contains the factor $n - n = 0$ as soon as $k > n$.
+:::
+
+:::proposition[Symmetry]{#binomial-symmetry}
+For all integers $n \ge 0$ and $k$,
 
 $$\binom{n}{k} = \binom{n}{n-k}.$$
 :::
 
 :::proof
-Choosing which $k$ items are *in* the selection is the same as choosing which $n-k$ items are *left out* — the two choices determine each other, so the $k$-subsets and the $(n-k)$-subsets are matched up one for one and are therefore equinumerous.
+Complementation $A \mapsto [n] \setminus A$ is a map from $k$-subsets of $[n]$ to $(n-k)$-subsets, and it is its own inverse, hence a bijection. The bijection principle gives the identity. Algebraically the same thing: $\frac{n!}{k!(n-k)!}$ is unchanged when $k$ is replaced by $n-k$. For $k$ outside $[0,n]$ both sides are $0$.
+:::
+
+:::pitfall
+Symmetry is a statement about the *integer* binomial coefficients only. $\binom{\alpha}{k} = \binom{\alpha}{\alpha - k}$ is meaningless for non-integer $\alpha$ — the right-hand side has a non-integer lower index — and false as soon as one tries to make sense of it. The generalised coefficient keeps Pascal's rule and the binomial series, but not symmetry.
+:::
+
+:::proposition[Absorption identity]{#absorption-identity}
+For integers $1 \le k \le n$,
+
+$$k \binom{n}{k} = n \binom{n-1}{k-1}.$$
+:::
+
+:::proof
+Count in two ways the pairs $(A, x)$ where $A \subseteq [n]$ has $|A| = k$ and $x \in A$ — a "committee of size $k$ with a designated chair". Choosing the committee first and then the chair from within it gives $\binom{n}{k} \cdot k$. Choosing the chair first from all $n$ people and then the remaining $k-1$ members from the other $n-1$ gives $n \cdot \binom{n-1}{k-1}$. The two counts are of the same set, so they agree.
+:::
+
+This is the prototype of a **double count**: a single set counted by two different schemes yields an identity for free, and the identity is *explained* rather than merely verified. Nearly all the identities in the last two sections have such a proof.
+
+:::proposition[Unimodality and log-concavity]{#log-concavity}
+For fixed $n$, the sequence $\binom{n}{0}, \binom{n}{1}, \ldots, \binom{n}{n}$ increases up to the middle and decreases after it: $\binom{n}{k-1} < \binom{n}{k}$ for $k \le n/2$ and $\binom{n}{k} > \binom{n}{k+1}$ for $k \ge n/2$. Its maximum is $\binom{n}{\lfloor n/2 \rfloor}$.
+:::
+
+:::proof
+From the formula, the ratio of consecutive entries is
+
+$$\frac{\binom{n}{k}}{\binom{n}{k-1}} = \frac{n!}{k!(n-k)!} \cdot \frac{(k-1)!\,(n-k+1)!}{n!} = \frac{n-k+1}{k},$$
+
+which exceeds $1$ exactly when $n - k + 1 > k$, i.e. $k < (n+1)/2$, equals $1$ when $n$ is odd and $k = (n+1)/2$, and is less than $1$ beyond. So the sequence rises strictly, possibly repeats one value at the centre of an odd row, then falls strictly; the maximum sits at $k = \lfloor n/2 \rfloor$ (and also at $\lceil n/2 \rceil$). Symmetry confirms the shape is a mirror image about the centre.
+:::
+
+:::figure[Row $10$ of Pascal's triangle drawn to scale: $\binom{10}{k}$ against $k$. The ratio of consecutive bars is $(n-k+1)/k$, which is above $1$ to the left of the centre and below it to the right — so the row rises strictly, peaks once at $k=5$, and falls strictly, with the mirror symmetry $\binom{10}{k}=\binom{10}{10-k}$ visible as the left–right reflection. The single central bar holds $252$ of the $2^{10}=1024$ subsets, nearly a quarter of the whole row, while the two end bars hold one each.]{#row-ten-hump}
+{
+  "type": "plot",
+  "x": [-1.1, 11.6],
+  "y": [-22, 330],
+  "equalAspect": false,
+  "xTicks": 1,
+  "yTicks": 50,
+  "xLabel": "k",
+  "yLabel": "C(10, k)",
+  "marks": [
+    { "kind": "bars", "bars": [[-0.4, 0.4, 1], [0.6, 1.4, 10], [1.6, 2.4, 45], [2.6, 3.4, 120], [3.6, 4.4, 210], [5.6, 6.4, 210], [6.6, 7.4, 120], [7.6, 8.4, 45], [8.6, 9.4, 10], [9.6, 10.4, 1]], "tone": "accent" },
+    { "kind": "bars", "bars": [[4.6, 5.4, 252]], "tone": "result" },
+    { "kind": "text", "at": [8.3, 288], "text": "peak: C(10,5) = 252", "tone": "result", "leaderTo": [5.4, 254] },
+    { "kind": "text", "at": [1.4, 205], "text": "row sums to 1024", "tone": "muted" }
+  ]
+}
 :::
 
 :::intuition
-The number of ways to pick 2 people to go on a trip from 10 is the same as the number of ways to pick 8 people who stay home.
-
-This identity often lets you compute the smaller of k or n-k.
+Row $n$ of Pascal's triangle is a single hump: small at the ends, largest in the middle. That shape is why "about half heads" is overwhelmingly the most likely outcome of many coin tosses — the middle binomial coefficient dwarfs the ends. Stirling's approximation quantifies it: $\binom{2m}{m} \sim 4^m/\sqrt{\pi m}$, so the central term is a $\Theta(1/\sqrt{m})$ fraction of the whole row sum $4^m$.
 :::
 
-:::example
-A class has 12 students. Number of ways to choose a committee of 5:
+:::example[Computing efficiently]
+Evaluate $\binom{20}{17}$ and $\binom{12}{5}$, and verify the absorption identity for $n = 12$, $k = 5$.
 :::
 
 :::solution
-$$\binom{12}{5} = \frac{12 \times 11 \times 10 \times 9 \times 8}{5 \times 4 \times 3 \times 2 \times 1} = \frac{95040}{120} = 792.$$
+Use symmetry to reduce the lower index first: $\binom{20}{17} = \binom{20}{3} = \frac{20 \cdot 19 \cdot 18}{6} = 1140$ — three factors instead of seventeen.
 
-By symmetry, this equals the number of ways to choose which $7$ students are *not* on the committee. Because $n-k = 12-5 = 7$ is larger than $k=5$, we would normally compute the $k=5$ version by hand, but let us verify the identity:
+$$\binom{12}{5} = \frac{12 \cdot 11 \cdot 10 \cdot 9 \cdot 8}{120} = \frac{95\,040}{120} = 792.$$
 
-$$\binom{12}{7} = \frac{12!}{7!\,5!} = \binom{12}{5} = 792. \checkmark$$
+Absorption: the left side is $5 \cdot 792 = 3960$; the right side is $12 \binom{11}{4} = 12 \cdot \frac{11 \cdot 10 \cdot 9 \cdot 8}{24} = 12 \cdot 330 = 3960$. ✓ Both count the $3960$ five-person committees with a designated chair drawn from twelve people.
 :::
 
-## Useful Identities and the Subset Sum
+## Pascal's Rule and Subset Identities
 
 <!-- section: identities-and-relations -->
 
+The identities in this section all have the same two-line shape: describe a set, count it twice. They are the working vocabulary of combinatorial proof.
+
 :::theorem[Pascal's rule]{#pascals-rule}
-For integers $1 \le k \le n-1$,
+For all integers $n \ge 1$ and all integers $k$,
 
-$$\binom{n}{k} = \binom{n-1}{k} + \binom{n-1}{k-1}.$$
+$$\binom{n}{k} = \binom{n-1}{k-1} + \binom{n-1}{k}.$$
 :::
 
 :::proof
-Fix one special element. A $k$-subset either excludes it (choose all $k$ from the other $n-1$, giving $\binom{n-1}{k}$) or includes it (choose the remaining $k-1$ from the other $n-1$, giving $\binom{n-1}{k-1}$). These two cases are disjoint and exhaustive, so the addition principle applies.
+Fix the element $n \in [n]$ and split the $k$-subsets of $[n]$ into two disjoint classes according to whether they contain $n$.
+
+Those that contain $n$ are determined by their other $k-1$ elements, chosen from $[n-1]$: there are $\binom{n-1}{k-1}$ of them. Those that do not contain $n$ are $k$-subsets of $[n-1]$: there are $\binom{n-1}{k}$. The two classes are disjoint and exhaust all $k$-subsets, so the addition rule gives the identity.
+
+The edge cases are covered by the zero convention: for $k \le 0$ or $k > n$ both sides reduce to the same value ($1 = 1 + 0$ at $k = 0$, $0 = 0 + 0$ beyond the range).
 :::
 
-This is exactly the recurrence that builds Pascal's triangle.
+:::proposition[Total number of subsets]{#subset-sum}
+For every integer $n \ge 0$,
 
-:::proposition[Number of subsets]{#subset-sum}
-The total number of subsets of an $n$-element set is
-
-$$\sum_{k=0}^n \binom{n}{k} = 2^n.$$
+$$\sum_{k=0}^{n} \binom{n}{k} = 2^n.$$
 :::
 
 :::proof
-Each element can be independently included or excluded ($2$ choices each, by the multiplication principle), so there are $2^n$ subsets in all. Summing $\binom{n}{k}$ over all sizes $k$ just groups those same subsets by how many elements they contain.
+Both sides count the subsets of $[n]$. The right side does so by the power-set corollary (each element independently in or out). The left side classifies the subsets by their size $k$ — the classes are disjoint and exhaust the power set — and the addition rule sums the class sizes.
+:::
+
+:::proposition[Alternating sum]{#alternating-sum}
+For every integer $n \ge 1$,
+
+$$\sum_{k=0}^{n} (-1)^k \binom{n}{k} = 0,$$
+
+equivalently an $n$-set has as many even-sized subsets as odd-sized ones, namely $2^{n-1}$ of each.
+:::
+
+:::proof
+Exhibit a bijection between even and odd subsets. Fix the element $1$ and define $\varphi(A) = A \,\triangle\, \{1\}$, i.e. remove $1$ from $A$ if present and adjoin it otherwise. Then $\varphi$ changes $|A|$ by exactly $\pm 1$, so it swaps parity, and $\varphi(\varphi(A)) = A$, so it is a bijection. Hence the even-sized and odd-sized subsets are equinumerous; since together they number $2^n$, each class has $2^{n-1}$ members, and the alternating sum — which is (evens) minus (odds) — vanishes. The hypothesis $n \ge 1$ is needed for the element $1$ to exist; for $n = 0$ the sum is $1$, not $0$.
+:::
+
+:::proposition[Weighted subset sum]{#weighted-subset-sum}
+For every integer $n \ge 1$,
+
+$$\sum_{k=0}^{n} k \binom{n}{k} = n\,2^{n-1}.$$
+:::
+
+:::proof
+Double count the pairs $(A, x)$ with $A \subseteq [n]$ and $x \in A$ — a subset with a designated leader, of any size. Grouping by the size $k$ of $A$ gives $\sum_k k \binom{n}{k}$. Grouping instead by the leader gives: $n$ choices of $x$, then any subset of the remaining $n-1$ elements to complete $A$, that is $n\,2^{n-1}$. Equating the two counts proves the identity. (Alternatively, sum the absorption identity $k\binom{n}{k} = n\binom{n-1}{k-1}$ over $k$ and apply the subset sum to row $n-1$.)
 :::
 
 :::intuition
-Pascal's triangle: every entry is the sum of the two entries above it from the previous row — exactly the choose-or-not-choose cases.
+The rhythm of a double count is always the same: name a set of *pairs* (or of decorated objects), then count it by deciding the two coordinates in either order. "Committee with a chair" proves absorption; "subset with a leader" proves the weighted sum; "choose the first-year members, then the rest" will prove Vandermonde.
 
-2^n subsets: for a set of 3 elements {1,2,3} the subsets are {}, {1}, {2}, {3}, {1,2}, {1,3}, {2,3}, {1,2,3} — eight of them.
+This is why combinatorial proofs feel like explanations rather than verifications: the identity is true because both sides are *names for the same objects*.
 :::
 
-:::example
-Verify Pascal's identity for $n=5$, $k=2$. The left side:
+:::example[Pascal's rule at work]
+Verify Pascal's rule for $n = 5$, $k = 2$, and use the rule alone to compute $\binom{6}{3}$ from row $4$ of Pascal's triangle ($1, 4, 6, 4, 1$).
 :::
 
 :::solution
-$$\binom{5}{2} = \frac{5 \times 4}{2 \times 1} = 10.$$
+Verification: $\binom{5}{2} = \frac{5 \cdot 4}{2} = 10$, while $\binom{4}{1} + \binom{4}{2} = 4 + 6 = 10$. ✓
 
-The right side, $\binom{n-1}{k} + \binom{n-1}{k-1} = \binom{4}{2} + \binom{4}{1}$:
+Row $5$ from row $4$ by adding adjacent pairs and capping with $1$s: $1,\ 1+4=5,\ 4+6=10,\ 6+4=10,\ 4+1=5,\ 1$. So row $5$ is $1, 5, 10, 10, 5, 1$. Then $\binom{6}{3} = \binom{5}{2} + \binom{5}{3} = 10 + 10 = 20$.
 
-$$\binom{4}{2} + \binom{4}{1} = 6 + 4 = 10. \checkmark$$
-
-Both sides equal $10$, confirming the identity here.
-
-Now verify the subset sum for the 4-element set $\{a,b,c,d\}$. Summing over all sizes:
-
-$$\binom{4}{0} + \binom{4}{1} + \binom{4}{2} + \binom{4}{3} + \binom{4}{4} = 1 + 4 + 6 + 4 + 1 = 16 = 2^4. \checkmark$$
+Sanity check against the formula: $\binom{6}{3} = \frac{6 \cdot 5 \cdot 4}{6} = 20$ ✓, and row $5$ sums to $32 = 2^5$ ✓.
 :::
 
-## Common Mistakes
+:::example[Counting with a parity condition]
+How many subsets of $[10]$ have an odd number of elements? How many have at least $8$ elements?
+:::
 
-- **Forgetting to divide by $k!$ when turning permutations into combinations**: $P(n,k)/k!$ is required; many people stop at the ordered count.
-- **Computing $\binom{n}{k}$ when $k > n$**: It is zero, not a negative number or an error.
-- **Mixing up the two arguments**: $\binom{n}{k}$ has $n$ on top (the total pool) and $k$ on the bottom (the size chosen).
-- **Thinking $\binom{n}{k} \times k!$ gives permutations of the *same* fixed set**: No — it gives the number of ways to select $k$ *distinct* items from $n$ and then arrange them, i.e. $P(n,k)$.
-- **Ignoring that combinations assume distinct objects**: If items have types or repeats, different formulas (multisets) apply.
+:::solution
+By the alternating-sum proposition, exactly half of the $2^{10} = 1024$ subsets are odd-sized: $2^{9} = 512$.
 
-The binomial coefficient $\binom{n}{k}$ is one of the most ubiquitous objects in mathematics. It counts subsets, appears as coefficients in polynomial expansions, generates Pascal's triangle, and underpins the binomial distribution in probability.
+For the second, sum the top three terms of row $10$:
 
-Its algebraic and combinatorial properties make it a Swiss-army knife for counting arguments.
+$$\binom{10}{8} + \binom{10}{9} + \binom{10}{10} = 45 + 10 + 1 = 56.$$
 
-## Pascal's Triangle and the Recursive Structure
+Sanity check on the first by direct summation: $\binom{10}{1} + \binom{10}{3} + \binom{10}{5} + \binom{10}{7} + \binom{10}{9} = 10 + 120 + 252 + 120 + 10 = 512$. ✓
+:::
+
+## Pascal's Triangle and Lattice Paths
 
 <!-- section: pascal-triangle -->
 
-:::definition[Pascal's triangle]
-Pascal's triangle is the triangular array where each entry is a binomial coefficient: row $n$ (indexing rows from $0$) contains $\binom{n}{0}, \binom{n}{1}, \ldots, \binom{n}{n}$.
+:::definition[Pascal's triangle]{#pascal-triangle-definition}
+Pascal's triangle is the infinite triangular array whose $n$-th row (rows indexed from $0$) is
+
+$$\binom{n}{0}, \binom{n}{1}, \ldots, \binom{n}{n}.$$
+
+By Pascal's rule each interior entry is the sum of the two entries above it, and each row begins and ends with $1$.
 :::
 
-The additive property
+The array can therefore be generated by addition alone, with no factorials and no multiplication:
 
-$$\binom{n}{k} = \binom{n-1}{k-1} + \binom{n-1}{k}$$
+$$
+\begin{array}{c}
+1 \\
+1 \quad 1 \\
+1 \quad 2 \quad 1 \\
+1 \quad 3 \quad 3 \quad 1 \\
+1 \quad 4 \quad 6 \quad 4 \quad 1 \\
+1 \quad 5 \quad 10 \quad 10 \quad 5 \quad 1
+\end{array}
+$$
 
-(Pascal's rule, rewritten) lets you build the entire triangle from the top with only additions — no factorials needed.
+Reading the triangle in different directions recovers the identities of the previous section as visual facts: rows are symmetric (symmetry of $\binom{n}{k}$), row sums are $1, 2, 4, 8, \ldots$ (the subset sum), the alternating sum of any row from row $1$ down is zero, and the second diagonal $1, 3, 6, 10, \ldots$ consists of the triangular numbers $\binom{m}{2} = m(m-1)/2$.
 
 :::intuition
-Each number is the sum of the two numbers "parents" above it. It is like a family tree of choices: you either took the item (add the left parent) or skipped it (add the right parent).
+Each entry is the sum of its two parents because a $k$-subset of $[n]$ either takes the new element $n$ (left parent) or does not (right parent). The triangle is the recursion made visible.
 
-The triangle encodes every possible "choose k from n" question in a visual pyramid.
+Every counting question of the form "how many ways to choose $k$ from $n$" for small $n$ can be read off the triangle faster than any formula can be evaluated.
 :::
 
-:::example
-Let us build row $5$ from row $4$ by addition. Row $4$ is $1\ 4\ 6\ 4\ 1$. Placing a $1$ at each end and adding adjacent pairs:
-:::
+Binomial coefficients also count paths on a grid, and this reading makes several identities geometrically obvious.
 
-:::solution
-$$1,\quad 1+4=5,\quad 4+6=10,\quad 6+4=10,\quad 4+1=5,\quad 1$$
+:::theorem[Lattice paths]{#lattice-paths}
+The number of paths in the integer lattice from $(0,0)$ to $(a,b)$ using only unit steps right ($R$) and up ($U$) is
 
-so row $5$ is
-
-$$1\ \ 5\ \ 10\ \ 10\ \ 5\ \ 1.$$
-
-These are $\binom{5}{0}$ through $\binom{5}{5}$. Cross-check the middle entry with the factorial formula:
-
-$$\binom{5}{2} = \frac{5 \times 4}{2 \times 1} = 10 = \binom{5}{3},$$
-
-the two $10$'s being equal by the symmetry $\binom{5}{2} = \binom{5}{5-2}$. Sanity check: the row sums to $1+5+10+10+5+1 = 32 = 2^5$, as every row must.
-:::
-
-## The Binomial Theorem
-
-<!-- section: binomial-theorem -->
-
-:::theorem[Binomial theorem]{#binomial-theorem}
-For any numbers (or commuting symbols) $x, y$ and any non-negative integer $n$,
-
-$$(x + y)^n = \sum_{k=0}^n \binom{n}{k} x^{n-k} y^k.$$
+$$\binom{a+b}{a} = \binom{a+b}{b}.$$
 :::
 
 :::proof
-Expanding the product of $n$ copies of $(x+y)$ means choosing $x$ or $y$ from each factor. The term $x^{n-k} y^k$ arises every time you pick $y$ from exactly $k$ of the factors and $x$ from the rest, and there are exactly $\binom{n}{k}$ ways to choose which $k$ factors contribute the $y$. So each term's coefficient $\binom{n}{k}$ tells exactly how many ways to pick the $y$ factor $k$ times.
+A path consists of exactly $a + b$ steps, of which exactly $a$ are $R$ and $b$ are $U$ (each $R$ raises the first coordinate by $1$ and each $U$ the second, and the endpoint requires those totals). Encode a path as the word of its steps, a string in $\{R, U\}^{a+b}$ with $a$ letters $R$. This encoding is a bijection: the word determines the path step by step, and the path determines the word.
+
+By the combination formula, the number of such words is the number of ways to choose which $a$ of the $a+b$ positions carry an $R$, namely $\binom{a+b}{a}$; equivalently a multiset permutation, $\frac{(a+b)!}{a!\,b!}$, which is the same number.
 :::
 
-:::intuition
-Setting $x=1$, $y=1$ instantly gives the subset count $2^n$; setting $x=1$, $y=-1$ gives the alternating sum $0$ (for $n \ge 1$).
+:::figure[Pascal's triangle laid on the lattice. The number written at each node is the count of right/up paths reaching it from the origin, which is $\binom{i+j}{i}$ at $(i,j)$. Every interior node's number is the sum of the node to its left and the node below it, because a path arrives by a final step from exactly one of those two — that is Pascal's rule, drawn. The highlighted route is one of the $\binom{5}{2}=10$ paths to $(3,2)$.]{#lattice-pascal}
+{
+  "type": "plot",
+  "x": [-0.75, 3.75],
+  "y": [-0.65, 2.75],
+  "equalAspect": true,
+  "xTicks": 1,
+  "yTicks": 1,
+  "xLabel": "east",
+  "yLabel": "north",
+  "marks": [
+    { "kind": "path", "points": [[0, 0], [1, 0], [1, 1], [2, 1], [3, 1], [3, 2]], "tone": "result" },
+    { "kind": "point", "at": [0, 0], "tone": "muted" },
+    { "kind": "point", "at": [1, 0], "tone": "muted" },
+    { "kind": "point", "at": [2, 0], "tone": "muted" },
+    { "kind": "point", "at": [3, 0], "tone": "muted" },
+    { "kind": "point", "at": [0, 1], "tone": "muted" },
+    { "kind": "point", "at": [1, 1], "tone": "muted" },
+    { "kind": "point", "at": [2, 1], "tone": "muted" },
+    { "kind": "point", "at": [3, 1], "tone": "muted" },
+    { "kind": "point", "at": [0, 2], "tone": "muted" },
+    { "kind": "point", "at": [1, 2], "tone": "muted" },
+    { "kind": "point", "at": [2, 2], "tone": "muted" },
+    { "kind": "point", "at": [3, 2], "tone": "muted" },
+    { "kind": "text", "at": [-0.28, 0.26], "text": "1" },
+    { "kind": "text", "at": [0.72, 0.26], "text": "1" },
+    { "kind": "text", "at": [1.72, 0.26], "text": "1" },
+    { "kind": "text", "at": [2.72, 0.26], "text": "1" },
+    { "kind": "text", "at": [-0.28, 1.26], "text": "1" },
+    { "kind": "text", "at": [0.72, 1.26], "text": "2" },
+    { "kind": "text", "at": [1.72, 1.26], "text": "3" },
+    { "kind": "text", "at": [2.72, 1.26], "text": "4" },
+    { "kind": "text", "at": [-0.28, 2.26], "text": "1" },
+    { "kind": "text", "at": [0.72, 2.26], "text": "3" },
+    { "kind": "text", "at": [1.72, 2.26], "text": "6" },
+    { "kind": "text", "at": [2.66, 2.26], "text": "10", "tone": "result" }
+  ]
+}
 :::
 
-:::example
-Expand $(a + b)^4$. The coefficients are $\binom{4}{k}$ for $k = 0,1,2,3,4$, which are row $4$ of Pascal's triangle: $1, 4, 6, 4, 1$. Attaching $a^{4-k} b^k$ to each:
+:::corollary[Pascal's rule, geometrically]{#pascal-geometric}
+The lattice-path count satisfies $\binom{a+b}{a} = \binom{a+b-1}{a-1} + \binom{a+b-1}{a}$, since every path to $(a,b)$ arrives by its last step either from $(a-1,b)$ or from $(a,b-1)$, and the two cases are disjoint.
+:::
+
+:::proof
+Classify paths to $(a,b)$ by their final step. If the final step is $R$, the rest of the path is an arbitrary path to $(a-1,b)$, and there are $\binom{a+b-1}{a-1}$ of those. If it is $U$, the rest is a path to $(a,b-1)$, of which there are $\binom{a+b-1}{a}$. Disjoint and exhaustive, so the addition rule applies. This is Pascal's rule with $n = a+b$, $k = a$.
+:::
+
+:::example[Blocked grid]
+A city grid runs $6$ blocks east and $4$ blocks north. How many shortest routes from the south-west corner to the north-east corner (a) in total, (b) pass through the point $3$ east and $2$ north, (c) avoid that point?
 :::
 
 :::solution
-$$(a+b)^4 = a^4 + 4a^3 b + 6a^2 b^2 + 4a b^3 + b^4.$$
+**(a)** $\binom{6+4}{4} = \binom{10}{4} = 210$.
 
-The middle coefficient $6$ is $\binom{4}{2} = \frac{4 \times 3}{2 \times 1} = 6$.
+**(b)** A route through $(3,2)$ splits uniquely into a route to $(3,2)$ and a route from $(3,2)$ onward, and the two halves can be chosen independently:
 
-Sanity check: set $a=b=1$. The left side is $2^4 = 16$; the right side is $1+4+6+4+1 = 16$. The exponents in each term also always add to $4$ (e.g. $a^3 b$ has $3+1=4$), as they must.
+$$\binom{5}{2} \cdot \binom{5}{2} = 10 \cdot 10 = 100.$$
+
+**(c)** Complementary counting: $210 - 100 = 110$.
+
+Sanity check on (b): the split is a bijection between full routes through the point and pairs (first half, second half), which is what licenses the multiplication; and $100 < 210$ as it must be.
 :::
 
-## Important Identities and Applications
+:::example[Words and paths are the same object]
+Count the binary strings of length $9$ with exactly $4$ ones, and interpret the count as a path.
+:::
+
+:::solution
+Choose which $4$ of the $9$ positions hold a one:
+
+$$\binom{9}{4} = \frac{9 \cdot 8 \cdot 7 \cdot 6}{24} = 126.$$
+
+Reading a one as a step up and a zero as a step right, each string is a lattice path from $(0,0)$ to $(5,4)$, and $\binom{9}{4} = \binom{9}{5} = 126$ ✓ — the symmetry of the binomial coefficient is the symmetry of swapping the roles of the two coordinates.
+:::
+
+## The Binomial and Multinomial Theorems
+
+<!-- section: binomial-theorem -->
+
+The binomial coefficients were defined by counting subsets. The following theorem is the reason they are called *binomial*: they are exactly the coefficients that appear when a two-term sum is raised to a power.
+
+:::theorem[Binomial theorem]{#binomial-theorem}
+For all elements $x, y$ of a commutative ring (in particular all real or complex numbers) and every integer $n \ge 0$,
+
+$$(x+y)^n = \sum_{k=0}^{n} \binom{n}{k} x^{\,n-k} y^{\,k}.$$
+:::
+
+:::proof
+*Combinatorial proof.* Write the left side as a product of $n$ identical factors
+
+$$(x+y)(x+y)\cdots(x+y).$$
+
+Expanding by distributivity without collecting terms produces exactly one summand for each way of choosing one term — either $x$ or $y$ — from each of the $n$ factors; there are $2^n$ such summands, and each is a product of $n$ letters. A summand equals $x^{n-k} y^k$ precisely when $y$ was chosen from exactly $k$ of the factors, and the set of those $k$ factors may be any $k$-subset of the $n$ factors. By the combination formula there are $\binom{n}{k}$ such choices, so after collecting like terms the coefficient of $x^{n-k}y^k$ is $\binom{n}{k}$. Commutativity is what allows the letters within a summand to be reordered into the form $x^{n-k}y^k$.
+
+*Second proof, by induction on $n$.* For $n = 0$ both sides are $1$. Assume the formula for $n-1$. Then
+
+$$(x+y)^n = (x+y)\sum_{j=0}^{n-1}\binom{n-1}{j}x^{\,n-1-j}y^{\,j} = \sum_{j=0}^{n-1}\binom{n-1}{j}x^{\,n-j}y^{\,j} + \sum_{j=0}^{n-1}\binom{n-1}{j}x^{\,n-1-j}y^{\,j+1}.$$
+
+In the second sum substitute $k = j+1$, and in the first write $k = j$; the coefficient of $x^{n-k}y^k$ in the total is then $\binom{n-1}{k} + \binom{n-1}{k-1}$, which equals $\binom{n}{k}$ by Pascal's rule (the zero convention handles $k = 0$ and $k = n$).
+:::
+
+:::corollary[Specialisations]{#binomial-specialisations}
+Setting $x = y = 1$ gives $\sum_{k} \binom{n}{k} = 2^n$; setting $x = 1$, $y = -1$ gives $\sum_{k} (-1)^k \binom{n}{k} = 0$ for $n \ge 1$; setting $x = 1$, $y = t$ gives the generating polynomial $(1+t)^n = \sum_k \binom{n}{k} t^k$.
+:::
+
+:::proof
+Each is a direct substitution into the theorem. Note that the first two re-prove, by algebra, the subset sum and alternating sum established combinatorially earlier — a good illustration that identities of this kind usually admit both a counting proof and an algebraic one.
+:::
+
+:::intuition
+$(1+t)^n = \sum_k \binom{n}{k}t^k$ says: the polynomial $(1+t)^n$ is a *catalogue* of the subsets of $[n]$, in which the coefficient of $t^k$ records how many have size $k$. Algebraic manipulation of the polynomial then becomes manipulation of the whole family of counts at once. That idea, pushed further, is the theory of generating functions.
+:::
+
+:::pitfall
+In the term $\binom{n}{k}x^{n-k}y^k$ the index $k$ is the exponent on the **second** letter. When asked for "the coefficient of $x^3$ in $(2x - 5)^7$", identify the roles first: here $x$ plays the role of the second letter (exponent $3$, so $k = 3$ counted from the constant term) — safest is to write the expansion explicitly as $\sum_k \binom{7}{k}(2x)^k(-5)^{7-k}$ and read off $k = 3$, giving $\binom{7}{3} \cdot 2^3 \cdot (-5)^4 = 35 \cdot 8 \cdot 625 = 175\,000$. Forgetting to raise the numerical factors $2$ and $-5$ to their powers is the single most common slip in these questions.
+:::
+
+The generalisation to more than two terms uses the multinomial coefficients of the earlier section.
+
+:::theorem[Multinomial theorem]{#multinomial-theorem}
+For commuting $x_1, \ldots, x_r$ and an integer $n \ge 0$,
+
+$$(x_1 + x_2 + \cdots + x_r)^n = \sum_{\substack{k_1 + \cdots + k_r = n \\ k_i \ge 0}} \binom{n}{k_1, k_2, \ldots, k_r}\, x_1^{k_1} x_2^{k_2} \cdots x_r^{k_r}.$$
+:::
+
+:::proof
+Expand the product of $n$ factors $(x_1 + \cdots + x_r)$ by distributivity. Each summand is obtained by choosing one of the $r$ letters from each factor, so the summands correspond bijectively to the words of length $n$ over the alphabet $\{x_1, \ldots, x_r\}$. A word contributes $x_1^{k_1}\cdots x_r^{k_r}$ exactly when it uses letter $i$ precisely $k_i$ times, and the number of such words is the multiset permutation count $\frac{n!}{k_1!\cdots k_r!}$ by the multiset theorem. Collecting like terms gives the stated coefficient. For $r = 2$ this is the binomial theorem.
+:::
+
+:::corollary[Number of monomials and the total]{#multinomial-corollaries}
+The expansion has $\binom{n + r - 1}{n}$ distinct monomials, and setting every $x_i = 1$ gives $\sum \binom{n}{k_1,\ldots,k_r} = r^n$.
+:::
+
+:::proof
+The monomials correspond to the exponent vectors $(k_1, \ldots, k_r)$ with $k_i \ge 0$ and $\sum k_i = n$, counted by stars and bars as $\binom{n+r-1}{n}$. The second statement is the theorem evaluated at $x_i = 1$, whose left side is $r^n$ — equivalently, the total number of words of length $n$ over an $r$-letter alphabet, classified by their letter multiplicities.
+:::
+
+:::theorem[Newton's generalised binomial series]{#newton-series}
+For any real $\alpha$ and any real $t$ with $|t| < 1$,
+
+$$(1+t)^{\alpha} = \sum_{k=0}^{\infty} \binom{\alpha}{k} t^{k},$$
+
+the series converging absolutely. When $\alpha$ is a non-negative integer, all terms with $k > \alpha$ vanish and the series is the finite binomial expansion.
+:::
+
+:::remark
+This is an analytic statement, not a combinatorial one: the proof requires Taylor's theorem with a remainder estimate (or the theory of ordinary differential equations applied to $f(t) = (1+t)^\alpha$, which satisfies $(1+t)f' = \alpha f$), together with a convergence argument on $|t| < 1$. Neither is in scope here, so we state it without proof and record only the combinatorially useful case $\alpha = -m$ for a positive integer $m$, where
+
+$$\binom{-m}{k} = (-1)^k \binom{m+k-1}{k},$$
+
+so that $(1-t)^{-m} = \sum_{k \ge 0} \binom{m+k-1}{k} t^k$ — a generating function whose coefficients are exactly the stars-and-bars counts. That is not a coincidence: it is the statement that distributing $k$ identical items among $m$ boxes is the $k$-th coefficient of the $m$-fold product $(1 + t + t^2 + \cdots)^m$.
+:::
+
+:::example[Expansion and a single coefficient]
+(a) Expand $(a+b)^4$. (b) Find the coefficient of $x^5 y^3$ in $(2x - y)^8$. (c) Find the coefficient of $x^2 y^3 z$ in $(x + y + z)^6$.
+:::
+
+:::solution
+**(a)** Row $4$ of Pascal's triangle is $1, 4, 6, 4, 1$, so
+
+$$(a+b)^4 = a^4 + 4a^3b + 6a^2b^2 + 4ab^3 + b^4.$$
+
+Check: at $a = b = 1$ both sides are $16 = 2^4$ ✓, and each term's exponents sum to $4$ ✓.
+
+**(b)** Write $(2x-y)^8 = \sum_k \binom{8}{k}(2x)^{8-k}(-y)^k$. The term with $y^3$ has $k = 3$, and then $x$ carries exponent $5$ as required:
+
+$$\binom{8}{3} \cdot 2^5 \cdot (-1)^3 = 56 \cdot 32 \cdot (-1) = -1792.$$
+
+**(c)** By the multinomial theorem with $(k_1,k_2,k_3) = (2,3,1)$:
+
+$$\binom{6}{2,3,1} = \frac{6!}{2!\,3!\,1!} = \frac{720}{12} = 60.$$
+
+Sanity check on (c): the sum of all multinomial coefficients for $n = 6$, $r = 3$ is $3^6 = 729$, and $60$ is a plausible share of it; the exponents $2+3+1 = 6$ ✓.
+:::
+
+## Vandermonde, the Hockey Stick, and Double Counting
 
 <!-- section: identities-applications -->
 
-Besides Pascal's rule and the subset sum $2^n$ there are many more identities, among them the hockey-stick identity and Vandermonde's identity for convolutions of coefficients.
+This closing section collects the two identities that appear most often in applications, and proves both by double counting. The pattern to internalise is that the *proof strategy* — describe a set, classify its elements, count each class — is more valuable than either identity.
 
-:::proposition[Hockey-stick identity]{#hockey-stick}
+:::theorem[Vandermonde's identity]{#vandermonde}
+For non-negative integers $m, n$ and any integer $r \ge 0$,
+
+$$\binom{m+n}{r} = \sum_{j=0}^{r} \binom{m}{j}\binom{n}{r-j}.$$
+:::
+
+:::proof
+Let $M$ be a set of $m$ women and $N$ a set of $n$ men, disjoint, so $|M \cup N| = m+n$. Count the $r$-element subsets of $M \cup N$ in two ways.
+
+Directly: there are $\binom{m+n}{r}$ of them.
+
+By classification: sort the $r$-subsets according to how many of their elements come from $M$, say $j$ of them, where $0 \le j \le r$. The classes are pairwise disjoint and exhaust all $r$-subsets. A subset in class $j$ is determined by choosing its $j$ elements from $M$ ($\binom{m}{j}$ ways) and its remaining $r-j$ elements from $N$ ($\binom{n}{r-j}$ ways), independently, so the class has $\binom{m}{j}\binom{n}{r-j}$ members by the product rule. The addition rule over $j$ gives the sum.
+
+The zero convention makes the formula correct even when $r > m$ or $r > n$: the impossible terms simply vanish.
+:::
+
+:::corollary[Sum of squares of a row]{#sum-of-squares}
+For every integer $n \ge 0$,
+
+$$\sum_{k=0}^{n} \binom{n}{k}^{2} = \binom{2n}{n}.$$
+:::
+
+:::proof
+Apply Vandermonde with $m = n$ and $r = n$:
+
+$$\binom{2n}{n} = \sum_{k=0}^{n}\binom{n}{k}\binom{n}{n-k} = \sum_{k=0}^{n}\binom{n}{k}^{2},$$
+
+the last step by the symmetry $\binom{n}{n-k} = \binom{n}{k}$.
+:::
+
+:::theorem[Hockey-stick identity]{#hockey-stick}
 For integers $0 \le r \le m$,
 
 $$\sum_{i=r}^{m} \binom{i}{r} = \binom{m+1}{r+1}.$$
 :::
 
 :::proof
-Count the $(r+1)$-element subsets of $\{1, \ldots, m+1\}$ by their largest element. If the largest chosen element is $i+1$, the other $r$ elements come from $\{1, \ldots, i\}$, and there are $\binom{i}{r}$ ways to pick them. Summing over every possible largest element gives the total $\binom{m+1}{r+1}$.
+Count the $(r+1)$-element subsets of $[m+1]$ by their **largest** element. Every such subset has a unique largest element, so the classes are disjoint and exhaustive. If the largest element is $i+1$ (which requires $i + 1 \ge r+1$, i.e. $i \ge r$, and $i + 1 \le m+1$, i.e. $i \le m$), the remaining $r$ elements form an arbitrary $r$-subset of $\{1, \ldots, i\}$, of which there are $\binom{i}{r}$. Summing over the possible largest elements gives $\sum_{i=r}^{m}\binom{i}{r}$, and the total is $\binom{m+1}{r+1}$.
 :::
 
-Applications: probability (binomial distribution), generating functions, algebraic proofs of combinatorial identities, and counting lattice paths.
+:::figure[The hockey stick for $r=2$, $m=5$. The shaft runs down a diagonal of constant lower index — $\binom{2}{2}, \binom{3}{2}, \binom{4}{2}, \binom{5}{2} = 1, 3, 6, 10$ — and the blade is the entry one step down and across, $\binom{6}{3} = 20$, which is their sum. The bend matters: the total does not lie at the diagonal's continuation ($15$) but on the other side, because the classification is by the largest element chosen, and adjoining that element shifts both indices.]{#hockey-stick-figure}
+{
+  "type": "plot",
+  "x": [-6.0, 6.0],
+  "y": [-0.9, 6.6],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "text", "at": [0, 6], "text": "1" },
+    { "kind": "text", "at": [-0.9, 5], "text": "1" },
+    { "kind": "text", "at": [0.9, 5], "text": "1" },
+    { "kind": "text", "at": [-1.8, 4], "text": "1" },
+    { "kind": "text", "at": [0, 4], "text": "2" },
+    { "kind": "text", "at": [1.8, 4], "text": "1", "tone": "accent" },
+    { "kind": "text", "at": [-2.7, 3], "text": "1" },
+    { "kind": "text", "at": [-0.9, 3], "text": "3" },
+    { "kind": "text", "at": [0.9, 3], "text": "3", "tone": "accent" },
+    { "kind": "text", "at": [2.7, 3], "text": "1" },
+    { "kind": "text", "at": [-3.6, 2], "text": "1" },
+    { "kind": "text", "at": [-1.8, 2], "text": "4" },
+    { "kind": "text", "at": [0, 2], "text": "6", "tone": "accent" },
+    { "kind": "text", "at": [1.8, 2], "text": "4" },
+    { "kind": "text", "at": [3.6, 2], "text": "1" },
+    { "kind": "text", "at": [-4.5, 1], "text": "1" },
+    { "kind": "text", "at": [-2.7, 1], "text": "5" },
+    { "kind": "text", "at": [-0.9, 1], "text": "10", "tone": "accent" },
+    { "kind": "text", "at": [0.9, 1], "text": "10" },
+    { "kind": "text", "at": [2.7, 1], "text": "5" },
+    { "kind": "text", "at": [4.5, 1], "text": "1" },
+    { "kind": "text", "at": [-5.4, 0], "text": "1" },
+    { "kind": "text", "at": [-3.6, 0], "text": "6" },
+    { "kind": "text", "at": [-1.8, 0], "text": "15" },
+    { "kind": "text", "at": [0, 0], "text": "20", "tone": "result" },
+    { "kind": "text", "at": [1.8, 0], "text": "15" },
+    { "kind": "text", "at": [3.6, 0], "text": "6" },
+    { "kind": "text", "at": [5.4, 0], "text": "1" },
+    { "kind": "arrow", "from": [-0.75, 0.75], "to": [-0.2, 0.25], "tone": "result" },
+    { "kind": "text", "at": [3.9, 5.3], "text": "1 + 3 + 6 + 10 = 20", "tone": "result" }
+  ]
+}
+:::
 
 :::intuition
-Lattice paths from $(0,0)$ to $(n-k, k)$ using only right and up steps: exactly $\binom{n}{k}$ paths, since a path is determined by choosing which $k$ of the $n$ total steps go up.
+The name comes from the picture: the summands $\binom{r}{r}, \binom{r+1}{r}, \ldots, \binom{m}{r}$ lie along a diagonal of Pascal's triangle (the shaft of the stick) and the answer $\binom{m+1}{r+1}$ sits one step off the end, in the row below and to the side (the blade).
+
+The special case $r = 1$ is the schoolroom formula $1 + 2 + \cdots + m = \binom{m+1}{2} = \frac{m(m+1)}{2}$, and $r = 2$ sums the triangular numbers.
 :::
 
-:::example
-First, a sum-rule count: the number of ways to choose $2$ or $3$ items from $6$ (the two cases are disjoint) is
+:::pitfall
+The hockey-stick sum runs down a diagonal with the **lower index fixed**, not across a row. The superficially similar $\sum_{i=r}^{m}\binom{m}{i}$ — a partial row sum — has no closed form at all; only the complete row sums to $2^m$. Confusing the two is common; check which index is moving before reaching for the identity.
+:::
+
+:::example[Vandermonde in a committee problem]
+A department has $7$ mathematicians and $5$ statisticians. How many committees of $4$ can be formed? Verify the answer by splitting on the number of mathematicians.
 :::
 
 :::solution
-$$\binom{6}{2} + \binom{6}{3} = 15 + 20 = 35.$$
+Directly: $\binom{12}{4} = \frac{12 \cdot 11 \cdot 10 \cdot 9}{24} = 495$.
 
-Second, a full check of the hockey-stick identity with $r=2$ and $m=5$. The claim is $\sum_{i=2}^{5} \binom{i}{2} = \binom{6}{3}$. Compute the left side term by term:
+By Vandermonde with $m = 7$, $n = 5$, $r = 4$, classifying by the number $j$ of mathematicians:
 
-$$\binom{2}{2} + \binom{3}{2} + \binom{4}{2} + \binom{5}{2} = 1 + 3 + 6 + 10 = 20.$$
+$$\sum_{j=0}^{4}\binom{7}{j}\binom{5}{4-j} = 1 \cdot 5 + 7 \cdot 10 + 21 \cdot 10 + 35 \cdot 5 + 35 \cdot 1 = 5 + 70 + 210 + 175 + 35 = 495. \checkmark$$
 
-The right side is $\binom{6}{3} = 20$. The two match, confirming the identity. (Notice the summands $1, 3, 6, 10$ trace the "stick" down a diagonal of Pascal's triangle, and the answer $20$ sits just off its end — the "blade" of the hockey stick.)
+The classification is also the efficient route to constrained versions: committees with at least one of each specialty are $495 - \binom{7}{4} - \binom{5}{4} = 495 - 35 - 5 = 455$.
+:::
+
+:::example[Hockey stick and a running total]
+Evaluate $\sum_{i=2}^{6}\binom{i}{2}$, and use the identity to find $1 + 3 + 6 + 10 + 15 + 21 + 28$.
+:::
+
+:::solution
+By the hockey-stick identity with $r = 2$, $m = 6$:
+
+$$\sum_{i=2}^{6}\binom{i}{2} = \binom{7}{3} = \frac{7 \cdot 6 \cdot 5}{6} = 35.$$
+
+Direct check: $1 + 3 + 6 + 10 + 15 = 35$. ✓
+
+The second sum is the first seven triangular numbers, that is $\sum_{i=2}^{8}\binom{i}{2}$, so it equals $\binom{9}{3} = \frac{9 \cdot 8 \cdot 7}{6} = 84$. Direct check: $1+3+6+10+15+21+28 = 84$. ✓
+:::
+
+:::example[A double count with no formula in sight]
+Prove that $\sum_{k=0}^{n} k^2 \binom{n}{k} = n(n+1)2^{n-2}$ for $n \ge 2$.
+:::
+
+:::solution
+Double count the triples $(A, x, y)$ with $A \subseteq [n]$, $x \in A$ and $y \in A$, where $x$ and $y$ may coincide — "a subset with a chair and a secretary, possibly the same person".
+
+Grouping by the size $k$ of $A$: there are $\binom{n}{k}$ subsets of size $k$ and $k \cdot k = k^2$ choices of the ordered pair $(x,y)$ inside it, giving $\sum_k k^2 \binom{n}{k}$.
+
+Grouping instead by whether $x = y$:
+- If $x = y$: choose the common person ($n$ ways) and any subset of the remaining $n-1$ elements to complete $A$ ($2^{n-1}$), giving $n\,2^{n-1}$.
+- If $x \neq y$: choose the ordered pair ($n(n-1)$ ways) and any subset of the remaining $n-2$ elements ($2^{n-2}$), giving $n(n-1)2^{n-2}$.
+
+Adding the two disjoint cases,
+
+$$n\,2^{n-1} + n(n-1)2^{n-2} = 2^{n-2}\bigl(2n + n^2 - n\bigr) = n(n+1)2^{n-2}.$$
+
+Sanity check at $n = 3$: the left side is $1 \cdot 3 + 4 \cdot 3 + 9 \cdot 1 = 24$, and $n(n+1)2^{n-2} = 3 \cdot 4 \cdot 2 = 24$. ✓
+:::
+
+:::summary[The identities of this chapter]
+- Symmetry: $\binom{n}{k} = \binom{n}{n-k}$.
+- Pascal: $\binom{n}{k} = \binom{n-1}{k-1} + \binom{n-1}{k}$.
+- Absorption: $k\binom{n}{k} = n\binom{n-1}{k-1}$.
+- Row sum: $\sum_k \binom{n}{k} = 2^n$; alternating: $\sum_k (-1)^k\binom{n}{k} = 0$ for $n \ge 1$.
+- Weighted: $\sum_k k\binom{n}{k} = n2^{n-1}$.
+- Vandermonde: $\sum_j \binom{m}{j}\binom{n}{r-j} = \binom{m+n}{r}$; squares: $\sum_k \binom{n}{k}^2 = \binom{2n}{n}$.
+- Hockey stick: $\sum_{i=r}^{m}\binom{i}{r} = \binom{m+1}{r+1}$.
+- Binomial theorem: $(x+y)^n = \sum_k \binom{n}{k}x^{n-k}y^k$; multinomial: coefficients $\frac{n!}{k_1!\cdots k_r!}$.
 :::
 
 ## Common Mistakes
 
-- **Computing the wrong $k$ in the expansion**: Remember the exponent on $y$ (the second variable) is the index $k$ that multiplies $\binom{n}{k}$.
-- **Forgetting symmetry when $k$ is large**: Replace $k$ by $n-k$ if it is smaller, to compute by hand with fewer factors.
-- **Thinking the sum of coefficients is $n$ or something else**: It is always $2^n$ (set both variables to $1$).
-- **Confusing binomial coefficients with multinomial coefficients**: For more than two categories the multinomial $\frac{n!}{k_1!\, k_2! \cdots}$ generalizes it.
-- **Using the recursive definition without base cases**: $\binom{n}{0}=1$ and $\binom{n}{n}=1$ are essential to start the recursion or triangle.
+- **Reaching for a formula before fixing the model.** Decide first: ordered or not, repetition or not, labelled boxes or not. The formula follows from the model; guessing the formula first is how $n^k$, $P(n,k)$, $\binom{n}{k}$ and $\binom{n+k-1}{k}$ get interchanged.
+- **Dividing $n^k$ by $k!$ to "remove the order".** Invalid whenever repetition is allowed, because multisets with repeats have fewer orderings than those without. Use stars and bars.
+- **Using stars and bars on distinguishable items.** $\binom{n+k-1}{k}$ counts identical items in labelled boxes. Labelled items in labelled boxes is $k^n$; identical items in identical boxes is a partition number with no closed form.
+- **Forgetting the zero convention.** $\binom{n}{k} = 0$ for $k > n$ or $k < 0$ is what makes Pascal's rule, Vandermonde and the hockey stick true without case analysis.
+- **Misreading the index in the binomial theorem.** In $\binom{n}{k}x^{n-k}y^k$ the index $k$ is the exponent on the second letter, and numerical factors inside the letters must be raised to their powers too.
+- **Confusing a diagonal sum with a row sum.** $\sum_{i=r}^{m}\binom{i}{r} = \binom{m+1}{r+1}$ is a diagonal; a partial row sum $\sum_{i \le j}\binom{m}{i}$ has no closed form.
