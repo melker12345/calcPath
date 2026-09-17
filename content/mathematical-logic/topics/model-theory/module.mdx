@@ -4,206 +4,799 @@ title: Model Theory
 
 # Model Theory
 
-Model theory studies the relationship between formal languages (syntax) and the mathematical structures that interpret them (semantics). It answers questions such as: when do two structures satisfy exactly the same sentences? How can we build new models from old ones? What properties are preserved under various constructions?
+A formal language is a supply of marks on paper: symbols, formulas, proofs. A mathematical structure is a set with some operations and relations on it. Model theory is the systematic study of the map between the two — which structures make which sentences true, and what that correspondence can and cannot see.
 
-It is the branch of logic that most directly connects syntax to "what the world could be like."
+The subject's characteristic discovery is that the correspondence is *lossy in a precisely measurable way*. First-order logic cannot count past the finite: a theory with arbitrarily large finite models has an infinite one, a theory with one infinite model has models of every infinite size, and no first-order theory pins down $\mathbb{N}$ up to isomorphism. Those limitations are not defects to be patched; they are theorems, and each of them is a tool. Compactness manufactures infinite integers; Löwenheim–Skolem manufactures countable models of set theory; ultraproducts manufacture a single structure out of infinitely many and prove compactness as a by-product.
 
-## Structures and Satisfaction
+This chapter builds the machinery in order: structures and the maps between them, elementary equivalence and elementary substructures, the two Löwenheim–Skolem theorems, compactness and its standard harvest, filters and the ultraproduct construction with Łoś's theorem, the completeness theorem in its model-existence form, and finally categoricity and quantifier elimination — the tools that let you prove a theory *complete* and then decide its sentences.
+
+## Structures, Homomorphisms and Embeddings
 
 <!-- section: structures -->
 
-Model theory lives at the interface between the purely syntactic world of formal languages and the semantic world of concrete mathematical structures that "make the sentences true." A structure (or model) supplies a universe of objects together with interpretations of the symbols in the language; satisfaction tells you whether a given sentence comes out true in that universe.
-
-The satisfaction relation is defined recursively, mirroring the inductive construction of formulas: atomic formulas are checked directly against the interpretations, Boolean combinations follow truth tables, and quantifiers range over the domain of the structure. Two structures are elementarily equivalent when they satisfy exactly the same first-order sentences, even if they are not isomorphic.
-
-In this section you will learn the precise definition of a structure, how satisfaction works, the distinction between theories and models, and the basic constructions (elementary submodels, ultrapowers) that let you build new models with prescribed properties.
+Everything begins with a choice of vocabulary. A **signature** (or language) $L$ is a set of constant symbols, function symbols and relation symbols, each function and relation symbol carrying an *arity*, the number of arguments it takes. The signature of ordered rings is $\{0, 1, +, \cdot, -, <\}$; the signature of graphs is a single binary relation $E$; the signature of pure set theory is a single binary relation $\in$. Nothing in the signature has meaning yet: $+$ is a mark with arity $2$.
 
 :::definition[Structure]{#structure-definition}
-A **structure** (or model) $\mathcal{M}$ for a first-order language consists of a domain plus interpretations for all the constant, function, and relation symbols.
+An $L$-**structure** $\mathcal{M}$ consists of a non-empty set $M$, called the **domain** or **universe**, together with an interpretation of each symbol of $L$:
+
+- each constant symbol $c$ receives an element $c^{\mathcal{M}} \in M$;
+- each $n$-ary function symbol $f$ receives a function $f^{\mathcal{M}} : M^n \to M$;
+- each $n$-ary relation symbol $R$ receives a set $R^{\mathcal{M}} \subseteq M^n$.
+
+The **cardinality** of $\mathcal{M}$ is $|M|$.
 :::
+
+The non-emptiness requirement is not cosmetic. Classical first-order semantics validates $\exists x\,(x = x)$, and a great many derivations silently instantiate a universal quantifier to obtain an element; both fail over an empty domain. Free logics drop the requirement and pay for it with a more complicated deduction system.
+
+Interpretations of the symbols propagate to interpretations of *terms*. Given an assignment $s$ of domain elements to variables, define $t^{\mathcal{M}}[s]$ by recursion: a variable $x$ denotes $s(x)$, a constant $c$ denotes $c^{\mathcal{M}}$, and $f(t_1,\dots,t_n)$ denotes $f^{\mathcal{M}}(t_1^{\mathcal{M}}[s], \dots, t_n^{\mathcal{M}}[s])$. Formulas are then evaluated by a second recursion.
 
 :::definition[Satisfaction]{#satisfaction-definition}
-The **satisfaction relation** $\mathcal{M} \models \phi[\mathbf{a}]$ (read: $\mathcal{M}$ satisfies formula $\phi$ under assignment $\mathbf{a}$) is defined recursively on formula complexity:
+The relation $\mathcal{M} \models \phi[s]$ ("$\mathcal{M}$ satisfies $\phi$ under the assignment $s$") is defined by recursion on the structure of $\phi$:
 
-- Atomic: by the interpretation of the predicate/relation.
-- Boolean connectives: classical truth tables.
-- Quantifiers: $\mathcal{M} \models \forall x \phi[x,\mathbf{a}]$ iff for every $b$ in the domain, $\mathcal{M} \models \phi[b,\mathbf{a}]$.
+- $\mathcal{M} \models (t_1 = t_2)[s]$ iff $t_1^{\mathcal{M}}[s]$ and $t_2^{\mathcal{M}}[s]$ are the same element;
+- $\mathcal{M} \models R(t_1,\dots,t_n)[s]$ iff $(t_1^{\mathcal{M}}[s], \dots, t_n^{\mathcal{M}}[s]) \in R^{\mathcal{M}}$;
+- $\mathcal{M} \models \neg\phi[s]$ iff $\mathcal{M} \models \phi[s]$ fails, and the clauses for $\wedge, \vee, \to$ follow the truth tables;
+- $\mathcal{M} \models \exists x\,\phi[s]$ iff $\mathcal{M} \models \phi[s']$ for some assignment $s'$ agreeing with $s$ off $x$;
+- $\mathcal{M} \models \forall x\,\phi[s]$ iff $\mathcal{M} \models \phi[s']$ for every such $s'$.
 :::
 
-For sentences (no free variables) we simply write $\mathcal{M} \models \phi$.
+The value of $\mathcal{M} \models \phi[s]$ depends on $s$ only through its values on the free variables of $\phi$ — an easy induction. A **sentence** has no free variables, so for sentences we drop $s$ and write $\mathcal{M} \models \phi$. A **theory** $T$ is a set of sentences; $\mathcal{M} \models T$ means $\mathcal{M}$ satisfies every member, and then $\mathcal{M}$ is a **model** of $T$. We write $T \models \phi$ when every model of $T$ satisfies $\phi$, and $\operatorname{Th}(\mathcal{M})$ for the set of all sentences true in $\mathcal{M}$ — the **complete theory** of $\mathcal{M}$.
 
 :::intuition
-A structure is a concrete "world" together with names for its important objects, functions, and relations. The natural numbers with + and < is one structure for the language of arithmetic.
-
-Satisfaction is "the sentence comes out true when you plug in the real meanings in this world."
+A signature is a list of names with no meanings attached. A structure hands out the meanings: here is the set of things we are talking about, here is what "$+$" does to two of them, here is which pairs count as "$<$". Satisfaction is then nothing more than reading a sentence aloud with those meanings substituted and checking whether what you said is true.
 :::
 
-:::example[evaluating satisfaction step by step.]
-Take the structure $\mathcal{M}$ with domain $\{0,1,2\}$, constant symbol $c$ interpreted as $c^{\mathcal{M}} = 0$, and unary function symbol $S$ interpreted as successor mod $3$, so $S^{\mathcal{M}}(0)=1$, $S^{\mathcal{M}}(1)=2$, $S^{\mathcal{M}}(2)=0$. Does $\mathcal{M} \models \forall x\,(S(S(S(x))) = x)$?
+Structures over the same signature are compared by maps that respect the interpretations.
+
+:::definition[Homomorphism, embedding, isomorphism]{#morphisms}
+Let $\mathcal{M}, \mathcal{N}$ be $L$-structures. A **homomorphism** $h : \mathcal{M} \to \mathcal{N}$ is a function $h : M \to N$ with
+
+$$h(c^{\mathcal{M}}) = c^{\mathcal{N}}, \qquad h\big(f^{\mathcal{M}}(a_1,\dots,a_n)\big) = f^{\mathcal{N}}\big(h(a_1),\dots,h(a_n)\big),$$
+
+and $(a_1,\dots,a_n) \in R^{\mathcal{M}} \Rightarrow (h(a_1),\dots,h(a_n)) \in R^{\mathcal{N}}$ for every relation symbol $R$.
+
+It is an **embedding** if moreover $h$ is injective and the relational condition holds in both directions:
+
+$$(a_1,\dots,a_n) \in R^{\mathcal{M}} \iff (h(a_1),\dots,h(a_n)) \in R^{\mathcal{N}}.$$
+
+An **isomorphism** is a surjective embedding; $\mathcal{M} \cong \mathcal{N}$ means one exists.
+:::
+
+The one-directional relational clause is what separates a homomorphism from an embedding, and the separation is real: the identity map from $(\mathbb{Z}, R)$ with $R$ interpreted as the empty relation into $(\mathbb{Z}, <)$ is a bijective homomorphism that is not an embedding, because it does not *reflect* the relation. Algebra usually escapes the distinction because groups, rings and fields have *purely functional* signatures, where an injective homomorphism is automatically an embedding.
+
+:::definition[Substructure]{#substructure}
+$\mathcal{N}$ is a **substructure** of $\mathcal{M}$, written $\mathcal{N} \subseteq \mathcal{M}$, if $N \subseteq M$, every $c^{\mathcal{M}}$ lies in $N$ and equals $c^{\mathcal{N}}$, each $f^{\mathcal{N}}$ is the restriction of $f^{\mathcal{M}}$ to $N^n$ (so $N$ must be closed under $f^{\mathcal{M}}$), and each $R^{\mathcal{N}} = R^{\mathcal{M}} \cap N^n$.
+:::
+
+Substructures and embeddings are two views of one notion: $h : \mathcal{M} \to \mathcal{N}$ is an embedding exactly when it is an isomorphism onto a substructure of $\mathcal{N}$. The next lemma records precisely which formulas a substructure inherits, and it is the reason "substructure" is a far weaker relation than it looks.
+
+:::lemma[Embeddings preserve quantifier-free formulas]{#qf-preservation}
+Let $h : \mathcal{M} \to \mathcal{N}$ be an embedding and $\phi(x_1,\dots,x_n)$ a quantifier-free formula. Then for all $a_1,\dots,a_n \in M$,
+
+$$\mathcal{M} \models \phi[a_1,\dots,a_n] \iff \mathcal{N} \models \phi[h(a_1),\dots,h(a_n)].$$
+:::
+
+:::proof
+First, terms: induction on $t$ gives $h\big(t^{\mathcal{M}}[\mathbf{a}]\big) = t^{\mathcal{N}}[h(\mathbf{a})]$. For a variable this is trivial, for a constant it is the clause $h(c^{\mathcal{M}}) = c^{\mathcal{N}}$, and for $f(t_1,\dots,t_k)$ it is the function clause applied to the inductive hypotheses.
+
+Now induct on $\phi$. If $\phi$ is $t_1 = t_2$, then $\mathcal{M} \models \phi[\mathbf{a}]$ says $t_1^{\mathcal{M}}[\mathbf{a}] = t_2^{\mathcal{M}}[\mathbf{a}]$; applying $h$ and the term identity gives $t_1^{\mathcal{N}}[h(\mathbf{a})] = t_2^{\mathcal{N}}[h(\mathbf{a})]$, and injectivity of $h$ gives the converse direction. If $\phi$ is $R(t_1,\dots,t_k)$, the two-directional relational clause is exactly what is needed. The Boolean cases are immediate, since a biconditional is preserved by negation and conjunction. There is no quantifier case, which is the whole point: the argument collapses the moment a quantifier appears, because a witness in $\mathcal{N}$ need not lie in the image of $h$.
+:::
+
+:::example[Counting structures on a fixed domain]
+How many distinct $L$-structures are there on the fixed three-element domain $M = \{0,1,2\}$, where $L$ has one constant symbol $c$, one unary function symbol $f$ and one binary relation symbol $R$?
 :::
 
 :::solution
-**Step 1 (unfold the quantifier).** By the recursive clause for $\forall$, this holds iff for *every* $b \in \{0,1,2\}$ we have $\mathcal{M} \models (S(S(S(x))) = x)[b]$.
-**Step 2 (evaluate the term for each $b$).** Applying $S^{\mathcal{M}}$ three times cycles all the way around: $b=0 \to 1 \to 2 \to 0$; $b=1 \to 2 \to 0 \to 1$; $b=2 \to 0 \to 1 \to 2$. In every case the result equals $b$.
-**Step 3 (check the atomic formula).** The atomic formula $t = x$ is true under the interpretation of $=$ exactly when both sides denote the same domain element, which we just verified for all three $b$.
-**Sanity check.** $S$ is a bijection of period $3$, so $S^3$ is the identity — cubing a $3$-cycle gives the identity, matching Step 2. Hence $\mathcal{M} \models \forall x\,(S(S(S(x))) = x)$. ✓
+A structure is exactly a choice of interpretation for each symbol, and the choices are independent, so count each and multiply.
 
-Note $\mathcal{M}$ is *not* the standard naturals: it satisfies the sentence above, which is false in $(\mathbb{N}, S)$, so satisfaction genuinely depends on the world you plug into.
+**Step 1 (the constant).** $c^{\mathcal{M}}$ is any element of $M$: $3$ choices.
+
+**Step 2 (the function).** $f^{\mathcal{M}}$ is any map $M \to M$: $3^3 = 27$ choices.
+
+**Step 3 (the relation).** $R^{\mathcal{M}}$ is any subset of $M^2$, a nine-element set: $2^9 = 512$ choices.
+
+**Step 4 (multiply).** $3 \cdot 27 \cdot 512 = 41472$.
+
+Sanity check: dropping $R$ leaves $3 \cdot 27 = 81$ structures, and each of those is refined by one of $512$ relations, reproducing the same total. This counts *labelled* structures on a fixed domain, not isomorphism types — of the latter there are far fewer.
 :::
 
-:::example[counting structures on a fixed domain.]
-How many distinct structures are there for a language with exactly one constant symbol $c$ and one unary function symbol $f$, on a fixed domain of size $3$? A structure is determined by *choosing the interpretations of all symbols*, so we count independently and multiply:
+:::example[Evaluating satisfaction step by step]
+Let $\mathcal{M}$ have domain $\{0,1,2\}$, constant $c^{\mathcal{M}} = 0$, and unary $S^{\mathcal{M}}$ the successor modulo $3$. Does $\mathcal{M} \models \forall x\,\big(S(S(S(x))) = x\big)$?
 :::
 
 :::solution
-**Step 1 (interpret $c$).** The constant can be any of the $3$ domain elements: $3$ choices.
-**Step 2 (interpret $f$).** A unary function is any map from the $3$-element domain to itself; there are $3^3 = 27$ such maps.
-**Step 3 (multiply, since choices are independent).** $3 \times 27 = 81$ distinct structures.
+**Step 1 (unfold the quantifier).** By the clause for $\forall$, the sentence holds iff $\mathcal{M} \models (S(S(S(x))) = x)[b]$ for every $b \in \{0,1,2\}$.
 
-Sanity check: if we drop $f$ and keep only $c$ there would be $3$ structures, and each is refined by one of $27$ function choices, giving $3 \times 27 = 81$. ✓
+**Step 2 (evaluate the term).** Applying $S^{\mathcal{M}}$ three times cycles all the way around: $0 \to 1 \to 2 \to 0$, $1 \to 2 \to 0 \to 1$, $2 \to 0 \to 1 \to 2$. In each case the value returns to $b$.
+
+**Step 3 (check the atomic formula).** The atomic clause for $=$ asks whether both sides denote the same element, which Step 2 confirms for all three $b$. Hence $\mathcal{M} \models \forall x\,(S(S(S(x))) = x)$.
+
+The same sentence is false in $(\mathbb{N}, S)$, where the successor function is injective but not surjective. Satisfaction is a relation between a sentence and a world, never a property of the sentence alone.
+:::
+
+:::pitfall
+"$\mathcal{N} \subseteq \mathcal{M}$" constrains the *atomic* data only, and by Lemma *Embeddings preserve quantifier-free formulas* that is exactly as far as the guarantee reaches. $(\mathbb{Z}, +, \cdot)$ is a substructure of $(\mathbb{Q}, +, \cdot)$, yet "every non-zero element has a multiplicative inverse" is false in the first and true in the second.
+:::
+
+:::notation
+$\mathcal{M}, \mathcal{N}$ denote structures and the matching italic letters $M, N$ their domains. $L_M$ denotes $L$ enlarged by a fresh constant symbol $\underline{a}$ for every $a \in M$, and $\mathcal{M}$ is read as an $L_M$-structure by interpreting $\underline{a}$ as $a$. This device — *naming the elements* — is used constantly from the next section onward. The **atomic diagram** $\operatorname{Diag}(\mathcal{M})$ is the set of atomic and negated atomic $L_M$-sentences true in $\mathcal{M}$; the **elementary diagram** $\operatorname{Diag}_{\mathrm{el}}(\mathcal{M})$ is the set of *all* $L_M$-sentences true in $\mathcal{M}$.
 :::
 
 ## Elementary Equivalence and Elementary Substructures
 
 <!-- section: elementary -->
 
+Isomorphism is the strongest comparison between structures and is usually out of reach; first-order logic offers a coarser one that is often exactly the right granularity.
+
 :::definition[Elementary equivalence]{#elementary-equivalence}
-Two structures $\mathcal{M}$ and $\mathcal{N}$ are **elementarily equivalent** ($\mathcal{M} \equiv \mathcal{N}$) if they satisfy exactly the same first-order sentences:
+Structures $\mathcal{M}$ and $\mathcal{N}$ are **elementarily equivalent**, written $\mathcal{M} \equiv \mathcal{N}$, if they satisfy exactly the same $L$-sentences:
 
-$$\mathcal{M} \equiv \mathcal{N} \quad\text{iff}\quad \text{for every sentence } \phi,\; \mathcal{M} \models \phi \iff \mathcal{N} \models \phi.$$
+$$\mathcal{M} \equiv \mathcal{N} \quad\text{iff}\quad \text{for every sentence } \phi,\; \mathcal{M} \models \phi \iff \mathcal{N} \models \phi,$$
+
+equivalently $\operatorname{Th}(\mathcal{M}) = \operatorname{Th}(\mathcal{N})$.
 :::
 
-They may be non-isomorphic yet elementarily equivalent (e.g., $(\mathbb{Q},<)$ and $(\mathbb{R},<)$ are both dense linear orders without endpoints, hence elementarily equivalent by quantifier elimination).
-
-:::definition[Elementary substructure]{#elementary-substructure}
-A substructure $\mathcal{N} \subseteq \mathcal{M}$ is an **elementary substructure** ($\mathcal{N} \preceq \mathcal{M}$) if for every formula $\phi(\mathbf{x})$ and tuple $\mathbf{a}$ from $\mathcal{N}$,
-
-$$\mathcal{N} \models \phi[\mathbf{a}] \iff \mathcal{M} \models \phi[\mathbf{a}].$$
+:::proposition[Isomorphism implies elementary equivalence]{#iso-implies-ee}
+If $\mathcal{M} \cong \mathcal{N}$ then $\mathcal{M} \equiv \mathcal{N}$.
 :::
 
-(Recall a *substructure* means $\mathcal{N}$'s domain sits inside $\mathcal{M}$'s, contains all interpreted constants, and is closed under all interpreted functions, with relations and functions inherited by restriction. "Elementary" is the much stronger demand that $\mathcal{N}$ and $\mathcal{M}$ agree on *all* formulas with parameters from $\mathcal{N}$, not just the quantifier-free ones.)
-
-Checking the full definition directly is impractical, so the standard tool is the following criterion.
-
-:::theorem[Tarski–Vaught test]{#tarski-vaught}
-A substructure $\mathcal{N} \subseteq \mathcal{M}$ satisfies $\mathcal{N} \preceq \mathcal{M}$ if and only if for every formula $\psi(x, \mathbf{y})$ and every tuple $\mathbf{a}$ from $\mathcal{N}$, *whenever there is a witness $b \in \mathcal{M}$ with $\mathcal{M} \models \psi[b, \mathbf{a}]$, there is already a witness $b' \in \mathcal{N}$ with $\mathcal{M} \models \psi[b', \mathbf{a}]$.*
+:::proof
+Let $h$ be an isomorphism. Extend Lemma *Embeddings preserve quantifier-free formulas* by induction through the quantifiers, which is now legitimate because $h$ is onto. For $\exists x\,\psi$: if $\mathcal{M} \models \exists x\,\psi[\mathbf{a}]$ with witness $b \in M$, then by the induction hypothesis $\mathcal{N} \models \psi[h(b), h(\mathbf{a})]$, so $\mathcal{N} \models \exists x\,\psi[h(\mathbf{a})]$. Conversely a witness $d \in N$ is $h(b)$ for some $b \in M$ by surjectivity, and the induction hypothesis pulls it back. The universal case is the same argument, or the existential one applied to $\neg\psi$. Taking $\phi$ a sentence gives the claim.
 :::
 
-In words: $\mathcal{N}$ never has to leave home to satisfy an existential it can see in $\mathcal{M}$.
+The converse fails badly, and the failure is the engine of the whole subject: first-order logic cannot see cardinality.
 
-:::intuition
-Elementary equivalence: the two worlds answer "yes" or "no" to exactly the same first-order questions, even if one is "bigger" or has extra hidden structure that first-order logic cannot see.
-
-Elementary submodel: when you zoom in on a sub-universe, every first-order fact that was true there remains true in the big universe (and vice versa for the sub-universe).
-:::
-
-:::example[elementary equivalence without isomorphism.]
-Claim: $(\mathbb{Q}, <)$ and $(\mathbb{R}, <)$ are elementarily equivalent but not isomorphic (in the language with just the order symbol $<$).
+:::example[Elementary equivalence without isomorphism]
+Show that $(\mathbb{Q}, <)$ and $(\mathbb{R}, <)$ are elementarily equivalent but not isomorphic, in the language with the single binary symbol $<$.
 :::
 
 :::solution
-**Step 1 (they cannot be isomorphic).** An isomorphism is in particular a bijection of the domains, but $\mathbb{Q}$ is countable and $\mathbb{R}$ is uncountable. So no isomorphism exists.
-**Step 2 (both are dense linear orders without endpoints, DLO).** Each is linearly ordered; between any two elements lies a third ($\tfrac{p+q}{2}$ works in both); and neither has a least or greatest element. These are exactly the axioms of DLO.
-**Step 3 (DLO is complete).** The theory DLO admits quantifier elimination, and a quantifier-free sentence in the pure language of $<$ (no constants) is either a tautology or a contradiction, decided identically in every DLO. Hence any two DLOs satisfy exactly the same sentences.
-**Conclusion.** Therefore $(\mathbb{Q},<) \equiv (\mathbb{R},<)$ even though they are non-isomorphic — first-order logic over $<$ simply cannot detect the cardinality gap.
+**Step 1 (no isomorphism).** An isomorphism is in particular a bijection of domains, and $\mathbb{Q}$ is countable while $\mathbb{R}$ is not. So none exists.
+
+**Step 2 (both are models of DLO).** Each is a linear order; between any two elements lies a third, namely $\tfrac{p+q}{2}$; and neither has a least or a greatest element. These are exactly the axioms of DLO, the theory of dense linear orders without endpoints.
+
+**Step 3 (DLO is complete).** The section *Categoricity and Quantifier Elimination* proves DLO is $\aleph_0$-categorical and deduces completeness from Vaught's test. A complete theory decides every sentence, so any two of its models agree on every sentence.
+
+**Conclusion.** $(\mathbb{Q},<) \equiv (\mathbb{R},<)$ while $(\mathbb{Q},<) \not\cong (\mathbb{R},<)$. The cardinality gap is invisible to first-order sentences over $<$.
 :::
 
-:::example[a substructure that is *not* elementary.]
-Consider $(\mathbb{Z}, <)$ as a substructure of $(\mathbb{Q}, <)$. It is a genuine substructure (integers are closed under nothing extra, order inherited), but it is *not* elementary. Apply the Tarski–Vaught test with the formula $\psi(x, a_1, a_2) \equiv (a_1 < x \wedge x < a_2)$ and parameters $a_1 = 0,\ a_2 = 1$ from $\mathbb{Z}$: in $\mathbb{Q}$ the witness $x = \tfrac12$ satisfies $0 < x < 1$, yet *no integer* lies strictly between $0$ and $1$. The test fails, so $(\mathbb{Z},<) \not\preceq (\mathbb{Q},<)$. Concretely, the sentence "between any two ordered points there is a third" (density) is true in $\mathbb{Q}$ and false in $\mathbb{Z}$, so they are not even elementarily equivalent. This is exactly why "substructure" and "elementary substructure" must be kept apart.
+Inside a fixed $\mathcal{M}$ the corresponding refinement of "substructure" is the central notion of the chapter.
+
+:::definition[Elementary substructure]{#elementary-substructure}
+A substructure $\mathcal{N} \subseteq \mathcal{M}$ is an **elementary substructure**, written $\mathcal{N} \preceq \mathcal{M}$, if for every formula $\phi(x_1,\dots,x_n)$ and every tuple $\mathbf{a}$ from $N$,
+
+$$\mathcal{N} \models \phi[\mathbf{a}] \iff \mathcal{M} \models \phi[\mathbf{a}].$$
+
+An embedding $h : \mathcal{N} \to \mathcal{M}$ whose image is an elementary substructure is an **elementary embedding**.
 :::
 
-## Ultraproducts and Łoś's Theorem
+Note the quantifier order. Elementary equivalence compares two structures on *sentences*; elementary substructure demands agreement on *all formulas with parameters from the small structure*. The second is strictly stronger than $\mathcal{N} \subseteq \mathcal{M}$ together with $\mathcal{N} \equiv \mathcal{M}$: there are structures $\mathcal{N} \subseteq \mathcal{M}$ with $\mathcal{N} \cong \mathcal{M}$, hence $\mathcal{N} \equiv \mathcal{M}$, and still $\mathcal{N} \not\preceq \mathcal{M}$ — for instance $(2\mathbb{Z}, <) \subseteq (\mathbb{Z}, <)$, which is isomorphic to the whole but omits the element $1$ lying strictly between the parameters $0$ and $2$.
+
+Verifying the definition directly means checking infinitely many formulas of unbounded quantifier depth. The following test reduces the work to a single quantifier alternation, and is the workhorse behind every construction in the next two sections.
+
+:::theorem[Tarski–Vaught test]{#tarski-vaught}
+Let $\mathcal{N} \subseteq \mathcal{M}$ be a substructure. Then $\mathcal{N} \preceq \mathcal{M}$ if and only if:
+
+> for every formula $\psi(x, \mathbf{y})$ and every tuple $\mathbf{a}$ from $N$, if there is $b \in M$ with $\mathcal{M} \models \psi[b, \mathbf{a}]$, then there is $b' \in N$ with $\mathcal{M} \models \psi[b', \mathbf{a}]$.
+:::
+
+:::proof
+($\Rightarrow$) Suppose $\mathcal{N} \preceq \mathcal{M}$ and $\mathcal{M} \models \psi[b,\mathbf{a}]$ for some $b \in M$. Then $\mathcal{M} \models \exists x\,\psi[\mathbf{a}]$, so by elementarity $\mathcal{N} \models \exists x\,\psi[\mathbf{a}]$, giving some $b' \in N$ with $\mathcal{N} \models \psi[b',\mathbf{a}]$; elementarity again lifts this to $\mathcal{M} \models \psi[b',\mathbf{a}]$.
+
+($\Leftarrow$) Assume the condition and prove $\mathcal{N} \models \phi[\mathbf{a}] \iff \mathcal{M} \models \phi[\mathbf{a}]$ by induction on $\phi$.
+
+*Atomic.* This is the substructure hypothesis: constants, functions and relations agree by restriction, so Lemma *Embeddings preserve quantifier-free formulas* applies to the inclusion embedding.
+
+*Negation.* If the equivalence holds for $\phi$, negating both sides preserves it.
+
+*Conjunction.* $\mathcal{N} \models (\phi_1 \wedge \phi_2)[\mathbf{a}]$ iff both conjuncts hold in $\mathcal{N}$, iff (induction) both hold in $\mathcal{M}$, iff $\mathcal{M} \models (\phi_1 \wedge \phi_2)[\mathbf{a}]$. The other connectives are definable from $\neg, \wedge$.
+
+*Existential.* Let $\phi = \exists x\,\psi(x,\mathbf{y})$ with $\mathbf{a}$ from $N$. If $\mathcal{N} \models \phi[\mathbf{a}]$, take $b' \in N$ with $\mathcal{N} \models \psi[b',\mathbf{a}]$; the induction hypothesis for $\psi$ — applicable since $b'$ and $\mathbf{a}$ all lie in $N$ — gives $\mathcal{M} \models \psi[b',\mathbf{a}]$, so $\mathcal{M} \models \phi[\mathbf{a}]$. Conversely, if $\mathcal{M} \models \phi[\mathbf{a}]$ there is $b \in M$ with $\mathcal{M} \models \psi[b,\mathbf{a}]$; the test supplies $b' \in N$ with $\mathcal{M} \models \psi[b',\mathbf{a}]$, and the induction hypothesis converts this to $\mathcal{N} \models \psi[b',\mathbf{a}]$, whence $\mathcal{N} \models \phi[\mathbf{a}]$.
+
+Since $\forall x\,\psi$ is $\neg\exists x\,\neg\psi$, the universal case is covered. This completes the induction, so $\mathcal{N} \preceq \mathcal{M}$.
+:::
+
+:::intuition
+Read the test as: *$\mathcal{N}$ never has to leave home*. Whenever the big structure can satisfy an existential demand using parameters $\mathcal{N}$ already owns, $\mathcal{N}$ owns a witness too. If that is true for every demand, $\mathcal{N}$ can simulate $\mathcal{M}$'s entire first-order reasoning internally, and the two agree on everything expressible.
+:::
+
+:::example[A substructure that is not elementary]
+Show $(\mathbb{Z}, <) \not\preceq (\mathbb{Q}, <)$, using the Tarski–Vaught test.
+:::
+
+:::solution
+**Step 1 (it is a substructure).** $\mathbb{Z} \subseteq \mathbb{Q}$, the language has no constants or function symbols, and $<^{\mathbb{Z}}$ is the restriction of $<^{\mathbb{Q}}$. So the inclusion is a substructure.
+
+**Step 2 (produce a failing witness demand).** Take $\psi(x, y_1, y_2)$ to be $y_1 < x \wedge x < y_2$ and the parameters $a_1 = 0$, $a_2 = 1$, both in $\mathbb{Z}$. In $\mathbb{Q}$ the element $b = \tfrac12$ satisfies $\mathbb{Q} \models \psi[b, 0, 1]$.
+
+**Step 3 (no witness at home).** No integer lies strictly between $0$ and $1$, so no $b' \in \mathbb{Z}$ satisfies $\psi[b', 0, 1]$. The test fails, hence $(\mathbb{Z},<) \not\preceq (\mathbb{Q},<)$.
+
+**Step 4 (in fact they are not even elementarily equivalent).** The density sentence $\forall y_1 \forall y_2\,(y_1 < y_2 \to \exists x\,(y_1 < x \wedge x < y_2))$ is true in $\mathbb{Q}$ and false in $\mathbb{Z}$, so $(\mathbb{Z},<) \not\equiv (\mathbb{Q},<)$.
+:::
+
+:::figure[The Tarski–Vaught failure for $(\mathbb{Z},<) \subseteq (\mathbb{Q},<)$. The parameters $0$ and $1$ lie in the substructure, but the only witnesses to $0 < x < 1$ — the shaded rational gap, with $1/2$ marked — lie outside it.]{#tv-failure}
+{
+  "type": "plot",
+  "x": [-2.4, 3.4], "y": [-1.2, 1.4],
+  "xTicks": 1, "yTicks": 1, "xLabel": "order", "yLabel": "",
+  "marks": [
+    { "kind": "line", "through": [[-2.4, 0], [3.4, 0]], "muted": true },
+    { "kind": "region", "points": [[0, -0.12], [1, -0.12], [1, 0.12], [0, 0.12]], "tone": "alt" },
+    { "kind": "point", "at": [-2, 0] },
+    { "kind": "point", "at": [-1, 0] },
+    { "kind": "point", "at": [0, 0] },
+    { "kind": "point", "at": [1, 0] },
+    { "kind": "point", "at": [2, 0] },
+    { "kind": "point", "at": [3, 0] },
+    { "kind": "point", "at": [0.5, 0], "tone": "result" },
+    { "kind": "text", "at": [-1.4, 0.75], "text": "integers: the substructure", "leaderTo": [-1, 0] },
+    { "kind": "text", "at": [2.1, -0.85], "text": "x = 1/2 witnesses 0 < x < 1", "leaderTo": [0.5, 0] }
+  ]
+}
+:::
+
+:::pitfall
+$\mathcal{N} \equiv \mathcal{M}$ together with $N \subseteq M$ does **not** give $\mathcal{N} \preceq \mathcal{M}$, as $(2\mathbb{Z},<) \subseteq (\mathbb{Z},<)$ shows. Elementary equivalence quantifies over sentences with no parameters; elementary substructure demands agreement on formulas with parameters, which is a strictly stronger requirement.
+:::
+
+:::example[A substructure that is elementary]
+Show that $(\mathbb{Q}, <) \preceq (\mathbb{R}, <)$.
+:::
+
+:::solution
+**Step 1 (it is a substructure).** $\mathbb{Q} \subseteq \mathbb{R}$ and the order is inherited; there is nothing to close under.
+
+**Step 2 (reduce the witness demand to inequalities).** Let $\psi(x, \mathbf{y})$ be any formula and $\mathbf{a}$ a tuple of rationals, and suppose some real $b$ has $\mathbb{R} \models \psi[b,\mathbf{a}]$. By quantifier elimination for DLO — proved in the section *Categoricity and Quantifier Elimination* — $\psi$ is equivalent over $\mathbb{R}$ to a quantifier-free formula, that is a Boolean combination of the atomic statements $x < a_i$, $a_i < x$ and $x = a_i$.
+
+**Step 3 (describe the solution set).** A Boolean combination of those conditions defines a set that is a finite union of the points $a_i$ and of open intervals whose endpoints lie in $\mathbf{a}$ or are $\pm\infty$. It is non-empty, since $b$ belongs to it.
+
+**Step 4 (find a rational in it).** A point $a_i$ is already rational. A non-empty open interval with rational or infinite endpoints contains a rational, by density of $\mathbb{Q}$ in $\mathbb{R}$. Either way there is a rational witness $b'$ with $\mathbb{R} \models \psi[b',\mathbf{a}]$.
+
+**Step 5 (apply the test).** Theorem *Tarski–Vaught test* now gives $(\mathbb{Q},<) \preceq (\mathbb{R},<)$ — a strictly stronger statement than the elementary equivalence established above, and the reason $\mathbb{Q}$ may be used as a "small copy" of $\mathbb{R}$ for any question expressible in the order alone.
+:::
+
+## Löwenheim–Skolem: Shrinking and Growing Models
+
+<!-- section: lowenheim-skolem -->
+
+The Tarski–Vaught test does more than diagnose; run as a construction, it builds elementary substructures to order. Given $\mathcal{M}$ and any subset $A \subseteq M$, close $A$ under witnesses for every existential demand, repeat countably many times, and the union satisfies the test automatically. Controlling the cardinality of the result is what makes the theorem sharp.
+
+:::definition[Skolem function]{#skolem-function}
+Fix a well-ordering of $M$. For each formula $\psi(x, \mathbf{y})$ with $\mathbf{y}$ of length $n$, define $F_\psi : M^n \to M$ by: $F_\psi(\mathbf{a})$ is the $<$-least $b \in M$ with $\mathcal{M} \models \psi[b,\mathbf{a}]$ if any exists, and the $<$-least element of $M$ otherwise. These are the **Skolem functions** of $\mathcal{M}$.
+:::
+
+:::theorem[Downward Löwenheim–Skolem]{#downward-ls}
+Let $\mathcal{M}$ be an $L$-structure and $A \subseteq M$. Then there is $\mathcal{N} \preceq \mathcal{M}$ with $A \subseteq N$ and
+
+$$|N| \le |A| + |L| + \aleph_0.$$
+
+In particular, if $L$ is countable, every structure has a countable elementary substructure containing any prescribed countable set.
+:::
+
+:::proof
+Write $\kappa = |A| + |L| + \aleph_0$. There are exactly $|L| + \aleph_0 \le \kappa$ formulas, hence at most $\kappa$ Skolem functions $F_\psi$.
+
+Set $A_0 = A \cup \{c^{\mathcal{M}} : c \in L\}$ if $A$ is empty, and $A_0 = A$ otherwise, so $A_0 \ne \emptyset$ and $|A_0| \le \kappa$. Define recursively
+
+$$A_{k+1} = A_k \cup \{F_\psi(\mathbf{a}) : \psi \text{ a formula},\ \mathbf{a} \text{ a tuple from } A_k\},$$
+
+and put $N = \bigcup_{k<\omega} A_k$.
+
+*Cardinality.* If $|A_k| \le \kappa$ then the set of tuples from $A_k$ has size at most $\kappa$, and there are at most $\kappa$ Skolem functions, so at most $\kappa \cdot \kappa = \kappa$ new elements appear; hence $|A_{k+1}| \le \kappa$. A countable union of sets of size at most $\kappa$ has size at most $\aleph_0 \cdot \kappa = \kappa$, so $|N| \le \kappa$, and $A \subseteq N$ by construction.
+
+*$N$ carries a substructure.* For a function symbol $f$ and $\mathbf{a}$ from $N$, all of $\mathbf{a}$ lies in some single $A_k$ (the chain is increasing and $\mathbf{a}$ is finite). Taking $\psi(x,\mathbf{y})$ to be $x = f(\mathbf{y})$, the value $F_\psi(\mathbf{a}) = f^{\mathcal{M}}(\mathbf{a})$ lands in $A_{k+1} \subseteq N$. Constants are handled by $\psi(x)$ equal to $x = c$. So $N$ is closed, and we give it the induced structure $\mathcal{N}$.
+
+*Tarski–Vaught.* Let $\psi(x,\mathbf{y})$ be a formula, $\mathbf{a}$ a tuple from $N$, and suppose some $b \in M$ has $\mathcal{M} \models \psi[b,\mathbf{a}]$. Again $\mathbf{a}$ lies in some $A_k$, so $F_\psi(\mathbf{a}) \in A_{k+1} \subseteq N$, and since a witness exists, $F_\psi(\mathbf{a})$ *is* one. The test is met, so by Theorem *Tarski–Vaught test*, $\mathcal{N} \preceq \mathcal{M}$.
+:::
+
+Note where the axiom of choice enters: the well-ordering of $M$ used to define the Skolem functions. Without choice one selects witnesses ad hoc and the theorem becomes delicate.
+
+The other direction grows models instead, and its proof runs through compactness — stated in the next section and proved in the one after that, so no circularity arises.
+
+:::theorem[Upward Löwenheim–Skolem]{#upward-ls}
+Let $\mathcal{M}$ be an infinite $L$-structure and let $\kappa \ge |M| + |L| + \aleph_0$. Then there is $\mathcal{N}$ of cardinality exactly $\kappa$ with $\mathcal{M} \preceq \mathcal{N}$ (more precisely, with an elementary embedding of $\mathcal{M}$ into $\mathcal{N}$).
+:::
+
+:::proof
+Work in the language $L_M$ with a constant $\underline{a}$ for each $a \in M$, and add $\kappa$ further fresh constants $\{d_i : i < \kappa\}$. Let
+
+$$T = \operatorname{Diag}_{\mathrm{el}}(\mathcal{M}) \cup \{ \neg(d_i = d_j) : i \ne j < \kappa \}.$$
+
+*Every finite subset of $T$ has a model.* A finite subset mentions only finitely many of the $d_i$, say $d_{i_1},\dots,d_{i_n}$. Interpret those as $n$ distinct elements of $M$ — possible because $\mathcal{M}$ is infinite — and interpret each $\underline{a}$ as $a$. The resulting expansion of $\mathcal{M}$ satisfies the elementary diagram (it is $\mathcal{M}$) and the finitely many inequations.
+
+*Apply compactness.* By Theorem *Compactness*, $T$ has a model $\mathcal{N}_0$. The map $a \mapsto \underline{a}^{\mathcal{N}_0}$ is an elementary embedding of $\mathcal{M}$ into the $L$-reduct, precisely because $\mathcal{N}_0$ satisfies every sentence of the *elementary* diagram, and it is injective because $\operatorname{Diag}_{\mathrm{el}}(\mathcal{M})$ contains $\neg(\underline{a} = \underline{b})$ for distinct $a,b$. The $\kappa$ constants $d_i$ are pairwise distinct, so $|N_0| \ge \kappa$.
+
+*Trim to size exactly $\kappa$.* The language $L_M \cup \{d_i\}$ has cardinality at most $|L| + |M| + \kappa = \kappa$. Apply Theorem *Downward Löwenheim–Skolem* inside $\mathcal{N}_0$ to the subset $A = \{\underline{a}^{\mathcal{N}_0} : a \in M\} \cup \{d_i^{\mathcal{N}_0} : i<\kappa\}$, of size $\kappa$: it yields $\mathcal{N} \preceq \mathcal{N}_0$ containing $A$ with $|N| \le \kappa + \kappa = \kappa$, and $|N| \ge \kappa$ since $A \subseteq N$. So $|N| = \kappa$, and composing the two elementary maps embeds $\mathcal{M}$ elementarily into $\mathcal{N}$.
+:::
+
+:::corollary[No infinite structure is determined up to isomorphism]{#no-categoricity}
+If a theory $T$ in a countable language has an infinite model, it has models of every infinite cardinality $\kappa \ge \aleph_0$, and hence models that are elementarily equivalent but not isomorphic.
+:::
+
+:::proof
+Downward Löwenheim–Skolem gives a countable model; upward gives one of each larger size. Structures of different cardinality cannot be isomorphic, yet all are models of the complete theory of the original, so all are elementarily equivalent to it.
+:::
+
+:::example[The Skolem paradox]
+ZFC proves the existence of uncountable sets. If ZFC is consistent, it has a countable model $\mathcal{M}$. How can a countable $\mathcal{M}$ contain an element it believes to be uncountable?
+:::
+
+:::solution
+**Step 1 (both halves are genuine).** If ZFC is consistent it has a model, and its language is countable, so Theorem *Downward Löwenheim–Skolem* yields a countable elementary substructure — a countable $\mathcal{M} \models \text{ZFC}$. Meanwhile ZFC proves $\exists x\,(\text{"}x\text{ is uncountable"})$, so there is $u \in M$ with $\mathcal{M} \models$ "$u$ is uncountable".
+
+**Step 2 (unfold what "uncountable" says).** "$u$ is uncountable" is the sentence: *there is no bijection between $u$ and $\omega$*. That is a statement quantifying over the elements of $\mathcal{M}$ only. So $\mathcal{M}$ asserts that **no member of $M$** codes such a bijection.
+
+**Step 3 (the bijection lives outside).** The set $\{v \in M : \mathcal{M} \models v \in u\}$ is a subset of the countable set $M$, hence countable *in the real world*, so a bijection with $\omega$ exists externally. It is simply not an element of $M$. The model is missing the very function that would refute it.
+
+**Step 4 (diagnosis).** "Uncountable" is not an absolute property; it is relative to which functions a model possesses. The paradox dissolves once one notices that $\mathcal{M}$'s quantifiers range over $M$, not over the universe. Nothing is contradictory: $u$ is uncountable *in $\mathcal{M}$* and countable *outside it*.
+:::
+
+:::pitfall
+The Skolem paradox is often misread as "Löwenheim–Skolem refutes Cantor's theorem". It does not. Cantor's theorem holds *inside* every model of ZFC — the model contains no surjection from $u$ onto its power set. What varies between models is which external functions have been admitted as elements, and first-order set theory cannot say "all functions", only "all functions that are elements of me".
+:::
+
+:::intuition
+Downward Löwenheim–Skolem is a *closure* argument: keep throwing in one witness per existential demand until nothing new is demanded. Upward Löwenheim–Skolem is a *padding* argument: ask for $\kappa$ pairwise distinct new constants, note that each finite portion of the demand is satisfiable inside the old infinite model, and let compactness grant the whole demand at once.
+:::
+
+## Compactness and What It Builds
+
+<!-- section: compactness -->
+
+:::theorem[Compactness]{#compactness}
+A set of first-order sentences $T$ has a model if and only if every finite subset of $T$ has a model.
+:::
+
+The left-to-right direction is trivial: a model of $T$ is a model of each subset. The content is the converse, and this chapter proves it twice — once from ultraproducts in the section *Filters, Ultraproducts and Łoś's Theorem*, and once from the Henkin construction in *The Completeness Theorem Revisited*. Until then it is used as a stated theorem, not assumed silently.
+
+:::intuition
+Read compactness as a *finiteness of evidence* principle. A proof is a finite object, so it can only appeal to finitely many axioms; therefore an inconsistency, if one exists, is already visible in a finite subtheory. Contrapositively, if no finite subtheory is inconsistent, the whole theory is satisfiable. That is exactly why a compactness argument can grant infinitely many demands at once: nothing can go wrong globally that was not already wrong locally.
+:::
+
+The standard use is a two-step template: to build a model with a strange property, write down a theory whose models must have it, then verify finite satisfiability inside an ordinary structure.
+
+:::theorem[Non-standard models of arithmetic]{#nonstandard-arithmetic}
+Let $\operatorname{Th}(\mathbb{N})$ be the complete theory of the standard model $(\mathbb{N}, 0, S, +, \cdot, <)$ — *true arithmetic*. Then there is a model $\mathcal{N} \models \operatorname{Th}(\mathbb{N})$ containing an element larger than every standard natural number. Hence $\mathcal{N} \equiv \mathbb{N}$ but $\mathcal{N} \not\cong \mathbb{N}$.
+:::
+
+:::proof
+Add one fresh constant $c$ and set
+
+$$T = \operatorname{Th}(\mathbb{N}) \cup \{\underline{n} < c : n \in \mathbb{N}\},$$
+
+where $\underline{n}$ is the numeral $S(S(\cdots S(0)))$ with $n$ occurrences of $S$.
+
+A finite subset $T_0 \subseteq T$ mentions only finitely many numerals, so there is a largest $n_0$ with $\underline{n_0} < c$ in $T_0$. Interpret $c$ as $n_0 + 1$ in the standard model: every sentence of $\operatorname{Th}(\mathbb{N})$ is true there, and each of the finitely many inequations holds. So $T_0$ has a model.
+
+By Theorem *Compactness*, $T$ has a model $\mathcal{N}$. Its interpretation $c^{\mathcal{N}}$ exceeds every $\underline{n}^{\mathcal{N}}$, so it is not equal to any numeral value and $\mathcal{N}$ is not isomorphic to $\mathbb{N}$ (in $\mathbb{N}$, every element *is* a numeral value). But $\mathcal{N} \models \operatorname{Th}(\mathbb{N})$, so it satisfies exactly the same sentences as $\mathbb{N}$.
+:::
+
+Every non-standard $\mathcal{N}$ has a rigid shape. Its standard part — the numeral values — forms an initial copy of $\mathbb{N}$. Above it, each non-standard element $a$ has a predecessor and a successor, all still non-standard, so the non-standard elements fall into $\mathbb{Z}$-shaped blocks. The blocks are densely ordered without endpoints, since between blocks $[a]$ and $[b]$ with $a$ far below $b$ lies the block of $\lfloor (a+b)/2 \rfloor$. For a countable $\mathcal{N}$ the block order is a countable DLO, hence a copy of $\mathbb{Q}$: the order type is $\mathbb{N} + \mathbb{Z}\cdot\mathbb{Q}$.
+
+:::figure[The order type of a countable non-standard model of arithmetic: an initial copy of $\mathbb{N}$, then $\mathbb{Z}$-shaped blocks of non-standard elements ordered like $\mathbb{Q}$. No block is first, and between any two blocks lies another.]{#nonstandard-order}
+{
+  "type": "plot",
+  "x": [-0.6, 13.6], "y": [-1.4, 1.6],
+  "xTicks": 1, "yTicks": 1, "xLabel": "order", "yLabel": "",
+  "marks": [
+    { "kind": "line", "through": [[-0.6, 0], [13.6, 0]], "muted": true },
+    { "kind": "point", "at": [0, 0] },
+    { "kind": "point", "at": [0.7, 0] },
+    { "kind": "point", "at": [1.4, 0] },
+    { "kind": "point", "at": [2.1, 0] },
+    { "kind": "point", "at": [5, 0], "tone": "result" },
+    { "kind": "point", "at": [5.7, 0], "tone": "result" },
+    { "kind": "point", "at": [6.4, 0], "tone": "result" },
+    { "kind": "point", "at": [9.4, 0], "tone": "result" },
+    { "kind": "point", "at": [10.1, 0], "tone": "result" },
+    { "kind": "point", "at": [10.8, 0], "tone": "result" },
+    { "kind": "text", "at": [3.2, 1.1], "text": "standard part: a copy of N", "leaderTo": [1.4, 0] },
+    { "kind": "text", "at": [5.7, -0.9], "text": "a Z-block", "leaderTo": [5.7, 0] },
+    { "kind": "text", "at": [11.2, 1.1], "text": "blocks ordered like Q", "leaderTo": [10.1, 0] }
+  ]
+}
+:::
+
+:::theorem[Arbitrarily large finite models give an infinite model]{#finite-to-infinite}
+If a theory $T$ has finite models of unboundedly large size, then $T$ has an infinite model. Consequently, the class of finite structures is not the class of models of any first-order theory, and "finite" is not first-order expressible.
+:::
+
+:::proof
+For each $n \ge 2$ let $\lambda_n$ be the sentence "there exist at least $n$ distinct elements", namely $\exists x_1 \cdots \exists x_n \bigwedge_{i<j} \neg(x_i = x_j)$. Put $T' = T \cup \{\lambda_n : n \ge 2\}$.
+
+A finite subset of $T'$ contains finitely many $\lambda_n$, with a largest index $n_0$. By hypothesis $T$ has a model with at least $n_0$ elements, and that model satisfies $\lambda_2, \dots, \lambda_{n_0}$. So every finite subset of $T'$ is satisfiable, and Theorem *Compactness* gives a model of $T'$. It satisfies every $\lambda_n$, so it is infinite, and it models $T$.
+
+For the consequence: if some theory had exactly the finite structures as models, it would have arbitrarily large finite models and therefore an infinite one, a contradiction.
+:::
+
+The same template yields non-standard analysis. Adjoin a constant $\epsilon$ to the complete theory of the ordered field $\mathbb{R}$ with a symbol for every real, together with $\{0 < \epsilon\} \cup \{\epsilon < \underline{1/n} : n \ge 1\}$. Every finite subset is satisfiable in $\mathbb{R}$ itself by choosing $\epsilon$ small enough, so compactness delivers an ordered field elementarily equivalent to $\mathbb{R}$ containing a positive infinitesimal.
+
+:::definition[Order indiscernibles]{#indiscernibles}
+Let $\mathcal{M}$ be a structure and $(I, <)$ a linear order. A family $(a_i)_{i \in I}$ of elements of $M$ is a set of **order indiscernibles** if for every formula $\phi(x_1,\dots,x_n)$ and all increasing tuples $i_1 < \cdots < i_n$ and $j_1 < \cdots < j_n$ from $I$,
+
+$$\mathcal{M} \models \phi[a_{i_1},\dots,a_{i_n}] \iff \mathcal{M} \models \phi[a_{j_1},\dots,a_{j_n}].$$
+
+That is, the truth of a formula depends only on the relative order of the arguments, not on which elements were chosen.
+:::
+
+:::theorem[Ehrenfeucht–Mostowski: existence of indiscernibles]{#em-indiscernibles}
+Every theory with an infinite model has, for each linear order $(I,<)$, a model containing a set of order indiscernibles indexed by $I$.
+:::
+
+:::proof[Sketch]
+This is a sketch; it rests on two results proved elsewhere — Ramsey's theorem for $n$-tuples (see the combinatorics chapter) and Theorem *Compactness*.
+
+Take $T$ with an infinite model. Add constants $\{d_i : i \in I\}$ and let
+
+$$T' = T \cup \{\neg(d_i = d_j) : i \ne j\} \cup \{\phi(d_{i_1},\dots,d_{i_n}) \leftrightarrow \phi(d_{j_1},\dots,d_{j_n})\},$$
+
+the last family taken over all formulas $\phi$ and all pairs of increasing tuples. By compactness it suffices to model each finite subset $T_0$, which mentions finitely many formulas $\phi_1,\dots,\phi_m$, each of arity at most $n$, and finitely many constants — say $N$ of them.
+
+Inside an infinite model $\mathcal{M} \models T$, colour each increasing $n$-tuple from an infinite subset by the tuple of truth values of $\phi_1,\dots,\phi_m$ on it: finitely many colours, namely $2^m$. Ramsey's theorem yields an infinite monochromatic set $H$: on increasing $n$-tuples from $H$, every $\phi_k$ has constant truth value. Interpreting the $N$ constants as increasing elements of $H$ models $T_0$.
+
+Compactness then gives a model of $T'$, in which the interpretations of the $d_i$ are indiscernible by construction.
+:::
+
+:::example[Compactness fails for second-order logic]
+Show that the compactness theorem is genuinely a first-order phenomenon by exhibiting a second-order theory each of whose finite subsets is satisfiable, but which has no model.
+:::
+
+:::solution
+**Step 1 (second-order logic can say "finite").** In second-order logic one can write a sentence $\sigma$ asserting the Dedekind-finiteness of the universe: every injective function from the universe to itself is surjective. This quantifies over functions, so it is not first-order.
+
+**Step 2 (build the theory).** Let $T = \{\sigma\} \cup \{\lambda_n : n \ge 2\}$ with $\lambda_n$ as in Theorem *Arbitrarily large finite models give an infinite model*.
+
+**Step 3 (finite subsets are satisfiable).** A finite subset involves $\lambda_2,\dots,\lambda_{n_0}$ at most; any finite set of size $n_0$ satisfies those and is Dedekind-finite, so it models the subset.
+
+**Step 4 (the whole theory is not).** A model of all the $\lambda_n$ is infinite, and an infinite set admits an injective non-surjective self-map, contradicting $\sigma$. So $T$ has no model, and compactness fails.
+
+This also re-proves that $\sigma$ cannot be first-order expressible: if it were, Theorem *Compactness* would be contradicted.
+:::
+
+## Filters, Ultraproducts and Łoś's Theorem
 
 <!-- section: ultraproducts -->
 
-:::definition[Ultrafilter]{#ultrafilter}
-An **ultrafilter** $U$ on an index set $I$ is a collection of "large" subsets of $I$ that is closed under supersets and finite intersections, contains $I$, excludes $\emptyset$, and — the defining maximality property — for *every* $A \subseteq I$ contains exactly one of $A$ or its complement $I \setminus A$.
+Compactness produced models by a soft existence argument. Ultraproducts produce them *explicitly*: they take a family of structures and a notion of "large index set", and build one structure whose truths are the truths holding on large sets of coordinates. The notion of largeness is what a filter formalises.
+
+:::definition[Filter and ultrafilter]{#ultrafilter}
+A **filter** on a non-empty set $I$ is a family $F$ of subsets of $I$ such that $I \in F$, $\emptyset \notin F$, $F$ is closed under finite intersections, and $F$ is closed upward ($A \in F$ and $A \subseteq B \subseteq I$ imply $B \in F$).
+
+An **ultrafilter** is a filter $U$ with the maximality property
+
+$$\text{for every } A \subseteq I,\quad A \in U \ \text{ or } \ I \setminus A \in U.$$
+
+Since $\emptyset \notin U$ and $U$ is closed under intersection, exactly one of the two holds.
+
+$U$ is **principal** if $U = \{A \subseteq I : i_0 \in A\}$ for some fixed $i_0 \in I$, and **non-principal** otherwise.
 :::
 
-A *principal* ultrafilter is one of the form $\{A : i_0 \in A\}$ for a fixed point $i_0$ ("large" means "contains $i_0$"); any other is *non-principal*, and on an infinite $I$ a non-principal ultrafilter contains all cofinite sets.
+:::proposition[Non-principal ultrafilters contain the cofinite sets]{#nonprincipal-cofinite}
+An ultrafilter $U$ on $I$ is non-principal if and only if it contains no finite set. In that case $U$ contains every cofinite subset of $I$.
+:::
+
+:::proof
+If $U$ contains a finite set, take one of least size, $A = \{i_1,\dots,i_k\}$. For each $j$, either $\{i_j\} \in U$ or its complement is. If some $\{i_j\} \in U$, then upward closure makes $U$ principal at $i_j$. Otherwise every complement $I \setminus \{i_j\}$ is in $U$, and intersecting all $k$ of them with $A$ gives $\emptyset \in U$, a contradiction. So a non-principal $U$ contains no finite set; and conversely a principal $U$ contains the singleton $\{i_0\}$.
+
+If $A$ is cofinite then $I \setminus A$ is finite, hence not in $U$, hence $A \in U$ by maximality.
+:::
+
+:::theorem[Ultrafilter lemma]{#ultrafilter-lemma}
+Every filter on $I$ extends to an ultrafilter on $I$. In particular, on an infinite $I$ the Fréchet filter of cofinite sets extends to a non-principal ultrafilter.
+:::
+
+:::proof
+Order the filters on $I$ extending the given $F$ by inclusion. The union of a chain of such filters is again a filter — closure under finite intersection involves only two members, which lie in a common link of the chain, and $\emptyset$ is in no link. So Zorn's lemma gives a maximal filter $U \supseteq F$.
+
+Maximality gives the ultrafilter property. Suppose $A \notin U$ and $I \setminus A \notin U$. If $A \cap B \ne \emptyset$ for every $B \in U$, then $\{C : C \supseteq A \cap B \text{ for some } B \in U\}$ is a filter properly containing $U$, contradicting maximality. So $A \cap B = \emptyset$ for some $B \in U$, i.e. $B \subseteq I \setminus A$, whence $I \setminus A \in U$ by upward closure — a contradiction. Applying this to the Fréchet filter on an infinite $I$ yields an ultrafilter containing all cofinite sets, hence non-principal by Proposition *Non-principal ultrafilters contain the cofinite sets*.
+:::
+
+:::pitfall
+The ultrafilter lemma is a genuine use of choice: it is not provable in ZF alone. No non-principal ultrafilter on $\mathbb{N}$ can be exhibited by an explicit rule, so "take a non-principal $U$" is always an appeal to Zorn's lemma, never a construction.
+:::
 
 :::definition[Ultraproduct and ultrapower]{#ultraproduct}
-Given a family of structures $\{\mathcal{M}_i\}_{i\in I}$ and an ultrafilter $U$ on $I$, the **ultraproduct** $\prod_U \mathcal{M}_i$ has as its domain the set of equivalence classes of tuples $(a_i)_{i \in I}$ from the direct product $\prod_i \mathcal{M}_i$, under the relation "$(a_i) \sim (b_i)$ iff $\{i : a_i = b_i\} \in U$" (equal on a $U$-large set). Functions and relations are computed coordinatewise and then read off "on a large set." When all the factors are the same structure $\mathcal{M}$, the ultraproduct is called the **ultrapower** $\mathcal{M}^I / U$.
+Let $\{\mathcal{M}_i\}_{i \in I}$ be $L$-structures and $U$ an ultrafilter on $I$. On the Cartesian product $\prod_{i} M_i$ define
+
+$$(a_i) \sim_U (b_i) \quad\text{iff}\quad \{i \in I : a_i = b_i\} \in U.$$
+
+This is an equivalence relation, by the filter axioms. The **ultraproduct** $\prod_U \mathcal{M}_i$ has domain the set of classes $[a] = [(a_i)]$, with
+
+$$c^{\prod_U \mathcal{M}_i} = [(c^{\mathcal{M}_i})], \qquad f\big([a^1],\dots,[a^n]\big) = \big[\big(f^{\mathcal{M}_i}(a^1_i,\dots,a^n_i)\big)\big],$$
+
+$$\big([a^1],\dots,[a^n]\big) \in R \quad\text{iff}\quad \{i : (a^1_i,\dots,a^n_i) \in R^{\mathcal{M}_i}\} \in U.$$
+
+When all $\mathcal{M}_i$ are the same $\mathcal{M}$, the result is the **ultrapower** $\mathcal{M}^I/U$.
 :::
+
+The definitions are well posed: if $(a_i) \sim_U (a'_i)$ then the agreement sets intersect, and a finite intersection of $U$-sets is in $U$, so the value of a function or the truth of a relation does not depend on the representatives chosen.
 
 :::theorem[Łoś's theorem]{#los-theorem}
-For any formula $\phi(\mathbf{x})$ and classes $[\mathbf{a}]$ in the ultraproduct,
+For every formula $\phi(x_1,\dots,x_n)$ and all classes $[a^1],\dots,[a^n]$ in the ultraproduct,
 
-$$\prod_U \mathcal{M}_i \models \phi[\,[\mathbf{a}]\,] \quad\text{iff}\quad \{i \in I : \mathcal{M}_i \models \phi[\mathbf{a}_i]\} \in U.$$
+$$\prod_U \mathcal{M}_i \models \phi\big[[a^1],\dots,[a^n]\big] \quad\text{iff}\quad \big\{i \in I : \mathcal{M}_i \models \phi[a^1_i,\dots,a^n_i]\big\} \in U.$$
+
+In particular, a sentence holds in the ultraproduct exactly when it holds in $U$-almost all factors.
 :::
 
-In the sentence case: $\phi$ holds in the ultraproduct iff it holds in a $U$-large ("almost all") set of factors.
+:::proof
+Induction on $\phi$. Write $\llbracket \phi(\mathbf{a}) \rrbracket$ for the index set on the right.
 
-This is a powerful model-building tool: you can take ultraproducts of finite structures to obtain infinite ones that still satisfy the same first-order sentences.
+*Atomic.* A term induction shows $t^{\prod_U}[\mathbf{[a]}] = [(t^{\mathcal{M}_i}[\mathbf{a}_i])]$, using the coordinatewise definition of the functions. The clauses for $=$ and $R$ then read off the definition of $\sim_U$ and of $R$ in the ultraproduct, which are stated exactly as membership of the relevant index set in $U$.
+
+*Negation.* By the induction hypothesis, $\prod_U \models \neg\phi$ iff $\llbracket\phi\rrbracket \notin U$, and by the ultrafilter property this holds iff $I \setminus \llbracket\phi\rrbracket \in U$; but $I \setminus \llbracket\phi\rrbracket = \llbracket\neg\phi\rrbracket$. This is the only step using maximality of $U$, and it is the step that fails for a general filter.
+
+*Conjunction.* $\llbracket \phi \wedge \psi \rrbracket = \llbracket\phi\rrbracket \cap \llbracket\psi\rrbracket$. Closure under finite intersection gives one direction and upward closure the other.
+
+*Existential.* Suppose $\prod_U \models \exists x\,\psi[\mathbf{[a]}]$, witnessed by a class $[b]$. By the induction hypothesis $\llbracket \psi(b,\mathbf{a})\rrbracket \in U$, and this set is contained in $\llbracket \exists x\,\psi(\mathbf{a})\rrbracket$, which is therefore in $U$ by upward closure.
+
+Conversely let $J = \llbracket \exists x\,\psi(\mathbf{a})\rrbracket \in U$. For each $i \in J$ choose (axiom of choice) some $b_i \in M_i$ with $\mathcal{M}_i \models \psi[b_i,\mathbf{a}_i]$, and for $i \notin J$ let $b_i$ be arbitrary. Then $J \subseteq \llbracket\psi(b,\mathbf{a})\rrbracket$, so that set is in $U$, and the induction hypothesis gives $\prod_U \models \psi[[b],\mathbf{[a]}]$, hence $\prod_U \models \exists x\,\psi[\mathbf{[a]}]$.
+
+The universal quantifier is $\neg\exists\neg$, already covered.
+:::
+
+:::corollary[Ultrapowers are elementary extensions]{#ultrapower-elementary}
+The diagonal map $d : \mathcal{M} \to \mathcal{M}^I/U$ sending $a$ to the class of the constant sequence is an elementary embedding.
+:::
+
+:::proof
+For a formula $\phi$ and $\mathbf{a}$ from $M$, the index set $\llbracket \phi(\mathbf{a}) \rrbracket$ is either all of $I$ (if $\mathcal{M} \models \phi[\mathbf{a}]$) or empty (if not). The first is in $U$ and the second is not, so Łoś's theorem gives $\mathcal{M}^I/U \models \phi[d(\mathbf{a})]$ iff $\mathcal{M} \models \phi[\mathbf{a}]$.
+:::
+
+:::theorem[Compactness via ultraproducts]{#compactness-via-ultraproducts}
+If every finite subset of a theory $T$ has a model, then $T$ has a model.
+:::
+
+:::proof
+Let $I$ be the set of finite subsets of $T$, and for each $i \in I$ pick a model $\mathcal{M}_i \models i$. For $\phi \in T$ put
+
+$$\hat{\phi} = \{ i \in I : \phi \in i \}.$$
+
+The family $\{\hat\phi : \phi \in T\}$ has the finite intersection property: $\hat{\phi_1} \cap \cdots \cap \hat{\phi_n}$ contains the index $\{\phi_1,\dots,\phi_n\}$, so it is non-empty. Hence it generates a filter, which by Theorem *Ultrafilter lemma* extends to an ultrafilter $U$ on $I$.
+
+Fix $\phi \in T$. For every $i \in \hat\phi$ we have $\phi \in i$ and $\mathcal{M}_i \models i$, so $\mathcal{M}_i \models \phi$. Thus $\hat\phi \subseteq \{i : \mathcal{M}_i \models \phi\}$, and the latter is in $U$ by upward closure. By Theorem *Łoś's theorem*, $\prod_U \mathcal{M}_i \models \phi$. As $\phi \in T$ was arbitrary, the ultraproduct models $T$.
+:::
 
 :::intuition
-Ultraproduct is a "majority vote" construction across many worlds. A property holds in the big new world precisely when it holds in a "large" (according to the ultrafilter) number of the original worlds.
-
-It lets logicians manufacture exotic models while preserving all first-order truths.
+An ultraproduct is a majority vote across infinitely many worlds, with the ultrafilter deciding which coalitions count as a majority. Maximality — $A$ or its complement, never both, never neither — is what makes the vote decide *every* question, which is why the new world is a structure at all and not a partial one.
 :::
 
-:::example[building an infinite natural number.]
-Take countably many copies of the standard naturals, i.e. the ultrapower $\mathbb{N}^{\mathbb{N}} / U$ where $U$ is a *non-principal* ultrafilter on $\mathbb{N}$. Let $\alpha = [(0,1,2,3,\dots)]$, the class of the identity sequence, and for a fixed standard $n$ let $\underline{n} = [(n,n,n,\dots)]$, the class of the constant sequence. Claim: $\alpha > \underline{n}$ in the ultrapower for every standard $n$, so $\alpha$ is an "infinite" element.
+:::example[Building an infinite natural number]
+Let $U$ be a non-principal ultrafilter on $\mathbb{N}$ and form the ultrapower $\mathbb{N}^{\mathbb{N}}/U$. Show that the class $\alpha = [(0,1,2,3,\dots)]$ of the identity sequence exceeds every standard natural number.
 :::
 
 :::solution
-**Step 1 (translate via Łoś).** By Łoś's theorem, $\mathbb{N}^{\mathbb{N}}/U \models \underline{n} < \alpha$ iff $\{i \in \mathbb{N} : \mathbb{N} \models n < i\} \in U$, i.e. iff $\{i : i > n\} \in U$.
-**Step 2 (the index set is large).** The set $\{i : i > n\} = \{n+1, n+2, \dots\}$ is *cofinite* (it omits only the finitely many $0,\dots,n$).
-**Step 3 (non-principal $\Rightarrow$ contains all cofinite sets).** A non-principal ultrafilter contains every cofinite set: it contains no finite set (a finite set in $U$ would force a single point into every member, making $U$ principal), hence by the one-of-$A$-or-complement law it contains the complement of each finite set. So $\{i : i > n\} \in U$.
-**Conclusion.** Thus $\underline{n} < \alpha$ for every standard $n$: the class $\alpha$ exceeds all standard naturals. Yet by Łoś every first-order sentence true in $\mathbb{N}$ is true in the ultrapower, so this nonstandard model is elementarily equivalent to $\mathbb{N}$ — an infinite "natural number" obeying all the same first-order arithmetic. ✓
+**Step 1 (translate via Łoś).** Write $\underline{n} = [(n,n,n,\dots)]$ for the diagonal image of $n$. By Theorem *Łoś's theorem*, $\mathbb{N}^{\mathbb{N}}/U \models \underline{n} < \alpha$ iff $\{i : n < i\} \in U$.
 
-Contrast: if $U$ were *principal*, say generated by $\{i_0\}$, then Łoś reduces every sentence to its truth at coordinate $i_0$, and the ultrapower is just $\mathbb{N}$ again with no new elements — no infinite number appears.
+**Step 2 (the index set is cofinite).** $\{i : i > n\}$ omits only $0,1,\dots,n$, so it is cofinite.
+
+**Step 3 (apply non-principality).** By Proposition *Non-principal ultrafilters contain the cofinite sets*, every cofinite set belongs to $U$. Hence $\underline{n} < \alpha$ for every standard $n$.
+
+**Step 4 (and the ultrapower still satisfies true arithmetic).** By Corollary *Ultrapowers are elementary extensions*, $\mathbb{N} \preceq \mathbb{N}^{\mathbb{N}}/U$, so every sentence of $\operatorname{Th}(\mathbb{N})$ survives. This is an explicit non-standard model — the same object Theorem *Non-standard models of arithmetic* produced abstractly, now written down.
+
+Contrast with the principal case: if $U$ is generated by $\{i_0\}$, Łoś reduces every formula to its truth at coordinate $i_0$, the map $[a] \mapsto a_{i_0}$ is an isomorphism, and no new element appears.
+:::
+
+:::example[An ultraproduct of finite fields]
+What is the characteristic of $\prod_U \mathbb{F}_{p_i}$, where $p_1 < p_2 < \cdots$ enumerates the primes and $U$ is non-principal on $\mathbb{N}$?
+:::
+
+:::solution
+**Step 1 (each candidate characteristic is a sentence).** For a fixed prime $q$, "characteristic $q$" is the sentence $\chi_q$ saying $\underbrace{1 + \cdots + 1}_{q} = 0$.
+
+**Step 2 (count the large index sets).** $\mathbb{F}_{p_i} \models \chi_q$ only when $p_i = q$, so $\llbracket \chi_q \rrbracket$ is a single index — a finite set, hence not in the non-principal $U$.
+
+**Step 3 (apply Łoś).** So $\prod_U \mathbb{F}_{p_i} \models \neg\chi_q$ for every prime $q$: the characteristic is $0$.
+
+**Step 4 (what else survives).** Every field axiom holds in every factor, so it holds in the ultraproduct: an infinite field of characteristic $0$ built entirely out of finite fields. Since each $\mathbb{F}_{p_i}$ satisfies "every element has a $p$-th root" only for its own $p$, one must check sentence by sentence which properties transfer — that is exactly the content of Łoś's theorem, and it is the mechanism behind the Ax–Kochen transfer principles.
 :::
 
 ## The Completeness Theorem Revisited
 
 <!-- section: completeness -->
 
-:::theorem[Completeness, model-theoretic form]{#model-existence}
-A set of sentences $\Gamma$ is consistent (no proof of contradiction) if and only if it has a model.
+Compactness and Löwenheim–Skolem were semantic. The completeness theorem connects them to syntax: it says the proof system and the class of structures measure the same thing.
+
+:::theorem[Model existence / completeness, semantic form]{#model-existence}
+A theory $T$ is consistent — no derivation of a contradiction from $T$ exists — if and only if $T$ has a model. Equivalently, $T \vdash \phi$ if and only if $T \models \phi$.
 :::
 
-The proof usually proceeds by building a term model (Henkin construction) or via compactness + ultraproducts. The Henkin idea is to make the *syntax itself* into a model: elements of the model are (equivalence classes of) closed terms of the language, so that a term literally names the object it describes. The one obstacle is existentials — a consistent theory may assert $\exists x\,\psi(x)$ without any term that provably witnesses it — so the construction deals with them first.
+The easy half is **soundness**: every rule of the proof system preserves truth in a structure, so a model of $T$ cannot also model a derived contradiction. The hard half builds a model out of syntax itself, and the idea is Henkin's: let the domain consist of the *closed terms* of the language, so every element is literally named by a term. One obstacle stands in the way — a consistent theory may assert $\exists x\,\psi(x)$ while no term provably witnesses it — so the construction manufactures the missing names first.
+
+:::definition[Henkin theory]{#henkin-theory}
+A theory $T$ in a language $L$ is a **Henkin theory** if for every formula $\psi(x)$ with one free variable there is a constant $c_\psi \in L$ with
+
+$$T \vdash \exists x\,\psi(x) \to \psi(c_\psi).$$
+
+Such a $c_\psi$ is a **witness constant** for $\psi$.
+:::
 
 :::recipe[Henkin construction]
-1. For each existential formula $\exists x\,\psi(x)$, add a fresh **witness constant** $c_\psi$ together with the axiom $\exists x\,\psi(x) \to \psi(c_\psi)$.
-2. Extend the enlarged theory to a maximal consistent theory.
-3. Take the closed terms of the enlarged language as the domain: the canonical structure on them satisfies exactly the sentences in that maximal theory.
+1. **Add witnesses.** For each formula $\psi(x)$ add a fresh constant $c_\psi$ and the Henkin axiom $\exists x\,\psi(x) \to \psi(c_\psi)$. Iterate $\omega$ times, since each round creates new formulas needing witnesses, and take the union $L^*, T^*_0$.
+2. **Complete it.** Extend $T^*_0$ to a maximal consistent $L^*$-theory $T^*$ by Lindenbaum's lemma: enumerate the $L^*$-sentences and add each one, or its negation, whichever keeps the theory consistent.
+3. **Build the term model.** Let the domain be the closed $L^*$-terms modulo the relation $t \sim u$ iff $(t = u) \in T^*$. Interpret each constant by its own class, each function symbol by $f([t_1],\dots,[t_n]) = [f(t_1,\dots,t_n)]$, and each relation by $([t_1],\dots,[t_n]) \in R$ iff $R(t_1,\dots,t_n) \in T^*$.
+4. **Verify.** Prove by induction on $\phi$ that the term model satisfies $\phi$ exactly when $\phi \in T^*$; conclude it models $T \subseteq T^*$.
 :::
 
-This gives a tight link: syntactic consistency ⇔ semantic satisfiability.
+:::lemma[Adding a witness preserves consistency]{#witness-consistency}
+If $T$ is consistent and $c$ is a constant not occurring in $T$, then $T \cup \{\exists x\,\psi(x) \to \psi(c)\}$ is consistent.
+:::
+
+:::proof
+Suppose not. Then $T \vdash \neg\big(\exists x\,\psi(x) \to \psi(c)\big)$, hence $T \vdash \exists x\,\psi(x)$ and $T \vdash \neg\psi(c)$. Since $c$ does not occur in $T$, a derivation of $\neg\psi(c)$ from $T$ can be converted into one of $\neg\psi(y)$ for a fresh variable $y$ — replace $c$ by $y$ throughout, which leaves every axiom of $T$ unchanged and every rule valid. Generalising, $T \vdash \forall y\,\neg\psi(y)$, that is $T \vdash \neg\exists x\,\psi(x)$. Together with $T \vdash \exists x\,\psi(x)$ this contradicts consistency of $T$.
+:::
+
+:::proof[Sketch]
+*Proof sketch of Theorem "Model existence / completeness, semantic form".* This sketch fills in the two steps of the Henkin recipe that are not immediate, and rests on Lemma *Adding a witness preserves consistency* and on Zorn's lemma (or, for a countable language, a plain enumeration).
+
+Step 1 preserves consistency: a single witness is safe by the lemma, a finite iteration by induction, and the $\omega$-limit because any derivation of a contradiction is finite and so lives at a finite stage. Step 2 preserves consistency by the same finiteness argument applied to Lindenbaum's chain. For step 4 one proves the *truth lemma* by induction on $\phi$: the atomic case is the definition of the term model; the Boolean cases use that $T^*$ is maximal consistent, so it contains exactly one of $\phi, \neg\phi$ and contains $\phi \wedge \chi$ iff it contains both; and the existential case is where the witnesses pay off — if $\exists x\,\psi(x) \in T^*$ then the Henkin axiom and maximality put $\psi(c_\psi) \in T^*$, so the class $[c_\psi]$ is a genuine witness *inside the term model*. Finally, the $L$-reduct of the term model is a model of $T$.
+
+The one further wrinkle: if the language has no constants, the term model could be empty, which structures may not be. Adding the witness constants in step 1 removes that possibility.
+:::
+
+:::corollary[Compactness from completeness]{#compactness-from-completeness}
+Theorem *Compactness* follows from Theorem *Model existence / completeness, semantic form*.
+:::
+
+:::proof
+Suppose every finite subset of $T$ has a model. If $T$ were inconsistent, there would be a derivation of a contradiction from $T$; a derivation is a finite object and cites only finitely many members $T_0 \subseteq T$. Then $T_0$ is inconsistent, so by soundness $T_0$ has no model — contradicting the hypothesis. Hence $T$ is consistent, and by model existence it has a model.
+:::
+
+This is the second, independent proof of compactness promised earlier; the ultraproduct proof in the previous section used no proof system at all.
 
 :::intuition
-Think of your axioms as a wish-list for a world. Completeness promises that if the wish-list never contradicts itself (the proof machine can never derive $\bot$), then some real world granting *all* the wishes actually exists — possibly huge and weird, but real. "No contradiction on paper" is upgraded to "an actual model out there."
-
-This is why we can confidently study "the theory of groups" — consistency (easy to see: exhibit one group) guarantees the whole space of models exists.
+Think of a theory as a wish list for a world. Soundness says a world cannot grant contradictory wishes. Completeness says the converse: if the wish list never contradicts itself *on paper*, some world granting all of it exists. The Henkin trick is to build that world out of the wish list's own vocabulary — every object in it is a phrase, and the theory's job is to decide which phrases name the same thing.
 :::
 
-:::example[consistency gives a model, via Henkin witnessing.]
-Consider the theory $T = \{\exists x\,P(x),\ \exists x\,\neg P(x)\}$ in a language with one unary predicate $P$. Does it have a model? The completeness theorem says yes as soon as $T$ is consistent — let us trace the Henkin construction.
+:::example[Consistency gives a model, traced through Henkin]
+Let $T = \{\exists x\,P(x),\ \exists x\,\neg P(x)\}$ in a language with one unary predicate $P$ and nothing else. Trace the Henkin construction to produce a model.
 :::
 
 :::solution
-**Step 1 (add witness constants).** $T$ has two existentials, so add fresh constants $c_1, c_2$ and the Henkin axioms $\exists x\,P(x) \to P(c_1)$ and $\exists x\,\neg P(x) \to \neg P(c_2)$.
-**Step 2 (extend to a maximal consistent set).** Adjoining these keeps the theory consistent (the constants are new, so they cannot create a contradiction); extend to a complete, maximal consistent theory $T^*$ deciding every sentence. Since $\exists x\,P(x) \in T^*$, modus ponens forces $P(c_1) \in T^*$; likewise $\neg P(c_2) \in T^*$.
-**Step 3 (read off the term model).** The domain is the closed terms modulo provable equality — here $\{c_1, c_2\}$ (distinct, since nothing forces $c_1 = c_2$). Interpret $P$ by "$P(t) \in T^*$", giving $P^{\mathcal{M}} = \{c_1\}$.
-**Sanity check.** In $\mathcal{M}$, $c_1$ satisfies $P$ so $\exists x\,P(x)$ holds; $c_2$ satisfies $\neg P$ so $\exists x\,\neg P(x)$ holds. Both axioms are true, so $\mathcal{M} \models T$. ✓ Consistency did indeed produce a concrete model.
+**Step 1 (witnesses).** $T$ needs witnesses for $P(x)$ and for $\neg P(x)$: add fresh constants $c_1, c_2$ with axioms $\exists x\,P(x) \to P(c_1)$ and $\exists x\,\neg P(x) \to \neg P(c_2)$. By Lemma *Adding a witness preserves consistency* the enlarged theory is consistent.
+
+**Step 2 (complete).** Extend to a maximal consistent $T^*$. Since $\exists x\,P(x) \in T^*$, modus ponens and maximality give $P(c_1) \in T^*$; likewise $\neg P(c_2) \in T^*$.
+
+**Step 3 (term model).** The closed terms are $c_1$ and $c_2$. Nothing in $T^*$ forces $c_1 = c_2$ — indeed $P(c_1) \wedge \neg P(c_2)$ refutes it — so the domain is $\{[c_1],[c_2]\}$, of size $2$, and $P$ is interpreted as $\{[c_1]\}$.
+
+**Step 4 (check).** $[c_1]$ satisfies $P$, so $\exists x\,P(x)$ holds; $[c_2]$ satisfies $\neg P$, so $\exists x\,\neg P(x)$ holds. Both axioms are true, giving $\mathcal{M} \models T$ with $|M| = 2$.
 :::
 
-:::example[completeness of a theory forces elementary equivalence.]
-The theory ACF$_0$ of algebraically closed fields of characteristic zero admits quantifier elimination, and adding the axioms (field axioms, "every nonconstant polynomial has a root", $\operatorname{char} = 0$) fixes the truth value of every quantifier-free sentence — hence ACF$_0$ is *complete*: it decides every sentence. Therefore any two of its models — e.g. $\overline{\mathbb{Q}}$ (the algebraic numbers) and $\mathbb{C}$ — satisfy exactly the same first-order sentences and are elementarily equivalent, even though $\overline{\mathbb{Q}}$ is countable and $\mathbb{C}$ is uncountable, so they are certainly not isomorphic. This is the completeness-theorem principle "complete theory $\Rightarrow$ all models elementarily equivalent" in action.
+:::pitfall
+Completeness says *some* model exists, never that it is the model you had in mind. The theory of true arithmetic is consistent, and among its models are the non-standard ones of Theorem *Non-standard models of arithmetic*. Consistency buys satisfiability, not standardness — and by Corollary *No infinite structure is determined up to isomorphism*, no first-order theory can buy standardness.
+:::
+
+:::remark
+Completeness and Gödel's incompleteness theorems are different statements about different objects and are consistent with one another. Completeness says: what is true in *all* models is provable. Incompleteness says: for a theory like Peano arithmetic there are sentences true in the standard model but false in another model, so they are true in some models and false in others, hence not provable and not refutable. The gap between "true in $\mathbb{N}$" and "true in all models of PA" is exactly where independent sentences live.
+:::
+
+## Categoricity and Quantifier Elimination
+
+<!-- section: categoricity -->
+
+Corollary *No infinite structure is determined up to isomorphism* says no first-order theory determines an infinite model up to isomorphism. The best available substitute is determination *within a cardinality*, and it turns out to be strong enough to prove completeness.
+
+:::definition[Categoricity]{#categoricity}
+A theory $T$ is $\kappa$-**categorical**, for an infinite cardinal $\kappa$, if $T$ has a model of cardinality $\kappa$ and any two models of $T$ of cardinality $\kappa$ are isomorphic.
+:::
+
+:::theorem[Vaught's test]{#vaughts-test}
+Let $T$ be a theory in a language $L$ with no finite models, and suppose $T$ is $\kappa$-categorical for some $\kappa \ge |L| + \aleph_0$. Then $T$ is complete: for every sentence $\phi$, either $T \models \phi$ or $T \models \neg\phi$.
+:::
+
+:::proof
+Suppose not: there are models $\mathcal{A} \models T \cup \{\phi\}$ and $\mathcal{B} \models T \cup \{\neg\phi\}$. Both theories are satisfiable, and neither has a finite model, so both $\mathcal{A}$ and $\mathcal{B}$ are infinite.
+
+By Theorem *Downward Löwenheim–Skolem* and Theorem *Upward Löwenheim–Skolem* applied to each, there are $\mathcal{A}' \equiv \mathcal{A}$ and $\mathcal{B}' \equiv \mathcal{B}$ both of cardinality exactly $\kappa$ — shrink if the model is larger than $\kappa$, grow if smaller, which is legitimate since $\kappa \ge |L| + \aleph_0$.
+
+Now $\mathcal{A}'$ and $\mathcal{B}'$ are models of $T$ of the same cardinality $\kappa$, so $\kappa$-categoricity makes them isomorphic, and by Proposition *Isomorphism implies elementary equivalence*, $\mathcal{A}' \equiv \mathcal{B}'$. But $\mathcal{A}' \models \phi$ and $\mathcal{B}' \models \neg\phi$ — a contradiction. Hence $T$ decides every sentence.
+:::
+
+:::example[DLO is $\aleph_0$-categorical, hence complete]
+Prove that any two countable dense linear orders without endpoints are isomorphic, and deduce that DLO is complete.
+:::
+
+:::solution
+**Step 1 (set up the back-and-forth).** Let $\mathcal{A} = \{a_0,a_1,\dots\}$ and $\mathcal{B} = \{b_0,b_1,\dots\}$ be countable models of DLO, enumerated. Build an increasing chain of finite partial order-isomorphisms $p_0 \subseteq p_1 \subseteq \cdots$.
+
+**Step 2 (the forth step).** Given a finite order-preserving $p_n$, take the least-indexed $a$ not yet in its domain. The elements already matched split $\mathcal{A}$ into finitely many intervals, and $a$ sits in one of them; the corresponding interval of $\mathcal{B}$ is non-empty — if the interval is bounded on both sides, density supplies a point; if unbounded on one side, "no endpoint" supplies one. Choose such a $b$ and extend.
+
+**Step 3 (the back step).** Symmetrically, take the least-indexed $b$ not in the range and find a matching $a$ the same way.
+
+**Step 4 (union).** Alternating the two steps ensures every $a_n$ enters the domain and every $b_n$ the range, so $p = \bigcup_n p_n$ is an order-preserving bijection: $\mathcal{A} \cong \mathcal{B}$.
+
+**Step 5 (completeness).** DLO has no finite models — density forces infinitude — and the language $\{<\}$ is finite, so Theorem *Vaught's test* with $\kappa = \aleph_0$ gives completeness. This is the fact the section *Elementary Equivalence and Elementary Substructures* borrowed to conclude $(\mathbb{Q},<) \equiv (\mathbb{R},<)$.
+:::
+
+Categoricity at one cardinal and at another are not independent, which is one of the deepest results in the subject.
+
+:::theorem[Morley's categoricity theorem (quoted)]{#morley}
+Let $T$ be a complete theory in a countable language. If $T$ is $\kappa$-categorical for some uncountable $\kappa$, then it is $\kappa$-categorical for *every* uncountable $\kappa$.
+:::
+
+We quote Morley's theorem without proof: it depends on the machinery of stability theory and totally transcendental theories, well beyond this chapter. The four possible categoricity patterns it leaves — categorical in all infinite powers, only in $\aleph_0$, only above $\aleph_0$, or in none — are realised, for instance, by the theory of an infinite set with no structure, by DLO, by ACF$_0$, and by true arithmetic respectively.
+
+The second route to completeness is syntactic and gives much more: an algorithm.
+
+:::definition[Quantifier elimination]{#qe}
+A theory $T$ admits **quantifier elimination** if for every formula $\phi(\mathbf{x})$ there is a quantifier-free formula $\phi^*(\mathbf{x})$ in the same free variables with
+
+$$T \models \forall \mathbf{x}\,\big(\phi(\mathbf{x}) \leftrightarrow \phi^*(\mathbf{x})\big).$$
+:::
+
+:::lemma[One existential over a conjunction suffices]{#qe-reduction}
+To prove that $T$ admits quantifier elimination, it is enough to eliminate the quantifier from every formula of the form $\exists x\,\big(\psi_1 \wedge \cdots \wedge \psi_m\big)$ where each $\psi_k$ is atomic or negated atomic.
+:::
+
+:::proof
+Argue by induction on quantifier depth. Take a formula with at least one quantifier and consider an innermost one; its scope is quantifier-free, so it can be put in disjunctive normal form. Since $\exists x$ distributes over $\vee$ — $\exists x(\alpha \vee \beta)$ is equivalent to $\exists x\,\alpha \vee \exists x\,\beta$ — the problem reduces to a single disjunct, a conjunction of literals. Eliminating there produces a quantifier-free equivalent, lowering the depth by one. A universal quantifier is handled as $\neg \exists \neg$. Iterate.
+:::
+
+:::example[Quantifier elimination for dense linear orders]
+Eliminate the quantifier from $\exists x\,\big(a_1 < x \wedge a_2 < x \wedge x < b_1 \wedge \neg(x = c)\big)$ over DLO, and describe the general procedure.
+:::
+
+:::solution
+**Step 1 (classify the literals).** In the language $\{<\}$ every literal involving $x$ is one of $x < t$, $t < x$, $x = t$, or a negation of these. Negations collapse: $\neg(x < t)$ is $t < x \vee x = t$, and $\neg (x = t)$ is $x < t \vee t < x$. So after re-applying the distribution of Lemma *One existential over a conjunction suffices*, each disjunct is a conjunction of *positive* literals $t_i < x$, $x < u_j$, $x = v$.
+
+**Step 2 (kill any equality).** If some conjunct is $x = v$, substitute $v$ for $x$ throughout and drop the quantifier entirely. Nothing quantified remains.
+
+**Step 3 (the remaining case).** Otherwise the disjunct reads $\bigwedge_i (t_i < x) \wedge \bigwedge_j (x < u_j)$. Such an $x$ exists in a dense linear order without endpoints exactly when every lower bound is below every upper bound:
+
+$$\exists x \Big(\bigwedge_i t_i < x \wedge \bigwedge_j x < u_j\Big) \ \longleftrightarrow\ \bigwedge_{i,j} t_i < u_j,$$
+
+with the convention that an empty conjunction is $\top$ — if there are no $t_i$ the "no least element" axiom provides $x$, and if there are no $u_j$ the "no greatest element" axiom does. The right-hand side is quantifier-free.
+
+**Step 4 (the given formula).** Rewrite $\neg(x=c)$ as $x < c \vee c < x$ and distribute, giving two disjuncts:
+
+- $\exists x\,(a_1<x \wedge a_2<x \wedge x<b_1 \wedge x<c)$, which by Step 3 becomes $a_1<b_1 \wedge a_1<c \wedge a_2<b_1 \wedge a_2<c$;
+- $\exists x\,(a_1<x \wedge a_2<x \wedge c<x \wedge x<b_1)$, which becomes $a_1<b_1 \wedge a_2<b_1 \wedge c<b_1$.
+
+The answer is the disjunction of the two, entirely free of quantifiers.
+
+**Step 5 (completeness again).** A sentence has no free variables, so its quantifier-free equivalent is a Boolean combination of atomic sentences in a language with no constants — there are none, so the equivalent is $\top$ or $\bot$, decided the same way in every model. Hence DLO is complete and, since the elimination is an algorithm, decidable.
+:::
+
+:::theorem[Quantifier elimination for algebraically closed fields (quoted)]{#acf-qe}
+The theory ACF of algebraically closed fields admits quantifier elimination in the ring language $\{0,1,+,-,\cdot\}$. Consequently ACF$_p$, for each fixed characteristic $p$ (prime or zero), is complete, and the image of a constructible set under a projection is constructible — Chevalley's theorem.
+:::
+
+:::proof[Sketch]
+A sketch; the algebraic input is the theory of resultants, which is not developed here. By Lemma *One existential over a conjunction suffices* it is enough to eliminate $x$ from a conjunction of polynomial equations $p_k(x,\mathbf{y}) = 0$ and inequations $q_l(x,\mathbf{y}) \ne 0$. Repeated division reduces the system to a single equation and a single inequation; "these have a common root" is then expressed by the vanishing of a resultant, a polynomial in the coefficients alone, and "the equation has a root not shared with the inequation" is a further resultant condition. Every such condition is quantifier-free in $\mathbf{y}$.
+
+Completeness of ACF$_p$ then follows as in Step 5 above, since a quantifier-free sentence in the ring language is a Boolean combination of numerical identities among integers, decided by the characteristic alone.
+:::
+
+:::remark
+ACF$_p$ is also $\kappa$-categorical for every uncountable $\kappa$: an algebraically closed field is determined up to isomorphism by its characteristic and its transcendence degree over the prime field, and for $|K| = \kappa > \aleph_0$ the transcendence degree equals $\kappa$. Vaught's test therefore gives completeness a second way. It is *not* $\aleph_0$-categorical — the countable models have transcendence degrees $0, 1, 2, \dots, \aleph_0$, pairwise non-isomorphic.
+:::
+
+:::theorem[Ryll-Nardzewski (quoted)]{#ryll-nardzewski}
+A complete theory $T$ in a countable language with only infinite models is $\aleph_0$-categorical if and only if for every $n$ there are only finitely many formulas in $n$ free variables up to $T$-equivalence.
+:::
+
+We quote this without proof; it rests on the omitting types theorem. It explains why $\aleph_0$-categoricity is rare: it demands that the language, modulo the theory, be able to describe only finitely many kinds of $n$-tuple. DLO passes — an $n$-tuple is described entirely by which of its coordinates are equal and how the rest are ordered, giving finitely many possibilities. The theory of an infinite set with one unary predicate splitting it into two infinite pieces also passes. Most theories of algebraic interest fail.
+
+:::summary
+- $\kappa$-categoricity plus "no finite models" gives completeness (Vaught's test), and by Morley's theorem uncountable categoricity does not depend on which uncountable $\kappa$ is chosen.
+- Quantifier elimination gives completeness *and* decidability, by reducing every sentence to a quantifier-free one that every model evaluates identically.
+- DLO is $\aleph_0$-categorical and eliminates quantifiers; ACF$_p$ is uncountably categorical and eliminates quantifiers; true arithmetic is categorical in no infinite cardinal and eliminates nothing.
 :::
 
 ## Common Mistakes
 
-- **Elementary equivalence is not isomorphism:** Equating elementary equivalence with isomorphism is a mistake. First-order logic cannot distinguish all structures; cardinality, higher-order properties, and "standardness" often require second-order or infinitary logic.
+- **Elementary equivalence is not isomorphism.** $\mathcal{M} \equiv \mathcal{N}$ only says no first-order sentence separates them. Cardinality, well-foundedness and "being standard" are invisible to first-order logic; by Corollary *No infinite structure is determined up to isomorphism* every infinite structure has non-isomorphic elementary equivalents.
 
-- **Same sentences does not mean identical:** Thinking that if two structures satisfy the same sentences they are "the same" is incorrect. They can differ wildly (different cardinalities, non-isomorphic).
+- **Substructure is not elementary substructure.** $\mathcal{N} \subseteq \mathcal{M}$ constrains only the atomic data. Use Theorem *Tarski–Vaught test* to check elementarity, and remember that $(\mathbb{Z},<) \subseteq (\mathbb{Q},<)$ fails it.
 
-- **Domains are non-empty:** Forgetting that the domain of a structure must be non-empty leads to errors. Empty structures are usually disallowed in classical FOL.
+- **Forgetting that domains are non-empty.** Classical first-order semantics requires $M \ne \emptyset$; $\exists x\,(x=x)$ is valid. This is why the Henkin construction must supply at least one constant.
 
-- **Substructure versus elementary substructure:** Confusing substructure with elementary substructure is common. A subring need not be an elementary subring.
+- **Believing ultraproducts are always exotic.** If $U$ is principal at $i_0$, Łoś's theorem collapses to evaluation at coordinate $i_0$ and the ultraproduct is isomorphic to $\mathcal{M}_{i_0}$. Non-principality is what buys new elements, and it costs an appeal to Zorn's lemma.
 
-- **Principal ultrafilters give ordinary products:** Believing ultraproducts always produce "non-standard" models is wrong. If the ultrafilter is principal the ultraproduct is just one of the factors.
+- **Using Łoś's theorem with a mere filter.** The negation step of the proof needs "$A \in U$ or $I \setminus A \in U$". With a filter that is not maximal, the reduced product satisfies only the positive Horn part of the theory, not every formula.
 
-- **Categoricity is rare:** Assuming every complete theory has a unique model up to isomorphism (categoricity) is false for most. $\aleph_0$-categoricity is rare and characterized by the Ryll-Nardzewski theorem.
+- **Reading the Skolem paradox as a refutation of Cantor.** A countable model of ZFC still satisfies Cantor's theorem internally; it merely lacks, as an element, the external bijection that would witness countability of its "uncountable" set.
+
+- **Expecting completeness to deliver the intended model.** Consistency yields *some* model. True arithmetic is consistent and has non-standard models; PA is consistent and has models of $\neg\operatorname{Con}(\mathrm{PA})$.
+
+- **Applying Vaught's test without excluding finite models.** The empty theory in the empty language is $\kappa$-categorical for every infinite $\kappa$ — any two infinite sets of the same size are isomorphic as bare sets — yet it is plainly incomplete, since "there are at least two elements" is true in some of its models and false in the one-element model. The proof of Theorem *Vaught's test* breaks exactly there: the Löwenheim–Skolem step needs both counterexample models to be infinite before it can resize them.
