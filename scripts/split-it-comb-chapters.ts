@@ -23,7 +23,7 @@ import { splitSubjectChapters, type SplitChapterPlan } from "./lib/split-chapter
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
 
-const INFORMATION_THEORY: SplitChapterPlan[] = [
+export const INFORMATION_THEORY: SplitChapterPlan[] = [
   {
     id: "entropy",
     title: "Entropy, Joint and Conditional Entropy",
@@ -331,7 +331,7 @@ const INFORMATION_THEORY: SplitChapterPlan[] = [
   },
 ];
 
-const COMBINATORICS: SplitChapterPlan[] = [
+export const COMBINATORICS: SplitChapterPlan[] = [
   {
     id: "counting-principles",
     title: "Counting Principles",
@@ -523,6 +523,11 @@ const COMBINATORICS: SplitChapterPlan[] = [
   },
 ];
 
+export const PLANS: Record<string, SplitChapterPlan[]> = {
+  "information-theory": INFORMATION_THEORY,
+  combinatorics: COMBINATORICS,
+};
+
 async function main() {
   await splitSubjectChapters(ROOT, "information-theory", INFORMATION_THEORY, {
     // Its opening section (the AEP) moved to the entropy-rates chapter, but a
@@ -532,7 +537,12 @@ async function main() {
   await splitSubjectChapters(ROOT, "combinatorics", COMBINATORICS);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+// Only split when run directly — this module is also imported for its plans,
+// which describe where every section came from.
+const invokedDirectly = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (invokedDirectly) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

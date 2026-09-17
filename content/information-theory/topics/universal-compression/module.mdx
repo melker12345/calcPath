@@ -757,42 +757,6 @@ or $0.03\%$ of the file.
 
 ## Common Mistakes
 
-- **Thinking every sequence has probability exactly $2^{-nh}$.** Only typical ones have probability close to that *on the exponential scale*, and even they vary by subexponential factors. Atypical strings can be far more or far less likely.
-- **Confusing the size of the typical set with the size of the support.** The support is usually all of $\mathcal{X}^n$; the typical set is the exponentially smaller subset of size about $2^{nH}$.
-- **Dropping the ergodicity or stationarity hypothesis.** Without it the entropy rate may not exist, and the concentration in the AEP can fail outright.
-- **Treating the AEP as exact at finite $n$.** It is asymptotic. For short blocks the atypical branch is not negligible and one needs explicit finite-$n$ bounds (Chebyshev, or a Chernoff bound).
-- **Confusing the AEP with the central limit theorem.** Both concern $\frac1n\sum_i(-\log p(X_i))$, but the AEP is a law of large numbers (the mean converges); the CLT describes the $\sqrt n$-scale fluctuations around it, which govern finite-blocklength corrections.
-- **Assuming typicality is a property of a string.** It is a property of a string *and* a distribution. The all-ones string is typical for $p(1)=1-1/n$ and wildly atypical for a fair coin.
-
-Shannon's source coding theorem — the *noiseless coding theorem* — is the first of the two pillars of information theory. It converts the counting facts of the previous part into a sharp statement about which compression schemes can exist. Its content is that a single number, the entropy rate, is simultaneously an upper and a lower bound on the achievable rate, so that the compressibility of a source is not a matter of ingenuity but of arithmetic.
-
-- **Reading the theorem as a statement about single messages.** It is asymptotic in block length and probabilistic in the source. Individual short messages can beat $H$ or fall far short of it.
-- **Confusing the source coding theorem with the channel coding theorem.** Source coding removes redundancy to approach $h$; channel coding adds redundancy to approach capacity. They are dual, not the same.
-- **Using $H(X)$ for a source with memory.** The limit is the entropy *rate* $h = \lim H(X_n \mid X^{n-1})$, which can be far below the marginal entropy: English has a marginal letter entropy above $4$ bits but an entropy rate near $1.3$ bits.
-- **Forgetting the vanishing-error qualifier in the achievability half.** Fixed-rate codes below $\log|\mathcal{X}|$ must sometimes fail; the theorem promises only that the failure probability tends to zero.
-- **Believing the converse follows from Fano's inequality alone.** Fano gives $P_e$ bounded away from zero; the exponential counting argument is what gives $P_e \to 1$.
-- **Assuming a smarter codebook could beat the count.** The converse quantifies over *all* functions $f_n$, computable or not. There is no algorithmic escape from a pigeonhole.
-
-The theory so far speaks of blocks of length $n\to\infty$ and codebooks of astronomical size. Real compressors read a file once, symbol by symbol, and emit bits as they go. This part makes the transition: from block codes to **symbol codes**, where the combinatorial constraint is not a pigeonhole count but *Kraft's inequality*, and where the asymptotic bound $L \to H$ is replaced by the sharp finite bound $H \le L < H+1$.
-
-- **Expecting a compressor to shrink random or already-compressed data.** The no-free-lunch theorem forbids it; the output of gzip run twice is slightly larger than run once.
-- **Confusing non-singular with uniquely decodable.** $\{0,1,01\}$ is non-singular but not uniquely decodable: `01` could be one symbol or two.
-- **Believing unique decodability allows shorter codes than the prefix property.** Kraft–McMillan says the achievable length vectors are identical; instantaneous decoding is free.
-- **Reading Kraft's inequality as a statement about a particular code.** It constrains the *multiset of lengths*. Any length vector satisfying it can be realised, and no code can violate it.
-- **Ignoring model cost for small files.** The $D(p\|q)$ penalty assumes a known model; if the model must be transmitted, its description length is charged to the file, which is why compression shines on large inputs.
-- **Comparing $L$ against $\log|\mathcal{X}|$ instead of $H$.** The naive baseline measures the saving; the entropy measures how much saving was left on the table.
-
-Kraft's inequality tells us which length vectors are legal; the Shannon code shows that a legal vector within one bit of the entropy always exists. It does not tell us the *best* legal vector. That problem — minimise $\sum_i p_i\ell_i$ over all prefix codes — was solved in 1952 by David Huffman, then a graduate student who took it as a term-paper assignment after his professor, Robert Fano, mentioned that nobody knew the answer. The algorithm is three lines long, runs in $O(m\log m)$ time, and is provably optimal.
-
-- **Assuming Huffman achieves the entropy exactly.** It achieves $L < H+1$; equality holds only for dyadic probabilities. For a very skewed binary source the gap approaches a full bit, which can be a factor of ten in rate.
-- **Comparing Huffman codes by their codewords instead of their lengths.** Tie-breaking changes the codewords; only the length vector, and hence $L$, is canonical.
-- **Forgetting the cost of the table.** A two-pass Huffman coder must transmit the code (or the lengths). On small inputs this overhead can exceed the savings, which is why DEFLATE offers a fixed, pre-agreed table as an option.
-- **Assuming the rarest symbol gets a short codeword because the tree is "balanced".** In the worst case it gets $m-1$ bits; Huffman trees are balanced only when the distribution is near uniform.
-- **Using a stale model.** Huffman assumes the probabilities are known and fixed. On data whose statistics drift, adaptive coding, or re-estimating per block, is essential.
-- **Believing Huffman handles memory.** Symbol-by-symbol Huffman coding is blind to correlation; the gain from context modelling usually dwarfs the gain from optimal symbol coding.
-
-Huffman coding is optimal and still leaves up to one bit per symbol on the table, because a codeword is an integral number of bits. Arithmetic coding removes that restriction by refusing to give any symbol a codeword at all: the entire message is mapped to a single number, and only that number is transmitted. The cost is $-\log p(x^n) + 2$ bits for the whole message, so the rounding loss is amortised over the whole file rather than paid per symbol.
-
 - **Waiting until the end to emit bits.** Renormalization emits each bit as soon as it is determined, so memory use is constant and the coder streams. An implementation that computes the exact final interval in rational arithmetic is correct but useless.
 - **Omitting the E3 (underflow) rule.** Without it an interval straddling $\tfrac12$ shrinks below the register precision and encoder and decoder diverge.
 - **Blaming the coder for poor compression.** Arithmetic coding is within two bits of $-\log p(x^n)$ *for the model it is given*. All remaining compression performance is the model's; this is why modern compressors put their effort into context mixing, not into the coder.
@@ -801,7 +765,6 @@ Huffman coding is optimal and still leaves up to one bit per symbol on the table
 - **Assuming arithmetic coding is always the right choice.** It has higher per-symbol cost than a canonical Huffman decoder, and for nearly uniform alphabets the one-bit Huffman penalty is negligible. ANS (asymmetric numeral systems) now occupies much of this ground, achieving arithmetic-coding compression at table-driven speeds.
 
 Every coder so far has been handed a probability model. Real files arrive without one. A **universal** compressor must learn the structure while coding and still approach the entropy rate of whatever source produced the data. The Lempel–Ziv family does this with no probabilities at all: it compresses by noticing that text repeats itself.
-
 - **Confusing LZ77 with LZ78/LZW.** LZ77 points backwards into the raw text with (distance, length) pairs; LZ78/LZW points into a dictionary of previously created phrases. The distinction matters for memory, for seeking, and for patent history.
 - **Believing the dictionary is transmitted.** It is rebuilt by the decoder from the code stream. Sending it would defeat the purpose.
 - **Mishandling the exceptional code.** An implementation that assumes every received code is already in the dictionary fails on inputs as short as `ABABABA`.
@@ -810,16 +773,6 @@ Every coder so far has been handed a probability model. Real files arrive withou
 - **Quoting LZ's optimality without its hypotheses.** It is asymptotic, requires an unbounded dictionary, and holds for stationary ergodic sources. None of the three is exactly true of a real file on a real implementation.
 
 Shannon–Fano coding is the first systematic construction of an efficient prefix code, described by Shannon in 1948 and refined by Fano the same year. It is no longer the method of choice — Huffman is optimal and barely harder — but it is the cleanest illustration of top-down code design, it is what Huffman was assigned to improve upon, and its analysis is where the bound $L < H+1$ was first established.
-
-- **Believing Fano's code is optimal.** It is not; the five-symbol example is a genuine counterexample, and the proposition above says the direction of the error is always the same.
-- **Splitting by count instead of by mass.** The rule balances the *sum of probabilities* of the two groups, not the number of symbols in them.
-- **Forgetting to sort first.** Fano's construction requires non-increasing probabilities and splits only into *consecutive* groups; splitting an unsorted list can produce a code far from optimal.
-- **Conflating Shannon's lengths with Fano's algorithm.** They are different codes with different lengths, as the pitfall above shows.
-- **Ignoring memory.** Like Huffman, Fano coding is symbol-by-symbol and blind to correlation; blocking or context modelling is required to capture it.
-- **Assuming it is used in modern standards.** It is not. Where a simple prefix code is wanted, canonical Huffman is used; where the last fraction of a bit matters, arithmetic coding or ANS.
-
-Every code so far has needed a model: Huffman needs the probabilities, arithmetic coding needs a conditional distribution per symbol, and only Lempel–Ziv managed without. A **universal** code is one that works for a whole *class* of sources at once, paying a price that vanishes per symbol. This last part makes the notion precise, exhibits the standard constructions, and proves that the price cannot be driven to zero at finite length.
-
 - **Thinking a universal code achieves the entropy exactly on every file.** It achieves $nh + o(n)$; on short files the $o(n)$ term dominates and compression can be negative.
 - **Confusing universal with optimal-for-the-unknown-source.** Rissanen's bound says a strictly positive minimax redundancy is unavoidable at every finite $n$.
 - **Assuming Lempel–Ziv is the best universal code.** It is universal over a far larger class than CTW, and correspondingly slower to converge: $O(n\log\log n/\log n)$ against $O(\log n)$ total redundancy on parametric classes.

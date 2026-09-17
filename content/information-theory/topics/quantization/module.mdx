@@ -518,25 +518,6 @@ Real codecs replace the KLT, which depends on the signal statistics and costs $O
 
 ## Common Mistakes
 
-- **Confusing $R(D)$ with the distortion–rate function $D(R)$.** They are inverse functions of each other on the range where $R$ is strictly decreasing: $R(D)$ is the least rate for a distortion budget, $D(R)$ the least distortion for a rate budget. Quoting one where the other is meant inverts every inequality.
-- **Asserting $R(0) = H(X)$ for every source.** It holds for discrete sources with a distortion measure vanishing only on the diagonal. For a continuous source $R(D)\to\infty$ as $D\to 0$, and substituting the differential entropy $h(X)$ for $H(X)$ is wrong — $h(X)$ can even be negative.
-- **Using $h_2(p) - h_2(D)$ outside $D \le \min(p,1-p)$.** Past $D_{\max}$ the true value is $0$; the formula goes negative and is meaningless there.
-- **Forgetting that $R(D)$ depends on the distortion measure as much as on the source.** Swapping squared error for absolute error or a perceptual metric changes the function entirely; a rate–distortion claim with no $d$ attached is not a claim.
-- **Treating the test channel as a physical channel.** $p(\hat x\mid x)$ scores a proposed source–reproduction relationship; nothing is transmitted through it and it need not be implementable.
-- **Assuming the optimal reproduction alphabet equals the source alphabet.** For a discrete source the optimal $\hat{\mathcal{X}}$ can be strictly smaller, and for a continuous source it is a finite set at each finite rate.
-
-The last part computed $R^{(I)}(D)$, an optimization over one-symbol conditional distributions. Nothing so far says that this number has anything to do with codes. That identification is the rate–distortion theorem, and it is the reason the whole subject is called rate–distortion theory rather than "constrained mutual information minimization".
-
-- **Reading the achievability proof as an algorithm.** It proves a good codebook exists by averaging over random codebooks; it offers no way to find one, and the encoding step it describes is a search over $2^{nR}$ codewords.
-- **Getting the Lagrangian sign backwards.** Minimize $I + \lambda\mathbb{E}[d]$ with $\lambda \ge 0$; the slope of the curve is $s = R'(D) = -\lambda \le 0$. Optimal test channel weights carry $e^{-\lambda d}$, never $e^{+\lambda d}$.
-- **Using the Shannon lower bound without clipping it at zero.** For $D$ near or above $D_{\max}$ the expression $h(X) - \tfrac12\log_2(2\pi eD)$ is negative, while $R(D) = 0$. The bound is $\max\{0,\text{SLB}\}$.
-- **Applying the high-rate approximation $R(D)\approx h(X) - \tfrac12\log_2(2\pi eD)$ at low rate.** It is an asymptotic statement as $D\to 0$; at moderate $D$ it can be badly off, and above $D_{\max}$ it is simply wrong.
-- **Forward water-filling instead of reverse.** Channel coding allocates *power* preferentially to strong sub-channels; rate–distortion allocates *distortion* equally down to a level and abandons everything below it. The two pictures are not the same and confusing them inverts the bit allocation.
-- **Assuming a component below the water level should get "a few" bits.** The optimum gives it exactly zero and reproduces it by its mean; spending bits there provably wastes them.
-- **Treating $R(D)$ as a per-block quantity.** It is bits *per source symbol*; a block of $n$ symbols needs about $nR(D)$ bits, and the $o(n)$ correction is what finite-blocklength analysis quantifies.
-
-The rate–distortion theorem promises a code; it does not build one, and its construction encodes whole blocks by exhaustive search. Everything actually deployed starts from the opposite end: quantize one sample at a time, cheaply, and recover what can be recovered with a transform and an entropy coder. This part measures exactly how much that costs.
-
 - **Treating the Lloyd–Max conditions as sufficient.** They are necessary. A quantizer meeting both is a fixed point and may be only locally optimal; multimodal densities have several distinct fixed points.
 - **Assuming quantization noise is white, uniform and signal-independent.** That model is a high-rate approximation on a smooth density. At low rate, on constant or slowly varying signals, the error is deterministic and structured; dither is what makes the model honest.
 - **Confusing $\log_2 N$ with the rate.** With entropy coding the rate is $H(Q(X))$, which for a peaked source is much smaller. Nearly all of the $4.35$ dB Panter–Dite gap is recovered by entropy coding, not by clever level placement.
@@ -546,7 +527,6 @@ The rate–distortion theorem promises a code; it does not build one, and its co
 - **Applying the high-rate formulas at one or two bits.** Panter–Dite predicts $2.72\sigma^2/N^2 = 0.68\sigma^2$ for a 1-bit Gaussian quantizer; the true optimum is $0.363\sigma^2$. The asymptotic analysis is simply not valid there.
 
 The previous part ended with a puzzle: entropy-coded scalar quantization is within $1.53$ dB of $R(D)$ for every smooth source, and no amount of scalar cleverness closes the remaining gap. Vector quantization closes it, and the analysis below says exactly how, and how much each ingredient is worth.
-
 - **Expecting VQ to be applied to raw samples.** It essentially never is. A transform (DCT, wavelet, autoencoder) comes first, because the memory gain it collects is large and cheap, while the space-filling gain VQ adds is at most $1.53$ dB.
 - **Quoting VQ's advantage as unbounded.** Against *entropy-coded* scalar quantization of an i.i.d. source, the total available gain is $1.53$ dB, full stop. The dramatic numbers in textbook comparisons come from correlated sources measured against *fixed-rate* scalar quantization, which conflates three separate gains.
 - **Confusing codebook size with search cost.** The size is $2^{kR}$ and so is the full-search cost; doubling the dimension at fixed rate squares it. Structured codebooks are mandatory, not an optimization.
@@ -556,28 +536,3 @@ The previous part ended with a puzzle: entropy-coded scalar quantization is with
 - **Overfitting the training set.** A codebook trained on $T$ vectors with $M$ codevectors is fitting $kM$ parameters; with $T$ not much larger than $M$, the measured training distortion is optimistic and out-of-sample performance is far worse.
 
 So far the encoder and the decoder have known nothing except what the encoder sends. In a sensor network, in a video codec with a reference frame, in any system with several correlated observations, that is false: somebody knows something extra. This part asks what that knowledge is worth, and — the surprising part — *where* it has to sit to be worth anything.
-
-- **Believing encoder-only side information reduces the rate.** It does not, when the distortion depends only on $(x,\hat x)$: $R_{\mathrm{enc}}(D) = R(D)$ exactly. The "send only the innovation" argument fails because the decoder cannot add the predictable part back.
-- **Mixing up the source and channel versions of the asymmetry.** In *source* coding, side information at the decoder helps and at the encoder does not. In *channel* coding with state, the reverse holds: state at the transmitter is worth a great deal (dirty-paper coding). Quoting one asymmetry for the other reverses the conclusion.
-- **Assuming $R_{\mathrm{WZ}}(D) = R_{X\mid Y}(D)$ in general.** It holds for the quadratic-Gaussian source and a few others. For a binary source under Hamming distortion there is a strict gap at every $0 < D < D_{\max}$.
-- **Forgetting that the reconstruction may depend on the side information.** The Wyner–Ziv reproduction is $\hat x(u,y)$, a function of *both*. A codec that uses $Y$ only to decode the bin index, and not again at reconstruction, leaves performance on the table.
-- **Assuming every source is successively refinable.** Gaussian and Bernoulli sources are; the general condition is the Equitz–Cover Markov chain, and sources failing it pay a real penalty for a scalable bitstream.
-- **Treating open problems as solved.** The general multiple-description and Heegard–Berger regions are not known. An inner bound from quantize-and-bin is not a characterization.
-
-The Wyner–Ziv problem is the one configuration of the four whose answer is not a rephrasing of the ordinary theory. It has its own auxiliary variable, its own achievability construction, and a genuinely surprising special case.
-
-- **Sending the quantization index instead of the bin index.** That costs $I(X;U)$ rather than $I(X;U\mid Y)$ — in the Gaussian example above, $1.5$ bits instead of $0.87$. Binning is the entire saving.
-- **Dropping the Markov constraint $U - X - Y$.** Without it the minimum collapses to the conditional rate–distortion function. The constraint is the encoder's blindness, expressed in symbols.
-- **Reconstructing from $U$ alone.** The optimal reproduction is $\hat x(u,y)$; using $Y$ only to resolve the bin and then ignoring it at reconstruction time loses distortion for free.
-- **Generalizing the no-rate-loss result.** It is a theorem about the quadratic-Gaussian source. Under Hamming distortion on a binary source the gap is strictly positive for every interior $D$.
-- **Assuming the auxiliary alphabet must be large.** $|\mathcal{U}|\le|\mathcal{X}|+1$ always suffices, which is what makes numerical computation of $R_{\mathrm{WZ}}$ possible at all.
-- **Expecting practical distributed video codecs to hit the bound.** Real side information is neither memoryless nor of known correlation, the correlation must be estimated online, and blocklengths are short. The theorem is the benchmark, not the achieved performance.
-
-The last problem in the chapter is the lossless one, and it is placed last rather than first because its solution is the binning construction we have just built. Slepian and Wolf proved it in 1973; Wyner and Ziv's lossy version came three years later and is the theorem above.
-
-- **Believing separate encoders must pay a penalty.** The achievable sum rate is exactly $H(X,Y)$, the same as joint encoding. Only the *individual* rates carry extra constraints, which is what makes the region a pentagon rather than a half-plane.
-- **Reading "each encoder needs only $H(X\mid Y)$" as a rate pair.** The point $(H(X\mid Y), H(Y\mid X))$ is *not* achievable unless $X$ and $Y$ are independent: its sum is $H(X,Y) - I(X;Y)$, below the sum-rate bound.
-- **Confusing Slepian–Wolf with Wyner–Ziv.** Slepian–Wolf is lossless and both sources are recovered; Wyner–Ziv is lossy and the side information is never reconstructed, only used.
-- **Forgetting that the binning is designed for a known $p(x,y)$.** In practice the correlation must be estimated, and a mismatch causes decoding failure rather than graceful degradation. Universal and rateless (feedback-driven) schemes exist for this reason.
-- **Assuming syndrome coding handles every correlation.** It is exactly right when the correlation is a binary symmetric "virtual channel". A general $p(x,y)$ needs general binning, typically graph-based codes over larger alphabets.
-- **Thinking the sources must be binary or even i.i.d.** The theorem holds for any discrete memoryless joint distribution, and extends to stationary ergodic sources with $H$ replaced by entropy rates.
