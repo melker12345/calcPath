@@ -6,306 +6,713 @@ title: Network Coding and Common Randomness
 
 Mixing packets inside the network instead of forwarding them, and distilling shared secrecy from correlated observations.
 
-## Store-and-Forward vs Network Coding
+## Routing, Coding, and What a Network Can Carry
 
 <!-- section: store-forward-vs-nc -->
 
-Under pure routing, each edge carries a copy of some source packet (or a duplicate). The max-flow min-cut theorem gives the maximum rate from one source to one sink, but for multiple sinks the routing rate may be strictly less than the cut value.
+A communication network is a directed graph whose edges are pipes of bounded capacity. The question this chapter opens with is deceptively simple: given the graph, how much information can the source push to its destinations? For a single destination the answer has been known since 1956 and is purely combinatorial. For several destinations wanting the *same* data, the combinatorial answer is still right — but only if the interior nodes are allowed to compute, not merely to copy.
 
-:::definition[Network coding]{#network-coding}
-Under network coding, an edge may carry a function — typically a linear combination over a finite field — of several packets, rather than a copy of one of them.
+:::definition[Network]{#network-model}
+A **network** is a finite directed acyclic multigraph $G = (V, E)$ together with a source $s \in V$ and a set of sinks $T \subseteq V \setminus \{s\}$. Each edge $e$ has capacity $1$: in one use of the network it carries a single symbol of the alphabet $\mathbb{F}_q$. Unequal capacities are modelled by parallel edges.
 :::
 
-This 'mixing' lets information flow more efficiently to multiple destinations that need different subsets of the data.
+The source holds a message $x = (x_1,\dots,x_h) \in \mathbb{F}_q^h$; the number $h$ is the **rate**. Each node computes the symbol it puts on each of its outgoing edges from the symbols arriving on its incoming edges (and, at $s$, from $x$). Every sink must reconstruct all of $x$. What distinguishes the two regimes is the class of functions the interior nodes are permitted to use.
+
+:::definition[Routing solution]{#routing-solution}
+A **routing** (store-and-forward) solution is one in which the symbol placed on each outgoing edge is a *copy* of the symbol on some incoming edge — or, at the source, a copy of some $x_i$. Interior nodes may duplicate and drop, never combine.
+:::
+
+:::definition[Network code]{#network-code}
+A **network code** allows each node $v$ to place on an outgoing edge $e$ an arbitrary function
+
+$$y_e = \varphi_e\bigl(y_{e_1},\dots,y_{e_d}\bigr)$$
+
+of the symbols on the edges $e_1,\dots,e_d$ entering $v$. The code is **linear** if every $\varphi_e$ is an $\mathbb{F}_q$-linear map. A code is a **solution at rate $h$** if every sink can recover $x$ from the symbols on its incoming edges.
+:::
+
+Routing is the special case in which each $\varphi_e$ is a coordinate projection. So coding can never do worse; the content of the chapter is that it can do strictly better, and exactly how much better.
+
+The ceiling on both regimes is a cut. A **cut** separating $s$ from a sink $t$ is a set $C \subseteq E$ whose removal destroys every directed $s \to t$ path, and $\mathrm{mincut}(s,t)$ is the least cardinality of such a set.
+
+:::theorem[Max-flow min-cut]{#max-flow-min-cut}
+In a network with unit-capacity edges, the maximum number of edge-disjoint directed paths from $s$ to $t$ equals $\mathrm{mincut}(s,t)$.
+:::
+
+:::proof
+Any family of edge-disjoint $s \to t$ paths uses at least one edge of every cut, and no two paths share an edge, so the number of paths is at most $|C|$ for every cut $C$: the maximum is at most the minimum.
+
+For the reverse, run the augmenting-path algorithm. Start with the zero flow and repeatedly search the residual graph for a directed $s \to t$ path, pushing one unit along it. Each augmentation raises the integral flow value by $1$ and the value never exceeds $|E|$, so the process halts. At termination let $S$ be the set of vertices reachable from $s$ in the residual graph; then $t \notin S$. Every edge from $S$ to $V\setminus S$ is saturated and every edge from $V \setminus S$ back into $S$ carries no flow, so the flow value equals the number of edges leaving $S$ — and those edges form a cut. Hence some cut has size equal to the flow value. Finally an integral unit-capacity flow of value $f$ decomposes into $f$ edge-disjoint $s \to t$ paths: follow saturated edges forward from $s$ until reaching $t$, delete that path, and induct on $f$.
+:::
+
+:::proposition[The cut bound holds for any code]{#cut-bound}
+Let a network code (linear or not) deliver $x \in \mathbb{F}_q^h$ to a sink $t$ with zero error, and let $C$ be any cut separating $s$ from $t$. Then $h \le |C|$.
+:::
+
+:::proof
+Give $x$ the uniform distribution on $\mathbb{F}_q^h$, so $H(x) = h\log q$. Because the graph is acyclic and every $s \to t$ path crosses $C$, every symbol arriving at $t$ is a deterministic function of the tuple $y_C$ of symbols carried on $C$. Zero-error decoding gives $H(x \mid y_C) = 0$, whence
+
+$$h \log q = H(x) = I(x; y_C) \le H(y_C) \le |C| \log q,$$
+
+since each of the $|C|$ symbols takes at most $q$ values. Divide by $\log q$.
+:::
+
+:::corollary[Unicast needs no coding]{#unicast-no-coding}
+If there is a single sink $t$, routing achieves rate $h = \mathrm{mincut}(s,t)$, and no network code achieves more.
+:::
+
+:::proof
+Achievability: take $h$ edge-disjoint paths from Theorem *Max-flow min-cut* and send $x_i$ along the $i$-th path, which is a routing solution. Optimality is Proposition *The cut bound holds for any code*, whose proof assumed nothing about the functions $\varphi_e$.
+:::
+
+So for one sink the story is closed, and coding is pointless. With two sinks the cut bound reads $h \le \min_{t\in T}\mathrm{mincut}(s,t)$, and the live question is whether both sinks can be served *simultaneously* at that rate. Routing must physically divide each edge between the two demands; coding need not, because one coded symbol can be useful to two receivers at once.
 
 :::intuition
-Routing is like delivering whole letters or whole boxes; each truck on a road carries one intact box.
-
-Network coding is like allowing the post office to open the boxes, mix the contents (say take the XOR of two letters), and send the mixture onward. The recipients, having side information, can still recover everything.
+Routing treats a packet as a physical object: a truck on a road carries one intact crate, and a crate delivered to one warehouse is not delivered to the other. Coding treats a packet as a *constraint*. Broadcasting the single equation $a \oplus b = 1$ tells a listener who already knows $a$ the value of $b$, and tells a listener who already knows $b$ the value of $a$ — one transmission, two different pieces of news, because the two listeners bring different side information to the same equation.
 :::
 
-:::example
-Take the setup where two packets $a$ and $b$ must each reach two sinks $T_1$ and $T_2$, and every route from a source to the "far" sink is forced through a single shared bottleneck edge of capacity $1$ packet per use.
+:::example[One transmission for two receivers]
+A satellite must deliver bits $a$ and $b$ to two ground stations. Station $1$ already holds $b$ and needs $a$; station $2$ already holds $a$ and needs $b$. Each broadcast reaches both stations and carries one bit. How few broadcasts suffice, and is that optimal?
 :::
 
 :::solution
-**What routing can do.** The bottleneck can carry only one packet per use. To route both $a$ and $b$ across it takes *two* uses, so in a single use routing delivers at most $1$ packet of "cross" traffic. One sink ends up missing its far packet, capping the achievable rate.
-**Step 2 — What coding can do.** Send the single combined packet $a \oplus b$ (bitwise XOR over $\mathrm{GF}(2)$) across the bottleneck. It still occupies exactly $1$ unit of capacity — no more bits than a plain packet.
-**Step 3 — Recovery at each sink.** $T_1$ already holds $a$ from a direct path; it computes $b = a \oplus (a \oplus b)$. $T_2$ already holds $b$; it computes $a = b \oplus (a \oplus b)$. Both sinks now have both packets.
-**Step 4 — Count the gain.** Routing delivered $1$ useful packet-worth of cross traffic per bottleneck use; coding delivered $2$ (one to each sink) for the same $1$ unit of capacity — a factor-of-2 throughput gain on the bottleneck.
-**Sanity check:** $a \oplus (a \oplus b) = (a \oplus a) \oplus b = 0 \oplus b = b$. ✓ The XOR is its own inverse, which is exactly why one coded transmission serves both recipients.
+One broadcast suffices: send $a \oplus b$. Station $1$ computes $(a\oplus b)\oplus b = a$, and station $2$ computes $(a\oplus b)\oplus a = b$.
+
+It is optimal, because zero broadcasts cannot work: with $a$ uniform and independent of station $1$'s side information $b$, that station has $H(a \mid b) = 1$ bit of uncertainty about $a$ and receives nothing to remove it. So the minimum is exactly $1$. A routing satellite, permitted only to forward $a$ or $b$ verbatim, needs $2$ broadcasts, since a broadcast of $a$ alone leaves station $2$ knowing nothing new. The coding gain is a clean factor of $2$, obtained with nothing more than a XOR.
+
+This is the smallest instance of *index coding*, and it already shows where gains come from: the useful quantity is not "how many packets moved" but "how much uncertainty was removed at each receiver". □
 :::
 
-## The Butterfly Network Example
+:::pitfall
+The gain is a property of the topology and the demands, not of coding as such. On a directed tree, or in any single-sink problem, Corollary *Unicast needs no coding* says routing is already optimal and coding buys exactly nothing. A claim that "network coding doubles throughput" is a claim about a particular graph, never a general theorem.
+:::
+
+## The Butterfly Network, Worked in Full
 
 <!-- section: butterfly -->
 
-The canonical butterfly: sources S1 and S2 each produce one packet (say bits a and b). Two edge-disjoint paths from S1 to T1 and from S2 to T2, plus a cross path through a central node C that has only unit capacity to both T1 and T2.
+The butterfly is the smallest network on which coding beats routing, and it is worth doing completely: the coding scheme, the proof that it is optimal, and the proof that routing cannot match it. Nothing in it is asymptotic or approximate.
 
-With routing, C can forward either a or b but not both in one use; at least one sink gets only rate 1/2 or one message is lost.
+:::definition[The butterfly network]{#butterfly-network}
+The **butterfly** has vertices $s, u_1, u_2, w, z, t_1, t_2$ and nine unit-capacity directed edges
 
-With network coding, C forwards a+b (over GF(2)). T1 receives a (direct) and a+b, recovers b = a + (a+b). T2 symmetrically recovers a. Both sinks get both packets at rate 1 each; the bottleneck carried 'one packet worth' of information that served both.
+$$s \to u_1,\quad s \to u_2,\quad u_1 \to t_1,\quad u_2 \to t_2,\quad u_1 \to w,\quad u_2 \to w,\quad w \to z,\quad z \to t_1,\quad z \to t_2 .$$
 
-:::intuition
-The middle link sends a 'mixture' a+b. The guy who already has a can subtract to get b; the guy who has b can subtract to get a.
-
-One transmission on the scarce middle link satisfies the missing piece for two different people.
+The source is $s$; the sinks $t_1$ and $t_2$ both demand the whole message.
 :::
 
-:::example
-Packets $a$ from $S_1$, $b$ from $S_2$; the middle node $C$ computes and sends $a \oplus b$ over $\mathrm{GF}(2)$.
+:::figure[The butterfly. Each sink has two edge-disjoint paths from $s$, so the cut bound allows rate $2$; but every path to the "far" sink is forced through the single bottleneck $w \to z$, drawn in orange, which the two sinks must share.]{#butterfly-figure}
+{
+  "type": "plot",
+  "x": [-0.8, 6.8], "y": [-1.0, 6.6],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "point", "at": [3.0, 6.0] },
+    { "kind": "point", "at": [1.0, 4.4] },
+    { "kind": "point", "at": [5.0, 4.4] },
+    { "kind": "point", "at": [3.0, 3.0] },
+    { "kind": "point", "at": [3.0, 1.6] },
+    { "kind": "point", "at": [1.0, 0.0], "tone": "result" },
+    { "kind": "point", "at": [5.0, 0.0], "tone": "result" },
+    { "kind": "arrow", "from": [2.85, 5.85], "to": [1.15, 4.55], "tone": "muted" },
+    { "kind": "arrow", "from": [3.15, 5.85], "to": [4.85, 4.55], "tone": "muted" },
+    { "kind": "arrow", "from": [1.0, 4.25], "to": [1.0, 0.18], "tone": "muted" },
+    { "kind": "arrow", "from": [5.0, 4.25], "to": [5.0, 0.18], "tone": "muted" },
+    { "kind": "arrow", "from": [1.15, 4.28], "to": [2.85, 3.12], "tone": "muted" },
+    { "kind": "arrow", "from": [4.85, 4.28], "to": [3.15, 3.12], "tone": "muted" },
+    { "kind": "arrow", "from": [3.0, 2.85], "to": [3.0, 1.75], "tone": "result" },
+    { "kind": "arrow", "from": [2.85, 1.45], "to": [1.15, 0.15], "tone": "muted" },
+    { "kind": "arrow", "from": [3.15, 1.45], "to": [4.85, 0.15], "tone": "muted" },
+    { "kind": "text", "at": [3.0, 6.35], "text": "s" },
+    { "kind": "text", "at": [0.35, 4.45], "text": "u1" },
+    { "kind": "text", "at": [5.65, 4.45], "text": "u2" },
+    { "kind": "text", "at": [3.45, 3.05], "text": "w" },
+    { "kind": "text", "at": [3.45, 1.6], "text": "z" },
+    { "kind": "text", "at": [1.0, -0.6], "text": "t1" },
+    { "kind": "text", "at": [5.0, -0.6], "text": "t2" },
+    { "kind": "text", "at": [1.75, 5.55], "text": "a" },
+    { "kind": "text", "at": [4.25, 5.55], "text": "b" },
+    { "kind": "text", "at": [0.25, 2.2], "text": "a" },
+    { "kind": "text", "at": [5.75, 2.2], "text": "b" },
+    { "kind": "text", "at": [4.7, 2.35], "text": "a+b" }
+  ]
+}
+:::
+
+Both min-cuts equal $2$: the paths $s\,u_1\,t_1$ and $s\,u_2\,w\,z\,t_1$ are edge-disjoint and reach $t_1$, and symmetrically for $t_2$, so Theorem *Max-flow min-cut* gives $\mathrm{mincut}(s,t_1) = \mathrm{mincut}(s,t_2) = 2$. Proposition *The cut bound holds for any code* therefore caps every scheme, coded or not, at rate $2$.
+
+:::theorem[The butterfly has a rate-2 linear code over $\mathbb{F}_2$]{#butterfly-code}
+With $h = 2$ and message $(a,b) \in \mathbb{F}_2^2$, the assignment
+
+$$y_{su_1} = y_{u_1t_1} = y_{u_1w} = a, \qquad y_{su_2} = y_{u_2t_2} = y_{u_2w} = b, \qquad y_{wz} = y_{zt_1} = y_{zt_2} = a \oplus b$$
+
+is a linear network code under which both sinks recover $(a,b)$. It meets the cut bound, hence is optimal.
+:::
+
+:::proof
+Each assignment is a linear function of the symbols entering the node in question: $u_1, u_2, z$ relay, and $w$ receives $a$ and $b$ and outputs their sum, so this is a legal linear network code.
+
+Sink $t_1$ receives the pair $(a,\ a\oplus b)$, whose global encoding vectors are the rows of
+
+$$G_1 = \begin{pmatrix} 1 & 0 \\ 1 & 1\end{pmatrix}, \qquad \det G_1 = 1 \neq 0 \text{ in } \mathbb{F}_2 .$$
+
+Hence $t_1$ inverts and obtains $(a,b)$; explicitly $b = a \oplus (a \oplus b)$. Sink $t_2$ receives $(b,\ a\oplus b)$ with matrix $G_2 = \begin{pmatrix} 0 & 1 \\ 1 & 1 \end{pmatrix}$, again of determinant $1$, and recovers $a = b \oplus (a\oplus b)$. Both sinks decode at rate $2$, and rate $2$ cannot be exceeded, by the cut bound.
+:::
+
+Now the other half, which is usually asserted rather than argued: routing on the butterfly is strictly worse, *even* when time-sharing, fractional rates and arbitrarily long blocks are allowed.
+
+:::theorem[Routing on the butterfly is capped at 3/2]{#butterfly-routing-bound}
+Suppose a routing solution delivers $k$ distinct packets to both sinks using $n$ uses of the butterfly, so each edge carries at most $n$ packets. Then $k/n \le 3/2$, and the value $3/2$ is attained.
+:::
+
+:::proof
+Let $P_1$ be the set of packets carried on $s \to u_1$ over the $n$ uses, $P_2$ the set carried on $s\to u_2$, and $M$ the set carried on $w \to z$. Each has at most $n$ elements, since each edge is used at most $n$ times and — this is exactly where the routing hypothesis enters — each use carries a verbatim packet rather than a mixture.
+
+Node $u_1$ sees only what arrives on $s \to u_1$, so everything sent on $u_1 \to t_1$ lies in $P_1$, and everything reaching $t_1$ through $z$ lies in $M$. Since $t_1$ must obtain all $k$ packets,
+
+$$[k] \subseteq P_1 \cup M, \qquad\text{and symmetrically}\qquad [k] \subseteq P_2 \cup M .$$
+
+Consequently $[k]\setminus M \subseteq P_1 \cap P_2$, so writing $m = |M|$ we get $|P_1 \cap P_2| \ge k - m$. Every packet must also leave the source on one of the two edges out of $s$, so $|P_1 \cup P_2| \ge k$. Inclusion–exclusion now gives
+
+$$2n \ \ge\ |P_1| + |P_2| \;=\; |P_1 \cup P_2| + |P_1\cap P_2| \ \ge\ k + (k-m) \;=\; 2k-m .$$
+
+Since $m \le n$, this yields $2k \le 2n + m \le 3n$, that is $k/n \le 3/2$.
+
+For attainment take $n=2$ and $k=3$ with packets $a,b,c$: put $P_1 = \{a,c\}$, $P_2 = \{b,c\}$ and $M = \{a,b\}$, with $u_1$ forwarding $a$ to $w$ and $u_2$ forwarding $b$. Then $t_1$ receives $\{a,c\}$ directly and $\{b\}$ through $z$, while $t_2$ receives $\{b,c\}$ directly and $\{a\}$ through $z$. No edge is used more than twice and both sinks hold $\{a,b,c\}$, so the rate is $3/2$.
+:::
+
+:::example[Reading the gain off the two theorems]
+Quantify the end-to-end throughput advantage of coding over routing on the butterfly, and identify the single edge responsible for it.
 :::
 
 :::solution
-**Direct paths.** $T_1$ receives $a$ over its dedicated direct edge; $T_2$ receives $b$ over its direct edge.
-**Step 2 — Coded path.** $C$ receives both $a$ and $b$, forms $a \oplus b$, and forwards this single packet down the shared branch that reaches *both* sinks.
-**Step 3 — Decode.** $T_1$: $a \oplus (a \oplus b) = b$. $T_2$: $b \oplus (a \oplus b) = a$. Each sink now has $\{a,b\}$, i.e. rate $1$ for $a$ and rate $1$ for $b$.
-**Step 4 — Edge accounting.** Number the unit-capacity edges: $S_1\!\to\!C$, $S_2\!\to\!C$, the coded edge $C\!\to\!(T_1,T_2)$, and the two direct edges $S_1\!\to\!T_1$, $S_2\!\to\!T_2$ — five edge-uses total, each carrying one packet. The min-cut to each sink is $2$, and coding achieves rate $2$ (both packets) at *every* sink simultaneously, which pure routing cannot on this topology.
-**Sanity check:** count what each sink knows — $T_1$ holds $\{a, a\oplus b\}$, a full-rank pair over $\mathrm{GF}(2)$, so it inverts to $\{a,b\}$; symmetrically for $T_2$. ✓
+Coding attains $2$ packets per use at each sink by Theorem *The butterfly has a rate-2 linear code over $\mathbb{F}_2$*, and routing attains at most $3/2$ by Theorem *Routing on the butterfly is capped at 3/2*. The ratio is
+
+$$\frac{2}{3/2} = \frac{4}{3} \approx 1.33 .$$
+
+The responsible edge is $w \to z$: it is the only edge lying on a path to *both* sinks, and it is the only place where the two proofs part company. The routing bound had to spend the quantity $m = |M| \le n$ once, because a forwarded packet serves whichever single sink was missing it; the coded symbol $a \oplus b$ serves both sinks at the same time.
+
+Note what the factor $4/3$ is not. The often-quoted "factor $2$" is the ratio measured *on the bottleneck edge alone* — two packets' worth of demand met per use instead of one — not the ratio of end-to-end rates, which is $4/3$. □
 :::
 
-## Linear Network Coding and Throughput
+:::intuition
+Think of the two sinks as two people each missing one half of a jigsaw. The bottleneck can hand over one piece. Under routing you must decide *whose* piece it is, and the other person waits. Under coding you hand over the difference of the two pieces, which is the missing half for both of them at once, because each already holds the other half to subtract.
+:::
+
+:::pitfall
+The routing bound above already allows fractional and time-shared strategies; that is what "$k$ packets in $n$ uses" means. A frequent error is to argue "routing gives rate $1$ because the bottleneck carries one packet" and conclude a factor-$2$ end-to-end gain. The honest routing optimum is $3/2$, attained by the $n=2$, $k=3$ schedule in the proof, and the honest gain is $4/3$.
+:::
+
+## Linear Network Coding and the Multicast Theorem
 
 <!-- section: linear-nc -->
 
-:::theorem[Multicast capacity via linear network coding]{#multicast-capacity}
-For multicast — one source and many sinks *all wanting the same data* — the achievable rate is exactly the minimum over sinks of that sink's individual max-flow from the source. Linear network coding over a sufficiently large field achieves this common min-cut rate to every sink simultaneously, something routing cannot always do.
+The butterfly suggests that linear combinations are enough. The remarkable fact, due to Li, Yeung and Cai and recast algebraically by Koetter and Médard, is that they always are — for multicast, and over a large enough field.
+
+:::definition[Linear network code and global encoding vectors]{#global-encoding-vector}
+Fix a field $\mathbb{F}_q$ and rate $h$. A **linear network code** assigns to each edge $e$ leaving a node $v$ a coefficient $\beta_{e',e} \in \mathbb{F}_q$ for each edge $e'$ entering $v$ (and, at the source, a coefficient for each message symbol), so that
+
+$$y_e = \sum_{e' \to v} \beta_{e',e}\, y_{e'} .$$
+
+By induction along the acyclic order, $y_e = \langle g_e, x\rangle$ for a unique $g_e \in \mathbb{F}_q^h$, the **global encoding vector** of $e$: the recipe saying how much of each source symbol the edge carries.
 :::
 
-The clean "min of max-flows" characterization is special to single-source multicast; general multi-source or multi-sink demands need not have a simple cut-based capacity.
+:::lemma[Decoding is a rank condition]{#rank-condition}
+A sink $t$ with incoming edges $e_1,\dots,e_d$ can recover every $x \in \mathbb{F}_q^h$ from $(y_{e_1},\dots,y_{e_d})$ if and only if the matrix $G_t$ whose rows are $g_{e_1},\dots,g_{e_d}$ has rank $h$.
+:::
 
-Each edge carries a linear combination of the source packets; the coefficients can be chosen centrally (algebraic NC) or randomly (random linear NC, with high probability invertible at the sinks when field is large).
+:::proof
+The received tuple is $G_t x$. The map $x \mapsto G_t x$ is injective on $\mathbb{F}_q^h$ exactly when $\ker G_t = \{0\}$, that is when $\operatorname{rank} G_t = h$; and an injective linear map is inverted by any left inverse of $G_t$, which the sink can compute once it knows the vectors $g_{e_i}$.
+:::
 
-Decoding at a sink reduces to solving a linear system whose matrix is the product of the local coding matrices along the paths; the sink needs the matrix to be full rank.
+So the entire design problem is: choose the local coefficients $\beta$ so that $\operatorname{rank} G_t = h$ *for every sink simultaneously*. Collecting the $\beta$'s into a vector of indeterminates makes each entry of $G_t$ a polynomial, and the problem becomes one about polynomials being nonzero.
+
+:::lemma[Transfer matrices are polynomial]{#transfer-matrix}
+Order the edges consistently with the acyclic order and let $F$ be the matrix with $F_{e',e} = \beta_{e',e}$ when $e'$ enters the tail of $e$ and $0$ otherwise, let $A$ record the source coefficients and $B_t$ select the edges entering $t$. Then $F$ is strictly upper triangular, $(I-F)$ is invertible, and
+
+$$G_t^{\mathsf T} = A\,(I-F)^{-1}B_t^{\mathsf T},$$
+
+so every entry of $G_t$ is a polynomial in the variables $\beta$ with coefficients in $\mathbb{F}_q$, of degree at most $1$ in each variable.
+:::
+
+:::proof
+Strict upper triangularity is the acyclicity of $G$ in the chosen order, so $F^{|E|} = 0$ and $(I-F)^{-1} = I + F + F^2 + \cdots + F^{|E|-1}$, a polynomial in $F$. The $k$-th term collects the products of coefficients along the directed paths of length $k$, and a path visits each edge at most once, so each variable appears to degree at most $1$ in each such product.
+:::
+
+:::theorem[Li–Yeung–Cai / Koetter–Médard multicast theorem]{#multicast-theorem}
+Let $G$ be an acyclic network with source $s$ and sink set $T$, and let
+
+$$h = \min_{t \in T} \mathrm{mincut}(s,t).$$
+
+Then for every field $\mathbb{F}_q$ with $q > |T|$ there is a linear network code over $\mathbb{F}_q$ achieving rate $h$ to every sink simultaneously. No scheme of any kind achieves more.
+:::
+
+:::proof
+The converse is Proposition *The cut bound holds for any code* applied to the sink attaining the minimum.
+
+For achievability, treat the local coefficients as indeterminates and set $P(\beta) = \prod_{t \in T} \det M_t(\beta)$, where $M_t$ is any $h \times h$ submatrix of $G_t$ chosen as follows. Fix $t$; by Theorem *Max-flow min-cut* there are $\mathrm{mincut}(s,t) \ge h$ edge-disjoint paths from $s$ to $t$, and we may pick $h$ of them and let $M_t$ be the submatrix indexed by their last edges. Assigning $\beta$ so as to route $x_i$ along the $i$-th of those paths (coefficient $1$ along the path, $0$ elsewhere) makes $M_t$ the identity, so $\det M_t$ is *not* the zero polynomial. A product of finitely many nonzero polynomials over a field is nonzero, so $P \not\equiv 0$.
+
+By Lemma *Transfer matrices are polynomial*, each $\det M_t$ has degree at most $1$ in each variable, hence $P$ has degree at most $|T|$ in each variable. Theorem *Schwartz–Zippel* — in the per-variable form, which is Alon's Combinatorial Nullstellensatz for this case — now guarantees that if $q > |T|$ then some assignment $\beta \in \mathbb{F}_q^{|E|}$ gives $P(\beta) \neq 0$. For that assignment every $\det M_t \ne 0$, so every $G_t$ has rank $h$, and Lemma *Decoding is a rank condition* lets every sink decode.
+:::
+
+:::theorem[Schwartz–Zippel]{#schwartz-zippel}
+Let $P \in \mathbb{F}[\beta_1,\dots,\beta_N]$ be a nonzero polynomial of total degree $d$, and let $S \subseteq \mathbb{F}$ be finite. If $\beta_1,\dots,\beta_N$ are chosen independently and uniformly from $S$, then
+
+$$\Pr\bigl[P(\beta_1,\dots,\beta_N) = 0\bigr] \ \le\ \frac{d}{|S|} .$$
+:::
+
+:::proof
+Induct on $N$. For $N=1$ a nonzero univariate polynomial of degree $d$ has at most $d$ roots, so the probability is at most $d/|S|$.
+
+For $N > 1$, write $P = \sum_{j=0}^{k} \beta_N^{\,j} Q_j(\beta_1,\dots,\beta_{N-1})$ with $Q_k \not\equiv 0$, where $k$ is the degree of $P$ in $\beta_N$. Then $\deg Q_k \le d-k$. Let $E$ be the event $Q_k(\beta_1,\dots,\beta_{N-1}) = 0$. By induction $\Pr[E] \le (d-k)/|S|$. Conditioned on the complement of $E$, the polynomial $P$ becomes a nonzero univariate polynomial in $\beta_N$ of degree $k$, so it vanishes with probability at most $k/|S|$. Hence
+
+$$\Pr[P = 0] \le \Pr[E] + \Pr[P=0 \mid E^{c}] \le \frac{d-k}{|S|} + \frac{k}{|S|} = \frac{d}{|S|}. \qquad$$
+
+The per-variable refinement used above is the same induction carried out with the degree in each variable separately: if $\deg_{\beta_i} P \le d_i$ and $|S| > \max_i d_i$, then $P$ does not vanish identically on $S^N$.
+:::
+
+:::corollary[Random linear network coding succeeds]{#rlnc-success}
+Choose every local coefficient independently and uniformly from $\mathbb{F}_q$. Then all $|T|$ sinks can decode with probability at least
+
+$$1 - \frac{|T|\,|E|}{q}.$$
+:::
+
+:::proof
+Apply Theorem *Schwartz–Zippel* to $P = \prod_{t}\det M_t$ with $S = \mathbb{F}_q$. By Lemma *Transfer matrices are polynomial* each $\det M_t$ has degree at most $1$ in each of the at most $|E|$ variables, so $\deg \det M_t \le |E|$ and $\deg P \le |T||E|$. Since $P \not\equiv 0$ by the proof of Theorem *Li–Yeung–Cai / Koetter–Médard multicast theorem*, the failure probability $\Pr[P = 0]$ is at most $|T||E|/q$.
+:::
+
+The bound is crude but it says the right thing: failure decays like $1/q$, so doubling the symbol size squares the reliability. A second, sharper estimate applies when the sink simply collects coded packets carrying independent uniform vectors, as in practical generation-based schemes.
+
+:::proposition[Full rank of a uniform random matrix over $\mathbb{F}_q$]{#random-matrix-rank}
+Let $R$ be a $k \times k$ matrix with entries independent and uniform on $\mathbb{F}_q$. Then
+
+$$\Pr[\operatorname{rank} R = k] \;=\; \prod_{i=0}^{k-1}\Bigl(1 - q^{\,i-k}\Bigr) \;>\; 1 - \frac{1}{q-1}.$$
+:::
+
+:::proof
+Build $R$ row by row. Given that the first $i$ rows are independent, they span a subspace of size $q^{i}$, and the next row is uniform on $\mathbb{F}_q^{k}$, so it lands outside that span with probability $(q^k - q^i)/q^k = 1 - q^{i-k}$. Multiplying over $i = 0,\dots,k-1$ gives the product.
+
+For the bound, $\prod_i (1-a_i) \ge 1 - \sum_i a_i$ for $a_i \in [0,1]$ (induction on the number of factors), so the product is at least
+
+$$1 - \sum_{i=0}^{k-1} q^{\,i-k} = 1 - \bigl(q^{-1}+q^{-2}+\cdots+q^{-k}\bigr) > 1 - \sum_{j\ge 1} q^{-j} = 1 - \frac{1}{q-1}. \qquad$$
+:::
 
 :::intuition
-Each packet on the wire is a 'recipe' — a vector of coefficients telling how much of each original source packet is mixed in.
-
-At the destination you collect enough independent recipes; linear algebra (Gaussian elimination) recovers the original ingredients.
+Every coded packet on the wire is a *recipe*: a vector of coefficients saying how much of each source packet went in. A sink is a cook who must reverse-engineer the ingredients, and can do so as soon as it has collected $h$ recipes that are genuinely different — linearly independent. A big field is simply a large supply of distinct recipes, which makes an accidental repetition unlikely.
 :::
 
-:::example[(small, over $\mathrm{GF}(2)$):]
-Source has $k = 2$ packets $a, b$. A sink collects two coded packets whose global encoding vectors are $v_1 = (1,1)$ (payload $a \oplus b$) and $v_2 = (0,1)$ (payload $b$).
-:::
-
-:::solution
-**Form the decoding matrix.** Stack the vectors as rows: $G = \begin{pmatrix} 1 & 1 \\ 0 & 1 \end{pmatrix}$, and the received payloads as $\begin{pmatrix} a\oplus b \\ b \end{pmatrix} = G \begin{pmatrix} a \\ b \end{pmatrix}$.
-**Step 2 — Check invertibility.** $\det G = (1)(1) - (1)(0) = 1 \ne 0$ over $\mathrm{GF}(2)$, so $G$ is full rank and invertible.
-**Step 3 — Invert.** Over $\mathrm{GF}(2)$, $G^{-1} = \begin{pmatrix} 1 & 1 \\ 0 & 1 \end{pmatrix}$ (self-inverse here). Then $\begin{pmatrix} a \\ b \end{pmatrix} = G^{-1}\begin{pmatrix} a\oplus b \\ b \end{pmatrix}$, i.e. $b = b$ and $a = (a\oplus b)\oplus b = a$. ✓
-**Step 4 — Sanity check.** $G G^{-1} = \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix}$ over $\mathrm{GF}(2)$ (recall $1+1 = 0$), confirming the inverse.
-:::
-
-:::example[(why a large field helps):]
-Now a generation of $k = 8$ source packets over $\mathrm{GF}(256)$ with random coefficients. The sink can decode iff the $8$ collected global vectors are linearly independent in $\mathbb{F}_q^k$ with $q = 256$.
+:::example[Decoding a generation of two over $\mathbb{F}_2$]
+A source has $k=2$ packets $a,b$. A sink collects two coded packets with global encoding vectors $v_1 = (1,1)$ (payload $a \oplus b$) and $v_2 = (0,1)$ (payload $b$). Recover $a$ and $b$.
 :::
 
 :::solution
-**Count independent choices.** The first vector must be nonzero: probability $\dfrac{q^k - 1}{q^k}$. The $i$-th vector must avoid the span of the previous $i-1$ (a subspace of size $q^{i-1}$): probability $\dfrac{q^k - q^{i-1}}{q^k}$.
-**Step 2 — Multiply.** $\Pr[\text{full rank}] = \displaystyle\prod_{i=0}^{k-1}\Big(1 - q^{\,i-k}\Big) = \prod_{i=0}^{7}\big(1 - 256^{\,i-8}\big)$.
-**Step 3 — Evaluate.** The dominant loss term is the last factor $1 - 256^{-1} \approx 0.99609$; the product over all eight factors is $\approx 0.99608$, so failure probability $\approx 0.0039$, well under $1\%$.
-**Sanity check / scaling:** the failure probability is dominated by $q^{-(q-k+1)} \approx q^{-1} = 1/256$; pushing to $\mathrm{GF}(2^{16})$ would drop it to $\approx 1/65536$. This is the precise sense in which "a large enough field" makes random linear network coding succeed with probability $\to 1$.
+Stack the vectors as rows of $G = \begin{pmatrix} 1 & 1 \\ 0 & 1\end{pmatrix}$, so the received payloads are $G(a,b)^{\mathsf T} = (a\oplus b,\ b)^{\mathsf T}$. Since $\det G = 1\cdot 1 - 1 \cdot 0 = 1 \neq 0$ in $\mathbb{F}_2$, Lemma *Decoding is a rank condition* says the sink can decode. Over $\mathbb{F}_2$ this $G$ is its own inverse, so
+
+$$\begin{pmatrix} a \\ b\end{pmatrix} = G^{-1}\begin{pmatrix} a\oplus b \\ b \end{pmatrix} = \begin{pmatrix} (a\oplus b)\oplus b \\ b\end{pmatrix} = \begin{pmatrix} a \\ b \end{pmatrix}. \qquad\square$$
 :::
 
-## The Common Randomness Generation Problem
+:::example[How large must the field be?]
+A generation of $k=8$ packets is coded with independent uniform coefficients over $\mathbb{F}_{256}$, and a sink collects exactly $8$ coded packets. What is the probability it can decode, and how does it change over $\mathbb{F}_{2^{16}}$?
+:::
+
+:::solution
+By Proposition *Full rank of a uniform random matrix over $\mathbb{F}_q$* with $k=8$, $q=256$,
+
+$$\Pr[\text{decode}] = \prod_{i=0}^{7}\bigl(1 - 256^{\,i-8}\bigr).$$
+
+The factors are $1-256^{-8},\dots,1-256^{-1}$; all but the last are within $10^{-4}$ of $1$, so the product is $\approx 1 - 256^{-1} - 256^{-2} \approx 0.99608$, a failure probability of about $0.0039$. The bound in the proposition predicts failure below $1/(q-1) = 1/255 \approx 0.0039$ — here essentially tight, because the last factor dominates.
+
+Over $\mathbb{F}_{2^{16}}$ the same computation gives failure $\approx 2^{-16} \approx 1.5\times 10^{-5}$. So the price of $8$ extra bits per coefficient is a $256$-fold drop in the decoding-failure probability. □
+:::
+
+:::pitfall
+Random linear network coding needs the receiver to *know* the global encoding vectors, which are normally carried in the packet header: $k$ coefficients of $\log_2 q$ bits each. For $k = 32$ over $\mathbb{F}_{256}$ that is $32$ bytes per packet — negligible against a $1500$-byte packet, ruinous against a $64$-byte one. The overhead vanishes asymptotically in the packet length, never in the generation size, which is why deployments keep $k$ small.
+:::
+
+## Common Randomness: The Problem and Its Capacity
 
 <!-- section: cr-problem -->
 
-Two parties, Alice and Bob, observe correlated random variables X and Y (e.g., repeated independent draws from a joint distribution p(x,y), or the inputs and outputs of a noisy channel). They may also have access to a public (authenticated but eavesdropped) communication channel.
+We now change subject from moving information to *sharing* it. Alice observes $X^n$ and Bob observes $Y^n$, drawn i.i.d. from a joint law $p(x,y)$: neither knows the other's sequence, but the two are correlated. They may talk over a public channel that anyone can read. How many bits of *identical* randomness can they end up holding?
 
 :::definition[Common randomness generation]{#common-randomness}
-The goal is to output identical strings $K_A$ and $K_B$ that are (almost) uniformly random and (almost) independent of any side information $Z$ that an eavesdropper may possess.
+A **common-randomness (CR) protocol** of block length $n$ consists of an interactive public transcript $F$ — each message a function of the sender's observation, their local randomness, and the previous messages — together with outputs $K_A = f(X^n, F)$ and $K_B = g(Y^n, F)$ taking values in a finite set $\mathcal{K}$. It achieves CR rate $R$ with communication rate $R_c$ if, for every $\varepsilon > 0$ and all large $n$,
+
+$$\Pr[K_A \ne K_B] \le \varepsilon, \qquad \tfrac1n H(K_A) \ge R - \varepsilon, \qquad \tfrac1n H(F) \le R_c + \varepsilon .$$
 :::
 
-:::theorem[Common-randomness rate with free communication]{#cr-rate}
-When communication is free and unlimited, the maximum rate of common randomness that can be generated is the mutual information
+Two remarks fix the shape of the problem. First, no secrecy is demanded here: an eavesdropper may read $F$ in full. Second, and crucially, the communication must be *rate-limited*, or the question is empty — Alice could simply transmit $n$ fresh fair coin flips and both parties would hold $n$ bits of common randomness having used no correlation at all. The correct question is therefore how much common randomness the pair can hold **in excess of** what was spent describing it.
 
-$$I(X;Y),$$
+:::theorem[Ahlswede–Csiszár converse for common randomness]{#cr-converse}
+Any CR protocol with one-way communication from Alice, in which $F$ is a function of $X^n$ alone, satisfies
 
-or more precisely the supremum of $I(U;V)$ over auxiliaries with the right Markov chains.
+$$\tfrac1n H(K_A) \ \le\ I(X;Y) + \tfrac1n H(F) + \delta_n,$$
+
+where $\delta_n \to 0$ as $\varepsilon \to 0$. In particular the CR rate exceeds the communication rate by at most $I(X;Y)$.
 :::
 
-With rate-limited communication the problem becomes a rate region instead of a single number.
+:::proof
+Write $K = K_A$. Since $\Pr[K \ne K_B] \le \varepsilon$ and $K_B = g(Y^n,F)$, Fano's inequality gives
+
+$$H(K \mid Y^n, F) \le H(K\mid K_B) \le 1 + \varepsilon\log|\mathcal{K}| =: n\delta_n,$$
+
+and $\delta_n \to 0$ because $\log|\mathcal K|$ may be taken $O(n)$. Hence
+
+$$H(K) = I(K; Y^n, F) + H(K \mid Y^n,F) \le I(K;Y^n,F) + n\delta_n .$$
+
+Now $K$ is a function of $(X^n, F)$ and $F$ is a function of $X^n$, so $K$ is a function of $X^n$ and the data processing inequality gives $I(K;Y^n,F) \le I(X^n;Y^n,F)$. Expanding and using $H(F\mid X^n) = 0$,
+
+$$I(X^n;Y^n,F) = I(X^n;Y^n) + I(X^n;F\mid Y^n) \le n\,I(X;Y) + H(F),$$
+
+where $I(X^n;Y^n) = n I(X;Y)$ because the pairs are i.i.d. Dividing by $n$ finishes the argument.
+:::
+
+The matching achievability is the Slepian–Wolf construction, which we state because the argument leans on it by name.
+
+:::theorem[Slepian–Wolf]{#slepian-wolf}
+Let $(X_i,Y_i)$ be i.i.d. $\sim p(x,y)$. If Alice may describe $X^n$ to a decoder that already holds $Y^n$, then any rate $R > H(X \mid Y)$ suffices for the decoder to recover $X^n$ with error probability tending to $0$, and no rate below $H(X\mid Y)$ suffices.
+:::
+
+:::proof
+Sketch — the argument rests on the asymptotic equipartition property and random binning, both developed in the chapters on entropy rates and on distributed source coding. Assign each $x^n$ a uniformly random bin index in $\{1,\dots,2^{nR}\}$ and send the index. The decoder outputs the unique $\tilde x^n$ in the announced bin that is jointly typical with $y^n$. Failure requires either atypicality, whose probability vanishes by the AEP, or a competing sequence in the same bin, whose expected number is at most $2^{n(H(X\mid Y)+\epsilon)}2^{-nR} \to 0$ when $R > H(X\mid Y)$. The converse is the usual entropy bound on the description of $X^n$ given $Y^n$.
+:::
+
+:::corollary[The CR rate of a correlated source]{#cr-rate}
+With one-way communication of rate $R_c = H(X\mid Y)$, Alice and Bob can generate common randomness at rate $H(X)$, so the excess over the communication rate is
+
+$$H(X) - H(X\mid Y) = I(X;Y),$$
+
+which by Theorem *Ahlswede–Csiszár converse for common randomness* is the largest possible excess.
+:::
+
+:::proof
+Alice sends the Slepian–Wolf bin index of $X^n$, of rate $H(X\mid Y) + \epsilon$; by Theorem *Slepian–Wolf* Bob reconstructs $X^n$ with vanishing error probability. Both set $K = X^n$, so $\frac1n H(K) = H(X)$ and $\Pr[K_A \ne K_B] \to 0$. The excess is $H(X) - H(X\mid Y) - \epsilon = I(X;Y) - \epsilon$, and the converse caps it at $I(X;Y)$.
+:::
 
 :::intuition
-Alice and Bob each see a noisy version of the same underlying 'coin flips' or 'fading coefficients.' By talking over a public line they can reconcile their views and distill a shorter string of bits that both hold exactly and that an eavesdropper who saw the conversation and maybe one of the noisy observations still cannot predict.
-
-The distilled bits can be used as a shared secret key or as a source of shared randomness for coordination.
+Alice and Bob each hold a noisy photograph of the same scene. Sending a short description — only enough to resolve the places where the two photographs disagree — lets Bob repaint his copy into an exact duplicate of Alice's. What they gain is a whole photograph's worth of shared randomness for the price of describing the *disagreements*. The saving, per symbol, is precisely $H(X) - H(X \mid Y) = I(X;Y)$.
 :::
 
-:::example
-Alice holds $X$, uniform on $\{0,1\}$, and Bob holds $Y = X \oplus N$ where $N \sim \mathrm{Bernoulli}(p)$ with $p = 0.1$ — i.e. their observations pass through a BSC with crossover $0.1$. All logs base 2, and $H_2(p) = -p\log p - (1-p)\log(1-p)$.
+:::example[Common randomness across a binary symmetric channel]
+Alice observes $X$ uniform on $\{0,1\}$ and Bob observes $Y = X \oplus N$ with $N \sim \mathrm{Bernoulli}(0.1)$ independent of $X$. Logs are base $2$ and $H_2(p) = -p\log p - (1-p)\log(1-p)$, with $H_2(0.1) \approx 0.469$. Find the reconciliation rate and the CR excess rate.
 :::
 
 :::solution
-**How much correlation is there?** The common-randomness rate with free public discussion is $I(X;Y)$. Since $X$ is uniform, $Y$ is uniform too, so $H(Y) = 1$ bit, and $H(Y\mid X) = H_2(p) = H_2(0.1) \approx 0.469$ bits (given $X$, the only uncertainty in $Y$ is the noise bit).
-**Step 2 — Mutual information.** $I(X;Y) = H(Y) - H(Y\mid X) = 1 - 0.469 = 0.531$ bits per observation.
-**Step 3 — Achieving it.** Alice sends Bob just enough about $X$ to let him correct the $\approx 10\%$ of positions where $X$ and $Y$ differ. That reconciliation costs $H(X\mid Y) = H_2(0.1) \approx 0.469$ bits per symbol (a Slepian–Wolf/syndrome description), after which both hold $X$. The *net* common randomness is $H(X) - H(X\mid Y) = 1 - 0.469 = 0.531 = I(X;Y)$.
-**Sanity check:** as $p \to 0$ the channels agree, $H_2(p)\to 0$, and the rate $\to 1$ bit — they share a whole fair coin per symbol; as $p \to 0.5$ the observations become independent, $H_2(p)\to 1$, and the rate $\to 0$ — nothing to share. ✓
+Since $X$ is uniform and the noise is independent, $Y$ is uniform too, so $H(Y) = 1$ bit; and $H(Y\mid X) = H(N) = H_2(0.1) \approx 0.469$ bits. Therefore
+
+$$I(X;Y) = H(Y) - H(Y \mid X) = 1 - 0.469 = 0.531 \text{ bits per symbol}.$$
+
+By symmetry $H(X \mid Y) = H(Y\mid X) \approx 0.469$, so Theorem *Slepian–Wolf* says Alice needs about $0.469$ bits per symbol of public description for Bob to recover $X^n$ exactly. Both then hold $X^n$: $1$ bit per symbol of common randomness for $0.469$ bits per symbol of talk, an excess of $0.531 = I(X;Y)$, which Corollary *The CR rate of a correlated source* says is optimal.
+
+Sanity check: as $p \to 0$ the two views coincide, $H_2(p) \to 0$, and the excess tends to $1$ bit — a whole shared coin per symbol. As $p \to 1/2$ the views become independent, $H_2(p)\to 1$, and the excess tends to $0$: nothing was shared to begin with. □
 :::
 
-## Secret Key Agreement from Common Randomness
+:::pitfall
+"Free communication gives CR rate $I(X;Y)$" is false as stated, and is the most common misstatement of this result. With genuinely free communication the CR rate is unbounded — Alice just reads out fresh coin flips. $I(X;Y)$ is the maximum CR rate *in excess of the communication rate*, which is what Theorem *Ahlswede–Csiszár converse for common randomness* actually bounds.
+:::
+
+## Secret Key Agreement from Correlated Sources
 
 <!-- section: key-agreement -->
 
-When an eavesdropper Eve observes Z correlated with (X,Y), the goal is often secret key agreement: produce K that is uniform, identical at Alice and Bob, and I(K; communication, Z) ≈ 0 (Eve learns essentially nothing about K).
+Add an eavesdropper. Eve observes $Z^n$, correlated with $(X^n,Y^n)$, and reads the entire public transcript. Now Alice and Bob want not merely identical bits but identical bits that Eve cannot guess.
 
-The secret-key rate is bounded by the mutual information quantities
+:::definition[Secret-key rate]{#secret-key-rate}
+A **secret-key agreement protocol** is a CR protocol in which, in addition, the key is nearly uniform and nearly independent of Eve's total view:
 
-$$I(X;Y) - I(X;Z),$$
+$$\Pr[K_A \ne K_B]\le\varepsilon, \qquad \tfrac1n\bigl(\log|\mathcal K| - H(K_A)\bigr) \le \varepsilon, \qquad \tfrac1n I\bigl(K_A ; Z^n, F\bigr) \le \varepsilon .$$
 
-or by more refined expressions involving auxiliary variables (Csiszár–Körner).
-
-:::theorem[Secrecy capacity of the wiretap channel]{#secrecy-capacity}
-For the wiretap channel, with no public discussion, the secrecy capacity is
-
-$$\max_{U - X - (Y,Z)} \bigl[\, I(U;Y) - I(U;Z) \,\bigr].$$
+The **secret-key rate** $S(X;Y\,\|\,Z)$ is the supremum of rates $\frac1n H(K_A)$ achievable this way with unlimited interactive public discussion.
 :::
 
-:::recipe[Distilling a secret key]{#key-distillation}
-1. **Reconciliation**: error-correct so that Alice's and Bob's strings become identical.
-2. **Privacy amplification**: hash the common string down to remove Eve's information.
+:::theorem[Maurer / Ahlswede–Csiszár lower bound]{#sk-lower-bound}
+$$S(X;Y\,\|\,Z) \ \ge\ \max\bigl\{\,I(X;Y) - I(X;Z),\ \ I(Y;X) - I(Y;Z)\,\bigr\} .$$
 :::
 
-:::intuition
-Alice and Bob start with some 'raw' shared uncertainty (I(X;Y)) that Eve also partially sees (I(X;Z)). They first correct the differences in their views (reconciliation), then hash the corrected string down to a shorter key whose bits are unpredictable to Eve (privacy amplification).
+:::proof
+Sketch — the argument rests on the Csiszár–Körner wiretap coding theorem, proved in the chapter on multi-user channels, together with Theorem *Slepian–Wolf*. Consider one-way communication from Alice. Alice sends a Slepian–Wolf description of $X^n$ at rate $H(X\mid Y)+\epsilon$, so that Bob reconstructs $X^n$; this costs Eve's knowledge nothing beyond the $H(X\mid Y)$ bits revealed. The pair now share $X^n$, of which Eve knows $I(X;Z)$ bits per symbol through $Z^n$ and $H(X\mid Y)$ bits per symbol through the transcript. Hashing $X^n$ down by those two amounts — this is privacy amplification, made quantitative by Theorem *Leftover hash lemma* in the next section — leaves
 
-The net rate of secure key they can distill is limited by how much 'advantage' they have over Eve: the mutual information gap.
+$$H(X) - H(X\mid Y) - I(X;Z) = I(X;Y) - I(X;Z)$$
+
+bits per symbol that are $\varepsilon$-close to uniform given Eve's view. Exchanging the roles of Alice and Bob gives the second term.
 :::
 
-:::example
-Binary source: Alice sees $X$ uniform; Bob sees $Y = X \oplus N_1$ with $N_1 \sim \mathrm{Bernoulli}(0.1)$; Eve sees $Z = X \oplus N_2$ with $N_2 \sim \mathrm{Bernoulli}(0.25)$, all noises independent. Logs base 2, $H_2(0.1) \approx 0.469$, $H_2(0.25) \approx 0.811$.
+:::theorem[Maurer upper bound]{#sk-upper-bound}
+$$S(X;Y\,\|\,Z) \ \le\ I(X;Y\mid Z).$$
+:::
+
+:::proof
+The key step is that no public message can increase the conditional dependence between the two views given Eve's. Let $F_1,\dots,F_r$ be the messages and write $F_{<i} = (F_1,\dots,F_{i-1})$. Suppose $F_i$ is sent by Alice, so $F_i$ is a function of $(X^n, F_{<i})$ and possibly her local randomness independent of everything else. Expanding $I(X^n F_i; Y^n \mid Z^n F_{<i})$ in two ways,
+
+$$I(F_i;Y^n\mid Z^nF_{<i}) + I(X^n;Y^n \mid Z^n F_{\le i}) \;=\; I(X^n;Y^n\mid Z^nF_{<i}) + I(F_i;Y^n\mid X^n Z^n F_{<i}).$$
+
+The last term vanishes: given $(X^n, F_{<i})$ the message $F_i$ is independent of $Y^n$ and $Z^n$. Since $I(F_i;Y^n\mid Z^nF_{<i}) \ge 0$, we get
+
+$$I(X^n;Y^n\mid Z^n F_{\le i}) \ \le\ I(X^n;Y^n \mid Z^n F_{<i}),$$
+
+and the same computation with the roles swapped covers messages sent by Bob. Iterating over the $r$ rounds,
+
+$$I(X^n;Y^n \mid Z^n, F) \ \le\ I(X^n;Y^n\mid Z^n) \;=\; n\,I(X;Y\mid Z),$$
+
+the last equality because the triples are i.i.d.
+
+It remains to bound the key by this quantity. Since $K_B$ is a function of $(Y^n,F)$ and $K_A$ of $(X^n,F)$,
+
+$$I(K_A;K_B \mid Z^n,F) \le I(X^n;Y^n\mid Z^n,F) \le n I(X;Y\mid Z).$$
+
+On the other side, near-uniformity and Fano's inequality give $H(K_A) \le I(K_A;K_B\mid Z^n,F) + n\varepsilon'$ with $\varepsilon' \to 0$: indeed $H(K_A) = I(K_A; K_B, Z^n, F) + H(K_A \mid K_B, Z^n,F)$, the last term is at most $1 + \varepsilon\log|\mathcal K| $ by Fano, and $I(K_A;Z^n,F) \le n\varepsilon$ by the secrecy condition, leaving $H(K_A) \le I(K_A;K_B\mid Z^n,F) + n\varepsilon + 1 + \varepsilon\log|\mathcal{K}|$. Combining and letting $\varepsilon \to 0$ gives $S \le I(X;Y\mid Z)$.
+:::
+
+The two bounds do not meet, and the gap is real mathematics rather than slack bookkeeping: there are sources where $I(X;Y) - I(X;Z) = 0$ yet $S > 0$. The mechanism is *advantage distillation*, which needs two-way communication, and it is the reason Theorem *Maurer / Ahlswede–Csiszár lower bound* is only a lower bound.
+
+:::example[Advantage distillation with a repetition trick]
+Alice, Bob and Eve observe $X$, $Y = X\oplus N_1$, $Z = X \oplus N_2$ with $N_1 \sim \mathrm{Bern}(p)$, $N_2\sim\mathrm{Bern}(q)$ independent, and $p > q$ — so Eve's channel is *better* than Bob's and the one-way bound is negative. Alice takes two of her bits $X_1,X_2$, draws a fair bit $C$, and publicly announces $(X_1\oplus C,\ X_2 \oplus C)$. Bob forms his two candidate values of $C$ and keeps the block only if they agree. With $p = 0.3$, what is Bob's error probability on an accepted block?
 :::
 
 :::solution
-**Alice–Bob correlation.** $I(X;Y) = 1 - H_2(0.1) \approx 0.531$ bits, as in the previous example.
-**Step 2 — Alice–Eve leakage.** $I(X;Z) = 1 - H_2(0.25) = 1 - 0.811 \approx 0.189$ bits — Eve's noisier channel means she learns less about $X$.
-**Step 3 — Secret-key rate.** The one-way lower bound (advantage of the legitimate pair over Eve) is $I(X;Y) - I(X;Z) \approx 0.531 - 0.189 = 0.342$ secret bits per symbol.
-**Step 4 — Two-phase protocol.** *Reconciliation:* Alice sends a syndrome of rate $H(X\mid Y) \approx 0.469$ so Bob recovers $X$; they now share $W = X$. *Privacy amplification:* they hash $W$ down, discarding roughly the $I(X;Z) \approx 0.189$ bits Eve could infer plus the reconciliation leakage, keeping $\approx 0.342$ bits per symbol that are $\varepsilon$-close to uniform and independent of $(Z, \text{transcript})$.
-**Sanity check:** the rate is positive precisely because Bob's channel is *less* noisy than Eve's ($0.1 < 0.25$). If Eve's channel matched Bob's ($p_2 = 0.1$), the gap would be $0$ and no secret key could be distilled by this one-way scheme. ✓
+From the announcement Bob computes $C_1 = Y_1 \oplus (X_1\oplus C) = C \oplus N_{1,1}$ and $C_2 = C\oplus N_{1,2}$. He accepts when $C_1 = C_2$, that is when $N_{1,1} = N_{1,2}$: both bits correct (probability $(1-p)^2$) or both wrong (probability $p^2$). Conditioned on acceptance his guess is wrong exactly in the second case, so
+
+$$p' = \frac{p^2}{p^2 + (1-p)^2} = \frac{0.09}{0.09+0.49} = \frac{0.09}{0.58} \approx 0.155 .$$
+
+Eve, who must guess $C$ from $Z_1, Z_2$ and the announcement, faces the same combinatorics with her own crossover $q$, giving $q' = q^2/(q^2+(1-q)^2)$. The crucial point is the *shape* of the map $p \mapsto p^2/(p^2+(1-p)^2)$: it squares the odds ratio, since $\frac{p'}{1-p'} = \bigl(\frac{p}{1-p}\bigr)^2$. Repeating the trick $\ell$ times raises the odds ratio to the power $2^{\ell}$ for both parties, and because Bob's odds ratio is below $1$ while an unfavourable enough acceptance rule makes Eve's approach $1$ more slowly, iterating can drive Bob's error to $0$ faster than Eve's, opening a positive gap where the one-way bound saw none.
+
+Sanity check: $p=0.3$ gives $p' \approx 0.155 < 0.3$, and one more round gives $\approx 0.032$ — the error is falling roughly like the square each time, at the cost of discarding the blocks Bob rejects (here a fraction $2p(1-p) = 0.42$ of them). □
+:::
+
+:::recipe[Distilling a secret key]{#key-distillation}
+1. **Advantage distillation** (only if needed): two-way exchanges that discard the blocks on which Bob is unreliable, buying an advantage over Eve where none existed.
+2. **Information reconciliation**: Alice sends a syndrome of rate about $H(X\mid Y)$ — in practice an LDPC or polar syndrome — so Bob's string becomes identical to hers. Every bit sent is a bit Eve also learns, and must be paid for in step 3.
+3. **Privacy amplification**: apply a public universal hash, shortening the common string by Eve's total information — what she learned through $Z^n$ plus the reconciliation leakage — so that the output is almost uniform given her whole view.
+:::
+
+:::example[Key rate over a pair of binary symmetric channels]
+Alice holds $X$ uniform; Bob sees $Y = X \oplus N_1$, $N_1\sim\mathrm{Bern}(0.1)$; Eve sees $Z = X\oplus N_2$, $N_2\sim\mathrm{Bern}(0.25)$, all independent. Use $H_2(0.1)\approx 0.469$, $H_2(0.25)\approx 0.811$. Compute the one-way lower bound and the Maurer upper bound.
+:::
+
+:::solution
+As in the previous section $I(X;Y) = 1 - H_2(0.1) \approx 0.531$ and $I(X;Z) = 1 - H_2(0.25) \approx 0.189$. Theorem *Maurer / Ahlswede–Csiszár lower bound* gives
+
+$$S \ \ge\ 0.531 - 0.189 = 0.342 \text{ secret bits per symbol}.$$
+
+For the upper bound, $I(X;Y\mid Z) = H(X \mid Z) - H(X\mid Y,Z)$. Here $H(X\mid Z) = H_2(0.25) \approx 0.811$. For $H(X\mid Y,Z)$, note that given $(Y,Z)$ the posterior of $X$ depends only on whether $Y = Z$. That happens with probability $(1-p)(1-q)+pq = 0.7$, and then $\Pr[X = Y\mid Y,Z] = 0.675/0.7 \approx 0.964$, contributing $H_2(0.0357)\approx 0.222$; otherwise $\Pr[X=Y\mid Y,Z] = 0.225/0.3 = 0.75$, contributing $H_2(0.25)\approx 0.811$. Hence
+
+$$H(X\mid Y,Z) = 0.7(0.222) + 0.3(0.811) \approx 0.399, \qquad I(X;Y\mid Z) \approx 0.811 - 0.399 = 0.412 .$$
+
+The secret-key rate therefore lies in $[0.342,\ 0.412]$ — the two bounds are close but do not coincide, which is typical.
+
+Sanity check: the lower bound is positive precisely because Bob's channel is less noisy than Eve's, $0.1 < 0.25$. Setting Eve's crossover to $0.1$ as well would make the lower bound $0$, yet the example on advantage distillation shows that a zero lower bound is not a proof that no key exists. □
+:::
+
+:::pitfall
+$I(X;Y) - I(X;Z) \le 0$ does **not** mean no secret key is possible. That expression is only the one-way achievable rate of Theorem *Maurer / Ahlswede–Csiszár lower bound*; two-way advantage distillation can make $S > 0$ even when Eve's observation is better than Bob's. The genuine obstruction is $I(X;Y\mid Z) = 0$, by Theorem *Maurer upper bound*.
 :::
 
 ## Randomness Extraction and Privacy Amplification
 
 <!-- section: extraction-amplification -->
 
-:::definition[Randomness extractor]{#extractor}
-A randomness extractor is a function $\mathrm{Ext}(X, S)$, with $S$ a short random seed, such that when $X$ has sufficient min-entropy, $\mathrm{Ext}(X,S)$ is close to uniform even conditioned on $S$.
+Reconciliation leaves Alice and Bob holding the same string $W$, about which Eve retains partial information. Privacy amplification is the step that converts $W$ into a shorter string Eve knows nothing about. The right measure of "how much is left" is not Shannon entropy but the worst case.
+
+:::definition[Min-entropy and statistical distance]{#min-entropy}
+The **min-entropy** of a random variable $W$ on a finite set is
+
+$$H_\infty(W) = -\log_2 \max_w \Pr[W = w],$$
+
+so $H_\infty(W)\ge k$ says no single value is guessed with probability above $2^{-k}$. The **statistical distance** between distributions $P,Q$ on a set $\mathcal S$ is
+
+$$\Delta(P,Q) = \tfrac12\sum_{s\in\mathcal S}\bigl|P(s)-Q(s)\bigr|,$$
+
+and $P$ is called $\varepsilon$-close to $Q$ when $\Delta(P,Q)\le\varepsilon$. Statistical distance is exactly the largest advantage any test can have in telling $P$ from $Q$.
 :::
 
-Strong extractors (output independent of the seed) are used for privacy amplification: after reconciliation Alice and Bob apply the same extractor (or a randomness condenser followed by hashing) to their common string using a short public random seed; the output is uniform and independent of Eve's entire view (including the seed).
+:::pitfall
+Shannon entropy is useless here. Let $W$ be the constant $0^{100}$ with probability $1/2$ and uniform on $\{0,1\}^{100}$ otherwise. Then $H(W) \approx 51$ bits, which sounds ample, but $H_\infty(W) \approx 1$ bit: Eve guesses $W = 0^{100}$ and is right half the time. No hash of $W$ can be more than $1$ bit from uniform in her eyes. Extraction is governed by the worst case, not the average.
+:::
+
+:::definition[Universal hash family]{#universal-hash}
+A family $\mathcal H$ of functions $h : \{0,1\}^{N} \to \{0,1\}^{m}$ is **2-universal** if for every pair $w \ne w'$, a uniformly chosen $h \in \mathcal H$ satisfies
+
+$$\Pr_h\bigl[h(w) = h(w')\bigr] \le 2^{-m}.$$
+
+The map $w \mapsto$ (the first $m$ bits of $a\cdot w$ in $\mathbb{F}_{2^{N}}$), indexed by $a \ne 0$, is the standard example, and the index $a$ is short — $N$ bits — compared with what it extracts.
+:::
+
+Two small lemmas do all the work. The first converts a collision bound into a distance bound; the second computes the collision probability of a hashed string.
+
+:::lemma[From collision probability to statistical distance]{#l2-to-l1}
+Let $P$ be a distribution on a set $\mathcal S$ of size $M$, let $U$ be uniform on $\mathcal S$, and let $\mathrm{Col}(P) = \sum_{s}P(s)^2$ be its collision probability. Then
+
+$$\Delta(P,U) \ \le\ \tfrac12\sqrt{M\cdot \mathrm{Col}(P) - 1}.$$
+:::
+
+:::proof
+By Cauchy–Schwarz applied to the vectors $\bigl(|P(s)-1/M|\bigr)_s$ and $(1)_s$,
+
+$$\Bigl(\sum_s \bigl|P(s)-\tfrac1M\bigr|\Bigr)^2 \le M \sum_s\Bigl(P(s)-\tfrac1M\Bigr)^2 = M\Bigl(\sum_s P(s)^2 - \tfrac{2}{M}\sum_s P(s) + \tfrac{1}{M}\Bigr),$$
+
+which equals $M\,\mathrm{Col}(P) - 1$. Take square roots and halve.
+:::
+
+:::lemma[Collision probability after universal hashing]{#hash-collision}
+Let $W$ satisfy $H_\infty(W) \ge k$, let $\mathcal H$ be 2-universal with $m$-bit outputs, and let $H$ be uniform on $\mathcal H$ and independent of $W$. Then the pair $(H, H(W))$ has collision probability at most
+
+$$\frac{1}{|\mathcal H|}\bigl(2^{-k} + 2^{-m}\bigr).$$
+:::
+
+:::proof
+Let $(H',W')$ be an independent copy. A collision requires $H = H'$, which has probability $1/|\mathcal H|$, and then $H(W) = H(W')$. Split on whether $W = W'$:
+
+$$\Pr[H(W)=H(W')] \le \Pr[W=W'] + \Pr\bigl[H(W)=H(W') \ \wedge\ W \ne W'\bigr] \le \mathrm{Col}(W) + 2^{-m},$$
+
+the last step by 2-universality applied conditionally on each pair $w\neq w'$. Finally $\mathrm{Col}(W) = \sum_w \Pr[W=w]^2 \le \max_w\Pr[W=w] \le 2^{-k}$.
+:::
 
 :::theorem[Leftover hash lemma]{#leftover-hash}
-Suppose $W$ has min-entropy $k$, that is
+Let $H_\infty(W) \ge k$ and let $\mathcal H$ be a 2-universal family with $m$-bit outputs, $H$ uniform on $\mathcal H$ and independent of $W$. Then
 
-$$H_\infty(W) = -\log_2 \max_w \Pr[W=w] \ge k,$$
+$$\Delta\bigl((H, H(W)),\ (H, U_m)\bigr) \ \le\ \tfrac12\,2^{-(k-m)/2},$$
 
-and a universal hash is applied to produce an $m$-bit output with
+where $U_m$ is uniform on $\{0,1\}^m$. In particular the output is $\varepsilon$-close to uniform *given the seed* whenever
 
-$$m \le k - 2\log(1/\varepsilon).$$
-
-Then the output is $\varepsilon$-close to uniform even given the seed and Eve's side information; equivalently the statistical distance obeys $\varepsilon \le 2^{-(k-m)/2}$.
+$$m \ \le\ k - 2\log_2(1/\varepsilon) .$$
 :::
 
-Note that the hypothesis is on the *worst-case* uncertainty from Eve's viewpoint, which is what matters here — not the average-case Shannon entropy.
+:::proof
+Apply Lemma *From collision probability to statistical distance* to the distribution $P$ of the pair $(H,H(W))$ on the set of size $M = |\mathcal H|\,2^m$, using the collision bound of Lemma *Collision probability after universal hashing*:
+
+$$M\cdot\mathrm{Col}(P) - 1 \ \le\ |\mathcal H|2^{m}\cdot\frac{2^{-k}+2^{-m}}{|\mathcal H|} - 1 \;=\; 2^{m-k} + 1 - 1 \;=\; 2^{m-k}.$$
+
+Hence $\Delta \le \frac12\sqrt{2^{m-k}} = \frac12 2^{-(k-m)/2}$. For the last claim, $m \le k - 2\log_2(1/\varepsilon)$ gives $k - m \ge 2\log_2(1/\varepsilon)$, so $\frac12 2^{-(k-m)/2} \le \frac12\varepsilon \le \varepsilon$.
+:::
+
+Because the seed $H$ appears on both sides of the distance, the guarantee survives publishing it: this is what "strong extractor" means, and it is why the seed may be sent in the clear.
+
+:::definition[Strong extractor]{#strong-extractor}
+A function $\mathrm{Ext} : \{0,1\}^N\times\{0,1\}^d \to \{0,1\}^m$ is a **$(k,\varepsilon)$ strong extractor** if for every $W$ with $H_\infty(W)\ge k$ and $S$ uniform on $\{0,1\}^d$ independent of $W$,
+
+$$\Delta\bigl((S,\mathrm{Ext}(W,S)),\ (S,U_m)\bigr)\le\varepsilon .$$
+
+Theorem *Leftover hash lemma* says a 2-universal family is a $(k,\varepsilon)$ strong extractor with $m = k-2\log_2(1/\varepsilon)$, and the loss of $2\log_2(1/\varepsilon)$ bits is known to be necessary up to an additive constant.
+:::
+
+Eve, though, has side information rather than nothing, so the relevant hypothesis is on $W$ *given her view*. Two facts make this manageable.
+
+:::lemma[Leakage costs at most its length]{#minentropy-chain}
+If $E$ takes at most $2^{\lambda}$ values then for every $\varepsilon' > 0$ there is an event of probability at least $1-\varepsilon'$ on which the conditional min-entropy satisfies
+
+$$H_\infty(W \mid E = e) \ \ge\ H_\infty(W) - \lambda - \log_2(1/\varepsilon') .$$
+:::
+
+:::proof
+Fix $w$ and $e$. Then $\Pr[W=w\mid E=e] = \Pr[W=w,\,E=e]/\Pr[E=e] \le \Pr[W=w]/\Pr[E=e]$. Call $e$ *bad* if $\Pr[E=e] < \varepsilon' 2^{-\lambda}$; the union over the at most $2^{\lambda}$ values of $E$ shows the bad values occur with total probability below $\varepsilon'$. For every good $e$,
+
+$$\max_w \Pr[W=w\mid E=e] \le \frac{2^{-H_\infty(W)}}{\varepsilon' 2^{-\lambda}} = 2^{-H_\infty(W)+\lambda+\log_2(1/\varepsilon')}. \qquad$$
+:::
+
+So a reconciliation transcript of $\lambda$ bits costs at most $\lambda$ bits of min-entropy, which is exactly the accounting used in Recipe *Distilling a secret key*: hash away Eve's channel information *and* the syndrome length.
 
 :::intuition
-After Alice and Bob have made their strings identical (but Eve still has some partial information), they both run the same public hash function on the string. If the string had enough uncertainty left, the hash output looks like fresh random bits to everyone, including Eve.
-
-The seed for the hash can be sent in the clear; strong extractors guarantee that the output is uniform even given the seed.
+Picture Eve's knowledge as having narrowed $W$ down to a set of about $2^{k}$ equally plausible candidates. A universal hash scatters those candidates over the $2^m$ possible outputs like balls into bins. When $2^{k}$ greatly exceeds $2^{m}$, every bin receives about the same number of candidates, so the output tells Eve nothing about which candidate was real. The margin $k - m$ is how many times more candidates than bins there are, and the $\tfrac12 2^{-(k-m)/2}$ in the lemma is the size of the residual imbalance.
 :::
 
-:::example
-$W$ is a 256-bit string with min-entropy at least $k = 200$ bits from Eve's perspective (she has partial side information but cannot pin $W$ down better than $2^{-200}$). Alice and Bob apply a universal hash with a public seed to produce an $m$-bit key.
+:::example[Sizing a key from a min-entropy budget]
+A reconciled string $W$ of $256$ bits has min-entropy at least $k = 200$ bits from Eve's viewpoint. Alice and Bob apply a public 2-universal hash. What is the largest $m$ meeting a security target $\varepsilon = 2^{-20}$, and what distance does a $128$-bit key actually achieve?
 :::
 
 :::solution
-**Choose the output length.** The leftover-hash lemma requires $m \le k - 2\log_2(1/\varepsilon)$. Target $\varepsilon = 2^{-20}$, so the "entropy tax" is $2\log_2(1/\varepsilon) = 2 \times 20 = 40$ bits.
-**Step 2 — Solve for $m$.** $m \le 200 - 40 = 160$ bits. Outputting a $128$-bit key ($m = 128$) is comfortably within budget.
-**Step 3 — Bound the leakage.** With $m = 128$ and $k = 200$, the achieved distance is $\varepsilon \le 2^{-(k-m)/2} = 2^{-(200-128)/2} = 2^{-36}$ — far better than the $2^{-20}$ target, because we left $160 - 128 = 32$ bits of headroom.
-**Step 4 — Publicity of the seed.** Because a *strong* extractor / universal hash is used, the output stays uniform even when the seed $S$ is revealed, so $S$ can be sent in the clear over the public channel.
-**Sanity check:** with the maximal $m = 160$ the distance is exactly $2^{-(200-160)/2} = 2^{-20}$, hitting the target with zero margin — confirming $160$ is the largest safe key length and $128$ is conservative. ✓
+Theorem *Leftover hash lemma* allows any $m \le k - 2\log_2(1/\varepsilon)$. Here $\log_2(1/\varepsilon) = 20$, so the entropy tax is $40$ bits and
+
+$$m \le 200 - 40 = 160 \text{ bits}.$$
+
+Taking $m = 128$ instead, the achieved distance is $\tfrac12 2^{-(200-128)/2} = \tfrac12 2^{-36} = 2^{-37}$, far inside the target, because $32$ bits of headroom were left unused.
+
+Sanity check: at the maximal $m = 160$ the bound reads $\frac12 2^{-20} = 2^{-21} \le \varepsilon$, so $160$ is indeed the largest safe length and $128$ is conservative. If reconciliation had additionally leaked a $50$-bit syndrome, Lemma *Leakage costs at most its length* would cut the budget to roughly $k = 150$, allowing only $m \le 110$ — which is why syndrome length is paid for twice, once in bandwidth and once in key length. □
 :::
 
-## Applications: Key Distribution, Correlation, and Communication
+## Where Common Randomness Is Used
 
 <!-- section: applications-cr -->
 
-Common-randomness primitives are used for:
-- Information-theoretic secret-key agreement over noisy channels or quantum channels (quantum key distribution can be viewed as a form of common-randomness distillation).
-- Coordinated actions without communication: two parties that share common randomness can choose the same random codebook, the same time slot, the same hash function, etc.
-- Wireless physical-layer security, localization, and authentication (shared randomness from channel reciprocity).
-- Distributed simulation and coordination complexity: the amount of common randomness needed to simulate a joint distribution with limited communication.
-- Explicit constructions of extractors, condensers, and Ramsey graphs from common-randomness ideas.
+The two halves of this chapter meet in practice: network coding is how shared structure moves through a network, common randomness is what two endpoints can agree on without meeting. Each has a small number of applications that are genuinely information-theoretic rather than merely suggestive.
 
-In the asymptotic regime the rates are characterized by mutual information quantities; for finite block length one uses smooth min-entropy, one-shot bounds, and second-order analysis.
+**Quantum key distribution.** BB84 and its relatives produce exactly the situation of the section on secret key agreement: after the quantum phase, Alice and Bob hold correlated strings and an eavesdropper holds a quantum system correlated with them. The classical post-processing is Recipe *Distilling a secret key* verbatim — reconciliation, then privacy amplification by universal hashing.
 
-:::intuition
-Two wireless devices that see the same fading channel can turn the reciprocity into shared secret bits (after reconciliation and privacy amplification) that they use to encrypt their traffic — without ever sending the key over the air.
+:::theorem[Asymptotic BB84 key rate]{#bb84-rate}
+For BB84 over a channel with observed bit-error rate $e$ in the sifted key, collective attacks admit a secret-key rate per sifted bit of
 
-Once they have shared randomness they can 'flip a shared coin' to decide who transmits first, which frequency to hop to, or which code to use, all without further messages.
+$$r = 1 - 2H_2(e),$$
+
+positive for $e < 0.11$.
 :::
 
-:::example
-A wireless pairing protocol. Alice and Bob each send a probe; by *reciprocity* both measure (nearly) the same channel coefficient $h$, plus independent local noise. Eve, at a different location more than half a wavelength away, sees an essentially decorrelated coefficient.
+:::proof
+Sketch — the argument rests on the Devetak–Winter formula $r = I(A;B) - \chi(A;E)$ for the asymptotic key rate against collective attacks, whose derivation belongs to the chapter on quantum information. One factor $H_2(e)$ is the reconciliation cost $H(X\mid Y)$ from Theorem *Slepian–Wolf*; the other is the bound on Eve's Holevo information forced by the observed error rate, since in BB84 an eavesdropper who learns a fraction of the key must disturb the conjugate basis by a matching amount. Setting $1-2H_2(e) > 0$ gives $H_2(e) < 1/2$, i.e. $e < 0.11$.
+:::
+
+**Physical-layer keys from channel reciprocity.** Two radios measuring the same fading coefficient obtain correlated observations for free, while an eavesdropper more than half a wavelength away sees an essentially independent one.
+
+:::example[A key harvested from a fading channel]
+Two devices probe the channel over $500$ independent coherence blocks, quantizing each reciprocal measurement to $3$ bits. After reconciliation the shared string retains a conservative $0.4$ bits of min-entropy per block against Eve. How long a key can they publish at security $\varepsilon = 2^{-20}$?
 :::
 
 :::solution
-**Harvest.** Over one coherence block each device quantizes its noisy $h$ estimate into, say, $3$ bits. Reciprocity makes Alice's and Bob's $3$-bit words agree with high probability; Eve's are near-independent, so her min-entropy about the joint word is close to the full $3$ bits.
-**Step 2 — Accumulate.** Repeat over $N = 500$ independent coherence blocks. Suppose after reconciliation the shared string $W$ retains a conservative min-entropy of $k \approx 0.4$ bits per block $\times\ 500 = 200$ bits from Eve's viewpoint.
-**Step 3 — Distill the key.** Apply privacy amplification (leftover-hash lemma) with target $\varepsilon = 2^{-20}$: allowed output $m \le k - 2\log_2(1/\varepsilon) = 200 - 40 = 160$ bits. Output a $128$-bit key — safely under the $160$-bit ceiling, with $2^{-36}$ leakage.
-**Step 4 — Security claim.** The resulting AES-128 key is *information-theoretically* secured against Eve's noisy channel observations: no computational assumption is used, only her lack of correlation with $h$ and the min-entropy budget.
-**Sanity check:** the number of usable key bits scales linearly with the number of independent probes ($200$ bits of entropy needed $\Rightarrow \sim 500$ blocks at $0.4$ bit/block), so a longer probing phase buys a longer key — the expected behaviour of an entropy-limited resource. ✓
+The min-entropy budget is $k = 0.4 \times 500 = 200$ bits. Theorem *Leftover hash lemma* permits
+
+$$m \le k - 2\log_2(1/\varepsilon) = 200 - 40 = 160 \text{ bits},$$
+
+so a $128$-bit key is comfortably available, with distance $2^{-37}$ as computed in the previous section. The security rests on no computational assumption — only on Eve's decorrelation and the min-entropy estimate.
+
+Sanity check: the usable key length grows linearly in the number of probes, so halving the probing phase to $250$ blocks gives $k = 100$ and $m \le 60$, too short for a $128$-bit key. The entropy estimate per block is the quantity worth being conservative about, since Theorem *Leftover hash lemma* is only as good as the $k$ fed into it. □
+:::
+
+**Coordination without communication.** Shared randomness lets two parties act as though they had conferred: choosing the same codebook, the same hash seed, the same frequency-hopping pattern. How much shared randomness is needed to *simulate* a target joint distribution is a question with its own answer.
+
+:::definition[Wyner common information]{#wyner-common-information}
+For a joint law $p(x,y)$, the **Wyner common information** is
+
+$$C(X;Y) = \min_{U \,:\, X - U - Y} I(X,Y;U),$$
+
+the least rate of a common message from which two separate processors, acting independently, can generate a pair distributed as $p(x,y)$.
+:::
+
+:::proposition[Common information dominates mutual information]{#cwyner-ge-i}
+$C(X;Y) \ \ge\ I(X;Y)$, with equality if and only if some $U$ with $X-U-Y$ satisfies $I(X,Y;U) = I(X;Y)$.
+:::
+
+:::proof
+Let $U$ achieve the minimum, so $X - U - Y$ is a Markov chain. The data processing inequality applied to that chain gives $I(X;Y) \le I(X;U)$, and $I(X;U)\le I(X,Y;U)$ since conditioning on more cannot decrease the information the pair carries about $U$ — formally $I(X,Y;U) = I(X;U) + I(Y;U\mid X) \ge I(X;U)$. Chaining the two inequalities gives $I(X;Y)\le I(X,Y;U) = C(X;Y)$.
+:::
+
+So agreeing on a source of correlation is strictly harder, in general, than the correlation itself is worth — the two quantities coincide only for special sources, and the gap is the price of *generating* dependence rather than merely exploiting it.
+
+**Random linear network coding in deployed systems.** Corollary *Random linear network coding succeeds* is what makes network coding practical: nodes need no knowledge of the topology, choose coefficients at random, and a sink decodes as soon as it has collected enough independent recipes. Peer-to-peer distribution, distributed-storage repair, and the wireless schemes COPE and MORE all rest on it. The design tension is the one in the pitfall of the section on linear coding.
+
+:::example[Choosing a generation size]
+A system uses generations of $k$ packets over $\mathbb{F}_{256}$ with $1024$-byte payloads, carrying the coding vector in the header. Compare the header overhead and the decoding-failure probability for $k = 16$ and $k = 64$.
+:::
+
+:::solution
+The coding vector is $k$ coefficients of one byte each, so the overhead fraction is $k/(1024+k)$: about $1.5\%$ at $k=16$ and about $5.9\%$ at $k=64$.
+
+Proposition *Full rank of a uniform random matrix over $\mathbb{F}_q$* bounds the failure probability, when exactly $k$ coded packets are collected, by $1/(q-1) = 1/255 \approx 0.39\%$ for *both* values of $k$ — the bound does not depend on $k$ at all.
+
+So the decision is not about reliability but about overhead against decoding cost and delay: Gaussian elimination on a $k\times k$ matrix costs $O(k^3)$ operations, $64$ times more at $k=64$ than at $k=16$, and a sink must wait for $k$ packets before producing anything. Small generations win on every axis except the number of generations to manage. □
+:::
+
+:::intuition
+The two threads of this chapter are one idea seen twice. In the butterfly, a single symbol served two receivers because each brought its own side information to the same linear equation. In privacy amplification, a single public hash served Alice and Bob but not Eve, because they brought the reconciled string to it and she did not. Both are cases of publishing a *constraint* rather than a *value*, and letting the recipients' prior knowledge decide what the constraint reveals.
 :::
 
 ## Common Mistakes
 
-- **Thinking the MAC capacity region is always a rectangle**: Only when the users do not interfere (orthogonal channels) is it a rectangle; otherwise there is a sum-rate tradeoff.
-- **Using the same code as for a single-user channel without accounting for interference**: Treating the other user purely as noise is suboptimal except at the corner points.
-- **Confusing the MAC with the broadcast channel**: In MAC multiple senders → one receiver; in broadcast one sender → multiple receivers with possibly different channels.
-- **Assuming independent codebooks are always optimal**: For some MACs (deterministic) correlation can help, but for the standard memoryless MAC independent inputs suffice for the capacity region.
-- **Forgetting that the capacity region is for asymptotically long blocks**: For finite n there is a penalty and practical systems use HARQ, power control, and scheduling on top of the information-theoretic region.
-- **Believing SIC always requires the stronger user to be decoded first in every realization**: In information theory we consider average power and typical sets; practical SIC adapts ordering or uses joint decoding for robustness.
-
-A broadcast channel (BC) has a single transmitter sending one or more messages to several receivers. Each receiver observes its own (possibly different) noisy version of the transmitted signal. The goal is to characterize the set of rates at which the transmitter can send private messages to each receiver (and possibly a common message to all).
-
-The broadcast channel is the dual of the multiple-access channel and introduces superposition and binning ideas central to network information theory.
-
-- **Assuming the broadcast capacity region is always the intersection of the individual point-to-point capacities**: That would be too pessimistic; superposition lets the strong user get extra rate 'on top' without hurting the weak user as much as orthogonal allocation would.
-- **Confusing superposition with time-sharing**: Time-sharing is a simple inner bound; superposition strictly enlarges the region for non-degraded or even some degraded channels.
-- **Thinking the same codebook is sent to everyone**: The encoding uses auxiliary variables; the actual X carries a combination of messages in a structured way.
-- **Forgetting the common message**: Many treatments focus on private messages only; adding a common message R0 changes the bounds and is important for video multicast etc.
-- **Believing all broadcast channels have known capacity regions**: Only degraded (and a few other classes such as more capable, less noisy) BCs have single-letter capacity regions; the general BC capacity is still open.
-- **Ignoring that practical broadcast systems use layered video + unequal error protection rather than pure information-theoretic superposition**: The principle is the same, but implementation uses scalable codecs and different modulation/coding per layer.
-
-In traditional packet networks, intermediate routers only store and forward packets. Network coding allows (or requires) routers to compute linear combinations (or other functions) of the packets they receive and forward the combinations. For multicast traffic this can achieve higher throughput than routing alone; the classic gain is demonstrated by the butterfly network.
-
-Network coding sits at the intersection of information theory, graph theory, and algebra; random linear network coding makes it practical in large networks.
-
-- **Thinking network coding always doubles throughput**: The gain is topology-dependent; in some networks (trees) coding gives no gain over routing; the butterfly is the smallest example with gain 2.
-- **Confusing network coding with source or channel coding**: Network coding operates on packets at intermediate nodes; it is orthogonal and can be composed with end-to-end source/channel coding.
-- **Assuming the field size can be arbitrarily small**: For linear NC to achieve capacity, the field must be large enough relative to the number of sinks or edges; GF(2) sometimes works but not always.
-- **Forgetting header overhead for coefficients**: In random linear NC the coding vector (coefficients) must be sent with the packet or known by other means; this overhead vanishes asymptotically but matters for small generations.
-- **Believing coding is only for multicast**: While the big theorem is for multicast, network coding ideas (including index coding, functional compression, compute-forward) apply to many other traffic patterns and have practical uses in wireless (COPE, MORE) and distributed storage.
-- **Ignoring that practical deployments use generation-based or sliding-window NC rather than the block model of the theorems**: Real systems chunk data into generations to keep matrices small and decoding delay low.
-
-Common randomness refers to the problem of generating or extracting identical random bits that are shared among two or more parties, often when the parties observe correlated but noisy versions of some source or communicate over noisy channels. The extracted bits should be nearly uniform and independent of any eavesdropper's view (when privacy is required).
-
-This area sits at the intersection of information theory, cryptography, and communication complexity. It underlies secret-key agreement, privacy amplification, randomness extraction, and certain physical-layer security schemes.
-
-- **Equating common randomness with secret-key agreement**: Common randomness can be generated even when there is no secrecy requirement (just identical uniform bits); secrecy adds the privacy-amplification step and changes the achievable rates.
-- **Forgetting reconciliation**: Correlated observations X and Y are almost never identical; an error-correction / reconciliation phase (often using Slepian-Wolf or LDPC codes on the virtual correlation channel) is required before extraction.
-- **Thinking that sending the raw observations over the public channel always works**: It does give common randomness at rate H(X|Y), but it may leak everything to an eavesdropper; privacy amplification is still needed if secrecy is required.
-- **Confusing min-entropy with Shannon entropy in one-shot extraction**: Extractors are analyzed with min-entropy (worst-case); Shannon entropy gives only asymptotic typical-set statements.
-- **Assuming that common randomness always requires interaction**: In some models (e.g., channel reciprocity with no active adversary) the correlation itself may be sufficient with one-way or even zero communication after the initial observations.
-- **Overlooking that common randomness is a resource that can be consumed**: Once Alice and Bob use up their shared bits for a key or for coordination, they may need to distill more from a fresh batch of correlated observations.
-
-The Blahut–Arimoto (BA) algorithm is a practical iterative method for numerically computing the rate-distortion function R(D) for a given source and distortion measure, and a closely related algorithm computes the channel capacity C of a DMC. It was developed independently by Blahut and Arimoto in the early 1970s and remains the standard tool when no closed form is available.
-
-Because R(D) and C are defined by convex optimizations, alternating optimization between the variables yields a convergent procedure whose fixed point satisfies the necessary KKT conditions for optimality.
-
-- **Running the algorithm for a fixed D instead of using the s-parameter**: Direct fixed-D versions exist but the Lagrangian form is numerically more stable and naturally traces the whole curve.
-- **Forgetting to normalize the test-channel updates**: The proportionality must become a true conditional pmf for each x; missing normalization ruins the I calculation.
-- **Assuming convergence from any initialization to the global optimum without checking**: While convexity guarantees it for the exact BA, floating-point or approximate versions can need multiple random starts for large problems.
-- **Confusing the BA algorithm with actual code construction**: BA gives the information-theoretic limit R(D) or C; it does not directly produce the encoder/decoder codebooks (though it can guide quantizer design).
-- **Using it on continuous alphabets without discretization**: The algorithm is for finite alphabets; continuous problems require discretization, kernel methods, or parametric assumptions.
-- **Ignoring that s = dR/dD at the solution**: After convergence you can read the slope from the final s to verify consistency with the computed (R,D) point.
+- **Claiming network coding always improves throughput**: Corollary *Unicast needs no coding* proves routing is already optimal for a single sink, and the same holds on any directed tree. The gain is a property of the topology together with the demands.
+- **Quoting "factor 2" as the butterfly's end-to-end gain**: routing attains $3/2$, not $1$, by Theorem *Routing on the butterfly is capped at 3/2*, so the end-to-end gain is $4/3$. The factor $2$ is the gain on the bottleneck edge alone.
+- **Assuming the min-cut characterization extends beyond multicast**: Theorem *Li–Yeung–Cai / Koetter–Médard multicast theorem* is about one source and sinks wanting the *same* data. For two independent sessions the cut bound can be unachievable and linear codes need not be optimal at all.
+- **Believing any field size works**: the multicast theorem needs $q > |T|$, and the random-coding guarantee of Corollary *Random linear network coding succeeds* degrades like $|T||E|/q$. $\mathbb{F}_2$ suffices for the butterfly and fails on larger multicast instances.
+- **Forgetting the coding-vector header**: random linear coding requires the sink to know the global encoding vectors, costing $k\log_2 q$ bits per packet. This vanishes with payload length, never with generation size.
+- **Saying the common-randomness rate is $I(X;Y)$ when communication is free**: with free communication the rate is unbounded, since Alice can read out fresh coin flips. $I(X;Y)$ bounds the CR rate *in excess of* the communication rate — Theorem *Ahlswede–Csiszár converse for common randomness*.
+- **Equating common randomness with secret key agreement**: CR asks only that both parties hold the same bits; a key must additionally be nearly independent of Eve's view, which is what forces the privacy-amplification step and lowers the rate.
+- **Skipping reconciliation**: correlated observations are almost never identical, so without an error-correction phase the two parties hash *different* strings and obtain unrelated outputs.
+- **Reading $I(X;Y) - I(X;Z) \le 0$ as "no key exists"**: that is only the one-way bound. Two-way advantage distillation can yield a positive rate; the real obstruction is $I(X;Y\mid Z) = 0$, by Theorem *Maurer upper bound*.
+- **Using Shannon entropy in the leftover hash lemma**: extraction is governed by min-entropy. A source with $H(W) \approx 51$ can have $H_\infty(W) = 1$, and then no hash of it is secret.
+- **Forgetting that reconciliation leakage is charged against the key**: every syndrome bit sent in the clear costs up to one bit of min-entropy by Lemma *Leakage costs at most its length*, and must be subtracted before choosing the output length $m$.
+- **Treating the extractor seed as a secret**: Theorem *Leftover hash lemma* bounds the distance of the pair $(H, H(W))$ from uniform, so the seed may be published. Conversely, reusing one seed on correlated strings is outside the lemma's hypotheses and is not covered by it.
