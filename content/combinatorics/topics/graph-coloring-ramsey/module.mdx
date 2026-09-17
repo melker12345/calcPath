@@ -6,110 +6,568 @@ title: Graph Coloring and Ramsey Theory
 
 Colouring vertices and edges, the chromatic number and its bounds, and the Ramsey results that make disorder impossible.
 
-## Vertex Coloring Basics
+A colouring is a partition in disguise. Colouring the *vertices* of a graph so that no edge is monochromatic splits the vertex set into independent pieces, and the least number of pieces needed — the chromatic number — is one of the hardest invariants in graph theory to pin down. Colouring the *edges* asks the same question of a different graph, and there the answer is almost complete: Vizing's theorem traps the edge chromatic number inside a window of width one. Then comes the reversal that gives the chapter its second half. Instead of asking for a colouring with no monochromatic structure, fix the number of colours and ask how large the host graph must be before a monochromatic structure becomes unavoidable. That is Ramsey theory, and it is edge colouring read backwards.
+
+Throughout, $G = (V,E)$ is a finite simple graph — no loops, no repeated edges — with $n = |V|$ vertices and $m = |E|$ edges. We write $\Delta(G)$ for the maximum degree, $\delta(G)$ for the minimum degree, $\omega(G)$ for the **clique number** (the largest $r$ with $K_r \subseteq G$) and $\alpha(G)$ for the **independence number** (the size of the largest set of pairwise non-adjacent vertices).
+
+## Proper Colourings and the Chromatic Number
 
 <!-- section: vertex-coloring -->
 
-:::definition[Proper coloring]{#proper-coloring}
-A proper k-coloring of the vertices is a function c : V → {1,2,...,k} such that if uv is an edge then c(u) ≠ c(v).
+:::definition[Proper colouring and chromatic number]{#proper-coloring}
+Let $k \ge 1$ be an integer. A **proper $k$-colouring** of $G$ is a map
+$$c : V(G) \to \{1, 2, \dots, k\} \quad \text{such that} \quad c(u) \ne c(v) \text{ whenever } uv \in E(G).$$
+$G$ is **$k$-colourable** if such a map exists. The **chromatic number** $\chi(G)$ is the least $k$ for which $G$ is $k$-colourable.
 :::
 
-:::definition[Chromatic number]{#chromatic-number}
-The chromatic number χ(G) is the smallest k for which a proper k-coloring exists.
-:::
+The condition constrains only edges, so non-adjacent vertices are free to share a colour and are in fact *encouraged* to: reusing colours is exactly what drives $k$ down. Nothing requires a proper colouring to use all $k$ colours, which is why $k$-colourable implies $(k+1)$-colourable and the minimum defining $\chi$ is taken over an upward-closed set. A finite graph is always $n$-colourable — give every vertex its own colour — so that set is non-empty and $1 \le \chi(G) \le n$.
 
-:::intuition
-Color the countries on a map so that countries sharing a border get different colors. The "graph" has a vertex per country and edges for shared borders.
+The names of the colours carry no information. What a proper colouring really produces is a partition of the vertices, and that reformulation is the one to keep in mind.
 
-The minimal number of colors needed is the chromatic number.
-:::
-
-:::example
-Compute $\chi(C_4)$, the 4-cycle $1\text{–}2\text{–}3\text{–}4\text{–}1$.
-:::
-
-:::solution
-Step 1 (lower bound). $C_4$ has an edge, so $\chi \ge 2$: adjacent vertices need different colors.
-Step 2 (construction). Color the two "even" vertices $2,4$ with color A and the two "odd" vertices $1,3$ with color B. Check each edge: $1\text{–}2$ is B–A ✓, $2\text{–}3$ is A–B ✓, $3\text{–}4$ is B–A ✓, $4\text{–}1$ is A–B ✓. No edge is monochromatic, so 2 colors suffice.
-Step 3. Combining, $\chi(C_4)=2$.
-Sanity check: $C_4$ is an even cycle, hence bipartite (no odd cycle), and every bipartite graph with at least one edge has $\chi=2$ ✓.
-
-Two contrasting extremes: for the triangle $K_3$ every pair of vertices is adjacent, so no color can be reused and $\chi(K_3)=3$; a single edge $K_2$ needs $\chi=2$.
-:::
-
-## Chromatic Number and Bounds
-
-<!-- section: chromatic-number -->
-
-Here $\Delta(G)$ denotes the maximum degree — the largest number of edges meeting any single vertex.
-
-:::theorem[Greedy bound]{#greedy-bound}
-For every graph $G$,
-
-$$\chi(G) \le \Delta(G) + 1.$$
+:::proposition[Colourings are partitions into independent sets]{#colour-classes}
+$G$ is $k$-colourable if and only if $V(G)$ can be written as a union of $k$ pairwise disjoint (possibly empty) **independent sets** — sets spanning no edge of $G$. Consequently $\chi(G)$ is the least number of independent sets into which $V(G)$ can be partitioned.
 :::
 
 :::proof
-Process the vertices in any order and give each the smallest color not already used by its already-colored neighbors; a vertex has at most $\Delta$ neighbors, so at most $\Delta$ colors are blocked and one of the first $\Delta+1$ colors is always free.
+Given a proper $k$-colouring $c$, let $V_i = c^{-1}(i)$ be the **colour class** of colour $i$. These sets are disjoint and cover $V$. If $u,v \in V_i$ were adjacent then $c(u) = c(v) = i$ would violate properness, so each $V_i$ is independent.
+
+Conversely, given a partition $V = V_1 \cup \dots \cup V_k$ into independent sets, define $c(v) = i$ for the unique $i$ with $v \in V_i$. If $uv$ is an edge then $u$ and $v$ cannot lie in a common $V_i$, since $V_i$ spans no edge, so $c(u) \ne c(v)$.
 :::
 
-:::theorem[Brooks' theorem]{#brooks}
-For a connected graph $G$ that is neither a complete graph nor an odd cycle,
+:::intuition
+Think of the colours as rooms and of each edge as an instruction "these two must not share a room". A proper colouring is a room assignment; the chromatic number is the smallest number of rooms that can hold everybody. Because only the grouping matters, swapping the labels on two rooms gives the same assignment — which is why $\chi$ counts *classes*, not *labellings*.
+:::
 
+Two consequences drop out immediately and will be used constantly.
+
+:::proposition[Monotonicity, the clique bound and the independence bound]{#clique-bound}
+If $H$ is a subgraph of $G$ then $\chi(H) \le \chi(G)$. In particular
+$$\chi(G) \ge \omega(G).$$
+Moreover $\chi(G)\,\alpha(G) \ge n$, so $\chi(G) \ge n/\alpha(G)$.
+:::
+
+:::proof
+Restricting a proper colouring of $G$ to $V(H)$ leaves every edge of $H$ bichromatic, because every edge of $H$ is an edge of $G$; hence $\chi(H) \le \chi(G)$. In a complete graph no two vertices may share a colour, so $\chi(K_r) = r$; taking $H = K_{\omega(G)}$ gives $\chi(G) \ge \omega(G)$.
+
+For the last claim, a proper $\chi(G)$-colouring splits $V$ into $\chi(G)$ independent sets, each of size at most $\alpha(G)$, and together they cover all $n$ vertices; hence $n \le \chi(G)\,\alpha(G)$.
+:::
+
+:::proposition[The standard families]{#standard-families}
+For $n \ge 1$ we have $\chi(K_n) = n$ and $\chi(\overline{K_n}) = 1$; $\chi(T) = 2$ for every tree $T$ with at least one edge; and for cycles with $n \ge 3$,
+$$\chi(C_n) = \begin{cases} 2, & n \text{ even},\\ 3, & n \text{ odd}.\end{cases}$$
+:::
+
+:::proof
+The first two were just argued. For a tree, root it anywhere and colour each vertex by the parity of its distance to the root; every edge of a tree joins consecutive levels, so its ends receive opposite parities. One colour will not do, since the tree has an edge.
+
+For an even cycle $v_1 v_2 \cdots v_n v_1$, colour $v_i$ by the parity of $i$; the only edge that could fail is $v_n v_1$, and $n$ even makes $n$ and $1$ opposite in parity. For $n$ odd, suppose $c$ were a proper $2$-colouring. The colour must change at each of the $n-1$ steps along $v_1, \dots, v_n$, so $c(v_i)$ depends only on the parity of $i$; then $c(v_n) = c(v_1)$ because $n$ and $1$ are both odd, contradicting that $v_nv_1$ is an edge. So $\chi(C_n) \ge 3$, and the colouring $1,2,1,2,\dots,1,2,3$ shows three colours suffice.
+:::
+
+:::figure[The alternation around $C_5$ fails to close. Colours forced along the cycle return to $v_1$ with the colour it already carries, so the edge $v_5v_1$ is monochromatic. Every odd cycle breaks in exactly this way.]{#odd-cycle-fig}
+{
+  "type": "plot",
+  "x": [-2.4, 2.4], "y": [-2.1, 2.2],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "path", "points": [[0, 1], [-0.951, 0.309], [-0.588, -0.809], [0.588, -0.809], [0.951, 0.309], [0, 1]], "muted": true },
+    { "kind": "point", "at": [0, 1] },
+    { "kind": "point", "at": [-0.951, 0.309], "tone": "result" },
+    { "kind": "point", "at": [-0.588, -0.809] },
+    { "kind": "point", "at": [0.588, -0.809], "tone": "result" },
+    { "kind": "point", "at": [0.951, 0.309] },
+    { "kind": "text", "at": [0, 1.65], "text": "v1 = A" },
+    { "kind": "text", "at": [-1.6, 0.6], "text": "v2 = B", "tone": "result" },
+    { "kind": "text", "at": [-1.05, -1.45], "text": "v3 = A" },
+    { "kind": "text", "at": [1.05, -1.45], "text": "v4 = B", "tone": "result" },
+    { "kind": "text", "at": [1.6, 0.6], "text": "v5 = A" }
+  ]
+}
+:::
+
+The odd cycle is not merely an example; it is the *only* obstruction to two colours. That is the first real theorem of the subject.
+
+:::theorem[Two colours iff no odd cycle]{#bipartite-odd-cycle}
+For a graph $G$ with at least one edge, the following are equivalent.
+
+1. $\chi(G) \le 2$.
+2. $G$ is **bipartite**: $V(G) = X \cup Y$ with $X \cap Y = \varnothing$ and every edge having one end in $X$ and one in $Y$.
+3. $G$ contains no cycle of odd length.
+:::
+
+:::proof
+(1) $\Leftrightarrow$ (2). A proper $2$-colouring is exactly a partition into two independent sets by Proposition *Colourings are partitions into independent sets*, and a partition into two independent sets is exactly a bipartition.
+
+(2) $\Rightarrow$ (3). Let $v_1 v_2 \cdots v_\ell v_1$ be a cycle in a bipartite graph with parts $X, Y$. Consecutive vertices lie in opposite parts, so part membership alternates and $v_i$ lies in the same part as $v_1$ precisely when $i$ is odd. Closing the cycle requires $v_\ell$ and $v_1$ to lie in opposite parts, which forces $\ell$ to be even.
+
+(3) $\Rightarrow$ (2). We may assume $G$ connected; otherwise bipartition each component and take unions. Fix a vertex $r$ and let $d(v)$ be the length of a shortest path from $r$ to $v$, finite by connectedness. Put
+$$X = \{v : d(v) \text{ even}\}, \qquad Y = \{v : d(v) \text{ odd}\}.$$
+Suppose some edge $uv$ had both ends in one part, so that $d(u)$ and $d(v)$ have equal parity. Take shortest paths $P$ from $r$ to $u$ and $Q$ from $r$ to $v$, and let $w$ be the last vertex at which they agree. The portions of $P$ and $Q$ from $w$ onwards have lengths $d(u) - d(w)$ and $d(v) - d(w)$, meet only at $w$, and together with the edge $uv$ close up into a cycle of length
+$$\big(d(u) - d(w)\big) + \big(d(v) - d(w)\big) + 1 .$$
+Since $d(u)$ and $d(v)$ have equal parity, that length is odd — an odd cycle, contrary to hypothesis. So both parts are independent and $G$ is bipartite.
+:::
+
+:::pitfall
+Two colours are decided by a clean local condition, and it is tempting to expect the same for three. It is not so: deciding $3$-colourability is NP-complete, and no finite list of forbidden subgraphs characterises it. Two colours are special because a $2$-colouring of a connected graph is *forced* once a single vertex is coloured, and a forced process either completes or exhibits a visible contradiction. From three colours upward there is genuine choice, and the choices interact globally.
+:::
+
+:::example[The Petersen graph]
+The Petersen graph has an outer $5$-cycle $u_1u_2u_3u_4u_5u_1$, five inner vertices $w_1, \dots, w_5$ joined in the pentagram $w_1w_3w_5w_2w_4w_1$, and the five spokes $u_iw_i$. Determine $\chi$.
+:::
+
+:::solution
+Lower bound. The outer $5$-cycle is odd, so $\chi \ge 3$ by Theorem *Two colours iff no odd cycle*.
+
+Upper bound. Take
+$$u = (1,2,1,2,3), \qquad w = (2,1,3,3,2).$$
+Spokes: $u_1w_1 = 1\,|\,2$, $u_2w_2 = 2\,|\,1$, $u_3w_3 = 1\,|\,3$, $u_4w_4 = 2\,|\,3$, $u_5w_5 = 3\,|\,2$. Outer cycle: $1\,|\,2$, $2\,|\,1$, $1\,|\,2$, $2\,|\,3$, $3\,|\,1$. Pentagram: $w_1w_3 = 2\,|\,3$, $w_3w_5 = 3\,|\,2$, $w_5w_2 = 2\,|\,1$, $w_2w_4 = 1\,|\,3$, $w_4w_1 = 3\,|\,2$. All fifteen edges are bichromatic, so $\chi = 3$.
+
+Note that $\omega = 2$ here: the Petersen graph is triangle-free. The clique bound is therefore off by one, which is the theme of the next section.
+:::
+
+:::remark
+$\chi$ is determined neither by the number of edges nor by the degree sequence. The $6$-cycle and the disjoint union of two triangles both have six vertices, six edges and every degree equal to $2$ — and chromatic numbers $2$ and $3$. Any useful bound must look at more than counts.
+:::
+
+## Bounds on the Chromatic Number
+
+<!-- section: chromatic-number -->
+
+Computing $\chi$ exactly is hard, so the working mathematician brackets it: an upper bound comes from exhibiting a colouring, a lower bound from exhibiting a structure that forces colours apart. This section collects the standard brackets and then shows how far apart they can be.
+
+The cheapest colouring algorithm is also the source of the cheapest bound.
+
+:::recipe[Greedy colouring]{#greedy-recipe}
+Fix an ordering $v_1, v_2, \dots, v_n$ of the vertices. For $i = 1, 2, \dots, n$ in turn, assign to $v_i$ the smallest positive integer not already used on a neighbour of $v_i$ among $v_1, \dots, v_{i-1}$.
+:::
+
+The output is proper by construction: when $v_i$ is coloured, every earlier neighbour's colour is forbidden, and every later neighbour will in its turn avoid the colour of $v_i$.
+
+:::theorem[Greedy bound]{#greedy-bound}
+For every graph $G$,
+$$\chi(G) \le \Delta(G) + 1 .$$
+:::
+
+:::proof
+Run greedy in any order. When $v_i$ is reached, its already-coloured neighbours number at most $\deg(v_i) \le \Delta(G)$, so at most $\Delta(G)$ colours are blocked. Among the $\Delta(G)+1$ colours $1, \dots, \Delta(G)+1$ at least one is therefore free, and the rule picks the least such. So greedy never introduces a colour above $\Delta(G)+1$, and the colouring it produces is proper.
+:::
+
+:::pitfall
+The number of colours greedy actually uses depends heavily on the order. Let $G$ be the **crown** $S_k$: vertices $a_1,\dots,a_k$ and $b_1,\dots,b_k$, with $a_i b_j$ an edge exactly when $i \ne j$. This graph is bipartite, so $\chi = 2$. But the order $a_1, b_1, a_2, b_2, \dots, a_k, b_k$ makes greedy use $k$ colours: $a_1, b_1$ are non-adjacent and both get colour $1$; then $a_2, b_2$ are adjacent to $b_1, a_1$ respectively, so both get colour $2$; inductively $a_i$ and $b_i$ are adjacent to all of $b_1,\dots,b_{i-1}$ and $a_1,\dots,a_{i-1}$ and so receive colour $i$. Greedy can be off by an arbitrarily large factor. *Some* ordering always achieves $\chi$ — order the vertices by colour class of an optimal colouring — but finding it is as hard as the original problem.
+:::
+
+A better ordering gives a better bound, and the right notion is degeneracy.
+
+:::definition[Degeneracy]{#degeneracy}
+$G$ is **$d$-degenerate** if every subgraph of $G$ has a vertex of degree at most $d$. The **degeneracy** of $G$ is the least such $d$, namely
+$$d(G) = \max_{H \subseteq G} \delta(H),$$
+the maximum over subgraphs $H$ of the minimum degree of $H$.
+:::
+
+:::theorem[Degeneracy bound]{#degeneracy-bound}
+For every graph $G$, $\;\chi(G) \le d(G) + 1$.
+:::
+
+:::proof
+Build an ordering backwards. Let $v_n$ be a vertex of degree at most $d(G)$ in $G$ — one exists by definition. Delete it; in $G - v_n$, again pick a vertex $v_{n-1}$ of degree at most $d(G)$, which exists because $G - v_n$ is a subgraph of $G$. Continuing, we obtain an order $v_1, \dots, v_n$ in which each $v_i$ has at most $d(G)$ neighbours among $v_1, \dots, v_{i-1}$, since those are exactly its neighbours at the moment it was removed.
+
+Run greedy in this order. At each step at most $d(G)$ colours are blocked, so colour $d(G)+1$ is never exceeded.
+:::
+
+Since $d(G) \le \Delta(G)$ always, this refines the greedy bound, sometimes dramatically: a tree has $d = 1$ but may have huge $\Delta$, and the bound returns the correct value $2$. It is also how planarity will be converted into a colouring bound later in the chapter.
+
+The remaining slack in $\chi \le \Delta + 1$ is precisely two families.
+
+:::theorem[Brooks' theorem]{#brooks}
+Let $G$ be connected. If $G$ is neither a complete graph nor an odd cycle, then
 $$\chi(G) \le \Delta(G).$$
 :::
 
-The two excluded families are exactly the graphs where the $\Delta+1$ bound is forced.
+:::proof
+**This is a sketch**, not a complete argument; it rests on the greedy bound, on the existence of a depth-first (or breadth-first) search tree, and on Menger-type connectivity facts that are not proved in this chapter.
 
-:::theorem[Four Color Theorem]{#four-color}
-For planar graphs, $\chi(G) \le 4$.
+Write $\Delta = \Delta(G)$. If $\Delta \le 2$ then a connected graph is a path or a cycle, and the excluded cases ($K_1, K_2, K_3$ and odd cycles) leave only paths and even cycles, which are $2$-colourable. So assume $\Delta \ge 3$.
+
+If $G$ has a vertex $v$ with $\deg(v) < \Delta$, order the vertices by decreasing distance from $v$, so that $v$ comes last and every other vertex has at least one neighbour closer to $v$, hence at least one neighbour *later* in the order. Greedy then blocks at most $\Delta - 1$ colours at each vertex other than $v$, and at $v$ itself at most $\deg(v) \le \Delta - 1$ colours; so $\Delta$ colours suffice. Hence we may assume $G$ is $\Delta$-regular.
+
+If $G$ is not $2$-connected, it has a cut vertex $v$; each block together with $v$ has a vertex of degree below $\Delta$, so each is $\Delta$-colourable by the previous paragraph, and the colourings can be permuted to agree at $v$ and glued.
+
+So $G$ is $\Delta$-regular and $2$-connected. The heart of the proof is to produce a vertex $u$ with two neighbours $x, y$ that are non-adjacent to each other and such that $G - x - y$ is connected. Ordering the vertices by decreasing distance from $u$ with $x, y$ placed first and $u$ last, greedy gives $x$ and $y$ the same colour — legal, as they are non-adjacent — so when $u$ is finally reached, its $\Delta$ neighbours carry at most $\Delta - 1$ distinct colours and a colour remains free. Exactly when no such triple $u,x,y$ exists, $G$ turns out to be complete or an odd cycle, which are the excluded cases.
 :::
 
-(This hypothesis matters: it holds only for graphs drawable in the plane without crossing edges — see Common Mistakes.)
-
-:::intuition
-Greedy: when you color a vertex, at worst all its neighbors have used different colors, so you may need one new color beyond the degree.
-
-Odd cycles and cliques force χ = Δ+1 in the exceptional cases.
+:::remark
+Brooks' theorem is sharp in a strong sense: $K_n$ has $\chi = n = \Delta+1$, and an odd cycle has $\chi = 3 = \Delta + 1$. Those are the only connected graphs attaining $\Delta+1$.
 :::
 
-:::example
-A 5-cycle $C_5$ has $\Delta=2$ (every vertex has exactly two neighbors). Try to 2-color it by alternating around the cycle: $1\to$A, $2\to$B, $3\to$A, $4\to$B, $5\to$A. But vertex 5 and vertex 1 are adjacent and both got A — the alternation fails to close because the cycle has odd length. So $\chi(C_5) \ge 3$; three colors clearly suffice (e.g. A,B,A,B,C), giving $\chi(C_5)=3$. Since $3 = \Delta+1$ and $C_5$ is an odd cycle, this is exactly one of the two Brooks exceptions — the bound $\chi \le \Delta$ genuinely fails here.
+Now the lower bounds. The clique bound $\chi \ge \omega$ is the obvious one, and the natural hope — that $\chi$ is *governed* by $\omega$, so that a graph needing many colours must contain a large clique — is false in the most emphatic way possible. There are triangle-free graphs of arbitrarily large chromatic number. Mycielski's construction builds them explicitly.
+
+:::definition[Mycielskian]{#mycielskian}
+Let $G$ have vertices $v_1, \dots, v_n$. The **Mycielskian** $M(G)$ has vertex set
+$$\{v_1, \dots, v_n\} \cup \{u_1, \dots, u_n\} \cup \{w\},$$
+with edges: all edges of $G$; the edge $u_i v_j$ whenever $v_iv_j \in E(G)$; and the edge $w u_i$ for every $i$. Thus $u_i$ is a "shadow" of $v_i$ copying its neighbourhood in $G$, and $w$ is joined to every shadow.
 :::
 
-:::example[(greedy):]
-Run greedy on the "paw" graph: a triangle on $\{a,b,c\}$ plus a pendant vertex $d$ joined only to $c$. Here $\Delta=3$ (vertex $c$).
+:::theorem[Mycielski: triangle-free with arbitrarily large $\chi$]{#mycielski}
+If $G$ is triangle-free with at least one edge, then $M(G)$ is triangle-free and
+$$\chi(M(G)) = \chi(G) + 1 .$$
+Consequently the graphs $G_2 = K_2$, $G_{k+1} = M(G_k)$ are all triangle-free with $\chi(G_k) = k$, so triangle-free graphs of every chromatic number exist.
+:::
+
+:::proof
+**Triangle-free.** The shadows $u_1, \dots, u_n$ form an independent set, since $M(G)$ has no edge $u_iu_j$; and $w$ is adjacent only to shadows. So a triangle contains at most one shadow and cannot contain $w$ unless it contains two shadows. Hence a triangle either lies inside $G$ — impossible, as $G$ is triangle-free — or consists of one shadow $u_i$ and two vertices $v_j, v_k$ of $G$. In that case $v_jv_k \in E$, and $u_iv_j, u_iv_k \in E$ means $v_iv_j, v_iv_k \in E$, so $v_i v_j v_k$ is a triangle in $G$. Contradiction.
+
+**$\chi(M(G)) \le \chi(G)+1$.** Take a proper $k$-colouring $c$ of $G$ with $k = \chi(G)$. Colour $v_i$ by $c(v_i)$, colour the shadow $u_i$ by $c(v_i)$ as well, and give $w$ the new colour $k+1$. Shadows are pairwise non-adjacent, so they never clash with each other; an edge $u_iv_j$ exists only when $v_iv_j \in E$, in which case $c(v_i) \ne c(v_j)$; and $w$ has a colour used nowhere else. The colouring is proper and uses $k+1$ colours.
+
+**$\chi(M(G)) \ge \chi(G)+1$.** Suppose $M(G)$ had a proper colouring $f$ with $k = \chi(G)$ colours. Since $w$ is adjacent to every shadow, no shadow carries the colour $f(w)$; say $f(w) = k$, so $f(u_i) \le k-1$ for all $i$. Define a colouring $g$ of $G$ by
+$$g(v_i) = \begin{cases} f(v_i), & f(v_i) \ne k, \\ f(u_i), & f(v_i) = k.\end{cases}$$
+Then $g$ takes values in $\{1, \dots, k-1\}$. We check $g$ is proper on $G$; that contradicts $\chi(G) = k$ and finishes the proof.
+
+Let $v_iv_j \in E(G)$. If neither $v_i$ nor $v_j$ was recoloured, $g(v_i) = f(v_i) \ne f(v_j) = g(v_j)$ because $f$ is proper. They cannot both have been recoloured, since that would mean $f(v_i) = f(v_j) = k$ on an edge. So exactly one was, say $v_i$, giving $g(v_i) = f(u_i)$ and $g(v_j) = f(v_j)$. But $v_iv_j \in E(G)$ makes $u_iv_j$ an edge of $M(G)$, so $f(u_i) \ne f(v_j)$, i.e. $g(v_i) \ne g(v_j)$.
+
+Finally, $K_2$ is triangle-free with $\chi = 2$, and each Mycielskian raises $\chi$ by one while preserving triangle-freeness, so the claimed sequence exists.
+:::
+
+:::example[The Grötzsch graph]
+Identify $M(C_5)$ and its chromatic number.
 :::
 
 :::solution
-Order $a,b,c,d$. $a\to 1$; $b\to 2$ (neighbor $a$ blocks 1); $c\to 3$ (neighbors $a,b$ block 1,2); $d\to 1$ (neighbor $c$ blocks 3, so 1 is free). Uses 3 colors.
-The triangle already forces $\chi\ge 3$, so $\chi=3$ here, matching the greedy result.
-Note $3 = \chi < \Delta+1 = 4$: the greedy bound is not tight, and indeed Brooks applies ($G$ is connected, not complete, not an odd cycle) giving $\chi\le\Delta=3$ ✓.
+$C_5$ has $5$ vertices, so $M(C_5)$ has $5 + 5 + 1 = 11$ vertices. Its edges are the $5$ of the cycle, $2 \cdot 5 = 10$ shadow-to-original edges (each $u_i$ joins the two neighbours of $v_i$), and $5$ edges from $w$: twenty in all. This is the **Grötzsch graph**, the smallest triangle-free graph with $\chi = 4$.
+
+By Theorem *Mycielski: triangle-free with arbitrarily large $\chi$*, $\chi(M(C_5)) = \chi(C_5) + 1 = 3 + 1 = 4$ and $M(C_5)$ is triangle-free, so $\omega = 2$ while $\chi = 4$: the clique bound is off by two.
 :::
 
-## Applications and Algorithms
+:::intuition
+Why can a triangle-free graph need many colours? Because $\chi$ is a global quantity and $\omega$ is a local one. A large clique is a local certificate that many colours are needed; the Mycielskian manufactures the *need* without the certificate, by making every small piece of the graph look easy while the pieces cannot be reconciled with each other. The shadow $u_i$ is a vertex that "must be able to take $v_i$'s colour", and $w$ then demands one colour that no shadow may use — an entirely non-local squeeze.
+:::
+
+A useful complementary lower bound relates $G$ to its complement $\overline{G}$.
+
+:::proposition[Nordhaus–Gaddum, product form]{#nordhaus-gaddum}
+For every graph $G$ on $n$ vertices, $\;\chi(G)\,\chi(\overline{G}) \ge n$.
+:::
+
+:::proof
+Let $k = \chi(G)$ and take an optimal colouring, whose $k$ colour classes cover $n$ vertices; so some class $S$ has $|S| \ge n/k$. The set $S$ is independent in $G$, hence a clique in $\overline{G}$, so $\omega(\overline G) \ge n/k$ and by Proposition *Monotonicity, the clique bound and the independence bound*, $\chi(\overline G) \ge n/k$. Multiplying by $k$ gives the claim.
+:::
+
+:::remark
+Three named results tell the rest of the story and are quoted here without proof, each far beyond the tools of this chapter. **Grötzsch's theorem** (1959): every triangle-free *planar* graph is $3$-colourable — so planarity does restore a link between local and global that Mycielski destroys. **The strong perfect graph theorem** (Chudnovsky, Robertson, Seymour, Thomas, 2006): $\chi(H) = \omega(H)$ for every induced subgraph $H$ of $G$ if and only if neither $G$ nor $\overline G$ contains an induced odd cycle of length at least five. **Erdős** (1959): for every $g$ and $k$ there is a graph of girth greater than $g$ and chromatic number greater than $k$, proved by the probabilistic method — so not even forbidding all short cycles keeps $\chi$ small.
+:::
+
+## The Chromatic Polynomial
+
+<!-- section: chromatic-polynomial -->
+
+So far $\chi(G)$ has been a single number. There is more information available for the same price: instead of asking *whether* $k$ colours suffice, count *how many* proper colourings with $k$ colours there are. The count turns out to be a polynomial in $k$, and $\chi$ is recoverable from it.
+
+:::definition[Chromatic polynomial]{#chromatic-polynomial-def}
+For a positive integer $k$, let $P(G,k)$ denote the number of proper colourings $c : V(G) \to \{1,\dots,k\}$. Colourings are counted as *labelled* maps, so permuting the colours gives a different colouring.
+:::
+
+:::proposition[Three basic evaluations]{#basic-chromatic-polys}
+$$P(\overline{K_n},k) = k^n, \qquad P(K_n,k) = k(k-1)(k-2)\cdots(k-n+1),$$
+and for every tree $T$ on $n \ge 1$ vertices, $\;P(T,k) = k(k-1)^{n-1}$.
+:::
+
+:::proof
+With no edges every vertex is free, giving $k$ choices each. In $K_n$, colour the vertices in any order: the $i$-th vertex is adjacent to all $i-1$ already coloured, and their colours are distinct, so it has $k-(i-1)$ choices; multiply.
+
+For a tree, root it and colour outwards from the root. The root has $k$ choices. Every other vertex has exactly one already-coloured neighbour, its parent, so it has $k-1$ choices, and these choices are independent because no two non-parent vertices of the tree are adjacent to one another before being reached. Multiplying gives $k(k-1)^{n-1}$.
+:::
+
+Everything else follows from one identity, which is the fundamental recursion of the theory.
+
+:::notation
+For an edge $e = uv$ of $G$, write $G - e$ for the graph with $e$ deleted, and $G / e$ for the graph obtained by **contracting** $e$: delete $e$, identify $u$ and $v$ into a single vertex, and discard any repeated edges so the result stays simple. Contraction reduces the vertex count by one.
+:::
+
+:::theorem[Deletion–contraction]{#deletion-contraction}
+For every graph $G$ and every edge $e \in E(G)$,
+$$P(G,k) = P(G - e, k) - P(G/e, k) .$$
+:::
+
+:::proof
+Let $e = uv$ and split the proper $k$-colourings of $G-e$ into two classes according to whether $u$ and $v$ receive the same colour.
+
+If $c$ is a proper colouring of $G-e$ with $c(u) \ne c(v)$, then $c$ is also a proper colouring of $G$, because the only edge of $G$ not in $G-e$ is $e$ itself and its ends differ. Conversely every proper colouring of $G$ restricts to such a colouring of $G-e$. So this class is in bijection with the proper colourings of $G$, and has size $P(G,k)$.
+
+If instead $c(u) = c(v)$, then $c$ assigns a single colour to the pair $\{u,v\}$ and a colour to each other vertex, with all edges of $G-e$ bichromatic. That is precisely the data of a proper colouring of $G/e$: a vertex $x$ is adjacent to the merged vertex in $G/e$ exactly when $x$ is adjacent in $G-e$ to $u$ or to $v$, and the condition "$c(x)$ differs from the common colour" is the same in both graphs. Discarding repeated edges changes no constraint, only how many times it is written. So this class has size $P(G/e,k)$.
+
+The two classes are disjoint and exhaust the colourings of $G-e$, so $P(G-e,k) = P(G,k) + P(G/e,k)$.
+:::
+
+:::intuition
+Deleting an edge *relaxes* a constraint, so $G - e$ has at least as many colourings as $G$. The excess consists exactly of the colourings that were only admissible because the constraint was dropped — the ones giving $u$ and $v$ the same colour — and gluing $u$ to $v$ is how you count those. Deletion–contraction says: colourings of $G$ = colourings without the rule, minus the ones that cheat.
+:::
+
+The recursion strictly reduces $|E| + |V|$ at each step and bottoms out at edgeless graphs, so it computes $P$ for any graph in finitely many steps. It also proves that $P$ deserves the name "polynomial".
+
+:::theorem[$P(G,k)$ is a polynomial]{#chromatic-is-polynomial}
+For every graph $G$ on $n$ vertices and $m$ edges there is a polynomial with integer coefficients agreeing with $P(G,k)$ at every positive integer $k$. It has degree $n$, is monic, has constant term $0$ when $n \ge 1$, its coefficient of $k^{n-1}$ is $-m$, and its coefficients alternate in sign: writing
+$$P(G,k) = \sum_{i=0}^{n} (-1)^{n-i} a_i k^i, \qquad a_i \ge 0 .$$
+:::
+
+:::proof
+Induction on $m$. If $m = 0$ then $P(G,k) = k^n$ by Proposition *Three basic evaluations*: monic of degree $n$, coefficient of $k^{n-1}$ equal to $0 = -m$, non-negative coefficients with the sign pattern (all but the leading one are zero).
+
+Suppose $m \ge 1$ and the statement holds for all graphs with fewer edges. Pick $e \in E(G)$. Then $G-e$ has $n$ vertices and $m-1$ edges, and $G/e$ has $n-1$ vertices and at most $m-1$ edges. By induction,
+$$P(G-e,k) = k^n - (m-1)k^{n-1} + \cdots, \qquad P(G/e,k) = k^{n-1} - \cdots,$$
+both with alternating signs in the stated sense. By Theorem *Deletion–contraction*, $P(G,k) = P(G-e,k) - P(G/e,k)$ is a polynomial of degree $n$, monic (the degree-$n$ term comes only from $P(G-e,k)$), and its coefficient of $k^{n-1}$ is $-(m-1) - 1 = -m$.
+
+For the signs: write $P(G-e,k) = \sum_i (-1)^{n-i} b_i k^i$ and $P(G/e,k) = \sum_i (-1)^{n-1-i} c_i k^i$ with all $b_i, c_i \ge 0$. Then
+$$P(G,k) = \sum_i \Big( (-1)^{n-i} b_i - (-1)^{n-1-i} c_i \Big) k^i = \sum_i (-1)^{n-i}\big(b_i + c_i\big)k^i,$$
+since $-(-1)^{n-1-i} = (-1)^{n-i}$. So $a_i = b_i + c_i \ge 0$, as required.
+
+Finally $P(G,0) = 0$ for $n \ge 1$ because there is no map into an empty colour set, so the constant term vanishes.
+:::
+
+:::proposition[Recovering $\chi$]{#chi-from-polynomial}
+$\chi(G) = \min\{k \in \mathbb{Z}_{>0} : P(G,k) > 0\}$, and $P(G,k) > 0$ for every $k \ge \chi(G)$.
+:::
+
+:::proof
+$P(G,k) > 0$ says precisely that a proper $k$-colouring exists, which is the definition of $k$-colourable; and $k$-colourable implies $(k+1)$-colourable, since a colouring into $\{1,\dots,k\}$ is one into $\{1,\dots,k+1\}$. So the set of $k$ with $P(G,k)>0$ is exactly $\{\chi(G), \chi(G)+1, \dots\}$ and its minimum is $\chi(G)$.
+:::
+
+:::example[The chromatic polynomial of a cycle]
+Show that $P(C_n, k) = (k-1)^n + (-1)^n(k-1)$ for $n \ge 3$, and read off $\chi(C_n)$.
+:::
+
+:::solution
+Induct on $n$. For $n = 3$, $C_3 = K_3$ and Proposition *Three basic evaluations* gives $k(k-1)(k-2)$; meanwhile $(k-1)^3 - (k-1) = (k-1)\big((k-1)^2-1\big) = (k-1)(k^2-2k) = k(k-1)(k-2)$ ✓.
+
+For $n > 3$ pick an edge $e$ of $C_n$. Deleting it leaves the path $P_n$, a tree on $n$ vertices, so $P(C_n - e, k) = k(k-1)^{n-1}$. Contracting it leaves $C_{n-1}$. By Theorem *Deletion–contraction* and the inductive hypothesis,
+$$P(C_n,k) = k(k-1)^{n-1} - \Big[(k-1)^{n-1} + (-1)^{n-1}(k-1)\Big] = (k-1)^{n-1}(k-1) + (-1)^{n}(k-1),$$
+which is $(k-1)^n + (-1)^n(k-1)$.
+
+Now read off $\chi$. At $k=1$ the value is $0$. At $k = 2$ it is $1 + (-1)^n$, which is $2$ for $n$ even and $0$ for $n$ odd. So by Proposition *Recovering $\chi$*, $\chi(C_n) = 2$ for even $n$ — and indeed there are exactly two proper $2$-colourings, one for each way of labelling the two classes — while for odd $n$ we must go to $k=3$, where $2^n + (-1)^n \cdot 2 = 2^n - 2 > 0$. This recovers Proposition *The standard families*, now with counts attached.
+:::
+
+:::example[A small graph by deletion–contraction]
+Compute $P(G,k)$ for the "paw": a triangle on $\{a,b,c\}$ plus a pendant vertex $d$ adjacent only to $c$.
+:::
+
+:::solution
+Colour $d$ last. It has one neighbour, $c$, so once $a,b,c$ are coloured there are $k-1$ choices for $d$, independently of everything else. Hence $P(G,k) = (k-1)\,P(K_3,k) = (k-1)\cdot k(k-1)(k-2) = k(k-1)^2(k-2)$.
+
+Check against the theorem: expanding gives $k^4 - 4k^3 + 5k^2 - 2k$. Degree $4 = n$ ✓, monic ✓, coefficient of $k^3$ equal to $-4 = -m$ ✓ (the paw has four edges), signs alternating ✓, constant term $0$ ✓.
+
+Smallest $k$ with $P>0$: $P(G,1) = 0$, $P(G,2) = 2\cdot1\cdot0 = 0$, $P(G,3) = 3\cdot4\cdot1 = 12 > 0$. So $\chi = 3$, matching the triangle's demand.
+:::
+
+:::pitfall
+The chromatic polynomial does not determine the graph. All trees on $n$ vertices share the polynomial $k(k-1)^{n-1}$, so the path $P_4$ and the star $K_{1,3}$ are indistinguishable by it even though they are not isomorphic. Nor does every alternating-sign polynomial of the right shape arise from a graph. Take $k^4 - 3k^3 + 3k^2$. Degree $4$ forces $n = 4$, the coefficient $-3$ of $k^{n-1}$ forces $m = 3$, and the lowest surviving power $k^2$ forces two components (the multiplicity of the factor $k$ is the number of components). Four vertices, three edges and two components leave only a triangle plus an isolated vertex, whose polynomial is $k \cdot k(k-1)(k-2) = k^4 - 3k^3 + 2k^2 \ne k^4-3k^3+3k^2$. Deciding which polynomials are chromatic is open in general.
+:::
+
+:::remark
+The chromatic polynomial evaluated *outside* the positive integers still means something. Stanley's theorem (1973) says $(-1)^n P(G,-1)$ equals the number of **acyclic orientations** of $G$ — assignments of a direction to every edge leaving no directed cycle. For the triangle this predicts $(-1)^3 \big((-1)(-2)(-3)\big) = 6$, and indeed the $2^3 = 8$ orientations of $K_3$ are acyclic except for the two cyclic ones. The chromatic polynomial is a specialisation of the Tutte polynomial, which is why so many counting problems on graphs reduce to it.
+:::
+
+## Applications: Scheduling, Registers and Maps
 
 <!-- section: applications -->
 
-Coloring models exam scheduling (vertices = exams, edge = student taking both, colors = time slots), register allocation in compilers, map coloring, frequency assignment, and Sudoku (as graph coloring on a special graph).
+Colouring is the canonical model for *conflict avoidance*. Whenever a set of objects must be partitioned into groups so that certain pairs stay apart, the objects are vertices, the conflicts are edges, the groups are colours, and the fewest groups is $\chi$. Three standard instances:
 
-Computing χ(G) is NP-hard, but for special classes (bipartite, chordal, perfect) it is polynomial.
+- **Timetabling.** Vertices are exams; join two exams if some student sits both; colours are time slots. A proper colouring is a clash-free timetable and $\chi$ is the shortest possible exam period.
+- **Register allocation.** Vertices are program variables; join two if their live ranges overlap, so they cannot share a machine register; colours are registers. A $k$-colouring assigns variables to the $k$ available registers; if $\chi > k$ the compiler must "spill" a variable to memory. Chaitin's 1982 allocator is exactly greedy colouring with spilling.
+- **Frequency assignment.** Vertices are transmitters; join two if they are close enough to interfere; colours are frequency bands.
 
 :::intuition
-Final exams: if two exams share a student they can't be at the same time slot (color).
-
-The minimal number of slots needed to avoid conflicts is the chromatic number of the conflict graph.
+The modelling step is always the same and always worth doing slowly: decide what a *conflict* is, and put an edge exactly there. Getting this wrong is the usual source of nonsense. In timetabling the edge is "shares a student", not "same department"; in register allocation it is "live at the same instant", not "appears in the same line of code".
 :::
 
-:::example
-Schedule 4 exams $A,B,C,D$ into as few time slots as possible. Two exams conflict (need different slots) when a student takes both. Conflicts: $A\text{–}B$, $A\text{–}C$, $B\text{–}C$, $B\text{–}D$.
+:::example[An exam timetable]
+Six exams $A, \dots, F$ must be scheduled. Pairs sharing a student: $AB$, $AC$, $AD$, $BC$, $BD$, $CD$, $CE$, $DF$, $EF$. What is the shortest clash-free timetable?
 :::
 
 :::solution
-Step 1 (lower bound). $A,B,C$ are mutually conflicting — a triangle $K_3$ in the conflict graph — so they need 3 distinct slots. Hence $\chi \ge 3$.
-Step 2 (construction). Slot 1: $\{A\}$. Slot 2: $\{B\}$. Slot 3: $\{C\}$. Now place $D$: its only conflict is $B$ (slot 2), so $D$ may share slot 1 or slot 3. Put $D$ in slot 1 with $A$ (they have no student in common).
-Step 3. Assignment $A,D\to$ slot 1, $B\to$ slot 2, $C\to$ slot 3 uses 3 slots and has no conflict in any slot.
-Sanity check: 3 slots meet the lower bound from Step 1, so this is optimal: $\chi=3$.
+Lower bound. $A, B, C, D$ are pairwise conflicting, a $K_4$ in the conflict graph, so $\omega \ge 4$ and $\chi \ge 4$ by the clique bound.
+
+Upper bound. Take slots $A \to 1$, $B \to 2$, $C \to 3$, $D \to 4$, $E \to 1$ (its only conflict is $C$, in slot $3$), $F \to 2$ (its conflicts are $D$ in slot $4$ and $E$ in slot $1$). Every listed pair receives different slots, so four slots suffice.
+
+Hence $\chi = 4$ and four slots is optimal. Note that the lower bound came from a clique and the upper from an explicit colouring — the standard two-sided argument, and the only honest way to claim optimality.
+:::
+
+:::remark
+Sudoku is the same problem in disguise. Build a graph on the $81$ cells, joining two cells when they share a row, a column or a $3\times3$ box. Each vertex has $8+8+4 = 20$ neighbours, the graph contains $K_9$ (any row), and a completed Sudoku grid is precisely a proper $9$-colouring; so $\chi = 9$. Solving a puzzle is *extending a partial colouring*, which is harder in general than colouring from scratch.
+:::
+
+How hard is it to compute $\chi$? As hard as anything in combinatorics.
+
+:::theorem[Complexity of colouring]{#coloring-complexity}
+Deciding whether $\chi(G) \le 3$ is NP-complete, and remains so for planar graphs of maximum degree $4$. Computing $\chi(G)$ exactly is NP-hard, and — unless $\mathrm{P} = \mathrm{NP}$ — no polynomial algorithm approximates $\chi(G)$ within a factor $n^{1-\varepsilon}$ for any fixed $\varepsilon > 0$.
+:::
+
+:::proof
+Not proved here. The first statement is a classical reduction from $3$-SAT; the inapproximability is Zuckerman's 2007 derandomisation of Håstad's result on clique approximation. Both belong to computational complexity rather than graph theory, and are quoted because they explain why the rest of the chapter is about bounds and special classes rather than algorithms.
+:::
+
+Some classes escape.
+
+:::theorem[Chordal graphs colour greedily]{#chordal}
+Call $G$ **chordal** if every cycle of length at least four has a chord (an edge joining two non-consecutive vertices of the cycle). Every chordal graph has a **perfect elimination ordering** — an ordering $v_1, \dots, v_n$ in which the later neighbours of each $v_i$ form a clique — and greedy colouring in the reverse of that ordering uses exactly $\omega(G)$ colours. Hence $\chi(G) = \omega(G)$ for chordal $G$, and both are computable in linear time.
+:::
+
+:::proof
+**Sketch**, resting on Dirac's lemma, which is not proved here: every chordal graph has a *simplicial* vertex, one whose neighbourhood is a clique. Repeatedly removing a simplicial vertex (chordality is inherited by induced subgraphs) produces a perfect elimination ordering.
+
+Given the ordering, colour $v_n, v_{n-1}, \dots, v_1$ greedily. When $v_i$ is reached, its already-coloured neighbours are exactly its later neighbours, which form a clique, so they carry distinct colours; if there are $t$ of them, $v_i$ receives a colour in $\{1, \dots, t+1\}$, and $v_i$ together with those $t$ neighbours is a clique of size $t+1 \le \omega(G)$. So no colour above $\omega(G)$ is used, and $\chi \le \omega$; the reverse inequality is the clique bound.
+:::
+
+Bipartite graphs are $2$-colourable by the BFS construction inside Theorem *Two colours iff no odd cycle*, also in linear time. Chordal and bipartite graphs are both **perfect** — every induced subgraph has $\chi = \omega$ — and the strong perfect graph theorem quoted earlier characterises the perfect graphs exactly.
+
+### Planar graphs and maps
+
+The historical root of the subject is map colouring. A map's countries become vertices and two countries sharing a border become adjacent, which produces a **planar** graph: one drawable in the plane with no two edges crossing. How many colours does a planar graph need?
+
+:::theorem[Euler's formula]{#euler-formula}
+For a connected plane graph with $V$ vertices, $E$ edges and $F$ faces (regions of the plane, including the unbounded one),
+$$V - E + F = 2 .$$
+:::
+
+:::proof
+**Sketch**, by induction on $E$. A connected graph with $V$ vertices and no cycle is a tree, with $E = V-1$ and $F = 1$, so $V - (V-1) + 1 = 2$. If the graph has a cycle, delete an edge $e$ of that cycle: the graph stays connected, $E$ drops by one, and the two faces on either side of $e$ merge into one, so $F$ drops by one. The alternating sum is unchanged, and induction applies. The only step needing genuine topology — that an edge on a cycle really does separate two distinct faces — is the Jordan curve theorem, which is assumed.
+:::
+
+:::corollary[Planar graphs are sparse]{#planar-sparse}
+A simple planar graph with $n \ge 3$ vertices has at most $3n - 6$ edges, and therefore a vertex of degree at most $5$.
+:::
+
+:::proof
+We may add edges until the graph is maximal planar, which only helps the bound, and assume it is connected. Every face of a simple plane graph with $n \ge 3$ is bounded by at least three edges, and every edge borders exactly two faces; counting incidences of edges with faces in two ways gives $2E \ge 3F$, i.e. $F \le \tfrac23 E$. Substituting into Euler's formula,
+$$2 = V - E + F \le n - E + \tfrac23 E = n - \tfrac13 E ,$$
+so $E \le 3n-6$.
+
+If every vertex had degree at least $6$, then $2E = \sum_v \deg(v) \ge 6n$, so $E \ge 3n > 3n-6$, a contradiction. Hence $\delta(G) \le 5$.
+:::
+
+Since every subgraph of a planar graph is planar, the corollary says planar graphs are $5$-degenerate, and Theorem *Degeneracy bound* immediately gives six colours.
+
+:::theorem[Six colour theorem]{#six-color}
+Every planar graph satisfies $\chi(G) \le 6$.
+:::
+
+:::proof
+Every subgraph of a planar graph is planar, so by Corollary *Planar graphs are sparse* every subgraph has a vertex of degree at most $5$; that is, $d(G) \le 5$. Theorem *Degeneracy bound* gives $\chi(G) \le d(G)+1 \le 6$.
+:::
+
+One more colour can be removed by an argument of Kempe that, unlike his attempted proof of four colours, is correct.
+
+:::theorem[Five colour theorem]{#five-color}
+Every planar graph satisfies $\chi(G) \le 5$.
+:::
+
+:::proof
+Induction on $n$. For $n \le 5$ give every vertex its own colour. Let $n > 5$ and fix a plane drawing of $G$. By Corollary *Planar graphs are sparse* there is a vertex $v$ with $\deg(v) \le 5$. By induction $G - v$ has a proper $5$-colouring $c$.
+
+If $\deg(v) \le 4$, or if the neighbours of $v$ use at most four colours between them, a colour is free for $v$ and we are done. So assume $v$ has exactly five neighbours $v_1, v_2, v_3, v_4, v_5$, listed in the cyclic order in which their edges leave $v$ in the drawing, with $c(v_i) = i$ for each $i$.
+
+Let $H_{13}$ be the subgraph of $G-v$ induced by the vertices coloured $1$ or $3$, and let $K$ be the connected component of $H_{13}$ containing $v_1$ — a **Kempe chain**.
+
+*Case A: $v_3 \notin K$.* Swap colours $1$ and $3$ throughout $K$. The result is still a proper colouring of $G - v$: inside $K$ the swap preserves properness, and any edge leaving $K$ goes to a vertex coloured neither $1$ nor $3$ (otherwise it would lie in $K$). Now $v_1$ is coloured $3$ and $v_3$ is still coloured $3$, so colour $1$ is used by none of $v$'s neighbours; give it to $v$.
+
+*Case B: $v_3 \in K$.* Then there is a path from $v_1$ to $v_3$ using only colours $1$ and $3$. Together with $v$, this path forms a closed curve in the plane which separates $v_2$ from $v_4$: the cyclic order of the neighbours around $v$ puts $v_2$ strictly inside the region bounded by the curve and $v_4$ strictly outside. Any path from $v_2$ to $v_4$ in $G - v$ must cross that curve, and since the drawing is planar it can only cross at a vertex of the curve — but every such vertex is coloured $1$ or $3$. So no path from $v_2$ to $v_4$ uses only colours $2$ and $4$: the component of the $\{2,4\}$-subgraph containing $v_2$ does not contain $v_4$. Swap colours $2$ and $4$ on that component, exactly as in Case A, and colour $2$ is freed for $v$.
+
+Either way $G$ has a proper $5$-colouring.
+:::
+
+:::theorem[Four colour theorem]{#four-color}
+Every planar graph satisfies $\chi(G) \le 4$.
+:::
+
+:::proof
+**Not proved here, and no short proof is known.** The statement was conjectured by Guthrie in 1852. Kempe published a proof in 1879 using the chain argument above on a vertex of degree $5$; Heawood found the error in 1890 — the two simultaneous Kempe swaps the argument needs can interfere with one another — and salvaged the five colour theorem from the wreckage, which is the proof given above.
+
+The theorem was finally proved by Appel and Haken in 1976. Their argument is a *discharging* proof: an **unavoidable set** of $1{,}476$ configurations is exhibited, such that every planar triangulation must contain one of them, and each is shown to be **reducible**, meaning a four-colouring of a smaller graph extends across it. The reducibility checks were performed by computer and took over a thousand hours; they cannot be carried out by hand. Robertson, Sanders, Seymour and Thomas gave a cleaner version in 1997 with $633$ configurations, still machine-checked. In 2005 Gonthier produced a fully formal proof verified by the Coq proof assistant, which removes doubt about the case analysis but does not make the proof humanly surveyable.
+
+The bound is sharp: $K_4$ is planar and needs four colours.
+:::
+
+:::pitfall
+The four colour theorem is about *planar* graphs and says nothing about graphs in general. $K_n$ needs $n$ colours and is non-planar for $n \ge 5$. The everyday version — "any map needs four colours" — also quietly assumes each country is a single connected region; a map with a country in two disconnected pieces that must share a colour is not modelled by a planar graph and can need arbitrarily many colours.
+:::
+
+## Edge Colourings and Vizing's Theorem
+
+<!-- section: edge-coloring -->
+
+Colour the edges instead of the vertices, and the conflict rule becomes: edges sharing an endpoint must differ.
+
+:::definition[Proper edge colouring and chromatic index]{#edge-coloring-def}
+A **proper $k$-edge-colouring** of $G$ is a map $c : E(G) \to \{1,\dots,k\}$ such that $c(e) \ne c(f)$ whenever $e$ and $f$ share an endpoint. The **chromatic index** $\chi'(G)$ is the least such $k$.
+:::
+
+:::proposition[Colour classes are matchings]{#edge-classes}
+A proper $k$-edge-colouring of $G$ is the same thing as a partition of $E(G)$ into $k$ **matchings** — sets of pairwise disjoint edges. Consequently $\chi'(G)$ is the least number of matchings covering $E(G)$, and
+$$\chi'(G) \ge \Delta(G).$$
+:::
+
+:::proof
+A colour class is a set of edges no two of which share an endpoint, which is exactly a matching; conversely a partition into matchings defines a proper colouring by class index. For the bound, let $v$ be a vertex of degree $\Delta$. The $\Delta$ edges at $v$ pairwise share the endpoint $v$, so they receive $\Delta$ distinct colours.
+:::
+
+:::remark
+Edge colouring $G$ is vertex colouring the **line graph** $L(G)$, whose vertices are the edges of $G$ and whose edges join pairs meeting at a vertex: $\chi'(G) = \chi(L(G))$. So edge colouring is a *special case* of vertex colouring — which makes it all the more striking that it admits a near-complete answer while the general problem does not. Restricting to line graphs is a severe restriction, and it buys a great deal.
+:::
+
+The near-complete answer is Vizing's, and it is the reason edge colouring feels tame.
+
+:::theorem[Vizing's theorem]{#vizing}
+For every simple graph $G$,
+$$\Delta(G) \le \chi'(G) \le \Delta(G) + 1 .$$
+:::
+
+:::proof
+**Sketch.** The lower bound is Proposition *Colour classes are matchings*. The upper bound is proved by induction on $|E|$, and rests on two tools used in this chapter already: Kempe chains, and a counting device called a *fan*.
+
+Suppose all but one edge $uv_1$ of $G$ has been properly coloured with the palette $\{1, \dots, \Delta+1\}$. Every vertex has degree at most $\Delta$, so every vertex *misses* at least one colour of the palette. Build a **fan** at $u$: a maximal sequence of distinct neighbours $v_1, v_2, \dots, v_r$ of $u$ in which the colour missing at $v_i$ is the colour of the edge $uv_{i+1}$. If some colour missing at $u$ is also missing at some $v_i$, the fan can be "rotated" — recolour $uv_j$ with the colour of $uv_{j+1}$ for $j < i$ — and $uv_1$ ends up coloured, finishing the step.
+
+Otherwise, pick a colour $\alpha$ missing at $u$ and a colour $\beta$ missing at the last fan vertex $v_r$. Take the $\{\alpha,\beta\}$-Kempe chain from $v_r$. Swapping colours along it frees a colour and, after at most one rotation of the fan, lets $uv_1$ be coloured. Making "at most one rotation" precise — showing the chain cannot end at both places that would block the argument — is the technical core and is omitted.
+:::
+
+Vizing's theorem splits every graph into two classes: **class 1** if $\chi' = \Delta$, **class 2** if $\chi' = \Delta+1$. Deciding which is NP-complete, so the gap of one colour is not merely a blemish in the statement. Some families are settled.
+
+:::theorem[König's edge colouring theorem]{#konig-edge}
+Every bipartite graph is class 1: $\chi'(G) = \Delta(G)$ for bipartite $G$.
+:::
+
+:::proof
+**Sketch**, by induction on the number of edges, resting on the theory of alternating paths. Remove an edge $uv$ and properly $\Delta$-edge-colour the rest. Both $u$ and $v$ miss a colour; if they miss a common colour, use it on $uv$. Otherwise $u$ misses $\alpha$ and $v$ misses $\beta \ne \alpha$; follow the $\{\alpha,\beta\}$-chain from $v$. In a bipartite graph such a chain cannot return to $u$, because it would have to be an odd closed walk; swapping colours along it frees $\alpha$ at $v$ and $uv$ can be coloured $\alpha$.
+:::
+
+:::proposition[Cycles and odd order]{#edge-cycles}
+$\chi'(C_n) = 2$ for $n$ even and $3$ for $n$ odd. More generally, if $n = |V(G)|$ is odd and
+$$|E(G)| > \Delta(G)\cdot\frac{n-1}{2},$$
+then $G$ is class 2.
+:::
+
+:::proof
+For the cycle, $\Delta = 2$, so $\chi' \in \{2,3\}$. A proper $2$-edge-colouring of $C_n$ alternates colours around the cycle and closes up only when $n$ is even, by the same parity argument as in Proposition *The standard families*; for odd $n$, colour $1,2,1,2,\dots,1,2,3$.
+
+For the general claim, a matching in a graph on $n$ vertices has at most $\lfloor n/2 \rfloor$ edges, which for odd $n$ equals $(n-1)/2$. If $G$ were class 1, its $\Delta$ colour classes would be matchings covering all edges, giving $|E| \le \Delta(n-1)/2$, contrary to hypothesis.
+:::
+
+:::example[Round-robin tournaments]
+$n$ teams each play every other team once, and a team plays at most one match per round. How many rounds are needed?
+:::
+
+:::solution
+Matches are the edges of $K_n$; a round is a set of matches with no team appearing twice, i.e. a matching; so the minimum number of rounds is $\chi'(K_n)$. Here $\Delta = n-1$.
+
+For $n$ odd, $|E| = \binom{n}{2} = \frac{n(n-1)}{2} > (n-1)\cdot\frac{n-1}{2}$, so Proposition *Cycles and odd order* makes $K_n$ class 2 and $\chi'(K_n) = n$. Concretely: with $n$ odd each round leaves at least one team idle, since $n$ is odd, so at most $(n-1)/2$ matches per round and at least $n$ rounds are needed.
+
+For $n$ even, $\chi'(K_n) = n-1$, realised by the classical circle schedule: fix one team at the centre and arrange the other $n-1$ around a circle; in round $i$, the centre plays the team at position $i$ and the remaining teams are paired by reflection about the diameter through position $i$. Rotating gives $n-1$ rounds covering every pair exactly once.
+
+So the answer is $n-1$ rounds for even $n$ and $n$ rounds for odd $n$ — and for odd $n$ a bye is unavoidable, which is exactly what class 2 means here.
+:::
+
+:::remark
+The Petersen graph is the standard small class-2 graph that is not covered by the parity argument: it is $3$-regular on ten (even) vertices, yet $\chi' = 4$. For a cubic graph, being class 1 is the same as splitting the edge set into three perfect matchings, and the Petersen graph admits no such split — although it does have perfect matchings. It is the smallest **snark**: a bridgeless cubic class-2 graph of girth at least five.
+:::
+
+:::intuition
+Here is the turn that organises the rest of the chapter. An edge colouring of $K_n$ with two colours is just a way of splitting the pairs from an $n$-set into two groups: friends and strangers, say. Everything so far has asked for a colouring that *avoids* something — no two edges of a colour class meeting at a vertex. Ramsey theory asks the opposite question about the same object: given that we are free to colour the edges of $K_n$ however we like with two colours, what monochromatic structure are we *forced* to create once $n$ is large enough? No properness is demanded and none is possible; the colour classes are arbitrary graphs. The question is how big $n$ must be before arbitrariness runs out.
 :::
 
 ## Ramsey Numbers
@@ -117,123 +575,363 @@ Sanity check: 3 slots meet the lower bound from Step 1, so this is optimal: $\ch
 <!-- section: ramsey-numbers -->
 
 :::definition[Ramsey number]{#ramsey-number}
-The Ramsey number R(s,t) is the smallest integer n such that every red/blue coloring of the edges of the complete graph K_n contains either a red clique of size s or a blue clique of size t.
+Let $s, t \ge 1$. The **Ramsey number** $R(s,t)$ is the least $n$ such that every colouring of the edges of $K_n$ with the two colours red and blue contains a red $K_s$ (a set of $s$ vertices with all $\binom{s}{2}$ pairs red) or a blue $K_t$.
 :::
 
-:::proposition[The smallest non-trivial Ramsey number]
-R(3,3) = 6: any 6 people contain 3 mutual friends or 3 mutual strangers.
-:::
+Three things about this definition need saying at once. The colouring is completely arbitrary — no properness, no balance. The two colours play different roles, so $R(s,t) = R(t,s)$ holds only because swapping the colours is a bijection between colourings. And the definition presupposes that *some* $n$ works; that $R(s,t)$ is finite at all is a theorem, proved in the next section.
 
 :::intuition
-With 5 people it is possible to arrange friendships so there is no trio of all friends and no trio of all strangers (the 5-cycle coloring).
-
-At 6 the mathematics forces one or the other.
+Read it as a party. Invite $n$ people; colour the pair $\{x,y\}$ red if $x$ and $y$ know each other and blue if they do not. A red $K_3$ is three mutual acquaintances, a blue $K_3$ three mutual strangers. $R(3,3)$ is the smallest party size at which one of the two is guaranteed, whatever the acquaintance pattern. The point is not that such a party *can* be arranged — it is that it cannot be avoided.
 :::
 
-:::example
-Prove $R(3,3)=6$. This needs two parts: an upper bound (6 always works) and a lower bound (5 does not).
+:::proposition[Trivial values]{#ramsey-trivial}
+$R(1,t) = 1$ and $R(2,t) = t$ for every $t \ge 1$.
+:::
+
+:::proof
+$K_1$ is a red $K_1$ vacuously — a single vertex spans no edges — so $n = 1$ already suffices and $R(1,t)=1$.
+
+For $R(2,t)$: in a colouring of $K_t$ either some edge is red, giving a red $K_2$, or every edge is blue, giving a blue $K_t$; so $n = t$ suffices. And $n = t-1$ does not: colour every edge of $K_{t-1}$ blue. There is no red $K_2$ (no red edge at all) and no blue $K_t$ (not enough vertices). So $R(2,t) = t$.
+:::
+
+The first genuinely non-trivial value is the one everybody meets first.
+
+:::theorem[$R(3,3) = 6$]{#r33}
+Every red/blue colouring of the edges of $K_6$ contains a monochromatic triangle, and some colouring of $K_5$ does not.
+:::
+
+:::proof
+**Upper bound: $R(3,3) \le 6$.** Take any colouring of $K_6$ and fix a vertex $v$. The five edges at $v$ receive two colours, so by the pigeonhole principle at least $\lceil 5/2 \rceil = 3$ of them share a colour; say $vx$, $vy$, $vz$ are all red.
+
+Consider the three edges $xy$, $yz$, $xz$. If any one of them is red — say $xy$ — then $v, x, y$ is a red triangle, since $vx, vy, xy$ are all red. If none of them is red, then $xy, yz, xz$ are all blue and $x,y,z$ is a blue triangle. Either way a monochromatic triangle exists. (If the majority colour at $v$ is blue instead, exchange the words red and blue throughout.)
+
+**Lower bound: $R(3,3) > 5$.** Colour $K_5$ by making the five edges of the cycle $1\text{–}2\text{–}3\text{–}4\text{–}5\text{–}1$ red and the five remaining edges — the pentagram $1\text{–}3\text{–}5\text{–}2\text{–}4\text{–}1$ — blue. Each colour class is itself a $5$-cycle, and $C_5$ contains no triangle: a triangle needs three mutually adjacent vertices, whereas in $C_5$ any two adjacent vertices have no common neighbour. So neither class contains $K_3$ and $n = 5$ fails.
+
+Together these show $6$ is the least sufficient $n$.
+:::
+
+:::figure[The unique (up to relabelling) triangle-free $2$-colouring of $K_5$: a red pentagon and a blue pentagram. Each colour class is a $5$-cycle, so neither contains a triangle — which is why $R(3,3) > 5$.]{#r33-fig}
+{
+  "type": "plot",
+  "x": [-2.4, 2.4], "y": [-2.0, 2.2],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "path", "points": [[0, 1], [-0.951, 0.309], [-0.588, -0.809], [0.588, -0.809], [0.951, 0.309], [0, 1]] },
+    { "kind": "path", "points": [[0, 1], [-0.588, -0.809], [0.951, 0.309], [-0.951, 0.309], [0.588, -0.809], [0, 1]], "tone": "result", "dashed": true },
+    { "kind": "point", "at": [0, 1] },
+    { "kind": "point", "at": [-0.951, 0.309] },
+    { "kind": "point", "at": [-0.588, -0.809] },
+    { "kind": "point", "at": [0.588, -0.809] },
+    { "kind": "point", "at": [0.951, 0.309] },
+    { "kind": "text", "at": [0, 1.65], "text": "1" },
+    { "kind": "text", "at": [-1.5, 0.55], "text": "2" },
+    { "kind": "text", "at": [-0.95, -1.4], "text": "3" },
+    { "kind": "text", "at": [0.95, -1.4], "text": "4" },
+    { "kind": "text", "at": [1.5, 0.55], "text": "5" },
+    { "kind": "text", "at": [-1.9, 1.75], "text": "red pentagon", "leaderTo": [-0.55, 0.72] },
+    { "kind": "text", "at": [1.85, 1.75], "text": "blue pentagram", "leaderTo": [0.55, 0.1], "tone": "result" }
+  ]
+}
+:::
+
+:::pitfall
+"Six people always contain three mutual friends or three mutual strangers" does not say the six people contain three mutual friends. The conclusion is a disjunction, and which half holds depends on the colouring. Nor does the theorem locate the triangle: the proof picks an arbitrary vertex $v$ and follows the majority colour, so the triangle found depends on the choice of $v$. Ramsey statements assert existence and almost never identify a witness.
+:::
+
+:::example[Every $2$-colouring of $K_6$ has at least two monochromatic triangles]
+Strengthen Theorem *$R(3,3) = 6$* by counting.
 :::
 
 :::solution
-Upper bound, $R(3,3) \le 6$. Take any red/blue coloring of the edges of $K_6$. Fix a vertex $v$; it has 5 edges. By pigeonhole, since $5 = 2\cdot 2 + 1$, at least $\lceil 5/2\rceil = 3$ of them share a color, say red — call three such neighbors $x,y,z$. Now look at the three edges $xy,yz,xz$. If any one of them is red, say $xy$, then $v,x,y$ are pairwise red: a red triangle. If none of them is red, then $xy,yz,xz$ are all blue: $x,y,z$ form a blue triangle. Either way a monochromatic triangle exists.
-Lower bound, $R(3,3) > 5$. Color $K_5$ by making the edges of a 5-cycle $1\text{–}2\text{–}3\text{–}4\text{–}5\text{–}1$ red and the remaining edges (the "pentagram" $1\text{–}3\text{–}5\text{–}2\text{–}4\text{–}1$) blue. Each color class is itself a 5-cycle, which is triangle-free, so there is no monochromatic triangle. Thus 5 vertices are not enough.
-Sanity check: the two parts pin the smallest forcing $n$ to exactly 6, so $R(3,3)=6$ ✓.
+Call a triple **bichromatic** if its three edges are not all the same colour. Count *bad pairs*: pairs $(v, \{e,f\})$ where $e, f$ are edges at $v$ of different colours. At a vertex of red-degree $r$ and blue-degree $5-r$, the number of such pairs is $r(5-r) \le 2\cdot 3 = 6$, the maximum of $r(5-r)$ over integers $0 \le r \le 5$. Summing over the six vertices, there are at most $36$ bad pairs.
+
+Every bichromatic triangle contains exactly two vertices at which its two incident edges differ in colour — if the triangle has two edges of one colour and one of the other, the two vertices meeting the odd edge each see a colour change — so it contributes exactly $2$ bad pairs, and a monochromatic triangle contributes $0$. Hence the number of bichromatic triangles is at most $36/2 = 18$.
+
+$K_6$ has $\binom{6}{3} = 20$ triangles, so at least $20 - 18 = 2$ are monochromatic. The bound is attained, so "two" cannot be improved.
+:::
+
+The exact values are known only for very small parameters, and the reason is brute force: checking $R(5,5)$ by exhaustion would require sifting the $2^{\binom{43}{2}}$ colourings of $K_{43}$.
+
+:::proposition[Small Ramsey numbers]{#small-ramsey-values}
+The known diagonal and near-diagonal values are
+$$R(3,3) = 6,\quad R(3,4) = 9,\quad R(3,5) = 14,\quad R(3,6) = 18,\quad R(3,7) = 23,$$
+$$R(3,8) = 28, \quad R(3,9) = 36, \quad R(4,4) = 18, \quad R(4,5) = 25 .$$
+No other value $R(s,t)$ with $s,t \ge 3$ is known exactly. For $R(5,5)$ only the bracket $43 \le R(5,5) \le 46$ is established.
+:::
+
+:::proof
+Not proved here; each value is a separate piece of work combining an explicit colouring for the lower bound with a computer search or a clever counting argument for the upper. $R(4,4) = 18$ is due to Greenwood and Gleason (1955), $R(4,5) = 25$ to McKay and Radziszowski (1995) after years of computation.
+:::
+
+:::remark
+Erdős's much-quoted remark makes the difficulty concrete. If aliens demanded the value of $R(5,5)$ on pain of destroying the Earth, we should marshal every computer and mathematician and try to find it. If they asked for $R(6,6)$, we should attempt to destroy the aliens.
+:::
+
+Two generalisations extend the definition without changing its character.
+
+:::definition[Multicolour and hypergraph Ramsey numbers]{#ramsey-general}
+For $r$ colours, $R(s_1, \dots, s_r)$ is the least $n$ such that every $r$-colouring of the edges of $K_n$ has, for some $i$, a $K_{s_i}$ entirely in colour $i$.
+
+For $k$-uniform hypergraphs, $R^{(k)}(s,t)$ is the least $n$ such that every red/blue colouring of the $k$-element subsets of an $n$-set contains a set of $s$ elements all of whose $k$-subsets are red, or a set of $t$ elements all of whose $k$-subsets are blue. The graph case is $k = 2$.
+:::
+
+Both are finite, by the same arguments as in the next section. The only multicolour value known exactly beyond the trivial ones is $R(3,3,3) = 17$.
+
+## Bounding the Ramsey Numbers
+
+<!-- section: ramsey-bounds -->
+
+Nothing so far shows that $R(s,t)$ exists. The existence proof and the best general upper bound are the same argument, and it is an induction on $s+t$ modelled on Pascal's rule.
+
+:::theorem[Erdős–Szekeres recursion]{#ramsey-recursion}
+For $s, t \ge 2$, if $R(s-1,t)$ and $R(s,t-1)$ are finite then so is $R(s,t)$, and
+$$R(s,t) \le R(s-1,t) + R(s,t-1).$$
+Since $R(1,t) = 1$ and $R(2,t) = t$ are finite, induction gives that $R(s,t)$ is finite for all $s,t \ge 1$.
+:::
+
+:::proof
+Put $n = R(s-1,t) + R(s,t-1)$ and take any red/blue colouring of $K_n$. Fix a vertex $v$ and split the other $n-1$ vertices by the colour of their edge to $v$:
+$$A = \{u : uv \text{ red}\}, \qquad B = \{u : uv \text{ blue}\}, \qquad |A| + |B| = n - 1 .$$
+If $|A| \le R(s-1,t) - 1$ and $|B| \le R(s,t-1) - 1$, then $|A|+|B| \le n - 2 < n-1$, a contradiction. So $|A| \ge R(s-1,t)$ or $|B| \ge R(s,t-1)$.
+
+Suppose $|A| \ge R(s-1,t)$. The colouring restricted to $A$ contains a red $K_{s-1}$ or a blue $K_t$, by the definition of $R(s-1,t)$. In the second case we are finished. In the first, that red $K_{s-1}$ together with $v$ is a red $K_s$: every vertex of $A$ is joined to $v$ in red by construction, and the $\binom{s-1}{2}$ internal pairs are red by assumption.
+
+The case $|B| \ge R(s,t-1)$ is identical with the colours exchanged: a blue $K_{t-1}$ inside $B$ plus $v$ makes a blue $K_t$.
+:::
+
+:::corollary[Binomial bound]{#ramsey-binomial}
+For all $s,t \ge 1$,
+$$R(s,t) \le \binom{s+t-2}{s-1}.$$
+In particular $R(s,s) \le \binom{2s-2}{s-1} \le 4^{s-1}$.
+:::
+
+:::proof
+Induction on $s+t$. If $s = 1$ then $R(1,t) = 1 = \binom{t-1}{0}$, and symmetrically for $t=1$. For $s,t \ge 2$, Theorem *Erdős–Szekeres recursion* and the inductive hypothesis give
+$$R(s,t) \le R(s-1,t) + R(s,t-1) \le \binom{s+t-3}{s-2} + \binom{s+t-3}{s-1} = \binom{s+t-2}{s-1},$$
+the last step being Pascal's rule.
+
+For the diagonal case, $\binom{2s-2}{s-1} \le \sum_{j=0}^{2s-2}\binom{2s-2}{j} = 2^{2s-2} = 4^{s-1}$.
+:::
+
+So $R(4,4) \le \binom{6}{3} = 20$, against the true value $18$, and $R(3,4) \le \binom{5}{2} = 10$ against the true $9$. A parity refinement closes the second gap exactly.
+
+:::proposition[Parity refinement]{#ramsey-parity}
+If $R(s-1,t)$ and $R(s,t-1)$ are both even, then $R(s,t) \le R(s-1,t) + R(s,t-1) - 1$.
+:::
+
+:::proof
+Write $p = R(s-1,t)$, $q = R(s,t-1)$, both even, and set $n = p+q-1$, which is odd. Take a colouring of $K_n$ with no red $K_s$ and no blue $K_t$; we derive a contradiction.
+
+For each vertex $v$, let $d(v)$ be its red degree. If $d(v) \ge p$ then, as in the proof of the recursion, the red neighbourhood of $v$ contains a red $K_{s-1}$ (giving a red $K_s$ with $v$) or a blue $K_t$ — either way a contradiction. So $d(v) \le p-1$ for every $v$. Similarly the blue degree $n-1-d(v)$ is at most $q-1$, so $d(v) \ge n-q = p-1$. Hence $d(v) = p-1$ for every vertex.
+
+Now count red edges: $\sum_v d(v) = 2\,|{\text{red edges}}|$ must be even. But $\sum_v d(v) = n(p-1)$ with $n$ odd and $p-1$ odd, so the sum is odd. Contradiction, so no such colouring exists and $n$ vertices already force the conclusion.
+:::
+
+:::example[Pinning down $R(3,4)$]
+Show $R(3,4) = 9$.
+:::
+
+:::solution
+Upper bound. $R(2,4) = 4$ and $R(3,3) = 6$ are both even, so Proposition *Parity refinement* gives $R(3,4) \le 4 + 6 - 1 = 9$.
+
+Lower bound. An $8$-vertex colouring with no red triangle and no blue $K_4$ is needed. Take vertices $\mathbb{Z}_8$ and colour $\{i,j\}$ red when $i - j \equiv \pm 1$ or $\pm 4 \pmod 8$, blue otherwise. The red graph is the $8$-cycle plus its four long diagonals; it is triangle-free, since a red triangle would need three differences from $\{\pm1, \pm4\}$ summing to $0 \bmod 8$, and $1+1+(-4)$, $4+4+(-1)$ and the like never vanish mod $8$ — the only sums of three such differences that vanish would require $\pm 1 \pm 1 \pm 1 \equiv 0$ or $\pm 4 \pm 4 \pm 4 \equiv 0$, neither of which holds. The blue graph joins $i$ and $j$ when $i - j \equiv \pm 2, \pm 3 \pmod 8$, and one checks it contains no $K_4$: a blue $K_4$ would be four residues with all six pairwise differences in $\{\pm2,\pm3\}$, and any four residues in $\mathbb{Z}_8$ include a pair differing by $1$ or $4$.
+
+Hence $8$ vertices do not force the conclusion and $R(3,4) = 9$.
+:::
+
+The upper bounds come from a deterministic argument. The best lower bounds come from a probabilistic one, and Erdős's 1947 proof of it is the founding example of the probabilistic method: the colouring it produces is never exhibited, only shown to exist.
+
+:::theorem[Erdős probabilistic lower bound]{#erdos-lower-bound}
+If $n$ and $s$ satisfy
+$$\binom{n}{s} 2^{1 - \binom{s}{2}} < 1,$$
+then $R(s,s) > n$. Consequently $R(s,s) > 2^{s/2}$ for every $s \ge 3$.
+:::
+
+:::proof
+Colour each edge of $K_n$ red or blue independently, each with probability $1/2$. For a fixed set $S$ of $s$ vertices, let $A_S$ be the event that $S$ is monochromatic. The $\binom{s}{2}$ edges inside $S$ are coloured independently, so
+$$\Pr[A_S] = 2 \cdot 2^{-\binom{s}{2}} = 2^{1-\binom{s}{2}},$$
+the factor $2$ being the choice of which colour. By the union bound over all $\binom{n}{s}$ sets $S$,
+$$\Pr\Big[\bigcup_S A_S\Big] \le \binom{n}{s} 2^{1-\binom{s}{2}} < 1 .$$
+So the probability that *no* $S$ is monochromatic is strictly positive, and an event of positive probability is non-empty: some colouring of $K_n$ has no monochromatic $K_s$. Hence $n$ vertices do not force one, and $R(s,s) > n$.
+
+For the consequence, take $s \ge 3$ and $n = \lfloor 2^{s/2} \rfloor$. Using $\binom{n}{s} \le n^s/s!$,
+$$\binom{n}{s}2^{1-\binom{s}{2}} \le \frac{n^s}{s!}\cdot\frac{2^{1+s/2}}{2^{s^2/2}} \le \frac{2^{s^2/2}}{s!}\cdot\frac{2^{1+s/2}}{2^{s^2/2}} = \frac{2^{1+s/2}}{s!} < 1$$
+for $s \ge 3$: at $s = 3$ the ratio is $2^{2.5}/3! = 5.657/6 < 1$, and increasing $s$ by one multiplies the numerator by $\sqrt2 \approx 1.414$ and the denominator by $s+1 \ge 4$, so the ratio only decreases. So the hypothesis holds with $n = \lfloor 2^{s/2}\rfloor$ and $R(s,s) > 2^{s/2}$.
+:::
+
+:::intuition
+The probabilistic method replaces "construct an object with property $P$" by "put a probability distribution on candidates and show $\Pr[P] > 0$". Nothing is built, yet the conclusion is a genuine existence statement. Here the random colouring is the fairest possible, and the calculation says that monochromatic $K_s$'s are so unlikely individually that even $\binom{n}{s}$ of them do not add up to certainty. What the argument emphatically does *not* do is tell you which colouring to write down.
+:::
+
+:::pitfall
+The gap between the bounds is enormous and has barely moved in eighty years: $2^{s/2} < R(s,s) \le 4^{s}$, so $R(s,s)^{1/s}$ is known only to lie between $\sqrt 2$ and $4$. Even worse, no *explicit* construction comes close to $2^{s/2}$ — the best known constructive lower bounds are quasi-polynomial in comparison. This is the classic embarrassment of the probabilistic method: it proves that almost every colouring is good, while nobody can name one.
+:::
+
+:::remark
+The upper bound has finally started to move. Campos, Griffiths, Morris and Sahasrabudhe proved in 2023 that $R(s,s) \le (4-\varepsilon)^s$ for an explicit $\varepsilon > 0$, the first exponential improvement on the Erdős–Szekeres bound. Off the diagonal, $R(3,t) = \Theta(t^2/\log t)$ is known exactly up to constants, the lower bound again probabilistic (Kim, 1995) and the upper bound by Ajtai, Komlós and Szemerédi.
 :::
 
 ## Infinite Ramsey Theory
 
 <!-- section: infinite-ramsey -->
 
-:::theorem[Ramsey's theorem, infinite form]{#infinite-ramsey}
-In any finite coloring of the k-subsets of an infinite set there exists an infinite homogeneous subset.
+The infinite version of Ramsey's theorem is both stronger in conclusion and easier to prove than the finite one, because at every step it can afford to throw away infinitely much. Nothing has to be counted.
+
+:::notation
+For a set $X$ write $[X]^k$ for the collection of its $k$-element subsets. A **colouring** of $[X]^k$ with $r$ colours is a map $[X]^k \to \{1,\dots,r\}$, with no constraint whatever. A set $H \subseteq X$ is **homogeneous** (or monochromatic) for the colouring if all of $[H]^k$ receives a single colour.
 :::
 
-:::corollary[Infinite monochromatic clique]
-For graphs (k=2, 2 colors) this says any 2-coloring of the edges of K_ℕ contains an infinite monochromatic clique.
+:::theorem[Infinite Ramsey theorem]{#infinite-ramsey}
+Let $X$ be infinite, $k \ge 1$, $r \ge 1$, and let $[X]^k$ be coloured with $r$ colours. Then there is an infinite homogeneous $H \subseteq X$.
+:::
+
+:::proof
+Induction on $k$. For $k = 1$ the colouring splits $X$ into $r$ classes; if all were finite their union would be finite, so some class is infinite and is homogeneous.
+
+Let $k \ge 2$ and suppose the theorem holds for $k-1$. We build a sequence of vertices and a decreasing chain of infinite sets. Put $X_0 = X$. Given an infinite $X_i$, choose any $x_{i+1} \in X_i$ and define a colouring of $[X_i \setminus \{x_{i+1}\}]^{k-1}$ by
+$$c_{i+1}(S) = c\big(S \cup \{x_{i+1}\}\big),$$
+which is legitimate because $S \cup \{x_{i+1}\}$ has exactly $k$ elements. By the inductive hypothesis applied to the infinite set $X_i \setminus \{x_{i+1}\}$, there is an infinite $X_{i+1} \subseteq X_i \setminus \{x_{i+1}\}$ homogeneous for $c_{i+1}$; let $\gamma_{i+1} \in \{1,\dots,r\}$ be its colour.
+
+This produces distinct $x_1, x_2, x_3, \dots$ and colours $\gamma_1, \gamma_2, \dots$ with the key property: whenever $i_1 < i_2 < \dots < i_k$, the set $\{x_{i_1}, \dots, x_{i_k}\}$ has colour $\gamma_{i_1}$. Indeed $x_{i_2}, \dots, x_{i_k}$ all lie in $X_{i_1}$, which is homogeneous of colour $\gamma_{i_1}$ for $c_{i_1}$.
+
+Finally, the infinitely many indices $i$ carry only $r$ colours $\gamma_i$, so some colour $\gamma$ occurs for infinitely many indices $i_1 < i_2 < \cdots$. Then $H = \{x_{i_1}, x_{i_2}, \dots\}$ is infinite, and every $k$-subset of $H$ has colour $\gamma$ by the key property. So $H$ is homogeneous.
+:::
+
+:::corollary[Infinite monochromatic clique]{#infinite-clique}
+In every red/blue colouring of the edges of the complete graph on $\mathbb{N}$ there is an infinite set of vertices all of whose internal edges have the same colour.
+:::
+
+:::proof
+This is the case $k = 2$, $r = 2$, $X = \mathbb{N}$ of Theorem *Infinite Ramsey theorem*.
 :::
 
 :::intuition
-No matter how you color the infinite complete graph with two colors, you can always find an infinite set where all edges inside are the same color.
-
-The proof uses repeated infinite pigeonhole: build the set one vertex at a time, always keeping an infinite reservoir of the same color.
+The engine of the proof is the *infinite* pigeonhole principle: a set split into finitely many pieces has an infinite piece. That is what lets each step commit to one colour for a vertex without ever running out of room. The finite theorem has no such luxury — there each step consumes a definite fraction of what is left, which is why the finite proof yields a bound and the infinite one does not.
 :::
 
-:::example
-Build an infinite monochromatic clique in a 2-coloring of $K_{\mathbb N}$.
+A pleasant corollary shows the theorem doing work outside graph theory.
+
+:::corollary[Monotone subsequences]{#monotone-subsequence}
+Every infinite sequence $(a_n)_{n \ge 1}$ of real numbers has an infinite subsequence that is non-decreasing or non-increasing.
 :::
 
-:::solution
-Set $S_0 = \mathbb N$ and pick any $v_1 \in S_0$. The edges from $v_1$ to $S_0\setminus\{v_1\}$ are colored red or blue; that infinite set splits into its red-neighbors and blue-neighbors of $v_1$. A set partitioned into two pieces cannot have both finite, so at least one piece is infinite (infinite pigeonhole). Pick an infinite one and call it $S_1$; record its color as $c_1$. Every edge from $v_1$ into $S_1$ has color $c_1$.
-Step 2. Pick $v_2 \in S_1$. Repeat the argument inside $S_1$: an infinite subset $S_2 \subseteq S_1\setminus\{v_2\}$ where all edges from $v_2$ have a single color $c_2$.
-Step 3. Iterating gives $v_1,v_2,v_3,\dots$ and colors $c_1,c_2,\dots$, where every edge $v_iv_j$ with $i<j$ has color $c_i$ (because $v_j\in S_i$). Since there are only 2 colors, infinitely many of the $c_i$ agree — say they equal red at indices $i_1<i_2<\cdots$. Then $\{v_{i_1},v_{i_2},\dots\}$ is an infinite set all of whose internal edges are red.
-Sanity check: at each step we only ever shrink to a still-infinite set, so the construction never stalls, and the final subsequence is genuinely infinite ✓.
+:::proof
+Colour a pair $\{i,j\}$ with $i < j$ red if $a_i \le a_j$ and blue if $a_i > a_j$. By Corollary *Infinite monochromatic clique* there is an infinite $H \subseteq \mathbb{N}$ all of whose pairs receive one colour. Listing $H$ in increasing order as $i_1 < i_2 < \cdots$, the red case gives $a_{i_1} \le a_{i_2} \le \cdots$ and the blue case gives $a_{i_1} > a_{i_2} > \cdots$.
 :::
 
-## Broader Applications and Philosophy
+The infinite theorem also implies the finite one, by a compactness argument. This gives a second proof that $R(s,t)$ is finite — a proof that, unlike the recursion, yields no bound at all.
+
+:::theorem[Compactness: infinite implies finite]{#ramsey-compactness}
+Let $k, r, m$ be given. There exists $N$ such that every $r$-colouring of $[\{1,\dots,N\}]^k$ has a homogeneous set of size $m$.
+:::
+
+:::proof
+Suppose not. Then for every $N$ there is an $r$-colouring $c_N$ of $[\{1,\dots,N\}]^k$ with no homogeneous $m$-set. Build a tree whose nodes at level $N$ are the "bad" colourings of $[\{1,\dots,N\}]^k$, with a colouring at level $N+1$ joined to its restriction at level $N$. Each level is non-empty by assumption and finite, since there are only $r^{\binom{N}{k}}$ colourings in all. A restriction of a bad colouring is bad, so every node has a parent and the tree is connected.
+
+By **König's lemma** — an infinite, finitely branching tree has an infinite branch, which we quote without proof — there is a sequence of colourings, each extending the previous. Their common refinement is a single $r$-colouring $c$ of $[\mathbb{N}]^k$ with no homogeneous $m$-set, since any such set would be contained in $\{1,\dots,N\}$ for some $N$ and would already be homogeneous for $c_N$. But Theorem *Infinite Ramsey theorem* gives an infinite homogeneous set for $c$, and any $m$ of its elements form a homogeneous $m$-set. Contradiction.
+:::
+
+:::pitfall
+The compactness proof is *ineffective*: it shows $N$ exists without producing it, because König's lemma selects a branch without describing it. That is why the recursion of Theorem *Erdős–Szekeres recursion*, weak as its bound is, remains the source of every explicit upper estimate on Ramsey numbers. "Infinite Ramsey implies finite Ramsey" is a statement about existence, not about size.
+:::
+
+:::remark
+Both hypotheses in the infinite theorem are needed. With *infinitely many* colours it fails: colour $\{i,j\}$ by the pair itself, and no two pairs share a colour, so no homogeneous set of size $3$ exists. And it does not lift freely to larger cardinalities: Sierpiński constructed a colouring of $[\mathbb{R}]^2$ with two colours having no uncountable homogeneous set, so $\aleph_1 \not\to (\aleph_1)^2_2$. The cardinals for which the analogue does hold are the weakly compact cardinals, whose existence is not provable in ZFC — the infinite Ramsey theorem for $\mathbb{N}$ sits right at the edge of what set theory gives for free.
+:::
+
+## Van der Waerden, Schur and the Ramsey Family
 
 <!-- section: ramsey-applications -->
 
-Ramsey theory extends to arithmetic progressions (van der Waerden, Szemerédi), geometric configurations (Happy Ending problem), and higher uniformity.
+Ramsey's theorem for graphs is one member of a family whose common shape is: *partition a large enough structure into finitely many classes, and one class must contain a copy of the structure you care about.* The slogan, due to Motzkin, is that **complete disorder is impossible**. The structures vary; the phenomenon does not.
 
-It is existential and non-constructive in flavor; the numbers are often huge and the proofs give little information about where the structures are located.
-
-:::intuition
-In any large enough set of numbers you are guaranteed long arithmetic progressions (Szemerédi), even if the set looks "random".
-
-The theory guarantees structure but rarely helps you find it efficiently.
+:::theorem[Schur's theorem]{#schur}
+For every $r \ge 1$ there is an integer $S(r)$ such that whenever $\{1, 2, \dots, n\}$ with $n \ge S(r)$ is coloured with $r$ colours, some colour class contains $x, y, z$ (not necessarily distinct) with
+$$x + y = z .$$
 :::
 
-:::example
-The van der Waerden number $W(3,2)=9$: any 2-coloring of $\{1,\dots,9\}$ contains a monochromatic 3-term arithmetic progression, and 9 is the smallest such length.
+:::proof
+Let $n \ge R(3,3,\dots,3)$, the $r$-colour Ramsey number for triangles, which is finite by the multicolour form of Theorem *Erdős–Szekeres recursion*. Given an $r$-colouring $\kappa$ of $\{1,\dots,n\}$, colour the edges of the complete graph on vertex set $\{1, \dots, n+1\}$ by
+$$c(\{i,j\}) = \kappa(|i-j|),$$
+which is well defined because $1 \le |i-j| \le n$.
+
+By choice of $n$ there is a monochromatic triangle $\{i,j,k\}$ with $i < j < k$, say in colour $\alpha$. Set
+$$x = j - i, \qquad y = k - j, \qquad z = k - i .$$
+All three lie in $\{1,\dots,n\}$ and $\kappa(x) = \kappa(y) = \kappa(z) = \alpha$, since those are the colours of the three edges. And $x + y = (j-i)+(k-j) = k-i = z$.
+:::
+
+:::remark
+Schur proved this in 1916 for a reason that had nothing to do with combinatorics: it shows that for every $m$, the congruence $x^m + y^m \equiv z^m \pmod p$ has a solution with $p \nmid xyz$ for all sufficiently large primes $p$. Colour the non-zero residues mod $p$ by their coset in the quotient of $\mathbb{F}_p^\times$ by the $m$-th powers — there are at most $m$ classes — and apply the theorem. So Fermat's equation cannot be ruled out by congruences alone.
+:::
+
+:::example[The Schur numbers]
+The largest $n$ for which $\{1,\dots,n\}$ can be $r$-coloured with no monochromatic solution of $x+y=z$ is $1, 4, 13, 44, 160$ for $r = 1,2,3,4,5$. Verify the case $r = 2$.
 :::
 
 :::solution
-Why $8$ is not enough: color $\{1,\dots,8\}$ by red $=\{1,2,5,6\}$, blue $=\{3,4,7,8\}$. Neither class contains a 3-AP — e.g. the red pairs have differences $1,4,5,\dots$ but no red $a,a+d,a+2d$ all occur, and likewise for blue. So $W(3,2) > 8$.
-Why $9$ forces one: with 9 numbers and only 2 colors, the extra room removes every escape; the theorem guarantees a monochromatic progression $a, a+d, a+2d$.
-Illustration inside a forced coloring: if $\{2,5,8\}$ all end up red, that is a red 3-AP with $a=2,d=3$: indeed $2, 2+3, 2+6 = 2,5,8$ ✓.
-Takeaway: even $W(3,2)$ is only $9$, but the numbers grow explosively — e.g. $W(3,3)=27$ and larger parameters become astronomically large.
+Colour $\{1,2,3,4\}$ by red $= \{1,4\}$ and blue $= \{2,3\}$. Red sums: $1+1 = 2$ (blue), $1+4 = 5$ (out of range), $4+4 = 8$ (out of range). Blue sums: $2+2 = 4$ (red), $2+3 = 5$ (out of range), $3+3 = 6$ (out of range). No monochromatic solution, so $S(2) > 4$ in the "largest good $n$" convention.
+
+Now take $n = 5$ and suppose a $2$-colouring avoids monochromatic $x+y=z$. Say $1$ is red. Then $2 = 1+1$ is blue. Then $4 = 2+2$ is red. Then $3$: if $3$ were red, $1+3 = 4$ would be a red solution; so $3$ is blue. But then $2 + 3 = 5$ forces $5$ to be red, and $1 + 4 = 5$ is then a red solution. Contradiction. So $n = 5$ always contains one, and $4$ is the largest good value.
+
+The value $160$ for $r = 5$ was established in 2017 by an exhaustive SAT-solver computation producing a two-petabyte proof — an indication of how quickly these numbers become inaccessible.
+:::
+
+:::theorem[Van der Waerden's theorem]{#van-der-waerden}
+For all $k, r \ge 1$ there is an integer $W(k,r)$ such that every $r$-colouring of $\{1, 2, \dots, W(k,r)\}$ contains a monochromatic arithmetic progression of length $k$: elements $a, a+d, \dots, a+(k-1)d$ with $d \ge 1$, all of one colour.
+:::
+
+:::proof
+Not proved here. The original 1927 argument is a double induction on $k$ and $r$ using "colour focusing", and it is elementary but long; it is the source of the enormous bounds discussed below.
+:::
+
+:::example[$W(3,2) = 9$]
+Every $2$-colouring of $\{1,\dots,9\}$ contains a monochromatic $3$-term arithmetic progression, and $8$ is not enough.
+:::
+
+:::solution
+$8$ is not enough. Colour red $= \{1,2,5,6\}$ and blue $= \{3,4,7,8\}$. Since $a + 2d \le 8$, only $d \in \{1,2,3\}$ is possible. Red: $d=1$ needs three consecutive reds, but the red runs are $\{1,2\}$ and $\{5,6\}$; $d=2$ gives $1,3,5$ and $2,4,6$, both broken at the middle term; $d=3$ gives $1,4,7$ and $2,5,8$, both broken. Blue: $d=1$ gives $3,4,5$ (and $7,8,9$ is out of range), broken; $d=2$ gives $3,5,7$ and $4,6,8$, both broken; $d=3$ gives $1,4,7$ and $2,5,8$, whose first terms are red. So neither class contains a $3$-AP and $W(3,2) > 8$.
+
+$9$ is enough. Suppose some $2$-colouring of $\{1,\dots,9\}$ has no monochromatic $3$-AP. Swapping colour names, assume $5$ is red.
+
+First, $4$ and $6$ are not both red, since $4,5,6$ would be a red progression. They are not both blue either: if they were, then $2$ would be red (else $2,4,6$ is blue) and $8$ would be red (else $4,6,8$ is blue), making $2,5,8$ red. So exactly one of $4,6$ is blue, and reflecting through $i \mapsto 10-i$ — which preserves progressions and fixes $5$ — we may assume $4$ is blue and $6$ is red. Now the colours cascade:
+
+- $5,6$ red forces $7$ blue, from $5,6,7$.
+- $4,7$ blue forces $1$ red, from $1,4,7$.
+- $1,5$ red forces $3$ blue (from $1,3,5$) and $9$ blue (from $1,5,9$).
+- $7,9$ blue forces $8$ red, from $7,8,9$.
+- $5,8$ red forces $2$ blue, from $2,5,8$.
+
+But now $2, 3, 4$ are all blue — a monochromatic progression with $a = 2$, $d = 1$. Every branch closes, so $9$ forces one and $W(3,2) = 9$.
+:::
+
+:::pitfall
+Van der Waerden numbers are astronomically larger than they look. $W(3,2) = 9$ and $W(4,2) = 35$ are tame, but $W(5,2) = 178$, $W(6,2) = 1132$, and no further diagonal value is known. Van der Waerden's own proof gives a bound growing like the Ackermann function; Shelah reduced it to primitive recursive in 1988, and Gowers to a tower of height five in 2001 — still far beyond anything that can be searched.
+:::
+
+:::remark
+Three further members of the family, stated without proof.
+
+**Szemerédi's theorem** (1975) strengthens van der Waerden from colourings to *density*: any set $A \subseteq \mathbb{N}$ with positive upper density $\limsup_{N} |A \cap [N]|/N > 0$ contains arithmetic progressions of every finite length. Van der Waerden follows, since in an $r$-colouring of $\mathbb{N}$ some class has upper density at least $1/r$.
+
+**Green–Tao** (2004): the primes contain arbitrarily long arithmetic progressions — remarkable because the primes have density zero, so Szemerédi does not apply directly.
+
+**Erdős–Szekeres, "happy ending"**: for every $m$ there is $N$ such that any $N$ points in general position in the plane contain $m$ forming a convex polygon. One proof colours each triple of points by its orientation and applies the hypergraph Ramsey theorem $R^{(3)}$ of Definition *Multicolour and hypergraph Ramsey numbers*.
+:::
+
+:::intuition
+Why should any of this be true? Because a colouring has to make a decision about *every* object, and the objects overlap. Once $1$ is red and $2$ is blue in Schur's setting, the value of $4$ is constrained by both; the constraints propagate and eventually contradict each other. Ramsey theory is the study of how far constraint propagation can be postponed, and the answer is always: not indefinitely, but usually much longer than you would guess.
 :::
 
 ## Common Mistakes
 
-- **Confusing vertex coloring with edge coloring**: Edge chromatic number (Vizing) is Δ or Δ+1; different theory.
-- **Assuming χ(G) = clique number ω(G)**: Always χ ≥ ω, but can be strictly larger (odd cycles, Mycielski constructions).
-- **Thinking every graph is 2-colorable**: Only the bipartite ones; odd cycles are the obstruction.
-- **Forgetting that the four color theorem is for planar graphs only**: Non-planar graphs can require arbitrarily many colors (K_n).
-- **Greedy depends on ordering**: Different vertex orders can use different numbers of colors even though the bound Δ+1 always holds.
-
-Ramsey theory is the study of conditions under which order must appear. Its central message is that "complete disorder is impossible": in any sufficiently large structure, no matter how the edges are colored or the elements partitioned, a large ordered monochromatic or homogeneous substructure is forced to exist.
-
-- **Thinking small Ramsey numbers are all known**: Only a handful of exact R(s,t) are known; most have only huge bounds.
-- **Confusing Ramsey with Turán or extremal graph theory**: Turán maximizes edges without a clique; Ramsey forces the clique in colorings regardless of density.
-- **Expecting constructive proofs or small witnesses**: Most proofs are by induction or compactness and give no explicit construction.
-- **Forgetting the infinite case is easier in statement**: The infinite Ramsey theorem is in some senses simpler than the finite quantitative versions.
-- **Believing R(3,3) >6 because of some party example**: If your party of 6 has no mono triangle, you have a counterexample to the theorem — but none exists.
-
-Extremal graph theory asks: what is the maximum number of edges (or other structures) a graph on n vertices can have while avoiding a certain forbidden subgraph H?
-
-The answers often take the form of a specific "extremal graph" that is just on the threshold of containing H.
-
-- **Confusing ex(n,H) with Ramsey numbers**: Extremal maximizes edges before H appears; Ramsey forces monochromatic H in *any* coloring once n is large, independent of total edges.
-- **Assuming the extremal graph is always the Turán graph**: Only when H is a clique. For bipartite H the extremal graphs have very different structure (often no dense bipartite subgraphs).
-- **Forgetting the o(n^2) in Erdős–Stone**: The theorem gives the leading density term; the error and stability require more work.
-- **Getting ex(n, tree) wrong**: For a tree $T$ on $k$ vertices the extremal number is *linear* in $n$, not quadratic. The Erdős–Sós conjecture (proved for large $n$) predicts $\mathrm{ex}(n,T) = \tfrac{k-2}{2}\,n$; the key point is that forbidding a sparse (bipartite) graph gives a far smaller threshold than forbidding a clique.
-- **Overlooking stability versions**: Not only the max number but that graphs achieving near the max must be close in edit distance to the extremal example (Erdős–Simonovits stability).
-
-Turán's theorem is the cornerstone of extremal graph theory. It gives the exact maximum number of edges in an n-vertex graph that does not contain a clique K_{r+1} as a subgraph, and identifies the unique extremal graph achieving the bound.
-
-- **Forgetting the uniqueness**: T(n,r) is the unique maximizer; many students think "any complete r-partite" works, but unbalanced ones have fewer edges.
-- **Confusing with Ramsey**: Turán controls the total number of edges before a clique appears in the *uncolored* graph; Ramsey forces monochromatic cliques in colored graphs.
-- **Wrong part sizes**: The sizes must be as equal as possible; differing by 2 or more can be improved by moving a vertex.
-- **Thinking the theorem gives the number of K_{r+1} copies**: It gives only the threshold for at least one; supersaturation and removal lemmas give quantitative versions.
-- **Applying directly to non-clique H**: For general H one needs Erdős–Stone or other tools; the exact ex(n,H) is known only in special cases.
-
-Szemerédi's theorem (1975) is one of the great triumphs of combinatorics: any subset of the integers that occupies a positive proportion (in the sense of upper density) must contain arithmetic progressions of every finite length.
-
-It vastly generalizes van der Waerden's theorem from colorings to dense sets and has transformed additive combinatorics and ergodic theory.
-
-- **Claiming the theorem applies to any infinite set**: No — only those with positive upper density. There are infinite sets with no 3-AP (Behrend, Salem-Spencer, etc.).
-- **Confusing upper density with natural density**: The lim sup >0 is enough; the actual limit need not exist.
-- **Thinking quantitative versions are practical**: The bounds from all known proofs are astronomically large; for concrete computation one uses much weaker van der Waerden numbers.
-- **Forgetting that Szemerédi is for the integers/Z, while finite versions are for [N] with N large depending on density and k**.
-- **Attributing the ergodic proof to Szemerédi**: Furstenberg gave the ergodic proof; Szemerédi the combinatorial one.
+- **Confusing vertex colouring with edge colouring.** The chromatic index $\chi'$ is pinned to within one colour by Vizing's theorem; the chromatic number $\chi$ has no such bracket. They are different invariants, related only by $\chi'(G) = \chi(L(G))$.
+- **Assuming $\chi(G) = \omega(G)$.** Always $\chi \ge \omega$, but the gap is unbounded: the Mycielski graphs are triangle-free with arbitrarily large $\chi$. Equality for every induced subgraph is the definition of a *perfect* graph, not a general fact.
+- **Thinking every graph is $2$-colourable, or that odd cycles are only "usually" the obstruction.** $\chi \le 2$ holds exactly when there is no odd cycle — this is an equivalence, not a heuristic.
+- **Reading $\chi \le \Delta + 1$ as "greedy finds the optimum".** Greedy respects the bound in every order but can use arbitrarily many more colours than $\chi$ on a bipartite graph if the order is bad.
+- **Applying the four colour theorem to non-planar graphs.** $K_5$ is already a counterexample to the unrestricted statement, and $K_n$ needs $n$ colours.
+- **Believing the four colour theorem has a short proof.** Kempe's 1879 argument is *wrong*; it survives only as the five colour theorem. Every known proof of four colours checks hundreds of configurations by machine.
+- **Treating $P(G,k)$ as a graph invariant that determines the graph.** All trees on $n$ vertices share one chromatic polynomial.
+- **Expecting small Ramsey numbers to be known.** $R(5,5)$ is not known, and no $R(s,t)$ with $s,t \ge 3$ beyond the short list in Proposition *Small Ramsey numbers* has an exact value.
+- **Confusing Ramsey with Turán-type extremal problems.** An extremal problem maximises edges in an *uncoloured* graph before a subgraph is forced; Ramsey forces a *monochromatic* subgraph in any colouring, however the edges are distributed.
+- **Expecting a Ramsey proof to produce a witness.** The recursion locates nothing, and the probabilistic lower bound names no colouring at all. These are existence statements.
+- **Thinking the infinite theorem gives finite bounds.** It implies finiteness of $R(s,t)$ by compactness, but the argument is ineffective and yields no numerical bound whatsoever.
