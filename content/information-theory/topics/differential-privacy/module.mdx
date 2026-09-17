@@ -1,0 +1,222 @@
+---
+title: Differential Privacy
+---
+
+# Differential Privacy
+
+A guarantee stated as a divergence bound, the mechanisms that meet it, and what composition costs across repeated queries.
+
+## The Definition of Differential Privacy
+
+<!-- section: dp-definition -->
+
+:::definition[Neighboring datasets]{#neighboring-datasets}
+Two datasets are neighboring if they differ by the addition, removal, or change of a single individual's record.
+:::
+
+:::definition[ε-differential privacy]{#differential-privacy}
+A randomized algorithm $M$ is $\varepsilon$-differentially private if, for any two neighboring datasets $D$ and $D'$ and any measurable set $S$ of possible outputs,
+
+$$\Pr[M(D) \in S] \le e^{\varepsilon}\, \Pr[M(D') \in S].$$
+:::
+
+The definition is closed under post-processing: if $M$ is DP then any (possibly randomized) function of $M$'s output is also DP with the same $\varepsilon$.
+
+:::definition[Approximate differential privacy]{#approximate-dp}
+$(\varepsilon,\delta)$-DP relaxes pure DP to allow a small probability $\delta$ of 'catastrophic' failure: the bound above may be violated with probability at most $\delta$.
+:::
+
+This relaxation is necessary for many mechanisms — Gaussian noise, in particular — and for composition over many queries.
+
+Group privacy follows from the definition by iterating it: if $M$ is $\varepsilon$-DP then changing $k$ records changes probabilities by at most $e^{k\varepsilon}$, or $(k\varepsilon,\delta')$ in the approximate case.
+
+:::intuition
+Whatever the output distribution looks like when your data is in the dataset, it cannot look too different (multiplicatively e^ε) from the distribution when your data is removed or changed.
+
+The guarantee holds even if the adversary knows everything else about the world and sees the exact output; your participation still cannot be reliably detected.
+:::
+
+:::example
+A database of medical records; a DP release of "how many patients have disease X."
+:::
+
+:::solution
+**Neighboring datasets.** $D$ has $1000$ patients, of whom $200$ have disease X. Remove one patient who has X to get neighbor $D'$: now the true count is $199$. Neighboring means they differ by exactly one record.
+**The requirement.** For the release $M$ to be $\varepsilon$-DP, for *every* output set $S$, $\Pr[M(D)\in S]\le e^{\varepsilon}\Pr[M(D')\in S]$ and vice-versa. So no observed output can be much more likely under "patient included" than under "patient removed."
+**Numbers with $\varepsilon=\ln 3\approx1.099$.** Then $e^{\varepsilon}=3$. Whatever the chance the mechanism outputs some value, say $205$, it may be at most $3\times$ as likely when the patient is present as when absent. An adversary who sees $205$ therefore cannot update its belief about that patient's participation by more than a factor of $3$.
+**Why noise is needed.** The true counts differ by only $1$, but a deterministic release would output $200$ vs $199$ — perfectly distinguishing $D$ from $D'$ (ratio $\infty$). The mechanism must add randomness to smear the outputs together. **Sanity check:** as $\varepsilon\to0$, $e^{\varepsilon}\to1$, forcing the two output distributions to coincide — maximum privacy, and by post-processing, any function of the release inherits the same $\varepsilon$.
+:::
+
+## The Laplace and Gaussian Mechanisms
+
+<!-- section: mechanisms -->
+
+:::definition[Sensitivity]{#sensitivity}
+The $L_1$ sensitivity of a numeric query $f$ is
+
+$$\Delta = \max_{D, D' \text{ neighbors}} |f(D)-f(D')|,$$
+
+the most that one record can move the answer.
+:::
+
+:::theorem[Laplace mechanism]{#laplace-mechanism}
+The mechanism that outputs
+
+$$f(D) + \mathrm{Lap}(\Delta/\varepsilon),$$
+
+adding noise from the Laplace distribution with scale $\Delta/\varepsilon$, is $\varepsilon$-DP.
+:::
+
+:::theorem[Gaussian mechanism]{#gaussian-mechanism}
+For $(\varepsilon,\delta)$-DP, adding $N(0, \sigma^2)$ noise with
+
+$$\sigma \ge \frac{\Delta \sqrt{2 \ln(1.25/\delta)}}{\varepsilon}$$
+
+(or similar calibrated constants) suffices.
+:::
+
+Gaussian noise is often preferred in practice because of its tail behavior and compatibility with composition.
+
+For non-numeric outputs (histograms, synthetic data, ML models) one uses the exponential mechanism (sample from a distribution weighted by a utility score) or more sophisticated constructions (private SGD, PATE, etc.).
+
+:::intuition
+Compute the statistic you care about on the real data. Because one person can affect the statistic by at most Δ, add random noise whose 'width' is proportional to Δ/ε. The noise hides whether any single person was present.
+
+Laplace noise is 'double-exponential' and gives pure ε-DP; Gaussian is bell-shaped and gives the slightly weaker (ε,δ) guarantee but is easier to analyze with many queries.
+:::
+
+:::example[(Laplace):]
+Counting query with sensitivity $\Delta=1$ (adding/removing one person changes the count by at most $1$), target $\varepsilon=0.5$.
+:::
+
+:::solution
+**Calibrate the noise.** Laplace scale $b=\Delta/\varepsilon=1/0.5=2$. The mechanism releases $M(D)=\text{count}(D)+\text{Lap}(2)$, whose density at output $z$ is $\propto \exp(-|z-\text{count}(D)|/b)=\exp(-|z-\text{count}(D)|/2)$.
+**Check the DP ratio.** Take neighbors with counts $c$ and $c'$ where $|c-c'|\le\Delta=1$. For any output $z$ the density ratio is
+$$\frac{\exp(-|z-c|/2)}{\exp(-|z-c'|/2)}=\exp\!\Big(\tfrac{|z-c'|-|z-c|}{2}\Big)\le \exp\!\Big(\tfrac{|c-c'|}{2}\Big)\le \exp\!\Big(\tfrac{1}{2}\Big)=e^{0.5}=e^{\varepsilon}.$$
+   The middle step uses the reverse triangle inequality $|z-c'|-|z-c|\le|c-c'|$.
+**Sanity check.** The bound is exactly $e^{\varepsilon}$ and it holds for *every* $z$, so the mechanism is $\varepsilon$-DP with $\varepsilon=0.5$ ✓. Smaller $\varepsilon$ would force a larger scale $b=1/\varepsilon$, i.e. more noise.
+:::
+
+:::example[(Gaussian):]
+Suppose the query is a vector-valued statistic with $L_2$ sensitivity $\Delta=4$, and we want $(\varepsilon=1,\delta=10^{-5})$-DP via the Gaussian mechanism using the rule of thumb $\sigma\ge \Delta\sqrt{2\ln(1.25/\delta)}/\varepsilon$.
+:::
+
+:::solution
+$1.25/\delta=1.25/10^{-5}=1.25\times10^{5}$, and $\ln(1.25\times10^{5})\approx11.74$.
+$\sqrt{2\cdot11.74}=\sqrt{23.48}\approx4.85$.
+$\sigma\ge 4\cdot4.85/1\approx19.4$. So adding $N(0,\sigma^2)$ with $\sigma\approx19.4$ per coordinate suffices. **Sanity check:** halving the budget to $\varepsilon=0.5$ would double $\sigma$ to $\approx38.8$ — tighter privacy costs proportionally more noise.
+:::
+
+## Composition, Post-Processing, and Advanced Properties
+
+<!-- section: composition-properties -->
+
+:::theorem[Basic composition]{#basic-composition}
+$k$ mechanisms, each $\varepsilon$-DP, are together $k\varepsilon$-DP — and $(k\varepsilon, k\delta)$-DP in the approximate case.
+:::
+
+:::theorem[Advanced composition]{#advanced-composition}
+For $(\varepsilon,\delta)$-DP mechanisms, $k$-fold adaptive composition is roughly $(\varepsilon', k\delta + \delta')$-DP with
+
+$$\varepsilon' \approx \sqrt{2k \ln(1/\delta')}\;\varepsilon + k\varepsilon(e^{\varepsilon}-1),$$
+
+or tighter under modern bounds.
+:::
+
+Advanced composition is the source of the 'privacy budget' accounting used in practice: the $\sqrt{k}$ in place of $k$ is what makes hundreds of queries affordable.
+
+:::proposition[Post-processing immunity]{#post-processing}
+Any function, even a randomized one, of a DP output remains DP with the same parameters.
+:::
+
+This lets you post-process noisy answers arbitrarily — take medians, train models on synthetic data — without spending more privacy.
+
+Other properties: parallel composition (queries on disjoint subsets cost only the max ε), privacy amplification by sampling, and privacy odometers / filters for fully adaptive composition.
+
+:::intuition
+Every time you release a DP statistic you 'spend' some of your privacy budget ε. After many releases the total spent budget is tracked by composition theorems; you stop when the budget is exhausted.
+
+Once something is DP, you can compute anything you like from it later (graphs, ML models, press releases) and the privacy guarantee still holds; you do not pay extra.
+:::
+
+:::example[(basic composition):]
+Release $k=3$ statistics, each made $\varepsilon_0=0.2$-DP.
+:::
+
+:::solution
+By basic composition the combined release is $k\varepsilon_0=3\cdot0.2=0.6$-DP.
+**Why:** for neighbors $D,D'$ and outputs $(z_1,z_2,z_3)$, the joint density ratio factors, and each factor is bounded by $e^{\varepsilon_0}$, so the product is at most $e^{3\varepsilon_0}=e^{0.6}$. **Sanity check:** $3\cdot0.2=0.6\le$ the analyst's budget if the budget is, say, $1$.
+:::
+
+:::example[(advanced composition):]
+An analyst wants $k=100$ counting queries (each sensitivity $1$) within total budget $(\varepsilon=1,\delta=10^{-6})$; pick $\delta'=10^{-6}$ for the composition slack.
+:::
+
+:::solution
+**Basic composition is too lossy:** it would force each query to be $\varepsilon/k=1/100=0.01$-DP — very noisy per query.
+**Advanced composition** gives roughly $\varepsilon\approx\sqrt{2k\ln(1/\delta')}\,\varepsilon_0 + k\varepsilon_0(e^{\varepsilon_0}-1)$. For small $\varepsilon_0$ the first term dominates, so set $\varepsilon_0\approx \dfrac{\varepsilon}{\sqrt{2k\ln(1/\delta')}}$.
+**Plug in:** $\ln(1/\delta')=\ln(10^{6})\approx13.8$, so $\sqrt{2\cdot100\cdot13.8}=\sqrt{2760}\approx52.5$. Then $\varepsilon_0\approx 1/52.5\approx0.019$.
+**Sanity check:** this per-query $\varepsilon_0\approx0.019$ is nearly $2\times$ larger than the $0.01$ that basic composition allowed, so each query can use about half the noise — the $\sqrt{k}$ savings of advanced composition. The exact calibration is done by a privacy accountant (e.g. Rényi-DP), which is tighter still.
+:::
+
+## Applications and Limitations
+
+<!-- section: applications-limitations -->
+
+DP is used for:
+- Releasing aggregate statistics, contingency tables, synthetic data.
+- Training ML models (DP-SGD adds noise to gradients; the privacy cost depends on the noise multiplier, batch size, and number of epochs).
+- Apple's 'differential privacy' deployment for emoji and Safari usage (local DP, each device adds noise before sending).
+- The 2020 U.S. Census (Disclosure Avoidance System based on the TopDown algorithm, a form of DP).
+
+Limitations: the utility/privacy tradeoff can be severe for small datasets or many queries; choosing ε is a policy question (typical deployed values 0.1–10); composition can exhaust the budget quickly; DP does not protect against all inference (it protects participation, not the fact that someone is in a certain group if group membership is already known).
+
+:::intuition
+DP gives a dial you can turn: more noise → stronger privacy but less accurate answers. For big datasets and few queries the dial can be set so that the noise is tiny relative to the signal.
+
+In machine learning, DP-SGD makes models slightly less accurate but gives a mathematical guarantee that the model weights do not memorize any single training example too strongly.
+:::
+
+:::example[(DP-SGD):]
+Train a neural net privately. Concrete setup: dataset size $N=50{,}000$, batch size $B=500$, noise multiplier $\sigma=1.1$, clipping norm $C=1.0$, and $E=30$ epochs.
+:::
+
+:::solution
+**Per-step mechanism.** Compute each example's gradient $g_i$, clip it to $L_2$ norm $C$ via $\bar g_i=g_i/\max(1,\lVert g_i\rVert_2/C)$ (bounding sensitivity to $C$), sum over the batch, add Gaussian noise $N(0,(\sigma C)^2 I)=N(0,1.21\,I)$, then divide by $B$ and take the SGD step.
+**Sampling rate.** $q=B/N=500/50{,}000=0.01$. Poisson subsampling amplifies privacy: each step is much more private than $\sigma$ alone would suggest.
+**Number of steps.** Steps per epoch $=N/B=50{,}000/500=100$, so total $T=E\cdot(N/B)=30\cdot100=3000$ steps.
+**Accounting.** A Rényi-DP / moments accountant composes these $T=3000$ subsampled Gaussian steps and outputs a single $(\varepsilon,\delta)$. For these parameters one typically lands near $\varepsilon\approx2$–$3$ at $\delta=10^{-5}$. **Sanity check:** raising $\sigma$ or lowering $q$ or $T$ all *decrease* $\varepsilon$ (stronger privacy) at the cost of accuracy — the levers behave monotonically, as expected. Because the trained weights are a post-processing of the noisy gradients, the final model inherits the same $(\varepsilon,\delta)$.
+:::
+
+## Common Mistakes
+
+- **Thinking that in Shamir's scheme the polynomial is evaluated at the participant identities only**: The x-coordinates are public identifiers; the y-values (or the pair) are the actual shares that must be kept secret.
+- **Believing that k-1 shares give 'some' partial information about s**: In a perfect scheme they give zero information; the posterior on s is identical to the prior (uniform).
+- **Using a small field for a large secret**: Shamir is usually applied to field elements; for a long secret one either uses a large field or shares the secret bit-by-bit / block-by-block with independent polynomials.
+- **Forgetting that the dealer must be trusted to choose the polynomial correctly**: If the dealer is malicious he can give inconsistent shares. Verifiable secret sharing solves this.
+- **Assuming computational secret sharing (e.g., using one-way functions) is the same as information-theoretic**: Computational schemes can have shorter shares but rely on hardness assumptions and may be broken by future algorithms or quantum computers.
+- **Confusing secret sharing with threshold cryptography or multiparty computation**: Secret sharing is the distribution step; threshold crypto uses shares of a key to perform operations without reconstructing the key in the clear; MPC is the broader interactive protocol setting.
+
+Secure multiparty computation (MPC, or SMPC) lets a set of parties, each holding a private input, compute a joint function of all inputs while revealing only the output (and whatever is implied by it). No party learns anything else about the other parties' inputs.
+
+MPC is the broadest primitive in cryptography that generalizes secret sharing, zero-knowledge, and private set intersection. It can realize any 'mental poker' or 'millionaires' problem in a provably secure way.
+
+- **Thinking MPC always requires a trusted third party**: The whole point is to remove the trusted party; the protocol itself emulates the ideal functionality.
+- **Assuming that 'the output reveals nothing'**: By definition the output y is revealed; privacy only protects the inputs beyond what is implied by y (e.g., if f is the sum, the sum itself is learned but not the individual addends).
+- **Believing information-theoretic security is always possible**: It requires an honest majority (or a private channel + honest majority). Dishonest majority needs computational assumptions.
+- **Confusing 2-party Yao with multi-party secret-sharing MPC**: Yao is usually computational (via OT) and for two parties; BGW-style is information-theoretic for honest majority and uses Shamir sharing + interaction for multiplication.
+- **Forgetting the cost of malicious security**: Semi-honest protocols can be very cheap (linear in circuit size); malicious security often adds heavy zero-knowledge or cut-and-choose overhead, although recent protocols (e.g., SPDZ, authenticated triples) have made malicious security practical.
+- **Assuming MPC is only for 'millionaires' or toy functions**: Modern MPC frameworks (MP-SPDZ, SCALE-MAMBA, EMP-toolkit, etc.) routinely evaluate AES, neural-network inference, and complex database queries among dozens of parties.
+
+Differential privacy (DP) is a rigorous, quantifiable definition of privacy for data analysis and machine learning. It asks that a randomized algorithm behave almost identically on any two datasets differing in at most one record, so that no output can betray whether a particular individual took part; the formal statement is given in the next section.
+
+The parameter ε (the privacy budget) controls the strength of the guarantee: smaller ε gives stronger privacy. The definition makes no assumptions about the adversary's background knowledge or computational power.
+
+DP has become the gold standard for private data release at companies (Apple, Google, Microsoft, Uber) and in the U.S. Census Bureau's 2020 release.
+
+- **Confusing differential privacy with k-anonymity or other syntactic notions**: k-anonymity can be broken by background knowledge or homogeneity attacks; DP gives a worst-case multiplicative guarantee independent of the adversary's knowledge.
+- **Thinking that 'adding noise' is automatically DP**: The noise distribution and its scale must be calibrated exactly to the sensitivity and the desired ε (or (ε,δ)); arbitrary noise may give no guarantee.
+- **Forgetting that post-processing does not cost privacy but composition does**: You can analyze the released DP object as much as you want for free; each new release that depends on the original data costs more budget.
+- **Using a fixed ε across all datasets and applications**: ε is a policy choice that should depend on the sensitivity of the data, the number of expected queries, and the risk tolerance;  ε=1 is not 'always safe.'
+- **Believing local DP (each user perturbs before sending) is the same as central DP**: Local DP requires much more noise (roughly √n worse) because each report must be private by itself; central DP (a trusted curator adds noise to the aggregate) is far more accurate.
+- **Ignoring that DP protects participation, not the value of an attribute**: If everyone in a group has the same sensitive attribute, learning that the group statistic is high may still reveal the attribute for a member even if participation is hidden.

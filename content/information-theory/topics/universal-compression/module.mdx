@@ -1,0 +1,828 @@
+---
+title: Arithmetic, Lempel–Ziv and Universal Coding
+---
+
+# Arithmetic, Lempel–Ziv and Universal Coding
+
+Coding a whole message as one interval, learning the dictionary as you go, and what it costs to compress a source you were not told about.
+
+## The Core Idea: Messages as Subintervals {#idea}
+
+<!-- section: idea -->
+
+Arrange the strings of length $n$ in lexicographic order and lay their probabilities end to end along $[0,1)$. Each string then owns a subinterval whose *length* is its probability and whose *position* identifies it. Naming a message means naming a point in its interval.
+
+:::definition[Cumulative distribution and the interval of a string]{#cdf-interval}
+For a distribution $p$ on a totally ordered set, the **cumulative distribution function** is $F(x) = \sum_{a \le x} p(a)$, and the interval assigned to $x$ is
+
+$$I(x) = \bigl[\,F(x) - p(x),\ F(x)\,\bigr),$$
+
+of length exactly $p(x)$. Distinct symbols own disjoint intervals, and the intervals tile $[0,1)$.
+:::
+
+:::definition[Modified cumulative function and the Shannon–Fano–Elias code]{#sfe-code}
+The **modified cumulative function** is the midpoint of the interval,
+
+$$\bar F(x) = \sum_{a<x} p(a) + \tfrac12 p(x).$$
+
+The **Shannon–Fano–Elias code** transmits the first
+
+$$\ell(x) = \left\lceil \log\frac{1}{p(x)} \right\rceil + 1$$
+
+bits of the binary expansion of $\bar F(x)$; write $\lfloor \bar F(x)\rfloor_{\ell(x)}$ for that truncation.
+:::
+
+The extra bit in $\ell(x)$ buys prefix-freeness, and the following proof shows exactly where it is spent.
+
+:::theorem[The Shannon–Fano–Elias code is prefix-free, with $L < H+2$]{#sfe-theorem}
+The code above is a prefix code, and its expected length satisfies
+
+$$H(p) + 1 \;\le\; L \;<\; H(p) + 2 .$$
+:::
+
+:::proof
+*Prefix-freeness.* Truncating a number $z\in[0,1)$ to $\ell$ bits loses less than $2^{-\ell}$, so
+
+$$0 \;\le\; \bar F(x) - \lfloor \bar F(x)\rfloor_{\ell(x)} \;<\; 2^{-\ell(x)} .$$
+
+A codeword $c$ of length $\ell$ stands for the dyadic interval $[0.c,\, 0.c + 2^{-\ell})$, and by the display this interval contains $\bar F(x)$. Moreover
+
+$$2^{-\ell(x)} = 2^{-\lceil \log(1/p(x))\rceil - 1} \;\le\; \frac{p(x)}{2},$$
+
+so the dyadic interval has length at most $p(x)/2$ and contains the midpoint $\bar F(x)$ of $I(x)$; since the midpoint is at distance $p(x)/2$ from each end of $I(x)$, the dyadic interval lies entirely inside $I(x)$. The intervals $I(x)$ are disjoint for distinct $x$, so the dyadic intervals are disjoint, and as established in the proof of Kraft's inequality, disjoint dyadic intervals correspond to codewords neither of which is a prefix of the other.
+
+*Expected length.* Taking expectations of $\ell(x) = \lceil\log(1/p(x))\rceil + 1$ and using $t \le \lceil t\rceil < t+1$,
+
+$$H(p) + 1 \;\le\; \sum_x p(x)\left(\log\frac{1}{p(x)} + 1\right) \le L < \sum_x p(x)\left(\log\frac{1}{p(x)} + 2\right) = H(p)+2 .$$
+:::
+
+Two bits of overhead is worse than Huffman's one — on single symbols. The point is that the construction never mentions the alphabet: apply it to the alphabet $\mathcal{X}^n$ of whole messages and the overhead becomes $2/n$ bits per symbol, with no enormous code table, because the interval of $x^n$ can be computed incrementally. That incremental computation is arithmetic coding.
+
+:::definition[Arithmetic code and tag]{#arithmetic-tag}
+An **arithmetic code** for a model $p$ over $\mathcal{X}^n$ maps the message $x^n$ to the interval $I(x^n) \subseteq [0,1)$ of length $p(x^n)$ obtained by nesting the per-symbol subdivisions, and transmits enough binary digits of a point inside it — the **tag** — to identify the interval uniquely.
+:::
+
+:::intuition
+The unit interval is a ruler. Every possible message claims a segment of the ruler in proportion to how likely it is: likely messages get wide segments, unlikely ones get slivers.
+
+To send a message you point at a spot inside its segment. Wide segments can be located with few digits of precision, slivers need many — and "number of digits needed" is $\log(1/\text{width}) = \log(1/p)$, which is exactly the ideal codelength. Arithmetic coding is the observation that pointing precisely is the same as compressing.
+:::
+
+:::example[Encoding a three-symbol message]
+A source emits $A$ with $p=0.8$ and $B$ with $p=0.2$, with $F(A) = 0$ and $F(B) = 0.8$ as the interval bases. Encode `AAB`.
+:::
+
+:::solution
+Start with $[\text{low},\text{high}) = [0,1)$, width $1$.
+
+*First $A$:* $[0 + 1(0),\ 0 + 1(0.8)) = [0,\,0.8)$, width $0.8$.
+
+*Second $A$:* $[0 + 0.8(0),\ 0 + 0.8(0.8)) = [0,\,0.64)$, width $0.64$.
+
+*Then $B$:* $[0 + 0.64(0.8),\ 0 + 0.64(1.0)) = [0.512,\,0.64)$, width $0.128$.
+
+**Sanity check.** The final width is $0.8 \times 0.8 \times 0.2 = 0.128$ ✓ — the probability of `AAB`. The ideal codelength is $\log(1/0.128) = 2.97$ bits, so about $3$ bits should suffice. Indeed $0.101 _2 = 0.625$ lies in $[0.512, 0.64)$, and no shorter binary fraction does, since the only $2$-bit candidates are $0.00, 0.25, 0.50, 0.75$. Three bits for three symbols beats the naive $3$ bits only marginally here, but the source entropy is $0.722$, so on long messages the coder approaches $0.722$ bits per symbol while Huffman is stuck at $1$.
+:::
+
+:::figure[Encoding `AAB`: each symbol narrows the interval by its own probability, so the final width is $0.8\times0.8\times0.2 = 0.128 = p(\mathrm{AAB})$.]{#fig-arithmetic-intervals}
+{
+  "type": "plot",
+  "x": [
+    -0.02,
+    1.05
+  ],
+  "y": [
+    -0.35,
+    3.95
+  ],
+  "xTicks": 0.25,
+  "axes": false,
+  "marks": [
+    {
+      "kind": "region",
+      "points": [
+        [
+          0.0,
+          3.0
+        ],
+        [
+          1.0,
+          3.0
+        ],
+        [
+          1.0,
+          3.55
+        ],
+        [
+          0.0,
+          3.55
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          0.0,
+          2.0
+        ],
+        [
+          0.8,
+          2.0
+        ],
+        [
+          0.8,
+          2.55
+        ],
+        [
+          0.0,
+          2.55
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          0.64,
+          1.0
+        ],
+        [
+          0.64,
+          1.55
+        ],
+        [
+          0.0,
+          1.55
+        ]
+      ]
+    },
+    {
+      "kind": "region",
+      "points": [
+        [
+          0.512,
+          0.0
+        ],
+        [
+          0.64,
+          0.0
+        ],
+        [
+          0.64,
+          0.55
+        ],
+        [
+          0.512,
+          0.55
+        ]
+      ]
+    },
+    {
+      "kind": "text",
+      "at": [
+        0.82,
+        3.75
+      ],
+      "text": "start"
+    },
+    {
+      "kind": "text",
+      "at": [
+        0.82,
+        2.75
+      ],
+      "text": "after A"
+    },
+    {
+      "kind": "text",
+      "at": [
+        0.82,
+        1.75
+      ],
+      "text": "after AA"
+    },
+    {
+      "kind": "text",
+      "at": [
+        0.82,
+        0.75
+      ],
+      "text": "after AAB",
+      "leaderTo": [
+        0.6,
+        0.56
+      ]
+    }
+  ]
+}
+:::
+
+## Interval Narrowing, Renormalization, and Precision {#interval-narrowing}
+
+<!-- section: interval-narrowing -->
+
+The encoder is one line of arithmetic repeated once per symbol.
+
+:::recipe[Arithmetic encoder update]{#arithmetic-update}
+Maintain $[\text{low}, \text{high})$, initialised to $[0,1)$. For each symbol $s$ with probability $p(s)$ and cumulative base $F^{-}(s) = \sum_{a<s}p(a)$ — both allowed to depend on all previously coded symbols — set $w = \text{high}-\text{low}$ and
+
+$$\text{low}' = \text{low} + w\,F^{-}(s), \qquad \text{high}' = \text{low} + w\bigl(F^{-}(s) + p(s)\bigr).$$
+:::
+
+:::proposition[The final width is the message probability]{#arithmetic-width}
+After encoding $x^n$ the interval has width
+
+$$\text{high} - \text{low} = \prod_{i=1}^{n} p(x_i \mid x^{i-1}) = p(x^n),$$
+
+so $\log(1/\text{width}) = -\log p(x^n)$ bits suffice to name it, whatever model supplied the conditional probabilities.
+:::
+
+:::proof
+From the update rule, $\text{high}' - \text{low}' = w\,p(s)$: each step multiplies the width by the probability of the symbol just coded. Starting from width $1$ and multiplying across the message gives $\prod_i p(x_i\mid x^{i-1})$, which is $p(x^n)$ by the chain rule.
+:::
+
+This proposition is the reason arithmetic coding is *model-agnostic*. The coder never sees a table of symbol probabilities; it consumes a conditional distribution per symbol, and whatever model produces them — order-0, order-5 context, a neural network — the output length is $-\log p(x^n)$ plus a constant. Modelling and coding are cleanly separated, which is arithmetic coding's true advantage over Huffman.
+
+The obvious implementation problem is that $\text{low}$ and $\text{high}$ converge and would need unbounded precision. The fix is to notice that once the interval lies wholly in one half of $[0,1)$, the leading bit of every point in it is decided and can be emitted.
+
+:::recipe[Renormalization: E1, E2 and E3 scalings]{#renormalization}
+After each symbol, repeat while one of the conditions holds:
+
+- **E1** ($\text{high} \le \tfrac12$): the interval is in the lower half. Output the bit $0$, then map $[l,h) \mapsto [2l, 2h)$.
+- **E2** ($\text{low} \ge \tfrac12$): the interval is in the upper half. Output the bit $1$, then map $[l,h)\mapsto[2l-1, 2h-1)$.
+- **E3** ($\tfrac14 \le \text{low} < \tfrac12 \le \text{high} < \tfrac34$): the interval straddles $\tfrac12$ but is narrow. Increment a counter of *pending* bits, then map $[l,h) \mapsto [2l-\tfrac12,\ 2h-\tfrac12)$. When the next E1 or E2 finally outputs a bit $b$, emit that bit followed by one copy of $\bar b$ per pending count.
+:::
+
+:::proposition[Renormalization is lossless and keeps the width above $1/4$]{#renorm-correct}
+The E1/E2 maps are the affine maps that send the relevant half of $[0,1)$ onto $[0,1)$; emitting the corresponding bit and rescaling therefore preserves the identity of the final interval. After the loop terminates the width exceeds $\tfrac14$, so the registers never lose more than two bits of precision.
+:::
+
+:::proof
+The map $x\mapsto 2x$ on $[0,\tfrac12)$ and $x \mapsto 2x-1$ on $[\tfrac12,1)$ are exactly "delete the leading bit after the binary point", which is the bit just emitted; so the remaining digits of the tag are unchanged. The loop exits only when none of E1, E2, E3 applies, i.e. when $\text{low}<\tfrac14$ and $\text{high}>\tfrac12$, or $\text{low}<\tfrac12$ and $\text{high}>\tfrac34$; in either case $\text{high}-\text{low} > \tfrac14$.
+:::
+
+The E3 rule is the subtle one. An interval such as $[0.499, 0.501)$ is tiny but straddles the midpoint, so no bit is yet determined; scaling about the midpoint keeps the registers full while recording that whatever the first undetermined bit turns out to be, the next bits are its complement. Without E3 an implementation with finite registers eventually underflows and the code becomes ambiguous.
+
+:::intuition
+You keep zooming into a smaller and smaller portion of the ruler. As soon as the whole remaining segment lies to the left of the halfway mark you know the first digit is $0$; write it down and blow the left half back up to full size, recovering a bit of working precision.
+
+E3 is the "I know the next two bits are either $01\ldots1$ or $10\ldots0$" case: you cannot name the first bit yet, but you know all the following ones will be its opposite, so you count them and fill them in later.
+:::
+
+:::example[One narrowing step and its renormalization]
+The current interval is $[0.1, 0.6)$. The next symbol has $F^{-} = 0.3$ and $p = 0.4$. Perform the update and any renormalization.
+:::
+
+:::solution
+Width $w = 0.5$. The update gives
+
+$$\bigl[\,0.1 + 0.5(0.3),\ 0.1 + 0.5(0.3+0.4)\,\bigr) = [\,0.25,\ 0.45\,),$$
+
+of width $0.20 = 0.5 \times 0.4$ ✓.
+
+Since $\text{high} = 0.45 \le 0.5$, rule **E1** applies: output the bit $0$ and rescale to $[0.5, 0.9)$.
+
+Now $\text{low} = 0.5 \ge 0.5$, so **E2** applies: output the bit $1$ and rescale to $[2(0.5)-1,\ 2(0.9)-1) = [0, 0.8)$. No rule applies to $[0,0.8)$, so the loop stops.
+
+**Sanity check.** Two bits (`01`) were emitted and the width went from $0.20$ to $0.80$, a factor of $4 = 2^2$ — one doubling per emitted bit, as the proposition requires. And `01` is right: the final interval $[0.25,0.45)$ sits inside $[0.25, 0.5)$, whose points all begin $0.01\ldots$ in binary ✓.
+:::
+
+:::pitfall[Finite precision needs integer arithmetic, not floating point]
+Encoder and decoder must agree *bit for bit*. Floating-point rounding differs across compilers and platforms, so any real implementation keeps `low` and `high` as fixed-width integers (say 32 bits), computes $w\,F^{-}(s)$ with integer multiply-then-divide by the cumulative total, and guarantees that no interval ever becomes empty by keeping the frequency counts below a bound related to the register width. Carry propagation out of `low` must also be handled — the pending-bit counter of E3 is exactly the mechanism that does it.
+:::
+
+## Termination, Decoding, and the Coding Theorem for Arithmetic Codes {#termination}
+
+<!-- section: termination -->
+
+The interval determines the message; a *transmitted tag* determines the message only if the decoder also knows where to stop. Two devices are used, and one theorem settles the cost of both.
+
+:::theorem[Arithmetic coding is within two bits of optimal]{#arithmetic-optimal}
+Encoding a message $x^n$ with an arithmetic coder driven by the model $p$ produces at most
+
+$$\ell(x^n) \;=\; \left\lceil \log\frac{1}{p(x^n)}\right\rceil + 1 \;<\; \log\frac{1}{p(x^n)} + 2$$
+
+bits, and the resulting code is prefix-free. Consequently the expected rate satisfies
+
+$$\frac{L_n}{n} \;<\; \frac{H(X_1,\dots,X_n)}{n} + \frac2n \;\longrightarrow\; h .$$
+:::
+
+:::proof
+The final interval has width $p(x^n)$ by Proposition *The final width is the message probability*. Applying the Shannon–Fano–Elias construction to the alphabet $\mathcal{X}^n$ — transmitting the first $\lceil\log(1/p(x^n))\rceil + 1$ bits of the midpoint of that interval — gives a prefix code by the Shannon–Fano–Elias theorem, with the stated length. Taking expectations,
+
+$$L_n = E[\ell(X^n)] < E\left[\log\frac{1}{p(X^n)}\right] + 2 = H(X_1,\dots,X_n) + 2 .$$
+
+Dividing by $n$ and letting $n\to\infty$ gives the rate claim, since $H(X_1,\dots,X_n)/n \to h$ by definition of the entropy rate.
+:::
+
+Compare this with Huffman's $L^{*}_n < H(X^n)+1$ for blocks: the constant is worse, but Huffman needs a table of size $|\mathcal{X}|^n$ to achieve it while arithmetic coding needs one register and a model. Two bits *for the whole file* is the practical meaning of the theorem.
+
+:::recipe[Termination strategies]{#arithmetic-termination}
+1. **End-of-file symbol.** Reserve a symbol EOF with a small probability, and code it as the last symbol. The decoder stops when it decodes EOF. Cost: $\log(1/p(\text{EOF}))$ bits, plus a tiny dilution of every other symbol's probability.
+2. **Explicit length.** Transmit $n$ in a header (e.g. with an Elias code) and decode exactly $n$ symbols. Cost: about $\log n + 2\log\log n$ bits.
+3. **Flush bits.** Emit enough bits of the tag to pin it inside the final interval — two bits after renormalization, plus any pending E3 bits — and let the container format supply the length.
+:::
+
+:::recipe[Arithmetic decoding]{#arithmetic-decoding}
+The decoder mirrors the encoder. Maintain the same $[\text{low},\text{high})$ and a *value* register holding the received tag bits.
+
+1. Compute $t = \dfrac{\text{value} - \text{low}}{\text{high}-\text{low}}$, the position of the tag within the current interval.
+2. Find the unique symbol $s$ with $F^{-}(s) \le t < F^{-}(s)+p(s)$; emit $s$.
+3. Apply the same narrowing update for $s$, then the same renormalization, shifting new bits into the value register whenever the encoder would have emitted one.
+4. Repeat until EOF or the known length is reached.
+:::
+
+:::proposition[Decoder correctness]{#decoder-correct}
+If the transmitted tag lies in $I(x^n)$, the decoder recovers $x^n$ exactly.
+:::
+
+:::proof
+By induction on $i$. The intervals of the possible first symbols partition $[0,1)$, and the tag lies in $I(x^n)\subseteq I(x_1)$, so step 2 selects $s = x_1$. After the update the decoder's interval is $I(x_1)$, the encoder's interval after one symbol, and the tag still lies in $I(x^n)\subseteq I(x_1x_2)$. The inductive step repeats the argument inside the rescaled interval, and the renormalization maps applied by both sides are identical, so the registers stay synchronised.
+:::
+
+:::intuition
+The decoder is the encoder run as a question-answering machine: "given where the pointer is, which segment is it in?" Each answer is one symbol, and narrowing to that segment zooms in to ask the same question again.
+
+Because the two sides apply the same updates in the same order, the decoder needs no information beyond the tag and the model — and if the model is adaptive, it can update it from the symbols it has already decoded, exactly as the encoder did.
+:::
+
+:::example[Cost of the two termination strategies]
+A file of $n = 10^{6}$ symbols is coded at $H = 2$ bits/symbol. Compare an EOF symbol of probability $10^{-6}$ with an explicit length header.
+:::
+
+:::solution
+*EOF symbol.* Coding it costs $\log(1/10^{-6}) = 19.9$ bits once. But giving EOF probability $10^{-6}$ also scales every other symbol's probability by $(1-10^{-6})$, costing $-\log(1-10^{-6}) \approx 1.44\times10^{-6}$ bits per symbol, i.e. $1.44$ bits over the file. Total: about $21.4$ bits.
+
+*Explicit length.* An Elias delta code for $n = 10^{6}$ uses about $\log n + 2\log\log n + 1 \approx 19.9 + 2(4.3) + 1 = 29.5$ bits.
+
+*Flush.* Either way, two extra bits pin the tag.
+
+**Sanity check.** The file itself occupies $2\times10^{6}$ bits, so the termination overhead is about $10^{-5}$ of the total — utterly negligible, which is why the choice is made on engineering grounds (streaming favours EOF; random access favours an explicit length). The theorem's "$+2$ bits" is of the same order, confirming that arithmetic coding's inefficiency is a constant, not a rate.
+:::
+
+## Parsing a String into Phrases {#dictionary}
+
+<!-- section: dictionary -->
+
+:::definition[LZ78 parsing]{#lz78-parsing}
+The **LZ78 parsing** of a string $x_1x_2\cdots x_n$ is the greedy decomposition into phrases in which each new phrase is the shortest prefix of the remaining input that has not appeared as an earlier phrase. Each phrase therefore equals some earlier phrase extended by one symbol, and is transmitted as the pair
+
+$$(\text{index of that earlier phrase},\ \text{the new symbol}).$$
+
+Write $c(n)$ for the number of phrases produced.
+:::
+
+:::definition[LZW dictionary]{#lzw-dictionary}
+**LZW** (Lempel–Ziv–Welch, 1984) is the variant that keeps the phrases in an explicit **dictionary** initialised with every single symbol of the alphabet, so that only an index — never a raw symbol — is ever transmitted. Encoder and decoder build identical dictionaries from the code stream alone; the dictionary is never sent.
+:::
+
+The two descriptions differ only in bookkeeping, and LZW is what GIF and the Unix `compress` utility implement. The essential point is shared: the code is a sequence of *pointers into text the decoder has already reconstructed*.
+
+:::theorem[How many phrases a string can have]{#phrase-count}
+If a string of length $n$ over an alphabet of size $D \ge 2$ is parsed into $c$ distinct phrases, then
+
+$$c \;\le\; \frac{C\,n}{\log_D n}$$
+
+for an absolute constant $C$ and all $n \ge 2$; that is, $c = O(n/\log n)$.
+:::
+
+:::proof
+The phrases are distinct strings whose lengths sum to $n$, so $n$ is at least the smallest possible total length of $c$ distinct non-empty strings — which is attained by taking the $c$ shortest ones.
+
+First count the short strings. The number of non-empty strings of length at most $m$ is
+
+$$D + D^2 + \cdots + D^{m} \;=\; \frac{D\bigl(D^{m}-1\bigr)}{D-1} \;\le\; 2D^{m},$$
+
+using $D/(D-1)\le 2$ for $D \ge 2$.
+
+Let $m$ be the largest integer with $D^{m} \le c/4$. Then at most $2D^{m} \le c/2$ of the phrases have length $\le m$, so at least $c/2$ of them have length greater than $m$, and since the lengths sum to $n$,
+
+$$n \;\ge\; \frac{c}{2}\,m .$$
+
+Maximality of $m$ gives $D^{m+1} > c/4$, hence $m > \log_D c - \log_D 4 - 1$. Substituting,
+
+$$n \;\ge\; \frac{c}{2}\bigl(\log_D c - \log_D 4 - 1\bigr), \qquad\text{so}\qquad c\log_D c \;\le\; 2n + 3c \;\le\; 5n,$$
+
+using $\log_D 4 \le 2$ and $c \le n$. Now split on the size of $c$. If $c \ge \sqrt n$ then $\log_D c \ge \tfrac12 \log_D n$, and the display gives $c \le 10n/\log_D n$. If instead $c < \sqrt n$, then $c < \sqrt n \le 10n/\log_D n$ because $\log_D n \le 10\sqrt n$ for all $n\ge2$. Either way the bound holds with $C = 10$.
+:::
+
+The theorem is the engine of the whole method: it says the number of pointers grows like $n/\log n$, so the total cost $c(n)\bigl(\log c(n) + \log D\bigr)$ grows like $n$ — a constant number of bits per symbol — and the entire question is what that constant turns out to be.
+
+:::intuition
+The first time you meet the phrase `the ` you must spell it out. After that you can say "entry 300". The dictionary grows, so later pointers are longer, but the phrases they name grow faster — and that race is what compression is.
+
+A string cannot have too many *distinct* phrases, because distinct strings have to get longer: there are only $D^k$ strings of length $k$ to go around.
+:::
+
+:::example[LZW encoding of a repetitive string]
+The alphabet is $\{A, B\}$ with initial dictionary $A \to 1$, $B \to 2$; the next free code is $3$. Encode `ABABABA`.
+:::
+
+:::solution
+The encoder holds a phrase `cur` and emits a code only when `cur + c` is not yet in the dictionary.
+
+`cur = "A"`, read `B`: `"AB"` unknown $\Rightarrow$ output **1** (`"A"`), add `"AB"` $=3$, set `cur = "B"`.
+
+`cur = "B"`, read `A`: `"BA"` unknown $\Rightarrow$ output **2** (`"B"`), add `"BA"` $=4$, set `cur = "A"`.
+
+`cur = "A"`, read `B`: `"AB"` known $\Rightarrow$ extend, `cur = "AB"`.
+
+`cur = "AB"`, read `A`: `"ABA"` unknown $\Rightarrow$ output **3** (`"AB"`), add `"ABA"` $=5$, set `cur = "A"`.
+
+`cur = "A"`, read `B`: `"AB"` known $\Rightarrow$ `cur = "AB"`.
+
+`cur = "AB"`, read `A`: `"ABA"` known $\Rightarrow$ `cur = "ABA"`.
+
+End of input: output **5** (`"ABA"`).
+
+Output stream: $1, 2, 3, 5$ — four codes for seven characters.
+
+**Sanity check.** Every dictionary addition is the phrase just emitted followed by the next input symbol (`AB`, `BA`, `ABA`), so the decoder, which sees the same emitted phrases, can replay every addition. Note the last code, $5$, names a phrase the algorithm learned *during this very string* — the mechanism by which LZW discovers structure it was never told about.
+:::
+
+## Encoding, Decoding, and the Self-Referential Case {#encoding-process}
+
+<!-- section: encoding-process -->
+
+:::recipe[LZW encoding]{#lzw-encoding}
+1. Initialise the dictionary with the $D$ single symbols; set `cur` to the first input symbol.
+2. For each subsequent symbol `c`: if `cur + c` is in the dictionary, set `cur = cur + c`; otherwise output the code of `cur`, add `cur + c` to the dictionary, and set `cur = c`.
+3. At the end of the input, output the code of `cur`.
+:::
+
+:::recipe[LZW decoding]{#lzw-decoding}
+1. Read the first code and emit its phrase; call it `prev`.
+2. For each subsequent code $k$: if $k$ is in the dictionary, let `cur` be its phrase; **otherwise** let `cur` $=$ `prev` $+$ `prev`$[0]$. Emit `cur`, add `prev` $+$ `cur`$[0]$ to the dictionary, and set `prev` $=$ `cur`.
+:::
+
+The decoder runs one step behind the encoder — it adds an entry only after seeing the *next* code — and that one-step lag creates the only subtlety in the algorithm.
+
+:::proposition[The exceptional code]{#lzw-exception}
+A decoder can receive a code $k$ that is not yet in its dictionary. This happens exactly when the encoder used an entry it created on the immediately preceding step, and in that case the missing phrase is
+
+$$\text{phrase}(k) \;=\; \texttt{prev} + \texttt{prev}[0],$$
+
+so the decoder can always continue.
+:::
+
+:::proof
+Suppose the encoder emits code $k$ for a phrase $w$ that it added one step earlier. By the encoding rule, the entry added at the previous step was $w = v + a$, where $v$ is the phrase emitted at the previous step (so $v = \texttt{prev}$ at the decoder) and $a$ is the input symbol that followed it. But the encoder emits $w$ next only if `cur` grew to $w$, which starts from `cur` $= a$: the symbol immediately after $v$ is $a$, and $w$ begins with that same symbol only if $w = v+a$ starts with $a$ — i.e. $v$ starts with $a$, so $a = v[0]$. Hence $w = v + v[0] = \texttt{prev} + \texttt{prev}[0]$, which the decoder already knows.
+
+No other code can be missing: any $k$ emitted for an older entry was added at least two steps earlier, and the decoder is only one step behind.
+:::
+
+:::example[Decoding the stream and meeting the exception]
+Decode $1, 2, 3, 5$ with initial dictionary $A = 1$, $B = 2$, next free code $3$.
+:::
+
+:::solution
+Receive **1** $\to$ emit `"A"`; nothing to add yet. `prev = "A"`.
+
+Receive **2** $\to$ phrase `"B"`; emit `"B"`, add `"A"+"B" = "AB"` $=3$. `prev = "B"`.
+
+Receive **3** $\to$ phrase `"AB"`; emit `"AB"`, add `"B"+"A" = "BA"` $=4$. `prev = "AB"`.
+
+Receive **5** $\to$ *not in the dictionary*. By the exceptional-code rule the phrase is `prev + prev[0] = "AB" + "A" = "ABA"`. Emit `"ABA"`, add `"AB"+"A" = "ABA"` $=5$. `prev = "ABA"`.
+
+Output: `A` + `B` + `AB` + `ABA` = `ABABABA`.
+
+**Sanity check.** The reconstruction equals the original input ✓, and the decoder's dictionary (`AB`$=3$, `BA`$=4$, `ABA`$=5$) is identical to the encoder's ✓ — built from the code stream alone, with no dictionary transmitted. The exception fired exactly where the proposition predicts: code $5$ was created by the encoder one step before it was used.
+:::
+
+:::theorem[Codelength of LZ78]{#lz-codelength}
+Transmitting the $c(n)$ phrases of an LZ78 parsing, each as an index into the phrases so far plus one symbol, costs at most
+
+$$\ell(x^n) \;\le\; c(n)\bigl(\log c(n) + \log D\bigr) \text{ bits},$$
+
+which is $O(n)$ bits: by the phrase-count theorem $c(n) = O(n/\log_D n)$, while $\log c(n) \le \log n$, so the product is bounded by a constant multiple of $n$. The code therefore spends a bounded number of bits per symbol, and the content of the optimality theorem below is that the constant is exactly $h$.
+:::
+
+:::proof
+There are $c(n)$ phrases; the index of the earlier phrase referenced by phrase $j$ is at most $j-1 < c(n)$ and so fits in $\lceil\log c(n)\rceil$ bits if a fixed width is used, and the appended symbol costs $\lceil \log D\rceil$ bits. Summing over the $c(n)$ phrases gives the bound.
+:::
+
+:::theorem[Asymptotic optimality of Lempel–Ziv]{#lz-optimality}
+For any stationary ergodic source with entropy rate $h$, the LZ78 codelength satisfies
+
+$$\limsup_{n\to\infty} \frac{1}{n}\,\ell(X^n) \;=\; h \quad\text{almost surely.}$$
+
+Lempel–Ziv therefore attains the source coding bound *without being told the distribution*: it is universal over the class of all stationary ergodic sources on a finite alphabet.
+:::
+
+:::proof
+We only sketch the argument; the full proof is in Cover and Thomas and is beyond the scope of this chapter. Two ingredients do the work.
+
+*Lower bound.* $\liminf \frac1n \ell(X^n) \ge h$ is the converse to the source coding theorem: no uniquely decodable code beats the entropy rate.
+
+*Upper bound.* The key step is **Ziv's inequality**: for any distinct parsing of $x^n$ into $c$ phrases, and for any $k$-th order Markov measure $Q$ on the source,
+
+$$\log \frac{1}{Q(x^n)} \;\ge\; \sum_{\text{phrases}} \log(\text{number of phrases with the same $k$-symbol context}) \;\ge\; c\log c - c\,\kappa,$$
+
+with $\kappa$ depending only on $k$ and $D$. Combining it with the phrase-count theorem shows $c(n)\log c(n)/n$ is asymptotically bounded by the $k$-th order conditional entropy $H(X_{k+1}\mid X_1,\dots,X_k)$; the ergodic theorem lets $k\to\infty$, and that conditional entropy decreases to $h$. Since the codelength is $c\log c$ up to lower-order terms, the limsup is at most $h$.
+:::
+
+:::intuition
+LZ never estimates a probability. It nevertheless converges to the entropy rate, because *repetition is exactly what low entropy means*: a source with entropy rate $h$ produces about $2^{nh}$ typical strings of length $n$, so within a long enough window, phrases must start repeating, and the repetition rate is governed by $h$.
+
+The dictionary is an empirical model that gets richer the longer you look. It is slower to converge than a well-chosen parametric model — its redundancy decays like $1/\log n$ rather than $\log n / n$ — but it needs no choosing.
+:::
+
+## Limits, Variants, and What Is Used in Practice {#limitations}
+
+<!-- section: limitations -->
+
+The optimality theorem is asymptotic in $n$ with an unbounded dictionary. Every real implementation departs from it, and the departures are what distinguish the formats.
+
+- **Bounded dictionary.** GIF uses $12$-bit codes, i.e. $4096$ entries. Once full, an implementation either freezes the dictionary (and stops adapting) or emits a CLEAR code that resets it, paying the cost of relearning. Neither matches the theorem, whose conclusion needs $c(n)\to\infty$.
+- **LZ77 instead of LZ78.** LZ77 (Ziv–Lempel 1977) emits triples (distance back, match length, next symbol) into a sliding window rather than indices into a dictionary of phrases. It is also universal, adapts faster to local statistics, and is what gzip (DEFLATE), zstd, LZMA and Brotli use, always with an entropy coder — usually Huffman or ANS — applied to the literals, lengths and distances.
+- **Expansion on incompressible data.** On a string with no repeats every phrase is new, so $c(n) \approx n$ and the output is $n(\log n + \log D)$ bits, *longer* than the input. Formats therefore include a "stored" (uncompressed) block type, which caps the expansion at a few bytes per block.
+- **Convergence speed.** LZ's redundancy over the entropy rate decays roughly like $O(1/\log n)$, so on a $10$ kB file it may be several tenths of a bit per symbol away from $h$. Context-model-plus-arithmetic compressors converge much faster and win decisively on small inputs; LZ wins on speed.
+
+:::theorem[LZW cannot compress a memoryless uniform source]{#lz-incompressible}
+If $X_1,\dots,X_n$ are i.i.d. uniform on an alphabet of size $D$, then $h = \log D$ and every lossless code — Lempel–Ziv included — has expected length at least $n\log D$ bits, so the expected compression ratio is at most $1$.
+:::
+
+:::proof
+Uniformity gives $H(X) = \log D$ and independence gives $h = \log D$. The entropy lower bound for uniquely decodable codes applied to the block $X^n$ gives $E[\ell(X^n)] \ge H(X^n) = n\log D$. Since the raw encoding also costs $n\log D$ bits, no scheme can do better on average, and any scheme that shortens some inputs lengthens others by the no-free-lunch theorem.
+:::
+
+:::example[Why GIF is a poor choice for photographs]
+A $256$-colour icon with large flat areas and a $256$-colour dithered photograph are both stored as GIF. Explain the difference in file size using the phrase-count bound.
+:::
+
+:::solution
+*Icon.* Flat runs mean the parsing quickly builds long phrases: a run of $k$ identical pixels is covered by phrases of lengths $1,2,3,\dots$, so $c$ phrases cover about $c^2/2$ pixels and $c \approx \sqrt{2n}$. The cost is about $\sqrt{2n}(\log c + 8)$ bits instead of $8n$ — a ratio that improves as the file grows.
+
+*Dithered photograph.* Dithering deliberately randomises neighbouring pixels, so repeats are rare, $c(n)\approx n/2$ or worse, and the cost approaches $n(\log c + 8) > 8n$ bits: LZW expands it, and only the stored-block escape keeps the file near its raw size.
+
+**Sanity check.** The two cases bracket the theorem: the icon is a low-entropy-rate source where repetition is abundant, the dithered image an engineered high-entropy one where the incompressibility theorem applies with $\log D = 8$. The right tools are respectively PNG (LZ77 + Huffman, with a pixel predictor) and JPEG (lossy, escaping the entropy bound altogether).
+:::
+
+## What Universality Means {#definition-universal}
+
+<!-- section: definition-universal -->
+
+:::definition[Redundancy of a code]{#code-redundancy}
+Let $\mathcal{P}$ be a class of sources and let $C_n$ be a code on $\mathcal{X}^n$ with lengths $\ell_n$. For $P\in\mathcal{P}$ the **pointwise redundancy** on $x^n$ is
+
+$$\rho_n(x^n, P) = \ell_n(x^n) - \log\frac{1}{P(x^n)},$$
+
+the excess over the ideal codelength for $P$, and the **expected redundancy** is $R_n(P) = E_P[\rho_n(X^n,P)] = E_P[\ell_n] - H_P(X^n)$.
+:::
+
+:::definition[Universal code]{#universal-code}
+A sequence of codes $\{C_n\}$ is **weakly universal** for the class $\mathcal{P}$ if for every $P \in \mathcal{P}$
+
+$$\frac{1}{n}E_P\bigl[\ell_n(X^n)\bigr] \;\longrightarrow\; h(P),$$
+
+the entropy rate of $P$; equivalently $R_n(P) = o(n)$ for every $P$. It is **strongly universal** (or *minimax*) if the convergence is uniform over $\mathcal{P}$:
+
+$$\sup_{P\in\mathcal{P}} \frac{R_n(P)}{n} \;\longrightarrow\; 0 .$$
+
+A code is **pointwise universal** if $\frac1n\rho_n(X^n,P)\to0$ almost surely under each $P$.
+:::
+
+Notice what universality is not. It is not "optimal for the unknown source at finite $n$" — no code is — and it is not a claim about any particular file. It is a statement that the *per-symbol* overhead of not knowing the source vanishes.
+
+:::theorem[Codes are probability distributions]{#code-measure-duality}
+Given any uniquely decodable code with lengths $\ell$, the assignment $Q(x) = 2^{-\ell(x)}/c$ with $c=\sum_x 2^{-\ell(x)} \le 1$ is a probability distribution, and $\ell(x) \ge \log(1/Q(x))$. Conversely, for any distribution $Q$ the lengths $\lceil\log(1/Q(x))\rceil$ define a prefix code.
+
+Consequently designing a universal code *is* designing a single distribution $Q$ that is close to every $P$ in the class simultaneously, and the redundancy is
+
+$$R_n(P) \;=\; D\bigl(P^{(n)} \,\|\, Q^{(n)}\bigr) + O(1).$$
+:::
+
+:::proof
+The first claim is Kraft–McMillan plus normalisation; the second is Kraft's converse, as used for the Shannon code. For the redundancy formula, take $\ell_n(x^n) = \lceil\log(1/Q(x^n))\rceil$, so that $\ell_n < \log(1/Q(x^n)) + 1$, and average under $P$:
+
+$$E_P[\ell_n] \;<\; \sum_{x^n} P(x^n)\log\frac{1}{Q(x^n)} + 1 \;=\; H_P(X^n) + D\bigl(P\,\|\,Q\bigr) + 1,$$
+
+by the cost-of-the-wrong-model identity. Subtracting $H_P(X^n)$ gives $R_n(P) \le D(P\|Q) + 1$, and the matching lower bound $R_n(P)\ge D(P\|Q) - O(1)$ follows from the entropy bound applied to the code's own induced distribution.
+:::
+
+This duality is the organising idea of the whole subject: a universal compressor is a *single* distribution over files that hedges across a class of sources, and its worst-case cost is a divergence.
+
+:::intuition
+A universal compressor is a packing service that is not told what is in your luggage. It watches the first few items, forms a theory, and keeps revising. The theory is wrong at first, which costs bits — but the number of wasted bits grows like $\log n$, not like $n$, so the per-item waste goes to zero.
+
+The formal version of "forming a theory" is Bayesian: put a prior on the class of sources, let $Q$ be the resulting mixture, and the redundancy becomes the cost of the prior.
+:::
+
+:::example[Weak universality of Lempel–Ziv]
+Which class is LZ78 universal for, in which sense, and what is known about its redundancy?
+:::
+
+:::solution
+*Class.* All stationary ergodic processes on a finite alphabet.
+
+*Sense.* Pointwise: $\frac1n\ell(X^n)\to h$ almost surely, by the LZ optimality theorem. Pointwise convergence implies weak universality by dominated convergence, the codelength being bounded by $\log D + o(1)$ per symbol.
+
+*Redundancy.* Slow. For an i.i.d. or finite-order Markov source the LZ78 redundancy is of order $n\log\log n/\log n$ in total, i.e. about $\log\log n/\log n$ per symbol; for $n = 10^{6}$ that is roughly $4.3/20 \approx 0.2$ bits per symbol.
+
+**Sanity check.** Compare with the $O(\log n)$ *total* redundancy of a mixture code for a parametric class: at $n = 10^{6}$ that is about $10$ bits in total, versus LZ's $200{,}000$. The comparison is fair only where the parametric model is right — LZ pays for covering a vastly larger class, and for asking nothing of the user.
+:::
+
+## The Standard Constructions {#examples}
+
+<!-- section: examples -->
+
+Three families of universal code recur, and they cover the practical ground.
+
+**Integer codes.** These are universal for the class of all distributions on $\mathbb{N}$ with decreasing probabilities, and are the building block for headers, lengths and dictionary indices.
+
+:::definition[Elias gamma and delta codes]{#elias-codes}
+The **Elias gamma** code writes a positive integer $n$ as $\lfloor\log n\rfloor$ zeros, followed by the $\lfloor\log n\rfloor + 1$ bits of $n$ in binary. The **Elias delta** code replaces the unary prefix by the gamma code of $\lfloor\log n\rfloor + 1$.
+:::
+
+:::proposition[Lengths of the Elias codes]{#elias-lengths}
+Gamma uses $2\lfloor\log n\rfloor + 1$ bits and delta uses $\lfloor\log n\rfloor + 2\lfloor\log(\lfloor\log n\rfloor+1)\rfloor + 1$ bits; both are prefix codes, and delta is within $1+o(1)$ of the ideal $\log n$ bits.
+:::
+
+:::proof
+For gamma, the unary prefix of $\lfloor\log n\rfloor$ zeros terminated by the leading $1$ of the binary expansion tells the decoder how many further bits to read, so the code is prefix-free, and the total is $\lfloor\log n\rfloor + (\lfloor\log n\rfloor+1)$. For delta, the same argument applies with the unary prefix replaced by a gamma-coded length, whose own length is $2\lfloor\log(\lfloor\log n\rfloor+1)\rfloor+1$; the payload contributes the remaining $\lfloor\log n\rfloor$ bits. The ratio of the delta length to $\log n$ tends to $1$, since $\log\log n = o(\log n)$.
+:::
+
+**Mixture and plug-in codes.** These are universal for parametric classes, and achieve the best possible redundancy.
+
+:::definition[Krichevsky–Trofimov estimator]{#kt-estimator}
+For a binary i.i.d. source of unknown bias, the **KT estimator** predicts the next symbol after $a$ zeros and $b$ ones by
+
+$$\hat p(1 \mid a,b) = \frac{b + \tfrac12}{a+b+1},$$
+
+and feeding these predictions to an arithmetic coder produces the KT code. It is the Bayesian mixture over the bias with a $\mathrm{Beta}(\tfrac12,\tfrac12)$ (Jeffreys) prior.
+:::
+
+:::theorem[KT redundancy]{#kt-redundancy}
+For every $\theta \in [0,1]$, the KT code applied to an i.i.d. binary source of bias $\theta$ has total redundancy
+
+$$R_n(\theta) \;\le\; \tfrac12 \log n + 2 \text{ bits},$$
+
+uniformly in $\theta$ — a *total* overhead, not a per-symbol one, so the per-symbol overhead is $O(\log n / n)$.
+:::
+
+:::proof
+We sketch the standard argument. The KT probability of a string with $a$ zeros and $b$ ones is the mixture $Q(x^n) = \int_0^1 \theta^{b}(1-\theta)^{a}\,w(\theta)\,d\theta$ with the Jeffreys prior $w(\theta) = \pi^{-1}\theta^{-1/2}(1-\theta)^{-1/2}$. Laplace's method applied to this integral gives
+
+$$\log\frac{1}{Q(x^n)} \;\le\; \log\frac{1}{\hat\theta^{b}(1-\hat\theta)^{a}} + \tfrac12\log n + O(1)$$
+
+where $\hat\theta = b/n$ is the maximum-likelihood bias, and the first term is at most $\log(1/\theta^b(1-\theta)^a)$ for the true $\theta$ because $\hat\theta$ maximises the likelihood. Taking expectations under $\theta$ and adding the arithmetic coder's two bits gives the claim. The full argument evaluates the Beta integral exactly; it is carried out in the source-coding literature and we do not reproduce it.
+:::
+
+**Context models.** Context Tree Weighting (CTW) mixes KT estimators over all tree-structured context models up to a depth $d$, achieving redundancy $O(|S|\log n)$ for any tree source with $|S|$ states — again a logarithmic total. Prediction by Partial Matching (PPM) is the heuristic cousin that dominated text compression benchmarks before context mixing (PAQ, cmix) and, more recently, neural predictors.
+
+:::example[Counting the cost of not knowing the bias]
+A binary file of $n = 10^{6}$ symbols comes from an i.i.d. source of unknown bias $\theta = 0.1$. Compare the ideal length, the KT length, and the length produced by wrongly assuming $\theta = 0.5$.
+:::
+
+:::solution
+*Ideal.* $H(0.1) = 0.469$ bits/symbol, so $nH = 469{,}000$ bits.
+
+*KT.* At most $nH + \tfrac12\log n + 2 = 469{,}000 + \tfrac12(19.93) + 2 \approx 469{,}012$ bits. The overhead is $12$ bits — about $2.6\times10^{-5}$ bits per symbol.
+
+*Wrong fixed model.* Assuming a fair coin costs $H + D(p\|q) = 1$ bit per symbol, i.e. $1{,}000{,}000$ bits.
+
+**Sanity check.** The wrong fixed model throws away $1{,}000{,}000 - 469{,}000 = 531{,}000$ bits; the universal coder recovers all but $12$ of them. Twelve bits against half a megabit is the practical case for universal coding in one line.
+:::
+
+## The Price of Universality {#limitations-universal}
+
+<!-- section: limitations-universal -->
+
+Universality is not free, and the cost has an exact asymptotic form. The intuition is a counting one: a code that must be ready for $|\mathcal{P}|$ essentially different sources has to reserve short codewords for the typical set of each, and typical sets of different sources are disjoint.
+
+:::definition[Minimax redundancy]{#minimax-redundancy-def}
+The **minimax redundancy** of a class $\mathcal{P}$ at block length $n$ is
+
+$$R_n^{*} = \min_{Q}\ \max_{P\in\mathcal{P}}\ D\bigl(P^{(n)}\,\|\,Q^{(n)}\bigr),$$
+
+the least worst-case excess achievable by any single coding distribution $Q$.
+:::
+
+:::theorem[Rissanen's bound for parametric classes]{#minimax-redundancy}
+For the class of i.i.d. distributions on an alphabet of size $m$ — a $k = m-1$ parameter family — the minimax redundancy satisfies
+
+$$R_n^{*} \;=\; \frac{m-1}{2}\log n + O(1) \text{ bits.}$$
+
+More generally, for a smooth $k$-parameter class the minimax redundancy is $\tfrac{k}{2}\log n + O(1)$: **every parameter costs half a logarithm.** No universal code for such a class can do better, and mixture codes such as KT and CTW attain it.
+:::
+
+:::remark[On the proof]
+The upper bound is the mixture argument sketched for the KT estimator, applied with Jeffreys' prior in $k$ dimensions; the constant in $O(1)$ is the logarithm of the volume of the parameter space in the Fisher metric. The lower bound is Rissanen's theorem, proved by a counting argument: the parameter space contains about $n^{k/2}$ distributions that are statistically distinguishable at sample size $n$, and no single $Q$ can be close to all of them at once. Both halves are beyond the scope of this chapter; we state the result and use it.
+:::
+
+:::corollary[Half a bit per parameter per doubling]{#half-log}
+Doubling the file length adds $k/2$ bits to the minimax redundancy — so for fixed $k$ the *per-symbol* cost of universality decays like $\tfrac{k\log n}{2n}$, and vanishes.
+:::
+
+:::proof
+Replace $n$ by $2n$ in the theorem: the redundancy changes by $\tfrac k2\log 2 = k/2$ bits. Dividing the total by $n$ gives the per-symbol claim.
+:::
+
+:::theorem[Most strings are incompressible by any code]{#incompressible}
+For any uniquely decodable code on $\{0,1\}^n$ and any $k\ge1$, fewer than a fraction $2^{-k+1}$ of the $2^n$ inputs receive codewords shorter than $n-k$ bits. In particular, no universal code — however clever, however adaptive — compresses more than a negligible fraction of all files.
+:::
+
+:::proof
+This is the no-free-lunch theorem applied to the encoder, which is injective by unique decodability: at most $2^{n-k+1}-1$ binary strings have length less than $n-k+1$, so at most that many inputs can receive them.
+:::
+
+The two theorems together delimit the subject. Universality is possible because real data is not uniform over $\{0,1\}^n$ — it lives in the typical set of some low-entropy source — and the only cost of not knowing *which* source is logarithmic. But the moment the data really is uniform, no amount of adaptivity helps, because the obstruction is counting, not ignorance.
+
+:::remark[Kolmogorov complexity: the ultimate universal code]
+One can define the complexity $K(x)$ of a string as the length of the shortest program that prints it on a fixed universal machine. This is universal in the strongest sense — $K(x) \le \ell(x) + O(1)$ for every computable code $\ell$ — and for a computable source $E[K(X^n)] = H(X^n)+O(\log n)$. It is also **uncomputable**: no algorithm computes $K$, by a diagonal argument closely related to the halting problem. Kolmogorov complexity is therefore the correct theoretical endpoint of this chapter and useless as an engineering target. The practical hierarchy — Huffman, arithmetic, LZ, CTW — is a sequence of computable approximations to an ideal that cannot be reached.
+:::
+
+:::example[Sizing the minimax penalty for a real alphabet]
+A compressor must handle an unknown memoryless source over the $256$ byte values. How many extra bits must it pay on a $1$ MB file, and on a $1$ kB file?
+:::
+
+:::solution
+Here $m = 256$, so $k = m-1 = 255$ parameters.
+
+*1 MB.* The symbols are bytes, so $n = 10^{6}$. The penalty is
+
+$$\frac{255}{2}\log_2 10^{6} = 127.5 \times 19.93 \approx 2541 \text{ bits} \approx 318 \text{ bytes},$$
+
+or $0.03\%$ of the file.
+
+*1 kB.* $n = 1024$: $127.5 \times 10 = 1275$ bits $\approx 159$ bytes, which is $16\%$ of the file.
+
+**Sanity check.** The penalty grows only logarithmically in $n$ while the file grows linearly, so the relative cost falls by a factor of about $500$ between the two sizes — which is precisely why compressors have a minimum useful file size, and why archive formats compress many small files as one stream ("solid" archives) rather than separately.
+:::
+
+## Common Mistakes
+
+- **Thinking every sequence has probability exactly $2^{-nh}$.** Only typical ones have probability close to that *on the exponential scale*, and even they vary by subexponential factors. Atypical strings can be far more or far less likely.
+- **Confusing the size of the typical set with the size of the support.** The support is usually all of $\mathcal{X}^n$; the typical set is the exponentially smaller subset of size about $2^{nH}$.
+- **Dropping the ergodicity or stationarity hypothesis.** Without it the entropy rate may not exist, and the concentration in the AEP can fail outright.
+- **Treating the AEP as exact at finite $n$.** It is asymptotic. For short blocks the atypical branch is not negligible and one needs explicit finite-$n$ bounds (Chebyshev, or a Chernoff bound).
+- **Confusing the AEP with the central limit theorem.** Both concern $\frac1n\sum_i(-\log p(X_i))$, but the AEP is a law of large numbers (the mean converges); the CLT describes the $\sqrt n$-scale fluctuations around it, which govern finite-blocklength corrections.
+- **Assuming typicality is a property of a string.** It is a property of a string *and* a distribution. The all-ones string is typical for $p(1)=1-1/n$ and wildly atypical for a fair coin.
+
+Shannon's source coding theorem — the *noiseless coding theorem* — is the first of the two pillars of information theory. It converts the counting facts of the previous part into a sharp statement about which compression schemes can exist. Its content is that a single number, the entropy rate, is simultaneously an upper and a lower bound on the achievable rate, so that the compressibility of a source is not a matter of ingenuity but of arithmetic.
+
+- **Reading the theorem as a statement about single messages.** It is asymptotic in block length and probabilistic in the source. Individual short messages can beat $H$ or fall far short of it.
+- **Confusing the source coding theorem with the channel coding theorem.** Source coding removes redundancy to approach $h$; channel coding adds redundancy to approach capacity. They are dual, not the same.
+- **Using $H(X)$ for a source with memory.** The limit is the entropy *rate* $h = \lim H(X_n \mid X^{n-1})$, which can be far below the marginal entropy: English has a marginal letter entropy above $4$ bits but an entropy rate near $1.3$ bits.
+- **Forgetting the vanishing-error qualifier in the achievability half.** Fixed-rate codes below $\log|\mathcal{X}|$ must sometimes fail; the theorem promises only that the failure probability tends to zero.
+- **Believing the converse follows from Fano's inequality alone.** Fano gives $P_e$ bounded away from zero; the exponential counting argument is what gives $P_e \to 1$.
+- **Assuming a smarter codebook could beat the count.** The converse quantifies over *all* functions $f_n$, computable or not. There is no algorithmic escape from a pigeonhole.
+
+The theory so far speaks of blocks of length $n\to\infty$ and codebooks of astronomical size. Real compressors read a file once, symbol by symbol, and emit bits as they go. This part makes the transition: from block codes to **symbol codes**, where the combinatorial constraint is not a pigeonhole count but *Kraft's inequality*, and where the asymptotic bound $L \to H$ is replaced by the sharp finite bound $H \le L < H+1$.
+
+- **Expecting a compressor to shrink random or already-compressed data.** The no-free-lunch theorem forbids it; the output of gzip run twice is slightly larger than run once.
+- **Confusing non-singular with uniquely decodable.** $\{0,1,01\}$ is non-singular but not uniquely decodable: `01` could be one symbol or two.
+- **Believing unique decodability allows shorter codes than the prefix property.** Kraft–McMillan says the achievable length vectors are identical; instantaneous decoding is free.
+- **Reading Kraft's inequality as a statement about a particular code.** It constrains the *multiset of lengths*. Any length vector satisfying it can be realised, and no code can violate it.
+- **Ignoring model cost for small files.** The $D(p\|q)$ penalty assumes a known model; if the model must be transmitted, its description length is charged to the file, which is why compression shines on large inputs.
+- **Comparing $L$ against $\log|\mathcal{X}|$ instead of $H$.** The naive baseline measures the saving; the entropy measures how much saving was left on the table.
+
+Kraft's inequality tells us which length vectors are legal; the Shannon code shows that a legal vector within one bit of the entropy always exists. It does not tell us the *best* legal vector. That problem — minimise $\sum_i p_i\ell_i$ over all prefix codes — was solved in 1952 by David Huffman, then a graduate student who took it as a term-paper assignment after his professor, Robert Fano, mentioned that nobody knew the answer. The algorithm is three lines long, runs in $O(m\log m)$ time, and is provably optimal.
+
+- **Assuming Huffman achieves the entropy exactly.** It achieves $L < H+1$; equality holds only for dyadic probabilities. For a very skewed binary source the gap approaches a full bit, which can be a factor of ten in rate.
+- **Comparing Huffman codes by their codewords instead of their lengths.** Tie-breaking changes the codewords; only the length vector, and hence $L$, is canonical.
+- **Forgetting the cost of the table.** A two-pass Huffman coder must transmit the code (or the lengths). On small inputs this overhead can exceed the savings, which is why DEFLATE offers a fixed, pre-agreed table as an option.
+- **Assuming the rarest symbol gets a short codeword because the tree is "balanced".** In the worst case it gets $m-1$ bits; Huffman trees are balanced only when the distribution is near uniform.
+- **Using a stale model.** Huffman assumes the probabilities are known and fixed. On data whose statistics drift, adaptive coding, or re-estimating per block, is essential.
+- **Believing Huffman handles memory.** Symbol-by-symbol Huffman coding is blind to correlation; the gain from context modelling usually dwarfs the gain from optimal symbol coding.
+
+Huffman coding is optimal and still leaves up to one bit per symbol on the table, because a codeword is an integral number of bits. Arithmetic coding removes that restriction by refusing to give any symbol a codeword at all: the entire message is mapped to a single number, and only that number is transmitted. The cost is $-\log p(x^n) + 2$ bits for the whole message, so the rounding loss is amortised over the whole file rather than paid per symbol.
+
+- **Waiting until the end to emit bits.** Renormalization emits each bit as soon as it is determined, so memory use is constant and the coder streams. An implementation that computes the exact final interval in rational arithmetic is correct but useless.
+- **Omitting the E3 (underflow) rule.** Without it an interval straddling $\tfrac12$ shrinks below the register precision and encoder and decoder diverge.
+- **Blaming the coder for poor compression.** Arithmetic coding is within two bits of $-\log p(x^n)$ *for the model it is given*. All remaining compression performance is the model's; this is why modern compressors put their effort into context mixing, not into the coder.
+- **Forgetting to allocate probability to termination.** Without an EOF symbol or an explicit length the decoder cannot know when to stop and will happily decode arbitrarily many further symbols.
+- **Using floating point.** Encoder and decoder must perform bit-identical arithmetic; fixed-point integers with a controlled total frequency are mandatory.
+- **Assuming arithmetic coding is always the right choice.** It has higher per-symbol cost than a canonical Huffman decoder, and for nearly uniform alphabets the one-bit Huffman penalty is negligible. ANS (asymmetric numeral systems) now occupies much of this ground, achieving arithmetic-coding compression at table-driven speeds.
+
+Every coder so far has been handed a probability model. Real files arrive without one. A **universal** compressor must learn the structure while coding and still approach the entropy rate of whatever source produced the data. The Lempel–Ziv family does this with no probabilities at all: it compresses by noticing that text repeats itself.
+
+- **Confusing LZ77 with LZ78/LZW.** LZ77 points backwards into the raw text with (distance, length) pairs; LZ78/LZW points into a dictionary of previously created phrases. The distinction matters for memory, for seeking, and for patent history.
+- **Believing the dictionary is transmitted.** It is rebuilt by the decoder from the code stream. Sending it would defeat the purpose.
+- **Mishandling the exceptional code.** An implementation that assumes every received code is already in the dictionary fails on inputs as short as `ABABABA`.
+- **Expecting compression of random data.** The incompressibility theorem forbids it; LZ on random data expands by roughly $\log n$ bits per phrase.
+- **Forgetting the CLEAR mechanism.** With a bounded dictionary and no reset, a compressor that has finished learning one file's statistics carries them, uselessly, into the next region of a heterogeneous file.
+- **Quoting LZ's optimality without its hypotheses.** It is asymptotic, requires an unbounded dictionary, and holds for stationary ergodic sources. None of the three is exactly true of a real file on a real implementation.
+
+Shannon–Fano coding is the first systematic construction of an efficient prefix code, described by Shannon in 1948 and refined by Fano the same year. It is no longer the method of choice — Huffman is optimal and barely harder — but it is the cleanest illustration of top-down code design, it is what Huffman was assigned to improve upon, and its analysis is where the bound $L < H+1$ was first established.
+
+- **Believing Fano's code is optimal.** It is not; the five-symbol example is a genuine counterexample, and the proposition above says the direction of the error is always the same.
+- **Splitting by count instead of by mass.** The rule balances the *sum of probabilities* of the two groups, not the number of symbols in them.
+- **Forgetting to sort first.** Fano's construction requires non-increasing probabilities and splits only into *consecutive* groups; splitting an unsorted list can produce a code far from optimal.
+- **Conflating Shannon's lengths with Fano's algorithm.** They are different codes with different lengths, as the pitfall above shows.
+- **Ignoring memory.** Like Huffman, Fano coding is symbol-by-symbol and blind to correlation; blocking or context modelling is required to capture it.
+- **Assuming it is used in modern standards.** It is not. Where a simple prefix code is wanted, canonical Huffman is used; where the last fraction of a bit matters, arithmetic coding or ANS.
+
+Every code so far has needed a model: Huffman needs the probabilities, arithmetic coding needs a conditional distribution per symbol, and only Lempel–Ziv managed without. A **universal** code is one that works for a whole *class* of sources at once, paying a price that vanishes per symbol. This last part makes the notion precise, exhibits the standard constructions, and proves that the price cannot be driven to zero at finite length.
+
+- **Thinking a universal code achieves the entropy exactly on every file.** It achieves $nh + o(n)$; on short files the $o(n)$ term dominates and compression can be negative.
+- **Confusing universal with optimal-for-the-unknown-source.** Rissanen's bound says a strictly positive minimax redundancy is unavoidable at every finite $n$.
+- **Assuming Lempel–Ziv is the best universal code.** It is universal over a far larger class than CTW, and correspondingly slower to converge: $O(n\log\log n/\log n)$ against $O(\log n)$ total redundancy on parametric classes.
+- **Forgetting that the class must be specified.** A code universal for i.i.d. sources need not be universal for sources with long memory; "universal" without a class is meaningless.
+- **Restricting the term to integer codes.** Elias codes are the classic examples, but in modern usage a universal *compressor* is the whole model-plus-coder pipeline.
+- **Believing adaptivity defeats the counting bound.** The incompressibility theorem quantifies over every injective encoder. Adaptive, neural or otherwise, almost all strings stay incompressible.

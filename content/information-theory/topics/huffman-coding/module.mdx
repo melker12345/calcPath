@@ -1,0 +1,707 @@
+---
+title: Huffman and Shannon–Fano Codes
+---
+
+# Huffman and Shannon–Fano Codes
+
+Building an optimal prefix code symbol by symbol, proving it optimal, and seeing where the older Shannon–Fano construction falls short.
+
+## Huffman's Algorithm {#algorithm}
+
+<!-- section: algorithm -->
+
+The idea is to build the code tree from the leaves upward. The two rarest symbols will end up deepest in the tree, so we decide their relationship first and then forget that they were ever separate.
+
+:::recipe[Huffman's algorithm]{#huffman-algorithm}
+Input: probabilities $p_1,\dots,p_m$ over the symbols of $\mathcal{X}$.
+
+1. Create one leaf node per symbol, weighted by its probability, and place all $m$ nodes in a priority queue.
+2. While more than one node remains: remove the two nodes of smallest weight, create a new internal node whose weight is their sum, and attach the two removed nodes as its children.
+3. The last remaining node is the root. Read each symbol's codeword off the path from the root to its leaf, writing $0$ for a left branch and $1$ for a right branch.
+:::
+
+Each merge reduces the number of nodes by one, so the loop runs $m-1$ times; with a binary heap each iteration costs $O(\log m)$ and the total is $O(m\log m)$. If the probabilities arrive already sorted, two queues (one of leaves, one of merged nodes) give $O(m)$.
+
+:::proposition[Huffman codes are prefix-free and complete]{#huffman-prefix}
+The code produced by Huffman's algorithm is prefix-free, and its Kraft sum is exactly $1$.
+:::
+
+:::proof
+Symbols sit only at leaves, and no leaf lies on the root-to-leaf path of another leaf, so no codeword is a prefix of another: the code is prefix-free.
+
+For completeness, note that every internal node created in step 2 has exactly two children, so the tree is *full*. In a full binary tree the leaf depths satisfy $\sum_{\text{leaves}} 2^{-\text{depth}} = 1$, which is proved by induction on the number of internal nodes: a single leaf at depth $0$ gives $2^{0}=1$, and replacing a leaf at depth $d$ by an internal node with two children at depth $d+1$ replaces $2^{-d}$ by $2\cdot 2^{-(d+1)} = 2^{-d}$, leaving the sum unchanged.
+:::
+
+A full tree means no wasted budget: unlike the Shannon code of the previous part, whose Kraft sum was $0.6875$, a Huffman code spends every bit of its allowance.
+
+:::intuition
+Think of the probabilities as weights and each merge as tying two of them together with a string. The two lightest get tied first, so they hang lowest; heavy symbols stay near the top and get short codewords.
+
+The key insight — and the reason greed works here — is that once two symbols are the rarest, *nothing later in the construction can improve on making them siblings*. Their combined weight is all that matters afterwards.
+:::
+
+:::example[Huffman code for a dyadic source]
+Build a Huffman code for $A{:}0.5$, $B{:}0.25$, $C{:}0.125$, $D{:}0.125$.
+:::
+
+:::solution
+*Merge 1.* The two smallest are $C$ and $D$ ($0.125$ each). Merge into node $E$ with weight $0.25$. Queue: $A{:}0.5,\ B{:}0.25,\ E{:}0.25$.
+
+*Merge 2.* The two smallest are $B$ and $E$ ($0.25$ each; ties broken arbitrarily). Merge into $F$ with weight $0.5$. Queue: $A{:}0.5,\ F{:}0.5$.
+
+*Merge 3.* Merge $A$ and $F$ into the root, weight $1.0$.
+
+Reading the paths ($0$ = left, $1$ = right, with $A$ on the left of the root): $A = 0$, $B = 10$, $C = 110$, $D = 111$.
+
+Expected length: $L = 0.5(1) + 0.25(2) + 0.125(3) + 0.125(3) = 1.75$ bits.
+
+**Sanity check.** Prefix-free: $0$ is not a prefix of $10, 110, 111$, and $10$ is not a prefix of $110$ or $111$ ✓. Kraft sum: $\tfrac12 + \tfrac14 + \tfrac18 + \tfrac18 = 1$ ✓, so the tree is full. Entropy: $H = 1.75$ bits, so $L = H$ exactly — as it must be, since all probabilities are dyadic.
+:::
+
+:::example[Huffman code for a non-dyadic source]
+Build a Huffman code for $p = (0.45, 0.30, 0.15, 0.10)$ — the distribution for which the Shannon code gave $L = 2.35$ — and compare.
+:::
+
+:::solution
+*Merge 1.* Smallest two: $0.15$ and $0.10$ $\to$ node $u$, weight $0.25$. Queue: $0.45,\ 0.30,\ u{:}0.25$.
+
+*Merge 2.* Smallest two: $0.30$ and $u{:}0.25$ $\to$ node $v$, weight $0.55$. Queue: $0.45,\ v{:}0.55$.
+
+*Merge 3.* Merge to the root.
+
+Depths: the $0.45$ symbol is at depth $1$; the $0.30$ symbol at depth $2$; the $0.15$ and $0.10$ symbols at depth $3$. Codewords: $0$, $10$, $110$, $111$.
+
+$$L = 0.45(1) + 0.30(2) + 0.15(3) + 0.10(3) = 0.45+0.60+0.45+0.30 = 1.80 \text{ bits.}$$
+
+**Sanity check.** $H = 1.782$ bits (computed in the previous part), so $H \le L = 1.80 < H+1$ ✓ — and the excess over entropy is only $0.018$ bits. Compare with the Shannon code's $L = 2.35$ on the same source: the Shannon lengths $(2,2,3,4)$ wasted $0.55$ bits per symbol, because they ignore how the rounding interacts across symbols. Kraft sum here: $\tfrac12+\tfrac14+\tfrac18+\tfrac18 = 1$ ✓, full tree.
+:::
+
+:::figure[The Huffman tree for $(0.45,0.30,0.15,0.10)$. Depth is codeword length, so the code is $0,10,110,111$ and $L = 1.80$ bits.]{#fig-huffman-tree}
+{
+  "type": "plot",
+  "x": [
+    -2.6,
+    4.4
+  ],
+  "y": [
+    -0.9,
+    3.4
+  ],
+  "axes": false,
+  "marks": [
+    {
+      "kind": "path",
+      "points": [
+        [
+          0,
+          3
+        ],
+        [
+          -1.5,
+          2
+        ]
+      ],
+      "muted": true
+    },
+    {
+      "kind": "path",
+      "points": [
+        [
+          0,
+          3
+        ],
+        [
+          1.5,
+          2
+        ]
+      ],
+      "muted": true
+    },
+    {
+      "kind": "path",
+      "points": [
+        [
+          1.5,
+          2
+        ],
+        [
+          0.5,
+          1
+        ]
+      ],
+      "muted": true
+    },
+    {
+      "kind": "path",
+      "points": [
+        [
+          1.5,
+          2
+        ],
+        [
+          2.5,
+          1
+        ]
+      ],
+      "muted": true
+    },
+    {
+      "kind": "path",
+      "points": [
+        [
+          2.5,
+          1
+        ],
+        [
+          1.8,
+          0
+        ]
+      ],
+      "muted": true
+    },
+    {
+      "kind": "path",
+      "points": [
+        [
+          2.5,
+          1
+        ],
+        [
+          3.2,
+          0
+        ]
+      ],
+      "muted": true
+    },
+    {
+      "kind": "point",
+      "at": [
+        0,
+        3
+      ],
+      "tone": "muted"
+    },
+    {
+      "kind": "point",
+      "at": [
+        1.5,
+        2
+      ],
+      "tone": "muted"
+    },
+    {
+      "kind": "point",
+      "at": [
+        2.5,
+        1
+      ],
+      "tone": "muted"
+    },
+    {
+      "kind": "point",
+      "at": [
+        -1.5,
+        2
+      ],
+      "tone": "result"
+    },
+    {
+      "kind": "point",
+      "at": [
+        0.5,
+        1
+      ],
+      "tone": "result"
+    },
+    {
+      "kind": "point",
+      "at": [
+        1.8,
+        0
+      ],
+      "tone": "result"
+    },
+    {
+      "kind": "point",
+      "at": [
+        3.2,
+        0
+      ],
+      "tone": "result"
+    },
+    {
+      "kind": "text",
+      "at": [
+        -1.5,
+        1.6
+      ],
+      "text": "a 0.45"
+    },
+    {
+      "kind": "text",
+      "at": [
+        0.3,
+        0.6
+      ],
+      "text": "b 0.30"
+    },
+    {
+      "kind": "text",
+      "at": [
+        1.5,
+        -0.45
+      ],
+      "text": "c 0.15"
+    },
+    {
+      "kind": "text",
+      "at": [
+        3.4,
+        -0.45
+      ],
+      "text": "d 0.10"
+    },
+    {
+      "kind": "text",
+      "at": [
+        -1.05,
+        2.72
+      ],
+      "text": "0",
+      "muted": true
+    },
+    {
+      "kind": "text",
+      "at": [
+        1.05,
+        2.72
+      ],
+      "text": "1",
+      "muted": true
+    },
+    {
+      "kind": "text",
+      "at": [
+        0.55,
+        1.72
+      ],
+      "text": "0",
+      "muted": true
+    },
+    {
+      "kind": "text",
+      "at": [
+        2.45,
+        1.72
+      ],
+      "text": "1",
+      "muted": true
+    },
+    {
+      "kind": "text",
+      "at": [
+        1.85,
+        0.72
+      ],
+      "text": "0",
+      "muted": true
+    },
+    {
+      "kind": "text",
+      "at": [
+        3.15,
+        0.72
+      ],
+      "text": "1",
+      "muted": true
+    }
+  ]
+}
+:::
+
+:::pitfall[Ties and the shape of the tree]
+Ties in step 2 may be broken arbitrarily, and different choices give *different* codes with *different* codeword lengths — but always the same expected length. In the dyadic example, merging $B$ with $A$ instead of with $E$ is not allowed (their weights are not the two smallest), but where genuine ties occur the resulting trees can look quite different. Implementations that must interoperate therefore fix a deterministic tie-breaking rule, or transmit code lengths explicitly.
+:::
+
+## Optimality of Huffman Codes {#optimality}
+
+<!-- section: optimality -->
+
+Huffman's algorithm is greedy, and greedy algorithms are usually wrong. That this one is right needs proof, and the proof is a model of its kind: two structural lemmas about optimal codes, then an induction that says merging is harmless.
+
+Throughout, order the probabilities $p_1 \ge p_2 \ge \cdots \ge p_m$ and call a prefix code **optimal** for $p$ if it minimises $L = \sum_i p_i \ell_i$ among all prefix codes.
+
+:::lemma[Structure of an optimal code]{#huffman-lemma}
+For any distribution $p$ with $p_1 \ge \cdots \ge p_m$ there is an optimal prefix code such that:
+
+1. $p_j > p_k \implies \ell_j \le \ell_k$ (more probable symbols get no longer codewords);
+2. the two longest codewords have equal length;
+3. the two longest codewords differ only in their last bit — that is, they are siblings in the tree — and they may be taken to belong to the two least probable symbols $x_{m-1}$ and $x_m$.
+:::
+
+:::proof
+**(1)** Let $C$ be optimal and suppose $p_j > p_k$ but $\ell_j > \ell_k$. Form $C'$ by swapping the codewords of $x_j$ and $x_k$; $C'$ is still a prefix code with the same multiset of lengths. The change in expected length is
+
+$$L(C') - L(C) = p_j\ell_k + p_k\ell_j - p_j\ell_j - p_k\ell_k = (p_j - p_k)(\ell_k - \ell_j) < 0,$$
+
+since $p_j - p_k > 0$ and $\ell_k - \ell_j < 0$. That contradicts optimality of $C$, so no such pair exists.
+
+**(2)** Suppose the longest codeword $c$ is strictly longer than every other. No other codeword has $c$ as a prefix (prefix-freeness), and no other codeword is a prefix of $c$; deleting the last bit of $c$ therefore keeps the code prefix-free — the shortened string cannot be a prefix of another codeword, since such a codeword would then have the shortened string as a prefix and be at least as long as $c$, contradicting uniqueness of the maximum. The deletion strictly decreases $L$, contradicting optimality.
+
+**(3)** By (2) there are at least two codewords of maximal length $\ell_{\max}$. Take one, $c$; its sibling (the string agreeing with $c$ except in the last bit) must be a codeword or have a codeword as a proper prefix — otherwise the subtree hanging there is empty and $c$ could be shortened, as in (2). Since $c$ has maximal length, the sibling must itself be a codeword. So maximal-length codewords come in sibling pairs. Finally, by (1) the symbols with maximal length are among the least probable; permuting codewords of equal length does not change $L$, so we may relabel so that the sibling pair belongs to $x_{m-1}$ and $x_m$.
+:::
+
+:::theorem[Optimality of Huffman coding]{#huffman-optimality}
+For every distribution $p$ on a finite alphabet, the Huffman code is optimal: no prefix code (equivalently, by Kraft–McMillan, no uniquely decodable code) has smaller expected length.
+:::
+
+:::proof
+Induction on the alphabet size $m$.
+
+*Base case $m=2$.* Any prefix code needs two distinct codewords, so $L \ge 1$; Huffman assigns $0$ and $1$ and achieves $L = 1$.
+
+*Induction step.* Assume Huffman is optimal for every distribution on $m-1$ symbols. Given $p_1\ge\cdots\ge p_m$, let $p'$ be the distribution on $m-1$ symbols obtained by merging the two smallest into one symbol of probability $p_{m-1}+p_m$.
+
+First, a bookkeeping identity. Codes on the merged alphabet and codes on the original alphabet in which $x_{m-1}, x_m$ are siblings correspond one to one: split the merged symbol's codeword $c$ into $c0$ and $c1$, or conversely delete the last bit. Under this correspondence the expected lengths differ by a fixed amount,
+
+$$L(C) = L(C') + (p_{m-1}+p_m), \tag{$\ast$}$$
+
+because the two split symbols each gain one bit, contributing $(p_{m-1}+p_m)\cdot 1$, while every other symbol is unchanged.
+
+Now let $C_m$ be the Huffman code for $p$. By construction it is obtained by splitting the merged symbol of the Huffman code $C'_{m-1}$ for $p'$, so $L(C_m) = L(C'_{m-1}) + p_{m-1}+p_m$.
+
+Let $C^{*}$ be any optimal code for $p$. By Lemma *Structure of an optimal code* we may assume $x_{m-1}$ and $x_m$ are siblings in $C^{*}$; merging them gives a prefix code $D'$ for $p'$ with $L(C^{*}) = L(D') + p_{m-1}+p_m$ by $(\ast)$. By the induction hypothesis $L(C'_{m-1}) \le L(D')$. Therefore
+
+$$L(C_m) = L(C'_{m-1}) + p_{m-1}+p_m \;\le\; L(D') + p_{m-1}+p_m \;=\; L(C^{*}).$$
+
+Since $C^{*}$ was optimal, $L(C_m) = L(C^{*})$ and the Huffman code is optimal too.
+:::
+
+The proof also explains *why* greed is safe. The structure lemma says every optimal code contains the decision "make the two rarest symbols siblings" somewhere inside it; the algorithm simply makes that decision first, and identity $(\ast)$ shows that doing so costs a fixed amount regardless of what happens later.
+
+:::corollary[Huffman codes obey the fundamental bound]{#huffman-bound}
+The Huffman expected length $L^{*}$ satisfies
+
+$$H(p) \;\le\; L^{*} \;<\; H(p) + 1 ,$$
+
+with $L^{*} = H(p)$ if and only if every $p_i$ is a power of $1/2$.
+:::
+
+:::proof
+The lower bound and the equality condition come from the entropy lower bound for uniquely decodable codes. For the upper bound, the Shannon code is a prefix code with $L < H+1$, and $L^{*} \le L$ by optimality.
+:::
+
+:::corollary[Huffman coding of blocks approaches the entropy rate]{#huffman-blocks}
+Let $L_n^{*}$ be the expected length of the Huffman code applied to blocks of $n$ symbols of a stationary source. Then
+
+$$\frac{H(X_1,\dots,X_n)}{n} \;\le\; \frac{L^{*}_n}{n} \;<\; \frac{H(X_1,\dots,X_n)}{n} + \frac1n, \qquad\text{so}\qquad \frac{L^{*}_n}{n}\longrightarrow h .$$
+:::
+
+:::proof
+Apply the previous corollary to the single random variable $X^n$ over the alphabet $\mathcal{X}^n$, then divide by $n$ and let $n\to\infty$, using the definition of the entropy rate.
+:::
+
+:::intuition
+Huffman gives you the best possible "comma-free" code, and the worst it can ever be is one bit per symbol above the theoretical floor.
+
+That one bit is entirely the fault of integer arithmetic: a symbol of probability $0.9$ deserves a codeword of length $0.152$ bits and gets one of length $1$. Blocking symbols together spreads a single rounding error over many symbols, which is why the excess shrinks like $1/n$.
+:::
+
+:::example[When the one-bit gap really bites]
+A binary source has $p(1) = 0.99$. Compute $H$, the Huffman expected length, and the efficiency. Then Huffman-code blocks of two symbols and recompute.
+:::
+
+:::solution
+*Single symbols.* $H = -0.99\log 0.99 - 0.01\log 0.01 = 0.99(0.0145) + 0.01(6.644) = 0.0808$ bits.
+
+There are only two symbols, so the only prefix code is $\{0,1\}$ and $L = 1$ bit. Efficiency $H/L = 8.1\%$; the excess is $0.919$ bits — nearly the whole allowed bit.
+
+*Pairs.* The block probabilities are $11{:}0.9801$, $10{:}0.0099$, $01{:}0.0099$, $00{:}0.0001$. Huffman merges $00$ with $01$ ($0.0100$), then that with $10$ ($0.0199$), then with $11$. Lengths: $11 \to 1$, $10 \to 2$, $01\to 3$, $00 \to 3$.
+
+$$L_2 = 0.9801(1) + 0.0099(2) + 0.0099(3) + 0.0001(3) = 0.9801+0.0198+0.0297+0.0003 = 1.0299 \text{ bits per pair,}$$
+
+i.e. $0.515$ bits per symbol.
+
+**Sanity check.** $H \le L_2/2 < H + 1/2$: indeed $0.0808 \le 0.515 < 0.5808$ ✓. Blocking halved the per-symbol cost from $1$ to $0.515$, exactly as the $1/n$ overhead predicts, and blocks of eight would bring it to about $0.081 + 0.125 = 0.206$. To actually reach $0.0808$ one needs blocks of thousands — or arithmetic coding, which is the subject of the next part.
+:::
+
+:::pitfall[Optimal does not mean good]
+Huffman is optimal *within the class of symbol codes for the given model*. It cannot exploit memory (a first-order Huffman code on English text ignores that `q` is followed by `u`), it cannot spend a fractional bit, and it is helpless if the probabilities are wrong. Optimality is always relative to a class and a model; both restrictions are severe.
+:::
+
+## Huffman Coding in Practice {#practical-huffman}
+
+<!-- section: practical-huffman -->
+
+Real formats — DEFLATE, JPEG, MP3 — use Huffman codes, but never in the naive form of the algorithm above. Four engineering issues dominate.
+
+:::definition[Canonical Huffman code]{#canonical-huffman}
+A **canonical** Huffman code is the code obtained from a length vector $(\ell_1,\dots,\ell_m)$ by sorting symbols by $(\ell_i, i)$ and assigning codewords in increasing numerical order, incrementing the code value by $1$ at each symbol and shifting left when the length increases — exactly the cumulative construction used in the proof of Kraft's converse.
+:::
+
+:::proposition[Canonical codes are as good and cheaper to transmit]{#canonical-optimal}
+A canonical Huffman code has the same codeword lengths, and hence the same expected length, as the Huffman code it is derived from; and it is fully determined by the length vector alone.
+:::
+
+:::proof
+The construction assigns to the symbol of length $\ell_i$ the interval $[w_i, w_i + 2^{-\ell_i})$ of the Kraft proof, so lengths are preserved and the code is prefix-free; expected length depends only on lengths. Since the assignment is a deterministic function of the sorted lengths, decoder and encoder agree given the lengths alone: a table of $m$ small integers rather than $m$ variable-length bit strings.
+:::
+
+That proposition is why DEFLATE transmits a list of code lengths, themselves run-length and Huffman coded, rather than a tree. It also makes decoding fast: canonical codes can be decoded by comparing the input register against one threshold per length, without walking a tree.
+
+- **Length-limited Huffman.** Hardware decoders need a bound $\ell_{\max}$ (typically $15$ or $16$) so that a lookup table fits in cache. The package-merge algorithm finds the optimal code subject to $\ell_i \le \ell_{\max}$ in $O(m\,\ell_{\max})$ time; the cost in expected length is usually a fraction of a percent.
+- **Adaptive Huffman.** The FGK and Vitter algorithms maintain the tree as symbols arrive, so the encoder need not make a first pass or transmit a table. They pay in speed and in a small redundancy, and have largely been displaced by adaptive arithmetic coding.
+- **Blocking and context.** Since Huffman cannot spend fractional bits, real codecs apply it to *derived* symbols that are already close to independent — DEFLATE Huffman-codes literal/length and distance symbols produced by an LZ77 pass; JPEG Huffman-codes (run, size) pairs produced by run-length coding the quantised DCT coefficients.
+
+:::theorem[Worst-case codeword length]{#huffman-max-length}
+For an alphabet of size $m$, no Huffman codeword is longer than $m-1$ bits, and this bound is attained — for example by probabilities proportional to the Fibonacci numbers $1,1,2,3,5,\dots$
+:::
+
+:::proof
+Each merge in the algorithm increases by one the depth of the symbols in the merged subtrees, and there are exactly $m-1$ merges, so no depth can exceed $m-1$. Attainment: if $p_i \propto F_i$ with $F_{k+1} = F_k + F_{k-1}$, then at every step the newly created node has weight equal to the *next* Fibonacci number, hence is again one of the two smallest, so every merge involves the node created in the previous step. The tree degenerates into a path and the rarest symbol receives $m-1$ bits.
+:::
+
+:::example[Huffman inside JPEG]
+In baseline JPEG, an $8\times8$ block's $63$ quantised AC coefficients are converted to (run-length, magnitude-category) symbols, which are Huffman-coded; the extra bits identifying the value within a category are appended raw. Why is the category trick used instead of Huffman-coding the coefficient values directly?
+:::
+
+:::solution
+A coefficient can take thousands of values, so a direct Huffman table would need thousands of entries — expensive to transmit and to store — while most entries would be used a handful of times per image.
+
+Grouping values by magnitude category ($\pm1$; $\pm2,\pm3$; $\pm4..\pm7$; …) reduces the alphabet to about $16$ categories crossed with $16$ run lengths, i.e. a table of about $256$ entries. Within a category of size $2^{k}$, all values are nearly equiprobable, so spending $k$ raw bits on them costs almost nothing above their entropy.
+
+**Sanity check.** The scheme is exactly the Shannon-code idea applied twice: the category carries $\log(1/\Pr[\text{category}])$ bits of genuinely skewed information and is worth Huffman-coding; the within-category offset carries $k$ bits of nearly uniform information and is not. Huffman-coding a uniform alphabet of size $2^k$ gives codewords of exactly $k$ bits, so the raw bits lose nothing — the table is saved for free.
+:::
+
+## The Splitting Construction {#construction}
+
+<!-- section: construction -->
+
+Two different constructions travel under the name "Shannon–Fano", and it is worth keeping them apart.
+
+:::definition[Shannon's lengths]{#shannon-lengths}
+**Shannon's code** assigns $\ell_i = \lceil \log(1/p_i)\rceil$ and realises those lengths by the cumulative construction of Kraft's converse: sort by decreasing probability, set $w_i = \sum_{j<i}p_j$, and take the first $\ell_i$ bits of the binary expansion of $w_i$.
+:::
+
+:::recipe[Fano's splitting algorithm]{#shannon-fano-construction}
+**Fano's code** is built top-down.
+
+1. Sort the symbols in non-increasing order of probability.
+2. Split the sorted list into two consecutive groups whose total probabilities are as nearly equal as possible.
+3. Append $0$ to every codeword in the first group and $1$ to every codeword in the second.
+4. Recurse on each group until every group holds a single symbol.
+:::
+
+Both produce prefix codes — Shannon's by Kraft's converse, Fano's because the recursion builds a binary tree with the symbols at its leaves — and both satisfy the fundamental bound.
+
+:::theorem[Shannon's code satisfies $H \le L < H+1$]{#sf-bound}
+The Shannon code is a prefix code and its expected length obeys $H(p) \le L < H(p)+1$.
+:::
+
+:::proof
+The lengths $\ell_i = \lceil\log(1/p_i)\rceil$ satisfy Kraft's inequality, since $2^{-\ell_i}\le p_i$ and the $p_i$ sum to $1$, so the cumulative construction of Kraft's converse realises them as a prefix code. Averaging the pointwise bounds $\log(1/p_i) \le \ell_i < \log(1/p_i)+1$ against $p$ gives $H \le L < H+1$. (This is the fundamental bound established earlier; it is repeated here because Shannon's lengths are the code it was proved for.)
+:::
+
+:::proposition[Fano's code is bracketed on both sides]{#fano-bracket}
+Fano's code is a prefix code, so $L_{\text{Fano}} \ge H(p)$; and $L_{\text{Fano}} \ge L_{\text{Huffman}}$, so it is never better than the optimum.
+:::
+
+:::proof
+The recursion assigns symbols to the leaves of a binary tree, so no codeword is a prefix of another, and the entropy lower bound for uniquely decodable codes gives $L \ge H$. The second inequality is Huffman optimality.
+:::
+
+:::remark[The upper bound for Fano's code]
+That Fano's splitting also satisfies $L < H+1$ is classical, but its proof is a delicate induction over the splitting recursion — the difficulty is that a greedy split can be forced far from balance by a single dominant symbol — and we do not give it here. What the results above do give without extra work is the two-sided bracket $H \le L_{\text{Huffman}} \le L_{\text{Fano}}$ together with $L_{\text{Huffman}} < H+1$; for every distribution appearing in this chapter, $L_{\text{Fano}}$ is computed directly and checked against $H+1$.
+:::
+
+:::intuition
+Fano's rule is "twenty questions with a balanced question": ask a yes/no question that splits the probability as evenly as you can, and the answer carries a full bit of information.
+
+The reason it is not optimal is that the greedy split looks one level ahead. Balancing $0.52$ against $0.48$ at the top looks perfect, but it commits the most probable symbol to sharing its side with another, and so to a two-bit codeword.
+:::
+
+:::example[Fano's code on a dyadic source]
+Construct Fano's code for $A\,0.5,\ B\,0.25,\ C\,0.125,\ D\,0.125$ (already sorted).
+:::
+
+:::solution
+*Level 1.* Split $\{A\} \mid \{B,C,D\}$: masses $0.5$ and $0.5$, a perfect balance. Assign $0$ to the left, $1$ to the right. $A = 0$, finished.
+
+*Level 2* on $\{B,C,D\}$ (prefix `1`). Split $\{B\}\mid\{C,D\}$: $0.25$ versus $0.25$. So $B = 10$, and $C,D$ carry the prefix `11`.
+
+*Level 3* on $\{C,D\}$. Split $\{C\}\mid\{D\}$: $0.125$ each. $C = 110$, $D = 111$.
+
+Lengths $1,2,3,3$ and
+
+$$L = 0.5(1)+0.25(2)+0.125(3)+0.125(3) = 1.75 \text{ bits.}$$
+
+**Sanity check.** $H = 1.75$ bits, so $L = H$ exactly, as the dyadic equality condition requires. Shannon's lengths agree here too: $\lceil\log(1/0.5)\rceil = 1$, $\lceil\log 4\rceil = 2$, $\lceil\log 8\rceil = 3$, $3$. And the Huffman code built earlier is the same code. On dyadic distributions all three constructions coincide.
+:::
+
+## Where Fano's Heuristic Loses to Huffman {#comparison}
+
+<!-- section: comparison -->
+
+Fano's code is top-down and greedy on *balance*; Huffman's is bottom-up and greedy on *rarity*. Only the second is optimal, and the gap is usually tiny but always in the same direction.
+
+:::proposition[Fano's code is never better than Huffman's]{#sf-vs-huffman}
+For every distribution, $L_{\text{Huffman}} \le L_{\text{Fano}}$, and the inequality is strict for some distributions.
+:::
+
+:::proof
+Fano's construction yields a prefix code, and the Huffman code minimises expected length over all prefix codes by the optimality theorem, so $L_{\text{Huffman}} \le L_{\text{Fano}}$. Strictness is exhibited by the example below.
+:::
+
+:::example[A distribution where the heuristic is strictly worse]
+Compare Fano's code and the Huffman code on $p = (0.35, 0.17, 0.17, 0.16, 0.15)$.
+:::
+
+:::solution
+*Fano.* The most balanced consecutive split of the sorted list is $\{0.35, 0.17\}$ against $\{0.17,0.16,0.15\}$, i.e. $0.52$ against $0.48$; every other cut is further from $0.5$ ($0.35$ against $0.65$, or $0.69$ against $0.31$). The left pair splits once more, giving both symbols length $2$. On the right, the best cut is $\{0.17\}$ against $\{0.16,0.15\}$, so that symbol has length $2$ and the last two have length $3$. Lengths $(2,2,2,3,3)$:
+
+$$L_{\text{Fano}} = 2(0.35+0.17+0.17) + 3(0.16+0.15) = 2(0.69) + 3(0.31) = 1.38+0.93 = 2.31 \text{ bits.}$$
+
+*Huffman.* Merge $0.16+0.15 = 0.31$; then the two smallest are $0.17$ and $0.17$, merge to $0.34$; then $0.34 + 0.31 = 0.65$; then $0.65+0.35 = 1$. Depths: the $0.35$ symbol is at depth $1$, the other four at depth $3$. Lengths $(1,3,3,3,3)$:
+
+$$L_{\text{Huffman}} = 0.35(1) + 3(0.17+0.17+0.16+0.15) = 0.35 + 3(0.65) = 0.35+1.95 = 2.30 \text{ bits.}$$
+
+*Entropy.*
+
+$$H = -\bigl(0.35\log 0.35 + 2(0.17\log 0.17) + 0.16\log 0.16 + 0.15\log 0.15\bigr) = 2.2328 \text{ bits.}$$
+
+**Sanity check.** Both codes satisfy $H \le L < H+1$, i.e. $2.233 \le L < 3.233$ ✓, and Huffman wins by $0.01$ bits per symbol, as the proposition requires. The diagnosis is instructive: Fano's top-level balance is excellent ($0.52$ versus $0.48$) but it costs the most probable symbol a second bit, and $0.35$ bits of waste is not repaid by the better balance further down. Huffman's Kraft sums are equal ($1$ in both codes), so this is not a matter of wasted budget but of where the budget is spent.
+:::
+
+:::pitfall[Shannon's lengths are not Fano's lengths]
+For the distribution above, Shannon's lengths are $\lceil\log(1/0.35)\rceil = 2$ and $\lceil\log(1/0.15)\rceil = 3$, giving $(2,3,3,3,3)$ and $L = 2.65$ — worse than both. The three constructions agree on dyadic distributions and diverge elsewhere, so "Shannon–Fano coding" is an ambiguous name; say which one you mean.
+:::
+
+:::theorem[Competitive optimality of the Shannon code]{#competitive-optimality}
+Let $\ell(x) = \lceil\log(1/p(x))\rceil$ be the Shannon lengths and let $\ell'$ be the lengths of *any* other uniquely decodable code. Then for every $c \ge 1$,
+
+$$\Pr\bigl( \ell(X) \ge \ell'(X) + c \bigr) \;\le\; 2^{-c+1} .$$
+
+No competitor can beat the Shannon code by more than a few bits except with exponentially small probability — even though a competitor may beat it on average.
+:::
+
+:::proof
+Using $\ell(x) < \log(1/p(x)) + 1$,
+
+$$\Pr\bigl(\ell(X) \ge \ell'(X)+c\bigr) \le \Pr\Bigl(\log\tfrac1{p(X)} + 1 \ge \ell'(X)+c\Bigr) = \Pr\bigl(p(X) \le 2^{-\ell'(X)-c+1}\bigr).$$
+
+Bounding the probability of the event by summing $p(x)$ over the strings in it, and on each such string using $p(x)\le 2^{-\ell'(x)-c+1}$,
+
+$$\sum_{x:\,p(x)\le 2^{-\ell'(x)-c+1}} p(x) \;\le\; \sum_{x} 2^{-\ell'(x)-c+1} \;=\; 2^{-c+1}\sum_x 2^{-\ell'(x)} \;\le\; 2^{-c+1},$$
+
+the last step by the Kraft–McMillan inequality for the competing code.
+:::
+
+This is the sense in which the Shannon code is hard to beat *per message* rather than on average: an opponent who does better on some strings must do much worse on others, and the worse cases carry most of the probability.
+
+## Why the History Matters {#historical}
+
+<!-- section: historical -->
+
+Shannon's 1948 paper proved that $h$ was the compression limit and gave the lengths $\lceil\log(1/p)\rceil$ to show the limit was nearly attainable; Fano's contemporaneous splitting rule gave a practical recipe. Neither was optimal, and neither author claimed otherwise — the question "what is the best prefix code?" was left open, and Fano set it as a term project in his MIT information theory course in 1951.
+
+David Huffman, a student in that course, chose the project over the final exam. After weeks of failing to improve the top-down approach, he inverted it: instead of asking which symbol gets which bit first, ask which two symbols are the *last* to be distinguished. The bottom-up merge fell out immediately, and with it the optimality proof.
+
+Three lessons from the episode survive in the material of this chapter.
+
+- **The right greedy direction is not obvious.** Both algorithms are greedy; only the bottom-up one has the exchange property that makes greed provably safe, and that property is exactly Lemma *Structure of an optimal code*.
+- **Optimality within a class is not the end.** Huffman closed the prefix-code question, and the one-bit gap remained, which is what drove the development of arithmetic coding (Rissanen and Pasco, 1976) two decades later.
+- **The old ideas do not disappear.** Shannon's lengths reappear as the length formula of arithmetic coding; Fano's balanced splitting reappears in the design of canonical and length-limited codes; and the cumulative-sum construction used for Shannon's code is exactly the interval arithmetic of the modern coder.
+
+:::intuition
+Shannon said: give common things short names. Fano said: here is a way to do it — halve the probability at each question. Huffman said: do it backwards, and here is the proof that nothing does better.
+
+The remaining bit of waste came not from any of them but from the alphabet of output symbols: bits are indivisible. Arithmetic coding fixed that by giving up on codewords entirely.
+:::
+
+:::example[Reading the historical progression off one source]
+For $p = (0.45, 0.30, 0.15, 0.10)$ line up Shannon's, Fano's and Huffman's codes and the entropy.
+:::
+
+:::solution
+*Entropy.* $H = 1.782$ bits.
+
+*Shannon.* $\ell = (2,2,3,4)$, $L = 0.45(2)+0.30(2)+0.15(3)+0.10(4) = 2.35$ bits.
+
+*Fano.* The most balanced split is $\{0.45\}\mid\{0.30,0.15,0.10\}$ ($0.45$ against $0.55$; the alternative $\{0.45,0.30\}$ against $\{0.15,0.10\}$ is $0.75$ against $0.25$). Then $\{0.30\}\mid\{0.15,0.10\}$, then the last pair. Lengths $(1,2,3,3)$, $L = 0.45+0.60+0.45+0.30 = 1.80$ bits.
+
+*Huffman.* Lengths $(1,2,3,3)$, $L = 1.80$ bits — identical to Fano's here.
+
+**Sanity check.** $1.782 \le 1.80 \le 2.35 < 2.782$ ✓. Fano matches Huffman on this distribution and loses on the five-symbol example above, which is the honest summary of the heuristic: usually excellent, occasionally optimal, never guaranteed. Shannon's lengths are the weakest of the three because they round each symbol independently, ignoring how the rounding interacts across the alphabet.
+:::
+
+## Common Mistakes
+
+- **Thinking every sequence has probability exactly $2^{-nh}$.** Only typical ones have probability close to that *on the exponential scale*, and even they vary by subexponential factors. Atypical strings can be far more or far less likely.
+- **Confusing the size of the typical set with the size of the support.** The support is usually all of $\mathcal{X}^n$; the typical set is the exponentially smaller subset of size about $2^{nH}$.
+- **Dropping the ergodicity or stationarity hypothesis.** Without it the entropy rate may not exist, and the concentration in the AEP can fail outright.
+- **Treating the AEP as exact at finite $n$.** It is asymptotic. For short blocks the atypical branch is not negligible and one needs explicit finite-$n$ bounds (Chebyshev, or a Chernoff bound).
+- **Confusing the AEP with the central limit theorem.** Both concern $\frac1n\sum_i(-\log p(X_i))$, but the AEP is a law of large numbers (the mean converges); the CLT describes the $\sqrt n$-scale fluctuations around it, which govern finite-blocklength corrections.
+- **Assuming typicality is a property of a string.** It is a property of a string *and* a distribution. The all-ones string is typical for $p(1)=1-1/n$ and wildly atypical for a fair coin.
+
+Shannon's source coding theorem — the *noiseless coding theorem* — is the first of the two pillars of information theory. It converts the counting facts of the previous part into a sharp statement about which compression schemes can exist. Its content is that a single number, the entropy rate, is simultaneously an upper and a lower bound on the achievable rate, so that the compressibility of a source is not a matter of ingenuity but of arithmetic.
+
+- **Reading the theorem as a statement about single messages.** It is asymptotic in block length and probabilistic in the source. Individual short messages can beat $H$ or fall far short of it.
+- **Confusing the source coding theorem with the channel coding theorem.** Source coding removes redundancy to approach $h$; channel coding adds redundancy to approach capacity. They are dual, not the same.
+- **Using $H(X)$ for a source with memory.** The limit is the entropy *rate* $h = \lim H(X_n \mid X^{n-1})$, which can be far below the marginal entropy: English has a marginal letter entropy above $4$ bits but an entropy rate near $1.3$ bits.
+- **Forgetting the vanishing-error qualifier in the achievability half.** Fixed-rate codes below $\log|\mathcal{X}|$ must sometimes fail; the theorem promises only that the failure probability tends to zero.
+- **Believing the converse follows from Fano's inequality alone.** Fano gives $P_e$ bounded away from zero; the exponential counting argument is what gives $P_e \to 1$.
+- **Assuming a smarter codebook could beat the count.** The converse quantifies over *all* functions $f_n$, computable or not. There is no algorithmic escape from a pigeonhole.
+
+The theory so far speaks of blocks of length $n\to\infty$ and codebooks of astronomical size. Real compressors read a file once, symbol by symbol, and emit bits as they go. This part makes the transition: from block codes to **symbol codes**, where the combinatorial constraint is not a pigeonhole count but *Kraft's inequality*, and where the asymptotic bound $L \to H$ is replaced by the sharp finite bound $H \le L < H+1$.
+
+- **Expecting a compressor to shrink random or already-compressed data.** The no-free-lunch theorem forbids it; the output of gzip run twice is slightly larger than run once.
+- **Confusing non-singular with uniquely decodable.** $\{0,1,01\}$ is non-singular but not uniquely decodable: `01` could be one symbol or two.
+- **Believing unique decodability allows shorter codes than the prefix property.** Kraft–McMillan says the achievable length vectors are identical; instantaneous decoding is free.
+- **Reading Kraft's inequality as a statement about a particular code.** It constrains the *multiset of lengths*. Any length vector satisfying it can be realised, and no code can violate it.
+- **Ignoring model cost for small files.** The $D(p\|q)$ penalty assumes a known model; if the model must be transmitted, its description length is charged to the file, which is why compression shines on large inputs.
+- **Comparing $L$ against $\log|\mathcal{X}|$ instead of $H$.** The naive baseline measures the saving; the entropy measures how much saving was left on the table.
+
+Kraft's inequality tells us which length vectors are legal; the Shannon code shows that a legal vector within one bit of the entropy always exists. It does not tell us the *best* legal vector. That problem — minimise $\sum_i p_i\ell_i$ over all prefix codes — was solved in 1952 by David Huffman, then a graduate student who took it as a term-paper assignment after his professor, Robert Fano, mentioned that nobody knew the answer. The algorithm is three lines long, runs in $O(m\log m)$ time, and is provably optimal.
+
+- **Assuming Huffman achieves the entropy exactly.** It achieves $L < H+1$; equality holds only for dyadic probabilities. For a very skewed binary source the gap approaches a full bit, which can be a factor of ten in rate.
+- **Comparing Huffman codes by their codewords instead of their lengths.** Tie-breaking changes the codewords; only the length vector, and hence $L$, is canonical.
+- **Forgetting the cost of the table.** A two-pass Huffman coder must transmit the code (or the lengths). On small inputs this overhead can exceed the savings, which is why DEFLATE offers a fixed, pre-agreed table as an option.
+- **Assuming the rarest symbol gets a short codeword because the tree is "balanced".** In the worst case it gets $m-1$ bits; Huffman trees are balanced only when the distribution is near uniform.
+- **Using a stale model.** Huffman assumes the probabilities are known and fixed. On data whose statistics drift, adaptive coding, or re-estimating per block, is essential.
+- **Believing Huffman handles memory.** Symbol-by-symbol Huffman coding is blind to correlation; the gain from context modelling usually dwarfs the gain from optimal symbol coding.
+
+Huffman coding is optimal and still leaves up to one bit per symbol on the table, because a codeword is an integral number of bits. Arithmetic coding removes that restriction by refusing to give any symbol a codeword at all: the entire message is mapped to a single number, and only that number is transmitted. The cost is $-\log p(x^n) + 2$ bits for the whole message, so the rounding loss is amortised over the whole file rather than paid per symbol.
+
+- **Waiting until the end to emit bits.** Renormalization emits each bit as soon as it is determined, so memory use is constant and the coder streams. An implementation that computes the exact final interval in rational arithmetic is correct but useless.
+- **Omitting the E3 (underflow) rule.** Without it an interval straddling $\tfrac12$ shrinks below the register precision and encoder and decoder diverge.
+- **Blaming the coder for poor compression.** Arithmetic coding is within two bits of $-\log p(x^n)$ *for the model it is given*. All remaining compression performance is the model's; this is why modern compressors put their effort into context mixing, not into the coder.
+- **Forgetting to allocate probability to termination.** Without an EOF symbol or an explicit length the decoder cannot know when to stop and will happily decode arbitrarily many further symbols.
+- **Using floating point.** Encoder and decoder must perform bit-identical arithmetic; fixed-point integers with a controlled total frequency are mandatory.
+- **Assuming arithmetic coding is always the right choice.** It has higher per-symbol cost than a canonical Huffman decoder, and for nearly uniform alphabets the one-bit Huffman penalty is negligible. ANS (asymmetric numeral systems) now occupies much of this ground, achieving arithmetic-coding compression at table-driven speeds.
+
+Every coder so far has been handed a probability model. Real files arrive without one. A **universal** compressor must learn the structure while coding and still approach the entropy rate of whatever source produced the data. The Lempel–Ziv family does this with no probabilities at all: it compresses by noticing that text repeats itself.
+
+- **Confusing LZ77 with LZ78/LZW.** LZ77 points backwards into the raw text with (distance, length) pairs; LZ78/LZW points into a dictionary of previously created phrases. The distinction matters for memory, for seeking, and for patent history.
+- **Believing the dictionary is transmitted.** It is rebuilt by the decoder from the code stream. Sending it would defeat the purpose.
+- **Mishandling the exceptional code.** An implementation that assumes every received code is already in the dictionary fails on inputs as short as `ABABABA`.
+- **Expecting compression of random data.** The incompressibility theorem forbids it; LZ on random data expands by roughly $\log n$ bits per phrase.
+- **Forgetting the CLEAR mechanism.** With a bounded dictionary and no reset, a compressor that has finished learning one file's statistics carries them, uselessly, into the next region of a heterogeneous file.
+- **Quoting LZ's optimality without its hypotheses.** It is asymptotic, requires an unbounded dictionary, and holds for stationary ergodic sources. None of the three is exactly true of a real file on a real implementation.
+
+Shannon–Fano coding is the first systematic construction of an efficient prefix code, described by Shannon in 1948 and refined by Fano the same year. It is no longer the method of choice — Huffman is optimal and barely harder — but it is the cleanest illustration of top-down code design, it is what Huffman was assigned to improve upon, and its analysis is where the bound $L < H+1$ was first established.
+
+- **Believing Fano's code is optimal.** It is not; the five-symbol example is a genuine counterexample, and the proposition above says the direction of the error is always the same.
+- **Splitting by count instead of by mass.** The rule balances the *sum of probabilities* of the two groups, not the number of symbols in them.
+- **Forgetting to sort first.** Fano's construction requires non-increasing probabilities and splits only into *consecutive* groups; splitting an unsorted list can produce a code far from optimal.
+- **Conflating Shannon's lengths with Fano's algorithm.** They are different codes with different lengths, as the pitfall above shows.
+- **Ignoring memory.** Like Huffman, Fano coding is symbol-by-symbol and blind to correlation; blocking or context modelling is required to capture it.
+- **Assuming it is used in modern standards.** It is not. Where a simple prefix code is wanted, canonical Huffman is used; where the last fraction of a bit matters, arithmetic coding or ANS.
+
+Every code so far has needed a model: Huffman needs the probabilities, arithmetic coding needs a conditional distribution per symbol, and only Lempel–Ziv managed without. A **universal** code is one that works for a whole *class* of sources at once, paying a price that vanishes per symbol. This last part makes the notion precise, exhibits the standard constructions, and proves that the price cannot be driven to zero at finite length.
+
+- **Thinking a universal code achieves the entropy exactly on every file.** It achieves $nh + o(n)$; on short files the $o(n)$ term dominates and compression can be negative.
+- **Confusing universal with optimal-for-the-unknown-source.** Rissanen's bound says a strictly positive minimax redundancy is unavoidable at every finite $n$.
+- **Assuming Lempel–Ziv is the best universal code.** It is universal over a far larger class than CTW, and correspondingly slower to converge: $O(n\log\log n/\log n)$ against $O(\log n)$ total redundancy on parametric classes.
+- **Forgetting that the class must be specified.** A code universal for i.i.d. sources need not be universal for sources with long memory; "universal" without a class is meaningless.
+- **Restricting the term to integer codes.** Elias codes are the classic examples, but in modern usage a universal *compressor* is the whole model-plus-coder pipeline.
+- **Believing adaptivity defeats the counting bound.** The incompressibility theorem quantifies over every injective encoder. Adaptive, neural or otherwise, almost all strings stay incompressible.

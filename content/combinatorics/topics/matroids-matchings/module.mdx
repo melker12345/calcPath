@@ -1,0 +1,256 @@
+---
+title: Matroids and Matchings
+---
+
+# Matroids and Matchings
+
+The structure that makes the greedy algorithm correct, and the matching theory of Hall and König that mirrors it.
+
+## Definition via Independent Sets (and Other Axioms)
+
+<!-- section: definition-axioms -->
+
+:::definition[Matroid]{#matroid}
+A matroid M = (E, I) consists of a finite ground set E and a family I of subsets of E (the independent sets) satisfying:
+
+1. ∅ ∈ I.
+2. If A ∈ I and B ⊂ A then B ∈ I (hereditary / downward closed).
+3. (Augmentation) If A, B ∈ I and |A| < |B|, then there exists e ∈ B \ A such that A ∪ {e} ∈ I.
+:::
+
+Equivalent axiomatizations exist using bases, circuits (minimal dependent sets), the rank function (submodular, monotone), and the closure operator.
+
+:::intuition
+Think of "independent" as "no redundancy." A team where everyone brings a *different* skill is independent; the moment someone duplicates a skill already on the team, they are redundant (dependent).
+
+The augmentation axiom is the magic: if your team is smaller than a rival team, you can always poach *someone* from the rival who adds a genuinely new skill to yours. That "you can always grow toward the bigger set" property is what makes greedy hiring work.
+
+The axioms are deliberately chosen so that every nice theorem about bases and rank from linear algebra keeps holding in this abstract world.
+:::
+
+:::example
+Let us verify that the uniform matroid $U_{2,3}$ really is a matroid. Take ground set $E = \{1,2,3\}$ and declare $I$ to be *all* subsets of size at most $2$:
+$$I = \{\emptyset,\ \{1\},\{2\},\{3\},\ \{1,2\},\{1,3\},\{2,3\}\}.$$
+:::
+
+:::solution
+Check each axiom:
+
+**(1) $\emptyset \in I$.** Yes, $\emptyset$ has size $0 \le 2$. ✓
+**(2) Hereditary.** Any subset of a set of size $\le 2$ also has size $\le 2$, so it is in $I$. ✓
+**(3) Augmentation.** Suppose $A, B \in I$ with $|A| < |B|$. Then $|A| \le 1$ and $|B| \le 2$. Since $|B| > |A|$, the set $B$ contains an element $e \notin A$; adding it gives $|A \cup \{e\}| = |A| + 1 \le 2$, so $A \cup \{e\} \in I$. ✓
+
+All three hold, so $U_{2,3}$ is a matroid.
+
+Now contrast this with a *non-example* to see why augmentation is the load-bearing axiom. Keep $E = \{1,2,3\}$ but take the hereditary family
+$$I'' = \{\emptyset,\ \{1\},\{2\},\{3\},\ \{1,2\}\}.$$
+Axioms (1) and (2) still hold (every subset of $\{1,2\}$ is listed). But augmentation fails: take $A = \{3\}$ and $B = \{1,2\}$, both in $I''$ with $|A| = 1 < 2 = |B|$. The elements of $B \setminus A$ are $1$ and $2$, giving candidates $\{3,1\}$ and $\{3,2\}$ — *neither* is in $I''$. So no element of $B$ can extend $A$, and axiom (3) is violated. Thus $I''$ is hereditary but **not** a matroid, and (as the Common Mistakes section notes) greedy can fail on such a family — which is exactly what axiom (3) rules out.
+:::
+
+## Important Examples
+
+<!-- section: examples -->
+
+- **Vector matroid / linear matroid**: columns of a matrix; independent = linearly independent columns.
+- **Graphic matroid**: edges of a graph; independent = acyclic sets of edges (forests). Rank of a set of edges = v − c in the subgraph.
+- **Partition matroid / transversal**: given a partition of E into blocks with capacities, independent sets take at most the capacity from each block.
+- **Uniform matroid U_{k,n}**: all subsets of size ≤ k are independent.
+- **Fano matroid**, projective geometries, etc.
+
+Many theorems true for vector spaces or for graphs have matroid generalizations.
+
+:::intuition
+In a graph, a forest is "independent" because it has no cycles (the circuit axiom: a cycle is a minimal dependent set).
+
+In a vector space the circuits are the minimal linearly dependent sets (relations).
+:::
+
+:::example
+Consider the cycle graph $C_4$ on vertices $\{1,2,3,4\}$ with edges $e_1=12$, $e_2=23$, $e_3=34$, $e_4=41$. Its graphic matroid has ground set $E = \{e_1,e_2,e_3,e_4\}$, and a set of edges is independent iff it is acyclic (a forest).
+:::
+
+:::solution
+**Rank of the whole set.** The graph is connected with $v = 4$ vertices and $c = 1$ component, so the rank formula gives $r(E) = v - c = 4 - 1 = 3$. A maximal forest (basis) therefore has $3$ edges.
+**Which 3-edge sets are bases?** Any $3$ of the $4$ edges omit exactly one edge and form a path on all $4$ vertices — a tree, hence acyclic and independent. All $\binom{4}{3} = 4$ triples are bases.
+**The unique circuit.** Taking all $4$ edges closes the cycle $1\text{-}2\text{-}3\text{-}4\text{-}1$. This is a minimal dependent set (removing any one edge makes it independent again), so $\{e_1,e_2,e_3,e_4\}$ is the single circuit of this matroid.
+
+**Sanity check:** rank $3$, bases of size $3$, and adding the $4$th edge to any basis creates the circuit — consistent with "a basis is a maximal independent set." ✓
+:::
+
+## Optimization and Min-Max Theorems
+
+<!-- section: optimization -->
+
+The greedy algorithm sorts the elements by weight descending, then scans through them adding each one iff the current set stays independent.
+
+:::theorem[Greedy characterizes matroids]{#greedy-matroid}
+Greedy finds a maximum-weight basis exactly when the set system is a matroid. In fact this is a *characterization*: a hereditary set system is a matroid if and only if greedy returns a maximum-weight basis for **every** weight function.
+:::
+
+:::theorem[Matroid intersection]{#matroid-intersection}
+There is a min-max formula for the largest set independent in *two* different matroids on the same ground set, and it is solved in polynomial time.
+:::
+
+These results generalize Kruskal's MST algorithm, bipartite matching, and many other classical optimization results.
+
+:::intuition
+Greedy works perfectly for matroids: always pick the next best item that doesn't create a "circuit".
+
+For two matroids (e.g. one graphic, one partition) the common independent sets (e.g. matchings that are also forests) have a clean min-max size.
+:::
+
+:::example
+Kruskal's algorithm for the maximum-weight spanning tree *is* the matroid greedy algorithm on the graphic matroid. Let us run it explicitly. Take the triangle $K_3$ on vertices $\{a,b,c\}$ with edge weights
+$$w(ab) = 3,\quad w(bc) = 2,\quad w(ca) = 1.$$
+We want a **maximum**-weight basis (spanning tree), so we sort descending and add each edge iff it keeps the set acyclic:
+:::
+
+:::solution
+**$ab$ (weight $3$).** Current set $\emptyset$; adding $ab$ stays a forest. Take it → $\{ab\}$.
+**$bc$ (weight $2$).** $\{ab, bc\}$ is a path $a\text{-}b\text{-}c$, still acyclic. Take it → $\{ab, bc\}$.
+**$ca$ (weight $1$).** Adding $ca$ would close the triangle $a\text{-}b\text{-}c\text{-}a$, a cycle — dependent. Skip it.
+
+Result: the tree $\{ab, bc\}$ with total weight $3 + 2 = 5$.
+
+**Sanity check:** $K_3$ has $v=3$ vertices, so every spanning tree has $v-1 = 2$ edges; there are $3$ spanning trees with weights $3{+}2{=}5$, $3{+}1{=}4$, $2{+}1{=}3$, and greedy correctly picked the heaviest, $5$. ✓ (For a *minimum* spanning tree, sort ascending instead — the same argument shows greedy is optimal because forests form a matroid.)
+:::
+
+## Definitions and Basic Facts
+
+<!-- section: definition-matching -->
+
+:::definition[Matching]{#matching}
+A matching M is a subset of edges with no two sharing a vertex. A vertex is matched (covered) if incident to an edge in M; otherwise free (exposed). A maximum matching has the largest possible number of edges.
+:::
+
+:::definition[Augmenting path]{#augmenting-path}
+An augmenting path with respect to M is an alternating path (edges alternately in and out of M) that begins and ends at free vertices.
+:::
+
+:::lemma[Berge's lemma]{#berge}
+A matching is maximum if and only if it admits no augmenting path.
+:::
+
+:::intuition
+A matching is a collection of "paired" edges that don't fight over people (vertices).
+
+An augmenting path is an alternating chain that lets you flip and get one more pair.
+:::
+
+:::example
+Take the path $P_5$ on vertices $a\text{-}b\text{-}c\text{-}d\text{-}e$ (four edges: $ab$, $bc$, $cd$, $de$). Start from the small matching $M = \{bc\}$, of size $1$. Vertices $b,c$ are matched; $a,d,e$ are free.
+:::
+
+:::solution
+Look for an augmenting path — an alternating path (out-of-$M$, in-$M$, out-of-$M$, …) whose two endpoints are both free. Start at the free vertex $a$:
+$$a \xrightarrow{ab \notin M} b \xrightarrow{bc \in M} c \xrightarrow{cd \notin M} d.$$
+The endpoints $a$ and $d$ are both free, and the edges alternate out/in/out, so $a\text{-}b\text{-}c\text{-}d$ is augmenting. **Flip** membership along it: remove $bc$, add $ab$ and $cd$. The new matching is
+$$M' = \{ab,\ cd\},\qquad |M'| = 2,$$
+one larger than before, as promised. Now $a,b,c,d$ are matched and only $e$ is free. Any alternating path from $e$ is $e\text{-}d\text{-}c\text{-}b\text{-}a$, but $a$ is matched, so it does **not** end at a free vertex — no augmenting path exists.
+
+**Sanity check:** by Berge's lemma, no augmenting path means $M'$ is maximum. Indeed $P_5$ has $5$ vertices, so a matching has at most $\lfloor 5/2\rfloor = 2$ edges, and $|M'| = 2$ attains it. ✓
+:::
+
+## Hall's Theorem in Bipartite Graphs
+
+<!-- section: halls-theorem -->
+
+:::theorem[Hall's marriage theorem]{#hall}
+Let G be bipartite with parts L and R. There is a matching that saturates (covers) every vertex of L if and only if for every S ⊆ L we have |N(S)| ≥ |S|, where N(S) is the set of neighbors of S in R.
+:::
+
+This is a necessary and sufficient condition and a prototype min-max theorem.
+
+:::intuition
+To marry off every boy (L) to a girl (R) such that each girl gets at most one, you need that any group of k boys collectively knows at least k girls.
+
+If some group of boys knows fewer girls than boys, obviously impossible.
+:::
+
+:::example
+Let $L = \{A,B,C\}$ and $R = \{1,2,3\}$ with neighborhoods
+$$N(A) = \{1,2\},\quad N(B) = \{1\},\quad N(C) = \{1,2,3\}.$$
+To apply Hall we must check $|N(S)| \ge |S|$ for **every** $S \subseteq L$. The dangerous cases are the small, "cramped" ones — a set is only in danger if its members share few neighbors:
+:::
+
+:::solution
+Singletons: $|N(A)|=2\ge1$, $|N(B)|=1\ge1$, $|N(C)|=3\ge1$. ✓
+Pairs: $N(\{A,B\})=\{1,2\}$ ($2\ge2$); $N(\{A,C\})=\{1,2,3\}$ ($3\ge2$); $N(\{B,C\})=\{1,2,3\}$ ($3\ge2$). ✓
+All three: $N(\{A,B,C\}) = \{1,2,3\}$ ($3 \ge 3$). ✓
+
+Every subset satisfies Hall's condition, so a matching saturating $L$ exists. To construct one, match the most constrained vertex first: $B$ can only take $1$, so set $B\text{-}1$; then $A$ takes $2$; then $C$ takes the remaining $3$. This gives the perfect matching
+$$M = \{B\text{-}1,\ A\text{-}2,\ C\text{-}3\}.$$
+
+**Sanity check:** the three chosen right-vertices $1,2,3$ are distinct, and each edge respects the neighborhoods ($1\in N(B)$, $2\in N(A)$, $3\in N(C)$). ✓ Notice the failure mode Hall guards against: if instead $N(A)=N(C)=\{1\}$ too, then $S=\{A,B,C\}$ would have $|N(S)|=1<3$ and no such matching could exist.
+:::
+
+## Algorithms and Min-Max
+
+<!-- section: algorithms -->
+
+In bipartite graphs: reduce to max flow (unit capacities from source to L, edges L-R capacity 1, R to sink). Ford-Fulkerson or Dinic gives max matching. Hopcroft-Karp is faster O(E√V).
+
+In general graphs: Edmonds' blossom algorithm contracts odd alternating cycles ("blossoms") and recurses; polynomial time.
+
+:::theorem[König's theorem]{#konig}
+In a bipartite graph, the size of a maximum matching equals the size of a minimum vertex cover.
+:::
+
+:::intuition
+Flow models "sending one unit of assignment along an edge without exceeding capacities."
+
+Blossoms are the odd-cycle obstacles that require special shrinking in the non-bipartite case.
+:::
+
+:::example
+Let us find a maximum matching in the bipartite graph $L=\{A,B,C\}$, $R=\{1,2,3\}$ with edges
+$$A\text{-}1,\ A\text{-}2,\ B\text{-}1,\ C\text{-}2,\ C\text{-}3,$$
+using the augmenting-path method (the combinatorial heart of the flow reduction).
+:::
+
+:::solution
+**Start empty.** $M = \emptyset$.
+**Grow from $A$:** edge $A\text{-}1$ reaches free $1$. Add it → $M=\{A\text{-}1\}$.
+**Grow from $B$:** edge $B\text{-}1$, but $1$ is taken. Try the alternating path $B \to 1 \to A \to 2$ (out $B1$, in $A1$, out $A2$), ending at free $2$. Augment: drop $A\text{-}1$, add $B\text{-}1$ and $A\text{-}2$ → $M=\{B\text{-}1,\ A\text{-}2\}$, size $2$.
+**Grow from $C$:** edge $C\text{-}3$ reaches free $3$. Add it → $M=\{B\text{-}1,\ A\text{-}2,\ C\text{-}3\}$, size $3$.
+
+No free left vertex remains, so no augmenting path exists and $M$ is maximum with $|M| = 3$.
+
+**Sanity check via König.** The vertex set $\{1,2,3\}$ (all of $R$) is a vertex cover of size $3$ — every edge has a right endpoint. Since max matching $\le$ min vertex cover always, and here matching $=3=$ this cover, both are optimal: max matching $=$ min vertex cover $=3$, as König's theorem guarantees for bipartite graphs. ✓
+:::
+
+## Common Mistakes
+
+- **Thinking every hereditary family is a matroid**: The augmentation axiom is crucial; without it greedy can fail.
+- **Confusing circuits with bases**: Circuits are the minimal *dependent* sets; bases are the maximal *independent* sets.
+- **Assuming all matroids are representable over a field**: Many are not (e.g. the non-Pappus matroid); the abstract theory is richer.
+- **Forgetting that graphic matroids are a proper subclass**: Not every matroid comes from a graph.
+- **Overlooking the algorithmic power**: Matroid algorithms (greedy, intersection, union, etc.) give polynomial-time solutions for many problems that look hard when stated in the original language.
+
+A matching is a set of edges that share no vertices. Matchings are among the most fundamental objects in graph theory and combinatorial optimization; they model pairings, assignments, and resource allocation.
+
+The theory is especially rich in bipartite graphs, where min-max theorems and efficient algorithms abound.
+
+- **Allowing shared vertices in a 'matching'**: By definition no two edges in a matching share a vertex.
+- **Confusing matching with edge cover or vertex cover**: A vertex cover touches *all* edges; a matching is a *packing* of edges.
+- **Thinking Hall's condition is only sufficient**: It is necessary and sufficient.
+- **Forgetting that in non-bipartite graphs min vertex cover can be strictly larger than max matching** (e.g., a triangle: matching 1, vertex cover 2).
+- **Assuming perfect matchings always exist when |L|=|R|**: Hall's (or Tutte's) condition may fail.
+
+Network flows model the movement of a commodity through a network with capacities on the arcs. The maximum flow problem and its min-cut dual are among the most important and versatile tools in combinatorial optimization.
+
+- **Allowing negative flows or violating conservation**: Feasibility requires both.
+- **Confusing the residual graph with the original**: Backward edges have capacity equal to current flow (can cancel).
+- **Thinking max flow is always the sum of capacities out of s**: That is only an upper bound; other cuts may be tighter.
+- **Forgetting that the min cut found from residual reachability is a proof of optimality**: After running any max-flow alg, the reachable set from s in residual gives a cut of capacity equal to the flow value.
+- **Assuming all flows are integral**: With fractional capacities you may need fractional flows; the integral flow theorem holds when all capacities are integers.
+
+Linear programming (LP) is the problem of optimizing a linear objective over a polyhedron defined by linear inequalities. It is both a fundamental algorithmic tool and the source of powerful min-max theorems and duality in combinatorics.
+
+Many combinatorial optimization problems admit natural LP formulations that are integral, so that LP solvers (or combinatorial algorithms derived from them) solve the discrete problem exactly.
+
+- **Thinking every LP has an integral optimum**: Only when the polyhedron has integer vertices (TU or other conditions).
+- **Forgetting strong duality requires feasibility of both sides**: If one is infeasible the other may be unbounded.
+- **Confusing simplex (vertex walking) with interior-point methods**: Both solve LP; simplex has combinatorial flavor.
+- **Assuming all combinatorial problems have small integrality gap**: Some have large gaps; approximation algorithms study the gap.
+- **Neglecting degeneracy and multiple optima**: A vertex may have several bases; complementary slackness helps certify optimality.

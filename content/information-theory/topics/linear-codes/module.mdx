@@ -1,0 +1,547 @@
+---
+title: Linear and Hamming Codes
+---
+
+# Linear and Hamming Codes
+
+Minimum distance, the bounds it must obey, and the classical linear constructions that correct errors by syndrome.
+
+## Distance, Errors and Decoding
+
+<!-- section: errors-in-communication -->
+
+The binary symmetric channel flips bits, so the natural measure of how much damage the channel has done is the number of positions that changed.
+
+:::definition[Hamming weight and distance]{#hamming-distance}
+For $\mathbf x, \mathbf y \in \mathbb F_2^n$, the **Hamming weight** $w(\mathbf x)$ is the number of nonzero coordinates, and the **Hamming distance** is
+
+$$d(\mathbf x,\mathbf y) = |\{i : x_i \neq y_i\}| = w(\mathbf x - \mathbf y).$$
+:::
+
+:::proposition[Hamming distance is a metric]{#hamming-metric}
+$d$ is a metric on $\mathbb F_2^n$: it is non-negative, vanishes only when $\mathbf x = \mathbf y$, is symmetric, and satisfies the triangle inequality $d(\mathbf x,\mathbf z) \le d(\mathbf x,\mathbf y) + d(\mathbf y,\mathbf z)$.
+:::
+
+:::proof
+Only the triangle inequality needs an argument. If $x_i \neq z_i$ then $y_i$ cannot equal both $x_i$ and $z_i$, so position $i$ is counted in $d(\mathbf x,\mathbf y)$ or in $d(\mathbf y,\mathbf z)$ (possibly both). Hence every position counted on the left is counted at least once on the right.
+:::
+
+Metric structure is what licenses the geometric language — balls, packing, covering — used for the rest of the chapter.
+
+:::definition[Code, rate, minimum distance]{#minimum-distance}
+A **code** of length $n$ is a subset $\mathcal C \subseteq \mathbb F_2^n$ with $|\mathcal C| = M \ge 2$ codewords; its **rate** is $R = \frac{\log M}{n}$. Its **minimum distance** is
+
+$$d = \min_{\mathbf c \neq \mathbf c' \in \mathcal C} d(\mathbf c, \mathbf c').$$
+
+A code of length $n$, size $2^k$ and minimum distance $d$ is called an $(n,k,d)$ code.
+:::
+
+:::definition[Nearest-neighbour decoding]{#nearest-neighbour}
+The **nearest-neighbour** (minimum-distance) decoder maps a received word $\mathbf r$ to a codeword $\mathbf c$ minimising $d(\mathbf r,\mathbf c)$, breaking ties arbitrarily.
+:::
+
+:::proposition[Nearest-neighbour decoding is maximum likelihood on the BSC]{#nn-is-ml}
+On $\mathrm{BSC}(p)$ with $p < 1/2$, the nearest-neighbour decoder is a maximum-likelihood decoder.
+:::
+
+:::proof
+If $\mathbf c$ is sent and $\mathbf r$ received at distance $t = d(\mathbf r,\mathbf c)$, then
+
+$$\Pr[\mathbf r \mid \mathbf c] = p^{t}(1-p)^{n-t} = (1-p)^n\left(\frac{p}{1-p}\right)^{t}.$$
+
+Since $p<1/2$ we have $p/(1-p) < 1$, so the likelihood is strictly decreasing in $t$. Maximising the likelihood is therefore minimising $t$.
+:::
+
+:::theorem[Detection and correction capability]{#error-capability}
+Let $\mathcal C$ have minimum distance $d$. Then
+
+1. $\mathcal C$ detects every error pattern of weight at most $d-1$;
+2. $\mathcal C$ corrects every error pattern of weight at most $t = \left\lfloor \frac{d-1}{2}\right\rfloor$ under nearest-neighbour decoding;
+3. both bounds are tight: some pattern of weight $d$ is undetectable and some pattern of weight $t+1$ is miscorrected.
+:::
+
+:::proof
+(1) If $\mathbf c$ is sent and an error of weight $1 \le w \le d-1$ occurs, the received word $\mathbf r$ is at distance $w < d$ from $\mathbf c$, so it cannot be another codeword (any two codewords are at distance $\ge d$). Hence $\mathbf r \notin \mathcal C$ and the error is visible.
+
+(2) Suppose $\mathbf c$ is sent and $d(\mathbf r,\mathbf c) \le t$. For any other codeword $\mathbf c'$, the triangle inequality gives
+
+$$d(\mathbf r, \mathbf c') \ge d(\mathbf c,\mathbf c') - d(\mathbf c,\mathbf r) \ge d - t \ge d - \frac{d-1}{2} = \frac{d+1}{2} > t,$$
+
+so $\mathbf c$ is the strictly closest codeword and the decoder returns it.
+
+(3) Take $\mathbf c,\mathbf c'$ at distance exactly $d$. The error pattern $\mathbf e = \mathbf c' - \mathbf c$ has weight $d$ and carries $\mathbf c$ to the codeword $\mathbf c'$, which no detector can flag. For the second claim, change $t+1$ of the $d$ positions in which $\mathbf c$ and $\mathbf c'$ differ, moving from $\mathbf c$ to a word at distance $t+1$ from $\mathbf c$ and $d - t - 1 \le t+1$ from $\mathbf c'$, so the decoder may prefer $\mathbf c'$.
+:::
+
+:::intuition
+Put a ball of radius $t$ around every codeword. Correction works exactly when the balls do not overlap, and the packing condition $2t + 1 \le d$ is the arithmetic of "no word is in two balls". Detection only needs the received word to fall outside *every* codeword other than the true one, which is a weaker demand — hence $d-1$ rather than $(d-1)/2$.
+:::
+
+:::example[The triple repetition code]
+Compute the parameters of $\mathcal C = \{000, 111\}$ and decode the received word $011$.
+:::
+
+:::solution
+Here $n=3$, $M=2$ so $k=1$, and $d = d(000,111) = 3$; it is a $(3,1,3)$ code of rate $1/3$. It detects up to $d-1 = 2$ errors and corrects $t = \lfloor 2/2\rfloor = 1$.
+
+For $\mathbf r = 011$: $d(\mathbf r,000) = 2$ and $d(\mathbf r,111)=1$, so nearest-neighbour decoding returns $111$ — the majority vote. If $000$ was actually sent, this is a miscorrection caused by a weight-$2$ error, exactly the tightness claimed in part (3) of the capability theorem.
+:::
+
+:::pitfall
+Minimum distance governs *guaranteed* capability, not typical behaviour. A code with $d=3$ corrects every single error and may well correct most double errors too; conversely, quoting an average distance says nothing, because one unusually close pair of codewords is enough to ruin the guarantee.
+:::
+
+## Error Detection
+
+<!-- section: error-detection -->
+
+Detection is cheaper than correction and is often all a system needs, because a retransmission mechanism can supply the correction (see the final sections of this chapter on ARQ).
+
+:::definition[Detection capability]{#detection-capability}
+A code **detects** an error pattern $\mathbf e \neq \mathbf 0$ if $\mathbf c + \mathbf e \notin \mathcal C$ for every codeword $\mathbf c$. For a linear code this depends only on $\mathbf e$: the undetectable patterns are precisely the nonzero codewords.
+:::
+
+:::proposition[Undetected error probability of a linear code]{#undetected-error}
+Let $\mathcal C$ be a linear code with weight enumerator $A_w = |\{\mathbf c \in \mathcal C : w(\mathbf c) = w\}|$, used on $\mathrm{BSC}(p)$. The probability that an error occurs and goes undetected is
+
+$$P_{\mathrm{ud}} = \sum_{w = d}^{n} A_w\, p^w (1-p)^{n-w}.$$
+:::
+
+:::proof
+By linearity an error is undetected exactly when the error pattern is a nonzero codeword, and on the BSC a fixed pattern of weight $w$ occurs with probability $p^w(1-p)^{n-w}$. Summing over the nonzero codewords and grouping by weight gives the formula; the sum starts at $w=d$ because there are no nonzero codewords of smaller weight.
+:::
+
+The simplest detector adds a single parity bit.
+
+:::definition[Single parity-check code]{#parity-code}
+The $(n, n-1)$ **single parity-check code** consists of all $\mathbf c \in \mathbb F_2^n$ with $\sum_i c_i = 0$; equivalently, a data word of length $n-1$ is extended by the bit making the total number of ones even.
+:::
+
+:::proposition[What one parity bit buys]{#parity-capability}
+The single parity-check code has minimum distance $2$. It detects every error pattern of odd weight and no error pattern of even weight.
+:::
+
+:::proof
+The parity of the received word equals the parity of the error pattern, since the codeword's parity is zero. So the check fails exactly when $w(\mathbf e)$ is odd. Two coordinates can be flipped to move between codewords, and one cannot, so $d = 2$; by the capability theorem it detects $d-1 = 1$ error, and in fact all odd-weight patterns.
+:::
+
+:::example[Parity in action, and its blind spot]
+Send the data word $1011$ with an even parity bit. Show a detected error and an undetected one.
+:::
+
+:::solution
+The data word has three ones, an odd number, so the parity bit is $1$ and the codeword is $10111$ (four ones, even).
+
+*Detected.* Suppose the third bit flips: the receiver sees $10011$, which has three ones. Odd parity where even was expected, so an error is flagged. Every single flip changes the count of ones by exactly one and so always flips the parity.
+
+*Undetected.* Suppose bits three and four both flip: the receiver sees $10001$, which has two ones — even. The check passes and the double error is delivered silently. This is the price of $d=2$.
+:::
+
+:::definition[Cyclic redundancy check]{#crc}
+Identify a bit string $(a_{n-1},\dots,a_0)$ with the polynomial $a(x) = \sum_i a_i x^i$ over $\mathbb F_2$. Fix a **generator polynomial** $g(x)$ of degree $r$ with $g(0)=1$. The CRC encoder maps a message polynomial $m(x)$ of degree $< n-r$ to
+
+$$c(x) = x^{r} m(x) - \big(x^{r}m(x) \bmod g(x)\big),$$
+
+which is divisible by $g(x)$. The receiver recomputes the remainder and flags an error if it is nonzero.
+:::
+
+:::theorem[Burst-error detection by a CRC]{#crc-burst}
+A CRC with generator of degree $r$ detects every error burst of length at most $r$, where a burst of length $\ell$ is an error polynomial of the form $e(x) = x^{j}b(x)$ with $\deg b < \ell$ and $b(0)=1$.
+:::
+
+:::proof
+An error is undetected precisely when $g(x)$ divides $e(x) = x^j b(x)$. Since $g(0) = 1$, $x$ is not a factor of $g$, and as $\mathbb F_2[x]$ is a unique factorisation domain $g(x) \mid x^j b(x)$ forces $g(x) \mid b(x)$. But $\deg b \le r - 1 < r = \deg g$ and $b \neq 0$, so this is impossible. Hence every such burst is detected.
+:::
+
+:::corollary[Odd-weight detection]{#crc-odd}
+If $(x+1) \mid g(x)$, the CRC detects every error pattern of odd weight.
+:::
+
+:::proof
+An error polynomial $e(x)$ has odd weight if and only if $e(1) = 1$ in $\mathbb F_2$. If $(x+1)\mid g \mid e$, then $e(1) = 0$, a contradiction. Practical generators such as CRC-32 are chosen with the factor $x+1$ for exactly this reason.
+:::
+
+:::intuition
+A CRC is a checksum computed by long division instead of addition, and the divisor is chosen so that the error patterns real hardware produces — short bursts on a wire, on a disk track, in a packet — cannot be multiples of it. Its strength is not a distance guarantee but a deliberately awkward algebraic structure.
+:::
+
+:::example[Computing a CRC remainder]
+With $g(x) = x^3 + x + 1$ (bit pattern $1011$) and message $m = 1101$, compute the transmitted codeword.
+:::
+
+:::solution
+Here $r = 3$, so form $x^3 m(x)$, that is the bit string $1101000$, and divide by $1011$ over $\mathbb F_2$ (XOR long division):
+
+$1101000 \oplus 1011000 = 0110000$; bring down: $110000 \oplus 101100 = 011100$; then $11100 \oplus 10110 = 01010$; then $1010 \oplus 1011 = 0001$.
+
+The remainder is $001$, so the codeword is $1101\,001$. The receiver dividing $1101001$ by $1011$ gets remainder $0$ and accepts. Any burst of length $\le 3$ in transit leaves a nonzero remainder, by the burst theorem.
+:::
+
+## Linear Codes, Syndromes and the Fundamental Bounds
+
+<!-- section: error-correction -->
+
+Searching a general code of size $2^k$ for the nearest codeword costs $2^k$ comparisons, which is hopeless. Linearity is the structure that makes both encoding and decoding cheap, and essentially every code in use is linear.
+
+:::definition[Linear code, generator and parity-check matrices]{#linear-code}
+An $[n,k]$ **linear code** is a $k$-dimensional subspace $\mathcal C \subseteq \mathbb F_2^n$. A **generator matrix** is a $k\times n$ matrix $G$ whose rows are a basis, so that $\mathcal C = \{\mathbf m G : \mathbf m \in \mathbb F_2^k\}$. A **parity-check matrix** is an $(n-k)\times n$ matrix $H$ of rank $n-k$ with
+
+$$\mathcal C = \{\mathbf c : H\mathbf c^{\mathsf T} = \mathbf 0\}, \qquad \text{equivalently } GH^{\mathsf T} = 0.$$
+
+$G$ is **systematic** if $G = [I_k \mid A]$, in which case $H = [A^{\mathsf T}\mid I_{n-k}]$ and the first $k$ coordinates of a codeword are the message itself.
+:::
+
+:::proposition[Minimum distance equals minimum weight]{#distance-is-weight}
+For a linear code, $d = \min\{w(\mathbf c) : \mathbf c \in \mathcal C,\ \mathbf c \neq \mathbf 0\}$.
+:::
+
+:::proof
+$d(\mathbf c,\mathbf c') = w(\mathbf c - \mathbf c')$ and $\mathbf c - \mathbf c'$ ranges over all nonzero codewords as the pair ranges over distinct codewords, by closure under subtraction.
+:::
+
+This halves the work of computing $d$ — one scans $2^k$ codewords rather than $2^{2k}$ pairs — and there is a better criterion still, read off the parity-check matrix.
+
+:::theorem[Distance from the parity-check matrix]{#distance-from-H}
+A linear code with parity-check matrix $H$ has minimum distance $d$ if and only if every set of $d-1$ columns of $H$ is linearly independent and some set of $d$ columns is dependent.
+:::
+
+:::proof
+A word $\mathbf c$ of weight $w$ with support $S$ satisfies $H\mathbf c^{\mathsf T} = \mathbf 0$ exactly when the columns indexed by $S$ sum to zero, i.e. are linearly dependent (over $\mathbb F_2$, a dependency is a subset summing to zero). So a nonzero codeword of weight $w$ exists precisely when some $w$ columns are dependent. Taking the least such $w$ and applying the previous proposition gives the statement.
+:::
+
+:::definition[Syndrome]{#syndrome-def}
+The **syndrome** of a received word $\mathbf r$ is $\mathbf s = H \mathbf r^{\mathsf T} \in \mathbb F_2^{n-k}$.
+:::
+
+:::proposition[The syndrome sees only the error]{#syndrome}
+If $\mathbf r = \mathbf c + \mathbf e$ with $\mathbf c \in \mathcal C$, then $\mathbf s = H\mathbf r^{\mathsf T} = H\mathbf e^{\mathsf T}$. Two words have the same syndrome if and only if they lie in the same coset of $\mathcal C$.
+:::
+
+:::proof
+$H\mathbf r^{\mathsf T} = H\mathbf c^{\mathsf T} + H\mathbf e^{\mathsf T} = \mathbf 0 + H \mathbf e^{\mathsf T}$. And $H\mathbf r^{\mathsf T} = H\mathbf r'^{\mathsf T}$ iff $H(\mathbf r - \mathbf r')^{\mathsf T} = \mathbf 0$ iff $\mathbf r - \mathbf r' \in \mathcal C$ iff $\mathbf r, \mathbf r'$ are in the same coset.
+:::
+
+:::recipe[Standard-array (coset-leader) decoding]{#standard-array}
+1. List the $2^{n-k}$ cosets of $\mathcal C$ in $\mathbb F_2^n$.
+2. In each coset pick a minimum-weight element, the **coset leader** $\mathbf e_{\mathbf s}$; store it against the coset's syndrome $\mathbf s$.
+3. To decode $\mathbf r$: compute $\mathbf s = H\mathbf r^{\mathsf T}$, look up $\mathbf e_{\mathbf s}$, and output $\hat{\mathbf c} = \mathbf r - \mathbf e_{\mathbf s}$.
+:::
+
+:::proposition[Coset-leader decoding is nearest-neighbour decoding]{#syndrome-is-nn}
+The output of standard-array decoding is a codeword at minimum distance from $\mathbf r$.
+:::
+
+:::proof
+Candidates for the error are exactly the members of the coset $\mathbf r + \mathcal C$, since $\hat{\mathbf c} = \mathbf r - \mathbf e$ must be a codeword. Choosing $\mathbf e$ of least weight in that coset therefore minimises $d(\mathbf r,\hat{\mathbf c}) = w(\mathbf e)$.
+:::
+
+The table has $2^{n-k}$ entries rather than $2^k$ codewords, so syndrome decoding is cheap precisely when the code has few parity checks — and this is the structure that Hamming codes exploit to the limit.
+
+:::example[Syndrome decoding the repetition code]
+Decode $\mathbf r = 101$ in the $(3,1,3)$ repetition code, whose parity-check matrix is $H = \begin{bmatrix}1&1&0\\1&0&1\end{bmatrix}$.
+:::
+
+:::solution
+The two rows encode $c_1 + c_2 = 0$ and $c_1 + c_3 = 0$, which force $c_1=c_2=c_3$, so the null space is indeed $\{000,111\}$.
+
+Compute $\mathbf s = H\mathbf r^{\mathsf T} = (r_1+r_2,\ r_1+r_3) = (1+0,\ 1+1) = (1,0)$. The columns of $H$ are $(1,1)^{\mathsf T}, (1,0)^{\mathsf T}, (0,1)^{\mathsf T}$, and $\mathbf s$ matches column $2$, so the minimum-weight error with this syndrome is $\mathbf e = 010$. Then $\hat{\mathbf c} = 101 - 010 = 111$, agreeing with the majority vote as the previous proposition guarantees.
+:::
+
+How good can a code be? Three bounds frame the answer: two say that distance is expensive, one says that a decent distance is always available.
+
+:::lemma[Volume of a Hamming ball]{#ball-volume}
+The ball $B(\mathbf x,t) = \{\mathbf y : d(\mathbf x,\mathbf y)\le t\}$ has $V(n,t) = \sum_{i=0}^{t}\binom ni$ elements, and for $0 \le \lambda \le 1/2$,
+
+$$\frac{1}{n+1}2^{n h_2(\lambda)} \le V(n,\lfloor \lambda n\rfloor) \le 2^{n h_2(\lambda)}.$$
+:::
+
+:::proof
+The count is immediate: choose which $i \le t$ positions differ. For the upper bound, with $\lambda \le 1/2$,
+
+$$1 = (\lambda + (1-\lambda))^n \ge \sum_{i\le \lambda n}\binom ni \lambda^{i}(1-\lambda)^{n-i} \ge \sum_{i \le \lambda n}\binom ni \lambda^{\lambda n}(1-\lambda)^{n-\lambda n} = V(n,\lfloor\lambda n\rfloor)2^{-nh_2(\lambda)},$$
+
+where the second inequality uses that $\left(\frac{\lambda}{1-\lambda}\right)^{i}$ is decreasing in $i$ for $\lambda\le 1/2$. The lower bound follows because $\binom{n}{\lfloor \lambda n\rfloor}$ is the largest of the $n+1$ binomial coefficients and $\binom{n}{\lfloor\lambda n\rfloor}\ge \frac{1}{n+1}2^{nh_2(\lambda)}$ by Stirling.
+:::
+
+:::theorem[Hamming (sphere-packing) bound]{#hamming-bound}
+Any binary code of length $n$, size $M$ and minimum distance $d = 2t+1$ satisfies
+
+$$M \cdot \sum_{i=0}^{t}\binom ni \le 2^{n}.$$
+
+A code attaining the bound with equality is called **perfect**.
+:::
+
+:::proof
+By the capability theorem the balls of radius $t$ about distinct codewords are pairwise disjoint (a word in two such balls would be within $t$ of two codewords at distance $\ge 2t+1$, contradicting the triangle inequality). Each ball contains $V(n,t)$ words and they all sit inside $\mathbb F_2^n$, so $M\,V(n,t)\le 2^n$.
+:::
+
+:::theorem[Singleton bound]{#singleton-bound}
+Any code of length $n$, size $M = 2^k$ and minimum distance $d$ satisfies $d \le n-k+1$.
+:::
+
+:::proof
+Delete the last $d-1$ coordinates of every codeword. Two distinct codewords differ in at least $d$ positions, so they still differ somewhere among the remaining $n-d+1$ coordinates; the projection is therefore injective. Hence $2^k \le 2^{n-d+1}$, i.e. $k \le n-d+1$.
+:::
+
+:::theorem[Gilbert–Varshamov bound]{#gv-bound}
+For any $n$ and $d$ there exists a binary code of length $n$ and minimum distance at least $d$ with
+
+$$M \ge \frac{2^{n}}{V(n,d-1)} = \frac{2^n}{\sum_{i=0}^{d-1}\binom ni}.$$
+:::
+
+:::proof
+Greedy construction. Start with an empty code and repeatedly add any word of $\mathbb F_2^n$ at distance $\ge d$ from every word already chosen, stopping when no such word exists. At that point the balls of radius $d-1$ about the chosen words cover $\mathbb F_2^n$ — otherwise an uncovered word could be added — so $M\,V(n,d-1) \ge 2^n$.
+:::
+
+:::corollary[Asymptotic form]{#gv-asymptotic}
+For relative distance $\delta = d/n$ fixed with $\delta<1/2$, there exist codes of rate $R \ge 1 - h_2(\delta) - o(1)$, while the Hamming bound forces $R \le 1 - h_2(\delta/2) + o(1)$.
+:::
+
+:::proof
+Insert the ball-volume estimates of the volume lemma into the two previous theorems and take logarithms divided by $n$.
+:::
+
+:::intuition
+The three bounds are a packing problem in disguise. Singleton is a coordinate-counting argument and is usually loose in the binary case; Hamming says the balls must fit; Gilbert–Varshamov says that if you place points greedily you cannot get stuck too early, because a stuck configuration must cover the whole space. The gap between the Gilbert–Varshamov curve and the Hamming curve has resisted closure for binary codes since 1952 — the best possible rate–distance trade-off is still unknown.
+:::
+
+:::example[Can a $(15,11)$ single-error-correcting code exist?]
+Check the Hamming bound for $n=15$, $k=11$, $t=1$.
+:::
+
+:::solution
+$M = 2^{11} = 2048$ and $V(15,1) = 1 + 15 = 16$, so $M\,V = 2048 \times 16 = 32768 = 2^{15}$. The bound holds with equality, so such a code — if it exists — is perfect. It does exist: it is the Hamming code with $m=4$, built in the next section.
+:::
+
+:::pitfall
+Perfect codes are rare, not ideal. The complete list of binary perfect codes is: the trivial codes ($\mathcal C = \mathbb F_2^n$, and the repetition codes of odd length), the Hamming codes, and the $(23,12,7)$ Golay code. "Perfect" means the packing has no wasted space, not that the code is a good choice — long Hamming codes are perfect and have relative distance tending to $0$.
+:::
+
+## Hamming Codes: Construction and Parameters
+
+<!-- section: definition-hamming -->
+
+The design idea is to make the syndrome do double duty: not merely announce that an error occurred, but spell out its position in binary.
+
+:::definition[Binary Hamming code]{#hamming-code}
+For $m \ge 2$, the **Hamming code** $\mathcal H_m$ is the linear code of length $n = 2^m-1$ whose parity-check matrix $H$ is the $m \times (2^m-1)$ matrix whose columns are all the distinct nonzero vectors of $\mathbb F_2^m$. When the columns are ordered so that column $i$ is the binary representation of $i$, the code is in **position-ordered** form.
+:::
+
+:::theorem[Parameters of the Hamming code]{#hamming-parameters}
+$\mathcal H_m$ is an $[n,k,d]$ code with
+
+$$n = 2^m-1, \qquad k = 2^m-1-m, \qquad d = 3,$$
+
+so it corrects one error, and its rate is $R = 1 - \frac{m}{2^m-1} \to 1$ as $m\to\infty$.
+:::
+
+:::proof
+$H$ has $m$ rows and contains all $m$ weight-one columns, so its rank is $m$ and the null space has dimension $n - m = 2^m - 1 - m$; that is $k$.
+
+For the distance, use the column criterion. No single column is zero (all columns are nonzero), so $d \ge 2$. No two columns are equal, so no two are dependent and $d\ge3$. Finally, any three distinct nonzero columns $\mathbf a, \mathbf b$ and $\mathbf a + \mathbf b$ — and $\mathbf a + \mathbf b$ is nonzero and distinct from both, so it is a column — sum to zero, exhibiting a dependent triple. Hence $d = 3$ exactly.
+:::
+
+:::theorem[Hamming codes are perfect]{#hamming-perfect}
+$\mathcal H_m$ attains the Hamming bound with equality: the balls of radius $1$ about its codewords partition $\mathbb F_2^{n}$.
+:::
+
+:::proof
+$|\mathcal C|\,V(n,1) = 2^{n-m}(1+n) = 2^{n-m}\,2^{m} = 2^{n}$, since $1+n = 2^m$. Equality in the sphere-packing bound means the disjoint balls exhaust the space.
+:::
+
+:::intuition
+With $m$ parity bits there are $2^m - 1$ nonzero syndromes, and there are exactly $2^m-1$ possible single-error positions in a word of that length. Hamming's construction matches the two sets up perfectly, leaving no syndrome unused and no error position unaddressed. That exact fit is what "perfect" means here.
+:::
+
+:::example[The $(7,4)$ Hamming code]
+Write down the parameters and a parity-check matrix for $m=3$, and verify perfection.
+:::
+
+:::solution
+Parameters: $n = 2^3-1 = 7$, $k = 7-3 = 4$, $d=3$, $t=1$, rate $4/7 \approx 0.571$.
+
+Position-ordered parity-check matrix, with column $i$ the binary form of $i$ (most significant bit on top):
+
+$$H = \begin{bmatrix} 0&0&0&1&1&1&1\\ 0&1&1&0&0&1&1\\ 1&0&1&0&1&0&1 \end{bmatrix}.$$
+
+Perfection: there are $2^4 = 16$ codewords, each owning a ball of $1 + 7 = 8$ words, and $16 \times 8 = 128 = 2^7$ fills the space exactly.
+:::
+
+:::remark[The dual: the simplex code]
+The dual code $\mathcal H_m^{\perp}$, generated by the rows of $H$, is the $[2^m-1,\ m,\ 2^{m-1}]$ **simplex code**: every nonzero codeword has the same weight $2^{m-1}$, and all pairs of codewords are equidistant — hence the name. Its punctured extension is the first-order Reed–Muller code used by Mariner 9 to return pictures of Mars. Hamming codes have very high rate and small distance; their duals have very low rate and enormous distance. They are the two extremes of the same construction.
+:::
+
+:::pitfall
+The rate of $\mathcal H_m$ tends to $1$, which sounds excellent until one notices that the relative distance $d/n = 3/(2^m-1)$ tends to $0$. On a BSC with fixed $p$, a long Hamming code fails almost surely, because the expected number of errors $pn$ greatly exceeds $t=1$. Hamming codes are good for *very* clean channels, not for noisy ones.
+:::
+
+## Syndrome Decoding of a Hamming Code
+
+<!-- section: syndrome-decoding -->
+
+For a general linear code, syndrome decoding needs a stored table of $2^{n-k}$ coset leaders. For Hamming codes the table is unnecessary: the syndrome *is* the address.
+
+:::theorem[Syndrome equals error position]{#syndrome-address}
+Let $\mathcal H_m$ be in position-ordered form and let $\mathbf r = \mathbf c + \mathbf e$ with $w(\mathbf e)\le 1$. If $\mathbf e = \mathbf 0$ then $\mathbf s = H\mathbf r^{\mathsf T} = \mathbf 0$; if $\mathbf e$ is the unit vector in position $i$, then $\mathbf s$ is the binary representation of $i$.
+:::
+
+:::proof
+$\mathbf s = H\mathbf e^{\mathsf T}$ by the syndrome proposition, and $H$ times a unit vector in position $i$ is the $i$-th column of $H$, which in position-ordered form is the binary representation of $i$. The zero-error case is immediate since codewords are in the null space.
+:::
+
+:::recipe[Decoding a Hamming code]{#syndrome-decoding}
+1. Compute $\mathbf s = H\mathbf r^{\mathsf T}$ over $\mathbb F_2$.
+2. If $\mathbf s = \mathbf 0$, output $\mathbf r$ unchanged.
+3. Otherwise read $\mathbf s$ as an integer $i \in \{1,\dots,2^m-1\}$ and flip bit $i$ of $\mathbf r$.
+:::
+
+The whole decoder is $m$ parity computations and one bit flip, which is why Hamming codes survive in memory controllers where the decoding latency budget is a few gate delays.
+
+:::proposition[Behaviour under two errors]{#hamming-two-errors}
+If $w(\mathbf e) = 2$, the decoder of the recipe above always produces a codeword different from the one sent; it never reports failure.
+:::
+
+:::proof
+Since $d = 3$ and the code is perfect, every word of $\mathbb F_2^n$ lies in exactly one radius-$1$ ball. A word at distance $2$ from the sent codeword $\mathbf c$ lies in the ball of some other codeword $\mathbf c'$ with $d(\mathbf c,\mathbf c') = 3$, so the decoder "corrects" to $\mathbf c' \neq \mathbf c$. There is no syndrome left over to signal failure — perfection has no spare room for a "detect only" region.
+:::
+
+:::example[Decoding a single error]
+In the position-ordered $(7,4)$ code, the all-zero codeword is sent and position $5$ is flipped, so $\mathbf r = 0000100$. Decode it.
+:::
+
+:::solution
+$\mathbf s = H\mathbf r^{\mathsf T}$ selects the columns where $\mathbf r$ has a one and adds them; only position $5$ is set, so $\mathbf s$ is column $5$, which is $101_2$. Reading $101_2 = 5$, flip bit $5$ of $\mathbf r$ to recover $0000000$. Recomputing the syndrome gives $\mathbf 0$, confirming a valid codeword.
+:::
+
+:::example[Decoding a double error, and being misled]
+The same code, the same all-zero codeword, but positions $3$ and $5$ flip: $\mathbf r = 0010100$.
+:::
+
+:::solution
+The syndrome is the sum of columns $3$ and $5$: $011_2 \oplus 101_2 = 110_2 = 6$. The decoder flips bit $6$, producing the word $0010110$ — a codeword, but not the one sent, and at distance $3$ from it. The decoder reports success. This silent miscorrection is exactly what the previous proposition predicted, and it is what the extended code in the next section is designed to prevent.
+:::
+
+:::intuition
+Each parity check of the position-ordered Hamming code covers the positions whose binary address has a one in a given bit. A single flip breaks precisely those checks whose bit is set in its address, so the pattern of failed checks spells the address in binary. It is a binary search executed in parallel.
+:::
+
+## Extended Hamming Codes and SECDED
+
+<!-- section: extended -->
+
+The defect of a perfect code is that it has nowhere to put an "I do not know". One extra bit creates that room.
+
+:::definition[Extended Hamming code]{#extended-hamming}
+The **extended Hamming code** $\widehat{\mathcal H}_m$ is obtained from $\mathcal H_m$ by appending an overall parity bit $c_0 = \sum_{i\ge1} c_i$. Its parity-check matrix is
+
+$$\widehat H = \begin{bmatrix} 1 & 1 & \cdots & 1 \\ 0 & & H & \end{bmatrix},$$
+
+with the all-ones row checking overall parity.
+:::
+
+:::theorem[Parameters of the extended code]{#extended-parameters}
+$\widehat{\mathcal H}_m$ is a $[2^m,\ 2^m-1-m,\ 4]$ code: the length grows by one, the dimension is unchanged, and the minimum distance rises from $3$ to $4$.
+:::
+
+:::proof
+Every codeword of $\widehat{\mathcal H}_m$ has even weight by construction. A word of $\mathcal H_m$ of weight $3$ therefore extends to a word of weight $4$, and no nonzero extended codeword can have weight $1$ or $2$: weight $1$ would violate even parity together with $d(\mathcal H_m)=3$, and weight $2$ would project to a word of weight $\le 2$ in $\mathcal H_m$, of which there are none nonzero. Hence $d = 4$, attained. The dimension is unchanged because the appended bit is a function of the others.
+:::
+
+:::corollary[SECDED]{#secded}
+$\widehat{\mathcal H}_m$ corrects any single error and simultaneously detects any double error: single error correction, double error detection.
+:::
+
+:::proof
+Write $\mathbf s = (s_0, \mathbf s')$ for the overall-parity bit and the Hamming syndrome. If $\mathbf e = \mathbf 0$, then $s_0=0$ and $\mathbf s' = \mathbf 0$. A single error has odd weight, so $s_0 = 1$, and $\mathbf s'$ addresses it (or is zero if the flipped bit was the overall parity bit itself). A double error has even weight, so $s_0 = 0$, while $\mathbf s' \neq \mathbf 0$ because $d(\mathcal H_m)=3$ means no weight-2 pattern is a codeword. So the three cases are distinguished by the pair $(s_0, \mathbf s')$:
+
+$$(0,\mathbf 0) \Rightarrow \text{no error}, \quad (1, \mathbf s')\Rightarrow \text{correct position } \mathbf s', \quad (0,\mathbf s'\neq\mathbf 0)\Rightarrow \text{uncorrectable, flag it}.$$
+:::
+
+:::intuition
+The overall parity bit answers one question the Hamming syndrome cannot: was the number of errors odd or even? If the syndrome points somewhere but the parity says "even number of flips", the pointer is lying and the controller should raise an alarm instead of corrupting data silently.
+:::
+
+:::example[ECC memory]
+A $(72,64)$ SECDED code is the standard for server DRAM: $64$ data bits and $8$ check bits. Explain the parameters and what the controller does in each syndrome case.
+:::
+
+:::solution
+Take $m=7$: $\mathcal H_7$ is $[127,120,3]$, and its extension is $[128,120,4]$. Shortening by deleting $56$ information coordinates (fixing them to zero and removing them) leaves a $[72,64,4]$ code, which is what memory modules implement; shortening never decreases the minimum distance, since the shortened code is a subset of the original restricted to a coordinate subset.
+
+On a read: syndrome zero means deliver the data; odd overall parity with a nonzero pointer means flip the indicated bit, deliver the data, and log a correctable error; even overall parity with a nonzero pointer means two or more bits are wrong, and the controller raises an uncorrectable-error machine check rather than delivering wrong data. The last case is the whole reason for the extra bit.
+:::
+
+:::pitfall
+SECDED does not *correct* two errors; the extra distance buys detection only. And with three or more errors even the detection guarantee fails — a weight-$4$ pattern can be a codeword, delivering corrupted data with a clean syndrome. Chipkill and similar schemes exist because DRAM failures are not independent single bits.
+:::
+
+## Common Mistakes
+
+- **Confusing capacity with the raw symbol rate**: capacity is the supremum of *reliable* information rates after optimal coding. You may push symbols faster, but not information.
+- **Assuming the best input is always uniform**: uniform is optimal for weakly symmetric channels. For the Z-channel, or for parallel Gaussian channels, it is not; water-filling and Blahut–Arimoto exist because the general answer is not uniform.
+- **Forgetting that capacity is asymptotic**: it is approached as the block length grows. At short block lengths there is a real penalty, quantified by finite-blocklength theory.
+- **Reading achievability as a construction**: the theorem says good codes *exist*. Finding ones that can also be decoded quickly took fifty years.
+- **Mixing capacity with rate–distortion**: capacity is a *maximum* of $I(X;Y)$ over inputs (channel coding); the rate–distortion function is a *minimum* of $I$ over test channels (lossy source coding). Maximum versus minimum is the tell.
+- **Applying $C=B\log(1+\mathrm{SNR})$ to a discrete-time model**: the bandwidth form already counts uses per second; the discrete-time form is per use, and carries the factor $\tfrac12$ that two uses per hertz per second supplies.
+
+The definition of capacity as $\max_{p(x)} I(X;Y)$ is an *information* quantity: it is computed from the transition matrix and has, on the face of it, nothing to do with codes, messages or errors. The noisy-channel coding theorem is the assertion that this information quantity coincides with an entirely different, *operational* quantity — the supremum of rates at which messages can be pushed through the channel with vanishing error probability. That two such different definitions give the same number is the substance of the theorem and the reason it is one of the central results of the twentieth century.
+
+- **Reading the theorem as "zero error at rate $C$"**: the guarantee is for rates *strictly below* $C$, with error tending to zero as $n$ grows, never exactly zero at finite length (except in degenerate cases like the noisy typewriter).
+- **Confusing average with maximal error probability**: the random-coding argument controls the *average*; expurgation is the extra step that converts it to a maximal-error guarantee at the cost of one bit of rate.
+- **Forgetting that $A_\epsilon^{(n)}$ requires all three conditions**: marginal typicality of $x^n$ and of $y^n$ does not imply joint typicality, and it is the joint condition that produces the $2^{-nI}$ bound.
+- **Applying Fano's inequality with the wrong alphabet**: the $\log|\mathcal W|$ term is the log of the *message* set size, which is $nR$ for a rate-$R$ code — using $\log 2$ instead loses the whole argument.
+- **Believing achievability gives a decoder**: typicality decoding compares against every codeword and is exponential in $n$. Practical decoding needs structure, which random codes deliberately lack.
+- **Assuming separation always holds**: it is a point-to-point, asymptotic, stationary-source theorem. Networks, delay constraints and short blocks all break it.
+
+Shannon's theorem promises codes; it does not deliver them. The rest of this chapter is about the codes themselves, and it starts where coding theory started, with a geometric question: how do you place $M$ points in the cube $\{0,1\}^n$ so that noise moving a point a little cannot make it look like a different point?
+
+- **Treating detection and correction as the same capability**: a parity bit says *that* something is wrong, never *where*. Correction needs enough distance to identify the error pattern, which costs roughly twice as much.
+- **Forgetting linearity when computing $d$**: for a linear code the minimum distance is the minimum nonzero *weight*, and the column condition on $H$ gives it faster still.
+- **Assuming errors are independent**: real media produce bursts. A code designed for the BSC needs interleaving before it faces a bursty channel, which is why CRCs and interleavers appear together in standards.
+- **Misreading the Singleton bound as achievable over $\mathbb F_2$**: binary MDS codes attaining $d = n-k+1$ are only the trivial ones; Reed–Solomon codes attain it over larger alphabets.
+- **Thinking a bigger $t$ is always better**: raising $t$ costs rate, and by the Hamming bound the cost is roughly $h_2(t/n)$ per symbol. Systems balance $t$ against rate, latency and the actual error statistics.
+- **Confusing the coset leader with the true error**: syndrome decoding returns the *most likely* error consistent with the syndrome. When the true error is heavier than the leader, the decoder confidently outputs the wrong codeword.
+
+Richard Hamming, frustrated in 1947 by a relay computer that halted every weekend on a detected but uncorrected error, asked why a machine clever enough to know it was wrong could not work out what the right answer was. The family of codes he published in 1950 is the answer, and it is optimal in the exact sense of the sphere-packing bound.
+
+- **Expecting a Hamming code to correct two errors**: it has $d=3$, so $t=1$. Worse, being perfect, it miscorrects double errors *silently* rather than reporting failure.
+- **Forgetting the position ordering**: the syndrome-is-the-address property holds only when the columns of $H$ are the binary representations in order. Any column permutation gives an equivalent code, but then a lookup table is needed.
+- **Confusing rate with reliability**: the rate of $\mathcal H_m$ tends to $1$ while its relative distance tends to $0$. Long Hamming codes are fast and fragile.
+- **Believing perfect codes are plentiful**: over $\mathbb F_2$ the only ones are the trivial codes, the odd-length repetition codes, the Hamming codes and the $(23,12,7)$ Golay code.
+- **Mixing up extension and shortening**: extending appends a parity coordinate and raises $d$ from $3$ to $4$; shortening deletes information coordinates, lowering $n$ and $k$ together while leaving $d$ at least as large.
+- **Assuming modern systems rely on Hamming codes for the hard cases**: they are used where blocks are tiny and latency is measured in gate delays. Anything trying to approach capacity uses LDPC, turbo or polar codes.
+
+Hamming's codes are optimal packings but hopeless at capacity: their distance does not grow with the block length. Shannon's argument says that long random codes are excellent — the problem is decoding them. Robert Gallager's 1963 thesis found the resolution: choose the parity-check matrix at random but *sparse*, so that the code is still essentially random, yet the constraints are local enough to be resolved by a message-passing algorithm. The idea was forgotten for thirty years, rediscovered by MacKay and Neal in the mid-1990s, and is now in Wi-Fi, DVB-S2, 5G data channels and every hard-disk controller.
+
+- **Confusing LDPC with turbo codes**: both are iteratively decoded and capacity-approaching, but LDPC codes are defined by a sparse parity-check matrix and decoded on its Tanner graph, whereas turbo codes concatenate convolutional codes through an interleaver.
+- **Assuming any sparse $H$ gives a good code**: degree-2-heavy ensembles violate the stability condition, short cycles wreck finite-length performance, and $d_v = 2$ ensembles have logarithmic minimum distance.
+- **Treating belief propagation as maximum likelihood**: it is exact only on trees. On a loopy graph it may converge to a non-codeword, oscillate, or stop at a trapping set.
+- **Reading a threshold as a finite-length guarantee**: thresholds are asymptotic. A length-1000 code performs visibly worse than its ensemble threshold predicts.
+- **Forgetting that the all-zero codeword suffices for simulation**: for a linear code on a symmetric channel the error probability does not depend on the transmitted codeword, so simulations transmit $\mathbf 0$ — but only after checking that the decoder itself is symmetric.
+- **Ignoring the error floor**: the waterfall is not the whole curve. Systems that need error rates below $10^{-12}$ care more about trapping sets than about the threshold.
+
+LDPC and turbo codes approach capacity but do not provably attain it, and their analysis is asymptotic and ensemble-averaged. In 2009 Erdal Arıkan produced the first explicit construction with a proof: a deterministic family of codes, with encoding and decoding in $O(n\log n)$, that achieves the symmetric capacity of *any* binary-input memoryless channel. The mechanism is a phenomenon he named channel polarization.
+
+- **Reading the polarization theorem as a finite-length guarantee**: it says the *fraction* of extremal channels converges. At any finite $n$ many synthetic channels are still mediocre, and they are the ones that cause errors.
+- **Confusing the polar transform with the FFT**: $G_n$ has the butterfly structure of a fast Hadamard transform, but the code lies in the choice of frozen set, which is channel-dependent and has no analogue in signal processing.
+- **Thinking frozen bits carry information**: they carry *known* values. Their role is to make the good synthetic channels usable, not to add parity.
+- **Assuming SC is maximum likelihood**: it is greedy and cannot revisit a decision. SCL with $L>1$ plus a CRC is what approaches ML.
+- **Designing the information set at the wrong SNR**: the ordering of synthetic channels depends on the channel. A set chosen for a clean channel is wrong for a noisy one, which is why standards fix a single nested reliability sequence as a compromise.
+- **Expecting polar codes to dominate everywhere**: at long blocks and high rates LDPC codes usually win on implementation; 5G deploys both for exactly that reason.
+
+In 1993 Berrou, Glavieux and Thitimajshima reported bit error rates within half a decibel of the Shannon limit at rate $1/2$ — a claim so far beyond the state of the art that the audience largely disbelieved it until the simulations were reproduced. Their construction combined two ingredients that had been available for thirty years: convolutional codes, and the idea of exchanging soft information between decoders. We treat convolutional codes first, because turbo codes are built out of them and because the Viterbi algorithm is the cleanest example of decoding by dynamic programming.
+
+- **Calling every concatenation "turbo"**: the classical construction is *parallel* concatenation of two RSC encoders. Serial concatenation is a different (and sometimes better) architecture with its own analysis.
+- **Using feedforward components**: without recursion there is no interleaver gain, and the error floor does not fall with block length.
+- **Passing a posteriori instead of extrinsic information**: this double-counts evidence and produces a confidently wrong decoder.
+- **Expecting a short turbo code to perform well**: interleaver gain is a $k^{-1}$ effect. Short blocks have visible floors, which is why 5G control channels use polar codes instead.
+- **Treating the BCJR as maximum likelihood for the whole code**: it is exact for one constituent trellis; the concatenation is decoded only approximately, by iteration.
+- **Comparing against the wrong Shannon limit**: for binary signalling the relevant number at rate $1/2$ is $0.187$ dB in $E_b/N_0$, not $0$ dB.
+
+When the receiver can talk back, the system stops being a one-way pipe. The surprise is how little this changes the fundamental limit and how much it changes everything else: feedback leaves the capacity of a memoryless point-to-point channel exactly where it was, while transforming the complexity, the delay and the error exponent.
+
+- **Claiming feedback raises the capacity of a DMC**: it does not. The claim is true for channels with memory and for networks, and the distinction is exactly where the proof's hypotheses are used.
+- **Treating error detection as free**: the clean ARQ throughput formula assumes a perfect detector. Perfect detection is itself side information, and paying for it honestly with a CRC costs rate; only FEC combined with retransmission approaches capacity.
+- **Ignoring feedback delay and feedback errors**: real ACKs are late and sometimes lost. Protocols need timers, sequence numbers and robustness to a lost ACK, and the clean analysis above assumes none of that.
+- **Assuming variable-length coding is impractical**: incremental-redundancy HARQ is variable-length coding, deployed at planetary scale.
+- **Forgetting the gain in exponent and delay**: even where capacity is unchanged, feedback reduces the number of channel uses needed to reach a target error probability, sometimes dramatically.
+- **Transmitting the full posterior rather than an extrinsic or innovation-like quantity**: as in turbo decoding, resending what the other side already knows wastes the channel — the good feedback schemes transmit only what is new.

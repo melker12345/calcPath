@@ -1,0 +1,627 @@
+---
+title: Distributed Source Coding and Side Information
+---
+
+# Distributed Source Coding and Side Information
+
+Compressing correlated sources that cannot talk to each other — Slepian–Wolf, Wyner–Ziv, and the binning argument behind both.
+
+## Four Configurations of Side Information
+
+<!-- section: rd-si-decoder -->
+
+Let $(X,Y)\sim p(x,y)$ be a pair of correlated discrete memoryless sources. We wish to describe $X$ to a decoder with distortion at most $D$ under $d(x,\hat x)$. There are four cases, according to who knows $Y$.
+
+:::notation[The four rate–distortion functions]{#four-si-cases}
+- $R(D)$: neither encoder nor decoder knows $Y$. The ordinary rate–distortion function.
+- $R_{\mathrm{enc}}(D)$: the encoder knows $Y$, the decoder does not.
+- $R_{\mathrm{WZ}}(D)$: the decoder knows $Y$, the encoder does not. The **Wyner–Ziv** function.
+- $R_{X\mid Y}(D)$: both know $Y$. The **conditional** rate–distortion function.
+:::
+
+:::theorem[Ordering of the four cases]{#si-ordering}
+For every $D$,
+
+$$R_{X\mid Y}(D)\ \le\ R_{\mathrm{WZ}}(D)\ \le\ R(D), \qquad\text{and}\qquad R_{\mathrm{enc}}(D) = R(D).$$
+:::
+
+The second statement is the surprise, and it is proved in the next section. The first is proved here, once the two middle functions have been defined; for now note what it says. Knowledge at the *decoder* strictly helps in general; knowledge at the *encoder alone* helps not at all; and having it at both ends is best, but for the quadratic-Gaussian source it is no better than having it at the decoder alone.
+
+:::intuition
+Why is the decoder the privileged place? Because the decoder is where the reconstruction happens. If the decoder holds $Y$, the encoder only has to describe what $Y$ does not already reveal — and remarkably, it can do that *without knowing what $Y$ is*, by sending a coarse "which bin" message and letting the decoder use its own $Y$ to pick out the right item within the bin.
+
+An encoder that knows $Y$, by contrast, cannot make the decoder know it. Whatever it computes from $Y$ must still be transmitted in full if the decoder is to use it, and the distortion is measured against $X$, not against anything the encoder learned.
+:::
+
+:::example[How much is side information worth? A Gaussian benchmark]{#ex-si-worth}
+Let $X\sim N(0,1)$ and $Y = X+Z$ with $Z\sim N(0,0.5)$ independent, squared-error distortion, target $D = 0.1$. Compute $R(D)$ and $R_{X\mid Y}(D)$ and compare.
+:::
+
+:::solution
+*No side information.* $R(0.1) = \tfrac12\log_2(1/0.1) = \tfrac12\log_2 10 = \tfrac12(3.3219) = 1.661$ bits.
+
+*Side information at both ends.* First the conditional variance:
+
+$$\sigma_{XY} = \operatorname{cov}(X, X+Z) = \operatorname{Var}(X) = 1, \qquad \sigma_Y^2 = 1 + 0.5 = 1.5,$$
+$$\operatorname{Var}(X\mid Y) = \sigma_X^2 - \frac{\sigma_{XY}^2}{\sigma_Y^2} = 1 - \frac{1}{1.5} = \frac13 .$$
+
+Given $Y$, the residual $X - \mathbb{E}[X\mid Y]$ is Gaussian with variance $1/3$, independent of $Y$, so the problem is ordinary Gaussian rate–distortion on that residual:
+
+$$R_{X\mid Y}(0.1) = \tfrac12\log_2\frac{1/3}{0.1} = \tfrac12\log_2(3.3333) = \tfrac12(1.7370) = 0.869\ \text{bits}.$$
+
+*Comparison.* The side information saves $1.661 - 0.869 = 0.792$ bits per sample, which is exactly $I(X;Y) = \tfrac12\log_2\frac{\sigma_X^2}{\operatorname{Var}(X\mid Y)} = \tfrac12\log_2 3 = 0.7925$ bits.
+
+Sanity check: $D = 0.1 < \operatorname{Var}(X\mid Y) = 1/3$, so the formula is in range. And the saving equalling $I(X;Y)$ exactly is special to the Gaussian case — it reflects that $\tfrac12\log_2(\sigma^2/D) - \tfrac12\log_2(\sigma^2_{X|Y}/D)$ has the $D$ cancel. For a general source the saving depends on $D$.
+:::
+
+## Side Information at the Encoder Only
+
+<!-- section: rd-si-encoder -->
+
+This configuration is the one most often misremembered, so it is worth isolating. The encoder observes both $X^n$ and $Y^n$; the decoder observes only the message and must reproduce $X^n$.
+
+:::theorem[Encoder-only side information is worthless]{#enc-si-useless}
+Let $(X,Y)$ be drawn i.i.d. from $p(x,y)$ and let the distortion measure depend only on $(x,\hat x)$. Then
+
+$$R_{\mathrm{enc}}(D) = R(D)$$
+
+for every $D$: an encoder that sees $Y^n$ in addition to $X^n$ cannot beat the ordinary rate–distortion function.
+:::
+
+:::proof
+*Achievability* is trivial: ignore $Y^n$ and use an ordinary rate–distortion code, so $R_{\mathrm{enc}}(D) \le R(D)$.
+
+*Converse.* Let $M = f_n(X^n,Y^n)$ be any message of rate $R$ and $\hat X^n = g_n(M)$ the reproduction, with $\mathbb{E}[d(X^n,\hat X^n)]\le D$. Then
+
+$$nR \ \ge\ H(M)\ \ge\ I(X^n;M) \ \ge\ I(X^n;\hat X^n),$$
+
+the last step by data processing, since $\hat X^n$ is a function of $M$. From here the argument is word for word the converse of the rate–distortion theorem:
+
+$$I(X^n;\hat X^n) = \sum_i H(X_i) - H(X^n\mid\hat X^n) \ \ge\ \sum_i I(X_i;\hat X_i)\ \ge\ \sum_i R(D_i)\ \ge\ n R(D),$$
+
+by independence of the $X_i$, the chain rule, convexity of $R$ and Jensen. Nowhere did the argument use how $M$ was produced — only that it is a random variable and that $\hat X^n$ is a function of it. So the extra observation $Y^n$ at the encoder buys nothing.
+:::
+
+:::remark
+The theorem is sharp about its hypotheses, and each one matters.
+
+- If the distortion measure depends on $y$ as well, $d(x,y,\hat x)$, the conclusion fails: the encoder's knowledge of $Y$ now changes which reproduction is good.
+- If the decoder must reproduce $Y$ too, or a function of both, it fails.
+- If there is a *rate constraint plus a cost constraint*, as in channel coding with state known at the transmitter (the Gel'fand–Pinsker / "writing on dirty paper" setting), the transmitter's knowledge is famously worth a great deal. That is the channel-coding dual, and the asymmetry is real: state at the *transmitter* helps in channel coding, side information at the *receiver* helps in source coding.
+:::
+
+:::pitfall
+A widely repeated but false claim is that encoder-only side information reduces the rate to $R(D) - I(X;Y)$. It does not reduce it at all. The intuition behind the false claim — "the encoder can describe only the innovation $X - \mathbb{E}[X\mid Y]$" — breaks because the decoder, lacking $Y$, cannot add $\mathbb{E}[X\mid Y]$ back, and the encoder would then have to transmit that term as well.
+:::
+
+:::example[Why "send only the innovation" fails]{#ex-innovation-fails}
+Let $X\sim N(0,1)$ and $Y = X + Z$ with $Z\sim N(0,0.5)$, and suppose the encoder sees both. Show that describing the innovation alone does not meet a distortion target of $D = 0.1$ at the conditional rate.
+:::
+
+:::solution
+Write $\hat m = \mathbb{E}[X\mid Y] = \frac{2}{3}Y$ and $E = X - \hat m$, so $\operatorname{Var}(E) = 1/3$ and $E$ is independent of $Y$.
+
+Suppose the encoder spends $R_{X\mid Y}(0.1) = 0.869$ bits per sample describing $E$ to within squared error $0.1$, sending $\hat E$. The decoder now holds $\hat E$ — and nothing else. Its best reproduction is $\hat X = \hat E + \mathbb{E}[\hat m] = \hat E$, since $\hat m$ has mean zero and is unknown to it. The resulting distortion is
+
+$$\mathbb{E}[(X-\hat E)^2] = \mathbb{E}[(E - \hat E)^2] + \mathbb{E}[\hat m^2] = 0.1 + \operatorname{Var}\bigl(\tfrac23 Y\bigr) = 0.1 + \tfrac49(1.5) = 0.1 + 0.6667 = 0.767,$$
+
+using independence of $E$ (hence of $E-\hat E$) from $Y$. That is nowhere near $0.1$.
+
+To fix it the encoder must also describe $\hat m$, a variance-$2/3$ Gaussian, which by the theorem costs back everything that was saved.
+
+Sanity check: $0.767 \gg 0.1$, and the shortfall $0.667$ is exactly the variance of the predictable part the decoder never received. The theorem says the total bill is $R(0.1) = 1.661$ bits either way.
+:::
+
+## Conditional Rate–Distortion
+
+<!-- section: conditional-rd -->
+
+:::definition[Conditional rate–distortion function]{#conditional-rd}
+When both encoder and decoder observe $Y$,
+
+$$R_{X\mid Y}(D) = \min_{\,p(\hat x\mid x,y)\,:\;\mathbb{E}[d(X,\hat X)]\le D} I(X;\hat X\mid Y).$$
+:::
+
+:::theorem[Conditional rate–distortion theorem]{#cond-rd-theorem}
+$R_{X\mid Y}(D)$ is the least achievable rate when both terminals observe $Y^n$, and
+
+$$R_{X\mid Y}(D) \ \le\ R(D) \qquad\text{for every } D.$$
+:::
+
+:::proof
+Achievability and the converse are the ordinary rate–distortion theorem applied conditionally on each $y$-typical sequence, with the distortion budget allocated across the $y$-types; convexity of $R_{X|y}(\cdot)$ makes the allocation a Jensen argument as before.
+
+For the inequality, let $p^\ast(\hat x\mid x)$ attain $R(D)$. It is in particular a valid choice of $p(\hat x\mid x,y)$ that ignores $y$, so it is feasible for the conditional problem, and under it $\hat X - X - Y$ is a Markov chain. Then
+
+$$I(X;\hat X\mid Y) = I(X;\hat X) - I(\hat X;Y) + I(\hat X; Y\mid X) = I(X;\hat X) - I(\hat X;Y) \le I(X;\hat X) = R(D),$$
+
+where $I(\hat X;Y\mid X) = 0$ by the Markov chain and $I(\hat X;Y)\ge 0$. Hence $R_{X\mid Y}(D) \le R(D)$.
+:::
+
+:::intuition
+With $Y$ at both ends, the problem is simply ordinary rate–distortion on a source that has already had the predictable part removed. For the Gaussian case, that is literally true: describe $X - \mathbb{E}[X\mid Y]$, whose variance is the conditional variance, and let the decoder add back its own $\mathbb{E}[X\mid Y]$.
+
+The gap $R(D) - R_{X|Y}(D)$ is what the correlation is worth, and the identity in the proof shows it equals $I(\hat X; Y)$ — the part of the description the decoder could have predicted.
+:::
+
+We can now prove the first half of the ordering theorem, which needs the Wyner–Ziv function defined in the next part; it is stated here because it belongs with the comparison.
+
+:::proposition[Conditional is at most Wyner–Ziv]{#cond-le-wz}
+$R_{X\mid Y}(D)\le R_{\mathrm{WZ}}(D)$ for every $D$.
+:::
+
+:::proof
+Let $U$ with $U - X - Y$ and reconstruction $\hat x(u,y)$ be feasible for the Wyner–Ziv problem, so $\mathbb{E}[d(X,\hat x(U,Y))]\le D$. Set $\hat X = \hat x(U,Y)$. Conditioned on $Y$, $\hat X$ is a deterministic function of $U$, so the conditional data-processing inequality gives $I(X;\hat X\mid Y)\le I(X;U\mid Y)$. Since $\hat X$ is a valid choice for the conditional problem, $R_{X\mid Y}(D)\le I(X;\hat X\mid Y)\le I(X;U\mid Y)$. Minimizing the right side over feasible $(U,\hat x)$ gives the claim.
+:::
+
+## Beyond Two Terminals
+
+<!-- section: general-rd-si -->
+
+Once there is more than one decoder, or more than one description, single-letter answers become scarce. Three settings are worth naming precisely, because they mark the boundary of what is known.
+
+:::definition[Successive refinement]{#successive-refinement}
+A source is **successively refinable** for distortions $D_1 > D_2$ if there is a two-layer code — a base layer of rate $R_1$ and a refinement of rate $R_2 - R_1$ — such that the base alone achieves $D_1$ and both layers together achieve $D_2$, with $R_1 = R(D_1)$ and $R_2 = R(D_2)$. That is, nothing is lost by insisting the coarse description be a prefix of the fine one.
+:::
+
+:::theorem[Equitz–Cover condition]{#equitz-cover}
+A source is successively refinable at $(D_1,D_2)$ if and only if there exist reproductions $\hat X_1, \hat X_2$ achieving $R(D_1)$ and $R(D_2)$ respectively for which
+
+$$\hat X_1 - \hat X_2 - X$$
+
+is a Markov chain. Gaussian sources under squared error, and Bernoulli sources under Hamming distortion, are successively refinable for all pairs $D_1 > D_2$.
+:::
+
+:::remark
+Successive refinability is exactly what makes a *scalable* codec possible at no cost: a single bitstream whose prefixes are themselves valid, progressively better, encodings. That JPEG 2000 and scalable video coding work as well as they do is downstream of the Gaussian case of this theorem. Sources that are not successively refinable exist, and for them a scalable codec provably pays a penalty.
+:::
+
+:::definition[The Heegard–Berger problem]{#heegard-berger}
+One encoder describes $X$; two decoders hold different side informations $Y_1$ and $Y_2$ and must achieve distortions $D_1$ and $D_2$. The achievable rate is known in closed form when the side informations are **degraded**, $X - Y_1 - Y_2$, and the general case — non-degraded side information at two or more decoders — remains open.
+:::
+
+:::definition[Multiple descriptions]{#multiple-descriptions}
+One encoder sends two descriptions over separate links; either may be lost. The decoder must achieve distortion $D_1$ from description 1 alone, $D_2$ from description 2 alone, and $D_0$ from both. The El Gamal–Cover region is achievable and is tight for the quadratic-Gaussian source with two descriptions, but the general region is **not known**, even for a binary source.
+:::
+
+:::intuition
+The uniting construction in all of these is the same two-step recipe that solves Wyner–Ziv: *quantize to an auxiliary description, then bin the description index at a rate matched to what the receiver already knows.* Extra receivers mean extra auxiliaries and extra Markov constraints between them; the constructions generalize readily and it is the matching converses that fail.
+
+Where a chapter says "the region remains open", that is almost always what is meant: an inner bound from quantize-and-bin, an outer bound from a cut-set or a converse argument, and a gap between them that decades of work have not closed.
+:::
+
+:::pitfall
+Do not assume every multi-terminal rate–distortion problem has a single-letter solution waiting to be looked up. The two-encoder quadratic-Gaussian CEO problem was solved only in 2008; the general multiple-description region and the general Heegard–Berger region are open today. A derivation that quietly assumes a single-letter characterization exists is assuming a research result.
+:::
+
+## The Wyner–Ziv Setup
+
+<!-- section: wz-setup -->
+
+:::notation[Wyner–Ziv code]{#wz-code}
+Let $(X_i,Y_i)$ be i.i.d. $\sim p(x,y)$. An $(n,2^{nR})$ **Wyner–Ziv code** consists of an encoder
+$$f_n:\mathcal{X}^n \to \{1,\dots,2^{nR}\}$$
+that sees **only** $X^n$, and a decoder
+$$g_n:\{1,\dots,2^{nR}\}\times\mathcal{Y}^n \to \hat{\mathcal{X}}^n$$
+that sees the message **and** the side-information sequence $Y^n$. Its distortion is $\mathbb{E}\bigl[\tfrac1n\sum_i d(X_i,\hat X_i)\bigr]$ with $\hat X^n = g_n(f_n(X^n), Y^n)$. $R_{\mathrm{WZ}}(D)$ is the infimum of achievable rates.
+:::
+
+Two features of the setup drive everything. There is **no feedback**: the encoder never learns $Y^n$, not even its type, so its description must work for whatever $Y^n$ turns out to be. And the decoder's reconstruction is a function of *both* arguments, which is what lets a deliberately ambiguous message be resolved.
+
+:::intuition
+You want to send a photograph to a friend who already holds a noisy copy of the same scene. You do not know which noisy copy.
+
+You cannot send the difference, because you do not know what to subtract. What you *can* do is send a description that is ambiguous on purpose — "the image is one of these thousand" — chosen so that only one of the thousand is plausibly close to any particular noisy copy. Your friend's own copy resolves the ambiguity, and you never had to know it.
+:::
+
+:::example[Where this actually occurs]{#ex-wz-applications}
+Name the correlated pair $(X,Y)$ in three real systems where the Wyner–Ziv structure is the right model.
+:::
+
+:::solution
+*Distributed video coding.* $X$ is the current frame at a low-power camera; $Y$ is a motion-compensated prediction the decoder builds from frames it already has. The encoder is too cheap to do motion estimation, so the expensive work moves to the decoder. This is the architecture's whole selling point: it inverts the usual complexity asymmetry of video coding.
+
+*Sensor networks.* $X$ is one sensor's reading, $Y$ the fusion centre's aggregate of the other sensors. The sensor cannot hear its neighbours and must compress blind.
+
+*Lossy compression with a database.* $X$ is a new genome to store, $Y$ a reference genome the archive already holds. The encoder need not fetch the reference.
+
+Sanity check: in each case the correlation is strong, the side information is bulky, and the encoder genuinely cannot see it — which is exactly when $R_{\mathrm{WZ}}$ rather than $R$ or $R_{X|Y}$ is the relevant number.
+:::
+
+## The Wyner–Ziv Rate–Distortion Function
+
+<!-- section: wz-rd -->
+
+:::theorem[Wyner–Ziv]{#wyner-ziv-rd}
+For a discrete memoryless pair $(X,Y)$ and bounded $d$,
+
+$$R_{\mathrm{WZ}}(D) = \min\ \bigl[\, I(X;U) - I(Y;U) \,\bigr] = \min\ I(X;U\mid Y),$$
+
+where the minimum is over auxiliary random variables $U$ and reconstruction functions $\hat x:\mathcal{U}\times\mathcal{Y}\to\hat{\mathcal{X}}$ satisfying
+
+1. the Markov chain $U - X - Y$ (the auxiliary is generated from $X$ alone), and
+2. $\mathbb{E}\bigl[d\bigl(X,\hat x(U,Y)\bigr)\bigr]\le D$.
+
+It suffices to consider $|\mathcal{U}|\le|\mathcal{X}|+1$. The function $R_{\mathrm{WZ}}$ is convex and non-increasing in $D$.
+:::
+
+:::proof
+*(The two expressions agree.)* Under the Markov chain $U-X-Y$ we have $I(U;Y\mid X) = 0$, so
+
+$$I(U;X\mid Y) = I(U;X,Y) - I(U;Y) = I(U;X) + I(U;Y\mid X) - I(U;Y) = I(X;U) - I(Y;U).$$
+
+*(Convexity.)* Let $(U_1,\hat x_1)$ and $(U_2,\hat x_2)$ be optimal at $D_1, D_2$. Introduce a time-sharing variable $Q\in\{1,2\}$ with $\Pr[Q=1]=\lambda$, independent of everything, and set $U = (U_Q, Q)$ with $\hat x(u,q,y) = \hat x_q(u,y)$. The Markov chain and the distortion constraint pass through, the distortion is $\lambda D_1 + (1-\lambda)D_2$, and $I(X;U\mid Y) = \lambda I(X;U_1\mid Y) + (1-\lambda)I(X;U_2\mid Y)$ because $Q$ is independent of $(X,Y)$.
+
+*(Cardinality.)* The bound $|\mathcal{U}|\le|\mathcal{X}|+1$ is the standard support-lemma argument: the objective and the constraint depend on the distribution of $U$ only through $|\mathcal{X}|-1$ values fixing $p(x)$, plus one for the conditional mutual information and one for the distortion.
+
+The achievability and converse — that this quantity is the operational limit — are the substance of Wyner and Ziv's 1976 theorem. Achievability is the quantize-and-bin construction of the next section; the converse identifies the auxiliary as $U_i = (M, Y^{i-1}, Y_{i+1}^n)$ and runs the usual chain-rule argument. We do not reproduce the converse in full.
+:::
+
+:::pitfall
+The Markov constraint $U - X - Y$ is not decoration. It encodes the fact that the encoder cannot see $Y$: the auxiliary must be manufactured from $X$ alone. Dropping it turns the minimum into the conditional rate–distortion function, which is exactly the quantity that is *smaller*. Every rate loss in Wyner–Ziv coding is the price of that one constraint.
+:::
+
+:::theorem[No rate loss for the quadratic-Gaussian source]{#wz-no-rate-loss}
+Let $X$ and $Y$ be jointly Gaussian with $\operatorname{Var}(X\mid Y) = \sigma^2_{X\mid Y}$, and let $d$ be squared error. Then for $0 < D \le \sigma^2_{X\mid Y}$,
+
+$$R_{\mathrm{WZ}}(D) = \tfrac12\log_2\frac{\sigma^2_{X\mid Y}}{D} = R_{X\mid Y}(D).$$
+
+The encoder's ignorance of $Y$ costs nothing.
+:::
+
+:::proof
+The inequality $R_{\mathrm{WZ}}\ge R_{X\mid Y}$ is the proposition *Conditional is at most Wyner–Ziv*, and $R_{X\mid Y}(D) = \tfrac12\log_2(\sigma^2_{X\mid Y}/D)$ because, given $Y$, the residual $X - \mathbb{E}[X\mid Y]$ is Gaussian with variance $\sigma^2_{X|Y}$ and independent of $Y$.
+
+For the reverse inequality, exhibit an auxiliary. Let $U = X + W$ with $W\sim N(0,N)$ independent of $(X,Y)$; this respects $U - X - Y$ by construction. The decoder forms $\hat x(U,Y) = \mathbb{E}[X\mid U, Y]$, whose mean squared error is the MMSE of $X$ from the pair $(U,Y)$. Since $(X,Y,U)$ are jointly Gaussian, that MMSE is
+
+$$\mathbb{E}[(X-\hat X)^2] = \frac{\sigma^2_{X\mid Y}\,N}{\sigma^2_{X\mid Y} + N},$$
+
+the harmonic-style combination of the two independent pieces of evidence about the residual. Setting this equal to $D$ gives $N = \frac{D\,\sigma^2_{X\mid Y}}{\sigma^2_{X\mid Y}-D}$. Now compute the rate:
+
+$$I(X;U\mid Y) = h(U\mid Y) - h(U\mid X,Y) = \tfrac12\log_2\bigl(2\pi e(\sigma^2_{X\mid Y}+N)\bigr) - \tfrac12\log_2(2\pi e N) = \tfrac12\log_2\frac{\sigma^2_{X\mid Y}+N}{N},$$
+
+using $h(U\mid X,Y) = h(W)$ and $\operatorname{Var}(U\mid Y) = \sigma^2_{X\mid Y}+N$. Substituting $N$ gives $\frac{\sigma^2_{X|Y}+N}{N} = 1 + \frac{\sigma^2_{X|Y}}{N} = 1 + \frac{\sigma^2_{X|Y}-D}{D} = \frac{\sigma^2_{X|Y}}{D}$, so $I(X;U\mid Y) = \tfrac12\log_2(\sigma^2_{X\mid Y}/D)$. This matches the lower bound, so both are the minimum.
+:::
+
+:::intuition
+The Gaussian coincidence has a clean cause. Adding independent Gaussian noise to $X$ commutes with conditioning on $Y$: the residual $X - \mathbb{E}[X|Y]$ is independent of $Y$, so an auxiliary built by adding noise to $X$ is "the same" auxiliary whether or not you already know $Y$. The encoder's ignorance therefore costs nothing.
+
+For a binary source that commutation fails — $X\oplus Z$ does not decompose against $Y$ in the same way — and the gap is real.
+:::
+
+:::example[The binary Wyner–Ziv gap]{#ex-binary-wz}
+Let $X\sim\mathrm{Bernoulli}(1/2)$, $Y = X\oplus Z$ with $Z\sim\mathrm{Bernoulli}(p)$, $p = 0.25$, under Hamming distortion, and take $D = 0.1$. Compare $R_{\mathrm{WZ}}(D)$ with $R_{X\mid Y}(D)$.
+:::
+
+:::solution
+*Conditional.* Given $Y$, $X = Y\oplus Z$, so the conditional source is $\mathrm{Bernoulli}(p)$ and $R_{X\mid Y}(D) = h_2(p) - h_2(D)$ for $D\le p$:
+
+$$R_{X\mid Y}(0.1) = h_2(0.25) - h_2(0.1) = 0.8113 - 0.4690 = 0.3423\ \text{bits}.$$
+
+*Wyner–Ziv.* Wyner and Ziv showed $R_{\mathrm{WZ}}$ is the lower convex envelope of the function
+
+$$g(D) = h_2(D * p) - h_2(D), \qquad D * p = D(1-p) + p(1-D),$$
+
+on $0\le D\le p$, together with the point $(p, 0)$. Here $0.1 * 0.25 = 0.1(0.75)+0.25(0.9) = 0.3$, so
+
+$$g(0.1) = h_2(0.3) - h_2(0.1) = 0.8813 - 0.4690 = 0.4123\ \text{bits},$$
+
+and the envelope, which is active (time-sharing with the zero-rate point) for $D$ above about $0.088$, gives $R_{\mathrm{WZ}}(0.1) \approx 0.411$ bits.
+
+*Gap.* $0.411 - 0.342 = 0.069$ bits per symbol, about $20\%$ more rate than a decoder-and-encoder-informed scheme would need.
+
+Sanity check: $R_{X|Y} \le R_{\mathrm{WZ}} \le R(D)$, and here $R(0.1) = 1 - h_2(0.1) = 0.531$ bits, so $0.342 \le 0.411 \le 0.531$. ✓ The side information is worth most of the saving, but not all of it.
+:::
+
+## Quantize-and-Bin: The Achievability Construction
+
+<!-- section: wz-binning -->
+
+The Wyner–Ziv rate $I(X;U) - I(Y;U)$ has the shape of a difference, and the construction achieving it is a difference of two constructions: a covering code that produces $U$, and a binning of that code that discards the part $Y$ can supply.
+
+:::recipe[Quantize and bin]{#wz-quantize-bin}
+Fix an auxiliary $p(u\mid x)$ and reconstruction $\hat x(u,y)$ meeting the distortion budget.
+
+1. **Codebook.** Generate $2^{n(I(X;U)+\epsilon)}$ sequences $u^n$ i.i.d. from $p(u)$. This is a covering code for $X^n$: by the covering lemma, almost every typical $x^n$ has a jointly typical codeword.
+2. **Binning.** Distribute those codewords uniformly at random into $2^{n(I(X;U)-I(Y;U)+2\epsilon)}$ bins. Each bin holds about $2^{n(I(Y;U)-\epsilon)}$ codewords.
+3. **Encode.** Given $x^n$, find a codeword $u^n$ jointly typical with it and send only its **bin index**.
+4. **Decode.** Given the bin index and $y^n$, search that bin for the unique codeword jointly typical with $y^n$. By the packing lemma, since the bin holds about $2^{nI(Y;U)}$ codewords and $y^n$ is jointly typical with only a $2^{-nI(Y;U)}$ fraction of random codewords, the correct one is with high probability the only one.
+5. **Reconstruct.** Output $\hat x_i = \hat x(u_i, y_i)$ symbol by symbol.
+:::
+
+:::proposition[Rate of the construction]{#wz-rate-accounting}
+The construction transmits $I(X;U) - I(Y;U) + 2\epsilon = I(X;U\mid Y) + 2\epsilon$ bits per symbol and achieves distortion at most $D + O(\epsilon)$.
+:::
+
+:::proof
+The rate is the logarithm of the number of bins divided by $n$, which is the stated expression by construction. For the distortion: step 3 succeeds with probability tending to $1$ because the codebook has more than $2^{nI(X;U)}$ codewords (covering lemma), and step 4 succeeds with probability tending to $1$ because each bin has fewer than $2^{nI(Y;U)}$ codewords (packing lemma). On the intersection of those events the triple $(x^n,u^n,y^n)$ is jointly typical, so the empirical average of $d(x_i,\hat x(u_i,y_i))$ is within $O(\epsilon)$ of its expectation $\le D$. The failure events contribute at most $d_{\max}$ times a vanishing probability.
+:::
+
+:::intuition
+The two steps do two different jobs, and it is worth keeping them apart.
+
+*Quantization* is ordinary lossy compression: it replaces $X^n$ by a codeword $U^n$ good enough that $\hat x(U,Y)$ will meet the budget. It costs $I(X;U)$ bits.
+
+*Binning* then throws away $I(Y;U)$ of those bits on the grounds that the decoder can reconstruct them from $Y^n$. The encoder does not know *which* bits $Y$ will supply — that is the point — so it cannot choose them; it instead makes the message ambiguous in a random, statistically uniform way, and relies on $Y$ being informative enough to break the ambiguity whatever it turns out to be.
+
+The net bill, $I(X;U) - I(Y;U)$, is exactly the theorem's expression. Note also the duality: step 1 is a *covering* argument (a codebook dense enough that nothing is missed) and step 4 is a *packing* argument (a bin sparse enough that nothing is confused). Rate–distortion coding and channel coding, one inside the other.
+:::
+
+:::example[Rate accounting for the Gaussian case]{#ex-wz-accounting}
+For $X\sim N(0,1)$, $Y = X+Z$ with $Z\sim N(0,0.5)$ and $D = 0.1$, compute $I(X;U)$, $I(Y;U)$ and their difference for the optimal auxiliary $U = X + W$.
+:::
+
+:::solution
+From the no-rate-loss proof, $\sigma^2_{X\mid Y} = 1/3$ and $N = \frac{D\sigma^2_{X|Y}}{\sigma^2_{X|Y}-D} = \frac{0.1/3}{1/3 - 0.1} = \frac{0.03333}{0.23333} = 0.14286$.
+
+*Quantization cost.* $I(X;U) = \tfrac12\log_2\frac{\operatorname{Var}(X)+N}{N} = \tfrac12\log_2\frac{1.14286}{0.14286} = \tfrac12\log_2(8.0) = 1.5$ bits.
+
+*Binning credit.* $U = X+W$ and $Y = X+Z$ are jointly Gaussian with $\operatorname{Var}(U) = 1.14286$, $\operatorname{Var}(Y) = 1.5$, $\operatorname{cov}(U,Y) = 1$. So
+
+$$I(Y;U) = \tfrac12\log_2\frac{1}{1-\rho^2}, \qquad \rho^2 = \frac{1}{1.14286\times 1.5} = \frac{1}{1.71429} = 0.58333,$$
+
+giving $I(Y;U) = \tfrac12\log_2\frac{1}{0.41667} = \tfrac12\log_2(2.4) = \tfrac12(1.2630) = 0.6315$ bits.
+
+*Net rate.* $1.5 - 0.6315 = 0.8685$ bits, which is exactly $\tfrac12\log_2\frac{1/3}{0.1} = 0.8685$. ✓
+
+Sanity check: the encoder does $1.5$ bits' worth of quantization — more than the $0.869$ it ends up sending — and throws away $0.63$ bits of it in the binning, on the strength of correlation it cannot observe. That surplus is not waste; it is what makes the description robust to every $Y$ the decoder might hold.
+:::
+
+## Distributed Source Coding
+
+<!-- section: distributed-sc-problem -->
+
+:::notation[Distributed source code]{#dsc-code}
+Let $(X_i,Y_i)$ be i.i.d. $\sim p(x,y)$ on a finite alphabet. A **distributed source code** of rates $(R_1,R_2)$ consists of two *separate* encoders
+
+$$f_n : \mathcal{X}^n \to \{1,\dots,2^{nR_1}\}, \qquad g_n : \mathcal{Y}^n\to\{1,\dots,2^{nR_2}\},$$
+
+— the first sees only $X^n$, the second only $Y^n$, and they may not communicate — together with a **joint** decoder $\varphi_n$ producing $(\hat X^n,\hat Y^n) = \varphi_n(f_n(X^n), g_n(Y^n))$. The rate pair is **achievable** if there is such a sequence of codes with $\Pr[(\hat X^n,\hat Y^n)\ne (X^n,Y^n)]\to 0$.
+:::
+
+The question is which pairs $(R_1,R_2)$ are achievable. Two bounds are obvious before any work. Joint encoding would need $H(X,Y)$ in total, so $R_1+R_2 \ge H(X,Y)$ cannot be beaten by separate encoders. And separate *independent* encoding, each ignoring the other source, costs $H(X)+H(Y)$, which is larger by $I(X;Y)$. The content of the theorem is that the first bound, not the second, is the truth.
+
+:::intuition
+Two sensors in different rooms measure correlated temperatures. Each has its own link to a server and neither can hear the other. Common sense says that to exploit the correlation they would have to compare notes — and common sense is wrong.
+
+The correlation is side information that only the *decoder* sees. By now that should sound familiar: it is the same structure as Wyner–Ziv, in the lossless limit, and the same construction solves it.
+:::
+
+:::example[The cost of ignoring correlation]{#ex-dsc-cost}
+Let $X\sim\mathrm{Bernoulli}(1/2)$ and $Y = X\oplus Z$ with $Z\sim\mathrm{Bernoulli}(0.11)$, so $h_2(0.11) = 0.500$. What do independent encoding, joint encoding and distributed encoding cost?
+:::
+
+:::solution
+Entropies: $H(X) = H(Y) = 1$ bit. $H(X,Y) = H(X) + H(Y\mid X) = 1 + h_2(0.11) = 1.500$ bits. $H(X\mid Y) = H(Y\mid X) = 0.500$ bits. $I(X;Y) = 1 - 0.5 = 0.500$ bits.
+
+*Independent encoding*, each source compressed to its own entropy: $1 + 1 = 2.000$ bits per symbol pair.
+
+*Joint encoding*, one encoder seeing both: $H(X,Y) = 1.500$ bits.
+
+*Distributed encoding*: by the theorem below, also $1.500$ bits — the separation costs nothing in total rate.
+
+Sanity check: the saving over independent encoding is $0.500$ bits $= I(X;Y)$, as it must be. And $1.5 < 2$ while $1.5 \ge H(X,Y)$, so the answer sits exactly on the joint-encoding bound.
+:::
+
+## The Slepian–Wolf Rate Region
+
+<!-- section: sw-rate-region -->
+
+:::theorem[Slepian–Wolf]{#slepian-wolf}
+The set of achievable rate pairs for the distributed lossless coding of $(X,Y)$ is exactly
+
+$$\mathcal{R} = \Bigl\{(R_1,R_2) : R_1 \ge H(X\mid Y),\quad R_2\ge H(Y\mid X),\quad R_1 + R_2 \ge H(X,Y)\Bigr\}.$$
+:::
+
+:::proof
+*(Converse.)* Suppose $(R_1,R_2)$ is achievable, with messages $M_1 = f_n(X^n)$, $M_2 = g_n(Y^n)$ and error probability $P_e^{(n)}\to 0$. By Fano's inequality applied to the pair, $H(X^n,Y^n\mid M_1,M_2)\le 1 + P_e^{(n)}\,n\log|\mathcal{X}\times\mathcal{Y}| =: n\varepsilon_n$ with $\varepsilon_n\to 0$.
+
+For the first constraint,
+
+$$nR_1 \ge H(M_1) \ge H(M_1\mid Y^n) \ \ge\ H(M_1\mid Y^n) - H(M_1\mid X^n, Y^n) = I(M_1; X^n\mid Y^n),$$
+
+where $H(M_1\mid X^n,Y^n) = 0$ since $M_1$ is a function of $X^n$. Expanding,
+
+$$I(M_1;X^n\mid Y^n) = H(X^n\mid Y^n) - H(X^n\mid M_1,Y^n) = nH(X\mid Y) - H(X^n\mid M_1, M_2, Y^n) \ \ge\ nH(X\mid Y) - n\varepsilon_n,$$
+
+using that $M_2$ is a function of $Y^n$ (so conditioning on it changes nothing) and that $H(X^n\mid M_1,M_2,Y^n)\le H(X^n,Y^n\mid M_1,M_2)\le n\varepsilon_n$. Dividing by $n$ and letting $n\to\infty$ gives $R_1\ge H(X\mid Y)$. By symmetry $R_2\ge H(Y\mid X)$.
+
+For the sum,
+
+$$n(R_1+R_2)\ \ge\ H(M_1,M_2) \ =\ I(X^n,Y^n; M_1,M_2)\ =\ H(X^n,Y^n) - H(X^n,Y^n\mid M_1,M_2) \ \ge\ nH(X,Y) - n\varepsilon_n,$$
+
+using $H(M_1,M_2\mid X^n,Y^n) = 0$. Dividing and taking limits gives $R_1+R_2\ge H(X,Y)$.
+
+*(Achievability.)* The construction is in the next section.
+:::
+
+:::remark
+The region is a **pentagon**: the first quadrant with a corner cut off by the sum-rate line. Its two corner points are
+
+$$\bigl(H(X\mid Y),\ H(Y)\bigr) \quad\text{and}\quad \bigl(H(X),\ H(Y\mid X)\bigr),$$
+
+and every point of the dominant face is a time-sharing mixture of them. The first corner has a clean reading: encoder 2 compresses $Y$ to its full entropy, ignoring the correlation altogether, and encoder 1 then behaves as though the decoder already knew $Y$ — which, after decoding $M_2$, it does. That corner is achievable by a *sequential* argument requiring no new ideas; what needs the random binning of the next section is achieving it without encoder 1 knowing that encoder 2 succeeded, and achieving the interior of the dominant face.
+:::
+
+:::intuition
+Each of the three constraints has a one-line reason.
+
+$R_1 \ge H(X\mid Y)$: even a decoder that already knew $Y^n$ perfectly would still need $H(X|Y)$ bits per symbol to pin down $X^n$. Encoder 1 cannot do better than that, so it certainly cannot do better without knowing $Y$.
+
+$R_2\ge H(Y\mid X)$: the same, with the roles swapped.
+
+$R_1+R_2\ge H(X,Y)$: together the two messages must determine the pair, which carries $H(X,Y)$ bits.
+
+The theorem's whole content is that these three necessary conditions are also *sufficient* — that the encoders' inability to talk costs nothing at all.
+:::
+
+:::example[The pentagon for the binary symmetric pair]{#ex-sw-pentagon}
+For $X\sim\mathrm{Bernoulli}(1/2)$, $Y = X\oplus Z$, $Z\sim\mathrm{Bernoulli}(0.11)$, describe the region and check that the symmetric point is achievable.
+:::
+
+:::solution
+With $h_2(0.11) = 0.5$: $H(X\mid Y) = H(Y\mid X) = 0.5$, $H(X,Y) = 1.5$, $H(X) = H(Y) = 1$.
+
+The region is $\{R_1\ge 0.5,\ R_2\ge 0.5,\ R_1+R_2\ge 1.5\}$, a pentagon whose corners are $(0.5,\,1)$ and $(1,\,0.5)$.
+
+The symmetric point $(0.75, 0.75)$ satisfies all three: $0.75\ge0.5$ ✓, $0.75\ge0.5$ ✓, $1.5\ge1.5$ ✓, and it sits on the dominant face, so it is achievable — by time-sharing the two corners equally, or directly by symmetric binning.
+
+Sanity check: the point $(0.5, 0.5)$ is *not* achievable, since $1.0 < 1.5$. Both encoders cannot simultaneously compress to the conditional entropy; one of them must carry the joint information. That is the one thing the pentagon forbids that a naive reading of "each encoder needs only $H(X|Y)$" would allow.
+:::
+
+:::figure[The Slepian–Wolf pentagon for the binary symmetric pair with $h_2(0.11)=0.5$. The shaded set is achievable. Its dominant face is the sum-rate line $R_1+R_2 = H(X,Y) = 1.5$, cut off at the two corner points, and the symmetric point $(0.75,0.75)$ lies on it. The point $(0.5,0.5)$ is outside: both encoders cannot compress to the conditional entropy at once.]{#fig-sw-pentagon}
+{
+  "type": "plot",
+  "x": [0, 1.85], "y": [0, 1.85],
+  "xTicks": 0.5, "yTicks": 0.5, "xLabel": "R1", "yLabel": "R2",
+  "equalAspect": true,
+  "marks": [
+    { "kind": "region", "points": [[0.5, 1.8], [0.5, 1], [1, 0.5], [1.8, 0.5], [1.8, 1.8]] },
+    { "kind": "path", "points": [[0.5, 1.8], [0.5, 1], [1, 0.5], [1.8, 0.5]], "tone": "result" },
+    { "kind": "point", "at": [0.5, 1], "tone": "result" },
+    { "kind": "point", "at": [1, 0.5], "tone": "result" },
+    { "kind": "point", "at": [0.75, 0.75], "tone": "alt" },
+    { "kind": "point", "at": [0.5, 0.5], "tone": "muted", "open": true },
+    { "kind": "text", "at": [1.35, 1.35], "text": "achievable" },
+    { "kind": "text", "at": [1.3, 1.0], "text": "sum rate 1.5", "leaderTo": [0.78, 0.72] },
+    { "kind": "text", "at": [0.25, 0.25], "text": "not achievable", "leaderTo": [0.48, 0.48] }
+  ]
+}
+:::
+
+## Random Binning and the Channel-Coding Dual
+
+<!-- section: binning-achievability -->
+
+:::proof
+*(Achievability of the Slepian–Wolf region.)* It suffices to achieve the two corner points; the rest of the dominant face follows by time-sharing, and the region is closed upward.
+
+*Codebook.* Independently of the sources, assign to each sequence $x^n\in\mathcal{X}^n$ a bin index $b_1(x^n)$ drawn uniformly at random from $\{1,\dots,2^{nR_1}\}$, and to each $y^n$ an index $b_2(y^n)$ uniform on $\{1,\dots,2^{nR_2}\}$. Both assignments are revealed to the decoder. Note there is no codebook to search and no structure: the encoders are hash functions.
+
+*Encoding.* Encoder 1 sends $b_1(X^n)$; encoder 2 sends $b_2(Y^n)$. Each is a table lookup.
+
+*Decoding.* Given $(m_1,m_2)$, declare $(\hat x^n,\hat y^n)$ to be the unique jointly typical pair with $b_1(\hat x^n) = m_1$ and $b_2(\hat y^n) = m_2$. If there is none, or more than one, declare an error.
+
+*Error analysis.* An error requires either that the true pair is not jointly typical — probability $\to 0$ by the asymptotic equipartition property — or that some *other* pair collides. Split the competing pairs by how they differ from the truth:
+
+- a wrong $\hat x^n$ with the true $y^n$: there are at most $2^{nH(X\mid Y)}$ sequences jointly typical with $y^n$, each landing in bin $m_1$ with probability $2^{-nR_1}$, so a union bound gives $2^{n(H(X\mid Y)-R_1)}\to 0$ when $R_1 > H(X\mid Y)$;
+- a wrong $\hat y^n$ with the true $x^n$: symmetrically, vanishing when $R_2 > H(Y\mid X)$;
+- both wrong: there are at most $2^{nH(X,Y)}$ jointly typical pairs, each landing in the announced pair of bins with probability $2^{-n(R_1+R_2)}$, so the union bound gives $2^{n(H(X,Y)-R_1-R_2)}\to 0$ when $R_1+R_2 > H(X,Y)$.
+
+All three vanish simultaneously in the interior of $\mathcal{R}$, so the average error probability over random binnings tends to $0$, and some particular binning is at least as good as the average.
+:::
+
+:::remark
+Compare that error analysis with the one for channel coding. There, a codebook of $2^{nR}$ codewords is scattered in the input space and an error occurs when a *wrong codeword* is jointly typical with the received sequence; the union bound gives $2^{n(R - I(X;Y))}$ and the condition is $R < I(X;Y)$.
+
+Here, the sequences are scattered into $2^{nR}$ *bins* and an error occurs when a wrong sequence shares the announced bin *and* is jointly typical; the union bound gives $2^{n(H(X|Y)-R)}$ and the condition is $R > H(X\mid Y)$. The inequality points the other way because we are counting how *few* competitors survive rather than how *many* codewords fit. Packing and covering, again.
+:::
+
+:::intuition
+Each encoder throws its possible sequences into a large number of buckets at random and reports only which bucket it landed in. On its own that message is nearly meaningless — a bucket holds $2^{n(H(X)-R_1)}$ sequences.
+
+The decoder rescues it by asking which member of bucket $m_1$ and which member of bucket $m_2$ *make sense together*, i.e. are jointly typical. Because typicality is such a stringent condition, there is almost surely only one such pair, and that must be the truth.
+
+The encoders never needed to know anything about each other. They only needed the buckets to be fine enough that correlation alone could single out the answer.
+:::
+
+:::recipe[Syndrome coding: binning made practical]{#syndrome-coding}
+For the binary symmetric correlation $Y = X\oplus Z$ with $Z\sim\mathrm{Bernoulli}(p)$, the random binning can be replaced by a linear code, which is what real systems use:
+
+1. Choose a binary linear code of length $n$ with an $(n-k)\times n$ parity-check matrix $H$, good for the binary symmetric channel with crossover $p$.
+2. Encoder 1 sends the **syndrome** $s = Hx^n$, which is $n-k$ bits, i.e. rate $R_1 = (n-k)/n \approx h_2(p) = H(X\mid Y)$.
+3. The decoder, holding $y^n$, computes $Hy^n \oplus s = H(x^n\oplus y^n) = Hz^n$, the syndrome of the "error pattern".
+4. It runs the code's syndrome decoder to recover $z^n$, then outputs $\hat x^n = y^n\oplus z^n$.
+:::
+
+:::remark
+The cosets of a linear code *are* the bins, and the syndrome is the bin index: two sequences share a syndrome exactly when they differ by a codeword. The decoder's job — find the minimum-weight member of a coset — is exactly channel decoding. So a good channel code for the "virtual channel" $X\to Y$ is automatically a good Slepian–Wolf code for the correlation, and modern systems use LDPC or turbo codes in precisely this way. This is the sharpest form of the duality that has run through the whole chapter.
+:::
+
+:::example[Syndrome rate for the binary symmetric pair]{#ex-syndrome}
+With $p = 0.11$ and $n = 1000$, how many syndrome bits per block does the ideal scheme send, and what does the decoder do with them?
+:::
+
+:::solution
+$R_1 \ge H(X\mid Y) = h_2(0.11) = 0.5$ bits per symbol, so an ideal code sends $n - k = 500$ syndrome bits per $1000$-bit block — a rate-$1/2$ code.
+
+The decoder computes $Hy^n\oplus s$, a $500$-bit syndrome for the error pattern $z^n$, which has about $110$ ones. It then runs the code's decoder to find that pattern and adds it to $y^n$.
+
+Sanity check: a rate-$1/2$ code is exactly what one would use on a BSC with crossover $0.11$, whose capacity is $1 - h_2(0.11) = 0.5$. The Slepian–Wolf rate and the channel capacity are complementary, $R_1 = 1 - C$, which is the duality in one line. Encoder 2 meanwhile sends $Y^n$ at its full entropy, $1000$ bits, putting the system at the corner point $(0.5, 1)$.
+:::
+
+:::summary
+The chapter's three constructions are one construction.
+
+- **Rate–distortion coding** covers the source space with a codebook: rate $I(X;\hat X)$.
+- **Slepian–Wolf coding** bins the source space and lets correlated side information at the decoder resolve each bin: rate $H(X\mid Y)$.
+- **Wyner–Ziv coding** does both, covering first and then binning the cover: rate $I(X;U) - I(Y;U)$.
+
+Each is matched by a converse built from the same three moves — data processing, the chain rule with "conditioning reduces entropy", and convexity plus Jensen to get from a per-symbol average back to the single-letter function.
+:::
+
+## Common Mistakes
+
+- **Confusing $R(D)$ with the distortion–rate function $D(R)$.** They are inverse functions of each other on the range where $R$ is strictly decreasing: $R(D)$ is the least rate for a distortion budget, $D(R)$ the least distortion for a rate budget. Quoting one where the other is meant inverts every inequality.
+- **Asserting $R(0) = H(X)$ for every source.** It holds for discrete sources with a distortion measure vanishing only on the diagonal. For a continuous source $R(D)\to\infty$ as $D\to 0$, and substituting the differential entropy $h(X)$ for $H(X)$ is wrong — $h(X)$ can even be negative.
+- **Using $h_2(p) - h_2(D)$ outside $D \le \min(p,1-p)$.** Past $D_{\max}$ the true value is $0$; the formula goes negative and is meaningless there.
+- **Forgetting that $R(D)$ depends on the distortion measure as much as on the source.** Swapping squared error for absolute error or a perceptual metric changes the function entirely; a rate–distortion claim with no $d$ attached is not a claim.
+- **Treating the test channel as a physical channel.** $p(\hat x\mid x)$ scores a proposed source–reproduction relationship; nothing is transmitted through it and it need not be implementable.
+- **Assuming the optimal reproduction alphabet equals the source alphabet.** For a discrete source the optimal $\hat{\mathcal{X}}$ can be strictly smaller, and for a continuous source it is a finite set at each finite rate.
+
+The last part computed $R^{(I)}(D)$, an optimization over one-symbol conditional distributions. Nothing so far says that this number has anything to do with codes. That identification is the rate–distortion theorem, and it is the reason the whole subject is called rate–distortion theory rather than "constrained mutual information minimization".
+
+- **Reading the achievability proof as an algorithm.** It proves a good codebook exists by averaging over random codebooks; it offers no way to find one, and the encoding step it describes is a search over $2^{nR}$ codewords.
+- **Getting the Lagrangian sign backwards.** Minimize $I + \lambda\mathbb{E}[d]$ with $\lambda \ge 0$; the slope of the curve is $s = R'(D) = -\lambda \le 0$. Optimal test channel weights carry $e^{-\lambda d}$, never $e^{+\lambda d}$.
+- **Using the Shannon lower bound without clipping it at zero.** For $D$ near or above $D_{\max}$ the expression $h(X) - \tfrac12\log_2(2\pi eD)$ is negative, while $R(D) = 0$. The bound is $\max\{0,\text{SLB}\}$.
+- **Applying the high-rate approximation $R(D)\approx h(X) - \tfrac12\log_2(2\pi eD)$ at low rate.** It is an asymptotic statement as $D\to 0$; at moderate $D$ it can be badly off, and above $D_{\max}$ it is simply wrong.
+- **Forward water-filling instead of reverse.** Channel coding allocates *power* preferentially to strong sub-channels; rate–distortion allocates *distortion* equally down to a level and abandons everything below it. The two pictures are not the same and confusing them inverts the bit allocation.
+- **Assuming a component below the water level should get "a few" bits.** The optimum gives it exactly zero and reproduces it by its mean; spending bits there provably wastes them.
+- **Treating $R(D)$ as a per-block quantity.** It is bits *per source symbol*; a block of $n$ symbols needs about $nR(D)$ bits, and the $o(n)$ correction is what finite-blocklength analysis quantifies.
+
+The rate–distortion theorem promises a code; it does not build one, and its construction encodes whole blocks by exhaustive search. Everything actually deployed starts from the opposite end: quantize one sample at a time, cheaply, and recover what can be recovered with a transform and an entropy coder. This part measures exactly how much that costs.
+
+- **Treating the Lloyd–Max conditions as sufficient.** They are necessary. A quantizer meeting both is a fixed point and may be only locally optimal; multimodal densities have several distinct fixed points.
+- **Assuming quantization noise is white, uniform and signal-independent.** That model is a high-rate approximation on a smooth density. At low rate, on constant or slowly varying signals, the error is deterministic and structured; dither is what makes the model honest.
+- **Confusing $\log_2 N$ with the rate.** With entropy coding the rate is $H(Q(X))$, which for a peaked source is much smaller. Nearly all of the $4.35$ dB Panter–Dite gap is recovered by entropy coding, not by clever level placement.
+- **Quoting SQNR without stating the signal level.** $6.02b + 1.76$ dB assumes a *full-scale sinusoid*. A different waveform or a backed-off level changes the constant, sometimes by tens of dB.
+- **Ignoring overload distortion.** Samples beyond the outermost boundary incur unbounded error. Good designs balance granular against overload error by choosing the loading factor; too wide a range is as bad as too narrow.
+- **Believing scalar quantization is hopelessly far from $R(D)$.** Entropy-coded scalar quantization is within $0.2546$ bits per sample of the bound at high rate, for *any* smooth source. That is why practical codecs use it.
+- **Applying the high-rate formulas at one or two bits.** Panter–Dite predicts $2.72\sigma^2/N^2 = 0.68\sigma^2$ for a 1-bit Gaussian quantizer; the true optimum is $0.363\sigma^2$. The asymptotic analysis is simply not valid there.
+
+The previous part ended with a puzzle: entropy-coded scalar quantization is within $1.53$ dB of $R(D)$ for every smooth source, and no amount of scalar cleverness closes the remaining gap. Vector quantization closes it, and the analysis below says exactly how, and how much each ingredient is worth.
+
+- **Expecting VQ to be applied to raw samples.** It essentially never is. A transform (DCT, wavelet, autoencoder) comes first, because the memory gain it collects is large and cheap, while the space-filling gain VQ adds is at most $1.53$ dB.
+- **Quoting VQ's advantage as unbounded.** Against *entropy-coded* scalar quantization of an i.i.d. source, the total available gain is $1.53$ dB, full stop. The dramatic numbers in textbook comparisons come from correlated sources measured against *fixed-rate* scalar quantization, which conflates three separate gains.
+- **Confusing codebook size with search cost.** The size is $2^{kR}$ and so is the full-search cost; doubling the dimension at fixed rate squares it. Structured codebooks are mandatory, not an optimization.
+- **Believing LBG finds the global optimum.** It is coordinate descent on a non-convex objective and stops at a fixed point. Initialization by splitting and multiple restarts matter.
+- **Forgetting to count the codebook.** For a one-shot compression or a small data set, transmitting the trained codebook can cost more than the data. Lattice and universal quantizers avoid the problem by having no codebook to send.
+- **Mishandling empty cells.** A codevector that captures no training vectors has an undefined centroid; leaving it in place wastes a codeword permanently. Split the highest-distortion cell instead.
+- **Overfitting the training set.** A codebook trained on $T$ vectors with $M$ codevectors is fitting $kM$ parameters; with $T$ not much larger than $M$, the measured training distortion is optimistic and out-of-sample performance is far worse.
+
+So far the encoder and the decoder have known nothing except what the encoder sends. In a sensor network, in a video codec with a reference frame, in any system with several correlated observations, that is false: somebody knows something extra. This part asks what that knowledge is worth, and — the surprising part — *where* it has to sit to be worth anything.
+
+- **Believing encoder-only side information reduces the rate.** It does not, when the distortion depends only on $(x,\hat x)$: $R_{\mathrm{enc}}(D) = R(D)$ exactly. The "send only the innovation" argument fails because the decoder cannot add the predictable part back.
+- **Mixing up the source and channel versions of the asymmetry.** In *source* coding, side information at the decoder helps and at the encoder does not. In *channel* coding with state, the reverse holds: state at the transmitter is worth a great deal (dirty-paper coding). Quoting one asymmetry for the other reverses the conclusion.
+- **Assuming $R_{\mathrm{WZ}}(D) = R_{X\mid Y}(D)$ in general.** It holds for the quadratic-Gaussian source and a few others. For a binary source under Hamming distortion there is a strict gap at every $0 < D < D_{\max}$.
+- **Forgetting that the reconstruction may depend on the side information.** The Wyner–Ziv reproduction is $\hat x(u,y)$, a function of *both*. A codec that uses $Y$ only to decode the bin index, and not again at reconstruction, leaves performance on the table.
+- **Assuming every source is successively refinable.** Gaussian and Bernoulli sources are; the general condition is the Equitz–Cover Markov chain, and sources failing it pay a real penalty for a scalable bitstream.
+- **Treating open problems as solved.** The general multiple-description and Heegard–Berger regions are not known. An inner bound from quantize-and-bin is not a characterization.
+
+The Wyner–Ziv problem is the one configuration of the four whose answer is not a rephrasing of the ordinary theory. It has its own auxiliary variable, its own achievability construction, and a genuinely surprising special case.
+
+- **Sending the quantization index instead of the bin index.** That costs $I(X;U)$ rather than $I(X;U\mid Y)$ — in the Gaussian example above, $1.5$ bits instead of $0.87$. Binning is the entire saving.
+- **Dropping the Markov constraint $U - X - Y$.** Without it the minimum collapses to the conditional rate–distortion function. The constraint is the encoder's blindness, expressed in symbols.
+- **Reconstructing from $U$ alone.** The optimal reproduction is $\hat x(u,y)$; using $Y$ only to resolve the bin and then ignoring it at reconstruction time loses distortion for free.
+- **Generalizing the no-rate-loss result.** It is a theorem about the quadratic-Gaussian source. Under Hamming distortion on a binary source the gap is strictly positive for every interior $D$.
+- **Assuming the auxiliary alphabet must be large.** $|\mathcal{U}|\le|\mathcal{X}|+1$ always suffices, which is what makes numerical computation of $R_{\mathrm{WZ}}$ possible at all.
+- **Expecting practical distributed video codecs to hit the bound.** Real side information is neither memoryless nor of known correlation, the correlation must be estimated online, and blocklengths are short. The theorem is the benchmark, not the achieved performance.
+
+The last problem in the chapter is the lossless one, and it is placed last rather than first because its solution is the binning construction we have just built. Slepian and Wolf proved it in 1973; Wyner and Ziv's lossy version came three years later and is the theorem above.
+
+- **Believing separate encoders must pay a penalty.** The achievable sum rate is exactly $H(X,Y)$, the same as joint encoding. Only the *individual* rates carry extra constraints, which is what makes the region a pentagon rather than a half-plane.
+- **Reading "each encoder needs only $H(X\mid Y)$" as a rate pair.** The point $(H(X\mid Y), H(Y\mid X))$ is *not* achievable unless $X$ and $Y$ are independent: its sum is $H(X,Y) - I(X;Y)$, below the sum-rate bound.
+- **Confusing Slepian–Wolf with Wyner–Ziv.** Slepian–Wolf is lossless and both sources are recovered; Wyner–Ziv is lossy and the side information is never reconstructed, only used.
+- **Forgetting that the binning is designed for a known $p(x,y)$.** In practice the correlation must be estimated, and a mismatch causes decoding failure rather than graceful degradation. Universal and rateless (feedback-driven) schemes exist for this reason.
+- **Assuming syndrome coding handles every correlation.** It is exactly right when the correlation is a binary symmetric "virtual channel". A general $p(x,y)$ needs general binning, typically graph-based codes over larger alphabets.
+- **Thinking the sources must be binary or even i.i.d.** The theorem holds for any discrete memoryless joint distribution, and extends to stationary ergodic sources with $H$ replaced by entropy rates.

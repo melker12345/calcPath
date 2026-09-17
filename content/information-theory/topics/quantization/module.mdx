@@ -1,0 +1,583 @@
+---
+title: Quantization
+---
+
+# Quantization
+
+Turning the theory into a codebook: scalar quantizers, the Lloyd–Max conditions, and why quantizing vectors beats quantizing one sample at a time.
+
+## Scalar Quantization
+
+<!-- section: scalar-quantization -->
+
+:::definition[Scalar quantizer]{#scalar-quantizer}
+An $N$-level **scalar quantizer** is a pair consisting of a **partition** of $\mathbb{R}$ into cells $V_1,\dots,V_N$ and a **codebook** $\{\hat x_1,\dots,\hat x_N\} \subset \mathbb{R}$. It acts by
+
+$$Q(x) = \hat x_i \quad\text{for } x \in V_i.$$
+
+Its **distortion** is $D(Q) = \mathbb{E}[(X - Q(X))^2] = \sum_{i=1}^N \int_{V_i}(x-\hat x_i)^2 f(x)\,dx$ for a source with density $f$. Its **index rate** is $\log_2 N$ bits; its **entropy rate** is $H(Q(X)) \le \log_2 N$.
+:::
+
+The distinction between the two rates is not pedantry. A fixed-length index costs $\log_2 N$ bits regardless of how lopsided the cell probabilities are. If the indices are then entropy coded, the cost falls to $H(Q(X))$, and for a peaked source the difference is large. **Entropy-coded scalar quantization** (ECSQ) means the second scheme, and it is the one that competes with $R(D)$.
+
+:::notation[Uniform quantizer]{#uniform-quantizer}
+A **uniform** quantizer of step $\Delta$ has cells $V_i = [\,(i - \tfrac12)\Delta,\ (i+\tfrac12)\Delta\,)$ and levels $\hat x_i = i\Delta$ (a *midtread* quantizer), so $Q(x) = \Delta\,\mathrm{round}(x/\Delta)$. A **dead-zone** quantizer widens the cell containing zero, which is what image and video codecs use to force small coefficients to zero.
+:::
+
+:::definition[Granular and overload distortion]{#granular-overload}
+For a quantizer whose outermost cells are unbounded, write $S = \bigcup_{i: V_i \text{ bounded}} V_i$ for the **granular region**. Then
+
+$$D(Q) = \underbrace{\int_{S}(x-Q(x))^2 f(x)\,dx}_{\text{granular}} \;+\; \underbrace{\int_{\mathbb{R}\setminus S}(x-Q(x))^2 f(x)\,dx}_{\text{overload}}.$$
+:::
+
+Granular distortion is the rounding error inside the working range; overload distortion is the clipping error on samples that fall outside it. They trade against each other: for a fixed number of levels, widening the range shrinks overload and inflates granular error. A quantizer designed with too small a loading factor sounds "gritty"; one with too large a loading factor clips.
+
+:::intuition
+A quantizer is a ruler with $N$ marks. The partition says which mark each value is snapped to; the codebook says where the marks are. Design is choosing both.
+
+Uniform spacing is a regular ruler. Non-uniform spacing crowds marks where the source spends most of its time — near zero for speech, near zero for transform coefficients — and that is where almost all the gain of scalar quantizer design lives.
+:::
+
+:::example[An 8-bit uniform quantizer]{#ex-8bit}
+An 8-bit uniform quantizer covers $[-1,1]$ volts. Find the step size, quantize $x = 0.123$ V, and check the error bound.
+:::
+
+:::solution
+$N = 2^8 = 256$ levels over a range of $2$ V, so $\Delta = 2/256 = 0.0078125$ V.
+
+Place levels at cell midpoints $\hat x_k = -1 + (k+\tfrac12)\Delta$ for $k = 0,\dots,255$. The index of $x = 0.123$ is $k = \lfloor (x+1)/\Delta\rfloor = \lfloor 1.123/0.0078125\rfloor = \lfloor 143.744\rfloor = 143$.
+
+Reconstruction: $\hat x = -1 + 143.5 \times 0.0078125 = -1 + 1.12109 = 0.12109$ V. Error $e = 0.123 - 0.12109 = 0.00191$ V.
+
+Sanity check: $|e| = 0.00191 \le \Delta/2 = 0.00391$, as nearest-level quantization requires.
+:::
+
+:::pitfall
+The familiar model "quantization error is uniform on $[-\Delta/2,\Delta/2]$ and independent of the signal" is an approximation valid at *high rate* on a *smooth* density. At low rate it fails badly — for a 1-bit quantizer the error is strongly signal-dependent — and for slowly varying or nearly constant inputs the error becomes a deterministic, audible pattern. Dither is added precisely to make the error model true rather than merely assumed.
+:::
+
+## Optimal Quantizer Design: The Lloyd–Max Conditions
+
+<!-- section: lloyd-max -->
+
+:::theorem[Lloyd–Max necessary conditions]{#lloyd-max-conditions}
+Let $Q$ be an $N$-level scalar quantizer minimizing $\mathbb{E}[(X-Q(X))^2]$ for a source with density $f$. Then, up to sets of probability zero,
+
+1. **(Nearest-neighbour condition.)** Each cell is the set of points closer to its own level than to any other:
+$$V_i \subseteq \{x : |x - \hat x_i| \le |x - \hat x_j| \text{ for all } j\},$$
+so for levels ordered $\hat x_1 < \cdots < \hat x_N$ the boundaries sit at the midpoints $b_i = (\hat x_i + \hat x_{i+1})/2$.
+2. **(Centroid condition.)** Each level is the conditional mean of its own cell:
+$$\hat x_i = \mathbb{E}[X \mid X \in V_i].$$
+:::
+
+:::proof
+(1) Fix the codebook and vary the partition. For each $x$ the integrand $(x - \hat x_i)^2 f(x)$ depends on the partition only through which $i$ is assigned to $x$, and the assignments at different $x$ are independent of each other. So the integral is minimized pointwise by assigning $x$ to an $i$ minimizing $(x-\hat x_i)^2$, which is the nearest level. Ties occur on a set of measure zero and may be broken arbitrarily.
+
+(2) Fix the partition and vary the levels. The distortion is $\sum_i \int_{V_i}(x-\hat x_i)^2 f(x)dx$, a sum of terms each involving one $\hat x_i$. Differentiating the $i$-th term,
+
+$$\frac{\partial}{\partial \hat x_i}\int_{V_i}(x-\hat x_i)^2 f(x)\,dx = -2\int_{V_i}(x - \hat x_i)f(x)\,dx,$$
+
+which vanishes exactly when $\hat x_i \Pr[X\in V_i] = \int_{V_i} x f(x)dx$, i.e. $\hat x_i = \mathbb{E}[X\mid X\in V_i]$ whenever the cell has positive probability. The second derivative is $2\Pr[X\in V_i] > 0$, so this stationary point is the minimum.
+:::
+
+:::pitfall
+These conditions are **necessary, not sufficient**. A quantizer satisfying both is a fixed point of the Lloyd iteration, and there can be several: for a bimodal density, different initializations converge to genuinely different fixed points with different distortions. Satisfying Lloyd–Max certifies local optimality only. (For log-concave densities the optimal quantizer is known to be unique, which is why the scalar Gaussian case causes no trouble in practice.)
+:::
+
+:::recipe[Lloyd's algorithm]{#lloyd-iteration}
+Given a density $f$ (or a training set) and a target number of levels $N$:
+
+1. Initialize a codebook $\{\hat x_i^{(0)}\}$ with distinct values.
+2. **Assign.** Partition by nearest neighbour: $V_i^{(k)} = \{x : |x - \hat x_i^{(k)}| \le |x - \hat x_j^{(k)}|\ \forall j\}$.
+3. **Update.** Set $\hat x_i^{(k+1)} = \mathbb{E}[X \mid X \in V_i^{(k)}]$, the centroid of the cell (the sample mean of the training points in it).
+4. Repeat from step 2 until the distortion stops decreasing by more than the tolerance.
+:::
+
+:::proposition[Lloyd's algorithm never increases distortion]{#lloyd-descent}
+Writing $D_k$ for the distortion after iteration $k$, the sequence $D_0 \ge D_1 \ge D_2 \ge \cdots \ge 0$ converges. It converges to the global minimum only when the fixed point reached is the global one.
+:::
+
+:::proof
+Step 2 minimizes distortion over partitions with the codebook fixed, by part (1) of the Lloyd–Max theorem, so it cannot increase $D$. Step 3 minimizes distortion over codebooks with the partition fixed, by part (2), so it cannot increase $D$ either. Hence $D_k$ is non-increasing and bounded below by $0$, so it converges. That the limit need not be global follows from the pitfall above: the algorithm is a coordinate descent on a non-convex objective.
+:::
+
+:::intuition
+The two conditions are each other's best reply. "Where should the fence go, given the posts?" — halfway between them. "Where should the post go, given the fence?" — at the centre of mass of what it serves.
+
+Alternating the two best replies is Lloyd's algorithm, and it is the same algorithm as $k$-means clustering, discovered independently in that guise.
+:::
+
+:::example[The optimal 1-bit quantizer of a Gaussian]{#ex-1bit-gaussian}
+Find the minimum-MSE 2-level quantizer for $X\sim N(0,1)$, and its distortion.
+:::
+
+:::solution
+By symmetry of the density, look for levels $\pm a$ with boundary at $0$. The centroid condition gives
+
+$$a = \mathbb{E}[X \mid X > 0] = \frac{\int_0^\infty x\varphi(x)dx}{1/2} = \frac{\varphi(0)}{1/2} = 2\varphi(0) = \sqrt{\tfrac{2}{\pi}} = 0.79788,$$
+
+using $\int_0^\infty x\varphi(x)dx = \varphi(0) = 1/\sqrt{2\pi}$. The nearest-neighbour condition is satisfied because the midpoint of $-a$ and $+a$ is $0$, the boundary we assumed.
+
+Distortion: $D = \mathbb{E}[(X - a\,\mathrm{sgn}X)^2] = \mathbb{E}[X^2] - 2a\,\mathbb{E}[|X|] + a^2 = 1 - 2a\sqrt{2/\pi} + a^2$. With $a = \sqrt{2/\pi}$ this is $1 - 2(2/\pi) + 2/\pi = 1 - 2/\pi = 0.36338$.
+
+Sanity check against theory: at $R = 1$ bit the rate–distortion bound is $D = \sigma^2 2^{-2R} = 0.25$. The scalar quantizer achieves $0.3634$, a ratio of $1.4535$, or $1.62$ dB above the bound. That gap is real and cannot be closed by any 1-bit scalar quantizer — closing it requires coding several samples jointly.
+:::
+
+:::example[The optimal 2-bit quantizer of a Gaussian]{#ex-2bit-gaussian}
+Verify that levels $\pm 0.4528, \pm 1.510$ with boundaries $0, \pm 0.9816$ are a Lloyd–Max fixed point for $X \sim N(0,1)$, and compare its distortion with a uniform quantizer.
+:::
+
+:::solution
+*Nearest-neighbour check.* The boundary between the two positive levels must be their midpoint: $(0.4528 + 1.510)/2 = 0.9814$, matching the stated $0.9816$ to rounding. ✓
+
+*Centroid check.* For the normal density, $\mathbb{E}[X\mid a \le X \le b] = \frac{\varphi(a)-\varphi(b)}{\Phi(b)-\Phi(a)}$. The inner cell $[0, 0.9816]$ gives $\frac{\varphi(0)-\varphi(0.9816)}{\Phi(0.9816)-\Phi(0)} = \frac{0.39894 - 0.24610}{0.83686-0.5} = \frac{0.15284}{0.33686} = 0.4537 \approx 0.4528$. ✓ The outer cell $[0.9816,\infty)$ gives $\frac{\varphi(0.9816)}{1 - \Phi(0.9816)} = \frac{0.24610}{0.16314} = 1.5085 \approx 1.510$. ✓
+
+Both conditions hold simultaneously, so this is a fixed point of the Lloyd iteration.
+
+*Distortion.* $D \approx 0.1175$, versus $\approx 0.1188$ for the best *uniform* 4-level quantizer of the same source. The non-uniform spacing — finer near the dense centre, coarser in the tails — buys about $1\%$, i.e. $0.05$ dB.
+
+Sanity check: the rate–distortion bound at $R = 2$ is $2^{-4} = 0.0625$, so even the optimal 2-bit scalar quantizer sits $10\log_{10}(0.1175/0.0625) = 2.74$ dB above it. Note also how little the *shape* optimization is worth here compared with the structural gap — a theme the next section makes precise.
+:::
+
+:::figure[The optimal 4-level quantizer for a standard normal source. Dashed lines are the cell boundaries at $0$ and $\pm 0.982$; the dots on the axis are the reproduction levels at $\pm 0.453$ and $\pm 1.510$. Each level is the centre of mass of its own cell, and each boundary is halfway between its two neighbouring levels.]{#fig-lloyd-max}
+{
+  "type": "plot",
+  "x": [-3.2, 3.2], "y": [-0.07, 0.54],
+  "xTicks": 1, "yTicks": 0.1, "xLabel": "x", "yLabel": "density",
+  "marks": [
+    { "kind": "function", "fn": "exp(-x^2/2)/sqrt(2*pi)", "tone": "accent" },
+    { "kind": "line", "through": [[0, 0], [0, 0.42]], "extend": false, "dashed": true, "tone": "muted" },
+    { "kind": "line", "through": [[0.9816, 0], [0.9816, 0.26]], "extend": false, "dashed": true, "tone": "muted" },
+    { "kind": "line", "through": [[-0.9816, 0], [-0.9816, 0.26]], "extend": false, "dashed": true, "tone": "muted" },
+    { "kind": "point", "at": [0.4528, 0], "tone": "result" },
+    { "kind": "point", "at": [-0.4528, 0], "tone": "result" },
+    { "kind": "point", "at": [1.51, 0], "tone": "result" },
+    { "kind": "point", "at": [-1.51, 0], "tone": "result" },
+    { "kind": "text", "at": [2.2, 0.16], "text": "levels", "leaderTo": [1.51, 0.015] },
+    { "kind": "text", "at": [-2.1, 0.36], "text": "boundaries", "leaderTo": [-0.9816, 0.24] }
+  ]
+}
+:::
+
+## High-Rate Analysis and the Gap to $R(D)$
+
+<!-- section: performance-highrate -->
+
+At high rate the cells are narrow, the density is nearly constant across each, and everything becomes computable in closed form.
+
+:::lemma[Uniform-cell distortion]{#delta-squared-over-12}
+If a cell has width $\Delta$, its level sits at the cell's midpoint, and $f$ is approximately constant across it, the cell's contribution to the MSE per unit probability is $\Delta^2/12$.
+:::
+
+:::proof
+With $f$ constant on the cell, $X$ restricted to the cell is uniform on an interval of length $\Delta$, and the midpoint is its mean. The variance of a uniform distribution on an interval of length $\Delta$ is $\Delta^2/12$.
+:::
+
+:::proposition[High-rate SQNR of a uniform quantizer]{#sqnr}
+For a $b$-bit uniform quantizer spanning the full-scale amplitude range $[-A,A]$, so that $\Delta = 2A/2^b$, and a signal of power $\sigma^2$ with negligible overload,
+
+$$\mathrm{SQNR} = 10\log_{10}\frac{\sigma^2}{\Delta^2/12} = 6.02\,b + 10\log_{10}\frac{12\sigma^2}{4A^2}\ \ \text{dB}.$$
+
+For a full-scale sinusoid, $\sigma^2 = A^2/2$ and the constant term is $10\log_{10}(1.5) = 1.76$ dB, giving the classical $\mathrm{SQNR} \approx 6.02\,b + 1.76$ dB.
+:::
+
+:::proof
+Substitute $\Delta = 2A/2^{b}$ into $\Delta^2/12 = \frac{4A^2}{12}2^{-2b}$, so $\sigma^2/(\Delta^2/12) = \frac{12\sigma^2}{4A^2}\,2^{2b}$. Taking $10\log_{10}$ turns $2^{2b}$ into $20b\log_{10}2 = 6.0206\,b$ dB, and the remaining factor is the stated constant, which depends only on the loading factor $A/\sigma$ and not on $b$. Each added bit halves $\Delta$, quartering $\Delta^2/12$, hence the $6.02$ dB per bit.
+:::
+
+:::example[A 16-bit converter]{#ex-16bit}
+What SQNR does an ideal 16-bit converter achieve on a full-scale sine wave, and what does that say about a real converter quoted at 92 dB?
+:::
+
+:::solution
+$\mathrm{SQNR} = 6.02 \times 16 + 1.76 = 96.33 + 1.76 = 98.1$ dB.
+
+A real part quoted at $92$ dB is $6.1$ dB short, which corresponds to $6.1/6.02 = 1.01$ bits — its **effective number of bits** is about $15$. The missing bit is spent on thermal noise, clock jitter and comparator nonlinearity.
+
+Sanity check: SQNR figures are only meaningful with the signal level stated. The same converter driven at $-20$ dBFS shows $20$ dB less SQNR, because $\sigma^2$ has fallen while $\Delta$ has not.
+:::
+
+For a *non-uniform* quantizer the analysis generalizes through the idea of a point density: at high rate, describe the quantizer not by its individual cells but by how densely it places them.
+
+:::definition[Quantizer point density]{#point-density}
+An $N$-level quantizer has **point density** $\lambda$, a probability density on $\mathbb{R}$, if the number of levels in any interval $I$ is approximately $N\int_I \lambda(x)dx$ — equivalently, the cell containing $x$ has width approximately $1/(N\lambda(x))$.
+:::
+
+:::theorem[Bennett's integral and the Panter–Dite formula]{#panter-dite}
+At high rate, an $N$-level quantizer with point density $\lambda$ and midpoint levels has distortion
+
+$$D \approx \frac{1}{12N^2}\int_{\mathbb{R}} \frac{f(x)}{\lambda(x)^2}\,dx \qquad\text{(Bennett's integral).}$$
+
+This is minimized by the **compander rule** $\lambda^\ast(x) \propto f(x)^{1/3}$, and the minimum value is
+
+$$D^\ast \approx \frac{1}{12 N^2}\left(\int_{\mathbb{R}} f(x)^{1/3}dx\right)^{3} \qquad\text{(Panter–Dite).}$$
+:::
+
+:::proof
+Bennett's integral is the previous lemma summed over cells: the cell at $x$ has width $1/(N\lambda(x))$ and contributes $\frac{1}{12}\bigl(N\lambda(x)\bigr)^{-2}$ per unit probability, so the total is $\int f(x)\frac{1}{12N^2\lambda(x)^2}dx$.
+
+For the optimization, apply Hölder's inequality with exponents $3$ and $3/2$ to the factorization $f^{1/3} = (f\lambda^{-2})^{1/3}\cdot \lambda^{2/3}$:
+
+$$\int f^{1/3} = \int (f\lambda^{-2})^{1/3}\lambda^{2/3} \le \left(\int f\lambda^{-2}\right)^{1/3}\left(\int \lambda\right)^{2/3} = \left(\int f\lambda^{-2}\right)^{1/3},$$
+
+using $\int\lambda = 1$. Cubing gives $\int f\lambda^{-2} \ge \bigl(\int f^{1/3}\bigr)^3$, with equality in Hölder exactly when $f\lambda^{-2}$ and $\lambda$ are proportional, i.e. $\lambda \propto f^{1/3}$.
+:::
+
+:::example[Panter–Dite for a Gaussian, and the 4.35 dB gap]{#ex-panter-dite-gaussian}
+Evaluate the Panter–Dite distortion for $X\sim N(0,\sigma^2)$ and compare it with $R(D)$.
+:::
+
+:::solution
+With $f(x) = (2\pi\sigma^2)^{-1/2}e^{-x^2/(2\sigma^2)}$,
+
+$$f(x)^{1/3} = (2\pi\sigma^2)^{-1/6}e^{-x^2/(6\sigma^2)}, \qquad \int f^{1/3} = (2\pi\sigma^2)^{-1/6}\sqrt{6\pi\sigma^2}.$$
+
+Cubing: $\bigl(\int f^{1/3}\bigr)^3 = \dfrac{(6\pi\sigma^2)^{3/2}}{(2\pi\sigma^2)^{1/2}} = 6\sqrt{3}\,\pi\,\sigma^2$.
+
+Hence $D^\ast \approx \dfrac{6\sqrt3\pi\sigma^2}{12N^2} = \dfrac{\sqrt3\,\pi}{2}\,\sigma^2 2^{-2b} = 2.7207\,\sigma^2 2^{-2b}$ for $N = 2^b$ levels.
+
+Compare with the rate–distortion optimum $D = \sigma^2 2^{-2b}$. The ratio is $2.7207$, i.e.
+
+$$10\log_{10}(2.7207) = 4.35\ \text{dB}.$$
+
+Sanity check: the gap is a constant independent of $b$ — the two curves are parallel on a dB-versus-rate plot, both falling at $6.02$ dB per bit. The scalar quantizer does not get relatively worse at high rate; it is uniformly $4.35$ dB behind, which in rate terms is $4.35/6.02 = 0.72$ bits per sample.
+:::
+
+That $4.35$ dB is for *fixed-rate* scalar quantization, where every index costs $\log_2 N$ bits. Entropy coding the indices recovers most of it, and the amount left over is one of the cleanest constants in the subject.
+
+:::theorem[Gish–Pierce: the entropy-coded scalar quantization gap]{#gish-pierce}
+At high rate, the best entropy-coded scalar quantizer of a source with density $f$ is the **uniform** one, and it satisfies
+
+$$D_{\mathrm{ECSQ}}(R) \approx \frac{2^{2h(X)}}{12}\,2^{-2R}, \qquad\text{while}\qquad D_{R(D)}(R) \approx \frac{2^{2h(X)}}{2\pi e}\,2^{-2R}.$$
+
+The ratio is $\dfrac{2\pi e}{12} = \dfrac{\pi e}{6} = 1.4233$, so entropy-coded scalar quantization is
+
+$$\tfrac12\log_2\frac{\pi e}{6} = 0.2546\ \text{bits per sample}, \qquad 10\log_{10}\frac{\pi e}{6} = 1.533\ \text{dB}$$
+
+away from the rate–distortion bound, for **every** source with a smooth density.
+:::
+
+:::proof
+*(Sketch.)* For a uniform quantizer of step $\Delta$ at high rate, the index probabilities are $p_i \approx f(x_i)\Delta$, so the index entropy is
+
+$$H(Q(X)) = -\sum_i p_i\log_2 p_i \approx -\int f(x)\log_2\bigl(f(x)\Delta\bigr)dx = h(X) - \log_2\Delta.$$
+
+Setting $R = H(Q(X))$ gives $\Delta = 2^{h(X)-R}$, and the distortion is $\Delta^2/12 = \frac{2^{2h(X)}}{12}2^{-2R}$. Meanwhile the Shannon lower bound, tight as $D\to 0$, gives $R \ge h(X) - \tfrac12\log_2(2\pi e D)$, i.e. $D \ge \frac{2^{2h(X)}}{2\pi e}2^{-2R}$. Dividing gives the constant. That the uniform quantizer is the optimal ECSQ at high rate — non-uniform companding *hurts* once entropy coding is allowed — is the substantive half of the theorem, due to Gish and Pierce; it follows from a variational argument over point densities in which the entropy constraint replaces the level-count constraint, and the optimizer is $\lambda$ constant.
+:::
+
+:::remark
+Three numbers now sit side by side for the Gaussian source at high rate, all measured against $R(D)$:
+
+- fixed-rate uniform scalar quantization: about $4.4$ dB behind (loading-factor dependent);
+- fixed-rate optimal (Panter–Dite) scalar quantization: $4.35$ dB behind;
+- entropy-coded uniform scalar quantization: $1.53$ dB behind.
+
+Entropy coding is worth nearly $2.8$ dB; optimizing the *shape* of the scalar quantizer, once you are entropy coding, is worth essentially nothing. The remaining $1.53$ dB is not a defect of the quantizer's shape at all — it is the price of partitioning space into intervals rather than into better-shaped multidimensional cells, and only vector quantization can collect it.
+:::
+
+:::figure[Signal-to-distortion ratio against rate for a Gaussian source at high rate. All three lines climb at $6.02$ dB per bit, so the gaps are constants: entropy-coded scalar quantization sits $1.53$ dB below the rate–distortion bound, and fixed-rate Panter–Dite quantization $4.35$ dB below it.]{#fig-quantizer-gaps}
+{
+  "type": "plot",
+  "x": [0, 5], "y": [-1, 31],
+  "xTicks": 1, "yTicks": 6, "xLabel": "rate, bits per sample", "yLabel": "SNR in dB",
+  "marks": [
+    { "kind": "function", "fn": "6.0206*x", "tone": "result" },
+    { "kind": "function", "fn": "6.0206*x - 1.533", "tone": "accent", "dashed": true },
+    { "kind": "function", "fn": "6.0206*x - 4.35", "tone": "alt", "dashed": true },
+    { "kind": "text", "at": [1.5, 25], "text": "R(D) bound", "leaderTo": [3.7, 22.3] },
+    { "kind": "text", "at": [4.1, 11], "text": "entropy-coded SQ", "leaderTo": [2.6, 14.1] },
+    { "kind": "text", "at": [3.0, 2], "text": "Panter-Dite", "leaderTo": [1.8, 6.5] }
+  ]
+}
+:::
+
+:::intuition
+Why is the last $1.53$ dB unreachable by any scalar scheme? Because a scalar quantizer applied to $k$ samples carves $\mathbb{R}^k$ into boxes, and a box is a poor cell: it has too much volume far from its centre, in the corners. The best possible cell shape is a sphere. The ratio of a cube's normalized second moment to a sphere's, in high dimension, is exactly $2\pi e/12$.
+
+That is the whole story of the next part.
+:::
+
+## Why Vector Quantization Beats Scalar
+
+<!-- section: why-vector -->
+
+:::definition[Vector quantizer]{#vector-quantizer}
+A $k$-dimensional **vector quantizer** of rate $R$ bits per sample is a map $Q:\mathbb{R}^k \to \mathcal{C}$ onto a codebook $\mathcal{C} = \{\hat{\mathbf{y}}_1,\dots,\hat{\mathbf{y}}_M\}\subset\mathbb{R}^k$ with $M = 2^{kR}$ codevectors. Its cells are the **Voronoi regions** $V_i = \{\mathbf{x} : \|\mathbf{x}-\hat{\mathbf{y}}_i\| \le \|\mathbf{x}-\hat{\mathbf{y}}_j\|\ \forall j\}$, and its distortion is $\frac1k\mathbb{E}\|\mathbf{X}-Q(\mathbf{X})\|^2$ per sample.
+:::
+
+Applying a scalar quantizer to each of $k$ coordinates *is* a vector quantizer — one whose cells are axis-aligned boxes and whose codebook is a product set. So VQ can never be worse, and the question is only where the improvement comes from. It is customary, and genuinely clarifying, to separate it into three independent gains.
+
+:::definition[The three gains of vector quantization]{#vq-gains}
+Against entropy-coded scalar quantization of the same source at the same rate, a vector quantizer can collect:
+
+1. **Memory gain** — from statistical dependence between the coordinates, which a product codebook must waste codewords on;
+2. **Shape gain** — from the density's shape, when its contours are not aligned with the coordinate boxes (for a fixed-rate scalar quantizer; entropy coding already collects most of this);
+3. **Space-filling gain** — from the geometry of the cells themselves, present even for i.i.d. sources and even at infinite rate.
+:::
+
+The first two are intuitive and are, in principle, obtainable by other means: memory gain by a decorrelating transform, shape gain by entropy coding. The third is the irreducible one, and it is pure geometry.
+
+:::definition[Normalized second moment]{#nsm}
+For a bounded region $V \subset\mathbb{R}^k$ of positive volume with centroid at the origin, its **normalized second moment** is
+
+$$G(V) = \frac{1}{k}\cdot\frac{\int_V \|\mathbf{x}\|^2 d\mathbf{x}}{\bigl(\mathrm{vol}\,V\bigr)^{1 + 2/k}},$$
+
+a dimensionless quantity invariant under scaling. Write $G_k = \inf_V G(V)$ over all regions that tile $\mathbb{R}^k$.
+:::
+
+:::theorem[The space-filling bound]{#space-filling}
+$G_1 = 1/12$, attained by the interval. In every dimension $G_k \ge G(\text{ball in }\mathbb{R}^k)$, and
+
+$$\lim_{k\to\infty} G_k = \frac{1}{2\pi e} = 0.05855.$$
+
+Consequently the maximum achievable space-filling gain of vector over scalar quantization, at any rate, is
+
+$$10\log_{10}\frac{1/12}{1/(2\pi e)} = 10\log_{10}\frac{\pi e}{6} = 1.533\ \text{dB},$$
+
+matching exactly the Gish–Pierce gap of the previous part.
+:::
+
+:::proof
+*(The scalar value, and the shape of the argument.)* For $V = [-\Delta/2,\Delta/2]$, $\int_V x^2 dx = \Delta^3/12$ and $\mathrm{vol}\,V = \Delta$, so $G(V) = (\Delta^3/12)/\Delta^{3} = 1/12$. That no other one-dimensional tile does better is immediate, since intervals are the only connected tiles of $\mathbb{R}$.
+
+The lower bound $G_k \ge G(\text{ball})$ is the isoperimetric-type statement that among all regions of a given volume, the ball minimizes the second moment about its centroid — a rearrangement inequality. For the limit, a direct computation with the volume of the unit ball $V_k = \pi^{k/2}/\Gamma(k/2+1)$ gives $G(\text{ball in }\mathbb{R}^k) = \frac{1}{k+2}V_k^{-2/k}$, and Stirling's formula yields $V_k^{-2/k}\sim k/(2\pi e)$, hence $G \to 1/(2\pi e)$. That spheres *asymptotically tile* — that the lower bound is attained in the limit — is the deep half, and follows from the existence of good lattice quantizers (equivalently from the achievability half of the rate–distortion theorem itself); it is not proved here.
+:::
+
+:::remark
+The two constants $1/12$ and $1/(2\pi e)$ have already appeared, in the Gish–Pierce theorem, as the coefficients of $2^{-2R}$ for ECSQ and for $R(D)$. That is not a coincidence: $\Delta^2/12$ *is* $G_1$ applied to an interval, and the $2\pi e$ in the Shannon lower bound *is* the $k\to\infty$ normalized second moment. The two derivations — one through entropies, one through geometry — are the same theorem seen from two sides.
+:::
+
+:::theorem[Zador's high-rate formula]{#zador}
+For an entropy-constrained $k$-dimensional vector quantizer of a source with density $f$ on $\mathbb{R}^k$, the least distortion per sample at rate $R$ satisfies, as $R\to\infty$,
+
+$$D_k(R) \approx G_k\, 2^{2h(X)}\,2^{-2R},$$
+
+where $h(X)$ is the differential entropy per sample. Taking $k=1$ recovers $\frac{1}{12}2^{2h}2^{-2R}$; taking $k\to\infty$ recovers the Shannon lower bound $\frac{1}{2\pi e}2^{2h}2^{-2R}$.
+:::
+
+:::intuition
+At high rate every quantizer has the same $6.02$ dB-per-bit slope. All that distinguishes them is the constant in front, and Zador says that constant factors into "what the source is" ($2^{2h}$) times "what shape your cells are" ($G_k$).
+
+You cannot change the source. You can change the cell shape, and the entire achievable improvement, from box to sphere, is $1.53$ dB.
+:::
+
+:::example[The hexagonal lattice in two dimensions]{#ex-hexagonal}
+The hexagonal lattice $A_2$ has normalized second moment $G(A_2) = \frac{5}{36\sqrt3}$. How much does it gain over the square lattice, and what fraction of the ultimate space-filling gain is that?
+:::
+
+:::solution
+$G(A_2) = \frac{5}{36\sqrt3} = \frac{5}{62.354} = 0.080188$, against $G_1 = 1/12 = 0.083333$ for the square lattice (whose cells are squares, i.e. products of intervals).
+
+Gain: $10\log_{10}(0.083333/0.080188) = 10\log_{10}(1.03921) = 0.167$ dB.
+
+Fraction of the ultimate: $0.167/1.533 = 10.9\%$.
+
+Sanity check: a modest but real improvement from two dimensions, consistent with the fact that most of the space-filling gain requires high dimension — the best known lattices in dimension $24$ (the Leech lattice, $G = 0.065772$) reach $10\log_{10}(0.083333/0.065772) = 1.03$ dB, still only two thirds of the way.
+:::
+
+Memory gain is a different animal and is usually much larger. The cleanest way to see it is the jointly Gaussian case, where reverse water-filling gives the exact answer.
+
+:::example[Two correlated Gaussians at one bit per sample]{#ex-correlated-pair}
+Let $(X_1,X_2)$ be jointly Gaussian, zero mean, unit variance, with correlation $\rho = 0.9$. Compare (a) independent optimal 1-bit scalar quantizers, with (b) the rate–distortion optimum, both at a total budget of $2$ bits for the pair.
+:::
+
+:::solution
+*(a) Independent scalar quantizers.* Each coordinate gets one bit. From the earlier worked example, the optimal 1-bit quantizer of a unit Gaussian reports $\pm\sqrt{2/\pi} = \pm 0.79788$ with MSE $1 - 2/\pi = 0.36338$. Per-sample MSE is therefore $0.36338$. Note what this codebook looks like: four points at $(\pm0.798,\pm0.798)$, two of which — the off-diagonal ones — sit where the highly correlated data essentially never goes. Half the codebook is wasted.
+
+*(b) The rate–distortion optimum.* Diagonalize: $U = (X_1+X_2)/\sqrt2$ and $V = (X_1-X_2)/\sqrt2$ are independent with variances $1+\rho = 1.9$ and $1-\rho = 0.1$. Apply reverse water-filling with a total rate of $2$ bits. If both components were coded we would need $\tfrac12\log_2(1.9/\theta) + \tfrac12\log_2(0.1/\theta) = 2$, i.e. $0.19/\theta^2 = 16$, giving $\theta = 0.10897 > 0.1$ — inconsistent, since the $V$ axis would then be *below* the water level. So $V$ is discarded ($D_V = 0.1$) and the whole budget goes to $U$: $\tfrac12\log_2(1.9/D_U) = 2$ gives $D_U = 1.9/16 = 0.11875$.
+
+Total distortion $0.11875 + 0.1 = 0.21875$, i.e. per-sample MSE $0.109375$.
+
+*Comparison.* $0.36338/0.109375 = 3.322$, a $5.21$ dB improvement at the same rate.
+
+Sanity check by decomposition: the pure **memory gain** at high rate is the arithmetic-to-geometric-mean ratio of the eigenvalues, $\frac{(1.9+0.1)/2}{\sqrt{1.9\times 0.1}} = \frac{1}{0.43589} = 2.294$, or $3.61$ dB. The remaining $5.21 - 3.61 = 1.60$ dB is the gap of a 1-bit scalar quantizer to its own bound, computed earlier as $1.62$ dB. The two contributions add, as they should, and the arithmetic is consistent to rounding.
+:::
+
+:::pitfall
+That example compares VQ against *fixed-rate* scalar quantization of the *original* coordinates. It is not a fair advertisement for VQ as such: rotating first (the KLT) and then scalar-quantizing with entropy coding collects the $3.61$ dB memory gain without any vector codebook at all. The honest claim for VQ over a well-designed transform-plus-ECSQ pipeline is the space-filling gain — at most $1.53$ dB — plus whatever dependence the transform failed to remove.
+:::
+
+## Codebook Design: The LBG Algorithm
+
+<!-- section: lbg-design -->
+
+The Lloyd–Max conditions were derived for scalars, but nothing in their proof used dimension one.
+
+:::theorem[Optimality conditions for a vector quantizer]{#vq-conditions}
+A minimum-MSE $k$-dimensional vector quantizer satisfies, up to null sets:
+
+1. **Nearest-neighbour encoding.** The cells are the Voronoi regions of the codebook.
+2. **Centroid decoding.** $\hat{\mathbf{y}}_i = \mathbb{E}[\mathbf{X}\mid \mathbf{X}\in V_i]$.
+:::
+
+:::proof
+Identical to the scalar proof. For (1), with the codebook fixed, the assignment of each $\mathbf{x}$ is an independent choice and $\|\mathbf{x}-\hat{\mathbf{y}}_i\|^2$ is minimized by the nearest codevector. For (2), with the partition fixed, $\nabla_{\hat{\mathbf{y}}_i}\int_{V_i}\|\mathbf{x}-\hat{\mathbf{y}}_i\|^2 f(\mathbf{x})d\mathbf{x} = -2\int_{V_i}(\mathbf{x}-\hat{\mathbf{y}}_i)f\,d\mathbf{x}$ vanishes exactly at the conditional mean, and the Hessian $2\Pr[\mathbf{X}\in V_i]\,I$ is positive definite.
+:::
+
+:::recipe[Linde–Buzo–Gray / generalized Lloyd algorithm]{#lbg}
+Given a training set $\mathcal{T} = \{\mathbf{x}^{(1)},\dots,\mathbf{x}^{(T)}\}$ and a target codebook size $M$:
+
+1. **Initialize** a codebook of size $M$ — by *splitting*: start with the single centroid of $\mathcal{T}$, perturb it to $\hat{\mathbf{y}}\pm\boldsymbol{\epsilon}$, run the iteration below to convergence, and repeat the doubling until the size reaches $M$.
+2. **Assign** each training vector to its nearest codevector.
+3. **Update** each codevector to the sample mean of the vectors assigned to it.
+4. **Handle empty cells**: a codevector with no assigned training vectors is discarded and replaced by splitting the cell with the largest total distortion.
+5. Repeat from step 2 until the relative decrease in distortion falls below the tolerance.
+:::
+
+:::proposition[LBG is a descent method]{#lbg-descent}
+Each pass of steps 2–3 does not increase the training-set distortion, so the distortion sequence converges. The limit is a fixed point of the two optimality conditions, but need not be the globally optimal codebook.
+:::
+
+:::proof
+As in the scalar case, step 2 minimizes over partitions with the codebook fixed and step 3 minimizes over codebooks with the partition fixed; both are exact minimizations, so neither increases the objective. The sequence is non-increasing and bounded below, hence convergent. Non-global convergence is genuine: the objective as a function of the codebook is not convex, and for a training set with well-separated clusters, two different initializations can converge to distinct local minima with different distortions. The standard mitigations — splitting initialization, multiple random restarts, and pairwise-nearest-neighbour merging — reduce but do not eliminate the risk.
+:::
+
+:::remark
+LBG is exactly Lloyd's algorithm in $k$ dimensions, and exactly $k$-means clustering with the squared Euclidean distortion. The three names describe the same fixed-point iteration, discovered in quantization, in statistics and in pattern recognition respectively. For a non-Euclidean distortion the centroid step is replaced by whatever minimizes the expected distortion within the cell — for absolute error, the componentwise median; for the Itakura–Saito distortion used in speech, a spectral average.
+:::
+
+:::intuition
+Show the algorithm a few hundred thousand real blocks from your data. Repeatedly: group the blocks by which dictionary entry they are closest to, then move each dictionary entry to the average of its group.
+
+After enough iterations the entries sit at the centres of the natural clusters — and for image blocks, those clusters turn out to be recognizable things: flat patches, edges at various angles, textures.
+:::
+
+:::example[A VQ for image blocks]{#ex-image-vq}
+A codebook of $256$ codevectors is trained on $4\times4$ image blocks. What is the rate, and what does the encoder do per block?
+:::
+
+:::solution
+The block dimension is $k = 16$ pixels, and the codebook size is $M = 256 = 2^8$, so each block costs $8$ bits and the rate is $R = 8/16 = 0.5$ bits per pixel.
+
+Encoding one block: compute $\|\mathbf{x}-\hat{\mathbf{y}}_i\|^2$ for all $256$ codevectors and transmit the index of the smallest. That is $256 \times 16 = 4096$ multiply–accumulates per block, or $256$ per pixel.
+
+Sanity check: $0.5$ bits per pixel against the $8$ bits of the raw image is a compression factor of $16$, and the computation is $256$ operations per pixel — already substantial, and the next section shows this is the mild case.
+:::
+
+## Complexity, Structure, and Transform Coding
+
+<!-- section: performance-complexity -->
+
+:::proposition[Full-search VQ complexity]{#vq-complexity}
+A full-search $k$-dimensional VQ at rate $R$ bits per sample requires $2^{kR}$ distance computations of $k$ terms each per block, hence $2^{kR}$ operations and $k\,2^{kR}$ words of codebook storage **per sample**. Both are exponential in $kR$.
+:::
+
+:::proof
+Immediate from the codebook size $M = 2^{kR}$ and the definition of nearest-neighbour encoding: each of the $M$ codevectors must be compared, at a cost of $k$ operations, and the whole block of $k$ samples is thereby encoded.
+:::
+
+At $R = 1$ bit per sample and $k = 24$, that is $2^{24} \approx 1.7\times 10^7$ distance computations per block — and $k = 24$ is nowhere near the dimension at which the space-filling gain is collected. Unstructured VQ is not a practical technique, and everything real is a structured approximation.
+
+:::definition[Structured vector quantizers]{#structured-vq}
+- **Lattice VQ**: the codebook is (a bounded region of) a lattice $\Lambda$, so nearest-neighbour search is a closed-form rounding rule instead of a search. Storage is $O(k^2)$ and encoding is $O(k\log k)$ or better.
+- **Tree-structured VQ**: the codebook is the leaf set of a binary tree; encoding descends the tree, costing $kR$ comparisons instead of $2^{kR}$, at the price of a suboptimal partition.
+- **Multi-stage (residual) VQ**: quantize $\mathbf{x}$ coarsely, then quantize the residual, and so on; $s$ stages of $M^{1/s}$ codevectors each cost $sM^{1/s}$ searches.
+- **Product / shape–gain VQ**: quantize the norm and the direction separately, matching the spherical symmetry many sources have.
+- **Trellis-coded quantization**: use a convolutional code's trellis as an implicit codebook, with the Viterbi algorithm as the encoder — the quantization dual of trellis-coded modulation.
+:::
+
+:::remark
+Lattice VQ deserves emphasis because it makes the space-filling gain *directly* available: choosing the lattice is choosing the cell shape, and the best lattices are exactly the ones with small $G(\Lambda)$. It also makes the encoder trivial. What it gives up is the ability to match the source density, which is why lattice VQ is normally applied after a transform that has made the source approximately i.i.d. and roughly spherical.
+:::
+
+In practice, the dominant architecture is not VQ at all: it is a transform, followed by scalar quantization, followed by entropy coding. The reason is the theorem below, which says the transform collects the memory gain — the large one — at negligible cost.
+
+:::theorem[Transform coding gain]{#transform-coding-gain}
+Let $\mathbf{X}\sim N(\mathbf{0},\Sigma)$ in $\mathbb{R}^m$ with $\Sigma$ having equal diagonal entries $\sigma^2$, and eigenvalues $\lambda_1,\dots,\lambda_m$. At high rate, with optimal bit allocation across components, coding in the eigenbasis rather than in the original coordinates reduces the distortion by the factor
+
+$$G_{\mathrm{TC}} = \frac{\frac1m\sum_{j}\lambda_j}{\bigl(\prod_j \lambda_j\bigr)^{1/m}},$$
+
+the ratio of the arithmetic to the geometric mean of the eigenvalues. $G_{\mathrm{TC}}\ge 1$ always, with equality exactly when all eigenvalues are equal, i.e. when the source is already white.
+:::
+
+:::proof
+At high rate a scalar quantizer on a component of variance $v$ at rate $R_j$ has distortion $c\,v\,2^{-2R_j}$, with $c$ a constant depending only on the cell shape and the entropy-coding regime (the same constant for every component, since all components are Gaussian). Minimize the total $\sum_j c\lambda_j 2^{-2R_j}$ subject to $\sum_j R_j = mR$. By the arithmetic–geometric mean inequality,
+
+$$\frac1m\sum_j c\lambda_j 2^{-2R_j} \ \ge\ \Bigl(\prod_j c\lambda_j 2^{-2R_j}\Bigr)^{1/m} = c\Bigl(\prod_j \lambda_j\Bigr)^{1/m} 2^{-2R},$$
+
+with equality exactly when all terms are equal, which is the allocation $R_j = R + \tfrac12\log_2\frac{\lambda_j}{(\prod\lambda)^{1/m}}$. So the transform-coded distortion per component is $c(\prod\lambda_j)^{1/m}2^{-2R}$.
+
+Coding the original coordinates instead, each has variance $\sigma^2 = \frac1m\sum_j\lambda_j$ (equal diagonal entries, and the trace is preserved by the eigendecomposition), so equal bit allocation is optimal and the distortion per component is $c\sigma^2 2^{-2R}$. The ratio is $G_{\mathrm{TC}}$, and AM $\ge$ GM gives $G_{\mathrm{TC}}\ge1$ with equality iff all $\lambda_j$ coincide.
+:::
+
+:::example[Transform coding gain for the correlated pair]{#ex-tc-gain}
+Compute $G_{\mathrm{TC}}$ for the $\rho = 0.9$ pair of the earlier example, and check it against the $5.21$ dB total measured there.
+:::
+
+:::solution
+Eigenvalues $1.9$ and $0.1$. Arithmetic mean $1.0$; geometric mean $\sqrt{0.19} = 0.43589$.
+
+$$G_{\mathrm{TC}} = \frac{1.0}{0.43589} = 2.294, \qquad 10\log_{10}(2.294) = 3.61\ \text{dB}.$$
+
+Sanity check: the earlier example measured a total improvement of $5.21$ dB against fixed-rate scalar quantization, and attributed $3.61$ dB of it to correlation. The two calculations agree, and the residual $1.60$ dB is the 1-bit scalar quantizer's own gap to its bound — which entropy coding and higher dimension, not the transform, would address.
+:::
+
+:::remark
+Real codecs replace the KLT, which depends on the signal statistics and costs $O(m^2)$, by a fixed transform: the DCT in JPEG, H.264 and AAC; a wavelet in JPEG 2000. For first-order Markov sources with high correlation the DCT is asymptotically as good as the KLT, and it costs $O(m\log m)$ with no side information. Learned compressors replace the fixed transform by a trained nonlinear one and keep the same three-stage structure — the theorem above is still what they are exploiting.
+:::
+
+## Common Mistakes
+
+- **Confusing $R(D)$ with the distortion–rate function $D(R)$.** They are inverse functions of each other on the range where $R$ is strictly decreasing: $R(D)$ is the least rate for a distortion budget, $D(R)$ the least distortion for a rate budget. Quoting one where the other is meant inverts every inequality.
+- **Asserting $R(0) = H(X)$ for every source.** It holds for discrete sources with a distortion measure vanishing only on the diagonal. For a continuous source $R(D)\to\infty$ as $D\to 0$, and substituting the differential entropy $h(X)$ for $H(X)$ is wrong — $h(X)$ can even be negative.
+- **Using $h_2(p) - h_2(D)$ outside $D \le \min(p,1-p)$.** Past $D_{\max}$ the true value is $0$; the formula goes negative and is meaningless there.
+- **Forgetting that $R(D)$ depends on the distortion measure as much as on the source.** Swapping squared error for absolute error or a perceptual metric changes the function entirely; a rate–distortion claim with no $d$ attached is not a claim.
+- **Treating the test channel as a physical channel.** $p(\hat x\mid x)$ scores a proposed source–reproduction relationship; nothing is transmitted through it and it need not be implementable.
+- **Assuming the optimal reproduction alphabet equals the source alphabet.** For a discrete source the optimal $\hat{\mathcal{X}}$ can be strictly smaller, and for a continuous source it is a finite set at each finite rate.
+
+The last part computed $R^{(I)}(D)$, an optimization over one-symbol conditional distributions. Nothing so far says that this number has anything to do with codes. That identification is the rate–distortion theorem, and it is the reason the whole subject is called rate–distortion theory rather than "constrained mutual information minimization".
+
+- **Reading the achievability proof as an algorithm.** It proves a good codebook exists by averaging over random codebooks; it offers no way to find one, and the encoding step it describes is a search over $2^{nR}$ codewords.
+- **Getting the Lagrangian sign backwards.** Minimize $I + \lambda\mathbb{E}[d]$ with $\lambda \ge 0$; the slope of the curve is $s = R'(D) = -\lambda \le 0$. Optimal test channel weights carry $e^{-\lambda d}$, never $e^{+\lambda d}$.
+- **Using the Shannon lower bound without clipping it at zero.** For $D$ near or above $D_{\max}$ the expression $h(X) - \tfrac12\log_2(2\pi eD)$ is negative, while $R(D) = 0$. The bound is $\max\{0,\text{SLB}\}$.
+- **Applying the high-rate approximation $R(D)\approx h(X) - \tfrac12\log_2(2\pi eD)$ at low rate.** It is an asymptotic statement as $D\to 0$; at moderate $D$ it can be badly off, and above $D_{\max}$ it is simply wrong.
+- **Forward water-filling instead of reverse.** Channel coding allocates *power* preferentially to strong sub-channels; rate–distortion allocates *distortion* equally down to a level and abandons everything below it. The two pictures are not the same and confusing them inverts the bit allocation.
+- **Assuming a component below the water level should get "a few" bits.** The optimum gives it exactly zero and reproduces it by its mean; spending bits there provably wastes them.
+- **Treating $R(D)$ as a per-block quantity.** It is bits *per source symbol*; a block of $n$ symbols needs about $nR(D)$ bits, and the $o(n)$ correction is what finite-blocklength analysis quantifies.
+
+The rate–distortion theorem promises a code; it does not build one, and its construction encodes whole blocks by exhaustive search. Everything actually deployed starts from the opposite end: quantize one sample at a time, cheaply, and recover what can be recovered with a transform and an entropy coder. This part measures exactly how much that costs.
+
+- **Treating the Lloyd–Max conditions as sufficient.** They are necessary. A quantizer meeting both is a fixed point and may be only locally optimal; multimodal densities have several distinct fixed points.
+- **Assuming quantization noise is white, uniform and signal-independent.** That model is a high-rate approximation on a smooth density. At low rate, on constant or slowly varying signals, the error is deterministic and structured; dither is what makes the model honest.
+- **Confusing $\log_2 N$ with the rate.** With entropy coding the rate is $H(Q(X))$, which for a peaked source is much smaller. Nearly all of the $4.35$ dB Panter–Dite gap is recovered by entropy coding, not by clever level placement.
+- **Quoting SQNR without stating the signal level.** $6.02b + 1.76$ dB assumes a *full-scale sinusoid*. A different waveform or a backed-off level changes the constant, sometimes by tens of dB.
+- **Ignoring overload distortion.** Samples beyond the outermost boundary incur unbounded error. Good designs balance granular against overload error by choosing the loading factor; too wide a range is as bad as too narrow.
+- **Believing scalar quantization is hopelessly far from $R(D)$.** Entropy-coded scalar quantization is within $0.2546$ bits per sample of the bound at high rate, for *any* smooth source. That is why practical codecs use it.
+- **Applying the high-rate formulas at one or two bits.** Panter–Dite predicts $2.72\sigma^2/N^2 = 0.68\sigma^2$ for a 1-bit Gaussian quantizer; the true optimum is $0.363\sigma^2$. The asymptotic analysis is simply not valid there.
+
+The previous part ended with a puzzle: entropy-coded scalar quantization is within $1.53$ dB of $R(D)$ for every smooth source, and no amount of scalar cleverness closes the remaining gap. Vector quantization closes it, and the analysis below says exactly how, and how much each ingredient is worth.
+
+- **Expecting VQ to be applied to raw samples.** It essentially never is. A transform (DCT, wavelet, autoencoder) comes first, because the memory gain it collects is large and cheap, while the space-filling gain VQ adds is at most $1.53$ dB.
+- **Quoting VQ's advantage as unbounded.** Against *entropy-coded* scalar quantization of an i.i.d. source, the total available gain is $1.53$ dB, full stop. The dramatic numbers in textbook comparisons come from correlated sources measured against *fixed-rate* scalar quantization, which conflates three separate gains.
+- **Confusing codebook size with search cost.** The size is $2^{kR}$ and so is the full-search cost; doubling the dimension at fixed rate squares it. Structured codebooks are mandatory, not an optimization.
+- **Believing LBG finds the global optimum.** It is coordinate descent on a non-convex objective and stops at a fixed point. Initialization by splitting and multiple restarts matter.
+- **Forgetting to count the codebook.** For a one-shot compression or a small data set, transmitting the trained codebook can cost more than the data. Lattice and universal quantizers avoid the problem by having no codebook to send.
+- **Mishandling empty cells.** A codevector that captures no training vectors has an undefined centroid; leaving it in place wastes a codeword permanently. Split the highest-distortion cell instead.
+- **Overfitting the training set.** A codebook trained on $T$ vectors with $M$ codevectors is fitting $kM$ parameters; with $T$ not much larger than $M$, the measured training distortion is optimistic and out-of-sample performance is far worse.
+
+So far the encoder and the decoder have known nothing except what the encoder sends. In a sensor network, in a video codec with a reference frame, in any system with several correlated observations, that is false: somebody knows something extra. This part asks what that knowledge is worth, and — the surprising part — *where* it has to sit to be worth anything.
+
+- **Believing encoder-only side information reduces the rate.** It does not, when the distortion depends only on $(x,\hat x)$: $R_{\mathrm{enc}}(D) = R(D)$ exactly. The "send only the innovation" argument fails because the decoder cannot add the predictable part back.
+- **Mixing up the source and channel versions of the asymmetry.** In *source* coding, side information at the decoder helps and at the encoder does not. In *channel* coding with state, the reverse holds: state at the transmitter is worth a great deal (dirty-paper coding). Quoting one asymmetry for the other reverses the conclusion.
+- **Assuming $R_{\mathrm{WZ}}(D) = R_{X\mid Y}(D)$ in general.** It holds for the quadratic-Gaussian source and a few others. For a binary source under Hamming distortion there is a strict gap at every $0 < D < D_{\max}$.
+- **Forgetting that the reconstruction may depend on the side information.** The Wyner–Ziv reproduction is $\hat x(u,y)$, a function of *both*. A codec that uses $Y$ only to decode the bin index, and not again at reconstruction, leaves performance on the table.
+- **Assuming every source is successively refinable.** Gaussian and Bernoulli sources are; the general condition is the Equitz–Cover Markov chain, and sources failing it pay a real penalty for a scalable bitstream.
+- **Treating open problems as solved.** The general multiple-description and Heegard–Berger regions are not known. An inner bound from quantize-and-bin is not a characterization.
+
+The Wyner–Ziv problem is the one configuration of the four whose answer is not a rephrasing of the ordinary theory. It has its own auxiliary variable, its own achievability construction, and a genuinely surprising special case.
+
+- **Sending the quantization index instead of the bin index.** That costs $I(X;U)$ rather than $I(X;U\mid Y)$ — in the Gaussian example above, $1.5$ bits instead of $0.87$. Binning is the entire saving.
+- **Dropping the Markov constraint $U - X - Y$.** Without it the minimum collapses to the conditional rate–distortion function. The constraint is the encoder's blindness, expressed in symbols.
+- **Reconstructing from $U$ alone.** The optimal reproduction is $\hat x(u,y)$; using $Y$ only to resolve the bin and then ignoring it at reconstruction time loses distortion for free.
+- **Generalizing the no-rate-loss result.** It is a theorem about the quadratic-Gaussian source. Under Hamming distortion on a binary source the gap is strictly positive for every interior $D$.
+- **Assuming the auxiliary alphabet must be large.** $|\mathcal{U}|\le|\mathcal{X}|+1$ always suffices, which is what makes numerical computation of $R_{\mathrm{WZ}}$ possible at all.
+- **Expecting practical distributed video codecs to hit the bound.** Real side information is neither memoryless nor of known correlation, the correlation must be estimated online, and blocklengths are short. The theorem is the benchmark, not the achieved performance.
+
+The last problem in the chapter is the lossless one, and it is placed last rather than first because its solution is the binning construction we have just built. Slepian and Wolf proved it in 1973; Wyner and Ziv's lossy version came three years later and is the theorem above.
+
+- **Believing separate encoders must pay a penalty.** The achievable sum rate is exactly $H(X,Y)$, the same as joint encoding. Only the *individual* rates carry extra constraints, which is what makes the region a pentagon rather than a half-plane.
+- **Reading "each encoder needs only $H(X\mid Y)$" as a rate pair.** The point $(H(X\mid Y), H(Y\mid X))$ is *not* achievable unless $X$ and $Y$ are independent: its sum is $H(X,Y) - I(X;Y)$, below the sum-rate bound.
+- **Confusing Slepian–Wolf with Wyner–Ziv.** Slepian–Wolf is lossless and both sources are recovered; Wyner–Ziv is lossy and the side information is never reconstructed, only used.
+- **Forgetting that the binning is designed for a known $p(x,y)$.** In practice the correlation must be estimated, and a mismatch causes decoding failure rather than graceful degradation. Universal and rateless (feedback-driven) schemes exist for this reason.
+- **Assuming syndrome coding handles every correlation.** It is exactly right when the correlation is a binary symmetric "virtual channel". A general $p(x,y)$ needs general binning, typically graph-based codes over larger alphabets.
+- **Thinking the sources must be binary or even i.i.d.** The theorem holds for any discrete memoryless joint distribution, and extends to stationary ergodic sources with $H$ replaced by entropy rates.
