@@ -4,232 +4,874 @@ title: Predicate Logic
 
 # Predicate Logic
 
-Predicate logic, or first-order logic (FOL), extends propositional logic by allowing us to talk about objects and their properties and relations. Instead of treating "Socrates is mortal" as an atomic proposition, we decompose it as $M(s)$ where $s$ names Socrates and $M$ is the predicate "is mortal".
+Propositional logic treats a sentence as an unanalysed atom. It can tell you that *if* "Socrates is a man" then "Socrates is mortal", but it cannot see inside either sentence, and so it cannot explain why the inference from "every man is mortal" to "Socrates is mortal" is valid. First-order logic — predicate logic — opens the atom. It names objects with **terms**, says things about them with **predicates**, and quantifies over them with $\forall$ and $\exists$. The result is a language in which essentially all of mathematics can be written down, together with a semantics precise enough to say what those sentences *mean* and a proof calculus that is sound and complete for that semantics.
 
-We also add quantifiers: "for all" ($\forall$) and "there exists" ($\exists$). This lets us express statements such as "every natural number has a successor" or "there exists a prime larger than 100". FOL is expressive enough for most of mathematics yet still decidable in important fragments and has a complete proof system (Gödel's completeness theorem).
+This chapter builds the subject in the order the definitions actually depend on each other: first the language (pure syntax, no meaning at all), then the bookkeeping of free and bound variables and substitution, then structures and Tarski's recursive definition of truth, then entailment and validity, then two theorems that tie syntax and semantics together — prenex normal form and the soundness of a proof calculus.
 
-## Predicates, Constants, Functions, and Variables
+## First-Order Languages: Terms, Formulas, Unique Readability
 
 <!-- section: predicates -->
 
-:::definition[Predicate]
-A **predicate** (or relation symbol) of arity $k$ takes $k$ arguments and yields a truth value.
+A first-order language is a purely formal object: a set of symbols and rules for stringing them together. Nothing in this section is about truth. Meaning arrives two sections later, and keeping the two apart is the single most important habit in the subject — it is what makes it possible to ask whether a *syntactic* notion (provability) matches a *semantic* one (truth in every structure).
+
+:::definition[First-order language]{#language-definition}
+A **first-order language** $\mathcal{L}$ consists of
+
+- **logical symbols**, the same for every language: variables $v_0, v_1, v_2, \dots$ (an infinite supply), connectives $\neg, \land, \lor, \to$, quantifiers $\forall, \exists$, the equality symbol $=$, and the punctuation marks $($, $)$ and the comma;
+- a **signature**: a set of **constant symbols** $c, d, \dots$, a set of **function symbols** each with an **arity** $n \ge 1$, and a set of **relation (predicate) symbols** each with an arity $n \ge 0$.
+
+The logical symbols are fixed furniture; a language *is* its signature.
 :::
 
-$P(x)$ is a unary predicate (property); $R(x,y)$ is binary (relation).
-
-:::notation[The rest of the vocabulary]
-**Constants** (names) denote specific objects: $a, b, c, \ldots$ or $0, \pi, \text{Socrates}$.
-
-**Function symbols** produce new objects from old: $f(x)$, $+(x,y)$, $\text{successor}(n)$.
-
-**Variables** $x,y,z$ stand for arbitrary objects; they are not yet assigned meaning until we interpret or quantify.
+:::notation
+We write $\mathcal{L}_{\text{ar}} = \{0, S, +, \times, <\}$ for the language of arithmetic ($0$ a constant, $S$ unary, $+$ and $\times$ binary, $<$ a binary relation), and $\mathcal{L}_{\text{gp}} = \{e, \cdot, {}^{-1}\}$ for the language of groups. Arities are part of the data: the same symbol $f$ cannot be unary in one formula and binary in the next.
 :::
 
-:::definition[Term]
-A **term** is anything that names an object: a constant, a variable, or a function symbol applied to other terms.
+Terms are the noun phrases of the language: expressions that *name* objects. They are generated from below, and the phrase "nothing else is a term" in the definition is doing real work — it is what licenses proof by induction on terms.
+
+:::definition[Term]{#term-definition}
+The set of **$\mathcal{L}$-terms** is the smallest set $T$ such that
+
+1. every variable $v_i$ is in $T$;
+2. every constant symbol of $\mathcal{L}$ is in $T$;
+3. if $f$ is an $n$-ary function symbol of $\mathcal{L}$ and $t_1,\dots,t_n \in T$, then the string $f(t_1,\dots,t_n)$ is in $T$.
+
+A term containing no variables is a **closed term** (or *ground term*).
 :::
 
-So $x$, $a$, $f(x)$, and $f(f(x,a),y)$ are all terms. A **term is not a formula** — it has no truth value; it just picks out an object.
+Because $T$ is the *smallest* such set, every term is built by finitely many applications of these clauses, and a property that holds of variables and constants and is preserved by clause 3 holds of every term. That is the **induction principle for terms**, used throughout the chapter without further comment.
 
-:::definition[Atomic formula]
-An **atomic formula** is a predicate symbol applied to terms (constants, variables, or function applications), e.g. $R(f(a), x)$ applies the binary predicate $R$ to the term $f(a)$ and the variable $x$.
+:::definition[Atomic formula]{#atomic-definition}
+An **atomic $\mathcal{L}$-formula** is a string of one of the two shapes
+
+$$t_1 = t_2 \qquad\text{or}\qquad R(t_1,\dots,t_n),$$
+
+where $R$ is an $n$-ary relation symbol of $\mathcal{L}$ and $t_1,\dots,t_n$ are $\mathcal{L}$-terms. A $0$-ary relation symbol standing alone is atomic too; it behaves exactly like a propositional variable.
 :::
 
-Atomic formulas are the smallest pieces that carry a truth value; everything else is built from them with connectives ($\land, \lor, \neg, \to$) and quantifiers.
+:::definition[Well-formed formula]{#wff-definition}
+The set of **$\mathcal{L}$-formulas** (well-formed formulas, wffs) is the smallest set $F$ with
 
-:::intuition
-Predicates are like adjectives or verbs with blanks: "__ is even", "__ loves __". Fill the blanks with names or variables and you get a claim that is true or false of those particular things.
-
-Constants are proper names. Functions are "machines" that take input objects and output a new object (successor function turns 3 into 4).
+1. every atomic $\mathcal{L}$-formula is in $F$;
+2. if $\varphi \in F$ then $(\neg \varphi) \in F$;
+3. if $\varphi, \psi \in F$ then $(\varphi \land \psi)$, $(\varphi \lor \psi)$ and $(\varphi \to \psi)$ are in $F$;
+4. if $\varphi \in F$ and $x$ is a variable then $(\forall x\, \varphi)$ and $(\exists x\, \varphi)$ are in $F$.
 :::
 
-:::example
-Work in the language of arithmetic: constant $0$, unary function $S$ (successor), binary functions $+$ and $\times$, and predicate $=$ (equality, usually built-in).
+:::pitfall
+A term is never a formula and a formula is never a term. $S(S(0))$ names the number two; it is not true or false, and $\neg S(S(0))$ is not a grammatical mistake to be argued about — it is simply not a string the definition generates. Conversely $0 = 0$ is a formula and may not be fed to $S$: $S(0=0)$ does not exist. The quick test is the outermost symbol: a function symbol, constant or variable gives a term; a relation symbol, connective or quantifier gives a formula.
+:::
+
+The official definition brackets everything, so formulas are strings like $((\forall v_0\,(P(v_0) \to Q(v_0))) \land (\neg R(c)))$. In practice we drop outer parentheses and use the precedence $\neg$, then $\land$, then $\lor$, then $\to$, with a quantifier taking the *longest* following subformula as its scope. These are abbreviations in the metalanguage, not changes to the language.
+
+### Unique readability
+
+Every definition by recursion on formulas — the free variables of a formula, substitution, and above all Tarski's definition of truth — presupposes that a formula can be taken apart in exactly one way. If the string $\varphi \land \psi$ could also be read as $\varphi' \lor \psi'$, a recursion could assign it two different values and would not define a function at all. That this never happens is a theorem, not an observation.
+
+:::theorem[Unique readability of terms]{#unique-readability-terms}
+No proper non-empty initial segment of an $\mathcal{L}$-term is itself an $\mathcal{L}$-term. Consequently every term has exactly one of the forms "a variable", "a constant", or $f(t_1,\dots,t_n)$, and in the last case $f$ and $t_1,\dots,t_n$ are uniquely determined.
+:::
+
+:::proof
+Assign a weight $w(s)$ to each symbol: $w(f) = n-1$ for an $n$-ary function symbol $f$; $w(x) = w(c) = -1$ for variables and constants; $w = 0$ for the comma and both parentheses. For a string $\sigma$, let $w(\sigma)$ be the sum of the weights of its symbols.
+
+*Claim.* $w(t) = -1$ for every term $t$, and $w(\sigma) \ge 0$ for every proper non-empty initial segment $\sigma$ of a term.
+
+Both parts go by induction on $t$. If $t$ is a variable or a constant then $w(t) = -1$, and $t$ has no proper non-empty initial segment, so the second part is vacuous. If $t = f(t_1,\dots,t_n)$ then, using $w(t_i) = -1$,
+
+$$w(t) = (n-1) + \sum_{i=1}^{n} w(t_i) = (n-1) - n = -1.$$
+
+For the second part, a proper non-empty initial segment $\sigma$ of $t$ is either the single symbol $f$, or $f($, or $f($ followed by $t_1, \dots, t_{k-1}$, a separator, and an initial segment $\sigma_k$ of $t_k$ (possibly empty, possibly all of $t_k$) for some $k \le n$. In the last case
+
+$$w(\sigma) = (n-1) - (k-1) + w(\sigma_k) \ge (n-1)-(k-1)-1 = n-k \ge 0,$$
+
+where $w(\sigma_k) \ge -1$ holds by the induction hypothesis ($\ge 0$ if $\sigma_k$ is a proper segment, $=-1$ if $\sigma_k = t_k$, and $=0$ if empty). The first two cases give $w = n-1 \ge 0$.
+
+Now suppose a term $t$ were a proper initial segment of a term. The claim gives $w(t) \ge 0$, contradicting $w(t) = -1$. For the consequence: the first symbol decides the clause, since variables, constants and function symbols are distinct symbols. If $f(t_1,\dots,t_n)$ and $f(t_1',\dots,t_n')$ are the same string, then $t_1$ and $t_1'$ are initial segments of one another, hence equal by the first part; strip them and repeat.
+:::
+
+:::theorem[Unique readability of formulas]{#unique-readability-formulas}
+Every $\mathcal{L}$-formula has exactly one of the forms $t_1 = t_2$, $R(t_1,\dots,t_n)$, $(\neg\varphi)$, $(\varphi \mathbin{\square} \psi)$ for a unique binary connective $\square$, $(\forall x\,\varphi)$, $(\exists x\,\varphi)$; and in each case the constituents are uniquely determined.
+:::
+
+:::proof[Sketch — rests on induction on formulas and Theorem *Unique readability of terms*]
+The same weight argument, now counting parentheses: give $($ weight $+1$, $)$ weight $-1$, and every other symbol weight $0$. By induction on formulas, every formula has total weight $0$ and every proper non-empty initial segment has weight $> 0$; hence no proper initial segment of a formula is a formula. Uniqueness of the decomposition follows: an atomic formula is recognised because it does not begin with $($, and in a non-atomic formula the symbol just after the opening $($ is $\neg$, $\forall$ or $\exists$ — or else the formula is binary, and then its connective is the unique symbol at which the running parenthesis weight first returns to $1$. The argument rests on nothing beyond induction on formulas and *Unique readability of terms*, which supplies the atomic case.
+:::
+
+:::remark
+Unique readability is exactly what the bracketing convention buys, and it is genuinely lost without it: with $\neg$ and $\land$ unbracketed, the string $\neg P \land Q$ has two parses. Our informal precedence rules restore a unique parse, which is what makes them legitimate abbreviations — each abbreviated string denotes one official string.
+:::
+
+:::figure[The unique parse tree of the term $f(g(x), c)$, in a language with binary $f$ and unary $g$. Unique readability says this is the only tree whose left-to-right reading is that string.]{#term-tree}
+{
+  "type": "plot",
+  "x": [-1.2, 4.2],
+  "y": [-1.0, 3.0],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "path", "points": [[1.4, 2.0], [0.4, 1.0]], "tone": "muted" },
+    { "kind": "path", "points": [[1.4, 2.0], [2.4, 1.0]], "tone": "muted" },
+    { "kind": "path", "points": [[0.4, 1.0], [0.4, 0.0]], "tone": "muted" },
+    { "kind": "point", "at": [1.4, 2.0], "tone": "accent" },
+    { "kind": "point", "at": [0.4, 1.0], "tone": "accent" },
+    { "kind": "point", "at": [2.4, 1.0], "tone": "result" },
+    { "kind": "point", "at": [0.4, 0.0], "tone": "result" },
+    { "kind": "text", "at": [2.6, 2.6], "text": "f binary", "leaderTo": [1.4, 2.0] },
+    { "kind": "text", "at": [-0.9, 1.6], "text": "g unary", "leaderTo": [0.4, 1.0] },
+    { "kind": "text", "at": [3.4, 0.8], "text": "c", "leaderTo": [2.4, 1.0] },
+    { "kind": "text", "at": [0.4, -0.6], "text": "x", "leaderTo": [0.4, 0.0] }
+  ]
+}
+:::
+
+:::example[Term, formula, or neither]
+In the language $\mathcal{L}_{\text{ar}}$, decide for each of $S(0) + S(S(0))$, $S(0) < S(S(0))$ and $\forall v_0\, (v_0 + 0)$ whether it is a term, a formula, or neither.
 :::
 
 :::solution
-Classify each expression.
+$S(0) + S(S(0))$ — officially $+(S(0), S(S(0)))$ — is a **term**: the outermost symbol is the binary function symbol $+$ applied to two terms. It names an object and has no truth value.
 
-$S(S(0))$ — a **term**. It is the function $S$ applied to the term $S(0)$, which is $S$ applied to the constant $0$. Under the standard interpretation it names the number $2$. Being a term, it has no truth value on its own.
-$S(0) = S(S(0))$ — an **atomic formula** (predicate $=$ applied to two terms). Under the standard interpretation it says $1 = 2$, so it is **false**.
-$x = 0$ — an **atomic formula** too, but it is **open**: the free variable $x$ means it is neither true nor false until we assign $x$ a value.
+$S(0) < S(S(0))$ is an **atomic formula**: the binary relation symbol $<$ applied to two terms.
 
-Now count function-symbol occurrences in the term $f(f(x, a), y)$ (in a language with a binary function $f$). Read the term as a tree: the outer $f$ is one occurrence, and its first argument $f(x,a)$ is a second occurrence. The leaves $x$, $a$, $y$ are a variable, a constant, and a variable — none is a function symbol. **Total: $2$ occurrences of $f$.** Sanity check: a function symbol occurrence is exactly one "call," and there are two calls to $f$ nested here.
+$\forall v_0\,(v_0 + 0)$ is **neither**. Clause 4 of *Well-formed formula* requires a formula after the quantifier, and $v_0 + 0$ is a term. No insertion of brackets repairs it; the string is simply not generated. □
 :::
 
-## Quantifiers and Their Meaning
+:::example[Counting symbol occurrences]
+How many occurrences of function symbols does the $\mathcal{L}_{\text{ar}}$-term $S(S(0)) + S(x \times 0)$ contain?
+:::
+
+:::solution
+Read the term as a tree and count the internal nodes, which are exactly the function-symbol occurrences.
+
+Officially the term is $+\bigl(S(S(0)),\, S(\times(x,0))\bigr)$. The root is $+$: one occurrence. The left argument $S(S(0))$ has two occurrences of $S$. The right argument $S(\times(x,0))$ has one $S$ and one $\times$. The leaves — two occurrences of the constant $0$ and one of the variable $x$ — contribute nothing, since neither constants nor variables are function symbols.
+
+$$1 + 2 + 2 = 5.$$
+
+Final answer: $5$. As a check, the weight identity of *Unique readability of terms* must give $-1$: the binary symbols $+$ and $\times$ weigh $+1$ each, the three occurrences of the unary $S$ weigh $0$ each, and the three leaves weigh $-1$ each, so $2 + 0 - 3 = -1$. ✓ □
+:::
+
+## Quantifiers, Duality, and the Quantifier Equivalences
 
 <!-- section: quantifiers -->
 
-:::definition[Universal and existential quantifiers]
-The **universal quantifier** $\forall x \, \phi(x)$ means "for every object $x$ in the domain, $\phi(x)$ holds". The **existential quantifier** $\exists x \, \phi(x)$ means "there is at least one object $x$ in the domain such that $\phi(x)$ holds".
+Quantifiers are what separate first-order logic from propositional logic, and their content is two ideas: a quantifier ranges over a **domain**, and the two quantifiers are **dual** under negation. This section states the equivalences the rest of the chapter uses, each with the side condition that makes it true. The semantics justifying them is given in full in *Structures and Tarski's Definition of Truth*; here the reading "$\forall x\,\varphi$ says $\varphi$ holds of every object of the domain, $\exists x\,\varphi$ says it holds of at least one" is enough to state the laws precisely and to see why each side condition is needed.
+
+:::definition[Logical equivalence]{#logical-equivalence}
+Formulas $\varphi$ and $\psi$ are **logically equivalent**, written $\varphi \equiv \psi$, if in every structure and under every variable assignment, $\varphi$ is satisfied exactly when $\psi$ is. Equivalence is a relation *between* formulas asserted in the metalanguage; $\equiv$ is not a symbol of the object language.
 :::
 
-Quantifiers range over the **domain** (universe) of the interpretation — the set of objects we are talking about. Changing the domain changes truth.
+:::theorem[Duality of the quantifiers]{#quantifier-duality}
+For every formula $\varphi$ and every variable $x$,
 
-Quantifiers can nest: $\forall x \exists y \, (y > x)$ ("there is no largest number").
+$$\neg \forall x\, \varphi \;\equiv\; \exists x\, \neg\varphi, \qquad \neg \exists x\, \varphi \;\equiv\; \forall x\, \neg \varphi.$$
 
-:::proposition[Negating a quantifier]{#quantifier-negation}
-To push a negation past a quantifier, flip the quantifier and negate the body (the quantifier version of De Morgan's laws):
-
-$$\neg \forall x \, \phi \;\equiv\; \exists x \, \neg\phi, \qquad \neg \exists x \, \phi \;\equiv\; \forall x \, \neg\phi.$$
+Consequently $\forall x\,\varphi \equiv \neg\exists x\,\neg\varphi$ and $\exists x\,\varphi \equiv \neg\forall x\,\neg\varphi$: either quantifier may be taken as primitive and the other defined from it.
 :::
 
-Intuition: "not everyone passed" means "someone failed"; "no one passed" means "everyone failed". You apply this repeatedly to move a negation all the way inside a formula, flipping every quantifier it crosses.
+:::proof
+Fix a structure with domain $D$ and an assignment $s$. By the satisfaction clauses, $\forall x\,\varphi$ is satisfied iff $\varphi$ is satisfied under $s$ modified to send $x$ to $d$, for **every** $d \in D$. Hence $\neg\forall x\,\varphi$ is satisfied iff it is *not* the case that every $d$ works, i.e. iff **some** $d\in D$ makes $\varphi$ fail, i.e. iff some $d$ makes $\neg\varphi$ hold — which is exactly satisfaction of $\exists x\,\neg\varphi$. The middle step, "not every $d$" $\Rightarrow$ "some $d$ not", is the classical negation of a universal claim over the set $D$, available because the metatheory is classical.
+
+The second equivalence is the first applied to $\neg\varphi$, together with $\neg\neg\psi \equiv \psi$: from $\neg\forall x\,\neg\varphi \equiv \exists x\,\neg\neg\varphi \equiv \exists x\,\varphi$, negate both sides. The two consequences follow by negating each equivalence once more.
+:::
 
 :::intuition
-$\forall$ is "no matter which one you pick, the claim is still true". Like a universal warranty: every customer gets a refund.
-
-$\exists$ is "I can point to one that works". Like "there exists a winning move" — you don't need to list all, just show one example suffices.
-
-Order matters: $\forall x \exists y$ (for every x I can find a y) is weaker than $\exists y \forall x$ (there is one y that works for every x).
+$\forall$ is a conjunction over the domain and $\exists$ a disjunction. If $D = \{d_1,\dots,d_n\}$ is finite then $\forall x\,\varphi$ really is $\varphi(d_1)\land\dots\land\varphi(d_n)$ and $\exists x\,\varphi$ really is $\varphi(d_1)\lor\dots\lor\varphi(d_n)$. Duality is then literally De Morgan's law stretched over the domain, and every other law in this section is a fact about conjunctions and disjunctions read through that dictionary. It is a reliable way to *guess* which laws should hold before proving them — and the infinite case is why they must still be proved.
 :::
 
-:::example
-"Every person has a mother": $\forall x \exists y \, \text{Mother}(y, x)$.
+:::proposition[Quantifiers distribute one way only]{#quantifier-distribution}
+For all formulas $\varphi,\psi$ and every variable $x$,
+
+$$\forall x\,(\varphi \land \psi) \equiv (\forall x\,\varphi) \land (\forall x\,\psi), \qquad \exists x\,(\varphi \lor \psi) \equiv (\exists x\,\varphi) \lor (\exists x\,\psi).$$
+
+The mixed forms fail. Only the one-way implications
+
+$$(\forall x\,\varphi)\lor(\forall x\,\psi) \;\models\; \forall x\,(\varphi\lor\psi), \qquad \exists x\,(\varphi\land\psi) \;\models\; (\exists x\,\varphi)\land(\exists x\,\psi)$$
+
+hold in general, and their converses are refutable.
+:::
+
+:::proof
+For the first equivalence: $\forall x\,(\varphi\land\psi)$ holds iff for every $d \in D$ both $\varphi$ and $\psi$ hold of $d$, which is the same statement about $D$ as "($\varphi$ holds of every $d$) and ($\psi$ holds of every $d$)". The second equivalence follows from the first by *Duality of the quantifiers*, applied to $\neg\varphi$ and $\neg\psi$.
+
+The surviving implications are immediate: a single witness $d$ for $\exists x\,(\varphi\land\psi)$ witnesses each conjunct separately; and if $\varphi$ holds of every $d$ then $\varphi\lor\psi$ does.
+
+One counter-model refutes both converses. Take $D = \{1,2\}$ with $P^{\mathcal{M}} = \{1\}$ and $Q^{\mathcal{M}} = \{2\}$, and put $\varphi = P(x)$, $\psi = Q(x)$. Then $\forall x\,(P(x)\lor Q(x))$ is **true** — each element lies in $P$ or in $Q$ — while $(\forall x\,P(x))\lor(\forall x\,Q(x))$ is **false**, since neither predicate holds of both elements. Dually $(\exists x\,P(x))\land(\exists x\,Q(x))$ is **true** while $\exists x\,(P(x)\land Q(x))$ is **false**, as no element lies in both.
+:::
+
+:::pitfall
+The failure of $\exists x\,(\varphi \land \psi) \equiv (\exists x\,\varphi)\land(\exists x\,\psi)$ is the formal content of the equivocation "some students are athletes and some students are musicians, therefore some student is both". Two existential statements deliver two witnesses, not one shared witness. The same slip appears in analysis whenever "for each $\varepsilon$ there is a $\delta$" is treated as "there is a $\delta$ for each $\varepsilon$".
+:::
+
+:::theorem[Quantifier order]{#quantifier-order}
+Let $x$ and $y$ be distinct variables and $\varphi$ any formula. Then
+
+$$\forall x\forall y\,\varphi \equiv \forall y \forall x\,\varphi, \qquad \exists x \exists y\, \varphi \equiv \exists y \exists x\, \varphi,$$
+
+and $\exists y \forall x\, \varphi \models \forall x \exists y\, \varphi$, while the converse entailment fails.
+:::
+
+:::proof
+Like quantifiers commute because "for every pair $(d,e) \in D\times D$" does not depend on the order in which the two coordinates are presented, and likewise for "for some pair"; formally, both sides unwind to the same condition on $D \times D$ by two applications of the satisfaction clause.
+
+For the mixed direction, suppose $\exists y\,\forall x\,\varphi$ is satisfied, witnessed by $e \in D$: then $\varphi$ holds for every $d$ assigned to $x$ while $y$ is assigned that single $e$. So given any $d$, the element $e$ witnesses $\exists y\,\varphi$ for that $d$, and $\forall x\exists y\,\varphi$ follows.
+
+For the failure of the converse, take $D = \mathbb{N}$ with the usual $<$, and $\varphi = (x<y)$. Then $\forall x\exists y\,(x<y)$ is true — take $y = x+1$ — while $\exists y\forall x\,(x<y)$ asserts a natural number strictly above every natural number, itself included, and is false.
+:::
+
+:::intuition
+Read $\forall x\exists y$ as "you move first, then I answer", and $\exists y\forall x$ as "I must commit first, before seeing your move". Committing first is harder, so $\exists\forall$ is the stronger statement and implies the other. This is exactly the difference between continuity, where $\delta$ may depend on the point, and uniform continuity, where one $\delta$ must serve every point — and it explains why the second is a genuinely stronger hypothesis rather than a restatement.
+:::
+
+:::proposition[Pulling a quantifier out]{#quantifier-shift}
+Suppose $x$ does **not** occur free in $\psi$. Then
+
+$$(\forall x\,\varphi) \land \psi \equiv \forall x\,(\varphi \land \psi), \qquad (\exists x\,\varphi) \lor \psi \equiv \exists x\,(\varphi \lor \psi),$$
+
+$$(\forall x\,\varphi) \to \psi \equiv \exists x\,(\varphi \to \psi), \qquad \psi \to (\forall x\, \varphi) \equiv \forall x\,(\psi \to \varphi).$$
+
+Each of these can fail if $x$ is free in $\psi$.
+:::
+
+:::proof
+Because $x$ is not free in $\psi$, the truth value of $\psi$ does not change when the assignment to $x$ is varied — this is *Truth depends only on the free variables*, proved in the semantics section. Write $A(d)$ for "$\varphi$ is satisfied when $x$ is assigned $d$", and let $B$ be the fixed truth value of $\psi$. Over a non-empty domain $D$ the four claims become
+
+$$(\forall d\,A(d)) \land B \iff \forall d\,(A(d)\land B), \qquad (\exists d\,A(d)) \lor B \iff \exists d\,(A(d)\lor B),$$
+
+$$(\forall d\,A(d)) \to B \iff \exists d\,(A(d) \to B), \qquad B \to \forall d\,A(d) \iff \forall d\,(B \to A(d)).$$
+
+The first, second and fourth are distributions of a constant through a quantifier and use $D\ne\emptyset$ only in the left-to-right direction of the second. The third is the interesting one. ($\Rightarrow$) If $\forall d\,A(d)$ fails then some $d_0$ has $\neg A(d_0)$, and that $d_0$ satisfies $A(d_0)\to B$ vacuously; if instead $B$ holds, every $d$ satisfies $A(d)\to B$, and $D\ne\emptyset$ supplies one. ($\Leftarrow$) If some $d_0$ satisfies $A(d_0)\to B$ and $\forall d\,A(d)$ holds, then $A(d_0)$ holds, hence $B$. Non-emptiness of the domain was used twice, which is where the standing assumption that domains are non-empty earns its keep.
+
+For failure without the side condition, take the fourth law with $\varphi = \psi = P(x)$, so that $x$ *is* free in $\psi$. The right-hand side $\forall x\,(P(x)\to P(x))$ is valid. The left-hand side $P(x) \to \forall x\,P(x)$ is refuted in the structure $D = \{1,2\}$, $P^{\mathcal{M}} = \{1\}$ under the assignment $x \mapsto 1$: the antecedent holds and the consequent fails. The two sides differ because on the right the previously free $x$ of $\psi$ has been **captured** by the new quantifier — the phenomenon analysed in the next section.
+:::
+
+:::example[Negating a nested sentence]
+Negate $\forall x\,(P(x) \to \exists y\, Q(x,y))$ and drive the negation inwards until no $\neg$ stands in front of a quantifier.
 :::
 
 :::solution
-1. "There is someone who is everyone's mother": $\exists y \forall x \, \text{Mother}(y, x)$.
-2. These are not equivalent; the second is much stronger (and false in normal human domains). In general $\exists y \forall x \, \phi \;\to\; \forall x \exists y \, \phi$ is valid, but the converse is not: one witness that works for all is a special case of each object getting its own witness.
+Apply *Duality of the quantifiers* to the outer $\forall$:
+
+$$\exists x\, \neg\bigl(P(x) \to \exists y\,Q(x,y)\bigr).$$
+
+Use $\neg(A \to B) \equiv A \land \neg B$:
+
+$$\exists x\,\bigl(P(x) \land \neg \exists y\, Q(x,y)\bigr).$$
+
+Apply duality again, to the inner $\exists$:
+
+$$\exists x\,\bigl(P(x) \land \forall y\, \neg Q(x,y)\bigr).$$
+
+Check the reading: the original says "every $P$ has a $Q$-partner", so its negation should say "some $P$ has no $Q$-partner at all", which is what the last line states. □
 :::
 
-:::example[(negating a quantified sentence):]
-Negate $\forall x \, (P(x) \to \exists y \, Q(x,y))$ and simplify until no negation sits in front of a quantifier.
+:::example[Formalising continuity and negating it]
+Write "$f$ is continuous at $a$" as a first-order formula and negate it, keeping track of the quantifier order.
 :::
 
 :::solution
-flip the outer $\forall$: $\;\neg\forall x\,\psi \equiv \exists x\,\neg\psi$, giving $\exists x \, \neg(P(x) \to \exists y \, Q(x,y))$.
-Step 2 — negate the implication: $\;\neg(A \to B) \equiv A \land \neg B$, giving $\exists x \, (P(x) \land \neg\exists y \, Q(x,y))$.
-Step 3 — flip the inner $\exists$: $\;\neg\exists y\,\chi \equiv \forall y\,\neg\chi$, giving $\exists x \, (P(x) \land \forall y \, \neg Q(x,y))$.
+With variables ranging over the reals and the obvious symbols,
 
-Sanity check: the original says "every $P$ has some $Q$-partner"; its negation should say "some $P$ has no $Q$-partner at all" — which is exactly $\exists x \, (P(x) \land \forall y \, \neg Q(x,y))$. ✓
+$$\forall \varepsilon\,\Bigl(0 < \varepsilon \to \exists \delta\,\bigl(0 < \delta \land \forall x\,(|x-a| < \delta \to |f(x)-f(a)| < \varepsilon)\bigr)\Bigr).$$
+
+Negate and push inwards, using duality at each quantifier and $\neg(A\to B)\equiv A\land\neg B$, $\neg(A\land B)\equiv A \to \neg B$ at each connective:
+
+$$\exists \varepsilon\,\Bigl(0<\varepsilon \land \forall \delta\,\bigl(0<\delta \to \exists x\,(|x-a|<\delta \land \neg(|f(x)-f(a)| < \varepsilon))\bigr)\Bigr).$$
+
+This is the usual discontinuity criterion: one bad $\varepsilon$ that no $\delta$ can meet, with an offending point $x$ for each $\delta$. Observe that the prefix $\forall\varepsilon\exists\delta\forall x$ became $\exists\varepsilon\forall\delta\exists x$ — the *order* is preserved while each quantifier flips. Had the original been $\exists\delta\forall\varepsilon$ (uniform continuity's shape), the negation would have a different shape too, which by *Quantifier order* is not an equivalent statement. □
 :::
 
-:::example[(moving a quantifier past a subformula):]
-The rule $\forall x \, (P(x) \to Q) \equiv (\forall x \, P(x) \to Q)$ holds **only when $x$ does not occur free in $Q$**. Here is why the condition matters.
+:::example[Which distribution law applies]
+Over the domain $\mathbb{Z}$, let $E(x)$ say "$x$ is even" and $O(x)$ say "$x$ is odd". Evaluate all four combinations of $\{\forall,\exists\}$ with $\{\land,\lor\}$ distributed across $E$ and $O$.
 :::
 
 :::solution
-If $x$ is *not* free in $Q$: the value of $Q$ never depends on which $x$ we look at, so pulling the universal in front of only $P$ is safe. (This is the standard "quantifier can leave a subformula it doesn't affect" rule.)
-If $x$ *is* free in $Q$, say $Q = Q(x)$: take domain $\{1,2\}$ with $P^I = \{1\}$ and $Q^I = \{2\}$. The left side $\forall x\,(P(x)\to Q(x))$ checks $x=1$ ($P$ true, $Q$ false → implication false), so the left side is **false**. But on the right, $\forall x\,P(x)$ is false (2 is not in $P$), so $(\forall x\,P(x)) \to Q(x)$ is **true**. Different truth values, so the equivalence fails. ✓
+$\forall x\,(E(x)\land O(x))$ is false and $(\forall x\,E(x))\land(\forall x\,O(x))$ is false — consistent with the *equivalence* in *Quantifiers distribute one way only*.
+
+$\exists x\,(E(x)\lor O(x))$ is true and $(\exists x\,E(x))\lor(\exists x\,O(x))$ is true — again the equivalence.
+
+$\forall x\,(E(x)\lor O(x))$ is **true** (every integer is even or odd) but $(\forall x\,E(x))\lor(\forall x\,O(x))$ is **false**: the failing mixed case.
+
+$\exists x\,(E(x)\land O(x))$ is **false** but $(\exists x\,E(x))\land(\exists x\,O(x))$ is **true**: the other failing mixed case. □
 :::
 
-## Scope, Free and Bound Variables
+:::summary
+$\neg$ swaps the quantifiers. $\forall$ distributes over $\land$ and $\exists$ over $\lor$, never the reverse. Like quantifiers commute; mixed ones do not, and $\exists\forall$ is the stronger prefix. A quantifier may be pulled across a subformula exactly when its variable is not free there.
+:::
+
+## Scope, Free and Bound Variables, and Substitution
 
 <!-- section: scope -->
 
-:::definition[Scope, free and bound occurrences]
-The **scope** of a quantifier is the subformula it governs, usually indicated by parentheses or convention. A variable occurrence is **bound** if it lies inside the scope of a quantifier that uses the same variable name; otherwise it is **free**.
+A variable occurrence in a formula plays one of two utterly different roles. Either it is a genuine blank, waiting to be filled by an object — a **free** occurrence — or it is a piece of internal plumbing belonging to a quantifier, in which case its name is arbitrary. Nearly every technical error in first-order logic is a confusion of the two, and the machinery of this section exists to make the distinction mechanical.
+
+:::definition[Scope]{#scope-definition}
+In the formula $(\forall x\,\varphi)$ or $(\exists x\,\varphi)$, the **scope** of that quantifier occurrence is the subformula $\varphi$. Scope is determined by the official bracketing and is therefore unambiguous, by *Unique readability of formulas*.
+:::
+
+:::definition[Free and bound occurrences]{#free-bound-definition}
+An occurrence of a variable $x$ in a formula $\varphi$ is **bound** if it lies within the scope of some occurrence of $\forall x$ or $\exists x$ in $\varphi$, or is the occurrence immediately following such a quantifier symbol; otherwise it is **free**. The set $\mathrm{FV}(\varphi)$ of **free variables** of $\varphi$ is defined by recursion:
+
+- $\mathrm{FV}(t_1 = t_2) = \mathrm{var}(t_1)\cup\mathrm{var}(t_2)$ and $\mathrm{FV}(R(t_1,\dots,t_n)) = \bigcup_i \mathrm{var}(t_i)$, where $\mathrm{var}(t)$ is the set of variables occurring in the term $t$;
+- $\mathrm{FV}(\neg\varphi) = \mathrm{FV}(\varphi)$ and $\mathrm{FV}(\varphi \mathbin{\square} \psi) = \mathrm{FV}(\varphi)\cup\mathrm{FV}(\psi)$ for a binary connective $\square$;
+- $\mathrm{FV}(\forall x\,\varphi) = \mathrm{FV}(\exists x\,\varphi) = \mathrm{FV}(\varphi)\setminus\{x\}$.
+
+This recursion is legitimate exactly because of *Unique readability of formulas*.
 :::
 
 :::definition[Sentence]{#sentence-definition}
-A formula with no free variables is a **sentence** (closed formula) and can be true or false in an interpretation.
+A formula $\varphi$ with $\mathrm{FV}(\varphi) = \emptyset$ is a **sentence** (a closed formula). The **universal closure** of $\varphi$, written $\forall\varphi$, is $\forall x_1 \cdots \forall x_n\,\varphi$ where $x_1,\dots,x_n$ list $\mathrm{FV}(\varphi)$.
 :::
 
-Open formulas (with free vars) express properties or relations. For example $\forall x (P(x) \to Q(x))$ is closed, while $P(x) \to Q(y)$ has free $x$ and $y$.
-
-:::proposition[Renaming bound variables]
-Renaming bound variables is safe (alpha-equivalence):
-
-$$\forall x \, \phi(x) \equiv \forall y \, \phi(y).$$
-:::
+The same variable may occur both free and bound in one formula: in $P(x) \land \forall x\,Q(x)$ the first $x$ is free and the second bound, so $\mathrm{FV} = \{x\}$ even though a quantifier for $x$ is present. Nothing is wrong with such a formula, but it is hard to read, and the renaming result below lets us avoid writing them.
 
 :::intuition
-Free variables are like pronouns without antecedent in the sentence: "He is tall" — who? You need context (an assignment of values).
-
-Bound variables are dummy: "For every person x, if x is a student then x studies" — the 'x' is just a placeholder; you can rename it to 'z' without changing meaning.
-
-Scope is the "jurisdiction" of the quantifier — like parentheses in arithmetic. $\exists x (P(x) \land Q(x))$ vs $(\exists x P(x)) \land Q(x)$ — different meanings.
+A free variable is a pronoun with no antecedent: "he is tall" is neither true nor false until someone says who. A bound variable is a dummy index — the $i$ in $\sum_{i=1}^{n} a_i$ or the $x$ in $\int_0^1 x^2\,dx$, which you can rename without changing anything, and which cannot be "given a value" from outside. A sentence is a formula with no pronouns left: it makes a claim that a structure can settle by itself.
 :::
 
-:::example[(which quantifier binds which occurrence):]
-In $\exists x (P(x) \land \forall x \, Q(x))$, the $x$ in $Q(x)$ sits inside the inner $\forall x$, so it is bound by that $\forall$; the $x$ in $P(x)$ is bound by the outer $\exists$. When two quantifiers reuse the same name, an occurrence is captured by the **innermost** enclosing quantifier of that name. To avoid this confusion, rename the inner one: the formula is equivalent to $\exists x (P(x) \land \forall y \, Q(y))$, which makes the two roles of the variable visible.
+:::proposition[Renaming bound variables]{#alpha-equivalence}
+Let $\varphi$ be a formula and $y$ a variable not occurring at all in $\varphi$. Then
+
+$$\forall x\,\varphi \equiv \forall y\, \varphi[x := y], \qquad \exists x\,\varphi \equiv \exists y\, \varphi[x := y],$$
+
+where $\varphi[x:=y]$ replaces every free occurrence of $x$ in $\varphi$ by $y$. Formulas related by finitely many such renamings are called **alpha-equivalent**; alpha-equivalent formulas have the same free variables and are satisfied by the same assignments in the same structures.
 :::
 
-:::example[(counting free occurrences):]
-Count the free variable occurrences (with multiplicity) in $\forall x \, (P(x,y) \to \exists y \, Q(y,z))$. Go occurrence by occurrence, checking whether each sits inside a quantifier of its own name.
+:::proof[Sketch — the full induction is in Enderton §2.4 and van Dalen §2.3]
+The requirement that $y$ be *entirely fresh* guarantees that no occurrence of $y$ introduced by the substitution falls inside the scope of a quantifier on $y$, so the new $\forall y$ binds exactly the occurrences the old $\forall x$ bound. Satisfaction is then preserved by *The substitution lemma* below, applied with the term $y$, together with the observation that $s(x\mapsto d)$ and $s(y\mapsto d)$ agree on all variables relevant to the two formulas. The full argument is an induction on $\varphi$ carried out in Enderton §2.4 and van Dalen §2.3.
+:::
+
+### Substitution and the capture problem
+
+To *use* a universal statement we instantiate it: from $\forall x\,\varphi$ we want $\varphi$ with $x$ replaced by a term naming the object we have in mind. Making that operation safe is the one genuinely delicate definition in elementary first-order logic.
+
+:::definition[Substitution]{#substitution-definition}
+For a term $t$, the formula $\varphi[x := t]$ is obtained by replacing every **free** occurrence of $x$ in $\varphi$ by $t$. Formally, by recursion: on atomic formulas, replace $x$ by $t$ throughout each term; $\neg$ and the binary connectives commute with the operation; and
+
+$$(\forall y\,\psi)[x := t] = \begin{cases} \forall y\,\psi & \text{if } y = x,\\ \forall y\,(\psi[x:=t]) & \text{if } y \ne x,\end{cases}$$
+
+and likewise for $\exists$. Bound occurrences are therefore never touched.
+:::
+
+:::definition[Substitutable (free for)]{#substitutable-definition}
+The term $t$ is **substitutable for $x$ in $\varphi$** (older texts: "$t$ is free for $x$ in $\varphi$") if no free occurrence of $x$ in $\varphi$ lies within the scope of a quantifier $\forall y$ or $\exists y$ for some variable $y$ occurring in $t$. Equivalently, by recursion: any $t$ is substitutable for $x$ in an atomic formula; substitutability commutes with $\neg$ and the binary connectives; and $t$ is substitutable for $x$ in $\forall y\,\psi$ iff either $x \notin \mathrm{FV}(\forall y\,\psi)$, or ($y \notin \mathrm{var}(t)$ and $t$ is substitutable for $x$ in $\psi$).
+:::
+
+:::pitfall
+Substitution without checking substitutability is **variable capture**, and it turns valid principles into invalid ones. Take $\varphi = \exists y\,\neg(x = y)$, which in any structure with at least two elements says "something differs from $x$", and substitute the term $t = y$:
+
+$$\varphi[x := y] = \exists y\,\neg(y = y),$$
+
+which is false in *every* structure. The free $y$ of $t$ walked into the scope of $\exists y$ and was captured; a statement about an arbitrary object became a statement about the quantifier's own dummy. The repair is always the same: rename the bound variable first, using *Renaming bound variables*, so that $\varphi$ becomes $\exists z\,\neg(x=z)$, and then substitute to get $\exists z\,\neg(y = z)$, which says what it should.
+:::
+
+:::theorem[The substitution lemma]{#substitution-lemma}
+Let $\mathcal{M}$ be a structure, $s$ an assignment, $\varphi$ a formula, $x$ a variable and $t$ a term that is **substitutable for $x$ in $\varphi$**. Then
+
+$$\mathcal{M} \models \varphi[x := t]\,[s] \quad\text{if and only if}\quad \mathcal{M} \models \varphi\,[s(x \mapsto t^{\mathcal{M}}[s])],$$
+
+where $t^{\mathcal{M}}[s]$ is the value of $t$ in $\mathcal{M}$ under $s$ and $s(x\mapsto d)$ is $s$ modified to send $x$ to $d$. In words: *substituting a term and then evaluating gives the same answer as evaluating the term and then assigning its value to $x$.*
+:::
+
+:::proof
+First, for terms: an induction on $u$ shows $(u[x:=t])^{\mathcal{M}}[s] = u^{\mathcal{M}}[s(x\mapsto t^{\mathcal{M}}[s])]$. It is immediate for a constant and for a variable (the two cases $u = x$ and $u \ne x$), and the inductive step for $f(u_1,\dots,u_n)$ applies $f^{\mathcal{M}}$ to the induction hypotheses.
+
+Now induct on $\varphi$. For atomic $\varphi$ the claim is the term case applied inside each argument. The connective cases are immediate, since both substitution and satisfaction commute with $\neg,\land,\lor,\to$.
+
+The quantifier case is where substitutability is used. Consider $\varphi = \forall y\,\psi$.
+
+*Case $y = x$.* Then $x \notin \mathrm{FV}(\varphi)$ and $\varphi[x:=t] = \varphi$. By *Truth depends only on the free variables*, changing the value assigned to $x$ cannot affect satisfaction of $\varphi$, so both sides agree.
+
+*Case $y \ne x$ and $x \notin \mathrm{FV}(\varphi)$.* Again the substitution does nothing and the relevance lemma settles it.
+
+*Case $y \ne x$ and $x \in \mathrm{FV}(\varphi)$.* Substitutability forces $y \notin \mathrm{var}(t)$ and makes $t$ substitutable for $x$ in $\psi$. Now $\varphi[x:=t] = \forall y\,(\psi[x:=t])$, so the left-hand side says: for every $d \in D$, $\psi[x:=t]$ is satisfied under $s(y\mapsto d)$. By the induction hypothesis that is: for every $d$, $\psi$ is satisfied under $s(y\mapsto d)(x \mapsto t^{\mathcal{M}}[s(y\mapsto d)])$. Because $y$ does not occur in $t$, the value of $t$ is unaffected by what $y$ is assigned, so $t^{\mathcal{M}}[s(y\mapsto d)] = t^{\mathcal{M}}[s]$. Writing $e = t^{\mathcal{M}}[s]$ and using $x \ne y$ to swap the two modifications, the condition becomes: for every $d$, $\psi$ is satisfied under $s(x\mapsto e)(y\mapsto d)$ — which is precisely satisfaction of $\forall y\,\psi$ under $s(x\mapsto e)$, the right-hand side. The case of $\exists$ is identical with "every" replaced by "some".
+:::
+
+:::remark
+The single line that would break without substitutability is "$t^{\mathcal{M}}[s(y\mapsto d)] = t^{\mathcal{M}}[s]$". If $y$ occurred in $t$, the term would be re-evaluated inside the quantifier and would mean something different for each $d$ — which is exactly what capture is. It is worth noticing that the hypothesis is used at one point only; everything else in the proof is bookkeeping.
+:::
+
+:::figure[Binding structure of $\forall x\,(P(x,y) \to \exists y\, Q(y,z))$. Solid arrows run from a bound occurrence to the quantifier binding it; the two occurrences with no arrow are free.]{#binding-figure}
+{
+  "type": "plot",
+  "x": [-0.8, 9.2],
+  "y": [-2.6, 2.4],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "point", "at": [0.6, 0.0], "tone": "accent" },
+    { "kind": "point", "at": [2.6, 0.0], "tone": "result" },
+    { "kind": "point", "at": [4.0, 0.0], "tone": "muted" },
+    { "kind": "point", "at": [5.6, 0.0], "tone": "accent" },
+    { "kind": "point", "at": [7.0, 0.0], "tone": "result" },
+    { "kind": "point", "at": [8.4, 0.0], "tone": "muted" },
+    { "kind": "path", "points": [[2.6, 0.2], [1.6, 1.2], [0.6, 0.2]], "tone": "result" },
+    { "kind": "path", "points": [[7.0, 0.2], [6.3, 1.2], [5.6, 0.2]], "tone": "result" },
+    { "kind": "text", "at": [0.6, -0.7], "text": "forall x" },
+    { "kind": "text", "at": [2.6, -0.7], "text": "x of P" },
+    { "kind": "text", "at": [4.0, -0.7], "text": "y of P" },
+    { "kind": "text", "at": [5.6, -0.7], "text": "exists y" },
+    { "kind": "text", "at": [7.0, -0.7], "text": "y of Q" },
+    { "kind": "text", "at": [8.4, -0.7], "text": "z of Q" },
+    { "kind": "text", "at": [4.0, -1.5], "text": "free" },
+    { "kind": "text", "at": [8.4, -1.5], "text": "free" },
+    { "kind": "text", "at": [1.6, 1.8], "text": "bound by forall x" },
+    { "kind": "text", "at": [6.6, 1.8], "text": "bound by exists y" }
+  ]
+}
+:::
+
+:::example[Counting free occurrences]
+Count the free occurrences of variables, with multiplicity, in $\forall x\,(P(x,y) \to \exists y\, Q(y,z))$, and give $\mathrm{FV}$ of the formula.
 :::
 
 :::solution
-$x$ in $P(x,y)$: inside $\forall x$ → **bound**.
-$y$ in $P(x,y)$: the only $y$-quantifier is $\exists y$, whose scope is just $Q(y,z)$; this $y$ is in the antecedent, **outside** that scope → **free** (occurrence 1).
-$y$ in $Q(y,z)$: inside $\exists y$ → **bound**.
-$z$ in $Q(y,z)$: no quantifier for $z$ anywhere → **free** (occurrence 2).
+Take the four variable occurrences inside the predicates one at a time.
 
-**Total: $2$ free occurrences** (one $y$, one $z$). Sanity check: the distinct free *variables* are $\{y, z\}$, and here each appears free exactly once, so the occurrence count matches the variable count.
+The $x$ in $P(x,y)$ lies in the scope of $\forall x$, so it is **bound**.
+
+The $y$ in $P(x,y)$: the only $y$-quantifier is $\exists y$, whose scope is $Q(y,z)$ alone. This occurrence is in the antecedent of the implication, outside that scope, so it is **free**.
+
+The $y$ in $Q(y,z)$ lies in the scope of $\exists y$: **bound**.
+
+The $z$ in $Q(y,z)$ has no quantifier anywhere: **free**.
+
+So there are $2$ free occurrences, and $\mathrm{FV}(\varphi) = \{y, z\}$. Final answer: $2$. The formula is therefore not a sentence, and its truth value in a structure depends on what $y$ and $z$ are assigned. □
 :::
 
-## Interpretations and Satisfaction
+:::example[Is this substitution legal?]
+Decide whether $t = f(y)$ is substitutable for $x$ in $\varphi = \exists y\,R(x,y) \land \forall z\,R(z,x)$, and compute the result of the substitution after any repair needed.
+:::
+
+:::solution
+Check each free occurrence of $x$. The occurrence in $R(x,y)$ lies inside $\exists y$, and $y \in \mathrm{var}(f(y))$, so $t$ is **not** substitutable for $x$ in $\varphi$: a blind substitution would produce $\exists y\,R(f(y),y)$, in which the $y$ of the term has been captured. (The occurrence in $R(z,x)$ is harmless, since $z$ does not occur in $t$.)
+
+Repair by *Renaming bound variables*, choosing a variable fresh for both $\varphi$ and $t$, say $w$:
+
+$$\varphi \equiv \exists w\,R(x,w) \land \forall z\,R(z,x).$$
+
+Now $f(y)$ is substitutable, and
+
+$$\varphi[x := f(y)] = \exists w\,R(f(y),w) \land \forall z\,R(z,f(y)).$$
+
+Both occurrences of $y$ are free, as they should be. □
+:::
+
+:::example[A sentence versus an open formula]
+In the language $\mathcal{L}_{\text{ar}}$, classify $\forall x\,\exists y\,(x < y)$ and $\exists y\,(x<y)$, and say what each requires in order to have a truth value.
+:::
+
+:::solution
+$\mathrm{FV}(\forall x\exists y\,(x<y)) = (\{x,y\}\setminus\{y\})\setminus\{x\} = \emptyset$, so it is a **sentence**: a structure alone settles it (true in $\mathbb{N}$, false in a finite linear order).
+
+$\mathrm{FV}(\exists y\,(x<y)) = \{x,y\}\setminus\{y\} = \{x\}$, so it is an **open formula**. It expresses a property of one object, and to give it a truth value we need a structure *and* an assignment of a value to $x$ — or we may take its universal closure $\forall x\,\exists y\,(x<y)$, which is the first sentence again. □
+:::
+
+## Structures and Tarski's Definition of Truth
 
 <!-- section: interpretations -->
 
-:::definition[Interpretation]{#interpretation-definition}
-An **interpretation** (or structure, model) for a first-order language consists of:
+So far no string has meant anything. To give the language meaning we supply a world for it to talk about — a **structure** — and then define, by recursion on formulas, what it is for a formula to be **satisfied** there. The definition is due to Tarski, and its central feature is that the truth of a compound formula is explained entirely in terms of the truth of its immediate constituents. That is what makes truth a well-defined mathematical object rather than an appeal to intuition.
 
-- A non-empty domain $D$.
-- For each constant $c$, an element $c^I \in D$.
-- For each $k$-ary function $f$, a function $f^I : D^k \to D$.
-- For each $k$-ary predicate $P$, a relation $P^I \subseteq D^k$.
+:::definition[Structure]{#structure-definition}
+An **$\mathcal{L}$-structure** $\mathcal{M}$ consists of
+
+- a **non-empty** set $M$, the **domain** (or universe);
+- for each constant symbol $c$ of $\mathcal{L}$, an element $c^{\mathcal{M}} \in M$;
+- for each $n$-ary function symbol $f$, a function $f^{\mathcal{M}} : M^n \to M$ (total, and defined on *all* of $M^n$);
+- for each $n$-ary relation symbol $R$, a set $R^{\mathcal{M}} \subseteq M^n$.
+
+The equality symbol is *not* interpreted: it is always read as genuine identity on $M$.
 :::
 
-An assignment of values to free variables, together with the interpretation, determines whether a formula is satisfied. The domain $D$ must be **non-empty** in classical FOL — otherwise $\exists x \, \phi$ could never be satisfied while $\forall x \, \phi$ would be vacuously true, breaking standard laws.
-
-:::notation[The satisfaction relation]
-We write
-
-$$\mathcal{M} \models \phi$$
-
-when sentence $\phi$ is true in model $\mathcal{M}$. The double turnstile $\models$ is *semantic*: it reports truth in a structure, not derivability in a proof system (that is $\vdash$).
+:::remark
+Non-emptiness is a convention with consequences, and it is the convention of classical first-order logic. If $M = \emptyset$ were allowed, $\forall x\,\varphi$ would be vacuously true and $\exists x\,\varphi$ vacuously false for every $\varphi$, so $\forall x\,P(x) \to \exists x\,P(x)$ — a theorem of the standard calculus — would fail. *Free logic* drops the convention and pays for it with a modified proof system; we keep it, and *Pulling a quantifier out* showed exactly where it is used.
 :::
 
-Because a sentence has no free variables, its truth depends only on $\mathcal{M}$, not on any variable assignment — this is why we can speak of $\phi$ being simply "true in $\mathcal{M}$".
+:::definition[Variable assignment]{#assignment-definition}
+A **variable assignment** in $\mathcal{M}$ is a function $s$ from the set of variables to $M$. For $d \in M$, the **modified assignment** $s(x \mapsto d)$ agrees with $s$ everywhere except that it sends $x$ to $d$.
+:::
+
+:::definition[Value of a term]{#term-value}
+The value $t^{\mathcal{M}}[s] \in M$ of a term $t$ is defined by recursion on $t$:
+
+- $x^{\mathcal{M}}[s] = s(x)$ for a variable $x$;
+- $c^{\mathcal{M}}[s] = c^{\mathcal{M}}$ for a constant $c$;
+- $\bigl(f(t_1,\dots,t_n)\bigr)^{\mathcal{M}}[s] = f^{\mathcal{M}}\bigl(t_1^{\mathcal{M}}[s], \dots, t_n^{\mathcal{M}}[s]\bigr)$.
+
+The recursion is well defined by *Unique readability of terms*.
+:::
+
+:::definition[Satisfaction (Tarski)]{#satisfaction-definition}
+For an $\mathcal{L}$-structure $\mathcal{M}$, an assignment $s$ and a formula $\varphi$, the relation $\mathcal{M} \models \varphi\,[s]$ ("$s$ satisfies $\varphi$ in $\mathcal{M}$") is defined by recursion on $\varphi$:
+
+1. $\mathcal{M}\models (t_1 = t_2)[s]$ iff $t_1^{\mathcal{M}}[s] = t_2^{\mathcal{M}}[s]$;
+2. $\mathcal{M}\models R(t_1,\dots,t_n)[s]$ iff $\bigl(t_1^{\mathcal{M}}[s],\dots,t_n^{\mathcal{M}}[s]\bigr) \in R^{\mathcal{M}}$;
+3. $\mathcal{M}\models (\neg\varphi)[s]$ iff $\mathcal{M}\not\models \varphi\,[s]$;
+4. $\mathcal{M}\models (\varphi\land\psi)[s]$ iff $\mathcal{M}\models\varphi[s]$ and $\mathcal{M}\models\psi[s]$; similarly $\lor$ with "or", and $\mathcal{M}\models(\varphi\to\psi)[s]$ iff $\mathcal{M}\not\models\varphi[s]$ or $\mathcal{M}\models\psi[s]$;
+5. $\mathcal{M}\models (\forall x\,\varphi)[s]$ iff $\mathcal{M}\models\varphi\,[s(x\mapsto d)]$ for **every** $d \in M$;
+6. $\mathcal{M}\models (\exists x\,\varphi)[s]$ iff $\mathcal{M}\models\varphi\,[s(x\mapsto d)]$ for **some** $d \in M$.
+:::
 
 :::intuition
-An interpretation is "picking the actual universe and what the symbols mean in it". The same sentence "$\forall x (P(x) \to Q(x))$" can be true in one universe (all P things are also Q) and false in another.
-
-Satisfaction is "this particular assignment of objects to the free slots makes the claim hold in this model".
+Clauses 5 and 6 are the whole idea, and they are subtler than they look. We cannot say "$\forall x\,\varphi$ is true iff $\varphi(d)$ is true for every $d$", because $\varphi(d)$ is not a formula — the domain element $d$ is not a symbol of the language, and in an uncountable structure most elements have no name at all. Tarski's device is to leave the formula alone and vary the *assignment* instead. That is why satisfaction is defined for formulas-with-assignments rather than for sentences directly, even though sentences are what we ultimately care about.
 :::
 
-:::example[(checking a unary predicate):]
-Language with unary $P$. Domain $D = \{1,2,3\}$. Let $P^I = \{1,2\}$.
+:::theorem[Truth depends only on the free variables]{#relevance-lemma}
+Let $\varphi$ be a formula and let $s_1, s_2$ be assignments in $\mathcal{M}$ that agree on every variable in $\mathrm{FV}(\varphi)$. Then
+
+$$\mathcal{M}\models\varphi\,[s_1] \quad\text{if and only if}\quad \mathcal{M}\models\varphi\,[s_2].$$
+
+In particular, if $\varphi$ is a sentence then either every assignment satisfies it or none does.
+:::
+
+:::proof
+First, for terms: if $s_1$ and $s_2$ agree on $\mathrm{var}(t)$ then $t^{\mathcal{M}}[s_1] = t^{\mathcal{M}}[s_2]$, by induction on $t$ — immediate for constants and variables, and preserved by clause 3 of *Value of a term*.
+
+Now induct on $\varphi$. If $\varphi$ is atomic, its free variables are exactly the variables of its terms, so the term case gives equal values and hence the same truth value by clauses 1–2. The cases of $\neg$ and the binary connectives are immediate from the induction hypothesis, since $\mathrm{FV}$ of a compound contains $\mathrm{FV}$ of each part.
+
+Let $\varphi = \forall x\,\psi$ and suppose $s_1, s_2$ agree on $\mathrm{FV}(\varphi) = \mathrm{FV}(\psi)\setminus\{x\}$. For any $d \in M$ the assignments $s_1(x\mapsto d)$ and $s_2(x\mapsto d)$ agree on all of $\mathrm{FV}(\psi)$: on $x$ they both give $d$, and elsewhere they inherit the agreement. By the induction hypothesis they satisfy $\psi$ together or not at all, so the condition "for every $d$" holds for $s_1$ iff it holds for $s_2$. The case $\exists$ is identical with "some" in place of "every". The final claim is the case $\mathrm{FV}(\varphi) = \emptyset$, where the hypothesis on $s_1, s_2$ is vacuous.
+:::
+
+:::definition[Truth in a structure, model]{#truth-definition}
+For a sentence $\sigma$ we write $\mathcal{M}\models\sigma$ — "$\sigma$ is **true in** $\mathcal{M}$", "$\mathcal{M}$ is a **model** of $\sigma$" — if $\mathcal{M}\models\sigma\,[s]$ for some (equivalently, by *Truth depends only on the free variables*, for every) assignment $s$. For a set $\Sigma$ of sentences, $\mathcal{M}\models\Sigma$ means $\mathcal{M}\models\sigma$ for every $\sigma\in\Sigma$. For a formula $\varphi$ with free variables, $\mathcal{M}\models\varphi$ abbreviates truth of its universal closure.
+:::
+
+:::pitfall
+$\models$ carries three different jobs in the literature and they must not be run together: $\mathcal{M}\models\varphi[s]$ (satisfaction by an assignment), $\mathcal{M}\models\sigma$ (truth in a structure), and $\Sigma\models\sigma$ (entailment, defined in the next section). The symbol between the turnstiles tells you which: a structure on the left means truth, a set of sentences on the left means entailment. None of them is $\vdash$, which is about proofs and never mentions a structure at all.
+:::
+
+:::example[Evaluating quantifiers in a small structure]
+Let $\mathcal{M}$ have domain $M = \{a,b\}$ and interpret a binary relation symbol $R$ as $R^{\mathcal{M}} = \{(a,a),(a,b)\}$. Decide the truth of $\exists x\forall y\,R(x,y)$ and of $\forall x\exists y\,R(x,y)$.
 :::
 
 :::solution
-$\exists x \, P(x)$: is there some element in $P^I$? Yes ($1$ works) → **true**.
-$\forall x \, P(x)$: is *every* element in $P^I$? No, $3 \notin P^I$ → **false**.
-$\exists x \, \neg P(x)$: is there an element outside $P^I$? Yes ($3$) → **true**.
+For $\exists x \forall y\,R(x,y)$, clause 6 asks for some $d\in M$ such that $\forall y\,R(x,y)$ holds under $x\mapsto d$.
 
-If we shrink the domain to $\{1,2\}$ and set $P^I = \{1,2\}$ (all of $D$), then $\forall x \, P(x)$ becomes **true**. Same symbols, different structure, different truth value — that is the whole point of an interpretation.
+Try $d = a$: clause 5 requires $(a,e) \in R^{\mathcal{M}}$ for every $e \in M$. Both $(a,a)$ and $(a,b)$ are in $R^{\mathcal{M}}$, so the inner universal holds and $a$ is a witness. Hence the sentence is **true**.
+
+For $\forall x\exists y\,R(x,y)$, clause 5 requires *every* $d$ to have a partner. For $d = a$, the partner $a$ works. For $d = b$ we need some $e$ with $(b,e) \in R^{\mathcal{M}}$, and $R^{\mathcal{M}}$ contains no pair whose first coordinate is $b$. So the sentence is **false**.
+
+This does not contradict *Quantifier order*, which compares $\exists y\forall x\,\varphi$ with $\forall x\exists y\,\varphi$ for a **fixed** matrix $\varphi$. Here the two sentences are not of that pair: the second was obtained by exchanging the roles of $x$ and $y$ in the matrix as well as in the prefix. The genuine consequence of *Quantifier order* is that $\forall y\exists x\,R(x,y)$ must also be true in $\mathcal{M}$ — and it is, since $a$ relates to both elements. □
 :::
 
-:::example[(nested quantifiers over a relation):]
-Domain $D = \{a,b\}$, binary relation $R^I = \{(a,a),(a,b)\}$. Is $\exists x \, \forall y \, R(x,y)$ true?
+:::example[The same sentence in two structures]
+Let $\sigma$ be $\forall x\,\exists y\,(x < y)$. Exhibit a model and a counter-model.
 :::
 
 :::solution
-The claim asks for **one** $x$ that relates to **every** $y$. Test each candidate $x$.
-Try $x = a$: need $R(a,a)$ and $R(a,b)$. Both pairs are in $R^I$ → the inner $\forall y$ holds for $x=a$.
-Since a witness exists, the existential is satisfied → **true**.
+Take $\mathcal{M}_1$ with domain $\mathbb{N}$ and $<^{\mathcal{M}_1}$ the usual strict order. Given any $d\in\mathbb{N}$, the element $d+1$ witnesses the inner existential, so $\mathcal{M}_1\models\sigma$.
 
-(Had we asked $\forall x \, \exists y \, R(x,y)$ instead, we would also need $b$ to relate to *something*; but $R^I$ has no pair starting with $b$, so that different sentence would be false — a reminder that quantifier order changes the question.)
+Take $\mathcal{M}_2$ with domain $\{0,1,2\}$ and $<^{\mathcal{M}_2}$ the usual order restricted to it. For $d = 2$ there is no $e$ with $2 < e$, so the inner existential fails and $\mathcal{M}_2\not\models\sigma$.
+
+The same string of symbols is true in one structure and false in another. A sentence by itself is not true or false; it is true *in* a structure. □
 :::
 
-:::example[(counting interpretations):]
-How many interpretations of a single binary relation $R$ exist over a domain of size $2$? An interpretation $R^I$ is *any* subset of $D \times D$. With $|D| = 2$ there are $2 \times 2 = 4$ ordered pairs, and a subset either includes or excludes each pair independently, so there are $2^4 = 16$ possible relations. Sanity check: the empty relation and the full relation $D\times D$ are two of these $16$ extremes.
+:::example[Counting structures on a fixed domain]
+How many structures for a language with a single binary relation symbol $R$ have domain $\{1,2\}$?
+:::
+
+:::solution
+Such a structure is determined by $R^{\mathcal{M}} \subseteq \{1,2\}^2$, and nothing else: there are no constant or function symbols to interpret, and the domain is fixed.
+
+$|\{1,2\}^2| = 4$, and a subset includes or excludes each of the $4$ pairs independently, so there are
+
+$$2^4 = 16$$
+
+structures. Final answer: $16$. Two of them are the extremes $R^{\mathcal{M}} = \emptyset$ and $R^{\mathcal{M}} = \{1,2\}^2$; the sentence $\forall x\,\forall y\, R(x,y)$ is true in exactly one of the $16$. □
+:::
+
+:::example[Satisfaction of an open formula]
+In the structure $\mathcal{M}$ with domain $\mathbb{Z}$ and $<$ the usual order, which assignments satisfy $\varphi = \exists y\,(x < y \land y < x + x)$?
+:::
+
+:::solution
+By *Truth depends only on the free variables*, only $s(x)$ matters, since $\mathrm{FV}(\varphi) = \{x\}$. Write $n = s(x)$. Clause 6 asks for an integer $m$ with $n < m < 2n$, which has a solution exactly when the open interval $(n, 2n)$ contains an integer, i.e. when $2n - n = n \ge 2$.
+
+So the satisfying assignments are exactly those with $s(x) \ge 2$; for instance $s(x) = 3$ works with $m = 4$, while $s(x) = 1$ fails because $(1,2)$ contains no integer and $s(x) = -5$ fails because $(-5,-10)$ is empty. Final answer: $s(x) \ge 2$. □
+:::
+
+## Entailment, Validity, and Truth in a Structure
+
+<!-- section: entailment -->
+
+With satisfaction in place we can define the notion logic is really about: an argument is valid when the conclusion cannot fail while the premises hold — in *any* structure whatsoever. The point of quantifying over all structures is that it removes the subject matter from the question. Whether $\forall x\,P(x) \to P(c)$ holds has nothing to do with numbers, sets or people; it holds whatever $P$, $c$ and the domain are, and that is what makes it logic.
+
+:::definition[Entailment, validity, satisfiability]{#entailment-definition}
+Let $\Sigma$ be a set of sentences and $\sigma$ a sentence.
+
+- $\Sigma$ **entails** $\sigma$, written $\Sigma \models \sigma$, if every structure that is a model of $\Sigma$ is a model of $\sigma$.
+- $\sigma$ is **valid** (**logically true**), written $\models\sigma$, if every structure is a model of it — the case $\Sigma = \emptyset$.
+- $\Sigma$ is **satisfiable** if some structure is a model of it; $\sigma$ is **refutable** if $\neg\sigma$ is satisfiable.
+- $\sigma$ and $\tau$ are **logically equivalent** iff $\models \sigma \leftrightarrow \tau$, which reconciles this with *Logical equivalence*.
+:::
+
+:::pitfall
+**Truth in a structure is not validity, and this is the most consequential distinction in the chapter.** The sentence $\forall x\,\forall y\,(x\cdot y = y\cdot x)$ is true in the structure $(\mathbb{Z},\cdot)$ and false in the structure of $2\times 2$ real matrices under multiplication. It is therefore true-in-a-structure but not valid. A valid sentence is one no structure can refute; there is no privileged "intended" structure in logic, and an argument that a sentence is "obviously true" about the intended one says nothing about validity. Soundness runs from provability to validity, not from truth in one's favourite model to provability.
+:::
+
+:::proposition[Semantic deduction and refutation]{#semantic-deduction}
+For sentences $\sigma, \tau$ and a set of sentences $\Sigma$:
+
+1. $\Sigma \cup \{\sigma\} \models \tau$ if and only if $\Sigma \models \sigma \to \tau$;
+2. $\Sigma \models \sigma$ if and only if $\Sigma \cup \{\neg \sigma\}$ is unsatisfiable;
+3. $\models\sigma$ if and only if $\neg\sigma$ is unsatisfiable.
+:::
+
+:::proof
+(1) ($\Rightarrow$) Let $\mathcal{M}\models\Sigma$. If $\mathcal{M}\models\sigma$ then $\mathcal{M}$ is a model of $\Sigma\cup\{\sigma\}$, so $\mathcal{M}\models\tau$ by hypothesis, and clause 4 of *Satisfaction (Tarski)* gives $\mathcal{M}\models\sigma\to\tau$; if $\mathcal{M}\not\models\sigma$, the same clause gives it directly. ($\Leftarrow$) Let $\mathcal{M}\models\Sigma\cup\{\sigma\}$. Then $\mathcal{M}\models\sigma\to\tau$ and $\mathcal{M}\models\sigma$, so $\mathcal{M}\models\tau$.
+
+(2) ($\Rightarrow$) A model of $\Sigma\cup\{\neg\sigma\}$ would be a model of $\Sigma$ satisfying $\neg\sigma$, hence not $\sigma$, contradicting $\Sigma\models\sigma$. ($\Leftarrow$) If $\mathcal{M}\models\Sigma$ but $\mathcal{M}\not\models\sigma$, then $\mathcal{M}\models\neg\sigma$ by clause 3, so $\Sigma\cup\{\neg\sigma\}$ is satisfiable.
+
+(3) is (2) with $\Sigma = \emptyset$, since every structure is a model of $\emptyset$.
+:::
+
+:::remark
+Part (2) is why automated theorem provers *refute* instead of proving: to establish $\Sigma \models \sigma$ they add $\neg\sigma$ to the premises and search for a contradiction. Resolution, tableaux and SMT solvers are all built on that reduction.
+:::
+
+:::theorem[Instantiation and generalisation are valid]{#instantiation-validity}
+Let $\varphi$ be a formula, $x$ a variable and $t$ a term substitutable for $x$ in $\varphi$. Then
+
+$$\models \forall x\,\varphi \to \varphi[x:=t] \qquad\text{and}\qquad \models \varphi[x:=t] \to \exists x\,\varphi,$$
+
+where validity of a formula with free variables means validity of its universal closure.
+:::
+
+:::proof
+Fix $\mathcal{M}$ and an assignment $s$, and suppose $\mathcal{M}\models(\forall x\,\varphi)[s]$. Put $d = t^{\mathcal{M}}[s] \in M$. Clause 5 of *Satisfaction (Tarski)* applied with this particular $d$ gives $\mathcal{M}\models\varphi\,[s(x\mapsto d)]$. Since $t$ is substitutable for $x$ in $\varphi$, *The substitution lemma* converts this into $\mathcal{M}\models\varphi[x:=t]\,[s]$. As $\mathcal{M}$ and $s$ were arbitrary, the implication is satisfied everywhere.
+
+The second formula is the first read through duality: assume $\mathcal{M}\models\varphi[x:=t][s]$, so by the substitution lemma $\mathcal{M}\models\varphi[s(x\mapsto d)]$ with $d = t^{\mathcal{M}}[s]$, and clause 6 needs only that one witness.
+:::
+
+:::pitfall
+Both halves collapse without substitutability. With $\varphi = \exists y\,\neg(x=y)$ and $t = y$, the instance $\forall x\,\exists y\,\neg(x=y) \to \exists y\,\neg(y=y)$ has a true antecedent in any two-element structure and a consequent false in every structure, so it is not valid. Nothing is wrong with the theorem; the hypothesis was violated, since $y$ is not substitutable for $x$ in $\varphi$.
+:::
+
+:::example[Valid, satisfiable but not valid, or unsatisfiable]
+Classify each of the following: (a) $\exists x\,(P(x) \to \forall y\,P(y))$; (b) $\forall x\exists y\,R(x,y) \to \exists y \forall x\,R(x,y)$; (c) $\exists x\,(P(x) \land \neg P(x))$.
+:::
+
+:::solution
+(a) is **valid**, the "drinker paradox". Fix $\mathcal{M}$ with domain $M \neq \emptyset$. If $\forall y\,P(y)$ holds, then *every* $d$ makes the implication true, and $M$ is non-empty, so a witness exists. If $\forall y\,P(y)$ fails, some $d_0$ has $\neg P(d_0)$, and that $d_0$ makes the antecedent of the implication false, hence the implication true. Either way a witness exists.
+
+(b) is **satisfiable but not valid**. It is true in any structure where the consequent holds. It fails in $\mathcal{M}$ with domain $\mathbb{N}$ and $R^{\mathcal{M}} = \{(m,n) : m < n\}$, by the counter-model in *Quantifier order*.
+
+(c) is **unsatisfiable**: clauses 3 and 4 of *Satisfaction (Tarski)* make $P(x)\land\neg P(x)$ unsatisfiable under every assignment, so no witness can exist in any structure. □
+:::
+
+:::example[Deciding an entailment]
+Does $\{\forall x\,(P(x)\to Q(x)),\ \exists x\,P(x)\} \models \exists x\,Q(x)$? Does $\{\forall x\,(P(x)\to Q(x)),\ \exists x\,Q(x)\} \models \exists x\,P(x)$?
+:::
+
+:::solution
+The first entailment **holds**. Let $\mathcal{M}$ model both premises. The second premise gives $d\in M$ with $d \in P^{\mathcal{M}}$. The first premise, instantiated at $d$ via *Instantiation and generalisation are valid*, gives $P(d)\to Q(d)$, so $d\in Q^{\mathcal{M}}$, and $d$ witnesses $\exists x\,Q(x)$.
+
+The second **fails**. Take $M = \{1\}$, $P^{\mathcal{M}} = \emptyset$, $Q^{\mathcal{M}} = \{1\}$. Then $\forall x\,(P(x)\to Q(x))$ is true vacuously, $\exists x\,Q(x)$ is true, and $\exists x\,P(x)$ is false. This is the quantified form of affirming the consequent. □
+:::
+
+:::theorem[Compactness]{#compactness}
+A set $\Sigma$ of first-order sentences has a model if and only if every finite subset of $\Sigma$ has a model.
+:::
+
+:::proof[Sketch — rests on the completeness theorem, not proved here]
+The direction ($\Rightarrow$) is trivial: a model of $\Sigma$ models each subset. The direction ($\Leftarrow$) is not proved here. It follows from the completeness theorem stated in the next section: if $\Sigma$ had no model then $\Sigma \models \bot$, so by completeness $\Sigma\vdash\bot$; a derivation is a finite object and uses only finitely many members of $\Sigma$, so some finite $\Sigma_0\subseteq\Sigma$ has $\Sigma_0\vdash\bot$, and by soundness $\Sigma_0$ has no model. The proof therefore rests on completeness (Gödel 1929), which is beyond this chapter; Henkin's construction is the standard route.
+:::
+
+:::remark
+Compactness is the engine of model theory. Adding constants $c_1, c_2, \dots$ with the sentences $\neg(c_i = c_j)$ for $i\ne j$ to the axioms of any theory with arbitrarily large finite models shows that theory has an infinite model; the same trick, run over a non-standard element, produces non-standard models of arithmetic and the infinitesimals of non-standard analysis. It also shows first-order logic *cannot* express "the domain is finite": a sentence with only finite models of unbounded size would contradict compactness.
+:::
+
+## Prenex Normal Form
+
+<!-- section: prenex -->
+
+A formula in which quantifiers are scattered through the structure is hard to reason about: one cannot see at a glance how many alternations it contains, and the alternation count is exactly what measures the logical complexity of a statement. **Prenex normal form** pushes every quantifier to the front, leaving a quantifier-free body behind. The theorem below says this is always possible, and the proof is an algorithm.
+
+:::definition[Prenex normal form]{#prenex-definition}
+A formula is in **prenex normal form** if it has the shape
+
+$$Q_1 x_1\, Q_2 x_2 \cdots Q_n x_n\; \psi,$$
+
+where each $Q_i$ is $\forall$ or $\exists$, the variables $x_1,\dots,x_n$ are distinct, and the **matrix** $\psi$ contains no quantifier. The string $Q_1x_1\cdots Q_nx_n$ is the **prefix**; $n = 0$ is allowed.
+:::
+
+:::theorem[Prenex normal form]{#prenex-theorem}
+Every first-order formula $\varphi$ is logically equivalent to a formula $\varphi^{*}$ in prenex normal form with $\mathrm{FV}(\varphi^{*}) = \mathrm{FV}(\varphi)$. Moreover $\varphi^{*}$ can be computed from $\varphi$ by an algorithm.
+:::
+
+:::proof
+Induct on the structure of $\varphi$, producing a prenex equivalent at each step.
+
+*Atomic $\varphi$.* Already prenex, with empty prefix.
+
+*$\varphi = \neg\psi$.* By the induction hypothesis $\psi \equiv Q_1x_1\cdots Q_nx_n\,\chi$ with $\chi$ quantifier-free. Applying *Duality of the quantifiers* $n$ times, once per quantifier from the outside in,
+
+$$\neg Q_1x_1\cdots Q_nx_n\,\chi \;\equiv\; \overline{Q_1}x_1\cdots \overline{Q_n}x_n\,\neg\chi,$$
+
+where $\overline{\forall} = \exists$ and $\overline{\exists} = \forall$. The matrix $\neg\chi$ is quantifier-free, so this is prenex. Each application is legitimate because equivalence is a congruence: replacing a subformula by an equivalent one preserves satisfaction, as an easy induction on the surrounding context shows.
+
+*$\varphi = \psi \land \theta$ (and the other binary connectives).* By the induction hypothesis $\psi\equiv Q_1x_1\cdots Q_mx_m\,\chi$ and $\theta \equiv Q'_1y_1\cdots Q'_ny_n\,\chi'$. First rename: by *Renaming bound variables*, choose the $x_i$ and $y_j$ all distinct from one another and not free in either formula — this is the step that makes the whole construction work, and it is always available because there are infinitely many variables and each formula is finite. Now every $x_i$ is not free in $\theta$ and every $y_j$ is not free in $\psi$, so *Pulling a quantifier out* applies repeatedly, moving the prefix of $\psi$ outwards through $\land\,\theta$ and then the prefix of $\theta$ outwards:
+
+$$\psi\land\theta \;\equiv\; Q_1x_1\cdots Q_mx_m\,Q'_1y_1\cdots Q'_ny_n\,(\chi\land\chi').$$
+
+For $\to$ the same argument applies, with the third law of *Pulling a quantifier out* flipping each quantifier that is moved out of the **antecedent** and the fourth leaving untouched those moved out of the consequent.
+
+*$\varphi = \forall x\,\psi$ or $\exists x\,\psi$.* By the induction hypothesis $\psi \equiv Q_1x_1\cdots Q_nx_n\,\chi$; prefixing the quantifier gives a prenex formula at once, after renaming $x$ if it collides with some $x_i$.
+
+Each step either leaves the free variables alone or removes and restores the same binding, so $\mathrm{FV}$ is preserved. The induction is finite and every step is effective — rename, then apply a fixed list of equivalences — so it is an algorithm.
+:::
+
+:::pitfall
+The renaming step is not optional bookkeeping. Without it the construction is wrong, not merely inelegant: $(\exists x\,P(x)) \land (\exists x\,Q(x))$ pulled out naively becomes $\exists x\,(P(x)\land Q(x))$, which *Quantifiers distribute one way only* showed is not equivalent to it. Rename first, to $(\exists x\,P(x))\land(\exists z\,Q(z))$, and the correct prenex form $\exists x\exists z\,(P(x)\land Q(z))$ drops out.
+:::
+
+:::remark
+Prenex form is not unique. $\forall x\,P(x) \land \exists y\,Q(y)$ prenexes to $\forall x\exists y\,(P(x)\land Q(y))$ or to $\exists y\forall x\,(P(x)\land Q(y))$, depending on which conjunct's prefix you extract first, and by *Quantifier order* those two prefixes are in general inequivalent — here they happen to be equivalent because the matrix splits. What *is* an invariant of a formula, not of a particular prenex form, is the least possible number of quantifier alternations; that number defines the arithmetical hierarchy $\Sigma_n / \Pi_n$, in which $\Sigma_1$ formulas ($\exists\cdots$ over a decidable matrix) are the semi-decidable properties.
+:::
+
+:::example[Prenexing a formula with a shared variable]
+Put $\bigl(\forall x\,P(x)\bigr) \to \exists x\,Q(x)$ into prenex normal form.
+:::
+
+:::solution
+Rename the bound variables apart first, by *Renaming bound variables*:
+
+$$\bigl(\forall x\,P(x)\bigr) \to \exists z\,Q(z).$$
+
+Pull the antecedent's quantifier out. By the third law of *Pulling a quantifier out*, $(\forall x\,\varphi)\to\psi \equiv \exists x\,(\varphi\to\psi)$, valid here because $x$ is not free in $\exists z\,Q(z)$:
+
+$$\exists x\,\bigl(P(x) \to \exists z\,Q(z)\bigr).$$
+
+Now pull out $\exists z$ from the consequent, using $\psi \to \exists z\,\chi \equiv \exists z\,(\psi\to\chi)$ — the dual of the fourth law, valid since $z$ is not free in $P(x)$:
+
+$$\exists x\,\exists z\,\bigl(P(x)\to Q(z)\bigr).$$
+
+The prefix has $2$ quantifiers and no alternation, so the sentence is $\Sigma_1$ over its matrix. □
+:::
+
+:::example[A formula whose negation changes the prefix]
+Prenex $\neg\forall x\,\exists y\,\bigl(R(x,y)\land \neg S(y)\bigr)$ and count the alternations.
+:::
+
+:::solution
+Apply *Duality of the quantifiers* twice, outside in:
+
+$$\neg\forall x\,\exists y\,\theta \;\equiv\; \exists x\,\neg\exists y\,\theta \;\equiv\; \exists x\,\forall y\,\neg\theta,$$
+
+with $\theta = R(x,y)\land\neg S(y)$. Push the negation into the quantifier-free matrix by De Morgan:
+
+$$\neg\bigl(R(x,y)\land\neg S(y)\bigr) \equiv \neg R(x,y) \lor S(y).$$
+
+So the prenex form is
+
+$$\exists x\,\forall y\,\bigl(\neg R(x,y)\lor S(y)\bigr).$$
+
+The prefix is $\exists\forall$: one alternation, the same count as the original $\forall\exists$, as duality guarantees. Final answer: $1$ alternation. □
+:::
+
+## A Proof Calculus and Its Soundness
+
+<!-- section: proof-system -->
+
+Everything so far has been semantic: truth, satisfaction, entailment, all defined by quantifying over structures. That is not something one can carry out by inspection — checking $\models\sigma$ means surveying every structure, of every cardinality. A **proof calculus** replaces this with a finite, checkable, purely syntactic game, and the two theorems that connect the game to the semantics are soundness (everything provable is true) and completeness (everything true is provable). We set up a Hilbert-style calculus and prove soundness in full; completeness is stated and attributed.
+
+:::definition[A Hilbert calculus for first-order logic]{#proof-calculus}
+Fix $\neg, \to, \forall$ as primitive ($\land, \lor, \exists$ being defined from them by duality). The **logical axioms** are all *universal closures* of formulas of the following shapes, for any formulas $\varphi,\psi,\chi$, variable $x$ and term $t$:
+
+- **A1** $\varphi \to (\psi \to \varphi)$;
+- **A2** $\bigl(\varphi\to(\psi\to\chi)\bigr) \to \bigl((\varphi\to\psi)\to(\varphi\to\chi)\bigr)$;
+- **A3** $(\neg\psi\to\neg\varphi) \to (\varphi\to\psi)$;
+- **A4** $\forall x\,\varphi \to \varphi[x:=t]$, **provided $t$ is substitutable for $x$ in $\varphi$**;
+- **A5** $\forall x\,(\varphi\to\psi) \to (\forall x\,\varphi \to \forall x\,\psi)$;
+- **A6** $\varphi \to \forall x\,\varphi$, **provided $x \notin \mathrm{FV}(\varphi)$**.
+
+The single rule of inference is **modus ponens**: from $\varphi$ and $\varphi\to\psi$ infer $\psi$.
+
+A **derivation** of $\varphi$ from a set $\Sigma$ of formulas is a finite sequence $\varphi_1,\dots,\varphi_n$ with $\varphi_n = \varphi$, each $\varphi_i$ being a logical axiom, a member of $\Sigma$, or obtained from two earlier entries by modus ponens. We write $\Sigma\vdash\varphi$ when such a derivation exists, and $\vdash\varphi$ for $\emptyset\vdash\varphi$.
+:::
+
+:::remark
+Taking the *universal closures* of the axiom schemes lets generalisation be absorbed into the axioms, so modus ponens can be the only rule. Presentations that state the axioms without closure need a second rule, "from $\varphi$ infer $\forall x\,\varphi$", and must then restrict it so that $x$ is not free in the premises — otherwise $\{P(x)\} \vdash \forall x\,P(x)$ becomes derivable, which is false semantically. Both designs exist in the literature and prove the same theorems; the restriction has to be paid somewhere.
+:::
+
+:::pitfall
+The side conditions on **A4** and **A6** are not decoration. Drop the one on A4 and the capture instance $\forall x\,\exists y\,\neg(x=y) \to \exists y\,\neg(y=y)$ becomes an axiom, deriving a falsehood from a truth. Drop the one on A6 and $P(x)\to\forall x\,P(x)$ becomes an axiom, which *Pulling a quantifier out* already refuted in a two-element structure. Soundness is exactly the theorem that with the conditions in place, no such thing can happen.
+:::
+
+:::theorem[Soundness]{#soundness}
+If $\Sigma \vdash \varphi$ then $\Sigma \models \varphi$. In particular, if $\vdash\varphi$ then $\varphi$ is valid, and a theory with a model is consistent.
+:::
+
+:::proof
+It suffices to show two things: (i) every logical axiom is valid, and (ii) modus ponens preserves satisfaction. Then an induction on the length of a derivation gives the theorem: fix $\mathcal{M}\models\Sigma$ and an assignment $s$; every entry $\varphi_i$ of the derivation is satisfied by $s$ in $\mathcal{M}$, being a valid axiom, a member of $\Sigma$, or a modus ponens consequence of two earlier satisfied entries.
+
+(ii) is clause 4 of *Satisfaction (Tarski)*: if $s$ satisfies $\varphi$ and $\varphi\to\psi$, then since it satisfies $\varphi$ the first disjunct of the clause fails, so it satisfies $\psi$.
+
+For (i), note first that it suffices to check each axiom *shape* is satisfied by every assignment in every structure, since validity of a formula is validity of its universal closure, and clause 5 of *Satisfaction (Tarski)* says the closure is satisfied precisely when the open formula is satisfied under all modified assignments.
+
+**A1–A3** are propositional tautologies in the shapes $\varphi,\psi,\chi$, and clauses 3 and 4 of the satisfaction definition evaluate $\neg$ and $\to$ exactly as the truth tables do. So under any fixed $\mathcal{M}, s$ the three formulas reduce to tautologies of the two truth values assigned to their constituents.
+
+**A4** is *Instantiation and generalisation are valid*, whose proof used the substitutability hypothesis through *The substitution lemma*.
+
+**A5.** Fix $\mathcal{M}, s$ and suppose $s$ satisfies $\forall x\,(\varphi\to\psi)$ and $\forall x\,\varphi$; we must satisfy $\forall x\,\psi$. Let $d\in M$ be arbitrary. By clause 5 twice, $s(x\mapsto d)$ satisfies both $\varphi\to\psi$ and $\varphi$, hence satisfies $\psi$ by (ii). As $d$ was arbitrary, clause 5 gives $\forall x\,\psi$.
+
+**A6.** Suppose $x\notin\mathrm{FV}(\varphi)$ and $s$ satisfies $\varphi$ in $\mathcal{M}$. For any $d \in M$, the assignments $s$ and $s(x\mapsto d)$ differ only at $x$, which is not free in $\varphi$; by *Truth depends only on the free variables*, $s(x\mapsto d)$ satisfies $\varphi$ as well. Since $d$ was arbitrary, clause 5 gives $\forall x\,\varphi$. This is the step that the side condition makes possible, and the only place in the proof where it is used.
+
+Finally, the consistency claim: if $\Sigma$ had a model $\mathcal{M}$ and also $\Sigma\vdash\varphi$ and $\Sigma\vdash\neg\varphi$, then $\mathcal{M}$ would satisfy both $\varphi$ and $\neg\varphi$, contradicting clause 3.
+:::
+
+:::theorem[Gödel's completeness theorem]{#completeness}
+For any set $\Sigma$ of first-order formulas and any formula $\varphi$, if $\Sigma\models\varphi$ then $\Sigma\vdash\varphi$. Together with *Soundness*, $\Sigma\vdash\varphi$ if and only if $\Sigma\models\varphi$.
+:::
+
+:::proof[Sketch — Henkin's construction, not carried out here]
+Not proved here. The standard argument (Henkin) is the contrapositive: if $\Sigma\not\vdash\varphi$ then $\Sigma\cup\{\neg\varphi\}$ is consistent; extend it to a maximal consistent set that also contains a witness $\varphi[x:=c]$ for each existential formula $\exists x\,\varphi$ it contains, adding fresh constants $c$ as needed; then build a structure whose domain is the set of closed terms modulo provable equality, interpreting each symbol by itself. A "truth lemma", proved by induction on formulas, shows this term structure satisfies exactly the sentences in the maximal set, hence models $\Sigma\cup\{\neg\varphi\}$, so $\Sigma\not\models\varphi$. It rests on Zorn's lemma (or König's lemma in the countable case) and on the axioms above being strong enough to prove the deduction theorem. Full accounts are in Enderton §2.5 and van Dalen §3.1.
+:::
+
+:::intuition
+Soundness is the easy half and the indispensable one: it is what makes a proof worth writing, because it certifies that no derivation can lead from true premises to a false conclusion. Completeness is the surprising half — that a fixed, finite list of axiom schemes and one rule suffice to reach *every* semantic consequence, over every signature and every cardinality of structure. It is also what makes first-order validity semi-decidable: search all derivations, and if $\varphi$ is valid you will eventually find one. Church and Turing showed you cannot do better than semi-decidable — there is no algorithm that always halts and decides validity.
+:::
+
+:::example[A derivation and what soundness tells us]
+Derive $\forall x\,P(x) \to \exists x\,P(x)$ in the calculus, and identify where non-emptiness of the domain is used.
+:::
+
+:::solution
+Recall $\exists x\,P(x)$ abbreviates $\neg\forall x\,\neg P(x)$.
+
+1. $\forall x\,P(x) \to P(x)$ — **A4**, with $t = x$, which is substitutable for $x$ in $P(x)$.
+2. $\forall x\,\neg P(x) \to \neg P(x)$ — **A4** again.
+3. From 1 and 2, propositional reasoning (A1–A3 with modus ponens) yields $\forall x\,P(x) \to \neg\forall x\,\neg P(x)$: assuming the antecedent gives $P(x)$ by 1, while $\forall x\,\neg P(x)$ would give $\neg P(x)$ by 2, a contradiction, so $\neg\forall x\,\neg P(x)$.
+4. The conclusion is $\forall x\,P(x)\to\exists x\,P(x)$ by the abbreviation.
+
+Non-emptiness enters not in the derivation but in *Soundness*: step 1 is valid because clause 5 of the satisfaction definition can be instantiated at the element $s(x)$ — and an assignment into an empty domain does not exist. Over empty domains this sentence is false, so the calculus would be unsound; the two conventions stand or fall together. □
+:::
+
+:::example[Using soundness to show something is unprovable]
+Show that $\exists x\,P(x) \to \forall x\,P(x)$ is not derivable in the calculus.
+:::
+
+:::solution
+By *Soundness*, a derivable formula is valid, so it is enough to exhibit one structure refuting it — the contrapositive of soundness is the standard tool for unprovability.
+
+Take $M = \{1,2\}$ and $P^{\mathcal{M}} = \{1\}$. Then $\exists x\,P(x)$ is true, witnessed by $1$, while $\forall x\,P(x)$ is false because $2\notin P^{\mathcal{M}}$. Clause 4 of *Satisfaction (Tarski)* makes the implication false in $\mathcal{M}$, so it is not valid, so by soundness it has no derivation.
+
+Note what was *not* needed: no search through derivations, and no appeal to completeness. Soundness alone converts a semantic counter-model into a syntactic non-existence claim. □
 :::
 
 ## Common Mistakes
 
-- **Quantifier scope and domain:** Treat quantifiers with care for scope and domain rather than like propositional connectives or English plurals. "All that glitters is not gold" is classically misparsed; the logical form is usually $\neg \forall x (G(x) \to \text{Gold}(x))$.
+- **Confusing truth in a structure with validity.** $\forall x\forall y\,(x\cdot y = y\cdot x)$ is true in $(\mathbb{Z},\cdot)$ and false in $2\times2$ matrices; truth in your favourite model is not a licence to assert a sentence as a theorem of logic. Soundness runs from $\vdash$ to $\models$, never from truth in one structure to $\vdash$.
 
-- **Quantifier order:** Swapping quantifier order without justification is invalid. $\forall x \exists y$ ("everyone has a mother") is not equivalent to $\exists y \forall x$ ("someone is mother of everyone").
+- **Substituting without checking substitutability.** Replacing $x$ by a term whose variables get captured turns valid instantiation into nonsense — the standard example being $\exists y\,\neg(x=y)$ with $t = y$. Rename the bound variable first.
 
-- **Non-empty domains:** Forgetting that the domain must be non-empty leads to errors. Some texts allow empty domains; classical FOL usually requires non-empty.
+- **Swapping quantifier order.** $\forall x\exists y$ and $\exists y\forall x$ are not equivalent; only $\exists\forall \models \forall\exists$ holds. This is the continuity versus uniform continuity distinction.
 
-- **Free versus bound:** Confusing free and bound variables is common. Writing proofs that treat a free $x$ as if universally quantified without the $\forall$ intro rule is incorrect.
+- **Distributing a quantifier over the wrong connective.** $\forall$ distributes over $\land$ and $\exists$ over $\lor$; the mixed forms fail, and "some $A$ and some $B$" never yields "some $A$ that is $B$".
 
-- **Intended model versus validity:** Assuming that truth in the "intended" model implies validity (truth in all models) gets the direction wrong. Soundness goes the other way.
+- **Prenexing without renaming apart.** Pulling both quantifiers of $(\exists x\,P(x))\land(\exists x\,Q(x))$ to the front under one $\exists x$ silently strengthens the formula. Rename first.
 
-- **Nested quantifier capture:** Using the same variable name for nested quantifiers without renaming leads to accidental capture.
+- **Treating a free variable as universally quantified.** An open formula has no truth value in a structure until an assignment is supplied; a derivation that generalises on a variable free in the premises is invalid, which is exactly what the side condition on **A6** blocks.
+
+- **Forgetting that domains are non-empty.** $\forall x\,P(x)\to\exists x\,P(x)$ is derivable, and it is valid only because every structure has at least one element.
+
+- **Mixing up $\models$ and $\vdash$.** The first is about structures, the second about derivations. That they coincide for first-order logic is Gödel's completeness theorem, a hard result, not a definition.
