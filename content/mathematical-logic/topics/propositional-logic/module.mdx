@@ -4,253 +4,873 @@ title: Propositional Logic
 
 # Propositional Logic
 
-Propositional logic (also called sentential logic or propositional calculus) is the simplest layer of formal logic. It studies how we combine whole statements ("propositions") using connectives such as "and", "or", "not", "implies", and "if and only if". Unlike predicate logic, it does not look inside the statements at objects or quantifiers; a proposition is treated as an indivisible atom that is either true or false.
+Propositional logic is the fragment of formal logic in which whole statements are the smallest moving parts. It does not look inside a statement at objects, functions or quantifiers; it fixes a stock of *atoms*, each of which is simply true or false, and studies how truth flows through the connectives that build compound statements out of them.
 
-This system gives us precise tools to analyze arguments, build truth tables, detect tautologies, and decide satisfiability. Every proof in mathematics ultimately rests on valid propositional reasoning, and computer science uses it for circuit design, automated reasoning, and SAT solvers.
+That deliberate poverty is what makes the subject sharp. Because a formula's meaning is a finite function of finitely many bits, every semantic question about it — is it always true, is it ever true, does it follow from these assumptions — is decidable by inspection. The mathematics lies in doing that inspection well: in proving that formulas can be read in only one way, that a handful of connectives suffices to express every truth function, that a formula can always be flattened into a normal form, that a single mechanical inference rule is enough to refute anything unsatisfiable, that an infinite set of assumptions is satisfiable as soon as each of its finite parts is, and that a purely syntactic calculus can capture exactly the semantic truths. Those theorems are the content of this chapter.
 
-## Propositions and Connectives
+## The Language and Unique Readability
 
 <!-- section: connectives -->
 
-:::definition[Proposition]
-A **proposition** is a declarative sentence that is either true or false, but not both.
+Logic begins with a language, and a language begins with symbols. We must be able to say exactly which strings are formulas before we can ask what they mean, because the whole method of the subject is to define truth by recursion on the way a formula was built. If a formula could be built in two different ways, that recursion would not define anything.
+
+:::definition[The propositional language]{#language}
+Fix a non-empty set $\mathrm{At} = \{p_0, p_1, p_2, \dots\}$ of **atoms** (also called propositional variables or sentence letters). The alphabet of the language consists of the atoms, the **connectives** $\neg, \land, \lor, \to, \leftrightarrow$, and the two parentheses.
+
+The set $\mathrm{Form}$ of **formulas** is the smallest set of finite strings over this alphabet such that
+
+1. every atom is a formula, and so are the constants $\top$ and $\bot$;
+2. if $\varphi$ is a formula then so is $(\neg\varphi)$;
+3. if $\varphi$ and $\psi$ are formulas then so are $(\varphi \land \psi)$, $(\varphi \lor \psi)$, $(\varphi \to \psi)$ and $(\varphi \leftrightarrow \psi)$.
 :::
 
-Examples: "2 + 2 = 4", "It is raining", "Every even integer greater than 2 is the sum of two primes". We denote atomic propositions by lowercase letters: $p$, $q$, $r$, ...
+"Smallest set closed under these rules" is not a phrase to skim. It means $\mathrm{Form}$ is the intersection of all sets satisfying (1)–(3), and that intersection is itself closed under (1)–(3), so it is the least such set. The payoff is immediate and is used on almost every page that follows.
 
-The five standard connectives are:
-
-- Negation: $\neg p$ ("not p") — true when $p$ is false.
-- Conjunction: $p \land q$ ("p and q") — holds only when both are true.
-- Disjunction: $p \lor q$ ("p or q", inclusive) — true when at least one true.
-- Implication: $p \to q$ ("if p then q") — false only when $p$ true and $q$ false.
-- Biconditional: $p \leftrightarrow q$ ("p if and only if q") — true when both same truth value.
-
-Each has a precise truth table. The implication $p \to q$ is material implication; it does not require causation in natural language.
-
-A connective is called **binary** if it takes two inputs (like $\land$, $\lor$, $\to$, $\leftrightarrow$) and **unary** if it takes one (like $\neg$). There are fewer binary connectives than you might expect.
-
-:::proposition[The sixteen binary connectives]
-There are exactly
-
-$$2^4 = 16$$
-
-possible binary connectives on two atoms.
+:::theorem[Structural induction]{#structural-induction}
+Let $P$ be a property of formulas. Suppose $P$ holds of every atom and of $\top$ and $\bot$; that $P(\varphi)$ implies $P((\neg\varphi))$; and that $P(\varphi)$ and $P(\psi)$ together imply $P((\varphi \ast \psi))$ for each binary connective $\ast$. Then every formula has property $P$.
 :::
 
 :::proof
-Two atoms have $2^2 = 4$ input rows, and each row can independently map to T or F.
+Let $S = \{\varphi \in \mathrm{Form} : P(\varphi)\}$. The hypotheses say precisely that $S$ satisfies clauses (1)–(3) of the definition. Since $\mathrm{Form}$ is the *smallest* such set, $\mathrm{Form} \subseteq S$, and as $S \subseteq \mathrm{Form}$ by construction, $S = \mathrm{Form}$.
 :::
 
-Only a handful of the sixteen have standard names.
-
-:::definition[Functional completeness]
-A set of connectives is **functionally complete** if every one of those truth functions can be expressed using only that set.
+:::notation
+Writing every pair of parentheses is unbearable, so we adopt the usual conventions: outermost parentheses are dropped, $\neg$ binds most tightly, then $\land$, then $\lor$, then $\to$, then $\leftrightarrow$; and $\to$ associates to the **right**, so $p \to q \to r$ abbreviates $p \to (q \to r)$. These are conventions about *abbreviations*, not about the official language. Every proof in this chapter concerns the fully parenthesised strings.
 :::
 
-For example $\{\neg, \land\}$ is functionally complete (we recover $\lor$ from De Morgan and $\to$ from $\neg p \lor q$), whereas $\{\land, \lor\}$ is not, because with no negation you can never turn an all-true row false.
+The rest of this section establishes the fact that licenses definition by recursion: a formula wears its construction on its face.
+
+:::lemma[Parenthesis balance]{#paren-lemma}
+In every formula the number of left parentheses equals the number of right parentheses, and in every **proper** non-empty initial segment of a formula the left parentheses strictly outnumber the right.
+:::
+
+:::proof
+By structural induction. For an atom, $\top$ or $\bot$, the string has no parentheses and no proper non-empty initial segment at all, so both claims hold.
+
+Suppose the claims hold for $\varphi$ and $\psi$, and consider $\chi = (\varphi \ast \psi)$ for a binary connective $\ast$. Its parenthesis count exceeds the combined counts of $\varphi$ and $\psi$ by one of each kind, and those are balanced, so $\chi$ is balanced. A proper non-empty initial segment of $\chi$ has one of these forms: the single symbol $($; or $($ followed by a proper non-empty initial segment of $\varphi$; or $($ followed by all of $\varphi$; or that together with $\ast$; or that followed by a proper non-empty initial segment of $\psi$. In the first four cases the excess of left over right parentheses is at least $1$, using the induction hypothesis for $\varphi$ in the second case and the balance of $\varphi$ in the third and fourth. In the last case the excess is $1$ plus the excess in an initial segment of $\psi$, hence at least $2$. The unary case $(\neg\varphi)$ is the same argument with fewer sub-cases.
+:::
+
+:::theorem[Unique readability]{#unique-readability}
+Every formula is of exactly one of the forms: an atom, $\top$, $\bot$, $(\neg\varphi)$, or $(\varphi \ast \psi)$ for exactly one binary connective $\ast$; and in the last two cases the constituent formulas $\varphi$ and $\psi$ are uniquely determined.
+:::
+
+:::proof
+A formula beginning with a symbol other than $($ is an atom, $\top$ or $\bot$, and those three cases are visibly disjoint. So suppose the formula begins with $($. The symbol immediately after it is either $\neg$ — in which case the formula can only have arisen from clause (2) — or the first symbol of a formula, in which case it arose from clause (3). That settles the shape.
+
+For uniqueness of the constituents, suppose $(\varphi \ast \psi)$ and $(\varphi' \ast' \psi')$ are the same string. If $\varphi \neq \varphi'$ then one is a proper non-empty initial segment of the other, say $\varphi$ of $\varphi'$. By Lemma *Parenthesis balance* the left parentheses of $\varphi$ then strictly outnumber its right ones — yet $\varphi$ is itself a formula and so is balanced. That contradiction forces $\varphi = \varphi'$. Deleting the common prefix $(\varphi$ leaves $\ast\psi)$ and $\ast'\psi')$ equal as strings, so $\ast = \ast'$ and then $\psi = \psi'$.
+:::
 
 :::intuition
-Think of propositions as light switches: on (true) or off (false). Connectives are wiring diagrams: AND requires both switches on, OR needs at least one, NOT flips the switch, IMPLIES is a one-way safety: if the first is on, the second must be too (otherwise the circuit "fails").
-
-Everyday: "If it rains, the ground is wet" is an implication. It is false only on the day it rains but the ground stays dry.
+Unique readability is the reason a formula has a parse tree rather than a parse forest. Natural language lacks it — "old men and women" genuinely has two readings — and that ambiguity is exactly what parentheses are bought to prevent. Every later definition in this chapter says "define the value of $\varphi$ by cases on the shape of $\varphi$"; without unique readability those cases could overlap and the definition would be incoherent.
 :::
 
-:::example
-Build the truth table for $p \to q$ (implication).
+:::definition[Subformula, rank, atoms of a formula]{#subformula}
+The set $\mathrm{Sub}(\varphi)$ of **subformulas** of $\varphi$ is defined by recursion: $\mathrm{Sub}(\varphi) = \{\varphi\}$ for atomic $\varphi$; $\mathrm{Sub}((\neg\varphi)) = \{(\neg\varphi)\} \cup \mathrm{Sub}(\varphi)$; and $\mathrm{Sub}((\varphi\ast\psi)) = \{(\varphi\ast\psi)\} \cup \mathrm{Sub}(\varphi) \cup \mathrm{Sub}(\psi)$. The **rank** $\mathrm{rk}(\varphi)$ is the depth of the parse tree: $0$ for atomic formulas, $1 + \mathrm{rk}(\varphi)$ for $(\neg\varphi)$, and $1 + \max(\mathrm{rk}(\varphi), \mathrm{rk}(\psi))$ for $(\varphi\ast\psi)$. We write $\mathrm{At}(\varphi)$ for the finite set of atoms occurring in $\varphi$.
+:::
+
+:::figure[The parse tree of $((\neg p) \land q) \to r$. Unique readability is what makes this tree — rather than some other tree over the same leaves — the only one the string admits.]{#parse-tree}
+{
+  "type": "plot",
+  "x": [-1.6, 4.8],
+  "y": [-1.4, 4.4],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "path", "points": [[2, 3], [1, 2]], "tone": "muted" },
+    { "kind": "path", "points": [[2, 3], [3, 2]], "tone": "muted" },
+    { "kind": "path", "points": [[1, 2], [0.2, 1]], "tone": "muted" },
+    { "kind": "path", "points": [[1, 2], [1.8, 1]], "tone": "muted" },
+    { "kind": "path", "points": [[0.2, 1], [0.2, 0]], "tone": "muted" },
+    { "kind": "point", "at": [2, 3], "tone": "result" },
+    { "kind": "point", "at": [1, 2], "tone": "accent" },
+    { "kind": "point", "at": [3, 2], "tone": "accent" },
+    { "kind": "point", "at": [0.2, 1], "tone": "accent" },
+    { "kind": "point", "at": [1.8, 1], "tone": "accent" },
+    { "kind": "point", "at": [0.2, 0], "tone": "accent" },
+    { "kind": "text", "at": [2.9, 3.9], "text": "IMPLIES", "leaderTo": [2, 3] },
+    { "kind": "text", "at": [-0.6, 2.8], "text": "AND", "leaderTo": [1, 2] },
+    { "kind": "text", "at": [4.2, 2.5], "text": "r", "leaderTo": [3, 2] },
+    { "kind": "text", "at": [-1.2, 1.5], "text": "NOT", "leaderTo": [0.2, 1] },
+    { "kind": "text", "at": [3.0, 1.0], "text": "q", "leaderTo": [1.8, 1] },
+    { "kind": "text", "at": [1.3, -1.0], "text": "p", "leaderTo": [0.2, 0] }
+  ]
+}
+:::
+
+:::example[Reading a string back into a tree]
+Determine the principal connective, the rank, and the immediate subformulas of $((p \to q) \leftrightarrow ((\neg p) \lor q))$.
 :::
 
 :::solution
-Columns for each subexpression, rows for all combinations:
+Strip the outer parentheses and scan for the connective lying at depth $0$ inside them, running a counter that increments on $($ and decrements on $)$. The segment $(p \to q)$ opens and closes, returning the counter to $0$, and the next symbol is $\leftrightarrow$. So the principal connective is $\leftrightarrow$, and by Theorem *Unique readability* it is the only candidate.
 
-| $p$ | $q$ | $p \to q$ |
-|-----|-----|-----------|
-| T   | T   | T         |
-| T   | F   | F         |
-| F   | T   | T         |
-| F   | F   | T         |
-
-Only one falsifying case (where the implication is false): when the antecedent $p$ is true but the consequent $q$ is false. All other rows are true. This shows why "false implies anything" is vacuously true.
+The immediate subformulas are therefore $\varphi = (p \to q)$ and $\psi = ((\neg p) \lor q)$. Their ranks are $\mathrm{rk}(\varphi) = 1$ and $\mathrm{rk}(\psi) = 1 + \max(\mathrm{rk}((\neg p)), \mathrm{rk}(q)) = 1 + \max(1,0) = 2$, so the whole formula has rank $1 + \max(1,2) = 3$. It has $6$ subformulas in all: itself, $(p\to q)$, $((\neg p)\lor q)$, $(\neg p)$, $p$ and $q$. □
 :::
 
-:::example
-Show that $\{\neg, \land\}$ can express disjunction $p \lor q$.
+:::example[Counting formulas of a given shape]
+How many formulas of rank exactly $1$ can be built from the two atoms $p$ and $q$ alone, using the five connectives?
 :::
 
 :::solution
-We want a formula using only $\neg$ and $\land$ whose truth table matches $p \lor q$ (true unless both are false). Step 2: By De Morgan, $\neg(\neg p \land \neg q) \equiv p \lor q$. Step 3: Verify by table — the only row where $p \lor q$ is false is $p = q = \text{F}$:
+A rank-$1$ formula has a principal connective whose immediate constituents all have rank $0$, and the only rank-$0$ formulas available are $p$ and $q$. For the unary $\neg$ there are $2$ choices of constituent, giving $(\neg p)$ and $(\neg q)$. For each of the four binary connectives there are $2 \times 2 = 4$ ordered choices, and $(\varphi \ast \psi)$ is a different *string* from $(\psi \ast \varphi)$ even when the two mean the same. So the count is
 
-| $p$ | $q$ | $\neg p \land \neg q$ | $\neg(\neg p \land \neg q)$ | $p \lor q$ |
-|-----|-----|-----------------------|------------------------------|------------|
-| T   | T   | F                     | T                            | T          |
-| T   | F   | F                     | T                            | T          |
-| F   | T   | F                     | T                            | T          |
-| F   | F   | T                     | F                            | F          |
+$$2 + 4 \times 4 = 18.$$
 
-The last two columns agree in every row, so the construction is correct. Since $\lor$ (and, similarly, $\to$ and $\leftrightarrow$) can be rebuilt this way, $\{\neg, \land\}$ is functionally complete.
+Note carefully what was counted: strings, not meanings. Among these $18$ formulas only a handful of distinct truth functions appear, which is the theme of the next section. □
 :::
 
-## Truth Tables and Tautologies
+:::pitfall
+The abbreviation conventions are the commonest source of silent error. Because $\to$ associates to the right, $p \to q \to r$ is $p \to (q \to r)$ and *not* $(p \to q) \to r$; the two differ, as the assignment $p = \bot$, $q = \top$, $r = \bot$ shows — the first is true, the second false. Likewise $\neg p \land q$ abbreviates $((\neg p) \land q)$, never $(\neg(p \land q))$.
+:::
+
+## Truth Functions and Functional Completeness
+
+<!-- section: truth-functions -->
+
+Syntax fixed, we give the symbols meaning. The guiding principle is **truth-functionality**: the truth value of a compound formula depends on nothing but the truth values of its immediate constituents. This is an assumption about the connectives, and a strong one — "Alice believes that $\varphi$" is not truth-functional, since two sentences with the same truth value need not be equally believed. Classical propositional logic is precisely the logic of the truth-functional connectives.
+
+:::definition[Valuation and its extension]{#valuation}
+A **valuation** is a function $v : \mathrm{At} \to \{0,1\}$. By Theorem *Unique readability* it extends uniquely to $\bar v : \mathrm{Form} \to \{0,1\}$ satisfying $\bar v(\top) = 1$, $\bar v(\bot) = 0$, $\bar v(p) = v(p)$ for atoms, and
+
+$$\bar v(\neg\varphi) = 1 - \bar v(\varphi), \qquad \bar v(\varphi \land \psi) = \min(\bar v(\varphi), \bar v(\psi)), \qquad \bar v(\varphi \lor \psi) = \max(\bar v(\varphi), \bar v(\psi)),$$
+
+$$\bar v(\varphi \to \psi) = \max(1 - \bar v(\varphi), \bar v(\psi)), \qquad \bar v(\varphi \leftrightarrow \psi) = 1 - |\bar v(\varphi) - \bar v(\psi)|.$$
+
+We drop the bar and write $v(\varphi)$ throughout.
+:::
+
+:::lemma[Relevance]{#relevance}
+If two valuations $v$ and $w$ agree on every atom of $\mathrm{At}(\varphi)$, then $v(\varphi) = w(\varphi)$.
+:::
+
+:::proof
+Structural induction on $\varphi$. The atomic case is the hypothesis, and $\top, \bot$ are constant. If the claim holds for $\varphi$ and $\psi$, then since $\mathrm{At}(\varphi \ast \psi) = \mathrm{At}(\varphi) \cup \mathrm{At}(\psi)$, the valuations agree on the atoms of each constituent, so they agree on the constituents' values, and the clauses of Definition *Valuation and its extension* compute the same value from the same inputs.
+:::
+
+Relevance is what makes a finite truth table an honest device: to know the value of $\varphi$ under every one of the infinitely many valuations of the full language, it suffices to tabulate the $2^n$ patterns on the $n$ atoms that actually occur in $\varphi$.
+
+:::definition[Truth function]{#truth-function}
+An **$n$-ary truth function** is a map $f : \{0,1\}^n \to \{0,1\}$. A formula $\varphi$ with $\mathrm{At}(\varphi) \subseteq \{p_1,\dots,p_n\}$ **expresses** the truth function $f$ if $v(\varphi) = f(v(p_1),\dots,v(p_n))$ for every valuation $v$.
+:::
+
+:::proposition[How many truth functions there are]{#counting-truth-functions}
+There are exactly $2^{2^n}$ $n$-ary truth functions. In particular there are $4$ unary and $16$ binary ones.
+:::
+
+:::proof
+A truth function is a function from the $2^n$-element set $\{0,1\}^n$ to the $2$-element set $\{0,1\}$, and the number of functions from a set of size $a$ to a set of size $b$ is $b^a$. Hence the count is $2^{2^n}$; substituting $n=1$ and $n=2$ gives $4$ and $16$.
+:::
+
+Only a few of the sixteen binary functions carry names. Four are worth isolating because they will do real work later.
+
+:::definition[Sheffer stroke, Peirce arrow, exclusive or]{#nand-nor-xor}
+Define $p \uparrow q$ (**NAND**, the Sheffer stroke) to be $\neg(p \land q)$; $p \downarrow q$ (**NOR**, the Peirce arrow) to be $\neg(p \lor q)$; and $p \oplus q$ (**exclusive or**) to be $\neg(p \leftrightarrow q)$, true exactly when $p$ and $q$ differ.
+:::
+
+:::definition[Functional completeness]{#functional-completeness}
+A set $C$ of connectives is **functionally complete** if for every $n \ge 1$ every $n$-ary truth function is expressed by some formula whose connectives all lie in $C$.
+:::
+
+:::theorem[Functional completeness of the standard set]{#complete-standard}
+The set $\{\neg, \land, \lor\}$ is functionally complete.
+:::
+
+:::proof
+Let $f$ be an $n$-ary truth function. If $f$ is identically $0$, the formula $p_1 \land \neg p_1$ expresses it. Otherwise let $T = \{a \in \{0,1\}^n : f(a) = 1\}$, a non-empty finite set. For $a = (a_1,\dots,a_n) \in T$ put
+
+$$\chi_a \;=\; \ell_1^{a_1} \land \ell_2^{a_2} \land \cdots \land \ell_n^{a_n}, \qquad \text{where } \ell_i^{1} = p_i \text{ and } \ell_i^{0} = \neg p_i,$$
+
+and set $\varphi_f = \bigvee_{a \in T} \chi_a$. Every connective used is in $\{\neg,\land,\lor\}$.
+
+For correctness, fix a valuation $v$ and let $b = (v(p_1),\dots,v(p_n))$. By construction $v(\chi_a) = 1$ if and only if $v(p_i) = a_i$ for every $i$, that is, if and only if $a = b$. Hence $v(\varphi_f) = 1$ iff some $a \in T$ equals $b$, iff $b \in T$, iff $f(b) = 1$. So $\varphi_f$ expresses $f$.
+:::
+
+:::corollary[Smaller complete sets]{#complete-pairs}
+Each of $\{\neg, \land\}$, $\{\neg, \lor\}$ and $\{\neg, \to\}$ is functionally complete.
+:::
+
+:::proof
+By Theorem *Functional completeness of the standard set* it is enough to rewrite every formula over $\{\neg,\land,\lor\}$ inside the smaller set, which we do by replacing offending subformulas innermost-first. For $\{\neg,\land\}$ use $\varphi \lor \psi \equiv \neg(\neg\varphi \land \neg\psi)$; for $\{\neg,\lor\}$ use $\varphi \land \psi \equiv \neg(\neg\varphi \lor \neg\psi)$; for $\{\neg,\to\}$ use $\varphi \lor \psi \equiv \neg\varphi \to \psi$ together with $\varphi \land \psi \equiv \neg(\varphi \to \neg\psi)$. Each replacement preserves the truth function, as a two-row or four-row check confirms, and each strictly decreases the number of forbidden connectives, so the rewriting terminates.
+:::
+
+:::theorem[Sheffer's theorem]{#sheffer}
+$\{\uparrow\}$ is functionally complete on its own, and so is $\{\downarrow\}$.
+:::
+
+:::proof
+It suffices to express $\neg$ and $\land$, by Corollary *Smaller complete sets*. Since $p \uparrow p = \neg(p \land p) = \neg p$, negation is available. Then
+
+$$(p \uparrow q) \uparrow (p \uparrow q) \;=\; \neg(p \uparrow q) \;=\; \neg\neg(p \land q) \;=\; p \land q.$$
+
+So both $\neg$ and $\land$ are expressible using $\uparrow$ alone. The argument for $\downarrow$ is dual: $p \downarrow p = \neg p$ and $(p \downarrow q)\downarrow(p \downarrow q) = p \lor q$, and $\{\neg,\lor\}$ is complete.
+:::
+
+Completeness is not cheap, and the next two results say why. Both are proved by exhibiting a property that every formula over the given connectives must have, and which some truth function lacks.
+
+:::theorem[Monotone connectives are not complete]{#and-or-incomplete}
+The set $\{\land, \lor\}$ is not functionally complete: no formula built from $\land$ and $\lor$ alone expresses $\neg p$.
+:::
+
+:::proof
+Call a formula **monotone** if $v(\varphi) \le w(\varphi)$ whenever $v(p) \le w(p)$ for every atom $p$. Every atom is monotone, and if $\varphi, \psi$ are monotone then so are $\varphi\land\psi$ and $\varphi\lor\psi$, because $\min$ and $\max$ are non-decreasing in each argument. By Theorem *Structural induction* every formula over $\{\land,\lor\}$ is monotone. But $\neg p$ is not: taking $v(p) = 0 \le 1 = w(p)$ gives $v(\neg p) = 1 > 0 = w(\neg p)$.
+:::
+
+:::theorem[Truth-preserving connectives are not complete]{#truth-preserving}
+No formula built from $\{\land, \lor, \to, \leftrightarrow\}$ alone expresses $\neg p$, or indeed any truth function that returns $0$ on the all-ones input.
+:::
+
+:::proof
+Let $v_1$ be the valuation sending every atom to $1$. Each of the four connectives returns $1$ when both arguments are $1$: $\min(1,1) = \max(1,1) = 1$, and $1 \to 1$ and $1 \leftrightarrow 1$ are both $1$. So by structural induction $v_1(\varphi) = 1$ for every formula $\varphi$ over that set. Since $v_1(\neg p) = 0$, negation is not among them.
+:::
+
+:::intuition
+The two obstructions are of the same kind: a *clone* of truth functions closed under composition can miss a function only by failing to escape some invariant. Post's classification makes this exact — there are precisely five maximal clones (the truth-preserving, falsity-preserving, monotone, self-dual and affine functions), and a set of connectives is functionally complete exactly when it is contained in none of them. NAND escapes all five at once, which is why one connective can suffice.
+:::
+
+:::example[Expressing exclusive or three ways]
+Write $p \oplus q$ using (a) $\{\neg,\land,\lor\}$ via the construction in Theorem *Functional completeness of the standard set*, and (b) $\uparrow$ alone.
+:::
+
+:::solution
+(a) The function is $1$ exactly on the rows $(1,0)$ and $(0,1)$, so $T = \{(1,0),(0,1)\}$ and the construction gives
+
+$$p \oplus q \equiv (p \land \neg q) \lor (\neg p \land q).$$
+
+(b) Set $r = p \uparrow q$. Then $p \uparrow r = \neg(p \land \neg(p\land q))$, which is $0$ exactly when $p = 1$ and $p \land q = 0$, i.e. exactly on the row $(1,0)$; symmetrically $q \uparrow r$ is $0$ exactly on $(0,1)$. Since $\alpha \uparrow \beta$ is $0$ only when both are $1$, the formula $(p \uparrow r) \uparrow (q \uparrow r)$ is $0$ precisely on the rows where neither of $(1,0)$, $(0,1)$ occurs — that is, on $(1,1)$ and $(0,0)$ — and $1$ on the other two. Hence
+
+$$p \oplus q \equiv (p \uparrow (p \uparrow q)) \uparrow (q \uparrow (p \uparrow q)),$$
+
+five occurrences of the stroke and no other connective. □
+:::
+
+:::example[A completeness check]
+Is $\{\leftrightarrow, \neg\}$ functionally complete?
+:::
+
+:::solution
+No. Call a binary truth function **affine** if it can be written as $a_0 \oplus a_1 x_1 \oplus \cdots \oplus a_n x_n$ with each $a_i \in \{0,1\}$, arithmetic modulo $2$. Both $\neg x = 1 \oplus x$ and $x \leftrightarrow y = 1 \oplus x \oplus y$ are affine, and substituting affine expressions into an affine expression yields an affine expression, since sums modulo $2$ of affine forms are affine. So by structural induction every formula over $\{\leftrightarrow,\neg\}$ is affine. But $p \land q$ is not affine: an affine function of $p$ and $q$ satisfies $f(0,0) \oplus f(0,1) \oplus f(1,0) \oplus f(1,1) = 0$, whereas conjunction gives $0 \oplus 0 \oplus 0 \oplus 1 = 1$. Hence $\land$ is not expressible and the set is incomplete. □
+:::
+
+:::pitfall
+Functional completeness is a property of a *set* of connectives, not of a single formula, and it is not preserved by dropping members. $\{\neg,\land\}$ is complete; $\{\land\}$ is not, and neither is $\{\neg\}$. Adding connectives never destroys completeness, but adding them to an incomplete set need not repair it — $\{\land,\lor,\to,\leftrightarrow,\top\}$ is still incomplete by Theorem *Truth-preserving connectives are not complete*.
+:::
+
+## Truth Tables, Tautologies and Equivalence
 
 <!-- section: tautologies -->
 
-:::definition[Truth table]
-A **truth table** enumerates all $2^n$ possible assignments of truth values to $n$ atomic propositions and computes the value of the compound formula under each.
+With semantics in place we can classify formulas by how they behave across all valuations, and define what it means for one statement to follow from others.
+
+:::definition[Truth table]{#truth-table}
+Let $\mathrm{At}(\varphi) = \{p_1,\dots,p_n\}$. The **truth table** of $\varphi$ is the list of the $2^n$ values $f(a)$, $a \in \{0,1\}^n$, of the truth function $\varphi$ expresses. By Lemma *Relevance* this table determines $v(\varphi)$ for every valuation of the whole language.
 :::
 
-:::definition[Tautology, contradiction, contingency]
-A formula is a **tautology** (or logically valid) if it evaluates to true no matter the assignment of truth values. A **contradiction** is false under every assignment. A **contingent** formula is true under some and false under others.
+:::definition[Tautology, contradiction, contingency]{#tautology}
+A formula $\varphi$ is a **tautology** (written $\models \varphi$) if $v(\varphi) = 1$ for every valuation $v$; a **contradiction** if $v(\varphi) = 0$ for every $v$; and **contingent** otherwise. Every formula falls into exactly one of the three classes.
 :::
 
-These three categories are exhaustive and mutually exclusive: every formula is exactly one of them.
-
-To check whether a formula is a tautology you can always build the full table. The **falsification shortcut** gets there faster.
-
-:::recipe[Falsification shortcut]
-*Assume* the formula is false and try to solve for a consistent truth assignment.
-
-1. If that attempt forces a contradiction (some atom would have to be both true and false), no falsifying assignment exists, so the formula is a tautology.
-2. If instead you find a consistent assignment, that assignment is an explicit counterexample proving it is *not* a tautology.
+:::definition[Model, semantic entailment]{#entailment}
+A valuation $v$ is a **model** of a set $\Sigma$ of formulas if $v(\sigma) = 1$ for every $\sigma \in \Sigma$; we write $v \models \Sigma$. We say $\Sigma$ **entails** $\varphi$, written $\Sigma \models \varphi$, if every model of $\Sigma$ is a model of $\varphi$. For finite $\Sigma$ we write $\varphi_1,\dots,\varphi_k \models \psi$.
 :::
 
-:::intuition
-A tautology is a statement that is "always safe", no matter what the facts are. "It is raining or it is not raining" is true even if you have no weather report. Tautologies are the logical skeleton that every correct argument must preserve.
+Entailment is the central semantic relation of the subject: it is what "this argument is valid" means. The next proposition ties it to the connective $\to$, and it must be read carefully, because conflating the two is the standard beginner's error.
 
-Building a truth table is like testing every possible combination of light-switch positions to see if the final bulb always lights.
-:::
+:::theorem[Semantic deduction theorem]{#semantic-deduction}
+For any set $\Sigma$ and formulas $\varphi, \psi$,
 
-:::example
-Prove that $p \lor \neg p$ is a tautology (law of excluded middle).
-:::
+$$\Sigma \cup \{\varphi\} \models \psi \quad\Longleftrightarrow\quad \Sigma \models \varphi \to \psi.$$
 
-:::solution
-Build the table for the two possible assignments:
-
-| $p$ | $\neg p$ | $p \lor \neg p$ |
-|-----|----------|-----------------|
-| T   | F        | T               |
-| F   | T        | T               |
-
-The formula evaluates to T in both rows, hence it is a tautology (always true, no matter the truth value of p). This is a foundational law in classical logic.
-:::
-
-:::example
-Show that hypothetical syllogism $(p \to q) \land (q \to r) \to (p \to r)$ is a tautology, using the falsification shortcut instead of writing all $2^3 = 8$ rows.
-:::
-
-:::solution
-1. Assume the whole implication is false. An implication is false only when its antecedent is true and its consequent is false, so we need $(p \to q) \land (q \to r)$ true and $(p \to r)$ false. Step 2: For $(p \to r)$ to be false we need $p = \text{T}$ and $r = \text{F}$. Step 3: The antecedent being true means both $p \to q$ and $q \to r$ are true. Since $p = \text{T}$, $p \to q$ true forces $q = \text{T}$. Step 4: But then $q \to r$ is $\text{T} \to \text{F} = \text{F}$, contradicting that $q \to r$ is true. Step 5: The assumption "the formula is false" leads to a contradiction, so no falsifying assignment exists. Hence the formula is a tautology. Sanity check: this is exactly transitivity of implication — "if $p$ forces $q$ and $q$ forces $r$, then $p$ forces $r$" — which is what we expect to hold.
-:::
-
-## Satisfiability and Validity
-
-<!-- section: satisfiability -->
-
-:::definition[Satisfiable and valid]
-A formula (or set of formulas) is **satisfiable** if there is some truth assignment making the whole thing true. It is **valid** (a tautology) if it comes out true for every possible assignment. Unsatisfiable formulas are contradictions.
-:::
-
-The **satisfiability problem** (SAT) asks whether a given formula in conjunctive normal form is satisfiable.
-
-:::theorem[Cook–Levin]
-SAT is NP-complete.
-:::
-
-Even so, SAT is central to verification, AI planning, and hardware design.
-
-:::definition[Logical equivalence]
-Two formulas are **logically equivalent** if they have identical truth tables (same value under every assignment). We write $p \equiv q$.
-:::
-
-:::proposition[Validity and satisfiability are dual]
-A formula is a tautology exactly when its negation is unsatisfiable, and it is satisfiable exactly when its negation is not a tautology.
-:::
-
-This duality is why SAT solvers can also answer validity questions — to test whether $\varphi$ is valid, ask whether $\neg\varphi$ is satisfiable and expect the answer "no".
-
-:::intuition
-Satisfiable = there is some way the world could be that makes your claim true. "It is Tuesday and raining" is satisfiable (just wait for a rainy Tuesday).
-
-Valid = true no matter how the world is. "It is Tuesday or it is not Tuesday" cannot be false.
-
-A detective's hypothesis is satisfiable if consistent with evidence; a valid deduction is forced by the evidence alone.
-:::
-
-:::example
-Is $(p \to q) \land (q \to r) \land p \land \neg r$ satisfiable?
-:::
-
-:::solution
-1. A conjunction is true only if every conjunct is true, so assume all four hold and try to build a consistent assignment. Step 2: The last two conjuncts, $p$ and $\neg r$, force $p = \text{T}$ and $r = \text{F}$. Step 3: With $p = \text{T}$, the conjunct $p \to q$ (which must be true) forces $q = \text{T}$, since $\text{T} \to \text{F}$ would be false. Step 4: With $q = \text{T}$, the conjunct $q \to r$ must be true, but $q \to r = \text{T} \to \text{F} = \text{F}$. Step 5: Contradiction — we needed $q \to r$ true but it came out false. No assignment satisfies all conjuncts, so the formula is **unsatisfiable**. Sanity check: the four conjuncts say "$p$ leads to $q$, $q$ leads to $r$, $p$ holds, but $r$ does not" — chaining the first three forces $r$, clashing with the fourth, exactly as the algebra found.
-:::
-
-:::example
-Is the clause set $\{p \lor q,\; \neg p \lor r,\; \neg q \lor \neg r\}$ satisfiable?
-:::
-
-:::solution
-1. Rather than assume unsatisfiability, we hunt for one model by case analysis. Try $p = \text{T}$. Step 2: The second clause $\neg p \lor r$ becomes $\text{F} \lor r$, so it needs $r = \text{T}$. Step 3: The third clause $\neg q \lor \neg r$ becomes $\neg q \lor \text{F}$, so it needs $\neg q = \text{T}$, i.e. $q = \text{F}$. Step 4: Check the first clause $p \lor q = \text{T} \lor \text{F} = \text{T}$ — satisfied. Step 5: The assignment $p = \text{T},\, q = \text{F},\, r = \text{T}$ makes all three clauses true, so the set is **satisfiable**. Finding a single satisfying assignment (a "witness") is enough; we do not need to inspect the other rows.
-:::
-
-## Logical Equivalence and Normal Forms
-
-<!-- section: normal-forms -->
-
-:::definition[Literal, clause, normal forms]
-A **literal** is an atom or its negation ($p$ or $\neg p$). A **clause** is a disjunction of literals, e.g. $\neg p \lor q \lor r$. A formula is in **disjunctive normal form** (DNF) if it is an OR of ANDs of literals, and in **conjunctive normal form** (CNF) if it is an AND of ORs of literals — that is, an AND of clauses.
-:::
-
-:::theorem[Existence of normal forms]
-Every propositional formula is logically equivalent to one in disjunctive normal form and to one in conjunctive normal form.
+In particular $\varphi \models \psi$ iff $\models \varphi \to \psi$, and $\models \varphi$ iff $\emptyset \models \varphi$.
 :::
 
 :::proof
-From a truth table you can read off a DNF (one AND-term per true row) or a CNF (one clause per false row), so no formula is ever "unconvertible".
+($\Rightarrow$) Let $v \models \Sigma$. If $v(\varphi) = 0$ then $v(\varphi\to\psi) = 1$ outright. If $v(\varphi) = 1$ then $v \models \Sigma \cup \{\varphi\}$, so by hypothesis $v(\psi) = 1$ and again $v(\varphi \to \psi) = 1$.
+
+($\Leftarrow$) Let $v \models \Sigma \cup \{\varphi\}$. Then $v \models \Sigma$, so $v(\varphi \to \psi) = 1$ by hypothesis; and $v(\varphi) = 1$, so the only way the implication can hold is $v(\psi) = 1$.
 :::
 
-The forms are not unique, though — many equivalent CNFs exist for the same formula.
+:::pitfall
+$\models$ is a relation *between* formulas, living in the metalanguage; $\to$ is a symbol *inside* a formula. "$p \models q$" is a claim that happens to be false; "$p \to q$" is a formula that is sometimes true. Theorem *Semantic deduction theorem* says the two are systematically related, which is exactly why they are easy to confuse — but writing $\Sigma \to \varphi$ or $p \models q \models r$ is a type error, not a shorthand.
+:::
 
-Useful equivalences (replace subformulas):
+:::definition[Logical equivalence]{#logical-equivalence}
+Formulas $\varphi$ and $\psi$ are **logically equivalent**, written $\varphi \equiv \psi$, if $v(\varphi) = v(\psi)$ for every valuation $v$; equivalently, if $\models \varphi \leftrightarrow \psi$.
+:::
 
-- Double negation: $\neg\neg p \equiv p$
-- De Morgan: $\neg(p \land q) \equiv \neg p \lor \neg q$; $\neg(p \lor q) \equiv \neg p \land \neg q$
-- Implication elimination: $p \to q \equiv \neg p \lor q$
-- Distribution, commutativity, associativity, idempotence, etc.
+:::proposition[Equivalence is an equivalence relation]{#equiv-is-equiv}
+$\equiv$ is reflexive, symmetric and transitive on $\mathrm{Form}$, and its classes are in bijection with the truth functions over any fixed finite set of atoms.
+:::
+
+:::proof
+The three properties are inherited pointwise from equality of the values $v(\varphi)$. For the second claim, map each class to the truth function its members express; this is well defined and injective by the definition of $\equiv$, and surjective by Theorem *Functional completeness of the standard set*. Over $n$ atoms there are therefore exactly $2^{2^n}$ classes.
+:::
+
+The following theorem is what makes equivalence *usable*: it says you may rewrite a part of a formula and keep the whole intact. Without it, the familiar chain of rewritings that converts a formula to normal form would have no justification.
+
+:::theorem[Substitution of equivalents]{#substitution-theorem}
+Let $\varphi \equiv \psi$, and let $\chi$ be a formula with a distinguished occurrence of $\varphi$ as a subformula. Let $\chi'$ be the result of replacing that occurrence by $\psi$. Then $\chi \equiv \chi'$.
+:::
+
+:::proof
+Induct on the rank of $\chi$ relative to the distinguished occurrence. If the occurrence is all of $\chi$, then $\chi = \varphi \equiv \psi = \chi'$ and there is nothing to prove. Otherwise $\chi$ has a principal connective and the occurrence lies inside one immediate constituent. Say $\chi = \chi_1 \ast \chi_2$ with the occurrence inside $\chi_1$, and let $\chi_1'$ be the corresponding replacement, so $\chi' = \chi_1' \ast \chi_2$. By the induction hypothesis $\chi_1 \equiv \chi_1'$, so for every valuation $v$ we have $v(\chi_1) = v(\chi_1')$, and then
+
+$$v(\chi) = \ast\bigl(v(\chi_1), v(\chi_2)\bigr) = \ast\bigl(v(\chi_1'), v(\chi_2)\bigr) = v(\chi'),$$
+
+where $\ast$ also denotes the truth function of the connective. The unary case is identical with one argument. Hence $\chi \equiv \chi'$.
+:::
+
+:::theorem[Uniform substitution preserves tautologies]{#uniform-substitution}
+Let $\varphi$ be a tautology and let $\sigma$ assign to each atom a formula. Let $\varphi^\sigma$ be the result of replacing every occurrence of every atom $p$ in $\varphi$ by $\sigma(p)$. Then $\varphi^\sigma$ is a tautology.
+:::
+
+:::proof
+Fix a valuation $v$ and define a valuation $w$ on atoms by $w(p) = v(\sigma(p))$. A structural induction on $\varphi$ shows $v(\varphi^\sigma) = w(\varphi)$: for an atom this is the definition of $w$; and for a compound formula, substitution commutes with the connective, so both sides are computed by the same truth function from equal arguments. Since $\varphi$ is a tautology, $w(\varphi) = 1$, hence $v(\varphi^\sigma) = 1$. As $v$ was arbitrary, $\varphi^\sigma$ is a tautology.
+:::
+
+This is why the laws below are stated with schematic letters: once $\neg(\varphi \land \psi) \equiv \neg\varphi \lor \neg\psi$ is checked on a four-row table with atoms, it holds with *any* formulas substituted in.
+
+:::theorem[The basic equivalences]{#basic-equivalences}
+For all formulas $\varphi,\psi,\chi$:
+
+$$\neg\neg\varphi \equiv \varphi, \qquad \neg(\varphi\land\psi) \equiv \neg\varphi \lor \neg\psi, \qquad \neg(\varphi\lor\psi) \equiv \neg\varphi \land \neg\psi,$$
+
+$$\varphi \to \psi \equiv \neg\varphi \lor \psi \equiv \neg\psi \to \neg\varphi, \qquad \varphi \leftrightarrow \psi \equiv (\varphi\to\psi)\land(\psi\to\varphi),$$
+
+$$\varphi \land (\psi \lor \chi) \equiv (\varphi\land\psi)\lor(\varphi\land\chi), \qquad \varphi \lor (\psi \land \chi) \equiv (\varphi\lor\psi)\land(\varphi\lor\chi),$$
+
+together with commutativity, associativity, idempotence and absorption for $\land$ and $\lor$.
+:::
+
+:::proof
+By Theorem *Uniform substitution preserves tautologies* it suffices to verify each as a biconditional between atoms, and each such verification is a truth table with at most $8$ rows. For instance $\neg(p \land q)$ and $\neg p \lor \neg q$ are both $0$ exactly on the row $p = q = 1$; and $p \lor (q \land r)$ and $(p\lor q)\land(p\lor r)$ are both $1$ exactly when $p = 1$ or $q = r = 1$.
+:::
+
+:::definition[Dual of a formula]{#dual}
+Let $\varphi$ be built from atoms, $\top$, $\bot$, $\neg$, $\land$ and $\lor$ only. Its **dual** $\varphi^d$ is obtained by exchanging $\land$ with $\lor$ and $\top$ with $\bot$ throughout, leaving atoms and negations untouched.
+:::
+
+:::theorem[Duality principle]{#duality}
+For every such $\varphi$ with atoms among $p_1,\dots,p_n$,
+
+$$\varphi^d \equiv \neg\varphi[\,p_1 := \neg p_1, \dots, p_n := \neg p_n\,].$$
+
+Consequently, if $\varphi \equiv \psi$ then $\varphi^d \equiv \psi^d$; and $\varphi$ is a tautology if and only if $\varphi^d$ is a contradiction.
+:::
+
+:::proof
+Write $\varphi^\neg$ for the formula with every atom negated, and argue by structural induction that $\varphi^d \equiv \neg(\varphi^\neg)$. For an atom $p$: $p^d = p$ and $\neg(\neg p) \equiv p$. For $\top$: $\top^d = \bot \equiv \neg\top$. For $\neg\alpha$: $(\neg\alpha)^d = \neg(\alpha^d) \equiv \neg\neg(\alpha^\neg) \equiv \neg((\neg\alpha)^\neg)$ after one double negation. For $\alpha\land\beta$,
+
+$$(\alpha\land\beta)^d = \alpha^d \lor \beta^d \equiv \neg(\alpha^\neg) \lor \neg(\beta^\neg) \equiv \neg(\alpha^\neg \land \beta^\neg) = \neg\bigl((\alpha\land\beta)^\neg\bigr)$$
+
+by De Morgan from Theorem *The basic equivalences*, and the $\lor$ case is symmetric.
+
+For the consequences: if $\varphi \equiv \psi$ then $\varphi^\neg \equiv \psi^\neg$ (negating atoms is a uniform substitution, which preserves equality of truth functions by the argument of Theorem *Uniform substitution preserves tautologies*), so the negations are equivalent and hence so are the duals. And $\varphi$ is a tautology iff $\varphi^\neg$ is — since $v \mapsto 1-v$ is a bijection of valuations — iff $\neg(\varphi^\neg)$ is a contradiction, iff $\varphi^d$ is.
+:::
+
+:::recipe[The falsification shortcut]{#falsification}
+To test $\models \varphi$ without writing $2^n$ rows:
+
+1. Assume $v(\varphi) = 0$ and propagate. A false implication forces its antecedent true and its consequent false; a false disjunction forces both disjuncts false; a true conjunction forces both conjuncts true.
+2. Continue until either an atom is forced to both values — then no falsifying valuation exists and $\varphi$ is a tautology — or every atom is assigned consistently, in which case that assignment is an explicit counterexample.
+3. If a step offers a genuine choice (a false conjunction, say), branch and treat each branch by the same rules; $\varphi$ is a tautology only if *every* branch closes.
+:::
+
+:::example[Hypothetical syllogism]
+Show $\models (p \to q) \land (q \to r) \to (p \to r)$ without tabulating all eight rows.
+:::
+
+:::solution
+Assume the formula is false. An implication is false only when its antecedent is true and consequent false, so $v((p\to q)\land(q\to r)) = 1$ and $v(p \to r) = 0$. The second forces $v(p) = 1$ and $v(r) = 0$. The first forces $v(p \to q) = 1$ and $v(q \to r) = 1$. From $v(p) = 1$ and $v(p\to q) = 1$ we get $v(q) = 1$; from $v(q) = 1$ and $v(r) = 0$ we get $v(q \to r) = 0$, contradicting what we just forced. No branch survives, so the formula is a tautology. □
+:::
+
+:::example[Using duality to halve the work]
+Given that $p \lor (p \land q) \equiv p$ (absorption), deduce a second law for free.
+:::
+
+:::solution
+Both sides are built from atoms, $\land$ and $\lor$ only, so Theorem *Duality principle* applies: equivalent formulas have equivalent duals. Dualising exchanges $\land$ and $\lor$ throughout, turning the left side into $p \land (p \lor q)$ and the right side into $p$. Hence
+
+$$p \land (p \lor q) \equiv p,$$
+
+the other absorption law, obtained without a single new truth-table row. The same trick pairs the two De Morgan laws and the two distributive laws. □
+:::
+
+:::example[Entailment versus implication]
+Decide whether $p \to q,\ \neg q \models \neg p$, and whether $\models (p \to q) \land \neg q \to \neg p$.
+:::
+
+:::solution
+For the first: let $v$ be any model of both premises. Then $v(q) = 0$ from the second premise. If $v(p)$ were $1$ then $v(p \to q) = 0$, contradicting the first premise, so $v(p) = 0$ and $v(\neg p) = 1$. Every model of the premises is a model of the conclusion, so the entailment holds — this is *modus tollens*.
+
+For the second, Theorem *Semantic deduction theorem* applied twice converts the entailment into exactly this implication, so it is a tautology. The two questions are the same question in two notations, which is the content of that theorem. □
+:::
+
+:::summary
+$\varphi$ is a tautology $\iff$ $\neg\varphi$ is a contradiction $\iff$ $\emptyset \models \varphi$. Entailment $\Sigma \models \varphi$ and the object-language $\to$ are linked by the semantic deduction theorem. Equivalence may be applied to subformulas (substitution of equivalents) and tautologies survive uniform substitution; duality halves the catalogue of laws.
+:::
+
+## Satisfiability, Validity and SAT
+
+<!-- section: satisfiability -->
+
+The classification of the previous section had three boxes. Recast in terms of *existence* of a model rather than universality, it has two, and the two are related by negation — which is the single most useful fact in applied logic, because it lets one algorithm answer every question.
+
+:::definition[Satisfiability]{#satisfiable}
+A set $\Sigma$ of formulas is **satisfiable** if it has a model, and **unsatisfiable** otherwise. A single formula $\varphi$ is satisfiable if $\{\varphi\}$ is. The **number of models** of $\varphi$ over $\mathrm{At}(\varphi)$ is written $\#\varphi$.
+:::
+
+:::theorem[The duality of validity and satisfiability]{#validity-duality}
+For every formula $\varphi$:
+
+1. $\varphi$ is a tautology if and only if $\neg\varphi$ is unsatisfiable;
+2. $\varphi$ is satisfiable if and only if $\neg\varphi$ is not a tautology;
+3. if $\mathrm{At}(\varphi)$ has $n$ elements, $\varphi$ is a tautology iff $\#\varphi = 2^n$, a contradiction iff $\#\varphi = 0$, and contingent otherwise.
+:::
+
+:::proof
+(1) $v(\neg\varphi) = 1$ iff $v(\varphi) = 0$. So $\neg\varphi$ has a model iff $\varphi$ has a falsifying valuation, and $\varphi$ is a tautology iff no such valuation exists. (2) is (1) applied to $\neg\varphi$ together with $\neg\neg\varphi \equiv \varphi$. (3) By Lemma *Relevance* only the $2^n$ patterns on $\mathrm{At}(\varphi)$ matter, and $\varphi$ is true on all of them, none of them, or some but not all.
+:::
+
+:::theorem[The refutation principle]{#refutation-principle}
+$\Sigma \models \varphi$ if and only if $\Sigma \cup \{\neg\varphi\}$ is unsatisfiable.
+:::
+
+:::proof
+Suppose $\Sigma \models \varphi$ and let $v \models \Sigma \cup \{\neg\varphi\}$. Then $v \models \Sigma$, so $v(\varphi) = 1$; but $v(\neg\varphi) = 1$ gives $v(\varphi) = 0$, a contradiction, so no such $v$ exists. Conversely, suppose $\Sigma \cup \{\neg\varphi\}$ is unsatisfiable and let $v \models \Sigma$. Then $v \not\models \neg\varphi$, i.e. $v(\varphi) = 1$. Hence every model of $\Sigma$ models $\varphi$.
+:::
 
 :::intuition
-Normal forms are "standardized recipes". CNF is like a checklist of requirements that must all hold ("AND of rules"); each rule is an "OR of allowed options". SAT solvers love CNF because it is easy to plug in values and see if any clause goes false.
-
-Converting is like algebraic simplification but for logic: you expand and cancel until only the two allowed connectives remain in the right pattern.
+This is how every automated reasoner on earth is organised. You do not build a machine that searches for proofs of $\varphi$ from $\Sigma$; you build a machine that searches for a model, feed it $\Sigma$ together with the *negation* of what you hope to prove, and take its failure to find one as the proof. "Prove it" becomes "show this is impossible", and impossibility is what an exhaustive search is good at establishing.
 :::
 
-:::example
+:::definition[The satisfiability problem]{#sat}
+**SAT** is the decision problem: given a formula (conventionally in conjunctive normal form), is it satisfiable? **$k$-SAT** is the restriction to inputs in which every clause has at most $k$ literals.
+:::
+
+:::proposition[Brute force works, slowly]{#brute-force}
+SAT is decidable: for a formula with $n$ atoms, evaluating all $2^n$ valuations decides satisfiability in time $O(2^n \cdot |\varphi|)$.
+:::
+
+:::proof
+By Lemma *Relevance* it suffices to test valuations of $\mathrm{At}(\varphi)$, of which there are $2^n$. Each evaluation is a single bottom-up pass over the parse tree, linear in the length of $\varphi$. Return "satisfiable" at the first valuation giving $1$, and "unsatisfiable" if all fail.
+:::
+
+That the exponent is unavoidable in the worst case is the central open problem of the area.
+
+:::theorem[Cook–Levin]{#cook-levin}
+SAT is NP-complete, and remains so when restricted to $3$-SAT.
+:::
+
+:::proof
+*Sketch.* Membership in NP is immediate: a satisfying valuation is a certificate of size $n$, checkable in linear time by Proposition *Brute force works, slowly* applied to one valuation. For hardness one shows that every language decided by a nondeterministic Turing machine $M$ in time $p(n)$ reduces to SAT: introduce atoms $x_{i,j,s}$ meaning "at step $i$, tape cell $j$ holds symbol $s$", together with atoms for head position and state, and write down clauses asserting that the initial configuration is correct, that exactly one symbol occupies each cell at each step, that successive configurations are related by $M$'s transition table, and that some configuration is accepting. The resulting formula is polynomial in $p(n)$ and is satisfiable exactly when $M$ accepts. Reducing arbitrary clauses to $3$-literal clauses is the Tseitin-style splitting of Theorem *Tseitin transformation* below. This proof rests on the formal model of nondeterministic computation, which is outside this chapter.
+:::
+
+:::proposition[2-SAT is tractable]{#two-sat}
+Satisfiability of a set of clauses each containing at most two literals is decidable in time linear in the size of the input.
+:::
+
+:::proof
+*Sketch.* Read each two-literal clause $\ell_1 \lor \ell_2$ as the pair of implications $\neg\ell_1 \to \ell_2$ and $\neg\ell_2 \to \ell_1$, and build the directed **implication graph** whose vertices are the $2n$ literals and whose edges are these implications. The graph is skew-symmetric: an edge $\ell \to m$ is present exactly when $\neg m \to \neg\ell$ is. One shows the clause set is unsatisfiable if and only if some atom $p$ has $p$ and $\neg p$ in the same strongly connected component, and Tarjan's algorithm finds the components in linear time. The argument that this criterion is correct uses the fact that within a component all literals must take the same value, which rests on graph theory rather than logic.
+:::
+
+:::example[Counting models]
+How many valuations of $\{p,q,r\}$ satisfy $(p \lor q) \land (\neg p \lor r)$?
+:::
+
+:::solution
+Split on $p$. If $v(p) = 1$, the second clause forces $v(r) = 1$ and the first is already satisfied; $q$ is free, giving $2$ models. If $v(p) = 0$, the second clause is satisfied outright and the first forces $v(q) = 1$, while $r$ is free, giving $2$ more. The two cases are disjoint, so
+
+$$\#\varphi = 2 + 2 = 4$$
+
+out of $2^3 = 8$ valuations. Since $0 < 4 < 8$, part (3) of Theorem *The duality of validity and satisfiability* says the formula is contingent. □
+:::
+
+:::example[An unsatisfiable set]
+Show $\{p \to q,\ q \to r,\ p,\ \neg r\}$ is unsatisfiable, and say what that tells us about an entailment.
+:::
+
+:::solution
+Suppose $v$ models all four. From $v(p) = 1$ and $v(p \to q) = 1$ we get $v(q) = 1$; from $v(q) = 1$ and $v(q \to r) = 1$ we get $v(r) = 1$; but $v(\neg r) = 1$ gives $v(r) = 0$. No model exists.
+
+By Theorem *The refutation principle*, taking $\Sigma = \{p \to q,\ q\to r,\ p\}$ and $\varphi = r$, the unsatisfiability of $\Sigma \cup \{\neg r\}$ is exactly the statement $\Sigma \models r$. The refutation we just performed *is* the proof of the entailment. □
+:::
+
+:::example[Satisfiable, by witness]
+Is $\{p \lor q,\ \neg p \lor r,\ \neg q \lor \neg r\}$ satisfiable?
+:::
+
+:::solution
+Try $v(p) = 1$. The second clause then needs $v(r) = 1$, and the third needs $v(q) = 0$; the first clause is satisfied by $p$. So $v(p) = 1, v(q) = 0, v(r) = 1$ models all three clauses and the set is satisfiable. A single witness settles satisfiability; no other rows need be examined. (Unsatisfiability is the expensive direction — there, every row must be excluded, which is what resolution automates.) □
+:::
+
+:::pitfall
+"Not a tautology" and "unsatisfiable" are different failures, and Theorem *The duality of validity and satisfiability* relates them only through a negation. The formula $p$ is neither a tautology nor unsatisfiable. A solver reporting "no model" for $\neg\varphi$ has proved $\varphi$ valid; a solver reporting "no model" for $\varphi$ has proved $\varphi$ contradictory. Feeding it the wrong one inverts your conclusion.
+:::
+
+## Conjunctive and Disjunctive Normal Form
+
+<!-- section: normal-forms -->
+
+Any formula can be flattened into one of two rigidly regimented shapes. The value of doing so is that algorithms can then assume a fixed structure, and that both existence proofs are constructive.
+
+:::definition[Literal, clause, term, CNF, DNF]{#cnf-dnf}
+A **literal** is an atom $p$ or a negated atom $\neg p$; the two are **complementary**. A **clause** is a disjunction of finitely many literals; a **term** is a conjunction of finitely many literals. A formula is in **conjunctive normal form** (CNF) if it is a conjunction of clauses, and in **disjunctive normal form** (DNF) if it is a disjunction of terms. The empty clause, written $\square$, is a disjunction of no literals and is false under every valuation; the empty term is true under every valuation.
+:::
+
+:::definition[Negation normal form]{#nnf}
+A formula is in **negation normal form** (NNF) if it is built from literals, $\top$ and $\bot$ using $\land$ and $\lor$ only — in particular, negation appears only directly in front of atoms.
+:::
+
+:::theorem[Existence of normal forms]{#normal-form-existence}
+Every formula is logically equivalent to one in CNF and to one in DNF.
+:::
+
+:::proof
+Let $\varphi$ have atoms $p_1,\dots,p_n$ and let $f$ be its truth function.
+
+For DNF: if $f$ is identically $0$, take the term $p_1 \land \neg p_1$. Otherwise the formula $\bigvee_{a : f(a) = 1} \chi_a$ built in the proof of Theorem *Functional completeness of the standard set* is a disjunction of terms equivalent to $\varphi$ — this is the **full DNF**, one term per satisfying row.
+
+For CNF, apply the same construction to $\neg\varphi$ to get a DNF $\delta \equiv \neg\varphi$, so $\varphi \equiv \neg\delta$. Pushing the negation inward with De Morgan from Theorem *The basic equivalences* turns the disjunction of terms into a conjunction of clauses: each term $\ell_1 \land \cdots \land \ell_n$ becomes the clause $\bar\ell_1 \lor \cdots \lor \bar\ell_n$, where $\bar\ell$ is the complement of $\ell$. The result is a CNF equivalent to $\varphi$ with one clause per *falsifying* row of $\varphi$.
+:::
+
+:::intuition
+Read the table twice. A satisfying row says "this exact pattern is allowed": record it as a term, and OR the terms — that is DNF, a list of the permitted worlds. A falsifying row says "this exact pattern is forbidden": record the clause that rules it out, and AND the clauses — that is CNF, a checklist of constraints. DNF answers "is it satisfiable?" at a glance (yes, unless every term is internally contradictory); CNF answers "is it a tautology?" at a glance (yes, unless some clause lacks a complementary pair).
+:::
+
+:::recipe[Conversion to CNF by rewriting]{#cnf-recipe}
+Rather than build a $2^n$-row table, rewrite:
+
+1. Eliminate $\leftrightarrow$ using $\alpha \leftrightarrow \beta \equiv (\alpha\to\beta)\land(\beta\to\alpha)$, then $\to$ using $\alpha \to \beta \equiv \neg\alpha \lor \beta$.
+2. Drive negations inward with De Morgan and $\neg\neg\alpha \equiv \alpha$ until only literals are negated. The formula is now in NNF.
+3. Distribute $\lor$ over $\land$: replace $\alpha \lor (\beta \land \gamma)$ by $(\alpha\lor\beta)\land(\alpha\lor\gamma)$, and symmetrically on the other side, until no $\land$ lies below a $\lor$.
+
+Each step is licensed by Theorem *Substitution of equivalents*, so the result is equivalent throughout. For DNF, distribute $\land$ over $\lor$ in step 3 instead.
+:::
+
+:::theorem[The conversion terminates]{#conversion-terminates}
+The rewriting of Recipe *Conversion to CNF by rewriting* halts on every input, and its output is in CNF.
+:::
+
+:::proof
+Steps 1 and 2 first. Each application of the $\leftrightarrow$ or $\to$ rule strictly decreases the number of occurrences of $\leftrightarrow$ and $\to$ in the outermost position and introduces none of higher rank, so measuring by the multiset of ranks of remaining $\leftrightarrow$ and $\to$ occurrences gives a strictly decreasing well-founded measure; step 1 halts. In step 2, assign to each formula the measure $m(\varphi) = \sum$ over occurrences of $\neg$ of the rank of the subformula it governs. De Morgan replaces one negation of rank $r$ by two of rank $r - 1$, dropping the sum, and $\neg\neg\alpha \rightsquigarrow \alpha$ removes two negations outright. Since $m$ is a natural number and strictly decreases, step 2 halts, and it can only halt when every $\neg$ governs a rank-$0$ subformula, i.e. an atom — that is NNF.
+
+For step 3, define for an NNF formula the measure $c(\varphi)$ = the number of *terminal* positions in the distributive expansion, by $c(\ell) = 1$ for a literal, $c(\alpha \land \beta) = c(\alpha) + c(\beta)$, and $c(\alpha \lor \beta) = c(\alpha)\,c(\beta)$. Applying the distributive rule to $\alpha \lor (\beta\land\gamma)$ replaces a subformula of measure $c(\alpha)(c(\beta)+c(\gamma))$ by one of measure $c(\alpha)c(\beta) + c(\alpha)c(\gamma)$ — equal. So $c$ alone does not decrease; instead use the pair $(c(\varphi), k(\varphi))$ ordered lexicographically, where $k$ counts occurrences of $\land$ that lie in the scope of some $\lor$. The rewrite leaves $c$ unchanged and strictly decreases $k$, since the rewritten $\land$ moves to the top of that subformula and no $\land$ enters the scope of a new $\lor$. Hence step 3 halts, and it halts only when no $\land$ is under a $\lor$ — which for an NNF formula means a conjunction of disjunctions of literals, i.e. CNF.
+:::
+
+:::theorem[Normal forms can be exponentially large]{#cnf-blowup}
+For each $n$, the DNF formula
+
+$$\varphi_n \;=\; (p_1 \land q_1) \lor (p_2 \land q_2) \lor \cdots \lor (p_n \land q_n)$$
+
+has no equivalent CNF with fewer than $2^n$ clauses.
+:::
+
+:::proof
+Let $\psi$ be a CNF equivalent to $\varphi_n$. For each $a = (a_1,\dots,a_n) \in \{1,2\}^n$ define the valuation $v_a$ that sets, in the $i$-th pair, the variable selected by $a_i$ to $0$ and the other to $1$ — so $p_i \land q_i$ fails for every $i$ and $v_a(\varphi_n) = 0$. Hence $v_a$ falsifies some clause $C_a$ of $\psi$.
+
+We claim $C_a$ must contain, for every $i$, a literal made false by $v_a$ from the $i$-th pair — indeed $C_a$ contains only literals false under $v_a$, and we claim it mentions all $n$ pairs. Suppose it omits pair $j$ entirely. Modify $v_a$ to $v'$ by setting both $p_j$ and $q_j$ to $1$. This changes no literal of $C_a$, so $v'$ still falsifies $C_a$ and hence $v'(\psi) = 0$; but $v'(p_j \land q_j) = 1$, so $v'(\varphi_n) = 1$, contradicting $\psi \equiv \varphi_n$. So $C_a$ mentions every pair, and the literals it contains from pair $i$ are exactly those false under $v_a$, which identifies $a_i$. Therefore $a \mapsto C_a$ is injective, and $\psi$ has at least $|\{1,2\}^n| = 2^n$ clauses.
+:::
+
+:::theorem[Tseitin transformation]{#tseitin}
+For every formula $\varphi$ there is a CNF formula $T(\varphi)$, computable in time linear in $|\varphi|$ and of size $O(|\varphi|)$, such that $\varphi$ and $T(\varphi)$ are **equisatisfiable**: $T(\varphi)$ is satisfiable if and only if $\varphi$ is.
+:::
+
+:::proof
+Introduce a fresh atom $x_\alpha$ for each non-atomic subformula $\alpha$ of $\varphi$. For each such $\alpha$ with principal connective $\ast$ and immediate constituents $\beta,\gamma$, write down the CNF of the biconditional $x_\alpha \leftrightarrow (y_\beta \ast y_\gamma)$, where $y_\delta$ is $\delta$ itself if $\delta$ is a literal and $x_\delta$ otherwise. Each such biconditional involves at most three atoms, so its CNF has at most four clauses of at most three literals — a constant per subformula. Let $T(\varphi)$ be the conjunction of all of these together with the unit clause $x_\varphi$.
+
+If $v \models \varphi$, extend $v$ by setting $x_\alpha := v(\alpha)$ for each subformula; every biconditional then holds by construction and $x_\varphi$ is true, so $T(\varphi)$ is satisfiable. Conversely, if $w \models T(\varphi)$, an induction on rank using the biconditionals shows $w(x_\alpha) = w(\alpha)$ for every subformula $\alpha$; the clause $x_\varphi$ then gives $w(\varphi) = 1$. Size and time are linear because $\varphi$ has at most $|\varphi|$ subformulas and each contributes a bounded number of clauses.
+:::
+
+:::pitfall
+Equisatisfiable is weaker than equivalent, and Theorem *Normal forms can be exponentially large* is why we settle for it. $T(\varphi)$ has extra atoms and is *not* logically equivalent to $\varphi$ — it has different models, over a larger vocabulary. Never use a Tseitin encoding to answer a question about equivalence, model counting, or entailment of the original formula without first projecting away the auxiliary atoms.
+:::
+
+:::example[CNF by rewriting]
 Convert $p \to (q \land r)$ to CNF.
 :::
 
 :::solution
-1. Eliminate the implication using $p \to q \equiv \neg p \lor q$: this gives $\neg p \lor (q \land r)$. Step 2: Push the disjunction inside the conjunction with the distributive law $a \lor (b \land c) \equiv (a \lor b) \land (a \lor c)$, taking $a = \neg p$, $b = q$, $c = r$: this yields $(\neg p \lor q) \land (\neg p \lor r)$. Step 3: Both parts are clauses (disjunctions of literals) joined by AND, so this is CNF with two clauses. Sanity check: the original is false only when $p = \text{T}$ and $q \land r = \text{F}$; the CNF is false exactly when $\neg p \lor q$ or $\neg p \lor r$ is false, i.e. when $p = \text{T}$ and $q = \text{F}$, or $p = \text{T}$ and $r = \text{F}$ — the same set of falsifying rows.
+Eliminate the implication: $\neg p \lor (q \land r)$. Distribute $\lor$ over $\land$ with $\alpha = \neg p$, $\beta = q$, $\gamma = r$:
+
+$$p \to (q\land r) \;\equiv\; (\neg p \lor q) \land (\neg p \lor r).$$
+
+Check against the table: the original is false exactly when $p = 1$ and at least one of $q,r$ is $0$; the CNF fails exactly when $p = 1$ and $q = 0$, or $p = 1$ and $r = 0$ — the same three rows. Note that this CNF has two clauses while the *full* CNF read off the table by Theorem *Existence of normal forms* would have three, one per falsifying row. Both are CNFs of the same formula, which is uniqueness failing exactly as advertised: rewriting produces a shorter form than the table does. □
 :::
 
-:::example
-Convert $\neg(p \leftrightarrow q)$ to CNF.
+:::example[Negated biconditional]
+Convert $\neg(p \leftrightarrow q)$ to CNF and to DNF.
 :::
 
 :::solution
-1. Expand the biconditional. $p \leftrightarrow q$ is true when $p$ and $q$ share a truth value, so $p \leftrightarrow q \equiv (p \land q) \lor (\neg p \land \neg q)$. Step 2: Negate both sides and apply De Morgan to the outer OR: $\neg\big((p \land q) \lor (\neg p \land \neg q)\big) \equiv \neg(p \land q) \land \neg(\neg p \land \neg q)$. Step 3: Apply De Morgan inside each factor: $\neg(p \land q) \equiv \neg p \lor \neg q$, and $\neg(\neg p \land \neg q) \equiv p \lor q$ (using double negation). Step 4: Combine: $\neg(p \leftrightarrow q) \equiv (\neg p \lor \neg q) \land (p \lor q)$, a CNF of two clauses. Sanity check: $\neg(p \leftrightarrow q)$ is exclusive-or, true exactly when $p$ and $q$ differ; the clause $p \lor q$ rules out both-false and $\neg p \lor \neg q$ rules out both-true, leaving precisely the two "differ" rows.
+DNF first: $\neg(p\leftrightarrow q)$ is true exactly on the rows $(1,0)$ and $(0,1)$, so the full DNF is $(p \land \neg q) \lor (\neg p \land q)$.
+
+For CNF, apply the recipe to the DNF: distributing $\lor$ over $\land$ twice gives $(p \lor \neg p) \land (p \lor q) \land (\neg q \lor \neg p) \land (\neg q \lor q)$. The first and last clauses each contain a complementary pair and so are tautologous; dropping them leaves
+
+$$\neg(p \leftrightarrow q) \;\equiv\; (p \lor q) \land (\neg p \lor \neg q).$$
+
+The reading is exactly right: $p \lor q$ forbids both-false and $\neg p \lor \neg q$ forbids both-true, leaving the two rows where they differ. □
+:::
+
+:::example[Counting the clauses in advance]
+Without converting, how many clauses does the full CNF of $p \oplus q \oplus r$ have?
+:::
+
+:::solution
+By the proof of Theorem *Existence of normal forms* the full CNF has one clause per falsifying row. Three-way exclusive or is true exactly when an odd number of its arguments are true, so it is false on the four rows with an even number of ones: $(0,0,0)$, $(1,1,0)$, $(1,0,1)$, $(0,1,1)$. Hence the full CNF has $4$ clauses, each with $3$ literals. □
+:::
+
+## Resolution and Compactness
+
+<!-- section: resolution -->
+
+Everything so far decides questions by consulting valuations. Resolution replaces that with a single syntactic rule, applied until nothing new appears. It is the engine inside every modern SAT solver, and the theorem that makes it trustworthy is that it can refute *every* unsatisfiable clause set and *only* unsatisfiable ones.
+
+:::definition[Clauses as sets, resolvent]{#resolvent}
+Identify a clause with the finite set of its literals, so that order, repetition and grouping are immaterial and the empty clause is $\square$. If $C$ and $D$ are clauses with $p \in C$ and $\neg p \in D$, their **resolvent on $p$** is
+
+$$\mathrm{Res}_p(C,D) \;=\; (C \setminus \{p\}) \cup (D \setminus \{\neg p\}).$$
+
+A **resolution derivation** of $C$ from a clause set $S$ is a finite sequence of clauses ending in $C$, each of which is in $S$ or is a resolvent of two earlier ones. A **refutation** of $S$ is a derivation of $\square$.
+:::
+
+:::theorem[Soundness of resolution]{#resolution-soundness}
+If $C$ is a resolvent of $C_1$ and $C_2$, then $\{C_1, C_2\} \models C$. Consequently, if $S$ has a resolution refutation then $S$ is unsatisfiable.
+:::
+
+:::proof
+Let $C = \mathrm{Res}_p(C_1, C_2)$ and let $v$ be a model of $C_1$ and $C_2$. Consider $v(p)$. If $v(p) = 1$ then $v$ falsifies the literal $\neg p$, so to satisfy $C_2$ it must satisfy some literal of $C_2 \setminus \{\neg p\} \subseteq C$. If $v(p) = 0$ then $v$ falsifies $p$, so to satisfy $C_1$ it must satisfy some literal of $C_1 \setminus \{p\} \subseteq C$. Either way $v(C) = 1$.
+
+Now suppose $S$ has a refutation. An induction along the derivation, using the case just proved at each resolution step, shows every clause in it is entailed by $S$. In particular $S \models \square$. But $\square$ is false under every valuation, so $S$ has no model.
+:::
+
+:::theorem[Refutation completeness]{#resolution-complete}
+Let $S$ be a finite set of clauses over finitely many atoms. If $S$ is unsatisfiable then $S$ has a resolution refutation.
+:::
+
+:::proof
+Induct on the number $n$ of atoms occurring in $S$.
+
+If $n = 0$, the only clause available is $\square$ itself, and a clause set with no atoms is unsatisfiable only if $\square \in S$ — a refutation of length one.
+
+Let $n \ge 1$, pick an atom $p$ of $S$, and form two clause sets. Let $S_1$ be obtained by deleting every clause containing $\neg p$ and deleting the literal $p$ from the clauses that remain; let $S_0$ be obtained symmetrically, deleting clauses containing $p$ and removing $\neg p$ from the rest. Both are clause sets over the remaining $n-1$ atoms. $S_1$ is exactly the residue of $S$ under the assumption $v(p) = 1$, and $S_0$ the residue under $v(p) = 0$; since $S$ is unsatisfiable, neither residue is satisfiable — a model of $S_1$ over the other atoms would extend, by setting $p$ to $1$, to a model of $S$, and likewise for $S_0$ with $p$ set to $0$.
+
+By the induction hypothesis $S_1$ has a refutation $R_1$ and $S_0$ has a refutation $R_0$. Reinstate the deleted literals: replaying $R_1$ on the original clauses of $S$ yields a derivation from $S$ of either $\square$ — in which case we are done — or the unit clause $\{\neg p\}$, since the only literal that could have been dropped along the way is $\neg p$. Symmetrically $R_0$ yields from $S$ either $\square$ or $\{p\}$. In the remaining case we have derived both $\{p\}$ and $\{\neg p\}$ from $S$, and one further resolution step on $p$ produces $\square$. Concatenating the two replayed derivations and that final step is a refutation of $S$.
+:::
+
+:::intuition
+The induction is a case split done once and for all: "suppose $p$ is true — then these clauses survive, and they are already contradictory; suppose $p$ is false — likewise". Resolution is the bookkeeping that turns those two sub-refutations into one, and the final step on $\{p\}$ and $\{\neg p\}$ is where the two branches are glued. This is precisely the shape of the DPLL algorithm, which is why DPLL runs can be read off as resolution proofs.
+:::
+
+:::example[A refutation]
+Refute $S = \{\{p, q\},\ \{\neg p, r\},\ \{\neg q, r\},\ \{\neg r\}\}$.
+:::
+
+:::solution
+Resolve $\{p,q\}$ with $\{\neg p, r\}$ on $p$ to get $\{q, r\}$. Resolve that with $\{\neg q, r\}$ on $q$ to get $\{r\}$ (the two copies of $r$ collapse, since a clause is a *set*). Resolve $\{r\}$ with $\{\neg r\}$ on $r$ to get $\square$. Four input clauses, three resolution steps.
+
+By Theorem *Soundness of resolution* the existence of this refutation proves $S$ unsatisfiable, and by Theorem *The refutation principle* it also proves $\{p \lor q,\ p \to r,\ q\to r\} \models r$ — a proof by cases, mechanised. □
+:::
+
+:::figure[The refutation of $\{p,q\},\ \{\neg p,r\},\ \{\neg q,r\},\ \{\neg r\}$. Input clauses sit on the top row; each resolution step consumes two clauses and produces the one below.]{#refutation-dag}
+{
+  "type": "plot",
+  "x": [-1.2, 8.6],
+  "y": [-1.6, 4.6],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "path", "points": [[0.5, 3.6], [2.0, 2.4]], "tone": "muted" },
+    { "kind": "path", "points": [[3.5, 3.6], [2.0, 2.4]], "tone": "muted" },
+    { "kind": "path", "points": [[2.0, 2.4], [3.6, 1.2]], "tone": "muted" },
+    { "kind": "path", "points": [[5.2, 3.6], [3.6, 1.2]], "tone": "muted" },
+    { "kind": "path", "points": [[3.6, 1.2], [5.0, 0.0]], "tone": "muted" },
+    { "kind": "path", "points": [[7.0, 3.6], [5.0, 0.0]], "tone": "muted" },
+    { "kind": "point", "at": [0.5, 3.6], "tone": "accent" },
+    { "kind": "point", "at": [3.5, 3.6], "tone": "accent" },
+    { "kind": "point", "at": [5.2, 3.6], "tone": "accent" },
+    { "kind": "point", "at": [7.0, 3.6], "tone": "accent" },
+    { "kind": "point", "at": [2.0, 2.4], "tone": "alt" },
+    { "kind": "point", "at": [3.6, 1.2], "tone": "alt" },
+    { "kind": "point", "at": [5.0, 0.0], "tone": "result" },
+    { "kind": "text", "at": [-0.7, 4.3], "text": "p or q", "leaderTo": [0.5, 3.6] },
+    { "kind": "text", "at": [2.6, 4.3], "text": "not p or r", "leaderTo": [3.5, 3.6] },
+    { "kind": "text", "at": [5.6, 4.3], "text": "not q or r", "leaderTo": [5.2, 3.6] },
+    { "kind": "text", "at": [8.0, 4.3], "text": "not r", "leaderTo": [7.0, 3.6] },
+    { "kind": "text", "at": [0.4, 2.0], "text": "q or r", "leaderTo": [2.0, 2.4] },
+    { "kind": "text", "at": [2.0, 0.7], "text": "r", "leaderTo": [3.6, 1.2] },
+    { "kind": "text", "at": [5.4, -1.1], "text": "empty clause", "leaderTo": [5.0, 0.0] }
+  ]
+}
+:::
+
+Refutation completeness was stated for finitely many atoms. Extending it to infinite clause sets needs the following theorem, which is the one genuinely infinitary result in propositional logic and the source of its power in applications.
+
+:::theorem[Compactness]{#compactness}
+A set $\Sigma$ of formulas is satisfiable if and only if every finite subset of $\Sigma$ is satisfiable.
+:::
+
+:::proof
+($\Rightarrow$) A model of $\Sigma$ models each of its subsets.
+
+($\Leftarrow$) Assume every finite subset of $\Sigma$ is satisfiable; call such a $\Sigma$ **finitely satisfiable**. Suppose first that the language is countable, with atoms $p_0, p_1, p_2, \dots$, and build a valuation one atom at a time. Set $\Sigma_0 = \Sigma$, and having a finitely satisfiable $\Sigma_k$, define
+
+$$\Sigma_{k+1} = \begin{cases} \Sigma_k \cup \{p_k\} & \text{if that set is finitely satisfiable},\\ \Sigma_k \cup \{\neg p_k\} & \text{otherwise.}\end{cases}$$
+
+The second branch is legitimate: if both $\Sigma_k \cup \{p_k\}$ and $\Sigma_k \cup \{\neg p_k\}$ failed to be finitely satisfiable, there would be finite $A, B \subseteq \Sigma_k$ with $A \cup \{p_k\}$ and $B \cup \{\neg p_k\}$ unsatisfiable. Then $A \cup B$ is a finite subset of $\Sigma_k$, hence has a model $w$; but $w(p_k)$ is either $1$, making $w$ a model of $A \cup \{p_k\}$, or $0$, making it a model of $B \cup \{\neg p_k\}$. Either way a contradiction. So $\Sigma_{k+1}$ is finitely satisfiable, and by induction every $\Sigma_k$ is.
+
+Let $\Sigma_\infty = \bigcup_k \Sigma_k$ and define $v(p_k) = 1$ if $p_k \in \Sigma_\infty$ and $0$ otherwise. We claim $v \models \Sigma$. Let $\sigma \in \Sigma$ and let $p_{k_1},\dots,p_{k_m}$ be its atoms, with $K$ larger than every $k_j$. The set $F = \{\sigma\} \cup \{\,\ell_k : k < K\,\}$, where $\ell_k$ is whichever of $p_k, \neg p_k$ was placed into $\Sigma_{k+1}$, is a finite subset of $\Sigma_K$ and so has a model $u$. Each $\ell_k \in F$ forces $u(p_k) = v(p_k)$ for all $k < K$, so $u$ and $v$ agree on $\mathrm{At}(\sigma)$, and Lemma *Relevance* gives $v(\sigma) = u(\sigma) = 1$.
+
+For an uncountable language the same construction runs, but the atoms cannot be enumerated in order type $\omega$. One instead applies Zorn's lemma to the family of finitely satisfiable extensions of $\Sigma$, ordered by inclusion — the union of a chain of finitely satisfiable sets is finitely satisfiable, since any finite subset of the union already lies in one member — to obtain a maximal finitely satisfiable $\Sigma^\ast \supseteq \Sigma$, and reads the valuation off it exactly as above. That this use of choice is genuinely needed is a result of set theory outside this chapter: compactness for propositional logic is equivalent, over ZF, to the Boolean prime ideal theorem, which is strictly weaker than the axiom of choice.
+:::
+
+:::corollary[Compactness for entailment]{#compactness-entailment}
+If $\Sigma \models \varphi$ then $\Sigma_0 \models \varphi$ for some finite $\Sigma_0 \subseteq \Sigma$.
+:::
+
+:::proof
+By Theorem *The refutation principle*, $\Sigma \cup \{\neg\varphi\}$ is unsatisfiable. By Theorem *Compactness* some finite subset $F \subseteq \Sigma \cup \{\neg\varphi\}$ is unsatisfiable. Put $\Sigma_0 = F \cap \Sigma$, which is finite. Then $\Sigma_0 \cup \{\neg\varphi\} \supseteq F$ is unsatisfiable, so by the refutation principle again $\Sigma_0 \models \varphi$.
+:::
+
+:::example[Compactness at work: colouring an infinite graph]
+Let $G$ be an infinite graph every finite subgraph of which is $3$-colourable. Show $G$ is $3$-colourable.
+:::
+
+:::solution
+For each vertex $x$ and colour $c \in \{1,2,3\}$ introduce an atom $p_{x,c}$ meaning "$x$ has colour $c$". Let $\Sigma$ contain, for every vertex $x$, the clause $p_{x,1} \lor p_{x,2} \lor p_{x,3}$ and the three clauses $\neg p_{x,c} \lor \neg p_{x,c'}$ for $c \neq c'$; and for every edge $xy$ and colour $c$, the clause $\neg p_{x,c} \lor \neg p_{y,c}$. A model of $\Sigma$ is exactly a proper $3$-colouring of $G$.
+
+Any finite $F \subseteq \Sigma$ mentions finitely many vertices; the finite subgraph they span is $3$-colourable by hypothesis, and that colouring, extended arbitrarily elsewhere, models $F$. So $\Sigma$ is finitely satisfiable, and Theorem *Compactness* gives it a model — a $3$-colouring of all of $G$. □
+:::
+
+:::pitfall
+Compactness does *not* say a satisfiable set has a finite model, nor that an infinite set of formulas is equivalent to a finite one. It says only that unsatisfiability is always witnessed by a finite part. Nor does it survive the move to "at most finitely many atoms are true", which is not expressible by any set of propositional formulas — compactness is precisely the obstruction, as the finitely satisfiable set $\{\,\text{at most } n \text{ true}: n \in \mathbb{N}\,\} \cup \{p_0, p_1, \dots\}$ would show.
+:::
+
+## A Proof Calculus and Its Soundness
+
+<!-- section: proof-calculus -->
+
+Resolution is a refutation system: it shows things impossible. A **proof calculus** does the complementary job, generating theorems directly from axioms by rules. The classical example is a Hilbert-style system, which buys a tiny set of rules at the cost of long derivations, and whose analysis is correspondingly clean.
+
+:::definition[The Hilbert calculus $H$]{#hilbert}
+Work in the language with $\neg$ and $\to$ only, which is functionally complete by Corollary *Smaller complete sets*. The **axioms** of $H$ are all formulas of the three schemes
+
+$$\text{(A1)}\quad \varphi \to (\psi \to \varphi),$$
+
+$$\text{(A2)}\quad \bigl(\varphi \to (\psi \to \chi)\bigr) \to \bigl((\varphi\to\psi) \to (\varphi\to\chi)\bigr),$$
+
+$$\text{(A3)}\quad (\neg\psi \to \neg\varphi) \to (\varphi \to \psi),$$
+
+for arbitrary formulas $\varphi,\psi,\chi$. The single rule is **modus ponens**: from $\varphi$ and $\varphi \to \psi$ infer $\psi$.
+:::
+
+:::definition[Derivation]{#derivation}
+A **derivation of $\varphi$ from $\Sigma$** is a finite sequence $\varphi_1,\dots,\varphi_m$ with $\varphi_m = \varphi$ in which each $\varphi_i$ is an axiom, a member of $\Sigma$, or follows from two earlier entries by modus ponens. We write $\Sigma \vdash \varphi$, and $\vdash \varphi$ when $\Sigma = \emptyset$. $\Sigma$ is **consistent** if $\Sigma \nvdash \bot$, equivalently if there is no $\varphi$ with $\Sigma \vdash \varphi$ and $\Sigma \vdash \neg\varphi$.
+:::
+
+:::theorem[Soundness]{#soundness}
+If $\Sigma \vdash \varphi$ then $\Sigma \models \varphi$. In particular every theorem of $H$ is a tautology, and every satisfiable set is consistent.
+:::
+
+:::proof
+Induct on the length of a derivation $\varphi_1,\dots,\varphi_m$ of $\varphi$ from $\Sigma$, showing $\Sigma \models \varphi_i$ for each $i$.
+
+If $\varphi_i \in \Sigma$ then every model of $\Sigma$ satisfies it. If $\varphi_i$ is an axiom, it is a tautology: by Theorem *Uniform substitution preserves tautologies* it is enough to check the three schemes with atoms substituted for $\varphi,\psi,\chi$. (A1) fails only if $p = 1$ and $q \to p$ is $0$, which needs $p = 0$ — impossible. (A2) fails only if $p \to (q\to r)$ is $1$, $p \to q$ is $1$ and $p \to r$ is $0$; the last forces $p = 1, r = 0$, then the second forces $q = 1$, then the first gives $q \to r$ true with $q=1, r=0$ — impossible. (A3) fails only if $\neg q \to \neg p$ is $1$ and $p \to q$ is $0$; the latter forces $p = 1, q = 0$, so $\neg q = 1$ and $\neg p = 0$, making $\neg q \to \neg p$ false — impossible. A tautology is entailed by anything.
+
+If $\varphi_i$ comes by modus ponens from $\varphi_j$ and $\varphi_k = (\varphi_j \to \varphi_i)$ with $j,k < i$, let $v \models \Sigma$. By the induction hypothesis $v(\varphi_j) = 1$ and $v(\varphi_j \to \varphi_i) = 1$, and the truth table of $\to$ forces $v(\varphi_i) = 1$.
+
+For the last claim: if $\Sigma$ has a model $v$ and $\Sigma \vdash \bot$, then $v(\bot) = 1$, which is false.
+:::
+
+:::theorem[Deduction theorem]{#deduction-theorem}
+$\Sigma \cup \{\varphi\} \vdash \psi$ if and only if $\Sigma \vdash \varphi \to \psi$.
+:::
+
+:::proof
+($\Leftarrow$) Given a derivation of $\varphi \to \psi$ from $\Sigma$, append $\varphi$ (available as a hypothesis) and then $\psi$ by modus ponens.
+
+($\Rightarrow$) Induct on the length of a derivation $\psi_1,\dots,\psi_m = \psi$ from $\Sigma \cup \{\varphi\}$, proving $\Sigma \vdash \varphi \to \psi_i$ for each $i$.
+
+If $\psi_i$ is an axiom or lies in $\Sigma$, derive it, then take the (A1) instance $\psi_i \to (\varphi \to \psi_i)$ and apply modus ponens to get $\varphi \to \psi_i$. If $\psi_i$ is $\varphi$ itself we need $\Sigma \vdash \varphi \to \varphi$, which is Example *Deriving the identity* below.
+
+If $\psi_i$ follows by modus ponens from $\psi_j$ and $\psi_k = (\psi_j \to \psi_i)$, the induction hypothesis supplies $\Sigma \vdash \varphi \to \psi_j$ and $\Sigma \vdash \varphi \to (\psi_j \to \psi_i)$. The (A2) instance
+
+$$\bigl(\varphi \to (\psi_j \to \psi_i)\bigr) \to \bigl((\varphi \to \psi_j) \to (\varphi \to \psi_i)\bigr)$$
+
+then yields $(\varphi \to \psi_j) \to (\varphi \to \psi_i)$ by one modus ponens, and a second modus ponens with $\varphi \to \psi_j$ gives $\varphi \to \psi_i$.
+:::
+
+:::example[Deriving the identity]
+Show $\vdash \varphi \to \varphi$ in $H$, using no hypotheses.
+:::
+
+:::solution
+Take the (A2) instance with $\psi := (\varphi \to \varphi)$ and $\chi := \varphi$:
+
+1. $\bigl(\varphi \to ((\varphi\to\varphi) \to \varphi)\bigr) \to \bigl((\varphi \to (\varphi\to\varphi)) \to (\varphi\to\varphi)\bigr)$ — (A2).
+2. $\varphi \to ((\varphi\to\varphi)\to\varphi)$ — (A1) with $\psi := (\varphi\to\varphi)$.
+3. $(\varphi \to (\varphi\to\varphi)) \to (\varphi\to\varphi)$ — modus ponens on 1 and 2.
+4. $\varphi \to (\varphi\to\varphi)$ — (A1) with $\psi := \varphi$.
+5. $\varphi \to \varphi$ — modus ponens on 3 and 4.
+
+Five lines for the most obvious statement in logic. That is the characteristic trade of a Hilbert system: almost no rules to verify in the soundness proof, and almost no comfort in use. □
+:::
+
+:::example[The deduction theorem earning its keep]
+Derive the transitivity of implication, $\vdash (\varphi\to\psi) \to ((\psi\to\chi) \to (\varphi\to\chi))$.
+:::
+
+:::solution
+By Theorem *Deduction theorem* applied three times, it suffices to show
+
+$$\{\varphi\to\psi,\ \psi\to\chi,\ \varphi\} \vdash \chi.$$
+
+That is two lines: from $\varphi$ and $\varphi\to\psi$, modus ponens gives $\psi$; from $\psi$ and $\psi\to\chi$, modus ponens gives $\chi$. Unwinding the deduction theorem mechanically turns those two lines into the required axiomatic derivation. Proving the same formula directly from the three schemes takes well over a dozen lines. □
+:::
+
+:::theorem[Completeness]{#completeness}
+If $\Sigma \models \varphi$ then $\Sigma \vdash \varphi$. Equivalently, every consistent set of formulas is satisfiable.
+:::
+
+:::proof
+*Sketch.* The two statements are interchangeable via Theorem *The refutation principle* and Theorem *Deduction theorem*, so we sketch the second, which is the Henkin–Lindenbaum argument.
+
+Let $\Sigma$ be consistent. First extend it to a **maximal** consistent set $\Sigma^\ast$: enumerate the formulas and add each one if doing so preserves consistency, taking the union at the end; for uncountable languages, Zorn's lemma supplies the maximal element. Maximality gives the key properties, each proved from the axioms: for every $\varphi$, exactly one of $\varphi, \neg\varphi$ lies in $\Sigma^\ast$; and $\varphi \to \psi \in \Sigma^\ast$ iff ($\varphi \notin \Sigma^\ast$ or $\psi \in \Sigma^\ast$).
+
+Now define $v(p) = 1$ iff $p \in \Sigma^\ast$. An induction on rank, using exactly those two properties at the two connectives, shows $v(\varphi) = 1$ iff $\varphi \in \Sigma^\ast$ for every formula. Since $\Sigma \subseteq \Sigma^\ast$, $v$ models $\Sigma$.
+
+What this sketch omits is the derivation, inside $H$, of the lemmas that make the maximal set behave — chiefly $\vdash \neg\neg\varphi \to \varphi$ and the *reductio* rule "if $\Sigma \cup \{\neg\varphi\}$ is inconsistent then $\Sigma \vdash \varphi$", both of which need (A3) and several applications of Theorem *Deduction theorem*.
+:::
+
+:::corollary[Compactness, again]{#compactness-again}
+If every finite subset of $\Sigma$ is satisfiable, then $\Sigma$ is satisfiable.
+:::
+
+:::proof
+Suppose $\Sigma$ is unsatisfiable. By Theorem *Completeness* it is inconsistent, so $\Sigma \vdash \bot$. A derivation is a *finite* sequence and therefore uses only finitely many members of $\Sigma$; let $\Sigma_0$ be that finite set, so $\Sigma_0 \vdash \bot$. By Theorem *Soundness* $\Sigma_0$ is unsatisfiable, exhibiting an unsatisfiable finite subset.
+:::
+
+:::intuition
+Read the corollary's proof again and notice where the work happens: the *only* property of $\vdash$ it uses is that derivations are finite objects. Completeness converts a semantic fact (no model) into a syntactic one (a proof), finiteness of proofs is then free, and soundness converts back. That is the standard shape of a compactness argument throughout logic, and it is why compactness is usually said to be a corollary of completeness even though Theorem *Compactness* above proves it directly.
+:::
+
+:::pitfall
+$\vdash$ and $\models$ are different relations proved coextensive by two theorems, and each theorem does real work in one direction only. Soundness is what stops the calculus from proving falsehoods; completeness is what stops it from being too weak. Dropping (A3) from Definition *The Hilbert calculus $H$* leaves a sound system — it is the positive implicational fragment — that is no longer complete, since it cannot prove $\neg\neg p \to p$. Soundness alone never licenses writing $\models$ where you have only established $\vdash$, or the reverse.
 :::
 
 ## Common Mistakes
 
-- **Misreading implication:** The formula $p \to q$ is true whenever $p$ is false, regardless of $q$. This is the source of many vacuous-truth confusions; it does not mean "causes" or English "only if".
+- **Reading $\to$ as causation or relevance.** $p \to q$ is the truth function that fails only on $p = 1$, $q = 0$. "If $2+2=5$ then the moon is cheese" is *true*. Vacuous truth is a feature of the definition, not a paradox to be resolved.
 
-- **Affirming the consequent:** From $p \to q$ and $q$, one cannot conclude the antecedent. This inference is invalid (see truth table: when the antecedent is false and consequent true, the implication holds).
+- **Confusing $\to$ with $\models$, or $\to$ with $\vdash$.** The first is a connective inside a formula; the others are relations asserted about formulas. Theorem *Semantic deduction theorem* and Theorem *Deduction theorem* say how they correspond — which is exactly why they are not the same thing.
 
-- **Denying the antecedent:** From $p \to q$ and $\neg p$, one cannot conclude $\neg q$. This inference is also invalid.
+- **Affirming the consequent and denying the antecedent.** From $p \to q$ and $q$ nothing follows about $p$; from $p \to q$ and $\neg p$ nothing follows about $q$. In both cases the valuation $p = 0, q = 1$ satisfies the premises and refutes the proposed conclusion.
 
-- **Confusing conjunction and disjunction:** "and/or" ambiguity in English often leads to mistakes when confusing $\land$ with $\lor$.
+- **Converse for contrapositive.** $p \to q$ is equivalent to $\neg q \to \neg p$ and *not* to $q \to p$. The two mistakes look alike on the page and differ on two rows of four.
 
-- **Exclusive versus inclusive or:** Most math uses inclusive $\lor$ (true if at least one is true).
+- **Forgetting that $\to$ is right-associative.** $p \to q \to r$ means $p \to (q \to r)$. It is one of the few places where a convention, not a theorem, determines the answer.
 
-- **Partial checks for tautologies:** You must check all $2^n$ rows; partial checks are insufficient.
+- **Treating a normal form as unique.** Theorem *Existence of normal forms* gives existence, not uniqueness; $p$, $p \land p$ and $p \land (p \lor q)$ are all CNFs of the same formula. Only the *full* CNF or DNF over a fixed atom set, one clause or term per row, is canonical.
 
-- **Not provable versus false:** In pure propositional logic (no extra axioms), many contingent statements are neither provable nor disprovable.
+- **Confusing equisatisfiable with equivalent.** A Tseitin encoding preserves satisfiability and nothing else. Model counts, entailments and equivalences must be read off the original formula.
+
+- **Stopping a tautology check early.** A formula is a tautology only if *every* row is true and every branch of the falsification shortcut closes. One surviving branch is a counterexample; finding one true row proves only satisfiability.
+
+- **Expecting compactness to produce finite models.** Theorem *Compactness* concludes that a model exists, over the same infinite vocabulary. It says nothing about its size, and its real content is that unsatisfiability is always finitely witnessed.
