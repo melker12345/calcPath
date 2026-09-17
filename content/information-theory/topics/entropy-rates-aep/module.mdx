@@ -10,6 +10,8 @@ Information per symbol for a process with memory, and the asymptotic equipartiti
 
 <!-- section: definition-entropy-rate -->
 
+For a single random variable, entropy is the uncertainty per draw. A *process* $X_1, X_2, X_3,\dots$ is different: its symbols are usually dependent, so the useful question is not how uncertain one symbol is but how much *new* uncertainty each additional symbol contributes. That long-run average per symbol is the entropy **rate**, and it, not the single-symbol entropy, is the number that governs the compressibility of real files — whose symbols are anything but independent.
+
 :::definition[Entropy rate]{#entropy-rate}
 For a discrete-time stochastic process $\{X_i\}$ define, when the limits exist,
 
@@ -79,7 +81,7 @@ The right side is the Cesàro mean of a convergent sequence, so by Lemma *Cesàr
     { "kind": "line", "through": [[0.5, 0.8], [9.0, 0.8]], "tone": "muted", "dashed": true },
     { "kind": "text", "at": [6.3, 1.22], "text": "block average (1/n)H(X1..Xn)", "leaderTo": [6.0, 0.9313] },
     { "kind": "text", "at": [5.9, 0.75], "text": "H(Xn | past)", "leaderTo": [5.0, 0.825] },
-    { "kind": "text", "at": [2.0, 0.83], "text": "entropy rate h = 0.8", "leaderTo": [3.0, 0.8] }
+    { "kind": "text", "at": [2.0, 0.83], "text": "entropy rate H(X) = 0.8", "leaderTo": [3.0, 0.8] }
   ]
 }
 :::
@@ -182,22 +184,14 @@ A *hidden* Markov process — a function of a Markov chain, observed through noi
 
 The entropy rate is not only an average; for well-behaved processes it is the value that essentially *every* long realisation exhibits. That is the content of the asymptotic equipartition property.
 
-:::definition[Typical set]{#typical-set}
-For $\varepsilon>0$, the **typical set** $A_\varepsilon^{(n)} \subseteq \mathcal X^n$ consists of the sequences $(x_1,\dots,x_n)$ with
-
-$$2^{-n(H+\varepsilon)} \le p(x_1,\dots,x_n) \le 2^{-n(H-\varepsilon)},$$
-
-equivalently those whose per-symbol code length $-\tfrac1n\log_2 p(x_1,\dots,x_n)$ lies within $\varepsilon$ of $H$.
-:::
+Write $A_\varepsilon^{(n)} \subseteq \mathcal X^n$ for the set of sequences whose per-symbol code length $-\tfrac1n\log_2 p(x_1,\dots,x_n)$ lies within $\varepsilon$ of $H$ — the **typical set**. It is defined carefully, and its size pinned down, in Definition *Typical set* below; here we need only the name.
 
 :::theorem[Asymptotic equipartition property, i.i.d. case]{#aep}
 Let $X_1,X_2,\dots$ be i.i.d. with entropy $H = H(X)$ on a finite alphabet. Then
 
 $$-\frac1n\log_2 p(X_1,\dots,X_n) \longrightarrow H \quad\text{in probability},$$
 
-and consequently, for every $\varepsilon>0$ and all large $n$,
-
-$$P\bigl(A_\varepsilon^{(n)}\bigr) > 1-\varepsilon, \qquad (1-\varepsilon)2^{n(H-\varepsilon)} \le \bigl|A_\varepsilon^{(n)}\bigr| \le 2^{n(H+\varepsilon)}.$$
+and consequently $P\bigl(A_\varepsilon^{(n)}\bigr) \to 1$ for every $\varepsilon>0$: the typical set eventually carries essentially all of the probability.
 :::
 
 :::proof
@@ -205,29 +199,21 @@ Independence factors the joint mass function, so
 
 $$-\frac1n\log_2 p(X_1,\dots,X_n) = \frac1n\sum_{i=1}^n \bigl(-\log_2 p(X_i)\bigr),$$
 
-an average of i.i.d. random variables with common mean $\mathbb{E}[-\log_2 p(X)] = H(X)$ and finite variance (the alphabet is finite). The weak law of large numbers gives convergence in probability to $H$, which is the first claim, and it is exactly the statement that $P(A_\varepsilon^{(n)}) \to 1$.
-
-For the size bounds, every sequence in $A_\varepsilon^{(n)}$ has probability at least $2^{-n(H+\varepsilon)}$, and the total probability of the set is at most $1$, so $|A_\varepsilon^{(n)}| \le 2^{n(H+\varepsilon)}$. For the lower bound, each sequence has probability at most $2^{-n(H-\varepsilon)}$ and the set carries probability more than $1-\varepsilon$ for large $n$, so $|A_\varepsilon^{(n)}| \ge (1-\varepsilon)2^{n(H-\varepsilon)}$.
+an average of i.i.d. random variables with common mean $\mathbb{E}[-\log_2 p(X)] = H(X)$ and finite variance (the alphabet is finite). The weak law of large numbers gives convergence in probability to $H$, which is the first claim, and membership of $A_\varepsilon^{(n)}$ is precisely the event $\bigl|-\tfrac1n\log_2 p(X^n) - H\bigr| \le \varepsilon$, so its probability tends to $1$. The weak law itself is proved in the next section, and the counting consequences — that $|A_\varepsilon^{(n)}|$ is about $2^{nH}$ — in the section after that.
 :::
 
 :::intuition
 Of the $|\mathcal X|^n$ possible sequences, only about $2^{nH}$ are ever seen, and they are all roughly equally likely. Compression is therefore just indexing: number the typical sequences and send the index, which needs $nH$ bits. Everything else is handled by an escape code whose cost vanishes because its probability does.
 :::
 
-:::theorem[Shannon's source coding theorem, block form]{#block-source-coding}
-For a stationary ergodic process with entropy rate $H(\mathcal X)$ and any $R > H(\mathcal X)$, there are codes mapping blocks of length $n$ into $nR$ bits with error probability tending to $0$; for $R < H(\mathcal X)$ the error probability tends to $1$.
-:::
-
-:::proof
-*Sketch, i.i.d. case.* Achievability: index the typical set, which has at most $2^{n(H+\varepsilon)}$ members, using $n(H+\varepsilon)+1$ bits, and flag atypical sequences with a one-bit escape followed by a raw description. The error probability is $P(A_\varepsilon^{(n)c}) \to 0$, and the rate is $H+\varepsilon$, which is below $R$ for small $\varepsilon$. Converse: a set of at most $2^{nR}$ sequences with $R < H - 2\varepsilon$ can cover at most $2^{nR}2^{-n(H-\varepsilon)} \to 0$ of the typical probability, plus the vanishing atypical part. The general stationary ergodic case replaces the weak law with the Shannon–McMillan–Breiman theorem, whose proof is out of scope.
-:::
+Indexing the typical set is how the entropy rate becomes an achievable compression rate, and the last section of this chapter carries that construction out and measures its length. The matching claim that *no* scheme beats the rate — Shannon's source coding theorem, in both directions, with its Fano converse — is the subject of the next chapter, *Source Coding and the Entropy Bound*. Here we use only the achievability side, and only as arithmetic for sizing files.
 
 :::example[Sizing a file from its rate]
 A source with entropy rate $1.2$ bits/symbol emits $1{,}000{,}000$ symbols. How large is the compressed file, and what would using the marginal entropy of $1.8$ bits/symbol have predicted?
 :::
 
 :::solution
-The block entropy is about $nH(\mathcal X) = 1.2\times10^{6}$ bits $=150{,}000$ bytes $=150$ kB, and Theorem *Shannon's source coding theorem, block form* says no scheme does sustainably better.
+The block entropy is about $nH(\mathcal X) = 1.2\times10^{6}$ bits $=150{,}000$ bytes $=150$ kB, and no scheme does sustainably better — that is the converse half of the source coding theorem, proved in the next chapter.
 
 Using the marginal entropy instead would predict $1.8\times 10^6$ bits $=225$ kB. That estimate is an upper bound, not the truth: it ignores the memory, and the $75$ kB difference is exactly the redundancy a model of the dependence recovers. □
 :::
@@ -269,7 +255,7 @@ What survives the passage to densities is precisely the *relative* quantities. R
 :::
 
 :::summary
-For a stationary process the entropy rate exists, equals the limiting one-step conditional entropy, is at most the marginal entropy with equality only in the i.i.d. case, equals $-\sum_{i,j}\mu_iP_{ij}\log_2 P_{ij}$ for a stationary Markov chain, and — by the AEP — is both the exponent of the typical set and the exact asymptotic cost of lossless compression.
+So far: for a stationary process the entropy rate exists, equals the limiting one-step conditional entropy, is at most the marginal entropy with equality only in the i.i.d. case, and equals $-\sum_{i,j}\mu_iP_{ij}\log_2 P_{ij}$ for a stationary Markov chain. The AEP says that a long realisation exhibits that rate, and differential entropy is the continuous analogue that keeps the formula but loses the interpretation. The rest of the chapter makes the AEP quantitative: where it comes from, how large the typical set is, and what compressor it hands us.
 :::
 
 ## The Law of Large Numbers for Information {#definition}
@@ -278,15 +264,9 @@ For a stationary process the entropy rate exists, equals the limiting one-step c
 
 Entropy was introduced as the expected surprise of a single draw. To say anything about *files* we need a per-symbol quantity that survives dependence between symbols.
 
-:::definition[Entropy rate]{#entropy-rate}
-The **entropy rate** of a stochastic process $\{X_i\}$ is
+Recall the entropy rate $H(\mathcal X) = \lim_{n\to\infty} \tfrac1n H(X_1,\dots,X_n)$ of Definition *Entropy rate*, which for a stationary process also equals $\lim_{n\to\infty} H(X_n\mid X_1,\dots,X_{n-1})$, the conditional entropy of the next symbol given the entire past. That is an average over the whole ensemble; what a compressor actually meets is one string, so we need a per-string quantity beside it.
 
-$$h = \lim_{n\to\infty} \frac{1}{n} H(X_1,\dots,X_n),$$
-
-whenever the limit exists. For a stationary process the limit always exists and also equals $\lim_{n\to\infty} H(X_n \mid X_1,\dots,X_{n-1})$, the conditional entropy of the next symbol given the entire past.
-:::
-
-For an i.i.d. source the chain rule gives $H(X_1,\dots,X_n) = nH(X)$ immediately, so $h = H(X)$: the entropy rate is the ordinary single-symbol entropy. For a source with memory the two differ, and the difference is exactly the redundancy that a model of the memory can harvest.
+For an i.i.d. source the chain rule gives $H(X_1,\dots,X_n) = nH(X)$ immediately, so $H(\mathcal X) = H(X)$: the entropy rate is the ordinary single-symbol entropy. For a source with memory the two differ, and the difference is exactly the redundancy that a model of the memory can harvest.
 
 :::definition[Sample information rate]{#sample-information-rate}
 For a string $x^n$ of positive probability, the **sample information rate** is
@@ -296,7 +276,7 @@ $$-\frac{1}{n}\log p(x^n),$$
 the number of bits per symbol an ideal code would spend on this particular string. The random variable $-\frac1n \log p(X^n)$ is the empirical rate of the string actually produced.
 :::
 
-The entropy rate is an expectation, $h = \lim \frac1n E[-\log p(X^n)]$; the sample information rate is the random quantity being averaged. The AEP says that the random quantity concentrates on its mean — that essentially every long string costs the same number of bits per symbol.
+The entropy rate is an expectation, $H(\mathcal X) = \lim_{n\to\infty} \frac1n E[-\log p(X^n)]$; the sample information rate is the random quantity being averaged. The AEP says that the random quantity concentrates on its mean — that essentially every long string costs the same number of bits per symbol.
 
 :::theorem[Weak law of large numbers]{#wlln}
 If $Y_1, Y_2,\dots$ are i.i.d. with finite mean $\mu$, then $\frac1n\sum_{i=1}^n Y_i \to \mu$ in probability: for every $\varepsilon > 0$,
@@ -312,10 +292,16 @@ $$\Pr\!\left( |\bar Y_n - \mu| \ge \varepsilon \right) \le \frac{\sigma^2}{n\var
 (The general finite-mean case is Khinchin's theorem and requires a truncation argument, which we do not need.)
 :::
 
-:::theorem[Asymptotic equipartition property, i.i.d. case]{#aep}
-Let $X_1,X_2,\dots$ be i.i.d. with probability mass function $p$ on a finite alphabet, and write $H = H(X)$. Then
+:::theorem[AEP, quantitative form]{#aep-quantitative}
+Let $X_1,X_2,\dots$ be i.i.d. $\sim p$ on a finite alphabet, write $H = H(X)$, and let
 
-$$-\frac{1}{n}\log p(X_1,\dots,X_n) \longrightarrow H \quad \text{in probability.}$$
+$$V = \operatorname{Var}\bigl(-\log p(X)\bigr) = \sum_x p(x)\log^2 p(x) \;-\; H^2$$
+
+be the **varentropy** of the source. Then for every $\varepsilon>0$ and every $n$,
+
+$$\Pr\!\left( \Bigl| -\frac1n\log p(X^n) - H \Bigr| \ge \varepsilon \right) \;\le\; \frac{V}{n\varepsilon^{2}} .$$
+
+Letting $n\to\infty$ recovers Theorem *Asymptotic equipartition property, i.i.d. case*, now with an explicit rate.
 :::
 
 :::proof
@@ -325,23 +311,23 @@ $$-\frac1n \log p(X^n) = \frac1n \sum_{i=1}^n \bigl(-\log p(X_i)\bigr).$$
 
 The summands $Y_i = -\log p(X_i)$ are i.i.d. functions of i.i.d. variables, and are bounded because the alphabet is finite and every symbol that can actually be observed has $p(x)>0$. Their common mean is
 
-$$E[Y_1] = \sum_{x} p(x)\bigl(-\log p(x)\bigr) = H(X).$$
+$$E[Y_1] = \sum_{x} p(x)\bigl(-\log p(x)\bigr) = H(X),$$
 
-The weak law of large numbers applied to $Y_1,Y_2,\dots$ now gives $\frac1n\sum_i Y_i \to H(X)$ in probability, which is the claim.
+and their common variance is $V$, by the definition above. So $-\frac1n\log p(X^n)$ is exactly the sample mean $\bar Y_n$ of Theorem *Weak law of large numbers* with $\mu = H$ and $\sigma^2 = V$, and the Chebyshev step of that proof gives the displayed bound — at every $n$, not merely in the limit.
 :::
 
-That proof is worth rereading, because it is the whole trick: **the AEP is the weak law of large numbers applied to the random variable "surprise".** Everything in the first half of this chapter is a consequence of it.
+That is the whole trick, and it is worth saying twice: **the AEP is the weak law of large numbers applied to the random variable "surprise".** The varentropy is the constant that says how long a block must be before the law bites. A nearly uniform source has small $V$ and concentrates almost at once; a source with one rare, very surprising symbol has large $V$ and needs long blocks before its typical set is worth anything. That is why the asymptotic statements of this chapter are careful to be asymptotic.
 
 :::remark[Beyond independence]
 For a general stationary ergodic process the same conclusion holds, in the stronger almost-sure form
 
-$$-\frac1n\log p(X^n) \longrightarrow h \quad \text{almost surely.}$$
+$$-\frac1n\log p(X^n) \longrightarrow H(\mathcal X) \quad \text{almost surely.}$$
 
 This is the **Shannon–McMillan–Breiman theorem**. Its proof is genuinely harder — it rests on the Birkhoff ergodic theorem together with a martingale-convergence argument for the conditional densities — and is beyond the scope of this chapter. We use it only to state results in their natural generality; every proof given here is carried out in the i.i.d. case, where the weak law suffices.
 :::
 
 :::intuition
-Toss a biased coin a million times. You cannot predict the sequence, but you *can* predict its cost: almost every outcome you will ever see takes about the same number of bits to write down, namely $h$ per toss.
+Toss a biased coin a million times. You cannot predict the sequence, but you *can* predict its cost: almost every outcome you will ever see takes about the same number of bits to write down, namely $H(\mathcal X)$ per toss.
 
 Strings that are much cheaper (all heads) or much more expensive exist, but their total probability is negligible. Compression is the art of budgeting for the ordinary strings and merely coping with the rest.
 :::
@@ -374,7 +360,7 @@ The AEP says that the *logarithm* of the probability, divided by $n$, concentrat
 
 <!-- section: typical-set -->
 
-The AEP is a statement about a limit in probability. To use it we convert it into a statement about a *set* — the strings whose rate is close to $h$.
+The AEP is a statement about a limit in probability. To use it we convert it into a statement about a *set* — the strings whose rate is close to $H(\mathcal X)$.
 
 :::definition[Typical set]{#typical-set-def}
 For $\varepsilon > 0$ and $n \ge 1$, the **typical set** $A_\varepsilon^{(n)} \subseteq \mathcal{X}^n$ consists of the strings whose sample information rate is within $\varepsilon$ of the entropy:
@@ -664,7 +650,7 @@ Given $\varepsilon'>0$, choose $\varepsilon = \varepsilon'/\bigl(2(1+\log|\mathc
 :::
 
 :::corollary[Entropy is an achievable description length]{#entropy-achievable}
-For any source satisfying the AEP with entropy rate $h$, and any $\varepsilon>0$, there exist lossless codes with expected description length at most $h+\varepsilon$ bits per symbol for all sufficiently large block lengths.
+For any source satisfying the AEP with entropy rate $H(\mathcal X)$, and any $\varepsilon>0$, there exist lossless codes with expected description length at most $H(\mathcal X)+\varepsilon$ bits per symbol for all sufficiently large block lengths.
 :::
 
 The corollary is the achievability half of the source coding theorem, obtained before the theorem is even stated. What the next part adds is precision about *what kind* of code is allowed, and a matching converse.
