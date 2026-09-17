@@ -211,6 +211,18 @@ const allProblemIds = new Map<string, string>();
         warnings.push(`${slug}/topics/${tid}/module.mdx: no ## sections`);
       }
 
+      // A marker the canonical parser cannot read is worse than no marker: the
+      // slug silently falls back to the heading's, so the author believes they
+      // pinned a slug and the question bank is keyed to something else.
+      for (const line of mdx.split(/\r?\n/)) {
+        const loose = line.match(/<!--\s*section:\s*(.+?)\s*-->/);
+        if (loose && !/^[a-z0-9-]+$/.test(loose[1])) {
+          errors.push(
+            `${slug}/topics/${tid}/module.mdx: section marker "${loose[1]}" is not a slug (lowercase, digits and hyphens only) — it is ignored and the heading slug is used instead`
+          );
+        }
+      }
+
       // Two ## sections deriving the same slug is a silent data bug: questions,
       // deep links (?section=) and per-section progress can only resolve to the
       // first one, so the other section's questions are stranded.

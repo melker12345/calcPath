@@ -476,15 +476,13 @@ async function main() {
   } else {
     prose.failures.slice(0, 40).forEach((l) => console.log(l));
     if (prose.failures.length > 40) console.log(`  ... and ${prose.failures.length - 40} more`);
-    // Reported, not fatal, until the known backlog below is cleared — otherwise
-    // every unrelated content change fails on pre-existing questions. Flip the
-    // `+ prose.failures.length` back into `failed` once it reads zero.
     console.log(
-      `\nWARNING: ${prose.failures.length} numeric question(s) should be mcq (see content/questions.md). Not failing the run yet.\n`
+      `\n${prose.failures.length} numeric question(s) should be mcq (see content/questions.md).\n`
     );
   }
 
   const failed =
+    prose.failures.length +
     cross.failures.length +
     suite.accepts.length +
     suite.rejects.length +
