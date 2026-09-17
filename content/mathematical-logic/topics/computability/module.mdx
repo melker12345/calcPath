@@ -4,222 +4,897 @@ title: Computability Theory
 
 # Computability Theory
 
-Computability theory (recursion theory) asks: which functions and problems can be solved by a purely mechanical procedure that always terminates with the correct answer? It provides the mathematical foundation for the notion of "algorithm" and reveals fundamental limits of computation.
+Computability theory asks which functions and which questions can be settled by a purely mechanical procedure. The answer turns out to be sharp: there is a single robust class of *computable* functions, reached independently by half a dozen unrelated formalisms, and there are concrete, entirely natural questions — does this program stop? — that provably lie outside it.
 
-The central models are Turing machines (Alan Turing 1936) and the equivalent recursive functions (Church, Kleene). They turned out to capture exactly the intuitive idea of effective calculability.
+The chapter builds the machinery in the order the proofs need it. Turing machines and the recursive functions give two definitions of *algorithm*; the universal machine and the $s$-$m$-$n$ theorem give the two tools that let programs manipulate programs; diagonalisation then produces the first undecidable set, reductions propagate undecidability outwards from it, Rice's theorem shows how far it spreads, and the arithmetical hierarchy and the Turing jump measure what is left.
 
-## Turing Machines and Algorithms
+One warning about scope. Computability measures *whether* a function can be computed at all, never how cheaply. Complexity classes such as $\mathrm{P}$ and $\mathrm{NP}$ live one level down and are not treated here. The dual question — how much information a *single finite string* contains, measured by the length of the shortest program that prints it — is Kolmogorov complexity, and it is developed in the information-theory chapter *Algorithmic Information*; we use its vocabulary only in passing.
+
+## Turing Machines, Configurations and Computation
 
 <!-- section: turing -->
 
-Turing machines provide the precise mathematical model of what it means for a procedure to be "mechanical" and effective. Any question about whether a problem is algorithmically solvable is ultimately a question about what Turing machines (or equivalent formalisms) can and cannot do.
-
-A Turing machine has an infinite tape, a finite set of internal states, a read/write head, and a finite table of instructions. Despite the extreme simplicity of the device, Turing showed that it can simulate any other reasonable model of computation (lambda calculus, register machines, modern programming languages). The functions it can compute are called the computable (or recursive) functions.
-
-In this section you will learn the components of a Turing machine, the definition of computability, several examples of computable and non-computable functions, and why the model is robust under changes of formalism.
+A definition of "mechanical procedure" has to be poor in features, or the definition smuggles in the very power it is supposed to explain. Turing's device is deliberately impoverished: a finite control, a tape that is unbounded but written one cell at a time, and a head that moves one step per instruction. Everything else — arithmetic, recursion, self-reference — is reconstructed from those pieces.
 
 :::definition[Turing machine]{#turing-machine}
-A **Turing machine** consists of:
+A **Turing machine** is a $7$-tuple
 
-- A finite set of states, including a start state and halting states.
-- An infinite tape divided into cells, each holding a symbol from a finite alphabet (usually including blank).
-- A head that reads/writes one cell and moves left or right.
-- A transition table: given current state and symbol read, what to write, which direction to move, and next state.
+$$M = (Q, \Sigma, \Gamma, \delta, q_0, q_{\text{acc}}, q_{\text{rej}}),$$
+
+where $Q$ is a finite set of **states**; $\Sigma$ is the finite **input alphabet**; $\Gamma \supseteq \Sigma$ is the finite **tape alphabet**, containing a blank symbol $\sqcup \notin \Sigma$; $q_0 \in Q$ is the **start state**; $q_{\text{acc}} \neq q_{\text{rej}}$ are the two halting states; and
+
+$$\delta : (Q \setminus \{q_{\text{acc}}, q_{\text{rej}}\}) \times \Gamma \longrightarrow Q \times \Gamma \times \{L, R\}$$
+
+is the **transition function**. The tape is infinite to the right, initially holds the input followed by blanks, and the head starts on the leftmost cell.
 :::
 
-:::definition[Computable function]{#computable-function}
-A function $f:\mathbb{N}\to\mathbb{N}$ is **computable** (Turing-computable, recursive) if there is a TM that, started with input $n$ (encoded on the tape, e.g. in unary or binary), eventually halts with $f(n)$ written on the tape. A function is **total computable** when it is computable and defined on all of $\mathbb{N}$, i.e. the machine halts on every input.
+The transition function is total on non-halting states, so a computation never gets stuck for want of an instruction: it either reaches $q_{\text{acc}}$ or $q_{\text{rej}}$, or it runs forever. That is the only way a Turing machine can fail, and it is exactly the failure the rest of the chapter is about.
+
+:::definition[Configuration]{#configuration}
+A **configuration** of $M$ is a string $u\,q\,v$ with $u, v \in \Gamma^*$ and $q \in Q$: the tape holds $uv$ followed by blanks, the machine is in state $q$, and the head scans the first symbol of $v$ (a blank if $v$ is empty).
+
+Configuration $C_1$ **yields** $C_2$, written $C_1 \vdash C_2$, when one application of $\delta$ turns the first into the second. Writing $a, b, c \in \Gamma$: if $\delta(q,b) = (r,c,R)$ then $u\,a\,q\,b\,v \vdash u\,a\,c\,r\,v$, and if $\delta(q,b) = (r,c,L)$ then $u\,a\,q\,b\,v \vdash u\,r\,a\,c\,v$. The **start configuration** on input $w$ is $q_0 w$.
 :::
 
-If $f$ is a **partial** function, the TM is required to halt with $f(n)$ exactly on those inputs $n$ where $f(n)$ is defined, and to run forever (or reject) where $f(n)$ is undefined.
-
-:::intuition
-Imagine an infinitely long strip of paper, a read/write head, and a little program (the finite state table) that tells the head "if you see a 1 and you are in state q3, write 0, move right, go to state q7".
-
-Anything a modern computer can do (given enough time and memory) can be simulated by such a simple device. Conversely, if a TM cannot compute it, no real computer program can either.
+:::figure[One step of a machine in configuration $0\,1\,q_3\,1\,0$. The head scans the highlighted cell; $\delta(q_3, 1) = (q_5, 0, R)$ rewrites it and shifts the head one cell right, producing $0\,1\,0\,q_5\,0$.]{#configuration-step}
+{
+  "type": "plot",
+  "x": [-1.2, 7.6],
+  "y": [-2.2, 4.2],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "path", "points": [[0,2],[6,2],[6,3],[0,3],[0,2]], "tone": "muted" },
+    { "kind": "path", "points": [[1,2],[1,3]], "tone": "muted" },
+    { "kind": "path", "points": [[2,2],[2,3]], "tone": "muted" },
+    { "kind": "path", "points": [[3,2],[3,3]], "tone": "muted" },
+    { "kind": "path", "points": [[4,2],[4,3]], "tone": "muted" },
+    { "kind": "path", "points": [[5,2],[5,3]], "tone": "muted" },
+    { "kind": "region", "points": [[2,2],[3,2],[3,3],[2,3]], "tone": "accent" },
+    { "kind": "text", "at": [0.5, 2.5], "text": "0" },
+    { "kind": "text", "at": [1.5, 2.5], "text": "1" },
+    { "kind": "text", "at": [2.5, 2.5], "text": "1" },
+    { "kind": "text", "at": [3.5, 2.5], "text": "0" },
+    { "kind": "text", "at": [6.8, 2.5], "text": "before" },
+    { "kind": "arrow", "from": [2.5, 1.5], "to": [2.5, 1.95], "tone": "accent" },
+    { "kind": "text", "at": [2.5, 1.1], "text": "head in state q3" },
+    { "kind": "path", "points": [[0,-1],[6,-1],[6,0],[0,0],[0,-1]], "tone": "muted" },
+    { "kind": "path", "points": [[1,-1],[1,0]], "tone": "muted" },
+    { "kind": "path", "points": [[2,-1],[2,0]], "tone": "muted" },
+    { "kind": "path", "points": [[3,-1],[3,0]], "tone": "muted" },
+    { "kind": "path", "points": [[4,-1],[4,0]], "tone": "muted" },
+    { "kind": "path", "points": [[5,-1],[5,0]], "tone": "muted" },
+    { "kind": "region", "points": [[3,-1],[4,-1],[4,0],[3,0]], "tone": "result" },
+    { "kind": "text", "at": [0.5, -0.5], "text": "0" },
+    { "kind": "text", "at": [1.5, -0.5], "text": "1" },
+    { "kind": "text", "at": [2.5, -0.5], "text": "0" },
+    { "kind": "text", "at": [3.5, -0.5], "text": "0" },
+    { "kind": "text", "at": [6.8, -0.5], "text": "after" },
+    { "kind": "arrow", "from": [-0.6, 1.8], "to": [-0.6, 0.2], "tone": "result" },
+    { "kind": "text", "at": [3.0, 3.7], "text": "one step of the yields relation" }
+  ]
+}
 :::
 
-:::example
-Let us fully specify a TM that computes the **successor function** on unary numbers, where the natural number $n$ is written as a block of $n$ ones (so $3$ is `111`) followed by blanks. Goal: turn the block of $n$ ones into a block of $n+1$ ones.
+A *computation* is now just a chain of configurations. This is the level at which almost every later proof operates: nobody writes transition tables after this section, but the fact that a computation is a finite string of finite configurations is what makes computations checkable, encodable and countable.
+
+:::definition[Computation, acceptance, computed function]{#computation}
+The **computation** of $M$ on $w$ is the (finite or infinite) sequence $C_0 \vdash C_1 \vdash C_2 \vdash \cdots$ with $C_0 = q_0 w$. It **halts** if some $C_t$ contains $q_{\text{acc}}$ or $q_{\text{rej}}$, and then $t$ is the **running time**.
+
+$M$ **accepts** $w$ if it halts in $q_{\text{acc}}$; $L(M)$ is the set of accepted strings. $M$ **decides** $L(M)$ if it halts on every input. The **partial function computed** by $M$, written $\varphi_M$, sends $w$ to the tape contents at halting if $M$ halts on $w$, and is undefined otherwise; we write $\varphi_M(w)\!\downarrow$ for "defined" (the machine halts) and $\varphi_M(w)\!\uparrow$ for "undefined".
+:::
+
+:::definition[Computable and partial computable]{#computable-function}
+A partial function $f$ on $\mathbb{N}$ is **partial computable** (partial recursive) if $f = \varphi_M$ for some Turing machine $M$. It is **computable** (total recursive) if in addition it is total, i.e. the machine halts on every input.
+:::
+
+:::pitfall
+*Halting* and *accepting* are different events, and *recognising* and *deciding* are different achievements. A machine that accepts exactly the members of $A$ but runs forever on some non-members recognises $A$ without deciding it. Almost every undecidability result in this chapter is the statement that some set is recognised but not decided.
+:::
+
+:::example[A machine, traced by configurations]
+Specify a Turing machine computing the successor on unary notation — the number $n$ is the block $1^n$ — and trace its computation on $n = 2$ as a chain of configurations.
 :::
 
 :::solution
-Tape alphabet: $\{1, \sqcup\}$ ($\sqcup$ is blank). States: $q_{\text{start}}$ and the halting state $q_{\text{halt}}$. Transition table (reading `state, symbol` $\to$ `write, move, next state`):
+Take $\Gamma = \{1,\sqcup\}$, states $\{q_0, q_{\text{acc}}, q_{\text{rej}}\}$, and
 
-$q_{\text{start}}, 1 \to 1, R, q_{\text{start}}$  (skip past a $1$, stay scanning)
-$q_{\text{start}}, \sqcup \to 1, S, q_{\text{halt}}$  (found the end; write a $1$ and stop; $S$ = stay)
+$$\delta(q_0, 1) = (q_0, 1, R), \qquad \delta(q_0, \sqcup) = (q_{\text{acc}}, 1, R).$$
 
-Trace on input $n = 2$ (tape `11` with head at the leftmost cell):
+The machine walks right over the block and converts the first blank into a $1$. On input $11$:
 
-State $q_{\text{start}}$, read $1$: write $1$, move right. Tape `11`, head on cell 2.
-State $q_{\text{start}}$, read $1$: write $1$, move right. Tape `11`, head on cell 3 (blank).
-State $q_{\text{start}}$, read $\sqcup$: write $1$, halt. Tape `111`.
+$$q_0 11 \;\vdash\; 1 q_0 1 \;\vdash\; 11 q_0 \;\vdash\; 111\, q_{\text{acc}}.$$
 
-Sanity check: the input `11` represented $2$ and the output `111` represents $3 = 2+1$. The machine scanned the whole block once, so it halts after $n+1$ steps for input $n$ — in particular it halts on **every** input, so the successor function is total computable. The same two-line table works for any $n$: there is no separate case per input length.
+Three steps, and the tape reads $111 = 3 = 2+1$. On input $1^n$ the machine takes exactly $n+1$ steps, so it halts on every input and the successor is total computable. Note that the table has two lines no matter how large $n$ is: a finite program, uniform in the input, is the whole point of the model. □
 :::
 
-## Recursive Functions and Church-Turing Thesis
+Nothing in these traces depends on having one tape, or on the tape being one-dimensional, or on the machine being deterministic. That robustness is what entitles us to stop drawing tables.
+
+:::theorem[Robustness of the model]{#robustness}
+Each of the following computes exactly the partial computable functions: single-tape machines; $k$-tape machines for any fixed $k$; machines with a two-way infinite tape; machines with a two-dimensional tape; nondeterministic machines; and register machines. In particular a function is computable by some multi-tape machine if and only if it is computable by some single-tape machine.
+:::
+
+:::proof
+We give the simulation for $k$ tapes in full and sketch the rest. Given a $k$-tape machine $N$, build a single-tape $M$ over the enlarged alphabet $\Gamma \cup \dot\Gamma \cup \{\#\}$, where $\dot a$ is a dotted copy of $a$ marking a head position. $M$ keeps the $k$ tapes on one tape as $\# u_1 \# u_2 \# \cdots \# u_k \#$, with exactly one dotted symbol per block. To simulate one step of $N$, $M$ sweeps the whole tape once to read the $k$ scanned symbols — it can remember them in its finite control, since $k$ is a fixed constant and the alphabet is finite — consults $N$'s table, and sweeps back writing the new symbols and moving the dots one cell each; when a dot would run off the right end of a block, $M$ first shifts everything to the right of that block one cell rightwards to make room. Each simulated step is therefore faithful, so by induction on $t$ the tape of $M$ after simulating $t$ steps encodes the configuration of $N$ after $t$ steps. Hence $M$ halts exactly when $N$ does and with the same output, so $\varphi_M = \varphi_N$; the converse inclusion is trivial, a $1$-tape machine being a $k$-tape machine that ignores $k-1$ tapes.
+
+For the remaining models the same "encode the state of the other device on one tape and simulate a step at a time" argument applies: a two-way infinite tape is folded into two interleaved tracks of a one-way tape, a two-dimensional tape is stored as a list of written cells with their coordinates, a register machine's registers are stored as separated blocks, and a nondeterministic machine is simulated by breadth-first search over its computation tree, one depth at a time — depth-first would be unfaithful, since it can fall into an infinite branch while an accepting branch exists elsewhere. What these arguments do *not* claim is that the simulations are cheap: the $k$-tape simulation above costs $O(t^2)$ steps for $t$ simulated steps, and the nondeterministic one costs exponentially. Cost is a complexity question and is irrelevant to the class of computable functions.
+:::
+
+Encoding is the other thing this section owes the rest of the chapter. A machine is a finite object, so it can be written down as a string, and strings can be numbered.
+
+:::definition[Encoding and the standard listing]{#godel-numbering}
+Fix an effective encoding $M \mapsto \langle M \rangle \in \mathbb{N}$ of Turing machines as numbers, and an effective pairing bijection $\langle \cdot, \cdot \rangle : \mathbb{N}^2 \to \mathbb{N}$, for example the Cantor pairing
+
+$$\langle x, y\rangle = \tfrac{1}{2}(x+y)(x+y+1) + y.$$
+
+Every number is taken to be the code of some machine (decode garbage as a fixed trivial machine). Write $M_e$ for the machine coded by $e$ and
+
+$$\varphi_e := \varphi_{M_e}$$
+
+for the partial computable function it computes. The sequence $\varphi_0, \varphi_1, \varphi_2, \dots$ is the **standard listing** of the partial computable functions; $e$ is an **index** for $\varphi_e$. Every partial computable function has infinitely many indices, since padding a machine with unreachable states changes the code but not the function.
+:::
+
+That listing immediately settles how much of mathematics is computable: almost none of it.
+
+:::theorem[Most functions are not computable]{#counting-uncomputable}
+There are only countably many partial computable functions, but uncountably many functions $\mathbb{N} \to \{0,1\}$. Hence uncountably many functions $\mathbb{N}\to\mathbb{N}$ are not computable, and likewise only countably many subsets of $\mathbb{N}$ are decidable.
+:::
+
+:::proof
+Each Turing machine is a finite tuple over finite sets, so it has a finite description over a fixed finite alphabet; there are countably many finite strings over a finite alphabet, and $e \mapsto \varphi_e$ maps $\mathbb{N}$ onto the partial computable functions, which are therefore countably many. The functions $\mathbb{N}\to\{0,1\}$ are in bijection with $\mathcal{P}(\mathbb{N})$, which by Cantor's theorem has cardinality $2^{\aleph_0} > \aleph_0$. A countable set cannot contain an uncountable one, so the non-computable functions are uncountable — indeed all but countably many functions are uncomputable.
+:::
+
+:::intuition
+Programs are finite texts, and there are only countably many finite texts. Functions on $\mathbb{N}$ are infinite objects with no such constraint, and there are continuum-many. The mismatch is so violent that a "random" function is uncomputable with probability one. What the rest of the chapter adds is that undecidability is not confined to those exotic objects: the halting set is as concrete and as natural as a set can be.
+:::
+
+:::pitfall
+The counting argument proves that uncomputable functions exist; it exhibits none, and it cannot, because it never mentions a specific function. Producing a *named* undecidable set takes diagonalisation, which is the work of the section *The Halting Problem*.
+:::
+
+## Recursive Functions and the Church-Turing Thesis
 
 <!-- section: recursive -->
 
-Instead of describing a *machine*, the recursive-function approach builds computable functions *algebraically*: start from a few trivially-computable functions and only allow rules that manifestly preserve computability. Any function you can reach this way is computable, and (Church-Turing thesis below) every computable function can be reached.
+The second definition of algorithm never mentions a machine. It builds functions algebraically from a handful of obviously-computable seeds using rules that obviously preserve computability, and the surprise is that this reaches exactly as far as the tape does.
 
-:::definition[Recursive functions]{#recursive-functions}
-The class of **recursive functions** is the smallest class of functions on $\mathbb{N}$ containing the three **base functions**:
+:::definition[Primitive recursive functions]{#primitive-recursive}
+The **primitive recursive** functions form the smallest class of total functions $\mathbb{N}^k \to \mathbb{N}$ containing the **base functions**
 
-- the **zero function** $Z(x) = 0$,
-- the **successor** $S(x) = x+1$,
-- the **projections** $P^n_i(x_1,\dots,x_n) = x_i$ (pick out the $i$-th of $n$ arguments),
+- the zero function $Z(x) = 0$,
+- the successor $S(x) = x+1$,
+- the projections $P^n_i(x_1,\dots,x_n) = x_i$ for $1 \le i \le n$,
 
-and closed under three construction rules:
+and closed under
 
-- **Composition:** plug functions into another function, $h(\vec{x}) = f(g_1(\vec{x}),\dots,g_k(\vec{x}))$.
-- **Primitive recursion:** define $f$ by a base case and a step that may reuse the previous value, $f(\vec{x},0)=g(\vec{x})$ and $f(\vec{x},y+1)=h(\vec{x},y,f(\vec{x},y))$.
-- The **$\mu$-operator** (unbounded search / minimization): $\mu y[\,g(\vec{x},y)=0\,]$ returns the *least* $y$ making $g$ output $0$.
+- **composition:** $h(\vec x) = f\bigl(g_1(\vec x), \dots, g_k(\vec x)\bigr)$;
+- **primitive recursion:** from $g$ of arity $n$ and $h$ of arity $n+2$, the function $f$ of arity $n+1$ given by
+
+$$f(\vec x, 0) = g(\vec x), \qquad f(\vec x, y+1) = h\bigl(\vec x, y, f(\vec x, y)\bigr).$$
 :::
 
-In primitive recursion the recursion depth $y$ is fixed by an argument, so it is a "bounded loop" and always terminates. The $\mu$-operator is the only rule that can fail to halt (if no such $y$ exists), which is exactly why it is needed to reach *partial* functions and total functions like Ackermann that outrun primitive recursion.
+The recursion parameter $y$ counts down to a base case reached after exactly $y$ unfoldings, so the schema is a *bounded loop*: the trip count is known before the loop starts. That is the structural reason for the following, and it is also the class's limitation.
 
-:::definition[Primitive recursive functions]
-Functions built using only the base functions, composition, and primitive recursion are the **primitive recursive** functions.
+:::theorem[Primitive recursive implies total]{#pr-total}
+Every primitive recursive function is total.
 :::
 
-They form a strict subclass, since every primitive recursive function is total but the full recursive class also contains partial functions and fast-growing total ones.
-
-:::remark[Church-Turing thesis]{#church-turing}
-Not a theorem but a thesis: a function is effectively calculable by an algorithm if and only if it is recursive / Turing-computable. All reasonable models of computation (lambda calculus, register machines, etc.) define the same class.
+:::proof
+Induct on the derivation of the function. The three base functions are total. If $f, g_1,\dots,g_k$ are total then so is the composition $f(g_1(\vec x),\dots,g_k(\vec x))$, since every inner value is defined and $f$ is defined everywhere. Suppose $g$ and $h$ are total and $f$ arises from them by primitive recursion. Fix $\vec x$ and induct on $y$: $f(\vec x, 0) = g(\vec x)$ is defined, and if $f(\vec x, y)$ is defined then $f(\vec x, y+1) = h(\vec x, y, f(\vec x,y))$ is defined because $h$ is total. So $f$ is defined at every $(\vec x, y)$.
 :::
 
-:::intuition
-You start with the most basic operations (copy a number, add one, pick out an argument) and are allowed to build bigger programs by plugging them together, repeating a number of times given by another number, or searching for the first number that makes a condition true.
-
-The thesis says this captures everything humans would call "a definite mechanical procedure".
-:::
-
-:::example
-Addition is primitive recursive. Fit it to the schema $f(x,0)=g(x)$, $f(x,y+1)=h(x,y,f(x,y))$:
+:::example[Building the arithmetic you need]
+Show that addition, multiplication, the predecessor, truncated subtraction and the sign function are primitive recursive, and record the derived tools they give.
 :::
 
 :::solution
-Base case: $\text{add}(x,0) = x$, so $g(x) = P^1_1(x) = x$ (the identity, a projection).
-Step: $\text{add}(x,y+1) = S(\text{add}(x,y))$, so $h(x,y,z) = S(z) = S(P^3_3(x,y,z))$ — take the previous value and add one.
+Addition fits the schema with $g = P^1_1$ and $h(x,y,z) = S(P^3_3(x,y,z))$:
 
-Both $g$ and $h$ are built from base functions and composition, so $\text{add}$ is primitive recursive. Let us unfold $\text{add}(2,3)$ to check the recursion actually computes the sum:
+$$\mathrm{add}(x,0) = x, \qquad \mathrm{add}(x, y+1) = S(\mathrm{add}(x,y)).$$
 
-$$\text{add}(2,3) = S(\text{add}(2,2)) = S(S(\text{add}(2,1))) = S(S(S(\text{add}(2,0)))) = S(S(S(2))) = 5.$$
+Unfolding checks it: $\mathrm{add}(2,3) = S(\mathrm{add}(2,2)) = S(S(\mathrm{add}(2,1))) = S(S(S(\mathrm{add}(2,0)))) = S(S(S(2))) = 5$, bottoming out after exactly $3$ unfoldings.
 
-Sanity check: $2+3 = 5$ ✓, and the recursion bottomed out at the base case $\text{add}(2,0)=2$ after exactly $3$ unfoldings (one per unit of the second argument), so it always terminates.
+Multiplication uses $\mathrm{add}$ as its step, $\mathrm{mult}(x,0)=0$ and $\mathrm{mult}(x,y+1) = \mathrm{add}(x, \mathrm{mult}(x,y))$; exponentiation uses $\mathrm{mult}$ the same way. The predecessor is a recursion that discards its recursive value, $\mathrm{pred}(0) = 0$ and $\mathrm{pred}(y+1) = y$, and truncated subtraction iterates it: $x \mathbin{\dot-} 0 = x$ and $x \mathbin{\dot-} (y+1) = \mathrm{pred}(x \mathbin{\dot-} y)$. The sign function is $\mathrm{sg}(x) = 1 \mathbin{\dot-}(1 \mathbin{\dot-} x)$, which is $0$ at $0$ and $1$ elsewhere.
 
-Multiplication is then primitive recursive by the same pattern using $\text{add}$ as its step function: $\text{mult}(x,0)=0$, $\text{mult}(x,y+1)=\text{add}(x,\text{mult}(x,y))$. Exponentiation follows from multiplication in the same way. The **Ackermann function** is the classic example that is total and computable but **not** primitive recursive: it grows faster than every primitive recursive function, so it cannot be captured by bounded (primitive) recursion alone and requires general recursion (double recursion / the $\mu$-operator).
+With $\mathrm{sg}$ and $\mathbin{\dot-}$ in hand, *predicates* become primitive recursive too, identifying a predicate with its characteristic function: the characteristic function of $x \le y$ is $1 \mathbin{\dot-} (x \mathbin{\dot-} y)$, and $\land, \lor, \lnot$ are computed by $\mathrm{mult}$, by $\mathrm{sg}\circ\mathrm{add}$ and by $1 \mathbin{\dot-} x$. Bounded sums and products $\sum_{i<y} f(\vec x,i)$ and $\prod_{i<y} f(\vec x, i)$ are primitive recursions, and so is **bounded search**
+
+$$(\mu i < y)\,[\,R(\vec x, i)\,] = \text{the least } i < y \text{ with } R(\vec x, i) \text{, and } y \text{ if there is none},$$
+
+since it can be written as a bounded sum of products of $\mathrm{sg}$ values. Everything up to and including "is $x$ prime?", "what is the $n$-th prime?" and the decoding of sequence codes is therefore primitive recursive. □
 :::
 
-## The Halting Problem and Undecidability
+Totality is a ceiling as well as a guarantee. A class of total functions cannot contain a function universal for itself, and it cannot contain the fastest-growing total functions.
+
+:::theorem[Ackermann's function]{#ackermann}
+Define $A : \mathbb{N}^2 \to \mathbb{N}$ by
+
+$$A(0,n) = n+1, \qquad A(m+1, 0) = A(m,1), \qquad A(m+1, n+1) = A\bigl(m, A(m+1,n)\bigr).$$
+
+Then $A$ is total and computable, but $A$ is not primitive recursive.
+:::
+
+:::proof
+**Sketch**, complete except for the majorisation lemma named below. Totality follows by induction on $(m,n)$ ordered lexicographically: every right-hand side calls $A$ at a lexicographically smaller pair, and the lexicographic order on $\mathbb{N}^2$ is a well-order, so the recursion terminates. It is computable because the recursion is a finite, effective rewriting procedure that the Church-Turing thesis (or an explicit stack machine) turns into a program.
+
+Non-primitive-recursiveness rests on a *majorisation lemma*, proved by induction on the build of $f$: for every primitive recursive $f$ of arity $k$ there is an $m$ with
+
+$$f(x_1,\dots,x_k) < A\bigl(m, \max_i x_i\bigr) \quad \text{for all } \vec x.$$
+
+The inductive step needs the monotonicity facts $A(m,n) < A(m,n+1)$ and $A(m,n) \le A(m+1,n)$, each itself an induction, and composition and primitive recursion each raise the required $m$ by a bounded amount. Granting the lemma, suppose $A$ were primitive recursive. Then so would be the diagonal $d(x) = A(x,x)$, so $d(x) < A(m, x)$ for some fixed $m$ and all $x$; taking $x = m$ gives $A(m,m) < A(m,m)$, a contradiction. The step left unproved here is the majorisation lemma, a long but routine double induction.
+:::
+
+:::intuition
+Ackermann's function diagonalises out of the primitive recursive class in the same way the halting argument will diagonalise out of the computable one, and the reason is the same: a class closed under a *uniform* construction cannot contain the function that runs down its own list doing something different. Concretely, $A(1,n)$ is essentially $n+2$, $A(2,n)$ is essentially $2n$, $A(3,n)$ is essentially $2^n$, and $A(4,n)$ a tower of exponentials — each row outgrows every function definable with one fewer level of loop nesting.
+:::
+
+To reach the partial functions — and every function a real programming language can define, since a real program can loop — one more rule is needed, and exactly one.
+
+:::definition[Partial recursive functions]{#partial-recursive}
+The **$\mu$-operator** (unbounded search) applied to a partial function $g$ of arity $n+1$ yields
+
+$$\mu y\,[\,g(\vec x, y) = 0\,] = \text{the least } y \text{ such that } g(\vec x,y) = 0 \text{ and } g(\vec x, i)\!\downarrow \text{ for all } i \le y,$$
+
+undefined if no such $y$ exists. The **partial recursive** functions are the smallest class containing the base functions and closed under composition, primitive recursion and $\mu$. A partial recursive function that happens to be total is called **total recursive**.
+:::
+
+:::pitfall
+$\mu$ is the only source of divergence, and it diverges in two distinct ways: either no witness $y$ exists at all, or some earlier value $g(\vec x, i)$ is itself undefined and the search hangs before reaching a witness. The clause "$g(\vec x,i)\!\downarrow$ for all $i \le y$" is not pedantry — without it the operator would be uncomputable, since it would demand the least witness while forbidding the machine to test the values below it.
+:::
+
+:::theorem[Kleene normal form, and equivalence with Turing computability]{#kleene-normal-form}
+There is a primitive recursive predicate $T(e, x, s)$ — "$s$ codes a halting computation of $M_e$ on input $x$" — and a primitive recursive function $U$ ("read the output off a computation") such that for every partial computable $f$ there is an index $e$ with
+
+$$f(x) \simeq U\bigl(\mu s\,[\,T(e,x,s)\,]\bigr)$$
+
+for all $x$, where $\simeq$ means the two sides are defined for exactly the same $x$ and are equal there. Consequently a partial function is partial recursive if and only if it is Turing computable, and a single application of $\mu$ to a primitive recursive predicate always suffices.
+:::
+
+:::proof
+**Sketch**, resting on the arithmetisation of syntax named at the end. Both directions are simulations. *Recursive $\Rightarrow$ Turing computable*: each base function has a two-line machine, composition is sequencing, primitive recursion is a counted loop, and $\mu$ is an unbounded loop — every rule has a direct machine implementation, so induction on the build gives a machine for every partial recursive function.
+
+*Turing computable $\Rightarrow$ recursive*: encode a configuration $uqv$ as a number by coding the finite strings $u$ and $v$ symbol by symbol, and code a length-$t$ computation history as a single number $s$ by the prime-power sequence coding $s = \prod_{i<t} p_i^{c_i}$. Then "is $c_{i+1}$ the successor configuration of $c_i$ under the table coded by $e$?" is a *bounded* arithmetic question about the exponents of $s$, hence primitive recursive by the tools built above; conjoining it over $i < \mathrm{lh}(s)$ with bounded quantifiers, and adding "$c_0$ is the start configuration on $x$" and "the last configuration is halting", gives the primitive recursive predicate $T$. Searching for a halting history is the single $\mu$, and $U$ extracts the output from the last configuration.
+
+What the sketch compresses is the arithmetisation itself: the verification that sequence coding, decoding and length are primitive recursive. That is the content of Gödel's $\beta$-function lemma, proved in the chapter *Incompleteness and Independence*, and everything here rests on it.
+:::
+
+:::remark[The Church-Turing thesis]{#church-turing}
+**Thesis.** A function is effectively calculable — computable by some finite, deterministic, mechanical procedure in the informal sense — precisely when it is partial recursive, equivalently Turing computable.
+
+This is a *thesis*, not a theorem, and it cannot be one: "effectively calculable" is an informal notion, so there is nothing to prove it against. What supports it is evidence. Turing machines, the $\lambda$-calculus, Gödel-Herbrand general recursion, Post systems, register machines, Markov algorithms and every programming language ever implemented define the same class, despite having been designed with different intentions. Turing's own argument is the most direct: he analysed what a human computer with paper, finitely many distinguishable states of mind and a bounded field of view can do in one step, and showed that each such step is a Turing-machine step.
+
+The thesis is refutable in principle. Exhibiting a physically realisable procedure that computes a function provably outside the class would kill it. None has been produced; quantum computers, analogue machines and randomised algorithms all compute exactly the same class of functions, differing only in cost.
+:::
+
+:::pitfall
+Do not cite the Church-Turing thesis inside a proof as though it were a theorem, and do not confuse it with the false claim that "everything is computable". The thesis says the two classes coincide; Theorem *Most functions are not computable* showed the class is countable, so it misses almost every function.
+:::
+
+:::intuition
+In practice the thesis is a licence to stop writing transition tables. Once you accept it, "there is an algorithm that does $X$" is enough to conclude "there is a Turing machine computing $X$", and every later construction in this chapter — build a machine that simulates another on a modified input, search for a halting computation, dovetail infinitely many simulations at once — is described in that informal register and is none the worse for it.
+:::
+
+## Decidable and Recursively Enumerable Sets
+
+<!-- section: decidable-re -->
+
+Undecidability is a property of *sets*, so the vocabulary has to be fixed before anything can be proved undecidable. Two notions matter, and the gap between them is where the whole subject lives.
+
+:::definition[Decidable and recursively enumerable]{#decidable-re}
+A set $A \subseteq \mathbb{N}$ is **decidable** (recursive, computable) if its characteristic function
+
+$$\chi_A(x) = \begin{cases} 1 & x \in A,\\ 0 & x \notin A\end{cases}$$
+
+is computable — some machine halts on every input and answers correctly.
+
+$A$ is **recursively enumerable** (r.e., computably enumerable, semi-decidable) if $A$ is the domain of a partial computable function: for some $e$,
+
+$$A = W_e := \{x : \varphi_e(x)\!\downarrow\}.$$
+
+Equivalently, some machine halts exactly on the members of $A$ and runs forever on the rest.
+:::
+
+:::notation
+$W_e$ denotes the $e$-th r.e. set, the domain of $\varphi_e$; the sequence $W_0, W_1, W_2,\dots$ enumerates all r.e. sets, just as $\varphi_0,\varphi_1,\dots$ enumerates all partial computable functions. We write $\overline{A} = \mathbb{N}\setminus A$ for the complement.
+:::
+
+:::intuition
+A decider is a machine with a deadline: it must answer, yes or no, in finite time. A semi-decider has only half a deadline — it must eventually say yes when the answer is yes, and is free to stay silent forever when the answer is no. "Silent forever" is not an answer you can ever observe, which is precisely why semi-decidability is strictly weaker.
+:::
+
+Two constructions make semi-decidability workable in practice, and both recur constantly below. The first is the **stage**, or step-counting, view: $x \in W_e$ if and only if $\varphi_e(x)$ halts within $s$ steps for some $s$, and "does $\varphi_e(x)$ halt within $s$ steps?" is *decidable* — simulate for $s$ steps and look. The second is **dovetailing**: to run infinitely many computations at once, run computation $0$ for one step, then computations $0$ and $1$ for one more step each, then $0,1,2$, and so on. Every individual computation receives unboundedly many steps, so any one that halts is eventually seen to halt.
+
+:::theorem[Complementation characterises decidability]{#complement-theorem}
+A set $A \subseteq \mathbb{N}$ is decidable if and only if both $A$ and $\overline{A}$ are recursively enumerable.
+:::
+
+:::proof
+($\Rightarrow$) Suppose $A$ is decidable, with total machine $D$ computing $\chi_A$. A machine that runs $D$ and then halts if the answer is $1$, and enters a deliberate infinite loop if the answer is $0$, has domain exactly $A$; so $A$ is r.e. Swapping the two branches gives a machine with domain $\overline{A}$, so $\overline{A}$ is r.e.
+
+($\Leftarrow$) Suppose $A = W_i$ and $\overline{A} = W_j$. Build a machine $D$ which, on input $x$, runs the two computations $\varphi_i(x)$ and $\varphi_j(x)$ *in parallel* — formally, for $s = 1, 2, 3, \dots$ it simulates each for $s$ steps and tests the decidable predicates "$\varphi_i(x)$ halts within $s$ steps" and "$\varphi_j(x)$ halts within $s$ steps". It stops at the first $s$ at which one of them holds, outputting $1$ if it was the $i$-computation and $0$ if it was the $j$-computation.
+
+$D$ halts on every input: $x$ lies in exactly one of $A$ and $\overline{A}$, so exactly one of $\varphi_i(x)$, $\varphi_j(x)$ converges, and it converges after some finite number of steps $s_0$; the loop therefore terminates by stage $s_0$. Because exactly one of the two ever converges, no input can trigger both tests, and the output is unambiguous. And $D$ is correct: it outputs $1$ only when $\varphi_i(x)\!\downarrow$, that is $x \in W_i = A$, and $0$ only when $\varphi_j(x)\!\downarrow$, that is $x \in \overline{A}$. So $\chi_A$ is computable and $A$ is decidable.
+:::
+
+The theorem is the workhorse of the chapter in its contrapositive form: *if $A$ is r.e. and not decidable, then $\overline{A}$ is not even r.e.* A single undecidability proof therefore yields two sets' worth of information, and it is how we will know, in the next section, that "$M$ does **not** halt on $w$" is not merely undecidable but not semi-decidable either.
+
+:::theorem[Enumeration characterises r.e.]{#enumeration-theorem}
+A non-empty set $A \subseteq \mathbb{N}$ is r.e. if and only if $A$ is the range of a total computable function. Moreover an infinite set $A$ is decidable if and only if it is the range of a *strictly increasing* total computable function.
+:::
+
+:::proof
+If $A = \operatorname{ran} f$ with $f$ total computable, then the machine that on input $x$ computes $f(0), f(1), f(2), \dots$ and halts at the first $n$ with $f(n) = x$ has domain exactly $A$, so $A$ is r.e.
+
+Conversely let $A = W_e$ be non-empty and fix $a \in A$. Using the decidable stage predicate and the pairing bijection, define
+
+$$f(\langle x, s\rangle) = \begin{cases} x & \text{if } \varphi_e(x) \text{ halts within } s \text{ steps},\\ a & \text{otherwise.}\end{cases}$$
+
+This is total and computable, since the test is decidable and every number is a pair. Its range is contained in $A$, because it outputs only $a$ and values on which $\varphi_e$ halts; and it contains $A$, because any $x \in A$ halts at some stage $s$, whence $x = f(\langle x,s\rangle)$.
+
+For the last claim let $A$ be infinite. If $A = \operatorname{ran} f$ with $f$ strictly increasing, then to test $x$ compute $f(0) < f(1) < \cdots$ until the values exceed $x$, which happens by index $x+1$ since $f(n) \ge f(0) + n$, and check whether $x$ appeared; this always halts, so $A$ is decidable. Conversely if $A$ is infinite and decidable, run the decider on $0,1,2,\dots$ and let $f(n)$ be the $n$-th member found. The search always succeeds because $A$ is infinite, so $f$ is total; it is computable; and it is strictly increasing by construction.
+:::
+
+:::pitfall
+"Recursively enumerable" means listable in *some* order, not in increasing order. The last clause above is exactly that difference: an increasing enumeration lets you stop searching and conclude $x \notin A$, and that extra power is precisely decidability. Many mistaken arguments that the halting set is decidable amount to forgetting this.
+:::
+
+Programs must now become data that other programs can read and write. Two theorems make that legal, and every construction from here to the end of the chapter uses one or both.
+
+:::theorem[Universal machine, or the enumeration theorem]{#universal-machine}
+There is a partial computable function of two arguments, computed by a single machine $U$, with
+
+$$U(e, x) \simeq \varphi_e(x) \quad \text{for all } e, x.$$
+
+Consequently the set $K_0 = \{\langle e,x\rangle : \varphi_e(x)\!\downarrow\}$ is r.e.
+:::
+
+:::proof
+**Sketch**, honest about the one routine but tedious step. On input $(e,x)$, $U$ decodes $e$ into a transition table, writes the start configuration $q_0 x$ on a work tape, and then repeatedly performs the operation "given a configuration and the table, produce its successor configuration". That operation is decidable: it is a bounded search through the finitely many table entries for the one matching the current state and scanned symbol, followed by a local rewrite of the configuration string. $U$ halts exactly when the simulated machine reaches a halting state, and then copies the output; so $U(e,x)\!\downarrow$ if and only if $\varphi_e(x)\!\downarrow$, with the same value. Since $U$ halts exactly on the pairs $\langle e,x\rangle$ with $\varphi_e(x)\!\downarrow$, that set is the domain of a partial computable function and hence r.e.
+
+The step compressed is the bookkeeping: a single tape must hold the table, the simulated tape and a marker for the simulated head, and shifting cells to make room requires care. Theorem *Robustness of the model* lets us carry out the construction on a three-tape machine, where it is immediate, and then convert.
+:::
+
+:::theorem[The $s$-$m$-$n$ theorem]{#smn}
+For all $m, n \ge 1$ there is a *total computable, injective* function $s^m_n$ of $m+1$ arguments such that
+
+$$\varphi_{s^m_n(e,\, y_1,\dots,y_m)}(x_1,\dots,x_n) \simeq \varphi_e(y_1,\dots,y_m, x_1,\dots,x_n)$$
+
+for all $e$ and all arguments, where on each side $\varphi$ denotes the standard listing of partial computable functions of the appropriate arity. In words: fixing some of a program's inputs can be carried out *on the program text*, computably and uniformly.
+:::
+
+:::proof
+**Sketch.** Given $e$ and $\vec y$, the function $s^m_n$ outputs the code of the machine that, on input $\vec x$, first writes the fixed constants $\vec y$ to the left of its input — a preamble of finitely many states depending only on the numerals $\vec y$ — and then runs $M_e$. Building this code is textual splicing: read off the table of $e$, renumber its states to make room, prepend the preamble, and re-encode. Every step is a primitive recursive operation on the code, so $s^m_n$ is total computable, and padding the preamble with unreachable states makes it injective. The displayed equivalence holds because the constructed machine's computation on $\vec x$ is, after the preamble, literally the computation of $M_e$ on $(\vec y, \vec x)$. What is not spelled out here is the encoding-level detail of the renumbering, which depends on the coding fixed in Definition *Encoding and the standard listing*.
+:::
+
+:::intuition
+The $s$-$m$-$n$ theorem is currying, and you have used it whenever you wrote a closure or a partial application. Its content is not that partial application exists but that it is *effective on the code*: there is an algorithm taking a program and some inputs to a new program. That is what licenses a proof to say "let $f$ be the total computable function with $\varphi_{f(x)} = \dots$", which is how every reduction in this chapter is built.
+:::
+
+:::example[Building a program that ignores its input]
+Given $e$, construct — computably in $e$ — an index $g(e)$ with $\varphi_{g(e)}(y) \simeq \varphi_e(e)$ for every $y$: a program that discards its own input and instead runs $M_e$ on $e$.
+:::
+
+:::solution
+Define the partial computable function of two arguments
+
+$$\theta(x, y) \simeq \varphi_x(x),$$
+
+which is partial computable because it is $U(x,x)$ for the universal machine $U$, with $y$ discarded. Fix an index $d$ for $\theta$ as a function of two arguments. By $s$-$m$-$n$ with $m = n = 1$ put
+
+$$g(e) := s^1_1(d, e).$$
+
+Then $g$ is total computable, being the total computable $s^1_1$ with its first argument fixed, and for every $y$
+
+$$\varphi_{g(e)}(y) \simeq \theta(e,y) \simeq \varphi_e(e).$$
+
+So $\varphi_{g(e)}$ is the everywhere-undefined function when $\varphi_e(e)\!\uparrow$, and a constant total function when $\varphi_e(e)\!\downarrow$. This three-line pattern — define the partial function you want, take an index for it, apply $s$-$m$-$n$ — is the engine of every reduction in the following sections and of the proof of Rice's theorem. □
+:::
+
+:::proposition[Closure properties]{#closure-properties}
+The decidable sets are closed under complement, union and intersection. The r.e. sets are closed under union and intersection, but **not** under complement.
+:::
+
+:::proof
+For decidable sets, run the deciders and combine their answers with $\lnot, \lor, \land$; all deciders are total, so the combination halts on every input.
+
+For r.e. sets $A = W_i$ and $B = W_j$: for the intersection, run $\varphi_i(x)$ and then $\varphi_j(x)$ in sequence and halt only if both halt, which gives domain $A \cap B$. For the union, run the two in parallel by stages exactly as in the proof of Theorem *Complementation characterises decidability* and halt as soon as either halts, giving domain $A \cup B$. Failure of closure under complement follows from Theorem *Complementation characterises decidability* together with the existence, proved in the next section, of an r.e. set that is not decidable: were the r.e. sets closed under complement, every r.e. set would have r.e. complement and hence be decidable.
+:::
+
+## The Halting Problem and Diagonalisation
 
 <!-- section: halting -->
 
+Everything so far has been machinery. This section spends it, producing a concrete, completely natural set that no algorithm decides.
+
 :::definition[The halting problem]{#halting-problem}
-The **halting problem** asks: given (a description of) a Turing machine $M$ and input $w$, does $M$ halt on $w$?
+The **halting problem** is the set
+
+$$K_0 = \{\langle e, x\rangle : \varphi_e(x)\!\downarrow\},$$
+
+"does program $e$ halt on input $x$?". Its diagonal version is
+
+$$K = \{e : \varphi_e(e)\!\downarrow\},$$
+
+the set of programs that halt when run on their own code. $K$ is also written $\emptyset'$ and called the **halting set**.
 :::
+
+Both sets are r.e.: by Theorem *Universal machine, or the enumeration theorem*, $K_0$ is the domain of $U$, and $K$ is the domain of $x \mapsto U(x,x)$. So halting is semi-decidable — run the machine and say yes if it stops. What cannot be done is to ever say no.
 
 :::theorem[Undecidability of the halting problem]{#halting-undecidable}
-The halting problem is undecidable: no Turing machine can, for *every* pair $(M,w)$, halt with the correct yes/no answer.
+$K$ is not decidable, and neither is $K_0$. Hence there is no algorithm which, given a program and an input, always halts and correctly reports whether that program halts on that input.
 :::
-
-It is still *semi-decidable* — you can just simulate $M$ on $w$ and answer "yes" if it stops — but that procedure never gives a definite "no".
 
 :::proof
-By contradiction (diagonalization). Suppose a **total** decider $H$ exists: $H(M,w)$ always halts, outputting "halts" if $M$ halts on $w$ and "loops" otherwise. Build a machine $D$ that takes a single machine description $M$ and does the following:
+Suppose $K$ were decidable. Then the partial function
 
-1. run $H(M,M)$ (ask whether $M$ halts when given its own code as input);
-2. if $H$ answers "halts", then $D$ deliberately enters an infinite loop;
-3. if $H$ answers "loops", then $D$ halts immediately.
+$$g(x) \simeq \begin{cases} 0 & \text{if } x \notin K,\\ \text{undefined} & \text{if } x \in K\end{cases}$$
 
-Now feed $D$ its own description and ask: does $D$ halt on input $D$? If $D$ **halts** on $D$, then step 1 computed $H(D,D)=$ "halts", so by step 2 $D$ loops — contradiction. If $D$ **loops** on $D$, then $H(D,D)=$ "loops", so by step 3 $D$ halts — contradiction.
+would be partial computable: run the assumed total decider for $K$ on $x$, output $0$ if it says "no", and enter a deliberate infinite loop if it says "yes". Being partial computable, $g = \varphi_i$ for some index $i$. Now ask whether $i \in K$:
 
-Either way we reach a contradiction, so the assumed decider $H$ cannot exist. The one assumption we made was that $H$ is total and correct, so *that* is what fails.
+$$i \in K \iff \varphi_i(i)\!\downarrow \iff g(i)\!\downarrow \iff i \notin K,$$
+
+where the first equivalence is the definition of $K$, the second is $g = \varphi_i$, and the third is the definition of $g$. This is a contradiction, so no decider for $K$ exists.
+
+For $K_0$: a decider for $K_0$ would decide $K$, since $x \in K \iff \langle x,x\rangle \in K_0$ and $x \mapsto \langle x,x\rangle$ is computable. So $K_0$ is undecidable too.
 :::
-
-Many other problems reduce to halting and are therefore undecidable: "does this program ever print 0?", "does this program halt on empty input?", validity in FOL, etc.
 
 :::intuition
-There is no general-purpose debugger that, given any program and any input, can always tell you in finite time whether that program will eventually stop or run forever on that input.
-
-The proof is by diagonalization — the same technique used to show the reals are uncountable.
+The argument is Cantor's diagonal argument wearing different clothes. Lay out the infinite table whose $(i,x)$ entry records whether $\varphi_i(x)$ halts. A decider for $K$ would let us compute the diagonal of that table, and $g$ is built to *disagree with the diagonal at every point*: it halts exactly where the diagonal says "does not halt". But $g$ is itself one of the rows, say row $i$, and a row cannot differ from the diagonal at its own position. Cantor built a real not in the list; Turing built a program not in the list of programs, which is impossible, so the assumed decider is what fails.
 :::
 
-:::example
-Claim: the **empty-tape halting problem** — "given the code of a TM $M$, does $M$ halt when started on a blank tape?" — is undecidable. We prove it by **reduction** from the general halting problem: we show that a decider for the empty-tape version could be turned into a decider for the general version, which we just proved impossible.
+:::corollary[The complement of $K$ is not even r.e.]{#k-complement}
+$\overline{K} = \{e : \varphi_e(e)\!\uparrow\}$ is not recursively enumerable. Likewise $\overline{K_0}$, the set of pairs $\langle e,x\rangle$ such that $M_e$ runs forever on $x$, is not r.e.
+:::
+
+:::proof
+$K$ is r.e. and, by Theorem *Undecidability of the halting problem*, not decidable. If $\overline{K}$ were r.e. as well, Theorem *Complementation characterises decidability* would make $K$ decidable. The same argument applies to $K_0$.
+:::
+
+So the two halves of the halting question are not symmetric. "This program halts" is confirmable in finite time whenever it is true; "this program never halts" is not confirmable even in principle by any uniform procedure, which is why non-termination proofs are always specific to the program at hand.
+
+:::pitfall
+Undecidability of halting is not the claim that no program's behaviour can ever be determined. For any *particular* program you may well have a proof that it halts — the successor machine above halts in $n+1$ steps, and that is a theorem. The undecidable object is the *uniform* question, one algorithm answering for all pairs. Likewise, undecidability says nothing about approximations: compilers, termination checkers and static analysers are sound but incomplete, answering "halts", "loops", or "don't know", and that third option is exactly what makes them possible.
+:::
+
+:::example[Halting on the empty input]
+Show that $\mathrm{HALT}_\varepsilon = \{e : \varphi_e(0)\!\downarrow\}$ — "does this program halt on the fixed input $0$?" — is undecidable, even though the input is no longer a parameter.
 :::
 
 :::solution
-Given an arbitrary pair $(M, w)$, effectively construct a new machine $M'$ (with $w$ hard-coded into its transition table) that ignores whatever is on its tape and does this:
+Use Example *Building a program that ignores its input*: the total computable $g$ there satisfies $\varphi_{g(e)}(y) \simeq \varphi_e(e)$ for every $y$. In particular
 
-erase the tape and write the fixed string $w$ on it;
-run $M$ from that configuration.
+$$\varphi_{g(e)}(0)\!\downarrow \iff \varphi_e(e)\!\downarrow \iff e \in K .$$
 
-Two facts to verify:
+Suppose $\mathrm{HALT}_\varepsilon$ had a total decider $E$. Then $x \mapsto E(g(x))$ is total computable and decides $K$: it answers yes exactly when $\varphi_{g(x)}(0)\!\downarrow$, that is, exactly when $x \in K$. This contradicts Theorem *Undecidability of the halting problem*, so no such $E$ exists.
 
-**$M'$ on the empty tape does exactly what $M$ does on $w$.** Its first action recreates the input $w$, then it behaves as $M$. So $M'$ halts on the empty tape $\iff$ $M$ halts on $w$.
-**The map $(M,w) \mapsto M'$ is itself computable** — it just splices a fixed "write $w$" preamble in front of $M$.
-
-Now suppose, for contradiction, a decider $E$ for empty-tape halting existed. Then to decide whether arbitrary $M$ halts on arbitrary $w$, build $M'$ and return $E(M')$. By the first bullet this answer is correct, so we would have decided the general halting problem — contradicting Turing's theorem. Hence no such $E$ exists.
-
-Sanity check on the reduction direction: we reduced the *known-undecidable* problem (general halting) *to* the target problem (empty-tape halting), which is the correct direction to conclude the target is undecidable. Reducing the other way would prove nothing.
+Note the direction, which is the whole content of the argument: we turned a decider for the *target* problem into a decider for the *known-undecidable* one. Building a decider for the halting problem out of a decider for $\mathrm{HALT}_\varepsilon$ would prove nothing about $\mathrm{HALT}_\varepsilon$ at all. □
 :::
 
-## Rice's Theorem and Decidable vs. Undecidable Properties
+Undecidability also has a quantitative shadow: a function that is perfectly well defined and grows faster than every computable function.
+
+:::definition[The busy beaver function]{#busy-beaver}
+For $n \ge 1$ let $\mathrm{BB}(n)$ be the largest number of $1$s that any $n$-state, two-symbol Turing machine can leave on an initially blank tape before halting, the maximum being taken over the finitely many such machines that do halt.
+:::
+
+:::theorem[Busy beaver is not computable]{#bb-uncomputable}
+$\mathrm{BB}$ is not computable. Indeed $\mathrm{BB}$ eventually exceeds every computable function: for every computable $f : \mathbb{N}\to\mathbb{N}$ there is an $N$ with $\mathrm{BB}(n) > f(n)$ for all $n \ge N$.
+:::
+
+:::proof
+Suppose $\mathrm{BB}$ were computable, and let $S(n)$ be the maximum number of *steps* taken by a halting $n$-state machine on the blank tape; the same argument applies to either, and $S$ is computable if $\mathrm{BB}$ is, since one may run each halting machine to completion once its output length is known to be bounded. Then halting on the blank tape becomes decidable: given an $n$-state machine, simulate it for $S(n)$ steps, and if it has not halted by then it never will, because $S(n)$ bounds the running time of every halting $n$-state machine. This contradicts the undecidability of blank-tape halting, which follows from Example *Halting on the empty input* by translating "input $0$" into "blank tape" — a fixed change of encoding.
+
+For the growth claim, let $f$ be computable and consider $F(n) = \max_{i \le n} f(i) + n + 1$, which is computable, total and non-decreasing. There is a fixed machine of some size $c$ computing $F$, so an $n$-state machine can be built, for suitable small overhead, that writes $n$ in unary and then runs it; this puts $F(n)$ ones on the tape using $n + c$ states, whence $\mathrm{BB}(n + c) \ge F(n) > f(n)$. Since $\mathrm{BB}$ is non-decreasing in $n$, this forces $\mathrm{BB}$ past $f$ from some point on.
+:::
+
+:::example[The known busy beaver values]
+The values of $\mathrm{BB}(n)$ for small $n$ are $\mathrm{BB}(1) = 1$, $\mathrm{BB}(2) = 4$, $\mathrm{BB}(3) = 6$, $\mathrm{BB}(4) = 13$, and $\mathrm{BB}(5) = 4098$. Explain why the sequence stops there.
+:::
+
+:::solution
+For each fixed $n$ there are only finitely many $n$-state two-symbol machines — about $(4n+4)^{2n}$ of them — so $\mathrm{BB}(n)$ is a perfectly well-defined natural number, and in principle each value is found by examining a finite list. What is not finite is the work of deciding, for each machine on that list, whether it halts at all: a machine that has not halted after a trillion steps might still halt, and no uniform test can tell. Determining $\mathrm{BB}(5)$ required resolving the behaviour of every hold-out machine individually, and $\mathrm{BB}(6)$ is known to exceed $10 \uparrow\uparrow 15$, a tower of exponentials, so it will never be pinned down by simulation.
+
+This is Theorem *Busy beaver is not computable* seen from ground level: the difficulty is not that the values are large, but that no single algorithm produces them, so each new value demands a new mathematical argument. □
+:::
+
+:::remark[What undecidability spread to]{#undecidable-catalogue}
+Many problems far from machine theory are undecidable, each by a reduction from halting: validity in first-order logic (the *Entscheidungsproblem*, Church and Turing 1936); whether a Diophantine equation has an integer solution (Hilbert's tenth problem, by the MRDP theorem); whether two context-free grammars generate the same language; whether a set of Wang tiles tiles the plane; and the word problem for finitely presented groups. The pattern is always the same: encode the computation history of a machine as an object of the target kind, so that a decision procedure for the target would read off whether the machine halts.
+:::
+
+## Reductions: Transporting Undecidability
+
+<!-- section: reductions -->
+
+One undecidable set is enough, provided there is a disciplined way to carry its undecidability elsewhere. That way is reduction, and formalising it turns a collection of ad-hoc contradiction arguments into a single lemma applied over and over.
+
+:::definition[Many-one reducibility]{#many-one}
+Let $A, B \subseteq \mathbb{N}$. Then $A$ is **many-one reducible** to $B$, written $A \le_m B$, if there is a *total computable* $f$ with
+
+$$x \in A \iff f(x) \in B \quad \text{for all } x \in \mathbb{N}.$$
+
+If in addition $f$ is injective the reduction is **one-one**, written $A \le_1 B$. Sets with $A \le_m B$ and $B \le_m A$ are **many-one equivalent**, $A \equiv_m B$.
+:::
+
+:::intuition
+Read $A \le_m B$ as "$A$ is no harder than $B$": questions about $A$ can be rephrased, by a fixed algorithm, as questions about $B$. The function $f$ does no deciding — it is total, so it always returns, and it never learns the answer. It only translates. All the difficulty stays in $B$.
+:::
+
+:::theorem[Reduction transfers decidability and enumerability]{#reduction-transfer}
+Suppose $A \le_m B$. Then:
+
+1. if $B$ is decidable, so is $A$;
+2. if $B$ is r.e., so is $A$;
+3. contrapositively, if $A$ is undecidable then so is $B$, and if $A$ is not r.e. then neither is $B$.
+:::
+
+:::proof
+Let $f$ be total computable with $x \in A \iff f(x)\in B$.
+
+(1) If $D$ is a total decider for $B$, then $x \mapsto D(f(x))$ is total — both $f$ and $D$ halt on every input — and outputs $1$ exactly when $f(x)\in B$, that is exactly when $x \in A$. So it decides $A$.
+
+(2) If $B = W_j$, consider the machine that on input $x$ computes $f(x)$ and then runs $\varphi_j$ on it. It halts iff $\varphi_j(f(x))\!\downarrow$ iff $f(x)\in B$ iff $x \in A$, so its domain is $A$ and $A$ is r.e.
+
+(3) is the contrapositive of (1) and (2).
+:::
+
+:::pitfall
+The direction is the entire content, and reversing it proves nothing. To show a target $B$ is undecidable you must reduce a *known-undecidable* $A$ **to** $B$: $A \le_m B$, translating questions about halting into questions about $B$. Writing $B \le_m A$ instead shows only that $B$ is no harder than something hard, which is vacuous. A quick check: the reduction must start from an arbitrary instance of the hard problem and produce an instance of the target.
+:::
+
+:::recipe[Proving a set $B$ undecidable by reduction]{#reduction-recipe}
+1. Choose a known-undecidable source, almost always $K$.
+2. Describe, in plain algorithmic language, a program $P_x$ built from the arbitrary input $x$, whose *behaviour* encodes whether $x \in K$: typically "on any input $y$, first simulate $\varphi_x(x)$, and only if that halts do the thing that puts $P_x$ into $B$".
+3. Invoke the $s$-$m$-$n$ theorem to make $x \mapsto \lceil P_x \rceil$ a *total computable* function $f$. This is the step that makes the construction legitimate rather than merely plausible; the definition of $\le_m$ requires $f$ to be total and computable, never partial.
+4. Verify **both** directions: $x \in K \Rightarrow f(x) \in B$, and $x \notin K \Rightarrow f(x) \notin B$. The second is where sloppy constructions fail, because a machine that "does nothing" must genuinely land outside $B$.
+5. Conclude $K \le_m B$, so $B$ is undecidable by Theorem *Reduction transfers decidability and enumerability*.
+:::
+
+:::example[The non-emptiness problem]
+Let $\mathrm{NE} = \{e : W_e \neq \varnothing\}$, the set of programs that halt on at least one input. Prove $K \le_m \mathrm{NE}$, and deduce that $\mathrm{NE}$ is undecidable.
+:::
+
+:::solution
+Follow the recipe. Define the partial computable function of two arguments $\theta(x,y) \simeq \varphi_x(x)$, take an index $d$ for it, and set $f(x) = s^1_1(d,x)$, which is total computable by the $s$-$m$-$n$ theorem. Then $\varphi_{f(x)}(y) \simeq \varphi_x(x)$ for all $y$, so
+
+$$W_{f(x)} = \begin{cases}\mathbb{N} & \text{if } x \in K,\\ \varnothing & \text{if } x \notin K.\end{cases}$$
+
+Both directions are immediate from this: if $x \in K$ then $W_{f(x)} = \mathbb{N} \neq \varnothing$, so $f(x) \in \mathrm{NE}$; and if $x \notin K$ then the inner simulation never halts, so $\varphi_{f(x)}$ is defined nowhere, $W_{f(x)} = \varnothing$, and $f(x)\notin\mathrm{NE}$. Hence $K \le_m \mathrm{NE}$ and $\mathrm{NE}$ is undecidable.
+
+Note that $\mathrm{NE}$ *is* r.e.: dovetail the computations $\varphi_e(0), \varphi_e(1), \dots$ and halt if any of them halts. So $\mathrm{NE}$ is another r.e. undecidable set, and by Theorem *Complementation characterises decidability* its complement — "this program halts on no input" — is not r.e. □
+:::
+
+:::example[Totality is not even r.e.]
+Let $\mathrm{TOT} = \{e : \varphi_e \text{ is total}\}$. Show $K \le_m \mathrm{TOT}$, so $\mathrm{TOT}$ is undecidable, and show in addition that $\mathrm{TOT}$ is not r.e.
+:::
+
+:::solution
+The same $f$ works: $\varphi_{f(x)}$ is the constant function on all of $\mathbb{N}$ when $x \in K$, hence total, and the empty function when $x \notin K$, hence not total. So $K \le_m \mathrm{TOT}$ and $\mathrm{TOT}$ is undecidable.
+
+For the stronger claim, reduce $\overline{K}$ instead. Define $\psi(x,y)$ to be $0$ if $\varphi_x(x)$ does **not** halt within $y$ steps, and undefined otherwise — a legitimate partial computable function, since the step test is decidable, and one whose domain is an initial segment of $\mathbb{N}$. By $s$-$m$-$n$ get a total computable $h$ with $\varphi_{h(x)}(y) \simeq \psi(x,y)$. If $x \notin K$ then $\varphi_x(x)$ halts within no number of steps, so $\varphi_{h(x)}(y) = 0$ for every $y$ and $h(x)\in\mathrm{TOT}$. If $x \in K$, say $\varphi_x(x)$ halts in exactly $s$ steps, then $\varphi_{h(x)}(y)$ is undefined for all $y \ge s$, so $h(x)\notin\mathrm{TOT}$. Hence $\overline{K} \le_m \mathrm{TOT}$, and since $\overline{K}$ is not r.e. by Corollary *The complement of $K$ is not even r.e.*, Theorem *Reduction transfers decidability and enumerability* shows $\mathrm{TOT}$ is not r.e. either. □
+:::
+
+Reduction also organises the r.e. sets into a hierarchy with a top.
+
+:::definition[$m$-completeness]{#m-complete}
+A set $B$ is **$m$-complete for the r.e. sets** if $B$ is r.e. and $A \le_m B$ for every r.e. $A$.
+:::
+
+:::theorem[$K$ is $m$-complete]{#k-complete}
+$K$ is r.e., and $A \le_m K$ for every r.e. set $A$. Hence $K$ is $m$-complete, and so is $K_0$.
+:::
+
+:::proof
+$K$ is r.e. as noted above. Let $A = W_i$ be r.e. Define the partial computable function of two arguments
+
+$$\theta(x, y) \simeq \varphi_i(x),$$
+
+which ignores $y$, and fix an index $d$ for it. By $s$-$m$-$n$, $f(x) = s^1_1(d, x)$ is total computable and satisfies $\varphi_{f(x)}(y)\simeq \varphi_i(x)$ for all $y$. In particular, taking $y = f(x)$,
+
+$$f(x) \in K \iff \varphi_{f(x)}(f(x))\!\downarrow \iff \varphi_i(x)\!\downarrow \iff x \in A .$$
+
+So $f$ is a many-one reduction of $A$ to $K$. Since $K \le_m K_0$ via $x\mapsto\langle x,x\rangle$, and $K_0$ is r.e., $K_0$ is $m$-complete as well.
+:::
+
+:::corollary[Undecidability by completeness]
+Every $m$-complete set is undecidable, since $K$ is undecidable and reduces to it. Conversely, exhibiting a reduction $K \le_m B$ for an r.e. $B$ shows $B$ is exactly as hard as the halting problem, not merely at least as hard.
+:::
+
+Many-one reduction is not the only notion of relative difficulty, and it is deliberately restrictive: the translating function may consult $B$ only once, at the very end, and must accept its verdict unchanged. Allowing unrestricted use gives the coarser notion that governs the rest of the chapter.
+
+:::definition[Oracle machines and Turing reducibility]{#turing-reducibility}
+An **oracle machine** with oracle $B \subseteq \mathbb{N}$ is a Turing machine with an extra instruction "is $n \in B$?", answered in one step and correctly. Write $\Phi^B_e$ for the partial function computed by the $e$-th oracle machine with oracle $B$.
+
+$A$ is **Turing reducible** to $B$, written $A \le_T B$, if $\chi_A = \Phi^B_e$ for some $e$ — that is, $A$ is decidable by an algorithm allowed to ask membership questions about $B$. If $A \le_T B$ and $B \le_T A$, the sets are **Turing equivalent**, $A \equiv_T B$.
+:::
+
+:::proposition[Many-one is strictly finer than Turing]{#m-versus-t}
+$A \le_m B$ implies $A \le_T B$, and $A \le_T B$ implies $\overline{A} \le_T B$. The converse of the first implication fails: $\overline{K} \le_T K$ but $\overline{K} \not\le_m K$.
+:::
+
+:::proof
+If $f$ reduces $A$ to $B$ many-one, an oracle machine computes $f(x)$, asks the oracle whether $f(x)\in B$, and returns the answer; so $A \le_T B$. For the second claim, negate the output of the oracle machine deciding $A$ — a decision procedure can always be complemented, which is exactly what a semi-decision procedure cannot do.
+
+$\overline{K}\le_T K$: with oracle $K$ we decide $x\in K$ and return the opposite answer. But $\overline{K}\not\le_m K$: a many-one reduction $f$ of $\overline{K}$ to $K$ would make $\overline{K}$ r.e. by Theorem *Reduction transfers decidability and enumerability*, since $K$ is r.e., contradicting Corollary *The complement of $K$ is not even r.e.*
+:::
+
+:::remark
+The asymmetry in that last proof is worth naming. Many-one reducibility respects the difference between "yes" and "no": it cannot flip an answer, so it can distinguish $K$ from $\overline{K}$. Turing reducibility identifies them, because a decision procedure may negate its answer freely. That is why $\le_m$ is the right tool for statements about r.e. sets and $\le_T$ is the right tool for measuring absolute information content, which is the subject of the final section.
+:::
+
+## Rice's Theorem and the Recursion Theorem
 
 <!-- section: rice -->
 
+The reductions of the last section were each built by hand, and each looked much like the last. Rice's theorem explains why: *every* question about what a program computes, as opposed to how it is written, is undecidable unless it is trivial. It is the one theorem in the chapter that closes a whole class of questions at once.
+
+:::definition[Index set]{#index-set}
+A set $P \subseteq \mathbb{N}$ is an **index set** if membership depends only on the function computed:
+
+$$\varphi_i = \varphi_j \;\Longrightarrow\; \bigl(i \in P \iff j \in P\bigr).$$
+
+Equivalently, $P = \{e : \varphi_e \in \mathcal{C}\}$ for some class $\mathcal{C}$ of partial computable functions. An index set is **trivial** if it is $\varnothing$ or $\mathbb{N}$.
+:::
+
+Index sets are exactly the *semantic* properties: they cannot distinguish two programs that behave identically, however differently they are written. A property like "the code of $M$ has an even number of states" is not an index set, since padding a machine changes the state count without changing its function.
+
 :::theorem[Rice's theorem]{#rice-theorem}
-Any non-trivial **semantic** property of the language recognized (or partial function computed) by Turing machines is undecidable.
+Every non-trivial index set is undecidable. Equivalently: if $\mathcal{C}$ is a class of partial computable functions that is neither empty nor all of them, then $\{e : \varphi_e \in \mathcal{C}\}$ is undecidable.
 :::
 
-Two conditions must both hold for the theorem to apply:
+:::proof
+Let $P$ be a non-trivial index set. Let $\mathbf{0}$ denote the everywhere-undefined function, and let $e_\varnothing$ be an index for it (the machine that loops immediately on every input).
 
-- **Semantic** (a property of *behavior*): whether a machine has the property depends only on the language it recognizes / function it computes, not on how its code is written. Formally, if $M_1$ and $M_2$ compute the same function, they must both have the property or both lack it. Equivalently, the set of machine codes with the property is an **index set**.
-- **Non-trivial:** there is at least one TM with the property *and* at least one without. The two properties the theorem does **not** cover are the two trivial ones — "true of every machine" and "true of no machine" — which are decidable (always answer yes, or always answer no).
+**Case 1: $e_\varnothing \notin P$.** Since $P \neq \varnothing$, choose $e_1 \in P$, so $\varphi_{e_1}$ is some partial computable function in the class. Define the partial function of two arguments
 
-Syntactic properties (about the finite code itself) fall outside the theorem's scope and may well be decidable — Rice says nothing about them.
+$$\theta(x,y) \simeq \begin{cases} \varphi_{e_1}(y) & \text{if } \varphi_x(x)\!\downarrow,\\ \text{undefined} & \text{otherwise,}\end{cases}$$
 
-:::corollary[Undecidable behavioural questions]
-Each of the following is undecidable: "does the TM accept the empty string?", "does it accept any string?", "is the language finite?", "is the function computed total?", "does it ever output 42?".
+realised by the algorithm: on input $(x,y)$, first simulate $\varphi_x(x)$ using the universal machine; if and when that halts, simulate $\varphi_{e_1}(y)$ and return its value. This is partial computable, so it has an index $d$, and by the $s$-$m$-$n$ theorem there is a total computable $f$ with $\varphi_{f(x)}(y) \simeq \theta(x,y)$ for all $x,y$.
+
+Check both directions. If $x \in K$ then $\varphi_x(x)\!\downarrow$, so the first simulation always completes and $\varphi_{f(x)}(y) \simeq \varphi_{e_1}(y)$ for every $y$; that is, $\varphi_{f(x)} = \varphi_{e_1}$. As $P$ is an index set and $e_1 \in P$, we get $f(x)\in P$. If $x \notin K$ then $\varphi_x(x)\!\uparrow$, so the first simulation never completes and $\varphi_{f(x)}(y)$ is undefined for every $y$; that is, $\varphi_{f(x)} = \mathbf{0} = \varphi_{e_\varnothing}$. As $P$ is an index set and $e_\varnothing\notin P$, we get $f(x)\notin P$.
+
+So $x \in K \iff f(x) \in P$, i.e. $K \le_m P$, and by Theorem *Reduction transfers decidability and enumerability* together with Theorem *Undecidability of the halting problem*, $P$ is undecidable.
+
+**Case 2: $e_\varnothing \in P$.** Then $e_\varnothing \notin \overline{P}$, and $\overline{P}$ is again an index set — the defining implication is preserved under complement — and again non-trivial, since $P \neq \mathbb{N}$ gives $\overline{P}\neq\varnothing$ and $P \neq \varnothing$ gives $\overline{P}\neq\mathbb{N}$. Case 1 applies to $\overline{P}$, so $\overline{P}$ is undecidable; and a set is decidable exactly when its complement is, by Proposition *Closure properties*. Hence $P$ is undecidable.
+
+Both cases are covered, since $e_\varnothing$ either does or does not belong to $P$.
 :::
-
-Properties that *are* decidable are usually syntactic (about the code of the machine itself, not its behavior).
 
 :::intuition
-If you ask a question that is really about *what the program does* (its input-output behavior) rather than how it is written on the page, and the question is interesting (sometimes yes, sometimes no), then there is no algorithm that answers it correctly for every possible program.
-
-"Does this program contain the word 'while'?" is syntactic and decidable. "Does this program contain an infinite loop?" is behavioral and undecidable.
+Read the construction as a *behaviour swap*. The program $f(x)$ is built so that its behaviour is $\varphi_{e_1}$ — a behaviour inside the property — when $\varphi_x(x)$ halts, and no behaviour at all when it does not. Any decider for the property would therefore be reporting, in disguise, whether $\varphi_x(x)$ halts. Nothing about the property was used except that *some* program has it and *some* program does not; that is why the theorem is so sweeping, and also why triviality is the only escape.
 :::
 
-:::example
-Take the property $P$ = "the TM accepts at least one string" (equivalently, its language is non-empty). Check the hypotheses of Rice's theorem, then confirm with a direct reduction.
+:::corollary[A catalogue of undecidable questions]{#rice-catalogue}
+Each of the following is an undecidable property of a given program $e$, because each defines a non-trivial index set: $\varphi_e$ is total; $W_e$ is empty; $W_e$ is finite; $W_e$ is infinite; $W_e = \mathbb{N}$; $\varphi_e(0) = 42$; $\varphi_e$ is a constant function; $W_e$ is decidable; $\varphi_e$ agrees with a fixed partial computable function $\psi$.
+:::
+
+:::pitfall
+Rice's theorem applies only to index sets, and to *non-trivial* ones. Three common misapplications:
+
+- "Does $M$ halt on the empty tape within $100$ steps?" is decidable — simulate for $100$ steps. It is not an index set, because two machines computing the same function can differ in speed.
+- "Does the code of $M$ contain more than seven states?" is decidable by inspection; again not an index set, by padding.
+- "Is $\varphi_e$ partial computable?" is trivially true of every $e$, so the index set is $\mathbb{N}$ and the question is decidable — the answer is always yes.
+
+Rice also does not say the property is *non-r.e.* Some non-trivial index sets are r.e. ($\mathrm{NE}$, from the previous section, is) and some are not ($\mathrm{TOT}$ is not). Undecidable and non-r.e. are different claims, and Rice gives only the first.
+:::
+
+:::theorem[Rice-Shapiro, which r.e. index sets look like]{#rice-shapiro}
+Let $\mathcal{C}$ be a class of partial computable functions such that $P = \{e : \varphi_e \in \mathcal{C}\}$ is r.e. Then for every partial computable $\psi$,
+
+$$\psi \in \mathcal{C} \iff \text{some finite sub-function } \sigma \subseteq \psi \text{ lies in } \mathcal{C}.$$
+
+In words: an r.e. semantic property must be decided by a *finite amount* of the function's behaviour, and must be preserved when more behaviour is added.
+:::
+
+:::proof
+**Sketch**, giving the easy direction in full and the idea of the other. If some finite $\sigma\subseteq\psi$ lies in $\mathcal{C}$, then the "monotone" half asserts $\psi\in\mathcal{C}$; this half is proved by a reduction from $\overline{K}$ of the same shape as in the $\mathrm{TOT}$ example, using a machine that computes $\sigma$ and then extends it to $\psi$ only while $\varphi_x(x)$ has not yet halted. If no finite sub-function of $\psi$ lies in $\mathcal{C}$ but $\psi$ does, a symmetric construction reduces $\overline{K}$ to $P$, contradicting that $P$ is r.e. The compressed step in both halves is the verification that the approximating machines are uniformly constructible, which is $s$-$m$-$n$ applied exactly as in the proof of Rice's theorem.
+
+The theorem immediately explains the catalogue above: "$\varphi_e$ is total" fails the finiteness condition, since no finite sub-function is total, so $\mathrm{TOT}$ is not r.e. — recovering by a general principle what the previous section proved by hand.
+:::
+
+Rice's theorem was proved by reduction. There is a second route to it, through a theorem about self-reference which is worth having in its own right: it is the formal statement that a program can be given access to its own code.
+
+:::theorem[Kleene's recursion theorem]{#recursion-theorem}
+For every total computable $f$ there is an $n$ with
+
+$$\varphi_n = \varphi_{f(n)} .$$
+
+Such an $n$ is called a **fixed point** of $f$. In the stronger *parametrised* form: for every partial computable $\psi(x,y)$ there is an $n$ with $\varphi_n(y) \simeq \psi(n, y)$ for all $y$ — a program may use its own index.
+:::
+
+:::proof
+**Sketch**, complete in structure with one routine $s$-$m$-$n$ step left implicit. Define a partial computable function of two arguments by
+
+$$\theta(x, y) \simeq \varphi_{\varphi_x(x)}(y),$$
+
+meaning: compute $\varphi_x(x)$; if it converges to a value $v$, run $\varphi_v(y)$. By $s$-$m$-$n$ there is a total computable $g$ with $\varphi_{g(x)}(y)\simeq\theta(x,y)$, so $\varphi_{g(x)} = \varphi_{\varphi_x(x)}$ whenever $\varphi_x(x)\!\downarrow$. Now let $f$ be total computable and let $v$ be an index for the total computable composition $f \circ g$, so $\varphi_v(x) = f(g(x))$ for all $x$, and put $n = g(v)$. Then
+
+$$\varphi_n = \varphi_{g(v)} = \varphi_{\varphi_v(v)} = \varphi_{f(g(v))} = \varphi_{f(n)},$$
+
+where the second equality uses the displayed property of $g$ at $x = v$, legitimate because $\varphi_v(v) = f(g(v))$ is defined. The implicit step is the construction of $g$ itself, which is the same splicing argument as in Theorem *The $s$-$m$-$n$ theorem*.
+:::
+
+:::intuition
+The recursion theorem is the reason self-referential programs are not paradoxical but routine. A *quine* — a program that prints its own source — is the fixed point of the function "given a program $p$, return the program that prints $p$". Recursive definitions in programming languages are the same phenomenon: `let rec` is a fixed-point operator, and the theorem says the fixed point always exists and is computable. The diagonalisation of the halting proof and the self-application here are the same manoeuvre used with opposite intent — there to derive a contradiction, here to construct an object.
+:::
+
+:::example[Rice's theorem again, from the recursion theorem]
+Derive Rice's theorem from Theorem *Kleene's recursion theorem* instead of from a reduction.
 :::
 
 :::solution
-**Semantic?** Yes: whether $L(M)\neq\varnothing$ depends only on the language $L(M)$, not on how $M$ is coded. So $P$ is an index set.
-**Non-trivial?** Yes: a machine that accepts every string has $P$; a machine that rejects every string does not. So some machines are in, some are out.
+Let $P$ be a non-trivial index set and suppose it were decidable, with total decider $D$. Non-triviality gives indices $a \in P$ and $b \notin P$. Define
 
-Both hypotheses hold, so Rice's theorem immediately gives: $P$ is undecidable. To *see why* concretely, reduce the (empty-tape) halting problem to $P$. Given a machine $M$, build $M'$ that on **any** input $x$ ignores $x$, simulates $M$ on the empty tape, and accepts $x$ only if that simulation halts:
+$$f(x) = \begin{cases} b & \text{if } D(x) = 1 \text{, i.e. } x \in P,\\ a & \text{if } D(x) = 0 \text{, i.e. } x \notin P.\end{cases}$$
 
-If $M$ halts on the empty tape, then $M'$ accepts every $x$, so $L(M') = \Sigma^* \neq \varnothing$: $M'$ has property $P$.
-If $M$ loops on the empty tape, then $M'$ never accepts anything, so $L(M') = \varnothing$: $M'$ lacks property $P$.
+Since $D$ is total and computable, so is $f$. By the recursion theorem $f$ has a fixed point $n$ with $\varphi_n = \varphi_{f(n)}$, and since $P$ is an index set this gives $n \in P \iff f(n)\in P$.
 
-The construction $M \mapsto M'$ is effective, so a decider for $P$ would decide empty-tape halting — impossible. Sanity check: the reduction bundles the *undecidable* halting behavior into the *non-emptiness* of $L(M')$, exactly matching the two truth-values of $P$, so a $P$-oracle would leak the halting answer.
+But $f$ was built to violate exactly that: if $n \in P$ then $f(n) = b \notin P$, and if $n \notin P$ then $f(n) = a \in P$. Both cases contradict the displayed equivalence, so $D$ cannot exist.
+
+The two proofs differ in flavour: the reduction proof shows *how hard* $P$ is, yielding $K \le_m P$, whereas this one shows only that $P$ is undecidable — but it does so in six lines, and it never mentions the halting problem. □
+:::
+
+## The Arithmetical Hierarchy and Turing Degrees
+
+<!-- section: hierarchy-degrees -->
+
+Undecidability is not a single condition. $\overline{K}$ is harder than $K$ in a precise sense, $\mathrm{TOT}$ is harder than both, and there is an unbounded ladder above them. Two measuring instruments make this precise: a *syntactic* one counting quantifier alternations, and a *computational* one counting oracles.
+
+:::definition[The arithmetical hierarchy]{#arithmetical-hierarchy}
+A relation is $\Sigma^0_0 = \Pi^0_0 = \Delta^0_0$ if it is definable by a formula of arithmetic all of whose quantifiers are **bounded**, of the form $(\forall i < t)$ or $(\exists i < t)$; every such relation is decidable. For $n \ge 0$, a set $A \subseteq \mathbb{N}$ is
+
+- $\Sigma^0_{n+1}$ if $A = \{x : \exists y\, R(x,y)\}$ for some $\Pi^0_n$ relation $R$;
+- $\Pi^0_{n+1}$ if $A = \{x : \forall y\, R(x,y)\}$ for some $\Sigma^0_n$ relation $R$;
+- $\Delta^0_n$ if it is both $\Sigma^0_n$ and $\Pi^0_n$.
+
+The superscript $0$ records that the quantifiers range over numbers, not sets; it is often dropped. $A$ is $\Sigma^0_n$ if and only if $\overline{A}$ is $\Pi^0_n$, directly from the definition and the duality of $\exists$ and $\forall$.
+:::
+
+:::notation
+Consecutive like quantifiers collapse: $\exists y_1 \exists y_2\, R$ is $\exists z\, R'$ with $z = \langle y_1,y_2\rangle$ and $R'$ decoding the pair, which costs only bounded quantifiers. So the level of a set is the number of *alternations* in the simplest formula defining it, and adding a dummy quantifier is always allowed: $\Sigma^0_n \cup \Pi^0_n \subseteq \Delta^0_{n+1}$.
+:::
+
+:::theorem[Post's normal-form theorem]{#post-normal-form}
+A set $A \subseteq \mathbb{N}$ is recursively enumerable if and only if it is $\Sigma^0_1$.
+:::
+
+:::proof
+($\Leftarrow$) Suppose $A = \{x : \exists y\, R(x,y)\}$ with $R$ decidable. The machine that on input $x$ tests $R(x,0), R(x,1), R(x,2),\dots$ in turn and halts at the first success has domain exactly $A$: it halts when a witness exists and searches forever when none does. So $A$ is the domain of a partial computable function, i.e. r.e.
+
+($\Rightarrow$) Suppose $A = W_e$. By Theorem *Kleene normal form, and equivalence with Turing computability*, $\varphi_e(x)\!\downarrow$ exactly when some $s$ codes a halting computation of $M_e$ on $x$, and $T(e,x,s)$ is primitive recursive, hence decidable. So
+
+$$A = \{x : \exists s\; T(e,x,s)\},$$
+
+which is $\Sigma^0_1$.
+:::
+
+:::corollary[Decidable equals $\Delta^0_1$]{#delta-one}
+$A$ is decidable if and only if $A$ is $\Delta^0_1$.
+:::
+
+:::proof
+If $A$ is decidable then $A$ and $\overline{A}$ are both r.e. by Theorem *Complementation characterises decidability*, so both are $\Sigma^0_1$ by Post's normal-form theorem; $\overline{A}\in\Sigma^0_1$ means $A \in \Pi^0_1$, so $A\in\Delta^0_1$. Conversely if $A$ is $\Sigma^0_1$ and $\Pi^0_1$ then $A$ and $\overline{A}$ are both $\Sigma^0_1$, hence both r.e., hence $A$ is decidable by the same theorem.
+:::
+
+:::example[Reading the level off the definition]
+Classify $K$, $\overline{K}$, $\mathrm{TOT}$ and $\mathrm{FIN} = \{e : W_e \text{ is finite}\}$ in the hierarchy.
+:::
+
+:::solution
+Write everything in terms of the decidable predicate $H(e,x,s)$: "$\varphi_e(x)$ halts within $s$ steps".
+
+$K = \{e : \exists s\, H(e,e,s)\}$ is $\Sigma^0_1$, and it is not $\Pi^0_1$, since a $\Pi^0_1$ set has $\Sigma^0_1$ complement and $\overline{K}$ is not r.e. So $K$ is properly $\Sigma^0_1$, and dually $\overline{K}$ is properly $\Pi^0_1$.
+
+$\mathrm{TOT} = \{e : \forall x\, \exists s\, H(e,x,s)\}$: the inner part $\exists s\, H$ is $\Sigma^0_1$, and one universal quantifier in front makes it $\Pi^0_2$. It is in fact properly $\Pi^0_2$ — no $\Sigma^0_2$ definition exists — which is a sharpening of the earlier fact that it is not r.e.
+
+$\mathrm{FIN} = \{e : \exists b\, \forall x\, (x > b \rightarrow \forall s\, \lnot H(e,x,s))\}$, an $\exists$ over a $\Pi^0_1$ matrix, hence $\Sigma^0_2$; it is properly so, and note $\mathrm{FIN} = \overline{\mathrm{INF}}$ with $\mathrm{INF}$ properly $\Pi^0_2$. Counting the alternations in the plainest definition is almost always the right first move; proving that the count cannot be lowered is the harder half and needs the hierarchy theorem below. □
+:::
+
+:::figure[The first levels of the arithmetical hierarchy. Each line is an inclusion, upwards. $\Delta^0_1$ is the decidable sets, $\Sigma^0_1$ the r.e. sets and $\Pi^0_1$ their complements; $K$ sits properly in $\Sigma^0_1$ and $\mathrm{TOT}$ properly in $\Pi^0_2$. Every inclusion drawn is strict.]{#hierarchy-figure}
+{
+  "type": "plot",
+  "x": [-4.6, 4.6],
+  "y": [-0.8, 7.2],
+  "equalAspect": true,
+  "marks": [
+    { "kind": "path", "points": [[0,0],[-2,1.5]], "tone": "muted" },
+    { "kind": "path", "points": [[0,0],[2,1.5]], "tone": "muted" },
+    { "kind": "path", "points": [[-2,1.5],[0,3]], "tone": "muted" },
+    { "kind": "path", "points": [[2,1.5],[0,3]], "tone": "muted" },
+    { "kind": "path", "points": [[0,3],[-2,4.5]], "tone": "muted" },
+    { "kind": "path", "points": [[0,3],[2,4.5]], "tone": "muted" },
+    { "kind": "path", "points": [[-2,4.5],[0,6]], "tone": "muted" },
+    { "kind": "path", "points": [[2,4.5],[0,6]], "tone": "muted" },
+    { "kind": "point", "at": [0,0], "tone": "result" },
+    { "kind": "point", "at": [-2,1.5], "tone": "accent" },
+    { "kind": "point", "at": [2,1.5], "tone": "alt" },
+    { "kind": "point", "at": [0,3], "tone": "result" },
+    { "kind": "point", "at": [-2,4.5], "tone": "accent" },
+    { "kind": "point", "at": [2,4.5], "tone": "alt" },
+    { "kind": "point", "at": [0,6], "tone": "result" },
+    { "kind": "text", "at": [0,-0.5], "text": "D1 = decidable" },
+    { "kind": "text", "at": [-3.2,1.5], "text": "S1 = r.e." },
+    { "kind": "text", "at": [3.2,1.5], "text": "P1" },
+    { "kind": "text", "at": [0,2.5], "text": "D2" },
+    { "kind": "text", "at": [-3.2,4.5], "text": "S2" },
+    { "kind": "text", "at": [3.2,4.5], "text": "P2" },
+    { "kind": "text", "at": [0,6.5], "text": "D3" },
+    { "kind": "text", "at": [-3.4,0.6], "text": "K here", "leaderTo": [-2.1,1.35] },
+    { "kind": "text", "at": [3.4,3.6], "text": "TOT here", "leaderTo": [2.1,4.35] }
+  ]
+}
+:::
+
+The computational instrument is the oracle, and iterating it produces exactly the same ladder.
+
+:::definition[Turing degrees and the jump]{#turing-degree}
+The relation $\equiv_T$ of Turing equivalence is an equivalence relation on $\mathcal{P}(\mathbb{N})$; its classes are the **Turing degrees**, written $\deg(A)$, and $\le_T$ induces a partial order on them. The degree of the decidable sets is written $\mathbf{0}$; it is the least degree.
+
+The **Turing jump** of $A$ is
+
+$$A' = \{e : \Phi^A_e(e)\!\downarrow\},$$
+
+the halting problem relativised to the oracle $A$. Write $A^{(0)} = A$ and $A^{(n+1)} = (A^{(n)})'$, so $\emptyset' \equiv_T K$ and $\mathbf{0}^{(n)} = \deg(\emptyset^{(n)})$.
+:::
+
+:::theorem[The jump is a strict increase]{#jump-theorem}
+For every $A \subseteq \mathbb{N}$: $A'$ is r.e. in $A$; $A \le_T A'$; and $A' \not\le_T A$. Hence $A <_T A'$ strictly, and
+
+$$\emptyset <_T \emptyset' <_T \emptyset'' <_T \cdots$$
+
+is a strictly increasing chain of degrees, so there is no hardest undecidable problem.
+:::
+
+:::proof
+*$A'$ is r.e. in $A$*: the oracle machine that on input $e$ simulates $\Phi^A_e(e)$, consulting the oracle whenever the simulation does, halts exactly on $A'$.
+
+*$A \le_T A'$*: for each $n$ let $j(n)$ be an index of the oracle machine that, on any input, asks the oracle whether $n \in A$ and halts if the answer is yes, looping otherwise. The map $n \mapsto j(n)$ is total computable by relativised $s$-$m$-$n$, and $n \in A \iff j(n)\in A'$. So $A \le_m A'$, hence $A \le_T A'$.
+
+*$A' \not\le_T A$*: this is the halting proof relativised, and every step survives the addition of the oracle. Suppose $\chi_{A'}$ were computable from $A$. Then the partial function that on input $x$ decides whether $x \in A'$ using the oracle, outputs $0$ if the answer is no, and loops if the answer is yes, is partial computable *in $A$*, hence equals $\Phi^A_i$ for some $i$. Then $i \in A' \iff \Phi^A_i(i)\!\downarrow \iff i \notin A'$, a contradiction.
+
+Applying the three facts to $\emptyset, \emptyset', \emptyset'',\dots$ in turn gives the chain, and each step is strict.
+:::
+
+:::theorem[Post's theorem]{#post-theorem}
+For every $n \ge 0$: a set $A$ is $\Sigma^0_{n+1}$ if and only if $A$ is r.e. in $\emptyset^{(n)}$; and $A$ is $\Delta^0_{n+1}$ if and only if $A \le_T \emptyset^{(n)}$. Moreover $\emptyset^{(n)}$ is $m$-complete for $\Sigma^0_n$ when $n \ge 1$.
+:::
+
+:::proof
+**Sketch.** The case $n=0$ is Post's normal-form theorem together with Corollary *Decidable equals $\Delta^0_1$*. The induction step in one direction relativises the normal-form proof: a $\Sigma^0_{n+1}$ set is $\exists y$ over a $\Pi^0_n$ matrix, and by the induction hypothesis the matrix is decidable with oracle $\emptyset^{(n)}$, so searching for a witness is a semi-decision procedure with that oracle. The other direction relativises the $T$-predicate construction, writing "the oracle computation halts" as an existential over a predicate decidable in $\emptyset^{(n)}$ and then unwinding the oracle queries into the extra quantifiers supplied by the induction hypothesis. The step compressed is that unwinding, which needs the fact that oracle queries can be bundled into a single quantifier using a finite *use* of the oracle.
+:::
+
+:::corollary[The hierarchy is proper]{#hierarchy-proper}
+For every $n \ge 1$, $\Sigma^0_n \neq \Pi^0_n$ and $\Delta^0_n \subsetneq \Sigma^0_n$. In particular the arithmetical hierarchy does not collapse at any level.
+:::
+
+:::proof
+By Post's theorem $\emptyset^{(n)}$ is $\Sigma^0_n$. If $\Sigma^0_n$ were closed under complement we would have $\emptyset^{(n)} \in \Pi^0_n$, hence $\emptyset^{(n)}\in\Delta^0_n$, hence by Post's theorem $\emptyset^{(n)} \le_T \emptyset^{(n-1)}$ — contradicting Theorem *The jump is a strict increase*, which makes the inequality strict. So $\Sigma^0_n\neq\Pi^0_n$, and since $\Delta^0_n = \Sigma^0_n\cap\Pi^0_n$ the second inclusion is strict too.
+:::
+
+:::intuition
+The two instruments measure the same thing from opposite sides. Syntactically, each new quantifier alternation is a new level; computationally, each new jump is a new oracle. Post's theorem says the counts agree: $n$ alternations of quantifier is exactly $n$ applications of "solve the halting problem for the previous level". $\mathrm{TOT}$ being $\Pi^0_2$ means precisely that with a halting oracle you could *semi-decide* its complement but not decide it, and would need a second jump to settle it.
+:::
+
+:::remark[Post's problem and what lies between]{#posts-problem}
+Every r.e. set $A$ satisfies $\emptyset \le_T A \le_T \emptyset'$, and the classical examples — $K$, $K_0$, $\mathrm{NE}$ — are all of degree exactly $\mathbf{0}'$. Post asked in 1944 whether there is an r.e. set of degree strictly between $\mathbf{0}$ and $\mathbf{0}'$. Friedberg and Muchnik answered yes, independently, in 1956-57, constructing two r.e. sets $A, B$ with $A \not\le_T B$ and $B \not\le_T A$; both then have intermediate degree. The proof introduced the **priority method**, in which infinitely many conflicting requirements are met by assigning them priorities and allowing high-priority requirements to injure the work done for lower ones only finitely often. That method is the engine of modern recursion theory and is well beyond this chapter, but the statement is worth carrying: the structure of the r.e. degrees is rich, not a two-element chain.
+:::
+
+:::remark[Where Kolmogorov complexity fits]{#ai-crossref}
+A closely related uncomputability runs through the *length of the shortest program* producing a given string, the Kolmogorov complexity $C(x)$. That function is not computable, essentially by a diagonal argument of the same family as the one above, and the set $\{x : C(x) \ge |x|\}$ of incompressible strings is not r.e. although its complement is. The chapter *Algorithmic Information* in information theory develops that theory — invariance, incompressibility, the connection to entropy and Chaitin's constant — and it is the right place to look for the string-by-string version of everything this chapter says about sets and functions.
 :::
 
 ## Common Mistakes
 
-- **Human inspection is not a decider:** Believing "my program always halts because I can't think of an input that makes it loop" is wrong. Human inspection is not a decision procedure that works for all programs.
+- **Confusing undecidable with uncomputable-in-general:** Undecidability of halting does not mean nothing can be computed. Almost all the mathematics you use daily is computable; what fails is one *uniform* question about arbitrary programs.
 
-- **Undecidable versus uncomputable in general:** Confusing "undecidable" with "impossible to compute anything" is mistaken. Plenty of useful functions are computable; only certain questions about arbitrary programs are not.
+- **Applying Rice's theorem to syntax or to resource bounds:** "Does the code have an even number of states?" and "does $M$ halt within $100$ steps?" are both decidable. Rice needs an index set — a property invariant under changes of program that preserve behaviour — and neither of these is one.
 
-- **Heuristics still exist for undecidable problems:** Thinking that because a problem is undecidable there is no useful approximation or heuristic is false. Compilers, antivirus, and static analyzers use sound but incomplete methods all the time.
+- **Reducing in the wrong direction:** To prove $B$ undecidable you need $K \le_m B$, translating halting instances into $B$-instances. Producing a reduction $B \le_m K$ instead proves nothing about $B$.
 
-- **Recursive versus primitive recursive:** Equating "recursive" with "primitive recursive" is incorrect. The latter is a proper subclass (Ackermann is total recursive but not primitive recursive).
+- **Treating a partial reduction function as a reduction:** The $f$ in $A \le_m B$ must be *total* computable. A construction that only sometimes returns a program is not a reduction; this is exactly what the $s$-$m$-$n$ theorem is invoked to repair.
 
-- **Halting says nothing about speed:** Assuming that if a TM halts on all inputs it must do so "quickly" is wrong. Halting says nothing about time or space complexity.
+- **Equating r.e. with decidable:** A set can be listable without being decidable — $K$ is the standing example. The listing must be in increasing order before you may conclude decidability.
 
-- **Infinity is not the halting issue:** Claiming the halting problem is undecidable "because there are infinitely many programs" misses the point. Infinity is not the issue; diagonalization against the assumed decider is.
+- **Equating recursive with primitive recursive:** The primitive recursive functions are a proper subclass of the total recursive ones; Ackermann's function is total and computable but not primitive recursive.
+
+- **Reading the Church-Turing thesis as a theorem:** It equates a formal class with an informal notion and so is not provable, only supportable — and refutable, in principle, by a physically realisable counterexample.
+
+- **Believing undecidability forbids tools:** Compilers, static analysers and termination checkers all attack undecidable questions successfully, by being sound and incomplete: they are allowed to answer "don't know".
+
+- **Confusing halting with speed:** A machine that halts on every input may still take astronomically long. Computability says nothing about running time; that is the business of complexity theory.
