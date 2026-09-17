@@ -6,217 +6,710 @@ title: Differential Privacy
 
 A guarantee stated as a divergence bound, the mechanisms that meet it, and what composition costs across repeated queries.
 
-## The Definition of Differential Privacy
+Differential privacy is the answer to a question that anonymisation kept getting wrong: what, exactly, should a data release promise? Stripping names does not work, and neither does $k$-anonymity, because both are *syntactic* — they constrain the shape of the released table rather than the inferences an adversary can draw from it. Differential privacy instead constrains the *mechanism*: it is a property of the randomised map from datasets to outputs, and it holds whatever the adversary knows, whatever computational power the adversary has, and whatever auxiliary data arrives in the future.
+
+The whole chapter turns on one inequality — a bound on how far apart two output distributions may be — so the natural home for the subject is information theory. The quantity being bounded is a divergence, the max-divergence, and the modern accounting tools are Rényi divergences of finite order. The section *Privacy Loss as a Divergence* makes that identification exact.
+
+## What the Guarantee Says
 
 <!-- section: dp-definition -->
 
-:::definition[Neighboring datasets]{#neighboring-datasets}
-Two datasets are neighboring if they differ by the addition, removal, or change of a single individual's record.
+Everything begins with what counts as "one person's data".
+
+:::definition[Neighbouring datasets]{#neighbouring-datasets}
+Fix a data universe $\mathcal{X}$. A dataset is a finite multiset $D \in \mathcal{X}^{*}$. Two datasets $D, D'$ are **neighbouring**, written $D \sim D'$, if one is obtained from the other by adding or removing a single record (*unbounded* neighbouring), or, in the *bounded* variant, by replacing a single record while keeping the size fixed.
 :::
 
-:::definition[ε-differential privacy]{#differential-privacy}
-A randomized algorithm $M$ is $\varepsilon$-differentially private if, for any two neighboring datasets $D$ and $D'$ and any measurable set $S$ of possible outputs,
-
-$$\Pr[M(D) \in S] \le e^{\varepsilon}\, \Pr[M(D') \in S].$$
+:::notation
+Which variant you use changes sensitivities by a factor of up to $2$: a histogram has $\ell_1$ sensitivity $1$ under add/remove and $2$ under replacement, because a replacement empties one bin and fills another. State the variant before quoting an $\varepsilon$. This chapter uses add/remove unless it says otherwise.
 :::
 
-The definition is closed under post-processing: if $M$ is DP then any (possibly randomized) function of $M$'s output is also DP with the same $\varepsilon$.
+:::definition[$\varepsilon$-differential privacy]{#differential-privacy}
+A randomised algorithm $M \colon \mathcal{X}^{*} \to \mathcal{R}$ is **$\varepsilon$-differentially private** if for every pair of neighbouring datasets $D \sim D'$ and every measurable $S \subseteq \mathcal{R}$,
 
-:::definition[Approximate differential privacy]{#approximate-dp}
-$(\varepsilon,\delta)$-DP relaxes pure DP to allow a small probability $\delta$ of 'catastrophic' failure: the bound above may be violated with probability at most $\delta$.
+$$\Pr[M(D) \in S] \le e^{\varepsilon}\,\Pr[M(D') \in S].$$
 :::
 
-This relaxation is necessary for many mechanisms — Gaussian noise, in particular — and for composition over many queries.
+Three features of the definition are worth naming, because each is a deliberate design choice and each is what makes the guarantee survive contact with reality.
 
-Group privacy follows from the definition by iterating it: if $M$ is $\varepsilon$-DP then changing $k$ records changes probabilities by at most $e^{k\varepsilon}$, or $(k\varepsilon,\delta')$ in the approximate case.
+First, the quantifier is over *all* neighbouring pairs and *all* output sets: this is a worst-case guarantee, not an average-case one, so it cannot be defeated by an unlucky dataset. Second, the bound is multiplicative. An additive bound $\Pr[M(D)\in S]\le \Pr[M(D')\in S]+\varepsilon$ would be useless, because it says nothing about events that are rare under both datasets — and "the mechanism output exactly this value" is exactly such an event. Third, the inequality is symmetric in $D$ and $D'$ even though it is written one way round: swapping the two neighbours in the definition gives the reverse bound for free, so the ratio of the two probabilities lies in $[e^{-\varepsilon}, e^{\varepsilon}]$.
+
+:::definition[Privacy loss random variable]{#privacy-loss}
+Suppose $M(D)$ and $M(D')$ have densities $p$ and $q$ with respect to a common reference measure. The **privacy loss** at output $o$ is
+
+$$L_{D\|D'}(o) = \ln \frac{p(o)}{q(o)},$$
+
+and the privacy loss random variable is $L_{D\|D'}(O)$ where $O \sim M(D)$.
+:::
+
+:::theorem[Pure DP is a bound on the privacy loss]{#dp-as-loss-bound}
+$M$ is $\varepsilon$-differentially private if and only if for every $D \sim D'$,
+
+$$\bigl|L_{D\|D'}(o)\bigr| \le \varepsilon \quad \text{for almost every } o.$$
+:::
+
+:::proof
+($\Leftarrow$) If $p(o) \le e^{\varepsilon} q(o)$ almost everywhere then integrating over any $S$ gives $\Pr[M(D)\in S] \le e^{\varepsilon}\Pr[M(D')\in S]$.
+
+($\Rightarrow$) Suppose the set $S_{0} = \{o : p(o) > e^{\varepsilon} q(o)\}$ has positive measure. Then
+
+$$\Pr[M(D)\in S_{0}] = \int_{S_{0}} p > e^{\varepsilon}\int_{S_{0}} q = e^{\varepsilon}\Pr[M(D')\in S_{0}],$$
+
+contradicting the definition; so $S_0$ is null, i.e. $L \le \varepsilon$ almost everywhere. Applying the same argument to the pair $(D', D)$ gives $L \ge -\varepsilon$.
+:::
+
+This reformulation is the one to carry forward: *pure differential privacy says the log-likelihood ratio between "you are in the data" and "you are not" is bounded by $\varepsilon$, pointwise.* Since a Bayesian adversary updates prior odds into posterior odds by multiplying by exactly that likelihood ratio, the definition has an immediate operational reading.
+
+:::theorem[Bayesian reading of $\varepsilon$]{#bayesian-reading}
+Let $M$ be $\varepsilon$-DP and let an adversary hold any prior over whether individual $i$'s record is present, together with full knowledge of every other record. On observing $o = M(D)$, the posterior odds that the record is present satisfy
+
+$$e^{-\varepsilon} \le \frac{\text{posterior odds}}{\text{prior odds}} \le e^{\varepsilon}.$$
+:::
+
+:::proof
+Write $A$ for the event that $i$'s record is present. By Bayes' rule the posterior odds are the prior odds times the likelihood ratio $\Pr[o \mid A]/\Pr[o \mid \neg A]$. With every other record fixed and known, the two hypotheses correspond to two neighbouring datasets $D$ and $D'$, so that likelihood ratio equals $e^{L_{D\|D'}(o)} \in [e^{-\varepsilon}, e^{\varepsilon}]$ by Theorem *Pure DP is a bound on the privacy loss*.
+:::
 
 :::intuition
-Whatever the output distribution looks like when your data is in the dataset, it cannot look too different (multiplicatively e^ε) from the distribution when your data is removed or changed.
-
-The guarantee holds even if the adversary knows everything else about the world and sees the exact output; your participation still cannot be reliably detected.
+Think of $\varepsilon$ as a bound on how much anyone can learn *about your participation*, measured in log-odds. At $\varepsilon = 0.1$ an adversary's belief can move by at most $11\%$ in relative odds — nothing. At $\varepsilon = 5$ it can move by a factor of $148$, which turns a $1\%$ prior suspicion into a $60\%$ posterior. The scale is exponential, so the gap between $\varepsilon = 1$ and $\varepsilon = 10$ is not "ten times weaker" but four orders of magnitude weaker.
 :::
 
-:::example
-A database of medical records; a DP release of "how many patients have disease X."
+Pure DP is demanding: it forbids *any* output whose likelihood ratio exceeds $e^{\varepsilon}$, and the Gaussian distribution — whose log-ratio is unbounded — cannot satisfy it at any finite $\varepsilon$. The standard relaxation buys that back with a small additive term.
+
+:::definition[$(\varepsilon,\delta)$-differential privacy]{#approximate-dp}
+$M$ is **$(\varepsilon,\delta)$-differentially private** if for all $D \sim D'$ and all measurable $S$,
+
+$$\Pr[M(D)\in S] \le e^{\varepsilon}\Pr[M(D')\in S] + \delta.$$
+:::
+
+:::pitfall
+$\delta$ is not "a small chance of a small leak". A mechanism that publishes the whole dataset with probability $\delta$ and the empty string otherwise is $(0,\delta)$-DP. So $\delta$ must be small relative to the dataset — the standard rule is $\delta \ll 1/n$, and $\delta = 10^{-5}$ on $n = 10^{3}$ records is already a defensible-looking number attached to an indefensible mechanism.
+:::
+
+The right way to read $(\varepsilon,\delta)$-DP is as a statement that the privacy loss is bounded by $\varepsilon$ *except on an event of probability $\delta$*; this is not literally equivalent to the definition, but the following one-directional statement is the workhorse and is what makes the Gaussian mechanism analysable.
+
+:::lemma[Tail bound on the loss implies approximate DP]{#loss-tail-lemma}
+If for every $D \sim D'$ we have $\Pr_{O\sim M(D)}\bigl[L_{D\|D'}(O) > \varepsilon\bigr] \le \delta$, then $M$ is $(\varepsilon,\delta)$-DP.
+:::
+
+:::proof
+Fix $S$ and let $B = \{o : L_{D\|D'}(o) > \varepsilon\}$. Split the probability:
+
+$$\Pr[M(D)\in S] = \Pr[M(D)\in S\cap B] + \Pr[M(D)\in S\setminus B] \le \delta + \int_{S\setminus B} p.$$
+
+On $S \setminus B$ we have $p(o) \le e^{\varepsilon}q(o)$, so the integral is at most $e^{\varepsilon}\Pr[M(D')\in S]$.
+:::
+
+Historically the subject begins not with a curator adding noise but with a survey trick from 1965, which turns out to satisfy the definition written forty years later.
+
+:::definition[Randomised response]{#randomised-response}
+To ask a sensitive yes/no question, instruct each respondent to report their true answer with probability $\tfrac{e^{\varepsilon}}{e^{\varepsilon}+1}$ and the opposite answer with probability $\tfrac{1}{e^{\varepsilon}+1}$, independently of everyone else.
+:::
+
+:::theorem[Randomised response is $\varepsilon$-DP]{#rr-is-dp}
+The randomised response mechanism is $\varepsilon$-differentially private, and the classical "flip a coin; if tails, flip again and answer yes iff heads" protocol is the case $\varepsilon = \ln 3$.
+:::
+
+:::proof
+The output alphabet is $\{\text{yes},\text{no}\}$, so it suffices to bound the ratio of point probabilities. For either report $r$, the probability of $r$ is $\tfrac{e^{\varepsilon}}{e^{\varepsilon}+1}$ when $r$ is the truth and $\tfrac{1}{e^{\varepsilon}+1}$ when it is not, so every ratio of the two is $e^{\varepsilon}$ or $e^{-\varepsilon}$. Changing one respondent's true answer changes only that respondent's report distribution, hence the joint ratio is $e^{\pm\varepsilon}$.
+
+For the coin protocol: with probability $\tfrac12$ the answer is truthful, and with probability $\tfrac12$ it is a fresh fair coin, so $\Pr[\text{yes} \mid \text{true yes}] = \tfrac12 + \tfrac14 = \tfrac34$ and $\Pr[\text{yes}\mid \text{true no}] = \tfrac14$. The ratio is $3 = e^{\ln 3}$.
+:::
+
+:::example[Debiasing randomised response]
+In a class of $n = 400$ students each answers a sensitive question by the coin protocol above, and $160$ report "yes". Estimate the true number of yes-answers, and give the standard error of the estimate.
 :::
 
 :::solution
-**Neighboring datasets.** $D$ has $1000$ patients, of whom $200$ have disease X. Remove one patient who has X to get neighbor $D'$: now the true count is $199$. Neighboring means they differ by exactly one record.
-**The requirement.** For the release $M$ to be $\varepsilon$-DP, for *every* output set $S$, $\Pr[M(D)\in S]\le e^{\varepsilon}\Pr[M(D')\in S]$ and vice-versa. So no observed output can be much more likely under "patient included" than under "patient removed."
-**Numbers with $\varepsilon=\ln 3\approx1.099$.** Then $e^{\varepsilon}=3$. Whatever the chance the mechanism outputs some value, say $205$, it may be at most $3\times$ as likely when the patient is present as when absent. An adversary who sees $205$ therefore cannot update its belief about that patient's participation by more than a factor of $3$.
-**Why noise is needed.** The true counts differ by only $1$, but a deterministic release would output $200$ vs $199$ — perfectly distinguishing $D$ from $D'$ (ratio $\infty$). The mechanism must add randomness to smear the outputs together. **Sanity check:** as $\varepsilon\to0$, $e^{\varepsilon}\to1$, forcing the two output distributions to coincide — maximum privacy, and by post-processing, any function of the release inherits the same $\varepsilon$.
+Let $T$ be the true number of yes-answers and $Y$ the number of reported yeses. Each true yes reports yes with probability $\tfrac34$ and each true no with probability $\tfrac14$, so
+
+$$\mathbb{E}[Y] = \tfrac34 T + \tfrac14 (n-T) = \tfrac{n}{4} + \tfrac{T}{2}.$$
+
+Solving gives the unbiased estimator $\widehat{T} = 2\bigl(Y - \tfrac{n}{4}\bigr) = 2(160 - 100) = 120$.
+
+For the standard error, $Y$ is a sum of independent Bernoulli variables each of variance at most $\tfrac14$, so $\operatorname{Var}(Y)\le n/4 = 100$ and $\operatorname{Var}(\widehat{T}) = 4\operatorname{Var}(Y) \le 400$, giving a standard error of at most $20$.
+
+Sanity check: the estimate $120$ out of $400$ carries an uncertainty of about $\pm 20$, i.e. $\pm 5$ percentage points — the price of $\varepsilon = \ln 3 \approx 1.10$ privacy at this sample size. Note also that $\widehat{T}$ can fall outside $[0,n]$; clipping it to that range is legitimate, because clipping is post-processing. □
 :::
 
-## The Laplace and Gaussian Mechanisms
+:::remark
+Randomised response is private *without a trusted curator*: each respondent randomises their own answer before it leaves them. That is the local model, taken up in *Differential Privacy Without a Trusted Curator*, and its accuracy cost is exactly what the example above shows — an error of order $\sqrt{n}$ in a count, where a trusted curator would pay $O(1/\varepsilon)$.
+:::
+
+## Sensitivity and the Basic Mechanisms
 
 <!-- section: mechanisms -->
 
-:::definition[Sensitivity]{#sensitivity}
-The $L_1$ sensitivity of a numeric query $f$ is
+To privatise a numeric query the mechanism must know how much one person can move it.
 
-$$\Delta = \max_{D, D' \text{ neighbors}} |f(D)-f(D')|,$$
+:::definition[Global sensitivity]{#sensitivity}
+For a query $f \colon \mathcal{X}^{*} \to \mathbb{R}^{k}$, the **global $\ell_{1}$ sensitivity** is
 
-the most that one record can move the answer.
+$$\Delta_{1} f = \max_{D \sim D'} \lVert f(D) - f(D')\rVert_{1},$$
+
+and the **global $\ell_{2}$ sensitivity** is $\Delta_{2} f = \max_{D\sim D'}\lVert f(D)-f(D')\rVert_{2}$. The maximum is over all neighbouring pairs in the universe, not over pairs drawn from the data at hand.
 :::
 
-:::theorem[Laplace mechanism]{#laplace-mechanism}
-The mechanism that outputs
-
-$$f(D) + \mathrm{Lap}(\Delta/\varepsilon),$$
-
-adding noise from the Laplace distribution with scale $\Delta/\varepsilon$, is $\varepsilon$-DP.
+:::pitfall
+Global sensitivity is a property of the *query*, not of the dataset. A mean of unbounded real values has infinite sensitivity, and no calibration of noise can rescue it — you must first clip the values to a fixed range $[a,b]$, which is a change of query, decided without looking at the data. Choosing the clipping range by inspecting the data is itself a data-dependent release and must be paid for.
 :::
 
-:::theorem[Gaussian mechanism]{#gaussian-mechanism}
-For $(\varepsilon,\delta)$-DP, adding $N(0, \sigma^2)$ noise with
-
-$$\sigma \ge \frac{\Delta \sqrt{2 \ln(1.25/\delta)}}{\varepsilon}$$
-
-(or similar calibrated constants) suffices.
+:::example[Sensitivities of three standard queries]
+Compute $\Delta_1$ for: (a) the count of records satisfying a predicate; (b) the histogram of records over $k$ disjoint bins; (c) the sum of an attribute known to lie in $[0,B]$.
 :::
 
-Gaussian noise is often preferred in practice because of its tail behavior and compatibility with composition.
+:::solution
+(a) Adding or removing one record changes the count by at most $1$, so $\Delta_{1} = 1$.
 
-For non-numeric outputs (histograms, synthetic data, ML models) one uses the exponential mechanism (sample from a distribution weighted by a utility score) or more sophisticated constructions (private SGD, PATE, etc.).
+(b) Adding or removing one record changes exactly one bin by exactly $1$, so the $\ell_1$ distance between the two histograms is $1$: $\Delta_{1} = 1$, independent of $k$. (Under the *replacement* relation it is $2$, since one bin falls and another rises.)
+
+(c) The removed record contributes some value in $[0,B]$, so $\Delta_{1} = B$.
+
+Sanity check: (b) is the striking one — a histogram over a million bins costs the same noise per bin as a single count, which is why histograms are the cheapest useful DP release there is. □
+:::
+
+:::definition[Laplace distribution]{#laplace-distribution}
+$\mathrm{Lap}(b)$ has density $\tfrac{1}{2b}e^{-|z|/b}$ on $\mathbb{R}$, mean $0$, variance $2b^{2}$, and mean absolute deviation $\mathbb{E}|Z| = b$. Its tail is $\Pr[|Z| \ge t] = e^{-t/b}$.
+:::
+
+:::theorem[The Laplace mechanism]{#laplace-mechanism}
+For $f \colon \mathcal{X}^{*}\to\mathbb{R}^{k}$ with $\ell_1$ sensitivity $\Delta_{1}$, the mechanism
+
+$$M(D) = f(D) + (Z_{1},\dots,Z_{k}), \qquad Z_{i} \stackrel{\text{iid}}{\sim} \mathrm{Lap}(\Delta_{1}/\varepsilon),$$
+
+is $\varepsilon$-differentially private.
+:::
+
+:::proof
+Write $b = \Delta_{1}/\varepsilon$ and let $p_{D}$ be the density of $M(D)$. For any output $z \in \mathbb{R}^{k}$ and neighbours $D \sim D'$,
+
+$$\frac{p_{D}(z)}{p_{D'}(z)} = \prod_{i=1}^{k} \frac{\exp\bigl(-|z_{i}-f_{i}(D)|/b\bigr)}{\exp\bigl(-|z_{i}-f_{i}(D')|/b\bigr)} = \exp\left(\frac{1}{b}\sum_{i=1}^{k}\Bigl(|z_{i}-f_{i}(D')| - |z_{i}-f_{i}(D)|\Bigr)\right).$$
+
+By the reverse triangle inequality each bracket is at most $|f_{i}(D)-f_{i}(D')|$, so the exponent is at most
+
+$$\frac{1}{b}\sum_{i=1}^{k}|f_{i}(D)-f_{i}(D')| = \frac{\lVert f(D)-f(D')\rVert_{1}}{b} \le \frac{\Delta_{1}}{b} = \varepsilon.$$
+
+Thus the density ratio is bounded by $e^{\varepsilon}$ pointwise, and Theorem *Pure DP is a bound on the privacy loss* gives $\varepsilon$-DP.
+:::
+
+:::figure[Laplace densities for two neighbouring datasets whose counts differ by $1$, at $b = \Delta_1/\varepsilon = 2$. The curves are translates of one another, and the vertical ratio between them never exceeds $e^{1/2} = e^{\varepsilon}$ — that bounded ratio, at every output, *is* the privacy guarantee.]{#laplace-overlap}
+{
+  "type": "plot",
+  "x": [-8, 10],
+  "y": [0, 0.34],
+  "xTicks": 2,
+  "yTicks": 0.05,
+  "xLabel": "released value z",
+  "yLabel": "density",
+  "marks": [
+    { "kind": "function", "fn": "exp(-abs(x)/2)/4", "tone": "accent" },
+    { "kind": "function", "fn": "exp(-abs(x-1)/2)/4", "tone": "result", "dashed": true },
+    { "kind": "text", "at": [-5.0, 0.30], "text": "f(D) = 0", "leaderTo": [0, 0.25] },
+    { "kind": "text", "at": [6.2, 0.30], "text": "f(D') = 1", "leaderTo": [1, 0.25] },
+    { "kind": "text", "at": [6.0, 0.115], "text": "ratio at most e^0.5" }
+  ]
+}
+:::
+
+Privacy is only half of what a mechanism must deliver; a mechanism that outputs pure noise is perfectly private and perfectly useless. The accuracy of the Laplace mechanism follows from its tail.
+
+:::theorem[Accuracy of the Laplace mechanism]{#laplace-accuracy}
+Let $M$ be the Laplace mechanism above with $b = \Delta_{1}/\varepsilon$. For every $\beta \in (0,1)$,
+
+$$\Pr\Bigl[\lVert M(D)-f(D)\rVert_{\infty} \ge \frac{\Delta_{1}}{\varepsilon}\ln\frac{k}{\beta}\Bigr] \le \beta.$$
+
+In particular a single counting query ($k=1$, $\Delta_1 = 1$) has error at most $\tfrac{1}{\varepsilon}\ln\tfrac{1}{\beta}$ with probability $1-\beta$, independent of the dataset size.
+:::
+
+:::proof
+For one coordinate, $\Pr[|Z_{i}|\ge t] = e^{-t/b}$. Setting $t = b\ln(k/\beta)$ makes this $\beta/k$. A union bound over the $k$ coordinates gives total failure probability at most $\beta$.
+:::
 
 :::intuition
-Compute the statistic you care about on the real data. Because one person can affect the statistic by at most Δ, add random noise whose 'width' is proportional to Δ/ε. The noise hides whether any single person was present.
-
-Laplace noise is 'double-exponential' and gives pure ε-DP; Gaussian is bell-shaped and gives the slightly weaker (ε,δ) guarantee but is easier to analyze with many queries.
+The error does not grow with $n$. A count over ten records and a count over ten million records get the same absolute noise, because one person moves both by $1$. This is why differential privacy is nearly free for large populations and brutal for small ones: the *relative* error is $O(1/(\varepsilon n))$.
 :::
 
-:::example[(Laplace):]
-Counting query with sensitivity $\Delta=1$ (adding/removing one person changes the count by at most $1$), target $\varepsilon=0.5$.
-:::
-
-:::solution
-**Calibrate the noise.** Laplace scale $b=\Delta/\varepsilon=1/0.5=2$. The mechanism releases $M(D)=\text{count}(D)+\text{Lap}(2)$, whose density at output $z$ is $\propto \exp(-|z-\text{count}(D)|/b)=\exp(-|z-\text{count}(D)|/2)$.
-**Check the DP ratio.** Take neighbors with counts $c$ and $c'$ where $|c-c'|\le\Delta=1$. For any output $z$ the density ratio is
-$$\frac{\exp(-|z-c|/2)}{\exp(-|z-c'|/2)}=\exp\!\Big(\tfrac{|z-c'|-|z-c|}{2}\Big)\le \exp\!\Big(\tfrac{|c-c'|}{2}\Big)\le \exp\!\Big(\tfrac{1}{2}\Big)=e^{0.5}=e^{\varepsilon}.$$
-   The middle step uses the reverse triangle inequality $|z-c'|-|z-c|\le|c-c'|$.
-**Sanity check.** The bound is exactly $e^{\varepsilon}$ and it holds for *every* $z$, so the mechanism is $\varepsilon$-DP with $\varepsilon=0.5$ ✓. Smaller $\varepsilon$ would force a larger scale $b=1/\varepsilon$, i.e. more noise.
-:::
-
-:::example[(Gaussian):]
-Suppose the query is a vector-valued statistic with $L_2$ sensitivity $\Delta=4$, and we want $(\varepsilon=1,\delta=10^{-5})$-DP via the Gaussian mechanism using the rule of thumb $\sigma\ge \Delta\sqrt{2\ln(1.25/\delta)}/\varepsilon$.
+:::example[Calibrating for a released proportion]
+A hospital releases the proportion of its $n = 25{,}000$ patients with a given diagnosis, at $\varepsilon = 0.5$. How large is the noise, and what is a $95\%$ error bar?
 :::
 
 :::solution
-$1.25/\delta=1.25/10^{-5}=1.25\times10^{5}$, and $\ln(1.25\times10^{5})\approx11.74$.
-$\sqrt{2\cdot11.74}=\sqrt{23.48}\approx4.85$.
-$\sigma\ge 4\cdot4.85/1\approx19.4$. So adding $N(0,\sigma^2)$ with $\sigma\approx19.4$ per coordinate suffices. **Sanity check:** halving the budget to $\varepsilon=0.5$ would double $\sigma$ to $\approx38.8$ — tighter privacy costs proportionally more noise.
+Release the count and divide — division by the public constant $n$ is post-processing. The count has $\Delta_{1}=1$, so $b = 1/0.5 = 2$ and the released count is $c + \mathrm{Lap}(2)$.
+
+With $\beta = 0.05$ and $k=1$, Theorem *Accuracy of the Laplace mechanism* gives error at most $2\ln 20 \approx 2(2.996) \approx 5.99$ with probability $95\%$.
+
+As a proportion that is $5.99/25{,}000 \approx 0.00024$, i.e. $\pm 0.024$ percentage points.
+
+Sanity check: the sampling error of the proportion itself, at most $1/(2\sqrt{n}) = 0.0032$, is more than ten times larger. The privacy noise is invisible beneath the statistical noise already present — the regime in which DP costs nothing. □
 :::
 
-## Composition, Post-Processing, and Advanced Properties
+The Gaussian mechanism trades pure DP for the $(\varepsilon,\delta)$ relaxation, and gains $\ell_2$ rather than $\ell_1$ calibration — decisive when $f$ is a high-dimensional vector such as a gradient, where $\Delta_2$ can be $\sqrt{k}$ times smaller than $\Delta_1$.
+
+:::theorem[The Gaussian mechanism]{#gaussian-mechanism}
+Let $f$ have $\ell_{2}$ sensitivity $\Delta_{2}$ and let $\varepsilon \in (0,1)$, $\delta \in (0,1)$. Then $M(D) = f(D) + \mathcal{N}(0,\sigma^{2}I_{k})$ is $(\varepsilon,\delta)$-differentially private whenever
+
+$$\sigma \ge \frac{\Delta_{2}\sqrt{2\ln(1.25/\delta)}}{\varepsilon}.$$
+:::
+
+:::proof
+*Sketch; the full computation is Appendix A of Dwork and Roth, and this argument rests on Lemma *Tail bound on the loss implies approximate DP*.* By rotational symmetry it suffices to treat $k=1$ with $f(D)-f(D') = \Delta_{2}$. The privacy loss at output $z \sim \mathcal{N}(0,\sigma^2)$ shifted to $f(D)$ is
+
+$$L(z) = \ln\frac{e^{-z^{2}/2\sigma^{2}}}{e^{-(z-\Delta_{2})^{2}/2\sigma^{2}}} = \frac{2z\Delta_{2}-\Delta_{2}^{2}}{2\sigma^{2}},$$
+
+which is itself a *Gaussian* random variable, with mean $-\Delta_{2}^{2}/2\sigma^{2}$ and standard deviation $\Delta_{2}/\sigma$. Being unbounded, it can exceed $\varepsilon$, so pure DP is impossible; but a standard Gaussian tail estimate shows $\Pr[L > \varepsilon] \le \delta$ for $\sigma$ as displayed, and the lemma converts that into $(\varepsilon,\delta)$-DP. What the sketch omits is only the explicit tail estimate producing the constant $1.25$; the restriction $\varepsilon < 1$ enters there, and the *analytic Gaussian mechanism* replaces the closed form by an exact condition on the Gaussian CDF valid for every $\varepsilon$.
+:::
+
+:::pitfall
+The formula above is not valid for $\varepsilon \ge 1$: taking $\varepsilon = 4$ in it gives a $\sigma$ that does not satisfy the definition. Use the analytic calibration, or an accountant based on Rényi divergence, outside the range $\varepsilon \in (0,1)$.
+:::
+
+:::example[Laplace against Gaussian in $k$ dimensions]
+A query returns $k = 100$ counts, and one record can change every one of them by $1$. Compare the per-coordinate noise scale of the Laplace mechanism at $\varepsilon = 1$ with that of the Gaussian mechanism at $(\varepsilon,\delta) = (1, 10^{-6})$.
+:::
+
+:::solution
+Sensitivities: $\Delta_{1} = 100$ and $\Delta_{2} = \sqrt{100} = 10$.
+
+Laplace: $b = \Delta_{1}/\varepsilon = 100$, so each coordinate has standard deviation $\sqrt{2}\,b \approx 141$.
+
+Gaussian: $\ln(1.25\times 10^{6}) \approx 14.04$, so $\sqrt{2(14.04)} \approx 5.30$ and $\sigma \ge 10(5.30)/1 = 53.0$.
+
+Sanity check: the Gaussian mechanism is about $2.7$ times quieter here, and the advantage grows like $\sqrt{k}$ — it comes entirely from measuring sensitivity in $\ell_2$. This is why DP-SGD, whose query is a clipped gradient vector in millions of dimensions, is always Gaussian. □
+:::
+
+## Choosing Well Instead of Adding Noise
+
+<!-- section: exponential-mechanism -->
+
+Additive noise presupposes that the answer is a number and that "close" answers are nearly as good. Neither holds when the output is a *choice*: the best price to set, the best decision-tree split, the winner of an election. Adding Laplace noise to a price and then rounding to the nearest sellable value can produce a price at which nobody buys. The exponential mechanism handles these by sampling from the output space directly, weighting each candidate by how good it is.
+
+:::definition[Utility and its sensitivity]{#utility-sensitivity}
+A **utility** is a function $u \colon \mathcal{X}^{*}\times\mathcal{R} \to \mathbb{R}$ scoring each candidate output $r$ against the dataset. Its sensitivity is
+
+$$\Delta u = \max_{r\in\mathcal{R}}\ \max_{D\sim D'} |u(D,r)-u(D',r)|,$$
+
+the maximum over candidates of how much one record can change that candidate's score. Note the maximum is *not* taken over pairs of candidates: only each candidate's own score must be insensitive.
+:::
+
+:::definition[The exponential mechanism]{#exponential-mechanism}
+$M_{E}(D,u)$ outputs $r \in \mathcal{R}$ with probability proportional to
+
+$$\exp\left(\frac{\varepsilon\, u(D,r)}{2\Delta u}\right).$$
+:::
+
+:::theorem[The exponential mechanism is $\varepsilon$-DP]{#exponential-privacy}
+For any utility $u$ with sensitivity $\Delta u$, the mechanism $M_{E}(\cdot,u)$ is $\varepsilon$-differentially private.
+:::
+
+:::proof
+Write $\alpha = \varepsilon/(2\Delta u)$ and let $Z(D) = \sum_{r'}\exp(\alpha u(D,r'))$ be the normaliser. For neighbours $D\sim D'$ and any $r$,
+
+$$\frac{\Pr[M_{E}(D)=r]}{\Pr[M_{E}(D')=r]} = \frac{\exp(\alpha u(D,r))}{\exp(\alpha u(D',r))}\cdot\frac{Z(D')}{Z(D)}.$$
+
+The first factor is $\exp\bigl(\alpha(u(D,r)-u(D',r))\bigr) \le \exp(\alpha \Delta u) = e^{\varepsilon/2}$.
+
+For the second, every term obeys $\exp(\alpha u(D',r')) \le \exp(\alpha \Delta u)\exp(\alpha u(D,r'))$, so summing over $r'$ gives $Z(D') \le e^{\varepsilon/2} Z(D)$.
+
+Multiplying, the ratio is at most $e^{\varepsilon/2}\cdot e^{\varepsilon/2} = e^{\varepsilon}$ for every $r$; the same argument with $D$ and $D'$ exchanged gives the lower bound.
+:::
+
+:::remark
+The factor $2$ in the exponent is exactly the price of the normaliser: numerator and denominator each contribute $e^{\varepsilon/2}$. A mechanism using $\exp(\varepsilon u/\Delta u)$ would be $2\varepsilon$-DP, which is why the $2$ is written into the definition rather than discovered in the analysis.
+:::
+
+:::theorem[Utility of the exponential mechanism]{#exponential-utility}
+Let $\mathrm{OPT} = \max_{r} u(D,r)$ and let $\mathcal{R}$ be finite. Then for every $t > 0$,
+
+$$\Pr\Bigl[u(D, M_{E}(D)) \le \mathrm{OPT} - \frac{2\Delta u}{\varepsilon}\bigl(\ln|\mathcal{R}| + t\bigr)\Bigr] \le e^{-t}.$$
+:::
+
+:::proof
+Let $c = \tfrac{2\Delta u}{\varepsilon}(\ln|\mathcal{R}|+t)$ and let $B = \{r : u(D,r) \le \mathrm{OPT}-c\}$ be the bad candidates. Each bad candidate has unnormalised weight at most $\exp\bigl(\tfrac{\varepsilon}{2\Delta u}(\mathrm{OPT}-c)\bigr)$, so
+
+$$\Pr[M_{E}(D)\in B] \le \frac{|\mathcal{R}|\exp\bigl(\tfrac{\varepsilon}{2\Delta u}(\mathrm{OPT}-c)\bigr)}{Z(D)}.$$
+
+The normaliser is at least the weight of an optimal candidate, $Z(D) \ge \exp\bigl(\tfrac{\varepsilon}{2\Delta u}\mathrm{OPT}\bigr)$. Dividing,
+
+$$\Pr[M_{E}(D)\in B] \le |\mathcal{R}|\exp\Bigl(-\frac{\varepsilon c}{2\Delta u}\Bigr) = |\mathcal{R}|\exp(-\ln|\mathcal{R}|-t) = e^{-t}.$$
+:::
+
+:::intuition
+Read the utility theorem as: the exponential mechanism loses about $\tfrac{2\Delta u}{\varepsilon}\ln|\mathcal{R}|$ against the best possible score. The dependence on the number of candidates is *logarithmic*, so choosing privately among a million options costs only $\ln(10^{6})\approx 14$ of those units, not a million. Privacy here is bought by occasionally picking a near-best option, not by corrupting the answer.
+:::
+
+:::example[Private pricing]
+A seller faces four bidders willing to pay $\$1.00$, $\$1.00$, $\$3.01$ and $\$3.01$. The candidate prices are $\mathcal{R}=\{1.00,\ 3.01\}$ and the utility is the revenue $u(D,r) = r\cdot\#\{\text{bidders willing to pay } r\}$, so $u(D,1.00)=4.00$ and $u(D,3.01)=6.02$. One bidder can change a price's revenue by at most $\Delta u = 3.01$. With $\varepsilon = 1$, what is the probability the mechanism sets the better price?
+:::
+
+:::solution
+The exponents are $\tfrac{\varepsilon u}{2\Delta u} = \tfrac{u}{6.02}$:
+
+$$\text{price } 3.01:\ \exp(6.02/6.02)=e^{1}=2.718, \qquad \text{price } 1.00:\ \exp(4.00/6.02)=e^{0.6645}=1.943.$$
+
+Normalising, $\Pr[r = 3.01] = 2.718/(2.718+1.943) = 2.718/4.661 \approx 0.583$.
+
+Sanity check: the better price wins, but only by a modest margin — at $\varepsilon=1$, with utilities this close relative to $\Delta u$, the mechanism is nearly indifferent. Raising $\varepsilon$ to $5$ makes the exponents $5$ and $3.322$, and the better price wins with probability $e^{5}/(e^{5}+e^{3.322}) \approx 0.84$. Note also that revenue is not a well-behaved target for additive noise: the two candidate prices are two dollars apart, so "the optimal price plus Laplace noise" would name a price nobody will pay. □
+:::
+
+:::pitfall
+Sampling from the exponential mechanism requires evaluating (or cleverly summing) the weight of every candidate, which is intractable for a large structured output space. Practical instantiations use a utility that factorises, or replace exact sampling by a private selection routine such as report-noisy-max — which, for the same utility, is *equivalent* to the exponential mechanism when the added noise is Gumbel.
+:::
+
+## Composition, Post-Processing, and Group Privacy
 
 <!-- section: composition-properties -->
 
-:::theorem[Basic composition]{#basic-composition}
-$k$ mechanisms, each $\varepsilon$-DP, are together $k\varepsilon$-DP — and $(k\varepsilon, k\delta)$-DP in the approximate case.
+Differential privacy would be a curiosity if it were not closed under the operations analysts actually perform. It is closed under two of them exactly, and under the third at a quantified cost.
+
+:::theorem[Post-processing invariance]{#post-processing}
+Let $M$ be $(\varepsilon,\delta)$-DP and let $g \colon \mathcal{R}\to\mathcal{R}'$ be an arbitrary randomised map that does not access the dataset. Then $g\circ M$ is $(\varepsilon,\delta)$-DP.
 :::
 
-:::theorem[Advanced composition]{#advanced-composition}
-For $(\varepsilon,\delta)$-DP mechanisms, $k$-fold adaptive composition is roughly $(\varepsilon', k\delta + \delta')$-DP with
+:::proof
+First suppose $g$ is deterministic. Fix $S' \subseteq \mathcal{R}'$ and let $T = g^{-1}(S') \subseteq \mathcal{R}$. Then for $D\sim D'$,
 
-$$\varepsilon' \approx \sqrt{2k \ln(1/\delta')}\;\varepsilon + k\varepsilon(e^{\varepsilon}-1),$$
+$$\Pr[g(M(D))\in S'] = \Pr[M(D)\in T] \le e^{\varepsilon}\Pr[M(D')\in T]+\delta = e^{\varepsilon}\Pr[g(M(D'))\in S']+\delta.$$
 
-or tighter under modern bounds.
+Now let $g$ be randomised. Any randomised map can be written as $g(r) = g_{\omega}(r)$ where $\omega$ is drawn from a distribution independent of the data and each $g_{\omega}$ is deterministic. Then
+
+$$\Pr[g(M(D))\in S'] = \mathbb{E}_{\omega}\bigl[\Pr[g_{\omega}(M(D))\in S']\bigr] \le \mathbb{E}_{\omega}\bigl[e^{\varepsilon}\Pr[g_{\omega}(M(D'))\in S']+\delta\bigr],$$
+
+which equals $e^{\varepsilon}\Pr[g(M(D'))\in S']+\delta$ because expectation is linear and the deterministic bound holds for each $\omega$.
 :::
-
-Advanced composition is the source of the 'privacy budget' accounting used in practice: the $\sqrt{k}$ in place of $k$ is what makes hundreds of queries affordable.
-
-:::proposition[Post-processing immunity]{#post-processing}
-Any function, even a randomized one, of a DP output remains DP with the same parameters.
-:::
-
-This lets you post-process noisy answers arbitrarily — take medians, train models on synthetic data — without spending more privacy.
-
-Other properties: parallel composition (queries on disjoint subsets cost only the max ε), privacy amplification by sampling, and privacy odometers / filters for fully adaptive composition.
 
 :::intuition
-Every time you release a DP statistic you 'spend' some of your privacy budget ε. After many releases the total spent budget is tracked by composition theorems; you stop when the budget is exhausted.
-
-Once something is DP, you can compute anything you like from it later (graphs, ML models, press releases) and the privacy guarantee still holds; you do not pay extra.
+Nothing you can compute from a released output can break its privacy, because the computation never touches the data — it only rearranges a distribution that was already close to its neighbour's. This is what makes DP usable: you may fit models, draw graphs, round, clip, and publish, all for free. It is also what distinguishes DP from output-perturbation heuristics, which typically leak more the harder you stare at them.
 :::
 
-:::example[(basic composition):]
-Release $k=3$ statistics, each made $\varepsilon_0=0.2$-DP.
+:::theorem[Basic composition]{#basic-composition}
+Let $M_{1},\dots,M_{k}$ be mechanisms where $M_{j}$ is $(\varepsilon_{j},\delta_{j})$-DP, run *adaptively*: $M_{j}$ may depend on the outputs of $M_{1},\dots,M_{j-1}$. The combined release is $\bigl(\sum_{j}\varepsilon_{j},\ \sum_{j}\delta_{j}\bigr)$-DP.
+:::
+
+:::proof
+Take $\delta_{j}=0$ and $k=2$; the general case follows by induction, and the $\delta$ terms add by the same splitting argument as in Lemma *Tail bound on the loss implies approximate DP*. Write the joint density of $(o_{1},o_{2})$ on input $D$ as $p_{D}(o_{1})\,p_{D}(o_{2}\mid o_{1})$, where the second factor is the density of $M_{2}$ — which depends on $o_{1}$, but for each *fixed* $o_{1}$ is an $\varepsilon_{2}$-DP mechanism. Hence
+
+$$\frac{p_{D}(o_{1},o_{2})}{p_{D'}(o_{1},o_{2})} = \frac{p_{D}(o_{1})}{p_{D'}(o_{1})}\cdot\frac{p_{D}(o_{2}\mid o_{1})}{p_{D'}(o_{2}\mid o_{1})} \le e^{\varepsilon_{1}}e^{\varepsilon_{2}}.$$
+
+The privacy losses add, so their bounds add.
+:::
+
+The last line is the one to remember: **privacy loss composes additively because it is a log-likelihood ratio.** That also shows why basic composition is loose. The total loss after $k$ steps is a *sum of $k$ bounded random variables, each with mean close to zero* — and such a sum is typically of size $\sqrt{k}$, not $k$. Making that precise is advanced composition.
+
+:::theorem[Advanced composition]{#advanced-composition}
+Let each $M_{j}$ be $(\varepsilon_{0},\delta)$-DP, composed adaptively $k$ times. Then for every $\delta' > 0$ the composition is $(\varepsilon', k\delta+\delta')$-DP with
+
+$$\varepsilon' = \sqrt{2k\ln(1/\delta')}\;\varepsilon_{0} + k\,\varepsilon_{0}\bigl(e^{\varepsilon_{0}}-1\bigr).$$
+:::
+
+:::proof
+*Sketch.* The argument rests on two results proved elsewhere in this chapter and one standard concentration inequality. (i) By Theorem *Pure DP is a bound on the privacy loss*, each step's privacy loss $L_{j}$ lies in $[-\varepsilon_{0},\varepsilon_{0}]$. (ii) By Theorem *Bounded loss implies a small mean loss*, each has mean $\mathbb{E}[L_{j}] \le \varepsilon_{0}(e^{\varepsilon_{0}}-1)$, which accounts for the second term once summed over $k$ steps. (iii) Azuma's inequality, applied to the martingale $\sum_{j}(L_{j}-\mathbb{E}[L_{j}])$ whose increments are bounded by $\varepsilon_0$ in absolute value, gives a deviation of at most $\sqrt{2k\ln(1/\delta')}\,\varepsilon_{0}$ except with probability $\delta'$. Adding the mean to the deviation bounds the total loss by $\varepsilon'$ outside an event of probability $\delta'$, and Lemma *Tail bound on the loss implies approximate DP* converts that into $(\varepsilon',\delta')$-DP; the $k\delta$ absorbs the failure probabilities of the individual mechanisms. The omitted work is the martingale bookkeeping under adaptivity.
+:::
+
+:::figure[Total $\varepsilon$ after $k$ adaptive releases at $\varepsilon_0 = 0.1$, with $\delta' = 10^{-6}$. Basic composition grows linearly; advanced composition grows like $\sqrt{k}$, and overtakes it only once the fixed start-up cost of the $\sqrt{2\ln(1/\delta')}$ factor has been amortised — near $k = 30$ here.]{#composition-growth}
+{
+  "type": "plot",
+  "x": [0, 200],
+  "y": [0, 22],
+  "xTicks": 25,
+  "yTicks": 2.5,
+  "xLabel": "number of releases k",
+  "yLabel": "total epsilon",
+  "marks": [
+    { "kind": "function", "fn": "0.1*x", "tone": "accent" },
+    { "kind": "function", "fn": "sqrt(2*x*ln(1000000))*0.1 + 0.1*x*(exp(0.1)-1)", "tone": "result", "dashed": true },
+    { "kind": "text", "at": [130, 19.5], "text": "basic: k times eps0", "leaderTo": [180, 18] },
+    { "kind": "text", "at": [95, 3.0], "text": "advanced: order sqrt(k)", "leaderTo": [160, 7.1] }
+  ]
+}
+:::
+
+:::example[Budgeting a hundred queries]
+An analyst must answer $k = 100$ counting queries within a total budget of $(\varepsilon,\delta) = (1,10^{-6})$. Compare the per-query $\varepsilon_{0}$ allowed by basic and by advanced composition, and hence the noise scales.
 :::
 
 :::solution
-By basic composition the combined release is $k\varepsilon_0=3\cdot0.2=0.6$-DP.
-**Why:** for neighbors $D,D'$ and outputs $(z_1,z_2,z_3)$, the joint density ratio factors, and each factor is bounded by $e^{\varepsilon_0}$, so the product is at most $e^{3\varepsilon_0}=e^{0.6}$. **Sanity check:** $3\cdot0.2=0.6\le$ the analyst's budget if the budget is, say, $1$.
+Basic: $\varepsilon_{0} = \varepsilon/k = 0.01$, so each query uses $\mathrm{Lap}(1/0.01) = \mathrm{Lap}(100)$.
+
+Advanced: spend $\delta' = 10^{-6}$ on the composition slack. For small $\varepsilon_{0}$ the second term is of order $k\varepsilon_{0}^{2}$ and negligible, so
+
+$$\varepsilon_{0}\approx \frac{\varepsilon}{\sqrt{2k\ln(1/\delta')}} = \frac{1}{\sqrt{2(100)(13.82)}} = \frac{1}{\sqrt{2763}} = \frac{1}{52.6}\approx 0.0190.$$
+
+Check the discarded term: $k\varepsilon_{0}(e^{\varepsilon_{0}}-1) \approx 100(0.019)(0.0192)= 0.036$, indeed small against $1$; shaving $\varepsilon_0$ to $0.0183$ absorbs it. Each query then uses $\mathrm{Lap}(1/0.0183)=\mathrm{Lap}(54.6)$.
+
+Sanity check: advanced composition allows about $1.8$ times less noise per query here — real, but not dramatic at $k=100$. At $k = 10{,}000$ the ratio is $\sqrt{k}/\sqrt{2\ln(1/\delta')} \approx 100/5.26 \approx 19$, which is the regime the theorem was built for. □
 :::
 
-:::example[(advanced composition):]
-An analyst wants $k=100$ counting queries (each sensitivity $1$) within total budget $(\varepsilon=1,\delta=10^{-6})$; pick $\delta'=10^{-6}$ for the composition slack.
+:::proposition[Parallel composition]{#parallel-composition}
+If $M_{1},\dots,M_{k}$ are $\varepsilon$-DP and each is applied to a *disjoint* part of the dataset, under a data-independent partition, the combined release is $\varepsilon$-DP — not $k\varepsilon$-DP.
+:::
+
+:::proof
+Neighbouring datasets $D\sim D'$ differ in one record, which falls in exactly one part $i$. For $j\ne i$ the two runs of $M_{j}$ see identical inputs and their output distributions are identical, contributing a likelihood ratio of $1$. Only the $i$-th factor contributes, and it is bounded by $e^{\varepsilon}$.
+:::
+
+:::remark
+Parallel composition is why a histogram costs one $\varepsilon$ rather than one per bin, and it agrees with the sensitivity computation in Example *Sensitivities of three standard queries* — two routes to the same conclusion.
+:::
+
+:::theorem[Group privacy]{#group-privacy}
+If $M$ is $\varepsilon$-DP and $D, D'$ differ in $k$ records, then for all $S$,
+
+$$\Pr[M(D)\in S] \le e^{k\varepsilon}\Pr[M(D')\in S].$$
+
+If $M$ is $(\varepsilon,\delta)$-DP the corresponding bound is $e^{k\varepsilon}\Pr[M(D')\in S] + k e^{(k-1)\varepsilon}\delta$.
+:::
+
+:::proof
+Build a chain $D = D_{0}\sim D_{1}\sim\cdots\sim D_{k}=D'$ changing one record at a time. For pure DP, apply the definition along each link and multiply the $k$ factors of $e^{\varepsilon}$.
+
+For the approximate case, apply the definition once per link and unwind: $\Pr[M(D_{0})\in S] \le e^{\varepsilon}\Pr[M(D_{1})\in S]+\delta \le e^{2\varepsilon}\Pr[M(D_{2})\in S]+e^{\varepsilon}\delta+\delta$, and so on. After $k$ links the additive terms form the geometric sum $\delta(1+e^{\varepsilon}+\cdots+e^{(k-1)\varepsilon}) \le k e^{(k-1)\varepsilon}\delta$.
+:::
+
+:::pitfall
+Group privacy degrades *exponentially* in the group size, so an $\varepsilon = 1$ guarantee says essentially nothing about a family of $20$ correlated records: $e^{20} \approx 4.9\times 10^{8}$. DP protects individuals by construction and groups only by this lossy inheritance — and the $\delta$ term degrades even faster. If the unit you care about is a household, define neighbouring datasets at the household level from the start.
+:::
+
+## Privacy Loss as a Divergence
+
+<!-- section: divergence-view -->
+
+The definition of $\varepsilon$-DP is a statement about two distributions, and every statement of that kind belongs to the theory of divergences. Naming the divergence does more than tidy the subject up: it produces the composition accountants that make private deep learning possible.
+
+:::definition[Max-divergence]{#max-divergence}
+For distributions $P,Q$ on a common space with $P \ll Q$,
+
+$$D_{\infty}(P\|Q) = \sup_{S:\,Q(S)>0}\ \ln\frac{P(S)}{Q(S)} = \operatorname*{ess\,sup}_{o\sim P}\ \ln\frac{p(o)}{q(o)},$$
+
+the supremum of the log-likelihood ratio. It is the $\alpha\to\infty$ limit of the Rényi divergence $D_{\alpha}$.
+:::
+
+:::theorem[DP is a max-divergence bound]{#dp-is-max-divergence}
+$M$ is $\varepsilon$-DP if and only if $D_{\infty}\bigl(M(D)\,\|\,M(D')\bigr) \le \varepsilon$ for every ordered pair of neighbouring datasets.
+:::
+
+:::proof
+Immediate from Theorem *Pure DP is a bound on the privacy loss*: the essential supremum of $L_{D\|D'}$ is at most $\varepsilon$ exactly when the definition holds for that ordered pair, and quantifying over ordered pairs supplies both directions.
+:::
+
+So pure DP is the *strongest* member of a family: it bounds the divergence of infinite order, hence — since Rényi divergence is non-decreasing in its order — every divergence of finite order too. Two consequences are worth stating, because they connect this chapter to the rest of information theory.
+
+:::lemma[Total variation under DP]{#tv-under-dp}
+If $M$ is $\varepsilon$-DP then for all $D\sim D'$,
+
+$$\mathrm{TV}\bigl(M(D),M(D')\bigr) \le \frac{e^{\varepsilon}-1}{e^{\varepsilon}+1}.$$
+:::
+
+:::proof
+Write $P = M(D)$, $Q = M(D')$ and let $A$ be the set where $p > q$, so that $\mathrm{TV} = P(A)-Q(A)$. Put $a = P(A)$, $b = Q(A)$. Differential privacy gives $a \le e^{\varepsilon}b$, and applied to the complement, $1-b \le e^{\varepsilon}(1-a)$. Maximising $a-b$ subject to these two constraints puts both at equality: substituting $a = e^{\varepsilon}b$ into the second gives $1-b = e^{\varepsilon}-e^{2\varepsilon}b$, hence $b(e^{2\varepsilon}-1) = e^{\varepsilon}-1$, so $b = 1/(e^{\varepsilon}+1)$ and $a = e^{\varepsilon}/(e^{\varepsilon}+1)$. Then $a-b = (e^{\varepsilon}-1)/(e^{\varepsilon}+1)$.
+:::
+
+:::theorem[Bounded loss implies a small mean loss]{#kl-under-dp}
+If $M$ is $\varepsilon$-DP then for all $D\sim D'$,
+
+$$D_{\mathrm{KL}}\bigl(M(D)\,\|\,M(D')\bigr) \le \varepsilon\bigl(e^{\varepsilon}-1\bigr).$$
+
+For small $\varepsilon$ the right-hand side is approximately $\varepsilon^{2}$, far smaller than the pointwise bound $\varepsilon$.
+:::
+
+:::proof
+With $P,Q$ as above, the KL divergence is the mean privacy loss, $D_{\mathrm{KL}}(P\|Q) = \mathbb{E}_{P}[L]$. Since $D_{\mathrm{KL}}(Q\|P)\ge 0$ we may add it for free:
+
+$$D_{\mathrm{KL}}(P\|Q) \le D_{\mathrm{KL}}(P\|Q)+D_{\mathrm{KL}}(Q\|P) = \sum_{o}\bigl(p(o)-q(o)\bigr)L(o) \le \varepsilon\sum_{o}|p(o)-q(o)| = 2\varepsilon\,\mathrm{TV}(P,Q),$$
+
+using $|L|\le\varepsilon$ pointwise. Lemma *Total variation under DP* bounds the last factor, giving
+
+$$D_{\mathrm{KL}}(P\|Q) \le 2\varepsilon\cdot\frac{e^{\varepsilon}-1}{e^{\varepsilon}+1} \le \varepsilon(e^{\varepsilon}-1),$$
+
+since $2/(e^{\varepsilon}+1)\le 1$ for $\varepsilon \ge 0$.
+:::
+
+:::intuition
+The gap between $\varepsilon$ and $\varepsilon^{2}$ is the whole story of advanced composition. Over $k$ steps the losses accumulate at rate $\varepsilon^{2}$ in the mean and fluctuate at rate $\varepsilon\sqrt{k}$ around it, so the total is about $k\varepsilon^{2}+\varepsilon\sqrt{k}$ rather than $k\varepsilon$. A worst-case bound applied $k$ times pays the worst case $k$ times; a mean-plus-deviation bound pays it once.
+:::
+
+That suggests tracking the whole moment generating function of the loss rather than its supremum, which is what the Rényi family does.
+
+:::definition[Rényi divergence, Rényi DP, and zCDP]{#renyi-dp}
+For $\alpha > 1$,
+
+$$D_{\alpha}(P\|Q) = \frac{1}{\alpha-1}\ln \mathbb{E}_{o\sim Q}\left[\left(\frac{p(o)}{q(o)}\right)^{\alpha}\right] = \frac{1}{\alpha-1}\ln\mathbb{E}_{o\sim P}\bigl[e^{(\alpha-1)L(o)}\bigr].$$
+
+$M$ is **$(\alpha,\rho)$-Rényi differentially private** if $D_{\alpha}(M(D)\|M(D'))\le\rho$ for every $D\sim D'$, and **$\rho$-zCDP** if $D_{\alpha}(M(D)\|M(D'))\le\rho\alpha$ for every $\alpha>1$ simultaneously.
+:::
+
+:::theorem[Rényi DP composes additively and converts to $(\varepsilon,\delta)$-DP]{#rdp-composition}
+(i) If $M_{1}$ is $(\alpha,\rho_{1})$-RDP and $M_{2}$ is $(\alpha,\rho_{2})$-RDP, their adaptive composition is $(\alpha,\rho_{1}+\rho_{2})$-RDP.
+
+(ii) If $M$ is $(\alpha,\rho)$-RDP then $M$ is $\bigl(\rho+\tfrac{\ln(1/\delta)}{\alpha-1},\ \delta\bigr)$-DP for every $\delta\in(0,1)$.
+
+(iii) The Gaussian mechanism with $\ell_{2}$ sensitivity $\Delta_{2}$ and noise $\sigma$ is $\bigl(\alpha,\ \tfrac{\alpha\Delta_{2}^{2}}{2\sigma^{2}}\bigr)$-RDP for every $\alpha>1$; equivalently it is $\tfrac{\Delta_{2}^{2}}{2\sigma^{2}}$-zCDP.
+:::
+
+:::proof
+*Sketch for (i) and (ii); (iii) is a direct computation.*
+
+(iii) For $P=\mathcal{N}(\mu_1,\sigma^{2})$ and $Q=\mathcal{N}(\mu_2,\sigma^{2})$ with $|\mu_1-\mu_2| = \Delta_{2}$, completing the square in the Gaussian integral $\mathbb{E}_{Q}[(p/q)^{\alpha}]$ gives the exact value $D_{\alpha}(P\|Q) = \tfrac{\alpha\Delta_{2}^{2}}{2\sigma^{2}}$; the Rényi divergence between equal-variance Gaussians is *linear* in $\alpha$, which is precisely the zCDP condition.
+
+(i) The quantity $e^{(\alpha-1)D_{\alpha}}$ is an expectation of $e^{(\alpha-1)L}$, and under adaptive composition the total loss is the sum of the per-step losses; conditioning on the first output and applying the second mechanism's bound inside the expectation multiplies the two moment generating functions, and taking logarithms turns the product into a sum. The omitted part is the bookkeeping that makes this rigorous under adaptivity.
+
+(ii) Markov's inequality applied to $e^{(\alpha-1)L}$ bounds $\Pr[L > \rho + \tfrac{\ln(1/\delta)}{\alpha-1}]$ by $\delta$, and Lemma *Tail bound on the loss implies approximate DP* finishes.
+:::
+
+:::example[Accounting a hundred Gaussian releases two ways]
+A mechanism releases $k=100$ statistics, each by a Gaussian mechanism with $\Delta_{2}=1$ and $\sigma = 10$. Compute the resulting $(\varepsilon,\delta)$ at $\delta = 10^{-6}$ via Rényi accounting, and compare with what basic composition of per-release guarantees would give.
 :::
 
 :::solution
-**Basic composition is too lossy:** it would force each query to be $\varepsilon/k=1/100=0.01$-DP — very noisy per query.
-**Advanced composition** gives roughly $\varepsilon\approx\sqrt{2k\ln(1/\delta')}\,\varepsilon_0 + k\varepsilon_0(e^{\varepsilon_0}-1)$. For small $\varepsilon_0$ the first term dominates, so set $\varepsilon_0\approx \dfrac{\varepsilon}{\sqrt{2k\ln(1/\delta')}}$.
-**Plug in:** $\ln(1/\delta')=\ln(10^{6})\approx13.8$, so $\sqrt{2\cdot100\cdot13.8}=\sqrt{2760}\approx52.5$. Then $\varepsilon_0\approx 1/52.5\approx0.019$.
-**Sanity check:** this per-query $\varepsilon_0\approx0.019$ is nearly $2\times$ larger than the $0.01$ that basic composition allowed, so each query can use about half the noise — the $\sqrt{k}$ savings of advanced composition. The exact calibration is done by a privacy accountant (e.g. Rényi-DP), which is tighter still.
+Each release is $(\alpha, \alpha/200)$-RDP by part (iii). By part (i), $100$ of them are $(\alpha, \alpha/2)$-RDP.
+
+By part (ii) the final guarantee is $\varepsilon(\alpha) = \tfrac{\alpha}{2} + \tfrac{\ln(10^{6})}{\alpha-1} = \tfrac{\alpha}{2}+\tfrac{13.82}{\alpha-1}$. Minimising over $\alpha$: differentiating, $\tfrac12 = \tfrac{13.82}{(\alpha-1)^{2}}$, so $\alpha-1 = \sqrt{27.63}=5.26$ and $\alpha = 6.26$. Then
+
+$$\varepsilon = \frac{6.26}{2}+\frac{13.82}{5.26} = 3.13+2.63 = 5.76.$$
+
+Basic composition: one release at $\sigma = 10$ with $\delta_{0}=10^{-8}$ needs $\varepsilon_{0} = \sqrt{2\ln(1.25\times 10^{8})}/10 = \sqrt{2(18.64)}/10 = 0.611$, and $100$ of those give $\varepsilon = 61.1$ at $\delta = 10^{-6}$.
+
+Sanity check: Rényi accounting gives $5.76$ against $61.1$ — a factor of ten, roughly the $\sqrt{k}$ the theory predicts. This is why every production system for private deep learning is built on an RDP or zCDP accountant rather than on composition theorems in closed form. □
 :::
 
-## Applications and Limitations
+:::remark
+The exponential, Laplace and Gaussian mechanisms now sit in one frame: each bounds a divergence between the output distributions on neighbouring inputs. Laplace and the exponential mechanism bound $D_{\infty}$; the Gaussian mechanism bounds $D_{\alpha}$ linearly in $\alpha$ and $D_{\infty}$ not at all. Choosing a mechanism is choosing which divergence you can afford to bound.
+:::
+
+## Differential Privacy Without a Trusted Curator
+
+<!-- section: local-dp -->
+
+Everything so far assumes a curator who sees the raw data and releases something noisy. That is the *central* model, and it presumes exactly the trust that is often missing — a phone maker collecting typing statistics does not want the raw keystrokes on its servers at all. The local model removes the curator.
+
+:::definition[Local differential privacy]{#local-dp}
+A randomiser $R\colon\mathcal{X}\to\mathcal{Z}$ is **$\varepsilon$-locally differentially private** if for all inputs $x,x'\in\mathcal{X}$ and all $S\subseteq\mathcal{Z}$,
+
+$$\Pr[R(x)\in S]\le e^{\varepsilon}\Pr[R(x')\in S].$$
+
+A protocol in which each of $n$ users independently applies $R$ to their own record and sends the result is then called $\varepsilon$-LDP.
+:::
+
+The quantifier has changed: it now runs over all *pairs of possible records*, not over neighbouring datasets. Nothing unperturbed ever leaves the device, so no server, subpoena or breach can recover a raw record. Randomised response, from the first section, is the prototype.
+
+:::proposition[A local protocol is central-DP too]{#local-implies-central}
+If each user runs an $\varepsilon$-LDP randomiser independently, the collection of all $n$ reports is an $\varepsilon$-DP mechanism on the dataset in the central sense.
+:::
+
+:::proof
+Neighbouring datasets differ in one user's record. That user's report distribution changes by a factor at most $e^{\varepsilon}$ by local DP; every other user's report distribution is unchanged, contributing a factor $1$ to the joint likelihood ratio. This is Proposition *Parallel composition* with one record per part.
+:::
+
+The converse fails badly, and quantifying the failure is the central fact of the local model.
+
+:::theorem[Accuracy of local frequency estimation]{#ldp-accuracy}
+Let $n$ users hold bits $x_{1},\dots,x_{n}$ and report via $\varepsilon$-LDP randomised response. Let $\bar{y}$ be the fraction of "yes" reports and set
+
+$$\widehat{p} = \frac{\bar{y}-q}{p-q},\qquad p = \frac{e^{\varepsilon}}{e^{\varepsilon}+1},\quad q = \frac{1}{e^{\varepsilon}+1}.$$
+
+Then $\widehat{p}$ is unbiased for the true fraction $\bar p$ of ones, and
+
+$$\operatorname{Var}(\widehat p) \le \frac{1}{4n}\left(\frac{e^{\varepsilon}+1}{e^{\varepsilon}-1}\right)^{2},$$
+
+which for small $\varepsilon$ is of order $1/(\varepsilon^{2}n)$.
+:::
+
+:::proof
+User $i$ reports yes with probability $q + (p-q)x_{i}$, so $\mathbb{E}[\bar y] = q+(p-q)\bar p$ and $\widehat p$ is unbiased. The reports are independent Bernoulli variables, each of variance at most $\tfrac14$, so $\operatorname{Var}(\bar y)\le \tfrac{1}{4n}$; dividing by $(p-q)^{2}$ gives the stated bound, since $p-q = \tfrac{e^{\varepsilon}-1}{e^{\varepsilon}+1}$. For small $\varepsilon$, $\tfrac{e^{\varepsilon}+1}{e^{\varepsilon}-1}\approx \tfrac{2}{\varepsilon}$, whence the order statement.
+:::
+
+:::corollary[The $\sqrt{n}$ separation]{#local-central-gap}
+Estimating a proportion costs a standard error of order $1/(\varepsilon\sqrt{n})$ in the local model, against order $1/(\varepsilon n)$ in the central model: the local model is a factor $\sqrt{n}$ worse.
+:::
+
+:::proof
+The local rate is Theorem *Accuracy of local frequency estimation*. For the central rate, release the count with the Laplace mechanism and divide by $n$: by Theorem *Accuracy of the Laplace mechanism* the absolute error of the count is $O(1/\varepsilon)$, so the error of the proportion is $O(1/(\varepsilon n))$. That the local rate cannot be improved requires a matching lower bound, which is not proved here.
+:::
+
+:::intuition
+In the central model one noise term is shared across the whole population; in the local model every user adds their own, and $n$ independent noises average down only as $\sqrt{n}$. Concretely, at $\varepsilon = 1$ and $n = 10^{6}$ the central error in a proportion is about $10^{-6}$ and the local error about $2\times 10^{-3}$ — a thousandfold gap, which is why local deployments need populations in the hundreds of millions and only ever ask coarse questions.
+:::
+
+:::example[How many users does a local deployment need?]
+A company wants the frequency of a rare emoji estimated to within $\pm 0.001$ (two standard errors) at $\varepsilon = 2$. How many users must report?
+:::
+
+:::solution
+Here $e^{2} = 7.389$, so $\tfrac{e^{\varepsilon}+1}{e^{\varepsilon}-1} = 8.389/6.389 = 1.313$ and
+
+$$\operatorname{Var}(\widehat p)\le \frac{1.313^{2}}{4n} = \frac{1.724}{4n} = \frac{0.431}{n}.$$
+
+Two standard errors is $2\sqrt{0.431/n} \le 0.001$, so $\sqrt{0.431/n}\le 5\times10^{-4}$, i.e. $0.431/n \le 2.5\times 10^{-7}$ and $n \ge 1.72\times 10^{6}$.
+
+Sanity check: about $1.7$ million users for a single yes/no question at a fairly weak $\varepsilon = 2$. A central-model curator would need a few thousand. This is the arithmetic behind the industrial local deployments — they are run by companies with hundreds of millions of devices, and even then each device reports on only a handful of questions per day. □
+:::
+
+:::pitfall
+Local DP is often deployed with a per-report $\varepsilon$ and no bound on the number of reports. If a device reports daily under $\varepsilon = 2$, basic composition gives $\varepsilon = 730$ over a year on an unchanging attribute — no guarantee at all. A local deployment must either rate-limit reports per user, or memoise, so that the same true value always yields the same randomised report.
+:::
+
+:::remark
+The shuffle model sits between the two: users randomise locally, and a trusted shuffler strips identifiers and permutes the reports before they reach the analyst. Anonymity *amplifies* the guarantee — $n$ reports at local $\varepsilon_{0}$ become roughly $\varepsilon_{0}\sqrt{\ln(1/\delta)/n}$ at the analyst — recovering much of the central model's accuracy without any party seeing raw data.
+:::
+
+## Deployments, and What the Guarantee Does Not Cover
 
 <!-- section: applications-limitations -->
 
-DP is used for:
-- Releasing aggregate statistics, contingency tables, synthetic data.
-- Training ML models (DP-SGD adds noise to gradients; the privacy cost depends on the noise multiplier, batch size, and number of epochs).
-- Apple's 'differential privacy' deployment for emoji and Safari usage (local DP, each device adds noise before sending).
-- The 2020 U.S. Census (Disclosure Avoidance System based on the TopDown algorithm, a form of DP).
+Three deployments show the three models at work.
 
-Limitations: the utility/privacy tradeoff can be severe for small datasets or many queries; choosing ε is a policy question (typical deployed values 0.1–10); composition can exhaust the budget quickly; DP does not protect against all inference (it protects participation, not the fact that someone is in a certain group if group membership is already known).
+**Machine learning (central model).** DP-SGD replaces the gradient step with a privatised one: per-example gradients are clipped to $\ell_{2}$ norm $C$, which *defines* the sensitivity rather than measuring it; the clipped gradients are summed; Gaussian noise $\mathcal{N}(0,\sigma^{2}C^{2}I)$ is added; the result is averaged and used as the step. Every subsequent operation — the optimiser state, the trained weights, the predictions — is post-processing, so the trained model inherits the privacy of the gradient sequence by Theorem *Post-processing invariance*. The accounting is Rényi, by Theorem *Rényi DP composes additively and converts to $(\varepsilon,\delta)$-DP*, with an additional *subsampling amplification*: a step taken on a batch sampled at rate $q$ is far more private than the same step on the full data, because most records were not even eligible to influence it.
 
-:::intuition
-DP gives a dial you can turn: more noise → stronger privacy but less accurate answers. For big datasets and few queries the dial can be set so that the noise is tiny relative to the signal.
+**Official statistics (central model).** The 2020 US Census Disclosure Avoidance System is the largest DP deployment: noisy counts at every level of geography, reconciled by a post-processing step that enforces non-negativity and hierarchical consistency. That the reconciliation is post-processing is what allows it to be as elaborate as it needs to be without spending any budget.
 
-In machine learning, DP-SGD makes models slightly less accurate but gives a mathematical guarantee that the model weights do not memorize any single training example too strongly.
-:::
+**Telemetry (local model).** Apple's keyboard and Safari statistics, and Google's original RAPPOR, randomise on the device. Both are subject to the accuracy arithmetic of Example *How many users does a local deployment need?* and to the repeated-reporting pitfall above; RAPPOR's memoisation step exists precisely to defuse it.
 
-:::example[(DP-SGD):]
-Train a neural net privately. Concrete setup: dataset size $N=50{,}000$, batch size $B=500$, noise multiplier $\sigma=1.1$, clipping norm $C=1.0$, and $E=30$ epochs.
+:::example[Reading a DP-SGD configuration]
+A model is trained on $N = 50{,}000$ examples with batch size $B = 500$, clipping norm $C = 1$, noise multiplier $\sigma = 1.1$, for $E = 30$ epochs. Identify the sensitivity, the sampling rate and the number of composed mechanisms, and say which lever to move to halve the reported privacy cost.
 :::
 
 :::solution
-**Per-step mechanism.** Compute each example's gradient $g_i$, clip it to $L_2$ norm $C$ via $\bar g_i=g_i/\max(1,\lVert g_i\rVert_2/C)$ (bounding sensitivity to $C$), sum over the batch, add Gaussian noise $N(0,(\sigma C)^2 I)=N(0,1.21\,I)$, then divide by $B$ and take the SGD step.
-**Sampling rate.** $q=B/N=500/50{,}000=0.01$. Poisson subsampling amplifies privacy: each step is much more private than $\sigma$ alone would suggest.
-**Number of steps.** Steps per epoch $=N/B=50{,}000/500=100$, so total $T=E\cdot(N/B)=30\cdot100=3000$ steps.
-**Accounting.** A Rényi-DP / moments accountant composes these $T=3000$ subsampled Gaussian steps and outputs a single $(\varepsilon,\delta)$. For these parameters one typically lands near $\varepsilon\approx2$–$3$ at $\delta=10^{-5}$. **Sanity check:** raising $\sigma$ or lowering $q$ or $T$ all *decrease* $\varepsilon$ (stronger privacy) at the cost of accuracy — the levers behave monotonically, as expected. Because the trained weights are a post-processing of the noisy gradients, the final model inherits the same $(\varepsilon,\delta)$.
+Sensitivity: one example changes the clipped sum by at most $C = 1$ in $\ell_{2}$, so $\Delta_{2}=1$ by construction — this is why clipping is mandatory rather than merely stabilising.
+
+Sampling rate: $q = B/N = 500/50{,}000 = 0.01$.
+
+Composed mechanisms: steps per epoch $= N/B = 100$, so $T = 30\times 100 = 3000$ Gaussian mechanisms composed adaptively.
+
+Levers: by part (iii) of Theorem *Rényi DP composes additively and converts to $(\varepsilon,\delta)$-DP* the per-step RDP cost is $\alpha C^{2}/(2\sigma^{2}C^{2}) = \alpha/(2\sigma^{2})$, and by part (i) it accumulates linearly in $T$, so the total zCDP parameter $\rho$ scales as $T/\sigma^{2}$ before amplification. Halving $\rho$ therefore needs $\sigma \to \sigma\sqrt2 \approx 1.56$, or $T \to T/2$ (fifteen epochs), or a smaller $q$.
+
+Sanity check: all three levers move the privacy cost in the direction that costs accuracy — more noise, less training, smaller batches. There is no free parameter, which is the honest content of the privacy–utility tradeoff. □
+:::
+
+:::pitfall
+The $\varepsilon$ reported for a trained model covers the *training run as specified*. Hyperparameter search over the private data, early stopping on a private validation metric, and re-running after a disappointing result are all further queries that composition charges for, and they are routinely left out of published numbers.
+:::
+
+Now the limitations, stated as sharply as the guarantees.
+
+:::remark[What differential privacy does not promise]{#what-dp-does-not-do}
+1. **It does not prevent you from learning about populations.** If a study concludes that smoking causes cancer, a smoker's insurer can act on that. DP protects *participation*, not the conclusions — deliberately, since a mechanism that hid population-level facts would hide the reason for collecting data at all.
+2. **It does not protect correlated records well.** Theorem *Group privacy* degrades as $e^{k\varepsilon}$. If your record is heavily correlated with your relatives' records, your attributes are partly inferable from theirs whether or not you participate. No mechanism can be useful and simultaneously prevent inferences that follow from correlations in the data.
+3. **It says nothing when $\varepsilon$ is large.** At $\varepsilon = 10$ the log-odds may move by a factor of $22{,}026$. Deployed values between $0.1$ and $10$ have been defended, but $\varepsilon$ is a policy parameter and no theorem chooses it.
+4. **$\delta$ can hide a catastrophe.** See the pitfall in *What the Guarantee Says*: $\delta$ must be well below $1/n$ to be meaningful.
+5. **The guarantee is about the idealised mechanism.** Floating-point implementations of the Laplace mechanism leaked which real values were representable and broke the guarantee outright; timing, memory use and rounding are side channels the definition does not model.
+6. **It does not make a small dataset releasable.** The relative error $O(1/(\varepsilon n))$ is fatal for small $n$, and for small subgroups inside a large dataset. A DP release accurate in aggregate can be worthless for a minority group — the equity objection raised against the 2020 Census.
+7. **It is not access control.** DP constrains what a release reveals. It says nothing about who may run queries, how the raw data is stored, or whether the budget is honestly tracked.
+:::
+
+:::intuition
+The right summary is that DP moves the question from "is this release safe?", which nobody can answer, to "how much has been spent?", which is arithmetic. The arithmetic is honest, but it is still arithmetic: it charges you for every question you ask, it cannot make a small dataset rich, and it protects the individual rather than the group.
 :::
 
 ## Common Mistakes
 
-- **Thinking that in Shamir's scheme the polynomial is evaluated at the participant identities only**: The x-coordinates are public identifiers; the y-values (or the pair) are the actual shares that must be kept secret.
-- **Believing that k-1 shares give 'some' partial information about s**: In a perfect scheme they give zero information; the posterior on s is identical to the prior (uniform).
-- **Using a small field for a large secret**: Shamir is usually applied to field elements; for a long secret one either uses a large field or shares the secret bit-by-bit / block-by-block with independent polynomials.
-- **Forgetting that the dealer must be trusted to choose the polynomial correctly**: If the dealer is malicious he can give inconsistent shares. Verifiable secret sharing solves this.
-- **Assuming computational secret sharing (e.g., using one-way functions) is the same as information-theoretic**: Computational schemes can have shorter shares but rely on hardness assumptions and may be broken by future algorithms or quantum computers.
-- **Confusing secret sharing with threshold cryptography or multiparty computation**: Secret sharing is the distribution step; threshold crypto uses shares of a key to perform operations without reconstructing the key in the clear; MPC is the broader interactive protocol setting.
-
-Secure multiparty computation (MPC, or SMPC) lets a set of parties, each holding a private input, compute a joint function of all inputs while revealing only the output (and whatever is implied by it). No party learns anything else about the other parties' inputs.
-
-MPC is the broadest primitive in cryptography that generalizes secret sharing, zero-knowledge, and private set intersection. It can realize any 'mental poker' or 'millionaires' problem in a provably secure way.
-
-- **Thinking MPC always requires a trusted third party**: The whole point is to remove the trusted party; the protocol itself emulates the ideal functionality.
-- **Assuming that 'the output reveals nothing'**: By definition the output y is revealed; privacy only protects the inputs beyond what is implied by y (e.g., if f is the sum, the sum itself is learned but not the individual addends).
-- **Believing information-theoretic security is always possible**: It requires an honest majority (or a private channel + honest majority). Dishonest majority needs computational assumptions.
-- **Confusing 2-party Yao with multi-party secret-sharing MPC**: Yao is usually computational (via OT) and for two parties; BGW-style is information-theoretic for honest majority and uses Shamir sharing + interaction for multiplication.
-- **Forgetting the cost of malicious security**: Semi-honest protocols can be very cheap (linear in circuit size); malicious security often adds heavy zero-knowledge or cut-and-choose overhead, although recent protocols (e.g., SPDZ, authenticated triples) have made malicious security practical.
-- **Assuming MPC is only for 'millionaires' or toy functions**: Modern MPC frameworks (MP-SPDZ, SCALE-MAMBA, EMP-toolkit, etc.) routinely evaluate AES, neural-network inference, and complex database queries among dozens of parties.
-
-Differential privacy (DP) is a rigorous, quantifiable definition of privacy for data analysis and machine learning. It asks that a randomized algorithm behave almost identically on any two datasets differing in at most one record, so that no output can betray whether a particular individual took part; the formal statement is given in the next section.
-
-The parameter ε (the privacy budget) controls the strength of the guarantee: smaller ε gives stronger privacy. The definition makes no assumptions about the adversary's background knowledge or computational power.
-
-DP has become the gold standard for private data release at companies (Apple, Google, Microsoft, Uber) and in the U.S. Census Bureau's 2020 release.
-
-- **Confusing differential privacy with k-anonymity or other syntactic notions**: k-anonymity can be broken by background knowledge or homogeneity attacks; DP gives a worst-case multiplicative guarantee independent of the adversary's knowledge.
-- **Thinking that 'adding noise' is automatically DP**: The noise distribution and its scale must be calibrated exactly to the sensitivity and the desired ε (or (ε,δ)); arbitrary noise may give no guarantee.
-- **Forgetting that post-processing does not cost privacy but composition does**: You can analyze the released DP object as much as you want for free; each new release that depends on the original data costs more budget.
-- **Using a fixed ε across all datasets and applications**: ε is a policy choice that should depend on the sensitivity of the data, the number of expected queries, and the risk tolerance;  ε=1 is not 'always safe.'
-- **Believing local DP (each user perturbs before sending) is the same as central DP**: Local DP requires much more noise (roughly √n worse) because each report must be private by itself; central DP (a trusted curator adds noise to the aggregate) is far more accurate.
-- **Ignoring that DP protects participation, not the value of an attribute**: If everyone in a group has the same sensitive attribute, learning that the group statistic is high may still reveal the attribute for a member even if participation is hidden.
+- **Treating "we added noise" as differential privacy**: the distribution and its scale must be calibrated to the query's global sensitivity and the target $\varepsilon$. Noise of the wrong scale, or noise added after a data-dependent decision, carries no guarantee at all.
+- **Computing sensitivity from the dataset in hand**: global sensitivity is a maximum over *all* neighbouring pairs in the universe. A mean of unbounded values has infinite sensitivity however tame the observed data looks; clip first, and choose the clipping range without looking.
+- **Reading $\delta$ as "a small leak"**: a mechanism that publishes everything with probability $\delta$ satisfies $(0,\delta)$-DP. Require $\delta \ll 1/n$.
+- **Paying privacy for post-processing**: rounding, clipping to a sensible range, reconciling a hierarchy, fitting a model to a noisy release — all free by Theorem *Post-processing invariance*. Analysts often re-query the raw data to do what they could have done to the noisy output.
+- **Confusing post-processing with re-querying**: the guarantee is free only if the function never touches the dataset again. Anything that re-reads the data costs budget, composition applies, and hyperparameter tuning is the usual offender.
+- **Using the Gaussian calibration $\sigma \ge \Delta_{2}\sqrt{2\ln(1.25/\delta)}/\varepsilon$ outside $\varepsilon<1$**: the bound simply fails for larger $\varepsilon$; use the analytic Gaussian mechanism or an RDP accountant.
+- **Mixing $\ell_{1}$ and $\ell_{2}$ sensitivities**: Laplace is calibrated to $\Delta_{1}$ and Gaussian to $\Delta_{2}$. Feeding $\Delta_{2}$ into the Laplace scale under-noises a $k$-dimensional query by as much as $\sqrt{k}$.
+- **Assuming advanced composition always wins**: the $\sqrt{2k\ln(1/\delta')}$ factor is a fixed overhead, so for small $k$ basic composition gives a smaller $\varepsilon$ — and it gives *pure* DP, with no $\delta$.
+- **Quoting an $\varepsilon$ without the neighbouring relation or the unit of privacy**: add/remove and replacement differ by up to a factor $2$, and an $\varepsilon$ stated per record says little about a household, a business, or a user contributing many rows.
+- **Believing local DP is "just DP on the device"**: the quantifier runs over all pairs of records, not neighbouring datasets, and the accuracy cost is a factor $\sqrt{n}$ — Corollary *The $\sqrt{n}$ separation*.
+- **Forgetting that group privacy degrades exponentially**: $\varepsilon$-DP gives a group of $k$ only $e^{k\varepsilon}$, which is vacuous well before $k = 20$ at $\varepsilon=1$.
+- **Confusing DP with $k$-anonymity or de-identification**: those constrain the released table and fall to linkage attacks with auxiliary data; DP constrains the mechanism and is immune to auxiliary information by construction.
