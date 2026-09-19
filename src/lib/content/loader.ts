@@ -58,7 +58,6 @@ export function subjectConfigFromIndex(idx: SubjectIndex): ListedSubjectConfig {
     modulesDescription: idx.modulesDescription,
     icon: idx.icon,
     order: idx.order,
-    hasTests: idx.hasTests ?? false,
     category: idx.category,
     topicCount: idx.topics.length,
     topics: [],
@@ -86,7 +85,6 @@ const linalgConfig: SubjectConfig = {
     "Read the linear algebra chapters in order, or jump directly to the topic you need.",
   icon: "λ",
   order: 2,
-  hasTests: false,
 };
 
 /**
@@ -279,7 +277,7 @@ export async function loadSubjectIndex(slug: string): Promise<SubjectIndex> {
 /**
  * Lightweight auto subject discovery to enable true "just drop content/" for new subjects.
  * Scans the content/ directory (server-only via fs) for subdirectories containing index.json.
- * For each, loads the SubjectIndex for label/desc/icon/order/hasTests.
+ * For each, loads the SubjectIndex for label/desc/icon/order.
  * Scans content/ for subdirectories with a valid index.json.
  * Returns listed configs (topics/problems/modules empty; bundles loaded at call sites).
  */
@@ -398,7 +396,6 @@ export async function loadSubjectFromContent(
     modulesDescription: subjectIndex.modulesDescription,
     icon: subjectIndex.icon,
     order: subjectIndex.order,
-    hasTests: subjectIndex.hasTests,
   };
 
   const topicsFromIndex = subjectIndex.topics;

@@ -22,7 +22,8 @@
  * Future work (do not over-engineer in v1):
  * - Per-problem answer validation config (tolerance, equivalence mode, etc.)
  * - Structured explanations (vs rich string) — now using raw MDX sources for rich content
- * - Test questions as first-class (currently separate for calculus only)
+ * - (done) Test questions are first-class content: content/{slug}/topics/{topic}/problemset.json,
+ *   see ProblemSetFileSchema below. Presence of that file is what gives a topic a chapter test.
  * - MDX / richer body content (initial FS + raw source support added)
  *
  * MDX support (2026-06-01):
@@ -117,20 +118,6 @@ export const ProblemSchema = z
 
 export type Problem = z.infer<typeof ProblemSchema>;
 
-/**
- * Test questions (separate pool, only for "hasTests" subjects like Calculus).
- * Similar shape to Problem but never mixed into practice progress.
- * Ids conventionally prefixed "test-".
- */
-export const TestQuestionSchema = z
-  .object({
-    ...problemFields,
-    /** Tests do not use per-section filtering (optional in test pool). */
-    section: z.string().min(1).optional(),
-  })
-  .refine(mcqRefine.refine, { message: mcqRefine.message, path: mcqRefine.path });
-export type TestQuestion = z.infer<typeof TestQuestionSchema>;
-
 // ============================================
 // Topic
 // ============================================
@@ -211,7 +198,6 @@ export const SubjectConfigSchema = z.object({
   modulesDescription: z.string().min(1),
   icon: z.string().min(1), // emoji or short symbol
   order: z.number().int().positive(),
-  hasTests: z.boolean().default(false),
   /** Optional topic count for /subjects overview, populated from the index topics array by loader */
   topicCount: z.number().int().nonnegative().optional(),
   /** Category for color-coding cards (foundations | calculus | linear | stats | discrete | algebra | logic | analysis) */
@@ -287,7 +273,6 @@ export const SubjectIndexSchema = z.object({
   modulesDescription: z.string().min(1),
   icon: z.string().min(1),
   order: z.number().int().positive(),
-  hasTests: z.boolean().default(false),
   category: z.string().optional(),
   topics: z.array(TopicSchema),
 
@@ -433,3 +418,91 @@ export const DiagnosticFileSchema = z.object({
 });
 
 export type DiagnosticFile = z.infer<typeof DiagnosticFileSchema>;
+
+// ============================================
+// Problem Sets (content/{slug}/topics/{topicId}/problemset.json)
+// ============================================
+
+/**
+ * What a problem asks the learner to *do*.
+ *
+ * This is the reason the format exists. The online question bank is ~60% multiple
+ * choice because every answer had to survive string comparison; a printed sheet
+ * has no grader, so it can finally ask for the three kinds of work that matter
+ * most and cannot be auto-marked:
+ *
+ * - "computation" — evaluate/solve, the only kind the online bank could carry.
+ * - "proof"       — establish a statement from definitions or named theorems.
+ * - "sketch"      — draw a graph/region and justify the features drawn.
+ * - "critique"    — find the error in a given argument and repair it.
+ *
+ * Authoring rule: a sheet made only of "computation" wastes the format.
+ */
+export const ProblemKindSchema = z.enum(["computation", "proof", "sketch", "critique"]);
+export type ProblemKind = z.infer<typeof ProblemKindSchema>;
+
+/**
+ * One numbered problem on a printable sheet.
+ *
+ * Invariants (enforced by scripts/validate-problemsets.ts):
+ * - `id` is stable and unique across the whole corpus. It is *not* a practice
+ *   question id and never enters progress tracking — paper is not graded here.
+ * - `section` must exactly match a section slug derived from the topic's
+ *   module.mdx (same hard requirement questions.json carries), so a sheet can
+ *   never drift away from the chapter it claims to test.
+ * - `solution` is a full worked method, not a final answer. The learner checks
+ *   their *route*, which is the whole point of doing it on paper.
+ */
+export const ProblemSetProblemSchema = z.object({
+  /** Stable, unique id. Convention: "ps-{subject}-{topic}-{nn}". */
+  id: z.string().min(1),
+
+  /** Section slug within the topic's module.mdx that this problem draws on. */
+  section: z.string().min(1),
+
+  kind: ProblemKindSchema,
+
+  difficulty: DifficultySchema,
+
+  /**
+   * Expected working time in minutes. Drives the sheet's total time estimate and
+   * how much blank space is printed under the question.
+   */
+  minutes: z.number().int().positive().max(60),
+
+  /** The question, as it is printed. LaTeX in $...$ / $$...$$ as elsewhere in the corpus. */
+  prompt: z.string().min(1),
+
+  /**
+   * Optional lettered parts, printed (a), (b), (c) … under the prompt, each with
+   * its own working space. Use when one setup carries several asks.
+   */
+  parts: z.array(z.string().min(1)).min(2).optional(),
+
+  /** Full worked solution — the method, step by step, not just the answer. */
+  solution: z.string().min(1),
+});
+
+export type ProblemSetProblem = z.infer<typeof ProblemSetProblemSchema>;
+
+/**
+ * Schema for content/{slug}/topics/{topicId}/problemset.json.
+ *
+ * The presence of this file is the single source of truth for whether a topic
+ * has a chapter test — there is no per-subject flag. (The retired `hasTests` on
+ * the subject index was the wrong granularity: tests are per chapter.)
+ */
+export const ProblemSetFileSchema = z.object({
+  /** Must match the containing topic folder. */
+  topicId: z.string().min(1),
+
+  /** Printed at the head of the sheet, e.g. "Limits & Continuity". */
+  title: z.string().min(1),
+
+  /** One or two sentences of rubric printed under the title. */
+  instructions: z.string().min(1),
+
+  problems: z.array(ProblemSetProblemSchema).min(1),
+});
+
+export type ProblemSetFile = z.infer<typeof ProblemSetFileSchema>;

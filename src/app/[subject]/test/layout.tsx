@@ -13,8 +13,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // minimal fallback
   }
   return {
-    title: `Topic Test — ${label} | CalcPath`,
-    description: `Timed topic test for ${label}.`,
+    title: `Chapter Test — ${label} | CalcPath`,
+    description: `Printable chapter problem sheets for ${label}, with full worked solutions.`,
   };
 }
 

@@ -8,6 +8,7 @@ import {
 } from "@/lib/content/legacy-topic-redirects";
 import { getPracticePath } from "@/lib/subject-urls";
 import { GenericPracticeExperience } from "@/components/generic-practice-experience";
+import { hasProblemSet } from "@/lib/content/problemset-loader";
 import { PracticeErrorBoundary } from "@/components/practice/PracticeErrorBoundary";
 
 interface Props {
@@ -145,6 +146,7 @@ export default async function DynamicPracticePage({ params, searchParams }: Prop
         problems={topicProblems}
         subjectLabel={bundle.config.label}
         nextTopic={nextTopic ? { id: nextTopic.id, title: nextTopic.title } : undefined}
+        hasProblemSet={await hasProblemSet(subjectSlug, topicId)}
       />
     </PracticeErrorBoundary>
   );

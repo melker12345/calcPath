@@ -1,65 +1,63 @@
-import { getFileSystemContentBundle } from "@/lib/content/loader";
-import dynamic from "next/dynamic";
+/**
+ * The printable question sheet for one chapter: /[subject]/test/[topicId].
+ *
+ * A Server Component with no client JavaScript. Everything the page does —
+ * numbering, maths, the per-question answer reveal — is HTML and CSS, because
+ * the page's real destination is a sheet of A4.
+ *
+ * Auto-discovered: the route exists exactly when
+ * content/{subject}/topics/{topicId}/problemset.json does. There is no flag to
+ * set and no per-subject data file to hand-write (which is what the old
+ * src/lib/test-questions.ts required, and why only calculus ever had tests).
+ */
+
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import type { Topic } from "@/lib/shared-types";
-import type { TestQuestion } from "@/lib/test-questions";
-import { getTestQuestionsForTopic } from "@/lib/test-questions";
+import "katex/dist/katex.min.css";
+
+import { ProblemSheet } from "@/components/problem-sheet";
 import { loadSubjectIndex } from "@/lib/content/loader";
+import { loadProblemSet, problemSetMinutes } from "@/lib/content/problemset-loader";
 
 type Props = {
   params: Promise<{ subject: string; topicId: string }>;
 };
 
-const TestClient = dynamic(
-  () => import("./TestClient"),
-  {
-    loading: () => (
-      <div className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6">
-        <div className="text-sm text-zinc-500">Loading test…</div>
-      </div>
-    ),
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { subject: slug, topicId } = await params;
+  const set = await loadProblemSet(slug, topicId);
+  if (!set) {
+    return { title: "Not Found", robots: { index: false, follow: false } };
   }
-);
+  return {
+    title: `${set.title} — Printable Chapter Test`,
+    description: `A printable problem sheet for ${set.title}. Work it on paper; full worked solutions on a separate page.`,
+    alternates: { canonical: `https://calc-path.com/${slug}/test/${topicId}` },
+  };
+}
 
-export default async function SubjectTestPage({ params }: Props) {
+export default async function ChapterTestPage({ params }: Props) {
   const { subject: slug, topicId } = await params;
 
-  let hasTests = false;
+  const set = await loadProblemSet(slug, topicId);
+  if (!set) {
+    notFound();
+  }
+
+  let subjectLabel = slug;
   try {
-    const idx = await loadSubjectIndex(slug);
-    hasTests = idx.hasTests ?? false;
+    subjectLabel = (await loadSubjectIndex(slug)).label;
   } catch {
     notFound();
   }
-  if (!hasTests) {
-    notFound();
-  }
 
-  let topic: Topic | null = null;
-  try {
-    const bundle = await getFileSystemContentBundle(slug);
-    topic = bundle.topics.find((t) => t.id === topicId) ?? null;
-  } catch (err) {
-    console.error("Failed to load test topic", err);
-  }
-
-  if (!topic) {
-    notFound();
-  }
-
-  const allTestQuestions: TestQuestion[] = getTestQuestionsForTopic(topicId);
-
-  // If hasTests is true but no test questions exist for the topic (e.g. new subject or
-  // calculus topic without pool yet), we pass [] to TestClient which renders a graceful
-  // "No test questions available for this topic." message + link back (does not crash or 404 the topic).
-  // notFound() would also be valid here per task, but message preserves UX parity for partial data.
-  // topic tests currently only have data for subjects where test question pools exist in lib/test-questions.ts; new subjects can set hasTests:true in their content/*/index.json once data is provided.
   return (
-    <TestClient
+    <ProblemSheet
       subjectSlug={slug}
+      subjectLabel={subjectLabel}
       topicId={topicId}
-      topic={topic}
-      allTestQuestions={allTestQuestions}
+      set={set}
+      totalMinutes={problemSetMinutes(set)}
     />
   );
 }

@@ -1336,3 +1336,399 @@ textarea:focus {
     break-inside: avoid;
   }
 }
+
+/* ==================================================================== *
+   PROBLEM SHEETS  (/[subject]/test/[topicId] and .../answers)
+   ------------------------------------------------------------------
+   One contiguous block, appended last on purpose so it merges cleanly.
+
+   These two pages are Server Components with no client JavaScript: the
+   whole feature is HTML plus the rules below. The page's real output is
+   a sheet of A4, so every rule here has a screen half and a paper half.
+
+   THE RULE THAT MATTERS: `.answer-reveal` is display:none in print,
+   open or closed. A learner who expands question 4 to check it and then
+   prints must still get a clean sheet. The solutions on the /answers
+   page are NOT `.answer-reveal` — they are the page's content, and they
+   print. Note also that the global print block above force-opens every
+   <details> (`details > :not(summary) { display: block !important }`);
+   hiding the <details> element itself is what beats that.
+ * ==================================================================== */
+
+.ps-sheet {
+  margin: 0 auto;
+  width: 100%;
+  max-width: 44rem;
+  padding: 2rem 1rem 4rem;
+}
+
+@media (min-width: 640px) {
+  .ps-sheet {
+    padding: 2.5rem 1.5rem 5rem;
+  }
+}
+
+/* --- screen-only chrome ------------------------------------------- */
+
+.ps-chrome {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+.ps-chrome-spacer {
+  flex: 1 1 auto;
+}
+
+.ps-chrome-link {
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.ps-chrome-link:hover {
+  text-decoration: underline;
+}
+
+.ps-howto {
+  margin-top: 1.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* --- the sheet head ----------------------------------------------- */
+
+.ps-head {
+  margin-top: 2rem;
+  border-bottom: 2px solid var(--text-primary);
+  padding-bottom: 1rem;
+}
+
+.ps-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ps-title {
+  margin-top: 0.4rem;
+  font-family: var(--font-serif);
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.ps-meta {
+  margin-top: 0.4rem;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.ps-instructions {
+  margin-top: 0.9rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* Name / Date rules. Print-only: an empty line to write on is furniture
+   on a screen and the first thing filled in on paper. Deliberately no
+   `display` here — the element is hidden on screen by Tailwind's .hidden,
+   and this block is emitted after the utilities, so declaring one would
+   win and leak the blank rules onto the page. The print block sets it. */
+.ps-nameline {
+  margin-top: 1rem;
+  gap: 2rem;
+}
+
+.ps-nameline > span {
+  flex: 1 1 0;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 1.4rem;
+  font-size: 9pt;
+}
+
+/* --- the numbered questions --------------------------------------- */
+
+.ps-list {
+  margin-top: 2rem;
+  list-style: none;
+  padding: 0;
+}
+
+.ps-item + .ps-item {
+  margin-top: 2.75rem;
+  border-top: 1px solid var(--border);
+  padding-top: 2rem;
+}
+
+.ps-item-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* The number is real text, never a CSS counter: a counter that fails to
+   print leaves a sheet of unnumbered questions. */
+.ps-num {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.ps-tag {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.ps-prompt {
+  margin-top: 0.5rem;
+  color: var(--text-primary);
+}
+
+.ps-prompt-recap {
+  color: var(--text-secondary);
+}
+
+.ps-para {
+  line-height: 1.7;
+}
+
+.ps-para + .ps-para {
+  margin-top: 0.75rem;
+}
+
+.ps-parts {
+  margin-top: 0.75rem;
+  list-style: none;
+  padding: 0;
+}
+
+.ps-part {
+  display: flex;
+  gap: 0.6rem;
+  line-height: 1.7;
+}
+
+.ps-part + .ps-part {
+  margin-top: 0.75rem;
+}
+
+.ps-part-label {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+/* inline-block so a \displaystyle fraction or limit owns its own vertical
+   space. KaTeX inline math does not grow the surrounding line box, so a
+   column of tall parts would otherwise sit almost on top of one another. */
+.ps-part-body {
+  display: inline-block;
+  max-width: 100%;
+}
+
+/* Blank working space. Print-only, sized from the question's expected
+   minutes via --ps-work-lines, at roughly one handwritten line each. */
+.ps-work {
+  min-height: calc(var(--ps-work-lines, 6) * 7mm);
+}
+
+/* --- the per-question reveal (screen) ------------------------------ */
+
+.answer-reveal {
+  margin-top: 1rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.answer-reveal-summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.answer-reveal-summary::-webkit-details-marker {
+  display: none;
+}
+
+.answer-reveal-summary::before {
+  content: "▸ ";
+  color: var(--text-muted);
+}
+
+.answer-reveal[open] .answer-reveal-summary::before {
+  content: "▾ ";
+}
+
+.answer-reveal-body {
+  border-top: 1px solid var(--border);
+  padding: 0.9rem;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+/* --- the solutions sheet ------------------------------------------ */
+
+.ps-item-answer + .ps-item-answer {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+}
+
+.ps-solution {
+  margin-top: 0.9rem;
+  border-left: 2px solid var(--accent);
+  padding-left: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.ps-solution-label {
+  margin-bottom: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ps-foot {
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1.25rem;
+  font-size: 0.875rem;
+}
+
+.ps-foot-print {
+  color: var(--text-muted);
+  font-size: 9pt;
+}
+
+/* A formula KaTeX refused; content:problemsets would already have failed. */
+.ps-math-error {
+  border-radius: 0.2rem;
+  background: var(--surface-2);
+  padding: 0 0.2rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+}
+
+/* Long display maths scrolls rather than widening the column. */
+.ps-sheet .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.4rem 0;
+}
+
+/* ------------------------------------------------------------------ *
+   Paper
+ * ------------------------------------------------------------------ */
+
+@page {
+  size: A4;
+  margin: 16mm 15mm 18mm;
+}
+
+@media print {
+  /* THE SPOILER RULE. A revealed answer must not reach the paper, and
+     `[open]` must not rescue it either. Hiding the <details> itself also
+     defeats the global rule that force-opens every <details> in print. */
+  .answer-reveal,
+  .answer-reveal[open] {
+    display: none !important;
+  }
+
+  .ps-sheet {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    font-size: 10pt;
+  }
+
+  .ps-head {
+    margin-top: 0;
+    border-bottom: 1pt solid #000 !important;
+    padding-bottom: 6pt;
+  }
+
+  /* `.print-only` reveals with display:block, which would collapse the two
+     name/date rules into one column — put the row back. */
+  .ps-nameline {
+    display: flex !important;
+  }
+
+  .ps-title {
+    font-size: 16pt;
+  }
+
+  .ps-eyebrow,
+  .ps-meta,
+  .ps-tag {
+    color: #3f3f46 !important;
+  }
+
+  .ps-instructions {
+    font-size: 9.5pt;
+  }
+
+  .ps-list {
+    margin-top: 10mm;
+  }
+
+  /* On paper the rule between questions is noise — the blank working
+     space already separates them. */
+  .ps-item + .ps-item {
+    margin-top: 9mm;
+    border-top: none !important;
+    padding-top: 0;
+  }
+
+  /* A number must never be orphaned from the question it numbers, so the
+     number, the prompt and any parts are one unbreakable block. The
+     working space below is allowed to flow onto the next page. */
+  .ps-question {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .ps-num {
+    font-size: 11pt;
+  }
+
+  .ps-solution {
+    border-left: 1pt solid #71717a !important;
+  }
+
+  .ps-item-answer {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Wide display maths cannot scroll on paper; let it show in full. */
+  .ps-sheet .katex-display {
+    overflow: visible;
+  }
+}

@@ -10,7 +10,6 @@ import {
 } from "@/lib/content/loader";
 import type { ListedSubjectConfig } from "@/lib/content/loader";
 import type { Problem, Topic } from "@/lib/shared-types";
-import { getTestQuestionsForTopic } from "@/lib/test-questions";
 
 type Props = {
   params: Promise<{ subject: string }>;
@@ -93,14 +92,6 @@ export default async function SubjectHome({ params }: Props) {
     // omit ld+json when index is unavailable
   }
 
-  // Size of each topic's recap-test pool, so chapter progress can count test
-  // questions toward "questions done" (empty for subjects without test pools).
-  const testCounts: Record<string, number> = {};
-  for (const topic of topics) {
-    const n = getTestQuestionsForTopic(topic.id).length;
-    if (n > 0) testCounts[topic.id] = n;
-  }
-
   return (
     <>
       {courseJsonLd && (
@@ -117,8 +108,10 @@ export default async function SubjectHome({ params }: Props) {
           // Sending whole Problems shipped every prompt, answer and explanation
           // in the subject to draw a progress bar, so only the two fields it
           // reads cross to the client.
+          // Chapter tests are printable paper sheets now (problemset.json),
+          // and nothing on paper is graded here — so they no longer contribute
+          // to the on-screen "questions done" count.
           problems={problems.map((p) => ({ id: p.id, topicId: p.topicId }))}
-          testCounts={testCounts}
         />
       </ProgressBoundary>
     </>
