@@ -124,12 +124,20 @@ export function GenericPracticeExperience({
   subjectSlug,
   subjectLabel,
   nextTopic,
+  hasProblemSet = false,
 }: {
   topic: Topic;
   problems: Problem[];
   subjectSlug: string;
   subjectLabel: string;
   nextTopic?: { id: string; title: string };
+  /**
+   * Whether this chapter ships content/{subject}/topics/{topic}/problemset.json,
+   * i.e. whether /[subject]/test/[topicId] exists. Resolved on the server by the
+   * page; previously this link was hardcoded to subjectSlug === "calculus",
+   * which both hid real sheets and would now link other calculus chapters at a 404.
+   */
+  hasProblemSet?: boolean;
 }) {
   const params = useParams<{ topicId: string }>();
   const topicId = params?.topicId ?? topic.id;
@@ -633,13 +641,13 @@ export function GenericPracticeExperience({
           {/* On narrow viewports the labels shorten (instead of wrapping into
               multiple lines each) and never wrap internally. */}
           <div className="flex min-w-0 items-center justify-self-end">
-            {subjectSlug === "calculus" && (
+            {hasProblemSet && (
               <Link
                 className="whitespace-nowrap rounded-lg px-2 py-1 text-xs font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] sm:px-2.5 sm:text-sm"
-                href={`/${subjectSlug}/test/${current.topicId}`}
+                href={`/${subjectSlug}/test/${topicId}`}
               >
-                <span className="sm:hidden">Topic test</span>
-                <span className="hidden sm:inline">Take topic test</span>
+                <span className="sm:hidden">Chapter test</span>
+                <span className="hidden sm:inline">Chapter test (printable)</span>
               </Link>
             )}
             <Link

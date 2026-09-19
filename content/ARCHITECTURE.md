@@ -23,6 +23,7 @@ content/
         index.json             # Topic metadata (title, description, order, estimatedMinutes)
         questions.json         # Array of all practice questions for this topic
         module.mdx             # Rich explanation content (sections, ELI5, examples, etc.)
+        problemset.json        # OPTIONAL: the printable chapter test (paper, not graded)
 ```
 
 ### Example
@@ -39,6 +40,59 @@ content/
       matrices/
         ...
 ```
+
+### problemset.json — the printable chapter test
+
+A chapter has a chapter test **if and only if** this file exists. Nothing else
+switches it on: the route `/{subject}/test/{topic}` (and its `/answers` sibling)
+is auto-discovered from the file, exactly as practice is auto-discovered from
+`questions.json`. There is no per-subject flag — the old `hasTests` on
+`index.json` was the wrong granularity and has been retired.
+
+The format exists because **paper removes the grading constraint**. The online
+bank is heavily multiple choice because every answer had to survive a string
+comparison. A sheet worked by hand can ask for the things that matter and cannot
+be auto-marked, so every problem carries a `kind`:
+
+| `kind` | asks the learner to |
+|---|---|
+| `computation` | evaluate or solve |
+| `proof` | establish a statement from definitions or named theorems |
+| `sketch` | draw a graph/region and justify the features drawn |
+| `critique` | find the error in a given argument and repair it |
+
+A sheet of nothing but `computation` wastes the format, and the validator warns
+about it.
+
+```jsonc
+{
+  "topicId": "limits",                    // must match the folder
+  "title": "Limits & Continuity",
+  "instructions": "Work this sheet on paper, showing every step — …",
+  "problems": [
+    {
+      "id": "ps-calculus-limits-01",      // stable, unique across the WHOLE corpus
+      "section": "indeterminate",         // must match a module.mdx section slug
+      "kind": "computation",              // computation | proof | sketch | critique
+      "difficulty": "easy",               // easy | medium | hard; sheets run easy → hard
+      "minutes": 6,                       // expected working time; also sizes the
+                                          // blank space printed under the question
+      "prompt": "Evaluate each limit. …", // LaTeX in $…$ / $$…$$ as everywhere else
+      "parts": ["$…$", "$…$", "$…$"],     // optional; printed (a), (b), (c), each
+                                          // with its own working space
+      "solution": "**(a) Factor and cancel.** …"   // the full METHOD, not an answer key
+    }
+  ]
+}
+```
+
+`solution` is a worked method, not a final value: the learner is checking their
+route, which is the only thing paper is good for. Blank lines separate
+paragraphs; `**bold**` is supported.
+
+Validate with `npm run content:problemsets` (schema, section↔`module.mdx` match,
+corpus-wide unique ids that never collide with a practice question id, and a
+KaTeX render of every fragment).
 
 ## Why This Split?
 
@@ -96,6 +150,7 @@ implementations. The environment vocabulary itself lives in
   `:::solution`. It is idempotent and safe to run on newly authored content.
 - Run `npm run content:validate` (uses tsx) before committing content changes. It enforces Zod schemas, folder<->index parity, environment fences (`:::kind ... :::` — closed, not nested, known kind), **and the critical invariant**: every `question.section` must exactly equal a section slug derived from the topic's `module.mdx` (from `## Title` + optional `{#slug}` or immediate following `<!-- section: slug -->` comment).
 - Sections power per-section mastery, deep links (?section=), dashboard, and progress. Mismatches silently break UX for that topic.
+- Run `npm run content:problemsets` after touching any `problemset.json`. It enforces the same hard section invariant on problem sheets, plus corpus-wide id uniqueness and a KaTeX render of every prompt, part and solution.
 - Use `<!-- section: the-exact-string-from-questions -->` right after the relevant `##` when the natural heading slug would not match the qs you need (or use `{#slug}` in the heading itself).
 - `per-topic/index.json` is optional (subject-level list wins for metadata); folder must still exist if questions/mdx are present.
 - All three core markers (`**ELI5**`, `**Worked Example:**`, `## Common Mistakes` / `## Pitfalls`) are recommended for best authoring consistency and full ELI5/worked/pitfalls UI cards.

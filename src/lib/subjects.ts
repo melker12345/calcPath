@@ -30,7 +30,6 @@ export type SubjectConfig = {
   topics: Topic[];
   problems: Problem[];
   modules: SubjectModule[];
-  hasTests: boolean;
   topicCount?: number;
   category?: string;
 };
