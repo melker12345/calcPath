@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import { getAvailableSubjectConfigs } from "@/lib/content/loader";
 
 /**
- * Shared SEO + data foundation for the landing-page design variants (/1../5).
+ * Shared SEO + data foundation for the home page ("/") and the remaining
+ * landing design references (/1, /3, /4, /5). The former variant /2 won the
+ * comparison and now *is* the home page, so its route is gone.
  *
- * Every variant renders identical metadata and schema.org structured data so the
- * only thing that differs between them is the visual design — a clean A/B test.
- * Variants stay viewable but are noindex'd and canonicalize to "/" so they never
- * compete with the real homepage in search; only "/" itself is indexable.
- * Keep this the single source of truth; variants must not redefine SEO logic.
+ * Every page here renders identical metadata and schema.org structured data so
+ * the only thing that differs between them is the visual design. The references
+ * stay viewable but are noindex'd and canonicalize to "/" so they never compete
+ * with the real homepage in search; only "/" itself is indexable.
+ * Keep this the single source of truth; the references must not redefine SEO logic.
  */
 
 export const SITE_URL = "https://calc-path.com";
@@ -81,14 +83,15 @@ export const LANDING_FAQ: Array<{ q: string; a: string }> = [
 ];
 
 /**
- * Consistent metadata for the landing page and its design variants.
- * `path` is the route: "/" for the real landing page, "/1".."/5" for variants.
+ * Consistent metadata for the landing page and its design references.
+ * `path` is the route: "/" for the real landing page, "/1", "/3", "/4", "/5"
+ * for the kept design references.
  *
- * The variants are five near-identical copies of the homepage kept viewable
- * for A/B design comparison. They must NOT compete with the homepage in
- * search: every variant canonicalizes to "https://calc-path.com/" and carries
- * robots noindex,follow. Only the real landing page ("/") self-canonicalizes
- * and is indexable.
+ * Those references are near-identical copies of the homepage kept viewable for
+ * design comparison. They must NOT compete with the homepage in search: every
+ * one of them canonicalizes to "https://calc-path.com/" and carries robots
+ * noindex,follow. Only the real landing page ("/") self-canonicalizes and is
+ * indexable. Any path other than "/" is treated as a reference.
  */
 export function buildLandingMetadata(opts: {
   path: string;
