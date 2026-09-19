@@ -29,7 +29,7 @@ function AccountContent() {
 
   // Derive simple stats (no topic list needed; use what's in progress)
   const topicsWithProgress = Object.keys(progress.topicStats || {}).length;
-  const problemsMastered = (progress.completedProblemIds || []).length;
+  const problemsSolved = (progress.completedProblemIds || []).length;
   const totalAttempts = (progress.attempts || []).length;
   const currentStreak = progress.streak?.current ?? 0;
 
@@ -105,7 +105,7 @@ function AccountContent() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               { value: topicsWithProgress, label: "Topics touched" },
-              { value: problemsMastered, label: "Problems mastered" },
+              { value: problemsSolved, label: "Problems solved" },
               { value: totalAttempts, label: "Total attempts" },
               { value: currentStreak, label: "Current streak (days)" },
             ].map((stat) => (

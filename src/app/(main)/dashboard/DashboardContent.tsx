@@ -101,7 +101,7 @@ function DashboardInner({
     totalProblems,
     totalAttempted,
     overallAccuracy,
-    masteryPercent,
+    practicePercent,
   } = useMemo(() => {
     const activeSubjects = subjectConfigs ?? [];
     const computedSubjects: SubjectWithProgress[] = activeSubjects.map((subject) => {
@@ -153,7 +153,7 @@ function DashboardInner({
       totalProblems: tProblems,
       totalAttempted: tAttempted,
       overallAccuracy: acc,
-      masteryPercent: mPercent,
+      practicePercent: mPercent,
     };
   }, [progress, realData, subjectConfigs]);
 
@@ -198,7 +198,7 @@ function DashboardInner({
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="theme-card-light theme-border rounded-2xl border p-4 sm:p-5">
             <div className="text-xs font-semibold uppercase tracking-wide theme-text">
-              Problems Mastered
+              Problems Solved
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-4xl font-bold theme-text">{totalSolved}</span>
@@ -207,10 +207,10 @@ function DashboardInner({
             <div className="mt-3 h-2 rounded-full bg-[var(--accent)]/20">
               <div
                 className="h-2 rounded-full bg-[var(--accent)] transition-all"
-                style={{ width: `${masteryPercent}%` }}
+                style={{ width: `${practicePercent}%` }}
               />
             </div>
-            <div className="mt-2 text-sm theme-text-muted">{masteryPercent}% complete</div>
+            <div className="mt-2 text-sm theme-text-muted">{practicePercent}% of the practice bank</div>
           </div>
 
           <div className="theme-card-light theme-border rounded-2xl border p-4 sm:p-5">
@@ -230,6 +230,13 @@ function DashboardInner({
             <div className="mt-3 text-sm theme-text-muted">First-try success rate</div>
           </div>
         </div>
+        {/* The numbers above come from auto-graded practice, and a high one is
+            easy to read as command of a subject. Said once, under the figures
+            it qualifies, rather than on every screen that shows a bar. */}
+        <p className="mt-3 text-xs leading-relaxed theme-text-muted">
+          These figures count auto-graded practice questions. They show which basics are in place,
+          not how well a chapter is understood.
+        </p>
       </section>
 
       <section>
