@@ -10,20 +10,22 @@ import { SiteUpdateModal } from "@/components/site-update-modal";
 import { DevNotice } from "@/components/dev-notice";
 
 /**
- * Home page — "editorial / academic authority" design. Typeset like a scholarly
- * course index: serif headings, a left-aligned hero, subjects as an elegant
- * numbered contents list, and generous ink-on-paper whitespace. Server Component:
- * all copy, catalogue and FAQ render as crawlable HTML with no client JS.
+ * Home page — reference-index design, in the manner of a modern encyclopaedia
+ * portal: one modest heading, a lead paragraph, then the catalogue as a dense
+ * grouped link list. No hero, no marketing grid, no closing CTA.
  *
- * The catalogue comes from getLandingData(), which wraps
+ * Set in the UI sans (Inter) rather than the display serif. The serif is the
+ * course content's voice — module pages are typeset as a book — and keeping the
+ * chrome sans is what stops the home page reading like a book jacket.
+ *
+ * Server Component: the catalogue and FAQ render as crawlable HTML with no
+ * client JS. The catalogue comes from getLandingData(), which wraps
  * getAvailableSubjectConfigs() auto-discovery, so a newly dropped content/
- * folder appears here with no subjects.ts entry. SEO/JSON-LD come from
+ * folder appears here with no code change. SEO/JSON-LD come from
  * @/lib/landing/seo — the single source of truth shared with the /1, /3, /4, /5
  * noindexed design references.
  */
 
-// Rich landing metadata from the shared helper (path "/" => self-canonical and
-// indexable; the design variants get canonical "/" + noindex instead).
 export const metadata = buildLandingMetadata({
   path: "/",
   title: "CalcPath — Free University Math: Calculus, Linear Algebra & Statistics",
@@ -31,28 +33,76 @@ export const metadata = buildLandingMetadata({
     "Learn university mathematics free with CalcPath: clear derivation-first chapters, worked examples, and practice problems with full step-by-step solutions for calculus, linear algebra, statistics and more. No account required.",
 });
 
-const FEATURES = [
+/**
+ * Display names for the `category` field in each content/<slug>/index.json.
+ * Unknown categories fall back to a title-cased version of the raw key, so a
+ * subject dropped in with a brand-new category still renders rather than
+ * vanishing from the index.
+ */
+const CATEGORY_LABELS: Record<string, string> = {
+  foundations: "Foundations",
+  calculus: "Calculus and analysis",
+  analysis: "Calculus and analysis",
+  linear: "Algebra",
+  algebra: "Algebra",
+  discrete: "Discrete mathematics and logic",
+  logic: "Discrete mathematics and logic",
+  stats: "Probability and statistics",
+};
+
+/** Order the groups appear in; anything unlisted sorts to the end, alphabetically. */
+const CATEGORY_ORDER = [
+  "Foundations",
+  "Calculus and analysis",
+  "Algebra",
+  "Discrete mathematics and logic",
+  "Probability and statistics",
+];
+
+function categoryLabel(raw: string | null | undefined): string {
+  if (!raw) return "Other";
+  return (
+    CATEGORY_LABELS[raw] ??
+    raw.charAt(0).toUpperCase() + raw.slice(1).replace(/[-_]/g, " ")
+  );
+}
+
+const SUMMARY = [
   {
-    title: "Derivation-first chapters",
-    body: "Each topic is written like a good textbook section: definitions, motivation and full derivations, so you understand where every result comes from rather than memorising it.",
+    term: "Chapters",
+    def: "Each one is a self-contained textbook section — definitions, motivation and full derivations, so a result is shown rather than asserted.",
   },
   {
-    title: "Practice with full solutions",
-    body: "Every practice problem is paired with a complete, step-by-step worked solution — you learn from the method, not just the final answer.",
+    term: "Practice",
+    def: "Short auto-graded questions that confirm a chapter's methods work. Every one carries a complete worked solution.",
   },
   {
-    title: "A diagnostic and topic tests",
-    body: "A short diagnostic surfaces exactly which topics need attention, and per-topic tests confirm mastery before you move on.",
-  },
-  {
-    title: "Automatic progress tracking",
-    body: "Completed chapters and solved problems are saved on your device automatically, so you always resume precisely where you left off.",
+    term: "Progress",
+    def: "Saved on your device as you go. No account needed; a PIN can back it up across devices.",
   },
 ];
 
 export default async function Home() {
   const data = await getLandingData();
-  const { subjects, subjectCount, totalChapters, primary, subjectNames } = data;
+  const { subjects, subjectCount, totalChapters, primary } = data;
+
+  // Group the auto-discovered catalogue by category, preserving each subject's
+  // own `order` within its group.
+  const groups = new Map<string, typeof subjects>();
+  for (const subject of subjects) {
+    const key = categoryLabel(subject.category);
+    const existing = groups.get(key);
+    if (existing) existing.push(subject);
+    else groups.set(key, [subject]);
+  }
+  const orderedGroups = [...groups.entries()].sort(([a], [b]) => {
+    const ia = CATEGORY_ORDER.indexOf(a);
+    const ib = CATEGORY_ORDER.indexOf(b);
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    if (ia !== -1) return -1;
+    if (ib !== -1) return 1;
+    return a.localeCompare(b);
+  });
 
   return (
     <div className="theme-bg theme-text">
@@ -61,206 +111,114 @@ export default async function Home() {
           so crawlers merge them. Exactly one set of nodes on this page. */}
       <JsonLd data={buildLandingJsonLd(data)} />
 
-      {/* Hero — left-aligned, editorial */}
-      <header className="mx-auto max-w-4xl px-4 pt-20 pb-12 sm:px-6 sm:pt-28">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] theme-text-muted">
-          Free · Ad-free · No account required
-        </p>
-        <h1 className="mt-6 font-serif text-4xl font-medium leading-[1.1] tracking-tight theme-text sm:text-6xl">
-          University mathematics,
-          <br className="hidden sm:block" />{" "}
-          <span className="italic text-[var(--accent)]">clearly derived</span>.
+      <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
+        <h1 className="text-3xl font-semibold tracking-tight theme-text">
+          CalcPath
         </h1>
-        <p className="mt-7 max-w-2xl text-lg leading-relaxed theme-text-secondary">
-          CalcPath is a free, ad-free reference for calculus, linear algebra and
-          statistics — clear, derivation-first chapters paired with practice
-          problems that carry full, step-by-step worked solutions. Read the
-          theory, then prove you have understood it.
+        <p className="mt-1 text-sm theme-text-muted">
+          Free university mathematics · {subjectCount} subjects ·{" "}
+          {totalChapters} chapters
         </p>
 
-        <div className="mt-9 flex flex-col gap-x-8 gap-y-4 sm:flex-row sm:items-center">
+        <p className="mt-6 text-[15px] leading-relaxed theme-text-secondary">
+          CalcPath is a free, ad-free reference for university mathematics. Every
+          chapter is written as a self-contained textbook section — definitions,
+          motivation and full derivations — and paired with practice problems
+          that carry complete step-by-step solutions. There is no account, no
+          paywall and no advertising; your progress is saved on your device.
+        </p>
+
+        <p className="mt-5 text-[15px] theme-text-secondary">
           {primary && (
-            <Link
-              href={`/${primary.slug}`}
-              className="group inline-flex items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-6 py-3 text-base font-medium text-white transition hover:opacity-90 active:scale-[0.99]"
-            >
-              Begin with {primary.label}
-              <span
-                aria-hidden
-                className="transition-transform duration-200 group-hover:translate-x-0.5"
+            <>
+              <Link
+                href={`/${primary.slug}`}
+                className="font-medium text-[var(--accent)] underline-offset-4 hover:underline"
               >
-                →
+                Start with {primary.label}
+              </Link>
+              <span aria-hidden className="mx-2 theme-text-muted">
+                ·
               </span>
-            </Link>
+            </>
           )}
           <Link
             href="/subjects"
-            className="inline-flex items-center gap-1.5 text-base font-medium theme-text-secondary underline-offset-4 transition hover:text-[var(--accent)] hover:underline"
+            className="font-medium text-[var(--accent)] underline-offset-4 hover:underline"
           >
-            View the full catalogue
+            Browse all subjects
           </Link>
-        </div>
-
-        <hr className="mt-14 theme-border" aria-hidden />
-      </header>
-
-      {/* Entity-defining paragraph */}
-      <section className="mx-auto max-w-4xl px-4 py-4 sm:px-6">
-        <h2 className="font-serif text-2xl font-medium tracking-tight theme-text sm:text-3xl">
-          About CalcPath
-        </h2>
-        <p className="mt-4 max-w-3xl text-lg leading-relaxed theme-text-secondary">
-          CalcPath is a free platform for learning university mathematics. It
-          combines self-contained reference chapters with an integrated practice
-          engine, so you can read a concept and immediately test it against
-          problems that include complete worked solutions. It currently covers{" "}
-          <span className="theme-text">{subjectNames}</span>, spanning{" "}
-          {totalChapters} chapters across {subjectCount} subjects — with no
-          sign-up, no advertising and no cost.
         </p>
-      </section>
 
-      {/* Subjects — numbered contents list */}
-      <section className="mx-auto mt-12 max-w-5xl px-4 sm:px-6">
-        <div className="flex items-baseline justify-between gap-4 border-b theme-border pb-4">
-          <h2 className="font-serif text-2xl font-medium tracking-tight theme-text sm:text-3xl">
-            Contents
-          </h2>
-          <p className="text-xs font-medium uppercase tracking-[0.16em] theme-text-muted">
-            {subjectCount} subjects
-          </p>
-        </div>
-
-        <ol className="mt-2">
-          {subjects.map((subject, i) => {
-            const chapterLabel =
-              subject.topicCount === 1
-                ? "1 chapter"
-                : `${subject.topicCount ?? 0} chapters`;
-            const index = String(i + 1).padStart(2, "0");
-
-            return (
-              <li key={subject.slug} className="border-t theme-border first:border-t-0">
-                <Link
-                  href={`/${subject.slug}`}
-                  className="group flex items-baseline gap-5 rounded-md px-3 py-6 transition-colors hover:bg-[var(--surface-2)] sm:gap-8 sm:px-4"
-                >
-                  <span
-                    aria-hidden
-                    className="font-serif text-2xl font-normal tabular-nums theme-text-muted transition-colors group-hover:text-[var(--accent)] sm:text-3xl"
-                  >
-                    {index}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <span className="font-serif text-xl font-medium tracking-tight theme-text sm:text-2xl">
-                        {subject.label}
-                      </span>
-                      <span className="text-xs font-medium uppercase tracking-[0.14em] theme-text-muted">
-                        {chapterLabel}
-                      </span>
-                    </span>
-                    <span className="mt-1.5 block max-w-2xl text-sm leading-relaxed theme-text-secondary">
-                      {subject.shortDescription}
-                    </span>
-                  </span>
-                  <span className="hidden shrink-0 items-center gap-1.5 self-center text-sm font-medium text-[var(--accent)] sm:inline-flex">
-                    Read
-                    <span
-                      aria-hidden
-                      className="transition-transform duration-200 group-hover:translate-x-1"
+        {/* Catalogue — grouped dense link list, in the manner of a portal index */}
+        <h2 className="mt-12 border-b theme-border pb-1.5 text-lg font-semibold tracking-tight theme-text">
+          Subjects
+        </h2>
+        <div className="mt-5 grid gap-x-10 gap-y-6 sm:grid-cols-2">
+          {orderedGroups.map(([label, list]) => (
+            <section key={label}>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.1em] theme-text-muted">
+                {label}
+              </h3>
+              <ul className="mt-2 space-y-1">
+                {list.map((subject) => (
+                  <li key={subject.slug} className="flex items-baseline gap-2">
+                    <Link
+                      href={`/${subject.slug}`}
+                      className="text-[15px] text-[var(--accent)] underline-offset-4 hover:underline"
                     >
-                      →
+                      {subject.label}
+                    </Link>
+                    <span className="text-xs tabular-nums theme-text-muted">
+                      {subject.topicCount}
                     </span>
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ol>
-      </section>
-
-      {/* How it works */}
-      <section className="mx-auto mt-24 max-w-4xl px-4 sm:px-6">
-        <h2 className="font-serif text-2xl font-medium tracking-tight theme-text sm:text-3xl">
-          How it works
-        </h2>
-        <p className="mt-3 max-w-2xl text-base leading-relaxed theme-text-secondary">
-          The method behind every subject is the same: understand the idea, then
-          practise it until it is second nature.
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+        <p className="mt-4 text-xs theme-text-muted">
+          Figures are chapter counts.
         </p>
 
-        <dl className="mt-10 grid gap-x-12 gap-y-10 sm:grid-cols-2">
-          {FEATURES.map((f, i) => (
-            <div key={f.title} className="border-t theme-border pt-5">
-              <span
-                aria-hidden
-                className="font-serif text-sm font-medium tabular-nums text-[var(--accent)]"
-              >
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <dt className="mt-2 font-serif text-xl font-medium tracking-tight theme-text">
-                {f.title}
-              </dt>
-              <dd className="mt-2 text-base leading-relaxed theme-text-secondary">
-                {f.body}
-              </dd>
+        {/* What's inside — three lines, not a feature grid */}
+        <h2 className="mt-12 border-b theme-border pb-1.5 text-lg font-semibold tracking-tight theme-text">
+          What&apos;s inside
+        </h2>
+        <dl className="mt-4 space-y-3">
+          {SUMMARY.map((item) => (
+            <div key={item.term} className="text-[15px] leading-relaxed">
+              <dt className="inline font-medium theme-text">{item.term}.</dt>{" "}
+              <dd className="inline theme-text-secondary">{item.def}</dd>
             </div>
           ))}
         </dl>
-      </section>
 
-      {/* FAQ — visible, mirrored in FAQPage JSON-LD */}
-      <section className="mx-auto mt-24 max-w-4xl px-4 sm:px-6">
-        <h2 className="font-serif text-2xl font-medium tracking-tight theme-text sm:text-3xl">
-          Frequently asked questions
+        {/* FAQ — collapsed by default so it stays a footnote rather than half
+            the page. The FAQPage JSON-LD mirrors these exact pairs. */}
+        <h2 className="mt-12 border-b theme-border pb-1.5 text-lg font-semibold tracking-tight theme-text">
+          Frequently asked
         </h2>
-        <div className="mt-8 divide-y theme-border border-y theme-border">
+        <div className="mt-3 divide-y theme-border border-b theme-border">
           {LANDING_FAQ.map((f) => (
-            <details key={f.q} className="group py-5 [&_summary]:cursor-pointer">
-              <summary className="flex items-baseline justify-between gap-6 font-serif text-lg font-medium theme-text marker:content-['']">
-                {f.q}
+            <details key={f.q} className="group py-2.5">
+              <summary className="flex cursor-pointer items-baseline gap-2 text-[15px] font-medium theme-text marker:content-['']">
                 <span
                   aria-hidden
-                  className="mt-1 shrink-0 text-[var(--accent)] transition-transform duration-200 group-open:rotate-45"
+                  className="text-xs theme-text-muted transition-transform duration-150 group-open:rotate-90"
                 >
-                  +
+                  &#9656;
                 </span>
+                {f.q}
               </summary>
-              <p className="mt-3 max-w-2xl text-base leading-relaxed theme-text-secondary">
+              <p className="mt-1.5 pl-5 text-[15px] leading-relaxed theme-text-secondary">
                 {f.a}
               </p>
             </details>
           ))}
         </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="mx-auto mt-24 mb-28 max-w-4xl px-4 sm:px-6">
-        <div className="border-t-2 border-[var(--accent)] pt-10">
-          <h2 className="font-serif text-3xl font-medium tracking-tight theme-text sm:text-4xl">
-            Open the first chapter.
-          </h2>
-          <p className="mt-4 max-w-xl text-lg leading-relaxed theme-text-secondary">
-            No account, no card, no catch — pick a subject and start reading. Your
-            progress saves itself as you go.
-          </p>
-          {primary && (
-            <Link
-              href={`/${primary.slug}`}
-              className="group mt-8 inline-flex items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-7 py-3.5 text-base font-medium text-white transition hover:opacity-90 active:scale-[0.99]"
-            >
-              Begin with {primary.label}
-              <span
-                aria-hidden
-                className="transition-transform duration-200 group-hover:translate-x-0.5"
-              >
-                →
-              </span>
-            </Link>
-          )}
-        </div>
-      </section>
+      </main>
 
       {/* One-time "do you prefer the new version?" prompt — records a vote the
           admin inbox tallies as +Yes / -No (target_type "site-version"). */}
