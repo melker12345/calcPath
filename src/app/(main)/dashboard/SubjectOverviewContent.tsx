@@ -429,12 +429,17 @@ function SubjectOverviewInner({
         </Link>
       </div>
 
-      <div className="mb-8 h-2 overflow-hidden rounded-full bg-[var(--accent)]/15">
+      <div className="h-2 overflow-hidden rounded-full bg-[var(--accent)]/15">
         <div
           className="h-full rounded-full bg-[var(--accent)] transition-all"
           style={{ width: `${percent}%` }}
         />
       </div>
+      {/* What the bar above measures, said where it is measured. */}
+      <p className="mb-8 mt-2 text-xs theme-text-muted">
+        Counts practice questions answered correctly — a measure of the basics, not of how well a
+        chapter is understood.
+      </p>
 
       {hasDiagnostic ? (
         <DiagnosticPanel

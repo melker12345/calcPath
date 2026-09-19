@@ -330,10 +330,10 @@ export const getTopicProgress = (
   const correct = stat?.correct ?? 0;
   const attemptedRate =
     totalProblems === 0 ? 0 : Math.min(100, (solved / totalProblems) * 100);
-  const masteryRate =
+  const solvedRate =
     totalProblems === 0 ? 0 : Math.min(100, (correct / totalProblems) * 100);
   const accuracyRate = solved === 0 ? 0 : Math.round((correct / solved) * 100);
-  return { solved, correct, attemptedRate, masteryRate, accuracyRate };
+  return { solved, correct, attemptedRate, solvedRate, accuracyRate };
 };
 
 /**
@@ -345,7 +345,7 @@ export const getTopicProgress = (
  *   getFileSystemContentBundle() from content/[star]/topics/[star]/questions.json) or legacy sources.
  * - Uses ONLY the stable `id` + `topicId` values (preserved 1:1 during content ports).
  * - The empty-topic guard (totalProblems > 0) ensures scaffolded/not-yet-ported topics
- *   for the data-driven routes (generics now primary for main /[subject] practice) never falsely report as "mastered".
+ *   for the data-driven routes (generics now primary for main /[subject] practice) never falsely report as complete.
  * - No dependency on legacy *-content.ts structures.
  */
 export const getPracticeProgress = (
@@ -371,7 +371,7 @@ export const getPracticeProgress = (
 
   const attemptedRate =
     totalProblems === 0 ? 0 : Math.min(100, (attempted / totalProblems) * 100);
-  const masteryRate =
+  const solvedRate =
     totalProblems === 0 ? 0 : Math.min(100, (correct / totalProblems) * 100);
   const accuracyRate = attempted === 0 ? 0 : Math.round((correct / attempted) * 100);
 
@@ -380,10 +380,10 @@ export const getPracticeProgress = (
     correct,
     total: totalProblems,
     attemptedRate,
-    masteryRate,
+    solvedRate,
     accuracyRate,
     // Require at least one problem in the topic so that an empty topic
-    // (e.g. scaffolded but not yet populated) never reports as mastered.
+    // (e.g. scaffolded but not yet populated) never reports as complete.
     isComplete: totalProblems > 0 && correct >= totalProblems,
   };
 };
@@ -448,7 +448,7 @@ export const getSectionPracticeProgress = (
   const correct = completedInSection.length;
 
   const attemptedRate = total === 0 ? 0 : Math.min(100, (attempted / total) * 100);
-  const masteryRate = total === 0 ? 0 : Math.min(100, (correct / total) * 100);
+  const solvedRate = total === 0 ? 0 : Math.min(100, (correct / total) * 100);
   const accuracyRate = attempted === 0 ? 0 : Math.round((correct / attempted) * 100);
 
   return {
@@ -456,7 +456,7 @@ export const getSectionPracticeProgress = (
     correct,
     total,
     attemptedRate,
-    masteryRate,
+    solvedRate,
     accuracyRate,
     isComplete: total > 0 && correct >= total,
   };

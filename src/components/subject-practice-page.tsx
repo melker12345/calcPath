@@ -36,6 +36,13 @@ export function SubjectPracticePage({
         <p className="mt-2 text-sm theme-text-secondary">
           Pick a chapter and work through its problem set. Progress is saved automatically.
         </p>
+        {/* Said where a learner chooses a set, so the score they are about to
+            earn is read for what it is: every question is graded on one typed
+            or chosen answer. */}
+        <p className="mt-1.5 text-sm theme-text-muted">
+          Each question is graded on a single answer, so a set confirms that a chapter&apos;s methods
+          work rather than that you could prove the results.
+        </p>
         <Link
           href={`/${subjectSlug}`}
           className="mt-3 inline-block text-sm font-medium text-[var(--accent)] hover:underline"
@@ -73,7 +80,7 @@ export function SubjectPracticePage({
                     className={`h-1.5 rounded-full transition-all duration-500 ${
                       stats.isComplete ? "bg-emerald-500" : "bg-[var(--accent)]"
                     }`}
-                    style={{ width: `${stats.masteryRate}%` }}
+                    style={{ width: `${stats.solvedRate}%` }}
                   />
                 </div>
               </div>

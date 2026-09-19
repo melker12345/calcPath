@@ -218,7 +218,7 @@ export function GenericPracticeExperience({
 
   if (displayProblems.length === 0) {
     // Extra guard: show clean intentional "no questions yet" instead of falling to bad-data fallback,
-    // broken nav (length-1=-1), "All 0 mastered", or hitting PracticeErrorBoundary.
+    // broken nav (length-1=-1), "All 0 solved", or hitting PracticeErrorBoundary.
     // Matches the polished card look and feel of the main data-driven routes exactly.
     return (
       <div className="mx-auto w-full max-w-3xl px-0 pb-0 sm:px-6 sm:py-10" style={subjectAccentVars}>
@@ -387,7 +387,7 @@ export function GenericPracticeExperience({
       <div className="mb-2 hidden min-w-0 shrink-0 sm:flex sm:items-baseline sm:gap-3 px-1">
         <h1 className="shrink-0 text-lg font-bold theme-text">{topic.title}</h1>
         <span className="min-w-0 flex-1 truncate text-sm theme-text-muted">{topic.description}</span>
-        <span className="shrink-0 text-sm theme-text-muted">{solvedCount}/{displayProblems.length} mastered</span>
+        <span className="shrink-0 text-sm theme-text-muted">{solvedCount}/{displayProblems.length} solved</span>
       </div>
 
       {/* Main practice card: fills the remaining viewport exactly; the page
@@ -408,6 +408,16 @@ export function GenericPracticeExperience({
             </span>
           </div>
         </div>
+
+        {/* Said once, on arrival at a fresh set: what the session checks, before
+            a score exists to be over-read. It disappears as soon as the first
+            answer is graded, so it never becomes furniture. */}
+        {solvedCount === 0 && index === 0 && !feedback && (
+          <p className="mx-auto mt-2 max-w-lg text-balance text-center text-xs leading-relaxed theme-text-muted">
+            Each question is graded on a single answer — a check that this chapter&apos;s methods
+            work, not a test of the reasoning behind them.
+          </p>
+        )}
 
         {/* Per-question error boundary: keeps header/progress/nav always visible.
             Only the question+input subtree is isolated. Key ensures clean state per q. */}
@@ -521,10 +531,10 @@ export function GenericPracticeExperience({
             area follows the prompt instead of being pushed toward the fold. */}
         <div aria-hidden="true" className="min-h-0 flex-1" />
 
-        {/* All mastered */}
+        {/* Whole set solved */}
         {solvedCount >= displayProblems.length && (
           <div className="mt-4 rounded-xl border theme-border bg-[var(--surface-2)] p-4 text-center sm:mt-6 sm:rounded-2xl sm:p-5">
-            <p className="text-lg font-bold theme-text">Congrats! All {displayProblems.length} mastered.</p>
+            <p className="text-lg font-bold theme-text">Congrats! All {displayProblems.length} solved.</p>
             <p className="mt-1 text-sm theme-text-secondary">You&apos;ve completed the practice for this section.</p>
             {/* Said at the moment it is most likely to be misread: finishing a
                 bank of computations is easy to mistake for understanding the
@@ -532,8 +542,9 @@ export function GenericPracticeExperience({
                 they are not the proof exercises a course would also set. */}
             <p className="mt-3 text-xs leading-relaxed theme-text-muted">
               These questions check that you can carry out this chapter&apos;s computations correctly.
-              They are not proof exercises — finishing them means the mechanics are solid, not that
-              you could prove the results. Re-read the chapter&apos;s statements and proofs for that.
+              A full score means the mechanics are solid; it does not show that you could prove the
+              results or carry the argument through yourself. Re-read the chapter&apos;s statements
+              and proofs for that.
             </p>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:gap-3 sm:justify-center">
               <Link

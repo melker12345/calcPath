@@ -130,7 +130,7 @@ export default async function DynamicPracticePage({ params, searchParams }: Prop
     );
   }
 
-  // Compute next topic in subject order for the "go to next after complete" button in mastered state.
+  // Compute next topic in subject order for the "go to next after complete" button in the all-solved state.
   // Always uses full topic order (even if ?section= filtered the current problems).
   const orderedTopics = [...bundle.topics].sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
   const currentIdx = orderedTopics.findIndex((t) => t.id === topicId);
