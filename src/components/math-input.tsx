@@ -269,7 +269,7 @@ export function MathInput({
 
   // Per-subject accent (see SUBJECT_IDENTITY_SLUG above). Resolved to concrete
   // palette values (not var(--subject-accent)) so it also works when the input
-  // is rendered outside a subject-themed subtree (e.g. the diagnostic).
+  // is rendered outside a subject-themed subtree.
   const identitySlug = SUBJECT_IDENTITY_SLUG[subject] ?? null;
   const identityTheme = identitySlug ? getThemeForSubject(identitySlug) : null;
   const identityPalette = identityTheme ? (isDark ? identityTheme.dark : identityTheme.light) : null;

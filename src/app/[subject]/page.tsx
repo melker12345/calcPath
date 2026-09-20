@@ -10,6 +10,7 @@ import {
 } from "@/lib/content/loader";
 import type { ListedSubjectConfig } from "@/lib/content/loader";
 import type { Problem, Topic } from "@/lib/shared-types";
+import { listTopicsWithProblemSets } from "@/lib/content/problemset-loader";
 
 type Props = {
   params: Promise<{ subject: string }>;
@@ -73,6 +74,9 @@ export default async function SubjectHome({ params }: Props) {
     // graceful: keep empty lists from index-only config
   }
 
+  // Chapters with a printable sheet, so the contents page can link to it.
+  const problemSetTopicIds = await listTopicsWithProblemSets(slug);
+
   let courseJsonLd: Record<string, unknown> | null = null;
   try {
     const idx = await loadSubjectIndex(slug);
@@ -112,6 +116,7 @@ export default async function SubjectHome({ params }: Props) {
           // and nothing on paper is graded here — so they no longer contribute
           // to the on-screen "questions done" count.
           problems={problems.map((p) => ({ id: p.id, topicId: p.topicId }))}
+          problemSetTopicIds={problemSetTopicIds}
         />
       </ProgressBoundary>
     </>

@@ -101,7 +101,7 @@ function finishHint(hint: string): string {
 
 /**
  * Pull a useful hint from an explanation without giving away the final answer.
- * Supports both practice ("Step 1: ...") and diagnostic (short prose + math) formats.
+ * Supports both step-by-step ("Step 1: ...") and short prose + math formats.
  *
  * A trailing `$math$` fragment is only stripped when it actually spells the
  * answer (pass the question's stored `answer` for the most reliable check —

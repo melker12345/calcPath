@@ -5,6 +5,7 @@ import type { Problem, Topic } from "@/lib/shared-types";
 import { getFileSystemContentBundle, loadSubjectIndex, requireSubjectConfig } from "@/lib/content/loader";
 import { getLegacyTopicRedirect } from "@/lib/content/legacy-topic-redirects";
 import { getSectionHref } from "@/lib/subject-urls";
+import { hasProblemSet } from "@/lib/content/problemset-loader";
 
 type Props = { params: Promise<{ subject: string; topicId: string }> };
 
@@ -57,6 +58,7 @@ export default async function SubjectModulePageRoute({ params }: Props) {
       topics={topics}
       problems={topicProblems}
       faqs={{}} // generic; per-topic faqs can be added later if needed
+      hasProblemSet={await hasProblemSet(slug, topicId)}
     />
   );
 }

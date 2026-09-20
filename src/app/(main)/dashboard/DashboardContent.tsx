@@ -165,7 +165,7 @@ function DashboardInner({
       <div className="mb-6">
         <h1 className="font-serif text-4xl font-semibold tracking-tight theme-text">Dashboard</h1>
         <p className="mt-2 text-sm theme-text-muted">
-          Your overall progress across all subjects. Open a subject for chapter breakdown and diagnostics.
+          Your overall progress across all subjects. Open a subject for its chapter breakdown and printable problem sets.
         </p>
       </div>
 
@@ -173,15 +173,15 @@ function DashboardInner({
         <section className="mb-8 rounded-2xl border theme-border theme-card-light p-4 sm:p-5">
           <h2 className="text-lg font-semibold theme-text">New here?</h2>
           <p className="mt-1 text-sm theme-text-muted">
-            Take a quick diagnostic to find your starting point, or jump straight into a course —
-            your progress shows up here as you practice.
+            Jump straight into a course — your progress shows up here as you practice — or print
+            a chapter problem set to work on paper.
           </p>
           <div className="mt-4 flex flex-wrap gap-2 text-sm">
             <Link
-              href="/diagnostic"
+              href="/problem-sets"
               className="rounded-lg bg-[var(--accent)] px-4 py-2 font-medium text-[var(--accent-text)] transition hover:opacity-90"
             >
-              Take a quick diagnostic →
+              Print a problem set →
             </Link>
             <Link
               href="/calculus"

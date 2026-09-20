@@ -18,7 +18,7 @@ export const metadata = buildLandingMetadata({
   path: "/4",
   title: "CalcPath — Free University Math: Calculus, Linear Algebra & Statistics",
   description:
-    "A clean, free platform for university mathematics. Derivation-first chapters, practice problems with full step-by-step solutions, diagnostic and topic tests, and automatic progress tracking. No account required.",
+    "A clean, free platform for university mathematics. Derivation-first chapters, practice problems with full step-by-step solutions, printable problem sets, and automatic progress tracking. No account required.",
 });
 
 const FEATURES = [
@@ -34,8 +34,8 @@ const FEATURES = [
   },
   {
     label: "Testing",
-    title: "Diagnostic & topic tests",
-    body: "A quick diagnostic pinpoints the exact topics to review, and per-topic tests confirm when you have mastered them.",
+    title: "Printable problem sets",
+    body: "Each chapter ends in a problem sheet to print and work on paper, with full worked solutions on a separate page.",
   },
   {
     label: "Progress",

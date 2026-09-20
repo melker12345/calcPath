@@ -38,6 +38,7 @@ export function CourseContentsPage({
   modules = [],
   problems = [],
   testCounts = {},
+  problemSetTopicIds = [],
 }: {
   title: string;
   description: string;
@@ -47,6 +48,8 @@ export function CourseContentsPage({
   problems?: Problem[];
   /** Recap-test pool size per topicId, for counting test questions toward progress. */
   testCounts?: Record<string, number>;
+  /** Chapters that ship a printable problem set (resolved on the server from problemset.json). */
+  problemSetTopicIds?: string[];
 }) {
   const [openTopicId, setOpenTopicId] = useState<string | null>(null);
 
@@ -211,6 +214,14 @@ export function CourseContentsPage({
                         >
                           Practice
                         </Link>
+                        {problemSetTopicIds.includes(topic.id) && (
+                          <Link
+                            href={`/${subjectSlug}/test/${topic.id}`}
+                            className="rounded-lg border border-[var(--accent)] px-3.5 py-1.5 text-xs font-semibold text-[var(--accent)] transition hover:bg-[var(--accent)] hover:text-[var(--accent-text)] sm:text-sm"
+                          >
+                            Problem set
+                          </Link>
+                        )}
                       </div>
                     </div>
                   </div>

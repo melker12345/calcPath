@@ -1,5 +1,3 @@
-import type { DiagnosticResult } from "@/lib/diagnostics";
-
 export type Attempt = {
   problemId: string;
   topicId: string;
@@ -41,7 +39,6 @@ export type ProgressState = {
   moduleCompletions: Record<string, string>;
   topicStats: Record<string, { solved: number; correct: number }>;
   testResults: TestResult[];
-  diagnostics: DiagnosticResult[];
   streak: StreakStats;
 };
 
@@ -53,7 +50,6 @@ export const createEmptyProgress = (): ProgressState => ({
   moduleCompletions: {},
   topicStats: {},
   testResults: [],
-  diagnostics: [],
   streak: { current: 0, longest: 0 },
 });
 
@@ -82,14 +78,6 @@ export const recordTestResult = (
   const normalized = normalizeTestResult(result);
   const testResults = [normalized, ...state.testResults].slice(0, 100);
   return { ...state, testResults };
-};
-
-export const recordDiagnosticResult = (
-  state: ProgressState,
-  result: DiagnosticResult,
-): ProgressState => {
-  const diagnostics = [result, ...state.diagnostics].slice(0, 25);
-  return { ...state, diagnostics };
 };
 
 export const getTopicTestStats = (state: ProgressState, topicId: string) => {
@@ -148,15 +136,14 @@ const rebuildDerivedFields = (attempts: Attempt[]) => {
 /**
  * Hard size caps applied when normalizing an (untrusted) progress state.
  * All are generously above what the app itself can produce — recordAttempt
- * caps attempts/ids at 5000, recordTestResult at 100, recordDiagnosticResult
- * at 25 — so legitimate data is never truncated; only abusive payloads are.
+ * caps attempts/ids at 5000, recordTestResult at 100 — so legitimate data is
+ * never truncated; only abusive payloads are.
  */
 const MAX_ATTEMPTS = 5000;
 const MAX_PROBLEM_IDS = 5000;
 const MAX_MODULE_IDS = 2000;
 const MAX_MODULE_COMPLETIONS = 2000;
 const MAX_TEST_RESULTS = 100;
-const MAX_DIAGNOSTICS = 25;
 
 const normalizeModuleCompletions = (
   input: unknown,
@@ -176,6 +163,8 @@ const normalizeModuleCompletions = (
 export const normalizeProgressState = (
   input: Partial<ProgressState> | null | undefined,
 ): ProgressState => {
+  // Stored payloads written before September 2026 also carry a `diagnostics`
+  // array (the retired readiness checks). It is simply not copied across.
   const empty = createEmptyProgress();
   if (!input) return empty;
   const attempts = Array.isArray(input.attempts)
@@ -186,9 +175,6 @@ export const normalizeProgressState = (
         .slice(0, MAX_TEST_RESULTS)
         .map((result) => normalizeTestResult(result as TestResult))
     : empty.testResults;
-  const diagnostics = Array.isArray(input.diagnostics)
-    ? input.diagnostics.slice(0, MAX_DIAGNOSTICS)
-    : empty.diagnostics;
   const completedModuleIds = Array.isArray(input.completedModuleIds)
     ? input.completedModuleIds.slice(0, MAX_MODULE_IDS)
     : empty.completedModuleIds;
@@ -203,7 +189,6 @@ export const normalizeProgressState = (
       moduleCompletions,
       topicStats: derived.topicStats,
       testResults,
-      diagnostics,
       streak: derived.streak,
     };
   }
@@ -219,7 +204,6 @@ export const normalizeProgressState = (
     moduleCompletions,
     topicStats: input.topicStats ?? empty.topicStats,
     testResults,
-    diagnostics,
     streak: input.streak ?? empty.streak,
   };
 };
@@ -315,7 +299,6 @@ export const recordAttempt = (
     moduleCompletions: state.moduleCompletions,
     topicStats,
     testResults: state.testResults,
-    diagnostics: state.diagnostics,
     streak,
   };
 };

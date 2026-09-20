@@ -15,8 +15,9 @@ export function getPracticePath(slug: string, topicId?: string): string {
   return topicId ? `/${slug}/practice/${topicId}` : `/${slug}/practice`;
 }
 
+/** The printable problem set for a chapter; without a chapter, the site-wide catalogue. */
 export function getTestPath(slug: string, topicId?: string): string {
-  return topicId ? `/${slug}/test/${topicId}` : `/${slug}/test`;
+  return topicId ? `/${slug}/test/${topicId}` : "/problem-sets";
 }
 
 export function getSectionHref(slug: string, topicId: string, section?: string): string {

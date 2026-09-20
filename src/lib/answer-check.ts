@@ -770,7 +770,7 @@ export const isAnswerCorrect = (userInput: string, expected: string) => {
  * nothing here and actively harms: normalization deletes unknown LaTeX commands,
  * which collapses distractors onto the answer — "p \\land \\neg p" and
  * "p \\lor \\neg p" both reduce to "pp", and a wrong choice grades correct.
- * Compare identity instead, exactly as the diagnostic flow does.
+ * Compare identity instead.
  *
  * Returns null when the stored answer is not one of the offered choices (bad
  * content, or a choice list rendered differently); the caller then falls back to

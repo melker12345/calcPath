@@ -35,7 +35,7 @@
 -- progress_backups — PIN + password cloud backup (no accounts, no emails)
 -- ----------------------------------------------------------------------------
 -- One row per backup. The PIN is the 6-digit primary key. `blob` holds the
--- compact CloudProgressBlob (2-bit-per-question bitset + test/diagnostic
+-- compact CloudProgressBlob (2-bit-per-question bitset + test
 -- summaries). Templates (is_template = true) are public, read-only milestones.
 create table if not exists public.progress_backups (
   pin           text         primary key,

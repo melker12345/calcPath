@@ -11,7 +11,7 @@
  * change is needed to give a new subject tests. Drop the file in, and the
  * route, the link and the validator all pick it up.
  *
- * Follows the idiom of loader.ts / diagnostic-loader.ts: `server-only`,
+ * Follows the idiom of loader.ts: `server-only`,
  * dynamic fs import so nothing leaks into a client bundle, Zod-validated reads.
  */
 

@@ -51,9 +51,7 @@ const EMPTY_TRANSIENT: TransientState = {
 
 /**
  * Unbiased Fisher-Yates shuffle (returns a new array).
- * `sort(() => Math.random() - 0.5)` is biased (and engine-dependent); this is
- * the same algorithm as shuffleArray in lib/assessment/diagnostic-sampling.ts,
- * which is module-private there (and takes a seeded rand we don't need here).
+ * `sort(() => Math.random() - 0.5)` is biased (and engine-dependent).
  */
 function shuffleArray<T>(array: T[]): T[] {
   const result = [...array];

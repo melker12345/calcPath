@@ -45,7 +45,7 @@ const FEATURES = [
   {
     icon: "🎯",
     title: "Find your gaps",
-    body: "A quick diagnostic points you to the exact topics to review, and topic tests confirm when you've mastered them.",
+    body: "Each chapter ends in a printable problem sheet to work on paper, with full worked solutions on a separate page.",
   },
   {
     icon: "📈",

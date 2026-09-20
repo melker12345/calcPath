@@ -74,7 +74,7 @@ export const LANDING_FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "Does CalcPath include practice problems with solutions?",
-    a: "Yes. Every topic pairs concise explanations with practice problems that have full, step-by-step worked solutions, plus topic tests and a diagnostic to find your gaps.",
+    a: "Yes. Every topic pairs concise explanations with practice problems that have full, step-by-step worked solutions, plus printable problem sets to work on paper.",
   },
   {
     q: "How is CalcPath different from other free math sites?",

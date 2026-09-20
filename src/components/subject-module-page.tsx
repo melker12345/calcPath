@@ -27,6 +27,8 @@ type SubjectModulePageProps = {
   /** Optional problems for the topic (from content bundle) to power the print "Text + Questions" worksheet feature. */
   problems?: Array<Pick<Problem, "id" | "topicId" | "prompt" | "type" | "choices">>;
   faqs?: Record<string, { q: string; a: string }[]>;
+  /** Whether this chapter ships a printable problem set (/[subject]/test/[topicId]). Server-resolved. */
+  hasProblemSet?: boolean;
 };
 
 function toSlug(text: string) {
@@ -109,6 +111,7 @@ export function SubjectModulePage({
   topics,
   problems,
   faqs,
+  hasProblemSet = false,
 }: SubjectModulePageProps) {
   const params = useParams<{ topicId: string }>();
   const topicId = params?.topicId ?? "";
@@ -462,6 +465,20 @@ export function SubjectModulePage({
             is graded on a single answer. They are not proof exercises: working through them confirms
             the mechanics, not that you could prove the results yourself. For that, re-read the
             statements above and try to reconstruct their proofs with the page closed.
+            {hasProblemSet && (
+              <>
+                {" "}
+                This chapter also has a{" "}
+                <Link
+                  href={`/${subjectSlug}/test/${topicId}`}
+                  className="font-semibold text-[var(--accent)] underline underline-offset-2 hover:opacity-80"
+                >
+                  printable problem set
+                </Link>
+                : proofs, sketches and find-the-error work to do on paper, with full solutions on
+                a separate page.
+              </>
+            )}
           </div>
 
           {/* Navigation */}
@@ -477,21 +494,31 @@ export function SubjectModulePage({
               <div />
             )}
 
-            {nextTopic ? (
-              <Link
-                href={`/${subjectSlug}/modules/${nextTopic.id}`}
-                className="btn-primary inline-flex w-full justify-center sm:w-auto"
-              >
-                {nextTopic.title} →
-              </Link>
-            ) : (
-              <Link
-                href={`/${subjectSlug}/practice/${topicId}`}
-                className="btn-primary inline-flex w-full justify-center sm:w-auto"
-              >
-                Practice this topic →
-              </Link>
-            )}
+            <div className="flex flex-col gap-3 sm:flex-row">
+              {hasProblemSet && (
+                <Link
+                  href={`/${subjectSlug}/test/${topicId}`}
+                  className="btn-secondary inline-flex w-full justify-center sm:w-auto"
+                >
+                  Printable problem set
+                </Link>
+              )}
+              {nextTopic ? (
+                <Link
+                  href={`/${subjectSlug}/modules/${nextTopic.id}`}
+                  className="btn-primary inline-flex w-full justify-center sm:w-auto"
+                >
+                  {nextTopic.title} →
+                </Link>
+              ) : (
+                <Link
+                  href={`/${subjectSlug}/practice/${topicId}`}
+                  className="btn-primary inline-flex w-full justify-center sm:w-auto"
+                >
+                  Practice this topic →
+                </Link>
+              )}
+            </div>
           </div>
 
           <div className="mt-8 flex justify-center" data-no-print>

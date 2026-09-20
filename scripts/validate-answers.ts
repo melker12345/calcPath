@@ -74,7 +74,7 @@ async function loadAllQuestions(): Promise<Loaded[]> {
       for (const q of parsed as Question[]) out.push({ source: rel, q });
     }
 
-    // Diagnostic files: { questions: [...] }.
+    // Any other question bank shaped { questions: [...] }.
     if (
       parsed &&
       typeof parsed === "object" &&

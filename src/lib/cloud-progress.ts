@@ -1,4 +1,3 @@
-import type { DiagnosticResult, DiagnosticPrerequisiteSummary } from "@/lib/diagnostics";
 import {
   createEmptyProgress,
   normalizeProgressState,
@@ -27,14 +26,6 @@ export type CloudTestResult = {
   completedAt: string;
 };
 
-export type CloudDiagnosticSummary = {
-  targetSubject: string;
-  completedAt: string;
-  score?: number;
-  total?: number;
-  prerequisites: Array<{ id: string; correct: number; total: number }>;
-};
-
 export type CloudProgressBlob = {
   v: 1;
   registryVersion: number;
@@ -42,7 +33,12 @@ export type CloudProgressBlob = {
   completedModuleIds: string[];
   moduleCompletions: Record<string, string>;
   testResults: CloudTestResult[];
-  diagnostics: CloudDiagnosticSummary[];
+  /**
+   * Retired September 2026 with the readiness diagnostics. Blobs written
+   * before then still carry it; it is read as opaque data and dropped on the
+   * next serialize. Never populated by current code.
+   */
+  diagnostics?: unknown[];
 };
 
 function encodeBits(states: number[]): string {
@@ -121,31 +117,6 @@ export function serializeProgressToCloud(state: ProgressState): CloudProgressBlo
     completedAt: result.completedAt,
   }));
 
-  const latestDiagnosticBySubject = new Map<string, DiagnosticResult>();
-  for (const diag of state.diagnostics ?? []) {
-    if (diag.mode !== "prerequisite" || !diag.targetSubject) continue;
-    const prev = latestDiagnosticBySubject.get(diag.targetSubject);
-    if (!prev || diag.completedAt > prev.completedAt) {
-      latestDiagnosticBySubject.set(diag.targetSubject, diag);
-    }
-  }
-
-  const diagnostics: CloudDiagnosticSummary[] = [];
-  for (const [targetSubject, diag] of latestDiagnosticBySubject) {
-    const summaries = diag.prerequisiteSummaries ?? [];
-    diagnostics.push({
-      targetSubject,
-      completedAt: diag.completedAt,
-      score: diag.score,
-      total: diag.total,
-      prerequisites: summaries.map((s) => ({
-        id: s.prerequisite.id,
-        correct: s.correct,
-        total: s.total,
-      })),
-    });
-  }
-
   return {
     v: 1,
     registryVersion: registry.version,
@@ -153,37 +124,7 @@ export function serializeProgressToCloud(state: ProgressState): CloudProgressBlo
     completedModuleIds: state.completedModuleIds ?? [],
     moduleCompletions: state.moduleCompletions ?? {},
     testResults,
-    diagnostics,
   };
-}
-
-function summariesFromCloud(
-  summary: CloudDiagnosticSummary,
-  prerequisitesBySubject: Map<string, DiagnosticPrerequisiteSummary["prerequisite"][]>,
-): DiagnosticPrerequisiteSummary[] {
-  return summary.prerequisites.map((p) => {
-    const percentage = p.total === 0 ? null : Math.round((p.correct / p.total) * 100);
-    const known = prerequisitesBySubject.get(summary.targetSubject)?.find((x) => x.id === p.id);
-    const prerequisite = known ?? {
-      id: p.id,
-      label: p.id,
-      description: "",
-    };
-    let status: DiagnosticPrerequisiteSummary["status"] = "not-tested";
-    if (percentage !== null) {
-      if (percentage >= 80) status = "strong";
-      else if (percentage >= 60) status = "ready";
-      else if (percentage >= 30) status = "needs-review";
-      else status = "weak";
-    }
-    return {
-      prerequisite,
-      correct: p.correct,
-      total: p.total,
-      percentage,
-      status,
-    };
-  });
 }
 
 export function deserializeCloudToProgress(blob: CloudProgressBlob): ProgressState {
@@ -223,16 +164,6 @@ export function deserializeCloudToProgress(blob: CloudProgressBlob): ProgressSta
     };
   });
 
-  const diagnostics: DiagnosticResult[] = (blob.diagnostics ?? []).map((summary) => ({
-    mode: "prerequisite" as const,
-    targetSubject: summary.targetSubject,
-    completedAt: summary.completedAt,
-    score: summary.score,
-    total: summary.total,
-    questionResults: [],
-    prerequisiteSummaries: summariesFromCloud(summary, new Map()),
-  }));
-
   const empty = createEmptyProgress();
   return normalizeProgressState({
     attempts: [],
@@ -242,7 +173,6 @@ export function deserializeCloudToProgress(blob: CloudProgressBlob): ProgressSta
     moduleCompletions: blob.moduleCompletions ?? {},
     topicStats,
     testResults,
-    diagnostics,
     streak: empty.streak,
   });
 }
@@ -273,7 +203,6 @@ export function buildTemplateBlob(fraction: number): CloudProgressBlob {
     completedModuleIds: [],
     moduleCompletions: {},
     testResults: [],
-    diagnostics: [],
   };
 }
 
@@ -342,21 +271,6 @@ function mergeTestResults(
     .slice(0, 100);
 }
 
-function mergeDiagnostics(
-  a: CloudDiagnosticSummary[] = [],
-  b: CloudDiagnosticSummary[] = [],
-): CloudDiagnosticSummary[] {
-  const latestBySubject = new Map<string, CloudDiagnosticSummary>();
-  for (const diag of [...a, ...b]) {
-    if (!diag) continue;
-    const prev = latestBySubject.get(diag.targetSubject);
-    if (!prev || diag.completedAt > prev.completedAt) {
-      latestBySubject.set(diag.targetSubject, diag);
-    }
-  }
-  return Array.from(latestBySubject.values());
-}
-
 function mergeModuleCompletions(
   a: Record<string, string> = {},
   b: Record<string, string> = {},
@@ -373,7 +287,7 @@ function mergeModuleCompletions(
 /**
  * Convergent (monotonic) merge of two backup blobs. Completion only ever grows:
  * per question we keep the strongest state (correct > wrong > unattempted), and
- * we union modules / test history / diagnostics. This makes both "push to cloud"
+ * we union modules / test history. This makes both "push to cloud"
  * and "pull from cloud" non-destructive regardless of which side is ahead.
  */
 export function mergeCloudBlobs(
@@ -404,7 +318,6 @@ export function mergeCloudBlobs(
     completedModuleIds,
     moduleCompletions: mergeModuleCompletions(a.moduleCompletions, b.moduleCompletions),
     testResults: mergeTestResults(a.testResults, b.testResults),
-    diagnostics: mergeDiagnostics(a.diagnostics, b.diagnostics),
   };
 }
 
@@ -426,7 +339,6 @@ export function blobIsSupersetOf(
   return (
     merged.practiceBits === stored.practiceBits &&
     merged.testResults.length === (stored.testResults?.length ?? 0) &&
-    merged.diagnostics.length === (stored.diagnostics?.length ?? 0) &&
     merged.completedModuleIds.length === (stored.completedModuleIds?.length ?? 0) &&
     moduleCompletionsEqual
   );

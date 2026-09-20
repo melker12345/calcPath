@@ -31,8 +31,8 @@ const FEATURES = [
     body: "Every practice problem comes with a complete, step-by-step worked solution — learn from each mistake instead of guessing where you went wrong.",
   },
   {
-    title: "Diagnostic + topic tests",
-    body: "A quick diagnostic pinpoints exactly what to review, and per-topic tests confirm the moment you have genuinely mastered the material.",
+    title: "Printable problem sets",
+    body: "Each chapter ends in a problem sheet to print and work on paper, with full worked solutions on a separate page.",
   },
   {
     title: "Automatic progress tracking",

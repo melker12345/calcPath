@@ -2,24 +2,24 @@
 
 import dynamic from "next/dynamic";
 import type { NavSubject } from "@/lib/subjects";
-import type { SubjectOverviewData } from "../SubjectOverviewContent";
+import type { ProblemSetLink, SubjectOverviewData } from "../SubjectOverviewContent";
 
 const SubjectOverviewContent = dynamic(() => import("../SubjectOverviewContent"), { ssr: false });
 
 export function SubjectOverviewShell({
   subject,
   realData,
-  hasDiagnostic,
+  problemSets,
 }: {
   subject: NavSubject;
   realData: SubjectOverviewData;
-  hasDiagnostic: boolean;
+  problemSets: ProblemSetLink[];
 }) {
   return (
     <SubjectOverviewContent
       subject={subject}
       realData={realData}
-      hasDiagnostic={hasDiagnostic}
+      problemSets={problemSets}
     />
   );
 }

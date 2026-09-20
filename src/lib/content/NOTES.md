@@ -587,14 +587,14 @@ This completes MathInput support for the dynamic architecture migration. Ready f
 **Core files read** (absolute paths):
 - `/home/melker/Desktop/work/saas/src/lib/progress.ts` — types (`Attempt`, `ProgressState`), `recordAttempt`, `rebuildDerivedFields`, `getPracticeProgress`, `getSectionPracticeProgress`, `getTopicProgress`, `normalizeProgressState`, streak calc. All ID + topicId string based.
 - `/home/melker/Desktop/work/saas/src/components/progress-provider.tsx` — React context + `useProgress`, localStorage (`calc_progress_v1`), Supabase `user_progress` sync (conditional on `useAuth`), `addAttempt` etc.
-- Usage sites: real/legacy (`/app/*/practice/*/[topicId]/page.tsx`, `DashboardContent.tsx`, `subject-practice-page.tsx`, calculus test, diagnostic, account reset); generic (`/components/generic-practice-experience.tsx`, `/components/generic-practice/GenericPracticeExperience.tsx`, `/app/x/.../practice/layout.tsx` + pages).
+- Usage sites: real/legacy (`/app/*/practice/*/[topicId]/page.tsx`, `DashboardContent.tsx`, `subject-practice-page.tsx`, calculus test, account reset); generic (`/components/generic-practice-experience.tsx`, `/components/generic-practice/GenericPracticeExperience.tsx`, `/app/x/.../practice/layout.tsx` + pages).
 - Supporting: `usePracticeSession.ts` (consumes `completedProblemIds` + `problems` list for statuses/resume), `subjects.ts` (legacy feeder), `loader.ts` (new FS bundles), schema docs.
 
 **How progress tracking works today**:
 - Recording: `addAttempt({problemId, topicId, correct, createdAt, isTest?})` → `recordAttempt` updates attempts list + derived `completedProblemIds`/`attemptedProblemIds`/`topicStats` (unique per topicId).
 - Consumption for UI: pass a `Problem[]` (or subset) to `getPracticeProgress(state, topicId, practiceProblems)` or `getSection...`; it intersects the persisted ID sets against the provided list's IDs to compute rates/totals/isComplete (with `total > 0` guard).
 - Persistence: always local + best-effort remote for authed users. IDs are the sole key; no subject slugs or other structures stored.
-- Streak/diagnostics/tests are orthogonal but share the store.
+- Streak/tests are orthogonal but share the store.
 - Critical invariant (from schema + ports): `problem.id`s are globally stable forever (e.g. "vectors-operations-1"); `topicId`s stable; `section` slugs exact-match for per-section features.
 
 **Real app (legacy + dual) vs generic practice usage**:

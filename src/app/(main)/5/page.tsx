@@ -58,7 +58,7 @@ const STEPS = [
   },
   {
     title: "Know where to start",
-    body: "A gentle diagnostic finds your gaps, and topic tests quietly confirm when a concept has clicked. No guesswork.",
+    body: "Each chapter ends in a printable problem sheet to work on paper, with full worked solutions on a separate page.",
   },
   {
     title: "See yourself grow",

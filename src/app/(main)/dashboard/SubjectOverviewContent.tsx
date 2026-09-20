@@ -12,12 +12,6 @@ import {
   type ProgressState,
 } from "@/lib/progress";
 import type { Topic, Problem } from "@/lib/shared-types";
-import {
-  getDiagnosticHistoryForSubject,
-  getRecommendedPrerequisiteAction,
-  type DiagnosticResult,
-} from "@/lib/diagnostics";
-import { DiagnosticStatusPill } from "@/app/(main)/diagnostic/DiagnosticStatusPill";
 
 type SlimModule = { topicId: string; sections: Array<{ title: string; section?: string }> };
 
@@ -26,6 +20,9 @@ export type SubjectOverviewData = {
   problems: Problem[];
   modules: SlimModule[];
 };
+
+/** One printable problem set of this subject, resolved on the server. */
+export type ProblemSetLink = { topicId: string; title: string };
 
 type TopicWithProgress = Topic & { correct: number; total: number; percent: number };
 
@@ -43,14 +40,6 @@ function sectionSlugFromTitle(title: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
-}
-
-function formatDiagnosticDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 function SectionTopicRow({
@@ -220,110 +209,61 @@ function ChapterRow({
   );
 }
 
-function DiagnosticPanel({
-  slug,
-  label,
-  latest,
-  history,
-}: {
-  slug: string;
-  label: string;
-  latest?: DiagnosticResult;
-  history: DiagnosticResult[];
-}) {
-  const summaries = latest?.prerequisiteSummaries ?? [];
-  const action =
-    summaries.length > 0
-      ? getRecommendedPrerequisiteAction(summaries, summaries.map((s) => s.prerequisite), slug)
-      : null;
-  const score = latest?.score;
-  const total = latest?.total;
-  const scorePct =
-    score != null && total != null && total > 0 ? Math.round((score / total) * 100) : null;
-
-  const trend =
-    history.length > 1
-      ? [...history]
-          .reverse()
-          .map((attempt) =>
-            attempt.score != null && attempt.total != null
-              ? `${attempt.score}/${attempt.total}`
-              : null,
-          )
-          .filter((value): value is string => value !== null)
-      : [];
-
+function ProblemSetsPanel({ slug, label, sets }: { slug: string; label: string; sets: ProblemSetLink[] }) {
   return (
     <section className="mb-8 rounded-xl border theme-border theme-surface p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold theme-text">Prerequisite readiness</h2>
-          {latest ? (
-            <p className="mt-1 text-sm theme-text-muted">
-              Last taken {formatDiagnosticDate(latest.completedAt)}
-            </p>
-          ) : (
-            <p className="mt-1 text-sm theme-text-muted">Not taken yet</p>
-          )}
+          <h2 className="text-lg font-semibold theme-text">Problem sets</h2>
+          <p className="mt-1 text-sm leading-relaxed theme-text-muted">
+            Printable chapter tests for {label}, meant to be worked on paper with every step shown.
+            Nothing here is graded on screen; each sheet has its full worked solutions on a separate
+            page, so you check your route rather than a final answer.
+          </p>
         </div>
-        {scorePct != null ? (
-          <div className="shrink-0 text-right">
-            <div className="text-3xl font-bold tabular-nums theme-text">{scorePct}%</div>
-            <div className="text-xs tabular-nums theme-text-muted">
-              {score}/{total} correct
-            </div>
-          </div>
-        ) : null}
+        <Link
+          href="/problem-sets"
+          className="shrink-0 text-sm font-medium text-[var(--accent)] hover:underline"
+        >
+          All problem sets →
+        </Link>
       </div>
 
-      {summaries.length > 0 ? (
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
-          {summaries.map((summary) => (
-            <div
-              key={summary.prerequisite.id}
-              className="flex items-center justify-between gap-2 rounded-lg border theme-border bg-[var(--surface)] px-3 py-2"
+      {sets.length > 0 ? (
+        <ul className="mt-4 divide-y theme-border">
+          {sets.map((set) => (
+            <li
+              key={set.topicId}
+              className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2.5"
             >
-              <span className="min-w-0 truncate text-sm theme-text">{summary.prerequisite.label}</span>
-              <div className="flex shrink-0 items-center gap-2">
-                {summary.total > 0 ? (
-                  <span className="text-xs tabular-nums theme-text-muted">
-                    {summary.correct}/{summary.total}
-                  </span>
-                ) : null}
-                <DiagnosticStatusPill status={summary.status} />
+              <Link
+                href={`/${slug}/test/${set.topicId}`}
+                className="min-w-0 text-sm font-medium theme-text hover:underline"
+              >
+                {set.title}
+              </Link>
+              <div className="flex shrink-0 gap-4 text-sm">
+                <Link
+                  href={`/${slug}/test/${set.topicId}`}
+                  className="font-medium text-[var(--accent)] hover:underline"
+                >
+                  Question sheet
+                </Link>
+                <Link
+                  href={`/${slug}/test/${set.topicId}/answers`}
+                  className="theme-text-secondary hover:underline"
+                >
+                  Solutions
+                </Link>
               </div>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       ) : (
-        <p className="mt-4 text-sm leading-relaxed theme-text-muted">
-          A short readiness check samples prerequisite skills before you dive into {label}.
+        <p className="mt-4 text-sm theme-text-muted">
+          No problem sets for {label} yet; they are being written chapter by chapter.
         </p>
       )}
-
-      {trend.length > 1 ? (
-        <p className="mt-3 text-xs theme-text-muted">
-          <span className="font-medium theme-text-secondary">Recent scores:</span>{" "}
-          <span className="tabular-nums">{trend.join(" → ")}</span>
-        </p>
-      ) : null}
-
-      <div className="mt-4 flex flex-wrap gap-2 text-sm">
-        <Link
-          href={`/diagnostic/${slug}`}
-          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 font-medium text-[var(--accent-text)] transition hover:opacity-90"
-        >
-          {latest ? "Retake diagnostic" : "Take diagnostic"}
-        </Link>
-        {action && latest ? (
-          <Link
-            href={action.href}
-            className="rounded-lg border theme-border px-3 py-1.5 font-medium theme-text-secondary transition hover:bg-[var(--surface-2)]"
-          >
-            {action.label}
-          </Link>
-        ) : null}
-      </div>
     </section>
   );
 }
@@ -331,11 +271,11 @@ function DiagnosticPanel({
 function SubjectOverviewInner({
   subject,
   realData,
-  hasDiagnostic,
+  problemSets,
 }: {
   subject: NavSubject;
   realData: SubjectOverviewData;
-  hasDiagnostic: boolean;
+  problemSets: ProblemSetLink[];
 }) {
   const { progress } = useProgress();
   const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({});
@@ -384,12 +324,6 @@ function SubjectOverviewInner({
       return { mod, topic, chapterNum: index + 1 };
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
-
-  const latestDiagnostic = progress.diagnostics
-    .filter((r) => r.mode === "prerequisite" && r.targetSubject === subject.slug)
-    .sort((a, b) => b.completedAt.localeCompare(a.completedAt))[0];
-
-  const diagnosticHistory = getDiagnosticHistoryForSubject(progress.diagnostics, subject.slug);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
@@ -441,14 +375,7 @@ function SubjectOverviewInner({
         chapter is understood.
       </p>
 
-      {hasDiagnostic ? (
-        <DiagnosticPanel
-          slug={subject.slug}
-          label={subject.label}
-          latest={latestDiagnostic}
-          history={diagnosticHistory}
-        />
-      ) : null}
+      <ProblemSetsPanel slug={subject.slug} label={subject.label} sets={problemSets} />
 
       <section>
         <h2 className="mb-4 text-lg font-semibold theme-text">Chapter progress</h2>
@@ -486,18 +413,18 @@ function SubjectOverviewInner({
 export default function SubjectOverviewContent({
   subject,
   realData,
-  hasDiagnostic,
+  problemSets,
 }: {
   subject: NavSubject;
   realData: SubjectOverviewData;
-  hasDiagnostic: boolean;
+  problemSets: ProblemSetLink[];
 }) {
   return (
     <AppStateProviders>
       <SubjectOverviewInner
         subject={subject}
         realData={realData}
-        hasDiagnostic={hasDiagnostic}
+        problemSets={problemSets}
       />
     </AppStateProviders>
   );

@@ -9,16 +9,13 @@ import {
   createEmptyProgress,
   normalizeProgressState,
   recordAttempt,
-  recordDiagnosticResult,
   recordTestResult,
 } from "@/lib/progress";
-import type { DiagnosticResult } from "@/lib/diagnostics";
 
 type ProgressContextValue = {
   progress: ProgressState;
   addAttempt: (attempt: Attempt) => void;
   addTestResult: (result: TestResult) => void;
-  addDiagnosticResult: (result: DiagnosticResult) => void;
   resetProgress: () => void;
   applySyncedProgress: (synced: ProgressState) => void;
 };
@@ -69,14 +66,6 @@ export const ProgressProvider = ({
     });
   };
 
-  const addDiagnosticResult = (result: DiagnosticResult) => {
-    setProgress((prev) => {
-      const next = recordDiagnosticResult(prev, result);
-      writeStorage(PROGRESS_KEY, next);
-      return next;
-    });
-  };
-
   const resetProgress = () => {
     const next = createEmptyProgress();
     setProgress(next);
@@ -94,7 +83,6 @@ export const ProgressProvider = ({
       progress,
       addAttempt,
       addTestResult,
-      addDiagnosticResult,
       resetProgress,
       applySyncedProgress,
     }),
@@ -122,7 +110,6 @@ export const useProgress = () => {
       progress: noopProgress,
       addAttempt: noop,
       addTestResult: noop,
-      addDiagnosticResult: noop,
       resetProgress: noop,
       applySyncedProgress: noop,
     } satisfies ProgressContextValue;
