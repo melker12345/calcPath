@@ -6,7 +6,6 @@ import {
   buildLandingMetadata,
   getLandingData,
 } from "@/lib/landing/seo";
-import { SiteUpdateModal } from "@/components/site-update-modal";
 import { DevNotice } from "@/components/dev-notice";
 
 /**
@@ -220,11 +219,7 @@ export default async function Home() {
         </div>
       </main>
 
-      {/* One-time "do you prefer the new version?" prompt — records a vote the
-          admin inbox tallies as +Yes / -No (target_type "site-version"). */}
-      <SiteUpdateModal />
-
-      {/* Dismissible bottom-left "in development" notice pointing critique to /feedback. */}
+      {/* One-time dismissible "in development" dialog pointing critique to /feedback. */}
       <DevNotice />
     </div>
   );

@@ -4,6 +4,7 @@ import {
   getFileSystemContentBundle,
   deriveModuleStructureFromBundle,
 } from "@/lib/content/loader";
+import { listTopicsWithProblemSets } from "@/lib/content/problemset-loader";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = "https://calc-path.com";
@@ -14,7 +15,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: base, lastModified: new Date(), changeFrequency: "weekly", priority: 1.0 },
     { url: `${base}/subjects`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/about`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
-    { url: `${base}/diagnostic`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
+    { url: `${base}/problem-sets`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.7 },
     { url: `${base}/donate`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.4 },
     { url: `${base}/feedback`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.3 },
   ];
@@ -39,12 +40,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Auto-discovery means adding content/{slug}/ + index.json is enough (metadata fallback from index or thin subjects.ts).
   const deepModulePages: MetadataRoute.Sitemap = [];
   const deepPracticePages: MetadataRoute.Sitemap = [];
+  const problemSheetPages: MetadataRoute.Sitemap = [];
   for (const subject of subjectList) {
     const slug = subject.slug;
     try {
-      const [bundle, modStructure] = await Promise.all([
+      const [bundle, modStructure, sheetTopics] = await Promise.all([
         getFileSystemContentBundle(slug),
         deriveModuleStructureFromBundle(slug),
+        listTopicsWithProblemSets(slug),
       ]);
       deepModulePages.push(
         ...modStructure.map((mod) => ({
@@ -62,10 +65,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           priority: 0.6,
         }))
       );
+      // Printable problem sets: the question sheet and its solutions sheet.
+      for (const topicId of sheetTopics) {
+        problemSheetPages.push(
+          { url: `${base}/${slug}/test/${topicId}`, lastModified: new Date(), changeFrequency: "monthly" as const, priority: 0.7 },
+          { url: `${base}/${slug}/test/${topicId}/answers`, lastModified: new Date(), changeFrequency: "monthly" as const, priority: 0.5 },
+        );
+      }
     } catch {
       // graceful; sitemap still has the subject homes
     }
   }
 
-  return [...staticPages, ...allPages, ...deepModulePages, ...deepPracticePages];
+  return [...staticPages, ...allPages, ...deepModulePages, ...deepPracticePages, ...problemSheetPages];
 }

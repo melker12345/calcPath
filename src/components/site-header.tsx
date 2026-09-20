@@ -20,7 +20,7 @@ function ProfileIcon({ size = 20, color = "currentColor" }: { size?: number; col
 
 const utilityLinks = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/diagnostic", label: "Diagnostic" },
+  { href: "/problem-sets", label: "Problem sets" },
   { href: "/feedback", label: "Feedback" },
 ] as const;
 

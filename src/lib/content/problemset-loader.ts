@@ -101,3 +101,54 @@ export async function listTopicsWithProblemSets(slug: string): Promise<string[]>
 export function problemSetMinutes(set: ProblemSetFile): number {
   return set.problems.reduce((total, p) => total + p.minutes, 0);
 }
+
+/** One row of the site-wide problem-set catalogue (see /problem-sets). */
+export type ProblemSetListing = {
+  subjectSlug: string;
+  subjectLabel: string;
+  topicId: string;
+  /** Sheet title from problemset.json, e.g. "Limits & Continuity". */
+  title: string;
+  problemCount: number;
+  minutes: number;
+};
+
+/**
+ * Every problem set on the site, grouped by subject in subject `order`, with
+ * chapters in the subject's own topic order. A subject with no sheets is
+ * omitted, so the catalogue never advertises an empty subject.
+ */
+export async function listAllProblemSets(): Promise<
+  Array<{ subjectSlug: string; subjectLabel: string; sets: ProblemSetListing[] }>
+> {
+  const { getAvailableSubjectConfigs } = await import("./loader");
+  const subjects = await getAvailableSubjectConfigs();
+
+  const groups: Array<{ subjectSlug: string; subjectLabel: string; sets: ProblemSetListing[] }> = [];
+  for (const subject of subjects) {
+    const topicIds = await listTopicsWithProblemSets(subject.slug);
+    if (topicIds.length === 0) continue;
+
+    // Order by the subject's topic list; anything unlisted sorts to the end.
+    const position = new Map(subject.topics.map((t, i) => [t.id, i]));
+    topicIds.sort((a, b) => (position.get(a) ?? Infinity) - (position.get(b) ?? Infinity));
+
+    const sets: ProblemSetListing[] = [];
+    for (const topicId of topicIds) {
+      const set = await loadProblemSet(subject.slug, topicId);
+      if (!set) continue;
+      sets.push({
+        subjectSlug: subject.slug,
+        subjectLabel: subject.label,
+        topicId,
+        title: set.title,
+        problemCount: set.problems.length,
+        minutes: problemSetMinutes(set),
+      });
+    }
+    if (sets.length > 0) {
+      groups.push({ subjectSlug: subject.slug, subjectLabel: subject.label, sets });
+    }
+  }
+  return groups;
+}
