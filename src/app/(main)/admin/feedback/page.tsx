@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { AdminNav } from "@/components/admin-nav";
 import { AdminFeedbackPanel } from "@/components/admin-feedback-panel";
 
 export const metadata: Metadata = {
@@ -10,7 +9,6 @@ export const metadata: Metadata = {
 export default function AdminFeedbackPage() {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
-      <AdminNav />
       <AdminFeedbackPanel />
     </div>
   );

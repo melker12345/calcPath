@@ -59,14 +59,8 @@ export const SiteFooter = async () => {
         </div>
       </div>
 
-      <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-stone-300 pt-6 sm:flex-row">
-        <p className="text-sm text-stone-500">© 2026 CalcPath</p>
-        <Link
-          href="/donate"
-          className="text-sm font-medium text-stone-600 dark:text-[var(--text-muted)] transition hover:text-stone-950"
-        >
-          Support CalcPath
-        </Link>
+      <div className="mt-8 border-t theme-border pt-6">
+        <p className="text-sm theme-text-muted">© 2026 CalcPath</p>
       </div>
     </div>
   </footer>

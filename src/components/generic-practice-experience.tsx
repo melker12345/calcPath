@@ -9,7 +9,6 @@ import { useProgress } from "@/components/progress-provider";
 import { isAnswerCorrectAsync, isMcqAnswerCorrect } from "@/lib/answer-check";
 import { detectQuestionContext } from "@/lib/math-input-helpers";
 import { getSectionHref } from "@/lib/subject-urls";
-import { getQuestionIndex } from "@/lib/question-registry";
 import { getThemeForSubject } from "@/lib/themes";
 import {
   ProgressDots,
@@ -40,7 +39,7 @@ import type { Problem, Topic } from "@/lib/shared-types";
  * - All prompt / choice / step / explanation text *always* goes through the project's <MathText>
  *   (robust $ / $$ splitter + Safe* fallbacks for bad katex). No local RichPrompt/RichMath.
  * - Subject context for MathInput uses "generic" (neutral dark-friendly theme,
- *   reliable MQ style injection, improved deriveSuggestionLabels via prompt ctx; full keypad/scratchpad/submit
+ *   reliable MQ style injection, improved deriveSuggestionLabels via prompt ctx; full keypad/submit
  *   experience works end-to-end for statistics + linear-algebra topics in the primary dynamic routes' practice).
  * - Progress + answer checking use the global shared systems (stable ids preserved from content).
  *
@@ -336,17 +335,11 @@ export function GenericPracticeExperience({
   const getHint = () => getDefaultHint(current?.explanation || "", current?.answer);
   const finalAnswer = extractFinalAnswer(current?.explanation || "", current?.answer || "");
 
-  // Stable global question number from the registry (same regardless of arrival
-  // route / ?section= filtering). Undefined only for problems not yet registered.
-  const globalIndex = getQuestionIndex(current.id);
-  const globalQuestionNumber = globalIndex !== undefined ? globalIndex + 1 : null;
-
   // Everything an admin needs to reproduce a report without asking the user:
   // which question, what the grader expected, every graded submission, and the
   // hint/solution state at report time. Sent only with "Report issue".
   const reportContext: Record<string, unknown> = {
     questionId: current.id,
-    globalQuestionNumber,
     questionType: current.type,
     section: current.section ?? null,
     expectedAnswer: current.answer,
@@ -630,12 +623,9 @@ export function GenericPracticeExperience({
           </div>
 
           <div className="justify-self-center rounded-full px-2 py-0.5 text-[11px] font-medium text-[var(--text-muted)] ring-1 ring-[var(--border)]/80">
-            {/* Stable global question number (registry index) — independent of
-                arrival route / section filtering. Falls back to the per-topic
-                ordinal only for problems missing from the registry. */}
-            {globalQuestionNumber !== null
-              ? `#${globalQuestionNumber}`
-              : `Q${topicProblems.findIndex((p) => p.id === current.id) + 1}`}
+            {/* The stable question id, as stored in questions.json. It is what a
+                report needs to point at the exact item. */}
+            <code>{current.id}</code>
           </div>
 
           {/* On narrow viewports the labels shorten (instead of wrapping into

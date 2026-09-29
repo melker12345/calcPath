@@ -6,7 +6,6 @@ import {
   buildLandingMetadata,
   getLandingData,
 } from "@/lib/landing/seo";
-import { DevNotice } from "@/components/dev-notice";
 
 /**
  * Home page — reference-index design, in the manner of a modern encyclopaedia
@@ -219,8 +218,6 @@ export default async function Home() {
         </div>
       </main>
 
-      {/* One-time dismissible "in development" dialog pointing critique to /feedback. */}
-      <DevNotice />
     </div>
   );
 }

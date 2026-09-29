@@ -32,28 +32,6 @@
 
 
 -- ----------------------------------------------------------------------------
--- progress_backups — PIN + password cloud backup (no accounts, no emails)
--- ----------------------------------------------------------------------------
--- One row per backup. The PIN is the 6-digit primary key. `blob` holds the
--- compact CloudProgressBlob (2-bit-per-question bitset + test
--- summaries). Templates (is_template = true) are public, read-only milestones.
-create table if not exists public.progress_backups (
-  pin           text         primary key,
-  password_hash text         not null,
-  blob          jsonb        not null,
-  is_template   boolean      not null default false,
-  created_at    timestamptz  not null default now(),
-  updated_at    timestamptz  not null default now(),
-  last_accessed timestamptz  default now()
-);
-
--- Fast lookup of the handful of recovery templates.
-create index if not exists progress_backups_template_idx
-  on public.progress_backups (is_template)
-  where is_template = true;
-
-alter table public.progress_backups enable row level security;
-
 
 -- ----------------------------------------------------------------------------
 -- feedback — bug/feature/general messages and per-target up/down votes
@@ -97,40 +75,4 @@ create index if not exists feedback_vote_lookup_idx
 alter table public.feedback enable row level security;
 
 
--- ----------------------------------------------------------------------------
--- analytics_events — privacy-friendly in-house usage tracking (no PII, no IP)
--- ----------------------------------------------------------------------------
--- Full table + aggregation RPCs live in supabase/analytics.sql. Run that file
--- too (it is idempotent) to enable the /admin/metrics dashboard.
-create table if not exists public.analytics_events (
-  id          bigint generated always as identity primary key,
-  event       text        not null,
-  visitor_id  text,
-  session_id  text,
-  path        text,
-  referrer    text,
-  duration_ms integer,
-  meta        jsonb,
-  created_at  timestamptz not null default now()
-);
 
-create index if not exists analytics_events_created_idx on public.analytics_events (created_at);
-create index if not exists analytics_events_event_idx   on public.analytics_events (event);
-create index if not exists analytics_events_session_idx on public.analytics_events (session_id);
-
-alter table public.analytics_events enable row level security;
-
-
--- ----------------------------------------------------------------------------
--- OPTIONAL: profiles — only needed if/when auth is reintroduced
--- ----------------------------------------------------------------------------
--- On this dev branch auth is stripped, so feedback.user_id is always null and
--- the admin feedback view never reads this table. It is left commented out to
--- keep the clean DB minimal. Uncomment if you bring back Supabase Auth and want
--- to map feedback.user_id -> email in the admin inbox.
---
--- create table if not exists public.profiles (
---   id    uuid primary key references auth.users (id) on delete cascade,
---   email text
--- );
--- alter table public.profiles enable row level security;

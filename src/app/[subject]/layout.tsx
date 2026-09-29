@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { CourseLayout } from "@/components/course-layout";
-import { subjectBodyFont, subjectHeadingFont } from "@/lib/subject-fonts";
 import { getAvailableSubjectConfigs, loadSubjectIndex } from "@/lib/content/loader";
 import { getThemeForSubject } from "@/lib/themes";
 
@@ -64,10 +63,8 @@ export default async function SubjectLayout({
   }));
 
   return (
-    <div className={`${subjectHeadingFont.variable} ${subjectBodyFont.variable}`}>
-      <CourseLayout navSubjects={navSubjects} theme={theme}>
-        {children}
-      </CourseLayout>
-    </div>
+    <CourseLayout navSubjects={navSubjects} theme={theme}>
+      {children}
+    </CourseLayout>
   );
 }

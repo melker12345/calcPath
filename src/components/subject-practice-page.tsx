@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
 import { SectionCard } from "@/components/section-card";
 import { SubjectBreadcrumbs } from "@/components/subject-breadcrumbs";
 import { useProgress } from "@/components/progress-provider";
 import { getPracticeProgress } from "@/lib/progress";
-import { trackEvent } from "@/lib/analytics";
 import type { Problem, Topic } from "@/lib/shared-types";
 
 type SubjectPracticePageProps = {
@@ -23,10 +21,6 @@ export function SubjectPracticePage({
   problems,
 }: SubjectPracticePageProps) {
   const { progress } = useProgress();
-
-  useEffect(() => {
-    trackEvent("view_practice_topics", { subject: subjectSlug });
-  }, [subjectSlug]);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">

@@ -17,23 +17,6 @@ drop table if exists public.user_progress    cascade;  -- legacy (old sync)
 
 -- 2. Recreate the clean schema (mirrors supabase/schema.sql)
 
--- progress_backups — PIN + password cloud backup (no accounts, no emails)
-create table public.progress_backups (
-  pin           text         primary key,
-  password_hash text         not null,
-  blob          jsonb        not null,
-  is_template   boolean      not null default false,
-  created_at    timestamptz  not null default now(),
-  updated_at    timestamptz  not null default now(),
-  last_accessed timestamptz  default now()
-);
-
-create index progress_backups_template_idx
-  on public.progress_backups (is_template)
-  where is_template = true;
-
-alter table public.progress_backups enable row level security;
-
 -- feedback — bug/feature/general messages and per-target up/down votes
 create table public.feedback (
   id          uuid         primary key default gen_random_uuid(),
@@ -57,23 +40,6 @@ create index feedback_vote_lookup_idx
 
 alter table public.feedback enable row level security;
 
--- analytics_events — privacy-friendly in-house usage tracking (no PII, no IP).
--- Aggregation RPCs live in supabase/analytics.sql — run that file too.
-create table public.analytics_events (
-  id          bigint generated always as identity primary key,
-  event       text        not null,
-  visitor_id  text,
-  session_id  text,
-  path        text,
-  referrer    text,
-  duration_ms integer,
-  meta        jsonb,
-  created_at  timestamptz not null default now()
-);
-create index analytics_events_created_idx on public.analytics_events (created_at);
-create index analytics_events_event_idx   on public.analytics_events (event);
-create index analytics_events_session_idx on public.analytics_events (session_id);
-alter table public.analytics_events enable row level security;
 
 -- 3. Wipe every auth user except the admin (the new version has no signup UI;
 --    only the admin account is needed). Cascades to auth.identities/sessions.

@@ -62,11 +62,11 @@ export async function getLandingData(): Promise<LandingData> {
 export const LANDING_FAQ: Array<{ q: string; a: string }> = [
   {
     q: "Is CalcPath free?",
-    a: "Yes. CalcPath is completely free — every chapter, worked example, and practice problem is available with no subscription, no paywall, and no trial. It is funded by optional donations, not ads.",
+    a: "Yes. CalcPath is completely free — every chapter, worked example, practice problem and problem set is available with no subscription, no paywall and no advertising.",
   },
   {
     q: "Do I need to create an account to use CalcPath?",
-    a: "No. You can read every lesson and solve every practice problem without signing up. Your progress is saved on your device automatically, and creating an account is only needed if you want to sync progress across devices.",
+    a: "No. There are no accounts. You can read every chapter and solve every practice problem without signing up; your progress is saved in your browser, and you can export it as a file to move it to another device.",
   },
   {
     q: "What level is the material aimed at?",

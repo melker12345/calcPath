@@ -177,12 +177,7 @@ export default async function AboutPage() {
           <Link href="/feedback" className="font-medium text-[var(--accent)] underline underline-offset-2 hover:opacity-80">
             feedback page
           </Link>{" "}
-          — or use <em>Report issue</em> right where you found it. If CalcPath
-          helps you, you can{" "}
-          <Link href="/donate" className="font-medium text-[var(--accent)] underline underline-offset-2 hover:opacity-80">
-            support it
-          </Link>
-          .
+          — or use <em>Report issue</em> right where you found it.
         </p>
       </Section>
     </div>

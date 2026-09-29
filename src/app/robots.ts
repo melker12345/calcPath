@@ -6,9 +6,9 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        // /admin, /sync and /dashboard render auth/empty shells to crawlers;
+        // /admin and /dashboard render auth/empty shells to crawlers;
         // they are also noindex'd in page metadata and absent from the sitemap.
-        disallow: ["/api/", "/account", "/admin", "/sync", "/dashboard"],
+        disallow: ["/api/", "/account", "/admin", "/dashboard"],
       },
     ],
     sitemap: "https://calc-path.com/sitemap.xml",

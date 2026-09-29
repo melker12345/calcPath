@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "next-themes";
-import { Scratchpad } from "@/components/scratchpad";
 import { deriveSuggestionLabels, type QuestionContext } from "@/lib/math-input-helpers";
 import { getThemeForSubject } from "@/lib/themes";
 
@@ -211,7 +210,7 @@ function deriveKeys(
  * - Style injection for MQ is robust (DOM-checked + tagging) to survive fast navigations and
  *   remounts/HMR (or multi-bundle scenarios).
  * - Suggestions derive improved via better questionContext fallbacks (benefits generic stats/linalg topics).
- * - Full flow (direct typing in MQ field, all keypad buttons, scratchpad, submit, hint, feedback overlay)
+ * - Full flow (direct typing in MQ field, all keypad buttons, submit, hint, feedback overlay)
  *   works end-to-end for the primary /[subject]/practice routes with subject=generic.
  *
  * Used by legacy per-subject pages (calculus/stats/linalg) and the new generic practice.
@@ -285,14 +284,6 @@ export function MathInput({
   // calls the latest onSubmit.
   const onSubmitRef = useRef(onSubmit);
   onSubmitRef.current = onSubmit;
-  const [scratchpadOpen, setScratchpadOpen] = useState(false);
-  const scratchpadData = useRef<string | null>(null);
-  const prevPrompt = useRef(questionPrompt);
-
-  if (questionPrompt !== prevPrompt.current) {
-    prevPrompt.current = questionPrompt;
-    scratchpadData.current = null;
-  }
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -408,7 +399,7 @@ export function MathInput({
           {feedbackOverlay}
         </div>
       )}
-      {/* ── Header: label + draw + hint ── */}
+      {/* ── Header: label + hint ── */}
       {/* Aligned to the same centered 430px column as the field and keypad */}
       <div className="mx-auto flex w-full max-w-[430px] items-center justify-between px-4 pt-3 sm:px-1 sm:pt-4" style={{ background: th.headerBg }}>
         <p className="text-xs font-semibold sm:text-sm" style={{ color: th.labelColor }}>{placeholder}</p>
@@ -419,17 +410,6 @@ export function MathInput({
           aria-hidden={feedbackOverlay ? true : undefined}
           inert={feedbackOverlay ? true : undefined}
         >
-          <button
-            type="button"
-            onClick={() => setScratchpadOpen(true)}
-            className="flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition active:scale-95 sm:px-3 sm:py-1 sm:text-sm"
-            style={{ borderColor: th.dividerColor, color: th.labelColor }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:h-3.5 sm:w-3.5">
-              <path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Z" />
-            </svg>
-            Draw
-          </button>
           {onHint && (
             <button
               type="button"
@@ -444,13 +424,6 @@ export function MathInput({
           )}
         </div>
       </div>
-      <Scratchpad
-        open={scratchpadOpen}
-        onClose={() => setScratchpadOpen(false)}
-        questionPrompt={questionPrompt}
-        savedImage={scratchpadData.current}
-        onSave={(dataUrl) => { scratchpadData.current = dataUrl; }}
-      />
 
       {/* ── Math field — taller, and no wider than the keypad below it ──
              inert while the (opaque) feedback overlay covers it, so Tab can

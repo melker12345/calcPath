@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { trackEvent } from "@/lib/analytics";
 import { supabase } from "@/lib/supabase/client";
 
 const FEEDBACK_KINDS = [
@@ -65,7 +64,6 @@ export default function FeedbackPage() {
 
       if (!res.ok) throw new Error("Failed");
 
-      trackEvent("feedback_submitted", { kind });
       setStatus("sent");
       setMessage("");
     } catch {

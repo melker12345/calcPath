@@ -144,8 +144,7 @@ const allProblemIds = new Map<string, string>();
       questions = questions.map((q) => ({ ...q, topicId: q.topicId ?? tid }));
 
       // Duplicate ids, checked across the WHOLE corpus rather than per subject.
-      // src/lib/question-registry.json maps an id to a single index and carries
-      // no subject, and progress is stored against that index — so two subjects
+      // Progress is stored against the bare id with no subject, so two subjects
       // sharing an id silently share a progress slot, and answering one marks
       // the other done. That had already happened once, between
       // mathematical-logic and set-theory.
@@ -153,7 +152,7 @@ const allProblemIds = new Map<string, string>();
         const prior = allProblemIds.get(q.id);
         if (prior) {
           errors.push(
-            `${slug}/topics/${tid}: duplicate problem id "${q.id}" — already used by ${prior}. Ids must be unique across every subject, because the question registry is global.`
+            `${slug}/topics/${tid}: duplicate problem id "${q.id}" — already used by ${prior}. Ids must be unique across every subject, because progress is keyed by id alone.`
           );
         }
         allProblemIds.set(q.id, `${slug}/topics/${tid}`);

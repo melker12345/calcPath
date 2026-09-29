@@ -1,18 +1,7 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import { subjectBodyFont, subjectHeadingFont } from "@/lib/subject-fonts";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
-import { GoogleAnalytics } from "@next/third-parties/google";
 import { Providers } from "@/components/providers";
-import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { allThemesCss } from "@/lib/themes";
 import "./globals.css";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: {
@@ -20,7 +9,7 @@ export const metadata: Metadata = {
     template: "%s | CalcPath",
   },
   description:
-    "Free step-by-step math courses with practice problems, instant feedback, and topic tests. Calculus, statistics & linear algebra.",
+    "Free step-by-step university mathematics: textbook chapters, practice problems with full solutions, and printable problem sets.",
   keywords: [
     "learn university mathematics",
     "university math",
@@ -33,14 +22,7 @@ export const metadata: Metadata = {
     "linear algebra",
     "math practice",
     "math problems",
-    "limits",
-    "derivatives",
-    "integrals",
     "step by step math",
-    "math tutor",
-    "calculus problems",
-    "statistics problems",
-    "linear algebra problems",
   ],
   metadataBase: new URL("https://calc-path.com"),
   // NOTE: no `alternates` here — Next.js metadata is shallow-merged, so a root
@@ -50,7 +32,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "CalcPath — Learn Math Step by Step",
     description:
-      "Free step-by-step courses with practice problems and topic tests. Master math at your own pace.",
+      "Free university mathematics: textbook chapters, practice problems with full solutions, and printable problem sets.",
     url: "https://calc-path.com",
     siteName: "CalcPath",
     images: [
@@ -68,7 +50,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "CalcPath — Learn Math Step by Step",
     description:
-      "Free courses with practice problems, instant feedback, and topic tests.",
+      "Free university mathematics: textbook chapters, practice problems with full solutions, and printable problem sets.",
     images: ["/og-image.png"],
   },
   robots: {
@@ -90,14 +72,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={`${inter.variable} ${subjectHeadingFont.variable} ${subjectBodyFont.variable}`}
-    >
+    <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Per-subject metaphor theme palettes (light + dark), generated from
-            src/lib/themes.ts. Scoped via .subject-theme-<id> classes. */}
+        {/* Per-subject nav tint (light + dark), generated from src/lib/themes.ts
+            and scoped via .subject-theme-<id> classes. */}
         <style
           id="subject-themes"
           dangerouslySetInnerHTML={{ __html: allThemesCss() }}
@@ -113,23 +91,14 @@ export default function RootLayout({
                   name: "CalcPath",
                   url: "https://calc-path.com",
                   description:
-                    "Free step-by-step math courses with practice problems, instant feedback, and topic tests.",
-                  potentialAction: {
-                    "@type": "SearchAction",
-                    target: "https://calc-path.com/calculus/modules?q={search_term_string}",
-                    "query-input": "required name=search_term_string",
-                  },
+                    "Free step-by-step university mathematics with practice problems and printable problem sets.",
                 },
                 {
                   "@type": "Organization",
-                  // Same @id as the landing page's EducationalOrganization node
-                  // (see src/lib/landing/seo.tsx) so crawlers merge them into
-                  // one entity instead of seeing two conflicting organizations.
                   "@id": "https://calc-path.com/#org",
                   name: "CalcPath",
                   url: "https://calc-path.com",
                   logo: "https://calc-path.com/og-image.png",
-                  sameAs: ["https://x.com/CalcPath"],
                 },
               ],
             }),
@@ -138,15 +107,6 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <Providers>{children}</Providers>
-        <AnalyticsTracker />
-        <Analytics />
-        <SpeedInsights />
-        {/* Google Analytics 4. Loads gtag.js and reports page views on every
-            route change. Unset NEXT_PUBLIC_GA_ID locally to keep dev traffic
-            out of the reports. */}
-        {process.env.NEXT_PUBLIC_GA_ID && (
-          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
-        )}
       </body>
     </html>
   );
