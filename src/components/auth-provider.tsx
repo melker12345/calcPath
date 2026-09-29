@@ -1,202 +1,87 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase/client";
+import type { Session } from "@supabase/supabase-js";
+import { getSupabase } from "@/lib/supabase/client";
 
-export type UserProfile = {
-  id: string;
-  email: string | null;
-  phone: string | null;
-  createdAt: string | null;
-};
+/**
+ * The only signed-in surface on the site is /admin/feedback. This provider
+ * exposes the Supabase session (email + access token) and password sign-in.
+ * Outside an AuthProvider, useAuth() returns a signed-out value rather than
+ * throwing, so public pages never depend on it.
+ */
+export type AuthUser = { id: string; email: string | null };
 
 type AuthContextValue = {
-  user: UserProfile | null;
-  signUp: (email: string, password: string) => Promise<{ error?: string }>;
+  /** undefined while the initial session is still being read. */
+  user: AuthUser | null | undefined;
+  accessToken: string | null;
   signInWithPassword: (email: string, password: string) => Promise<{ error?: string }>;
-  sendEmailOtp: (email: string) => Promise<void>;
-  sendPasswordReset: (email: string) => Promise<{ error?: string }>;
-  refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
-// Safe fallback returned by useAuth/useOptionalAuth when called outside an
-// AuthProvider. Many surfaces (public/anon pages) mount components that call
-// useAuth without a provider above them; those must degrade to "no user", not
-// throw. The real value below is used wherever AuthBoundary wraps the tree.
-const noAuthValue: AuthContextValue = {
+const signedOut: AuthContextValue = {
   user: null,
-  signUp: async () => ({}),
-  signInWithPassword: async () => ({}),
-  sendEmailOtp: async () => {},
-  sendPasswordReset: async () => ({}),
-  refreshProfile: async () => {},
+  accessToken: null,
+  signInWithPassword: async () => ({ error: "Not available here." }),
   signOut: async () => {},
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-type DbProfileRow = {
-  id: string;
-  email: string | null;
-  phone: string | null;
-  created_at: string | null;
-};
-
-function toUserProfile(user: User, dbProfile: DbProfileRow | null): UserProfile {
+function fromSession(session: Session | null): { user: AuthUser | null; accessToken: string | null } {
+  if (!session?.user) return { user: null, accessToken: null };
   return {
-    id: user.id,
-    email: user.email ?? dbProfile?.email ?? null,
-    phone: user.phone ?? dbProfile?.phone ?? null,
-    createdAt: dbProfile?.created_at ?? null,
+    user: { id: session.user.id, email: session.user.email ?? null },
+    accessToken: session.access_token ?? null,
   };
 }
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<UserProfile | null>(null);
+  // NEXT_PUBLIC_* vars are inlined at build time, so "configured or not" is
+  // the same on the server and in the browser; without Supabase the state is
+  // signed-out from the first render instead of "checking".
+  const [state, setState] = useState<{ user: AuthUser | null | undefined; accessToken: string | null }>(() => ({
+    user: getSupabase() ? undefined : null,
+    accessToken: null,
+  }));
 
   useEffect(() => {
-    let isMounted = true;
-
-    const load = async (session: Session | null) => {
-      const authUser = session?.user ?? null;
-      if (!authUser) {
-        if (isMounted) setUser(null);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id,email,phone,created_at")
-        .eq("id", authUser.id)
-        .maybeSingle();
-
-      if (error) {
-        console.warn("Failed to load profile:", error.message);
-      }
-
-      await supabase.from("profiles").upsert(
-        {
-          id: authUser.id,
-          email: authUser.email ?? data?.email ?? null,
-          phone: authUser.phone ?? data?.phone ?? null,
-        },
-        { onConflict: "id" },
-      );
-
-      if (isMounted) setUser(toUserProfile(authUser, (data ?? null) as DbProfileRow | null));
-    };
-
-    supabase.auth.getSession().then(({ data }) => load(data.session ?? null));
-
-    const { data: sub } = supabase.auth.onAuthStateChange(
-      (event: AuthChangeEvent, session: Session | null) => {
-        if (event === "SIGNED_OUT") {
-          setUser(null);
-          return;
-        }
-        load(session);
-      },
-    );
-
+    const supabase = getSupabase();
+    if (!supabase) return;
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (mounted) setState(fromSession(data.session ?? null));
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setState(fromSession(session));
+    });
     return () => {
-      isMounted = false;
+      mounted = false;
       sub.subscription.unsubscribe();
     };
   }, []);
 
-  const signUp = async (email: string, password: string): Promise<{ error?: string }> => {
-    const trimmed = email.trim().toLowerCase();
-    if (!trimmed || !password) return { error: "Email and password are required." };
-    if (password.length < 6) return { error: "Password must be at least 6 characters." };
-    const { error } = await supabase.auth.signUp({
-      email: trimmed,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) return { error: error.message };
-    return {};
-  };
-
-  const signInWithPassword = async (email: string, password: string): Promise<{ error?: string }> => {
-    const trimmed = email.trim().toLowerCase();
-    if (!trimmed || !password) return { error: "Email and password are required." };
-    const { error } = await supabase.auth.signInWithPassword({
-      email: trimmed,
-      password,
-    });
-    if (error) return { error: error.message };
-    return {};
-  };
-
-  const sendEmailOtp = async (email: string) => {
-    const trimmed = email.trim().toLowerCase();
-    if (!trimmed) return;
-    await supabase.auth.signInWithOtp({
-      email: trimmed,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-  };
-
-  const sendPasswordReset = async (email: string): Promise<{ error?: string }> => {
-    const trimmed = email.trim().toLowerCase();
-    if (!trimmed) return { error: "Email is required." };
-    const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/account`,
-    });
-    if (error) return { error: error.message };
-    return {};
-  };
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-  };
-
-  const refreshProfile = async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const authUser = sessionData.session?.user ?? null;
-    if (!authUser) return;
-
-    const { data } = await supabase
-      .from("profiles")
-      .select("id,email,phone,created_at")
-      .eq("id", authUser.id)
-      .maybeSingle();
-
-    if (data) {
-      setUser(toUserProfile(authUser, data as DbProfileRow));
-    }
-  };
-
-  const value = useMemo(
+  const value = useMemo<AuthContextValue>(
     () => ({
-      user,
-      signUp,
-      signInWithPassword,
-      sendEmailOtp,
-      sendPasswordReset,
-      refreshProfile,
-      signOut,
+      user: state.user,
+      accessToken: state.accessToken,
+      signInWithPassword: async (email, password) => {
+        const supabase = getSupabase();
+        if (!supabase) return { error: "Sign-in is not configured on this deployment." };
+        const trimmed = email.trim().toLowerCase();
+        if (!trimmed || !password) return { error: "Email and password are required." };
+        const { error } = await supabase.auth.signInWithPassword({ email: trimmed, password });
+        return error ? { error: error.message } : {};
+      },
+      signOut: async () => {
+        await getSupabase()?.auth.signOut();
+      },
     }),
-    [user],
+    [state],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Non-throwing on purpose: outside an AuthProvider these return the no-op value
-// so anonymous surfaces keep working. Wrap admin/account trees in AuthBoundary
-// to get the real session-backed value.
-export const useAuth = () => {
-  return useContext(AuthContext) ?? noAuthValue;
-};
-
-export const useOptionalAuth = () => {
-  return useContext(AuthContext) ?? noAuthValue;
-};
+export const useAuth = (): AuthContextValue => useContext(AuthContext) ?? signedOut;

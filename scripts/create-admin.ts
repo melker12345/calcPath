@@ -8,7 +8,7 @@
  * - Reads NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and ADMIN_EMAIL
  *   from the project .env (no dotenv dependency; parsed here directly).
  * - Uses the service-role key to create the user with email already confirmed,
- *   so the admin can sign in immediately at /admin.
+ *   so the admin can sign in immediately at /admin/feedback (the reports inbox).
  * - If the user already exists, its password is reset to the one you pass.
  *
  * The password is your choice — whatever you pass here is what you type into the
@@ -78,7 +78,7 @@ async function main() {
     });
 
   if (!createError && created.user) {
-    console.log(`✓ Created admin user ${adminEmail}. You can now sign in at /admin.`);
+    console.log(`✓ Created admin user ${adminEmail}. You can now sign in at /admin/feedback.`);
     return;
   }
 
@@ -116,7 +116,7 @@ async function main() {
     console.error("Failed to reset admin password:", updateError.message);
     process.exit(1);
   }
-  console.log(`✓ Reset password for existing admin user ${adminEmail}. Sign in at /admin.`);
+  console.log(`✓ Reset password for existing admin user ${adminEmail}. Sign in at /admin/feedback.`);
 }
 
 main().catch((err) => {

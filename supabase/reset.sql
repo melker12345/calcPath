@@ -1,47 +1,48 @@
 -- ============================================================================
 -- CalcPath — FULL DB RESET (DESTRUCTIVE)
 -- ============================================================================
--- Wipes every table this app has ever used (current + legacy) and recreates a
--- clean schema matching the dev branch. Run once in the Supabase SQL Editor.
+-- Drops every table any version of the site has used and recreates the one
+-- table the current site needs (public.reports, see schema.sql). Run once in
+-- the Supabase SQL editor. All data in these tables is lost.
 --
--- This DELETES ALL DATA in these tables. It also wipes every auth user EXCEPT
--- the admin (step 3), so you launch with a single clean admin account.
+-- Admin sign-in for /admin/feedback uses Supabase Auth: create the admin user
+-- with `npx tsx scripts/create-admin.ts '<password>'` (reads ADMIN_EMAIL from
+-- .env). Step 3 below removes every other auth user.
 -- ============================================================================
 
--- 1. Drop everything (current + legacy from the old accounts/subscription era)
-drop table if exists public.feedback         cascade;
-drop table if exists public.progress_backups cascade;
-drop table if exists public.analytics_events cascade;
-drop table if exists public.profiles         cascade;  -- legacy (old auth)
-drop table if exists public.user_progress    cascade;  -- legacy (old sync)
+-- 1. Drop everything, current and legacy.
+drop table if exists public.reports          cascade;
+drop table if exists public.feedback         cascade;  -- old votes + reports
+drop table if exists public.progress_backups cascade;  -- old PIN cloud backup
+drop table if exists public.analytics_events cascade;  -- old in-house tracker
+drop table if exists public.profiles         cascade;  -- old accounts
+drop table if exists public.user_progress    cascade;  -- old sync
 
--- 2. Recreate the clean schema (mirrors supabase/schema.sql)
-
--- feedback — bug/feature/general messages and per-target up/down votes
-create table public.feedback (
+-- 2. Recreate the schema (mirrors supabase/schema.sql).
+create table public.reports (
   id          uuid         primary key default gen_random_uuid(),
-  kind        text         not null check (kind in ('bug', 'feature', 'general', 'vote')),
-  user_id     uuid,
-  page_url    text,
+  created_at  timestamptz  not null default now(),
+  status      text         not null default 'open'
+                           check (status in ('open', 'fixed', 'dismissed')),
+  kind        text         not null check (kind in ('question', 'chapter', 'site')),
+  subject     text,
+  topic_id    text,
+  section     text,
+  question_id text,
+  reason      text         not null,
   message     text,
-  vote        smallint     check (vote in (-1, 0, 1)),
-  target_type text,
-  target_id   text,
-  context     jsonb,
-  status      text         not null default 'open' check (status in ('open', 'fixed', 'trash')),
-  created_at  timestamptz  not null default now()
+  page_url    text,
+  snapshot    jsonb,
+  learner     jsonb,
+  resolved_at timestamptz
 );
 
-create index feedback_created_at_idx on public.feedback (created_at desc);
-create index feedback_kind_idx       on public.feedback (kind);
-create index feedback_vote_lookup_idx
-  on public.feedback (user_id, target_type, target_id)
-  where kind = 'vote';
+create index reports_created_at_idx on public.reports (created_at desc);
+create index reports_status_idx     on public.reports (status);
+create index reports_target_idx     on public.reports (subject, topic_id, question_id);
 
-alter table public.feedback enable row level security;
+alter table public.reports enable row level security;
 
-
--- 3. Wipe every auth user except the admin (the new version has no signup UI;
---    only the admin account is needed). Cascades to auth.identities/sessions.
+-- 3. Keep only the admin auth user (replace the address with your ADMIN_EMAIL).
 delete from auth.users
 where lower(email) <> 'melkeroberg03@gmail.com';

@@ -1,199 +1,130 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { useState } from "react";
+import { MESSAGE_MAX, SITE_REASONS, type ReportInput } from "@/lib/reports";
 
-const FEEDBACK_KINDS = [
-  { id: "bug", label: "Bug" },
-  { id: "feature", label: "Feature idea" },
-  { id: "general", label: "General" },
-] as const;
+type Status = "idle" | "sending" | "sent" | "error";
 
-type FeedbackKind = (typeof FEEDBACK_KINDS)[number]["id"];
-
+/**
+ * Site-level feedback. Content problems are better reported from the chapter
+ * or question itself, where the report picks up the exact item automatically;
+ * this page is for everything else.
+ */
 export default function FeedbackPage() {
-  const [kind, setKind] = useState<FeedbackKind>("general");
+  const [reason, setReason] = useState<string>(SITE_REASONS[0]);
   const [message, setMessage] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const radioRefs = useRef<Array<HTMLButtonElement | null>>([]);
-
+  const [status, setStatus] = useState<Status>("idle");
+  const [error, setError] = useState<string | null>(null);
+  const max = MESSAGE_MAX.site;
   const canSubmit = status !== "sending" && message.trim().length >= 3;
 
-  const handleRadioKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, idx: number) => {
-    let next: number | null = null;
-    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-      next = (idx + 1) % FEEDBACK_KINDS.length;
-    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-      next = (idx - 1 + FEEDBACK_KINDS.length) % FEEDBACK_KINDS.length;
-    }
-    if (next !== null) {
-      e.preventDefault();
-      setKind(FEEDBACK_KINDS[next].id);
-      radioRefs.current[next]?.focus();
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmed = message.trim();
-    if (!trimmed || trimmed.length < 3) return;
-
+    if (!canSubmit) return;
     setStatus("sending");
+    setError(null);
+    const body: ReportInput = {
+      kind: "site",
+      reason,
+      message: message.trim(),
+      pageUrl: window.location.href,
+    };
     try {
-      // Attribute the feedback when signed in; anonymous submissions still work.
-      let accessToken: string | undefined;
-      try {
-        const { data } = await supabase.auth.getSession();
-        accessToken = data.session?.access_token ?? undefined;
-      } catch {
-        // No session available — submit anonymously.
-      }
-
       const res = await fetch("/api/feedback", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-        body: JSON.stringify({
-          kind,
-          message: trimmed,
-          page_url: window.location.href,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
-
-      if (!res.ok) throw new Error("Failed");
-
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error || `Request failed (${res.status})`);
+      }
       setStatus("sent");
       setMessage("");
-    } catch {
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
       setStatus("error");
     }
   };
 
-  if (status === "sent") {
-    return (
-      <div className="mx-auto w-full max-w-xl px-4 py-16 sm:px-6 sm:py-24">
-        <div role="status" className="text-center">
-          <h1 className="font-serif text-3xl font-semibold tracking-tight theme-text">
-            Thanks for your feedback
-          </h1>
-          <p className="mx-auto mt-3 max-w-md text-base leading-relaxed theme-text-secondary">
-            We read every submission. Your input helps make CalcPath better for everyone.
-          </p>
+  return (
+    <div className="mx-auto w-full max-w-xl px-4 py-12 sm:px-6 sm:py-16">
+      <h1 className="font-serif text-3xl font-semibold tracking-tight theme-text">Feedback</h1>
+      <p className="mt-3 text-[15px] leading-relaxed theme-text-secondary">
+        A mistake in a chapter or a question is best reported from that page with
+        the <em>Report a problem</em> link, which records exactly which item you mean.
+        Use this form for anything else about the site.
+      </p>
+
+      {status === "sent" ? (
+        <div role="status" className="mt-8 border theme-border p-4 text-sm theme-text-secondary">
+          Thank you. Every report is read.{" "}
           <button
             type="button"
             onClick={() => setStatus("idle")}
-            className="mt-8 inline-flex items-center justify-center rounded-xl border theme-border px-5 py-2.5 text-sm font-medium theme-text-secondary transition hover:border-[var(--accent)]/35 hover:bg-[var(--surface-2)] hover:theme-text active:scale-[0.98]"
+            className="underline underline-offset-2 hover:theme-text"
           >
-            Send more feedback
+            Send another
           </button>
         </div>
-      </div>
-    );
-  }
+      ) : (
+        <form onSubmit={submit} className="mt-8 text-sm">
+          <fieldset>
+            <legend className="mb-2 font-medium theme-text">What is this about?</legend>
+            <div className="flex flex-col gap-1.5">
+              {SITE_REASONS.map((r) => (
+                <label key={r} className="flex cursor-pointer items-center gap-2 theme-text-secondary">
+                  <input
+                    type="radio"
+                    name="site-reason"
+                    value={r}
+                    checked={reason === r}
+                    onChange={() => setReason(r)}
+                    className="accent-[var(--accent)]"
+                  />
+                  {r}
+                </label>
+              ))}
+            </div>
+          </fieldset>
 
-  return (
-    <div className="mx-auto w-full max-w-xl px-4 py-12 sm:px-6 sm:py-20">
-      <div className="text-center">
-        <h1 className="font-serif text-3xl font-semibold tracking-tight theme-text sm:text-4xl">
-          Feedback
-        </h1>
-        <p className="mx-auto mt-4 max-w-md text-base leading-relaxed theme-text-secondary">
-          Found a bug, have an idea, or just want to share a thought? Let us know — every
-          message helps shape CalcPath.
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="mt-10">
-        {/* Kind selector */}
-        <fieldset>
-          <legend className="mb-3 text-sm font-medium theme-text">
-            What kind of feedback is this?
-          </legend>
-          <div
-            role="radiogroup"
-            aria-label="Kind of feedback"
-            className="flex flex-wrap gap-2.5"
-          >
-            {FEEDBACK_KINDS.map((k, idx) => {
-              const active = kind === k.id;
-              return (
-                <button
-                  key={k.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  tabIndex={active ? 0 : -1}
-                  ref={(el) => {
-                    radioRefs.current[idx] = el;
-                  }}
-                  onClick={() => setKind(k.id)}
-                  onKeyDown={(e) => handleRadioKeyDown(e, idx)}
-                  className={`inline-flex items-center gap-1.5 rounded-xl border-2 px-4 py-2.5 text-sm font-medium transition active:scale-95 ${
-                    active
-                      ? "border-[var(--accent)] bg-[var(--accent)]/10 font-semibold text-[var(--accent)]"
-                      : "theme-border bg-[var(--surface)] theme-text-secondary hover:border-[var(--accent)]/40"
-                  }`}
-                >
-                  {active && <span aria-hidden>✓</span>}
-                  {k.label}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        {/* Message */}
-        <div className="mt-7">
-          <label htmlFor="feedback-message" className="mb-2 block text-sm font-medium theme-text">
-            Your message
+          <label htmlFor="feedback-message" className="mt-5 block font-medium theme-text">
+            Message
           </label>
           <textarea
             id="feedback-message"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             rows={6}
-            maxLength={5000}
+            maxLength={max}
             required
             minLength={3}
             placeholder={
-              kind === "bug"
-                ? "Describe what happened and what you expected…"
-                : kind === "feature"
-                  ? "What would you like to see added or changed?"
-                  : "Share your thoughts…"
+              reason === "Site bug"
+                ? "What happened, on which page, and what you expected."
+                : "What would make the site more useful?"
             }
-            className="w-full resize-y rounded-xl border-2 theme-border bg-[var(--surface)] px-4 py-3 text-sm theme-text outline-none transition placeholder:text-[var(--text-muted)] focus:border-[var(--accent)]"
+            className="mt-1 w-full resize-y border theme-border bg-[var(--surface)] px-3 py-2 theme-text outline-none focus:border-[var(--accent)]"
           />
-          <p className="mt-1.5 text-right text-xs theme-text-muted">
-            {message.length}/5000
+          <p className="mt-1 text-right text-xs theme-text-muted">
+            {message.length}/{max}
           </p>
-        </div>
 
-        {/* Error message */}
-        {status === "error" && (
-          <p
-            role="alert"
-            className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400"
+          {error && (
+            <p role="alert" className="mt-3 text-red-600 dark:text-red-400">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="mt-4 border border-[var(--accent)] bg-[var(--accent)] px-4 py-2 font-medium text-[var(--accent-text)] disabled:opacity-50"
           >
-            Something went wrong. Please try again.
-          </p>
-        )}
-
-        {/* Submit */}
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className={`mt-6 w-full rounded-xl py-3.5 text-sm font-semibold transition active:scale-[0.99] ${
-            canSubmit
-              ? "bg-[var(--accent)] text-[var(--accent-text)] shadow-sm hover:opacity-90"
-              : "cursor-not-allowed border-2 theme-border bg-[var(--surface-2)] theme-text-muted"
-          }`}
-        >
-          {status === "sending" ? "Sending…" : "Send feedback"}
-        </button>
-      </form>
+            {status === "sending" ? "Sending…" : "Send"}
+          </button>
+        </form>
+      )}
     </div>
   );
 }
