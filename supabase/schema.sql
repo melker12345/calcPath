@@ -1,78 +1,46 @@
 -- ============================================================================
--- CalcPath — clean database schema (dev branch)
+-- CalcPath — database schema (idempotent)
 -- ============================================================================
--- This is the COMPLETE set of tables/columns this version of the app actually
--- uses. Run it once against a fresh (or freshly wiped) Supabase project to get
--- a clean database with no leftover columns/tables from older versions.
+-- The site stores exactly one thing server-side: reports filed from the
+-- "Report a problem" form on chapters and questions, and from /feedback.
+-- Progress lives in the learner's browser; there are no accounts, no
+-- analytics, no backups.
 --
--- Safe to run on an empty DB. It is idempotent (IF NOT EXISTS everywhere), so
--- re-running it will not error or clobber existing data.
+-- Apply: paste this file into the Supabase SQL editor and run it. It is safe
+-- to run again. To wipe the old tables from earlier versions of the site, run
+-- supabase/reset.sql instead (destructive).
 --
--- The app talks to these tables ONLY via the service-role key (server-side),
--- which bypasses Row Level Security. We enable RLS with no policies so the
--- public/anon key has zero access.
---
--- After running this, seed the public recovery templates with:
---   npx tsx scripts/seed-progress-templates.ts
+-- Access: only the server (service role) reads and writes this table. RLS is
+-- on and no policies are defined, so the anon key can do nothing with it.
 -- ============================================================================
 
-
--- ----------------------------------------------------------------------------
--- OPTIONAL: full reset (DESTRUCTIVE)
--- ----------------------------------------------------------------------------
--- Uncomment this block ONLY when you intentionally want to wipe these tables
--- before recreating them. This drops ALL backup + feedback data.
---
--- If your old live DB has legacy tables from previous versions that this app no
--- longer uses (e.g. user_progress, sync_codes, snapshots, ...), drop those
--- manually too — they are intentionally NOT recreated below.
---
--- drop table if exists public.feedback cascade;
--- drop table if exists public.progress_backups cascade;
-
-
--- ----------------------------------------------------------------------------
-
--- ----------------------------------------------------------------------------
--- feedback — bug/feature/general messages and per-target up/down votes
--- ----------------------------------------------------------------------------
--- kind = 'vote'  -> uses vote (+1/-1/0) + target_type + target_id, message optional (note)
--- kind = other   -> uses message (the report text), target_type/target_id when the
---                   report was filed on a specific question, and context (jsonb)
---                   with what the user actually did (submitted answers, hint use…)
--- user_id is nullable: on this branch auth is stripped, so it is effectively
--- always null. It is kept so the same schema works if auth is reintroduced.
-create table if not exists public.feedback (
+create table if not exists public.reports (
   id          uuid         primary key default gen_random_uuid(),
-  kind        text         not null check (kind in ('bug', 'feature', 'general', 'vote')),
-  user_id     uuid,
-  page_url    text,
+  created_at  timestamptz  not null default now(),
+  status      text         not null default 'open'
+                           check (status in ('open', 'fixed', 'dismissed')),
+  kind        text         not null check (kind in ('question', 'chapter', 'site')),
+  -- Where the report points. All null for kind = 'site'.
+  subject     text,        -- content/<subject>
+  topic_id    text,        -- content/<subject>/topics/<topic_id>
+  section     text,        -- a ## section slug of module.mdx
+  question_id text,        -- an id in questions.json (kind = 'question' only)
+  -- What the learner said.
+  reason      text         not null,
   message     text,
-  vote        smallint     check (vote in (-1, 0, 1)),
-  target_type text,
-  target_id   text,
-  context     jsonb,
-  status      text         not null default 'open' check (status in ('open', 'fixed', 'trash')),
-  created_at  timestamptz  not null default now()
+  page_url    text,
+  -- Captured by the server at report time so the report stays actionable
+  -- after the content changes: the stored question, or the section source.
+  snapshot    jsonb,
+  -- What the learner did on a practice question before reporting (their
+  -- submissions and how each was graded, hint use, solution shown).
+  learner     jsonb,
+  resolved_at timestamptz
 );
 
--- Existing databases predating the report-context column: add it in place.
-alter table public.feedback add column if not exists context jsonb;
+-- Inbox lists newest first, usually filtered to open reports.
+create index if not exists reports_created_at_idx on public.reports (created_at desc);
+create index if not exists reports_status_idx     on public.reports (status);
+create index if not exists reports_target_idx     on public.reports (subject, topic_id, question_id);
 
--- Admin inbox lists newest first.
-create index if not exists feedback_created_at_idx
-  on public.feedback (created_at desc);
-
--- Filtering the inbox by kind.
-create index if not exists feedback_kind_idx
-  on public.feedback (kind);
-
--- One-vote-per-(user, target) lookup used when a signed-in user toggles a vote.
-create index if not exists feedback_vote_lookup_idx
-  on public.feedback (user_id, target_type, target_id)
-  where kind = 'vote';
-
-alter table public.feedback enable row level security;
-
-
-
+alter table public.reports enable row level security;
