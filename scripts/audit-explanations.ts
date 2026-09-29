@@ -115,15 +115,33 @@ function auditFile(raw: string): Issue[] {
   // Prose-in-math: a $...$ span whose content reads like an English sentence
   // (3+ lowercase words in a row) usually means an unescaped currency $ silently
   // turned prose into math. KaTeX renders it without error, so validate-latex misses it.
+  //
+  // Every unescaped single dollar is paired with the next one in document
+  // order. An escaped `\$` (a literal dollar sign in prose) is skipped, and
+  // spans are never capped in length — a regex with a length cap paired the
+  // closer of a long span with the next opener and reported the prose between
+  // them as mathematics.
   {
-    const mathRe = /(?<!\\)\$([^$\n]{1,120}?)(?<!\\)\$/g;
+    const src = raw.replace(/\$\$[\s\S]*?\$\$/g, (m) => m.replace(/[^\n]/g, " "));
+    const dollar = /(?<!\\)\$/g;
+    let open: number | null = null;
     let m: RegExpExecArray | null;
-    while ((m = mathRe.exec(raw)) !== null) {
-      const inner = m[1];
+    while ((m = dollar.exec(src)) !== null) {
+      if (open === null) {
+        open = m.index + 1;
+        continue;
+      }
+      const inner = src.slice(open, m.index);
+      if (inner.includes("\n")) {
+        // Inline math never spans lines: the opener was stray, start over here.
+        open = m.index + 1;
+        continue;
+      }
+      open = null;
       // 3+ consecutive plain English words (no math symbols between them)
       if (/\b[a-z]{2,}\s+[a-z]{2,}\s+[a-z]{2,}\b/.test(inner) && !/[\\^_{}=]/.test(inner)) {
-        const line = raw.slice(0, m.index).split("\n").length;
-        issues.push({ kind: "prose-in-math", detail: `L${line}: $${inner}$` });
+        const line = src.slice(0, m.index).split("\n").length;
+        issues.push({ kind: "prose-in-math", detail: `L${line}: $${inner.slice(0, 120)}$` });
       }
     }
   }
