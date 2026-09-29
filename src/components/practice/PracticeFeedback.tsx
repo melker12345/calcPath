@@ -1,7 +1,6 @@
 "use client";
 
 import { MathText } from "@/components/math-text";
-import { VoteFeedback } from "@/components/vote-feedback";
 import { normalizeAnswer } from "@/lib/answer-check";
 import type { FeedbackState } from "./types";
 
@@ -171,27 +170,22 @@ interface PracticeFeedbackProps {
   onUseHint: () => void;
   onShowSolution?: () => void;
   getHint: () => string;
-  /** Legacy overlay-dismissal flag; the compact incorrect banner ignores it. */
-  overlayDismissed?: boolean;
-  setOverlayDismissed?: (dismissed: boolean) => void;
   finalAnswer: string;
-  /** When true on a correct feedback for the final question, shows "Congrats!" and "Finish" instead of "Correct!"/"Next Question" */
+  /** On a correct answer to the final question the button reads "Finish". */
   isLastQuestion?: boolean;
-  /** Attached to bug reports filed from this overlay (user's submissions, expected answer…). */
-  reportContext?: Record<string, unknown>;
 }
 
 /**
- * Shared feedback UI for practice questions.
+ * Feedback for a graded practice question. Three states:
  *
- * Three states:
- * - correct        → full-area celebration card (steps + answer + Next), used as
- *                    an overlay by the input variant.
- * - incorrect      → COMPACT banner (icon + "Not quite" + Hint/Solution/Skip,
- *                    hint inline underneath when open). Deliberately small so the
- *                    caller can keep the math field / choices visible and editable
- *                    for a retry — never a full-area takeover.
- * - showSolution   → full-area amber solution card (steps + answer + Next).
+ * - correct       → a card with the worked steps, the answer and Next. It
+ *                   takes the place of the input.
+ * - showSolution  → the same card, headed "Not quite", after the learner gave
+ *                   up or ran out of attempts. It also replaces the input.
+ * - incorrect     → a compact banner with Hint / Solution / Skip, kept small
+ *                   so the input stays visible and editable for a retry.
+ *
+ * Every piece of text goes through MathText so LaTeX renders.
  */
 export function PracticeFeedback({
   feedback,
@@ -202,182 +196,90 @@ export function PracticeFeedback({
   getHint,
   finalAnswer,
   isLastQuestion = false,
-  reportContext,
 }: PracticeFeedbackProps) {
   if (!feedback) return null;
 
   const isCorrect = feedback.type === "correct";
 
-  // Internal step renderer (replaces the need for subjects to pass renderSteps).
-  // Numbered chips only appear for real multi-step explanations — a single
-  // unnumbered paragraph gets no stray "1" bullet.
-  const renderInternalSteps = (color: "emerald" | "amber") => {
+  // Numbered steps only for real multi-step explanations; a single paragraph
+  // gets no stray "1".
+  const renderSteps = () => {
     const steps = extractSteps(current.explanation);
-    const showChips = steps.length >= 2;
-
-    return steps.map((step, stepIdx) => (
-      <div
-        key={stepIdx}
-        className={`flex gap-2 sm:gap-3 ${color === "emerald" ? "animate-step-in" : ""}`}
-      >
-        {showChips && (
-          <span
-            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold sm:h-6 sm:w-6 sm:text-xs ${
-              color === "emerald"
-                ? "bg-emerald-200 text-emerald-800 dark:bg-emerald-800 dark:text-emerald-200"
-                : "bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200"
-            }`}
-          >
-            {stepIdx + 1}
-          </span>
-        )}
-        <div className="flex-1 text-sm leading-relaxed text-zinc-700 sm:text-base dark:text-[var(--text-secondary)]">
-          {/* All explanation step text routes through MathText for correct LaTeX (incl. $Q_1$, percentiles etc) + error resilience */}
-          <MathText text={step} />
-        </div>
-      </div>
-    ));
+    const numbered = steps.length >= 2;
+    return (
+      <ol className={numbered ? "list-decimal space-y-2 pl-6" : "list-none space-y-2 pl-0"}>
+        {steps.map((step, i) => (
+          <li key={i} className="text-sm leading-relaxed theme-text sm:text-base">
+            <MathText text={step} />
+          </li>
+        ))}
+      </ol>
+    );
   };
 
-  if (isCorrect) {
+  if (isCorrect || feedback.showSolution) {
     return (
       <div
         role="status"
         aria-live="polite"
         aria-atomic="true"
-        className="animate-correct-pop flex h-full flex-col border-t border-emerald-200 bg-emerald-50 p-3 pt-4 sm:p-5 dark:border-[var(--border)] dark:bg-[var(--surface-2)]"
+        className="border theme-border bg-[var(--surface)] p-4 sm:p-5"
       >
-        <div className="flex items-center gap-2.5">
-          <div className="animate-check-bounce flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base">✓</div>
-          <p className="text-base font-bold text-emerald-800 sm:text-xl dark:text-emerald-300">{isLastQuestion ? "Congrats!" : "Correct!"}</p>
-        </div>
-        <div className="mt-3 flex-1 space-y-1.5 overflow-y-auto sm:mt-4 sm:space-y-2">
-          {renderInternalSteps("emerald")}
-        </div>
-        <div className="mt-3 rounded-lg bg-emerald-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3 dark:bg-emerald-400/10">
-          <p className="text-sm font-semibold text-emerald-900 sm:text-base dark:text-emerald-200">
-            Answer: <span className="text-base sm:text-lg">{/* final via MathText */}<MathText text={finalAnswer} /></span>
-          </p>
-        </div>
-        <div className="mt-2 flex justify-end sm:mt-3">
-          <VoteFeedback targetType="problem" targetId={current.id} reportContext={reportContext} />
-        </div>
-        <button
-          type="button"
-          onClick={onNext}
-          className="mt-2 w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.98] sm:mt-3 sm:py-3 sm:text-base"
-        >
-          {isLastQuestion ? "Finish" : "Next Question →"}
+        <p className="text-base font-semibold theme-text sm:text-lg">
+          {isCorrect ? "Correct" : "Not quite. Here is the solution."}
+        </p>
+        <div className="mt-3">{renderSteps()}</div>
+        <p className="mt-4 border-t theme-border pt-3 text-sm theme-text sm:text-base">
+          <span className="font-semibold">Answer: </span>
+          <MathText text={finalAnswer} />
+        </p>
+        <button type="button" onClick={onNext} className="btn-primary mt-4 w-full sm:w-auto">
+          {isCorrect && isLastQuestion ? "Finish" : "Next question"}
         </button>
       </div>
     );
   }
 
-  // Full solution card (still a full-area takeover — it is dense with content
-  // and the only remaining action is moving on).
-  if (feedback.showSolution) {
-    return (
-      <div
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        className="flex h-full flex-col border-t border-amber-200 bg-amber-50 p-3 pt-4 sm:p-5 dark:border-[var(--border)] dark:bg-[var(--surface-2)]"
-      >
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white sm:h-10 sm:w-10 sm:text-base dark:bg-amber-500">✗</div>
-          <div>
-            <p className="text-sm font-bold text-amber-800 sm:text-lg dark:text-amber-300">Not quite</p>
-            <p className="text-[11px] text-amber-700 sm:text-sm dark:text-amber-400">Here&apos;s the solution:</p>
-          </div>
-        </div>
-
-        <div className="mt-3 flex-1 space-y-1.5 overflow-y-auto sm:mt-4 sm:space-y-2">
-          {renderInternalSteps("amber")}
-        </div>
-        <div className="mt-3 rounded-lg bg-amber-100 px-3 py-2 sm:mt-4 sm:rounded-xl sm:px-4 sm:py-3 dark:bg-amber-400/10">
-          <p className="text-sm font-semibold text-amber-900 sm:text-base dark:text-amber-200">
-            Answer: <span className="text-base sm:text-lg">{/* final via MathText */}<MathText text={finalAnswer} /></span>
-          </p>
-        </div>
-        <div className="mt-2 flex justify-end sm:mt-3">
-          <VoteFeedback targetType="problem" targetId={current.id} reportContext={reportContext} />
-        </div>
-        <button
-          type="button"
-          onClick={onNext}
-          className="mt-2 w-full rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-amber-700 active:scale-[0.98] sm:mt-3 sm:py-3 sm:text-base"
-        >
-          Next Question →
-        </button>
-      </div>
-    );
-  }
-
-  // Compact incorrect banner: the input (with the learner's attempt) stays
-  // visible and editable behind/below this, so they can compare and retry.
   const showHint = feedback.hintUsed;
+  const heading = feedback.attempts > 0 ? "Not quite" : "Stuck?";
   const message =
     feedback.attempts === 0
       ? null
       : feedback.hintUsed
-      ? "Use the hint and try again!"
+      ? "Use the hint and try again."
       : feedback.attempts >= 2
       ? "Need a hint?"
-      : "Give it another try!";
+      : "Try again.";
 
   return (
     <div
       role="status"
       aria-live="polite"
       aria-atomic="true"
-      className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 dark:border-[var(--border)] dark:bg-[var(--surface-2)] sm:px-4 sm:py-2.5"
+      className="flex flex-col gap-2 border theme-border bg-[var(--surface-2)] px-3 py-2 sm:px-4"
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        {feedback.attempts > 0 ? (
-          <>
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500 text-[11px] font-bold text-white" aria-hidden="true">
-              ✗
-            </span>
-            <span className="text-sm font-bold text-amber-800 dark:text-amber-300">Not quite</span>
-            {message && (
-              <span className="hidden text-xs text-amber-700 md:inline dark:text-amber-400">{message}</span>
-            )}
-          </>
-        ) : (
-          <span className="text-sm font-bold text-amber-800 dark:text-amber-300">Stuck?</span>
-        )}
+        <span className="text-sm font-semibold theme-text">{heading}</span>
+        {message && <span className="text-sm theme-text-secondary">{message}</span>}
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {!feedback.hintUsed && (
-            <button
-              type="button"
-              onClick={onUseHint}
-              className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 active:scale-95 dark:border-[var(--border)] dark:bg-[var(--surface)] dark:text-blue-300 dark:hover:bg-blue-900/50"
-            >
+            <button type="button" onClick={onUseHint} className="border theme-border bg-[var(--surface)] px-2.5 py-1 text-xs font-medium theme-text">
               Hint
             </button>
           )}
-          <button
-            type="button"
-            onClick={onShowSolution}
-            className="rounded-lg border border-amber-200 bg-white px-2.5 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 active:scale-95 dark:border-amber-800 dark:bg-[var(--surface)] dark:text-amber-300 dark:hover:bg-amber-900/50"
-          >
+          <button type="button" onClick={onShowSolution} className="border theme-border bg-[var(--surface)] px-2.5 py-1 text-xs font-medium theme-text">
             Solution
           </button>
-          <button
-            type="button"
-            onClick={onNext}
-            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-50 active:scale-95 dark:border-[var(--border)] dark:bg-[var(--surface)] dark:text-[var(--text-muted)] dark:hover:bg-[var(--surface-2)]"
-          >
+          <button type="button" onClick={onNext} className="border theme-border bg-[var(--surface)] px-2.5 py-1 text-xs font-medium theme-text-muted">
             Skip
           </button>
         </div>
       </div>
 
       {showHint && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 sm:px-3 sm:py-2 dark:border-[var(--border)] dark:bg-[var(--surface)]">
-          <p className="text-[11px] font-semibold text-blue-700 sm:text-xs dark:text-blue-300">Hint</p>
-          <div className="mt-0.5 text-xs text-blue-900 sm:text-sm dark:text-blue-200">
-            {/* Hint text (from expl) always via MathText so LaTeX renders */}
+        <div className="border-t theme-border pt-2">
+          <p className="text-xs font-semibold theme-text-muted">Hint</p>
+          <div className="mt-0.5 text-sm theme-text">
             <MathText text={getHint()} />
           </div>
         </div>

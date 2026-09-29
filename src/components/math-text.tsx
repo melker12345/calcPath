@@ -145,7 +145,7 @@ class MathRenderBoundary extends Component<MathBoundaryProps, MathBoundaryState>
 function SafeInlineMath({ math }: { math: string }) {
   const fallback = (
     <span
-      className="rounded bg-amber-100 px-0.5 font-mono text-[10px] text-amber-800 dark:bg-amber-950 dark:text-amber-200"
+      className="border theme-border px-0.5 font-mono text-[10px] theme-text"
       title={`Could not render LaTeX (katex error): ${math}. Showing raw source as fallback.`}
     >
       {math}
@@ -160,7 +160,7 @@ function SafeInlineMath({ math }: { math: string }) {
 
 function SafeBlockMath({ math }: { math: string }) {
   const fallback = (
-    <div className="my-2 rounded border border-amber-200 bg-amber-50 p-2 font-mono text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+    <div className="my-2 border theme-border p-2 font-mono text-xs theme-text">
       [LaTeX error: {math}]
     </div>
   );
