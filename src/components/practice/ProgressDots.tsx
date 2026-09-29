@@ -12,8 +12,7 @@ interface ProgressDotsProps {
 
 /**
  * Reusable progress dots component for practice sessions.
- * Shows colored dots for each question (solved, wrong, hint-used, not-attempted)
- * and allows clicking to jump between questions.
+ * One small square per question (filled when solved) that jumps to it on click.
  *
  * Always a SINGLE row: with many questions (some topics have 75+) the dots
  * scroll horizontally instead of wrapping into a wall of rows. The scrollbar is
@@ -44,7 +43,7 @@ export function ProgressDots({
       scroller.scrollLeft -
       scroller.clientWidth / 2 +
       activeRect.width / 2;
-    scroller.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
+    scroller.scrollTo({ left: Math.max(0, target) });
   }, [currentIndex, statuses.length]);
 
   return (
@@ -57,16 +56,6 @@ export function ProgressDots({
         className="flex min-w-0 max-w-[min(380px,calc(100vw_-_7.5rem))] flex-nowrap items-center overflow-x-auto px-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(90deg,transparent,black_14px,black_calc(100%-14px),transparent)] sm:max-w-[520px]"
       >
         {statuses.map((status, i) => {
-          let colorClass = "bg-zinc-300 dark:bg-zinc-600"; // not-attempted
-
-          if (status === "solved") {
-            colorClass = "bg-emerald-500";
-          } else if (status === "hint-used") {
-            colorClass = "bg-amber-500";
-          } else if (status === "wrong") {
-            colorClass = "bg-red-500";
-          }
-
           const isActive = i === currentIndex;
           const statusLabel =
             status === "solved"
@@ -76,26 +65,30 @@ export function ProgressDots({
               : status === "wrong"
               ? "Incorrect"
               : "Not attempted";
+          // Solved: filled with the accent. Otherwise: an outlined square. The
+          // current question gets a thicker outline.
+          const dotClass =
+            status === "solved"
+              ? "bg-[var(--accent)] border-[var(--accent)]"
+              : status === "wrong"
+              ? "border-[var(--text-muted)] bg-transparent"
+              : "border-[var(--border)] bg-transparent";
 
           return (
-            // The button provides a comfortably sized hit area (~22×22px + row
-            // padding); the inner span keeps the small 10px visual dot.
+            // The button provides a comfortably sized hit area (~22×22px); the
+            // inner span keeps the small 10px visual mark.
             <button
               key={i}
               type="button"
               onClick={() => onSelect(i)}
-              className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full"
+              className="flex h-[22px] w-[22px] shrink-0 items-center justify-center"
               aria-label={`Go to question ${i + 1} (${statusLabel})`}
               aria-current={isActive ? "true" : undefined}
               title={statusLabel}
             >
               <span
                 aria-hidden="true"
-                className={`h-2.5 w-2.5 rounded-full transition-all ${colorClass} ${
-                  isActive
-                    ? "ring-2 ring-offset-2 ring-offset-white dark:ring-offset-[var(--surface)] ring-zinc-400"
-                    : ""
-                }`}
+                className={`block h-2.5 w-2.5 border ${dotClass} ${isActive ? "outline outline-2 outline-offset-2 outline-[var(--text-primary)]" : ""}`}
               />
             </button>
           );

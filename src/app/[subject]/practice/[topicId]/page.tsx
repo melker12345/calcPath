@@ -1,26 +1,43 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
-import { notFound, permanentRedirect } from "next/navigation";
-import { getFileSystemContentBundle, loadSubjectIndex } from "@/lib/content/loader";
+import { notFound } from "next/navigation";
 import {
-  getLegacySectionRedirect,
-  getLegacyTopicRedirect,
-} from "@/lib/content/legacy-topic-redirects";
-import { getPracticePath } from "@/lib/subject-urls";
+  getDiscoveredSubjectSlugs,
+  getFileSystemContentBundle,
+  loadSubjectIndex,
+} from "@/lib/content/loader";
 import { GenericPracticeExperience } from "@/components/generic-practice-experience";
 import { hasProblemSet } from "@/lib/content/problemset-loader";
 import { PracticeErrorBoundary } from "@/components/practice/PracticeErrorBoundary";
 
 interface Props {
   params: Promise<{ subject: string; topicId: string }>;
-  searchParams: Promise<{ section?: string }>;
+}
+
+/**
+ * Every chapter's practice page is prerendered at build time. The optional
+ * `?section=` and `?focus=` query parameters are read on the client (inside
+ * GenericPracticeExperience), so the route never touches searchParams.
+ */
+export const dynamicParams = false;
+
+export async function generateStaticParams(): Promise<Array<{ subject: string; topicId: string }>> {
+  const slugs = await getDiscoveredSubjectSlugs();
+  const params: Array<{ subject: string; topicId: string }> = [];
+  for (const subject of slugs) {
+    try {
+      const idx = await loadSubjectIndex(subject);
+      for (const topic of idx.topics) params.push({ subject, topicId: topic.id });
+    } catch {
+      // A subject without a readable index has no practice pages.
+    }
+  }
+  return params;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { subject: slug, topicId } = await params;
-  // Self-canonical: without this the page would inherit its parents' metadata
-  // and (before the layout fix) a canonical pointing at /{slug}, causing Google
-  // to drop the practice URLs the sitemap advertises as duplicates.
   const canonical = `https://calc-path.com/${slug}/practice/${topicId}`;
   let subjectLabel = slug;
   let topicTitle = topicId;
@@ -35,49 +52,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = `${topicTitle} Practice Problems — ${subjectLabel}`;
   const description = `Free ${subjectLabel.toLowerCase()} practice problems on ${topicTitle.toLowerCase()}, with instant feedback and full step-by-step solutions.`;
   return {
-    // Parent [subject] layout's title template appends " | CalcPath".
     title,
     description,
     alternates: { canonical },
-    // Full openGraph block: metadata shallow-merge means a partial override
-    // would drop the root's images/siteName/type/locale entirely.
     openGraph: {
       title: `${title} | CalcPath`,
       description,
       url: canonical,
       siteName: "CalcPath",
-      images: [
-        {
-          url: "/og-image.png",
-          width: 1200,
-          height: 630,
-          alt: "CalcPath — Learn math step by step",
-        },
-      ],
+      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "CalcPath — Learn math step by step" }],
       type: "website",
       locale: "en_US",
     },
   };
 }
 
-export default async function DynamicPracticePage({ params, searchParams }: Props) {
+export default async function PracticePage({ params }: Props) {
   const { subject: subjectSlug, topicId } = await params;
-  const { section: sectionFilter } = await searchParams;
-
-  // A deep link follows its own section wherever that section went, in
-  // preference to the chapter's single landing point — the old chapter's
-  // sections may now sit in several different chapters.
-  const movedSection = await getLegacySectionRedirect(subjectSlug, topicId, sectionFilter);
-  if (movedSection) {
-    const target = getPracticePath(subjectSlug, movedSection);
-    permanentRedirect(`${target}?section=${encodeURIComponent(sectionFilter!)}`);
-  }
-
-  const legacy = await getLegacyTopicRedirect(subjectSlug, topicId);
-  if (legacy) {
-    const target = getPracticePath(legacy.subject ?? subjectSlug, legacy.chapterId);
-    permanentRedirect(`${target}?section=${encodeURIComponent(legacy.section)}`);
-  }
 
   let bundle;
   try {
@@ -87,67 +78,47 @@ export default async function DynamicPracticePage({ params, searchParams }: Prop
   }
 
   const topic = bundle.topics.find((t) => t.id === topicId);
-  let topicProblems = bundle.problems.filter((p) => p.topicId === topicId);
-  if (sectionFilter) {
-    topicProblems = topicProblems.filter((p) => p.section === sectionFilter);
-  }
+  if (!topic) notFound();
 
-  if (!topic) {
-    return (
-      <main className="mx-auto max-w-3xl p-8">
-        <div className="rounded-2xl border theme-border bg-[var(--surface-2)] p-6">
-          <p className="theme-text-secondary">Topic “{topicId}” not found in the data for {subjectSlug}.</p>
-          <Link href={`/${subjectSlug}`} className="mt-4 inline-block text-[var(--accent)] hover:underline">← Browse topics</Link>
-        </div>
-      </main>
-    );
-  }
+  const topicProblems = bundle.problems.filter((p) => p.topicId === topicId);
 
   if (topicProblems.length === 0) {
-    const label = bundle.config.label;
     return (
-      <main className="mx-auto max-w-3xl p-8">
-        <div className="rounded-2xl border theme-border bg-[var(--surface-2)] p-6">
-          <div className="mb-3 inline-flex items-center rounded-full bg-[var(--surface)] px-3 py-1 text-xs font-medium tracking-wider theme-text-muted">
-            PRACTICE — {subjectSlug.toUpperCase()}
-          </div>
-          <h1 className="text-2xl font-semibold theme-text">{topic.title}</h1>
-          <p className="mt-3 text-base theme-text-secondary">
-            No practice questions are available for this topic yet.
-          </p>
-          <p className="mt-2 text-sm theme-text-muted">
-            This is an intentional “not yet” state while we expand practice for this topic. The full explanation is ready.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3 text-sm">
-            <Link href={`/${subjectSlug}/modules/${topicId}`} className="inline-flex items-center justify-center rounded-lg bg-[var(--accent)] px-5 py-2 font-medium text-white transition hover:opacity-90 active:scale-[0.985]">
-              View the explanation →
-            </Link>
-            <Link href={`/${subjectSlug}`} className="inline-flex items-center justify-center rounded-lg border theme-border px-5 py-2 font-medium theme-text-muted transition hover:bg-[var(--surface)] hover:text-[var(--accent)]">
-              ← Back to {label}
-            </Link>
-          </div>
+      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <h1 className="text-2xl font-semibold theme-text">{topic.title}</h1>
+        <p className="mt-3 text-base theme-text-secondary">
+          No practice questions are available for this chapter yet.
+        </p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link href={`/${subjectSlug}/modules/${topicId}`} className="btn-primary">
+            Read the chapter
+          </Link>
+          <Link href={`/${subjectSlug}`} className="btn-secondary">
+            All {bundle.config.label} chapters
+          </Link>
         </div>
       </main>
     );
   }
 
-  // Compute next topic in subject order for the "go to next after complete" button in the all-solved state.
-  // Always uses full topic order (even if ?section= filtered the current problems).
+  // The next chapter in subject order, for the "all solved" state.
   const orderedTopics = [...bundle.topics].sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
   const currentIdx = orderedTopics.findIndex((t) => t.id === topicId);
   const nextTopic = currentIdx >= 0 && currentIdx < orderedTopics.length - 1 ? orderedTopics[currentIdx + 1] : null;
 
-  // Use the generic experience (supports MathInput, usePracticeSession, hints, etc. purely from bundle data)
   return (
     <PracticeErrorBoundary subjectSlug={subjectSlug} topicId={topicId}>
-      <GenericPracticeExperience
-        subjectSlug={subjectSlug}
-        topic={topic}
-        problems={topicProblems}
-        subjectLabel={bundle.config.label}
-        nextTopic={nextTopic ? { id: nextTopic.id, title: nextTopic.title } : undefined}
-        hasProblemSet={await hasProblemSet(subjectSlug, topicId)}
-      />
+      {/* useSearchParams inside needs a Suspense boundary for static rendering. */}
+      <Suspense fallback={null}>
+        <GenericPracticeExperience
+          subjectSlug={subjectSlug}
+          topic={topic}
+          problems={topicProblems}
+          subjectLabel={bundle.config.label}
+          nextTopic={nextTopic ? { id: nextTopic.id, title: nextTopic.title } : undefined}
+          hasProblemSet={await hasProblemSet(subjectSlug, topicId)}
+        />
+      </Suspense>
     </PracticeErrorBoundary>
   );
 }

@@ -1,81 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useTheme } from "next-themes";
+import { useEffect, useMemo, useRef } from "react";
 import { deriveSuggestionLabels, type QuestionContext } from "@/lib/math-input-helpers";
-import { getThemeForSubject } from "@/lib/themes";
 
 let stylesInjected = false;
-
-type Subject = "calculus" | "linalg" | "stats" | "generic";
-
-/**
- * MathInput subject → lib/themes identity slug. Named subjects re-point the
- * --accent / --accent-text tokens INSIDE the input to the subject's identity
- * color (calculus red, stats green, linalg blue), so the primary Check button
- * (.kp-submit), the operator-key tint (.kp-op-solid) and the focus ring follow
- * the subject accent instead of the global blue. "generic" keeps whatever
- * accent cascades in (global blue, or a subject override set by the page) —
- * the safe fallback. Each palette pairs its accent with an accent-text chosen
- * for ≥4.5:1 contrast (the app's --accent-text convention).
- */
-const SUBJECT_IDENTITY_SLUG: Record<Subject, string | null> = {
-  calculus: "calculus",
-  linalg: "linear-algebra",
-  stats: "statistics",
-  generic: null,
-};
-
-const SUBJECT_THEME: Record<Subject, {
-  pillBg: string; pillBorder: string; pillText: string;
-  opBg: string; opText: string; parenColor: string;
-  opSolidBg: string;
-  containerBg: string; containerBorder: string;
-  headerBg: string; labelColor: string; dividerColor: string;
-  fieldAreaBg: string; fieldInnerBg: string; fieldBorder: string;
-  keypadBg: string; numBg: string; numText: string; numShadow: string;
-}> = {
-  calculus: {
-    pillBg: "#f1f5f9", pillBorder: "#cbd5e1", pillText: "#334155",
-    opBg: "#f1f5f9", opText: "#0f172a", parenColor: "#334155",
-    opSolidBg: "#334155",
-    containerBg: "#f8fafc", containerBorder: "#e2e8f0",
-    headerBg: "#ffffff", labelColor: "var(--text-muted)", dividerColor: "#e4e4e7",
-    fieldAreaBg: "#ffffff", fieldInnerBg: "#f8fafc", fieldBorder: "#e4e4e7",
-    keypadBg: "#f4f4f5", numBg: "#ffffff", numText: "#18181b", numShadow: "0 1px 3px rgba(0,0,0,0.08)",
-  },
-  linalg: {
-    pillBg: "#f1f5f9", pillBorder: "#cbd5e1", pillText: "#334155",
-    opBg: "#f1f5f9", opText: "#0f172a", parenColor: "#334155",
-    opSolidBg: "#334155",
-    containerBg: "#f8fafc", containerBorder: "#e2e8f0",
-    headerBg: "#ffffff", labelColor: "var(--text-muted)", dividerColor: "#e4e4e7",
-    fieldAreaBg: "#ffffff", fieldInnerBg: "#f8fafc", fieldBorder: "#e4e4e7",
-    keypadBg: "#f4f4f5", numBg: "#ffffff", numText: "#18181b", numShadow: "0 1px 3px rgba(0,0,0,0.08)",
-  },
-  stats: {
-    pillBg: "#f1f5f9", pillBorder: "#cbd5e1", pillText: "#334155",
-    opBg: "#f1f5f9", opText: "#0f172a", parenColor: "#334155",
-    opSolidBg: "#334155",
-    containerBg: "#f8fafc", containerBorder: "#e2e8f0",
-    headerBg: "#ffffff", labelColor: "var(--text-muted)", dividerColor: "#e4e4e7",
-    fieldAreaBg: "#ffffff", fieldInnerBg: "#f8fafc", fieldBorder: "#e4e4e7",
-    keypadBg: "#f4f4f5", numBg: "#ffffff", numText: "#18181b", numShadow: "0 1px 3px rgba(0,0,0,0.08)",
-  },
-  generic: {
-    // Neutral fallback for the data-driven dynamic routes (primary for main /[subject] + future subjects).
-    // Uses CSS vars so it is always design-token aligned, dark-mode friendly,
-    // and resolves to correct light values on initial SSR (no theme flash on fast nav).
-    pillBg: "var(--surface-2)", pillBorder: "var(--border)", pillText: "var(--text-secondary)",
-    opBg: "var(--surface-2)", opText: "var(--text-secondary)", parenColor: "var(--text-muted)",
-    opSolidBg: "var(--accent)",
-    containerBg: "var(--surface)", containerBorder: "var(--border)",
-    headerBg: "var(--surface)", labelColor: "var(--text-muted)", dividerColor: "var(--border)",
-    fieldAreaBg: "var(--surface)", fieldInnerBg: "var(--bg)", fieldBorder: "var(--border)",
-    keypadBg: "var(--surface)", numBg: "var(--surface-2)", numText: "var(--text-primary)", numShadow: "none",
-  },
-};
 
 interface MathInputProps {
   value: string;
@@ -84,11 +13,9 @@ interface MathInputProps {
   onHint?: () => void;
   hintDisabled?: boolean;
   placeholder?: string;
-  subject?: Subject;
   questionContext?: QuestionContext;
   answerHint?: string;
-  feedbackOverlay?: React.ReactNode;
-  onDismissOverlay?: () => void;
+  /** Changing prompt → the field is re-focused. */
   questionPrompt?: string;
 }
 
@@ -203,17 +130,11 @@ function deriveKeys(
 }
 
 /**
- * MathInput — virtual keypad + react-mathquill LaTeX editor for free-response numeric answers.
+ * MathInput — a MathQuill field with a small keypad, for typed answers.
  *
- * - subject="generic" (used by GenericPracticeExperience in the primary data-driven routes) now has
- *   a hardened neutral var-based theme (light/dark friendly, matches app design tokens).
- * - Style injection for MQ is robust (DOM-checked + tagging) to survive fast navigations and
- *   remounts/HMR (or multi-bundle scenarios).
- * - Suggestions derive improved via better questionContext fallbacks (benefits generic stats/linalg topics).
- * - Full flow (direct typing in MQ field, all keypad buttons, submit, hint, feedback overlay)
- *   works end-to-end for the primary /[subject]/practice routes with subject=generic.
- *
- * Used by legacy per-subject pages (calculus/stats/linalg) and the new generic practice.
+ * Enter submits. Contextual symbol keys (variables, functions, constants) are
+ * derived from the question and the expected answer. Styled with the site
+ * tokens only, so light and dark both work and no per-subject palette exists.
  */
 export function MathInput({
   value,
@@ -222,63 +143,10 @@ export function MathInput({
   onHint,
   hintDisabled,
   placeholder = "Your answer",
-  subject = "calculus",
   questionContext,
   answerHint,
-  feedbackOverlay,
-  onDismissOverlay,
   questionPrompt,
 }: MathInputProps) {
-  const { theme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const lightTh = SUBJECT_THEME[subject] ?? SUBJECT_THEME.calculus;
-
-  // Dark theme colors (GitHub-inspired + our accent system)
-  const darkTh = {
-    pillBg: "var(--surface-2)",
-    pillBorder: "var(--border)",
-    pillText: "var(--text-secondary)",
-    opBg: "var(--surface-2)",
-    opText: "var(--text-secondary)",
-    parenColor: "var(--text-muted)",
-    opSolidBg: "var(--accent)",
-    containerBg: "var(--surface)",
-    containerBorder: "var(--border)",
-    headerBg: "var(--surface)",
-    labelColor: "var(--text-muted)",
-    dividerColor: "var(--border)",
-    fieldAreaBg: "var(--surface)",
-    fieldInnerBg: "var(--bg)",
-    fieldBorder: "var(--border)",
-    keypadBg: "var(--surface)",
-    numBg: "var(--surface-2)",
-    numText: "var(--text-primary)",
-    numShadow: "none",
-  };
-
-  // Only trust the theme after mount to prevent hydration mismatch.
-  // On server / first client render we always use light values so the HTML matches.
-  const isDark = mounted && (resolvedTheme ?? theme) === "dark";
-  const th = isDark ? darkTh : lightTh;
-
-  // Per-subject accent (see SUBJECT_IDENTITY_SLUG above). Resolved to concrete
-  // palette values (not var(--subject-accent)) so it also works when the input
-  // is rendered outside a subject-themed subtree.
-  const identitySlug = SUBJECT_IDENTITY_SLUG[subject] ?? null;
-  const identityTheme = identitySlug ? getThemeForSubject(identitySlug) : null;
-  const identityPalette = identityTheme ? (isDark ? identityTheme.dark : identityTheme.light) : null;
-  const accentVars = identityPalette
-    ? ({
-        "--accent": identityPalette.accent,
-        "--accent-text": identityPalette.accentText,
-      } as React.CSSProperties)
-    : undefined;
-
   const mqRef = useRef<MQField | null>(null);
   // Stable ref so the MathQuill enter handler (bound once at mount) always
   // calls the latest onSubmit.
@@ -373,195 +241,131 @@ export function MathInput({
     [answerHint, questionContext],
   );
 
+  const key = "flex items-center justify-center border theme-border bg-[var(--surface)] text-[15px] theme-text";
+
   return (
-    <div className="relative flex flex-col overflow-hidden rounded-2xl sm:min-h-0" data-subject={subject} style={{ background: th.containerBg, ...accentVars }}>
-      {/* ── Feedback overlay covers the ENTIRE input area (header + field +
-             keypad) so even long "Correct!" explanations fit without
-             scrolling; overflow-y-auto is the fallback for extreme cases.
-             Contract: callers pass `feedbackOverlay` ONLY for feedback that
-             genuinely replaces the input (correct celebration, full solution).
-             The inert/invisible treatment of the field + keypad below is keyed
-             off this prop, so it only applies while an overlay actually covers
-             them — compact "Not quite" banners render OUTSIDE MathInput and
-             leave the field fully interactive for a retry. ── */}
-      {feedbackOverlay && (
-        <div className="absolute inset-0 z-10 overflow-y-auto rounded-2xl">
-          {onDismissOverlay && (
-            <button
-              type="button"
-              onClick={onDismissOverlay}
-              className="absolute right-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-zinc-500 shadow-sm backdrop-blur transition hover:bg-white hover:text-zinc-800 dark:bg-[var(--surface-2)]/80 dark:text-[var(--text-muted)] dark:hover:bg-[var(--surface-2)] dark:hover:text-[var(--text-secondary)] sm:right-3 sm:top-3 sm:h-8 sm:w-8"
-              aria-label="Close"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+    <div className="flex flex-col border theme-border bg-[var(--surface)]">
+      {/* Header: label + hint */}
+      <div className="flex items-center justify-between border-b theme-border px-3 py-2">
+        <p className="text-sm theme-text-muted">{placeholder}</p>
+        {onHint && (
+          <button
+            type="button"
+            onClick={onHint}
+            disabled={hintDisabled}
+            className="border theme-border bg-[var(--surface)] px-2.5 py-1 text-xs font-medium theme-text disabled:opacity-40"
+          >
+            Hint
+          </button>
+        )}
+      </div>
+
+      {/* Math field. Enter submits: caught at the wrapper (the event bubbles up
+          from MathQuill's hidden textarea) instead of via config.handlers.enter,
+          because react-mathquill mutates the handlers object when wiring its
+          edit wrapper, which double-wraps under StrictMode and crashes. */}
+      <div
+        className="relative flex min-h-[72px] items-center justify-center border-b theme-border bg-[var(--bg)] px-4 py-3 focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-[var(--accent)]"
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            onSubmitRef.current();
+          }
+        }}
+      >
+        {!value && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm theme-text-muted sm:text-base"
+          >
+            <span className="mi-fine-only">Type your answer, then press Enter to check</span>
+            <span className="mi-touch-only">Enter your answer</span>
+          </span>
+        )}
+        <EditableMathField
+          latex={value}
+          config={{
+            spaceBehavesLikeTab: true,
+            substituteTextarea: () => {
+              const ta = document.createElement("textarea");
+              ta.setAttribute("autocapitalize", "off");
+              ta.setAttribute("autocomplete", "off");
+              ta.setAttribute("autocorrect", "off");
+              ta.setAttribute("spellcheck", "false");
+              ta.setAttribute("inputmode", "none");
+              return ta;
+            },
+          }}
+          onChange={(field: MQField) => {
+            mqRef.current = field;
+            onChange(field.latex());
+          }}
+          mathquillDidMount={(field: MQField) => {
+            mqRef.current = field;
+            // Each question remounts this component (keyed error boundary), so
+            // focusing here means the field is ready the moment a question
+            // appears.
+            requestAnimationFrame(() => field.focus());
+          }}
+          className="w-full text-center text-lg theme-text sm:text-xl"
+        />
+      </div>
+
+      {/* Contextual symbols for this question */}
+      {suggestions.length > 0 && (
+        <div className="flex flex-wrap items-center justify-center gap-1.5 border-b theme-border px-3 py-2">
+          {suggestions.map((k) => (
+            <button key={k.label} type="button" onClick={k.action} className={`${key} min-h-[32px] px-2.5 text-sm`}>
+              {k.label}
             </button>
-          )}
-          {feedbackOverlay}
+          ))}
         </div>
       )}
-      {/* ── Header: label + hint ── */}
-      {/* Aligned to the same centered 430px column as the field and keypad */}
-      <div className="mx-auto flex w-full max-w-[430px] items-center justify-between px-4 pt-3 sm:px-1 sm:pt-4" style={{ background: th.headerBg }}>
-        <p className="text-xs font-semibold sm:text-sm" style={{ color: th.labelColor }}>{placeholder}</p>
-        {/* Keep the action buttons mounted (just hidden) while feedback is shown
-            so the header height never changes between input and feedback states. */}
-        <div
-          className={`flex items-center gap-1.5 ${feedbackOverlay ? "invisible" : ""}`}
-          aria-hidden={feedbackOverlay ? true : undefined}
-          inert={feedbackOverlay ? true : undefined}
-        >
-          {onHint && (
-            <button
-              type="button"
-              onClick={onHint}
-              disabled={hintDisabled}
-              className="flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition active:scale-95 disabled:opacity-30 sm:px-3 sm:py-1 sm:text-sm"
-              style={{ borderColor: th.dividerColor, color: th.labelColor }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:h-3.5 sm:w-3.5"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              Hint
-            </button>
-          )}
-        </div>
-      </div>
 
-      {/* ── Math field — taller, and no wider than the keypad below it ──
-             inert while the (opaque) feedback overlay covers it, so Tab can
-             never land on the invisible MathQuill textarea underneath. */}
-      <div
-        className="flex items-center justify-center px-4 py-3 sm:px-5"
-        style={{ background: th.fieldAreaBg }}
-        inert={feedbackOverlay ? true : undefined}
-      >
-        <div
-          className="relative flex min-h-[64px] w-full max-w-[430px] items-center justify-center rounded-xl px-4 transition-shadow focus-within:ring-2 focus-within:ring-[var(--accent)]/50 sm:min-h-[76px]"
-          style={{ background: "var(--surface-2)" }}
-          // Enter submits. Caught at the wrapper (the event bubbles up from
-          // MathQuill's hidden textarea) instead of via config.handlers.enter:
-          // react-mathquill mutates the passed handlers object when wiring its
-          // edit wrapper, which double-wraps under StrictMode and crashes.
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              onSubmitRef.current();
-            }
-          }}
-        >
-          {!value && !feedbackOverlay && (
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm sm:text-base"
-              style={{ color: th.labelColor }}
-            >
-              <span className="mi-fine-only">Type your answer — press Enter to check</span>
-              <span className="mi-touch-only">Enter your answer</span>
+      {/* Keypad: digits, operators, and the one accent-coloured action, Check.
+          Digits are clickable everywhere; typing + Enter always works too. */}
+      <div className="mx-auto w-full max-w-[430px] px-3 py-3">
+        <div className="grid grid-cols-5 gap-1 pb-1">
+          <button type="button" aria-label="parentheses" onClick={() => { write("\\left(\\right)"); mqRef.current?.keystroke("Left"); }} className={`${key} min-h-[36px]`}>( )</button>
+          <button type="button" aria-label="exponent" onClick={() => cmd("^")} className={`${key} min-h-[36px]`}><span aria-hidden>x<sup className="text-[9px]">n</sup></span></button>
+          <button type="button" aria-label="square root" onClick={() => cmd("\\sqrt")} className={`${key} min-h-[36px]`}>√</button>
+          <button type="button" aria-label="backspace" onClick={backspace} className={`${key} min-h-[36px]`}>⌫</button>
+          <button type="button" aria-label="clear all" onClick={clear} className={`${key} min-h-[36px] text-[13px] theme-text-muted`}>AC</button>
+        </div>
+
+        <div className="grid grid-cols-[2fr_2fr_2fr_1fr] grid-rows-5 gap-1">
+          <button type="button" onClick={() => write("7")} className={`${key} min-h-[42px]`}>7</button>
+          <button type="button" onClick={() => write("8")} className={`${key} min-h-[42px]`}>8</button>
+          <button type="button" onClick={() => write("9")} className={`${key} min-h-[42px]`}>9</button>
+          <button type="button" aria-label="plus" onClick={() => write("+")} className={`${key} min-h-[42px]`}>+</button>
+
+          <button type="button" onClick={() => write("4")} className={`${key} min-h-[42px]`}>4</button>
+          <button type="button" onClick={() => write("5")} className={`${key} min-h-[42px]`}>5</button>
+          <button type="button" onClick={() => write("6")} className={`${key} min-h-[42px]`}>6</button>
+          <button type="button" aria-label="minus" onClick={() => write("-")} className={`${key} min-h-[42px]`}>−</button>
+
+          <button type="button" onClick={() => write("1")} className={`${key} min-h-[42px]`}>1</button>
+          <button type="button" onClick={() => write("2")} className={`${key} min-h-[42px]`}>2</button>
+          <button type="button" onClick={() => write("3")} className={`${key} min-h-[42px]`}>3</button>
+          <button type="button" aria-label="multiply" onClick={() => write("\\cdot ")} className={`${key} min-h-[42px]`}>×</button>
+
+          <button type="button" onClick={() => write("0")} className={`${key} col-span-2 min-h-[42px]`}>0</button>
+          <button type="button" aria-label="decimal point" onClick={() => write(".")} className={`${key} min-h-[42px]`}>.</button>
+          <button type="button" aria-label="fraction" onClick={() => cmd("\\frac")} className={`${key} min-h-[42px]`}>
+            <span aria-hidden className="flex flex-col items-center text-[11px] leading-[1.1]">
+              <span>a</span><span className="my-[-1px] h-px w-3 bg-current" /><span>b</span>
             </span>
-          )}
-          <EditableMathField
-            latex={value}
-            config={{
-              spaceBehavesLikeTab: true,
-              substituteTextarea: () => {
-                const ta = document.createElement("textarea");
-                ta.setAttribute("autocapitalize", "off");
-                ta.setAttribute("autocomplete", "off");
-                ta.setAttribute("autocorrect", "off");
-                ta.setAttribute("spellcheck", "false");
-                ta.setAttribute("inputmode", "none");
-                return ta;
-              },
-            }}
-            onChange={(field: MQField) => {
-              mqRef.current = field;
-              onChange(field.latex());
-            }}
-            mathquillDidMount={(field: MQField) => {
-              mqRef.current = field;
-              // Each question remounts this component (keyed error boundary),
-              // so focusing here means the field is ready to type into the
-              // moment a question appears — no click required.
-              requestAnimationFrame(() => field.focus());
-            }}
-            className="w-full text-center text-lg sm:text-xl"
-            style={{ color: th.numText }}
-          />
-        </div>
-      </div>
+          </button>
 
-      {/* ── Symbol strip + keypad (hidden but height-preserving while the
-             feedback overlay above is active). ── */}
-      <div className="relative">
-        <div className={feedbackOverlay ? "invisible" : ""} inert={feedbackOverlay ? true : undefined}>
-          {/* ── Suggestions strip: contextual symbols for this question.
-                 Dividers are short centered hairlines, not full-width rules. ── */}
-          {suggestions.length > 0 && (
-            <div aria-hidden className="mx-auto h-px w-1/3" style={{ background: th.dividerColor }} />
-          )}
-          {suggestions.length > 0 && (
-            <div className="flex items-center justify-center gap-1.5 overflow-x-auto px-3 py-1.5 sm:gap-2 sm:px-4" style={{ background: th.keypadBg }}>
-              {suggestions.map((k) => (
-                <button
-                  key={k.label}
-                  type="button"
-                  onClick={k.action}
-                  className="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold transition active:scale-95 sm:px-3 sm:text-sm"
-                  style={{ background: th.pillBg, color: th.pillText }}
-                >
-                  {k.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* ── Keypad — compact, centered, capped width so it reads as a tool,
-                 not a wall. Digits are clickable everywhere; typing + Enter
-                 always work too. ── */}
-          <div style={{ background: th.keypadBg }}>
-            <div aria-hidden className="mx-auto h-px w-1/3" style={{ background: th.dividerColor }} />
-            <div className="mx-auto w-full max-w-[430px] px-3 pb-2.5 pt-1.5 sm:px-4 sm:pb-3">
-              {/* Tools row: ( )  xⁿ  √  ⌫  AC */}
-              <div className="grid grid-cols-5 gap-1 pb-1 sm:gap-1.5 sm:pb-1.5">
-                <button type="button" aria-label="parentheses" onClick={() => { write("\\left(\\right)"); mqRef.current?.keystroke("Left"); }} className="kp-op text-[13px] sm:text-sm">( )</button>
-                <button type="button" aria-label="exponent" onClick={() => cmd("^")} className="kp-op text-[13px] sm:text-sm"><span aria-hidden>x<sup className="text-[9px]">n</sup></span></button>
-                <button type="button" aria-label="square root" onClick={() => cmd("\\sqrt")} className="kp-op text-[13px] sm:text-sm">√</button>
-                <button type="button" aria-label="backspace" onClick={backspace} className="kp-op text-[13px] sm:text-sm">⌫</button>
-                <button type="button" aria-label="clear all" onClick={clear} className="kp-op-ac">AC</button>
-              </div>
-
-              {/* Numpad (3 cols) + operator column (1 col) */}
-              <div className="grid grid-cols-[2fr_2fr_2fr_1fr] grid-rows-5 gap-1 sm:gap-1.5">
-                <button type="button" onClick={() => write("7")} className="kp-num">7</button>
-                <button type="button" onClick={() => write("8")} className="kp-num">8</button>
-                <button type="button" onClick={() => write("9")} className="kp-num">9</button>
-                <button type="button" aria-label="plus" onClick={() => write("+")} className="kp-op-solid">+</button>
-
-                <button type="button" onClick={() => write("4")} className="kp-num">4</button>
-                <button type="button" onClick={() => write("5")} className="kp-num">5</button>
-                <button type="button" onClick={() => write("6")} className="kp-num">6</button>
-                <button type="button" aria-label="minus" onClick={() => write("-")} className="kp-op-solid">−</button>
-
-                <button type="button" onClick={() => write("1")} className="kp-num">1</button>
-                <button type="button" onClick={() => write("2")} className="kp-num">2</button>
-                <button type="button" onClick={() => write("3")} className="kp-num">3</button>
-                <button type="button" aria-label="multiply" onClick={() => write("\\cdot ")} className="kp-op-solid">×</button>
-
-                <button type="button" onClick={() => write("0")} className="kp-num col-span-2">0</button>
-                <button type="button" aria-label="decimal point" onClick={() => write(".")} className="kp-num">.</button>
-                <button type="button" aria-label="fraction" onClick={() => cmd("\\frac")} className="kp-op-solid">
-                  <span aria-hidden className="flex flex-col items-center text-[11px] leading-[1.1] sm:text-xs">
-                    <span>a</span><span className="my-[-1px] h-px w-3 bg-current" /><span>b</span>
-                  </span>
-                </button>
-
-                <button type="button" onClick={onSubmit} className="kp-submit col-span-3">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5"><path d="M20 6L9 17l-5-5"/></svg>
-                  Check
-                  <span aria-hidden className="mi-fine-only ml-1.5 items-center rounded border px-1 text-[10px] font-semibold opacity-70" style={{ borderColor: "currentColor" }}>↵</span>
-                </button>
-                <button type="button" aria-label="divide" onClick={() => write("\\div ")} className="kp-op-solid">÷</button>
-              </div>
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={onSubmit}
+            className="col-span-3 flex min-h-[42px] items-center justify-center border border-[var(--accent)] bg-[var(--accent)] text-sm font-semibold text-[var(--accent-text)]"
+          >
+            Check
+            <span aria-hidden className="mi-fine-only ml-2 text-xs opacity-80">(Enter)</span>
+          </button>
+          <button type="button" aria-label="divide" onClick={() => write("\\div ")} className={`${key} min-h-[42px]`}>÷</button>
         </div>
       </div>
     </div>

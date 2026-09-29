@@ -1,59 +1,42 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
 import { MathInput } from "@/components/math-input";
+import { ReportIssue } from "@/components/report-issue";
 import { useProgress } from "@/components/progress-provider";
 import { isAnswerCorrectAsync, isMcqAnswerCorrect } from "@/lib/answer-check";
 import { detectQuestionContext } from "@/lib/math-input-helpers";
 import { getSectionHref } from "@/lib/subject-urls";
-import { getThemeForSubject } from "@/lib/themes";
 import {
   ProgressDots,
   PracticeFeedback,
   usePracticeSession,
   getDefaultHint,
   extractFinalAnswer,
+  orderedChoices,
 } from "@/components/practice";
 import type { Problem, Topic } from "@/lib/shared-types";
 
 /**
- * GenericPracticeExperience
+ * GenericPracticeExperience — the practice page for one chapter.
  *
- * Fully data-driven practice UI for the main dynamic routes (primary implementation for /[subject] pages via generics + FileSystemContentBundle).
- * Consumes Problem[] + Topic directly from FileSystemContentBundle (via server props).
- * Reuses ALL the shared practice primitives (usePracticeSession, ProgressDots, PracticeFeedback).
+ * The page receives every question of the chapter from the server (the route
+ * is static). The optional `?section=` and `?focus=` query parameters are read
+ * here, on the client, so the route can be prerendered.
  *
- * This is the integration point proving "generic components + new content data = working practice".
+ * Structure, top to bottom: title and score, progress dots, the prompt, the
+ * answer area (a radiogroup for multiple choice; the MathQuill field and keypad
+ * for typed answers), the feedback, then the navigation row with the question
+ * id and the report form.
  *
- * Resilience:
- * - Loader already does tolerant per-question recovery on schema errors ("better to load broken than none").
- * - Existing data guard + always-<MathText> (with its per-fragment MathRenderBoundary).
- * - Local QuestionErrorBoundary (below) for any runtime render errors (e.g. edge-case LaTeX, handler bugs, partial data) on a *single* question.
- *   One bad question never destroys the session; clear "rendering issue" UI + skip affordance keeps progress usable.
- *
- * Current design notes / simplifications (vs older per-subject page implementations):
- * - Uses the improved PracticeFeedback for *both* correct + incorrect states (less duplication).
- * - All prompt / choice / step / explanation text *always* goes through the project's <MathText>
- *   (robust $ / $$ splitter + Safe* fallbacks for bad katex). No local RichPrompt/RichMath.
- * - Subject context for MathInput uses "generic" (neutral dark-friendly theme,
- *   reliable MQ style injection, improved deriveSuggestionLabels via prompt ctx; full keypad/submit
- *   experience works end-to-end for statistics + linear-algebra topics in the primary dynamic routes' practice).
- * - Progress + answer checking use the global shared systems (stable ids preserved from content).
- *
- * Limitations noted in NOTES.md.
+ * Resilience: a per-question error boundary keeps one malformed question from
+ * taking the session down; every piece of text is rendered through MathText,
+ * which has its own per-fragment fallback.
  */
 
-/**
- * Local per-question error boundary (defined here to avoid new files / scope creep).
- * Catches runtime render errors for *one* question's subtree (prompt MathText edges beyond its own,
- * choice rendering, MathInput internals, PracticeFeedback expl rendering, event-time sync bugs etc).
- * Shows clear "rendering issue" UI per spec; onSkip advances via parent's goToNext (preserves
- * session progress context, dots, nav). Keyed by question id so skip remounts clean.
- * Complements the page-level PracticeErrorBoundary (last-resort) and MathText's fragment boundaries.
- */
 class QuestionErrorBoundary extends React.Component<
   { children: React.ReactNode; onSkip: () => void; questionId: string },
   { hasError: boolean; error: Error | null }
@@ -83,30 +66,19 @@ class QuestionErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-800 dark:bg-amber-950/40">
-          <div className="mx-auto mb-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300" aria-hidden="true">
-            !
-          </div>
-          <p className="text-base font-semibold theme-text">This question had a rendering issue — skipped.</p>
+        <div className="border theme-border p-6 text-center">
+          <p className="text-base font-semibold theme-text">This question could not be displayed.</p>
           <p className="mt-1 text-sm theme-text-secondary">
-            A malformed LaTeX fragment or edge-case data prevented display. The rest of your session (including progress) is unaffected.
+            A malformed formula or a data problem prevented rendering. Your progress is unaffected.
           </p>
           {this.state.error && (
-            <p className="mt-2 text-[10px] theme-text-muted font-mono break-all opacity-70">{this.state.error.message}</p>
+            <p className="mt-2 break-all font-mono text-xs theme-text-muted">{this.state.error.message}</p>
           )}
           <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
-            <button
-              type="button"
-              onClick={this.handleSkip}
-              className="inline-flex items-center justify-center rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--accent-text)] transition hover:opacity-90 active:scale-[0.985]"
-            >
-              Skip to next question →
+            <button type="button" onClick={this.handleSkip} className="btn-primary">
+              Skip to next question
             </button>
-            <button
-              type="button"
-              onClick={this.handleReset}
-              className="inline-flex items-center justify-center rounded-lg border theme-border px-4 py-2 text-sm font-medium theme-text-muted transition hover:bg-[var(--surface-2)]"
-            >
+            <button type="button" onClick={this.handleReset} className="btn-secondary">
               Try again
             </button>
           </div>
@@ -130,26 +102,28 @@ export function GenericPracticeExperience({
   subjectSlug: string;
   subjectLabel: string;
   nextTopic?: { id: string; title: string };
-  /**
-   * Whether this chapter ships content/{subject}/topics/{topic}/problemset.json,
-   * i.e. whether /[subject]/test/[topicId] exists. Resolved on the server by the
-   * page; previously this link was hardcoded to subjectSlug === "calculus",
-   * which both hid real sheets and would now link other calculus chapters at a 404.
-   */
+  /** Whether content/{subject}/topics/{topic}/problemset.json exists, i.e. whether /[subject]/test/[topicId] exists. */
   hasProblemSet?: boolean;
 }) {
   const params = useParams<{ topicId: string }>();
   const topicId = params?.topicId ?? topic.id;
   const searchParams = useSearchParams();
   const focusId = searchParams.get("focus");
+  const sectionFilter = searchParams.get("section");
 
   const { progress, addAttempt } = useProgress();
 
-  // Filter + memo (in case parent passes broader list)
   const topicProblems = useMemo(
     () => allTopicProblems.filter((p) => p.topicId === topicId),
     [allTopicProblems, topicId]
   );
+
+  // A `?section=` that matches nothing falls back to the whole chapter rather
+  // than an empty session.
+  const effectiveSectionFilter = useMemo(() => {
+    if (!sectionFilter) return null;
+    return topicProblems.some((p) => p.section === sectionFilter) ? sectionFilter : null;
+  }, [sectionFilter, topicProblems]);
 
   const {
     displayProblems,
@@ -161,7 +135,6 @@ export function GenericPracticeExperience({
     goToNext,
     goToPrev,
     pinIndex,
-
     answer,
     setAnswer,
     feedback,
@@ -169,21 +142,15 @@ export function GenericPracticeExperience({
   } = usePracticeSession({
     problems: topicProblems,
     completedProblemIds: progress.completedProblemIds,
+    sectionFilter: effectiveSectionFilter,
     focusId,
   });
 
   const current = hookCurrent || displayProblems[index];
 
-  // Practice is an app-like screen: everything fits the viewport, the page
-  // itself never scrolls (long question prompts scroll inside their own area).
-  useEffect(() => {
-    document.documentElement.classList.add("practice-no-scroll");
-    return () => document.documentElement.classList.remove("practice-no-scroll");
-  }, []);
-
-  // Every graded submission for the current question, in order. Attached to bug
-  // reports so "Answer seems wrong" arrives with exactly what the user typed
-  // and how the grader judged it. Reset when the question changes.
+  // Every graded submission for the current question, in order. Attached to
+  // reports so "answer seems wrong" arrives with exactly what was typed and how
+  // the grader judged it. Reset when the question changes.
   const [submissionLog, setSubmissionLog] = useState<
     { input: string; gradedCorrect: boolean; at: string }[]
   >([]);
@@ -192,8 +159,7 @@ export function GenericPracticeExperience({
     setLoggedQuestionId(current?.id);
     setSubmissionLog([]);
   }
-  // For "back to explanation" after mastering (or in empty states), prefer a section anchor if we have one
-  // (e.g. when practicing a filtered ?section= or when all questions share a section). Falls back to topic root.
+
   const backToExplanationHref = getSectionHref(
     subjectSlug,
     topic.id,
@@ -205,75 +171,40 @@ export function GenericPracticeExperience({
     [current]
   );
 
-  // Subject-accent alignment: subject pages render inside a
-  // `.subject-theme-<id>` subtree (see CourseLayout + lib/themes) which defines
-  // --subject-accent / --subject-accent-text. Re-pointing --accent at those for
-  // the whole practice card makes the Check button, keypad operator keys and
-  // links follow the subject's identity color (calculus red, stats green, …).
-  // Unthemed subjects get no override — the global blue accent stays the
-  // fallback. The theme palettes pair each accent with a ≥4.5:1 accent-text.
-  const subjectAccentVars = useMemo(
-    () =>
-      getThemeForSubject(subjectSlug)
-        ? ({
-            "--accent": "var(--subject-accent)",
-            "--accent-text": "var(--subject-accent-text)",
-          } as React.CSSProperties)
-        : undefined,
-    [subjectSlug]
+  // Display order of the choices: seeded on the question id, the same before
+  // and after grading (see practice/shuffleChoices.ts).
+  const choices = useMemo(
+    () => (current?.type === "mcq" ? orderedChoices(current.id, current.choices) : []),
+    [current]
   );
 
   if (displayProblems.length === 0) {
-    // Extra guard: show clean intentional "no questions yet" instead of falling to bad-data fallback,
-    // broken nav (length-1=-1), "All 0 solved", or hitting PracticeErrorBoundary.
-    // Matches the polished card look and feel of the main data-driven routes exactly.
     return (
-      <div className="mx-auto w-full max-w-3xl px-0 pb-0 sm:px-6 sm:py-10" style={subjectAccentVars}>
-        <div className="flex min-h-[calc(100dvh-56px)] flex-col justify-center bg-[var(--surface-solid)] px-4 pb-1 pt-2 sm:min-h-[min(80vh,700px)] sm:rounded-2xl sm:px-8 sm:pb-6 sm:pt-6 sm:shadow-lg">
-          <div className="mx-auto max-w-md text-center">
-            <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface-2)] text-2xl" aria-hidden="true">
-              📝
-            </div>
-            <h2 className="text-xl font-semibold theme-text">No practice questions yet</h2>
-            <p className="mt-2 text-sm theme-text-secondary">
-              This topic’s questions have not been added yet.
-              This is an intentional “not yet” state while we expand practice for this topic.
-            </p>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <Link
-                href={backToExplanationHref}
-                className="inline-flex items-center justify-center rounded-lg bg-[var(--accent)] px-5 py-2 text-sm font-medium text-[var(--accent-text)] transition hover:opacity-90 active:scale-[0.985]"
-              >
-                View the explanation →
-              </Link>
-              <Link
-                href={`/${subjectSlug}`}
-                className="inline-flex items-center justify-center rounded-lg border theme-border px-5 py-2 text-sm font-medium theme-text-muted transition hover:bg-[var(--surface-2)] hover:text-[var(--accent)]"
-              >
-                ← Back to {subjectLabel}
-              </Link>
-            </div>
-          </div>
+      <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
+        <h1 className="text-2xl font-semibold theme-text">{topic.title}</h1>
+        <p className="mt-3 text-base theme-text-secondary">No practice questions are available for this chapter yet.</p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link href={backToExplanationHref} className="btn-primary">
+            Read the chapter
+          </Link>
+          <Link href={`/${subjectSlug}`} className="btn-secondary">
+            All {subjectLabel} chapters
+          </Link>
         </div>
       </div>
     );
   }
 
   if (!current || typeof current.prompt !== "string" || !current.explanation) {
-    // Graceful per-question fallback for bad/malformed data (post-loader tolerant recovery).
-    // Uses clear "rendering issue" language per resilience spec. Skip keeps session usable (progress context preserved in hook).
-    // Note: full runtime render errors (e.g. in MathText edges or handlers) handled by QuestionErrorBoundary below.
     return (
-      <div className="mx-auto max-w-3xl p-8">
-        <p className="theme-text-secondary">This question had a rendering issue — skipped.</p>
-        <button
-          type="button"
-          onClick={goToNext}
-          className="mt-4 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm text-[var(--accent-text)]"
-        >
-          Skip to next question →
+      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <p className="theme-text-secondary">This question could not be displayed.</p>
+        <button type="button" onClick={goToNext} className="btn-primary mt-4">
+          Skip to next question
         </button>
-        <Link href={`/${subjectSlug}`} className="mt-3 block underline text-[var(--accent)]">Back to {subjectLabel}</Link>
+        <Link href={`/${subjectSlug}`} className="mt-3 block text-[var(--accent)] underline">
+          All {subjectLabel} chapters
+        </Link>
       </div>
     );
   }
@@ -281,23 +212,15 @@ export function GenericPracticeExperience({
   const submitAnswer = async (val: string) => {
     // Freeze the session on this question so a correct grade (which updates
     // progress and would move the auto-index to the next unsolved question)
-    // can't tear down the feedback the user is about to read.
+    // cannot tear down the feedback the learner is about to read.
     pinIndex();
-    // Multiple choice is graded by identity against the offered choices; only
-    // typed answers go through expression equivalence.
     const mcqVerdict =
-      current.type === "mcq"
-        ? isMcqAnswerCorrect(val, current.answer, current.choices)
-        : null;
-    const isCorrect =
-      mcqVerdict ?? (await isAnswerCorrectAsync(val, current.answer));
+      current.type === "mcq" ? isMcqAnswerCorrect(val, current.answer, current.choices) : null;
+    const isCorrect = mcqVerdict ?? (await isAnswerCorrectAsync(val, current.answer));
     const currentAttempts = feedback?.type === "incorrect" ? feedback.attempts : 0;
     const hintWasUsed = feedback?.type === "incorrect" ? feedback.hintUsed : false;
 
-    setSubmissionLog((log) => [
-      ...log,
-      { input: val, gradedCorrect: isCorrect, at: new Date().toISOString() },
-    ]);
+    setSubmissionLog((log) => [...log, { input: val, gradedCorrect: isCorrect, at: new Date().toISOString() }]);
 
     addAttempt({
       problemId: current.id,
@@ -329,15 +252,12 @@ export function GenericPracticeExperience({
     }
   };
 
-  // Pass the stored answer so the hint extractor only strips a trailing $math$
-  // fragment when it actually reveals the answer (a formula like the power rule
-  // is kept and rendered via MathText).
   const getHint = () => getDefaultHint(current?.explanation || "", current?.answer);
   const finalAnswer = extractFinalAnswer(current?.explanation || "", current?.answer || "");
 
-  // Everything an admin needs to reproduce a report without asking the user:
+  // Everything a report needs to be reproducible without asking the learner:
   // which question, what the grader expected, every graded submission, and the
-  // hint/solution state at report time. Sent only with "Report issue".
+  // hint/solution state at report time.
   const reportContext: Record<string, unknown> = {
     questionId: current.id,
     questionType: current.type,
@@ -348,15 +268,6 @@ export function GenericPracticeExperience({
     solutionShown: feedback?.type === "incorrect" ? feedback.showSolution : false,
   };
 
-  // Shared PracticeFeedback element for all three feedback states.
-  //
-  // Only the FULL states (correct celebration, full solution) are handed to
-  // MathInput as a covering overlay — those genuinely replace the input, and
-  // MathInput's inert/invisible treatment of the field + keypad only applies
-  // while such an overlay actually covers them. A plain incorrect verdict
-  // renders as a compact banner NEXT TO the input instead, keeping the math
-  // field visible and editable (with the user's attempt still in it) for a
-  // retry.
   const feedbackEl = feedback ? (
     <PracticeFeedback
       feedback={feedback}
@@ -364,290 +275,229 @@ export function GenericPracticeExperience({
       onNext={goToNext}
       onUseHint={useHint}
       onShowSolution={() =>
-        setFeedback((prev) =>
-          prev && prev.type === "incorrect" ? { ...prev, showSolution: true } : prev
-        )
+        setFeedback((prev) => (prev && prev.type === "incorrect" ? { ...prev, showSolution: true } : prev))
       }
       getHint={getHint}
       finalAnswer={finalAnswer}
       isLastQuestion={index === displayProblems.length - 1}
-      reportContext={reportContext}
     />
   ) : null;
+  // Correct, or the full solution: the card replaces the input.
   const isFullFeedback =
-    feedback?.type === "correct" ||
-    (feedback?.type === "incorrect" && feedback.showSolution);
-  // MCQ: a choice has been graded (hint-only feedback doesn't count).
-  const mcqAnswered =
-    feedback?.type === "correct" ||
-    (feedback?.type === "incorrect" && feedback.attempts > 0);
+    feedback?.type === "correct" || (feedback?.type === "incorrect" && feedback.showSolution);
+  // MCQ: a choice has been graded (hint-only feedback does not count).
+  const mcqAnswered = feedback?.type === "correct" || (feedback?.type === "incorrect" && feedback.attempts > 0);
+  const allSolved = solvedCount >= displayProblems.length;
+
+  const navButton =
+    "flex h-9 min-w-9 items-center justify-center border theme-border px-2 text-sm theme-text disabled:opacity-40";
+  const quietLink = "text-sm theme-text-muted hover:underline";
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-56px)] w-full max-w-3xl flex-col px-0 sm:px-6 sm:py-4" style={subjectAccentVars}>
-      {/* Compact header row — practice fits the viewport, so it stays slim */}
-      <div className="mb-2 hidden min-w-0 shrink-0 sm:flex sm:items-baseline sm:gap-3 px-1">
-        <h1 className="shrink-0 text-lg font-bold theme-text">{topic.title}</h1>
-        <span className="min-w-0 flex-1 truncate text-sm theme-text-muted">{topic.description}</span>
-        <span className="shrink-0 text-sm theme-text-muted">{solvedCount}/{displayProblems.length} solved</span>
+    <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
+      {/* Title row */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b theme-border pb-3">
+        <h1 className="text-xl font-semibold theme-text sm:text-2xl">{topic.title}</h1>
+        <span className="text-sm tabular-nums theme-text-muted">
+          {solvedCount}/{displayProblems.length} solved
+          {effectiveSectionFilter ? " in this section" : ""}
+        </span>
       </div>
 
-      {/* Main practice card: fills the remaining viewport exactly; the page
-          never scrolls (html.practice-no-scroll). Long prompts scroll inside
-          their own area instead. Opaque surface, borderless — depth via shadow. */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--surface-solid)] px-4 pb-1 pt-2 sm:rounded-2xl sm:px-8 sm:pb-5 sm:pt-5 sm:shadow-lg">
-        {/* Progress dots + "1 / N" counter (counter positioned on right of dots; uses theme-text-muted).
-            min-w-0 lets the dots scroller shrink on narrow viewports so the counter never clips. */}
-        <div className="flex w-full min-w-0 justify-center">
-          <div className="flex min-w-0 max-w-full items-center gap-2">
-            <ProgressDots
-              statuses={questionStatuses}
-              currentIndex={index}
-              onSelect={(i) => setIndex(i)}
-            />
-            <span className="shrink-0 text-xs font-semibold tabular-nums theme-text-muted">
-              {index + 1} / {displayProblems.length}
-            </span>
+      {/* Progress dots + "1 / N" */}
+      <div className="mt-4 flex w-full min-w-0 items-center justify-center gap-2">
+        <ProgressDots statuses={questionStatuses} currentIndex={index} onSelect={(i) => setIndex(i)} />
+        <span className="shrink-0 text-xs tabular-nums theme-text-muted">
+          {index + 1} / {displayProblems.length}
+        </span>
+      </div>
+
+      {/* Said once, on arrival at a fresh set. */}
+      {solvedCount === 0 && index === 0 && !feedback && (
+        <p className="mx-auto mt-3 max-w-lg text-center text-xs leading-relaxed theme-text-muted">
+          Each question is graded on a single answer: a check that this chapter&apos;s methods work,
+          not a test of the reasoning behind them.
+        </p>
+      )}
+
+      <QuestionErrorBoundary key={current.id} onSkip={goToNext} questionId={current.id}>
+        {/* Prompt */}
+        <div className="py-6 text-center sm:py-8">
+          <div role="heading" aria-level={2} className="text-lg leading-relaxed theme-text sm:text-xl">
+            <MathText text={current.prompt} />
           </div>
+          <p className="mt-3">
+            <Link href={getSectionHref(subjectSlug, current.topicId, current.section)} className="text-sm text-[var(--accent)] hover:underline">
+              Read the section this question comes from
+            </Link>
+          </p>
         </div>
 
-        {/* Said once, on arrival at a fresh set: what the session checks, before
-            a score exists to be over-read. It disappears as soon as the first
-            answer is graded, so it never becomes furniture. */}
-        {solvedCount === 0 && index === 0 && !feedback && (
-          <p className="mx-auto mt-2 max-w-lg text-balance text-center text-xs leading-relaxed theme-text-muted">
-            Each question is graded on a single answer — a check that this chapter&apos;s methods
-            work, not a test of the reasoning behind them.
-          </p>
-        )}
-
-        {/* Per-question error boundary: keeps header/progress/nav always visible.
-            Only the question+input subtree is isolated. Key ensures clean state per q. */}
-        <QuestionErrorBoundary key={current.id} onSkip={goToNext} questionId={current.id}>
-          {/* Question prompt area: content-sized (NOT flex-1) so a short
-              question sits right above the answer area instead of reserving a
-              tall empty band; leftover space collapses into the spacer below
-              the answer area. Still scrolls internally if a prompt is very
-              tall so the page itself never scrolls. */}
-          <div className="flex min-h-0 shrink flex-col items-center gap-2 overflow-y-auto py-4 text-center sm:py-6">
-            <div role="heading" aria-level={2} className="text-lg font-semibold leading-relaxed sm:text-2xl">
-              {/* Always delegate to project's MathText (robust splitter + katex error fallback) */}
-              <MathText text={current.prompt} />
-            </div>
-
-            {/* Optional link back to explanation (generic, points to main data-driven module route + specific #section for the question) */}
-            <Link
-              href={getSectionHref(subjectSlug, current.topicId, current.section)}
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-[var(--accent)] transition-colors hover:bg-[var(--surface-2)]"
-            >
-              Review the explanation for this topic →
-            </Link>
-          </div>
-
-          {/* Answer input area */}
-          {current.type === "mcq" ? (
-            /* MCQ: the choice list NEVER disappears after answering — the
-               selected choice and the correct one stay visibly (and
-               accessibly) marked, with the feedback card/banner rendered
-               below so users can compare against the distractors. */
-            <div className="flex min-h-0 flex-col gap-2 overflow-y-auto sm:gap-3">
-              <div role="radiogroup" aria-label="Answer choices" className="flex shrink-0 flex-col gap-2 sm:gap-3">
-                {current.choices?.map((choice) => {
-                  const isSelected = answer === choice;
-                  const isCorrectChoice = isMcqAnswerCorrect(choice, current.answer, current.choices);
-                  let stateClass = isSelected
-                    ? "border-[var(--accent)] bg-[var(--surface-2)] ring-1 ring-[var(--accent)]"
-                    : "theme-border bg-[var(--surface)]";
-                  if (mcqAnswered) {
-                    stateClass = isCorrectChoice
-                      ? "border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500 dark:bg-emerald-500/10"
-                      : isSelected
-                      ? "border-red-400 bg-red-50 ring-1 ring-red-400 dark:bg-red-500/10"
-                      : "theme-border bg-[var(--surface)] opacity-60";
+        {/* Answer area */}
+        {current.type === "mcq" ? (
+          /* The choice list never disappears after answering: the correct
+             choice and the selected one stay marked, in words as well as by
+             border, so the learner can compare against the distractors. */
+          <div className="flex flex-col gap-3">
+            <div role="radiogroup" aria-label="Answer choices" className="flex flex-col gap-2">
+              {choices.map((choice) => {
+                const isSelected = answer === choice;
+                const isCorrectChoice = isMcqAnswerCorrect(choice, current.answer, current.choices);
+                let boxClass = isSelected ? "border-[var(--accent)]" : "theme-border";
+                let label: string | null = null;
+                if (mcqAnswered) {
+                  if (isCorrectChoice) {
+                    boxClass = "border-[var(--accent)] border-2";
+                    label = "Correct answer";
+                  } else if (isSelected) {
+                    boxClass = "theme-border border-dashed";
+                    label = "Your answer";
+                  } else {
+                    boxClass = "theme-border opacity-60";
                   }
-                  return (
-                    <button
-                      key={choice}
-                      type="button"
-                      role="radio"
-                      aria-checked={isSelected}
-                      onClick={() => {
-                        setAnswer(choice);
-                        submitAnswer(choice);
-                      }}
-                      disabled={mcqAnswered}
-                      className={`rounded-xl border px-4 py-3 text-left text-base font-medium theme-text transition active:scale-[0.98] disabled:pointer-events-none sm:px-5 sm:py-3.5 sm:text-lg ${
-                        mcqAnswered ? "" : "hover:border-[var(--accent)] hover:bg-[var(--surface-2)]"
-                      } ${stateClass}`}
-                    >
+                }
+                return (
+                  <button
+                    key={choice}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    onClick={() => {
+                      setAnswer(choice);
+                      submitAnswer(choice);
+                    }}
+                    disabled={mcqAnswered}
+                    className={`flex items-baseline justify-between gap-3 border bg-[var(--surface)] px-4 py-3 text-left text-base theme-text disabled:pointer-events-none sm:text-lg ${
+                      mcqAnswered ? "" : "hover:border-[var(--accent)]"
+                    } ${boxClass}`}
+                  >
+                    <span>
                       <MathText text={choice} />
-                      {mcqAnswered && isCorrectChoice && (
-                        <span className="sr-only"> (correct answer)</span>
-                      )}
-                      {mcqAnswered && isSelected && !isCorrectChoice && (
-                        <span className="sr-only"> (your answer — incorrect)</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {feedbackEl && (
-                <div className={isFullFeedback ? "min-h-0 shrink-0 overflow-y-auto rounded-xl" : "shrink-0"}>
-                  {feedbackEl}
-                </div>
-              )}
+                    </span>
+                    {label && (
+                      <span className="shrink-0 text-xs font-medium theme-text-muted">{label}</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
-          ) : (
-            /* Typed answers: on a plain incorrect verdict the compact banner
-               sits ABOVE the input, which stays visible and editable with the
-               user's attempt still in it. Only correct / full-solution
-               feedback covers the input as an overlay. */
-            /* overflow-y-auto: when the incorrect banner + inline hint expand,
-               the keypad must stay reachable by scrolling within the card
-               (the page itself never scrolls in practice). */
-            <div className="flex min-h-0 flex-col gap-2 overflow-y-auto">
-              {feedbackEl && !isFullFeedback && <div className="shrink-0">{feedbackEl}</div>}
+            {feedbackEl}
+          </div>
+        ) : (
+          /* Typed answers: a plain incorrect verdict shows as a banner above
+             the input, which stays editable with the attempt still in it. A
+             correct grade or the full solution replaces the input. */
+          <div className="flex flex-col gap-3">
+            {feedbackEl && !isFullFeedback && feedbackEl}
+            {isFullFeedback ? (
+              feedbackEl
+            ) : (
               <MathInput
                 value={answer}
                 onChange={setAnswer}
                 onSubmit={() => {
-                  // Ignore empty/whitespace-only submissions — a blank MathQuill
-                  // submit must not record an attempt (or trigger grading at all).
+                  // A blank submission must not record an attempt.
                   if (!answer.trim()) return;
                   submitAnswer(answer);
                 }}
                 onHint={useHint}
-                subject="generic" /* for primary data-driven routes — uses neutral theme + heuristics */
-                hintDisabled={feedback?.type === "correct" || (feedback?.type === "incorrect" && (feedback.hintUsed || feedback.showSolution))}
+                hintDisabled={feedback?.type === "incorrect" && feedback.hintUsed}
                 questionContext={questionContext}
                 answerHint={current.answer}
-                feedbackOverlay={isFullFeedback ? feedbackEl : undefined}
                 questionPrompt={current.prompt}
               />
-            </div>
-          )}
-        </QuestionErrorBoundary>
-
-        {/* Spacer: absorbs leftover height on short questions so the answer
-            area follows the prompt instead of being pushed toward the fold. */}
-        <div aria-hidden="true" className="min-h-0 flex-1" />
-
-        {/* Whole set solved */}
-        {solvedCount >= displayProblems.length && (
-          <div className="mt-4 rounded-xl border theme-border bg-[var(--surface-2)] p-4 text-center sm:mt-6 sm:rounded-2xl sm:p-5">
-            <p className="text-lg font-bold theme-text">Congrats! All {displayProblems.length} solved.</p>
-            <p className="mt-1 text-sm theme-text-secondary">You&apos;ve completed the practice for this section.</p>
-            {/* Said at the moment it is most likely to be misread: finishing a
-                bank of computations is easy to mistake for understanding the
-                chapter. These questions check that the mechanics are right;
-                they are not the proof exercises a course would also set. */}
-            <p className="mt-3 text-xs leading-relaxed theme-text-muted">
-              These questions check that you can carry out this chapter&apos;s computations correctly.
-              A full score means the mechanics are solid; it does not show that you could prove the
-              results or carry the argument through yourself. Re-read the chapter&apos;s statements
-              and proofs for that.
-            </p>
-            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:gap-3 sm:justify-center">
-              <Link
-                href={backToExplanationHref}
-                className="btn-primary inline-flex items-center justify-center"
-              >
-                Back to explanation →
-              </Link>
-              {nextTopic && (
-                <Link
-                  href={`/${subjectSlug}/practice/${nextTopic.id}`}
-                  className="btn-secondary inline-flex items-center justify-center"
-                >
-                  Go to next topic’s practice →
-                </Link>
-              )}
-              <button
-                type="button"
-                onClick={() => setIndex(0)}
-                className="btn-secondary"
-              >
-                Restart
-              </button>
-            </div>
+            )}
           </div>
         )}
+      </QuestionErrorBoundary>
 
-        {/* Bottom nav */}
-        <div className="mt-1 grid grid-cols-[1fr_auto_1fr] items-center py-1 sm:mt-3 sm:py-0">
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={goToPrev}
-              disabled={index === 0}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-secondary)] transition hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-[var(--text-secondary)] sm:h-9 sm:w-9"
-              aria-label="Previous"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 18l-6-6 6-6" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={goToNext}
-              disabled={index === displayProblems.length - 1}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-secondary)] transition hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-[var(--text-secondary)] sm:h-9 sm:w-9"
-              aria-label="Next"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 18l6-6-6-6" />
-              </svg>
-            </button>
-            {solvedCount > 0 && solvedCount < displayProblems.length && (
-              <button
-                type="button"
-                className="ml-1 whitespace-nowrap rounded-lg px-2 py-1 text-xs font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] sm:px-2.5 sm:text-sm"
-                onClick={() => {
-                  const done = new Set(progress.completedProblemIds);
-                  const next = displayProblems.findIndex((p, i) => i > index && !done.has(p.id));
-                  if (next >= 0) {
-                    setIndex(next);
-                    return;
-                  }
-                  // Wrap around to the first unsolved question; if everything is
-                  // solved (findIndex → -1), stay put instead of setIndex(-1).
-                  const wrapped = displayProblems.findIndex((p) => !done.has(p.id));
-                  if (wrapped >= 0) setIndex(wrapped);
-                }}
-              >
-                {/* Shorter label on narrow viewports so the bottom row never wraps */}
-                <span className="sm:hidden">Unsolved</span>
-                <span className="hidden sm:inline">Skip to unsolved</span>
-              </button>
-            )}
-          </div>
-
-          <div className="justify-self-center rounded-full px-2 py-0.5 text-[11px] font-medium text-[var(--text-muted)] ring-1 ring-[var(--border)]/80">
-            {/* The stable question id, as stored in questions.json. It is what a
-                report needs to point at the exact item. */}
-            <code>{current.id}</code>
-          </div>
-
-          {/* On narrow viewports the labels shorten (instead of wrapping into
-              multiple lines each) and never wrap internally. */}
-          <div className="flex min-w-0 items-center justify-self-end">
+      {/* Whole set solved */}
+      {allSolved && (
+        <div className="mt-6 border theme-border bg-[var(--surface-2)] p-4 sm:p-5">
+          <p className="text-lg font-semibold theme-text">All {displayProblems.length} solved.</p>
+          <p className="mt-2 text-sm leading-relaxed theme-text-secondary">
+            These questions check that you can carry out this chapter&apos;s computations correctly.
+            A full score means the mechanics are solid; it does not show that you could prove the
+            results yourself. Re-read the chapter&apos;s statements and proofs for that, and work the
+            printable problem set if the chapter has one.
+          </p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Link href={backToExplanationHref} className="btn-primary">
+              Back to the chapter
+            </Link>
             {hasProblemSet && (
-              <Link
-                className="whitespace-nowrap rounded-lg px-2 py-1 text-xs font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] sm:px-2.5 sm:text-sm"
-                href={`/${subjectSlug}/test/${topicId}`}
-              >
-                <span className="sm:hidden">Chapter test</span>
-                <span className="hidden sm:inline">Chapter test (printable)</span>
+              <Link href={`/${subjectSlug}/test/${topicId}`} className="btn-secondary">
+                Printable problem set
               </Link>
             )}
-            <Link
-              className="whitespace-nowrap rounded-lg px-2 py-1 text-xs font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] sm:px-2.5 sm:text-sm"
-              href={`/${subjectSlug}`}
-            >
-              <span className="sm:hidden">All topics</span>
-              <span className="hidden sm:inline">All {subjectLabel} topics</span>
-            </Link>
+            {nextTopic && (
+              <Link href={`/${subjectSlug}/practice/${nextTopic.id}`} className="btn-secondary">
+                Next chapter&apos;s practice
+              </Link>
+            )}
+            <button type="button" onClick={() => setIndex(0)} className="btn-secondary">
+              Restart
+            </button>
           </div>
+        </div>
+      )}
+
+      {/* Navigation row */}
+      <div className="mt-6 flex flex-col gap-3 border-t theme-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={goToPrev} disabled={index === 0} className={navButton} aria-label="Previous question">
+            ‹ Prev
+          </button>
+          <button
+            type="button"
+            onClick={goToNext}
+            disabled={index === displayProblems.length - 1}
+            className={navButton}
+            aria-label="Next question"
+          >
+            Next ›
+          </button>
+          {solvedCount > 0 && !allSolved && (
+            <button
+              type="button"
+              className={`${navButton} whitespace-nowrap`}
+              onClick={() => {
+                const done = new Set(progress.completedProblemIds);
+                const next = displayProblems.findIndex((p, i) => i > index && !done.has(p.id));
+                if (next >= 0) {
+                  setIndex(next);
+                  return;
+                }
+                const wrapped = displayProblems.findIndex((p) => !done.has(p.id));
+                if (wrapped >= 0) setIndex(wrapped);
+              }}
+            >
+              Skip to unsolved
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          {/* The stable id, as stored in questions.json: what a report points at. */}
+          <code className="text-xs theme-text-muted">{current.id}</code>
+          <ReportIssue
+            target={{
+              kind: "question",
+              subject: subjectSlug,
+              topicId,
+              questionId: current.id,
+              section: current.section,
+            }}
+            context={reportContext}
+          />
+          {hasProblemSet && (
+            <Link className={quietLink} href={`/${subjectSlug}/test/${topicId}`}>
+              Problem set
+            </Link>
+          )}
+          <Link className={quietLink} href={`/${subjectSlug}`}>
+            All {subjectLabel} chapters
+          </Link>
         </div>
       </div>
     </div>
