@@ -43,6 +43,7 @@ create index reports_target_idx     on public.reports (subject, topic_id, questi
 
 alter table public.reports enable row level security;
 
--- 3. Keep only the admin auth user (replace the address with your ADMIN_EMAIL).
+-- 3. Keep only the admin auth user. Replace <admin email> with the ADMIN_EMAIL
+--    from .env before running this statement.
 delete from auth.users
-where lower(email) <> 'melkeroberg03@gmail.com';
+where lower(email) <> '<admin email>';
