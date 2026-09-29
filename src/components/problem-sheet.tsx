@@ -15,7 +15,7 @@
 import type React from "react";
 import Link from "next/link";
 import type { ProblemSetFile, ProblemSetProblem } from "@/lib/content/schema";
-import { renderMathHtml, renderMathParagraphs } from "@/lib/content/problemset-math";
+import { renderMathHtml, renderMathParagraphs } from "@/lib/content/render-math";
 import { MarkProblemSetDone } from "@/components/mark-problem-set-done";
 
 const KIND_LABEL: Record<ProblemSetProblem["kind"], string> = {

@@ -7,7 +7,7 @@ import { SearchTrigger } from "@/components/search-command";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useClientMounted } from "@/hooks/use-client-mounted";
 import { getSubjectIconClass } from "@/lib/subject-icon-styles";
-import type { NavSubject } from "@/lib/subjects";
+import type { NavSubject } from "@/lib/shared-types";
 
 const utilityLinks = [
   { href: "/dashboard", label: "Progress" },

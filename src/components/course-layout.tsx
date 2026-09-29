@@ -1,6 +1,6 @@
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import type { NavSubject } from "@/lib/subjects";
+import type { NavSubject } from "@/lib/shared-types";
 import { subjectThemeClass, type SubjectTheme } from "@/lib/themes";
 
 export async function CourseLayout({
