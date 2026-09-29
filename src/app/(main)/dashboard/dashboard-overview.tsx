@@ -25,7 +25,7 @@ type Row = {
   sheets: number;
 };
 
-const cell = "border-b theme-border py-2 pr-3 align-top";
+const cell = "border-b theme-border py-2 pr-2 align-top sm:pr-3";
 const num = `${cell} text-right tabular-nums whitespace-nowrap`;
 
 export function DashboardOverview({ subjects }: { subjects: OverviewSubject[] }) {
@@ -70,13 +70,22 @@ export function DashboardOverview({ subjects }: { subjects: OverviewSubject[] })
       </p>
 
       <div className="mt-6 overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
+        <table className="w-full border-collapse text-xs sm:text-sm">
           <thead>
             <tr className="text-left theme-text-muted">
               <th scope="col" className={`${cell} font-medium`}>Subject</th>
-              <th scope="col" className={`${num} font-medium`}>Chapters read</th>
-              <th scope="col" className={`${num} font-medium`}>Questions correct</th>
-              <th scope="col" className={`${num} font-medium`}>Sheets done</th>
+              <th scope="col" className={`${num} font-medium`}>
+                <span className="sm:hidden">Read</span>
+                <span className="hidden sm:inline">Chapters read</span>
+              </th>
+              <th scope="col" className={`${num} font-medium`}>
+                <span className="sm:hidden">Correct</span>
+                <span className="hidden sm:inline">Questions correct</span>
+              </th>
+              <th scope="col" className={`${num} font-medium`}>
+                <span className="sm:hidden">Sheets</span>
+                <span className="hidden sm:inline">Sheets done</span>
+              </th>
             </tr>
           </thead>
           <tbody>

@@ -9,7 +9,7 @@ import type { DashboardTopic } from "@/lib/content/loader";
 
 export type SubjectProgressTopic = DashboardTopic & { hasProblemSet: boolean };
 
-const cell = "border-b theme-border py-2 pr-3 align-top";
+const cell = "border-b theme-border py-2 pr-2 align-top sm:pr-3";
 const num = `${cell} text-right tabular-nums whitespace-nowrap`;
 const toggle = "border px-2 py-0.5 text-xs whitespace-nowrap";
 const toggleOn = `${toggle} border-[var(--accent)] text-[var(--accent)]`;
@@ -55,14 +55,17 @@ export function SubjectProgress({
       </p>
 
       <div className="mt-6 overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
+        <table className="w-full border-collapse text-xs sm:text-sm">
           <thead>
             <tr className="text-left theme-text-muted">
               <th scope="col" className={`${cell} w-8 font-medium`}>#</th>
               <th scope="col" className={`${cell} font-medium`}>Chapter</th>
               <th scope="col" className={`${cell} font-medium`}>Read</th>
               <th scope="col" className={`${num} font-medium`}>Practice</th>
-              <th scope="col" className={`${cell} font-medium`}>Problem set</th>
+              <th scope="col" className={`${cell} font-medium`}>
+                <span className="sm:hidden">Sheet</span>
+                <span className="hidden sm:inline">Problem set</span>
+              </th>
             </tr>
           </thead>
           {topics.map((t, index) => {
@@ -110,7 +113,7 @@ export function SubjectProgress({
                       "—"
                     )}
                   </td>
-                  <td className={`${cell} whitespace-nowrap`}>
+                  <td className={cell}>
                     {t.hasProblemSet ? (
                       <>
                         <button
@@ -123,7 +126,7 @@ export function SubjectProgress({
                         </button>
                         <Link
                           href={`/${subject.slug}/test/${t.id}`}
-                          className="ml-2 text-xs text-[var(--accent)] hover:underline"
+                          className="ml-2 inline-block text-xs text-[var(--accent)] hover:underline"
                         >
                           open
                         </Link>
