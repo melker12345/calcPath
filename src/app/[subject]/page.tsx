@@ -6,17 +6,13 @@ import {
   getFileSystemContentBundle,
   deriveModuleStructureFromBundle,
   loadSubjectIndex,
-  requireSubjectConfig,
 } from "@/lib/content/loader";
-import type { ListedSubjectConfig } from "@/lib/content/loader";
-import type { Problem, Topic } from "@/lib/shared-types";
+import type { SubjectIndex } from "@/lib/content/schema";
 import { listTopicsWithProblemSets } from "@/lib/content/problemset-loader";
 
 type Props = {
   params: Promise<{ subject: string }>;
 };
-
-type ModuleStructure = ListedSubjectConfig["modules"];
 
 /** Every subject page is built at deploy time; unknown slugs are 404s. */
 export async function generateStaticParams() {
@@ -61,69 +57,46 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function SubjectHome({ params }: Props) {
   const { subject: slug } = await params;
 
-  let subject: ListedSubjectConfig;
+  let idx: SubjectIndex;
   try {
-    subject = await requireSubjectConfig(slug);
+    idx = await loadSubjectIndex(slug);
   } catch {
     notFound();
   }
 
-  let topics: Topic[] = subject.topics;
-  let problems: Problem[] = subject.problems;
-  let modules: ModuleStructure = subject.modules;
-  try {
-    const bundle = await getFileSystemContentBundle(slug);
-    if (bundle?.topics?.length) topics = bundle.topics;
-    if (bundle?.problems?.length) problems = bundle.problems;
-    const derived = await deriveModuleStructureFromBundle(slug);
-    if (derived.length) modules = derived;
-  } catch {
-    // graceful: keep empty lists from index-only config
-  }
+  const [bundle, modules, problemSetTopicIds] = await Promise.all([
+    getFileSystemContentBundle(slug),
+    deriveModuleStructureFromBundle(slug),
+    // Chapters with a printable sheet, so the contents page can link to it.
+    listTopicsWithProblemSets(slug),
+  ]);
 
-  // Chapters with a printable sheet, so the contents page can link to it.
-  const problemSetTopicIds = await listTopicsWithProblemSets(slug);
-
-  let courseJsonLd: Record<string, unknown> | null = null;
-  try {
-    const idx = await loadSubjectIndex(slug);
-    const cdesc = idx.courseDescription || idx.shortDescription || `A free course on ${idx.label}.`;
-    courseJsonLd = {
-      "@context": "https://schema.org",
-      "@type": "Course",
-      name: idx.label,
-      description: cdesc,
-      provider: { "@type": "Organization", name: "CalcPath", url: "https://calc-path.com" },
-      url: `https://calc-path.com/${slug}`,
-      educationalLevel: "University",
-      inLanguage: "en",
-      isAccessibleForFree: true,
-    };
-  } catch {
-    // omit ld+json when index is unavailable
-  }
+  const courseJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Course",
+    name: idx.label,
+    description: idx.courseDescription || idx.shortDescription || `A free course on ${idx.label}.`,
+    provider: { "@type": "Organization", name: "CalcPath", url: "https://calc-path.com" },
+    url: `https://calc-path.com/${slug}`,
+    educationalLevel: "University",
+    inLanguage: "en",
+    isAccessibleForFree: true,
+  };
 
   return (
     <>
-      {courseJsonLd && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(courseJsonLd) }} />
-      )}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(courseJsonLd) }} />
       <CourseContentsPage
-        title={subject.label}
-        description={subject.shortDescription}
-        subjectSlug={subject.slug}
-        topics={topics}
+        title={idx.label}
+        description={idx.shortDescription}
+        subjectSlug={slug}
+        topics={bundle.topics}
         modules={modules}
-        // The contents page counts questions per chapter; it never renders one.
-        // Sending whole Problems shipped every prompt, answer and explanation
-        // in the subject to draw a progress bar, so only the two fields it
-        // reads cross to the client.
-        // Chapter tests are printable paper sheets now (problemset.json),
-        // and nothing on paper is graded here — so they no longer contribute
-        // to the on-screen "questions done" count.
-        problems={problems.map((p) => ({ id: p.id, topicId: p.topicId }))}
+        // The contents page only counts questions per chapter, so only the
+        // two fields it reads cross to the client.
+        problems={bundle.problems.map((p) => ({ id: p.id, topicId: p.topicId }))}
         problemSetTopicIds={problemSetTopicIds}
-        />
+      />
     </>
   );
 }

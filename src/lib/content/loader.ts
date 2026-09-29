@@ -27,12 +27,8 @@ import {
 import { extractMdxSections, toSlug } from "./mdx";
 import type { Problem, Topic } from "@/lib/shared-types";
 
-/** Subject list entry: index.json metadata + empty content slots filled at call sites. */
-export type ListedSubjectConfig = SubjectConfig & {
-  topics: Topic[];
-  problems: Problem[];
-  modules: Array<{ topicId: string; sections: Array<{ title: string; section?: string }> }>;
-};
+/** Subject list entry: the index.json metadata plus its chapter count. */
+export type ListedSubjectConfig = SubjectConfig & { topicCount: number };
 
 function subjectConfigFromIndex(idx: SubjectIndex): ListedSubjectConfig {
   return {
@@ -44,16 +40,7 @@ function subjectConfigFromIndex(idx: SubjectIndex): ListedSubjectConfig {
     order: idx.order,
     category: idx.category,
     topicCount: idx.topics.length,
-    topics: [],
-    problems: [],
-    modules: [],
   };
-}
-
-/** Loads subject metadata from content/{slug}/index.json. Throws if missing/invalid. */
-export async function requireSubjectConfig(slug: string): Promise<ListedSubjectConfig> {
-  const idx = await loadSubjectIndex(slug);
-  return subjectConfigFromIndex(idx);
 }
 
 
@@ -212,8 +199,7 @@ export async function loadSubjectIndex(slug: string): Promise<SubjectIndex> {
 
 /**
  * Subject discovery: every folder under content/ with a valid index.json, in
- * `order`. Returns configs with empty topics/problems/modules; the bundle
- * loaders fill those at the call sites that need them.
+ * `order`.
  */
 export async function getAvailableSubjectConfigs(): Promise<ListedSubjectConfig[]> {
   const fs = await import("fs/promises");

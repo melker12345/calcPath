@@ -137,7 +137,7 @@ export type ProblemSetListing = {
 export async function listAllProblemSets(): Promise<
   Array<{ subjectSlug: string; subjectLabel: string; sets: ProblemSetListing[] }>
 > {
-  const { getAvailableSubjectConfigs } = await import("./loader");
+  const { getAvailableSubjectConfigs, loadSubjectIndex } = await import("./loader");
   const subjects = await getAvailableSubjectConfigs();
 
   const groups: Array<{ subjectSlug: string; subjectLabel: string; sets: ProblemSetListing[] }> = [];
@@ -145,8 +145,10 @@ export async function listAllProblemSets(): Promise<
     const topicIds = await listTopicsWithProblemSets(subject.slug);
     if (topicIds.length === 0) continue;
 
-    // Order by the subject's topic list; anything unlisted sorts to the end.
-    const position = new Map(subject.topics.map((t, i) => [t.id, i]));
+    // Order by the subject's chapter order; anything unlisted sorts to the end.
+    const index = await loadSubjectIndex(subject.slug);
+    const ordered = [...index.topics].sort((a, b) => a.order - b.order);
+    const position = new Map(ordered.map((t, i) => [t.id, i]));
     topicIds.sort((a, b) => (position.get(a) ?? Infinity) - (position.get(b) ?? Infinity));
 
     const sets: ProblemSetListing[] = [];
