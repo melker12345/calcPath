@@ -62,7 +62,7 @@ export default function FeedbackPage() {
           <button
             type="button"
             onClick={() => setStatus("idle")}
-            className="underline underline-offset-2 hover:theme-text"
+            className="underline underline-offset-2"
           >
             Send another
           </button>

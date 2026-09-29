@@ -11,7 +11,7 @@ export default function ErrorPage({ error }: { error: Error }) {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-4 px-6 py-24 text-center">
       <h1 className="text-3xl font-semibold">Something went wrong</h1>
-      <p className="text-sm text-zinc-500">
+      <p className="text-sm theme-text-muted">
         We logged the issue. Try refreshing or go back home.
       </p>
       <Link className="btn-primary" href="/">

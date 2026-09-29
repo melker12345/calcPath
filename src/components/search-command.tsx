@@ -207,7 +207,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
                     aria-autocomplete="list"
                     aria-controls="search-command-listbox"
                     aria-activedescendant={results.length > 0 ? `search-command-option-${activeIndex}` : undefined}
-                    className="flex-1 bg-transparent text-sm theme-text placeholder:text-[var(--text-muted)] outline-none border-none p-0 focus:ring-0"
+                    className="flex-1 bg-transparent text-sm theme-text placeholder:text-[var(--text-muted)] outline-none border-none p-0"
                   />
                   <kbd className="border theme-border px-1.5 py-0.5 text-[10px] font-medium theme-text-muted">Esc</kbd>
                 </div>

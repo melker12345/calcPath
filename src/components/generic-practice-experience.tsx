@@ -382,9 +382,7 @@ export function GenericPracticeExperience({
                       submitAnswer(choice);
                     }}
                     disabled={mcqAnswered}
-                    className={`flex items-baseline justify-between gap-3 border bg-[var(--surface)] px-4 py-3 text-left text-base theme-text disabled:pointer-events-none sm:text-lg ${
-                      mcqAnswered ? "" : "hover:border-[var(--accent)]"
-                    } ${boxClass}`}
+                    className={`flex items-baseline justify-between gap-3 border bg-[var(--surface)] px-4 py-3 text-left text-base theme-text disabled:pointer-events-none sm:text-lg ${boxClass}`}
                   >
                     <span>
                       <MathText text={choice} />

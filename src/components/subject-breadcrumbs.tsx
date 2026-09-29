@@ -81,7 +81,7 @@ export function SubjectBreadcrumbs({
             {crumb.href && !isLast ? (
               <Link
                 href={crumb.href}
-                className="text-blue-700 hover:underline dark:text-[var(--accent)]"
+                className="text-[var(--accent)] hover:underline"
               >
                 {crumb.label}
               </Link>
