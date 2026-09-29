@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
@@ -26,8 +26,9 @@ import type { Problem, Topic } from "@/lib/shared-types";
  * The page receives every question of the chapter from the server (the route
  * is static, and the first question is in the prerendered HTML). The optional
  * `?section=` and `?focus=` query parameters are read from window.location
- * after mount — not via useSearchParams, which would bail the whole page out
- * to client-side rendering and ship an empty <main>.
+ * once hydrated (useSyncExternalStore with an empty server snapshot) — not via
+ * useSearchParams, which would bail the whole page out to client-side
+ * rendering and ship an empty <main>.
  *
  * Structure, top to bottom: title and score, progress dots, the prompt, the
  * answer area (a radiogroup for multiple choice; the MathQuill field and keypad
@@ -91,6 +92,15 @@ class QuestionErrorBoundary extends React.Component<
   }
 }
 
+function subscribeToLocation(onChange: () => void) {
+  window.addEventListener("popstate", onChange);
+  return () => window.removeEventListener("popstate", onChange);
+}
+
+function readLocationSearch() {
+  return window.location.search;
+}
+
 export function GenericPracticeExperience({
   topic,
   problems: allTopicProblems,
@@ -109,18 +119,12 @@ export function GenericPracticeExperience({
 }) {
   const params = useParams<{ topicId: string }>();
   const topicId = params?.topicId ?? topic.id;
-  const [query, setQuery] = useState<{ section: string | null; focus: string | null }>({
-    section: null,
-    focus: null,
-  });
-  useEffect(() => {
-    const sp = new URLSearchParams(window.location.search);
-    const section = sp.get("section");
-    const focus = sp.get("focus");
-    if (section || focus) setQuery({ section, focus });
-  }, []);
-  const focusId = query.focus;
-  const sectionFilter = query.section;
+  // "" on the server and during hydration, the real query string afterwards.
+  const search = useSyncExternalStore(subscribeToLocation, readLocationSearch, () => "");
+  const { focusId, sectionFilter } = useMemo(() => {
+    const sp = new URLSearchParams(search);
+    return { focusId: sp.get("focus"), sectionFilter: sp.get("section") };
+  }, [search]);
 
   const { progress, addAttempt } = useProgress();
 
