@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useProgress } from "@/components/progress-provider";
-import { getChapterCompletion } from "@/lib/progress";
+import { chapterKey, getPracticeProgress } from "@/lib/progress";
 import { SubjectBreadcrumbs } from "@/components/subject-breadcrumbs";
 import { MathText } from "@/components/math-text";
 
@@ -16,7 +16,7 @@ type CourseTopic = {
 
 type ModuleSection = {
   title: string;
-  /** Stable slug (preferred for # anchors when present; from new content/ derive or legacy) */
+  /** Stable slug for # anchors; matches question.section and progress. */
   section?: string;
 };
 
@@ -30,6 +30,21 @@ type Problem = {
   topicId: string;
 };
 
+function sectionSlug(section: ModuleSection): string {
+  return (
+    section.section ||
+    section.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
+  );
+}
+
+/**
+ * A subject's table of contents: every chapter in order, each expandable to
+ * its numbered sections, with the learner's state for the chapter (read,
+ * practice correct, problem set done) read from the progress in this browser.
+ */
 export function CourseContentsPage({
   title,
   description,
@@ -37,7 +52,6 @@ export function CourseContentsPage({
   topics,
   modules = [],
   problems = [],
-  testCounts = {},
   problemSetTopicIds = [],
 }: {
   title: string;
@@ -45,196 +59,130 @@ export function CourseContentsPage({
   subjectSlug: string;
   topics: CourseTopic[];
   modules?: Module[];
+  /** Only `id` and `topicId` are read: enough for exact practice counts. */
   problems?: Problem[];
-  /** Recap-test pool size per topicId, for counting test questions toward progress. */
-  testCounts?: Record<string, number>;
-  /** Chapters that ship a printable problem set (resolved on the server from problemset.json). */
+  /** Chapters that ship a printable problem set (resolved on the server). */
   problemSetTopicIds?: string[];
 }) {
   const [openTopicId, setOpenTopicId] = useState<string | null>(null);
-
   const { progress } = useProgress();
 
   const modulesByTopic = useMemo(() => {
     const map: Record<string, Module | undefined> = {};
-    for (const mod of modules) {
-      map[mod.topicId] = mod;
-    }
+    for (const mod of modules) map[mod.topicId] = mod;
     return map;
   }, [modules]);
 
-  const toggleTopic = (topicId: string) => {
-    setOpenTopicId(openTopicId === topicId ? null : topicId);
-  };
-
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
-      <div className="border-b border-[var(--border)] pb-6 dark:border-[var(--surface-2)]">
+      <div className="border-b theme-border pb-6">
         <SubjectBreadcrumbs subjectSlug={subjectSlug} subjectLabel={title} />
         <h1 className="mt-3 font-serif text-3xl font-semibold tracking-tight theme-text sm:text-4xl">
           {title}
         </h1>
-        <p className="mt-3 max-w-3xl text-base leading-7 theme-text-secondary">
-          {description}
-        </p>
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm theme-text-secondary">
+        <p className="mt-3 max-w-3xl text-base leading-7 theme-text-secondary">{description}</p>
+        <p className="mt-4 text-sm theme-text-secondary">
           <span className="tabular-nums">{topics.length} chapters</span>
-          <span className="theme-text-muted">·</span>
+          <span className="mx-2 theme-text-muted">·</span>
           <span className="tabular-nums">{problems.length} practice questions</span>
-          <Link href="/dashboard" className="ml-auto font-medium text-[var(--accent)] hover:underline">
-            Dashboard →
+          <span className="mx-2 theme-text-muted">·</span>
+          <Link href={`/dashboard/${subjectSlug}`} className="text-[var(--accent)] hover:underline">
+            Your progress
           </Link>
-        </div>
+        </p>
       </div>
 
       <section className="py-8">
-        <h2 className="text-sm font-semibold uppercase tracking-widest theme-text-muted">
-          Course contents
-        </h2>
-        <div className="mt-5 divide-y divide-[var(--border)] border-y border-[var(--border)] dark:divide-[var(--surface-2)] dark:border-[var(--surface-2)]">
+        <h2 className="text-sm font-semibold uppercase tracking-widest theme-text-muted">Contents</h2>
+        <ol className="mt-4 divide-y theme-border border-y">
           {topics.map((topic, index) => {
             const isOpen = openTopicId === topic.id;
-            const moduleData = modulesByTopic[topic.id];
-            const sections = moduleData?.sections || [];
-            // Progress = questions done (practice + recap tests) / total available.
-            const comp = getChapterCompletion(
-              progress,
-              topic.id,
-              problems,
-              testCounts[topic.id] ?? 0,
-            );
+            const sections = modulesByTopic[topic.id]?.sections ?? [];
+            const key = chapterKey(subjectSlug, topic.id);
+            const read = progress.readChapters.includes(key);
+            const hasSheet = problemSetTopicIds.includes(topic.id);
+            const sheetDone = hasSheet && progress.completedProblemSets.includes(key);
+            const practice = getPracticeProgress(progress, topic.id, problems);
 
             return (
-              <div key={topic.id}>
-                {/* The title navigates to the chapter (primary action); the
-                    chevron is a separate toggle for the section list. One
-                    row-sized button doing both made the title open the
-                    accordion, which is not what a chapter name promises. */}
-                <div className="flex w-full items-center gap-2 py-4">
-                  <Link
-                    href={`/${subjectSlug}/modules/${topic.id}`}
-                    className="group flex min-w-0 flex-1 items-center gap-4"
-                  >
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)]/10 text-sm font-bold tabular-nums text-[var(--accent)]">
-                      {index + 1}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] theme-text-secondary">
-                        Chapter {index + 1}
-                        {comp.total > 0 && (
-                          <span className="theme-text-muted"> · {comp.total} questions</span>
-                        )}
-                      </p>
-                      <h3 className="mt-0.5 text-base font-semibold leading-snug theme-text transition-colors group-hover:text-[var(--accent)] sm:text-lg">
-                        {topic.title}
-                      </h3>
-                      {comp.total > 0 && (
-                        <div className="mt-2 flex items-center gap-2">
-                          <div className="h-1.5 w-full max-w-[220px] overflow-hidden rounded-full bg-[var(--surface-2)]">
-                            <div
-                              className={`h-full rounded-full ${comp.isComplete ? "bg-emerald-500" : "bg-[var(--accent)]"}`}
-                              style={{ width: `${comp.pct}%` }}
-                            />
-                          </div>
-                          <span className="shrink-0 text-[11px] tabular-nums theme-text-secondary">
-                            {comp.isComplete
-                              ? "Complete"
-                              : comp.started
-                                ? `${comp.done}/${comp.total} done`
-                                : "Not started"}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </Link>
-                  <button
-                    onClick={() => toggleTopic(topic.id)}
-                    aria-expanded={isOpen}
-                    aria-label={`${isOpen ? "Hide" : "Show"} sections of ${topic.title}`}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-[var(--surface-2)] hover:text-[var(--accent)] dark:text-zinc-500"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className={`h-4 w-4 transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
+              <li key={topic.id} className="py-4">
+                <div className="flex items-start gap-3">
+                  <span className="w-7 shrink-0 pt-0.5 text-right tabular-nums theme-text-muted">{index + 1}.</span>
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={`/${subjectSlug}/modules/${topic.id}`}
+                      className="text-base font-semibold theme-text hover:underline sm:text-lg"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
+                      {topic.title}
+                    </Link>
+                    <p className="mt-1 text-sm theme-text-secondary">
+                      <span className={read ? "text-[var(--accent)]" : "theme-text-muted"}>
+                        {read ? "Read ✓" : "Not read"}
+                      </span>
+                      {practice.total > 0 && (
+                        <>
+                          <span className="mx-2 theme-text-muted">·</span>
+                          <Link
+                            href={`/${subjectSlug}/practice/${topic.id}`}
+                            className="tabular-nums hover:underline"
+                          >
+                            {practice.correct} / {practice.total} correct
+                          </Link>
+                        </>
+                      )}
+                      {hasSheet && (
+                        <>
+                          <span className="mx-2 theme-text-muted">·</span>
+                          <Link href={`/${subjectSlug}/test/${topic.id}`} className="hover:underline">
+                            Problem set{sheetDone ? " ✓" : ""}
+                          </Link>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  {sections.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setOpenTopicId(isOpen ? null : topic.id)}
+                      aria-expanded={isOpen}
+                      aria-label={`${isOpen ? "Hide" : "Show"} sections of ${topic.title}`}
+                      className="shrink-0 border theme-border px-2 py-1 text-xs theme-text-secondary"
+                    >
+                      {isOpen ? "Hide sections" : `${sections.length} sections`}
+                    </button>
+                  )}
                 </div>
 
                 {isOpen && (
-                  <div className="pb-4 pl-[56px]">
-                    <div className="border-l-2 border-[var(--accent)]/25 pl-4">
-                      {topic.description && (
-                        <p className="mb-3 text-sm leading-6 theme-text-secondary">
-                          {topic.description}
-                        </p>
-                      )}
-                      {sections.length > 0 && (
-                        <ul className="space-y-0.5 text-sm">
-                          {sections.map((section, sIdx) => {
-                            // Prefer explicit stable .section (from new content/ MDX or legacy) for
-                            // anchors (matches question.section and progress); fall back to slugified title.
-                            const slug =
-                              section.section ||
-                              section.title
-                                .toLowerCase()
-                                .replace(/[^a-z0-9]+/g, "-")
-                                .replace(/(^-|-$)/g, "");
-                            return (
-                              <li key={sIdx}>
-                                <Link
-                                  href={`/${subjectSlug}/modules/${topic.id}#${slug}`}
-                                  className="flex items-start gap-2.5 rounded-md px-2 py-1.5 theme-text-secondary transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--accent)]"
-                                >
-                                  <span className="mt-0.5 shrink-0 font-mono text-xs tabular-nums theme-text-muted">
-                                    {index + 1}.{sIdx + 1}
-                                  </span>
-                                  <span><MathText text={section.title} /></span>
-                                </Link>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )}
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Link
-                          href={`/${subjectSlug}/modules/${topic.id}`}
-                          className="rounded-lg bg-[var(--accent)] px-3.5 py-1.5 text-xs font-semibold text-[var(--accent-text)] transition hover:opacity-90 sm:text-sm"
-                        >
-                          Read chapter
-                        </Link>
-                        <Link
-                          href={`/${subjectSlug}/practice/${topic.id}`}
-                          className="rounded-lg border border-[var(--accent)] px-3.5 py-1.5 text-xs font-semibold text-[var(--accent)] transition hover:bg-[var(--accent)] hover:text-[var(--accent-text)] sm:text-sm"
-                        >
-                          Practice
-                        </Link>
-                        {problemSetTopicIds.includes(topic.id) && (
-                          <Link
-                            href={`/${subjectSlug}/test/${topic.id}`}
-                            className="rounded-lg border border-[var(--accent)] px-3.5 py-1.5 text-xs font-semibold text-[var(--accent)] transition hover:bg-[var(--accent)] hover:text-[var(--accent-text)] sm:text-sm"
-                          >
-                            Problem set
-                          </Link>
-                        )}
-                      </div>
-                    </div>
+                  <div className="mt-3 pl-10">
+                    {topic.description && (
+                      <p className="mb-2 text-sm leading-6 theme-text-secondary">{topic.description}</p>
+                    )}
+                    <ol className="text-sm">
+                      {sections.map((section, sIdx) => {
+                        const slug = sectionSlug(section);
+                        return (
+                          <li key={slug || sIdx} className="flex items-start gap-2.5 py-1">
+                            <span className="shrink-0 tabular-nums theme-text-muted">
+                              {index + 1}.{sIdx + 1}
+                            </span>
+                            <Link
+                              href={`/${subjectSlug}/modules/${topic.id}#${slug}`}
+                              className="theme-text-secondary hover:underline"
+                            >
+                              <MathText text={section.title} />
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ol>
                   </div>
                 )}
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ol>
       </section>
     </main>
   );
 }
-
-
-
-

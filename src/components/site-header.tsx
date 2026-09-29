@@ -9,17 +9,8 @@ import { useClientMounted } from "@/hooks/use-client-mounted";
 import { getSubjectIconClass } from "@/lib/subject-icon-styles";
 import type { NavSubject } from "@/lib/subjects";
 
-function ProfileIcon({ size = 20, color = "currentColor" }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M20 21a8 8 0 1 0-16 0" />
-    </svg>
-  );
-}
-
 const utilityLinks = [
-  { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard", label: "Progress" },
   { href: "/problem-sets", label: "Problem sets" },
   { href: "/feedback", label: "Feedback" },
 ] as const;
@@ -127,7 +118,6 @@ function MobileDrawer({
   onClose: () => void;
   subjects?: Array<{ slug: string; label: string; icon?: string; category?: string }>;
 }) {
-  // Auth removed: always show Account link in drawer (no conditional sign in/out).
   const mounted = useClientMounted();
 
   useEffect(() => {
@@ -205,14 +195,6 @@ function MobileDrawer({
             </Link>
           ))}
 
-          <div className="my-2 border-t theme-border" />
-          <Link
-            href="/account"
-            className="block rounded-xl bg-zinc-50 px-4 py-3.5 text-base font-semibold text-zinc-900 transition active:bg-zinc-100"
-            onClick={onClose}
-          >
-            Account
-          </Link>
         </nav>
       </div>
     </div>,
@@ -278,18 +260,10 @@ function SiteHeaderAuthControls({
   onCloseMobileMenu: () => void;
   subjects?: Array<{ slug: string; label: string; icon?: string; category?: string }>;
 }) {
-  // Auth removed: always show Profile/Account + Sync devices (anon accessible). No sign in/out CTAs.
   return (
     <>
       <div className="flex items-center gap-1.5 md:hidden">
         <ThemeToggle />
-        <Link
-          href="/account"
-          className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[var(--nav-control-border,var(--border))] bg-[var(--nav-control-bg,var(--surface))] theme-text-secondary transition active:bg-[var(--nav-control-hover,var(--surface-2))]"
-          aria-label="Account"
-        >
-          <ProfileIcon size={18} color="currentColor" />
-        </Link>
         <button
           type="button"
           onClick={onToggleMobileMenu}
@@ -305,13 +279,6 @@ function SiteHeaderAuthControls({
 
       <div className="hidden shrink-0 items-center gap-2 md:flex">
         <ThemeToggle />
-        <Link
-          href="/account"
-          className="flex items-center gap-2 rounded-full border-2 border-[var(--nav-control-border,var(--border))] bg-[var(--nav-control-bg,var(--surface))] px-3 py-1.5 text-sm font-semibold theme-text shadow-sm transition hover:bg-[var(--nav-control-hover,var(--surface-2))] hover:shadow-md"
-          aria-label="Account"
-        >
-          <ProfileIcon size={18} color="currentColor" />
-        </Link>
       </div>
 
       <MobileDrawer

@@ -1,67 +1,62 @@
-import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getDashboardDataForSubject, getAvailableSubjectConfigs } from "@/lib/content/loader";
+import { notFound } from "next/navigation";
+import { getAvailableSubjectConfigs, getDashboardDataForSubject } from "@/lib/content/loader";
 import { listTopicsWithProblemSets } from "@/lib/content/problemset-loader";
-import type { Problem, Topic } from "@/lib/shared-types";
-import { SubjectOverviewShell } from "./SubjectOverviewShell";
-
-type SlimModule = { topicId: string; sections: Array<{ title: string; section?: string }> };
+import { ProgressBoundary } from "@/components/scoped-providers";
+import { SubjectProgress, type SubjectProgressTopic } from "./subject-progress";
 
 type Props = {
   params: Promise<{ subject: string }>;
 };
 
+export async function generateStaticParams() {
+  const configs = await getAvailableSubjectConfigs();
+  return configs.map((s) => ({ subject: s.slug }));
+}
+export const dynamicParams = false;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { subject: slug } = await params;
   const configs = await getAvailableSubjectConfigs();
   const subject = configs.find((s) => s.slug === slug);
-  if (!subject) return { title: "Not Found" };
+  if (!subject) return { title: "Not Found", robots: { index: false, follow: false } };
   return {
-    title: `${subject.label} Progress — Dashboard | CalcPath`,
-    description: `Your practice progress and printable problem sets for ${subject.label}.`,
+    title: `${subject.label} progress`,
+    description: `Chapters read, practice questions answered and problem sets done in ${subject.label}.`,
+    alternates: { canonical: `https://calc-path.com/dashboard/${slug}` },
+    robots: { index: false, follow: true },
   };
 }
 
-export default async function SubjectOverviewPage({ params }: Props) {
+/**
+ * Per-subject progress: one row per chapter with read state, practice count
+ * and problem-set state, expandable to per-section counts. The server sends
+ * titles, counts and the question ids of this one subject (needed for exact
+ * per-section counts); never question text.
+ */
+export default async function SubjectProgressPage({ params }: Props) {
   const { subject: slug } = await params;
+  const configs = await getAvailableSubjectConfigs();
+  const subject = configs.find((s) => s.slug === slug);
+  if (!subject) notFound();
 
-  const [subjectConfigs, data, problemSetTopicIds] = await Promise.all([
-    getAvailableSubjectConfigs(),
-    getDashboardDataForSubject(slug).catch(() => null),
+  const [data, problemSetTopicIds] = await Promise.all([
+    getDashboardDataForSubject(slug),
     listTopicsWithProblemSets(slug),
   ]);
 
-  const subject = subjectConfigs.find((s) => s.slug === slug);
-  if (!subject || !data) notFound();
-
-  const realData: { topics: Topic[]; problems: Problem[]; modules: SlimModule[] } = {
-    topics: data.topics ?? [],
-    problems: data.problems ?? [],
-    modules: data.modules ?? [],
-  };
-
-  // Printable sheets for this subject, in chapter order, with the chapter title
-  // for the panel. Resolved here because problemset-loader is server-only.
-  const titleById = new Map(realData.topics.map((t) => [t.id, t.title]));
-  const problemSets = problemSetTopicIds
-    .map((topicId) => ({ topicId, title: titleById.get(topicId) ?? topicId }))
-    .sort((a, b) => {
-      const ia = realData.topics.findIndex((t) => t.id === a.topicId);
-      const ib = realData.topics.findIndex((t) => t.id === b.topicId);
-      return (ia === -1 ? Infinity : ia) - (ib === -1 ? Infinity : ib);
-    });
+  const topics: SubjectProgressTopic[] = data.topics.map((t) => ({
+    ...t,
+    hasProblemSet: problemSetTopicIds.includes(t.id),
+  }));
 
   return (
-    <SubjectOverviewShell
-      subject={{
-        slug: subject.slug,
-        label: subject.label,
-        icon: subject.icon,
-        category: subject.category,
-        order: subject.order,
-      }}
-      realData={realData}
-      problemSets={problemSets}
-    />
+    <ProgressBoundary>
+      <SubjectProgress
+        subject={{ slug: subject.slug, label: subject.label }}
+        topics={topics}
+        sectionIds={data.sectionIds}
+      />
+    </ProgressBoundary>
   );
 }

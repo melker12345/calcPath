@@ -1,118 +1,63 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { readStorage, writeStorage } from "@/lib/storage";
+import React, { useMemo, useSyncExternalStore } from "react";
 import {
-  Attempt,
-  ProgressState,
-  TestResult,
-  createEmptyProgress,
+  type Attempt,
+  type ProgressState,
   normalizeProgressState,
+  createEmptyProgress,
   recordAttempt,
-  recordTestResult,
+  toggleChapterRead as toggleChapterReadState,
+  toggleProblemSetDone as toggleProblemSetDoneState,
 } from "@/lib/progress";
+import {
+  getProgressServerSnapshot,
+  getProgressSnapshot,
+  subscribeProgress,
+  updateProgress,
+} from "@/lib/progress-store";
+
+export { PROGRESS_KEY } from "@/lib/progress-store";
 
 type ProgressContextValue = {
   progress: ProgressState;
+  /** False on the server and during hydration, true once the stored state is in use. */
+  hydrated: boolean;
   addAttempt: (attempt: Attempt) => void;
-  addTestResult: (result: TestResult) => void;
+  toggleChapterRead: (key: string) => void;
+  toggleProblemSetDone: (key: string) => void;
   resetProgress: () => void;
-  applySyncedProgress: (synced: ProgressState) => void;
+  /** Replace the stored progress with an imported blob (normalized first). */
+  importProgress: (data: unknown) => void;
 };
 
-const PROGRESS_KEY = "calc_progress_v1";
+/**
+ * Kept for callers that wrap a subtree in a provider (ProgressBoundary). The
+ * state itself lives in the module-level store, so the provider is only a
+ * marker: `useProgress()` works anywhere on the client.
+ */
+export const ProgressProvider = ({ children }: { children: React.ReactNode }) => <>{children}</>;
 
-const ProgressContext = createContext<ProgressContextValue | undefined>(
-  undefined,
-);
+const subscribeHydrated = () => () => {};
 
-export const ProgressProvider = ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => {
-  const [progress, setProgress] = useState<ProgressState>(createEmptyProgress());
+export const useProgress = (): ProgressContextValue => {
+  const progress = useSyncExternalStore(subscribeProgress, getProgressSnapshot, getProgressServerSnapshot);
+  const hydrated = useSyncExternalStore(
+    subscribeHydrated,
+    () => true,
+    () => false,
+  );
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = () => {
-      const stored = readStorage<ProgressState | Partial<ProgressState>>(
-        PROGRESS_KEY,
-        createEmptyProgress(),
-      );
-      if (!cancelled) setProgress(normalizeProgressState(stored as Partial<ProgressState>));
-    };
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const addAttempt = (attempt: Attempt) => {
-    setProgress((prev) => {
-      const next = recordAttempt(prev, attempt);
-      writeStorage(PROGRESS_KEY, next);
-      return next;
-    });
-  };
-
-  const addTestResult = (result: TestResult) => {
-    setProgress((prev) => {
-      const next = recordTestResult(prev, result);
-      writeStorage(PROGRESS_KEY, next);
-      return next;
-    });
-  };
-
-  const resetProgress = () => {
-    const next = createEmptyProgress();
-    setProgress(next);
-    writeStorage(PROGRESS_KEY, next);
-  };
-
-  const applySyncedProgress = (synced: ProgressState) => {
-    const next = normalizeProgressState(synced as Partial<ProgressState>);
-    setProgress(next);
-    writeStorage(PROGRESS_KEY, next);
-  };
-
-  const value = useMemo(
+  return useMemo<ProgressContextValue>(
     () => ({
       progress,
-      addAttempt,
-      addTestResult,
-      resetProgress,
-      applySyncedProgress,
+      hydrated,
+      addAttempt: (attempt) => updateProgress((prev) => recordAttempt(prev, attempt)),
+      toggleChapterRead: (key) => updateProgress((prev) => toggleChapterReadState(prev, key)),
+      toggleProblemSetDone: (key) => updateProgress((prev) => toggleProblemSetDoneState(prev, key)),
+      resetProgress: () => updateProgress(() => createEmptyProgress()),
+      importProgress: (data) => updateProgress(() => normalizeProgressState(data)),
     }),
-    [progress],
+    [progress, hydrated],
   );
-
-  return (
-    <ProgressContext.Provider value={value}>
-      {children}
-    </ProgressContext.Provider>
-  );
-};
-
-export const useProgress = () => {
-  const context = useContext(ProgressContext);
-  if (!context) {
-    // Safe default for read-only surfaces (e.g. home page mastery indicators in
-    // CourseContentsPage when used outside a ProgressBoundary). Mutations will be no-ops
-    // (no provider = no persistence for that tree). Practice/dashboard etc always provide.
-    // This enables granular components like CourseContentsPage to be dropped into
-    // server-driven home pages without forcing provider wrappers on every caller.
-    const noopProgress = createEmptyProgress();
-    const noop = () => {};
-    return {
-      progress: noopProgress,
-      addAttempt: noop,
-      addTestResult: noop,
-      resetProgress: noop,
-      applySyncedProgress: noop,
-    } satisfies ProgressContextValue;
-  }
-  return context;
 };
