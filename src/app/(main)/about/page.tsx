@@ -16,7 +16,7 @@ function Ext({ href, children }: { href: string; children: React.ReactNode }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="font-medium text-[var(--accent)] underline underline-offset-2 transition hover:opacity-80"
+      className="font-medium text-[var(--accent)] underline underline-offset-2"
     >
       {children}
     </a>
@@ -172,7 +172,7 @@ export default async function AboutPage() {
           CalcPath is in active development and shaped directly by reports from
           people using it. Spotted a wrong answer, an unclear explanation, or
           anything off? Tell us on the{" "}
-          <Link href="/feedback" className="font-medium text-[var(--accent)] underline underline-offset-2 hover:opacity-80">
+          <Link href="/feedback" className="font-medium text-[var(--accent)] underline underline-offset-2">
             feedback page
           </Link>{" "}
           — or use <em>Report issue</em> right where you found it.

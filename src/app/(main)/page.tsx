@@ -208,7 +208,7 @@ export default async function Home() {
               <summary className="flex cursor-pointer items-baseline gap-2 text-[15px] font-medium theme-text marker:content-['']">
                 <span
                   aria-hidden
-                  className="text-xs theme-text-muted transition-transform duration-150 group-open:rotate-90"
+                  className="text-xs theme-text-muted group-open:rotate-90"
                 >
                   &#9656;
                 </span>
