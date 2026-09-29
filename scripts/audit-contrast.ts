@@ -1,84 +1,72 @@
 #!/usr/bin/env node
 /**
- * content:contrast — WCAG contrast audit of every subject theme, both modes.
+ * content:contrast — WCAG contrast audit of the site tokens and every
+ * subject's nav tint, in both modes.
  *
- * Each theme projects its palette onto the global tokens, so a colour chosen for
- * its character can quietly make body text unreadable. This checks the three
- * that carry text:
+ * A subject changes only the nav bar tint and the accent used for its glyph
+ * and links (src/lib/themes.ts). This checks that
  *
- *   textMuted -> --text-secondary   secondary prose, target 4.5:1 (we hold 7:1)
- *   textDim   -> --text-muted       labels and section numbers, target 4.5:1
- *   accent                          link text, target 4.5:1
+ *   - the site's text tokens read on the site background (AA 4.5:1),
+ *   - the primary text still reads on each subject's tinted nav bar,
+ *   - each subject accent reads as link text on the surface,
+ *   - a label in accentText reads on the accent.
  *
- * It also checks that a button's label still reads on its accent background.
+ * color-mix(in srgb, accent N%, surface) is reproduced as a linear sRGB mix.
  * Exits 1 if anything falls below AA.
  *
  * Run: npx tsx scripts/audit-contrast.ts
  */
-import { getThemeForSubject } from "../src/lib/themes";
+import { allSubjectThemes } from "../src/lib/themes";
 
-const SUBJECTS = ["calculus","statistics","linear-algebra","precalculus","algebra","geometry","set-theory","number-theory","combinatorics","discrete-mathematics","mathematical-logic","information-theory","real-analysis","abstract-algebra"];
+// Mirrors :root / .dark in src/app/globals.css. Keep in sync by hand.
+const TOKENS = {
+  light: { bg: "#ffffff", surface: "#ffffff", text: "#111111", textSecondary: "#374151", textMuted: "#6b7280", accent: "#0969da" },
+  dark: { bg: "#0d1117", surface: "#161b22", text: "#f0f6fc", textSecondary: "#d0d7de", textMuted: "#8b949e", accent: "#58a6ff" },
+} as const;
 
 type RGB = [number, number, number];
-const parse = (c: string): { rgb: RGB; a: number } => {
-  if (c.startsWith("#")) {
-    const h = c.slice(1);
-    const n = h.length === 3 ? h.split("").map((x) => x + x).join("") : h;
-    return { rgb: [parseInt(n.slice(0,2),16), parseInt(n.slice(2,4),16), parseInt(n.slice(4,6),16)], a: 1 };
-  }
-  const m = c.match(/rgba?\(([^)]+)\)/);
-  if (!m) throw new Error("bad color " + c);
-  const p = m[1].split(",").map((x) => parseFloat(x.trim()));
-  return { rgb: [p[0], p[1], p[2]], a: p[3] ?? 1 };
+const hex = (c: string): RGB => {
+  const h = c.slice(1);
+  const n = h.length === 3 ? h.split("").map((x) => x + x).join("") : h;
+  return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)];
 };
-const over = (fg: string, bg: string): RGB => {
-  const f = parse(fg), b = parse(bg);
-  return [0,1,2].map((i) => f.rgb[i] * f.a + b.rgb[i] * (1 - f.a)) as RGB;
+const mix = (a: string, pct: number, b: string): RGB => {
+  const x = hex(a), y = hex(b);
+  return [0, 1, 2].map((i) => x[i] * (pct / 100) + y[i] * (1 - pct / 100)) as RGB;
 };
 const lum = (rgb: RGB) => {
-  const [r,g,b] = rgb.map((v) => { const s = v/255; return s <= 0.03928 ? s/12.92 : ((s+0.055)/1.055) ** 2.4; });
-  return 0.2126*r + 0.7152*g + 0.0722*b;
+  const [r, g, b] = rgb.map((v) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 };
-const ratio = (fg: string, bg: string) => {
-  const f = lum(over(fg, bg)), b = lum(over(bg, bg));
-  return (Math.max(f,b) + 0.05) / (Math.min(f,b) + 0.05);
+const ratio = (fg: RGB, bg: RGB) => {
+  const f = lum(fg), b = lum(bg);
+  return (Math.max(f, b) + 0.05) / (Math.min(f, b) + 0.05);
 };
 const fmt = (n: number) => n.toFixed(2).padStart(5);
-const flag = (n: number, need: number) => (n < need ? " FAIL" : "     ");
+
+let failures = 0;
+const check = (label: string, r: number, need: number) => {
+  const ok = r >= need;
+  if (!ok) failures += 1;
+  console.log(`${label.padEnd(44)} ${fmt(r)} ${ok ? "" : " FAIL"}`);
+};
 
 for (const mode of ["light", "dark"] as const) {
+  const t = TOKENS[mode];
   console.log(`\n=== ${mode.toUpperCase()} ===`);
-  console.log("subject".padEnd(22) + "body(muted)".padStart(12) + "  " + "primary".padStart(8) + "  " + "dim".padStart(8) + "  " + "accent".padStart(8));
-  for (const slug of SUBJECTS) {
-    const t = getThemeForSubject(slug);
-    if (!t) continue;
-    const p = t[mode];
-    const body = ratio(p.textMuted, p.bg);
-    const prim = ratio(p.text, p.bg);
-    const dim = ratio(p.textDim, p.bg);
-    const acc = ratio(p.accent, p.bg);
-    console.log(
-      slug.padEnd(22) + fmt(body) + flag(body, 4.5) + "  " + fmt(prim) + "  " + fmt(dim) + flag(dim, 3) + "  " + fmt(acc) + flag(acc, 4.5)
-    );
+  check("text on bg", ratio(hex(t.text), hex(t.bg)), 4.5);
+  check("text-secondary on bg", ratio(hex(t.textSecondary), hex(t.bg)), 4.5);
+  check("text-muted on bg", ratio(hex(t.textMuted), hex(t.bg)), 4.5);
+  check("accent on surface", ratio(hex(t.accent), hex(t.surface)), 4.5);
+  const tint = mode === "dark" ? 16 : 12;
+  for (const s of allSubjectThemes()) {
+    const p = s[mode];
+    const navBg = mix(p.accent, tint, t.surface);
+    check(`${s.slug}: text on nav tint`, ratio(hex(t.text), navBg), 4.5);
+    check(`${s.slug}: accent on surface`, ratio(hex(p.accent), hex(t.surface)), 4.5);
+    check(`${s.slug}: accentText on accent`, ratio(hex(p.accentText), hex(p.accent)), 4.5);
   }
 }
 
-// Button labels sit on the accent, not the page.
-let failures = 0;
-for (const slug of SUBJECTS) {
-  const theme = getThemeForSubject(slug);
-  if (!theme) continue;
-  for (const mode of ["light", "dark"] as const) {
-    const p = theme[mode];
-    const onAccent = ratio(p.accentText, p.accent);
-    if (onAccent < 4.5) {
-      console.log(`FAIL button label ${slug} ${mode}: ${onAccent.toFixed(2)}`);
-      failures += 1;
-    }
-    if (ratio(p.textMuted, p.bg) < 4.5) failures += 1;
-    if (ratio(p.textDim, p.bg) < 4.5) failures += 1;
-    if (ratio(p.accent, p.bg) < 4.5) failures += 1;
-  }
-}
-console.log(failures === 0 ? "\nEvery theme meets AA in both modes." : `\n${failures} contrast failure(s).`);
+console.log(failures === 0 ? "\nEverything meets AA in both modes." : `\n${failures} contrast failure(s).`);
 process.exitCode = failures === 0 ? 0 : 1;
