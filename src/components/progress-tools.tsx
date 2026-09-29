@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useProgress } from "@/components/progress-provider";
 
+// Plain bordered button; the shared button class still carries rounded corners.
+const button = "border theme-border bg-[var(--surface)] px-4 py-2 text-sm theme-text";
+
 /**
  * Export / import / reset for the progress stored in this browser. Rendered at
  * the bottom of the progress overview; needs a ProgressProvider above it.
@@ -54,10 +57,10 @@ export function ProgressTools() {
         another device; import replaces what is saved here.
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" onClick={handleExport} className="btn-secondary">
+        <button type="button" onClick={handleExport} className={button}>
           Export progress (JSON)
         </button>
-        <label className="btn-secondary inline-flex cursor-pointer items-center">
+        <label className={`${button} inline-flex cursor-pointer items-center`}>
           Import from JSON
           <input type="file" accept="application/json,.json" onChange={handleImport} className="hidden" />
         </label>
@@ -74,12 +77,12 @@ export function ProgressTools() {
             >
               Yes, erase everything
             </button>
-            <button type="button" className="btn-secondary" onClick={() => setConfirmingReset(false)}>
+            <button type="button" className={button} onClick={() => setConfirmingReset(false)}>
               Cancel
             </button>
           </>
         ) : (
-          <button type="button" className="btn-secondary" onClick={() => setConfirmingReset(true)}>
+          <button type="button" className={button} onClick={() => setConfirmingReset(true)}>
             Reset progress
           </button>
         )}
