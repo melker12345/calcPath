@@ -1,5 +1,5 @@
 /**
- * Client-safe subject types and optional code-only overrides.
+ * Client-safe subject types.
  *
  * Canonical metadata lives in `content/{slug}/index.json`. Server code should use
  * `getAvailableSubjectConfigs()` / `loadSubjectIndex()` from `@/lib/content/loader`.
@@ -43,27 +43,3 @@ export type NavSubject = {
   order?: number;
   shortDescription?: string;
 };
-
-/**
- * Optional overrides when index.json is absent or you need a code-only tweak.
- * All 14 shipped subjects are fully defined in content index.json files — keep this empty.
- */
-export const subjects: Record<SubjectSlug, SubjectConfig> = {};
-
-export const subjectList: SubjectConfig[] = Object.values(subjects).sort(
-  (a, b) => a.order - b.order
-);
-
-/** @deprecated Use `loadSubjectIndex` / `requireSubjectConfig` from the content loader on the server. */
-export function getSubject(slug: SubjectSlug): SubjectConfig | undefined {
-  void slug;
-  return undefined;
-}
-
-export function getOrderedSubjects(): SubjectConfig[] {
-  return [...subjectList];
-}
-
-export function getAvailableTopics(subject: SubjectConfig) {
-  return [...(subject.topics || [])];
-}

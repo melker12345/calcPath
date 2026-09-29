@@ -1,8 +1,4 @@
-import {
-  getAvailableSubjectConfigs,
-  loadAllContent,
-  loadSubjectFromContent,
-} from "@/lib/content/loader";
+import { getAvailableSubjectConfigs, loadSubjectFromContent } from "@/lib/content/loader";
 
 /**
  * Server-side resolution of feedback targets (problem / section ids) to
@@ -86,12 +82,6 @@ async function buildMaps(): Promise<MetaMaps> {
     } catch {
       // A malformed subject shouldn't break the whole admin inbox.
     }
-  }
-
-  // Legacy in-code bundles (currently linear-algebra). Added second so a
-  // content/ version of the same subject wins.
-  for (const bundle of Object.values(await loadAllContent())) {
-    addBundle(bundle);
   }
 
   return { problems, topics };
