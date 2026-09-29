@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getAvailableSubjectConfigs, getDashboardDataForSubject } from "@/lib/content/loader";
 import { listTopicsWithProblemSets } from "@/lib/content/problemset-loader";
-import { ProgressBoundary } from "@/components/scoped-providers";
 import { SubjectProgress, type SubjectProgressTopic } from "./subject-progress";
 
 type Props = {
@@ -51,12 +50,10 @@ export default async function SubjectProgressPage({ params }: Props) {
   }));
 
   return (
-    <ProgressBoundary>
-      <SubjectProgress
-        subject={{ slug: subject.slug, label: subject.label }}
-        topics={topics}
-        sectionIds={data.sectionIds}
-      />
-    </ProgressBoundary>
+    <SubjectProgress
+      subject={{ slug: subject.slug, label: subject.label }}
+      topics={topics}
+      sectionIds={data.sectionIds}
+    />
   );
 }

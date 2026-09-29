@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useProgress } from "@/components/progress-provider";
+import { useProgress } from "@/lib/use-progress";
 import { MathText } from "@/components/math-text";
 import { chapterKey, countCorrectIn } from "@/lib/progress";
 import type { DashboardTopic } from "@/lib/content/loader";

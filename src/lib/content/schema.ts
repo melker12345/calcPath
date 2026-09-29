@@ -1,36 +1,16 @@
 /**
- * Content Schema for the Dynamic Architecture
+ * Zod schemas for every file under content/ (see content/ARCHITECTURE.md):
+ * the subject and chapter index.json files, questions.json, module.mdx as a
+ * raw source, and problemset.json. The loader validates with these at build
+ * time; the scripts in scripts/ validate with them as gates.
  *
- * This is the source of truth for what "content" looks like in the new system.
- * All future loaders, editors, and generic pages will be built against these types.
- *
- * Design goals (per the 2026-06 primary architecture declaration; see git history for future-dynamic.md):
- * - Versioned (we will evolve this)
- * - Strongly validated (Zod) at load time with good errors
- * - Captures current real-world usage from the 3 existing subjects (inventory in NOTES.md + analysis)
- * - Explicit about stable identifiers (critical for user progress, streaks, completedProblemIds)
- * - Schema-first: loader + generic UI derive from this, not the other way around
- * - Now the canonical schema for the primary data-driven system (all subjects)
- *
- * Key invariants from code analysis:
- * - Problem.section <-> ModuleSection.section exact match required for dashboard sections + deep links.
- * - Progress/attempts keyed ONLY by stable problem.id (topicId is auxiliary).
- * - Explanation strings are parseable for steps/hints (shared UI).
- * - Subject slugs are kebab-case (e.g. "linear-algebra").
- * - Answer checking logic lives outside content for now (global normalizer + math equiv).
- *
- * Future work (do not over-engineer in v1):
- * - Per-problem answer validation config (tolerance, equivalence mode, etc.)
- * - Structured explanations (vs rich string) — now using raw MDX sources for rich content
- * - (done) Test questions are first-class content: content/{slug}/topics/{topic}/problemset.json,
- *   see ProblemSetFileSchema below. Presence of that file is what gives a topic a chapter test.
- * - MDX / richer body content (initial FS + raw source support added)
- *
- * MDX support (2026-06-01):
- * - Structured data (subjects/topics/questions/metadata) live in JSON per content/ARCHITECTURE.md
- * - Rich explanations live in .mdx files
- * - New FileSystemContentBundle + MdxModule + QuestionFile schemas for loader
+ * Invariants the schemas cannot express on their own, checked by the gates:
+ *   - a question's `section` equals a `##` section slug of its module.mdx;
+ *   - question and problem-set ids are unique across the whole corpus and
+ *     never change once live (progress and reports are keyed by them).
  */
+
+import type { Problem, Topic } from "@/lib/shared-types";
 
 import { z } from "zod";
 
@@ -38,16 +18,16 @@ import { z } from "zod";
 // Core Primitives
 // ============================================
 
-export const ProblemTypeSchema = z.enum(["numeric", "mcq"]);
+const ProblemTypeSchema = z.enum(["numeric", "mcq"]);
 
-export const DifficultySchema = z.enum(["easy", "medium", "hard"]);
+const DifficultySchema = z.enum(["easy", "medium", "hard"]);
 
 // Shared shape for practice problems and test questions (avoids Zod v4 restrictions on .extend/.omit for refined schemas)
 const problemFields = {
   /**
    * Stable, unique identifier across all time.
    * NEVER change this after content is live for real users.
-   * Used in completedProblemIds, streaks, attempts, etc.
+   * Used in completedProblemIds, attempts, and reports.
    * Recommended format: kebab-case with topic prefix, e.g. "vectors-operations-1"
    */
   id: z.string().min(1),
@@ -112,17 +92,17 @@ const mcqRefine = {
  * - `explanation` currently uses a conventional string format for step parsing in UI ("Step N: ... Final answer: ...").
  * - Answer validation is currently global (see answer-check.ts); per-question rules are a future extension.
  */
-export const ProblemSchema = z
+const ProblemSchema = z
   .object(problemFields)
   .refine(mcqRefine.refine, { message: mcqRefine.message, path: mcqRefine.path });
 
-export type Problem = z.infer<typeof ProblemSchema>;
+export type { Problem, Topic };
 
 // ============================================
 // Topic
 // ============================================
 
-export const TopicSchema = z.object({
+const TopicSchema = z.object({
   /** Stable topic id, e.g. "vectors", "limits" — used in URLs and progress keys. */
   id: z.string().min(1),
 
@@ -136,15 +116,21 @@ export const TopicSchema = z.object({
   estimatedMinutes: z.number().int().positive(),
 });
 
-export type Topic = z.infer<typeof TopicSchema>;
+
+// The validators must produce exactly the hand-written client types.
+type Equal<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+const _problemShapeMatches: Equal<z.infer<typeof ProblemSchema>, Problem> = true;
+const _topicShapeMatches: Equal<z.infer<typeof TopicSchema>, Topic> = true;
+void _problemShapeMatches;
+void _topicShapeMatches;
 
 // ============================================
 // Subject Level
 // ============================================
 
-export const SubjectSlugSchema = z.string().min(1);
+const SubjectSlugSchema = z.string().min(1);
 
-export const SubjectConfigSchema = z.object({
+const SubjectConfigSchema = z.object({
   slug: SubjectSlugSchema,
   label: z.string().min(1),
   shortDescription: z.string().min(1),
@@ -168,8 +154,7 @@ export type SubjectConfig = z.infer<typeof SubjectConfigSchema>;
  * Contains subject metadata + the list of topics (for navigation/overview).
  * This is the entry point for a data-driven subject.
  *
- * Note: This largely overlaps SubjectConfig + topics, but is the canonical
- * source when loading from the content/ directory (vs legacy TS).
+
  */
 export const SubjectIndexSchema = z.object({
   slug: SubjectSlugSchema,
@@ -197,7 +182,6 @@ export type SubjectIndex = z.infer<typeof SubjectIndexSchema>;
  * Provides topic metadata. (May duplicate info from subject index for self-contained topics.)
  */
 export const TopicIndexSchema = TopicSchema;
-export type TopicIndex = z.infer<typeof TopicIndexSchema>;
 
 /**
  * Base problem fields for questions stored in JSON files.
@@ -232,10 +216,8 @@ export type QuestionsFile = z.infer<typeof QuestionsFileSchema>;
  * - Rendering / MDX compilation happens downstream (e.g. in generic module page)
  * - No need to force structured body/sections in JSON for explanations.
  *
- * Critical invariants still apply:
- * - Any `section` slugs used in the topic's questions.json MUST correspond
- *   to sections/headings present in this MDX (for deep links + per-section progress).
- * - This replaces the legacy structured ModuleContent for new content.
+ * Any `section` slug used in the topic's questions.json MUST correspond to a
+ * `##` heading of this MDX (for deep links + per-section progress).
  */
 export const MdxModuleSchema = z.object({
   topicId: z.string().min(1),
@@ -251,9 +233,6 @@ export type MdxModule = z.infer<typeof MdxModuleSchema>;
  * The complete bundle loaded purely from the content/ filesystem structure
  * (JSON metadata + questions + MDX explanations).
  *
- * This is the target shape for the primary data-driven loader (official architecture).
- *
- * Populated from the full content/{subject}/ structures for all subjects.
  */
 export const FileSystemContentBundleSchema = z.object({
   config: SubjectConfigSchema,
@@ -283,8 +262,7 @@ export type FileSystemContentBundle = z.infer<typeof FileSystemContentBundleSche
  *
  * Authoring rule: a sheet made only of "computation" wastes the format.
  */
-export const ProblemKindSchema = z.enum(["computation", "proof", "sketch", "critique"]);
-export type ProblemKind = z.infer<typeof ProblemKindSchema>;
+const ProblemKindSchema = z.enum(["computation", "proof", "sketch", "critique"]);
 
 /**
  * One numbered problem on a printable sheet.
@@ -298,7 +276,7 @@ export type ProblemKind = z.infer<typeof ProblemKindSchema>;
  * - `solution` is a full worked method, not a final answer. The learner checks
  *   their *route*, which is the whole point of doing it on paper.
  */
-export const ProblemSetProblemSchema = z.object({
+const ProblemSetProblemSchema = z.object({
   /** Stable, unique id. Convention: "ps-{subject}-{topic}-{nn}". */
   id: z.string().min(1),
 

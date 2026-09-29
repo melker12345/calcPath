@@ -15,16 +15,45 @@ content/<subject>/
     module.mdx               the chapter, in the house style (content/STYLE.md)
     questions.json           auto-graded practice questions (content/questions.md)
     problemset.json          optional printable chapter test (content/ARCHITECTURE.md)
-src/app/                     routes (Next.js app router)
+  legacy-topic-redirects.json   optional: old chapter id → new chapter (+ section)
+  legacy-section-redirects.json optional: old chapter + section → the chapter it moved to
+src/app/                     routes (Next.js app router); every content route is
+                             prerendered at build (generateStaticParams)
 src/components/              UI
-src/lib/content/             loader, schema, MDX section extraction, figures
-src/lib/answer-check.ts      grading
+src/lib/content/             loader + schema, MDX section extraction, the server
+                             renderers (render-math, render-prose, render-chapter,
+                             chapter.ts), figures, problem sets
+src/lib/answer-check.ts      grading (client side, in the practice page)
+src/lib/progress*.ts         progress v2: localStorage store + model; use-progress.ts hook
+src/lib/reports.ts, report-markdown.ts, server/report-snapshot.ts
+                             reports: types, the LLM-ready brief, the content snapshot
 scripts/                     content gates and audits
+tests/stubs/server-only.ts   lets vitest import server-only modules
 docs/CONTENT-BACKLOG.md      known content problems, measured
 ```
 
 Dropping a new `content/<subject>/` folder adds the subject everywhere: routes,
-navigation, sitemap, search.
+navigation, sitemap, search, dashboard. Old chapter ids keep working through
+the two optional redirect files, turned into permanent redirects by
+`next.config.ts` at build time.
+
+## How pages are made
+
+- **Chapters** — `module.mdx` is parsed once on the server and typeset with
+  KaTeX at build time; the page ships rendered HTML and no KaTeX or markdown
+  JavaScript.
+- **Practice** — one client component per topic; questions are graded in the
+  browser (`answer-check.ts`), multiple-choice options are shown in a fixed
+  per-question order.
+- **Problem sets** — server-rendered sheets with print CSS; a separate
+  solutions page.
+- **Progress** — chapters read, questions solved and sheets done, kept in the
+  browser (`calc_progress_v2` in localStorage) with JSON export and import on
+  `/dashboard`.
+- **Reports** — "Report a problem" on every chapter and question posts to
+  `/api/feedback`; the server snapshots the item from `content/` and stores it
+  in the Supabase `reports` table. `/admin/feedback` renders each report as a
+  markdown brief an LLM can act on.
 
 ## Commands
 
@@ -50,8 +79,8 @@ before a commit on `dev`.
 
 ## Services
 
-Supabase holds feedback reports (`supabase/schema.sql`) and the single admin
-login for reading them. Both are optional: without the environment variables
-the site builds and runs, and the report form simply cannot post.
+Supabase holds the `reports` table (`supabase/schema.sql`) and the single
+admin login for reading it. Both are optional: without the variables listed in
+`.env.example` the site builds and runs, and the report form answers 503.
 
 See `CLAUDE.md` for the project rules.

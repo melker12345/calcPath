@@ -1,6 +1,5 @@
 import Link from "next/link";
-import type { SubjectIndex } from "@/lib/content/schema";
-import type { SubjectConfig } from "@/lib/subjects"; // type for legacy shape compat (bundles provide slim config)
+import type { SubjectConfig, SubjectIndex } from "@/lib/content/schema";
 
 export type BreadcrumbItem = {
   label: string;

@@ -129,13 +129,23 @@ working through two optional per-subject files, both hand-maintained:
 
 ## Code
 
-- `src/lib/content/schema.ts` — Zod schemas for every file above.
+- `src/lib/content/schema.ts` — Zod schemas for every file above; re-exports
+  the client-side `Problem`/`Topic` types from `src/lib/shared-types.ts`.
 - `src/lib/content/loader.ts` — reads and validates `content/`, auto-discovers
-  subjects, caches per process.
-- `src/lib/content/mdx.ts` — section slug extraction; the single implementation
-  the validator and the pages share.
-- `src/lib/content/problemset-loader.ts` — problem sets.
+  subjects, caches per process; light paths for counts and section lists.
+- `src/lib/content/mdx.ts` — section slug extraction and the intro / section /
+  mistakes split; the single implementation the validator and the pages share.
+- `src/lib/content/chapter.ts`, `render-chapter.ts`, `render-prose.ts`,
+  `render-math.ts` — a chapter page: one module.mdx to HTML on the server
+  (marked for prose, KaTeX for mathematics, environments numbered in document
+  order, figures from `figure-spec.ts`). `render-math.ts` is the only KaTeX
+  renderer; the problem sheets use it too.
+- `src/lib/content/problemset-loader.ts` — problem sets and their static params.
 - `src/lib/content/figure-spec.ts` — figure spec parsing and expression evaluation.
+- `src/lib/server/report-snapshot.ts` — what a report captures from `content/`
+  (the stored question, or the section source) at report time.
+- `next.config.ts` — turns the two redirect files into permanent redirects at
+  build time, so old URLs survive even though every content page is static.
 
 ## Gates
 

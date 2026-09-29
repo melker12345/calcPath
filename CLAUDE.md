@@ -16,7 +16,12 @@ high quality information**. Everything else is secondary.
 - **Progress** — stored in the browser only (localStorage), shown on the
   dashboard. No accounts.
 - **Feedback** — a report form on every chapter and question. Reports are
-  written so that an LLM can fix the content from the report alone.
+  written so that an LLM can fix the content from the report alone. They live
+  in the Supabase `reports` table (`supabase/schema.sql`); `/admin/feedback`
+  shows each as a markdown brief.
+- **Old URLs** — `content/<subject>/legacy-topic-redirects.json` and
+  `legacy-section-redirects.json` become permanent redirects in
+  `next.config.ts` at build time. Add to them when a chapter moves.
 
 There is no analytics, no donations, no cloud sync, no gamification. Do not
 add them back.
@@ -46,6 +51,7 @@ add them back.
 npm run dev                  # never assume port 3000 is free
 npm run build                # must pass with NO environment variables set
 npm run lint && npx tsc --noEmit
+npm test                     # vitest; tests/stubs/server-only.ts lets it import server modules
 npm run content:validate     # schemas + question.section ↔ module.mdx
 npm run content:latex        # every LaTeX fragment renders under KaTeX
 npm run content:answers      # every stored answer grades itself correct
@@ -53,8 +59,8 @@ npm run content:problemsets  # problem-set schema + ids + LaTeX
 npm run content:audit        # book-style coverage; fails if prose is lost
 ```
 
-All five content gates plus lint, typecheck and build must be green before a
-commit on `dev`.
+All five content gates plus lint, typecheck, tests and build must be green
+before a commit on `dev`.
 
 ## Git
 

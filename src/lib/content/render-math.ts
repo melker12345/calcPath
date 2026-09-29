@@ -1,11 +1,19 @@
 /**
- * Server-side LaTeX rendering for chapters.
+ * Server-side LaTeX rendering — the one KaTeX renderer for everything built
+ * at deploy time (chapters and printable problem sheets).
  *
- * KaTeX typesets every `$…$` / `$$…$$` fragment to HTML at build time, so a
- * chapter page ships rendered mathematics and no KaTeX JavaScript. The
- * splitter (src/lib/math-split.ts) and the normaliser are the ones the client
+ * KaTeX typesets every `$…$` / `$$…$$` fragment to HTML at build time, so
+ * those pages ship rendered mathematics and no KaTeX JavaScript. The splitter
+ * (src/lib/math-split.ts) and the normaliser are the ones the client
  * <MathText> uses, so a fragment that renders on a practice page renders
  * identically here.
+ *
+ * Two prose flavours sit on top of `renderKatex`:
+ *   - `renderMathText`   — a run of text with inline maths, the server twin
+ *                          of <MathText> (chapters);
+ *   - `renderMathHtml`   — the problem-sheet dialect: **bold**, *italic*,
+ *                          `\n` line breaks, formulas lifted out first so the
+ *                          markup may span them (problem sets).
  */
 
 import katex from "katex";
@@ -110,4 +118,58 @@ export function renderMathText(text: string): string {
   });
 
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Problem-sheet dialect
+// ---------------------------------------------------------------------------
+
+/** Same matcher <MathText>'s splitMath and validate-latex.ts use. */
+const MATH_RE = /(?<!\\)(\$\$([\s\S]*?)(?<!\\)\$\$|\$([\s\S]*?)(?<!\\)\$)/g;
+
+/**
+ * Stand-in for a rendered formula while the prose markup pass runs. A control
+ * character, so it cannot occur in authored content, and it carries no `*` —
+ * which is the whole point: a phrase like `**Base case $k=1$.**` must still
+ * read as one bold run even though a formula sits in the middle of it.
+ */
+const MATH_TOKEN = (i: number) => `\u0000${i}\u0000`;
+const MATH_TOKEN_RE = /\u0000(\d+)\u0000/g;
+
+/**
+ * Render one authored string (prompt, part, solution paragraph) to HTML.
+ * Inline `$…$` stays in the run of text; `$$…$$` becomes a display block.
+ *
+ * Formulas are lifted out first and substituted back last, so the light prose
+ * markup — **bold**, *italic*, `\n` as a line break — is applied to the whole
+ * string at once and may span a formula.
+ */
+export function renderMathHtml(text: string): string {
+  const source = normalizeMathText(text);
+
+  const rendered: string[] = [];
+  const skeleton = source.replace(MATH_RE, (whole, _all, block, inline) => {
+    const isBlock = String(whole).startsWith("$$");
+    rendered.push(renderKatex((isBlock ? block : inline) ?? "", isBlock));
+    return MATH_TOKEN(rendered.length - 1);
+  });
+
+  const prose = escapeHtml(skeleton)
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(?<![*\w])\*([^*\n]+)\*(?!\w)/g, "<em>$1</em>")
+    .replace(/\n/g, "<br />");
+
+  return prose.replace(MATH_TOKEN_RE, (_m, i) => rendered[Number(i)] ?? "");
+}
+
+/**
+ * Split an authored body on blank lines and render each paragraph.
+ * Solutions are written as several paragraphs; each becomes its own <p>.
+ */
+export function renderMathParagraphs(text: string): string[] {
+  return text
+    .split(/\n{2,}/)
+    .map((para) => para.trim())
+    .filter(Boolean)
+    .map(renderMathHtml);
 }

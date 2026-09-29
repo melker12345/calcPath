@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useProgress } from "@/components/progress-provider";
+import { useProgress } from "@/lib/use-progress";
 
 // Plain bordered button; the shared button class still carries rounded corners.
 const button = "border theme-border bg-[var(--surface)] px-4 py-2 text-sm theme-text";
 
 /**
  * Export / import / reset for the progress stored in this browser. Rendered at
- * the bottom of the progress overview; needs a ProgressProvider above it.
+ * the bottom of the progress overview.
  */
 export function ProgressTools() {
   const { progress, resetProgress, importProgress } = useProgress();

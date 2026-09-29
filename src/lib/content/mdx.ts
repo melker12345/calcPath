@@ -8,11 +8,12 @@
  * THE CRITICAL INVARIANT:
  * Every question's `section` (in questions.json) MUST exactly match one of the
  * `section` values produced here for the corresponding module.mdx.
- * This powers per-section mastery, deep links (?section=), dashboard, progress.
+ * This powers per-section counts, deep links (?section=), the dashboard and progress.
  *
  * Used by:
- * - loader.ts (deriveModuleStructureFromBundle for dashboard + slim modules; now via light mdx-only path + cache for perf)
- * - adapters.ts (parseMdxToLegacyModuleContent for SubjectModulePage compat)
+ * - loader.ts (deriveModuleStructureFromBundle: the section structure)
+ * - render-chapter.ts / chapter.ts (the chapter page)
+ * - src/lib/server/report-snapshot.ts (the section source in a report)
  * - scripts/validate-content.ts (the hard section-matching check)
  *
  * Changes here affect ALL subjects and must preserve exact slug output for existing content.

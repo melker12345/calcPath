@@ -1,38 +1,25 @@
 /**
- * Content Loader
- *
- * Provides validated content data.
- *
- * Primary implementation (data-driven architecture):
- * - Primary data-driven loader: reads JSON + MDX from `content/` dir per content/ARCHITECTURE.md and the official 2026-06 declaration.
- * - Includes lightweight auto-discovery via getAvailableSubjectConfigs() (scan content/ subdirs with index.json).
- * - All per-subject load*FromContent duplication removed; single generic loadSubjectFromContent path.
- *
- * Schema-first: all output validated with Zod from src/lib/content/schema.ts.
- *
- * Supports all subjects from content/ (including newly dropped ones with zero subjects.ts entry).
- * Previous TS content files were archived in backup-content/legacy/ and have been fully deleted after successful migration sign-off.
- * History remains fully preserved in git (original git mv commits on the migration branch; inspect via `git show <backup-commit>:backup-content/legacy/...`).
- *
- * Primary dynamic routes at /[subject] are fully data-driven via content/ + loader + generics + adapters.
- * See content/ARCHITECTURE.md (detailed history lives in src/lib/content/NOTES.md and git log).
- *
- * Perf: getFileSystemContentBundle + deriveModuleStructureFromBundle + new getDashboardDataForSubject are cached
- * (process-lifetime Maps) and derive uses mdx-only light path (no questions.json). This eliminates the
- * dashboard's previous N*2 full loads for 14+ auto-discovered subjects.
+ * Content loader: reads content/<subject>/ (index.json, topics/<id>/index.json,
+ * questions.json, module.mdx), validates with src/lib/content/schema.ts and
+ * caches per process. Subjects are discovered by scanning content/ for
+ * folders with an index.json, so a new subject is a new folder. Callers that
+ * only need counts or section lists use the light paths, never the full
+ * bundle.
  */
 
 import "server-only";
 
 import {
   type SubjectConfig,
-  // New FS content schemas (JSON + MDX)
   SubjectIndexSchema,
   type SubjectIndex,
   TopicIndexSchema,
   QuestionsFileSchema,
+  type QuestionsFile,
   QuestionFileSchema,
+  type QuestionFile,
   MdxModuleSchema,
+  type MdxModule,
   FileSystemContentBundleSchema,
   type FileSystemContentBundle,
 } from "./schema";
@@ -47,7 +34,7 @@ export type ListedSubjectConfig = SubjectConfig & {
   modules: Array<{ topicId: string; sections: Array<{ title: string; section?: string }> }>;
 };
 
-export function subjectConfigFromIndex(idx: SubjectIndex): ListedSubjectConfig {
+function subjectConfigFromIndex(idx: SubjectIndex): ListedSubjectConfig {
   return {
     slug: idx.slug,
     label: idx.label,
@@ -69,11 +56,6 @@ export async function requireSubjectConfig(slug: string): Promise<ListedSubjectC
   return subjectConfigFromIndex(idx);
 }
 
-// ============================================
-// Primary: Data-driven loader from content/ directory (JSON + MDX)
-// Per content/ARCHITECTURE.md (official primary architecture).
-// Supports full structures for all subjects.
-// ============================================
 
 const CONTENT_DIR = "content";
 
@@ -126,29 +108,23 @@ async function readMdxFile(relativePath: string): Promise<string> {
 }
 
 /**
- * Load a single topic's data from its folder under content/{subject}/topics/{topicId}/
- * - topic index.json (required for topic metadata)
- * - questions.json (injects topicId if missing) -- can be skipped via options for lightweight paths
- * - module.mdx (the rich explanation source) -- can be skipped via options
- *
- * Resilient loading for partial ports or future subjects.
- * Supports options to skip heavy files: used by dashboard lightweight path (skip mdx when only problems needed)
- * and derive (skip questions entirely, since only sections from MDX headings are required).
+ * One topic folder: index.json (required), questions.json (topicId injected
+ * when omitted) and module.mdx, the last two skippable for light paths.
  */
 async function loadTopicContent(
   subjectSlug: string,
   topicId: string,
   options: { loadQuestions?: boolean; loadMdx?: boolean } = {}
 ): Promise<{
-  topic: import("./schema").Topic;
-  questions: import("./schema").Problem[];
-  mdxModule?: import("./schema").MdxModule;
+  topic: Topic;
+  questions: Problem[];
+  mdxModule?: MdxModule;
 }> {
   const { loadQuestions = true, loadMdx = true } = options;
   const topicDir = `${subjectSlug}/topics/${topicId}`;
 
   // Topic metadata: prefer topic/index.json, fallback not present yet in skeleton for all
-  let topic: import("./schema").Topic;
+  let topic: Topic;
   try {
     topic = await readJsonFile(`${topicDir}/index.json`, TopicIndexSchema);
   } catch {
@@ -160,9 +136,9 @@ async function loadTopicContent(
   // Resilient loading: prefer the whole file validating, but if it fails we still try to
   // load the good individual questions. This way one bad MCQ/LaTeX item does not nuke
   // the entire topic for practice (user preference: "better to load broken questions than none").
-  let questions: import("./schema").Problem[] = [];
+  let questions: Problem[] = [];
   if (loadQuestions) {
-    let questionsFile: import("./schema").QuestionsFile = [];
+    let questionsFile: QuestionsFile = [];
     try {
       questionsFile = await readJsonFile(`${topicDir}/questions.json`, QuestionsFileSchema);
     } catch {
@@ -175,7 +151,7 @@ async function loadTopicContent(
         const raw: unknown = JSON.parse(await fs.readFile(fullPath, "utf-8"));
 
         if (Array.isArray(raw)) {
-          const valid: import("./schema").QuestionFile[] = [];
+          const valid: QuestionFile[] = [];
           const invalid: Array<{ id?: string; issues: string[] }> = [];
           for (const item of raw) {
             const result = QuestionFileSchema.safeParse(item);
@@ -205,11 +181,11 @@ async function loadTopicContent(
     questions = questionsFile.map((q) => ({
       ...q,
       topicId: q.topicId ?? topicId,
-    })) as import("./schema").Problem[];
+    })) as Problem[];
   }
 
   // MDX rich content (skippable for perf paths that only need problems or only sections)
-  let mdxModule: import("./schema").MdxModule | undefined;
+  let mdxModule: MdxModule | undefined;
   if (loadMdx) {
     try {
       const mdxSource = await readMdxFile(`${topicDir}/module.mdx`);
@@ -229,22 +205,15 @@ async function loadTopicContent(
   return { topic, questions, mdxModule };
 }
 
-/**
- * Load just the SubjectIndex (subject metadata + topics list) from content/{slug}/index.json.
- * This is lightweight and ideal for driving subject-level navigation, breadcrumbs,
- * topic lists, subject chrome, etc. from the new data-driven content (no need for full bundle with problems/mdx).
- * Works for any subject that has an index.json.
- */
+/** The subject index (metadata + topic list) from content/{slug}/index.json. */
 export async function loadSubjectIndex(slug: string): Promise<SubjectIndex> {
   return readJsonFile<SubjectIndex>(`${slug}/index.json`, SubjectIndexSchema);
 }
 
 /**
- * Lightweight auto subject discovery to enable true "just drop content/" for new subjects.
- * Scans the content/ directory (server-only via fs) for subdirectories containing index.json.
- * For each, loads the SubjectIndex for label/desc/icon/order.
- * Scans content/ for subdirectories with a valid index.json.
- * Returns listed configs (topics/problems/modules empty; bundles loaded at call sites).
+ * Subject discovery: every folder under content/ with a valid index.json, in
+ * `order`. Returns configs with empty topics/problems/modules; the bundle
+ * loaders fill those at the call sites that need them.
  */
 export async function getAvailableSubjectConfigs(): Promise<ListedSubjectConfig[]> {
   const fs = await import("fs/promises");
@@ -284,54 +253,26 @@ export async function getDiscoveredSubjectSlugs(): Promise<string[]> {
 // ============================================
 
 /**
- * Server-side process-lifetime caches to fix dashboard over-fetching (and benefit sitemap/search/etc).
- *
- * - fileSystemBundleCache: full bundles (topics + problems + mdxModules). Lifetime because content is static
- *   (shipped in the deploy; runtime edits require server restart to pick up, which is acceptable for this SaaS).
- *   Avoids re-reading large questions.json (algebra ~400qs, statistics 461, real-analysis 353, geometry etc.)
- *   and re-parsing MDX on repeated calls.
- * - moduleStructureCache: the slim {topicId, sections[]} derived from MDX headings. Populated by derive.
- *
- * Dashboard previously did Promise.all over 14+ subjects, each doing *two* full getFileSystemContentBundle
- * (once explicit, once inside derive which re-reads everything + re-extracts). Now uses getDashboardDataForSubject
- * which does mdx-skipped problems load + cached derive (light mdx-only).
- *
- * No new deps; pure Map. Callers of getFileSystem... still get full fidelity.
+ * Process-lifetime caches. Content is static for the life of a build, so a
+ * subject's bundle and its section structure are read once.
  */
 const fileSystemBundleCache = new Map<string, FileSystemContentBundle>();
 const moduleStructureCache = new Map<string, Array<{ topicId: string; sections: Array<{ title: string; section?: string }> }>>();
 
 /**
- * Primary entry point for the data-driven architecture.
- * Returns a validated FileSystemContentBundle by reading directly from content/{slug}/
- * (index.json + topics/<topic>/ {index.json, questions.json, module.mdx}).
- *
- * Supports every subject that has a content/ folder — including newly dropped ones with
- * zero code changes and zero entry in subjects.ts (thanks to auto-discovery in getAvailableSubjectConfigs).
- *
- * This is now the single implementation path (previous per-subject load*FromContent shims removed).
- *
- * Results are cached in-memory for the process lifetime (see fileSystemBundleCache above).
+ * The full bundle of one subject: config, topics, every question, and the
+ * raw module.mdx sources. Cached for the process lifetime.
  */
 export async function getFileSystemContentBundle(slug: string): Promise<FileSystemContentBundle> {
   return loadSubjectFromContent(slug, { includeMdxModules: true });
 }
 
 /**
- * Generic loader for any subject that has a full content/{slug}/ structure
- * (index.json + topics/<topicId>/index.json + questions.json + module.mdx).
- * This is the single implementation used by getFileSystemContentBundle for all subjects.
- * For *listing* subjects with zero subjects.ts boilerplate, see getAvailableSubjectConfigs()
- * (scans content/ dirs). This load is for the data bundle of a known slug.
- *
- * Supports options.includeMdxModules=false for lightweight callers that only need topics+problems
- * (e.g. dashboard progress aggregates via getPracticeProgress which only needs the problem IDs/sections).
- * When mdx skipped, mdxModules will be [] in result (callers that need rich modules use the default full path).
- *
- * Internal caching: if a FULL (mdx-included) bundle for the slug is already cached, light requests
- * return a stripped view instantly with no FS I/O. Full requests always hit cache after first load.
+ * Reads content/{slug}/ into a bundle. `includeMdxModules: false` skips the
+ * module.mdx files for callers that only need topics and questions; if the
+ * full bundle is already cached the light view is served from it.
  */
-export async function loadSubjectFromContent(
+async function loadSubjectFromContent(
   slug: string,
   options: { includeMdxModules?: boolean } = {}
 ): Promise<FileSystemContentBundle> {
@@ -365,9 +306,9 @@ export async function loadSubjectFromContent(
 
   const topicsFromIndex = subjectIndex.topics;
 
-  const loadedTopics: import("./schema").Topic[] = [];
-  const allProblems: import("./schema").Problem[] = [];
-  const mdxModules: import("./schema").MdxModule[] = [];
+  const loadedTopics: Topic[] = [];
+  const allProblems: Problem[] = [];
+  const mdxModules: MdxModule[] = [];
 
   let existingTopicIds: string[] = [];
   try {
@@ -414,12 +355,8 @@ export async function loadSubjectFromContent(
   return parsed;
 }
 
-// ============================================
-// Adapter / Validation helpers (for compat & other subjects)
-// ============================================
-
 // =============================================================================
-// Section structure derivation (replaced the retired src/lib/modules/ tree)
+// Section structure derivation
 // =============================================================================
 
 /**
@@ -433,7 +370,7 @@ async function loadSlimModuleStructure(slug: string): Promise<Array<{ topicId: s
   const subjectIndex = await loadSubjectIndex(slug);
   const topicsFromIndex = subjectIndex.topics;
 
-  const mdxModules: import("./schema").MdxModule[] = [];
+  const mdxModules: MdxModule[] = [];
 
   let existingTopicIds: string[] = [];
   try {
@@ -475,13 +412,10 @@ async function loadSlimModuleStructure(slug: string): Promise<Array<{ topicId: s
   return out;
 }
 
-/** Derive slim {topicId, sections[]} from content/ MDX (replaces src/lib/modules/ data).
- *  Uses the shared canonical extractor so section slugs are identical to validation and adapters.
- *
- *  Perf: uses moduleStructureCache (lifetime) + loadSlimModuleStructure (mdx-only, no questions.json).
- *  Previously this would call getFileSystemContentBundle (full load of ALL problems + mdx for the subject).
- *  Now safe to call for all 14+ subjects from dashboard without causing over-fetch of large questions files.
- *  (Bundle callers that need sections still get them from derive which is now light.)
+/**
+ * The slim {topicId, sections[]} structure of a subject, from the `##`
+ * headings of each module.mdx (never questions.json). Section slugs come from
+ * the same extractor the validator uses. Cached for the process lifetime.
  */
 export async function deriveModuleStructureFromBundle(
   slug: string

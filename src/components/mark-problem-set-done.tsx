@@ -1,6 +1,6 @@
 "use client";
 
-import { useProgress } from "@/components/progress-provider";
+import { useProgress } from "@/lib/use-progress";
 import { chapterKey } from "@/lib/progress";
 
 /**

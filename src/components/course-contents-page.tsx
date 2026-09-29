@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useProgress } from "@/components/progress-provider";
+import { useProgress } from "@/lib/use-progress";
 import { chapterKey, getPracticeProgress } from "@/lib/progress";
 import { SubjectBreadcrumbs } from "@/components/subject-breadcrumbs";
 import { MathText } from "@/components/math-text";

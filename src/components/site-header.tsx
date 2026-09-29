@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { SearchTrigger } from "@/components/search-command";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useClientMounted } from "@/hooks/use-client-mounted";
-import type { NavSubject } from "@/lib/subjects";
+import type { NavSubject } from "@/lib/shared-types";
 
 const utilityLinks = [
   { href: "/dashboard", label: "Progress" },
