@@ -239,7 +239,7 @@ export function AnswerSheet({
         kicker="Solutions"
       />
 
-      <ol className="ps-list ps-list-answers">
+      <ol className="ps-list">
         {set.problems.map((problem, index) => {
           const parts = problem.parts ?? [];
           return (
