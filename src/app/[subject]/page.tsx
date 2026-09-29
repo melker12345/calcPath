@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { CourseContentsPage } from "@/components/course-contents-page";
 import { ProgressBoundary } from "@/components/scoped-providers";
 import {
+  getAvailableSubjectConfigs,
   getFileSystemContentBundle,
   deriveModuleStructureFromBundle,
   loadSubjectIndex,
@@ -17,6 +18,13 @@ type Props = {
 };
 
 type ModuleStructure = ListedSubjectConfig["modules"];
+
+/** Every subject page is built at deploy time; unknown slugs are 404s. */
+export async function generateStaticParams() {
+  const subjects = await getAvailableSubjectConfigs();
+  return subjects.map((s) => ({ subject: s.slug }));
+}
+export const dynamicParams = false;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { subject: slug } = await params;

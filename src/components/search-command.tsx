@@ -169,12 +169,6 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const kindClasses: Record<string, string> = {
-    topic: "bg-blue-100 text-blue-700 dark:bg-[var(--accent)]/15 dark:text-[var(--accent)]",
-    section: "bg-zinc-100 text-zinc-600 dark:bg-[var(--surface-2)] dark:text-[var(--text-muted)]",
-    page: "bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-400",
-  };
-
   const ctxValue = useMemo(() => ({ open }), [open]);
 
   return (
@@ -190,9 +184,9 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
             onKeyDown={handleTrapKeyDown}
             className="fixed inset-0 z-[10000]"
           >
-            <button type="button" aria-label="Close search" onClick={close} className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+            <button type="button" aria-label="Close search" onClick={close} className="fixed inset-0 bg-black/50" />
             <div className="relative mx-auto mt-[15vh] w-[min(560px,90vw)]">
-              <div className="overflow-hidden rounded-xl border theme-border theme-surface shadow-2xl">
+              <div className="border theme-border theme-surface">
                 <div className="flex items-center gap-3 border-b theme-border px-4 py-3">
                   <svg className="h-5 w-5 shrink-0 theme-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
@@ -206,7 +200,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
                       setActiveIndex(0);
                     }}
                     onKeyDown={handleKeyDown}
-                    placeholder="Search topics, sections, pages..."
+                    placeholder="Search chapters and sections"
                     aria-label="Search topics, sections, and pages"
                     role="combobox"
                     aria-expanded="true"
@@ -215,7 +209,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
                     aria-activedescendant={results.length > 0 ? `search-command-option-${activeIndex}` : undefined}
                     className="flex-1 bg-transparent text-sm theme-text placeholder:text-[var(--text-muted)] outline-none border-none p-0 focus:ring-0"
                   />
-                  <kbd className="rounded border theme-border bg-[var(--surface-2)] px-1.5 py-0.5 text-[10px] font-medium theme-text-muted">ESC</kbd>
+                  <kbd className="border theme-border px-1.5 py-0.5 text-[10px] font-medium theme-text-muted">Esc</kbd>
                 </div>
                 <div
                   ref={listRef}
@@ -236,15 +230,15 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
                       type="button"
                       onClick={() => navigate(entry.href)}
                       onMouseEnter={() => setActiveIndex(i)}
-                      className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition ${i === activeIndex ? "bg-[var(--accent)]/10" : "hover:bg-[var(--surface-2)]"}`}
+                      className={`flex w-full items-center gap-3 px-4 py-2.5 text-left ${i === activeIndex ? "bg-[var(--surface-2)]" : ""}`}
                     >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-2)] text-sm font-bold theme-text-muted">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center border theme-border font-serif text-base theme-text-muted">
                         {entry.subjectIcon}
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="truncate text-sm font-medium theme-text">{entry.label}</span>
-                          <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${kindClasses[entry.kind]}`}>
+                          <span className="shrink-0 text-[10px] uppercase theme-text-muted">
                             {entry.kind}
                           </span>
                         </div>
@@ -269,12 +263,12 @@ export function SearchTrigger() {
     <button
       type="button"
       onClick={open}
-      className="flex items-center gap-2 rounded-lg border border-[var(--nav-control-border,var(--border))] bg-[var(--nav-control-bg,var(--surface))] px-3 py-1.5 text-sm theme-text-muted transition hover:bg-[var(--nav-control-hover,var(--surface-2))] hover:theme-text"
+      className="flex items-center gap-2 border border-[var(--nav-control-border,var(--border))] bg-[var(--nav-control-bg,var(--surface))] px-3 py-1.5 text-sm theme-text-muted hover:underline"
     >
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
       </svg>
-      <span className="hidden sm:inline">Search...</span>
+      <span className="hidden sm:inline">Search</span>
     </button>
   );
 }
